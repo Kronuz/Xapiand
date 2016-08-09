@@ -30,17 +30,20 @@
 #include <future>
 
 
-enum class unitTime {
+enum class unitTime : uint8_t {
 	SECOND,
 	MINUTE,
 	HOUR,
 	DAY,
 	MONTH,
 	YEAR,
+	DECADE,
+	CENTURY,
+	MILLENNIUM
 };
 
 
-enum class Index {
+enum class Index : uint8_t {
 	ALL,
 	TERM,
 	VALUE,

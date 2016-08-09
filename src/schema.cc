@@ -23,20 +23,21 @@
 #include "schema.h"
 
 #include "database.h"
+#include "multivalue/generate_terms.h"
 #include "log.h"
 #include "manager.h"
 #include "serialise.h"
 #include "wkt_parser.h"
 
 
-static const std::vector<std::string> str_time     { "second", "minute", "hour", "day", "month", "year" };
+static const std::vector<std::string> str_time     { "second", "minute", "hour", "day", "month", "year", "decade", "century", "millennium" };
 static const std::vector<std::string> str_analyzer { "STEM_NONE", "STEM_SOME", "STEM_ALL", "STEM_ALL_Z" };
 static const std::vector<std::string> str_index    { "ALL", "TERM", "VALUE", "TEXT" };
 
 
 static const MsgPack def_accuracy_geo  { true, 0.2, 0, 5, 10, 15, 20, 25 };
 static const MsgPack def_accuracy_num  { 100, 1000, 10000, 100000 };
-static const MsgPack def_accuracy_date { "hour", "day", "month", "year" };
+static const MsgPack def_accuracy_date { "hour", "day", "month", "year", "decade", "century" };
 
 
 const specification_t default_spc;
@@ -1363,7 +1364,13 @@ Schema::validate_required_data(const MsgPack* value)
 				try {
 					for (const auto& _accuracy : *specification.doc_acc) {
 						auto str_accuracy(lower_string(_accuracy.as_string()));
-						if (str_accuracy == str_time[5]) {
+						if (str_accuracy == str_time[8]) {
+							set_acc.insert(toUType(unitTime::MILLENNIUM));
+						} else if (str_accuracy == str_time[7]) {
+							set_acc.insert(toUType(unitTime::CENTURY));
+						} else if (str_accuracy == str_time[6]) {
+							set_acc.insert(toUType(unitTime::DECADE));
+						} else if (str_accuracy == str_time[5]) {
 							set_acc.insert(toUType(unitTime::YEAR));
 						} else if (str_accuracy == str_time[4]) {
 							set_acc.insert(toUType(unitTime::MONTH));
@@ -1376,11 +1383,13 @@ Schema::validate_required_data(const MsgPack* value)
 						} else if (str_accuracy == str_time[0]) {
 							set_acc.insert(toUType(unitTime::SECOND));
 						} else {
-							throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s} (%s not supported)", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str(), str_accuracy.c_str());
+							throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s, %s, %s, %s} (%s not supported)", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(),
+								str_time[4].c_str(), str_time[5].c_str(), str_time[6].c_str(), str_time[7].c_str(), str_time[8].c_str(), str_accuracy.c_str());
 						}
 					}
 				} catch (const msgpack::type_error&) {
-					throw MSG_ClientError("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+					throw MSG_ClientError("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(),
+						str_time[5].c_str(), str_time[6].c_str(), str_time[7].c_str(), str_time[8].c_str());
 				}
 				break;
 			}
@@ -1637,24 +1646,51 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, s
 			auto it = specification.acc_prefix.begin();
 			for (const auto& acc : specification.accuracy) {
 				switch ((unitTime)acc) {
-					case unitTime::YEAR:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "y"), *it++));
+					case unitTime::MILLENNIUM: {
+						Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
+						doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 						break;
-					case unitTime::MONTH:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "M"), *it++));
+					}
+					case unitTime::CENTURY: {
+						Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
+						doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 						break;
-					case unitTime::DAY:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "d"), *it++));
+					}
+					case unitTime::DECADE: {
+						Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
+						doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 						break;
-					case unitTime::HOUR:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "h"), *it++));
+					}
+					case unitTime::YEAR: {
+						Datetime::tm_t _tm(tm.year);
+						doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 						break;
-					case unitTime::MINUTE:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "m"), *it++));
+					}
+					case unitTime::MONTH: {
+						Datetime::tm_t _tm(tm.year, tm.mon);
+						doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 						break;
-					case unitTime::SECOND:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "s"), *it++));
+					}
+					case unitTime::DAY: {
+						Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
+						doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 						break;
+					}
+					case unitTime::HOUR: {
+						Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
+						doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+						break;
+					}
+					case unitTime::MINUTE: {
+						Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
+						doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+						break;
+					}
+					case unitTime::SECOND: {
+						Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
+						doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+						break;
+					}
 				}
 			}
 			s.insert(value_v);
@@ -1666,14 +1702,11 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, s
 				value_v.assign(Serialise::ewkt(ewkt));
 			}
 
-			RangeList ranges;
-			CartesianUSet centroids;
-
-			EWKT_Parser::getRanges(ewkt, specification.accuracy[0], specification.accuracy[1], ranges, centroids);
+			auto geo = EWKT_Parser::getGeoSpatial(ewkt, specification.accuracy[0], specification.accuracy[1]);
 
 			// Index Values and looking for terms generated by accuracy.
 			std::unordered_set<std::string> set_terms;
-			for (const auto& range : ranges) {
+			for (const auto& range : geo.ranges) {
 				int idx = -1;
 				uint64_t val;
 				if (range.start != range.end) {
@@ -1700,7 +1733,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, s
 				doc.add_term(term);
 			}
 
-			s.insert(Serialise::geo(ranges, centroids));
+			s.insert(Serialise::geo(geo.ranges, geo.centroids));
 			break;
 		}
 		default:
