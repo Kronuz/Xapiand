@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "../stl_serialise.h"
-
 #include <xapian.h>
 
 #include <string>

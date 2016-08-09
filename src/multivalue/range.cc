@@ -22,11 +22,37 @@
 
 #include "range.h"
 
-#include "../length.h"
 #include "../serialise.h"
-#include "../sortable_serialise.h"
 #include "../stl_serialise.h"
+#include "../fields.h"
 #include "../utils.h"
+#include "generate_terms.h"
+#include "geospatialrange.h"
+
+
+template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::decay_t<T>>::value>>
+Xapian::Query filterNumericQuery(const data_field_t& field_data, T start, T end) {
+	if (start > end) {
+		return Xapian::Query::MatchNothing;
+	}
+
+	auto start_s = Serialise::_float(start);
+	auto end_s = Serialise::_float(end);
+
+	auto mvr = new MultipleValueRange(field_data.slot, start_s, end_s);
+
+	auto filter_terms = GenerateTerms::numeric(start, end, field_data.accuracy, field_data.acc_prefix);
+	if (filter_terms.first.empty()) {
+		return Xapian::Query(mvr->release());
+	} else {
+		Xapian::QueryParser queryparser;
+		for (const auto& prefix : filter_terms.second) {
+			auto nfp = new NumericFieldProcessor(field_data.type, prefix);
+			queryparser.add_prefix(prefix, nfp->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_terms.first), Xapian::Query(mvr->release()));
+	}
+}
 
 
 MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string& start_, const std::string& end_)
@@ -36,73 +62,97 @@ MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string&
 }
 
 
-// Receive start and end did not serialize.
+// Receive start and end, they are not serialized.
 Xapian::Query
-MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, const std::string& start_, const std::string& end_, const std::string& field_name)
+MultipleValueRange::getQuery(const data_field_t& field_data, const std::string& field_name, std::string start, std::string end)
 {
-	if (start_.empty()) {
-		if (end_.empty()) {
-			return Xapian::Query::MatchAll;
-		}
-		try {
-			auto mvle = new MultipleValueLE(slot_, Serialise::serialise(field_type, end_));
-			return Xapian::Query(mvle->release());
-		} catch (const Exception& exc) {
-			throw MSG_QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + exc.what() +")");
-		}
-	} else if (end_.empty()) {
-		try {
-			auto mvge = new MultipleValueGE(slot_, Serialise::serialise(field_type, start_));
-			return Xapian::Query(mvge->release());
-		} catch (const Exception& exc) {
-			throw MSG_QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + exc.what() +")");
-		}
-	}
-
 	try {
-		std::string start_s;
-		std::string end_s;
-		switch (field_type) {
-			case INTEGER_TYPE:
-				start_s = Serialise::integer(start_);
-				end_s = Serialise::integer(end_);
-				break;
-			case POSITIVE_TYPE:
-				start_s = Serialise::positive(start_);
-				end_s = Serialise::positive(end_);
-				break;
+		if (start.empty()) {
+			if (end.empty()) {
+				return Xapian::Query::MatchAll;
+			}
+
+			if (field_data.type == GEO_TYPE) {
+				auto geo = EWKT_Parser::getGeoSpatial(end, field_data.accuracy[0], field_data.accuracy[1]);
+
+				if (geo.ranges.empty()) {
+					return Xapian::Query::MatchNothing;
+				}
+
+				auto GeoQuery = GeoSpatialRange::getQuery(field_data.slot, geo.ranges, geo.centroids);
+
+				auto filter_term = GenerateTerms::geo(geo.ranges, field_data.accuracy, field_data.acc_prefix);
+				if (filter_term.first.empty()) {
+					return GeoQuery;
+				} else {
+					Xapian::QueryParser queryparser;
+					for (const auto& prefix : filter_term.second) {
+						auto gfp = new GeoFieldProcessor(prefix);
+						queryparser.add_prefix(prefix, gfp->release());
+					}
+					return Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term.first), GeoQuery);
+				}
+			} else {
+				auto mvle = new MultipleValueLE(field_data.slot, Serialise::serialise(field_data.type, end));
+				return Xapian::Query(mvle->release());
+			}
+		} else if (end.empty()) {
+			if (field_data.type == GEO_TYPE) {
+				throw MSG_SerialisationError("The format for Geo Spatial range is: field_name:\"..EWKT\"");
+			}
+
+			auto mvge = new MultipleValueGE(field_data.slot, Serialise::serialise(field_data.type, start));
+			return Xapian::Query(mvge->release());
+		}
+
+		switch (field_data.type) {
 			case FLOAT_TYPE:
-				start_s = Serialise::_float(start_);
-				end_s = Serialise::_float(end_);
-			case DATE_TYPE:
-				start_s = Serialise::date(start_);
-				end_s = Serialise::date(end_);
-				break;
-			case BOOLEAN_TYPE:
-				start_s = Serialise::boolean(start_);
-				end_s = Serialise::boolean(end_);
-				break;
-			case STRING_TYPE:
-				start_s = start_;
-				end_s = end_;
-				break;
+				return filterNumericQuery(field_data, strict(std::stod, start), strict(std::stod, end));
+			case INTEGER_TYPE:
+				return filterNumericQuery(field_data, strict(std::stoll, start), strict(std::stoll, end));
+			case POSITIVE_TYPE:
+				return filterNumericQuery(field_data, strict(std::stoull, start), strict(std::stoull, end));
+			case STRING_TYPE: {
+				if (start > end) {
+					return Xapian::Query::MatchNothing;
+				}
+
+				auto mvr = new MultipleValueRange(field_data.slot, start, end);
+				return Xapian::Query(mvr->release());
+			}
+			case DATE_TYPE: {
+				auto timestamp_s = Datetime::timestamp(start);
+				auto timestamp_e = Datetime::timestamp(end);
+
+				if (timestamp_s > timestamp_e) {
+					return Xapian::Query::MatchNothing;
+				}
+
+				auto start_s = Serialise::timestamp(timestamp_s);
+				auto end_s   = Serialise::timestamp(timestamp_e);
+
+				auto mvr = new MultipleValueRange(field_data.slot, start_s, end_s);
+
+				auto filter_terms = GenerateTerms::date(timestamp_s, timestamp_e, field_data.accuracy, field_data.acc_prefix);
+				if (filter_terms.first.empty()) {
+					return Xapian::Query(mvr->release());
+				} else {
+					Xapian::QueryParser queryparser;
+					for (const auto& prefix : filter_terms.second) {
+						auto dfp = new DateFieldProcessor(prefix);
+						queryparser.add_prefix(prefix, dfp->release());
+					}
+					return Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_terms.first), Xapian::Query(mvr->release()));
+				}
+			}
 			case GEO_TYPE:
-				start_s = Serialise::ewkt(start_);
-				end_s = Serialise::ewkt(end_);
-				break;
+				throw MSG_QueryParserError("The format for Geo Spatial range is: field_name:\"..EWKT\"");
 			default:
-				throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
+				return Xapian::Query::MatchNothing;
 		}
-
-		// Multiple Value Range
-		if (start_s > end_s) {
-			return Xapian::Query::MatchNothing;
-		}
-
-		auto mvr = new MultipleValueRange(slot_, start_s, end_s);
-		return Xapian::Query(mvr->release());
 	} catch (const Exception& exc) {
-		throw MSG_QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + exc.what() +")");
+		throw MSG_QueryParserError("Failed to serialize: %s:%s..%s like %s (%s)", field_name.c_str(), start.c_str(), end.c_str(),
+			Serialise::type(field_data.type).c_str(), exc.what());
 	}
 }
 

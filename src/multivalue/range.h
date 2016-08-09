@@ -22,10 +22,11 @@
 
 #pragma once
 
+#include "../database_utils.h"
+
 #include <xapian.h>
 
-#include <string.h>
-#include <vector>
+#include <string>
 
 
 // New Match Decider for multiple value range.
@@ -58,7 +59,7 @@ public:
 	std::string get_description() const override;
 
 	// Call this function for create a new Query based in ranges.
-	static Xapian::Query getQuery(Xapian::valueno slot_, char field_type, const std::string& start_, const std::string& end_, const std::string& field_name);
+	static Xapian::Query getQuery(const data_field_t& field_data, const std::string& field_name, std::string start, std::string end);
 };
 
 

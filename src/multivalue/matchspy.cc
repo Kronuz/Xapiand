@@ -24,6 +24,7 @@
 
 #include "../exception.h"
 #include "../length.h"
+#include "../stl_serialise.h"
 
 #include <cassert>
 
