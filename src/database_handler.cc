@@ -22,16 +22,15 @@
 
 #include "database_handler.h"
 
-#include "database_utils.h"
 #include "datetime.h"
-#include "generate_terms.h"
+#include "fields.h"
 #include "msgpack_patcher.h"
 #include "multivalue/range.h"
 #include "serialise.h"
 #include "wkt_parser.h"
 
 
-static const std::regex find_field_re("(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::optimize);
+static const std::regex find_field_re("(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"([^\"]+)\"|([^\": ]+))[ ]*", std::regex::optimize);
 
 
 DatabaseHandler::DatabaseHandler()
@@ -63,7 +62,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 
 	auto found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
-	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
+	std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
 
 	// Saves document's id in DB_SLOT_ID
 	doc.add_value(DB_SLOT_ID, term_id);
@@ -275,7 +274,7 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 		size_match += next->length(0);
 		auto field_name_dot = next->str(1);
 		auto field_name = next->str(2);
-		auto field_value = next->str(3);
+		auto field_value = next->length(4) ? next->str(4) : next->str(5);
 		auto field_t = schema->get_data_field(field_name);
 
 		std::smatch m;
@@ -286,78 +285,12 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 				continue;
 			}
 
-			Xapian::Query queryRange;
-
-			switch (field_t.type) {
-				case FLOAT_TYPE:
-				case INTEGER_TYPE: {
-					auto start = m.str(1), end = m.str(2);
-
-					queryRange = MultipleValueRange::getQuery(field_t.slot, FLOAT_TYPE, start, end, field_name);
-
-					auto filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, queryparser);
-					if (!filter_term.empty()) {
-						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, q_flags), queryRange);
-					}
-					break;
-				}
-				case POSITIVE_TYPE: {
-					auto start = m.str(1), end = m.str(2);
-
-					queryRange = MultipleValueRange::getQuery(field_t.slot, POSITIVE_TYPE, start, end, field_name);
-
-					auto filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, queryparser);
-					if (!filter_term.empty()) {
-						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, q_flags), queryRange);
-					}
-					break;
-				}
-				case STRING_TYPE: {
-					auto start = m.str(1), end = m.str(2);
-					queryRange = MultipleValueRange::getQuery(field_t.slot, STRING_TYPE, start, end, field_name);
-					break;
-				}
-				case DATE_TYPE: {
-					auto start = m.str(1), end = m.str(2);
-
-					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
-
-					auto filter_term = GenerateTerms::date(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, queryparser);
-					if (!filter_term.empty()) {
-						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, q_flags), queryRange);
-					}
-					break;
-				}
-				case GEO_TYPE: {
-					// Validate special case.
-					if (field_value.compare("..") == 0) {
-						queryRange = Xapian::Query::MatchAll;
-						break;
-					}
-
-					// The format is: "..EWKT". We always delete double quotes and .. -> EWKT
-					field_value.assign(field_value, 3, field_value.size() - 4);
-
-					RangeList ranges;
-					CartesianUSet centroids;
-					EWKT_Parser::getRanges(field_value, field_t.accuracy[0], field_t.accuracy[1], ranges, centroids);
-
-					queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges, centroids);
-
-					auto filter_term = GenerateTerms::geo(ranges, field_t.accuracy, field_t.acc_prefix, added_prefixes, queryparser);
-					if (!filter_term.empty()) {
-						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, q_flags), queryRange);
-					}
-					break;
-				}
-			}
-
 			// Concatenate with OR all the ranges queries.
 			if (first_timeR) {
-				query = queryRange;
+				query = MultipleValueRange::getQuery(field_t, field_name, m.str(1), m.str(2));
 				first_timeR = false;
 			} else {
-				query = Xapian::Query(Xapian::Query::OP_OR, query, queryRange);
+				query = Xapian::Query(Xapian::Query::OP_OR, query, MultipleValueRange::getQuery(field_t, field_name, m.str(1), m.str(2)));
 			}
 		} else {
 			// If the field has not been indexed as a term, not process this query.
@@ -375,7 +308,9 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 						auto nfp = new NumericFieldProcessor(field_t.type, field_t.prefix);
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, nfp->release()) : queryparser.add_prefix(field_name, nfp->release());
 					}
-					field.assign(field_name_dot).append(to_query_string(field_value));
+
+					to_query_string(field_value);
+					field.assign(field_name_dot).append(field_value);
 					break;
 				case STRING_TYPE:
 					// Xapian does not allow repeat prefixes.
@@ -384,21 +319,18 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 					}
 					break;
 				case DATE_TYPE:
-					// If there are double quotes, they are deleted: "date" -> date
-					if (field_value.at(0) == '"') {
-						field_value.assign(field_value, 1, field_value.size() - 2);
-					}
-
 					// Xapian does not allow repeat prefixes.
 					if (added_prefixes.insert(field_t.prefix).second) {
 						auto dfp = new DateFieldProcessor(field_t.prefix);
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, dfp->release()) : queryparser.add_prefix(field_name, dfp->release());
 					}
-					field.assign(field_name_dot).append(to_query_string(std::to_string(Datetime::timestamp(field_value))));
+
+					field_value.assign(std::to_string(Datetime::timestamp(field_value)));
+					to_query_string(field_value);
+
+					field.assign(field_name_dot).append(field_value);
 					break;
 				case GEO_TYPE:
-					// Delete double quotes (always): "EWKT" -> EWKT
-					field_value.assign(field_value, 1, field_value.size() - 2);
 					field_value.assign(Serialise::ewkt(field_value));
 
 					// If the region for search is empty, not process this query.
@@ -427,15 +359,15 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 				querystring = field;
 				first_time = false;
 			} else {
-				querystring += " OR " + field;
+				querystring.append(" OR ").append(field);
 			}
 		}
 
 		++next;
 	}
 
-	if (size_match != str_query.size()) {
-		throw MSG_QueryParserError("Query '" + str_query + "' contains errors");
+	if (size_match != str_query.length()) {
+		throw MSG_QueryParserError("Query %s contains errors [%zu]", str_query.c_str(), size_match);
 	}
 
 	switch (first_time << 1 | first_timeR) {
@@ -482,7 +414,7 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 	auto aux_flags = e.spelling ? Xapian::QueryParser::FLAG_SPELLING_CORRECTION : 0;
 	if (e.synonyms) aux_flags |= Xapian::QueryParser::FLAG_SYNONYM;
 
-	L_SEARCH(this, "e.query size: %d  Spelling: %d Synonyms: %d", e.query.size(), e.spelling, e.synonyms);
+	L_SEARCH(this, "e.query size: %zu  Spelling: %d Synonyms: %d", e.query.size(), e.spelling, e.synonyms);
 	auto q_flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT | aux_flags;
 	std::string lan;
 	auto first = true;
@@ -502,7 +434,7 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 	}
 	L_SEARCH(this, "e.query: %s", queryQ.get_description().c_str());
 
-	L_SEARCH(this, "e.partial size: %d", e.partial.size());
+	L_SEARCH(this, "e.partial size: %zu", e.partial.size());
 	q_flags = Xapian::QueryParser::FLAG_PARTIAL | aux_flags;
 	first = true;
 	Xapian::Query queryP;
@@ -516,7 +448,7 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 	}
 	L_SEARCH(this, "e.partial: %s", queryP.get_description().c_str());
 
-	L_SEARCH(this, "e.terms size: %d", e.terms.size());
+	L_SEARCH(this, "e.terms size: %zu", e.terms.size());
 	q_flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT | aux_flags;
 	first = true;
 	Xapian::Query queryT;
@@ -683,7 +615,7 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVecto
 				case '-':
 					descending = true;
 				case '+':
-					field.assign(field, 1, field.size() - 1);
+					field.erase(field.begin());
 					break;
 			}
 			auto field_t = schema->get_slot_field(field);
