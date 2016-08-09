@@ -139,15 +139,24 @@ std::string str_type(const std::vector<unsigned>& sep_types) {
 
 void clean_reserved(MsgPack& document) {
 	if (document.is_map()) {
+		bool obj = false;
+		MsgPack _val;
 		for (auto item_key = document.begin(); item_key != document.end();) {
 			auto str_key((*item_key).as_string());
-			if (is_valid(str_key) || str_key == RESERVED_VALUE) {
+			if (is_valid(str_key)) {
+				obj = true;
 				auto& item_doc = document.at(str_key);
 				clean_reserved(item_doc);
+				++item_key;
+			} else if (str_key == RESERVED_VALUE) {
+				_val = document.at(str_key);
 				++item_key;
 			} else {
 				item_key = document.erase(item_key);
 			}
+		}
+		if (!obj) {
+			document = _val;
 		}
 	}
 }
