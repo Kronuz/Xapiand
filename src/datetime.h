@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,10 +22,10 @@
 
 #pragma once
 
+#include <chrono>
 #include <ctime>
 #include <iostream>
 #include <regex>
-#include <chrono>
 
 #define _EPOCH      1970
 #define _START_YEAR 1900
@@ -41,27 +41,30 @@ namespace Datetime {
 		int min;
 		int sec;
 		int msec;
+
+		tm_t(int y=_EPOCH, int M=1, int d=1, int h=0, int m=0, int s=0, int ms=0)
+			: year(y), mon(M), day(d), hour(h),
+			  min(m), sec(s), msec(ms) { }
 	};
 
 	extern const std::regex date_re;
 	extern const std::regex date_math_re;
 
 	void dateTimeParser(const std::string& date, tm_t& tm);
-	void computeDateMath(tm_t& tm, const std::string& op, const std::string& units);
+	void computeDateMath(tm_t& tm, const std::string& op, char unit);
 	bool isleapYear(int year);
 	bool isleapRef_year(int tm_year);
 	int getDays_month(int year, int month);
-	time_t toordinal(int year, int month, int day);
-	time_t timegm(struct tm *tm);
-	time_t timegm(tm_t& tm);
-	double mtimegm(tm_t& tm);
-	double timestamp(const std::string& date);
+	std::time_t toordinal(int year, int month, int day);
+	std::time_t timegm(std::tm* tm);
+	std::time_t timegm(tm_t& tm);
 	tm_t to_tm_t(double timestamp);
+	double timestamp(tm_t& tm);
+	double timestamp(const std::string& date);
 	double timestamp(const std::string& date, tm_t& tm);
 	bool isvalidDate(int year, int month, int day);
-	::std::string isotime(const struct tm *timep, int microseconds=0);
-	::std::string ctime(const ::std::string& epoch);
-	::std::string ctime(double epoch);
+	std::string isotime(const std::tm* timep);
+	std::string isotime(double epoch);
 	void normalizeMonths(int& year, int& mon);
 	bool isDate(const std::string& date);
 	std::string to_string(const std::chrono::time_point<std::chrono::system_clock>& tp);
