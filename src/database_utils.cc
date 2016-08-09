@@ -35,9 +35,6 @@
 #include <unistd.h>
 #include <random>
 
-#define DATABASE_DATA_HEADER_MAGIC 0x42
-#define DATABASE_DATA_FOOTER_MAGIC 0x2A
-
 
 const std::regex find_types_re("(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" FLOAT_STR "|" INTEGER_STR "|" POSITIVE_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")", std::regex::icase | std::regex::optimize);
 
@@ -89,19 +86,6 @@ long long read_mastery(const std::string& dir, bool force) {
 	L_DATABASE(nullptr, "- MASTERY OF INDEX '%s' is %llx", dir.c_str(), mastery_level);
 
 	return mastery_level;
-}
-
-
-bool is_valid(const std::string& word) {
-	return word.front() != '_' && word.back() != '_';
-}
-
-
-bool is_language(const std::string& language) {
-	if (language.find(" ") == std::string::npos) {
-		return std::string(DB_LANGUAGES).find(language) == std::string::npos ? false : true;
-	}
-	return false;
 }
 
 
@@ -190,11 +174,6 @@ rapidjson::Document to_json(const std::string& str) {
 }
 
 
-void set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str) {
-	doc.set_data(std::string(1, DATABASE_DATA_HEADER_MAGIC).append(serialise_length(obj_data_str.size())).append(obj_data_str).append(1, DATABASE_DATA_FOOTER_MAGIC).append(blob_str));
-}
-
-
 MsgPack get_MsgPack(const Xapian::Document& doc) {
 	auto data = doc.get_data();
 
@@ -234,16 +213,6 @@ std::string get_blob(const Xapian::Document& doc) {
 	p += length;
 	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) return data;
 	return std::string(p, p_end - p);
-}
-
-
-std::string to_query_string(std::string str) {
-	// '-'' in not accepted by the field processors.
-	if (str.at(0) == '-') {
-		str[0] = '_';
-	}
-
-	return str;
 }
 
 

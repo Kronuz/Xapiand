@@ -22,14 +22,10 @@
 
 #pragma once
 
-#include "fields.h"
-#include "geospatialrange.h"
-#include "multivalue/range.h"
+#include "length.h"
 #include "msgpack.h"
 #include "rapidjson/document.h"
 
-#include <regex>
-#include <vector>
 #include <xapian.h>
 
 #define RESERVED_ENDPOINT    "_endpoint"
@@ -87,6 +83,9 @@
 #define MSGPACK_TYPE         "application/x-msgpack"
 #define HTML_TYPE            "text/html"
 #define TEXT_TYPE            "text/plain"
+
+#define DATABASE_DATA_HEADER_MAGIC 0x42
+#define DATABASE_DATA_FOOTER_MAGIC 0x2A
 
 constexpr int DB_OPEN         = 0x00; // Opens a database
 constexpr int DB_WRITABLE     = 0x01; // Opens as writable
@@ -162,20 +161,53 @@ enum class MIMEType {
 };
 
 
+// All the field names that start or end with '_'.
+inline bool is_valid(const std::string& word) {
+	return word.front() != '_' && word.back() != '_';
+}
+
+
+inline bool is_language(const std::string& language) {
+	if (language.find(' ') == std::string::npos) {
+		return std::string(DB_LANGUAGES).find(language) == std::string::npos ? false : true;
+	}
+	return false;
+}
+
+
+inline void set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str) {
+	doc.set_data(std::string(1, DATABASE_DATA_HEADER_MAGIC).append(serialise_length(obj_data_str.size())).append(obj_data_str).append(1, DATABASE_DATA_FOOTER_MAGIC).append(blob_str));
+}
+
+
+inline void to_query_string(std::string& str) {
+	// '-'' in not accepted by the field processors.
+	if (str.at(0) == '-') {
+		str[0] = '_';
+	}
+}
+
+
+template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::decay_t<T>>::value>>
+inline std::string to_query_string(T value) {
+	std::string str = std::to_string(value);
+	// '-'' in not accepted by the field processors.
+	if (str[0] == '-') {
+		str[0] = '_';
+	}
+	return str;
+}
+
+
 long long read_mastery(const std::string& dir, bool force);
-// All the field names that start or end with '_', or contains DB_OFFSPRING_UNION are not valid field names.
-bool is_valid(const std::string& word);
-bool is_language(const std::string& language);
 bool set_types(const std::string& type, std::vector<unsigned>& sep_types);
 std::string str_type(const std::vector<unsigned>& sep_types);
 void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);
 rapidjson::Document to_json(const std::string& str);
-void set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str);
 MsgPack get_MsgPack(const Xapian::Document& doc);
 std::string get_blob(const Xapian::Document& doc);
-std::string to_query_string(std::string str);
 std::string msgpack_to_html(const msgpack::object& o);
 std::string msgpack_map_value_to_html(const msgpack::object& o);
 std::string msgpack_to_html_error(const msgpack::object& o);
