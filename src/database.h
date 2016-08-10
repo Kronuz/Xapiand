@@ -44,22 +44,18 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#define DB_MASTER "M"
-#define DB_SLAVE  "S"
-
-
-#define DB_SLOT_RESERVED 10 // Reserved slots by special data
-
-#define DB_RETRIES 3 // Number of tries to do an operation on a Xapian::Database
 
 #define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))
+
 
 constexpr size_t START_POS = SIZE_BITS_ID - 4;
 
 
 using namespace std::chrono;
 
+
 struct WalHeader;
+
 
 class Database;
 class DatabasePool;
@@ -82,6 +78,7 @@ struct WalHeader {
 	void validate(void* param, void* args);
 };
 
+
 #pragma pack(push, 1)
 struct WalBinHeader {
 	uint8_t magic;
@@ -103,6 +100,7 @@ struct WalBinHeader {
 		}
 	}
 };
+
 
 struct WalBinFooter {
 	uint32_t checksum;

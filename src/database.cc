@@ -1625,7 +1625,7 @@ DatabasePool::init_ref(const Endpoint& endpoint)
 		// Boolean term for the node.
 		doc.add_boolean_term(unique_id);
 		// Start values for the DB.
-		doc.add_boolean_term(prefixed(DB_MASTER, get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE)));
+		doc.add_boolean_term(prefixed(DOCUMENT_DB_MASTER, get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE)));
 		doc.add_value(DB_SLOT_CREF, "0");
 		try {
 			ref_database->replace_document_term(unique_id, doc, true);
@@ -1735,8 +1735,8 @@ DatabasePool::get_master_count()
 	int count = 0;
 
 	if (ref_database) {
-		Xapian::PostingIterator p(ref_database->db->postlist_begin(DB_MASTER));
-		count = std::distance(ref_database->db->postlist_begin(DB_MASTER), ref_database->db->postlist_end(DB_MASTER));
+		Xapian::PostingIterator p(ref_database->db->postlist_begin(DOCUMENT_DB_MASTER));
+		count = std::distance(ref_database->db->postlist_begin(DOCUMENT_DB_MASTER), ref_database->db->postlist_end(DOCUMENT_DB_MASTER));
 	}
 
 	checkin(ref_database);

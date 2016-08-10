@@ -65,17 +65,23 @@
 #define DB_LANGUAGES       "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
 #define DB_VERSION_SCHEMA  2.0
 
+#define DB_SLOT_RESERVED 10 // Reserved slots by special data
+#define DB_RETRIES        3 // Number of tries to do an operation on a Xapian::Database
+
 #define DB_SLOT_ID     0 // Slot ID document
 #define DB_SLOT_OFFSET 1 // Slot offset for data
 #define DB_SLOT_TYPE   2 // Slot type data
 #define DB_SLOT_LENGTH 3 // Slot length data
 #define DB_SLOT_CREF   4 // Slot that saves the references counter
 
-#define DEFAULT_OFFSET "0" /* Replace for the real offset */
+#define DEFAULT_LANGUAGE "en"
+#define DEFAULT_OFFSET   "0" /* Replace for the real offset */
 
 // Default prefixes
 #define DOCUMENT_ID_TERM_PREFIX     "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
+#define DOCUMENT_DB_MASTER          "M"
+#define DOCUMENT_DB_SLAVE           "S"
 
 #define ANY_TYPE             "*/*"
 #define JSON_TYPE            "application/json"
