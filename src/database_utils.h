@@ -63,6 +63,12 @@
 #define RESERVED_ID          "_id"
 #define RESERVED_SCHEMA      "_schema"
 #define RESERVED_VERSION     "_version"
+// Reserved words used in schema only for geospatial fields.
+#define RESERVED_PARTIALS    "_partials"
+#define RESERVED_ERROR       "_error"
+#define RESERVED_RADIUS      "_radius"
+#define RESERVED_LATITUDE    "_latitude"
+#define RESERVED_LONGITUDE   "_longitude"
 
 #define DB_OFFSPRING_UNION "__"
 #define DB_LANGUAGES       "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
