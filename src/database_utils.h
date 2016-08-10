@@ -28,10 +28,13 @@
 
 #include <xapian.h>
 
+// Reserved words only used in the responses to the user.
 #define RESERVED_ENDPOINT    "_endpoint"
 #define RESERVED_RANK        "_rank"
-#define RESERVED_WEIGHT      "_weight"
 #define RESERVED_PERCENT     "_percent"
+
+// Reserved words used in schema.
+#define RESERVED_WEIGHT      "_weight"
 #define RESERVED_POSITION    "_position"
 #define RESERVED_LANGUAGE    "_language"
 #define RESERVED_SPELLING    "_spelling"
