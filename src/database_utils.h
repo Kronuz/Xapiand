@@ -74,8 +74,8 @@
 #define DB_SLOT_LENGTH 3 // Slot length data
 #define DB_SLOT_CREF   4 // Slot that saves the references counter
 
-#define DEFAULT_LANGUAGE "en"
-#define DEFAULT_OFFSET   "0" /* Replace for the real offset */
+#define DEFAULT_LANGUAGE "en"  // Default language used by Xapian::Stem class.
+#define DEFAULT_OFFSET   "0"   // Replace for the real offset.
 
 // Default prefixes
 #define DOCUMENT_ID_TERM_PREFIX     "Q"
