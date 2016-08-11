@@ -1549,7 +1549,11 @@ inline bool MsgPack::empty() const noexcept {
 inline uint64_t MsgPack::as_u64() const {
 	switch (_const_body->_obj->type) {
 		case msgpack::type::NEGATIVE_INTEGER:
-			return _const_body->_obj->via.i64;
+			auto val = _const_body->_obj->via.i64;
+			if (val < 0) {
+				throw msgpack::type_error();
+			}
+			return val;
 		case msgpack::type::POSITIVE_INTEGER:
 			return _const_body->_obj->via.u64;
 		default:
@@ -1563,7 +1567,11 @@ inline int64_t MsgPack::as_i64() const {
 		case msgpack::type::NEGATIVE_INTEGER:
 			return _const_body->_obj->via.i64;
 		case msgpack::type::POSITIVE_INTEGER:
-			return _const_body->_obj->via.u64;
+			auto val = _const_body->_obj->via.u64;
+			if (val > INT64_MAX) {
+				throw msgpack::type_error();
+			}
+			return val;
 		default:
 			throw msgpack::type_error();
 	}
