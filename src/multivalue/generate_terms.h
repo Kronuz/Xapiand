@@ -65,55 +65,115 @@ namespace GenerateTerms {
 
 		// If there is a upper or equal accuracy.
 		if (pos < len) {
-			auto _acc = static_cast<int64_t>(accuracy[pos]);
-			auto aux_start = start - (start % _acc);
-			auto aux_end = end - (end % _acc);
-			size_t num_unions = (aux_end - aux_start) / _acc;
-			std::string prefix_dot;
-			prefix_dot.reserve(acc_prefix[pos].length() + 1);
-			prefix_dot.assign(acc_prefix[pos]).push_back(':');
+			auto up_acc = static_cast<int64_t>(accuracy[pos]);
+			auto up_start = start - (start % up_acc);
+			auto up_end = end - (end % up_acc);
 
-			// Reserve upper bound.
-			result_terms.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+			std::string prefix_dot_up;
+			std::string prefix_dot_low;
+
+			prefix_dot_up.reserve(acc_prefix[pos].length() + 1);
+			prefix_dot_up.assign(acc_prefix[pos]).push_back(':');
 
 			used_prefixes.push_back(acc_prefix[pos]);
 
-			while (aux_start != aux_end) {
-				result_terms.append(prefix_dot).append(to_query_string(aux_start)).append(" OR ");
-				aux_start +=_acc;
-			}
-			result_terms.append(prefix_dot).append(to_query_string(aux_end));
-		}
-
-		// If there is a lower accuracy.
-		if (pos > 0) {
-			--pos;
-			auto _acc = static_cast<int64_t>(accuracy[pos]);
-			start -= start % _acc;
-			end -= end % _acc;
-			size_t num_unions = (end - start) / _acc;
-			// If terms are not too many terms (num_unions + 1).
-			if (num_unions < MAX_TERMS) {
-				std::string prefix_dot, lower_terms;
-				prefix_dot.reserve(acc_prefix[pos].length() + 1);
-				prefix_dot.assign(acc_prefix[pos]).push_back(':');
-				// Reserve upper bound.
-				lower_terms.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
-
+			if (pos > 0) {
+				--pos;
+				auto low_acc = static_cast<int64_t>(accuracy[pos]);
+				auto low_start = start - start % low_acc;
+				auto low_end = end - end % low_acc;
 				used_prefixes.push_back(acc_prefix[pos]);
-
-				while (start != end) {
-					lower_terms.append(prefix_dot).append(to_query_string(start)).append(" OR ");
-					start +=_acc;
-				}
-				lower_terms.append(prefix_dot).append(to_query_string(end));
-
-				if (result_terms.empty()) {
-					result_terms.assign(lower_terms);
+				prefix_dot_low.reserve(acc_prefix[pos].length() + 1);
+				prefix_dot_low.assign(acc_prefix[pos]).push_back(':');
+				if (up_start == up_end) {
+					size_t num_unions = (low_end - low_start) / low_acc;
+					if (num_unions == 0) {
+						result_terms.reserve(get_upper_bound(prefix_dot_low.length(), num_unions, 4));
+						result_terms.append(prefix_dot_low).append(to_query_string(low_start));
+					} else {
+						result_terms.reserve(get_upper_bound(prefix_dot_low.length(), num_unions + 1, 4) + 2);
+						result_terms.append(prefix_dot_up).append(to_query_string(up_start)).append(" AND (");
+						while (low_start != low_end) {
+							result_terms.append(prefix_dot_low).append(to_query_string(low_start)).append(" OR ");
+							low_start += low_acc;
+						}
+						result_terms.append(prefix_dot_low).append(to_query_string(low_end));
+						result_terms.push_back(')');
+					}
 				} else {
-					result_terms.reserve(result_terms.length() + lower_terms.length() + 9);
-					result_terms.insert(result_terms.begin(), '(');
-					result_terms.append(") AND (").append(lower_terms).push_back(')');
+					size_t num_unions1 = (up_end - low_start) / low_acc;
+					if (num_unions1 == 0) {
+						result_terms.reserve(get_upper_bound(prefix_dot_low.length(), num_unions1, 4));
+						result_terms.append(prefix_dot_low).append(to_query_string(low_start));
+					} else {
+						result_terms.reserve(get_upper_bound(prefix_dot_low.length(), num_unions1 + 1, 4) + 2);
+						result_terms.append(prefix_dot_up).append(to_query_string(up_start)).append(" AND (");
+						while (low_start < up_end) {
+							result_terms.append(prefix_dot_low).append(to_query_string(low_start));
+							low_start += low_acc;
+							if (low_start < up_end) {
+								result_terms.append(" OR ");
+							}
+						}
+						result_terms.push_back(')');
+					}
+					size_t num_unions2 = (low_end - low_start) / low_acc;
+					if (num_unions2 == 0) {
+						result_terms.reserve(result_terms.length() + get_upper_bound(prefix_dot_low.length(), num_unions2, 4) + 6);
+						result_terms.insert(result_terms.begin(), '(');
+						result_terms.append(") OR ").append(prefix_dot_low).append(to_query_string(low_end));
+					} else {
+						result_terms.reserve(result_terms.length() + get_upper_bound(prefix_dot_low.length(), num_unions2 + 1, 4) + 10);
+						result_terms.insert(result_terms.begin(), '(');
+						result_terms.append(") OR (");
+						result_terms.append(prefix_dot_up).append(to_query_string(up_end)).append(" AND (");
+						while (low_start != low_end) {
+							result_terms.append(prefix_dot_low).append(to_query_string(low_start)).append(" OR ");
+							low_start += low_acc;
+						}
+						result_terms.append(prefix_dot_low).append(to_query_string(low_end));
+						result_terms.append("))");
+					}
+				}
+			} else {
+				// Reserve upper bound.
+				result_terms.reserve(get_upper_bound(prefix_dot_up.length(), up_start != up_end, 4));
+				if (up_start != up_end) {
+					result_terms.append(prefix_dot_up).append(to_query_string(up_start)).append(" OR ");
+				}
+				result_terms.append(prefix_dot_up).append(to_query_string(up_end));
+			}
+		} else {
+			// If there is a lower accuracy.
+			if (pos > 0) {
+				--pos;
+				auto _acc = static_cast<int64_t>(accuracy[pos]);
+				start -= start % _acc;
+				end -= end % _acc;
+				size_t num_unions = (end - start) / _acc;
+				// If terms are not too many terms (num_unions + 1).
+				if (num_unions < MAX_TERMS) {
+					std::string prefix_dot, lower_terms;
+					prefix_dot.reserve(acc_prefix[pos].length() + 1);
+					prefix_dot.assign(acc_prefix[pos]).push_back(':');
+					// Reserve upper bound.
+					lower_terms.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+
+					used_prefixes.push_back(acc_prefix[pos]);
+
+					while (start != end) {
+						lower_terms.append(prefix_dot).append(to_query_string(start)).append(" OR ");
+						start +=_acc;
+					}
+					lower_terms.append(prefix_dot).append(to_query_string(end));
+
+					if (result_terms.empty()) {
+						result_terms.assign(lower_terms);
+					} else {
+						result_terms.reserve(result_terms.length() + lower_terms.length() + 9);
+						result_terms.insert(result_terms.begin(), '(');
+						result_terms.append(") AND (").append(lower_terms).push_back(')');
+					}
 				}
 			}
 		}
