@@ -317,6 +317,7 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 					if (added_prefixes.insert(field_t.prefix).second) {
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, field_t.prefix) : queryparser.add_prefix(field_name, field_t.prefix);
 					}
+					field.assign(field_name_dot).append(field_value);
 					break;
 				case DATE_TYPE:
 					// Xapian does not allow repeat prefixes.
@@ -351,6 +352,7 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 						auto bfp = new BooleanFieldProcessor(field_t.prefix);
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, bfp->release()) : queryparser.add_prefix(field_name, bfp->release());
 					}
+					field.assign(field_name_dot).append(field_value);
 					break;
 			}
 
