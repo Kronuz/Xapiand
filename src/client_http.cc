@@ -71,11 +71,11 @@ type_t content_type_pair(const std::string& ct_type) {
 }
 
 
-static const auto any_type     = content_type_pair(ANY_TYPE);
-static const auto json_type    = content_type_pair(JSON_TYPE);
-static const auto msgpack_type = content_type_pair(MSGPACK_TYPE);
-static const auto html_type    = content_type_pair(HTML_TYPE);
-static const auto text_type    = content_type_pair(TEXT_TYPE);
+static const auto any_type     = content_type_pair(ANY_CONTENT_TYPE);
+static const auto json_type    = content_type_pair(JSON_CONTENT_TYPE);
+static const auto msgpack_type = content_type_pair(MSGPACK_CONTENT_TYPE);
+static const auto html_type    = content_type_pair(HTML_CONTENT_TYPE);
+static const auto text_type    = content_type_pair(TEXT_CONTENT_TYPE);
 static const auto msgpack_serializers = std::vector<type_t>({json_type, msgpack_type, html_type, text_type});
 
 
@@ -808,7 +808,7 @@ HttpClient::index_document_view(bool gen_id)
 	build_path_index(index_path);
 
 	if (content_type.empty()) {
-		content_type = JSON_TYPE;
+		content_type = JSON_CONTENT_TYPE;
 	}
 
 	operation_begins = std::chrono::system_clock::now();
@@ -1060,11 +1060,11 @@ HttpClient::search_view()
 			operation_ends = std::chrono::system_clock::now();
 
 			auto ct_type_str = document.get_value(DB_SLOT_TYPE);
-			if (ct_type_str == JSON_TYPE || ct_type_str == MSGPACK_TYPE) {
+			if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE) {
 				if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
-					ct_type_str = JSON_TYPE;
+					ct_type_str = JSON_CONTENT_TYPE;
 				} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
-					ct_type_str = MSGPACK_TYPE;
+					ct_type_str = MSGPACK_CONTENT_TYPE;
 				}
 			}
 			auto ct_type = content_type_pair(ct_type_str);

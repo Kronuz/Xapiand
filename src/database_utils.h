@@ -92,12 +92,12 @@
 #define DOCUMENT_DB_MASTER          "M"
 #define DOCUMENT_DB_SLAVE           "S"
 
-#define ANY_TYPE             "*/*"
-#define JSON_TYPE            "application/json"
-#define FORM_URLENCODED_TYPE "application/x-www-form-urlencoded"
-#define MSGPACK_TYPE         "application/x-msgpack"
-#define HTML_TYPE            "text/html"
-#define TEXT_TYPE            "text/plain"
+#define ANY_CONTENT_TYPE             "*/*"
+#define JSON_CONTENT_TYPE            "application/json"
+#define FORM_URLENCODED_CONTENT_TYPE "application/x-www-form-urlencoded"
+#define MSGPACK_CONTENT_TYPE         "application/x-msgpack"
+#define HTML_CONTENT_TYPE            "text/html"
+#define TEXT_CONTENT_TYPE            "text/plain"
 
 #define DATABASE_DATA_HEADER_MAGIC 0x42
 #define DATABASE_DATA_FOOTER_MAGIC 0x2A

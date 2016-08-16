@@ -117,7 +117,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 			try {
 				json_load(rdoc, body);
 				obj = MsgPack(rdoc);
-				ct_type_ = JSON_TYPE;
+				ct_type_ = JSON_CONTENT_TYPE;
 			} catch (const std::exception&) {
 				blob = true;
 			}
@@ -202,7 +202,7 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
 			json_load(rdoc_patch, patches);
 			obj_patch = MsgPack(rdoc_patch);
-			_ct_type = JSON_TYPE;
+			_ct_type = JSON_CONTENT_TYPE;
 			break;
 		case MIMEType::APPLICATION_X_MSGPACK:
 			obj_patch = MsgPack::unserialise(patches);
@@ -744,7 +744,7 @@ DatabaseHandler::get_stats_doc(MsgPack& stats, const std::string& doc_id)
 	stats[RESERVED_DATA] = std::move(obj_data);
 
 	auto ct_type = doc.get_value(DB_SLOT_TYPE);
-	stats["_blob"] = ct_type != JSON_TYPE && ct_type != MSGPACK_TYPE;
+	stats["_blob"] = ct_type != JSON_CONTENT_TYPE && ct_type != MSGPACK_CONTENT_TYPE;
 
 	stats["_number_terms"] = doc.termlist_count();
 

@@ -147,11 +147,11 @@ void clean_reserved(MsgPack& document) {
 
 
 MIMEType get_mimetype(const std::string& type) {
-	if (type == JSON_TYPE) {
+	if (type == JSON_CONTENT_TYPE) {
 		return MIMEType::APPLICATION_JSON;
-	} else if (type == FORM_URLENCODED_TYPE) {
+	} else if (type == FORM_URLENCODED_CONTENT_TYPE) {
 		return MIMEType::APPLICATION_XWWW_FORM_URLENCODED;
-	} else if (type == MSGPACK_TYPE) {
+	} else if (type == MSGPACK_CONTENT_TYPE) {
 		return MIMEType::APPLICATION_X_MSGPACK;
 	} else {
 		return MIMEType::UNKNOW;
