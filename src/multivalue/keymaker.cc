@@ -142,39 +142,39 @@ GeoKey::get_cmpvalue(const std::string& serialise_val) const
 
 
 void
-Multi_MultiValueKeyMaker::add_value(Xapian::valueno slot, bool reverse, char type, const std::string& value, const query_field_t& qf)
+Multi_MultiValueKeyMaker::add_value(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf)
 {
 	if (value.empty()) {
-		if (type != GEO_TYPE) {
-			slots.push_back(std::make_unique<SerialiseKey>(slot, reverse));
+		if (field_spc.type != GEO_TYPE) {
+			slots.push_back(std::make_unique<SerialiseKey>(field_spc.slot, reverse));
 		}
 	} else {
-		switch (type) {
+		switch (field_spc.type) {
 			case FLOAT_TYPE:
-				slots.push_back(std::make_unique<FloatKey>(slot, reverse, value));
+				slots.push_back(std::make_unique<FloatKey>(field_spc.slot, reverse, value));
 				return;
 			case INTEGER_TYPE:
-				slots.push_back(std::make_unique<IntegerKey>(slot, reverse, value));
+				slots.push_back(std::make_unique<IntegerKey>(field_spc.slot, reverse, value));
 				return;
 			case POSITIVE_TYPE:
-				slots.push_back(std::make_unique<PositiveKey>(slot, reverse, value));
+				slots.push_back(std::make_unique<PositiveKey>(field_spc.slot, reverse, value));
 				return;
 			case DATE_TYPE:
-				slots.push_back(std::make_unique<DateKey>(slot, reverse, value));
+				slots.push_back(std::make_unique<DateKey>(field_spc.slot, reverse, value));
 				return;
 			case BOOLEAN_TYPE:
-				slots.push_back(std::make_unique<BoolKey>(slot, reverse, value));
+				slots.push_back(std::make_unique<BoolKey>(field_spc.slot, reverse, value));
 				return;
 			case STRING_TYPE:
 				try {
 					auto func = map_dispatch_str_metric.at(qf.metric);
-					(this->*func)(slot, reverse, value, qf);
+					(this->*func)(field_spc.slot, reverse, value, qf);
 				} catch (const std::out_of_range&) {
-					(this->*def_str_metric)(slot, reverse, value, qf);
+					(this->*def_str_metric)(field_spc.slot, reverse, value, qf);
 				}
 				return;
 			case GEO_TYPE:
-				slots.push_back(std::make_unique<GeoKey>(slot, reverse, value));
+				slots.push_back(std::make_unique<GeoKey>(field_spc, reverse, value));
 				return;
 		}
 	}

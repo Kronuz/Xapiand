@@ -184,9 +184,9 @@ class GeoKey : public BaseKey {
 	std::string get_cmpvalue(const std::string& serialise_val) const override;
 
 public:
-	GeoKey(Xapian::valueno slot, bool reverse, const std::string& value)
-		: BaseKey(slot, reverse),
-		  _centroids(EWKT_Parser::getCentroids(value, true, HTM_MIN_ERROR)) { }
+	GeoKey(const data_field_t& field_spc, bool reverse, const std::string& value)
+		: BaseKey(field_spc.slot, reverse),
+		  _centroids(EWKT_Parser::getCentroids(value, field_spc.partials, field_spc.error)) { }
 };
 
 
@@ -212,7 +212,7 @@ public:
 	}
 
 	virtual std::string operator()(const Xapian::Document& doc) const override;
-	void add_value(Xapian::valueno slot, bool reverse, char type, const std::string& value, const query_field_t& qf);
+	void add_value(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf);
 
 	void levenshtein(Xapian::valueno slot,  bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Levenshtein>>(slot, reverse, value, qf.icase));
