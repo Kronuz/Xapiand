@@ -25,6 +25,7 @@
 #include "length.h"
 #include "msgpack.h"
 #include "rapidjson/document.h"
+#include "serialise.h"
 
 #include <xapian.h>
 
@@ -39,12 +40,9 @@
 #define RESERVED_LANGUAGE    "_language"
 #define RESERVED_SPELLING    "_spelling"
 #define RESERVED_POSITIONS   "_positions"
-#define RESERVED_TEXTS       "_texts"
-#define RESERVED_VALUES      "_values"
-#define RESERVED_TERMS       "_terms"
-#define RESERVED_DATA        "_data"
 #define RESERVED_ACCURACY    "_accuracy"
 #define RESERVED_ACC_PREFIX  "_accuracy_prefix"
+#define RESERVED_ACC_GPREFIX "_accuracy_gprefix"
 #define RESERVED_STORE       "_store"
 #define RESERVED_TYPE        "_type"
 #define RESERVED_ANALYZER    "_analyzer"
@@ -63,6 +61,17 @@
 #define RESERVED_ID          "_id"
 #define RESERVED_SCHEMA      "_schema"
 #define RESERVED_VERSION     "_version"
+// Reserved words used only in the root of the  document.
+#define RESERVED_VALUES         "_values"
+#define RESERVED_FIELD_VALUES   "_field_values"
+#define RESERVED_GLOBAL_VALUES  "_global_values"
+#define RESERVED_TERMS          "_terms"
+#define RESERVED_FIELD_TERMS    "_field_terms"
+#define RESERVED_GLOBAL_TERMS   "_global_terms"
+#define RESERVED_FIELD_ALL      "_field_all"
+#define RESERVED_GLOBAL_ALL     "_global_all"
+#define RESERVED_NONE           "_none"
+#define RESERVED_DATA           "_data"
 // Reserved words used in schema only for geospatial fields.
 #define RESERVED_PARTIALS    "_partials"
 #define RESERVED_ERROR       "_error"
@@ -70,18 +79,26 @@
 #define RESERVED_LATITUDE    "_latitude"
 #define RESERVED_LONGITUDE   "_longitude"
 
+
 #define DB_OFFSPRING_UNION "__"
 #define DB_LANGUAGES       "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
 #define DB_VERSION_SCHEMA  2.0
 
-#define DB_SLOT_RESERVED 10 // Reserved slots by special data
-#define DB_RETRIES        3 // Number of tries to do an operation on a Xapian::Database
+#define DB_SLOT_RESERVED  20 // Reserved slots by special data
+#define DB_RETRIES        3  // Number of tries to do an operation on a Xapian::Database
 
-#define DB_SLOT_ID     0 // Slot ID document
-#define DB_SLOT_OFFSET 1 // Slot offset for data
-#define DB_SLOT_TYPE   2 // Slot type data
-#define DB_SLOT_LENGTH 3 // Slot length data
-#define DB_SLOT_CREF   4 // Slot that saves the references counter
+#define DB_SLOT_ID        0  // Slot ID document
+#define DB_SLOT_OFFSET    1  // Slot offset for data
+#define DB_SLOT_TYPE      2  // Slot type data
+#define DB_SLOT_LENGTH    3  // Slot length data
+#define DB_SLOT_CREF      4  // Slot that saves the references counter
+
+#define DB_SLOT_FLOAT     5  // Slot for saving global float values
+#define DB_SLOT_INTEGER   6  // Slot for saving global integer values
+#define DB_SLOT_POSITIVE  7  // Slot for saving global positive values
+#define DB_SLOT_DATE      8  // Slot for saving global date values
+#define DB_SLOT_GEO       9  // Slot for saving global geo values
+#define DB_SLOT_STRING    10 // Slot for saving global string/text/boolean values.
 
 #define DEFAULT_LANGUAGE "en"  // Default language used by Xapian::Stem class.
 #define DEFAULT_OFFSET   "0"   // Replace for the real offset.
@@ -114,12 +131,17 @@ constexpr int DB_DATA_STORAGE = 0x80; // Enable separate data storage file for t
 
 
 struct data_field_t {
-	unsigned slot;
+	Xapian::valueno slot;
 	std::string prefix;
-	char type;
-	std::vector<double> accuracy;
+	unsigned type;
+	std::vector<uint64_t> accuracy;
 	std::vector<std::string> acc_prefix;
+	std::vector<std::string> acc_gprefix;
 	bool bool_term;
+
+	// For geospatial.
+	bool partials;
+	double error;
 };
 
 
@@ -211,6 +233,30 @@ inline std::string to_query_string(T value) {
 		str[0] = '_';
 	}
 	return str;
+}
+
+
+inline Xapian::valueno get_global_slot(char type) {
+	switch (type) {
+		case FLOAT_TYPE:
+			return DB_SLOT_FLOAT;
+		case INTEGER_TYPE:
+			return DB_SLOT_INTEGER;
+		case POSITIVE_TYPE:
+			return DB_SLOT_POSITIVE;
+		case STRING_TYPE:
+			return DB_SLOT_STRING;
+		case TEXT_TYPE:
+			return DB_SLOT_STRING;
+		case DATE_TYPE:
+			return DB_SLOT_DATE;
+		case GEO_TYPE:
+			return DB_SLOT_GEO;
+		case BOOLEAN_TYPE:
+			return DB_SLOT_STRING;
+		default:
+			throw MSG_ClientError("Type: '%u' is an unknown type", type);
+	}
 }
 
 
