@@ -356,7 +356,7 @@ public:
 	void update_analyzer(const MsgPack& prop_analyzer) {
 		specification.analyzer.clear();
 		for (const auto& _analyzer : prop_analyzer) {
-			specification.analyzer.push_back(static_cast<unsigned>(_analyzer.as_u64()));
+			specification.analyzer.push_back(static_cast<Xapian::TermGenerator::stem_strategy>(_analyzer.as_u64()));
 		}
 	}
 
