@@ -24,7 +24,6 @@
 
 #include "hash/sha256.h"
 #include "length.h"
-#include "log.h"
 #include "utils.h"
 #include "wkt_parser.h"
 
@@ -54,7 +53,7 @@ Serialise::serialise(char field_type, const MsgPack& field_value)
 std::string
 Serialise::serialise(char field_type, const std::string& field_value)
 {
-	if (field_value.empty() && field_type != STRING_TYPE) {
+	if (field_value.empty() && (field_type != STRING_TYPE || field_type != TEXT_TYPE)) {
 		throw MSG_SerialisationError("Field value must be defined");
 	}
 
@@ -70,11 +69,12 @@ Serialise::serialise(char field_type, const std::string& field_value)
 		case BOOLEAN_TYPE:
 			return boolean(field_value);
 		case STRING_TYPE:
+		case TEXT_TYPE:
 			return field_value;
 		case GEO_TYPE:
 			return ewkt(field_value);
 		default:
-			throw MSG_SerialisationError("Type: '%c' is an unknown type", type);
+			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
 	}
 }
 
@@ -82,7 +82,7 @@ Serialise::serialise(char field_type, const std::string& field_value)
 std::string
 Serialise::string(char field_type, const std::string& field_value)
 {
-	if (field_value.empty() && field_type != STRING_TYPE) {
+	if (field_value.empty() && (field_type != STRING_TYPE || field_type != TEXT_TYPE)) {
 		throw MSG_SerialisationError("Field value must be defined");
 	}
 
@@ -92,6 +92,7 @@ Serialise::string(char field_type, const std::string& field_value)
 		case BOOLEAN_TYPE:
 			return boolean(field_value);
 		case STRING_TYPE:
+		case TEXT_TYPE:
 			return field_value;
 		case GEO_TYPE:
 			return ewkt(field_value);
@@ -193,7 +194,7 @@ Serialise::serialise(const std::string& field_value)
 		return std::make_pair(GEO_TYPE, ewkt(field_value));
 	} catch (const EWKTError&) { }
 
-	// Default type: String
+	// Default type.
 	return std::make_pair(STRING_TYPE, field_value);
 }
 
@@ -274,16 +275,33 @@ Serialise::positive(const std::string& field_value)
 std::string
 Serialise::ewkt(const std::string& field_value)
 {
-	std::string result;
-
-	EWKT_Parser ewkt(field_value, false, HTM_MIN_ERROR);
-
+	EWKT_Parser ewkt(field_value, GEO_DEF_PARTIALS, GEO_DEF_ERROR);
 	if (ewkt.trixels.empty()) {
 		return std::string();
 	}
 
+	std::string result;
+	result.reserve(MAX_SIZE_NAME * ewkt.trixels.size());
 	for (const auto& trixel : ewkt.trixels) {
-		result += trixel;
+		result.append(trixel);
+	}
+
+	SHA256 sha256;
+	return sha256(result);
+}
+
+
+std::string
+Serialise::trixels(const std::vector<std::string>& trixels)
+{
+	if (trixels.empty()) {
+		return std::string();
+	}
+
+	std::string result;
+	result.reserve(MAX_SIZE_NAME * trixels.size());
+	for (const auto& trixel : trixels) {
+		result.append(trixel);
 	}
 
 	SHA256 sha256;
@@ -361,6 +379,7 @@ Serialise::type(char type)
 {
 	switch (type) {
 		case STRING_TYPE:   return STRING_STR;
+		case TEXT_TYPE:     return TEXT_STR;
 		case FLOAT_TYPE:    return FLOAT_STR;
 		case INTEGER_TYPE:  return INTEGER_STR;
 		case POSITIVE_TYPE: return POSITIVE_STR;
@@ -397,6 +416,7 @@ Unserialise::MsgPack(char field_type, const std::string& serialise_val)
 			result = boolean(serialise_val);
 			break;
 		case STRING_TYPE:
+		case TEXT_TYPE:
 			result = serialise_val;
 			break;
 		case GEO_TYPE:
@@ -425,6 +445,7 @@ Unserialise::unserialise(char field_type, const std::string& serialise_val)
 		case BOOLEAN_TYPE:
 			return std::string(boolean(serialise_val) ? "true" : "false");
 		case STRING_TYPE:
+		case TEXT_TYPE:
 			return serialise_val;
 		case GEO_TYPE:
 			return ewkt(serialise_val);
@@ -520,44 +541,49 @@ Unserialise::ewkt(const std::string& serialise_ewkt)
 }
 
 
-std::string
+char
 Unserialise::type(const std::string& str_type)
 {
 	const char *value = str_type.c_str();
 	switch (toupper(value[0])) {
 		case FLOAT_TYPE:
 			if (value[1] == '\0' || strcasecmp(value, FLOAT_STR) == 0) {
-				return std::string(1, FLOAT_TYPE);
+				return FLOAT_TYPE;
 			}
 			break;
 		case INTEGER_TYPE:
 			if (value[1] == '\0' || strcasecmp(value, INTEGER_STR) == 0) {
-				return std::string(1, INTEGER_TYPE);
+				return INTEGER_TYPE;
 			}
 			break;
 		case POSITIVE_TYPE:
 			if (value[1] == '\0' || strcasecmp(value, POSITIVE_STR) == 0) {
-				return std::string(1, POSITIVE_TYPE);
+				return POSITIVE_TYPE;
 			}
 			break;
 		case GEO_TYPE:
 			if (value[1] == '\0' || strcasecmp(value, GEO_STR) == 0) {
-				return std::string(1, GEO_TYPE);
+				return GEO_TYPE;
 			}
 			break;
 		case STRING_TYPE:
 			if (value[1] == '\0' || strcasecmp(value, STRING_STR) == 0) {
-				return std::string(1, STRING_TYPE);
+				return STRING_TYPE;
+			}
+			break;
+		case TEXT_TYPE:
+			if (value[1] == '\0' || strcasecmp(value, TEXT_STR) == 0) {
+				return TEXT_TYPE;
 			}
 			break;
 		case BOOLEAN_TYPE:
 			if (value[1] == '\0' || strcasecmp(value, BOOLEAN_STR) == 0) {
-				return std::string(1, BOOLEAN_TYPE);
+				return BOOLEAN_TYPE;
 			}
 			break;
 		case DATE_TYPE:
 			if (value[1] == '\0' || strcasecmp(value, DATE_STR) == 0) {
-				return std::string(1, DATE_TYPE);
+				return DATE_TYPE;
 			}
 			break;
 		default:

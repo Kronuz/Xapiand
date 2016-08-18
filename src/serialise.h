@@ -22,14 +22,12 @@
 
 #pragma once
 
-
 #include "datetime.h"
-#include "htm.h"
+#include "hash/endian.h"
 #include "msgpack.h"
 #include "sortable_serialise.h"
 #include "stl_serialise.h"
-
-#include "hash/endian.h"
+#include "wkt_parser.h"
 
 
 // Data types
@@ -37,9 +35,11 @@
 #define INTEGER_TYPE  'I'
 #define POSITIVE_TYPE 'P'
 #define STRING_TYPE   'S'
+#define TEXT_TYPE     'T'
 #define DATE_TYPE     'D'
 #define GEO_TYPE      'G'
 #define BOOLEAN_TYPE  'B'
+#define UUID_TYPE     'U'
 #define ARRAY_TYPE    'A'
 #define OBJECT_TYPE   'O'
 #define NO_TYPE       ' '
@@ -49,9 +49,11 @@
 #define INTEGER_STR  "integer"
 #define POSITIVE_STR "positive"
 #define STRING_STR   "string"
+#define TEXT_STR     "text"
 #define DATE_STR     "date"
 #define GEO_STR      "geospatial"
 #define BOOLEAN_STR  "boolean"
+#define UUID_STR     "uuid"
 #define ARRAY_STR    "array"
 #define OBJECT_STR   "object"
 
@@ -78,14 +80,18 @@
 
 
 constexpr uint32_t SIZE_SERIALISE_CARTESIAN = 12;
-constexpr uint32_t DOUBLE2INT = 1000000000;
-constexpr uint32_t MAXDOU2INT =  999999999;
+constexpr uint32_t DOUBLE2INT               = 1000000000;
+constexpr uint32_t MAXDOU2INT               =  999999999;
+
+constexpr bool   GEO_DEF_PARTIALS = true;
+constexpr double GEO_DEF_ERROR    = HTM_MIN_ERROR;
 
 
 namespace Serialise {
 	/*
 	 * Serialise field_value according to field_type.
 	 */
+
 	std::string serialise(char field_type, const MsgPack& field_value);
 	std::string serialise(char field_type, const std::string& field_value);
 	std::string string(char field_type, const std::string& field_value);
@@ -134,6 +140,9 @@ namespace Serialise {
 
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value);
+
+	// Serialise a vector of trixel's id (HTM).
+	std::string trixels(const std::vector<std::string>& trixels);
 
 	// Serialise a geo specification.
 	std::string geo(const RangeList& ranges, const CartesianUSet& centroids);
@@ -204,5 +213,5 @@ namespace Unserialise {
 	std::pair<std::string, std::string> geo(const std::string& serialise_ewkt);
 
 	// Unserialise str_type to its char representation.
-	std::string type(const std::string& str_type);
+	char type(const std::string& str_type);
 };
