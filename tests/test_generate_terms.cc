@@ -34,7 +34,7 @@ const testQuery_t numeric[] {
 	// Find lower and upper accuracy, upper accuracy generates only one term.
 	{
 		"1200", "2500", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"(N5:0) AND (N4:1000 OR N4:2000)", { "N5", "N4" }
+		"N5:0 AND (N4:1000 OR N4:2000)", { "N5", "N4" }
 	},
 	// Do not find a Lower accuracy.
 	{
@@ -44,7 +44,7 @@ const testQuery_t numeric[] {
 	// Find lower and upper accuracy, upper accuracy generates two terms.
 	{
 		"10200.100", "100200.200", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"(N6:0 OR N6:100000) AND (N5:10000 OR N5:20000 OR N5:30000 OR N5:40000 OR N5:50000 OR N5:60000 OR N5:70000 OR N5:80000 OR N5:90000 OR N5:100000)",
+		"(N6:0 AND (N5:10000 OR N5:20000 OR N5:30000 OR N5:40000 OR N5:50000 OR N5:60000 OR N5:70000 OR N5:80000 OR N5:90000)) OR N5:100000",
 		{ "N6", "N5" }
 	},
 	// Do not find a upper accuracy.
@@ -288,6 +288,7 @@ const testQuery_t date[] {
 
 
 const testQueryG_t geo[] {
+	// partials: true, error = 0.2.
 	{
 		{
 			// POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))
@@ -305,13 +306,13 @@ const testQueryG_t geo[] {
 			{ 15637254370230272, 15638353881858047 },
 			{ 15638628759764992, 15638697479241727 },
 			{ 15638766198718464, 15638903637671935 }
-		}, { 0.2, 1, 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" }, "G1:13", { "G1" }
+		}, { 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" }, "G1:13", { "G1" }
 	},
 	{
 		{
 			// "POINT (48.574789910928864 -103.53515625)"
 			{ 15629289656149997, 15629289656149997 }
-		}, { 0.2, 1, 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" }, "G6:15629289656149997", { "G6" }
+		}, { 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" }, "G6:15629289656149997", { "G6" }
 	},
 	{
 		{
@@ -332,17 +333,17 @@ const testQueryG_t geo[] {
 			{ 17451448774164480, 17451448782553087 },
 			{ 17451448786747392, 17451448795135999 },
 			{ 17451448799330304, 17451448811913215 }
-		}, { 0.2, 1, 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" }, "G3:8388608 OR G3:12058624 OR G3:12582912 OR G3:16252928", { "G3" }
+		}, { 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" }, "G3:8388608 OR G3:12058624 OR G3:12582912 OR G3:16252928", { "G3" }
 	},
 	// There are not ranges.
 	{
-		{ }, { 0.2, 1, 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" }, "", { }
+		{ }, { 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" }, "", { }
 	},
 	// There are not accuracy
 	{
 		{
 			{ 15629289656149997, 15629289656149997 }
-		}, { 0.2, 1 }, { }, "", { }
+		}, { }, { }, "", { }
 	}
 };
 
@@ -353,15 +354,26 @@ int numeric_test() {
 		const auto p = numeric[pos];
 		std::pair<std::string, std::vector<std::string>> result;
 
-		// try to convert string to numeric.
+		// try to convert string to uint64_t.
 		try {
-			auto val_s = strict(std::stod, p.start);
-			auto val_e = strict(std::stod, p.end);
+			auto val_s = strict(std::stoull, p.start);
+			auto val_e = strict(std::stoull, p.end);
 			result = GenerateTerms::numeric(val_s, val_e, p.accuracy, p.acc_prefix);
-		} catch (const std::exception&) {
-			L_ERR(nullptr, "ERROR: %s or %s are not numeric", p.start.c_str(), p.end.c_str());
-			RETURN(1);
-		}
+		} catch (const std::exception&) { }
+
+		// try to convert string to int64_t
+		try {
+			auto val_s = strict(std::stoll, p.start);
+			auto val_e = strict(std::stoll, p.end);
+			result = GenerateTerms::numeric(val_s, val_e, p.accuracy, p.acc_prefix);
+		} catch (const std::exception&) { }
+
+		// try to convert string to double
+		try {
+			auto val_s = (int64_t)strict(std::stod, p.start);
+			auto val_e = (int64_t)strict(std::stod, p.end);
+			result = GenerateTerms::numeric(val_s, val_e, p.accuracy, p.acc_prefix);
+		} catch (const std::exception&) { }
 
 		if (result.first.compare(p.expected_terms) == 0) {
 			if (result.second.size() != p.expected_prefixes.size()) {

@@ -28,7 +28,7 @@
 struct testQuery_t {
 	std::string start;
 	std::string end;
-	std::vector<double> accuracy;
+	std::vector<uint64_t> accuracy;
 	std::vector<std::string> acc_prefix;
 	std::string expected_terms;
 	std::vector<std::string> expected_prefixes;
@@ -37,7 +37,7 @@ struct testQuery_t {
 
 struct testQueryG_t {
 	std::vector<range_t> ranges;
-	std::vector<double> accuracy;
+	std::vector<uint64_t> accuracy;
 	std::vector<std::string> acc_prefix;
 	std::string expected_terms;
 	std::vector<std::string> expected_prefixes;
