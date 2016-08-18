@@ -30,24 +30,17 @@
 #include "geospatialrange.h"
 
 
-template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::decay_t<T>>::value>>
-Xapian::Query filterNumericQuery(const data_field_t& field_data, T start, T end) {
-	if (start > end) {
-		return Xapian::Query::MatchNothing;
-	}
+template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
+Xapian::Query filterNumericQuery(const data_field_t& field_spc, T start, T end, const std::string& start_s, const std::string& end_s) {
+	auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
 
-	auto start_s = Serialise::_float(start);
-	auto end_s = Serialise::_float(end);
-
-	auto mvr = new MultipleValueRange(field_data.slot, start_s, end_s);
-
-	auto filter_terms = GenerateTerms::numeric(start, end, field_data.accuracy, field_data.acc_prefix);
+	auto filter_terms = GenerateTerms::numeric(start, end, field_spc.accuracy, field_spc.acc_prefix);
 	if (filter_terms.first.empty()) {
 		return Xapian::Query(mvr->release());
 	} else {
 		Xapian::QueryParser queryparser;
 		for (const auto& prefix : filter_terms.second) {
-			auto nfp = new NumericFieldProcessor(field_data.type, prefix);
+			auto nfp = new NumericFieldProcessor(field_spc.type, prefix);
 			queryparser.add_prefix(prefix, nfp->release());
 		}
 		return Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_terms.first), Xapian::Query(mvr->release()));
@@ -64,7 +57,7 @@ MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string&
 
 // Receive start and end, they are not serialized.
 Xapian::Query
-MultipleValueRange::getQuery(const data_field_t& field_data, const std::string& field_name, std::string start, std::string end)
+MultipleValueRange::getQuery(const data_field_t& field_spc, const std::string& field_name, const std::string& start, const std::string& end)
 {
 	try {
 		if (start.empty()) {
@@ -72,16 +65,16 @@ MultipleValueRange::getQuery(const data_field_t& field_data, const std::string& 
 				return Xapian::Query::MatchAll;
 			}
 
-			if (field_data.type == GEO_TYPE) {
-				auto geo = EWKT_Parser::getGeoSpatial(end, field_data.accuracy[0], field_data.accuracy[1]);
+			if (field_spc.type == GEO_TYPE) {
+				auto geo = EWKT_Parser::getGeoSpatial(end, field_spc.accuracy[0], field_spc.accuracy[1]);
 
 				if (geo.ranges.empty()) {
 					return Xapian::Query::MatchNothing;
 				}
 
-				auto GeoQuery = GeoSpatialRange::getQuery(field_data.slot, geo.ranges, geo.centroids);
+				auto GeoQuery = GeoSpatialRange::getQuery(field_spc.slot, geo.ranges, geo.centroids);
 
-				auto filter_term = GenerateTerms::geo(geo.ranges, field_data.accuracy, field_data.acc_prefix);
+				auto filter_term = GenerateTerms::geo(geo.ranges, field_spc.accuracy, field_spc.acc_prefix);
 				if (filter_term.first.empty()) {
 					return GeoQuery;
 				} else {
@@ -93,31 +86,49 @@ MultipleValueRange::getQuery(const data_field_t& field_data, const std::string& 
 					return Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term.first), GeoQuery);
 				}
 			} else {
-				auto mvle = new MultipleValueLE(field_data.slot, Serialise::serialise(field_data.type, end));
+				auto mvle = new MultipleValueLE(field_spc.slot, Serialise::serialise(field_spc.type, end));
 				return Xapian::Query(mvle->release());
 			}
 		} else if (end.empty()) {
-			if (field_data.type == GEO_TYPE) {
+			if (field_spc.type == GEO_TYPE) {
 				throw MSG_SerialisationError("The format for Geo Spatial range is: field_name:\"..EWKT\"");
 			}
 
-			auto mvge = new MultipleValueGE(field_data.slot, Serialise::serialise(field_data.type, start));
+			auto mvge = new MultipleValueGE(field_spc.slot, Serialise::serialise(field_spc.type, start));
 			return Xapian::Query(mvge->release());
 		}
 
-		switch (field_data.type) {
-			case FLOAT_TYPE:
-				return filterNumericQuery(field_data, strict(std::stod, start), strict(std::stod, end));
-			case INTEGER_TYPE:
-				return filterNumericQuery(field_data, strict(std::stoll, start), strict(std::stoll, end));
-			case POSITIVE_TYPE:
-				return filterNumericQuery(field_data, strict(std::stoull, start), strict(std::stoull, end));
+		switch (field_spc.type) {
+			case FLOAT_TYPE: {
+				auto start_v = strict(std::stod, start);
+				auto end_v   = strict(std::stod, end);
+				if (start_v > end_v) {
+					return Xapian::Query::MatchNothing;
+				}
+				return filterNumericQuery(field_spc, (int64_t)start_v, (int64_t)end_v, Serialise::_float(start_v), Serialise::_float(end_v));
+			}
+			case INTEGER_TYPE: {
+				auto start_v = strict(std::stoll, start);
+				auto end_v   = strict(std::stoll, end);
+				if (start_v > end_v) {
+					return Xapian::Query::MatchNothing;
+				}
+				return filterNumericQuery(field_spc, start_v, end_v, Serialise::integer(start_v), Serialise::integer(end_v));
+			}
+			case POSITIVE_TYPE: {
+				auto start_v = strict(std::stoull, start);
+				auto end_v   = strict(std::stoull, end);
+				if (start_v > end_v) {
+					return Xapian::Query::MatchNothing;
+				}
+				return filterNumericQuery(field_spc, start_v, end_v, Serialise::positive(start_v), Serialise::positive(end_v));
+			}
 			case STRING_TYPE: {
 				if (start > end) {
 					return Xapian::Query::MatchNothing;
 				}
 
-				auto mvr = new MultipleValueRange(field_data.slot, start, end);
+				auto mvr = new MultipleValueRange(field_spc.slot, start, end);
 				return Xapian::Query(mvr->release());
 			}
 			case DATE_TYPE: {
@@ -131,9 +142,9 @@ MultipleValueRange::getQuery(const data_field_t& field_data, const std::string& 
 				auto start_s = Serialise::timestamp(timestamp_s);
 				auto end_s   = Serialise::timestamp(timestamp_e);
 
-				auto mvr = new MultipleValueRange(field_data.slot, start_s, end_s);
+				auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
 
-				auto filter_terms = GenerateTerms::date(timestamp_s, timestamp_e, field_data.accuracy, field_data.acc_prefix);
+				auto filter_terms = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
 				if (filter_terms.first.empty()) {
 					return Xapian::Query(mvr->release());
 				} else {
@@ -152,7 +163,7 @@ MultipleValueRange::getQuery(const data_field_t& field_data, const std::string& 
 		}
 	} catch (const Exception& exc) {
 		throw MSG_QueryParserError("Failed to serialize: %s:%s..%s like %s (%s)", field_name.c_str(), start.c_str(), end.c_str(),
-			Serialise::type(field_data.type).c_str(), exc.what());
+			Serialise::type(field_spc.type).c_str(), exc.what());
 	}
 }
 

@@ -59,7 +59,7 @@ public:
 	std::string get_description() const override;
 
 	// Call this function for create a new Query based in ranges.
-	static Xapian::Query getQuery(const data_field_t& field_data, const std::string& field_name, std::string start, std::string end);
+	static Xapian::Query getQuery(const data_field_t& field_spc, const std::string& field_name, const std::string& start, const std::string& end);
 };
 
 
