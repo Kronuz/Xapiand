@@ -131,25 +131,65 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 	}
 
 	L_INDEX(this, "Document to index: %s", body.c_str());
+
 	Xapian::Document doc;
+	Xapian::docid did;
 	std::string term_id;
 
-	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+	if (endpoints.size() > 1) {
+		std::shared_ptr<const MsgPack> fvd;
+		size_t offset = 0;
+		for (auto& e : endpoints) {
+			fvd = XapiandManager::manager->database_pool.get_schema(e, flags);	/* Get the first valid schema */
+			if (fvd->is_null()) {
+				++offset;
+				continue;
+			} else {
+				auto endpoint = endpoints.begin();
+				std::advance(endpoint, offset);
+				for (; endpoint != endpoints.end(); endpoint++) {
+					auto sch = XapiandManager::manager->database_pool.get_schema(*endpoint, flags);
+					if (!sch->is_null() && *sch != *fvd) {
+						throw MSG_ClientError("Cannot index in several indexes with different schema");
+					}
+				}
+				break;
+			}
+		}
+		schema = std::make_shared<Schema>(fvd);
 
-	_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
+		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
 
-	set_data(doc, obj.serialise(), blob ? body : "");
-	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
+		set_data(doc, obj.serialise(), blob ? body : "");
+		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
-	checkout();
-	auto did = database->replace_document_term(term_id, doc, commit_);
-	checkin();
+		auto _endpoints = endpoints;
+		for (auto& e: _endpoints) {
+			endpoints.clear();
+			endpoints.add(e);
+			checkout();
+			did = database->replace_document_term(term_id, doc, commit_);
+			checkin();
+		}
+		endpoints = _endpoints;
+		update_schemas();
 
-	update_schema();
+	} else {
+		schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+
+		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
+
+		set_data(doc, obj.serialise(), blob ? body : "");
+		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
+
+		checkout();
+		did = database->replace_document_term(term_id, doc, commit_);
+		checkin();
+		update_schema();
+	}
 
 	return did;
 }
-
 
 Xapian::docid
 DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)

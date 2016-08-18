@@ -106,7 +106,7 @@ class HttpClient : public BaseClient {
 	size_t body_size;
 	int body_descriptor;
 	char body_path[PATH_MAX];
-	std::string index_path;
+	std::vector<std::string> index_paths;
 
 	std::string content_type;
 	std::string content_length;

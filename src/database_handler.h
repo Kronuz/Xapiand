@@ -111,6 +111,15 @@ public:
 		}
 	}
 
+	void update_schemas() {
+		auto mod_schema = schema->get_modified_schema();
+		if (mod_schema) {
+			for (auto& e: endpoints) {
+				XapiandManager::manager->database_pool.set_schema(e, flags, mod_schema);
+			}
+		}
+	}
+
 	Xapian::Document get_document(const std::string& doc_id);
 	Xapian::docid get_docid(const std::string& doc_id);
 

@@ -805,7 +805,9 @@ HttpClient::index_document_view(bool gen_id)
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
 
-	build_path_index(index_path);
+	for (auto& index : index_paths) {
+		build_path_index(index);
+	}
 
 	if (content_type.empty()) {
 		content_type = JSON_CONTENT_TYPE;
@@ -1304,11 +1306,14 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		}
 	}
 
+	std::string index_path;
 	if (!ns.empty()) {
 		index_path = ns + "/" + path;
 	} else {
 		index_path = path;
 	}
+
+	index_paths.push_back(index_path);
 
 	std::string node_name;
 	std::vector<Endpoint> asked_nodes;
