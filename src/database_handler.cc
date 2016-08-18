@@ -643,7 +643,7 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVecto
 			}
 			auto field_t = schema->get_slot_field(field);
 			if (field_t.type != NO_TYPE) {
-				sorter->add_value(field_t.slot, descending, field_t.type, value, e);
+				sorter->add_value(field_t, descending, value, e);
 			}
 		}
 	}
