@@ -824,8 +824,8 @@ HttpClient::index_document_view(bool gen_id)
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
-		++stats_cnt.index.min[b_time.minute];
-		++stats_cnt.index.sec[b_time.second];
+		stats_cnt.index.min[b_time.minute]+=endpoints.size();
+		stats_cnt.index.sec[b_time.second]+=endpoints.size();
 		stats_cnt.index.tm_min[b_time.minute] += _time;
 		stats_cnt.index.tm_sec[b_time.second] += _time;
 	}
