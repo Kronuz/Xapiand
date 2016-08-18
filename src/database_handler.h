@@ -54,12 +54,28 @@ public:
 	DatabaseHandler(const Endpoints &endpoints_, int flags_=0);
 	~DatabaseHandler();
 
-	std::shared_ptr<Database> get_database() {
+	std::shared_ptr<Database> get_database() const {
 		return database;
 	}
 
-	std::shared_ptr<Schema> get_schema() {
+	std::shared_ptr<Schema> get_schema() const {
 		return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+	}
+
+	std::shared_ptr<Schema> get_fvschema() const {
+		std::shared_ptr<const MsgPack> fvs, fvs_aux;
+		for (const auto& e : endpoints) {
+			fvs_aux = XapiandManager::manager->database_pool.get_schema(e, flags);	/* Get the first valid schema */
+			if (fvs_aux->is_null()) {
+				continue;
+			}
+			if (fvs == nullptr) {
+				fvs = fvs_aux;
+			} else if (fvs != fvs_aux) {
+				throw MSG_ClientError("Cannot index in several indexes with different schemas");
+			}
+		}
+		return std::make_shared<Schema>(fvs ? fvs : fvs_aux);
 	}
 
 	void checkout() {
@@ -104,17 +120,17 @@ public:
 		return doc;
 	}
 
-	void update_schema() {
+	void update_schema() const {
 		auto mod_schema = schema->get_modified_schema();
 		if (mod_schema) {
 			XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, mod_schema);
 		}
 	}
 
-	void update_schemas() {
+	void update_schemas() const {
 		auto mod_schema = schema->get_modified_schema();
 		if (mod_schema) {
-			for (auto& e: endpoints) {
+			for (const auto& e: endpoints) {
 				XapiandManager::manager->database_pool.set_schema(e, flags, mod_schema);
 			}
 		}

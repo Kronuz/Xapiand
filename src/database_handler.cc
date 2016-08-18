@@ -136,46 +136,8 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 	Xapian::docid did;
 	std::string term_id;
 
-	if (endpoints.size() > 1) {
-		std::shared_ptr<const MsgPack> fvd;
-		size_t offset = 0;
-		for (auto& e : endpoints) {
-			fvd = XapiandManager::manager->database_pool.get_schema(e, flags);	/* Get the first valid schema */
-			if (fvd->is_null()) {
-				++offset;
-				continue;
-			} else {
-				auto endpoint = endpoints.begin();
-				std::advance(endpoint, offset);
-				for (; endpoint != endpoints.end(); endpoint++) {
-					auto sch = XapiandManager::manager->database_pool.get_schema(*endpoint, flags);
-					if (!sch->is_null() && *sch != *fvd) {
-						throw MSG_ClientError("Cannot index in several indexes with different schema");
-					}
-				}
-				break;
-			}
-		}
-		schema = std::make_shared<Schema>(fvd);
-
-		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
-
-		set_data(doc, obj.serialise(), blob ? body : "");
-		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
-
-		auto _endpoints = endpoints;
-		for (auto& e: _endpoints) {
-			endpoints.clear();
-			endpoints.add(e);
-			checkout();
-			did = database->replace_document_term(term_id, doc, commit_);
-			checkin();
-		}
-		endpoints = _endpoints;
-		update_schemas();
-
-	} else {
-		schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+	if (endpoints.size() == 1) {
+		schema = get_schema();
 
 		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
 
@@ -186,10 +148,29 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 		did = database->replace_document_term(term_id, doc, commit_);
 		checkin();
 		update_schema();
+	} else {
+		schema = get_fvschema();
+
+		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
+
+		set_data(doc, obj.serialise(), blob ? body : "");
+		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
+
+		const auto _endpoints = endpoints;
+		for (const auto& e : _endpoints) {
+			endpoints.clear();
+			endpoints.add(e);
+			checkout();
+			did = database->replace_document_term(term_id, doc, commit_);
+			checkin();
+		}
+		endpoints = std::move(_endpoints);
+		update_schemas();
 	}
 
 	return did;
 }
+
 
 Xapian::docid
 DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
