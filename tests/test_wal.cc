@@ -101,7 +101,7 @@ int create_db_wal(DB_Test& db_wal) {
 	int num_documents = 1020;
 	std::string document("{ \"message\" : \"Hello world\"}");
 
-	db_wal.db_handler.index(document, std::to_string(1), true, JSON_TYPE, std::to_string(document.size()));
+	db_wal.db_handler.index(document, std::to_string(1), true, JSON_CONTENT_TYPE, std::to_string(document.size()));
 
 	if (copy_file(test_db.c_str(), restored_db.c_str()) == -1) {
 		L_ERR(nullptr, "ERROR: Could not copy the dir %s to dir %s\n", test_db.c_str(), restored_db.c_str());
@@ -109,7 +109,7 @@ int create_db_wal(DB_Test& db_wal) {
 	}
 
 	for (int i = 2; i <= num_documents; ++i) {
-		db_wal.db_handler.index(document, std::to_string(i), true, JSON_TYPE, std::to_string(document.size()));
+		db_wal.db_handler.index(document, std::to_string(i), true, JSON_CONTENT_TYPE, std::to_string(document.size()));
 	}
 
 	if (copy_file(test_db.c_str(), restored_db.c_str(), true, std::string("wal.0")) == -1) {
