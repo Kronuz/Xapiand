@@ -28,7 +28,6 @@
 #include "lru.h"
 #include "queue.h"
 #include "threadpool.h"
-#include "schema.h"
 #include "storage.h"
 #include "atomic_shared_ptr.h"
 
@@ -46,9 +45,6 @@
 
 
 #define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))
-
-
-constexpr size_t START_POS = SIZE_BITS_ID - 4;
 
 
 using namespace std::chrono;
