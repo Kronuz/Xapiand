@@ -541,7 +541,9 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 	std::vector<std::string> prefixes;
 	prefixes.reserve(similar.type.size() + similar.field.size());
 	for (const auto& sim_type : similar.type) {
-		prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + Unserialise::type(sim_type));
+		std::string prefix(DOCUMENT_CUSTOM_TERM_PREFIX);
+		prefix.push_back(Unserialise::type(sim_type));
+		prefixes.push_back(std::move(prefix));
 	}
 
 	for (const auto& sim_field : similar.field) {
