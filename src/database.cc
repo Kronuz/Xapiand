@@ -942,11 +942,11 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 			modified = true;
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			if (!t) throw MSG_Error("Database %s was modified, try again (%s)", endpoints.as_string().c_str(), exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
+			throw MSG_Error("Database %s error %s", endpoints.as_string().c_str(), exc.get_msg().c_str());
 		}
 		reopen();
 	}
