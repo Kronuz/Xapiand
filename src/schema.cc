@@ -1516,8 +1516,6 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Ms
 
 			if (offsprings) {
 				set_type_to_object();
-			} else if (specification.store) {
-				*data = (*data)[RESERVED_VALUE];
 			}
 			break;
 		}
@@ -1609,8 +1607,6 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 
 	if (offsprings) {
 		set_type_to_object();
-	} else {
-		data = data[RESERVED_VALUE];
 	}
 
 	specification = std::move(spc_start);
@@ -1909,7 +1905,31 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 
 		if (specification.store) {
 			// Add value to data.
-			data[RESERVED_VALUE] = values;
+			auto& data_value = data[RESERVED_VALUE];
+			switch (data_value.type()) {
+				case msgpack::type::NIL:
+					data_value = values;
+					break;
+				case msgpack::type::ARRAY:
+					if (values.is_array()) {
+						for (const auto& value : values) {
+							data_value.push_back(value);
+						}
+					} else {
+						data_value.push_back(values);
+					}
+					break;
+				default:
+					if (values.is_array()) {
+						data_value = MsgPack({ data_value,  });
+						for (const auto& value : values) {
+							data_value.push_back(value);
+						}
+					} else {
+						data_value = MsgPack({ data_value, values });
+					}
+					break;
+			}
 		}
 	} catch (const DummyException&) { }
 }
