@@ -634,12 +634,14 @@ Schema::set_type_to_array()
 {
 	L_CALL(this, "Schema::set_type_to_array()");
 
-	try {
-		auto& _type = get_mutable(specification.full_name).at(RESERVED_TYPE).at(1);
-		if (_type.as_u64() == NO_TYPE) {
-			_type = ARRAY_TYPE;
-		}
-	} catch (const std::out_of_range&) { }
+	auto& _types = get_mutable(specification.full_name)[RESERVED_TYPE];
+	if (_types.is_null()) {
+		_types = MsgPack({ NO_TYPE, ARRAY_TYPE, NO_TYPE });
+		specification.sep_types[1] = ARRAY_TYPE;
+	} else {
+		_types[1] = ARRAY_TYPE;
+		specification.sep_types[1] = ARRAY_TYPE;
+	}
 }
 
 
@@ -648,12 +650,14 @@ Schema::set_type_to_object()
 {
 	L_CALL(this, "Schema::set_type_to_object()");
 
-	try {
-		auto& _type = get_mutable(specification.full_name).at(RESERVED_TYPE).at(0);
-		if (_type.as_u64() == NO_TYPE) {
-			_type = OBJECT_TYPE;
-		}
-	} catch (const std::out_of_range&) { }
+	auto& _types = get_mutable(specification.full_name)[RESERVED_TYPE];
+	if (_types.is_null()) {
+		_types = MsgPack({ OBJECT_TYPE, NO_TYPE, NO_TYPE });
+		specification.sep_types[0] = OBJECT_TYPE;
+	} else {
+		_types[0] = OBJECT_TYPE;
+		specification.sep_types[0] = OBJECT_TYPE;
+	}
 }
 
 
@@ -1514,13 +1518,15 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Ms
 				task.get();
 			}
 
-			if (offsprings) {
+			if unlikely(offsprings && specification.sep_types[0] == NO_TYPE) {
 				set_type_to_object();
 			}
 			break;
 		}
 		case msgpack::type::ARRAY:
-			set_type_to_array();
+			if unlikely(specification.sep_types[1] == NO_TYPE) {
+				set_type_to_array();
+			}
 			index_array(*properties, object, *data, doc);
 			break;
 		default:
@@ -1605,7 +1611,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 		++pos;
 	}
 
-	if (offsprings) {
+	if unlikely(offsprings && specification.sep_types[0] == NO_TYPE) {
 		set_type_to_object();
 	}
 
@@ -1739,7 +1745,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				case typeIndex::FIELD_TERMS:
 				case typeIndex::GLOBAL_TERMS: {
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_global_term(doc, Serialise::serialise(specification.sep_types[2], value), pos++);
@@ -1754,7 +1762,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				case typeIndex::GLOBAL_VALUES: {
 					StringSet& s_g = map_values[get_global_slot(specification.sep_types[2])];
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_value(doc, value, s_g, specification.acc_gprefix, pos++);
@@ -1769,7 +1779,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				case typeIndex::GLOBAL_ALL: {
 					StringSet& s_g = map_values[get_global_slot(specification.sep_types[2])];
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_value(doc, value, s_g, specification.acc_gprefix, pos++, &Schema::index_global_term);
@@ -1786,7 +1798,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					return;
 				case typeIndex::TERMS: {
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_all_term(doc, Serialise::serialise(specification.sep_types[2], value), pos++);
@@ -1798,7 +1812,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				}
 				case typeIndex::FIELD_TERMS: {
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_field_term(doc, Serialise::serialise(specification.sep_types[2], value), pos++);
@@ -1810,7 +1826,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				}
 				case typeIndex::GLOBAL_TERMS: {
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_global_term(doc, Serialise::serialise(specification.sep_types[2], value), pos++);
@@ -1824,7 +1842,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					StringSet& s_f = map_values[specification.slot];
 					StringSet& s_g = map_values[get_global_slot(specification.sep_types[2])];
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_all_value(doc, value, s_f, s_g, pos++);
@@ -1837,7 +1857,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				case typeIndex::FIELD_VALUES: {
 					StringSet& s_f = map_values[specification.slot];
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_value(doc, value, s_f, specification.acc_prefix, pos++);
@@ -1850,7 +1872,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				case typeIndex::GLOBAL_VALUES: {
 					StringSet& s_g = map_values[get_global_slot(specification.sep_types[2])];
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_value(doc, value, s_g, specification.acc_gprefix, pos++);
@@ -1864,7 +1888,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					StringSet& s_f = map_values[specification.slot];
 					StringSet& s_g = map_values[get_global_slot(specification.sep_types[2])];
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_all_value(doc, value, s_f, s_g, pos++, true);
@@ -1877,7 +1903,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				case typeIndex::FIELD_ALL: {
 					StringSet& s_f = map_values[specification.slot];
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_value(doc, value, s_f, specification.acc_prefix, pos++, &Schema::index_field_term);
@@ -1890,7 +1918,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				case typeIndex::GLOBAL_ALL: {
 					StringSet& s_g = map_values[get_global_slot(specification.sep_types[2])];
 					if (values.is_array()) {
-						set_type_to_array();
+						if unlikely(specification.sep_types[1] == NO_TYPE) {
+							set_type_to_array();
+						}
 						size_t pos = 0;
 						for (const auto& value : values) {
 							index_value(doc, value, s_g, specification.acc_gprefix, pos++, &Schema::index_global_term);
