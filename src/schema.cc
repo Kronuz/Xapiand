@@ -1534,6 +1534,10 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Ms
 			break;
 	}
 
+	if (data->is_null()) {
+		parent_data.erase(name);
+	}
+
 	specification = std::move(spc_start);
 }
 
@@ -1553,6 +1557,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				tasks.reserve(item.size());
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
+				auto& data_pos = data[pos];
 
 				for (const auto& property : item) {
 					auto str_prop = property.as_string();
@@ -1561,7 +1566,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 						(this->*func)(item.at(str_prop));
 					} catch (const std::out_of_range&) {
 						if (is_valid(str_prop)) {
-							tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(item.at(str_prop)), std::ref(data), std::ref(doc), std::move(str_prop)));
+							tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(item.at(str_prop)), std::ref(data_pos), std::ref(doc), std::move(str_prop)));
 							offsprings = true;
 						}
 					}
@@ -1572,10 +1577,10 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				if (specification.name.empty()) {
 					specification.found_field = true;
 					if (specification.value) {
-						index_item(doc, *specification.value, data);
+						index_item(doc, *specification.value, data_pos);
 					}
 					if (specification.value_rec) {
-						index_item(doc, *specification.value_rec, data, pos);
+						index_item(doc, *specification.value_rec, data_pos, pos);
 					}
 				} else {
 					if (specification.full_name.empty()) {
@@ -1586,12 +1591,12 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 					if (specification.value) {
 						// Update specification.
 						get_subproperties(properties);
-						index_item(doc, *specification.value, data);
+						index_item(doc, *specification.value, data_pos);
 					}
 					if (specification.value_rec) {
 						// Update specification.
 						get_subproperties(properties);
-						index_item(doc, *specification.value_rec, data, pos);
+						index_item(doc, *specification.value_rec, data_pos, pos);
 					}
 				}
 
@@ -1599,13 +1604,15 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 					specification = spc_item;
 					task.get();
 				}
+
+				specification = spc_start;
 				break;
 			}
 			case msgpack::type::ARRAY:
-				index_item(doc, item, data);
+				index_item(doc, item, data[pos]);
 				break;
 			default:
-				index_item(doc, item, data, pos);
+				index_item(doc, item, data[pos], pos);
 				break;
 		}
 		++pos;
@@ -1614,8 +1621,6 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 	if unlikely(offsprings && specification.sep_types[0] == NO_TYPE) {
 		set_type_to_object();
 	}
-
-	specification = std::move(spc_start);
 }
 
 
@@ -1951,7 +1956,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					break;
 				default:
 					if (values.is_array()) {
-						data_value = MsgPack({ data_value,  });
+						data_value = MsgPack({ data_value });
 						for (const auto& value : values) {
 							data_value.push_back(value);
 						}
