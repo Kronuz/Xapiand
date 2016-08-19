@@ -404,7 +404,7 @@ public:
 	}
 
 	void update_store(const MsgPack& prop_store) {
-		specification.store = prop_store.as_bool();
+		specification.store = prop_store.as_bool() && specification.store;
 	}
 
 	void update_dynamic(const MsgPack& prop_dynamic) {

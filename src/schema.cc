@@ -1055,9 +1055,12 @@ Schema::process_index(const MsgPack& doc_index)
 void
 Schema::process_store(const MsgPack& doc_store)
 {
-	// RESERVED_STORE is heritable and can change.
+	/*
+	 * RESERVED_STORE is heritable and can change, but once fixed in false
+	 * it cannot change in its offsprings.
+	 */
 	try {
-		specification.store = doc_store.as_bool();
+		specification.store = doc_store.as_bool() && specification.store;
 
 		if unlikely(!specification.found_field) {
 			get_mutable(specification.full_name)[RESERVED_STORE] = specification.store;
