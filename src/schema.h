@@ -93,6 +93,7 @@ struct specification_t {
 	std::unique_ptr<const MsgPack> value;
 	std::unique_ptr<MsgPack> value_rec; // Value recovered from the item.
 	std::unique_ptr<const MsgPack> doc_acc;
+
 	std::string name;
 	std::string full_name;
 
@@ -109,8 +110,10 @@ struct specification_t {
 
 	specification_t();
 	specification_t(const specification_t& o);
+	specification_t(specification_t&& o) noexcept;
 
 	specification_t& operator=(const specification_t& o);
+	specification_t& operator=(specification_t&& o) noexcept;
 
 	std::string to_string() const;
 };

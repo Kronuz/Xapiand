@@ -252,6 +252,37 @@ specification_t::specification_t(const specification_t& o)
 	  error(o.error) { }
 
 
+specification_t::specification_t(specification_t&& o) noexcept
+	: position(std::move(o.position)),
+	  weight(std::move(o.weight)),
+	  language(std::move(o.language)),
+	  spelling(std::move(o.spelling)),
+	  positions(std::move(o.positions)),
+	  analyzer(std::move(o.analyzer)),
+	  sep_types(std::move(o.sep_types)),
+	  prefix(std::move(o.prefix)),
+	  slot(std::move(o.slot)),
+	  index(std::move(o.index)),
+	  accuracy(std::move(o.accuracy)),
+	  acc_prefix(std::move(o.acc_prefix)),
+	  acc_gprefix(std::move(o.acc_gprefix)),
+	  store(std::move(o.store)),
+	  dynamic(std::move(o.dynamic)),
+	  date_detection(std::move(o.date_detection)),
+	  numeric_detection(std::move(o.numeric_detection)),
+	  geo_detection(std::move(o.geo_detection)),
+	  bool_detection(std::move(o.bool_detection)),
+	  string_detection(std::move(o.string_detection)),
+	  bool_term(std::move(o.bool_term)),
+	  full_name(std::move(o.full_name)),
+	  found_field(std::move(o.found_field)),
+	  set_type(std::move(o.set_type)),
+	  set_bool_term(std::move(o.set_bool_term)),
+	  fixed_index(std::move(o.fixed_index)),
+	  partials(std::move(o.partials)),
+	  error(std::move(o.error)) { }
+
+
 specification_t&
 specification_t::operator=(const specification_t& o)
 {
@@ -262,12 +293,12 @@ specification_t::operator=(const specification_t& o)
 	positions = o.positions;
 	analyzer = o.analyzer;
 	sep_types = o.sep_types;
-	accuracy = o.accuracy;
-	acc_prefix = o.acc_prefix;
-	acc_gprefix = o.acc_gprefix;
 	prefix = o.prefix;
 	slot = o.slot;
 	index = o.index;
+	accuracy = o.accuracy;
+	acc_prefix = o.acc_prefix;
+	acc_gprefix = o.acc_gprefix;
 	store = o.store;
 	dynamic = o.dynamic;
 	date_detection = o.date_detection;
@@ -287,6 +318,45 @@ specification_t::operator=(const specification_t& o)
 	fixed_index = o.fixed_index;
 	partials = o.partials;
 	error = o.error;
+	return *this;
+}
+
+
+specification_t&
+specification_t::operator=(specification_t&& o) noexcept
+{
+	position = std::move(o.position);
+	weight = std::move(o.weight);
+	language = std::move(o.language);
+	spelling = std::move(o.spelling);
+	positions = std::move(o.positions);
+	analyzer = std::move(o.analyzer);
+	sep_types = std::move(o.sep_types);
+	prefix = std::move(o.prefix);
+	slot = std::move(o.slot);
+	index = std::move(o.index);
+	accuracy = std::move(o.accuracy);
+	acc_prefix = std::move(o.acc_prefix);
+	acc_gprefix = std::move(o.acc_gprefix);
+	store = std::move(o.store);
+	dynamic = std::move(o.dynamic);
+	date_detection = std::move(o.date_detection);
+	numeric_detection = std::move(o.numeric_detection);
+	geo_detection = std::move(o.geo_detection);
+	bool_detection = std::move(o.bool_detection);
+	string_detection = std::move(o.string_detection);
+	bool_term = std::move(o.bool_term);
+	value.reset();
+	value_rec.reset();
+	doc_acc.reset();
+	name = std::move(o.name);
+	full_name = std::move(o.full_name);
+	found_field = std::move(o.found_field);
+	set_type = std::move(o.set_type);
+	set_bool_term = std::move(o.set_bool_term);
+	fixed_index = std::move(o.fixed_index);
+	partials = std::move(o.partials);
+	error = std::move(o.error);
 	return *this;
 }
 
