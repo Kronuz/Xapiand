@@ -299,6 +299,7 @@ public:
 	 * Functions for reserved words that are only in document's root.
 	 */
 
+	inline void process_data(const MsgPack&, const MsgPack& doc_data, MsgPack& data, Xapian::Document&);
 	inline void process_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
 	inline void process_field_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
 	inline void process_global_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);

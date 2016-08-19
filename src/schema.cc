@@ -171,6 +171,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties
 
 
 const std::unordered_map<std::string, dispatch_root> map_dispatch_root({
+	{ RESERVED_DATA,           &Schema::process_data           },
 	{ RESERVED_VALUES,         &Schema::process_values         },
 	{ RESERVED_FIELD_VALUES,   &Schema::process_field_values   },
 	{ RESERVED_GLOBAL_VALUES,  &Schema::process_global_values  },
@@ -1319,6 +1320,15 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 		mut_schema.reset();
 		throw;
 	}
+}
+
+
+void
+Schema::process_data(const MsgPack&, const MsgPack& doc_data, MsgPack& data, Xapian::Document&)
+{
+	L_CALL(this, "Schema::process_data()");
+
+	data[RESERVED_DATA] = doc_data;
 }
 
 
