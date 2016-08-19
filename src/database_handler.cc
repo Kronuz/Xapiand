@@ -50,7 +50,7 @@ DatabaseHandler::~DatabaseHandler() {
 }
 
 
-void
+MsgPack
 DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
 {
 	L_CALL(this, "DatabaseHandler::_index()");
@@ -85,8 +85,10 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 
 	// Index obj.
 	if (obj.is_map()) {
-		schema->index(properties, obj, doc);
+		return schema->index(properties, obj, doc);
 	}
+
+	return obj;
 }
 
 
@@ -139,9 +141,10 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 	if (endpoints.size() == 1) {
 		schema = get_schema();
 
-		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
+		auto f_data = _index(doc, obj, term_id, _document_id, ct_type_, ct_length);
+		L_INDEX(this, "Data: %s", f_data.to_string().c_str());
 
-		set_data(doc, obj.serialise(), blob ? body : "");
+		set_data(doc, f_data.serialise(), blob ? body : "");
 		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 		checkout();
@@ -151,9 +154,10 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 	} else {
 		schema = get_fvschema();
 
-		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
+		auto f_data = _index(doc, obj, term_id, _document_id, ct_type_, ct_length);
+		L_INDEX(this, "Data: %s", f_data.to_string().c_str());
 
-		set_data(doc, obj.serialise(), blob ? body : "");
+		set_data(doc, f_data.serialise(), blob ? body : "");
 		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 		const auto _endpoints = endpoints;
@@ -183,9 +187,10 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 
 	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
-	_index(doc, obj, term_id, _document_id, ct_type, ct_length);
+	auto f_data = _index(doc, obj, term_id, _document_id, ct_type, ct_length);
+	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
 
-	set_data(doc, obj.serialise(), "");
+	set_data(doc, f_data.serialise(), "");
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	checkout();
@@ -247,9 +252,10 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 
 	Xapian::Document doc;
 	std::string term_id;
-	_index(doc, obj_data, term_id, _document_id, _ct_type, ct_length);
+	auto f_data = _index(doc, obj_data, term_id, _document_id, _ct_type, ct_length);
+	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
 
-	set_data(doc, obj_data.serialise(), get_blob(document));
+	set_data(doc, f_data.serialise(), get_blob(document));
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	checkout();
