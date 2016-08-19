@@ -369,7 +369,7 @@ public:
 		specification.sep_types[0] = static_cast<unsigned>(prop_type.at(0).as_u64());
 		specification.sep_types[1] = static_cast<unsigned>(prop_type.at(1).as_u64());
 		specification.sep_types[2] = static_cast<unsigned>(prop_type.at(2).as_u64());
-		specification.set_type = true;
+		specification.set_type = specification.sep_types[2] != NO_TYPE;
 	}
 
 	void update_accuracy(const MsgPack& prop_accuracy) {
