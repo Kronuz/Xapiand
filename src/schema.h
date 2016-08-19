@@ -182,11 +182,12 @@ class Schema {
 	 * Auxiliar functions for index fields in doc.
 	 */
 
-	inline void fixed_index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc);
-	void index_object(const MsgPack& parent_properties, const MsgPack& object, Xapian::Document& doc, const std::string& name=std::string());
-	void index_array(const MsgPack& properties, const MsgPack& array, Xapian::Document& doc);
-	void index_item(Xapian::Document& doc, const MsgPack& value, size_t pos);
-	void index_item(Xapian::Document& doc, const MsgPack& values);
+	inline void fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& data, Xapian::Document& doc, const char* reserved_word);
+	void index_object(const MsgPack& parent_properties, const MsgPack& object, MsgPack& parent_data,
+		Xapian::Document& doc, const std::string& name=std::string());
+	void index_array(const MsgPack& properties, const MsgPack& array, MsgPack& data, Xapian::Document& doc);
+	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos);
+	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data);
 
 	void index_field_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
 	void index_global_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
@@ -248,7 +249,7 @@ public:
 	/*
 	 * Function to index object in doc.
 	 */
-	void index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc);
+	MsgPack index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc);
 
 
 	/*
@@ -298,15 +299,15 @@ public:
 	 * Functions for reserved words that are only in document's root.
 	 */
 
-	inline void process_values(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc);
-	inline void process_field_values(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc);
-	inline void process_global_values(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc);
-	inline void process_terms(const MsgPack& properties, const MsgPack& doc_terms, Xapian::Document& doc);
-	inline void process_field_terms(const MsgPack& properties, const MsgPack& doc_terms, Xapian::Document& doc);
-	inline void process_global_terms(const MsgPack& properties, const MsgPack& doc_terms, Xapian::Document& doc);
-	inline void process_field_all(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc);
-	inline void process_global_all(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc);
-	inline void process_none(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc);
+	inline void process_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
+	inline void process_field_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
+	inline void process_global_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
+	inline void process_terms(const MsgPack& properties, const MsgPack& doc_terms, MsgPack& data, Xapian::Document& doc);
+	inline void process_field_terms(const MsgPack& properties, const MsgPack& doc_terms, MsgPack& data, Xapian::Document& doc);
+	inline void process_global_terms(const MsgPack& properties, const MsgPack& doc_terms, MsgPack& data, Xapian::Document& doc);
+	inline void process_field_all(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
+	inline void process_global_all(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
+	inline void process_none(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
 
 
 	/*
@@ -446,7 +447,7 @@ public:
 
 
 using dispatch_reserved = void (Schema::*)(const MsgPack&);
-using dispatch_root     = void (Schema::*)(const MsgPack&, const MsgPack&, Xapian::Document&);
+using dispatch_root     = void (Schema::*)(const MsgPack&, const MsgPack&, MsgPack&, Xapian::Document&);
 using dispatch_readable = void (*)(MsgPack&, MsgPack&);
 
 

@@ -1275,12 +1275,13 @@ Schema::process_name(const MsgPack& doc_name)
 }
 
 
-void
+MsgPack
 Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::index()");
 
 	try {
+		MsgPack data;
 		TaskVector tasks;
 		tasks.reserve(object.size());
 		for (const auto& item_key : object) {
@@ -1290,26 +1291,30 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 				(this->*func)(object.at(str_key));
 			} catch (const std::out_of_range&) {
 				if (is_valid(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(doc), std::move(str_key)));
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
 				} else {
 					try {
 						auto func = map_dispatch_root.at(str_key);
-						tasks.push_back(std::async(std::launch::deferred, func, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(doc)));
+						tasks.push_back(std::async(std::launch::deferred, func, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc)));
 					} catch (const std::out_of_range&) { }
 				}
 			}
 		}
 
 		restart_specification();
-		const specification_t spc_start = specification;
+		const specification_t spc_start = std::move(specification);
 		for (auto& task : tasks) {
-			task.get();
 			specification = spc_start;
+			task.get();
 		}
 
 		for (const auto& elem : map_values) {
-			doc.add_value(elem.first, elem.second.serialise());
+			auto val_ser = elem.second.serialise();
+			doc.add_value(elem.first, val_ser);
+			L_INDEX(this, "Slot: %zu  Values: %s", elem.first, repr(val_ser).c_str());
 		}
+
+		return data;
 	} catch (...) {
 		mut_schema.reset();
 		throw;
@@ -1318,119 +1323,121 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 
 
 void
-Schema::process_values(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc)
+Schema::process_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_values()");
 
 	specification.index = typeIndex::VALUES;
-	fixed_index(properties, doc_values, doc);
+	fixed_index(properties, doc_values, specification.store ? data[RESERVED_VALUES] : data, doc, RESERVED_VALUES);
 }
 
 
 void
-Schema::process_field_values(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc)
+Schema::process_field_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_field_values()");
 
 	specification.index = typeIndex::FIELD_VALUES;
-	fixed_index(properties, doc_values, doc);
+	fixed_index(properties, doc_values, specification.store ? data[RESERVED_FIELD_VALUES] : data, doc, RESERVED_FIELD_VALUES);
 }
 
 
 void
-Schema::process_global_values(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc)
+Schema::process_global_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_global_values()");
 
 	specification.index = typeIndex::GLOBAL_VALUES;
-	fixed_index(properties, doc_values, doc);
+	fixed_index(properties, doc_values, specification.store ? data[RESERVED_GLOBAL_VALUES] : data, doc, RESERVED_GLOBAL_VALUES);
 }
 
 
 void
-Schema::process_terms(const MsgPack& properties, const MsgPack& doc_terms, Xapian::Document& doc)
+Schema::process_terms(const MsgPack& properties, const MsgPack& doc_terms, MsgPack& data, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_terms()");
 
 	specification.index = typeIndex::TERMS;
-	fixed_index(properties, doc_terms, doc);
+	fixed_index(properties, doc_terms, specification.store ? data[RESERVED_TERMS] : data, doc, RESERVED_TERMS);
 }
 
 
 void
-Schema::process_field_terms(const MsgPack& properties, const MsgPack& doc_terms, Xapian::Document& doc)
+Schema::process_field_terms(const MsgPack& properties, const MsgPack& doc_terms, MsgPack& data, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_field_terms()");
 
 	specification.index = typeIndex::FIELD_TERMS;
-	fixed_index(properties, doc_terms, doc);
+	fixed_index(properties, doc_terms, specification.store ? data[RESERVED_FIELD_TERMS] : data, doc, RESERVED_FIELD_TERMS);
 }
 
 
 void
-Schema::process_global_terms(const MsgPack& properties, const MsgPack& doc_terms, Xapian::Document& doc)
+Schema::process_global_terms(const MsgPack& properties, const MsgPack& doc_terms, MsgPack& data, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_global_terms()");
 
 	specification.index = typeIndex::GLOBAL_TERMS;
-	fixed_index(properties, doc_terms, doc);
+	fixed_index(properties, doc_terms, specification.store ? data[RESERVED_GLOBAL_TERMS] : data, doc, RESERVED_GLOBAL_TERMS);
 }
 
 
 void
-Schema::process_field_all(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc)
+Schema::process_field_all(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_field_all()");
 
 	specification.index = typeIndex::FIELD_ALL;
-	fixed_index(properties, doc_values, doc);
+	fixed_index(properties, doc_values, specification.store ? data[RESERVED_FIELD_ALL] : data, doc, RESERVED_FIELD_ALL);
 }
 
 
 void
-Schema::process_global_all(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc)
+Schema::process_global_all(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_global_all()");
 
 	specification.index = typeIndex::GLOBAL_ALL;
-	fixed_index(properties, doc_values, doc);
+	fixed_index(properties, doc_values, specification.store ? data[RESERVED_GLOBAL_ALL] : data, doc, RESERVED_GLOBAL_ALL);
 }
 
 
 void
-Schema::process_none(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc)
+Schema::process_none(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_none()");
 
 	specification.index = typeIndex::NONE;
-	fixed_index(properties, doc_values, doc);
+	fixed_index(properties, doc_values, specification.store ? data[RESERVED_NONE] : data, doc, RESERVED_NONE);
 }
 
 
 void
-Schema::fixed_index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc)
+Schema::fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& data, Xapian::Document& doc, const char* reserved_word)
 {
 	specification.fixed_index = true;
 	switch (object.type()) {
 		case msgpack::type::MAP:
-			return index_object(properties, object, doc);
+			return index_object(properties, object, data, doc);
 		case msgpack::type::ARRAY:
-			return index_array(properties, object, doc);
+			return index_array(properties, object, data, doc);
 		default:
-			throw MSG_ClientError("%s must be an object or an array of objects", RESERVED_VALUES);
+			throw MSG_ClientError("%s must be an object or an array of objects", reserved_word);
 	}
 }
 
 
 void
-Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Xapian::Document& doc, const std::string& name)
+Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, MsgPack& parent_data, Xapian::Document& doc, const std::string& name)
 {
 	L_CALL(this, "Schema::index_object()");
 
 	const auto spc_start = specification;
 	const MsgPack* properties = nullptr;
+	MsgPack* data = nullptr;
 	if (name.empty()) {
 		properties = &parent_properties;
+		data = &parent_data;
 		specification.found_field = true;
 	} else {
 		if (specification.full_name.empty()) {
@@ -1440,6 +1447,7 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Xa
 		}
 		specification.name.assign(name);
 		properties = &get_subproperties(parent_properties);
+		data = &parent_data[name];
 	}
 
 	switch (object.type()) {
@@ -1454,7 +1462,7 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Xa
 					(this->*func)(object.at(str_key));
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_key)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(*properties), std::ref(object.at(str_key)), std::ref(doc), std::move(str_key)));
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(*properties), std::ref(object.at(str_key)), std::ref(*data), std::ref(doc), std::move(str_key)));
 						offsprings = true;
 					}
 				}
@@ -1468,10 +1476,10 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Xa
 
 			if (specification.name.empty()) {
 				if (specification.value) {
-					index_item(doc, *specification.value);
+					index_item(doc, *specification.value, *data);
 				}
 				if (specification.value_rec) {
-					index_item(doc, *specification.value_rec);
+					index_item(doc, *specification.value_rec, *data, 0);
 				}
 			} else {
 				if (specification.full_name.empty()) {
@@ -1482,40 +1490,42 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Xa
 				if (specification.value) {
 					// Update specifications.
 					get_subproperties(*properties);
-					index_item(doc, *specification.value);
+					index_item(doc, *specification.value, *data);
 				}
 				if (specification.value_rec) {
 					// Update specifications.
 					get_subproperties(*properties);
-					index_item(doc, *specification.value_rec);
+					index_item(doc, *specification.value_rec, *data, 0);
 				}
-			}
-
-			if (offsprings) {
-				set_type_to_object();
 			}
 
 			for (auto& task : tasks) {
 				specification = spc_object;
 				task.get();
 			}
+
+			if (offsprings) {
+				set_type_to_object();
+			} else if (specification.store) {
+				*data = (*data)[RESERVED_VALUE];
+			}
 			break;
 		}
 		case msgpack::type::ARRAY:
 			set_type_to_array();
-			index_array(*properties, object, doc);
+			index_array(*properties, object, *data, doc);
 			break;
 		default:
-			index_item(doc, object);
+			index_item(doc, object, *data);
 			break;
 	}
 
-	specification = spc_start;
+	specification = std::move(spc_start);
 }
 
 
 void
-Schema::index_array(const MsgPack& properties, const MsgPack& array, Xapian::Document& doc)
+Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& data, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::index_array()");
 
@@ -1537,7 +1547,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, Xapian::Doc
 						(this->*func)(item.at(str_prop));
 					} catch (const std::out_of_range&) {
 						if (is_valid(str_prop)) {
-							tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(item.at(str_prop)), std::ref(doc), std::move(str_prop)));
+							tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(item.at(str_prop)), std::ref(data), std::ref(doc), std::move(str_prop)));
 							offsprings = true;
 						}
 					}
@@ -1548,10 +1558,10 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, Xapian::Doc
 				if (specification.name.empty()) {
 					specification.found_field = true;
 					if (specification.value) {
-						index_item(doc, *specification.value);
+						index_item(doc, *specification.value, data);
 					}
 					if (specification.value_rec) {
-						index_item(doc, *specification.value_rec);
+						index_item(doc, *specification.value_rec, data, pos);
 					}
 				} else {
 					if (specification.full_name.empty()) {
@@ -1562,12 +1572,12 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, Xapian::Doc
 					if (specification.value) {
 						// Update specification.
 						get_subproperties(properties);
-						index_item(doc, *specification.value);
+						index_item(doc, *specification.value, data);
 					}
 					if (specification.value_rec) {
 						// Update specification.
 						get_subproperties(properties);
-						index_item(doc, *specification.value_rec);
+						index_item(doc, *specification.value_rec, data, pos);
 					}
 				}
 
@@ -1578,10 +1588,10 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, Xapian::Doc
 				break;
 			}
 			case msgpack::type::ARRAY:
-				index_item(doc, item);
+				index_item(doc, item, data);
 				break;
 			default:
-				index_item(doc, item, pos);
+				index_item(doc, item, data, pos);
 				break;
 		}
 		++pos;
@@ -1589,14 +1599,16 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, Xapian::Doc
 
 	if (offsprings) {
 		set_type_to_object();
+	} else {
+		data = data[RESERVED_VALUE];
 	}
 
-	specification = spc_start;
+	specification = std::move(spc_start);
 }
 
 
 void
-Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
+Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos)
 {
 	L_CALL(this, "Schema::index_item(1)");
 
@@ -1680,12 +1692,27 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 				}
 			}
 		}
+
+		if (specification.store) {
+			// Add value to data.
+			auto& data_value = data[RESERVED_VALUE];
+			switch (data_value.type()) {
+				case msgpack::type::NIL:
+					data_value = value;
+					break;
+				case msgpack::type::ARRAY:
+					data_value.push_back(value);
+					break;
+				default:
+					data_value = MsgPack({ data_value, value });
+			}
+		}
 	} catch (const DummyException&) { }
 }
 
 
 void
-Schema::index_item(Xapian::Document& doc, const MsgPack& values)
+Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 {
 	L_CALL(this, "Schema::index_item()");
 
@@ -1834,7 +1861,6 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values)
 						set_type_to_array();
 						size_t pos = 0;
 						for (const auto& value : values) {
-							L_INDEX(this, "++++++ Pos  %zu", pos);
 							index_all_value(doc, value, s_f, s_g, pos++, true);
 						}
 					} else {
@@ -1869,6 +1895,11 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values)
 					break;
 				}
 			}
+		}
+
+		if (specification.store) {
+			// Add value to data.
+			data[RESERVED_VALUE] = values;
 		}
 	} catch (const DummyException&) { }
 }
@@ -1976,7 +2007,6 @@ Schema::validate_required_data(const MsgPack* value)
 				throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
 			}
 
-			L_INDEX(this, "+++++Acc G prefix:  Emp:  %d   size_acc:   %zu   size_acc_gp:  %zu\n", specification.acc_gprefix.empty(), size_acc, specification.acc_gprefix.size());
 			if (specification.acc_gprefix.empty()) {
 				std::string name(1, '_');
 				name.append(Serialise::type(specification.sep_types[2]));
