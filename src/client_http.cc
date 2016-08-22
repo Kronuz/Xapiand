@@ -759,12 +759,42 @@ HttpClient::delete_document_view()
 
 	std::string doc_id(path_parser.get_id());
 
-	operation_begins = std::chrono::system_clock::now();
-
+	int status_code;
+	MsgPack response;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN);
-	db_handler.delete_document(doc_id, query_field->commit);
 
-	operation_ends = std::chrono::system_clock::now();
+	if (endpoints.size() == 1) {
+		operation_begins = std::chrono::system_clock::now();
+		db_handler.delete_document(doc_id, query_field->commit);
+		operation_ends = std::chrono::system_clock::now();
+		status_code = 200;
+
+		response["_delete"] = {
+			{ RESERVED_ID, doc_id },
+			{ "_commit",  query_field->commit }
+		};
+	} else {
+		operation_begins = std::chrono::system_clock::now();
+		endpoints_error_list err_list = db_handler.multi_db_delete_document(doc_id, query_field->commit);
+		operation_ends = std::chrono::system_clock::now();
+
+		if (err_list.empty()) {
+			status_code = 200;
+			response["_delete"] = {
+				{ RESERVED_ID, doc_id },
+				{ "_commit",  query_field->commit }
+			};
+		} else {
+			status_code = 400;
+			for (const auto& err : err_list) {
+				MsgPack o;
+				for (const auto& end : err.second) {
+					o.push_back(end);
+				}
+				response["_delete"].insert(err.first, o);
+			}
+		}
+	}
 
 	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
 	{
@@ -777,13 +807,8 @@ HttpClient::delete_document_view()
 	}
 	L_TIME(this, "Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	MsgPack response;
-	response["_delete"] = {
-		{ RESERVED_ID, doc_id },
-		{ "_commit",  query_field->commit }
-	};
 
-	write_http_response(response, 200, pretty);
+	write_http_response(response, status_code, pretty);
 }
 
 

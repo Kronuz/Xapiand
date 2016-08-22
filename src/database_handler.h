@@ -33,6 +33,7 @@ extern const std::regex find_types_re;
 
 
 using SpiesVector = std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>;
+using endpoints_error_list = std::unordered_map<std::string, std::vector<std::string>>;
 
 
 class DatabaseHandler {
@@ -140,6 +141,7 @@ public:
 	Xapian::docid get_docid(const std::string& doc_id);
 
 	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
+	endpoints_error_list multi_db_delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 
 	MsgPack get_value(const Xapian::Document& document, const std::string& slot_name);
 	void get_stats_doc(MsgPack& stats, const std::string& document_id);
