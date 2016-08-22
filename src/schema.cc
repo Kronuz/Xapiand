@@ -1466,7 +1466,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		}
 		specification.name.assign(name);
 		properties = &get_subproperties(*parent_properties);
-		data = &(*parent_data)[name];
+		data = specification.store ? &(*parent_data)[name] : parent_data;
 	}
 
 	switch (object.type()) {
@@ -1510,8 +1510,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				} else {
 					specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
 				}
+				if (specification.store) {
+					data = &(*data)[specification.name];
+				}
 				properties = &get_subproperties(*properties);
-				data = &(*parent_data)[specification.name];
 				if (specification.value) {
 					index_item(doc, *specification.value, *data);
 					if (specification.store && !offsprings) {
@@ -1525,7 +1527,6 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 					}
 				}
 			}
-
 			const auto spc_object = std::move(specification);
 			for (auto& task : tasks) {
 				specification = spc_object;
@@ -1548,6 +1549,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			break;
 	}
 
+	if (data->is_null()) {
+		parent_data->erase(name);
+	}
+
 	specification = std::move(spc_start);
 }
 
@@ -1568,7 +1573,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
 				auto sub_properties = &properties;
-				auto data_pos = &data[pos];
+				auto data_pos = specification.store ? &data[pos] : &data;
 
 				for (const auto& property : item) {
 					auto str_prop = property.as_string();
@@ -1596,7 +1601,9 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 					} else {
 						specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
 					}
-					data_pos = &(*data_pos)[specification.name];
+					if (specification.store) {
+						data_pos = &(*data_pos)[specification.name];
+					}
 					sub_properties = &get_subproperties(*sub_properties);
 					if (specification.value) {
 						index_item(doc, *specification.value, *data_pos);
@@ -1616,10 +1623,10 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				break;
 			}
 			case msgpack::type::ARRAY:
-				index_item(doc, item, data[pos]);
+				index_item(doc, item, specification.store ? data[pos] : data);
 				break;
 			default:
-				index_item(doc, item, data[pos], pos);
+				index_item(doc, item, specification.store ? data[pos] : data, pos);
 				break;
 		}
 		++pos;
