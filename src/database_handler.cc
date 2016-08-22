@@ -753,7 +753,7 @@ DatabaseHandler::multi_db_delete_document(const std::string& doc_id, bool commit
 		} catch (const DocNotFoundError& err) {
 			err_endpoints["Document not found"].push_back(e.as_string());
 			checkin();
-		} catch (const Xapian::Error err) {
+		} catch (const Xapian::Error& err) {
 			err_endpoints[err.get_error_string()].push_back(e.as_string());
 			checkin();
 		}
