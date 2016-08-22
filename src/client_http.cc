@@ -1441,11 +1441,6 @@ HttpClient::query_field_maker(int flag)
 		}
 		query_parser.rewind();
 
-		while (query_parser.next("terms") != -1) {
-			query_field->terms.push_back(query_parser.get());
-		}
-		query_parser.rewind();
-
 		while (query_parser.next("language") != -1) {
 			query_field->language.push_back(query_parser.get());
 		}
