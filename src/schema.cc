@@ -1289,6 +1289,8 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 		MsgPack data;
 		TaskVector tasks;
 		tasks.reserve(object.size());
+		auto prop_ptr = &properties;
+		auto data_ptr = &data;
 		for (const auto& item_key : object) {
 			const auto str_key = item_key.as_string();
 			try {
@@ -1296,7 +1298,7 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 				(this->*func)(object.at(str_key));
 			} catch (const std::out_of_range&) {
 				if (is_valid(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
 				} else {
 					try {
 						auto func = map_dispatch_root.at(str_key);
@@ -1431,8 +1433,11 @@ Schema::fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& d
 {
 	specification.fixed_index = true;
 	switch (object.type()) {
-		case msgpack::type::MAP:
-			return index_object(properties, object, data, doc);
+		case msgpack::type::MAP: {
+			auto prop_ptr = &properties;
+			auto data_ptr = &data;
+			return index_object(std::ref(prop_ptr), object, std::ref(data_ptr), doc);
+		}
 		case msgpack::type::ARRAY:
 			return index_array(properties, object, data, doc);
 		default:
@@ -1442,7 +1447,7 @@ Schema::fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& d
 
 
 void
-Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, MsgPack& parent_data, Xapian::Document& doc, const std::string& name)
+Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
 	L_CALL(this, "Schema::index_object()");
 
@@ -1450,8 +1455,8 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Ms
 	const MsgPack* properties = nullptr;
 	MsgPack* data = nullptr;
 	if (name.empty()) {
-		properties = &parent_properties;
-		data = &parent_data;
+		properties = parent_properties;
+		data = parent_data;
 		specification.found_field = true;
 	} else {
 		if (specification.full_name.empty()) {
@@ -1460,8 +1465,8 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Ms
 			specification.full_name.append(DB_OFFSPRING_UNION).append(name);
 		}
 		specification.name.assign(name);
-		properties = &get_subproperties(parent_properties);
-		data = &parent_data[name];
+		properties = &get_subproperties(*parent_properties);
+		data = &(*parent_data)[name];
 	}
 
 	switch (object.type()) {
@@ -1476,13 +1481,11 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Ms
 					(this->*func)(object.at(str_key));
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_key)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(*properties), std::ref(object.at(str_key)), std::ref(*data), std::ref(doc), std::move(str_key)));
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
 						offsprings = true;
 					}
 				}
 			}
-
-			const auto spc_object = specification;
 
 			if unlikely(!specification.found_field && specification.sep_types[2] != NO_TYPE) {
 				validate_required_data(specification.value.get());
@@ -1491,9 +1494,15 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Ms
 			if (specification.name.empty()) {
 				if (specification.value) {
 					index_item(doc, *specification.value, *data);
+					if (specification.store && !offsprings) {
+						*data = (*data)[RESERVED_VALUE];
+					}
 				}
 				if (specification.value_rec) {
 					index_item(doc, *specification.value_rec, *data, 0);
+					if (specification.store && !offsprings) {
+						*data = (*data)[RESERVED_VALUE];
+					}
 				}
 			} else {
 				if (specification.full_name.empty()) {
@@ -1501,18 +1510,23 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Ms
 				} else {
 					specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
 				}
+				properties = &get_subproperties(*properties);
+				data = &(*parent_data)[specification.name];
 				if (specification.value) {
-					// Update specifications.
-					get_subproperties(*properties);
 					index_item(doc, *specification.value, *data);
+					if (specification.store && !offsprings) {
+						*data = (*data)[RESERVED_VALUE];
+					}
 				}
 				if (specification.value_rec) {
-					// Update specifications.
-					get_subproperties(*properties);
 					index_item(doc, *specification.value_rec, *data, 0);
+					if (specification.store && !offsprings) {
+						*data = (*data)[RESERVED_VALUE];
+					}
 				}
 			}
 
+			const auto spc_object = std::move(specification);
 			for (auto& task : tasks) {
 				specification = spc_object;
 				task.get();
@@ -1534,10 +1548,6 @@ Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Ms
 			break;
 	}
 
-	if (data->is_null()) {
-		parent_data.erase(name);
-	}
-
 	specification = std::move(spc_start);
 }
 
@@ -1557,7 +1567,8 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				tasks.reserve(item.size());
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
-				auto& data_pos = data[pos];
+				auto sub_properties = &properties;
+				auto data_pos = &data[pos];
 
 				for (const auto& property : item) {
 					auto str_prop = property.as_string();
@@ -1566,21 +1577,18 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 						(this->*func)(item.at(str_prop));
 					} catch (const std::out_of_range&) {
 						if (is_valid(str_prop)) {
-							tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(item.at(str_prop)), std::ref(data_pos), std::ref(doc), std::move(str_prop)));
+							tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(sub_properties), std::ref(item.at(str_prop)), std::ref(data_pos), std::ref(doc), std::move(str_prop)));
 							offsprings = true;
 						}
 					}
 				}
 
-				const auto spc_item = specification;
-
 				if (specification.name.empty()) {
-					specification.found_field = true;
 					if (specification.value) {
-						index_item(doc, *specification.value, data_pos);
+						index_item(doc, *specification.value, *data_pos);
 					}
 					if (specification.value_rec) {
-						index_item(doc, *specification.value_rec, data_pos, pos);
+						index_item(doc, *specification.value_rec, *data_pos);
 					}
 				} else {
 					if (specification.full_name.empty()) {
@@ -1588,18 +1596,17 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 					} else {
 						specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
 					}
+					data_pos = &(*data_pos)[specification.name];
+					sub_properties = &get_subproperties(*sub_properties);
 					if (specification.value) {
-						// Update specification.
-						get_subproperties(properties);
-						index_item(doc, *specification.value, data_pos);
+						index_item(doc, *specification.value, *data_pos);
 					}
 					if (specification.value_rec) {
-						// Update specification.
-						get_subproperties(properties);
-						index_item(doc, *specification.value_rec, data_pos, pos);
+						index_item(doc, *specification.value_rec, *data_pos);
 					}
 				}
 
+				const auto spc_item = std::move(specification);
 				for (auto& task : tasks) {
 					specification = spc_item;
 					task.get();
@@ -2098,7 +2105,7 @@ Schema::validate_required_data(const MsgPack* value)
 		properties[RESERVED_PREFIX] = specification.prefix;
 
 		// Process RESERVED_SLOT
-		if (!specification.slot) {
+		if (specification.slot == Xapian::BAD_VALUENO) {
 			specification.slot = get_slot(specification.full_name);
 		}
 		properties[RESERVED_SLOT] = specification.slot;
