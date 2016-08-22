@@ -53,7 +53,7 @@ GenerateTerms::integer(Xapian::Document& doc, const std::vector<uint64_t>& accur
 {
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
-		auto term_v = Serialise::integer(value - value % acc);
+		auto term_v = Serialise::integer(value - modulus(value, acc));
 		doc.add_term(prefixed(term_v, *it++));
 	}
 }
@@ -64,7 +64,7 @@ GenerateTerms::positive(Xapian::Document& doc, const std::vector<uint64_t>& accu
 {
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
-		auto term_v = Serialise::positive(value - value % acc);
+		auto term_v = Serialise::positive(value - modulus(value, acc));
 		doc.add_term(prefixed(term_v, *it++));
 	}
 }
@@ -168,7 +168,7 @@ GenerateTerms::integer(Xapian::Document& doc, const std::vector<uint64_t>& accur
 	auto it = acc_prefix.begin();
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
-		auto term_v = Serialise::integer(value - value % acc);
+		auto term_v = Serialise::integer(value - modulus(value, acc));
 		doc.add_term(prefixed(term_v, *it++));
 		doc.add_term(prefixed(term_v, *itg++));
 	}
@@ -182,7 +182,7 @@ GenerateTerms::positive(Xapian::Document& doc, const std::vector<uint64_t>& accu
 	auto it = acc_prefix.begin();
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
-		auto term_v = Serialise::positive(value - value % acc);
+		auto term_v = Serialise::positive(value - modulus(value, acc));
 		doc.add_term(prefixed(term_v, *it++));
 		doc.add_term(prefixed(term_v, *itg++));
 	}

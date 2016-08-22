@@ -44,6 +44,18 @@ inline constexpr size_t get_upper_bound(size_t length_prefix, size_t number_unio
 
 
 namespace GenerateTerms {
+	inline uint64_t modulus(uint64_t val, uint64_t mod) {
+		return val % mod;
+	}
+
+	inline uint64_t modulus(int64_t val, uint64_t mod) {
+		if (val < 0) {
+			val = -val;
+			auto m = static_cast<uint64_t>(val) % mod;
+			return m ? mod - m : m;
+		}
+		return static_cast<uint64_t>(val) % mod;
+	}
 
 	/*
 	 * Add generated terms by accuracy for field or global values in doc.
@@ -93,8 +105,8 @@ namespace GenerateTerms {
 		// If there is a upper or equal accuracy.
 		if (pos < len) {
 			auto up_acc = accuracy[pos];
-			T up_start = start - (start % up_acc);
-			T up_end = end - (end % up_acc);
+			T up_start = start - modulus(start, up_acc);
+			T up_end = end - modulus(end, up_acc);
 			std::string prefix_dot_up;
 			prefix_dot_up.reserve(acc_prefix[pos].length() + 1);
 			prefix_dot_up.assign(acc_prefix[pos]).push_back(':');
@@ -104,9 +116,8 @@ namespace GenerateTerms {
 			if (pos > 0) {
 				--pos;
 				auto low_acc = accuracy[pos];
-				T low_start = start - start % low_acc;
-				T low_end = end - end % low_acc;
-
+				T low_start = start - modulus(start, low_acc);
+				T low_end = end - modulus(end, low_acc);
 				std::string prefix_dot_low;
 				prefix_dot_low.reserve(acc_prefix[pos].length() + 1);
 				prefix_dot_low.assign(acc_prefix[pos]).push_back(':');
@@ -176,8 +187,8 @@ namespace GenerateTerms {
 			if (pos > 0) {
 				--pos;
 				auto low_acc = accuracy[pos];
-				start -= start % low_acc;
-				end -= end % low_acc;
+				start -= modulus(start, low_acc);
+				end -= modulus(end, low_acc);
 				size_t num_unions = (end - start) / low_acc;
 				// If terms are not too many terms (num_unions + 1).
 				if (num_unions < MAX_TERMS) {
