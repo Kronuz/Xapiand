@@ -794,9 +794,7 @@ DatabaseHandler::get_stats_doc(MsgPack& stats, const std::string& doc_id)
 	MsgPack obj_data = get_MsgPack(doc);
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
-	} catch (const std::out_of_range&) {
-		clean_reserved(obj_data);
-	}
+	} catch (const std::out_of_range&) { }
 
 	stats[RESERVED_DATA] = std::move(obj_data);
 

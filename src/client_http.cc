@@ -715,10 +715,8 @@ HttpClient::home_view()
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
 	} catch (const std::out_of_range&) {
-		clean_reserved(obj_data);
-		obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
+		obj_data[RESERVED_ID] = db_handler.get_value(document, RESERVED_ID);
 	}
-	obj_data[RESERVED_ID] = db_handler.get_value(document, RESERVED_ID);
 
 #ifdef XAPIAND_CLUSTERING
 	obj_data["_cluster_name"] = XapiandManager::manager->cluster_name;
@@ -1134,7 +1132,6 @@ HttpClient::search_view()
 			try {
 				obj_data = obj_data.at(RESERVED_DATA);
 			} catch (const std::out_of_range&) {
-				clean_reserved(obj_data);
 				obj_data[RESERVED_ID] = db_handler.get_value(document, RESERVED_ID);
 				// Detailed info about the document:
 				obj_data[RESERVED_RANK] = m.get_rank();
