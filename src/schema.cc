@@ -2199,6 +2199,9 @@ Schema::index_field_term(Xapian::Document& doc, std::string&& serialise_val, siz
 		}
 		L_INDEX(this, "Text to Index [%d] => %s: %s [with positions: %d]", pos, specification.prefix.c_str(), serialise_val.c_str(), positions);
 	} else {
+		if (!specification.bool_term && specification.sep_types[2] == STRING_TYPE) {
+			to_lower(serialise_val);
+		}
 		auto nameterm = prefixed(serialise_val, specification.prefix);
 		auto position = specification.position[getPos(pos, specification.position.size())];
 		if (position) {
@@ -2247,6 +2250,9 @@ Schema::index_global_term(Xapian::Document& doc, std::string&& serialise_val, si
 		}
 		L_INDEX(this, "Text to Index [%d] => %s [with positions: %d]", pos, serialise_val.c_str(), positions);
 	} else {
+		if (!specification.bool_term && specification.sep_types[2] == STRING_TYPE) {
+			to_lower(serialise_val);
+		}
 		auto position = specification.position[getPos(pos, specification.position.size())];
 		if (position) {
 			if (specification.bool_term) {
