@@ -2158,8 +2158,11 @@ Schema::validate_required_data(const MsgPack* value)
 
 		// Process RESERVED_BOOL_TERM
 		if (!specification.set_bool_term) {
-			// By default, if field name has upper characters then it is consider bool term.
-			specification.bool_term = strhasupper(specification.full_name);
+			/*
+			 * By default, if field name has upper characters then it is consider bool term.
+			 * If type is TEXT, bool_term is false.
+			 */
+			specification.bool_term = specification.sep_types[2] != TEXT_TYPE && strhasupper(specification.full_name);
 		}
 		properties[RESERVED_BOOL_TERM] = specification.bool_term;
 
