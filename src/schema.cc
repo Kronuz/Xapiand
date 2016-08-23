@@ -1562,6 +1562,9 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			break;
 		default:
 			index_item(doc, object, *data);
+			if (specification.store && data->size() == 1) {
+				*data = (*data)[RESERVED_VALUE];
+			}
 			break;
 	}
 
