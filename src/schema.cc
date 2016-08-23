@@ -2296,7 +2296,7 @@ Schema::index_all_term(Xapian::Document& doc, std::string&& serialise_val, size_
 			term_generator.index_text_without_positions(serialise_val, wdfinc, specification.prefix);
 			term_generator.index_text_without_positions(serialise_val, wdfinc);
 		}
-		L_INDEX(this, "Text to Index [%d] => { %s: %s, %s } [with positions: %s]", pos, specification.prefix.c_str(), serialise_val.c_str(), serialise_val.c_str(), positions);
+		L_INDEX(this, "Text to Index [%d] => { %s: %s, %s } [with positions: %d]", pos, specification.prefix.c_str(), serialise_val.c_str(), serialise_val.c_str(), positions);
 	} else {
 		auto nameterm = prefixed(serialise_val, specification.prefix);
 		auto position = specification.position[getPos(pos, specification.position.size())];
