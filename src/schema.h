@@ -135,6 +135,7 @@ struct specification_t {
 	bool geo_detection;
 	bool bool_detection;
 	bool string_detection;
+	bool text_detection;
 	bool bool_term;
 
 	std::unique_ptr<const MsgPack> value;
@@ -330,6 +331,7 @@ public:
 	void process_g_detection(const MsgPack& doc_g_detection);
 	void process_b_detection(const MsgPack& doc_b_detection);
 	void process_s_detection(const MsgPack& doc_s_detection);
+	void process_t_detection(const MsgPack& doc_t_detection);
 	void process_bool_term(const MsgPack& doc_bool_term);
 	void process_partials(const MsgPack& doc_partials);
 	void process_error(const MsgPack& doc_error);
@@ -477,6 +479,10 @@ public:
 
 	void update_s_detection(const MsgPack& prop_s_detection) {
 		specification.string_detection = prop_s_detection.as_bool();
+	}
+
+	void update_t_detection(const MsgPack& prop_t_detection) {
+		specification.text_detection = prop_t_detection.as_bool();
 	}
 
 	void update_bool_term(const MsgPack& prop_bool_term) {

@@ -99,6 +99,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_document({
 	{ RESERVED_G_DETECTION,  &Schema::process_g_detection },
 	{ RESERVED_B_DETECTION,  &Schema::process_b_detection },
 	{ RESERVED_S_DETECTION,  &Schema::process_s_detection },
+	{ RESERVED_T_DETECTION,  &Schema::process_t_detection },
 	{ RESERVED_BOOL_TERM,    &Schema::process_bool_term   },
 	{ RESERVED_VALUE,        &Schema::process_value       },
 	{ RESERVED_NAME,         &Schema::process_name        },
@@ -131,6 +132,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties
 	{ RESERVED_G_DETECTION,  &Schema::update_g_detection  },
 	{ RESERVED_B_DETECTION,  &Schema::update_b_detection  },
 	{ RESERVED_S_DETECTION,  &Schema::update_s_detection  },
+	{ RESERVED_T_DETECTION,  &Schema::update_t_detection  },
 	{ RESERVED_BOOL_TERM,    &Schema::update_bool_term    },
 	{ RESERVED_SLOT,         &Schema::update_slot         },
 	{ RESERVED_INDEX,        &Schema::update_index        },
@@ -179,6 +181,7 @@ specification_t::specification_t()
 	  geo_detection(true),
 	  bool_detection(true),
 	  string_detection(true),
+	  text_detection(true),
 	  bool_term(false),
 	  found_field(true),
 	  set_type(false),
@@ -210,6 +213,7 @@ specification_t::specification_t(const specification_t& o)
 	  geo_detection(o.geo_detection),
 	  bool_detection(o.bool_detection),
 	  string_detection(o.string_detection),
+	  text_detection(o.text_detection),
 	  bool_term(o.bool_term),
 	  full_name(o.full_name),
 	  found_field(o.found_field),
@@ -242,6 +246,7 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  geo_detection(std::move(o.geo_detection)),
 	  bool_detection(std::move(o.bool_detection)),
 	  string_detection(std::move(o.string_detection)),
+	  text_detection(std::move(o.text_detection)),
 	  bool_term(std::move(o.bool_term)),
 	  full_name(std::move(o.full_name)),
 	  found_field(std::move(o.found_field)),
@@ -276,6 +281,7 @@ specification_t::operator=(const specification_t& o)
 	geo_detection = o.geo_detection;
 	bool_detection = o.bool_detection;
 	string_detection = o.string_detection;
+	text_detection = o.text_detection;
 	bool_term = o.bool_term;
 	value.reset();
 	value_rec.reset();
@@ -316,6 +322,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	geo_detection = std::move(o.geo_detection);
 	bool_detection = std::move(o.bool_detection);
 	string_detection = std::move(o.string_detection);
+	text_detection = std::move(o.text_detection);
 	bool_term = std::move(o.bool_term);
 	value.reset();
 	value_rec.reset();
@@ -400,6 +407,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_G_DETECTION << ": " << (geo_detection     ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_B_DETECTION << ": " << (bool_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_S_DETECTION << ": " << (string_detection  ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_T_DETECTION << ": " << (text_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_BOOL_TERM   << ": " << (bool_term         ? "true" : "false") << "\n}\n";
 
 	return str.str();
@@ -1139,7 +1147,7 @@ Schema::process_b_detection(const MsgPack& doc_b_detection)
 void
 Schema::process_s_detection(const MsgPack& doc_s_detection)
 {
-	// RESERVED_S_DETECTION isn't heritable and can't change.
+	// RESERVED_S_DETECTION is heritable and can't change.
 	if likely(specification.found_field) {
 		return;
 	}
@@ -1149,6 +1157,23 @@ Schema::process_s_detection(const MsgPack& doc_s_detection)
 		get_mutable(specification.full_name)[RESERVED_S_DETECTION] = specification.string_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_S_DETECTION);
+	}
+}
+
+
+void
+Schema::process_t_detection(const MsgPack& doc_t_detection)
+{
+	// RESERVED_T_DETECTION is heritable and can't change.
+	if likely(specification.found_field) {
+		return;
+	}
+
+	try {
+		specification.text_detection = doc_t_detection.as_bool();
+		get_mutable(specification.full_name)[RESERVED_T_DETECTION] = specification.text_detection;
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_T_DETECTION);
 	}
 }
 
