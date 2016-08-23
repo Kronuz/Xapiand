@@ -59,6 +59,52 @@ enum class typeIndex : uint8_t {
 };
 
 
+inline static std::string readable_acc_date(unitTime unit) noexcept {
+	switch (unit) {
+		case unitTime::SECOND:     return "second";
+		case unitTime::MINUTE:     return "minute";
+		case unitTime::HOUR:       return "hour";
+		case unitTime::DAY:        return "day";
+		case unitTime::MONTH:      return "month";
+		case unitTime::YEAR:       return "year";
+		case unitTime::DECADE:     return "decade";
+		case unitTime::CENTURY:    return "century";
+		case unitTime::MILLENNIUM: return "millennium";
+	}
+}
+
+
+inline static std::string readable_analyzer(Xapian::TermGenerator::stem_strategy stem) noexcept {
+	switch (stem) {
+		case Xapian::TermGenerator::STEM_NONE:   return "stem_none";
+		case Xapian::TermGenerator::STEM_SOME:   return "stem_some";
+		case Xapian::TermGenerator::STEM_ALL:    return "stem_all";
+		case Xapian::TermGenerator::STEM_ALL_Z:  return "stem_all_z";
+	}
+}
+
+
+inline static std::string readable_index(typeIndex index) noexcept {
+	switch (index) {
+		case typeIndex::NONE:           return "none";
+		case typeIndex::TERMS:          return "terms";
+		case typeIndex::VALUES:         return "values";
+		case typeIndex::ALL:            return "all";
+		case typeIndex::FIELD_TERMS:    return "field_terms";
+		case typeIndex::FIELD_VALUES:   return "field_values";
+		case typeIndex::FIELD_ALL:      return "field_all";
+		case typeIndex::GLOBAL_TERMS:   return "global_terms";
+		case typeIndex::GLOBAL_VALUES:  return "global_values";
+		case typeIndex::GLOBAL_ALL:     return "global_all";
+	}
+}
+
+
+inline static constexpr auto getPos(size_t pos, size_t size) noexcept {
+	return pos < size ? pos : size - 1;
+};
+
+
 MSGPACK_ADD_ENUM(unitTime);
 MSGPACK_ADD_ENUM(typeIndex);
 MSGPACK_ADD_ENUM(Xapian::TermGenerator::stem_strategy);
@@ -130,7 +176,6 @@ class Schema;
 
 
 using index_term = void (Schema::*)(Xapian::Document&, std::string&&, size_t) const;
-
 
 
 class Schema {

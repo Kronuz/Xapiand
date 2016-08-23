@@ -61,36 +61,6 @@ static const std::unordered_map<std::string, typeIndex> map_index({
 
 
 /*
- * Unordered Maps used for doing the schema readable.
- */
-
-static const std::unordered_map<unitTime, std::string> map_acc_date_inv({
-	{ unitTime::SECOND,     "second"     }, { unitTime::MINUTE,  "minute"  },
-	{ unitTime::HOUR,       "hour"       }, { unitTime::DAY,     "day"     },
-	{ unitTime::MONTH,      "month"      }, { unitTime::YEAR,    "year"    },
-	{ unitTime::DECADE,     "decade"     }, { unitTime::CENTURY, "century" },
-	{ unitTime::MILLENNIUM, "millennium" }
-});
-
-
-static const std::unordered_map<Xapian::TermGenerator::stem_strategy, std::string> map_analyzer_inv({
-	{ Xapian::TermGenerator::STEM_NONE,  "stem_none"   },
-	{ Xapian::TermGenerator::STEM_SOME,  "stem_some"   },
-	{ Xapian::TermGenerator::STEM_ALL,   "stem_all"    },
-	{ Xapian::TermGenerator::STEM_ALL_Z, "stem_all_z"  }
-});
-
-
-static const std::unordered_map<typeIndex, std::string> map_index_inv({
-	{ typeIndex::NONE,          "none"          }, { typeIndex::TERMS,        "terms"        },
-	{ typeIndex::VALUES,        "values"        }, { typeIndex::ALL,          "all"          },
-	{ typeIndex::FIELD_TERMS,   "field_terms"   }, { typeIndex::FIELD_VALUES, "field_values" },
-	{ typeIndex::FIELD_ALL,     "field_all"     }, { typeIndex::GLOBAL_TERMS, "global_terms" },
-	{ typeIndex::GLOBAL_VALUES, "global_values" }, { typeIndex::GLOBAL_ALL,   "global_all"   }
-});
-
-
-/*
  * Default accuracies.
  */
 
@@ -189,11 +159,6 @@ const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable({
 	{ RESERVED_ANALYZER,     &Schema::readable_analyzer },
 	{ RESERVED_INDEX,        &Schema::readable_index    }
 });
-
-
-inline static constexpr auto getPos(size_t pos, size_t size) noexcept {
-	return pos < size ? pos : size - 1;
-};
 
 
 specification_t::specification_t()
@@ -405,7 +370,7 @@ specification_t::to_string() const
 
 	str << "\t" << RESERVED_ANALYZER    << ": [ ";
 	for (const auto& _analyzer : analyzer) {
-		str << map_analyzer_inv.at(_analyzer) << " ";
+		str << readable_analyzer(_analyzer) << " ";
 	}
 	str << "]\n";
 
@@ -427,7 +392,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_SLOT        << ": " << slot                    << "\n";
 	str << "\t" << RESERVED_TYPE        << ": " << str_type(sep_types)     << "\n";
 	str << "\t" << RESERVED_PREFIX      << ": " << prefix                  << "\n";
-	str << "\t" << RESERVED_INDEX       << ": " << map_index_inv.at(index) << "\n";
+	str << "\t" << RESERVED_INDEX       << ": " << readable_index(index)   << "\n";
 	str << "\t" << RESERVED_STORE       << ": " << (store             ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_DYNAMIC     << ": " << (dynamic           ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_D_DETECTION << ": " << (date_detection    ? "true" : "false") << "\n";
@@ -731,7 +696,7 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 	// Readable accuracy.
 	if (sep_types[2] == DATE_TYPE) {
 		for (auto& _accuracy : properties.at(RESERVED_ACCURACY)) {
-			_accuracy = map_acc_date_inv.at((unitTime)_accuracy.as_u64());
+			_accuracy = readable_acc_date((unitTime)_accuracy.as_u64());
 		}
 	}
 }
@@ -741,7 +706,7 @@ void
 Schema::readable_analyzer(MsgPack& prop_analyzer, MsgPack&)
 {
 	for (auto& _analyzer : prop_analyzer) {
-		_analyzer = map_analyzer_inv.at((Xapian::TermGenerator::stem_strategy)_analyzer.as_u64());
+		_analyzer = ::readable_analyzer((Xapian::TermGenerator::stem_strategy)_analyzer.as_u64());
 	}
 }
 
@@ -749,7 +714,7 @@ Schema::readable_analyzer(MsgPack& prop_analyzer, MsgPack&)
 void
 Schema::readable_index(MsgPack& prop_index, MsgPack&)
 {
-	prop_index = map_index_inv.at((typeIndex)prop_index.as_u64());
+	prop_index = ::readable_index((typeIndex)prop_index.as_u64());
 }
 
 
