@@ -42,9 +42,16 @@ KEY_FIELD_VALUE = '_value'
 KEY_FIELD_WEIGHT = '_weight'
 KEY_FIELD_INDEX = '_index'
 KEY_FIELD_STORE = '_store'
-TERM = 'term'
-VALUE = 'value'
+NONE = 'none'
 ALL = 'all'
+ALL_TERMS = 'terms'
+ALL_VALUES = 'values'
+FIELD_ALL = 'field_all'
+FIELD_TERMS = 'field_terms'
+FIELD_VALUES = 'field_values'
+GLOBAL_ALL = 'global_all'
+GLOBAL_TERMS = 'global_terms'
+GLOBAL_VALUES = 'global_values'
 
 
 class XapianSearchResults:
@@ -56,6 +63,7 @@ class XapianSearchResults:
 
         if 'results' in results:
             self.results = results['results']
+        if 'size' in results:
             self.size = int(results['size'])
 
             for result in self.results:
@@ -77,11 +85,7 @@ class XapianSearchResults:
             return self.get_data(_first_result)
         else:
             next_result = self.results.next()
-            if next_result is not None:
-                return self.get_data(self.results.next())
-            else:
-                # for some reason the module requests keep-alive new lines as a None
-                return self.resutls.next()
+            return self.get_data(next_result)
     __next__ = next
 
     def get_data(self, result):
@@ -96,8 +100,9 @@ class XapianSearchResults:
     def fix_data(self, result):
         _result = result
         for name in result:
-            if '_value' in result[name]:
-                _result[name] = result[name]['_value']
+            if isinstance(result[name], dict):
+                if '_value' in result[name]:
+                    _result[name] = result[name]['_value']
         return _result
 
 
@@ -121,7 +126,10 @@ class XapianSearchBackend(BaseSearchBackend):
         self.endpoints = endpoints
 
     def build_json(self, document_json, field_name, value, weight, index_type):
-        # TODO: Any chance of multivalued?
+        if isinstance(value, list):  # For multivalue case
+            value = [x for x in value if x is not None]
+            if len(value) == 0:
+                return
         document_json[field_name] = {KEY_FIELD_VALUE: value, KEY_FIELD_INDEX: index_type, KEY_FIELD_WEIGHT: weight}
 
     def updater(self, index, obj, commit):
@@ -142,9 +150,6 @@ class XapianSearchBackend(BaseSearchBackend):
                 if field_name in data:
                     values = data[field_name]
 
-                    if not field['multi_valued']:
-                        values = [values]
-
                     try:
                         weight = int(weights[field_name])
                     except KeyError:
@@ -153,82 +158,93 @@ class XapianSearchBackend(BaseSearchBackend):
                     if field_name in (ID, DJANGO_CT, DJANGO_ID):
                         field_name = field_name.upper()
 
+                    in_json = False
                     field_type = field['type']
                     _field_name = field_name
-                    for value in values:
-                        if not value:
-                            continue
 
-                        if field_type == 'text':
-                            if field['mode'] == 'autocomplete':  # mode = content, autocomplete, tagged
-                                self.build_json(document_json, DOCUMENT_AC_FIELD, value, weight, TERM)
-                                _field_name = DOCUMENT_AC_FIELD
+                    if values is None:
+                        continue
 
-                            elif field['mode'] == 'tagged':
-                                self.build_json(document_json, DOCUMENT_TAGS_FIELD, value, weight, TERM)
-                                _field_name = DOCUMENT_TAGS_FIELD
+                    if field_type == 'text':
+                        if field['mode'] == 'autocomplete':  # mode = content, autocomplete, tagged
+                            self.build_json(document_json, DOCUMENT_AC_FIELD, values, weight, FIELD_TERMS)
+                            _field_name = DOCUMENT_AC_FIELD
+                            in_json = True
 
-                            else:
-                                self.build_json(document_json, field_name, value, weight, TERM)
+                        elif field['mode'] == 'tagged':
+                            self.build_json(document_json, DOCUMENT_TAGS_FIELD, values, weight, FIELD_TERMS)
+                            _field_name = DOCUMENT_TAGS_FIELD
+                            in_json = True
 
-                        elif field_type in ('ngram', 'edge_ngram'):
-                                NGRAM_MIN_LENGTH = 1
-                                NGRAM_MAX_LENGTH = 15
-                                terms = _ngram_terms({value: weight}, min_length=NGRAM_MIN_LENGTH, max_length=NGRAM_MAX_LENGTH, split=field_type == 'edge_ngram')
-                                for term, weight in terms.items():
-                                    self.build_json(document_json, field_name, term, weight, TERM)
+                        else:
+                            self.build_json(document_json, field_name, values, weight, FIELD_TERMS)
+                            in_json = True
 
-                        # FIXME: Xapiand support EWKT, by default use 'POINT' in the backend but needed change for receive a geometry primitives too
-                        # FIXME: Xapiand no support list of POINTS, you need index MULTIPOINT to achieve it, for now it will overwrite the field POINT in case receive more that one
-                        elif field_type == 'geo_point':
-                            lat, _, lng = value.partition(',')
-                            value = 'POINT(' + lat + ' ' + lng + ')'
-                            self.build_json(document_json, field_name, value, weight, VALUE)
+                    elif field_type in ('ngram', 'edge_ngram'):
+                            NGRAM_MIN_LENGTH = 1
+                            NGRAM_MAX_LENGTH = 15
+                            terms = _ngram_terms({values: weight}, min_length=NGRAM_MIN_LENGTH, max_length=NGRAM_MAX_LENGTH, split=field_type == 'edge_ngram')
+                            for term, weight in terms.items():
+                                self.build_json(document_json, field_name, term, weight, FIELD_TERMS)
+                            in_json = True
 
-                        elif field_type == 'boolean':
-                            self.build_json(document_json, field_name, value, weight, TERM)
+                    # TODO: Xapiand support EWKT, by default use 'POINT' in the backend but needed change for receive a geometry primitives too
+                    # TODO: Xapiand no support list of POINTS, you need index MULTIPOINT to achieve it, for now it will overwrite the field POINT in case receive more that one
+                    elif field_type == 'geo_point':
+                        lat, _, lng = values.partition(',')
+                        values = 'POINT(' + lat + ' ' + lng + ')'
+                        self.build_json(document_json, field_name, values, weight, FIELD_VALUES)
+                        in_json = True
 
-                        elif field_type in ('integer', 'long'):
-                            value = int(value)
-                            self.build_json(document_json, field_name, value, weight, ALL)
+                    elif field_type == 'boolean':
+                        self.build_json(document_json, field_name, values, weight, FIELD_TERMS)
+                        in_json = True
 
-                        elif field_type in ('float'):
-                            value = float(value)
-                            self.build_json(document_json, field_name, value, weight, ALL)
+                    elif field_type in ('integer', 'long'):
+                        values = int(values)
+                        self.build_json(document_json, field_name, values, weight, FIELD_ALL)
+                        in_json = True
 
-                        elif field_type in ('date'):
-                            self.build_json(document_json, field_name, value, weight, ALL)
+                    elif field_type in ('float'):
+                        values = float(values)
+                        self.build_json(document_json, field_name, values, weight, FIELD_ALL)
+                        in_json = True
 
-                        if field_name == self.content_field_name:
-                            pass
+                    elif field_type in ('date'):
+                        self.build_json(document_json, field_name, values, weight, FIELD_ALL)
+                        in_json = True
 
-                if 'stored' in field:
-                    document_json.setdefault(_field_name, {KEY_FIELD_STORE: field['stored']})
+                    if field_name == self.content_field_name:
+                        pass
+
+                    if 'stored' in field and in_json:
+                        document_json.setdefault(_field_name, {KEY_FIELD_STORE: field['stored']})
 
             model = obj._meta.model
             if model._deferred:
                 model = model._meta.proxy_for_model
-            self.build_json(document_json, 'app_label', model._meta.app_label, weight, TERM)
-            self.build_json(document_json, 'module_name', model._meta.module_name, weight, TERM)
-            self.build_json(document_json, 'pk', obj.pk, weight, TERM)
+            self.build_json(document_json, 'app_label', model._meta.app_label, weight, FIELD_TERMS)
+            self.build_json(document_json, 'module_name', model._meta.module_name, weight, FIELD_TERMS)
+            self.build_json(document_json, 'pk', obj.pk, weight, FIELD_TERMS)
 
-            self.build_json(document_json, DJANGO_CT.upper(), get_model_ct(obj), 0, TERM)
+            self.build_json(document_json, DJANGO_CT.upper(), get_model_ct(obj), 0, FIELD_TERMS)
 
             document_id = get_identifier(obj)
-            client = Xapiand(settings.XAPIAN_SERVER)
-            for endpoint in endpoints:
-                client.index(endpoint, None, document_json, id=document_id)
+            client = Xapiand(ip=settings.XAPIAN_SERVER)
 
-    def update(self, index, iterable, commit=False):
+            for endpoint in endpoints:
+                client.index(endpoint, document_json, id=document_id)
+
+    def update(self, index, iterable, commit=False, mod=None):
         for obj in iterable:
             self.updater(index, obj, commit=commit)
 
     def remove(self, obj, commit=False):
         endpoints = self.endpoints.for_write(instance=obj)
         document_id = get_identifier(obj)
-        client = Xapiand(settings.XAPIAN_SERVER)
+        client = Xapiand(ip=settings.XAPIAN_SERVER)
         for endpoint in endpoints:
-            client.delete(endpoint, None, id=document_id)
+            client.delete(endpoint, id=document_id)
 
     def clear(self, models=[], commit=True):
         pass
@@ -259,9 +275,8 @@ class XapianSearchBackend(BaseSearchBackend):
 
         hints = hints or {}
         endpoints = self.endpoints.for_read(models=models, **hints)
-
         client = Xapiand(settings.XAPIAN_SERVER)
-        results = client.search(endpoints, None, query=queries, partial=partials, terms=terms, offset=offset, limit=limit)
+        results = client.search(endpoints, query=queries, partial=partials, terms=terms, offset=offset, limit=limit)
         results_obj = XapianSearchResults(results)
 
         return {
@@ -380,7 +395,7 @@ class XapianSearchQuery(BaseSearchQuery):
                 self.queries.add('%s:"%s"' % (field, value))
                 value = '###'
 
-        # FIXME: Xapiand support EWKT, It needs to implement a way to indicate which primitive is used
+        # TODO: Xapiand support EWKT, It needs to implement a way to indicate which primitive is used
         # elif filter_type == 'geo':
 
         elif filter_type == 'gte':
