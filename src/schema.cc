@@ -577,6 +577,13 @@ Schema::set_type(const MsgPack& item_doc)
 			break;
 		case msgpack::type::STR: {
 			auto str_value = field.as_string();
+			if (specification.bool_detection) {
+				try {
+					Serialise::boolean(str_value);
+					specification.sep_types[2] = BOOLEAN_TYPE;
+					return;
+				} catch (const SerialisationError&) { }
+			}
 			if (specification.date_detection && Datetime::isDate(str_value)) {
 				specification.sep_types[2] = DATE_TYPE;
 				return;
@@ -592,13 +599,6 @@ Schema::set_type(const MsgPack& item_doc)
 			if (specification.string_detection) {
 				specification.sep_types[2] = STRING_TYPE;
 				return;
-			}
-			if (specification.bool_detection) {
-				try {
-					Serialise::boolean(str_value);
-					specification.sep_types[2] = BOOLEAN_TYPE;
-					return;
-				} catch (const std::exception&) { }
 			}
 			break;
 		}
