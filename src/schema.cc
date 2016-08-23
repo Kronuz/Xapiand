@@ -471,7 +471,7 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 	} catch (const std::out_of_range&) {
 		auto& prop_id = get_mutable(RESERVED_ID);
 		specification.found_field = false;
-		auto res_serialise = Serialise::serialise(value_id);
+		auto res_serialise = Serialise::serialise(value_id, true);
 		prop_id[RESERVED_TYPE] = std::vector<unsigned>({ NO_TYPE, NO_TYPE, static_cast<unsigned>(res_serialise.first) });
 		prop_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
