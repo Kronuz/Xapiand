@@ -1582,7 +1582,6 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 	L_CALL(this, "Schema::index_array()");
 
 	const auto spc_start = specification;
-	bool offsprings = false;
 	size_t pos = 0;
 	for (const auto& item : array) {
 		switch (item.type()) {
@@ -1593,6 +1592,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				specification.value_rec = nullptr;
 				auto sub_properties = &properties;
 				MsgPack* data_pos = nullptr;
+				bool offsprings = false;
 
 				for (const auto& property : item) {
 					auto str_prop = property.as_string();
@@ -1611,9 +1611,15 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				if (specification.name.empty()) {
 					if (specification.value) {
 						index_item(doc, *specification.value, *data_pos);
+						if (specification.store && !offsprings) {
+							*data_pos = (*data_pos)[RESERVED_VALUE];
+						}
 					}
 					if (specification.value_rec) {
 						index_item(doc, *specification.value_rec, *data_pos);
+						if (specification.store && !offsprings) {
+							*data_pos = (*data_pos)[RESERVED_VALUE];
+						}
 					}
 				} else {
 					if (specification.full_name.empty()) {
@@ -1627,9 +1633,15 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 					sub_properties = &get_subproperties(*sub_properties);
 					if (specification.value) {
 						index_item(doc, *specification.value, *data_pos);
+						if (specification.store && !offsprings) {
+							*data_pos = (*data_pos)[RESERVED_VALUE];
+						}
 					}
 					if (specification.value_rec) {
 						index_item(doc, *specification.value_rec, *data_pos);
+						if (specification.store && !offsprings) {
+							*data_pos = (*data_pos)[RESERVED_VALUE];
+						}
 					}
 				}
 
@@ -1639,21 +1651,31 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 					task.get();
 				}
 
+				if unlikely(offsprings && specification.sep_types[0] == NO_TYPE) {
+					set_type_to_object();
+				}
+
 				specification = spc_start;
 				break;
 			}
-			case msgpack::type::ARRAY:
-				index_item(doc, item, specification.store ? data[pos] : data);
+			case msgpack::type::ARRAY: {
+				MsgPack& data_pos = specification.store ? data[pos] : data;
+				index_item(doc, item, data_pos);
+				if (specification.store) {
+					data_pos = data_pos[RESERVED_VALUE];
+				}
 				break;
-			default:
-				index_item(doc, item, specification.store ? data[pos] : data, pos);
+			}
+			default: {
+				MsgPack& data_pos = specification.store ? data[pos] : data;
+				index_item(doc, item, data_pos, pos);
+				if (specification.store) {
+					data_pos = data_pos[RESERVED_VALUE];
+				}
 				break;
+			}
 		}
 		++pos;
-	}
-
-	if unlikely(offsprings && specification.sep_types[0] == NO_TYPE) {
-		set_type_to_object();
 	}
 }
 
