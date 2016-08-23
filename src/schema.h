@@ -82,6 +82,7 @@ struct specification_t {
 	std::vector<std::string> acc_gprefix;
 
 	bool store;
+	bool parent_store;
 	bool dynamic;
 	bool date_detection;
 	bool numeric_detection;
@@ -405,7 +406,8 @@ public:
 	}
 
 	void update_store(const MsgPack& prop_store) {
-		specification.store = prop_store.as_bool() && specification.store;
+		specification.parent_store = specification.store;
+		specification.store = prop_store.as_bool() && specification.parent_store;
 	}
 
 	void update_dynamic(const MsgPack& prop_dynamic) {

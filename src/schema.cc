@@ -207,6 +207,7 @@ specification_t::specification_t()
 	  slot(Xapian::BAD_VALUENO),
 	  index(typeIndex::ALL),
 	  store(true),
+	  parent_store(true),
 	  dynamic(true),
 	  date_detection(true),
 	  numeric_detection(true),
@@ -237,6 +238,7 @@ specification_t::specification_t(const specification_t& o)
 	  acc_prefix(o.acc_prefix),
 	  acc_gprefix(o.acc_gprefix),
 	  store(o.store),
+	  parent_store(o.parent_store),
 	  dynamic(o.dynamic),
 	  date_detection(o.date_detection),
 	  numeric_detection(o.numeric_detection),
@@ -268,6 +270,7 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  acc_prefix(std::move(o.acc_prefix)),
 	  acc_gprefix(std::move(o.acc_gprefix)),
 	  store(std::move(o.store)),
+	  parent_store(std::move(o.parent_store)),
 	  dynamic(std::move(o.dynamic)),
 	  date_detection(std::move(o.date_detection)),
 	  numeric_detection(std::move(o.numeric_detection)),
@@ -301,6 +304,7 @@ specification_t::operator=(const specification_t& o)
 	acc_prefix = o.acc_prefix;
 	acc_gprefix = o.acc_gprefix;
 	store = o.store;
+	parent_store = o.parent_store;
 	dynamic = o.dynamic;
 	date_detection = o.date_detection;
 	numeric_detection = o.numeric_detection;
@@ -340,6 +344,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	acc_prefix = std::move(o.acc_prefix);
 	acc_gprefix = std::move(o.acc_gprefix);
 	store = std::move(o.store);
+	parent_store = std::move(o.parent_store);
 	dynamic = std::move(o.dynamic);
 	date_detection = std::move(o.date_detection);
 	numeric_detection = std::move(o.numeric_detection);
@@ -415,6 +420,9 @@ specification_t::to_string() const
 		str << acc_p << " ";
 	}
 	str << "]\n";
+
+	str << "\t" << RESERVED_VALUE     << ": " << (value ? value->to_string() : std::string())                 << "\n";
+	str << "\t" << "Recovery value"   << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
 
 	str << "\t" << RESERVED_SLOT        << ": " << slot                    << "\n";
 	str << "\t" << RESERVED_TYPE        << ": " << str_type(sep_types)     << "\n";
@@ -522,14 +530,14 @@ Schema::restart_specification()
 	L_CALL(this, "Schema::restart_specification()");
 
 	specification.sep_types = default_spc.sep_types;
+	specification.prefix = default_spc.prefix;
+	specification.slot = default_spc.slot;
 	specification.accuracy.clear();
 	specification.acc_prefix.clear();
 	specification.acc_gprefix.clear();
-	specification.prefix = default_spc.prefix;
-	specification.slot = default_spc.slot;
 	specification.bool_term = default_spc.bool_term;
-	specification.set_type = default_spc.set_type;
 	specification.name = default_spc.name;
+	specification.set_type = default_spc.set_type;
 	specification.partials = default_spc.partials;
 	specification.error = default_spc.error;
 }
@@ -1065,10 +1073,12 @@ Schema::process_store(const MsgPack& doc_store)
 	 * it cannot change in its offsprings.
 	 */
 	try {
-		specification.store = doc_store.as_bool() && specification.store;
+		auto val_store = doc_store.as_bool();
+		specification.store = val_store && specification.parent_store;
+		specification.parent_store = specification.store;
 
 		if unlikely(!specification.found_field) {
-			get_mutable(specification.full_name)[RESERVED_STORE] = specification.store;
+			get_mutable(specification.full_name)[RESERVED_STORE] = val_store;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_STORE);
@@ -1465,8 +1475,8 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			specification.full_name.append(DB_OFFSPRING_UNION).append(name);
 		}
 		specification.name.assign(name);
-		properties = &get_subproperties(*parent_properties);
 		data = specification.store ? &(*parent_data)[name] : parent_data;
+		properties = &get_subproperties(*parent_properties);
 	}
 
 	switch (object.type()) {
@@ -1492,6 +1502,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			}
 
 			if (specification.name.empty()) {
+				if (data != parent_data && !specification.store) {
+					parent_data->erase(name);
+					data = parent_data;
+				}
 				if (specification.value) {
 					index_item(doc, *specification.value, *data);
 					if (specification.store && !offsprings) {
@@ -1514,6 +1528,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 					data = &(*data)[specification.name];
 				}
 				properties = &get_subproperties(*properties);
+
 				if (specification.value) {
 					index_item(doc, *specification.value, *data);
 					if (specification.store && !offsprings) {
@@ -1527,6 +1542,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 					}
 				}
 			}
+
 			const auto spc_object = std::move(specification);
 			for (auto& task : tasks) {
 				specification = spc_object;
@@ -1573,7 +1589,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
 				auto sub_properties = &properties;
-				auto data_pos = specification.store ? &data[pos] : &data;
+				MsgPack* data_pos = nullptr;
 
 				for (const auto& property : item) {
 					auto str_prop = property.as_string();
@@ -1587,6 +1603,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 						}
 					}
 				}
+				data_pos = specification.store ? &data[pos] : &data;
 
 				if (specification.name.empty()) {
 					if (specification.value) {
