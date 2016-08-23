@@ -88,6 +88,10 @@ constexpr double GEO_DEF_ERROR    = HTM_MIN_ERROR;
 
 
 namespace Serialise {
+	inline static bool isText(const std::string& value, bool bool_term) noexcept {
+		return !bool_term && value.find(' ') != std::string::npos;
+	}
+
 	/*
 	 * Serialise field_value according to field_type.
 	 */
@@ -102,9 +106,12 @@ namespace Serialise {
 
 	/*
 	 * Given a field_value, it gets the type.
+	 *
+	 * If bool_term can not return TEXT_TYPE.
+	 *
 	 * Returns the type and the serialise value.
 	 */
-	std::pair<char, std::string> serialise(const std::string& field_value);
+	std::pair<char, std::string> serialise(const std::string& field_value, bool bool_term);
 
 
 	// Serialise field_value like date.

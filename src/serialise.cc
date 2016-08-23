@@ -167,7 +167,7 @@ Serialise::boolean(char field_type, bool field_value)
 
 
 std::pair<char, std::string>
-Serialise::serialise(const std::string& field_value)
+Serialise::serialise(const std::string& field_value, bool bool_term)
 {
 	// Try like integer.
 	try {
@@ -193,6 +193,11 @@ Serialise::serialise(const std::string& field_value)
 	try {
 		return std::make_pair(GEO_TYPE, ewkt(field_value));
 	} catch (const EWKTError&) { }
+
+	// If it is TEXT
+	if (isText(field_value, bool_term)) {
+		return std::make_pair(TEXT_TYPE, field_value);
+	}
 
 	// Default type.
 	return std::make_pair(STRING_TYPE, field_value);
