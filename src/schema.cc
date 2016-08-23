@@ -576,17 +576,24 @@ Schema::set_type(const MsgPack& item_doc)
 			}
 			break;
 		case msgpack::type::STR: {
-			auto str_value(field.as_string());
+			auto str_value = field.as_string();
 			if (specification.date_detection && Datetime::isDate(str_value)) {
 				specification.sep_types[2] = DATE_TYPE;
 				return;
-			} else if (specification.geo_detection && EWKT_Parser::isEWKT(str_value)) {
+			}
+			if (specification.geo_detection && EWKT_Parser::isEWKT(str_value)) {
 				specification.sep_types[2] = GEO_TYPE;
 				return;
-			} else if (specification.string_detection) {
+			}
+			if (specification.text_detection && Serialise::isText(str_value, specification.bool_term)) {
+				specification.sep_types[2] = TEXT_TYPE;
+				return;
+			}
+			if (specification.string_detection) {
 				specification.sep_types[2] = STRING_TYPE;
 				return;
-			} else if (specification.bool_detection) {
+			}
+			if (specification.bool_detection) {
 				try {
 					Serialise::boolean(str_value);
 					specification.sep_types[2] = BOOLEAN_TYPE;
