@@ -169,22 +169,27 @@ Serialise::boolean(char field_type, bool field_value)
 std::pair<char, std::string>
 Serialise::serialise(const std::string& field_value, bool bool_term)
 {
-	// Try like integer.
+	// Try like INTEGER.
 	try {
 		return std::make_pair(INTEGER_TYPE, integer(field_value));
 	} catch (const SerialisationError&) { }
 
-	// Try like positive.
+	// Try like POSITIVE.
 	try {
 		return std::make_pair(POSITIVE_TYPE, positive(field_value));
 	} catch (const SerialisationError&) { }
 
-	// Try like Float
+	// Try like FLOAT
 	try {
 		return std::make_pair(FLOAT_TYPE, _float(field_value));
 	} catch (const SerialisationError&) { }
 
-	// Try like date
+	// Try like BOOLEAN
+	try {
+		return std::make_pair(BOOLEAN_TYPE, boolean(field_value));
+	} catch (const SerialisationError&) { }
+
+	// Try like DATE
 	try {
 		return std::make_pair(DATE_TYPE, date(field_value));
 	} catch (const DatetimeError&) { }
@@ -194,12 +199,12 @@ Serialise::serialise(const std::string& field_value, bool bool_term)
 		return std::make_pair(GEO_TYPE, ewkt(field_value));
 	} catch (const EWKTError&) { }
 
-	// If it is TEXT
+	// Like TEXT
 	if (isText(field_value, bool_term)) {
 		return std::make_pair(TEXT_TYPE, field_value);
 	}
 
-	// Default type.
+	// Default type STRING.
 	return std::make_pair(STRING_TYPE, field_value);
 }
 

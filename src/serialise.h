@@ -111,7 +111,7 @@ namespace Serialise {
 	 *
 	 * Returns the type and the serialise value.
 	 */
-	std::pair<char, std::string> serialise(const std::string& field_value, bool bool_term);
+	std::pair<char, std::string> serialise(const std::string& field_value, bool bool_term=false);
 
 
 	// Serialise field_value like date.
