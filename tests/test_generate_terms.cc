@@ -70,7 +70,7 @@ const testQuery_t numeric[] {
 	// Do not find a lower accuracy because it exceeded the number of terms.
 	{
 		"-1200.300", "1200.200", { 10, 10000, 100000 }, { "N1", "N2", "N3" },
-		"N2:0", { "N2" }
+		"N2:_10000 OR N2:0", { "N2" }
 	},
 
 	// Testing negatives.
@@ -93,7 +93,7 @@ const testQuery_t numeric[] {
 	// Do not find a upper accuracy.
 	{
 		"-1000200.200", "-10200.100", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"N6:_1000000 OR N6:_900000 OR N6:_800000 OR N6:_700000 OR N6:_600000 OR N6:_500000 OR N6:_400000 OR N6:_300000 OR N6:_200000 OR N6:_100000 OR N6:0",
+		"N6:_1100000 OR N6:_1000000 OR N6:_900000 OR N6:_800000 OR N6:_700000 OR N6:_600000 OR N6:_500000 OR N6:_400000 OR N6:_300000 OR N6:_200000 OR N6:_100000",
 		{"N6"}
 	},
 	// When the range of search is more big that MAX_TERM * MAX_ACCURACY.
@@ -105,18 +105,17 @@ const testQuery_t numeric[] {
 	// Find lower and upper accuracy, upper accuracy generates only one term.
 	{
 		"-2500", "1200", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"(N5:0) AND (N4:_2000 OR N4:_1000 OR N4:0 OR N4:1000)", { "N5", "N4" }
+		"(N5:_10000 AND (N4:_3000 OR N4:_2000 OR N4:_1000)) OR (N5:0 AND (N4:0 OR N4:1000))", { "N5", "N4" }
 	},
 	// Find lower and upper accuracy, upper accuracy generates two terms.
 	{
 		"-100200.200", "10200.100", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"N6:_100000 OR N6:0",
-		{ "N6"}
+		"N6:_200000 OR N6:_100000 OR N6:0", { "N6"}
 	},
 	// Do not find a upper accuracy.
 	{
 		"-1000200.200", "100200.100", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"N6:_1000000 OR N6:_900000 OR N6:_800000 OR N6:_700000 OR N6:_600000 OR N6:_500000 OR N6:_400000 OR N6:_300000 OR N6:_200000 OR N6:_100000 OR N6:0 OR N6:100000",
+		"N6:_1100000 OR N6:_1000000 OR N6:_900000 OR N6:_800000 OR N6:_700000 OR N6:_600000 OR N6:_500000 OR N6:_400000 OR N6:_300000 OR N6:_200000 OR N6:_100000 OR N6:0 OR N6:100000",
 		{ "N6" }
 	},
 	// When the range of search is more big that MAX_TERM * MAX_ACCURACY.
