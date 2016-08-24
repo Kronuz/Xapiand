@@ -44,11 +44,8 @@ inline constexpr size_t get_upper_bound(size_t length_prefix, size_t number_unio
 
 
 namespace GenerateTerms {
-	inline uint64_t modulus(uint64_t val, uint64_t mod) {
-		return val % mod;
-	}
-
-	inline uint64_t modulus(int64_t val, uint64_t mod) {
+	template<typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
+	inline uint64_t modulus(T val, uint64_t mod) {
 		if (val < 0) {
 			val = -val;
 			auto m = static_cast<uint64_t>(val) % mod;
