@@ -184,11 +184,6 @@ Serialise::serialise(const std::string& field_value, bool bool_term)
 		return std::make_pair(FLOAT_TYPE, _float(field_value));
 	} catch (const SerialisationError&) { }
 
-	// Try like BOOLEAN
-	try {
-		return std::make_pair(BOOLEAN_TYPE, boolean(field_value));
-	} catch (const SerialisationError&) { }
-
 	// Try like DATE
 	try {
 		return std::make_pair(DATE_TYPE, date(field_value));
