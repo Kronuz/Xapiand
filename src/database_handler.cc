@@ -721,7 +721,7 @@ DatabaseHandler::multi_db_delete_document(const std::string& doc_id, bool commit
 {
 	L_CALL(this, "DatabaseHandler::multi_db_delete_document(2)");
 
-	endpoints_error_list err_endpoints;
+	endpoints_error_list err_list;
 	auto _endpoints = endpoints;
 	for (const auto& e : _endpoints) {
 		endpoints.clear();
@@ -732,15 +732,15 @@ DatabaseHandler::multi_db_delete_document(const std::string& doc_id, bool commit
 			database->delete_document(_id, commit_, wal_);
 			checkin();
 		} catch (const DocNotFoundError& err) {
-			err_endpoints["Document not found"].push_back(e.as_string());
+			err_list["Document not found"].push_back(e.as_string());
 			checkin();
 		} catch (const Xapian::Error& err) {
-			err_endpoints[err.get_error_string()].push_back(e.as_string());
+			err_list[err.get_error_string()].push_back(e.as_string());
 			checkin();
 		}
 	}
 	endpoints = _endpoints;
-	return err_endpoints;
+	return err_list;
 }
 
 
