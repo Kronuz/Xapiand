@@ -72,7 +72,7 @@ public:
 			}
 			if (fvs == nullptr) {
 				fvs = fvs_aux;
-			} else if (fvs != fvs_aux) {
+			} else if (*fvs != *fvs_aux) {
 				throw MSG_ClientError("Cannot index in several indexes with different schemas");
 			}
 		}
