@@ -798,8 +798,8 @@ HttpClient::delete_document_view()
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
-		++stats_cnt.del.min[b_time.minute];
-		++stats_cnt.del.sec[b_time.second];
+		stats_cnt.del.min[b_time.minute] += endpoints.size();
+		stats_cnt.del.sec[b_time.second] += endpoints.size();
 		stats_cnt.del.tm_min[b_time.minute] += _time;
 		stats_cnt.del.tm_sec[b_time.second] += _time;
 	}
