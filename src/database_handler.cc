@@ -93,7 +93,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 
 
 Xapian::docid
-DatabaseHandler::index(const std::string &body, const std::string &_document_id, bool commit_, const std::string &ct_type, const std::string &ct_length)
+DatabaseHandler::index(const std::string &body, const std::string &_document_id, bool commit_, const std::string &ct_type, const std::string &ct_length, endpoints_error_list* err_list)
 {
 	L_CALL(this, "DatabaseHandler::index(1)");
 
@@ -165,7 +165,12 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 			endpoints.clear();
 			endpoints.add(e);
 			checkout();
-			did = database->replace_document_term(term_id, doc, commit_);
+			try {
+				did = database->replace_document_term(term_id, doc, commit_);
+			} catch (const Xapian::Error& err) {
+				err_list->operator[](err.get_error_string()).push_back(e.as_string());
+				checkin();
+			}
 			checkin();
 		}
 		endpoints = std::move(_endpoints);

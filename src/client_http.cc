@@ -816,6 +816,7 @@ HttpClient::index_document_view(bool gen_id)
 	L_CALL(this, "HttpClient::index_document_view()");
 
 	std::string doc_id;
+	int status_code;
 
 	if (gen_id) {
 		path_parser.off_id = nullptr;
@@ -836,10 +837,11 @@ HttpClient::index_document_view(bool gen_id)
 		content_type = JSON_CONTENT_TYPE;
 	}
 
+	endpoints_error_list err_list;
 	operation_begins = std::chrono::system_clock::now();
 
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF);
-	db_handler.index(body, doc_id, query_field->commit, content_type, content_length);
+	db_handler.index(body, doc_id, query_field->commit, content_type, content_length, &err_list);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -855,12 +857,23 @@ HttpClient::index_document_view(bool gen_id)
 	L_TIME(this, "Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	MsgPack response;
-	response["_index"] = {
-		{ RESERVED_ID, doc_id },
-		{ "_commit", query_field->commit }
-	};
+	if (err_list.empty()) {
+		status_code = 200;
+		response["_index"] = {
+			{ RESERVED_ID, doc_id },
+			{ "_commit", query_field->commit }
+		};
+	} else {
+		for (const auto& err : err_list) {
+			MsgPack o;
+			for (const auto& end : err.second) {
+				o.push_back(end);
+			}
+			response["_index"].insert(err.first, o);
+		}
+	}
 
-	write_http_response(response, 200, pretty);
+	write_http_response(response, status_code, pretty);
 }
 
 
