@@ -277,7 +277,7 @@ std::string urldecode(const char *src, size_t size) {
 
 	std::string sResult(pStart, pEnd);
 	delete [] pStart;
-	//std::replace( sResult.begin(), sResult.end(), '+', ' ');
+	std::replace( sResult.begin(), sResult.end(), '+', ' ');
 	return sResult;
 }
 
