@@ -75,48 +75,48 @@ GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy
 {
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
-		switch ((unitTime)acc) {
-			case unitTime::MILLENNIUM: {
+		switch ((UnitTime)acc) {
+			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 				break;
 			}
-			case unitTime::CENTURY: {
+			case UnitTime::CENTURY: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 				break;
 			}
-			case unitTime::DECADE: {
+			case UnitTime::DECADE: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 				break;
 			}
-			case unitTime::YEAR: {
+			case UnitTime::YEAR: {
 				Datetime::tm_t _tm(tm.year);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 				break;
 			}
-			case unitTime::MONTH: {
+			case UnitTime::MONTH: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 				break;
 			}
-			case unitTime::DAY: {
+			case UnitTime::DAY: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 				break;
 			}
-			case unitTime::HOUR: {
+			case UnitTime::HOUR: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 				break;
 			}
-			case unitTime::MINUTE: {
+			case UnitTime::MINUTE: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 				break;
 			}
-			case unitTime::SECOND: {
+			case UnitTime::SECOND: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
 				break;
@@ -196,64 +196,64 @@ GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy
 	auto it = acc_prefix.begin();
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
-		switch ((unitTime)acc) {
-			case unitTime::MILLENNIUM: {
+		switch ((UnitTime)acc) {
+			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it++));
 				doc.add_term(prefixed(term_v, *itg++));
 				break;
 			}
-			case unitTime::CENTURY: {
+			case UnitTime::CENTURY: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it++));
 				doc.add_term(prefixed(term_v, *itg++));
 				break;
 			}
-			case unitTime::DECADE: {
+			case UnitTime::DECADE: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it++));
 				doc.add_term(prefixed(term_v, *itg++));
 				break;
 			}
-			case unitTime::YEAR: {
+			case UnitTime::YEAR: {
 				Datetime::tm_t _tm(tm.year);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it++));
 				doc.add_term(prefixed(term_v, *itg++));
 				break;
 			}
-			case unitTime::MONTH: {
+			case UnitTime::MONTH: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it++));
 				doc.add_term(prefixed(term_v, *itg++));
 				break;
 			}
-			case unitTime::DAY: {
+			case UnitTime::DAY: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it++));
 				doc.add_term(prefixed(term_v, *itg++));
 				break;
 			}
-			case unitTime::HOUR: {
+			case UnitTime::HOUR: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it++));
 				doc.add_term(prefixed(term_v, *itg++));
 				break;
 			}
-			case unitTime::MINUTE: {
+			case UnitTime::MINUTE: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it++));
 				doc.add_term(prefixed(term_v, *itg++));
 				break;
 			}
-			case unitTime::SECOND: {
+			case UnitTime::SECOND: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it++));
@@ -322,24 +322,24 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 	// Find the accuracy needed.
 	if (diff) {
 		if (diff >= 1000) {
-			acc = toUType(unitTime::MILLENNIUM);
+			acc = toUType(UnitTime::MILLENNIUM);
 		} else if (diff >= 100) {
-			acc = toUType(unitTime::CENTURY);
+			acc = toUType(UnitTime::CENTURY);
 		} else if (diff >= 10) {
-			acc = toUType(unitTime::DECADE);
+			acc = toUType(UnitTime::DECADE);
 		} else {
-			acc = toUType(unitTime::YEAR);
+			acc = toUType(UnitTime::YEAR);
 		}
 	} else if (tm_e.mon - tm_s.mon) {
-		acc = toUType(unitTime::MONTH);
+		acc = toUType(UnitTime::MONTH);
 	} else if (tm_e.day - tm_s.day) {
-		acc = toUType(unitTime::DAY);
+		acc = toUType(UnitTime::DAY);
 	} else if (tm_e.hour - tm_s.hour) {
-		acc = toUType(unitTime::HOUR);
+		acc = toUType(UnitTime::HOUR);
 	} else if (tm_e.min - tm_s.min) {
-		acc = toUType(unitTime::MINUTE);
+		acc = toUType(UnitTime::MINUTE);
 	} else {
-		acc = toUType(unitTime::SECOND);
+		acc = toUType(UnitTime::SECOND);
 	}
 
 	// Find the upper or equal accuracy.
@@ -352,32 +352,32 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 	if (pos < len) {
 		auto c_tm_s = tm_s;
 		auto c_tm_e = tm_e;
-		switch ((unitTime)accuracy[pos]) {
-			case unitTime::MILLENNIUM:
+		switch ((UnitTime)accuracy[pos]) {
+			case UnitTime::MILLENNIUM:
 				result_terms.assign(millennium(c_tm_s, c_tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::CENTURY:
+			case UnitTime::CENTURY:
 				result_terms.assign(century(c_tm_s, c_tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::DECADE:
+			case UnitTime::DECADE:
 				result_terms.assign(decade(c_tm_s, c_tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::YEAR:
+			case UnitTime::YEAR:
 				result_terms.assign(year(c_tm_s, c_tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::MONTH:
+			case UnitTime::MONTH:
 				result_terms.assign(month(c_tm_s, c_tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::DAY:
+			case UnitTime::DAY:
 				result_terms.assign(day(c_tm_s, c_tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::HOUR:
+			case UnitTime::HOUR:
 				result_terms.assign(hour(c_tm_s, c_tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::MINUTE:
+			case UnitTime::MINUTE:
 				result_terms.assign(minute(c_tm_s, c_tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::SECOND:
+			case UnitTime::SECOND:
 				result_terms.assign(second(c_tm_s, c_tm_e, acc_prefix[pos]));
 				break;
 		}
@@ -389,32 +389,32 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 	// If there is the needed accuracy.
 	if (pos > 0 && acc == accuracy[--pos]) {
 		std::string lower_terms;
-		switch ((unitTime)accuracy[pos]) {
-			case unitTime::MILLENNIUM:
+		switch ((UnitTime)accuracy[pos]) {
+			case UnitTime::MILLENNIUM:
 				lower_terms.assign(millennium(tm_s, tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::CENTURY:
+			case UnitTime::CENTURY:
 				lower_terms.assign(century(tm_s, tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::DECADE:
+			case UnitTime::DECADE:
 				lower_terms.assign(decade(tm_s, tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::YEAR:
+			case UnitTime::YEAR:
 				lower_terms.assign(year(tm_s, tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::MONTH:
+			case UnitTime::MONTH:
 				lower_terms.assign(month(tm_s, tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::DAY:
+			case UnitTime::DAY:
 				lower_terms.assign(day(tm_s, tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::HOUR:
+			case UnitTime::HOUR:
 				lower_terms.assign(hour(tm_s, tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::MINUTE:
+			case UnitTime::MINUTE:
 				lower_terms.assign(minute(tm_s, tm_e, acc_prefix[pos]));
 				break;
-			case unitTime::SECOND:
+			case UnitTime::SECOND:
 				lower_terms.assign(second(tm_s, tm_e, acc_prefix[pos]));
 				break;
 		}
