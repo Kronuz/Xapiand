@@ -2856,8 +2856,9 @@ Schema::get_data_field(const std::string& field_name) const
 
 	data_field_t res = {
 		default_spc.slot, default_spc.prefix, default_spc.sep_types[2],
-		default_spc.accuracy, default_spc.acc_prefix, default_spc.acc_gprefix,
-		default_spc.bool_term, default_spc.partials, default_spc.error
+		default_spc.accuracy, default_spc.acc_prefix, default_spc.bool_term,
+		default_spc.stem_strategy, default_spc.stem_language, default_spc.language,
+		default_spc.partials, default_spc.error
 	};
 
 	if (field_name.empty()) {
@@ -2878,7 +2879,7 @@ Schema::get_data_field(const std::string& field_name) const
 		res.prefix = properties.at(RESERVED_PREFIX).as_string();
 		res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 
-		// Get accuracy, acc_prefix and acc_gprefix.
+		// Get accuracy, acc_prefix and reserved word.
 		switch (res.type) {
 			case GEO_TYPE:
 				res.partials = properties.at(RESERVED_PARTIALS).as_bool();
@@ -2893,11 +2894,14 @@ Schema::get_data_field(const std::string& field_name) const
 				for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
 					res.acc_prefix.push_back(acc_p.as_string());
 				}
-				for (const auto& acc_gp : properties.at(RESERVED_ACC_GPREFIX)) {
-					res.acc_gprefix.push_back(acc_gp.as_string());
-				}
 				break;
 			}
+			case TEXT_TYPE:
+				res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
+				res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
+			case STRING_TYPE:
+				res.language = properties.at(RESERVED_LANGUAGE).as_string();
+				break;
 			default:
 				break;
 		}
@@ -2914,8 +2918,9 @@ Schema::get_slot_field(const std::string& field_name) const
 
 	data_field_t res = {
 		default_spc.slot, default_spc.prefix, default_spc.sep_types[2],
-		default_spc.accuracy, default_spc.acc_prefix, default_spc.acc_gprefix,
-		default_spc.bool_term, default_spc.partials, default_spc.error
+		default_spc.accuracy, default_spc.acc_prefix, default_spc.bool_term,
+		default_spc.stem_strategy, default_spc.stem_language, default_spc.language,
+		default_spc.partials, default_spc.error
 	};
 
 	if (field_name.empty()) {
@@ -2929,11 +2934,103 @@ Schema::get_slot_field(const std::string& field_name) const
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		res.type = static_cast<unsigned>(properties.at(RESERVED_TYPE).at(2).as_u64());
 		// Get partials and error if type is GEO.
-		if (res.type == GEO_TYPE) {
-			res.partials = properties.at(RESERVED_PARTIALS).as_bool();
-			res.error = properties.at(RESERVED_ERROR).as_bool();
+		switch (res.type) {
+			case GEO_TYPE:
+				res.partials = properties.at(RESERVED_PARTIALS).as_bool();
+				res.error = properties.at(RESERVED_ERROR).as_f64();
+				break;
+			case TEXT_TYPE:
+				res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
+				res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
+			case STRING_TYPE:
+				res.language = properties.at(RESERVED_LANGUAGE).as_string();
+				break;
 		}
 	} catch (const std::exception&) { }
 
 	return res;
+}
+
+
+const data_field_t&
+Schema::get_data_global(char field_type)
+{
+	L_CALL(nullptr, "Schema::get_data_global()");
+
+	switch (field_type) {
+		case FLOAT_TYPE: {
+			static const data_field_t prop = {
+				DB_SLOT_NUMERIC, default_spc.prefix, FLOAT_TYPE, def_accuracy_num,
+				global_acc_prefix_num, default_spc.bool_term, default_spc.stem_strategy,
+				default_spc.stem_language, default_spc.language, default_spc.partials,
+				default_spc.error
+			};
+			return prop;
+		}
+		case INTEGER_TYPE: {
+			static const data_field_t prop = {
+				DB_SLOT_NUMERIC, default_spc.prefix, INTEGER_TYPE, def_accuracy_num,
+				global_acc_prefix_num, default_spc.bool_term, default_spc.stem_strategy,
+				default_spc.stem_language, default_spc.language, default_spc.partials,
+				default_spc.error
+			};
+			return prop;
+		}
+		case POSITIVE_TYPE: {
+			static const data_field_t prop = {
+				DB_SLOT_NUMERIC, default_spc.prefix, POSITIVE_TYPE, def_accuracy_num,
+				global_acc_prefix_num, default_spc.bool_term, default_spc.stem_strategy,
+				default_spc.stem_language, default_spc.language, default_spc.partials,
+				default_spc.error
+			};
+			return prop;
+		}
+		case STRING_TYPE: {
+			static const data_field_t prop = {
+				DB_SLOT_STRING, default_spc.prefix, STRING_TYPE, default_spc.accuracy,
+				default_spc.acc_prefix, default_spc.bool_term, default_spc.stem_strategy,
+				default_spc.stem_language, default_spc.language, default_spc.partials,
+				default_spc.error
+			};
+			return prop;
+		}
+		case TEXT_TYPE: {
+			static const data_field_t prop = {
+				DB_SLOT_STRING, default_spc.prefix, TEXT_TYPE, default_spc.accuracy,
+				default_spc.acc_prefix, default_spc.bool_term, default_spc.stem_strategy,
+				default_spc.stem_language, default_spc.language, default_spc.partials,
+				default_spc.error
+			};
+			return prop;
+		}
+		case BOOLEAN_TYPE: {
+			static const data_field_t prop = {
+				DB_SLOT_STRING, default_spc.prefix, BOOLEAN_TYPE, default_spc.accuracy,
+				default_spc.acc_prefix, default_spc.bool_term, default_spc.stem_strategy,
+				default_spc.stem_language, default_spc.language, default_spc.partials,
+				default_spc.error
+			};
+			return prop;
+		}
+		case DATE_TYPE: {
+			static const data_field_t prop = {
+				DB_SLOT_DATE, default_spc.prefix, DATE_TYPE, def_accuracy_date,
+				global_acc_prefix_date, default_spc.bool_term, default_spc.stem_strategy,
+				default_spc.stem_language, default_spc.language, default_spc.partials,
+				default_spc.error
+			};
+			return prop;
+		}
+		case GEO_TYPE: {
+			static const data_field_t prop = {
+				DB_SLOT_GEO, default_spc.prefix, GEO_TYPE, def_accuracy_geo,
+				global_acc_prefix_geo, default_spc.bool_term, default_spc.stem_strategy,
+				default_spc.stem_language, default_spc.language, default_spc.partials,
+				default_spc.error
+			};
+			return prop;
+		}
+		default:
+			throw MSG_ClientError("Type: '%u' is an unknown type", field_type);
+	}
 }
