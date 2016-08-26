@@ -696,16 +696,18 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	// Delete duplicates terms.
 	auto it = results.begin();
 	auto last_valid(std::bitset<SIZE_BITS_ID>(it->first).to_string());
-	last_valid.assign(last_valid.substr(last_valid.find("1")));
+	last_valid.assign(last_valid.substr(last_valid.find('1')));
 	auto result_terms(it->second);
-	result_terms.append(":").append(std::to_string(it->first));
+	result_terms.push_back(':');
+	result_terms.append(std::to_string(it->first));
 	std::unordered_set<std::string> used_prefixes({ it->second });
 	used_prefixes.reserve(acc_prefix.size());
 	const auto it_e = results.end();
 	for (++it; it != it_e; ++it) {
 		if (isnotSubtrixel(last_valid, it->first)) {
 			used_prefixes.insert(it->second);
-			result_terms.append(" OR ").append(it->second).append(":").append(std::to_string(it->first));
+			result_terms.append(" OR ").append(it->second).push_back(':');
+			result_terms.append(std::to_string(it->first));
 		}
 	}
 
