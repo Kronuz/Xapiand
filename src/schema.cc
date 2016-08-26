@@ -34,29 +34,29 @@
  * Unordered Maps used for reading user data specification.
  */
 
-static const std::unordered_map<std::string, unitTime> map_acc_date({
-	{ "second",     unitTime::SECOND     }, { "minute",  unitTime::MINUTE  },
-	{ "hour",       unitTime::HOUR       }, { "day",     unitTime::DAY     },
-	{ "month",      unitTime::MONTH      }, { "year",    unitTime::YEAR    },
-	{ "decade",     unitTime::DECADE     }, { "century", unitTime::CENTURY },
-	{ "millennium", unitTime::MILLENNIUM }
+static const std::unordered_map<std::string, UnitTime> map_acc_date({
+	{ "second",     UnitTime::SECOND     }, { "minute",  UnitTime::MINUTE  },
+	{ "hour",       UnitTime::HOUR       }, { "day",     UnitTime::DAY     },
+	{ "month",      UnitTime::MONTH      }, { "year",    UnitTime::YEAR    },
+	{ "decade",     UnitTime::DECADE     }, { "century", UnitTime::CENTURY },
+	{ "millennium", UnitTime::MILLENNIUM }
 });
 
 
-static const std::unordered_map<std::string, Xapian::TermGenerator::stem_strategy> map_analyzer({
-	{ "stem_none",  Xapian::TermGenerator::STEM_NONE   }, { "none",  Xapian::TermGenerator::STEM_NONE   },
-	{ "stem_some",  Xapian::TermGenerator::STEM_SOME   }, { "some",  Xapian::TermGenerator::STEM_SOME   },
-	{ "stem_all",   Xapian::TermGenerator::STEM_ALL    }, { "all",   Xapian::TermGenerator::STEM_ALL    },
-	{ "stem_all_z", Xapian::TermGenerator::STEM_ALL_Z  }, { "all_z", Xapian::TermGenerator::STEM_ALL_Z  }
+static const std::unordered_map<std::string, StemStrategy> map_stem_strategy({
+	{ "stem_none",  StemStrategy::STEM_NONE   }, { "none",  StemStrategy::STEM_NONE   },
+	{ "stem_some",  StemStrategy::STEM_SOME   }, { "some",  StemStrategy::STEM_SOME   },
+	{ "stem_all",   StemStrategy::STEM_ALL    }, { "all",   StemStrategy::STEM_ALL    },
+	{ "stem_all_z", StemStrategy::STEM_ALL_Z  }, { "all_z", StemStrategy::STEM_ALL_Z  }
 });
 
 
-static const std::unordered_map<std::string, typeIndex> map_index({
-	{ "none",          typeIndex::NONE          }, { "terms",        typeIndex::TERMS        },
-	{ "values",        typeIndex::VALUES        }, { "all",          typeIndex::ALL          },
-	{ "field_terms",   typeIndex::FIELD_TERMS   }, { "field_values", typeIndex::FIELD_VALUES },
-	{ "field_all",     typeIndex::FIELD_ALL     }, { "global_terms", typeIndex::GLOBAL_TERMS },
-	{ "global_values", typeIndex::GLOBAL_VALUES }, { "global_all",   typeIndex::GLOBAL_ALL   }
+static const std::unordered_map<std::string, TypeIndex> map_index({
+	{ "none",          TypeIndex::NONE          }, { "terms",        TypeIndex::TERMS        },
+	{ "values",        TypeIndex::VALUES        }, { "all",          TypeIndex::ALL          },
+	{ "field_terms",   TypeIndex::FIELD_TERMS   }, { "field_values", TypeIndex::FIELD_VALUES },
+	{ "field_all",     TypeIndex::FIELD_ALL     }, { "global_terms", TypeIndex::GLOBAL_TERMS },
+	{ "global_values", TypeIndex::GLOBAL_VALUES }, { "global_all",   TypeIndex::GLOBAL_ALL   }
 });
 
 
@@ -64,9 +64,41 @@ static const std::unordered_map<std::string, typeIndex> map_index({
  * Default accuracies.
  */
 
-static const MsgPack def_accuracy_geo  { 0, 5, 10, 15, 20, 25 };
-static const MsgPack def_accuracy_num  { 100, 1000, 10000, 100000 };
-static const MsgPack def_accuracy_date { "hour", "day", "month", "year", "decade", "century" };
+static const std::vector<uint64_t> def_accuracy_geo({ 0, 5, 10, 15, 20, 25 });
+static const std::vector<uint64_t> def_accuracy_num({ 100, 1000, 10000, 100000, 1000000, 10000000 });
+static const std::vector<uint64_t> def_accuracy_date({ toUType(UnitTime::HOUR), toUType(UnitTime::DAY), toUType(UnitTime::MONTH), toUType(UnitTime::YEAR), toUType(UnitTime::DECADE), toUType(UnitTime::CENTURY) });
+
+
+/*
+ * Default acc_prefixes for global values.
+ */
+
+static const std::vector<std::string> global_acc_prefix_geo({
+	get_prefix("_geo_0",  DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE),
+	get_prefix("_geo_5",  DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE),
+	get_prefix("_geo_10", DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE),
+	get_prefix("_geo_15", DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE),
+	get_prefix("_geo_20", DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE),
+	get_prefix("_geo_25", DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE)
+});
+
+static const std::vector<std::string> global_acc_prefix_date({
+	get_prefix("_date_hour",    DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE),
+	get_prefix("_date_day",     DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE),
+	get_prefix("_date_month",   DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE),
+	get_prefix("_date_year",    DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE),
+	get_prefix("_date_decade",  DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE),
+	get_prefix("_date_century", DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE)
+});
+
+static const std::vector<std::string> global_acc_prefix_num({
+	get_prefix("_num_100",      DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE),
+	get_prefix("_num_1000",     DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE),
+	get_prefix("_num_10000",    DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE),
+	get_prefix("_num_100000",   DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE),
+	get_prefix("_num_1000000",  DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE),
+	get_prefix("_num_10000000", DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE)
+});
 
 
 /*
@@ -74,7 +106,7 @@ static const MsgPack def_accuracy_date { "hour", "day", "month", "year", "decade
  */
 
 static const std::string str_set_acc_date("{ second, minute, hour, day, month, year, decade, century, millennium }");
-static const std::string str_set_analyzer("{ stem_none, stem_some, stem_all, stem_all_z, none, some, all, all_z }");
+static const std::string str_set_stem_strategy("{ stem_none, stem_some, stem_all, stem_all_z, none, some, all, all_z }");
 static const std::string str_set_index("{ none, terms, values, all, field_terms, field_values, field_all, global_terms, global_values, global_all }");
 
 
@@ -82,97 +114,120 @@ const specification_t default_spc;
 
 
 const std::unordered_map<std::string, dispatch_reserved> map_dispatch_document({
-	{ RESERVED_WEIGHT,       &Schema::process_weight      },
-	{ RESERVED_POSITION,     &Schema::process_position    },
-	{ RESERVED_LANGUAGE,     &Schema::process_language    },
-	{ RESERVED_SPELLING,     &Schema::process_spelling    },
-	{ RESERVED_POSITIONS,    &Schema::process_positions   },
-	{ RESERVED_ACCURACY,     &Schema::process_accuracy    },
-	{ RESERVED_ACC_PREFIX,   &Schema::process_acc_prefix  },
-	{ RESERVED_ACC_GPREFIX,  &Schema::process_acc_gprefix },
-	{ RESERVED_STORE,        &Schema::process_store       },
-	{ RESERVED_TYPE,         &Schema::process_type        },
-	{ RESERVED_ANALYZER,     &Schema::process_analyzer    },
-	{ RESERVED_DYNAMIC,      &Schema::process_dynamic     },
-	{ RESERVED_D_DETECTION,  &Schema::process_d_detection },
-	{ RESERVED_N_DETECTION,  &Schema::process_n_detection },
-	{ RESERVED_G_DETECTION,  &Schema::process_g_detection },
-	{ RESERVED_B_DETECTION,  &Schema::process_b_detection },
-	{ RESERVED_S_DETECTION,  &Schema::process_s_detection },
-	{ RESERVED_T_DETECTION,  &Schema::process_t_detection },
-	{ RESERVED_BOOL_TERM,    &Schema::process_bool_term   },
-	{ RESERVED_VALUE,        &Schema::process_value       },
-	{ RESERVED_NAME,         &Schema::process_name        },
-	{ RESERVED_SLOT,         &Schema::process_slot        },
-	{ RESERVED_INDEX,        &Schema::process_index       },
-	{ RESERVED_PREFIX,       &Schema::process_prefix      },
-	{ RESERVED_PARTIALS,     &Schema::process_partials    },
-	{ RESERVED_ERROR,        &Schema::process_error       },
-	{ RESERVED_LATITUDE,     &Schema::process_latitude    },
-	{ RESERVED_LONGITUDE,    &Schema::process_longitude   },
-	{ RESERVED_RADIUS,       &Schema::process_radius      }
+	{ RESERVED_WEIGHT,          &Schema::process_weight          },
+	{ RESERVED_POSITION,        &Schema::process_position        },
+	{ RESERVED_SPELLING,        &Schema::process_spelling        },
+	{ RESERVED_POSITIONS,       &Schema::process_positions       },
+	{ RESERVED_TYPE,            &Schema::process_type            },
+	{ RESERVED_PREFIX,          &Schema::process_prefix          },
+	{ RESERVED_SLOT,            &Schema::process_slot            },
+	{ RESERVED_INDEX,           &Schema::process_index           },
+	{ RESERVED_STORE,           &Schema::process_store           },
+	{ RESERVED_DYNAMIC,         &Schema::process_dynamic         },
+	{ RESERVED_D_DETECTION,     &Schema::process_d_detection     },
+	{ RESERVED_N_DETECTION,     &Schema::process_n_detection     },
+	{ RESERVED_G_DETECTION,     &Schema::process_g_detection     },
+	{ RESERVED_B_DETECTION,     &Schema::process_b_detection     },
+	{ RESERVED_S_DETECTION,     &Schema::process_s_detection     },
+	{ RESERVED_T_DETECTION,     &Schema::process_t_detection     },
+	{ RESERVED_BOOL_TERM,       &Schema::process_bool_term       },
+	{ RESERVED_VALUE,           &Schema::process_value           },
+	{ RESERVED_NAME,            &Schema::process_name            },
+	{ RESERVED_ACCURACY,        &Schema::process_accuracy        },
+	{ RESERVED_ACC_PREFIX,      &Schema::process_acc_prefix      },
+	{ RESERVED_STEM_STRATEGY,   &Schema::process_stem_strategy   },
+	{ RESERVED_STEM_LANGUAGE,   &Schema::process_stem_language   },
+	{ RESERVED_LANGUAGE,        &Schema::process_language        },
+	{ RESERVED_PARTIALS,        &Schema::process_partials        },
+	{ RESERVED_ERROR,           &Schema::process_error           },
+	{ RESERVED_LATITUDE,        &Schema::process_latitude        },
+	{ RESERVED_LONGITUDE,       &Schema::process_longitude       },
+	{ RESERVED_RADIUS,          &Schema::process_radius          },
+	{ RESERVED_DATE,            &Schema::process_date            },
+	{ RESERVED_TIME,            &Schema::process_time            },
+	{ RESERVED_YEAR,            &Schema::process_year            },
+	{ RESERVED_MONTH,           &Schema::process_month           },
+	{ RESERVED_DAY,             &Schema::process_day             }
 });
 
 
 const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties({
-	{ RESERVED_WEIGHT,       &Schema::update_weight       },
-	{ RESERVED_POSITION,     &Schema::update_position     },
-	{ RESERVED_LANGUAGE,     &Schema::update_language     },
-	{ RESERVED_SPELLING,     &Schema::update_spelling     },
-	{ RESERVED_POSITIONS,    &Schema::update_positions    },
-	{ RESERVED_ACCURACY,     &Schema::update_accuracy     },
-	{ RESERVED_ACC_PREFIX,   &Schema::update_acc_prefix   },
-	{ RESERVED_ACC_GPREFIX,  &Schema::update_acc_gprefix  },
-	{ RESERVED_STORE,        &Schema::update_store        },
-	{ RESERVED_TYPE,         &Schema::update_type         },
-	{ RESERVED_ANALYZER,     &Schema::update_analyzer     },
-	{ RESERVED_DYNAMIC,      &Schema::update_dynamic      },
-	{ RESERVED_D_DETECTION,  &Schema::update_d_detection  },
-	{ RESERVED_N_DETECTION,  &Schema::update_n_detection  },
-	{ RESERVED_G_DETECTION,  &Schema::update_g_detection  },
-	{ RESERVED_B_DETECTION,  &Schema::update_b_detection  },
-	{ RESERVED_S_DETECTION,  &Schema::update_s_detection  },
-	{ RESERVED_T_DETECTION,  &Schema::update_t_detection  },
-	{ RESERVED_BOOL_TERM,    &Schema::update_bool_term    },
-	{ RESERVED_SLOT,         &Schema::update_slot         },
-	{ RESERVED_INDEX,        &Schema::update_index        },
-	{ RESERVED_PREFIX,       &Schema::update_prefix       },
-	{ RESERVED_PARTIALS,     &Schema::update_partials     },
-	{ RESERVED_ERROR,        &Schema::update_error        }
+	{ RESERVED_WEIGHT,          &Schema::update_weight           },
+	{ RESERVED_POSITION,        &Schema::update_position         },
+	{ RESERVED_SPELLING,        &Schema::update_spelling         },
+	{ RESERVED_POSITIONS,       &Schema::update_positions        },
+	{ RESERVED_TYPE,            &Schema::update_type             },
+	{ RESERVED_PREFIX,          &Schema::update_prefix           },
+	{ RESERVED_SLOT,            &Schema::update_slot             },
+	{ RESERVED_INDEX,           &Schema::update_index            },
+	{ RESERVED_STORE,           &Schema::update_store            },
+	{ RESERVED_DYNAMIC,         &Schema::update_dynamic          },
+	{ RESERVED_D_DETECTION,     &Schema::update_d_detection      },
+	{ RESERVED_N_DETECTION,     &Schema::update_n_detection      },
+	{ RESERVED_G_DETECTION,     &Schema::update_g_detection      },
+	{ RESERVED_B_DETECTION,     &Schema::update_b_detection      },
+	{ RESERVED_S_DETECTION,     &Schema::update_s_detection      },
+	{ RESERVED_T_DETECTION,     &Schema::update_t_detection      },
+	{ RESERVED_BOOL_TERM,       &Schema::update_bool_term        },
+	{ RESERVED_ACCURACY,        &Schema::update_accuracy         },
+	{ RESERVED_ACC_PREFIX,      &Schema::update_acc_prefix       },
+	{ RESERVED_STEM_STRATEGY,   &Schema::update_stem_strategy    },
+	{ RESERVED_STEM_LANGUAGE,   &Schema::update_stem_language    },
+	{ RESERVED_LANGUAGE,        &Schema::update_language         },
+	{ RESERVED_PARTIALS,        &Schema::update_partials         },
+	{ RESERVED_ERROR,           &Schema::update_error            }
 });
 
 
 const std::unordered_map<std::string, dispatch_root> map_dispatch_root({
-	{ RESERVED_DATA,           &Schema::process_data           },
-	{ RESERVED_VALUES,         &Schema::process_values         },
-	{ RESERVED_FIELD_VALUES,   &Schema::process_field_values   },
-	{ RESERVED_GLOBAL_VALUES,  &Schema::process_global_values  },
-	{ RESERVED_TERMS,          &Schema::process_terms          },
-	{ RESERVED_FIELD_TERMS,    &Schema::process_field_terms    },
-	{ RESERVED_GLOBAL_TERMS,   &Schema::process_global_terms   },
-	{ RESERVED_FIELD_ALL,      &Schema::process_field_all      },
-	{ RESERVED_GLOBAL_ALL,     &Schema::process_global_all     },
-	{ RESERVED_NONE,           &Schema::process_none           }
+	{ RESERVED_DATA,           &Schema::process_data             },
+	{ RESERVED_VALUES,         &Schema::process_values           },
+	{ RESERVED_FIELD_VALUES,   &Schema::process_field_values     },
+	{ RESERVED_GLOBAL_VALUES,  &Schema::process_global_values    },
+	{ RESERVED_TERMS,          &Schema::process_terms            },
+	{ RESERVED_FIELD_TERMS,    &Schema::process_field_terms      },
+	{ RESERVED_GLOBAL_TERMS,   &Schema::process_global_terms     },
+	{ RESERVED_FIELD_ALL,      &Schema::process_field_all        },
+	{ RESERVED_GLOBAL_ALL,     &Schema::process_global_all       },
+	{ RESERVED_NONE,           &Schema::process_none             }
 });
 
 
 const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable({
-	{ RESERVED_TYPE,         &Schema::readable_type     },
-	{ RESERVED_ANALYZER,     &Schema::readable_analyzer },
-	{ RESERVED_INDEX,        &Schema::readable_index    }
+	{ RESERVED_TYPE,            &Schema::readable_type           },
+	{ RESERVED_STEM_STRATEGY,   &Schema::readable_stem_strategy  },
+	{ RESERVED_INDEX,           &Schema::readable_index          }
+});
+
+
+const std::unordered_map<std::string, std::pair<bool, std::string>> map_stem_language({
+	{ "armenian",    { true,  "hy" } },  { "hy",               { true,  "hy" } },  { "basque",          { true,  "ue" } },
+	{ "eu",          { true,  "eu" } },  { "catalan",          { true,  "ca" } },  { "ca",              { true,  "ca" } },
+	{ "danish",      { true,  "da" } },  { "da",               { true,  "da" } },  { "dutch",           { true,  "nl" } },
+	{ "nl",          { true,  "nl" } },  { "kraaij_pohlmann",  { false, "nl" } },  { "english",         { true,  "en" } },
+	{ "en",          { true,  "en" } },  { "earlyenglish",     { false, "en" } },  { "english_lovins",  { false, "en" } },
+	{ "lovins",      { false, "en" } },  { "english_porter",   { false, "en" } },  { "porter",          { false, "en" } },
+	{ "finnish",     { true,  "fi" } },  { "fi",               { true,  "fi" } },  { "french",          { true,  "fr" } },
+	{ "fr",          { true,  "fr" } },  { "german",           { true,  "de" } },  { "de",              { true,  "de" } },
+	{ "german2",     { false, "de" } },  { "hungarian",        { true,  "hu" } },  { "hu",              { true,  "hu" } },
+	{ "italian",     { true,  "it" } },  { "it",               { true,  "it" } },  { "norwegian",       { true,  "no" } },
+	{ "nb",          { false, "no" } },  { "nn",               { false, "no" } },  { "no",              { true,  "no" } },
+	{ "portuguese",  { true,  "pt" } },  { "pt",               { true,  "pt" } },  { "romanian",        { true,  "ro" } },
+	{ "ro",          { true,  "ro" } },  { "russian",          { true,  "ru" } },  { "ru",              { true,  "ru" } },
+	{ "spanish",     { true,  "es" } },  { "es",               { true,  "es" } },  { "swedish",         { true,  "sv" } },
+	{ "sv",          { true,  "sv" } },  { "turkish",          { true,  "tr" } },  { "tr",              { true,  "tr" } },
+	{ "none",        { false, DEFAULT_LANGUAGE } }
 });
 
 
 specification_t::specification_t()
 	: position({ 0 }),
 	  weight({ 1 }),
-	  language({ DEFAULT_LANGUAGE }),
 	  spelling({ false }),
 	  positions({ false }),
-	  analyzer({ Xapian::TermGenerator::STEM_SOME }),
 	  sep_types({ NO_TYPE, NO_TYPE, NO_TYPE }),
 	  slot(Xapian::BAD_VALUENO),
-	  index(typeIndex::ALL),
+	  index(TypeIndex::ALL),
 	  store(true),
 	  parent_store(true),
 	  dynamic(true),
@@ -183,28 +238,25 @@ specification_t::specification_t()
 	  string_detection(true),
 	  text_detection(true),
 	  bool_term(false),
+	  stem_strategy(StemStrategy::STEM_SOME),
+	  stem_language(DEFAULT_LANGUAGE),
+	  language(DEFAULT_LANGUAGE),
+	  partials(GEO_DEF_PARTIALS),
+	  error(GEO_DEF_ERROR),
 	  found_field(true),
 	  set_type(false),
-	  set_bool_term(false),
-	  fixed_index(false),
-	  partials(GEO_DEF_PARTIALS),
-	  error(GEO_DEF_ERROR) { }
+	  set_bool_term(false) { }
 
 
 specification_t::specification_t(const specification_t& o)
 	: position(o.position),
 	  weight(o.weight),
-	  language(o.language),
 	  spelling(o.spelling),
 	  positions(o.positions),
-	  analyzer(o.analyzer),
 	  sep_types(o.sep_types),
 	  prefix(o.prefix),
 	  slot(o.slot),
 	  index(o.index),
-	  accuracy(o.accuracy),
-	  acc_prefix(o.acc_prefix),
-	  acc_gprefix(o.acc_gprefix),
 	  store(o.store),
 	  parent_store(o.parent_store),
 	  dynamic(o.dynamic),
@@ -215,29 +267,31 @@ specification_t::specification_t(const specification_t& o)
 	  string_detection(o.string_detection),
 	  text_detection(o.text_detection),
 	  bool_term(o.bool_term),
+	  name(o.name),
 	  full_name(o.full_name),
+	  accuracy(o.accuracy),
+	  acc_prefix(o.acc_prefix),
+	  stem_strategy(o.stem_strategy),
+	  stem_language(o.stem_language),
+	  language(o.language),
+	  partials(o.partials),
+	  error(o.error),
 	  found_field(o.found_field),
 	  set_type(o.set_type),
 	  set_bool_term(o.set_bool_term),
-	  fixed_index(o.fixed_index),
-	  partials(o.partials),
-	  error(o.error) { }
+	  aux_stem_lan(o.aux_stem_lan),
+	  aux_lan(o.aux_lan) { }
 
 
 specification_t::specification_t(specification_t&& o) noexcept
 	: position(std::move(o.position)),
 	  weight(std::move(o.weight)),
-	  language(std::move(o.language)),
 	  spelling(std::move(o.spelling)),
 	  positions(std::move(o.positions)),
-	  analyzer(std::move(o.analyzer)),
 	  sep_types(std::move(o.sep_types)),
 	  prefix(std::move(o.prefix)),
 	  slot(std::move(o.slot)),
 	  index(std::move(o.index)),
-	  accuracy(std::move(o.accuracy)),
-	  acc_prefix(std::move(o.acc_prefix)),
-	  acc_gprefix(std::move(o.acc_gprefix)),
 	  store(std::move(o.store)),
 	  parent_store(std::move(o.parent_store)),
 	  dynamic(std::move(o.dynamic)),
@@ -248,13 +302,20 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  string_detection(std::move(o.string_detection)),
 	  text_detection(std::move(o.text_detection)),
 	  bool_term(std::move(o.bool_term)),
+	  name(std::move(o.name)),
 	  full_name(std::move(o.full_name)),
+	  accuracy(std::move(o.accuracy)),
+	  acc_prefix(std::move(o.acc_prefix)),
+	  stem_strategy(std::move(o.stem_strategy)),
+	  stem_language(std::move(o.stem_language)),
+	  language(std::move(o.language)),
+	  partials(std::move(o.partials)),
+	  error(std::move(o.error)),
 	  found_field(std::move(o.found_field)),
 	  set_type(std::move(o.set_type)),
 	  set_bool_term(std::move(o.set_bool_term)),
-	  fixed_index(std::move(o.fixed_index)),
-	  partials(std::move(o.partials)),
-	  error(std::move(o.error)) { }
+	  aux_stem_lan(std::move(o.aux_stem_lan)),
+	  aux_lan(std::move(o.aux_lan)) { }
 
 
 specification_t&
@@ -262,17 +323,12 @@ specification_t::operator=(const specification_t& o)
 {
 	position = o.position;
 	weight = o.weight;
-	language = o.language;
 	spelling = o.spelling;
 	positions = o.positions;
-	analyzer = o.analyzer;
 	sep_types = o.sep_types;
 	prefix = o.prefix;
 	slot = o.slot;
 	index = o.index;
-	accuracy = o.accuracy;
-	acc_prefix = o.acc_prefix;
-	acc_gprefix = o.acc_gprefix;
 	store = o.store;
 	parent_store = o.parent_store;
 	dynamic = o.dynamic;
@@ -288,12 +344,18 @@ specification_t::operator=(const specification_t& o)
 	doc_acc.reset();
 	name = o.name;
 	full_name = o.full_name;
+	accuracy = o.accuracy;
+	acc_prefix = o.acc_prefix;
+	stem_strategy = o.stem_strategy;
+	stem_language = o.stem_language;
+	language = o.language;
+	partials = o.partials;
+	error = o.error;
 	found_field = o.found_field;
 	set_type = o.set_type;
 	set_bool_term = o.set_bool_term;
-	fixed_index = o.fixed_index;
-	partials = o.partials;
-	error = o.error;
+	aux_stem_lan = o.aux_stem_lan;
+	aux_lan = o.aux_lan;
 	return *this;
 }
 
@@ -303,17 +365,12 @@ specification_t::operator=(specification_t&& o) noexcept
 {
 	position = std::move(o.position);
 	weight = std::move(o.weight);
-	language = std::move(o.language);
 	spelling = std::move(o.spelling);
 	positions = std::move(o.positions);
-	analyzer = std::move(o.analyzer);
 	sep_types = std::move(o.sep_types);
 	prefix = std::move(o.prefix);
 	slot = std::move(o.slot);
 	index = std::move(o.index);
-	accuracy = std::move(o.accuracy);
-	acc_prefix = std::move(o.acc_prefix);
-	acc_gprefix = std::move(o.acc_gprefix);
 	store = std::move(o.store);
 	parent_store = std::move(o.parent_store);
 	dynamic = std::move(o.dynamic);
@@ -329,12 +386,18 @@ specification_t::operator=(specification_t&& o) noexcept
 	doc_acc.reset();
 	name = std::move(o.name);
 	full_name = std::move(o.full_name);
+	accuracy = std::move(o.accuracy);
+	acc_prefix = std::move(o.acc_prefix);
+	stem_strategy = std::move(o.stem_strategy);
+	stem_language = std::move(o.stem_language);
+	language = std::move(o.language);
+	partials = std::move(o.partials);
+	error = std::move(o.error);
 	found_field = std::move(o.found_field);
 	set_type = std::move(o.set_type);
 	set_bool_term = std::move(o.set_bool_term);
-	fixed_index = std::move(o.fixed_index);
-	partials = std::move(o.partials);
-	error = std::move(o.error);
+	aux_stem_lan = std::move(o.aux_stem_lan);
+	aux_lan = std::move(o.aux_lan);
 	return *this;
 }
 
@@ -357,12 +420,6 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_LANGUAGE << ": [ ";
-	for (const auto& lan : language) {
-		str << lan << " ";
-	}
-	str << "]\n";
-
 	str << "\t" << RESERVED_SPELLING << ": [ ";
 	for (const auto& spel : spelling) {
 		str << (spel ? "true" : "false") << " ";
@@ -375,11 +432,9 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_ANALYZER    << ": [ ";
-	for (const auto& _analyzer : analyzer) {
-		str << readable_analyzer(_analyzer) << " ";
-	}
-	str << "]\n";
+	str << "\t" << RESERVED_STEM_STRATEGY    << ": " << readable_stem_strategy(stem_strategy) << "\n";
+	str << "\t" << RESERVED_STEM_LANGUAGE    << ": " << stem_language     << "\n";
+	str << "\t" << RESERVED_LANGUAGE         << ": " << language          << "\n";
 
 	str << "\t" << RESERVED_ACCURACY << ": [ ";
 	for (const auto& acc : accuracy) {
@@ -476,7 +531,7 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 		prop_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
 		prop_id[RESERVED_BOOL_TERM] = true;
-		prop_id[RESERVED_INDEX] = typeIndex::ALL;
+		prop_id[RESERVED_INDEX] = TypeIndex::ALL;
 		return res_serialise.second;
 	}
 }
@@ -502,17 +557,21 @@ Schema::restart_specification()
 {
 	L_CALL(this, "Schema::restart_specification()");
 
-	specification.sep_types = default_spc.sep_types;
-	specification.prefix = default_spc.prefix;
-	specification.slot = default_spc.slot;
-	specification.accuracy.clear();
-	specification.acc_prefix.clear();
-	specification.acc_gprefix.clear();
-	specification.bool_term = default_spc.bool_term;
-	specification.name = default_spc.name;
-	specification.set_type = default_spc.set_type;
-	specification.partials = default_spc.partials;
-	specification.error = default_spc.error;
+	specification.sep_types     = default_spc.sep_types;
+	specification.prefix        = default_spc.prefix;
+	specification.slot          = default_spc.slot;
+	specification.accuracy      = default_spc.accuracy;
+	specification.acc_prefix    = default_spc.acc_prefix;
+	specification.bool_term     = default_spc.bool_term;
+	specification.name          = default_spc.name;
+	specification.stem_strategy = default_spc.stem_strategy;
+	specification.stem_language = default_spc.stem_language;
+	specification.language      = default_spc.language;
+	specification.partials      = default_spc.partials;
+	specification.error         = default_spc.error;
+	specification.set_type      = default_spc.set_type;
+	specification.aux_stem_lan  = default_spc.aux_stem_lan;
+	specification.aux_lan       = default_spc.aux_lan;
 }
 
 
@@ -711,17 +770,17 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 	// Readable accuracy.
 	if (sep_types[2] == DATE_TYPE) {
 		for (auto& _accuracy : properties.at(RESERVED_ACCURACY)) {
-			_accuracy = readable_acc_date((unitTime)_accuracy.as_u64());
+			_accuracy = readable_acc_date((UnitTime)_accuracy.as_u64());
 		}
 	}
 }
 
 
 void
-Schema::readable_analyzer(MsgPack& prop_analyzer, MsgPack&)
+Schema::readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack&)
 {
-	for (auto& _analyzer : prop_analyzer) {
-		_analyzer = ::readable_analyzer((Xapian::TermGenerator::stem_strategy)_analyzer.as_u64());
+	for (auto& _stem_strategy : prop_stem_strategy) {
+		_stem_strategy = ::readable_stem_strategy((StemStrategy)_stem_strategy.as_u64());
 	}
 }
 
@@ -729,7 +788,7 @@ Schema::readable_analyzer(MsgPack& prop_analyzer, MsgPack&)
 void
 Schema::readable_index(MsgPack& prop_index, MsgPack&)
 {
-	prop_index = ::readable_index((typeIndex)prop_index.as_u64());
+	prop_index = ::readable_index((TypeIndex)prop_index.as_u64());
 }
 
 
@@ -859,34 +918,72 @@ Schema::process_positions(const MsgPack& doc_positions)
 
 
 void
-Schema::process_analyzer(const MsgPack& doc_analyzer)
+Schema::process_stem_strategy(const MsgPack& doc_stem_strategy)
 {
-	// RESERVED_ANALYZER is heritable and can change between documents.
-	try {
-		specification.analyzer.clear();
-		if (doc_analyzer.is_array()) {
-			for (const auto& analyzer : doc_analyzer) {
-				auto _analyzer(lower_string(analyzer.as_string()));
-				try {
-					specification.analyzer.push_back(map_analyzer.at(_analyzer));
-				} catch (const std::out_of_range&) {
-					throw MSG_ClientError("%s can be in %s (%s not supported)", RESERVED_ANALYZER, str_set_analyzer.c_str(), _analyzer.c_str());
-				}
-			}
-		} else {
-			auto _analyzer(lower_string(doc_analyzer.as_string()));
-			try {
-				specification.analyzer.push_back(map_analyzer.at(_analyzer));
-			} catch (const std::out_of_range&) {
-				throw MSG_ClientError("%s can be in %s (%s not supported)", RESERVED_ANALYZER, str_set_analyzer.c_str(), _analyzer.c_str());
-			}
-		}
+	// RESERVED_STEM_STRATEGY isn't heritable and can't change once fixed.
+	if likely(specification.set_type) {
+		return;
+	}
 
-		if unlikely(!specification.found_field) {
-			get_mutable(specification.full_name)[RESERVED_ANALYZER] = specification.analyzer;
+	try {
+		auto _stem_strategy = lower_string(doc_stem_strategy.as_string());
+		try {
+			specification.stem_strategy = map_stem_strategy.at(_stem_strategy);
+		} catch (const std::out_of_range&) {
+			throw MSG_ClientError("%s can be in %s (%s not supported)", RESERVED_STEM_STRATEGY, str_set_stem_strategy.c_str(), _stem_strategy.c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be string or array of strings", RESERVED_ANALYZER);
+		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_STEM_STRATEGY);
+	}
+}
+
+
+void
+Schema::process_stem_language(const MsgPack& doc_stem_language)
+{
+	// RESERVED_STEM_LANGUAGE isn't heritable and can't change once fixed.
+	if likely(specification.set_type) {
+		return;
+	}
+
+	try {
+		auto _stem_language = lower_string(doc_stem_language.as_string());
+		try {
+			auto data_lan = map_stem_language.at(_stem_language);
+			specification.stem_language = _stem_language;
+			specification.aux_stem_lan =  data_lan.second;
+		} catch (const std::out_of_range&) {
+			throw MSG_ClientError("%s: %s is not supported", RESERVED_STEM_LANGUAGE, _stem_language.c_str());
+		}
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_STEM_LANGUAGE);
+	}
+}
+
+
+void
+Schema::process_language(const MsgPack& doc_language)
+{
+	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
+	if likely(specification.set_type) {
+		return;
+	}
+
+	try {
+		auto _str_language = lower_string(doc_language.as_string());
+		try {
+			auto data_lan = map_stem_language.at(_str_language);
+			if (data_lan.first) {
+				specification.language = data_lan.second;
+				specification.aux_lan = data_lan.second;
+			} else {
+				throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
+			}
+		} catch (const std::out_of_range&) {
+			throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
+		}
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_LANGUAGE);
 	}
 }
 
@@ -954,35 +1051,6 @@ Schema::process_acc_prefix(const MsgPack& doc_acc_prefix)
 		}
 	} else {
 		throw MSG_ClientError("Data inconsistency, %s must be an array of strings", RESERVED_ACC_PREFIX);
-	}
-}
-
-
-void
-Schema::process_acc_gprefix(const MsgPack& doc_acc_gprefix)
-{
-	// RESERVED_ACC_GPREFIX isn't heritable and can't change once fixed.
-	// It is taken into account only if RESERVED_ACCURACY is defined.
-	if likely(specification.set_type) {
-		return;
-	}
-
-	if (doc_acc_gprefix.is_array()) {
-		std::unordered_set<std::string> uset_acc_gprefix;
-		uset_acc_gprefix.reserve(doc_acc_gprefix.size());
-		specification.acc_gprefix.reserve(doc_acc_gprefix.size());
-		try {
-			for (const auto& _acc_gprefix : doc_acc_gprefix) {
-				auto gprefix = _acc_gprefix.as_string();
-				if (uset_acc_gprefix.insert(gprefix).second) {
-					specification.acc_gprefix.push_back(std::move(gprefix));
-				}
-			}
-		} catch (const msgpack::type_error&) {
-			throw MSG_ClientError("Data inconsistency, %s must be an array of strings", RESERVED_ACC_GPREFIX);
-		}
-	} else {
-		throw MSG_ClientError("Data inconsistency, %s must be an array of strings", RESERVED_ACC_GPREFIX);
 	}
 }
 
@@ -1268,6 +1336,61 @@ Schema::process_radius(const MsgPack& doc_radius)
 
 
 void
+Schema::process_date(const MsgPack& doc_date)
+{
+	// RESERVED_DATE isn't heritable and is not saved in schema.
+	if (!specification.value_rec) {
+		specification.value_rec = std::make_unique<MsgPack>();
+	}
+	(*specification.value_rec)[RESERVED_DATE] = doc_date;
+}
+
+
+void
+Schema::process_time(const MsgPack& doc_time)
+{
+	// RESERVED_TIME isn't heritable and is not saved in schema.
+	if (!specification.value_rec) {
+		specification.value_rec = std::make_unique<MsgPack>();
+	}
+	(*specification.value_rec)[RESERVED_TIME] = doc_time;
+}
+
+
+void
+Schema::process_year(const MsgPack& doc_year)
+{
+	// RESERVED_YEAR isn't heritable and is not saved in schema.
+	if (!specification.value_rec) {
+		specification.value_rec = std::make_unique<MsgPack>();
+	}
+	(*specification.value_rec)[RESERVED_YEAR] = doc_year;
+}
+
+
+void
+Schema::process_month(const MsgPack& doc_month)
+{
+	// RESERVED_MONTH isn't heritable and is not saved in schema.
+	if (!specification.value_rec) {
+		specification.value_rec = std::make_unique<MsgPack>();
+	}
+	(*specification.value_rec)[RESERVED_MONTH] = doc_month;
+}
+
+
+void
+Schema::process_day(const MsgPack& doc_day)
+{
+	// RESERVED_DAY isn't heritable and is not saved in schema.
+	if (!specification.value_rec) {
+		specification.value_rec = std::make_unique<MsgPack>();
+	}
+	(*specification.value_rec)[RESERVED_DAY] = doc_day;
+}
+
+
+void
 Schema::process_value(const MsgPack& doc_value)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
@@ -1350,7 +1473,7 @@ Schema::process_values(const MsgPack& properties, const MsgPack& doc_values, Msg
 {
 	L_CALL(this, "Schema::process_values()");
 
-	specification.index = typeIndex::VALUES;
+	specification.index = TypeIndex::VALUES;
 	fixed_index(properties, doc_values, specification.store ? data[RESERVED_VALUES] : data, doc, RESERVED_VALUES);
 }
 
@@ -1360,7 +1483,7 @@ Schema::process_field_values(const MsgPack& properties, const MsgPack& doc_value
 {
 	L_CALL(this, "Schema::process_field_values()");
 
-	specification.index = typeIndex::FIELD_VALUES;
+	specification.index = TypeIndex::FIELD_VALUES;
 	fixed_index(properties, doc_values, specification.store ? data[RESERVED_FIELD_VALUES] : data, doc, RESERVED_FIELD_VALUES);
 }
 
@@ -1370,7 +1493,7 @@ Schema::process_global_values(const MsgPack& properties, const MsgPack& doc_valu
 {
 	L_CALL(this, "Schema::process_global_values()");
 
-	specification.index = typeIndex::GLOBAL_VALUES;
+	specification.index = TypeIndex::GLOBAL_VALUES;
 	fixed_index(properties, doc_values, specification.store ? data[RESERVED_GLOBAL_VALUES] : data, doc, RESERVED_GLOBAL_VALUES);
 }
 
@@ -1380,7 +1503,7 @@ Schema::process_terms(const MsgPack& properties, const MsgPack& doc_terms, MsgPa
 {
 	L_CALL(this, "Schema::process_terms()");
 
-	specification.index = typeIndex::TERMS;
+	specification.index = TypeIndex::TERMS;
 	fixed_index(properties, doc_terms, specification.store ? data[RESERVED_TERMS] : data, doc, RESERVED_TERMS);
 }
 
@@ -1390,7 +1513,7 @@ Schema::process_field_terms(const MsgPack& properties, const MsgPack& doc_terms,
 {
 	L_CALL(this, "Schema::process_field_terms()");
 
-	specification.index = typeIndex::FIELD_TERMS;
+	specification.index = TypeIndex::FIELD_TERMS;
 	fixed_index(properties, doc_terms, specification.store ? data[RESERVED_FIELD_TERMS] : data, doc, RESERVED_FIELD_TERMS);
 }
 
@@ -1400,7 +1523,7 @@ Schema::process_global_terms(const MsgPack& properties, const MsgPack& doc_terms
 {
 	L_CALL(this, "Schema::process_global_terms()");
 
-	specification.index = typeIndex::GLOBAL_TERMS;
+	specification.index = TypeIndex::GLOBAL_TERMS;
 	fixed_index(properties, doc_terms, specification.store ? data[RESERVED_GLOBAL_TERMS] : data, doc, RESERVED_GLOBAL_TERMS);
 }
 
@@ -1410,7 +1533,7 @@ Schema::process_field_all(const MsgPack& properties, const MsgPack& doc_values, 
 {
 	L_CALL(this, "Schema::process_field_all()");
 
-	specification.index = typeIndex::FIELD_ALL;
+	specification.index = TypeIndex::FIELD_ALL;
 	fixed_index(properties, doc_values, specification.store ? data[RESERVED_FIELD_ALL] : data, doc, RESERVED_FIELD_ALL);
 }
 
@@ -1420,7 +1543,7 @@ Schema::process_global_all(const MsgPack& properties, const MsgPack& doc_values,
 {
 	L_CALL(this, "Schema::process_global_all()");
 
-	specification.index = typeIndex::GLOBAL_ALL;
+	specification.index = TypeIndex::GLOBAL_ALL;
 	fixed_index(properties, doc_values, specification.store ? data[RESERVED_GLOBAL_ALL] : data, doc, RESERVED_GLOBAL_ALL);
 }
 
@@ -1430,7 +1553,7 @@ Schema::process_none(const MsgPack& properties, const MsgPack& doc_values, MsgPa
 {
 	L_CALL(this, "Schema::process_none()");
 
-	specification.index = typeIndex::NONE;
+	specification.index = TypeIndex::NONE;
 	fixed_index(properties, doc_values, specification.store ? data[RESERVED_NONE] : data, doc, RESERVED_NONE);
 }
 
