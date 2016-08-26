@@ -443,7 +443,7 @@ specification_t::get_global(char field_type)
 			static const auto spc = []() {
 				specification_t global_spc;
 				global_spc.slot = DB_SLOT_STRING;
-				global_spc.sep_types[2] = STRING_TYPE;
+				global_spc.sep_types[2] = TEXT_TYPE;
 				return global_spc;
 			}();
 			return spc;
@@ -2985,7 +2985,7 @@ Schema::get_data_global(char field_type)
 		}
 		case STRING_TYPE: {
 			static const data_field_t prop = {
-				DB_SLOT_STRING, default_spc.prefix, STRING_TYPE, default_spc.accuracy,
+				DB_SLOT_STRING, default_spc.prefix, TEXT_TYPE, default_spc.accuracy,
 				default_spc.acc_prefix, default_spc.bool_term, default_spc.stem_strategy,
 				default_spc.stem_language, default_spc.language, default_spc.partials,
 				default_spc.error

@@ -320,8 +320,16 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 				auto ser_type = Serialise::serialise(field_value);
 				const auto& global_t = Schema::get_data_global(ser_type.first);
 				switch (ser_type.first) {
+					default:
+						if (first_term) {
+							queryTerms.set_database(*database->db);
+							str_terms.assign(ser_type.second);
+							first_term = false;
+						} else {
+							str_terms.reserve(str_terms.length() + ser_type.second.length() + 4);
+							str_terms.append(" OR ").append(ser_type.second);
+						}
 					case TEXT_TYPE:
-						// Concatenate with OR all the texts.
 						if (first_text) {
 							queryTexts.set_database(*database->db);
 							queryTexts.set_stemming_strategy(getQueryParserStrategy(global_t.stem_strategy));
@@ -331,28 +339,6 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 						} else {
 							str_texts.reserve(str_texts.length() + field_value.length() + 4);
 							str_texts.append(" OR ").append(field_value);
-						}
-						break;
-					case STRING_TYPE:
-						// Concatenate with OR all the terms
-						if (first_term) {
-							queryTerms.set_database(*database->db);
-							str_terms.assign(field_value);
-							first_term = false;
-						} else {
-							str_terms.reserve(str_terms.length() + field_value.length() + 4);
-							str_terms.append(" OR ").append(field_value);
-						}
-						break;
-					default:
-						if (first_term) {
-							queryTerms.set_database(*database->db);
-							str_terms.reserve(field_value.length() + ser_type.second.length() + 4);
-							str_terms.assign(field_value).append(" OR ").append(ser_type.second);
-							first_term = false;
-						} else {
-							str_terms.reserve(str_terms.length() + field_value.length() + ser_type.second.length() + 8);
-							str_terms.append(" OR ").append(field_value).append(" OR ").append(ser_type.second);
 						}
 						break;
 				}
