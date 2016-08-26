@@ -284,14 +284,12 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 	}
 
 	size_t size_match = 0;
-	bool first_time = true, first_timeR = true;
-	std::string querystring;
-	Xapian::QueryParser queryparser;
+	bool first_term = true, first_range = true, first_text = true;
+	std::string str_terms, str_texts;
+	Xapian::QueryParser queryTerms, queryTexts;
 	Xapian::Query query;
 
-	queryparser.set_database(*database->db);
-
-	// Set for save the prefix added in queryparser.
+	// Set for save the prefix added in queryTerms.
 	std::unordered_set<std::string> added_prefixes;
 
 	std::sregex_iterator next(str_query.begin(), str_query.end(), find_field_re, std::regex_constants::match_continuous);
@@ -302,99 +300,199 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 		auto field_name_dot = next->str(1);
 		auto field_name = next->str(2);
 		auto field_value = next->length(4) ? next->str(4) : next->str(5);
-		auto field_t = schema->get_data_field(field_name);
 
 		std::smatch m;
-		if (std::regex_match(field_value, m, find_range_re)) {
-			// If this field is not indexed as value, not process this query.
-			if (field_t.slot == Xapian::BAD_VALUENO) {
-				++next;
-				continue;
-			}
-
-			// Concatenate with OR all the ranges queries.
-			if (first_timeR) {
-				query = MultipleValueRange::getQuery(field_t, field_name, m.str(1), m.str(2));
-				first_timeR = false;
+		if (field_name.empty()) {
+			if (std::regex_match(field_value, m, find_range_re)) {
+				auto start = m.str(1);
+				auto end = m.str(2);
+				// Get type of the field_value.
+				auto ser_type = Serialise::serialise(start.empty() ? end : start);
+				const auto& global_t = Schema::get_data_global(ser_type.first);
+				if (first_range) {
+					query = MultipleValueRange::getQuery(global_t, field_name, start, end);
+					first_range = false;
+				} else {
+					query = Xapian::Query(Xapian::Query::OP_OR, query, MultipleValueRange::getQuery(global_t, field_name, start, end));
+				}
 			} else {
-				query = Xapian::Query(Xapian::Query::OP_OR, query, MultipleValueRange::getQuery(field_t, field_name, m.str(1), m.str(2)));
+				// Get type of the field_value.
+				auto ser_type = Serialise::serialise(field_value);
+				const auto& global_t = Schema::get_data_global(ser_type.first);
+				switch (ser_type.first) {
+					case TEXT_TYPE:
+						// Concatenate with OR all the texts.
+						if (first_text) {
+							queryTexts.set_database(*database->db);
+							queryTexts.set_stemming_strategy(getQueryParserStrategy(global_t.stem_strategy));
+							queryTexts.set_stemmer(Xapian::Stem(global_t.language));
+							str_texts.assign(field_value);
+							first_text = false;
+						} else {
+							str_texts.reserve(str_texts.length() + field_value.length() + 4);
+							str_texts.append(" OR ").append(field_value);
+						}
+						break;
+					case STRING_TYPE:
+						// Concatenate with OR all the terms
+						if (first_term) {
+							queryTerms.set_database(*database->db);
+							str_terms.assign(field_value);
+							first_term = false;
+						} else {
+							str_terms.reserve(str_terms.length() + field_value.length() + 4);
+							str_terms.append(" OR ").append(field_value);
+						}
+						break;
+					default:
+						if (first_term) {
+							queryTerms.set_database(*database->db);
+							str_terms.reserve(field_value.length() + ser_type.second.length() + 4);
+							str_terms.assign(field_value).append(" OR ").append(ser_type.second);
+							first_term = false;
+						} else {
+							str_terms.reserve(str_terms.length() + field_value.length() + ser_type.second.length() + 8);
+							str_terms.append(" OR ").append(field_value).append(" OR ").append(ser_type.second);
+						}
+						break;
+				}
 			}
 		} else {
-			// If the field has not been indexed as a term, not process this query.
-			if (!field_name.empty() && field_t.prefix.empty()) {
-				++next;
-				continue;
-			}
+			auto field_t = schema->get_data_field(field_name);
+			if (std::regex_match(field_value, m, find_range_re)) {
+				// If this field is not indexed as value, not process this range.
+				if (field_t.slot == default_spc.slot) {
+					++next;
+					continue;
+				}
 
-			switch (field_t.type) {
-				case FLOAT_TYPE:
-				case INTEGER_TYPE:
-				case POSITIVE_TYPE:
-					// Xapian does not allow repeat prefixes.
-					if (added_prefixes.insert(field_t.prefix).second) {
-						auto nfp = new NumericFieldProcessor(field_t.type, field_t.prefix);
-						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, nfp->release()) : queryparser.add_prefix(field_name, nfp->release());
-					}
-
-					to_query_string(field_value);
-					field.assign(field_name_dot).append(field_value);
-					break;
-				case TEXT_TYPE:
-					queryparser.set_stemming_strategy(queryparser.STEM_SOME);
-					queryparser.set_stemmer(Xapian::Stem(lan.empty() ? default_spc.language[0] : lan));
-				case STRING_TYPE:
-					// Xapian does not allow repeat prefixes.
-					if (added_prefixes.insert(field_t.prefix).second) {
-						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, field_t.prefix) : queryparser.add_prefix(field_name, field_t.prefix);
-					}
-					field.assign(field_name_dot).append(field_value);
-					break;
-				case DATE_TYPE:
-					// Xapian does not allow repeat prefixes.
-					if (added_prefixes.insert(field_t.prefix).second) {
-						auto dfp = new DateFieldProcessor(field_t.prefix);
-						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, dfp->release()) : queryparser.add_prefix(field_name, dfp->release());
-					}
-
-					field_value.assign(std::to_string(Datetime::timestamp(field_value)));
-					to_query_string(field_value);
-
-					field.assign(field_name_dot).append(field_value);
-					break;
-				case GEO_TYPE:
-					field_value.assign(Serialise::ewkt(field_value));
-
-					// If the region for search is empty, not process this query.
-					if (field_value.empty()) {
-						++next;
-						continue;
-					}
-
-					// Xapian does not allow repeat prefixes.
-					if (added_prefixes.insert(field_t.prefix).second) {
-						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, field_t.prefix) : queryparser.add_prefix(field_name, field_t.prefix);
-					}
-					field.assign(field_name_dot).append(field_value);
-					break;
-				case BOOLEAN_TYPE:
-					// Xapian does not allow repeat prefixes.
-					if (added_prefixes.insert(field_t.prefix).second) {
-						auto bfp = new BooleanFieldProcessor(field_t.prefix);
-						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, bfp->release()) : queryparser.add_prefix(field_name, bfp->release());
-					}
-					field.assign(field_name_dot).append(field_value);
-					break;
-			}
-
-			// Concatenate with OR all the queries.
-			if (first_time) {
-				querystring = field;
-				first_time = false;
+				if (first_range) {
+					query = MultipleValueRange::getQuery(field_t, field_name, m.str(1), m.str(2));
+					first_range = false;
+				} else {
+					query = Xapian::Query(Xapian::Query::OP_OR, query, MultipleValueRange::getQuery(field_t, field_name, m.str(1), m.str(2)));
+				}
 			} else {
-				querystring.append(" OR ").append(field);
+				// If the field has not been indexed as a term, not process this term.
+				if (field_t.prefix.empty()) {
+					++next;
+					continue;
+				}
+
+				switch (field_t.type) {
+					case FLOAT_TYPE:
+					case INTEGER_TYPE:
+					case POSITIVE_TYPE:
+						// Xapian does not allow repeat prefixes.
+						if (added_prefixes.insert(field_t.prefix).second) {
+							auto nfp = new NumericFieldProcessor(field_t.type, field_t.prefix);
+							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, nfp->release()) : queryTerms.add_prefix(field_name, nfp->release());
+						}
+
+						to_query_string(field_value);
+						if (first_term) {
+							queryTerms.set_database(*database->db);
+							str_terms.reserve(field_name_dot.length() + field_value.length());
+							str_terms.assign(field_name_dot).append(field_value);
+							first_term = false;
+						} else {
+							str_terms.reserve(str_terms.length() + field_name_dot.length() + field_value.length() + 4);
+							str_terms.append(" OR ").append(field_name_dot).append(field_value);
+						}
+						break;
+					case TEXT_TYPE:
+						if (added_prefixes.insert(field_t.prefix).second) {
+							field_t.bool_term ? queryTexts.add_boolean_prefix(field_name, field_t.prefix) : queryTexts.add_prefix(field_name, field_t.prefix);
+						}
+						if (first_text) {
+							queryTexts.set_database(*database->db);
+							queryTexts.set_stemming_strategy(getQueryParserStrategy(field_t.stem_strategy));
+							queryTexts.set_stemmer(Xapian::Stem(field_t.language));
+							str_texts.reserve(field_name_dot.length() + field_value.length());
+							str_texts.assign(field_name_dot).append(field_value);
+							first_text = false;
+						} else {
+							str_texts.reserve(str_texts.length() + field_name_dot.length() + field_value.length() + 4);
+							str_texts.append(" OR ").append(field_name_dot).append(field_value);
+						}
+						break;
+					case STRING_TYPE:
+						// Xapian does not allow repeat prefixes.
+						if (added_prefixes.insert(field_t.prefix).second) {
+							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, field_t.prefix) : queryTerms.add_prefix(field_name, field_t.prefix);
+						}
+						if (first_term) {
+							queryTerms.set_database(*database->db);
+							str_terms.reserve(field_name_dot.length() + field_value.length());
+							str_terms.assign(field_name_dot).append(field_value);
+							first_term = false;
+						} else {
+							str_terms.reserve(str_terms.length() + field_name_dot.length() + field_value.length() + 4);
+							str_terms.append(" OR ").append(field_name_dot).append(field_value);
+						}
+						break;
+					case DATE_TYPE:
+						// Xapian does not allow repeat prefixes.
+						if (added_prefixes.insert(field_t.prefix).second) {
+							auto dfp = new DateFieldProcessor(field_t.prefix);
+							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, dfp->release()) : queryTerms.add_prefix(field_name, dfp->release());
+						}
+
+						field_value.assign(std::to_string(Datetime::timestamp(field_value)));
+						to_query_string(field_value);
+
+						if (first_term) {
+							queryTerms.set_database(*database->db);
+							str_terms.reserve(field_name_dot.length() + field_value.length());
+							str_terms.assign(field_name_dot).append(field_value);
+							first_term = false;
+						} else {
+							str_terms.reserve(str_terms.length() + field_name_dot.length() + field_value.length() + 4);
+							str_terms.append(" OR ").append(field_name_dot).append(field_value);
+						}
+						break;
+					case GEO_TYPE:
+						field_value.assign(Serialise::ewkt(field_value));
+
+						// If the region for search is empty, not process this query.
+						if (field_value.empty()) {
+							++next;
+							continue;
+						}
+
+						// Xapian does not allow repeat prefixes.
+						if (added_prefixes.insert(field_t.prefix).second) {
+							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, field_t.prefix) : queryTerms.add_prefix(field_name, field_t.prefix);
+						}
+						if (first_term) {
+							queryTerms.set_database(*database->db);
+							str_terms.reserve(field_name_dot.length() + field_value.length());
+							str_terms.assign(field_name_dot).append(field_value);
+							first_term = false;
+						} else {
+							str_terms.reserve(str_terms.length() + field_name_dot.length() + field_value.length() + 4);
+							str_terms.append(" OR ").append(field_name_dot).append(field_value);
+						}
+						break;
+					case BOOLEAN_TYPE:
+						// Xapian does not allow repeat prefixes.
+						if (added_prefixes.insert(field_t.prefix).second) {
+							auto bfp = new BooleanFieldProcessor(field_t.prefix);
+							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, bfp->release()) : queryTerms.add_prefix(field_name, bfp->release());
+						}
+						if (first_term) {
+							queryTerms.set_database(*database->db);
+							str_terms.reserve(field_name_dot.length() + field_value.length());
+							str_terms.assign(field_name_dot).append(field_value);
+							first_term = false;
+						} else {
+							str_terms.reserve(str_terms.length() + field_name_dot.length() + field_value.length() + 4);
+							str_terms.append(" OR ").append(field_name_dot).append(field_value);
+						}
+						break;
+				}
 			}
 		}
-
 		++next;
 	}
 
@@ -402,39 +500,50 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 		throw MSG_QueryParserError("Query %s contains errors [%zu]", str_query.c_str(), size_match);
 	}
 
-	switch (first_time << 1 | first_timeR) {
-		case 0:
-			try {
-				query = Xapian::Query(Xapian::Query::OP_OR, queryparser.parse_query(querystring, q_flags), query);
-				std::string query_corrected = queryparser.get_corrected_query_string();
-				if (!query_corrected.empty()) {
-					suggestions.push_back(query_corrected);
-				}
-			} catch (const Xapian::QueryParserError& exc) {
-				L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-				throw;
+	try {
+		switch (first_term << 2 | first_text << 1 | first_range) {
+			case 0: {
+				query = Xapian::Query(Xapian::Query::OP_OR, queryTerms.parse_query(str_terms, q_flags), query);
+				query = Xapian::Query(Xapian::Query::OP_OR, queryTexts.parse_query(str_texts, q_flags), query);
+				auto query_corrected = queryTerms.get_corrected_query_string();
+				query_corrected.append(queryTexts.get_corrected_query_string());
+				suggestions.push_back(std::move(query_corrected));
+				return query;
 			}
-			break;
-		case 1:
-			try {
-				query = queryparser.parse_query(querystring, q_flags);
-				std::string query_corrected = queryparser.get_corrected_query_string();
-				if (!query_corrected.empty()) {
-					suggestions.push_back(query_corrected);
-				}
-			} catch (const Xapian::QueryParserError& exc) {
-				L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-				throw;
+			case 1: {
+				query = Xapian::Query(Xapian::Query::OP_OR, queryTerms.parse_query(str_terms, q_flags), queryTexts.parse_query(str_texts, q_flags));
+				auto query_corrected = queryTerms.get_corrected_query_string();
+				query_corrected.append(queryTexts.get_corrected_query_string());
+				suggestions.push_back(std::move(query_corrected));
+				return query;
 			}
-			break;
-		case 2:
-			break;
-		case 3:
-			query = Xapian::Query::MatchNothing;
-			break;
+			case 2:
+				query = Xapian::Query(Xapian::Query::OP_OR, queryTerms.parse_query(str_terms, q_flags), query);
+				suggestions.push_back(queryTerms.get_corrected_query_string());
+				return query;
+			case 3:
+				query = queryTerms.parse_query(str_terms, q_flags);
+				suggestions.push_back(queryTerms.get_corrected_query_string());
+				return query;
+			case 4:
+				query = Xapian::Query(Xapian::Query::OP_OR, queryTexts.parse_query(str_texts, q_flags), query);
+				suggestions.push_back(queryTexts.get_corrected_query_string());
+				return query;
+			case 5:
+				query = queryTexts.parse_query(str_texts, q_flags);
+				suggestions.push_back(queryTexts.get_corrected_query_string());
+				return query;
+			case 6:
+				suggestions.push_back(std::string());
+				return query;
+			default:
+				suggestions.push_back(std::string());
+				return Xapian::Query::MatchNothing;
+		}
+	} catch (const Xapian::QueryParserError& exc) {
+		L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+		throw;
 	}
-
-	return query;
 }
 
 
