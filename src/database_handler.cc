@@ -386,6 +386,21 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 							str_terms.append(" OR ").append(field_name_dot).append(field_value);
 						}
 						break;
+					case STRING_TYPE:
+						// Xapian does not allow repeat prefixes.
+						if (added_prefixes.insert(field_t.prefix).second) {
+							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, field_t.prefix) : queryTerms.add_prefix(field_name, field_t.prefix);
+						}
+						if (first_term) {
+							queryTerms.set_database(*database->db);
+							str_terms.reserve(field_name_dot.length() + field_value.length());
+							str_terms.assign(field_name_dot).append(field_value);
+							first_term = false;
+						} else {
+							str_terms.reserve(str_terms.length() + field_name_dot.length() + field_value.length() + 4);
+							str_terms.append(" OR ").append(field_name_dot).append(field_value);
+						}
+						break;
 					case TEXT_TYPE:
 						if (added_prefixes.insert(field_t.prefix).second) {
 							field_t.bool_term ? queryTexts.add_boolean_prefix(field_name, field_t.prefix) : queryTexts.add_prefix(field_name, field_t.prefix);
@@ -400,21 +415,6 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 						} else {
 							str_texts.reserve(str_texts.length() + field_name_dot.length() + field_value.length() + 4);
 							str_texts.append(" OR ").append(field_name_dot).append(field_value);
-						}
-						break;
-					case STRING_TYPE:
-						// Xapian does not allow repeat prefixes.
-						if (added_prefixes.insert(field_t.prefix).second) {
-							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, field_t.prefix) : queryTerms.add_prefix(field_name, field_t.prefix);
-						}
-						if (first_term) {
-							queryTerms.set_database(*database->db);
-							str_terms.reserve(field_name_dot.length() + field_value.length());
-							str_terms.assign(field_name_dot).append(field_value);
-							first_term = false;
-						} else {
-							str_terms.reserve(str_terms.length() + field_name_dot.length() + field_value.length() + 4);
-							str_terms.append(" OR ").append(field_name_dot).append(field_value);
 						}
 						break;
 					case DATE_TYPE:

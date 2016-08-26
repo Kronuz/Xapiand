@@ -66,7 +66,7 @@ MultipleValueRange::getQuery(const data_field_t& field_spc, const std::string& f
 			}
 
 			if (field_spc.type == GEO_TYPE) {
-				auto geo = EWKT_Parser::getGeoSpatial(end, field_spc.accuracy[0], field_spc.accuracy[1]);
+				auto geo = EWKT_Parser::getGeoSpatial(end, field_spc.partials, field_spc.error);
 
 				if (geo.ranges.empty()) {
 					return Xapian::Query::MatchNothing;
@@ -123,8 +123,8 @@ MultipleValueRange::getQuery(const data_field_t& field_spc, const std::string& f
 				}
 				return filterNumericQuery(field_spc, start_v, end_v, Serialise::positive(start_v), Serialise::positive(end_v));
 			}
-			case TEXT_TYPE:
-			case STRING_TYPE: {
+			case STRING_TYPE:
+			case TEXT_TYPE: {
 				if (start > end) {
 					return Xapian::Query::MatchNothing;
 				}
