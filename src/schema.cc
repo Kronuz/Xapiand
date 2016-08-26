@@ -1668,6 +1668,12 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		specification.name.assign(name);
 		data = specification.store ? &(*parent_data)[name] : parent_data;
 		properties = &get_subproperties(*parent_properties);
+		try {
+			auto data_lan = map_stem_language.at(name);
+			if (data_lan.first) {
+				specification.language = data_lan.second;
+			}
+		} catch (const std::out_of_range) { }
 	}
 
 	switch (object.type()) {
