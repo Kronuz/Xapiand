@@ -447,6 +447,22 @@ EWKT_Parser::parse_geometry_intersection(const std::string& data)
 }
 
 
+RangeList
+EWKT_Parser::getRanges()
+{
+	RangeList ranges;
+	ranges.reserve(trixels.size());
+
+	for (const auto& trixel : trixels) {
+		HTM::insertRange(trixel, ranges, HTM_MAX_LEVEL);
+	}
+
+	HTM::mergeRanges(ranges);
+
+	return ranges;
+}
+
+
 // String tokenizer by characters in delimiter.
 std::vector<std::string>
 EWKT_Parser::stringSplit(const std::string& str, const std::string& delimiter)

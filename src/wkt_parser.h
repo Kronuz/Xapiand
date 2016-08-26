@@ -65,6 +65,7 @@ public:
 	EWKT_Parser(const EWKT_Parser&) = delete;
 	EWKT_Parser(const std::string& EWKT, bool partials, double error);
 
+	RangeList getRanges();
 
 	static std::vector<std::string> stringSplit(const std::string& str, const std::string& delimiter);
 	static std::vector<std::string> get_trixels(const std::string& father, size_t depth, const std::string& son);
