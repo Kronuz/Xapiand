@@ -2260,72 +2260,79 @@ Schema::validate_required_data(const MsgPack* value)
 	if (!specification.full_name.empty()) {
 		auto& properties = get_mutable(specification.full_name);
 
-		// Process RESERVED_ACCURACY, RESERVED_ACC_PREFIX, RESERVED_ACC_GPREFIX
+		// Process RESERVED_ACCURACY, RESERVED_ACC_PREFIX.
 		std::set<uint64_t> set_acc;
 		switch (specification.sep_types[2]) {
 			case GEO_TYPE: {
-				if (!specification.doc_acc) {
-					specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_geo);
-				}
-
 				// Set partials and error.
 				properties[RESERVED_PARTIALS] = specification.partials;
-
-				// Set partials and error.
-				if (specification.error < HTM_MIN_ERROR) {
-					specification.error = HTM_MIN_ERROR;
-				} else if (specification.error > HTM_MAX_ERROR) {
-					specification.error = HTM_MAX_ERROR;
-				}
 				properties[RESERVED_ERROR] = specification.error;
 
-				try {
-					for (const auto& _accuracy : *specification.doc_acc) {
-						auto val_acc = _accuracy.as_u64();
-						if (val_acc <= HTM_MAX_LEVEL) {
-							set_acc.insert(val_acc);
-						} else {
-							throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+				if (specification.doc_acc) {
+					try {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							auto val_acc = _accuracy.as_u64();
+							if (val_acc <= HTM_MAX_LEVEL) {
+								set_acc.insert(val_acc);
+							} else {
+								throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+							}
 						}
+					} catch (const msgpack::type_error&) {
+						throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 					}
-				} catch (const msgpack::type_error&) {
-					throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+				} else {
+					set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
 				}
 				break;
 			}
 			case DATE_TYPE: {
-				if (!specification.doc_acc) {
-					specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_date);
-				}
-				try {
-					for (const auto& _accuracy : *specification.doc_acc) {
-						auto str_accuracy(lower_string(_accuracy.as_string()));
-						try {
-							set_acc.insert(toUType(map_acc_date.at(str_accuracy)));
-						} catch (const std::out_of_range&) {
-							throw MSG_ClientError("Data inconsistency, %s: %s must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str(), str_accuracy.c_str());
+				if (specification.doc_acc) {
+					try {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							auto str_accuracy(lower_string(_accuracy.as_string()));
+							try {
+								set_acc.insert(toUType(map_acc_date.at(str_accuracy)));
+							} catch (const std::out_of_range&) {
+								throw MSG_ClientError("Data inconsistency, %s: %s must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str(), str_accuracy.c_str());
+							}
 						}
+					} catch (const msgpack::type_error&) {
+						throw MSG_ClientError("Data inconsistency, %s in %s must be a subset of %s", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str());
 					}
-				} catch (const msgpack::type_error&) {
-					throw MSG_ClientError("Data inconsistency, %s in %s must be a subset of %s", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str());
+				} else {
+					set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
 				}
 				break;
 			}
 			case INTEGER_TYPE:
 			case POSITIVE_TYPE:
 			case FLOAT_TYPE: {
-				if (!specification.doc_acc) {
-					specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_num);
-				}
-				try {
-					for (const auto& _accuracy : *specification.doc_acc) {
-						set_acc.insert(_accuracy.as_u64());
+				if (specification.doc_acc) {
+					try {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							set_acc.insert(_accuracy.as_u64());
+						}
+						break;
+					} catch (const msgpack::type_error&) {
+						throw MSG_ClientError("Data inconsistency, %s: %s must be an array of positive numbers", RESERVED_ACCURACY, specification.sep_types[2]);
 					}
-					break;
-				} catch (const msgpack::type_error&) {
-					throw MSG_ClientError("Data inconsistency, %s: %s must be an array of positive numbers", RESERVED_ACCURACY, specification.sep_types[2]);
+				} else {
+					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
 				}
 			}
+			case TEXT_TYPE:
+				properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
+				if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
+					specification.stem_language = specification.aux_lan;
+				}
+				properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
+			case STRING_TYPE:
+				if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
+					specification.language = specification.aux_stem_lan;
+				}
+				properties[RESERVED_LANGUAGE] = specification.language;
+				break;
 			case NO_TYPE:
 				throw MSG_ClientError("%s must be defined for validate data to index", RESERVED_TYPE);
 		}
