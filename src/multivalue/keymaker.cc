@@ -166,6 +166,7 @@ Multi_MultiValueKeyMaker::add_value(const data_field_t& field_spc, bool reverse,
 				slots.push_back(std::make_unique<BoolKey>(field_spc.slot, reverse, value));
 				return;
 			case STRING_TYPE:
+			case TEXT_TYPE:
 				try {
 					auto func = map_dispatch_str_metric.at(qf.metric);
 					(this->*func)(field_spc, reverse, value, qf);
