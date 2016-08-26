@@ -30,38 +30,37 @@
 #include <xapian.h>
 
 // Reserved words only used in the responses to the user.
-#define RESERVED_ENDPOINT    "_endpoint"
-#define RESERVED_RANK        "_rank"
-#define RESERVED_PERCENT     "_percent"
+#define RESERVED_ENDPOINT       "_endpoint"
+#define RESERVED_RANK           "_rank"
+#define RESERVED_PERCENT        "_percent"
 
 // Reserved words used in schema.
-#define RESERVED_WEIGHT      "_weight"
-#define RESERVED_POSITION    "_position"
-#define RESERVED_LANGUAGE    "_language"
-#define RESERVED_SPELLING    "_spelling"
-#define RESERVED_POSITIONS   "_positions"
-#define RESERVED_ACCURACY    "_accuracy"
-#define RESERVED_ACC_PREFIX  "_accuracy_prefix"
-#define RESERVED_ACC_GPREFIX "_accuracy_gprefix"
-#define RESERVED_STORE       "_store"
-#define RESERVED_TYPE        "_type"
-#define RESERVED_ANALYZER    "_analyzer"
-#define RESERVED_DYNAMIC     "_dynamic"
-#define RESERVED_D_DETECTION "_date_detection"
-#define RESERVED_N_DETECTION "_numeric_detection"
-#define RESERVED_G_DETECTION "_geo_detection"
-#define RESERVED_B_DETECTION "_bool_detection"
-#define RESERVED_S_DETECTION "_string_detection"
-#define RESERVED_T_DETECTION "_text_detection"
-#define RESERVED_BOOL_TERM   "_bool_term"
-#define RESERVED_VALUE       "_value"
-#define RESERVED_NAME        "_name"
-#define RESERVED_SLOT        "_slot"
-#define RESERVED_INDEX       "_index"
-#define RESERVED_PREFIX      "_prefix"
-#define RESERVED_ID          "_id"
-#define RESERVED_SCHEMA      "_schema"
-#define RESERVED_VERSION     "_version"
+#define RESERVED_WEIGHT         "_weight"
+#define RESERVED_POSITION       "_position"
+#define RESERVED_SPELLING       "_spelling"
+#define RESERVED_POSITIONS      "_positions"
+#define RESERVED_LANGUAGE       "_language"
+#define RESERVED_ACCURACY       "_accuracy"
+#define RESERVED_ACC_PREFIX     "_accuracy_prefix"
+#define RESERVED_ACC_GPREFIX    "_accuracy_gprefix"
+#define RESERVED_STORE          "_store"
+#define RESERVED_TYPE           "_type"
+#define RESERVED_DYNAMIC        "_dynamic"
+#define RESERVED_D_DETECTION    "_date_detection"
+#define RESERVED_N_DETECTION    "_numeric_detection"
+#define RESERVED_G_DETECTION    "_geo_detection"
+#define RESERVED_B_DETECTION    "_bool_detection"
+#define RESERVED_S_DETECTION    "_string_detection"
+#define RESERVED_T_DETECTION    "_text_detection"
+#define RESERVED_BOOL_TERM      "_bool_term"
+#define RESERVED_VALUE          "_value"
+#define RESERVED_NAME           "_name"
+#define RESERVED_SLOT           "_slot"
+#define RESERVED_INDEX          "_index"
+#define RESERVED_PREFIX         "_prefix"
+#define RESERVED_ID             "_id"
+#define RESERVED_SCHEMA         "_schema"
+#define RESERVED_VERSION        "_version"
 // Reserved words used only in the root of the  document.
 #define RESERVED_VALUES         "_values"
 #define RESERVED_FIELD_VALUES   "_field_values"
@@ -73,17 +72,26 @@
 #define RESERVED_GLOBAL_ALL     "_global_all"
 #define RESERVED_NONE           "_none"
 #define RESERVED_DATA           "_data"
-// Reserved words used in schema only for geospatial fields.
-#define RESERVED_PARTIALS    "_partials"
-#define RESERVED_ERROR       "_error"
-#define RESERVED_RADIUS      "_radius"
-#define RESERVED_LATITUDE    "_latitude"
-#define RESERVED_LONGITUDE   "_longitude"
+// Reserved words used in schema only for TEXT fields.
+#define RESERVED_STEM_STRATEGY  "_stem_strategy"
+#define RESERVED_STEM_LANGUAGE  "_stem_language"
+// Reserved words used in schema only for GEO fields.
+#define RESERVED_PARTIALS       "_partials"
+#define RESERVED_ERROR          "_error"
+#define RESERVED_RADIUS         "_radius"
+#define RESERVED_LATITUDE       "_latitude"
+#define RESERVED_LONGITUDE      "_longitude"
+// Reserved words used in schema only for DATE fields
+#define RESERVED_DATE           "_date"
+#define RESERVED_TIME           "_time"
+#define RESERVED_YEAR           "_year"
+#define RESERVED_MONTH          "_month"
+#define RESERVED_DAY            "_day"
 
 
 #define DB_OFFSPRING_UNION "__"
 #define DB_LANGUAGES       "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
-#define DB_VERSION_SCHEMA  2.0
+#define DB_VERSION_SCHEMA  2.1
 
 #define DB_SLOT_RESERVED  20 // Reserved slots by special data
 #define DB_RETRIES        3  // Number of tries to do an operation on a Xapian::Database
@@ -94,12 +102,10 @@
 #define DB_SLOT_LENGTH    3  // Slot length data
 #define DB_SLOT_CREF      4  // Slot that saves the references counter
 
-#define DB_SLOT_FLOAT     5  // Slot for saving global float values
-#define DB_SLOT_INTEGER   6  // Slot for saving global integer values
-#define DB_SLOT_POSITIVE  7  // Slot for saving global positive values
-#define DB_SLOT_DATE      8  // Slot for saving global date values
-#define DB_SLOT_GEO       9  // Slot for saving global geo values
-#define DB_SLOT_STRING    10 // Slot for saving global string/text/boolean values.
+#define DB_SLOT_NUMERIC   5  // Slot for saving global float/integer/positive values
+#define DB_SLOT_DATE      6  // Slot for saving global date values
+#define DB_SLOT_GEO       7  // Slot for saving global geo values
+#define DB_SLOT_STRING    8  // Slot for saving global string/text/boolean values.
 
 #define DEFAULT_LANGUAGE "en"  // Default language used by Xapian::Stem class.
 #define DEFAULT_OFFSET   "0"   // Replace for the real offset.
@@ -131,21 +137,6 @@ constexpr int DB_NOWAL        = 0x40; // Disable open wal file
 constexpr int DB_DATA_STORAGE = 0x80; // Enable separate data storage file for the database
 
 
-struct data_field_t {
-	Xapian::valueno slot;
-	std::string prefix;
-	unsigned type;
-	std::vector<uint64_t> accuracy;
-	std::vector<std::string> acc_prefix;
-	std::vector<std::string> acc_gprefix;
-	bool bool_term;
-
-	// For geospatial.
-	bool partials;
-	double error;
-};
-
-
 struct similar_field_t {
 	unsigned n_rset;
 	unsigned n_eset;
@@ -170,7 +161,6 @@ struct query_field_t {
 	bool is_nearest;
 	std::string collapse;
 	unsigned collapse_max;
-	std::vector <std::string> language;
 	std::vector <std::string> query;
 	std::vector <std::string> partial;
 	std::vector <std::string> terms;
@@ -199,7 +189,7 @@ enum class MIMEType {
 };
 
 
-// All the field names that start or end with '_'.
+// All the field names that do not start or end with '_' are valid.
 inline bool is_valid(const std::string& word) {
 	return word.front() != '_' && word.back() != '_';
 }
@@ -234,30 +224,6 @@ inline std::string to_query_string(T value) {
 		str[0] = '_';
 	}
 	return str;
-}
-
-
-inline Xapian::valueno get_global_slot(char type) {
-	switch (type) {
-		case FLOAT_TYPE:
-			return DB_SLOT_FLOAT;
-		case INTEGER_TYPE:
-			return DB_SLOT_INTEGER;
-		case POSITIVE_TYPE:
-			return DB_SLOT_POSITIVE;
-		case STRING_TYPE:
-			return DB_SLOT_STRING;
-		case TEXT_TYPE:
-			return DB_SLOT_STRING;
-		case DATE_TYPE:
-			return DB_SLOT_DATE;
-		case GEO_TYPE:
-			return DB_SLOT_GEO;
-		case BOOLEAN_TYPE:
-			return DB_SLOT_STRING;
-		default:
-			throw MSG_ClientError("Type: '%u' is an unknown type", type);
-	}
 }
 
 
