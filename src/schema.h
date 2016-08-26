@@ -30,7 +30,7 @@
 #include <future>
 
 
-enum class unitTime : uint8_t {
+enum class UnitTime : uint8_t {
 	SECOND,
 	MINUTE,
 	HOUR,
@@ -43,7 +43,7 @@ enum class unitTime : uint8_t {
 };
 
 
-enum class typeIndex : uint8_t {
+enum class TypeIndex : uint8_t {
 	NONE,           // Not index
 	TERMS,          // Index the field value like FIELD_TERMS and GLOBAL_TERMS.
 	VALUES,         // Index the field value like FIELD_VALUES and GLOBAL_VALUES.
@@ -59,43 +59,79 @@ enum class typeIndex : uint8_t {
 };
 
 
-inline static std::string readable_acc_date(unitTime unit) noexcept {
+enum class StemStrategy : uint8_t {
+	STEM_NONE,
+	STEM_SOME,
+	STEM_ALL,
+	STEM_ALL_Z
+};
+
+
+inline static std::string readable_acc_date(UnitTime unit) noexcept {
 	switch (unit) {
-		case unitTime::SECOND:     return "second";
-		case unitTime::MINUTE:     return "minute";
-		case unitTime::HOUR:       return "hour";
-		case unitTime::DAY:        return "day";
-		case unitTime::MONTH:      return "month";
-		case unitTime::YEAR:       return "year";
-		case unitTime::DECADE:     return "decade";
-		case unitTime::CENTURY:    return "century";
-		case unitTime::MILLENNIUM: return "millennium";
+		case UnitTime::SECOND:     return "second";
+		case UnitTime::MINUTE:     return "minute";
+		case UnitTime::HOUR:       return "hour";
+		case UnitTime::DAY:        return "day";
+		case UnitTime::MONTH:      return "month";
+		case UnitTime::YEAR:       return "year";
+		case UnitTime::DECADE:     return "decade";
+		case UnitTime::CENTURY:    return "century";
+		case UnitTime::MILLENNIUM: return "millennium";
 	}
 }
 
 
-inline static std::string readable_analyzer(Xapian::TermGenerator::stem_strategy stem) noexcept {
+inline static std::string readable_stem_strategy(StemStrategy stem) noexcept {
 	switch (stem) {
-		case Xapian::TermGenerator::STEM_NONE:   return "stem_none";
-		case Xapian::TermGenerator::STEM_SOME:   return "stem_some";
-		case Xapian::TermGenerator::STEM_ALL:    return "stem_all";
-		case Xapian::TermGenerator::STEM_ALL_Z:  return "stem_all_z";
+		case StemStrategy::STEM_NONE:   return "stem_none";
+		case StemStrategy::STEM_SOME:   return "stem_some";
+		case StemStrategy::STEM_ALL:    return "stem_all";
+		case StemStrategy::STEM_ALL_Z:  return "stem_all_z";
 	}
 }
 
 
-inline static std::string readable_index(typeIndex index) noexcept {
+inline static std::string readable_index(TypeIndex index) noexcept {
 	switch (index) {
-		case typeIndex::NONE:           return "none";
-		case typeIndex::TERMS:          return "terms";
-		case typeIndex::VALUES:         return "values";
-		case typeIndex::ALL:            return "all";
-		case typeIndex::FIELD_TERMS:    return "field_terms";
-		case typeIndex::FIELD_VALUES:   return "field_values";
-		case typeIndex::FIELD_ALL:      return "field_all";
-		case typeIndex::GLOBAL_TERMS:   return "global_terms";
-		case typeIndex::GLOBAL_VALUES:  return "global_values";
-		case typeIndex::GLOBAL_ALL:     return "global_all";
+		case TypeIndex::NONE:           return "none";
+		case TypeIndex::TERMS:          return "terms";
+		case TypeIndex::VALUES:         return "values";
+		case TypeIndex::ALL:            return "all";
+		case TypeIndex::FIELD_TERMS:    return "field_terms";
+		case TypeIndex::FIELD_VALUES:   return "field_values";
+		case TypeIndex::FIELD_ALL:      return "field_all";
+		case TypeIndex::GLOBAL_TERMS:   return "global_terms";
+		case TypeIndex::GLOBAL_VALUES:  return "global_values";
+		case TypeIndex::GLOBAL_ALL:     return "global_all";
+	}
+}
+
+
+inline static Xapian::TermGenerator::stem_strategy getGeneratorStrategy(StemStrategy stem_strategy) noexcept {
+	switch (stem_strategy) {
+		case StemStrategy::STEM_NONE:
+			return Xapian::TermGenerator::STEM_NONE;
+		case StemStrategy::STEM_SOME:
+			return Xapian::TermGenerator::STEM_SOME;
+		case StemStrategy::STEM_ALL:
+			return Xapian::TermGenerator::STEM_ALL;
+		case StemStrategy::STEM_ALL_Z:
+			return Xapian::TermGenerator::STEM_ALL_Z;
+	}
+}
+
+
+inline static Xapian::QueryParser::stem_strategy getQueryParserStrategy(StemStrategy stem_strategy) noexcept {
+	switch (stem_strategy) {
+		case StemStrategy::STEM_NONE:
+			return Xapian::QueryParser::STEM_NONE;
+		case StemStrategy::STEM_SOME:
+			return Xapian::QueryParser::STEM_SOME;
+		case StemStrategy::STEM_ALL:
+			return Xapian::QueryParser::STEM_ALL;
+		case StemStrategy::STEM_ALL_Z:
+			return Xapian::QueryParser::STEM_ALL_Z;
 	}
 }
 
@@ -105,27 +141,21 @@ inline static constexpr auto getPos(size_t pos, size_t size) noexcept {
 };
 
 
-MSGPACK_ADD_ENUM(unitTime);
-MSGPACK_ADD_ENUM(typeIndex);
-MSGPACK_ADD_ENUM(Xapian::TermGenerator::stem_strategy);
+MSGPACK_ADD_ENUM(UnitTime);
+MSGPACK_ADD_ENUM(TypeIndex);
+MSGPACK_ADD_ENUM(StemStrategy);
 
 
 struct specification_t {
 	// Reserved values.
 	std::vector<Xapian::termpos> position;
 	std::vector<Xapian::termcount> weight;
-	std::vector<std::string> language;
 	std::vector<bool> spelling;
 	std::vector<bool> positions;
-	std::vector<Xapian::TermGenerator::stem_strategy> analyzer;
 	std::vector<unsigned> sep_types;
 	std::string prefix;
 	Xapian::valueno slot;
-	typeIndex index;
-
-	std::vector<uint64_t> accuracy;
-	std::vector<std::string> acc_prefix;
-	std::vector<std::string> acc_gprefix;
+	TypeIndex index;
 
 	bool store;
 	bool parent_store;
@@ -139,21 +169,33 @@ struct specification_t {
 	bool bool_term;
 
 	std::unique_ptr<const MsgPack> value;
-	std::unique_ptr<MsgPack> value_rec; // Value recovered from the item.
+	std::unique_ptr<MsgPack> value_rec;       // Value recovered from the item.
 	std::unique_ptr<const MsgPack> doc_acc;
 
 	std::string name;
 	std::string full_name;
+
+	// For GEO, DATE and Numeric types.
+	std::vector<uint64_t> accuracy;
+	std::vector<std::string> acc_prefix;
+
+	// Variables for TEXT type.
+	StemStrategy stem_strategy;
+	std::string stem_language;
+	// For STRING and TEXT type.
+	std::string language;
+
+	// Variables for GEO type.
+	bool partials;
+	double error;
 
 	// Auxiliar variables.
 	bool found_field;
 	bool set_type;
 	bool set_bool_term;
 	bool fixed_index;
-
-	// Variables for geospatial types.
-	bool partials;
-	double error;
+	std::string aux_stem_lan;
+	std::string aux_lan;
 
 
 	specification_t();
@@ -164,6 +206,27 @@ struct specification_t {
 	specification_t& operator=(specification_t&& o) noexcept;
 
 	std::string to_string() const;
+
+	static const specification_t& get_global(char field_type);
+};
+
+
+struct data_field_t {
+	Xapian::valueno slot;
+	std::string prefix;
+	unsigned type;
+	std::vector<uint64_t> accuracy;
+	std::vector<std::string> acc_prefix;
+	bool bool_term;
+
+	// For TEXT
+	StemStrategy stem_strategy;
+	std::string stem_language;
+	std::string language;
+
+	// For GEO.
+	bool partials;
+	double error;
 };
 
 
@@ -176,7 +239,7 @@ using TaskVector = std::vector<std::future<void>>;
 class Schema;
 
 
-using index_term = void (Schema::*)(Xapian::Document&, std::string&&, size_t) const;
+using dispatch_index = void (*)(Xapian::Document&, std::string&&, const specification_t&, size_t);
 
 
 class Schema {
@@ -235,12 +298,11 @@ class Schema {
 	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos);
 	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data);
 
-	void index_field_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-	void index_global_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-	void index_all_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-
-	void index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const std::vector<std::string>& acc_prefix, size_t pos, index_term fun=nullptr) const;
-	void index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, size_t pos, bool is_term=false) const;
+	static void index_field_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, size_t pos);
+	static void index_global_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& global_spc, size_t pos);
+	static void index_all_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
+	static void index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, dispatch_index fun=nullptr);
+	static void index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos, bool is_term=false);
 
 	/*
 	 * Validates data when RESERVED_TYPE has not been save in schema.
@@ -303,7 +365,7 @@ public:
 	 */
 
 	static void readable_type(MsgPack& prop_type, MsgPack& properties);
-	static void readable_analyzer(MsgPack& prop_analyzer, MsgPack& properties);
+	static void readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack& properties);
 	static void readable_index(MsgPack& prop_index, MsgPack& properties);
 
 
@@ -313,14 +375,14 @@ public:
 
 	void process_weight(const MsgPack& doc_weight);
 	void process_position(const MsgPack& doc_position);
-	void process_language(const MsgPack& doc_language);
 	void process_spelling(const MsgPack& doc_spelling);
 	void process_positions(const MsgPack& doc_positions);
-	void process_analyzer(const MsgPack& doc_analyzer);
+	void process_stem_strategy(const MsgPack& doc_stem_strategy);
+	void process_stem_language(const MsgPack& doc_stem_language);
+	void process_language(const MsgPack& doc_language);
 	void process_type(const MsgPack& doc_type);
 	void process_accuracy(const MsgPack& doc_accuracy);
 	void process_acc_prefix(const MsgPack& doc_acc_prefix);
-	void process_acc_gprefix(const MsgPack& doc_acc_gprefix);
 	void process_prefix(const MsgPack& doc_prefix);
 	void process_slot(const MsgPack& doc_slot);
 	void process_index(const MsgPack& doc_index);
@@ -338,6 +400,11 @@ public:
 	void process_latitude(const MsgPack& doc_latitude);
 	void process_longitude(const MsgPack& doc_longitude);
 	void process_radius(const MsgPack& doc_radius);
+	void process_date(const MsgPack& doc_date);
+	void process_time(const MsgPack& doc_time);
+	void process_year(const MsgPack& doc_year);
+	void process_month(const MsgPack& doc_month);
+	void process_day(const MsgPack& doc_day);
 	void process_value(const MsgPack& doc_value);
 	void process_name(const MsgPack& doc_name);
 
@@ -364,6 +431,7 @@ public:
 
 	data_field_t get_data_field(const std::string& field_name) const;
 	data_field_t get_slot_field(const std::string& field_name) const;
+	static const data_field_t& get_data_global(char field_type);
 
 
 	/*
@@ -384,13 +452,6 @@ public:
 		}
 	}
 
-	void update_language(const MsgPack& prop_language) {
-		specification.language.clear();
-		for (const auto& _language : prop_language) {
-			specification.language.push_back(lower_string(_language.as_string()));
-		}
-	}
-
 	void update_spelling(const MsgPack& prop_spelling) {
 		specification.spelling.clear();
 		for (const auto& _spelling : prop_spelling) {
@@ -405,11 +466,16 @@ public:
 		}
 	}
 
-	void update_analyzer(const MsgPack& prop_analyzer) {
-		specification.analyzer.clear();
-		for (const auto& _analyzer : prop_analyzer) {
-			specification.analyzer.push_back(static_cast<Xapian::TermGenerator::stem_strategy>(_analyzer.as_u64()));
-		}
+	void update_stem_strategy(const MsgPack& prop_stem_strategy) {
+		specification.stem_strategy = static_cast<StemStrategy>(prop_stem_strategy.as_u64());
+	}
+
+	void update_stem_language(const MsgPack& prop_stem_language) {
+		specification.stem_language = prop_stem_language.as_string();
+	}
+
+	void update_language(const MsgPack& prop_language) {
+		specification.language = prop_language.as_string();
 	}
 
 	void update_type(const MsgPack& prop_type) {
@@ -431,12 +497,6 @@ public:
 		}
 	}
 
-	void update_acc_gprefix(const MsgPack& prop_acc_gprefix) {
-		for (const auto& acc_gp : prop_acc_gprefix) {
-			specification.acc_gprefix.push_back(acc_gp.as_string());
-		}
-	}
-
 	void update_prefix(const MsgPack& prop_prefix) {
 		specification.prefix = prop_prefix.as_string();
 	}
@@ -448,7 +508,7 @@ public:
 	void update_index(const MsgPack& prop_index) {
 		// If not fixed_index update index type.
 		if likely(!specification.fixed_index) {
-			specification.index = static_cast<typeIndex>(prop_index.as_u64());
+			specification.index = static_cast<TypeIndex>(prop_index.as_u64());
 		}
 	}
 
