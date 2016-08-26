@@ -274,7 +274,7 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 
 
 Xapian::Query
-DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags, const std::string& lan)
+DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags)
 {
 	L_CALL(this, "DatabaseHandler::_search()");
 
@@ -448,20 +448,14 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 
 	L_SEARCH(this, "e.query size: %zu  Spelling: %d Synonyms: %d", e.query.size(), e.spelling, e.synonyms);
 	auto q_flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT | aux_flags;
-	std::string lan;
 	auto first = true;
-	auto lit = e.language.begin();
-	const auto e_lit = e.language.end();
 	Xapian::Query queryQ;
 	for (const auto& query : e.query) {
-		if (lit != e_lit) {
-			lan.assign(*lit++);
-		}
 		if (first) {
-			queryQ = _search(query, suggestions, q_flags, lan);
+			queryQ = _search(query, suggestions, q_flags);
 			first = false;
 		} else {
-			queryQ = Xapian::Query(Xapian::Query::OP_AND, queryQ, _search(query, suggestions, q_flags, lan));
+			queryQ = Xapian::Query(Xapian::Query::OP_AND, queryQ, _search(query, suggestions, q_flags));
 		}
 	}
 	L_SEARCH(this, "e.query: %s", queryQ.get_description().c_str());
@@ -472,10 +466,10 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 	Xapian::Query queryP;
 	for (const auto& partial : e.partial) {
 		if (first) {
-			queryP = _search(partial, suggestions, q_flags, lan);
+			queryP = _search(partial, suggestions, q_flags);
 			first = false;
 		} else {
-			queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, _search(partial, suggestions, q_flags, lan));
+			queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, _search(partial, suggestions, q_flags));
 		}
 	}
 	L_SEARCH(this, "e.partial: %s", queryP.get_description().c_str());
