@@ -168,9 +168,9 @@ Multi_MultiValueKeyMaker::add_value(const data_field_t& field_spc, bool reverse,
 			case STRING_TYPE:
 				try {
 					auto func = map_dispatch_str_metric.at(qf.metric);
-					(this->*func)(field_spc.slot, reverse, value, qf);
+					(this->*func)(field_spc, reverse, value, qf);
 				} catch (const std::out_of_range&) {
-					(this->*def_str_metric)(field_spc.slot, reverse, value, qf);
+					(this->*def_str_metric)(field_spc, reverse, value, qf);
 				}
 				return;
 			case GEO_TYPE:
