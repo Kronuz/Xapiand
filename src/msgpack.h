@@ -1537,9 +1537,9 @@ inline bool MsgPack::empty() const noexcept {
 		case msgpack::type::MAP:
 			return _const_body->_obj->via.map.size == 0;
 		case msgpack::type::ARRAY:
-			return _const_body->_obj->via.array.size = 0;
+			return _const_body->_obj->via.array.size == 0;
 		case msgpack::type::STR:
-			return _const_body->_obj->via.str.size = 0;
+			return _const_body->_obj->via.str.size == 0;
 		default:
 			return false;
 	}
