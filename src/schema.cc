@@ -871,7 +871,7 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 void
 Schema::readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack&)
 {
-	_stem_strategy = ::readable_stem_strategy((StemStrategy)prop_stem_strategy.as_u64());
+	prop_stem_strategy = ::readable_stem_strategy((StemStrategy)prop_stem_strategy.as_u64());
 }
 
 
