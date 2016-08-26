@@ -891,6 +891,9 @@ Schema::process_position(const MsgPack& doc_position)
 	try {
 		specification.position.clear();
 		if (doc_position.is_array()) {
+			if (doc_position.empty()) {
+				throw MSG_ClientError("Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", RESERVED_POSITION);
+			}
 			for (const auto& _position : doc_position) {
 				specification.position.push_back(static_cast<unsigned>(_position.as_u64()));
 			}
@@ -902,7 +905,7 @@ Schema::process_position(const MsgPack& doc_position)
 			get_mutable(specification.full_name)[RESERVED_POSITION] = specification.position;
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_POSITION);
+		throw MSG_ClientError("Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", RESERVED_POSITION);
 	}
 }
 
@@ -914,6 +917,9 @@ Schema::process_weight(const MsgPack& doc_weight)
 	try {
 		specification.weight.clear();
 		if (doc_weight.is_array()) {
+			if (doc_weight.empty()) {
+				throw MSG_ClientError("Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", RESERVED_WEIGHT);
+			}
 			for (const auto& _weight : doc_weight) {
 				specification.weight.push_back(static_cast<unsigned>(_weight.as_u64()));
 			}
@@ -925,40 +931,7 @@ Schema::process_weight(const MsgPack& doc_weight)
 			get_mutable(specification.full_name)[RESERVED_WEIGHT] = specification.weight;
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_WEIGHT);
-	}
-}
-
-
-void
-Schema::process_language(const MsgPack& doc_language)
-{
-	// RESERVED_LANGUAGE is heritable and can change between documents.
-	try {
-		specification.language.clear();
-		if (doc_language.is_array()) {
-			for (const auto& _language : doc_language) {
-				auto _str_language(_language.as_string());
-				if (is_language(_str_language)) {
-					specification.language.push_back(std::move(_str_language));
-				} else {
-					throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
-				}
-			}
-		} else {
-			auto _str_language(doc_language.as_string());
-			if (is_language(_str_language)) {
-				specification.language.push_back(std::move(_str_language));
-			} else {
-				throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
-			}
-		}
-
-		if unlikely(!specification.found_field) {
-			get_mutable(specification.full_name)[RESERVED_LANGUAGE] = specification.language;
-		}
-	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be string or array of strings", RESERVED_LANGUAGE);
+		throw MSG_ClientError("Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", RESERVED_WEIGHT);
 	}
 }
 
@@ -970,6 +943,9 @@ Schema::process_spelling(const MsgPack& doc_spelling)
 	try {
 		specification.spelling.clear();
 		if (doc_spelling.is_array()) {
+			if (doc_spelling.empty()) {
+				throw MSG_ClientError("Data inconsistency, %s must be a boolean or a not-empty array of booleans", RESERVED_SPELLING);
+			}
 			for (const auto& _spelling : doc_spelling) {
 				specification.spelling.push_back(_spelling.as_bool());
 			}
@@ -981,7 +957,7 @@ Schema::process_spelling(const MsgPack& doc_spelling)
 			get_mutable(specification.full_name)[RESERVED_SPELLING] = specification.spelling;
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean or array of booleans", RESERVED_SPELLING);
+		throw MSG_ClientError("Data inconsistency, %s must be a boolean or a not-empty array of booleans", RESERVED_SPELLING);
 	}
 }
 
@@ -993,6 +969,9 @@ Schema::process_positions(const MsgPack& doc_positions)
 	try {
 		specification.positions.clear();
 		if (doc_positions.is_array()) {
+			if (doc_positions.empty()) {
+				throw MSG_ClientError("Data inconsistency, %s must be a boolean or a not-empty array of booleans", RESERVED_POSITIONS);
+			}
 			for (const auto& _positions : doc_positions) {
 				specification.positions.push_back(_positions.as_bool());
 			}
@@ -1004,7 +983,7 @@ Schema::process_positions(const MsgPack& doc_positions)
 			get_mutable(specification.full_name)[RESERVED_POSITIONS] = specification.positions;
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean or array of booleans", RESERVED_POSITIONS);
+		throw MSG_ClientError("Data inconsistency, %s must be a boolean or a not-empty array of booleans", RESERVED_POSITIONS);
 	}
 }
 
