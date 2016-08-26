@@ -140,7 +140,7 @@ static int make_search(const test_geo_t _tests[], int len) {
 			db_geo.db_handler.get_mset(query, mset, spies, suggestions);
 			if (mset.size() != p.expect_datas.size()) {
 				++cont;
-				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.", mset.size(), p.expect_datas.size());
+				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), p.expect_datas.size());
 			} else {
 				auto it = p.expect_datas.begin();
 				for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {

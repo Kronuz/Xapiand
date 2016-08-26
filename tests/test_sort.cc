@@ -604,7 +604,7 @@ static DB_Test db_sort(".db_sort.db", std::vector<std::string>({
 	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 
-static int make_search(const sort_t _tests[], int len, const std::string& metric=std::string(), const std::string& lan="en") {
+static int make_search(const sort_t _tests[], int len, const std::string& metric=std::string()) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -615,7 +615,6 @@ static int make_search(const sort_t _tests[], int len, const std::string& metric
 	query.is_fuzzy = false;
 	query.is_nearest = false;
 	query.metric = metric;
-	query.language.push_back(lan);
 
 	for (int i = 0; i < len; ++i) {
 		sort_t p = _tests[i];
@@ -790,7 +789,7 @@ int sort_test_string_lcsq() {
 
 int sort_test_string_soundex_en() {
 	try {
-		int cont = make_search(string_soundex_en_tests, arraySize(string_soundex_en_tests), "soundex", "en");
+		int cont = make_search(string_soundex_en_tests, arraySize(string_soundex_en_tests), "soundex");
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort strings is correct!");
 		} else {
@@ -809,7 +808,7 @@ int sort_test_string_soundex_en() {
 
 int sort_test_string_soundex_fr() {
 	try {
-		int cont = make_search(string_soundex_fr_tests, arraySize(string_soundex_fr_tests), "soundex", "fr");
+		int cont = make_search(string_soundex_fr_tests, arraySize(string_soundex_fr_tests), "soundex");
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort strings is correct!");
 		} else {
@@ -828,7 +827,7 @@ int sort_test_string_soundex_fr() {
 
 int sort_test_string_soundex_de() {
 	try {
-		int cont = make_search(string_soundex_de_tests, arraySize(string_soundex_de_tests), "soundex", "german");
+		int cont = make_search(string_soundex_de_tests, arraySize(string_soundex_de_tests), "soundex");
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort strings is correct!");
 		} else {
@@ -847,7 +846,7 @@ int sort_test_string_soundex_de() {
 
 int sort_test_string_soundex_es() {
 	try {
-		int cont = make_search(string_soundex_es_tests, arraySize(string_soundex_es_tests), "soundex", "es");
+		int cont = make_search(string_soundex_es_tests, arraySize(string_soundex_es_tests), "soundex");
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort strings is correct!");
 		} else {
