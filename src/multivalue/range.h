@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "../database_utils.h"
+#include "../schema.h"
 
 #include <xapian.h>
 

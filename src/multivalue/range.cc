@@ -123,6 +123,7 @@ MultipleValueRange::getQuery(const data_field_t& field_spc, const std::string& f
 				}
 				return filterNumericQuery(field_spc, start_v, end_v, Serialise::positive(start_v), Serialise::positive(end_v));
 			}
+			case TEXT_TYPE:
 			case STRING_TYPE: {
 				if (start > end) {
 					return Xapian::Query::MatchNothing;
