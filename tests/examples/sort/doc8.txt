@@ -1,6 +1,11 @@
 {
 	"_data": "8",
-	"name": ["cooking", "hola mundo"],
+	"name": {
+		"en": ["cooking", "hello world"],
+		"es": ["cocina", "hola mundo"],
+		"fr": ["cuisine", "bonjour le monde"],
+		"de": ["kochen", "hallo welt"]
+	},
 	"location": "POINT(3.2 10.1)",
 	"year": [-10000, 0],
 	"date": ["0010-01-01", "0020-01-01"],

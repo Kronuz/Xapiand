@@ -1,6 +1,11 @@
 {
 	"_data": "1",
-	"name": ["cook", "cooked"],
+	"name": {
+		"en": ["cook", "cooked"],
+		"es": ["cocinar", "cocido"],
+		"fr": ["cuire", "cuit"],
+		"de": ["coch", "gecocht"]
+	},
 	"location": ["POINT(10 21)", "POINT(10 20)"],
 	"year": [2010, 2015],
 	"date": ["2010-10-21", "2011-01-01"],

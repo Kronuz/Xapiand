@@ -1,6 +1,11 @@
 {
 	"_data": "5",
-	"name": "mundo",
+	"name": {
+		"en": ["world"],
+		"es": ["mundo"],
+		"fr": ["monde"],
+		"de": ["welt"]
+	},
 	"location": "CIRCLE(10 10, 2000)",
 	"year": 500,
 	"date": "2015-01-01",

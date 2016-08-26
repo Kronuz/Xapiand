@@ -1,6 +1,11 @@
 {
 	"_data": "4",
-	"name": "hola",
+	"name": {
+		"en": ["hello"],
+		"es": ["hola"],
+		"fr": ["bonjour"],
+		"de": ["hallo"]
+	},
 	"location": "CIRCLE(2 2, 2000)",
 	"year": 100,
 	"date": "0001-01-01",
