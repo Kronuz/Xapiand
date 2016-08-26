@@ -402,6 +402,98 @@ specification_t::operator=(specification_t&& o) noexcept
 }
 
 
+const specification_t&
+specification_t::get_global(char field_type)
+{
+	switch (field_type) {
+		case FLOAT_TYPE: {
+			static const auto spc = []() {
+				specification_t global_spc;
+				global_spc.slot = DB_SLOT_NUMERIC;
+				global_spc.sep_types[2] = FLOAT_TYPE;
+				global_spc.accuracy = def_accuracy_num;
+				global_spc.acc_prefix = global_acc_prefix_num;
+				return global_spc;
+			}();
+			return spc;
+		}
+		case INTEGER_TYPE: {
+			static const auto spc = []() {
+				specification_t global_spc;
+				global_spc.slot = DB_SLOT_NUMERIC;
+				global_spc.sep_types[2] = INTEGER_TYPE;
+				global_spc.accuracy = def_accuracy_num;
+				global_spc.acc_prefix = global_acc_prefix_num;
+				return global_spc;
+			}();
+			return spc;
+		}
+		case POSITIVE_TYPE: {
+			static const auto spc = []() {
+				specification_t global_spc;
+				global_spc.slot = DB_SLOT_NUMERIC;
+				global_spc.sep_types[2] = POSITIVE_TYPE;
+				global_spc.accuracy = def_accuracy_num;
+				global_spc.acc_prefix = global_acc_prefix_num;
+				return global_spc;
+			}();
+			return spc;
+		}
+		case STRING_TYPE: {
+			static const auto spc = []() {
+				specification_t global_spc;
+				global_spc.slot = DB_SLOT_STRING;
+				global_spc.sep_types[2] = STRING_TYPE;
+				return global_spc;
+			}();
+			return spc;
+		}
+		case TEXT_TYPE: {
+			static const auto spc = []() {
+				specification_t global_spc;
+				global_spc.slot = DB_SLOT_STRING;
+				global_spc.sep_types[2] = TEXT_TYPE;
+				return global_spc;
+			}();
+			return spc;
+		}
+		case BOOLEAN_TYPE: {
+			static const auto spc = []() {
+				specification_t global_spc;
+				global_spc.slot = DB_SLOT_STRING;
+				global_spc.sep_types[2] = BOOLEAN_TYPE;
+				return global_spc;
+			}();
+			return spc;
+		}
+		case DATE_TYPE: {
+			static const auto spc = []() {
+				specification_t global_spc;
+				global_spc.slot = DB_SLOT_DATE;
+				global_spc.sep_types[2] = DATE_TYPE;
+				global_spc.accuracy = def_accuracy_date;
+				global_spc.acc_prefix = global_acc_prefix_date;
+				return global_spc;
+			}();
+			return spc;
+		}
+		case GEO_TYPE: {
+			static const auto spc = []() {
+				specification_t global_spc;
+				global_spc.slot = DB_SLOT_GEO;
+				global_spc.sep_types[2] = GEO_TYPE;
+				global_spc.accuracy = def_accuracy_geo;
+				global_spc.acc_prefix = global_acc_prefix_geo;
+				return global_spc;
+			}();
+			return spc;
+		}
+		default:
+			throw MSG_ClientError("Type: '%u' is an unknown type", field_type);
+	}
+}
+
+
 std::string
 specification_t::to_string() const
 {
