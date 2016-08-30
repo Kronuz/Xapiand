@@ -24,8 +24,8 @@
 
 #include "database_utils.h"
 #include "msgpack.h"
+#include "serialise.h"
 #include "stl_serialise.h"
-#include "utils.h"
 
 #include <future>
 
@@ -64,6 +64,22 @@ enum class StemStrategy : uint8_t {
 	STEM_SOME,
 	STEM_ALL,
 	STEM_ALL_Z
+};
+
+
+enum class FieldType : uint8_t {
+	FLOAT         =  'F',
+	INTEGER       =  'I',
+	POSITIVE      =  'P',
+	STRING        =  'S',
+	TEXT          =  'T',
+	DATE          =  'D',
+	GEO           =  'G',
+	BOOLEAN       =  'B',
+	UUID          =  'U',
+	ARRAY         =  'A',
+	OBJECT        =  'O',
+	EMPTY         =  ' '
 };
 
 
@@ -108,6 +124,23 @@ inline static std::string readable_index(TypeIndex index) noexcept {
 }
 
 
+inline static std::string readable_type(const std::array<FieldType, 3>& sep_types) {
+	std::string object;
+	if (sep_types[0] == FieldType::OBJECT) {
+		object.assign(OBJECT_STR);
+		object.push_back('/');
+	}
+	std::string array;
+	if (sep_types[1] == FieldType::ARRAY) {
+		array.assign(ARRAY_STR);
+		array.push_back('/');
+	}
+	char result[30];
+	snprintf(result, 30, "%s%s%s", object.c_str(), array.c_str(), Serialise::type(sep_types[2]).c_str());
+	return std::string(result);
+}
+
+
 inline static Xapian::TermGenerator::stem_strategy getGeneratorStrategy(StemStrategy stem_strategy) noexcept {
 	switch (stem_strategy) {
 		case StemStrategy::STEM_NONE:
@@ -144,36 +177,14 @@ inline static constexpr auto getPos(size_t pos, size_t size) noexcept {
 MSGPACK_ADD_ENUM(UnitTime);
 MSGPACK_ADD_ENUM(TypeIndex);
 MSGPACK_ADD_ENUM(StemStrategy);
+MSGPACK_ADD_ENUM(FieldType);
 
 
-struct specification_t {
-	// Reserved values.
-	std::vector<Xapian::termpos> position;
-	std::vector<Xapian::termcount> weight;
-	std::vector<bool> spelling;
-	std::vector<bool> positions;
-	std::vector<unsigned> sep_types;
+struct required_spc_t {
+	std::array<FieldType, 3> sep_types;
 	std::string prefix;
 	Xapian::valueno slot;
-	TypeIndex index;
-
-	bool store;
-	bool parent_store;
-	bool dynamic;
-	bool date_detection;
-	bool numeric_detection;
-	bool geo_detection;
-	bool bool_detection;
-	bool string_detection;
-	bool text_detection;
 	bool bool_term;
-
-	std::unique_ptr<const MsgPack> value;
-	std::unique_ptr<MsgPack> value_rec;       // Value recovered from the item.
-	std::unique_ptr<const MsgPack> doc_acc;
-
-	std::string name;
-	std::string full_name;
 
 	// For GEO, DATE and Numeric types.
 	std::vector<uint64_t> accuracy;
@@ -189,6 +200,43 @@ struct specification_t {
 	bool partials;
 	double error;
 
+	required_spc_t();
+	required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
+	required_spc_t(const required_spc_t& o);
+	required_spc_t(required_spc_t&& o) noexcept;
+
+	FieldType get_type() const noexcept {
+		return sep_types[2];
+	}
+};
+
+
+struct specification_t : required_spc_t  {
+	// Reserved values.
+	std::vector<Xapian::termpos> position;
+	std::vector<Xapian::termcount> weight;
+	std::vector<bool> spelling;
+	std::vector<bool> positions;
+	TypeIndex index;
+
+	bool store;
+	bool parent_store;
+	bool dynamic;
+	bool date_detection;
+	bool numeric_detection;
+	bool geo_detection;
+	bool bool_detection;
+	bool string_detection;
+	bool text_detection;
+
+	std::unique_ptr<const MsgPack> value;
+	// Value recovered from the item.
+	std::unique_ptr<MsgPack> value_rec;
+	std::unique_ptr<const MsgPack> doc_acc;
+
+	std::string name;
+	std::string full_name;
+
 	// Auxiliar variables.
 	bool found_field;
 	bool set_type;
@@ -197,8 +245,8 @@ struct specification_t {
 	std::string aux_stem_lan;
 	std::string aux_lan;
 
-
 	specification_t();
+	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
 	specification_t(const specification_t& o);
 	specification_t(specification_t&& o) noexcept;
 
@@ -207,26 +255,7 @@ struct specification_t {
 
 	std::string to_string() const;
 
-	static const specification_t& get_global(char field_type);
-};
-
-
-struct data_field_t {
-	Xapian::valueno slot;
-	std::string prefix;
-	unsigned type;
-	std::vector<uint64_t> accuracy;
-	std::vector<std::string> acc_prefix;
-	bool bool_term;
-
-	// For TEXT
-	StemStrategy stem_strategy;
-	std::string stem_language;
-	std::string language;
-
-	// For GEO.
-	bool partials;
-	double error;
+	static const specification_t& get_global(FieldType field_type);
 };
 
 
@@ -429,9 +458,9 @@ public:
 	 * Functions used for searching, return a field properties.
 	 */
 
-	data_field_t get_data_field(const std::string& field_name) const;
-	data_field_t get_slot_field(const std::string& field_name) const;
-	static const data_field_t& get_data_global(char field_type);
+	required_spc_t get_data_field(const std::string& field_name) const;
+	required_spc_t get_slot_field(const std::string& field_name) const;
+	static const required_spc_t& get_data_global(FieldType field_type);
 
 
 	/*
@@ -479,10 +508,10 @@ public:
 	}
 
 	void update_type(const MsgPack& prop_type) {
-		specification.sep_types[0] = static_cast<unsigned>(prop_type.at(0).as_u64());
-		specification.sep_types[1] = static_cast<unsigned>(prop_type.at(1).as_u64());
-		specification.sep_types[2] = static_cast<unsigned>(prop_type.at(2).as_u64());
-		specification.set_type = specification.sep_types[2] != NO_TYPE;
+		specification.sep_types[0] = (FieldType)prop_type.at(0).as_u64();
+		specification.sep_types[1] = (FieldType)prop_type.at(1).as_u64();
+		specification.sep_types[2] = (FieldType)prop_type.at(2).as_u64();
+		specification.set_type = specification.sep_types[2] != FieldType::EMPTY;
 	}
 
 	void update_accuracy(const MsgPack& prop_accuracy) {
@@ -502,7 +531,7 @@ public:
 	}
 
 	void update_slot(const MsgPack& prop_slot) {
-		specification.slot = static_cast<unsigned>(prop_slot.as_u64());
+		specification.slot = static_cast<Xapian::valueno>(prop_slot.as_u64());
 	}
 
 	void update_index(const MsgPack& prop_index) {

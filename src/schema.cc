@@ -22,11 +22,10 @@
 
 #include "schema.h"
 
-#include "database.h"
 #include "multivalue/generate_terms.h"
 #include "log.h"
+#include "utils.h"
 #include "manager.h"
-#include "serialise.h"
 #include "wkt_parser.h"
 
 
@@ -60,6 +59,15 @@ static const std::unordered_map<std::string, TypeIndex> map_index({
 });
 
 
+static const std::unordered_map<std::string, FieldType> map_type({
+	{ "float",         FieldType::FLOAT        }, { "integer",   FieldType::INTEGER     },
+	{ "positive",      FieldType::POSITIVE     }, { "string",    FieldType::STRING      },
+	{ "text",          FieldType::TEXT         }, { "date",      FieldType::DATE        },
+	{ "geospatial",    FieldType::GEO          }, { "boolean",   FieldType::BOOLEAN     },
+	{ "uuid",          FieldType::UUID         }
+});
+
+
 /*
  * Default accuracies.
  */
@@ -74,30 +82,30 @@ static const std::vector<uint64_t> def_accuracy_date({ toUType(UnitTime::HOUR), 
  */
 
 static const std::vector<std::string> global_acc_prefix_geo({
-	get_prefix("_geo_0",  DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE),
-	get_prefix("_geo_5",  DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE),
-	get_prefix("_geo_10", DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE),
-	get_prefix("_geo_15", DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE),
-	get_prefix("_geo_20", DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE),
-	get_prefix("_geo_25", DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE)
+	get_prefix("_geo_0",  DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO)),
+	get_prefix("_geo_5",  DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO)),
+	get_prefix("_geo_10", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO)),
+	get_prefix("_geo_15", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO)),
+	get_prefix("_geo_20", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO)),
+	get_prefix("_geo_25", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO))
 });
 
 static const std::vector<std::string> global_acc_prefix_date({
-	get_prefix("_date_hour",    DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE),
-	get_prefix("_date_day",     DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE),
-	get_prefix("_date_month",   DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE),
-	get_prefix("_date_year",    DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE),
-	get_prefix("_date_decade",  DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE),
-	get_prefix("_date_century", DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE)
+	get_prefix("_date_hour",    DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE)),
+	get_prefix("_date_day",     DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE)),
+	get_prefix("_date_month",   DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE)),
+	get_prefix("_date_year",    DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE)),
+	get_prefix("_date_decade",  DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE)),
+	get_prefix("_date_century", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE))
 });
 
 static const std::vector<std::string> global_acc_prefix_num({
-	get_prefix("_num_100",      DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE),
-	get_prefix("_num_1000",     DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE),
-	get_prefix("_num_10000",    DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE),
-	get_prefix("_num_100000",   DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE),
-	get_prefix("_num_1000000",  DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE),
-	get_prefix("_num_10000000", DOCUMENT_CUSTOM_TERM_PREFIX, INTEGER_TYPE)
+	get_prefix("_num_100",      DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER)),
+	get_prefix("_num_1000",     DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER)),
+	get_prefix("_num_10000",    DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER)),
+	get_prefix("_num_100000",   DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER)),
+	get_prefix("_num_1000000",  DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER)),
+	get_prefix("_num_10000000", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER))
 });
 
 
@@ -105,9 +113,41 @@ static const std::vector<std::string> global_acc_prefix_num({
  * Acceptable values string used when there is a data inconsistency.
  */
 
-static const std::string str_set_acc_date("{ second, minute, hour, day, month, year, decade, century, millennium }");
-static const std::string str_set_stem_strategy("{ stem_none, stem_some, stem_all, stem_all_z, none, some, all, all_z }");
-static const std::string str_set_index("{ none, terms, values, all, field_terms, field_values, field_all, global_terms, global_values, global_all }");
+static const std::string str_set_acc_date = []() {
+	std::string res("{ ");
+	for (const auto& p : map_acc_date) {
+		res.append(p.first).append(", ");
+	}
+	res.push_back('}');
+	return res;
+}();
+
+static const std::string str_set_stem_strategy = []() {
+	std::string res("{ ");
+	for (const auto& p : map_stem_strategy) {
+		res.append(p.first).append(", ");
+	}
+	res.push_back('}');
+	return res;
+}();
+
+static const std::string str_set_index = []() {
+	std::string res("{ ");
+	for (const auto& p : map_index) {
+		res.append(p.first).append(", ");
+	}
+	res.push_back('}');
+	return res;
+}();
+
+static const std::string str_set_type = []() {
+	std::string res("{ ");
+	for (const auto& p : map_type) {
+		res.append(p.first).append(", ");
+	}
+	res.push_back('}');
+	return res;
+}();
 
 
 const specification_t default_spc;
@@ -220,13 +260,64 @@ const std::unordered_map<std::string, std::pair<bool, std::string>> map_stem_lan
 });
 
 
+required_spc_t::required_spc_t()
+	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY }}),
+	  slot(Xapian::BAD_VALUENO),
+	  bool_term(false),
+	  stem_strategy(StemStrategy::STEM_SOME),
+	  stem_language(DEFAULT_LANGUAGE),
+	  language(DEFAULT_LANGUAGE),
+	  partials(GEO_DEF_PARTIALS),
+	  error(GEO_DEF_ERROR) { }
+
+
+required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
+	const std::vector<std::string>& _acc_prefix)
+	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, type }}),
+	  slot(_slot),
+	  bool_term(false),
+	  accuracy(acc),
+	  acc_prefix(_acc_prefix),
+	  stem_strategy(StemStrategy::STEM_SOME),
+	  stem_language(DEFAULT_LANGUAGE),
+	  language(DEFAULT_LANGUAGE),
+	  partials(GEO_DEF_PARTIALS),
+	  error(GEO_DEF_ERROR) { }
+
+
+required_spc_t::required_spc_t(const required_spc_t& o)
+	: sep_types(o.sep_types),
+	  prefix(o.prefix),
+	  slot(o.slot),
+	  bool_term(o.bool_term),
+	  accuracy(o.accuracy),
+	  acc_prefix(o.acc_prefix),
+	  stem_strategy(o.stem_strategy),
+	  stem_language(o.stem_language),
+	  language(o.language),
+	  partials(o.partials),
+	  error(o.error) { }
+
+
+required_spc_t::required_spc_t(required_spc_t&& o) noexcept
+	: sep_types(std::move(o.sep_types)),
+	  prefix(std::move(o.prefix)),
+	  slot(std::move(o.slot)),
+	  bool_term(std::move(o.bool_term)),
+	  accuracy(std::move(o.accuracy)),
+	  acc_prefix(std::move(o.acc_prefix)),
+	  stem_strategy(std::move(o.stem_strategy)),
+	  stem_language(std::move(o.stem_language)),
+	  language(std::move(o.language)),
+	  partials(std::move(o.partials)),
+	  error(std::move(o.error)) { }
+
+
 specification_t::specification_t()
 	: position({ 0 }),
 	  weight({ 1 }),
 	  spelling({ false }),
 	  positions({ false }),
-	  sep_types({ NO_TYPE, NO_TYPE, NO_TYPE }),
-	  slot(Xapian::BAD_VALUENO),
 	  index(TypeIndex::ALL),
 	  store(true),
 	  parent_store(true),
@@ -237,12 +328,28 @@ specification_t::specification_t()
 	  bool_detection(true),
 	  string_detection(true),
 	  text_detection(true),
-	  bool_term(false),
-	  stem_strategy(StemStrategy::STEM_SOME),
-	  stem_language(DEFAULT_LANGUAGE),
-	  language(DEFAULT_LANGUAGE),
-	  partials(GEO_DEF_PARTIALS),
-	  error(GEO_DEF_ERROR),
+	  found_field(true),
+	  set_type(false),
+	  set_bool_term(false) { }
+
+
+specification_t::specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
+	const std::vector<std::string>& _acc_prefix)
+	: required_spc_t(_slot, type, acc, _acc_prefix),
+	  position({ 0 }),
+	  weight({ 1 }),
+	  spelling({ false }),
+	  positions({ false }),
+	  index(TypeIndex::ALL),
+	  store(true),
+	  parent_store(true),
+	  dynamic(true),
+	  date_detection(true),
+	  numeric_detection(true),
+	  geo_detection(true),
+	  bool_detection(true),
+	  string_detection(true),
+	  text_detection(true),
 	  found_field(true),
 	  set_type(false),
 	  set_bool_term(false) { }
@@ -253,9 +360,6 @@ specification_t::specification_t(const specification_t& o)
 	  weight(o.weight),
 	  spelling(o.spelling),
 	  positions(o.positions),
-	  sep_types(o.sep_types),
-	  prefix(o.prefix),
-	  slot(o.slot),
 	  index(o.index),
 	  store(o.store),
 	  parent_store(o.parent_store),
@@ -266,16 +370,8 @@ specification_t::specification_t(const specification_t& o)
 	  bool_detection(o.bool_detection),
 	  string_detection(o.string_detection),
 	  text_detection(o.text_detection),
-	  bool_term(o.bool_term),
 	  name(o.name),
 	  full_name(o.full_name),
-	  accuracy(o.accuracy),
-	  acc_prefix(o.acc_prefix),
-	  stem_strategy(o.stem_strategy),
-	  stem_language(o.stem_language),
-	  language(o.language),
-	  partials(o.partials),
-	  error(o.error),
 	  found_field(o.found_field),
 	  set_type(o.set_type),
 	  set_bool_term(o.set_bool_term),
@@ -288,9 +384,6 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  weight(std::move(o.weight)),
 	  spelling(std::move(o.spelling)),
 	  positions(std::move(o.positions)),
-	  sep_types(std::move(o.sep_types)),
-	  prefix(std::move(o.prefix)),
-	  slot(std::move(o.slot)),
 	  index(std::move(o.index)),
 	  store(std::move(o.store)),
 	  parent_store(std::move(o.parent_store)),
@@ -301,16 +394,8 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  bool_detection(std::move(o.bool_detection)),
 	  string_detection(std::move(o.string_detection)),
 	  text_detection(std::move(o.text_detection)),
-	  bool_term(std::move(o.bool_term)),
 	  name(std::move(o.name)),
 	  full_name(std::move(o.full_name)),
-	  accuracy(std::move(o.accuracy)),
-	  acc_prefix(std::move(o.acc_prefix)),
-	  stem_strategy(std::move(o.stem_strategy)),
-	  stem_language(std::move(o.stem_language)),
-	  language(std::move(o.language)),
-	  partials(std::move(o.partials)),
-	  error(std::move(o.error)),
 	  found_field(std::move(o.found_field)),
 	  set_type(std::move(o.set_type)),
 	  set_bool_term(std::move(o.set_bool_term)),
