@@ -26,9 +26,6 @@
 #include <unordered_map>
 #include <vector>
 
-// Datum for WGS84
-#define DATUM_WGS84 0
-
 
 /*
  * More ellipsoids available in:
@@ -64,102 +61,98 @@ static const ellipsoid_t ellipsoids[12] = {
  * http://earth-info.nga.mil/GandG/coordsys/datums/NATO_DT.pdfs
  * http://georepository.com/search/by-name/?query=&include_world=on
  */
-static const datum_t datums[17] = {
+static const std::unordered_map<int, datum_t> map_datums({
 	// World Geodetic System 1984 (WGS84)
 	// EPSG_SRID: 4326
 	// Code NATO: WGE
-	{ "World Geodetic System 1984 (WGS84)", WE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 },
+	// Code Ellip: WE
+	{ WGS84, { "World Geodetic System 1984 (WGS84)", ellipsoids[0], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 } },
 	// World Geodetic System 1972
 	// EPSG_SRID: 4322
 	// Code NATO: WGC-7
-	{ "Worl Geodetic System 1972 (WGS72)", WD, 0.0, 0.0, 4.5, 0.0, 0.0, (0.554 / 3600.0) * RAD_PER_DEG, 0.219 / 1E6},
+	// Code Ellip: WD
+	{ WGS72, { "Worl Geodetic System 1972 (WGS72)", ellipsoids[11], 0.0, 0.0, 4.5, 0.0, 0.0, (0.554 / 3600.0) * RAD_PER_DEG, 0.219 / 1E6} },
 	// North American Datum 1983 USA - Hawaii - main islands
 	// EPSG_SRID: 4269
 	// Code NATO: NAR(H)
-	{ "North American Datum 1983 US - Hawaii (NAD83)", RF, 1, 1, -1, 0.0, 0.0, 0.0, 0.0 },
+	// Code Ellip: RF
+	{ NAD83, { "North American Datum 1983 US - Hawaii (NAD83)", ellipsoids[1], 1, 1, -1, 0.0, 0.0, 0.0, 0.0 } },
 	// NORTH AMERICAN 1927 USA - CONUS - onshore
 	// EPSG_SRID: 4267
 	// Code NATO: NAS(C)
-	{ "North American 1927 US-CONUS (NAD27)", CC, -8, 160, 176, 0.0, 0.0, 0.0, 0.0 },
+	// Code Ellip: CC
+	{ NAD27, { "North American 1927 US-CONUS (NAD27)", ellipsoids[8], -8, 160, 176, 0.0, 0.0, 0.0, 0.0 } },
 	// Ordnance Survey Great Britain 1936 - UK - Great Britain; Isle of Man
 	// EPSG_SRID: 4277
 	// Code NATO: OGB-7
-	{ "Ordnance Survey Great Britain 1936 (OSGB36)", AA, 446.448, -125.157, 542.06, (0.150 / 3600.0) * RAD_PER_DEG, (0.247 / 3600.0) * RAD_PER_DEG, (0.8421 / 3600.0) * RAD_PER_DEG, -20.4894 / 1E6 },
+	// Code Ellip: AA
+	{ OSGB36, { "Ordnance Survey Great Britain 1936 (OSGB36)", ellipsoids[2], 446.448, -125.157, 542.06, (0.150 / 3600.0) * RAD_PER_DEG, (0.247 / 3600.0) * RAD_PER_DEG, (0.8421 / 3600.0) * RAD_PER_DEG, -20.4894 / 1E6 } },
 	// IRELAND 1975, Europe - Ireland (Republic and Ulster) - onshore
 	// EPSG_SRID: 4300
-	{ "Ireland 1975 (TM75)", AM, 482.5, -130.6, 564.6, (-1.042 / 3600.0) * RAD_PER_DEG, (-0.214 / 3600.0) * RAD_PER_DEG, (-0.631 / 3600.0) * RAD_PER_DEG, 8.150 / 1E6 },
+	// Code Ellip: AM
+	{ TM75, { "Ireland 1975 (TM75)", ellipsoids[3], 482.5, -130.6, 564.6, (-1.042 / 3600.0) * RAD_PER_DEG, (-0.214 / 3600.0) * RAD_PER_DEG, (-0.631 / 3600.0) * RAD_PER_DEG, 8.150 / 1E6 } },
 	// IRELAND 1965, Europe - Ireland (Republic and Ulster) - onshore
 	// EPSG_SRID: 4299
 	// Code NATO: IRL-7
-	{ "Ireland 1965 (TM65)", AM, 482.530, -130.596, 564.557, (-1.042 / 3600.0) * RAD_PER_DEG, (-0.214 / 3600.0) * RAD_PER_DEG, (-0.631 / 3600.0) * RAD_PER_DEG, 8.150 / 1E6 },
+	// Code Ellip: AM
+	{ TM65, { "Ireland 1965 (TM65)", ellipsoids[3], 482.530, -130.596, 564.557, (-1.042 / 3600.0) * RAD_PER_DEG, (-0.214 / 3600.0) * RAD_PER_DEG, (-0.631 / 3600.0) * RAD_PER_DEG, 8.150 / 1E6 } },
 	// European Datum 1979 (ED79), Europe - west
 	// EPSG_SRID: 4668
+	// Code Ellip: IN
 	// http://georepository.com/transformation_15752/ED79-to-WGS-84-1.html
-	{ "European Datum 1979 (ED79)", IN, -86, -98, -119, 0.0, 0.0, 0.0, 0.0 },
+	{ ED79, { "European Datum 1979 (ED79)", ellipsoids[4], -86, -98, -119, 0.0, 0.0, 0.0, 0.0 } },
 	// European Datum 1950, Europe - west (DMA ED50 mean)
 	// EPSG_SRID: 4230
 	// Code NATO: EUR(M)
+	// Code Ellip: IN
 	// http://georepository.com/transformation_1133/ED50-to-WGS-84-1.html
-	{ "European Datum 1950 (ED50)", IN, -87, -98, -121, 0.0, 0.0, 0.0, 0.0 },
+	{ ED50, { "European Datum 1950 (ED50)", ellipsoids[4], -87, -98, -121, 0.0, 0.0, 0.0, 0.0 } },
 	// Tokyo Japan, Asia - Japan and South Korea
 	// EPSG_SRID: 4301
 	// Code NATO: TOY(A)
-	{ "Tokyo Japan (TOYA)", BR, -148, 507, 685, 0.0, 0.0, 0.0, 0.0 },
+	// Code Ellip: BR
+	{ TOYA, { "Tokyo Japan (TOYA)", ellipsoids[5], -148, 507, 685, 0.0, 0.0, 0.0, 0.0 } },
 	// DHDN (RAUENBERG), Germany - West Germany all states
 	// EPSG_SRID: 4314
 	// Code NATO: RAU-7
-	{ "Deutsches Hauptdreiecksnetz (DHDN)", BR, 582, 105, 414, (1.04 / 3600.0) * RAD_PER_DEG, (0.35 / 3600.0) * RAD_PER_DEG, (-3.08 / 3600.0) * RAD_PER_DEG, 8.3 /1E6 },
+	// Code Ellip: BR
+	{ DHDN, { "Deutsches Hauptdreiecksnetz (DHDN)", ellipsoids[5], 582, 105, 414, (1.04 / 3600.0) * RAD_PER_DEG, (0.35 / 3600.0) * RAD_PER_DEG, (-3.08 / 3600.0) * RAD_PER_DEG, 8.3 /1E6 } },
 	// OLD EGYPTIAN 1907 - Egypt.
 	// EPSG_SRID: 4229
 	// Code NATO: OEG
-	{ "Egypt 1907 (OEG)", HE, -130, 110, -13, 0.0, 0.0, 0.0, 0.0 },
+	// Code Ellip: HE
+	{ OEG, { "Egypt 1907 (OEG)", ellipsoids[6], -130, 110, -13, 0.0, 0.0, 0.0, 0.0 } },
 	// AUSTRALIAN GEODETIC 1984, Australia - all states
 	// EPSG_SRID: 4203
 	// Code NATO: AUG-7
-	{ "Australian Geodetic 1984 (AGD84)", AN, -116, -50.47, 141.69, (0.23 / 3600.0) * RAD_PER_DEG, (0.39 / 3600.0) * RAD_PER_DEG, (0.344 / 3600.0) * RAD_PER_DEG, 0.0983 / 1E6 },
+	// Code Ellip: AN
+	{ AGD84, { "Australian Geodetic 1984 (AGD84)", ellipsoids[7], -116, -50.47, 141.69, (0.23 / 3600.0) * RAD_PER_DEG, (0.39 / 3600.0) * RAD_PER_DEG, (0.344 / 3600.0) * RAD_PER_DEG, 0.0983 / 1E6 } },
 	// SOUTH AMERICAN 1969 - South America - SAD69 by country
 	// EPSG_SRID: 4618
 	// Code NATO: SAN(M)
-	{ "South American 1969 (SAD69)", SA, -57, 1, -41, 0.0, 0.0, 0.0, 0.0 },
+	// Code Ellip: SA
+	{ SAD69, { "South American 1969 (SAD69)", ellipsoids[9], -57, 1, -41, 0.0, 0.0, 0.0, 0.0 } },
 	// PULKOVO 1942	- Germany - East Germany all states
 	// EPSG_SRID: 4178
 	// Code NATO: PUK-7
-	{ "Pulkovo 1942 (PUL42)", KA, 21.58719, -97.541, -60.925, (1.01378 / 3600.0) * RAD_PER_DEG, (0.58117 / 3600.0) * RAD_PER_DEG, (0.2348 / 3600.0) * RAD_PER_DEG, -4.6121 / 1E6 },
+	// Code Ellip: KA
+	{ PUL42, { "Pulkovo 1942 (PUL42)", ellipsoids[10], 21.58719, -97.541, -60.925, (1.01378 / 3600.0) * RAD_PER_DEG, (0.58117 / 3600.0) * RAD_PER_DEG, (0.2348 / 3600.0) * RAD_PER_DEG, -4.6121 / 1E6 } },
 	// HERMANNSKOGEL, Former Yugoslavia.
 	// EPSG_SRID: 3906
 	// Code NATO: HER-7
-	{ "MGI 1901 (MGI1901)", BR, 515.149, 186.233, 511.959, (5.49721 / 3600.0) * RAD_PER_DEG, (3.51742 / 3600.0) * RAD_PER_DEG, (-12.948 / 3600.0) * RAD_PER_DEG, 0.782 / 1E6 },
+	// Code Ellip: BR
+	{ MGI1901, { "MGI 1901 (MGI1901)", ellipsoids[5], 515.149, 186.233, 511.959, (5.49721 / 3600.0) * RAD_PER_DEG, (3.51742 / 3600.0) * RAD_PER_DEG, (-12.948 / 3600.0) * RAD_PER_DEG, 0.782 / 1E6 } },
 	// GGRS87, Greece
 	// EPSG_SRID: 4121
 	// Code NATO: GRX
-	{ "GGRS87", RF, -199.87, 74.79, 246.62, 0.0, 0.0, 0.0, 0.0 }
-};
-
-
-static const std::unordered_map<int, int> SRIDS_DATUMS({
-	{ WGS84,    0 },
-	{ WGS72,    1 },
-	{ NAD83,    2 },
-	{ NAD27,    3 },
-	{ OSGB36,   4 },
-	{ TM75,     5 },
-	{ TM65,     6 },
-	{ ED79,     7 },
-	{ ED50,     8 },
-	{ TOYA,     9 },
-	{ DHDN,    10 },
-	{ OEG,     11 },
-	{ AGD84,   12 },
-	{ SAD69,   13 },
-	{ PUL42,   14 },
-	{ MGI1901, 15 },
-	{ GGRS87,  16 }
+	// Code Ellip: RF
+	{ GGRS87, { "GGRS87", ellipsoids[1], -199.87, 74.79, 246.62, 0.0, 0.0, 0.0, 0.0  }}
 });
 
 
 Cartesian::Cartesian()
 	: SRID(WGS84),
-	  datum(DATUM_WGS84),
+	  datum(map_datums.at(SRID)),
 	  x(1.0),
 	  y(0.0),
 	  z(0.0) { }
@@ -173,11 +166,10 @@ Cartesian::Cartesian(double lat, double lon, double height, CartesianUnits units
 	: SRID(_SRID)
 {
 	try {
-		datum = SRIDS_DATUMS.at(SRID);
+		datum = map_datums.at(SRID);
 		toCartesian(lat, lon, height, units);
 		if (SRID != WGS84) {
 			transform2WGS84();
-			SRID = WGS84;
 		}
 	} catch (const std::out_of_range&) {
 		throw MSG_CartesianError("SRID = %d is not supported", SRID);
@@ -191,7 +183,7 @@ Cartesian::Cartesian(double lat, double lon, double height, CartesianUnits units
  */
 Cartesian::Cartesian(double lat, double lon, double height, CartesianUnits units)
 	: SRID(WGS84),
-	  datum(DATUM_WGS84)
+	  datum(map_datums.at(SRID))
 {
 	toCartesian(lat, lon, height, units);
 }
@@ -204,7 +196,7 @@ Cartesian::Cartesian(double lat, double lon, double height, CartesianUnits units
  */
 Cartesian::Cartesian(double _x, double _y, double _z)
 	: SRID(WGS84),
-	  datum(DATUM_WGS84),
+	  datum(map_datums.at(SRID)),
 	  x(_x),
 	  y(_y),
 	  z(_z) { }
@@ -214,19 +206,19 @@ Cartesian::Cartesian(double _x, double _y, double _z)
 void
 Cartesian::transform2WGS84() noexcept
 {
-	datum_t t = datums[datum];
-	double s_1 = t.s + 1;
+	double s_1 = datum.s + 1;
 
 	// Apply transform.
-	double x2 = t.tx + s_1 * (x - t.rz * y + t.ry * z);
-	double y2 = t.ty + s_1 * (t.rz * x + y - t.rx * z);
-	double z2 = t.tz + s_1 * (- t.ry * x + t.rx * y + z);
+	double x2 = datum.tx + s_1 * (x - datum.rz * y + datum.ry * z);
+	double y2 = datum.ty + s_1 * (datum.rz * x + y - datum.rx * z);
+	double z2 = datum.tz + s_1 * (- datum.ry * x + datum.rx * y + z);
 
 	x = x2;
 	y = y2;
 	z = z2;
 
-	datum = DATUM_WGS84;
+	SRID = WGS84;
+	datum = map_datums.at(SRID);
 }
 
 
@@ -249,10 +241,8 @@ Cartesian::toCartesian(double lat, double lon, double height, CartesianUnits uni
 		throw MSG_CartesianError("Latitude out-of-range");
 	}
 
-	auto ellipsoid = ellipsoids[datums[datum].ellipsoid];
-
-	double a = ellipsoid.major_axis;
-	double e2 = ellipsoid.e2;
+	double a = datum.ellipsoid.major_axis;
+	double e2 = datum.ellipsoid.e2;
 
 	double cos_lat = std::cos(lat);
 	double sin_lat = std::sin(lat);
@@ -274,7 +264,7 @@ Cartesian::operator==(const Cartesian& p) const noexcept
 bool
 Cartesian::operator!=(const Cartesian& p) const noexcept
 {
-	return x != p.x || y != p.y || z != p.z || SRID != p.SRID;
+	return !operator==(p);
 }
 
 
@@ -357,24 +347,30 @@ Cartesian::Decimal2Degrees() const
 
 	std::string direction;
 	if (lat < 0) {
-		direction = "''S";
+		direction.assign("''S");
 		dlat = - 1 * dlat;
 		mlat = - 1 * mlat;
 		slat = - 1 * slat;
 	} else {
-		direction = "''N";
+		direction.assign("''N");
 	}
 
-	std::string res = std::to_string(dlat) + "°" + std::to_string(mlat) + "'" + std::to_string(slat) + direction;
+	std::string res;
+	res.reserve(60);
+	res.append(std::to_string(dlat)).append("°");
+	res.append(std::to_string(mlat)).append("'");
+	res.append(std::to_string(slat)).append(direction);
 	if (lon < 0) {
-		direction = "''W";
+		direction.assign("''W");
 		dlon = - 1 * dlon;
 		mlon = - 1 * mlon;
 		slon = - 1 * slon;
 	} else {
-		direction = "''E";
+		direction.assign("''E");
 	}
-	res += "  " + std::to_string(dlon) + "°" + std::to_string(mlon) + "'" + std::to_string(slon) + direction + "  " + std::to_string(height);
+	res.append("  ").append(std::to_string(dlon)).append("°");
+	res.append(std::to_string(mlon)).append("'");
+	res.append(std::to_string(slon)).append(direction).append("  ").append(std::to_string(height));
 
 	return res;
 }
@@ -390,10 +386,8 @@ Cartesian::toGeodetic(double& lat, double& lon, double& height) const
 	lon = std::atan2(y, x);
 	double p = std::sqrt(x * x + y * y);
 
-	ellipsoid_t ellipsoid = ellipsoids[datums[datum].ellipsoid];
-
-	double a = ellipsoid.major_axis;
-	double e2 = ellipsoid.e2;
+	double a = datum.ellipsoid.major_axis;
+	double e2 = datum.ellipsoid.e2;
 
 	lat = std::atan2(z, p * (1 - e2));
 	double sin_lat = std::sin(lat);
@@ -416,10 +410,10 @@ Cartesian::toGeodetic(double& lat, double& lon, double& height) const
 void
 Cartesian::normalize()
 {
-	double sum = std::sqrt(x * x + y * y + z * z);
-	x /= sum;
-	y /= sum;
-	z /= sum;
+	double _norm = norm();
+	x /= _norm;
+	y /= _norm;
+	z /= _norm;
 }
 
 
@@ -442,14 +436,20 @@ Cartesian::norm() const
 std::string
 Cartesian::as_string() const
 {
-	return "SRID = " + std::to_string(SRID) + "\n(" + std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(z) + ")";
+	std::string res;
+	res.reserve(50);
+	res.assign("SRID = ").append(std::to_string(SRID)).append(" (");
+	res.append(std::to_string(x)).push_back(' ');
+	res.append(std::to_string(y)).push_back(' ');
+	res.append(std::to_string(z)).push_back(')');
+	return res;
 }
 
 
 bool
 Cartesian::is_SRID_supported(int _SRID)
 {
-	return SRIDS_DATUMS.find(_SRID) != SRIDS_DATUMS.end();
+	return map_datums.find(_SRID) != map_datums.end();
 }
 
 

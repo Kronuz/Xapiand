@@ -28,26 +28,13 @@
 #include <functional>
 #include <string>
 
-// Code of ellipsoids were obtained of
-// http://earth-info.nga.mil/GandG/coordsys/datums/ellips.txt
-// Ellipsoids
-#define WE 0
-#define RF 1
-#define AA 2
-#define AM 3
-#define IN 4
-#define BR 5
-#define HE 6
-#define AN 7
-#define CC 8
-#define SA 9
-#define KA 10
-#define WD 11
 
-// This SRIDs were obtained of http://www.epsg.org/, However we can use differents datums.
-// The datums used were obtained of
-// http://earth-info.nga.mil/GandG/coordsys/datums/NATO_DT.pdf
-// CRS  SRID
+/*
+ * This SRIDs were obtained of http://www.epsg.org/. However we can use differents datums.
+ * The datums used were obtained from:
+ *   http://earth-info.nga.mil/GandG/coordsys/datums/NATO_DT.pdf
+ *      CRS     SRID
+ */
 #define WGS84   4326 // Cartesian uses this Coordinate Reference System (CRS).
 #define WGS72   4322
 #define NAD83   4269
@@ -80,26 +67,31 @@ constexpr double DEG_PER_RAD = 57.2957795130823208767981548;
 constexpr double PI_HALF = 1.57079632679489661923132169;
 
 
-// The simple geometric shape which most closely approximates the shape of the Earth is a
-// biaxial ellipsoid.
+/*
+ * The simple geometric shape which most closely approximates the shape of the Earth is a
+ * biaxial ellipsoid.
+ *
+ * Name of ellipsoids were obtained from:
+ *   http://earth-info.nga.mil/GandG/coordsys/datums/ellips.txt
+ */
 struct ellipsoid_t {
 	std::string name;
 	double major_axis;
 	double minor_axis;
-	double e2;        // eccentricity squared = 2f - f^2
+	double e2;              // eccentricity squared = 2f - f^2
 };
 
 
 struct datum_t {
-	std::string name; // Datum name
-	int ellipsoid;    // Ellipsoid used
-	double tx;        // meters
-	double ty;        // meters
-	double tz;        // meters
-	double rx;        // radians
-	double ry;        // radians
-	double rz;        // radians
-	double s;         // scale factor s / 1E6
+	std::string name;       // Datum name
+	ellipsoid_t ellipsoid;  // Ellipsoid used
+	double tx;              // meters
+	double ty;              // meters
+	double tz;              // meters
+	double rx;              // radians
+	double ry;              // radians
+	double rz;              // radians
+	double s;               // scale factor s / 1E6
 };
 
 
@@ -109,11 +101,13 @@ enum class CartesianUnits {
 };
 
 
-// The formulas used for the conversions were obtained from:
-// "A guide to coordinate systems in Great Britain".
+/*
+ * The formulas used for the conversions were obtained from:
+ *    "A guide to coordinate systems in Great Britain"
+ */
 class Cartesian {
 	int SRID;
-	int datum;
+	datum_t datum;
 
 	void transform2WGS84() noexcept;
 	void toCartesian(double lat, double lon, double height, CartesianUnits units);
@@ -161,7 +155,7 @@ public:
 		return SRID;
 	}
 
-	inline int getDatum() const noexcept {
+	inline datum_t getDatum() const noexcept {
 		return datum;
 	}
 };
