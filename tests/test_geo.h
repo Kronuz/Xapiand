@@ -28,7 +28,6 @@
 
 struct test_geo_t {
 	std::string query;
-	std::string terms;
 	std::vector<std::string> expect_datas;
 };
 
