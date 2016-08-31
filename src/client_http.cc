@@ -1010,7 +1010,7 @@ HttpClient::facets_view()
 			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
 				auto field_t = db_handler.get_schema()->get_slot_field(spy.first);
 				MsgPack value = {
-					{ RESERVED_VALUE, Unserialise::MsgPack(field_t.type, *facet) },
+					{ RESERVED_VALUE, Unserialise::MsgPack(field_t.get_type(), *facet) },
 					{ "_termfreq", facet.get_termfreq() }
 				};
 				array.push_back(std::move(value));

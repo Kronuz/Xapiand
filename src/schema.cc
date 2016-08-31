@@ -60,11 +60,11 @@ static const std::unordered_map<std::string, TypeIndex> map_index({
 
 
 static const std::unordered_map<std::string, FieldType> map_type({
-	{ "float",         FieldType::FLOAT        }, { "integer",   FieldType::INTEGER     },
-	{ "positive",      FieldType::POSITIVE     }, { "string",    FieldType::STRING      },
-	{ "text",          FieldType::TEXT         }, { "date",      FieldType::DATE        },
-	{ "geospatial",    FieldType::GEO          }, { "boolean",   FieldType::BOOLEAN     },
-	{ "uuid",          FieldType::UUID         }
+	{ FLOAT_STR,       FieldType::FLOAT        }, { INTEGER_STR,     FieldType::INTEGER     },
+	{ POSITIVE_STR,    FieldType::POSITIVE     }, { STRING_STR,      FieldType::STRING      },
+	{ TEXT_STR,        FieldType::TEXT         }, { DATE_STR,        FieldType::DATE        },
+	{ GEO_STR,         FieldType::GEO          }, { BOOLEAN_STR,     FieldType::BOOLEAN     },
+	{ UUID_STR,        FieldType::UUID         }
 });
 
 
@@ -488,89 +488,39 @@ specification_t::operator=(specification_t&& o) noexcept
 
 
 const specification_t&
-specification_t::get_global(char field_type)
+specification_t::get_global(FieldType field_type)
 {
 	switch (field_type) {
-		case FLOAT_TYPE: {
-			static const auto spc = []() {
-				specification_t global_spc;
-				global_spc.slot = DB_SLOT_NUMERIC;
-				global_spc.sep_types[2] = FLOAT_TYPE;
-				global_spc.accuracy = def_accuracy_num;
-				global_spc.acc_prefix = global_acc_prefix_num;
-				return global_spc;
-			}();
+		case FieldType::FLOAT: {
+			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::FLOAT, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
-		case INTEGER_TYPE: {
-			static const auto spc = []() {
-				specification_t global_spc;
-				global_spc.slot = DB_SLOT_NUMERIC;
-				global_spc.sep_types[2] = INTEGER_TYPE;
-				global_spc.accuracy = def_accuracy_num;
-				global_spc.acc_prefix = global_acc_prefix_num;
-				return global_spc;
-			}();
+		case FieldType::INTEGER: {
+			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::INTEGER, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
-		case POSITIVE_TYPE: {
-			static const auto spc = []() {
-				specification_t global_spc;
-				global_spc.slot = DB_SLOT_NUMERIC;
-				global_spc.sep_types[2] = POSITIVE_TYPE;
-				global_spc.accuracy = def_accuracy_num;
-				global_spc.acc_prefix = global_acc_prefix_num;
-				return global_spc;
-			}();
+		case FieldType::POSITIVE: {
+			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::POSITIVE, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
-		case STRING_TYPE: {
-			static const auto spc = []() {
-				specification_t global_spc;
-				global_spc.slot = DB_SLOT_STRING;
-				global_spc.sep_types[2] = TEXT_TYPE;
-				return global_spc;
-			}();
+		case FieldType::STRING: {
+			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case TEXT_TYPE: {
-			static const auto spc = []() {
-				specification_t global_spc;
-				global_spc.slot = DB_SLOT_STRING;
-				global_spc.sep_types[2] = TEXT_TYPE;
-				return global_spc;
-			}();
+		case FieldType::TEXT: {
+			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case BOOLEAN_TYPE: {
-			static const auto spc = []() {
-				specification_t global_spc;
-				global_spc.slot = DB_SLOT_STRING;
-				global_spc.sep_types[2] = BOOLEAN_TYPE;
-				return global_spc;
-			}();
+		case FieldType::BOOLEAN: {
+			static const specification_t spc(DB_SLOT_STRING, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case DATE_TYPE: {
-			static const auto spc = []() {
-				specification_t global_spc;
-				global_spc.slot = DB_SLOT_DATE;
-				global_spc.sep_types[2] = DATE_TYPE;
-				global_spc.accuracy = def_accuracy_date;
-				global_spc.acc_prefix = global_acc_prefix_date;
-				return global_spc;
-			}();
+		case FieldType::DATE: {
+			static const specification_t spc(DB_SLOT_DATE, FieldType::DATE, def_accuracy_date, global_acc_prefix_date);
 			return spc;
 		}
-		case GEO_TYPE: {
-			static const auto spc = []() {
-				specification_t global_spc;
-				global_spc.slot = DB_SLOT_GEO;
-				global_spc.sep_types[2] = GEO_TYPE;
-				global_spc.accuracy = def_accuracy_geo;
-				global_spc.acc_prefix = global_acc_prefix_geo;
-				return global_spc;
-			}();
+		case FieldType::GEO: {
+			static const specification_t spc(DB_SLOT_GEO, FieldType::GEO, def_accuracy_geo, global_acc_prefix_geo);
 			return spc;
 		}
 		default:
@@ -628,10 +578,10 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_VALUE     << ": " << (value ? value->to_string() : std::string())                 << "\n";
 	str << "\t" << "Recovery value"   << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
 
-	str << "\t" << RESERVED_SLOT        << ": " << slot                    << "\n";
-	str << "\t" << RESERVED_TYPE        << ": " << str_type(sep_types)     << "\n";
-	str << "\t" << RESERVED_PREFIX      << ": " << prefix                  << "\n";
-	str << "\t" << RESERVED_INDEX       << ": " << readable_index(index)   << "\n";
+	str << "\t" << RESERVED_SLOT        << ": " << slot                           << "\n";
+	str << "\t" << RESERVED_TYPE        << ": " << readable_type(sep_types)       << "\n";
+	str << "\t" << RESERVED_PREFIX      << ": " << prefix                         << "\n";
+	str << "\t" << RESERVED_INDEX       << ": " << readable_index(index)          << "\n";
 	str << "\t" << RESERVED_STORE       << ": " << (store             ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_DYNAMIC     << ": " << (dynamic           ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_D_DETECTION << ": " << (date_detection    ? "true" : "false") << "\n";
@@ -697,14 +647,14 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 
 	specification.set_type = true;
 	try {
-		const auto& prop_id = properties.at(RESERVED_ID);
-		update_specification(properties);
-		return Serialise::serialise(static_cast<char>(prop_id.at(RESERVED_TYPE).at(2).as_u64()), value_id);
+		auto& prop_id = properties.at(RESERVED_ID);
+		update_specification(prop_id);
+		return Serialise::serialise(specification, value_id);
 	} catch (const std::out_of_range&) {
 		auto& prop_id = get_mutable(RESERVED_ID);
 		specification.found_field = false;
-		auto res_serialise = Serialise::serialise(value_id, true);
-		prop_id[RESERVED_TYPE] = std::vector<unsigned>({ NO_TYPE, NO_TYPE, static_cast<unsigned>(res_serialise.first) });
+		auto res_serialise = Serialise::get_type(value_id, specification.bool_term);
+		prop_id[RESERVED_TYPE] = std::array<FieldType, 3>({{ FieldType::EMPTY, FieldType::EMPTY, res_serialise.first }});
 		prop_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
 		prop_id[RESERVED_BOOL_TERM] = true;
@@ -789,50 +739,50 @@ Schema::set_type(const MsgPack& item_doc)
 	switch (field.type()) {
 		case msgpack::type::POSITIVE_INTEGER:
 			if (specification.numeric_detection) {
-				specification.sep_types[2] = POSITIVE_TYPE;
+				specification.sep_types[2] = FieldType::POSITIVE;
 				return;
 			}
 			break;
 		case msgpack::type::NEGATIVE_INTEGER:
 			if (specification.numeric_detection) {
-				specification.sep_types[2] = INTEGER_TYPE;
+				specification.sep_types[2] = FieldType::INTEGER;
 				return;
 			}
 			break;
 		case msgpack::type::FLOAT:
 			if (specification.numeric_detection) {
-				specification.sep_types[2] = FLOAT_TYPE;
+				specification.sep_types[2] = FieldType::FLOAT;
 				return;
 			}
 			break;
 		case msgpack::type::BOOLEAN:
 			if (specification.bool_detection) {
-				specification.sep_types[2] = BOOLEAN_TYPE;
+				specification.sep_types[2] = FieldType::BOOLEAN;
 				return;
 			}
 			break;
 		case msgpack::type::STR: {
 			auto str_value = field.as_string();
 			if (specification.date_detection && Datetime::isDate(str_value)) {
-				specification.sep_types[2] = DATE_TYPE;
+				specification.sep_types[2] = FieldType::DATE;
 				return;
 			}
 			if (specification.geo_detection && EWKT_Parser::isEWKT(str_value)) {
-				specification.sep_types[2] = GEO_TYPE;
+				specification.sep_types[2] = FieldType::GEO;
 				return;
 			}
 			if (specification.text_detection && Serialise::isText(str_value, specification.bool_term)) {
-				specification.sep_types[2] = TEXT_TYPE;
+				specification.sep_types[2] = FieldType::TEXT;
 				return;
 			}
 			if (specification.string_detection) {
-				specification.sep_types[2] = STRING_TYPE;
+				specification.sep_types[2] = FieldType::STRING;
 				return;
 			}
 			if (specification.bool_detection) {
 				try {
 					Serialise::boolean(str_value);
-					specification.sep_types[2] = BOOLEAN_TYPE;
+					specification.sep_types[2] = FieldType::BOOLEAN;
 					return;
 				} catch (const SerialisationError&) { }
 			}
@@ -860,11 +810,11 @@ Schema::set_type_to_array()
 
 	auto& _types = get_mutable(specification.full_name)[RESERVED_TYPE];
 	if (_types.is_null()) {
-		_types = MsgPack({ NO_TYPE, ARRAY_TYPE, NO_TYPE });
-		specification.sep_types[1] = ARRAY_TYPE;
+		_types = MsgPack({ FieldType::EMPTY, FieldType::ARRAY, FieldType::EMPTY });
+		specification.sep_types[1] = FieldType::ARRAY;
 	} else {
-		_types[1] = ARRAY_TYPE;
-		specification.sep_types[1] = ARRAY_TYPE;
+		_types[1] = FieldType::ARRAY;
+		specification.sep_types[1] = FieldType::ARRAY;
 	}
 }
 
@@ -876,11 +826,11 @@ Schema::set_type_to_object()
 
 	auto& _types = get_mutable(specification.full_name)[RESERVED_TYPE];
 	if (_types.is_null()) {
-		_types = MsgPack({ OBJECT_TYPE, NO_TYPE, NO_TYPE });
-		specification.sep_types[0] = OBJECT_TYPE;
+		_types = MsgPack({ FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY });
+		specification.sep_types[0] = FieldType::OBJECT;
 	} else {
-		_types[0] = OBJECT_TYPE;
-		specification.sep_types[0] = OBJECT_TYPE;
+		_types[0] = FieldType::OBJECT;
+		specification.sep_types[0] = FieldType::OBJECT;
 	}
 }
 
@@ -937,15 +887,15 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 void
 Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 {
-	std::vector<unsigned> sep_types({
-		static_cast<unsigned>(prop_type.at(0).as_u64()),
-		static_cast<unsigned>(prop_type.at(1).as_u64()),
-		static_cast<unsigned>(prop_type.at(2).as_u64())
-	});
-	prop_type = str_type(sep_types);
+	std::array<FieldType, 3> sep_types({{
+		(FieldType)prop_type.at(0).as_u64(),
+		(FieldType)prop_type.at(1).as_u64(),
+		(FieldType)prop_type.at(2).as_u64()
+	}});
+	prop_type = ::readable_type(sep_types);
 
 	// Readable accuracy.
-	if (sep_types[2] == DATE_TYPE) {
+	if (sep_types[2] == FieldType::DATE) {
 		for (auto& _accuracy : properties.at(RESERVED_ACCURACY)) {
 			_accuracy = readable_acc_date((UnitTime)_accuracy.as_u64());
 		}
@@ -1151,8 +1101,55 @@ Schema::process_type(const MsgPack& doc_type)
 	}
 
 	try {
-		if (!set_types(lower_string(doc_type.as_string()), specification.sep_types)) {
-			throw MSG_ClientError("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, FLOAT_STR, INTEGER_STR, POSITIVE_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
+		auto str_type = lower_string(doc_type.as_string());
+		if (str_type.empty()) {
+			throw MSG_ClientError("%s must be in { object, array, [object/][array/]< %s > }", RESERVED_TYPE, str_set_type.c_str());
+		}
+
+		try {
+			specification.sep_types[2] = map_type.at(str_type);
+		} catch (const std::out_of_range&) {
+			std::vector<std::string> tokens;
+			stringTokenizer(str_type, "/", tokens);
+			try {
+				switch (tokens.size()) {
+					case 1:
+						if (tokens[0] == OBJECT_STR) {
+							specification.sep_types[0] = FieldType::OBJECT;
+							return;
+						} else if (tokens[0] == ARRAY_STR) {
+							specification.sep_types[1] = FieldType::ARRAY;
+							return;
+						}
+						break;
+					case 2:
+						if (tokens[0] == OBJECT_STR) {
+							specification.sep_types[0] = FieldType::OBJECT;
+							if (tokens[1] == ARRAY_STR) {
+								specification.sep_types[1] = FieldType::ARRAY;
+								return;
+							} else {
+								specification.sep_types[2] = map_type.at(tokens[1]);
+								return;
+							}
+						} else if (tokens[0] == ARRAY_STR) {
+							specification.sep_types[1] = FieldType::ARRAY;
+							specification.sep_types[2] = map_type.at(tokens[1]);
+							return;
+						}
+						break;
+					case 3:
+						if (tokens[0] == OBJECT_STR && tokens[1] == ARRAY_STR) {
+							specification.sep_types[0] = FieldType::OBJECT;
+							specification.sep_types[1] = FieldType::ARRAY;
+							specification.sep_types[2] = map_type.at(tokens[2]);
+						}
+						break;
+				}
+				throw MSG_ClientError("%s must be in { object, array, [object/][array/]< %s > }", RESERVED_TYPE, str_set_type.c_str());
+			} catch (const std::out_of_range&) {
+				throw MSG_ClientError("%s must be in { object, array, [object/][array/]< %s > }", RESERVED_TYPE, str_set_type.c_str());
+			}
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_TYPE);
@@ -1777,7 +1774,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				}
 			}
 
-			if unlikely(!specification.found_field && specification.sep_types[2] != NO_TYPE) {
+			if unlikely(!specification.found_field && specification.sep_types[2] != FieldType::EMPTY) {
 				validate_required_data(specification.value.get());
 			}
 
@@ -1829,13 +1826,13 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				task.get();
 			}
 
-			if unlikely(offsprings && specification.sep_types[0] == NO_TYPE) {
+			if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY) {
 				set_type_to_object();
 			}
 			break;
 		}
 		case msgpack::type::ARRAY:
-			if unlikely(specification.sep_types[1] == NO_TYPE) {
+			if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 				set_type_to_array();
 			}
 			index_array(*properties, object, *data, doc);
@@ -1931,7 +1928,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 					task.get();
 				}
 
-				if unlikely(offsprings && specification.sep_types[0] == NO_TYPE) {
+				if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY) {
 					set_type_to_object();
 				}
 
@@ -1981,7 +1978,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 				case TypeIndex::TERMS:
 				case TypeIndex::FIELD_TERMS:
 				case TypeIndex::GLOBAL_TERMS:
-					index_global_term(doc, Serialise::serialise(specification.sep_types[2], value), specification_t::get_global(specification.sep_types[2]), pos);
+					index_global_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
 					break;
 				case TypeIndex::VALUES:
 				case TypeIndex::FIELD_VALUES:
@@ -2005,13 +2002,13 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 				case TypeIndex::NONE:
 					return;
 				case TypeIndex::TERMS:
-					index_all_term(doc, Serialise::serialise(specification.sep_types[2], value), specification, specification_t::get_global(specification.sep_types[2]), pos);
+					index_all_term(doc, Serialise::MsgPack(specification, value), specification, specification_t::get_global(specification.sep_types[2]), pos);
 					break;
 				case TypeIndex::FIELD_TERMS:
-					index_field_term(doc, Serialise::serialise(specification.sep_types[2], value), specification, pos);
+					index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos);
 					break;
 				case TypeIndex::GLOBAL_TERMS:
-					index_global_term(doc, Serialise::serialise(specification.sep_types[2], value), specification_t::get_global(specification.sep_types[2]), pos);
+					index_global_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
 					break;
 				case TypeIndex::VALUES: {
 					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
@@ -2092,16 +2089,16 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				case TypeIndex::FIELD_TERMS:
 				case TypeIndex::GLOBAL_TERMS: {
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
 						const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 						for (const auto& value : values) {
-							index_global_term(doc, Serialise::serialise(specification.sep_types[2], value), global_spc, pos++);
+							index_global_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
 						}
 					} else {
-						index_global_term(doc, Serialise::serialise(specification.sep_types[2], values), specification_t::get_global(specification.sep_types[2]), 0);
+						index_global_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
 					}
 					break;
 				}
@@ -2111,7 +2108,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 					StringSet& s_g = map_values[global_spc.slot];
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
@@ -2129,7 +2126,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 					StringSet& s_g = map_values[global_spc.slot];
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
@@ -2148,45 +2145,45 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					return;
 				case TypeIndex::TERMS: {
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
 						const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 						for (const auto& value : values) {
-							index_all_term(doc, Serialise::serialise(specification.sep_types[2], value), specification, global_spc, pos++);
+							index_all_term(doc, Serialise::MsgPack(specification, value), specification, global_spc, pos++);
 						}
 					} else {
-						index_all_term(doc, Serialise::serialise(specification.sep_types[2], values), specification, specification_t::get_global(specification.sep_types[2]), 0);
+						index_all_term(doc, Serialise::MsgPack(specification, values), specification, specification_t::get_global(specification.sep_types[2]), 0);
 					}
 					break;
 				}
 				case TypeIndex::FIELD_TERMS: {
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
 						for (const auto& value : values) {
-							index_field_term(doc, Serialise::serialise(specification.sep_types[2], value), specification, pos++);
+							index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
 						}
 					} else {
-						index_field_term(doc, Serialise::serialise(specification.sep_types[2], values), specification, 0);
+						index_field_term(doc, Serialise::MsgPack(specification, values), specification, 0);
 					}
 					break;
 				}
 				case TypeIndex::GLOBAL_TERMS: {
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
 						const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 						for (const auto& value : values) {
-							index_global_term(doc, Serialise::serialise(specification.sep_types[2], value), global_spc, pos++);
+							index_global_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
 						}
 					} else {
-						index_global_term(doc, Serialise::serialise(specification.sep_types[2], values), specification_t::get_global(specification.sep_types[2]), 0);
+						index_global_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
 					}
 					break;
 				}
@@ -2195,7 +2192,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					StringSet& s_f = map_values[specification.slot];
 					StringSet& s_g = map_values[global_spc.slot];
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
@@ -2210,7 +2207,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				case TypeIndex::FIELD_VALUES: {
 					StringSet& s_f = map_values[specification.slot];
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
@@ -2226,7 +2223,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 					StringSet& s_g = map_values[global_spc.slot];
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
@@ -2243,7 +2240,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					StringSet& s_f = map_values[specification.slot];
 					StringSet& s_g = map_values[global_spc.slot];
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
@@ -2258,7 +2255,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 				case TypeIndex::FIELD_ALL: {
 					StringSet& s_f = map_values[specification.slot];
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
@@ -2274,7 +2271,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 					StringSet& s_g = map_values[global_spc.slot];
 					if (values.is_array()) {
-						if unlikely(specification.sep_types[1] == NO_TYPE) {
+						if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 							set_type_to_array();
 						}
 						size_t pos = 0;
@@ -2326,7 +2323,7 @@ Schema::validate_required_data(const MsgPack* value)
 {
 	L_CALL(this, "Schema::validate_required_data()");
 
-	if (specification.sep_types[2] == NO_TYPE) {
+	if (specification.sep_types[2] == FieldType::EMPTY) {
 		if (value) {
 			if (XapiandManager::manager->type_required) {
 				throw MSG_MissingTypeError("Type of field [%s] is missing", specification.full_name.c_str());
@@ -2346,7 +2343,7 @@ Schema::validate_required_data(const MsgPack* value)
 		// Process RESERVED_ACCURACY, RESERVED_ACC_PREFIX.
 		std::set<uint64_t> set_acc;
 		switch (specification.sep_types[2]) {
-			case GEO_TYPE: {
+			case FieldType::GEO: {
 				// Set partials and error.
 				properties[RESERVED_PARTIALS] = specification.partials;
 				properties[RESERVED_ERROR] = specification.error;
@@ -2369,7 +2366,7 @@ Schema::validate_required_data(const MsgPack* value)
 				}
 				break;
 			}
-			case DATE_TYPE: {
+			case FieldType::DATE: {
 				if (specification.doc_acc) {
 					try {
 						for (const auto& _accuracy : *specification.doc_acc) {
@@ -2388,43 +2385,45 @@ Schema::validate_required_data(const MsgPack* value)
 				}
 				break;
 			}
-			case INTEGER_TYPE:
-			case POSITIVE_TYPE:
-			case FLOAT_TYPE: {
+			case FieldType::INTEGER:
+			case FieldType::POSITIVE:
+			case FieldType::FLOAT: {
 				if (specification.doc_acc) {
 					try {
 						for (const auto& _accuracy : *specification.doc_acc) {
 							set_acc.insert(_accuracy.as_u64());
 						}
-						break;
 					} catch (const msgpack::type_error&) {
-						throw MSG_ClientError("Data inconsistency, %s: %s must be an array of positive numbers", RESERVED_ACCURACY, specification.sep_types[2]);
+						throw MSG_ClientError("Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str());
 					}
 				} else {
 					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
 				}
+				break;
 			}
-			case TEXT_TYPE:
+			case FieldType::TEXT:
 				properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
 				if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
 					specification.stem_language = specification.aux_lan;
 				}
 				properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
-			case STRING_TYPE:
+			case FieldType::STRING:
 				if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
 					specification.language = specification.aux_stem_lan;
 				}
 				properties[RESERVED_LANGUAGE] = specification.language;
 				break;
-			case NO_TYPE:
-				throw MSG_ClientError("%s must be defined for validate data to index", RESERVED_TYPE);
+			case FieldType::BOOLEAN:
+				break;
+			default:
+				throw MSG_ClientError("%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
 		}
 
 		auto size_acc = set_acc.size();
 		if (size_acc) {
 			if (specification.acc_prefix.empty()) {
 				for (const auto& acc : set_acc) {
-					specification.acc_prefix.push_back(get_prefix(specification.full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]));
+					specification.acc_prefix.push_back(get_prefix(specification.full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
 				}
 			} else if (specification.acc_prefix.size() != size_acc) {
 				throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -2440,7 +2439,7 @@ Schema::validate_required_data(const MsgPack* value)
 
 		// Process RESERVED_PREFIX
 		if (specification.prefix.empty()) {
-			specification.prefix = get_prefix(specification.full_name, DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]);
+			specification.prefix = get_prefix(specification.full_name, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
 		}
 		properties[RESERVED_PREFIX] = specification.prefix;
 
@@ -2456,7 +2455,7 @@ Schema::validate_required_data(const MsgPack* value)
 			 * By default, if field name has upper characters then it is consider bool term.
 			 * If type is TEXT, bool_term is false.
 			 */
-			specification.bool_term = specification.sep_types[2] != TEXT_TYPE && strhasupper(specification.full_name);
+			specification.bool_term = specification.sep_types[2] != FieldType::TEXT && strhasupper(specification.full_name);
 		}
 		properties[RESERVED_BOOL_TERM] = specification.bool_term;
 
@@ -2474,7 +2473,7 @@ Schema::index_field_term(Xapian::Document& doc, std::string&& serialise_val, con
 		return;
 	}
 
-	if (field_spc.sep_types[2] == TEXT_TYPE) {
+	if (field_spc.sep_types[2] == FieldType::TEXT) {
 		Xapian::TermGenerator term_generator;
 		term_generator.set_document(doc);
 		term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
@@ -2494,7 +2493,7 @@ Schema::index_field_term(Xapian::Document& doc, std::string&& serialise_val, con
 		}
 		L_INDEX(nullptr, "Field Text to Index [%d] => %s:%s [Positions: %d]", pos, field_spc.prefix.c_str(), serialise_val.c_str(), positions);
 	} else {
-		if (!field_spc.bool_term && field_spc.sep_types[2] == STRING_TYPE) {
+		if (!field_spc.bool_term && field_spc.sep_types[2] == FieldType::STRING) {
 			to_lower(serialise_val);
 		}
 		serialise_val = prefixed(serialise_val, field_spc.prefix);
@@ -2526,7 +2525,7 @@ Schema::index_global_term(Xapian::Document& doc, std::string&& serialise_val, co
 		return;
 	}
 
-	if (global_spc.sep_types[2] == TEXT_TYPE) {
+	if (global_spc.sep_types[2] == FieldType::TEXT) {
 		Xapian::TermGenerator term_generator;
 		term_generator.set_document(doc);
 		term_generator.set_stemmer(Xapian::Stem(global_spc.stem_language));
@@ -2539,7 +2538,7 @@ Schema::index_global_term(Xapian::Document& doc, std::string&& serialise_val, co
 		}
 		L_INDEX(nullptr, "Global Text to Index [%d] => %s [with positions: %d]", pos, serialise_val.c_str(), positions);
 	} else {
-		if (!global_spc.bool_term && global_spc.sep_types[2] == STRING_TYPE) {
+		if (!global_spc.bool_term && global_spc.sep_types[2] == FieldType::STRING) {
 			to_lower(serialise_val);
 		}
 		auto position = global_spc.position[getPos(pos, global_spc.position.size())];
@@ -2570,7 +2569,7 @@ Schema::index_all_term(Xapian::Document& doc, std::string&& serialise_val, const
 		return;
 	}
 
-	if (field_spc.sep_types[2] == TEXT_TYPE) {
+	if (field_spc.sep_types[2] == FieldType::TEXT) {
 		Xapian::TermGenerator term_generator;
 		term_generator.set_document(doc);
 
@@ -2597,7 +2596,7 @@ Schema::index_all_term(Xapian::Document& doc, std::string&& serialise_val, const
 	} else {
 		// Index Field Term.
 		auto nameterm = serialise_val;
-		if (!field_spc.bool_term && field_spc.sep_types[2] == STRING_TYPE) {
+		if (!field_spc.bool_term && field_spc.sep_types[2] == FieldType::STRING) {
 			to_lower(nameterm);
 		}
 		nameterm = prefixed(nameterm, field_spc.prefix);
@@ -2617,7 +2616,7 @@ Schema::index_all_term(Xapian::Document& doc, std::string&& serialise_val, const
 		}
 
 		// Index Global Term.
-		if (!global_spc.bool_term && global_spc.sep_types[2] == STRING_TYPE) {
+		if (!global_spc.bool_term && global_spc.sep_types[2] == FieldType::STRING) {
 			to_lower(serialise_val);
 		}
 		auto g_position = global_spc.position[getPos(pos, global_spc.position.size())];
@@ -2647,7 +2646,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 	L_CALL(nullptr, "Schema::index_value()");
 
 	switch (spc.sep_types[2]) {
-		case FLOAT_TYPE: {
+		case FieldType::FLOAT: {
 			try {
 				auto f_val = value.as_f64();
 				if (fun) {
@@ -2663,7 +2662,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				throw MSG_ClientError("Format invalid for float type: %s", value.to_string().c_str());
 			}
 		}
-		case INTEGER_TYPE: {
+		case FieldType::INTEGER: {
 			try {
 				auto i_val = value.as_i64();
 				if (fun) {
@@ -2679,7 +2678,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				throw MSG_ClientError("Format invalid for integer type: %s", value.to_string().c_str());
 			}
 		}
-		case POSITIVE_TYPE: {
+		case FieldType::POSITIVE: {
 			try {
 				auto u_val = value.as_u64();
 				if (fun) {
@@ -2695,7 +2694,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				throw MSG_ClientError("Format invalid for positive type: %s", value.to_string().c_str());
 			}
 		}
-		case DATE_TYPE: {
+		case FieldType::DATE: {
 			try {
 				Datetime::tm_t tm;
 				if (fun) {
@@ -2711,7 +2710,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				throw MSG_ClientError("Format invalid for date type: %s", value.to_string().c_str());
 			}
 		}
-		case GEO_TYPE: {
+		case FieldType::GEO: {
 			try {
 				auto str_ewkt = value.as_string();
 				EWKT_Parser ewkt(str_ewkt, spc.partials, spc.error);
@@ -2726,8 +2725,8 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				throw MSG_ClientError("Format invalid for geo type: %s", value.to_string().c_str());
 			}
 		}
-		case STRING_TYPE:
-		case TEXT_TYPE: {
+		case FieldType::STRING:
+		case FieldType::TEXT: {
 			try {
 				if (fun) {
 					auto ser_value = value.as_string();
@@ -2741,14 +2740,14 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(spc.sep_types[2]).c_str(), value.to_string().c_str());
 			}
 		}
-		case BOOLEAN_TYPE: {
+		case FieldType::BOOLEAN: {
 			try {
 				if (fun) {
-					auto ser_value = Serialise::serialise(BOOLEAN_TYPE, value);
+					auto ser_value = Serialise::MsgPack(spc, value);
 					s.insert(ser_value);
 					(*fun)(doc, std::move(ser_value), spc, pos);
 				} else {
-					s.insert(Serialise::serialise(BOOLEAN_TYPE, value));
+					s.insert(Serialise::MsgPack(spc, value));
 				}
 				return;
 			} catch (const SerialisationError&) {
@@ -2767,7 +2766,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 	L_CALL(nullptr, "Schema::index_all_value()");
 
 	switch (field_spc.sep_types[2]) {
-		case FLOAT_TYPE: {
+		case FieldType::FLOAT: {
 			try {
 				auto f_val = value.as_f64();
 				auto ser_value = Serialise::_float(f_val);
@@ -2790,7 +2789,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				throw MSG_ClientError("Format invalid for float type: %s", value.to_string().c_str());
 			}
 		}
-		case INTEGER_TYPE: {
+		case FieldType::INTEGER: {
 			try {
 				auto i_val = value.as_i64();
 				auto ser_value = Serialise::integer(i_val);
@@ -2813,7 +2812,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				throw MSG_ClientError("Format invalid for integer type: %s", value.to_string().c_str());
 			}
 		}
-		case POSITIVE_TYPE: {
+		case FieldType::POSITIVE: {
 			try {
 				auto u_val = value.as_u64();
 				auto ser_value = Serialise::positive(u_val);
@@ -2836,7 +2835,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				throw MSG_ClientError("Format invalid for positive type: %s", value.to_string().c_str());
 			}
 		}
-		case DATE_TYPE: {
+		case FieldType::DATE: {
 			try {
 				Datetime::tm_t tm;
 				auto ser_value = Serialise::date(value, tm);
@@ -2859,7 +2858,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				throw MSG_ClientError("Format invalid for date type: %s", value.to_string().c_str());
 			}
 		}
-		case GEO_TYPE: {
+		case FieldType::GEO: {
 			try {
 				auto str_ewkt = value.as_string();
 				if (field_spc.partials == global_spc.partials &&
@@ -2893,8 +2892,8 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				throw MSG_ClientError("Format invalid for geo type: %s", value.to_string().c_str());
 			}
 		}
-		case STRING_TYPE:
-		case TEXT_TYPE: {
+		case FieldType::STRING:
+		case FieldType::TEXT: {
 			try {
 				auto ser_value = value.as_string();
 				if (is_term) {
@@ -2910,9 +2909,9 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[2]).c_str(), value.to_string().c_str());
 			}
 		}
-		case BOOLEAN_TYPE: {
+		case FieldType::BOOLEAN: {
 			try {
-				auto ser_value = Serialise::serialise(BOOLEAN_TYPE, value);
+				auto ser_value = Serialise::MsgPack(field_spc, value);
 				if (is_term) {
 					s_f.insert(ser_value);
 					s_g.insert(ser_value);
@@ -2932,17 +2931,12 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 }
 
 
-data_field_t
+required_spc_t
 Schema::get_data_field(const std::string& field_name) const
 {
 	L_CALL(this, "Schema::get_data_field()");
 
-	data_field_t res = {
-		default_spc.slot, default_spc.prefix, default_spc.sep_types[2],
-		default_spc.accuracy, default_spc.acc_prefix, default_spc.bool_term,
-		default_spc.stem_strategy, default_spc.stem_language, default_spc.language,
-		default_spc.partials, default_spc.error
-	};
+	required_spc_t res;
 
 	if (field_name.empty()) {
 		return res;
@@ -2953,8 +2947,12 @@ Schema::get_data_field(const std::string& field_name) const
 	try {
 		const auto& properties = schema->at(RESERVED_SCHEMA).path(fields);
 
-		res.type = static_cast<unsigned>(properties.at(RESERVED_TYPE).at(2).as_u64());
-		if (res.type == NO_TYPE) {
+		const auto& sep_types = properties.at(RESERVED_TYPE);
+		res.sep_types[0] = (FieldType)sep_types.at(0).as_u64();
+		res.sep_types[1] = (FieldType)sep_types.at(1).as_u64();
+		res.sep_types[2] = (FieldType)sep_types.at(2).as_u64();
+
+		if (res.sep_types[2] == FieldType::EMPTY) {
 			return res;
 		}
 
@@ -2963,14 +2961,14 @@ Schema::get_data_field(const std::string& field_name) const
 		res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 
 		// Get accuracy, acc_prefix and reserved word.
-		switch (res.type) {
-			case GEO_TYPE:
+		switch (res.sep_types[2]) {
+			case FieldType::GEO:
 				res.partials = properties.at(RESERVED_PARTIALS).as_bool();
 				res.error = properties.at(RESERVED_ERROR).as_f64();
-			case FLOAT_TYPE:
-			case INTEGER_TYPE:
-			case POSITIVE_TYPE:
-			case DATE_TYPE: {
+			case FieldType::FLOAT:
+			case FieldType::INTEGER:
+			case FieldType::POSITIVE:
+			case FieldType::DATE: {
 				for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
 					res.accuracy.push_back(acc.as_u64());
 				}
@@ -2979,10 +2977,10 @@ Schema::get_data_field(const std::string& field_name) const
 				}
 				break;
 			}
-			case TEXT_TYPE:
+			case FieldType::TEXT:
 				res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 				res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
-			case STRING_TYPE:
+			case FieldType::STRING:
 				res.language = properties.at(RESERVED_LANGUAGE).as_string();
 				break;
 			default:
@@ -2994,17 +2992,12 @@ Schema::get_data_field(const std::string& field_name) const
 }
 
 
-data_field_t
+required_spc_t
 Schema::get_slot_field(const std::string& field_name) const
 {
 	L_CALL(this, "Schema::get_slot_field()");
 
-	data_field_t res = {
-		default_spc.slot, default_spc.prefix, default_spc.sep_types[2],
-		default_spc.accuracy, default_spc.acc_prefix, default_spc.bool_term,
-		default_spc.stem_strategy, default_spc.stem_language, default_spc.language,
-		default_spc.partials, default_spc.error
-	};
+	required_spc_t res;
 
 	if (field_name.empty()) {
 		return res;
@@ -3015,18 +3008,25 @@ Schema::get_slot_field(const std::string& field_name) const
 	try {
 		const auto& properties = schema->at(RESERVED_SCHEMA).path(fields);
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
-		res.type = static_cast<unsigned>(properties.at(RESERVED_TYPE).at(2).as_u64());
+
+		const auto& sep_types = properties.at(RESERVED_TYPE);
+		res.sep_types[0] = (FieldType)sep_types.at(0).as_u64();
+		res.sep_types[1] = (FieldType)sep_types.at(1).as_u64();
+		res.sep_types[2] = (FieldType)sep_types.at(2).as_u64();
+
 		// Get partials and error if type is GEO.
-		switch (res.type) {
-			case GEO_TYPE:
+		switch (res.sep_types[2]) {
+			case FieldType::GEO:
 				res.partials = properties.at(RESERVED_PARTIALS).as_bool();
 				res.error = properties.at(RESERVED_ERROR).as_f64();
 				break;
-			case TEXT_TYPE:
+			case FieldType::TEXT:
 				res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 				res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
-			case STRING_TYPE:
+			case FieldType::STRING:
 				res.language = properties.at(RESERVED_LANGUAGE).as_string();
+				break;
+			default:
 				break;
 		}
 	} catch (const std::exception&) { }
@@ -3035,85 +3035,45 @@ Schema::get_slot_field(const std::string& field_name) const
 }
 
 
-const data_field_t&
-Schema::get_data_global(char field_type)
+const required_spc_t&
+Schema::get_data_global(FieldType field_type)
 {
 	L_CALL(nullptr, "Schema::get_data_global()");
 
 	switch (field_type) {
-		case FLOAT_TYPE: {
-			static const data_field_t prop = {
-				DB_SLOT_NUMERIC, default_spc.prefix, FLOAT_TYPE, def_accuracy_num,
-				global_acc_prefix_num, default_spc.bool_term, default_spc.stem_strategy,
-				default_spc.stem_language, default_spc.language, default_spc.partials,
-				default_spc.error
-			};
+		case FieldType::FLOAT: {
+			static const required_spc_t prop(DB_SLOT_NUMERIC, FieldType::FLOAT, def_accuracy_num, global_acc_prefix_num);
 			return prop;
 		}
-		case INTEGER_TYPE: {
-			static const data_field_t prop = {
-				DB_SLOT_NUMERIC, default_spc.prefix, INTEGER_TYPE, def_accuracy_num,
-				global_acc_prefix_num, default_spc.bool_term, default_spc.stem_strategy,
-				default_spc.stem_language, default_spc.language, default_spc.partials,
-				default_spc.error
-			};
+		case FieldType::INTEGER: {
+			static const required_spc_t prop(DB_SLOT_NUMERIC, FieldType::INTEGER, def_accuracy_num, global_acc_prefix_num);
 			return prop;
 		}
-		case POSITIVE_TYPE: {
-			static const data_field_t prop = {
-				DB_SLOT_NUMERIC, default_spc.prefix, POSITIVE_TYPE, def_accuracy_num,
-				global_acc_prefix_num, default_spc.bool_term, default_spc.stem_strategy,
-				default_spc.stem_language, default_spc.language, default_spc.partials,
-				default_spc.error
-			};
+		case FieldType::POSITIVE: {
+			static const required_spc_t prop(DB_SLOT_NUMERIC, FieldType::POSITIVE, def_accuracy_num, global_acc_prefix_num);
 			return prop;
 		}
-		case STRING_TYPE: {
-			static const data_field_t prop = {
-				DB_SLOT_STRING, default_spc.prefix, TEXT_TYPE, default_spc.accuracy,
-				default_spc.acc_prefix, default_spc.bool_term, default_spc.stem_strategy,
-				default_spc.stem_language, default_spc.language, default_spc.partials,
-				default_spc.error
-			};
+		case FieldType::STRING: {
+			static const required_spc_t prop(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
 			return prop;
 		}
-		case TEXT_TYPE: {
-			static const data_field_t prop = {
-				DB_SLOT_STRING, default_spc.prefix, TEXT_TYPE, default_spc.accuracy,
-				default_spc.acc_prefix, default_spc.bool_term, default_spc.stem_strategy,
-				default_spc.stem_language, default_spc.language, default_spc.partials,
-				default_spc.error
-			};
+		case FieldType::TEXT: {
+			static const required_spc_t prop(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
 			return prop;
 		}
-		case BOOLEAN_TYPE: {
-			static const data_field_t prop = {
-				DB_SLOT_STRING, default_spc.prefix, BOOLEAN_TYPE, default_spc.accuracy,
-				default_spc.acc_prefix, default_spc.bool_term, default_spc.stem_strategy,
-				default_spc.stem_language, default_spc.language, default_spc.partials,
-				default_spc.error
-			};
+		case FieldType::BOOLEAN: {
+			static const required_spc_t prop(DB_SLOT_STRING, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
 			return prop;
 		}
-		case DATE_TYPE: {
-			static const data_field_t prop = {
-				DB_SLOT_DATE, default_spc.prefix, DATE_TYPE, def_accuracy_date,
-				global_acc_prefix_date, default_spc.bool_term, default_spc.stem_strategy,
-				default_spc.stem_language, default_spc.language, default_spc.partials,
-				default_spc.error
-			};
+		case FieldType::DATE: {
+			static const required_spc_t prop(DB_SLOT_DATE, FieldType::DATE, def_accuracy_date, global_acc_prefix_date);
 			return prop;
 		}
-		case GEO_TYPE: {
-			static const data_field_t prop = {
-				DB_SLOT_GEO, default_spc.prefix, GEO_TYPE, def_accuracy_geo,
-				global_acc_prefix_geo, default_spc.bool_term, default_spc.stem_strategy,
-				default_spc.stem_language, default_spc.language, default_spc.partials,
-				default_spc.error
-			};
+		case FieldType::GEO: {
+			static const required_spc_t prop(DB_SLOT_GEO, FieldType::GEO, def_accuracy_geo, global_acc_prefix_geo);
 			return prop;
 		}
 		default:
-			throw MSG_ClientError("Type: '%u' is an unknown type", field_type);
+			throw MSG_ClientError("Type: '%u' is an unknown type", toUType(field_type));
 	}
 }
