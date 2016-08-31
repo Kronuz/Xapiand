@@ -40,7 +40,7 @@ const std::string STR_FOR_EMPTY("\xff");
 class Multi_MultiValueKeyMaker;
 
 
-using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(const data_field_t&, bool, const std::string&, const query_field_t&);
+using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(const required_spc_t&, bool, const std::string&, const query_field_t&);
 
 
 extern const dispatch_str_metric def_str_metric;
@@ -184,7 +184,7 @@ class GeoKey : public BaseKey {
 	std::string get_cmpvalue(const std::string& serialise_val) const override;
 
 public:
-	GeoKey(const data_field_t& field_spc, bool reverse, const std::string& value)
+	GeoKey(const required_spc_t& field_spc, bool reverse, const std::string& value)
 		: BaseKey(field_spc.slot, reverse),
 		  _centroids(EWKT_Parser::getCentroids(value, field_spc.partials, field_spc.error)) { }
 };
@@ -212,53 +212,53 @@ public:
 	}
 
 	virtual std::string operator()(const Xapian::Document& doc) const override;
-	void add_value(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf);
+	void add_value(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf);
 
-	void levenshtein(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void levenshtein(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Levenshtein>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void jaro(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void jaro(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Jaro>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void jaro_winkler(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void jaro_winkler(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Jaro_Winkler>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void sorensen_dice(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void sorensen_dice(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Sorensen_Dice>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void jaccard(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void jaccard(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Jaccard>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void lcs(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void lcs(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<LCSubstr>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void lcsq(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void lcsq(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<LCSubsequence>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void soundex_en(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void soundex_en(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexEnglish, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void soundex_fr(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void soundex_fr(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexFrench, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void soundex_de(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void soundex_de(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexGerman, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void soundex_es(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void soundex_es(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexSpanish, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void soundex(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
+	void soundex(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf) {
 		try {
 			auto func = map_dispatch_soundex_metric.at(field_spc.language);
 			(this->*func)(field_spc, reverse, value, qf);

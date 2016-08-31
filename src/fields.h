@@ -22,17 +22,19 @@
 
 #pragma once
 
+#include "schema.h"
+
 #include <string.h>
 #include <sstream>
 #include <xapian.h>
 
 
 class NumericFieldProcessor : public Xapian::FieldProcessor {
-	char type;
+	FieldType type;
 	std::string prefix;
 
 	public:
-		NumericFieldProcessor(char type_, const std::string& prefix);
+		NumericFieldProcessor(FieldType type_, const std::string& prefix);
 		Xapian::Query operator()(const std::string& str) override;
 };
 

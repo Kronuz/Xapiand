@@ -142,31 +142,31 @@ GeoKey::get_cmpvalue(const std::string& serialise_val) const
 
 
 void
-Multi_MultiValueKeyMaker::add_value(const data_field_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf)
+Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf)
 {
 	if (value.empty()) {
-		if (field_spc.type != GEO_TYPE) {
+		if (field_spc.get_type() != FieldType::GEO) {
 			slots.push_back(std::make_unique<SerialiseKey>(field_spc.slot, reverse));
 		}
 	} else {
-		switch (field_spc.type) {
-			case FLOAT_TYPE:
+		switch (field_spc.get_type()) {
+			case FieldType::FLOAT:
 				slots.push_back(std::make_unique<FloatKey>(field_spc.slot, reverse, value));
 				return;
-			case INTEGER_TYPE:
+			case FieldType::INTEGER:
 				slots.push_back(std::make_unique<IntegerKey>(field_spc.slot, reverse, value));
 				return;
-			case POSITIVE_TYPE:
+			case FieldType::POSITIVE:
 				slots.push_back(std::make_unique<PositiveKey>(field_spc.slot, reverse, value));
 				return;
-			case DATE_TYPE:
+			case FieldType::DATE:
 				slots.push_back(std::make_unique<DateKey>(field_spc.slot, reverse, value));
 				return;
-			case BOOLEAN_TYPE:
+			case FieldType::BOOLEAN:
 				slots.push_back(std::make_unique<BoolKey>(field_spc.slot, reverse, value));
 				return;
-			case STRING_TYPE:
-			case TEXT_TYPE:
+			case FieldType::STRING:
+			case FieldType::TEXT:
 				try {
 					auto func = map_dispatch_str_metric.at(qf.metric);
 					(this->*func)(field_spc, reverse, value, qf);
@@ -174,9 +174,11 @@ Multi_MultiValueKeyMaker::add_value(const data_field_t& field_spc, bool reverse,
 					(this->*def_str_metric)(field_spc, reverse, value, qf);
 				}
 				return;
-			case GEO_TYPE:
+			case FieldType::GEO:
 				slots.push_back(std::make_unique<GeoKey>(field_spc, reverse, value));
 				return;
+			default:
+				throw MSG_InvalidArgumentError("Type '%c' is not supported", field_spc.get_type());
 		}
 	}
 }

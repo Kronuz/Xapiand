@@ -78,7 +78,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 	doc.add_value(DB_SLOT_LENGTH, ct_length);
 
 	// Index terms for content-type
-	auto term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
+	auto term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::STRING));
 	doc.add_term(prefixed(ct_type, term_prefix));
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
@@ -306,19 +306,28 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 			if (std::regex_match(field_value, m, find_range_re)) {
 				auto start = m.str(1);
 				auto end = m.str(2);
-				// Get type of the field_value.
-				auto ser_type = Serialise::serialise(start.empty() ? end : start);
-				const auto& global_t = Schema::get_data_global(ser_type.first);
+				// Get type of the range.
+				std::pair<FieldType, std::string> ser_type;
+				if (start.empty() || end.empty()) {
+					ser_type = Serialise::get_type(start.empty() ? end : start);
+				} else {
+					auto ser_type_s = Serialise::get_type(start);
+					ser_type = Serialise::get_type(end);
+					if (ser_type_s.first != ser_type.first) {
+						ser_type.first = FieldType::TEXT;
+					}
+				}
+				const auto& global_spc = Schema::get_data_global(ser_type.first);
 				if (first_range) {
-					query = MultipleValueRange::getQuery(global_t, field_name, start, end);
+					query = MultipleValueRange::getQuery(global_spc, field_name, start, end);
 					first_range = false;
 				} else {
-					query = Xapian::Query(Xapian::Query::OP_OR, query, MultipleValueRange::getQuery(global_t, field_name, start, end));
+					query = Xapian::Query(Xapian::Query::OP_OR, query, MultipleValueRange::getQuery(global_spc, field_name, start, end));
 				}
 			} else {
 				// Get type of the field_value.
-				auto ser_type = Serialise::serialise(field_value);
-				const auto& global_t = Schema::get_data_global(ser_type.first);
+				auto ser_type = Serialise::get_type(field_value);
+				const auto& global_spc = Schema::get_data_global(ser_type.first);
 				switch (ser_type.first) {
 					default:
 						if (first_term) {
@@ -329,11 +338,12 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 							str_terms.reserve(str_terms.length() + ser_type.second.length() + 4);
 							str_terms.append(" OR ").append(ser_type.second);
 						}
-					case TEXT_TYPE:
+					case FieldType::STRING:
+					case FieldType::TEXT:
 						if (first_text) {
 							queryTexts.set_database(*database->db);
-							queryTexts.set_stemming_strategy(getQueryParserStrategy(global_t.stem_strategy));
-							queryTexts.set_stemmer(Xapian::Stem(global_t.language));
+							queryTexts.set_stemming_strategy(getQueryParserStrategy(global_spc.stem_strategy));
+							queryTexts.set_stemmer(Xapian::Stem(global_spc.language));
 							str_texts.assign(field_value);
 							first_text = false;
 						} else {
@@ -344,35 +354,35 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 				}
 			}
 		} else {
-			auto field_t = schema->get_data_field(field_name);
+			auto field_spc = schema->get_data_field(field_name);
 			if (std::regex_match(field_value, m, find_range_re)) {
 				// If this field is not indexed as value, not process this range.
-				if (field_t.slot == default_spc.slot) {
+				if (field_spc.slot == default_spc.slot) {
 					++next;
 					continue;
 				}
 
 				if (first_range) {
-					query = MultipleValueRange::getQuery(field_t, field_name, m.str(1), m.str(2));
+					query = MultipleValueRange::getQuery(field_spc, field_name, m.str(1), m.str(2));
 					first_range = false;
 				} else {
-					query = Xapian::Query(Xapian::Query::OP_OR, query, MultipleValueRange::getQuery(field_t, field_name, m.str(1), m.str(2)));
+					query = Xapian::Query(Xapian::Query::OP_OR, query, MultipleValueRange::getQuery(field_spc, field_name, m.str(1), m.str(2)));
 				}
 			} else {
 				// If the field has not been indexed as a term, not process this term.
-				if (field_t.prefix.empty()) {
+				if (field_spc.prefix.empty()) {
 					++next;
 					continue;
 				}
 
-				switch (field_t.type) {
-					case FLOAT_TYPE:
-					case INTEGER_TYPE:
-					case POSITIVE_TYPE:
+				switch (field_spc.get_type()) {
+					case FieldType::FLOAT:
+					case FieldType::INTEGER:
+					case FieldType::POSITIVE:
 						// Xapian does not allow repeat prefixes.
-						if (added_prefixes.insert(field_t.prefix).second) {
-							auto nfp = new NumericFieldProcessor(field_t.type, field_t.prefix);
-							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, nfp->release()) : queryTerms.add_prefix(field_name, nfp->release());
+						if (added_prefixes.insert(field_spc.prefix).second) {
+							auto nfp = new NumericFieldProcessor(field_spc.get_type(), field_spc.prefix);
+							field_spc.bool_term ? queryTerms.add_boolean_prefix(field_name, nfp->release()) : queryTerms.add_prefix(field_name, nfp->release());
 						}
 
 						to_query_string(field_value);
@@ -386,10 +396,10 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 							str_terms.append(" OR ").append(field_name_dot).append(field_value);
 						}
 						break;
-					case STRING_TYPE:
+					case FieldType::STRING:
 						// Xapian does not allow repeat prefixes.
-						if (added_prefixes.insert(field_t.prefix).second) {
-							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, field_t.prefix) : queryTerms.add_prefix(field_name, field_t.prefix);
+						if (added_prefixes.insert(field_spc.prefix).second) {
+							field_spc.bool_term ? queryTerms.add_boolean_prefix(field_name, field_spc.prefix) : queryTerms.add_prefix(field_name, field_spc.prefix);
 						}
 						if (first_term) {
 							queryTerms.set_database(*database->db);
@@ -401,14 +411,14 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 							str_terms.append(" OR ").append(field_name_dot).append(field_value);
 						}
 						break;
-					case TEXT_TYPE:
-						if (added_prefixes.insert(field_t.prefix).second) {
-							field_t.bool_term ? queryTexts.add_boolean_prefix(field_name, field_t.prefix) : queryTexts.add_prefix(field_name, field_t.prefix);
+					case FieldType::TEXT:
+						if (added_prefixes.insert(field_spc.prefix).second) {
+							field_spc.bool_term ? queryTexts.add_boolean_prefix(field_name, field_spc.prefix) : queryTexts.add_prefix(field_name, field_spc.prefix);
 						}
 						if (first_text) {
 							queryTexts.set_database(*database->db);
-							queryTexts.set_stemming_strategy(getQueryParserStrategy(field_t.stem_strategy));
-							queryTexts.set_stemmer(Xapian::Stem(field_t.language));
+							queryTexts.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
+							queryTexts.set_stemmer(Xapian::Stem(field_spc.language));
 							str_texts.reserve(field_name_dot.length() + field_value.length());
 							str_texts.assign(field_name_dot).append(field_value);
 							first_text = false;
@@ -417,11 +427,11 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 							str_texts.append(" OR ").append(field_name_dot).append(field_value);
 						}
 						break;
-					case DATE_TYPE:
+					case FieldType::DATE:
 						// Xapian does not allow repeat prefixes.
-						if (added_prefixes.insert(field_t.prefix).second) {
-							auto dfp = new DateFieldProcessor(field_t.prefix);
-							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, dfp->release()) : queryTerms.add_prefix(field_name, dfp->release());
+						if (added_prefixes.insert(field_spc.prefix).second) {
+							auto dfp = new DateFieldProcessor(field_spc.prefix);
+							field_spc.bool_term ? queryTerms.add_boolean_prefix(field_name, dfp->release()) : queryTerms.add_prefix(field_name, dfp->release());
 						}
 
 						field_value.assign(std::to_string(Datetime::timestamp(field_value)));
@@ -437,8 +447,8 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 							str_terms.append(" OR ").append(field_name_dot).append(field_value);
 						}
 						break;
-					case GEO_TYPE:
-						field_value.assign(Serialise::ewkt(field_value));
+					case FieldType::GEO:
+						field_value.assign(Serialise::ewkt(field_value, field_spc.partials, field_spc.error));
 
 						// If the region for search is empty, not process this query.
 						if (field_value.empty()) {
@@ -447,8 +457,8 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 						}
 
 						// Xapian does not allow repeat prefixes.
-						if (added_prefixes.insert(field_t.prefix).second) {
-							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, field_t.prefix) : queryTerms.add_prefix(field_name, field_t.prefix);
+						if (added_prefixes.insert(field_spc.prefix).second) {
+							field_spc.bool_term ? queryTerms.add_boolean_prefix(field_name, field_spc.prefix) : queryTerms.add_prefix(field_name, field_spc.prefix);
 						}
 						if (first_term) {
 							queryTerms.set_database(*database->db);
@@ -460,11 +470,11 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 							str_terms.append(" OR ").append(field_name_dot).append(field_value);
 						}
 						break;
-					case BOOLEAN_TYPE:
+					case FieldType::BOOLEAN:
 						// Xapian does not allow repeat prefixes.
-						if (added_prefixes.insert(field_t.prefix).second) {
-							auto bfp = new BooleanFieldProcessor(field_t.prefix);
-							field_t.bool_term ? queryTerms.add_boolean_prefix(field_name, bfp->release()) : queryTerms.add_prefix(field_name, bfp->release());
+						if (added_prefixes.insert(field_spc.prefix).second) {
+							auto bfp = new BooleanFieldProcessor(field_spc.prefix);
+							field_spc.bool_term ? queryTerms.add_boolean_prefix(field_name, bfp->release()) : queryTerms.add_prefix(field_name, bfp->release());
 						}
 						if (first_term) {
 							queryTerms.set_database(*database->db);
@@ -475,6 +485,8 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 							str_terms.reserve(str_terms.length() + field_name_dot.length() + field_value.length() + 4);
 							str_terms.append(" OR ").append(field_name_dot).append(field_value);
 						}
+						break;
+					default:
 						break;
 				}
 			}
@@ -618,14 +630,14 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 	prefixes.reserve(similar.type.size() + similar.field.size());
 	for (const auto& sim_type : similar.type) {
 		std::string prefix(DOCUMENT_CUSTOM_TERM_PREFIX);
-		prefix.push_back(Unserialise::type(sim_type));
+		prefix.push_back(toUType(Unserialise::type(sim_type)));
 		prefixes.push_back(std::move(prefix));
 	}
 
 	for (const auto& sim_field : similar.field) {
-		auto field_t = schema->get_data_field(sim_field);
-		if (field_t.type != NO_TYPE) {
-			prefixes.push_back(field_t.prefix);
+		auto field_spc = schema->get_data_field(sim_field);
+		if (field_spc.get_type() != FieldType::EMPTY) {
+			prefixes.push_back(field_spc.prefix);
 		}
 	}
 
@@ -664,8 +676,8 @@ DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collap
 		}
 
 		for (const auto& facet : e->facets) {
-			auto field_t = schema->get_slot_field(facet);
-			if (field_t.type != NO_TYPE) {
+			auto field_spc = schema->get_slot_field(facet);
+			if (field_spc.get_type() != FieldType::EMPTY) {
 				auto spy = std::make_unique<MultiValueCountMatchSpy>(get_slot(facet));
 				enquire.add_matchspy(spy.get());
 				L_SEARCH(this, "added spy -%s-", (facet).c_str());
@@ -694,8 +706,8 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVecto
 	if (e.collapse.empty()) {
 		collapse_key = Xapian::BAD_VALUENO;
 	} else {
-		auto field_t = schema->get_slot_field(e.collapse);
-		collapse_key = field_t.slot;
+		auto field_spc = schema->get_slot_field(e.collapse);
+		collapse_key = field_spc.slot;
 	}
 
 	std::unique_ptr<Multi_MultiValueKeyMaker> sorter;
@@ -719,9 +731,9 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVecto
 					field.erase(field.begin());
 					break;
 			}
-			auto field_t = schema->get_slot_field(field);
-			if (field_t.type != NO_TYPE) {
-				sorter->add_value(field_t, descending, value, e);
+			auto field_spc = schema->get_slot_field(field);
+			if (field_spc.get_type() != FieldType::EMPTY) {
+				sorter->add_value(field_spc, descending, value, e);
 			}
 		}
 	}
@@ -760,9 +772,9 @@ DatabaseHandler::get_document(const std::string& doc_id)
 
 	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
-	auto field_t = schema->get_slot_field(RESERVED_ID);
+	auto field_spc = schema->get_slot_field(RESERVED_ID);
 
-	Xapian::Query query(prefixed(Serialise::serialise(field_t.type, doc_id), DOCUMENT_ID_TERM_PREFIX));
+	Xapian::Query query(prefixed(Serialise::MsgPack(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
 
 	checkout();
 	Xapian::docid did = database->find_document(query);
@@ -780,9 +792,9 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 
 	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
-	auto field_t = schema->get_slot_field(RESERVED_ID);
+	auto field_spc = schema->get_slot_field(RESERVED_ID);
 
-	Xapian::Query query(prefixed(Serialise::serialise(field_t.type, doc_id), DOCUMENT_ID_TERM_PREFIX));
+	Xapian::Query query(prefixed(Serialise::MsgPack(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
 
 	checkout();
 	Xapian::docid did = database->find_document(query);
@@ -843,7 +855,7 @@ DatabaseHandler::get_value(const Xapian::Document& document, const std::string& 
 	auto slot_field = schema->get_slot_field(slot_name);
 
 	try {
-		return Unserialise::MsgPack(slot_field.type, document.get_value(slot_field.slot));
+		return Unserialise::MsgPack(slot_field.get_type(), document.get_value(slot_field.slot));
 	} catch (const SerialisationError& exc) {
 		throw MSG_Error("Error unserializing value (%s)", exc.get_msg().c_str());
 	}

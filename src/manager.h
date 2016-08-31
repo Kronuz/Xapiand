@@ -164,7 +164,7 @@ public:
 	std::string node_name;
 	bool solo;
 	bool type_required;
-	
+
 	ev::async async_shutdown_sig;
 	std::atomic_int shutdown_sig_sig;
 	void shutdown_sig(int sig);

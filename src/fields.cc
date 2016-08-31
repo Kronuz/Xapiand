@@ -22,12 +22,10 @@
 
 #include "fields.h"
 
-#include "serialise.h"
-
 #include <xapian/query.h>
 
 
-NumericFieldProcessor::NumericFieldProcessor(char type_, const std::string& prefix_) : type(type_), prefix(prefix_) { }
+NumericFieldProcessor::NumericFieldProcessor(FieldType type_, const std::string& prefix_) : type(type_), prefix(prefix_) { }
 
 
 Xapian::Query
@@ -40,15 +38,17 @@ NumericFieldProcessor::operator()(const std::string& str)
 	}
 	try {
 		switch (type) {
-			case FLOAT_TYPE:
+			case FieldType::FLOAT:
 				serialise.assign(Serialise::_float(serialise));
 				break;
-			case INTEGER_TYPE:
+			case FieldType::INTEGER:
 				serialise.assign(Serialise::integer(serialise));
 				break;
-			case POSITIVE_TYPE:
+			case FieldType::POSITIVE:
 				serialise.assign(Serialise::positive(serialise));
 				break;
+			default:
+				throw MSG_QueryParserError("Type: %s is not a numeric type", Serialise::type(type).c_str());
 		}
 		return Xapian::Query(prefix + serialise);
 	} catch (const SerialisationError& exc) {
