@@ -25,7 +25,6 @@
 #include "length.h"
 #include "msgpack.h"
 #include "rapidjson/document.h"
-#include "serialise.h"
 
 #include <xapian.h>
 
@@ -90,31 +89,32 @@
 
 
 #define DB_OFFSPRING_UNION "__"
-#define DB_LANGUAGES       "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
 #define DB_VERSION_SCHEMA  2.1
 
-#define DB_SLOT_RESERVED  20 // Reserved slots by special data
-#define DB_RETRIES        3  // Number of tries to do an operation on a Xapian::Database
+#define DB_SLOT_RESERVED   20    // Reserved slots by special data
+#define DB_RETRIES         3     // Number of tries to do an operation on a Xapian::Database
 
-#define DB_SLOT_ID        0  // Slot ID document
-#define DB_SLOT_OFFSET    1  // Slot offset for data
-#define DB_SLOT_TYPE      2  // Slot type data
-#define DB_SLOT_LENGTH    3  // Slot length data
-#define DB_SLOT_CREF      4  // Slot that saves the references counter
+#define DB_SLOT_ID         0     // Slot ID document
+#define DB_SLOT_OFFSET     1     // Slot offset for data
+#define DB_SLOT_TYPE       2     // Slot type data
+#define DB_SLOT_LENGTH     3     // Slot length data
+#define DB_SLOT_CREF       4     // Slot that saves the references counter
 
-#define DB_SLOT_NUMERIC   5  // Slot for saving global float/integer/positive values
-#define DB_SLOT_DATE      6  // Slot for saving global date values
-#define DB_SLOT_GEO       7  // Slot for saving global geo values
-#define DB_SLOT_STRING    8  // Slot for saving global string/text/boolean values.
+#define DB_SLOT_NUMERIC    5     // Slot for saving global float/integer/positive values
+#define DB_SLOT_DATE       6     // Slot for saving global date values
+#define DB_SLOT_GEO        7     // Slot for saving global geo values
+#define DB_SLOT_STRING     8     // Slot for saving global string/text/boolean values.
 
-#define DEFAULT_LANGUAGE "en"  // Default language used by Xapian::Stem class.
-#define DEFAULT_OFFSET   "0"   // Replace for the real offset.
+#define DEFAULT_LANGUAGE   "en"  // Default language used by Xapian::Stem class.
+#define DEFAULT_OFFSET     "0"   // Replace for the real offset.
+
 
 // Default prefixes
-#define DOCUMENT_ID_TERM_PREFIX     "Q"
-#define DOCUMENT_CUSTOM_TERM_PREFIX "X"
-#define DOCUMENT_DB_MASTER          "M"
-#define DOCUMENT_DB_SLAVE           "S"
+#define DOCUMENT_ID_TERM_PREFIX      "Q"
+#define DOCUMENT_CUSTOM_TERM_PREFIX  "X"
+#define DOCUMENT_DB_MASTER           "M"
+#define DOCUMENT_DB_SLAVE            "S"
+
 
 #define ANY_CONTENT_TYPE             "*/*"
 #define JSON_CONTENT_TYPE            "application/json"
@@ -123,8 +123,10 @@
 #define HTML_CONTENT_TYPE            "text/html"
 #define TEXT_CONTENT_TYPE            "text/plain"
 
+
 #define DATABASE_DATA_HEADER_MAGIC 0x42
 #define DATABASE_DATA_FOOTER_MAGIC 0x2A
+
 
 constexpr int DB_OPEN         = 0x00; // Opens a database
 constexpr int DB_WRITABLE     = 0x01; // Opens as writable
@@ -161,11 +163,10 @@ struct query_field_t {
 	bool is_nearest;
 	std::string collapse;
 	unsigned collapse_max;
-	std::vector <std::string> query;
-	std::vector <std::string> partial;
-	std::vector <std::string> terms;
-	std::vector <std::string> sort;
-	std::vector <std::string> facets;
+	std::vector<std::string> query;
+	std::vector<std::string> partial;
+	std::vector<std::string> sort;
+	std::vector<std::string> facets;
 	similar_field_t fuzzy;
 	similar_field_t nearest;
 	std::string time;
@@ -176,8 +177,7 @@ struct query_field_t {
 
 	query_field_t()
 		: offset(0), limit(10), check_at_least(0), spelling(true), synonyms(false), commit(false),
-		  unique_doc(false), is_fuzzy(false), is_nearest(false), collapse_max(1), icase(true) { }
-
+		  unique_doc(false), is_fuzzy(false), is_nearest(false), collapse_max(1), icase(false) { }
 };
 
 
@@ -190,16 +190,8 @@ enum class MIMEType {
 
 
 // All the field names that do not start or end with '_' are valid.
-inline bool is_valid(const std::string& word) {
-	return word.front() != '_' && word.back() != '_';
-}
-
-
-inline bool is_language(const std::string& language) {
-	if (language.find(' ') == std::string::npos) {
-		return std::string(DB_LANGUAGES).find(language) == std::string::npos ? false : true;
-	}
-	return false;
+inline bool is_valid(const std::string& field_name) {
+	return field_name.front() != '_' && field_name.back() != '_';
 }
 
 
@@ -227,9 +219,12 @@ inline std::string to_query_string(T value) {
 }
 
 
+Xapian::valueno get_slot(const std::string& name);
+std::string prefixed(const std::string& term, const std::string& prefixO);
+std::string get_prefix(const std::string& name, const std::string& prefix, char type);
+std::string get_slot_hex(const std::string& name);
+
 long long read_mastery(const std::string& dir, bool force);
-bool set_types(const std::string& type, std::vector<unsigned>& sep_types);
-std::string str_type(const std::vector<unsigned>& sep_types);
 void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);

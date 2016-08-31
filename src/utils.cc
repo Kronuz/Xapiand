@@ -22,8 +22,7 @@
 
 #include "utils.h"
 
-#include "database.h"
-#include "hash/md5.h"
+#include "io_utils.h"
 #include "log.h"
 #include "namegen.h"
 #include "xapiand.h"
@@ -76,6 +75,7 @@
 #define STATE_NSP 3
 #define STATE_PTH 4
 #define STATE_HST 5
+
 
 const std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
 const std::regex find_range_re("(.*)\\.\\.(.*)", std::regex::optimize);
@@ -712,62 +712,6 @@ void to_lower(std::string& str) {
 }
 
 
-std::string prefixed(const std::string& term, const std::string& prefix) {
-	if (isupper(term.at(0))) {
-		if (prefix.empty()) {
-			return term;
-		} else {
-			std::string result;
-			result.reserve(prefix.length() + term.length() + 1);
-			result.assign(prefix).push_back(':');
-			result.append(term);
-			return result;
-		}
-	} else {
-		std::string result;
-		result.reserve(prefix.length() + term.length());
-		result.assign(prefix).append(term);
-		return result;
-	}
-}
-
-
-unsigned get_slot(const std::string& name) {
-	MD5 md5;
-	// We are left with the last 8 characters.
-	std::string _md5(md5(strhasupper(name) ? upper_string(name) : name), 24, 8);
-	unsigned slot = static_cast<unsigned>(std::stoul(_md5, nullptr, 16));
-	if (slot < DB_SLOT_RESERVED) {
-		slot += DB_SLOT_RESERVED;
-	} else if (slot == Xapian::BAD_VALUENO) {
-		slot = 0xfffffffe;
-	}
-	return slot;
-}
-
-
-std::string get_prefix(const std::string& name, const std::string& prefix, char type) {
-	MD5 md5;
-	// We are left with the last 8 characters.
-	auto _md5 = get_slot_hex(name);
-	// Mapped [0-9] -> [A-J] and [A-F] -> [R-W]
-	for (auto& c : _md5) c += 17;
-
-	std::string result;
-	result.reserve(prefix.length() + _md5.length() + 1);
-	result.assign(prefix).push_back(type);
-	result.append(_md5);
-	return result;
-}
-
-
-std::string get_slot_hex(const std::string& name) {
-	MD5 md5;
-	// We are left with the last 8 characters.
-	return upper_string(md5(strhasupper(name) ? upper_string(name) : name), 24, 8);
-}
-
-
 bool strhasupper(const std::string& str) {
 	for (const auto& c : str) {
 		if (isupper(c)) {
@@ -1070,20 +1014,20 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 			std::string src_path (src + "/" + std::string(ent->d_name));
 			std::string dst_path (dst + "/" + (new_name.empty() ? std::string(ent->d_name) : new_name));
 
-			int src_fd = open(src_path.c_str(), O_RDONLY);
+			int src_fd = io::open(src_path.c_str(), O_RDONLY);
 			if (-1 == src_fd) {
 				L_ERR(nullptr, "ERROR: opening file. %s\n", src_path.c_str());
 				return -1;
 			}
 
-			int dst_fd = open(dst_path.c_str(), O_CREAT | O_WRONLY, 0644);
+			int dst_fd = io::open(dst_path.c_str(), O_CREAT | O_WRONLY, 0644);
 			if (-1 == src_fd) {
 				L_ERR(nullptr, "ERROR: opening file. %s\n", dst_path.c_str());
 				return -1;
 			}
 
 			while (1) {
-				ssize_t bytes = read(src_fd, buffer, 4096);
+				ssize_t bytes = io::read(src_fd, buffer, 4096);
 				if (-1 == bytes) {
 					L_ERR(nullptr, "ERROR: reading file. %s (%s)\n", src_path.c_str(), strerror(errno));
 					return -1;

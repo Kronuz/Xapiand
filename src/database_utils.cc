@@ -22,10 +22,9 @@
 
 #include "database_utils.h"
 
+#include "hash/md5.h"
 #include "io_utils.h"
-#include "length.h"
 #include "log.h"
-#include "serialise.h"
 #include "utils.h"
 
 #include "rapidjson/error/en.h"
@@ -36,10 +35,7 @@
 #include <random>
 
 
-const std::regex find_types_re("(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" FLOAT_STR "|" INTEGER_STR "|" POSITIVE_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR "|" TEXT_STR ")|(" OBJECT_STR ")", std::regex::icase | std::regex::optimize);
-
-
-long long save_mastery(const std::string& dir) {
+inline static long long save_mastery(const std::string& dir) {
 	char buf[20];
 	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 16;
 	mastery_level |= static_cast<int>(random_int(0, 0xffff));
@@ -50,6 +46,62 @@ long long save_mastery(const std::string& dir) {
 		io::close(fd);
 	}
 	return mastery_level;
+}
+
+
+std::string prefixed(const std::string& term, const std::string& prefix) {
+	if (isupper(term.at(0))) {
+		if (prefix.empty()) {
+			return term;
+		} else {
+			std::string result;
+			result.reserve(prefix.length() + term.length() + 1);
+			result.assign(prefix).push_back(':');
+			result.append(term);
+			return result;
+		}
+	} else {
+		std::string result;
+		result.reserve(prefix.length() + term.length());
+		result.assign(prefix).append(term);
+		return result;
+	}
+}
+
+
+Xapian::valueno get_slot(const std::string& name) {
+	MD5 md5;
+	// We are left with the last 8 characters.
+	std::string _md5(md5(strhasupper(name) ? upper_string(name) : name), 24, 8);
+	auto slot = static_cast<Xapian::valueno>(std::stoul(_md5, nullptr, 16));
+	if (slot < DB_SLOT_RESERVED) {
+		slot += DB_SLOT_RESERVED;
+	} else if (slot == Xapian::BAD_VALUENO) {
+		slot = 0xfffffffe;
+	}
+	return slot;
+}
+
+
+std::string get_prefix(const std::string& name, const std::string& prefix, char type) {
+	MD5 md5;
+	// We are left with the last 8 characters.
+	auto _md5 = get_slot_hex(name);
+	// Mapped [0-9] -> [A-J] and [A-F] -> [R-W]
+	for (auto& c : _md5) c += 17;
+
+	std::string result;
+	result.reserve(prefix.length() + _md5.length() + 1);
+	result.assign(prefix).push_back(type);
+	result.append(_md5);
+	return result;
+}
+
+
+std::string get_slot_hex(const std::string& name) {
+	MD5 md5;
+	// We are left with the last 8 characters.
+	return upper_string(md5(strhasupper(name) ? upper_string(name) : name), 24, 8);
 }
 
 
@@ -86,38 +138,6 @@ long long read_mastery(const std::string& dir, bool force) {
 	L_DATABASE(nullptr, "- MASTERY OF INDEX '%s' is %llx", dir.c_str(), mastery_level);
 
 	return mastery_level;
-}
-
-
-bool set_types(const std::string& type, std::vector<unsigned>& sep_types) {
-	std::smatch m;
-	if (std::regex_match(type, m, find_types_re) && static_cast<size_t>(m.length(0)) == type.size()) {
-		if (m.length(4) != 0) {
-			sep_types[0] = OBJECT_TYPE;
-			sep_types[1] = NO_TYPE;
-			sep_types[2] = NO_TYPE;
-		} else {
-			if (m.length(1) != 0) {
-				sep_types[0] = OBJECT_TYPE;
-			}
-			if (m.length(2) != 0) {
-				sep_types[1] = ARRAY_TYPE;
-			}
-			sep_types[2] = toupper(m.str(3).at(0));
-		}
-		return true;
-	}
-
-	return false;
-}
-
-
-std::string str_type(const std::vector<unsigned>& sep_types) {
-	std::stringstream str;
-	if (sep_types[0] == OBJECT_TYPE) str << OBJECT_STR << "/";
-	if (sep_types[1] == ARRAY_TYPE) str << ARRAY_STR << "/";
-	str << Serialise::type(sep_types[2]);
-	return str.str();
 }
 
 

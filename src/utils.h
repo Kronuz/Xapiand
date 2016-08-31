@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <algorithm>
 #include <chrono>
 #include <dirent.h>
@@ -39,17 +37,17 @@
 #include <unistd.h>
 #include <unordered_set>
 #include <vector>
-#include <xapian.h>
 
-#define RESERVED_FDS 50 /* Better approach? */
+#define RESERVED_FDS  50 /* Better approach? */
 
-#define CMD_NO_CMD 0
-#define CMD_SEARCH 1
-#define CMD_FACETS 2
-#define CMD_STATS  3
-#define CMD_SCHEMA 4
+#define CMD_NO_CMD     0
+#define CMD_SEARCH     1
+#define CMD_FACETS     2
+#define CMD_STATS      3
+#define CMD_SCHEMA     4
 #define CMD_UNKNOWN   -1
 #define CMD_BAD_QUERY -2
+
 
 #define strict(func, s) \
 	[](const std::string& str) { \
@@ -65,6 +63,7 @@
 constexpr uint16_t SLOT_TIME_MINUTE = 1440;
 constexpr uint8_t SLOT_TIME_SECOND = 60;
 
+
 struct cont_time_t {
 	uint32_t min[SLOT_TIME_MINUTE];
 	uint32_t sec[SLOT_TIME_SECOND];
@@ -72,12 +71,14 @@ struct cont_time_t {
 	uint64_t tm_sec[SLOT_TIME_SECOND];
 };
 
+
 struct times_row_t {
 	cont_time_t index;
 	cont_time_t search;
 	cont_time_t del;
 	cont_time_t patch;
 };
+
 
 struct pos_time_t {
 	uint16_t minute;
@@ -239,10 +240,6 @@ std::string urldecode(const char *, size_t);
 // String tokenizer with the delimiter.
 void stringTokenizer(const std::string& str, const std::string& delimiter, std::vector<std::string> &tokens);
 
-unsigned get_slot(const std::string& name);
-std::string prefixed(const std::string& term, const std::string& prefixO);
-std::string get_prefix(const std::string& name, const std::string& prefix, char type);
-std::string get_slot_hex(const std::string& name);
 bool strhasupper(const std::string& str);
 
 bool isRange(const std::string& str);
