@@ -26,39 +26,7 @@
 #include "hash/endian.h"
 #include "msgpack.h"
 #include "sortable_serialise.h"
-#include "stl_serialise.h"
 #include "wkt_parser.h"
-
-
-// Data types
-#define FLOAT_TYPE    'F'
-#define INTEGER_TYPE  'I'
-#define POSITIVE_TYPE 'P'
-#define STRING_TYPE   'S'
-#define TEXT_TYPE     'T'
-#define DATE_TYPE     'D'
-#define GEO_TYPE      'G'
-#define BOOLEAN_TYPE  'B'
-#define UUID_TYPE     'U'
-#define ARRAY_TYPE    'A'
-#define OBJECT_TYPE   'O'
-#define NO_TYPE       ' '
-
-// Str types
-#define FLOAT_STR    "float"
-#define INTEGER_STR  "integer"
-#define POSITIVE_STR "positive"
-#define STRING_STR   "string"
-#define TEXT_STR     "text"
-#define DATE_STR     "date"
-#define GEO_STR      "geospatial"
-#define BOOLEAN_STR  "boolean"
-#define UUID_STR     "uuid"
-#define ARRAY_STR    "array"
-#define OBJECT_STR   "object"
-
-#define FALSE_SERIALISED 'f'
-#define TRUE_SERIALISED  't'
 
 
 #if __BYTE_ORDER == __BIG_ENDIAN
@@ -79,6 +47,23 @@
 #endif
 
 
+#define FLOAT_STR    "float"
+#define INTEGER_STR  "integer"
+#define POSITIVE_STR "positive"
+#define STRING_STR   "string"
+#define TEXT_STR     "text"
+#define DATE_STR     "date"
+#define GEO_STR      "geospatial"
+#define BOOLEAN_STR  "boolean"
+#define UUID_STR     "uuid"
+#define ARRAY_STR    "array"
+#define OBJECT_STR   "object"
+
+
+#define FALSE_SERIALISED 'f'
+#define TRUE_SERIALISED  't'
+
+
 constexpr uint32_t SIZE_SERIALISE_CARTESIAN = 12;
 constexpr uint32_t DOUBLE2INT               = 1000000000;
 constexpr uint32_t MAXDOU2INT               =  999999999;
@@ -87,31 +72,39 @@ constexpr bool   GEO_DEF_PARTIALS = true;
 constexpr double GEO_DEF_ERROR    = HTM_MIN_ERROR;
 
 
+struct required_spc_t;
+enum class FieldType : uint8_t;
+
+
 namespace Serialise {
-	inline static bool isText(const std::string& value, bool bool_term) noexcept {
-		return !bool_term && value.find(' ') != std::string::npos;
+	inline static bool isText(const std::string& field_value, bool bool_term) noexcept {
+		return !bool_term && field_value.find(' ') != std::string::npos;
 	}
+
+	/*
+	 * Serialise field_value according to field_spc.
+	 */
+
+	std::string MsgPack(const required_spc_t& field_spc, const MsgPack& field_value);
+	std::string serialise(const required_spc_t& field_spc, const std::string& field_value);
+	std::string string(const required_spc_t& field_spc, const std::string& field_value);
 
 	/*
 	 * Serialise field_value according to field_type.
 	 */
-
-	std::string serialise(char field_type, const MsgPack& field_value);
-	std::string serialise(char field_type, const std::string& field_value);
-	std::string string(char field_type, const std::string& field_value);
-	std::string _float(char field_type, double field_value);
-	std::string integer(char field_type, int64_t field_value);
-	std::string positive(char field_type, uint64_t field_value);
-	std::string boolean(char field_type, bool field_value);
+	std::string _float(FieldType field_type, double field_value);
+	std::string integer(FieldType field_type, int64_t field_value);
+	std::string positive(FieldType field_type, uint64_t field_value);
+	std::string boolean(FieldType field_type, bool field_value);
 
 	/*
 	 * Given a field_value, it gets the type.
 	 *
-	 * If bool_term can not return TEXT_TYPE.
+	 * If bool_term can not return FieldType::TEXT.
 	 *
-	 * Returns the type and the serialise value.
+	 * Returns the type and the serialise value according to type.
 	 */
-	std::pair<char, std::string> serialise(const std::string& field_value, bool bool_term=false);
+	std::pair<FieldType, std::string> get_type(const std::string& field_value, bool bool_term=false);
 
 
 	// Serialise field_value like date.
@@ -122,7 +115,7 @@ namespace Serialise {
 	}
 
 	// Serialise value like date and fill tm.
-	std::string date(const MsgPack& value, Datetime::tm_t& tm);
+	std::string date(const ::MsgPack& value, Datetime::tm_t& tm);
 
 	// Serialise field_value like float.
 	std::string _float(const std::string& field_value);
@@ -146,7 +139,7 @@ namespace Serialise {
 	}
 
 	// Serialise field_value like EWKT.
-	std::string ewkt(const std::string& field_value);
+	std::string ewkt(const std::string& field_value, bool partials, double error);
 
 	// Serialise a vector of trixel's id (HTM).
 	std::string trixels(const std::vector<std::string>& trixels);
@@ -168,16 +161,16 @@ namespace Serialise {
 	std::string trixel_id(uint64_t id);
 
 	// Serialise type to its string representation.
-	std::string type(char type);
+	std::string type(FieldType type);
 };
 
 
 namespace Unserialise {
 	// Unserialise serialise_val according to field_type and returns a MsgPack.
-	MsgPack MsgPack(char field_type, const std::string& serialise_val);
+	MsgPack MsgPack(FieldType field_type, const std::string& serialise_val);
 
 	// Unserialise serialise_val according to field_type.
-	std::string unserialise(char field_type, const std::string& serialise_val);
+	std::string unserialise(FieldType field_type, const std::string& serialise_val);
 
 	// Unserialise a serialised float.
 	inline double _float(const std::string& serialise_float) {
@@ -219,6 +212,6 @@ namespace Unserialise {
 	// Unserialise a serialised EWKT (Save as a Value), in unserialised ranges and unserialised centroids.
 	std::pair<std::string, std::string> geo(const std::string& serialise_ewkt);
 
-	// Unserialise str_type to its char representation.
-	char type(const std::string& str_type);
+	// Unserialise str_type to its FieldType.
+	FieldType type(const std::string& str_type);
 };

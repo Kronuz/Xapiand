@@ -24,26 +24,27 @@
 
 #include "hash/sha256.h"
 #include "length.h"
+#include "schema.h"
 #include "utils.h"
 #include "wkt_parser.h"
 
 
 std::string
-Serialise::serialise(char field_type, const MsgPack& field_value)
+Serialise::MsgPack(const required_spc_t& field_spc, const ::MsgPack& field_value)
 {
 	switch (field_value.type()) {
 		case msgpack::type::NIL:
 			throw MSG_DummyException();
 		case msgpack::type::BOOLEAN:
-			return boolean(field_type, field_value.as_bool());
+			return boolean(field_spc.get_type(), field_value.as_bool());
 		case msgpack::type::POSITIVE_INTEGER:
-			return positive(field_type, field_value.as_u64());
+			return positive(field_spc.get_type(), field_value.as_u64());
 		case msgpack::type::NEGATIVE_INTEGER:
-			return integer(field_type, field_value.as_i64());
+			return integer(field_spc.get_type(), field_value.as_i64());
 		case msgpack::type::FLOAT:
-			return _float(field_type, field_value.as_f64());
+			return _float(field_spc.get_type(), field_value.as_f64());
 		case msgpack::type::STR:
-			return string(field_type, field_value.as_string());
+			return string(field_spc, field_value.as_string());
 		default:
 			throw MSG_SerialisationError("msgpack::type [%d] is not supported", field_value.type());
 	}
@@ -51,51 +52,53 @@ Serialise::serialise(char field_type, const MsgPack& field_value)
 
 
 std::string
-Serialise::serialise(char field_type, const std::string& field_value)
+Serialise::serialise(const required_spc_t& field_spc, const std::string& field_value)
 {
-	if (field_value.empty() && field_type != STRING_TYPE && field_type != TEXT_TYPE) {
+	auto type = field_spc.get_type();
+	if (field_value.empty() && type != FieldType::STRING && type != FieldType::TEXT) {
 		throw MSG_SerialisationError("Field value must be defined");
 	}
 
-	switch (field_type) {
-		case INTEGER_TYPE:
+	switch (type) {
+		case FieldType::INTEGER:
 			return integer(field_value);
-		case POSITIVE_TYPE:
+		case FieldType::POSITIVE:
 			return positive(field_value);
-		case FLOAT_TYPE:
+		case FieldType::FLOAT:
 			return _float(field_value);
-		case DATE_TYPE:
+		case FieldType::DATE:
 			return date(field_value);
-		case BOOLEAN_TYPE:
+		case FieldType::BOOLEAN:
 			return boolean(field_value);
-		case STRING_TYPE:
-		case TEXT_TYPE:
+		case FieldType::STRING:
+		case FieldType::TEXT:
 			return field_value;
-		case GEO_TYPE:
-			return ewkt(field_value);
+		case FieldType::GEO:
+			return ewkt(field_value, field_spc.partials, field_spc.error);
 		default:
-			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
+			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(type));
 	}
 }
 
 
 std::string
-Serialise::string(char field_type, const std::string& field_value)
+Serialise::string(const required_spc_t& field_spc, const std::string& field_value)
 {
-	if (field_value.empty() && field_type != STRING_TYPE && field_type != TEXT_TYPE) {
+	auto field_type = field_spc.get_type();
+	if (field_value.empty() && field_type != FieldType::STRING && field_type != FieldType::TEXT) {
 		throw MSG_SerialisationError("Field value must be defined");
 	}
 
 	switch (field_type) {
-		case DATE_TYPE:
+		case FieldType::DATE:
 			return date(field_value);
-		case BOOLEAN_TYPE:
+		case FieldType::BOOLEAN:
 			return boolean(field_value);
-		case STRING_TYPE:
-		case TEXT_TYPE:
+		case FieldType::STRING:
+		case FieldType::TEXT:
 			return field_value;
-		case GEO_TYPE:
-			return ewkt(field_value);
+		case FieldType::GEO:
+			return ewkt(field_value, field_spc.partials, field_spc.error);
 		default:
 			throw MSG_SerialisationError("Type: %s is not string", type(field_type).c_str());
 	}
@@ -103,12 +106,12 @@ Serialise::string(char field_type, const std::string& field_value)
 
 
 std::string
-Serialise::_float(char field_type, double field_value)
+Serialise::_float(FieldType field_type, double field_value)
 {
 	switch (field_type) {
-		case DATE_TYPE:
+		case FieldType::DATE:
 			return timestamp(field_value);
-		case FLOAT_TYPE:
+		case  FieldType::FLOAT:
 			return _float(field_value);
 		default:
 			throw MSG_SerialisationError("Type: %s is not a float", type(field_type).c_str());
@@ -117,19 +120,19 @@ Serialise::_float(char field_type, double field_value)
 
 
 std::string
-Serialise::integer(char field_type, int64_t field_value)
+Serialise::integer(FieldType field_type, int64_t field_value)
 {
 	switch (field_type) {
-		case POSITIVE_TYPE:
+		case FieldType::POSITIVE:
 			if (field_value < 0) {
 				throw MSG_SerialisationError("Type: %s must be a positive number [%lld]", type(field_type).c_str(), field_value);
 			}
 			return positive(field_value);
-		case DATE_TYPE:
+		case FieldType::DATE:
 			return timestamp(field_value);
-		case FLOAT_TYPE:
+		case FieldType::FLOAT:
 			return _float(field_value);
-		case INTEGER_TYPE:
+		case FieldType::INTEGER:
 			return integer(field_value);
 		default:
 			throw MSG_SerialisationError("Type: %s is not a integer [%lld]", type(field_type).c_str(), field_value);
@@ -138,27 +141,27 @@ Serialise::integer(char field_type, int64_t field_value)
 
 
 std::string
-Serialise::positive(char field_type, uint64_t field_value)
+Serialise::positive(FieldType field_type, uint64_t field_value)
 {
 	switch (field_type) {
-		case DATE_TYPE:
+		case FieldType::DATE:
 			return timestamp(field_value);
-		case FLOAT_TYPE:
+		case FieldType::FLOAT:
 			return _float(field_value);
-		case INTEGER_TYPE:
+		case FieldType::INTEGER:
 			return integer(field_value);
-		case POSITIVE_TYPE:
+		case FieldType::POSITIVE:
 			return positive(field_value);
 		default:
-			throw MSG_SerialisationError("Type: %s is not a positive integer [%lld]", type(field_type).c_str(), field_value);
+			throw MSG_SerialisationError("Type: %s is not a positive integer [%llu]", type(field_type).c_str(), field_value);
 	}
 }
 
 
 std::string
-Serialise::boolean(char field_type, bool field_value)
+Serialise::boolean(FieldType field_type, bool field_value)
 {
-	if (field_type == BOOLEAN_TYPE) {
+	if (field_type == FieldType::BOOLEAN) {
 		return boolean(field_value);
 	}
 
@@ -166,41 +169,45 @@ Serialise::boolean(char field_type, bool field_value)
 }
 
 
-std::pair<char, std::string>
-Serialise::serialise(const std::string& field_value, bool bool_term)
+std::pair<FieldType, std::string>
+Serialise::get_type(const std::string& field_value, bool bool_term)
 {
+	if (field_value.empty()) {
+		return std::make_pair(FieldType::STRING, field_value);
+	}
+
 	// Try like INTEGER.
 	try {
-		return std::make_pair(INTEGER_TYPE, integer(field_value));
+		return std::make_pair(FieldType::INTEGER, integer(field_value));
 	} catch (const SerialisationError&) { }
 
 	// Try like POSITIVE.
 	try {
-		return std::make_pair(POSITIVE_TYPE, positive(field_value));
+		return std::make_pair(FieldType::POSITIVE, positive(field_value));
 	} catch (const SerialisationError&) { }
 
 	// Try like FLOAT
 	try {
-		return std::make_pair(FLOAT_TYPE, _float(field_value));
+		return std::make_pair(FieldType::FLOAT, _float(field_value));
 	} catch (const SerialisationError&) { }
 
 	// Try like DATE
 	try {
-		return std::make_pair(DATE_TYPE, date(field_value));
+		return std::make_pair(FieldType::DATE, date(field_value));
 	} catch (const DatetimeError&) { }
 
 	// Try like GEO
 	try {
-		return std::make_pair(GEO_TYPE, ewkt(field_value));
+		return std::make_pair(FieldType::GEO, ewkt(field_value, GEO_DEF_PARTIALS, GEO_DEF_ERROR));
 	} catch (const EWKTError&) { }
 
 	// Like TEXT
 	if (isText(field_value, bool_term)) {
-		return std::make_pair(TEXT_TYPE, field_value);
+		return std::make_pair(FieldType::TEXT, field_value);
 	}
 
 	// Default type STRING.
-	return std::make_pair(STRING_TYPE, field_value);
+	return std::make_pair(FieldType::STRING, field_value);
 }
 
 
@@ -212,7 +219,7 @@ Serialise::date(const std::string& field_value)
 
 
 std::string
-Serialise::date(const MsgPack& value, Datetime::tm_t& tm)
+Serialise::date(const ::MsgPack& value, Datetime::tm_t& tm)
 {
 	double _timestamp;
 	switch (value.type()) {
@@ -278,9 +285,9 @@ Serialise::positive(const std::string& field_value)
 
 
 std::string
-Serialise::ewkt(const std::string& field_value)
+Serialise::ewkt(const std::string& field_value, bool partials, double error)
 {
-	EWKT_Parser ewkt(field_value, GEO_DEF_PARTIALS, GEO_DEF_ERROR);
+	EWKT_Parser ewkt(field_value, partials, error);
 	if (ewkt.trixels.empty()) {
 		return std::string();
 	}
@@ -380,55 +387,54 @@ Serialise::trixel_id(uint64_t id)
 
 
 std::string
-Serialise::type(char type)
+Serialise::type(FieldType type)
 {
 	switch (type) {
-		case STRING_TYPE:   return STRING_STR;
-		case TEXT_TYPE:     return TEXT_STR;
-		case FLOAT_TYPE:    return FLOAT_STR;
-		case INTEGER_TYPE:  return INTEGER_STR;
-		case POSITIVE_TYPE: return POSITIVE_STR;
-		case BOOLEAN_TYPE:  return BOOLEAN_STR;
-		case GEO_TYPE:      return GEO_STR;
-		case DATE_TYPE:     return DATE_STR;
-		case OBJECT_TYPE:   return OBJECT_STR;
-		case ARRAY_TYPE:    return ARRAY_STR;
-		case NO_TYPE:       return std::string();
+		case FieldType::STRING:   return STRING_STR;
+		case FieldType::TEXT:     return TEXT_STR;
+		case FieldType::FLOAT:    return FLOAT_STR;
+		case FieldType::INTEGER:  return INTEGER_STR;
+		case FieldType::POSITIVE: return POSITIVE_STR;
+		case FieldType::BOOLEAN:  return BOOLEAN_STR;
+		case FieldType::GEO:      return GEO_STR;
+		case FieldType::DATE:     return DATE_STR;
+		case FieldType::UUID:     return UUID_STR;
+		case FieldType::OBJECT:   return OBJECT_STR;
+		case FieldType::ARRAY:    return ARRAY_STR;
+		case FieldType::EMPTY:    return std::string();
 	}
-
-	throw MSG_SerialisationError("Type: '%c' is an unknown type", type);
 }
 
 
-MsgPack
-Unserialise::MsgPack(char field_type, const std::string& serialise_val)
+::MsgPack
+Unserialise::MsgPack(FieldType field_type, const std::string& serialise_val)
 {
 	::MsgPack result;
 	switch (field_type) {
-		case FLOAT_TYPE:
+		case FieldType::FLOAT:
 			result = _float(serialise_val);
 			break;
-		case INTEGER_TYPE:
+		case FieldType::INTEGER:
 			result = integer(serialise_val);
 			break;
-		case POSITIVE_TYPE:
+		case FieldType::POSITIVE:
 			result = positive(serialise_val);
 			break;
-		case DATE_TYPE:
+		case FieldType::DATE:
 			result = date(serialise_val);
 			break;
-		case BOOLEAN_TYPE:
+		case FieldType::BOOLEAN:
 			result = boolean(serialise_val);
 			break;
-		case STRING_TYPE:
-		case TEXT_TYPE:
+		case FieldType::STRING:
+		case FieldType::TEXT:
 			result = serialise_val;
 			break;
-		case GEO_TYPE:
+		case FieldType::GEO:
 			result = geo(serialise_val);
 			break;
 		default:
-			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
+			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(field_type));
 	}
 
 	return result;
@@ -436,23 +442,23 @@ Unserialise::MsgPack(char field_type, const std::string& serialise_val)
 
 
 std::string
-Unserialise::unserialise(char field_type, const std::string& serialise_val)
+Unserialise::unserialise(FieldType field_type, const std::string& serialise_val)
 {
 	switch (field_type) {
-		case FLOAT_TYPE:
+		case FieldType::FLOAT:
 			return std::to_string(_float(serialise_val));
-		case INTEGER_TYPE:
+		case FieldType::INTEGER:
 			return std::to_string(integer(serialise_val));
-		case POSITIVE_TYPE:
+		case FieldType::POSITIVE:
 			return std::to_string(positive(serialise_val));
-		case DATE_TYPE:
+		case FieldType::DATE:
 			return date(serialise_val);
-		case BOOLEAN_TYPE:
+		case FieldType::BOOLEAN:
 			return std::string(boolean(serialise_val) ? "true" : "false");
-		case STRING_TYPE:
-		case TEXT_TYPE:
+		case FieldType::STRING:
+		case FieldType::TEXT:
 			return serialise_val;
-		case GEO_TYPE:
+		case FieldType::GEO:
 			return ewkt(serialise_val);
 		default:
 			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
@@ -546,49 +552,49 @@ Unserialise::ewkt(const std::string& serialise_ewkt)
 }
 
 
-char
+FieldType
 Unserialise::type(const std::string& str_type)
 {
 	const char *value = str_type.c_str();
-	switch (toupper(value[0])) {
-		case FLOAT_TYPE:
+	switch ((FieldType)(toupper(value[0]))) {
+		case FieldType::FLOAT:
 			if (value[1] == '\0' || strcasecmp(value, FLOAT_STR) == 0) {
-				return FLOAT_TYPE;
+				return FieldType::FLOAT;
 			}
 			break;
-		case INTEGER_TYPE:
+		case FieldType::INTEGER:
 			if (value[1] == '\0' || strcasecmp(value, INTEGER_STR) == 0) {
-				return INTEGER_TYPE;
+				return FieldType::INTEGER;
 			}
 			break;
-		case POSITIVE_TYPE:
+		case FieldType::POSITIVE:
 			if (value[1] == '\0' || strcasecmp(value, POSITIVE_STR) == 0) {
-				return POSITIVE_TYPE;
+				return FieldType::POSITIVE;
 			}
 			break;
-		case GEO_TYPE:
+		case FieldType::GEO:
 			if (value[1] == '\0' || strcasecmp(value, GEO_STR) == 0) {
-				return GEO_TYPE;
+				return FieldType::GEO;
 			}
 			break;
-		case STRING_TYPE:
+		case FieldType::STRING:
 			if (value[1] == '\0' || strcasecmp(value, STRING_STR) == 0) {
-				return STRING_TYPE;
+				return FieldType::STRING;
 			}
 			break;
-		case TEXT_TYPE:
+		case FieldType::TEXT:
 			if (value[1] == '\0' || strcasecmp(value, TEXT_STR) == 0) {
-				return TEXT_TYPE;
+				return FieldType::TEXT;
 			}
 			break;
-		case BOOLEAN_TYPE:
+		case FieldType::BOOLEAN:
 			if (value[1] == '\0' || strcasecmp(value, BOOLEAN_STR) == 0) {
-				return BOOLEAN_TYPE;
+				return FieldType::BOOLEAN;
 			}
 			break;
-		case DATE_TYPE:
+		case FieldType::DATE:
 			if (value[1] == '\0' || strcasecmp(value, DATE_STR) == 0) {
-				return DATE_TYPE;
+				return FieldType::DATE;
 			}
 			break;
 		default:
