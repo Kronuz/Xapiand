@@ -30,11 +30,6 @@ TEST(QueryTest, Query_search) {
 }
 
 
-TEST(QueryTest, Terms_search) {
-	EXPECT_EQ(test_terms_search(), 0);
-}
-
-
 TEST(QueryTest, Partials_search) {
 	EXPECT_EQ(test_partials_search(), 0);
 }

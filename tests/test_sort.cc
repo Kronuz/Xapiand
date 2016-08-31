@@ -637,7 +637,7 @@ static int make_search(const sort_t _tests[], int len, const std::string& metric
 			} else {
 				Xapian::MSetIterator m = mset.begin();
 				for (auto it = p.expect_result.begin(); m != mset.end(); ++it, ++m) {
-					auto val = Unserialise::unserialise(INTEGER_TYPE, m.get_document().get_value(0));
+					auto val = Unserialise::unserialise(FieldType::INTEGER, m.get_document().get_value(0));
 					if (it->compare(val) != 0) {
 						++cont;
 						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_ID, val.c_str(), RESERVED_ID, it->c_str());
