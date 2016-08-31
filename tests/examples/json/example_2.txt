@@ -21,7 +21,8 @@
 	"directed_by": "Franklin J. Schaffner",
 	"description": {
 		"_value": "text similar Marty McFly, a typical American teenager of the Eighties, is accidentally sent back to 1955 in a plutonium-powered DeLorean \"timemachine\" invented by slightly mad scientist. During his often hysterical, always amazing trip back in time, Marty must make certain his teenage parents-to-be meet and fall in love An astronaut crew crash lands on a planet in the distant time where intelligent talking apes are the dominant species, and humans are the oppressed and enslaved",
-		"_weight": 0
+		"_weight": 0,
+		"_index": "field_all"
 	},
 	"_values": {
 		"year": 1968,
