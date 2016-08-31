@@ -24,10 +24,10 @@
 
 #include "datetime.h"
 #include "fields.h"
+#include "geo/wkt_parser.h"
 #include "msgpack_patcher.h"
 #include "multivalue/range.h"
 #include "serialise.h"
-#include "wkt_parser.h"
 
 
 static const std::regex find_field_re("(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"([^\"]+)\"|([^\": ]+))[ ]*", std::regex::optimize);

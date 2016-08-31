@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -170,17 +170,18 @@ Cartesian::Cartesian()
  * which are converted to cartesian coordinates, and then they are converted to CRS WGS84.
  */
 Cartesian::Cartesian(double lat, double lon, double height, CartesianUnits units, int _SRID)
+	: SRID(_SRID)
 {
-	auto it = SRIDS_DATUMS.find(_SRID);
-	if (it == SRIDS_DATUMS.end()) {
-		throw MSG_CartesianError("SRID = %d is not supported", _SRID);
+	try {
+		datum = SRIDS_DATUMS.at(SRID);
+		toCartesian(lat, lon, height, units);
+		if (SRID != WGS84) {
+			transform2WGS84();
+			SRID = WGS84;
+		}
+	} catch (const std::out_of_range&) {
+		throw MSG_CartesianError("SRID = %d is not supported", SRID);
 	}
-
-	datum = it->second;
-	toCartesian(lat, lon, height, units);
-
-	if (_SRID != WGS84) transform2WGS84();
-	SRID = WGS84;
 }
 
 

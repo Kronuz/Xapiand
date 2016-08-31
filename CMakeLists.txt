@@ -273,6 +273,7 @@ configure_file (
 file (GLOB SRC_LIST
 	${PROJECT_SOURCE_DIR}/src/*.c* ${PROJECT_SOURCE_DIR}/src/*.h
 	${PROJECT_SOURCE_DIR}/src/ev/*.c* ${PROJECT_SOURCE_DIR}/src/ev/*.h
+	${PROJECT_SOURCE_DIR}/src/geo/*.c* ${PROJECT_SOURCE_DIR}/src/geo/*.h
 	${PROJECT_SOURCE_DIR}/src/hash/*.c* ${PROJECT_SOURCE_DIR}/src/hash/*.h
 	${PROJECT_SOURCE_DIR}/src/lz4/*.c* ${PROJECT_SOURCE_DIR}/src/lz4/*.h
 	${PROJECT_SOURCE_DIR}/src/multivalue/*.c* ${PROJECT_SOURCE_DIR}/src/multivalue/*.h

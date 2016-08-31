@@ -22,11 +22,11 @@
 
 #include "schema.h"
 
+#include "geo/wkt_parser.h"
 #include "multivalue/generate_terms.h"
 #include "log.h"
 #include "utils.h"
 #include "manager.h"
-#include "wkt_parser.h"
 
 
 /*
@@ -267,8 +267,8 @@ required_spc_t::required_spc_t()
 	  stem_strategy(StemStrategy::STEM_SOME),
 	  stem_language(DEFAULT_LANGUAGE),
 	  language(DEFAULT_LANGUAGE),
-	  partials(GEO_DEF_PARTIALS),
-	  error(GEO_DEF_ERROR) { }
+	  partials(DEFAULT_GEO_PARTIALS),
+	  error(DEFAULT_GEO_ERROR) { }
 
 
 required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
@@ -281,8 +281,8 @@ required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std:
 	  stem_strategy(StemStrategy::STEM_SOME),
 	  stem_language(DEFAULT_LANGUAGE),
 	  language(DEFAULT_LANGUAGE),
-	  partials(GEO_DEF_PARTIALS),
-	  error(GEO_DEF_ERROR) { }
+	  partials(DEFAULT_GEO_PARTIALS),
+	  error(DEFAULT_GEO_ERROR) { }
 
 
 required_spc_t::required_spc_t(const required_spc_t& o)

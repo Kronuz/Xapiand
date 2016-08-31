@@ -22,12 +22,10 @@
 
 #pragma once
 
-#include "htm.h"
+#include "geo/htm.h"
 
 #include <set>
-#include <string>
 #include <unordered_set>
-#include <vector>
 
 
 /*

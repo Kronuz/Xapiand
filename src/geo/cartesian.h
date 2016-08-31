@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "exception.h"
+#include "../exception.h"
 
 #include <cstdio>
 #include <functional>
@@ -86,7 +86,7 @@ struct ellipsoid_t {
 	std::string name;
 	double major_axis;
 	double minor_axis;
-	double e2;        //eccentricity squared = 2f - f^2
+	double e2;        // eccentricity squared = 2f - f^2
 };
 
 

@@ -23,10 +23,10 @@
 #pragma once
 
 #include "datetime.h"
+#include "geo/wkt_parser.h"
 #include "hash/endian.h"
 #include "msgpack.h"
 #include "sortable_serialise.h"
-#include "wkt_parser.h"
 
 
 #if __BYTE_ORDER == __BIG_ENDIAN
@@ -67,9 +67,6 @@
 constexpr uint32_t SIZE_SERIALISE_CARTESIAN = 12;
 constexpr uint32_t DOUBLE2INT               = 1000000000;
 constexpr uint32_t MAXDOU2INT               =  999999999;
-
-constexpr bool   GEO_DEF_PARTIALS = true;
-constexpr double GEO_DEF_ERROR    = HTM_MIN_ERROR;
 
 
 struct required_spc_t;

@@ -22,7 +22,7 @@
 
 #include "test_htm.h"
 
-#include "../src/htm.h"
+#include "../src/geo/htm.h"
 #include "utils.h"
 
 #include <algorithm>

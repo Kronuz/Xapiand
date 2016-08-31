@@ -22,7 +22,7 @@
 
 #include "test_wkt_parser.h"
 
-#include "../src/wkt_parser.h"
+#include "../src/geo/wkt_parser.h"
 #include "utils.h"
 
 #include <algorithm>

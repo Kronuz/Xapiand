@@ -28,7 +28,6 @@
 #include <limits.h>
 
 
-
 const testQuery_t numeric[] {
 	// Testing positives.
 	// Find lower and upper accuracy, upper accuracy generates only one term.

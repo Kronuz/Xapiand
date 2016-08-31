@@ -22,11 +22,12 @@
 
 #pragma once
 
-#include "../schema.h"
+
+#include "../geo/wkt_parser.h"
 #include "../phonetic.h"
+#include "../schema.h"
 #include "../serialise.h"
 #include "../string_metric.h"
-#include "../wkt_parser.h"
 
 #include <cfloat>
 #include <cmath>

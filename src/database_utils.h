@@ -105,7 +105,6 @@
 #define DB_SLOT_GEO        7     // Slot for saving global geo values
 #define DB_SLOT_STRING     8     // Slot for saving global string/text/boolean values.
 
-#define DEFAULT_LANGUAGE   "en"  // Default language used by Xapian::Stem class.
 #define DEFAULT_OFFSET     "0"   // Replace for the real offset.
 
 

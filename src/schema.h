@@ -29,6 +29,10 @@
 
 #include <future>
 
+#define DEFAULT_LANGUAGE      "en"
+#define DEFAULT_GEO_PARTIALS  true
+#define DEFAULT_GEO_ERROR     HTM_MIN_ERROR
+
 
 enum class UnitTime : uint8_t {
 	SECOND,

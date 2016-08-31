@@ -24,7 +24,7 @@
 
 #include "../database_utils.h"
 #include "../datetime.h"
-#include "../wkt_parser.h"
+#include "../geo/wkt_parser.h"
 
 #include <unordered_set>
 #include <vector>

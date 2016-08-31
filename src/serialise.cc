@@ -26,7 +26,6 @@
 #include "length.h"
 #include "schema.h"
 #include "utils.h"
-#include "wkt_parser.h"
 
 
 std::string
@@ -198,7 +197,7 @@ Serialise::get_type(const std::string& field_value, bool bool_term)
 
 	// Try like GEO
 	try {
-		return std::make_pair(FieldType::GEO, ewkt(field_value, GEO_DEF_PARTIALS, GEO_DEF_ERROR));
+		return std::make_pair(FieldType::GEO, ewkt(field_value, default_spc.partials, default_spc.error));
 	} catch (const EWKTError&) { }
 
 	// Like TEXT
