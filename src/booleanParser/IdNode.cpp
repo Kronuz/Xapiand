@@ -24,14 +24,14 @@
 
 
 IdNode::IdNode(string id) {
-    this->id = id;
+	this->id = id;
 }
 
 string IdNode::getId(){
-    return id;
+	return id;
 }
 
 NodeType IdNode::getType() {
-    return IdNodeType;
+	return IdNodeType;
 }
 

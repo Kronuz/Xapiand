@@ -28,23 +28,23 @@
 using namespace std;
 
 enum class TokenType{
-    Not=1,
-    Or,
-    And,
-    Xor,
-    LeftParenthesis,
-    RightParenthesis,
-    Id,
-    EndOfFile
+	Not=1,
+	Or,
+	And,
+	Xor,
+	LeftParenthesis,
+	RightParenthesis,
+	Id,
+	EndOfFile
 };
 
 class Token {
 public:
 
-    string lexeme;
-    TokenType type;
-    Token();
-    virtual ~Token();
+	string lexeme;
+	TokenType type;
+	Token();
+	virtual ~Token();
 private:
 
 };

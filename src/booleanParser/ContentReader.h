@@ -23,24 +23,24 @@
 #pragma once
 
 struct Symbol{
-    char symbol;
-    int line;
-    int column;
+	char symbol;
+	int line;
+	int column;
 };
 
 class ContentReader{
 private:
-    int currentPosition;
-    int currentLine;
-    int currentColumn;
-    char * content;
+	int currentPosition;
+	int currentLine;
+	int currentColumn;
+	char * content;
 public:
-    ContentReader();
-    ContentReader(char * content);
+	ContentReader();
+	ContentReader(char * content);
 
-    void setContent(char * content);
+	void setContent(char * content);
 
 
-    Symbol NextSymbol();
+	Symbol NextSymbol();
 
 };

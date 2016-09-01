@@ -36,7 +36,7 @@
 class BooleanTree {
 public:
 	BooleanTree(const std::string& input);
-    ~BooleanTree() = default;
+	~BooleanTree() = default;
 
 	std::unique_ptr<BaseNode> root;
 
@@ -75,10 +75,10 @@ private:
 	std::unique_ptr<BaseNode> BuildTree();
 	unsigned precedence(TokenType type);
 
-    std::list<Token> stack_output;
-    std::vector<Token> stack_operator;
+	std::list<Token> stack_output;
+	std::vector<Token> stack_operator;
 
-    std::unique_ptr<Lexer> lexer;
+	std::unique_ptr<Lexer> lexer;
 	std::unique_ptr<char[]> input;
-    Token currentToken;
+	Token currentToken;
 };

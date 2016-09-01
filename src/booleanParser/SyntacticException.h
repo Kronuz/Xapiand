@@ -28,8 +28,8 @@ using namespace std;
 
 class SyntacticException: public exception{
 private:
-    const char* msg;
+	const char* msg;
 public:
-    SyntacticException(const char* msg);
-    virtual const char* what() const throw();
+	SyntacticException(const char* msg);
+	virtual const char* what() const throw();
 };

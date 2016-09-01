@@ -31,9 +31,9 @@ class NotNode : public BaseNode {
 
 public:
 	NotNode(std::unique_ptr<BaseNode> node);
-    BaseNode* getNode();
-    virtual NodeType getType();
+	BaseNode* getNode();
+	virtual NodeType getType();
 
 private:
-    std::unique_ptr<BaseNode> node;
+	std::unique_ptr<BaseNode> node;
 };

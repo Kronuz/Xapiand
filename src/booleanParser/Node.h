@@ -23,16 +23,16 @@
 #pragma once
 
 enum NodeType{
-    AndNodeType,
-    OrNodeType,
-    NotNodeType,
-    XorNodeType,
-    IdNodeType,
+	AndNodeType,
+	OrNodeType,
+	NotNodeType,
+	XorNodeType,
+	IdNodeType,
 };
 
 class BaseNode {
 public:
-    virtual NodeType getType()=0;
+	virtual NodeType getType()=0;
 private:
 
 };

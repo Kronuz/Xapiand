@@ -37,7 +37,7 @@ BooleanTree::BooleanTree(const std::string& input_)
 {
 	input = std::make_unique<char[]>(input_.size()+1);
 	std::strcpy(input.get(), input_.c_str());
-    lexer = std::make_unique<Lexer>(input.get());
+	lexer = std::make_unique<Lexer>(input.get());
 	toRPN();
 }
 
@@ -127,7 +127,7 @@ BooleanTree::toRPN()
 						}
 					} else {
 						string msj = ") was expected";
-            			throw SyntacticException(msj.c_str());
+						throw SyntacticException(msj.c_str());
 					}
 				}
 				break;

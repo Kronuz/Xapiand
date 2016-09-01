@@ -30,12 +30,12 @@
 class OrNode : public BaseNode {
 
 public:
-    OrNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig);
-    BaseNode* getLeftNode();
-    BaseNode* getRightNode();
-    virtual NodeType getType();
+	OrNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig);
+	BaseNode* getLeftNode();
+	BaseNode* getRightNode();
+	virtual NodeType getType();
 
 private:
-    std::unique_ptr<BaseNode> lef;
-    std::unique_ptr<BaseNode> rig;
+	std::unique_ptr<BaseNode> lef;
+	std::unique_ptr<BaseNode> rig;
 };

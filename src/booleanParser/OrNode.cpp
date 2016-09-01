@@ -25,17 +25,17 @@
 
 OrNode::OrNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig) {
 	this->lef = std::move(lef);
-    this->rig = std::move(rig);
+	this->rig = std::move(rig);
 }
 
 BaseNode* OrNode::getRightNode() {
-    return rig.get();
+	return rig.get();
 }
 
 BaseNode* OrNode::getLeftNode() {
-    return lef.get();
+	return lef.get();
 }
 
 NodeType OrNode::getType() {
-    return OrNodeType;
+	return OrNodeType;
 }

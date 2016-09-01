@@ -30,13 +30,13 @@ XorNode::XorNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig) {
 }
 
 BaseNode* XorNode::getRightNode() {
-    return rig.get();
+	return rig.get();
 }
 
 BaseNode* XorNode::getLeftNode() {
-    return lef.get();
+	return lef.get();
 }
 
 NodeType XorNode::getType() {
-    return XorNodeType;
+	return XorNodeType;
 }

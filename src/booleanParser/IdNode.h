@@ -32,10 +32,10 @@ using namespace std;
 class IdNode : public BaseNode {
 
 public:
-    IdNode(string id);
-    virtual NodeType getType();
-    string getId();
+	IdNode(string id);
+	virtual NodeType getType();
+	string getId();
 private:
-    string id;
+	string id;
 
 };

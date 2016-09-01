@@ -31,11 +31,11 @@ class AndNode : public BaseNode {
 
 public:
 	AndNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig);
-    BaseNode* getLeftNode();
-    BaseNode* getRightNode();
-    virtual NodeType getType();
+	BaseNode* getLeftNode();
+	BaseNode* getRightNode();
+	virtual NodeType getType();
 
 private:
-    std::unique_ptr<BaseNode> lef;
+	std::unique_ptr<BaseNode> lef;
 	std::unique_ptr<BaseNode> rig;
 };

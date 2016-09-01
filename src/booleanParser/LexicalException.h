@@ -28,8 +28,8 @@ using namespace std;
 
 class LexicalException: public exception{
 private:
-    const char* msg;
+	const char* msg;
 public:
-    LexicalException(const char* msg);
-    virtual const char* what() const throw();
+	LexicalException(const char* msg);
+	virtual const char* what() const throw();
 };

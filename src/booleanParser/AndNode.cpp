@@ -25,18 +25,18 @@
 
 AndNode::AndNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig) {
 	this->lef = std::move(lef);
-    this->rig = std::move(rig);
+	this->rig = std::move(rig);
 }
 
 BaseNode* AndNode::getRightNode() {
-    return rig.get();
+	return rig.get();
 }
 
 BaseNode* AndNode::getLeftNode() {
-    return lef.get();
+	return lef.get();
 }
 
 NodeType AndNode::getType(){
-    return AndNodeType;
+	return AndNodeType;
 }
 

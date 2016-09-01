@@ -44,15 +44,15 @@ enum class LexerState {
 
 class Lexer{
 private:
-    Symbol currentSymbol;
-    ContentReader contentReader;
-    unordered_map<string, TokenType> singleSymbolDictionary;
-    void InitDictionary();
-    void IsStringOperator(Token& token);
-    bool IsSymbolOp(char c);
+	Symbol currentSymbol;
+	ContentReader contentReader;
+	unordered_map<string, TokenType> singleSymbolDictionary;
+	void InitDictionary();
+	void IsStringOperator(Token& token);
+	bool IsSymbolOp(char c);
 
 public:
-    Lexer(ContentReader cr);
-    Lexer(char * input);
-    Token NextToken();
+	Lexer(ContentReader cr);
+	Lexer(char * input);
+	Token NextToken();
 };

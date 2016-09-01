@@ -28,9 +28,9 @@ NotNode::NotNode(std::unique_ptr<BaseNode> node) {
 }
 
 BaseNode* NotNode::getNode() {
-    return node.get();
+	return node.get();
 }
 
 NodeType NotNode::getType() {
-    return NotNodeType;
+	return NotNodeType;
 }
