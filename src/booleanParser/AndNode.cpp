@@ -36,7 +36,7 @@ BaseNode* AndNode::getLeftNode() {
 	return lef.get();
 }
 
-NodeType AndNode::getType(){
+NodeType AndNode::getType() {
 	return AndNodeType;
 }
 

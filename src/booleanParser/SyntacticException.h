@@ -26,7 +26,7 @@
 
 using namespace std;
 
-class SyntacticException: public exception{
+class SyntacticException: public exception {
 private:
 	const char* msg;
 public:
