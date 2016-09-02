@@ -432,17 +432,13 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 			if (std::regex_match(field_value, m, find_range_re)) {
 				// If this field is not indexed as value, not process this range.
 				if (field_spc.slot == default_spc.slot) {
-					++next;
-					continue;
-					// TODO: what it is supposed to be done in this case?
+					return Xapian::Query::MatchNothing;
 				}
 				return MultipleValueRange::getQuery(field_spc, field_name, m.str(1), m.str(2));
 			} else {
 				// If the field has not been indexed as a term, not process this term.
 				if (field_spc.prefix.empty()) {
-					++next;
-					continue;
-					// TODO: what it is supposed to be done in this case?
+					return Xapian::Query::MatchNothing;
 				}
 
 				switch (field_spc.get_type()) {
