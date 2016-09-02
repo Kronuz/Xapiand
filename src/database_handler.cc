@@ -555,7 +555,7 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 	if (e.synonyms) aux_flags |= Xapian::QueryParser::FLAG_SYNONYM;
 
 	L_SEARCH(this, "e.query size: %zu  Spelling: %d Synonyms: %d", e.query.size(), e.spelling, e.synonyms);
-	auto q_flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT | aux_flags;
+	auto q_flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | aux_flags;
 	auto first = true;
 	Xapian::Query queryQ;
 	for (const auto& query : e.query) {
