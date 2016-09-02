@@ -2538,9 +2538,6 @@ Schema::index_global_term(Xapian::Document& doc, std::string&& serialise_val, co
 		}
 		L_INDEX(nullptr, "Global Text to Index [%d] => %s [with positions: %d]", pos, serialise_val.c_str(), positions);
 	} else {
-		if (!global_spc.bool_term && global_spc.sep_types[2] == FieldType::STRING) {
-			to_lower(serialise_val);
-		}
 		auto position = global_spc.position[getPos(pos, global_spc.position.size())];
 		if (position) {
 			if (global_spc.bool_term) {
@@ -2569,74 +2566,9 @@ Schema::index_all_term(Xapian::Document& doc, std::string&& serialise_val, const
 		return;
 	}
 
-	if (field_spc.sep_types[2] == FieldType::TEXT) {
-		Xapian::TermGenerator term_generator;
-		term_generator.set_document(doc);
-
-		// Index Field Text.
-		term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
-		term_generator.set_stemming_strategy(getGeneratorStrategy(field_spc.stem_strategy));
-		bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
-		if (positions) {
-			term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
-		} else {
-			term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
-		}
-
-		// Index Global Text.
-		term_generator.set_stemmer(Xapian::Stem(global_spc.stem_language));
-		term_generator.set_stemming_strategy(getGeneratorStrategy(global_spc.stem_strategy));
-		bool g_positions = global_spc.positions[getPos(pos, global_spc.positions.size())];
-		if (g_positions) {
-			term_generator.index_text(serialise_val, global_spc.weight[getPos(pos, global_spc.weight.size())]);
-		} else {
-			term_generator.index_text_without_positions(serialise_val, global_spc.weight[getPos(pos, global_spc.weight.size())]);
-		}
-		L_INDEX(nullptr, "Text to Index [%zu] => { %s:%s [Positions: %d], %s [Positions: %d] }", pos, field_spc.prefix.c_str(), serialise_val.c_str(), positions, serialise_val.c_str(), g_positions);
-	} else {
-		// Index Field Term.
-		auto nameterm = serialise_val;
-		if (!field_spc.bool_term && field_spc.sep_types[2] == FieldType::STRING) {
-			to_lower(nameterm);
-		}
-		nameterm = prefixed(nameterm, field_spc.prefix);
-		auto position = field_spc.position[getPos(pos, field_spc.position.size())];
-		if (position) {
-			if (field_spc.bool_term) {
-				doc.add_posting(nameterm, position, 0);
-			} else {
-				doc.add_posting(nameterm, position, field_spc.weight[getPos(pos, field_spc.weight.size())]);
-			}
-		} else {
-			if (field_spc.bool_term) {
-				doc.add_boolean_term(nameterm);
-			} else {
-				doc.add_term(nameterm, field_spc.weight[getPos(pos, field_spc.weight.size())]);
-			}
-		}
-
-		// Index Global Term.
-		if (!global_spc.bool_term && global_spc.sep_types[2] == FieldType::STRING) {
-			to_lower(serialise_val);
-		}
-		auto g_position = global_spc.position[getPos(pos, global_spc.position.size())];
-		if (position) {
-			if (global_spc.bool_term) {
-				doc.add_posting(serialise_val, position, 0);
-			} else {
-				doc.add_posting(serialise_val, position, global_spc.weight[getPos(pos, global_spc.weight.size())]);
-			}
-		} else {
-			if (global_spc.bool_term) {
-				doc.add_boolean_term(serialise_val);
-			} else {
-				doc.add_term(serialise_val, global_spc.weight[getPos(pos, global_spc.weight.size())]);
-			}
-		}
-
-		L_INDEX(nullptr, "Term [%zu] -> { %s [Bool: %d  Posting: %d], %s [Bool: %d  Posting: %d] }", pos, repr(nameterm).c_str(),
-			field_spc.bool_term, position, repr(serialise_val).c_str(), global_spc.bool_term, g_position);
-	}
+	auto serialise_val_cp = serialise_val;
+	index_field_term(doc, std::move(serialise_val_cp), field_spc, pos);
+	index_global_term(doc, std::move(serialise_val), global_spc, pos);
 }
 
 
