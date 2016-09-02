@@ -26,7 +26,7 @@
 
 using namespace std;
 
-class LexicalException: public exception{
+class LexicalException: public exception {
 private:
 	const char* msg;
 public:

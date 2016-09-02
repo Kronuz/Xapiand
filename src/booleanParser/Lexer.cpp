@@ -30,7 +30,8 @@
 
 #define QUOTE '"'
 
-Lexer::Lexer(ContentReader contentReader) {
+Lexer::Lexer(ContentReader contentReader)
+{
 	this->contentReader = contentReader;
 	currentSymbol = this->contentReader.NextSymbol();
 
@@ -38,7 +39,8 @@ Lexer::Lexer(ContentReader contentReader) {
 }
 
 
-Lexer::Lexer(char * input) {
+Lexer::Lexer(char * input)
+{
 	ContentReader cr(input);
 	contentReader = cr;
 	currentSymbol = this->contentReader.NextSymbol();
@@ -49,7 +51,8 @@ Lexer::Lexer(char * input) {
 
 
 void
-Lexer::InitDictionary() {
+Lexer::InitDictionary()
+{
 	singleSymbolDictionary["("] = TokenType::LeftParenthesis;
 	singleSymbolDictionary[")"] = TokenType::RightParenthesis;
 	singleSymbolDictionary["&"] = TokenType::And;
@@ -59,7 +62,8 @@ Lexer::InitDictionary() {
 
 
 Token
-Lexer::NextToken() {
+Lexer::NextToken()
+{
 	string lexeme = "";
 	LexerState currentState = LexerState::INIT;
 	Token token;
@@ -149,7 +153,8 @@ Lexer::NextToken() {
 
 
 void
-Lexer::IsStringOperator(Token& token) {
+Lexer::IsStringOperator(Token& token)
+{
 	if (!token.lexeme.empty()) {
 		switch (token.lexeme.at(0)) {
 			 case 'A':
@@ -180,7 +185,8 @@ Lexer::IsStringOperator(Token& token) {
 
 
 bool
-Lexer::IsSymbolOp(char c) {
+Lexer::IsSymbolOp(char c)
+{
 	try {
 		singleSymbolDictionary.at(std::string(1, c));
 		return true;

@@ -24,19 +24,23 @@
 #include "XorNode.h"
 
 
-XorNode::XorNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig) {
+XorNode::XorNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig)
+{
 	this->lef = std::move(lef);
 	this->rig = std::move(rig);
 }
 
-BaseNode* XorNode::getRightNode() {
+BaseNode* XorNode::getRightNode()
+{
 	return rig.get();
 }
 
-BaseNode* XorNode::getLeftNode() {
+BaseNode* XorNode::getLeftNode()
+{
 	return lef.get();
 }
 
-NodeType XorNode::getType() {
+NodeType XorNode::getType()
+{
 	return XorNodeType;
 }

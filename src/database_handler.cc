@@ -375,7 +375,6 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 	// Set for save the prefix added in queryTerms.
 	std::unordered_set<std::string> added_prefixes;
 
-
 	std::sregex_iterator next(token.begin(), token.end(), find_field_re, std::regex_constants::match_continuous);
 	std::sregex_iterator end;
 	while (next != end) {

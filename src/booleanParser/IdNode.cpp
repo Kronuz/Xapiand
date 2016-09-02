@@ -23,15 +23,18 @@
 #include "IdNode.h"
 
 
-IdNode::IdNode(string id) {
+IdNode::IdNode(string id)
+{
 	this->id = id;
 }
 
-string IdNode::getId(){
+string IdNode::getId()
+{
 	return id;
 }
 
-NodeType IdNode::getType() {
+NodeType IdNode::getType()
+{
 	return IdNodeType;
 }
 

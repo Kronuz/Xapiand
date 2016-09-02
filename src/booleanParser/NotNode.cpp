@@ -23,14 +23,17 @@
 #include "NotNode.h"
 
 
-NotNode::NotNode(std::unique_ptr<BaseNode> node) {
+NotNode::NotNode(std::unique_ptr<BaseNode> node)
+{
 	this->node = std::move(node);
 }
 
-BaseNode* NotNode::getNode() {
+BaseNode* NotNode::getNode()
+{
 	return node.get();
 }
 
-NodeType NotNode::getType() {
+NodeType NotNode::getType()
+{
 	return NotNodeType;
 }

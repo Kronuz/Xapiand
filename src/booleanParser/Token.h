@@ -27,7 +27,7 @@
 
 using namespace std;
 
-enum class TokenType{
+enum class TokenType {
 	Not=1,
 	Or,
 	And,

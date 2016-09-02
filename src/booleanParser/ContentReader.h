@@ -28,7 +28,7 @@ struct Symbol{
 	int column;
 };
 
-class ContentReader{
+class ContentReader {
 private:
 	int currentPosition;
 	int currentLine;

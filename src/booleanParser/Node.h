@@ -22,7 +22,7 @@
 
 #pragma once
 
-enum NodeType{
+enum NodeType {
 	AndNodeType,
 	OrNodeType,
 	NotNodeType,

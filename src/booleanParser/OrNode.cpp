@@ -23,19 +23,23 @@
 #include "OrNode.h"
 
 
-OrNode::OrNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig) {
+OrNode::OrNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig)
+{
 	this->lef = std::move(lef);
 	this->rig = std::move(rig);
 }
 
-BaseNode* OrNode::getRightNode() {
+BaseNode* OrNode::getRightNode()
+{
 	return rig.get();
 }
 
-BaseNode* OrNode::getLeftNode() {
+BaseNode* OrNode::getLeftNode()
+{
 	return lef.get();
 }
 
-NodeType OrNode::getType() {
+NodeType OrNode::getType()
+{
 	return OrNodeType;
 }

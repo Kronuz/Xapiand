@@ -22,24 +22,28 @@
 
 #include "ContentReader.h"
 
-ContentReader::ContentReader(){
+ContentReader::ContentReader()
+{
 	currentLine = 1;
 	currentColumn = 1;
 	currentPosition = 0;
 }
 
-ContentReader::ContentReader(char* content){
+ContentReader::ContentReader(char* content)
+{
 	currentLine = 1;
 	currentColumn = 1;
 	currentPosition = 0;
 	this->content = content;
 }
 
-void ContentReader::setContent(char* content){
+void ContentReader::setContent(char* content)
+{
 	this->content = content;
 }
 
-Symbol ContentReader::NextSymbol() {
+Symbol ContentReader::NextSymbol()
+{
 	Symbol ret;
 	if (content[currentPosition]) {
 		char c = content[currentPosition++];
