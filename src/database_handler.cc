@@ -507,9 +507,7 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 
 						// If the region for search is empty, not process this query.
 						if (field_value.empty()) {
-							++next;
-							continue;
-							// TODO: what it is supposed to be done in this case?
+							return Xapian::Query::MatchNothing;
 						}
 
 						// Xapian does not allow repeat prefixes.
