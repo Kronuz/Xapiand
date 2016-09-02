@@ -420,8 +420,8 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 						queryTexts.set_stemmer(Xapian::Stem(global_spc.language));
 						str_texts.assign(field_value);
 
-						suggestions.push_back(queryTerms.get_corrected_query_string());
-						return queryTerms.parse_query(str_texts, q_flags);
+						suggestions.push_back(queryTexts.get_corrected_query_string());
+						return queryTexts.parse_query(str_texts, q_flags);
 				}
 			}
 		} else {
