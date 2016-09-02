@@ -23,6 +23,7 @@
 #include "database_handler.h"
 
 #include "booleanParser/BooleanParser.h"
+#include "booleanParser/SyntacticException.h"
 #include "datetime.h"
 #include "fields.h"
 #include "geo/wkt_parser.h"
@@ -284,80 +285,82 @@ DatabaseHandler::__search(const std::string& str_query, std::vector<std::string>
 		return Xapian::Query::MatchAll;
 	}
 
-	BooleanTree booltree(str_query);
-	Xapian::QueryParser queryTerms, queryTexts;
+	try {
+		BooleanTree booltree(str_query);
+		Xapian::QueryParser queryTerms, queryTexts;
 
-	std::vector<Xapian::Query> stack_query;
+		std::vector<Xapian::Query> stack_query;
 
-	while (!booltree.empty()) {
-		Token token = booltree.front();
-		booltree.pop_front();
+		while (!booltree.empty()) {
+			Token token = booltree.front();
+			booltree.pop_front();
 
-		switch (token.type) {
-			case TokenType::Not: {
-				if (stack_query.size() < 1) {
-					throw MSG_ClientError("Bad boolean expression");
-				} else {
-					Xapian::QueryParser querypNot;
-					auto expression = stack_query.back();
-					stack_query.pop_back();
-					stack_query.push_back(Xapian::Query(Xapian::Query::OP_AND_NOT, expression));
-					// FIXME: Make NotNode for 2 expression
+			switch (token.type) {
+				case TokenType::Not: {
+					if (stack_query.size() < 1) {
+						throw MSG_ClientError("Bad boolean expression");
+					} else {
+						auto expression = stack_query.back();
+						stack_query.pop_back();
+						stack_query.push_back(Xapian::Query(Xapian::Query::OP_AND_NOT, Xapian::Query::MatchAll, expression));
+					}
 				}
-			}
-				break;
-			case TokenType::Or: {
-				if (stack_query.size() < 2) {
-					throw MSG_ClientError("Bad boolean expression");
-				} else {
-					auto letf_expression = stack_query.back();
-					stack_query.pop_back();
-					auto right_expression = stack_query.back();
-					stack_query.pop_back();
-					stack_query.push_back(Xapian::Query(Xapian::Query::OP_OR, letf_expression, right_expression));
+					break;
+				case TokenType::Or: {
+					if (stack_query.size() < 2) {
+						throw MSG_ClientError("Bad boolean expression");
+					} else {
+						auto letf_expression = stack_query.back();
+						stack_query.pop_back();
+						auto right_expression = stack_query.back();
+						stack_query.pop_back();
+						stack_query.push_back(Xapian::Query(Xapian::Query::OP_OR, letf_expression, right_expression));
+					}
 				}
-			}
-				break;
-			case TokenType::And: {
-				if (stack_query.size() < 2) {
-					throw MSG_ClientError("Bad boolean expression");
-				} else {
-					auto letf_expression = stack_query.back();
-					stack_query.pop_back();
-					auto right_expression = stack_query.back();
-					stack_query.pop_back();
-					stack_query.push_back(Xapian::Query(Xapian::Query::OP_AND, letf_expression, right_expression));
+					break;
+				case TokenType::And: {
+					if (stack_query.size() < 2) {
+						throw MSG_ClientError("Bad boolean expression");
+					} else {
+						auto letf_expression = stack_query.back();
+						stack_query.pop_back();
+						auto right_expression = stack_query.back();
+						stack_query.pop_back();
+						stack_query.push_back(Xapian::Query(Xapian::Query::OP_AND, letf_expression, right_expression));
+					}
 				}
-			}
-				break;
-			case TokenType::Xor:{
-				if (stack_query.size() < 2) {
-					throw MSG_ClientError("Bad boolean expression");
-				} else {
-					auto letf_expression = stack_query.back();
-					stack_query.pop_back();
-					auto right_expression = stack_query.back();
-					stack_query.pop_back();
-					stack_query.push_back(Xapian::Query(Xapian::Query::OP_XOR, letf_expression, right_expression));
+					break;
+				case TokenType::Xor:{
+					if (stack_query.size() < 2) {
+						throw MSG_ClientError("Bad boolean expression");
+					} else {
+						auto letf_expression = stack_query.back();
+						stack_query.pop_back();
+						auto right_expression = stack_query.back();
+						stack_query.pop_back();
+						stack_query.push_back(Xapian::Query(Xapian::Query::OP_XOR, letf_expression, right_expression));
+					}
 				}
-			}
-				break;
-			case TokenType::Id:
-				stack_query.push_back(build_query(token.lexeme, suggestions, q_flags));
-				break;
+					break;
+				case TokenType::Id:
+					stack_query.push_back(build_query(token.lexeme, suggestions, q_flags));
+					break;
 
-			default:
-				// Silence warning from switch
-				break;
+				default:
+					// Silence warning from switch
+					break;
+			}
 		}
-	}
 
-	if (stack_query.size() != 1) {
-		throw MSG_ClientError("Bad boolean expression");
-	} else {
-		auto query = stack_query.back();
-		stack_query.pop_back();
-		return query;
+		if (stack_query.size() != 1) {
+			throw MSG_ClientError("Bad boolean expression");
+		} else {
+			auto query = stack_query.back();
+			stack_query.pop_back();
+			return query;
+		}
+	} catch (const SyntacticException& err) {
+		throw MSG_ClientError(err.what());
 	}
 }
 
@@ -545,7 +548,6 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 				}
 			}
 		}
-
 		++next;
 	}
 
