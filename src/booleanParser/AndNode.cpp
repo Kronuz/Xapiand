@@ -23,20 +23,24 @@
 #include "AndNode.h"
 
 
-AndNode::AndNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig) {
+AndNode::AndNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig)
+{
 	this->lef = std::move(lef);
 	this->rig = std::move(rig);
 }
 
-BaseNode* AndNode::getRightNode() {
+BaseNode* AndNode::getRightNode()
+{
 	return rig.get();
 }
 
-BaseNode* AndNode::getLeftNode() {
+BaseNode* AndNode::getLeftNode()
+{
 	return lef.get();
 }
 
-NodeType AndNode::getType() {
+NodeType AndNode::getType()
+{
 	return AndNodeType;
 }
 
