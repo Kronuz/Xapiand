@@ -368,21 +368,18 @@ DatabaseHandler::__search(const std::string& str_query, std::vector<std::string>
 Xapian::Query
 DatabaseHandler::build_query(std::string token, std::vector<std::string>& suggestions, int q_flags) {
 
-	size_t size_match = 0;
 	std::string str_terms, str_texts;
 	Xapian::QueryParser queryTerms, queryTexts;
 
 	// Set for save the prefix added in queryTerms.
 	std::unordered_set<std::string> added_prefixes;
 
-	std::sregex_iterator next(token.begin(), token.end(), find_field_re, std::regex_constants::match_continuous);
-	std::sregex_iterator end;
-	while (next != end) {
-		auto field = next->str(0);
-		size_match += next->length(0);
-		auto field_name_dot = next->str(1);
-		auto field_name = next->str(2);
-		auto field_value = next->length(4) ? next->str(4) : next->str(5);
+	std::smatch m;
+	if (std::regex_match(token, m, find_field_re) && static_cast<size_t>(m.length(0)) == token.length()) {
+		auto field = m.str(0);
+		auto field_name_dot = m.str(1);
+		auto field_name = m.str(2);
+		auto field_value = m.length(4) ? m.str(4) : m.str(5);
 
 		std::smatch m;
 		if (field_name.empty()) {
@@ -541,12 +538,10 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 				}
 			}
 		}
-		++next;
+	} else {
+		throw MSG_QueryParserError("Query %s contains errors", token.c_str());
 	}
 
-	if (size_match != token.length()) {
-		throw MSG_QueryParserError("Query %s contains errors [%zu]", token.c_str(), size_match);
-	}
 	return Xapian::Query::MatchNothing;
 }
 
