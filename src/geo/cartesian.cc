@@ -178,18 +178,6 @@ Cartesian::Cartesian(double lat, double lon, double height, CartesianUnits units
 
 
 /*
- * Constructor receives latitude, longitude and their units on WGS84 CRS.
- * which are converted to cartesian coordinates.
- */
-Cartesian::Cartesian(double lat, double lon, double height, CartesianUnits units)
-	: SRID(WGS84),
-	  datum(map_datums.at(SRID))
-{
-	toCartesian(lat, lon, height, units);
-}
-
-
-/*
  * Constructor receives a cartesian coordinate.
  * This constructor receive a cartesian coordinate,
  * which was obtained from WGS84 CRS.
@@ -226,6 +214,10 @@ Cartesian::transform2WGS84() noexcept
  * Converts this coordinate from (geodetic) latitude / longitude coordinates to
  * (geocentric) cartesian (x, y, z) coordinates on the CRS specified by SRID.
  *
+ * Reference: Conversion between Cartesian and geodetic coordinates
+ *   on a rotational ellipsoid by solving a system of nonlinear equations.
+ *   http://www.iag-aig.org/attach/989c8e501d9c5b5e2736955baf2632f5/V60N2_5FT.pdf
+ *
  * Function receives latitude, longitude, ellipsoid height and their units.
  */
 void
@@ -246,11 +238,12 @@ Cartesian::toCartesian(double lat, double lon, double height, CartesianUnits uni
 
 	double cos_lat = std::cos(lat);
 	double sin_lat = std::sin(lat);
-	double v = a / std::sqrt(1 - e2 * sin_lat * sin_lat);
+	// Radius of curvature in the prime vertical.
+	double N = a / std::sqrt(1 - e2 * sin_lat * sin_lat);
 
-	x = (v + height) * cos_lat * std::cos(lon);
-	y = (v + height) * cos_lat * std::sin(lon);
-	z = ((1 - e2) * v + height) * sin_lat;
+	x = (N + height) * cos_lat * std::cos(lon);
+	y = (N + height) * cos_lat * std::sin(lon);
+	z = ((1 - e2) * N + height) * sin_lat;
 }
 
 
@@ -411,6 +404,9 @@ void
 Cartesian::normalize()
 {
 	double _norm = norm();
+	if (_norm < DBL_TOLERANCE) {
+		throw MSG_CartesianError("Norm is zero");
+	}
 	x /= _norm;
 	y /= _norm;
 	z /= _norm;

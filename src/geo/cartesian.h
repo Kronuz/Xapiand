@@ -78,7 +78,7 @@ struct ellipsoid_t {
 	std::string name;
 	double major_axis;
 	double minor_axis;
-	double e2;              // eccentricity squared = 2f - f^2
+	double e2;              // First eccentricity squared = 2f - f^2
 };
 
 
@@ -118,8 +118,7 @@ public:
 	double z;
 
 	Cartesian();
-	Cartesian(double lat, double lon, double height, CartesianUnits units, int SRID);
-	Cartesian(double lat, double lon, double height, CartesianUnits units);
+	Cartesian(double lat, double lon, double height, CartesianUnits units, int SRID=WGS84);
 	Cartesian(double x, double y, double z);
 	// Move constructor
 	Cartesian(Cartesian&& p) = default;
