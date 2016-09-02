@@ -371,32 +371,54 @@ Cartesian::Decimal2Degrees() const
 
 /*
  * Converts (geocentric) cartesian (x, y, z) to (ellipsoidal geodetic) latitude / longitude coordinates.
- * Modified lat and lon in degrees, height in meters.
+ * Sets lat and lon in degrees, height in meters.
+ *
+ * Reference:
+ *   + A COMPARISON OF METHODS USED IN RECTANGULAR TO GEODETIC COORDINATE TRANSFORMATIONS.
+ *     http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.139.7504&rep=rep1&type=pdf
+ *   + Conversion between Cartesian and geodetic coordinates on a rotational ellipsoid
+ *     by solving a system of nonlinear equations
+ *     http://www.iag-aig.org/attach/989c8e501d9c5b5e2736955baf2632f5/V60N2_5FT.pdf
+ *
+ * Used method: Lin and Wang (1995)
  */
 void
 Cartesian::toGeodetic(double& lat, double& lon, double& height) const
 {
-	lon = std::atan2(y, x);
-	double p = std::sqrt(x * x + y * y);
-
+	double p2 = x * x + y * y;
+	// Distance from the polar axis to the point.
+	double p = std::sqrt(p2);
+	double z2 = z * z;
 	double a = datum.ellipsoid.major_axis;
-	double e2 = datum.ellipsoid.e2;
+	double b = datum.ellipsoid.minor_axis;
 
-	lat = std::atan2(z, p * (1 - e2));
-	double sin_lat = std::sin(lat);
-	double v = a / std::sqrt(1 - e2 * sin_lat * sin_lat);
-	double diff = 1;
-	while (diff < -DBL_TOLERANCE || diff > DBL_TOLERANCE) {
-		double lat2 = std::atan2(z + e2 * v * sin_lat, p);
-		diff = lat - lat2;
-		lat = lat2;
-		sin_lat = std::sin(lat);
-		v = a / std::sqrt(1 - e2 * sin_lat * sin_lat);
+	double a2 = a * a;
+	double b2 = b * b;
+	double aux = a2 * z2 + b2 * p2;
+	double m0 = (a * b * aux * std::sqrt(aux) - a2 * b2 * aux) / (2 * (a2 * a2 * z2 + b2 * b2 * p2));
+	double dm = 2 * m0;
+	for (int itr = 0; itr < 10; ++itr) {
+		double f_a = a + dm / a, f_b = b + dm / b;
+		double f_a2 = f_a * f_a, f_b2 = f_b * f_b;
+		double fm = p2 / f_a2 + z2 / f_b2 - 1;
+		double dfm = - 4 * (p2 / (a * f_a2 * f_a) + z2 / (b * f_b2 * f_b));
+		double h = fm / dfm;
+		if (h > -DBL_TOLERANCE && h < DBL_TOLERANCE) {
+			break;
+		}
+		m0 = m0 - h;
+		dm = 2 * m0;
 	}
 
-	height = (p / std::cos(lat)) - v;
-	lat = lat * DEG_PER_RAD;
-	lon = lon * DEG_PER_RAD;
+	double pe = p / (1 + dm / a2);
+	double ze = z / (1 + dm / b2);
+
+	lon = 2 * std::atan2(y, x + p) * DEG_PER_RAD;
+	lat = std::atan2(a2 * ze, b2 * pe) * DEG_PER_RAD;
+	height = std::sqrt(std::pow(pe - p, 2) + std::pow(ze - z, 2));
+	if ((p + std::abs(z)) < (pe + std::abs(ze))) {
+		height = - height;
+	}
 }
 
 
