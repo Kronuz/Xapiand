@@ -47,7 +47,6 @@ class DatabaseHandler {
 	Xapian::Query search(const query_field_t& e, std::vector<std::string>& suggestions);
 	Xapian::Query _search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags);
 	Xapian::Query build_query(std::string token, std::vector<std::string>& suggestions, int q_flags);
-	Xapian::Query __search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags);
 
 	void get_similar(Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar, bool is_fuzzy=false);
 	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, SpiesVector* spies);
