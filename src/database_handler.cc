@@ -381,7 +381,7 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 		auto field = m.str(0);
 		auto field_name_dot = m.str(1);
 		auto field_name = m.str(2);
-		auto field_value = m.length(4) ? m.str(4) : m.str(5);
+		auto field_value = m.length(3) ? m.str(3) : m.str(5);
 
 		std::smatch m;
 		if (field_name.empty()) {
