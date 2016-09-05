@@ -278,7 +278,7 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 Xapian::Query
 DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags)
 {
-	L_CALL(this, "DatabaseHandler::build_query()");
+	L_CALL(this, "DatabaseHandler::_search()");
 
 	if (str_query.compare("*") == 0) {
 		suggestions.push_back(std::string());
@@ -367,6 +367,8 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 
 Xapian::Query
 DatabaseHandler::build_query(std::string token, std::vector<std::string>& suggestions, int q_flags) {
+
+	L_CALL(this, "DatabaseHandler::build_query()");
 
 	std::string str_terms, str_texts;
 	Xapian::QueryParser queryTerms, queryTexts;
