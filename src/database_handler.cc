@@ -357,6 +357,8 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 			stack_query.pop_back();
 			return query;
 		}
+	} catch (const LexicalException& err) {
+		throw MSG_ClientError(err.what());
 	} catch (const SyntacticException& err) {
 		throw MSG_ClientError(err.what());
 	}
