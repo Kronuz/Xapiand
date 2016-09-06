@@ -133,7 +133,7 @@ BaseUDP::bind(int tries, const std::string& group)
 		addr.sin_port = htons(port);
 
 		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			if (!ignored_errorno(errno, true)) {
+			if (!ignored_errorno(errno, true, true)) {
 				if (i == tries - 1) break;
 				L_DEBUG(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 				continue;
@@ -167,7 +167,7 @@ BaseUDP::sending_message(const std::string& message)
 #endif
 
 		if (written < 0) {
-			if (sock != -1 && !ignored_errorno(errno, true)) {
+			if (sock != -1 && !ignored_errorno(errno, true, true)) {
 				L_ERR(this, "ERROR: sendto error (sock=%d): %s", sock, strerror(errno));
 				XapiandManager::manager->shutdown();
 			}
@@ -197,7 +197,7 @@ BaseUDP::get_message(std::string& result, char max_type)
 	socklen_t addrlen = sizeof(addr);
 	ssize_t received = ::recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
 	if (received < 0) {
-		if (!ignored_errorno(errno, true)) {
+		if (!ignored_errorno(errno, true, true)) {
 			L_ERR(this, "ERROR: read error (sock=%d): %s", sock, strerror(errno));
 			throw MSG_NetworkError(strerror(errno));
 		}

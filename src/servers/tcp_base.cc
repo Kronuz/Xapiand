@@ -160,7 +160,7 @@ BaseTCP::bind(int tries)
 		addr.sin_port = htons(port);
 
 		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			if (!ignored_errorno(errno, true)) {
+			if (!ignored_errorno(errno, true, true)) {
 				if (i == tries - 1) break;
 				L_DEBUG(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 				continue;
@@ -193,7 +193,7 @@ BaseTCP::accept()
 	socklen_t addrlen = sizeof(addr);
 
 	if ((client_sock = ::accept(sock, (struct sockaddr *)&addr, &addrlen)) < 0) {
-		if (!ignored_errorno(errno, true)) {
+		if (!ignored_errorno(errno, true, true)) {
 			L_ERR(nullptr, "ERROR: accept error (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 		return -1;
@@ -279,7 +279,7 @@ BaseTCP::connect(int sock_, const std::string& hostname, const std::string& serv
 	}
 
 	if (::connect(sock_, result->ai_addr, result->ai_addrlen) < 0) {
-		if (!ignored_errorno(errno, true)) {
+		if (!ignored_errorno(errno, true, true)) {
 			L_ERR(nullptr, "ERROR: connect error to %s:%s (sock=%d): [%d] %s", hostname.c_str(), servname.c_str(), sock_, errno, strerror(errno));
 			freeaddrinfo(result);
 			io::close(sock_);

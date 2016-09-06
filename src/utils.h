@@ -213,16 +213,17 @@ std::string repr(const void* p, size_t size, bool friendly=true, size_t max_size
 std::string repr(const std::string& string, bool friendly=true, size_t max_size=0);
 
 
-inline bool ignored_errorno(int e, bool udp) {
+inline bool ignored_errorno(int e, bool tcp, bool udp) {
 	switch(e) {
-		case EINTR:
 		case EAGAIN:
 #if EAGAIN != EWOULDBLOCK
 		case EWOULDBLOCK:
 #endif
+			return true;  //  Ignore error
+		case EINTR:
 		case EPIPE:
 		case EINPROGRESS:
-			return true;  //  Ignore error
+			return tcp;  //  Ignore error
 
 		case ENETDOWN:
 		case EPROTO:

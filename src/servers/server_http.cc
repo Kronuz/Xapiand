@@ -60,7 +60,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 
 	int client_sock;
 	if ((client_sock = http->accept()) < 0) {
-		if (!ignored_errorno(errno, false)) {
+		if (!ignored_errorno(errno, true, false)) {
 			L_ERR(this, "ERROR: accept http error (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 		}
 	} else {

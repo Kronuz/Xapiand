@@ -423,7 +423,7 @@ BaseClient::write_directly(int fd)
 #endif
 
 		if (written < 0) {
-			if (ignored_errorno(errno, false)) {
+			if (ignored_errorno(errno, true, false)) {
 				L_CONN(this, "WR:RETRY: (sock=%d, fd=%d)", sock, fd);
 				return WR::RETRY;
 			} else {
@@ -532,7 +532,7 @@ BaseClient::io_cb_read(int fd)
 		const char *buf_data = read_buffer;
 
 		if (received < 0) {
-			if (!ignored_errorno(errno, false)) {
+			if (!ignored_errorno(errno, true, false)) {
 				if (errno == ECONNRESET) {
 					L_WARNING(this, "WARNING: read error (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 				} else {
