@@ -36,7 +36,9 @@ using namespace std;
 enum class LexerState {
 	INIT,
 	TOKEN,
-	TOKEN_QUOTES,
+	TOKEN_DOUBLEQ,
+	TOKEN_SINGLEQ,
+	ESCAPE,
 	SYMBOL_OP,
 	EOFILE
 };

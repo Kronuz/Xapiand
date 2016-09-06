@@ -28,7 +28,9 @@
 #define NOT "NOT"
 #define XOR "XOR"
 
-#define QUOTE '"'
+#define DOUBLEQUOTE '"'
+#define SINGLEQUOTE '\''
+
 
 Lexer::Lexer(ContentReader contentReader)
 {
@@ -68,6 +70,8 @@ Lexer::NextToken()
 	LexerState currentState = LexerState::INIT;
 	Token token;
 
+	auto oldState = currentState;
+
 	string symbol;
 	string lcSymbol;
 
@@ -104,10 +108,16 @@ Lexer::NextToken()
 				}
 				break;
 			case LexerState::TOKEN:
-				if (currentSymbol.symbol == QUOTE)
+				if (currentSymbol.symbol == DOUBLEQUOTE)
 				{
 					lexeme += currentSymbol.symbol;
-					currentState = LexerState::TOKEN_QUOTES;
+					currentState = LexerState::TOKEN_DOUBLEQ;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else if (currentSymbol.symbol == SINGLEQUOTE)
+				{
+					lexeme += currentSymbol.symbol;
+					currentState = LexerState::TOKEN_SINGLEQ;
 					currentSymbol = contentReader.NextSymbol();
 				}
 				else if (!IsSymbolOp(currentSymbol.symbol) && currentSymbol.symbol != ' ' && currentSymbol.symbol != '\0')
@@ -123,10 +133,18 @@ Lexer::NextToken()
 					return token;
 				}
 				break;
-			case LexerState::TOKEN_QUOTES:
-				if (currentSymbol.symbol == QUOTE) {
+			case LexerState::TOKEN_DOUBLEQ:
+				if (currentSymbol.symbol == DOUBLEQUOTE)
+				{
 					lexeme += currentSymbol.symbol;
 					currentState =  LexerState::TOKEN;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else if (currentSymbol.symbol == '\\')
+				{
+					lexeme += currentSymbol.symbol;
+					oldState = LexerState::TOKEN_DOUBLEQ;
+					currentState =  LexerState::ESCAPE;
 					currentSymbol = contentReader.NextSymbol();
 				}
 				else if (currentSymbol.symbol != '\0')
@@ -137,6 +155,44 @@ Lexer::NextToken()
 				else
 				{
 					string msj = "Missing double quote";
+					throw LexicalException(msj.c_str());
+				}
+				break;
+			case LexerState::TOKEN_SINGLEQ:
+				if (currentSymbol.symbol == SINGLEQUOTE)
+				{
+					lexeme += currentSymbol.symbol;
+					currentState =  LexerState::TOKEN;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else if (currentSymbol.symbol == '\\')
+				{
+					lexeme += currentSymbol.symbol;
+					oldState = LexerState::TOKEN_SINGLEQ;
+					currentState =  LexerState::ESCAPE;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else if (currentSymbol.symbol != '\0')
+				{
+					lexeme += currentSymbol.symbol;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else
+				{
+					string msj = "Missing single quote";
+					throw LexicalException(msj.c_str());
+				}
+				break;
+			case LexerState::ESCAPE:
+				if (currentSymbol.symbol != '\0')
+				{
+					lexeme += currentSymbol.symbol;
+					currentState = oldState;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else
+				{
+					string msj = "Symbol EOF not expected";;
 					throw LexicalException(msj.c_str());
 				}
 				break;
