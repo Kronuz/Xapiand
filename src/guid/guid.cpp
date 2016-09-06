@@ -46,10 +46,6 @@ THE SOFTWARE.
 #include <objbase.h>
 #endif
 
-#ifdef GUID_ANDROID
-#include <jni.h>
-#endif
-
 using namespace std;
 
 // overload << so that it's easy to convert to a string
@@ -180,7 +176,7 @@ std::string Guid::to_string() const
 Guid GuidGenerator::newGuid()
 {
 	uuid_t id;
-	uuid_generate(id);
+	uuid_generate_time(id);
 	return id;
 }
 #endif
@@ -197,7 +193,7 @@ Guid GuidGenerator::newGuid()
 		throw std::bad_alloc();
 	}
 	unsigned char byteArray[16];
-	std::memcpy(byteArray, &id, sizeof(byteArray));
+	uuid_enc_be(byteArray, &id);
 	return byteArray;
 }
 #endif
