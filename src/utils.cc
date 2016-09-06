@@ -793,6 +793,7 @@ FieldParser::parse() {
 				if (*currentSymbol == SINGLEQUOTE) {
 					currentState = FieldParser::State::END;
 					++len_single_quote_value;
+					--len_value;	// subtract the last quote count
 				} else if (*currentSymbol == '\\') {
 					currentState = FieldParser::State::ESCAPE;
 					old_state = FieldParser::State::SINGLEQ;
