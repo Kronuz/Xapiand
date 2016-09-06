@@ -821,10 +821,10 @@ FieldParser::parse() {
 				break;
 
 			case FieldParser::State::VALUE:
-				if (isalpha(*currentSymbol) || *currentSymbol == '.') {
+				if (*currentSymbol == '\0') {
+					currentState = FieldParser::State::END;
+				} else if (isalnum(*currentSymbol) || *currentSymbol == '.') {
 					++len_value;
-				} else if (*currentSymbol == '\0') {
-						currentState = FieldParser::State::END;
 				} else {
 					throw MSG_ClientError("Syntax error in query");
 				}
