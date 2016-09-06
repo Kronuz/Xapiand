@@ -432,6 +432,7 @@ BaseClient::write_directly(int fd)
 				return WR::ERR;
 			}
 		} else if (written == 0) {
+			L_WARNING(this, "ERROR: connection closed unexpectedly (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 			L_CONN(this, "WR:CLOSED: (sock=%d, fd=%d)", sock, fd);
 			return WR::CLOSED;
 		} else {
