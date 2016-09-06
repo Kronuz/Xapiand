@@ -124,16 +124,20 @@ Lexer::NextToken()
 				}
 				break;
 			case LexerState::TOKEN_QUOTES:
-				if (currentSymbol.symbol != QUOTE)
+				if (currentSymbol.symbol == QUOTE) {
+					lexeme += currentSymbol.symbol;
+					currentState =  LexerState::TOKEN;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else if (currentSymbol.symbol != '\0')
 				{
 					lexeme += currentSymbol.symbol;
 					currentSymbol = contentReader.NextSymbol();
 				}
 				else
 				{
-					lexeme += currentSymbol.symbol;
-					currentState =  LexerState::TOKEN;
-					currentSymbol = contentReader.NextSymbol();
+					string msj = "Missing double quote";
+					throw LexicalException(msj.c_str());
 				}
 				break;
 			case LexerState::SYMBOL_OP:
