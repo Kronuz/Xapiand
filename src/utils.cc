@@ -1258,10 +1258,16 @@ std::string delta_string(long double delta, bool colored) {
 	if (delta < 0) delta = -delta;
 
 	int order = (delta > 0) ? -floorl(floorl(log10l(delta)) / 3) : 3;
+	assert(order >= 0);
 	if (order > 3) order = 3;
 
+	const char* color = colored ? colors[order] : "";
+	timespan *= scaling[order];
+	const char* unit = units[order];
+	const char* reset = colored ? colors[4] : "";
+
 	char buf[100];
-	snprintf(buf, 100, "%s%Lg%s%s", colored ? colors[order] : "", timespan * scaling[order], units[order], colored ? colors[4] : "");
+	snprintf(buf, 100, "%s%Lg%s%s", color, timespan, unit, reset);
 	return buf;
 }
 
