@@ -330,3 +330,13 @@ sortable_unserialise(const std::string & value)
 	// result overflows or underflows, which isn't really desirable here.
 	return scalbnl(mantissa, exponent);
 }
+
+
+std::string sortable_serialise(const std::string& str) {
+	long double res = 0;
+	for (auto it = str.crbegin(); it != str.crend(); ++it) {
+		res /= 256.0;
+		res += *it;
+	}
+	return sortable_serialise(res);
+}
