@@ -90,6 +90,20 @@ Lexer::NextToken()
 					currentState = LexerState::INIT_SQUARE_BRACKET;
 					currentSymbol = contentReader.NextSymbol();
 				}
+				else if (currentSymbol.symbol == SINGLEQUOTE)
+				{
+					lexeme += currentSymbol.symbol;
+					currentState = LexerState::TOKEN_QUOTE;
+					quote = SINGLEQUOTE;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else if (currentSymbol.symbol == DOUBLEQUOTE)
+				{
+					lexeme += currentSymbol.symbol;
+					currentState = LexerState::TOKEN_QUOTE;
+					quote = DOUBLEQUOTE;
+					currentSymbol = contentReader.NextSymbol();
+				}
 				else if(isalpha(currentSymbol.symbol))
 				{
 					lexeme += currentSymbol.symbol;
