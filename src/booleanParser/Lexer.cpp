@@ -30,6 +30,9 @@
 
 #define DOUBLEQUOTE '"'
 #define SINGLEQUOTE '\''
+#define LEFT_SQUARE_BRACKET '['
+#define RIGHT_SQUARE_BRACKET ']'
+#define COMMA ','
 
 
 Lexer::Lexer(ContentReader contentReader)
@@ -71,6 +74,7 @@ Lexer::NextToken()
 	Token token;
 
 	auto oldState = currentState;
+	auto upState = currentState;
 
 	string symbol;
 	string lcSymbol;
@@ -80,7 +84,13 @@ Lexer::NextToken()
 		symbol += currentSymbol.symbol;
 		switch (currentState) {
 			case LexerState::INIT:
-				if(isalpha(currentSymbol.symbol))
+				if (currentSymbol.symbol == LEFT_SQUARE_BRACKET)
+				{
+					lexeme += currentSymbol.symbol;
+					currentState = LexerState::INIT_SQUARE_BRACKET;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else if(isalpha(currentSymbol.symbol))
 				{
 					lexeme += currentSymbol.symbol;
 					currentState = LexerState::TOKEN;
@@ -111,13 +121,13 @@ Lexer::NextToken()
 				if (currentSymbol.symbol == DOUBLEQUOTE)
 				{
 					lexeme += currentSymbol.symbol;
-					currentState = LexerState::TOKEN_DOUBLEQ;
+					currentState = LexerState::TOKEN_DOUBLE_QUOTE;
 					currentSymbol = contentReader.NextSymbol();
 				}
 				else if (currentSymbol.symbol == SINGLEQUOTE)
 				{
 					lexeme += currentSymbol.symbol;
-					currentState = LexerState::TOKEN_SINGLEQ;
+					currentState = LexerState::TOKEN_SINGLE_QUOTE;
 					currentSymbol = contentReader.NextSymbol();
 				}
 				else if (!IsSymbolOp(currentSymbol.symbol) && currentSymbol.symbol != ' ' && currentSymbol.symbol != '\0')
@@ -133,17 +143,17 @@ Lexer::NextToken()
 					return token;
 				}
 				break;
-			case LexerState::TOKEN_DOUBLEQ:
+			case LexerState::TOKEN_DOUBLE_QUOTE:
 				if (currentSymbol.symbol == DOUBLEQUOTE)
 				{
 					lexeme += currentSymbol.symbol;
-					currentState =  LexerState::TOKEN;
+					upState == LexerState::INIT_SQUARE_BRACKET ? currentState = LexerState::END_SQUARE_BRACKET : currentState = LexerState::TOKEN;
 					currentSymbol = contentReader.NextSymbol();
 				}
 				else if (currentSymbol.symbol == '\\')
 				{
 					lexeme += currentSymbol.symbol;
-					oldState = LexerState::TOKEN_DOUBLEQ;
+					oldState = LexerState::TOKEN_DOUBLE_QUOTE;
 					currentState =  LexerState::ESCAPE;
 					currentSymbol = contentReader.NextSymbol();
 				}
@@ -154,11 +164,11 @@ Lexer::NextToken()
 				}
 				else
 				{
-					string msj = "Missing double quote";
+					string msj = "Symbol double quote expected";
 					throw LexicalException(msj.c_str());
 				}
 				break;
-			case LexerState::TOKEN_SINGLEQ:
+			case LexerState::TOKEN_SINGLE_QUOTE:
 				if (currentSymbol.symbol == SINGLEQUOTE)
 				{
 					lexeme += currentSymbol.symbol;
@@ -168,7 +178,7 @@ Lexer::NextToken()
 				else if (currentSymbol.symbol == '\\')
 				{
 					lexeme += currentSymbol.symbol;
-					oldState = LexerState::TOKEN_SINGLEQ;
+					oldState = LexerState::TOKEN_SINGLE_QUOTE;
 					currentState =  LexerState::ESCAPE;
 					currentSymbol = contentReader.NextSymbol();
 				}
@@ -179,7 +189,7 @@ Lexer::NextToken()
 				}
 				else
 				{
-					string msj = "Missing single quote";
+					string msj = "Symbol single quote expected";
 					throw LexicalException(msj.c_str());
 				}
 				break;
@@ -193,6 +203,34 @@ Lexer::NextToken()
 				else
 				{
 					string msj = "Symbol EOF not expected";;
+					throw LexicalException(msj.c_str());
+				}
+				break;
+			case LexerState::INIT_SQUARE_BRACKET:
+				if (currentSymbol.symbol == DOUBLEQUOTE)
+				{
+					lexeme += currentSymbol.symbol;
+					currentState = LexerState::TOKEN_DOUBLE_QUOTE;
+					upState = LexerState::INIT_SQUARE_BRACKET;
+					currentSymbol = contentReader.NextSymbol();
+					continue;
+				}
+				else if (currentSymbol.symbol != RIGHT_SQUARE_BRACKET && currentSymbol.symbol != '\0')
+				{
+					lexeme += currentSymbol.symbol;
+					currentSymbol = contentReader.NextSymbol();
+					continue;
+				}
+			case LexerState::END_SQUARE_BRACKET:
+				if (currentSymbol.symbol == RIGHT_SQUARE_BRACKET)
+				{
+					lexeme += currentSymbol.symbol;
+					currentState = LexerState::TOKEN;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else
+				{
+					string msj = "Symbol ] expected";
 					throw LexicalException(msj.c_str());
 				}
 				break;
