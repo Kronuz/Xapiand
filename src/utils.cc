@@ -842,7 +842,6 @@ FieldParser::parse() {
 
 		++currentSymbol;
 	}
-
 }
 
 
@@ -856,7 +855,7 @@ FieldParser::get_field() {
 
 std::string
 FieldParser::get_field_dot() {
-	
+
 	if (!off_fieldot) return std::string();
 	return std::string(off_fieldot, len_fieldot);
 }
@@ -864,7 +863,7 @@ FieldParser::get_field_dot() {
 
 std::string
 FieldParser::get_value() {
-	
+
 	if (!off_value) return std::string();
 	return std::string(off_value, len_value);
 }
@@ -872,7 +871,7 @@ FieldParser::get_value() {
 
 std::string
 FieldParser::get_doubleq_value() {
-	
+
 	if (!off_double_quote_value) return std::string();
 	return std::string(off_double_quote_value, len_double_quote_value);
 }
@@ -880,7 +879,7 @@ FieldParser::get_doubleq_value() {
 
 std::string
 FieldParser::get_singleq_value() {
-	
+
 	if (!off_single_quote_value) return std::string();
 	return std::string(off_single_quote_value, len_single_quote_value);
 }
