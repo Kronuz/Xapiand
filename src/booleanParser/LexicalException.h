@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 furan
+ * Copyright (C) 2016 deipi.com LLC and contributors.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,13 +24,14 @@
 #pragma once
 
 #include <exception>
+#include <string>
 
 using namespace std;
 
 class LexicalException: public exception {
 private:
-	const char* msg;
+	const string msg;
 public:
-	LexicalException(const char* msg);
+	LexicalException(const string& msg);
 	virtual const char* what() const throw();
 };

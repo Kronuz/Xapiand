@@ -22,13 +22,10 @@
 
 #include "LexicalException.h"
 
-LexicalException::LexicalException(const char* msg)
-{
-	this->msg = msg;
-}
+LexicalException::LexicalException(const std::string& _msg) : msg(_msg) { }
 
 const char * LexicalException::what() const throw()
 {
-	return msg;
+	return msg.data();
 }
 
