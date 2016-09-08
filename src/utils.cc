@@ -874,10 +874,10 @@ FieldParser::parse() {
 			case FieldParser::State::VALUE:
 				if (*currentSymbol == '\0') {
 					currentState = FieldParser::State::END;
-				} else if (isalnum(*currentSymbol) || *currentSymbol == '.') {
+				} else if (!isspace(*currentSymbol)) {
 					++len_value;
 				} else {
-					throw MSG_ClientError("Syntax error in query value");
+					throw MSG_ClientError("Syntax error in query");
 				}
 				break;
 
