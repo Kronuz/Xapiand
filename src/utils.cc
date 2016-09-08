@@ -743,11 +743,15 @@ FieldParser::parse() {
 				if (*currentSymbol == DOUBLEDOTS) {
 					currentState = FieldParser::State::STARTVALUE;
 					++len_fieldot;
-				} else if (*currentSymbol != ' ' || *currentSymbol != '\0') {
+				} else if (*currentSymbol != ' ' && *currentSymbol != '\0') {
 					++len_field;
 					++len_fieldot;
-				} else {
-					throw MSG_ClientError("Syntax error in field");
+				} else if (*currentSymbol == '\0') {
+					len_value = len_field;
+					off_value = off_field;
+					len_field = len_fieldot = 0;
+					off_field = off_fieldot = nullptr;
+					return;
 				}
 				break;
 
