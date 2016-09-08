@@ -383,11 +383,10 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 	auto field_name = fp.get_field();
 	auto field_value = fp.get_value();
 
-	std::smatch m;
 	if (field_name.empty()) {
-		if (std::regex_match(field_value, m, find_range_re)) {
-			auto start = m.str(1);
-			auto end = m.str(2);
+		if (fp.isrange) {
+			auto start = fp.start;
+			auto end = fp.end;
 			// Get type of the range.
 			std::pair<FieldType, std::string> ser_type;
 			if (start.empty() || end.empty()) {
@@ -428,12 +427,12 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 		}
 	} else {
 		auto field_spc = schema->get_data_field(field_name);
-		if (std::regex_match(field_value, m, find_range_re)) {
+		if (fp.isrange) {
 			// If this field is not indexed as value, not process this range.
 			if (field_spc.slot == default_spc.slot) {
 				return Xapian::Query::MatchNothing;
 			}
-			return MultipleValueRange::getQuery(field_spc, field_name, m.str(1), m.str(2));
+			return MultipleValueRange::getQuery(field_spc, field_name, fp.start, fp.end);
 		} else {
 			// If the field has not been indexed as a term, not process this term.
 			if (field_spc.prefix.empty()) {

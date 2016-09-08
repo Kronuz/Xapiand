@@ -147,6 +147,7 @@ public:
 
 class FieldParser {
 	std::string fstr;
+	bool isEnd;
 
 public:
 	enum State {
@@ -162,7 +163,6 @@ public:
 	void parse();
 
 	bool isrange;
-	bool isEnd;
 
 	size_t len_field;
 	const char *off_field;
