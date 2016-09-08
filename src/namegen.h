@@ -1,10 +1,9 @@
 /**
  *
  * @file A fantasy name generator library.
- * @version 1.0.0
+ * @version 1.0.1
  * @license Public Domain
  * @author German M. Bravo (Kronuz)
- * @author deipi.com LLC and contributors (2015,2016).
  *
  * This library is designed after the RinkWorks Fantasy Name Generator.
  * @see http://www.rinkworks.com/namegen/
