@@ -211,6 +211,8 @@ public:
 	bool is_null() const;
 	bool is_boolean() const;
 	bool is_number() const;
+	bool is_integer() const;
+	bool is_float() const;
 	bool is_map() const;
 	bool is_array() const;
 	bool is_string() const;
@@ -1642,6 +1644,24 @@ inline bool MsgPack::is_number() const {
 	}
 }
 
+inline bool MsgPack::is_integer() const {
+	switch (_const_body->_obj->type) {
+		case msgpack::type::NEGATIVE_INTEGER:
+		case msgpack::type::POSITIVE_INTEGER:
+			return true;
+		default:
+			return false;
+	}
+}
+
+inline bool MsgPack::is_float() const {
+	switch (_const_body->_obj->type) {
+		case msgpack::type::FLOAT:
+			return true;
+		default:
+			return false;
+	}
+}
 
 inline bool MsgPack::is_map() const {
 	return _const_body->_obj->type == msgpack::type::MAP;
