@@ -72,8 +72,8 @@ Lexer::NextToken()
 	string lexeme = "";
 	LexerState currentState = LexerState::INIT;
 	Token token;
+	char quote;
 
-	auto oldState = currentState;
 	auto upState = currentState;
 
 	string symbol;
@@ -121,13 +121,15 @@ Lexer::NextToken()
 				if (currentSymbol.symbol == DOUBLEQUOTE)
 				{
 					lexeme += currentSymbol.symbol;
-					currentState = LexerState::TOKEN_DOUBLE_QUOTE;
+					currentState = LexerState::TOKEN_QUOTE;
+					quote = DOUBLEQUOTE;
 					currentSymbol = contentReader.NextSymbol();
 				}
 				else if (currentSymbol.symbol == SINGLEQUOTE)
 				{
 					lexeme += currentSymbol.symbol;
-					currentState = LexerState::TOKEN_SINGLE_QUOTE;
+					currentState = LexerState::TOKEN_QUOTE;
+					quote = SINGLEQUOTE;
 					currentSymbol = contentReader.NextSymbol();
 				}
 				else if (!IsSymbolOp(currentSymbol.symbol) && currentSymbol.symbol != ' ' && currentSymbol.symbol != '\0')
@@ -143,8 +145,8 @@ Lexer::NextToken()
 					return token;
 				}
 				break;
-			case LexerState::TOKEN_DOUBLE_QUOTE:
-				if (currentSymbol.symbol == DOUBLEQUOTE)
+			case LexerState::TOKEN_QUOTE:
+				if (currentSymbol.symbol == quote)
 				{
 					lexeme += currentSymbol.symbol;
 					upState == LexerState::INIT_SQUARE_BRACKET ? currentState = LexerState::END_SQUARE_BRACKET : currentState = LexerState::TOKEN;
@@ -153,7 +155,6 @@ Lexer::NextToken()
 				else if (currentSymbol.symbol == '\\')
 				{
 					lexeme += currentSymbol.symbol;
-					oldState = LexerState::TOKEN_DOUBLE_QUOTE;
 					currentState =  LexerState::ESCAPE;
 					currentSymbol = contentReader.NextSymbol();
 				}
@@ -168,36 +169,11 @@ Lexer::NextToken()
 					throw LexicalException(msj.c_str());
 				}
 				break;
-			case LexerState::TOKEN_SINGLE_QUOTE:
-				if (currentSymbol.symbol == SINGLEQUOTE)
-				{
-					lexeme += currentSymbol.symbol;
-					currentState =  LexerState::TOKEN;
-					currentSymbol = contentReader.NextSymbol();
-				}
-				else if (currentSymbol.symbol == '\\')
-				{
-					lexeme += currentSymbol.symbol;
-					oldState = LexerState::TOKEN_SINGLE_QUOTE;
-					currentState =  LexerState::ESCAPE;
-					currentSymbol = contentReader.NextSymbol();
-				}
-				else if (currentSymbol.symbol != '\0')
-				{
-					lexeme += currentSymbol.symbol;
-					currentSymbol = contentReader.NextSymbol();
-				}
-				else
-				{
-					string msj = "Symbol single quote expected";
-					throw LexicalException(msj.c_str());
-				}
-				break;
 			case LexerState::ESCAPE:
 				if (currentSymbol.symbol != '\0')
 				{
 					lexeme += currentSymbol.symbol;
-					currentState = oldState;
+					currentState = LexerState::TOKEN_QUOTE;
 					currentSymbol = contentReader.NextSymbol();
 				}
 				else
@@ -210,8 +186,18 @@ Lexer::NextToken()
 				if (currentSymbol.symbol == DOUBLEQUOTE)
 				{
 					lexeme += currentSymbol.symbol;
-					currentState = LexerState::TOKEN_DOUBLE_QUOTE;
+					currentState = LexerState::TOKEN_QUOTE;
 					upState = LexerState::INIT_SQUARE_BRACKET;
+					quote = DOUBLEQUOTE;
+					currentSymbol = contentReader.NextSymbol();
+					continue;
+				}
+				else if (currentSymbol.symbol == SINGLEQUOTE)
+				{
+					lexeme += currentSymbol.symbol;
+					currentState = LexerState::TOKEN_QUOTE;
+					upState = LexerState::INIT_SQUARE_BRACKET;
+					quote = SINGLEQUOTE;
 					currentSymbol = contentReader.NextSymbol();
 					continue;
 				}
@@ -226,6 +212,12 @@ Lexer::NextToken()
 				{
 					lexeme += currentSymbol.symbol;
 					currentState = LexerState::TOKEN;
+					currentSymbol = contentReader.NextSymbol();
+				}
+				else if (currentSymbol.symbol == ',')
+				{
+					lexeme += currentSymbol.symbol;
+					currentState = LexerState::INIT_SQUARE_BRACKET;
 					currentSymbol = contentReader.NextSymbol();
 				}
 				else
