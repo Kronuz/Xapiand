@@ -381,7 +381,7 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 
 	auto field_name_dot = fp.get_field_dot();
 	auto field_name = fp.get_field();
-	auto field_value = fp.get_doubleq_value().empty() ? fp.get_value() : fp.get_doubleq_value();
+	auto field_value = fp.get_value();
 
 	std::smatch m;
 	if (field_name.empty()) {
@@ -459,18 +459,16 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 
 				case FieldType::STRING:
 					// Xapian does not allow repeat prefixes.
-					if (added_prefixes.insert(field_spc.prefix).second) {
-						field_spc.bool_term ? queryTerms.add_boolean_prefix(field_name, field_spc.prefix) : queryTerms.add_prefix(field_name, field_spc.prefix);
-					}
-
-					queryTerms.set_database(*database->db);
-					str_terms.reserve(field_name_dot.length() + field_value.length());
-					str_terms.assign(field_name_dot).append(field_value);
-
-					suggestions.push_back(queryTerms.get_corrected_query_string());
-					return queryTerms.parse_query(str_terms, q_flags);
+				{
+					auto query_str = prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix);
+					return Xapian::Query(query_str);
+				}
 
 				case FieldType::TEXT:
+					if (fp.off_double_quote_value) {
+						field_value = fp.get_doubleq_value();
+					}
+
 					if (added_prefixes.insert(field_spc.prefix).second) {
 						field_spc.bool_term ? queryTexts.add_boolean_prefix(field_name, field_spc.prefix) : queryTexts.add_prefix(field_name, field_spc.prefix);
 					}
