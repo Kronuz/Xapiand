@@ -32,7 +32,6 @@
 #define SINGLEQUOTE '\''
 #define LEFT_SQUARE_BRACKET '['
 #define RIGHT_SQUARE_BRACKET ']'
-#define COMMA ','
 
 
 Lexer::Lexer(ContentReader contentReader)

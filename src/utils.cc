@@ -79,6 +79,9 @@
 #define DOUBLEDOTS ':'
 #define DOUBLEQUOTE '"'
 #define SINGLEQUOTE '\''
+#define LEFT_SQUARE_BRACKET '['
+#define RIGHT_SQUARE_BRACKET ']'
+#define COMMA ','
 
 
 
@@ -709,6 +712,7 @@ PathParser::get_id()
 
 FieldParser::FieldParser(const std::string &p)
 	: fstr(p),
+	  isrange(false), isEnd(false),
 	  len_field(0), off_field(nullptr),
 	  len_fieldot(0), off_fieldot(nullptr),
 	  len_value(0), off_value(nullptr),
@@ -719,9 +723,10 @@ FieldParser::FieldParser(const std::string &p)
 void
 FieldParser::parse() {
 
-	auto old_state = FieldParser::State::INIT;
 	auto currentState = FieldParser::State::INIT;
-	auto currentSymbol = fstr.c_str();
+	auto oldState = currentState;
+	auto currentSymbol = fstr.data();
+	char quote;
 
 	while (true) {
 		switch (currentState) {
@@ -734,6 +739,23 @@ FieldParser::parse() {
 					++len_fieldot;
 				} else if (isspace(*currentSymbol)) {
 					currentState = FieldParser::State::INIT;
+				} else if (*currentSymbol == LEFT_SQUARE_BRACKET) {
+					currentState = FieldParser::State::INIT_SQUARE_BRACKET;
+					isrange = true;
+				} else if (*currentSymbol == DOUBLEQUOTE) {
+					currentState = FieldParser::State::QUOTE;
+					quote = DOUBLEQUOTE;
+					off_double_quote_value = currentSymbol;
+					off_value = currentSymbol + 1;
+					++len_double_quote_value;
+					++len_value;
+				} else if (*currentSymbol == SINGLEQUOTE) {
+					currentState = FieldParser::State::QUOTE;
+					quote = SINGLEQUOTE;
+					off_single_quote_value = currentSymbol;
+					off_value = currentSymbol + 1;
+					++len_single_quote_value;
+					++len_value;
 				} else {
 					throw MSG_ClientError("Syntax error in query");
 				}
@@ -757,13 +779,15 @@ FieldParser::parse() {
 
 			case FieldParser::State::STARTVALUE:
 				if (*currentSymbol == DOUBLEQUOTE) {
-					currentState = FieldParser::State::DOUBLEQ;
+					currentState = FieldParser::State::QUOTE;
+					quote = DOUBLEQUOTE;
 					off_double_quote_value = currentSymbol;
 					off_value = off_double_quote_value + 1;
 					++len_double_quote_value;
 					++len_value;
 				} else if (*currentSymbol == SINGLEQUOTE) {
-					currentState = FieldParser::State::SINGLEQ;
+					currentState = FieldParser::State::QUOTE;
+					quote = SINGLEQUOTE;
 					off_single_quote_value = currentSymbol;
 					off_value = off_single_quote_value + 1;
 					++len_single_quote_value;
@@ -775,53 +799,75 @@ FieldParser::parse() {
 				}
 				break;
 
-			case FieldParser::State::DOUBLEQ:
-				if (*currentSymbol == DOUBLEQUOTE) {
+			case FieldParser::State::QUOTE:
+				if (*currentSymbol == quote) {
 					currentState = FieldParser::State::END;
-					++len_double_quote_value;
-					--len_value;	// subtract the last quote count
-				} else if (*currentSymbol == '\\') {
-					currentState = FieldParser::State::ESCAPE;
-					old_state = FieldParser::State::DOUBLEQ;
-					++len_value;
-					++len_double_quote_value;
-				} else if (*currentSymbol != '\0') {
-					++len_double_quote_value;
-					++len_value;
-				} else {
-					throw MSG_ClientError("Syntax error in query");
-				}
-				break;
+					switch (quote) {
+						case DOUBLEQUOTE:
+							++len_double_quote_value;
+							--len_value;	// subtract the last quote count
+							break;
 
-			case FieldParser::State::SINGLEQ:
-				if (*currentSymbol == SINGLEQUOTE) {
-					currentState = FieldParser::State::END;
-					++len_single_quote_value;
-					--len_value;	// subtract the last quote count
+						case SINGLEQUOTE:
+							++len_single_quote_value;
+							--len_value;	// subtract the last quote count
+							break;
+					}
 				} else if (*currentSymbol == '\\') {
 					currentState = FieldParser::State::ESCAPE;
-					old_state = FieldParser::State::SINGLEQ;
+					oldState = FieldParser::State::QUOTE;
 					++len_value;
-					++len_single_quote_value;
+					switch (quote) {
+						case DOUBLEQUOTE:
+							++len_double_quote_value;
+							break;
+
+						case SINGLEQUOTE:
+							++len_single_quote_value;
+							break;
+					}
+
 				} else if (*currentSymbol != '\0') {
-					++len_single_quote_value;
 					++len_value;
+					switch (quote) {
+						case DOUBLEQUOTE:
+							++len_double_quote_value;
+							break;
+
+						case SINGLEQUOTE:
+							++len_single_quote_value;
+							break;
+					}
 				} else {
-					throw MSG_ClientError("Syntax error in query");
+					throw MSG_ClientError("Symbol " + std::string(quote, 1) + " expected");
 				}
 				break;
 
 			case FieldParser::State::ESCAPE:
 				if (*currentSymbol != '\0') {
-					currentState = old_state;
-					++len_value;
-					if (old_state == FieldParser::State::DOUBLEQ) {
-						++len_double_quote_value;
-					} else if (old_state == FieldParser::State::SINGLEQ) {
-						++len_single_quote_value;
+					currentState = oldState;
+					switch(currentState) {
+						case FieldParser::State::QUOTE:
+							++len_value;
+							if (quote == DOUBLEQUOTE) {
+								++len_double_quote_value;
+							} else if (quote == SINGLEQUOTE) {
+								++len_single_quote_value;
+							}
+							break;
+						case FieldParser::State::QUOTE_SQUARE_BRACKET:
+							if (isEnd) {
+								end += *currentSymbol;
+							} else {
+								start += *currentSymbol;
+							}
+							break;
+						default:
+							//Silence switch warning
+							break;
 					}
 				} else {
-					throw MSG_ClientError("Syntax error in query");
+					throw MSG_ClientError("Syntax error in query escaped");
 				}
 				break;
 
@@ -831,7 +877,63 @@ FieldParser::parse() {
 				} else if (isalnum(*currentSymbol) || *currentSymbol == '.') {
 					++len_value;
 				} else {
+					throw MSG_ClientError("Syntax error in query value");
+				}
+				break;
+
+			case FieldParser::INIT_SQUARE_BRACKET:
+				if (*currentSymbol == DOUBLEQUOTE) {
+					currentState = FieldParser::QUOTE_SQUARE_BRACKET;
+					quote = DOUBLEQUOTE;
+				} else if (*currentSymbol == SINGLEQUOTE) {
+					currentState = FieldParser::QUOTE_SQUARE_BRACKET;
+					quote = SINGLEQUOTE;
+				} else if (*currentSymbol == COMMA) {
+					currentState = FieldParser::SQUARE_BRACKET;
+					isEnd = true;
+				} else if (*currentSymbol == RIGHT_SQUARE_BRACKET) {
+					currentState = FieldParser::State::END;
+				} else if (*currentSymbol != '\0') {
+					start += *currentSymbol;
+				} else {
 					throw MSG_ClientError("Syntax error in query");
+				}
+				break;
+
+			case FieldParser::SQUARE_BRACKET:
+				if (*currentSymbol == DOUBLEQUOTE) {
+					currentState = FieldParser::QUOTE_SQUARE_BRACKET;
+					quote = DOUBLEQUOTE;
+				} else if (*currentSymbol == SINGLEQUOTE) {
+					currentState = FieldParser::QUOTE_SQUARE_BRACKET;
+					quote = SINGLEQUOTE;
+				} else if (*currentSymbol == RIGHT_SQUARE_BRACKET) {
+					currentState = FieldParser::State::END;
+				} else if (*currentSymbol != '\0') {
+					end += *currentSymbol;
+				} else {
+					throw MSG_ClientError("Symbol ] expected");
+				}
+				break;
+
+			case FieldParser::QUOTE_SQUARE_BRACKET:
+				if (*currentSymbol == quote) {
+					currentState = FieldParser::END_SQUARE_BRACKET;
+				} else if (*currentSymbol == '\\') {
+					currentState = FieldParser::ESCAPE;
+					oldState = QUOTE_SQUARE_BRACKET;
+				} else if (isEnd && *currentSymbol != '\0') {
+					end += *currentSymbol;
+				} else if (!isEnd && *currentSymbol != '\0') {
+					start += *currentSymbol;
+				}
+				break;
+
+			case FieldParser::END_SQUARE_BRACKET:
+				if (*currentSymbol == RIGHT_SQUARE_BRACKET) {
+					currentState = FieldParser::State::END;
+				} else {
+					throw MSG_ClientError("Symbol ] expected");
 				}
 				break;
 
