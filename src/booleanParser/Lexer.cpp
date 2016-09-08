@@ -76,7 +76,7 @@ Lexer::NextToken()
 	string lcSymbol;
 
 	while (true) {
-		symbol = "";
+		symbol.clear();
 		symbol += currentSymbol.symbol;
 		switch (currentState) {
 			case LexerState::INIT:
