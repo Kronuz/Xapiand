@@ -1066,7 +1066,7 @@ HttpClient::search_view()
 
 	int db_flags = DB_OPEN;
 
-	if (query_field->atomic) {
+	if (query_field->volatile_) {
 		db_flags |= DB_WRITABLE;
 	}
 
@@ -1421,11 +1421,11 @@ HttpClient::query_field_maker(int flag)
 	}
 
 	if (flag & QUERY_FIELD_ID || flag & QUERY_FIELD_SEARCH) {
-		if (query_parser.next("atomic") != -1) {
-			query_field->atomic = true;
+		if (query_parser.next("volatile") != -1) {
+			query_field->volatile_ = true;
 			if (query_parser.len) {
 				try {
-					query_field->atomic = Serialise::boolean(query_parser.get()) == "t";
+					query_field->volatile_ = Serialise::boolean(query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
