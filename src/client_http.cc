@@ -1415,7 +1415,6 @@ HttpClient::query_field_maker(int flag)
 	}
 
 	if (flag & QUERY_FIELD_ID || flag & QUERY_FIELD_SEARCH) {
-		query_field->offset = 0;
 		if (query_parser.next("offset") != -1) {
 			try {
 				query_field->offset = static_cast<unsigned>(std::stoul(query_parser.get()));
@@ -1423,7 +1422,6 @@ HttpClient::query_field_maker(int flag)
 		}
 		query_parser.rewind();
 
-		query_field->check_at_least = 0;
 		if (query_parser.next("check_at_least") != -1) {
 			try {
 				query_field->check_at_least = static_cast<unsigned>(std::stoul(query_parser.get()));
@@ -1431,7 +1429,6 @@ HttpClient::query_field_maker(int flag)
 		}
 		query_parser.rewind();
 
-		query_field->limit = 10;
 		if (query_parser.next("limit") != -1) {
 			try {
 				query_field->limit = static_cast<unsigned>(std::stoul(query_parser.get()));
@@ -1495,7 +1492,6 @@ HttpClient::query_field_maker(int flag)
 		}
 		query_parser.rewind();
 
-		query_field->collapse_max = 1;
 		if (query_parser.next("collapse_max") != -1) {
 			try {
 				query_field->collapse_max = static_cast<unsigned>(std::stoul(query_parser.get()));
