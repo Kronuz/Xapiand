@@ -731,7 +731,7 @@ FieldParser::parse() {
 	while (true) {
 		switch (currentState) {
 			case FieldParser::State::INIT:
-				if (isalpha(*currentSymbol)) {
+				if (isalpha(*currentSymbol) || *currentSymbol == '_') {
 					currentState = FieldParser::State::FIELD;
 					off_field = currentSymbol;
 					off_fieldot = currentSymbol;
