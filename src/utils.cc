@@ -1461,7 +1461,7 @@ void adjustOpenFilesLimit(size_t& max_clients) {
 				L_WARNING(nullptr, "Server can't set maximum open files to %llu because of OS error: %s", (unsigned long long) maxfiles, strerror(setrlimit_error));
 				L_WARNING(nullptr, "Current maximum open files is %llu maxclients has been reduced to %d to compensate for low ulimit. If you need higher maxclients increase 'ulimit -n'", (unsigned long long) bestlimit, max_clients);
 			} else {
-				L_NOTICE(nullptr, "Increased maximum number of open files to %llu (it was originally set to %llu)", (unsigned long long) maxfiles, (unsigned long long) oldlimit);
+				L_INFO(nullptr, "Increased maximum number of open files to %llu (it was originally set to %llu)", (unsigned long long) maxfiles, (unsigned long long) oldlimit);
 			}
 		}
 	}
