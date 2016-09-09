@@ -104,7 +104,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 					if (heartbeat) {
 						L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node->name.c_str(), inet_ntop(AF_INET, &remote_node->addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node->http_port, remote_node->binary_port);
 					} else {
-						L_DISCOVERY(this, "Node %s joining the party (1)...", remote_node.name.c_str());
+						L_DISCOVERY(this, "Node %s joining the party (1)...", remote_node->name.c_str());
 					}
 					auto local_node_copy = std::make_unique<Node>(*local_node_);
 					local_node_copy->regions = -1;
@@ -121,7 +121,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 			if (heartbeat) {
 				L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)", remote_node->name.c_str(), inet_ntop(AF_INET, &remote_node->addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node->http_port, remote_node->binary_port);
 			} else {
-				L_DISCOVERY(this, "Node %s joining the party (2)...", remote_node.name.c_str());
+				L_DISCOVERY(this, "Node %s joining the party (2)...", remote_node->name.c_str());
 			}
 			auto local_node_copy = std::make_unique<Node>(*local_node_);
 			local_node_copy->regions = -1;
@@ -308,7 +308,7 @@ DiscoveryServer::_db_wave(bool bossy, const std::string& message)
 		L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node->name.c_str(), inet_ntop(AF_INET, &remote_node->addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node->http_port, remote_node->binary_port);
 	}
 
-	L_DISCOVERY(this, "Node %s has '%s' with a mastery of %llx!", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
+	L_DISCOVERY(this, "Node %s has '%s' with a mastery of %llx!", remote_node->name.c_str(), index_path.c_str(), remote_mastery_level);
 
 	if (XapiandManager::manager->get_region() == XapiandManager::manager->get_region(index_path)) {
 		L_DEBUG(this, "The DB is in the same region that this cluster!");
