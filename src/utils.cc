@@ -86,8 +86,6 @@
 
 
 const std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
-const std::regex find_range_re("(.*)\\.\\.(.*)", std::regex::optimize);
-
 
 pos_time_t b_time;
 std::chrono::time_point<std::chrono::system_clock> init_time;

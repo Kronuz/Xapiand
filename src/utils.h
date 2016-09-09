@@ -193,7 +193,6 @@ struct File_ptr {
 };
 
 extern const std::regex numeric_re;
-extern const std::regex find_range_re;
 
 // Varibles used by server stats.
 extern pos_time_t b_time;
