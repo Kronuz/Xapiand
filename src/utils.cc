@@ -792,6 +792,9 @@ FieldParser::parse() {
 					off_value = off_single_quote_value + 1;
 					++len_single_quote_value;
 					++len_value;
+				} else if (*currentSymbol == LEFT_SQUARE_BRACKET) {
+					currentState = FieldParser::State::INIT_SQUARE_BRACKET;
+					isrange = true;
 				} else {
 					currentState = FieldParser::State::VALUE;
 					off_value = currentSymbol;
