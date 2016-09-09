@@ -154,6 +154,7 @@ struct query_field_t {
 	unsigned offset;
 	unsigned limit;
 	unsigned check_at_least;
+	bool atomic;
 	bool spelling;
 	bool synonyms;
 	bool commit;
@@ -175,7 +176,7 @@ struct query_field_t {
 	bool icase;
 
 	query_field_t()
-		: offset(0), limit(10), check_at_least(0), spelling(true), synonyms(false), commit(false),
+		: offset(0), limit(10), check_at_least(0), atomic(false), spelling(true), synonyms(false), commit(false),
 		  unique_doc(false), is_fuzzy(false), is_nearest(false), collapse_max(1), icase(false) { }
 };
 

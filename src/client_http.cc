@@ -1064,7 +1064,13 @@ HttpClient::search_view()
 
 	operation_begins = std::chrono::system_clock::now();
 
-	db_handler.reset(endpoints, DB_OPEN);
+	int db_flags = DB_OPEN;
+
+	if (query_field->atomic) {
+		db_flags |= DB_WRITABLE;
+	}
+
+	db_handler.reset(endpoints, db_flags);
 	try {
 		db_handler.get_mset(*query_field, mset, spies, suggestions);
 	} catch (CheckoutError) {
@@ -1415,6 +1421,16 @@ HttpClient::query_field_maker(int flag)
 	}
 
 	if (flag & QUERY_FIELD_ID || flag & QUERY_FIELD_SEARCH) {
+		if (query_parser.next("atomic") != -1) {
+			query_field->atomic = true;
+			if (query_parser.len) {
+				try {
+					query_field->atomic = Serialise::boolean(query_parser.get()) == "t";
+				} catch (const Exception&) { }
+			}
+		}
+		query_parser.rewind();
+
 		if (query_parser.next("offset") != -1) {
 			try {
 				query_field->offset = static_cast<unsigned>(std::stoul(query_parser.get()));
