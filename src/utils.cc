@@ -1010,9 +1010,12 @@ bool strhasupper(const std::string& str) {
 
 
 bool isRange(const std::string& str) {
-	FieldParser fieldparser(str);
-	fieldparser.parse();
-	return fieldparser.isrange;
+	try {
+		FieldParser fieldparser(str);
+		fieldparser.parse();
+		return fieldparser.isrange;
+	} catch (const ClientError&) { }
+	return false;
 }
 
 
