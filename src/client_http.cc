@@ -57,7 +57,7 @@
 
 #define QUERY_FIELD_COMMIT (1 << 0)
 #define QUERY_FIELD_SEARCH (1 << 1)
-#define QUERY_FIELD_RANGE  (1 << 2)
+#define QUERY_FIELD_ID     (1 << 2)
 #define QUERY_FIELD_TIME   (1 << 3)
 
 
@@ -980,7 +980,7 @@ HttpClient::facets_view()
 
 	path_parser.off_id = nullptr;
 	endpoints_maker(1s);
-	query_field_maker(QUERY_FIELD_SEARCH | QUERY_FIELD_RANGE);
+	query_field_maker(QUERY_FIELD_SEARCH);
 
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
@@ -1047,10 +1047,8 @@ HttpClient::search_view()
 
 	if (!path_parser.off_id) {
 		query_field_flags |= QUERY_FIELD_SEARCH;
-	}
-
-	if (chunked) {
-		query_field_flags |= QUERY_FIELD_RANGE;
+	} else {
+		query_field_flags |= QUERY_FIELD_ID;
 	}
 
 	endpoints_maker(1s);
@@ -1416,6 +1414,32 @@ HttpClient::query_field_maker(int flag)
 		query_parser.rewind();
 	}
 
+	if (flag & QUERY_FIELD_ID || flag & QUERY_FIELD_SEARCH) {
+		query_field->offset = 0;
+		if (query_parser.next("offset") != -1) {
+			try {
+				query_field->offset = static_cast<unsigned>(std::stoul(query_parser.get()));
+			} catch (const std::invalid_argument&) { }
+		}
+		query_parser.rewind();
+
+		query_field->check_at_least = 0;
+		if (query_parser.next("check_at_least") != -1) {
+			try {
+				query_field->check_at_least = static_cast<unsigned>(std::stoul(query_parser.get()));
+			} catch (const std::invalid_argument&) { }
+		}
+		query_parser.rewind();
+
+		query_field->limit = 10;
+		if (query_parser.next("limit") != -1) {
+			try {
+				query_field->limit = static_cast<unsigned>(std::stoul(query_parser.get()));
+			} catch (const std::invalid_argument&) { }
+		}
+		query_parser.rewind();
+	}
+
 	if (flag & QUERY_FIELD_SEARCH) {
 		if (query_parser.next("spelling") != -1) {
 			query_field->spelling = true;
@@ -1451,34 +1475,6 @@ HttpClient::query_field_maker(int flag)
 
 		while (query_parser.next("partial") != -1) {
 			query_field->partial.push_back(query_parser.get());
-		}
-		query_parser.rewind();
-	}
-
-	if (flag & QUERY_FIELD_RANGE) {
-		if (!query_field) query_field = std::make_unique<query_field_t>();
-
-		query_field->offset = 0;
-		if (query_parser.next("offset") != -1) {
-			try {
-				query_field->offset = static_cast<unsigned>(std::stoul(query_parser.get()));
-			} catch (const std::invalid_argument&) { }
-		}
-		query_parser.rewind();
-
-		query_field->check_at_least = 0;
-		if (query_parser.next("check_at_least") != -1) {
-			try {
-				query_field->check_at_least = static_cast<unsigned>(std::stoul(query_parser.get()));
-			} catch (const std::invalid_argument&) { }
-		}
-		query_parser.rewind();
-
-		query_field->limit = 10;
-		if (query_parser.next("limit") != -1) {
-			try {
-				query_field->limit = static_cast<unsigned>(std::stoul(query_parser.get()));
-			} catch (const std::invalid_argument&) { }
 		}
 		query_parser.rewind();
 
