@@ -1012,8 +1012,9 @@ bool strhasupper(const std::string& str) {
 
 
 bool isRange(const std::string& str) {
-	std::smatch m;
-	return std::regex_match(str, m, find_range_re);
+	FieldParser fieldparser(str);
+	fieldparser.parse();
+	return fieldparser.isrange;
 }
 
 
