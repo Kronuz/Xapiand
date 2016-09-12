@@ -126,7 +126,7 @@ Lexer::NextToken()
 				}
 				else
 				{
-					string msj = "Symbol " + symbol + " is not recognized";
+					string msj = "Symbol " + symbol + " not expected";
 					throw LexicalException(msj.c_str());
 				}
 				break;
@@ -191,7 +191,7 @@ Lexer::NextToken()
 				}
 				else
 				{
-					string msj = "Symbol EOF not expected";;
+					string msj = "Symbol EOF not expected";
 					throw LexicalException(msj.c_str());
 				}
 				break;
