@@ -297,7 +297,11 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	try {
 		db_handler.get_document(std::to_string(local_node_->id));
 	} catch (const DocNotFoundError&) {
-		throw MSG_Error("Cluster database is corrupt");
+		L_CRIT(this, "Cluster database is corrupt");
+		sig_exit(-EX_DATAERR);
+	} catch (const Error& e) {
+		L_CRIT(this, "Exception:%s", e.what());
+		sig_exit(-EX_SOFTWARE);
 	}
 
 	// Set node as ready!
