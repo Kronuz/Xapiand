@@ -22,6 +22,9 @@
 #
 from __future__ import absolute_import
 
+__all__ = ['Xapiand']
+
+import itertools
 import json
 import os
 
@@ -39,6 +42,7 @@ class Xapiand(object):
     """
 
     session = requests.Session()
+    session.mount('http://', requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100))
     _methods = dict(
         search=(session.get, True, 'results'),
         facets=(session.get, True, 'facets'),
@@ -57,7 +61,7 @@ class Xapiand(object):
         self.port = port
         self.commit = commit
 
-    def build_url(self, action_request, index, ip, port, nodename, id, body):
+    def _build_url(self, action_request, index, ip, port, nodename, id, body):
         if ip and ':' in ip:
             ip, _, port = ip.partition(':')
         if not ip:
@@ -94,7 +98,7 @@ class Xapiand(object):
         """
         method, stream, key = self._methods[action_request]
 
-        url = self.build_url(action_request, index, ip, port, nodename, id, body)
+        url = self._build_url(action_request, index, ip, port, nodename, id, body)
 
         params = kwargs.pop('params', None)
         if params is not None:
@@ -117,12 +121,19 @@ class Xapiand(object):
         is_json = 'application/json' in res.headers['content-type']
 
         if stream:
-            def results(lines):
-                for line in lines:
-                    # filter out keep-alive new lines
-                    if line:
+            def results(lines, n=100):
+                def feed():
+                    feed.cache = []
+                    feed.cache.extend(l for l in itertools.islice(lines, n) if l)
+                feed()
+                yield
+                while feed.cache:
+                    for line in feed.cache:
                         yield json.loads(line) if is_json else line
-            results = results(res.iter_lines())
+                    feed()
+            lll = res.iter_lines(delimiter='\n\n')
+            results = results(lll)
+            next(results)
         else:
             results = [res.json() if is_json else res.content]
 
