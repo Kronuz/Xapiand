@@ -103,7 +103,7 @@ Lexer::NextToken()
 					quote = DOUBLEQUOTE;
 					currentSymbol = contentReader.NextSymbol();
 				}
-				else if(isalpha(currentSymbol.symbol) || currentSymbol.symbol == '_')
+				else if(isalnum(currentSymbol.symbol) || currentSymbol.symbol == '_')
 				{
 					lexeme += currentSymbol.symbol;
 					currentState = LexerState::TOKEN;
