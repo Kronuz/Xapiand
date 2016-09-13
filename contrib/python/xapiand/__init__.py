@@ -50,7 +50,7 @@ class Xapiand(object):
         get=(session.get, False, 'result'),
         delete=(session.delete, False, 'result'),
         head=(session.head, False, 'result'),
-        index=(session.put, False, 'result'),
+        put=(session.put, False, 'result'),
         patch=(session.patch, False, 'result'),
     )
 
@@ -232,7 +232,7 @@ class Xapiand(object):
         )
         return self._send_request('delete', index, **kwargs)
 
-    def index(self, index, body, id, commit=None, pretty=False, kwargs=None):
+    def put(self, index, body, id, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
         kwargs['id'] = id
         kwargs['body'] = body
@@ -240,7 +240,8 @@ class Xapiand(object):
             commit=self.commit if commit is None else commit,
             pretty=pretty,
         )
-        return self._send_request('index', index, **kwargs)
+        return self._send_request('put', index, **kwargs)
+    index = put
 
     def patch(self, index, id, body, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
