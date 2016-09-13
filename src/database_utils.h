@@ -189,9 +189,9 @@ enum class MIMEType {
 };
 
 
-// All the field names that do not start or end with '_' are valid.
+// All the field names that start with alphanumeric are valid.
 inline bool is_valid(const std::string& field_name) {
-	return field_name.front() != '_' && field_name.back() != '_';
+	return !field_name.empty() && isalnum(field_name.front());
 }
 
 
