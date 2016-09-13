@@ -33,7 +33,7 @@ from django.utils.importlib import import_module
 from django.core.exceptions import ImproperlyConfigured
 from django.utils import six
 
-from ..xapiand import Xapiand
+from xapiand import Xapiand
 
 
 DOCUMENT_TAGS_FIELD = 'tags'
