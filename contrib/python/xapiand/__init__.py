@@ -34,6 +34,35 @@ except ImportError:
     raise ImportError("Xapiand requires the installation of the requests module.")
 
 
+class Result(dict):
+    def __init__(self, *args, **kwargs):
+        super(Result, self).__init__(*args, **kwargs)
+        for k in list(self):
+            if k[0] == '_':
+                setattr(self, k[1:], self.pop(k))
+
+
+class Results(object):
+    def __init__(self, generator):
+        self.generator = generator
+
+    def __len__(self):
+        return int(getattr(self, 'total_count', 0))
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        return Result(next(iter(self.generator)))
+    __next__ = next
+
+
+class DoesNotExist(Exception):
+    pass
+
+NA = object()
+
+
 class Xapiand(object):
 
     """
@@ -54,12 +83,13 @@ class Xapiand(object):
         patch=(session.patch, False, 'result'),
     )
 
-    def __init__(self, ip='127.0.0.1', port=8880, commit=False):
+    def __init__(self, ip='127.0.0.1', port=8880, commit=False, prefix=None):
         if ip and ':' in ip:
             ip, _, port = ip.partition(':')
         self.ip = ip
         self.port = port
         self.commit = commit
+        self.prefix = prefix
 
     def _build_url(self, action_request, index, ip, port, nodename, id, body):
         if ip and ':' in ip:
@@ -68,24 +98,25 @@ class Xapiand(object):
             ip = self.ip
         if not port:
             port = self.port
-        host = '%s:%s' % (ip, port)
+        host = '{}:{}'.format(ip, port)
 
         if isinstance(index, (tuple, list)):
             index = ','.join(index)
 
-        if id is not None:
-            if nodename:
-                url = 'http://%s/%s@%s/%s' % (host, index, nodename, id)
-            else:
-                url = 'http://%s/%s/%s' % (host, index, id)
+        prefix = '{}/'.format(self.prefix) if self.prefix else ''
+
+        nodename = '@{}'.format(nodename) if nodename else ''
+
+        if id is None:
+            action_request = '_{}/'.format(action_request)
         else:
-            if nodename:
-                url = 'http://%s/%s@%s/_%s/' % (host, index, nodename, action_request)
-            else:
-                url = 'http://%s/%s/_%s/' % (host, index, action_request)
+            action_request = id
+
+        url = 'http://{}/{}{}{}/{}'.format(host, prefix, index, nodename, action_request)
+
         return url
 
-    def _send_request(self, action_request, index, ip=None, port=None, nodename=None, id=None, body=None, **kwargs):
+    def _send_request(self, action_request, index, ip=None, port=None, nodename=None, id=None, body=None, default=NA, **kwargs):
         """
         :arg action_request: Perform index, delete, serch, facets, stats, patch, head actions per request
         :arg query: Query to process on xapiand
@@ -116,9 +147,15 @@ class Xapiand(object):
             res = method(url, body, **kwargs)
         else:
             res = method(url, **kwargs)
-        res.raise_for_status()
 
-        is_json = 'application/json' in res.headers['content-type']
+        if res.status_code == 404 and action_request in ('patch', 'delete', 'get'):
+            if default is NA:
+                raise DoesNotExist
+            return default
+        else:
+            res.raise_for_status()
+
+        is_json = 'application/json' in res.headers.get('content-type', '')
 
         if stream:
             def results(lines, n=100):
@@ -137,26 +174,21 @@ class Xapiand(object):
         else:
             results = [res.json() if is_json else res.content]
 
+        results = Results(results)
         if key == 'result':
-            for result in results:
-                results = result
-                break
+            results = results.next()
 
-        response = {}
-        response[key] = results
+        for k, v in res.headers.items():
+            setattr(results, k.replace('-', '_'), v)
 
-        if 'total-count' in res.headers:
-            response['size'] = res.headers['total-count']
-        elif action_request == 'search' and res.ok:
-            response['size'] = 0
+        return results
 
-        return response
-
-    def search(self, index, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
+    def search(self, index, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, volatile=False, kwargs=None, **kw):
         kwargs = kwargs or {}
         kwargs.update(kw)
         kwargs['params'] = dict(
             pretty=pretty,
+            volatile=volatile,
         )
         if query is not None:
             kwargs['params']['query'] = query
@@ -176,11 +208,12 @@ class Xapiand(object):
             kwargs['params']['language'] = language
         return self._send_request('search', index, **kwargs)
 
-    def facets(self, index, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
+    def facets(self, index, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, volatile=False, kwargs=None, **kw):
         kwargs = kwargs or {}
         kwargs.update(kw)
         kwargs['params'] = dict(
             pretty=pretty,
+            volatile=volatile,
         )
         if query is not None:
             kwargs['params']['query'] = query
@@ -215,12 +248,14 @@ class Xapiand(object):
         )
         return self._send_request('head', index, **kwargs)
 
-    def get(self, index, id, pretty=False, kwargs=None):
+    def get(self, index, id, default=NA, pretty=False, volatile=False, kwargs=None):
         kwargs = kwargs or {}
         kwargs['id'] = id
         kwargs['params'] = dict(
             pretty=pretty,
+            volatile=volatile,
         )
+        kwargs['default'] = default
         return self._send_request('get', index, **kwargs)
 
     def delete(self, index, id, commit=None, pretty=False, kwargs=None):
