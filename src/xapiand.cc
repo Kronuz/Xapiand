@@ -567,41 +567,43 @@ void writepid(const char* pidfile) {
 }
 
 
-void usedir(const char* path) {
+void usedir(const char* path, bool solo) {
 
 #ifdef XAPIAND_CLUSTERING
-	DIR *dirp;
-	dirp = opendir(path, true);
-	if (!dirp) {
-		L_CRIT(nullptr, "Cannot open working directory: %s", path);
-		throw Exit(EX_OSFILE);
-	}
-
-	bool empty = true;
-	struct dirent *ent;
-	while ((ent = readdir(dirp)) != nullptr) {
-		const char *s = ent->d_name;
-		if (ent->d_type == DT_DIR) {
-			continue;
+	if (!solo) {
+		DIR *dirp;
+		dirp = opendir(path, true);
+		if (!dirp) {
+			L_CRIT(nullptr, "Cannot open working directory: %s", path);
+			throw Exit(EX_OSFILE);
 		}
-		if (ent->d_type == DT_REG) {
-#if defined(__APPLE__) && defined(__MACH__)
-			if (ent->d_namlen == 9 && strcmp(s, "flintlock") == 0)
-#else
-			if (strcmp(s, "flintlock") == 0)
-#endif
-			{
-				empty = true;
-				break;
+
+		bool empty = true;
+		struct dirent *ent;
+		while ((ent = readdir(dirp)) != nullptr) {
+			const char *s = ent->d_name;
+			if (ent->d_type == DT_DIR) {
+				continue;
 			}
+			if (ent->d_type == DT_REG) {
+#if defined(__APPLE__) && defined(__MACH__)
+				if (ent->d_namlen == 9 && strcmp(s, "flintlock") == 0)
+#else
+					if (strcmp(s, "flintlock") == 0)
+#endif
+					{
+						empty = true;
+						break;
+					}
+			}
+			empty = false;
 		}
-		empty = false;
-	}
-	closedir(dirp);
+		closedir(dirp);
 
-	if (!empty) {
-		L_CRIT(nullptr, "Working directory must be empty or a valid xapian database: %s", path);
-		throw Exit(EX_DATAERR);
+		if (!empty) {
+			L_CRIT(nullptr, "Working directory must be empty or a valid xapian database: %s", path);
+			throw Exit(EX_DATAERR);
+		}
 	}
 #endif
 
@@ -634,7 +636,7 @@ void banner() {
 
 
 void run(const opts_t &opts) {
-	usedir(opts.database.c_str());
+	usedir(opts.database.c_str(), opts.solo);
 
 	demote(opts.uid.c_str(), opts.gid.c_str());
 
