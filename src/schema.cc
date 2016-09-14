@@ -908,10 +908,7 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 void
 Schema::readable_prefix(MsgPack& prop_prefix, MsgPack&)
 {
-	auto prefix = prop_prefix.as_string();
-	// Convert prefix.
-
-	prop_prefix = prefix;
+	prop_prefix = prop_prefix.as_string();
 }
 
 
