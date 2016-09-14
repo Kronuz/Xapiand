@@ -599,10 +599,10 @@ specification_t::to_string() const
 Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
-	if (schema->is_null()) {
+	if (schema->is_undefined()) {
 		MsgPack new_schema = {
 			{ RESERVED_VERSION, DB_VERSION_SCHEMA },
-			{ RESERVED_SCHEMA, nullptr },
+			{ RESERVED_SCHEMA, MsgPack() },
 		};
 		new_schema.lock();
 		schema = std::make_shared<const MsgPack>(std::move(new_schema));
@@ -736,32 +736,32 @@ Schema::set_type(const MsgPack& item_doc)
 	L_CALL(this, "Schema::set_type()");
 
 	const auto& field = item_doc.is_array() ? item_doc.at(0) : item_doc;
-	switch (field.type()) {
-		case msgpack::type::POSITIVE_INTEGER:
+	switch (field.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
 			if (specification.numeric_detection) {
 				specification.sep_types[2] = FieldType::POSITIVE;
 				return;
 			}
 			break;
-		case msgpack::type::NEGATIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:
 			if (specification.numeric_detection) {
 				specification.sep_types[2] = FieldType::INTEGER;
 				return;
 			}
 			break;
-		case msgpack::type::FLOAT:
+		case MsgPack::Type::FLOAT:
 			if (specification.numeric_detection) {
 				specification.sep_types[2] = FieldType::FLOAT;
 				return;
 			}
 			break;
-		case msgpack::type::BOOLEAN:
+		case MsgPack::Type::BOOLEAN:
 			if (specification.bool_detection) {
 				specification.sep_types[2] = FieldType::BOOLEAN;
 				return;
 			}
 			break;
-		case msgpack::type::STR: {
+		case MsgPack::Type::STR: {
 			auto str_value = field.as_string();
 			if (specification.date_detection && Datetime::isDate(str_value)) {
 				specification.sep_types[2] = FieldType::DATE;
@@ -788,11 +788,11 @@ Schema::set_type(const MsgPack& item_doc)
 			}
 			break;
 		}
-		case msgpack::type::ARRAY:
+		case MsgPack::Type::ARRAY:
 			throw MSG_ClientError("%s can not be array of arrays", RESERVED_VALUE);
-		case msgpack::type::MAP:
+		case MsgPack::Type::MAP:
 			throw MSG_ClientError("%s can not be object", RESERVED_VALUE);
-		case msgpack::type::NIL:
+		case MsgPack::Type::NIL:
 			// Do not process this field.
 			throw MSG_DummyException();
 		default:
@@ -1713,13 +1713,13 @@ void
 Schema::fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& data, Xapian::Document& doc, const char* reserved_word)
 {
 	specification.fixed_index = true;
-	switch (object.type()) {
-		case msgpack::type::MAP: {
+	switch (object.getType()) {
+		case MsgPack::Type::MAP: {
 			auto prop_ptr = &properties;
 			auto data_ptr = &data;
 			return index_object(std::ref(prop_ptr), object, std::ref(data_ptr), doc);
 		}
-		case msgpack::type::ARRAY:
+		case MsgPack::Type::ARRAY:
 			return index_array(properties, object, data, doc);
 		default:
 			throw MSG_ClientError("%s must be an object or an array of objects", reserved_word);
@@ -1756,8 +1756,8 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		} catch (const std::out_of_range) { }
 	}
 
-	switch (object.type()) {
-		case msgpack::type::MAP: {
+	switch (object.getType()) {
+		case MsgPack::Type::MAP: {
 			bool offsprings = false;
 			TaskVector tasks;
 			tasks.reserve(object.size());
@@ -1831,7 +1831,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			}
 			break;
 		}
-		case msgpack::type::ARRAY:
+		case MsgPack::Type::ARRAY:
 			if unlikely(specification.sep_types[1] == FieldType::EMPTY) {
 				set_type_to_array();
 			}
@@ -1861,8 +1861,8 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 	const auto spc_start = specification;
 	size_t pos = 0;
 	for (const auto& item : array) {
-		switch (item.type()) {
-			case msgpack::type::MAP: {
+		switch (item.getType()) {
+			case MsgPack::Type::MAP: {
 				TaskVector tasks;
 				tasks.reserve(item.size());
 				specification.value = nullptr;
@@ -1935,7 +1935,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				specification = spc_start;
 				break;
 			}
-			case msgpack::type::ARRAY: {
+			case MsgPack::Type::ARRAY: {
 				MsgPack& data_pos = specification.store ? data[pos] : data;
 				index_item(doc, item, data_pos);
 				if (specification.store) {
@@ -2052,11 +2052,11 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 		if (specification.store) {
 			// Add value to data.
 			auto& data_value = data[RESERVED_VALUE];
-			switch (data_value.type()) {
-				case msgpack::type::NIL:
+			switch (data_value.getType()) {
+				case MsgPack::Type::NIL:
 					data_value = value;
 					break;
-				case msgpack::type::ARRAY:
+				case MsgPack::Type::ARRAY:
 					data_value.push_back(value);
 					break;
 				default:
@@ -2289,11 +2289,11 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 		if (specification.store) {
 			// Add value to data.
 			auto& data_value = data[RESERVED_VALUE];
-			switch (data_value.type()) {
-				case msgpack::type::NIL:
+			switch (data_value.getType()) {
+				case MsgPack::Type::NIL:
 					data_value = values;
 					break;
-				case msgpack::type::ARRAY:
+				case MsgPack::Type::ARRAY:
 					if (values.is_array()) {
 						for (const auto& value : values) {
 							data_value.push_back(value);
