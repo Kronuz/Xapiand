@@ -1866,7 +1866,6 @@ namespace msgpack {
 			struct object<std::nullptr_t> {
 				void operator()(msgpack::object& o, std::nullptr_t) const {
 					msgpack::object nil;
-					nil.type = msgpack::type::NIL;
 					o = msgpack::object(nil);
 				}
 			};
@@ -1875,7 +1874,6 @@ namespace msgpack {
 			struct object_with_zone<std::nullptr_t> {
 				void operator()(msgpack::object::with_zone& o, std::nullptr_t) const {
 					msgpack::object nil;
-					nil.type = msgpack::type::NIL;
 					msgpack::object obj(nil, o.zone);
 					o.type = obj.type;
 					o.via = obj.via;
