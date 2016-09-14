@@ -28,6 +28,26 @@
 
 #include "rapidjson/pointer.h"
 
+#define PATCH_PATH   "path"
+#define PATCH_FROM   "from"
+#define PATCH_VALUE  "value"
+#define PATCH_LIMIT  "limit"
+#define PATCH_OP     "op"
+#define PATCH_ADD    "add"
+#define PATCH_REM    "remove"
+#define PATCH_REP    "replace"
+#define PATCH_MOV    "move"
+#define PATCH_COP    "copy"
+#define PATCH_TES    "test"
+#define PATCH_INC    "incr"
+#define PATCH_DEC    "decr"
+
+
+using dispatch_patch_op = void (*)(const MsgPack&, MsgPack&);
+
+
+extern const std::unordered_map<std::string, dispatch_patch_op> map_dispatch_patch_op;
+
 
 /* Support for RFC 6902 */
 
@@ -39,83 +59,102 @@ void patch_move(const MsgPack& obj_patch, MsgPack& object);
 void patch_copy(const MsgPack& obj_patch, MsgPack& object);
 void patch_test(const MsgPack& obj_patch, MsgPack& object);
 void patch_incr(const MsgPack& obj_patch, MsgPack& object);
-void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr=false);
-const MsgPack& get_patch_value(const MsgPack& obj_patch);
-bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch);
+void patch_decr(const MsgPack& obj_patch, MsgPack& object);
+
+const MsgPack& get_patch_value(const MsgPack& obj_patch, const char* patch_op);
+double get_patch_double(const MsgPack& val, const char* patch_op);
 
 
 inline void _add(MsgPack& o, const MsgPack& val, const std::string& target) {
-	if (o.is_map()) {
-		o[target] = val;
-	} else if (o.is_array()) {
-		if (target.compare("-") == 0) {
-			o.push_back(val);
-		} else {
-			int offset = strict(std::stoi, target);
-			o.insert(static_cast<size_t>(offset), val);
-		}
-	} else {
-		throw MSG_ClientError("Object is not array or map");
+	switch (o.getType()) {
+		case MsgPack::Type::MAP:
+			o[target] = val;
+			return;
+		case MsgPack::Type::ARRAY:
+			if (target.length() == 1 && target[0] == '-') {
+				o.push_back(val);
+			} else {
+				try {
+					size_t offset = strict(std::stoul, target);
+					o.insert(offset, val);
+				} catch (const std::invalid_argument&) {
+					throw MSG_ClientError("Target in array must be a positive integer or '-'");
+				}
+			}
+			return;
+		default:
+			throw MSG_ClientError("Object is not array or map");
 	}
 }
 
 
 inline void _erase(MsgPack& o, const std::string& target) {
 	try {
-		if (o.is_array()) {
-			o.erase(strict(std::stoi, target));
-		} else {
-			o.erase(target);
+		switch (o.getType()) {
+			case MsgPack::Type::MAP:
+				o.erase(target);
+				return;
+			case MsgPack::Type::ARRAY:
+				try {
+					size_t offset = strict(std::stoul, target);
+					o.erase(offset);
+				} catch (const std::invalid_argument&) {
+					throw MSG_ClientError("Target in array must be a positive integer");
+				}
+				return;
+			default:
+				throw MSG_ClientError("Object is not array or map");
 		}
-	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Object is not array or map");
+	} catch (const std::out_of_range& e) {
+		throw MSG_ClientError("Target %s not found [%s]", target.c_str(), e.what());
 	}
 }
 
 
-inline void _incr_decr(MsgPack& o, int val) {
-	if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
+inline void _incr(MsgPack& o, double val) {
+	try {
 		o += val;
-	} else {
-		throw MSG_ClientError("Object is not integer");
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("Object is not numeric");
 	}
 }
 
 
-inline void _incr_decr(MsgPack& o, int val, int limit) {
-	if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
+inline void _incr(MsgPack& o, double val, double limit) {
+	try {
 		o += val;
 		if (val < 0) {
-			if (static_cast<int>(o.as_i64()) <= limit) {
+			if (o.as_f64() <= limit) {
 				throw MSG_LimitError("Limit exceeded");
 			}
-		} else if (static_cast<int>(o.as_i64()) >= limit) {
+		} else if (o.as_f64() >= limit) {
 			throw MSG_LimitError("Limit exceeded");
 		}
-	} else {
-		throw MSG_ClientError("Object is not integer");
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("Object is not numeric");
 	}
 }
 
 
-//Support for RFC 6901
-inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c) {
+// Support for RFC 6901
+inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c, const char* patch_op) {
 	try {
 		const auto& path = obj.at(path_c);
-		std::string path_str = path.unformatted_string();
-		rapidjson::GenericPointer<rapidjson::GenericValue<rapidjson::UTF8<> > > json_pointer(path_str.data(), path_str.size());
+		auto path_str = path.unformatted_string();
+		rapidjson::GenericPointer<rapidjson::GenericValue<rapidjson::UTF8<>>> json_pointer(path_str.data(), path_str.size());
 		size_t n_tok = json_pointer.GetTokenCount();
 
-		for (int i=0; i<static_cast<int>(n_tok); i++) {
+		for (size_t i = 0; i < n_tok; ++i) {
 			auto& t = json_pointer.GetTokens()[i];
 			path_split.push_back(std::string(t.name, t.length));
 		}
 
 		if (path_split.size() == 0 and path_str != "") {
-			throw MSG_ClientError("Bad syntax of a JSON Pointer in path:%s %s", path_str.c_str(), startswith(path_str, "/") ? "" : "perhaps forgot prefixed '/'");
+			throw MSG_ClientError("Bad syntax in '%s': %s (check RFC 6901)", path_c, path_str.c_str());
 		}
-
 	} catch (const std::out_of_range&) {
-		throw MSG_ClientError("Object MUST have exactly one \"path\" member for this operation");
+		throw MSG_ClientError("Object MUST have exactly one '%s' member for patch operation: '%s'", path_c, patch_op);
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("'%s' must be a string", path_c);
 	}
 }
