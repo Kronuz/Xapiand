@@ -25,6 +25,7 @@
 #include "hash/md5.h"
 #include "io_utils.h"
 #include "log.h"
+#include "serialise.h"
 #include "utils.h"
 
 #include "rapidjson/error/en.h"
@@ -71,9 +72,13 @@ std::string prefixed(const std::string& term, const std::string& prefix) {
 
 Xapian::valueno get_slot(const std::string& name) {
 	MD5 md5;
-	// We are left with the last 8 characters.
-	std::string _md5(md5(strhasupper(name) ? upper_string(name) : name), 24, 8);
-	auto slot = static_cast<Xapian::valueno>(std::stoul(_md5, nullptr, 16));
+	unsigned char buffer[MD5::HashBytes];
+	md5(strhasupper(name) ? upper_string(name) : name);
+	md5.getHash(buffer);
+
+	// We are left with the last half of the md5.
+	auto _slot = *reinterpret_cast<Xapian::valueno*>(buffer);
+	auto slot = Swap4Bytes(_slot);
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
 	} else if (slot == Xapian::BAD_VALUENO) {
@@ -85,15 +90,17 @@ Xapian::valueno get_slot(const std::string& name) {
 
 std::string get_prefix(const std::string& name, const std::string& prefix, char type) {
 	MD5 md5;
-	// We are left with the last 8 characters.
-	auto _md5 = get_slot_hex(name);
-	// Mapped [0-9] -> [A-J] and [A-F] -> [R-W]
-	for (auto& c : _md5) c += 17;
+	unsigned char buffer[MD5::HashBytes];
+	md5(strhasupper(name) ? upper_string(name) : name);
+	md5.getHash(buffer);
 
 	std::string result;
-	result.reserve(prefix.length() + _md5.length() + 1);
+	result.reserve(prefix.length() + MD5::HashBytes + 1);
 	result.assign(prefix).push_back(type);
-	result.append(_md5);
+	// We are left with the last half of the md5.
+	for (int i = 7; i < MD5::HashBytes; ++i) {
+		result.push_back(buffer[i]);
+	}
 	return result;
 }
 
