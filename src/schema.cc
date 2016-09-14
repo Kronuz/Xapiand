@@ -235,8 +235,10 @@ const std::unordered_map<std::string, dispatch_root> map_dispatch_root({
 
 const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable({
 	{ RESERVED_TYPE,            &Schema::readable_type           },
+	{ RESERVED_PREFIX,          &Schema::readable_prefix         },
 	{ RESERVED_STEM_STRATEGY,   &Schema::readable_stem_strategy  },
-	{ RESERVED_INDEX,           &Schema::readable_index          }
+	{ RESERVED_INDEX,           &Schema::readable_index          },
+	{ RESERVED_ACC_PREFIX,      &Schema::readable_acc_prefix     }
 });
 
 
@@ -904,6 +906,16 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 
 
 void
+Schema::readable_prefix(MsgPack& prop_prefix, MsgPack&)
+{
+	auto prefix = prop_prefix.as_string();
+	// Convert prefix.
+
+	prop_prefix = prefix;
+}
+
+
+void
 Schema::readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack&)
 {
 	prop_stem_strategy = ::readable_stem_strategy((StemStrategy)prop_stem_strategy.as_u64());
@@ -914,6 +926,15 @@ void
 Schema::readable_index(MsgPack& prop_index, MsgPack&)
 {
 	prop_index = ::readable_index((TypeIndex)prop_index.as_u64());
+}
+
+
+void
+Schema::readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack& properties)
+{
+	for (auto& prop_prefix : prop_acc_prefix) {
+		readable_prefix(prop_prefix, properties);
+	}
 }
 
 

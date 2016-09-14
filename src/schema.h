@@ -398,8 +398,10 @@ public:
 	 */
 
 	static void readable_type(MsgPack& prop_type, MsgPack& properties);
+	static void readable_prefix(MsgPack& prop_index, MsgPack& properties);
 	static void readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack& properties);
 	static void readable_index(MsgPack& prop_index, MsgPack& properties);
+	static void readable_acc_prefix(MsgPack& prop_index, MsgPack& properties);
 
 
 	/*
