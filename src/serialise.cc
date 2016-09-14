@@ -31,21 +31,21 @@
 std::string
 Serialise::MsgPack(const required_spc_t& field_spc, const ::MsgPack& field_value)
 {
-	switch (field_value.type()) {
-		case msgpack::type::NIL:
+	switch (field_value.getType()) {
+		case MsgPack::Type::NIL:
 			throw MSG_DummyException();
-		case msgpack::type::BOOLEAN:
+		case MsgPack::Type::BOOLEAN:
 			return boolean(field_spc.get_type(), field_value.as_bool());
-		case msgpack::type::POSITIVE_INTEGER:
+		case MsgPack::Type::POSITIVE_INTEGER:
 			return positive(field_spc.get_type(), field_value.as_u64());
-		case msgpack::type::NEGATIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:
 			return integer(field_spc.get_type(), field_value.as_i64());
-		case msgpack::type::FLOAT:
+		case MsgPack::Type::FLOAT:
 			return _float(field_spc.get_type(), field_value.as_f64());
-		case msgpack::type::STR:
+		case MsgPack::Type::STR:
 			return string(field_spc, field_value.as_string());
 		default:
-			throw MSG_SerialisationError("msgpack::type [%d] is not supported", field_value.type());
+			throw MSG_SerialisationError("msgpack::type [%d] is not supported", toUType(field_value.getType()));
 	}
 }
 
@@ -221,20 +221,20 @@ std::string
 Serialise::date(const ::MsgPack& value, Datetime::tm_t& tm)
 {
 	double _timestamp;
-	switch (value.type()) {
-		case msgpack::type::POSITIVE_INTEGER:
+	switch (value.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
 			_timestamp = value.as_u64();
 			tm = Datetime::to_tm_t(_timestamp);
 			return timestamp(_timestamp);
-		case msgpack::type::NEGATIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:
 			_timestamp = value.as_i64();
 			tm = Datetime::to_tm_t(_timestamp);
 			return timestamp(_timestamp);
-		case msgpack::type::FLOAT:
+		case MsgPack::Type::FLOAT:
 			_timestamp = value.as_f64();
 			tm = Datetime::to_tm_t(_timestamp);
 			return timestamp(_timestamp);
-		case msgpack::type::STR:
+		case MsgPack::Type::STR:
 			_timestamp = Datetime::timestamp(value.as_string(), tm);
 			tm = Datetime::to_tm_t(_timestamp);
 			return timestamp(_timestamp);
