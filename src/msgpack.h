@@ -228,14 +228,15 @@ public:
 	bool as_bool() const;
 	rapidjson::Document as_document() const;
 
-	bool is_null() const;
-	bool is_boolean() const;
-	bool is_number() const;
-	bool is_integer() const;
-	bool is_float() const;
-	bool is_map() const;
-	bool is_array() const;
-	bool is_string() const;
+	bool is_undefined() const noexcept;
+	bool is_null() const noexcept;
+	bool is_boolean() const noexcept;
+	bool is_number() const noexcept;
+	bool is_integer() const noexcept;
+	bool is_float() const noexcept;
+	bool is_map() const noexcept;
+	bool is_array() const noexcept;
+	bool is_string() const noexcept;
 
 	MsgPack::Type getType() const noexcept;
 
