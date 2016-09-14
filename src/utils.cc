@@ -710,7 +710,7 @@ PathParser::get_id()
 
 FieldParser::FieldParser(const std::string &p)
 	: fstr(p),
-	  isrange(false), isEnd(false),
+	  isEnd(false), isrange(false),
 	  len_field(0), off_field(nullptr),
 	  len_fieldot(0), off_fieldot(nullptr),
 	  len_value(0), off_value(nullptr),
