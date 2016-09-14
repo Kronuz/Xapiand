@@ -98,17 +98,17 @@ std::string get_prefix(const std::string& name, const std::string& prefix, char 
 }
 
 
-std::string get_slot_hex(const std::string& name) {
+std::string get_md5(const std::string& name) {
 	MD5 md5;
 	unsigned char buffer[MD5::HashBytes];
 	md5(strhasupper(name) ? upper_string(name) : name);
 	md5.getHash(buffer);
-	// We are left with the last 8 characters.
-	std::string buff_str;
-	for (int i=7; i<MD5::HashBytes; i++) {
-		buff_str.append(std::string(1,buffer[i]));
+	std::string res;
+	res.reserve(MD5::HashBytes);
+	for (int i = 0; i < MD5::HashBytes; ++i) {
+		res.push_back(buffer[i]);
 	}
-	return upper_string(buff_str);
+	return res;
 }
 
 
