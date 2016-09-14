@@ -242,8 +242,8 @@ public:
 
 	bool operator ==(const MsgPack& other) const;
 	bool operator !=(const MsgPack& other) const;
-	MsgPack operator +(long val);
-	MsgPack& operator +=(long val);
+	MsgPack operator +(double val);
+	MsgPack& operator +=(double val);
 	std::ostream& operator <<(std::ostream& s) const;
 
 	std::string unformatted_string() const;
@@ -1731,7 +1731,7 @@ inline bool MsgPack::operator!=(const MsgPack& other) const {
 }
 
 
-inline MsgPack MsgPack::operator +(long val) {
+inline MsgPack MsgPack::operator +(double val) {
 	MsgPack o(_body);
 	switch (o.getType()) {
 		case Type::NEGATIVE_INTEGER:
