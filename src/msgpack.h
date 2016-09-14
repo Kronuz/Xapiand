@@ -256,8 +256,6 @@ public:
 	friend msgpack::adaptor::pack<MsgPack>;
 	friend msgpack::adaptor::object<MsgPack>;
 	friend msgpack::adaptor::object_with_zone<MsgPack>;
-	friend msgpack::adaptor::object<std::nullptr_t>;
-	friend msgpack::adaptor::object_with_zone<std::nullptr_t>;
 };
 
 template <typename T>
