@@ -472,10 +472,14 @@ inline MsgPack::const_iterator MsgPack::cend() const {
 }
 
 
-inline MsgPack::MsgPack(const std::shared_ptr<MsgPack::Body>& b) : _body(b), _const_body(_body.get()) { }
+inline MsgPack::MsgPack(const std::shared_ptr<MsgPack::Body>& b)
+	: _body(b),
+	  _const_body(_body.get()) { }
 
 
-inline MsgPack::MsgPack(std::shared_ptr<MsgPack::Body>&& b) : _body(std::move(b)), _const_body(_body.get()) { }
+inline MsgPack::MsgPack(std::shared_ptr<MsgPack::Body>&& b)
+	: _body(std::move(b)),
+	  _const_body(_body.get()) { }
 
 
 inline void MsgPack::_initializer_array(const std::initializer_list<MsgPack>& list) {
@@ -535,7 +539,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 					return;
 				}
 				auto it = parent_body->map.find(val);
-				if (it !=parent_body->map.end()) {
+				if (it != parent_body->map.end()) {
 					if (parent_body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
 						parent_body->map.erase(it);
 					} else {
@@ -557,16 +561,19 @@ inline MsgPack::MsgPack()
 
 
 inline MsgPack::MsgPack(const MsgPack& other)
-	: _body(std::make_shared<Body>(other)), _const_body(_body.get()) { }
+	: _body(std::make_shared<Body>(other)),
+	  _const_body(_body.get()) { }
 
 
 inline MsgPack::MsgPack(MsgPack&& other)
-	: _body(std::move(other._body)), _const_body(_body.get()) { }
+	: _body(std::move(other._body)),
+	  _const_body(_body.get()) { }
 
 
 template <typename T, typename>
 inline MsgPack::MsgPack(T&& v)
-	: _body(std::make_shared<MsgPack::Body>(std::forward<T>(v))), _const_body(_body.get()) { }
+	: _body(std::make_shared<Body>(std::forward<T>(v))),
+	  _const_body(_body.get()) { }
 
 
 inline MsgPack::MsgPack(const std::initializer_list<MsgPack>& list)
@@ -609,8 +616,8 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 		if (p->key.type != msgpack::type::STR) {
 			throw msgpack::type_error();
 		}
-		auto last_key = MsgPack(std::make_shared<MsgPack::Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
-		auto last_val = MsgPack(std::make_shared<MsgPack::Body>(_body->_zone, _body->_base, _body, false, pos, last_key._body, &p->val));
+		auto last_key = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
+		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, last_key._body, &p->val));
 		auto str_key = std::string(p->key.via.str.ptr, p->key.via.str.size);
 		auto inserted = _body->map.insert(std::make_pair(str_key, std::make_pair(std::move(last_key), std::move(last_val))));
 		if (!inserted.second) {
@@ -650,7 +657,7 @@ inline MsgPack* MsgPack::_init_array(size_t pos) {
 	_body->array.reserve(_body->_capacity);
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
-		auto last_val = MsgPack(std::make_shared<MsgPack::Body>(_body->_zone, _body->_base, _body, false, pos, nullptr, p));
+		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, nullptr, p));
 		ret = &*_body->array.insert(_body->array.end(), std::move(last_val));
 	}
 	assert(_body->_obj->via.array.size == _body->array.size());
@@ -1080,7 +1087,7 @@ inline MsgPack& MsgPack::put(const std::string& s, T&& val) {
 template <typename T>
 inline MsgPack::iterator MsgPack::insert(const std::string& s, T&& val) {
 	_put(s, std::forward<T>(val));
-	return MsgPack::Iterator<MsgPack>(this, size()-1);
+	return MsgPack::Iterator<MsgPack>(this, size() - 1);
 }
 
 
