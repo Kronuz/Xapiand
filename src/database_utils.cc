@@ -73,8 +73,8 @@ std::string prefixed(const std::string& term, const std::string& prefix) {
 
 Xapian::valueno get_slot(const std::string& name) {
 	MD5 md5;
+	md5(name);
 	unsigned char buffer[MD5::HashBytes];
-	md5(strhasupper(name) ? upper_string(name) : name);
 	md5.getHash(buffer);
 
 	// We are left with the last half of the md5.
@@ -91,8 +91,8 @@ Xapian::valueno get_slot(const std::string& name) {
 
 std::string get_prefix(const std::string& name, const std::string& prefix, char type) {
 	MD5 md5;
+	md5(name);
 	unsigned char buffer[MD5::HashBytes];
-	md5(strhasupper(name) ? upper_string(name) : name);
 	md5.getHash(buffer);
 
 	std::string result;
@@ -108,20 +108,27 @@ std::string get_prefix(const std::string& name, const std::string& prefix, char 
 
 std::string get_uuid_field_prefix(const std::string& name, const std::string& prefix, char type) {
 	SHA256 sha256;
+	sha256(name);
+	unsigned char buffer[SHA256::HashBytes];
+	sha256.getHash(buffer);
+
 	std::string result;
-	std::string sha_str(std::string(sha256(name),15, 16));
-	result.reserve(prefix.length() + sha_str.length() + 1);
+	result.reserve(prefix.length() + SHA256::HashBytes + 1);
 	result.assign(prefix).push_back(type);
-	result.append(sha_str);
+	// We are left with the last half of the sha256.
+	for (int i = 16; i < SHA256::HashBytes; ++i) {
+		result.push_back(buffer[i]);
+	}
 	return result;
 }
 
 
 std::string get_md5(const std::string& name) {
 	MD5 md5;
+	md5(name);
 	unsigned char buffer[MD5::HashBytes];
-	md5(strhasupper(name) ? upper_string(name) : name);
 	md5.getHash(buffer);
+
 	std::string res;
 	res.reserve(MD5::HashBytes);
 	for (int i = 0; i < MD5::HashBytes; ++i) {
