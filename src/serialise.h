@@ -69,24 +69,27 @@ constexpr uint32_t DOUBLE2INT               = 1000000000;
 constexpr uint32_t MAXDOU2INT               =  999999999;
 
 
+constexpr uint8_t SIZE_UUID = 36;
+
+
 struct required_spc_t;
 enum class FieldType : uint8_t;
 
 
-namespace Serialise {
+namespace Serialise{
 	inline static bool isText(const std::string& field_value, bool bool_term) noexcept {
 		return !bool_term && field_value.find(' ') != std::string::npos;
 	}
 
 	inline static bool isUUID(const std::string& field_name) noexcept {
-		if (field_name.size() != 36) {
+		if (field_name.length() != SIZE_UUID) {
 			return false;
 		}
-		if (field_name.at(8) != '-' || field_name.at(13) != '-' || field_name.at(18) != '-' || field_name.at(23) != '-') {
+		if (field_name[8] != '-' || field_name[13] != '-' || field_name[18] != '-' || field_name[23] != '-') {
 			return false;
 		}
-		for (int i = 0; i<field_name.length(); i++) {
-			if (!isxdigit(field_name.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
+		for (size_t i = 0; i < SIZE_UUID; ++i) {
+			if (!std::isxdigit(field_name.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
 				return false;
 			}
 		}
