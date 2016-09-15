@@ -373,9 +373,6 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 	std::string str_terms, str_texts;
 	Xapian::QueryParser queryTerms, queryTexts;
 
-	// Set for save the prefix added in queryTerms.
-	std::unordered_set<std::string> added_prefixes;
-
 	FieldParser fp(token);
 	fp.parse();
 
@@ -441,36 +438,19 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 
 			switch (field_spc.get_type()) {
 				case FieldType::FLOAT:
+					return Xapian::Query(prefixed(Serialise::_float(field_value), field_spc.prefix));
 				case FieldType::INTEGER:
+					return Xapian::Query(prefixed(Serialise::integer(field_value), field_spc.prefix));
 				case FieldType::POSITIVE:
-					// Xapian does not allow repeat prefixes.
-					if (added_prefixes.insert(field_spc.prefix).second) {
-						auto nfp = new NumericFieldProcessor(field_spc.get_type(), field_spc.prefix);
-						field_spc.bool_term ? queryTerms.add_boolean_prefix(field_name, nfp->release()) : queryTerms.add_prefix(field_name, nfp->release());
-					}
-					to_query_string(field_value);
-					queryTerms.set_database(*database->db);
-					str_terms.reserve(field_name_dot.length() + field_value.length());
-					str_terms.assign(field_name_dot).append(field_value);
-
-					suggestions.push_back(queryTerms.get_corrected_query_string());
-					return queryTerms.parse_query(str_terms, q_flags);
-
+					return Xapian::Query(prefixed(Serialise::positive(field_value), field_spc.prefix));
 				case FieldType::STRING:
-					// Xapian does not allow repeat prefixes.
-				{
-					auto query_str = prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix);
-					return Xapian::Query(query_str);
-				}
-
+					return Xapian::Query(prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix));
 				case FieldType::TEXT:
 					if (fp.off_double_quote_value) {
 						field_value = fp.get_doubleq_value();
 					}
 
-					if (added_prefixes.insert(field_spc.prefix).second) {
-						field_spc.bool_term ? queryTexts.add_boolean_prefix(field_name, field_spc.prefix) : queryTexts.add_prefix(field_name, field_spc.prefix);
-					}
+					field_spc.bool_term ? queryTexts.add_boolean_prefix(field_name, field_spc.prefix) : queryTexts.add_prefix(field_name, field_spc.prefix);
 
 					queryTexts.set_database(*database->db);
 					queryTexts.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
@@ -480,58 +460,17 @@ DatabaseHandler::build_query(std::string token, std::vector<std::string>& sugges
 
 					suggestions.push_back(queryTexts.get_corrected_query_string());
 					return queryTexts.parse_query(str_texts, q_flags);
-
 				case FieldType::DATE:
-					// Xapian does not allow repeat prefixes.
-					if (added_prefixes.insert(field_spc.prefix).second) {
-						auto dfp = new DateFieldProcessor(field_spc.prefix);
-						field_spc.bool_term ? queryTerms.add_boolean_prefix(field_name, dfp->release()) : queryTerms.add_prefix(field_name, dfp->release());
-					}
-
-					field_value.assign(std::to_string(Datetime::timestamp(field_value)));
-					to_query_string(field_value);
-
-					queryTerms.set_database(*database->db);
-					str_terms.reserve(field_name_dot.length() + field_value.length());
-					str_terms.assign(field_name_dot).append(field_value);
-
-					suggestions.push_back(queryTerms.get_corrected_query_string());
-					return queryTerms.parse_query(str_terms, q_flags);
-
+					return Xapian::Query(prefixed(Serialise::date(field_value), field_spc.prefix));
 				case FieldType::GEO:
 					field_value.assign(Serialise::ewkt(field_value, field_spc.partials, field_spc.error));
-
 					// If the region for search is empty, not process this query.
 					if (field_value.empty()) {
 						return Xapian::Query::MatchNothing;
 					}
-
-					// Xapian does not allow repeat prefixes.
-					if (added_prefixes.insert(field_spc.prefix).second) {
-						field_spc.bool_term ? queryTerms.add_boolean_prefix(field_name, field_spc.prefix) : queryTerms.add_prefix(field_name, field_spc.prefix);
-					}
-
-					queryTerms.set_database(*database->db);
-					str_terms.reserve(field_name_dot.length() + field_value.length());
-					str_terms.assign(field_name_dot).append(field_value);
-
-					suggestions.push_back(queryTerms.get_corrected_query_string());
-					return queryTerms.parse_query(str_terms, q_flags);
-
+					return Xapian::Query(prefixed(field_value, field_spc.prefix));
 				case FieldType::BOOLEAN:
-					// Xapian does not allow repeat prefixes.
-					if (added_prefixes.insert(field_spc.prefix).second) {
-						auto bfp = new BooleanFieldProcessor(field_spc.prefix);
-						field_spc.bool_term ? queryTerms.add_boolean_prefix(field_name, bfp->release()) : queryTerms.add_prefix(field_name, bfp->release());
-					}
-
-					queryTerms.set_database(*database->db);
-					str_terms.reserve(field_name_dot.length() + field_value.length());
-					str_terms.assign(field_name_dot).append(field_value);
-
-					suggestions.push_back(queryTerms.get_corrected_query_string());
-					return queryTerms.parse_query(str_terms, q_flags);
-
+					return Xapian::Query(prefixed(Serialise::boolean(field_value), field_spc.prefix));
 				default:
 					break;
 			}
