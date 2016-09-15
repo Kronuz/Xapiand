@@ -1848,7 +1848,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				}
 			}
 
-			if unlikely(!specification.is_dynamic_field || !specification.found_field) {
+			if unlikely(specification.is_dynamic_field || !specification.found_field) {
 				validate_required_data(specification.value.get());
 			}
 
@@ -1875,7 +1875,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 						specification.dynamic_field.assign(lower_string(specification.name));
 						specification.full_name.assign(RESERVED_UUID_FIELD);
 					} else {
-						specification.dynamic_field.append(DB_OFFSPRING_UNION).append(specification.name);
+						specification.dynamic_field.append(DB_OFFSPRING_UNION).append(lower_string(specification.name));
 						specification.full_name.append(DB_OFFSPRING_UNION).append(RESERVED_UUID_FIELD);
 					}
 					properties = &get_subproperties(*properties);
@@ -1998,8 +1998,8 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 						specification.is_dynamic_field = true;
 					} else {
 						if (specification.full_name.empty()) {
-							specification.full_name.assign(specification.name);
 							specification.dynamic_field.assign(specification.name);
+							specification.full_name.assign(specification.name);
 						} else {
 							specification.dynamic_field.append(DB_OFFSPRING_UNION).append(specification.name);
 							specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
@@ -2064,7 +2064,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	L_CALL(this, "Schema::index_item(1)");
 
 	try {
-		if unlikely(!specification.is_dynamic_field || !specification.set_type) {
+		if unlikely(specification.is_dynamic_field || !specification.set_type) {
 			validate_required_data(&value);
 		}
 
@@ -2174,7 +2174,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 	L_CALL(this, "Schema::index_item()");
 
 	try {
-		if unlikely(!specification.is_dynamic_field || !specification.set_type) {
+		if unlikely(specification.is_dynamic_field || !specification.set_type) {
 			validate_required_data(&values);
 		}
 
