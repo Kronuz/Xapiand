@@ -718,7 +718,7 @@ Schema::get_subproperties(const MsgPack& properties)
 
 	const MsgPack * subproperties = &properties;
 	for (const auto& field_name : field_names) {
-		if (!is_valid(field_name) && field_name != RESERVED_UUID_FIELD) {
+		if (!is_valid(field_name)) {
 			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
 		}
 		restart_specification();
