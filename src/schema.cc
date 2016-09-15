@@ -374,12 +374,12 @@ specification_t::specification_t(const specification_t& o)
 	  text_detection(o.text_detection),
 	  name(o.name),
 	  full_name(o.full_name),
-	  uuid_field(o.uuid_field),
 	  found_field(o.found_field),
 	  set_type(o.set_type),
 	  set_bool_term(o.set_bool_term),
 	  aux_stem_lan(o.aux_stem_lan),
-	  aux_lan(o.aux_lan) { }
+	  aux_lan(o.aux_lan),
+	  uuid_field(o.uuid_field) { }
 
 
 specification_t::specification_t(specification_t&& o) noexcept
@@ -399,12 +399,12 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  text_detection(std::move(o.text_detection)),
 	  name(std::move(o.name)),
 	  full_name(std::move(o.full_name)),
-	  uuid_field(std::move(o.uuid_field)),
 	  found_field(std::move(o.found_field)),
 	  set_type(std::move(o.set_type)),
 	  set_bool_term(std::move(o.set_bool_term)),
 	  aux_stem_lan(std::move(o.aux_stem_lan)),
-	  aux_lan(std::move(o.aux_lan)) { }
+	  aux_lan(std::move(o.aux_lan)),
+	  uuid_field(std::move(o.uuid_field)) { }
 
 
 specification_t&
@@ -440,12 +440,12 @@ specification_t::operator=(const specification_t& o)
 	language = o.language;
 	partials = o.partials;
 	error = o.error;
-	uuid_field = o.uuid_field;
 	found_field = o.found_field;
 	set_type = o.set_type;
 	set_bool_term = o.set_bool_term;
 	aux_stem_lan = o.aux_stem_lan;
 	aux_lan = o.aux_lan;
+	uuid_field = o.uuid_field;
 	return *this;
 }
 
@@ -483,12 +483,12 @@ specification_t::operator=(specification_t&& o) noexcept
 	language = std::move(o.language);
 	partials = std::move(o.partials);
 	error = std::move(o.error);
-	uuid_field = std::move(o.uuid_field);
 	found_field = std::move(o.found_field);
 	set_type = std::move(o.set_type);
 	set_bool_term = std::move(o.set_bool_term);
 	aux_stem_lan = std::move(o.aux_stem_lan);
 	aux_lan = std::move(o.aux_lan);
+	uuid_field = std::move(o.uuid_field);
 	return *this;
 }
 
