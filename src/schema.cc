@@ -815,7 +815,7 @@ Schema::set_type_to_array()
 	L_CALL(this, "Schema::set_type_to_array()");
 
 	auto& _types = get_mutable(specification.full_name)[RESERVED_TYPE];
-	if (_types.is_null()) {
+	if (_types.is_undefined()) {
 		_types = MsgPack({ FieldType::EMPTY, FieldType::ARRAY, FieldType::EMPTY });
 		specification.sep_types[1] = FieldType::ARRAY;
 	} else {
@@ -831,7 +831,7 @@ Schema::set_type_to_object()
 	L_CALL(this, "Schema::set_type_to_object()");
 
 	auto& _types = get_mutable(specification.full_name)[RESERVED_TYPE];
-	if (_types.is_null()) {
+	if (_types.is_undefined()) {
 		_types = MsgPack({ FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY });
 		specification.sep_types[0] = FieldType::OBJECT;
 	} else {
@@ -857,7 +857,7 @@ Schema::get_readable() const
 
 	auto schema_readable = mut_schema ? *mut_schema : *schema;
 	auto& properties = schema_readable.at(RESERVED_SCHEMA);
-	if unlikely(properties.is_null()) {
+	if unlikely(properties.is_undefined()) {
 		schema_readable.erase(RESERVED_SCHEMA);
 	} else {
 		readable(properties, true);
@@ -879,7 +879,7 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 		} catch (const std::out_of_range&) {
 			if (is_valid(str_key) || (is_root && str_key == RESERVED_ID)) {
 				auto& sub_item = item_schema.at(str_key);
-				if unlikely(sub_item.is_null()) {
+				if unlikely(sub_item.is_undefined()) {
 					item_schema.erase(str_key);
 				} else {
 					readable(sub_item);
@@ -1867,7 +1867,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			break;
 	}
 
-	if (data->is_null()) {
+	if (data->is_undefined()) {
 		parent_data->erase(name);
 	}
 
@@ -2075,7 +2075,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 			// Add value to data.
 			auto& data_value = data[RESERVED_VALUE];
 			switch (data_value.getType()) {
-				case MsgPack::Type::NIL:
+				case MsgPack::Type::UNDEFINED:
 					data_value = value;
 					break;
 				case MsgPack::Type::ARRAY:
@@ -2312,7 +2312,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 			// Add value to data.
 			auto& data_value = data[RESERVED_VALUE];
 			switch (data_value.getType()) {
-				case MsgPack::Type::NIL:
+				case MsgPack::Type::UNDEFINED:
 					data_value = values;
 					break;
 				case MsgPack::Type::ARRAY:
