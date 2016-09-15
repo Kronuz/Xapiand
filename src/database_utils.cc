@@ -99,7 +99,7 @@ std::string get_prefix(const std::string& name, const std::string& prefix, char 
 	result.reserve(prefix.length() + MD5::HashBytes + 1);
 	result.assign(prefix).push_back(type);
 	// We are left with the last half of the md5.
-	for (int i = 7; i < MD5::HashBytes; ++i) {
+	for (int i = 8; i < MD5::HashBytes; ++i) {
 		result.push_back(buffer[i]);
 	}
 	return result;
