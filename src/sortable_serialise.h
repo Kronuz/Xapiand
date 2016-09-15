@@ -24,5 +24,3 @@
 long double sortable_unserialise(const std::string & value);
 
 std::string sortable_serialise(long double value);
-
-std::string sortable_serialise(const std::string& str);
