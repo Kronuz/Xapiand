@@ -2520,7 +2520,6 @@ Schema::update_uuidfield_specification() {
 		case TypeIndex::GLOBAL_ALL:
 			specification.prefix = get_uuid_field_prefix(specification.uuid_field, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
 			specification.slot = get_slot(specification.uuid_field);
-			// calcula acc_prefix
 			for (const auto& acc : specification.accuracy) {
 				specification.acc_prefix.push_back(get_uuid_field_prefix(specification.uuid_field + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
 			}
@@ -2529,7 +2528,6 @@ Schema::update_uuidfield_specification() {
 		case TypeIndex::FIELD_VALUES:
 		case TypeIndex::GLOBAL_VALUES:
 			specification.slot = get_slot(specification.uuid_field);
-			// calcula acc_prefix
 			for (const auto& acc : specification.accuracy) {
 				specification.acc_prefix.push_back(get_uuid_field_prefix(specification.uuid_field + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
 			}
