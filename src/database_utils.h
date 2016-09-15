@@ -60,6 +60,7 @@
 #define RESERVED_ID             "_id"
 #define RESERVED_SCHEMA         "_schema"
 #define RESERVED_VERSION        "_version"
+#define RESERVED_UUID_FIELD     "_uuid_field"
 // Reserved words used only in the root of the  document.
 #define RESERVED_VALUES         "_values"
 #define RESERVED_FIELD_VALUES   "_field_values"
@@ -222,6 +223,7 @@ inline std::string to_query_string(T value) {
 Xapian::valueno get_slot(const std::string& name);
 std::string prefixed(const std::string& term, const std::string& prefixO);
 std::string get_prefix(const std::string& name, const std::string& prefix, char type);
+std::string get_uuid_field_prefix(const std::string& name, const std::string& prefix, char type);
 std::string get_md5(const std::string& name);
 
 long long read_mastery(const std::string& dir, bool force);

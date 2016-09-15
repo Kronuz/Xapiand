@@ -23,6 +23,7 @@
 #include "database_utils.h"
 
 #include "hash/md5.h"
+#include "hash/sha256.h"
 #include "io_utils.h"
 #include "log.h"
 #include "serialise.h"
@@ -101,6 +102,17 @@ std::string get_prefix(const std::string& name, const std::string& prefix, char 
 	for (int i = 7; i < MD5::HashBytes; ++i) {
 		result.push_back(buffer[i]);
 	}
+	return result;
+}
+
+
+std::string get_uuid_field_prefix(const std::string& name, const std::string& prefix, char type) {
+	SHA256 sha256;
+	std::string result;
+	std::string sha_str(std::string(sha256(name),15, 16));
+	result.reserve(prefix.length() + sha_str.length() + 1);
+	result.assign(prefix).push_back(type);
+	result.append(sha_str);
 	return result;
 }
 

@@ -78,6 +78,21 @@ namespace Serialise {
 		return !bool_term && field_value.find(' ') != std::string::npos;
 	}
 
+	inline static bool isUUID(const std::string& field_name) noexcept {
+		if (field_name.size() != 36) {
+			return false;
+		}
+		if (field_name.at(8) != '-' || field_name.at(13) != '-' || field_name.at(18) != '-' || field_name.at(23) != '-') {
+			return false;
+		}
+		for (int i = 0; i<field_name.length(); i++) {
+			if (!isxdigit(field_name.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	/*
 	 * Serialise field_value according to field_spc.
 	 */
