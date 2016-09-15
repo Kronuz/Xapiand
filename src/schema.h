@@ -248,7 +248,10 @@ struct specification_t : required_spc_t  {
 	bool fixed_index;
 	std::string aux_stem_lan;
 	std::string aux_lan;
-	std::string uuid_field;
+
+	// Auxiliar variables for dynamic field.
+	std::string dynamic_field;
+	bool is_dynamic_field;
 
 	specification_t();
 	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);

@@ -332,7 +332,8 @@ specification_t::specification_t()
 	  text_detection(true),
 	  found_field(true),
 	  set_type(false),
-	  set_bool_term(false) { }
+	  set_bool_term(false),
+	  is_dynamic_field(false) { }
 
 
 specification_t::specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
@@ -354,7 +355,8 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 	  text_detection(true),
 	  found_field(true),
 	  set_type(false),
-	  set_bool_term(false) { }
+	  set_bool_term(false),
+	  is_dynamic_field(false) { }
 
 
 specification_t::specification_t(const specification_t& o)
@@ -379,7 +381,8 @@ specification_t::specification_t(const specification_t& o)
 	  set_bool_term(o.set_bool_term),
 	  aux_stem_lan(o.aux_stem_lan),
 	  aux_lan(o.aux_lan),
-	  uuid_field(o.uuid_field) { }
+	  dynamic_field(o.dynamic_field),
+	  is_dynamic_field(o.is_dynamic_field) { }
 
 
 specification_t::specification_t(specification_t&& o) noexcept
@@ -404,7 +407,8 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  set_bool_term(std::move(o.set_bool_term)),
 	  aux_stem_lan(std::move(o.aux_stem_lan)),
 	  aux_lan(std::move(o.aux_lan)),
-	  uuid_field(std::move(o.uuid_field)) { }
+	  dynamic_field(std::move(o.dynamic_field)),
+	  is_dynamic_field(std::move(o.is_dynamic_field)) { }
 
 
 specification_t&
@@ -445,7 +449,8 @@ specification_t::operator=(const specification_t& o)
 	set_bool_term = o.set_bool_term;
 	aux_stem_lan = o.aux_stem_lan;
 	aux_lan = o.aux_lan;
-	uuid_field = o.uuid_field;
+	dynamic_field = o.dynamic_field;
+	is_dynamic_field = o.is_dynamic_field;
 	return *this;
 }
 
@@ -488,7 +493,8 @@ specification_t::operator=(specification_t&& o) noexcept
 	set_bool_term = std::move(o.set_bool_term);
 	aux_stem_lan = std::move(o.aux_stem_lan);
 	aux_lan = std::move(o.aux_lan);
-	uuid_field = std::move(o.uuid_field);
+	dynamic_field = std::move(o.dynamic_field);
+	is_dynamic_field = std::move(o.is_dynamic_field);
 	return *this;
 }
 
@@ -690,21 +696,22 @@ Schema::restart_specification()
 {
 	L_CALL(this, "Schema::restart_specification()");
 
-	specification.sep_types     = default_spc.sep_types;
-	specification.prefix        = default_spc.prefix;
-	specification.slot          = default_spc.slot;
-	specification.accuracy      = default_spc.accuracy;
-	specification.acc_prefix    = default_spc.acc_prefix;
-	specification.bool_term     = default_spc.bool_term;
-	specification.name          = default_spc.name;
-	specification.stem_strategy = default_spc.stem_strategy;
-	specification.stem_language = default_spc.stem_language;
-	specification.language      = default_spc.language;
-	specification.partials      = default_spc.partials;
-	specification.error         = default_spc.error;
-	specification.set_type      = default_spc.set_type;
-	specification.aux_stem_lan  = default_spc.aux_stem_lan;
-	specification.aux_lan       = default_spc.aux_lan;
+	specification.sep_types        = default_spc.sep_types;
+	specification.prefix           = default_spc.prefix;
+	specification.slot             = default_spc.slot;
+	specification.accuracy         = default_spc.accuracy;
+	specification.acc_prefix       = default_spc.acc_prefix;
+	specification.bool_term        = default_spc.bool_term;
+	specification.name             = default_spc.name;
+	specification.stem_strategy    = default_spc.stem_strategy;
+	specification.stem_language    = default_spc.stem_language;
+	specification.language         = default_spc.language;
+	specification.partials         = default_spc.partials;
+	specification.error            = default_spc.error;
+	specification.set_type         = default_spc.set_type;
+	specification.aux_stem_lan     = default_spc.aux_stem_lan;
+	specification.aux_lan          = default_spc.aux_lan;
+	specification.is_dynamic_field = default_spc.is_dynamic_field;;
 }
 
 
@@ -1765,19 +1772,21 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		data = specification.store ? &(*parent_data)[name] : parent_data;
 		if (Serialise::isUUID(name)) {
 			if (specification.full_name.empty()) {
-				specification.uuid_field.assign(name);
+				specification.dynamic_field.assign(name);
 				specification.full_name.assign(RESERVED_UUID_FIELD);
 			} else {
-				specification.uuid_field.assign(specification.full_name).append(DB_OFFSPRING_UNION).append(name);
+				specification.dynamic_field.append(DB_OFFSPRING_UNION).append(name);
 				specification.full_name.append(DB_OFFSPRING_UNION).append(RESERVED_UUID_FIELD);
 			}
 			specification.name.assign(RESERVED_UUID_FIELD);
 			properties = &get_subproperties(*parent_properties);
+			specification.is_dynamic_field = true;
 		} else {
-			specification.uuid_field.clear();
 			if (specification.full_name.empty()) {
 				specification.full_name.assign(name);
+				specification.dynamic_field.assign(name);
 			} else {
+				specification.dynamic_field.append(DB_OFFSPRING_UNION).append(name);
 				specification.full_name.append(DB_OFFSPRING_UNION).append(name);
 			}
 			specification.name.assign(name);
@@ -1809,7 +1818,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				}
 			}
 
-			if unlikely(!specification.uuid_field.empty() || !specification.found_field) {
+			if unlikely(!specification.is_dynamic_field || !specification.found_field) {
 				validate_required_data(specification.value.get());
 			}
 
@@ -1831,16 +1840,29 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 					}
 				}
 			} else {
-				if (specification.full_name.empty()) {
-					specification.full_name.assign(specification.name);
+				if (Serialise::isUUID(specification.name)) {
+					if (specification.full_name.empty()) {
+						specification.dynamic_field.assign(specification.name);
+						specification.full_name.assign(RESERVED_UUID_FIELD);
+					} else {
+						specification.dynamic_field.append(DB_OFFSPRING_UNION).append(specification.name);
+						specification.full_name.append(DB_OFFSPRING_UNION).append(RESERVED_UUID_FIELD);
+					}
+					properties = &get_subproperties(*properties);
+					specification.is_dynamic_field = true;
 				} else {
-					specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
+					if (specification.full_name.empty()) {
+						specification.full_name.assign(specification.name);
+						specification.dynamic_field.assign(specification.name);
+					} else {
+						specification.dynamic_field.append(DB_OFFSPRING_UNION).append(specification.name);
+						specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
+					}
+					properties = &get_subproperties(*properties);
 				}
 				if (specification.store) {
 					data = &(*data)[specification.name];
 				}
-				properties = &get_subproperties(*properties);
-
 				if (specification.value) {
 					index_item(doc, *specification.value, *data);
 					if (specification.store && !offsprings) {
@@ -1934,15 +1956,29 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 						}
 					}
 				} else {
-					if (specification.full_name.empty()) {
-						specification.full_name.assign(specification.name);
+					if (Serialise::isUUID(specification.name)) {
+						if (specification.full_name.empty()) {
+							specification.dynamic_field.assign(specification.name);
+							specification.full_name.assign(RESERVED_UUID_FIELD);
+						} else {
+							specification.dynamic_field.append(DB_OFFSPRING_UNION).append(specification.name);
+							specification.full_name.append(DB_OFFSPRING_UNION).append(RESERVED_UUID_FIELD);
+						}
+						sub_properties = &get_subproperties(*sub_properties);
+						specification.is_dynamic_field = true;
 					} else {
-						specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
+						if (specification.full_name.empty()) {
+							specification.full_name.assign(specification.name);
+							specification.dynamic_field.assign(specification.name);
+						} else {
+							specification.dynamic_field.append(DB_OFFSPRING_UNION).append(specification.name);
+							specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
+						}
+						sub_properties = &get_subproperties(*sub_properties);
 					}
 					if (specification.store) {
 						data_pos = &(*data_pos)[specification.name];
 					}
-					sub_properties = &get_subproperties(*sub_properties);
 					if (specification.value) {
 						index_item(doc, *specification.value, *data_pos);
 						if (specification.store && !offsprings) {
@@ -1998,7 +2034,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	L_CALL(this, "Schema::index_item(1)");
 
 	try {
-		if unlikely(!specification.uuid_field.empty() || !specification.set_type) {
+		if unlikely(!specification.is_dynamic_field || !specification.set_type) {
 			validate_required_data(&value);
 		}
 
@@ -2108,7 +2144,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 	L_CALL(this, "Schema::index_item()");
 
 	try {
-		if unlikely(!specification.uuid_field.empty() || !specification.set_type) {
+		if unlikely(!specification.is_dynamic_field || !specification.set_type) {
 			validate_required_data(&values);
 		}
 
@@ -2364,12 +2400,12 @@ Schema::validate_required_data(const MsgPack* value)
 		if (specification.sep_types[2] == FieldType::EMPTY) {
 			if (value) {
 				if (XapiandManager::manager->type_required) {
-					throw MSG_MissingTypeError("Type of field [%s] is missing", specification.full_name.c_str());
+					throw MSG_MissingTypeError("Type of field [%s] is missing", specification.dynamic_field.c_str());
 				}
 				set_type(*value);
 			} else if (specification.value_rec) {
 				if (XapiandManager::manager->type_required) {
-					throw MSG_MissingTypeError("Type of field [%s] is missing", specification.full_name.c_str());
+					throw MSG_MissingTypeError("Type of field [%s] is missing", specification.dynamic_field.c_str());
 				}
 				set_type(*specification.value_rec);
 			}
@@ -2457,7 +2493,7 @@ Schema::validate_required_data(const MsgPack* value)
 					 throw MSG_ClientError("%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
 			 }
 
-			 if (!specification.uuid_field.empty()) {
+			 if (specification.is_dynamic_field) {
 				 if (set_acc.size()) {
 					 specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
 					 properties[RESERVED_ACCURACY] = specification.accuracy;
@@ -2468,7 +2504,7 @@ Schema::validate_required_data(const MsgPack* value)
 				 if (size_acc) {
 					 if (specification.acc_prefix.empty()) {
 						 for (const auto& acc : set_acc) {
-							 specification.acc_prefix.push_back(get_prefix(specification.full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+							 specification.acc_prefix.push_back(get_prefix(specification.dynamic_field + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
 						 }
 					 } else if (specification.acc_prefix.size() != size_acc) {
 						 throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -2481,13 +2517,13 @@ Schema::validate_required_data(const MsgPack* value)
 
 				 // Process RESERVED_PREFIX
 				 if (specification.prefix.empty()) {
-					 specification.prefix = get_prefix(specification.full_name, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
+					 specification.prefix = get_prefix(specification.dynamic_field, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
 				 }
 				 properties[RESERVED_PREFIX] = specification.prefix;
 
 				 // Process RESERVED_SLOT
 				 if (specification.slot == Xapian::BAD_VALUENO) {
-					 specification.slot = get_slot(specification.full_name);
+					 specification.slot = get_slot(specification.dynamic_field);
 				 }
 				 properties[RESERVED_SLOT] = specification.slot;
 
@@ -2502,7 +2538,7 @@ Schema::validate_required_data(const MsgPack* value)
 				  * By default, if field name has upper characters then it is consider bool term.
 				  * If type is TEXT, bool_term is false.
 				  */
-				 specification.bool_term = specification.sep_types[2] != FieldType::TEXT && strhasupper(specification.full_name);
+				 specification.bool_term = specification.sep_types[2] != FieldType::TEXT && strhasupper(specification.dynamic_field);
 			 }
 			 properties[RESERVED_BOOL_TERM] = specification.bool_term;
 
@@ -2518,24 +2554,24 @@ Schema::update_uuidfield_specification() {
 		case TypeIndex::ALL:
 		case TypeIndex::FIELD_ALL:
 		case TypeIndex::GLOBAL_ALL:
-			specification.prefix = get_uuid_field_prefix(specification.uuid_field, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
-			specification.slot = get_slot(specification.uuid_field);
+			specification.prefix = get_uuid_field_prefix(specification.dynamic_field, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
+			specification.slot = get_slot(specification.dynamic_field);
 			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_uuid_field_prefix(specification.uuid_field + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+				specification.acc_prefix.push_back(get_uuid_field_prefix(specification.dynamic_field + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
 			}
 			break;
 		case TypeIndex::VALUES:
 		case TypeIndex::FIELD_VALUES:
 		case TypeIndex::GLOBAL_VALUES:
-			specification.slot = get_slot(specification.uuid_field);
+			specification.slot = get_slot(specification.dynamic_field);
 			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_uuid_field_prefix(specification.uuid_field + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+				specification.acc_prefix.push_back(get_uuid_field_prefix(specification.dynamic_field + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
 			}
 			break;
 		case TypeIndex::TERMS:
 		case TypeIndex::FIELD_TERMS:
 		case TypeIndex::GLOBAL_TERMS:
-			specification.prefix = get_uuid_field_prefix(specification.uuid_field, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
+			specification.prefix = get_uuid_field_prefix(specification.dynamic_field, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
 			break;
 		default:
 			break;
@@ -3052,12 +3088,11 @@ Schema::get_slot_field(const std::string& field_name) const
 
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
-	std::string full_name, last_field = fields.back();
+	std::string last_field = fields.back();
 	for (auto& field : fields) {
 		if (Serialise::isUUID(field)) {
 			field = RESERVED_UUID_FIELD;
 		}
-		full_name.append(field);
 	}
 	try {
 		const auto& properties = schema->at(RESERVED_SCHEMA).path(fields);
@@ -3084,7 +3119,7 @@ Schema::get_slot_field(const std::string& field_name) const
 		}
 
 		if (Serialise::isUUID(last_field)) {
-			res.slot = get_slot(full_name);
+			res.slot = get_slot(field_name);
 		} else {
 			res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		}
