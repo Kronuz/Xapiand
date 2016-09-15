@@ -1772,10 +1772,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		data = specification.store ? &(*parent_data)[name] : parent_data;
 		if (Serialise::isUUID(name)) {
 			if (specification.full_name.empty()) {
-				specification.dynamic_field.assign(name);
+				specification.dynamic_field.assign(lower_string(name));
 				specification.full_name.assign(RESERVED_UUID_FIELD);
 			} else {
-				specification.dynamic_field.append(DB_OFFSPRING_UNION).append(name);
+				specification.dynamic_field.append(DB_OFFSPRING_UNION).append(lower_string(name));
 				specification.full_name.append(DB_OFFSPRING_UNION).append(RESERVED_UUID_FIELD);
 			}
 			specification.name.assign(RESERVED_UUID_FIELD);
@@ -1842,7 +1842,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			} else {
 				if (Serialise::isUUID(specification.name)) {
 					if (specification.full_name.empty()) {
-						specification.dynamic_field.assign(specification.name);
+						specification.dynamic_field.assign(lower_string(specification.name));
 						specification.full_name.assign(RESERVED_UUID_FIELD);
 					} else {
 						specification.dynamic_field.append(DB_OFFSPRING_UNION).append(specification.name);
@@ -1958,10 +1958,10 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				} else {
 					if (Serialise::isUUID(specification.name)) {
 						if (specification.full_name.empty()) {
-							specification.dynamic_field.assign(specification.name);
+							specification.dynamic_field.assign(lower_string(specification.name));
 							specification.full_name.assign(RESERVED_UUID_FIELD);
 						} else {
-							specification.dynamic_field.append(DB_OFFSPRING_UNION).append(specification.name);
+							specification.dynamic_field.append(DB_OFFSPRING_UNION).append(lower_string(specification.name));
 							specification.full_name.append(DB_OFFSPRING_UNION).append(RESERVED_UUID_FIELD);
 						}
 						sub_properties = &get_subproperties(*sub_properties);
@@ -2991,12 +2991,25 @@ Schema::get_data_field(const std::string& field_name) const
 
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
-	std::string last_field = fields.back();
+	std::string last_field = fields.back(), dynamic_field;
+	dynamic_field.reserve(field_name.length());
 	for (auto& field : fields) {
 		if (Serialise::isUUID(field)) {
+			if (dynamic_field.empty()) {
+				dynamic_field.append(lower_string(field));
+			} else {
+				dynamic_field.append(DB_OFFSPRING_UNION).append(lower_string(field));
+			}
 			field = RESERVED_UUID_FIELD;
+		} else {
+			if (dynamic_field.empty()) {
+				dynamic_field.append(field);
+			} else {
+				dynamic_field.append(DB_OFFSPRING_UNION).append(field);
+			}
 		}
 	}
+
 	try {
 		const auto& properties = schema->at(RESERVED_SCHEMA).path(fields);
 
@@ -3011,8 +3024,8 @@ Schema::get_data_field(const std::string& field_name) const
 
 		res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 		if (Serialise::isUUID(last_field)) {
-			res.slot = get_slot(field_name);
-			res.prefix = get_uuid_field_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, (char)res.sep_types[2]);
+			res.slot = get_slot(dynamic_field);
+			res.prefix = get_uuid_field_prefix(dynamic_field, DOCUMENT_CUSTOM_TERM_PREFIX, (char)res.sep_types[2]);
 
 			// Get accuracy, acc_prefix and reserved word.
 			switch (res.sep_types[2]) {
@@ -3088,10 +3101,22 @@ Schema::get_slot_field(const std::string& field_name) const
 
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
-	std::string last_field = fields.back();
+	std::string last_field = fields.back(), dynamic_field;
+	dynamic_field.reserve(field_name.length());
 	for (auto& field : fields) {
 		if (Serialise::isUUID(field)) {
+			if (dynamic_field.empty()) {
+				dynamic_field.append(lower_string(field));
+			} else {
+				dynamic_field.append(DB_OFFSPRING_UNION).append(lower_string(field));
+			}
 			field = RESERVED_UUID_FIELD;
+		} else {
+			if (dynamic_field.empty()) {
+				dynamic_field.append(field);
+			} else {
+				dynamic_field.append(DB_OFFSPRING_UNION).append(field);
+			}
 		}
 	}
 	try {
@@ -3119,7 +3144,7 @@ Schema::get_slot_field(const std::string& field_name) const
 		}
 
 		if (Serialise::isUUID(last_field)) {
-			res.slot = get_slot(field_name);
+			res.slot = get_slot(dynamic_field);
 		} else {
 			res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		}
