@@ -248,6 +248,7 @@ struct specification_t : required_spc_t  {
 	bool fixed_index;
 	std::string aux_stem_lan;
 	std::string aux_lan;
+	std::string uuid_field;
 
 	specification_t();
 	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
@@ -342,6 +343,7 @@ class Schema {
 	 * Insert into properties all required data.
 	 */
 	void validate_required_data(const MsgPack* value);
+	void update_uuidfield_specification();
 
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);
