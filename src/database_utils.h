@@ -51,6 +51,7 @@
 #define RESERVED_B_DETECTION    "_bool_detection"
 #define RESERVED_S_DETECTION    "_string_detection"
 #define RESERVED_T_DETECTION    "_text_detection"
+#define RESERVED_U_DETECTION    "_uuid_detection"
 #define RESERVED_BOOL_TERM      "_bool_term"
 #define RESERVED_VALUE          "_value"
 #define RESERVED_NAME           "_name"

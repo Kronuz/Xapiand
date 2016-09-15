@@ -170,6 +170,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_document({
 	{ RESERVED_B_DETECTION,     &Schema::process_b_detection     },
 	{ RESERVED_S_DETECTION,     &Schema::process_s_detection     },
 	{ RESERVED_T_DETECTION,     &Schema::process_t_detection     },
+	{ RESERVED_U_DETECTION,     &Schema::process_u_detection     },
 	{ RESERVED_BOOL_TERM,       &Schema::process_bool_term       },
 	{ RESERVED_VALUE,           &Schema::process_value           },
 	{ RESERVED_NAME,            &Schema::process_name            },
@@ -208,6 +209,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties
 	{ RESERVED_B_DETECTION,     &Schema::update_b_detection      },
 	{ RESERVED_S_DETECTION,     &Schema::update_s_detection      },
 	{ RESERVED_T_DETECTION,     &Schema::update_t_detection      },
+	{ RESERVED_U_DETECTION,     &Schema::update_u_detection      },
 	{ RESERVED_BOOL_TERM,       &Schema::update_bool_term        },
 	{ RESERVED_ACCURACY,        &Schema::update_accuracy         },
 	{ RESERVED_ACC_PREFIX,      &Schema::update_acc_prefix       },
@@ -330,6 +332,7 @@ specification_t::specification_t()
 	  bool_detection(true),
 	  string_detection(true),
 	  text_detection(true),
+	  uuid_detection(true),
 	  found_field(true),
 	  set_type(false),
 	  set_bool_term(false),
@@ -353,6 +356,7 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 	  bool_detection(true),
 	  string_detection(true),
 	  text_detection(true),
+	  uuid_detection(true),
 	  found_field(true),
 	  set_type(false),
 	  set_bool_term(false),
@@ -374,6 +378,7 @@ specification_t::specification_t(const specification_t& o)
 	  bool_detection(o.bool_detection),
 	  string_detection(o.string_detection),
 	  text_detection(o.text_detection),
+	  uuid_detection(true),
 	  name(o.name),
 	  full_name(o.full_name),
 	  found_field(o.found_field),
@@ -400,6 +405,7 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  bool_detection(std::move(o.bool_detection)),
 	  string_detection(std::move(o.string_detection)),
 	  text_detection(std::move(o.text_detection)),
+	  uuid_detection(std::move(o.uuid_detection)),
 	  name(std::move(o.name)),
 	  full_name(std::move(o.full_name)),
 	  found_field(std::move(o.found_field)),
@@ -431,6 +437,7 @@ specification_t::operator=(const specification_t& o)
 	bool_detection = o.bool_detection;
 	string_detection = o.string_detection;
 	text_detection = o.text_detection;
+	uuid_detection = o.uuid_detection;
 	bool_term = o.bool_term;
 	value.reset();
 	value_rec.reset();
@@ -475,6 +482,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	bool_detection = std::move(o.bool_detection);
 	string_detection = std::move(o.string_detection);
 	text_detection = std::move(o.text_detection);
+	uuid_detection = std::move(o.uuid_detection);
 	bool_term = std::move(o.bool_term);
 	value.reset();
 	value_rec.reset();
@@ -602,6 +610,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_B_DETECTION << ": " << (bool_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_S_DETECTION << ": " << (string_detection  ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_T_DETECTION << ": " << (text_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_U_DETECTION << ": " << (uuid_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_BOOL_TERM   << ": " << (bool_term         ? "true" : "false") << "\n}\n";
 
 	return str.str();
@@ -782,6 +791,10 @@ Schema::set_type(const MsgPack& item_doc)
 			}
 			if (specification.geo_detection && EWKT_Parser::isEWKT(str_value)) {
 				specification.sep_types[2] = FieldType::GEO;
+				return;
+			}
+			if (specification.uuid_detection && Serialise::isUUID(str_value)) {
+				specification.sep_types[2] = FieldType::UUID;
 				return;
 			}
 			if (specification.text_detection && Serialise::isText(str_value, specification.bool_term)) {
@@ -1429,6 +1442,23 @@ Schema::process_t_detection(const MsgPack& doc_t_detection)
 		get_mutable(specification.full_name)[RESERVED_T_DETECTION] = specification.text_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_T_DETECTION);
+	}
+}
+
+
+void
+Schema::process_u_detection(const MsgPack& doc_u_detection)
+{
+	// RESERVED_U_DETECTION is heritable and can't change.
+	if likely(specification.found_field) {
+		return;
+	}
+
+	try {
+		specification.uuid_detection = doc_u_detection.as_bool();
+		get_mutable(specification.full_name)[RESERVED_U_DETECTION] = specification.uuid_detection;
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_U_DETECTION);
 	}
 }
 
