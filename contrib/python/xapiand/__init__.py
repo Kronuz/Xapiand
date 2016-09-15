@@ -100,10 +100,11 @@ class Xapiand(object):
             port = self.port
         host = '{}:{}'.format(ip, port)
 
-        if isinstance(index, (tuple, list)):
-            index = ','.join(index)
-
         prefix = '{}/'.format(self.prefix) if self.prefix else ''
+
+        if not isinstance(index, (tuple, list)):
+            index = [index]
+        index = ','.join(prefix + i for i in index)
 
         nodename = '@{}'.format(nodename) if nodename else ''
 
@@ -112,7 +113,7 @@ class Xapiand(object):
         else:
             action_request = id
 
-        url = 'http://{}/{}{}{}/{}'.format(host, prefix, index, nodename, action_request)
+        url = 'http://{}/{}{}/{}'.format(host, index, nodename, action_request)
 
         return url
 
