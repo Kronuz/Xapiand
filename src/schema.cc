@@ -680,6 +680,9 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
 		prop_id[RESERVED_BOOL_TERM] = true;
 		prop_id[RESERVED_INDEX] = TypeIndex::ALL;
+		if (res_serialise.first == FieldType::STRING) {
+			prop_id[RESERVED_LANGUAGE] = DEFAULT_LANGUAGE;
+		}
 		return res_serialise.second;
 	}
 }
