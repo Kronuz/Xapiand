@@ -46,6 +46,16 @@ Xapian::Query filterNumericQuery(const required_spc_t& field_spc, T start, T end
 }
 
 
+Xapian::Query filterStringQuery(const required_spc_t& field_spc, const std::string& start_s, const std::string& end_s) {
+	if (start_s > end_s) {
+		return Xapian::Query::MatchNothing;
+	}
+
+	auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
+	return Xapian::Query(mvr->release());
+}
+
+
 MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string& start_, const std::string& end_)
 	: Xapian::ValuePostingSource(slot_), start(start_), end(end_)
 {
@@ -121,15 +131,13 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				}
 				return filterNumericQuery(field_spc, start_v, end_v, Serialise::positive(start_v), Serialise::positive(end_v));
 			}
+			case FieldType::UUID:
+				return filterStringQuery(field_spc, Serialise::uuid(start), Serialise::uuid(end));
+			case FieldType::BOOLEAN:
+				return filterStringQuery(field_spc, Serialise::boolean(start), Serialise::boolean(end));
 			case FieldType::STRING:
-			case FieldType::TEXT: {
-				if (start > end) {
-					return Xapian::Query::MatchNothing;
-				}
-
-				auto mvr = new MultipleValueRange(field_spc.slot, start, end);
-				return Xapian::Query(mvr->release());
-			}
+			case FieldType::TEXT:
+				return filterStringQuery(field_spc, start, end);
 			case FieldType::DATE: {
 				auto timestamp_s = Datetime::timestamp(start);
 				auto timestamp_e = Datetime::timestamp(end);
