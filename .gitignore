@@ -41,6 +41,8 @@
 *.so
 *.dylib
 *.dll
+*.pyo
+*.pyc
 
 # Fortran module files
 *.mod
