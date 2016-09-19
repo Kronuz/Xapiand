@@ -3089,8 +3089,8 @@ Schema::get_data_field(const std::string& field_name) const
 	dynamic_field.reserve(field_name.length());
 	for (auto& field : fields) {
 		DynamicFieldType dynamic_field_t = isDynamicField(field);
-		std::pair<std::string, std::string> dfs(dynamic_field_schema(dynamic_field_t, field));
 		if (dynamic_field_t != DynamicFieldType::NONE) {
+			std::pair<std::string, std::string> dfs(dynamic_field_schema(dynamic_field_t, field));
 			if (dynamic_field.empty()) {
 				dynamic_field.append(dfs.second);
 			} else {
