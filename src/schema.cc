@@ -532,7 +532,7 @@ specification_t::get_global(FieldType field_type)
 			return spc;
 		}
 		case FieldType::BOOLEAN: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
+			static const specification_t spc(DB_SLOT_BOOLEAN, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
 		case FieldType::DATE: {
@@ -541,6 +541,10 @@ specification_t::get_global(FieldType field_type)
 		}
 		case FieldType::GEO: {
 			static const specification_t spc(DB_SLOT_GEO, FieldType::GEO, def_accuracy_geo, global_acc_prefix_geo);
+			return spc;
+		}
+		case FieldType::UUID: {
+			static const specification_t spc(DB_SLOT_UUID, FieldType::UUID, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
 		default:
@@ -2521,6 +2525,7 @@ Schema::validate_required_data(const MsgPack* value)
 					 properties[RESERVED_LANGUAGE] = specification.language;
 					 break;
 				 case FieldType::BOOLEAN:
+				 case FieldType::UUID:
 					 break;
 				 default:
 					 throw MSG_ClientError("%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
@@ -2792,8 +2797,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		}
 		case FieldType::GEO: {
 			try {
-				auto str_ewkt = value.as_string();
-				EWKT_Parser ewkt(str_ewkt, spc.partials, spc.error);
+				EWKT_Parser ewkt(value.as_string(), spc.partials, spc.error);
 				if (fun) {
 					(*fun)(doc, Serialise::trixels(ewkt.trixels), spc, pos);
 				}
@@ -2832,6 +2836,22 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				return;
 			} catch (const SerialisationError&) {
 				throw MSG_ClientError("Format invalid for boolean type: %s", value.to_string().c_str());
+			}
+		}
+		case FieldType::UUID: {
+			try {
+				if (fun) {
+					auto ser_value = Serialise::uuid(value.as_string());
+					s.insert(ser_value);
+					(*fun)(doc, std::move(ser_value), spc, pos);
+				} else {
+					s.insert(Serialise::uuid(value.as_string()));
+				}
+				return;
+			} catch (const msgpack::type_error&) {
+				throw MSG_ClientError("Format invalid for uuid type: %s", value.to_string().c_str());
+			} catch (const SerialisationError&) {
+				throw MSG_ClientError("Format invalid for uuid type: %s", value.to_string().c_str());
 			}
 		}
 		default:
@@ -3003,6 +3023,22 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				return;
 			} catch (const SerialisationError&) {
 				throw MSG_ClientError("Format invalid for boolean type: %s", value.to_string().c_str());
+			}
+		}
+		case FieldType::UUID: {
+			try {
+				auto ser_value = Serialise::uuid(value.as_string());
+				if (is_term) {
+					s_f.insert(ser_value);
+					s_g.insert(ser_value);
+					index_all_term(doc, std::move(ser_value), field_spc, global_spc, pos);
+				} else {
+					s_f.insert(ser_value);
+					s_g.insert(std::move(ser_value));
+				}
+				return;
+			} catch (const msgpack::type_error&) {
+				throw MSG_ClientError("Format invalid for uuid type: %s", value.to_string().c_str());
 			}
 		}
 		default:
@@ -3214,7 +3250,7 @@ Schema::get_data_global(FieldType field_type)
 			return prop;
 		}
 		case FieldType::BOOLEAN: {
-			static const required_spc_t prop(DB_SLOT_STRING, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
+			static const required_spc_t prop(DB_SLOT_BOOLEAN, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
 			return prop;
 		}
 		case FieldType::DATE: {
@@ -3223,6 +3259,10 @@ Schema::get_data_global(FieldType field_type)
 		}
 		case FieldType::GEO: {
 			static const required_spc_t prop(DB_SLOT_GEO, FieldType::GEO, def_accuracy_geo, global_acc_prefix_geo);
+			return prop;
+		}
+		case FieldType::UUID: {
+			static const required_spc_t prop(DB_SLOT_UUID, FieldType::UUID, default_spc.accuracy, default_spc.acc_prefix);
 			return prop;
 		}
 		default:
