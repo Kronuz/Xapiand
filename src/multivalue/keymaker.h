@@ -132,7 +132,7 @@ public:
 };
 
 
-// Class for create the key using as a reference a timestamp value.
+// Class for create the key using as a reference a date value.
 class DateKey : public BaseKey {
 	double _ref_val;
 
@@ -162,7 +162,7 @@ public:
 };
 
 
-// Class for create the key using as a reference a boolean value.
+// Class for create the key using as a reference a string value.
 template <typename StringMetric>
 class StringKey : public BaseKey {
 	StringMetric _metric;
