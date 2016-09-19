@@ -99,7 +99,7 @@ enum class FieldType : uint8_t {
 inline static std::pair<std::string, std::string> dynamic_field_schema(DynamicFieldType type, std::string name) noexcept {
 	switch (type) {
 		case DynamicFieldType::DATE:   return std::make_pair<std::string, std::string>(RESERVED_DATE_FIELD, std::move(name));
-		case DynamicFieldType::GEO:    return std::make_pair<std::string, std::string>(RESERVED_GEO_FIELD, std::move(name));
+		case DynamicFieldType::GEO:    return std::make_pair<std::string, std::string>(RESERVED_GEO_FIELD, Serialise::ewkt(std::move(name), DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
 		case DynamicFieldType::UUID:   return std::make_pair<std::string, std::string>(RESERVED_UUID_FIELD, lower_string(std::move(name)));
 		default:	throw MSG_Error("Unknown dynamic field type");
 	}
