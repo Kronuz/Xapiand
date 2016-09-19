@@ -109,7 +109,7 @@ FieldParser::parse()
 						off_field = off_fieldot = nullptr;
 						return;
 					case ' ':
-						break
+						break;
 					default:
 						++len_field;
 						++len_fieldot;
