@@ -500,31 +500,31 @@ Serialise::type(FieldType type)
 
 
 ::MsgPack
-Unserialise::MsgPack(FieldType field_type, const std::string& serialise_val)
+Unserialise::MsgPack(FieldType field_type, const std::string& serialised_val)
 {
 	::MsgPack result;
 	switch (field_type) {
 		case FieldType::FLOAT:
-			result = _float(serialise_val);
+			result = _float(serialised_val);
 			break;
 		case FieldType::INTEGER:
-			result = integer(serialise_val);
+			result = integer(serialised_val);
 			break;
 		case FieldType::POSITIVE:
-			result = positive(serialise_val);
+			result = positive(serialised_val);
 			break;
 		case FieldType::DATE:
-			result = date(serialise_val);
+			result = date(serialised_val);
 			break;
 		case FieldType::BOOLEAN:
-			result = boolean(serialise_val);
+			result = boolean(serialised_val);
 			break;
 		case FieldType::STRING:
 		case FieldType::TEXT:
-			result = serialise_val;
+			result = serialised_val;
 			break;
 		case FieldType::GEO:
-			result = geo(serialise_val);
+			result = geo(serialised_val);
 			break;
 		default:
 			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(field_type));
@@ -535,26 +535,26 @@ Unserialise::MsgPack(FieldType field_type, const std::string& serialise_val)
 
 
 std::string
-Unserialise::unserialise(FieldType field_type, const std::string& serialise_val)
+Unserialise::unserialise(FieldType field_type, const std::string& serialised_val)
 {
 	switch (field_type) {
 		case FieldType::FLOAT:
-			return std::to_string(_float(serialise_val));
+			return std::to_string(_float(serialised_val));
 		case FieldType::INTEGER:
-			return std::to_string(integer(serialise_val));
+			return std::to_string(integer(serialised_val));
 		case FieldType::POSITIVE:
-			return std::to_string(positive(serialise_val));
+			return std::to_string(positive(serialised_val));
 		case FieldType::DATE:
-			return date(serialise_val);
+			return date(serialised_val);
 		case FieldType::BOOLEAN:
-			return std::string(boolean(serialise_val) ? "true" : "false");
+			return std::string(boolean(serialised_val) ? "true" : "false");
 		case FieldType::STRING:
 		case FieldType::TEXT:
-			return serialise_val;
+			return serialised_val;
 		case FieldType::GEO:
-			return ewkt(serialise_val);
+			return ewkt(serialised_val);
 		case FieldType::UUID:
-			return uuid(serialise_val);
+			return uuid(serialised_val);
 		default:
 			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
 	}
@@ -562,10 +562,10 @@ Unserialise::unserialise(FieldType field_type, const std::string& serialise_val)
 
 
 std::string
-Unserialise::date(const std::string& serialise_val)
+Unserialise::date(const std::string& serialised_date)
 {
 	static char date[25];
-	double epoch = timestamp(serialise_val);
+	double epoch = timestamp(serialised_date);
 	time_t timestamp = (time_t) epoch;
 	int msec = round((epoch - timestamp) * 1000);
 	struct tm *timeinfo = gmtime(&timestamp);
@@ -577,30 +577,30 @@ Unserialise::date(const std::string& serialise_val)
 
 
 Cartesian
-Unserialise::cartesian(const std::string& serialise_val)
+Unserialise::cartesian(const std::string& serialised_val)
 {
-	if (serialise_val.size() != SIZE_SERIALISE_CARTESIAN) {
-		throw MSG_SerialisationError("Can not unserialise cartesian: %s [%zu]", serialise_val.c_str(), serialise_val.size());
+	if (serialised_val.size() != SIZE_SERIALISE_CARTESIAN) {
+		throw MSG_SerialisationError("Can not unserialise cartesian: %s [%zu]", serialised_val.c_str(), serialised_val.size());
 	}
 
-	double x = (((unsigned)serialise_val[0] << 24) & 0xFF000000) | (((unsigned)serialise_val[1] << 16) & 0xFF0000) | (((unsigned)serialise_val[2] << 8) & 0xFF00)  | (((unsigned)serialise_val[3]) & 0xFF);
-	double y = (((unsigned)serialise_val[4] << 24) & 0xFF000000) | (((unsigned)serialise_val[5] << 16) & 0xFF0000) | (((unsigned)serialise_val[6] << 8) & 0xFF00)  | (((unsigned)serialise_val[7]) & 0xFF);
-	double z = (((unsigned)serialise_val[8] << 24) & 0xFF000000) | (((unsigned)serialise_val[9] << 16) & 0xFF0000) | (((unsigned)serialise_val[10] << 8) & 0xFF00) | (((unsigned)serialise_val[11]) & 0xFF);
+	double x = (((unsigned)serialised_val[0] << 24) & 0xFF000000) | (((unsigned)serialised_val[1] << 16) & 0xFF0000) | (((unsigned)serialised_val[2] << 8) & 0xFF00)  | (((unsigned)serialised_val[3]) & 0xFF);
+	double y = (((unsigned)serialised_val[4] << 24) & 0xFF000000) | (((unsigned)serialised_val[5] << 16) & 0xFF0000) | (((unsigned)serialised_val[6] << 8) & 0xFF00)  | (((unsigned)serialised_val[7]) & 0xFF);
+	double z = (((unsigned)serialised_val[8] << 24) & 0xFF000000) | (((unsigned)serialised_val[9] << 16) & 0xFF0000) | (((unsigned)serialised_val[10] << 8) & 0xFF00) | (((unsigned)serialised_val[11]) & 0xFF);
 	return Cartesian((x - MAXDOU2INT) / DOUBLE2INT, (y - MAXDOU2INT) / DOUBLE2INT, (z - MAXDOU2INT) / DOUBLE2INT);
 }
 
 
 uint64_t
-Unserialise::trixel_id(const std::string& serialise_val)
+Unserialise::trixel_id(const std::string& serialised_val)
 {
-	if (serialise_val.size() != SIZE_BYTES_ID) {
-		throw MSG_SerialisationError("Can not unserialise trixel_id: %s [%zu]", serialise_val.c_str(), serialise_val.size());
+	if (serialised_val.size() != SIZE_BYTES_ID) {
+		throw MSG_SerialisationError("Can not unserialise trixel_id: %s [%zu]", serialised_val.c_str(), serialised_val.size());
 	}
 
-	uint64_t id = (((uint64_t)serialise_val[0] << 48) & 0xFF000000000000) | (((uint64_t)serialise_val[1] << 40) & 0xFF0000000000) | \
-				  (((uint64_t)serialise_val[2] << 32) & 0xFF00000000)     | (((uint64_t)serialise_val[3] << 24) & 0xFF000000)     | \
-				  (((uint64_t)serialise_val[4] << 16) & 0xFF0000)         | (((uint64_t)serialise_val[5] <<  8) & 0xFF00)         | \
-				  (serialise_val[6] & 0xFF);
+	uint64_t id = (((uint64_t)serialised_val[0] << 48) & 0xFF000000000000) | (((uint64_t)serialised_val[1] << 40) & 0xFF0000000000) | \
+				  (((uint64_t)serialised_val[2] << 32) & 0xFF00000000)     | (((uint64_t)serialised_val[3] << 24) & 0xFF000000)     | \
+				  (((uint64_t)serialised_val[4] << 16) & 0xFF0000)         | (((uint64_t)serialised_val[5] <<  8) & 0xFF00)         | \
+				  (serialised_val[6] & 0xFF);
 	return id;
 }
 
@@ -614,10 +614,10 @@ Unserialise::uuid(const std::string& serialised_uuid)
 
 
 std::pair<std::string, std::string>
-Unserialise::geo(const std::string& serialise_ewkt)
+Unserialise::geo(const std::string& serialised_ewkt)
 {
-	const char* pos = serialise_ewkt.data();
-	const char* end = pos + serialise_ewkt.length();
+	const char* pos = serialised_ewkt.data();
+	const char* end = pos + serialised_ewkt.length();
 	try {
 		unserialise_length(&pos, end, true);
 		auto length = unserialise_length(&pos, end, true);
@@ -632,9 +632,9 @@ Unserialise::geo(const std::string& serialise_ewkt)
 
 
 std::string
-Unserialise::ewkt(const std::string& serialise_ewkt)
+Unserialise::ewkt(const std::string& serialised_ewkt)
 {
-	auto unserialise = geo(serialise_ewkt);
+	auto unserialise = geo(serialised_ewkt);
 	RangeList ranges;
 	ranges.unserialise(unserialise.first);
 	std::string res("Ranges: { ");

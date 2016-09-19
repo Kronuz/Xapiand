@@ -117,7 +117,7 @@ namespace Serialise{
 	 *
 	 * If bool_term can not return FieldType::TEXT.
 	 *
-	 * Returns the type and the serialise values according to type.
+	 * Returns the type and the serialised values according to type.
 	 */
 	std::pair<FieldType, std::string> get_type(const std::string& field_value, bool bool_term=false);
 	std::tuple<FieldType, std::string, std::string> get_range_type(const std::string& start, const std::string& end, bool bool_term=false);
@@ -185,54 +185,54 @@ namespace Serialise{
 
 
 namespace Unserialise {
-	// Unserialise serialise_val according to field_type and returns a MsgPack.
-	MsgPack MsgPack(FieldType field_type, const std::string& serialise_val);
+	// Unserialise serialised_val according to field_type and returns a MsgPack.
+	MsgPack MsgPack(FieldType field_type, const std::string& serialised_val);
 
-	// Unserialise serialise_val according to field_type.
-	std::string unserialise(FieldType field_type, const std::string& serialise_val);
+	// Unserialise serialised_val according to field_type.
+	std::string unserialise(FieldType field_type, const std::string& serialised_val);
 
 	// Unserialise a serialised float.
-	inline double _float(const std::string& serialise_float) {
-		return sortable_unserialise(serialise_float);
+	inline double _float(const std::string& serialised_float) {
+		return sortable_unserialise(serialised_float);
 	}
 
 	// Unserialise a serialised integer.
-	inline int64_t integer(const std::string& serialise_integer) {
-		return sortable_unserialise(serialise_integer);
+	inline int64_t integer(const std::string& serialised_integer) {
+		return sortable_unserialise(serialised_integer);
 	}
 
 	// Unserialise a serialised positive.
-	inline uint64_t positive(const std::string& serialise_positive) {
-		return sortable_unserialise(serialise_positive);
+	inline uint64_t positive(const std::string& serialised_positive) {
+		return sortable_unserialise(serialised_positive);
 	}
 
 	// Unserialise a serialised date.
-	std::string date(const std::string& serialise_date);
+	std::string date(const std::string& serialised_date);
 
 	// Unserialise a serialised date and returns the timestamp.
-	inline double timestamp(const std::string& serialise_timestamp) {
-		return sortable_unserialise(serialise_timestamp);
+	inline double timestamp(const std::string& serialised_timestamp) {
+		return sortable_unserialise(serialised_timestamp);
 	}
 
 	// Unserialise a serialised boolean.
-	inline bool boolean(const std::string& serialise_boolean) {
-		return serialise_boolean.at(0) == TRUE_SERIALISED;
+	inline bool boolean(const std::string& serialised_boolean) {
+		return serialised_boolean.at(0) == TRUE_SERIALISED;
 	}
 
 	// Unserialise a serialised cartesian coordinate.
-	Cartesian cartesian(const std::string& serialise_cartesian);
+	Cartesian cartesian(const std::string& serialised_cartesian);
 
 	// Unserialise a serialised trixel's id (HTM).
-	uint64_t trixel_id(const std::string& serialise_trixel_id);
+	uint64_t trixel_id(const std::string& serialised_trixel_id);
 
 	// Unserialise a serialised UUID.
 	std::string uuid(const std::string& serialised_uuid);
 
 	// Unserialise a serialised EWKT (save as value), in serialised ranges and serialises centroids.
-	std::string ewkt(const std::string& serialise_ewkt);
+	std::string ewkt(const std::string& serialised_ewkt);
 
 	// Unserialise a serialised EWKT (Save as a Value), in unserialised ranges and unserialised centroids.
-	std::pair<std::string, std::string> geo(const std::string& serialise_ewkt);
+	std::pair<std::string, std::string> geo(const std::string& serialised_ewkt);
 
 	// Unserialise str_type to its FieldType.
 	FieldType type(const std::string& str_type);
