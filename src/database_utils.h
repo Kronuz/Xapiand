@@ -105,7 +105,9 @@
 #define DB_SLOT_NUMERIC    5     // Slot for saving global float/integer/positive values
 #define DB_SLOT_DATE       6     // Slot for saving global date values
 #define DB_SLOT_GEO        7     // Slot for saving global geo values
-#define DB_SLOT_STRING     8     // Slot for saving global string/text/boolean values.
+#define DB_SLOT_STRING     8     // Slot for saving global string/text values.
+#define DB_SLOT_BOOLEAN    9     // Slot for saving global boolean values.
+#define DB_SLOT_UUID       10    // Slot for saving global uuid values.
 
 #define DEFAULT_OFFSET     "0"   // Replace for the real offset.
 
