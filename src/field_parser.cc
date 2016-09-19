@@ -108,11 +108,11 @@ FieldParser::parse()
 						len_field = len_fieldot = 0;
 						off_field = off_fieldot = nullptr;
 						return;
+					case ' ':
+						break
 					default:
-						if (*currentSymbol != ' ') {
-							++len_field;
-							++len_fieldot;
-						}
+						++len_field;
+						++len_fieldot;
 						break;
 				}
 				break;
@@ -163,16 +163,7 @@ FieldParser::parse()
 						}
 						break;
 					case '\0':
-						++len_value;
-						switch (quote) {
-							case DOUBLEQUOTE:
-								++len_double_quote_value;
-								break;
-							case SINGLEQUOTE:
-								++len_single_quote_value;
-								break;
-						}
-						break;
+						throw MSG_FieldParserError("Expected symbol: '%c'", quote);
 					default:
 						if (*currentSymbol == quote) {
 							currentState = FieldParser::State::END;
@@ -187,7 +178,15 @@ FieldParser::parse()
 									break;
 							}
 						} else {
-							throw MSG_FieldParserError("Expected symbol: '%c'", quote);
+							++len_value;
+							switch (quote) {
+								case DOUBLEQUOTE:
+									++len_double_quote_value;
+									break;
+								case SINGLEQUOTE:
+									++len_single_quote_value;
+									break;
+							}
 						}
 						break;
 				}
@@ -248,10 +247,10 @@ FieldParser::parse()
 						currentState = FieldParser::State::END;
 						break;
 					case '\0':
+						throw MSG_FieldParserError("Syntax error in query");
+					default:
 						start += *currentSymbol;
 						break;
-					default:
-						throw MSG_FieldParserError("Syntax error in query");
 				}
 				break;
 
@@ -269,10 +268,10 @@ FieldParser::parse()
 						currentState = FieldParser::State::END;
 						break;
 					case '\0':
+						throw MSG_FieldParserError("Expected symbol: ']'");
+					default:
 						end += *currentSymbol;
 						break;
-					default:
-						throw MSG_FieldParserError("Expected symbol: ']'");
 				}
 				break;
 
