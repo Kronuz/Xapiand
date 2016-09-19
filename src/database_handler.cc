@@ -25,7 +25,7 @@
 #include "booleanParser/BooleanParser.h"
 #include "booleanParser/SyntacticException.h"
 #include "datetime.h"
-#include "fields.h"
+#include "field_parser.h"
 #include "geo/wkt_parser.h"
 #include "msgpack_patcher.h"
 #include "multivalue/range.h"
@@ -427,7 +427,7 @@ DatabaseHandler::build_query(const std::string& token, std::vector<std::string>&
 				case FieldType::STRING:
 					return Xapian::Query(prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix));
 				case FieldType::TEXT: {
-					if (fp.off_double_quote_value) {
+					if (fp.is_double_quote_value()) {
 						field_value.assign(fp.get_doubleq_value());
 					}
 					Xapian::QueryParser queryTexts;
