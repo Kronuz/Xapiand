@@ -145,46 +145,6 @@ public:
 };
 
 
-class FieldParser {
-	std::string fstr;
-	bool isEnd;
-
-public:
-	enum State {
-		INIT, FIELD,
-		QUOTE, ESCAPE,
-		STARTVALUE, VALUE,
-		INIT_SQUARE_BRACKET, END_SQUARE_BRACKET,
-		SQUARE_BRACKET, QUOTE_SQUARE_BRACKET,
-		END
-	};
-
-	FieldParser(const std::string &p);
-	void parse();
-
-	bool isrange;
-
-	size_t len_field;
-	const char *off_field;
-	size_t len_fieldot;
-	const char *off_fieldot;
-	size_t len_value;
-	const char *off_value;
-	size_t len_double_quote_value;
-	const char *off_double_quote_value;
-	size_t len_single_quote_value;
-	const char *off_single_quote_value;
-	std::string start;
-	std::string end;
-
-	std::string get_field();
-	std::string get_field_dot();
-	std::string get_value();
-	std::string get_doubleq_value();
-	std::string get_singleq_value();
-};
-
-
 struct File_ptr {
 	struct dirent *ent;
 
