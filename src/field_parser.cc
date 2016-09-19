@@ -145,6 +145,7 @@ FieldParser::parse()
 						++len_value;
 						break;
 				}
+				break;
 
 			case FieldParser::State::QUOTE:
 				switch (*currentSymbol) {
