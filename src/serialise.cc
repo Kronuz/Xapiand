@@ -22,6 +22,7 @@
 
 #include "serialise.h"
 
+#include "guid/guid.h"
 #include "hash/sha256.h"
 #include "length.h"
 #include "schema.h"
@@ -54,9 +55,6 @@ std::string
 Serialise::serialise(const required_spc_t& field_spc, const std::string& field_value)
 {
 	auto type = field_spc.get_type();
-	if (field_value.empty() && type != FieldType::STRING && type != FieldType::TEXT) {
-		throw MSG_SerialisationError("Field value must be defined");
-	}
 
 	switch (type) {
 		case FieldType::INTEGER:
@@ -74,6 +72,8 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 			return field_value;
 		case FieldType::GEO:
 			return ewkt(field_value, field_spc.partials, field_spc.error);
+		case FieldType::UUID:
+			return uuid(field_value);
 		default:
 			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(type));
 	}
@@ -84,9 +84,6 @@ std::string
 Serialise::string(const required_spc_t& field_spc, const std::string& field_value)
 {
 	auto field_type = field_spc.get_type();
-	if (field_value.empty() && field_type != FieldType::STRING && field_type != FieldType::TEXT) {
-		throw MSG_SerialisationError("Field value must be defined");
-	}
 
 	switch (field_type) {
 		case FieldType::DATE:
@@ -98,6 +95,8 @@ Serialise::string(const required_spc_t& field_spc, const std::string& field_valu
 			return field_value;
 		case FieldType::GEO:
 			return ewkt(field_value, field_spc.partials, field_spc.error);
+		case FieldType::UUID:
+			return uuid(field_value);
 		default:
 			throw MSG_SerialisationError("Type: %s is not string", type(field_type).c_str());
 	}
@@ -110,7 +109,7 @@ Serialise::_float(FieldType field_type, double field_value)
 	switch (field_type) {
 		case FieldType::DATE:
 			return timestamp(field_value);
-		case  FieldType::FLOAT:
+		case FieldType::FLOAT:
 			return _float(field_value);
 		default:
 			throw MSG_SerialisationError("Type: %s is not a float", type(field_type).c_str());
@@ -172,7 +171,7 @@ std::pair<FieldType, std::string>
 Serialise::get_type(const std::string& field_value, bool bool_term)
 {
 	if (field_value.empty()) {
-		return std::make_pair(FieldType::STRING, field_value);
+		std::make_pair(FieldType::STRING, field_value);
 	}
 
 	// Try like INTEGER.
@@ -200,6 +199,16 @@ Serialise::get_type(const std::string& field_value, bool bool_term)
 		return std::make_pair(FieldType::GEO, ewkt(field_value, default_spc.partials, default_spc.error));
 	} catch (const EWKTError&) { }
 
+	// Like UUID
+	if (isUUID(field_value)) {
+		return std::make_pair(FieldType::UUID, uuid(field_value));
+	}
+
+	// Try like BOOLEAN
+	try {
+		return std::make_pair(FieldType::BOOLEAN, boolean(field_value));
+	} catch (const SerialisationError&) { }
+
 	// Like TEXT
 	if (isText(field_value, bool_term)) {
 		return std::make_pair(FieldType::TEXT, field_value);
@@ -207,6 +216,72 @@ Serialise::get_type(const std::string& field_value, bool bool_term)
 
 	// Default type STRING.
 	return std::make_pair(FieldType::STRING, field_value);
+}
+
+
+std::tuple<FieldType, std::string, std::string>
+Serialise::get_range_type(const std::string& start, const std::string& end, bool bool_term)
+{
+	if (start.empty()) {
+		auto res = get_type(end, bool_term);
+		return std::make_tuple(res.first, start, res.second);
+	}
+
+	if (end.empty()) {
+		auto res = get_type(start, bool_term);
+		return std::make_tuple(res.first, res.second, end);
+	}
+
+	auto res = get_type(start, bool_term);
+	switch (res.first) {
+		case FieldType::POSITIVE:
+			try {
+				return std::make_tuple(FieldType::POSITIVE, res.second, positive(end));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::STRING, start, end);
+			}
+		case FieldType::INTEGER:
+			try {
+				return std::make_tuple(FieldType::INTEGER, res.second, integer(end));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::STRING, start, end);
+			}
+		case FieldType::FLOAT:
+			try {
+				return std::make_tuple(FieldType::FLOAT, res.second, _float(end));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::STRING, start, end);
+			}
+		case FieldType::DATE:
+			try {
+				return std::make_tuple(FieldType::DATE, res.second, date(end));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::STRING, start, end);
+			}
+		case FieldType::GEO:
+			try {
+				return std::make_tuple(FieldType::GEO, res.second, ewkt(end, default_spc.partials, default_spc.error));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::STRING, start, end);
+			}
+		case FieldType::UUID:
+			if (isUUID(end)) {
+				return std::make_tuple(FieldType::UUID, res.second, uuid(end));
+			} else {
+				return std::make_tuple(FieldType::STRING, start, end);
+			}
+		case FieldType::BOOLEAN:
+			try {
+				return std::make_tuple(FieldType::BOOLEAN, res.second, boolean(end));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::STRING, start, end);
+			}
+		case FieldType::TEXT:
+			return std::make_tuple(FieldType::TEXT, start, end);
+		default:
+			return std::make_tuple(FieldType::STRING, start, end);
+
+	}
 }
 
 
@@ -280,6 +355,25 @@ Serialise::positive(const std::string& field_value)
 	} catch (const std::out_of_range&) {
 		throw MSG_SerialisationError("Out of range positive integer format: %s", field_value.c_str());
 	}
+}
+
+
+std::string
+Serialise::uuid(const std::string& field_value)
+{
+	if (!isUUID(field_value)) {
+		throw MSG_SerialisationError("Invalid UUID format in: %s", field_value.c_str());
+	}
+
+	Guid guid(field_value);
+	const auto& bytes = guid.get_bytes();
+
+	std::string res;
+	res.reserve(bytes.size());
+	for (const char& c : bytes) {
+		res.push_back(c);
+	}
+	return res;
 }
 
 
@@ -459,6 +553,8 @@ Unserialise::unserialise(FieldType field_type, const std::string& serialise_val)
 			return serialise_val;
 		case FieldType::GEO:
 			return ewkt(serialise_val);
+		case FieldType::UUID:
+			return uuid(serialise_val);
 		default:
 			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
 	}
@@ -506,6 +602,14 @@ Unserialise::trixel_id(const std::string& serialise_val)
 				  (((uint64_t)serialise_val[4] << 16) & 0xFF0000)         | (((uint64_t)serialise_val[5] <<  8) & 0xFF00)         | \
 				  (serialise_val[6] & 0xFF);
 	return id;
+}
+
+
+std::string
+Unserialise::uuid(const std::string& serialised_uuid)
+{
+	Guid guid(reinterpret_cast<const unsigned char*>(serialised_uuid.data()));
+	return guid.to_string();
 }
 
 

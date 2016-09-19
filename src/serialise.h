@@ -117,9 +117,10 @@ namespace Serialise{
 	 *
 	 * If bool_term can not return FieldType::TEXT.
 	 *
-	 * Returns the type and the serialise value according to type.
+	 * Returns the type and the serialise values according to type.
 	 */
 	std::pair<FieldType, std::string> get_type(const std::string& field_value, bool bool_term=false);
+	std::tuple<FieldType, std::string, std::string> get_range_type(const std::string& start, const std::string& end, bool bool_term=false);
 
 
 	// Serialise field_value like date.
@@ -152,6 +153,9 @@ namespace Serialise{
 	inline std::string positive(uint64_t field_value) {
 		return sortable_serialise(field_value);
 	}
+
+	// Serialise field_value like UUID.
+	std::string uuid(const std::string& field_value);
 
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value, bool partials, double error);
@@ -220,6 +224,9 @@ namespace Unserialise {
 
 	// Unserialise a serialised trixel's id (HTM).
 	uint64_t trixel_id(const std::string& serialise_trixel_id);
+
+	// Unserialise a serialised UUID.
+	std::string uuid(const std::string& serialised_uuid);
 
 	// Unserialise a serialised EWKT (save as value), in serialised ranges and serialises centroids.
 	std::string ewkt(const std::string& serialise_ewkt);
