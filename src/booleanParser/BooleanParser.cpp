@@ -162,14 +162,15 @@ BooleanTree::precedence(TokenType type)
 {
 	switch (type) {
 		case TokenType::Not:
-		case TokenType::And:
 			return 0; break;
-		case TokenType::Xor:
+		case TokenType::And:
 			return 1; break;
+		case TokenType::Xor:
+			return 2; break;
 			break;
 		case TokenType::Or:
-			return 2; break;
-		default: return 3;
+			return 3; break;
+		default: return 4;
 	}
 }
 
