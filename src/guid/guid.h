@@ -44,36 +44,45 @@ class Guid {
 public:
 
 	// create a guid from vector of bytes
-	Guid(const std::vector<unsigned char> &bytes);
+	Guid(const std::vector<unsigned char>& bytes);
 
 	// create a guid from array of bytes
-	Guid(const unsigned char *bytes);
+	Guid(const unsigned char* bytes);
 
 	// create a guid from string
-	Guid(const std::string &fromString);
+	Guid(const std::string& fromString);
 
 	// create empty guid
 	Guid();
 
 	// copy constructor
-	Guid(const Guid &other);
+	Guid(const Guid& other);
+
+	// move constructor
+	Guid(Guid&& other);
 
 	// overload assignment operator
-	Guid &operator=(const Guid &other);
+	Guid& operator=(const Guid& other);
+
+	// overload move operator
+	Guid& operator=(Guid&& other);
 
 	// overload equality and inequality operator
-	bool operator==(const Guid &other) const;
-	bool operator!=(const Guid &other) const;
+	bool operator==(const Guid& other) const;
+	bool operator!=(const Guid& other) const;
+
+	inline const std::vector<unsigned char>& get_bytes() const {
+		return _bytes;
+	}
 
 	std::string to_string() const;
 
 private:
-
 	// actual data
 	std::vector<unsigned char> _bytes;
 
 	// make the << operator a friend so it can access _bytes
-	friend std::ostream &operator<<(std::ostream &s, const Guid &guid);
+	friend std::ostream &operator<<(std::ostream& s, const Guid& guid);
 };
 
 // Class that can create new guids. The only reason this exists instead of
@@ -86,7 +95,7 @@ private:
 class GuidGenerator {
 public:
 #ifdef GUID_ANDROID
-	GuidGenerator(JNIEnv *env);
+	GuidGenerator(JNIEnv* env);
 #else
 	GuidGenerator() { }
 #endif
@@ -95,7 +104,7 @@ public:
 
 #ifdef GUID_ANDROID
 private:
-	JNIEnv *_env;
+	JNIEnv* _env;
 	jclass _uuidClass;
 	jmethodID _newGuidMethod;
 	jmethodID _mostSignificantBitsMethod;
