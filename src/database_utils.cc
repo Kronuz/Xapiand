@@ -106,7 +106,7 @@ std::string get_prefix(const std::string& name, const std::string& prefix, char 
 }
 
 
-std::string get_uuid_field_prefix(const std::string& name, const std::string& prefix, char type) {
+std::string get_dynamic_prefix(const std::string& name, const std::string& prefix, char type) {
 	SHA256 sha256;
 	sha256(name);
 	unsigned char buffer[SHA256::HashBytes];

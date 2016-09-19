@@ -226,7 +226,7 @@ inline std::string to_query_string(T value) {
 Xapian::valueno get_slot(const std::string& name);
 std::string prefixed(const std::string& term, const std::string& prefixO);
 std::string get_prefix(const std::string& name, const std::string& prefix, char type);
-std::string get_uuid_field_prefix(const std::string& name, const std::string& prefix, char type);
+std::string get_dynamic_prefix(const std::string& name, const std::string& prefix, char type);
 std::string get_md5(const std::string& name);
 
 long long read_mastery(const std::string& dir, bool force);
