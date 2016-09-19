@@ -165,6 +165,7 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 			case FieldType::BOOLEAN:
 				slots.push_back(std::make_unique<BoolKey>(field_spc.slot, reverse, value));
 				return;
+			case FieldType::UUID:
 			case FieldType::STRING:
 			case FieldType::TEXT:
 				try {
