@@ -26,6 +26,7 @@
 #include "msgpack.h"
 #include "serialise.h"
 #include "stl_serialise.h"
+#include "utils.h"
 
 #include <future>
 
