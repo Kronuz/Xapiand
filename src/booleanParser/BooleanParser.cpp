@@ -167,7 +167,6 @@ BooleanTree::precedence(TokenType type)
 			return 1; break;
 		case TokenType::Xor:
 			return 2; break;
-			break;
 		case TokenType::Or:
 			return 3; break;
 		default: return 4;
