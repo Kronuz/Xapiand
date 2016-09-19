@@ -35,6 +35,14 @@
 #define DEFAULT_GEO_ERROR     HTM_MIN_ERROR
 
 
+enum class DynamicFieldType : uint8_t {
+	NONE,
+	DATE,
+	GEO,
+	UUID
+};
+
+
 enum class UnitTime : uint8_t {
 	SECOND,
 	MINUTE,
@@ -86,6 +94,16 @@ enum class FieldType : uint8_t {
 	OBJECT        =  'O',
 	EMPTY         =  ' '
 };
+
+
+inline static std::pair<std::string, std::string> dynamic_field_schema(DynamicFieldType type, std::string name) noexcept {
+	switch (type) {
+		case DynamicFieldType::DATE:   return std::make_pair<std::string, std::string>(RESERVED_DATE_FIELD, std::move(name));
+		case DynamicFieldType::GEO:    return std::make_pair<std::string, std::string>(RESERVED_GEO_FIELD, std::move(name));
+		case DynamicFieldType::UUID:   return std::make_pair<std::string, std::string>(RESERVED_UUID_FIELD, lower_string(std::move(name)));
+		default:	throw MSG_Error("Unknown dynamic field type");
+	}
+}
 
 
 inline static std::string readable_acc_date(UnitTime unit) noexcept {
@@ -253,7 +271,7 @@ struct specification_t : required_spc_t  {
 
 	// Auxiliar variables for dynamic field.
 	std::string dynamic_field;
-	bool is_dynamic_field;
+	DynamicFieldType dynamic_field_type;
 
 	specification_t();
 	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
@@ -348,7 +366,12 @@ class Schema {
 	 * Insert into properties all required data.
 	 */
 	void validate_required_data(const MsgPack* value);
+
+	/*
+	 * Functions to handle dynamic fields types
+	 */
 	void update_uuidfield_specification();
+	static DynamicFieldType isDynamicField(const std::string& field_name);
 
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);
