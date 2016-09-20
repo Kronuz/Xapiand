@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "exception.h"
+
 #include <chrono>
 #include <ctime>
 #include <iostream>
@@ -30,6 +32,24 @@
 #define _EPOCH      1970
 #define _START_YEAR 1900
 #define _EPOCH_ORD  719163  /* toordinal(_EPOCH, 1, 1) */
+
+
+class DatetimeError : public ClientError {
+public:
+	template<typename... Args>
+	DatetimeError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+#define MSG_DatetimeError(...) DatetimeError(__FILE__, __LINE__, __VA_ARGS__)
+
+
+class DateISOError : public DatetimeError {
+public:
+	template<typename... Args>
+	DateISOError(Args&&... args) : DatetimeError(std::forward<Args>(args)...) { }
+};
+
+#define MSG_DateISOError(...) DateISOError(__FILE__, __LINE__, __VA_ARGS__)
 
 
 namespace Datetime {
