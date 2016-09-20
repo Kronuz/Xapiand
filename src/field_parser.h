@@ -40,7 +40,6 @@ public:
 
 class FieldParser {
 	std::string fstr;
-	bool isEnd;
 	size_t len_field;
 	const char* off_field;
 	size_t len_fieldot;
@@ -63,7 +62,9 @@ public:
 		INIT_SQUARE_BRACKET,
 		END_SQUARE_BRACKET,
 		SQUARE_BRACKET,
-		QUOTE_SQUARE_BRACKET,
+		COMMA_OR_END,
+		FIRST_QUOTE_SQUARE_BRACKET,
+		SECOND_QUOTE_SQUARE_BRACKET,
 		END
 	};
 
