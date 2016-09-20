@@ -71,6 +71,9 @@ namespace Datetime {
 	extern const std::regex date_math_re;
 
 	void dateTimeParser(const std::string& date, tm_t& tm);
+	void ISO8601(const std::string& date, tm_t& tm);
+	void processDateMath(const std::string& date_math, tm_t& tm);
+	void computeTimeZone(tm_t& tm, char op, const std::string& hour, const std::string& min);
 	void computeDateMath(tm_t& tm, const std::string& op, char unit);
 	bool isleapYear(int year);
 	bool isleapRef_year(int tm_year);
@@ -88,4 +91,5 @@ namespace Datetime {
 	void normalizeMonths(int& year, int& mon);
 	bool isDate(const std::string& date);
 	std::string to_string(const std::chrono::time_point<std::chrono::system_clock>& tp);
+	std::string normalizeISO8601(const std::string& iso_date);
 };

@@ -22,7 +22,6 @@
 
 #include "datetime.h"
 
-#include "exception.h"
 #include "log.h"
 #include "utils.h"
 
@@ -51,6 +50,17 @@ static constexpr int cumdays[2][12] = {
 void
 Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 {
+	// Check if date is ISO 8601.
+	try {
+		auto pos = date.find("||");
+		if (pos == std::string::npos) {
+			return ISO8601(date, tm);
+		} else {
+			ISO8601(date.substr(0, pos), tm);
+			return processDateMath(date.substr(pos + 2), tm);
+		}
+	} catch (const DateISOError&) { }
+
 	std::smatch m;
 	if (std::regex_match(date, m, date_re) && static_cast<std::size_t>(m.length(0)) == date.length()) {
 		tm.year = std::stoi(m.str(1));
@@ -70,46 +80,232 @@ Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 				tm.sec = tm.msec = 0;
 			}
 			if (m.length(12) > 1) {
-				std::string oph, opm;
-				oph.reserve(3);
-				opm.reserve(3);
-				if (date[m.position(13) - 1] == '+') {
-					oph.push_back('-');
-					oph.append(m.str(13));
-					opm.push_back('-');
-					opm.append(m.str(14));
-				} else {
-					oph.push_back('+');
-					oph.append(m.str(13));
-					opm.push_back('+');
-					opm.append(m.str(14));
-				}
-				computeDateMath(tm, oph, 'h');
-				computeDateMath(tm, opm, 'm');
+				computeTimeZone(tm, date[m.position(13) - 1], m.str(13), m.str(14));
 			}
 		} else {
 			tm.hour = tm.min = tm.sec = tm.msec = 0;
 		}
 
-		// Processing Date Math
+		// Process Date Math
 		if (m.length(16) != 0) {
-			int size_match = 0;
-			std::string date_math(m.str(16));
-			std::sregex_iterator next(date_math.begin(), date_math.end(), date_math_re, std::regex_constants::match_continuous);
-			std::sregex_iterator end;
-			while (next != end) {
-				size_match += next->length(0);
-				computeDateMath(tm, next->str(1), next->str(2)[0]);
-				++next;
-			}
-
-			if (m.length(16) != size_match) {
-				throw MSG_DatetimeError("Date Math (%s) is used incorrectly", date_math.c_str());
-			}
+			processDateMath(m.str(16), tm);
 		}
 	} else {
 		throw MSG_DatetimeError("In dateTimeParser, format %s is incorrect", date.c_str());
 	}
+}
+
+
+/*
+ * Full struct tm according to the date in ISO 8601 format.
+ */
+void
+Datetime::ISO8601(const std::string& date, tm_t& tm)
+{
+	switch (date.length()) {
+		case 29:
+			// 0000-00-00[T ]00:00:00.000[+-]00:00
+			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
+				date[16] == ':' && date[19] == '.' && (date[23] == '+' || date[23] == '-') && date[26] == ':') {
+				tm.year  = strict(std::stoul, date.substr(0, 4));
+				tm.mon   = strict(std::stoul, date.substr(5, 2));
+				tm.day   = strict(std::stoul, date.substr(8, 2));
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = strict(std::stoul, date.substr(11, 2));
+					if (tm.hour < 60) {
+						tm.min = strict(std::stoul, date.substr(14, 2));
+						if (tm.min < 60) {
+							tm.sec = strict(std::stoul, date.substr(17, 2));
+							if (tm.sec < 60) {
+								tm.msec = strict(std::stoul, date.substr(20, 3));
+								auto tz_h = date.substr(24, 2);
+								if (strict(std::stoul, tz_h) < 60) {
+									auto tz_m = date.substr(27, 2);
+									if (strict(std::stoul, tz_m) < 60) {
+										computeTimeZone(tm, date[23], tz_h, tz_m);
+										return;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			break;
+		case 25:
+			// 0000-00-00[T ]00:00:00[+-]00:00
+			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
+				date[16] == ':' && (date[19] == '+' || date[19] == '-') && date[22] == ':') {
+				tm.year  = strict(std::stoul, date.substr(0, 4));
+				tm.mon   = strict(std::stoul, date.substr(5, 2));
+				tm.day   = strict(std::stoul, date.substr(8, 2));
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = strict(std::stoul, date.substr(11, 2));
+					if (tm.hour < 60) {
+						tm.min = strict(std::stoul, date.substr(14, 2));
+						if (tm.min < 60) {
+							tm.sec = strict(std::stoul, date.substr(17, 2));
+							if (tm.sec < 60) {
+								tm.msec = 0;
+								auto tz_h = date.substr(20, 2);
+								if (strict(std::stoul, tz_h) < 60) {
+									auto tz_m = date.substr(23, 2);
+									if (strict(std::stoul, tz_m) < 60) {
+										computeTimeZone(tm, date[19], tz_h, tz_m);
+										return;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			break;
+		case 24:
+			// 0000-00-00[T ]00:00:00.000Z
+			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
+				date[16] == ':' && date[19] == '.' && date[23] == 'Z') {
+				tm.year  = strict(std::stoul, date.substr(0, 4));
+				tm.mon   = strict(std::stoul, date.substr(5, 2));
+				tm.day   = strict(std::stoul, date.substr(8, 2));
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = strict(std::stoul, date.substr(11, 2));
+					if (tm.hour < 60) {
+						tm.min = strict(std::stoul, date.substr(14, 2));
+						if (tm.min < 60) {
+							tm.sec = strict(std::stoul, date.substr(17, 2));
+							if (tm.sec < 60) {
+								tm.msec = strict(std::stoul, date.substr(20, 3));
+								return;
+							}
+						}
+					}
+				}
+			}
+			break;
+		case 23:
+			// 0000-00-00[T ]00:00:00.000
+			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
+				date[16] == ':' && date[19] == '.') {
+				tm.year  = strict(std::stoul, date.substr(0, 4));
+				tm.mon   = strict(std::stoul, date.substr(5, 2));
+				tm.day   = strict(std::stoul, date.substr(8, 2));
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = strict(std::stoul, date.substr(11, 2));
+					if (tm.hour < 60) {
+						tm.min = strict(std::stoul, date.substr(14, 2));
+						if (tm.min < 60) {
+							tm.sec = strict(std::stoul, date.substr(17, 2));
+							if (tm.sec < 60) {
+								tm.msec = strict(std::stoul, date.substr(20, 3));
+								return;
+							}
+						}
+					}
+				}
+			}
+			break;
+		case 20:
+			// 0000-00-00[T ]00:00:00Z
+			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
+				date[16] == ':' && date[19] == 'Z') {
+				tm.year  = strict(std::stoul, date.substr(0, 4));
+				tm.mon   = strict(std::stoul, date.substr(5, 2));
+				tm.day   = strict(std::stoul, date.substr(8, 2));
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = strict(std::stoul, date.substr(11, 2));
+					if (tm.hour < 60) {
+						tm.min = strict(std::stoul, date.substr(14, 2));
+						if (tm.min < 60) {
+							tm.sec = strict(std::stoul, date.substr(17, 2));
+							if (tm.sec < 60) {
+								tm.msec = 0;
+								return;
+							}
+						}
+					}
+				}
+			}
+			break;
+		case 19:
+			// 0000-00-00[T ]00:00:00
+			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
+				tm.year  = strict(std::stoul, date.substr(0, 4));
+				tm.mon   = strict(std::stoul, date.substr(5, 2));
+				tm.day   = strict(std::stoul, date.substr(8, 2));
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = strict(std::stoul, date.substr(11, 2));
+					if (tm.hour < 60) {
+						tm.min = strict(std::stoul, date.substr(14, 2));
+						if (tm.min < 60) {
+							tm.sec = strict(std::stoul, date.substr(17, 2));
+							if (tm.sec < 60) {
+								tm.msec = 0;
+								return;
+							}
+						}
+					}
+				}
+			}
+			break;
+		case 10:
+			// 0000-00-00
+			if (date[4] == '-' && date[7] == '-') {
+				tm.year  = strict(std::stoul, date.substr(0, 4));
+				tm.mon   = strict(std::stoul, date.substr(5, 2));
+				tm.day   = strict(std::stoul, date.substr(8, 2));
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = 0;
+					tm.min  = 0;
+					tm.sec  = 0;
+					tm.msec = 0;
+					return;
+				}
+			}
+			break;
+	}
+
+	throw MSG_DateISOError("Error format in %s", date.c_str());
+}
+
+
+void
+Datetime::processDateMath(const std::string& date_math, tm_t& tm)
+{
+	size_t size_match = 0;
+	std::sregex_iterator next(date_math.begin(), date_math.end(), date_math_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	while (next != end) {
+		size_match += next->length(0);
+		computeDateMath(tm, next->str(1), next->str(2)[0]);
+		++next;
+	}
+
+	if (date_math.length() != size_match) {
+		throw MSG_DatetimeError("Date Math (%s) is used incorrectly", date_math.c_str());
+	}
+}
+
+
+void
+Datetime::computeTimeZone(tm_t& tm, char op, const std::string& hour, const std::string& min)
+{
+	std::string oph, opm;
+	oph.reserve(3);
+	opm.reserve(3);
+	if (op == '+') {
+		oph.push_back('-');
+		oph.append(hour);
+		opm.push_back('-');
+		opm.append(min);
+	} else {
+		oph.push_back('+');
+		oph.append(hour);
+		opm.push_back('+');
+		opm.append(min);
+	}
+	computeDateMath(tm, oph, 'h');
+	computeDateMath(tm, opm, 'm');
 }
 
 
@@ -525,4 +721,19 @@ std::string
 Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock>& tp)
 {
 	return isotime(std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count() * MILLISECOND);
+}
+
+
+/*
+ * Normalize date in ISO 8601 format.
+ */
+std::string
+Datetime::normalizeISO8601(const std::string& iso_date)
+{
+	tm_t tm;
+	ISO8601(iso_date, tm);
+	char result[24];
+	snprintf(result, 24, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.%2.3d",
+		tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec, tm.msec);
+	return std::string(result);
 }
