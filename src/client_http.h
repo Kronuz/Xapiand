@@ -27,6 +27,7 @@
 #include "database_handler.h"
 #include "http_parser.h"
 #include "guid/guid.h"
+#include "url_parser.h"
 #include "servers/server_http.h"
 
 #include <memory>

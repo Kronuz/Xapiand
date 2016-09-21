@@ -1275,7 +1275,7 @@ HttpClient::url_resolve()
 			const char* path_str = path.data() + u.field_data[3].off;
 			normalize_path(path_str, path_str + path_size, path_buf_str);
 			if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
-				if (path_parser.init(path_buf_str) >= PathParser::end) {
+				if (path_parser.init(path_buf_str) >= PathParser::State::END) {
 					return CMD_BAD_QUERY;
 				}
 			}
@@ -1312,7 +1312,7 @@ HttpClient::endpoints_maker(duration<double, std::milli> timeout)
 	endpoints.clear();
 
 	PathParser::State state;
-	while ((state = path_parser.next()) < PathParser::end) {
+	while ((state = path_parser.next()) < PathParser::State::END) {
 		_endpoint_maker(timeout);
 	}
 }
