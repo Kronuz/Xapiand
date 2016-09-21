@@ -20,31 +20,32 @@
  * IN THE SOFTWARE.
  */
 
-#include "test_utils.h"
+#include "test_url_parser.h"
 
+#include "../src/url_parser.h"
 #include "utils.h"
 
 
 static std::string run_url_path(const std::string& path, bool clear_id) {
 	const char* parser_url_path_states_names[] = {
-		[PathParser::start] = "start",
-		[PathParser::pmt] = "pmt",
-		[PathParser::cmd] = "cmd",
-		[PathParser::id] = "id",
-		[PathParser::nsp] = "nsp",
-		[PathParser::pth] = "pth",
-		[PathParser::hst] = "hst",
-		[PathParser::end] = "end",
-		[PathParser::INVALID_STATE] = "INVALID_STATE",
-		[PathParser::INVALID_NSP] = "INVALID_NSP",
-		[PathParser::INVALID_HST] = "INVALID_HST",
+		[toUType(PathParser::State::START)] = "start",
+		[toUType(PathParser::State::PMT)]   = "pmt",
+		[toUType(PathParser::State::CMD)]   = "cmd",
+		[toUType(PathParser::State::ID)]    = "id",
+		[toUType(PathParser::State::NSP)]   = "nsp",
+		[toUType(PathParser::State::PTH)]   = "pth",
+		[toUType(PathParser::State::HST)]   = "hst",
+		[toUType(PathParser::State::END)]   = "end",
+		[toUType(PathParser::State::INVALID_STATE)] = "INVALID_STATE",
+		[toUType(PathParser::State::INVALID_NSP)]   = "INVALID_NSP",
+		[toUType(PathParser::State::INVALID_HST)]   = "INVALID_HST",
 	};
 
 	PathParser::State state;
 	std::string result;
 	PathParser p;
 
-	if ((state = p.init(path)) < PathParser::end) {
+	if ((state = p.init(path)) < PathParser::State::END) {
 		result += "_|";
 		if (clear_id) {
 			p.off_id = nullptr;
@@ -60,7 +61,7 @@ static std::string run_url_path(const std::string& path, bool clear_id) {
 		}
 	}
 
-	while ((state = p.next()) < PathParser::end) {
+	while ((state = p.next()) < PathParser::State::END) {
 		result += "_|";
 		if (p.off_hst) {
 			result += "hst:" + std::string(p.off_hst, p.len_hst) + "|";
@@ -72,7 +73,7 @@ static std::string run_url_path(const std::string& path, bool clear_id) {
 			result += "pth:" + std::string(p.off_pth, p.len_pth) + "|";
 		}
 	}
-	result += "(" + std::string(parser_url_path_states_names[state]) + ")";
+	result += "(" + std::string(parser_url_path_states_names[toUType(state)]) + ")";
 	return result;
 }
 

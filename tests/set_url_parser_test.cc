@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "test_utils.h"
+#include "test_url_parser.h"
 
 #include "gtest/gtest.h"
 
