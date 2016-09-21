@@ -101,6 +101,15 @@ enum class CartesianUnits {
 };
 
 
+class CartesianError : public ClientError {
+public:
+	template<typename... Args>
+	CartesianError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+#define MSG_CartesianError(...) CartesianError(__FILE__, __LINE__, __VA_ARGS__)
+
+
 /*
  * The formulas used for the conversions were obtained from:
  *    "A guide to coordinate systems in Great Britain"
