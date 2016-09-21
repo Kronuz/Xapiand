@@ -29,6 +29,11 @@
 #include "utils.h"
 
 
+const std::unordered_set<std::string> reserved_field_names({
+	RESERVED_ID_FIELD, RESERVED_UUID_FIELD, RESERVED_GEO_FIELD, RESERVED_DATE_FIELD
+});
+
+
 /*
  * Unordered Maps used for reading user data specification.
  */
@@ -336,7 +341,7 @@ specification_t::specification_t()
 	  found_field(true),
 	  set_type(false),
 	  set_bool_term(false),
-	  dynamic_field_type(DynamicFieldType::NONE) { }
+	  dynamic_type(DynamicFieldType::NONE) { }
 
 
 specification_t::specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
@@ -360,7 +365,7 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 	  found_field(true),
 	  set_type(false),
 	  set_bool_term(false),
-	  dynamic_field_type(DynamicFieldType::NONE) { }
+	  dynamic_type(DynamicFieldType::NONE) { }
 
 
 specification_t::specification_t(const specification_t& o)
@@ -386,8 +391,10 @@ specification_t::specification_t(const specification_t& o)
 	  set_bool_term(o.set_bool_term),
 	  aux_stem_lan(o.aux_stem_lan),
 	  aux_lan(o.aux_lan),
-	  dynamic_field(o.dynamic_field),
-	  dynamic_field_type(o.dynamic_field_type) { }
+	  dynamic_type(o.dynamic_type),
+	  dynamic_prefix(o.dynamic_prefix),
+	  dynamic_name(o.dynamic_name),
+	  dynamic_full_name(o.dynamic_full_name) { }
 
 
 specification_t::specification_t(specification_t&& o) noexcept
@@ -413,8 +420,10 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  set_bool_term(std::move(o.set_bool_term)),
 	  aux_stem_lan(std::move(o.aux_stem_lan)),
 	  aux_lan(std::move(o.aux_lan)),
-	  dynamic_field(std::move(o.dynamic_field)),
-	  dynamic_field_type(std::move(o.dynamic_field_type)) { }
+	  dynamic_type(std::move(o.dynamic_type)),
+	  dynamic_prefix(std::move(o.dynamic_prefix)),
+	  dynamic_name(std::move(o.dynamic_name)),
+	  dynamic_full_name(std::move(o.dynamic_full_name)) { }
 
 
 specification_t&
@@ -456,8 +465,10 @@ specification_t::operator=(const specification_t& o)
 	set_bool_term = o.set_bool_term;
 	aux_stem_lan = o.aux_stem_lan;
 	aux_lan = o.aux_lan;
-	dynamic_field = o.dynamic_field;
-	dynamic_field_type = o.dynamic_field_type;
+	dynamic_type = o.dynamic_type;
+	dynamic_prefix = o.dynamic_prefix;
+	dynamic_name = o.dynamic_name;
+	dynamic_full_name = o.dynamic_full_name;
 	return *this;
 }
 
@@ -501,8 +512,10 @@ specification_t::operator=(specification_t&& o) noexcept
 	set_bool_term = std::move(o.set_bool_term);
 	aux_stem_lan = std::move(o.aux_stem_lan);
 	aux_lan = std::move(o.aux_lan);
-	dynamic_field = std::move(o.dynamic_field);
-	dynamic_field_type = std::move(o.dynamic_field_type);
+	dynamic_type = std::move(o.dynamic_type);
+	dynamic_prefix = std::move(o.dynamic_prefix);
+	dynamic_name = std::move(o.dynamic_name);
+	dynamic_full_name = std::move(o.dynamic_full_name);
 	return *this;
 }
 
@@ -672,19 +685,19 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 
 	specification.set_type = true;
 	try {
-		auto& prop_id = properties.at(RESERVED_ID);
+		auto& prop_id = properties.at(RESERVED_ID_FIELD);
 		update_specification(prop_id);
 		return Serialise::serialise(specification, value_id);
 	} catch (const std::out_of_range&) {
-		auto& prop_id = get_mutable(RESERVED_ID);
+		auto& prop_id = get_mutable(RESERVED_ID_FIELD);
 		specification.found_field = false;
 		auto res_serialise = Serialise::get_type(value_id, specification.bool_term);
 		prop_id[RESERVED_TYPE] = std::array<FieldType, 3>({{ FieldType::EMPTY, FieldType::EMPTY, res_serialise.first }});
 		prop_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
-		prop_id[RESERVED_BOOL_TERM] = true;
 		prop_id[RESERVED_INDEX] = TypeIndex::ALL;
 		if (res_serialise.first == FieldType::STRING) {
+			prop_id[RESERVED_BOOL_TERM] = true;
 			prop_id[RESERVED_LANGUAGE] = DEFAULT_LANGUAGE;
 		}
 		return res_serialise.second;
@@ -727,35 +740,211 @@ Schema::restart_specification()
 	specification.set_type           = default_spc.set_type;
 	specification.aux_stem_lan       = default_spc.aux_stem_lan;
 	specification.aux_lan            = default_spc.aux_lan;
-	specification.dynamic_field_type = default_spc.dynamic_field_type;
+	specification.dynamic_type       = default_spc.dynamic_type;
+}
+
+
+void
+Schema::normalize_field(const std::string& field_name)
+{
+	L_CALL(this, "Schema::normalize_field()");
+
+	if (Serialise::isUUID(field_name)) {
+		specification.dynamic_prefix.append(lower_string(field_name));
+		specification.dynamic_name.assign(RESERVED_UUID_FIELD);
+		specification.dynamic_type = DynamicFieldType::UUID;
+		specification.index = TypeIndex::TERMS;
+		return;
+	}
+
+	try {
+		specification.dynamic_prefix.assign(Datetime::normalizeISO8601(field_name));
+		specification.dynamic_name.assign(RESERVED_DATE_FIELD);
+		specification.dynamic_type = DynamicFieldType::DATE;
+		specification.index = TypeIndex::TERMS;
+		return;
+	} catch (const DatetimeError&) { }
+
+	try {
+		specification.dynamic_prefix.assign(Serialise::ewkt(field_name, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+		specification.dynamic_name.assign(RESERVED_GEO_FIELD);
+		specification.dynamic_type = DynamicFieldType::GEO;
+		specification.index = TypeIndex::TERMS;
+		return;
+	} catch (const EWKTError&) { }
+
+	specification.dynamic_prefix.assign(field_name);
+	specification.dynamic_name.assign(field_name);
+	specification.dynamic_type = DynamicFieldType::NONE;
+	return;
+}
+
+
+void
+Schema::add_field(MsgPack* properties, const std::string& field_name)
+{
+	L_CALL(this, "Schema::add_field()");
+
+	properties = &(*properties)[field_name];
+	if (specification.dynamic_type == DynamicFieldType::NONE) {
+		try {
+			auto data_lan = map_stem_language.at(field_name);
+			if (data_lan.first) {
+				specification.language = data_lan.second;
+			}
+		} catch (const std::out_of_range) { }
+		if (specification.full_name.empty()) {
+			specification.full_name.assign(field_name);
+			specification.dynamic_full_name.assign(field_name);
+		} else {
+			specification.full_name.append(DB_OFFSPRING_UNION).append(field_name);
+			specification.dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_name);
+		}
+	} else {
+		if (specification.full_name.empty()) {
+			specification.full_name.assign(field_name);
+			specification.dynamic_full_name.assign(specification.dynamic_prefix);
+		} else {
+			specification.full_name.append(DB_OFFSPRING_UNION).append(field_name);
+			specification.dynamic_full_name.append(DB_OFFSPRING_UNION).append(specification.dynamic_prefix);
+		}
+	}
+}
+
+
+void
+Schema::get_subproperties(const MsgPack* properties, const std::string& field_name)
+{
+	L_CALL(this, "Schema::get_subproperties(1)");
+
+	properties = &properties->at(field_name);
+	specification.found_field = true;
+	try {
+		auto data_lan = map_stem_language.at(field_name);
+		if (data_lan.first) {
+			specification.language.assign(data_lan.second);
+		}
+	} catch (const std::out_of_range) { }
+	update_specification(*properties);
+	if (specification.full_name.empty()) {
+		specification.full_name.assign(field_name);
+		specification.dynamic_full_name.assign(field_name);
+	} else {
+		specification.full_name.append(DB_OFFSPRING_UNION).append(field_name);
+		specification.dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_name);
+	}
 }
 
 
 const MsgPack&
 Schema::get_subproperties(const MsgPack& properties)
 {
-	L_CALL(this, "Schema::get_subproperties()");
+	L_CALL(this, "Schema::get_subproperties(2)");
 
 	std::vector<std::string> field_names;
 	stringTokenizer(specification.name, DB_OFFSPRING_UNION, field_names);
 
-	const MsgPack * subproperties = &properties;
-	for (const auto& field_name : field_names) {
+	const MsgPack* subproperties = &properties;
+	const auto it_e = field_names.end();
+	for (auto it = field_names.begin(); it != it_e; ++it) {
+		const auto& field_name = *it;
 		if (!is_valid(field_name)) {
 			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
 		}
 		restart_specification();
 		try {
-			subproperties = &subproperties->at(field_name);
-			specification.found_field = true;
-			update_specification(*subproperties);
+			get_subproperties(subproperties, field_name);
 		} catch (const std::out_of_range&) {
-			subproperties = &get_mutable(specification.full_name);
+			normalize_field(field_name);
+			if (specification.dynamic_type != DynamicFieldType::NONE) {
+				try {
+					get_subproperties(subproperties, specification.dynamic_name);
+					continue;
+				} catch (const std::out_of_range&) { }
+			}
+
+			MsgPack* mut_subprop = &get_mutable(specification.full_name);
 			specification.found_field = false;
+			add_field(mut_subprop, specification.dynamic_name);
+			for (++it; it != it_e; ++it) {
+				normalize_field(*it);
+				add_field(mut_subprop, specification.dynamic_name);
+			}
+			return *mut_subprop;
 		}
 	}
 
 	return *subproperties;
+}
+
+
+std::tuple<std::string, DynamicFieldType, const MsgPack&>
+Schema::get_subproperties(const MsgPack& properties, const std::string& full_name) const
+{
+	L_CALL(this, "Schema::get_subproperties(3)");
+
+	std::vector<std::string> field_names;
+	stringTokenizer(full_name, DB_OFFSPRING_UNION, field_names);
+
+	const MsgPack* subproperties = &properties;
+	std::string dynamic_full_name;
+	dynamic_full_name.reserve(full_name.length());
+	DynamicFieldType type;
+	bool root = true;
+	for (const auto& field_name : field_names) {
+		if (!is_valid(field_name) && !root && field_name != RESERVED_ID_FIELD) {
+			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
+		}
+		root = false;
+		try {
+			subproperties = &subproperties->at(field_name);
+			type = DynamicFieldType::NONE;
+			if (dynamic_full_name.empty()) {
+				dynamic_full_name.assign(field_name);
+			} else {
+				dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_name);
+			}
+		} catch (const std::out_of_range&) {
+			if (Serialise::isUUID(field_name)) {
+				subproperties = &subproperties->at(RESERVED_UUID_FIELD);
+				type = DynamicFieldType::UUID;
+				if (dynamic_full_name.empty()) {
+					dynamic_full_name.assign(lower_string(field_name));
+				} else {
+					dynamic_full_name.append(DB_OFFSPRING_UNION).append(lower_string(field_name));
+				}
+				continue;
+			}
+
+			try {
+				auto dynamic_name = Datetime::normalizeISO8601(field_name);
+				subproperties = &subproperties->at(RESERVED_DATE_FIELD);
+				type = DynamicFieldType::DATE;
+				if (dynamic_full_name.empty()) {
+					dynamic_full_name.assign(dynamic_name);
+				} else {
+					dynamic_full_name.append(DB_OFFSPRING_UNION).append(dynamic_name);
+				}
+				continue;
+			} catch (const DatetimeError&) { }
+
+			try {
+				auto dynamic_name = Serialise::ewkt(field_name, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
+				subproperties = &subproperties->at(RESERVED_GEO_FIELD);
+				type = DynamicFieldType::GEO;
+				if (dynamic_full_name.empty()) {
+					dynamic_full_name.assign(dynamic_name);
+				} else {
+					dynamic_full_name.append(DB_OFFSPRING_UNION).append(dynamic_name);
+				}
+				continue;
+			} catch (const EWKTError&) { }
+
+			throw MSG_ClientError("%s does not exist in schema", field_name.c_str());
+		}
+	}
+
+	return std::forward_as_tuple(std::move(dynamic_full_name), type, *subproperties);
 }
 
 
@@ -887,7 +1076,7 @@ Schema::get_readable() const
 	if unlikely(properties.is_undefined()) {
 		schema_readable.erase(RESERVED_SCHEMA);
 	} else {
-		readable(properties, true);
+		readable(properties);
 	}
 
 	return schema_readable;
@@ -895,7 +1084,7 @@ Schema::get_readable() const
 
 
 void
-Schema::readable(MsgPack& item_schema, bool is_root)
+Schema::readable(MsgPack& item_schema)
 {
 	// Change this item of schema in readable form.
 	for (const auto& item_key : item_schema) {
@@ -904,7 +1093,7 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 			auto func = map_dispatch_readable.at(str_key);
 			(*func)(item_schema.at(str_key), item_schema);
 		} catch (const std::out_of_range&) {
-			if (is_valid(str_key) || (is_root && str_key == RESERVED_ID)) {
+			if (is_valid(str_key) || reserved_field_names.find(str_key) != reserved_field_names.end()) {
 				auto& sub_item = item_schema.at(str_key);
 				if unlikely(sub_item.is_undefined()) {
 					item_schema.erase(str_key);
@@ -1807,37 +1996,8 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		specification.found_field = true;
 	} else {
 		data = specification.store ? &(*parent_data)[name] : parent_data;
-		specification.dynamic_field_type = isDynamicField(name);
-		if (specification.dynamic_field_type != DynamicFieldType::NONE) {
-			std::pair<std::string, std::string> dfs = dynamic_field_schema(specification.dynamic_field_type, name);
-			if (specification.full_name.empty()) {
-				specification.dynamic_field.assign(dfs.second);
-				specification.full_name.assign(dfs.first);
-			} else {
-				specification.dynamic_field.append(DB_OFFSPRING_UNION).append(dfs.second);
-				specification.full_name.append(DB_OFFSPRING_UNION).append(dfs.first);
-			}
-			auto cp_dynamic_type = specification.dynamic_field_type;
-			specification.name.assign(dfs.first);
-			properties = &get_subproperties(*parent_properties);
-			specification.dynamic_field_type = cp_dynamic_type;
-		} else {
-			if (specification.full_name.empty()) {
-				specification.full_name.assign(name);
-				specification.dynamic_field.assign(name);
-			} else {
-				specification.dynamic_field.append(DB_OFFSPRING_UNION).append(name);
-				specification.full_name.append(DB_OFFSPRING_UNION).append(name);
-			}
-			specification.name.assign(name);
-			properties = &get_subproperties(*parent_properties);
-			try {
-				auto data_lan = map_stem_language.at(name);
-				if (data_lan.first) {
-					specification.language = data_lan.second;
-				}
-			} catch (const std::out_of_range) { }
-		}
+		specification.name.assign(name);
+		properties = &get_subproperties(*parent_properties);
 	}
 
 	switch (object.getType()) {
@@ -1858,10 +2018,6 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				}
 			}
 
-			if unlikely(specification.dynamic_field_type != DynamicFieldType::NONE || !specification.found_field) {
-				validate_required_data(specification.value.get());
-			}
-
 			if (specification.name.empty()) {
 				if (data != parent_data && !specification.store) {
 					parent_data->erase(name);
@@ -1880,29 +2036,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 					}
 				}
 			} else {
-				specification.dynamic_field_type = isDynamicField(specification.name);
-				if (specification.dynamic_field_type != DynamicFieldType::NONE) {
-					std::pair<std::string, std::string> dfs = dynamic_field_schema(specification.dynamic_field_type, specification.name);
-					if (specification.full_name.empty()) {
-						specification.dynamic_field.assign(dfs.second);
-						specification.full_name.assign(dfs.first);
-					} else {
-						specification.dynamic_field.append(DB_OFFSPRING_UNION).append(dfs.second);
-						specification.full_name.append(DB_OFFSPRING_UNION).append(dfs.first);
-					}
-					auto cp_dynamic_type = specification.dynamic_field_type;
-					properties = &get_subproperties(*properties);
-					specification.dynamic_field_type = cp_dynamic_type;
-				} else {
-					if (specification.full_name.empty()) {
-						specification.full_name.assign(specification.name);
-						specification.dynamic_field.assign(specification.name);
-					} else {
-						specification.dynamic_field.append(DB_OFFSPRING_UNION).append(specification.name);
-						specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
-					}
-					properties = &get_subproperties(*properties);
-				}
+				properties = &get_subproperties(*properties);
 				if (specification.store) {
 					data = &(*data)[specification.name];
 				}
@@ -1999,29 +2133,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 						}
 					}
 				} else {
-					specification.dynamic_field_type = isDynamicField(specification.name);
-					if (specification.dynamic_field_type != DynamicFieldType::NONE) {
-						std::pair<std::string, std::string> dfs = dynamic_field_schema(specification.dynamic_field_type, specification.name);
-						if (specification.full_name.empty()) {
-							specification.dynamic_field.assign(dfs.second);
-							specification.full_name.assign(dfs.first);
-						} else {
-							specification.dynamic_field.append(DB_OFFSPRING_UNION).append(dfs.second);
-							specification.full_name.append(DB_OFFSPRING_UNION).append(dfs.first);
-						}
-						auto cp_dynamic_type = specification.dynamic_field_type;
-						sub_properties = &get_subproperties(*sub_properties);
-						specification.dynamic_field_type = cp_dynamic_type;
-					} else {
-						if (specification.full_name.empty()) {
-							specification.dynamic_field.assign(specification.name);
-							specification.full_name.assign(specification.name);
-						} else {
-							specification.dynamic_field.append(DB_OFFSPRING_UNION).append(specification.name);
-							specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
-						}
-						sub_properties = &get_subproperties(*sub_properties);
-					}
+					sub_properties = &get_subproperties(*sub_properties);
 					if (specification.store) {
 						data_pos = &(*data_pos)[specification.name];
 					}
@@ -2080,12 +2192,13 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	L_CALL(this, "Schema::index_item(1)");
 
 	try {
-		if unlikely(specification.dynamic_field_type != DynamicFieldType::NONE || !specification.set_type) {
-			validate_required_data(&value);
-		}
-
-		if (!specification.found_field && !specification.dynamic) {
-			throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
+		if unlikely(!specification.found_field && !specification.set_type) {
+			if (!specification.dynamic) {
+				throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
+			}
+			validate_required_data(value);
+		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
+			update_dynamic_specification();
 		}
 
 		if (specification.prefix.empty()) {
@@ -2190,12 +2303,13 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 	L_CALL(this, "Schema::index_item()");
 
 	try {
-		if unlikely(specification.dynamic_field_type != DynamicFieldType::NONE || !specification.set_type) {
-			validate_required_data(&values);
-		}
-
-		if (!specification.found_field && !specification.dynamic) {
-			throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
+		if unlikely(!specification.found_field && !specification.set_type) {
+			if (!specification.dynamic) {
+				throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
+			}
+			validate_required_data(values);
+		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
+			update_dynamic_specification();
 		}
 
 		if (specification.prefix.empty()) {
@@ -2436,210 +2550,185 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 
 
 void
-Schema::validate_required_data(const MsgPack* value)
+Schema::validate_required_data(const MsgPack& value)
 {
 	L_CALL(this, "Schema::validate_required_data()");
 
-	if (specification.found_field) {
-		update_uuidfield_specification();
-	} else {
-		if (specification.sep_types[2] == FieldType::EMPTY) {
-			if (value) {
-				if (XapiandManager::manager->type_required) {
-					throw MSG_MissingTypeError("Type of field [%s] is missing", specification.dynamic_field.c_str());
+	if (specification.sep_types[2] == FieldType::EMPTY) {
+		if (XapiandManager::manager->type_required) {
+			throw MSG_MissingTypeError("Type of field [%s] is missing", specification.dynamic_full_name.c_str());
+		}
+		set_type(value);
+	}
+
+	if (!specification.full_name.empty()) {
+		auto& properties = get_mutable(specification.full_name);
+
+		// Process RESERVED_ACCURACY, RESERVED_ACC_PREFIX.
+		std::set<uint64_t> set_acc;
+		switch (specification.sep_types[2]) {
+			case FieldType::GEO: {
+				// Set partials and error.
+				properties[RESERVED_PARTIALS] = specification.partials;
+				properties[RESERVED_ERROR] = specification.error;
+
+				if (specification.doc_acc) {
+					try {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							auto val_acc = _accuracy.as_u64();
+							if (val_acc <= HTM_MAX_LEVEL) {
+								set_acc.insert(val_acc);
+							} else {
+								throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+							}
+						}
+					} catch (const msgpack::type_error&) {
+						throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+					}
+				} else {
+					set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
 				}
-				set_type(*value);
-			} else if (specification.value_rec) {
-				if (XapiandManager::manager->type_required) {
-					throw MSG_MissingTypeError("Type of field [%s] is missing", specification.dynamic_field.c_str());
-				}
-				set_type(*specification.value_rec);
+				break;
 			}
+			case FieldType::DATE: {
+				if (specification.doc_acc) {
+					try {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							auto str_accuracy(lower_string(_accuracy.as_string()));
+							try {
+								set_acc.insert(toUType(map_acc_date.at(str_accuracy)));
+							} catch (const std::out_of_range&) {
+								throw MSG_ClientError("Data inconsistency, %s: %s must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str(), str_accuracy.c_str());
+							}
+						}
+					} catch (const msgpack::type_error&) {
+						throw MSG_ClientError("Data inconsistency, %s in %s must be a subset of %s", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str());
+					}
+				} else {
+					set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
+				}
+				break;
+			}
+			case FieldType::INTEGER:
+			case FieldType::POSITIVE:
+			case FieldType::FLOAT: {
+				if (specification.doc_acc) {
+					try {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							set_acc.insert(_accuracy.as_u64());
+						}
+					} catch (const msgpack::type_error&) {
+						throw MSG_ClientError("Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str());
+					}
+				} else {
+					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
+				}
+				break;
+			}
+			case FieldType::TEXT:
+				properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
+				if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
+					specification.stem_language = specification.aux_lan;
+				}
+				properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
+
+				if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
+					specification.language = specification.aux_stem_lan;
+				}
+				properties[RESERVED_LANGUAGE] = specification.language;
+				break;
+			case FieldType::STRING:
+				if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
+					specification.language = specification.aux_stem_lan;
+				}
+				properties[RESERVED_LANGUAGE] = specification.language;
+
+				// Process RESERVED_BOOL_TERM
+				if (!specification.set_bool_term) {
+					// By default, if field name has upper characters then it is consider bool term.
+					specification.bool_term = strhasupper(specification.dynamic_name);
+				}
+				properties[RESERVED_BOOL_TERM] = specification.bool_term;
+				break;
+			case FieldType::BOOLEAN:
+			case FieldType::UUID:
+				break;
+			default:
+				throw MSG_ClientError("%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
 		}
 
-		 if (!specification.full_name.empty()) {
-			 auto& properties = get_mutable(specification.full_name);
+		if (specification.dynamic_type == DynamicFieldType::NONE) {
+			if (set_acc.size()) {
+				if (specification.acc_prefix.empty()) {
+					for (const auto& acc : set_acc) {
+						specification.acc_prefix.push_back(get_prefix(specification.dynamic_full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+					}
+				} else if (specification.acc_prefix.size() != set_acc.size()) {
+					throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+				}
 
-			 // Process RESERVED_ACCURACY, RESERVED_ACC_PREFIX.
-			 std::set<uint64_t> set_acc;
-			 switch (specification.sep_types[2]) {
-				 case FieldType::GEO: {
-					 // Set partials and error.
-					 properties[RESERVED_PARTIALS] = specification.partials;
-					 properties[RESERVED_ERROR] = specification.error;
+				specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+				properties[RESERVED_ACCURACY] = specification.accuracy;
+				properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
+			}
 
-					 if (specification.doc_acc) {
-						 try {
-							 for (const auto& _accuracy : *specification.doc_acc) {
-								 auto val_acc = _accuracy.as_u64();
-								 if (val_acc <= HTM_MAX_LEVEL) {
-									 set_acc.insert(val_acc);
-								 } else {
-									 throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
-								 }
-							 }
-						 } catch (const msgpack::type_error&) {
-							 throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
-						 }
-					 } else {
-						 set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
-					 }
-					 break;
-				 }
-				 case FieldType::DATE: {
-					 if (specification.doc_acc) {
-						 try {
-							 for (const auto& _accuracy : *specification.doc_acc) {
-								 auto str_accuracy(lower_string(_accuracy.as_string()));
-								 try {
-									 set_acc.insert(toUType(map_acc_date.at(str_accuracy)));
-								 } catch (const std::out_of_range&) {
-									 throw MSG_ClientError("Data inconsistency, %s: %s must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str(), str_accuracy.c_str());
-								 }
-							 }
-						 } catch (const msgpack::type_error&) {
-							 throw MSG_ClientError("Data inconsistency, %s in %s must be a subset of %s", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str());
-						 }
-					 } else {
-						 set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
-					 }
-					 break;
-				 }
-				 case FieldType::INTEGER:
-				 case FieldType::POSITIVE:
-				 case FieldType::FLOAT: {
-					 if (specification.doc_acc) {
-						 try {
-							 for (const auto& _accuracy : *specification.doc_acc) {
-								 set_acc.insert(_accuracy.as_u64());
-							 }
-						 } catch (const msgpack::type_error&) {
-							 throw MSG_ClientError("Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str());
-						 }
-					 } else {
-						 set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
-					 }
-					 break;
-				 }
-				 case FieldType::TEXT:
-					 properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
-					 if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
-						 specification.stem_language = specification.aux_lan;
-					 }
-					 properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
-				 case FieldType::STRING:
-					 if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
-						 specification.language = specification.aux_stem_lan;
-					 }
-					 properties[RESERVED_LANGUAGE] = specification.language;
-					 break;
-				 case FieldType::BOOLEAN:
-				 case FieldType::UUID:
-					 break;
-				 default:
-					 throw MSG_ClientError("%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
-			 }
+			// Process RESERVED_PREFIX
+			if (specification.prefix.empty()) {
+				specification.prefix = get_prefix(specification.dynamic_full_name, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
+			}
+			properties[RESERVED_PREFIX] = specification.prefix;
 
-			 if (specification.dynamic_field_type != DynamicFieldType::NONE) {
-				 if (set_acc.size()) {
-					 specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-					 properties[RESERVED_ACCURACY] = specification.accuracy;
-				 }
-				 update_uuidfield_specification();
-			 } else {
-				 auto size_acc = set_acc.size();
-				 if (size_acc) {
-					 if (specification.acc_prefix.empty()) {
-						 for (const auto& acc : set_acc) {
-							 specification.acc_prefix.push_back(get_prefix(specification.dynamic_field + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
-						 }
-					 } else if (specification.acc_prefix.size() != size_acc) {
-						 throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
-					 }
+			// Process RESERVED_SLOT
+			if (specification.slot == Xapian::BAD_VALUENO) {
+				specification.slot = get_slot(specification.dynamic_full_name);
+			}
+			properties[RESERVED_SLOT] = specification.slot;
 
-					 specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-					 properties[RESERVED_ACCURACY] = specification.accuracy;
-					 properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
-				 }
+		} else {
+			if (set_acc.size()) {
+				specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+				properties[RESERVED_ACCURACY] = specification.accuracy;
+			}
+			properties[RESERVED_INDEX] = specification.index;
+			update_dynamic_specification();
+		}
 
-				 // Process RESERVED_PREFIX
-				 if (specification.prefix.empty()) {
-					 specification.prefix = get_prefix(specification.dynamic_field, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
-				 }
-				 properties[RESERVED_PREFIX] = specification.prefix;
+		// Process RESERVED_TYPE
+		properties[RESERVED_TYPE] = specification.sep_types;
 
-				 // Process RESERVED_SLOT
-				 if (specification.slot == Xapian::BAD_VALUENO) {
-					 specification.slot = get_slot(specification.dynamic_field);
-				 }
-				 properties[RESERVED_SLOT] = specification.slot;
-
-			 }
-
-			 // Process RESERVED_TYPE
-			 properties[RESERVED_TYPE] = specification.sep_types;
-
-			 // Process RESERVED_BOOL_TERM
-			 if (!specification.set_bool_term) {
-				 /*
-				  * By default, if field name has upper characters then it is consider bool term.
-				  * If type is TEXT, bool_term is false.
-				  */
-				 specification.bool_term = specification.sep_types[2] != FieldType::TEXT && strhasupper(specification.dynamic_field);
-			 }
-			 properties[RESERVED_BOOL_TERM] = specification.bool_term;
-
-			 specification.set_type = true;
-		 }
+		specification.set_type = true;
 	}
 }
 
 
 void
-Schema::update_uuidfield_specification() {
+Schema::update_dynamic_specification() {
 	switch (specification.index) {
 		case TypeIndex::ALL:
 		case TypeIndex::FIELD_ALL:
 		case TypeIndex::GLOBAL_ALL:
-			specification.prefix = get_dynamic_prefix(specification.dynamic_field, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
-			specification.slot = get_slot(specification.dynamic_field);
+			specification.prefix.assign(get_dynamic_prefix(specification.dynamic_full_name, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+			specification.slot = get_slot(specification.dynamic_full_name);
 			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_dynamic_prefix(specification.dynamic_field + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+				specification.acc_prefix.push_back(get_dynamic_prefix(specification.dynamic_full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
 			}
 			break;
 		case TypeIndex::VALUES:
 		case TypeIndex::FIELD_VALUES:
 		case TypeIndex::GLOBAL_VALUES:
-			specification.slot = get_slot(specification.dynamic_field);
+			specification.slot = get_slot(specification.dynamic_full_name);
 			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_dynamic_prefix(specification.dynamic_field + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+				specification.acc_prefix.push_back(get_dynamic_prefix(specification.dynamic_full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
 			}
 			break;
 		case TypeIndex::TERMS:
 		case TypeIndex::FIELD_TERMS:
 		case TypeIndex::GLOBAL_TERMS:
-			specification.prefix = get_dynamic_prefix(specification.dynamic_field, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
+			specification.prefix.assign(get_dynamic_prefix(specification.dynamic_full_name, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
 			break;
 		default:
 			break;
 	}
-}
-
-
-DynamicFieldType
-Schema::isDynamicField(const std::string& field_name)
-{
-	L_CALL(nullptr, "Schema::isDynamicField()");
-
-	if (Serialise::isUUID(field_name)) {
-		return DynamicFieldType::UUID;
-	} else if (EWKT_Parser::isEWKT(field_name)) {
-		return DynamicFieldType::GEO;
-	} else if (Datetime::isDate(field_name)) {
-		return DynamicFieldType::DATE;
-	}
-
-	return DynamicFieldType::NONE;
 }
 
 
@@ -3084,31 +3173,9 @@ Schema::get_data_field(const std::string& field_name) const
 		return res;
 	}
 
-	std::vector<std::string> fields;
-	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
-	std::string last_field = fields.back(), dynamic_field;
-	dynamic_field.reserve(field_name.length());
-	for (auto& field : fields) {
-		DynamicFieldType dynamic_field_t = isDynamicField(field);
-		if (dynamic_field_t != DynamicFieldType::NONE) {
-			std::pair<std::string, std::string> dfs(dynamic_field_schema(dynamic_field_t, field));
-			if (dynamic_field.empty()) {
-				dynamic_field.append(dfs.second);
-			} else {
-				dynamic_field.append(DB_OFFSPRING_UNION).append(dfs.second);
-			}
-			field = dfs.first;
-		} else {
-			if (dynamic_field.empty()) {
-				dynamic_field.append(field);
-			} else {
-				dynamic_field.append(DB_OFFSPRING_UNION).append(field);
-			}
-		}
-	}
-
 	try {
-		const auto& properties = schema->at(RESERVED_SCHEMA).path(fields);
+		auto info = get_subproperties(schema->at(RESERVED_SCHEMA), field_name);
+		const auto& properties = std::get<2>(info);
 
 		const auto& sep_types = properties.at(RESERVED_TYPE);
 		res.sep_types[0] = (FieldType)sep_types.at(0).as_u64();
@@ -3119,37 +3186,7 @@ Schema::get_data_field(const std::string& field_name) const
 			return res;
 		}
 
-		res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
-		DynamicFieldType dynamic_field_t = isDynamicField(last_field);
-		if (dynamic_field_t != DynamicFieldType::NONE) {
-			res.slot = get_slot(dynamic_field);
-			res.prefix = get_dynamic_prefix(dynamic_field, DOCUMENT_CUSTOM_TERM_PREFIX, (char)res.sep_types[2]);
-
-			// Get accuracy, acc_prefix and reserved word.
-			switch (res.sep_types[2]) {
-				case FieldType::GEO:
-					res.partials = properties.at(RESERVED_PARTIALS).as_bool();
-					res.error = properties.at(RESERVED_ERROR).as_f64();
-				case FieldType::FLOAT:
-				case FieldType::INTEGER:
-				case FieldType::POSITIVE:
-				case FieldType::DATE: {
-					for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-						res.accuracy.push_back(acc.as_u64());
-						res.acc_prefix.push_back(get_dynamic_prefix(field_name + std::to_string(res.accuracy.back()), DOCUMENT_CUSTOM_TERM_PREFIX, (char)res.sep_types[2]));
-					}
-					break;
-				}
-				case FieldType::TEXT:
-					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
-					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
-				case FieldType::STRING:
-					res.language = properties.at(RESERVED_LANGUAGE).as_string();
-					break;
-				default:
-					break;
-			}
-		} else {
+		if (std::get<1>(info) == DynamicFieldType::NONE) {
 			res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 			res.prefix = properties.at(RESERVED_PREFIX).as_string();
 
@@ -3162,25 +3199,65 @@ Schema::get_data_field(const std::string& field_name) const
 				case FieldType::INTEGER:
 				case FieldType::POSITIVE:
 				case FieldType::DATE: {
-					for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-						res.accuracy.push_back(acc.as_u64());
-					}
-					for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
-						res.acc_prefix.push_back(acc_p.as_string());
-					}
+					try {
+						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+							res.accuracy.push_back(acc.as_u64());
+						}
+						for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
+							res.acc_prefix.push_back(acc_p.as_string());
+						}
+					} catch (const std::out_of_range&) { }
 					break;
 				}
 				case FieldType::TEXT:
 					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
+					res.language = properties.at(RESERVED_LANGUAGE).as_string();
+					break;
 				case FieldType::STRING:
 					res.language = properties.at(RESERVED_LANGUAGE).as_string();
+					res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
+					break;
+				default:
+					break;
+			}
+		} else {
+			res.slot = get_slot(std::get<0>(info));
+			res.prefix = get_dynamic_prefix(std::get<0>(info), DOCUMENT_CUSTOM_TERM_PREFIX, (char)res.sep_types[2]);
+
+			// Get accuracy, acc_prefix and reserved word.
+			switch (res.sep_types[2]) {
+				case FieldType::GEO:
+					res.partials = properties.at(RESERVED_PARTIALS).as_bool();
+					res.error = properties.at(RESERVED_ERROR).as_f64();
+				case FieldType::FLOAT:
+				case FieldType::INTEGER:
+				case FieldType::POSITIVE:
+				case FieldType::DATE: {
+					try {
+						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+							res.accuracy.push_back(acc.as_u64());
+							res.acc_prefix.push_back(get_dynamic_prefix(std::get<0>(info) + std::to_string(res.accuracy.back()), DOCUMENT_CUSTOM_TERM_PREFIX, (char)res.sep_types[2]));
+						}
+					} catch (const std::out_of_range&) { }
+					break;
+				}
+				case FieldType::TEXT:
+					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
+					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
+					res.language = properties.at(RESERVED_LANGUAGE).as_string();
+					break;
+				case FieldType::STRING:
+					res.language = properties.at(RESERVED_LANGUAGE).as_string();
+					res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 					break;
 				default:
 					break;
 			}
 		}
-	} catch (const std::exception&) { }
+	} catch (const std::exception& er) {
+		L_ERR(this, "ERROR: %s", er.what());
+	}
 
 	return res;
 }
@@ -3197,30 +3274,9 @@ Schema::get_slot_field(const std::string& field_name) const
 		return res;
 	}
 
-	std::vector<std::string> fields;
-	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
-	std::string last_field = fields.back(), dynamic_field;
-	dynamic_field.reserve(field_name.length());
-	for (auto& field : fields) {
-		 DynamicFieldType dynamic_field_t = isDynamicField(field);
-		if (dynamic_field_t != DynamicFieldType::NONE) {
-			std::pair<std::string, std::string> dfs(dynamic_field_schema(dynamic_field_t, field));
-			if (dynamic_field.empty()) {
-				dynamic_field.append(dfs.second);
-			} else {
-				dynamic_field.append(DB_OFFSPRING_UNION).append(dfs.second);
-			}
-			field = dfs.first;
-		} else {
-			if (dynamic_field.empty()) {
-				dynamic_field.append(field);
-			} else {
-				dynamic_field.append(DB_OFFSPRING_UNION).append(field);
-			}
-		}
-	}
 	try {
-		const auto& properties = schema->at(RESERVED_SCHEMA).path(fields);
+		auto info = get_subproperties(schema->at(RESERVED_SCHEMA), field_name);
+		const auto& properties = std::get<2>(info);
 
 		const auto& sep_types = properties.at(RESERVED_TYPE);
 		res.sep_types[0] = (FieldType)sep_types.at(0).as_u64();
@@ -3236,19 +3292,24 @@ Schema::get_slot_field(const std::string& field_name) const
 			case FieldType::TEXT:
 				res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 				res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
+				res.language = properties.at(RESERVED_LANGUAGE).as_string();
+				break;
 			case FieldType::STRING:
 				res.language = properties.at(RESERVED_LANGUAGE).as_string();
+				res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 				break;
 			default:
 				break;
 		}
 
-		if (isDynamicField(last_field) != DynamicFieldType::NONE) {
-			res.slot = get_slot(dynamic_field);
-		} else {
+		if (std::get<1>(info) == DynamicFieldType::NONE) {
 			res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
+		} else {
+			res.slot = get_slot(std::get<0>(info));
 		}
-	} catch (const std::exception&) { }
+	} catch (const std::exception& er) {
+		L_ERR(this, "ERROR: %s", er.what());
+	}
 
 	return res;
 }

@@ -269,9 +269,11 @@ struct specification_t : required_spc_t  {
 	std::string aux_stem_lan;
 	std::string aux_lan;
 
-	// Auxiliar variables for dynamic field.
-	std::string dynamic_field;
-	DynamicFieldType dynamic_field_type;
+	// Auxiliar variables for dynamic fields.
+	DynamicFieldType dynamic_type;
+	std::string dynamic_prefix;
+	std::string dynamic_name;
+	std::string dynamic_full_name;
 
 	specification_t();
 	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
@@ -319,10 +321,31 @@ class Schema {
 	void restart_specification();
 
 	/*
+	 * Normalize the field name and set dynamic type.
+	 */
+	void normalize_field(const std::string& field_name);
+
+	/*
+	 * Add new field to properties.
+	 */
+	void add_field(MsgPack* properties, const std::string& field_name);
+
+	/*
+	 * Get the subproperties of field_name.
+	 */
+	void get_subproperties(const MsgPack* properties, const std::string& field_name);
+
+	/*
 	 * Gets the properties of item_key and specification is updated.
 	 * Returns the properties of schema.
 	 */
 	const MsgPack& get_subproperties(const MsgPack& properties);
+
+	/*
+	 * Returns the propierties of full_name, if the path does not
+	 * exist throw an exception.
+	 */
+	std::tuple<std::string, DynamicFieldType, const MsgPack&> get_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 	/*
 	 * Sets type to array in properties.
@@ -342,7 +365,7 @@ class Schema {
 	/*
 	 * Recursively transforms item_schema into a readable form.
 	 */
-	static void readable(MsgPack& item_schema, bool is_root=false);
+	static void readable(MsgPack& item_schema);
 
 
 	/*
@@ -365,13 +388,12 @@ class Schema {
 	 * Validates data when RESERVED_TYPE has not been save in schema.
 	 * Insert into properties all required data.
 	 */
-	void validate_required_data(const MsgPack* value);
+	void validate_required_data(const MsgPack& value);
 
 	/*
-	 * Functions to handle dynamic fields types
+	 * Update dynamic field's specifications.
 	 */
-	void update_uuidfield_specification();
-	static DynamicFieldType isDynamicField(const std::string& field_name);
+	void update_dynamic_specification();
 
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);
@@ -627,6 +649,9 @@ public:
 		specification.error = prop_error.as_f64();
 	}
 };
+
+
+extern const std::unordered_set<std::string> reserved_field_names;
 
 
 using dispatch_reserved = void (Schema::*)(const MsgPack&);
