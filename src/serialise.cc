@@ -527,7 +527,7 @@ Unserialise::MsgPack(FieldType field_type, const std::string& serialised_val)
 			result = geo(serialised_val);
 			break;
 		case FieldType::UUID:
-			result = uuid(serialise_val);
+			result = uuid(serialised_val);
 			break;
 		default:
 			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(field_type));
