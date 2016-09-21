@@ -33,6 +33,15 @@ extern const std::regex find_subpolygon_re;
 extern const std::regex find_collection_re;
 
 
+class EWKTError : public ClientError {
+public:
+	template<typename... Args>
+	EWKTError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+#define MSG_EWKTError(...) EWKTError(__FILE__, __LINE__, __VA_ARGS__)
+
+
 struct GeoSpatial {
 	RangeList ranges;
 	CartesianUSet centroids;
