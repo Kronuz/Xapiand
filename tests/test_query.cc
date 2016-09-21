@@ -236,7 +236,7 @@ static int make_search(const test_query_t _tests[], int len) {
 	query.synonyms = false;
 	query.is_fuzzy = false;
 	query.is_nearest = false;
-	query.sort.push_back(RESERVED_ID); // All the result are sort by its id.
+	query.sort.push_back(RESERVED_ID_FIELD); // All the result are sort by its id.
 
 	for (int i = 0; i < len; ++i) {
 		test_query_t p = _tests[i];

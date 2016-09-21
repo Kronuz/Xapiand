@@ -693,7 +693,7 @@ DatabaseHandler::get_document(const std::string& doc_id)
 
 	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
-	auto field_spc = schema->get_slot_field(RESERVED_ID);
+	auto field_spc = schema->get_slot_field(RESERVED_ID_FIELD);
 
 	Xapian::Query query(prefixed(Serialise::serialise(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
 
@@ -713,7 +713,7 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 
 	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
-	auto field_spc = schema->get_slot_field(RESERVED_ID);
+	auto field_spc = schema->get_slot_field(RESERVED_ID_FIELD);
 
 	Xapian::Query query(prefixed(Serialise::MsgPack(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
 
@@ -792,7 +792,7 @@ DatabaseHandler::get_stats_doc(MsgPack& stats, const std::string& doc_id)
 
 	auto doc = get_document(doc_id);
 
-	stats[RESERVED_ID] = doc.get_value(DB_SLOT_ID);
+	stats[RESERVED_ID_FIELD] = doc.get_value(DB_SLOT_ID);
 
 	MsgPack obj_data = get_MsgPack(doc);
 	try {

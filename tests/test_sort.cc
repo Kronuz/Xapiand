@@ -640,7 +640,7 @@ static int make_search(const sort_t _tests[], int len, const std::string& metric
 					auto val = Unserialise::unserialise(FieldType::INTEGER, m.get_document().get_value(0));
 					if (it->compare(val) != 0) {
 						++cont;
-						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_ID, val.c_str(), RESERVED_ID, it->c_str());
+						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_ID_FIELD, val.c_str(), RESERVED_ID_FIELD, it->c_str());
 					}
 				}
 			}

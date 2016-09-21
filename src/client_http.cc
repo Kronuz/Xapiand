@@ -715,7 +715,7 @@ HttpClient::home_view()
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
 	} catch (const std::out_of_range&) {
-		obj_data[RESERVED_ID] = db_handler.get_value(document, RESERVED_ID);
+		obj_data[RESERVED_ID_FIELD] = db_handler.get_value(document, RESERVED_ID_FIELD);
 	}
 
 #ifdef XAPIAND_CLUSTERING
@@ -768,7 +768,7 @@ HttpClient::delete_document_view()
 		status_code = 200;
 
 		response["_delete"] = {
-			{ RESERVED_ID, doc_id },
+			{ RESERVED_ID_FIELD, doc_id },
 			{ "_commit",  query_field->commit }
 		};
 	} else {
@@ -779,7 +779,7 @@ HttpClient::delete_document_view()
 		if (err_list.empty()) {
 			status_code = 200;
 			response["_delete"] = {
-				{ RESERVED_ID, doc_id },
+				{ RESERVED_ID_FIELD, doc_id },
 				{ "_commit",  query_field->commit }
 			};
 		} else {
@@ -860,7 +860,7 @@ HttpClient::index_document_view(bool gen_id)
 	if (err_list.empty()) {
 		status_code = 200;
 		response["_index"] = {
-			{ RESERVED_ID, doc_id },
+			{ RESERVED_ID_FIELD, doc_id },
 			{ "_commit", query_field->commit }
 		};
 	} else {
@@ -907,7 +907,7 @@ HttpClient::update_document_view()
 
 	MsgPack response;
 	response["_update"] = {
-		{ RESERVED_ID, doc_id },
+		{ RESERVED_ID_FIELD, doc_id },
 		{ "_commit", query_field->commit }
 	};
 
@@ -1055,7 +1055,7 @@ HttpClient::search_view()
 	query_field_maker(query_field_flags);
 
 	if (path_parser.off_id) {
-		query_field->query.push_back(std::string(RESERVED_ID)  + ":" +  path_parser.get_id());
+		query_field->query.push_back(std::string(RESERVED_ID_FIELD)  + ":" +  path_parser.get_id());
 	}
 
 	Xapian::MSet mset;
@@ -1149,7 +1149,7 @@ HttpClient::search_view()
 			try {
 				obj_data = obj_data.at(RESERVED_DATA);
 			} catch (const std::out_of_range&) {
-				obj_data[RESERVED_ID] = db_handler.get_value(document, RESERVED_ID);
+				obj_data[RESERVED_ID_FIELD] = db_handler.get_value(document, RESERVED_ID_FIELD);
 				// Detailed info about the document:
 				obj_data[RESERVED_RANK] = m.get_rank();
 				obj_data[RESERVED_WEIGHT] = m.get_weight();
@@ -1494,7 +1494,7 @@ HttpClient::query_field_maker(int flag)
 		if (query_parser.next("sort") != -1) {
 			query_field->sort.push_back(query_parser.get());
 		} else {
-			query_field->sort.push_back(RESERVED_ID);
+			query_field->sort.push_back(RESERVED_ID_FIELD);
 		}
 		query_parser.rewind();
 
