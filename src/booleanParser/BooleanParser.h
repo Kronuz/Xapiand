@@ -45,16 +45,24 @@ public:
 	void PrintTree();
 	Xapian::Query get_query();
 
-	inline bool empty() {
+	inline bool empty() const noexcept {
 		return stack_output.empty();
 	}
 
-	inline size_t size() {
+	inline size_t size() const noexcept {
 		return stack_output.size();
+	}
+
+	inline const Token& front() const {
+		return stack_output.front();
 	}
 
 	inline Token& front() {
 		return stack_output.front();
+	}
+
+	inline const Token& back() const {
+		return stack_output.back();
 	}
 
 	inline Token& back() {

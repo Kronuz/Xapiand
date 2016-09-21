@@ -20,22 +20,22 @@
  * IN THE SOFTWARE.
  */
 
-#include <algorithm>
-#include <iomanip>
+#include "BooleanParser.h"
 
 #include "AndNode.h"
 #include "IdNode.h"
 #include "NotNode.h"
-#include "SyntacticException.h"
 #include "OrNode.h"
+#include "SyntacticException.h"
 #include "XorNode.h"
 
-#include "BooleanParser.h"
+#include <algorithm>
+#include <iomanip>
 
 
 BooleanTree::BooleanTree(const std::string& input_)
+	: input(std::make_unique<char[]>(input_.size() + 1))
 {
-	input = std::make_unique<char[]>(input_.size()+1);
 	std::strcpy(input.get(), input_.c_str());
 	lexer = std::make_unique<Lexer>(input.get());
 	toRPN();
@@ -72,23 +72,19 @@ BooleanTree::BuildTree()
 		Token token = stack_output.back();
 		stack_output.pop_back();
 		switch(token.type) {
-			case TokenType::Not	:
+			case TokenType::Not:
 				return std::make_unique<NotNode>(BuildTree());
-				break;
 			case TokenType::Or:
 				return std::make_unique<OrNode>(BuildTree(), BuildTree());
-				break;
 			case TokenType::And:
 				return std::make_unique<AndNode>(BuildTree(), BuildTree());
-				break;
 			case TokenType::Xor:
 				return std::make_unique<XorNode>(BuildTree(), BuildTree());
-				break;
 			default:
-				// Silence compiler switch warning
 				break;
 		}
 	}
+
 	return nullptr;
 }
 
@@ -103,9 +99,7 @@ BooleanTree::toRPN()
 	currentToken = lexer->NextToken();
 
 	while (currentToken.type != TokenType::EndOfFile) {
-
 		switch (currentToken.type) {
-
 			case TokenType::Id:
 				stack_output.push_back(currentToken);
 				break;
@@ -131,6 +125,7 @@ BooleanTree::toRPN()
 					}
 				}
 				break;
+
 			case TokenType::Not:
 			case TokenType::Or:
 			case TokenType::And:
@@ -169,7 +164,8 @@ BooleanTree::precedence(TokenType type)
 			return 2;
 		case TokenType::Or:
 			return 3;
-		default: return 4;
+		default:
+			return 4;
 	}
 }
 
@@ -184,8 +180,8 @@ BooleanTree::PrintTree()
 void
 BooleanTree::postorder(BaseNode* p, int indent)
 {
-	if(p != nullptr) {
-		switch(p->getType()) {
+	if (p != nullptr) {
+		switch (p->getType()) {
 			case AndNodeType:
 				if (dynamic_cast<AndNode*>(p)->getLeftNode()) {
 					postorder(dynamic_cast<AndNode*>(p)->getLeftNode(), indent+4);
@@ -193,7 +189,7 @@ BooleanTree::postorder(BaseNode* p, int indent)
 				if (indent) {
 					std::cout << std::setw(indent) << ' ';
 				}
-				cout<< "AND" << "\n ";
+				cout << "AND" << "\n ";
 				if (dynamic_cast<AndNode*>(p)->getRightNode()) {
 					postorder(dynamic_cast<AndNode*>(p)->getRightNode(), indent+4);
 				}
@@ -205,7 +201,7 @@ BooleanTree::postorder(BaseNode* p, int indent)
 				if (indent) {
 					std::cout << std::setw(indent) << ' ';
 				}
-				cout<< "OR" << "\n ";
+				cout << "OR" << "\n ";
 				if (dynamic_cast<OrNode*>(p)->getRightNode()) {
 					postorder(dynamic_cast<OrNode*>(p)->getRightNode(), indent+4);
 				}
@@ -213,7 +209,7 @@ BooleanTree::postorder(BaseNode* p, int indent)
 			case NotNodeType:
 				if (dynamic_cast<NotNode*>(p)) {
 					std::cout << std::setw(indent) << ' ';
-					cout<< "NOT" << "\n ";
+					cout << "NOT" << "\n ";
 					postorder(dynamic_cast<NotNode*>(p)->getNode(), indent+4);
 				}
 				break;
@@ -224,15 +220,15 @@ BooleanTree::postorder(BaseNode* p, int indent)
 				if (indent) {
 					std::cout << std::setw(indent) << ' ';
 				}
-				cout<< "XOR" << "\n ";
+				cout << "XOR" << "\n ";
 				if (dynamic_cast<XorNode*>(p)->getRightNode()) {
 					postorder(dynamic_cast<XorNode*>(p)->getRightNode(), indent+4);
 				}
 				break;
 			case IdNodeType:
-				std::cout << std::setw(indent) << ' ';
+				cout << std::setw(indent) << ' ';
 				if (dynamic_cast<IdNode*>(p)) {
-					cout<< dynamic_cast<IdNode*>(p)->getId() << "\n ";
+					cout << dynamic_cast<IdNode*>(p)->getId() << "\n ";
 				}
 				break;
 		}
