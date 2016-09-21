@@ -107,13 +107,6 @@ public:
 };
 
 
-class EWKTError : public ClientError {
-public:
-	template<typename... Args>
-	EWKTError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
-};
-
-
 class LimitError : public Exception {
 public:
 	template<typename... Args>
@@ -181,7 +174,6 @@ public:
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_CartesianError(...) CartesianError(__FILE__, __LINE__, __VA_ARGS__)
-#define MSG_EWKTError(...) EWKTError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_SerialisationError(...) SerialisationError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_DummyException() DummyException()
 #define MSG_NetworkError(...) NetworkError(__FILE__, __LINE__, __VA_ARGS__)

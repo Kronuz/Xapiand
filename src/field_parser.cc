@@ -290,7 +290,7 @@ FieldParser::parse()
 						break;
 				}
 				break;
-				
+
 			case FieldParser::State::COMMA_OR_END:
 					switch (*currentSymbol) {
 						case COMMA:
