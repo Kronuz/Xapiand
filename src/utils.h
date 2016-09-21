@@ -86,65 +86,6 @@ struct pos_time_t {
 };
 
 
-struct QueryParser {
-	std::string query;
-
-public:
-	size_t len;
-	const char *off;
-
-	QueryParser();
-
-	void clear();
-	void rewind();
-	int init(const std::string& q);
-	int next(const char *name);
-
-	std::string get();
-};
-
-
-class PathParser {
-	std::string path;
-	const char *off;
-
-public:
-	enum State {
-		start, pmt, cmd, id, nsp, pth, hst, end,
-		INVALID_STATE,
-		INVALID_NSP,
-		INVALID_HST,
-	};
-
-	size_t len_pth;
-	const char *off_pth;
-	size_t len_hst;
-	const char *off_hst;
-	size_t len_nsp;
-	const char *off_nsp;
-	size_t len_pmt;
-	const char *off_pmt;
-	size_t len_cmd;
-	const char *off_cmd;
-	size_t len_id;
-	const char *off_id;
-
-	PathParser();
-
-	void clear();
-	void rewind();
-	State init(const std::string& p);
-	State next();
-
-	std::string get_pth();
-	std::string get_hst();
-	std::string get_nsp();
-	std::string get_pmt();
-	std::string get_cmd();
-	std::string get_id();
-};
-
-
 struct File_ptr {
 	struct dirent *ent;
 
@@ -235,7 +176,6 @@ char* normalize_path(const char* src, const char* end, char* dst);
 char* normalize_path(const std::string& src, char* dst);
 std::string normalize_path(const std::string& src);
 int url_qs(const char *, const char *, size_t);
-std::string urldecode(const char *, size_t);
 
 // String tokenizer with the delimiter.
 void stringTokenizer(const std::string& str, const std::string& delimiter, std::vector<std::string> &tokens);
