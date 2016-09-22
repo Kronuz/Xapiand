@@ -266,27 +266,32 @@ Lexer::IsStringOperator(Token& token)
 {
 	if (!token.lexeme.empty()) {
 		switch (token.lexeme.at(0)) {
-			 case 'A':
-				if (strcmp(token.lexeme.data(), AND) == 0) {
+			case 'a':
+			case 'A':
+				if (strcasecmp(token.lexeme.data(), AND) == 0) {
 					token.type = TokenType::And;
 				}
 				break;
-			 case 'O':
-				if (strcmp(token.lexeme.data(), OR) == 0) {
+			case 'o':
+			case 'O':
+				if (strcasecmp(token.lexeme.data(), OR) == 0) {
 					token.type = TokenType::Or;
 				}
 				break;
-			 case 'N':
-				if (strcmp(token.lexeme.data(), NOT) == 0) {
+			case 'n':
+			case 'N':
+				if (strcasecmp(token.lexeme.data(), NOT) == 0) {
 					token.type = TokenType::Not;
 				}
 				break;
-			 case 'X':
-				if (strcmp(token.lexeme.data(), XOR) == 0) {
+			case 'x':
+			case 'X':
+				if (strcasecmp(token.lexeme.data(), XOR) == 0) {
 					token.type = TokenType::Xor;
 				}
 				break;
-			 default:
+				
+			default:
 				return;
 		}
 	}
