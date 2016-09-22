@@ -200,7 +200,6 @@ FieldParser::parse()
 
 					case DOUBLEDOTS:
 						currentState = FieldParser::State::STARTVALUE;
-						fprintf(stderr, "quote [%c]\n", quote);
 						switch (quote) {
 							case SINGLEQUOTE:
 								off_field = off_value;
