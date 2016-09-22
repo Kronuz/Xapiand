@@ -74,7 +74,14 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 			}
 
 			if (field_spc.get_type() == FieldType::GEO) {
-				auto geo = EWKT_Parser::getGeoSpatial(end, field_spc.partials, field_spc.error);
+				throw MSG_SerialisationError("The format for Geo Spatial range is: field_name:[\"EWKT\"]");
+			}
+
+			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::serialise(field_spc, end));
+			return Xapian::Query(mvle->release());
+		} else if (end.empty()) {
+			if (field_spc.get_type() == FieldType::GEO) {
+				auto geo = EWKT_Parser::getGeoSpatial(start, field_spc.partials, field_spc.error);
 
 				if (geo.ranges.empty()) {
 					return Xapian::Query::MatchNothing;
@@ -94,16 +101,9 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 					return Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term.first), GeoQuery);
 				}
 			} else {
-				auto mvle = new MultipleValueLE(field_spc.slot, Serialise::serialise(field_spc, end));
-				return Xapian::Query(mvle->release());
+				auto mvge = new MultipleValueGE(field_spc.slot, Serialise::serialise(field_spc, start));
+				return Xapian::Query(mvge->release());
 			}
-		} else if (end.empty()) {
-			if (field_spc.get_type() == FieldType::GEO) {
-				throw MSG_SerialisationError("The format for Geo Spatial range is: field_name:\"..EWKT\"");
-			}
-
-			auto mvge = new MultipleValueGE(field_spc.slot, Serialise::serialise(field_spc, start));
-			return Xapian::Query(mvge->release());
 		}
 
 		switch (field_spc.get_type()) {
@@ -164,7 +164,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				}
 			}
 			case FieldType::GEO:
-				throw MSG_QueryParserError("The format for Geo Spatial range is: field_name:\"..EWKT\"");
+				throw MSG_QueryParserError("The format for Geo Spatial range is: field_name:[\"EWKT\"]");
 			default:
 				return Xapian::Query::MatchNothing;
 		}
