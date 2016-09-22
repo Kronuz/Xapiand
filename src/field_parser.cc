@@ -38,7 +38,7 @@ FieldParser::FieldParser(const std::string& p)
 	  len_value(0), off_value(nullptr),
 	  len_double_quote_value(0), off_double_quote_value(nullptr),
 	  len_single_quote_value(0), off_single_quote_value(nullptr),
-	  isrange(false) { }
+	  skip_quote(false), isrange(false) { }
 
 
 void
@@ -166,7 +166,7 @@ FieldParser::parse()
 						throw MSG_FieldParserError("Expected symbol: '%c'", quote);
 					default:
 						if (*currentSymbol == quote) {
-							currentState = FieldParser::State::END;
+							currentState = FieldParser::State::DOUBLE_DOTS_OR_END;
 							switch (quote) {
 								case DOUBLEQUOTE:
 									++len_double_quote_value;
@@ -190,6 +190,42 @@ FieldParser::parse()
 						}
 						break;
 				}
+				break;
+
+			case FieldParser::State::DOUBLE_DOTS_OR_END:
+				switch (*currentSymbol) {
+					case '\0':
+						currentState = FieldParser::State::END;
+						break;
+
+					case DOUBLEDOTS:
+						currentState = FieldParser::State::STARTVALUE;
+						fprintf(stderr, "quote [%c]\n", quote);
+						switch (quote) {
+							case SINGLEQUOTE:
+								off_field = off_value;
+								len_field = len_value;
+								off_value = nullptr;
+								len_value = 0;
+								off_single_quote_value = nullptr;
+								break;
+
+							case DOUBLEQUOTE:
+								off_field = off_value;
+								len_field = len_value;
+								off_value = nullptr;
+								len_value = 0;
+								off_double_quote_value = nullptr;
+								break;
+						}
+						skip_quote = true;
+						break;
+
+					default:
+						 MSG_FieldParserError("Unexpected symbol: %c", *currentSymbol);
+						break;
+				}
+
 				break;
 
 			case FieldParser::State::ESCAPE:

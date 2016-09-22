@@ -51,6 +51,8 @@ class FieldParser {
 	size_t len_single_quote_value;
 	const char* off_single_quote_value;
 
+	bool skip_quote;
+
 public:
 	enum class State : uint8_t {
 		INIT,
@@ -63,6 +65,7 @@ public:
 		END_SQUARE_BRACKET,
 		SQUARE_BRACKET,
 		COMMA_OR_END,
+		DOUBLE_DOTS_OR_END,
 		FIRST_QUOTE_SQUARE_BRACKET,
 		SECOND_QUOTE_SQUARE_BRACKET,
 		END
@@ -84,7 +87,9 @@ public:
 	}
 
 	inline std::string get_field_dot() const {
-		if (off_fieldot) {
+		if (skip_quote) {
+			return std::string(off_field, len_field) + ":";
+		} else if (off_fieldot) {
 			return std::string(off_fieldot, len_fieldot);
 		}
 		return std::string();
