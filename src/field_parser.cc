@@ -222,7 +222,7 @@ FieldParser::parse()
 						break;
 
 					default:
-						 MSG_FieldParserError("Unexpected symbol: %c", *currentSymbol);
+						 throw MSG_FieldParserError("Unexpected symbol: %c", *currentSymbol);
 						break;
 				}
 
