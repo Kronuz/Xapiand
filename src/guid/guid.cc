@@ -102,10 +102,11 @@ unsigned char hexPairToChar(char a, char b) {
 
 // create a guid from string
 Guid::Guid(const string& fromString)
-	: _bytes(16, 0)
 {
 	char charOne, charTwo;
 	bool lookingForFirstChar = true;
+
+	_bytes.reserve(16);
 
 	for (const char& ch : fromString) {
 		if (ch == '-')
