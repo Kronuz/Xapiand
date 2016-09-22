@@ -296,12 +296,11 @@ FieldParser::parse()
 						case COMMA:
 							currentState = FieldParser::State::SQUARE_BRACKET;
 							break;
+						case RIGHT_SQUARE_BRACKET:
+							currentState = FieldParser::State::END;
+							break;
 						default:
-							if (*currentSymbol == quote) {
-								currentState = FieldParser::State::END_SQUARE_BRACKET;
-							} else {
-								 MSG_FieldParserError("Unexpected symbol: %c", *currentSymbol);
-							}
+							 MSG_FieldParserError("Unexpected symbol: %c", *currentSymbol);
 					}
 				break;
 
