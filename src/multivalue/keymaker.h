@@ -207,10 +207,8 @@ public:
 	Multi_MultiValueKeyMaker() = default;
 
 	template <class Iterator>
-	Multi_MultiValueKeyMaker(Iterator begin, Iterator end) {
-		slots.reserve(std::distance(begin, end));
-		while (begin != end) add_value(*begin++);
-	}
+	Multi_MultiValueKeyMaker(Iterator begin, Iterator end)
+		: slots(begin, end) { }
 
 	virtual std::string operator()(const Xapian::Document& doc) const override;
 	void add_value(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf);
