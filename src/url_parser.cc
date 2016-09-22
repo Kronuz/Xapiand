@@ -25,64 +25,40 @@
 #include <cassert>
 
 
-const char HEX2DEC[256] = {
-	/*       0  1  2  3   4  5  6  7   8  9  A  B   C  D  E  F */
-	/* 0 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* 1 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* 2 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* 3 */  0, 1, 2, 3,  4, 5, 6, 7,  8, 9,-1,-1, -1,-1,-1,-1,
+std::string urldecode(const char *str, size_t size) {
+	char *dStr = new char[size + 1];
+	char eStr[] = "00"; /* for a hex code */
 
-	/* 4 */ -1,10,11,12, 13,14,15,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* 5 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* 6 */ -1,10,11,12, 13,14,15,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* 7 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
+	strncpy(dStr, str, size);
+	dStr[size] = '\0';
 
-	/* 8 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* 9 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* A */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* B */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
+	int i; /* the counter for the string */
 
-	/* C */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* D */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* E */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	/* F */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1
-};
+	for(i=0;i<strlen(dStr);++i) {
 
+		if(dStr[i] == '%') {
+			if(dStr[i+1] == 0)
+				return std::string(dStr);
 
-std::string urldecode(const char *src, size_t size) {
-	// Note from RFC1630:  "Sequences which start with a percent sign
-	// but are not followed by two hexadecimal characters (0-9, A-F) are reserved
-	// for future extension"
+			if(isxdigit(dStr[i+1]) && isxdigit(dStr[i+2])) {
 
-	const char * SRC_END = src + size;
-	const char * SRC_LAST_DEC = SRC_END - 2;   // last decodable '%'
+				/* combine the next to numbers into one */
+				eStr[0] = dStr[i+1];
+				eStr[1] = dStr[i+2];
 
-	char * const pStart = new char[size];
-	char * pEnd = pStart;
+				/* convert it to decimal */
+				long int x = strtol(eStr, NULL, 16);
 
-	while (src < SRC_LAST_DEC) {
-		if (*src == '%') {
-			char dec1, dec2;
-			if (-1 != (dec1 = HEX2DEC[static_cast<int>(*(src + 1))])
-				&& -1 != (dec2 = HEX2DEC[static_cast<int>(*(src + 2))])) {
-				*pEnd++ = (dec1 << 4) + dec2;
-				src += 3;
-				continue;
+				/* remove the hex */
+				memmove(&dStr[i+1], &dStr[i+3], strlen(&dStr[i+3])+1);
+
+				dStr[i] = x;
 			}
 		}
-
-		*pEnd++ = *src++;
+		else if(dStr[i] == '+') { dStr[i] = ' '; }
 	}
 
-	// the last 2- chars
-	while (src < SRC_END) {
-		*pEnd++ = *src++;
-	}
-
-	std::string sResult(pStart, pEnd);
-	delete [] pStart;
-	std::replace(sResult.begin(), sResult.end(), '+', ' ');
-	return sResult;
+	return std::string(dStr);
 }
 
 
