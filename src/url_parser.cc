@@ -23,6 +23,7 @@
 #include "url_parser.h"
 
 #include <cassert>
+#include <cstdlib>
 
 
 std::string urldecode(const char *str, size_t size) {
