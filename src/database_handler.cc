@@ -424,7 +424,7 @@ DatabaseHandler::build_query(const std::string& token, std::vector<std::string>&
 				case FieldType::POSITIVE:
 					return Xapian::Query(prefixed(Serialise::positive(field_value), field_spc.prefix));
 				case FieldType::STRING:
-					if (fp.is_double_quote_value()) {
+					if (fp.is_double_quote_value() || q_flags & Xapian::QueryParser::FLAG_PARTIAL) {
 						Xapian::QueryParser queryString;
 						field_spc.bool_term ? queryString.add_boolean_prefix(field_name, field_spc.prefix) : queryString.add_prefix(field_name, field_spc.prefix);
 
