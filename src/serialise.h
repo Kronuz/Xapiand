@@ -29,21 +29,55 @@
 #include "sortable_serialise.h"
 
 
+#ifndef __has_builtin         // Optional of course
+  #define __has_builtin(x) 0  // Compatibility with non-clang compilers
+#endif
+#if (defined(__clang__) && __has_builtin(__builtin_bswap32) && __has_builtin(__builtin_bswap64)) || (defined(__GNUC__ ) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)))
+//  GCC and Clang recent versions provide intrinsic byte swaps via builtins
+//  prior to 4.8, gcc did not provide __builtin_bswap16 on some platforms so we emulate it
+//  see http://gcc.gnu.org/bugzilla/show_bug.cgi?id=52624
+//  Clang has a similar problem, but their feature test macros make it easier to detect
+#  if (defined(__clang__) && __has_builtin(__builtin_bswap16)) || (defined(__GNUC__) &&(__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)))
+#    define BYTE_SWAP_2(x) (__builtin_bswap16(x))
+#  else
+#    define BYTE_SWAP_2(x) (__builtin_bswap32((x) << 16))
+#  endif
+#  define BYTE_SWAP_4(x) (__builtin_bswap32(x))
+#  define BYTE_SWAP_8(x) (__builtin_bswap64(x))
+#elif defined(__linux__)
+// Linux systems provide the byteswap.h header, with
+// don't check for obsolete forms defined(linux) and defined(__linux) on the theory that
+// compilers that predefine only these are so old that byteswap.h probably isn't present.
+#  include <byteswap.h>
+#  define BYTE_SWAP_2(x) (bswap_16(x))
+#  define BYTE_SWAP_4(x) (bswap_32(x))
+#  define BYTE_SWAP_8(x) (bswap_64(x))
+#elif defined(_MSC_VER)
+// Microsoft documents these as being compatible since Windows 95 and specificly
+// lists runtime library support since Visual Studio 2003 (aka 7.1).
+#  include <cstdlib>
+#  define BYTE_SWAP_2(x) (_byteswap_ushort(x))
+#  define BYTE_SWAP_4(x) (_byteswap_ulong(x))
+#  define BYTE_SWAP_8(x) (_byteswap_uint64(x))
+#else
+#  define BYTE_SWAP_2(x) ((((x) & 0xFF00) >> 8) | (((x) & 0x00FF) << 8))
+#  define BYTE_SWAP_4(x) ((BYTE_SWAP_2(((x) & 0xFFFF0000) >> 16)) | ((BYTE_SWAP_2((x) & 0x0000FFFF)) << 16))
+#  define BYTE_SWAP_8(x) ((BYTE_SWAP_8(((x) & 0xFFFFFFFF00000000) >> 32)) | ((BYTE_SWAP_8((x) & 0x00000000FFFFFFFF)) << 32))
+#endif
+
+
 #if __BYTE_ORDER == __BIG_ENDIAN
 // No translation needed for big endian system.
-#define Swap7Bytes(val) val // HTM's trixel's ids are represent in 7 bytes.
-#define Swap2Bytes(val) val // uint16_t, short in 2 bytes
-#define Swap4Bytes(val) val // Unsigned int is represent in 4 bytes
-#define Swap8Bytes(val) val // uint64_t is represent in 8 bytes
+#  define Swap7Bytes(val) (val) // HTM's trixel's ids are represent in 7 bytes.
+#  define Swap2Bytes(val) (val) // uint16_t, short in 2 bytes
+#  define Swap4Bytes(val) (val) // Unsigned int is represent in 4 bytes
+#  define Swap8Bytes(val) (val) // uint64_t is represent in 8 bytes
 #elif __BYTE_ORDER == __LITTLE_ENDIAN
 // Swap 7 byte, 56 bit values. (If it is not big endian, It is considered little endian)
-#define Swap7Bytes(val) ((((val) >> 48) & 0xFF) | (((val) >> 32) & 0xFF00) | (((val) >> 16) & 0xFF0000) | \
-						((val) & 0xFF000000) | (((val) << 16) & 0xFF00000000) | \
-						(((val) << 32) & 0xFF0000000000) | (((val) << 48) & 0xFF000000000000))
-#define Swap2Bytes(val) (((val & 0xFF00) >> 8) | ((val & 0x00FF) << 8))
-#define Swap4Bytes(val) ((Swap2Bytes((val & 0xFFFF0000) >> 16)) | ((Swap2Bytes(val & 0x0000FFFF)) << 16))
-#define Swap8Bytes(val) ((Swap4Bytes((val & 0xFFFFFFFF00000000) >> 32)) | ((Swap4Bytes(val & 0x00000000FFFFFFFF)) << 32))
-
+#  define Swap2Bytes(val) BYTE_SWAP_2(val)
+#  define Swap4Bytes(val) BYTE_SWAP_4(val)
+#  define Swap7Bytes(val) (BYTE_SWAP_8((val) << 8))
+#  define Swap8Bytes(val) BYTE_SWAP_8(val)
 #endif
 
 
