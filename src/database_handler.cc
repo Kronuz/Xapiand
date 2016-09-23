@@ -424,7 +424,22 @@ DatabaseHandler::build_query(const std::string& token, std::vector<std::string>&
 				case FieldType::POSITIVE:
 					return Xapian::Query(prefixed(Serialise::positive(field_value), field_spc.prefix));
 				case FieldType::STRING:
-					return Xapian::Query(prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix));
+					if (fp.is_double_quote_value()) {
+						Xapian::QueryParser queryString;
+						field_spc.bool_term ? queryString.add_boolean_prefix(field_name, field_spc.prefix) : queryString.add_prefix(field_name, field_spc.prefix);
+
+						queryString.set_database(*database->db);
+						queryString.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
+						queryString.set_stemmer(Xapian::Stem(field_spc.stem_language));
+						std::string str_string;
+						str_string.reserve(field_name_dot.length() + field_value.length());
+						str_string.assign(field_name_dot).append(field_value);
+
+						suggestions.push_back(queryString.get_corrected_query_string());
+						return queryString.parse_query(str_string, q_flags);
+					} else {
+						return Xapian::Query(prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix));
+					}
 				case FieldType::TEXT: {
 					if (fp.is_double_quote_value()) {
 						field_value.assign(fp.get_doubleq_value());
