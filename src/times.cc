@@ -33,6 +33,8 @@
 
 #ifdef __APPLE__
 
+#ifndef HAVE_CLOCK_GETTIME
+
 static mach_timebase_info_data_t __clock_gettime_inf;
 
 
@@ -87,5 +89,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 	}
 	return retval;
 }
+
+# endif /* HAVE_CLOCK_GETTIME */
 
 #endif /* __APPLE__ */

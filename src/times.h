@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "config.h"
+
 #include <sys/time.h>
 
 
@@ -33,6 +35,8 @@
 #endif /*__linux__*/
 
 #ifdef __APPLE__
+
+#ifndef HAVE_CLOCK_GETTIME
 
 #include <sys/resource.h>
 #include <mach/mach.h>
@@ -50,6 +54,8 @@
 typedef	int	clockid_t;
 
 int clock_gettime(clockid_t clk_id, struct timespec *tp);
+
+#endif /* HAVE_CLOCK_GETTIME */
 
 #endif /* __APPLE__ */
 
