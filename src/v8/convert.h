@@ -1,0 +1,123 @@
+#include "../msgpack.h"
+
+#include <v8.h>
+
+
+namespace v8pp {
+
+
+// Generic converter.
+template <typename T, typename Enabler = void>
+struct convert;
+
+
+// String converter.
+template <typename charT, typename traits, typename Alloc>
+struct convert<std::basic_string<charT, traits, Alloc>> {
+private:
+	const charT* to_cstr(const v8::String::Utf8Value& value) const {
+		return *value ? reinterpret_cast<const charT*>(*value) : "<string conversion failed>";
+	}
+
+	using value_type = std::basic_string<charT, traits, Alloc>;
+
+public:
+	v8::Handle<v8::String> operator()(const v8::Arguments& args) const {
+		return v8::String::New(to_cstr(v8::String::Utf8Value(args.Data())));
+	}
+
+	value_type operator()(const v8::String::Utf8Value& value) const {
+		return to_cstr(value);
+	}
+
+	value_type operator()(v8::Handle<v8::Value> value) const {
+		return to_cstr(v8::String::Utf8Value(value));
+	}
+};
+
+
+// Const char* converter
+template <typename charT>
+struct convert<const charT*> {
+private:
+	inline const charT* to_cstr(const v8::String::Utf8Value& value) const {
+		return *value ? reinterpret_cast<const charT*>(*value) : "<string conversion failed>";
+	}
+
+public:
+	v8::Handle<v8::String> operator()(const v8::Arguments& args) const {
+		return v8::String::New(to_cstr(v8::String::Utf8Value(args.Data())));
+	}
+
+	const charT* operator()(const v8::String::Utf8Value& value) const {
+		return to_cstr(value);
+	}
+
+	const charT* operator()(v8::Handle<v8::Value> value) const {
+		return to_cstr(v8::String::Utf8Value(value));
+	}
+};
+
+
+// MsgPack converter.
+template <>
+struct convert<MsgPack> {
+private:
+	static inline void process(MsgPack& o, v8::Handle<v8::Value> v) {
+		if (v->IsBoolean()) {
+			o = v->BooleanValue();
+		} else if (v->IsInt32()) {
+			o = v->Int32Value();
+		} else if (v->IsUint32()) {
+			o = v->Uint32Value();
+		} else if (v->IsNumber()) {
+			o = v->NumberValue();
+		} else if (v->IsString()) {
+			o = convert<std::string>()(v);
+		} else if (v->IsArray()) {
+			auto o_v8 = v->ToObject();
+			auto length = o_v8->Get(v8::String::New("length"))->Uint32Value();
+			for (int i = 0; i < length; ++i) {
+				process(o[i], o_v8->Get(i));
+			}
+		} else if (v->IsObject()) {
+			auto o_v8 = v->ToObject();
+			auto properties = o_v8->GetPropertyNames();
+			auto length = properties->ToObject()->Get(v8::String::New("length"))->Uint32Value();
+			for (int i = 0; i < length; ++i) {
+				process(o[convert<std::string>()(properties->Get(i))], o_v8->Get(properties->Get(i)));
+			}
+		} else if (v->IsUndefined()) {
+			o = MsgPack();
+		} else {
+			o = convert<std::string>()(v);
+		}
+	}
+
+public:
+	void operator()(MsgPack& obj, const v8::Local<v8::Value>& value) const {
+		process(obj, value);
+	}
+
+	MsgPack operator()(v8::Handle<v8::Value> val) const {
+		if (val->IsObject()) {
+			auto o_v8 = v8::Handle<v8::Object>::Cast(val);
+			if (o_v8->InternalFieldCount() == 1) {
+				auto field = v8::Handle<v8::External>::Cast(o_v8->GetInternalField(0));
+				return *(static_cast<const MsgPack*>(field->Value()));
+			}
+		}
+
+		MsgPack res;
+		process(res, val);
+		return res;
+	}
+
+	MsgPack& operator()(const v8::AccessorInfo& info) const {
+		auto field = v8::Handle<v8::External>::Cast(info.Holder()->GetInternalField(0));
+		return *(static_cast<MsgPack*>(field->Value()));
+	}
+};
+
+
+}; // End namespace v8pp
