@@ -84,13 +84,12 @@ static v8::Handle<v8::Value> print(const v8::Arguments& args) {
 }
 
 
-template <typename T>
 struct Wrapper {
 private:
 	friend class Processor;
 
 	v8::Persistent<v8::ObjectTemplate> _obj_template;
-	wrap<T> _wrap;
+	wrap<MsgPack> _wrap;
 
 	static v8::Handle<v8::Value> _to_string(const v8::Arguments& args) {
 		return v8::String::New(convert<const char*>()(v8::String::Utf8Value(args.Data())));
@@ -193,13 +192,14 @@ public:
 		_obj_template.Dispose();
 	}
 
-	v8::Handle<v8::Value> operator()(T& arg) const {
+	v8::Handle<v8::Value> operator()(MsgPack& arg) const {
 		return _wrap.toValue(arg, _obj_template);
 	}
 };
 
 
 class Processor {
+public:
 	/*
 	 * Wrap C++ function into new V8 function.
 	 */
@@ -225,7 +225,7 @@ private:
 	v8::Isolate* isolate;
 	bool initialized;
 
-	Wrapper<MsgPack> wrapper;
+	Wrapper wrapper;
 	v8::Persistent<v8::Context> context;
 	std::map<std::string, Function> functions;
 
@@ -270,8 +270,8 @@ private:
 			}
 			wrapper._obj_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 			wrapper._obj_template->SetInternalFieldCount(1);
-			wrapper._obj_template->SetNamedPropertyHandler(Wrapper<MsgPack>::getter, Wrapper<MsgPack>::setter, Wrapper<MsgPack>::query, Wrapper<MsgPack>::deleter, Wrapper<MsgPack>::enumerator, v8::External::New(this));
-			wrapper._obj_template->SetIndexedPropertyHandler(Wrapper<MsgPack>::getter, Wrapper<MsgPack>::setter, Wrapper<MsgPack>::query, Wrapper<MsgPack>::deleter, Wrapper<MsgPack>::enumerator, v8::External::New(this));
+			wrapper._obj_template->SetNamedPropertyHandler(Wrapper::getter, Wrapper::setter, Wrapper::query, Wrapper::deleter, Wrapper::enumerator, v8::External::New(this));
+			wrapper._obj_template->SetIndexedPropertyHandler(Wrapper::getter, Wrapper::setter, Wrapper::query, Wrapper::deleter, Wrapper::enumerator, v8::External::New(this));
 		}
 	}
 
@@ -374,7 +374,10 @@ void run() {
 			"print ('nn:', nn);"\
 			"return old;"\
 		"}"
-		"function first(old) { print ('old:', old); }"
+		"function first(old) {"\
+			"print ('old:', old);"\
+			"return 1000;"
+		"}"
 	);
 
 
