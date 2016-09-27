@@ -51,24 +51,18 @@ struct wrap<MsgPack> {
 				auto arg_str = arg.as_string();
 				return v8::String::New(arg_str.data(), arg_str.size());
 			}
-			case MsgPack::Type::POSITIVE_INTEGER: {
+			case MsgPack::Type::POSITIVE_INTEGER:
 				return v8::Integer::New(arg.as_u64());
-			}
-			case MsgPack::Type::NEGATIVE_INTEGER: {
+			case MsgPack::Type::NEGATIVE_INTEGER:
 				return v8::Integer::New(arg.as_i64());
-			}
-			case MsgPack::Type::FLOAT: {
+			case MsgPack::Type::FLOAT:
 				return v8::Number::New(arg.as_f64());
-			}
-			case MsgPack::Type::BOOLEAN: {
+			case MsgPack::Type::BOOLEAN:
 				return v8::Boolean::New(arg.as_bool());
-			}
-			case MsgPack::Type::UNDEFINED: {
+			case MsgPack::Type::UNDEFINED:
 				return v8::Undefined();
-			}
-			case MsgPack::Type::NIL: {
+			case MsgPack::Type::NIL:
 				return v8::Null();
-			}
 			default:
 				return v8::Undefined();
 		}
@@ -99,14 +93,12 @@ struct wrap<MsgPack> {
 
 	inline void setter(const std::string& property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
 		auto& obj = convert<MsgPack>()(info);
-		auto& o_prop = obj[property];
-		o_prop = convert<MsgPack>()(value);
+		obj[property] = convert<MsgPack>()(value);
 	}
 
 	inline void setter(uint32_t index, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
 		auto& obj = convert<MsgPack>()(info);
-		auto& o_prop = obj[index];
-		o_prop = convert<MsgPack>()(value);
+		obj[index] = convert<MsgPack>()(value);
 	}
 
 	inline void deleter(const std::string& property, const v8::AccessorInfo& info) {
@@ -120,4 +112,4 @@ struct wrap<MsgPack> {
 	}
 };
 
-};
+}; // End namespace v8pp
