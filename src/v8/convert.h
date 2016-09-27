@@ -118,7 +118,7 @@ private:
 	}
 
 public:
-	void operator()(MsgPack& obj, const v8::Local<v8::Value>& value) const {
+	void operator()(MsgPack& obj, const v8::Handle<v8::Value>& value) const {
 		process(obj, value);
 	}
 
