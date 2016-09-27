@@ -23,21 +23,20 @@
 // brew install v8-315
 // c++ -std=c++14 -fsanitize=address -g -O2 -o test tst.cpp -lv8 -L/usr/local/opt/v8-315/lib -I/usr/local/opt/v8-315/include && ./test
 
-#include <iostream>
+#include "wrapper.h"
+
 #include <cassert>
-#include <string>
+#include <iostream>
 #include <map>
 #include <array>
+#include <string>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "wrapper.h"
-
 
 namespace v8pp {
-
 
 static void report_exception(v8::TryCatch* try_catch) {
 	auto exception_string = convert<std::string>()(try_catch->Exception());
@@ -80,7 +79,6 @@ static v8::Handle<v8::Value> print(const v8::Arguments& args) {
 		}
 	}
 	printf("\n");
-	fflush(stdout);
 
 	return v8::Undefined();
 }
@@ -89,12 +87,10 @@ static v8::Handle<v8::Value> print(const v8::Arguments& args) {
 template <typename T>
 struct Wrapper {
 private:
-	using wrap_template = wrap<T>;
-
 	friend class Processor;
 
 	v8::Persistent<v8::ObjectTemplate> _obj_template;
-	wrap_template _wrap;
+	wrap<T> _wrap;
 
 	static v8::Handle<v8::Value> _to_string(const v8::Arguments& args) {
 		return v8::String::New(convert<const char*>()(v8::String::Utf8Value(args.Data())));
@@ -234,7 +230,6 @@ private:
 	std::map<std::string, Function> functions;
 
 	void Initialize(const std::string& script_name_, const std::string& script_source_) {
-		fprintf(stderr, "********  Initialize\n");
 		v8::Locker locker(isolate);
 		v8::Isolate::Scope isolate_scope(isolate);
 
@@ -304,14 +299,12 @@ private:
 
 	template<typename... Args>
 	MsgPack invoke(const v8::Persistent<v8::Function>& function, Args&&... arguments) {
-		fprintf(stderr, "********  invoke\n");
 		v8::Locker locker(isolate);
 		v8::Isolate::Scope isolate_scope(isolate);
 		v8::Context::Scope context_scope(context);
 		v8::HandleScope handle_scope;
 
 		std::array<v8::Handle<v8::Value>, sizeof...(arguments)> args{ wrapper(std::forward<Args>(arguments))... };
-		fprintf(stderr, "+++++ EXIT HERE\n");
 		v8::TryCatch try_catch;
 		// Invoke the function, giving the global object as 'this' and one args
 		v8::Handle<v8::Value> result = function->Call(context->Global(), args.size(), args.data());
@@ -343,16 +336,13 @@ public:
 		try {
 			return functions.at(name);
 		} catch (const std::out_of_range&) {
-			fprintf(stderr, "++++ Do not found\n");
 			functions.emplace(name, Function(this, extract_function(name)));
-			fprintf(stderr, "++++ Function added\n");
 			return functions.at(name);
 		}
 	}
 };
 
-
-};
+}; // End namespace v8pp
 
 
 void run() {
