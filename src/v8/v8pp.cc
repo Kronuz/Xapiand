@@ -378,6 +378,18 @@ void run() {
 			"print ('old:', old);"\
 			"return 1000;"
 		"}"
+		"function test_cycle() {"\
+			"var map = { a:-110 };"\
+			"var sub_map = { x:2, y: map };"\
+			"map.b = sub_map;"\
+			"return sub_map;"\
+		"}"
+		"function test_cycle2() {"\
+			"var map = { a:{ aa:'AA', ab:'AB' },  b:{ ba:{ baa: 'BAA' }, c:'C' } };"\
+			"var sub_map = { x:[map.b ,'XXY'], y:'Y' };"\
+			"map.b.ba.bab = sub_map.x;"\
+			"return sub_map;"\
+		"}"
 	);
 
 
@@ -408,7 +420,17 @@ void run() {
 	new_map = p["test_object"](old_map, new_map);
 	std::cout << "new_map:" << new_map << std::endl;
 
-	p["first"](old_map);
+	try {
+		p["test_cycle"]();
+	} catch (const v8pp::cycle_detection&) {
+		fprintf(stderr, "ERROR: Cycle Detection\n");
+	}
+
+	try {
+		p["test_cycle2"]();
+	} catch (const v8pp::cycle_detection&) {
+		fprintf(stderr, "ERROR: Cycle Detection\n");
+	}
 }
 
 
