@@ -58,18 +58,18 @@ public:
 	using iterator = typename list_t::iterator;
 	using const_iterator = typename list_t::const_iterator;
 
-	decltype(auto) begin() {
+	auto begin() {
 		return _items_list.begin();
 	}
 
-	decltype(auto) cbegin() const {
+	auto cbegin() const {
 		return _items_list.cbegin();
 	}
 
-	decltype(auto) end() {
+	auto end() {
 		return _items_list.end();
 	}
-	decltype(auto) cend() const {
+	auto cend() const {
 		return _items_list.cend();
 	}
 
@@ -124,7 +124,7 @@ public:
 	T& get(const Key& key) {
 		try {
 			return at(key);
-		} catch (std::range_error) {
+		} catch (const std::range_error&) {
 			return insert(std::make_pair(key, T()));
 		}
 	}
@@ -206,7 +206,7 @@ public:
 	T& get_and(const OnGet& on_get, const Key& key) {
 		try {
 			return at_and(on_get, key);
-		} catch (std::range_error) {
+		} catch (const std::range_error&) {
 			T& ref = insert(std::make_pair(key, T()));
 			switch (on_get(ref)) {
 				case GetAction::leave:
