@@ -40,6 +40,12 @@
 
 namespace v8pp {
 
+static size_t hash(std::string source) {
+	std::hash<std::string> hash_fn;
+	return hash_fn(source);
+}
+
+
 static void report_exception(v8::TryCatch* try_catch) {
 	auto exception_string = convert<std::string>()(try_catch->Exception());
 
@@ -345,6 +351,12 @@ public:
 };
 
 }; // End namespace v8pp
+
+
+class ScriptLRU: public lru::LRU<size_t, Processor> {
+public:
+	ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { };
+};
 
 
 void run() {
