@@ -224,6 +224,8 @@ find_package (V8)
 if (V8_FOUND MATCHES "YES")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lv8 -L${V8_DIR}/lib -I${V8_INCLUDE_DIR}")
 endif()
+
+
 find_package (Xapian REQUIRED)
 find_package (Threads REQUIRED)
 find_package (UUID REQUIRED)
@@ -277,7 +279,6 @@ configure_file (
 
 file (GLOB SRC_LIST
 	${PROJECT_SOURCE_DIR}/src/*.c* ${PROJECT_SOURCE_DIR}/src/*.h
-	${PROJECT_SOURCE_DIR}/src/v8/*.c* ${PROJECT_SOURCE_DIR}/src/v8/*.h
 	${PROJECT_SOURCE_DIR}/src/booleanParser/*.c* ${PROJECT_SOURCE_DIR}/src/booleanParser/*.h
 	${PROJECT_SOURCE_DIR}/src/ev/*.c* ${PROJECT_SOURCE_DIR}/src/ev/*.h
 	${PROJECT_SOURCE_DIR}/src/geo/*.c* ${PROJECT_SOURCE_DIR}/src/geo/*.h
