@@ -29,6 +29,11 @@
 
 namespace v8pp {
 
+class cycle_detection : public std::runtime_error {
+	using std::runtime_error::runtime_error;
+};
+
+
 // Generic converter.
 template <typename T, typename Enabler = void>
 struct convert;
@@ -86,7 +91,7 @@ public:
 template <>
 struct convert<MsgPack> {
 private:
-	static inline void process(MsgPack& o, v8::Handle<v8::Value> v) {
+	static inline void process(MsgPack& o, v8::Handle<v8::Value> v, std::vector<v8::Local<v8::Object>>& visitObjects) {
 		if (v->IsBoolean()) {
 			o = v->BooleanValue();
 		} else if (v->IsInt32()) {
@@ -101,14 +106,19 @@ private:
 			auto o_v8 = v->ToObject();
 			auto length = o_v8->Get(v8::String::New("length"))->Uint32Value();
 			for (int i = 0; i < length; ++i) {
-				process(o[i], o_v8->Get(i));
+				process(o[i], o_v8->Get(i), visitObjects);
 			}
 		} else if (v->IsObject()) {
 			auto o_v8 = v->ToObject();
-			auto properties = o_v8->GetPropertyNames();
-			auto length = properties->ToObject()->Get(v8::String::New("length"))->Uint32Value();
-			for (int i = 0; i < length; ++i) {
-				process(o[convert<std::string>()(properties->Get(i))], o_v8->Get(properties->Get(i)));
+			if (std::find(visitObjects.begin(), visitObjects.end(), o_v8) == visitObjects.end()) {
+				visitObjects.push_back(o_v8);
+				auto properties = o_v8->GetPropertyNames();
+				auto length = properties->ToObject()->Get(v8::String::New("length"))->Uint32Value();
+				for (int i = 0; i < length; ++i) {
+					process(o[convert<std::string>()(properties->Get(i))], o_v8->Get(properties->Get(i)), visitObjects);
+				}
+			} else {
+				throw cycle_detection("Cycle detection");
 			}
 		} else if (v->IsUndefined()) {
 			o = MsgPack();
@@ -119,7 +129,8 @@ private:
 
 public:
 	void operator()(MsgPack& obj, const v8::Handle<v8::Value>& value) const {
-		process(obj, value);
+		std::vector<v8::Local<v8::Object>> visitObjects;
+		process(obj, value, visitObjects);
 	}
 
 	MsgPack operator()(v8::Handle<v8::Value> val) const {
@@ -132,7 +143,8 @@ public:
 		}
 
 		MsgPack res;
-		process(res, val);
+		std::vector<v8::Local<v8::Object>> visitObjects;
+		process(res, val, visitObjects);
 		return res;
 	}
 
