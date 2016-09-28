@@ -64,6 +64,7 @@
 #define RESERVED_UUID_FIELD     "_uuid_field"
 #define RESERVED_GEO_FIELD      "_geo_field"
 #define RESERVED_DATE_FIELD     "_date_field"
+#define RESERVED_SCRIPT         "_script"
 // Reserved words used only in the root of the  document.
 #define RESERVED_VALUES         "_values"
 #define RESERVED_FIELD_VALUES   "_field_values"
