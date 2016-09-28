@@ -348,14 +348,46 @@ public:
 		Initialize(script_name, script_source);
 	}
 
-	~Processor() {
-		{
-			v8::Locker locker(isolate);
-			v8::Isolate::Scope isolate_scope(isolate);
-			context.Dispose();
-		}
+	Processor(Processor&& o)
+		: isolate(o.isolate),
+		  initialized(std::move(o.initialized)),
+		  wrapper(std::move(o.wrapper)),
+		  context(std::move(o.context)),
+		  functions(std::move(o.functions))
+	{
+		o.isolate = nullptr;
+	}
 
-		isolate->Dispose();
+	Processor& operator=(Processor&& o) {
+		if (this != &o) {
+			reset();
+			isolate = o.isolate;
+			initialized = std::move(o.initialized);
+			wrapper = std::move(o.wrapper);
+			context = std::move(o.context);
+			functions = std::move(o.functions);
+			o.isolate = nullptr;
+		}
+		return *this;
+	}
+
+	Processor(const Processor&) = delete;
+	Processor& operator=(const Processor&) = delete;
+
+	~Processor() {
+		reset();
+	}
+
+	void reset() {
+		if (isolate) {
+			{
+				v8::Locker locker(isolate);
+				v8::Isolate::Scope isolate_scope(isolate);
+				context.Dispose();
+			}
+
+			isolate->Dispose();
+		}
 	}
 
 	Function operator[](const std::string& name) {
