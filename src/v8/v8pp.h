@@ -23,6 +23,8 @@
 // brew install v8-315
 // c++ -std=c++14 -fsanitize=address -g -O2 -o test tst.cpp -lv8 -L/usr/local/opt/v8-315/lib -I/usr/local/opt/v8-315/include && ./test
 
+#pragma once
+
 #include "wrapper.h"
 
 #include <cassert>
