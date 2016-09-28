@@ -39,7 +39,7 @@ namespace v8pp {
 
 // v8 version supported: v8-315
 
-static size_t hash(const std::string& source) {
+inline static size_t hash(const std::string& source) {
 	std::hash<std::string> hash_fn;
 	return hash_fn(source);
 }
@@ -180,11 +180,10 @@ private:
 				return result;
 			}
 			case MsgPack::Type::ARRAY: {
-				v8::Handle<v8::Array> result = v8::Array::New(obj.size());
-				int i = 0;
-				for (const auto& val : obj) {
+				auto size = obj.size();
+				v8::Handle<v8::Array> result = v8::Array::New(size);
+				for (size_t i = 0; i < size; ++i) {
 					result->Set(i, v8::Integer::New(i));
-					++i;
 				}
 				return result;
 			}
@@ -193,7 +192,7 @@ private:
 		}
 	}
 
-	static v8::Handle<v8::Integer> query(v8::Local<v8::String> property, const v8::AccessorInfo& info) {
+	static v8::Handle<v8::Integer> query(v8::Local<v8::String> property, const v8::AccessorInfo&) {
 		if (property.IsEmpty() || property->IsNull() || property->IsUndefined()) {
 			return v8::Integer::New(v8::None);
 		}
@@ -207,7 +206,7 @@ private:
 		return v8::Integer::New(v8::None);
 	}
 
-	static v8::Handle<v8::Integer> query(uint32_t index, const v8::AccessorInfo& info) {
+	static v8::Handle<v8::Integer> query(uint32_t, const v8::AccessorInfo&) {
 		return v8::Integer::New(v8::None);
 	}
 
@@ -330,7 +329,7 @@ private:
 		v8::Context::Scope context_scope(context);
 		v8::HandleScope handle_scope;
 
-		std::array<v8::Handle<v8::Value>, sizeof...(arguments)> args{ wrapper(std::forward<Args>(arguments))... };
+		std::array<v8::Handle<v8::Value>, sizeof...(arguments)> args{{ wrapper(std::forward<Args>(arguments))... }};
 		v8::TryCatch try_catch;
 		// Invoke the function, giving the global object as 'this' and one args
 		v8::Handle<v8::Value> result = function->Call(context->Global(), args.size(), args.data());
