@@ -217,15 +217,21 @@ endforeach ()
 
 
 ########################################################################
+# V8 Engine
+########################################################################
+if (V8)
+	find_package (V8)
+	if (V8_FOUND MATCHES "YES")
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lv8 -L${V8_DIR}/lib -I${V8_INCLUDE_DIR}")
+	else ()
+		message (FATAL_ERROR "V8 package not found")
+	endif()
+endif(V8)
+
+
+########################################################################
 # Configuration
 ########################################################################
-
-
-find_package (V8)
-if (V8_FOUND MATCHES "YES")
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lv8 -L${V8_DIR}/lib -I${V8_INCLUDE_DIR}")
-endif()
-
 
 find_package (Xapian REQUIRED)
 find_package (Threads REQUIRED)
