@@ -15,9 +15,10 @@ option (BINARY_PROXY "Define to what port binary traffic will be redirected to" 
 option (CLUSTERING "Enable remote clustering" ON)
 option (DATABASE_WAL "Enable database write ahead log (WAL)" ON)
 option (TRACEBACKS "Enable tracebacks for exceptions" OFF)
+option (V8 "Enable v8 engine" ON)
 option (BUILD_TESTS "Build all tests" OFF)
 
-foreach(opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS)
+foreach(opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS V8)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 	else ()

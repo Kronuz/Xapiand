@@ -272,4 +272,7 @@
 #cmakedefine GUID_CFUUID @GUID_CFUUID@
 #cmakedefine GUID_FREEBSD @GUID_FREEBSD@
 
+/* Enable V8 engine */
+#cmakedefine XAPIAND_V8 @XAPIAND_V8@
+
 #endif /*  _CONFIGURATION_HEADER_GUARD_H_ */
