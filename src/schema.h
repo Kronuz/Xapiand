@@ -27,6 +27,7 @@
 #include "serialise.h"
 #include "stl_serialise.h"
 #include "utils.h"
+#include "v8/v8pp.h"
 
 #include <future>
 
@@ -657,3 +658,12 @@ extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_doc
 extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties;
 extern const std::unordered_map<std::string, dispatch_root> map_dispatch_root;
 extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
+
+
+class ScriptLRU : public lru::LRU<size_t, v8pp::Processor> {
+public:
+	ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { };
+};
+
+
+extern ScriptLRU script_lru;

@@ -250,6 +250,10 @@ const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable({
 });
 
 
+// LRU of scripts.
+ScriptLRU script_lru;
+
+
 const std::unordered_map<std::string, std::pair<bool, std::string>> map_stem_language({
 	{ "armenian",    { true,  "hy" } },  { "hy",               { true,  "hy" } },  { "basque",          { true,  "ue" } },
 	{ "eu",          { true,  "eu" } },  { "catalan",          { true,  "ca" } },  { "ca",              { true,  "ca" } },
@@ -1870,7 +1874,24 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 
 		// Run script.
 		if (spc_start.script) {
-			// FIXME: Run
+			std::string script;
+			try {
+				script.assign(spc_start.script.as_string());
+			} catch (const msgpack::type_error&) {
+				throw MSG_ClientError("%s must be string", RESERVED_SCRIPT);
+			}
+
+			auto script_hash = v8pp::hash(script);
+
+			v8pp::Processor* processor;
+			try {
+				processor = &script_lru.at(script_hash);
+			} catch (const std::out_of_range&) {
+				fprintf(stderr, "++++++ NEW SCRIPT\n");
+				processor = &script_lru.emplace(script_hash, v8pp::Processor(std::to_string(script_hash), script));
+			}
+
+			data = processor["mod_data"](data);
 		}
 
 		return data;
