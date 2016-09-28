@@ -105,7 +105,7 @@ private:
 		} else if (v->IsArray()) {
 			auto o_v8 = v->ToObject();
 			auto length = o_v8->Get(v8::String::New("length"))->Uint32Value();
-			for (int i = 0; i < length; ++i) {
+			for (size_t i = 0; i < length; ++i) {
 				process(o[i], o_v8->Get(i), visitObjects);
 			}
 		} else if (v->IsObject()) {
@@ -114,7 +114,7 @@ private:
 				visitObjects.push_back(o_v8);
 				auto properties = o_v8->GetPropertyNames();
 				auto length = properties->ToObject()->Get(v8::String::New("length"))->Uint32Value();
-				for (int i = 0; i < length; ++i) {
+				for (size_t i = 0; i < length; ++i) {
 					process(o[convert<std::string>()(properties->Get(i))], o_v8->Get(properties->Get(i)), visitObjects);
 				}
 			} else {
