@@ -169,9 +169,28 @@ private:
 	}
 
 	static v8::Handle<v8::Array> enumerator(const v8::AccessorInfo& info) {
-		v8::Handle<v8::Array> result = v8::Array::New(1);
-		result->Set(0, v8::String::New("Universal Answer"));
-		return result;
+		const auto& obj = convert<MsgPack>()(info);
+		switch (obj.getType()) {
+			case MsgPack::Type::MAP: {
+				v8::Handle<v8::Array> result = v8::Array::New(obj.size());
+				int i = 0;
+				for (const auto& key : obj) {
+					result->Set(i++, v8::String::New(key.as_string().c_str()));
+				}
+				return result;
+			}
+			case MsgPack::Type::ARRAY: {
+				v8::Handle<v8::Array> result = v8::Array::New(obj.size());
+				int i = 0;
+				for (const auto& val : obj) {
+					result->Set(i, v8::Integer::New(i));
+					++i;
+				}
+				return result;
+			}
+			default:
+				return v8::Array::New(0);
+		}
 	}
 
 	static v8::Handle<v8::Integer> query(v8::Local<v8::String> property, const v8::AccessorInfo& info) {
