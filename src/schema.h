@@ -23,6 +23,7 @@
 #pragma once
 
 #include "database_utils.h"
+#include "lru.h"
 #include "msgpack.h"
 #include "serialise.h"
 #include "stl_serialise.h"
@@ -662,7 +663,7 @@ extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_rea
 
 class ScriptLRU : public lru::LRU<size_t, v8pp::Processor> {
 public:
-	ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { };
+	ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { }
 };
 
 

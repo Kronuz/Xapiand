@@ -388,7 +388,8 @@ specification_t::specification_t(const specification_t& o)
 	  bool_detection(o.bool_detection),
 	  string_detection(o.string_detection),
 	  text_detection(o.text_detection),
-	  uuid_detection(true),
+	  uuid_detection(o.uuid_detection),
+	  script(o.script),
 	  name(o.name),
 	  full_name(o.full_name),
 	  found_field(o.found_field),
@@ -418,6 +419,7 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  string_detection(std::move(o.string_detection)),
 	  text_detection(std::move(o.text_detection)),
 	  uuid_detection(std::move(o.uuid_detection)),
+	  script(std::move(o.script)),
 	  name(std::move(o.name)),
 	  full_name(std::move(o.full_name)),
 	  found_field(std::move(o.found_field)),
@@ -1874,9 +1876,10 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 
 		// Run script.
 		if (spc_start.script) {
+			v8::V8::Initialize();
 			std::string script;
 			try {
-				script.assign(spc_start.script.as_string());
+				script.assign(spc_start.script->as_string());
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("%s must be string", RESERVED_SCRIPT);
 			}
@@ -1886,12 +1889,11 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 			v8pp::Processor* processor;
 			try {
 				processor = &script_lru.at(script_hash);
-			} catch (const std::out_of_range&) {
-				fprintf(stderr, "++++++ NEW SCRIPT\n");
-				processor = &script_lru.emplace(script_hash, v8pp::Processor(std::to_string(script_hash), script));
+			} catch (const std::range_error&) {
+				processor = &script_lru.insert(std::make_pair(script_hash, v8pp::Processor(std::to_string(script_hash), script)));
 			}
 
-			data = processor["mod_data"](data);
+			data = (*processor)["mod_data"](data);
 		}
 
 		return data;
