@@ -243,10 +243,13 @@ struct specification_t : required_spc_t  {
 	bool text_detection;
 	bool uuid_detection;
 
-	std::unique_ptr<const MsgPack> value;
 	// Value recovered from the item.
+	std::unique_ptr<const MsgPack> value;
 	std::unique_ptr<MsgPack> value_rec;
 	std::unique_ptr<const MsgPack> doc_acc;
+
+	// Script for the object.
+	std::shared_ptr<const MsgPack> script;
 
 	std::string name;
 	std::string full_name;
@@ -485,6 +488,7 @@ public:
 	void process_day(const MsgPack& doc_day);
 	void process_value(const MsgPack& doc_value);
 	void process_name(const MsgPack& doc_name);
+	void process_script(const MsgPack& doc_script);
 
 
 	/*

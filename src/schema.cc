@@ -193,7 +193,8 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_document({
 	{ RESERVED_TIME,            &Schema::process_time            },
 	{ RESERVED_YEAR,            &Schema::process_year            },
 	{ RESERVED_MONTH,           &Schema::process_month           },
-	{ RESERVED_DAY,             &Schema::process_day             }
+	{ RESERVED_DAY,             &Schema::process_day             },
+	{ RESERVED_SCRIPT,          &Schema::process_script          }
 });
 
 
@@ -451,6 +452,7 @@ specification_t::operator=(const specification_t& o)
 	value.reset();
 	value_rec.reset();
 	doc_acc.reset();
+	script = o.script;
 	name = o.name;
 	full_name = o.full_name;
 	accuracy = o.accuracy;
@@ -498,6 +500,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	value.reset();
 	value_rec.reset();
 	doc_acc.reset();
+	script = std::move(o.script);
 	name = std::move(o.name);
 	full_name = std::move(o.full_name);
 	accuracy = std::move(o.accuracy);
@@ -1816,6 +1819,14 @@ Schema::process_name(const MsgPack& doc_name)
 }
 
 
+void
+Schema::process_script(const MsgPack& doc_script)
+{
+	// RESERVED_SCRIPT isn't heritable and is not saved in schema.
+	specification.script = std::make_unique<const MsgPack>(doc_script);
+}
+
+
 MsgPack
 Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc)
 {
@@ -1855,6 +1866,11 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 			auto val_ser = elem.second.serialise();
 			doc.add_value(elem.first, val_ser);
 			L_INDEX(this, "Slot: %zu  Values: %s", elem.first, repr(val_ser).c_str());
+		}
+
+		// Run script.
+		if (spc_start.script) {
+			// FIXME: Run
 		}
 
 		return data;
