@@ -20,9 +20,6 @@
  * IN THE SOFTWARE.
  */
 
-// brew install v8-315
-// c++ -std=c++14 -fsanitize=address -g -O2 -o test tst.cpp -lv8 -L/usr/local/opt/v8-315/lib -I/usr/local/opt/v8-315/include && ./test
-
 #pragma once
 
 #include "wrapper.h"
@@ -40,7 +37,9 @@
 
 namespace v8pp {
 
-static size_t hash(std::string source) {
+// v8 version supported: v8-315
+
+static size_t hash(const std::string& source) {
 	std::hash<std::string> hash_fn;
 	return hash_fn(source);
 }
@@ -353,107 +352,7 @@ public:
 }; // End namespace v8pp
 
 
-class ScriptLRU: public lru::LRU<size_t, Processor> {
+class ScriptLRU : public lru::LRU<size_t, Processor> {
 public:
 	ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { };
 };
-
-
-void run() {
-	auto p = v8pp::Processor("unnamed",
-		"function test_object(old, nn) {"\
-			"print ('Old: ', old);"\
-			"nn = {key:'old key', value:'old value'};"\
-			"print('nn:', nn);"\
-			"nn.key = 'new key';"\
-			"nn.value = { a:'new value', b:'value2' };"\
-			"print ('nn:', nn);"\
-			"return nn;"\
-		"}"
-		"function test_array(old, nn) {"\
-			"print('old:', old);"\
-			"nn = ['key', 'value'];"\
-			"print('nn:', nn);"\
-			"nn[0] = 'newkey';"\
-			"nn[1] = 'newvalue';"\
-			"print ('nn:', nn);"\
-			"return nn;"\
-		"}"
-		"function test_array2(old, nn) {"\
-			"print('old:', old);"\
-			"nn = ['key', 'value'];"\
-			"print('nn:', nn);"\
-			"nn[0] = 'newkey';"\
-			"nn[1] = 'newvalue';"\
-			"print ('nn:', nn);"\
-			"return old;"\
-		"}"
-		"function first(old) {"\
-			"print ('old:', old);"\
-			"return 1000;"
-		"}"
-		"function test_cycle() {"\
-			"var map = { a:-110 };"\
-			"var sub_map = { x:2, y: map };"\
-			"map.b = sub_map;"\
-			"return sub_map;"\
-		"}"
-		"function test_cycle2() {"\
-			"var map = { a:{ aa:'AA', ab:'AB' },  b:{ ba:{ baa: 'BAA' }, c:'C' } };"\
-			"var sub_map = { x:[map.b ,'XXY'], y:'Y' };"\
-			"map.b.ba.bab = sub_map.x;"\
-			"return sub_map;"\
-		"}"
-	);
-
-
-	MsgPack old_array = { 100, 200, 300, 400, 500 };
-	MsgPack old_map = {
-		{ "one", 1 },
-		{ "two", 2 },
-		{ "three",
-			{
-				{ "value", 30 },
-				{ "person",
-					{
-						{ "name", "José" },
-						{ "last", "Perez" },
-					}
-				}
-			}
-		},
-		{ "four", 4 },
-		{ "five", 5 }
-	};
-
-	MsgPack new_map;
-
-	new_map = p["test_array"](old_array, new_map);
-	std::cout << "new_array:" << new_map << std::endl;
-
-	new_map = p["test_object"](old_map, new_map);
-	std::cout << "new_map:" << new_map << std::endl;
-
-	try {
-		p["test_cycle"]();
-	} catch (const v8pp::cycle_detection&) {
-		fprintf(stderr, "ERROR: Cycle Detection\n");
-	}
-
-	try {
-		p["test_cycle2"]();
-	} catch (const v8pp::cycle_detection&) {
-		fprintf(stderr, "ERROR: Cycle Detection\n");
-	}
-}
-
-
-int
-main(int argc, char* argv[]) {
-	v8::V8::Initialize();
-
-	run();
-
-	v8::V8::Dispose();
-	return 0;
-}
