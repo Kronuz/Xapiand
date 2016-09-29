@@ -24,27 +24,39 @@
 
 #include "wrapper.h"
 
+#include <atomic>
 #include <cassert>
-#include <exception>
+#include <condition_variable>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <array>
 #include <string>
+#include <thread>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 
-class ScriptSyntaxException: public Exception::runtime_error {
-public:
-	ScriptSyntaxException(const std::string& err) : std::runtime_error(err) { }
-};
-
-
 namespace v8pp {
 
 // v8 version supported: v8-315
+
+
+constexpr size_t TIME_SCRIPT = 300; // Milliseconds.
+
+
+class TimeOutException : public std::runtime_error {
+	using std::runtime_error::runtime_error;
+};
+
+
+class ScriptSyntaxException : public std::runtime_error {
+public:
+	using std::runtime_error::runtime_error;
+};
+
 
 inline static size_t hash(const std::string& source) {
 	std::hash<std::string> hash_fn;
@@ -249,7 +261,7 @@ public:
 			function.Dispose();
 		}
 
-		template<typename... Args>
+		template <typename... Args>
 		MsgPack operator()(Args&&... args) {
 			return that->invoke(function, std::forward<Args>(args)...);
 		}
@@ -262,6 +274,11 @@ private:
 	Wrapper wrapper;
 	v8::Persistent<v8::Context> context;
 	std::map<std::string, Function> functions;
+
+	// Auxiliar variables for kill a script.
+	std::mutex mtx;
+	std::condition_variable cond_kill;
+	std::atomic_bool finished;
 
 	void Initialize(const std::string& script_name_, const std::string& script_source_) {
 		v8::Locker locker(isolate);
@@ -281,33 +298,20 @@ private:
 		v8::Handle<v8::Value> script_name = v8::String::New(script_name_.data(), script_name_.size());
 		v8::Handle<v8::String> script_source = v8::String::New(script_source_.data(), script_source_.size());
 
-		v8::Handle<v8::Script> script;
-		{
-			v8::TryCatch try_catch;
-			script = v8::Script::Compile(script_source, script_name);
-			if (try_catch.HasCaught()) {
-				report_exception(&try_catch);
-				return;
-			}
-		}
-
-		initialized = !script.IsEmpty();
 		v8::TryCatch try_catch;
 
+		v8::Handle<v8::Script> script = v8::Script::Compile(script_source, script_name);
+
+		initialized = !script.IsEmpty();
+
 		if (initialized) {
-			{
-				script->Run();
-				if (try_catch.HasCaught()) {
-					report_exception(&try_catch);
-					return;
-				}
-			}
+			script->Run();
 			wrapper._obj_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 			wrapper._obj_template->SetInternalFieldCount(1);
 			wrapper._obj_template->SetNamedPropertyHandler(Wrapper::getter, Wrapper::setter, Wrapper::query, Wrapper::deleter, Wrapper::enumerator, v8::External::New(this));
 			wrapper._obj_template->SetIndexedPropertyHandler(Wrapper::getter, Wrapper::setter, Wrapper::query, Wrapper::deleter, Wrapper::enumerator, v8::External::New(this));
 		} else {
-			throw ScriptSyntaxException(std::string("ScriptSyntaxError: ") + report_exception(&try_catch).c_str());
+			throw ScriptSyntaxException(std::string("ScriptSyntaxError: ").append(report_exception(&try_catch)));
 		}
 	}
 
@@ -333,6 +337,14 @@ private:
 		return v8::Persistent<v8::Function>();
 	}
 
+	void kill() {
+		std::unique_lock<std::mutex> lk(mtx);
+		if (!cond_kill.wait_for(lk, std::chrono::milliseconds(TIME_SCRIPT), [this](){ return finished.load(); }) && !v8::V8::IsExecutionTerminating(isolate)) {
+			v8::V8::TerminateExecution(isolate);
+			finished = true;
+		}
+	}
+
 	template<typename... Args>
 	MsgPack invoke(const v8::Persistent<v8::Function>& function, Args&&... arguments) {
 		v8::Locker locker(isolate);
@@ -342,10 +354,23 @@ private:
 
 		std::array<v8::Handle<v8::Value>, sizeof...(arguments)> args{{ wrapper(std::forward<Args>(arguments))... }};
 		v8::TryCatch try_catch;
+
+		finished = false;
+		std::thread t_kill(&Processor::kill, this);
+		t_kill.detach();
+
 		// Invoke the function, giving the global object as 'this' and one args
 		v8::Handle<v8::Value> result = function->Call(context->Global(), args.size(), args.data());
+
+		if (finished) {
+			throw TimeOutException("Time Out");
+		}
+
+		finished = true;
+		cond_kill.notify_one();
+
 		if (try_catch.HasCaught()) {
-			throw ScriptSyntaxException(std::string("ScriptSyntaxError: ") + report_exception(&try_catch));
+			throw ScriptSyntaxException(std::string("ScriptSyntaxError: ").append(report_exception(&try_catch)));
 		}
 
 		return convert<MsgPack>()(result);
