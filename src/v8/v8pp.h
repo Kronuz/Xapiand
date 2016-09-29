@@ -25,6 +25,7 @@
 #include "wrapper.h"
 
 #include <cassert>
+#include <exception>
 #include <iostream>
 #include <map>
 #include <array>
@@ -33,6 +34,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+
+class ScriptSyntaxException: public Exception::runtime_error {
+public:
+	ScriptSyntaxException(const std::string& err) : std::runtime_error(err) { }
+};
 
 
 namespace v8pp {
@@ -45,7 +52,7 @@ inline static size_t hash(const std::string& source) {
 }
 
 
-static void report_exception(v8::TryCatch* try_catch) {
+static std::string report_exception(v8::TryCatch* try_catch) {
 	auto exception_string = convert<std::string>()(try_catch->Exception());
 
 	v8::Handle<v8::Message> message = try_catch->Message();
@@ -53,6 +60,7 @@ static void report_exception(v8::TryCatch* try_catch) {
 		// V8 didn't provide any extra information about this error;
 		// just print the exception.
 		fprintf(stderr, "%s\n", exception_string.c_str());
+		return exception_string;
 	} else {
 		// Print (filename):(line number): (message).
 		fprintf(stderr, "%s:%i: %s\n", convert<const char*>()(v8::String::Utf8Value(message->GetScriptResourceName())), message->GetLineNumber(), exception_string.c_str());
@@ -70,6 +78,7 @@ static void report_exception(v8::TryCatch* try_catch) {
 			fprintf(stderr, "^");
 		}
 		fprintf(stderr, "\n");
+		return exception_string;
 	}
 }
 
@@ -283,10 +292,10 @@ private:
 		}
 
 		initialized = !script.IsEmpty();
+		v8::TryCatch try_catch;
 
 		if (initialized) {
 			{
-				v8::TryCatch try_catch;
 				script->Run();
 				if (try_catch.HasCaught()) {
 					report_exception(&try_catch);
@@ -297,6 +306,8 @@ private:
 			wrapper._obj_template->SetInternalFieldCount(1);
 			wrapper._obj_template->SetNamedPropertyHandler(Wrapper::getter, Wrapper::setter, Wrapper::query, Wrapper::deleter, Wrapper::enumerator, v8::External::New(this));
 			wrapper._obj_template->SetIndexedPropertyHandler(Wrapper::getter, Wrapper::setter, Wrapper::query, Wrapper::deleter, Wrapper::enumerator, v8::External::New(this));
+		} else {
+			throw ScriptSyntaxException(std::string("ScriptSyntaxError: ") + report_exception(&try_catch).c_str());
 		}
 	}
 
@@ -334,7 +345,7 @@ private:
 		// Invoke the function, giving the global object as 'this' and one args
 		v8::Handle<v8::Value> result = function->Call(context->Global(), args.size(), args.data());
 		if (try_catch.HasCaught()) {
-			report_exception(&try_catch);
+			throw ScriptSyntaxException(std::string("ScriptSyntaxError: ") + report_exception(&try_catch));
 		}
 
 		return convert<MsgPack>()(result);

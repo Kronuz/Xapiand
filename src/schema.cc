@@ -1889,11 +1889,17 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 			v8pp::Processor* processor;
 			try {
 				processor = &script_lru.at(script_hash);
+			} catch (const ScriptSyntaxException& e) {
+				throw MSG_ClientError(e.what());
 			} catch (const std::range_error&) {
 				processor = &script_lru.insert(std::make_pair(script_hash, v8pp::Processor(std::to_string(script_hash), script)));
 			}
 
-			data = (*processor)["mod_data"](data);
+			try {
+				data = (*processor)["mod_data"](data);
+			} catch (const ScriptSyntaxException& e) {
+				throw MSG_ClientError(e.what());
+			}
 		}
 
 		return data;
