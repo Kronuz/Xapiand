@@ -1874,34 +1874,6 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 			L_INDEX(this, "Slot: %zu  Values: %s", elem.first, repr(val_ser).c_str());
 		}
 
-		// Run script.
-		if (spc_start.script) {
-			v8::V8::Initialize();
-			std::string script;
-			try {
-				script.assign(spc_start.script->as_string());
-			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("%s must be string", RESERVED_SCRIPT);
-			}
-
-			auto script_hash = v8pp::hash(script);
-
-			v8pp::Processor* processor;
-			try {
-				processor = &script_lru.at(script_hash);
-			} catch (const v8pp::Error& e) {
-				throw MSG_ClientError(e.what());
-			} catch (const std::range_error&) {
-				processor = &script_lru.insert(std::make_pair(script_hash, v8pp::Processor(std::to_string(script_hash), script)));
-			}
-
-			try {
-				data = (*processor)["mod_data"](data);
-			} catch (const v8pp::Error& e) {
-				throw MSG_ClientError(e.what());
-			}
-		}
-
 		return data;
 	} catch (...) {
 		mut_schema.reset();
