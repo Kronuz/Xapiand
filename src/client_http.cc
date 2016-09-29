@@ -51,11 +51,6 @@
 #define QUERY_FIELD_ID     (1 << 2)
 #define QUERY_FIELD_TIME   (1 << 3)
 
-static constexpr const char* const HTTP_METHODS[] = {
-	"DELETE", "GET", "HEAD", "POST", "PUT", "CONNECT", "OPTIONS", "TRACE", "COPY",
-	"LOCK", "MKCOL", "MOVE", "PROPFIND", "PROPPATCH", "SEARCH", "UNLOCK", "REPORT",
-	"MKACTIVITY", "CHECKOUT", "MERGE", "MSEARCH", "NOTIFY", "SUBSCRIBE", "UNSUBSCRIBE",
-	"PATCH", "PURGE", "MKCALENDAR"};
 
 type_t content_type_pair(const std::string& ct_type) {
 	std::size_t found = ct_type.find_last_of("/");
@@ -1649,20 +1644,24 @@ HttpClient::clean_http_request()
 	auto request_delta = delta_string(request_begins, response_ends);
 	auto response_delta = delta_string(response_begins, response_ends);
 
-	int priority = LOG_DEBUG;
-	const char* color = WHITE;
-	if (response_status >= 200 && response_status <= 299) {
-		color = NO_COL;
-	} else if (response_status >= 300 && response_status <= 399) {
-		color = CYAN;
-	} else if (response_status >= 400 && response_status <= 499) {
-		color = YELLOW;
-		priority = LOG_INFO;
-	} else if (response_status >= 500 && response_status <= 599) {
-		color = BRIGHT_MAGENTA;
-		priority = LOG_ERR;
+	if (parser.http_errno) {
+		LOG(LOG_ERR, BRIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
+	} else {
+		int priority = LOG_DEBUG;
+		const char* color = WHITE;
+		if (response_status >= 200 && response_status <= 299) {
+			color = NO_COL;
+		} else if (response_status >= 300 && response_status <= 399) {
+			color = CYAN;
+		} else if (response_status >= 400 && response_status <= 499) {
+			color = YELLOW;
+			priority = LOG_INFO;
+		} else if (response_status >= 500 && response_status <= 599) {
+			color = BRIGHT_MAGENTA;
+			priority = LOG_ERR;
+		}
+		LOG(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %d %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, response_size, request_delta.c_str());
 	}
-	LOG(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %d %s", HTTP_METHODS[parser.method], path.c_str(), parser.http_major, parser.http_minor, response_status, response_size, request_delta.c_str());
 	LOG_DELAYED_CLEAR(response_log);
 
 	path.clear();

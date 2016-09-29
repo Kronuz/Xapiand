@@ -202,6 +202,9 @@ enum http_errno {
 /* Get an http_errno value from an http_parser */
 #define HTTP_PARSER_ERRNO(p)            ((enum http_errno) (p)->http_errno)
 
+/* Get an http_method value from an http_parser */
+#define HTTP_PARSER_METHOD(p)           ((enum http_method) (p)->method)
+
 
 struct http_parser {
 	/** PRIVATE **/
