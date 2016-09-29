@@ -473,26 +473,26 @@ HttpClient::_run()
 
 		int cmd = url_resolve();
 
-		switch (static_cast<METHOD>(parser.method)) {
-			case METHOD::DELETE:
+		switch (static_cast<HttpMethod>(parser.method)) {
+			case HttpMethod::DELETE:
 				_delete(cmd);
 				break;
-			case METHOD::GET:
+			case HttpMethod::GET:
 				_get(cmd);
 				break;
-			case METHOD::POST:
+			case HttpMethod::POST:
 				_post(cmd);
 				break;
-			case METHOD::HEAD:
+			case HttpMethod::HEAD:
 				_head(cmd);
 				break;
-			case METHOD::PUT:
+			case HttpMethod::PUT:
 				_put(cmd);
 				break;
-			case METHOD::OPTIONS:
+			case HttpMethod::OPTIONS:
 				_options(cmd);
 				break;
-			case METHOD::PATCH:
+			case HttpMethod::PATCH:
 				_patch(cmd);
 			default:
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
