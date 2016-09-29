@@ -43,11 +43,14 @@ class DatabaseHandler {
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
+	Xapian::Document _get_document(const std::string& term_id);
+	MsgPack run_script(const MsgPack& data, const std::string& prefix_term_id);
+
 	MsgPack _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
 
-	Xapian::Query search(const query_field_t& e, std::vector<std::string>& suggestions);
-	Xapian::Query _search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags);
 	Xapian::Query build_query(const std::string& token, std::vector<std::string>& suggestions, int q_flags);
+	Xapian::Query _search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags);
+	Xapian::Query search(const query_field_t& e, std::vector<std::string>& suggestions);
 
 	void get_similar(Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar, bool is_fuzzy=false);
 	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, SpiesVector* spies);
@@ -57,7 +60,7 @@ public:
 	DatabaseHandler(const Endpoints &endpoints_, int flags_=0);
 	~DatabaseHandler();
 
-	std::shared_ptr<Database> get_database() const {
+	std::shared_ptr<Database> get_database() const noexcept {
 		return database;
 	}
 
@@ -96,8 +99,8 @@ public:
 
 	void reset(const Endpoints& endpoints_, int flags_, HttpMethod method_);
 
-	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list= nullptr);
+	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 
 	void get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVector& spies, std::vector<std::string>& suggestions, int offset=0);

@@ -67,17 +67,110 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, HttpMethod metho
 }
 
 
+Xapian::Document
+DatabaseHandler::_get_document(const std::string& term_id)
+{
+	L_CALL(this, "DatabaseHandler::_get_document()");
+
+	Xapian::Query query(term_id);
+
+	checkout();
+	Xapian::docid did = database->find_document(query);
+	Xapian::Document doc = database->get_document(did);
+	checkin();
+
+	return doc;
+}
+
 
 MsgPack
-DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
+DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_id)
+{
+	std::string script;
+	try {
+		script = data.at(RESERVED_SCRIPT).as_string();
+	} catch (const std::out_of_range&) {
+		return data;
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("%s must be string", RESERVED_SCRIPT);
+	}
+
+	v8::V8::Initialize();
+
+	auto script_hash = v8pp::hash(script);
+
+	try {
+		v8pp::Processor* processor;
+		try {
+			processor = &script_lru.at(script_hash);
+		} catch (const std::range_error&) {
+			processor = &script_lru.insert(std::make_pair(script_hash, v8pp::Processor(std::to_string(script_hash), script)));
+		}
+
+		switch (method) {
+			case HttpMethod::PUT: {
+				MsgPack old_data;
+				try {
+					auto document = _get_document(prefix_term_id);
+					old_data = get_MsgPack(document);
+				} catch (const DocNotFoundError&) { }
+				MsgPack data_ = data;
+				return (*processor)["on_put"](data_, old_data);
+			}
+
+			case HttpMethod::PATCH: {
+				MsgPack old_data;
+				try {
+					auto document = _get_document(prefix_term_id);
+					old_data = get_MsgPack(document);
+				} catch (const DocNotFoundError&) { }
+				MsgPack data_ = data;
+				return (*processor)["on_patch"](data_, old_data);
+			}
+
+			case HttpMethod::DELETE: {
+				MsgPack old_data;
+				try {
+					auto document = _get_document(prefix_term_id);
+					old_data = get_MsgPack(document);
+				} catch (const DocNotFoundError&) { }
+				MsgPack data_ = data;
+				return (*processor)["on_delete"](data_, old_data);
+			}
+
+			case HttpMethod::GET: {
+				MsgPack data_ = data;
+				return (*processor)["on_get"](data_);
+			}
+
+			case HttpMethod::POST: {
+				MsgPack data_ = data;
+				return (*processor)["on_post"](data_);
+			}
+
+			default:
+				return data;
+		}
+	} catch (const v8pp::ReferenceError& e) {
+		return data;
+	} catch (const v8pp::Error& e) {
+		throw MSG_ClientError(e.what());
+	}
+}
+
+
+MsgPack
+DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& _obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
 {
 	L_CALL(this, "DatabaseHandler::_index()");
 
 	const auto& properties = schema->getProperties();
+	term_id = schema->serialise_id(properties, _document_id);
+	auto prefix_term_id = prefixed(term_id, DOCUMENT_ID_TERM_PREFIX);
+
+	auto obj = run_script(_obj, prefix_term_id);
 
 	// Index Required Data.
-	term_id = schema->serialise_id(properties, _document_id);
-
 	auto found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
 	std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
@@ -86,7 +179,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 	doc.add_value(DB_SLOT_ID, term_id);
 
 	// Document's id is also a boolean term (otherwise it doesn't replace an existing document)
-	term_id = prefixed(term_id, DOCUMENT_ID_TERM_PREFIX);
+	term_id = prefix_term_id;
 	doc.add_boolean_term(term_id);
 	L_INDEX(this, "Slot: %d _id: %s (%s)", DB_SLOT_ID, _document_id.c_str(), term_id.c_str());
 
@@ -111,7 +204,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 
 
 Xapian::docid
-DatabaseHandler::index(const std::string &body, const std::string &_document_id, bool commit_, const std::string &ct_type, const std::string &ct_length, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
 {
 	L_CALL(this, "DatabaseHandler::index(1)");
 
@@ -292,97 +385,6 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 
 
 Xapian::Query
-DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags)
-{
-	L_CALL(this, "DatabaseHandler::_search()");
-
-	if (str_query.compare("*") == 0) {
-		suggestions.push_back(std::string());
-		return Xapian::Query::MatchAll;
-	}
-
-	try {
-		BooleanTree booltree(str_query);
-		std::vector<Xapian::Query> stack_query;
-
-		while (!booltree.empty()) {
-			auto token = booltree.front();
-			booltree.pop_front();
-
-			switch (token.type) {
-				case TokenType::Not: {
-					if (stack_query.size() < 1) {
-						throw MSG_ClientError("Bad boolean expression");
-					} else {
-						auto expression = stack_query.back();
-						stack_query.pop_back();
-						stack_query.push_back(Xapian::Query(Xapian::Query::OP_AND_NOT, Xapian::Query::MatchAll, expression));
-					}
-					break;
-				}
-
-				case TokenType::Or: {
-					if (stack_query.size() < 2) {
-						throw MSG_ClientError("Bad boolean expression");
-					} else {
-						auto letf_expression = stack_query.back();
-						stack_query.pop_back();
-						auto right_expression = stack_query.back();
-						stack_query.pop_back();
-						stack_query.push_back(Xapian::Query(Xapian::Query::OP_OR, letf_expression, right_expression));
-					}
-					break;
-				}
-
-				case TokenType::And: {
-					if (stack_query.size() < 2) {
-						throw MSG_ClientError("Bad boolean expression");
-					} else {
-						auto letf_expression = stack_query.back();
-						stack_query.pop_back();
-						auto right_expression = stack_query.back();
-						stack_query.pop_back();
-						stack_query.push_back(Xapian::Query(Xapian::Query::OP_AND, letf_expression, right_expression));
-					}
-					break;
-				}
-
-				case TokenType::Xor:{
-					if (stack_query.size() < 2) {
-						throw MSG_ClientError("Bad boolean expression");
-					} else {
-						auto letf_expression = stack_query.back();
-						stack_query.pop_back();
-						auto right_expression = stack_query.back();
-						stack_query.pop_back();
-						stack_query.push_back(Xapian::Query(Xapian::Query::OP_XOR, letf_expression, right_expression));
-					}
-					break;
-				}
-
-				case TokenType::Id:
-					stack_query.push_back(build_query(token.lexeme, suggestions, q_flags));
-					break;
-
-				default:
-					break;
-			}
-		}
-
-		if (stack_query.size() == 1) {
-			return stack_query.back();
-		} else {
-			throw MSG_ClientError("Bad boolean expression");
-		}
-	} catch (const LexicalException& err) {
-		throw MSG_ClientError(err.what());
-	} catch (const SyntacticException& err) {
-		throw MSG_ClientError(err.what());
-	}
-}
-
-
-Xapian::Query
 DatabaseHandler::build_query(const std::string& token, std::vector<std::string>& suggestions, int q_flags)
 {
 	L_CALL(this, "DatabaseHandler::build_query()");
@@ -495,6 +497,97 @@ DatabaseHandler::build_query(const std::string& token, std::vector<std::string>&
 	}
 
 	return Xapian::Query::MatchNothing;
+}
+
+
+Xapian::Query
+DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags)
+{
+	L_CALL(this, "DatabaseHandler::_search()");
+
+	if (str_query.compare("*") == 0) {
+		suggestions.push_back(std::string());
+		return Xapian::Query::MatchAll;
+	}
+
+	try {
+		BooleanTree booltree(str_query);
+		std::vector<Xapian::Query> stack_query;
+
+		while (!booltree.empty()) {
+			auto token = booltree.front();
+			booltree.pop_front();
+
+			switch (token.type) {
+				case TokenType::Not: {
+					if (stack_query.size() < 1) {
+						throw MSG_ClientError("Bad boolean expression");
+					} else {
+						auto expression = stack_query.back();
+						stack_query.pop_back();
+						stack_query.push_back(Xapian::Query(Xapian::Query::OP_AND_NOT, Xapian::Query::MatchAll, expression));
+					}
+					break;
+				}
+
+				case TokenType::Or: {
+					if (stack_query.size() < 2) {
+						throw MSG_ClientError("Bad boolean expression");
+					} else {
+						auto letf_expression = stack_query.back();
+						stack_query.pop_back();
+						auto right_expression = stack_query.back();
+						stack_query.pop_back();
+						stack_query.push_back(Xapian::Query(Xapian::Query::OP_OR, letf_expression, right_expression));
+					}
+					break;
+				}
+
+				case TokenType::And: {
+					if (stack_query.size() < 2) {
+						throw MSG_ClientError("Bad boolean expression");
+					} else {
+						auto letf_expression = stack_query.back();
+						stack_query.pop_back();
+						auto right_expression = stack_query.back();
+						stack_query.pop_back();
+						stack_query.push_back(Xapian::Query(Xapian::Query::OP_AND, letf_expression, right_expression));
+					}
+					break;
+				}
+
+				case TokenType::Xor:{
+					if (stack_query.size() < 2) {
+						throw MSG_ClientError("Bad boolean expression");
+					} else {
+						auto letf_expression = stack_query.back();
+						stack_query.pop_back();
+						auto right_expression = stack_query.back();
+						stack_query.pop_back();
+						stack_query.push_back(Xapian::Query(Xapian::Query::OP_XOR, letf_expression, right_expression));
+					}
+					break;
+				}
+
+				case TokenType::Id:
+					stack_query.push_back(build_query(token.lexeme, suggestions, q_flags));
+					break;
+
+				default:
+					break;
+			}
+		}
+
+		if (stack_query.size() == 1) {
+			return stack_query.back();
+		} else {
+			throw MSG_ClientError("Bad boolean expression");
+		}
+	} catch (const LexicalException& err) {
+		throw MSG_ClientError(err.what());
+	} catch (const SyntacticException& err) {
+		throw MSG_ClientError(err.what());
+	}
 }
 
 
@@ -760,7 +853,7 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 void
 DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool wal_)
 {
-	L_CALL(this, "DatabaseHandler::delete_document(2)");
+	L_CALL(this, "DatabaseHandler::delete_document()");
 
 	auto _id = get_docid(doc_id);
 
@@ -773,7 +866,7 @@ DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool w
 endpoints_error_list
 DatabaseHandler::multi_db_delete_document(const std::string& doc_id, bool commit_, bool wal_)
 {
-	L_CALL(this, "DatabaseHandler::multi_db_delete_document(2)");
+	L_CALL(this, "DatabaseHandler::multi_db_delete_document()");
 
 	endpoints_error_list err_list;
 	auto _endpoints = endpoints;
