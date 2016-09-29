@@ -36,9 +36,6 @@ using SpiesVector = std::vector<std::pair<std::string, std::unique_ptr<MultiValu
 using endpoints_error_list = std::unordered_map<std::string, std::vector<std::string>>;
 
 
-enum class HttpMethod : uint8_t;
-
-
 class DatabaseHandler {
 	Endpoints endpoints;
 	int flags;
