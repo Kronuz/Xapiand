@@ -195,6 +195,7 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
 	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
 	  pretty(false),
+	  response_size(0),
 	  body_size(0),
 	  body_descriptor(0),
 	  request_begining(true)
@@ -216,7 +217,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 
 	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
 
-	LOG_DELAYED(response_log, true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...");
+	response_log = LOG_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...");
 }
 
 
@@ -245,7 +246,7 @@ HttpClient::~HttpClient()
 		}
 	}
 
-	if (!LOG_DELAYED_CLEAR(response_log)) {
+	if (!response_log.load()->LOG_DELAYED_CLEAR()) {
 		LOG(LOG_NOTICE, BRIGHT_RED, this, "Client killed!");
 	}
 
@@ -257,7 +258,7 @@ void
 HttpClient::on_read(const char* buf, size_t received)
 {
 	if (!received) {
-		LOG_DELAYED_CLEAR(response_log);
+		response_log.load()->LOG_DELAYED_CLEAR();
 		if (!response_logged) LOG(LOG_NOTICE, RED, this, "Client unexpectedly closed the other end!");
 		return;
 	}
@@ -265,8 +266,8 @@ HttpClient::on_read(const char* buf, size_t received)
 	if (request_begining) {
 		request_begining = false;
 		request_begins = std::chrono::system_clock::now();
-		LOG_DELAYED_CLEAR(response_log);
-		LOG_DELAYED(response_log, true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...");
+		response_log.load()->LOG_DELAYED_CLEAR();
+		response_log = LOG_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...");
 		response_logged = false;
 	}
 
@@ -480,8 +481,8 @@ HttpClient::_run()
 
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
-	LOG_DELAYED_CLEAR(response_log);
-	LOG_DELAYED(response_log, true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long...");
+	response_log.load()->LOG_DELAYED_CLEAR();
+	response_log = LOG_DELAYED(true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long...");
 
 	std::string error;
 	int error_code = 0;
@@ -1648,7 +1649,7 @@ HttpClient::clean_http_request()
 	auto request_delta = delta_string(request_begins, response_ends);
 	auto response_delta = delta_string(response_begins, response_ends);
 
-	LOG_DELAYED_CLEAR(response_log);
+	response_log.load()->LOG_DELAYED_CLEAR();
 	if (parser.http_errno) {
 		if (!response_logged.exchange(true)) LOG(LOG_ERR, BRIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
 	} else {
@@ -1665,7 +1666,7 @@ HttpClient::clean_http_request()
 			color = BRIGHT_MAGENTA;
 			priority = LOG_ERR;
 		}
-		if (!response_logged.exchange(true)) LOG(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %d %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, response_size, request_delta.c_str());
+		if (!response_logged.exchange(true)) LOG(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %zu %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, response_size, request_delta.c_str());
 	}
 
 	path.clear();

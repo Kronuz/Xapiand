@@ -211,15 +211,15 @@ public:
 #define _LOG_MARKED_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥  " DEBUG_COL, args)
 
 #define LOG(priority, color, args...) Log::log(false, 0ms, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
-#define LOG_DELAYED(var, cleanup, delay, priority, color, args...) var = Log::log(cleanup, delay, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
-#define LOG_DELAYED_UNLOG(var, priority, color, args...) var->unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
-#define LOG_DELAYED_CLEAR(var) var->clear()
+#define LOG_DELAYED(cleanup, delay, priority, color, args...) Log::log(cleanup, delay, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG_DELAYED_UNLOG(priority, color, args...) unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG_DELAYED_CLEAR() clear()
 
-#define _LOG_DELAYED_200(args...) LOG_DELAYED(auto __log_timed, true, 200ms, LOG_WARNING, BRIGHT_MAGENTA, args)
-#define _LOG_DELAYED_600(args...) LOG_DELAYED(auto __log_timed, true, 600ms, LOG_WARNING, BRIGHT_MAGENTA, args)
-#define _LOG_DELAYED_1000(args...) LOG_DELAYED(auto __log_timed, true, 1000ms, LOG_WARNING, BRIGHT_MAGENTA, args)
-#define _LOG_DELAYED_N_UNLOG(args...) LOG_DELAYED_UNLOG(__log_timed, LOG_WARNING, MAGENTA, args)
-#define _LOG_DELAYED_N_CLEAR() LOG_DELAYED_CLEAR(__log_timed)
+#define _LOG_DELAYED_200(args...) auto __log_timed = LOG_DELAYED(true, 200ms, LOG_WARNING, BRIGHT_MAGENTA, args)
+#define _LOG_DELAYED_600(args...) auto __log_timed = LOG_DELAYED(true, 600ms, LOG_WARNING, BRIGHT_MAGENTA, args)
+#define _LOG_DELAYED_1000(args...) auto __log_timed = LOG_DELAYED(true, 1000ms, LOG_WARNING, BRIGHT_MAGENTA, args)
+#define _LOG_DELAYED_N_UNLOG(args...) __log_timed->LOG_DELAYED_UNLOG(LOG_WARNING, MAGENTA, args)
+#define _LOG_DELAYED_N_CLEAR() __log_timed->LOG_DELAYED_CLEAR()
 
 #define _LOG_SET(name, value) auto name = value
 #define _LOG_INIT() _LOG_SET(start, std::chrono::system_clock::now())

@@ -29,6 +29,7 @@
 #include "guid/guid.h"
 #include "url_parser.h"
 #include "servers/server_http.h"
+#include "atomic_shared_ptr.h"
 
 #include <memory>
 
@@ -101,7 +102,7 @@ class HttpClient : public BaseClient {
 
 	int response_status;
 	size_t response_size;
-	std::shared_ptr<Log> response_log;
+	atomic_shared_ptr<Log> response_log;
 	std::atomic_bool response_logged;
 
 	std::string path;
