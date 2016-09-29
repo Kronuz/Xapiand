@@ -46,15 +46,6 @@
 
 #define DEF_36e6 2176782336
 
-// Xapian http client
-#define METHOD_DELETE  0
-#define METHOD_HEAD    2
-#define METHOD_GET     1
-#define METHOD_POST    3
-#define METHOD_PUT     4
-#define METHOD_OPTIONS 6
-#define METHOD_PATCH   24
-
 #define QUERY_FIELD_COMMIT (1 << 0)
 #define QUERY_FIELD_SEARCH (1 << 1)
 #define QUERY_FIELD_ID     (1 << 2)
@@ -482,26 +473,26 @@ HttpClient::_run()
 
 		int cmd = url_resolve();
 
-		switch (parser.method) {
-			case METHOD_DELETE:
+		switch (static_cast<METHOD>(parser.method)) {
+			case METHOD::DELETE:
 				_delete(cmd);
 				break;
-			case METHOD_GET:
+			case METHOD::GET:
 				_get(cmd);
 				break;
-			case METHOD_POST:
+			case METHOD::POST:
 				_post(cmd);
 				break;
-			case METHOD_HEAD:
+			case METHOD::HEAD:
 				_head(cmd);
 				break;
-			case METHOD_PUT:
+			case METHOD::PUT:
 				_put(cmd);
 				break;
-			case METHOD_OPTIONS:
+			case METHOD::OPTIONS:
 				_options(cmd);
 				break;
-			case METHOD_PATCH:
+			case METHOD::PATCH:
 				_patch(cmd);
 			default:
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));

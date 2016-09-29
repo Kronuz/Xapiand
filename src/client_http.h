@@ -45,6 +45,17 @@
 #define HTTP_EXPECTED100       (1 << 10)
 
 
+enum class METHOD: uint8_t {
+	DELETE =   0,
+	GET =      1,
+	HEAD =     2,
+	POST =     3,
+	PUT =      4,
+	OPTIONS =  6,
+	PATCH =   24
+};
+
+
 using type_t = std::pair<std::string, std::string>;
 
 
