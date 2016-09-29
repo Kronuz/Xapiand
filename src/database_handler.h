@@ -36,9 +36,13 @@ using SpiesVector = std::vector<std::pair<std::string, std::unique_ptr<MultiValu
 using endpoints_error_list = std::unordered_map<std::string, std::vector<std::string>>;
 
 
+enum class HttpMethod : uint8_t;
+
+
 class DatabaseHandler {
 	Endpoints endpoints;
 	int flags;
+	HttpMethod method;
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
@@ -93,19 +97,7 @@ public:
 		}
 	}
 
-	void reset(const Endpoints& endpoints_, int flags_) {
-		if (endpoints_.size() == 0) {
-			throw MSG_ClientError("It is expected at least one endpoint");
-		}
-
-		endpoints = endpoints_;
-		flags = flags_;
-
-		if (database) {
-			checkin();
-			checkout();
-		}
-	}
+	void reset(const Endpoints& endpoints_, int flags_, HttpMethod method_);
 
 	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list= nullptr);

@@ -64,6 +64,17 @@ constexpr uint16_t SLOT_TIME_MINUTE = 1440;
 constexpr uint8_t SLOT_TIME_SECOND = 60;
 
 
+enum class HttpMethod : uint8_t {
+	DELETE   =  0,
+	GET      =  1,
+	HEAD     =  2,
+	POST     =  3,
+	PUT      =  4,
+	OPTIONS  =  6,
+	PATCH    =  24
+};
+
+
 struct cont_time_t {
 	uint32_t min[SLOT_TIME_MINUTE];
 	uint32_t sec[SLOT_TIME_SECOND];

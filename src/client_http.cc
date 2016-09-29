@@ -719,7 +719,7 @@ HttpClient::home_view()
 	endpoints.clear();
 	endpoints.add(Endpoint("."));
 
-	db_handler.reset(endpoints, DB_SPAWN);
+	db_handler.reset(endpoints, DB_SPAWN, HttpMethod::GET);
 
 	auto local_node_ = local_node.load();
 	auto document = db_handler.get_document(std::to_string(local_node_->id));
@@ -751,7 +751,7 @@ HttpClient::document_info_view()
 
 	endpoints_maker(1s);
 
-	db_handler.reset(endpoints, DB_SPAWN);
+	db_handler.reset(endpoints, DB_SPAWN, HttpMethod::HEAD);
 
 	MsgPack response;
 	response["doc_id"] = db_handler.get_docid(path_parser.get_id());
@@ -772,7 +772,7 @@ HttpClient::delete_document_view()
 
 	int status_code;
 	MsgPack response;
-	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN);
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, HttpMethod::DELETE);
 
 	if (endpoints.size() == 1) {
 		operation_begins = std::chrono::system_clock::now();
@@ -830,11 +830,13 @@ HttpClient::index_document_view(bool gen_id)
 
 	std::string doc_id;
 	int status_code;
+	HttpMethod method = HttpMethod::PUT;
 
 	if (gen_id) {
 		path_parser.off_id = nullptr;
 		auto g = generator.newGuid();
 		doc_id = g.to_string();
+		method = HttpMethod::POST;
 	} else {
 		doc_id = path_parser.get_id();
 	}
@@ -853,7 +855,7 @@ HttpClient::index_document_view(bool gen_id)
 	endpoints_error_list err_list;
 	operation_begins = std::chrono::system_clock::now();
 
-	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF);
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	db_handler.index(body, doc_id, query_field->commit, content_type, content_length, &err_list);
 
 	operation_ends = std::chrono::system_clock::now();
@@ -902,7 +904,7 @@ HttpClient::update_document_view()
 
 	std::string doc_id(path_parser.get_id());
 
-	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN);
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, HttpMethod::PATCH);
 	db_handler.patch(body, doc_id, query_field->commit, content_type, content_length);
 
 	operation_ends = std::chrono::system_clock::now();
@@ -944,7 +946,7 @@ HttpClient::stats_view()
 	} else {
 		endpoints_maker(1s);
 
-		db_handler.reset(endpoints, DB_OPEN);
+		db_handler.reset(endpoints, DB_OPEN, HttpMethod::GET);
 		try {
 			db_handler.get_stats_doc(response["_document_status"], path_parser.get_id());
 		} catch (const CheckoutError&) {
@@ -955,7 +957,7 @@ HttpClient::stats_view()
 		path_parser.rewind();
 		endpoints_maker(1s);
 
-		db_handler.reset(endpoints, DB_OPEN);
+		db_handler.reset(endpoints, DB_OPEN, HttpMethod::GET);
 		db_handler.get_stats_database(response["_database_status"]);
 		res_stats = true;
 	}
@@ -978,7 +980,7 @@ HttpClient::schema_view()
 	path_parser.off_id = nullptr;
 	endpoints_maker(1s);
 
-	db_handler.reset(endpoints, DB_SPAWN);
+	db_handler.reset(endpoints, DB_SPAWN, HttpMethod::GET);
 	write_http_response(db_handler.get_schema()->get_readable(), 200, pretty);
 	return;
 }
@@ -999,7 +1001,7 @@ HttpClient::facets_view()
 
 	operation_begins = std::chrono::system_clock::now();
 
-	db_handler.reset(endpoints, DB_SPAWN);
+	db_handler.reset(endpoints, DB_SPAWN, HttpMethod::GET);
 	db_handler.get_mset(*query_field, mset, spies, suggestions);
 
 	L_DEBUG(this, "Suggested queries:\n%s", [&suggestions]() {
@@ -1081,7 +1083,7 @@ HttpClient::search_view()
 		db_flags |= DB_WRITABLE;
 	}
 
-	db_handler.reset(endpoints, db_flags);
+	db_handler.reset(endpoints, db_flags, HttpMethod::GET);
 	try {
 		db_handler.get_mset(*query_field, mset, spies, suggestions);
 	} catch (CheckoutError) {

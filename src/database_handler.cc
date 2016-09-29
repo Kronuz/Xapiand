@@ -50,6 +50,24 @@ DatabaseHandler::~DatabaseHandler() {
 }
 
 
+void
+DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, HttpMethod method_) {
+	if (endpoints_.size() == 0) {
+		throw MSG_ClientError("It is expected at least one endpoint");
+	}
+
+	endpoints = endpoints_;
+	flags = flags_;
+	method = method_;
+
+	if (database) {
+		checkin();
+		checkout();
+	}
+}
+
+
+
 MsgPack
 DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
 {
