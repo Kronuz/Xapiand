@@ -79,6 +79,11 @@ struct wrap<MsgPack> {
 			return toValue(obj.at(property), obj_template);
 		} catch (const std::out_of_range&) {
 			return v8::Undefined();
+		} catch (const msgpack::type_error&) {
+			if (property == "_value") {
+				return toValue(obj, obj_template);
+			}
+			return v8::Undefined();
 		}
 	}
 
@@ -93,7 +98,11 @@ struct wrap<MsgPack> {
 
 	inline void setter(const std::string& property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
 		auto& obj = convert<MsgPack>()(info);
-		obj[property] = convert<MsgPack>()(value);
+		if (obj.is_map()) {
+			obj[property] = convert<MsgPack>()(value);
+		} else if (property == "_value") {
+			obj = convert<MsgPack>()(value);
+		}
 	}
 
 	inline void setter(uint32_t index, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
