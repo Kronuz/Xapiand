@@ -323,7 +323,7 @@ private:
 			return v8::Persistent<v8::Function>::New(function_fun);
 		}
 
-		return v8::Persistent<v8::Function>();
+		throw ReferenceError(std::string("Reference error to function: ").append(name));
 	}
 
 	void kill() {
