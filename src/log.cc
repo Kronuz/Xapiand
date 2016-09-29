@@ -182,14 +182,14 @@ Log::log(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup
 }
 
 
-void
+bool
 Log::clear()
 {
-	finished = true;
+	return finished.exchange(true);
 }
 
 
-void
+bool
 Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	if (finished.exchange(true)) {
@@ -199,7 +199,10 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 		va_end(argptr);
 
 		print(str, false, 0, priority, created_at);
+
+		return true;
 	}
+	return false;
 }
 
 

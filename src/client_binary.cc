@@ -194,6 +194,10 @@ BinaryClient::on_read_file(const char *buf, size_t received)
 void
 BinaryClient::on_read(const char *buf, size_t received)
 {
+	if (!received) {
+		return;
+	}
+
 	L_CONN_WIRE(this, "BinaryClient::on_read: %zu bytes", received);
 	buffer.append(buf, received);
 	while (buffer.length() >= 2) {

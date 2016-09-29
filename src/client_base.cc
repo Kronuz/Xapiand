@@ -546,6 +546,7 @@ BaseClient::io_cb_read(int fd)
 		} else if (received == 0) {
 			// The peer has closed its half side of the connection.
 			L_CONN(this, "Received EOF (sock=%d, fd=%d)!", sock, fd);
+			on_read(nullptr, 0);
 			destroy();
 			detach();
 			return;

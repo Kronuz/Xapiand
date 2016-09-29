@@ -51,6 +51,11 @@
 #define QUERY_FIELD_ID     (1 << 2)
 #define QUERY_FIELD_TIME   (1 << 3)
 
+static constexpr const char* const HTTP_METHODS[] = {
+	"DELETE", "GET", "HEAD", "POST", "PUT", "CONNECT", "OPTIONS", "TRACE", "COPY",
+	"LOCK", "MKCOL", "MOVE", "PROPFIND", "PROPPATCH", "SEARCH", "UNLOCK", "REPORT",
+	"MKACTIVITY", "CHECKOUT", "MERGE", "MSEARCH", "NOTIFY", "SUBSCRIBE", "UNSUBSCRIBE",
+	"PATCH", "PURGE", "MKCALENDAR"};
 
 type_t content_type_pair(const std::string& ct_type) {
 	std::size_t found = ct_type.find_last_of("/");
@@ -122,6 +127,8 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 
 
 	if (mode & HTTP_STATUS) {
+		response_status = status;
+
 		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", http_major, http_minor, status);
 		response += buffer;
 		response += status_code[status / 100][status % 100] + eol;
@@ -180,6 +187,8 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 		}
 	}
 
+	response_size += response.size();
+
 	if (!(mode & HTTP_CHUNKED) && !(mode & HTTP_EXPECTED100)) {
 		clean_http_request();
 	}
@@ -211,6 +220,8 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 	L_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.", sock, http_clients, total_clients);
 
 	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
+
+	LOG_DELAYED(response_log, true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long (1)...");
 }
 
 
@@ -239,6 +250,10 @@ HttpClient::~HttpClient()
 		}
 	}
 
+	if (!LOG_DELAYED_CLEAR(response_log)) {
+		LOG(LOG_NOTICE, BRIGHT_RED, this, "Client killed!");
+	}
+
 	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)", http_clients);
 }
 
@@ -246,17 +261,29 @@ HttpClient::~HttpClient()
 void
 HttpClient::on_read(const char* buf, size_t received)
 {
+	if (!received) {
+		if (!LOG_DELAYED_CLEAR(response_log)) {
+			LOG(LOG_NOTICE, RED, this, "Client unexpectedly closed the other end!");
+		}
+		return;
+	}
+
 	if (request_begining) {
 		request_begining = false;
 		request_begins = std::chrono::system_clock::now();
+		LOG_DELAYED_CLEAR(response_log);
+		LOG_DELAYED(response_log, true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long (2)...");
 	}
+
 	L_CONN_WIRE(this, "HttpClient::on_read: %zu bytes", received);
 	unsigned init_state = parser.state;
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		unsigned final_state = parser.state;
-		if (final_state == init_state and received == 1 and (strncmp(buf, "\n", received) == 0)) { //ignore '\n' request
-			return;
+		if (final_state == init_state) {
+			if (received == 1 and (strncmp(buf, "\n", received) == 0)) { //ignore '\n' request
+				return;
+			}
 		}
 		if (final_state == 1 || final_state == 18) { // dead or message_complete
 			L_EV(this, "Disable read event (sock=%d)", sock);
@@ -556,7 +583,7 @@ HttpClient::_options(int cmd)
 {
 	L_CALL(this, "HttpClient::_options(%d)", cmd); (void)cmd;
 
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS, parser.http_major, parser.http_minor));
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS | HTTP_BODY, parser.http_major, parser.http_minor));
 }
 
 
@@ -938,12 +965,10 @@ HttpClient::stats_view()
 		res_stats = true;
 	}
 
-	int response_status = 200;
 	if (res_stats) {
-		write_http_response(response, response_status, pretty);
+		write_http_response(response, 200, pretty);
 	} else {
-		response_status = 404;
-		response[RESPONSE_STATUS] = response_status;
+		response[RESPONSE_STATUS] = 404;
 		response[RESPONSE_MESSAGE] = "Not found";
 		write_http_response(response, 404, pretty);
 	}
@@ -1620,6 +1645,26 @@ HttpClient::clean_http_request()
 {
 	L_CALL(this, "HttpClient::clean_http_request()");
 
+	response_ends = std::chrono::system_clock::now();
+	auto request_delta = delta_string(request_begins, response_ends);
+	auto response_delta = delta_string(response_begins, response_ends);
+
+	int priority = LOG_DEBUG;
+	const char* color = WHITE;
+	if (response_status >= 200 && response_status <= 299) {
+		color = NO_COL;
+	} else if (response_status >= 300 && response_status <= 399) {
+		color = CYAN;
+	} else if (response_status >= 400 && response_status <= 499) {
+		color = YELLOW;
+		priority = LOG_INFO;
+	} else if (response_status >= 500 && response_status <= 599) {
+		color = BRIGHT_MAGENTA;
+		priority = LOG_ERR;
+	}
+	LOG(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %d %s", HTTP_METHODS[parser.method], path.c_str(), parser.http_major, parser.http_minor, response_status, response_size, request_delta.c_str());
+	LOG_DELAYED_CLEAR(response_log);
+
 	path.clear();
 	body.clear();
 	header_name.clear();
@@ -1627,6 +1672,8 @@ HttpClient::clean_http_request()
 	content_type.clear();
 	content_length.clear();
 	host.clear();
+	response_status = 0;
+	response_size = 0;
 
 	pretty = false;
 	query_field.reset();
@@ -1634,9 +1681,8 @@ HttpClient::clean_http_request()
 	query_parser.clear();
 	accept_set.clear();
 
-	response_ends = std::chrono::system_clock::now();
 	request_begining = true;
-	L_TIME(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
+	L_TIME(this, "Full request took %s, response took %s", request_delta.c_str(), response_delta.c_str());
 
 	async_read.send();
 	http_parser_init(&parser, HTTP_REQUEST);

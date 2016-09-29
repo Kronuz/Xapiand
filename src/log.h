@@ -138,8 +138,8 @@ public:
 
 	static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
-	void unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
-	void clear();
+	bool unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
+	bool clear();
 
 	static void finish(int wait=10);
 
@@ -196,8 +196,6 @@ public:
 
 #define _(args...)
 #define _LOG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
-#define _LOG_TIMED(t, args...) auto __log_timed = Log::log(true, t, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
-#define _LOG_TIMED_CLEAR(args...) __log_timed->unlog(LOG_WARNING, __FILE__, __LINE__, NO_COL, NO_COL, args)
 
 #define _LOG_LOG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, LOG_COL, args)
 #define _LOG_DEBUG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
@@ -212,10 +210,16 @@ public:
 
 #define _LOG_MARKED_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥  " DEBUG_COL, args)
 
-#define _LOG_TIMED_200(args...) auto __log_timed = Log::log(true, 200ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, MAGENTA, args)
-#define _LOG_TIMED_600(args...) auto __log_timed = Log::log(true, 600ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, MAGENTA, args)
-#define _LOG_TIMED_1000(args...) auto __log_timed = Log::log(true, 1s, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, MAGENTA, args)
-#define _LOG_TIMED_N_CLEAR(args...) __log_timed->unlog(LOG_WARNING, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define LOG(priority, color, args...) Log::log(false, 0ms, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG_DELAYED(var, cleanup, delay, priority, color, args...) var = Log::log(cleanup, delay, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG_DELAYED_UNLOG(var, priority, color, args...) var->unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG_DELAYED_CLEAR(var) var->clear()
+
+#define _LOG_DELAYED_200(args...) LOG_DELAYED(auto __log_timed, true, 200ms, LOG_WARNING, BRIGHT_MAGENTA, args)
+#define _LOG_DELAYED_600(args...) LOG_DELAYED(auto __log_timed, true, 600ms, LOG_WARNING, BRIGHT_MAGENTA, args)
+#define _LOG_DELAYED_1000(args...) LOG_DELAYED(auto __log_timed, true, 1000ms, LOG_WARNING, BRIGHT_MAGENTA, args)
+#define _LOG_DELAYED_N_UNLOG(args...) LOG_DELAYED_UNLOG(__log_timed, LOG_WARNING, MAGENTA, args)
+#define _LOG_DELAYED_N_CLEAR() LOG_DELAYED_CLEAR(__log_timed)
 
 #define _LOG_SET(name, value) auto name = value
 #define _LOG_INIT() _LOG_SET(start, std::chrono::system_clock::now())
@@ -235,8 +239,6 @@ public:
 
 #ifdef NDEBUG
 #define L_DEBUG _
-#define L_BEGIN _
-#define L_END _
 #define L_OBJ_BEGIN _
 #define L_OBJ_END _
 #define L_DATABASE_BEGIN _
@@ -246,14 +248,12 @@ public:
 #define DBG_SET _
 #else
 #define L_DEBUG _LOG_DEBUG_ENABLED
-#define L_BEGIN _LOG_TIMED
-#define L_END _LOG_TIMED_CLEAR
-#define L_OBJ_BEGIN _LOG_TIMED_1000
-#define L_OBJ_END _LOG_TIMED_N_CLEAR
-#define L_DATABASE_BEGIN _LOG_TIMED_200
-#define L_DATABASE_END _LOG_TIMED_N_CLEAR
-#define L_EV_BEGIN _LOG_TIMED_600
-#define L_EV_END _LOG_TIMED_N_CLEAR
+#define L_OBJ_BEGIN _LOG_DELAYED_1000
+#define L_OBJ_END _LOG_DELAYED_N_UNLOG
+#define L_DATABASE_BEGIN _LOG_DELAYED_200
+#define L_DATABASE_END _LOG_DELAYED_N_UNLOG
+#define L_EV_BEGIN _LOG_DELAYED_600
+#define L_EV_END _LOG_DELAYED_N_UNLOG
 #define DBG_SET _LOG_SET
 #endif
 

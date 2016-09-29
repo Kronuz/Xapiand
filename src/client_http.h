@@ -110,6 +110,10 @@ class HttpClient : public BaseClient {
 	bool pretty;
 	std::unique_ptr<query_field_t> query_field;
 
+	int response_status;
+	size_t response_size;
+	std::shared_ptr<Log> response_log;
+
 	std::string path;
 	std::string body;
 	std::string header_name;
