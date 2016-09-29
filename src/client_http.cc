@@ -216,7 +216,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 
 	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
 
-	LOG_DELAYED(response_log, true, 1s, LOG_WARNING, MAGENTA, this, "Request taking too long...");
+	LOG_DELAYED(response_log, true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...");
 }
 
 
@@ -258,7 +258,7 @@ HttpClient::on_read(const char* buf, size_t received)
 {
 	if (!received) {
 		LOG_DELAYED_CLEAR(response_log);
-		LOG(LOG_NOTICE, RED, this, "Client unexpectedly closed the other end!");
+		if (!response_logged) LOG(LOG_NOTICE, RED, this, "Client unexpectedly closed the other end!");
 		return;
 	}
 
@@ -266,7 +266,8 @@ HttpClient::on_read(const char* buf, size_t received)
 		request_begining = false;
 		request_begins = std::chrono::system_clock::now();
 		LOG_DELAYED_CLEAR(response_log);
-		LOG_DELAYED(response_log, true, 1s, LOG_WARNING, MAGENTA, this, "Request taking too long...");
+		LOG_DELAYED(response_log, true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...");
+		response_logged = false;
 	}
 
 	L_CONN_WIRE(this, "HttpClient::on_read: %zu bytes", received);
@@ -1649,7 +1650,7 @@ HttpClient::clean_http_request()
 
 	LOG_DELAYED_CLEAR(response_log);
 	if (parser.http_errno) {
-		LOG(LOG_ERR, BRIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
+		if (!response_logged.exchange(true)) LOG(LOG_ERR, BRIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
 	} else {
 		int priority = LOG_DEBUG;
 		const char* color = WHITE;
@@ -1664,7 +1665,7 @@ HttpClient::clean_http_request()
 			color = BRIGHT_MAGENTA;
 			priority = LOG_ERR;
 		}
-		LOG(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %d %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, response_size, request_delta.c_str());
+		if (!response_logged.exchange(true)) LOG(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %d %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, response_size, request_delta.c_str());
 	}
 
 	path.clear();

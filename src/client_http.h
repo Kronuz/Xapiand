@@ -102,6 +102,7 @@ class HttpClient : public BaseClient {
 	int response_status;
 	size_t response_size;
 	std::shared_ptr<Log> response_log;
+	std::atomic_bool response_logged;
 
 	std::string path;
 	std::string body;
