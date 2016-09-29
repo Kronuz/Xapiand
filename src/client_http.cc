@@ -257,9 +257,8 @@ void
 HttpClient::on_read(const char* buf, size_t received)
 {
 	if (!received) {
-		if (!LOG_DELAYED_CLEAR(response_log)) {
-			LOG(LOG_NOTICE, RED, this, "Client unexpectedly closed the other end!");
-		}
+		LOG_DELAYED_CLEAR(response_log);
+		LOG(LOG_NOTICE, RED, this, "Client unexpectedly closed the other end!");
 		return;
 	}
 
@@ -1648,6 +1647,7 @@ HttpClient::clean_http_request()
 	auto request_delta = delta_string(request_begins, response_ends);
 	auto response_delta = delta_string(response_begins, response_ends);
 
+	LOG_DELAYED_CLEAR(response_log);
 	if (parser.http_errno) {
 		LOG(LOG_ERR, BRIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
 	} else {
@@ -1666,7 +1666,6 @@ HttpClient::clean_http_request()
 		}
 		LOG(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %d %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, response_size, request_delta.c_str());
 	}
-	LOG_DELAYED_CLEAR(response_log);
 
 	path.clear();
 	body.clear();
