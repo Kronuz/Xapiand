@@ -23,15 +23,12 @@
 #pragma once
 
 #include "../msgpack.h"
+#include "exception.h"
 
 #include <v8.h>
 
 
 namespace v8pp {
-
-class cycle_detection : public std::runtime_error {
-	using std::runtime_error::runtime_error;
-};
 
 
 // Generic converter.
@@ -118,7 +115,7 @@ private:
 					process(o[convert<std::string>()(properties->Get(i))], o_v8->Get(properties->Get(i)), visitObjects);
 				}
 			} else {
-				throw cycle_detection("Cycle detection");
+				throw CycleDetectionError();
 			}
 		} else if (v->IsUndefined()) {
 			o = MsgPack();

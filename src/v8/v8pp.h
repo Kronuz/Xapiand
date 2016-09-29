@@ -47,17 +47,6 @@ namespace v8pp {
 constexpr size_t TIME_SCRIPT = 300; // Milliseconds.
 
 
-class TimeOutException : public std::runtime_error {
-	using std::runtime_error::runtime_error;
-};
-
-
-class ScriptSyntaxException : public std::runtime_error {
-public:
-	using std::runtime_error::runtime_error;
-};
-
-
 inline static size_t hash(const std::string& source) {
 	std::hash<std::string> hash_fn;
 	return hash_fn(source);
@@ -311,7 +300,7 @@ private:
 			wrapper._obj_template->SetNamedPropertyHandler(Wrapper::getter, Wrapper::setter, Wrapper::query, Wrapper::deleter, Wrapper::enumerator, v8::External::New(this));
 			wrapper._obj_template->SetIndexedPropertyHandler(Wrapper::getter, Wrapper::setter, Wrapper::query, Wrapper::deleter, Wrapper::enumerator, v8::External::New(this));
 		} else {
-			throw ScriptSyntaxException(std::string("ScriptSyntaxError: ").append(report_exception(&try_catch)));
+			throw ScriptSyntaxError(std::string("ScriptSyntaxError: ").append(report_exception(&try_catch)));
 		}
 	}
 
@@ -363,14 +352,14 @@ private:
 		v8::Handle<v8::Value> result = function->Call(context->Global(), args.size(), args.data());
 
 		if (finished) {
-			throw TimeOutException("Time Out");
+			throw TimeOutError();
 		}
 
 		finished = true;
 		cond_kill.notify_one();
 
 		if (try_catch.HasCaught()) {
-			throw ScriptSyntaxException(std::string("ScriptSyntaxError: ").append(report_exception(&try_catch)));
+			throw ScriptSyntaxError(std::string("ScriptSyntaxError: ").append(report_exception(&try_catch)));
 		}
 
 		return convert<MsgPack>()(result);
