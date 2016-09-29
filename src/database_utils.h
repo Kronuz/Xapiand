@@ -188,11 +188,22 @@ struct query_field_t {
 };
 
 
-enum class MIMEType {
+enum class MIMEType : uint8_t {
 	APPLICATION_JSON,
 	APPLICATION_XWWW_FORM_URLENCODED,
 	APPLICATION_X_MSGPACK,
 	UNKNOW
+};
+
+
+enum class HttpMethod : uint8_t {
+	DELETE   =  0,
+	GET      =  1,
+	HEAD     =  2,
+	POST     =  3,
+	PUT      =  4,
+	OPTIONS  =  6,
+	PATCH    =  24
 };
 
 
