@@ -44,7 +44,7 @@ namespace v8pp {
 // v8 version supported: v8-315
 
 
-constexpr size_t TIME_SCRIPT = 300; // Milliseconds.
+constexpr size_t TIME_SCRIPT = 100; // Milliseconds.
 
 
 inline static size_t hash(const std::string& source) {
