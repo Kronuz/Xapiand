@@ -104,7 +104,6 @@ struct wrap<MsgPack> {
 				try {
 					inner_obj["_value"] = msgpack_value;
 					return;
-				} catch (const std::out_of_range&) {
 				} catch (const msgpack::type_error&) { }
 			}
 			inner_obj = msgpack_value;
@@ -124,7 +123,6 @@ struct wrap<MsgPack> {
 				try {
 					inner_obj["_value"] = msgpack_value;
 					return;
-				} catch (const std::out_of_range&) {
 				} catch (const msgpack::type_error&) { }
 			}
 			inner_obj = msgpack_value;
