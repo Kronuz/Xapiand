@@ -100,7 +100,7 @@ struct wrap<MsgPack> {
 		try {
 			auto &inner_obj = obj[property];
 			auto msgpack_value = convert<MsgPack>()(value);
-			if (!msgpack_value.is_map()) {
+			if (!msgpack_value.is_map() && property != "_value") {
 				try {
 					inner_obj["_value"] = msgpack_value;
 					return;
