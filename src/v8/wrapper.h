@@ -102,7 +102,7 @@ struct wrap<MsgPack> {
 			auto msgpack_value = convert<MsgPack>()(value);
 			if (!msgpack_value.is_map()) {
 				try {
-					inner_obj.at("_value") = msgpack_value;
+					inner_obj["_value"] = msgpack_value;
 					return;
 				} catch (const std::out_of_range&) {
 				} catch (const msgpack::type_error&) { }
@@ -122,7 +122,7 @@ struct wrap<MsgPack> {
 			auto msgpack_value = convert<MsgPack>()(value);
 			if (!msgpack_value.is_map()) {
 				try {
-					inner_obj.at("_value") = msgpack_value;
+					inner_obj["_value"] = msgpack_value;
 					return;
 				} catch (const std::out_of_range&) {
 				} catch (const msgpack::type_error&) { }
