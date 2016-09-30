@@ -131,12 +131,16 @@ struct wrap<MsgPack> {
 
 	inline void deleter(const std::string& property, const v8::AccessorInfo& info) {
 		auto& obj = convert<MsgPack>()(info);
-		obj.erase(property);
+		try {
+			obj.erase(property);
+		} catch (const msgpack::type_error&) { }
 	}
 
 	inline void deleter(uint32_t index, const v8::AccessorInfo& info) const {
 		auto& obj = convert<MsgPack>()(info);
-		obj.erase(index);
+		try {
+			obj.erase(index);
+		} catch (const msgpack::type_error&) { }
 	}
 };
 
