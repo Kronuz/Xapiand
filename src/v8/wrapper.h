@@ -78,13 +78,12 @@ struct wrap<MsgPack> {
 		try {
 			return toValue(obj.at(property), obj_template);
 		} catch (const std::out_of_range&) {
-			return v8::Undefined();
 		} catch (const msgpack::type_error&) {
 			if (property == "_value") {
 				return toValue(obj, obj_template);
 			}
-			return v8::Undefined();
 		}
+		return v8::Undefined();
 	}
 
 	inline v8::Handle<v8::Value> getter(uint32_t index, const v8::AccessorInfo& info, v8::Persistent<v8::ObjectTemplate> obj_template) const {
@@ -92,22 +91,44 @@ struct wrap<MsgPack> {
 		try {
 			return toValue(obj.at(index), obj_template);
 		} catch (const std::out_of_range&) {
-			return v8::Undefined();
-		}
+		} catch (const msgpack::type_error&) { }
+		return v8::Undefined();
 	}
 
 	inline void setter(const std::string& property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
 		auto& obj = convert<MsgPack>()(info);
-		if (obj.is_map()) {
-			obj[property] = convert<MsgPack>()(value);
-		} else if (property == "_value") {
-			obj = convert<MsgPack>()(value);
+		try {
+			auto &inner_obj = obj[property];
+			auto msgpack_value = convert<MsgPack>()(value);
+			if (!msgpack_value.is_map()) {
+				try {
+					inner_obj.at("_value") = msgpack_value;
+					return;
+				} catch (const std::out_of_range&) {
+				} catch (const msgpack::type_error&) { }
+			}
+			inner_obj = msgpack_value;
+		} catch (const msgpack::type_error&) {
+			if (property == "_value") {
+				obj = convert<MsgPack>()(value);
+			}
 		}
 	}
 
 	inline void setter(uint32_t index, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
 		auto& obj = convert<MsgPack>()(info);
-		obj[index] = convert<MsgPack>()(value);
+		try {
+			auto &inner_obj = obj[index];
+			auto msgpack_value = convert<MsgPack>()(value);
+			if (!msgpack_value.is_map()) {
+				try {
+					inner_obj.at("_value") = msgpack_value;
+					return;
+				} catch (const std::out_of_range&) {
+				} catch (const msgpack::type_error&) { }
+			}
+			inner_obj = msgpack_value;
+		} catch (const msgpack::type_error&) { }
 	}
 
 	inline void deleter(const std::string& property, const v8::AccessorInfo& info) {
