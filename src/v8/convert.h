@@ -92,7 +92,9 @@ private:
 		if (v->IsBoolean()) {
 			o = v->BooleanValue();
 		} else if (v->IsInt32() || v->IsUint32()) {
-			o = v->IntegerValue();
+			msgpack::object mo(-1);  // Ugly hack to force msgpack to get V8 Value as signed integer
+			mo.via.i64 = v->IntegerValue();
+			o = mo;
 		} else if (v->IsNumber()) {
 			o = v->NumberValue();
 		} else if (v->IsString()) {
