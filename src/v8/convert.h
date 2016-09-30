@@ -91,10 +91,8 @@ private:
 	static inline void process(MsgPack& o, v8::Handle<v8::Value> v, std::vector<v8::Local<v8::Object>>& visitObjects) {
 		if (v->IsBoolean()) {
 			o = v->BooleanValue();
-		} else if (v->IsInt32()) {
-			o = v->Int32Value();
-		} else if (v->IsUint32()) {
-			o = v->Uint32Value();
+		} else if (v->IsInt32() || v->IsUint32()) {
+			o = v->IntegerValue();
 		} else if (v->IsNumber()) {
 			o = v->NumberValue();
 		} else if (v->IsString()) {
