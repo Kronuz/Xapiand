@@ -2209,10 +2209,11 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	L_CALL(this, "Schema::index_item(1)");
 
 	try {
-		if unlikely(!specification.found_field && !specification.set_type) {
-			if (!specification.dynamic) {
-				throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
-			}
+		if (!specification.found_field && !specification.dynamic) {
+			throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
+		}
+
+		if (!specification.set_type) {
 			validate_required_data(value);
 		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
 			update_dynamic_specification();
@@ -2320,10 +2321,11 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 	L_CALL(this, "Schema::index_item()");
 
 	try {
-		if unlikely(!specification.found_field && !specification.set_type) {
-			if (!specification.dynamic) {
-				throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
-			}
+		if (!specification.found_field && !specification.dynamic) {
+			throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
+		}
+
+		if (!specification.set_type) {
 			validate_required_data(values);
 		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
 			update_dynamic_specification();
