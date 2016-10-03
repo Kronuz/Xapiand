@@ -429,7 +429,9 @@ private:
 		t_kill.detach();
 
 		// Invoke the function, giving the global object as 'this' and one args
-		v8::Local<v8::Value> result = function.Get(isolate)->Call(context_->Global(), args.size(), args.data());
+		auto global = context_->Global();
+		auto function_ = function.Get(isolate);
+		v8::Local<v8::Value> result = function_->Call(global, args.size(), args.data());
 
 		if (finished) {
 			throw TimeOutError();
