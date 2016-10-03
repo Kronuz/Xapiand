@@ -307,10 +307,10 @@ class Processor {
 			obj_template.Reset(isolate, obj_template_);
 		}
 
-		PropertyHandler(PropertyHandler&& o) = delete;
+		PropertyHandler(PropertyHandler&&) = delete;
 		PropertyHandler(const PropertyHandler&) = delete;
 
-		PropertyHandler& operator=(PropertyHandler&& o) = delete;
+		PropertyHandler& operator=(PropertyHandler&&) = delete;
 		PropertyHandler& operator=(const PropertyHandler&) = delete;
 
 		~PropertyHandler() {
@@ -334,10 +334,10 @@ public:
 			: processor(processor_),
 			  function(std::move(function_)) { }
 
-		Function(Function&& o) = delete;
+		Function(Function&&) = delete;
 		Function(const Function&) = delete;
 
-		Function& operator=(Function&& o) = delete;
+		Function& operator=(Function&&) = delete;
 		Function& operator=(const Function&) = delete;
 
 		~Function() {
@@ -466,10 +466,10 @@ public:
 		Initialize(script_name, script_source);
 	}
 
-	Processor(Processor&& o) = delete;
+	Processor(Processor&&) = delete;
 	Processor(const Processor&) = delete;
 
-	Processor& operator=(Processor&& o) = delete;
+	Processor& operator=(Processor&&) = delete;
 	Processor& operator=(const Processor&) = delete;
 
 	~Processor() {
