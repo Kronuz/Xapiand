@@ -330,7 +330,7 @@ public:
 			: processor(std::move(o.processor)),
 			  function(std::move(o.function))
 		{
-			processor = nullptr;
+			o.processor = nullptr;
 		}
 
 		~Function() {
