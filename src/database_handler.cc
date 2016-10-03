@@ -101,11 +101,11 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 	auto script_hash = v8pp::hash(script);
 
 	try {
-		v8pp::Processor* processor;
+		std::shared_ptr<v8pp::Processor> processor;
 		try {
-			processor = &script_lru.at(script_hash);
+			processor = script_lru.at(script_hash);
 		} catch (const std::range_error&) {
-			processor = &script_lru.insert(std::make_pair(script_hash, v8pp::Processor(std::to_string(script_hash), script)));
+			processor = script_lru.emplace(script_hash, std::make_shared<v8pp::Processor>(std::to_string(script_hash), script));
 		}
 
 		switch (method) {
