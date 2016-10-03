@@ -97,6 +97,7 @@ static void print(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	printf("\n");
 }
 
+
 static void to_string(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetReturnValue().Set(convert<const char*>()(args));
 }
@@ -108,10 +109,12 @@ public:
 		void* data = malloc(length);
 		return data;
 	}
+
 	void* Allocate(size_t length) {
 		void* data = AllocateUninitialized(length);
 		return data == nullptr ? data : memset(data, 0, length);
 	}
+
 	void Free(void* data, size_t) {
 		free(data);
 	}
@@ -125,7 +128,9 @@ class Processor {
 		v8::Isolate::CreateParams create_params;
 
 	public:
-		V8Initializer() : platform(v8::platform::CreateDefaultPlatform()) {
+		V8Initializer()
+			: platform(v8::platform::CreateDefaultPlatform())
+		{
 			create_params.array_buffer_allocator = &allocator;
 			v8::V8::InitializePlatform(platform);
 			v8::V8::InitializeICU();
@@ -331,7 +336,6 @@ public:
 		~Function() {
 			function.Reset();
 		}
-
 
 		template <typename... Args>
 		MsgPack operator()(Args&&... args) {
