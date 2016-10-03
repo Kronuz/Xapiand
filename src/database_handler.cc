@@ -98,9 +98,6 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 		throw MSG_ClientError("%s must be string", RESERVED_SCRIPT);
 	}
 
-	v8::V8::InitializeICU();
-	v8::V8::Initialize();
-
 	auto script_hash = v8pp::hash(script);
 
 	try {

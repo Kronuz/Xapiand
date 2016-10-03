@@ -122,6 +122,30 @@ public:
 
 
 class Processor {
+	class V8Initializer {
+		v8::Platform* platform;
+		ArrayBufferAllocator allocator;
+		v8::Isolate::CreateParams create_params;
+
+	public:
+		V8Initializer() : platform(v8::platform::CreateDefaultPlatform()) {
+			create_params.array_buffer_allocator = &allocator;
+			v8::V8::InitializePlatform(platform);
+			v8::V8::InitializeICU();
+			v8::V8::Initialize();
+		}
+
+		~V8Initializer() {
+			v8::V8::Dispose();
+			v8::V8::ShutdownPlatform();
+			delete platform;
+		}
+
+		const v8::Isolate::CreateParams& CreateParams() {
+			return create_params;
+		}
+	};
+
 	struct PropertyHandler {
 		Processor* processor;
 		wrap<MsgPack> wapped_type;
@@ -433,11 +457,9 @@ private:
 		return convert<MsgPack>()(result);
 	}
 
-	static v8::Isolate::CreateParams& CreateParams() {
-		static v8::Isolate::CreateParams create_params;
-		static ArrayBufferAllocator allocator;
-		create_params.array_buffer_allocator = &allocator;
-		return create_params;
+	static const v8::Isolate::CreateParams& CreateParams() {
+		static V8Initializer init;
+		return init.CreateParams();
 	}
 
 public:

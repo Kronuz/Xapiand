@@ -28,6 +28,7 @@
 #include "exception.h"
 
 #include <v8.h>
+#include <libplatform/libplatform.h>
 
 
 namespace v8pp {

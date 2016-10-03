@@ -241,20 +241,12 @@ else ()
 	set ("HAVE_LIBPTHREAD" 0)
 endif ()
 
-if (V8)
-	include_directories (
-		"${XAPIAN_INCLUDE_DIR}"
-		"${UUID_INCLUDE_DIRS}"
-		"${V8_INCLUDE_DIR}"
-		"${PROJECT_SOURCE_DIR}/src"
-		"${PROJECT_BINARY_DIR}/src")
-else ()
-	include_directories (
-		"${XAPIAN_INCLUDE_DIR}"
-		"${UUID_INCLUDE_DIRS}"
-		"${PROJECT_SOURCE_DIR}/src"
-		"${PROJECT_BINARY_DIR}/src")
-endif()
+include_directories (
+	"${XAPIAN_INCLUDE_DIR}"
+	"${UUID_INCLUDE_DIRS}"
+	"${V8_INCLUDE_DIRS}"
+	"${PROJECT_SOURCE_DIR}/src"
+	"${PROJECT_BINARY_DIR}/src")
 
 
 ########################################################################
@@ -319,7 +311,7 @@ target_link_libraries (${PROJECT_NAME}
 	${XAPIAN_LIBRARIES}
 	${CMAKE_THREAD_LIBS_INIT}
 	${UUID_LIBRARIES}
-	${V8_LIBRARY}
+	${V8_LIBRARIES}
 	m
 )
 
