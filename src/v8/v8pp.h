@@ -299,22 +299,36 @@ class Processor {
 			}
 		}
 
-		PropertyHandler(v8::Isolate* isolate_) : isolate(isolate_) { }
-
-		PropertyHandler(const PropertyHandler&) = delete;
-		PropertyHandler& operator=(PropertyHandler&&) = delete;
-		PropertyHandler& operator=(const PropertyHandler&) = delete;
-
-		v8::Local<v8::Value> operator()(MsgPack& arg) const {
-			return wapped_type.toValue(isolate, arg, obj_template.Get(isolate));
-		}
-
-		void Initialize() {
+		PropertyHandler(v8::Isolate* isolate_) : isolate(isolate_) {
 			v8::Local<v8::ObjectTemplate> obj_template_ = v8::ObjectTemplate::New(isolate);
 			obj_template_->SetInternalFieldCount(1);
 			obj_template_->SetNamedPropertyHandler(property_getter_cb, property_setter_cb, property_query_cb, property_deleter_cb, enumerator_cb, v8::External::New(isolate, this));
 			obj_template_->SetIndexedPropertyHandler(index_getter_cb, index_setter_cb, index_query_cb, index_deleter_cb, enumerator_cb, v8::External::New(isolate, this));
 			obj_template.Reset(isolate, obj_template_);
+		}
+
+		PropertyHandler(PropertyHandler&& o)
+			: isolate(std::move(o.isolate)),
+			  obj_template(std::move(o.obj_template)),
+			  wapped_type(std::move(o.wapped_type)) { }
+
+		PropertyHandler& operator=(PropertyHandler&& o) {
+			isolate = std::move(o.isolate);
+			obj_template = std::move(o.obj_template);
+			wapped_type = std::move(o.wapped_type);
+			return *this;
+		}
+
+		PropertyHandler(const PropertyHandler&) = delete;
+		PropertyHandler& operator=(const PropertyHandler&) = delete;
+
+		~PropertyHandler() {
+			obj_template.Reset();
+		}
+
+		v8::Local<v8::Value> operator()(MsgPack& arg) const {
+			fprintf(stderr, "+++++   %s\n", arg.to_string().c_str());
+			return wapped_type.toValue(isolate, arg, obj_template.Get(isolate));
 		}
 	};
 
@@ -337,12 +351,20 @@ public:
 			o.processor = nullptr;
 		}
 
+		Function& operator=(Function&& o) {
+			processor = std::move(o.processor);
+			function = std::move(o.function);
+			o.processor = nullptr;
+			return *this;
+		}
+
 		Function(const Function&) = delete;
-		Function& operator=(Function&&) = delete;
 		Function& operator=(const Function&) = delete;
 
 		~Function() {
-			function.Reset();
+			if (processor) {
+				function.Reset();
+			}
 		}
 
 		template <typename... Args>
@@ -354,7 +376,7 @@ public:
 private:
 	v8::Isolate* isolate;
 
-	PropertyHandler property_handler;
+	std::unique_ptr<PropertyHandler> property_handler;
 	v8::Global<v8::Context> context;
 	std::map<std::string, Function> functions;
 
@@ -368,7 +390,7 @@ private:
 		v8::Isolate::Scope isolate_scope(isolate);
 		v8::HandleScope handle_scope(isolate);
 
-		property_handler.Initialize();
+		property_handler = std::make_unique<PropertyHandler>(isolate);
 
 		v8::Local<v8::ObjectTemplate> global_template = v8::ObjectTemplate::New(isolate);
 
@@ -392,7 +414,7 @@ private:
 		}
 	}
 
-	v8::Global<v8::Function>&& extract_function(const std::string& name) {
+	v8::Global<v8::Function> extract_function(const std::string& name) {
 		v8::Locker locker(isolate);
 		v8::Isolate::Scope isolate_scope(isolate);
 		v8::HandleScope handle_scope(isolate);
@@ -407,7 +429,7 @@ private:
 		// If there is no function, or if it is not a function, ignore
 		if (function_val->IsFunction()) {
 			// It is a function; cast it to a Function and make it Global
-			return std::move(v8::Global<v8::Function>(isolate, v8::Local<v8::Function>::Cast(function_val)));
+			return v8::Global<v8::Function>(isolate, v8::Local<v8::Function>::Cast(function_val));
 		}
 
 		throw ReferenceError(std::string("Reference error to function: ").append(name));
@@ -429,7 +451,7 @@ private:
 		auto context_ = context.Get(isolate);
 		v8::Context::Scope context_scope(context_);
 
-		std::array<v8::Local<v8::Value>, sizeof...(arguments)> args{{ property_handler(std::forward<Args>(arguments))... }};
+		std::array<v8::Local<v8::Value>, sizeof...(arguments)> args{{ (*property_handler)(std::forward<Args>(arguments))... }};
 		v8::TryCatch try_catch;
 
 		finished = false;
@@ -462,8 +484,7 @@ private:
 
 public:
 	Processor(const std::string& script_name, const std::string& script_source)
-		: isolate(v8::Isolate::New(CreateParams())),
-		  property_handler(isolate)
+		: isolate(v8::Isolate::New(CreateParams()))
 	{
 		Initialize(script_name, script_source);
 	}
@@ -477,7 +498,21 @@ public:
 		o.isolate = nullptr;
 	}
 
+	Processor& operator=(Processor&& o) {
+		isolate = std::move(o.isolate);
+		property_handler = std::move(o.property_handler);
+		context = std::move(o.context);
+		functions = std::move(o.functions);
+		o.isolate = nullptr;
+		return *this;
+	}
+
+	Processor(const Processor&) = delete;
+	Processor& operator=(const Processor&) = delete;
+
 	~Processor() {
+		functions.clear();
+		property_handler.reset();
 		if (isolate) {
 			{
 				v8::Locker locker(isolate);
@@ -492,8 +527,8 @@ public:
 		try {
 			return functions.at(name);
 		} catch (const std::out_of_range&) {
-			functions.emplace(name, Function(this, extract_function(name)));
-			return functions.at(name);
+			auto p = functions.emplace(name, Function(this, extract_function(name)));
+			return p.first->second;
 		}
 	}
 };
