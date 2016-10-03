@@ -301,6 +301,10 @@ class Processor {
 
 		PropertyHandler(v8::Isolate* isolate_) : isolate(isolate_) { }
 
+		PropertyHandler(const PropertyHandler&) = delete;
+		PropertyHandler& operator=(PropertyHandler&&) = delete;
+		PropertyHandler& operator=(const PropertyHandler&) = delete;
+
 		v8::Local<v8::Value> operator()(MsgPack& arg) const {
 			return wapped_type.toValue(isolate, arg, obj_template.Get(isolate));
 		}
@@ -332,6 +336,10 @@ public:
 		{
 			o.processor = nullptr;
 		}
+
+		Function(const Function&) = delete;
+		Function& operator=(Function&&) = delete;
+		Function& operator=(const Function&) = delete;
 
 		~Function() {
 			function.Reset();
