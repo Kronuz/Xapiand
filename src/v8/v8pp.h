@@ -388,9 +388,11 @@ private:
 		v8::Locker locker(isolate);
 		v8::Isolate::Scope isolate_scope(isolate);
 		v8::HandleScope handle_scope(isolate);
+		auto context_ = context.Get(isolate);
+		v8::Context::Scope context_scope(context_);
 
 		// The script compiled and ran correctly.  Now we fetch out the function from the global object.
-		auto global = context.Get(isolate)->Global();
+		auto global = context_->Global();
 		auto name_value = v8::String::NewFromUtf8(isolate, name.data(), v8::NewStringType::kNormal, name.size()).ToLocalChecked();
 		v8::Local<v8::Value> function_val = global->Get(name_value);
 
@@ -416,6 +418,8 @@ private:
 		v8::Locker locker(isolate);
 		v8::Isolate::Scope isolate_scope(isolate);
 		v8::HandleScope handle_scope(isolate);
+		auto context_ = context.Get(isolate);
+		v8::Context::Scope context_scope(context_);
 
 		std::array<v8::Local<v8::Value>, sizeof...(arguments)> args{{ property_handler(std::forward<Args>(arguments))... }};
 		v8::TryCatch try_catch;
@@ -425,7 +429,7 @@ private:
 		t_kill.detach();
 
 		// Invoke the function, giving the global object as 'this' and one args
-		v8::Local<v8::Value> result = function.Get(isolate)->Call(context.Get(isolate)->Global(), args.size(), args.data());
+		v8::Local<v8::Value> result = function.Get(isolate)->Call(context_->Global(), args.size(), args.data());
 
 		if (finished) {
 			throw TimeOutError();
