@@ -122,6 +122,11 @@ public:
 
 
 class Processor {
+	class ScriptLRU : public lru::LRU<size_t, std::shared_ptr<v8pp::Processor>> {
+	public:
+		ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { }
+	};
+
 	class V8Initializer {
 		v8::Platform* platform;
 		ArrayBufferAllocator allocator;
@@ -489,6 +494,18 @@ public:
 		} catch (const std::out_of_range&) {
 			auto p = functions.emplace(name, std::make_unique<Function>(this, extract_function(name)));
 			return *p.first->second;
+		}
+	}
+
+	static std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script) {
+		static ScriptLRU script_lru;
+
+		auto script_hash = hash(script);
+
+		try {
+			return script_lru.at(script_hash);
+		} catch (const std::range_error&) {
+			return script_lru.emplace(script_hash, std::make_shared<Processor>(script_name, script));
 		}
 	}
 };

@@ -663,15 +663,3 @@ extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_doc
 extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties;
 extern const std::unordered_map<std::string, dispatch_root> map_dispatch_root;
 extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
-
-#if XAPIAND_V8
-
-class ScriptLRU : public lru::LRU<size_t, std::shared_ptr<v8pp::Processor>> {
-public:
-	ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { }
-};
-
-
-extern ScriptLRU script_lru;
-
-#endif

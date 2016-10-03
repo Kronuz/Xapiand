@@ -98,15 +98,8 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 		throw MSG_ClientError("%s must be string", RESERVED_SCRIPT);
 	}
 
-	auto script_hash = v8pp::hash(script);
-
 	try {
-		std::shared_ptr<v8pp::Processor> processor;
-		try {
-			processor = script_lru.at(script_hash);
-		} catch (const std::range_error&) {
-			processor = script_lru.emplace(script_hash, std::make_shared<v8pp::Processor>(std::to_string(script_hash), script));
-		}
+		auto processor = v8pp::Processor::compile("_script", script);
 
 		switch (method) {
 			case HttpMethod::PUT: {

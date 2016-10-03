@@ -250,13 +250,6 @@ const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable({
 });
 
 
-#if XAPIAND_V8
-
-// LRU of scripts.
-ScriptLRU script_lru;
-
-#endif
-
 const std::unordered_map<std::string, std::pair<bool, std::string>> map_stem_language({
 	{ "armenian",    { true,  "hy" } },  { "hy",               { true,  "hy" } },  { "basque",          { true,  "ue" } },
 	{ "eu",          { true,  "eu" } },  { "catalan",          { true,  "ca" } },  { "ca",              { true,  "ca" } },
