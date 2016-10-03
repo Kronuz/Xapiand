@@ -307,19 +307,10 @@ class Processor {
 			obj_template.Reset(isolate, obj_template_);
 		}
 
-		PropertyHandler(PropertyHandler&& o)
-			: isolate(std::move(o.isolate)),
-			  obj_template(std::move(o.obj_template)),
-			  wapped_type(std::move(o.wapped_type)) { }
-
-		PropertyHandler& operator=(PropertyHandler&& o) {
-			isolate = std::move(o.isolate);
-			obj_template = std::move(o.obj_template);
-			wapped_type = std::move(o.wapped_type);
-			return *this;
-		}
-
+		PropertyHandler(PropertyHandler&& o) = delete;
 		PropertyHandler(const PropertyHandler&) = delete;
+
+		PropertyHandler& operator=(PropertyHandler&& o) = delete;
 		PropertyHandler& operator=(const PropertyHandler&) = delete;
 
 		~PropertyHandler() {
@@ -327,7 +318,6 @@ class Processor {
 		}
 
 		v8::Local<v8::Value> operator()(MsgPack& arg) const {
-			fprintf(stderr, "+++++   %s\n", arg.to_string().c_str());
 			return wapped_type.toValue(isolate, arg, obj_template.Get(isolate));
 		}
 	};
@@ -344,27 +334,14 @@ public:
 			: processor(processor_),
 			  function(std::move(function_)) { }
 
-		Function(Function&& o)
-			: processor(std::move(o.processor)),
-			  function(std::move(o.function))
-		{
-			o.processor = nullptr;
-		}
-
-		Function& operator=(Function&& o) {
-			processor = std::move(o.processor);
-			function = std::move(o.function);
-			o.processor = nullptr;
-			return *this;
-		}
-
+		Function(Function&& o) = delete;
 		Function(const Function&) = delete;
+
+		Function& operator=(Function&& o) = delete;
 		Function& operator=(const Function&) = delete;
 
 		~Function() {
-			if (processor) {
-				function.Reset();
-			}
+			function.Reset();
 		}
 
 		template <typename... Args>
@@ -378,7 +355,7 @@ private:
 
 	std::unique_ptr<PropertyHandler> property_handler;
 	v8::Global<v8::Context> context;
-	std::map<std::string, Function> functions;
+	std::unordered_map<std::string, std::unique_ptr<Function>> functions;
 
 	// Auxiliar variables for kill a script.
 	std::mutex mtx;
@@ -489,46 +466,29 @@ public:
 		Initialize(script_name, script_source);
 	}
 
-	Processor(Processor&& o)
-		: isolate(std::move(o.isolate)),
-		  property_handler(std::move(o.property_handler)),
-		  context(std::move(o.context)),
-		  functions(std::move(o.functions))
-	{
-		o.isolate = nullptr;
-	}
-
-	Processor& operator=(Processor&& o) {
-		isolate = std::move(o.isolate);
-		property_handler = std::move(o.property_handler);
-		context = std::move(o.context);
-		functions = std::move(o.functions);
-		o.isolate = nullptr;
-		return *this;
-	}
-
+	Processor(Processor&& o) = delete;
 	Processor(const Processor&) = delete;
+
+	Processor& operator=(Processor&& o) = delete;
 	Processor& operator=(const Processor&) = delete;
 
 	~Processor() {
 		functions.clear();
 		property_handler.reset();
-		if (isolate) {
-			{
-				v8::Locker locker(isolate);
-				v8::Isolate::Scope isolate_scope(isolate);
-				context.Reset();
-			}
-			isolate->Dispose();
+		{
+			v8::Locker locker(isolate);
+			v8::Isolate::Scope isolate_scope(isolate);
+			context.Reset();
 		}
+		isolate->Dispose();
 	}
 
 	Function& operator[](const std::string& name) {
 		try {
-			return functions.at(name);
+			return *functions.at(name);
 		} catch (const std::out_of_range&) {
-			auto p = functions.emplace(name, Function(this, extract_function(name)));
-			return p.first->second;
+			auto p = functions.emplace(name, std::make_unique<Function>(this, extract_function(name)));
+			return *p.first->second;
 		}
 	}
 };
