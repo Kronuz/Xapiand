@@ -460,7 +460,7 @@ public:
 		  context(std::move(o.context)),
 		  functions(std::move(o.functions))
 	{
-		isolate = nullptr;
+		o.isolate = nullptr;
 	}
 
 	~Processor() {
