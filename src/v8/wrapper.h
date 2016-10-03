@@ -37,67 +37,69 @@ struct wrap;
 // MsgPack Wrap
 template <>
 struct wrap<MsgPack> {
-	inline v8::Handle<v8::Value> toValue(MsgPack& arg, v8::Persistent<v8::ObjectTemplate> obj_template) const {
+	v8::Local<v8::Value> toValue(v8::Isolate* isolate, MsgPack& arg, const v8::Local<v8::ObjectTemplate>& obj_template) const {
 		switch (arg.getType()) {
 			case MsgPack::Type::MAP: {
-				v8::Handle<v8::Object> obj = obj_template->NewInstance();
-				obj->SetInternalField(0, v8::External::New(&arg));
+				v8::Local<v8::Object> obj = obj_template->NewInstance(isolate->GetCurrentContext()).ToLocalChecked();
+				obj->SetInternalField(0, v8::External::New(isolate, &arg));
 				return obj;
 			}
 			case MsgPack::Type::ARRAY: {
-				v8::Handle<v8::Object> obj = obj_template->NewInstance();
-				obj->SetInternalField(0, v8::External::New(&arg));
+				v8::Local<v8::Object> obj = obj_template->NewInstance(isolate->GetCurrentContext()).ToLocalChecked();
+				obj->SetInternalField(0, v8::External::New(isolate, &arg));
 				return obj;
 			}
 			case MsgPack::Type::STR: {
 				auto arg_str = arg.as_string();
-				return v8::String::New(arg_str.data(), arg_str.size());
+				return v8::String::NewFromUtf8(isolate, arg_str.data(), v8::NewStringType::kNormal, arg_str.size()).ToLocalChecked();
 			}
 			case MsgPack::Type::POSITIVE_INTEGER:
-				return v8::Integer::New(arg.as_u64());
+				return v8::Integer::New(isolate, arg.as_u64());
 			case MsgPack::Type::NEGATIVE_INTEGER:
-				return v8::Integer::New(arg.as_i64());
+				return v8::Integer::New(isolate, arg.as_i64());
 			case MsgPack::Type::FLOAT:
-				return v8::Number::New(arg.as_f64());
+				return v8::Number::New(isolate, arg.as_f64());
 			case MsgPack::Type::BOOLEAN:
-				return v8::Boolean::New(arg.as_bool());
+				return v8::Boolean::New(isolate, arg.as_bool());
 			case MsgPack::Type::UNDEFINED:
-				return v8::Undefined();
+				return v8::Undefined(isolate);
 			case MsgPack::Type::NIL:
-				return v8::Null();
+				return v8::Null(isolate);
 			default:
-				return v8::Undefined();
+				return v8::Undefined(isolate);
 		}
 	}
 
-	inline std::string to_string(const v8::AccessorInfo& info) const {
+	std::string to_string(const v8::PropertyCallbackInfo<v8::Value>& info) const {
 		auto& obj = convert<MsgPack>()(info);
 		return obj.to_string();
 	}
 
-	inline v8::Handle<v8::Value> getter(const std::string& property, const v8::AccessorInfo& info, v8::Persistent<v8::ObjectTemplate> obj_template) const {
+	v8::Local<v8::Value> getter(const std::string& property, const v8::PropertyCallbackInfo<v8::Value>& info, const v8::Local<v8::ObjectTemplate>& obj_template) const {
+		auto isolate = info.GetIsolate();
 		auto& obj = convert<MsgPack>()(info);
 		try {
-			return toValue(obj.at(property), obj_template);
+			return toValue(isolate, obj.at(property), obj_template);
 		} catch (const std::out_of_range&) {
 		} catch (const msgpack::type_error&) {
 			if (property == "_value") {
-				return toValue(obj, obj_template);
+				return toValue(isolate, obj, obj_template);
 			}
 		}
-		return v8::Undefined();
+		return v8::Undefined(isolate);
 	}
 
-	inline v8::Handle<v8::Value> getter(uint32_t index, const v8::AccessorInfo& info, v8::Persistent<v8::ObjectTemplate> obj_template) const {
+	v8::Local<v8::Value> getter(uint32_t index, const v8::PropertyCallbackInfo<v8::Value>& info, const v8::Local<v8::ObjectTemplate>& obj_template) const {
+		auto isolate = info.GetIsolate();
 		auto& obj = convert<MsgPack>()(info);
 		try {
-			return toValue(obj.at(index), obj_template);
+			return toValue(isolate, obj.at(index), obj_template);
 		} catch (const std::out_of_range&) {
 		} catch (const msgpack::type_error&) { }
-		return v8::Undefined();
+		return v8::Undefined(isolate);
 	}
 
-	inline void setter(const std::string& property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
+	void setter(const std::string& property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<v8::Value>& info) {
 		auto& obj = convert<MsgPack>()(info);
 		try {
 			auto &inner_obj = obj[property];
@@ -116,7 +118,7 @@ struct wrap<MsgPack> {
 		}
 	}
 
-	inline void setter(uint32_t index, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
+	void setter(uint32_t index, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<v8::Value>& info) {
 		auto& obj = convert<MsgPack>()(info);
 		try {
 			auto &inner_obj = obj[index];
@@ -131,14 +133,14 @@ struct wrap<MsgPack> {
 		} catch (const msgpack::type_error&) { }
 	}
 
-	inline void deleter(const std::string& property, const v8::AccessorInfo& info) {
+	void deleter(const std::string& property, const v8::PropertyCallbackInfo<v8::Boolean>& info) {
 		auto& obj = convert<MsgPack>()(info);
 		try {
 			obj.erase(property);
 		} catch (const msgpack::type_error&) { }
 	}
 
-	inline void deleter(uint32_t index, const v8::AccessorInfo& info) const {
+	void deleter(uint32_t index, const v8::PropertyCallbackInfo<v8::Boolean>& info) const {
 		auto& obj = convert<MsgPack>()(info);
 		try {
 			obj.erase(index);

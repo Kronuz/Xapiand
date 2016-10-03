@@ -49,15 +49,15 @@ private:
 	using value_type = std::basic_string<charT, traits, Alloc>;
 
 public:
-	v8::Handle<v8::String> operator()(const v8::Arguments& args) const {
-		return v8::String::New(to_cstr(v8::String::Utf8Value(args.Data())));
+	v8::Local<v8::String> operator()(const v8::FunctionCallbackInfo<v8::Value>& args) const {
+		return v8::String::NewFromUtf8(args.GetIsolate(), to_cstr(v8::String::Utf8Value(args.Data())));
 	}
 
 	value_type operator()(const v8::String::Utf8Value& value) const {
 		return to_cstr(value);
 	}
 
-	value_type operator()(v8::Handle<v8::Value> value) const {
+	value_type operator()(v8::Local<v8::Value> value) const {
 		return to_cstr(v8::String::Utf8Value(value));
 	}
 };
@@ -67,20 +67,20 @@ public:
 template <typename charT>
 struct convert<const charT*> {
 private:
-	inline const charT* to_cstr(const v8::String::Utf8Value& value) const {
+	const charT* to_cstr(const v8::String::Utf8Value& value) const {
 		return *value ? reinterpret_cast<const charT*>(*value) : "<string conversion failed>";
 	}
 
 public:
-	v8::Handle<v8::String> operator()(const v8::Arguments& args) const {
-		return v8::String::New(to_cstr(v8::String::Utf8Value(args.Data())));
+	v8::Local<v8::String> operator()(const v8::FunctionCallbackInfo<v8::Value>& args) const {
+		return v8::String::NewFromUtf8(args.GetIsolate(), to_cstr(v8::String::Utf8Value(args.Data())));
 	}
 
 	const charT* operator()(const v8::String::Utf8Value& value) const {
 		return to_cstr(value);
 	}
 
-	const charT* operator()(v8::Handle<v8::Value> value) const {
+	const charT* operator()(v8::Local<v8::Value> value) const {
 		return to_cstr(v8::String::Utf8Value(value));
 	}
 };
@@ -90,7 +90,7 @@ public:
 template <>
 struct convert<MsgPack> {
 private:
-	static inline void process(MsgPack& o, v8::Handle<v8::Value> v, std::vector<v8::Local<v8::Object>>& visitObjects) {
+	static inline void process(MsgPack& o, v8::Local<v8::Value> v, std::vector<v8::Local<v8::Object>>& visitObjects) {
 		if (v->IsBoolean()) {
 			o = v->BooleanValue();
 		} else if (v->IsInt32() || v->IsUint32()) {
@@ -103,7 +103,7 @@ private:
 			o = convert<std::string>()(v);
 		} else if (v->IsArray()) {
 			auto o_v8 = v->ToObject();
-			auto length = o_v8->Get(v8::String::New("length"))->Uint32Value();
+			auto length = o_v8->Get(v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "length", v8::NewStringType::kNormal).ToLocalChecked())->Uint32Value();
 			for (size_t i = 0; i < length; ++i) {
 				process(o[i], o_v8->Get(i), visitObjects);
 			}
@@ -112,7 +112,7 @@ private:
 			if (std::find(visitObjects.begin(), visitObjects.end(), o_v8) == visitObjects.end()) {
 				visitObjects.push_back(o_v8);
 				auto properties = o_v8->GetPropertyNames();
-				auto length = properties->ToObject()->Get(v8::String::New("length"))->Uint32Value();
+				auto length = properties->ToObject()->Get(v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "length", v8::NewStringType::kNormal).ToLocalChecked())->Uint32Value();
 				for (size_t i = 0; i < length; ++i) {
 					process(o[convert<std::string>()(properties->Get(i))], o_v8->Get(properties->Get(i)), visitObjects);
 				}
@@ -127,16 +127,16 @@ private:
 	}
 
 public:
-	void operator()(MsgPack& obj, const v8::Handle<v8::Value>& value) const {
+	void operator()(MsgPack& obj, const v8::Local<v8::Value>& value) const {
 		std::vector<v8::Local<v8::Object>> visitObjects;
 		process(obj, value, visitObjects);
 	}
 
-	MsgPack operator()(v8::Handle<v8::Value> val) const {
+	MsgPack operator()(v8::Local<v8::Value> val) const {
 		if (val->IsObject()) {
-			auto o_v8 = v8::Handle<v8::Object>::Cast(val);
+			auto o_v8 = v8::Local<v8::Object>::Cast(val);
 			if (o_v8->InternalFieldCount() == 1) {
-				auto field = v8::Handle<v8::External>::Cast(o_v8->GetInternalField(0));
+				auto field = v8::Local<v8::External>::Cast(o_v8->GetInternalField(0));
 				return *(static_cast<const MsgPack*>(field->Value()));
 			}
 		}
@@ -147,8 +147,9 @@ public:
 		return res;
 	}
 
-	MsgPack& operator()(const v8::AccessorInfo& info) const {
-		auto field = v8::Handle<v8::External>::Cast(info.Holder()->GetInternalField(0));
+	template <typename Value>
+	MsgPack& operator()(const v8::PropertyCallbackInfo<Value>& info) const {
+		auto field = v8::Local<v8::External>::Cast(info.Holder()->GetInternalField(0));
 		return *(static_cast<MsgPack*>(field->Value()));
 	}
 };
