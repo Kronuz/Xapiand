@@ -275,4 +275,8 @@
 /* Enable V8 engine */
 #cmakedefine XAPIAND_V8 @XAPIAND_V8@
 
+/* Version number of V8 engine */
+#cmakedefine V8_MAJOR_VERSION @V8_MAJOR_VERSION@
+#cmakedefine V8_MINOR_VERSION @V8_MINOR_VERSION@
+
 #endif /*  _CONFIGURATION_HEADER_GUARD_H_ */
