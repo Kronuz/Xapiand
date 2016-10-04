@@ -103,29 +103,31 @@ static void to_string(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 
-class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
-public:
-	void* AllocateUninitialized(size_t length) {
-		void* data = malloc(length);
-		return data;
-	}
-
-	void* Allocate(size_t length) {
-		void* data = AllocateUninitialized(length);
-		return data == nullptr ? data : memset(data, 0, length);
-	}
-
-	void Free(void* data, size_t) {
-		free(data);
-	}
-};
-
-
 class Processor {
+
 	class ScriptLRU : public lru::LRU<size_t, std::shared_ptr<v8pp::Processor>> {
 	public:
 		ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { }
 	};
+
+
+	class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
+	public:
+		void* AllocateUninitialized(size_t length) {
+			void* data = malloc(length);
+			return data;
+		}
+
+		void* Allocate(size_t length) {
+			void* data = AllocateUninitialized(length);
+			return data == nullptr ? data : memset(data, 0, length);
+		}
+
+		void Free(void* data, size_t) {
+			free(data);
+		}
+	};
+
 
 	class V8Initializer {
 		v8::Platform* platform;
@@ -153,7 +155,7 @@ class Processor {
 		}
 	};
 
-	struct PropertyHandler {
+	class PropertyHandler {
 		v8::Isolate* isolate;
 		v8::Global<v8::ObjectTemplate> obj_template;
 		wrap<MsgPack> wapped_type;
@@ -304,6 +306,7 @@ class Processor {
 			}
 		}
 
+	public:
 		PropertyHandler(v8::Isolate* isolate_) : isolate(isolate_) {
 			v8::Local<v8::ObjectTemplate> obj_template_ = v8::ObjectTemplate::New(isolate);
 			obj_template_->SetInternalFieldCount(1);
@@ -327,14 +330,14 @@ class Processor {
 		}
 	};
 
-public:
 	/*
 	 * Wrap C++ function into new V8 function.
 	 */
-	struct Function {
+	class Function {
 		Processor* processor;
 		v8::Global<v8::Function> function;
 
+	public:
 		Function(Processor* processor_, v8::Global<v8::Function>&& function_)
 			: processor(processor_),
 			  function(std::move(function_)) { }
@@ -355,7 +358,6 @@ public:
 		}
 	};
 
-private:
 	v8::Isolate* isolate;
 
 	std::unique_ptr<PropertyHandler> property_handler;
