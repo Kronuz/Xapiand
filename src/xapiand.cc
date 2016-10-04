@@ -38,6 +38,10 @@
 #include <dirent.h>    // opendir, readdir, DIR, struct dirent
 #include <fcntl.h>
 
+#if XAPIAND_V8
+#include <v8.h>
+#endif
+
 #define LINE_LENGTH 78
 
 
@@ -622,16 +626,26 @@ void usedir(const char* path, bool solo) {
 
 void banner() {
 	set_thread_name("===");
+
+	std::vector<std::string> versions;
+	versions.push_back(format_string("Xapian v%s", XAPIAN_VERSION));
+#if XAPIAND_V8
+	versions.push_back(format_string("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION));
+#endif
+
 	L_INFO(nullptr,
 		"\n\n" WHITE
-		"  __  __           _                 _\n"
-		"  \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n"
-		"   \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n"
-		"   /  \\ (_| | |_) | | (_| | | | | (_| |\n"
-		"  /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n"
-		"            |_|  " BRIGHT_GREEN "v%s\n" GREEN
-		"   [%s]\n"
-		"          Using Xapian v%s\n\n", PACKAGE_VERSION, PACKAGE_BUGREPORT, XAPIAN_VERSION);
+		"     __  __           _                 _\n"
+		"     \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n"
+		"      \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n"
+		"      /  \\ (_| | |_) | | (_| | | | | (_| |\n"
+		"     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n"
+		"               |_|  " BRIGHT_GREEN "v%s\n" GREEN
+		"%s\n"
+		"%s\n\n",
+		PACKAGE_VERSION,
+		center_string(format_string("[%s]", PACKAGE_BUGREPORT), 46).c_str(),
+		center_string("Using " + join_string(versions, ", ", " and "), 46).c_str());
 }
 
 
