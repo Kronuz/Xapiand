@@ -1656,7 +1656,7 @@ HttpClient::clean_http_request()
 		int priority = LOG_DEBUG;
 		const char* color = WHITE;
 		if (response_status >= 200 && response_status <= 299) {
-			color = NO_COL;
+			color = GREY;
 		} else if (response_status >= 300 && response_status <= 399) {
 			color = CYAN;
 		} else if (response_status >= 400 && response_status <= 499) {
