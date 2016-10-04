@@ -155,6 +155,59 @@ inline bool ignored_errorno(int e, bool tcp, bool udp) {
 std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
+
+namespace std {
+	inline auto& to_string(std::string& str) {
+		return str;
+	}
+	inline const auto& to_string(const std::string& str) {
+		return str;
+	}
+}
+
+
+template<typename... Args>
+inline std::string format_string(const std::string& fmt, Args&&... args) {
+	char buf[4096];
+	snprintf(buf, sizeof(buf), fmt.c_str(), std::forward<Args>(args)...);
+	return buf;
+}
+
+
+template<typename T>
+inline std::string join_string(const std::vector<T>& values, const std::string& delimiter) {
+	return join_string(values, delimiter, delimiter);
+}
+
+
+template<typename T>
+inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, const std::string& last_delimiter)
+{
+	std::string result;
+	auto values_size = values.size();
+	for (typename std::vector<T>::size_type idx = 0; idx < values_size; ++idx) {
+		if (idx) {
+			if (idx == values_size - 1) {
+				result += last_delimiter;
+			} else {
+				result += delimiter;
+			}
+		}
+		result += std::to_string(values[idx]);
+	}
+	return result;
+}
+
+
+inline std::string center_string(const std::string& str, int width) {
+	std::string result;
+	for (auto idx = int((width + 0.5f) / 2 - (str.size() + 0.5f) / 2); idx > 0; --idx) {
+		result += " ";
+	}
+	result += str;
+	return result;
+}
+
 template<typename... Args>
 inline std::string upper_string(Args&&... args) {
 	std::string tmp(std::forward<Args>(args)...);
