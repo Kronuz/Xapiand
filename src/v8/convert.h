@@ -50,10 +50,6 @@ private:
 	using value_type = std::basic_string<charT, traits, Alloc>;
 
 public:
-	v8::Local<v8::String> operator()(const v8::FunctionCallbackInfo<v8::Value>& args) const {
-		return v8::String::NewFromUtf8(args.GetIsolate(), to_cstr(v8::String::Utf8Value(args.Data())));
-	}
-
 	value_type operator()(const v8::String::Utf8Value& value) const {
 		return to_cstr(value);
 	}
@@ -73,10 +69,6 @@ private:
 	}
 
 public:
-	v8::Local<v8::String> operator()(const v8::FunctionCallbackInfo<v8::Value>& args) const {
-		return v8::String::NewFromUtf8(args.GetIsolate(), to_cstr(v8::String::Utf8Value(args.Data())));
-	}
-
 	const charT* operator()(const v8::String::Utf8Value& value) const {
 		return to_cstr(value);
 	}
@@ -133,12 +125,21 @@ public:
 		process(obj, value, visitObjects);
 	}
 
+	template <typename Value>
+	MsgPack& operator()(const v8::PropertyCallbackInfo<Value>& info) const {
+		return operator()(info.Holder());
+	}
+
+	MsgPack& operator()(const v8::Local<v8::Object>& o_v8) const {
+		auto field = v8::Local<v8::External>::Cast(o_v8->GetInternalField(0));
+		return *(static_cast<MsgPack*>(field->Value()));
+	}
+
 	MsgPack operator()(v8::Local<v8::Value> val) const {
 		if (val->IsObject()) {
 			auto o_v8 = v8::Local<v8::Object>::Cast(val);
 			if (o_v8->InternalFieldCount() == 1) {
-				auto field = v8::Local<v8::External>::Cast(o_v8->GetInternalField(0));
-				return *(static_cast<const MsgPack*>(field->Value()));
+				return operator()(o_v8);
 			}
 		}
 
@@ -148,11 +149,6 @@ public:
 		return res;
 	}
 
-	template <typename Value>
-	MsgPack& operator()(const v8::PropertyCallbackInfo<Value>& info) const {
-		auto field = v8::Local<v8::External>::Cast(info.Holder()->GetInternalField(0));
-		return *(static_cast<MsgPack*>(field->Value()));
-	}
 };
 
 }; // End namespace v8pp

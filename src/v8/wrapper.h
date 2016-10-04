@@ -37,16 +37,18 @@ struct wrap;
 // MsgPack Wrap
 template <>
 struct wrap<MsgPack> {
-	v8::Local<v8::Value> toValue(v8::Isolate* isolate, MsgPack& arg, const v8::Local<v8::ObjectTemplate>& obj_template) const {
+	convert<MsgPack> convertor;
+
+	v8::Local<v8::Value> toValue(v8::Isolate* isolate, const MsgPack& arg, const v8::Local<v8::ObjectTemplate>& obj_template) const {
 		switch (arg.getType()) {
 			case MsgPack::Type::MAP: {
 				v8::Local<v8::Object> obj = obj_template->NewInstance(isolate->GetCurrentContext()).ToLocalChecked();
-				obj->SetInternalField(0, v8::External::New(isolate, &arg));
+				obj->SetInternalField(0, v8::External::New(isolate, const_cast<MsgPack*>(&arg)));
 				return obj;
 			}
 			case MsgPack::Type::ARRAY: {
 				v8::Local<v8::Object> obj = obj_template->NewInstance(isolate->GetCurrentContext()).ToLocalChecked();
-				obj->SetInternalField(0, v8::External::New(isolate, &arg));
+				obj->SetInternalField(0, v8::External::New(isolate, const_cast<MsgPack*>(&arg)));
 				return obj;
 			}
 			case MsgPack::Type::STR: {
@@ -70,14 +72,16 @@ struct wrap<MsgPack> {
 		}
 	}
 
-	std::string to_string(const v8::PropertyCallbackInfo<v8::Value>& info) const {
-		auto& obj = convert<MsgPack>()(info);
-		return obj.to_string();
+	v8::Local<v8::Value> toString(const v8::PropertyCallbackInfo<v8::Value>& info) const {
+		auto isolate = info.GetIsolate();
+		const auto& obj = convertor(info);
+		auto str = obj.to_string();
+		return v8::String::NewFromUtf8(isolate, str.data(), v8::NewStringType::kNormal, str.size()).ToLocalChecked();
 	}
 
 	v8::Local<v8::Value> getter(const std::string& property, const v8::PropertyCallbackInfo<v8::Value>& info, const v8::Local<v8::ObjectTemplate>& obj_template) const {
 		auto isolate = info.GetIsolate();
-		auto& obj = convert<MsgPack>()(info);
+		const auto& obj = convertor(info);
 		try {
 			return toValue(isolate, obj.at(property), obj_template);
 		} catch (const std::out_of_range&) {
@@ -91,7 +95,7 @@ struct wrap<MsgPack> {
 
 	v8::Local<v8::Value> getter(uint32_t index, const v8::PropertyCallbackInfo<v8::Value>& info, const v8::Local<v8::ObjectTemplate>& obj_template) const {
 		auto isolate = info.GetIsolate();
-		auto& obj = convert<MsgPack>()(info);
+		const auto& obj = convertor(info);
 		try {
 			return toValue(isolate, obj.at(index), obj_template);
 		} catch (const std::out_of_range&) {
@@ -100,10 +104,10 @@ struct wrap<MsgPack> {
 	}
 
 	void setter(const std::string& property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<v8::Value>& info) {
-		auto& obj = convert<MsgPack>()(info);
+		auto& obj = convertor(info);
 		try {
 			auto &inner_obj = obj[property];
-			auto msgpack_value = convert<MsgPack>()(value);
+			auto msgpack_value = convertor(value);
 			if (!msgpack_value.is_map() && property != "_value") {
 				try {
 					inner_obj["_value"] = msgpack_value;
@@ -113,16 +117,16 @@ struct wrap<MsgPack> {
 			inner_obj = msgpack_value;
 		} catch (const msgpack::type_error&) {
 			if (property == "_value") {
-				obj = convert<MsgPack>()(value);
+				obj = convertor(value);
 			}
 		}
 	}
 
 	void setter(uint32_t index, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<v8::Value>& info) {
-		auto& obj = convert<MsgPack>()(info);
+		auto& obj = convertor(info);
 		try {
 			auto &inner_obj = obj[index];
-			auto msgpack_value = convert<MsgPack>()(value);
+			auto msgpack_value = convertor(value);
 			if (!msgpack_value.is_map()) {
 				try {
 					inner_obj["_value"] = msgpack_value;
@@ -134,17 +138,42 @@ struct wrap<MsgPack> {
 	}
 
 	void deleter(const std::string& property, const v8::PropertyCallbackInfo<v8::Boolean>& info) {
-		auto& obj = convert<MsgPack>()(info);
+		auto& obj = convertor(info);
 		try {
 			obj.erase(property);
 		} catch (const msgpack::type_error&) { }
 	}
 
 	void deleter(uint32_t index, const v8::PropertyCallbackInfo<v8::Boolean>& info) const {
-		auto& obj = convert<MsgPack>()(info);
+		auto& obj = convertor(info);
 		try {
 			obj.erase(index);
 		} catch (const msgpack::type_error&) { }
+	}
+
+	v8::Local<v8::Array> enumerator(const v8::PropertyCallbackInfo<v8::Array>& info) {
+		auto isolate = info.GetIsolate();
+		const auto& obj = convertor(info);
+		switch (obj.getType()) {
+			case MsgPack::Type::MAP: {
+				v8::Local<v8::Array> result = v8::Array::New(isolate, obj.size());
+				int i = 0;
+				for (const auto& key : obj) {
+					result->Set(i++, v8::String::NewFromUtf8(isolate, key.as_string().c_str(), v8::NewStringType::kNormal).ToLocalChecked());
+				}
+				return result;
+			}
+			case MsgPack::Type::ARRAY: {
+				auto size = obj.size();
+				v8::Local<v8::Array> result = v8::Array::New(isolate, size);
+				for (size_t i = 0; i < size; ++i) {
+					result->Set(i, v8::Integer::New(isolate, i));
+				}
+				return result;
+			}
+			default:
+				return v8::Array::New(isolate, 0);
+		}
 	}
 };
 

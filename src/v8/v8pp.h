@@ -91,17 +91,18 @@ static std::string report_exception(v8::TryCatch* try_catch) {
 static void print(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	auto argc = args.Length();
 	if (argc) {
+		auto convertor = convert<MsgPack>();
 		printf("%s ", convert<const char*>()(v8::String::Utf8Value(args[0])));
 		for (int i = 1; i < argc; ++i) {
-			printf(" %s", convert<MsgPack>()(args[i]).to_string().c_str());
+			printf(" %s", convertor(args[i]).to_string().c_str());
 		}
 	}
 	printf("\n");
 }
 
 
-static void to_string(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	args.GetReturnValue().Set(convert<const char*>()(args));
+static void return_data(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	args.GetReturnValue().Set(args.Data());
 }
 
 
@@ -229,11 +230,16 @@ class Processor {
 			auto name_str = convert<std::string>()(property);
 
 			if (name_str == "toString") {
-				auto str = wapped_type.to_string(info);
-				return v8::FunctionTemplate::New(isolate, to_string, v8::String::NewFromUtf8(isolate, str.data(), v8::NewStringType::kNormal, str.size()).ToLocalChecked())->GetFunction();
+				auto string = wapped_type.toString(info);
+				return v8::FunctionTemplate::New(isolate, return_data, string)->GetFunction();
 			}
 
-			return  wapped_type.getter(name_str, info, obj_template.Get(isolate));
+			if (name_str == "valueOf") {
+				auto value = wapped_type.getter("_value", info, obj_template.Get(isolate));
+				return v8::FunctionTemplate::New(isolate, return_data, value)->GetFunction();
+			}
+
+			return wapped_type.getter(name_str, info, obj_template.Get(isolate));
 		}
 
 		v8::Local<v8::Value> index_getter(uint32_t index, const v8::PropertyCallbackInfo<v8::Value>& info) {
@@ -299,27 +305,7 @@ class Processor {
 		}
 
 		v8::Local<v8::Array> enumerator(const v8::PropertyCallbackInfo<v8::Array>& info) {
-			const auto& obj = convert<MsgPack>()(info);
-			switch (obj.getType()) {
-				case MsgPack::Type::MAP: {
-					v8::Local<v8::Array> result = v8::Array::New(isolate, obj.size());
-					int i = 0;
-					for (const auto& key : obj) {
-						result->Set(i++, v8::String::NewFromUtf8(isolate, key.as_string().c_str(), v8::NewStringType::kNormal).ToLocalChecked());
-					}
-					return result;
-				}
-				case MsgPack::Type::ARRAY: {
-					auto size = obj.size();
-					v8::Local<v8::Array> result = v8::Array::New(isolate, size);
-					for (size_t i = 0; i < size; ++i) {
-						result->Set(i, v8::Integer::New(isolate, i));
-					}
-					return result;
-				}
-				default:
-					return v8::Array::New(isolate, 0);
-			}
+			return wapped_type.enumerator(info);
 		}
 
 	public:
