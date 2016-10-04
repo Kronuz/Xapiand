@@ -30,33 +30,31 @@ std::string urldecode(const char *str, size_t size) {
 	char *dStr = new char[size + 1];
 	char eStr[] = "00"; /* for a hex code */
 
-	strncpy(dStr, str, size);
+	std::strncpy(dStr, str, size);
 	dStr[size] = '\0';
 
-	int i; /* the counter for the string */
-
-	for(i=0;i<strlen(dStr);++i) {
-
-		if(dStr[i] == '%') {
-			if(dStr[i+1] == 0)
+	for (size_t i = 0; i < std::strlen(dStr); ++i) {
+		if (dStr[i] == '%') {
+			if (dStr[i + 1] == 0) {
 				return std::string(dStr);
+			}
 
-			if(isxdigit(dStr[i+1]) && isxdigit(dStr[i+2])) {
-
+			if (std::isxdigit(dStr[i + 1]) && std::isxdigit(dStr[i + 2])) {
 				/* combine the next to numbers into one */
-				eStr[0] = dStr[i+1];
-				eStr[1] = dStr[i+2];
+				eStr[0] = dStr[i + 1];
+				eStr[1] = dStr[i + 2];
 
 				/* convert it to decimal */
-				long int x = strtol(eStr, NULL, 16);
+				long int x = std::strtol(eStr, nullptr, 16);
 
 				/* remove the hex */
-				memmove(&dStr[i+1], &dStr[i+3], strlen(&dStr[i+3])+1);
+				std::memmove(&dStr[i + 1], &dStr[i + 3], std::strlen(&dStr[i + 3]) + 1);
 
 				dStr[i] = x;
 			}
+		} else if (dStr[i] == '+') {
+			dStr[i] = ' ';
 		}
-		else if(dStr[i] == '+') { dStr[i] = ' '; }
 	}
 
 	return std::string(dStr);
