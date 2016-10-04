@@ -26,6 +26,8 @@
 
 #include "wrapper.h"
 
+#include "../lru.h"
+
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
