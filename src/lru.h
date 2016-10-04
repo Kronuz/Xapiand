@@ -137,6 +137,11 @@ public:
 		return _items_map.find(key) != _items_map.end();
 	}
 
+	void clear() {
+		_items_map.clear();
+		_items_list.clear();
+	}
+
 	bool empty() const {
 		return _items_map.empty();
 	}
