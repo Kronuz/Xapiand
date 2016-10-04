@@ -285,8 +285,8 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HttpMethod::GET);
 			MsgPack obj = {
-				{ "name", local_node_->name },
-				{ "tagline", XAPIAND_TAGLINE }
+				{ "name", { { RESERVED_VALUE, local_node_->name }, { RESERVED_TYPE,  "string" } } },
+				{ "tagline", { { RESERVED_VALUE, XAPIAND_TAGLINE }, { RESERVED_TYPE,  "string" } } }
 			};
 			db_handler.index(obj, std::to_string(local_node_->id), true, MSGPACK_CONTENT_TYPE, std::string());
 		} catch (const CheckoutError&) {
