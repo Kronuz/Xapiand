@@ -105,12 +105,6 @@ static void to_string(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
 class Processor {
 
-	class ScriptLRU : public lru::LRU<size_t, std::shared_ptr<v8pp::Processor>> {
-	public:
-		ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { }
-	};
-
-
 	class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
 	public:
 		void* AllocateUninitialized(size_t length) {
@@ -129,13 +123,21 @@ class Processor {
 	};
 
 
-	class V8Initializer {
+	class ScriptLRU : public lru::LRU<size_t, std::shared_ptr<v8pp::Processor>> {
+	public:
+		ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { }
+	};
+
+
+	class V8Engine {
 		v8::Platform* platform;
 		ArrayBufferAllocator allocator;
-		v8::Isolate::CreateParams create_params;
 
 	public:
-		V8Initializer()
+		ScriptLRU script_lru;
+		v8::Isolate::CreateParams create_params;
+
+		V8Engine()
 			: platform(v8::platform::CreateDefaultPlatform())
 		{
 			create_params.array_buffer_allocator = &allocator;
@@ -144,14 +146,11 @@ class Processor {
 			v8::V8::Initialize();
 		}
 
-		~V8Initializer() {
+		~V8Engine() {
+			script_lru.clear();
 			v8::V8::Dispose();
 			v8::V8::ShutdownPlatform();
 			delete platform;
-		}
-
-		const v8::Isolate::CreateParams& CreateParams() {
-			return create_params;
 		}
 	};
 
@@ -461,14 +460,14 @@ class Processor {
 		return convert<MsgPack>()(result);
 	}
 
-	static const v8::Isolate::CreateParams& CreateParams() {
-		static V8Initializer init;
-		return init.CreateParams();
+	static V8Engine& engine() {
+		static V8Engine engine;
+		return engine;
 	}
 
 public:
 	Processor(const std::string& script_name, const std::string& script_source)
-		: isolate(v8::Isolate::New(CreateParams()))
+		: isolate(v8::Isolate::New(engine().create_params))
 	{
 		Initialize(script_name, script_source);
 	}
@@ -500,10 +499,9 @@ public:
 	}
 
 	static std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script) {
-		static ScriptLRU script_lru;
-
 		auto script_hash = hash(script);
 
+		auto& script_lru = engine().script_lru;
 		try {
 			return script_lru.at(script_hash);
 		} catch (const std::range_error&) {
