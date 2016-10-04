@@ -133,8 +133,10 @@ class Processor {
 		v8::Platform* platform;
 		ArrayBufferAllocator allocator;
 
-	public:
 		ScriptLRU script_lru;
+		std::mutex mtx;
+
+	public:
 		v8::Isolate::CreateParams create_params;
 
 		V8Engine()
@@ -151,6 +153,17 @@ class Processor {
 			v8::V8::Dispose();
 			v8::V8::ShutdownPlatform();
 			delete platform;
+		}
+
+		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script) {
+			auto script_hash = hash(script);
+
+			std::lock_guard<std::mutex> lk(mtx);
+			try {
+				return script_lru.at(script_hash);
+			} catch (const std::range_error&) {
+				return script_lru.emplace(script_hash, std::make_shared<Processor>(script_name, script));
+			}
 		}
 	};
 
@@ -498,15 +511,9 @@ public:
 		}
 	}
 
-	static std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script) {
-		auto script_hash = hash(script);
-
-		auto& script_lru = engine().script_lru;
-		try {
-			return script_lru.at(script_hash);
-		} catch (const std::range_error&) {
-			return script_lru.emplace(script_hash, std::make_shared<Processor>(script_name, script));
-		}
+	template<typename... Args>
+	static auto compile(Args&&... args) {
+		return engine().compile(std::forward<Args>(args)...);
 	}
 };
 
