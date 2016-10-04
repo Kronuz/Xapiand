@@ -117,6 +117,7 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 	L_CALL(this, "HttpClient::http_response()");
 
 	char buffer[20];
+	std::string headers;
 	std::string response;
 	const std::string eol("\r\n");
 
@@ -125,51 +126,50 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 		response_status = status;
 
 		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", http_major, http_minor, status);
-		response += buffer;
-		response += status_code[status / 100][status % 100] + eol;
+		headers += buffer;
+		headers += status_code[status / 100][status % 100] + eol;
 		if (!(mode & HTTP_HEADER)) {
-			response += eol;
+			headers += eol;
 		}
 	}
 
 	if (mode & HTTP_HEADER) {
-
-		response += "Server: " + std::string(PACKAGE_NAME) + "/" + std::string(VERSION) + eol;
+		headers += "Server: " + std::string(PACKAGE_NAME) + "/" + std::string(VERSION) + eol;
 
 		response_ends = std::chrono::system_clock::now();
-		response += "Response-Time: " + delta_string(request_begins, response_ends) + eol;
+		headers += "Response-Time: " + delta_string(request_begins, response_ends) + eol;
 		if (operation_ends >= operation_begins) {
-			response += "Operation-Time: " + delta_string(operation_begins, operation_ends) + eol;
+			headers += "Operation-Time: " + delta_string(operation_begins, operation_ends) + eol;
 		}
 
 		if (mode & HTTP_OPTIONS) {
-			response += "Allow: GET,HEAD,POST,PUT,PATCH,OPTIONS" + eol;
+			headers += "Allow: GET,HEAD,POST,PUT,PATCH,OPTIONS" + eol;
 		}
 
 		if (mode & HTTP_TOTAL_COUNT) {
-			response += "Total-Count: " + std::to_string(total_count) + eol;
+			headers += "Total-Count: " + std::to_string(total_count) + eol;
 		}
 
 		if (mode & HTTP_MATCHES_ESTIMATED) {
-			response += "Matches-Estimated: " + std::to_string(matches_estimated) + eol;
+			headers += "Matches-Estimated: " + std::to_string(matches_estimated) + eol;
 		}
 
 		if (mode & HTTP_CONTENT_TYPE) {
-			response += "Content-Type: " + ct_type + eol;
+			headers += "Content-Type: " + ct_type + eol;
 		}
 
 		if (mode & HTTP_CONTENT_ENCODING) {
-			response += "Content-Encoding: " + ct_encoding + eol;
+			headers += "Content-Encoding: " + ct_encoding + eol;
 		}
 
 		if (mode & HTTP_CHUNKED) {
-			response += "Transfer-Encoding: chunked" + eol;
+			headers += "Transfer-Encoding: chunked" + eol;
 		} else {
-			response += "Content-Length: ";
+			headers += "Content-Length: ";
 			snprintf(buffer, sizeof(buffer), "%lu", body.size());
-			response += buffer + eol;
+			headers += buffer + eol;
 		}
-		response += eol;
+		headers += eol;
 	}
 
 	if (mode & HTTP_BODY) {
@@ -188,7 +188,7 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 		clean_http_request();
 	}
 
-	return response;
+	return headers + response;
 }
 
 
