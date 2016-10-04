@@ -22,6 +22,8 @@
 
 #pragma once
 
+#if XAPIAND_V8
+
 #include "wrapper.h"
 
 #include <atomic>
@@ -461,3 +463,5 @@ public:
 };
 
 }; // End namespace v8pp
+
+#endif

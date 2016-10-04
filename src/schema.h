@@ -660,6 +660,7 @@ extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_pro
 extern const std::unordered_map<std::string, dispatch_root> map_dispatch_root;
 extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
 
+#if XAPIAND_V8
 
 class ScriptLRU : public lru::LRU<size_t, v8pp::Processor> {
 public:
@@ -668,3 +669,5 @@ public:
 
 
 extern ScriptLRU script_lru;
+
+#endif

@@ -86,6 +86,8 @@ DatabaseHandler::_get_document(const std::string& term_id)
 MsgPack
 DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_id)
 {
+#if XAPIAND_V8
+
 	std::string script;
 	try {
 		script = data.at(RESERVED_SCRIPT).as_string();
@@ -156,6 +158,12 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 	} catch (const v8pp::Error& e) {
 		throw MSG_ClientError(e.what());
 	}
+
+#else
+
+	return data;
+
+#endif
 }
 
 

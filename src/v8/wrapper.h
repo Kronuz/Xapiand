@@ -22,6 +22,8 @@
 
 #pragma once
 
+#if XAPIAND_V8
+
 #include "convert.h"
 
 
@@ -145,3 +147,5 @@ struct wrap<MsgPack> {
 };
 
 }; // End namespace v8pp
+
+#endif

@@ -223,8 +223,8 @@ if (V8)
 	find_package (V8)
 	if (V8_FOUND MATCHES "NO")
 		message (FATAL_ERROR "V8 package not found")
-	endif()
-endif(V8)
+	endif ()
+endif ()
 
 
 ########################################################################
@@ -241,12 +241,20 @@ else ()
 	set ("HAVE_LIBPTHREAD" 0)
 endif ()
 
-include_directories (
-	"${XAPIAN_INCLUDE_DIR}"
-	"${UUID_INCLUDE_DIRS}"
-	"${V8_INCLUDE_DIR}"
-	"${PROJECT_SOURCE_DIR}/src"
-	"${PROJECT_BINARY_DIR}/src")
+if (V8)
+	include_directories (
+		"${XAPIAN_INCLUDE_DIR}"
+		"${UUID_INCLUDE_DIRS}"
+		"${V8_INCLUDE_DIR}"
+		"${PROJECT_SOURCE_DIR}/src"
+		"${PROJECT_BINARY_DIR}/src")
+else ()
+	include_directories (
+		"${XAPIAN_INCLUDE_DIR}"
+		"${UUID_INCLUDE_DIRS}"
+		"${PROJECT_SOURCE_DIR}/src"
+		"${PROJECT_BINARY_DIR}/src")
+endif()
 
 
 ########################################################################

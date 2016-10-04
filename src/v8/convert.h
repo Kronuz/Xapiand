@@ -22,6 +22,8 @@
 
 #pragma once
 
+#if XAPIAND_V8
+
 #include "../msgpack.h"
 #include "exception.h"
 
@@ -152,3 +154,5 @@ public:
 };
 
 }; // End namespace v8pp
+
+#endif
