@@ -629,27 +629,73 @@ void stringTokenizer(const std::string& str, const std::string& delimiter, std::
 }
 
 
-std::string delta_string(long double delta, bool colored) {
-	static const char* units[] = { "s", "ms", "\xc2\xb5s", "ns" };
-	static const long double scaling[] = { 1, 1e3, 1e6, 1e9 };
-	static const char* colors[] = { "\033[1;31m", "\033[1;33m", "\033[0;33m", "\033[0;32m", "\033[0m" };
-
-	delta /= 1e9;  // convert nanoseconds to seconds (as a double)
-	long double timespan = delta;
+static inline std::string humanize(long double delta, bool colored, const int i, const int n, const long double div, const char* const units[], const long double scaling[], const char* const colors[]) {
+	long double num = delta;
 
 	if (delta < 0) delta = -delta;
-	int order = (delta == 0) ? 3 : -floorl(floorl(log10l(delta)) / 3);
+	int order = (delta == 0) ? n : -floorl(logl(delta) / div);
+	order += i;
 	if (order < 0) order = 0;
-	else if (order > 3) order = 3;
+	else if (order > n) order = n;
 
 	const char* color = colored ? colors[order] : "";
-	timespan *= scaling[order];
+	num /= scaling[order];
 	const char* unit = units[order];
-	const char* reset = colored ? colors[4] : "";
+	const char* reset = colored ? colors[n + 1] : "";
 
 	char buf[100];
-	snprintf(buf, 100, "%s%Lg%s%s", color, timespan, unit, reset);
+	snprintf(buf, 100, "%s%Lg%s%s", color, num, unit, reset);
 	return buf;
+}
+
+
+static inline int find_val(long double val, const long double* input, int i=0) {
+	return (*input == val) ? i : find_val(val, input + 1, i + 1);
+}
+
+
+std::string bytes_string(size_t bytes, bool colored) {
+	static const long double base = 1024;
+	static const long double div = logl(base);
+	static const long double scaling[] = { powl(base, 8), powl(base, 7), powl(base, 6), powl(base, 5), powl(base, 4), powl(base, 3), powl(base, 2), powl(base, 1), 1 };
+	static const char* const units[] = { "YiB", "ZiB", "EiB", "PiB", "TiB", "GiB", "MiB", "KiB", "B" };
+	static const char* const colors[] = { "\033[1;31m", "\033[1;31m", "\033[1;31m", "\033[1;31m", "\033[1;33m", "\033[0;33m", "\033[0;32m", "\033[0;32m", "\033[0;32m", "\033[0m" };
+	static const int n = sizeof(units) / sizeof(const char*) - 1;
+	static const int i = find_val(1, scaling);
+
+	return humanize(bytes, colored, i, n, div, units, scaling, colors);
+}
+
+
+std::string small_time_string(long double seconds, bool colored) {
+	static const long double base = 1000;
+	static const long double div = logl(base);
+	static const long double scaling[] = { 1, powl(base, -1), powl(base, -2), powl(base, -3), powl(base, -4) };
+	static const char* const units[] = { "s", "ms", "\xc2\xb5s", "ns", "ps" };
+	static const char* const colors[] = { "\033[1;31m", "\033[1;33m", "\033[0;33m", "\033[0;32m", "\033[0;32m", "\033[0m" };
+	static const int n = sizeof(units) / sizeof(const char*) - 1;
+	static const int i = find_val(1, scaling);
+
+	return humanize(seconds, colored, i, n, div, units, scaling, colors);
+}
+
+
+std::string time_string(long double seconds, bool colored) {
+	static const long double base = 60;
+	static const long double div = logl(base);
+	static const long double scaling[] = { powl(base, 2), powl(base, 1), 1 };
+	static const char* const units[] = { "hrs", "min", "s" };
+	static const char* const colors[] = { "\033[1;33m", "\033[0;33m", "\033[0;32m", "\033[0m" };
+	static const int n = sizeof(units) / sizeof(const char*) - 1;
+	static const int i = find_val(1, scaling);
+
+	return humanize(seconds, colored, i, n, div, units, scaling, colors);
+}
+
+
+std::string delta_string(long double nanoseconds, bool colored) {
+	long double seconds = nanoseconds / 1e9;  // convert nanoseconds to seconds (as a double)
+	return (seconds < 1) ? small_time_string(seconds, colored) : time_string(seconds, colored);
 }
 
 

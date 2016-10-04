@@ -256,7 +256,8 @@ void fill_zeros_stats_sec(uint8_t start, uint8_t end);
 void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy);
 void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy);
 
-std::string delta_string(long double delta, bool colored=false);
+std::string bytes_string(size_t bytes, bool colored=false);
+std::string delta_string(long double nanoseconds, bool colored=false);
 std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored=false);
 
 void _tcp_nopush(int sock, int optval);
