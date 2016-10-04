@@ -114,7 +114,7 @@ find_library (V8_LIBBASE_LIBRARY
 )
 
 find_library (V8_LIBPLATFORM_LIBRARY
-	NAMES v8_libplatform libv8_libbase
+	NAMES v8_libplatform libv8_libplatform
 	PATHS
 		$ENV{V8_DIR}
 		$ENV{V8_DIR}/lib
