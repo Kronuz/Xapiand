@@ -23,9 +23,11 @@
 #include "serialise.h"
 
 #include "guid/guid.h"
+#include "geo/wkt_parser.h"
 #include "hash/sha256.h"
 #include "length.h"
 #include "schema.h"
+#include "stl_serialise.h"
 #include "utils.h"
 
 

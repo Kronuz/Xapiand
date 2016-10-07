@@ -23,7 +23,6 @@
 #pragma once
 
 #include "datetime.h"
-#include "geo/wkt_parser.h"
 #include "hash/endian.h"
 #include "msgpack.h"
 #include "sortable_serialise.h"
@@ -106,6 +105,9 @@ constexpr uint32_t MAXDOU2INT               =  999999999;
 constexpr uint8_t SIZE_UUID = 36;
 
 
+class Cartesian;
+class CartesianUSet;
+class RangeList;
 struct required_spc_t;
 enum class FieldType : uint8_t;
 
