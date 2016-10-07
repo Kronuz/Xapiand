@@ -61,7 +61,7 @@ class Sorensen_Dice : public StringMetric<Sorensen_Dice> {
 
 		// Find the intersection between the two sets.
 		Counter c;
-		std::set_intersection(str1_bigrams.begin(), str1_bigrams.end(),str2_bigrams.begin(),
+		std::set_intersection(str1_bigrams.begin(), str1_bigrams.end(), str2_bigrams.begin(),
 			str2_bigrams.end(), std::back_inserter(c));
 
 		// Returns similarity.
