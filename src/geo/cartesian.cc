@@ -461,13 +461,9 @@ Cartesian::norm() const
 std::string
 Cartesian::as_string() const
 {
-	std::string res;
-	res.reserve(50);
-	res.assign("SRID = ").append(std::to_string(SRID)).append(" (");
-	res.append(std::to_string(x)).push_back(' ');
-	res.append(std::to_string(y)).push_back(' ');
-	res.append(std::to_string(z)).push_back(')');
-	return res;
+	char result[50];
+	snprintf(result, 50, "SRID=%d;(%f %f %f)", SRID, x, y, z);
+	return std::string(result);
 }
 
 
