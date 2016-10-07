@@ -248,6 +248,13 @@ Cartesian::toCartesian(double lat, double lon, double height, CartesianUnits uni
 
 
 bool
+Cartesian::operator<(const Cartesian& p) const noexcept
+{
+	return y < p.y || (p.y == y && x < p.x) || (p.y == y && x == p.x && z < p.z);
+}
+
+
+bool
 Cartesian::operator==(const Cartesian& p) const noexcept
 {
 	return x == p.x && y == p.y && z == p.z && SRID == p.SRID;
@@ -468,12 +475,4 @@ bool
 Cartesian::is_SRID_supported(int _SRID)
 {
 	return map_datums.find(_SRID) != map_datums.end();
-}
-
-
-size_t
-std::hash<Cartesian>::operator()(const Cartesian& p) const
-{
-	std::hash<std::string> hash_fn;
-	return hash_fn(p.as_string());
 }

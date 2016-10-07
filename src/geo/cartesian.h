@@ -138,6 +138,7 @@ public:
 	Cartesian& operator=(Cartesian&& p) = default;
 	// Copy assignment
 	Cartesian& operator=(const Cartesian& p) = default;
+	bool operator<(const Cartesian& p) const noexcept;
 	bool operator==(const Cartesian& p) const noexcept;
 	bool operator!=(const Cartesian& p) const noexcept;
 	// Dot product
@@ -172,6 +173,9 @@ public:
 namespace std {
 	template<>
 	struct hash<Cartesian> {
-		size_t operator()(const Cartesian& p) const;
+		inline size_t operator()(const Cartesian& p) const {
+			std::hash<std::string> hash_fn;
+			return hash_fn(p.as_string());
+		}
 	};
 }
