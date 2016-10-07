@@ -61,6 +61,24 @@ constexpr double ERROR_NIVEL[] = {
 struct range_t {
 	uint64_t start;
 	uint64_t end;
+
+	bool operator<(const range_t& p) const noexcept {
+		return start < p.start;
+	}
+
+	bool operator==(const range_t& p) const noexcept {
+		return start == p.start && end == p.end;
+	}
+
+	bool operator!=(const range_t& p) const noexcept {
+		return !operator==(p);
+	}
+
+	std::string as_string() const {
+		char result[40];
+		snprintf(result, 40, "%llu-%llu", start, end);
+		return std::string(result);
+	}
 };
 
 
@@ -159,3 +177,14 @@ public:
 	static void mergeRanges(std::vector<range_t>& ranges);
 	static void writePython3D(const std::string& file, const std::vector<Geometry>& g, const std::vector<std::string>& names_f);
 };
+
+
+namespace std {
+	template<>
+	struct hash<range_t> {
+		inline size_t operator()(const range_t& p) const {
+			std::hash<std::string> hash_fn;
+			return hash_fn(p.as_string());
+		}
+	};
+}
