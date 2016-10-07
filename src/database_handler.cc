@@ -28,6 +28,7 @@
 #include "field_parser.h"
 #include "geo/wkt_parser.h"
 #include "msgpack_patcher.h"
+#include "multivalue/aggregation.h"
 #include "multivalue/range.h"
 #include "serialise.h"
 
@@ -707,7 +708,7 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 
 
 Xapian::Enquire
-DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, SpiesVector* spies)
+DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, AggregationMatchSpy* aggs)
 {
 	L_CALL(this, "DatabaseHandler::get_enquire()");
 
@@ -717,6 +718,10 @@ DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collap
 
 	if (sorter) {
 		enquire.set_sort_by_key_then_relevance(sorter, false);
+	}
+
+	if (aggs) {
+		enquire.add_matchspy(aggs);
 	}
 
 	int collapse_max = 1;
@@ -729,16 +734,6 @@ DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collap
 			get_similar(enquire, query, e->fuzzy, true);
 		}
 
-		for (const auto& facet : e->facets) {
-			auto field_spc = schema->get_slot_field(facet);
-			if (field_spc.get_type() != FieldType::EMPTY) {
-				auto spy = std::make_unique<MultiValueCountMatchSpy>(get_slot(facet));
-				enquire.add_matchspy(spy.get());
-				L_SEARCH(this, "added spy -%s-", (facet).c_str());
-				spies->push_back(std::make_pair(facet, std::move(spy)));
-			}
-		}
-
 		collapse_max = e->collapse_max;
 	}
 
@@ -749,7 +744,7 @@ DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collap
 
 
 void
-DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVector& spies, std::vector<std::string>& suggestions, int offset)
+DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions, int offset)
 {
 	L_CALL(this, "DatabaseHandler::get_mset()");
 
@@ -797,7 +792,7 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVecto
 		try {
 			auto query = search(e, suggestions);
 			auto check_at_least = std::min(database->db->get_doccount(), e.check_at_least);
-			auto enquire = get_enquire(query, collapse_key, &e, sorter.get(), &spies);
+			auto enquire = get_enquire(query, collapse_key, &e, sorter.get(), aggs);
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {

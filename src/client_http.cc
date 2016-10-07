@@ -24,7 +24,7 @@
 
 #include "io_utils.h"
 #include "length.h"
-#include "multivalue/matchspy.h"
+#include "multivalue/aggregation.h"
 #include "serialise.h"
 #include "utils.h"
 
@@ -622,9 +622,6 @@ HttpClient::_get(int cmd)
 			path_parser.off_id = nullptr;
 			search_view();
 			break;
-		case CMD_FACETS:
-			facets_view();
-			break;
 		case CMD_SCHEMA:
 			schema_view();
 			break;
@@ -990,69 +987,6 @@ HttpClient::schema_view()
 
 
 void
-HttpClient::facets_view()
-{
-	L_CALL(this, "HttpClient::facets_view()");
-
-	path_parser.off_id = nullptr;
-	endpoints_maker(1s);
-	query_field_maker(QUERY_FIELD_SEARCH);
-
-	Xapian::MSet mset;
-	std::vector<std::string> suggestions;
-	SpiesVector spies;
-
-	operation_begins = std::chrono::system_clock::now();
-
-	db_handler.reset(endpoints, DB_SPAWN, HttpMethod::GET);
-	db_handler.get_mset(*query_field, mset, spies, suggestions);
-
-	L_DEBUG(this, "Suggested queries:\n%s", [&suggestions]() {
-		std::string res;
-		for (const auto& suggestion : suggestions) {
-			res += "\t+ " + suggestion + "\n";
-		}
-		return res;
-	}().c_str());
-
-	MsgPack response;
-	if (spies.empty()) {
-		response[RESPONSE_MESSAGE] = "Not found documents tallied";
-	} else {
-		for (const auto& spy : spies) {
-			auto name_result = spy.first;
-			MsgPack array;
-			const auto facet_e = spy.second->values_end();
-			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
-				auto field_t = db_handler.get_schema()->get_slot_field(spy.first);
-				MsgPack value = {
-					{ RESERVED_VALUE, Unserialise::MsgPack(field_t.get_type(), *facet) },
-					{ "_termfreq", facet.get_termfreq() }
-				};
-				array.push_back(std::move(value));
-			}
-			response[name_result] = std::move(array);
-		}
-	}
-	operation_ends = std::chrono::system_clock::now();
-	write_http_response(response, 200, pretty);
-
-	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
-	{
-		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-		update_pos_time();
-		++stats_cnt.search.min[b_time.minute];
-		++stats_cnt.search.sec[b_time.second];
-		stats_cnt.search.tm_min[b_time.minute] += _time;
-		stats_cnt.search.tm_sec[b_time.second] += _time;
-	}
-	L_TIME(this, "Searching took %s", delta_string(operation_begins, operation_ends).c_str());
-
-	L_DEBUG(this, "FINISH SEARCH");
-}
-
-
-void
 HttpClient::search_view()
 {
 	L_CALL(this, "HttpClient::search_view()");
@@ -1076,9 +1010,6 @@ HttpClient::search_view()
 
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
-	SpiesVector spies;
-
-	operation_begins = std::chrono::system_clock::now();
 
 	int db_flags = DB_OPEN;
 
@@ -1086,115 +1017,135 @@ HttpClient::search_view()
 		db_flags |= DB_WRITABLE;
 	}
 
+	operation_begins = std::chrono::system_clock::now();
+
 	db_handler.reset(endpoints, db_flags, HttpMethod::GET);
-	try {
-		db_handler.get_mset(*query_field, mset, spies, suggestions);
-	} catch (CheckoutError) {
-		/* At the moment when the endpoint it not exist and it is chunck it will return 200 response
-		 * and zero matches this behavior may change in the future for instance ( return 404 )
-		 * if is not chunk return 404
-		 */
-	}
-
-	L_SEARCH(this, "Suggested queries:\n%s", [&suggestions]() {
-		std::string res;
-		for (const auto& suggestion : suggestions) {
-			res += "\t+ " + suggestion + "\n";
+	if (!body.empty()) {
+		rapidjson::Document json_aggs;
+		json_load(json_aggs, body);
+		AggregationMatchSpy aggs(MsgPack(json_aggs), db_handler.get_schema());
+		try {
+			db_handler.get_mset(*query_field, mset, &aggs, suggestions);
+		} catch (const CheckoutError&) {
+			/* At the moment when the endpoint it not exist and it is chunck it will return 200 response
+			 * and zero matches this behavior may change in the future for instance ( return 404 )
+			 * if is not chunk return 404
+			 */
 		}
-		return res;
-	}().c_str());
-
-	int rc = 0;
-	if (!chunked && mset.empty()) {
-		int error_code = 404;
-		MsgPack err_response = {
-			{ RESPONSE_STATUS, error_code },
-			{ RESPONSE_MESSAGE, "No document found" }
-		};
-		write_http_response(err_response, error_code, pretty);
+		auto ct_type = content_type_pair(JSON_CONTENT_TYPE);
+		auto result = serialize_response(aggs.get_aggregation(), ct_type, pretty);
+		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
 	} else {
-		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
-			auto document = db_handler.get_document(*m);
-			operation_ends = std::chrono::system_clock::now();
+		try {
+			db_handler.get_mset(*query_field, mset, nullptr, suggestions);
+		} catch (const CheckoutError&) {
+			/* At the moment when the endpoint it not exist and it is chunck it will return 200 response
+			 * and zero matches this behavior may change in the future for instance ( return 404 )
+			 * if is not chunk return 404
+			 */
+		}
 
-			auto ct_type_str = document.get_value(DB_SLOT_TYPE);
-			if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE) {
-				if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
-					ct_type_str = JSON_CONTENT_TYPE;
-				} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
-					ct_type_str = MSGPACK_CONTENT_TYPE;
+		L_SEARCH(this, "Suggested queries:\n%s", [&suggestions]() {
+			std::string res;
+			for (const auto& suggestion : suggestions) {
+				res += "\t+ " + suggestion + "\n";
+			}
+			return res;
+		}().c_str());
+
+		int rc = 0;
+		if (!chunked && mset.empty()) {
+			int error_code = 404;
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, error_code },
+				{ RESPONSE_MESSAGE, "No document found" }
+			};
+			write_http_response(err_response, error_code, pretty);
+		} else {
+			for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
+				auto document = db_handler.get_document(*m);
+
+				auto ct_type_str = document.get_value(DB_SLOT_TYPE);
+				if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE) {
+					if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
+						ct_type_str = JSON_CONTENT_TYPE;
+					} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
+						ct_type_str = MSGPACK_CONTENT_TYPE;
+					}
 				}
-			}
-			auto ct_type = content_type_pair(ct_type_str);
+				auto ct_type = content_type_pair(ct_type_str);
 
-			std::vector<type_t> ct_types;
-			if (ct_type == json_type || ct_type == msgpack_type) {
-				ct_types = msgpack_serializers;
-			} else {
-				ct_types.push_back(ct_type);
-			}
-
-			const auto& accepted_type = get_acceptable_type(ct_types);
-			const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
-			if (!accepted_ct_type) {
-				int error_code = 406;
-				MsgPack err_response = {
-					{ RESPONSE_STATUS, error_code },
-					{ RESPONSE_MESSAGE, std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header") }
-				};
-				write_http_response(err_response, error_code, pretty);
-				L_DEBUG(this, "ABORTED SEARCH");
-				return;
-			}
-
-			MsgPack obj_data;
-			if (is_acceptable_type(json_type, ct_type)) {
-				obj_data = get_MsgPack(document);
-			} else if (is_acceptable_type(msgpack_type, ct_type)) {
-				obj_data = get_MsgPack(document);
-			} else {
-				// Returns blob_data in case that type is unkown
-				auto blob_data = get_blob(document);
-				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type_str));
-				return;
-			}
-
-			ct_type = *accepted_ct_type;
-			ct_type_str = ct_type.first + "/" + ct_type.second;
-
-			try {
-				obj_data = obj_data.at(RESERVED_DATA);
-			} catch (const std::out_of_range&) {
-				obj_data[RESERVED_ID_FIELD] = db_handler.get_value(document, RESERVED_ID_FIELD);
-				// Detailed info about the document:
-				obj_data[RESERVED_RANK] = m.get_rank();
-				obj_data[RESERVED_WEIGHT] = m.get_weight();
-				obj_data[RESERVED_PERCENT] = m.get_percent();
-				int subdatabase = (document.get_docid() - 1) % endpoints.size();
-				auto endpoint = endpoints[subdatabase];
-				obj_data[RESERVED_ENDPOINT] = endpoint.as_string();
-			}
-
-			auto result = serialize_response(obj_data, ct_type, pretty);
-			if (chunked) {
-				if (rc == 0) {
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type_str));
+				std::vector<type_t> ct_types;
+				if (ct_type == json_type || ct_type == msgpack_type) {
+					ct_types = msgpack_serializers;
+				} else {
+					ct_types.push_back(ct_type);
 				}
-				if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, result.first + "\n\n"))) {
+
+				const auto& accepted_type = get_acceptable_type(ct_types);
+				const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
+				if (!accepted_ct_type) {
+					int error_code = 406;
+					MsgPack err_response = {
+						{ RESPONSE_STATUS, error_code },
+						{ RESPONSE_MESSAGE, std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header") }
+					};
+					write_http_response(err_response, error_code, pretty);
+					L_DEBUG(this, "ABORTED SEARCH");
+					return;
+				}
+
+				MsgPack obj_data;
+				if (is_acceptable_type(json_type, ct_type)) {
+					obj_data = get_MsgPack(document);
+				} else if (is_acceptable_type(msgpack_type, ct_type)) {
+					obj_data = get_MsgPack(document);
+				} else {
+					// Returns blob_data in case that type is unkown
+					auto blob_data = get_blob(document);
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type_str));
+					return;
+				}
+
+				ct_type = *accepted_ct_type;
+				ct_type_str = ct_type.first + "/" + ct_type.second;
+
+				try {
+					obj_data = obj_data.at(RESERVED_DATA);
+				} catch (const std::out_of_range&) {
+					obj_data[RESERVED_ID_FIELD] = db_handler.get_value(document, RESERVED_ID_FIELD);
+					// Detailed info about the document:
+					obj_data[RESERVED_RANK] = m.get_rank();
+					obj_data[RESERVED_WEIGHT] = m.get_weight();
+					obj_data[RESERVED_PERCENT] = m.get_percent();
+					int subdatabase = (document.get_docid() - 1) % endpoints.size();
+					auto endpoint = endpoints[subdatabase];
+					obj_data[RESERVED_ENDPOINT] = endpoint.as_string();
+				}
+
+				auto result = serialize_response(obj_data, ct_type, pretty);
+				if (chunked) {
+					if (rc == 0) {
+						write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type_str));
+					}
+					if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, result.first + "\n\n"))) {
+						break;
+					}
+				} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
 					break;
 				}
-			} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
-				break;
 			}
-		}
 
-		if (chunked) {
-			if (rc == 0) {
-				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated()));
+			if (chunked) {
+				if (rc == 0) {
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated()));
+				}
+				write(http_response(0, HTTP_BODY, 0, 0, 0, 0, "0\r\n\r\n"));
 			}
-			write(http_response(0, HTTP_BODY, 0, 0, 0, 0, "0\r\n\r\n"));
 		}
 	}
+
+	operation_ends = std::chrono::system_clock::now();
 
 	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
 	{
@@ -1241,7 +1192,6 @@ constexpr size_t const_hash(char const *input) {
 
 
 static constexpr auto http_search = const_hash("_search");
-static constexpr auto http_facets = const_hash("_facets");
 static constexpr auto http_stats = const_hash("_stats");
 static constexpr auto http_schema = const_hash("_schema");
 
@@ -1255,9 +1205,6 @@ HttpClient::identify_cmd()
 		switch (const_hash(lower_string(path_parser.get_cmd()).c_str())) {
 			case http_search:
 				return CMD_SEARCH;
-				break;
-			case http_facets:
-				return CMD_FACETS;
 				break;
 			case http_stats:
 				return CMD_STATS;
@@ -1533,11 +1480,6 @@ HttpClient::query_field_maker(int flag)
 
 		if (query_parser.next("collapse") != -1) {
 			query_field->collapse = query_parser.get();
-		}
-		query_parser.rewind();
-
-		while (query_parser.next("facets") != -1) {
-			query_field->facets.push_back(query_parser.get());
 		}
 		query_parser.rewind();
 

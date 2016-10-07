@@ -32,8 +32,10 @@
 extern const std::regex find_types_re;
 
 
-using SpiesVector = std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>;
 using endpoints_error_list = std::unordered_map<std::string, std::vector<std::string>>;
+
+
+class AggregationMatchSpy;
 
 
 class DatabaseHandler {
@@ -53,7 +55,7 @@ class DatabaseHandler {
 	Xapian::Query search(const query_field_t& e, std::vector<std::string>& suggestions);
 
 	void get_similar(Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar, bool is_fuzzy=false);
-	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, SpiesVector* spies);
+	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, AggregationMatchSpy* aggs);
 
 public:
 	DatabaseHandler();
@@ -103,7 +105,7 @@ public:
 	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 
-	void get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVector& spies, std::vector<std::string>& suggestions, int offset=0);
+	void get_mset(const query_field_t& e, Xapian::MSet& mset, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions, int offset=0);
 
 	Xapian::Document get_document(const Xapian::docid& did) {
 		L_CALL(this, "DatabaseHandler::get_document(1)");
