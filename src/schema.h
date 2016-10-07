@@ -411,6 +411,10 @@ public:
 		}
 	}
 
+	auto get_const_schema() const {
+		return schema;
+	}
+
 	/*
 	 * specification is updated with the properties of schema.
 	 * Returns the properties of schema.
