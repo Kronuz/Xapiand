@@ -1030,9 +1030,7 @@ HttpClient::search_view()
 			 * if is not chunk return 404
 			 */
 		}
-		auto ct_type = content_type_pair(JSON_CONTENT_TYPE);
-		auto result = serialize_response(aggs.get_aggregation(), ct_type, pretty);
-		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
+		write_http_response(aggs.get_aggregation(), 200, pretty);
 	} else {
 		try {
 			db_handler.get_mset(*query_field, mset, nullptr, suggestions);
