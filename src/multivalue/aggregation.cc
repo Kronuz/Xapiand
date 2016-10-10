@@ -47,7 +47,9 @@ const std::unordered_map<std::string, dispatch_aggregations> map_dispatch_aggreg
 	{ AGGREGATION_GEO_BOUNDS,       &Aggregation::add_geo_bounds      },
 	{ AGGREGATION_GEO_CENTROID,     &Aggregation::add_geo_centroid    },
 	{ AGGREGATION_PERCENTILE,       &Aggregation::add_percentile      },
-	{ AGGREGATION_FILTER,           &Aggregation::add_filter          }
+
+	{ AGGREGATION_FILTER,           &Aggregation::add_bucket<FilterAggregation>  },
+	{ AGGREGATION_VALUE,            &Aggregation::add_bucket<ValueAggregation>   },
 });
 
 
@@ -93,13 +95,6 @@ Aggregation::update()
 	for (auto& sub_agg : _sub_aggregations) {
 		sub_agg->update();
 	}
-}
-
-
-inline void
-Aggregation::add_filter(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-{
-	_sub_aggregations.push_back(std::make_shared<FilterAggregation>(result, data, schema));
 }
 
 

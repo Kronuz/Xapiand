@@ -26,22 +26,22 @@
 static func_value_handle get_func_value_handle(FieldType type, const std::string& field_name) {
 	switch (type) {
 		case FieldType::FLOAT:
-			return &MetricAggregation::_float;
+			return &SubAggregation::_aggregate_float;
 		case FieldType::INTEGER:
-			return &MetricAggregation::integer;
+			return &SubAggregation::_aggregate_integer;
 		case FieldType::POSITIVE:
-			return &MetricAggregation::positive;
+			return &SubAggregation::_aggregate_positive;
 		case FieldType::DATE:
-			return &MetricAggregation::date;
+			return &SubAggregation::_aggregate_date;
 		case FieldType::BOOLEAN:
-			return &MetricAggregation::boolean;
+			return &SubAggregation::_aggregate_boolean;
 		case FieldType::STRING:
 		case FieldType::TEXT:
-			return &MetricAggregation::string;
+			return &SubAggregation::_aggregate_string;
 		case FieldType::GEO:
-			return &MetricAggregation::geo;
+			return &SubAggregation::_aggregate_geo;
 		case FieldType::UUID:
-			return &MetricAggregation::uuid;
+			return &SubAggregation::_aggregate_uuid;
 		case FieldType::EMPTY:
 			throw MSG_AggregationError("Field: %s has not been indexed", field_name.c_str());
 		default:
@@ -51,18 +51,18 @@ static func_value_handle get_func_value_handle(FieldType type, const std::string
 
 
 void
-ValueHandle::operator()(MetricAggregation* agg, const Xapian::Document& doc) const
+ValueHandle::operator()(SubAggregation* agg, const Xapian::Document& doc) const
 {
 	auto multiValues = doc.get_value(_slot);
 
 	if (!multiValues.empty()) {
-		(agg->*_func)(multiValues);
+		(agg->*_func)(multiValues, doc);
 	}
 }
 
 
-MetricHandledAggregation::MetricHandledAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-	: MetricAggregation(result)
+HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
+	: SubAggregation(result)
 {
 	try {
 		const auto& agg = data.at(AGGREGATION_FIELD);
@@ -74,8 +74,8 @@ MetricHandledAggregation::MetricHandledAggregation(MsgPack& result, const MsgPac
 			throw MSG_AggregationError("'%s' must be string", AGGREGATION_FIELD);
 		}
 	} catch (const std::out_of_range&) {
-		throw MSG_AggregationError("'%s' must be specified in '%s'", AGGREGATION_FIELD, AGGREGATION_SUM);
+		throw MSG_AggregationError("'%s' must be specified in '%s'", AGGREGATION_FIELD, data.to_string().c_str());
 	} catch (const msgpack::type_error&) {
-		throw MSG_AggregationError("'%s' must be object", AGGREGATION_SUM);
+		throw MSG_AggregationError("'%s' must be object", data.to_string().c_str());
 	}
 }

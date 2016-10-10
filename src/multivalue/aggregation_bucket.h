@@ -26,7 +26,65 @@
 #include "string_metric.h"
 
 
-class Aggregation;
+class ValueAggregation : public HandledSubAggregation {
+protected:
+	const MsgPack _data;
+	const std::shared_ptr<Schema> _schema;
+
+	std::unordered_map<std::string, Aggregation> _aggs;
+
+public:
+	ValueAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(result, data.at(AGGREGATION_VALUE), schema),
+		  _data(data),
+		  _schema(schema)
+		{ }
+
+	void update() override {
+		for (auto& _agg : _aggs) {
+			_agg.second.update();
+		}
+	}
+
+	void _aggregate(const std::string& value, const Xapian::Document& doc) {
+		try {
+			_aggs.at(value)(doc);
+		} catch (const std::out_of_range&) {
+			auto p = _aggs.emplace(std::piecewise_construct, std::forward_as_tuple(value), std::forward_as_tuple(_result[value], _data, _schema));
+			p.first->second(doc);
+		}
+	}
+
+	void aggregate_float(double value, const Xapian::Document& doc) override {
+		_aggregate(std::to_string(value), doc);
+	}
+
+	void aggregate_integer(long value, const Xapian::Document& doc) override {
+		_aggregate(std::to_string(value), doc);
+	}
+
+	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
+		_aggregate(std::to_string(value), doc);
+	}
+
+	void aggregate_date(double value, const Xapian::Document& doc) override {
+		_aggregate(std::to_string(value), doc);
+	}
+
+	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
+		_aggregate(std::to_string(value), doc);
+	}
+
+	void aggregate_string(const std::string& value, const Xapian::Document& doc) override {
+		_aggregate(value, doc);
+	}
+
+	// void aggregate_geo(const std::pair<std::string, std::string>& value, const Xapian::Document& doc) override {
+	// }
+
+	// void aggregate_uuid(const std::string& value, const Xapian::Document& doc) override {
+	// }
+};
 
 
 class FilterAggregation : public SubAggregation {
@@ -40,7 +98,7 @@ public:
 	FilterAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
 
 	inline void operator()(const Xapian::Document& doc) override {
-		return (this->*func)(doc);
+		(this->*func)(doc);
 	}
 
 	void update() override;

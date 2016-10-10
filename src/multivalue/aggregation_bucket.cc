@@ -24,7 +24,8 @@
 
 
 FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-	: _agg(result, data, schema)
+	: SubAggregation(result),
+	  _agg(result, data, schema)
 {
 	try {
 		const auto& field_term = data.at(AGGREGATION_FILTER).at(AGGREGATION_TERM);

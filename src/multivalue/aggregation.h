@@ -42,57 +42,60 @@ public:
 
 	void update();
 
-	inline void add_count(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_count(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricCount>(result[AGGREGATION_COUNT], data[AGGREGATION_COUNT], schema));
 	}
 
-	inline void add_sum(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_sum(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricSum>(result[AGGREGATION_SUM], data[AGGREGATION_SUM], schema));
 	}
 
-	inline void add_avg(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_avg(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricAvg>(result[AGGREGATION_AVG], data[AGGREGATION_AVG], schema));
 	}
 
-	inline void add_min(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_min(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricMin>(result[AGGREGATION_MIN], data[AGGREGATION_MIN], schema));
 	}
 
-	inline void add_max(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_max(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricMax>(result[AGGREGATION_MAX], data[AGGREGATION_MAX], schema));
 	}
 
-	inline void add_variance(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_variance(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricVariance>(result[AGGREGATION_VARIANCE], data[AGGREGATION_VARIANCE], schema));
 	}
 
-	inline void add_std(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_std(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricSTD>(result[AGGREGATION_STD], data[AGGREGATION_STD], schema));
 	}
 
-	inline void add_median(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_median(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricMedian>(result[AGGREGATION_MEDIAN], data[AGGREGATION_MEDIAN], schema));
 	}
 
-	inline void add_mode(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_mode(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricMode>(result[AGGREGATION_MODE], data[AGGREGATION_MODE], schema));
 	}
 
-	inline void add_stats(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_stats(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricStats>(result, data[AGGREGATION_STATS], schema));
 	}
 
-	inline void add_ext_stats(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+	void add_ext_stats(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
 		_sub_aggregations.push_back(std::make_shared<MetricExtendedStats>(result, data[AGGREGATION_EXT_STATS], schema));
 	}
 
-	inline void add_geo_bounds(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
+	void add_geo_bounds(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
 
-	inline void add_geo_centroid(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
+	void add_geo_centroid(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
 
-	inline void add_percentile(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
+	void add_percentile(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
 
-	inline void add_filter(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
+	template <typename BucketAggregation>
+	void add_bucket(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+		_sub_aggregations.push_back(std::make_shared<BucketAggregation>(result, data, schema));
+	}
 };
 
 

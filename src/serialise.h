@@ -112,7 +112,7 @@ struct required_spc_t;
 enum class FieldType : uint8_t;
 
 
-namespace Serialise{
+namespace Serialise {
 	inline static bool isText(const std::string& field_value, bool bool_term) noexcept {
 		return !bool_term && field_value.find(' ') != std::string::npos;
 	}
