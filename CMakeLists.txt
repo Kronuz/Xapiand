@@ -223,6 +223,8 @@ if (V8)
 	find_package (V8)
 	if (V8_FOUND MATCHES "NO")
 		message (FATAL_ERROR "V8 package not found")
+	else ()
+		include_directories(BEFORE "${V8_INCLUDE_DIRS}")
 	endif ()
 endif ()
 
@@ -244,7 +246,6 @@ endif ()
 include_directories (
 	"${XAPIAN_INCLUDE_DIR}"
 	"${UUID_INCLUDE_DIRS}"
-	"${V8_INCLUDE_DIRS}"
 	"${PROJECT_SOURCE_DIR}/src"
 	"${PROJECT_BINARY_DIR}/src")
 
