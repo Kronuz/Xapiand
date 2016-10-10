@@ -44,8 +44,6 @@
 #define MAX_BODY_SIZE (250 * 1024 * 1024)
 #define MAX_BODY_MEM (5 * 1024 * 1024)
 
-#define DEF_36e6 2176782336
-
 #define QUERY_FIELD_COMMIT (1 << 0)
 #define QUERY_FIELD_SEARCH (1 << 1)
 #define QUERY_FIELD_ID     (1 << 2)
