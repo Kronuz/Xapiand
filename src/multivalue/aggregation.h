@@ -42,8 +42,8 @@ public:
 
 	void update();
 
-	inline void add_count(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>&) {
-		_sub_aggregations.push_back(std::make_shared<MetricCount>(result[AGGREGATION_COUNT], data[AGGREGATION_COUNT]));
+	inline void add_count(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
+		_sub_aggregations.push_back(std::make_shared<MetricCount>(result[AGGREGATION_COUNT], data[AGGREGATION_COUNT], schema));
 	}
 
 	inline void add_sum(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) {
@@ -86,11 +86,11 @@ public:
 		_sub_aggregations.push_back(std::make_shared<MetricExtendedStats>(result, data[AGGREGATION_EXT_STATS], schema));
 	}
 
-	inline void add_geo_bounds(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) { }
+	inline void add_geo_bounds(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
 
-	inline void add_geo_centroid(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) { }
+	inline void add_geo_centroid(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
 
-	inline void add_percentile(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema) { }
+	inline void add_percentile(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
 
 	inline void add_filter(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
 };

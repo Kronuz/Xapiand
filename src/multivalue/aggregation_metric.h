@@ -31,6 +31,7 @@
 #include <xapian.h>
 
 #define AGGREGATION_AGGS            "_aggregations"
+#define AGGREGATION_DOC_COUNT       "_doc_count"
 #define AGGREGATION_COUNT           "_count"
 #define AGGREGATION_SUM             "_sum"
 #define AGGREGATION_AVG             "_avg"
@@ -147,35 +148,49 @@ public:
 };
 
 
-class MetricCount : public MetricAggregation {
-	size_t _doc_count;
-
-public:
-	MetricCount(MsgPack& result, const MsgPack& data)
-		: MetricAggregation(result),
-		  _doc_count(0) { }
-
-	void operator()(const Xapian::Document&) override {
-		++_doc_count;
-	}
-
-	void update() override {
-		_result = _doc_count;
-	}
-};
-
-
-class MetricSum : public MetricAggregation {
+class MetricHandledAggregation : public MetricAggregation {
 protected:
 	ValueHandle _handle;
-	long double _sum;
+
+	MetricHandledAggregation(MsgPack& result)
+		: MetricAggregation(result) { }
 
 public:
-	MetricSum(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
+	MetricHandledAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
 
 	void operator()(const Xapian::Document& doc) override {
 		_handle(this, doc);
 	}
+};
+
+
+class MetricCount : public MetricHandledAggregation {
+protected:
+	size_t _count;
+
+public:
+	MetricCount(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
+		: MetricHandledAggregation(result, data, schema),
+		  _count(0) { }
+
+	void update() override {
+		_result = _count;
+	}
+
+	void add(double) override {
+		++_count;
+	}
+};
+
+
+class MetricSum : public MetricHandledAggregation {
+protected:
+	long double _sum;
+
+public:
+	MetricSum(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
+		: MetricHandledAggregation(result, data, schema),
+		  _sum(0) { }
 
 	void update() override {
 		_result = static_cast<double>(_sum);
@@ -189,7 +204,7 @@ public:
 
 class MetricAvg : public MetricSum {
 protected:
-	size_t _count = 0;
+	size_t _count;
 
 public:
 	MetricAvg(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
@@ -215,23 +230,21 @@ class MetricStats;
 class MetricExtendedStats;
 
 
-class MetricMin : public MetricAggregation {
-	ValueHandle _handle;
-	double _min;
-
-	MetricMin(MsgPack& result)
-		: MetricAggregation(result),
-		  _min(DBL_MAX) { }
-
+class MetricMin : public MetricHandledAggregation {
 	friend class MetricStats;
 	friend class MetricExtendedStats;
 
-public:
-	MetricMin(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
+protected:
+	double _min;
 
-	void operator()(const Xapian::Document& doc) override {
-		_handle(this, doc);
-	}
+	MetricMin(MsgPack& result)
+		: MetricHandledAggregation(result),
+		  _min(DBL_MAX) { }
+
+public:
+	MetricMin(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
+		: MetricHandledAggregation(result, data, schema),
+		  _min(DBL_MAX) { }
 
 	void update() override {
 		_result = _min;
@@ -245,23 +258,21 @@ public:
 };
 
 
-class MetricMax : public MetricAggregation {
-	ValueHandle _handle;
-	double _max;
-
-	MetricMax(MsgPack& result)
-		: MetricAggregation(result),
-		  _max(DBL_MIN) { }
-
+class MetricMax : public MetricHandledAggregation {
 	friend class MetricStats;
 	friend class MetricExtendedStats;
 
-public:
-	MetricMax(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
+protected:
+	double _max;
 
-	void operator()(const Xapian::Document& doc) override {
-		_handle(this, doc);
-	}
+	MetricMax(MsgPack& result)
+		: MetricHandledAggregation(result),
+		  _max(DBL_MIN) { }
+
+public:
+	MetricMax(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
+		: MetricHandledAggregation(result, data, schema),
+		  _max(DBL_MIN) { }
 
 	void update() override {
 		_result = _max;
@@ -317,16 +328,12 @@ public:
 };
 
 
-class MetricMedian : public MetricAggregation {
-	ValueHandle _handle;
+class MetricMedian : public MetricHandledAggregation {
 	std::vector<double> values;
 
 public:
-	MetricMedian(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
-
-	void operator()(const Xapian::Document& doc) override {
-		_handle(this, doc);
-	}
+	MetricMedian(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
+		: MetricHandledAggregation(result, data, schema) { }
 
 	void update() override {
 		if (values.empty()) {
@@ -353,16 +360,12 @@ public:
 };
 
 
-class MetricMode : public MetricAggregation {
-	ValueHandle _handle;
+class MetricMode : public MetricHandledAggregation {
 	std::unordered_map<double, size_t> _histogram;
 
 public:
-	MetricMode(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
-
-	void operator()(const Xapian::Document& doc) override {
-		_handle(this, doc);
-	}
+	MetricMode(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
+		: MetricHandledAggregation(result, data, schema) { }
 
 	void update() override {
 		if (_histogram.empty()) {
@@ -384,24 +387,18 @@ public:
 
 
 class MetricStats : public MetricAvg {
+protected:
 	MetricMin _min_metric;
 	MetricMax _max_metric;
-	size_t _doc_count;
 
 public:
 	MetricStats(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
 		: MetricAvg(result, data, schema),
-		  _min_metric(_result),
-		  _max_metric(_result),
-		  _doc_count(0) { }
-
-	void operator()(const Xapian::Document& doc) override {
-		++_doc_count;
-		_handle(this, doc);
-	}
+		  _min_metric(_result, data, schema),
+		  _max_metric(_result, data, schema) { }
 
 	void update() override {
-		_result[AGGREGATION_COUNT] = _doc_count;
+		_result[AGGREGATION_COUNT] = _count;
 		_result[AGGREGATION_MIN]   = _min_metric._min;
 		_result[AGGREGATION_MAX]   = _max_metric._max;
 		_result[AGGREGATION_AVG]   = static_cast<double>(avg());
@@ -417,24 +414,18 @@ public:
 
 
 class MetricExtendedStats : public MetricSTD {
+protected:
 	MetricMin _min_metric;
 	MetricMax _max_metric;
-	size_t _doc_count;
 
 public:
 	MetricExtendedStats(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
 		: MetricSTD(result, data, schema),
-		  _min_metric(_result),
-		  _max_metric(_result),
-		  _doc_count(0) { }
-
-	void operator()(const Xapian::Document& doc) override {
-		++_doc_count;
-		_handle(this, doc);
-	}
+		  _min_metric(_result, data, schema),
+		  _max_metric(_result, data, schema) { }
 
 	void update() override {
-		_result[AGGREGATION_COUNT]      = _doc_count;
+		_result[AGGREGATION_COUNT]      = _count;
 		_result[AGGREGATION_MIN]        = _min_metric._min;
 		_result[AGGREGATION_MAX]        = _max_metric._max;
 		_result[AGGREGATION_AVG]        = static_cast<double>(avg());
