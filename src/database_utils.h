@@ -93,7 +93,7 @@
 #define RESERVED_DAY            "_day"
 
 
-#define DB_OFFSPRING_UNION "__"
+#define DB_OFFSPRING_UNION "."
 #define DB_VERSION_SCHEMA  2.1
 
 #define DB_SLOT_RESERVED   20    // Reserved slots by special data
