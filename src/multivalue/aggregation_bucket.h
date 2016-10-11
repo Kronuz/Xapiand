@@ -102,6 +102,75 @@ public:
 };
 
 
+class HistogramAggregation : public BucketAggregation {
+	MsgPack interval;
+
+	std::string get_bucket(unsigned long value) {
+		auto interval_ = interval.as_u64();
+		auto rem = value % interval_;
+		if (rem < 0) {
+			rem += interval_;
+		}
+		auto bucket_key = value - rem;
+		return std::to_string(bucket_key);
+	}
+
+	std::string get_bucket(long value) {
+		auto interval_ = interval.as_i64();
+		auto rem = value % interval_;
+		if (rem < 0) {
+			rem += interval_;
+		}
+		auto bucket_key = value - rem;
+		return std::to_string(bucket_key);
+	}
+
+	std::string get_bucket(double value) {
+		auto interval_ = interval.as_f64();
+		auto rem = fmod(value, interval_);
+		if (rem < 0) {
+			rem += interval_;
+		}
+		auto bucket_key = value - rem;
+		return std::to_string(bucket_key);
+	}
+
+public:
+	HistogramAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation(AGGREGATION_HISTOGRAM, result, conf, schema)
+	{
+		auto histogram_conf = _conf.at(AGGREGATION_HISTOGRAM);
+		try {
+			interval = histogram_conf.at(AGGREGATION_INTERVAL);
+		} catch (const std::out_of_range&) {
+			throw MSG_AggregationError("'%s' must be specified must be specified in '%s'", AGGREGATION_INTERVAL, AGGREGATION_HISTOGRAM);
+		} catch (const msgpack::type_error&) {
+			throw MSG_AggregationError("'%s' must be object", AGGREGATION_HISTOGRAM);
+		}
+	}
+
+	void aggregate_float(double value, const Xapian::Document& doc) override {
+		auto bucket = get_bucket(value);
+		aggregate(bucket, doc);
+	}
+
+	void aggregate_integer(long value, const Xapian::Document& doc) override {
+		auto bucket = get_bucket(value);
+		aggregate(bucket, doc);
+	}
+
+	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
+		auto bucket = get_bucket(value);
+		aggregate(bucket, doc);
+	}
+
+	void aggregate_date(double value, const Xapian::Document& doc) override {
+		auto bucket = get_bucket(value);
+		aggregate(bucket, doc);
+	}
+};
+
+
 class FilterAggregation : public SubAggregation {
 	using func_filter = void (FilterAggregation::*)(const Xapian::Document&);
 

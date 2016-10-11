@@ -57,7 +57,7 @@ const std::unordered_map<std::string, dispatch_aggregations> map_dispatch_aggreg
 	// { AGGREGATION_DATE_RANGE,       &Aggregation::add_bucket<DateRangeAggregation>                                 },
 	// { AGGREGATION_GEO_DISTANCE,     &Aggregation::add_bucket<GeoDistanceAggregation>                               },
 	// { AGGREGATION_GEO_TRIXELS,      &Aggregation::add_bucket<GeoTrixelsAggregation>                                },
-	// { AGGREGATION_HISTOGRAM,        &Aggregation::add_bucket<HistogramAggregation>                                 },
+	{ AGGREGATION_HISTOGRAM,        &Aggregation::add_bucket<HistogramAggregation>                                 },
 	// { AGGREGATION_MISSING,          &Aggregation::add_bucket<MissingAggregation>                                   },
 	// { AGGREGATION_RANGE,            &Aggregation::add_bucket<RangeAggregation>                                     },
 	// { AGGREGATION_IP_RANGE,         &Aggregation::add_bucket<IPRangeAggregation>                                   },
