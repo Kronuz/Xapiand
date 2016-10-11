@@ -76,9 +76,9 @@ FieldParser::parse()
 					default:
 						switch (*currentSymbol) {
 							case ' ':
+							case '\r':
 							case '\n':
 							case '\t':
-							case '\r':
 								currentState = FieldParser::State::INIT;
 								break;
 							default:
