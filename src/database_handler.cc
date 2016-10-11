@@ -923,23 +923,18 @@ DatabaseHandler::get_stats_doc(MsgPack& stats, const std::string& doc_id)
 	auto ct_type = doc.get_value(DB_SLOT_TYPE);
 	stats["_blob"] = ct_type != JSON_CONTENT_TYPE && ct_type != MSGPACK_CONTENT_TYPE;
 
-	stats["_number_terms"] = doc.termlist_count();
-
-	std::string terms;
+	auto& stats_terms = stats[RESERVED_TERMS];
 	const auto it_e = doc.termlist_end();
+	int i = 0;
 	for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-		terms += repr(*it) + " ";
+		stats_terms[++i] = *it;
 	}
-	stats[RESERVED_TERMS] = terms;
 
-	stats["_number_values"] = doc.values_count();
-
-	std::string values;
+	auto& stats_values = stats[RESERVED_VALUES];
 	const auto iv_e = doc.values_end();
 	for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
-		values += std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
+		stats_values[std::to_string(iv.get_valueno())] = *iv;
 	}
-	stats[RESERVED_VALUES] = values;
 }
 
 
