@@ -230,12 +230,12 @@ public:
 				bool err_f64 = false;
 
 				try {
-					key = range.at("key").as_string();
+					key = range.at("_key").as_string();
 				} catch (const std::out_of_range&) {
 				}
 
 				try {
-					auto from = range.at("from");
+					auto from = range.at("_from");
 					try {
 						from_u64 = from.as_u64();
 					} catch (const msgpack::type_error&) {
@@ -258,7 +258,7 @@ public:
 				}
 
 				try {
-					auto to = range.at("to");
+					auto to = range.at("_to");
 					try {
 						to_u64 = to.as_u64();
 					} catch (const msgpack::type_error&) {
