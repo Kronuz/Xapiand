@@ -31,11 +31,14 @@
 
 
 class Aggregation {
+	MsgPack& _result;
+	size_t _doc_count;
+
 	std::vector<std::shared_ptr<SubAggregation>> _sub_aggregations;
 
-public:
-	Aggregation() = default;
 
+public:
+	Aggregation(MsgPack& result);
 	Aggregation(MsgPack& result, const MsgPack& aggs, const std::shared_ptr<Schema>& schema);
 
 	void operator()(const Xapian::Document& doc);
@@ -122,7 +125,9 @@ class AggregationMatchSpy : public Xapian::MatchSpy {
 public:
 	// Construct an empty AggregationMatchSpy.
 	AggregationMatchSpy()
-		: _total(0) { }
+		: _total(0),
+		  _result(),
+		  _aggregation(_result[AGGREGATION_AGGS]) { }
 
 	/*
 	 * Construct a AggregationMatchSpy which aggregates the values.

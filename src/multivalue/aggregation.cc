@@ -52,9 +52,20 @@ const std::unordered_map<std::string, dispatch_aggregations> map_dispatch_aggreg
 	{ AGGREGATION_VALUE,            &Aggregation::add_bucket<ValueAggregation>   },
 });
 
+Aggregation::Aggregation(MsgPack& result)
+	: _result(result),
+	  _doc_count(0)
+{
+	_result[AGGREGATION_DOC_COUNT] = _doc_count;  // Initialize here so it's at the start
+}
+
 
 Aggregation::Aggregation(MsgPack& result, const MsgPack& o_aggs, const std::shared_ptr<Schema>& schema)
+	: _result(result),
+	  _doc_count(0)
 {
+	_result[AGGREGATION_DOC_COUNT] = _doc_count;  // Initialize here so it's at the start
+
 	try {
 		const auto& aggs = o_aggs.at(AGGREGATION_AGGS);
 		for (const auto& agg : aggs) {
@@ -64,7 +75,7 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& o_aggs, const std::shar
 				auto sub_agg_type = (*sub_agg.begin()).as_string();
 				try {
 					auto func = map_dispatch_aggregations.at(sub_agg_type);
-					(this->*func)(result[sub_agg_name], sub_agg, schema);
+					(this->*func)(_result[sub_agg_name], sub_agg, schema);
 				} catch (const std::out_of_range&) {
 					throw MSG_AggregationError("Aggregation type: %s is not valid", sub_agg_name.c_str());
 				}
@@ -83,6 +94,7 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& o_aggs, const std::shar
 void
 Aggregation::operator()(const Xapian::Document& doc)
 {
+	++_doc_count;
 	for (auto& sub_agg : _sub_aggregations) {
 		(*sub_agg)(doc);
 	}
@@ -95,6 +107,7 @@ Aggregation::update()
 	for (auto& sub_agg : _sub_aggregations) {
 		sub_agg->update();
 	}
+	_result[AGGREGATION_DOC_COUNT] = _doc_count;
 }
 
 
