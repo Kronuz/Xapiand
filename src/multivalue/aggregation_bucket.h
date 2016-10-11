@@ -28,15 +28,15 @@
 
 class ValueAggregation : public HandledSubAggregation {
 protected:
-	const MsgPack _data;
+	const MsgPack _conf;
 	const std::shared_ptr<Schema> _schema;
 
 	std::unordered_map<std::string, Aggregation> _aggs;
 
 public:
-	ValueAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, data.at(AGGREGATION_VALUE), schema),
-		  _data(data),
+	ValueAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(result, conf.at(AGGREGATION_VALUE), schema),
+		  _conf(conf),
 		  _schema(schema)
 		{ }
 
@@ -50,7 +50,7 @@ public:
 		try {
 			_aggs.at(value)(doc);
 		} catch (const std::out_of_range&) {
-			auto p = _aggs.emplace(std::piecewise_construct, std::forward_as_tuple(value), std::forward_as_tuple(_result[value], _data, _schema));
+			auto p = _aggs.emplace(std::piecewise_construct, std::forward_as_tuple(value), std::forward_as_tuple(_result[value], _conf, _schema));
 			p.first->second(doc);
 		}
 	}
@@ -95,7 +95,7 @@ class FilterAggregation : public SubAggregation {
 	func_filter func;
 
 public:
-	FilterAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
+	FilterAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
 	inline void operator()(const Xapian::Document& doc) override {
 		(this->*func)(doc);

@@ -61,11 +61,11 @@ ValueHandle::operator()(SubAggregation* agg, const Xapian::Document& doc) const
 }
 
 
-HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
+HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 	: SubAggregation(result)
 {
 	try {
-		const auto& agg = data.at(AGGREGATION_FIELD);
+		const auto& agg = conf.at(AGGREGATION_FIELD);
 		try {
 			auto field_name = agg.as_string();
 			auto field_spc = schema->get_slot_field(field_name);
@@ -74,8 +74,8 @@ HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& dat
 			throw MSG_AggregationError("'%s' must be string", AGGREGATION_FIELD);
 		}
 	} catch (const std::out_of_range&) {
-		throw MSG_AggregationError("'%s' must be specified in '%s'", AGGREGATION_FIELD, data.to_string().c_str());
+		throw MSG_AggregationError("'%s' must be specified in '%s'", AGGREGATION_FIELD, conf.to_string().c_str());
 	} catch (const msgpack::type_error&) {
-		throw MSG_AggregationError("'%s' must be object", data.to_string().c_str());
+		throw MSG_AggregationError("'%s' must be object", conf.to_string().c_str());
 	}
 }

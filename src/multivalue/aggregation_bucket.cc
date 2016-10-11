@@ -23,12 +23,12 @@
 #include "aggregation_bucket.h"
 
 
-FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
+FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 	: SubAggregation(result),
-	  _agg(result, data, schema)
+	  _agg(result, conf, schema)
 {
 	try {
-		const auto& field_term = data.at(AGGREGATION_FILTER).at(AGGREGATION_TERM);
+		const auto& field_term = conf.at(AGGREGATION_FILTER).at(AGGREGATION_TERM);
 		try {
 			for (const auto& field : field_term) {
 				auto field_name = field.as_string();
