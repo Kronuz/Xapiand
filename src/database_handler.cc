@@ -446,14 +446,14 @@ DatabaseHandler::build_query(const std::string& token, std::vector<std::string>&
 				case FieldType::STRING:
 					if (fp.is_double_quote_value() || q_flags & Xapian::QueryParser::FLAG_PARTIAL) {
 						Xapian::QueryParser queryString;
-						field_spc.bool_term ? queryString.add_boolean_prefix(field_name, field_spc.prefix) : queryString.add_prefix(field_name, field_spc.prefix);
+						field_spc.bool_term ? queryString.add_boolean_prefix("_", field_spc.prefix) : queryString.add_prefix("_", field_spc.prefix);
 
 						queryString.set_database(*database->db);
 						queryString.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
 						queryString.set_stemmer(Xapian::Stem(field_spc.stem_language));
 						std::string str_string;
-						str_string.reserve(field_name_dot.length() + field_value.length());
-						str_string.assign(field_name_dot).append(field_value);
+						str_string.reserve(2 + field_value.length());
+						str_string.assign("_:").append(field_value);
 
 						suggestions.push_back(queryString.get_corrected_query_string());
 						return queryString.parse_query(str_string, q_flags);
@@ -465,14 +465,14 @@ DatabaseHandler::build_query(const std::string& token, std::vector<std::string>&
 						field_value.assign(fp.get_doubleq_value());
 					}
 					Xapian::QueryParser queryTexts;
-					field_spc.bool_term ? queryTexts.add_boolean_prefix(field_name, field_spc.prefix) : queryTexts.add_prefix(field_name, field_spc.prefix);
+					field_spc.bool_term ? queryTexts.add_boolean_prefix("_", field_spc.prefix) : queryTexts.add_prefix("_", field_spc.prefix);
 
 					queryTexts.set_database(*database->db);
 					queryTexts.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
 					queryTexts.set_stemmer(Xapian::Stem(field_spc.stem_language));
 					std::string str_texts;
-					str_texts.reserve(field_name_dot.length() + field_value.length());
-					str_texts.assign(field_name_dot).append(field_value);
+					str_texts.reserve(2 + field_value.length());
+					str_texts.assign("_:").append(field_value);
 
 					suggestions.push_back(queryTexts.get_corrected_query_string());
 					return queryTexts.parse_query(str_texts, q_flags);
