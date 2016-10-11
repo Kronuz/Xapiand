@@ -218,25 +218,6 @@ inline void set_data(Xapian::Document& doc, const std::string& obj_data_str, con
 }
 
 
-inline void to_query_string(std::string& str) {
-	// '-'' in not accepted by the field processors.
-	if (str.at(0) == '-') {
-		str[0] = '_';
-	}
-}
-
-
-template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::decay_t<T>>::value>>
-inline std::string to_query_string(T value) {
-	std::string str = std::to_string(value);
-	// '-'' in not accepted by the field processors.
-	if (str[0] == '-') {
-		str[0] = '_';
-	}
-	return str;
-}
-
-
 Xapian::valueno get_slot(const std::string& name);
 std::string prefixed(const std::string& term, const std::string& prefixO);
 std::string get_prefix(const std::string& name, const std::string& prefix, char type);

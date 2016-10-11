@@ -43,11 +43,6 @@ inline static bool isnotSubtrixel(std::string& last_valid, uint64_t id_trixel) {
 }
 
 
-inline static std::string transform_to_query_string(Datetime::tm_t& tm) {
-	return to_query_string(Datetime::timegm(tm));
-}
-
-
 void
 GenerateTerms::integer(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, int64_t value)
 {
