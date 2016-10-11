@@ -104,32 +104,38 @@ public:
 
 class HistogramAggregation : public BucketAggregation {
 	MsgPack interval;
+	uint64_t interval_u64;
+	int64_t interval_i64;
+	double interval_f64;
 
 	std::string get_bucket(unsigned long value) {
-		auto interval_ = interval.as_u64();
-		auto rem = value % interval_;
-		if (rem < 0) {
-			rem += interval_;
+		if (!interval_u64) {
+			throw MSG_AggregationError("'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
+		auto rem = value % interval_u64;
 		auto bucket_key = value - rem;
 		return std::to_string(bucket_key);
 	}
 
 	std::string get_bucket(long value) {
-		auto interval_ = interval.as_i64();
-		auto rem = value % interval_;
+		if (!interval_i64) {
+			throw MSG_AggregationError("'%s' must be a non-zero number", AGGREGATION_INTERVAL);
+		}
+		auto rem = value % interval_i64;
 		if (rem < 0) {
-			rem += interval_;
+			rem += interval_i64;
 		}
 		auto bucket_key = value - rem;
 		return std::to_string(bucket_key);
 	}
 
 	std::string get_bucket(double value) {
-		auto interval_ = interval.as_f64();
-		auto rem = fmod(value, interval_);
+		if (!interval_f64) {
+			throw MSG_AggregationError("'%s' must be a non-zero number", AGGREGATION_INTERVAL);
+		}
+		auto rem = fmod(value, interval_f64);
 		if (rem < 0) {
-			rem += interval_;
+			rem += interval_f64;
 		}
 		auto bucket_key = value - rem;
 		return std::to_string(bucket_key);
@@ -137,11 +143,23 @@ class HistogramAggregation : public BucketAggregation {
 
 public:
 	HistogramAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(AGGREGATION_HISTOGRAM, result, conf, schema)
+		: BucketAggregation(AGGREGATION_HISTOGRAM, result, conf, schema),
+		  interval_u64(0),
+		  interval_i64(0),
+		  interval_f64(0.0)
 	{
 		auto histogram_conf = _conf.at(AGGREGATION_HISTOGRAM);
 		try {
 			interval = histogram_conf.at(AGGREGATION_INTERVAL);
+			try {
+				interval_u64 = interval.as_u64();
+			} catch (const msgpack::type_error&) { }
+			try {
+				interval_i64 = interval.as_i64();
+			} catch (const msgpack::type_error&) { }
+			try {
+				interval_f64 = interval.as_f64();
+			} catch (const msgpack::type_error&) { }
 		} catch (const std::out_of_range&) {
 			throw MSG_AggregationError("'%s' must be specified must be specified in '%s'", AGGREGATION_INTERVAL, AGGREGATION_HISTOGRAM);
 		} catch (const msgpack::type_error&) {
