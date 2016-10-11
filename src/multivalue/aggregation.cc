@@ -83,10 +83,9 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& o_aggs, const std::shar
 				throw MSG_AggregationError("Aggregation sub_agg_name: %s is not valid", sub_agg_name.c_str());
 			}
 		}
-	} catch (const std::out_of_range&) {
-		throw MSG_AggregationError("'%s' must be defined", AGGREGATION_AGGS);
 	} catch (const msgpack::type_error) {
-		throw MSG_AggregationError("Aggregations must be a json");
+		throw MSG_AggregationError("Aggregations must be an object");
+	} catch (const std::out_of_range&) {
 	}
 }
 
