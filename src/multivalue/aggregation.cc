@@ -60,14 +60,14 @@ Aggregation::Aggregation(MsgPack& result)
 }
 
 
-Aggregation::Aggregation(MsgPack& result, const MsgPack& o_aggs, const std::shared_ptr<Schema>& schema)
+Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 	: _result(result),
 	  _doc_count(0)
 {
 	_result[AGGREGATION_DOC_COUNT] = _doc_count;  // Initialize here so it's at the start
 
 	try {
-		const auto& aggs = o_aggs.at(AGGREGATION_AGGS);
+		const auto& aggs = conf.at(AGGREGATION_AGGS);
 		for (const auto& agg : aggs) {
 			auto sub_agg_name = agg.as_string();
 			if (is_valid(sub_agg_name)) {

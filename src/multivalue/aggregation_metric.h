@@ -196,7 +196,7 @@ protected:
 		: SubAggregation(result) { }
 
 public:
-	HandledSubAggregation(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema);
+	HandledSubAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
 	void operator()(const Xapian::Document& doc) override {
 		_handle(this, doc);
@@ -209,8 +209,8 @@ protected:
 	size_t _count;
 
 public:
-	MetricCount(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, data, schema),
+	MetricCount(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(result, conf, schema),
 		  _count(0) { }
 
 	void update() override {
@@ -260,8 +260,8 @@ protected:
 	long double _sum;
 
 public:
-	MetricSum(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, data, schema),
+	MetricSum(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(result, conf, schema),
 		  _sum(0) { }
 
 	void update() override {
@@ -295,8 +295,8 @@ protected:
 	size_t _count;
 
 public:
-	MetricAvg(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: MetricSum(result, data, schema),
+	MetricAvg(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: MetricSum(result, conf, schema),
 		  _count(0) { }
 
 	void update() override {
@@ -346,8 +346,8 @@ protected:
 		  _min(DBL_MAX) { }
 
 public:
-	MetricMin(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, data, schema),
+	MetricMin(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(result, conf, schema),
 		  _min(DBL_MAX) { }
 
 	void update() override {
@@ -390,8 +390,8 @@ protected:
 		  _max(DBL_MIN) { }
 
 public:
-	MetricMax(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, data, schema),
+	MetricMax(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(result, conf, schema),
 		  _max(DBL_MIN) { }
 
 	void update() override {
@@ -427,8 +427,8 @@ protected:
 	long double _sq_sum;
 
 public:
-	MetricVariance(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: MetricAvg(result, data, schema),
+	MetricVariance(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: MetricAvg(result, conf, schema),
 		  _sq_sum(0) { }
 
 	void update() override {
@@ -467,8 +467,8 @@ public:
 // Standard deviation.
 class MetricSTD : public MetricVariance {
 public:
-	MetricSTD(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: MetricVariance(result, data, schema) { }
+	MetricSTD(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: MetricVariance(result, conf, schema) { }
 
 	void update() override {
 		_result = static_cast<double>(std());
@@ -484,8 +484,8 @@ class MetricMedian : public HandledSubAggregation {
 	std::vector<double> values;
 
 public:
-	MetricMedian(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, data, schema) { }
+	MetricMedian(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(result, conf, schema) { }
 
 	void update() override {
 		if (values.empty()) {
@@ -532,8 +532,8 @@ class MetricMode : public HandledSubAggregation {
 	std::unordered_map<double, size_t> _histogram;
 
 public:
-	MetricMode(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, data, schema) { }
+	MetricMode(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(result, conf, schema) { }
 
 	void update() override {
 		if (_histogram.empty()) {
@@ -576,10 +576,10 @@ protected:
 	MetricMax _max_metric;
 
 public:
-	MetricStats(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: MetricAvg(result, data, schema),
-		  _min_metric(_result, data, schema),
-		  _max_metric(_result, data, schema) { }
+	MetricStats(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: MetricAvg(result, conf, schema),
+		  _min_metric(_result, conf, schema),
+		  _max_metric(_result, conf, schema) { }
 
 	void update() override {
 		_result[AGGREGATION_COUNT] = _count;
@@ -619,10 +619,10 @@ protected:
 	MetricMax _max_metric;
 
 public:
-	MetricExtendedStats(MsgPack& result, const MsgPack& data, const std::shared_ptr<Schema>& schema)
-		: MetricSTD(result, data, schema),
-		  _min_metric(_result, data, schema),
-		  _max_metric(_result, data, schema) { }
+	MetricExtendedStats(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: MetricSTD(result, conf, schema),
+		  _min_metric(_result, conf, schema),
+		  _max_metric(_result, conf, schema) { }
 
 	void update() override {
 		_result[AGGREGATION_COUNT]      = _count;
