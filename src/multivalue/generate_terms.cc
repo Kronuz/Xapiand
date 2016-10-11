@@ -438,9 +438,7 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 std::string
 GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res, prefix_dot;
-	prefix_dot.reserve(prefix.length() + 1);
-	prefix_dot.assign(prefix).push_back(':');
+	std::string res;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_s.mon = tm_e.day = tm_e.mon = 1;
@@ -449,12 +447,12 @@ GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std:
 	size_t num_unions = (tm_e.year - tm_s.year) / 1000;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
 		while (tm_s.year != tm_e.year) {
-			res.append(prefix_dot).append(transform_to_query_string(tm_s)).append(" OR ");
+			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
 			tm_s.year += 1000;
 		}
-		res.append(prefix_dot).append(transform_to_query_string(tm_e));
+		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
 	return res;
@@ -464,9 +462,7 @@ GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std:
 std::string
 GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res, prefix_dot;
-	prefix_dot.reserve(prefix.length() + 1);
-	prefix_dot.assign(prefix).push_back(':');
+	std::string res;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_s.mon = tm_e.day = tm_e.mon = 1;
@@ -475,12 +471,12 @@ GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::st
 	size_t num_unions = (tm_e.year - tm_s.year) / 100;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
 		while (tm_s.year != tm_e.year) {
-			res.append(prefix_dot).append(transform_to_query_string(tm_s)).append(" OR ");
+			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
 			tm_s.year += 100;
 		}
-		res.append(prefix_dot).append(transform_to_query_string(tm_e));
+		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
 	return res;
@@ -490,9 +486,7 @@ GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::st
 std::string
 GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res, prefix_dot;
-	prefix_dot.reserve(prefix.length() + 1);
-	prefix_dot.assign(prefix).push_back(':');
+	std::string res;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_s.mon = tm_e.day = tm_e.mon = 1;
@@ -501,12 +495,12 @@ GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 	size_t num_unions = (tm_e.year - tm_s.year) / 10;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
 		while (tm_s.year != tm_e.year) {
-			res.append(prefix_dot).append(transform_to_query_string(tm_s)).append(" OR ");
+			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
 			tm_s.year += 10;
 		}
-		res.append(prefix_dot).append(transform_to_query_string(tm_e));
+		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
 	return res;
@@ -516,21 +510,19 @@ GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 std::string
 GenerateTerms::year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res, prefix_dot;
-	prefix_dot.reserve(prefix.length() + 1);
-	prefix_dot.assign(prefix).push_back(':');
+	std::string res;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_s.mon = tm_e.day = tm_e.mon = 1;
 	size_t num_unions = tm_e.year - tm_s.year;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
 		while (tm_s.year != tm_e.year) {
-			res.append(prefix_dot).append(transform_to_query_string(tm_s)).append(" OR ");
+			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
 			++tm_s.year;
 		}
-		res.append(prefix_dot).append(transform_to_query_string(tm_e));
+		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
 	return res;
@@ -540,21 +532,19 @@ GenerateTerms::year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::strin
 std::string
 GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res, prefix_dot;
-	prefix_dot.reserve(prefix.length() + 1);
-	prefix_dot.assign(prefix).push_back(':');
+	std::string res;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_e.day = 1;
 	size_t num_unions = tm_e.mon - tm_s.mon;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
 		while (tm_s.mon != tm_e.mon) {
-			res.append(prefix_dot).append(transform_to_query_string(tm_s)).append(" OR ");
+			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
 			++tm_s.mon;
 		}
-		res.append(prefix_dot).append(transform_to_query_string(tm_e));
+		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
 	return res;
@@ -564,20 +554,18 @@ GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::stri
 std::string
 GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res, prefix_dot;
-	prefix_dot.reserve(prefix.length() + 1);
-	prefix_dot.assign(prefix).push_back(':');
+	std::string res;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	size_t num_unions = tm_e.day - tm_s.day;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
 		while (tm_s.day != tm_e.day) {
-			res.append(prefix_dot).append(transform_to_query_string(tm_s)).append(" OR ");
+			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
 			++tm_s.day;
 		}
-		res.append(prefix_dot).append(transform_to_query_string(tm_e));
+		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
 	return res;
@@ -587,20 +575,18 @@ GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string
 std::string
 GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res, prefix_dot;
-	prefix_dot.reserve(prefix.length() + 1);
-	prefix_dot.assign(prefix).push_back(':');
+	std::string res;
 
 	tm_s.sec = tm_s.min = tm_e.sec = tm_e.min = 0;
 	size_t num_unions = tm_e.hour - tm_s.hour;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
 		while (tm_s.hour != tm_e.hour) {
-			res.append(prefix_dot).append(transform_to_query_string(tm_s)).append(" OR ");
+			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
 			++tm_s.hour;
 		}
-		res.append(prefix_dot).append(transform_to_query_string(tm_e));
+		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
 	return res;
@@ -610,20 +596,18 @@ GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::strin
 std::string
 GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res, prefix_dot;
-	prefix_dot.reserve(prefix.length() + 1);
-	prefix_dot.assign(prefix).push_back(':');
+	std::string res;
 
 	tm_s.sec = tm_e.sec = 0;
 	size_t num_unions = tm_e.min - tm_s.min;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
 		while (tm_s.min != tm_e.min) {
-			res.append(prefix_dot).append(transform_to_query_string(tm_s)).append(" OR ");
+			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
 			++tm_s.min;
 		}
-		res.append(prefix_dot).append(transform_to_query_string(tm_e));
+		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
 	return res;
@@ -633,19 +617,17 @@ GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 std::string
 GenerateTerms::second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res, prefix_dot;
-	prefix_dot.reserve(prefix.length() + 1);
-	prefix_dot.assign(prefix).push_back(':');
+	std::string res;
 
 	size_t num_unions = tm_e.sec - tm_s.sec;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix_dot.length(), num_unions, 4));
+		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
 		while (tm_s.sec != tm_e.sec) {
-			res.append(prefix_dot).append(transform_to_query_string(tm_s)).append(" OR ");
+			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
 			++tm_s.sec;
 		}
-		res.append(prefix_dot).append(transform_to_query_string(tm_e));
+		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
 	return res;
@@ -697,17 +679,14 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	auto it = results.begin();
 	auto last_valid(std::bitset<SIZE_BITS_ID>(it->first).to_string());
 	last_valid.assign(last_valid.substr(last_valid.find('1')));
-	auto result_terms(it->second);
-	result_terms.push_back(':');
-	result_terms.append(std::to_string(it->first));
+	auto result_terms = prefixed(Serialise::serialise(it->first), it->second);
 	std::unordered_set<std::string> used_prefixes({ it->second });
 	used_prefixes.reserve(acc_prefix.size());
 	const auto it_e = results.end();
 	for (++it; it != it_e; ++it) {
 		if (isnotSubtrixel(last_valid, it->first)) {
+			result_terms.append(" OR ").append(prefixed(Serialise::serialise(it->first), it->second));
 			used_prefixes.insert(it->second);
-			result_terms.append(" OR ").append(it->second).push_back(':');
-			result_terms.append(std::to_string(it->first));
 		}
 	}
 

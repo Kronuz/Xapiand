@@ -169,6 +169,10 @@ namespace Serialise {
 	// Serialise value like date and fill tm.
 	std::string date(const ::MsgPack& value, Datetime::tm_t& tm);
 
+	inline std::string date(Datetime::tm_t& tm) {
+		return sortable_serialise(Datetime::timestamp(tm));
+	}
+
 	// Serialise field_value like float.
 	std::string _float(const std::string& field_value);
 
@@ -217,6 +221,35 @@ namespace Serialise {
 
 	// Serialise type to its string representation.
 	std::string type(FieldType type);
+
+
+	inline std::string serialise(const std::string& val) {
+		return val;
+	}
+
+	inline std::string serialise(int64_t val) {
+		return Serialise::integer(val);
+	}
+
+	inline std::string serialise(uint64_t val) {
+		return Serialise::positive(val);
+	}
+
+	inline std::string serialise(bool val) {
+		return Serialise::boolean(val);
+	}
+
+	inline std::string serialise(double val) {
+		return Serialise::_float(val);
+	}
+
+	inline std::string serialise(Datetime::tm_t& tm) {
+		return Serialise::date(tm);
+	}
+
+	inline std::string serialise(const std::vector<std::string>& val) {
+		return Serialise::trixels(val);
+	}
 };
 
 
