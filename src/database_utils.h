@@ -207,9 +207,9 @@ enum class HttpMethod : uint8_t {
 };
 
 
-// All the field names that start with alphanumeric are valid.
+// All non-empty field names are valid.
 inline bool is_valid(const std::string& field_name) {
-	return (!field_name.empty() && isalnum(field_name.front()));
+	return !field_name.empty();
 }
 
 
