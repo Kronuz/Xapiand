@@ -293,7 +293,7 @@ public:
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
 		for (auto& range : ranges_f64) {
-			if (value >= range.second.first && value <= range.second.second) {
+			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);
 			}
 		}
@@ -301,7 +301,7 @@ public:
 
 	void aggregate_integer(long value, const Xapian::Document& doc) override {
 		for (auto& range : ranges_i64) {
-			if (value >= range.second.first && value <= range.second.second) {
+			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);
 			}
 		}
@@ -309,7 +309,7 @@ public:
 
 	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
 		for (auto& range : ranges_u64) {
-			if (value >= range.second.first && value <= range.second.second) {
+			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);
 			}
 		}
@@ -317,7 +317,7 @@ public:
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
 		for (auto& range : ranges_f64) {
-			if (value >= range.second.first && value <= range.second.second) {
+			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);
 			}
 		}
