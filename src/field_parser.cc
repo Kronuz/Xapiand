@@ -53,13 +53,6 @@ FieldParser::parse()
 		switch (currentState) {
 			case FieldParser::State::INIT:
 				switch (*currentSymbol) {
-					case '_':
-						currentState = FieldParser::State::FIELD;
-						off_field = currentSymbol;
-						off_fieldot = currentSymbol;
-						++len_field;
-						++len_fieldot;
-						break;
 					case LEFT_SQUARE_BRACKET:
 						currentState = FieldParser::State::INIT_SQUARE_BRACKET;
 						isrange = true;
@@ -81,16 +74,22 @@ FieldParser::parse()
 						++len_value;
 						break;
 					default:
-						if (isalnum(*currentSymbol)) {
-							currentState = FieldParser::State::FIELD;
-							off_field = currentSymbol;
-							off_fieldot = currentSymbol;
-							++len_field;
-							++len_fieldot;
-						} else if (isspace(*currentSymbol)) {
-							currentState = FieldParser::State::INIT;
-						} else {
-							throw MSG_FieldParserError("Syntax error in query");
+						switch (*currentSymbol) {
+							case ' ':
+							case '\n':
+							case '\t':
+							case '\r':
+								currentState = FieldParser::State::INIT;
+								break;
+							default:
+								if (++len_field >= 1024) {
+									throw MSG_FieldParserError("Syntax error in query");
+								}
+								++len_fieldot;
+								currentState = FieldParser::State::FIELD;
+								off_field = currentSymbol;
+								off_fieldot = currentSymbol;
+								break;
 						}
 						break;
 				}

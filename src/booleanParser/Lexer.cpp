@@ -109,20 +109,32 @@ Lexer::NextToken()
 						break;
 
 					default:
-						if(isalnum(currentSymbol.symbol) || currentSymbol.symbol == '_') {
-							lexeme += currentSymbol.symbol;
-							currentState = LexerState::TOKEN;
-							currentSymbol = contentReader.NextSymbol();
-						} else if (isspace(currentSymbol.symbol)) {
-							currentState = LexerState::INIT;
-							currentSymbol = contentReader.NextSymbol();
-						} else if(singleSymbolDictionary.find(symbol) != singleSymbolDictionary.end()) {
-							lexeme += currentSymbol.symbol;
-							currentState = LexerState::SYMBOL_OP;
-							currentSymbol = contentReader.NextSymbol();
-						} else {
-							string msj = "Symbol " + symbol + " not expected";
-							throw LexicalException(msj.c_str());
+						switch (currentSymbol.symbol) {
+							case ' ':
+							case '\n':
+							case '\t':
+							case '\r':
+								currentState = LexerState::INIT;
+								currentSymbol = contentReader.NextSymbol();
+								break;
+							case '(':
+							case ')':
+							case '&':
+							case '|':
+							case '~':
+								lexeme += currentSymbol.symbol;
+								currentState = LexerState::SYMBOL_OP;
+								currentSymbol = contentReader.NextSymbol();
+								break;
+							default:
+								lexeme += currentSymbol.symbol;
+								if (lexeme.size() >= 1024) {
+									string msj = "Symbol " + symbol + " not expected";
+									throw LexicalException(msj.c_str());
+								}
+								currentState = LexerState::TOKEN;
+								currentSymbol = contentReader.NextSymbol();
+								break;
 						}
 				}
 				break;
