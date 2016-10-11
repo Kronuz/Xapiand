@@ -67,6 +67,8 @@ void
 AsyncFsync::destroyer()
 {
 	running.store(false);
+	auto now = std::chrono::system_clock::now();
+	AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + 100ms));
 	wakeup_signal.notify_all();
 }
 
@@ -96,7 +98,7 @@ AsyncFsync::run()
 			std::unique_lock<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
 
 			auto now = std::chrono::system_clock::now();
-			AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + 20s));
+			AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + (running ? 20s : 100ms)));
 
 			for (auto it = AsyncFsync::statuses.begin(); it != AsyncFsync::statuses.end(); ) {
 				auto status = it->second;

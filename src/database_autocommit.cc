@@ -64,6 +64,8 @@ void
 DatabaseAutocommit::destroyer()
 {
 	running.store(false);
+	auto now = std::chrono::system_clock::now();
+	DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + 100ms));
 	wakeup_signal.notify_all();
 }
 
@@ -93,7 +95,7 @@ DatabaseAutocommit::run()
 			std::unique_lock<std::mutex> statuses_lk(DatabaseAutocommit::statuses_mtx);
 
 			auto now = std::chrono::system_clock::now();
-			DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + 20s));
+			DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + (running ? 20s : 100ms)));
 
 			for (auto it = DatabaseAutocommit::statuses.begin(); it != DatabaseAutocommit::statuses.end(); ) {
 				auto status = it->second;

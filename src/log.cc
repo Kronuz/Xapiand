@@ -315,11 +315,7 @@ LogThread::thread_function(DLList<const std::shared_ptr<Log>>& _log_list)
 		wakeup_signal.wait_until(lk, next_wakeup);
 
 		now = std::chrono::system_clock::now();
-		if (running < 0) {
-			next_wakeup = now + 3s;
-		} else {
-			next_wakeup = now + 100ms;
-		}
+		next_wakeup = now + (running < 0 ? 3s : 100ms);
 
 		for (auto it = _log_list.begin(); it != _log_list.end(); ) {
 			auto& l_ptr = *it;
