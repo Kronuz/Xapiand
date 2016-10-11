@@ -35,6 +35,7 @@ constexpr const char AGGREGATION_DOC_COUNT[]        = "_doc_count";
 constexpr const char AGGREGATION_FIELD[]            = "_field";
 constexpr const char AGGREGATION_SUM_OF_SQ[]        = "_sum_of_squares";
 constexpr const char AGGREGATION_INTERVAL[]         = "_interval";
+constexpr const char AGGREGATION_RANGES[]           = "_ranges";
 
 constexpr const char AGGREGATION_COUNT[]            = "_count";
 constexpr const char AGGREGATION_CARDINALITY[]      = "_cardinality";

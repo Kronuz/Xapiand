@@ -25,6 +25,8 @@
 #include "aggregation.h"
 #include "string_metric.h"
 
+#include <limits>
+
 
 class BucketAggregation : public HandledSubAggregation {
 protected:
@@ -103,7 +105,6 @@ public:
 
 
 class HistogramAggregation : public BucketAggregation {
-	MsgPack interval;
 	uint64_t interval_u64;
 	int64_t interval_i64;
 	double interval_f64;
@@ -150,7 +151,7 @@ public:
 	{
 		auto histogram_conf = _conf.at(AGGREGATION_HISTOGRAM);
 		try {
-			interval = histogram_conf.at(AGGREGATION_INTERVAL);
+			auto interval = histogram_conf.at(AGGREGATION_INTERVAL);
 			try {
 				interval_u64 = interval.as_u64();
 			} catch (const msgpack::type_error&) { }
@@ -185,6 +186,166 @@ public:
 	void aggregate_date(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
 		aggregate(bucket, doc);
+	}
+};
+
+
+class RangeAggregation : public BucketAggregation {
+	std::vector<std::pair<uint64_t, uint64_t>> ranges_u64;
+	std::vector<std::pair<int64_t, int64_t>> ranges_i64;
+	std::vector<std::pair<double, double>> ranges_f64;
+
+	std::string _as_bucket(const std::pair<uint64_t, uint64_t>& range) const {
+		if (range.second == std::numeric_limits<uint64_t>::max()) {
+			if (range.first == std::numeric_limits<uint64_t>::min()) {
+				return "..";
+			}
+			return format_string("%lu..", range.first);
+		}
+		if (range.first == std::numeric_limits<uint64_t>::min()) {
+			if (range.second == std::numeric_limits<uint64_t>::max()) {
+				return "..";
+			}
+			return format_string("..%lu", range.second);
+		}
+		return format_string("%lu..%lu", range.first, range.second);
+	}
+
+	std::string _as_bucket(const std::pair<int64_t, int64_t>& range) const {
+		if (range.second == std::numeric_limits<int64_t>::max()) {
+			if (range.first == std::numeric_limits<int64_t>::min()) {
+				return "..";
+			}
+			return format_string("%ld..", range.first);
+		}
+		if (range.first == std::numeric_limits<int64_t>::min()) {
+			if (range.second == std::numeric_limits<int64_t>::max()) {
+				return "..";
+			}
+			return format_string("..%ld", range.second);
+		}
+		return format_string("%ld..%ld", range.first, range.second);
+	}
+
+	std::string _as_bucket(const std::pair<double, double>& range) const {
+		if (range.second == std::numeric_limits<double>::max()) {
+			if (range.first == std::numeric_limits<double>::min()) {
+				return "..";
+			}
+			return format_string("%lf..", range.first);
+		}
+		if (range.first == std::numeric_limits<double>::min()) {
+			if (range.second == std::numeric_limits<double>::max()) {
+				return "..";
+			}
+			return format_string("..%lf", range.second);
+		}
+		return format_string("%lf..%lf", range.first, range.second);
+	}
+
+public:
+	RangeAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation(AGGREGATION_RANGE, result, conf, schema)
+	{
+		auto range_conf = _conf.at(AGGREGATION_RANGE);
+		try {
+			auto ranges = range_conf.at(AGGREGATION_RANGES);
+			for (auto& range : ranges) {
+				uint64_t from_u64, to_u64;
+				int64_t from_i64, to_i64;
+				double from_f64, to_f64;
+
+				bool err_u64 = false;
+				bool err_i64 = false;
+				bool err_f64 = false;
+
+				try {
+					auto from = range.at("from");
+					try {
+						from_u64 = from.as_u64();
+					} catch (const msgpack::type_error&) {
+						err_u64 = true;
+					}
+					try {
+						from_i64 = from.as_i64();
+					} catch (const msgpack::type_error&) {
+						err_i64 = true;
+					}
+					try {
+						from_f64 = from.as_f64();
+					} catch (const msgpack::type_error&) {
+						err_f64 = true;
+					}
+				} catch (const std::out_of_range&) {
+					from_u64 = std::numeric_limits<uint64_t>::min();
+					from_i64 = std::numeric_limits<int64_t>::min();
+					from_f64 = std::numeric_limits<double>::min();
+				}
+
+				try {
+					auto to = range.at("to");
+					try {
+						to_u64 = to.as_u64();
+					} catch (const msgpack::type_error&) {
+						err_u64 = true;
+					}
+					try {
+						to_i64 = to.as_i64();
+					} catch (const msgpack::type_error&) {
+						err_i64 = true;
+					}
+					try {
+						to_f64 = to.as_f64();
+					} catch (const msgpack::type_error&) {
+						err_f64 = true;
+					}
+				} catch (const std::out_of_range&) {
+					to_u64 = std::numeric_limits<uint64_t>::max();
+					to_i64 = std::numeric_limits<int64_t>::max();
+					to_f64 = std::numeric_limits<double>::max();
+				}
+
+				if (!err_u64) ranges_u64.emplace_back(from_u64, to_u64);
+				if (!err_i64) ranges_i64.emplace_back(from_i64, to_i64);
+				if (!err_f64) ranges_f64.emplace_back(from_f64, to_f64);
+			}
+		} catch (const std::out_of_range&) {
+			throw MSG_AggregationError("'%s' must be specified must be specified in '%s'", AGGREGATION_RANGES, AGGREGATION_RANGE);
+		} catch (const msgpack::type_error&) {
+			throw MSG_AggregationError("'%s' must be object", AGGREGATION_RANGE);
+		}
+	}
+
+	void aggregate_float(double value, const Xapian::Document& doc) override {
+		for (auto& range : ranges_f64) {
+			if (range.first <= value <= range.second) {
+				aggregate(_as_bucket(range), doc);
+			}
+		}
+	}
+
+	void aggregate_integer(long value, const Xapian::Document& doc) override {
+		for (auto& range : ranges_i64) {
+			if (range.first <= value <= range.second) {
+				aggregate(_as_bucket(range), doc);
+			}
+		}
+	}
+
+	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
+		for (auto& range : ranges_u64) {
+			if (range.first <= value <= range.second) {
+				aggregate(_as_bucket(range), doc);
+			}
+		}
+	}
+
+	void aggregate_date(double value, const Xapian::Document& doc) override {
+		for (auto& range : ranges_f64) {
+			if (range.first <= value <= range.second) {
+				aggregate(_as_bucket(range), doc);
+			}
+		}
 	}
 };
 
