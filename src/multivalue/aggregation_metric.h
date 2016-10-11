@@ -30,29 +30,28 @@
 
 #include <xapian.h>
 
-#define AGGREGATION_AGGS            "_aggregations"
-#define AGGREGATION_DOC_COUNT       "_doc_count"
-#define AGGREGATION_COUNT           "_count"
-#define AGGREGATION_SUM             "_sum"
-#define AGGREGATION_AVG             "_avg"
-#define AGGREGATION_MIN             "_min"
-#define AGGREGATION_MAX             "_max"
-#define AGGREGATION_VARIANCE        "_variance"
-#define AGGREGATION_STD             "_std"
-#define AGGREGATION_MEDIAN          "_median"
-#define AGGREGATION_MODE            "_mode"
-#define AGGREGATION_STATS           "_stats"
-#define AGGREGATION_EXT_STATS       "_extended_stats"
-#define AGGREGATION_GEO_BOUNDS      "_geo_bounds"
-#define AGGREGATION_GEO_CENTROID    "_geo_centroid"
-#define AGGREGATION_PERCENTILE      "_percentile"
-#define AGGREGATION_SUM_OF_SQ       "_sum_of_squares"
-#define AGGREGATION_FIELD           "_field"
+constexpr const char AGGREGATION_AGGS[]         = "_aggregations";
+constexpr const char AGGREGATION_DOC_COUNT[]    = "_doc_count";
+constexpr const char AGGREGATION_COUNT[]        = "_count";
+constexpr const char AGGREGATION_SUM[]          = "_sum";
+constexpr const char AGGREGATION_AVG[]          = "_avg";
+constexpr const char AGGREGATION_MIN[]          = "_min";
+constexpr const char AGGREGATION_MAX[]          = "_max";
+constexpr const char AGGREGATION_VARIANCE[]     = "_variance";
+constexpr const char AGGREGATION_STD[]          = "_std";
+constexpr const char AGGREGATION_MEDIAN[]       = "_median";
+constexpr const char AGGREGATION_MODE[]         = "_mode";
+constexpr const char AGGREGATION_STATS[]        = "_stats";
+constexpr const char AGGREGATION_EXT_STATS[]    = "_extended_stats";
+constexpr const char AGGREGATION_GEO_BOUNDS[]   = "_geo_bounds";
+constexpr const char AGGREGATION_GEO_CENTROID[] = "_geo_centroid";
+constexpr const char AGGREGATION_PERCENTILE[]   = "_percentile";
+constexpr const char AGGREGATION_SUM_OF_SQ[]    = "_sum_of_squares";
+constexpr const char AGGREGATION_FIELD[]        = "_field";
 
-
-#define AGGREGATION_TERM            "_term"
-#define AGGREGATION_FILTER          "_filter"
-#define AGGREGATION_VALUE           "_value"
+constexpr const char AGGREGATION_TERM[]         = "_term";
+constexpr const char AGGREGATION_FILTER[]       = "_filter";
+constexpr const char AGGREGATION_VALUE[]        = "_value";
 
 
 class SubAggregation;

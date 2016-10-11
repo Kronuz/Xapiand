@@ -45,55 +45,10 @@ public:
 
 	void update();
 
-	void add_count(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricCount>(result[AGGREGATION_COUNT], conf[AGGREGATION_COUNT], schema));
+	template <const char* name, typename MetricAggregation>
+	void add_metric(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
+		_sub_aggregations.push_back(std::make_shared<MetricAggregation>(result[name], conf[name], schema));
 	}
-
-	void add_sum(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricSum>(result[AGGREGATION_SUM], conf[AGGREGATION_SUM], schema));
-	}
-
-	void add_avg(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricAvg>(result[AGGREGATION_AVG], conf[AGGREGATION_AVG], schema));
-	}
-
-	void add_min(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricMin>(result[AGGREGATION_MIN], conf[AGGREGATION_MIN], schema));
-	}
-
-	void add_max(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricMax>(result[AGGREGATION_MAX], conf[AGGREGATION_MAX], schema));
-	}
-
-	void add_variance(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricVariance>(result[AGGREGATION_VARIANCE], conf[AGGREGATION_VARIANCE], schema));
-	}
-
-	void add_std(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricSTD>(result[AGGREGATION_STD], conf[AGGREGATION_STD], schema));
-	}
-
-	void add_median(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricMedian>(result[AGGREGATION_MEDIAN], conf[AGGREGATION_MEDIAN], schema));
-	}
-
-	void add_mode(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricMode>(result[AGGREGATION_MODE], conf[AGGREGATION_MODE], schema));
-	}
-
-	void add_stats(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricStats>(result, conf[AGGREGATION_STATS], schema));
-	}
-
-	void add_ext_stats(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricExtendedStats>(result, conf[AGGREGATION_EXT_STATS], schema));
-	}
-
-	void add_geo_bounds(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
-
-	void add_geo_centroid(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
-
-	void add_percentile(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&) { }
 
 	template <typename BucketAggregation>
 	void add_bucket(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {

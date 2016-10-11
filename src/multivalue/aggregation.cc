@@ -33,24 +33,25 @@
 
 
 const std::unordered_map<std::string, dispatch_aggregations> map_dispatch_aggregations({
-	{ AGGREGATION_COUNT,            &Aggregation::add_count           },
-	{ AGGREGATION_SUM,              &Aggregation::add_sum             },
-	{ AGGREGATION_AVG,              &Aggregation::add_avg             },
-	{ AGGREGATION_MIN,              &Aggregation::add_min             },
-	{ AGGREGATION_MAX,              &Aggregation::add_max             },
-	{ AGGREGATION_VARIANCE,         &Aggregation::add_variance        },
-	{ AGGREGATION_STD,              &Aggregation::add_std             },
-	{ AGGREGATION_MEDIAN,           &Aggregation::add_median          },
-	{ AGGREGATION_MODE,             &Aggregation::add_mode            },
-	{ AGGREGATION_STATS,            &Aggregation::add_stats           },
-	{ AGGREGATION_EXT_STATS,        &Aggregation::add_ext_stats       },
-	{ AGGREGATION_GEO_BOUNDS,       &Aggregation::add_geo_bounds      },
-	{ AGGREGATION_GEO_CENTROID,     &Aggregation::add_geo_centroid    },
-	{ AGGREGATION_PERCENTILE,       &Aggregation::add_percentile      },
+	{ AGGREGATION_COUNT,            &Aggregation::add_metric<AGGREGATION_COUNT, MetricCount>              },
+	{ AGGREGATION_SUM,              &Aggregation::add_metric<AGGREGATION_SUM, MetricSum>                  },
+	{ AGGREGATION_AVG,              &Aggregation::add_metric<AGGREGATION_AVG, MetricAvg>                  },
+	{ AGGREGATION_MIN,              &Aggregation::add_metric<AGGREGATION_MIN, MetricMin>                  },
+	{ AGGREGATION_MAX,              &Aggregation::add_metric<AGGREGATION_MAX, MetricMax>                  },
+	{ AGGREGATION_VARIANCE,         &Aggregation::add_metric<AGGREGATION_VARIANCE, MetricVariance>        },
+	{ AGGREGATION_STD,              &Aggregation::add_metric<AGGREGATION_STD, MetricSTD>                  },
+	{ AGGREGATION_MEDIAN,           &Aggregation::add_metric<AGGREGATION_MEDIAN, MetricMedian>            },
+	{ AGGREGATION_MODE,             &Aggregation::add_metric<AGGREGATION_MODE, MetricMode>                },
+	{ AGGREGATION_STATS,            &Aggregation::add_metric<AGGREGATION_STATS, MetricStats>              },
+	{ AGGREGATION_EXT_STATS,        &Aggregation::add_metric<AGGREGATION_EXT_STATS, MetricExtendedStats>  },
+	// { AGGREGATION_GEO_BOUNDS,       &Aggregation::add_metric<AGGREGATION_GEO_BOUNDS, MetricGeoBounds>     },
+	// { AGGREGATION_GEO_CENTROID,     &Aggregation::add_metric<AGGREGATION_GEO_CENTROID, MetricGeoCentroid> },
+	// { AGGREGATION_PERCENTILE,       &Aggregation::add_metric<AGGREGATION_PERCENTILE, MetricPercentil>     },
 
-	{ AGGREGATION_FILTER,           &Aggregation::add_bucket<FilterAggregation>  },
-	{ AGGREGATION_VALUE,            &Aggregation::add_bucket<ValueAggregation>   },
+	{ AGGREGATION_FILTER,           &Aggregation::add_bucket<FilterAggregation>                           },
+	{ AGGREGATION_VALUE,            &Aggregation::add_bucket<ValueAggregation>                            },
 });
+
 
 Aggregation::Aggregation(MsgPack& result)
 	: _result(result),
