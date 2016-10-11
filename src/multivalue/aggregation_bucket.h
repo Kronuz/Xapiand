@@ -26,19 +26,17 @@
 #include "string_metric.h"
 
 
-class ValueAggregation : public HandledSubAggregation {
+class BucketAggregation : public HandledSubAggregation {
 protected:
-	const MsgPack _conf;
-	const std::shared_ptr<Schema> _schema;
-
 	std::unordered_map<std::string, Aggregation> _aggs;
+	const std::shared_ptr<Schema> _schema;
+	const MsgPack& _conf;
 
 public:
-	ValueAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, conf.at(AGGREGATION_VALUE), schema),
-		  _conf(conf),
-		  _schema(schema)
-		{ }
+	BucketAggregation(const char* name, MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(result, conf.at(name), schema),
+		  _schema(schema),
+		  _conf(conf) { }
 
 	void update() override {
 		for (auto& _agg : _aggs) {
@@ -46,44 +44,61 @@ public:
 		}
 	}
 
-	void _aggregate(const std::string& value, const Xapian::Document& doc) {
+	void aggregate(const std::string& bucket, const Xapian::Document& doc) {
 		try {
-			_aggs.at(value)(doc);
+			_aggs.at(bucket)(doc);
 		} catch (const std::out_of_range&) {
-			auto p = _aggs.emplace(std::piecewise_construct, std::forward_as_tuple(value), std::forward_as_tuple(_result[value], _conf, _schema));
+			auto p = _aggs.emplace(std::piecewise_construct, std::forward_as_tuple(bucket), std::forward_as_tuple(_result[bucket], _conf, _schema));
 			p.first->second(doc);
 		}
 	}
+};
+
+
+class ValueAggregation : public BucketAggregation {
+public:
+	ValueAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation(AGGREGATION_VALUE, result, conf, schema) { }
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
-		_aggregate(std::to_string(value), doc);
+		auto bucket = std::to_string(value);
+		aggregate(bucket, doc);
 	}
 
 	void aggregate_integer(long value, const Xapian::Document& doc) override {
-		_aggregate(std::to_string(value), doc);
+		auto bucket = std::to_string(value);
+		aggregate(bucket, doc);
 	}
 
 	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
-		_aggregate(std::to_string(value), doc);
+		auto bucket = std::to_string(value);
+		aggregate(bucket, doc);
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
-		_aggregate(std::to_string(value), doc);
+		auto bucket = std::to_string(value);
+		aggregate(bucket, doc);
 	}
 
 	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
-		_aggregate(std::to_string(value), doc);
+		auto bucket = std::string(value ? "true" : "false");
+		aggregate(bucket, doc);
 	}
 
 	void aggregate_string(const std::string& value, const Xapian::Document& doc) override {
-		_aggregate(value, doc);
+		auto& bucket = value;
+		aggregate(bucket, doc);
 	}
 
-	// void aggregate_geo(const std::pair<std::string, std::string>& value, const Xapian::Document& doc) override {
-	// }
+	void aggregate_geo(const std::pair<std::string, std::string>& value, const Xapian::Document& doc) override {
+		auto bucket = format_string("(%f, %f)", Unserialise::_float(value.first), Unserialise::_float(value.second));
+		aggregate(bucket, doc);
+	}
 
-	// void aggregate_uuid(const std::string& value, const Xapian::Document& doc) override {
-	// }
+	void aggregate_uuid(const std::string& value, const Xapian::Document& doc) override {
+		auto& bucket = value;
+		aggregate(bucket, doc);
+	}
 };
 
 
