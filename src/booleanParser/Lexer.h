@@ -43,7 +43,7 @@ enum class LexerState {
 class Lexer {
 	Symbol currentSymbol;
 	ContentReader contentReader;
-	unordered_map<string, TokenType> singleSymbolDictionary;
+
 	void InitDictionary();
 	void IsStringOperator(Token& token);
 	bool IsSymbolOp(char c);

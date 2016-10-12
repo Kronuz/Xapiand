@@ -40,8 +40,6 @@ Lexer::Lexer(ContentReader contentReader)
 {
 	this->contentReader = contentReader;
 	currentSymbol = this->contentReader.NextSymbol();
-
-	InitDictionary();
 }
 
 
@@ -50,20 +48,6 @@ Lexer::Lexer(char * input)
 	ContentReader cr(input);
 	contentReader = cr;
 	currentSymbol = this->contentReader.NextSymbol();
-
-	InitDictionary();
-
-}
-
-
-void
-Lexer::InitDictionary()
-{
-	singleSymbolDictionary["("] = TokenType::LeftParenthesis;
-	singleSymbolDictionary[")"] = TokenType::RightParenthesis;
-	singleSymbolDictionary["&"] = TokenType::And;
-	singleSymbolDictionary["|"] = TokenType::Or;
-	singleSymbolDictionary["~"] = TokenType::Not;
 }
 
 
@@ -261,7 +245,23 @@ Lexer::NextToken()
 
 			case LexerState::SYMBOL_OP:
 				token.lexeme = lexeme;
-				token.type = singleSymbolDictionary.at(lexeme);
+				switch(lexeme.at(0)) {
+					case '(':
+						token.type = TokenType::LeftParenthesis;
+						break;
+					case ')':
+						token.type = TokenType::RightParenthesis;
+						break;
+					case '&':
+						token.type = TokenType::And;
+						break;
+					case '|':
+						token.type = TokenType::Or;
+						break;
+					case '~':
+						token.type = TokenType::Not;
+						break;
+				}
 				return token;
 			case LexerState::EOFILE:
 				token.type = TokenType::EndOfFile;
@@ -314,10 +314,14 @@ Lexer::IsStringOperator(Token& token)
 bool
 Lexer::IsSymbolOp(char c)
 {
-	try {
-		singleSymbolDictionary.at(std::string(1, c));
-		return true;
-	} catch (std::out_of_range) {
-		return false;
+	switch (c) {
+		case '(':
+		case ')':
+		case '&':
+		case '|':
+		case '~':
+			return true;
+		default:
+			return false;
 	}
 }
