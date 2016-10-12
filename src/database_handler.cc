@@ -925,9 +925,8 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 
 	auto& stats_terms = info[RESERVED_TERMS];
 	const auto it_e = doc.termlist_end();
-	int i = 0;
 	for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-		stats_terms[++i] = *it;
+		stats_terms.push_back(*it);
 	}
 
 	auto& stats_values = info[RESERVED_VALUES];
