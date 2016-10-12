@@ -207,9 +207,9 @@ enum class HttpMethod : uint8_t {
 };
 
 
-// All non-empty field names are valid.
+// All non-empty field names not starting with underscore are valid.
 inline bool is_valid(const std::string& field_name) {
-	return !field_name.empty();
+	return !field_name.empty() && field_name.at(0) != '_';
 }
 
 
