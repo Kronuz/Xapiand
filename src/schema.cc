@@ -897,7 +897,7 @@ Schema::get_subproperties(const MsgPack& properties, const std::string& full_nam
 	DynamicFieldType type;
 	bool root = true;
 	for (const auto& field_name : field_names) {
-		if (!is_valid(field_name) && !root && field_name != RESERVED_ID_FIELD) {
+		if (!root && !is_valid(field_name) && field_name != RESERVED_ID_FIELD) {
 			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
 		}
 		root = false;

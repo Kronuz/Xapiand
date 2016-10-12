@@ -181,7 +181,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& _obj, std::string&
 	// Document's id is also a boolean term (otherwise it doesn't replace an existing document)
 	term_id = prefix_term_id;
 	doc.add_boolean_term(term_id);
-	L_INDEX(this, "Slot: %d _id: %s (%s)", DB_SLOT_ID, _document_id.c_str(), term_id.c_str());
+	L_INDEX(this, "Slot: %d id: %s (%s)", DB_SLOT_ID, _document_id.c_str(), term_id.c_str());
 
 	// Indexing the content values of data.
 	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);

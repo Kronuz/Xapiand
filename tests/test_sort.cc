@@ -36,7 +36,7 @@ const sort_t string_levens_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__en"                  levens(name__en:cook)   value for sort (ASC)    value for sort (DESC)
+	 * "id"     "name.en"                   levens(name.en:cook)    value for sort (ASC)    value for sort (DESC)
 	 * "1"      ["cook", "cooked"]          [0.000000, 0.333333]    "cook"                  "cooked"
 	 * "2"      ["bookstore", "book"]       [0.666667, 0.250000]    "book"                  "bookstore"
 	 * "3"      ["cooking", "hello world"]  [0.428571, 0.818182]    "cooking"               "hello world"
@@ -48,18 +48,18 @@ const sort_t string_levens_tests[] {
 	 * "9"      "computer"                  0.750000                "computer"              "computer"
 	 * "10"     Does not have               MAX_DBL                 "\xff"                  "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "book", "computer", "cook", "cooking", "cooking", "hello", "hello", "world", "world", "\xff" }
-	{ "*", { "name__en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	{ "*", { "name.en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
 	// { "\xff", "world", "world", "hello world", "hello world", "hello", "hello", "cooked", "computer", "bookstore" }
-	{ "*", { "-name__en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	{ "*", { "-name.en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
 	// { 0, 0.250000, 0.428571, 0.428571, 0.750000, 0.800000, 0.800000, 1, 1, MAX_DBL }
-	{ "*", { "name__en:cook" },          { "1", "2", "3", "8", "9", "5", "6", "4", "7", "10" } },
-	{ "*", { "name__en:cook", "-_id" },  { "1", "2", "8", "3", "9", "6", "5", "7", "4", "10" } },
+	{ "*", { "name.en:cook" },          { "1", "2", "3", "8", "9", "5", "6", "4", "7", "10" } },
+	{ "*", { "name.en:cook", "-id" },   { "1", "2", "8", "3", "9", "6", "5", "7", "4", "10" } },
 	// { MAX_DBL, 1, 1, 0.818182, 0.818182, 0.800000, 0.800000, 0.750000, 0.666667, 0.333333 }
-	{ "*", { "-name__en:cook" },         { "10", "4", "7", "3", "8", "5", "6", "9", "2", "1" } },
-	{ "*", { "-name__en:cook", "-_id" }, { "10", "7", "4", "8", "3", "6", "5", "9", "2", "1" } }
+	{ "*", { "-name.en:cook" },         { "10", "4", "7", "3", "8", "5", "6", "9", "2", "1" } },
+	{ "*", { "-name.en:cook", "-id" },  { "10", "7", "4", "8", "3", "6", "5", "9", "2", "1" } }
 };
 
 
@@ -71,7 +71,7 @@ const sort_t string_jaro_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__en"                  jaro(name__en:cook)     value for sort (ASC)    value for sort (DESC)
+	 * "id"     "name.en"                   jaro(name.en:cook)      value for sort (ASC)    value for sort (DESC)
 	 * "1"      ["cook", "cooked"]          [0.000000, 0.111111]    "cook"                  "cooked"
 	 * "2"      ["bookstore", "book"]       [0.305556, 0.166667]    "book"                  "bookstore"
 	 * "3"      ["cooking", "hello world"]  [0.142857, 0.553030]    "cooking"               "hello world"
@@ -83,18 +83,18 @@ const sort_t string_jaro_tests[] {
 	 * "9"      "computer"                  0.416667                "computer"              "computer"
 	 * "10"     Does not have               MAX_DBL                 "\xff"                  "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "book", "computer", "cook", "cooking", "cooking", "hello", "hello", "world", "world", "\xff" }
-	{ "*", { "name__en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	{ "*", { "name.en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
 	// { "\xff", "world", "world", "hello world", "hello world", "hello", "hello", "cooked", "computer", "bookstore" }
-	{ "*", { "-name__en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	{ "*", { "-name.en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
 	// { 0, 0.142857, 0.142857, 0.166667, 0.416667, 0.500000, 0.500000, 1, 1, MAX_DBL }
-	{ "*", { "name__en:cook" },          { "1", "3", "8", "2", "9", "5", "6", "4", "7", "10" } },
-	{ "*", { "name__en:cook", "-_id" },  { "1", "8", "3", "2", "9", "6", "5", "7", "4", "10" } },
+	{ "*", { "name.en:cook" },          { "1", "3", "8", "2", "9", "5", "6", "4", "7", "10" } },
+	{ "*", { "name.en:cook", "-id" },   { "1", "8", "3", "2", "9", "6", "5", "7", "4", "10" } },
 	// { MAX_DBL, 1, 1, 0.553030, 0.553030, 0.516667, 0.516667, 0.416667, 0.305556, 0.111111 }
-	{ "*", { "-name__en:cook" },         { "10", "4", "7", "3", "8", "5", "6", "9", "2", "1" } },
-	{ "*", { "-name__en:cook", "-_id" }, { "10", "7", "4", "8", "3", "6", "5", "9", "2", "1" } }
+	{ "*", { "-name.en:cook" },         { "10", "4", "7", "3", "8", "5", "6", "9", "2", "1" } },
+	{ "*", { "-name.en:cook", "-id" },  { "10", "7", "4", "8", "3", "6", "5", "9", "2", "1" } }
 };
 
 
@@ -106,7 +106,7 @@ const sort_t string_jaro_w_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__en"                  jaro_w(name__en:cook)   value for sort (ASC)    value for sort (DESC)
+	 * "id"     "name.en"                   jaro_w(name.en:cook)    value for sort (ASC)    value for sort (DESC)
 	 * "1"      ["cook", "cooked"]          [0.000000, 0.066667]    "cook"                  "cooked"
 	 * "2"      ["bookstore", "book"]       [0.305556, 0.166667]    "book"                  "bookstore"
 	 * "3"      ["cooking", "hello world"]  [0.085714, 0.553030]    "cooking"               "hello world"
@@ -118,18 +118,18 @@ const sort_t string_jaro_w_tests[] {
 	 * "9"      "computer"                  0.416667                "computer"              "computer"
 	 * "10"     Does not have               MAX_DBL                 "\xff"                  "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "book", "computer", "cook", "cooking", "cooking", "hello", "hello", "world", "world", "\xff" }
-	{ "*", { "name__en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	{ "*", { "name.en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
 	// { "\xff", "world", "world", "hello world", "hello world", "hello", "hello", "cooked", "computer", "bookstore" }
-	{ "*", { "-name__en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	{ "*", { "-name.en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
 	// { 0, 0.085714, 0.085714, 0.166667, 0.416667, 0.516667, 0.516667, 1, 1, MAX_DBL }
-	{ "*", { "name__en:cook" },          { "1", "3", "8", "2", "9", "5", "6", "4", "7", "10" } },
-	{ "*", { "name__en:cook", "-_id" },  { "1", "8", "3", "2", "9", "6", "5", "7", "4", "10" } },
+	{ "*", { "name.en:cook" },          { "1", "3", "8", "2", "9", "5", "6", "4", "7", "10" } },
+	{ "*", { "name.en:cook", "-id" },   { "1", "8", "3", "2", "9", "6", "5", "7", "4", "10" } },
 	// { MAX_DBL, 1, 1, 0.553030, 0.553030, 0.516667, 0.516667, 0.416667, 0.305556, 0.066667 }
-	{ "*", { "-name__en:cook" },         { "10", "4", "7", "3", "8", "5", "6", "9", "2", "1" } },
-	{ "*", { "-name__en:cook", "-_id" }, { "10", "7", "4", "8", "3", "6", "5", "9", "2", "1" } }
+	{ "*", { "-name.en:cook" },         { "10", "4", "7", "3", "8", "5", "6", "9", "2", "1" } },
+	{ "*", { "-name.en:cook", "-id" },  { "10", "7", "4", "8", "3", "6", "5", "9", "2", "1" } }
 };
 
 
@@ -141,7 +141,7 @@ const sort_t string_dice_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__en"                  dice(name__en:cook)     value for sort (ASC)    value for sort (DESC)
+	 * "id"     "name.en"                   dice(name.en:cook)      value for sort (ASC)    value for sort (DESC)
 	 * "1"      ["cook", "cooked"]          [0.000000, 0.250000]    "cook"                  "cooked"
 	 * "2"      ["bookstore", "book"]       [0.636364, 0.333333]    "book"                  "bookstore"
 	 * "3"      ["cooking", "hello world"]  [0.333333, 1.000000]    "cooking"               "hello world"
@@ -153,18 +153,18 @@ const sort_t string_dice_tests[] {
 	 * "9"      "computer"                  0.800000                "computer"              "computer"
 	 * "10"     Does not have               MAX_DBL                 "\xff"                  "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "book", "computer", "cook", "cooking", "cooking", "hello", "hello", "world", "world", "\xff" }
-	{ "*", { "name__en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	{ "*", { "name.en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
 	// { "\xff", "world", "world", "hello world", "hello world", "hello", "hello", "cooked", "computer", "bookstore" }
-	{ "*", { "-name__en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	{ "*", { "-name.en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
 	// { 0, 0.333333, 0.333333, 0.333333, 0.800000, 1, 1, 1, 1, MAX_DBL }
-	{ "*", { "name__en:cook" },          { "1", "2", "3", "8", "9", "4", "5", "6", "7", "10" } },
-	{ "*", { "name__en:cook", "-_id" },  { "1", "8", "3", "2", "9", "7", "6", "5", "4", "10" } },
+	{ "*", { "name.en:cook" },          { "1", "2", "3", "8", "9", "4", "5", "6", "7", "10" } },
+	{ "*", { "name.en:cook", "-id" },   { "1", "8", "3", "2", "9", "7", "6", "5", "4", "10" } },
 	// { MAX_DBL, 1, 1, 1, 1, 1, 1, 0.800000, 0.636364, 0.250000 }
-	{ "*", { "-name__en:cook" },         { "10", "3", "4", "5", "6", "7", "8", "9", "2", "1" } },
-	{ "*", { "-name__en:cook", "-_id" }, { "10", "8", "7", "6", "5", "4", "3", "9", "2", "1" } }
+	{ "*", { "-name.en:cook" },         { "10", "3", "4", "5", "6", "7", "8", "9", "2", "1" } },
+	{ "*", { "-name.en:cook", "-id" },  { "10", "8", "7", "6", "5", "4", "3", "9", "2", "1" } }
 };
 
 
@@ -176,7 +176,7 @@ const sort_t string_jaccard_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__en"                  jaccard(name__en:cook)  value for sort (ASC)    value for sort (DESC)
+	 * "id"     "name.en"                   jaccard(name.en:cook)   value for sort (ASC)    value for sort (DESC)
 	 * "1"      ["cook", "cooked"]          [0.000000, 0.400000]    "cook"                  "cooked"
 	 * "2"      ["bookstore", "book"]       [0.750000, 0.500000]    "book"                  "bookstore"
 	 * "3"      ["cooking", "hello world"]  [0.500000, 0.900000]    "cooking"               "hello world"
@@ -188,18 +188,18 @@ const sort_t string_jaccard_tests[] {
 	 * "9"      "computer"                  0.777778                "computer"              "computer"
 	 * "10"     Does not have               MAX_DBL                 "\xff"                  "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "book", "computer", "cook", "cooking", "cooking", "hello", "hello", "world", "world", "\xff" }
-	{ "*", { "name__en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	{ "*", { "name.en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
 	// { "\xff", "world", "world", "hello world", "hello world", "hello", "hello", "cooked", "computer", "bookstore" }
-	{ "*", { "-name__en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	{ "*", { "-name.en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
 	// { 0, 0.500000, 0.500000, 0.500000, 0.777778, 0.833333, 0.833333, 0.857143, 0.857143, MAX_DBL }
-	{ "*", { "name__en:cook" },          { "1", "2", "3", "8", "9", "4", "7", "5", "6", "10" } },
-	{ "*", { "name__en:cook", "-_id" },  { "1", "8", "3", "2", "9", "7", "4", "6", "5", "10" } },
+	{ "*", { "name.en:cook" },          { "1", "2", "3", "8", "9", "4", "7", "5", "6", "10" } },
+	{ "*", { "name.en:cook", "-id" },   { "1", "8", "3", "2", "9", "7", "4", "6", "5", "10" } },
 	// { MAX_DBL, 0.900000, 0.900000, 0.857143, 0.857143, 0.833333, 0.833333, 0.777778, 0.750000, 0.400000 }
-	{ "*", { "-name__en:cook" },         { "10", "3", "8", "5", "6", "4", "7", "9", "2", "1" } },
-	{ "*", { "-name__en:cook", "-_id" }, { "10", "8", "3", "6", "5", "7", "4", "9", "2", "1" } }
+	{ "*", { "-name.en:cook" },         { "10", "3", "8", "5", "6", "4", "7", "9", "2", "1" } },
+	{ "*", { "-name.en:cook", "-id" },  { "10", "8", "3", "6", "5", "7", "4", "9", "2", "1" } }
 };
 
 
@@ -211,7 +211,7 @@ const sort_t string_lcs_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__en"                  lcs(name__en:cook)      value for sort (ASC)    value for sort (DESC)
+	 * "id"     "name.en"                   lcs(name.en:cook)       value for sort (ASC)    value for sort (DESC)
 	 * "1"      ["cook", "cooked"]          [0.000000, 0.333333]    "cook"                  "cooked"
 	 * "2"      ["bookstore", "book"]       [0.666667, 0.250000]    "book"                  "bookstore"
 	 * "3"      ["cooking", "hello world"]  [0.428571, 0.909091]    "cooking"               "hello world"
@@ -223,18 +223,18 @@ const sort_t string_lcs_tests[] {
 	 * "9"      "computer"                  0.750000                "computer"              "computer"
 	 * "10"     Does not have               MAX_DBL                 "\xff"                  "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "book", "computer", "cook", "cooking", "cooking", "hello", "hello", "world", "world", "\xff" }
-	{ "*", { "name__en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	{ "*", { "name.en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
 	// { "\xff", "world", "world", "hello world", "hello world", "hello", "hello", "cooked", "computer", "bookstore" }
-	{ "*", { "-name__en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	{ "*", { "-name.en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
 	// { 0, 0.250000, 0.428571, 0.428571, 0.750000, 0.800000, 0.800000, 0.800000, 0.800000, MAX_DBL }
-	{ "*", { "name__en:cook" },          { "1", "2", "3", "8", "9", "4", "5", "6", "7", "10" } },
-	{ "*", { "name__en:cook", "-_id" },  { "1", "2", "8", "3", "9", "7", "6", "5", "4", "10" } },
+	{ "*", { "name.en:cook" },          { "1", "2", "3", "8", "9", "4", "5", "6", "7", "10" } },
+	{ "*", { "name.en:cook", "-id" },   { "1", "2", "8", "3", "9", "7", "6", "5", "4", "10" } },
 	// { MAX_DBL, 0.909091, 0.909091, 0.800000, 0.800000, 0.800000, 0.800000, 0.750000, 0.666667, 0.333333 }
-	{ "*", { "-name__en:cook" },         { "10", "3", "8", "4", "5", "6", "7", "9", "2", "1" } },
-	{ "*", { "-name__en:cook", "-_id" }, { "10", "8", "3", "7", "6", "5", "4", "9", "2", "1" } }
+	{ "*", { "-name.en:cook" },         { "10", "3", "8", "4", "5", "6", "7", "9", "2", "1" } },
+	{ "*", { "-name.en:cook", "-id" },  { "10", "8", "3", "7", "6", "5", "4", "9", "2", "1" } }
 };
 
 
@@ -246,7 +246,7 @@ const sort_t string_lcsq_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__en"                  lcsq(name__en:cook)     value for sort (ASC)    value for sort (DESC)
+	 * "id"     "name.en"                   lcsq(name.en:cook)      value for sort (ASC)    value for sort (DESC)
 	 * "1"      ["cook", "cooked"]          [0.000000, 0.333333]    "cook"                  "cooked"
 	 * "2"      ["bookstore", "book"]       [0.666667, 0.250000]    "book"                  "bookstore"
 	 * "3"      ["cooking", "hello world"]  [0.428571, 0.818182]    "cooking"               "hello world"
@@ -258,18 +258,18 @@ const sort_t string_lcsq_tests[] {
 	 * "9"      "computer"                  0.750000                "computer"              "computer"
 	 * "10"     Does not have               MAX_DBL                 "\xff"                  "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "book", "computer", "cook", "cooking", "cooking", "hello", "hello", "world", "world", "\xff" }
-	{ "*", { "name__en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	{ "*", { "name.en" },               { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
 	// { "\xff", "world", "world", "hello world", "hello world", "hello", "hello", "cooked", "computer", "bookstore" }
-	{ "*", { "-name__en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	{ "*", { "-name.en" },              { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
 	// { 0, 0.250000, 0.428571, 0.428571, 0.750000, 0.800000, 0.800000, 0.800000, 0.800000, MAX_DBL }
-	{ "*", { "name__en:cook" },          { "1", "2", "3", "8", "9", "4", "5", "6", "7", "10" } },
-	{ "*", { "name__en:cook", "-_id" },  { "1", "2", "8", "3", "9", "7", "6", "5", "4", "10" } },
+	{ "*", { "name.en:cook" },          { "1", "2", "3", "8", "9", "4", "5", "6", "7", "10" } },
+	{ "*", { "name.en:cook", "-id" },   { "1", "2", "8", "3", "9", "7", "6", "5", "4", "10" } },
 	// { MAX_DBL, 0.818182, 0.818182, 0.800000, 0.800000, 0.800000, 0.800000, 0.750000, 0.666667, 0.333333 }
-	{ "*", { "-name__en:cook" },         { "10", "3", "8", "4", "5", "6", "7", "9", "2", "1" } },
-	{ "*", { "-name__en:cook", "-_id" }, { "10", "8", "3", "7", "6", "5", "4", "9", "2", "1" } }
+	{ "*", { "-name.en:cook" },         { "10", "3", "8", "4", "5", "6", "7", "9", "2", "1" } },
+	{ "*", { "-name.en:cook", "-id" },  { "10", "8", "3", "7", "6", "5", "4", "9", "2", "1" } }
 };
 
 
@@ -281,7 +281,7 @@ const sort_t string_soundex_en_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__en"                  sound_en(name__en:cok)   value for sort (ASC)    value for sort (DESC)
+	 * "id"     "name.en"                   sound_en(name.en:cok)    value for sort (ASC)    value for sort (DESC)
 	 * "1"      ["cook", "cooked"]          [0.000000, 0.333333]     "cook"                  "cooked"
 	 * "2"      ["bookstore", "book"]       [0.750000, 0.500000]     "bookstore"             "book"
 	 * "3"      ["cooking", "hello world"]  [0.428571, 0.857143]     "cooking"               "hello world"
@@ -293,18 +293,18 @@ const sort_t string_soundex_en_tests[] {
 	 * "9"      "computer"                  0.666667                 "computer"              "computer"
 	 * "10"     Does not have               MAX_DBL                  "\xff"                  "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "book", "computer", "cook", "cooking", "cooking", "hello", "hello", "world", "world", "\xff" }
-	{ "*", { "name__en" },              { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	{ "*", { "name.en" },              { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
 	// { "\xff", "world", "world", "hello world", "hello world", "hello", "hello", "cooked", "computer", "bookstore" }
-	{ "*", { "-name__en" },             { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	{ "*", { "-name.en" },             { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
 	// { 0, 0.428571, 0.428571, 0.500000, 0.666667, 0.750000, 0.750000, 0.800000, 0.800000, MAX_DBL }
-	{ "*", { "name__en:cok" },          { "1", "3", "8", "2", "9", "4", "7", "5", "6", "10" } },
-	{ "*", { "name__en:cok", "-_id" },  { "1", "8", "3", "2", "9", "7", "4", "6", "5", "10" } },
+	{ "*", { "name.en:cok" },          { "1", "3", "8", "2", "9", "4", "7", "5", "6", "10" } },
+	{ "*", { "name.en:cok", "-id" },   { "1", "8", "3", "2", "9", "7", "4", "6", "5", "10" } },
 	// { MAX_DBL, 0.857143, 0.857143, 0.800000, 0.800000, 0.750000, 0.750000, 0.750000, 0.666667, 0.333333 }
-	{ "*", { "-name__en:cok" },         { "10", "3", "8", "5", "6", "2", "4", "7", "9", "1" } },
-	{ "*", { "-name__en:cok", "-_id" }, { "10", "8", "3", "6", "5", "7", "4", "2", "9", "1" } }
+	{ "*", { "-name.en:cok" },         { "10", "3", "8", "5", "6", "2", "4", "7", "9", "1" } },
+	{ "*", { "-name.en:cok", "-id" },  { "10", "8", "3", "6", "5", "7", "4", "2", "9", "1" } }
 };
 
 
@@ -316,7 +316,7 @@ const sort_t string_soundex_fr_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__fr"                       sound__fr(name__fr:bônjûr)  value for sort (ASC)    value for sort (DESC)
+	 * "id"     "name.fr"                        sound_fr(name.fr:bônjûr)     value for sort (ASC)    value for sort (DESC)
 	 * "1"      ["cuire", "cuit"]                [0.666667, 0.833333]         "cuire"                 "cuit"
 	 * "2"      ["librairie", "livre"]           [0.571429, 0.666667]         "librairie"             "livre"
 	 * "3"      ["cuisine", "bonjour le monde"]  [0.666667, 0.500000]         "cuisine"               "bonjour le monde"
@@ -328,18 +328,18 @@ const sort_t string_soundex_fr_tests[] {
 	 * "9"      "ordinateur"                     0.555556                     "ordinateur"            "ordinateur"
 	 * "10"     Does not have                    MAX_DBL                      "\xff"                  "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "bonjour", "bonjour", "bonjour le monde", "bonjour le monde", "cuire", "librairie", "monde", "monde", "ordinateur", "\xff" }
-	{ "*", { "name__fr" },                 { "4", "7", "3", "8", "1", "2", "5", "6", "9", "10" } },
+	{ "*", { "name.fr" },                 { "4", "7", "3", "8", "1", "2", "5", "6", "9", "10" } },
 	// { "\xff", "ordinateur", "monde", "monde", "librairie", "cuire", "bonjour le monde", "bonjour le monde", "bonjour", "bonjour" }
-	{ "*", { "-name__fr" },                { "10", "9", "5", "6", "2", "1", "3", "8", "4", "7" } },
+	{ "*", { "-name.fr" },                { "10", "9", "5", "6", "2", "1", "3", "8", "4", "7" } },
 	// { 0., 0., 0.500000, 0.500000, 0.555556, 0.571429, 0.666667, 0.666667, 0.666667, MAX_DBL }
-	{ "*", { "name__fr:bônjûr" },          { "4", "7", "3", "8", "9", "2", "1", "5", "6", "10" } },
-	{ "*", { "name__fr:bônjûr", "-_id" },  { "7", "4", "8", "3", "9", "2", "6", "5", "1", "10" } },
+	{ "*", { "name.fr:bônjûr" },          { "4", "7", "3", "8", "9", "2", "1", "5", "6", "10" } },
+	{ "*", { "name.fr:bônjûr", "-id" },   { "7", "4", "8", "3", "9", "2", "6", "5", "1", "10" } },
 	// { MAX_DBL, 0.833333, 0.666667, 0.666667, 0.666667, 0.666667, 0.666667, 0.555556, 0.000000, 0.000000 }
-	{ "*", { "-name__fr:bônjûr" },         { "10", "1", "2", "3", "5", "6", "8", "9", "4", "7" } },
-	{ "*", { "-name__fr:bônjûr", "-_id" }, { "10", "1", "8", "6", "5", "3", "2", "9", "7", "4" } }
+	{ "*", { "-name.fr:bônjûr" },         { "10", "1", "2", "3", "5", "6", "8", "9", "4", "7" } },
+	{ "*", { "-name.fr:bônjûr", "-id" },  { "10", "1", "8", "6", "5", "3", "2", "9", "7", "4" } }
 };
 
 
@@ -351,7 +351,7 @@ const sort_t string_soundex_de_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__de"                 sound_de(name__de:häälöö)   value for sort (ASC)   value for sort (DESC)
+	 * "id"     "name.de"                  sound_de(name.de:häälöö)    value for sort (ASC)   value for sort (DESC)
 	 * "1"      ["coch", "gecocht"]        [1.000000, 0.800000]        "coch"                 "gecocht"
 	 * "2"      ["buchladen", "buch"]      [0.625000, 0.666667]        "buch"                 "buchladen"
 	 * "3"      ["kochen", "hallo welt"]   [0.600000, 0.571429]        "hallo welt"           "kochen"
@@ -363,18 +363,18 @@ const sort_t string_soundex_de_tests[] {
 	 * "9"      "computer"                 0.714286                    "computer"             "computer"
 	 * "10"     Does not have              MAX_DBL                     "\xff"                 "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "buch", "coch", "computer", "hallo", "hallo", "hallo welt", "hallo welt", "welt", "welt", "\xff" }
-	{ "*", { "name__de" },                 { "2", "1", "9", "4", "7", "3", "8", "5", "6", "10" } },
+	{ "*", { "name.de" },                 { "2", "1", "9", "4", "7", "3", "8", "5", "6", "10" } },
 	// { "\xff", "welt", "welt", "kochen", "kochen", "hallo", "hallo", "gecocht", "computer", "buchladen" }
-	{ "*", { "-name__de" },                { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	{ "*", { "-name.de" },                { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
 	// { 0., 0., 0.500000, 0.500000, 0.571429, 0.571429, 0.625000, 0.714286, 0.800000, MAX_DBL }
-	{ "*", { "name__de:häälöö" },          { "4", "7", "5", "6", "3", "8", "2", "9", "1", "10" } },
-	{ "*", { "name__de:häälöö", "-_id" },  { "7", "4", "6", "5", "8", "3", "2", "9", "1", "10" } },
+	{ "*", { "name.de:häälöö" },          { "4", "7", "5", "6", "3", "8", "2", "9", "1", "10" } },
+	{ "*", { "name.de:häälöö", "-id" },   { "7", "4", "6", "5", "8", "3", "2", "9", "1", "10" } },
 	// { MAX_DBL, 1.000000, 0.714286, 0.666667, 0.600000, 0.600000, 0.500000, 0.500000, 0., 0. }
-	{ "*", { "-name__de:häälöö" },         { "10", "1", "9", "2", "3", "8", "5", "6", "4", "7" } },
-	{ "*", { "-name__de:häälöö", "-_id" }, { "10", "1", "9", "2", "8", "3", "6", "5", "7", "4" } }
+	{ "*", { "-name.de:häälöö" },         { "10", "1", "9", "2", "3", "8", "5", "6", "4", "7" } },
+	{ "*", { "-name.de:häälöö", "-id" },  { "10", "1", "9", "2", "8", "3", "6", "5", "7", "4" } }
 };
 
 
@@ -386,7 +386,7 @@ const sort_t string_soundex_es_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "name__es"                sound_es(name__es:kocinor)  value for sort (ASC)  value for sort (DESC)
+	 * "id"     "name.es"                 sound_es(name.es:kocinor)   value for sort (ASC)  value for sort (DESC)
 	 * "1"      ["cocinar", "cocido"]     [0.000000, 0.285714]        "cocinar"             "cocido"
 	 * "2"      ["librería", "libro"]     [0.625000, 0.714286]        "librería"            "libro"
 	 * "3"      ["cocina", "hola mundo"]  [0.142857, 0.666667]        "cocina"              "hola mundo"
@@ -398,18 +398,18 @@ const sort_t string_soundex_es_tests[] {
 	 * "9"      "computadora"             0.500000                    "computadora"         "computadora"
 	 * "10"     Does not have             MAX_DBL                     "\xff"                "\xff"
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "cocido", "cocina", "cocina", "computadora", "hola", "hola", "librería", "mundo", "mundo", "\xff" }
-	{ "*", { "name__es" },                  { "1", "3", "8", "9", "4", "7", "2", "5", "6", "10" } },
+	{ "*", { "name.es" },                  { "1", "3", "8", "9", "4", "7", "2", "5", "6", "10" } },
 	// { "\xff", "mundo", "mundo", "libro", "hola mundo", "hola mundo", "hola", "hola", "computadora", "cocinar" }
-	{ "*", { "-name__es" },                 { "10", "5", "6", "2", "3", "8", "4", "7", "9", "1" } },
+	{ "*", { "-name.es" },                 { "10", "5", "6", "2", "3", "8", "4", "7", "9", "1" } },
 	// { 0., 0.142857, 0.142857, 0.500000, 0.571429, 0.571429, 0.625000, 0.714286, 0.714286, MAX_DBL }
-	{ "*", { "name__es:kocinor" },          { "1", "3", "8", "9", "5", "6", "2", "4", "7", "10" } },
-	{ "*", { "name__es:kocinor", "-_id" },  { "1", "8", "3", "9", "6", "5", "2", "7", "4", "10" } },
+	{ "*", { "name.es:kocinor" },          { "1", "3", "8", "9", "5", "6", "2", "4", "7", "10" } },
+	{ "*", { "name.es:kocinor", "-id" },   { "1", "8", "3", "9", "6", "5", "2", "7", "4", "10" } },
 	// { MAX_DBL, 0.714286, 0.714286, 0.714286, 0.666667, 0.666667, 0.571429, 0.571429, 0.500000, 0.285714 }
-	{ "*", { "-name__es:kocinor" },         { "10", "2", "4", "7", "3", "8", "5", "6", "9", "1" } },
-	{ "*", { "-name__es:kocinor", "-_id" }, { "10", "7", "4", "2", "8", "3", "6", "5", "9", "1" } }
+	{ "*", { "-name.es:kocinor" },         { "10", "2", "4", "7", "3", "8", "5", "6", "9", "1" } },
+	{ "*", { "-name.es:kocinor", "-id" },  { "10", "7", "4", "2", "8", "3", "6", "5", "9", "1" } }
 };
 
 
@@ -421,7 +421,7 @@ const sort_t numerical_tests[] {
 	 *                   there are several values (in array).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "year"          dist(year:1000) dist(year:2000) value for sort (ASC)    value for sort (DESC)
+	 * "id"     "year"          dist(year:1000) dist(year:2000) value for sort (ASC)    value for sort (DESC)
 	 * "1"      [2010, 2015]    [1010, 1015]    [10, 15]        2010                    2015
 	 * "2"      [2000, 2001]    [1000, 1001]    [0, 1]          2000                    2001
 	 * "3"      [-10000, 0]     [11000, 1000]   [12000, 2000]   -10000                  0
@@ -433,14 +433,14 @@ const sort_t numerical_tests[] {
 	 * "9"      [2000, 2001]    [1000, 1001]    [0, 1]          2000                    2001
 	 * "10"     2020            1020            20              2020                    2020
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
-	{ "*", { "_id" },                { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" } },
-	{ "*", { "-_id" },               { "10", "9", "8", "7", "6", "5", "4", "3", "2", "1" } },
+	{ "*", { "id" },                 { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" } },
+	{ "*", { "-id" },                { "10", "9", "8", "7", "6", "5", "4", "3", "2", "1" } },
 	// { 0, 1, 2, 2, 2, 2, 2, 2, 2, 2 }
-	{ "*", { "_id:10" },             { "10", "9", "8", "7", "6", "5", "4", "3", "2", "1" } },
+	{ "*", { "id:10" },              { "10", "9", "8", "7", "6", "5", "4", "3", "2", "1" } },
 	// { 2, 2, 2, 2, 2, 2, 2, 2, 1, 0 }
-	{ "*", { "-_id:10" },            { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" } },
+	{ "*", { "-id:10" },             { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" } },
 	// { -10000, -10000, 100, 100, 400, 500, 2000, 2000, 2010, 2020 }
 	{ "*", { "year" },               { "3", "8", "4", "7", "6", "5", "2", "9", "1", "10" } },
 	// { 2020, 2015, 2001, 2001, 500, 400, 100, 100, 0, 0 }
@@ -451,10 +451,10 @@ const sort_t numerical_tests[] {
 	{ "*", { "-year:1000" },         { "3", "8", "10", "1", "2", "9", "4", "7", "6", "5" } },
 	// { 0, 0, 10, 20, 1500, 1600, 1900, 1900, 2000, 2000 }
 	{ "*", { "year:2000" },          { "2", "9", "1", "10", "5", "6", "4", "7", "3", "8" } },
-	{ "*", { "year:2000", "-_id" },  { "9", "2", "1", "10", "5", "6", "7", "4", "8", "3" } },
+	{ "*", { "year:2000", "-id" },   { "9", "2", "1", "10", "5", "6", "7", "4", "8", "3" } },
 	// { 12000, 12000, 1900, 1900, 1600, 1500, 1100, 1100, 20, 10, 1, 1  }
 	{ "*", { "-year:2000" },         { "3", "8", "4", "7", "6", "5", "10", "1", "2", "9" } },
-	{ "*", { "-year:2000", "-_id" }, { "8", "3", "7", "4", "6", "5", "10", "1", "9", "2" } }
+	{ "*", { "-year:2000", "-id" },  { "8", "3", "7", "4", "6", "5", "10", "1", "9", "2" } }
 };
 
 
@@ -466,7 +466,7 @@ const sort_t date_tests[] {
 	 *                   there are several values (in array).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "date"                              dist(date:2010-01-01)       dist(date:0001-01-01)
+	 * "id"     "date"                              dist(date:2010-01-01)       dist(date:0001-01-01)
 	 *                                              Epoch: 1262304000           Epoch: -62135596800
 	 * "1"      ["2010-10-21", "2011-01-01"],       [25315200, 31536000]        [63423216000, 63429436800]
 	 *          Epoch: [1287619200, 1293840000]
@@ -489,7 +489,7 @@ const sort_t date_tests[] {
 	 * "10"     ["2010-10-21", "2011-01-01"],       [25315200, 31536000]        [63423216000, 63429436800]
 	 *          Epoch: [1287619200, 1293840000]
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { "0001-01-01", "0010-01-01", "0010-01-01", "0300-01-01", "1810-01-01", "1810-01-01", "2010-10-21", "2010-10-21", "2015-01-01", "2015-01-01" }
 	{ "*", { "date" },                      { "4", "3", "8", "7", "2", "9", "1", "10", "5", "6" } },
@@ -505,10 +505,10 @@ const sort_t date_tests[] {
 	{ "*", { "date:0001-01-01" },           { "4", "3", "8", "7", "2", "9", "1", "10", "5", "6" } },
 	{ "*", { "date:00010101 00:00:00" },    { "4", "3", "8", "7", "2", "9", "1", "10", "5", "6" } },
 	{ "*", { "date:-62135596800" },         { "4", "3", "8", "7", "2", "9", "1", "10", "5", "6" } },
-	{ "*", { "date:0001-01-01", "-_id" },   { "4", "8", "3", "7", "9", "2", "10", "1", "6", "5" } },
+	{ "*", { "date:0001-01-01", "-id" },    { "4", "8", "3", "7", "9", "2", "10", "1", "6", "5" } },
 	// { 63555667200, 63555667200, 63429436800, 63429436800, 60242140800, 60242140800, 9435484800, 599529600, 599529600, 0 }
 	{ "*", { "-date:0001-01-01" },          { "5", "6", "1", "10", "2", "9", "7", "3", "8", "4" } },
-	{ "*", { "-date:0001-01-01", "-_id" },  { "6", "5", "10", "1", "9", "2", "7", "8", "3", "4" } }
+	{ "*", { "-date:0001-01-01", "-id" },   { "6", "5", "10", "1", "9", "2", "7", "8", "3", "4" } }
 };
 
 
@@ -520,7 +520,7 @@ const sort_t boolean_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "there"             dist(there:false)   dist(there:true)    value for sort (ASC)    value for sort (DESC)
+	 * "id"     "there"             dist(there:false)   dist(there:true)    value for sort (ASC)    value for sort (DESC)
 	 * "1"      [true, false],      [1, 0]              [0, 1]              false                   true
 	 * "2"      [false, false],     [0, 0]              [1, 1]              false                   false
 	 * "3"      [true, true],       [1, 1]              [0, 0]              true                    true
@@ -532,7 +532,7 @@ const sort_t boolean_tests[] {
 	 * "9"      [false, false]      [0, 0]              [1, 1]              false                   false
 	 * "10"     [true, false],      [1, 0]              [0, 1]              false                   true
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// { false, false, false, false, false, true, true, true, true, true }
 	{ "*", { "there" },                 { "1", "2", "5", "6", "9", "10", "3", "4", "7", "8" } },
@@ -546,7 +546,7 @@ const sort_t boolean_tests[] {
 	{ "*", { "there:false" },           { "1", "2", "5", "6", "9", "10", "3", "4", "7", "8" } },
 	// { 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }
 	{ "*", { "-there:false" },          { "1", "3", "4", "7", "8", "10", "2", "5", "6", "9" } },
-	{ "*", { "-there:false", "-_id" },  { "10", "8", "7", "4", "3", "1", "9", "6", "5", "2" } },
+	{ "*", { "-there:false", "-id" },   { "10", "8", "7", "4", "3", "1", "9", "6", "5", "2" } },
 };
 
 
@@ -558,7 +558,7 @@ const sort_t geo_tests[] {
 	 *                   there are several values (in array).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"    "location"                          radius(location:POINT(5 5)) radius(location:CIRCLE(10 10,200000))
+	 * "id"     "location"                          radius(location:POINT(5 5)) radius(location:CIRCLE(10 10,200000))
 	 * "1"      ["POINT(10 21)", "POINT(10 20)"]    [0.290050, 0.273593]        [0.189099, 0.171909]
 	 * "2"      ["POINT(20 40)", "POINT(50 60)"]    [0.648657, 1.120883]        [0.533803, 0.999915]
 	 * "3"      ["POINT(0 0)", "POINT(0 70)"]       [0.122925, 1.136214]        [0.245395, 1.055833]
@@ -570,7 +570,7 @@ const sort_t geo_tests[] {
 	 * "9"      ["POINT(20 40)", "POINT(50 60)"]    [0.648657, 1.120883]        [0.533803, 0.999915]
 	 * "10"     ["POINT(10 21)", "POINT(10 20)"]    [0.290050, 0.273593]        [0.189099, 0.171909]
 	 *
-	 * The documents are indexed as the value of "_id" indicates.
+	 * The documents are indexed as the value of "id" indicates.
 	*/
 	// It does not have effect in the results.
 	{ "*", { "location" },              { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" } },
@@ -582,10 +582,10 @@ const sort_t geo_tests[] {
 	{ "*", { "-location:POINT(5 5)" },  { "3", "2", "9", "1", "10", "5", "6", "8", "4", "7" } },
 	// { 0.000036, 0.000036, 0.117923, 0.171909, 0.171909, 0.196201, 0.196201, 0.245395, 0.533803, 0.533803 }
 	{ "*", { "location:CIRCLE(10 10,200000)" },          { "5", "6", "8", "1", "10", "4", "7", "3", "2", "9" } },
-	{ "*", { "location:CIRCLE(10 10,200000)", "-_id" },  { "6", "5", "8", "10", "1", "7", "4", "3", "9", "2" } },
+	{ "*", { "location:CIRCLE(10 10,200000)", "-id" },   { "6", "5", "8", "10", "1", "7", "4", "3", "9", "2" } },
 	// { 1.055833, 0.999915, 0.999915, 0.196201, 0.196201, 0.189099, 0.189099,  0.117923, 0.000036, 0.000036 }
 	{ "*", { "-location:CIRCLE(10 10,200000)" },         { "3", "2", "9", "4", "7", "1", "10", "8", "5", "6" } },
-	{ "*", { "-location:CIRCLE(10 10,200000)", "-_id" }, { "3", "9", "2", "7", "4", "10", "1", "8", "6", "5" } }
+	{ "*", { "-location:CIRCLE(10 10,200000)", "-id" },  { "3", "9", "2", "7", "4", "10", "1", "8", "6", "5" } }
 };
 
 

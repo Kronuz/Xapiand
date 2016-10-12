@@ -52,16 +52,8 @@ inline static long long save_mastery(const std::string& dir) {
 
 
 std::string prefixed(const std::string& term, const std::string& prefix) {
-	if (isupper(term.at(0))) {
-		if (prefix.empty()) {
-			return term;
-		} else {
-			std::string result;
-			result.reserve(prefix.length() + term.length() + 1);
-			result.assign(prefix).push_back(':');
-			result.append(term);
-			return result;
-		}
+	if (prefix.empty()) {
+		return term;
 	} else {
 		std::string result;
 		result.reserve(prefix.length() + term.length());

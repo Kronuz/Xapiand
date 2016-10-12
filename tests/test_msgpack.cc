@@ -340,7 +340,7 @@ int test_msgpack_explore() {
 	auto obj = MsgPack::unserialise(buffer);
 
 	std::string expected(
-		"\"_id\":\"56892c5e23700e297bd84cd5\"\n"
+		"\"id\":\"56892c5e23700e297bd84cd5\"\n"
 		"\"about\":\"Minim ad irure pariatur nulla dolore occaecat ipsum. Qui ipsum enim aute do labore deserunt enim eu nulla duis cupidatat id est. Id cupidatat nostrud ad nulla culpa veniam nulla consequat enim sunt qui id enim. Aliquip ut deserunt irure consequat irure in fugiat. Esse veniam adipisicing deserunt culpa veniam consectetur qui ex amet. Commodo aute sit esse incididunt adipisicing non enim. Aliqua consectetur officia eiusmod veniam et amet qui adipisicing dolore voluptate reprehenderit anim commodo nulla.\"\n"
 		"\"address\":\"422 Whitney Avenue, Walker, Arizona, 7324\"\n"
 		"\"age\":29\n"
