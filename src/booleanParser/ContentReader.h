@@ -29,7 +29,6 @@ struct Symbol{
 };
 
 class ContentReader {
-private:
 	int currentPosition;
 	int currentLine;
 	int currentColumn;
@@ -40,7 +39,5 @@ public:
 
 	void setContent(char * content);
 
-
 	Symbol NextSymbol();
-
 };

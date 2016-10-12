@@ -26,12 +26,11 @@
 #include <exception>
 #include <string>
 
-using namespace std;
 
-class LexicalException: public exception {
+class LexicalException: public std::exception {
 private:
-	const string msg;
+	const std::string msg;
 public:
-	LexicalException(const string& msg);
+	LexicalException(const std::string& msg);
 	virtual const char* what() const throw();
 };

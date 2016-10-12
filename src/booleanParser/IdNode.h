@@ -26,16 +26,13 @@
 
 #include "Node.h"
 
-using namespace std;
-
 
 class IdNode : public BaseNode {
 
 public:
-	IdNode(string id);
+	IdNode(std::string id);
 	virtual NodeType getType();
-	string getId();
+	std::string getId();
 private:
-	string id;
-
+	std::string id;
 };

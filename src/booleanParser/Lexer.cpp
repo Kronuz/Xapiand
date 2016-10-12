@@ -23,6 +23,8 @@
 
 #include "Lexer.h"
 
+#include <string>
+
 #define AND "AND"
 #define OR "OR"
 #define NOT "NOT"
@@ -68,15 +70,15 @@ Lexer::InitDictionary()
 Token
 Lexer::NextToken()
 {
-	string lexeme = "";
+	std::string lexeme = "";
 	LexerState currentState = LexerState::INIT;
 	Token token;
 	char quote;
 
 	auto upState = currentState;
 
-	string symbol;
-	string lcSymbol;
+	std::string symbol;
+	std::string lcSymbol;
 
 	while (true) {
 		symbol.clear();
@@ -129,7 +131,7 @@ Lexer::NextToken()
 							default:
 								lexeme += currentSymbol.symbol;
 								if (lexeme.size() >= 1024) {
-									string msj = "Symbol " + symbol + " not expected";
+									std::string msj = "Symbol " + symbol + " not expected";
 									throw LexicalException(msj.c_str());
 								}
 								currentState = LexerState::TOKEN;
@@ -178,7 +180,7 @@ Lexer::NextToken()
 						break;
 
 					case '\0': {
-						string msj = "Symbol double quote expected";
+						std::string msj = "Symbol double quote expected";
 						throw LexicalException(msj.c_str());
 					}
 
@@ -197,7 +199,7 @@ Lexer::NextToken()
 			case LexerState::ESCAPE:
 				switch(currentSymbol.symbol) {
 					case '\0': {
-						string msj = "Symbol EOF not expected";
+						std::string msj = "Symbol EOF not expected";
 						throw LexicalException(msj.c_str());
 					}
 
@@ -251,7 +253,7 @@ Lexer::NextToken()
 						break;
 
 					default:
-						string msj = "Symbol ] expected";
+						std::string msj = "Symbol ] expected";
 						throw LexicalException(msj.c_str());
 
 				}
@@ -302,7 +304,6 @@ Lexer::IsStringOperator(Token& token)
 					token.type = TokenType::Xor;
 				}
 				break;
-				
 			default:
 				return;
 		}

@@ -24,9 +24,8 @@
 
 #include <exception>
 
-using namespace std;
 
-class SyntacticException: public exception {
+class SyntacticException: public std::exception {
 private:
 	const char* msg;
 public:

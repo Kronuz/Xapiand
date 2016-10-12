@@ -23,15 +23,10 @@
 
 #pragma once
 
-#include <iostream>
-#include <unordered_map>
-#include <string>
-
 #include "ContentReader.h"
 #include "Token.h"
 #include "LexicalException.h"
 
-using namespace std;
 
 enum class LexerState {
 	INIT,
@@ -45,8 +40,7 @@ enum class LexerState {
 };
 
 
-class Lexer{
-private:
+class Lexer {
 	Symbol currentSymbol;
 	ContentReader contentReader;
 	unordered_map<string, TokenType> singleSymbolDictionary;

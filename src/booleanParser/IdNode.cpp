@@ -23,12 +23,12 @@
 #include "IdNode.h"
 
 
-IdNode::IdNode(string id)
+IdNode::IdNode(std::string id)
 {
 	this->id = id;
 }
 
-string IdNode::getId()
+std::string IdNode::getId()
 {
 	return id;
 }

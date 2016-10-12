@@ -29,6 +29,7 @@
 #include "SyntacticException.h"
 #include "XorNode.h"
 
+#include <iostream>
 #include <algorithm>
 #include <iomanip>
 
@@ -48,7 +49,7 @@ BooleanTree::Parse()
 	root = BuildTree();
 	if (!stack_output.empty()) {
 		Token token = stack_output.back();
-		string msj = "'" + token.lexeme + "' not expected";
+		std::string msj = "'" + token.lexeme + "' not expected";
 		throw SyntacticException(msj.c_str());
 	}
 }
@@ -60,13 +61,13 @@ BooleanTree::BuildTree()
 	if (stack_output.size() == 1 || stack_output.back().type == TokenType::Id) {
 		Token token = stack_output.back();
 		stack_output.pop_back();
-		string id = token.lexeme;
+		std::string id = token.lexeme;
 		return std::make_unique<IdNode>(id);
 	}
 	/* Error case */
 	else if (stack_output.size() == 1 && stack_output.back().type != TokenType::Id) {
 		Token token = stack_output.back();
-		string msj = "'" + token.lexeme + "' not expected";
+		std::string msj = "'" + token.lexeme + "' not expected";
 		throw SyntacticException(msj.c_str());
 	} else {
 		Token token = stack_output.back();
@@ -120,7 +121,7 @@ BooleanTree::toRPN()
 							break;
 						}
 					} else {
-						string msj = ") was expected";
+						std::string msj = ") was expected";
 						throw SyntacticException(msj.c_str());
 					}
 				}
@@ -189,7 +190,7 @@ BooleanTree::postorder(BaseNode* p, int indent)
 				if (indent) {
 					std::cout << std::setw(indent) << ' ';
 				}
-				cout << "AND" << "\n ";
+				std::cout << "AND" << "\n ";
 				if (dynamic_cast<AndNode*>(p)->getRightNode()) {
 					postorder(dynamic_cast<AndNode*>(p)->getRightNode(), indent+4);
 				}
@@ -201,7 +202,7 @@ BooleanTree::postorder(BaseNode* p, int indent)
 				if (indent) {
 					std::cout << std::setw(indent) << ' ';
 				}
-				cout << "OR" << "\n ";
+				std::cout << "OR" << "\n ";
 				if (dynamic_cast<OrNode*>(p)->getRightNode()) {
 					postorder(dynamic_cast<OrNode*>(p)->getRightNode(), indent+4);
 				}
@@ -209,7 +210,7 @@ BooleanTree::postorder(BaseNode* p, int indent)
 			case NotNodeType:
 				if (dynamic_cast<NotNode*>(p)) {
 					std::cout << std::setw(indent) << ' ';
-					cout << "NOT" << "\n ";
+					std::cout << "NOT" << "\n ";
 					postorder(dynamic_cast<NotNode*>(p)->getNode(), indent+4);
 				}
 				break;
@@ -220,15 +221,15 @@ BooleanTree::postorder(BaseNode* p, int indent)
 				if (indent) {
 					std::cout << std::setw(indent) << ' ';
 				}
-				cout << "XOR" << "\n ";
+				std::cout << "XOR" << "\n ";
 				if (dynamic_cast<XorNode*>(p)->getRightNode()) {
 					postorder(dynamic_cast<XorNode*>(p)->getRightNode(), indent+4);
 				}
 				break;
 			case IdNodeType:
-				cout << std::setw(indent) << ' ';
+				std::cout << std::setw(indent) << ' ';
 				if (dynamic_cast<IdNode*>(p)) {
-					cout << dynamic_cast<IdNode*>(p)->getId() << "\n ";
+					std::cout << dynamic_cast<IdNode*>(p)->getId() << "\n ";
 				}
 				break;
 		}

@@ -25,8 +25,6 @@
 
 #include <string>
 
-using namespace std;
-
 enum class TokenType {
 	Not=1,
 	Or,
@@ -41,7 +39,7 @@ enum class TokenType {
 class Token {
 public:
 
-	string lexeme;
+	std::string lexeme;
 	TokenType type;
 	Token();
 	virtual ~Token();
