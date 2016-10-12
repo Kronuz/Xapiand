@@ -926,7 +926,16 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 	auto& stats_terms = info[RESERVED_TERMS];
 	const auto it_e = doc.termlist_end();
 	for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-		stats_terms.push_back(*it);
+		auto& stat_term = stats_terms[*it];
+		stat_term["_wdf"] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
+		stat_term["_term_freq"] = it.get_termfreq();  // The number of documents which this term indexes.
+		if (it.positionlist_count()) {
+			auto& stat_term_pos = stat_term["_pos"];
+			const auto pit_e = it.positionlist_end();
+			for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
+				stat_term_pos.push_back(*pit);
+			}
+		}
 	}
 
 	auto& stats_values = info[RESERVED_VALUES];
