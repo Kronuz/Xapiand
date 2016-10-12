@@ -3215,7 +3215,7 @@ Schema::get_data_field(const std::string& field_name) const
 				case FieldType::FLOAT:
 				case FieldType::INTEGER:
 				case FieldType::POSITIVE:
-				case FieldType::DATE: {
+				case FieldType::DATE:
 					try {
 						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
 							res.accuracy.push_back(acc.as_u64());
@@ -3225,7 +3225,6 @@ Schema::get_data_field(const std::string& field_name) const
 						}
 					} catch (const std::out_of_range&) { }
 					break;
-				}
 				case FieldType::TEXT:
 					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
@@ -3250,7 +3249,7 @@ Schema::get_data_field(const std::string& field_name) const
 				case FieldType::FLOAT:
 				case FieldType::INTEGER:
 				case FieldType::POSITIVE:
-				case FieldType::DATE: {
+				case FieldType::DATE:
 					try {
 						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
 							res.accuracy.push_back(acc.as_u64());
@@ -3258,7 +3257,6 @@ Schema::get_data_field(const std::string& field_name) const
 						}
 					} catch (const std::out_of_range&) { }
 					break;
-				}
 				case FieldType::TEXT:
 					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
