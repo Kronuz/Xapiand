@@ -2821,7 +2821,7 @@ Schema::index_global_term(Xapian::Document& doc, std::string&& serialise_val, co
 		} else {
 			term_generator.index_text_without_positions(serialise_val, global_spc.weight[getPos(pos, global_spc.weight.size())]);
 		}
-		L_INDEX(nullptr, "Global Text to Index [%d] => %s [with positions: %d]", pos, serialise_val.c_str(), positions);
+		L_INDEX(nullptr, "Global Text to Index [%d] => %s [Positions: %d]", pos, serialise_val.c_str(), positions);
 	} else {
 		auto position = global_spc.position[getPos(pos, global_spc.position.size())];
 		if (position) {
