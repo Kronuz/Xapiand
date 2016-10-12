@@ -132,7 +132,7 @@ class HttpClient : public BaseClient {
 	static int on_data(http_parser* p, const char* at, size_t length);
 
 	void home_view();
-	void stats_view();
+	void info_view();
 	void delete_document_view();
 	void index_document_view(bool gen_id);
 	void document_info_view();

@@ -623,8 +623,8 @@ HttpClient::_get(int cmd)
 		case CMD_SCHEMA:
 			schema_view();
 			break;
-		case CMD_STATS:
-			stats_view();
+		case CMD_INFO:
+			info_view();
 			break;
 		default:
 			bad_request_view();
@@ -929,16 +929,16 @@ HttpClient::update_document_view()
 
 
 void
-HttpClient::stats_view()
+HttpClient::info_view()
 {
-	L_CALL(this, "HttpClient::stats_view()");
+	L_CALL(this, "HttpClient::info_view()");
 
 	MsgPack response;
 	bool res_stats = false;
 
 	if (!path_parser.off_id) {
 		query_field_maker(QUERY_FIELD_TIME);
-		XapiandManager::manager->server_status(response["_server_status"]);
+		XapiandManager::manager->server_status(response["_server_info"]);
 		XapiandManager::manager->get_stats_time(response["_stats_time"], query_field->time);
 		res_stats = true;
 	} else {
@@ -946,17 +946,17 @@ HttpClient::stats_view()
 
 		db_handler.reset(endpoints, DB_OPEN, HttpMethod::GET);
 		try {
-			db_handler.get_stats_doc(response["_document_status"], path_parser.get_id());
+			db_handler.get_document_info(response["_document_info"], path_parser.get_id());
 		} catch (const CheckoutError&) {
 			path_parser.off_id = nullptr;
-			response.erase("_document_status");
+			response.erase("_document_info");
 		}
 
 		path_parser.rewind();
 		endpoints_maker(1s);
 
 		db_handler.reset(endpoints, DB_OPEN, HttpMethod::GET);
-		db_handler.get_stats_database(response["_database_status"]);
+		db_handler.get_database_info(response["_database_info"]);
 		res_stats = true;
 	}
 
@@ -1188,8 +1188,8 @@ constexpr size_t const_hash(char const *input) {
 
 
 static constexpr auto http_search = const_hash("_search");
-static constexpr auto http_stats = const_hash("_stats");
 static constexpr auto http_schema = const_hash("_schema");
+static constexpr auto http_info = const_hash("_info");
 
 
 int
@@ -1202,8 +1202,8 @@ HttpClient::identify_cmd()
 			case http_search:
 				return CMD_SEARCH;
 				break;
-			case http_stats:
-				return CMD_STATS;
+			case http_info:
+				return CMD_INFO;
 				break;
 			case http_schema:
 				return CMD_SCHEMA;

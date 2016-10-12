@@ -139,6 +139,6 @@ public:
 	endpoints_error_list multi_db_delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 
 	MsgPack get_value(const Xapian::Document& document, const std::string& slot_name);
-	void get_stats_doc(MsgPack& stats, const std::string& document_id);
-	void get_stats_database(MsgPack& stats);
+	void get_document_info(MsgPack& info, const std::string& document_id);
+	void get_database_info(MsgPack& info);
 };

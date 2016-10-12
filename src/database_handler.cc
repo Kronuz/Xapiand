@@ -905,32 +905,32 @@ DatabaseHandler::get_value(const Xapian::Document& document, const std::string& 
 
 
 void
-DatabaseHandler::get_stats_doc(MsgPack& stats, const std::string& doc_id)
+DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 {
-	L_CALL(this, "DatabaseHandler::get_stats_doc()");
+	L_CALL(this, "DatabaseHandler::get_document_info()");
 
 	auto doc = get_document(doc_id);
 
-	stats[RESERVED_ID_FIELD] = doc.get_value(DB_SLOT_ID);
+	info[RESERVED_ID_FIELD] = doc.get_value(DB_SLOT_ID);
 
 	MsgPack obj_data = get_MsgPack(doc);
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
 	} catch (const std::out_of_range&) { }
 
-	stats[RESERVED_DATA] = std::move(obj_data);
+	info[RESERVED_DATA] = std::move(obj_data);
 
 	auto ct_type = doc.get_value(DB_SLOT_TYPE);
-	stats["_blob"] = ct_type != JSON_CONTENT_TYPE && ct_type != MSGPACK_CONTENT_TYPE;
+	info["_blob"] = ct_type != JSON_CONTENT_TYPE && ct_type != MSGPACK_CONTENT_TYPE;
 
-	auto& stats_terms = stats[RESERVED_TERMS];
+	auto& stats_terms = info[RESERVED_TERMS];
 	const auto it_e = doc.termlist_end();
 	int i = 0;
 	for (auto it = doc.termlist_begin(); it != it_e; ++it) {
 		stats_terms[++i] = *it;
 	}
 
-	auto& stats_values = stats[RESERVED_VALUES];
+	auto& stats_values = info[RESERVED_VALUES];
 	const auto iv_e = doc.values_end();
 	for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
 		stats_values[std::to_string(iv.get_valueno())] = *iv;
@@ -939,20 +939,20 @@ DatabaseHandler::get_stats_doc(MsgPack& stats, const std::string& doc_id)
 
 
 void
-DatabaseHandler::get_stats_database(MsgPack& stats)
+DatabaseHandler::get_database_info(MsgPack& info)
 {
-	L_CALL(this, "DatabaseHandler::get_stats_database()");
+	L_CALL(this, "DatabaseHandler::get_database_info()");
 
 	checkout();
 	unsigned doccount = database->db->get_doccount();
 	unsigned lastdocid = database->db->get_lastdocid();
-	stats["_uuid"] = database->db->get_uuid();
-	stats["_doc_count"] = doccount;
-	stats["_last_id"] = lastdocid;
-	stats["_doc_del"] = lastdocid - doccount;
-	stats["_av_length"] = database->db->get_avlength();
-	stats["_doc_len_lower"] =  database->db->get_doclength_lower_bound();
-	stats["_doc_len_upper"] = database->db->get_doclength_upper_bound();
-	stats["_has_positions"] = database->db->has_positions();
+	info["_uuid"] = database->db->get_uuid();
+	info["_doc_count"] = doccount;
+	info["_last_id"] = lastdocid;
+	info["_doc_del"] = lastdocid - doccount;
+	info["_av_length"] = database->db->get_avlength();
+	info["_doc_len_lower"] =  database->db->get_doclength_lower_bound();
+	info["_doc_len_upper"] = database->db->get_doclength_upper_bound();
+	info["_has_positions"] = database->db->has_positions();
 	checkin();
 }
