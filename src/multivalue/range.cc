@@ -22,7 +22,6 @@
 
 #include "range.h"
 
-#include "../fields.h"
 #include "generate_terms.h"
 #include "geospatialrange.h"
 #include "utils.h"
