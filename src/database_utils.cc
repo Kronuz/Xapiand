@@ -28,6 +28,7 @@
 #include "log.h"
 #include "serialise.h"
 #include "utils.h"
+#include "schema.h"
 
 #include "rapidjson/error/en.h"
 
@@ -172,7 +173,7 @@ void clean_reserved(MsgPack& document) {
 		MsgPack _val;
 		for (auto item_key = document.begin(); item_key != document.end();) {
 			auto str_key((*item_key).as_string());
-			if (is_valid(str_key)) {
+			if (is_valid(str_key) && reserved_field_names.find(str_key) == reserved_field_names.end()) {
 				obj = true;
 				auto& item_doc = document.at(str_key);
 				clean_reserved(item_doc);

@@ -853,7 +853,7 @@ Schema::get_subproperties(const MsgPack& properties)
 	const auto it_e = field_names.end();
 	for (auto it = field_names.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
-		if (!is_valid(field_name)) {
+		if (!is_valid(field_name) || reserved_field_names.find(field_name) != reserved_field_names.end()) {
 			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
 		}
 		restart_specification();
@@ -1848,7 +1848,7 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 				auto func = map_dispatch_document.at(str_key);
 				(this->*func)(object.at(str_key));
 			} catch (const std::out_of_range&) {
-				if (is_valid(str_key)) {
+				if (is_valid(str_key) && reserved_field_names.find(str_key) == reserved_field_names.end()) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
 				} else {
 					try {
@@ -2026,7 +2026,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 					auto func = map_dispatch_document.at(str_key);
 					(this->*func)(object.at(str_key));
 				} catch (const std::out_of_range&) {
-					if (is_valid(str_key)) {
+					if (is_valid(str_key) && reserved_field_names.find(str_key) == reserved_field_names.end()) {
 						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
 						offsprings = true;
 					}
@@ -2126,7 +2126,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 						auto func = map_dispatch_document.at(str_prop);
 						(this->*func)(item.at(str_prop));
 					} catch (const std::out_of_range&) {
-						if (is_valid(str_prop)) {
+						if (is_valid(str_prop) && reserved_field_names.find(str_prop) == reserved_field_names.end()) {
 							tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(sub_properties), std::ref(item.at(str_prop)), std::ref(data_pos), std::ref(doc), std::move(str_prop)));
 							offsprings = true;
 						}
