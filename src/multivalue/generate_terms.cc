@@ -299,16 +299,12 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 }
 
 
-std::pair<std::string, std::vector<std::string>>
+Xapian::Query
 GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix)
 {
 	if (accuracy.empty() || end_ < start_) {
-		return std::make_pair(std::string(), std::vector<std::string>());
+		return Xapian::Query();
 	}
-
-	std::string result_terms;
-	std::vector<std::string> used_prefixes;
-	used_prefixes.reserve(2);
 
 	auto tm_s = Datetime::to_tm_t(start_);
 	auto tm_e = Datetime::to_tm_t(end_);
@@ -343,97 +339,93 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 		++pos;
 	}
 
+	Xapian::Query query_upper;
+	Xapian::Query query_needed;
+
 	// If there is an upper accuracy.
 	if (pos < len) {
 		auto c_tm_s = tm_s;
 		auto c_tm_e = tm_e;
 		switch ((UnitTime)accuracy[pos]) {
 			case UnitTime::MILLENNIUM:
-				result_terms.assign(millennium(c_tm_s, c_tm_e, acc_prefix[pos]));
+				query_upper = millennium(c_tm_s, c_tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::CENTURY:
-				result_terms.assign(century(c_tm_s, c_tm_e, acc_prefix[pos]));
+				query_upper = century(c_tm_s, c_tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::DECADE:
-				result_terms.assign(decade(c_tm_s, c_tm_e, acc_prefix[pos]));
+				query_upper = decade(c_tm_s, c_tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::YEAR:
-				result_terms.assign(year(c_tm_s, c_tm_e, acc_prefix[pos]));
+				query_upper = year(c_tm_s, c_tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::MONTH:
-				result_terms.assign(month(c_tm_s, c_tm_e, acc_prefix[pos]));
+				query_upper = month(c_tm_s, c_tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::DAY:
-				result_terms.assign(day(c_tm_s, c_tm_e, acc_prefix[pos]));
+				query_upper = day(c_tm_s, c_tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::HOUR:
-				result_terms.assign(hour(c_tm_s, c_tm_e, acc_prefix[pos]));
+				query_upper = hour(c_tm_s, c_tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::MINUTE:
-				result_terms.assign(minute(c_tm_s, c_tm_e, acc_prefix[pos]));
+				query_upper = minute(c_tm_s, c_tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::SECOND:
-				result_terms.assign(second(c_tm_s, c_tm_e, acc_prefix[pos]));
+				query_upper = second(c_tm_s, c_tm_e, acc_prefix[pos]);
 				break;
-		}
-		if (!result_terms.empty()) {
-			used_prefixes.push_back(acc_prefix[pos]);
 		}
 	}
 
 	// If there is the needed accuracy.
 	if (pos > 0 && acc == accuracy[--pos]) {
-		std::string lower_terms;
 		switch ((UnitTime)accuracy[pos]) {
 			case UnitTime::MILLENNIUM:
-				lower_terms.assign(millennium(tm_s, tm_e, acc_prefix[pos]));
+				query_needed = millennium(tm_s, tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::CENTURY:
-				lower_terms.assign(century(tm_s, tm_e, acc_prefix[pos]));
+				query_needed = century(tm_s, tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::DECADE:
-				lower_terms.assign(decade(tm_s, tm_e, acc_prefix[pos]));
+				query_needed = decade(tm_s, tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::YEAR:
-				lower_terms.assign(year(tm_s, tm_e, acc_prefix[pos]));
+				query_needed = year(tm_s, tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::MONTH:
-				lower_terms.assign(month(tm_s, tm_e, acc_prefix[pos]));
+				query_needed = month(tm_s, tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::DAY:
-				lower_terms.assign(day(tm_s, tm_e, acc_prefix[pos]));
+				query_needed = day(tm_s, tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::HOUR:
-				lower_terms.assign(hour(tm_s, tm_e, acc_prefix[pos]));
+				query_needed = hour(tm_s, tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::MINUTE:
-				lower_terms.assign(minute(tm_s, tm_e, acc_prefix[pos]));
+				query_needed = minute(tm_s, tm_e, acc_prefix[pos]);
 				break;
 			case UnitTime::SECOND:
-				lower_terms.assign(second(tm_s, tm_e, acc_prefix[pos]));
+				query_needed = second(tm_s, tm_e, acc_prefix[pos]);
 				break;
-		}
-
-		if (!lower_terms.empty()) {
-			used_prefixes.push_back(acc_prefix[pos]);
-			if (result_terms.empty()) {
-				result_terms.assign(lower_terms);
-			} else {
-				result_terms.reserve(result_terms.length() + lower_terms.length() + 9);
-				result_terms.insert(result_terms.begin(), '(');
-				result_terms.append(") AND (").append(lower_terms).push_back(')');
-			}
 		}
 	}
 
-	return std::make_pair(std::move(result_terms), std::move(used_prefixes));
+	if (!query_upper.empty() && !query_needed.empty()) {
+		return Xapian::Query(Xapian::Query::OP_AND, query_upper, query_needed);
+	} else if (!query_upper.empty()) {
+		return query_upper;
+	} else if (!query_needed.empty()) {
+		return query_needed;
+	} else {
+		return Xapian::Query();
+	}
 }
 
 
-std::string
+Xapian::Query
 GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res;
+	Xapian::Query query;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_s.mon = tm_e.day = tm_e.mon = 1;
@@ -442,22 +434,21 @@ GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std:
 	size_t num_unions = (tm_e.year - tm_s.year) / 1000;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
+		query = prefixed(Serialise::serialise(tm_e), prefix);
 		while (tm_s.year != tm_e.year) {
-			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
 			tm_s.year += 1000;
 		}
-		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
-	return res;
+	return query;
 }
 
 
-std::string
+Xapian::Query
 GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res;
+	Xapian::Query query;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_s.mon = tm_e.day = tm_e.mon = 1;
@@ -466,22 +457,21 @@ GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::st
 	size_t num_unions = (tm_e.year - tm_s.year) / 100;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
+		query = prefixed(Serialise::serialise(tm_e), prefix);
 		while (tm_s.year != tm_e.year) {
-			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
 			tm_s.year += 100;
 		}
-		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
-	return res;
+	return query;
 }
 
 
-std::string
+Xapian::Query
 GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res;
+	Xapian::Query query;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_s.mon = tm_e.day = tm_e.mon = 1;
@@ -490,151 +480,144 @@ GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 	size_t num_unions = (tm_e.year - tm_s.year) / 10;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
+		query = prefixed(Serialise::serialise(tm_e), prefix);
 		while (tm_s.year != tm_e.year) {
-			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
 			tm_s.year += 10;
 		}
-		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
-	return res;
+	return query;
 }
 
 
-std::string
+Xapian::Query
 GenerateTerms::year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res;
+	Xapian::Query query;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_s.mon = tm_e.day = tm_e.mon = 1;
 	size_t num_unions = tm_e.year - tm_s.year;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
+		query = prefixed(Serialise::serialise(tm_e), prefix);
 		while (tm_s.year != tm_e.year) {
-			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
 			++tm_s.year;
 		}
-		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
-	return res;
+	return query;
 }
 
 
-std::string
+Xapian::Query
 GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res;
+	Xapian::Query query;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_e.day = 1;
 	size_t num_unions = tm_e.mon - tm_s.mon;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
+		query = prefixed(Serialise::serialise(tm_e), prefix);
 		while (tm_s.mon != tm_e.mon) {
-			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
 			++tm_s.mon;
 		}
-		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
-	return res;
+	return query;
 }
 
 
-std::string
+Xapian::Query
 GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res;
+	Xapian::Query query;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	size_t num_unions = tm_e.day - tm_s.day;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
+		query = prefixed(Serialise::serialise(tm_e), prefix);
 		while (tm_s.day != tm_e.day) {
-			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
 			++tm_s.day;
 		}
-		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
-	return res;
+	return query;
 }
 
 
-std::string
+Xapian::Query
 GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res;
+	Xapian::Query query;
 
 	tm_s.sec = tm_s.min = tm_e.sec = tm_e.min = 0;
 	size_t num_unions = tm_e.hour - tm_s.hour;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
+		query = prefixed(Serialise::serialise(tm_e), prefix);
 		while (tm_s.hour != tm_e.hour) {
-			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
 			++tm_s.hour;
 		}
-		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
-	return res;
+	return query;
 }
 
 
-std::string
+Xapian::Query
 GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res;
+	Xapian::Query query;
 
 	tm_s.sec = tm_e.sec = 0;
 	size_t num_unions = tm_e.min - tm_s.min;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
+		query = prefixed(Serialise::serialise(tm_e), prefix);
 		while (tm_s.min != tm_e.min) {
-			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
 			++tm_s.min;
 		}
-		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
-	return res;
+	return query;
 }
 
 
-std::string
+Xapian::Query
 GenerateTerms::second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
 {
-	std::string res;
+	Xapian::Query query;
 
 	size_t num_unions = tm_e.sec - tm_s.sec;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		res.reserve(get_upper_bound(prefix.length(), num_unions, 4));
+		query = prefixed(Serialise::serialise(tm_e), prefix);
 		while (tm_s.sec != tm_e.sec) {
-			res.append(prefixed(Serialise::serialise(tm_s), prefix)).append(" OR ");
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
 			++tm_s.sec;
 		}
-		res.append(prefixed(Serialise::serialise(tm_e), prefix));
 	}
 
-	return res;
+	return query;
 }
 
 
-std::pair<std::string, std::unordered_set<std::string>>
+Xapian::Query
 GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix)
 {
 	// The user does not specify the accuracy.
 	if (acc_prefix.empty() || ranges.empty()) {
-		return std::make_pair(std::string(), std::unordered_set<std::string>());
+		return Xapian::Query();
 	}
 
 	std::vector<int> pos_accuracy;
@@ -667,7 +650,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 
 	// The search have trixels more big that the biggest trixel in accuracy.
 	if (results.empty()) {
-		return std::make_pair(std::string(), std::unordered_set<std::string>());
+		return Xapian::Query();
 	}
 
 	// Delete duplicates terms.
@@ -675,15 +658,19 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	auto last_valid(std::bitset<SIZE_BITS_ID>(it->first).to_string());
 	last_valid.assign(last_valid.substr(last_valid.find('1')));
 	auto result_terms = prefixed(Serialise::serialise(it->first), it->second);
-	std::unordered_set<std::string> used_prefixes({ it->second });
-	used_prefixes.reserve(acc_prefix.size());
 	const auto it_e = results.end();
+
+	Xapian::Query query;
 	for (++it; it != it_e; ++it) {
 		if (isnotSubtrixel(last_valid, it->first)) {
-			result_terms.append(" OR ").append(prefixed(Serialise::serialise(it->first), it->second));
-			used_prefixes.insert(it->second);
+			Xapian::Query query_(prefixed(Serialise::serialise(it->first), it->second));
+			if (query.empty()) {
+				query = query_;
+			} else {
+				query = Xapian::Query(Xapian::Query::OP_OR, query, query_);
+			}
 		}
 	}
 
-	return std::make_pair(std::move(result_terms), std::move(used_prefixes));
+	return query;
 }

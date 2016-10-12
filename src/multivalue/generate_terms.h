@@ -82,14 +82,12 @@ namespace GenerateTerms {
 	 * Generate terms for numerical ranges.
 	 */
 	template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
-	std::pair<std::string, std::vector<std::string>> numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix) {
-		if (accuracy.empty() || end < start) {
-			return std::make_pair(std::string(), std::vector<std::string>());
-		}
+	Xapian::Query numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix) {
+		Xapian::Query query;
 
-		std::string result_terms;
-		std::vector<std::string> used_prefixes;
-		used_prefixes.reserve(2);
+		if (accuracy.empty() || end < start) {
+			return query;
+		}
 
 		uint64_t size_r = end - start;
 
@@ -105,7 +103,7 @@ namespace GenerateTerms {
 			T up_start = start - modulus(start, up_acc);
 			T up_end = end - modulus(end, up_acc);
 			std::string prefix_up = acc_prefix[pos];
-			used_prefixes.push_back(acc_prefix[pos]);
+
 			// If there is a lower accuracy.
 			if (pos > 0) {
 				--pos;
@@ -115,71 +113,60 @@ namespace GenerateTerms {
 				// If terms are not too many terms (num_unions + 1).
 				if (static_cast<size_t>((low_end - low_start) / low_acc) < MAX_TERMS) {
 					std::string prefix_low = acc_prefix[pos];
-					used_prefixes.push_back(acc_prefix[pos]);
 
 					if (up_start == up_end) {
 						size_t num_unions = (low_end - low_start) / low_acc;
 						if (num_unions == 0) {
-							result_terms.reserve(get_upper_bound(prefix_low.length(), num_unions, 4));
-							result_terms.append(prefixed(Serialise::serialise(low_start), prefix_low));
+							query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low));
 						} else {
-							result_terms.reserve(get_upper_bound(prefix_low.length(), num_unions + 1, 4) + 2);
-							result_terms.append(prefixed(Serialise::serialise(up_start), prefix_up)).append(" AND (");
+							query = Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up));
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low));
 							while (low_start != low_end) {
-								result_terms.append(prefixed(Serialise::serialise(low_start), prefix_low)).append(" OR ");
 								low_start += low_acc;
+								query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low)));
 							}
-							result_terms.append(prefixed(Serialise::serialise(low_end), prefix_low));
-							result_terms.push_back(')');
+							query = Xapian::Query(Xapian::Query::OP_AND, query, query_low);
 						}
 
 					} else {
 						size_t num_unions1 = (up_end - low_start) / low_acc;
 						if (num_unions1 == 0) {
-							result_terms.reserve(get_upper_bound(prefix_low.length(), num_unions1, 4));
-
-							result_terms.append(prefixed(Serialise::serialise(low_start), prefix_low));
+							query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low));
 						} else {
-							result_terms.reserve(get_upper_bound(prefix_low.length(), num_unions1 + 1, 4) + 2);
-							result_terms.append(prefixed(Serialise::serialise(up_start), prefix_up)).append(" AND (");
+							query = Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up));
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low));
 							while (low_start < up_end) {
-								result_terms.append(prefixed(Serialise::serialise(low_start), prefix_low));
 								low_start += low_acc;
 								if (low_start < up_end) {
-									result_terms.append(" OR ");
+									query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low)));
 								}
 							}
-							result_terms.push_back(')');
+							query = Xapian::Query(Xapian::Query::OP_AND, query, query_low);
 						}
 
 						size_t num_unions2 = (low_end - low_start) / low_acc;
 						if (num_unions2 == 0) {
-							result_terms.reserve(result_terms.length() + get_upper_bound(prefix_low.length(), num_unions2, 4) + 6);
-							result_terms.insert(result_terms.begin(), '(');
-							result_terms.append(") OR ").append(prefixed(Serialise::serialise(low_end), prefix_low));
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_end), prefix_low));
+							query = Xapian::Query(Xapian::Query::OP_OR, query, query_low);
 						} else {
-							result_terms.reserve(result_terms.length() + get_upper_bound(prefix_low.length(), num_unions2 + 1, 4) + 15);
-							result_terms.insert(result_terms.begin(), '(');
-							result_terms.append(") OR (");
-							result_terms.append(prefixed(Serialise::serialise(up_end), prefix_up)).append(" AND (");
+							Xapian::Query query_up(prefixed(Serialise::serialise(up_end), prefix_up));
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low));
 							while (low_start != low_end) {
-								result_terms.append(prefixed(Serialise::serialise(low_start), prefix_low)).append(" OR ");
 								low_start += low_acc;
+								query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low)));
 							}
-							result_terms.append(prefixed(Serialise::serialise(low_end), prefix_low));
-							result_terms.append("))");
+							query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_AND, query_up, query_low));
 						}
 					}
-					return std::make_pair(std::move(result_terms), std::move(used_prefixes));
+					return query;
 				}
 			}
 
 			// Only upper accuracy.
-			result_terms.reserve(get_upper_bound(prefix_up.length(), up_start != up_end, 4));
+			query = Xapian::Query(prefixed(Serialise::serialise(up_end), prefix_up));
 			if (up_start != up_end) {
-				result_terms.append(prefixed(Serialise::serialise(up_start), prefix_up)).append(" OR ");
+				query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up)));
 			}
-			result_terms.append(prefixed(Serialise::serialise(up_end), prefix_up));
 
 		} else if (pos > 0) { // If only there is a lower accuracy.
 			--pos;
@@ -191,39 +178,35 @@ namespace GenerateTerms {
 			if (num_unions < MAX_TERMS) {
 				std::string prefix = acc_prefix[pos];
 				// Reserve upper bound.
-				result_terms.reserve(get_upper_bound(prefix.length(), num_unions, 4));
-
-				used_prefixes.push_back(acc_prefix[pos]);
-
+				query = Xapian::Query(prefixed(Serialise::serialise(end), prefix));
 				while (start != end) {
-					result_terms.append(prefixed(Serialise::serialise(start), prefix)).append(" OR ");
+					query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(start), prefix)));
 					start += low_acc;
 				}
-				result_terms.append(prefixed(Serialise::serialise(end), prefix));
 			}
 		}
 
-		return std::make_pair(std::move(result_terms), std::move(used_prefixes));
+		return query;
 	}
 
 	/*
 	 * Generate Terms for date ranges.
 	 */
-	std::pair<std::string, std::vector<std::string>> date(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix);
+	Xapian::Query date(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix);
 
 	/*
 	 * Auxiliar functions for date ranges.
 	 */
 
-	std::string millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	std::string century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	std::string decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	std::string year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	std::string month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	std::string day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	std::string hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	std::string minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	std::string second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
+	Xapian::Query millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
+	Xapian::Query century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
+	Xapian::Query decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
+	Xapian::Query year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
+	Xapian::Query month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
+	Xapian::Query day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
+	Xapian::Query hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
+	Xapian::Query minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
+	Xapian::Query second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
 
 	// Datetime only accepts year greater than 0.
 	inline constexpr int year(int year, int accuracy) noexcept {
@@ -234,5 +217,5 @@ namespace GenerateTerms {
 	/*
 	 * Generate ters for geospatial ranges.
 	 */
-	std::pair<std::string, std::unordered_set<std::string>> geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix);
+	Xapian::Query geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix);
 };

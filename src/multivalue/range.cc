@@ -32,16 +32,12 @@ template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<
 Xapian::Query filterNumericQuery(const required_spc_t& field_spc, T start, T end, const std::string& start_s, const std::string& end_s) {
 	auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
 
-	auto filter_terms = GenerateTerms::numeric(start, end, field_spc.accuracy, field_spc.acc_prefix);
-	if (filter_terms.first.empty()) {
+	auto query = GenerateTerms::numeric(start, end, field_spc.accuracy, field_spc.acc_prefix);
+
+	if (query.empty()) {
 		return Xapian::Query(mvr->release());
 	} else {
-		Xapian::QueryParser queryparser;
-		for (const auto& prefix : filter_terms.second) {
-			auto nfp = new NumericFieldProcessor(field_spc.get_type(), prefix);
-			queryparser.add_prefix(prefix, nfp->release());
-		}
-		return Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_terms.first), Xapian::Query(mvr->release()));
+		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 	}
 }
 
@@ -87,18 +83,13 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 					return Xapian::Query::MatchNothing;
 				}
 
-				auto GeoQuery = GeoSpatialRange::getQuery(field_spc.slot, geo.ranges, geo.centroids);
+				auto query_geo = GeoSpatialRange::getQuery(field_spc.slot, geo.ranges, geo.centroids);
 
-				auto filter_term = GenerateTerms::geo(geo.ranges, field_spc.accuracy, field_spc.acc_prefix);
-				if (filter_term.first.empty()) {
-					return GeoQuery;
+				auto query = GenerateTerms::geo(geo.ranges, field_spc.accuracy, field_spc.acc_prefix);
+				if (query.empty()) {
+					return query_geo;
 				} else {
-					Xapian::QueryParser queryparser;
-					for (const auto& prefix : filter_term.second) {
-						auto gfp = new GeoFieldProcessor(prefix);
-						queryparser.add_prefix(prefix, gfp->release());
-					}
-					return Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term.first), GeoQuery);
+					return Xapian::Query(Xapian::Query::OP_AND, query, query_geo);
 				}
 			} else {
 				auto mvge = new MultipleValueGE(field_spc.slot, Serialise::serialise(field_spc, start));
@@ -151,16 +142,11 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 
 				auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
 
-				auto filter_terms = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
-				if (filter_terms.first.empty()) {
+				auto query = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
+				if (query.empty()) {
 					return Xapian::Query(mvr->release());
 				} else {
-					Xapian::QueryParser queryparser;
-					for (const auto& prefix : filter_terms.second) {
-						auto dfp = new DateFieldProcessor(prefix);
-						queryparser.add_prefix(prefix, dfp->release());
-					}
-					return Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_terms.first), Xapian::Query(mvr->release()));
+					return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 				}
 			}
 			case FieldType::GEO:
