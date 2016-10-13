@@ -43,7 +43,8 @@ enum class DynamicFieldType : uint8_t {
 	NONE,
 	DATE,
 	GEO,
-	UUID
+	UUID,
+	ANY,
 };
 
 
@@ -56,7 +57,7 @@ enum class UnitTime : uint8_t {
 	YEAR,
 	DECADE,
 	CENTURY,
-	MILLENNIUM
+	MILLENNIUM,
 };
 
 
@@ -161,6 +162,7 @@ inline static std::string readable_dynamic_field_type(DynamicFieldType type) noe
 		case DynamicFieldType::DATE: return "date";
 		case DynamicFieldType::GEO:  return "geo";
 		case DynamicFieldType::UUID: return "uuid";
+		case DynamicFieldType::ANY:  return "any";
 	}
 };
 

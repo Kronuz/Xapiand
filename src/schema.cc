@@ -766,6 +766,11 @@ Schema::detect_dynamic(const std::string& field_name)
 		specification.dynamic_name.assign(UUID_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::UUID;
 		return;
+	} else if (field_name == UUID_FIELD_NAME) {
+		specification.dynamic_prefix.clear();
+		specification.dynamic_name.assign(UUID_FIELD_NAME);
+		specification.dynamic_type = DynamicFieldType::UUID;
+		return;
 	}
 
 	try {
@@ -773,14 +778,34 @@ Schema::detect_dynamic(const std::string& field_name)
 		specification.dynamic_name.assign(DATE_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::DATE;
 		return;
-	} catch (const DatetimeError&) { }
+	} catch (const DatetimeError&) {
+		if (field_name == DATE_FIELD_NAME) {
+			specification.dynamic_prefix.clear();
+			specification.dynamic_name.assign(DATE_FIELD_NAME);
+			specification.dynamic_type = DynamicFieldType::DATE;
+			return;
+		}
+	}
 
 	try {
 		specification.dynamic_prefix.assign(Serialise::ewkt(field_name, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
 		specification.dynamic_name.assign(GEO_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::GEO;
 		return;
-	} catch (const EWKTError&) { }
+	} catch (const EWKTError&) {
+		if (field_name == GEO_FIELD_NAME) {
+			specification.dynamic_prefix.clear();
+			specification.dynamic_name.assign(GEO_FIELD_NAME);
+			specification.dynamic_type = DynamicFieldType::GEO;
+			return;
+		}
+	}
+
+	if (field_name == ANY_FIELD_NAME) {
+		specification.dynamic_prefix.clear();
+		specification.dynamic_name.assign(ANY_FIELD_NAME);
+		specification.dynamic_type = DynamicFieldType::ANY;
+	}
 
 	specification.dynamic_prefix.assign(field_name);
 	specification.dynamic_name.assign(field_name);
