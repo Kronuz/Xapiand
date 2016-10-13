@@ -1213,7 +1213,11 @@ Schema::process_weight(const MsgPack& doc_weight)
 		}
 
 		if unlikely(!specification.found_field) {
-			get_mutable(specification.full_name)[RESERVED_WEIGHT] = specification.weight;
+			if (specification.weight.size() == 1) {
+				get_mutable(specification.full_name)[RESERVED_WEIGHT] = static_cast<uint64_t>(specification.weight.front());
+			} else {
+				get_mutable(specification.full_name)[RESERVED_WEIGHT] = specification.weight;
+			}
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", RESERVED_WEIGHT);
@@ -1239,7 +1243,11 @@ Schema::process_spelling(const MsgPack& doc_spelling)
 		}
 
 		if unlikely(!specification.found_field) {
-			get_mutable(specification.full_name)[RESERVED_SPELLING] = specification.spelling;
+			if (specification.spelling.size() == 1) {
+				get_mutable(specification.full_name)[RESERVED_SPELLING] = static_cast<bool>(specification.spelling.front());
+			} else {
+				get_mutable(specification.full_name)[RESERVED_SPELLING] = specification.spelling;
+			}
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be a boolean or a not-empty array of booleans", RESERVED_SPELLING);

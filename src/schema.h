@@ -585,29 +585,45 @@ public:
 
 	void update_position(const MsgPack& prop_position) {
 		specification.position.clear();
-		for (const auto& _position : prop_position) {
-			specification.position.push_back(static_cast<Xapian::termpos>(_position.as_u64()));
+		if (prop_position.is_array()) {
+			for (const auto& _position : prop_position) {
+				specification.position.push_back(static_cast<Xapian::termpos>(_position.as_u64()));
+			}
+		} else {
+			specification.position.push_back(static_cast<Xapian::termpos>(prop_position.as_u64()));
 		}
 	}
 
 	void update_weight(const MsgPack& prop_weight) {
 		specification.weight.clear();
-		for (const auto& _weight : prop_weight) {
-			specification.weight.push_back(static_cast<Xapian::termpos>(_weight.as_u64()));
+		if (prop_weight.is_array()) {
+			for (const auto& _weight : prop_weight) {
+				specification.weight.push_back(static_cast<Xapian::termpos>(_weight.as_u64()));
+			}
+		} else {
+			specification.weight.push_back(static_cast<Xapian::termpos>(prop_weight.as_u64()));
 		}
 	}
 
 	void update_spelling(const MsgPack& prop_spelling) {
 		specification.spelling.clear();
-		for (const auto& _spelling : prop_spelling) {
-			specification.spelling.push_back(_spelling.as_bool());
+		if (prop_spelling.is_array()) {
+			for (const auto& _spelling : prop_spelling) {
+				specification.spelling.push_back(_spelling.as_bool());
+			}
+		} else {
+			specification.spelling.push_back(prop_spelling.as_bool());
 		}
 	}
 
 	void update_positions(const MsgPack& prop_positions) {
 		specification.positions.clear();
-		for (const auto& _positions : prop_positions) {
-			specification.positions.push_back(_positions.as_bool());
+		if (prop_positions.is_array()) {
+			for (const auto& _positions : prop_positions) {
+				specification.positions.push_back(_positions.as_bool());
+			}
+		} else {
+			specification.positions.push_back(prop_positions.as_bool());
 		}
 	}
 
