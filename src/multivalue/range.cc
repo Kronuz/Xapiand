@@ -160,6 +160,167 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 }
 
 
+Xapian::Query
+MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string& field_name, const MsgPack* start, const MsgPack* end)
+{
+	try {
+		if (!start) {
+			if (!end) {
+				return Xapian::Query::MatchAll;
+			}
+
+			if (field_spc.get_type() == FieldType::GEO) {
+				throw MSG_SerialisationError("The format for Geo Spatial range is: field_name:[\"EWKT\"]");
+			}
+
+			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::serialise(field_spc, end));
+			return Xapian::Query(mvle->release());
+		}  else if (!end) {
+			if (field_spc.get_type() == FieldType::GEO) {
+
+				if (!start->is_string()) {
+					throw MSG_QueryParserError("Expected string in geo type");
+				}
+
+				auto geo = EWKT_Parser::getGeoSpatial(start->as_string(), field_spc.partials, field_spc.error);
+
+				if (geo.ranges.empty()) {
+					return Xapian::Query::MatchNothing;
+				}
+
+				auto query_geo = GeoSpatialRange::getQuery(field_spc.slot, geo.ranges, geo.centroids);
+
+				auto query = GenerateTerms::geo(geo.ranges, field_spc.accuracy, field_spc.acc_prefix);
+				if (query.empty()) {
+					return query_geo;
+				} else {
+					return Xapian::Query(Xapian::Query::OP_AND, query, query_geo);
+				}
+			} else {
+				auto mvge = new MultipleValueGE(field_spc.slot, Serialise::serialise(field_spc, start));
+				return Xapian::Query(mvge->release());
+			}
+		}
+
+		switch (field_spc.get_type()) {
+			case FieldType::FLOAT: {
+				double start_v, end_v;
+				if (start->is_number()) {
+					start_v = start->as_f64();
+				} else if (start->is_string()) {
+					start_v = strict(std::stod, start->as_string());
+				} else {
+					throw MSG_QueryParserError("Expected type %c in %s", FieldType::FLOAT, field_name.c_str());
+				}
+				if (end->is_number()) {
+					end_v = end->as_f64();
+				} else if (end->is_string()) {
+					end_v = strict(std::stod, end->as_string());
+				} else {
+					throw MSG_QueryParserError("Expected type %c in %s", FieldType::FLOAT, field_name.c_str());
+				}
+				if (start_v > end_v) {
+					return Xapian::Query::MatchNothing;
+				}
+				return filterNumericQuery(field_spc, (int64_t)start_v, (int64_t)end_v, Serialise::_float(start_v), Serialise::_float(end_v));
+			}
+			case FieldType::INTEGER: {
+				long long start_v, end_v;
+				if (start->is_number()) {
+					start_v = start->as_i64();
+				} else if (start->is_string()) {
+					start_v = strict(std::stoll, start->as_string());
+				} else {
+					throw MSG_QueryParserError("Expected type %c in %s", FieldType::INTEGER, field_name.c_str());
+				}
+				if (end->is_number()) {
+					end_v = end->as_i64();
+				} else if (end->is_string()) {
+					end_v = strict(std::stoll, end->as_string());
+				} else {
+					throw MSG_QueryParserError("Expected type %c in %s", FieldType::INTEGER, field_name.c_str());
+				}
+				if (start_v > end_v) {
+					return Xapian::Query::MatchNothing;
+				}
+				return filterNumericQuery(field_spc, start_v, end_v, Serialise::integer(start_v), Serialise::integer(end_v));
+			}
+			case FieldType::POSITIVE: {
+				unsigned long long start_v, end_v;
+				if (start->is_number()) {
+					start_v = start->as_u64();
+				} else if (start->is_string()) {
+					start_v = strict(std::stoull, start->as_string());
+				} else {
+					throw MSG_QueryParserError("Expected type %c in %s", FieldType::POSITIVE, field_name.c_str());
+				}
+				if (end->is_number()) {
+					end_v = end->as_u64();
+				} else if (end->is_string()) {
+					end_v = strict(std::stoull, end->as_string());
+				} else {
+					throw MSG_QueryParserError("Expected type %c in %s", FieldType::POSITIVE, field_name.c_str());
+				}
+				if (start_v > end_v) {
+					return Xapian::Query::MatchNothing;
+				}
+				return filterNumericQuery(field_spc, start_v, end_v, Serialise::positive(start_v), Serialise::positive(end_v));
+			}
+			case FieldType::UUID:
+				if (start->is_string() && end->is_string()) {
+					return filterStringQuery(field_spc, Serialise::uuid(start->as_string()), Serialise::uuid(end->as_string()));
+				} else {
+					throw MSG_QueryParserError("Expected type %c in %s", FieldType::UUID, field_name.c_str());
+				}
+			case FieldType::BOOLEAN:
+			if (start->is_string() && end->is_string()) {
+				return filterStringQuery(field_spc, Serialise::boolean(start->as_string()), Serialise::boolean(end->as_string()));
+			} else {
+				throw MSG_QueryParserError("Expected type %c in %s", FieldType::UUID, field_name.c_str());
+			}
+			case FieldType::STRING:
+			case FieldType::TEXT:
+			if (start->is_string() && end->is_string()) {
+				return filterStringQuery(field_spc, start->as_string(), end->as_string());
+			} else {
+				throw MSG_QueryParserError("Expected type %c or %c in %s", FieldType::STRING, FieldType::TEXT, field_name.c_str());
+			}
+			case FieldType::DATE: {
+				if (start->is_string() && end->is_string()) {
+					auto timestamp_s = Datetime::timestamp(start->as_string());
+					auto timestamp_e = Datetime::timestamp(end->as_string());
+
+					if (timestamp_s > timestamp_e) {
+						return Xapian::Query::MatchNothing;
+					}
+
+					auto start_s = Serialise::timestamp(timestamp_s);
+					auto end_s   = Serialise::timestamp(timestamp_e);
+
+					auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
+
+					auto query = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
+					if (query.empty()) {
+						return Xapian::Query(mvr->release());
+					} else {
+						return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
+					}
+				} else {
+					throw MSG_QueryParserError("Expected type %c in %s", FieldType::DATE, field_name.c_str());
+				}
+			}
+			case FieldType::GEO:
+				throw MSG_QueryParserError("The format for Geo Spatial range is: field_name:[\"EWKT\"]");
+			default:
+				return Xapian::Query::MatchNothing;
+		}
+
+	} catch (const Exception& exc) {
+		throw MSG_QueryParserError("Failed to serialize: %s:%s..%s like %s (%s)", field_name.c_str(), MsgPackTypes[static_cast<int>(start->getType())], MsgPackTypes[static_cast<int>(end->getType())], Serialise::type(field_spc.get_type()).c_str(), exc.what());
+	}
+}
+
+
 bool
 MultipleValueRange::insideRange() const noexcept
 {
