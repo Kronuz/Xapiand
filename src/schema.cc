@@ -1201,7 +1201,7 @@ void
 Schema::process_weight(const MsgPack& doc_weight)
 {
 	// RESERVED_WEIGHT is heritable and can change between documents.
-	L_CALL(this, "Schema::process_weight()");
+	L_CALL(this, "Schema::process_weight(%s)", doc_weight.to_string().c_str());
 
 	try {
 		specification.weight.clear();
@@ -1233,7 +1233,7 @@ void
 Schema::process_spelling(const MsgPack& doc_spelling)
 {
 	// RESERVED_SPELLING is heritable and can change between documents.
-	L_CALL(this, "Schema::process_spelling()");
+	L_CALL(this, "Schema::process_spelling(%s)", doc_spelling.to_string().c_str());
 
 	try {
 		specification.spelling.clear();
@@ -1265,7 +1265,7 @@ void
 Schema::process_positions(const MsgPack& doc_positions)
 {
 	// RESERVED_POSITIONS is heritable and can change between documents.
-	L_CALL(this, "Schema::process_positions()");
+	L_CALL(this, "Schema::process_positions(%s)", doc_positions.to_string().c_str());
 
 	try {
 		specification.positions.clear();
@@ -1297,7 +1297,7 @@ void
 Schema::process_stem_strategy(const MsgPack& doc_stem_strategy)
 {
 	// RESERVED_STEM_STRATEGY isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_stem_strategy()");
+	L_CALL(this, "Schema::process_stem_strategy(%s)", doc_stem_strategy.to_string().c_str());
 
 	if likely(specification.set_type) {
 		return;
@@ -1320,7 +1320,7 @@ void
 Schema::process_stem_language(const MsgPack& doc_stem_language)
 {
 	// RESERVED_STEM_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_stem_language()");
+	L_CALL(this, "Schema::process_stem_language(%s)", doc_stem_language.to_string().c_str());
 
 	if likely(specification.set_type) {
 		return;
@@ -1345,7 +1345,7 @@ void
 Schema::process_language(const MsgPack& doc_language)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_language()");
+	L_CALL(this, "Schema::process_language(%s)", doc_language.to_string().c_str());
 
 	if likely(specification.set_type) {
 		return;
@@ -1374,7 +1374,7 @@ void
 Schema::process_type(const MsgPack& doc_type)
 {
 	// RESERVED_TYPE isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_type()");
+	L_CALL(this, "Schema::process_type(%s)", doc_type.to_string().c_str());
 
 	if likely(specification.set_type) {
 		return;
@@ -1441,7 +1441,7 @@ void
 Schema::process_accuracy(const MsgPack& doc_accuracy)
 {
 	// RESERVED_ACCURACY isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_accuracy()");
+	L_CALL(this, "Schema::process_accuracy(%s)", doc_accuracy.to_string().c_str());
 
 	if likely(specification.set_type) {
 		return;
@@ -1463,7 +1463,7 @@ void
 Schema::process_acc_prefix(const MsgPack& doc_acc_prefix)
 {
 	// RESERVED_ACC_PREFIX isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_acc_prefix()");
+	L_CALL(this, "Schema::process_acc_prefix(%s)", doc_acc_prefix.to_string().c_str());
 
 	// It is taken into account only if RESERVED_ACCURACY is defined.
 	if likely(specification.set_type) {
@@ -1494,7 +1494,7 @@ void
 Schema::process_prefix(const MsgPack& doc_prefix)
 {
 	// RESERVED_PREFIX isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_prefix()");
+	L_CALL(this, "Schema::process_prefix(%s)", doc_prefix.to_string().c_str());
 
 	if likely(specification.set_type) {
 		return;
@@ -1512,7 +1512,7 @@ void
 Schema::process_slot(const MsgPack& doc_slot)
 {
 	// RESERVED_SLOT isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_slot()");
+	L_CALL(this, "Schema::process_slot(%s)", doc_slot.to_string().c_str());
 
 	if likely(specification.set_type) {
 		return;
@@ -1535,7 +1535,7 @@ void
 Schema::process_index(const MsgPack& doc_index)
 {
 	// RESERVED_INDEX is heritable and can change.
-	L_CALL(this, "Schema::process_index()");
+	L_CALL(this, "Schema::process_index(%s)", doc_index.to_string().c_str());
 
 	try {
 		auto str_index = lower_string(doc_index.as_string());
@@ -1557,7 +1557,7 @@ Schema::process_index(const MsgPack& doc_index)
 void
 Schema::process_store(const MsgPack& doc_store)
 {
-	L_CALL(this, "Schema::process_store()");
+	L_CALL(this, "Schema::process_store(%s)", doc_store.to_string().c_str());
 	/*
 	 * RESERVED_STORE is heritable and can change, but once fixed in false
 	 * it cannot change in its offsprings.
@@ -1580,7 +1580,7 @@ void
 Schema::process_dynamic(const MsgPack& doc_dynamic)
 {
 	// RESERVED_DYNAMIC is heritable but can't change.
-	L_CALL(this, "Schema::process_dynamic()");
+	L_CALL(this, "Schema::process_dynamic(%s)", doc_dynamic.to_string().c_str());
 
 	if likely(specification.found_field) {
 		return;
@@ -1599,7 +1599,7 @@ void
 Schema::process_d_detection(const MsgPack& doc_d_detection)
 {
 	// RESERVED_D_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::process_d_detection()");
+	L_CALL(this, "Schema::process_d_detection(%s)", doc_d_detection.to_string().c_str());
 
 	if likely(specification.found_field) {
 		return;
@@ -1618,7 +1618,7 @@ void
 Schema::process_n_detection(const MsgPack& doc_n_detection)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::process_n_detection()");
+	L_CALL(this, "Schema::process_n_detection(%s)", doc_n_detection.to_string().c_str());
 
 	if likely(specification.found_field) {
 		return;
@@ -1637,7 +1637,7 @@ void
 Schema::process_g_detection(const MsgPack& doc_g_detection)
 {
 	// RESERVED_G_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::process_g_detection()");
+	L_CALL(this, "Schema::process_g_detection(%s)", doc_g_detection.to_string().c_str());
 
 	if likely(specification.found_field) {
 		return;
@@ -1656,7 +1656,7 @@ void
 Schema::process_b_detection(const MsgPack& doc_b_detection)
 {
 	// RESERVED_B_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::process_b_detection()");
+	L_CALL(this, "Schema::process_b_detection(%s)", doc_b_detection.to_string().c_str());
 
 	if likely(specification.found_field) {
 		return;
@@ -1675,7 +1675,7 @@ void
 Schema::process_s_detection(const MsgPack& doc_s_detection)
 {
 	// RESERVED_S_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::process_s_detection()");
+	L_CALL(this, "Schema::process_s_detection(%s)", doc_s_detection.to_string().c_str());
 
 	if likely(specification.found_field) {
 		return;
@@ -1694,7 +1694,7 @@ void
 Schema::process_t_detection(const MsgPack& doc_t_detection)
 {
 	// RESERVED_T_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::process_t_detection()");
+	L_CALL(this, "Schema::process_t_detection(%s)", doc_t_detection.to_string().c_str());
 
 	if likely(specification.found_field) {
 		return;
@@ -1713,7 +1713,7 @@ void
 Schema::process_u_detection(const MsgPack& doc_u_detection)
 {
 	// RESERVED_U_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::process_u_detection()");
+	L_CALL(this, "Schema::process_u_detection(%s)", doc_u_detection.to_string().c_str());
 
 	if likely(specification.found_field) {
 		return;
@@ -1732,7 +1732,7 @@ void
 Schema::process_bool_term(const MsgPack& doc_bool_term)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
-	L_CALL(this, "Schema::process_bool_term()");
+	L_CALL(this, "Schema::process_bool_term(%s)", doc_bool_term.to_string().c_str());
 
 	if likely(specification.set_type) {
 		return;
@@ -1751,7 +1751,7 @@ void
 Schema::process_partials(const MsgPack& doc_partials)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_partials()");
+	L_CALL(this, "Schema::process_partials(%s)", doc_partials.to_string().c_str());
 
 	if likely(specification.set_type) {
 		return;
@@ -1769,7 +1769,7 @@ void
 Schema::process_error(const MsgPack& doc_error)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_error()");
+	L_CALL(this, "Schema::process_error(%s)", doc_error.to_string().c_str());
 
 	if likely(specification.set_type) {
 		return;
@@ -1787,7 +1787,7 @@ void
 Schema::process_latitude(const MsgPack& doc_latitude)
 {
 	// RESERVED_LATITUDE isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_latitude()");
+	L_CALL(this, "Schema::process_latitude(%s)", doc_latitude.to_string().c_str());
 
 	if (!specification.value_rec) {
 		specification.value_rec = std::make_unique<MsgPack>();
@@ -1800,7 +1800,7 @@ void
 Schema::process_longitude(const MsgPack& doc_longitude)
 {
 	// RESERVED_LONGITUDE isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_longitude()");
+	L_CALL(this, "Schema::process_longitude(%s)", doc_longitude.to_string().c_str());
 
 	if (!specification.value_rec) {
 		specification.value_rec = std::make_unique<MsgPack>();
@@ -1813,7 +1813,7 @@ void
 Schema::process_radius(const MsgPack& doc_radius)
 {
 	// RESERVED_RADIUS isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_radius()");
+	L_CALL(this, "Schema::process_radius(%s)", doc_radius.to_string().c_str());
 
 	if (!specification.value_rec) {
 		specification.value_rec = std::make_unique<MsgPack>();
@@ -1826,7 +1826,7 @@ void
 Schema::process_date(const MsgPack& doc_date)
 {
 	// RESERVED_DATE isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_date()");
+	L_CALL(this, "Schema::process_date(%s)", doc_date.to_string().c_str());
 
 	if (!specification.value_rec) {
 		specification.value_rec = std::make_unique<MsgPack>();
@@ -1839,7 +1839,7 @@ void
 Schema::process_time(const MsgPack& doc_time)
 {
 	// RESERVED_TIME isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_time()");
+	L_CALL(this, "Schema::process_time(%s)", doc_time.to_string().c_str());
 
 	if (!specification.value_rec) {
 		specification.value_rec = std::make_unique<MsgPack>();
@@ -1852,7 +1852,7 @@ void
 Schema::process_year(const MsgPack& doc_year)
 {
 	// RESERVED_YEAR isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_year()");
+	L_CALL(this, "Schema::process_year(%s)", doc_year.to_string().c_str());
 
 	if (!specification.value_rec) {
 		specification.value_rec = std::make_unique<MsgPack>();
@@ -1865,7 +1865,7 @@ void
 Schema::process_month(const MsgPack& doc_month)
 {
 	// RESERVED_MONTH isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_month()");
+	L_CALL(this, "Schema::process_month(%s)", doc_month.to_string().c_str());
 
 	if (!specification.value_rec) {
 		specification.value_rec = std::make_unique<MsgPack>();
@@ -1878,7 +1878,7 @@ void
 Schema::process_day(const MsgPack& doc_day)
 {
 	// RESERVED_DAY isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_day()");
+	L_CALL(this, "Schema::process_day(%s)", doc_day.to_string().c_str());
 
 	if (!specification.value_rec) {
 		specification.value_rec = std::make_unique<MsgPack>();
@@ -1891,7 +1891,7 @@ void
 Schema::process_value(const MsgPack& doc_value)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_value()");
+	L_CALL(this, "Schema::process_value(%s)", doc_value.to_string().c_str());
 
 	specification.value = std::make_unique<const MsgPack>(doc_value);
 }
@@ -1901,7 +1901,7 @@ void
 Schema::process_name(const MsgPack& doc_name)
 {
 	// RESERVED_NAME isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_name()");
+	L_CALL(this, "Schema::process_name(%s)", doc_name.to_string().c_str());
 
 	try {
 		specification.name.assign(doc_name.as_string());
@@ -1915,7 +1915,7 @@ void
 Schema::process_script(const MsgPack& doc_script)
 {
 	// RESERVED_SCRIPT isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_script()");
+	L_CALL(this, "Schema::process_script(%s)", doc_script.to_string().c_str());
 
 	specification.script = std::make_unique<const MsgPack>(doc_script);
 }
@@ -1940,7 +1940,7 @@ Schema::update_position(const MsgPack& prop_position)
 void
 Schema::update_weight(const MsgPack& prop_weight)
 {
-	L_CALL(this, "Schema::update_weight()");
+	L_CALL(this, "Schema::update_weight(%s)", prop_weight.to_string().c_str());
 
 	specification.weight.clear();
 	if (prop_weight.is_array()) {
@@ -1956,7 +1956,7 @@ Schema::update_weight(const MsgPack& prop_weight)
 void
 Schema::update_spelling(const MsgPack& prop_spelling)
 {
-	L_CALL(this, "Schema::update_spelling()");
+	L_CALL(this, "Schema::update_spelling(%s)", prop_spelling.to_string().c_str());
 
 	specification.spelling.clear();
 	if (prop_spelling.is_array()) {
@@ -1972,7 +1972,7 @@ Schema::update_spelling(const MsgPack& prop_spelling)
 void
 Schema::update_positions(const MsgPack& prop_positions)
 {
-	L_CALL(this, "Schema::update_positions()");
+	L_CALL(this, "Schema::update_positions(%s)", prop_positions.to_string().c_str());
 
 	specification.positions.clear();
 	if (prop_positions.is_array()) {
@@ -1988,7 +1988,7 @@ Schema::update_positions(const MsgPack& prop_positions)
 void
 Schema::update_stem_strategy(const MsgPack& prop_stem_strategy)
 {
-	L_CALL(this, "Schema::update_stem_strategy()");
+	L_CALL(this, "Schema::update_stem_strategy(%s)", prop_stem_strategy.to_string().c_str());
 
 	specification.stem_strategy = static_cast<StemStrategy>(prop_stem_strategy.as_u64());
 }
@@ -1997,7 +1997,7 @@ Schema::update_stem_strategy(const MsgPack& prop_stem_strategy)
 void
 Schema::update_stem_language(const MsgPack& prop_stem_language)
 {
-	L_CALL(this, "Schema::update_stem_language()");
+	L_CALL(this, "Schema::update_stem_language(%s)", prop_stem_language.to_string().c_str());
 
 	specification.stem_language = prop_stem_language.as_string();
 }
@@ -2006,7 +2006,7 @@ Schema::update_stem_language(const MsgPack& prop_stem_language)
 void
 Schema::update_language(const MsgPack& prop_language)
 {
-	L_CALL(this, "Schema::update_language()");
+	L_CALL(this, "Schema::update_language(%s)", prop_language.to_string().c_str());
 
 	specification.language = prop_language.as_string();
 }
@@ -2015,7 +2015,7 @@ Schema::update_language(const MsgPack& prop_language)
 void
 Schema::update_type(const MsgPack& prop_type)
 {
-	L_CALL(this, "Schema::update_type()");
+	L_CALL(this, "Schema::update_type(%s)", prop_type.to_string().c_str());
 
 	specification.sep_types[0] = (FieldType)prop_type.at(0).as_u64();
 	specification.sep_types[1] = (FieldType)prop_type.at(1).as_u64();
@@ -2027,7 +2027,7 @@ Schema::update_type(const MsgPack& prop_type)
 void
 Schema::update_accuracy(const MsgPack& prop_accuracy)
 {
-	L_CALL(this, "Schema::update_accuracy()");
+	L_CALL(this, "Schema::update_accuracy(%s)", prop_accuracy.to_string().c_str());
 
 	for (const auto& acc : prop_accuracy) {
 		specification.accuracy.push_back(acc.as_f64());
@@ -2038,7 +2038,7 @@ Schema::update_accuracy(const MsgPack& prop_accuracy)
 void
 Schema::update_acc_prefix(const MsgPack& prop_acc_prefix)
 {
-	L_CALL(this, "Schema::update_acc_prefix()");
+	L_CALL(this, "Schema::update_acc_prefix(%s)", prop_acc_prefix.to_string().c_str());
 
 	for (const auto& acc_p : prop_acc_prefix) {
 		specification.acc_prefix.push_back(acc_p.as_string());
@@ -2049,7 +2049,7 @@ Schema::update_acc_prefix(const MsgPack& prop_acc_prefix)
 void
 Schema::update_prefix(const MsgPack& prop_prefix)
 {
-	L_CALL(this, "Schema::update_prefix()");
+	L_CALL(this, "Schema::update_prefix(%s)", prop_prefix.to_string().c_str());
 
 	specification.prefix = prop_prefix.as_string();
 }
@@ -2058,7 +2058,7 @@ Schema::update_prefix(const MsgPack& prop_prefix)
 void
 Schema::update_slot(const MsgPack& prop_slot)
 {
-	L_CALL(this, "Schema::update_slot()");
+	L_CALL(this, "Schema::update_slot(%s)", prop_slot.to_string().c_str());
 
 	specification.slot = static_cast<Xapian::valueno>(prop_slot.as_u64());
 }
@@ -2067,7 +2067,7 @@ Schema::update_slot(const MsgPack& prop_slot)
 void
 Schema::update_index(const MsgPack& prop_index)
 {
-	L_CALL(this, "Schema::update_index()");
+	L_CALL(this, "Schema::update_index(%s)", prop_index.to_string().c_str());
 
 	// If not fixed_index update index type.
 	if likely(!specification.fixed_index) {
@@ -2079,7 +2079,7 @@ Schema::update_index(const MsgPack& prop_index)
 void
 Schema::update_store(const MsgPack& prop_store)
 {
-	L_CALL(this, "Schema::update_store()");
+	L_CALL(this, "Schema::update_store(%s)", prop_store.to_string().c_str());
 
 	specification.parent_store = specification.store;
 	specification.store = prop_store.as_bool() && specification.parent_store;
@@ -2089,7 +2089,7 @@ Schema::update_store(const MsgPack& prop_store)
 void
 Schema::update_dynamic(const MsgPack& prop_dynamic)
 {
-	L_CALL(this, "Schema::update_dynamic()");
+	L_CALL(this, "Schema::update_dynamic(%s)", prop_dynamic.to_string().c_str());
 
 	specification.dynamic = prop_dynamic.as_bool();
 }
@@ -2098,7 +2098,7 @@ Schema::update_dynamic(const MsgPack& prop_dynamic)
 void
 Schema::update_d_detection(const MsgPack& prop_d_detection)
 {
-	L_CALL(this, "Schema::update_d_detection()");
+	L_CALL(this, "Schema::update_d_detection(%s)", prop_d_detection.to_string().c_str());
 
 	specification.date_detection = prop_d_detection.as_bool();
 }
@@ -2107,7 +2107,7 @@ Schema::update_d_detection(const MsgPack& prop_d_detection)
 void
 Schema::update_n_detection(const MsgPack& prop_n_detection)
 {
-	L_CALL(this, "Schema::update_n_detection()");
+	L_CALL(this, "Schema::update_n_detection(%s)", prop_n_detection.to_string().c_str());
 
 	specification.numeric_detection = prop_n_detection.as_bool();
 }
@@ -2116,7 +2116,7 @@ Schema::update_n_detection(const MsgPack& prop_n_detection)
 void
 Schema::update_g_detection(const MsgPack& prop_g_detection)
 {
-	L_CALL(this, "Schema::update_g_detection()");
+	L_CALL(this, "Schema::update_g_detection(%s)", prop_g_detection.to_string().c_str());
 
 	specification.geo_detection = prop_g_detection.as_bool();
 }
@@ -2125,7 +2125,7 @@ Schema::update_g_detection(const MsgPack& prop_g_detection)
 void
 Schema::update_b_detection(const MsgPack& prop_b_detection)
 {
-	L_CALL(this, "Schema::update_b_detection()");
+	L_CALL(this, "Schema::update_b_detection(%s)", prop_b_detection.to_string().c_str());
 
 	specification.bool_detection = prop_b_detection.as_bool();
 }
@@ -2134,7 +2134,7 @@ Schema::update_b_detection(const MsgPack& prop_b_detection)
 void
 Schema::update_s_detection(const MsgPack& prop_s_detection)
 {
-	L_CALL(this, "Schema::update_s_detection()");
+	L_CALL(this, "Schema::update_s_detection(%s)", prop_s_detection.to_string().c_str());
 
 	specification.string_detection = prop_s_detection.as_bool();
 }
@@ -2143,7 +2143,7 @@ Schema::update_s_detection(const MsgPack& prop_s_detection)
 void
 Schema::update_t_detection(const MsgPack& prop_t_detection)
 {
-	L_CALL(this, "Schema::update_t_detection()");
+	L_CALL(this, "Schema::update_t_detection(%s)", prop_t_detection.to_string().c_str());
 
 	specification.text_detection = prop_t_detection.as_bool();
 }
@@ -2152,7 +2152,7 @@ Schema::update_t_detection(const MsgPack& prop_t_detection)
 void
 Schema::update_u_detection(const MsgPack& prop_u_detection)
 {
-	L_CALL(this, "Schema::update_u_detection()");
+	L_CALL(this, "Schema::update_u_detection(%s)", prop_u_detection.to_string().c_str());
 
 	specification.uuid_detection = prop_u_detection.as_bool();
 }
@@ -2161,7 +2161,7 @@ Schema::update_u_detection(const MsgPack& prop_u_detection)
 void
 Schema::update_bool_term(const MsgPack& prop_bool_term)
 {
-	L_CALL(this, "Schema::update_bool_term()");
+	L_CALL(this, "Schema::update_bool_term(%s)", prop_bool_term.to_string().c_str());
 
 	specification.bool_term = prop_bool_term.as_bool();
 }
@@ -2170,7 +2170,7 @@ Schema::update_bool_term(const MsgPack& prop_bool_term)
 void
 Schema::update_partials(const MsgPack& prop_partials)
 {
-	L_CALL(this, "Schema::update_partials()");
+	L_CALL(this, "Schema::update_partials(%s)", prop_partials.to_string().c_str());
 
 	specification.partials = prop_partials.as_bool();
 }
@@ -2179,7 +2179,7 @@ Schema::update_partials(const MsgPack& prop_partials)
 void
 Schema::update_error(const MsgPack& prop_error)
 {
-	L_CALL(this, "Schema::update_error()");
+	L_CALL(this, "Schema::update_error(%s)", prop_error.to_string().c_str());
 
 	specification.error = prop_error.as_f64();
 }
