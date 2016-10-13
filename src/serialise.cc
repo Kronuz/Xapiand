@@ -83,6 +83,75 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 
 
 std::string
+Serialise::serialise(const required_spc_t& field_spc, const class MsgPack* field_value)
+{
+	auto type = field_spc.get_type();
+
+	switch (type) {
+		case FieldType::INTEGER:
+			if (field_value->is_number()) {
+				return integer(field_value->as_i64());
+			} else if (field_value->is_string()) {
+				return integer(field_value->as_string());
+			} else {
+				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value->getType())]);
+			}
+		case FieldType::POSITIVE:
+			if (field_value->is_number()) {
+				return positive(field_value->as_u64());
+			} else if (field_value->is_string()) {
+				return positive(field_value->as_string());
+			} else {
+				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value->getType())]);
+			}
+		case FieldType::FLOAT:
+			if (field_value->is_number()) {
+				return _float(field_value->as_f64());
+			} else if (field_value->is_string()) {
+				return _float(field_value->as_string());
+			} else {
+				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value->getType())]);
+			}
+		case FieldType::DATE:
+			if (field_value->is_string()) {
+				return date(field_value->as_string());
+			} else {
+				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value->getType())]);
+			}
+		case FieldType::BOOLEAN:
+			if (field_value->is_boolean()) {
+				return boolean(field_value->as_bool());
+			} else if (field_value->is_string()) {
+				return boolean(field_value->as_string());
+			} else {
+				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value->getType())]);
+			}
+		case FieldType::STRING:
+		case FieldType::TEXT:
+			if (field_value->is_string()) {
+				return field_value->as_string();
+			} else {
+				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value->getType())]);
+			}
+		case FieldType::GEO:
+			if (field_value->is_string()) {
+				return ewkt(field_value->as_string(), field_spc.partials, field_spc.error);
+			} else {
+				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value->getType())]);
+			}
+		case FieldType::UUID:
+			if (field_value->is_string()){
+				return uuid(field_value->as_string());
+			} else {
+				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value->getType())]);
+			}
+		default:
+			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(type));
+	}
+}
+
+
+std::string
 Serialise::string(const required_spc_t& field_spc, const std::string& field_value)
 {
 	auto field_type = field_spc.get_type();
