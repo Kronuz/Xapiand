@@ -51,7 +51,7 @@ static const std::unordered_map<std::string, StemStrategy> map_stem_strategy({
 	{ "stem_none",  StemStrategy::STEM_NONE   }, { "none",  StemStrategy::STEM_NONE   },
 	{ "stem_some",  StemStrategy::STEM_SOME   }, { "some",  StemStrategy::STEM_SOME   },
 	{ "stem_all",   StemStrategy::STEM_ALL    }, { "all",   StemStrategy::STEM_ALL    },
-	{ "stem_all_z", StemStrategy::STEM_ALL_Z  }, { "all_z", StemStrategy::STEM_ALL_Z  }
+	{ "stem_all_z", StemStrategy::STEM_ALL_Z  }, { "all_z", StemStrategy::STEM_ALL_Z  },
 });
 
 
@@ -60,7 +60,7 @@ static const std::unordered_map<std::string, TypeIndex> map_index({
 	{ "values",        TypeIndex::VALUES        }, { "all",          TypeIndex::ALL          },
 	{ "field_terms",   TypeIndex::FIELD_TERMS   }, { "field_values", TypeIndex::FIELD_VALUES },
 	{ "field_all",     TypeIndex::FIELD_ALL     }, { "global_terms", TypeIndex::GLOBAL_TERMS },
-	{ "global_values", TypeIndex::GLOBAL_VALUES }, { "global_all",   TypeIndex::GLOBAL_ALL   }
+	{ "global_values", TypeIndex::GLOBAL_VALUES }, { "global_all",   TypeIndex::GLOBAL_ALL   },
 });
 
 
@@ -223,7 +223,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties
 	{ RESERVED_STEM_LANGUAGE,   &Schema::update_stem_language    },
 	{ RESERVED_LANGUAGE,        &Schema::update_language         },
 	{ RESERVED_PARTIALS,        &Schema::update_partials         },
-	{ RESERVED_ERROR,           &Schema::update_error            }
+	{ RESERVED_ERROR,           &Schema::update_error            },
 });
 
 
@@ -237,7 +237,7 @@ const std::unordered_map<std::string, dispatch_root> map_dispatch_root({
 	{ RESERVED_GLOBAL_TERMS,   &Schema::process_global_terms     },
 	{ RESERVED_FIELD_ALL,      &Schema::process_field_all        },
 	{ RESERVED_GLOBAL_ALL,     &Schema::process_global_all       },
-	{ RESERVED_NONE,           &Schema::process_none             }
+	{ RESERVED_NONE,           &Schema::process_none             },
 });
 
 
@@ -246,7 +246,7 @@ const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable({
 	{ RESERVED_PREFIX,          &Schema::readable_prefix         },
 	{ RESERVED_STEM_STRATEGY,   &Schema::readable_stem_strategy  },
 	{ RESERVED_INDEX,           &Schema::readable_index          },
-	{ RESERVED_ACC_PREFIX,      &Schema::readable_acc_prefix     }
+	{ RESERVED_ACC_PREFIX,      &Schema::readable_acc_prefix     },
 });
 
 
