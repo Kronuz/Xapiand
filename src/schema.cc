@@ -674,7 +674,7 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 MsgPack&
 Schema::get_mutable(const std::string& full_name)
 {
-	L_CALL(this, "Schema::get_mutable()");
+	L_CALL(this, "Schema::get_mutable(%s)", full_name.c_str());
 
 	if (!mut_schema) {
 		mut_schema = std::make_unique<MsgPack>(*schema);
@@ -720,7 +720,7 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 void
 Schema::update_specification(const MsgPack& properties)
 {
-	L_CALL(this, "Schema::update_specification()");
+	L_CALL(this, "Schema::update_specification(%s)", properties.to_string().c_str());
 
 	for (const auto& property : properties) {
 		auto str_prop = property.as_string();
@@ -759,7 +759,7 @@ Schema::restart_specification()
 void
 Schema::normalize_field(const std::string& field_name)
 {
-	L_CALL(this, "Schema::normalize_field()");
+	L_CALL(this, "Schema::normalize_field(%s)", field_name.c_str());
 
 	if (Serialise::isUUID(field_name)) {
 		specification.dynamic_prefix.append(lower_string(field_name));
@@ -795,7 +795,7 @@ Schema::normalize_field(const std::string& field_name)
 void
 Schema::add_field(MsgPack* properties, const std::string& field_name)
 {
-	L_CALL(this, "Schema::add_field()");
+	L_CALL(this, "Schema::add_field(%s, %s)", properties->to_string().c_str(), field_name.c_str());
 
 	properties = &(*properties)[field_name];
 	if (specification.dynamic_type == DynamicFieldType::NONE) {
@@ -827,7 +827,7 @@ Schema::add_field(MsgPack* properties, const std::string& field_name)
 void
 Schema::get_subproperties(const MsgPack* properties, const std::string& field_name)
 {
-	L_CALL(this, "Schema::get_subproperties(1)");
+	L_CALL(this, "Schema::get_subproperties(%s, %s)", properties->to_string().c_str(), field_name.c_str());
 
 	properties = &properties->at(field_name);
 	specification.found_field = true;
@@ -851,7 +851,7 @@ Schema::get_subproperties(const MsgPack* properties, const std::string& field_na
 const MsgPack&
 Schema::get_subproperties(const MsgPack& properties)
 {
-	L_CALL(this, "Schema::get_subproperties(2)");
+	L_CALL(this, "Schema::get_subproperties(%s)", properties.to_string().c_str());
 
 	std::vector<std::string> field_names;
 	stringTokenizer(specification.name, DB_OFFSPRING_UNION, field_names);
@@ -891,9 +891,9 @@ Schema::get_subproperties(const MsgPack& properties)
 
 
 std::tuple<std::string, DynamicFieldType, const MsgPack&>
-Schema::get_subproperties(const MsgPack& properties, const std::string& full_name) const
+Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
 {
-	L_CALL(this, "Schema::get_subproperties(3)");
+	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", properties.to_string().c_str(), full_name.c_str());
 
 	std::vector<std::string> field_names;
 	stringTokenizer(full_name, DB_OFFSPRING_UNION, field_names);
@@ -2005,6 +2005,8 @@ Schema::process_none(const MsgPack& properties, const MsgPack& doc_values, MsgPa
 void
 Schema::fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& data, Xapian::Document& doc, const char* reserved_word)
 {
+	L_CALL(nullptr, "Schema::fixed_index()");
+
 	specification.fixed_index = true;
 	switch (object.getType()) {
 		case MsgPack::Type::MAP: {
@@ -2023,7 +2025,7 @@ Schema::fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& d
 void
 Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL(this, "Schema::index_object()");
+	L_CALL(this, "Schema::index_object(%s)", name.c_str());
 
 	const auto spc_start = specification;
 	const MsgPack* properties = nullptr;
@@ -2592,7 +2594,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 void
 Schema::validate_required_data(const MsgPack& value)
 {
-	L_CALL(this, "Schema::validate_required_data()");
+	L_CALL(this, "Schema::validate_required_data(%s)", value.to_string().c_str());
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		if (XapiandManager::manager->type_required) {
@@ -2749,6 +2751,8 @@ Schema::validate_required_data(const MsgPack& value)
 
 void
 Schema::update_dynamic_specification() {
+	L_CALL(nullptr, "Schema::update_dynamic_specification()");
+
 	switch (specification.index) {
 		case TypeIndex::ALL:
 		case TypeIndex::FIELD_ALL:
@@ -3220,7 +3224,7 @@ Schema::get_data_field(const std::string& field_name) const
 	}
 
 	try {
-		auto info = get_subproperties(schema->at(RESERVED_SCHEMA), field_name);
+		auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
 		const auto& properties = std::get<2>(info);
 
 		const auto& sep_types = properties.at(RESERVED_TYPE);
@@ -3319,7 +3323,7 @@ Schema::get_slot_field(const std::string& field_name) const
 	}
 
 	try {
-		auto info = get_subproperties(schema->at(RESERVED_SCHEMA), field_name);
+		auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
 		const auto& properties = std::get<2>(info);
 
 		const auto& sep_types = properties.at(RESERVED_TYPE);

@@ -407,7 +407,7 @@ class Schema {
 	 * Returns the propierties of full_name, if the path does not
 	 * exist throw an exception.
 	 */
-	std::tuple<std::string, DynamicFieldType, const MsgPack&> get_subproperties(const MsgPack& properties, const std::string& full_name) const;
+	std::tuple<std::string, DynamicFieldType, const MsgPack&> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 	/*
 	 * Sets type to array in properties.
