@@ -69,13 +69,13 @@ QueryDSL::get_query(const MsgPack& obj)
 			switch (const_hash(lower_string(str_key).c_str())) {
 				case or_op:
 					return join_queries(obj.at(str_key), Xapian::Query::OP_OR);
-					
+
 				case and_op:
 					return join_queries(obj.at(str_key), Xapian::Query::OP_AND);
-					
+
 				case xor_op:
 					return join_queries(obj.at(str_key), Xapian::Query::OP_XOR);
-					
+
 				case not_op:
 					return join_queries(obj.at(str_key), Xapian::Query::OP_AND_NOT);
 				default: {
@@ -90,7 +90,7 @@ QueryDSL::get_query(const MsgPack& obj)
 							return build_query(o, str_key);
 						}
 					}
-					
+
 				}
 			}
 		}
