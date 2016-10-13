@@ -805,6 +805,7 @@ Schema::detect_dynamic(const std::string& field_name)
 		specification.dynamic_prefix.clear();
 		specification.dynamic_name.assign(ANY_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::ANY;
+		return;
 	}
 
 	specification.dynamic_prefix.assign(field_name);
