@@ -758,28 +758,7 @@ Schema::normalize_field(const std::string& field_name)
 		specification.dynamic_prefix.append(lower_string(field_name));
 		specification.dynamic_name.assign(RESERVED_UUID_FIELD);
 		specification.dynamic_type = DynamicFieldType::UUID;
-		// Fallback to index anything but values:
-		switch (specification.index) {
-			case TypeIndex::NONE:
-			case TypeIndex::TERMS:
-			case TypeIndex::FIELD_TERMS:
-			case TypeIndex::GLOBAL_TERMS:
-				break;
-			case TypeIndex::VALUES:
-			case TypeIndex::FIELD_VALUES:
-			case TypeIndex::GLOBAL_VALUES:
-				specification.index = TypeIndex::NONE;
-				break;
-			case TypeIndex::ALL:
-				specification.index = TypeIndex::TERMS;
-				break;
-			case TypeIndex::FIELD_ALL:
-				specification.index = TypeIndex::FIELD_TERMS;
-				break;
-			case TypeIndex::GLOBAL_ALL:
-				specification.index = TypeIndex::GLOBAL_TERMS;
-				break;
-		}
+		specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
 		return;
 	}
 
@@ -787,28 +766,7 @@ Schema::normalize_field(const std::string& field_name)
 		specification.dynamic_prefix.assign(Datetime::normalizeISO8601(field_name));
 		specification.dynamic_name.assign(RESERVED_DATE_FIELD);
 		specification.dynamic_type = DynamicFieldType::DATE;
-		// Fallback to index anything but values:
-		switch (specification.index) {
-			case TypeIndex::NONE:
-			case TypeIndex::TERMS:
-			case TypeIndex::FIELD_TERMS:
-			case TypeIndex::GLOBAL_TERMS:
-				break;
-			case TypeIndex::VALUES:
-			case TypeIndex::FIELD_VALUES:
-			case TypeIndex::GLOBAL_VALUES:
-				specification.index = TypeIndex::NONE;
-				break;
-			case TypeIndex::ALL:
-				specification.index = TypeIndex::TERMS;
-				break;
-			case TypeIndex::FIELD_ALL:
-				specification.index = TypeIndex::FIELD_TERMS;
-				break;
-			case TypeIndex::GLOBAL_ALL:
-				specification.index = TypeIndex::GLOBAL_TERMS;
-				break;
-		}
+		specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
 		return;
 	} catch (const DatetimeError&) { }
 
@@ -816,28 +774,7 @@ Schema::normalize_field(const std::string& field_name)
 		specification.dynamic_prefix.assign(Serialise::ewkt(field_name, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
 		specification.dynamic_name.assign(RESERVED_GEO_FIELD);
 		specification.dynamic_type = DynamicFieldType::GEO;
-		// Fallback to index anything but values:
-		switch (specification.index) {
-			case TypeIndex::NONE:
-			case TypeIndex::TERMS:
-			case TypeIndex::FIELD_TERMS:
-			case TypeIndex::GLOBAL_TERMS:
-				break;
-			case TypeIndex::VALUES:
-			case TypeIndex::FIELD_VALUES:
-			case TypeIndex::GLOBAL_VALUES:
-				specification.index = TypeIndex::NONE;
-				break;
-			case TypeIndex::ALL:
-				specification.index = TypeIndex::TERMS;
-				break;
-			case TypeIndex::FIELD_ALL:
-				specification.index = TypeIndex::FIELD_TERMS;
-				break;
-			case TypeIndex::GLOBAL_ALL:
-				specification.index = TypeIndex::GLOBAL_TERMS;
-				break;
-		}
+		specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
 		return;
 	} catch (const EWKTError&) { }
 

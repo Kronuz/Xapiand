@@ -58,20 +58,75 @@ enum class UnitTime : uint8_t {
 };
 
 
-enum class TypeIndex : uint8_t {
-	NONE,           // Not index
-	TERMS,          // Index the field value like FIELD_TERMS and GLOBAL_TERMS.
-	VALUES,         // Index the field value like FIELD_VALUES and GLOBAL_VALUES.
-	ALL,            // Index the field value like FIELD_ALL and GLOBAL_ALL.
-
-	FIELD_TERMS,    // Index the field value like terms with prefix.
-	FIELD_VALUES,   // Index the field value like values with prefix.
-	FIELD_ALL,      // Index the field value like FIELD_TERMS and FIELD_VALUES.
-
-	GLOBAL_TERMS,   // Index the field value like terms without prefix.
-	GLOBAL_VALUES,  // Index the field value like values without prefix.
-	GLOBAL_ALL      // Index the field value like GLOBAL_TERMS and GLOBAL_VALUES.
+enum class TypeIndexBit : uint8_t {
+	TERMS  = 0b0001,                       // Bit for terms
+	VALUES = 0b0010,                       // Bit for values
+	FIELD  = 0b0100,                       // Bit for field
+	GLOBAL = 0b1000,                       // Bit for global
 };
+
+inline constexpr TypeIndexBit operator|(const uint8_t& a, const TypeIndexBit& b) {
+	return static_cast<TypeIndexBit>(a | static_cast<uint8_t>(b));
+}
+
+inline constexpr TypeIndexBit operator|(const TypeIndexBit& a, const uint8_t& b) {
+	return static_cast<TypeIndexBit>(static_cast<uint8_t>(a) | b);
+}
+
+inline constexpr TypeIndexBit operator|(const TypeIndexBit& a, const TypeIndexBit& b) {
+	return static_cast<TypeIndexBit>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+
+inline constexpr TypeIndexBit operator~(const TypeIndexBit& o) {
+	return static_cast<TypeIndexBit>(~static_cast<uint8_t>(o));
+}
+
+enum class TypeIndex : uint8_t {
+	// Not indexed:
+	NONE          = 0b0000,
+	// Index the field value like FIELD_TERMS and GLOBAL_TERMS:
+	TERMS         = static_cast<uint8_t>(TypeIndexBit::GLOBAL | TypeIndexBit::FIELD | TypeIndexBit::TERMS),
+	// Index the field value like FIELD_VALUES and GLOBAL_VALUES:
+	VALUES        = static_cast<uint8_t>(TypeIndexBit::GLOBAL | TypeIndexBit::FIELD | TypeIndexBit::VALUES),
+	// Index the field value like FIELD_ALL and GLOBAL_ALL:
+	ALL           = static_cast<uint8_t>(TERMS | VALUES),
+	// Index the field value like terms with prefix:
+	FIELD_TERMS   = static_cast<uint8_t>(TypeIndexBit::FIELD | TypeIndexBit::TERMS),
+	// Index the field value like values with prefix:
+	FIELD_VALUES  = static_cast<uint8_t>(TypeIndexBit::FIELD | TypeIndexBit::VALUES),
+	// Index the field value like FIELD_TERMS and FIELD_VALUES:
+	FIELD_ALL     = static_cast<uint8_t>(FIELD_TERMS | FIELD_VALUES),
+	// Index the field value like terms without prefix:
+	GLOBAL_TERMS  = static_cast<uint8_t>(TypeIndexBit::GLOBAL | TypeIndexBit::TERMS),
+	// Index the field value like values without prefix:
+	GLOBAL_VALUES = static_cast<uint8_t>(TypeIndexBit::GLOBAL | TypeIndexBit::VALUES),
+	// Index the field value like GLOBAL_TERMS and GLOBAL_VALUES:
+	GLOBAL_ALL    = static_cast<uint8_t>(GLOBAL_TERMS | GLOBAL_VALUES),
+};
+
+inline constexpr TypeIndex operator&(const TypeIndex& a, const TypeIndexBit& b) {
+	return static_cast<TypeIndex>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
+}
+
+inline constexpr void operator&=(TypeIndex& a, const TypeIndexBit& b) {
+	a = a & b;
+}
+
+inline constexpr TypeIndex operator|(const TypeIndex& a, const TypeIndexBit& b) {
+	return static_cast<TypeIndex>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+
+inline constexpr void operator|=(TypeIndex& a, const TypeIndexBit& b) {
+	a = a | b;
+}
+
+inline constexpr TypeIndex operator^(const TypeIndex& a, const TypeIndexBit& b) {
+	return static_cast<TypeIndex>(static_cast<uint8_t>(a) ^ static_cast<uint8_t>(b));
+}
+
+inline constexpr void operator^=(TypeIndex& a, const TypeIndexBit& b) {
+	a = a ^ b;
+}
 
 
 enum class StemStrategy : uint8_t {
