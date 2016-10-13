@@ -1230,11 +1230,6 @@ HttpClient::bad_request_view()
 }
 
 
-constexpr size_t const_hash(char const *input) {
-	return *input ? static_cast<size_t>(*input) + 33 * const_hash(input + 1) : 5381;
-}
-
-
 static constexpr auto http_search = const_hash("_search");
 static constexpr auto http_schema = const_hash("_schema");
 static constexpr auto http_info = const_hash("_info");
