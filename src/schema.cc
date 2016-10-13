@@ -757,15 +757,14 @@ Schema::restart_specification()
 
 
 void
-Schema::normalize_field(const std::string& field_name)
+Schema::detect_dynamic(const std::string& field_name)
 {
-	L_CALL(this, "Schema::normalize_field(%s)", field_name.c_str());
+	L_CALL(this, "Schema::detect_dynamic(%s)", field_name.c_str());
 
 	if (Serialise::isUUID(field_name)) {
 		specification.dynamic_prefix.append(lower_string(field_name));
 		specification.dynamic_name.assign(UUID_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::UUID;
-		specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
 		return;
 	}
 
@@ -773,7 +772,6 @@ Schema::normalize_field(const std::string& field_name)
 		specification.dynamic_prefix.assign(Datetime::normalizeISO8601(field_name));
 		specification.dynamic_name.assign(DATE_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::DATE;
-		specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
 		return;
 	} catch (const DatetimeError&) { }
 
@@ -781,14 +779,12 @@ Schema::normalize_field(const std::string& field_name)
 		specification.dynamic_prefix.assign(Serialise::ewkt(field_name, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
 		specification.dynamic_name.assign(GEO_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::GEO;
-		specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
 		return;
 	} catch (const EWKTError&) { }
 
 	specification.dynamic_prefix.assign(field_name);
 	specification.dynamic_name.assign(field_name);
 	specification.dynamic_type = DynamicFieldType::NONE;
-	return;
 }
 
 
@@ -867,7 +863,7 @@ Schema::get_subproperties(const MsgPack& properties)
 		try {
 			get_subproperties(subproperties, field_name);
 		} catch (const std::out_of_range&) {
-			normalize_field(field_name);
+			detect_dynamic(field_name);
 			if (specification.dynamic_type != DynamicFieldType::NONE) {
 				try {
 					get_subproperties(subproperties, specification.dynamic_name);
@@ -879,7 +875,7 @@ Schema::get_subproperties(const MsgPack& properties)
 			specification.found_field = false;
 			add_field(mut_subprop, specification.dynamic_name);
 			for (++it; it != it_e; ++it) {
-				normalize_field(*it);
+				detect_dynamic(*it);
 				add_field(mut_subprop, specification.dynamic_name);
 			}
 			return *mut_subprop;
@@ -2667,7 +2663,15 @@ Schema::validate_required_data(const MsgPack& value)
 				}
 				break;
 			}
-			case FieldType::TEXT:
+			case FieldType::TEXT: {
+				if (properties.find(RESERVED_INDEX) == properties.end()) {
+					auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
+					if (specification.index != index) {
+						specification.index = index;
+						properties[RESERVED_INDEX] = specification.index;
+					}
+				}
+
 				properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
 				if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
 					specification.stem_language = specification.aux_lan;
@@ -2685,7 +2689,16 @@ Schema::validate_required_data(const MsgPack& value)
 					properties[RESERVED_POSITIONS] = specification.positions;
 				}
 				break;
-			case FieldType::STRING:
+			}
+			case FieldType::STRING: {
+				if (properties.find(RESERVED_INDEX) == properties.end()) {
+					auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
+					if (specification.index != index) {
+						specification.index = index;
+						properties[RESERVED_INDEX] = specification.index;
+					}
+				}
+
 				if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
 					specification.language = specification.aux_stem_lan;
 				}
@@ -2698,6 +2711,7 @@ Schema::validate_required_data(const MsgPack& value)
 				}
 				properties[RESERVED_BOOL_TERM] = specification.bool_term;
 				break;
+			}
 			case FieldType::BOOLEAN:
 			case FieldType::UUID:
 				break;
@@ -2733,11 +2747,18 @@ Schema::validate_required_data(const MsgPack& value)
 			properties[RESERVED_SLOT] = specification.slot;
 
 		} else {
+			if (properties.find(RESERVED_INDEX) == properties.end()) {
+				auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
+				if (specification.index != index) {
+					specification.index = index;
+					properties[RESERVED_INDEX] = specification.index;
+				}
+			}
+
 			if (set_acc.size()) {
 				specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
 				properties[RESERVED_ACCURACY] = specification.accuracy;
 			}
-			properties[RESERVED_INDEX] = specification.index;
 			update_dynamic_specification();
 		}
 

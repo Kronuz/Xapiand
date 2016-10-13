@@ -383,9 +383,9 @@ class Schema {
 	void restart_specification();
 
 	/*
-	 * Normalize the field name and set dynamic type.
+	 * Detect and set dynamic type.
 	 */
-	void normalize_field(const std::string& field_name);
+	void detect_dynamic(const std::string& field_name);
 
 	/*
 	 * Add new field to properties.
