@@ -102,7 +102,7 @@ QueryDSL::get_query(const MsgPack& obj)
 
 
 Xapian::Query
-QueryDSL::build_query(const MsgPack& o, const std::string& field_name,  bool as_term, Xapian::termcount wqf, const std::string& type) {
+QueryDSL::build_query(const MsgPack& o, const std::string& field_name, Xapian::termcount wqf, const std::string& type) {
 
 	auto field_spc = schema->get_data_field(field_name);
 	std::string type_s;
@@ -134,19 +134,7 @@ QueryDSL::build_query(const MsgPack& o, const std::string& field_name,  bool as_
 			{
 				type_s = STRING_STR;
 				auto field_value = o.as_string();
-				if (as_term) {
-					return Xapian::Query(prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix), wqf);
-				} else {
-					Xapian::QueryParser queryString;
-					field_spc.bool_term ? queryString.add_boolean_prefix(field_name, field_spc.prefix) : queryString.add_prefix(field_name, field_spc.prefix);
-					queryString.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
-					queryString.set_stemmer(Xapian::Stem(field_spc.stem_language));
-					std::string str_string;
-					str_string.reserve(field_name.length() + field_value.length() + 1);
-					str_string.assign(field_name).append(":").append(field_value);
-					return queryString.parse_query(str_string, q_flags);
-
-				}
+				return Xapian::Query(prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix), wqf);
 			}
 			case FieldType::TEXT:
 			{
@@ -275,7 +263,6 @@ Xapian::Query
 QueryDSL::process_query(const MsgPack& obj, const std::string& field_name) {
 
 	uint64_t boost = 1;	/* Default value in xapian */
-	bool term = false;
 
 	if (obj.is_map() && obj.find(RESERVED_RANGE) != obj.end()) {
 		const MsgPack* to;
@@ -307,12 +294,11 @@ QueryDSL::process_query(const MsgPack& obj, const std::string& field_name) {
 
 		try {
 			auto const& val = obj.at(RESERVED_VALUE);
-			return build_query(val, field_name, term, boost);
+			return build_query(val, field_name, boost);
 		} catch (const std::out_of_range&) {
 			try {
 				std::string type;
-				auto const& val = obj.at(RESERVED_TERM);
-				term = true;
+				auto const& val = obj.at(RESERVED_TERM); /* Force to term unused at the moment */
 				try {
 					/* Get _type if exist */
 					auto const& o_type = obj.at(RESERVED_TYPE);
@@ -322,7 +308,7 @@ QueryDSL::process_query(const MsgPack& obj, const std::string& field_name) {
 						throw MSG_QueryDslError("Type error expected string in %s", RESERVED_TYPE);
 					}
 				} catch (const std::out_of_range&) { }
-				return build_query(val, field_name, term, boost, type);
+				return build_query(val, field_name, boost, type);
 			} catch (const std::out_of_range&) {
 				throw MSG_QueryDslError("Expected %s or %s in object", RESERVED_VALUE, RESERVED_TERM);
 			}
