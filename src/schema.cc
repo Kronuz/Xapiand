@@ -705,9 +705,6 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 			prop_id[RESERVED_BOOL_TERM] = true;
 			prop_id[RESERVED_LANGUAGE] = DEFAULT_LANGUAGE;
 		}
-		if (res_serialise.first == FieldType::TEXT) {
-			prop_id[RESERVED_POSITIONS] = DEFAULT_POSITIONS;
-		}
 		return res_serialise.second;
 	}
 }
