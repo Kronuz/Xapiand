@@ -37,6 +37,12 @@
 #define MSGPACK_ARRAY_INIT_SIZE 64
 
 
+static constexpr const char* const MsgPackTypes[] = {
+	"NIL", "BOOLEAN", "POSITIVE_INTEGER", "NEGATIVE_INTEGER", "FLOAT", "STR", "BIN", "ARRAY",
+	"MAP", "EXT", "UNDEFINED"
+};
+
+
 class MsgPack {
 	struct Body;
 
