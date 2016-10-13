@@ -155,6 +155,16 @@ enum class FieldType : uint8_t {
 };
 
 
+inline static std::string readable_dynamic_field_type(DynamicFieldType type) noexcept {
+	switch (type) {
+		case DynamicFieldType::NONE: return "none";
+		case DynamicFieldType::DATE: return "date";
+		case DynamicFieldType::GEO:  return "geo";
+		case DynamicFieldType::UUID: return "uuid";
+	}
+};
+
+
 inline static std::string readable_acc_date(UnitTime unit) noexcept {
 	switch (unit) {
 		case UnitTime::SECOND:     return "second";

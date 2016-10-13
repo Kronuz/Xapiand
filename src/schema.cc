@@ -633,7 +633,14 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_S_DETECTION << ": " << (string_detection  ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_T_DETECTION << ": " << (text_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_U_DETECTION << ": " << (uuid_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_BOOL_TERM   << ": " << (bool_term         ? "true" : "false") << "\n}\n";
+	str << "\t" << RESERVED_BOOL_TERM   << ": " << (bool_term         ? "true" : "false") << "\n";
+
+	str << "\t" << "dynamic_type"       << ": " << readable_dynamic_field_type(dynamic_type) << "\n";
+	str << "\t" << "dynamic_prefix"     << ": " << dynamic_prefix << "\n";
+	str << "\t" << "dynamic_name"       << ": " << dynamic_name << "\n";
+	str << "\t" << "dynamic_full_name"  << ": " << dynamic_full_name << "\n";
+
+	str << "}\n";
 
 	return str.str();
 }
