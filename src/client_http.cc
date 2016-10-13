@@ -902,6 +902,8 @@ HttpClient::write_schema_view()
 	int status_code;
 	HttpMethod method = HttpMethod::PUT;
 
+	path_parser.off_id = nullptr;
+
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
 
