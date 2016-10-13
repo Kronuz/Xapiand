@@ -170,6 +170,13 @@ public:
 };
 
 
+class QueryDslError : public ClientError {
+public:
+	template<typename... Args>
+	QueryDslError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
 #define MSG_Error(...) Error(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
@@ -184,3 +191,4 @@ public:
 #define MSG_CheckoutError(...) CheckoutError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_MissingTypeError(...) MissingTypeError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_AggregationError(...) AggregationError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_QueryDslError(...) QueryDslError(__FILE__, __LINE__, __VA_ARGS__)
