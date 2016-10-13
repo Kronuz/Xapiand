@@ -34,10 +34,16 @@
 #define RESERVED_PERCENT        "_percent"
 
 // Reserved words used in schema.
-#define RESERVED_ID_FIELD       "id"
-#define RESERVED_UUID_FIELD     "<uuid_field>"
-#define RESERVED_GEO_FIELD      "<geo_field>"
-#define RESERVED_DATE_FIELD     "<date_field>"
+#define ID_FIELD_NAME           "id"
+#define UUID_FIELD_NAME         "<uuid_field>"
+#define GEO_FIELD_NAME          "<geo_field>"
+#define DATE_FIELD_NAME         "<date_field>"
+#define ANY_FIELD_NAME          "<any_field>"
+
+#define RESERVED_UUID_FIELD     "_uuid_field"
+#define RESERVED_GEO_FIELD      "_geo_field"
+#define RESERVED_DATE_FIELD     "_date_field"
+#define RESERVED_ANY_FIELD      "_any_field"
 
 #define RESERVED_WEIGHT         "_weight"
 #define RESERVED_POSITION       "_position"

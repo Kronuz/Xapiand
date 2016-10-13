@@ -30,7 +30,7 @@
 
 
 const std::unordered_set<std::string> reserved_field_names({
-	RESERVED_ID_FIELD, RESERVED_UUID_FIELD, RESERVED_GEO_FIELD, RESERVED_DATE_FIELD
+	ID_FIELD_NAME, UUID_FIELD_NAME, GEO_FIELD_NAME, DATE_FIELD_NAME, ANY_FIELD_NAME
 });
 
 
@@ -690,11 +690,11 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 
 	specification.set_type = true;
 	try {
-		auto& prop_id = properties.at(RESERVED_ID_FIELD);
+		auto& prop_id = properties.at(ID_FIELD_NAME);
 		update_specification(prop_id);
 		return Serialise::serialise(specification, value_id);
 	} catch (const std::out_of_range&) {
-		auto& prop_id = get_mutable(RESERVED_ID_FIELD);
+		auto& prop_id = get_mutable(ID_FIELD_NAME);
 		specification.found_field = false;
 		auto res_serialise = Serialise::get_type(value_id, specification.bool_term);
 		prop_id[RESERVED_TYPE] = std::array<FieldType, 3>({{ FieldType::EMPTY, FieldType::EMPTY, res_serialise.first }});
@@ -756,7 +756,7 @@ Schema::normalize_field(const std::string& field_name)
 
 	if (Serialise::isUUID(field_name)) {
 		specification.dynamic_prefix.append(lower_string(field_name));
-		specification.dynamic_name.assign(RESERVED_UUID_FIELD);
+		specification.dynamic_name.assign(UUID_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::UUID;
 		specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
 		return;
@@ -764,7 +764,7 @@ Schema::normalize_field(const std::string& field_name)
 
 	try {
 		specification.dynamic_prefix.assign(Datetime::normalizeISO8601(field_name));
-		specification.dynamic_name.assign(RESERVED_DATE_FIELD);
+		specification.dynamic_name.assign(DATE_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::DATE;
 		specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
 		return;
@@ -772,7 +772,7 @@ Schema::normalize_field(const std::string& field_name)
 
 	try {
 		specification.dynamic_prefix.assign(Serialise::ewkt(field_name, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
-		specification.dynamic_name.assign(RESERVED_GEO_FIELD);
+		specification.dynamic_name.assign(GEO_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::GEO;
 		specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
 		return;
@@ -897,7 +897,7 @@ Schema::get_subproperties(const MsgPack& properties, const std::string& full_nam
 	DynamicFieldType type;
 	bool root = true;
 	for (const auto& field_name : field_names) {
-		if (!root && !is_valid(field_name) && field_name != RESERVED_ID_FIELD) {
+		if (!root && !is_valid(field_name) && field_name != ID_FIELD_NAME) {
 			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
 		}
 		root = false;
@@ -911,7 +911,7 @@ Schema::get_subproperties(const MsgPack& properties, const std::string& full_nam
 			}
 		} catch (const std::out_of_range&) {
 			if (Serialise::isUUID(field_name)) {
-				subproperties = &subproperties->at(RESERVED_UUID_FIELD);
+				subproperties = &subproperties->at(UUID_FIELD_NAME);
 				type = DynamicFieldType::UUID;
 				if (dynamic_full_name.empty()) {
 					dynamic_full_name.assign(lower_string(field_name));
@@ -923,7 +923,7 @@ Schema::get_subproperties(const MsgPack& properties, const std::string& full_nam
 
 			try {
 				auto dynamic_name = Datetime::normalizeISO8601(field_name);
-				subproperties = &subproperties->at(RESERVED_DATE_FIELD);
+				subproperties = &subproperties->at(DATE_FIELD_NAME);
 				type = DynamicFieldType::DATE;
 				if (dynamic_full_name.empty()) {
 					dynamic_full_name.assign(dynamic_name);
@@ -935,7 +935,7 @@ Schema::get_subproperties(const MsgPack& properties, const std::string& full_nam
 
 			try {
 				auto dynamic_name = Serialise::ewkt(field_name, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
-				subproperties = &subproperties->at(RESERVED_GEO_FIELD);
+				subproperties = &subproperties->at(GEO_FIELD_NAME);
 				type = DynamicFieldType::GEO;
 				if (dynamic_full_name.empty()) {
 					dynamic_full_name.assign(dynamic_name);
