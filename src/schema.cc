@@ -2451,6 +2451,13 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				}
 			}
 
+			if (!specification.value && !specification.value_rec) {
+				validate_required_data(MsgPack());
+				if (specification.store && !offsprings) {
+					*data = (*data)[RESERVED_VALUE];
+				}
+			}
+
 			const auto spc_object = std::move(specification);
 			for (auto& task : tasks) {
 				specification = spc_object;
@@ -2548,6 +2555,13 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 					}
 				}
 
+				if (!specification.value && !specification.value_rec) {
+					validate_required_data(MsgPack());
+					if (specification.store && !offsprings) {
+						*data_pos = (*data_pos)[RESERVED_VALUE];
+					}
+				}
+
 				const auto spc_item = std::move(specification);
 				for (auto& task : tasks) {
 					specification = spc_item;
@@ -2588,17 +2602,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 {
 	L_CALL(this, "Schema::index_item(1)");
 
+	validate_required_data(value);
+
 	try {
-		if (!specification.found_field && !specification.dynamic) {
-			throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
-		}
-
-		if (!specification.set_type) {
-			validate_required_data(value);
-		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
-			update_dynamic_specification();
-		}
-
 		if (specification.prefix.empty()) {
 			switch (specification.index) {
 				case TypeIndex::NONE:
@@ -2700,17 +2706,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 {
 	L_CALL(this, "Schema::index_item()");
 
+	validate_required_data(values);
+
 	try {
-		if (!specification.found_field && !specification.dynamic) {
-			throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
-		}
-
-		if (!specification.set_type) {
-			validate_required_data(values);
-		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
-			update_dynamic_specification();
-		}
-
 		if (specification.prefix.empty()) {
 			switch (specification.index) {
 				case TypeIndex::NONE:
@@ -2952,6 +2950,17 @@ void
 Schema::validate_required_data(const MsgPack& value)
 {
 	L_CALL(this, "Schema::validate_required_data(%s)", value.to_string().c_str());
+
+	if (!specification.found_field && !specification.dynamic) {
+		throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
+	}
+
+	if (specification.set_type) {
+		if (specification.dynamic_type != DynamicFieldType::NONE) {
+			update_dynamic_specification();
+			return;
+		}
+	}
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		if (XapiandManager::manager->type_required) {
