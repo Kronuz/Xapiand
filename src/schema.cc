@@ -705,6 +705,9 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 			prop_id[RESERVED_BOOL_TERM] = true;
 			prop_id[RESERVED_LANGUAGE] = DEFAULT_LANGUAGE;
 		}
+		if (res_serialise.first == FieldType::TEXT) {
+			prop_id[RESERVED_POSITIONS] = DEFAULT_POSITIONS;
+		}
 		return res_serialise.second;
 	}
 }
@@ -1180,7 +1183,11 @@ Schema::process_position(const MsgPack& doc_position)
 		}
 
 		if unlikely(!specification.found_field) {
-			get_mutable(specification.full_name)[RESERVED_POSITION] = specification.position;
+			if (specification.position.size() == 1) {
+				get_mutable(specification.full_name)[RESERVED_POSITION] = static_cast<uint64_t>(specification.position.front());
+			} else {
+				get_mutable(specification.full_name)[RESERVED_POSITION] = specification.position;
+			}
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", RESERVED_POSITION);
@@ -1258,7 +1265,11 @@ Schema::process_positions(const MsgPack& doc_positions)
 		}
 
 		if unlikely(!specification.found_field) {
-			get_mutable(specification.full_name)[RESERVED_POSITIONS] = specification.positions;
+			if (specification.positions.size() == 1) {
+				get_mutable(specification.full_name)[RESERVED_POSITIONS] = static_cast<bool>(specification.positions.front());
+			} else {
+				get_mutable(specification.full_name)[RESERVED_POSITIONS] = specification.positions;
+			}
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be a boolean or a not-empty array of booleans", RESERVED_POSITIONS);
@@ -2653,6 +2664,12 @@ Schema::validate_required_data(const MsgPack& value)
 					specification.language = specification.aux_stem_lan;
 				}
 				properties[RESERVED_LANGUAGE] = specification.language;
+
+				if (specification.positions.size() == 1) {
+					properties[RESERVED_POSITIONS] = static_cast<bool>(specification.positions.front());
+				} else {
+					properties[RESERVED_POSITIONS] = specification.positions;
+				}
 				break;
 			case FieldType::STRING:
 				if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
