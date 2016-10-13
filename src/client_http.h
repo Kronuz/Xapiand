@@ -135,6 +135,7 @@ class HttpClient : public BaseClient {
 	void info_view();
 	void delete_document_view();
 	void index_document_view(bool gen_id);
+	void write_schema_view();
 	void document_info_view();
 	void update_document_view();
 	void search_view();

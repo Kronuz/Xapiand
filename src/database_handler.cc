@@ -384,6 +384,34 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 }
 
 
+void
+DatabaseHandler::write_schema(const std::string& body)
+{
+	L_CALL(this, "DatabaseHandler::index(1)");
+
+	if (!(flags & DB_WRITABLE)) {
+		throw MSG_Error("Database is read-only");
+	}
+
+	// Create MsgPack object
+	rapidjson::Document rdoc;
+	json_load(rdoc, body);
+	MsgPack obj(rdoc);
+
+	L_INDEX(this, "Schema to write: %s", body.c_str());
+
+	schema = get_schema();
+	Xapian::Document doc;
+
+	const auto& properties = schema->getProperties();
+	schema->index(properties, obj, doc);
+
+	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
+
+	update_schema();
+}
+
+
 Xapian::Query
 DatabaseHandler::build_query(const std::string& token, std::vector<std::string>& suggestions, int q_flags)
 {

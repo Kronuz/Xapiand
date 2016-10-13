@@ -662,6 +662,9 @@ HttpClient::_post(int cmd)
 		case CMD_NO_CMD:
 			index_document_view(true);
 			break;
+		case CMD_SCHEMA:
+			write_schema_view();
+			break;
 		default:
 			bad_request_view();
 			break;
@@ -883,6 +886,49 @@ HttpClient::index_document_view(bool gen_id)
 				o.push_back(end);
 			}
 			response["_index"].insert(err.first, o);
+		}
+	}
+
+	write_http_response(response, status_code, pretty);
+}
+
+
+void
+HttpClient::write_schema_view()
+{
+	L_CALL(this, "HttpClient::write_schema_view()");
+
+	std::string doc_id;
+	int status_code;
+	HttpMethod method = HttpMethod::PUT;
+
+	endpoints_maker(2s);
+	query_field_maker(QUERY_FIELD_COMMIT);
+
+	for (auto& index : index_paths) {
+		build_path_index(index);
+	}
+
+	endpoints_error_list err_list;
+	operation_begins = std::chrono::system_clock::now();
+
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	db_handler.write_schema(body);
+
+	operation_ends = std::chrono::system_clock::now();
+
+	MsgPack response;
+	if (err_list.empty()) {
+		status_code = 200;
+		response["_schema"] = {
+		};
+	} else {
+		for (const auto& err : err_list) {
+			MsgPack o;
+			for (const auto& end : err.second) {
+				o.push_back(end);
+			}
+			response["_schema"].insert(err.first, o);
 		}
 	}
 
