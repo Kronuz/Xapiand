@@ -3057,12 +3057,6 @@ Schema::validate_required_data(const MsgPack& value)
 					specification.language = specification.aux_stem_lan;
 				}
 				properties[RESERVED_LANGUAGE] = specification.language;
-
-				if (specification.positions.size() == 1) {
-					properties[RESERVED_POSITIONS] = static_cast<bool>(specification.positions.front());
-				} else {
-					properties[RESERVED_POSITIONS] = specification.positions;
-				}
 				break;
 			}
 			case FieldType::STRING: {
