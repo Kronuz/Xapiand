@@ -1120,6 +1120,8 @@ Schema::get_readable() const
 void
 Schema::readable(MsgPack& item_schema)
 {
+	L_CALL(nullptr, "Schema::readable(%s)", item_schema.to_string().c_str());
+
 	// Change this item of schema in readable form.
 	if (item_schema.is_map()) {
 		for (const auto& item_key : item_schema) {
@@ -1145,6 +1147,8 @@ Schema::readable(MsgPack& item_schema)
 void
 Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 {
+	L_CALL(nullptr, "Schema::readable_type(%s, %s)", prop_type.to_string().c_str(), properties.to_string().c_str());
+
 	std::array<FieldType, 3> sep_types({{
 		(FieldType)prop_type.at(0).as_u64(),
 		(FieldType)prop_type.at(1).as_u64(),
@@ -1164,6 +1168,8 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 void
 Schema::readable_prefix(MsgPack& prop_prefix, MsgPack&)
 {
+	L_CALL(nullptr, "Schema::readable_prefix(%s)", prop_prefix.to_string().c_str());
+
 	prop_prefix = prop_prefix.as_string();
 }
 
@@ -1171,6 +1177,8 @@ Schema::readable_prefix(MsgPack& prop_prefix, MsgPack&)
 void
 Schema::readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack&)
 {
+	L_CALL(nullptr, "Schema::readable_stem_strategy(%s)", prop_stem_strategy.to_string().c_str());
+
 	prop_stem_strategy = ::readable_stem_strategy((StemStrategy)prop_stem_strategy.as_u64());
 }
 
@@ -1178,6 +1186,8 @@ Schema::readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack&)
 void
 Schema::readable_index(MsgPack& prop_index, MsgPack&)
 {
+	L_CALL(nullptr, "Schema::readable_index(%s)", prop_index.to_string().c_str());
+
 	prop_index = ::readable_index((TypeIndex)prop_index.as_u64());
 }
 
@@ -1185,6 +1195,8 @@ Schema::readable_index(MsgPack& prop_index, MsgPack&)
 void
 Schema::readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack& properties)
 {
+	L_CALL(nullptr, "Schema::readable_acc_prefix(%s)", prop_acc_prefix.to_string().c_str());
+
 	for (auto& prop_prefix : prop_acc_prefix) {
 		readable_prefix(prop_prefix, properties);
 	}
@@ -1195,7 +1207,7 @@ void
 Schema::process_position(const MsgPack& doc_position)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
-	L_CALL(this, "Schema()");
+	L_CALL(this, "Schema::process_position(%s)", doc_position.to_string().c_str());
 
 	try {
 		specification.position.clear();
