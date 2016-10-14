@@ -360,13 +360,13 @@ LogThread::thread_function(DLList<const std::shared_ptr<Log>>& _log_list)
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished = true;
 				auto msg = l_ptr->str_start;
-				auto age = l_ptr->age();
-				if (age > 2e8) {
-					msg += " ~" + delta_string(age, true);
-				}
 				if (l_ptr->stacked) {
 					msg.replace(msg.find(STACKED_SEP), sizeof(STACKED_SEP) - 1, std::string(l_ptr->stack_level * 2, ' '));
 				}
+				// auto age = l_ptr->age();
+				// if (age > 2e8) {
+				// 	msg += " ~" + delta_string(age, true);
+				// }
 				Log::log(l_ptr->priority, msg);
 				it = _log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
