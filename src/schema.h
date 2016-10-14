@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "log.h"
 #include "database_utils.h"
 #include "lru.h"
 #include "msgpack.h"
@@ -157,6 +158,7 @@ enum class FieldType : uint8_t {
 
 
 inline static std::string readable_dynamic_field_type(DynamicFieldType type) noexcept {
+	L_CALL(nullptr, "::readable_dynamic_field_type(%d)", (int)type);
 	switch (type) {
 		case DynamicFieldType::NONE: return "none";
 		case DynamicFieldType::DATE: return "date";
@@ -168,6 +170,7 @@ inline static std::string readable_dynamic_field_type(DynamicFieldType type) noe
 
 
 inline static std::string readable_acc_date(UnitTime unit) noexcept {
+	L_CALL(nullptr, "::readable_acc_date(%d)", (int)unit);
 	switch (unit) {
 		case UnitTime::SECOND:     return "second";
 		case UnitTime::MINUTE:     return "minute";
@@ -183,6 +186,7 @@ inline static std::string readable_acc_date(UnitTime unit) noexcept {
 
 
 inline static std::string readable_stem_strategy(StemStrategy stem) noexcept {
+	L_CALL(nullptr, "::readable_stem_strategy(%d)", (int)stem);
 	switch (stem) {
 		case StemStrategy::STEM_NONE:   return "stem_none";
 		case StemStrategy::STEM_SOME:   return "stem_some";
@@ -193,6 +197,7 @@ inline static std::string readable_stem_strategy(StemStrategy stem) noexcept {
 
 
 inline static std::string readable_index(TypeIndex index) noexcept {
+	L_CALL(nullptr, "::readable_index(%d)", (int)index);
 	switch (index) {
 		case TypeIndex::NONE:           return "none";
 		case TypeIndex::TERMS:          return "terms";
@@ -209,6 +214,7 @@ inline static std::string readable_index(TypeIndex index) noexcept {
 
 
 inline static std::string readable_type(const std::array<FieldType, 3>& sep_types) {
+	L_CALL(nullptr, "::readable_type([%d, %d, %d])", (int)sep_types[0], sep_types[1], sep_types[2]);
 	std::string object;
 	if (sep_types[0] == FieldType::OBJECT) {
 		object.assign(OBJECT_STR);
@@ -471,6 +477,8 @@ public:
 	~Schema() = default;
 
 	auto get_modified_schema() {
+		L_CALL(this, "Schema::get_modified_schema()");
+
 		if (mut_schema) {
 			auto schema = std::shared_ptr<const MsgPack>(mut_schema.release());
 			schema->lock();
@@ -481,6 +489,8 @@ public:
 	}
 
 	auto get_const_schema() const {
+		L_CALL(this, "Schema::get_const_schema()");
+
 		return schema;
 	}
 

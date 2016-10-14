@@ -114,6 +114,8 @@ public:
 	}
 
 	void update_schema() const {
+		L_CALL(this, "DatabaseHandler::update_schema()");
+
 		auto mod_schema = schema->get_modified_schema();
 		if (mod_schema) {
 			XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, mod_schema);
@@ -121,6 +123,8 @@ public:
 	}
 
 	void update_schemas() const {
+		L_CALL(this, "DatabaseHandler::update_schemas()");
+
 		auto mod_schema = schema->get_modified_schema();
 		if (mod_schema) {
 			for (const auto& e: endpoints) {

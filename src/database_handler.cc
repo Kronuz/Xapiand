@@ -384,7 +384,7 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 void
 DatabaseHandler::write_schema(const std::string& body)
 {
-	L_CALL(this, "DatabaseHandler::index(1)");
+	L_CALL(this, "DatabaseHandler::write_schema()");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");

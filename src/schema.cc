@@ -24,7 +24,6 @@
 
 #include "geo/wkt_parser.h"
 #include "multivalue/generate_terms.h"
-#include "log.h"
 #include "manager.h"
 #include "utils.h"
 
