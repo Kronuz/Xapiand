@@ -37,7 +37,11 @@
 #include <vector>
 #include <fstream>
 #include <condition_variable>
+#include <unordered_map>
 
+#define MERGE_(a,b)  a##b
+#define LABEL_(a) MERGE_(__unique, a)
+#define UNIQUE_NAME LABEL_(__LINE__)
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
 #define LOCATION_LOG_LEVEL LOG_DEBUG  // The minimum log_level that prints file:line
@@ -79,73 +83,113 @@ public:
 };
 
 
+class LogWrapper;
 class LogThread;
 
-
 class Log : public std::enable_shared_from_this<Log> {
+	friend class LogWrapper;
 	friend class LogThread;
 
 	static LogThread& _thread();
 
-	static std::string str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
-	static std::shared_ptr<Log> add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
+	static std::string str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
+	static LogWrapper add(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 	static void log(int priority, const std::string& str);
 
-	bool cleanup;
+	static std::mutex stack_mtx;
+	static std::unordered_map<std::thread::id, unsigned> stack_levels;
+	std::thread::id thread_id;
+	unsigned stack_level;
+	bool stacked;
+
+	bool clean;
 	std::chrono::time_point<std::chrono::system_clock> created_at;
 	std::chrono::time_point<std::chrono::system_clock> wakeup;
 	std::string str_start;
 	int priority;
 	std::atomic_bool finished;
+	std::atomic_bool cleaned;
+
+	Log(Log&&) = delete;
+	Log(const Log&) = delete;
+	Log& operator=(Log&&) = delete;
+	Log& operator=(const Log&) = delete;
 
 public:
 	static int& _log_level();
 	static DLList<const std::unique_ptr<Logger>>& _handlers();
 
-	Log(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
+	Log(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Log();
 
 	template <typename T, typename R, typename... Args>
-	inline static std::shared_ptr<Log> log(bool cleanup, std::chrono::duration<T, R> timeout, int priority, Args&&... args) {
-		return log(cleanup, std::chrono::system_clock::now() + timeout, priority, std::forward<Args>(args)...);
-	}
+	static LogWrapper log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int priority, Args&&... args);
 
 	template <typename T, typename R>
-	inline static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::duration<T, R> timeout, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now()) {
-		return print(str, cleanup, std::chrono::system_clock::now() + timeout, priority, created_at);
-	}
+	static LogWrapper print(const std::string& str, bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
 	template <typename... Args>
-	inline static std::shared_ptr<Log> log(bool cleanup, int timeout, int priority, Args&&... args) {
-		return log(cleanup, std::chrono::milliseconds(timeout), priority, std::forward<Args>(args)...);
-	}
+	static LogWrapper log(bool cleanup, bool stacked, int timeout, int priority, Args&&... args);
 
-	inline static std::shared_ptr<Log> print(const std::string& str, bool cleanup, int timeout=0, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now()) {
-		return print(str, cleanup, std::chrono::milliseconds(timeout), priority, created_at);
-	}
+	static LogWrapper print(const std::string& str, bool cleanup, bool stacked, int timeout=0, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
-	static std::shared_ptr<Log> log(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
+	static LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 
 	template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Exception, std::decay_t<T>>::value>>
-	inline static std::shared_ptr<Log> log(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args) {
-		return log(cleanup, wakeup, priority, std::string(exc->get_traceback()), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
-	}
+	static LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args);
 
 	template <typename... Args>
-	inline static std::shared_ptr<Log> log(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args) {
-		return log(cleanup, wakeup, priority, std::string(), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
-	}
+	static LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args);
 
-	static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
+	static LogWrapper print(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
 	bool unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 	bool clear();
+	void cleanup();
 
 	static void finish(int wait=10);
 
 	long double age();
 };
 
+
+class LogWrapper {
+	std::shared_ptr<Log> log;
+
+	LogWrapper(const LogWrapper&) = delete;
+	LogWrapper& operator=(const LogWrapper&) = delete;
+
+public:
+	LogWrapper(LogWrapper&& o) : log(std::move(o.log)) { o.log.reset(); }
+	LogWrapper& operator=(LogWrapper&& o) { log = std::move(o.log); o.log.reset(); return *this; }
+
+	LogWrapper(std::shared_ptr<Log> log_) : log(log_) { }
+	~LogWrapper() {
+		if (log) {
+			log->cleanup();
+		}
+		log.reset();
+	}
+
+	template <typename... Args>
+	bool unlog(Args&&... args) {
+		return log->unlog(std::forward<Args>(args)...);
+	}
+
+	bool clear() {
+		return log->clear();
+	}
+
+	long double age() {
+		return log->age();
+	}
+
+	std::shared_ptr<Log> release() {
+		auto ret = log;
+		log.reset();
+		return ret;
+	}
+};
 
 class LogThread {
 	std::condition_variable wakeup_signal;
@@ -164,6 +208,36 @@ public:
 	void finish(int wait=10);
 	void add(const std::shared_ptr<Log>& l_ptr);
 };
+
+
+template <typename T, typename R, typename... Args>
+inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int priority, Args&&... args) {
+	return log(cleanup, stacked, std::chrono::system_clock::now() + timeout, priority, std::forward<Args>(args)...);
+}
+
+template <typename T, typename R>
+inline LogWrapper Log::print(const std::string& str, bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int priority, std::chrono::time_point<std::chrono::system_clock> created_at) {
+	return print(str, cleanup, stacked, std::chrono::system_clock::now() + timeout, priority, created_at);
+}
+
+template <typename... Args>
+inline LogWrapper Log::log(bool cleanup, bool stacked, int timeout, int priority, Args&&... args) {
+	return log(cleanup, stacked, std::chrono::milliseconds(timeout), priority, std::forward<Args>(args)...);
+}
+
+inline LogWrapper Log::print(const std::string& str, bool cleanup, bool stacked, int timeout, int priority, std::chrono::time_point<std::chrono::system_clock> created_at) {
+	return print(str, cleanup, stacked, std::chrono::milliseconds(timeout), priority, created_at);
+}
+
+template <typename T, typename... Args, typename>
+inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args) {
+	return log(cleanup, stacked, wakeup, priority, std::string(exc->get_traceback()), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args) {
+	return log(cleanup, stacked, wakeup, priority, std::string(), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
+}
 
 
 #define NO_COL "\033[0m"
@@ -195,31 +269,32 @@ public:
 #define EMERG_COL BRIGHT_RED
 
 #define _(args...)
-#define _LOG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
+#define _LOG_ENABLED(args...) Log::log(false, false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
 
-#define _LOG_LOG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, LOG_COL, args)
-#define _LOG_DEBUG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
-#define _LOG_INFO_ENABLED(args...) Log::log(false, 0ms, LOG_INFO, nullptr, __FILE__, __LINE__, NO_COL, INFO_COL, args)
-#define _LOG_NOTICE_ENABLED(args...) Log::log(false, 0ms, LOG_NOTICE, nullptr, __FILE__, __LINE__, NO_COL, NOTICE_COL, args)
-#define _LOG_WARNING_ENABLED(args...) Log::log(false, 0ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, WARNING_COL, args)
-#define _LOG_ERR_ENABLED(args...) Log::log(false, 0ms, LOG_ERR, nullptr, __FILE__, __LINE__, NO_COL, ERR_COL, args)
-#define _LOG_CRIT_ENABLED(args...) Log::log(false, 0ms, -LOG_CRIT, nullptr, __FILE__, __LINE__, NO_COL, CRIT_COL, args)
-#define _LOG_ALERT_ENABLED(args...) Log::log(false, 0ms, -LOG_ALERT, nullptr, __FILE__, __LINE__, NO_COL, ALERT_COL, args)
-#define _LOG_EMERG_ENABLED(args...) Log::log(false, 0ms, -LOG_EMERG, nullptr, __FILE__, __LINE__, NO_COL, EMERG_COL, args)
-#define _LOG_EXC_ENABLED(args...) Log::log(false, 0ms, LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define _LOG_STACKED_ENABLED(args...) auto UNIQUE_NAME = Log::log(false, true, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, LOG_COL, args)
+#define _LOG_LOG_ENABLED(args...) Log::log(false, false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, LOG_COL, args)
+#define _LOG_DEBUG_ENABLED(args...) Log::log(false, false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
+#define _LOG_INFO_ENABLED(args...) Log::log(false, false, 0ms, LOG_INFO, nullptr, __FILE__, __LINE__, NO_COL, INFO_COL, args)
+#define _LOG_NOTICE_ENABLED(args...) Log::log(false, false, 0ms, LOG_NOTICE, nullptr, __FILE__, __LINE__, NO_COL, NOTICE_COL, args)
+#define _LOG_WARNING_ENABLED(args...) Log::log(false, false, 0ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, WARNING_COL, args)
+#define _LOG_ERR_ENABLED(args...) Log::log(false, false, 0ms, LOG_ERR, nullptr, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define _LOG_CRIT_ENABLED(args...) Log::log(false, false, 0ms, -LOG_CRIT, nullptr, __FILE__, __LINE__, NO_COL, CRIT_COL, args)
+#define _LOG_ALERT_ENABLED(args...) Log::log(false, false, 0ms, -LOG_ALERT, nullptr, __FILE__, __LINE__, NO_COL, ALERT_COL, args)
+#define _LOG_EMERG_ENABLED(args...) Log::log(false, false, 0ms, -LOG_EMERG, nullptr, __FILE__, __LINE__, NO_COL, EMERG_COL, args)
+#define _LOG_EXC_ENABLED(args...) Log::log(false, false, 0ms, LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
-#define _LOG_MARKED_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥  " DEBUG_COL, args)
+#define _LOG_MARKED_ENABLED(args...) Log::log(false, false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥  " DEBUG_COL, args)
 
-#define LOG(priority, color, args...) Log::log(false, 0ms, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
-#define LOG_DELAYED(cleanup, delay, priority, color, args...) Log::log(cleanup, delay, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG(priority, color, args...) Log::log(false, false, 0ms, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG_DELAYED(cleanup, delay, priority, color, args...) Log::log(cleanup, false, delay, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 #define LOG_DELAYED_UNLOG(priority, color, args...) unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
 #define LOG_DELAYED_CLEAR() clear()
 
 #define _LOG_DELAYED_200(args...) auto __log_timed = LOG_DELAYED(true, 200ms, LOG_WARNING, BRIGHT_MAGENTA, args)
 #define _LOG_DELAYED_600(args...) auto __log_timed = LOG_DELAYED(true, 600ms, LOG_WARNING, BRIGHT_MAGENTA, args)
 #define _LOG_DELAYED_1000(args...) auto __log_timed = LOG_DELAYED(true, 1000ms, LOG_WARNING, BRIGHT_MAGENTA, args)
-#define _LOG_DELAYED_N_UNLOG(args...) __log_timed->LOG_DELAYED_UNLOG(LOG_WARNING, MAGENTA, args)
-#define _LOG_DELAYED_N_CLEAR() __log_timed->LOG_DELAYED_CLEAR()
+#define _LOG_DELAYED_N_UNLOG(args...) __log_timed.LOG_DELAYED_UNLOG(LOG_WARNING, MAGENTA, args)
+#define _LOG_DELAYED_N_CLEAR() __log_timed.LOG_DELAYED_CLEAR()
 
 #define _LOG_SET(name, value) auto name = value
 #define _LOG_INIT() _LOG_SET(start, std::chrono::system_clock::now())
@@ -264,10 +339,10 @@ public:
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Enable the following, when needed, using _LOG_LOG_ENABLED or _LOG_INIT:
+// Enable the following, when needed, using _LOG_LOG_ENABLED or _LOG_STACKED_ENABLED or _LOG_INIT:
 
-#define L_TRACEBACK _
-#define L_CALL _
+#define L_TRACEBACK _LOG_LOG_ENABLED
+#define L_CALL _LOG_STACKED_ENABLED
 #define L_TIME _
 #define L_CONN _
 #define L_RAFT _
@@ -289,5 +364,5 @@ public:
 #define L_BINARY_PROTO _
 #define L_DATABASE_WRAP_INIT _
 #define L_DATABASE_WRAP _
-#define L_INDEX _
+#define L_INDEX _LOG_LOG_ENABLED
 #define L_SEARCH _

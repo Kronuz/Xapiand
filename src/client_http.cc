@@ -215,7 +215,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 
 	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
 
-	response_log = LOG_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...");
+	response_log = LOG_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...").release();
 }
 
 
@@ -265,7 +265,7 @@ HttpClient::on_read(const char* buf, size_t received)
 		request_begining = false;
 		request_begins = std::chrono::system_clock::now();
 		response_log.load()->LOG_DELAYED_CLEAR();
-		response_log = LOG_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...");
+		response_log = LOG_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...").release();
 		response_logged = false;
 	}
 
@@ -480,7 +480,7 @@ HttpClient::_run()
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
 	response_log.load()->LOG_DELAYED_CLEAR();
-	response_log = LOG_DELAYED(true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long...");
+	response_log = LOG_DELAYED(true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long...").release();
 
 	std::string error;
 	int error_code = 0;

@@ -30,9 +30,12 @@
 #include <unistd.h>
 
 #define BUFFER_SIZE (10 * 1024)
+#define STACKED_SEP "<sep>"
 
 
 const std::regex filter_re("\033\\[[;\\d]*m");
+std::mutex Log::stack_mtx;
+std::unordered_map<std::thread::id, unsigned> Log::stack_levels;
 
 
 const char *priorities[] = {
@@ -84,18 +87,48 @@ SysLog::log(int priority, const std::string& str)
 }
 
 
-Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
-	: cleanup(cleanup_),
+Log::Log(const std::string& str, bool clean_, bool stacked_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
+	: stack_level(0),
+	  stacked(stacked_),
+	  clean(clean_),
 	  created_at(created_at_),
 	  wakeup(wakeup_),
 	  str_start(str),
 	  priority(priority_),
-	  finished(false) { }
+	  finished(false),
+	  cleaned(false) {
+
+	if (stacked) {
+		std::lock_guard<std::mutex> lk(stack_mtx);
+		thread_id = std::this_thread::get_id();
+		try {
+			stack_level = ++stack_levels.at(thread_id);
+		} catch (const std::out_of_range&) {
+			stack_levels[thread_id] = 0;
+		}
+	}
+}
 
 Log::~Log()
 {
+	cleanup();
+}
+
+
+void
+Log::cleanup()
+{
 	bool f = false;
-	finished.compare_exchange_strong(f, cleanup);
+	finished.compare_exchange_strong(f, clean);
+
+	if (!cleaned.exchange(true)) {
+		if (stacked) {
+			std::lock_guard<std::mutex> lk(stack_mtx);
+			if (stack_levels.at(thread_id)-- == 0) {
+				stack_levels.erase(thread_id);
+			}
+		}
+	}
 }
 
 
@@ -136,7 +169,7 @@ Log::_handlers()
 
 
 std::string
-Log::str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void* obj, const char *format, va_list argptr)
+Log::str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void* obj, const char *format, va_list argptr)
 {
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
@@ -157,6 +190,9 @@ Log::str_format(int priority, const std::string& exc, const char *file, int line
 	result += " ";
 	(void)obj;
 #endif
+	if (stacked) {
+		result += STACKED_SEP;
+	}
 	result += prefix + msg + suffix;
 	delete []buffer;
 	if (priority < 0) {
@@ -170,15 +206,15 @@ Log::str_format(int priority, const std::string& exc, const char *file, int line
 }
 
 
-std::shared_ptr<Log>
-Log::log(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+LogWrapper
+Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	std::string str(str_format(priority, exc, file, line, suffix, prefix, obj, format, argptr));
+	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, obj, format, argptr));
 	va_end(argptr);
 
-	return print(str, cleanup, wakeup, priority);
+	return print(str, clean, stacked, wakeup, priority);
 }
 
 
@@ -195,10 +231,10 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 	if (finished.exchange(true)) {
 		va_list argptr;
 		va_start(argptr, format);
-		std::string str(str_format(priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
+		std::string str(str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
 		va_end(argptr);
 
-		print(str, false, 0, priority, created_at);
+		print(str, false, stacked, 0, priority, created_at);
 
 		return true;
 	}
@@ -206,15 +242,15 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 }
 
 
-std::shared_ptr<Log>
-Log::add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
+LogWrapper
+Log::add(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
-	auto l_ptr = std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
+	auto l_ptr = std::make_shared<Log>(str, clean, stacked, wakeup, priority, created_at);
 
 	static LogThread& thread = _thread();
 	thread.add(l_ptr);
 
-	return l_ptr;
+	return LogWrapper(l_ptr);
 }
 
 
@@ -230,12 +266,12 @@ Log::log(int priority, const std::string& str)
 }
 
 
-std::shared_ptr<Log>
-Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
+LogWrapper
+Log::print(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
 	static auto& log_level = _log_level();
 	if (priority > log_level) {
-		return std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
+		return LogWrapper(std::make_shared<Log>(str, clean, stacked, wakeup, priority, created_at));
 	}
 
 	static auto& handlers = _handlers();
@@ -244,10 +280,10 @@ Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::ch
 	}
 
 	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {
-		return add(str, cleanup, wakeup, priority, created_at);
+		return add(str, clean, stacked, wakeup, priority, created_at);
 	} else {
 		log(priority, str);
-		return std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
+		return LogWrapper(std::make_shared<Log>(str, clean, stacked, wakeup, priority, created_at));
 	}
 }
 
@@ -327,6 +363,9 @@ LogThread::thread_function(DLList<const std::shared_ptr<Log>>& _log_list)
 				auto age = l_ptr->age();
 				if (age > 2e8) {
 					msg += " ~" + delta_string(age, true);
+				}
+				if (l_ptr->stacked) {
+					msg.replace(msg.find(STACKED_SEP), sizeof(STACKED_SEP) - 1, std::string(l_ptr->stack_level * 2, ' '));
 				}
 				Log::log(l_ptr->priority, msg);
 				it = _log_list.erase(it);
