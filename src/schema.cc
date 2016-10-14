@@ -2214,7 +2214,12 @@ Schema::update_error(const MsgPack& prop_error)
 MsgPack
 Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc)
 {
-	L_CALL(this, "Schema::index()");
+	L_CALL(this, "Schema::index(%s)", properties.to_string().c_str());
+
+	if (properties.empty()) {
+		specification.set_type = true;
+		specification.found_field = false;
+	}
 
 	try {
 		MsgPack data;
