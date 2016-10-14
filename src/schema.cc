@@ -1128,7 +1128,7 @@ Schema::readable(MsgPack& item_schema)
 				auto func = map_dispatch_readable.at(str_key);
 				(*func)(item_schema.at(str_key), item_schema);
 			} catch (const std::out_of_range&) {
-				if (is_valid(str_key)) {
+				if (is_valid(str_key) || reserved_field_names.find(str_key) != reserved_field_names.end()) {
 					auto& sub_item = item_schema.at(str_key);
 					if unlikely(sub_item.is_undefined()) {
 						item_schema.erase(str_key);
@@ -2233,7 +2233,7 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 				auto func = map_dispatch_document.at(str_key);
 				(this->*func)(object.at(str_key));
 			} catch (const std::out_of_range&) {
-				if (is_valid(str_key) && str_key != ID_FIELD_NAME) {
+				if (is_valid(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
 				} else {
 					try {
