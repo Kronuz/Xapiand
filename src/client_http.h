@@ -131,16 +131,16 @@ class HttpClient : public BaseClient {
 	static int on_info(http_parser* p);
 	static int on_data(http_parser* p, const char* at, size_t length);
 
-	void home_view();
-	void info_view();
-	void delete_document_view();
-	void index_document_view(bool gen_id);
-	void write_schema_view();
-	void document_info_view();
-	void update_document_view();
-	void search_view();
-	void schema_view();
-	void facets_view();
+	void home_view(HttpMethod method);
+	void info_view(HttpMethod method);
+	void delete_document_view(HttpMethod method);
+	void index_document_view(HttpMethod method);
+	void write_schema_view(HttpMethod method);
+	void document_info_view(HttpMethod method);
+	void update_document_view(HttpMethod method);
+	void search_view(HttpMethod method);
+	void schema_view(HttpMethod method);
+	void facets_view(HttpMethod method);
 	void bad_request_view();
 
 	void _options(int cmd);

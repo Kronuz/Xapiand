@@ -591,7 +591,7 @@ HttpClient::_head(int cmd)
 	switch (cmd) {
 		case CMD_NO_CMD:
 			if (path_parser.off_id) {
-				document_info_view();
+				document_info_view(HttpMethod::HEAD);
 			} else {
 				bad_request_view();
 			}
@@ -611,20 +611,20 @@ HttpClient::_get(int cmd)
 	switch (cmd) {
 		case CMD_NO_CMD:
 			if (path_parser.off_id) {
-				search_view();
+				search_view(HttpMethod::GET);
 			} else {
-				home_view();
+				home_view(HttpMethod::GET);
 			}
 			break;
 		case CMD_SEARCH:
 			path_parser.off_id = nullptr;
-			search_view();
+			search_view(HttpMethod::GET);
 			break;
 		case CMD_SCHEMA:
-			schema_view();
+			schema_view(HttpMethod::GET);
 			break;
 		case CMD_INFO:
-			info_view();
+			info_view(HttpMethod::GET);
 			break;
 		default:
 			bad_request_view();
@@ -641,7 +641,7 @@ HttpClient::_put(int cmd)
 	switch (cmd) {
 		case CMD_NO_CMD:
 			if (path_parser.off_id) {
-				index_document_view(false);
+				index_document_view(HttpMethod::PUT);
 			} else {
 				bad_request_view();
 			}
@@ -660,10 +660,10 @@ HttpClient::_post(int cmd)
 
 	switch (cmd) {
 		case CMD_NO_CMD:
-			index_document_view(true);
+			index_document_view(HttpMethod::POST);
 			break;
 		case CMD_SCHEMA:
-			write_schema_view();
+			write_schema_view(HttpMethod::POST);
 			break;
 		default:
 			bad_request_view();
@@ -680,7 +680,7 @@ HttpClient::_patch(int cmd)
 	switch (cmd) {
 		case CMD_NO_CMD:
 			if (path_parser.off_id) {
-				update_document_view();
+				update_document_view(HttpMethod::PATCH);
 			} else {
 				bad_request_view();
 			}
@@ -700,7 +700,7 @@ HttpClient::_delete(int cmd)
 	switch (cmd) {
 		case CMD_NO_CMD:
 			if (path_parser.off_id) {
-				delete_document_view();
+				delete_document_view(HttpMethod::DELETE);
 			} else {
 				bad_request_view();
 			}
@@ -713,14 +713,14 @@ HttpClient::_delete(int cmd)
 
 
 void
-HttpClient::home_view()
+HttpClient::home_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::home_view()");
 
 	endpoints.clear();
 	endpoints.add(Endpoint("."));
 
-	db_handler.reset(endpoints, DB_SPAWN, HttpMethod::GET);
+	db_handler.reset(endpoints, DB_SPAWN, method);
 
 	auto local_node_ = local_node.load();
 	auto document = db_handler.get_document(std::to_string(local_node_->id));
@@ -746,13 +746,13 @@ HttpClient::home_view()
 
 
 void
-HttpClient::document_info_view()
+HttpClient::document_info_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::document_info_view()");
 
 	endpoints_maker(1s);
 
-	db_handler.reset(endpoints, DB_SPAWN, HttpMethod::HEAD);
+	db_handler.reset(endpoints, DB_SPAWN, method);
 
 	MsgPack response;
 	response["doc_id"] = db_handler.get_docid(path_parser.get_id());
@@ -762,7 +762,7 @@ HttpClient::document_info_view()
 
 
 void
-HttpClient::delete_document_view()
+HttpClient::delete_document_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::delete_document_view()");
 
@@ -773,7 +773,7 @@ HttpClient::delete_document_view()
 
 	int status_code;
 	MsgPack response;
-	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, HttpMethod::DELETE);
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
 	if (endpoints.size() == 1) {
 		operation_begins = std::chrono::system_clock::now();
@@ -825,19 +825,17 @@ HttpClient::delete_document_view()
 
 
 void
-HttpClient::index_document_view(bool gen_id)
+HttpClient::index_document_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::index_document_view()");
 
 	std::string doc_id;
 	int status_code;
-	HttpMethod method = HttpMethod::PUT;
 
-	if (gen_id) {
+	if (method == HttpMethod::POST) {
 		path_parser.off_id = nullptr;
 		auto g = generator.newGuid();
 		doc_id = g.to_string();
-		method = HttpMethod::POST;
 	} else {
 		doc_id = path_parser.get_id();
 	}
@@ -894,13 +892,12 @@ HttpClient::index_document_view(bool gen_id)
 
 
 void
-HttpClient::write_schema_view()
+HttpClient::write_schema_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::write_schema_view()");
 
 	std::string doc_id;
 	int status_code;
-	HttpMethod method = HttpMethod::PUT;
 
 	path_parser.off_id = nullptr;
 
@@ -939,7 +936,7 @@ HttpClient::write_schema_view()
 
 
 void
-HttpClient::update_document_view()
+HttpClient::update_document_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::update_document_view()");
 
@@ -950,7 +947,7 @@ HttpClient::update_document_view()
 
 	std::string doc_id(path_parser.get_id());
 
-	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, HttpMethod::PATCH);
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
 	db_handler.patch(body, doc_id, query_field->commit, content_type, content_length);
 
 	operation_ends = std::chrono::system_clock::now();
@@ -977,7 +974,7 @@ HttpClient::update_document_view()
 
 
 void
-HttpClient::info_view()
+HttpClient::info_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::info_view()");
 
@@ -992,7 +989,7 @@ HttpClient::info_view()
 	} else {
 		endpoints_maker(1s);
 
-		db_handler.reset(endpoints, DB_OPEN, HttpMethod::GET);
+		db_handler.reset(endpoints, DB_OPEN, method);
 		try {
 			db_handler.get_document_info(response["_document_info"], path_parser.get_id());
 		} catch (const CheckoutError&) {
@@ -1003,7 +1000,7 @@ HttpClient::info_view()
 		path_parser.rewind();
 		endpoints_maker(1s);
 
-		db_handler.reset(endpoints, DB_OPEN, HttpMethod::GET);
+		db_handler.reset(endpoints, DB_OPEN, method);
 		db_handler.get_database_info(response["_database_info"]);
 		res_stats = true;
 	}
@@ -1019,21 +1016,21 @@ HttpClient::info_view()
 
 
 void
-HttpClient::schema_view()
+HttpClient::schema_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::schema_view()");
 
 	path_parser.off_id = nullptr;
 	endpoints_maker(1s);
 
-	db_handler.reset(endpoints, DB_SPAWN, HttpMethod::GET);
+	db_handler.reset(endpoints, DB_SPAWN, method);
 	write_http_response(db_handler.get_schema()->get_readable(), 200, pretty);
 	return;
 }
 
 
 void
-HttpClient::search_view()
+HttpClient::search_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::search_view()");
 
@@ -1065,7 +1062,7 @@ HttpClient::search_view()
 
 	operation_begins = std::chrono::system_clock::now();
 
-	db_handler.reset(endpoints, db_flags, HttpMethod::GET);
+	db_handler.reset(endpoints, db_flags, method);
 	if (!body.empty()) {
 		rapidjson::Document json_aggs;
 		json_load(json_aggs, body);
