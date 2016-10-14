@@ -271,7 +271,7 @@ QueryDSL::process_query(const MsgPack& obj, const std::string& field_name) {
 		const MsgPack* from;
 		const MsgPack& o = obj.at(QUERYDSL_RANGE);
 		try {
-			to = &o.at(QUERYDSL_FROM);
+			to = &o.at(QUERYDSL_TO);
 		} catch (const std::out_of_range&) { }
 
 		try {
@@ -281,7 +281,7 @@ QueryDSL::process_query(const MsgPack& obj, const std::string& field_name) {
 		if (to || from) {
 			return MultipleValueRange::getQuery(schema->get_data_field(field_name), field_name, from, to);
 		} else {
-			throw MSG_QueryDslError("Expected %s and/or %s in %s", QUERYDSL_FROM, QUERYDSL_FROM, QUERYDSL_RANGE);
+			throw MSG_QueryDslError("Expected %s and/or %s in %s", QUERYDSL_FROM, QUERYDSL_TO, QUERYDSL_RANGE);
 		}
 	} else {
 		try {
