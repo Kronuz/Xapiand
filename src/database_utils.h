@@ -40,11 +40,6 @@
 #define DATE_FIELD_NAME         "<date_field>"
 #define ANY_FIELD_NAME          "<any_field>"
 
-#define RESERVED_UUID_FIELD     "_uuid_field"
-#define RESERVED_GEO_FIELD      "_geo_field"
-#define RESERVED_DATE_FIELD     "_date_field"
-#define RESERVED_ANY_FIELD      "_any_field"
-
 #define RESERVED_WEIGHT         "_weight"
 #define RESERVED_POSITION       "_position"
 #define RESERVED_SPELLING       "_spelling"
