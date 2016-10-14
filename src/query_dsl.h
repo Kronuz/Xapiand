@@ -28,6 +28,8 @@
 
 #include "xapian.h"
 
+constexpr const char QUERYDSL_QUERY[] = "_query";
+
 
 /* A domain-specific language (DSL) for query */
 

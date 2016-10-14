@@ -28,12 +28,14 @@
 #include "multivalue/range.h"
 
 
-#define RESERVED_TERM "_term"
-#define RESERVED_BOOST "_boost"
-#define RESERVED_RANGE "_range"
-#define RESERVED_FROM "_from"
-#define RESERVED_TO "_to"
-#define RESERVED_EWKT "_ewkt"
+constexpr const char QUERYDSL_TERM[]  = "_term";
+constexpr const char QUERYDSL_VALUE[] = "_value";
+constexpr const char QUERYDSL_TYPE[]  = "_type";
+constexpr const char QUERYDSL_BOOST[] = "_boost";
+constexpr const char QUERYDSL_RANGE[] = "_range";
+constexpr const char QUERYDSL_FROM[]  = "_from";
+constexpr const char QUERYDSL_TO[]    = "_to";
+constexpr const char QUERYDSL_EWKT[]  = "_ewkt";
 
 
 static constexpr auto or_op = const_hash("_or");
@@ -264,53 +266,53 @@ QueryDSL::process_query(const MsgPack& obj, const std::string& field_name) {
 
 	uint64_t boost = 1;	/* Default value in xapian */
 
-	if (obj.is_map() && obj.find(RESERVED_RANGE) != obj.end()) {
+	if (obj.is_map() && obj.find(QUERYDSL_RANGE) != obj.end()) {
 		const MsgPack* to;
 		const MsgPack* from;
-		const MsgPack& o = obj.at(RESERVED_RANGE);
+		const MsgPack& o = obj.at(QUERYDSL_RANGE);
 		try {
-			to = &o.at(RESERVED_TO);
+			to = &o.at(QUERYDSL_FROM);
 		} catch (const std::out_of_range&) { }
 
 		try {
-			from = &o.at(RESERVED_FROM);
+			from = &o.at(QUERYDSL_FROM);
 		} catch (const std::out_of_range&) { }
 
 		if (to || from) {
 			return MultipleValueRange::getQuery(schema->get_data_field(field_name), field_name, from, to);
 		} else {
-			throw MSG_QueryDslError("Expected %s and/or %s in %s", RESERVED_FROM, RESERVED_TO, RESERVED_RANGE);
+			throw MSG_QueryDslError("Expected %s and/or %s in %s", QUERYDSL_FROM, QUERYDSL_FROM, QUERYDSL_RANGE);
 		}
 	} else {
 		try {
 			/* Get _boost if exist */
-			auto const& o_boost = obj.at(RESERVED_BOOST);
+			auto const& o_boost = obj.at(QUERYDSL_BOOST);
 			if (o_boost.is_number() && o_boost.getType() != MsgPack::Type::NEGATIVE_INTEGER) {
 				boost = o_boost.as_u64();
 			} else {
-				throw MSG_QueryDslError("Type error expected unsigned int in %s", RESERVED_BOOST);
+				throw MSG_QueryDslError("Type error expected unsigned int in %s", QUERYDSL_BOOST);
 			}
 		} catch (const std::out_of_range&) { }
 
 		try {
-			auto const& val = obj.at(RESERVED_VALUE);
+			auto const& val = obj.at(QUERYDSL_VALUE);
 			return build_query(val, field_name, boost);
 		} catch (const std::out_of_range&) {
 			try {
 				std::string type;
-				auto const& val = obj.at(RESERVED_TERM); /* Force to term unused at the moment */
+				auto const& val = obj.at(QUERYDSL_TERM); /* Force to term unused at the moment */
 				try {
 					/* Get _type if exist */
-					auto const& o_type = obj.at(RESERVED_TYPE);
+					auto const& o_type = obj.at(QUERYDSL_TYPE);
 					if (o_type.getType() == MsgPack::Type::STR) {
 						type = o_type.as_string();
 					} else {
-						throw MSG_QueryDslError("Type error expected string in %s", RESERVED_TYPE);
+						throw MSG_QueryDslError("Type error expected string in %s", QUERYDSL_TYPE);
 					}
 				} catch (const std::out_of_range&) { }
 				return build_query(val, field_name, boost, type);
 			} catch (const std::out_of_range&) {
-				throw MSG_QueryDslError("Expected %s or %s in object", RESERVED_VALUE, RESERVED_TERM);
+				throw MSG_QueryDslError("Expected %s or %s in object", QUERYDSL_VALUE, QUERYDSL_TERM);
 			}
 		}
 	}
