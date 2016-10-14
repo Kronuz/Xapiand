@@ -28,21 +28,27 @@
 #include "multivalue/range.h"
 
 
-constexpr const char QUERYDSL_TERM[]  = "_term";
-constexpr const char QUERYDSL_VALUE[] = "_value";
-constexpr const char QUERYDSL_TYPE[]  = "_type";
-constexpr const char QUERYDSL_BOOST[] = "_boost";
-constexpr const char QUERYDSL_RANGE[] = "_range";
-constexpr const char QUERYDSL_FROM[]  = "_from";
-constexpr const char QUERYDSL_TO[]    = "_to";
-constexpr const char QUERYDSL_EWKT[]  = "_ewkt";
+constexpr const char QUERYDSL_TERM[]       = "_term";
+constexpr const char QUERYDSL_VALUE[]      = "_value";
+constexpr const char QUERYDSL_TYPE[]       = "_type";
+constexpr const char QUERYDSL_BOOST[]      = "_boost";
+constexpr const char QUERYDSL_RANGE[]      = "_range";
+constexpr const char QUERYDSL_FROM[]       = "_from";
+constexpr const char QUERYDSL_TO[]         = "_to";
+constexpr const char QUERYDSL_EWKT[]       = "_ewkt";
+constexpr const char QUERYDSL_MATCH_ALL[]  = "_all";
+constexpr const char QUERYDSL_OR[]         = "_or";
+constexpr const char QUERYDSL_AND[]        = "_and";
+constexpr const char QUERYDSL_XOR[]        = "_xor";
+constexpr const char QUERYDSL_NOT[]        = "_not";
 
 
-static constexpr auto or_op = const_hash("_or");
-static constexpr auto and_op = const_hash("_and");
-static constexpr auto xor_op = const_hash("_xor");
-static constexpr auto not_op = const_hash("_not");
-static constexpr auto reserved_value = const_hash("_value");
+static constexpr auto HASH_OR    = const_hash(QUERYDSL_OR);
+static constexpr auto HASH_AND   = const_hash(QUERYDSL_AND);
+static constexpr auto HASH_XOR   = const_hash(QUERYDSL_XOR);
+static constexpr auto HASH_NOT   = const_hash(QUERYDSL_NOT);
+static constexpr auto HASH_VALUE = const_hash(QUERYDSL_VALUE);
+static constexpr auto HASH_ALL   = const_hash(QUERYDSL_MATCH_ALL);
 
 
 static const std::unordered_map<std::string, FieldType> map_type({
@@ -69,17 +75,18 @@ QueryDSL::get_query(const MsgPack& obj)
 		for (auto const& elem : obj) {
 			auto str_key = elem.as_string();
 			switch (const_hash(lower_string(str_key).c_str())) {
-				case or_op:
+				case HASH_OR:
 					return join_queries(obj.at(str_key), Xapian::Query::OP_OR);
 
-				case and_op:
+				case HASH_AND:
 					return join_queries(obj.at(str_key), Xapian::Query::OP_AND);
 
-				case xor_op:
+				case HASH_XOR:
 					return join_queries(obj.at(str_key), Xapian::Query::OP_XOR);
 
-				case not_op:
+				case HASH_NOT:
 					return join_queries(obj.at(str_key), Xapian::Query::OP_AND_NOT);
+
 				default: {
 					auto const& o = obj.at(str_key);
 					switch (o.getType()) {
@@ -96,6 +103,8 @@ QueryDSL::get_query(const MsgPack& obj)
 				}
 			}
 		}
+	} else if (obj.is_string() && const_hash(lower_string(obj.as_string()).c_str()) == HASH_ALL) {
+		return Xapian::Query::MatchAll;
 	} else {
 		throw MSG_QueryDslError("Type error expected map of size one at root level in query dsl");
 	}
@@ -197,35 +206,35 @@ QueryDSL::join_queries(const MsgPack& sub_obj, Xapian::Query::op op)
 				for (const auto& field : elem) {
 					auto str_ob = field.as_string();
 					switch (const_hash(lower_string(str_ob).c_str())) {
-						case or_op:
+						case HASH_OR:
 						{
 							const auto& o = elem.at(str_ob);
 							final_query.empty() ? final_query = join_queries(o, Xapian::Query::OP_OR) : final_query = Xapian::Query(op, final_query, join_queries(o, Xapian::Query::OP_OR));
 						}
 						break;
 
-						case and_op:
+						case HASH_AND:
 						{
 							const auto& o = elem.at(str_ob);
 							final_query.empty() ? final_query = join_queries(o, Xapian::Query::OP_AND) : final_query = Xapian::Query(op, final_query, join_queries(o, Xapian::Query::OP_AND));
 						}
 						break;
 
-						case xor_op:
+						case HASH_XOR:
 						{
 							const auto& o = elem.at(str_ob);
 							final_query.empty() ? final_query = join_queries(o, Xapian::Query::OP_XOR) : final_query = Xapian::Query(op, final_query, join_queries(o, Xapian::Query::OP_XOR));
 						}
 						break;
 
-						case not_op:
+						case HASH_NOT:
 						{
 							const auto& o = elem.at(str_ob);
 							final_query.empty() ? final_query = join_queries(o, Xapian::Query::OP_AND_NOT) :  final_query = Xapian::Query(op, final_query, join_queries(o, Xapian::Query::OP_AND_NOT));
 						}
 						break;
 
-						case reserved_value:
+						case HASH_VALUE:
 							//Empty field name
 							break;
 
