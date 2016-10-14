@@ -1593,6 +1593,10 @@ inline bool MsgPack::empty() const noexcept {
 			return _const_body->_obj->via.array.size == 0;
 		case Type::STR:
 			return _const_body->_obj->via.str.size == 0;
+		case Type::NIL:
+		case Type::EXT:
+		case Type::UNDEFINED:
+			return true;
 		default:
 			return false;
 	}
