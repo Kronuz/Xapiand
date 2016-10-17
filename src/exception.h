@@ -163,13 +163,6 @@ public:
 };
 
 
-class AggregationError : public ClientError {
-public:
-	template<typename... Args>
-	AggregationError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
-};
-
-
 class QueryDslError : public ClientError {
 public:
 	template<typename... Args>
@@ -190,5 +183,4 @@ public:
 #define MSG_DocNotFoundError(...) DocNotFoundError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_CheckoutError(...) CheckoutError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_MissingTypeError(...) MissingTypeError(__FILE__, __LINE__, __VA_ARGS__)
-#define MSG_AggregationError(...) AggregationError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_QueryDslError(...) QueryDslError(__FILE__, __LINE__, __VA_ARGS__)
