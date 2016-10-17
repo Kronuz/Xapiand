@@ -28,6 +28,7 @@
 #include "multivalue/aggregation.h"
 #include "multivalue/range.h"
 #include "query.h"
+#include "query_dsl.h"
 #include "serialise.h"
 
 
@@ -497,7 +498,7 @@ DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collap
 
 
 void
-DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions, int offset)
+DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions, int offset)
 {
 	L_CALL(this, "DatabaseHandler::get_mset()");
 
@@ -543,8 +544,31 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, Aggregatio
 	checkout();
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			Query query_object(schema, database);
-			auto query = query_object.get_query(e, suggestions);
+			Xapian::Query query;
+			switch (method) {
+				case HttpMethod::GET:
+				{
+					Query query_object(schema, database);
+					query = query_object.get_query(e, suggestions);
+				}
+				break;
+
+				case HttpMethod::POST:
+				{
+					if (qdsl && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
+						QueryDSL query_object(schema);
+						query = query_object.get_query(qdsl->at(QUERYDSL_QUERY));
+					} else {
+						Query query_object(schema, database);
+						query = query_object.get_query(e, suggestions);
+					}
+				}
+				break;
+
+				default:
+					break;
+			}
+
 			auto check_at_least = std::min(database->db->get_doccount(), e.check_at_least);
 			auto enquire = get_enquire(query, collapse_key, &e, sorter.get(), aggs);
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);

@@ -664,7 +664,12 @@ HttpClient::_post(int cmd)
 			index_document_view(HttpMethod::POST);
 			break;
 		case CMD_SCHEMA:
+			path_parser.off_id = nullptr;
 			write_schema_view(HttpMethod::POST);
+			break;
+		case CMD_SEARCH:
+			path_parser.off_id = nullptr;
+			search_view(HttpMethod::POST);
 			break;
 		default:
 			bad_request_view();
@@ -900,8 +905,6 @@ HttpClient::write_schema_view(HttpMethod method)
 	std::string doc_id;
 	int status_code;
 
-	path_parser.off_id = nullptr;
-
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
 
@@ -1067,9 +1070,10 @@ HttpClient::search_view(HttpMethod method)
 	if (!body.empty()) {
 		rapidjson::Document json_aggs;
 		json_load(json_aggs, body);
-		AggregationMatchSpy aggs(MsgPack(json_aggs), db_handler.get_schema());
+		MsgPack object(json_aggs);
+		AggregationMatchSpy aggs(object, db_handler.get_schema());
 		try {
-			db_handler.get_mset(*query_field, mset, &aggs, suggestions);
+			db_handler.get_mset(*query_field, mset, &aggs, &object, suggestions);
 		} catch (const CheckoutError&) {
 			/* At the moment when the endpoint it not exist and it is chunck it will return 200 response
 			 * and zero matches this behavior may change in the future for instance ( return 404 )
@@ -1079,7 +1083,7 @@ HttpClient::search_view(HttpMethod method)
 		write_http_response(aggs.get_aggregation(), 200, pretty);
 	} else {
 		try {
-			db_handler.get_mset(*query_field, mset, nullptr, suggestions);
+			db_handler.get_mset(*query_field, mset, nullptr, nullptr, suggestions);
 		} catch (const CheckoutError&) {
 			/* At the moment when the endpoint it not exist and it is chunck it will return 200 response
 			 * and zero matches this behavior may change in the future for instance ( return 404 )

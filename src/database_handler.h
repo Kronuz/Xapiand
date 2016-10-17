@@ -102,7 +102,7 @@ public:
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	void write_schema(const std::string& body);
 
-	void get_mset(const query_field_t& e, Xapian::MSet& mset, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions, int offset=0);
+	void get_mset(const query_field_t& e, Xapian::MSet& mset, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions, int offset=0);
 
 	Xapian::Document get_document(const Xapian::docid& did) {
 		L_CALL(this, "DatabaseHandler::get_document(1)");
