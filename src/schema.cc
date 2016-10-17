@@ -1118,20 +1118,17 @@ Schema::readable(MsgPack& item_schema)
 	L_CALL(nullptr, "Schema::readable(%s)", item_schema.to_string().c_str());
 
 	// Change this item of schema in readable form.
-	if (item_schema.is_map()) {
-		for (const auto& item_key : item_schema) {
-			auto str_key = item_key.as_string();
-			try {
-				auto func = map_dispatch_readable.at(str_key);
-				(*func)(item_schema.at(str_key), item_schema);
-			} catch (const std::out_of_range&) {
-				if (is_valid(str_key) || reserved_field_names.find(str_key) != reserved_field_names.end()) {
-					auto& sub_item = item_schema.at(str_key);
-					if unlikely(sub_item.is_undefined()) {
-						item_schema.erase(str_key);
-					} else {
-						readable(sub_item);
-					}
+	for (auto it = item_schema.begin(); it != item_schema.end(); ++it) {
+		auto str_key = it->as_string();
+		try {
+			auto func = map_dispatch_readable.at(str_key);
+			(*func)(item_schema.at(str_key), item_schema);
+		} catch (const std::out_of_range&) {
+			if (is_valid(str_key) || reserved_field_names.find(str_key) != reserved_field_names.end()) {
+				if unlikely(it->is_undefined()) {
+					it = item_schema.erase(it);
+				} else if (it->is_map()) {
+					readable(*it);
 				}
 			}
 		}
