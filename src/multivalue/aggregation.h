@@ -47,7 +47,7 @@ public:
 
 	template <const char* name, typename MetricAggregation>
 	void add_metric(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricAggregation>(result[name], conf[name], schema));
+		_sub_aggregations.push_back(std::make_shared<MetricAggregation>(result, conf[name], schema));
 	}
 
 	template <typename BucketAggregation>

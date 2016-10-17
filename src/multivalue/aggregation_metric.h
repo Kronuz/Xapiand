@@ -227,7 +227,7 @@ public:
 		  _count(0) { }
 
 	void update() override {
-		_result = _count;
+		_result[AGGREGATION_COUNT] = _count;
 	}
 
 	void _aggregate() {
@@ -278,7 +278,7 @@ public:
 		  _sum(0) { }
 
 	void update() override {
-		_result = static_cast<double>(_sum);
+		_result[AGGREGATION_SUM] = static_cast<double>(_sum);
 	}
 
 	void _aggregate(double value) {
@@ -313,7 +313,7 @@ public:
 		  _count(0) { }
 
 	void update() override {
-		_result = static_cast<double>(avg());
+		_result[AGGREGATION_AVG] = static_cast<double>(avg());
 	}
 
 	void _aggregate(double value) {
@@ -364,7 +364,7 @@ public:
 		  _min(DBL_MAX) { }
 
 	void update() override {
-		_result = _min;
+		_result[AGGREGATION_MIN] = _min;
 	}
 
 	void _aggregate(double value) {
@@ -408,7 +408,7 @@ public:
 		  _max(DBL_MIN) { }
 
 	void update() override {
-		_result = _max;
+		_result[AGGREGATION_MAX] = _max;
 	}
 
 	void _aggregate(double value) {
@@ -445,7 +445,7 @@ public:
 		  _sq_sum(0) { }
 
 	void update() override {
-		_result = static_cast<double>(variance());
+		_result[AGGREGATION_VARIANCE] = static_cast<double>(variance());
 	}
 
 	void _aggregate(double value) {
@@ -484,7 +484,7 @@ public:
 		: MetricVariance(result, conf, schema) { }
 
 	void update() override {
-		_result = static_cast<double>(std());
+		_result[AGGREGATION_STD] = static_cast<double>(std());
 	}
 
 	inline long double std() const {
@@ -502,7 +502,7 @@ public:
 
 	void update() override {
 		if (values.empty()) {
-			_result = 0;
+			_result[AGGREGATION_MEDIAN] = 0;
 			return;
 		}
 		size_t median_pos = values.size();
@@ -511,11 +511,11 @@ public:
 			std::nth_element(values.begin(), values.begin() + median_pos, values.end());
 			auto val1 = values[median_pos];
 			std::nth_element(values.begin(), values.begin() + median_pos - 1, values.end());
-			_result = (val1 + values[median_pos - 1]) / 2;
+			_result[AGGREGATION_MEDIAN] = (val1 + values[median_pos - 1]) / 2;
 		} else {
 			median_pos /= 2;
 			std::nth_element(values.begin(), values.begin() + median_pos, values.end());
-			_result = values[median_pos];
+			_result[AGGREGATION_MEDIAN] = values[median_pos];
 		}
 	}
 
@@ -550,11 +550,11 @@ public:
 
 	void update() override {
 		if (_histogram.empty()) {
-			_result = 0;
+			_result[AGGREGATION_MODE] = 0;
 			return;
 		}
 		auto it = std::max_element(_histogram.begin(), _histogram.end(), [](const std::pair<double, size_t>& a, const std::pair<double, size_t>& b) { return a.second < b.second; });
-		_result = it->first;
+		_result[AGGREGATION_MODE] = it->first;
 	}
 
 	void _aggregate(double value) {
