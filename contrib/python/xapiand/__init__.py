@@ -25,7 +25,12 @@ from __future__ import absolute_import
 import os
 import itertools
 
-import json
+try:
+    from dfw.core.utils import json
+    from dfw.core.utils.datastructures.nested import NestedDict
+except ImportError:
+    import json
+    NestedDict = dict
 
 __all__ = ['Xapiand']
 
@@ -36,16 +41,21 @@ except ImportError:
     raise ImportError("Xapiand requires the installation of the requests module.")
 
 
-class Result(dict):
+class Result(NestedDict):
     def __init__(self, *args, **kwargs):
         super(Result, self).__init__(*args, **kwargs)
         for k in list(self):
             if k[0] == '_':
-                setattr(self, k[1:], self.pop(k))
+                setattr(self, k, self.pop(k))
 
 
 class Results(object):
-    def __init__(self, generator):
+    def __init__(self, meta, generator):
+        for k, v in meta.get('_query', {}).items():
+            if k[0] == '_':
+                setattr(self, k, v)
+        aggregations = NestedDict(meta.get('_aggregations', {}))
+        setattr(self, 'aggregations', aggregations)
         self.generator = generator
 
     def __len__(self):
@@ -163,23 +173,31 @@ class Xapiand(object):
         is_json = 'application/json' in res.headers.get('content-type', '')
 
         if stream:
-            def results(lines, n=100):
+            def results(lines, size=100):
                 def feed():
                     feed.cache = []
-                    feed.cache.extend(l for l in itertools.islice(lines, n) if l)
+                    feed.cache.extend(l for l in itertools.islice(lines, size) if l)
                 feed()
-                yield
                 while feed.cache:
                     for line in feed.cache:
-                        yield json.loads(line) if is_json else line
+                        if is_json:
+                            if line.lstrip().startswith(']'):
+                                continue
+                            elif line.rstrip().endswith('['):
+                                line += ']}}'
+                            else:
+                                line = line.rstrip().rstrip(',')
+                            yield json.loads(line)
+                        else:
+                            yield line
                     feed()
-            lll = res.iter_lines(delimiter='\n\n')
-            results = results(lll)
-            next(results)
+            results = results(res.iter_lines(delimiter='\n\n'))
+            meta = next(results)
         else:
             results = [json.loads(res.content) if is_json else res.content]
+            meta = {}
 
-        results = Results(results)
+        results = Results(meta, results)
         if key == 'result':
             results = results.next()
 
