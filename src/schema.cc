@@ -23,8 +23,8 @@
 #include "schema.h"
 
 #include "geo/wkt_parser.h"
-#include "multivalue/generate_terms.h"
 #include "manager.h"
+#include "multivalue/generate_terms.h"
 #include "utils.h"
 
 
