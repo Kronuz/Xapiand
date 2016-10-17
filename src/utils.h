@@ -180,11 +180,11 @@ inline std::string join_string(const std::vector<T>& values, const std::string& 
 }
 
 
-inline std::string indent_string(const std::string& str, char sep, int level) {
+inline std::string indent_string(const std::string& str, char sep, int level, bool indent_first=true) {
 	std::string ret = str;
 
 	std::string indentation(level, sep);
-	ret.insert(0, indentation);
+	if (indent_first) ret.insert(0, indentation);
 
 	std::string::size_type pos = ret.find('\n');
 	while (pos != std::string::npos) {
