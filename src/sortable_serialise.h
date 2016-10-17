@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <string>
 
 long double sortable_unserialise(const std::string & value);
 

@@ -24,7 +24,6 @@
 
 #include "guid/guid.h"
 #include "geo/wkt_parser.h"
-#include "hash/sha256.h"
 #include "length.h"
 #include "schema.h"
 #include "stl_serialise.h"
@@ -462,8 +461,7 @@ Serialise::ewkt(const std::string& field_value, bool partials, double error)
 		result.append(trixel);
 	}
 
-	SHA256 sha256;
-	return sha256(result);
+	return get_hashed(result);
 }
 
 
@@ -480,8 +478,7 @@ Serialise::trixels(const std::vector<std::string>& trixels)
 		result.append(trixel);
 	}
 
-	SHA256 sha256;
-	return sha256(result);
+	return get_hashed(result);
 }
 
 

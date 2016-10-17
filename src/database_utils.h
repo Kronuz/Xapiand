@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "sortable_serialise.h"
+#include "xxh64.hpp"
 #include "length.h"
 #include "msgpack.h"
 #include "rapidjson/document.h"
@@ -224,7 +226,9 @@ Xapian::valueno get_slot(const std::string& name);
 std::string prefixed(const std::string& term, const std::string& prefixO);
 std::string get_prefix(const std::string& name, const std::string& prefix, char type);
 std::string get_dynamic_prefix(const std::string& name, const std::string& prefix, char type);
-std::string get_md5(const std::string& name);
+inline std::string get_hashed(const std::string& name) {
+	return sortable_serialise(xxh64::hash(name));
+}
 
 long long read_mastery(const std::string& dir, bool force);
 void clean_reserved(MsgPack& document);

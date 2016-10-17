@@ -22,8 +22,6 @@
 
 #include "database_utils.h"
 
-#include "hash/md5.h"
-#include "hash/sha256.h"
 #include "io_utils.h"
 #include "log.h"
 #include "serialise.h"
@@ -66,15 +64,9 @@ std::string prefixed(const std::string& term, const std::string& prefix)
 }
 
 
-Xapian::valueno get_slot(const std::string& name) {
-	MD5 md5;
-	md5(name);
-	unsigned char buffer[MD5::HashBytes];
-	md5.getHash(buffer);
-
-	// We are left with the last half of the md5.
-	auto _slot = *reinterpret_cast<Xapian::valueno*>(buffer);
-	auto slot = Swap4Bytes(_slot);
+Xapian::valueno get_slot(const std::string& name)
+{
+	auto slot = static_cast<Xapian::valueno>(xxh64::hash(name));
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
 	} else if (slot == Xapian::BAD_VALUENO) {
@@ -84,54 +76,25 @@ Xapian::valueno get_slot(const std::string& name) {
 }
 
 
-std::string get_prefix(const std::string& name, const std::string& prefix, char type) {
-	MD5 md5;
-	md5(name);
-	unsigned char buffer[MD5::HashBytes];
-	md5.getHash(buffer);
-
+std::string get_prefix(const std::string& name, const std::string& prefix, char type)
+{
+	auto hashed = get_hashed(name);
 	std::string result;
-	result.reserve(prefix.length() + MD5::HashBytes + 1);
+	result.reserve(prefix.length() + 1 + hashed.length());
 	result.assign(prefix).push_back(type);
-	// We are left with the last half of the md5.
-	for (int i = 8; i < MD5::HashBytes; ++i) {
-		result.push_back(buffer[i]);
-	}
+	result.append(hashed);
 	return result;
 }
 
 
 std::string get_dynamic_prefix(const std::string& name, const std::string& prefix, char type)
 {
-	SHA256 sha256;
-	sha256(name);
-	unsigned char buffer[SHA256::HashBytes];
-	sha256.getHash(buffer);
-
+	auto hashed = get_hashed(name);
 	std::string result;
-	result.reserve(prefix.length() + SHA256::HashBytes + 1);
+	result.reserve(prefix.length() + 1 + hashed.length());
 	result.assign(prefix).push_back(type);
-	// We are left with the last half of the sha256.
-	for (int i = 16; i < SHA256::HashBytes; ++i) {
-		result.push_back(buffer[i]);
-	}
+	result.append(hashed);
 	return result;
-}
-
-
-std::string get_md5(const std::string& name)
-{
-	MD5 md5;
-	md5(name);
-	unsigned char buffer[MD5::HashBytes];
-	md5.getHash(buffer);
-
-	std::string res;
-	res.reserve(MD5::HashBytes);
-	for (int i = 0; i < MD5::HashBytes; ++i) {
-		res.push_back(buffer[i]);
-	}
-	return res;
 }
 
 

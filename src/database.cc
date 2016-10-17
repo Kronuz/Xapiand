@@ -1618,7 +1618,7 @@ DatabasePool::init_ref(const Endpoint& endpoint)
 		return;
 	}
 
-	std::string unique_id(prefixed(get_md5(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
+	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
 	Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
 	if (p == ref_database->db->postlist_end(unique_id)) {
 		Xapian::Document doc;
@@ -1653,7 +1653,7 @@ DatabasePool::inc_ref(const Endpoint& endpoint)
 
 	Xapian::Document doc;
 
-	std::string unique_id(prefixed(get_md5(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
+	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
 	Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 	if (p == ref_database->db->postlist_end(unique_id)) {
 		// QUESTION: Document not found - should add?
@@ -1697,7 +1697,7 @@ DatabasePool::dec_ref(const Endpoint& endpoint)
 
 	Xapian::Document doc;
 
-	std::string unique_id(prefixed(get_md5(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
+	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
 	Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 	if (p != ref_database->db->postlist_end(unique_id)) {
 		doc = ref_database->db->get_document(*p);
