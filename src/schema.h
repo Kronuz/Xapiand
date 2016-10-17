@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include "log.h"
 #include "database_utils.h"
+#include "log.h"
 #include "lru.h"
 #include "msgpack.h"
 #include "serialise.h"
@@ -69,21 +69,26 @@ enum class TypeIndexBit : uint8_t {
 	GLOBAL = 0b1000,                       // Bit for global
 };
 
+
 inline constexpr TypeIndexBit operator|(const uint8_t& a, const TypeIndexBit& b) {
 	return static_cast<TypeIndexBit>(a | static_cast<uint8_t>(b));
 }
+
 
 inline constexpr TypeIndexBit operator|(const TypeIndexBit& a, const uint8_t& b) {
 	return static_cast<TypeIndexBit>(static_cast<uint8_t>(a) | b);
 }
 
+
 inline constexpr TypeIndexBit operator|(const TypeIndexBit& a, const TypeIndexBit& b) {
 	return static_cast<TypeIndexBit>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
 }
 
+
 inline constexpr TypeIndexBit operator~(const TypeIndexBit& o) {
 	return static_cast<TypeIndexBit>(~static_cast<uint8_t>(o));
 }
+
 
 enum class TypeIndex : uint8_t {
 	// Not indexed:
@@ -108,25 +113,31 @@ enum class TypeIndex : uint8_t {
 	GLOBAL_ALL    = static_cast<uint8_t>(GLOBAL_TERMS | GLOBAL_VALUES),
 };
 
+
 inline constexpr TypeIndex operator&(const TypeIndex& a, const TypeIndexBit& b) {
 	return static_cast<TypeIndex>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
 }
+
 
 inline constexpr void operator&=(TypeIndex& a, const TypeIndexBit& b) {
 	a = a & b;
 }
 
+
 inline constexpr TypeIndex operator|(const TypeIndex& a, const TypeIndexBit& b) {
 	return static_cast<TypeIndex>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
 }
+
 
 inline constexpr void operator|=(TypeIndex& a, const TypeIndexBit& b) {
 	a = a | b;
 }
 
+
 inline constexpr TypeIndex operator^(const TypeIndex& a, const TypeIndexBit& b) {
 	return static_cast<TypeIndex>(static_cast<uint8_t>(a) ^ static_cast<uint8_t>(b));
 }
+
 
 inline constexpr void operator^=(TypeIndex& a, const TypeIndexBit& b) {
 	a = a ^ b;
@@ -158,7 +169,7 @@ enum class FieldType : uint8_t {
 
 
 inline static std::string readable_dynamic_field_type(DynamicFieldType type) noexcept {
-	L_CALL(nullptr, "::readable_dynamic_field_type(%d)", (int)type);
+	L_CALL(nullptr, "::readable_dynamic_field_type(%d)", toUType(type));
 	switch (type) {
 		case DynamicFieldType::NONE: return "none";
 		case DynamicFieldType::DATE: return "date";
@@ -170,7 +181,7 @@ inline static std::string readable_dynamic_field_type(DynamicFieldType type) noe
 
 
 inline static std::string readable_acc_date(UnitTime unit) noexcept {
-	L_CALL(nullptr, "::readable_acc_date(%d)", (int)unit);
+	L_CALL(nullptr, "::readable_acc_date(%d)", toUType(unit));
 	switch (unit) {
 		case UnitTime::SECOND:     return "second";
 		case UnitTime::MINUTE:     return "minute";
@@ -186,7 +197,7 @@ inline static std::string readable_acc_date(UnitTime unit) noexcept {
 
 
 inline static std::string readable_stem_strategy(StemStrategy stem) noexcept {
-	L_CALL(nullptr, "::readable_stem_strategy(%d)", (int)stem);
+	L_CALL(nullptr, "::readable_stem_strategy(%d)", toUType(stem));
 	switch (stem) {
 		case StemStrategy::STEM_NONE:   return "stem_none";
 		case StemStrategy::STEM_SOME:   return "stem_some";
@@ -197,7 +208,7 @@ inline static std::string readable_stem_strategy(StemStrategy stem) noexcept {
 
 
 inline static std::string readable_index(TypeIndex index) noexcept {
-	L_CALL(nullptr, "::readable_index(%d)", (int)index);
+	L_CALL(nullptr, "::readable_index(%d)", toUType(index));
 	switch (index) {
 		case TypeIndex::NONE:           return "none";
 		case TypeIndex::TERMS:          return "terms";
@@ -214,7 +225,7 @@ inline static std::string readable_index(TypeIndex index) noexcept {
 
 
 inline static std::string readable_type(const std::array<FieldType, 3>& sep_types) {
-	L_CALL(nullptr, "::readable_type([%d, %d, %d])", (int)sep_types[0], sep_types[1], sep_types[2]);
+	L_CALL(nullptr, "::readable_type([%d, %d, %d])", toUType(sep_types[0]), toUType(sep_types[1]), toUType(sep_types[2]));
 	std::string object;
 	if (sep_types[0] == FieldType::OBJECT) {
 		object.assign(OBJECT_STR);
