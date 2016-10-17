@@ -1113,8 +1113,8 @@ HttpClient::search_view(HttpMethod method)
 					first_chunk.append("\n    \"_aggregations\": ").append(indent_string(aggregations.to_string(true),' ', 4, false)).append(",");
 				}
 				first_chunk.append("\n    \"_query\": {");
-				first_chunk.append("\n        \"_hits_count\": ").append(std::to_string(mset.size())).append(",");
-				first_chunk.append("\n        \"_matches_count\": ").append(std::to_string(mset.get_matches_estimated())).append(",");
+				first_chunk.append("\n        \"_total_count\": ").append(std::to_string(mset.size())).append(",");
+				first_chunk.append("\n        \"_matches_estimated\": ").append(std::to_string(mset.get_matches_estimated())).append(",");
 				first_chunk.append("\n        \"_hits\": [");
 				first_chunk.append("\n");
 				first_chunk.append("\n");
@@ -1127,8 +1127,8 @@ HttpClient::search_view(HttpMethod method)
 					first_chunk.append("\"_aggregations\":").append(aggregations.to_string()).append(",");
 				}
 				first_chunk.append("\"_query\": {");
-				first_chunk.append("\"_hits_count\":").append(std::to_string(mset.size())).append(",");
-				first_chunk.append("\"_matches_count\":").append(std::to_string(mset.get_matches_estimated())).append(",");
+				first_chunk.append("\"_total_count\":").append(std::to_string(mset.size())).append(",");
+				first_chunk.append("\"_matches_estimated\":").append(std::to_string(mset.get_matches_estimated())).append(",");
 				first_chunk.append("\"_hits\":[");
 				first_chunk.append("\n");
 				first_chunk.append("\n");
