@@ -341,8 +341,8 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 ////////////////////////////////////////////////////////////////////////////////
 // Enable the following, when needed, using _LOG_LOG_ENABLED or _LOG_STACKED_ENABLED or _LOG_INIT:
 
-#define L_TRACEBACK _LOG_LOG_ENABLED
-#define L_CALL _LOG_STACKED_ENABLED
+#define L_TRACEBACK _
+#define L_CALL _
 #define L_TIME _
 #define L_CONN _
 #define L_RAFT _
@@ -364,5 +364,5 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define L_BINARY_PROTO _
 #define L_DATABASE_WRAP_INIT _
 #define L_DATABASE_WRAP _
-#define L_INDEX _LOG_LOG_ENABLED
+#define L_INDEX _
 #define L_SEARCH _
