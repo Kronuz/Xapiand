@@ -325,6 +325,10 @@ public:
 		}
 	}
 
+	T* operator->() {
+		return &operator*();
+	}
+
 	T& operator*() const {
 		switch (_mobj->_const_body->getType()) {
 			case Type::MAP:
@@ -334,6 +338,10 @@ public:
 			default:
 				throw msgpack::type_error();
 		}
+	}
+
+	T* operator->() const {
+		return &operator*();
 	}
 
 	bool operator==(const Iterator& other) const {
