@@ -38,7 +38,8 @@
 #include <random>
 
 
-inline static long long save_mastery(const std::string& dir) {
+inline static long long save_mastery(const std::string& dir)
+{
 	char buf[20];
 	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 16;
 	mastery_level |= static_cast<int>(random_int(0, 0xffff));
@@ -52,7 +53,8 @@ inline static long long save_mastery(const std::string& dir) {
 }
 
 
-std::string prefixed(const std::string& term, const std::string& prefix) {
+std::string prefixed(const std::string& term, const std::string& prefix)
+{
 	if (prefix.empty()) {
 		return term;
 	} else {
@@ -99,7 +101,8 @@ std::string get_prefix(const std::string& name, const std::string& prefix, char 
 }
 
 
-std::string get_dynamic_prefix(const std::string& name, const std::string& prefix, char type) {
+std::string get_dynamic_prefix(const std::string& name, const std::string& prefix, char type)
+{
 	SHA256 sha256;
 	sha256(name);
 	unsigned char buffer[SHA256::HashBytes];
@@ -116,7 +119,8 @@ std::string get_dynamic_prefix(const std::string& name, const std::string& prefi
 }
 
 
-std::string get_md5(const std::string& name) {
+std::string get_md5(const std::string& name)
+{
 	MD5 md5;
 	md5(name);
 	unsigned char buffer[MD5::HashBytes];
@@ -131,7 +135,8 @@ std::string get_md5(const std::string& name) {
 }
 
 
-long long read_mastery(const std::string& dir, bool force) {
+long long read_mastery(const std::string& dir, bool force)
+{
 	L_DATABASE(nullptr, "+ READING MASTERY OF INDEX '%s'...", dir.c_str());
 
 	struct stat info;
@@ -167,7 +172,8 @@ long long read_mastery(const std::string& dir, bool force) {
 }
 
 
-void clean_reserved(MsgPack& document) {
+void clean_reserved(MsgPack& document)
+{
 	if (document.is_map()) {
 		bool obj = false;
 		MsgPack _val;
@@ -192,7 +198,8 @@ void clean_reserved(MsgPack& document) {
 }
 
 
-MIMEType get_mimetype(const std::string& type) {
+MIMEType get_mimetype(const std::string& type)
+{
 	if (type == JSON_CONTENT_TYPE) {
 		return MIMEType::APPLICATION_JSON;
 	} else if (type == FORM_URLENCODED_CONTENT_TYPE) {
@@ -205,7 +212,8 @@ MIMEType get_mimetype(const std::string& type) {
 }
 
 
-void json_load(rapidjson::Document& doc, const std::string& str) {
+void json_load(rapidjson::Document& doc, const std::string& str)
+{
 	rapidjson::ParseResult parse_done = doc.Parse(str.data());
 	if (!parse_done) {
 		throw MSG_ClientError("JSON parse error at position %u: %s", parse_done.Offset(), GetParseError_En(parse_done.Code()));
@@ -213,14 +221,16 @@ void json_load(rapidjson::Document& doc, const std::string& str) {
 }
 
 
-rapidjson::Document to_json(const std::string& str) {
+rapidjson::Document to_json(const std::string& str)
+{
 	rapidjson::Document doc;
 	json_load(doc, str);
 	return doc;
 }
 
 
-MsgPack get_MsgPack(const Xapian::Document& doc) {
+MsgPack get_MsgPack(const Xapian::Document& doc)
+{
 	auto data = doc.get_data();
 
 	size_t length;
@@ -244,7 +254,8 @@ MsgPack get_MsgPack(const Xapian::Document& doc) {
 }
 
 
-std::string get_blob(const Xapian::Document& doc) {
+std::string get_blob(const Xapian::Document& doc)
+{
 	std::string data = doc.get_data();
 
 	size_t length;
@@ -262,7 +273,8 @@ std::string get_blob(const Xapian::Document& doc) {
 }
 
 
-std::string msgpack_to_html(const msgpack::object& o) {
+std::string msgpack_to_html(const msgpack::object& o)
+{
 	if (o.type == msgpack::type::MAP) {
 		std::string key_tag_head = "<dt>";
 		std::string key_tag_tail = "</dt>";
@@ -331,7 +343,8 @@ std::string msgpack_to_html(const msgpack::object& o) {
 }
 
 
-std::string msgpack_map_value_to_html(const msgpack::object& o) {
+std::string msgpack_map_value_to_html(const msgpack::object& o)
+{
 	std::string tag_head = "<dd>";
 	std::string tag_tail = "</dd>";
 
@@ -353,7 +366,8 @@ std::string msgpack_map_value_to_html(const msgpack::object& o) {
 }
 
 
-std::string msgpack_to_html_error(const msgpack::object& o) {
+std::string msgpack_to_html_error(const msgpack::object& o)
+{
 	std::string html;
 	if (o.type == msgpack::type::MAP) {
 		const msgpack::object_kv* pend(o.via.map.ptr + o.via.map.size);
