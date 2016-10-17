@@ -1199,9 +1199,7 @@ HttpClient::search_view(HttpMethod method)
 			if (chunked) {
 				if (rc == 0) {
 					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type_str));
-
 					write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
-
 				}
 
 				if (!buffer.empty()) {
@@ -1220,6 +1218,7 @@ HttpClient::search_view(HttpMethod method)
 		if (chunked) {
 			if (rc == 0) {
 				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated()));
+				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
 			}
 
 			if (!buffer.empty()) {
