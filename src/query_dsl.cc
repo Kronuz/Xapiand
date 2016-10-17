@@ -20,6 +20,7 @@
 * IN THE SOFTWARE.
 */
 
+#include "xxh64.hpp"
 
 #include "query_dsl.h"
 
@@ -35,20 +36,20 @@ constexpr const char QUERYDSL_BOOST[]      = "_boost";
 constexpr const char QUERYDSL_RANGE[]      = "_range";
 constexpr const char QUERYDSL_FROM[]       = "_from";
 constexpr const char QUERYDSL_TO[]         = "_to";
-constexpr const char QUERYDSL_EWKT[]       = "_ewkt";
-constexpr const char QUERYDSL_MATCH_ALL[]  = "_all";
 constexpr const char QUERYDSL_OR[]         = "_or";
 constexpr const char QUERYDSL_AND[]        = "_and";
 constexpr const char QUERYDSL_XOR[]        = "_xor";
 constexpr const char QUERYDSL_NOT[]        = "_not";
+constexpr const char QUERYDSL_MATCH_ALL[]  = "_all";
+// constexpr const char QUERYDSL_EWKT[]       = "_ewkt";
 
 
-static constexpr auto HASH_OR    = const_hash(QUERYDSL_OR);
-static constexpr auto HASH_AND   = const_hash(QUERYDSL_AND);
-static constexpr auto HASH_XOR   = const_hash(QUERYDSL_XOR);
-static constexpr auto HASH_NOT   = const_hash(QUERYDSL_NOT);
-static constexpr auto HASH_VALUE = const_hash(QUERYDSL_VALUE);
-static constexpr auto HASH_ALL   = const_hash(QUERYDSL_MATCH_ALL);
+static constexpr auto HASH_OR    = xxh64::hash(QUERYDSL_OR);
+static constexpr auto HASH_AND   = xxh64::hash(QUERYDSL_AND);
+static constexpr auto HASH_XOR   = xxh64::hash(QUERYDSL_XOR);
+static constexpr auto HASH_NOT   = xxh64::hash(QUERYDSL_NOT);
+static constexpr auto HASH_VALUE = xxh64::hash(QUERYDSL_VALUE);
+static constexpr auto HASH_ALL   = xxh64::hash(QUERYDSL_MATCH_ALL);
 
 
 static const std::unordered_map<std::string, FieldType> map_type({
@@ -56,12 +57,11 @@ static const std::unordered_map<std::string, FieldType> map_type({
 	{ POSITIVE_STR,    FieldType::POSITIVE     }, { STRING_STR,      FieldType::STRING      },
 	{ TEXT_STR,        FieldType::TEXT         }, { DATE_STR,        FieldType::DATE        },
 	{ GEO_STR,         FieldType::GEO          }, { BOOLEAN_STR,     FieldType::BOOLEAN     },
-	{ UUID_STR,        FieldType::UUID         }
+	{ UUID_STR,        FieldType::UUID         },
 });
 
 
 /* A domain-specific language (DSL) for query */
-
 QueryDSL::QueryDSL(std::shared_ptr<Schema> schema_) : schema(schema_)
 {
 	q_flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD;
@@ -74,7 +74,7 @@ QueryDSL::get_query(const MsgPack& obj)
 	if (obj.is_map() && obj.is_map() == 1) {
 		for (auto const& elem : obj) {
 			auto str_key = elem.as_string();
-			switch (const_hash(lower_string(str_key).c_str())) {
+			switch (xxh64::hash(lower_string(str_key))) {
 				case HASH_OR:
 					return join_queries(obj.at(str_key), Xapian::Query::OP_OR);
 
@@ -103,7 +103,7 @@ QueryDSL::get_query(const MsgPack& obj)
 				}
 			}
 		}
-	} else if (obj.is_string() && const_hash(lower_string(obj.as_string()).c_str()) == HASH_ALL) {
+	} else if (obj.is_string() && xxh64::hash(lower_string(obj.as_string())) == HASH_ALL) {
 		return Xapian::Query::MatchAll;
 	} else {
 		throw MSG_QueryDslError("Type error expected map of size one at root level in query dsl");
@@ -205,7 +205,7 @@ QueryDSL::join_queries(const MsgPack& sub_obj, Xapian::Query::op op)
 			if (elem.is_map() && elem.size() == 1) {
 				for (const auto& field : elem) {
 					auto str_ob = field.as_string();
-					switch (const_hash(lower_string(str_ob).c_str())) {
+					switch (xxh64::hash(lower_string(str_ob))) {
 						case HASH_OR:
 						{
 							const auto& o = elem.at(str_ob);

@@ -220,11 +220,6 @@ inline void set_data(Xapian::Document& doc, const std::string& obj_data_str, con
 }
 
 
-constexpr size_t const_hash(char const *input) {
-	return *input ? static_cast<size_t>(*input) + 33 * const_hash(input + 1) : 5381;
-}
-
-
 Xapian::valueno get_slot(const std::string& name);
 std::string prefixed(const std::string& term, const std::string& prefixO);
 std::string get_prefix(const std::string& name, const std::string& prefix, char type);

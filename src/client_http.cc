@@ -22,6 +22,7 @@
 
 #include "client_http.h"
 
+#include "xxh64.hpp"
 #include "io_utils.h"
 #include "length.h"
 #include "multivalue/aggregation.h"
@@ -1227,9 +1228,9 @@ HttpClient::bad_request_view()
 }
 
 
-static constexpr auto http_search = const_hash("_search");
-static constexpr auto http_schema = const_hash("_schema");
-static constexpr auto http_info = const_hash("_info");
+static constexpr auto http_search = xxh64::hash("_search");
+static constexpr auto http_schema = xxh64::hash("_schema");
+static constexpr auto http_info = xxh64::hash("_info");
 
 
 int
@@ -1238,7 +1239,7 @@ HttpClient::identify_cmd()
 	if (!path_parser.off_cmd) {
 		return CMD_NO_CMD;
 	} else {
-		switch (const_hash(lower_string(path_parser.get_cmd()).c_str())) {
+		switch (xxh64::hash(lower_string(path_parser.get_cmd()))) {
 			case http_search:
 				return CMD_SEARCH;
 				break;
