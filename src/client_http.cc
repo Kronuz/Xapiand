@@ -1109,18 +1109,28 @@ HttpClient::search_view(HttpMethod method)
 		if (chunked) {
 			if (pretty) {
 				first_chunk.append("{");
-				first_chunk.append("\n    \"_aggregations\": ").append(indent_string(aggregations.to_string(true),' ', 4, false)).append(",");
-				first_chunk.append("\n    \"_query\": {\n        \"_hits_count\":").append(std::to_string(mset.size())).append(",");
-				first_chunk.append("\n        \"_matches_count\":").append(std::to_string(mset.get_matches_estimated())).append(",");
-				first_chunk.append("\n        \"_hits\": [\n\n");
-				last_chunk.append("\n    }\n}");
+				if (!aggregations.empty()) {
+					first_chunk.append("\n    \"_aggregations\": ").append(indent_string(aggregations.to_string(true),' ', 4, false)).append(",");
+				}
+				first_chunk.append("\n    \"_query\": {");
+				first_chunk.append("\n        \"_hits_count\": ").append(std::to_string(mset.size())).append(",");
+				first_chunk.append("\n        \"_matches_count\": ").append(std::to_string(mset.get_matches_estimated())).append(",");
+				first_chunk.append("\n        \"_hits\": [");
+				first_chunk.append("\n");
+				first_chunk.append("\n");
+				last_chunk.append("\n    }");
+				last_chunk.append("\n}");
 			} else {
 				first_chunk.append("{");
-				first_chunk.append("\"_aggregations\":").append(aggregations.to_string()).append(",");
-				first_chunk.append("\"_query\": {\"_hits_count\":").append(std::to_string(mset.size())).append(",");
+				if (!aggregations.empty()) {
+					first_chunk.append("\"_aggregations\":").append(aggregations.to_string()).append(",");
+				}
+				first_chunk.append("\"_query\": {");
+				first_chunk.append("\"_hits_count\":").append(std::to_string(mset.size())).append(",");
 				first_chunk.append("\"_matches_count\":").append(std::to_string(mset.get_matches_estimated())).append(",");
-				first_chunk.append("\"_hits\":");
-				last_chunk.append("}}");
+				first_chunk.append("\"_hits\":[");
+				last_chunk.append("}");
+				last_chunk.append("}");
 			}
 		}
 		std::string buffer;
