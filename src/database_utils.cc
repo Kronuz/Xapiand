@@ -78,7 +78,7 @@ Xapian::valueno get_slot(const std::string& name)
 
 std::string get_prefix(const std::string& name, const std::string& prefix, char type)
 {
-	auto hashed = get_hashed(name);
+	auto hashed = sortable_serialise(xxh64::hash(name) & 0xffffffff);
 	std::string result;
 	result.reserve(prefix.length() + 1 + hashed.length());
 	result.assign(prefix).push_back(type);
@@ -89,7 +89,7 @@ std::string get_prefix(const std::string& name, const std::string& prefix, char 
 
 std::string get_dynamic_prefix(const std::string& name, const std::string& prefix, char type)
 {
-	auto hashed = get_hashed(name);
+	auto hashed = sortable_serialise(xxh64::hash(name)) + sortable_serialise(xxh64::hash(name, 2654435761U));
 	std::string result;
 	result.reserve(prefix.length() + 1 + hashed.length());
 	result.assign(prefix).push_back(type);
