@@ -1109,7 +1109,7 @@ HttpClient::search_view(HttpMethod method)
 		if (chunked) {
 			if (pretty) {
 				first_chunk.append("{");
-				if (!aggregations.empty()) {
+				if (!aggregations) {
 					first_chunk.append("\n    \"_aggregations\": ").append(indent_string(aggregations.to_string(true),' ', 4, false)).append(",");
 				}
 				first_chunk.append("\n    \"_query\": {");
@@ -1122,7 +1122,7 @@ HttpClient::search_view(HttpMethod method)
 				last_chunk.append("\n}");
 			} else {
 				first_chunk.append("{");
-				if (!aggregations.empty()) {
+				if (!aggregations) {
 					first_chunk.append("\"_aggregations\":").append(aggregations.to_string()).append(",");
 				}
 				first_chunk.append("\"_query\": {");
