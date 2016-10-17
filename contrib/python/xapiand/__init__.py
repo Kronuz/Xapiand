@@ -22,11 +22,13 @@
 #
 from __future__ import absolute_import
 
+import os
+import itertools
+
+import json
+
 __all__ = ['Xapiand']
 
-import itertools
-import json
-import os
 
 try:
     import requests
@@ -79,6 +81,7 @@ class Xapiand(object):
         get=(session.get, False, 'result'),
         delete=(session.delete, False, 'result'),
         head=(session.head, False, 'result'),
+        post=(session.post, False, 'result'),
         put=(session.put, False, 'result'),
         patch=(session.patch, False, 'result'),
     )
@@ -108,8 +111,10 @@ class Xapiand(object):
 
         nodename = '@{}'.format(nodename) if nodename else ''
 
-        if id is None:
+        if id is None and action_request != 'post':
             action_request = '_{}/'.format(action_request)
+        elif action_request == 'post':
+            action_request = ''
         else:
             action_request = id
 
@@ -129,7 +134,6 @@ class Xapiand(object):
         :arg body: File or dictionary with the body of the request
         """
         method, stream, key = self._methods[action_request]
-
         url = self._build_url(action_request, index, ip, port, nodename, id, body)
 
         params = kwargs.pop('params', None)
@@ -173,7 +177,7 @@ class Xapiand(object):
             results = results(lll)
             next(results)
         else:
-            results = [res.json() if is_json else res.content]
+            results = [json.loads(res.content) if is_json else res.content]
 
         results = Results(results)
         if key == 'result':
@@ -268,6 +272,15 @@ class Xapiand(object):
         )
         return self._send_request('delete', index, **kwargs)
 
+    def post(self, index, body, commit=None, pretty=False, kwargs=None):
+        kwargs = kwargs or {}
+        kwargs['body'] = body
+        kwargs['params'] = dict(
+            commit=self.commit if commit is None else commit,
+            pretty=pretty,
+        )
+        return self._send_request('post', index, **kwargs)
+
     def put(self, index, body, id, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
         kwargs['id'] = id
@@ -288,3 +301,14 @@ class Xapiand(object):
             pretty=pretty,
         )
         return self._send_request('patch', index, **kwargs)
+
+
+# TODO: Get settings for these from django.conf.settings:
+XAPIAND_SANDBOX_PREFIX = 'sandbox'
+XAPIAND_LIVE_PREFIX = 'live'
+XAPIAND_HOST = '127.0.0.1'
+XAPIAND_PORT = 8880
+XAPIAND_COMMIT = False
+
+live = Xapiand(ip=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_LIVE_PREFIX)
+sandbox = Xapiand(ip=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_SANDBOX_PREFIX)
