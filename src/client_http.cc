@@ -1066,163 +1066,161 @@ HttpClient::search_view(HttpMethod method)
 
 	operation_begins = std::chrono::system_clock::now();
 
+	MsgPack aggregations;
 	db_handler.reset(endpoints, db_flags, method);
-	if (!body.empty()) {
-		rapidjson::Document json_aggs;
-		json_load(json_aggs, body);
-		MsgPack object(json_aggs);
-		AggregationMatchSpy aggs(object, db_handler.get_schema());
-		try {
+	try {
+		if (!body.empty()) {
+			rapidjson::Document json_aggs;
+			json_load(json_aggs, body);
+			MsgPack object(json_aggs);
+			AggregationMatchSpy aggs(object, db_handler.get_schema());
 			db_handler.get_mset(*query_field, mset, &aggs, &object, suggestions);
-		} catch (const CheckoutError&) {
-			/* At the moment when the endpoint it not exist and it is chunck it will return 200 response
-			 * and zero matches this behavior may change in the future for instance ( return 404 )
-			 * if is not chunk return 404
-			 */
-		}
-		write_http_response(aggs.get_aggregation(), 200, pretty);
-	} else {
-		try {
-			db_handler.get_mset(*query_field, mset, nullptr, nullptr, suggestions);
-		} catch (const CheckoutError&) {
-			/* At the moment when the endpoint it not exist and it is chunck it will return 200 response
-			 * and zero matches this behavior may change in the future for instance ( return 404 )
-			 * if is not chunk return 404
-			 */
-		}
-
-		L_SEARCH(this, "Suggested queries:\n%s", [&suggestions]() {
-			std::string res;
-			for (const auto& suggestion : suggestions) {
-				res += "\t+ " + suggestion + "\n";
-			}
-			return res;
-		}().c_str());
-
-		int rc = 0;
-		if (!chunked && mset.empty()) {
-			int error_code = 404;
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, error_code },
-				{ RESPONSE_MESSAGE, "No document found" }
-			};
-			write_http_response(err_response, error_code, pretty);
+			aggregations = aggs.get_aggregation();
 		} else {
-			std::string first_chunk;
-			std::string last_chunk;
+			db_handler.get_mset(*query_field, mset, nullptr, nullptr, suggestions);
+		}
+	} catch (const CheckoutError&) {
+		/* At the moment when the endpoint it not exist and it is chunck it will return 200 response
+		 * and zero matches this behavior may change in the future for instance ( return 404 )
+		 * if is not chunk return 404
+		 */
+	}
 
-			if (chunked) {
-				if (pretty) {
-					first_chunk.append("{\n    \"_query\": {\n        \"_hits_count\":").append(std::to_string(mset.size())).append(",");
-					first_chunk.append("\n        \"_matches_count\":").append(std::to_string(mset.get_matches_estimated())).append(",");
-					first_chunk.append("\n        \"_hits\": [\n\n");
-					last_chunk.append("\n    }\n}");
-				} else {
-					first_chunk.append("\"_query\": {\"_hits_count\":").append(std::to_string(mset.size())).append(",");
-					first_chunk.append("\"_matches_count\":").append(std::to_string(mset.get_matches_estimated())).append(",");
-					first_chunk.append("\"_hits\":");
-					last_chunk.append("}}");
+	L_SEARCH(this, "Suggested queries:\n%s", [&suggestions]() {
+		std::string res;
+		for (const auto& suggestion : suggestions) {
+			res += "\t+ " + suggestion + "\n";
+		}
+		return res;
+	}().c_str());
+
+	int rc = 0;
+	if (!chunked && mset.empty()) {
+		int error_code = 404;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, error_code },
+			{ RESPONSE_MESSAGE, "No document found" }
+		};
+		write_http_response(err_response, error_code, pretty);
+	} else {
+		std::string first_chunk;
+		std::string last_chunk;
+
+		if (chunked) {
+			if (pretty) {
+				first_chunk.append("{");
+				first_chunk.append("\n    \"_aggregations\": ").append(indent_string(aggregations.to_string(true),' ', 4, false)).append(",");
+				first_chunk.append("\n    \"_query\": {\n        \"_hits_count\":").append(std::to_string(mset.size())).append(",");
+				first_chunk.append("\n        \"_matches_count\":").append(std::to_string(mset.get_matches_estimated())).append(",");
+				first_chunk.append("\n        \"_hits\": [\n\n");
+				last_chunk.append("\n    }\n}");
+			} else {
+				first_chunk.append("{");
+				first_chunk.append("\"_aggregations\":").append(aggregations.to_string()).append(",");
+				first_chunk.append("\"_query\": {\"_hits_count\":").append(std::to_string(mset.size())).append(",");
+				first_chunk.append("\"_matches_count\":").append(std::to_string(mset.get_matches_estimated())).append(",");
+				first_chunk.append("\"_hits\":");
+				last_chunk.append("}}");
+			}
+		}
+		std::string buffer;
+		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
+			auto document = db_handler.get_document(*m);
+
+			auto ct_type_str = document.get_value(DB_SLOT_TYPE);
+			if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE) {
+				if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
+					ct_type_str = JSON_CONTENT_TYPE;
+				} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
+					ct_type_str = MSGPACK_CONTENT_TYPE;
 				}
 			}
-			std::string buffer;
-			for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
-				auto document = db_handler.get_document(*m);
+			auto ct_type = content_type_pair(ct_type_str);
 
-				auto ct_type_str = document.get_value(DB_SLOT_TYPE);
-				if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE) {
-					if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
-						ct_type_str = JSON_CONTENT_TYPE;
-					} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
-						ct_type_str = MSGPACK_CONTENT_TYPE;
-					}
-				}
-				auto ct_type = content_type_pair(ct_type_str);
-
-				std::vector<type_t> ct_types;
-				if (ct_type == json_type || ct_type == msgpack_type) {
-					ct_types = msgpack_serializers;
-				} else {
-					ct_types.push_back(ct_type);
-				}
-
-				const auto& accepted_type = get_acceptable_type(ct_types);
-				const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
-				if (!accepted_ct_type) {
-					int error_code = 406;
-					MsgPack err_response = {
-						{ RESPONSE_STATUS, error_code },
-						{ RESPONSE_MESSAGE, std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header") }
-					};
-					write_http_response(err_response, error_code, pretty);
-					L_DEBUG(this, "ABORTED SEARCH");
-					return;
-				}
-
-				MsgPack obj_data;
-				if (is_acceptable_type(json_type, ct_type)) {
-					obj_data = get_MsgPack(document);
-				} else if (is_acceptable_type(msgpack_type, ct_type)) {
-					obj_data = get_MsgPack(document);
-				} else {
-					// Returns blob_data in case that type is unkown
-					auto blob_data = get_blob(document);
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type_str));
-					return;
-				}
-
-				ct_type = *accepted_ct_type;
-				ct_type_str = ct_type.first + "/" + ct_type.second;
-
-				try {
-					obj_data = obj_data.at(RESERVED_DATA);
-				} catch (const std::out_of_range&) {
-					obj_data[ID_FIELD_NAME] = db_handler.get_value(document, ID_FIELD_NAME);
-					// Detailed info about the document:
-					obj_data[RESERVED_RANK] = m.get_rank();
-					obj_data[RESERVED_WEIGHT] = m.get_weight();
-					obj_data[RESERVED_PERCENT] = m.get_percent();
-					int subdatabase = (document.get_docid() - 1) % endpoints.size();
-					auto endpoint = endpoints[subdatabase];
-					obj_data[RESERVED_ENDPOINT] = endpoint.as_string();
-				}
-
-				auto result = serialize_response(obj_data, ct_type, pretty);
-				if (chunked) {
-					if (rc == 0) {
-						write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type_str));
-
-						write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
-
-					}
-
-					if (!buffer.empty()) {
-						if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (pretty ? indent_string(buffer, ' ', 3 * 4) : buffer) + ",\n\n"))) {
-							// TODO: log eror?
-							break;
-						}
-					}
-					buffer = result.first;
-				} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
-					// TODO: log eror?
-					break;
-				}
+			std::vector<type_t> ct_types;
+			if (ct_type == json_type || ct_type == msgpack_type) {
+				ct_types = msgpack_serializers;
+			} else {
+				ct_types.push_back(ct_type);
 			}
 
+			const auto& accepted_type = get_acceptable_type(ct_types);
+			const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
+			if (!accepted_ct_type) {
+				int error_code = 406;
+				MsgPack err_response = {
+					{ RESPONSE_STATUS, error_code },
+					{ RESPONSE_MESSAGE, std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header") }
+				};
+				write_http_response(err_response, error_code, pretty);
+				L_DEBUG(this, "ABORTED SEARCH");
+				return;
+			}
+
+			MsgPack obj_data;
+			if (is_acceptable_type(json_type, ct_type)) {
+				obj_data = get_MsgPack(document);
+			} else if (is_acceptable_type(msgpack_type, ct_type)) {
+				obj_data = get_MsgPack(document);
+			} else {
+				// Returns blob_data in case that type is unkown
+				auto blob_data = get_blob(document);
+				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type_str));
+				return;
+			}
+
+			ct_type = *accepted_ct_type;
+			ct_type_str = ct_type.first + "/" + ct_type.second;
+
+			try {
+				obj_data = obj_data.at(RESERVED_DATA);
+			} catch (const std::out_of_range&) {
+				obj_data[ID_FIELD_NAME] = db_handler.get_value(document, ID_FIELD_NAME);
+				// Detailed info about the document:
+				obj_data[RESERVED_RANK] = m.get_rank();
+				obj_data[RESERVED_WEIGHT] = m.get_weight();
+				obj_data[RESERVED_PERCENT] = m.get_percent();
+				int subdatabase = (document.get_docid() - 1) % endpoints.size();
+				auto endpoint = endpoints[subdatabase];
+				obj_data[RESERVED_ENDPOINT] = endpoint.as_string();
+			}
+
+			auto result = serialize_response(obj_data, ct_type, pretty);
 			if (chunked) {
 				if (rc == 0) {
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated()));
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type_str));
+
+					write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
+
 				}
 
 				if (!buffer.empty()) {
-					if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (pretty ? indent_string(buffer, ' ', 3 * 4) : buffer) + "]\n\n"))) {
+					if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (pretty ? indent_string(buffer, ' ', 3 * 4) : buffer) + ",\n\n"))) {
 						// TODO: log eror?
+						break;
 					}
 				}
-
-				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
-
-				write(http_response(0, HTTP_BODY, 0, 0, 0, 0, "0\r\n\r\n"));
+				buffer = result.first;
+			} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
+				// TODO: log eror?
+				break;
 			}
+		}
+
+		if (chunked) {
+			if (rc == 0) {
+				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated()));
+			}
+
+			if (!buffer.empty()) {
+				if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (pretty ? indent_string(buffer, ' ', 3 * 4) : buffer) + "]\n\n"))) {
+					// TODO: log eror?
+				}
+			}
+
+			write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
+
+			write(http_response(0, HTTP_BODY, 0, 0, 0, 0, "0\r\n\r\n"));
 		}
 	}
 
