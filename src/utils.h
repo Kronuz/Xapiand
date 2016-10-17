@@ -180,6 +180,22 @@ inline std::string join_string(const std::vector<T>& values, const std::string& 
 }
 
 
+inline std::string indent_string(const std::string& str, char sep, int level) {
+	std::string ret = str;
+
+	std::string indentation(level, sep);
+	ret.insert(0, indentation);
+
+	std::string::size_type pos = ret.find('\n');
+	while (pos != std::string::npos) {
+		ret.insert(pos + 1, indentation);
+		pos = ret.find('\n', pos + level + 1);
+	}
+
+	return ret;
+}
+
+
 template<typename T>
 inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, const std::string& last_delimiter)
 {
