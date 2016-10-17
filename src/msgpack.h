@@ -1551,6 +1551,7 @@ inline void MsgPack::clear() noexcept {
 
 inline MsgPack::operator bool() const {
 	switch (_const_body->getType()) {
+		case Type::EXT:
 		case Type::MAP:
 		case Type::ARRAY:
 		case Type::STR:
@@ -1563,8 +1564,6 @@ inline MsgPack::operator bool() const {
 			return _const_body->_obj->via.f64 != 0;
 		case Type::BOOLEAN:
 			return _const_body->_obj->via.boolean;
-		case Type::UNDEFINED:
-		case Type::NIL:
 		default:
 			return false;
 	}
@@ -1594,18 +1593,7 @@ inline size_t MsgPack::size() const noexcept {
 
 
 inline bool MsgPack::empty() const noexcept {
-	switch (_body->getType()) {
-		case Type::MAP:
-			return _const_body->_obj->via.map.size == 0;
-		case Type::ARRAY:
-			return _const_body->_obj->via.array.size == 0;
-		case Type::STR:
-			return _const_body->_obj->via.str.size == 0;
-		case Type::EXT:
-			return true;
-		default:
-			return false;
-	}
+	return size() == 0;
 }
 
 
