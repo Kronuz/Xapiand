@@ -1118,6 +1118,7 @@ HttpClient::search_view(HttpMethod method)
 				first_chunk.append("\n        \"_hits\": [");
 				first_chunk.append("\n");
 				first_chunk.append("\n");
+				last_chunk.append("        ]");
 				last_chunk.append("\n    }");
 				last_chunk.append("\n}");
 			} else {
@@ -1129,6 +1130,9 @@ HttpClient::search_view(HttpMethod method)
 				first_chunk.append("\"_hits_count\":").append(std::to_string(mset.size())).append(",");
 				first_chunk.append("\"_matches_count\":").append(std::to_string(mset.get_matches_estimated())).append(",");
 				first_chunk.append("\"_hits\":[");
+				first_chunk.append("\n");
+				first_chunk.append("\n");
+				last_chunk.append("]");
 				last_chunk.append("}");
 				last_chunk.append("}");
 			}
@@ -1222,9 +1226,7 @@ HttpClient::search_view(HttpMethod method)
 			}
 
 			if (!buffer.empty()) {
-				if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (pretty ? indent_string(buffer, ' ', 3 * 4) : buffer) + "]\n\n"))) {
-					// TODO: log eror?
-				}
+				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (pretty ? indent_string(buffer, ' ', 3 * 4) : buffer) + "\n\n"));
 			}
 
 			write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
