@@ -71,6 +71,9 @@ QueryDSL::QueryDSL(std::shared_ptr<Schema> schema_) : schema(schema_)
 Xapian::Query
 QueryDSL::get_query(const MsgPack& obj)
 {
+
+	L_CALL(this, "QueryDSL::get_query()");
+
 	if (obj.is_map() && obj.is_map() == 1) {
 		for (auto const& elem : obj) {
 			auto str_key = elem.as_string();
@@ -113,7 +116,9 @@ QueryDSL::get_query(const MsgPack& obj)
 
 
 Xapian::Query
-QueryDSL::build_query(const MsgPack& o, const std::string& field_name, Xapian::termcount wqf, const std::string& type) {
+QueryDSL::build_query(const MsgPack& o, const std::string& field_name, Xapian::termcount wqf, const std::string& type)
+{
+	L_CALL(this, "QueryDSL::build_query()");
 
 	auto field_spc = schema->get_data_field(field_name);
 	std::string type_s;
@@ -196,6 +201,8 @@ QueryDSL::build_query(const MsgPack& o, const std::string& field_name, Xapian::t
 Xapian::Query
 QueryDSL::join_queries(const MsgPack& sub_obj, Xapian::Query::op op)
 {
+	L_CALL(this, "QueryDSL::join_queries()");
+
 	Xapian::Query final_query;
 	if (op == Xapian::Query::OP_AND_NOT) {
 		final_query = Xapian::Query::MatchAll;
@@ -271,7 +278,9 @@ QueryDSL::join_queries(const MsgPack& sub_obj, Xapian::Query::op op)
 
 
 Xapian::Query
-QueryDSL::process_query(const MsgPack& obj, const std::string& field_name) {
+QueryDSL::process_query(const MsgPack& obj, const std::string& field_name)
+{
+	L_CALL(this, "QueryDSL::process_query()");
 
 	uint64_t boost = 1;	/* Default value in xapian */
 
