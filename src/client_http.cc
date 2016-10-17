@@ -1075,7 +1075,7 @@ HttpClient::search_view(HttpMethod method)
 			MsgPack object(json_aggs);
 			AggregationMatchSpy aggs(object, db_handler.get_schema());
 			db_handler.get_mset(*query_field, mset, &aggs, &object, suggestions);
-			aggregations = aggs.get_aggregation();
+			aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
 		} else {
 			db_handler.get_mset(*query_field, mset, nullptr, nullptr, suggestions);
 		}
