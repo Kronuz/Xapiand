@@ -1108,6 +1108,23 @@ HttpClient::search_view(HttpMethod method)
 			};
 			write_http_response(err_response, error_code, pretty);
 		} else {
+			std::string first_chunk;
+			std::string last_chunk;
+
+			if (chunked) {
+				if (pretty) {
+					first_chunk.append("{\n    \"_query\": {\n        \"_hits_count\":").append(std::to_string(mset.size())).append(",");
+					first_chunk.append("\n        \"_matches_count\":").append(std::to_string(mset.get_matches_estimated())).append(",");
+					first_chunk.append("\n        \"_hits\": [\n\n");
+					last_chunk.append("\n    }\n}");
+				} else {
+					first_chunk.append("\"_query\": {\"_hits_count\":").append(std::to_string(mset.size())).append(",");
+					first_chunk.append("\"_matches_count\":").append(std::to_string(mset.get_matches_estimated())).append(",");
+					first_chunk.append("\"_hits\":");
+					last_chunk.append("}}");
+				}
+			}
+			std::string buffer;
 			for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
 				auto document = db_handler.get_document(*m);
 
@@ -1173,11 +1190,20 @@ HttpClient::search_view(HttpMethod method)
 				if (chunked) {
 					if (rc == 0) {
 						write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type_str));
+
+						write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
+
 					}
-					if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, result.first + "\n\n"))) {
-						break;
+
+					if (!buffer.empty()) {
+						if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (pretty ? indent_string(buffer, ' ', 3 * 4) : buffer) + ",\n\n"))) {
+							// TODO: log eror?
+							break;
+						}
 					}
+					buffer = result.first;
 				} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
+					// TODO: log eror?
 					break;
 				}
 			}
@@ -1186,6 +1212,15 @@ HttpClient::search_view(HttpMethod method)
 				if (rc == 0) {
 					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated()));
 				}
+
+				if (!buffer.empty()) {
+					if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (pretty ? indent_string(buffer, ' ', 3 * 4) : buffer) + "]\n\n"))) {
+						// TODO: log eror?
+					}
+				}
+
+				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
+
 				write(http_response(0, HTTP_BODY, 0, 0, 0, 0, "0\r\n\r\n"));
 			}
 		}
