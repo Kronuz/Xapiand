@@ -647,6 +647,10 @@ HttpClient::_put(int cmd)
 				bad_request_view();
 			}
 			break;
+		case CMD_SCHEMA:
+			path_parser.off_id = nullptr;
+			write_schema_view(HttpMethod::PUT);
+			break;
 		default:
 			bad_request_view();
 			break;
