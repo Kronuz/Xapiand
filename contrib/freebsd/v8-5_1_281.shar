@@ -5,18 +5,18 @@
 #
 # This archive contains:
 #
-#	v8new
-#	v8new/Makefile
-#	v8new/distinfo
-#	v8new/pkg-descr
-#	v8new/pkg-plist
-#	v8new/files
-#	v8new/files/patch-src_base_logging.cc
+#	v8-5_1_281
+#	v8-5_1_281/Makefile
+#	v8-5_1_281/distinfo
+#	v8-5_1_281/files
+#	v8-5_1_281/files/patch-src_base_logging.cc
+#	v8-5_1_281/pkg-descr
+#	v8-5_1_281/pkg-plist
 #
-echo c - v8new
-mkdir -p v8new > /dev/null 2>&1
-echo x - v8new/Makefile
-sed 's/^X//' >v8new/Makefile << '72d3503ab0cf505f0571023ead5e5044'
+echo c - v8-5_1_281
+mkdir -p v8-5_1_281 > /dev/null 2>&1
+echo x - v8-5_1_281/Makefile
+sed 's/^X//' >v8-5_1_281/Makefile << '95a58b6da780469d0c0f0831bcf4d73e'
 X# Created by: Kronuz
 X# $FreeBSD: tags/RELEASE_10_2_0/lang/v8/Makefile 393187 2016-07-29 17:01:43Z feld $
 X
@@ -122,9 +122,9 @@ X	${LN} -fs ${PREFIX}/lib/libv8.so.1 ${STAGEDIR}${PREFIX}/lib/libv8.so
 X
 X.include <bsd.port.post.mk>
 X
-72d3503ab0cf505f0571023ead5e5044
-echo x - v8new/distinfo
-sed 's/^X//' >v8new/distinfo << 'f8f78c8a6b96527a18959ee8bd3bbbf8'
+95a58b6da780469d0c0f0831bcf4d73e
+echo x - v8-5_1_281/distinfo
+sed 's/^X//' >v8-5_1_281/distinfo << '263a912778ba6170eb704caf3f901455'
 XSHA256 (167dc63b4c9a1d0f0fe1b19af93644ac9a561e83.tar.gz) = 5061272936efc1829c5ddd4fedd8caf4c8e7253bee297db1ec34782ca90041fa
 XSIZE (167dc63b4c9a1d0f0fe1b19af93644ac9a561e83.tar.gz) = 21984358
 XSHA256 (4ec6c4e3a94bd04a6da2858163d40b2429b8aad1.tar.gz) = dc3a67a11d533cd1c12b94d46367713863570aafa2e28452d659d2cbebdae1cc
@@ -143,9 +143,25 @@ XSHA256 (0421b6f358139f02e102c9c332ce19a33faf75be.tar.gz) = 196a1ed5d3fcfdd52ace
 XSIZE (0421b6f358139f02e102c9c332ce19a33faf75be.tar.gz) = 307930
 XSHA256 (faee82e064e04e5cbf60cc7327e7a81d2a4557ad.tar.gz) = 06a7f1bfb97efe0d880f4a0e99302ab4f21a115e9fe5cab2c5120304239d4daa
 XSIZE (faee82e064e04e5cbf60cc7327e7a81d2a4557ad.tar.gz) = 140862
-f8f78c8a6b96527a18959ee8bd3bbbf8
-echo x - v8new/pkg-descr
-sed 's/^X//' >v8new/pkg-descr << '47d168dee2e78f43c69e7dba9827d4e8'
+263a912778ba6170eb704caf3f901455
+echo c - v8-5_1_281/files
+mkdir -p v8-5_1_281/files > /dev/null 2>&1
+echo x - v8-5_1_281/files/patch-src_base_logging.cc
+sed 's/^X//' >v8-5_1_281/files/patch-src_base_logging.cc << '8a6eb298584a9bdd870d646802016e39'
+X--- src/base/logging.cc.orig	2016-10-08 02:16:09 UTC
+X+++ src/base/logging.cc
+X@@ -54,7 +54,7 @@ DEFINE_CHECK_OP_IMPL(GT)
+X void DumpBacktrace() {
+X #if V8_LIBC_GLIBC || V8_OS_BSD
+X   void* trace[100];
+X-  int size = backtrace(trace, arraysize(trace));
+X+  unsigned long size = backtrace(trace, arraysize(trace));
+X   OS::PrintError("\n==== C stack trace ===============================\n\n");
+X   if (size == 0) {
+X     OS::PrintError("(empty)\n");
+8a6eb298584a9bdd870d646802016e39
+echo x - v8-5_1_281/pkg-descr
+sed 's/^X//' >v8-5_1_281/pkg-descr << '244290b7af76cac764c77fcfa94d3a3b'
 XV8 is Google's open source JavaScript engine.
 X
 XV8 is written in C++ and is used in Google Chrome, the open source browser from
@@ -160,9 +176,9 @@ X
 XGit repository at https://github.com/v8/v8
 X
 XWWW: http://code.google.com/p/v8/
-47d168dee2e78f43c69e7dba9827d4e8
-echo x - v8new/pkg-plist
-sed 's/^X//' >v8new/pkg-plist << '35b050076332edab8294c0ab7e66966d'
+244290b7af76cac764c77fcfa94d3a3b
+echo x - v8-5_1_281/pkg-plist
+sed 's/^X//' >v8-5_1_281/pkg-plist << 'a23a73be27a3db1afde0083aff3e1e62'
 Xbin/d8
 Xbin/mksnapshot
 Xbin/process
@@ -179,22 +195,6 @@ Xinclude/v8.h
 Xinclude/v8config.h
 Xlib/libv8.so
 Xlib/libv8.so.1
-35b050076332edab8294c0ab7e66966d
-echo c - v8new/files
-mkdir -p v8new/files > /dev/null 2>&1
-echo x - v8new/files/patch-src_base_logging.cc
-sed 's/^X//' >v8new/files/patch-src_base_logging.cc << 'a2ea3de6ece3e8c304c56c79f04fb8c3'
-X--- src/base/logging.cc.orig	2016-10-08 02:16:09 UTC
-X+++ src/base/logging.cc
-X@@ -54,7 +54,7 @@ DEFINE_CHECK_OP_IMPL(GT)
-X void DumpBacktrace() {
-X #if V8_LIBC_GLIBC || V8_OS_BSD
-X   void* trace[100];
-X-  int size = backtrace(trace, arraysize(trace));
-X+  unsigned long size = backtrace(trace, arraysize(trace));
-X   OS::PrintError("\n==== C stack trace ===============================\n\n");
-X   if (size == 0) {
-X     OS::PrintError("(empty)\n");
-a2ea3de6ece3e8c304c56c79f04fb8c3
+a23a73be27a3db1afde0083aff3e1e62
 exit
 
