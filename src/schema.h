@@ -148,7 +148,7 @@ enum class StemStrategy : uint8_t {
 	STEM_NONE,
 	STEM_SOME,
 	STEM_ALL,
-	STEM_ALL_Z
+	STEM_ALL_Z,
 };
 
 
@@ -164,7 +164,7 @@ enum class FieldType : uint8_t {
 	UUID          =  'U',
 	ARRAY         =  'A',
 	OBJECT        =  'O',
-	EMPTY         =  ' '
+	EMPTY         =  ' ',
 };
 
 

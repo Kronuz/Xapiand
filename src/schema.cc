@@ -29,7 +29,7 @@
 
 
 const std::unordered_set<std::string> reserved_field_names({
-	ID_FIELD_NAME, UUID_FIELD_NAME, GEO_FIELD_NAME, DATE_FIELD_NAME, ANY_FIELD_NAME
+	ID_FIELD_NAME, UUID_FIELD_NAME, GEO_FIELD_NAME, DATE_FIELD_NAME
 });
 
 
@@ -42,7 +42,7 @@ static const std::unordered_map<std::string, UnitTime> map_acc_date({
 	{ "hour",       UnitTime::HOUR       }, { "day",     UnitTime::DAY     },
 	{ "month",      UnitTime::MONTH      }, { "year",    UnitTime::YEAR    },
 	{ "decade",     UnitTime::DECADE     }, { "century", UnitTime::CENTURY },
-	{ "millennium", UnitTime::MILLENNIUM }
+	{ "millennium", UnitTime::MILLENNIUM },
 });
 
 
@@ -68,7 +68,7 @@ static const std::unordered_map<std::string, FieldType> map_type({
 	{ POSITIVE_STR,    FieldType::POSITIVE     }, { STRING_STR,      FieldType::STRING      },
 	{ TEXT_STR,        FieldType::TEXT         }, { DATE_STR,        FieldType::DATE        },
 	{ GEO_STR,         FieldType::GEO          }, { BOOLEAN_STR,     FieldType::BOOLEAN     },
-	{ UUID_STR,        FieldType::UUID         }
+	{ UUID_STR,        FieldType::UUID         },
 });
 
 
@@ -193,7 +193,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_document({
 	{ RESERVED_YEAR,            &Schema::process_year            },
 	{ RESERVED_MONTH,           &Schema::process_month           },
 	{ RESERVED_DAY,             &Schema::process_day             },
-	{ RESERVED_SCRIPT,          &Schema::process_script          }
+	{ RESERVED_SCRIPT,          &Schema::process_script          },
 });
 
 
