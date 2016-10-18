@@ -3328,9 +3328,9 @@ Schema::index_field_term(Xapian::Document& doc, std::string&& serialise_val, con
 		// Xapian::WritableDatabase *wdb = nullptr;
 		// bool spelling = field_spc.spelling[getPos(pos, field_spc.spelling.size())];
 		// if (spelling) {
-		//  wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
-		//  term_generator.set_database(*wdb);
-		//  term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
+		// 	wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
+		// 	term_generator.set_database(*wdb);
+		// 	term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
 		// }
 		bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
 		if (positions) {
