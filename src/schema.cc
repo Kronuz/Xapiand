@@ -798,6 +798,7 @@ Schema::add_field(MsgPack* properties, const std::string& field_name)
 			auto data_lan = map_stem_language.at(field_name);
 			if (data_lan.first) {
 				specification.language = data_lan.second;
+				specification.aux_lan = data_lan.second;
 			}
 		} catch (const std::out_of_range) { }
 		if (specification.full_name.empty()) {
