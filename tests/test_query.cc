@@ -262,10 +262,9 @@ static int make_search(const test_query_t _tests[], int len) {
 
 		Xapian::MSet mset;
 		std::vector<std::string> suggestions;
-		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 
 		try {
-			db_query.db_handler.get_mset(query, mset, spies, suggestions);
+			db_query.db_handler.get_mset(query, mset, nullptr, nullptr, suggestions);
 			// Check by documents
 			if (mset.size() != p.expect_datas.size()) {
 				++cont;
