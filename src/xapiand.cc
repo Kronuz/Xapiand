@@ -640,7 +640,7 @@ void banner() {
 		"      \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n"
 		"      /  \\ (_| | |_) | | (_| | | | | (_| |\n"
 		"     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n"
-		"               |_|  " BRIGHT_GREEN "v%s\n" GREEN
+		"               |_|  " LIGHT_GREEN "v%s\n" GREEN
 		"%s\n"
 		"%s\n\n",
 		PACKAGE_VERSION,

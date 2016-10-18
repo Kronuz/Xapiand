@@ -250,67 +250,123 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define MAGENTA "\033[0;35m"
 #define CYAN "\033[0;36m"
 #define DARK_GREY "\033[1;30m"
-#define BRIGHT_RED "\033[1;31m"
-#define BRIGHT_GREEN "\033[1;32m"
-#define BRIGHT_YELLOW "\033[1;33m"
-#define BRIGHT_BLUE "\033[1;34m"
-#define BRIGHT_MAGENTA "\033[1;35m"
-#define BRIGHT_CYAN "\033[1;36m"
+#define LIGHT_RED "\033[1;31m"
+#define LIGHT_GREEN "\033[1;32m"
+#define LIGHT_YELLOW "\033[1;33m"
+#define LIGHT_BLUE "\033[1;34m"
+#define LIGHT_MAGENTA "\033[1;35m"
+#define LIGHT_CYAN "\033[1;36m"
 #define WHITE "\033[1;37m"
 
 #define LOG_COL DARK_GREY
 #define DEBUG_COL NO_COL
 #define INFO_COL CYAN
-#define NOTICE_COL BRIGHT_CYAN
-#define WARNING_COL BRIGHT_YELLOW
+#define NOTICE_COL LIGHT_CYAN
+#define WARNING_COL LIGHT_YELLOW
 #define ERR_COL RED
-#define CRIT_COL BRIGHT_RED
-#define ALERT_COL BRIGHT_RED
-#define EMERG_COL BRIGHT_RED
+#define CRIT_COL LIGHT_RED
+#define ALERT_COL LIGHT_RED
+#define EMERG_COL LIGHT_RED
 
 #define _(args...)
-#define _LOG_ENABLED(args...) Log::log(false, false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
 
-#define _LOG_STACKED_ENABLED(args...) auto UNIQUE_NAME = Log::log(false, true, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, LOG_COL, args)
-#define _LOG_LOG_ENABLED(args...) Log::log(false, false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, LOG_COL, args)
-#define _LOG_DEBUG_ENABLED(args...) Log::log(false, false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
-#define _LOG_INFO_ENABLED(args...) Log::log(false, false, 0ms, LOG_INFO, nullptr, __FILE__, __LINE__, NO_COL, INFO_COL, args)
-#define _LOG_NOTICE_ENABLED(args...) Log::log(false, false, 0ms, LOG_NOTICE, nullptr, __FILE__, __LINE__, NO_COL, NOTICE_COL, args)
-#define _LOG_WARNING_ENABLED(args...) Log::log(false, false, 0ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, WARNING_COL, args)
-#define _LOG_ERR_ENABLED(args...) Log::log(false, false, 0ms, LOG_ERR, nullptr, __FILE__, __LINE__, NO_COL, ERR_COL, args)
-#define _LOG_CRIT_ENABLED(args...) Log::log(false, false, 0ms, -LOG_CRIT, nullptr, __FILE__, __LINE__, NO_COL, CRIT_COL, args)
-#define _LOG_ALERT_ENABLED(args...) Log::log(false, false, 0ms, -LOG_ALERT, nullptr, __FILE__, __LINE__, NO_COL, ALERT_COL, args)
-#define _LOG_EMERG_ENABLED(args...) Log::log(false, false, 0ms, -LOG_EMERG, nullptr, __FILE__, __LINE__, NO_COL, EMERG_COL, args)
-#define _LOG_EXC_ENABLED(args...) Log::log(false, false, 0ms, LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define _L(level, stacked, color, args...) Log::log(false, stacked, 0ms, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 
-#define _LOG_MARKED_ENABLED(args...) Log::log(false, false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥  " DEBUG_COL, args)
+#define _LOG_DEBUG(args...) _L(LOG_DEBUG, false, DEBUG_COL, args)
+#define _LOG_INFO(args...) _L(LOG_INFO, false, INFO_COL, args)
+#define _LOG_NOTICE(args...) _L(LOG_NOTICE, false, NOTICE_COL, args)
+#define _LOG_WARNING(args...) _L(LOG_WARNING, false, WARNING_COL, args)
+#define _LOG_ERR(args...) _L(LOG_ERR, false, ERR_COL, args)
+#define _LOG_CRIT(args...) _L(-LOG_CRIT, false, CRIT_COL, args)
+#define _LOG_ALERT(args...) _L(-LOG_ALERT, false, ALERT_COL, args)
+#define _LOG_EMERG(args...) _L(-LOG_EMERG, false, EMERG_COL, args)
+#define _LOG_EXC(args...) Log::log(false, false, 0ms, LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+
+#define _LOG(args...) _L(LOG_DEBUG, false, NO_COL, args)
+#define _LOG_LOG(args...) _L(LOG_DEBUG, false, LOG_COL, args)
+#define _LOG_BLACK(args...) _L(LOG_DEBUG, false, BLACK, args)
+#define _LOG_GREY(args...) _L(LOG_DEBUG, false, GREY, args)
+#define _LOG_RED(args...) _L(LOG_DEBUG, false, RED, args)
+#define _LOG_GREEN(args...) _L(LOG_DEBUG, false, GREEN, args)
+#define _LOG_YELLOW(args...) _L(LOG_DEBUG, false, YELLOW, args)
+#define _LOG_BLUE(args...) _L(LOG_DEBUG, false, BLUE, args)
+#define _LOG_MAGENTA(args...) _L(LOG_DEBUG, false, MAGENTA, args)
+#define _LOG_CYAN(args...) _L(LOG_DEBUG, false, CYAN, args)
+#define _LOG_DARKGREY(args...) _L(LOG_DEBUG, false, DARK_GREY, args)
+#define _LOG_LIGHT_RED(args...) _L(LOG_DEBUG, false, LIGHT_RED, args)
+#define _LOG_LIGHT_GREEN(args...) _L(LOG_DEBUG, false, LIGHT_GREEN, args)
+#define _LOG_LIGHT_YELLOW(args...) _L(LOG_DEBUG, false, LIGHT_YELLOW, args)
+#define _LOG_LIGHT_BLUE(args...) _L(LOG_DEBUG, false, LIGHT_BLUE, args)
+#define _LOG_LIGHT_MAGENTA(args...) _L(LOG_DEBUG, false, LIGHT_MAGENTA, args)
+#define _LOG_LIGHT_CYAN(args...) _L(LOG_DEBUG, false, LIGHT_CYAN, args)
+#define _LOG_WHITE(args...) _L(LOG_DEBUG, false, WHITE, args)
+
+#define _LOG_INDENTED(args...) _L(LOG_DEBUG, true, NO_COL, args)
+#define _LOG_INDENTED_LOG(args...) _L(LOG_DEBUG, true, LOG_COL, args)
+#define _LOG_INDENTED_BLACK(args...) _L(LOG_DEBUG, true, BLACK, args)
+#define _LOG_INDENTED_GREY(args...) _L(LOG_DEBUG, true, GREY, args)
+#define _LOG_INDENTED_RED(args...) _L(LOG_DEBUG, true, RED, args)
+#define _LOG_INDENTED_GREEN(args...) _L(LOG_DEBUG, true, GREEN, args)
+#define _LOG_INDENTED_YELLOW(args...) _L(LOG_DEBUG, true, YELLOW, args)
+#define _LOG_INDENTED_BLUE(args...) _L(LOG_DEBUG, true, BLUE, args)
+#define _LOG_INDENTED_MAGENTA(args...) _L(LOG_DEBUG, true, MAGENTA, args)
+#define _LOG_INDENTED_CYAN(args...) _L(LOG_DEBUG, true, CYAN, args)
+#define _LOG_INDENTED_DARKGREY(args...) _L(LOG_DEBUG, true, DARK_GREY, args)
+#define _LOG_INDENTED_LIGHT_RED(args...) _L(LOG_DEBUG, true, LIGHT_RED, args)
+#define _LOG_INDENTED_LIGHT_GREEN(args...) _L(LOG_DEBUG, true, LIGHT_GREEN, args)
+#define _LOG_INDENTED_LIGHT_YELLOW(args...) _L(LOG_DEBUG, true, LIGHT_YELLOW, args)
+#define _LOG_INDENTED_LIGHT_BLUE(args...) _L(LOG_DEBUG, true, LIGHT_BLUE, args)
+#define _LOG_INDENTED_LIGHT_MAGENTA(args...) _L(LOG_DEBUG, true, LIGHT_MAGENTA, args)
+#define _LOG_INDENTED_LIGHT_CYAN(args...) _L(LOG_DEBUG, true, LIGHT_CYAN, args)
+#define _LOG_INDENTED_WHITE(args...) _L(LOG_DEBUG, true, WHITE, args)
+
+#define _LOG_STACKED(args...) auto UNIQUE_NAME = _LOG_INDENTED(args)
+#define _LOG_STACKED_LOG(args...) auto UNIQUE_NAME = _LOG_INDENTED_LOG(args)
+#define _LOG_STACKED_BLACK(args...) auto UNIQUE_NAME = _LOG_INDENTED_BLACK(args)
+#define _LOG_STACKED_GREY(args...) auto UNIQUE_NAME = _LOG_INDENTED_GREY(args)
+#define _LOG_STACKED_RED(args...) auto UNIQUE_NAME = _LOG_INDENTED_RED(args)
+#define _LOG_STACKED_GREEN(args...) auto UNIQUE_NAME = _LOG_INDENTED_GREEN(args)
+#define _LOG_STACKED_YELLOW(args...) auto UNIQUE_NAME = _LOG_INDENTED_YELLOW(args)
+#define _LOG_STACKED_BLUE(args...) auto UNIQUE_NAME = _LOG_INDENTED_BLUE(args)
+#define _LOG_STACKED_MAGENTA(args...) auto UNIQUE_NAME = _LOG_INDENTED_MAGENTA(args)
+#define _LOG_STACKED_CYAN(args...) auto UNIQUE_NAME = _LOG_INDENTED_CYAN(args)
+#define _LOG_STACKED_DARKGREY(args...) auto UNIQUE_NAME = _LOG_INDENTED_DARKGREY(args)
+#define _LOG_STACKED_LIGHT_RED(args...) auto UNIQUE_NAME = _LOG_INDENTED_LIGHT_RED(args)
+#define _LOG_STACKED_LIGHT_GREEN(args...) auto UNIQUE_NAME = _LOG_INDENTED_LIGHT_GREEN(args)
+#define _LOG_STACKED_LIGHT_YELLOW(args...) auto UNIQUE_NAME = _LOG_INDENTED_LIGHT_YELLOW(args)
+#define _LOG_STACKED_LIGHT_BLUE(args...) auto UNIQUE_NAME = _LOG_INDENTED_LIGHT_BLUE(args)
+#define _LOG_STACKED_LIGHT_MAGENTA(args...) auto UNIQUE_NAME = _LOG_INDENTED_LIGHT_MAGENTA(args)
+#define _LOG_STACKED_LIGHT_CYAN(args...) auto UNIQUE_NAME = _LOG_INDENTED_LIGHT_CYAN(args)
+#define _LOG_STACKED_WHITE(args...) auto UNIQUE_NAME = _LOG_INDENTED_WHITE(args)
+
+#define _LOG_MARK(args...) _L(LOG_DEBUG, false, "🔥  " DEBUG_COL, args)
 
 #define LOG(priority, color, args...) Log::log(false, false, 0ms, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 #define LOG_DELAYED(cleanup, delay, priority, color, args...) Log::log(cleanup, false, delay, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 #define LOG_DELAYED_UNLOG(priority, color, args...) unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
 #define LOG_DELAYED_CLEAR() clear()
 
-#define _LOG_DELAYED_200(args...) auto __log_timed = LOG_DELAYED(true, 200ms, LOG_WARNING, BRIGHT_MAGENTA, args)
-#define _LOG_DELAYED_600(args...) auto __log_timed = LOG_DELAYED(true, 600ms, LOG_WARNING, BRIGHT_MAGENTA, args)
-#define _LOG_DELAYED_1000(args...) auto __log_timed = LOG_DELAYED(true, 1000ms, LOG_WARNING, BRIGHT_MAGENTA, args)
+#define _LOG_DELAYED_200(args...) auto __log_timed = LOG_DELAYED(true, 200ms, LOG_WARNING, LIGHT_MAGENTA, args)
+#define _LOG_DELAYED_600(args...) auto __log_timed = LOG_DELAYED(true, 600ms, LOG_WARNING, LIGHT_MAGENTA, args)
+#define _LOG_DELAYED_1000(args...) auto __log_timed = LOG_DELAYED(true, 1000ms, LOG_WARNING, LIGHT_MAGENTA, args)
 #define _LOG_DELAYED_N_UNLOG(args...) __log_timed.LOG_DELAYED_UNLOG(LOG_WARNING, MAGENTA, args)
 #define _LOG_DELAYED_N_CLEAR() __log_timed.LOG_DELAYED_CLEAR()
 
-#define _LOG_SET(name, value) auto name = value
-#define _LOG_INIT() _LOG_SET(start, std::chrono::system_clock::now())
+#define _DBG_SET(name, value) auto name = value
+#define _LOG_INIT() _DBG_SET(start, std::chrono::system_clock::now())
 
-#define L _LOG_ENABLED
-#define L_LOG _LOG_LOG_ENABLED
-#define L_MARK _LOG_MARKED_ENABLED
+#define L _LOG
+#define L_LOG _LOG_INDENTED_LOG
+#define L_MARK _LOG_MARK
 
-#define L_INFO _LOG_INFO_ENABLED
-#define L_NOTICE _LOG_NOTICE_ENABLED
-#define L_WARNING _LOG_WARNING_ENABLED
-#define L_ERR _LOG_ERR_ENABLED
-#define L_CRIT _LOG_CRIT_ENABLED
-#define L_ALERT _LOG_ALERT_ENABLED
-#define L_EMERG _LOG_EMERG_ENABLED
-#define L_EXC _LOG_EXC_ENABLED
+#define L_INFO _LOG_INFO
+#define L_NOTICE _LOG_NOTICE
+#define L_WARNING _LOG_WARNING
+#define L_ERR _LOG_ERR
+#define L_CRIT _LOG_CRIT
+#define L_ALERT _LOG_ALERT
+#define L_EMERG _LOG_EMERG
+#define L_EXC _LOG_EXC
 
 #ifdef NDEBUG
 #define L_DEBUG _
@@ -322,14 +378,14 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define L_EV_END _
 #define DBG_SET _
 #else
-#define L_DEBUG _LOG_DEBUG_ENABLED
+#define L_DEBUG _LOG_DEBUG
 #define L_OBJ_BEGIN _LOG_DELAYED_1000
 #define L_OBJ_END _LOG_DELAYED_N_UNLOG
 #define L_DATABASE_BEGIN _LOG_DELAYED_200
 #define L_DATABASE_END _LOG_DELAYED_N_UNLOG
 #define L_EV_BEGIN _LOG_DELAYED_600
 #define L_EV_END _LOG_DELAYED_N_UNLOG
-#define DBG_SET _LOG_SET
+#define DBG_SET _DBG_SET
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -339,7 +395,8 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Enable the following, when needed, using _LOG_LOG_ENABLED or _LOG_STACKED_ENABLED or _LOG_INIT:
+// Enable the following when needed. Use _LOG_* _LOG_INDENTED_* or _LOG_STACKED_*
+// ex. _LOG, _LOG_LOG, _LOG_CYAN, _LOG_STACKED_LOG or _LOG_INDENTED_MAGENTA
 
 #define L_TRACEBACK _
 #define L_CALL _

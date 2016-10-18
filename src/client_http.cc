@@ -246,7 +246,7 @@ HttpClient::~HttpClient()
 	}
 
 	if (!response_log.load()->LOG_DELAYED_CLEAR()) {
-		LOG(LOG_NOTICE, BRIGHT_RED, this, "Client killed!");
+		LOG(LOG_NOTICE, LIGHT_RED, this, "Client killed!");
 	}
 
 	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)", http_clients);
@@ -1678,7 +1678,7 @@ HttpClient::clean_http_request()
 
 	response_log.load()->LOG_DELAYED_CLEAR();
 	if (parser.http_errno) {
-		if (!response_logged.exchange(true)) LOG(LOG_ERR, BRIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
+		if (!response_logged.exchange(true)) LOG(LOG_ERR, LIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
 	} else {
 		int priority = LOG_DEBUG;
 		const char* color = WHITE;
@@ -1690,7 +1690,7 @@ HttpClient::clean_http_request()
 			color = YELLOW;
 			priority = LOG_INFO;
 		} else if (response_status >= 500 && response_status <= 599) {
-			color = BRIGHT_MAGENTA;
+			color = LIGHT_MAGENTA;
 			priority = LOG_ERR;
 		}
 		if (!response_logged.exchange(true)) LOG(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %s %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, bytes_string(response_size).c_str(), request_delta.c_str());
