@@ -355,6 +355,95 @@ Serialise::get_range_type(const std::string& start, const std::string& end, bool
 }
 
 
+std::pair<FieldType, std::string>
+Serialise::get_type(const class MsgPack& field_value, bool bool_term)
+{
+	if (!field_value) {
+		std::make_pair(FieldType::STRING, "");
+	}
+
+	switch (field_value.getType()) {
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return std::make_pair(FieldType::INTEGER, integer(field_value.as_i64()));
+
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return std::make_pair(FieldType::INTEGER, positive(field_value.as_u64()));
+
+		case MsgPack::Type::FLOAT:
+			return std::make_pair(FieldType::INTEGER, _float(field_value.as_f64()));
+
+		case MsgPack::Type::BOOLEAN:
+			return std::make_pair(FieldType::INTEGER, boolean(field_value.as_bool()));
+
+		case MsgPack::Type::STR:
+			// Try like INTEGER.
+			try {
+				return std::make_pair(FieldType::INTEGER, integer(field_value.as_string()));
+			} catch (const SerialisationError&) { }
+
+			// Try like POSITIVE.
+			try {
+				return std::make_pair(FieldType::POSITIVE, positive(field_value.as_string()));
+			} catch (const SerialisationError&) { }
+
+			// Try like FLOAT
+			try {
+				return std::make_pair(FieldType::FLOAT, _float(field_value.as_string()));
+			} catch (const SerialisationError&) { }
+
+			// Try like DATE
+			try {
+				return std::make_pair(FieldType::DATE, date(field_value.as_string()));
+			} catch (const DatetimeError&) { }
+
+			// Try like GEO
+			try {
+				return std::make_pair(FieldType::GEO, ewkt(field_value.as_string(), default_spc.partials, default_spc.error));
+			} catch (const EWKTError&) { }
+
+			// Like UUID
+			if (isUUID(field_value.as_string())) {
+				return std::make_pair(FieldType::UUID, uuid(field_value.as_string()));
+			}
+
+			// Like TEXT
+			if (isText(field_value.as_string(), bool_term)) {
+				return std::make_pair(FieldType::TEXT, field_value.as_string());
+			}
+
+			// Default type STRING.
+			return std::make_pair(FieldType::STRING, field_value.as_string());
+
+		default:
+			throw MSG_SerialisationError("Unexpected type %s", MsgPackTypes[static_cast<int>(field_value.getType())]);
+	}
+}
+
+
+std::tuple<FieldType, std::string, std::string>
+Serialise::get_range_type(const class MsgPack& start, const class MsgPack& end, bool bool_term)
+{
+	if (!start) {
+		auto res = get_type(end, bool_term);
+		return std::make_tuple(res.first, "", res.second);
+	}
+
+	if (!end) {
+		auto res = get_type(start, bool_term);
+		return std::make_tuple(res.first, res.second, "");
+	}
+
+	auto typ_start = get_type(start, bool_term);
+	auto typ_end = get_type(end, bool_term);
+
+	if (typ_start.first != typ_end.first) {
+		throw MSG_SerialisationError("Mismatch types %s - %s", MsgPackTypes[static_cast<int>(typ_start.first)], MsgPackTypes[static_cast<int>(typ_end.first)]);
+	}
+
+	return std::make_tuple(typ_start.first, typ_start.second, typ_end.second);
+}
+
+
 std::string
 Serialise::date(const std::string& field_value)
 {
