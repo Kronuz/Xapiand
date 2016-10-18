@@ -399,14 +399,13 @@ DatabaseHandler::write_schema(const std::string& body)
 	L_INDEX(this, "Schema to write: %s", body.c_str());
 
 	schema = get_schema();
-	Xapian::Document doc;
 
 	const auto& properties = schema->getProperties();
-	schema->index(properties, obj, doc);
-
-	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
+	schema->write_schema(properties, obj);
 
 	update_schema();
+
+	L_INDEX(this, "Schema: %s", get_schema()->to_string().c_str());
 }
 
 
