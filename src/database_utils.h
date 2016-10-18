@@ -195,7 +195,7 @@ enum class MIMEType : uint8_t {
 	APPLICATION_JSON,
 	APPLICATION_XWWW_FORM_URLENCODED,
 	APPLICATION_X_MSGPACK,
-	UNKNOW
+	UNKNOW,
 };
 
 
@@ -206,7 +206,7 @@ enum class HttpMethod : uint8_t {
 	POST     =  3,
 	PUT      =  4,
 	OPTIONS  =  6,
-	PATCH    =  24
+	PATCH    =  24,
 };
 
 
