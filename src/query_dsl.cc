@@ -50,6 +50,7 @@ static constexpr auto HASH_XOR   = xxh64::hash(QUERYDSL_XOR);
 static constexpr auto HASH_NOT   = xxh64::hash(QUERYDSL_NOT);
 static constexpr auto HASH_VALUE = xxh64::hash(QUERYDSL_VALUE);
 static constexpr auto HASH_ALL   = xxh64::hash(QUERYDSL_MATCH_ALL);
+static constexpr auto HASH_RANGE = xxh64::hash(QUERYDSL_RANGE);
 
 
 static const std::unordered_map<std::string, FieldType> map_type({
@@ -92,6 +93,9 @@ QueryDSL::get_query(const MsgPack& obj)
 
 				case HASH_VALUE:
 					return global_query(obj.at(str_key));
+
+				case HASH_RANGE:
+					return global_query(obj.at(str_key), true);
 
 				default: {
 					auto const& o = obj.at(str_key);
@@ -245,6 +249,10 @@ QueryDSL::join_queries(const MsgPack& sub_obj, Xapian::Query::op op)
 
 						case HASH_VALUE:
 							final_query.empty() ? final_query = global_query(elem.at(str_ob)) : final_query = Xapian::Query(op, final_query, global_query(elem.at(str_ob)));
+						break;
+
+						case HASH_RANGE:
+							final_query.empty() ? final_query = global_query(elem.at(str_ob), true) : final_query = Xapian::Query(op, final_query, global_query(elem.at(str_ob), true));
 						break;
 
 						default:
