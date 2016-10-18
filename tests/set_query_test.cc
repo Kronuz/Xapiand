@@ -35,11 +35,6 @@ TEST(QueryTest, Partials_search) {
 }
 
 
-TEST(QueryTest, Facets_search) {
-	EXPECT_EQ(test_facets_search(), 0);
-}
-
-
 int main(int argc, char **argv) {
 	::testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
