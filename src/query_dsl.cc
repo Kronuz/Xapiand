@@ -90,6 +90,9 @@ QueryDSL::get_query(const MsgPack& obj)
 				case HASH_NOT:
 					return join_queries(obj.at(str_key), Xapian::Query::OP_AND_NOT);
 
+				case HASH_VALUE:
+					return global_query(obj.at(str_key));
+
 				default: {
 					auto const& o = obj.at(str_key);
 					switch (o.getType()) {
@@ -102,7 +105,6 @@ QueryDSL::get_query(const MsgPack& obj)
 							return build_query(o, str_key);
 						}
 					}
-
 				}
 			}
 		}
@@ -189,7 +191,7 @@ QueryDSL::build_query(const MsgPack& o, const std::string& field_name, Xapian::t
 					return Xapian::Query(prefixed(Serialise::boolean(o.as_bool()), field_spc.prefix), wqf);
 				}
 			default:
-				throw MSG_QueryDslError("Type error unexpected %s i", type.c_str());
+				throw MSG_QueryDslError("Type error unexpected %s", type.c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_QueryDslError("Type error expected %s in %s", type_s.c_str(), field_name.c_str());
@@ -242,8 +244,8 @@ QueryDSL::join_queries(const MsgPack& sub_obj, Xapian::Query::op op)
 						break;
 
 						case HASH_VALUE:
-							//Empty field name
-							break;
+							final_query.empty() ? final_query = global_query(elem.at(str_ob)) : final_query = Xapian::Query(op, final_query, global_query(elem.at(str_ob)));
+						break;
 
 						default:
 							if (!startswith(str_ob, "_")) {
@@ -334,5 +336,49 @@ QueryDSL::process_query(const MsgPack& obj, const std::string& field_name)
 			}
 		}
 	}
+	return Xapian::Query();
+}
+
+
+Xapian::Query
+QueryDSL::global_query(const MsgPack& obj, bool isRange)
+{
+	L_CALL(this, "QueryDSL::global_query()");
+
+	if (isRange) {
+		MsgPack to;
+		MsgPack from;
+
+		try {
+			to = obj.at(QUERYDSL_TO);
+		} catch (const std::out_of_range&) { }
+
+		try {
+			from = obj.at(QUERYDSL_FROM);
+		} catch (const std::out_of_range&) { }
+
+		if (to || from) {
+			std::tuple<FieldType, std::string, std::string> ser_type = Serialise::get_range_type(from, to);
+			const auto& global_spc = Schema::get_data_global(std::get<0>(ser_type));
+			return MultipleValueRange::getQuery(global_spc, "", &from, &to);
+		} else {
+			throw MSG_QueryDslError("Expected %s and/or %s in %s", QUERYDSL_FROM, QUERYDSL_TO, QUERYDSL_RANGE);
+		}
+	} else {
+		auto ser_type = Serialise::get_type(obj);
+			const auto& global_spc = Schema::get_data_global(ser_type.first);
+			switch (ser_type.first) {
+				case FieldType::STRING:
+				case FieldType::TEXT: {
+					Xapian::QueryParser queryTexts;
+					queryTexts.set_stemming_strategy(getQueryParserStrategy(global_spc.stem_strategy));
+					queryTexts.set_stemmer(Xapian::Stem(global_spc.stem_language));
+					return queryTexts.parse_query(obj.as_string(), q_flags);
+				}
+				default:
+					return Xapian::Query(ser_type.second);
+			}
+	}
+
 	return Xapian::Query();
 }

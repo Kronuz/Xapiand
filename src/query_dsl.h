@@ -41,6 +41,7 @@ class QueryDSL {
 	Xapian::Query build_query(const MsgPack& o, const std::string& field_name, Xapian::termcount wqf=1, const std::string& type="");
 	Xapian::Query join_queries(const MsgPack& obj, Xapian::Query::op op);
 	Xapian::Query process_query(const MsgPack& obj, const std::string& field_name);
+	Xapian::Query global_query(const MsgPack& obj, bool isRange=false);
 
 public:
 	QueryDSL(std::shared_ptr<Schema> schema_);
