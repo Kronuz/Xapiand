@@ -2279,6 +2279,7 @@ Schema::write_schema(const MsgPack& properties, const MsgPack& obj_schema, bool 
 		TaskVector tasks;
 		tasks.reserve(obj_schema.size());
 		auto prop_ptr = replace ? &clear() : &properties;
+		specification.found_field = false;
 		for (const auto& item_key : obj_schema) {
 			const auto str_key = item_key.as_string();
 			try {
@@ -2478,10 +2479,9 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 	L_CALL(this, "Schema::update_schema(%s)", name.c_str());
 
 	const auto spc_start = specification;
-	specification.name.assign(name);
-	const MsgPack* properties = &get_schema_subproperties(*parent_properties);
-
 	if (obj_schema.is_map()) {
+		specification.name.assign(name);
+		const MsgPack* properties = &get_schema_subproperties(*parent_properties);
 		bool offsprings = false;
 		TaskVector tasks;
 		tasks.reserve(obj_schema.size());
