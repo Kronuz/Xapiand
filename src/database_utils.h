@@ -40,7 +40,6 @@
 #define UUID_FIELD_NAME         "<uuid_field>"
 #define GEO_FIELD_NAME          "<geo_field>"
 #define DATE_FIELD_NAME         "<date_field>"
-#define ANY_FIELD_NAME          "<any_field>"
 
 #define RESERVED_WEIGHT         "_weight"
 #define RESERVED_POSITION       "_position"
