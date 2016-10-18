@@ -404,8 +404,6 @@ DatabaseHandler::write_schema(const std::string& body)
 	schema->write_schema(properties, obj);
 
 	update_schema();
-
-	L_INDEX(this, "Schema: %s", get_schema()->to_string().c_str());
 }
 
 

@@ -923,8 +923,7 @@ HttpClient::write_schema_view(HttpMethod method)
 	MsgPack response;
 	if (err_list.empty()) {
 		status_code = 200;
-		response["_schema"] = {
-		};
+		response = db_handler.get_schema()->get_readable();
 	} else {
 		for (const auto& err : err_list) {
 			MsgPack o;
