@@ -16,8 +16,68 @@ import os
 buffer_size = 4096
 delay = 0.0001
 
-INCOMING = 0
-OUTGOING = 1
+OUTGOING = 0
+INCOMING = 1
+
+
+NO_COL = "\033[0m"
+BLACK = "\033[0;30m"
+GREY = "\033[0;37m"
+RED = "\033[0;31m"
+GREEN = "\033[0;32m"
+YELLOW = "\033[0;33m"
+BLUE = "\033[0;34m"
+MAGENTA = "\033[0;35m"
+CYAN = "\033[0;36m"
+DARK_GREY = "\033[1;30m"
+BRIGHT_RED = "\033[1;31m"
+BRIGHT_GREEN = "\033[1;32m"
+BRIGHT_YELLOW = "\033[1;33m"
+BRIGHT_BLUE = "\033[1;34m"
+BRIGHT_MAGENTA = "\033[1;35m"
+BRIGHT_CYAN = "\033[1;36m"
+WHITE = "\033[1;37m"
+
+
+def colorize(color, string):
+    if color:
+        return "%s%s%s" % (color, string, NO_COL)
+    else:
+        return string
+
+
+def colorizer(color):
+    def _colorizer(string):
+        return colorize(color, string)
+    return _colorizer
+black = colorizer(BLACK)
+grey = colorizer(GREY)
+red = colorizer(RED)
+green = colorizer(GREEN)
+yellow = colorizer(YELLOW)
+blue = colorizer(BLUE)
+magenta = colorizer(MAGENTA)
+cyan = colorizer(CYAN)
+darkgrey = colorizer(DARK_GREY)
+lightred = colorizer(BRIGHT_RED)
+lightgreen = colorizer(BRIGHT_GREEN)
+lightyellow = colorizer(BRIGHT_YELLOW)
+lightblue = colorizer(BRIGHT_BLUE)
+lightmagenta = colorizer(BRIGHT_MAGENTA)
+lightcyan = colorizer(BRIGHT_CYAN)
+white = colorizer(WHITE)
+
+
+def register(name, default=False):
+    def _register(cls):
+        if name in register.classes:
+            raise NameError("Name %s already registered" % name)
+        register.classes[name] = cls
+        if default:
+            register.classes[None] = cls
+        return cls
+    return _register
+register.classes = {}
 
 
 def decode_length(buf, check=False):
@@ -98,7 +158,7 @@ class ProxyServer(object):
                     self._on_close()
                     break
                 else:
-                    self._on_recv()
+                    self._on_send_recv()
 
     def get_args(self, s):
         out, direction = self.channel[s]
@@ -113,8 +173,8 @@ class ProxyServer(object):
         if forward:
             self.input_list.append(clientsock)
             self.input_list.append(forward)
-            self.channel[clientsock] = (forward, INCOMING)
-            self.channel[forward] = (clientsock, OUTGOING)
+            self.channel[clientsock] = (forward, OUTGOING)
+            self.channel[forward] = (clientsock, INCOMING)
             out, from_client, from_peer, to_client, to_peer, direction = self.get_args(clientsock)
             self.on_accept(from_client, from_peer, to_client, to_peer, direction)
         else:
@@ -137,32 +197,49 @@ class ProxyServer(object):
         del self.channel[out]
         del self.channel[self.s]
 
-    def _on_recv(self):
+    def _on_send_recv(self):
         # here we can parse and/or modify the data before send forward
         out, from_client, from_peer, to_client, to_peer, direction = self.get_args(self.s)
-        data = self.on_recv(self.data, from_client, from_peer, to_client, to_peer, direction)
+        op = self.on_send if direction else self.on_recv
+        data = op(self.data, from_client, from_peer, to_client, to_peer, direction)
         if data is None:
             data = self.data
         if data:
             out.send(data)
 
-    def repr(self, from_client, from_peer, to_client, to_peer, direction):
-        return "%10s - %s" % (from_client, (" <-- " if direction else " --> ").join(str(p) for p in (from_peer, to_peer)))
-
     def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
-        msg = "client has connected to %s" % from_peer
-        print("%10s - %s" % (from_client, msg))
+        msg = "client connected to %s" % from_peer
+        print("%10s - %s" % (cyan(from_client), msg))
+
+    def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
+        self.reads.setdefault(from_client, [0, 0])[direction] += len(data)
+        print("%10s - %s: %s" % (cyan(from_client), lightgreen("%s <-- %s" % (from_peer, to_peer)), green(repr(data))))
 
     def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
         self.reads.setdefault(from_client, [0, 0])[direction] += len(data)
-        print("%s: %r" % (self.repr(from_client, from_peer, to_client, to_peer, direction), data))
+        print("%10s - %s: %s" % (cyan(from_client), lightmagenta("%s --> %s" % (from_peer, to_peer)), magenta(repr(data))))
 
     def on_close(self, from_client, from_peer, to_client, to_peer, direction):
-        in_read = self.reads.setdefault(from_client, [0, 0])[INCOMING]
-        out_read = self.reads.setdefault(from_client, [0, 0])[OUTGOING]
-        msg = "%s %s closed the connection (client sent %s bytes and received %s)" % ("server listening on" if direction else "client connected to", to_peer if direction else from_peer, in_read, out_read)
-        print("%10s - %s" % (from_client, msg))
+        sent = self.reads.setdefault(from_client, [0, 0])[OUTGOING]
+        received = self.reads.setdefault(from_client, [0, 0])[INCOMING]
+        msg = "%s %s closed the connection (server received %s bytes, sent %s bytes)" % ("server listening on" if direction else "client connected to", to_peer if direction else from_peer, sent, received)
+        print("%10s - %s" % (cyan(from_client), msg))
         del self.reads[from_client]
+
+
+@register('raw', default=True)
+class RawProxyServer(ProxyServer):
+    def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
+        super(RawProxyServer, self).on_accept(from_client, from_peer, to_client, to_peer, direction)
+
+    def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
+        super(RawProxyServer, self).on_send(data, from_client, from_peer, to_client, to_peer, direction)
+
+    def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
+        super(RawProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
+
+    def on_close(self, from_client, from_peer, to_client, to_peer, direction):
+        super(RawProxyServer, self).on_close(from_client, from_peer, to_client, to_peer, direction)
 
 
 def enum_dict(*args):
@@ -173,6 +250,7 @@ def enum_dict(*args):
     return ret
 
 
+@register('xapian')
 class XapianProxyServer(ProxyServer):
     """
     Xapian binary Protocol
@@ -287,8 +365,7 @@ class XapianProxyServer(ProxyServer):
         super(XapianProxyServer, self).on_accept(from_client, from_peer, to_client, to_peer, direction)
         self.protocol = 'REMOTE'
 
-    def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
-        super(XapianProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
+    def on_send_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
         buf = self.buffers.setdefault(from_client, ['', ''])[direction] + data
         while buf:
             try:
@@ -306,18 +383,26 @@ class XapianProxyServer(ProxyServer):
                     msg = (self.replies[self.protocol] if direction else self.messages[self.protocol])[cmd]
                 except KeyError:
                     msg = 'UNKNOWN'
-                dir_repr = "<<<" if direction else ">>>"
-                self.dump_print("%s: %s %s" % (self.protocol, msg, dir_repr), msg_id)
+                cmsg = lightgreen(msg) if direction else lightmagenta(msg)
+                dir_repr = lightgreen("<<<") if direction else lightmagenta(">>>")
+                self.dump_print("%s: %s %s" % (white(self.protocol), cmsg, dir_repr), msg_id)
                 dump_func = 'dump_%s_%s' % (self.protocol, msg)
                 try:
                     getattr(self, dump_func.lower(), self.dump)(length, msg_length, msg_body)
                 except Exception:
                     self.dump_print("ERROR", "Bad message!!")
                     self.dump(length, msg_length, msg_body)
-
             except ValueError:
                 break
         self.buffers[from_client][direction] = buf
+
+    def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
+        super(XapianProxyServer, self).on_send(data, from_client, from_peer, to_client, to_peer, direction)
+        self.on_send_recv(data, from_client, from_peer, to_client, to_peer, direction)
+
+    def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
+        super(XapianProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
+        self.on_send_recv(data, from_client, from_peer, to_client, to_peer, direction)
 
     def dump_print(self, name, value):
         print("%35s %r" % ("%s:" % name, value))
@@ -346,26 +431,47 @@ class XapianProxyServer(ProxyServer):
         del self.buffers[from_client]
 
 
+@register('http')
+class HttpProxyServer(ProxyServer):
+    def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
+        super(HttpProxyServer, self).on_accept(from_client, from_peer, to_client, to_peer, direction)
+
+    def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
+        super(HttpProxyServer, self).on_send(data, from_client, from_peer, to_client, to_peer, direction)
+
+    def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
+        super(HttpProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
+
+    def on_close(self, from_client, from_peer, to_client, to_peer, direction):
+        super(HttpProxyServer, self).on_close(from_client, from_peer, to_client, to_peer, direction)
+
+
+def get_server(opts):
+    for o in opts:
+        if o.startswith('--'):
+            if o[2:] in register.classes:
+                return register.classes[o[2:]]
+    if None in register.classes:
+        return register.classes[None]
+    raise NameError("No default server registered")
+
+
 if __name__ == '__main__':
-    default_server_class = ProxyServer
     opts = [a for a in sys.argv[1:] if a.startswith('-')]
     args = [a for a in sys.argv[1:] if not a.startswith('-')]
-    if '--raw' in opts:
-        server_class = ProxyServer
-    elif '--xapian' in opts:
-        server_class = XapianProxyServer
-    else:
-        server_class = default_server_class
+    server_class = get_server(opts)
     try:
         host, _, port = args[1].partition(':')
         if not port:
             host, port = 'localhost', host
         server = server_class(('', int(args[0])), (host, int(port)))
     except IndexError:
+        servers_opts = ['--%s' % s for s in register.classes.keys() if s]
+        servers = '|'.join(servers_opts)
         print("Proxy listens to <in_port> and redirects traffic to a server listening on <out_port>")
-        print("usage: %s [--xapian|--raw] <in_port> [<host>:]<out_port>" % os.path.basename(sys.argv[0]))
+        print("usage: %s [%s] <in_port> [<host>:]<out_port>" % (os.path.basename(sys.argv[0]), servers))
         print("example:")
-        print("    %s --xapian 8860 localhost:8890" % os.path.basename(sys.argv[0]))
+        print("    %s %s 8860 localhost:8890" % (os.path.basename(sys.argv[0]), servers_opts[-1]))
         sys.exit(1)
     try:
         server.main_loop()
