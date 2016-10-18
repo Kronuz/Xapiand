@@ -2261,14 +2261,14 @@ Schema::update_error(const MsgPack& prop_error)
 
 
 void
-Schema::write_schema(const MsgPack& properties, const MsgPack& obj_schema)
+Schema::write_schema(const MsgPack& properties, const MsgPack& obj_schema, bool replace)
 {
 	L_CALL(this, "Schema::write_schema(%s, %s)", properties.to_string().c_str(), obj_schema.to_string().c_str());
 
 	try {
 		TaskVector tasks;
 		tasks.reserve(obj_schema.size());
-		auto prop_ptr = &properties;
+		auto prop_ptr = replace ? &clear() : &properties;
 		for (const auto& item_key : obj_schema) {
 			const auto str_key = item_key.as_string();
 			try {

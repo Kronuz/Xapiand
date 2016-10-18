@@ -545,7 +545,7 @@ public:
 	/*
 	 * Function to update the schema according to obj_schema.
 	 */
-	void write_schema(const MsgPack& properties, const MsgPack& obj_schema);
+	void write_schema(const MsgPack& properties, const MsgPack& obj_schema, bool replace);
 
 	/*
 	 * Function to index object in doc.
