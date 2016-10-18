@@ -230,7 +230,6 @@ inline std::string get_hashed(const std::string& name) {
 }
 
 long long read_mastery(const std::string& dir, bool force);
-void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);
 rapidjson::Document to_json(const std::string& str);
