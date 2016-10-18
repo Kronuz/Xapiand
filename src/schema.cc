@@ -693,6 +693,21 @@ Schema::get_mutable(const std::string& full_name)
 }
 
 
+MsgPack&
+Schema::clear() noexcept
+{
+	L_CALL(this, "Schema::clear()");
+
+	if (!mut_schema) {
+		mut_schema = std::make_unique<MsgPack>(*schema);
+	}
+
+	auto& prop = mut_schema->at(RESERVED_SCHEMA);
+	prop.clear();
+	return prop;
+}
+
+
 std::string
 Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 {
@@ -901,6 +916,7 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 
 	const MsgPack* subproperties = &properties;
 	const auto it_e = field_names.end();
+
 	for (auto it = field_names.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
 		if (!is_valid(field_name)) {

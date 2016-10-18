@@ -390,6 +390,7 @@ class Schema {
 	specification_t specification;
 
 	MsgPack& get_mutable(const std::string& full_name);
+	MsgPack& clear() noexcept;
 
 	/*
 	 * specification is updated with the properties.
