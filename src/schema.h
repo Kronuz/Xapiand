@@ -423,6 +423,12 @@ class Schema {
 	const MsgPack& get_subproperties(const MsgPack& properties);
 
 	/*
+	 * Gets the properties of a item and specifications is updated.
+	 * Do not check for dynamic types.
+	 */
+	const MsgPack& get_schema_subproperties(const MsgPack& properties);
+
+	/*
 	 * Returns the propierties of full_name, if the path does not
 	 * exist throw an exception.
 	 */
@@ -448,6 +454,10 @@ class Schema {
 	 */
 	static void readable(MsgPack& item_schema);
 
+	/*
+	 * Auxiliar function for update schema.
+	 */
+	void update_schema(const MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name);
 
 	/*
 	 * Auxiliar functions for index fields in doc.
@@ -465,10 +475,13 @@ class Schema {
 	static void index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, dispatch_index fun=nullptr);
 	static void index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos, bool is_term=false);
 
+
 	/*
 	 * Validates data when RESERVED_TYPE has not been save in schema.
 	 * Insert into properties all required data.
 	 */
+
+	void validate_required_data();
 	void validate_required_data(const MsgPack& value);
 
 	/*
@@ -527,6 +540,11 @@ public:
 	 * Returns readable schema.
 	 */
 	const MsgPack get_readable() const;
+
+	/*
+	 * Function to update the schema according to obj_schema.
+	 */
+	void write_schema(const MsgPack& properties, const MsgPack& obj_schema);
 
 	/*
 	 * Function to index object in doc.

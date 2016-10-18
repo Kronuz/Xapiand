@@ -907,6 +907,48 @@ Schema::get_subproperties(const MsgPack& properties)
 }
 
 
+const MsgPack&
+Schema::get_schema_subproperties(const MsgPack& properties)
+{
+	L_CALL(this, "Schema::get_schema_subproperties(%s)", properties.to_string().c_str());
+
+	std::vector<std::string> field_names;
+	stringTokenizer(specification.name, DB_OFFSPRING_UNION, field_names);
+
+	const MsgPack* subproperties = &properties;
+	const auto it_e = field_names.end();
+	for (auto it = field_names.begin(); it != it_e; ++it) {
+		const auto& field_name = *it;
+		if (!is_valid(field_name)) {
+			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
+		}
+		restart_specification();
+		try {
+			get_subproperties(subproperties, field_name);
+		} catch (const std::out_of_range&) {
+			static const auto fit_e = reserved_field_names.end();
+			MsgPack* mut_subprop = &get_mutable(specification.full_name);
+			for ( ; it != it_e; ++it) {
+				specification.dynamic_type = reserved_field_names.find(*it) == fit_e ? DynamicFieldType::NONE : DynamicFieldType::ANY;
+				specification.dynamic_prefix.assign(*it);
+				specification.dynamic_name.assign(*it);
+				add_field(mut_subprop, specification.dynamic_name);
+			}
+
+			// Found field always false for adding inheritable specification.
+			specification.found_field = false;
+
+			return *mut_subprop;
+		}
+	}
+
+	// Found field always false for adding inheritable specification.
+	specification.found_field = false;
+
+	return *subproperties;
+}
+
+
 std::tuple<std::string, DynamicFieldType, const MsgPack&>
 Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
 {
@@ -1124,7 +1166,8 @@ Schema::readable(MsgPack& item_schema)
 			auto func = map_dispatch_readable.at(str_key);
 			(*func)(item_schema.at(str_key), item_schema);
 		} catch (const std::out_of_range&) {
-			if (is_valid(str_key) || reserved_field_names.find(str_key) != reserved_field_names.end()) {
+			static const auto it_e = reserved_field_names.end();
+			if (is_valid(str_key) || reserved_field_names.find(str_key) != it_e) {
 				auto& sub_item = item_schema.at(str_key);
 				if unlikely(sub_item.is_undefined()) {
 					it = item_schema.erase(it);
@@ -2218,15 +2261,44 @@ Schema::update_error(const MsgPack& prop_error)
 }
 
 
+void
+Schema::write_schema(const MsgPack& properties, const MsgPack& obj_schema)
+{
+	L_CALL(this, "Schema::write_schema(%s, %s)", properties.to_string().c_str(), obj_schema.to_string().c_str());
+
+	try {
+		TaskVector tasks;
+		tasks.reserve(obj_schema.size());
+		auto prop_ptr = &properties;
+		for (const auto& item_key : obj_schema) {
+			const auto str_key = item_key.as_string();
+			try {
+				auto func = map_dispatch_document.at(str_key);
+				(this->*func)(obj_schema.at(str_key));
+			} catch (const std::out_of_range&) {
+				if (is_valid(str_key)) {
+					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(prop_ptr), std::ref(obj_schema.at(str_key)), std::move(str_key)));
+				}
+			}
+		}
+
+		restart_specification();
+		const specification_t spc_start = std::move(specification);
+		for (auto& task : tasks) {
+			specification = spc_start;
+			task.get();
+		}
+	} catch (...) {
+		mut_schema.reset();
+		throw;
+	}
+}
+
+
 MsgPack
 Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc)
 {
-	L_CALL(this, "Schema::index(%s)", properties.to_string().c_str());
-
-	if (properties.empty()) {
-		specification.set_type = true;
-		specification.found_field = false;
-	}
+	L_CALL(this, "Schema::index(%s, %s)", properties.to_string().c_str(), object.to_string().c_str());
 
 	try {
 		MsgPack data;
@@ -2388,6 +2460,57 @@ Schema::fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& d
 		default:
 			throw MSG_ClientError("%s must be an object or an array of objects", reserved_word);
 	}
+}
+
+
+void
+Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name)
+{
+	L_CALL(this, "Schema::update_schema(%s)", name.c_str());
+
+	const auto spc_start = specification;
+	specification.name.assign(name);
+	const MsgPack* properties = &get_schema_subproperties(*parent_properties);
+
+	if (obj_schema.is_map()) {
+		bool offsprings = false;
+		TaskVector tasks;
+		tasks.reserve(obj_schema.size());
+		for (const auto& item_key : obj_schema) {
+			const auto str_key = item_key.as_string();
+			try {
+				auto func = map_dispatch_document.at(str_key);
+				(this->*func)(obj_schema.at(str_key));
+			} catch (const std::out_of_range&) {
+				if (is_valid(str_key)) {
+					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
+					offsprings = true;
+				}
+			}
+		}
+
+		if (!specification.name.empty()) {
+			properties = &get_schema_subproperties(*properties);
+		}
+
+		if (!specification.set_type && specification.sep_types[2] != FieldType::EMPTY) {
+			validate_required_data();
+		}
+
+		const auto spc_object = std::move(specification);
+		for (auto& task : tasks) {
+			specification = spc_object;
+			task.get();
+		}
+
+		if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY) {
+			specification.sep_types[0] = FieldType::OBJECT;
+		}
+	} else {
+		throw MSG_ClientError("Schema must be an object of objects");
+	}
+
+	specification = std::move(spc_start);
 }
 
 
@@ -2961,16 +3084,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data)
 
 
 void
-Schema::validate_required_data(const MsgPack& value)
+Schema::validate_required_data()
 {
-	L_CALL(this, "Schema::validate_required_data(%s)", value.to_string().c_str());
-
-	if (specification.sep_types[2] == FieldType::EMPTY) {
-		if (XapiandManager::manager->type_required) {
-			throw MSG_MissingTypeError("Type of field [%s] is missing", specification.dynamic_full_name.c_str());
-		}
-		set_type(value);
-	}
+	L_CALL(this, "Schema::validate_required_data()");
 
 	if (!specification.full_name.empty()) {
 		auto& properties = get_mutable(specification.full_name);
@@ -3134,6 +3250,22 @@ Schema::validate_required_data(const MsgPack& value)
 
 		specification.set_type = true;
 	}
+}
+
+
+void
+Schema::validate_required_data(const MsgPack& value)
+{
+	L_CALL(this, "Schema::validate_required_data(%s)", value.to_string().c_str());
+
+	if (specification.sep_types[2] == FieldType::EMPTY) {
+		if (XapiandManager::manager->type_required) {
+			throw MSG_MissingTypeError("Type of field [%s] is missing", specification.dynamic_full_name.c_str());
+		}
+		set_type(value);
+	}
+
+	validate_required_data();
 }
 
 
