@@ -401,7 +401,7 @@ DatabaseHandler::write_schema(const std::string& body)
 	schema = get_schema();
 
 	const auto& properties = schema->getProperties();
-	schema->write_schema(properties, obj);
+	schema->write_schema(properties, obj, method == HttpMethod::PUT);
 
 	update_schema();
 }
