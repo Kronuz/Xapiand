@@ -28,6 +28,10 @@
 #include "utils.h"
 
 
+/*
+ * Set of reserved field names.
+ */
+
 const std::unordered_set<std::string> reserved_field_names({
 	ID_FIELD_NAME, UUID_FIELD_NAME, GEO_FIELD_NAME, DATE_FIELD_NAME
 });
@@ -856,8 +860,9 @@ Schema::get_subproperties(const MsgPack& properties)
 	const auto it_e = field_names.end();
 	for (auto it = field_names.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
-		if (!is_valid(field_name)) {
-			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
+		static const auto reserved_it_e = reserved_field_names.end();
+		if (!is_valid(field_name) || reserved_field_names.find(field_name) != reserved_it_e) {
+			throw MSG_ClientError("The field name: %s (%s) is not valid or reserved", specification.name.c_str(), field_name.c_str());
 		}
 		restart_specification();
 		try {
@@ -942,7 +947,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 	DynamicFieldType type;
 	bool root = true;
 	for (const auto& field_name : field_names) {
-		if (!root && !is_valid(field_name) && field_name != ID_FIELD_NAME) {
+		if (!root && !is_valid(field_name)) {
 			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
 		}
 		root = false;
@@ -1145,8 +1150,7 @@ Schema::readable(MsgPack& item_schema)
 			auto func = map_dispatch_readable.at(str_key);
 			(*func)(item_schema.at(str_key), item_schema);
 		} catch (const std::out_of_range&) {
-			static const auto it_e = reserved_field_names.end();
-			if (is_valid(str_key) || reserved_field_names.find(str_key) != it_e) {
+			if (is_valid(str_key)) {
 				auto& sub_item = item_schema.at(str_key);
 				if unlikely(sub_item.is_undefined()) {
 					it = item_schema.erase(it);
