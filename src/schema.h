@@ -38,6 +38,7 @@
 #define DEFAULT_GEO_ERROR     HTM_MIN_ERROR
 #define DEFAULT_POSITIONS     true
 #define DEFAULT_SPELLING      false
+#define DEFAULT_BOOL_TERM     false
 
 
 enum class DynamicFieldType : uint8_t {

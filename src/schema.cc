@@ -269,14 +269,14 @@ const std::unordered_map<std::string, std::pair<bool, std::string>> map_stem_lan
 	{ "ro",          { true,  "ro" } },  { "russian",          { true,  "ru" } },  { "ru",              { true,  "ru" } },
 	{ "spanish",     { true,  "es" } },  { "es",               { true,  "es" } },  { "swedish",         { true,  "sv" } },
 	{ "sv",          { true,  "sv" } },  { "turkish",          { true,  "tr" } },  { "tr",              { true,  "tr" } },
-	{ "none",        { false, DEFAULT_LANGUAGE } }
+	{ "none",        { false, DEFAULT_LANGUAGE } },
 });
 
 
 required_spc_t::required_spc_t()
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY }}),
 	  slot(Xapian::BAD_VALUENO),
-	  bool_term(false),
+	  bool_term(DEFAULT_BOOL_TERM),
 	  stem_strategy(StemStrategy::STEM_SOME),
 	  stem_language(DEFAULT_LANGUAGE),
 	  language(DEFAULT_LANGUAGE),
@@ -288,7 +288,7 @@ required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std:
 	const std::vector<std::string>& _acc_prefix)
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, type }}),
 	  slot(_slot),
-	  bool_term(false),
+	  bool_term(DEFAULT_BOOL_TERM),
 	  accuracy(acc),
 	  acc_prefix(_acc_prefix),
 	  stem_strategy(StemStrategy::STEM_SOME),
@@ -722,14 +722,24 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 		auto& prop_id = get_mutable(ID_FIELD_NAME);
 		specification.found_field = false;
 		auto res_serialise = Serialise::get_type(value_id, specification.bool_term);
-		prop_id[RESERVED_TYPE] = std::array<FieldType, 3>({{ FieldType::EMPTY, FieldType::EMPTY, res_serialise.first }});
+		prop_id[RESERVED_INDEX] = TypeIndex::ALL;
+		switch (res_serialise.first) {
+			case FieldType::STRING:
+				prop_id[RESERVED_LANGUAGE]  = default_spc.language;
+				prop_id[RESERVED_BOOL_TERM] = true;
+				break;
+			case FieldType::TEXT:
+				prop_id[RESERVED_STEM_STRATEGY] = default_spc.stem_strategy;
+				prop_id[RESERVED_STEM_LANGUAGE] = default_spc.stem_language;
+				prop_id[RESERVED_LANGUAGE] = default_spc.language;
+				break;
+			default:
+				break;
+		}
 		prop_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
-		prop_id[RESERVED_INDEX] = TypeIndex::ALL;
-		if (res_serialise.first == FieldType::STRING) {
-			prop_id[RESERVED_BOOL_TERM] = true;
-			prop_id[RESERVED_LANGUAGE] = DEFAULT_LANGUAGE;
-		}
+		prop_id[RESERVED_TYPE] = std::array<FieldType, 3>({{ FieldType::EMPTY, FieldType::EMPTY, res_serialise.first }});
+
 		return res_serialise.second;
 	}
 }
@@ -3318,9 +3328,9 @@ Schema::index_field_term(Xapian::Document& doc, std::string&& serialise_val, con
 		// Xapian::WritableDatabase *wdb = nullptr;
 		// bool spelling = field_spc.spelling[getPos(pos, field_spc.spelling.size())];
 		// if (spelling) {
-		// 	wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
-		// 	term_generator.set_database(*wdb);
-		// 	term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
+		//  wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
+		//  term_generator.set_database(*wdb);
+		//  term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
 		// }
 		bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
 		if (positions) {
