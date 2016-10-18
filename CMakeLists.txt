@@ -351,6 +351,7 @@ if (BUILD_TESTS)
 			${XAPIAN_LIBRARIES}
 			${CMAKE_THREAD_LIBS_INIT}
 			${UUID_LIBRARIES}
+			${V8_LIBRARIES}
 			m
 			gtest
 			gtest_main
