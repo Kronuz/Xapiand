@@ -648,6 +648,12 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
+	str << "\t" << RESERVED_NAMESPACE  << ": [ ";
+	for (const auto& name : parent_namespaces) {
+		str << name << " ";
+	}
+	str << "]\n";
+
 	str << "\t" << RESERVED_VALUE     << ": " << (value ? value->to_string() : std::string())                 << "\n";
 	str << "\t" << "Recovery value"   << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
 
@@ -656,6 +662,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_PREFIX      << ": " << prefix                         << "\n";
 	str << "\t" << RESERVED_INDEX       << ": " << readable_index(index)          << "\n";
 	str << "\t" << RESERVED_STORE       << ": " << (store             ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_RECURSIVE   << ": " << (is_recursive      ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_DYNAMIC     << ": " << (dynamic           ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_D_DETECTION << ": " << (date_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_N_DETECTION << ": " << (numeric_detection ? "true" : "false") << "\n";
