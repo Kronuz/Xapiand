@@ -44,13 +44,7 @@ constexpr const char QUERYDSL_MATCH_ALL[]  = "_all";
 // constexpr const char QUERYDSL_EWKT[]       = "_ewkt";
 
 
-static constexpr auto HASH_OR    = xxh64::hash(QUERYDSL_OR);
-static constexpr auto HASH_AND   = xxh64::hash(QUERYDSL_AND);
-static constexpr auto HASH_XOR   = xxh64::hash(QUERYDSL_XOR);
-static constexpr auto HASH_NOT   = xxh64::hash(QUERYDSL_NOT);
-static constexpr auto HASH_VALUE = xxh64::hash(QUERYDSL_VALUE);
 static constexpr auto HASH_ALL   = xxh64::hash(QUERYDSL_MATCH_ALL);
-static constexpr auto HASH_RANGE = xxh64::hash(QUERYDSL_RANGE);
 
 
 static const std::unordered_map<std::string, FieldType> map_type({
