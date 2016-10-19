@@ -2589,14 +2589,19 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 			validate_required_data();
 		}
 
+		if (offsprings) {
+			if (!specification.parent_namespaces.empty()) {
+				throw MSG_ClientError("An namespace object can not have children");
+			}
+			if unlikely(specification.sep_types[0] == FieldType::EMPTY) {
+				specification.sep_types[0] = FieldType::OBJECT;
+			}
+		}
+
 		const auto spc_object = std::move(specification);
 		for (auto& task : tasks) {
 			specification = spc_object;
 			task.get();
-		}
-
-		if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY) {
-			specification.sep_types[0] = FieldType::OBJECT;
 		}
 	} else {
 		throw MSG_ClientError("Schema must be an object of objects");
