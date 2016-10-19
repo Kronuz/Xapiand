@@ -385,7 +385,8 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 
 
 specification_t::specification_t(const specification_t& o)
-	: position(o.position),
+	: required_spc_t(o),
+	  position(o.position),
 	  weight(o.weight),
 	  spelling(o.spelling),
 	  positions(o.positions),
@@ -418,7 +419,8 @@ specification_t::specification_t(const specification_t& o)
 
 
 specification_t::specification_t(specification_t&& o) noexcept
-	: position(std::move(o.position)),
+	: required_spc_t(std::move(o)),
+	  position(std::move(o.position)),
 	  weight(std::move(o.weight)),
 	  spelling(std::move(o.spelling)),
 	  positions(std::move(o.positions)),
