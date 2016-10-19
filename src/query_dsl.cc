@@ -62,6 +62,30 @@ static const std::unordered_map<std::string, FieldType> map_type({
 });
 
 
+static const std::unordered_map<std::string, Xapian::Query::op> map_xapian_operator({
+	{ QUERYDSL_OR,        Xapian::Query::OP_OR         },
+	{ QUERYDSL_AND,       Xapian::Query::OP_AND        },
+	{ QUERYDSL_XOR,       Xapian::Query::OP_XOR  	   },
+	{ QUERYDSL_NOT,       Xapian::Query::OP_AND_NOT    },
+	{ QUERYDSL_RANGE,     Xapian::Query::OP_AND_NOT    },
+	{ QUERYDSL_VALUE,     Xapian::Query::OP_AND_NOT    },
+});
+
+
+const std::unordered_map<std::string, dispatch_op_dsl> map_op_dispatch_dsl({
+	{ QUERYDSL_OR,        &QueryDSL::join_queries         },
+	{ QUERYDSL_AND,       &QueryDSL::join_queries         },
+	{ QUERYDSL_XOR,       &QueryDSL::join_queries  		  },
+	{ QUERYDSL_NOT,       &QueryDSL::join_queries         },
+});
+
+
+const std::unordered_map<std::string, dispatch_dsl> map_dispatch_dsl({
+	{ QUERYDSL_RANGE,     &QueryDSL::global_range_query   },
+	{ QUERYDSL_VALUE,     &QueryDSL::global_query         },
+});
+
+
 /* A domain-specific language (DSL) for query */
 QueryDSL::QueryDSL(std::shared_ptr<Schema> schema_) : schema(schema_)
 {
@@ -78,33 +102,21 @@ QueryDSL::get_query(const MsgPack& obj)
 	if (obj.is_map() && obj.is_map() == 1) {
 		for (auto const& elem : obj) {
 			auto str_key = elem.as_string();
-			switch (xxh64::hash(lower_string(str_key))) {
-				case HASH_OR:
-					return join_queries(obj.at(str_key), Xapian::Query::OP_OR);
 
-				case HASH_AND:
-					return join_queries(obj.at(str_key), Xapian::Query::OP_AND);
-
-				case HASH_XOR:
-					return join_queries(obj.at(str_key), Xapian::Query::OP_XOR);
-
-				case HASH_NOT:
-					return join_queries(obj.at(str_key), Xapian::Query::OP_AND_NOT);
-
-				case HASH_VALUE:
-					return global_query(obj.at(str_key));
-
-				case HASH_RANGE:
-					return global_query(obj.at(str_key), true);
-
-				default: {
+			try {
+				auto func = map_op_dispatch_dsl.at(str_key);
+				return (this->*func)(obj.at(str_key), map_xapian_operator.at(str_key));
+			} catch (const std::out_of_range&) {
+				try {
+					auto func = map_dispatch_dsl.at(str_key);
+					return (this->*func)(obj.at(str_key));
+				} catch (const std::out_of_range&) {
 					auto const& o = obj.at(str_key);
 					switch (o.getType()) {
 						case MsgPack::Type::ARRAY:
 							throw MSG_QueryDslError("Unexpected type %s in %s", MsgPackTypes[static_cast<int>(MsgPack::Type::ARRAY)], str_key.c_str());
 						case MsgPack::Type::MAP:
 							return process_query(o, str_key);
-							break;
 						default: {
 							return build_query(o, str_key);
 						}
@@ -205,7 +217,7 @@ QueryDSL::build_query(const MsgPack& o, const std::string& field_name, Xapian::t
 
 
 Xapian::Query
-QueryDSL::join_queries(const MsgPack& sub_obj, Xapian::Query::op op)
+QueryDSL::join_queries(const MsgPack& obj, Xapian::Query::op op)
 {
 	L_CALL(this, "QueryDSL::join_queries()");
 
@@ -213,65 +225,35 @@ QueryDSL::join_queries(const MsgPack& sub_obj, Xapian::Query::op op)
 	if (op == Xapian::Query::OP_AND_NOT) {
 		final_query = Xapian::Query::MatchAll;
 	}
-	if (sub_obj.is_array()) {
-		for (const auto& elem : sub_obj) {
+	if (obj.is_array()) {
+		for (const auto& elem : obj) {
 			if (elem.is_map() && elem.size() == 1) {
 				for (const auto& field : elem) {
-					auto str_ob = field.as_string();
-					switch (xxh64::hash(lower_string(str_ob))) {
-						case HASH_OR:
-						{
-							const auto& o = elem.at(str_ob);
-							final_query.empty() ? final_query = join_queries(o, Xapian::Query::OP_OR) : final_query = Xapian::Query(op, final_query, join_queries(o, Xapian::Query::OP_OR));
-						}
-						break;
+					auto str_key = field.as_string();
+					try {
+						auto func = map_op_dispatch_dsl.at(str_key);
+						final_query.empty() ?  final_query = (this->*func)(elem.at(str_key), map_xapian_operator.at(str_key)) : final_query = Xapian::Query(op, final_query, (this->*func)(elem.at(str_key), map_xapian_operator.at(str_key)));
+					} catch (const std::out_of_range&) {
 
-						case HASH_AND:
-						{
-							const auto& o = elem.at(str_ob);
-							final_query.empty() ? final_query = join_queries(o, Xapian::Query::OP_AND) : final_query = Xapian::Query(op, final_query, join_queries(o, Xapian::Query::OP_AND));
-						}
-						break;
-
-						case HASH_XOR:
-						{
-							const auto& o = elem.at(str_ob);
-							final_query.empty() ? final_query = join_queries(o, Xapian::Query::OP_XOR) : final_query = Xapian::Query(op, final_query, join_queries(o, Xapian::Query::OP_XOR));
-						}
-						break;
-
-						case HASH_NOT:
-						{
-							const auto& o = elem.at(str_ob);
-							final_query.empty() ? final_query = join_queries(o, Xapian::Query::OP_AND_NOT) :  final_query = Xapian::Query(op, final_query, join_queries(o, Xapian::Query::OP_AND_NOT));
-						}
-						break;
-
-						case HASH_VALUE:
-							final_query.empty() ? final_query = global_query(elem.at(str_ob)) : final_query = Xapian::Query(op, final_query, global_query(elem.at(str_ob)));
-						break;
-
-						case HASH_RANGE:
-							final_query.empty() ? final_query = global_query(elem.at(str_ob), true) : final_query = Xapian::Query(op, final_query, global_query(elem.at(str_ob), true));
-						break;
-
-						default:
-							if (!startswith(str_ob, "_")) {
-								const auto& o = elem.at(str_ob);
+						try{
+							auto func = map_dispatch_dsl.at(str_key);
+							final_query.empty() ? final_query = (this->*func)(elem.at(str_key)) : final_query = Xapian::Query(op, (this->*func)(elem.at(str_key)));
+						} catch (const std::out_of_range&) {
+							if (!startswith(str_key, "_")) {
+								const auto& o = elem.at(str_key);
 								switch (o.getType()) {
 									case MsgPack::Type::ARRAY:
-										throw MSG_QueryDslError("Unexpected type array in %s", str_ob.c_str());
-
+										throw MSG_QueryDslError("Unexpected type array in %s", str_key.c_str());
 									case MsgPack::Type::MAP:
-										final_query.empty() ? final_query = process_query(o, str_ob) : final_query = Xapian::Query(op, final_query, process_query(o, str_ob));
-									break;
-
+										final_query.empty() ? final_query = process_query(o, str_key) : final_query = Xapian::Query(op, final_query, process_query(o, str_key));
+										break;
 									default:
-										final_query.empty() ? final_query = build_query(o, str_ob) : final_query = Xapian::Query(op, final_query, build_query(o, str_ob));
+										final_query.empty() ? final_query = build_query(o, str_key) : final_query = Xapian::Query(op, final_query, build_query(o, str_key));
 								}
 							} else {
-								throw MSG_QueryDslError("Unexpected reserved word %s", str_ob.c_str());
+								throw MSG_QueryDslError("Unexpected reserved word %s", str_key.c_str());
 							}
+						}
 					}
 				}
 
@@ -349,44 +331,47 @@ QueryDSL::process_query(const MsgPack& obj, const std::string& field_name)
 
 
 Xapian::Query
-QueryDSL::global_query(const MsgPack& obj, bool isRange)
+QueryDSL::global_range_query(const MsgPack& obj)
+{
+	L_CALL(this, "QueryDSL::global_range_query()");
+
+	MsgPack to;
+	MsgPack from;
+
+	try {
+		to = obj.at(QUERYDSL_TO);
+	} catch (const std::out_of_range&) { }
+
+	try {
+		from = obj.at(QUERYDSL_FROM);
+	} catch (const std::out_of_range&) { }
+
+	if (to || from) {
+		std::tuple<FieldType, std::string, std::string> ser_type = Serialise::get_range_type(from, to);
+		const auto& global_spc = Schema::get_data_global(std::get<0>(ser_type));
+		return MultipleValueRange::getQuery(global_spc, "", &from, &to);
+	} else {
+		throw MSG_QueryDslError("Expected %s and/or %s in %s", QUERYDSL_FROM, QUERYDSL_TO, QUERYDSL_RANGE);
+	}
+}
+
+
+Xapian::Query
+QueryDSL::global_query(const MsgPack& obj)
 {
 	L_CALL(this, "QueryDSL::global_query()");
 
-	if (isRange) {
-		MsgPack to;
-		MsgPack from;
-
-		try {
-			to = obj.at(QUERYDSL_TO);
-		} catch (const std::out_of_range&) { }
-
-		try {
-			from = obj.at(QUERYDSL_FROM);
-		} catch (const std::out_of_range&) { }
-
-		if (to || from) {
-			std::tuple<FieldType, std::string, std::string> ser_type = Serialise::get_range_type(from, to);
-			const auto& global_spc = Schema::get_data_global(std::get<0>(ser_type));
-			return MultipleValueRange::getQuery(global_spc, "", &from, &to);
-		} else {
-			throw MSG_QueryDslError("Expected %s and/or %s in %s", QUERYDSL_FROM, QUERYDSL_TO, QUERYDSL_RANGE);
+	auto ser_type = Serialise::get_type(obj);
+	const auto& global_spc = Schema::get_data_global(ser_type.first);
+	switch (ser_type.first) {
+		case FieldType::STRING:
+		case FieldType::TEXT: {
+			Xapian::QueryParser queryTexts;
+			queryTexts.set_stemming_strategy(getQueryParserStrategy(global_spc.stem_strategy));
+			queryTexts.set_stemmer(Xapian::Stem(global_spc.stem_language));
+			return queryTexts.parse_query(obj.as_string(), q_flags);
 		}
-	} else {
-		auto ser_type = Serialise::get_type(obj);
-			const auto& global_spc = Schema::get_data_global(ser_type.first);
-			switch (ser_type.first) {
-				case FieldType::STRING:
-				case FieldType::TEXT: {
-					Xapian::QueryParser queryTexts;
-					queryTexts.set_stemming_strategy(getQueryParserStrategy(global_spc.stem_strategy));
-					queryTexts.set_stemmer(Xapian::Stem(global_spc.stem_language));
-					return queryTexts.parse_query(obj.as_string(), q_flags);
-				}
-				default:
-					return Xapian::Query(ser_type.second);
-			}
+		default:
+			return Xapian::Query(ser_type.second);
 	}
-
-	return Xapian::Query();
 }
