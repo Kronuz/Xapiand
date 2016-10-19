@@ -302,6 +302,9 @@ struct required_spc_t {
 	bool partials;
 	double error;
 
+	// Variables for namespaces.
+	std::vector<std::string> parent_namespaces;
+
 	required_spc_t();
 	required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
 	required_spc_t(const required_spc_t& o);
@@ -313,7 +316,7 @@ struct required_spc_t {
 };
 
 
-struct specification_t : required_spc_t  {
+struct specification_t : required_spc_t {
 	// Reserved values.
 	std::vector<Xapian::termpos> position;
 	std::vector<Xapian::termcount> weight;
@@ -323,6 +326,7 @@ struct specification_t : required_spc_t  {
 
 	bool store;
 	bool parent_store;
+	bool is_recursive;
 	bool dynamic;
 	bool date_detection;
 	bool numeric_detection;
@@ -583,6 +587,7 @@ public:
 	void process_slot(const MsgPack& doc_slot);
 	void process_index(const MsgPack& doc_index);
 	void process_store(const MsgPack& doc_store);
+	void process_recursive(const MsgPack& doc_recursive);
 	void process_dynamic(const MsgPack& doc_dynamic);
 	void process_d_detection(const MsgPack& doc_d_detection);
 	void process_n_detection(const MsgPack& doc_n_detection);
@@ -594,6 +599,7 @@ public:
 	void process_bool_term(const MsgPack& doc_bool_term);
 	void process_partials(const MsgPack& doc_partials);
 	void process_error(const MsgPack& doc_error);
+	void process_namespace(const MsgPack& doc_namespace);
 	void process_latitude(const MsgPack& doc_latitude);
 	void process_longitude(const MsgPack& doc_longitude);
 	void process_radius(const MsgPack& doc_radius);
@@ -650,6 +656,7 @@ public:
 	void update_slot(const MsgPack& prop_slot);
 	void update_index(const MsgPack& prop_index);
 	void update_store(const MsgPack& prop_store);
+	void update_recursive(const MsgPack& prop_namespace);
 	void update_dynamic(const MsgPack& prop_dynamic);
 	void update_d_detection(const MsgPack& prop_d_detection);
 	void update_n_detection(const MsgPack& prop_n_detection);
@@ -661,6 +668,7 @@ public:
 	void update_bool_term(const MsgPack& prop_bool_term);
 	void update_partials(const MsgPack& prop_partials);
 	void update_error(const MsgPack& prop_error);
+	void update_namespace(const MsgPack& prop_namespace);
 };
 
 

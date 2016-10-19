@@ -171,6 +171,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_document({
 	{ RESERVED_SLOT,            &Schema::process_slot            },
 	{ RESERVED_INDEX,           &Schema::process_index           },
 	{ RESERVED_STORE,           &Schema::process_store           },
+	{ RESERVED_RECURSIVE,       &Schema::process_recursive       },
 	{ RESERVED_DYNAMIC,         &Schema::process_dynamic         },
 	{ RESERVED_D_DETECTION,     &Schema::process_d_detection     },
 	{ RESERVED_N_DETECTION,     &Schema::process_n_detection     },
@@ -189,6 +190,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_document({
 	{ RESERVED_LANGUAGE,        &Schema::process_language        },
 	{ RESERVED_PARTIALS,        &Schema::process_partials        },
 	{ RESERVED_ERROR,           &Schema::process_error           },
+	{ RESERVED_NAMESPACE,       &Schema::process_namespace       },
 	{ RESERVED_LATITUDE,        &Schema::process_latitude        },
 	{ RESERVED_LONGITUDE,       &Schema::process_longitude       },
 	{ RESERVED_RADIUS,          &Schema::process_radius          },
@@ -211,6 +213,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties
 	{ RESERVED_SLOT,            &Schema::update_slot             },
 	{ RESERVED_INDEX,           &Schema::update_index            },
 	{ RESERVED_STORE,           &Schema::update_store            },
+	{ RESERVED_RECURSIVE,       &Schema::update_recursive        },
 	{ RESERVED_DYNAMIC,         &Schema::update_dynamic          },
 	{ RESERVED_D_DETECTION,     &Schema::update_d_detection      },
 	{ RESERVED_N_DETECTION,     &Schema::update_n_detection      },
@@ -227,6 +230,7 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties
 	{ RESERVED_LANGUAGE,        &Schema::update_language         },
 	{ RESERVED_PARTIALS,        &Schema::update_partials         },
 	{ RESERVED_ERROR,           &Schema::update_error            },
+	{ RESERVED_NAMESPACE,       &Schema::update_namespace        },
 });
 
 
@@ -309,7 +313,8 @@ required_spc_t::required_spc_t(const required_spc_t& o)
 	  stem_language(o.stem_language),
 	  language(o.language),
 	  partials(o.partials),
-	  error(o.error) { }
+	  error(o.error),
+	  parent_namespaces(o.parent_namespaces) { }
 
 
 required_spc_t::required_spc_t(required_spc_t&& o) noexcept
@@ -323,7 +328,8 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 	  stem_language(std::move(o.stem_language)),
 	  language(std::move(o.language)),
 	  partials(std::move(o.partials)),
-	  error(std::move(o.error)) { }
+	  error(std::move(o.error)),
+	  parent_namespaces(std::move(o.parent_namespaces)) { }
 
 
 specification_t::specification_t()
@@ -334,6 +340,7 @@ specification_t::specification_t()
 	  index(TypeIndex::ALL),
 	  store(true),
 	  parent_store(true),
+	  is_recursive(true),
 	  dynamic(true),
 	  date_detection(true),
 	  numeric_detection(true),
@@ -358,6 +365,7 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 	  index(TypeIndex::ALL),
 	  store(true),
 	  parent_store(true),
+	  is_recursive(true),
 	  dynamic(true),
 	  date_detection(true),
 	  numeric_detection(true),
@@ -380,6 +388,7 @@ specification_t::specification_t(const specification_t& o)
 	  index(o.index),
 	  store(o.store),
 	  parent_store(o.parent_store),
+	  is_recursive(o.is_recursive),
 	  dynamic(o.dynamic),
 	  date_detection(o.date_detection),
 	  numeric_detection(o.numeric_detection),
@@ -410,6 +419,7 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  index(std::move(o.index)),
 	  store(std::move(o.store)),
 	  parent_store(std::move(o.parent_store)),
+	  is_recursive(std::move(o.is_recursive)),
 	  dynamic(std::move(o.dynamic)),
 	  date_detection(std::move(o.date_detection)),
 	  numeric_detection(std::move(o.numeric_detection)),
@@ -445,6 +455,7 @@ specification_t::operator=(const specification_t& o)
 	index = o.index;
 	store = o.store;
 	parent_store = o.parent_store;
+	is_recursive = o.is_recursive;
 	dynamic = o.dynamic;
 	date_detection = o.date_detection;
 	numeric_detection = o.numeric_detection;
@@ -467,6 +478,7 @@ specification_t::operator=(const specification_t& o)
 	language = o.language;
 	partials = o.partials;
 	error = o.error;
+	parent_namespaces = o.parent_namespaces;
 	found_field = o.found_field;
 	set_type = o.set_type;
 	set_bool_term = o.set_bool_term;
@@ -493,6 +505,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	index = std::move(o.index);
 	store = std::move(o.store);
 	parent_store = std::move(o.parent_store);
+	is_recursive = std::move(o.is_recursive);
 	dynamic = std::move(o.dynamic);
 	date_detection = std::move(o.date_detection);
 	numeric_detection = std::move(o.numeric_detection);
@@ -515,6 +528,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	language = std::move(o.language);
 	partials = std::move(o.partials);
 	error = std::move(o.error);
+	parent_namespaces = std::move(o.parent_namespaces);
 	found_field = std::move(o.found_field);
 	set_type = std::move(o.set_type);
 	set_bool_term = std::move(o.set_bool_term);
@@ -1662,6 +1676,25 @@ Schema::process_store(const MsgPack& doc_store)
 
 
 void
+Schema::process_recursive(const MsgPack& doc_recursive)
+{
+	L_CALL(this, "Schema::process_recursive(%s)", doc_recursive.to_string().c_str());
+	/*
+	 * RESERVED_RECURSIVE is heritable and can change, but once fixed in false
+	 * it does not process its children.
+	 */
+	try {
+		specification.is_recursive = doc_recursive.as_bool();
+		if likely(!specification.found_field) {
+			get_mutable(specification.full_name)[RESERVED_RECURSIVE] = specification.is_recursive;
+		}
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_RECURSIVE);
+	}
+}
+
+
+void
 Schema::process_dynamic(const MsgPack& doc_dynamic)
 {
 	// RESERVED_DYNAMIC is heritable but can't change.
@@ -1864,6 +1897,26 @@ Schema::process_error(const MsgPack& doc_error)
 		specification.error = doc_error.as_f64();
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be a double", RESERVED_ERROR);
+	}
+}
+
+
+void
+Schema::process_namespace(const MsgPack& doc_namespace)
+{
+	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
+	L_CALL(this, "Schema::process_namespace(%s)", doc_namespace.to_string().c_str());
+
+	if likely(specification.found_field) {
+		return;
+	}
+
+	try {
+		if (specification.parent_namespaces.empty() && doc_namespace.as_bool()) {
+			specification.parent_namespaces.push_back(specification.full_name);
+		}
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_NAMESPACE);
 	}
 }
 
@@ -2172,6 +2225,15 @@ Schema::update_store(const MsgPack& prop_store)
 
 
 void
+Schema::update_recursive(const MsgPack& prop_recursive)
+{
+	L_CALL(this, "Schema::update_recursive(%s)", prop_recursive.to_string().c_str());
+
+	specification.is_recursive = prop_recursive.as_bool();
+}
+
+
+void
 Schema::update_dynamic(const MsgPack& prop_dynamic)
 {
 	L_CALL(this, "Schema::update_dynamic(%s)", prop_dynamic.to_string().c_str());
@@ -2267,6 +2329,17 @@ Schema::update_error(const MsgPack& prop_error)
 	L_CALL(this, "Schema::update_error(%s)", prop_error.to_string().c_str());
 
 	specification.error = prop_error.as_f64();
+}
+
+
+void
+Schema::update_namespace(const MsgPack& prop_namespace)
+{
+	L_CALL(this, "Schema::update_namespace(%s)", prop_namespace.to_string().c_str());
+
+	if (specification.parent_namespaces.empty() && prop_namespace.as_bool()) {
+		specification.parent_namespaces.push_back(specification.full_name);
+	}
 }
 
 
@@ -3256,6 +3329,11 @@ Schema::validate_required_data()
 
 		// Process RESERVED_TYPE
 		properties[RESERVED_TYPE] = specification.sep_types;
+
+		// Process RESERVED_NAMESPACE.
+		if (!specification.parent_namespaces.empty()) {
+			properties[RESERVED_NAMESPACE] = true;
+		}
 
 		specification.set_type = true;
 	}
