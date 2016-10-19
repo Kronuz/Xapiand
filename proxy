@@ -133,7 +133,6 @@ class Forward(object):
 class ProxyServer(object):
     input_list = []
     channel = {}
-    reads = {}
 
     def __init__(self, forward_from, forward_to):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -208,16 +207,33 @@ class ProxyServer(object):
             out.send(data)
 
     def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
+        raise NotImplementedError
+
+    def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
+        raise NotImplementedError
+
+    def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
+        raise NotImplementedError
+
+    def on_close(self, from_client, from_peer, to_client, to_peer, direction):
+        raise NotImplementedError
+
+
+@register('raw', default=True)
+class RawProxyServer(ProxyServer):
+    reads = {}
+
+    def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
         msg = "client connected to %s" % from_peer
         print("%10s - %s" % (cyan(from_client), msg))
 
     def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
         self.reads.setdefault(from_client, [0, 0])[direction] += len(data)
-        print("%10s - %s: %s" % (cyan(from_client), lightgreen("%s <-- %s" % (from_peer, to_peer)), green(repr(data))))
+        print("%10s - %s: %s" % (cyan(from_client), lightyellow("%s <-- %s" % (from_peer, to_peer)), yellow(repr(data))))
 
     def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
         self.reads.setdefault(from_client, [0, 0])[direction] += len(data)
-        print("%10s - %s: %s" % (cyan(from_client), lightmagenta("%s --> %s" % (from_peer, to_peer)), magenta(repr(data))))
+        print("%10s - %s: %s" % (cyan(from_client), lightgreen("%s --> %s" % (from_peer, to_peer)), green(repr(data))))
 
     def on_close(self, from_client, from_peer, to_client, to_peer, direction):
         sent = self.reads.setdefault(from_client, [0, 0])[OUTGOING]
@@ -225,21 +241,6 @@ class ProxyServer(object):
         msg = "%s %s closed the connection (server received %s bytes, sent %s bytes)" % ("server listening on" if direction else "client connected to", to_peer if direction else from_peer, sent, received)
         print("%10s - %s" % (cyan(from_client), msg))
         del self.reads[from_client]
-
-
-@register('raw', default=True)
-class RawProxyServer(ProxyServer):
-    def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
-        super(RawProxyServer, self).on_accept(from_client, from_peer, to_client, to_peer, direction)
-
-    def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
-        super(RawProxyServer, self).on_send(data, from_client, from_peer, to_client, to_peer, direction)
-
-    def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
-        super(RawProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
-
-    def on_close(self, from_client, from_peer, to_client, to_peer, direction):
-        super(RawProxyServer, self).on_close(from_client, from_peer, to_client, to_peer, direction)
 
 
 def enum_dict(*args):
@@ -251,7 +252,7 @@ def enum_dict(*args):
 
 
 @register('xapian')
-class XapianProxyServer(ProxyServer):
+class XapianProxyServer(RawProxyServer):
     """
     Xapian binary Protocol
 
@@ -363,10 +364,11 @@ class XapianProxyServer(ProxyServer):
 
     def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
         super(XapianProxyServer, self).on_accept(from_client, from_peer, to_client, to_peer, direction)
+        self.buffers[from_client] = ['', '']
         self.protocol = 'REMOTE'
 
     def on_send_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
-        buf = self.buffers.setdefault(from_client, ['', ''])[direction] + data
+        buf = self.buffers[from_client][direction] + data
         while buf:
             try:
                 msg_id = buf[0]
@@ -383,8 +385,8 @@ class XapianProxyServer(ProxyServer):
                     msg = (self.replies[self.protocol] if direction else self.messages[self.protocol])[cmd]
                 except KeyError:
                     msg = 'UNKNOWN'
-                cmsg = lightgreen(msg) if direction else lightmagenta(msg)
-                dir_repr = lightgreen("<<<") if direction else lightmagenta(">>>")
+                cmsg = lightyellow(msg) if direction else lightgreen(msg)
+                dir_repr = lightyellow("<<<") if direction else lightgreen(">>>")
                 self.dump_print("%s: %s %s" % (white(self.protocol), cmsg, dir_repr), msg_id)
                 dump_func = 'dump_%s_%s' % (self.protocol, msg)
                 try:
@@ -425,25 +427,52 @@ class XapianProxyServer(ProxyServer):
 
     def on_close(self, from_client, from_peer, to_client, to_peer, direction):
         super(XapianProxyServer, self).on_close(from_client, from_peer, to_client, to_peer, direction)
-        buf = self.buffers.setdefault(from_client, ['', ''])[direction]
+        buf = self.buffers[from_client][direction]
         if buf:
             print("%s bytes where left in the buffer" % len(buf))
         del self.buffers[from_client]
 
 
 @register('http')
-class HttpProxyServer(ProxyServer):
+class HttpProxyServer(RawProxyServer):
+    buffers = {}
+
     def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
         super(HttpProxyServer, self).on_accept(from_client, from_peer, to_client, to_peer, direction)
+        self.buffers[from_client] = ['', '']
 
     def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
         super(HttpProxyServer, self).on_send(data, from_client, from_peer, to_client, to_peer, direction)
+        buf = self.buffers[from_client][direction]
+        if buf is not None:
+            buf += data.replace('\r', '')
+            headers, sep, body = buf.partition('\n\n')
+            if sep:
+                print(lightyellow('    ' + '\n    '.join(headers.split('\n'))))
+                buf = body
+                self.buffers[from_client][direction] = None
+            else:
+                self.buffers[from_client][direction] = buf
 
     def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
         super(HttpProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
+        buf = self.buffers[from_client][direction]
+        if buf is not None:
+            buf += data.replace('\r', '')
+            headers, sep, body = buf.partition('\n\n')
+            if sep:
+                print(lightgreen('    ' + '\n    '.join(headers.split('\n'))))
+                buf = body
+                self.buffers[from_client][direction] = None
+            else:
+                self.buffers[from_client][direction] = buf
 
     def on_close(self, from_client, from_peer, to_client, to_peer, direction):
         super(HttpProxyServer, self).on_close(from_client, from_peer, to_client, to_peer, direction)
+        buf = self.buffers[from_client][direction]
+        if buf:
+            print("%s bytes where left in the buffer" % len(buf))
+        del self.buffers[from_client]
 
 
 def get_server(opts):
