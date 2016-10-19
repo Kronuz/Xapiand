@@ -2601,6 +2601,13 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 {
 	L_CALL(this, "Schema::index_object(%s)", name.c_str());
 
+	if (!specification.is_recursive) {
+		if (specification.store) {
+			(*parent_data)[name] = object;
+		}
+		return;
+	}
+
 	const auto spc_start = specification;
 	const MsgPack* properties = nullptr;
 	MsgPack* data = nullptr;
