@@ -576,6 +576,10 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, Aggregatio
 			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const QueryParserError& exc) {
 			throw MSG_ClientError("%s", exc.what());
+		} catch (const SerialisationError& exc) {
+			throw MSG_ClientError("%s", exc.what());
+		} catch (const QueryDslError& exc) {
+			throw MSG_ClientError("%s", exc.what());
 		} catch (const Xapian::QueryParserError& exc) {
 			throw MSG_ClientError("%s", exc.get_msg().c_str());
 		} catch (const Xapian::Error& exc) {
