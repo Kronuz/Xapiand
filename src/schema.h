@@ -351,6 +351,7 @@ struct specification_t : required_spc_t {
 	bool found_field;
 	bool set_type;
 	bool set_bool_term;
+	bool set_index;
 	bool fixed_index;
 	std::string aux_stem_lan;
 	std::string aux_lan;

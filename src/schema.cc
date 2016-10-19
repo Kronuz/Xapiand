@@ -352,6 +352,7 @@ specification_t::specification_t()
 	  found_field(true),
 	  set_type(false),
 	  set_bool_term(false),
+	  set_index(false),
 	  dynamic_type(DynamicFieldType::NONE) { }
 
 
@@ -377,6 +378,7 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 	  found_field(true),
 	  set_type(false),
 	  set_bool_term(false),
+	  set_index(false),
 	  dynamic_type(DynamicFieldType::NONE) { }
 
 
@@ -403,6 +405,7 @@ specification_t::specification_t(const specification_t& o)
 	  found_field(o.found_field),
 	  set_type(o.set_type),
 	  set_bool_term(o.set_bool_term),
+	  set_index(o.set_index),
 	  aux_stem_lan(o.aux_stem_lan),
 	  aux_lan(o.aux_lan),
 	  dynamic_type(o.dynamic_type),
@@ -434,6 +437,7 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  found_field(std::move(o.found_field)),
 	  set_type(std::move(o.set_type)),
 	  set_bool_term(std::move(o.set_bool_term)),
+	  set_index(std::move(o.set_index)),
 	  aux_stem_lan(std::move(o.aux_stem_lan)),
 	  aux_lan(std::move(o.aux_lan)),
 	  dynamic_type(std::move(o.dynamic_type)),
@@ -482,6 +486,7 @@ specification_t::operator=(const specification_t& o)
 	found_field = o.found_field;
 	set_type = o.set_type;
 	set_bool_term = o.set_bool_term;
+	set_index = o.set_index;
 	aux_stem_lan = o.aux_stem_lan;
 	aux_lan = o.aux_lan;
 	dynamic_type = o.dynamic_type;
@@ -532,6 +537,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	found_field = std::move(o.found_field);
 	set_type = std::move(o.set_type);
 	set_bool_term = std::move(o.set_bool_term);
+	set_index = std::move(o.set_index);
 	aux_stem_lan = std::move(o.aux_stem_lan);
 	aux_lan = std::move(o.aux_lan);
 	dynamic_type = std::move(o.dynamic_type);
@@ -792,6 +798,7 @@ Schema::restart_specification()
 	specification.partials           = default_spc.partials;
 	specification.error              = default_spc.error;
 	specification.set_type           = default_spc.set_type;
+	specification.set_index          = default_spc.set_index;
 	specification.aux_stem_lan       = default_spc.aux_stem_lan;
 	specification.aux_lan            = default_spc.aux_lan;
 	specification.dynamic_type       = default_spc.dynamic_type;
@@ -1638,6 +1645,7 @@ Schema::process_index(const MsgPack& doc_index)
 
 	try {
 		auto str_index = lower_string(doc_index.as_string());
+		specification.set_index = true;
 		try {
 			specification.index = map_index.at(str_index);
 
@@ -2211,6 +2219,8 @@ Schema::update_index(const MsgPack& prop_index)
 	if likely(!specification.fixed_index) {
 		specification.index = static_cast<TypeIndex>(prop_index.as_u64());
 	}
+
+	specification.set_index = true;
 }
 
 
@@ -3242,7 +3252,7 @@ Schema::validate_required_data()
 				break;
 			}
 			case FieldType::TEXT: {
-				if (properties.find(RESERVED_INDEX) == properties.end()) {
+				if (!specification.set_index) {
 					auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
@@ -3263,7 +3273,7 @@ Schema::validate_required_data()
 				break;
 			}
 			case FieldType::STRING: {
-				if (properties.find(RESERVED_INDEX) == properties.end()) {
+				if (!specification.set_index) {
 					auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
@@ -3319,7 +3329,7 @@ Schema::validate_required_data()
 			properties[RESERVED_SLOT] = specification.slot;
 
 		} else {
-			if (properties.find(RESERVED_INDEX) == properties.end()) {
+			if (!specification.set_index) {
 				auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
