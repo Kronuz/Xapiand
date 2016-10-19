@@ -3362,24 +3362,11 @@ Schema::validate_required_namespace_data()
 	L_CALL(this, "Schema::validate_required_namespace_data()");
 
 	if (!specification.full_name.empty()) {
-		// Process RESERVED_ACCURACY, RESERVED_ACC_PREFIX.
-		std::set<uint64_t> set_acc;
 		switch (specification.sep_types[2]) {
 			case FieldType::GEO:
 				// Set partials and error.
 				specification.partials = default_spc.partials;
 				specification.error    = default_spc.error;
-				set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
-				break;
-
-			case FieldType::DATE:
-				set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
-				break;
-
-			case FieldType::INTEGER:
-			case FieldType::POSITIVE:
-			case FieldType::FLOAT: {
-				set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
 				break;
 
 			case FieldType::TEXT:
@@ -3400,34 +3387,21 @@ Schema::validate_required_namespace_data()
 				specification.language      = default_spc.language;
 				specification.bool_term     = strhasupper(specification.dynamic_name);
 				break;
-			}
+
+			case FieldType::DATE:
+			case FieldType::INTEGER:
+			case FieldType::POSITIVE:
+			case FieldType::FLOAT:
 			case FieldType::BOOLEAN:
 			case FieldType::UUID:
 				break;
+
 			default:
 				throw MSG_ClientError("%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
 		}
 
-		if (specification.dynamic_type == DynamicFieldType::NONE) {
-			if (set_acc.size()) {
-				specification.acc_prefix.clear();
-				for (const auto& acc : set_acc) {
-					specification.acc_prefix.push_back(get_prefix(specification.dynamic_full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
-				}
-				specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-			}
-
-			specification.prefix = get_prefix(specification.dynamic_full_name, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
-			specification.slot = get_slot(specification.dynamic_full_name);
-		} else {
-			if (!specification.set_index) {
-				specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
-			}
-
-			if (set_acc.size()) {
-				specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-			}
-			update_dynamic_specification();
+		if (specification.dynamic_type != DynamicFieldType::NONE && !specification.set_index) {
+			specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
 		}
 
 		specification.set_type = true;
