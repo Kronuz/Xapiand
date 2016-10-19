@@ -353,6 +353,7 @@ struct specification_t : required_spc_t {
 	bool set_bool_term;
 	bool set_index;
 	bool fixed_index;
+	bool inside_namespace;
 	std::string aux_stem_lan;
 	std::string aux_lan;
 
@@ -449,7 +450,7 @@ class Schema {
 	/*
 	 * Set type to object in properties.
 	 */
-	void set_type_to_object();
+	void set_type_to_object(bool offsprings);
 
 	/*
 	 * Sets in specification the item_doc's type
@@ -489,6 +490,7 @@ class Schema {
 	 */
 
 	void validate_required_data();
+	void validate_required_namespace_data();
 	void validate_required_data(const MsgPack& value);
 
 	/*
