@@ -282,10 +282,15 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HttpMethod::GET);
+			MsgPack schema_obj = {
+				{ "id", { { RESERVED_TYPE,  "string" } } },
+				{ "name", { { RESERVED_TYPE,  "string" } } },
+				{ "tagline", { { RESERVED_TYPE,  "string" } } },
+			};
+			db_handler.write_schema(schema_obj);
 			MsgPack obj = {
-				{ "id", { { RESERVED_VALUE, std::to_string(local_node_->id) }, { RESERVED_TYPE,  "string" } } },
-				{ "name", { { RESERVED_VALUE, local_node_->name }, { RESERVED_TYPE,  "string" } } },
-				{ "tagline", { { RESERVED_VALUE, XAPIAND_TAGLINE }, { RESERVED_TYPE,  "string" } } }
+				{ "name", local_node_->name },
+				{ "tagline", XAPIAND_TAGLINE },
 			};
 			db_handler.index(obj, std::to_string(local_node_->id), true, MSGPACK_CONTENT_TYPE, std::string());
 		} catch (const CheckoutError&) {

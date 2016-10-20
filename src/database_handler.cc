@@ -431,7 +431,7 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 void
 DatabaseHandler::write_schema(const std::string& body)
 {
-	L_CALL(this, "DatabaseHandler::write_schema()");
+	L_CALL(this, "DatabaseHandler::write_schema(1)");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
@@ -442,7 +442,16 @@ DatabaseHandler::write_schema(const std::string& body)
 	json_load(rdoc, body);
 	MsgPack obj(rdoc);
 
-	L_INDEX(this, "Schema to write: %s", body.c_str());
+	write_schema(obj);
+}
+
+
+void
+DatabaseHandler::write_schema(const MsgPack& obj)
+{
+	L_CALL(this, "DatabaseHandler::write_schema(2)");
+
+	L_INDEX(this, "Schema to write: %s", obj.to_string().c_str());
 
 	schema = get_schema();
 

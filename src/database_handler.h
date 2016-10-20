@@ -126,6 +126,7 @@ public:
 	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	void write_schema(const std::string& body);
+	void write_schema(const MsgPack& obj);
 
 	void get_mset(const query_field_t& e, Xapian::MSet& mset, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions, int offset=0);
 
