@@ -282,17 +282,15 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HttpMethod::GET);
-			MsgPack schema_obj = {
+			db_handler.write_schema({
 				{ "id", { { RESERVED_TYPE,  "string" } } },
 				{ "name", { { RESERVED_TYPE,  "string" } } },
 				{ "tagline", { { RESERVED_TYPE,  "string" } } },
-			};
-			db_handler.write_schema(schema_obj);
-			MsgPack obj = {
+			});
+			db_handler.index({
 				{ "name", local_node_->name },
 				{ "tagline", XAPIAND_TAGLINE },
-			};
-			db_handler.index(obj, std::to_string(local_node_->id), true, MSGPACK_CONTENT_TYPE, std::string());
+			}, std::to_string(local_node_->id), true, MSGPACK_CONTENT_TYPE, std::string());
 		} catch (const CheckoutError&) {
 			L_CRIT(this, "Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
