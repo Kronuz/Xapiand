@@ -243,7 +243,6 @@ QueryDSL::range_query(const MsgPack& obj)
 	switch (state) {
 		case QUERY::GLOBALQUERY:
 		{
-			fprintf(stderr , "GLOBAL QUERY\n");
 			MsgPack to;
 			MsgPack from;
 			try {
@@ -265,7 +264,6 @@ QueryDSL::range_query(const MsgPack& obj)
 
 		case QUERY::QUERY:
 		{
-			fprintf(stderr , "REGULAR QUERY\n");
 			MsgPack to;
 			MsgPack from;
 			try {
