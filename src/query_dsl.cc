@@ -223,7 +223,6 @@ QueryDSL::in_range_query(const MsgPack& obj)
 				auto func = map_range_dispatch_dsl.at(str_key);
 				return (this->*func)(obj.at(str_key));
 			} catch (const std::out_of_range&) {
-				std::cout << obj << std::endl;
 				throw MSG_QueryDslError("Unexpected range type %s", str_key.c_str());
 			}
 		}
