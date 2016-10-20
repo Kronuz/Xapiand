@@ -609,6 +609,8 @@ void usedir(const char* path, bool solo) {
 			throw Exit(EX_DATAERR);
 		}
 	}
+#else
+	(void)solo;  // silence -Wunused-parameter
 #endif
 
 	if (chdir(path) == -1) {

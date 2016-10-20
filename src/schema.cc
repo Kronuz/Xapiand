@@ -1946,6 +1946,7 @@ Schema::process_namespace(const MsgPack& doc_namespace)
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
 	L_CALL(this, "Schema::process_namespace(%s)", doc_namespace.to_string().c_str());
+	(void)doc_namespace;  // silence -Wunused-parameter
 
 	if likely(specification.found_field || !specification.parent_namespaces.empty()) {
 		return;
@@ -2377,6 +2378,7 @@ void
 Schema::update_namespace(const MsgPack& prop_namespace)
 {
 	L_CALL(this, "Schema::update_namespace(%s)", prop_namespace.to_string().c_str());
+	(void)prop_namespace;  // silence -Wunused-parameter
 
 	specification.parent_namespaces.push_back(specification.dynamic_full_name);
 }

@@ -601,8 +601,8 @@ Database::reopen()
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.cend(); ++i) {
 			auto& e = *i;
 			Xapian::Database rdb;
-			int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN;
 #ifdef XAPIAND_CLUSTERING
+			int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN;
 			if (!e.is_local()) {
 				int port = (e.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e.port;
 				rdb = Xapian::Remote::open(e.host, port, 10000, 10000, _flags, e.path);

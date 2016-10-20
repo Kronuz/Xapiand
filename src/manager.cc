@@ -549,6 +549,8 @@ XapiandManager::make_replicators(const opts_t& o)
 			replicator_pool.enqueue(std::move(obj));
 		}
 	}
+#else
+	(void)o;  // silence -Wunused-parameter
 #endif
 }
 
@@ -864,6 +866,9 @@ XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endp
 		return endp_r.resolve_index_endpoint(path, endpv, n_endps, timeout);
 	}
 	else
+#else
+	(void)n_endps;  // silence -Wunused-parameter
+	(void)timeout;  // silence -Wunused-parameter
 #endif
 	{
 		endpv.push_back(Endpoint(path));
