@@ -167,7 +167,7 @@ Endpoint::slice_before(std::string &subject, std::string delimiter)
 
 
 std::string
-Endpoint::as_string() const
+Endpoint::to_string() const
 {
 	std::string ret;
 	if (path.empty()) {
@@ -221,13 +221,13 @@ Endpoint::hash() const
 
 
 std::string
-Endpoints::as_string() const
+Endpoints::to_string() const
 {
 	std::string ret;
 	auto j = endpoints.cbegin();
 	for (int i = 0; j != endpoints.cend(); ++j, ++i) {
 		if (i) ret += ";";
-		ret += (*j).as_string();
+		ret += (*j).to_string();
 	}
 	return ret;
 }

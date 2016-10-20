@@ -186,7 +186,7 @@ public:
 	}
 
 	size_t hash() const;
-	std::string as_string() const;
+	std::string to_string() const;
 
 	bool operator<(const Endpoint & other) const;
 	bool operator==(const Node &other) const;
@@ -218,7 +218,7 @@ public:
 	}
 
 	size_t hash() const;
-	std::string as_string() const;
+	std::string to_string() const;
 
 	void clear() {
 		endpoints.clear();

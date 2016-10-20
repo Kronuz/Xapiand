@@ -327,7 +327,7 @@ DatabaseHandler::index(const std::string& body, const std::string& _document_id,
 			try {
 				did = database->replace_document_term(term_id, doc, commit_);
 			} catch (const Xapian::Error& err) {
-				err_list->operator[](err.get_error_string()).push_back(e.as_string());
+				err_list->operator[](err.get_error_string()).push_back(e.to_string());
 			}
 		}
 		endpoints = std::move(_endpoints);
@@ -739,9 +739,9 @@ DatabaseHandler::multi_db_delete_document(const std::string& doc_id, bool commit
 			DatabaseHandler::lock_database lk(this);
 			database->delete_document(_id, commit_, wal_);
 		} catch (const DocNotFoundError& err) {
-			err_list["Document not found"].push_back(e.as_string());
+			err_list["Document not found"].push_back(e.to_string());
 		} catch (const Xapian::Error& err) {
-			err_list[err.get_error_string()].push_back(e.as_string());
+			err_list[err.get_error_string()].push_back(e.to_string());
 		}
 	}
 	endpoints = _endpoints;

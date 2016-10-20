@@ -1196,7 +1196,7 @@ HttpClient::search_view(HttpMethod method)
 				obj_data[RESERVED_PERCENT] = m.get_percent();
 				int subdatabase = (document.get_docid() - 1) % endpoints.size();
 				auto endpoint = endpoints[subdatabase];
-				obj_data[RESERVED_ENDPOINT] = endpoint.as_string();
+				obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
 			}
 
 			auto result = serialize_response(obj_data, ct_type, pretty);
@@ -1450,7 +1450,7 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 			endpoints.add(asked_node);
 		}
 	}
-	L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.as_string().c_str());
+	L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.to_string().c_str());
 }
 
 
