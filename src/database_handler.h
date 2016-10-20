@@ -154,7 +154,6 @@ class Document {
 	friend class DatabaseHandler;
 
 	DatabaseHandler* db_handler;
-	const Xapian::docid did;
 
 	mutable std::shared_ptr<Database> _database;
 	mutable Xapian::Document _document;
@@ -164,7 +163,7 @@ class Document {
 
 		if (db_handler && db_handler->database && _database != db_handler->database) {
 			_database = db_handler->database;
-			_document = _database->get_document(did);
+			_document = _database->get_document(_document.get_docid());
 		}
 		return _document;
 	}
@@ -174,24 +173,21 @@ class Document {
 
 		if (db_handler && db_handler->database && _database != db_handler->database) {
 			_database = db_handler->database;
-			_document = _database->get_document(did);
+			_document = _database->get_document(_document.get_docid());
 		}
 		return _document;
 	}
 
 public:
 	Document()
-		: db_handler(nullptr),
-		  did(0) { }
+		: db_handler(nullptr) { }
 
 	Document(const Xapian::Document &doc)
 		: db_handler(nullptr),
-		  did(doc.get_docid()),
 		  _document(doc) { }
 
 	Document(DatabaseHandler* db_handler_, const Xapian::Document &doc)
 		: db_handler(db_handler_),
-		  did(doc.get_docid()),
 		  _database(db_handler->database),
 		  _document(doc) { }
 
@@ -371,7 +367,7 @@ public:
 	Xapian::docid get_docid() const {
 		L_CALL(this, "Document::get_docid()");
 
-		return did;
+		return _document.get_docid();
 	}
 
 	std::string serialise() const {
