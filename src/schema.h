@@ -303,7 +303,7 @@ struct required_spc_t {
 	double error;
 
 	// Variables for namespaces.
-	std::vector<std::string> parent_namespaces;
+	std::vector<std::string> paths_namespace;
 
 	required_spc_t();
 	required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
@@ -474,8 +474,8 @@ class Schema {
 	inline void fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& data, Xapian::Document& doc, const char* reserved_word);
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name=std::string());
 	void index_array(const MsgPack& properties, const MsgPack& array, MsgPack& data, Xapian::Document& doc);
-	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos);
-	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data);
+	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value=true);
+	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values=true);
 
 	static void index_field_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, size_t pos);
 	static void index_global_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& global_spc, size_t pos);
@@ -492,6 +492,16 @@ class Schema {
 	void validate_required_data();
 	void validate_required_namespace_data();
 	void validate_required_data(const MsgPack& value);
+
+	/*
+	 * Get the prefixes for a namespace.
+	 */
+	static std::vector<std::string> get_prefixes_namespace(const std::vector<std::string>& paths_namespace);
+
+	/*
+	 * Get the prefixes and slots for a namespace.
+	 */
+	static std::vector<std::pair<std::string, Xapian::valueno>> get_data_namespace(const std::vector<std::string>& paths_namespace);
 
 	/*
 	 * Update dynamic field's specifications.
