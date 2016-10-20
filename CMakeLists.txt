@@ -269,7 +269,7 @@ check_cxx_source_compiles ("
 	}" HAVE_DATABASE_REVISION_INFO)
 cmake_pop_check_state ()
 
-if (HAVE_REMOTE_PROTOCOL)
+if (CLUSTERING AND HAVE_REMOTE_PROTOCOL)
 	set ("XAPIAND_CLUSTERING" 1)
 else ()
 	set ("XAPIAND_CLUSTERING" 0)
