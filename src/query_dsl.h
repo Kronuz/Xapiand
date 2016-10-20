@@ -34,11 +34,22 @@ constexpr const char QUERYDSL_QUERY[] = "_query";
 /* A domain-specific language (DSL) for query */
 
 class QueryDSL {
+	enum class QUERY {
+		INIT,
+		GLOBALQUERY,
+		QUERY
+	};
 
 	std::shared_ptr<Schema> schema;
+
 	int q_flags;
-	Xapian::Query build_query(const MsgPack& o, const std::string& field_name, Xapian::termcount wqf=1, const std::string& type="");
+	QUERY state;
+	std::string _fieldname;
+	Xapian::termcount _wqf;
+
+
 	Xapian::Query process_query(const MsgPack& obj, const std::string& field_name);
+	void set_parameters(const MsgPack& obj);
 
 public:
 	QueryDSL(std::shared_ptr<Schema> schema_);
@@ -46,9 +57,9 @@ public:
 	Xapian::Query get_query(const MsgPack& obj);
 
 	Xapian::Query join_queries(const MsgPack& obj, Xapian::Query::op op);
-	Xapian::Query global_query(const MsgPack& obj);
-	Xapian::Query global_range_query(const MsgPack& obj);
-
+	Xapian::Query in_range_query(const MsgPack& obj);
+	Xapian::Query query(const MsgPack& o);
+	Xapian::Query range_query(const MsgPack& o);
 };
 
 using dispatch_op_dsl = Xapian::Query (QueryDSL::*)(const MsgPack&, Xapian::Query::op);
