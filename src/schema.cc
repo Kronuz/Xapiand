@@ -1070,7 +1070,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 				continue;
 			} catch (const EWKTError&) { }
 
-			throw MSG_ClientError("%s does not exist in schema", field_name.c_str());
+			throw MSG_ClientError("`%s` does not exist in schema", field_name.c_str());
 		}
 	}
 
@@ -1141,9 +1141,9 @@ Schema::set_type(const MsgPack& item_doc)
 			break;
 		}
 		case MsgPack::Type::ARRAY:
-			throw MSG_ClientError("%s can not be array of arrays", RESERVED_VALUE);
+			throw MSG_ClientError("`%s` can not be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
-			throw MSG_ClientError("%s can not be object", RESERVED_VALUE);
+			throw MSG_ClientError("`%s` can not be object", RESERVED_VALUE);
 		case MsgPack::Type::NIL:
 			// Do not process this field.
 			throw MSG_DummyException();
@@ -1151,7 +1151,7 @@ Schema::set_type(const MsgPack& item_doc)
 			break;
 	}
 
-	throw MSG_ClientError("%s: %s is ambiguous", RESERVED_VALUE, item_doc.to_string().c_str());
+	throw MSG_ClientError("`%s: %s` is ambiguous", RESERVED_VALUE, item_doc.to_string().c_str());
 }
 
 
@@ -1471,7 +1471,7 @@ Schema::process_stem_language(const MsgPack& doc_stem_language)
 			specification.stem_language = _stem_language;
 			specification.aux_stem_lan =  data_lan.second;
 		} catch (const std::out_of_range&) {
-			throw MSG_ClientError("%s: %s is not supported", RESERVED_STEM_LANGUAGE, _stem_language.c_str());
+			throw MSG_ClientError("`%s: %s` is not supported", RESERVED_STEM_LANGUAGE, _stem_language.c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_STEM_LANGUAGE);
@@ -1497,10 +1497,10 @@ Schema::process_language(const MsgPack& doc_language)
 				specification.language = data_lan.second;
 				specification.aux_lan = data_lan.second;
 			} else {
-				throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
+				throw MSG_ClientError("`%s: %s` is not supported", RESERVED_LANGUAGE, _str_language.c_str());
 			}
 		} catch (const std::out_of_range&) {
-			throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
+			throw MSG_ClientError("`%s: %s` is not supported", RESERVED_LANGUAGE, _str_language.c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_LANGUAGE);
@@ -3209,11 +3209,11 @@ Schema::validate_required_data()
 							if (val_acc <= HTM_MAX_LEVEL) {
 								set_acc.insert(val_acc);
 							} else {
-								throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+								throw MSG_ClientError("Data inconsistency, level value in `%s: %s` must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
 							}
 						}
 					} catch (const msgpack::type_error&) {
-						throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+						throw MSG_ClientError("Data inconsistency, level value in `%s: %s` must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 					}
 				} else {
 					set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
@@ -3228,11 +3228,11 @@ Schema::validate_required_data()
 							try {
 								set_acc.insert(toUType(map_acc_date.at(str_accuracy)));
 							} catch (const std::out_of_range&) {
-								throw MSG_ClientError("Data inconsistency, %s: %s must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str(), str_accuracy.c_str());
+								throw MSG_ClientError("Data inconsistency, `%s: %s` must be a subset of `%s` (`%s` not supported)", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str(), str_accuracy.c_str());
 							}
 						}
 					} catch (const msgpack::type_error&) {
-						throw MSG_ClientError("Data inconsistency, %s in %s must be a subset of %s", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str());
+						throw MSG_ClientError("Data inconsistency, `%s` in `%s` must be a subset of `%s`", RESERVED_ACCURACY, DATE_STR, str_set_acc_date.c_str());
 					}
 				} else {
 					set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
