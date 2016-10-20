@@ -254,7 +254,7 @@ QueryDSL::range_query(const MsgPack& obj)
 			} catch (const std::out_of_range&) { }
 			if (to || from) {
 				std::tuple<FieldType, std::string, std::string> ser_type = Serialise::get_range_type(from, to);
-				const auto& global_spc = Schema::get_data_global_CALL(std::get<0>(ser_type));
+				const auto& global_spc = Schema::get_data_global(std::get<0>(ser_type));
 				return MultipleValueRange::getQuery(global_spc, "", from, to);
 			} else {
 				throw MSG_QueryDslError("Expected %s and/or %s in %s", QUERYDSL_FROM, QUERYDSL_TO, QUERYDSL_RANGE);
