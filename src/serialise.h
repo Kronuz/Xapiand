@@ -26,6 +26,7 @@
 #include "hash/endian.h"
 #include "msgpack.h"
 #include "sortable_serialise.h"
+#include "xxh64.hpp"
 
 
 #ifndef __has_builtin         // Optional of course
@@ -161,6 +162,10 @@ namespace Serialise {
 	std::pair<FieldType, std::string> get_type(const class MsgPack& field_value, bool bool_term=false);
 	std::tuple<FieldType, std::string, std::string> get_range_type(const class MsgPack& start, const class MsgPack& end, bool bool_term=false);
 
+	// Serialise field_value like string.
+	inline std::string string(const std::string& field_value) {
+		return sortable_serialise(xxh64::hash(field_value) & 0xffffffff);
+	}
 
 	// Serialise field_value like date.
 	std::string date(const std::string& field_value);
