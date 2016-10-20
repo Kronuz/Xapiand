@@ -1311,7 +1311,7 @@ HttpClient::url_resolve()
 	L_CALL(this, "HttpClient::url_resolve()");
 
 	struct http_parser_url u;
-	std::string b = repr(path);
+	std::string b = repr(path, true, false);
 
 	L_HTTP_PROTO_PARSER(this, "URL: %s", b.c_str());
 	if (http_parser_parse_url(path.c_str(), path.size(), 0, &u) == 0) {

@@ -158,7 +158,7 @@ void
 BaseUDP::sending_message(const std::string& message)
 {
 	if (sock != -1) {
-		L_UDP_WIRE(this, "(sock=%d) <<-- '%s'", sock, repr(message).c_str());
+		L_UDP_WIRE(this, "(sock=%d) <<-- %s", sock, repr(message).c_str());
 
 #ifdef MSG_NOSIGNAL
 		ssize_t written = ::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&addr, sizeof(addr));
@@ -211,7 +211,7 @@ BaseUDP::get_message(std::string& result, char max_type)
 		throw MSG_NetworkError("Badly formed message: Incomplete!");
 	}
 
-	L_UDP_WIRE(this, "(sock=%d) -->> '%s'", sock, repr(buf, received).c_str());
+	L_UDP_WIRE(this, "(sock=%d) -->> %s", sock, repr(buf, received).c_str());
 
 	const char *p = buf;
 	const char *p_end = p + received;

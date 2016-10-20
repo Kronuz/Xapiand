@@ -285,7 +285,7 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 				if (type != Raft::Message::HEARTBEAT_LEADER) {
 					L_RAFT(this, ">> get_message(%s)", Raft::MessageNames[static_cast<int>(type)]);
 				}
-				L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
+				L_RAFT_PROTO(this, "message: %s", repr(message).c_str());
 
 				raft_server(type, message);
 			} catch (const DummyException&) {

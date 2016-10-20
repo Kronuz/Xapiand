@@ -131,10 +131,11 @@ uint64_t random_int(uint64_t initial, uint64_t last) {
 }
 
 
-std::string repr(const void* p, size_t size, bool friendly, size_t max_size) {
+std::string repr(const void* p, size_t size, bool friendly, bool quote, size_t max_size) {
 	const char* q = (const char *)p;
-	char *buff = new char[size * 4 + 1];
+	char *buff = new char[size * 4 + 3];
 	char *d = buff;
+	if (quote) *d++ = '\'';
 	const char *p_end = q + size;
 	const char *max_a = max_size ? q + (max_size * 2 / 3) : p_end + 1;
 	const char *max_b = max_size ? p_end - (max_size / 3) : q - 1;
@@ -189,6 +190,7 @@ std::string repr(const void* p, size_t size, bool friendly, size_t max_size) {
 		}
 		//printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 1));
 	}
+	if (quote) *d++ = '\'';
 	*d = '\0';
 	std::string ret(buff);
 	delete [] buff;
@@ -196,8 +198,8 @@ std::string repr(const void* p, size_t size, bool friendly, size_t max_size) {
 }
 
 
-std::string repr(const std::string& string, bool friendly, size_t max_size) {
-	return repr(string.c_str(), string.length(), friendly, max_size);
+std::string repr(const std::string& string, bool friendly, bool quote, size_t max_size) {
+	return repr(string.c_str(), string.length(), friendly, quote, max_size);
 }
 
 

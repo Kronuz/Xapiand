@@ -125,7 +125,7 @@ public:
 		if (type != Raft::Message::HEARTBEAT_LEADER) {
 			L_RAFT(this, "<< send_message(%s)", MessageNames[toUType(type)]);
 		}
-		L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
+		L_RAFT_PROTO(this, "message: %s", repr(message).c_str());
 		BaseUDP::send_message(toUType(type), message);
 	}
 

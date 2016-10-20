@@ -90,7 +90,7 @@ public:
 		if (type != Discovery::Message::HEARTBEAT) {
 			L_DISCOVERY(this, "<< send_message(%s)", MessageNames[toUType(type)]);
 		}
-		L_DISCOVERY_PROTO(this, "message: '%s'", repr(message).c_str());
+		L_DISCOVERY_PROTO(this, "message: %s", repr(message).c_str());
 		BaseUDP::send_message(toUType(type), message);
 	}
 

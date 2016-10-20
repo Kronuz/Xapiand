@@ -79,7 +79,7 @@ public:
 
 	inline void send_message(ReplicationReplyType type, const std::string& message, double end_time=0.0) {
 		L_BINARY(this, "<< send_message(%s)", ReplicationReplyTypeNames[static_cast<int>(type)]);
-		L_BINARY_PROTO(this, "message: '%s'", repr(message).c_str());
+		L_BINARY_PROTO(this, "message: %s", repr(message).c_str());
 		client->send_message(static_cast<char>(type), message, end_time);
 	}
 

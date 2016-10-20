@@ -436,7 +436,7 @@ BaseClient::write_directly(int fd)
 			L_CONN(this, "WR:CLOSED: (sock=%d, fd=%d)", sock, fd);
 			return WR::CLOSED;
 		} else {
-			auto str(repr(buf_data, written, true, 500));
+			auto str(repr(buf_data, written, true, true, 500));
 			L_CONN_WIRE(this, "(sock=%d, fd=%d) <<-- '%s' [%zu] (%zu bytes)", sock, fd, str.c_str(), str.size(), written);
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
@@ -551,7 +551,7 @@ BaseClient::io_cb_read(int fd)
 			detach();
 			return;
 		} else {
-			auto str(repr(buf_data, received, true, 500));
+			auto str(repr(buf_data, received, true, true, 500));
 			L_CONN_WIRE(this, "(sock=%d, fd=%d) -->> '%s' [%zu] (%zu bytes)", sock, fd, str.c_str(), str.size(), received);
 
 			if (mode == MODE::READ_FILE_TYPE) {

@@ -191,7 +191,7 @@ int test_serialise_cartesian() {
 	for (const test_cartesian_t *p = test_seri_cartesian; p->expect_serialise; ++p) {
 		Cartesian c = p->cartesian;
 		c.normalize();
-		std::string res(repr(Serialise::cartesian(c)));
+		std::string res(repr(Serialise::cartesian(c), true, false));
 		if (res.compare(p->expect_serialise) != 0) {
 			++cont;
 			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res.c_str(), p->expect_serialise);
@@ -237,7 +237,7 @@ int test_serialise_trixel_id() {
 	int cont = 0;
 	for (const test_trixel_id_t *p = test_seri_trixels; p->expect_serialise; ++p) {
 		uint64_t trixel_id = p->trixel_id;
-		std::string res(repr(Serialise::trixel_id(trixel_id)));
+		std::string res(repr(Serialise::trixel_id(trixel_id), true, false));
 		if (res.compare(p->expect_serialise) != 0) {
 			++cont;
 			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res.c_str(), p->expect_serialise);

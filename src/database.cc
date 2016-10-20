@@ -347,7 +347,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 	std::string uuid = database->get_uuid();
 	std::string line(revision_encode + serialise_length(toUType(type)) + data);
 
-	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint.path.c_str(), repr(line).c_str());
+	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint.path.c_str(), repr(line, quote).c_str());
 
 	const char* p = revision_encode.data();
 	const char* p_end = p + revision_encode.size();
@@ -563,7 +563,7 @@ Database::reopen()
 			try {
 				Xapian::Database tmp = Xapian::Database(e.path, Xapian::DB_OPEN);
 				if (tmp.get_uuid() == wdb.get_uuid()) {
-					L_DATABASE(this, "Endpoint %s fallback to local database!", e.to_string().c_str());
+					L_DATABASE(this, "Endpoint %s fallback to local database!", repr(e.to_string()).c_str());
 					// Handle remote endpoints and figure out if the endpoint is a local database
 					wdb = Xapian::WritableDatabase(e.path, _flags);
 					local = true;
@@ -610,7 +610,7 @@ Database::reopen()
 				try {
 					Xapian::Database tmp = Xapian::Database(e.path, Xapian::DB_OPEN);
 					if (tmp.get_uuid() == rdb.get_uuid()) {
-						L_DATABASE(this, "Endpoint %s fallback to local database!", e.to_string().c_str());
+						L_DATABASE(this, "Endpoint %s fallback to local database!", repr(e.to_string()).c_str());
 						// Handle remote endpoints and figure out if the endpoint is a local database
 						rdb = Xapian::Database(e.path, _flags);
 						if (endpoints_size == 1) read_mastery(e);
@@ -951,11 +951,11 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 			modified = true;
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) throw MSG_Error("Database %s was modified, try again (%s)", endpoints.to_string().c_str(), exc.get_msg().c_str());
+			if (!t) throw MSG_Error("Database %s was modified, try again (%s)", repr(endpoints.to_string()).c_str(), exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::Error& exc) {
-			throw MSG_Error("Database %s error %s", endpoints.to_string().c_str(), exc.get_msg().c_str());
+			throw MSG_Error("Database %s error %s", repr(endpoints.to_string()).c_str(), exc.get_msg().c_str());
 		}
 		reopen();
 	}
@@ -1310,7 +1310,7 @@ DatabasePool::~DatabasePool()
 void
 DatabasePool::add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
-	L_CALL(this, "DatabasePool::add_endpoint_queue(%s)", endpoint.to_string().c_str());
+	L_CALL(this, "DatabasePool::add_endpoint_queue(%s)", repr(endpoint.to_string()).c_str());
 
 	size_t hash = endpoint.hash();
 	auto& queues_set = queues[hash];
@@ -1321,7 +1321,7 @@ DatabasePool::add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr
 void
 DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
-	L_CALL(this, "DatabasePool::drop_endpoint_queue(%s)", endpoint.to_string().c_str());
+	L_CALL(this, "DatabasePool::drop_endpoint_queue(%s)", repr(endpoint.to_string()).c_str());
 
 	size_t hash = endpoint.hash();
 	auto& queues_set = queues[hash];
@@ -1369,21 +1369,21 @@ DatabasePool::finish()
 bool
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {
-	L_CALL(this, "DatabasePool::checkout(%s, %s, %d)", database ? database->to_string().c_str() : "nullptr", endpoints.to_string().c_str(), flags);
+	L_CALL(this, "DatabasePool::checkout(%s, %s, %d)", database ? repr(database->to_string()).c_str() : "nullptr", repr(endpoints.to_string()).c_str(), flags);
 
 	bool writable = flags & DB_WRITABLE;
 	bool persistent = flags & DB_PERSISTENT;
 	bool initref = flags & DB_INIT_REF;
 	bool replication = flags & DB_REPLICATION;
 
-	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB [%s]: %s ...", writable ? "WR" : "RO", endpoints.to_string().c_str());
+	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB [%s]: %s ...", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 
 	if (database) {
 		L_ERR(this, "Trying to checkout a database with a not null pointer");
 		return false;
 	}
 	if (writable && endpoints.size() != 1) {
-		L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), endpoints.to_string().c_str());
+		L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()).c_str());
 		return false;
 	}
 
@@ -1409,7 +1409,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				case DatabaseQueue::replica_state::REPLICA_LOCK:
 				case DatabaseQueue::replica_state::REPLICA_SWITCH:
 					L_REPLICATION(this, "A replication task is already waiting");
-					L_DATABASE_END(this, "!! ABORTED CHECKOUT DB [%s]: %s", writable ? "WR" : "RO", endpoints.to_string().c_str());
+					L_DATABASE_END(this, "!! ABORTED CHECKOUT DB [%s]: %s", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 					return false;
 			}
 		} else {
@@ -1483,16 +1483,16 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	lk.unlock();
 
 	if (!database) {
-		L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s", writable ? "WR" : "WR", endpoints.to_string().c_str());
+		L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
 		return false;
 	}
 
 	if (!writable && duration_cast<seconds>(system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
 		database->reopen();
-		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->endpoints.to_string().c_str());
+		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->repr(endpoints.to_string()).c_str());
 	}
 
-	L_DATABASE_END(this, "++ CHECKED OUT DB [%s]: %s (rev:%s)", writable ? "WR" : "WR", endpoints.to_string().c_str(), repr(database->checkout_revision, false).c_str());
+	L_DATABASE_END(this, "++ CHECKED OUT DB [%s]: %s (rev:%s)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str(), repr(database->checkout_revision, false).c_str());
 	return true;
 }
 
@@ -1500,9 +1500,9 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 void
 DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
-	L_CALL(this, "DatabasePool::checkin(%s)", database->to_string().c_str());
+	L_CALL(this, "DatabasePool::checkin(%s)", repr(database->to_string()).c_str());
 
-	L_DATABASE_BEGIN(this, "-- CHECKING IN DB [%s]: %s ...", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->endpoints.to_string().c_str());
+	L_DATABASE_BEGIN(this, "-- CHECKING IN DB [%s]: %s ...", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()).c_str());
 
 	assert(database);
 
@@ -1563,7 +1563,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	L_DATABASE_END(this, "-- CHECKED IN DB [%s]: %s", (flags & DB_WRITABLE) ? "WR" : "RO", endpoints.to_string().c_str());
+	L_DATABASE_END(this, "-- CHECKED IN DB [%s]: %s", (flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 
 	database.reset();
 
@@ -1578,7 +1578,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 bool
 DatabasePool::_switch_db(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::_switch_db(%s)", endpoint.to_string().c_str());
+	L_CALL(this, "DatabasePool::_switch_db(%s)", repr(endpoint.to_string()).c_str());
 
 	auto queues_set = queues[endpoint.hash()];
 
@@ -1609,7 +1609,7 @@ DatabasePool::_switch_db(const Endpoint& endpoint)
 bool
 DatabasePool::switch_db(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::switch_db(%s)", endpoint.to_string().c_str());
+	L_CALL(this, "DatabasePool::switch_db(%s)", repr(endpoint.to_string()).c_str());
 
 	std::lock_guard<std::mutex> lk(qmtx);
 	return _switch_db(endpoint);
@@ -1619,13 +1619,13 @@ DatabasePool::switch_db(const Endpoint& endpoint)
 void
 DatabasePool::init_ref(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::init_ref(%s)", endpoint.to_string().c_str());
+	L_CALL(this, "DatabasePool::init_ref(%s)", repr(endpoint.to_string()).c_str());
 
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Cannot open %s database.", ref_endpoints.to_string().c_str());
+		L_CRIT(this, "Cannot open %s database.", repr(ref_endpoints.to_string()).c_str());
 		return;
 	}
 
@@ -1652,13 +1652,13 @@ DatabasePool::init_ref(const Endpoint& endpoint)
 void
 DatabasePool::inc_ref(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::inc_ref(%s)", endpoint.to_string().c_str());
+	L_CALL(this, "DatabasePool::inc_ref(%s)", repr(endpoint.to_string()).c_str());
 
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Cannot open %s database.", ref_endpoints.to_string().c_str());
+		L_CRIT(this, "Cannot open %s database.", repr(ref_endpoints.to_string()).c_str());
 		return;
 	}
 
@@ -1696,13 +1696,13 @@ DatabasePool::inc_ref(const Endpoint& endpoint)
 void
 DatabasePool::dec_ref(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::dec_ref(%s)", endpoint.to_string().c_str());
+	L_CALL(this, "DatabasePool::dec_ref(%s)", repr(endpoint.to_string()).c_str());
 
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Cannot open %s database.", ref_endpoints.to_string().c_str());
+		L_CRIT(this, "Cannot open %s database.", repr(ref_endpoints.to_string()).c_str());
 		return;
 	}
 
@@ -1739,7 +1739,7 @@ DatabasePool::get_master_count()
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Cannot open %s database.", ref_endpoints.to_string().c_str());
+		L_CRIT(this, "Cannot open %s database.", repr(ref_endpoints.to_string()).c_str());
 		return -1;
 	}
 
@@ -1759,7 +1759,7 @@ DatabasePool::get_master_count()
 std::shared_ptr<const MsgPack>
 DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 {
-	L_CALL(this, "DatabasePool::get_schema(%s, %d)", endpoint.to_string().c_str(), flags);
+	L_CALL(this, "DatabasePool::get_schema(%s, %d)", repr(endpoint.to_string()).c_str(), flags);
 
 	if (finished) return nullptr;
 
@@ -1781,7 +1781,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 		checkin(database);
 	} else {
 		schemas.erase(endpoint.hash());
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.to_string().c_str());
+		throw MSG_CheckoutError("Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
 	}
 	try {
 		auto new_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
@@ -1798,7 +1798,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 void
 DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack> new_schema)
 {
-	L_CALL(this, "DatabasePool::set_schema(%s, %d, %s)", endpoint.to_string().c_str(), flags, new_schema ? new_schema->to_string().c_str() : "nullptr");
+	L_CALL(this, "DatabasePool::set_schema(%s, %d, %s)", repr(endpoint.to_string()).c_str(), flags, new_schema ? new_schema->to_string().c_str() : "nullptr");
 
 	atomic_shared_ptr<const MsgPack>* schema;
 	{
@@ -1813,7 +1813,7 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 		database->set_metadata(RESERVED_SCHEMA, schema->load()->serialise());
 		checkin(database);
 	} else {
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.to_string().c_str());
+		throw MSG_CheckoutError("Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
 	}
 }
 

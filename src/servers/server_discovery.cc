@@ -402,7 +402,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				if (type != Discovery::Message::HEARTBEAT) {
 					L_DISCOVERY(this, ">> get_message(%s)", Discovery::MessageNames[static_cast<int>(type)]);
 				}
-				L_DISCOVERY_PROTO(this, "message: '%s'", repr(message).c_str());
+				L_DISCOVERY_PROTO(this, "message: %s", repr(message).c_str());
 				discovery_server(type, message);
 			} catch (const DummyException&) {
 				break;  // No message.
