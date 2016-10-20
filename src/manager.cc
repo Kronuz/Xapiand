@@ -283,6 +283,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HttpMethod::GET);
 			MsgPack obj = {
+				{ "id", { { RESERVED_VALUE, std::to_string(local_node_->id) }, { RESERVED_TYPE,  "string" } } },
 				{ "name", { { RESERVED_VALUE, local_node_->name }, { RESERVED_TYPE,  "string" } } },
 				{ "tagline", { { RESERVED_VALUE, XAPIAND_TAGLINE }, { RESERVED_TYPE,  "string" } } }
 			};

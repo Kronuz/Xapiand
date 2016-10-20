@@ -1394,12 +1394,15 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 	}
 
 	std::string index_path;
-	if (!ns.empty()) {
-		index_path = ns + "/" + path;
-	} else {
+	if (ns.empty() && path.empty()) {
+		index_path = ".";
+	} else if (ns.empty()) {
 		index_path = path;
+	} else if (path.empty()) {
+		index_path = ns;
+	} else {
+		index_path = ns + "/" + path;
 	}
-
 	index_paths.push_back(index_path);
 
 	std::string node_name;
