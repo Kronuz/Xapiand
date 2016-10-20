@@ -1123,7 +1123,7 @@ Database::get_document(const Xapian::docid& did)
 std::string
 Database::get_metadata(const std::string& key)
 {
-	L_CALL(this, "Database::get_metadata()");
+	L_CALL(this, "Database::get_metadata(%s)", key.c_str());
 
 	std::string value;
 
@@ -1154,7 +1154,7 @@ Database::get_metadata(const std::string& key)
 void
 Database::set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::set_metadata()");
+	L_CALL(this, "Database::set_metadata(%s, %s)", key.c_str(), value.c_str());
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_set_metadata(key, value);
@@ -1233,7 +1233,7 @@ DatabaseQueue::~DatabaseQueue()
 bool
 DatabaseQueue::inc_count(int max)
 {
-	L_CALL(this, "DatabaseQueue::inc_count()");
+	L_CALL(this, "DatabaseQueue::inc_count(%d)", max);
 
 	std::unique_lock<std::mutex> lk(_mutex);
 
@@ -1310,7 +1310,7 @@ DatabasePool::~DatabasePool()
 void
 DatabasePool::add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
-	L_CALL(this, "DatabasePool::add_endpoint_queue()");
+	L_CALL(this, "DatabasePool::add_endpoint_queue(%s)", endpoint.to_string().c_str());
 
 	size_t hash = endpoint.hash();
 	auto& queues_set = queues[hash];
@@ -1321,7 +1321,7 @@ DatabasePool::add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr
 void
 DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
-	L_CALL(this, "DatabasePool::drop_endpoint_queue()");
+	L_CALL(this, "DatabasePool::drop_endpoint_queue(%s)", endpoint.to_string().c_str());
 
 	size_t hash = endpoint.hash();
 	auto& queues_set = queues[hash];
@@ -1336,7 +1336,7 @@ DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_pt
 long long
 DatabasePool::get_mastery_level(const std::string& dir)
 {
-	L_CALL(this, "DatabasePool::get_mastery_level()");
+	L_CALL(this, "DatabasePool::get_mastery_level(%s)", dir.c_str());
 
 	Endpoints endpoints;
 	endpoints.add(Endpoint(dir));
@@ -1355,6 +1355,8 @@ DatabasePool::get_mastery_level(const std::string& dir)
 void
 DatabasePool::finish()
 {
+	L_CALL(this, "DatabasePool::finish()");
+
 	finished = true;
 
 	writable_databases.finish();
@@ -1367,7 +1369,7 @@ DatabasePool::finish()
 bool
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {
-	L_CALL(this, "DatabasePool::checkout()");
+	L_CALL(this, "DatabasePool::checkout(%s, %s, %d)", database ? database->to_string().c_str() : "nullptr", endpoints.to_string().c_str(), flags);
 
 	bool writable = flags & DB_WRITABLE;
 	bool persistent = flags & DB_PERSISTENT;
@@ -1498,7 +1500,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 void
 DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
-	L_CALL(this, "DatabasePool::checkin()");
+	L_CALL(this, "DatabasePool::checkin(%s)", database->to_string().c_str());
 
 	L_DATABASE_BEGIN(this, "-- CHECKING IN DB [%s]: %s ...", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->endpoints.to_string().c_str());
 
@@ -1576,7 +1578,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 bool
 DatabasePool::_switch_db(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::_switch_db()");
+	L_CALL(this, "DatabasePool::_switch_db(%s)", endpoint.to_string().c_str());
 
 	auto queues_set = queues[endpoint.hash()];
 
@@ -1607,7 +1609,7 @@ DatabasePool::_switch_db(const Endpoint& endpoint)
 bool
 DatabasePool::switch_db(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::switch_db()");
+	L_CALL(this, "DatabasePool::switch_db(%s)", endpoint.to_string().c_str());
 
 	std::lock_guard<std::mutex> lk(qmtx);
 	return _switch_db(endpoint);
@@ -1617,7 +1619,7 @@ DatabasePool::switch_db(const Endpoint& endpoint)
 void
 DatabasePool::init_ref(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::init_ref()");
+	L_CALL(this, "DatabasePool::init_ref(%s)", endpoint.to_string().c_str());
 
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
@@ -1650,7 +1652,7 @@ DatabasePool::init_ref(const Endpoint& endpoint)
 void
 DatabasePool::inc_ref(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::inc_ref()");
+	L_CALL(this, "DatabasePool::inc_ref(%s)", endpoint.to_string().c_str());
 
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
@@ -1694,7 +1696,7 @@ DatabasePool::inc_ref(const Endpoint& endpoint)
 void
 DatabasePool::dec_ref(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::dec_ref()");
+	L_CALL(this, "DatabasePool::dec_ref(%s)", endpoint.to_string().c_str());
 
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
@@ -1757,7 +1759,7 @@ DatabasePool::get_master_count()
 std::shared_ptr<const MsgPack>
 DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 {
-	L_CALL(this, "DatabasePool::get_schema()");
+	L_CALL(this, "DatabasePool::get_schema(%s, %d)", endpoint.to_string().c_str(), flags);
 
 	if (finished) return nullptr;
 
@@ -1796,7 +1798,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 void
 DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack> new_schema)
 {
-	L_CALL(this, "DatabasePool::set_schema()");
+	L_CALL(this, "DatabasePool::set_schema(%s, %d, %s)", endpoint.to_string().c_str(), flags, new_schema ? new_schema->to_string().c_str() : "nullptr");
 
 	atomic_shared_ptr<const MsgPack>* schema;
 	{
