@@ -258,7 +258,7 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define LIGHT_CYAN "\033[1;36m"
 #define WHITE "\033[1;37m"
 
-#define LOG_COL DARK_GREY
+#define LOG_COL WHITE
 #define DEBUG_COL NO_COL
 #define INFO_COL CYAN
 #define NOTICE_COL LIGHT_CYAN
@@ -292,7 +292,7 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define _LOG_BLUE(args...) _L(LOG_DEBUG, false, BLUE, args)
 #define _LOG_MAGENTA(args...) _L(LOG_DEBUG, false, MAGENTA, args)
 #define _LOG_CYAN(args...) _L(LOG_DEBUG, false, CYAN, args)
-#define _LOG_DARKGREY(args...) _L(LOG_DEBUG, false, DARK_GREY, args)
+#define _LOG_DARK_GREY(args...) _L(LOG_DEBUG, false, DARK_GREY, args)
 #define _LOG_LIGHT_RED(args...) _L(LOG_DEBUG, false, LIGHT_RED, args)
 #define _LOG_LIGHT_GREEN(args...) _L(LOG_DEBUG, false, LIGHT_GREEN, args)
 #define _LOG_LIGHT_YELLOW(args...) _L(LOG_DEBUG, false, LIGHT_YELLOW, args)
@@ -311,7 +311,7 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define _LOG_INDENTED_BLUE(args...) _L(LOG_DEBUG, true, BLUE, args)
 #define _LOG_INDENTED_MAGENTA(args...) _L(LOG_DEBUG, true, MAGENTA, args)
 #define _LOG_INDENTED_CYAN(args...) _L(LOG_DEBUG, true, CYAN, args)
-#define _LOG_INDENTED_DARKGREY(args...) _L(LOG_DEBUG, true, DARK_GREY, args)
+#define _LOG_INDENTED_DARK_GREY(args...) _L(LOG_DEBUG, true, DARK_GREY, args)
 #define _LOG_INDENTED_LIGHT_RED(args...) _L(LOG_DEBUG, true, LIGHT_RED, args)
 #define _LOG_INDENTED_LIGHT_GREEN(args...) _L(LOG_DEBUG, true, LIGHT_GREEN, args)
 #define _LOG_INDENTED_LIGHT_YELLOW(args...) _L(LOG_DEBUG, true, LIGHT_YELLOW, args)
@@ -330,7 +330,7 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define _LOG_STACKED_BLUE(args...) auto UNIQUE_NAME = _LOG_INDENTED_BLUE(args)
 #define _LOG_STACKED_MAGENTA(args...) auto UNIQUE_NAME = _LOG_INDENTED_MAGENTA(args)
 #define _LOG_STACKED_CYAN(args...) auto UNIQUE_NAME = _LOG_INDENTED_CYAN(args)
-#define _LOG_STACKED_DARKGREY(args...) auto UNIQUE_NAME = _LOG_INDENTED_DARKGREY(args)
+#define _LOG_STACKED_DARK_GREY(args...) auto UNIQUE_NAME = _LOG_INDENTED_DARK_GREY(args)
 #define _LOG_STACKED_LIGHT_RED(args...) auto UNIQUE_NAME = _LOG_INDENTED_LIGHT_RED(args)
 #define _LOG_STACKED_LIGHT_GREEN(args...) auto UNIQUE_NAME = _LOG_INDENTED_LIGHT_GREEN(args)
 #define _LOG_STACKED_LIGHT_YELLOW(args...) auto UNIQUE_NAME = _LOG_INDENTED_LIGHT_YELLOW(args)
@@ -396,7 +396,7 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 
 ////////////////////////////////////////////////////////////////////////////////
 // Enable the following when needed. Use _LOG_* _LOG_INDENTED_* or _LOG_STACKED_*
-// ex. _LOG, _LOG_LOG, _LOG_CYAN, _LOG_STACKED_LOG or _LOG_INDENTED_MAGENTA
+// ex. _LOG, _LOG_STACKED_DARK_GREY, _LOG_CYAN, _LOG_STACKED_LOG or _LOG_INDENTED_MAGENTA
 
 #define L_TRACEBACK _
 #define L_CALL _
