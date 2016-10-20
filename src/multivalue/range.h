@@ -56,7 +56,7 @@ public:
 
 	// Call this function for create a new Query based in ranges.
 	static Xapian::Query getQuery(const required_spc_t& field_spc, const std::string& field_name, const std::string& start, const std::string& end);
-	static Xapian::Query getQuery(const required_spc_t& field_spc, const std::string& field_name, const MsgPack *start, const MsgPack *end);
+	static Xapian::Query getQuery(const required_spc_t& field_spc, const std::string& field_name, const MsgPack& start, const MsgPack& end);
 };
 
 
