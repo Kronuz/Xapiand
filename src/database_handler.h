@@ -159,9 +159,9 @@ class Document {
 	mutable Xapian::Document _document;
 
 	Xapian::Document& doc() {
-		L_CALL(this, "Document::doc(%d)", _database != db_handler->database);
+		L_CALL(this, "Document::doc(%d)", db_handler && db_handler->database && _database != db_handler->database);
 
-		if (db_handler->database && _database != db_handler->database) {
+		if (db_handler && db_handler->database && _database != db_handler->database) {
 			_database = db_handler->database;
 			_document = _database->get_document(did);
 		}
@@ -169,9 +169,9 @@ class Document {
 	}
 
 	const Xapian::Document& doc() const {
-		L_CALL(this, "Document::doc(%d) const", _database != db_handler->database);
+		L_CALL(this, "Document::doc(%d) const", db_handler->database && _database != db_handler->database);
 
-		if (db_handler->database && _database != db_handler->database) {
+		if (db_handler && db_handler->database && _database != db_handler->database) {
 			_database = db_handler->database;
 			_document = _database->get_document(did);
 		}
@@ -185,11 +185,14 @@ public:
 
 	Document(const Xapian::Document &doc)
 		: db_handler(nullptr),
-		  did(doc.get_docid()) { }
+		  did(doc.get_docid()),
+		  _document(doc) { }
 
 	Document(DatabaseHandler* db_handler_, const Xapian::Document &doc)
 		: db_handler(db_handler_),
-		  did(doc.get_docid()) { }
+		  did(doc.get_docid()),
+		  _database(db_handler->database),
+		  _document(doc) { }
 
 	std::string get_value(Xapian::valueno slot) const {
 		L_CALL(this, "Document::get_value()");
