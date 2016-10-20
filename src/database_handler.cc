@@ -252,7 +252,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& _obj, std::string&
 Xapian::docid
 DatabaseHandler::index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
 {
-	L_CALL(this, "DatabaseHandler::index(1)");
+	L_CALL(this, "DatabaseHandler::index() [1]");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
@@ -342,7 +342,7 @@ DatabaseHandler::index(const std::string& body, const std::string& _document_id,
 Xapian::docid
 DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
 {
-	L_CALL(this, "DatabaseHandler::index(2)");
+	L_CALL(this, "DatabaseHandler::index() [2]");
 
 	L_INDEX(this, "Document to index: %s", obj.to_string().c_str());
 	Xapian::Document doc;
@@ -431,7 +431,7 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 void
 DatabaseHandler::write_schema(const std::string& body)
 {
-	L_CALL(this, "DatabaseHandler::write_schema(1)");
+	L_CALL(this, "DatabaseHandler::write_schema() [1]");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
@@ -449,7 +449,7 @@ DatabaseHandler::write_schema(const std::string& body)
 void
 DatabaseHandler::write_schema(const MsgPack& obj)
 {
-	L_CALL(this, "DatabaseHandler::write_schema(2)");
+	L_CALL(this, "DatabaseHandler::write_schema() [2]");
 
 	L_INDEX(this, "Schema to write: %s", obj.to_string().c_str());
 

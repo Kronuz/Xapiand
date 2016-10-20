@@ -411,7 +411,7 @@ public:
 	}
 
 	uint32_t write(const char *data, size_t data_size, void* args=nullptr) {
-		L_CALL(this, "Storage::write(1)");
+		L_CALL(this, "Storage::write() [1]");
 
 		uint32_t curr_offset = header.head.offset;
 		const char* orig_data = data;
@@ -628,7 +628,7 @@ public:
 	}
 
 	size_t read(char* buf, size_t buf_size, uint32_t limit=-1, void* args=nullptr) {
-		L_CALL(this, "Storage::read(1)");
+		L_CALL(this, "Storage::read() [1]");
 
 		if (!buf_size) {
 			return 0;
@@ -755,13 +755,13 @@ public:
 	}
 
 	inline uint32_t write(const std::string& data, void* args=nullptr) {
-		L_CALL(this, "Storage::write(2)");
+		L_CALL(this, "Storage::write() [2]");
 
 		return write(data.data(), data.size(), args);
 	}
 
 	inline std::string read(uint32_t limit=-1, void* args=nullptr) {
-		L_CALL(this, "Storage::read(2)");
+		L_CALL(this, "Storage::read() [2]");
 
 		std::string ret;
 
