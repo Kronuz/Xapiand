@@ -121,10 +121,11 @@
 
 
 // Default prefixes
-#define DOCUMENT_ID_TERM_PREFIX      "Q"
-#define DOCUMENT_CUSTOM_TERM_PREFIX  "X"
-#define DOCUMENT_DB_MASTER           "M"
-#define DOCUMENT_DB_SLAVE            "S"
+#define DOCUMENT_ID_TERM_PREFIX         "Q"
+#define DOCUMENT_CUSTOM_TERM_PREFIX     "X"
+#define DOCUMENT_NAMESPACE_TERM_PREFIX  "N"
+#define DOCUMENT_DB_MASTER              "M"
+#define DOCUMENT_DB_SLAVE               "S"
 
 
 #define ANY_CONTENT_TYPE             "*/*"
