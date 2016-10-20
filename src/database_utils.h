@@ -217,11 +217,11 @@ inline bool is_valid(const std::string& field_name) {
 	return !field_name.empty() && field_name.at(0) != '_';
 }
 
-
 inline void set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str) {
 	doc.set_data(std::string(1, DATABASE_DATA_HEADER_MAGIC).append(serialise_length(obj_data_str.size())).append(obj_data_str).append(1, DATABASE_DATA_FOOTER_MAGIC).append(blob_str));
 }
 
+class Document;
 
 Xapian::valueno get_slot(const std::string& name);
 std::string prefixed(const std::string& term, const std::string& prefixO);
@@ -235,8 +235,8 @@ long long read_mastery(const std::string& dir, bool force);
 MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);
 rapidjson::Document to_json(const std::string& str);
-MsgPack get_MsgPack(const Xapian::Document& doc);
-std::string get_blob(const Xapian::Document& doc);
+MsgPack get_MsgPack(const Document& document);
+std::string get_blob(const Document& document);
 std::string msgpack_to_html(const msgpack::object& o);
 std::string msgpack_map_value_to_html(const msgpack::object& o);
 std::string msgpack_to_html_error(const msgpack::object& o);

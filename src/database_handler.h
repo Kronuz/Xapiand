@@ -36,16 +36,19 @@ using endpoints_error_list = std::unordered_map<std::string, std::vector<std::st
 
 
 class AggregationMatchSpy;
+class Document;
 
 
 class DatabaseHandler {
+	friend class Document;
+
 	Endpoints endpoints;
 	int flags;
 	HttpMethod method;
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
-	Xapian::Document _get_document(const std::string& term_id);
+	Document _get_document(const std::string& term_id);
 	MsgPack run_script(const MsgPack& data, const std::string& prefix_term_id);
 
 	MsgPack _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
@@ -54,6 +57,41 @@ class DatabaseHandler {
 	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, AggregationMatchSpy* aggs);
 
 public:
+	class lock_database {
+		DatabaseHandler* db_handler;
+		std::shared_ptr<Database>* database;
+
+		lock_database(const lock_database&) = delete;
+		lock_database& operator=(const lock_database&) = delete;
+
+	public:
+		lock_database(DatabaseHandler* db_handler_) : db_handler(db_handler_), database(nullptr) {
+			lock();
+		}
+
+		lock_database(DatabaseHandler& db_handler) : lock_database(&db_handler) { }
+
+		~lock_database() {
+			unlock();
+		}
+
+		void lock() {
+			if (!db_handler->database && XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
+				database = &db_handler->database;
+			}
+		}
+
+		void unlock() noexcept {
+			if (database) {
+				if (*database) {
+					XapiandManager::manager->database_pool.checkin(*database);
+				}
+				(*database).reset();
+				database = nullptr;
+			}
+		}
+	};
+
 	DatabaseHandler();
 	DatabaseHandler(const Endpoints &endpoints_, int flags_=0);
 	~DatabaseHandler();
@@ -82,19 +120,6 @@ public:
 		return std::make_shared<Schema>(fvs ? fvs : fvs_aux);
 	}
 
-	void checkout() {
-		if (!database && !XapiandManager::manager->database_pool.checkout(database, endpoints, flags)) {
-			throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
-		}
-	}
-
-	void checkin() {
-		if (database) {
-			XapiandManager::manager->database_pool.checkin(database);
-			database.reset();
-		}
-	}
-
 	void reset(const Endpoints& endpoints_, int flags_, HttpMethod method_);
 
 	Xapian::docid index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list=nullptr);
@@ -104,42 +129,217 @@ public:
 
 	void get_mset(const query_field_t& e, Xapian::MSet& mset, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions, int offset=0);
 
-	Xapian::Document get_document(const Xapian::docid& did) {
-		L_CALL(this, "DatabaseHandler::get_document(1)");
+	void update_schema() const;
+	void update_schemas() const;
 
-		checkout();
-		auto doc = database->get_document(did);
-		checkin();
-		return doc;
-	}
-
-	void update_schema() const {
-		L_CALL(this, "DatabaseHandler::update_schema()");
-
-		auto mod_schema = schema->get_modified_schema();
-		if (mod_schema) {
-			XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, mod_schema);
-		}
-	}
-
-	void update_schemas() const {
-		L_CALL(this, "DatabaseHandler::update_schemas()");
-
-		auto mod_schema = schema->get_modified_schema();
-		if (mod_schema) {
-			for (const auto& e: endpoints) {
-				XapiandManager::manager->database_pool.set_schema(e, flags, mod_schema);
-			}
-		}
-	}
-
-	Xapian::Document get_document(const std::string& doc_id);
+	Document get_document(const Xapian::docid& did);
+	Document get_document(const std::string& doc_id);
 	Xapian::docid get_docid(const std::string& doc_id);
 
 	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 	endpoints_error_list multi_db_delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 
-	MsgPack get_value(const Xapian::Document& document, const std::string& slot_name);
 	void get_document_info(MsgPack& info, const std::string& document_id);
 	void get_database_info(MsgPack& info);
+};
+
+
+class Document {
+	DatabaseHandler& db_handler;
+	const Xapian::docid did;
+
+	mutable std::shared_ptr<Database> _database;
+	mutable Xapian::Document _document;
+
+	Xapian::Document doc() {
+		L_CALL(this, "Document::doc(%d)", _database != db_handler.database);
+
+		if (_database != db_handler.database) {
+			_database = db_handler.database;
+			_document = _database->get_document(did);
+		}
+		return _document;
+	}
+
+	const Xapian::Document doc() const {
+		L_CALL(this, "Document::doc(%d) const", _database != db_handler.database);
+
+		if (_database != db_handler.database) {
+			_database = db_handler.database;
+			_document = _database->get_document(did);
+		}
+		return _document;
+	}
+
+public:
+	Document(DatabaseHandler& db_handler_, const Xapian::Document &doc)
+		: db_handler(db_handler_),
+		  did(doc.get_docid()) { }
+
+	std::string get_value(Xapian::valueno slot) const {
+		L_CALL(this, "Document::get_value()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		return doc().get_value(slot);
+	}
+
+	MsgPack get_value(const std::string& slot_name) const {
+		L_CALL(this, "Document::get_value(%s)", slot_name.c_str());
+
+		auto schema = db_handler.get_schema();
+		auto slot_field = schema->get_slot_field(slot_name);
+
+		return Unserialise::MsgPack(slot_field.get_type(), get_value(slot_field.slot));
+	}
+
+	void add_value(Xapian::valueno slot, const std::string& value) {
+		L_CALL(this, "Document::add_value()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		doc().add_value(slot, value);
+	}
+
+	void add_value(const std::string& slot_name, const MsgPack& value) {
+		L_CALL(this, "Document::add_value(%s)", slot_name.c_str());
+
+		auto schema = db_handler.get_schema();
+		auto slot_field = schema->get_slot_field(slot_name);
+
+		add_value(slot_field.slot, Serialise::MsgPack(slot_field, value));
+	}
+
+	void remove_value(Xapian::valueno slot) {
+		DatabaseHandler::lock_database lk(db_handler);
+		doc().remove_value(slot);
+	}
+
+	void remove_value(const std::string& slot_name) {
+		L_CALL(this, "Document::remove_value(%s)", slot_name.c_str());
+
+		auto schema = db_handler.get_schema();
+		auto slot_field = schema->get_slot_field(slot_name);
+
+		remove_value(slot_field.slot);
+	}
+
+	void clear_values() {
+		L_CALL(this, "Document::clear_values()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		doc().clear_values();
+	}
+
+	std::string get_data() const {
+		L_CALL(this, "Document::get_data()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		return doc().get_data();
+	}
+
+	void set_data(const std::string& data) {
+		L_CALL(this, "Document::set_data(%s)", repr(data).c_str());
+
+		DatabaseHandler::lock_database lk(db_handler);
+		doc().set_data(data);
+	}
+
+	void add_posting(const std::string& tname, Xapian::termpos tpos, Xapian::termcount wdfinc = 1) {
+		L_CALL(this, "Document::add_posting()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		doc().add_posting(tname, tpos, wdfinc);
+	}
+
+	void add_term(const std::string& tname, Xapian::termcount wdfinc = 1) {
+		L_CALL(this, "Document::add_term()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		doc().add_term(tname, wdfinc);
+	}
+
+	void add_boolean_term(const std::string& term) {
+		L_CALL(this, "Document::add_boolean_term()");
+
+		add_term(term, 0);
+	}
+
+	void remove_posting(const std::string& tname, Xapian::termpos tpos, Xapian::termcount wdfdec = 1) {
+		L_CALL(this, "Document::remove_posting()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		doc().remove_posting(tname, tpos, wdfdec);
+	}
+
+	void remove_term(const std::string& tname) {
+		L_CALL(this, "Document::remove_term()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		doc().remove_term(tname);
+	}
+
+	void clear_terms() {
+		L_CALL(this, "Document::clear_terms()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		doc().clear_terms();
+	}
+
+	Xapian::termcount termlist_count() const {
+		L_CALL(this, "Document::termlist_count()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		return doc().termlist_count();
+	}
+
+	Xapian::TermIterator termlist_begin() const {
+		L_CALL(this, "Document::termlist_begin()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		return doc().termlist_begin();
+	}
+
+	Xapian::TermIterator termlist_end() const noexcept {
+		L_CALL(this, "Document::termlist_end()");
+
+	    return Xapian::TermIterator();
+	}
+
+	Xapian::termcount values_count() const {
+		L_CALL(this, "Document::values_count()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		return doc().values_count();
+	}
+
+	Xapian::ValueIterator values_begin() const {
+		L_CALL(this, "Document::values_begin()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		return doc().values_begin();
+	}
+
+	Xapian::ValueIterator values_end() const noexcept {
+		L_CALL(this, "Document::values_end()");
+
+	    return Xapian::ValueIterator();
+	}
+
+	Xapian::docid get_docid() const {
+		L_CALL(this, "Document::get_docid()");
+
+		return did;
+	}
+
+	std::string serialise() const {
+		L_CALL(this, "Document::serialise()");
+
+		DatabaseHandler::lock_database lk(db_handler);
+		return doc().serialise();
+	}
+
+	static Document unserialise(DatabaseHandler& db_handler, const std::string& serialised) {
+		L_CALL(nullptr, "Document::unserialise()");
+
+		return Document(db_handler, Xapian::Document::unserialise(serialised));
+	}
 };

@@ -22,6 +22,7 @@
 
 #include "database_utils.h"
 
+#include "database_handler.h"
 #include "io_utils.h"
 #include "log.h"
 #include "serialise.h"
@@ -166,9 +167,9 @@ rapidjson::Document to_json(const std::string& str)
 }
 
 
-MsgPack get_MsgPack(const Xapian::Document& doc)
+MsgPack get_MsgPack(const Document& document)
 {
-	auto data = doc.get_data();
+	auto data = document.get_data();
 
 	size_t length;
 	const char *p = data.data();
@@ -191,9 +192,9 @@ MsgPack get_MsgPack(const Xapian::Document& doc)
 }
 
 
-std::string get_blob(const Xapian::Document& doc)
+std::string get_blob(const Document& document)
 {
-	std::string data = doc.get_data();
+	std::string data = document.get_data();
 
 	size_t length;
 	const char *p = data.data();

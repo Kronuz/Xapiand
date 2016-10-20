@@ -40,12 +40,10 @@ DatabaseHandler::DatabaseHandler(const Endpoints &endpoints_, int flags_)
 	: endpoints(endpoints_),
 	  flags(flags_)
 {
-	checkout();
 }
 
 
 DatabaseHandler::~DatabaseHandler() {
-	checkin();
 }
 
 
@@ -58,27 +56,19 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, HttpMethod metho
 	endpoints = endpoints_;
 	flags = flags_;
 	method = method_;
-
-	if (database) {
-		checkin();
-		checkout();
-	}
 }
 
 
-Xapian::Document
+Document
 DatabaseHandler::_get_document(const std::string& term_id)
 {
 	L_CALL(this, "DatabaseHandler::_get_document()");
 
 	Xapian::Query query(term_id);
 
-	checkout();
+	DatabaseHandler::lock_database lk(this);
 	Xapian::docid did = database->find_document(query);
-	Xapian::Document doc = database->get_document(did);
-	checkin();
-
-	return doc;
+	return Document(*this, database->get_document(did));
 }
 
 
@@ -256,9 +246,11 @@ DatabaseHandler::index(const std::string& body, const std::string& _document_id,
 		set_data(doc, f_data.serialise(), blob ? body : "");
 		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
-		checkout();
-		did = database->replace_document_term(term_id, doc, commit_);
-		checkin();
+		{
+			DatabaseHandler::lock_database lk(this);
+			did = database->replace_document_term(term_id, doc, commit_);
+		}
+
 		update_schema();
 	} else {
 		schema = get_fvschema();
@@ -273,16 +265,16 @@ DatabaseHandler::index(const std::string& body, const std::string& _document_id,
 		for (const auto& e : _endpoints) {
 			endpoints.clear();
 			endpoints.add(e);
-			checkout();
+
+			DatabaseHandler::lock_database lk(this);
 			try {
 				did = database->replace_document_term(term_id, doc, commit_);
 			} catch (const Xapian::Error& err) {
 				err_list->operator[](err.get_error_string()).push_back(e.as_string());
-				checkin();
 			}
-			checkin();
 		}
 		endpoints = std::move(_endpoints);
+
 		update_schemas();
 	}
 
@@ -299,7 +291,7 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 	Xapian::Document doc;
 	std::string term_id;
 
-	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+	schema = get_schema();
 
 	auto f_data = _index(doc, obj, term_id, _document_id, ct_type, ct_length);
 	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
@@ -307,9 +299,9 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 	set_data(doc, f_data.serialise(), "");
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
-	checkout();
+	DatabaseHandler::lock_database lk(this);
 	auto did = database->replace_document_term(term_id, doc, commit_);
-	checkin();
+	lk.unlock();
 
 	update_schema();
 
@@ -372,9 +364,9 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 	set_data(doc, f_data.serialise(), get_blob(document));
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
-	checkout();
+	DatabaseHandler::lock_database lk(this);
 	auto did = database->replace_document_term(term_id, doc, commit_);
-	checkin();
+	lk.unlock();
 
 	update_schema();
 
@@ -499,7 +491,7 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, Aggregatio
 {
 	L_CALL(this, "DatabaseHandler::get_mset()");
 
-	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+	schema = get_schema();
 
 	// Get the collapse key to use for queries.
 	Xapian::valueno collapse_key;
@@ -538,7 +530,7 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, Aggregatio
 		}
 	}
 
-	checkout();
+	DatabaseHandler::lock_database lk(this);
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			Xapian::Query query;
@@ -589,16 +581,51 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, Aggregatio
 		}
 		database->reopen();
 	}
-	checkin();
 }
 
 
-Xapian::Document
+Document
+DatabaseHandler::get_document(const Xapian::docid& did)
+{
+	L_CALL(this, "DatabaseHandler::get_document()");
+
+	DatabaseHandler::lock_database lk(this);
+	return Document(*this, database->get_document(did));
+}
+
+
+void
+DatabaseHandler::update_schema() const
+{
+	L_CALL(this, "DatabaseHandler::update_schema()");
+
+	auto mod_schema = schema->get_modified_schema();
+	if (mod_schema) {
+		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, mod_schema);
+	}
+}
+
+
+void
+DatabaseHandler::update_schemas() const
+{
+	L_CALL(this, "DatabaseHandler::update_schemas()");
+
+	auto mod_schema = schema->get_modified_schema();
+	if (mod_schema) {
+		for (const auto& e: endpoints) {
+			XapiandManager::manager->database_pool.set_schema(e, flags, mod_schema);
+		}
+	}
+}
+
+
+Document
 DatabaseHandler::get_document(const std::string& doc_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document(2)");
+	L_CALL(this, "DatabaseHandler::get_document(%s)", doc_id.c_str());
 
-	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+	schema = get_schema();
 
 	auto field_spc = schema->get_slot_field(ID_FIELD_NAME);
 
@@ -609,32 +636,28 @@ DatabaseHandler::get_document(const std::string& doc_id)
 Xapian::docid
 DatabaseHandler::get_docid(const std::string& doc_id)
 {
-	L_CALL(this, "DatabaseHandler::get_docid()");
+	L_CALL(this, "DatabaseHandler::get_docid(%s)", doc_id.c_str());
 
-	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+	schema = get_schema();
 
 	auto field_spc = schema->get_slot_field(ID_FIELD_NAME);
 
 	Xapian::Query query(prefixed(Serialise::MsgPack(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
 
-	checkout();
-	Xapian::docid did = database->find_document(query);
-	checkin();
-
-	return did;
+	DatabaseHandler::lock_database lk(this);
+	return database->find_document(query);
 }
 
 
 void
 DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool wal_)
 {
-	L_CALL(this, "DatabaseHandler::delete_document()");
+	L_CALL(this, "DatabaseHandler::delete_document(%s)", doc_id.c_str());
 
 	auto _id = get_docid(doc_id);
 
-	checkout();
+	DatabaseHandler::lock_database lk(this);
 	database->delete_document(_id, commit_, wal_);
-	checkin();
 }
 
 
@@ -650,15 +673,12 @@ DatabaseHandler::multi_db_delete_document(const std::string& doc_id, bool commit
 		endpoints.add(e);
 		try {
 			auto _id = get_docid(doc_id);
-			checkout();
+			DatabaseHandler::lock_database lk(this);
 			database->delete_document(_id, commit_, wal_);
-			checkin();
 		} catch (const DocNotFoundError& err) {
 			err_list["Document not found"].push_back(e.as_string());
-			checkin();
 		} catch (const Xapian::Error& err) {
 			err_list[err.get_error_string()].push_back(e.as_string());
-			checkin();
 		}
 	}
 	endpoints = _endpoints;
@@ -666,47 +686,30 @@ DatabaseHandler::multi_db_delete_document(const std::string& doc_id, bool commit
 }
 
 
-MsgPack
-DatabaseHandler::get_value(const Xapian::Document& document, const std::string& slot_name)
-{
-	L_CALL(this, "DatabaseHandler::get_value()");
-
-	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
-
-	auto slot_field = schema->get_slot_field(slot_name);
-
-	try {
-		return Unserialise::MsgPack(slot_field.get_type(), document.get_value(slot_field.slot));
-	} catch (const SerialisationError& exc) {
-		throw MSG_Error("Error unserializing value (%s)", exc.get_msg().c_str());
-	}
-
-	return MsgPack();
-}
-
-
 void
 DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document_info()");
+	L_CALL(this, "DatabaseHandler::get_document_info(%s, %s)", info.to_string().c_str(), doc_id.c_str());
 
-	auto doc = get_document(doc_id);
+	DatabaseHandler::lock_database lk(this);  // optimize nested database locking
 
-	info[ID_FIELD_NAME] = doc.get_value(DB_SLOT_ID);
+	auto document = get_document(doc_id);
 
-	MsgPack obj_data = get_MsgPack(doc);
+	info[ID_FIELD_NAME] = document.get_value(DB_SLOT_ID);
+
+	MsgPack obj_data = get_MsgPack(document);
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
 	} catch (const std::out_of_range&) { }
 
 	info[RESERVED_DATA] = std::move(obj_data);
 
-	auto ct_type = doc.get_value(DB_SLOT_TYPE);
+	auto ct_type = document.get_value(DB_SLOT_TYPE);
 	info["_blob"] = ct_type != JSON_CONTENT_TYPE && ct_type != MSGPACK_CONTENT_TYPE;
 
 	auto& stats_terms = info[RESERVED_TERMS];
-	const auto it_e = doc.termlist_end();
-	for (auto it = doc.termlist_begin(); it != it_e; ++it) {
+	const auto it_e = document.termlist_end();
+	for (auto it = document.termlist_begin(); it != it_e; ++it) {
 		auto& stat_term = stats_terms[*it];
 		stat_term["_wdf"] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
 		stat_term["_term_freq"] = it.get_termfreq();  // The number of documents which this term indexes.
@@ -720,8 +723,8 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 	}
 
 	auto& stats_values = info[RESERVED_VALUES];
-	const auto iv_e = doc.values_end();
-	for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
+	const auto iv_e = document.values_end();
+	for (auto iv = document.values_begin(); iv != iv_e; ++iv) {
 		stats_values[std::to_string(iv.get_valueno())] = *iv;
 	}
 }
@@ -730,9 +733,9 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 void
 DatabaseHandler::get_database_info(MsgPack& info)
 {
-	L_CALL(this, "DatabaseHandler::get_database_info()");
+	L_CALL(this, "DatabaseHandler::get_database_info(%s)", info.to_string().c_str());
 
-	checkout();
+	DatabaseHandler::lock_database lk(this);
 	unsigned doccount = database->db->get_doccount();
 	unsigned lastdocid = database->db->get_lastdocid();
 	info["_uuid"] = database->db->get_uuid();
@@ -743,5 +746,4 @@ DatabaseHandler::get_database_info(MsgPack& info)
 	info["_doc_len_lower"] =  database->db->get_doclength_lower_bound();
 	info["_doc_len_upper"] = database->db->get_doclength_upper_bound();
 	info["_has_positions"] = database->db->has_positions();
-	checkin();
 }

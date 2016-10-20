@@ -555,9 +555,6 @@ HttpClient::_run()
 	}
 
 	if (error_code) {
-		if (db_handler.get_database()) {
-			db_handler.checkin();
-		}
 		if (written) {
 			destroy();
 			detach();
@@ -739,7 +736,7 @@ HttpClient::home_view(HttpMethod method)
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
 	} catch (const std::out_of_range&) {
-		obj_data[ID_FIELD_NAME] = db_handler.get_value(document, ID_FIELD_NAME);
+		obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 	}
 
 #ifdef XAPIAND_CLUSTERING
@@ -1192,7 +1189,7 @@ HttpClient::search_view(HttpMethod method)
 			try {
 				obj_data = obj_data.at(RESERVED_DATA);
 			} catch (const std::out_of_range&) {
-				obj_data[ID_FIELD_NAME] = db_handler.get_value(document, ID_FIELD_NAME);
+				obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 				// Detailed info about the document:
 				obj_data[RESERVED_RANK] = m.get_rank();
 				obj_data[RESERVED_WEIGHT] = m.get_weight();
