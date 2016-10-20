@@ -732,7 +732,7 @@ HttpClient::home_view(HttpMethod method)
 	auto local_node_ = local_node.load();
 	auto document = db_handler.get_document(std::to_string(local_node_->id));
 
-	auto obj_data = get_MsgPack(document);
+	auto obj_data = document.get_obj();
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
 	} catch (const std::out_of_range&) {
@@ -1173,12 +1173,12 @@ HttpClient::search_view(HttpMethod method)
 
 			MsgPack obj_data;
 			if (is_acceptable_type(json_type, ct_type)) {
-				obj_data = get_MsgPack(document);
+				obj_data = document.get_obj();
 			} else if (is_acceptable_type(msgpack_type, ct_type)) {
-				obj_data = get_MsgPack(document);
+				obj_data = document.get_obj();
 			} else {
 				// Returns blob_data in case that type is unkown
-				auto blob_data = get_blob(document);
+				auto blob_data = document.get_blob();
 				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type_str));
 				return;
 			}

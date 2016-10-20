@@ -22,7 +22,6 @@
 
 #include "database_utils.h"
 
-#include "database_handler.h"
 #include "io_utils.h"
 #include "log.h"
 #include "serialise.h"
@@ -164,50 +163,6 @@ rapidjson::Document to_json(const std::string& str)
 	rapidjson::Document doc;
 	json_load(doc, str);
 	return doc;
-}
-
-
-MsgPack get_MsgPack(const Document& document)
-{
-	auto data = document.get_data();
-
-	size_t length;
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) {
-		return MsgPack();
-	}
-
-	try {
-		length = unserialise_length(&p, p_end, true);
-	} catch (Xapian::SerialisationError) {
-		return MsgPack();
-	}
-
-	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) {
-		return MsgPack();
-	}
-
-	return MsgPack::unserialise(std::string(p, length));
-}
-
-
-std::string get_blob(const Document& document)
-{
-	std::string data = document.get_data();
-
-	size_t length;
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return data;
-	try {
-		length = unserialise_length(&p, p_end, true);
-	} catch (Xapian::SerialisationError) {
-		return data;
-	}
-	p += length;
-	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) return data;
-	return std::string(p, p_end - p);
 }
 
 

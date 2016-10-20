@@ -32,6 +32,64 @@
 #include "serialise.h"
 
 
+std::string
+join_data(const std::string& obj, const std::string& blob)
+{
+	L_CALL(nullptr, "set_data(...)");
+	auto len = serialise_length(obj.size());
+	std::string data;
+	data.reserve(1 + len.size() + obj.size() + 1 + blob.size());
+	data.push_back(DATABASE_DATA_HEADER_MAGIC);
+	data.append(len);
+	data.append(obj);
+	data.push_back(DATABASE_DATA_FOOTER_MAGIC);
+	data.append(blob);
+	return data;
+}
+
+
+std::string
+split_data_obj(const std::string& data)
+{
+	size_t length;
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	if (*p++ != DATABASE_DATA_HEADER_MAGIC) {
+		return std::string();
+	}
+
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (Xapian::SerialisationError) {
+		return std::string();
+	}
+
+	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) {
+		return std::string();
+	}
+
+	return std::string(p, length);
+}
+
+
+std::string
+split_data_blob(const std::string& data)
+{
+	size_t length;
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return data;
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (Xapian::SerialisationError) {
+		return data;
+	}
+	p += length;
+	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) return data;
+	return std::string(p, p_end - p);
+}
+
+
 DatabaseHandler::DatabaseHandler()
 	: flags(0) { }
 
@@ -68,7 +126,7 @@ DatabaseHandler::_get_document(const std::string& term_id)
 
 	DatabaseHandler::lock_database lk(this);
 	Xapian::docid did = database->find_document(query);
-	return Document(*this, database->get_document(did));
+	return Document(this, database->get_document(did));
 }
 
 
@@ -94,7 +152,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 				MsgPack old_data;
 				try {
 					auto document = _get_document(prefix_term_id);
-					old_data = get_MsgPack(document);
+					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
 				return (*processor)["on_put"](data_, old_data);
@@ -104,7 +162,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 				MsgPack old_data;
 				try {
 					auto document = _get_document(prefix_term_id);
-					old_data = get_MsgPack(document);
+					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
 				return (*processor)["on_patch"](data_, old_data);
@@ -114,7 +172,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 				MsgPack old_data;
 				try {
 					auto document = _get_document(prefix_term_id);
-					old_data = get_MsgPack(document);
+					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
 				return (*processor)["on_delete"](data_, old_data);
@@ -230,7 +288,6 @@ DatabaseHandler::index(const std::string& body, const std::string& _document_id,
 			blob = true;
 			break;
 	}
-
 	L_INDEX(this, "Document to index: %s", body.c_str());
 
 	Xapian::Document doc;
@@ -243,7 +300,7 @@ DatabaseHandler::index(const std::string& body, const std::string& _document_id,
 		auto f_data = _index(doc, obj, term_id, _document_id, ct_type_, ct_length);
 		L_INDEX(this, "Data: %s", f_data.to_string().c_str());
 
-		set_data(doc, f_data.serialise(), blob ? body : "");
+		doc.set_data(join_data(f_data.serialise(), blob ? body : ""));
 		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 		{
@@ -258,7 +315,7 @@ DatabaseHandler::index(const std::string& body, const std::string& _document_id,
 		auto f_data = _index(doc, obj, term_id, _document_id, ct_type_, ct_length);
 		L_INDEX(this, "Data: %s", f_data.to_string().c_str());
 
-		set_data(doc, f_data.serialise(), blob ? body : "");
+		doc.set_data(join_data(f_data.serialise(), blob ? body : ""));
 		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 		const auto _endpoints = endpoints;
@@ -296,7 +353,7 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 	auto f_data = _index(doc, obj, term_id, _document_id, ct_type, ct_length);
 	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
 
-	set_data(doc, f_data.serialise(), "");
+	doc.set_data(join_data(f_data.serialise(), ""));
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	DatabaseHandler::lock_database lk(this);
@@ -349,19 +406,16 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 	}
 
 	auto document = get_document(_document_id);
-
-	auto obj_data = get_MsgPack(document);
-
-	apply_patch(obj_patch, obj_data);
-
-	L_INDEX(this, "Document to index: %s", obj_data.to_string().c_str());
+	auto obj = document.get_obj();
+	apply_patch(obj_patch, obj);
+	L_INDEX(this, "Document to index: %s", obj.to_string().c_str());
 
 	Xapian::Document doc;
 	std::string term_id;
-	auto f_data = _index(doc, obj_data, term_id, _document_id, _ct_type, ct_length);
+	auto f_data = _index(doc, obj, term_id, _document_id, _ct_type, ct_length);
 	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
 
-	set_data(doc, f_data.serialise(), get_blob(document));
+	doc.set_data(join_data(f_data.serialise(), document.get_blob()));
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	DatabaseHandler::lock_database lk(this);
@@ -590,7 +644,7 @@ DatabaseHandler::get_document(const Xapian::docid& did)
 	L_CALL(this, "DatabaseHandler::get_document()");
 
 	DatabaseHandler::lock_database lk(this);
-	return Document(*this, database->get_document(did));
+	return Document(this, database->get_document(did));
 }
 
 
@@ -697,7 +751,7 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 
 	info[ID_FIELD_NAME] = document.get_value(DB_SLOT_ID);
 
-	MsgPack obj_data = get_MsgPack(document);
+	MsgPack obj_data = document.get_obj();
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
 	} catch (const std::out_of_range&) { }
