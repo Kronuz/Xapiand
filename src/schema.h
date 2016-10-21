@@ -227,19 +227,20 @@ inline static std::string readable_index(TypeIndex index) noexcept {
 
 inline static std::string readable_type(const std::array<FieldType, 3>& sep_types) {
 	L_CALL(nullptr, "::readable_type([%d, %d, %d])", toUType(sep_types[0]), toUType(sep_types[1]), toUType(sep_types[2]));
-	std::string object;
-	if (sep_types[0] == FieldType::OBJECT) {
-		object.assign(OBJECT_STR);
-		object.push_back('/');
+
+	std::string result;
+	if (sep_types[0] != FieldType::EMPTY) {
+		result += Serialise::type(sep_types[0]);
 	}
-	std::string array;
-	if (sep_types[1] == FieldType::ARRAY) {
-		array.assign(ARRAY_STR);
-		array.push_back('/');
+	if (sep_types[1] != FieldType::EMPTY) {
+		if (!result.empty()) result += "/";
+		result += Serialise::type(sep_types[1]);
 	}
-	char result[30];
-	snprintf(result, 30, "%s%s%s", object.c_str(), array.c_str(), Serialise::type(sep_types[2]).c_str());
-	return std::string(result);
+	if (sep_types[2] != FieldType::EMPTY) {
+		if (!result.empty()) result += "/";
+		result += Serialise::type(sep_types[2]);
+	}
+	return result;
 }
 
 
