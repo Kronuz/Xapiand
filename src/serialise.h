@@ -319,3 +319,12 @@ namespace Unserialise {
 	// Unserialise str_type to its FieldType.
 	FieldType type(const std::string& str_type);
 };
+
+extern const char TYPE_FLOAT[];
+extern const char TYPE_POSITIVE[];
+extern const char TYPE_INTEGER[];
+extern const char TYPE_BOOLEAN[];
+extern const char TYPE_STRING[];
+extern const char TYPE_TEXT[];
+extern const char TYPE_UUID[];
+extern const char TYPE_EWKT[];
