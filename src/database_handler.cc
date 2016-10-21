@@ -595,34 +595,32 @@ DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, con
 		}
 	}
 
+	Xapian::Query query;
 	DatabaseHandler::lock_database lk(this);
+	switch (method) {
+		case HttpMethod::GET: {
+			Query query_object(schema, database);
+			query = query_object.get_query(e, suggestions);
+			break;
+		}
+
+		case HttpMethod::POST: {
+			if (qdsl && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
+				QueryDSL query_object(schema);
+				query = query_object.get_query(qdsl->at(QUERYDSL_QUERY));
+			} else {
+				Query query_object(schema, database);
+				query = query_object.get_query(e, suggestions);
+			}
+			break;
+		}
+
+		default:
+			break;
+	}
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			Xapian::Query query;
-			switch (method) {
-				case HttpMethod::GET:
-				{
-					Query query_object(schema, database);
-					query = query_object.get_query(e, suggestions);
-				}
-				break;
-
-				case HttpMethod::POST:
-				{
-					if (qdsl && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
-						QueryDSL query_object(schema);
-						query = query_object.get_query(qdsl->at(QUERYDSL_QUERY));
-					} else {
-						Query query_object(schema, database);
-						query = query_object.get_query(e, suggestions);
-					}
-				}
-				break;
-
-				default:
-					break;
-			}
-
 			auto check_at_least = std::min(database->db->get_doccount(), e.check_at_least);
 			auto enquire = get_enquire(query, collapse_key, &e, sorter.get(), aggs);
 			mset = enquire.get_mset(e.offset, e.limit, check_at_least);
