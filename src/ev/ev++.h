@@ -37,9 +37,6 @@
  * either the BSD or the GPL.
  */
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-parameter"
-
 #ifndef EVPP_H__
 #define EVPP_H__
 
@@ -816,4 +813,4 @@ namespace ev {
 }
 
 #endif
-#pragma clang diagnostic pop
+
