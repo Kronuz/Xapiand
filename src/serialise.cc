@@ -636,6 +636,42 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 			// Default type STRING.
 			return std::make_pair(FieldType::STRING, field_value.as_string());
 
+		case MsgPack::Type::MAP: {
+			std::string str_key;
+			try {
+				for(auto const& elem : field_value) {
+					str_key = elem.as_string();
+					switch(xxh64::hash(str_key)) {
+						case hash_integer:
+							return std::make_pair(FieldType::INTEGER, integer(field_value.at(str_key).as_i64()));
+
+						case hash_positive:
+							return std::make_pair(FieldType::POSITIVE, positive(field_value.at(str_key).as_u64()));
+
+						case hash_float:
+							return std::make_pair(FieldType::FLOAT, _float(field_value.at(str_key).as_f64()));
+
+						case hash_boolean:
+							return std::make_pair(FieldType::BOOLEAN, boolean(field_value.at(str_key).as_bool()));
+
+						case hash_string:
+							return std::make_pair(FieldType::STRING, field_value.at(str_key).as_string());
+
+						case hash_text:
+							return std::make_pair(FieldType::TEXT, field_value.at(str_key).as_string());
+
+						case hash_uuid:
+							return std::make_pair(FieldType::UUID, field_value.at(str_key).as_string());
+
+						case hash_ewkt:
+							return std::make_pair(FieldType::GEO, field_value.at(str_key).as_string());
+					}
+				}
+			} catch (const msgpack::type_error&) {
+				throw MSG_SerialisationError("Expected type %s", str_key.c_str());
+			}
+		}
+
 		default:
 			throw MSG_SerialisationError("Unexpected type %s", MsgPackTypes[static_cast<int>(field_value.getType())]);
 	}
@@ -659,7 +695,7 @@ Serialise::get_range_type(const class MsgPack& start, const class MsgPack& end, 
 	auto typ_end = get_type(end, bool_term);
 
 	if (typ_start.first != typ_end.first) {
-		throw MSG_SerialisationError("Mismatch types %s - %s", MsgPackTypes[static_cast<int>(typ_start.first)], MsgPackTypes[static_cast<int>(typ_end.first)]);
+		throw MSG_SerialisationError("Mismatch types %c - %c", typ_start.first, typ_end.first);
 	}
 
 	return std::make_tuple(typ_start.first, typ_start.second, typ_end.second);
