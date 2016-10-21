@@ -1369,7 +1369,7 @@ DatabasePool::finish()
 bool
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {
-	L_CALL(this, "DatabasePool::checkout(%s, %s, %d)", database ? repr(database->to_string()).c_str() : "nullptr", repr(endpoints.to_string()).c_str(), flags);
+	L_CALL(this, "DatabasePool::checkout(%s, %d)", repr(endpoints.to_string()).c_str(), flags);
 
 	bool writable = flags & DB_WRITABLE;
 	bool persistent = flags & DB_PERSISTENT;
