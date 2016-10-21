@@ -130,7 +130,7 @@ static int make_search(const test_geo_t _tests[], int len) {
 		query.query.clear();
 		query.query.push_back(p.query);
 
-		Xapian::MSet mset;
+		MSet mset;
 		std::vector<std::string> suggestions;
 
 		try {

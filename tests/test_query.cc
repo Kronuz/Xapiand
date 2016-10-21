@@ -204,7 +204,7 @@ static int make_search(const test_query_t _tests[], int len) {
 			query.partial.push_back(_partial);
 		}
 
-		Xapian::MSet mset;
+		MSet mset;
 		std::vector<std::string> suggestions;
 
 		try {

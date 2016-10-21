@@ -549,12 +549,12 @@ DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collap
 }
 
 
-Xapian::MSet
+MSet
 DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions)
 {
 	L_CALL(this, "DatabaseHandler::get_mset()");
 
-	Xapian::MSet mset;
+	MSet mset;
 
 	schema = get_schema();
 

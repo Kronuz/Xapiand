@@ -1055,7 +1055,7 @@ HttpClient::search_view(HttpMethod method)
 		query_field->query.push_back(std::string(ID_FIELD_NAME)  + ":" +  path_parser.get_id());
 	}
 
-	Xapian::MSet mset;
+	MSet mset;
 	std::vector<std::string> suggestions;
 
 	int db_flags = DB_OPEN;

@@ -626,7 +626,7 @@ static int make_search(const sort_t _tests[], int len, const std::string& metric
 			query.sort.push_back(_sort);
 		}
 
-		Xapian::MSet mset;
+		MSet mset;
 		std::vector<std::string> suggestions;
 
 		try {
