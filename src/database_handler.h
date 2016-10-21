@@ -150,32 +150,26 @@ std::string split_data_obj(const std::string& data);
 std::string split_data_blob(const std::string& data);
 
 
-class Document {
+class Document : public Xapian::Document {
 	friend class DatabaseHandler;
 
-	mutable Xapian::Document _document;
-	mutable std::shared_ptr<Database> _database;
-
 	DatabaseHandler* db_handler;
+	std::shared_ptr<Database> database;
 
-	Xapian::Document& doc() {
-		L_CALL(this, "Document::doc(%d)", db_handler && db_handler->database && _database != db_handler->database);
-
-		if (db_handler && db_handler->database && _database != db_handler->database) {
-			_database = db_handler->database;
-			_document = _database->get_document(_document.get_docid());
+	void update() {
+		if (db_handler && db_handler->database && database != db_handler->database) {
+			L_CALL(this, "Document::update()");
+			database = db_handler->database;
+			std::shared_ptr<Database> database_ = database;
+			DatabaseHandler* db_handler_ = db_handler;
+			*this = database->get_document(get_docid());
+			db_handler = db_handler_;
+			database = database_;
 		}
-		return _document;
 	}
 
-	const Xapian::Document& doc() const {
-		L_CALL(this, "Document::doc(%d) const", db_handler->database && _database != db_handler->database);
-
-		if (db_handler && db_handler->database && _database != db_handler->database) {
-			_database = db_handler->database;
-			_document = _database->get_document(_document.get_docid());
-		}
-		return _document;
+	void update() const {
+		const_cast<Document*>(this)->update();
 	}
 
 public:
@@ -183,19 +177,20 @@ public:
 		: db_handler(nullptr) { }
 
 	Document(const Xapian::Document &doc)
-		: _document(doc),
+		: Xapian::Document(doc),
 		  db_handler(nullptr) { }
 
 	Document(DatabaseHandler* db_handler_, const Xapian::Document &doc)
-		: _document(doc),
-		  _database(db_handler_->database),
-		  db_handler(db_handler_) { }
+		: Xapian::Document(doc),
+		  db_handler(db_handler_),
+		  database(db_handler->database) { }
 
 	std::string get_value(Xapian::valueno slot) const {
 		L_CALL(this, "Document::get_value()");
 
 		DatabaseHandler::lock_database lk(db_handler);
-		return doc().get_value(slot);
+		update();
+		return Xapian::Document::get_value(slot);
 	}
 
 	MsgPack get_value(const std::string& slot_name) const {
@@ -210,7 +205,7 @@ public:
 	void add_value(Xapian::valueno slot, const std::string& value) {
 		L_CALL(this, "Document::add_value()");
 
-		_document.add_value(slot, value);
+		Xapian::Document::add_value(slot, value);
 	}
 
 	void add_value(const std::string& slot_name, const MsgPack& value) {
@@ -225,7 +220,7 @@ public:
 	void remove_value(Xapian::valueno slot) {
 		L_CALL(this, "Document::remove_value()");
 
-		_document.remove_value(slot);
+		Xapian::Document::remove_value(slot);
 	}
 
 	void remove_value(const std::string& slot_name) {
@@ -237,23 +232,18 @@ public:
 		remove_value(slot_field.slot);
 	}
 
-	void clear_values() {
-		L_CALL(this, "Document::clear_values()");
-
-		_document.clear_values();
-	}
-
 	std::string get_data() const {
 		L_CALL(this, "Document::get_data()");
 
 		DatabaseHandler::lock_database lk(db_handler);
-		return doc().get_data();
+		update();
+		return Xapian::Document::get_data();
 	}
 
 	void set_data(const std::string& data) {
 		L_CALL(this, "Document::set_data(%s)", repr(data).c_str());
 
-		_document.set_data(data);
+		Xapian::Document::set_data(data);
 	}
 
 	void set_data(const std::string& obj, const std::string& blob) {
@@ -288,102 +278,43 @@ public:
 		set_data(obj.serialise(), get_blob());
 	}
 
-	void add_posting(const std::string& tname, Xapian::termpos tpos, Xapian::termcount wdfinc = 1) {
-		L_CALL(this, "Document::add_posting()");
-
-		_document.add_posting(tname, tpos, wdfinc);
-	}
-
-	void add_term(const std::string& tname, Xapian::termcount wdfinc = 1) {
-		L_CALL(this, "Document::add_term()");
-
-		_document.add_term(tname, wdfinc);
-	}
-
-	void add_boolean_term(const std::string& term) {
-		L_CALL(this, "Document::add_boolean_term()");
-
-		add_term(term, 0);
-	}
-
-	void remove_posting(const std::string& tname, Xapian::termpos tpos, Xapian::termcount wdfdec = 1) {
-		L_CALL(this, "Document::remove_posting()");
-
-		_document.remove_posting(tname, tpos, wdfdec);
-	}
-
-	void remove_term(const std::string& tname) {
-		L_CALL(this, "Document::remove_term()");
-
-		_document.remove_term(tname);
-	}
-
-	void clear_terms() {
-		L_CALL(this, "Document::clear_terms()");
-
-		_document.clear_terms();
-	}
-
 	Xapian::termcount termlist_count() const {
 		L_CALL(this, "Document::termlist_count()");
 
 		DatabaseHandler::lock_database lk(db_handler);
-		return doc().termlist_count();
+		update();
+		return Xapian::Document::termlist_count();
 	}
 
 	Xapian::TermIterator termlist_begin() const {
 		L_CALL(this, "Document::termlist_begin()");
 
 		DatabaseHandler::lock_database lk(db_handler);
-		return doc().termlist_begin();
-	}
-
-	Xapian::TermIterator termlist_end() const noexcept {
-		L_CALL(this, "Document::termlist_end()");
-
-	    return Xapian::TermIterator();
+		update();
+		return Xapian::Document::termlist_begin();
 	}
 
 	Xapian::termcount values_count() const {
 		L_CALL(this, "Document::values_count()");
 
 		DatabaseHandler::lock_database lk(db_handler);
-		return doc().values_count();
+		update();
+		return Xapian::Document::values_count();
 	}
 
 	Xapian::ValueIterator values_begin() const {
 		L_CALL(this, "Document::values_begin()");
 
 		DatabaseHandler::lock_database lk(db_handler);
-		return doc().values_begin();
-	}
-
-	Xapian::ValueIterator values_end() const noexcept {
-		L_CALL(this, "Document::values_end()");
-
-	    return Xapian::ValueIterator();
-	}
-
-	Xapian::docid get_docid() const {
-		L_CALL(this, "Document::get_docid()");
-
-		return _document.get_docid();
+		update();
+		return Xapian::Document::values_begin();
 	}
 
 	std::string serialise() const {
 		L_CALL(this, "Document::serialise()");
 
 		DatabaseHandler::lock_database lk(db_handler);
-		return doc().serialise();
-	}
-
-	static Document unserialise(DatabaseHandler* db_handler, const std::string& serialised) {
-		L_CALL(nullptr, "Document::unserialise()");
-
-		return Document(db_handler, Xapian::Document::unserialise(serialised));
-	}
-
-	static Document unserialise(const std::string& serialised) {
-		return unserialise(nullptr, serialised);
+		update();
+		return Xapian::Document::serialise();
 	}
 };
