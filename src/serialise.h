@@ -139,8 +139,13 @@ namespace Serialise {
 
 	std::string MsgPack(const required_spc_t& field_spc, const MsgPack& field_value);
 	std::string serialise(const required_spc_t& field_spc, const std::string& field_value);
-	std::string string(const required_spc_t& field_spc, const std::string& field_value);
 	std::string serialise(const required_spc_t& field_spc, const class MsgPack& field_value);
+	std::string string(const required_spc_t& field_spc, const std::string& field_value);
+	int64_t integer_cast(const class MsgPack& obj);
+	uint64_t positive_cast(const class MsgPack& obj);
+	double float_cast(const class MsgPack& obj);
+	std::string string_cast(const class MsgPack& obj);
+	bool boolean_cast(const class MsgPack& obj);
 
 	/*
 	 * Serialise field_value according to field_type.

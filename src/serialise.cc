@@ -30,6 +30,26 @@
 #include "utils.h"
 
 
+constexpr const char TYPE_FLOAT[]     = "_float";
+constexpr const char TYPE_POSITIVE[]  = "_positive";
+constexpr const char TYPE_INTEGER[]   = "_integer";
+constexpr const char TYPE_BOOLEAN[]   = "_boolean";
+constexpr const char TYPE_STRING[]    = "_string";
+constexpr const char TYPE_TEXT[]      = "_text";
+constexpr const char TYPE_UUID[]      = "_uuid";
+constexpr const char TYPE_EWKT[]      = "_ewkt";
+
+
+static constexpr auto hash_float = xxh64::hash(TYPE_FLOAT);
+static constexpr auto hash_positive = xxh64::hash(TYPE_POSITIVE);
+static constexpr auto hash_integer = xxh64::hash(TYPE_INTEGER);
+static constexpr auto hash_boolean = xxh64::hash(TYPE_BOOLEAN);
+static constexpr auto hash_string = xxh64::hash(TYPE_STRING);
+static constexpr auto hash_text = xxh64::hash(TYPE_TEXT);
+static constexpr auto hash_uuid = xxh64::hash(TYPE_UUID);
+static constexpr auto hash_ewkt = xxh64::hash(TYPE_EWKT);
+
+
 std::string
 Serialise::MsgPack(const required_spc_t& field_spc, const ::MsgPack& field_value)
 {
@@ -147,6 +167,160 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 		default:
 			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(type));
 	}
+}
+
+
+int64_t
+Serialise::integer_cast(const class MsgPack& obj) {
+
+	for (auto const& elem : obj) {
+		auto str_key = elem.as_string();
+		switch(xxh64::hash(str_key)) {
+			case hash_integer:
+				try {
+					return obj.at(str_key).as_i64();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type integer in %s", str_key.c_str());
+				}
+				break;
+			case hash_positive:
+				try {
+					return obj.at(str_key).as_u64();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type positive in %s", str_key.c_str());
+				}
+				break;
+			case hash_float:
+				try {
+					return obj.at(str_key).as_f64();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type float in %s", str_key.c_str());
+				}
+				break;
+			default:
+				throw MSG_SerialisationError("No able to cast to integer type %s", str_key.c_str());
+		}
+	}
+	return 0;
+}
+
+
+uint64_t
+Serialise::positive_cast(const class MsgPack& obj)
+{
+	for (auto const& elem : obj) {
+		auto str_key = elem.as_string();
+		switch(xxh64::hash(str_key)) {
+			case hash_integer:
+				try {
+					return obj.at(str_key).as_i64();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type integer in %s", str_key.c_str());
+				}
+				break;
+			case hash_positive:
+				try {
+					return obj.at(str_key).as_u64();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type positive in %s", str_key.c_str());
+				}
+				break;
+			case hash_float:
+				try {
+					return obj.at(str_key).as_f64();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type float in %s", str_key.c_str());
+				}
+				break;
+			default:
+				throw MSG_SerialisationError("No able to cast to positive type %s", str_key.c_str());
+
+		}
+	}
+	return 0;
+}
+
+
+double
+Serialise::float_cast(const class MsgPack& obj)
+{
+	for (auto const& elem : obj) {
+		auto str_key = elem.as_string();
+		switch(xxh64::hash(str_key)) {
+			case hash_integer:
+				try {
+					return obj.at(str_key).as_i64();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type integer in %s", str_key.c_str());
+				}
+				break;
+			case hash_positive:
+				try {
+					return obj.at(str_key).as_u64();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type positive in %s", str_key.c_str());
+				}
+				break;
+			case hash_float:
+				try {
+					return obj.at(str_key).as_f64();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type float in %s", str_key.c_str());
+				}
+				break;
+			default:
+				throw MSG_SerialisationError("No able to cast to double type %s", str_key.c_str());
+
+		}
+	}
+	return 0;
+}
+
+
+std::string
+Serialise::string_cast(const class MsgPack& obj)
+{
+	for (auto const& elem : obj) {
+		auto str_key = elem.as_string();
+		switch(xxh64::hash(str_key)) {
+			case hash_text:
+			case hash_string:
+			case hash_uuid:
+			case hash_ewkt:
+				try {
+					return obj.at(str_key).as_string();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type string in %s", str_key.c_str());
+				}
+				break;
+			default:
+				throw MSG_SerialisationError("No able to cast to string type %s", str_key.c_str());
+
+		}
+	}
+	return std::string();
+}
+
+
+bool
+Serialise::boolean_cast(const class MsgPack& obj)
+{
+	for (auto const& elem : obj) {
+		auto str_key = elem.as_string();
+		switch(xxh64::hash(str_key)) {
+			case hash_boolean:
+				try {
+					return obj.at(str_key).as_bool();
+				} catch (const msgpack::type_error&) {
+					throw MSG_SerialisationError("Expected type boolean in %s", str_key.c_str());
+				}
+				break;
+			default:
+				throw MSG_SerialisationError("No able to cast to bool type %s", str_key.c_str());
+
+		}
+	}
+	return false;
 }
 
 
