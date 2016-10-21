@@ -506,7 +506,7 @@ class Schema {
 	/*
 	 * Get the prefixes and slots for a namespace.
 	 */
-	static std::vector<std::pair<std::string, Xapian::valueno>> get_data_namespace(const std::vector<std::string>& paths_namespace);
+	static std::vector<std::pair<std::string, Xapian::valueno>> get_data_namespace(const std::vector<std::string>& paths_namespace, FieldType type);
 
 	/*
 	 * Update dynamic field's specifications.

@@ -3544,7 +3544,7 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 
 
 std::vector<std::pair<std::string, Xapian::valueno>>
-Schema::get_data_namespace(const std::vector<std::string>& paths_namespace)
+Schema::get_data_namespace(const std::vector<std::string>& paths_namespace, FieldType type)
 {
 	std::vector<std::pair<std::string, Xapian::valueno>> data;
 	data.reserve(std::pow(2, paths_namespace.size() - 2));
@@ -3562,7 +3562,10 @@ Schema::get_data_namespace(const std::vector<std::string>& paths_namespace)
 	}
 
 	for (auto& val : data) {
-		val.first.append(*it_e);
+		std::string prefix;
+		prefix.reserve(std::strlen(DOCUMENT_NAMESPACE_TERM_PREFIX) + it_e->length() + 1);
+		prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(*it_e).append(1, toUType(type));
+		val.first.append(prefix);
 		val.second = get_slot(val.first);
 	}
 
