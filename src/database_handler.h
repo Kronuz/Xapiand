@@ -70,7 +70,6 @@ class DatabaseHandler {
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
-	Document _get_document(const std::string& term_id);
 	MsgPack run_script(const MsgPack& data, const std::string& prefix_term_id);
 
 	MsgPack _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
@@ -157,6 +156,7 @@ public:
 
 	Document get_document(const Xapian::docid& did);
 	Document get_document(const std::string& doc_id);
+	Document get_document_term(const std::string& term_id);
 	Xapian::docid get_docid(const std::string& doc_id);
 
 	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);

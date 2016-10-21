@@ -118,9 +118,9 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, HttpMethod metho
 
 
 Document
-DatabaseHandler::_get_document(const std::string& term_id)
+DatabaseHandler::get_document_term(const std::string& term_id)
 {
-	L_CALL(this, "DatabaseHandler::_get_document()");
+	L_CALL(this, "DatabaseHandler::get_document_term(%s)", repr(term_id).c_str());
 
 	Xapian::Query query(term_id);
 
@@ -151,7 +151,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 			case HttpMethod::PUT: {
 				MsgPack old_data;
 				try {
-					auto document = _get_document(prefix_term_id);
+					auto document = get_document_term(prefix_term_id);
 					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
@@ -161,7 +161,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 			case HttpMethod::PATCH: {
 				MsgPack old_data;
 				try {
-					auto document = _get_document(prefix_term_id);
+					auto document = get_document_term(prefix_term_id);
 					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
@@ -171,7 +171,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 			case HttpMethod::DELETE: {
 				MsgPack old_data;
 				try {
-					auto document = _get_document(prefix_term_id);
+					auto document = get_document_term(prefix_term_id);
 					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
@@ -568,7 +568,7 @@ DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, con
 Document
 DatabaseHandler::get_document(const Xapian::docid& did)
 {
-	L_CALL(this, "DatabaseHandler::get_document()");
+	L_CALL(this, "DatabaseHandler::get_document(%d)", did);
 
 	DatabaseHandler::lock_database lk(this);
 	return Document(this, database->get_document(did));
@@ -592,20 +592,20 @@ DatabaseHandler::update_schema() const
 Document
 DatabaseHandler::get_document(const std::string& doc_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document(%s)", doc_id.c_str());
+	L_CALL(this, "DatabaseHandler::get_document(%s)", repr(doc_id).c_str());
 
 	schema = get_schema();
 
 	auto field_spc = schema->get_slot_field(ID_FIELD_NAME);
 
-	return _get_document(prefixed(Serialise::serialise(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
+	return get_document_term(prefixed(Serialise::serialise(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
 }
 
 
 Xapian::docid
 DatabaseHandler::get_docid(const std::string& doc_id)
 {
-	L_CALL(this, "DatabaseHandler::get_docid(%s)", doc_id.c_str());
+	L_CALL(this, "DatabaseHandler::get_docid(%s)", repr(doc_id).c_str());
 
 	schema = get_schema();
 
@@ -621,7 +621,7 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 void
 DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool wal_)
 {
-	L_CALL(this, "DatabaseHandler::delete_document(%s)", doc_id.c_str());
+	L_CALL(this, "DatabaseHandler::delete_document(%s)", repr(doc_id).c_str());
 
 	auto _id = get_docid(doc_id);
 
@@ -633,7 +633,7 @@ DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool w
 endpoints_error_list
 DatabaseHandler::multi_db_delete_document(const std::string& doc_id, bool commit_, bool wal_)
 {
-	L_CALL(this, "DatabaseHandler::multi_db_delete_document()");
+	L_CALL(this, "DatabaseHandler::multi_db_delete_document(%s)", repr(doc_id).c_str());
 
 	endpoints_error_list err_list;
 	auto _endpoints = endpoints;
@@ -658,7 +658,7 @@ DatabaseHandler::multi_db_delete_document(const std::string& doc_id, bool commit
 void
 DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document_info(%s, %s)", info.to_string().c_str(), doc_id.c_str());
+	L_CALL(this, "DatabaseHandler::get_document_info(%s, %s)", repr(info.to_string()).c_str(), repr(doc_id).c_str());
 
 	DatabaseHandler::lock_database lk(this);  // optimize nested database locking
 
@@ -702,7 +702,7 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 void
 DatabaseHandler::get_database_info(MsgPack& info)
 {
-	L_CALL(this, "DatabaseHandler::get_database_info(%s)", info.to_string().c_str());
+	L_CALL(this, "DatabaseHandler::get_database_info(%s)", repr(info.to_string()).c_str());
 
 	DatabaseHandler::lock_database lk(this);
 	unsigned doccount = database->db->get_doccount();

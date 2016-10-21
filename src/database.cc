@@ -749,7 +749,7 @@ Database::cancel(bool wal_)
 void
 Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::delete_document()");
+	L_CALL(this, "Database::delete_document(%d)", did);
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("database is read-only");
@@ -793,7 +793,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 void
 Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::delete_document_term()");
+	L_CALL(this, "Database::delete_document_term(%s)", repr(term).c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("database is read-only");
@@ -879,7 +879,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 Xapian::docid
 Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::replace_document()");
+	L_CALL(this, "Database::replace_document(%d)", did);
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_replace_document(did, doc);
@@ -921,7 +921,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 Xapian::docid
 Database::replace_document(const std::string& doc_id, const Xapian::Document& doc, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::replace_document()");
+	L_CALL(this, "Database::replace_document(%s)", repr(doc_id).c_str());
 	return replace_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), doc, commit_, wal_);
 }
 
@@ -929,7 +929,7 @@ Database::replace_document(const std::string& doc_id, const Xapian::Document& do
 Xapian::docid
 Database::replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::replace_document_term()");
+	L_CALL(this, "Database::replace_document_term(%s)", repr(term).c_str());
 
 	Xapian::docid did = 0;
 
@@ -1086,7 +1086,7 @@ Database::find_document(const Xapian::Query& query)
 Xapian::Document
 Database::get_document(const Xapian::docid& did)
 {
-	L_CALL(this, "Database::get_document()");
+	L_CALL(this, "Database::get_document(%d)", did);
 
 	Xapian::Document doc;
 
