@@ -194,14 +194,6 @@ struct query_field_t {
 };
 
 
-enum class MIMEType : uint8_t {
-	APPLICATION_JSON,
-	APPLICATION_XWWW_FORM_URLENCODED,
-	APPLICATION_X_MSGPACK,
-	UNKNOW,
-};
-
-
 enum class HttpMethod : uint8_t {
 	DELETE   =  0,
 	GET      =  1,
@@ -227,7 +219,6 @@ inline std::string get_hashed(const std::string& name) {
 }
 
 long long read_mastery(const std::string& dir, bool force);
-MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);
 rapidjson::Document to_json(const std::string& str);
 std::string msgpack_to_html(const msgpack::object& o);

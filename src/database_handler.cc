@@ -250,9 +250,9 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& _obj, std::string&
 
 
 Xapian::docid
-DatabaseHandler::index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
 {
-	L_CALL(this, "DatabaseHandler::index() [1]");
+	L_CALL(this, "DatabaseHandler::index(%s, %s)", repr(_document_id).c_str(), repr(body.to_string()).c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
@@ -262,114 +262,47 @@ DatabaseHandler::index(const std::string& body, const std::string& _document_id,
 		throw MSG_Error("Document must have an 'id'");
 	}
 
-	// Create MsgPack object
-	auto blob = false;
-	auto ct_type_ = ct_type;
-	MsgPack obj;
-	rapidjson::Document rdoc;
-	switch (get_mimetype(ct_type_)) {
-		case MIMEType::APPLICATION_JSON:
-			json_load(rdoc, body);
-			obj = MsgPack(rdoc);
-			break;
-		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
-			try {
-				json_load(rdoc, body);
-				obj = MsgPack(rdoc);
-				ct_type_ = JSON_CONTENT_TYPE;
-			} catch (const std::exception&) {
-				blob = true;
-			}
-			break;
-		case MIMEType::APPLICATION_X_MSGPACK:
-			obj = MsgPack::unserialise(body);
-			break;
-		default:
-			blob = true;
-			break;
-	}
-	L_INDEX(this, "Document to index: %s", body.c_str());
+	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(body.to_string()).c_str());
 
-	Xapian::Document doc;
-	Xapian::docid did;
+	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
+	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
+
 	std::string term_id;
-
-	if (endpoints.size() == 1) {
-		schema = get_schema();
-
-		auto f_data = _index(doc, obj, term_id, _document_id, ct_type_, ct_length);
+	Xapian::Document doc;
+	if (body.is_map()) {
+		auto f_data = _index(doc, body, term_id, _document_id, ct_type, ct_length);
 		L_INDEX(this, "Data: %s", f_data.to_string().c_str());
+		doc.set_data(join_data(f_data.serialise(), ""));
+	} else {
+		doc.set_data(join_data("", body.as_string()));
+	}
 
-		doc.set_data(join_data(f_data.serialise(), blob ? body : ""));
-		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
-
-		{
+	Xapian::docid did;
+	const auto _endpoints = endpoints;
+	for (const auto& e : _endpoints) {
+		endpoints.clear();
+		endpoints.add(e);
+		try {
 			DatabaseHandler::lock_database lk(this);
 			did = database->replace_document_term(term_id, doc, commit_);
-		}
-
-		update_schema();
-	} else {
-		schema = get_fvschema();
-
-		auto f_data = _index(doc, obj, term_id, _document_id, ct_type_, ct_length);
-		L_INDEX(this, "Data: %s", f_data.to_string().c_str());
-
-		doc.set_data(join_data(f_data.serialise(), blob ? body : ""));
-		L_INDEX(this, "Schema: %s", schema->to_string().c_str());
-
-		const auto _endpoints = endpoints;
-		for (const auto& e : _endpoints) {
-			endpoints.clear();
-			endpoints.add(e);
-
-			DatabaseHandler::lock_database lk(this);
-			try {
-				did = database->replace_document_term(term_id, doc, commit_);
-			} catch (const Xapian::Error& err) {
+		} catch (const Xapian::Error& err) {
+			if (err_list) {
 				err_list->operator[](err.get_error_string()).push_back(e.to_string());
 			}
 		}
-		endpoints = std::move(_endpoints);
-
-		update_schemas();
 	}
+	endpoints = std::move(_endpoints);
+
+	update_schemas();
 
 	return did;
 }
 
 
 Xapian::docid
-DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
+DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
 {
-	L_CALL(this, "DatabaseHandler::index() [2]");
-
-	L_INDEX(this, "Document to index: %s", obj.to_string().c_str());
-	Xapian::Document doc;
-	std::string term_id;
-
-	schema = get_schema();
-
-	auto f_data = _index(doc, obj, term_id, _document_id, ct_type, ct_length);
-	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
-
-	doc.set_data(join_data(f_data.serialise(), ""));
-	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
-
-	DatabaseHandler::lock_database lk(this);
-	auto did = database->replace_document_term(term_id, doc, commit_);
-	lk.unlock();
-
-	update_schema();
-
-	return did;
-}
-
-
-Xapian::docid
-DatabaseHandler::patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
-{
-	L_CALL(this, "DatabaseHandler::patch()");
+	L_CALL(this, "DatabaseHandler::patch(%s, %s)", repr(_document_id).c_str(), repr(patches.to_string()).c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("database is read-only");
@@ -379,25 +312,8 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 		throw MSG_ClientError("Document must have an 'id'");
 	}
 
-	rapidjson::Document rdoc_patch;
-	auto t = get_mimetype(ct_type);
-	MsgPack obj_patch;
-	auto _ct_type = ct_type;
-	switch (t) {
-		case MIMEType::APPLICATION_JSON:
-			json_load(rdoc_patch, patches);
-			obj_patch = MsgPack(rdoc_patch);
-			break;
-		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
-			json_load(rdoc_patch, patches);
-			obj_patch = MsgPack(rdoc_patch);
-			_ct_type = JSON_CONTENT_TYPE;
-			break;
-		case MIMEType::APPLICATION_X_MSGPACK:
-			obj_patch = MsgPack::unserialise(patches);
-			break;
-		default:
-			throw MSG_ClientError("Patches must be a JSON or MsgPack");
+	if (!patches.is_map()) {
+		throw MSG_ClientError("Patches must be a JSON or MsgPack");
 	}
 
 	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
@@ -407,20 +323,34 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 
 	auto document = get_document(_document_id);
 	auto obj = document.get_obj();
-	apply_patch(obj_patch, obj);
-	L_INDEX(this, "Document to index: %s", obj.to_string().c_str());
+	apply_patch(patches, obj);
 
-	Xapian::Document doc;
-	std::string term_id;
-	auto f_data = _index(doc, obj, term_id, _document_id, _ct_type, ct_length);
-	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
+	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(obj.to_string()).c_str());
 
-	doc.set_data(join_data(f_data.serialise(), document.get_blob()));
+	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
-	DatabaseHandler::lock_database lk(this);
-	auto did = database->replace_document_term(term_id, doc, commit_);
-	lk.unlock();
+	std::string term_id;
+	Xapian::Document doc;
+	auto f_data = _index(doc, obj, term_id, _document_id, ct_type, ct_length);
+	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
+	doc.set_data(join_data(f_data.serialise(), document.get_blob()));
+
+	Xapian::docid did;
+	const auto _endpoints = endpoints;
+	for (const auto& e : _endpoints) {
+		endpoints.clear();
+		endpoints.add(e);
+		try {
+			DatabaseHandler::lock_database lk(this);
+			did = database->replace_document_term(term_id, doc, commit_);
+		} catch (const Xapian::Error& err) {
+			if (err_list) {
+				err_list->operator[](err.get_error_string()).push_back(e.to_string());
+			}
+		}
+	}
+	endpoints = std::move(_endpoints);
 
 	update_schema();
 

@@ -287,10 +287,10 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				{ "name", { { RESERVED_TYPE,  "string" } } },
 				{ "tagline", { { RESERVED_TYPE,  "string" } } },
 			});
-			db_handler.index({
+			db_handler.index(std::to_string(local_node_->id), {
 				{ "name", local_node_->name },
 				{ "tagline", XAPIAND_TAGLINE },
-			}, std::to_string(local_node_->id), true, MSGPACK_CONTENT_TYPE, std::string());
+			}, true, MSGPACK_CONTENT_TYPE, std::string());
 		} catch (const CheckoutError&) {
 			L_CRIT(this, "Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);

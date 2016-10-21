@@ -719,6 +719,43 @@ HttpClient::_delete(int cmd)
 }
 
 
+std::pair<std::string, MsgPack>
+HttpClient::get_body()
+{
+	// Create MsgPack object for the body
+	auto ct_type = content_type;
+
+	if (ct_type.empty()) {
+		ct_type = FORM_URLENCODED_CONTENT_TYPE;
+	}
+	MsgPack msgpack;
+	rapidjson::Document rdoc;
+	switch (xxh64::hash(ct_type)) {
+		case xxh64::hash(FORM_URLENCODED_CONTENT_TYPE):
+			try {
+				json_load(rdoc, body);
+				msgpack = MsgPack(rdoc);
+				ct_type = JSON_CONTENT_TYPE;
+			} catch (const std::exception&) {
+				msgpack = MsgPack(body);
+			}
+			break;
+		case xxh64::hash(JSON_CONTENT_TYPE):
+			json_load(rdoc, body);
+			msgpack = MsgPack(rdoc);
+			break;
+		case xxh64::hash(MSGPACK_CONTENT_TYPE):
+			msgpack = MsgPack::unserialise(body);
+			break;
+		default:
+			msgpack = MsgPack(body);
+			break;
+	}
+
+	return std::make_pair(ct_type, msgpack);
+}
+
+
 void
 HttpClient::home_view(HttpMethod method)
 {
@@ -837,7 +874,7 @@ HttpClient::index_document_view(HttpMethod method)
 	L_CALL(this, "HttpClient::index_document_view()");
 
 	std::string doc_id;
-	int status_code;
+	int status_code = 400;
 
 	if (method == HttpMethod::POST) {
 		path_parser.off_id = nullptr;
@@ -854,15 +891,12 @@ HttpClient::index_document_view(HttpMethod method)
 		build_path_index(index);
 	}
 
-	if (content_type.empty()) {
-		content_type = JSON_CONTENT_TYPE;
-	}
-
-	endpoints_error_list err_list;
 	operation_begins = std::chrono::system_clock::now();
 
+	auto body_ = get_body();
+	endpoints_error_list err_list;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	db_handler.index(body, doc_id, query_field->commit, content_type, content_length, &err_list);
+	db_handler.index(doc_id, body_.second, query_field->commit, body_.first, content_length, &err_list);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -903,8 +937,7 @@ HttpClient::write_schema_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::write_schema_view()");
 
-	std::string doc_id;
-	int status_code;
+	int status_code = 400;
 
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
@@ -947,12 +980,15 @@ HttpClient::update_document_view(HttpMethod method)
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
 
+	std::string doc_id(path_parser.get_id());
+	int status_code = 400;
+
 	operation_begins = std::chrono::system_clock::now();
 
-	std::string doc_id(path_parser.get_id());
-
-	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
-	db_handler.patch(body, doc_id, query_field->commit, content_type, content_length);
+	auto body_ = get_body();
+	endpoints_error_list err_list;
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	db_handler.patch(doc_id, body_.second, query_field->commit, body_.first, content_length, &err_list);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -968,12 +1004,23 @@ HttpClient::update_document_view(HttpMethod method)
 	L_TIME(this, "Updating took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	MsgPack response;
-	response["_update"] = {
-		{ ID_FIELD_NAME, doc_id },
-		{ "_commit", query_field->commit }
-	};
+	if (err_list.empty()) {
+		status_code = 200;
+		response["_update"] = {
+			{ ID_FIELD_NAME, doc_id },
+			{ "_commit", query_field->commit }
+		};
+	} else {
+		for (const auto& err : err_list) {
+			MsgPack o;
+			for (const auto& end : err.second) {
+				o.push_back(end);
+			}
+			response["_update"].insert(err.first, o);
+		}
+	}
 
-	write_http_response(response, 200, pretty);
+	write_http_response(response, status_code, pretty);
 }
 
 

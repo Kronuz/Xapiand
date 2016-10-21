@@ -131,6 +131,8 @@ class HttpClient : public BaseClient {
 	static int on_info(http_parser* p);
 	static int on_data(http_parser* p, const char* at, size_t length);
 
+	std::pair<std::string, MsgPack> get_body();
+
 	void home_view(HttpMethod method);
 	void info_view(HttpMethod method);
 	void delete_document_view(HttpMethod method);

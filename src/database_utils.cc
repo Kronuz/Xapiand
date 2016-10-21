@@ -135,20 +135,6 @@ long long read_mastery(const std::string& dir, bool force)
 }
 
 
-MIMEType get_mimetype(const std::string& type)
-{
-	if (type == JSON_CONTENT_TYPE) {
-		return MIMEType::APPLICATION_JSON;
-	} else if (type == FORM_URLENCODED_CONTENT_TYPE) {
-		return MIMEType::APPLICATION_XWWW_FORM_URLENCODED;
-	} else if (type == MSGPACK_CONTENT_TYPE) {
-		return MIMEType::APPLICATION_X_MSGPACK;
-	} else {
-		return MIMEType::UNKNOW;
-	}
-}
-
-
 void json_load(rapidjson::Document& doc, const std::string& str)
 {
 	rapidjson::ParseResult parse_done = doc.Parse(str.data());
