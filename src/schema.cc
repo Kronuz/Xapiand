@@ -3492,7 +3492,7 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 	std::vector<std::string> prefixes;
 	prefixes.reserve(std::pow(2, paths_namespace.size() - 2));
 	auto it = paths_namespace.begin();
-	prefixes.push_back(*it);
+	prefixes.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + *it);
 	auto it_e = paths_namespace.end() - 1;
 	for (++it; it != it_e; ++it) {
 		const auto size = prefixes.size();
