@@ -514,7 +514,7 @@ Database::~Database()
 long long
 Database::read_mastery(const Endpoint& endpoint)
 {
-	L_CALL(this, "Database::read_mastery(%s)", endpoint.to_string().c_str());
+	L_CALL(this, "Database::read_mastery(%s)", repr(endpoint.to_string()).c_str());
 
 	if (mastery_level != -1) return mastery_level;
 	if (!endpoint.is_local()) return -1;
@@ -1123,7 +1123,7 @@ Database::get_document(const Xapian::docid& did)
 std::string
 Database::get_metadata(const std::string& key)
 {
-	L_CALL(this, "Database::get_metadata(%s)", key.c_str());
+	L_CALL(this, "Database::get_metadata(%s)", repr(key).c_str());
 
 	std::string value;
 
@@ -1154,7 +1154,7 @@ Database::get_metadata(const std::string& key)
 void
 Database::set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::set_metadata(%s, %s)", key.c_str(), value.c_str());
+	L_CALL(this, "Database::set_metadata(%s, %s)", repr(key).c_str(), repr(value).c_str());
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_set_metadata(key, value);
@@ -1336,7 +1336,7 @@ DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_pt
 long long
 DatabasePool::get_mastery_level(const std::string& dir)
 {
-	L_CALL(this, "DatabasePool::get_mastery_level(%s)", dir.c_str());
+	L_CALL(this, "DatabasePool::get_mastery_level(%s)", repr(dir).c_str());
 
 	Endpoints endpoints;
 	endpoints.add(Endpoint(dir));
