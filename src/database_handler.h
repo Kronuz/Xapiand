@@ -153,10 +153,10 @@ std::string split_data_blob(const std::string& data);
 class Document {
 	friend class DatabaseHandler;
 
-	DatabaseHandler* db_handler;
-
-	mutable std::shared_ptr<Database> _database;
 	mutable Xapian::Document _document;
+	mutable std::shared_ptr<Database> _database;
+
+	DatabaseHandler* db_handler;
 
 	Xapian::Document& doc() {
 		L_CALL(this, "Document::doc(%d)", db_handler && db_handler->database && _database != db_handler->database);
@@ -183,13 +183,13 @@ public:
 		: db_handler(nullptr) { }
 
 	Document(const Xapian::Document &doc)
-		: db_handler(nullptr),
-		  _document(doc) { }
+		: _document(doc),
+		  db_handler(nullptr) { }
 
 	Document(DatabaseHandler* db_handler_, const Xapian::Document &doc)
-		: db_handler(db_handler_),
-		  _database(db_handler->database),
-		  _document(doc) { }
+		: _document(doc),
+		  _database(db_handler_->database),
+		  db_handler(db_handler_) { }
 
 	std::string get_value(Xapian::valueno slot) const {
 		L_CALL(this, "Document::get_value()");
