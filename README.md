@@ -14,11 +14,11 @@ Xapiand: A Highly Available Distributed RESTful Storage and Search Engine built 
 	* Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
 * Multi Tenant with Multi Types:
 	* Support for more than one index.
-	* Support for more than one type per index.
+	* Support for different types, one per index.
 	* Index level configuration:
 		* Schema.
 		* Replicas.
-		* Partitioning strategies.
+		* Partitioning strategies.  *(Not yet implemented)*
 * Multi-Partitioning and Distribution Strategies  *(Not yet implemented)*:
 	* Random Consistent Partitioning and Replication.
 	* Social-Based Partitioning and Replication (SPAR <sup>[2](#footnote-2)</sup>).
