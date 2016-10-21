@@ -252,6 +252,8 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& _obj, std::string&
 Xapian::docid
 DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
 {
+	L_CALL(this, "DatabaseHandler::index(%s, <obj>, <blob>)", repr(_document_id).c_str());
+
 	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(obj.to_string()).c_str());
 
 	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
@@ -288,7 +290,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 Xapian::docid
 DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
 {
-	L_CALL(this, "DatabaseHandler::index(%s, %s)", repr(_document_id).c_str(), repr(body.to_string()).c_str());
+	L_CALL(this, "DatabaseHandler::index(%s, <body>)", repr(_document_id).c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
@@ -313,7 +315,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, boo
 Xapian::docid
 DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
 {
-	L_CALL(this, "DatabaseHandler::patch(%s, %s)", repr(_document_id).c_str(), repr(patches.to_string()).c_str());
+	L_CALL(this, "DatabaseHandler::patch(%s, <patches>)", repr(_document_id).c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("database is read-only");
