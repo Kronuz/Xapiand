@@ -3541,7 +3541,8 @@ Schema::get_data_namespace(const std::vector<std::string>& paths_namespace)
 
 
 void
-Schema::update_dynamic_specification() {
+Schema::update_dynamic_specification()
+{
 	L_CALL(nullptr, "Schema::update_dynamic_specification()");
 
 	switch (specification.index) {
