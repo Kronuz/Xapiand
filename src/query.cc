@@ -205,7 +205,6 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 			auto ser_type = Serialise::get_type(field_value);
 			const auto& global_spc = Schema::get_data_global(ser_type.first);
 			switch (ser_type.first) {
-				case FieldType::STRING:
 				case FieldType::TEXT: {
 					Xapian::QueryParser queryTexts;
 					queryTexts.set_database(*database->db);
@@ -215,7 +214,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 					return queryTexts.parse_query(field_value, q_flags);
 				}
 				default:
-					return Xapian::Query(ser_type.second);
+					return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
 			}
 		}
 	} else {
