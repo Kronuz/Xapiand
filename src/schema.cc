@@ -3472,7 +3472,7 @@ Schema::validate_required_data(const MsgPack& value)
 	L_CALL(this, "Schema::validate_required_data(%s)", repr(value.to_string()).c_str());
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
-		if (XapiandManager::manager->type_required) {
+		if (XapiandManager::manager->type_required && !specification.inside_namespace) {
 			throw MSG_MissingTypeError("Type of field [%s] is missing", specification.dynamic_full_name.c_str());
 		}
 		set_type(value);
