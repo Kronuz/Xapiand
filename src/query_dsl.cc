@@ -74,7 +74,15 @@ const std::unordered_map<std::string, dispatch_op_dsl> map_op_dispatch_dsl({
 
 const std::unordered_map<std::string, dispatch_dsl> map_dispatch_dsl({
 	{ QUERYDSL_IN,        &QueryDSL::in_range_query   },
-	{ QUERYDSL_VALUE,     &QueryDSL::query         },
+	{ QUERYDSL_VALUE,     &QueryDSL::query            },
+	{ TYPE_INTEGER,       &QueryDSL::query            },
+	{ TYPE_POSITIVE,      &QueryDSL::query            },
+	{ TYPE_FLOAT,         &QueryDSL::query            },
+	{ TYPE_BOOLEAN,       &QueryDSL::query            },
+	{ TYPE_STRING,        &QueryDSL::query            },
+	{ TYPE_TEXT,          &QueryDSL::query            },
+	{ TYPE_UUID,          &QueryDSL::query            },
+	{ TYPE_EWKT,          &QueryDSL::query            },
 });
 
 
@@ -313,40 +321,24 @@ QueryDSL::query(const MsgPack& obj)
 		case QUERY::QUERY:
 		{
 			auto field_spc = schema->get_data_field(_fieldname);
-			std::string type_s;
 			try {
 				switch (field_spc.get_type()) {
-					case FieldType::FLOAT:
-						type_s = FLOAT_STR;
-						if (obj.getType() == MsgPack::Type::STR) {
-							return Xapian::Query(prefixed(Serialise::_float(obj.as_string()), field_spc.prefix), _wqf);
-						} else {
-							return Xapian::Query(prefixed(Serialise::_float(obj.as_f64()), field_spc.prefix), _wqf);
-						}
 					case FieldType::INTEGER:
-						type_s = INTEGER_STR;
-						if (obj.getType() == MsgPack::Type::STR) {
-							return Xapian::Query(prefixed(Serialise::integer(obj.as_string()), field_spc.prefix), _wqf);
-						} else {
-							return Xapian::Query(prefixed(Serialise::integer(obj.as_i64()), field_spc.prefix));
-						}
 					case FieldType::POSITIVE:
-						type_s = POSITIVE_STR;
-						if (obj.getType() == MsgPack::Type::STR) {
-							return Xapian::Query(prefixed(Serialise::integer(obj.as_string()), field_spc.prefix), _wqf);
-						} else {
-							return Xapian::Query(prefixed(Serialise::integer(obj.as_u64()), field_spc.prefix), _wqf);
-						}
+					case FieldType::FLOAT:
+					case FieldType::DATE:
+					case FieldType::UUID:
+					case FieldType::BOOLEAN:
+						return Xapian::Query(prefixed(Serialise::serialise(field_spc, obj), field_spc.prefix), _wqf);
+
 					case FieldType::STRING:
 					{
-						type_s = STRING_STR;
-						auto field_value = obj.as_string();
+						auto field_value = Serialise::serialise(field_spc, obj);
 						return Xapian::Query(prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix), _wqf);
 					}
 					case FieldType::TEXT:
 					{
-						type_s = TEXT_STR;
-						auto field_value = obj.as_string();
+						auto field_value = Serialise::serialise(field_spc, obj);
 						Xapian::QueryParser queryTexts;
 						field_spc.bool_term ? queryTexts.add_boolean_prefix(_fieldname, field_spc.prefix) : queryTexts.add_prefix(_fieldname, field_spc.prefix);
 						queryTexts.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
@@ -356,34 +348,20 @@ QueryDSL::query(const MsgPack& obj)
 						str_texts.assign(field_value).append(":").append(field_value);
 						return queryTexts.parse_query(str_texts, q_flags);
 					}
-					case FieldType::DATE:
-						type_s = DATE_STR;
-						return Xapian::Query(prefixed(Serialise::date(obj.as_string()), field_spc.prefix));
 					case FieldType::GEO:
 					{
-						type_s = GEO_STR;
-						std::string field_value(Serialise::ewkt(obj.as_string(), field_spc.partials, field_spc.error));
+						std::string field_value(Serialise::serialise(field_spc, obj));
 						// If the region for search is empty, not process this query.
 						if (field_value.empty()) {
 							return Xapian::Query::MatchNothing;
 						}
 						return Xapian::Query(prefixed(field_value, field_spc.prefix), _wqf);
 					}
-					case FieldType::UUID:
-						type_s = UUID_STR;
-						return Xapian::Query(prefixed(Serialise::uuid(obj.as_string()), field_spc.prefix), _wqf);
-					case FieldType::BOOLEAN:
-						type_s = BOOLEAN_STR;
-						if (obj.getType() == MsgPack::Type::STR) {
-							return Xapian::Query(prefixed(Serialise::boolean(obj.as_string()), field_spc.prefix), _wqf);
-						} else {
-							return Xapian::Query(prefixed(Serialise::boolean(obj.as_bool()), field_spc.prefix), _wqf);
-						}
 					default:
 						throw MSG_QueryDslError("Type error unexpected %s");
 				}
 			} catch (const msgpack::type_error&) {
-				throw MSG_QueryDslError("Type error expected %s in %s", type_s.c_str(), _fieldname.c_str());
+				throw MSG_QueryDslError("Type error expected %s in %s", Serialise::type(field_spc.get_type()).c_str(), _fieldname.c_str());
 			}
 
 		}
