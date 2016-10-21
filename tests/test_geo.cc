@@ -134,7 +134,7 @@ static int make_search(const test_geo_t _tests[], int len) {
 		std::vector<std::string> suggestions;
 
 		try {
-			db_geo.db_handler.get_mset(query, mset, nullptr, nullptr, suggestions);
+			mset = db_geo.db_handler.get_mset(query, nullptr, nullptr, suggestions);
 			if (mset.size() != p.expect_datas.size()) {
 				++cont;
 				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), p.expect_datas.size());

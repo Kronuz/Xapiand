@@ -128,7 +128,7 @@ public:
 	void write_schema(const std::string& body);
 	void write_schema(const MsgPack& obj);
 
-	void get_mset(const query_field_t& e, Xapian::MSet& mset, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions, int offset=0);
+	Xapian::MSet get_mset(const query_field_t& e, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions);
 
 	void update_schema() const;
 	void update_schemas() const;

@@ -1074,10 +1074,10 @@ HttpClient::search_view(HttpMethod method)
 			json_load(json_aggs, body);
 			MsgPack object(json_aggs);
 			AggregationMatchSpy aggs(object, db_handler.get_schema());
-			db_handler.get_mset(*query_field, mset, &aggs, &object, suggestions);
+			mset = db_handler.get_mset(*query_field, &aggs, &object, suggestions);
 			aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
 		} else {
-			db_handler.get_mset(*query_field, mset, nullptr, nullptr, suggestions);
+			mset = db_handler.get_mset(*query_field, nullptr, nullptr, suggestions);
 		}
 	} catch (const CheckoutError&) {
 		/* At the moment when the endpoint it not exist and it is chunck it will return 200 response

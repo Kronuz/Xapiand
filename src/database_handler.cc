@@ -549,10 +549,12 @@ DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collap
 }
 
 
-void
-DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions, int offset)
+Xapian::MSet
+DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions)
 {
 	L_CALL(this, "DatabaseHandler::get_mset()");
+
+	Xapian::MSet mset;
 
 	schema = get_schema();
 
@@ -623,7 +625,7 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, Aggregatio
 
 			auto check_at_least = std::min(database->db->get_doccount(), e.check_at_least);
 			auto enquire = get_enquire(query, collapse_key, &e, sorter.get(), aggs);
-			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
+			mset = enquire.get_mset(e.offset, e.limit, check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -644,6 +646,8 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, Aggregatio
 		}
 		database->reopen();
 	}
+
+	return mset;
 }
 
 

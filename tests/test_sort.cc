@@ -630,7 +630,7 @@ static int make_search(const sort_t _tests[], int len, const std::string& metric
 		std::vector<std::string> suggestions;
 
 		try {
-			db_sort.db_handler.get_mset(query, mset, nullptr, nullptr, suggestions);
+			mset = db_sort.db_handler.get_mset(query, nullptr, nullptr, suggestions);
 			if (mset.size() != p.expect_result.size()) {
 				++cont;
 				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %u. Expected: %zu.", mset.size(), p.expect_result.size());

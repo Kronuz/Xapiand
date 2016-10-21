@@ -204,12 +204,11 @@ static int make_search(const test_query_t _tests[], int len) {
 			query.partial.push_back(_partial);
 		}
 
-
 		Xapian::MSet mset;
 		std::vector<std::string> suggestions;
 
 		try {
-			db_query.db_handler.get_mset(query, mset, nullptr, nullptr, suggestions);
+			mset = db_query.db_handler.get_mset(query, nullptr, nullptr, suggestions);
 			// Check by documents
 			if (mset.size() != p.expect_datas.size()) {
 				++cont;
