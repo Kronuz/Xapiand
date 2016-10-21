@@ -122,8 +122,8 @@
 
 // Default prefixes
 #define DOCUMENT_ID_TERM_PREFIX         "Q"
-#define DOCUMENT_CUSTOM_TERM_PREFIX     "X"
 #define DOCUMENT_NAMESPACE_TERM_PREFIX  "N"
+
 #define DOCUMENT_DB_MASTER              "M"
 #define DOCUMENT_DB_SLAVE               "S"
 
@@ -219,9 +219,9 @@ inline bool is_valid(const std::string& field_name) {
 }
 
 Xapian::valueno get_slot(const std::string& name);
-std::string prefixed(const std::string& term, const std::string& prefixO);
-std::string get_prefix(const std::string& name, const std::string& prefix, char type);
-std::string get_dynamic_prefix(const std::string& name, const std::string& prefix, char type);
+std::string prefixed(const std::string& term, const std::string& prefix);
+std::string get_prefix(const std::string& name, char type);
+std::string get_dynamic_prefix(const std::string& name, char type);
 inline std::string get_hashed(const std::string& name) {
 	return sortable_serialise(xxh64::hash(name));
 }

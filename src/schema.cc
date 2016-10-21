@@ -90,30 +90,30 @@ static const std::vector<uint64_t> def_accuracy_date({ toUType(UnitTime::HOUR), 
  */
 
 static const std::vector<std::string> global_acc_prefix_geo({
-	get_prefix("_geo_0",  DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO)),
-	get_prefix("_geo_5",  DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO)),
-	get_prefix("_geo_10", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO)),
-	get_prefix("_geo_15", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO)),
-	get_prefix("_geo_20", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO)),
-	get_prefix("_geo_25", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::GEO))
+	get_prefix("_geo_0",  toUType(FieldType::GEO)),
+	get_prefix("_geo_5",  toUType(FieldType::GEO)),
+	get_prefix("_geo_10", toUType(FieldType::GEO)),
+	get_prefix("_geo_15", toUType(FieldType::GEO)),
+	get_prefix("_geo_20", toUType(FieldType::GEO)),
+	get_prefix("_geo_25", toUType(FieldType::GEO))
 });
 
 static const std::vector<std::string> global_acc_prefix_date({
-	get_prefix("_date_hour",    DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE)),
-	get_prefix("_date_day",     DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE)),
-	get_prefix("_date_month",   DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE)),
-	get_prefix("_date_year",    DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE)),
-	get_prefix("_date_decade",  DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE)),
-	get_prefix("_date_century", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::DATE))
+	get_prefix("_date_hour",    toUType(FieldType::DATE)),
+	get_prefix("_date_day",     toUType(FieldType::DATE)),
+	get_prefix("_date_month",   toUType(FieldType::DATE)),
+	get_prefix("_date_year",    toUType(FieldType::DATE)),
+	get_prefix("_date_decade",  toUType(FieldType::DATE)),
+	get_prefix("_date_century", toUType(FieldType::DATE))
 });
 
 static const std::vector<std::string> global_acc_prefix_num({
-	get_prefix("_num_100",      DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER)),
-	get_prefix("_num_1000",     DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER)),
-	get_prefix("_num_10000",    DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER)),
-	get_prefix("_num_100000",   DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER)),
-	get_prefix("_num_1000000",  DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER)),
-	get_prefix("_num_10000000", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::INTEGER))
+	get_prefix("_num_100",      toUType(FieldType::INTEGER)),
+	get_prefix("_num_1000",     toUType(FieldType::INTEGER)),
+	get_prefix("_num_10000",    toUType(FieldType::INTEGER)),
+	get_prefix("_num_100000",   toUType(FieldType::INTEGER)),
+	get_prefix("_num_1000000",  toUType(FieldType::INTEGER)),
+	get_prefix("_num_10000000", toUType(FieldType::INTEGER))
 });
 
 
@@ -291,6 +291,7 @@ required_spc_t::required_spc_t()
 required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
 	const std::vector<std::string>& _acc_prefix)
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, type }}),
+	  prefix(1, tolower(toUType(type))),
 	  slot(_slot),
 	  bool_term(DEFAULT_BOOL_TERM),
 	  accuracy(acc),
@@ -2925,7 +2926,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 				case TypeIndex::TERMS:
 				case TypeIndex::FIELD_TERMS:
 				case TypeIndex::GLOBAL_TERMS:
-					index_global_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
+					index_field_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
 					break;
 				case TypeIndex::VALUES:
 				case TypeIndex::FIELD_VALUES:
@@ -2940,7 +2941,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 				case TypeIndex::GLOBAL_ALL: {
 					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 					StringSet& s_g = map_values[global_spc.slot];
-					index_value(doc, value, s_g, global_spc, pos, &Schema::index_global_term);
+					index_value(doc, value, s_g, global_spc, pos, &Schema::index_field_term);
 					break;
 				}
 			}
@@ -2955,7 +2956,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 					index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos);
 					break;
 				case TypeIndex::GLOBAL_TERMS:
-					index_global_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
+					index_field_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
 					break;
 				case TypeIndex::VALUES: {
 					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
@@ -2990,7 +2991,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 				case TypeIndex::GLOBAL_ALL: {
 					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 					StringSet& s_g = map_values[global_spc.slot];
-					index_value(doc, value, s_g, global_spc, pos, &Schema::index_global_term);
+					index_value(doc, value, s_g, global_spc, pos, &Schema::index_field_term);
 					break;
 				}
 			}
@@ -3042,10 +3043,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 						size_t pos = 0;
 						const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 						for (const auto& value : values) {
-							index_global_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
+							index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
 						}
 					} else {
-						index_global_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
+						index_field_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
 					}
 					break;
 				}
@@ -3074,10 +3075,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 						set_type_to_array();
 						size_t pos = 0;
 						for (const auto& value : values) {
-							index_value(doc, value, s_g, global_spc, pos++, &Schema::index_global_term);
+							index_value(doc, value, s_g, global_spc, pos++, &Schema::index_field_term);
 						}
 					} else {
-						index_value(doc, values, s_g, global_spc, 0, &Schema::index_global_term);
+						index_value(doc, values, s_g, global_spc, 0, &Schema::index_field_term);
 					}
 					break;
 				}
@@ -3117,10 +3118,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 						size_t pos = 0;
 						const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 						for (const auto& value : values) {
-							index_global_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
+							index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
 						}
 					} else {
-						index_global_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
+						index_field_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
 					}
 					break;
 				}
@@ -3201,10 +3202,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 						set_type_to_array();
 						size_t pos = 0;
 						for (const auto& value : values) {
-							index_value(doc, value, s_g, global_spc, pos++, &Schema::index_global_term);
+							index_value(doc, value, s_g, global_spc, pos++, &Schema::index_field_term);
 						}
 					} else {
-						index_value(doc, values, s_g, global_spc, 0, &Schema::index_global_term);
+						index_value(doc, values, s_g, global_spc, 0, &Schema::index_field_term);
 					}
 					break;
 				}
@@ -3366,7 +3367,7 @@ Schema::validate_required_data()
 			if (set_acc.size()) {
 				if (specification.acc_prefix.empty()) {
 					for (const auto& acc : set_acc) {
-						specification.acc_prefix.push_back(get_prefix(specification.dynamic_full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+						specification.acc_prefix.push_back(get_prefix(specification.dynamic_full_name + std::to_string(acc), toUType(specification.sep_types[2])));
 					}
 				} else if (specification.acc_prefix.size() != set_acc.size()) {
 					throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -3379,7 +3380,7 @@ Schema::validate_required_data()
 
 			// Process RESERVED_PREFIX
 			if (specification.prefix.empty()) {
-				specification.prefix = get_prefix(specification.dynamic_full_name, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2]));
+				specification.prefix = get_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2]));
 			}
 			properties[RESERVED_PREFIX] = specification.prefix;
 
@@ -3548,10 +3549,10 @@ Schema::update_dynamic_specification()
 		case TypeIndex::ALL:
 		case TypeIndex::FIELD_ALL:
 		case TypeIndex::GLOBAL_ALL:
-			specification.prefix.assign(get_dynamic_prefix(specification.dynamic_full_name, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+			specification.prefix.assign(get_dynamic_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2])));
 			specification.slot = get_slot(specification.dynamic_full_name);
 			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_dynamic_prefix(specification.dynamic_full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+				specification.acc_prefix.push_back(get_dynamic_prefix(specification.dynamic_full_name + std::to_string(acc), toUType(specification.sep_types[2])));
 			}
 			break;
 		case TypeIndex::VALUES:
@@ -3559,13 +3560,13 @@ Schema::update_dynamic_specification()
 		case TypeIndex::GLOBAL_VALUES:
 			specification.slot = get_slot(specification.dynamic_full_name);
 			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_dynamic_prefix(specification.dynamic_full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+				specification.acc_prefix.push_back(get_dynamic_prefix(specification.dynamic_full_name + std::to_string(acc), toUType(specification.sep_types[2])));
 			}
 			break;
 		case TypeIndex::TERMS:
 		case TypeIndex::FIELD_TERMS:
 		case TypeIndex::GLOBAL_TERMS:
-			specification.prefix.assign(get_dynamic_prefix(specification.dynamic_full_name, DOCUMENT_CUSTOM_TERM_PREFIX, toUType(specification.sep_types[2])));
+			specification.prefix.assign(get_dynamic_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2])));
 			break;
 		default:
 			break;
@@ -3626,47 +3627,6 @@ Schema::index_field_term(Xapian::Document& doc, std::string&& serialise_val, con
 
 
 void
-Schema::index_global_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& global_spc, size_t pos)
-{
-	L_CALL(nullptr, "Schema::index_global_term()");
-
-	if (serialise_val.empty()) {
-		return;
-	}
-
-	if (global_spc.sep_types[2] == FieldType::TEXT) {
-		Xapian::TermGenerator term_generator;
-		term_generator.set_document(doc);
-		term_generator.set_stemmer(Xapian::Stem(global_spc.stem_language));
-		term_generator.set_stemming_strategy(getGeneratorStrategy(global_spc.stem_strategy));
-		bool positions = global_spc.positions[getPos(pos, global_spc.positions.size())];
-		if (positions) {
-			term_generator.index_text(serialise_val, global_spc.weight[getPos(pos, global_spc.weight.size())]);
-		} else {
-			term_generator.index_text_without_positions(serialise_val, global_spc.weight[getPos(pos, global_spc.weight.size())]);
-		}
-		L_INDEX(nullptr, "Global Text to Index [%d] => %s [Positions: %d]", pos, serialise_val.c_str(), positions);
-	} else {
-		auto position = global_spc.position[getPos(pos, global_spc.position.size())];
-		if (position) {
-			if (global_spc.bool_term) {
-				doc.add_posting(serialise_val, position, 0);
-			} else {
-				doc.add_posting(serialise_val, position, global_spc.weight[getPos(pos, global_spc.weight.size())]);
-			}
-		} else {
-			if (global_spc.bool_term) {
-				doc.add_boolean_term(serialise_val);
-			} else {
-				doc.add_term(serialise_val, global_spc.weight[getPos(pos, global_spc.weight.size())]);
-			}
-		}
-		L_INDEX(nullptr, "Global Term [%d] -> %s  Bool: %d  Posting: %d", pos, repr(serialise_val).c_str(), global_spc.bool_term, position);
-	}
-}
-
-
-void
 Schema::index_all_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
 {
 	L_CALL(nullptr, "Schema::index_all_term()");
@@ -3677,7 +3637,7 @@ Schema::index_all_term(Xapian::Document& doc, std::string&& serialise_val, const
 
 	auto serialise_val_cp = serialise_val;
 	index_field_term(doc, std::move(serialise_val_cp), field_spc, pos);
-	index_global_term(doc, std::move(serialise_val), global_spc, pos);
+	index_field_term(doc, std::move(serialise_val), global_spc, pos);
 }
 
 
@@ -3934,7 +3894,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 					EWKT_Parser g_ewkt(str_ewkt, global_spc.partials, global_spc.error);
 					if (is_term) {
 						index_field_term(doc, Serialise::trixels(ewkt.trixels), field_spc, pos);
-						index_global_term(doc, Serialise::trixels(g_ewkt.trixels), global_spc, pos);
+						index_field_term(doc, Serialise::trixels(g_ewkt.trixels), global_spc, pos);
 					}
 					auto ranges = ewkt.getRanges();
 					auto g_ranges = g_ewkt.getRanges();
@@ -4063,7 +4023,7 @@ Schema::get_data_field(const std::string& field_name) const
 			}
 		} else {
 			res.slot = get_slot(std::get<0>(info));
-			res.prefix = get_dynamic_prefix(std::get<0>(info), DOCUMENT_CUSTOM_TERM_PREFIX, (char)res.sep_types[2]);
+			res.prefix = get_dynamic_prefix(std::get<0>(info), (char)res.sep_types[2]);
 
 			// Get accuracy, acc_prefix and reserved word.
 			switch (res.sep_types[2]) {
@@ -4077,7 +4037,7 @@ Schema::get_data_field(const std::string& field_name) const
 					try {
 						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
 							res.accuracy.push_back(acc.as_u64());
-							res.acc_prefix.push_back(get_dynamic_prefix(std::get<0>(info) + std::to_string(res.accuracy.back()), DOCUMENT_CUSTOM_TERM_PREFIX, (char)res.sep_types[2]));
+							res.acc_prefix.push_back(get_dynamic_prefix(std::get<0>(info) + std::to_string(res.accuracy.back()), (char)res.sep_types[2]));
 						}
 					} catch (const std::out_of_range&) { }
 					break;

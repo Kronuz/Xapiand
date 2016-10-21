@@ -235,7 +235,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& _obj, std::string&
 	doc.add_value(DB_SLOT_LENGTH, ct_length);
 
 	// Index terms for content-type
-	auto term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX, toUType(FieldType::STRING));
+	auto term_prefix = get_prefix("content_type", toUType(FieldType::STRING));
 	doc.add_term(prefixed(ct_type, term_prefix));
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
@@ -490,9 +490,9 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 	std::vector<std::string> prefixes;
 	prefixes.reserve(similar.type.size() + similar.field.size());
 	for (const auto& sim_type : similar.type) {
-		std::string prefix(DOCUMENT_CUSTOM_TERM_PREFIX);
-		prefix.push_back(toUType(Unserialise::type(sim_type)));
-		prefixes.push_back(std::move(prefix));
+		char type = toUType(Unserialise::type(sim_type));
+		prefixes.emplace_back(1, type);
+		prefixes.emplace_back(1, tolower(type));
 	}
 
 	for (const auto& sim_field : similar.field) {
