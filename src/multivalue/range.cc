@@ -175,12 +175,16 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 			return Xapian::Query(mvle->release());
 		}  else if (!end) {
 			if (field_spc.get_type() == FieldType::GEO) {
-
-				if (!start.is_string()) {
+				std::string geo_val;
+				if (start.is_map()) {
+					geo_val = Serialise::string_cast(start);
+				} else if (start.is_string()) {
+					geo_val = start.as_string();
+				} else {
 					throw MSG_QueryParserError("Expected string in geo type");
 				}
 
-				auto geo = EWKT_Parser::getGeoSpatial(start.as_string(), field_spc.partials, field_spc.error);
+				auto geo = EWKT_Parser::getGeoSpatial(geo_val, field_spc.partials, field_spc.error);
 
 				if (geo.ranges.empty()) {
 					return Xapian::Query::MatchNothing;
