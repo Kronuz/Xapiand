@@ -167,11 +167,6 @@ namespace Serialise {
 	std::pair<FieldType, std::string> get_type(const class MsgPack& field_value, bool bool_term=false);
 	std::tuple<FieldType, std::string, std::string> get_range_type(const class MsgPack& start, const class MsgPack& end, bool bool_term=false);
 
-	// Serialise field_value like string.
-	inline std::string string(const std::string& field_value) {
-		return sortable_serialise(xxh64::hash(field_value) & 0xffffffff);
-	}
-
 	// Serialise field_value like date.
 	std::string date(const std::string& field_value);
 
@@ -235,6 +230,15 @@ namespace Serialise {
 	// Serialise type to its string representation.
 	std::string type(FieldType type);
 
+	// Function for serialization of namespace field.
+	inline std::string namespace_field(const std::string& field_name) {
+		return sortable_serialise(xxh64::hash(field_name) & 0xffffffff);
+	}
+
+	// Function for serialization of dynamic namespace field.
+	inline std::string dynamic_namespace_field(const std::string& field_name) {
+		return sortable_serialise(xxh64::hash(field_name));
+	}
 
 	inline std::string serialise(const std::string& val) {
 		return val;
