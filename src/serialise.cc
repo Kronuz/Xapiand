@@ -864,5 +864,5 @@ Unserialise::type(const std::string& str_type)
 			break;
 	}
 
-	throw MSG_SerialisationError("Type: %s is an unknown type", str_type.c_str());
+	throw MSG_SerialisationError("Type: %s is an unknown type", repr(str_type).c_str());
 }
