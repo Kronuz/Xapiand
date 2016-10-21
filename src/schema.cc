@@ -2701,47 +2701,13 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				}
 			}
 
-			auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
-			if (val) {
-				if (specification.inside_namespace) {
-					auto data_namespace = get_data_namespace(specification.paths_namespace);
-					bool add_values = true;
-					if (offsprings) {
-						for (const auto& prefix_slot : data_namespace) {
-							specification.prefix = prefix_slot.first;
-							specification.slot = prefix_slot.second;
-							index_item(doc, *val, *data, add_values);
-							add_values = false;
-						}
-					} else {
-						for (const auto& prefix_slot : data_namespace) {
-							specification.prefix = prefix_slot.first;
-							specification.slot = prefix_slot.second;
-							index_item(doc, *val, *data, add_values);
-							doc.add_term(specification.prefix);
-							add_values = false;
-						}
-					}
-				} else {
-					index_item(doc, *val, *data);
-				}
-				if (specification.store && !offsprings) {
-					*data = (*data)[RESERVED_VALUE];
-				}
-			} else if (specification.inside_namespace && !offsprings) {
-				auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
-				for (const auto& prefix_namespace : prefixes_namespace) {
-					doc.add_term(prefix_namespace);
-				}
-			}
+			process_item_value(doc, data, offsprings);
 
 			const auto spc_object = std::move(specification);
 			for (auto& task : tasks) {
 				specification = spc_object;
 				task.get();
 			}
-
-			set_type_to_object(offsprings);
 			break;
 		}
 		case MsgPack::Type::ARRAY:
@@ -2749,21 +2715,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			index_array(*properties, object, *data, doc);
 			break;
 		default:
-			if (specification.inside_namespace) {
-				auto data_namespace = get_data_namespace(specification.paths_namespace);
-				bool add_values = true;
-				for (const auto& prefix_slot : data_namespace) {
-					specification.prefix = prefix_slot.first;
-					specification.slot = prefix_slot.second;
-					index_item(doc, object, *data, add_values);
-					add_values = false;
-				}
-			} else {
-				index_item(doc, object, *data);
-			}
-			if (specification.store && data->size() == 1) {
-				*data = (*data)[RESERVED_VALUE];
-			}
+			process_item_value(doc, data, object);
 			break;
 	}
 
@@ -2814,39 +2766,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 					}
 				}
 
-				auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
-				if (val) {
-					if (specification.inside_namespace) {
-						auto data_namespace = get_data_namespace(specification.paths_namespace);
-						bool add_values = true;
-						if (offsprings) {
-							for (const auto& data : data_namespace) {
-								specification.prefix = data.first;
-								specification.slot = data.second;
-								index_item(doc, *val, *data_pos, add_values);
-								add_values = false;
-							}
-						} else {
-							for (const auto& data : data_namespace) {
-								specification.prefix = data.first;
-								specification.slot = data.second;
-								index_item(doc, *val, *data_pos, add_values);
-								doc.add_term(data.first);
-								add_values = false;
-							}
-						}
-					} else {
-						index_item(doc, *val, *data_pos);
-					}
-					if (specification.store && !offsprings) {
-						*data_pos = (*data_pos)[RESERVED_VALUE];
-					}
-				} else if (specification.inside_namespace && !offsprings) {
-					auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
-					for (const auto& prefix_namespace : prefixes_namespace) {
-						doc.add_term(prefix_namespace);
-					}
-				}
+				process_item_value(doc, data_pos, offsprings);
 
 				const auto spc_item = std::move(specification);
 				for (auto& task : tasks) {
@@ -2854,47 +2774,16 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 					task.get();
 				}
 
-				set_type_to_object(offsprings);
-
 				specification = spc_start;
 				break;
 			}
 			case MsgPack::Type::ARRAY: {
-				MsgPack& data_pos = specification.store ? data[pos] : data;
-				if (specification.inside_namespace) {
-					auto data_namespace = get_data_namespace(specification.paths_namespace);
-					bool add_values = true;
-					for (const auto& data : data_namespace) {
-						specification.prefix = data.first;
-						specification.slot = data.second;
-						index_item(doc, item, data_pos, add_values);
-						add_values = false;
-					}
-				} else {
-					index_item(doc, item, data_pos);
-				}
-				if (specification.store) {
-					data_pos = data_pos[RESERVED_VALUE];
-				}
+				auto data_pos = specification.store ? &data[pos] : &data;
+				process_item_value(doc, data_pos, item);
 				break;
 			}
 			default: {
-				MsgPack& data_pos = specification.store ? data[pos] : data;
-				if (specification.inside_namespace) {
-					auto data_namespace = get_data_namespace(specification.paths_namespace);
-					bool add_value = true;
-					for (const auto& data : data_namespace) {
-						specification.prefix = data.first;
-						specification.slot = data.second;
-						index_item(doc, item, data_pos, pos, add_value);
-						add_value = false;
-					}
-				} else {
-					index_item(doc, item, data_pos, pos);
-				}
-				if (specification.store) {
-					data_pos = data_pos[RESERVED_VALUE];
-				}
+				process_item_value(doc, specification.store ? data[pos] : data, item, pos);
 				break;
 			}
 		}
@@ -2904,343 +2793,484 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 
 
 void
-Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
+Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos)
 {
-	L_CALL(this, "Schema::index_item() [1]");
+	if (item_value.is_null()) {
+		if (specification.inside_namespace) {
+			auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
+			for (const auto& prefix_namespace : prefixes_namespace) {
+				doc.add_term(prefix_namespace);
+			}
+		}
+		if (specification.store) {
+			data = item_value;
+		}
+		return;
+	}
 
-	try {
+	if (specification.inside_namespace) {
+		if (!specification.set_type) {
+			validate_required_data(item_value);
+		}
+
+		auto data_namespace = get_data_namespace(specification.paths_namespace, specification.sep_types[2]);
+		bool add_value = true;
+		for (const auto& prefix_slot : data_namespace) {
+			specification.prefix = prefix_slot.first;
+			specification.slot = prefix_slot.second;
+			index_item(doc, item_value, data, pos, add_value);
+			add_value = false;
+		}
+	} else {
 		if (!specification.found_field && !specification.dynamic) {
 			throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
 		}
 
 		if (!specification.set_type) {
-			validate_required_data(value);
+			validate_required_data(item_value);
 		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
 			update_dynamic_specification();
 		}
 
-		if (specification.prefix.empty()) {
-			switch (specification.index) {
-				case TypeIndex::NONE:
-					return;
-				case TypeIndex::TERMS:
-				case TypeIndex::FIELD_TERMS:
-				case TypeIndex::GLOBAL_TERMS:
-					index_field_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
-					break;
-				case TypeIndex::VALUES:
-				case TypeIndex::FIELD_VALUES:
-				case TypeIndex::GLOBAL_VALUES: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_g = map_values[global_spc.slot];
-					index_value(doc, value, s_g, global_spc, pos);
-					break;
+		index_item(doc, item_value, data, pos);
+	}
+
+	if (specification.store) {
+		data = data[RESERVED_VALUE];
+	}
+}
+
+
+void
+Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value)
+{
+	if (item_value.is_null()) {
+		if (specification.inside_namespace) {
+			auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
+			for (const auto& prefix_namespace : prefixes_namespace) {
+				doc.add_term(prefix_namespace);
+			}
+		}
+		if (specification.store) {
+			*data = item_value;
+		}
+		return;
+	}
+
+	if (specification.inside_namespace) {
+		if (!specification.set_type) {
+			validate_required_data(item_value);
+		}
+
+		auto data_namespace = get_data_namespace(specification.paths_namespace, specification.sep_types[2]);
+		bool add_values = true;
+		for (const auto& prefix_slot : data_namespace) {
+			specification.prefix = prefix_slot.first;
+			specification.slot = prefix_slot.second;
+			index_item(doc, item_value, *data, add_values);
+			add_values = false;
+		}
+	} else {
+		if (!specification.found_field && !specification.dynamic) {
+			throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
+		}
+
+		if (!specification.set_type) {
+			validate_required_data(item_value);
+		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
+			update_dynamic_specification();
+		}
+
+		index_item(doc, item_value, *data);
+	}
+
+	if (specification.store && data->size() == 1) {
+		*data = (*data)[RESERVED_VALUE];
+	}
+}
+
+
+void
+Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offsprings)
+{
+	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
+	if (val) {
+		if (val->is_null()) {
+			if (specification.inside_namespace && !offsprings) {
+				auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
+				for (const auto& prefix_namespace : prefixes_namespace) {
+					doc.add_term(prefix_namespace);
 				}
-				case TypeIndex::ALL:
-				case TypeIndex::FIELD_ALL:
-				case TypeIndex::GLOBAL_ALL: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_g = map_values[global_spc.slot];
-					index_value(doc, value, s_g, global_spc, pos, &Schema::index_field_term);
-					break;
+			}
+			*data = *val;
+			return;
+		}
+
+		if (specification.inside_namespace) {
+			if (!specification.set_type) {
+				validate_required_data(*val);
+			}
+
+			auto data_namespace = get_data_namespace(specification.paths_namespace, specification.sep_types[2]);
+			bool add_values = true;
+			if (offsprings) {
+				for (const auto& prefix_slot : data_namespace) {
+					specification.prefix = prefix_slot.first;
+					specification.slot = prefix_slot.second;
+					index_item(doc, *val, *data, add_values);
+					add_values = false;
+				}
+			} else {
+				for (auto& prefix_slot : data_namespace) {
+					specification.prefix = prefix_slot.first;
+					specification.slot = prefix_slot.second;
+					index_item(doc, *val, *data, add_values);
+					prefix_slot.first.pop_back();
+					doc.add_term(prefix_slot.first);
+					add_values = false;
 				}
 			}
 		} else {
-			switch (specification.index) {
-				case TypeIndex::NONE:
-					return;
-				case TypeIndex::TERMS:
-					index_all_term(doc, Serialise::MsgPack(specification, value), specification, specification_t::get_global(specification.sep_types[2]), pos);
-					break;
-				case TypeIndex::FIELD_TERMS:
-					index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos);
-					break;
-				case TypeIndex::GLOBAL_TERMS:
-					index_field_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
-					break;
-				case TypeIndex::VALUES: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_f = map_values[specification.slot];
-					StringSet& s_g = map_values[global_spc.slot];
-					index_all_value(doc, value, s_f, s_g, specification, global_spc, pos);
-					break;
-				}
-				case TypeIndex::FIELD_VALUES: {
-					StringSet& s_f = map_values[specification.slot];
-					index_value(doc, value, s_f, specification, pos);
-					break;
-				}
-				case TypeIndex::GLOBAL_VALUES: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_g = map_values[global_spc.slot];
-					index_value(doc, value, s_g, global_spc, pos);
-					break;
-				}
-				case TypeIndex::ALL: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_f = map_values[specification.slot];
-					StringSet& s_g = map_values[global_spc.slot];
-					index_all_value(doc, value, s_f, s_g, specification, global_spc, pos, true);
-					break;
-				}
-				case TypeIndex::FIELD_ALL: {
-					StringSet& s_f = map_values[specification.slot];
-					index_value(doc, value, s_f, specification, pos, &Schema::index_field_term);
-					break;
-				}
-				case TypeIndex::GLOBAL_ALL: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_g = map_values[global_spc.slot];
-					index_value(doc, value, s_g, global_spc, pos, &Schema::index_field_term);
-					break;
-				}
+			if (!specification.found_field && !specification.dynamic) {
+				throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
 			}
+
+			if (!specification.set_type) {
+				validate_required_data(*val);
+			} else if (specification.dynamic_type != DynamicFieldType::NONE) {
+				update_dynamic_specification();
+			}
+			index_item(doc, *val, *data);
 		}
 
-		if (specification.store && add_value) {
-			// Add value to data.
-			auto& data_value = data[RESERVED_VALUE];
-			switch (data_value.getType()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = value;
-					break;
-				case MsgPack::Type::ARRAY:
-					data_value.push_back(value);
-					break;
-				default:
-					data_value = MsgPack({ data_value, value });
+		if (specification.store && !offsprings) {
+			*data = (*data)[RESERVED_VALUE];
+		}
+	} else if (specification.inside_namespace && !offsprings) {
+		auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
+		for (const auto& prefix_namespace : prefixes_namespace) {
+			doc.add_term(prefix_namespace);
+		}
+	}
+
+	set_type_to_object(offsprings);
+}
+
+
+void
+Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
+{
+	L_CALL(this, "Schema::index_item(%s, %zu, %d)", value.to_string().c_str(), pos, add_value);
+
+	if (specification.prefix.empty()) {
+		switch (specification.index) {
+			case TypeIndex::NONE:
+				return;
+			case TypeIndex::TERMS:
+			case TypeIndex::FIELD_TERMS:
+			case TypeIndex::GLOBAL_TERMS:
+				index_field_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
+				break;
+			case TypeIndex::VALUES:
+			case TypeIndex::FIELD_VALUES:
+			case TypeIndex::GLOBAL_VALUES: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_g = map_values[global_spc.slot];
+				index_value(doc, value, s_g, global_spc, pos);
+				break;
+			}
+			case TypeIndex::ALL:
+			case TypeIndex::FIELD_ALL:
+			case TypeIndex::GLOBAL_ALL: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_g = map_values[global_spc.slot];
+				index_value(doc, value, s_g, global_spc, pos, &Schema::index_field_term);
+				break;
 			}
 		}
-	} catch (const DummyException&) { }
+	} else {
+		switch (specification.index) {
+			case TypeIndex::NONE:
+				return;
+			case TypeIndex::TERMS:
+				index_all_term(doc, Serialise::MsgPack(specification, value), specification, specification_t::get_global(specification.sep_types[2]), pos);
+				break;
+			case TypeIndex::FIELD_TERMS:
+				index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos);
+				break;
+			case TypeIndex::GLOBAL_TERMS:
+				index_field_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
+				break;
+			case TypeIndex::VALUES: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_f = map_values[specification.slot];
+				StringSet& s_g = map_values[global_spc.slot];
+				index_all_value(doc, value, s_f, s_g, specification, global_spc, pos);
+				break;
+			}
+			case TypeIndex::FIELD_VALUES: {
+				StringSet& s_f = map_values[specification.slot];
+				index_value(doc, value, s_f, specification, pos);
+				break;
+			}
+			case TypeIndex::GLOBAL_VALUES: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_g = map_values[global_spc.slot];
+				index_value(doc, value, s_g, global_spc, pos);
+				break;
+			}
+			case TypeIndex::ALL: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_f = map_values[specification.slot];
+				StringSet& s_g = map_values[global_spc.slot];
+				index_all_value(doc, value, s_f, s_g, specification, global_spc, pos, true);
+				break;
+			}
+			case TypeIndex::FIELD_ALL: {
+				StringSet& s_f = map_values[specification.slot];
+				index_value(doc, value, s_f, specification, pos, &Schema::index_field_term);
+				break;
+			}
+			case TypeIndex::GLOBAL_ALL: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_g = map_values[global_spc.slot];
+				index_value(doc, value, s_g, global_spc, pos, &Schema::index_field_term);
+				break;
+			}
+		}
+	}
+
+	if (specification.store && add_value) {
+		// Add value to data.
+		auto& data_value = data[RESERVED_VALUE];
+		switch (data_value.getType()) {
+			case MsgPack::Type::UNDEFINED:
+				data_value = value;
+				break;
+			case MsgPack::Type::ARRAY:
+				data_value.push_back(value);
+				break;
+			default:
+				data_value = MsgPack({ data_value, value });
+		}
+	}
 }
 
 
 void
 Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values)
 {
-	L_CALL(this, "Schema::index_item() [2]");
+	L_CALL(this, "Schema::index_item(%s, %d)", values.to_string().c_str(), add_values);
 
-	try {
-		if (!specification.found_field && !specification.dynamic) {
-			throw MSG_ClientError("%s is not dynamic", specification.dynamic_full_name.c_str());
-		}
-
-		if (!specification.set_type) {
-			validate_required_data(values);
-		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
-			update_dynamic_specification();
-		}
-
-		if (specification.prefix.empty()) {
-			switch (specification.index) {
-				case TypeIndex::NONE:
-					return;
-				case TypeIndex::TERMS:
-				case TypeIndex::FIELD_TERMS:
-				case TypeIndex::GLOBAL_TERMS: {
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-						for (const auto& value : values) {
-							index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
-						}
-					} else {
-						index_field_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
-					}
-					break;
-				}
-				case TypeIndex::VALUES:
-				case TypeIndex::FIELD_VALUES:
-				case TypeIndex::GLOBAL_VALUES: {
+	if (specification.prefix.empty()) {
+		switch (specification.index) {
+			case TypeIndex::NONE:
+				return;
+			case TypeIndex::TERMS:
+			case TypeIndex::FIELD_TERMS:
+			case TypeIndex::GLOBAL_TERMS: {
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
 					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_g = map_values[global_spc.slot];
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						for (const auto& value : values) {
-							index_value(doc, value, s_g, global_spc, pos++);
-						}
-					} else {
-						index_value(doc, values, s_g, global_spc, 0);
+					for (const auto& value : values) {
+						index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
 					}
-					break;
+				} else {
+					index_field_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
 				}
-				case TypeIndex::ALL:
-				case TypeIndex::FIELD_ALL:
-				case TypeIndex::GLOBAL_ALL: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_g = map_values[global_spc.slot];
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						for (const auto& value : values) {
-							index_value(doc, value, s_g, global_spc, pos++, &Schema::index_field_term);
-						}
-					} else {
-						index_value(doc, values, s_g, global_spc, 0, &Schema::index_field_term);
-					}
-					break;
-				}
+				break;
 			}
-		} else {
-			switch (specification.index) {
-				case TypeIndex::NONE:
-					return;
-				case TypeIndex::TERMS: {
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-						for (const auto& value : values) {
-							index_all_term(doc, Serialise::MsgPack(specification, value), specification, global_spc, pos++);
-						}
-					} else {
-						index_all_term(doc, Serialise::MsgPack(specification, values), specification, specification_t::get_global(specification.sep_types[2]), 0);
+			case TypeIndex::VALUES:
+			case TypeIndex::FIELD_VALUES:
+			case TypeIndex::GLOBAL_VALUES: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_g = map_values[global_spc.slot];
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					for (const auto& value : values) {
+						index_value(doc, value, s_g, global_spc, pos++);
 					}
-					break;
+				} else {
+					index_value(doc, values, s_g, global_spc, 0);
 				}
-				case TypeIndex::FIELD_TERMS: {
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						for (const auto& value : values) {
-							index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
-						}
-					} else {
-						index_field_term(doc, Serialise::MsgPack(specification, values), specification, 0);
+				break;
+			}
+			case TypeIndex::ALL:
+			case TypeIndex::FIELD_ALL:
+			case TypeIndex::GLOBAL_ALL: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_g = map_values[global_spc.slot];
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					for (const auto& value : values) {
+						index_value(doc, value, s_g, global_spc, pos++, &Schema::index_field_term);
 					}
-					break;
+				} else {
+					index_value(doc, values, s_g, global_spc, 0, &Schema::index_field_term);
 				}
-				case TypeIndex::GLOBAL_TERMS: {
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-						for (const auto& value : values) {
-							index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
-						}
-					} else {
-						index_field_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
-					}
-					break;
-				}
-				case TypeIndex::VALUES: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_f = map_values[specification.slot];
-					StringSet& s_g = map_values[global_spc.slot];
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						for (const auto& value : values) {
-							index_all_value(doc, value, s_f, s_g, specification, global_spc, pos++);
-						}
-					} else {
-						index_all_value(doc, values, s_f, s_g, specification, global_spc, 0);
-					}
-					break;
-				}
-				case TypeIndex::FIELD_VALUES: {
-					StringSet& s_f = map_values[specification.slot];
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						for (const auto& value : values) {
-							index_value(doc, value, s_f, specification, pos++);
-						}
-					} else {
-						index_value(doc, values, s_f, specification, 0);
-					}
-					break;
-				}
-				case TypeIndex::GLOBAL_VALUES: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_g = map_values[global_spc.slot];
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						for (const auto& value : values) {
-							index_value(doc, value, s_g, global_spc, pos++);
-						}
-					} else {
-						index_value(doc, values, s_g, global_spc, 0);
-					}
-					break;
-				}
-				case TypeIndex::ALL: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_f = map_values[specification.slot];
-					StringSet& s_g = map_values[global_spc.slot];
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						for (const auto& value : values) {
-							index_all_value(doc, value, s_f, s_g, specification, global_spc, pos++, true);
-						}
-					} else {
-						index_all_value(doc, values, s_f, s_g, specification, global_spc, 0, true);
-					}
-					break;
-				}
-				case TypeIndex::FIELD_ALL: {
-					StringSet& s_f = map_values[specification.slot];
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						for (const auto& value : values) {
-							index_value(doc, value, s_f, specification, pos++, &Schema::index_field_term);
-						}
-					} else {
-						index_value(doc, values, s_f, specification, 0, &Schema::index_field_term);
-					}
-					break;
-				}
-				case TypeIndex::GLOBAL_ALL: {
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					StringSet& s_g = map_values[global_spc.slot];
-					if (values.is_array()) {
-						set_type_to_array();
-						size_t pos = 0;
-						for (const auto& value : values) {
-							index_value(doc, value, s_g, global_spc, pos++, &Schema::index_field_term);
-						}
-					} else {
-						index_value(doc, values, s_g, global_spc, 0, &Schema::index_field_term);
-					}
-					break;
-				}
+				break;
 			}
 		}
-
-		if (specification.store && add_values) {
-			// Add value to data.
-			auto& data_value = data[RESERVED_VALUE];
-			switch (data_value.getType()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = values;
-					break;
-				case MsgPack::Type::ARRAY:
-					if (values.is_array()) {
-						for (const auto& value : values) {
-							data_value.push_back(value);
-						}
-					} else {
-						data_value.push_back(values);
+	} else {
+		switch (specification.index) {
+			case TypeIndex::NONE:
+				return;
+			case TypeIndex::TERMS: {
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+					for (const auto& value : values) {
+						index_all_term(doc, Serialise::MsgPack(specification, value), specification, global_spc, pos++);
 					}
-					break;
-				default:
-					if (values.is_array()) {
-						data_value = MsgPack({ data_value });
-						for (const auto& value : values) {
-							data_value.push_back(value);
-						}
-					} else {
-						data_value = MsgPack({ data_value, values });
+				} else {
+					index_all_term(doc, Serialise::MsgPack(specification, values), specification, specification_t::get_global(specification.sep_types[2]), 0);
+				}
+				break;
+			}
+			case TypeIndex::FIELD_TERMS: {
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					for (const auto& value : values) {
+						index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
 					}
-					break;
+				} else {
+					index_field_term(doc, Serialise::MsgPack(specification, values), specification, 0);
+				}
+				break;
+			}
+			case TypeIndex::GLOBAL_TERMS: {
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+					for (const auto& value : values) {
+						index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
+					}
+				} else {
+					index_field_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
+				}
+				break;
+			}
+			case TypeIndex::VALUES: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_f = map_values[specification.slot];
+				StringSet& s_g = map_values[global_spc.slot];
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					for (const auto& value : values) {
+						index_all_value(doc, value, s_f, s_g, specification, global_spc, pos++);
+					}
+				} else {
+					index_all_value(doc, values, s_f, s_g, specification, global_spc, 0);
+				}
+				break;
+			}
+			case TypeIndex::FIELD_VALUES: {
+				StringSet& s_f = map_values[specification.slot];
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					for (const auto& value : values) {
+						index_value(doc, value, s_f, specification, pos++);
+					}
+				} else {
+					index_value(doc, values, s_f, specification, 0);
+				}
+				break;
+			}
+			case TypeIndex::GLOBAL_VALUES: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_g = map_values[global_spc.slot];
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					for (const auto& value : values) {
+						index_value(doc, value, s_g, global_spc, pos++);
+					}
+				} else {
+					index_value(doc, values, s_g, global_spc, 0);
+				}
+				break;
+			}
+			case TypeIndex::ALL: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_f = map_values[specification.slot];
+				StringSet& s_g = map_values[global_spc.slot];
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					for (const auto& value : values) {
+						index_all_value(doc, value, s_f, s_g, specification, global_spc, pos++, true);
+					}
+				} else {
+					index_all_value(doc, values, s_f, s_g, specification, global_spc, 0, true);
+				}
+				break;
+			}
+			case TypeIndex::FIELD_ALL: {
+				StringSet& s_f = map_values[specification.slot];
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					for (const auto& value : values) {
+						index_value(doc, value, s_f, specification, pos++, &Schema::index_field_term);
+					}
+				} else {
+					index_value(doc, values, s_f, specification, 0, &Schema::index_field_term);
+				}
+				break;
+			}
+			case TypeIndex::GLOBAL_ALL: {
+				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+				StringSet& s_g = map_values[global_spc.slot];
+				if (values.is_array()) {
+					set_type_to_array();
+					size_t pos = 0;
+					for (const auto& value : values) {
+						index_value(doc, value, s_g, global_spc, pos++, &Schema::index_field_term);
+					}
+				} else {
+					index_value(doc, values, s_g, global_spc, 0, &Schema::index_field_term);
+				}
+				break;
 			}
 		}
-	} catch (const DummyException&) { }
+	}
+
+	if (specification.store && add_values) {
+		// Add value to data.
+		auto& data_value = data[RESERVED_VALUE];
+		switch (data_value.getType()) {
+			case MsgPack::Type::UNDEFINED:
+				data_value = values;
+				break;
+			case MsgPack::Type::ARRAY:
+				if (values.is_array()) {
+					for (const auto& value : values) {
+						data_value.push_back(value);
+					}
+				} else {
+					data_value.push_back(values);
+				}
+				break;
+			default:
+				if (values.is_array()) {
+					data_value = MsgPack({ data_value });
+					for (const auto& value : values) {
+						data_value.push_back(value);
+					}
+				} else {
+					data_value = MsgPack({ data_value, values });
+				}
+				break;
+		}
+	}
 }
 
 
@@ -3606,6 +3636,7 @@ Schema::index_field_term(Xapian::Document& doc, std::string&& serialise_val, con
 		if (!field_spc.bool_term && field_spc.sep_types[2] == FieldType::STRING) {
 			to_lower(serialise_val);
 		}
+
 		serialise_val = prefixed(serialise_val, field_spc.prefix);
 		auto position = field_spc.position[getPos(pos, field_spc.position.size())];
 		if (position) {

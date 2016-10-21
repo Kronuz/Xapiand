@@ -475,6 +475,11 @@ class Schema {
 	inline void fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& data, Xapian::Document& doc, const char* reserved_word);
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name=std::string());
 	void index_array(const MsgPack& properties, const MsgPack& array, MsgPack& data, Xapian::Document& doc);
+
+	void process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
+	void process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value);
+	void process_item_value(Xapian::Document& doc, MsgPack*& data, bool offsprings);
+
 	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value=true);
 	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values=true);
 
