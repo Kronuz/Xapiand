@@ -514,7 +514,7 @@ Database::~Database()
 long long
 Database::read_mastery(const Endpoint& endpoint)
 {
-	L_CALL(this, "Database::read_mastery()");
+	L_CALL(this, "Database::read_mastery(%s)", endpoint.to_string().c_str());
 
 	if (mastery_level != -1) return mastery_level;
 	if (!endpoint.is_local()) return -1;
