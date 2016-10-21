@@ -41,7 +41,6 @@ constexpr const char QUERYDSL_XOR[]       = "_xor";
 constexpr const char QUERYDSL_NOT[]       = "_not";
 constexpr const char QUERYDSL_MATCH_ALL[] = "_all";
 //constexpr const char QUERYDSL_GEO_POLIGON[] = "_polygon";
-// constexpr const char QUERYDSL_EWKT[]       = "_ewkt";
 
 
 static constexpr auto HASH_ALL   = xxh64::hash(QUERYDSL_MATCH_ALL);
