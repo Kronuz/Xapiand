@@ -620,6 +620,8 @@ XapiandManager::run(const opts_t& o)
 void
 XapiandManager::finish()
 {
+	L_CALL(this, "XapiandManager::finish()");
+
 	L_DEBUG(this, "Finishing servers pool!");
 	server_pool.finish();
 

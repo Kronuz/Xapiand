@@ -215,6 +215,8 @@ namespace queue {
 		}
 
 		void finish() noexcept {
+			L_CALL(this, "Queue::finish()");
+
 			if (_finished) {
 				return;
 			}

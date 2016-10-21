@@ -293,6 +293,8 @@ public:
 	}
 
 	void finish() {
+		L_CALL(this, "DatabasesLRU::finish()");
+
 		for (iterator it = begin(); it != end(); ++it) {
 			it->second->finish();
 		}
