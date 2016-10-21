@@ -250,32 +250,18 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& _obj, std::string&
 
 
 Xapian::docid
-DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
 {
-	L_CALL(this, "DatabaseHandler::index(%s, %s)", repr(_document_id).c_str(), repr(body.to_string()).c_str());
-
-	if (!(flags & DB_WRITABLE)) {
-		throw MSG_Error("Database is read-only");
-	}
-
-	if (_document_id.empty()) {
-		throw MSG_Error("Document must have an 'id'");
-	}
-
-	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(body.to_string()).c_str());
+	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(obj.to_string()).c_str());
 
 	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	std::string term_id;
 	Xapian::Document doc;
-	if (body.is_map()) {
-		auto f_data = _index(doc, body, term_id, _document_id, ct_type, ct_length);
-		L_INDEX(this, "Data: %s", f_data.to_string().c_str());
-		doc.set_data(join_data(f_data.serialise(), ""));
-	} else {
-		doc.set_data(join_data("", body.as_string()));
-	}
+	auto f_data = _index(doc, obj, term_id, _document_id, ct_type, ct_length);
+	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
+	doc.set_data(join_data(f_data.serialise(), blob));
 
 	Xapian::docid did;
 	const auto _endpoints = endpoints;
@@ -293,9 +279,34 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, boo
 	}
 	endpoints = std::move(_endpoints);
 
-	update_schemas();
+	update_schema();
 
 	return did;
+}
+
+
+Xapian::docid
+DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
+{
+	L_CALL(this, "DatabaseHandler::index(%s, %s)", repr(_document_id).c_str(), repr(body.to_string()).c_str());
+
+	if (!(flags & DB_WRITABLE)) {
+		throw MSG_Error("Database is read-only");
+	}
+
+	if (_document_id.empty()) {
+		throw MSG_Error("Document must have an 'id'");
+	}
+
+	MsgPack obj;
+	std::string blob;
+	if (body.is_map()) {
+		obj = body;
+	} else {
+		blob = body.as_string();
+	}
+
+	return index(_document_id, obj, blob, commit_, ct_type, ct_length, err_list);
 }
 
 
@@ -325,36 +336,9 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 	auto obj = document.get_obj();
 	apply_patch(patches, obj);
 
-	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(obj.to_string()).c_str());
+	auto blob = document.get_blob();
 
-	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
-	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
-
-	std::string term_id;
-	Xapian::Document doc;
-	auto f_data = _index(doc, obj, term_id, _document_id, ct_type, ct_length);
-	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
-	doc.set_data(join_data(f_data.serialise(), document.get_blob()));
-
-	Xapian::docid did;
-	const auto _endpoints = endpoints;
-	for (const auto& e : _endpoints) {
-		endpoints.clear();
-		endpoints.add(e);
-		try {
-			DatabaseHandler::lock_database lk(this);
-			did = database->replace_document_term(term_id, doc, commit_);
-		} catch (const Xapian::Error& err) {
-			if (err_list) {
-				err_list->operator[](err.get_error_string()).push_back(e.to_string());
-			}
-		}
-	}
-	endpoints = std::move(_endpoints);
-
-	update_schema();
-
-	return did;
+	return index(_document_id, obj, blob, commit_, ct_type, ct_length, err_list);
 }
 
 
@@ -593,18 +577,6 @@ void
 DatabaseHandler::update_schema() const
 {
 	L_CALL(this, "DatabaseHandler::update_schema()");
-
-	auto mod_schema = schema->get_modified_schema();
-	if (mod_schema) {
-		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, mod_schema);
-	}
-}
-
-
-void
-DatabaseHandler::update_schemas() const
-{
-	L_CALL(this, "DatabaseHandler::update_schemas()");
 
 	auto mod_schema = schema->get_modified_schema();
 	if (mod_schema) {
