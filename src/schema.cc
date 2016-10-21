@@ -958,9 +958,11 @@ Schema::get_subproperties(const MsgPack& properties)
 		restart_specification();
 		for (const auto& field_name : field_names) {
 			detect_dynamic(field_name);
-			auto _name = specification.dynamic_type == DynamicFieldType::NONE ? specification.dynamic_name : specification.dynamic_prefix;
-			auto ser_value = Serialise::string(_name);
-			specification.paths_namespace.push_back(std::move(ser_value));
+			if (specification.dynamic_type == DynamicFieldType::NONE) {
+				specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_name));
+			} else {
+				specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.dynamic_prefix));
+			}
 			specification.inside_namespace = true;
 		}
 	}
@@ -1957,7 +1959,11 @@ Schema::process_namespace(const MsgPack& doc_namespace)
 	}
 
 	try {
-		specification.paths_namespace.push_back(Serialise::string(specification.dynamic_full_name));
+		if (specification.dynamic_type == DynamicFieldType::NONE) {
+			specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
+		} else {
+			specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.dynamic_full_name));
+		}
 		get_mutable(specification.full_name)[RESERVED_NAMESPACE] = true;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_NAMESPACE);
@@ -2384,7 +2390,11 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 	L_CALL(this, "Schema::update_namespace(%s)", repr(prop_namespace.to_string()).c_str());
 	(void)prop_namespace;  // silence -Wunused-parameter
 
-	specification.paths_namespace.push_back(Serialise::string(specification.dynamic_full_name));
+	if (specification.dynamic_type == DynamicFieldType::NONE) {
+		specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
+	} else {
+		specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.dynamic_full_name));
+	}
 }
 
 
