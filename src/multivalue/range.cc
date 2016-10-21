@@ -210,7 +210,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				} else if (start.is_map()) {
 					start_v = Serialise::float_cast(start);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::FLOAT, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				if (end.is_number()) {
 					end_v = end.as_f64();
@@ -219,7 +219,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				} else if (end.is_map()) {
 					end_v = Serialise::float_cast(end);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::FLOAT, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				if (start_v > end_v) {
 					return Xapian::Query::MatchNothing;
@@ -235,7 +235,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				} else if (start.is_map()) {
 					start_v = Serialise::integer_cast(start);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::INTEGER, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				if (end.is_number()) {
 					end_v = end.as_i64();
@@ -244,7 +244,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				} else if (end.is_map()) {
 					end_v = Serialise::integer_cast(end);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::INTEGER, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				if (start_v > end_v) {
 					return Xapian::Query::MatchNothing;
@@ -260,7 +260,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				} else if (start.is_map()) {
 					start_v = Serialise::positive_cast(start);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::POSITIVE, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				if (end.is_number()) {
 					end_v = end.as_u64();
@@ -269,7 +269,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				} else if (end.is_map()) {
 					end_v = Serialise::positive_cast(end);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::POSITIVE, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				if (start_v > end_v) {
 					return Xapian::Query::MatchNothing;
@@ -283,14 +283,14 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				} else if (start.is_map()) {
 					start_v = Serialise::string_cast(start);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::UUID, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				if (end.is_string()) {
 					end_v = end.as_string();
 				} else if (end.is_map()) {
 					end_v = Serialise::string_cast(end);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::UUID, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				return filterStringQuery(field_spc, Serialise::uuid(start_v), Serialise::uuid(start_v));
 			}
@@ -301,14 +301,14 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				} else if (start.is_map()) {
 					start_v = Serialise::boolean_cast(start);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::UUID, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				if (end.is_boolean()) {
 					end_v = end.as_bool();
 				} else if (end.is_map()) {
 					end_v = Serialise::boolean_cast(end);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::BOOLEAN, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				return filterStringQuery(field_spc, Serialise::boolean(start_v), Serialise::boolean(start_v));
 			}
@@ -320,14 +320,14 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				} else if (start.is_map()) {
 					start_v = Serialise::string_cast(start);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::STRING, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				if (end.is_string()) {
 					end_v = end.as_string();
 				} else if (end.is_map()) {
 					end_v = Serialise::string_cast(end);
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::STRING, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				return filterStringQuery(field_spc, start_v, start_v);
 			}
@@ -338,14 +338,14 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				} else if (start.is_map()) {
 					timestamp_s = Datetime::timestamp(Serialise::string_cast(start));
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::DATE, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 				if (end.is_string()) {
 					timestamp_e = Datetime::timestamp(end.as_string());
 				} else if (end.is_map()) {
 					timestamp_e = Datetime::timestamp(Serialise::string_cast(end));
 				} else {
-					throw MSG_QueryParserError("Expected type %c in %s", FieldType::DATE, field_name.c_str());
+					throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()), field_name.c_str());
 				}
 
 				if (timestamp_s > timestamp_e) {
