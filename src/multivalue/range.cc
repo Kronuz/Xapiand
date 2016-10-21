@@ -168,11 +168,9 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 			if (!end) {
 				return Xapian::Query::MatchAll;
 			}
-
 			if (field_spc.get_type() == FieldType::GEO) {
 				throw MSG_SerialisationError("The format for Geo Spatial range is: field_name:[\"EWKT\"]");
 			}
-
 			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::serialise(field_spc, end));
 			return Xapian::Query(mvle->release());
 		}  else if (!end) {
