@@ -280,7 +280,7 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define _LOG_CRIT(args...) _L(-LOG_CRIT, false, CRIT_COL, args)
 #define _LOG_ALERT(args...) _L(-LOG_ALERT, false, ALERT_COL, args)
 #define _LOG_EMERG(args...) _L(-LOG_EMERG, false, EMERG_COL, args)
-#define _LOG_EXC(args...) Log::log(false, false, 0ms, LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define _LOG_EXC(args...) Log::log(false, true, 0ms, LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
 #define _LOG(args...) _L(LOG_DEBUG, false, NO_COL, args)
 #define _LOG_LOG(args...) _L(LOG_DEBUG, false, LOG_COL, args)
