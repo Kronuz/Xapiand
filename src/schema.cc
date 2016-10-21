@@ -853,7 +853,7 @@ Schema::detect_dynamic(const std::string& field_name)
 
 
 void
-Schema::add_field(MsgPack* properties, const std::string& field_name)
+Schema::add_field(MsgPack*& properties, const std::string& field_name)
 {
 	L_CALL(this, "Schema::add_field(%s, %s)", repr(properties->to_string()).c_str(), repr(field_name).c_str());
 
@@ -887,7 +887,7 @@ Schema::add_field(MsgPack* properties, const std::string& field_name)
 
 
 void
-Schema::get_subproperties(const MsgPack* properties, const std::string& field_name)
+Schema::get_subproperties(const MsgPack*& properties, const std::string& field_name)
 {
 	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(field_name).c_str());
 
@@ -922,7 +922,6 @@ Schema::get_subproperties(const MsgPack& properties)
 
 	const MsgPack* subproperties = &properties;
 	const auto it_e = field_names.end();
-
 
 	if (specification.paths_namespace.empty()) {
 		for (auto it = field_names.begin(); it != it_e; ++it) {
@@ -2649,7 +2648,7 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 void
 Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL(this, "Schema::index_object(%s)", repr(name).c_str());
+	L_CALL(this, "Schema::index_object(%s, %s)", parent_properties->to_string().c_str(), repr(name).c_str());
 
 	if (!specification.is_recursive) {
 		if (specification.store) {

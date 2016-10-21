@@ -417,12 +417,12 @@ class Schema {
 	/*
 	 * Add new field to properties.
 	 */
-	void add_field(MsgPack* properties, const std::string& field_name);
+	void add_field(MsgPack*& properties, const std::string& field_name);
 
 	/*
 	 * Get the subproperties of field_name.
 	 */
-	void get_subproperties(const MsgPack* properties, const std::string& field_name);
+	void get_subproperties(const MsgPack*& properties, const std::string& field_name);
 
 	/*
 	 * Gets the properties of item_key and specification is updated.
