@@ -478,6 +478,8 @@ HttpClient::_run()
 {
 	L_CALL(this, "HttpClient::run()");
 
+	L_CONN(this, "Start running in worker (sock=%d).", sock);
+
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
 	response_log.load()->LOG_DELAYED_CLEAR();
