@@ -303,6 +303,8 @@ BaseClient::~BaseClient()
 void
 BaseClient::destroy_impl()
 {
+	L_CALL(this, "BaseClient::destroy_impl()");
+
 	destroyer();
 }
 
@@ -310,6 +312,8 @@ BaseClient::destroy_impl()
 void
 BaseClient::destroyer()
 {
+	L_CALL(this, "BaseClient::destroyer()");
+
 	L_OBJ(this, "DESTROYING BASE CLIENT!");
 	close();
 
@@ -342,6 +346,8 @@ BaseClient::destroyer()
 void
 BaseClient::close()
 {
+	L_CALL(this, "BaseClient::close()");
+
 	if (closed) {
 		return;
 	}
@@ -409,6 +415,8 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 WR
 BaseClient::write_directly(int fd)
 {
+	L_CALL(this, "BaseClient::write_directly(%d)", fd);
+
 	if (fd == -1) {
 		L_ERR(this, "ERROR: write error {sock:%d, fd:%d}: Socket already closed!", sock, fd);
 		L_CONN(this, "WR:ERR.1: {sock:%d, fd:%d}", sock, fd);
@@ -465,6 +473,8 @@ BaseClient::write_directly(int fd)
 bool
 BaseClient::_write(int fd, bool async)
 {
+	L_CALL(this, "BaseClient::_write(%d, %s)", fd, async ? "true" : "false");
+
 	WR status;
 
 	do {
@@ -507,6 +517,8 @@ BaseClient::_write(int fd, bool async)
 bool
 BaseClient::write(const char *buf, size_t buf_size)
 {
+	L_CALL(this, "BaseClient::write(<buf>, %lu)", buf_size);
+
 	if (!write_queue.push(std::make_shared<Buffer>('\0', buf, buf_size))) {
 		return false;
 	}
@@ -690,6 +702,8 @@ BaseClient::async_read_cb(ev::async &, int revents)
 void
 BaseClient::shutdown_impl(time_t asap, time_t now)
 {
+	L_CALL(this, "BaseClient::shutdown_impl()");
+
 	L_OBJ(this , "SHUTDOWN BASE CLIENT! (%d %d)", asap, now);
 
 	Worker::shutdown_impl(asap, now);
@@ -704,6 +718,8 @@ BaseClient::shutdown_impl(time_t asap, time_t now)
 void
 BaseClient::read_file()
 {
+	L_CALL(this, "BaseClient::read_file()");
+
 	mode = MODE::READ_FILE_TYPE;
 	file_size = -1;
 	receive_checksum = false;
@@ -713,6 +729,8 @@ BaseClient::read_file()
 bool
 BaseClient::send_file(int fd, size_t offset)
 {
+	L_CALL(this, "BaseClient::send_file()");
+
 	ssize_t compressed = -1;
 	switch (*TYPE_COMPRESSOR) {
 		case *NO_COMPRESSOR: {

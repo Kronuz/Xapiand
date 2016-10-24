@@ -1798,6 +1798,8 @@ HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const type_t& ct_t
 const type_t*
 HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const std::vector<type_t>& ct_types)
 {
+	L_CALL(this, "HttpClient::is_acceptable_type(...)");
+
 	for (auto& ct_type : ct_types) {
 		if (is_acceptable_type(ct_type_pattern, ct_type)) {
 			return &ct_type;
