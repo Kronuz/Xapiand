@@ -30,7 +30,30 @@
 #include "utils.h"
 
 
-const std::unordered_map<std::string, dispatch_cast> map_cast({
+const std::unordered_map<std::string, FieldType> map_cast_type({
+	{ RESERVED_INTEGER,           FieldType::INTEGER    },
+	{ RESERVED_POSITIVE,          FieldType::POSITIVE   },
+	{ RESERVED_FLOAT,             FieldType::FLOAT      },
+	{ RESERVED_BOOLEAN,           FieldType::BOOLEAN    },
+	{ RESERVED_STRING,            FieldType::STRING     },
+	{ RESERVED_TEXT,              FieldType::TEXT       },
+	{ RESERVED_UUID,              FieldType::UUID       },
+	{ RESERVED_DATE,              FieldType::DATE       },
+	{ RESERVED_EWKT,              FieldType::GEO        },
+	{ RESERVED_POINT,             FieldType::GEO        },
+	{ RESERVED_POLYGON,           FieldType::GEO        },
+	{ RESERVED_CIRCLE,            FieldType::GEO        },
+	{ RESERVED_CHULL,             FieldType::GEO        },
+	{ RESERVED_MULTIPOINT,        FieldType::GEO        },
+	{ RESERVED_MULTIPOLYGON,      FieldType::GEO        },
+	{ RESERVED_MULTICIRCLE,       FieldType::GEO        },
+	{ RESERVED_MULTICHULL,        FieldType::GEO        },
+	{ RESERVED_GEO_COLLECTION,    FieldType::GEO        },
+	{ RESERVED_GEO_INTERSECTION,  FieldType::GEO        },
+});
+
+
+const std::unordered_map<std::string, dispatch_cast> map_dispatch_cast({
 	{ RESERVED_INTEGER,       &Serialise::integer_cast        },
 	{ RESERVED_POSITIVE,      &Serialise::positive_cast       },
 	{ RESERVED_FLOAT,         &Serialise::float_cast          },
