@@ -221,15 +221,16 @@ inline bool is_valid(const std::string& field_name) {
 	return !field_name.empty() && field_name.at(0) != '_';
 }
 
-Xapian::valueno get_slot(const std::string& name);
-std::string prefixed(const std::string& term, const std::string& prefix);
-std::string get_prefix(const std::string& name, char type);
-std::string get_dynamic_prefix(const std::string& name, char type);
 
 inline std::string get_hashed(const std::string& name) {
 	return sortable_serialise(xxh64::hash(name));
 }
 
+
+Xapian::valueno get_slot(const std::string& name);
+std::string prefixed(const std::string& term, const std::string& prefix);
+std::string get_prefix(const std::string& name, char type);
+std::string get_dynamic_prefix(const std::string& name, char type);
 long long read_mastery(const std::string& dir, bool force);
 void json_load(rapidjson::Document& doc, const std::string& str);
 rapidjson::Document to_json(const std::string& str);
