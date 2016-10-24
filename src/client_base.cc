@@ -442,29 +442,23 @@ BaseClient::write_directly(int fd)
 				L_CONN(this, "WR:ERR.2: {sock:%d, fd:%d}", sock, fd);
 				return WR::ERR;
 			}
-		} else if (written == 0) {
-			L_WARNING(this, "ERROR: connection closed unexpectedly {sock:%d, fd:%d}", sock, fd);
-			L_CONN(this, "WR:CLOSED: {sock:%d, fd:%d}", sock, fd);
-			return WR::CLOSED;
-		} else {
-			L_TCP_WIRE(this, "{sock:%d, fd:%d} <<-- %s (%zu bytes)", sock, fd, repr(buf_data, written, true, true, 500).c_str(), written);
-			buffer->pos += written;
-			if (buffer->nbytes() == 0) {
-				if (write_queue.pop(buffer)) {
-					if (write_queue.empty()) {
-						L_CONN(this, "WR:OK.1: {sock:%d, fd:%d}", sock, fd);
-						return WR::OK;
-					} else {
-						L_CONN(this, "WR:PENDING.1: {sock:%d, fd:%d}", sock, fd);
-						return WR::PENDING;
-					}
+		}
+
+		L_TCP_WIRE(this, "{sock:%d, fd:%d} <<-- %s (%zu bytes)", sock, fd, repr(buf_data, written, true, true, 500).c_str(), written);
+		buffer->pos += written;
+		if (buffer->nbytes() == 0) {
+			if (write_queue.pop(buffer)) {
+				if (write_queue.empty()) {
+					L_CONN(this, "WR:OK: {sock:%d, fd:%d}", sock, fd);
+					return WR::OK;
 				}
-			} else {
-				L_CONN(this, "WR:PENDING.2: {sock:%d, fd:%d}", sock, fd);
-				return WR::PENDING;
 			}
 		}
+
+		L_CONN(this, "WR:PENDING: {sock:%d, fd:%d}", sock, fd);
+		return WR::PENDING;
 	}
+
 	L_CONN(this, "WR:OK.2: {sock:%d, fd:%d}", sock, fd);
 	return WR::OK;
 }
