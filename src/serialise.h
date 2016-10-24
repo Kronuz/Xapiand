@@ -344,4 +344,6 @@ namespace Unserialise {
 	FieldType type(const std::string& str_type);
 };
 
-using dispatch_cast = std::string (*) (const required_spc_t& field_spc, const MsgPack&);
+
+using dispatch_cast = std::string (*)(const required_spc_t&, const MsgPack&);
+extern const std::unordered_map<std::string, dispatch_cast> map_cast;
