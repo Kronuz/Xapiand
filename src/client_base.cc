@@ -435,7 +435,7 @@ BaseClient::write_directly(int fd)
 
 		if (written < 0) {
 			if (ignored_errorno(errno, true, false)) {
-				L_CONN(this, "WR:RETRY: {sock:%d, fd:%d}", sock, fd);
+				L_CONN(this, "WR:RETRY: {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
 				return WR::RETRY;
 			} else {
 				L_ERR(this, "ERROR: write error {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
@@ -443,7 +443,7 @@ BaseClient::write_directly(int fd)
 				return WR::ERR;
 			}
 		} else if (written == 0) {
-			L_WARNING(this, "ERROR: connection closed unexpectedly {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
+			L_WARNING(this, "ERROR: connection closed unexpectedly {sock:%d, fd:%d}", sock, fd);
 			L_CONN(this, "WR:CLOSED: {sock:%d, fd:%d}", sock, fd);
 			return WR::CLOSED;
 		} else {
