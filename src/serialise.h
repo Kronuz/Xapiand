@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "database_utils.h"
 #include "datetime.h"
 #include "hash/endian.h"
 #include "msgpack.h"
@@ -256,7 +257,7 @@ namespace Serialise {
 
 	// Function for serialization of dynamic namespace field.
 	inline std::string dynamic_namespace_field(const std::string& field_name) {
-		return sortable_serialise(xxh64::hash(field_name));
+		return get_hashed(field_name);
 	}
 
 	inline std::string serialise(const std::string& val) {
