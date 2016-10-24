@@ -104,7 +104,7 @@ Raft::stop()
 void
 Raft::async_start_leader_heartbeat_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Raft::async_start_leader_heartbeat_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::async_start_leader_heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	_start_leader_heartbeat();
 }
@@ -113,7 +113,7 @@ Raft::async_start_leader_heartbeat_cb(ev::async&, int revents)
 void
 Raft::async_reset_leader_election_timeout_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Raft::async_reset_leader_election_timeout_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::async_reset_leader_election_timeout_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	_reset_leader_election_timeout();
 }
@@ -122,7 +122,7 @@ Raft::async_reset_leader_election_timeout_cb(ev::async&, int revents)
 void
 Raft::async_reset_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Raft::async_reset_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::async_reset_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	_reset();
 }
@@ -145,7 +145,7 @@ Raft::_reset()
 void
 Raft::leader_election_timeout_cb(ev::timer&, int revents)
 {
-	L_CALL(this, "Raft::leader_election_timeout_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	L_EV_BEGIN(this, "Raft::leader_election_timeout_cb:BEGIN");
 
@@ -187,7 +187,7 @@ Raft::_reset_leader_election_timeout()
 void
 Raft::leader_heartbeat_cb(ev::timer&, int revents)
 {
-	L_CALL(this, "Raft::leader_heartbeat_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	L_EV_BEGIN(this, "Raft::leader_heartbeat_cb:BEGIN");
 

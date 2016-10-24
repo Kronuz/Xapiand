@@ -49,7 +49,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 	int fd = watcher.fd;
 	int sock = http->sock;
 
-	L_CALL(this, "HttpServer::io_accept_cb(<watcher>, 0x%02x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents).c_str(), sock, fd); (void)revents;
+	L_CALL(this, "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents).c_str(), sock, fd); (void)revents;
 
 	if (EV_ERROR & revents) {
 		L_EV(this, "ERROR: got invalid http event {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
