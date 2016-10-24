@@ -208,14 +208,12 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 			return string(field_spc, field_value.as_string());
 		case MsgPack::Type::MAP:
 			if (field_value.size() == 1) {
-				for (const auto& elem : field_value) {
-					auto str_key = elem.as_string();
-					try {
-						auto func = map_cast.at(str_key);
-						return (*func)(field_spc, field_value.at(str_key));
-					} catch (const std::out_of_range&) {
-						throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
-					}
+				auto str_key = field_value.begin()->as_string();
+				try {
+					auto func = map_dispatch_cast.at(str_key);
+					return (*func)(field_spc, field_value.at(str_key));
+				} catch (const std::out_of_range&) {
+					throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
 				}
 			} else {
 				throw MSG_SerialisationError("Expected map with one element");
