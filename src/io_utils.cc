@@ -161,9 +161,13 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 	while (nbyte) {
 		ssize_t c = ::write(fd, p, nbyte);
 		if unlikely(c < 0) {
-			L_ERRNO(nullptr, "io::write() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
+			L_ERRNO(nullptr, "io::write() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
 			if (errno == EINTR) continue;
-			return -1;
+			size_t written = p - static_cast<const char*>(buf);
+			if (written == 0) {
+				return -1;
+			}
+			return written;
 		}
 		p += c;
 		if likely(c == static_cast<ssize_t>(nbyte)) {
@@ -191,9 +195,13 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 		ssize_t c = ::pwrite(fd, p, nbyte, offset);
 #endif
 		if unlikely(c < 0) {
-			L_ERRNO(nullptr, "io::pwrite() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
+			L_ERRNO(nullptr, "io::pwrite() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
 			if (errno == EINTR) continue;
-			return -1;
+			size_t written = p - static_cast<const char*>(buf);
+			if (written == 0) {
+				return -1;
+			}
+			return written;
 		}
 		p += c;
 		if likely(c == static_cast<ssize_t>(nbyte)) {
@@ -210,40 +218,61 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 	L_CALL(nullptr, "io::read(%d, <buf>, %lu)", fd, nbyte);
 
 	char* p = static_cast<char*>(buf);
-	while (true) {
+	while (nbyte) {
 		ssize_t c = ::read(fd, p, nbyte);
 		if unlikely(c < 0) {
-			L_ERRNO(nullptr, "io::read() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
+			L_ERRNO(nullptr, "io::read() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
 			if (errno == EINTR) continue;
-			return -1;
+			size_t read = p - static_cast<const char*>(buf);
+			if (read == 0) {
+				return -1;
+			}
+			return read;
 		}
-		return c;
+		p += c;
+		break; // read() doesn't have to read the whole nbytes
+		// if likely(c == static_cast<ssize_t>(nbyte)) {
+		// 	break;
+		// }
+		// nbyte -= c;
 	}
+	return p - static_cast<const char*>(buf);
 }
 
 
 ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 	L_CALL(nullptr, "io::pread(%d, <buf>, %lu, %lu)", fd, nbyte, offset);
 
-	char* p = static_cast<char*>(buf);
 #ifndef HAVE_PWRITE
 	if unlikely(io::lseek(fd, offset, SEEK_SET) == -1) {
 		return -1;
 	}
 #endif
-	while (true) {
+	char* p = static_cast<char*>(buf);
+	while (nbyte) {
 #ifndef HAVE_PWRITE
 		ssize_t c = ::read(fd, p, nbyte);
 #else
 		ssize_t c = ::pread(fd, p, nbyte, offset);
 #endif
 		if unlikely(c < 0) {
-			L_ERRNO(nullptr, "io::pread() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
+			L_ERRNO(nullptr, "io::pread() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
 			if (errno == EINTR) continue;
-			return -1;
+			size_t read = p - static_cast<const char*>(buf);
+			if (read == 0) {
+				return -1;
+			}
+			return read;
 		}
-		return c;
+		p += c;
+		break; // read() doesn't have to read the whole nbytes
+		// if likely(c == static_cast<ssize_t>(nbyte)) {
+		// 	break;
+		// }
+		// nbyte -= c;
+		// offset += c;
 	}
+	return p - static_cast<const char*>(buf);
 }
 
 
