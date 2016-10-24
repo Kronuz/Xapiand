@@ -79,7 +79,7 @@ Discovery::stop() {
 void
 Discovery::async_enter_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Discovery::async_enter_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL(this, "Discovery::async_enter_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	_enter();
 }
@@ -102,7 +102,7 @@ Discovery::_enter()
 void
 Discovery::heartbeat_cb(ev::timer&, int revents)
 {
-	L_CALL(this, "Discovery::heartbeat_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL(this, "Discovery::heartbeat_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	L_EV_BEGIN(this, "Discovery::heartbeat_cb:BEGIN");
 

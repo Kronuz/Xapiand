@@ -378,7 +378,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 {
 	int fd = watcher.fd;
 
-	L_CALL(this, "BaseClient::io_cb(<watcher>, 0x%02x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents).c_str(), sock, fd);
+	L_CALL(this, "BaseClient::io_cb(<watcher>, 0x%02x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents).c_str(), sock, fd); (void)revents;
 
 	if (revents & EV_ERROR) {
 		L_ERR(this, "ERROR: got invalid event {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
@@ -655,7 +655,7 @@ BaseClient::io_cb_read(int fd)
 void
 BaseClient::async_write_cb(ev::async &, int revents)
 {
-	L_CALL(this, "BaseClient::async_write_cb(<watcher>, 0x%02x (%s)) {sock:%d}", revents, readable_revents(revents).c_str(), sock);
+	L_CALL(this, "BaseClient::async_write_cb(<watcher>, 0x%02x (%s)) {sock:%d}", revents, readable_revents(revents).c_str(), sock); (void)revents;
 
 	L_EV_BEGIN(this, "BaseClient::async_write_cb:BEGIN");
 
@@ -668,7 +668,7 @@ BaseClient::async_write_cb(ev::async &, int revents)
 void
 BaseClient::async_read_cb(ev::async &, int revents)
 {
-	L_CALL(this, "BaseClient::async_read_cb(<watcher>, 0x%02x (%s)) {sock:%d}", revents, readable_revents(revents).c_str(), sock);
+	L_CALL(this, "BaseClient::async_read_cb(<watcher>, 0x%02x (%s)) {sock:%d}", revents, readable_revents(revents).c_str(), sock); (void)revents;
 
 	L_EV_BEGIN(this, "BaseClient::async_read_cb:BEGIN");
 

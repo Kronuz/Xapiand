@@ -163,7 +163,7 @@ private:
 	}
 
 	void _async_break_loop_cb(ev::async&, int revents) {
-		L_CALL(this, "Worker::_async_break_loop_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str());
+		L_CALL(this, "Worker::_async_break_loop_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 		L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
 		break_loop_impl();
@@ -171,7 +171,7 @@ private:
 	}
 
 	void _async_destroy_cb(ev::async&, int revents) {
-		L_CALL(this, "Worker::_async_destroy_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str());
+		L_CALL(this, "Worker::_async_destroy_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 		L_EV_BEGIN(this, "Worker::_async_destroy_cb:BEGIN");
 		destroy_impl();
@@ -179,7 +179,7 @@ private:
 	}
 
 	void _async_detach_cb(ev::async&, int revents) {
-		L_CALL(this, "Worker::_async_detach_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str());
+		L_CALL(this, "Worker::_async_detach_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
 		detach_impl();
