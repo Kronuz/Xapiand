@@ -156,30 +156,36 @@ Cast::boolean(const MsgPack& obj)
 
 
 std::string
-Serialise::integer_cast(const required_spc_t& field_spc, const class MsgPack& obj) {
+Serialise::integer_cast(const required_spc_t& field_spc, const class MsgPack& obj)
+{
 	return Serialise::integer(field_spc.get_type(), Cast::integer(obj));
 }
 
+
 std::string
-Serialise::positive_cast(const required_spc_t& field_type, const class MsgPack& obj) {
+Serialise::positive_cast(const required_spc_t& field_type, const class MsgPack& obj)
+{
 	return Serialise::positive(field_type.get_type(), Cast::positive(obj));
 }
 
 
 std::string
-Serialise::float_cast(const required_spc_t& field_type, const class MsgPack& obj) {
+Serialise::float_cast(const required_spc_t& field_type, const class MsgPack& obj)
+{
 	return Serialise::_float(field_type.get_type(), Cast::_float(obj));
 }
 
 
 std::string
-Serialise::boolean_cast(const required_spc_t& field_type, const class MsgPack& obj) {
+Serialise::boolean_cast(const required_spc_t& field_type, const class MsgPack& obj)
+{
 	return Serialise::boolean(field_type.get_type(), Cast::boolean(obj));
 }
 
 
 std::string
-Serialise::string_cast(const required_spc_t& field_type, const class MsgPack& obj) {
+Serialise::string_cast(const required_spc_t& field_type, const class MsgPack& obj)
+{
 	return Serialise::string(field_type, Cast::string(obj));
 }
 
@@ -208,7 +214,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 						auto func = map_cast.at(str_key);
 						return (*func)(field_spc, field_value.at(str_key));
 					} catch (const std::out_of_range&) {
-						throw MSG_SerialisationError("Unknown type %s", str_key.c_str());
+						throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
 					}
 				}
 			} else {
