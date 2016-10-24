@@ -40,6 +40,7 @@ inline int __fsync(int fd) { return 0; }
 
 // From /usr/include/sys/errno.h:
 const char* sys_errnolist[] {
+	"",
 	"EPERM",            /* 1:   Operation not permitted */
 	"ENOENT",           /* 2:   No such file or directory */
 	"ESRCH",            /* 3:   No such process */
@@ -160,7 +161,7 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 	while (nbyte) {
 		ssize_t c = ::write(fd, p, nbyte);
 		if unlikely(c < 0) {
-			L_ERRNO(nullptr, "io::write() -> %s (%d): %s)", strerrno(errno), errno, strerror(errno));
+			L_ERRNO(nullptr, "io::write() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
 			if (errno == EINTR) continue;
 			return -1;
 		}
@@ -190,7 +191,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 		ssize_t c = ::pwrite(fd, p, nbyte, offset);
 #endif
 		if unlikely(c < 0) {
-			L_ERRNO(nullptr, "io::pwrite() -> %s (%d): %s)", strerrno(errno), errno, strerror(errno));
+			L_ERRNO(nullptr, "io::pwrite() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
 			if (errno == EINTR) continue;
 			return -1;
 		}
@@ -212,7 +213,7 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 	while (true) {
 		ssize_t c = ::read(fd, p, nbyte);
 		if unlikely(c < 0) {
-			L_ERRNO(nullptr, "io::read() -> %s (%d): %s)", strerrno(errno), errno, strerror(errno));
+			L_ERRNO(nullptr, "io::read() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
 			if (errno == EINTR) continue;
 			return -1;
 		}
@@ -237,7 +238,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 		ssize_t c = ::pread(fd, p, nbyte, offset);
 #endif
 		if unlikely(c < 0) {
-			L_ERRNO(nullptr, "io::pread() -> %s (%d): %s)", strerrno(errno), errno, strerror(errno));
+			L_ERRNO(nullptr, "io::pread() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
 			if (errno == EINTR) continue;
 			return -1;
 		}
@@ -252,7 +253,7 @@ int fsync(int fd) {
 	while (true) {
 		int r = __FSYNC(fd);
 		if unlikely(r < 0) {
-			L_ERRNO(nullptr, "io::fsync() -> %s (%d): %s)", strerrno(errno), errno, strerror(errno));
+			L_ERRNO(nullptr, "io::fsync() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
 			if (errno == EINTR) continue;
 			return -1;
 		}
@@ -268,7 +269,7 @@ int full_fsync(int fd) {
 	while (true) {
 		int r = fcntl(fd, F_FULLFSYNC, 0);
 		if unlikely(r < 0) {
-			L_ERRNO(nullptr, "io::full_fsync() -> %s (%d): %s)", strerrno(errno), errno, strerror(errno));
+			L_ERRNO(nullptr, "io::full_fsync() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
 			if (errno == EINTR) continue;
 			return -1;
 		}
