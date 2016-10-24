@@ -24,6 +24,7 @@
 #include "Lexer.h"
 
 #include <string>
+#include <cstring>
 
 #define AND "AND"
 #define OR "OR"
