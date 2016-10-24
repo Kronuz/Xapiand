@@ -87,14 +87,6 @@
 // Reserved words used in schema only for GEO fields.
 #define RESERVED_PARTIALS          "_partials"
 #define RESERVED_ERROR             "_error"
-#define RESERVED_RADIUS            "_radius"
-#define RESERVED_LATITUDE          "_latitude"
-#define RESERVED_LONGITUDE         "_longitude"
-// Reserved words used in schema only for DATE fields
-#define RESERVED_TIME              "_time"
-#define RESERVED_YEAR              "_year"
-#define RESERVED_MONTH             "_month"
-#define RESERVED_DAY               "_day"
 // Reserved words used for doing explicit cast convertions
 #define RESERVED_FLOAT             "_float"
 #define RESERVED_POSITIVE          "_positive"
