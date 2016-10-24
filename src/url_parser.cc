@@ -24,6 +24,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <cstring>
 
 
 std::string urldecode(const char *str, size_t size) {
