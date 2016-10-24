@@ -398,6 +398,7 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 // Enable the following when needed. Use _LOG_* _LOG_INDENTED_* or _LOG_STACKED_*
 // ex. _LOG, _LOG_STACKED_DARK_GREY, _LOG_CYAN, _LOG_STACKED_LOG or _LOG_INDENTED_MAGENTA
 
+#define L_ERRNO _
 #define L_TRACEBACK _
 #define L_CALL _
 #define L_TIME _
