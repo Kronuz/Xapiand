@@ -106,6 +106,19 @@ constexpr uint32_t MAXDOU2INT               =  999999999;
 constexpr uint8_t SIZE_UUID = 36;
 
 
+namespace Cast {
+	/*
+	 * Functions for doing cast between types.
+	 */
+
+	int64_t integer(const MsgPack& obj);
+	uint64_t positive(const MsgPack& obj);
+	double _float(const MsgPack& obj);
+	std::string string(const MsgPack& obj);
+	bool boolean(const MsgPack& obj);
+};
+
+
 class Cartesian;
 class CartesianUSet;
 class RangeList;
@@ -139,17 +152,12 @@ namespace Serialise {
 
 	std::string MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value);
 	std::string serialise(const required_spc_t& field_spc, const std::string& field_value);
-	std::string serialise(const required_spc_t& field_spc, const class MsgPack& field_value);
 	std::string string(const required_spc_t& field_spc, const std::string& field_value);
-	int64_t integer_cast(const class MsgPack& obj);
-	uint64_t positive_cast(const class MsgPack& obj);
-	double float_cast(const class MsgPack& obj);
-	std::string string_cast(const class MsgPack& obj);
-	bool boolean_cast(const class MsgPack& obj);
 
 	/*
 	 * Serialise field_value according to field_type.
 	 */
+
 	std::string _float(FieldType field_type, double field_value);
 	std::string integer(FieldType field_type, int64_t field_value);
 	std::string positive(FieldType field_type, uint64_t field_value);
@@ -162,6 +170,7 @@ namespace Serialise {
 	 *
 	 * Returns the type and the serialised values according to type.
 	 */
+
 	std::pair<FieldType, std::string> get_type(const std::string& field_value, bool bool_term=false);
 	std::tuple<FieldType, std::string, std::string> get_range_type(const std::string& start, const std::string& end, bool bool_term=false);
 	std::pair<FieldType, std::string> get_type(const class MsgPack& field_value, bool bool_term=false);
@@ -175,7 +184,7 @@ namespace Serialise {
 	}
 
 	// Serialise value like date and fill tm.
-	std::string date(const ::MsgPack& value, Datetime::tm_t& tm);
+	std::string date(const class MsgPack& value, Datetime::tm_t& tm);
 
 	inline std::string date(Datetime::tm_t& tm) {
 		return sortable_serialise(Datetime::timestamp(tm));
@@ -323,12 +332,3 @@ namespace Unserialise {
 	// Unserialise str_type to its FieldType.
 	FieldType type(const std::string& str_type);
 };
-
-extern const char TYPE_FLOAT[];
-extern const char TYPE_POSITIVE[];
-extern const char TYPE_INTEGER[];
-extern const char TYPE_BOOLEAN[];
-extern const char TYPE_STRING[];
-extern const char TYPE_TEXT[];
-extern const char TYPE_UUID[];
-extern const char TYPE_EWKT[];
