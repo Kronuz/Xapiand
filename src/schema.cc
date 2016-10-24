@@ -1166,10 +1166,10 @@ Schema::set_type(const MsgPack& item_doc)
 					specification.sep_types[2] = map_cast_type.at(cast_type);
 					return;
 				} catch (const std::out_of_range&) {
-					throw MSG_ClienError("Unknown cast type %s", cast_type.c_str());
+					throw MSG_ClientError("Unknown cast type %s", cast_type.c_str());
 				}
 			}
-			throw MSG_ClienError("Expected map with one element");
+			throw MSG_ClientError("Expected map with one element");
 		case MsgPack::Type::NIL:
 			// Do not process this field.
 			throw MSG_DummyException();
