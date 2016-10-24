@@ -585,44 +585,37 @@ public:
 	 * Functions for reserved words that are in the document.
 	 */
 
-	void process_weight(const MsgPack& doc_weight);
-	void process_position(const MsgPack& doc_position);
-	void process_spelling(const MsgPack& doc_spelling);
-	void process_positions(const MsgPack& doc_positions);
-	void process_stem_strategy(const MsgPack& doc_stem_strategy);
-	void process_stem_language(const MsgPack& doc_stem_language);
-	void process_language(const MsgPack& doc_language);
-	void process_type(const MsgPack& doc_type);
-	void process_accuracy(const MsgPack& doc_accuracy);
-	void process_acc_prefix(const MsgPack& doc_acc_prefix);
-	void process_prefix(const MsgPack& doc_prefix);
-	void process_slot(const MsgPack& doc_slot);
-	void process_index(const MsgPack& doc_index);
-	void process_store(const MsgPack& doc_store);
-	void process_recursive(const MsgPack& doc_recursive);
-	void process_dynamic(const MsgPack& doc_dynamic);
-	void process_d_detection(const MsgPack& doc_d_detection);
-	void process_n_detection(const MsgPack& doc_n_detection);
-	void process_g_detection(const MsgPack& doc_g_detection);
-	void process_b_detection(const MsgPack& doc_b_detection);
-	void process_s_detection(const MsgPack& doc_s_detection);
-	void process_t_detection(const MsgPack& doc_t_detection);
-	void process_u_detection(const MsgPack& doc_u_detection);
-	void process_bool_term(const MsgPack& doc_bool_term);
-	void process_partials(const MsgPack& doc_partials);
-	void process_error(const MsgPack& doc_error);
-	void process_namespace(const MsgPack& doc_namespace);
-	void process_latitude(const MsgPack& doc_latitude);
-	void process_longitude(const MsgPack& doc_longitude);
-	void process_radius(const MsgPack& doc_radius);
-	void process_date(const MsgPack& doc_date);
-	void process_time(const MsgPack& doc_time);
-	void process_year(const MsgPack& doc_year);
-	void process_month(const MsgPack& doc_month);
-	void process_day(const MsgPack& doc_day);
-	void process_value(const MsgPack& doc_value);
-	void process_name(const MsgPack& doc_name);
-	void process_script(const MsgPack& doc_script);
+	void process_weight(const std::string& prop_name, const MsgPack& doc_weight);
+	void process_position(const std::string& prop_name, const MsgPack& doc_position);
+	void process_spelling(const std::string& prop_name, const MsgPack& doc_spelling);
+	void process_positions(const std::string& prop_name, const MsgPack& doc_positions);
+	void process_stem_strategy(const std::string& prop_name, const MsgPack& doc_stem_strategy);
+	void process_stem_language(const std::string& prop_name, const MsgPack& doc_stem_language);
+	void process_language(const std::string& prop_name, const MsgPack& doc_language);
+	void process_type(const std::string& prop_name, const MsgPack& doc_type);
+	void process_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy);
+	void process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_prefix);
+	void process_prefix(const std::string& prop_name, const MsgPack& doc_prefix);
+	void process_slot(const std::string& prop_name, const MsgPack& doc_slot);
+	void process_index(const std::string& prop_name, const MsgPack& doc_index);
+	void process_store(const std::string& prop_name, const MsgPack& doc_store);
+	void process_recursive(const std::string& prop_name, const MsgPack& doc_recursive);
+	void process_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic);
+	void process_d_detection(const std::string& prop_name, const MsgPack& doc_d_detection);
+	void process_n_detection(const std::string& prop_name, const MsgPack& doc_n_detection);
+	void process_g_detection(const std::string& prop_name, const MsgPack& doc_g_detection);
+	void process_b_detection(const std::string& prop_name, const MsgPack& doc_b_detection);
+	void process_s_detection(const std::string& prop_name, const MsgPack& doc_s_detection);
+	void process_t_detection(const std::string& prop_name, const MsgPack& doc_t_detection);
+	void process_u_detection(const std::string& prop_name, const MsgPack& doc_u_detection);
+	void process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term);
+	void process_partials(const std::string& prop_name, const MsgPack& doc_partials);
+	void process_error(const std::string& prop_name, const MsgPack& doc_error);
+	void process_namespace(const std::string& prop_name, const MsgPack& doc_namespace);
+	void process_value(const std::string& prop_name, const MsgPack& doc_value);
+	void process_name(const std::string& prop_name, const MsgPack& doc_name);
+	void process_script(const std::string& prop_name, const MsgPack& doc_script);
+	void process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object);
 
 
 	/*
@@ -687,12 +680,13 @@ public:
 extern const std::unordered_set<std::string> reserved_field_names;
 
 
-using dispatch_reserved = void (Schema::*)(const MsgPack&);
-using dispatch_root     = void (Schema::*)(const MsgPack&, const MsgPack&, MsgPack&, Xapian::Document&);
-using dispatch_readable = void (*)(MsgPack&, MsgPack&);
+using dispatch_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
+using dispatch_update_reserved   = void (Schema::*)(const MsgPack&);
+using dispatch_root              = void (Schema::*)(const MsgPack&, const MsgPack&, MsgPack&, Xapian::Document&);
+using dispatch_readable          = void (*)(MsgPack&, MsgPack&);
 
 
-extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_document;
-extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties;
+extern const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document;
+extern const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_properties;
 extern const std::unordered_map<std::string, dispatch_root> map_dispatch_root;
 extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
