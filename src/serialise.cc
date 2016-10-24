@@ -208,7 +208,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 			return string(field_spc, field_value.as_string());
 		case MsgPack::Type::MAP:
 			if (field_value.size() == 1) {
-				for (auto const elem : field_value) {
+				for (const auto& elem : field_value) {
 					auto str_key = elem.as_string();
 					try {
 						auto func = map_cast.at(str_key);
