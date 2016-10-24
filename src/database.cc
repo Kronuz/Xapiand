@@ -1369,7 +1369,19 @@ DatabasePool::finish()
 bool
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {
-	L_CALL(this, "DatabasePool::checkout(%s, %d)", repr(endpoints.to_string()).c_str(), flags);
+	L_CALL(this, "DatabasePool::checkout(%s, 0x%02x (%s))", repr(endpoints.to_string()).c_str(), flags, [&flags]() {
+		std::vector<std::string> values;
+		if (flags == DB_OPEN) values.push_back("DB_OPEN");
+		if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
+		if ((flags & DB_SPAWN) == DB_SPAWN) values.push_back("DB_SPAWN");
+		if ((flags & DB_PERSISTENT) == DB_PERSISTENT) values.push_back("DB_PERSISTENT");
+		if ((flags & DB_INIT_REF) == DB_INIT_REF) values.push_back("DB_INIT_REF");
+		if ((flags & DB_VOLATILE) == DB_VOLATILE) values.push_back("DB_VOLATILE");
+		if ((flags & DB_REPLICATION) == DB_REPLICATION) values.push_back("DB_REPLICATION");
+		if ((flags & DB_NOWAL) == DB_NOWAL) values.push_back("DB_NOWAL");
+		if ((flags & DB_DATA_STORAGE) == DB_DATA_STORAGE) values.push_back("DB_DATA_STORAGE");
+		return join_string(values, " | ");
+	}().c_str());
 
 	bool writable = flags & DB_WRITABLE;
 	bool persistent = flags & DB_PERSISTENT;
@@ -1759,7 +1771,7 @@ DatabasePool::get_master_count()
 std::shared_ptr<const MsgPack>
 DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 {
-	L_CALL(this, "DatabasePool::get_schema(%s, %d)", repr(endpoint.to_string()).c_str(), flags);
+	L_CALL(this, "DatabasePool::get_schema(%s, 0x%02x)", repr(endpoint.to_string()).c_str(), flags);
 
 	if (finished) return nullptr;
 
