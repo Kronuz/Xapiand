@@ -387,3 +387,15 @@ QueryDSL::set_parameters(const MsgPack& obj)
 
 	/* Add here more options for the fields */
 }
+
+
+bool
+QueryDSL::map_dispatcher(const std::string& str, const std::unordered_map<std::string, dispatch_dsl> map, const MsgPack& obj, Xapian::Query& query) {
+	try {
+		auto func = map.at(str);
+		query = (this->*func)(obj);
+		return true;
+	} catch (const std::out_of_range&) {
+		return false;
+	}
+}

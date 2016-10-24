@@ -28,7 +28,12 @@
 
 #include "xapian.h"
 
+class QueryDSL;
+
 constexpr const char QUERYDSL_QUERY[] = "_query";
+
+using dispatch_op_dsl = Xapian::Query (QueryDSL::*)(const MsgPack&, Xapian::Query::op);
+using dispatch_dsl = Xapian::Query (QueryDSL::*)(const MsgPack&);
 
 
 /* A domain-specific language (DSL) for query */
@@ -47,9 +52,9 @@ class QueryDSL {
 	std::string _fieldname;
 	Xapian::termcount _wqf;
 
-
 	Xapian::Query process_query(const MsgPack& obj, const std::string& field_name);
 	void set_parameters(const MsgPack& obj);
+	bool map_dispatcher(const std::string& str, const std::unordered_map<std::string, dispatch_dsl> map, const MsgPack& obj, Xapian::Query& query);
 
 public:
 	QueryDSL(std::shared_ptr<Schema> schema_);
@@ -61,9 +66,6 @@ public:
 	Xapian::Query query(const MsgPack& o);
 	Xapian::Query range_query(const MsgPack& o);
 };
-
-using dispatch_op_dsl = Xapian::Query (QueryDSL::*)(const MsgPack&, Xapian::Query::op);
-using dispatch_dsl = Xapian::Query (QueryDSL::*)(const MsgPack&);
 
 extern const std::unordered_map<std::string, dispatch_op_dsl> map_op_dispatch_dsl;
 extern const std::unordered_map<std::string, dispatch_dsl> map_dispatch_dsl;
