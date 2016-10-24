@@ -72,16 +72,16 @@ const std::unordered_map<std::string, dispatch_op_dsl> map_op_dispatch_dsl({
 
 
 const std::unordered_map<std::string, dispatch_dsl> map_dispatch_dsl({
-	{ QUERYDSL_IN,        &QueryDSL::in_range_query   },
-	{ QUERYDSL_VALUE,     &QueryDSL::query            },
-	{ TYPE_INTEGER,       &QueryDSL::query            },
-	{ TYPE_POSITIVE,      &QueryDSL::query            },
-	{ TYPE_FLOAT,         &QueryDSL::query            },
-	{ TYPE_BOOLEAN,       &QueryDSL::query            },
-	{ TYPE_STRING,        &QueryDSL::query            },
-	{ TYPE_TEXT,          &QueryDSL::query            },
-	{ TYPE_UUID,          &QueryDSL::query            },
-	{ TYPE_EWKT,          &QueryDSL::query            },
+	{ QUERYDSL_IN,            &QueryDSL::in_range_query   },
+	{ QUERYDSL_VALUE,         &QueryDSL::query            },
+	{ RESERVED_INTEGER,       &QueryDSL::query            },
+	{ RESERVED_POSITIVE,      &QueryDSL::query            },
+	{ RESERVED_FLOAT,         &QueryDSL::query            },
+	{ RESERVED_BOOLEAN,       &QueryDSL::query            },
+	{ RESERVED_STRING,        &QueryDSL::query            },
+	{ RESERVED_TEXT,          &QueryDSL::query            },
+	{ RESERVED_UUID,          &QueryDSL::query            },
+	{ RESERVED_EWKT,          &QueryDSL::query            },
 });
 
 
@@ -328,16 +328,16 @@ QueryDSL::query(const MsgPack& obj)
 					case FieldType::DATE:
 					case FieldType::UUID:
 					case FieldType::BOOLEAN:
-						return Xapian::Query(prefixed(Serialise::serialise(field_spc, obj), field_spc.prefix), _wqf);
+						return Xapian::Query(prefixed(Serialise::MsgPack(field_spc, obj), field_spc.prefix), _wqf);
 
 					case FieldType::STRING:
 					{
-						auto field_value = Serialise::serialise(field_spc, obj);
+						auto field_value = Serialise::MsgPack(field_spc, obj);
 						return Xapian::Query(prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix), _wqf);
 					}
 					case FieldType::TEXT:
 					{
-						auto field_value = Serialise::serialise(field_spc, obj);
+						auto field_value = Serialise::MsgPack(field_spc, obj);
 						Xapian::QueryParser queryTexts;
 						field_spc.bool_term ? queryTexts.add_boolean_prefix(_fieldname, field_spc.prefix) : queryTexts.add_prefix(_fieldname, field_spc.prefix);
 						queryTexts.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
@@ -349,7 +349,7 @@ QueryDSL::query(const MsgPack& obj)
 					}
 					case FieldType::GEO:
 					{
-						std::string field_value(Serialise::serialise(field_spc, obj));
+						std::string field_value(Serialise::MsgPack(field_spc, obj));
 						// If the region for search is empty, not process this query.
 						if (field_value.empty()) {
 							return Xapian::Query::MatchNothing;
