@@ -389,7 +389,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 	L_CALL(this, "BaseClient::io_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents).c_str(), sock, fd); (void)revents;
 
 	if (revents & EV_ERROR) {
-		L_ERR(this, "ERROR: got invalid event {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
+		L_ERR(this, "ERROR: got invalid event {sock:%d, fd:%d} - %d: %s", sock, fd, errno, strerror(errno));
 		destroy();
 		detach();
 	}
@@ -435,10 +435,10 @@ BaseClient::write_directly(int fd)
 
 		if (written < 0) {
 			if (ignored_errorno(errno, true, false)) {
-				L_CONN(this, "WR:RETRY: {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
+				L_CONN(this, "WR:RETRY: {sock:%d, fd:%d} - %d: %s", sock, fd, errno, strerror(errno));
 				return WR::RETRY;
 			} else {
-				L_ERR(this, "ERROR: write error {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
+				L_ERR(this, "ERROR: write error {sock:%d, fd:%d} - %d: %s", sock, fd, errno, strerror(errno));
 				L_CONN(this, "WR:ERR.2: {sock:%d, fd:%d}", sock, fd);
 				return WR::ERR;
 			}
@@ -551,11 +551,13 @@ BaseClient::io_cb_read(int fd)
 		const char *buf_data = read_buffer;
 
 		if (received < 0) {
-			if (!ignored_errorno(errno, true, false)) {
+			if (ignored_errorno(errno, true, false)) {
+				L_CONN(this, "Ignored error: {sock:%d, fd:%d} - %d: %s", sock, fd, errno, strerror(errno));
+			} else {
 				if (errno == ECONNRESET) {
-					L_WARNING(this, "WARNING: read error {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
+					L_WARNING(this, "WARNING: read error {sock:%d, fd:%d} - %d: %s", sock, fd, errno, strerror(errno));
 				} else {
-					L_ERR(this, "ERROR: read error {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
+					L_ERR(this, "ERROR: read error {sock:%d, fd:%d} - %d: %s", sock, fd, errno, strerror(errno));
 				}
 				destroy();
 				detach();
