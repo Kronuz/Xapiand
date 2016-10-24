@@ -30,28 +30,108 @@
 #include "utils.h"
 
 
-constexpr const char TYPE_FLOAT[]     = "_float";
-constexpr const char TYPE_POSITIVE[]  = "_positive";
-constexpr const char TYPE_INTEGER[]   = "_integer";
-constexpr const char TYPE_BOOLEAN[]   = "_boolean";
-constexpr const char TYPE_STRING[]    = "_string";
-constexpr const char TYPE_TEXT[]      = "_text";
-constexpr const char TYPE_UUID[]      = "_uuid";
-constexpr const char TYPE_EWKT[]      = "_ewkt";
+int64_t
+Cast::integer(const MsgPack& obj)
+{
+	switch (obj.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return obj.as_u64();
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return obj.as_i64();
+		case MsgPack::Type::FLOAT:
+			return obj.as_f64();
+		case MsgPack::Type::STR:
+			return strict(std::stoll, obj.as_string());
+		case MsgPack::Type::BOOLEAN:
+			return obj.as_bool();
+		default:
+			throw MSG_SerialisationError("Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+	}
+}
 
 
-static constexpr auto hash_float = xxh64::hash(TYPE_FLOAT);
-static constexpr auto hash_positive = xxh64::hash(TYPE_POSITIVE);
-static constexpr auto hash_integer = xxh64::hash(TYPE_INTEGER);
-static constexpr auto hash_boolean = xxh64::hash(TYPE_BOOLEAN);
-static constexpr auto hash_string = xxh64::hash(TYPE_STRING);
-static constexpr auto hash_text = xxh64::hash(TYPE_TEXT);
-static constexpr auto hash_uuid = xxh64::hash(TYPE_UUID);
-static constexpr auto hash_ewkt = xxh64::hash(TYPE_EWKT);
+uint64_t
+Cast::positive(const MsgPack& obj)
+{
+	switch (obj.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return obj.as_u64();
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return obj.as_i64();
+		case MsgPack::Type::FLOAT:
+			return obj.as_f64();
+		case MsgPack::Type::STR:
+			return strict(std::stoull, obj.as_string());
+		case MsgPack::Type::BOOLEAN:
+			return obj.as_bool();
+		default:
+			throw MSG_SerialisationError("Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+	}
+}
+
+
+double
+Cast::_float(const MsgPack& obj)
+{
+	switch (obj.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return obj.as_u64();
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return obj.as_i64();
+		case MsgPack::Type::FLOAT:
+			return obj.as_f64();
+		case MsgPack::Type::STR:
+			return strict(std::stod, obj.as_string());
+		case MsgPack::Type::BOOLEAN:
+			return obj.as_bool();
+		default:
+			throw MSG_SerialisationError("Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+	}
+}
 
 
 std::string
-Serialise::MsgPack(const required_spc_t& field_spc, const ::MsgPack& field_value)
+Cast::string(const MsgPack& obj)
+{
+	return obj.to_string();
+}
+
+
+bool
+Cast::boolean(const MsgPack& obj)
+{
+	switch (obj.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return obj.as_u64() != 0;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return obj.as_i64() != 0;
+		case MsgPack::Type::FLOAT:
+			return obj.as_f64() != 0;
+		case MsgPack::Type::STR: {
+			const char *value = obj.as_string().c_str();
+			switch (value[0]) {
+				case '\0':
+					return false;
+				case '0':
+				case 'f':
+				case 'F':
+					if (value[1] == '\0' || strcasecmp(value, "false") == 0) {
+						return false;
+					}
+				default:
+					return true;
+			}
+		}
+		case MsgPack::Type::BOOLEAN:
+			return obj.as_bool();
+		default:
+			throw MSG_SerialisationError("Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+	}
+}
+
+
+std::string
+Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::NIL:
@@ -98,277 +178,6 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 		default:
 			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(type));
 	}
-}
-
-
-std::string
-Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field_value)
-{
-	auto type = field_spc.get_type();
-
-	switch (type) {
-		case FieldType::INTEGER:
-			if (field_value.is_map()) {
-				if (field_value.size() == 1) {
-					return integer(integer_cast(field_value));
-				} else {
-					throw MSG_SerialisationError("Expected type map with one element");
-				}
-			} else if (field_value.is_number()) {
-				return integer(field_value.as_i64());
-			} else if (field_value.is_string()) {
-				return integer(field_value.as_string());
-			} else {
-				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value.getType())]);
-			}
-		case FieldType::POSITIVE:
-			if (field_value.is_map()) {
-				if (field_value.size() == 1) {
-					return positive(positive_cast(field_value));
-				} else {
-					throw MSG_SerialisationError("Expected type map with one element");
-				}
-			} else if (field_value.is_number()) {
-				return positive(field_value.as_u64());
-			} else if (field_value.is_string()) {
-				return positive(field_value.as_string());
-			} else {
-				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value.getType())]);
-			}
-		case FieldType::FLOAT:
-			if (field_value.is_map()) {
-				if (field_value.size() == 1) {
-					return _float(float_cast(field_value));
-				} else {
-					throw MSG_SerialisationError("Expected type map with one element");
-				}
-			} else if (field_value.is_number()) {
-				return _float(field_value.as_f64());
-			} else if (field_value.is_string()) {
-				return _float(field_value.as_string());
-			} else {
-				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value.getType())]);
-			}
-		case FieldType::DATE:
-			if (field_value.is_map()) {
-				if (field_value.size() == 1) {
-					return date(string_cast(field_value));
-				} else {
-					throw MSG_SerialisationError("Expected type map with one element");
-				}
-			} else if (field_value.is_string()) {
-				return date(field_value.as_string());
-			} else {
-				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value.getType())]);
-			}
-		case FieldType::BOOLEAN:
-			if (field_value.is_map()) {
-				if (field_value.size() == 1) {
-					return boolean(boolean_cast(field_value));
-				} else {
-					throw MSG_SerialisationError("Expected type map with one element");
-				}
-			} else if (field_value.is_boolean()) {
-				return boolean(field_value.as_bool());
-			} else if (field_value.is_string()) {
-				return boolean(field_value.as_string());
-			} else {
-				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value.getType())]);
-			}
-		case FieldType::STRING:
-		case FieldType::TEXT:
-			if (field_value.is_map()) {
-				if (field_value.size() == 1) {
-					return string_cast(field_value);
-				} else {
-					throw MSG_SerialisationError("Expected type map with one element");
-				}
-			} else if (field_value.is_string()) {
-				return field_value.as_string();
-			} else {
-				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value.getType())]);
-			}
-		case FieldType::GEO:
-			if (field_value.is_map()) {
-				if (field_value.size() == 1) {
-					return ewkt(string_cast(field_value), field_spc.partials, field_spc.error);
-				} else {
-					throw MSG_SerialisationError("Expected type map with one element");
-				}
-			} else if (field_value.is_string()) {
-				return ewkt(field_value.as_string(), field_spc.partials, field_spc.error);
-			} else {
-				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value.getType())]);
-			}
-		case FieldType::UUID:
-			if (field_value.is_map()) {
-				if (field_value.size() == 1) {
-					return uuid(string_cast(field_value));
-				} else {
-					throw MSG_SerialisationError("Expected type map with one element");
-				}
-			} else if (field_value.is_string()) {
-				return uuid(field_value.as_string());
-			} else {
-				throw MSG_SerialisationError("Expected type: '%c' but received '%c'", MsgPackTypes[static_cast<int>(field_value.getType())]);
-			}
-		default:
-			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(type));
-	}
-}
-
-
-int64_t
-Serialise::integer_cast(const class MsgPack& obj) {
-
-	for (auto const& elem : obj) {
-		auto str_key = elem.as_string();
-		switch(xxh64::hash(str_key)) {
-			case hash_integer:
-				try {
-					return obj.at(str_key).as_i64();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type integer in %s", str_key.c_str());
-				}
-				break;
-			case hash_positive:
-				try {
-					return obj.at(str_key).as_u64();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type positive in %s", str_key.c_str());
-				}
-				break;
-			case hash_float:
-				try {
-					return obj.at(str_key).as_f64();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type float in %s", str_key.c_str());
-				}
-				break;
-			default:
-				throw MSG_SerialisationError("No able to cast to integer type %s", str_key.c_str());
-		}
-	}
-	return 0;
-}
-
-
-uint64_t
-Serialise::positive_cast(const class MsgPack& obj)
-{
-	for (auto const& elem : obj) {
-		auto str_key = elem.as_string();
-		switch(xxh64::hash(str_key)) {
-			case hash_integer:
-				try {
-					return obj.at(str_key).as_i64();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type integer in %s", str_key.c_str());
-				}
-				break;
-			case hash_positive:
-				try {
-					return obj.at(str_key).as_u64();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type positive in %s", str_key.c_str());
-				}
-				break;
-			case hash_float:
-				try {
-					return obj.at(str_key).as_f64();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type float in %s", str_key.c_str());
-				}
-				break;
-			default:
-				throw MSG_SerialisationError("No able to cast to positive type %s", str_key.c_str());
-
-		}
-	}
-	return 0;
-}
-
-
-double
-Serialise::float_cast(const class MsgPack& obj)
-{
-	for (auto const& elem : obj) {
-		auto str_key = elem.as_string();
-		switch(xxh64::hash(str_key)) {
-			case hash_integer:
-				try {
-					return obj.at(str_key).as_i64();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type integer in %s", str_key.c_str());
-				}
-				break;
-			case hash_positive:
-				try {
-					return obj.at(str_key).as_u64();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type positive in %s", str_key.c_str());
-				}
-				break;
-			case hash_float:
-				try {
-					return obj.at(str_key).as_f64();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type float in %s", str_key.c_str());
-				}
-				break;
-			default:
-				throw MSG_SerialisationError("No able to cast to double type %s", str_key.c_str());
-
-		}
-	}
-	return 0;
-}
-
-
-std::string
-Serialise::string_cast(const class MsgPack& obj)
-{
-	for (auto const& elem : obj) {
-		auto str_key = elem.as_string();
-		switch(xxh64::hash(str_key)) {
-			case hash_text:
-			case hash_string:
-			case hash_uuid:
-			case hash_ewkt:
-				try {
-					return obj.at(str_key).as_string();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type string in %s", str_key.c_str());
-				}
-				break;
-			default:
-				throw MSG_SerialisationError("No able to cast to string type %s", str_key.c_str());
-
-		}
-	}
-	return std::string();
-}
-
-
-bool
-Serialise::boolean_cast(const class MsgPack& obj)
-{
-	for (auto const& elem : obj) {
-		auto str_key = elem.as_string();
-		switch(xxh64::hash(str_key)) {
-			case hash_boolean:
-				try {
-					return obj.at(str_key).as_bool();
-				} catch (const msgpack::type_error&) {
-					throw MSG_SerialisationError("Expected type boolean in %s", str_key.c_str());
-				}
-				break;
-			default:
-				throw MSG_SerialisationError("No able to cast to bool type %s", str_key.c_str());
-
-		}
-	}
-	return false;
 }
 
 
@@ -639,41 +448,42 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 		case MsgPack::Type::MAP: {
 			std::string str_key;
 			try {
-				for(auto const& elem : field_value) {
-					str_key = elem.as_string();
-					switch(xxh64::hash(str_key)) {
-						case hash_integer:
-							return std::make_pair(FieldType::INTEGER, integer(field_value.at(str_key).as_i64()));
+				return std::make_pair(FieldType::STRING, field_value.as_string());
+				// for(auto const& elem : field_value) {
+				// 	str_key = elem.as_string();
+				// 	switch(xxh64::hash(str_key)) {
+				// 		case hash_integer:
+				// 			return std::make_pair(FieldType::INTEGER, integer(field_value.at(str_key).as_i64()));
 
-						case hash_positive:
-							return std::make_pair(FieldType::POSITIVE, positive(field_value.at(str_key).as_u64()));
+				// 		case hash_positive:
+				// 			return std::make_pair(FieldType::POSITIVE, positive(field_value.at(str_key).as_u64()));
 
-						case hash_float:
-							return std::make_pair(FieldType::FLOAT, _float(field_value.at(str_key).as_f64()));
+				// 		case hash_float:
+				// 			return std::make_pair(FieldType::FLOAT, _float(field_value.at(str_key).as_f64()));
 
-						case hash_boolean:
-							return std::make_pair(FieldType::BOOLEAN, boolean(field_value.at(str_key).as_bool()));
+				// 		case hash_boolean:
+				// 			return std::make_pair(FieldType::BOOLEAN, boolean(field_value.at(str_key).as_bool()));
 
-						case hash_string:
-							return std::make_pair(FieldType::STRING, field_value.at(str_key).as_string());
+				// 		case hash_string:
+				// 			return std::make_pair(FieldType::STRING, field_value.at(str_key).as_string());
 
-						case hash_text:
-							return std::make_pair(FieldType::TEXT, field_value.at(str_key).as_string());
+				// 		case hash_text:
+				// 			return std::make_pair(FieldType::TEXT, field_value.at(str_key).as_string());
 
-						case hash_uuid:
-							return std::make_pair(FieldType::UUID, field_value.at(str_key).as_string());
+				// 		case hash_uuid:
+				// 			return std::make_pair(FieldType::UUID, field_value.at(str_key).as_string());
 
-						case hash_ewkt:
-							return std::make_pair(FieldType::GEO, field_value.at(str_key).as_string());
-					}
-				}
+				// 		case hash_ewkt:
+				// 			return std::make_pair(FieldType::GEO, field_value.at(str_key).as_string());
+				// 	}
+				// }
 			} catch (const msgpack::type_error&) {
 				throw MSG_SerialisationError("Expected type %s", str_key.c_str());
 			}
 		}
 
 		default:
-			throw MSG_SerialisationError("Unexpected type %s", MsgPackTypes[static_cast<int>(field_value.getType())]);
+			throw MSG_SerialisationError("Unexpected type %s", MsgPackTypes[toUType(field_value.getType())]);
 	}
 }
 
