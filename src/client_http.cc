@@ -270,7 +270,7 @@ HttpClient::on_read(const char* buf, size_t received)
 		response_logged = false;
 	}
 
-	L_CONN_WIRE(this, "HttpClient::on_read: %zu bytes", received);
+	L_HTTP_WIRE(this, "HttpClient::on_read: %zu bytes", received);
 	unsigned init_state = parser.state;
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
@@ -1396,7 +1396,7 @@ HttpClient::url_resolve()
 
 		return identify_cmd();
 	} else {
-		L_CONN_WIRE(this, "Parsing not done");
+		L_HTTP_WIRE(this, "Parsing not done");
 		// Bad query
 		return CMD_BAD_QUERY;
 	}
@@ -1499,7 +1499,7 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 			endpoints.add(asked_node);
 		}
 	}
-	L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.to_string().c_str());
+	L_HTTP_WIRE(this, "Endpoint: -> %s", endpoints.to_string().c_str());
 }
 
 

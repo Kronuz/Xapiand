@@ -389,8 +389,10 @@ XapiandManager::host_address()
 
 
 void
-XapiandManager::async_shutdown_sig_cb(ev::async&, int)
+XapiandManager::async_shutdown_sig_cb(ev::async&, int revents)
 {
+	L_CALL(this, "XapiandManager::async_shutdown_sig_cb(<watcher>, 0x%02x (%s))", revents, readable_revents(revents).c_str());
+
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
 	 * the user really wanting to quit ASAP without waiting to persist

@@ -268,14 +268,17 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	DBG_SET(fd, watcher.fd);
 	DBG_SET(sock, raft->get_socket());
+
+	L_CALL(this, "RaftServer::io_accept_cb(<watcher>, 0x%02x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents).c_str(), sock, fd);
+
+	if (EV_ERROR & revents) {
+		L_EV(this, "ERROR: got invalid raft event {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
+		return;
+	}
+
 	assert(sock == fd || sock == -1);
 
 	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN");
-	if (EV_ERROR & revents) {
-		L_EV(this, "ERROR: got invalid raft event (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
-		L_EV_END(this, "RaftServer::io_accept_cb:END");
-		return;
-	}
 
 	if (revents & EV_READ) {
 		while (XapiandManager::manager->state == XapiandManager::State::READY) {

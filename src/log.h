@@ -415,7 +415,9 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define L_BINARY _
 #define L_HTTP_PROTO_PARSER _
 #define L_EV _
-#define L_CONN_WIRE _
+#define L_HTTP_WIRE _
+#define L_BINARY_WIRE _
+#define L_TCP_WIRE _
 #define L_UDP_WIRE _
 #define L_HTTP_PROTO _
 #define L_BINARY_PROTO _
