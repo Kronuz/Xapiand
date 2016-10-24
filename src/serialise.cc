@@ -105,7 +105,20 @@ Cast::_float(const MsgPack& obj)
 std::string
 Cast::string(const MsgPack& obj)
 {
-	return obj.to_string();
+	switch (obj.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return std::to_string(obj.as_u64());
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return std::to_string(obj.as_i64());
+		case MsgPack::Type::FLOAT:
+			return std::to_string(obj.as_f64());
+		case MsgPack::Type::STR:
+			return obj.as_string();
+		case MsgPack::Type::BOOLEAN:
+			return obj.as_bool() ? "true" : "false";
+		default:
+			return obj.to_string();
+	}
 }
 
 
