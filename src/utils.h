@@ -300,8 +300,7 @@ namespace epoch {
 
 inline std::string readable_revents(int revents) {
 	std::vector<std::string> values;
-	if (revents == EV_UNDEF) values.push_back("EV_UNDEF");
-	if ((revents & EV_NONE) == EV_NONE) values.push_back("EV_NONE");
+	if (revents == EV_NONE) values.push_back("EV_NONE");
 	if ((revents & EV_READ) == EV_READ) values.push_back("EV_READ");
 	if ((revents & EV_WRITE) == EV_WRITE) values.push_back("EV_WRITE");
 	if ((revents & EV_TIMEOUT) == EV_TIMEOUT) values.push_back("EV_TIMEOUT");
@@ -317,5 +316,6 @@ inline std::string readable_revents(int revents) {
 	if ((revents & EV_ASYNC) == EV_ASYNC) values.push_back("EV_ASYNC");
 	if ((revents & EV_EMBED) == EV_EMBED) values.push_back("EV_EMBED");
 	if ((revents & EV_ERROR) == EV_ERROR) values.push_back("EV_ERROR");
+	if ((revents & EV_UNDEF) == EV_UNDEF) values.push_back("EV_UNDEF");
 	return join_string(values, " | ");
 }
