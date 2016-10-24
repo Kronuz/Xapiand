@@ -74,14 +74,19 @@ const std::unordered_map<std::string, dispatch_op_dsl> map_op_dispatch_dsl({
 const std::unordered_map<std::string, dispatch_dsl> map_dispatch_dsl({
 	{ QUERYDSL_IN,            &QueryDSL::in_range_query   },
 	{ QUERYDSL_VALUE,         &QueryDSL::query            },
-	{ RESERVED_INTEGER,       &QueryDSL::query            },
-	{ RESERVED_POSITIVE,      &QueryDSL::query            },
-	{ RESERVED_FLOAT,         &QueryDSL::query            },
-	{ RESERVED_BOOLEAN,       &QueryDSL::query            },
-	{ RESERVED_STRING,        &QueryDSL::query            },
-	{ RESERVED_TEXT,          &QueryDSL::query            },
-	{ RESERVED_UUID,          &QueryDSL::query            },
-	{ RESERVED_EWKT,          &QueryDSL::query            },
+});
+
+
+const std::unordered_map<std::string, dispatch_dsl> map_dispatch_cast({
+	{ RESERVED_INTEGER,      &QueryDSL::query          },
+	{ RESERVED_POSITIVE,     &QueryDSL::query          },
+	{ RESERVED_FLOAT,        &QueryDSL::query          },
+	{ RESERVED_BOOLEAN,      &QueryDSL::query          },
+	{ RESERVED_STRING,       &QueryDSL::query          },
+	{ RESERVED_TEXT,         &QueryDSL::query          },
+	{ RESERVED_EWKT,         &QueryDSL::query          },
+	{ RESERVED_UUID,         &QueryDSL::query          },
+	{ RESERVED_DATE,         &QueryDSL::query          },
 });
 
 
@@ -160,10 +165,12 @@ QueryDSL::join_queries(const MsgPack& obj, Xapian::Query::op op)
 						auto func = map_op_dispatch_dsl.at(str_key);
 						final_query.empty() ?  final_query = (this->*func)(elem.at(str_key), map_xapian_operator.at(str_key)) : final_query = Xapian::Query(op, final_query, (this->*func)(elem.at(str_key), map_xapian_operator.at(str_key)));
 					} catch (const std::out_of_range&) {
-						try{
-							auto func = map_dispatch_dsl.at(str_key);
-							final_query.empty() ? final_query = (this->*func)(elem.at(str_key)) : final_query = Xapian::Query(op, (this->*func)(elem.at(str_key)));
-						} catch (const std::out_of_range&) {
+						Xapian::Query query_aux;
+						if (map_dispatcher(str_key, map_dispatch_dsl, elem.at(str_key), query_aux)) {
+							final_query.empty() ? final_query = query_aux : final_query =  Xapian::Query(op, final_query, query_aux);
+						} else if (map_dispatcher(str_key, map_dispatch_cast, elem, query_aux)) {
+							final_query.empty() ? final_query = query_aux : final_query =  Xapian::Query(op, final_query, query_aux);
+						} else {
 							if (!startswith(str_key, "_")) {
 								const auto& o = elem.at(str_key);
 								switch (o.getType()) {
@@ -206,10 +213,12 @@ QueryDSL::process_query(const MsgPack& obj, const std::string& field_name)
 		set_parameters(obj);
 		for (const auto& elem : obj) {
 			auto str_key = elem.as_string();
-			try {
-				auto func = map_dispatch_dsl.at(str_key);
-				return (this->*func)(obj.at(str_key));
-			} catch (const std::out_of_range&) { }
+			Xapian::Query query;
+			if (map_dispatcher(str_key, map_dispatch_dsl, obj, query)) {
+				return query;
+			} else if (map_dispatcher(str_key, map_dispatch_cast, obj, query)) {
+				return query;
+			}
 		}
 	}
 
