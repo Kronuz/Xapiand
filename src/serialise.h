@@ -147,6 +147,16 @@ namespace Serialise {
 	}
 
 	/*
+	 * Functions for doing cast and serialise.
+	 */
+
+	std::string integer_cast(const required_spc_t& field_spc, const MsgPack& obj);
+	std::string positive_cast(const required_spc_t& field_spc, const MsgPack& obj);
+	std::string float_cast(const required_spc_t& field_spc, const MsgPack& obj);
+	std::string boolean_cast(const required_spc_t& field_spc, const MsgPack& obj);
+	std::string string_cast(const required_spc_t& field_spc, const MsgPack& obj);
+
+	/*
 	 * Serialise field_value according to field_spc.
 	 */
 
@@ -332,3 +342,5 @@ namespace Unserialise {
 	// Unserialise str_type to its FieldType.
 	FieldType type(const std::string& str_type);
 };
+
+using dispatch_cast = std::string (*) (const required_spc_t& field_spc, const MsgPack&);

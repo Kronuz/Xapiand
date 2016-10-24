@@ -30,6 +30,18 @@
 #include "utils.h"
 
 
+const std::unordered_map<std::string, dispatch_cast> map_cast({
+	{ RESERVED_INTEGER,       &Serialise::integer_cast        },
+	{ RESERVED_POSITIVE,      &Serialise::positive_cast       },
+	{ RESERVED_FLOAT,         &Serialise::float_cast          },
+	{ RESERVED_BOOLEAN,       &Serialise::boolean_cast        },
+	{ RESERVED_STRING,        &Serialise::string_cast         },
+	{ RESERVED_TEXT,          &Serialise::string_cast         },
+	{ RESERVED_UUID,          &Serialise::string_cast         },
+	{ RESERVED_EWKT,          &Serialise::string_cast         },
+});
+
+
 int64_t
 Cast::integer(const MsgPack& obj)
 {
@@ -131,6 +143,35 @@ Cast::boolean(const MsgPack& obj)
 
 
 std::string
+Serialise::integer_cast(const required_spc_t& field_spc, const class MsgPack& obj) {
+	return Serialise::integer(field_spc.get_type(), Cast::integer(obj));
+}
+
+std::string
+Serialise::positive_cast(const required_spc_t& field_type, const class MsgPack& obj) {
+	return Serialise::positive(field_type.get_type(), Cast::positive(obj));
+}
+
+
+std::string
+Serialise::float_cast(const required_spc_t& field_type, const class MsgPack& obj) {
+	return Serialise::_float(field_type.get_type(), Cast::_float(obj));
+}
+
+
+std::string
+Serialise::boolean_cast(const required_spc_t& field_type, const class MsgPack& obj) {
+	return Serialise::boolean(field_type.get_type(), Cast::boolean(obj));
+}
+
+
+std::string
+Serialise::string_cast(const required_spc_t& field_type, const class MsgPack& obj) {
+	return Serialise::string(field_type, Cast::string(obj));
+}
+
+
+std::string
 Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
 	switch (field_value.getType()) {
@@ -146,6 +187,20 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 			return _float(field_spc.get_type(), field_value.as_f64());
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.as_string());
+		case MsgPack::Type::MAP:
+			if (field_value.size() == 1) {
+				for (auto const elem : field_value) {
+					auto str_key = elem.as_string();
+					try {
+						auto func = map_cast.at(str_key);
+						return (*func)(field_spc, field_value.at(str_key));
+					} catch (const std::out_of_range&) {
+						throw MSG_SerialisationError("Unknown type %s", str_key.c_str());
+					}
+				}
+			} else {
+				throw MSG_SerialisationError("Expected map with one element");
+			}
 		default:
 			throw MSG_SerialisationError("msgpack::type [%d] is not supported", toUType(field_value.getType()));
 	}
