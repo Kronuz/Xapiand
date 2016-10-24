@@ -175,6 +175,25 @@ inline std::string format_string(const std::string& fmt, Args&&... args) {
 
 
 template<typename T>
+inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, const std::string& last_delimiter)
+{
+	std::string result;
+	auto values_size = values.size();
+	for (typename std::vector<T>::size_type idx = 0; idx < values_size; ++idx) {
+		if (idx) {
+			if (idx == values_size - 1) {
+				result += last_delimiter;
+			} else {
+				result += delimiter;
+			}
+		}
+		result += std::to_string(values[idx]);
+	}
+	return result;
+}
+
+
+template<typename T>
 inline std::string join_string(const std::vector<T>& values, const std::string& delimiter) {
 	return join_string(values, delimiter, delimiter);
 }
@@ -193,25 +212,6 @@ inline std::string indent_string(const std::string& str, char sep, int level, bo
 	}
 
 	return ret;
-}
-
-
-template<typename T>
-inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, const std::string& last_delimiter)
-{
-	std::string result;
-	auto values_size = values.size();
-	for (typename std::vector<T>::size_type idx = 0; idx < values_size; ++idx) {
-		if (idx) {
-			if (idx == values_size - 1) {
-				result += last_delimiter;
-			} else {
-				result += delimiter;
-			}
-		}
-		result += std::to_string(values[idx]);
-	}
-	return result;
 }
 
 
