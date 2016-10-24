@@ -356,6 +356,8 @@ BaseClient::close()
 void
 BaseClient::io_cb_update()
 {
+	L_CALL(this, "BaseClient::io_cb_update()");
+
 	if (sock != -1) {
 		if (write_queue.empty()) {
 			if (closed) {
@@ -520,6 +522,8 @@ BaseClient::write(const char *buf, size_t buf_size)
 void
 BaseClient::io_cb_write(int fd)
 {
+	L_CALL(this, "BaseClient::io_cb_write(%d)", fd);
+
 	_write(fd, false);
 }
 
@@ -527,6 +531,8 @@ BaseClient::io_cb_write(int fd)
 void
 BaseClient::io_cb_read(int fd)
 {
+	L_CALL(this, "BaseClient::io_cb_read(%d)", fd);
+
 	if (!closed) {
 		ssize_t received = io::read(fd, read_buffer, BUF_SIZE);
 		const char *buf_end = read_buffer + received;
