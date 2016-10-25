@@ -313,7 +313,6 @@ QueryDSL::query(const MsgPack& obj)
 			auto ser_type = Serialise::get_type(obj);
 			const auto& global_spc = Schema::get_data_global(ser_type.first);
 			switch (ser_type.first) {
-				case FieldType::STRING:
 				case FieldType::TEXT: {
 					Xapian::QueryParser queryTexts;
 					queryTexts.set_stemming_strategy(getQueryParserStrategy(global_spc.stem_strategy));
@@ -321,7 +320,7 @@ QueryDSL::query(const MsgPack& obj)
 					return queryTexts.parse_query(obj.as_string(), q_flags);
 				}
 				default:
-					return Xapian::Query(ser_type.second);
+					return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
 			}
 		}
 		break;
