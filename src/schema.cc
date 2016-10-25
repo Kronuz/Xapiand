@@ -3326,7 +3326,7 @@ Schema::validate_required_data()
 				// Process RESERVED_BOOL_TERM
 				if (!specification.set_bool_term) {
 					// By default, if field name has upper characters then it is consider bool term.
-					specification.bool_term = strhasupper(specification.dynamic_name);
+					specification.bool_term = strhasupper(specification.dynamic_name) || specification.full_name == ID_FIELD_NAME;
 				}
 				properties[RESERVED_BOOL_TERM] = specification.bool_term;
 				break;
