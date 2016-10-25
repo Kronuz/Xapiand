@@ -105,15 +105,13 @@ public:
 	}
 
 protected:
-	std::mutex qmtx;
-
 	ev::io io_read;
 	ev::io io_write;
 	ev::async async_write;
 	ev::async async_read;
 
 	std::atomic_bool closed;
-	int sock;
+	std::atomic_int sock;
 	int written;
 	std::string length_buffer;
 

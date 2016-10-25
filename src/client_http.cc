@@ -212,7 +212,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	L_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.", sock, http_clients, total_clients);
+	L_CONN(this, "New Http Client {sock:%d}, %d client(s) of a total of %d connected.", sock.load(), http_clients, total_clients);
 
 	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
 
@@ -281,7 +281,7 @@ HttpClient::on_read(const char* buf, size_t received)
 			}
 		}
 		if (final_state == 1 || final_state == 18) { // dead or message_complete
-			L_EV(this, "Disable read event (sock=%d)", sock);
+			L_EV(this, "Disable read event {sock:%d}", sock.load());
 			io_read.stop();
 			written = 0;
 			if (!closed) {
@@ -478,7 +478,7 @@ HttpClient::_run()
 {
 	L_CALL(this, "HttpClient::run()");
 
-	L_CONN(this, "Start running in worker (sock=%d).", sock);
+	L_CONN(this, "Start running in worker {sock:%d}.", sock.load());
 
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
