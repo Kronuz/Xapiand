@@ -1005,7 +1005,7 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 			static const auto fit_e = reserved_field_names.end();
 			MsgPack* mut_subprop = &get_mutable(specification.full_name);
 			for ( ; it != it_e; ++it) {
-				specification.dynamic_type = reserved_field_names.find(*it) == fit_e ? DynamicFieldType::NONE : DynamicFieldType::ANY;
+				specification.dynamic_type = reserved_field_names.find(*it) == fit_e || *it == ID_FIELD_NAME  ? DynamicFieldType::NONE : DynamicFieldType::ANY;
 				specification.dynamic_prefix.assign(*it);
 				specification.dynamic_name.assign(*it);
 				add_field(mut_subprop, specification.dynamic_name);
