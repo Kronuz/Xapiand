@@ -201,41 +201,6 @@ Cast::boolean(const MsgPack& obj)
 
 
 std::string
-Serialise::integer_cast(const required_spc_t& field_spc, const class MsgPack& obj)
-{
-	return Serialise::integer(field_spc.get_type(), Cast::integer(obj));
-}
-
-
-std::string
-Serialise::positive_cast(const required_spc_t& field_type, const class MsgPack& obj)
-{
-	return Serialise::positive(field_type.get_type(), Cast::positive(obj));
-}
-
-
-std::string
-Serialise::float_cast(const required_spc_t& field_type, const class MsgPack& obj)
-{
-	return Serialise::_float(field_type.get_type(), Cast::_float(obj));
-}
-
-
-std::string
-Serialise::boolean_cast(const required_spc_t& field_type, const class MsgPack& obj)
-{
-	return Serialise::boolean(field_type.get_type(), Cast::boolean(obj));
-}
-
-
-std::string
-Serialise::string_cast(const required_spc_t& field_type, const class MsgPack& obj)
-{
-	return Serialise::string(field_type, Cast::string(obj));
-}
-
-
-std::string
 Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
 	switch (field_value.getType()) {
@@ -252,20 +217,38 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.as_string());
 		case MsgPack::Type::MAP:
-			if (field_value.size() == 1) {
-				auto str_key = field_value.begin()->as_string();
-				try {
-					auto func = map_dispatch_cast.at(str_key);
-					return (*func)(field_spc, field_value.at(str_key));
-				} catch (const std::out_of_range&) {
-					throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
-				}
-			} else {
-				throw MSG_SerialisationError("Expected map with one element");
-			}
+			return cast_object(field_spc, field_value);
 		default:
 			throw MSG_SerialisationError("msgpack::type [%d] is not supported", toUType(field_value.getType()));
 	}
+}
+
+
+std::string
+Serialise::cast_object(const required_spc_t& field_spc, const class MsgPack& o)
+{
+	if (o.size() == 1) {
+		auto str_key = o.begin()->as_string();
+		switch ((Cast::Hash)xxh64::hash(str_key)) {
+			case Cast::Hash::INTEGER:
+				return Serialise::integer(field_spc.get_type(), Cast::integer(o));
+			case Cast::Hash::POSITIVE:
+				return Serialise::positive(field_spc.get_type(), Cast::positive(o));
+			case Cast::Hash::FLOAT:
+				return Serialise::_float(field_spc.get_type(), Cast::_float(o));
+			case Cast::Hash::BOOLEAN:
+				return Serialise::boolean(field_spc.get_type(), Cast::boolean(o));
+			case Cast::Hash::STRING:
+			case Cast::Hash::TEXT:
+			case Cast::Hash::UUID:
+			case Cast::Hash::EWKT:
+				return Serialise::string(field_spc, Cast::string(o));
+			default:
+				throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
+		}
+	}
+
+	throw MSG_SerialisationError("Expected map with one element");
 }
 
 
