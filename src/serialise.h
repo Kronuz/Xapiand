@@ -107,7 +107,36 @@ constexpr uint32_t MAXDOU2INT               =  999999999;
 constexpr uint8_t SIZE_UUID = 36;
 
 
+class Cartesian;
+class CartesianUSet;
+class RangeList;
+struct required_spc_t;
+enum class FieldType : uint8_t;
+
+
 namespace Cast {
+	enum class Hash : uint64_t {
+		INTEGER           = xxh64::hash(RESERVED_INTEGER),
+		POSITIVE          = xxh64::hash(RESERVED_POSITIVE),
+		FLOAT             = xxh64::hash(RESERVED_FLOAT),
+		BOOLEAN           = xxh64::hash(RESERVED_BOOLEAN),
+		STRING            = xxh64::hash(RESERVED_STRING),
+		TEXT              = xxh64::hash(RESERVED_TEXT),
+		UUID              = xxh64::hash(RESERVED_UUID),
+		DATE              = xxh64::hash(RESERVED_DATE),
+		EWKT              = xxh64::hash(RESERVED_EWKT),
+		POINT             = xxh64::hash(RESERVED_POINT),
+		POLYGON           = xxh64::hash(RESERVED_POLYGON),
+		CIRCLE            = xxh64::hash(RESERVED_CIRCLE),
+		CHULL             = xxh64::hash(RESERVED_CHULL),
+		MULTIPOINT        = xxh64::hash(RESERVED_MULTIPOINT),
+		MULTIPOLYGON      = xxh64::hash(RESERVED_MULTIPOLYGON),
+		MULTICIRCLE       = xxh64::hash(RESERVED_MULTICIRCLE),
+		MULTICHULL        = xxh64::hash(RESERVED_MULTICHULL),
+		GEO_COLLECTION    = xxh64::hash(RESERVED_GEO_COLLECTION),
+		GEO_INTERSECTION  = xxh64::hash(RESERVED_GEO_INTERSECTION),
+	};
+
 	/*
 	 * Functions for doing cast between types.
 	 */
@@ -118,14 +147,9 @@ namespace Cast {
 	double _float(const MsgPack& obj);
 	std::string string(const MsgPack& obj);
 	bool boolean(const MsgPack& obj);
+
+	FieldType getType(const std::string& cast_word);
 };
-
-
-class Cartesian;
-class CartesianUSet;
-class RangeList;
-struct required_spc_t;
-enum class FieldType : uint8_t;
 
 
 namespace Serialise {
@@ -149,20 +173,11 @@ namespace Serialise {
 	}
 
 	/*
-	 * Functions for doing cast and serialise.
-	 */
-
-	std::string integer_cast(const required_spc_t& field_spc, const MsgPack& obj);
-	std::string positive_cast(const required_spc_t& field_spc, const MsgPack& obj);
-	std::string float_cast(const required_spc_t& field_spc, const MsgPack& obj);
-	std::string boolean_cast(const required_spc_t& field_spc, const MsgPack& obj);
-	std::string string_cast(const required_spc_t& field_spc, const MsgPack& obj);
-
-	/*
 	 * Serialise field_value according to field_spc.
 	 */
 
 	std::string MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value);
+	std::string cast_object(const required_spc_t& field_spc, const class MsgPack& o);
 	std::string serialise(const required_spc_t& field_spc, const std::string& field_value);
 	std::string string(const required_spc_t& field_spc, const std::string& field_value);
 
@@ -344,10 +359,3 @@ namespace Unserialise {
 	// Unserialise str_type to its FieldType.
 	FieldType type(const std::string& str_type);
 };
-
-
-using dispatch_cast = std::string (*)(const required_spc_t&, const MsgPack&);
-
-
-extern const std::unordered_map<std::string, FieldType> map_cast_type;
-extern const std::unordered_map<std::string, dispatch_cast> map_cast_func;

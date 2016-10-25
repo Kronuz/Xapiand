@@ -30,81 +30,25 @@
 #include "utils.h"
 
 
-static constexpr auto hash_integer             = xxh64::hash(RESERVED_INTEGER);
-static constexpr auto hash_positive            = xxh64::hash(RESERVED_POSITIVE);
-static constexpr auto hash_float               = xxh64::hash(RESERVED_FLOAT);
-static constexpr auto hash_boolean             = xxh64::hash(RESERVED_BOOLEAN);
-static constexpr auto hash_string              = xxh64::hash(RESERVED_STRING);
-static constexpr auto hash_text                = xxh64::hash(RESERVED_TEXT);
-static constexpr auto hash_uuid                = xxh64::hash(RESERVED_UUID);
-static constexpr auto hash_date                = xxh64::hash(RESERVED_DATE);
-static constexpr auto hash_ewkt                = xxh64::hash(RESERVED_EWKT);
-static constexpr auto hash_point               = xxh64::hash(RESERVED_POINT);
-static constexpr auto hash_polygon             = xxh64::hash(RESERVED_POLYGON);
-static constexpr auto hash_circle              = xxh64::hash(RESERVED_CIRCLE);
-static constexpr auto hash_chull               = xxh64::hash(RESERVED_CHULL);
-static constexpr auto hash_multipoint          = xxh64::hash(RESERVED_MULTIPOINT);
-static constexpr auto hash_multipolygon        = xxh64::hash(RESERVED_MULTIPOLYGON);
-static constexpr auto hash_multicircle         = xxh64::hash(RESERVED_MULTICIRCLE);
-static constexpr auto hash_multichull          = xxh64::hash(RESERVED_MULTICHULL);
-static constexpr auto hash_geo_collection      = xxh64::hash(RESERVED_GEO_COLLECTION);
-static constexpr auto hash_geo_intersection    = xxh64::hash(RESERVED_GEO_INTERSECTION);
-
-
-const std::unordered_map<std::string, FieldType> map_cast_type({
-	{ RESERVED_INTEGER,           FieldType::INTEGER    },
-	{ RESERVED_POSITIVE,          FieldType::POSITIVE   },
-	{ RESERVED_FLOAT,             FieldType::FLOAT      },
-	{ RESERVED_BOOLEAN,           FieldType::BOOLEAN    },
-	{ RESERVED_STRING,            FieldType::STRING     },
-	{ RESERVED_TEXT,              FieldType::TEXT       },
-	{ RESERVED_UUID,              FieldType::UUID       },
-	{ RESERVED_DATE,              FieldType::DATE       },
-	{ RESERVED_EWKT,              FieldType::GEO        },
-	{ RESERVED_POINT,             FieldType::GEO        },
-	{ RESERVED_POLYGON,           FieldType::GEO        },
-	{ RESERVED_CIRCLE,            FieldType::GEO        },
-	{ RESERVED_CHULL,             FieldType::GEO        },
-	{ RESERVED_MULTIPOINT,        FieldType::GEO        },
-	{ RESERVED_MULTIPOLYGON,      FieldType::GEO        },
-	{ RESERVED_MULTICIRCLE,       FieldType::GEO        },
-	{ RESERVED_MULTICHULL,        FieldType::GEO        },
-	{ RESERVED_GEO_COLLECTION,    FieldType::GEO        },
-	{ RESERVED_GEO_INTERSECTION,  FieldType::GEO        },
-});
-
-
-const std::unordered_map<std::string, dispatch_cast> map_dispatch_cast({
-	{ RESERVED_INTEGER,       &Serialise::integer_cast        },
-	{ RESERVED_POSITIVE,      &Serialise::positive_cast       },
-	{ RESERVED_FLOAT,         &Serialise::float_cast          },
-	{ RESERVED_BOOLEAN,       &Serialise::boolean_cast        },
-	{ RESERVED_STRING,        &Serialise::string_cast         },
-	{ RESERVED_TEXT,          &Serialise::string_cast         },
-	{ RESERVED_UUID,          &Serialise::string_cast         },
-	{ RESERVED_EWKT,          &Serialise::string_cast         },
-});
-
-
 MsgPack
 Cast::cast(const MsgPack& obj)
 {
 	if (obj.size() == 1) {
 		auto str_key = obj.begin()->as_string();
-		switch (xxh64::hash(str_key)) {
-			case hash_integer:
-				return Cast::integer(obj);
-			case hash_positive:
-				return Cast::positive(obj);
-			case hash_float:
-				return Cast::_float(obj);
-			case hash_boolean:
-				return Cast::boolean(obj);
-			case hash_string:
-			case hash_text:
-			case hash_uuid:
-			case hash_ewkt:
-				return Cast::string(obj);
+		switch ((Hash)xxh64::hash(str_key)) {
+			case Hash::INTEGER:
+				return integer(obj);
+			case Hash::POSITIVE:
+				return positive(obj);
+			case Hash::FLOAT:
+				return _float(obj);
+			case Hash::BOOLEAN:
+				return boolean(obj);
+			case Hash::STRING:
+			case Hash::TEXT:
+			case Hash::UUID:
+			case Hash::EWKT:
+				return string(obj);
 			default:
 				throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
 		}
@@ -190,6 +134,35 @@ Cast::string(const MsgPack& obj)
 			return obj.as_bool() ? "true" : "false";
 		default:
 			return obj.to_string();
+	}
+}
+
+
+FieldType
+Cast::getType(const std::string& cast_word)
+{
+	switch ((Hash)xxh64::hash(cast_word)) {
+		case Hash::INTEGER:           return FieldType::INTEGER;
+		case Hash::POSITIVE:          return FieldType::POSITIVE;
+		case Hash::FLOAT:             return FieldType::FLOAT;
+		case Hash::BOOLEAN:           return FieldType::BOOLEAN;
+		case Hash::STRING:            return FieldType::STRING;
+		case Hash::TEXT:              return FieldType::TEXT;
+		case Hash::UUID:              return FieldType::UUID;
+		case Hash::DATE:              return FieldType::DATE;
+		case Hash::EWKT:              return FieldType::GEO;
+		case Hash::POINT:             return FieldType::GEO;
+		case Hash::POLYGON:           return FieldType::GEO;
+		case Hash::CIRCLE:            return FieldType::GEO;
+		case Hash::CHULL:             return FieldType::GEO;
+		case Hash::MULTIPOINT:        return FieldType::GEO;
+		case Hash::MULTIPOLYGON:      return FieldType::GEO;
+		case Hash::MULTICIRCLE:       return FieldType::GEO;
+		case Hash::MULTICHULL:        return FieldType::GEO;
+		case Hash::GEO_COLLECTION:    return FieldType::GEO;
+		case Hash::GEO_INTERSECTION:  return FieldType::GEO;
+		default:
+			throw MSG_SerialisationError("Unknown cast type %s", cast_word.c_str());
 	}
 }
 
