@@ -330,31 +330,21 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			Endpoint remote_endpoint(".", node.get());
 			// Replicate database from the other node
 	#ifdef XAPIAND_CLUSTERING
-			L_INFO(this, "Syncing cluster data from %s...", node->name.c_str());
+			if (!solo) {
+				L_INFO(this, "Syncing cluster data from %s...", node->name.c_str());
 
-			auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
-			if (ret.get()) {
-				L_INFO(this, "Cluster data being synchronized from %s...", node->name.c_str());
-				new_cluster = 2;
-				break;
+				auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
+				if (ret.get()) {
+					L_INFO(this, "Cluster data being synchronized from %s...", node->name.c_str());
+					new_cluster = 2;
+					break;
+				}
 			}
 	#endif
 		}
 	}
 
 	state = State::READY;
-
-	switch (new_cluster) {
-		case 0:
-			L_NOTICE(this, "Joined cluster %s: It is now online!", cluster_name.c_str());
-			break;
-		case 1:
-			L_NOTICE(this, "Joined new cluster %s: It is now online!", cluster_name.c_str());
-			break;
-		case 2:
-			L_NOTICE(this, "Joined cluster %s: It was already online!", cluster_name.c_str());
-			break;
-	}
 
 #ifdef XAPIAND_CLUSTERING
 	if (!is_single_node()) {
@@ -366,7 +356,32 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (auto discovery = weak_discovery.lock()) {
 		discovery->enter();
 	}
+
+	if (!solo) {
+		switch (new_cluster) {
+			case 0:
+				L_NOTICE(this, "Joined cluster: %s. It is now online!", cluster_name.c_str());
+				break;
+			case 1:
+				L_NOTICE(this, "Joined new cluster: %s. It is now online!", cluster_name.c_str());
+				break;
+			case 2:
+				L_NOTICE(this, "Joined cluster: %s. It was already online!", cluster_name.c_str());
+				break;
+		}
+	}
+	else
 #endif
+	{
+		switch (new_cluster) {
+			case 0:
+				L_NOTICE(this, "Using solo cluster: %s.", cluster_name.c_str());
+				break;
+			case 1:
+				L_NOTICE(this, "Using new solo cluster: %s.", cluster_name.c_str());
+				break;
+		}
+	}
 }
 
 
