@@ -609,7 +609,7 @@ HttpClient::_head(int cmd)
 			if (path_parser.off_id) {
 				document_info_view(HttpMethod::HEAD);
 			} else {
-				bad_request_view();
+				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 			}
 			break;
 		default:
