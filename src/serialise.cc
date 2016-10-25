@@ -450,7 +450,10 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 					throw MSG_SerialisationError("Unsupported Key: %s in date", str_key.c_str());
 				}
 			}
-			return _float(field_spc.get_type(), Datetime::timestamp(tm));
+			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
+				return _float(field_spc.get_type(), Datetime::timestamp(tm));
+			}
+			throw MSG_SerialisationError("Date is out of range");
 		}
 		default:
 			throw MSG_SerialisationError("Type: %s is not a date", MsgPackTypes[toUType(field_value.getType())]);
@@ -770,7 +773,10 @@ Serialise::date(const class MsgPack& value, Datetime::tm_t& tm)
 					throw MSG_SerialisationError("Unsupported Key: %s in date", str_key.c_str());
 				}
 			}
-			return timestamp(Datetime::timestamp(tm));
+			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
+				return timestamp(Datetime::timestamp(tm));
+			}
+			throw MSG_SerialisationError("Date is out of range");
 		default:
 			throw MSG_SerialisationError("Date value must be numeric or string");
 	}
