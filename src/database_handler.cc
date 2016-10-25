@@ -114,6 +114,8 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, HttpMethod metho
 	endpoints = endpoints_;
 	flags = flags_;
 	method = method_;
+
+	DatabaseHandler::lock_database lk(this);  // Try opening database (raises errors)
 }
 
 
