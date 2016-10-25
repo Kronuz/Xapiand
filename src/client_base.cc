@@ -421,7 +421,9 @@ BaseClient::write_directly(int fd)
 		L_ERR(this, "ERROR: write error {sock:%d, fd:%d}: Socket already closed!", sock, fd);
 		L_CONN(this, "WR:ERR.1: {sock:%d, fd:%d}", sock, fd);
 		return WR::ERR;
-	} else if (!write_queue.empty()) {
+	}
+
+	if (!write_queue.empty()) {
 		std::shared_ptr<Buffer> buffer = write_queue.front();
 
 		size_t buf_size = buffer->nbytes();
@@ -487,6 +489,7 @@ BaseClient::_write(int fd, bool async)
 				detach();
 				return false;
 			case WR::RETRY:
+			case WR::PENDING:
 				if (!async) {
 					io_write.start();
 					L_EV(this, "Enable write event {sock:%d, fd:%d}", sock, fd);
