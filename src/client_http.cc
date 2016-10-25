@@ -1135,13 +1135,13 @@ HttpClient::search_view(HttpMethod method)
 		 */
 	}
 
-	L_SEARCH(this, "Suggested queries:\n%s", [&suggestions]() {
-		std::string res;
+	L_SEARCH(this, "Suggested queries: %s", [&suggestions]() {
+		MsgPack res(MsgPack::Type::ARRAY);
 		for (const auto& suggestion : suggestions) {
-			res += "\t+ " + suggestion + "\n";
+			res.push_back(suggestion);
 		}
 		return res;
-	}().c_str());
+	}().to_string().c_str());
 
 	int rc = 0;
 	if (!chunked && mset.empty()) {
