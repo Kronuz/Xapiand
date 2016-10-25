@@ -1161,12 +1161,12 @@ Schema::set_type(const MsgPack& item_doc)
 			throw MSG_ClientError("`%s` can not be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
 			if (item_doc.size() == 1) {
-				auto cast_type = item_doc.begin()->as_string();
+				auto cast_word = item_doc.begin()->as_string();
 				try {
-					specification.sep_types[2] = map_cast_type.at(cast_type);
+					specification.sep_types[2] = Cast::getType(cast_word);
 					return;
 				} catch (const std::out_of_range&) {
-					throw MSG_ClientError("Unknown cast type %s", cast_type.c_str());
+					throw MSG_ClientError("Unknown cast type %s", cast_word.c_str());
 				}
 			}
 			throw MSG_ClientError("Expected map with one element");
