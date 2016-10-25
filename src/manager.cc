@@ -293,9 +293,9 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		new_cluster = 1;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		try {
-			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HttpMethod::GET);
+			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HttpMethod::PUT);
 			db_handler.write_schema({
-				{ "id", { { RESERVED_TYPE,  "string" } } },
+				{ "id", { { RESERVED_TYPE,  "string" }, { RESERVED_INDEX, "all" }, { RESERVED_SLOT,  DB_SLOT_ID }, { RESERVED_PREFIX, DOCUMENT_ID_TERM_PREFIX } } },
 				{ "name", { { RESERVED_TYPE,  "string" } } },
 				{ "tagline", { { RESERVED_TYPE,  "string" } } },
 			});
