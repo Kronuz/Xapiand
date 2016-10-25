@@ -35,7 +35,8 @@
 std::string
 join_data(const std::string& obj, const std::string& blob)
 {
-	L_CALL(nullptr, "set_data(...)");
+	L_CALL(nullptr, "::join_data(<obj>, <blob>)");
+
 	auto len = serialise_length(obj.size());
 	std::string data;
 	data.reserve(1 + len.size() + obj.size() + 1 + blob.size());
@@ -51,6 +52,8 @@ join_data(const std::string& obj, const std::string& blob)
 std::string
 split_data_obj(const std::string& data)
 {
+	L_CALL(nullptr, "::split_data_obj(<data>)");
+
 	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
@@ -75,6 +78,8 @@ split_data_obj(const std::string& data)
 std::string
 split_data_blob(const std::string& data)
 {
+	L_CALL(nullptr, "::split_data_blob(<data>)");
+
 	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
@@ -110,7 +115,10 @@ DatabaseHandler::~DatabaseHandler() {
 
 
 void
-DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, HttpMethod method_) {
+DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, HttpMethod method_)
+{
+	L_CALL(this, "DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()).c_str(), flags_);
+
 	if (endpoints_.size() == 0) {
 		throw MSG_ClientError("It is expected at least one endpoint");
 	}
@@ -347,7 +355,7 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 void
 DatabaseHandler::write_schema(const std::string& body)
 {
-	L_CALL(this, "DatabaseHandler::write_schema() [1]");
+	L_CALL(this, "DatabaseHandler::write_schema(<body>)");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
@@ -365,7 +373,7 @@ DatabaseHandler::write_schema(const std::string& body)
 void
 DatabaseHandler::write_schema(const MsgPack& obj)
 {
-	L_CALL(this, "DatabaseHandler::write_schema() [2]");
+	L_CALL(this, "DatabaseHandler::write_schema(<obj>)");
 
 	L_INDEX(this, "Schema to write: %s", repr(obj.to_string()).c_str());
 
@@ -381,7 +389,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 void
 DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar, bool is_fuzzy)
 {
-	L_CALL(this, "DatabaseHandler::get_similar()");
+	L_CALL(this, "DatabaseHandler::get_similar(...)");
 
 	Xapian::RSet rset;
 
@@ -432,7 +440,7 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 Xapian::Enquire
 DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, AggregationMatchSpy* aggs)
 {
-	L_CALL(this, "DatabaseHandler::get_enquire()");
+	L_CALL(this, "DatabaseHandler::get_enquire(...)");
 
 	Xapian::Enquire enquire(*database->db);
 
@@ -468,7 +476,7 @@ DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collap
 MSet
 DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions)
 {
-	L_CALL(this, "DatabaseHandler::get_mset()");
+	L_CALL(this, "DatabaseHandler::get_mset(...)");
 
 	MSet mset;
 
