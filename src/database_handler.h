@@ -97,8 +97,12 @@ public:
 		}
 
 		void lock() {
-			if (db_handler && !db_handler->database && XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
-				database = &db_handler->database;
+			if (db_handler && !db_handler->database) {
+				if (XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
+					database = &db_handler->database;
+				} else {
+					throw MSG_CheckoutError("Cannot checkout database: %s", repr(db_handler->endpoints.to_string()).c_str());
+				}
 			}
 		}
 
