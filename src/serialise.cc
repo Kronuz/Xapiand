@@ -93,7 +93,7 @@ static void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
 						if (tm.min < 60) {
 							tm.sec = strict(std::stoul, str_time.substr(6, 2));
 							if (tm.sec < 60) {
-								tm.msec = strict(std::stoul, str_time.substr(8, 3));
+								tm.msec = strict(std::stoul, str_time.substr(9, 3));
 								return;
 							}
 						}
