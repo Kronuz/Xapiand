@@ -272,14 +272,14 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 
 #define _L(level, stacked, color, args...) Log::log(false, stacked, 0ms, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 
-#define _LOG_DEBUG(args...) _L(LOG_DEBUG, false, DEBUG_COL, args)
-#define _LOG_INFO(args...) _L(LOG_INFO, false, INFO_COL, args)
-#define _LOG_NOTICE(args...) _L(LOG_NOTICE, false, NOTICE_COL, args)
-#define _LOG_WARNING(args...) _L(LOG_WARNING, false, WARNING_COL, args)
-#define _LOG_ERR(args...) _L(LOG_ERR, false, ERR_COL, args)
-#define _LOG_CRIT(args...) _L(-LOG_CRIT, false, CRIT_COL, args)
-#define _LOG_ALERT(args...) _L(-LOG_ALERT, false, ALERT_COL, args)
-#define _LOG_EMERG(args...) _L(-LOG_EMERG, false, EMERG_COL, args)
+#define _LOG_DEBUG(args...) _L(LOG_DEBUG, true, DEBUG_COL, args)
+#define _LOG_INFO(args...) _L(LOG_INFO, true, INFO_COL, args)
+#define _LOG_NOTICE(args...) _L(LOG_NOTICE, true, NOTICE_COL, args)
+#define _LOG_WARNING(args...) _L(LOG_WARNING, true, WARNING_COL, args)
+#define _LOG_ERR(args...) _L(LOG_ERR, true, ERR_COL, args)
+#define _LOG_CRIT(args...) _L(-LOG_CRIT, true, CRIT_COL, args)
+#define _LOG_ALERT(args...) _L(-LOG_ALERT, true, ALERT_COL, args)
+#define _LOG_EMERG(args...) _L(-LOG_EMERG, true, EMERG_COL, args)
 #define _LOG_EXC(args...) Log::log(false, true, 0ms, LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
 #define _LOG(args...) _L(LOG_DEBUG, false, NO_COL, args)
