@@ -192,7 +192,7 @@ BinaryClient::on_read_file(const char *buf, ssize_t received)
 
 
 void
-BinaryClient::on_read(const char *buf, dsize_t received)
+BinaryClient::on_read(const char *buf, ssize_t received)
 {
 	if (received <= 0) {
 		return;
