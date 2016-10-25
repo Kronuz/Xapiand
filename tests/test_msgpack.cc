@@ -279,8 +279,8 @@ int test_msgpack_serialise() {
 	rapidjson::Document doc;
 	try {
 		json_load(doc, buffer);
-	} catch (const std::exception& err) {
-		L_ERR(nullptr, "ERROR: %s", err.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.what());
 		RETURN(1);
 	}
 

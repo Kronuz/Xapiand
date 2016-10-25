@@ -166,15 +166,15 @@ BinaryClient::on_read_file_done()
 				shutdown();
 		};
 	} catch (const Xapian::NetworkError& exc) {
-		L_ERR(this, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 		checkin_database();
 		shutdown();
 	} catch (const std::exception& exc) {
-		L_ERR(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
+		L_EXC(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
 		checkin_database();
 		shutdown();
 	} catch (...) {
-		L_ERR(this, "ERROR: Unkown error!");
+		L_EXC(this, "ERROR: Unkown error!");
 		checkin_database();
 		shutdown();
 	}

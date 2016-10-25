@@ -145,8 +145,8 @@ int test_datetotimestamp() {
 		std::string timestamp;
 		try {
 			timestamp = std::to_string(Datetime::timestamp(date));
-		} catch (const std::exception &ex) {
-			L_ERR(nullptr, "ERROR: %s", ex.what());
+		} catch (const std::exception &exc) {
+			L_EXC(nullptr, "ERROR: %s", exc.what());
 			timestamp = "";
 		}
 		if (timestamp.compare(p->expect) != 0) {

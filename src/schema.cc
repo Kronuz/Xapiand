@@ -4029,8 +4029,8 @@ Schema::get_data_field(const std::string& field_name) const
 					break;
 			}
 		}
-	} catch (const std::exception& er) {
-		L_ERR(this, "ERROR: %s", er.what());
+	} catch (const std::exception& exc) {
+		L_EXC(this, "ERROR: %s", exc.what());
 	}
 
 	return res;
@@ -4081,8 +4081,8 @@ Schema::get_slot_field(const std::string& field_name) const
 		} else {
 			res.slot = get_slot(std::get<0>(info));
 		}
-	} catch (const std::exception& er) {
-		L_ERR(this, "ERROR: %s", er.what());
+	} catch (const std::exception& exc) {
+		L_EXC(this, "ERROR: %s", exc.what());
 	}
 
 	return res;
