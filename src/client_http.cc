@@ -256,9 +256,13 @@ HttpClient::~HttpClient()
 void
 HttpClient::on_read(const char* buf, size_t received)
 {
+	unsigned init_state = parser.state;
+
 	if (!received) {
 		response_log.load()->LOG_DELAYED_CLEAR();
-		if (!response_logged) LOG(LOG_NOTICE, RED, this, "Client unexpectedly closed the other end!");
+		if (init_state != 18 || !write_queue.empty()) {
+			if (!response_logged.exchange(true)) LOG(LOG_NOTICE, RED, this, "Client unexpectedly closed the other end! [%d]", init_state);
+		}
 		return;
 	}
 
@@ -271,7 +275,6 @@ HttpClient::on_read(const char* buf, size_t received)
 	}
 
 	L_HTTP_WIRE(this, "HttpClient::on_read: %zu bytes", received);
-	unsigned init_state = parser.state;
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		unsigned final_state = parser.state;
