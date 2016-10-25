@@ -1992,7 +1992,7 @@ Schema::process_namespace(const std::string& prop_name, const MsgPack& doc_names
 
 
 void
-Schema::process_value(const std::string& prop_name, const MsgPack& doc_value)
+Schema::process_value(const std::string&, const MsgPack& doc_value)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
 	L_CALL(this, "Schema::process_value(%s)", repr(doc_value.to_string()).c_str());
@@ -2016,7 +2016,7 @@ Schema::process_name(const std::string& prop_name, const MsgPack& doc_name)
 
 
 void
-Schema::process_script(const std::string& prop_name, const MsgPack& doc_script)
+Schema::process_script(const std::string&, const MsgPack& doc_script)
 {
 	// RESERVED_SCRIPT isn't heritable and is not saved in schema.
 	L_CALL(this, "Schema::process_script(%s)", repr(doc_script.to_string()).c_str());
