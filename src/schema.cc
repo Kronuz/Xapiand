@@ -33,7 +33,7 @@
  */
 
 const std::unordered_set<std::string> reserved_field_names({
-	ID_FIELD_NAME, UUID_FIELD_NAME, GEO_FIELD_NAME, DATE_FIELD_NAME
+	UUID_FIELD_NAME, GEO_FIELD_NAME, DATE_FIELD_NAME
 });
 
 
@@ -1005,7 +1005,7 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 			static const auto fit_e = reserved_field_names.end();
 			MsgPack* mut_subprop = &get_mutable(specification.full_name);
 			for ( ; it != it_e; ++it) {
-				specification.dynamic_type = reserved_field_names.find(*it) == fit_e || *it == ID_FIELD_NAME  ? DynamicFieldType::NONE : DynamicFieldType::ANY;
+				specification.dynamic_type = reserved_field_names.find(*it) == fit_e ? DynamicFieldType::NONE : DynamicFieldType::ANY;
 				specification.dynamic_prefix.assign(*it);
 				specification.dynamic_name.assign(*it);
 				add_field(mut_subprop, specification.dynamic_name);
@@ -2332,7 +2332,7 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 void
 Schema::write_schema(const MsgPack& properties, const MsgPack& obj_schema, bool replace)
 {
-	L_CALL(this, "Schema::write_schema(%s, %s)", repr(properties.to_string()).c_str(), repr(obj_schema.to_string()).c_str());
+	L_CALL(this, "Schema::write_schema(%s, %s, %d)", repr(properties.to_string()).c_str(), repr(obj_schema.to_string()).c_str(), replace);
 
 	try {
 		TaskVector tasks;
