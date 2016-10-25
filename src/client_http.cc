@@ -1443,9 +1443,6 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		if (startswith(ns, "/")) { /* ns without slash */
 			ns = ns.substr(1, std::string::npos);
 		}
-		if (startswith(ns, "_") or startswith(ns, ".")) {
-			throw MSG_ClientError("The index directory %s couldn't start with '_' or '.' are reserved", ns.c_str());
-		}
 	}
 
 	std::string path;
@@ -1453,9 +1450,6 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		path = path_parser.get_pth();
 		if (startswith(path, "/")) { /* path without slash */
 			path = path.substr(1, std::string::npos);
-		}
-		if (startswith(path, "_") or startswith(path, ".")) {
-			throw MSG_ClientError("The index directory %s couldn't start with '_' or '.' are reserved", path.c_str());
 		}
 	}
 
