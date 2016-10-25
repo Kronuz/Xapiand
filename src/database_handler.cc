@@ -115,11 +115,13 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, HttpMethod metho
 		throw MSG_ClientError("It is expected at least one endpoint");
 	}
 
-	endpoints = endpoints_;
-	flags = flags_;
 	method = method_;
 
-	DatabaseHandler::lock_database lk(this);  // Try opening database (raises errors)
+	if (endpoints != endpoints_ || flags != flags_) {
+		endpoints = endpoints_;
+		flags = flags_;
+		DatabaseHandler::lock_database lk(this);  // Try opening database (raises errors)
+	}
 }
 
 
