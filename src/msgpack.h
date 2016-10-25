@@ -106,6 +106,7 @@ public:
 	MsgPack(const MsgPack& other);
 	MsgPack(MsgPack&& other);
 	MsgPack(const std::initializer_list<MsgPack>& list);
+	MsgPack(Type type);
 
 	template <typename T, typename = std::enable_if_t<not std::is_same<std::shared_ptr<Body>, std::decay_t<T>>::value>>
 	MsgPack(T&& v);
@@ -594,6 +595,60 @@ inline MsgPack::MsgPack(const std::initializer_list<MsgPack>& list)
 	: MsgPack(Undefined())
 {
 	_initializer(list);
+}
+
+
+inline MsgPack::MsgPack(Type type)
+	: MsgPack(Undefined()) {
+	_deinit();
+	switch (type) {
+		case Type::NIL:
+			_body->_obj->type = msgpack::type::NIL;
+			break;
+		case Type::BOOLEAN:
+			_body->_obj->type = msgpack::type::BOOLEAN;
+			_body->_obj->via.boolean = false;
+			break;
+		case Type::POSITIVE_INTEGER:
+			_body->_obj->type = msgpack::type::POSITIVE_INTEGER;
+			_body->_obj->via.u64 = 0;
+			break;
+		case Type::NEGATIVE_INTEGER:
+			_body->_obj->type = msgpack::type::NEGATIVE_INTEGER;
+			_body->_obj->via.i64 = 0;
+			break;
+		case Type::FLOAT:
+			_body->_obj->type = msgpack::type::FLOAT;
+			_body->_obj->via.f64 = 0;
+			break;
+		case Type::STR:
+			_body->_obj->type = msgpack::type::STR;
+			_body->_obj->via.str.ptr = nullptr;
+			_body->_obj->via.str.size = 0;
+			break;
+		case Type::BIN:
+			_body->_obj->type = msgpack::type::BIN;
+			_body->_obj->via.bin.ptr = nullptr;
+			_body->_obj->via.bin.size = 0;
+			break;
+		case Type::ARRAY:
+			_body->_obj->type = msgpack::type::ARRAY;
+			_body->_obj->via.array.ptr = nullptr;
+			_body->_obj->via.array.size = 0;
+			break;
+		case Type::MAP:
+			_body->_obj->type = msgpack::type::MAP;
+			_body->_obj->via.map.ptr = nullptr;
+			_body->_obj->via.map.size = 0;
+			break;
+		case Type::EXT:
+			_body->_obj->type = msgpack::type::EXT;
+			_body->_obj->via.ext.ptr = nullptr;
+			_body->_obj->via.ext.size = 0;
+			break;
+		case Type::UNDEFINED:
+			break;
+	}
 }
 
 
