@@ -53,8 +53,12 @@ class QueryDSL {
 	Xapian::termcount _wqf;
 
 	Xapian::Query process_query(const MsgPack& obj, const std::string& field_name);
-	void set_parameters(const MsgPack& obj);
-	bool map_dispatcher(const std::string& str, const std::unordered_map<std::string, dispatch_dsl> map, const MsgPack& obj, Xapian::Query& query);
+	void find_parameters(const MsgPack& obj);
+
+	bool find_operators(const std::string& key, const MsgPack& obj, Xapian::Query& q);
+	bool find_casts(const std::string& key, const MsgPack& obj, Xapian::Query& q);
+	bool find_values(const std::string& key, const MsgPack& obj, Xapian::Query& q);
+	bool find_ranges(const std::string& key, const MsgPack& obj, Xapian::Query& q);
 
 public:
 	QueryDSL(std::shared_ptr<Schema> schema_);

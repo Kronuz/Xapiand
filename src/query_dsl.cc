@@ -114,25 +114,25 @@ QueryDSL::get_query(const MsgPack& obj)
 	if (obj.is_map() && obj.is_map() == 1) {
 		for (auto const& elem : obj) {
 			state =	QUERY::GLOBALQUERY;
-			auto str_key = elem.as_string();
-			try {
-				auto func = map_op_dispatch_dsl.at(str_key);
-				return (this->*func)(obj.at(str_key), map_xapian_operator.at(str_key));
-			} catch (const std::out_of_range&) {
-				try {
-					auto func = map_dispatch_dsl.at(str_key);
-					return (this->*func)(obj.at(str_key));
-				} catch (const std::out_of_range&) {
-					auto const& o = obj.at(str_key);
-					switch (o.getType()) {
-						case MsgPack::Type::ARRAY:
-							throw MSG_QueryDslError("Unexpected type %s in %s", MsgPackTypes[static_cast<int>(MsgPack::Type::ARRAY)], str_key.c_str());
-						case MsgPack::Type::MAP:
-							return process_query(o, str_key);
-						default: {
-							_fieldname = str_key;
-							return query(o);
-						}
+			auto key = elem.as_string();
+			Xapian::Query qry;
+			if (find_operators(key, obj.at(key), qry)) {
+				return qry;
+			} else if (find_values(key, obj, qry)) {
+				return qry;
+			} else if (find_operators(key, obj, qry)) {
+				return qry;
+			} else {
+				auto const& o = obj.at(key);
+				switch (o.getType()) {
+					case MsgPack::Type::ARRAY:
+						throw MSG_QueryDslError("Unexpected type %s in %s", MsgPackTypes[static_cast<int>(MsgPack::Type::ARRAY)], key.c_str());
+					case MsgPack::Type::MAP:
+						return process_query(o, key);
+					default: {
+						state =	QUERY::QUERY;
+						_fieldname = key;
+						return query(o);
 					}
 				}
 			}
@@ -160,41 +160,37 @@ QueryDSL::join_queries(const MsgPack& obj, Xapian::Query::op op)
 			if (elem.is_map() && elem.size() == 1) {
 				for (const auto& field : elem) {
 					state = QUERY::GLOBALQUERY;
-					auto str_key = field.as_string();
-					try {
-						auto func = map_op_dispatch_dsl.at(str_key);
-						final_query.empty() ?  final_query = (this->*func)(elem.at(str_key), map_xapian_operator.at(str_key)) : final_query = Xapian::Query(op, final_query, (this->*func)(elem.at(str_key), map_xapian_operator.at(str_key)));
-					} catch (const std::out_of_range&) {
-						Xapian::Query query_aux;
-						if (map_dispatcher(str_key, map_dispatch_dsl, elem.at(str_key), query_aux)) {
-							final_query.empty() ? final_query = query_aux : final_query =  Xapian::Query(op, final_query, query_aux);
-						} else if (map_dispatcher(str_key, map_dispatch_cast, elem, query_aux)) {
-							final_query.empty() ? final_query = query_aux : final_query =  Xapian::Query(op, final_query, query_aux);
-						} else {
-							if (!startswith(str_key, "_")) {
-								const auto& o = elem.at(str_key);
-								switch (o.getType()) {
-									case MsgPack::Type::ARRAY:
-										throw MSG_QueryDslError("Unexpected type array in %s", str_key.c_str());
-									case MsgPack::Type::MAP:
-										final_query.empty() ? final_query = process_query(o, str_key) : final_query = Xapian::Query(op, final_query, process_query(o, str_key));
-										break;
-									default:
-										_fieldname = str_key;
-										final_query.empty() ? final_query = query(o) : final_query = Xapian::Query(op, final_query, query(o));
-								}
-							} else {
-								throw MSG_QueryDslError("Unexpected reserved word %s", str_key.c_str());
+					auto key = field.as_string();
+					Xapian::Query qry;
+					if (find_operators(key, elem.at(key), qry)) {
+						final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
+					} else if (find_values(key, elem, qry)) {
+						final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
+					} else if (find_casts(key, elem, qry)) {
+						final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
+					} else {
+						if (!startswith(key, "_")) {
+							const auto& o = elem.at(key);
+							switch (o.getType()) {
+								case MsgPack::Type::ARRAY:
+									throw MSG_QueryDslError("Unexpected type array in %s", key.c_str());
+								case MsgPack::Type::MAP:
+									final_query.empty() ? final_query = process_query(o, key) : final_query = Xapian::Query(op, final_query, process_query(o, key));
+									break;
+								default:
+									state = QUERY::QUERY;
+									_fieldname = key;
+									final_query.empty() ? final_query = query(o) : final_query = Xapian::Query(op, final_query, query(o));
 							}
+						} else {
+							throw MSG_QueryDslError("Unexpected reserved word %s", key.c_str());
 						}
 					}
 				}
-
 			} else {
 				throw MSG_QueryDslError("Expected array of objects with one element");
 			}
 		}
-
 	} else {
 		throw MSG_QueryDslError("Type error expected map in boolean operator");
 	}
@@ -205,19 +201,19 @@ QueryDSL::join_queries(const MsgPack& obj, Xapian::Query::op op)
 Xapian::Query
 QueryDSL::process_query(const MsgPack& obj, const std::string& field_name)
 {
-	L_CALL(this, "QueryDSL::process_query()");
+	L_CALL(this, "QueryDSL::process_query(%s)", repr(field_name).c_str());
 
 	_fieldname = field_name;
 	state = QUERY::QUERY;
 	if (obj.is_map()) {
-		set_parameters(obj);
+		find_parameters(obj);
 		for (const auto& elem : obj) {
-			auto str_key = elem.as_string();
-			Xapian::Query query;
-			if (map_dispatcher(str_key, map_dispatch_dsl, obj, query)) {
-				return query;
-			} else if (map_dispatcher(str_key, map_dispatch_cast, obj, query)) {
-				return query;
+			auto key = elem.as_string();
+			Xapian::Query qry;
+			if (find_values(key, obj, qry)) {
+				return qry;
+			} else if (find_casts(key, obj, qry)) {
+				return qry;
 			}
 		}
 	}
@@ -233,13 +229,12 @@ QueryDSL::in_range_query(const MsgPack& obj)
 
 	if (obj.is_map() && obj.size() == 1) {
 		for (const auto& elem : obj) {
-			std::string str_key;
-			try {
-				str_key = elem.as_string();
-				auto func = map_range_dispatch_dsl.at(str_key);
-				return (this->*func)(obj.at(str_key));
-			} catch (const std::out_of_range&) {
-				throw MSG_QueryDslError("Unexpected range type %s", str_key.c_str());
+			auto key = elem.as_string();
+			Xapian::Query qry;
+			if (find_ranges(key, obj.at(key), qry)) {
+				return qry;
+			} else {
+				throw MSG_QueryDslError("Unexpected range type %s", key.c_str());
 			}
 		}
 	} else {
@@ -382,8 +377,10 @@ QueryDSL::query(const MsgPack& obj)
 
 
 void
-QueryDSL::set_parameters(const MsgPack& obj)
+QueryDSL::find_parameters(const MsgPack& obj)
 {
+	L_CALL(this, "QueryDSL::find_parameters()");
+
 	try {
 		auto const& boost = obj.at(QUERYDSL_BOOST);
 		if (boost.is_number() && boost.getType() != MsgPack::Type::NEGATIVE_INTEGER) {
@@ -398,10 +395,58 @@ QueryDSL::set_parameters(const MsgPack& obj)
 
 
 bool
-QueryDSL::map_dispatcher(const std::string& str, const std::unordered_map<std::string, dispatch_dsl> map, const MsgPack& obj, Xapian::Query& query) {
+QueryDSL::find_operators(const std::string& key, const MsgPack& obj, Xapian::Query& q)
+{
+	L_CALL(this, "QueryDSL::find_operators(%s)", repr(key).c_str());
+
 	try {
-		auto func = map.at(str);
-		query = (this->*func)(obj);
+		auto func = map_op_dispatch_dsl.at(key);
+		q = (this->*func)(obj, map_xapian_operator.at(key));
+		return true;
+	} catch (const std::out_of_range&) {
+		return false;
+	}
+}
+
+
+bool
+QueryDSL::find_casts(const std::string& key, const MsgPack& obj, Xapian::Query& q)
+{
+	L_CALL(this, "QueryDSL::find_casts(%s)", repr(key).c_str());
+
+	try {
+		auto func = map_dispatch_cast.at(key);
+		q = (this->*func)(obj.at(key));
+		return true;
+	} catch (const std::out_of_range&) {
+		return false;
+	}
+}
+
+
+bool
+QueryDSL::find_values(const std::string& key, const MsgPack& obj, Xapian::Query& q)
+{
+	L_CALL(this, "QueryDSL::find_values(%s)", repr(key).c_str());
+
+	try {
+		auto func = map_dispatch_dsl.at(key);
+		q = (this->*func)(obj.at(key));
+		return true;
+	} catch (const std::out_of_range&) {
+		return false;
+	}
+}
+
+
+bool
+QueryDSL::find_ranges(const std::string& key, const MsgPack& obj, Xapian::Query& q)
+{
+	L_CALL(this, "QueryDSL::find_ranges(%s)", repr(key).c_str());
+
+	try {
+		auto func = map_range_dispatch_dsl.at(key);
+		q = (this->*func)(obj.at(key));
 		return true;
 	} catch (const std::out_of_range&) {
 		return false;
