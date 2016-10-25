@@ -86,11 +86,11 @@ protected:
 public:
 	virtual ~BaseClient();
 
-	virtual void on_read_file(const char *buf, size_t received) = 0;
+	virtual void on_read_file(const char *buf, ssize_t received) = 0;
 
 	virtual void on_read_file_done() = 0;
 
-	virtual void on_read(const char *buf, size_t received) = 0;
+	virtual void on_read(const char *buf, ssize_t received) = 0;
 
 	void close();
 

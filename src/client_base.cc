@@ -549,9 +549,7 @@ BaseClient::io_cb_read(int fd)
 				L_CONN(this, "Ignored error: {sock:%d, fd:%d} - %d: %s", sock.load(), fd, errno, strerror(errno));
 				return;
 			} else {
-				if (errno == ECONNRESET) {
-					received = 0;
-				} else {
+				if (errno != ECONNRESET) {
 					L_ERR(this, "ERROR: read error {sock:%d, fd:%d} - %d: %s", sock.load(), fd, errno, strerror(errno));
 					destroy();
 					detach();
@@ -560,10 +558,10 @@ BaseClient::io_cb_read(int fd)
 			}
 		}
 
-		if (received == 0) {
+		if (received <= 0) {
 			// The peer has closed its half side of the connection.
 			L_CONN(this, "Received EOF {sock:%d, fd:%d}!", sock.load(), fd);
-			on_read(nullptr, 0);
+			on_read(nullptr, received);
 			destroy();
 			detach();
 			return;

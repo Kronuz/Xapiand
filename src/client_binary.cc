@@ -184,21 +184,21 @@ BinaryClient::on_read_file_done()
 
 
 void
-BinaryClient::on_read_file(const char *buf, size_t received)
+BinaryClient::on_read_file(const char *buf, ssize_t received)
 {
-	L_BINARY_WIRE(this, "BinaryClient::on_read_file: %zu bytes", received);
+	L_BINARY_WIRE(this, "BinaryClient::on_read_file: %zd bytes", received);
 	io::write(file_descriptor, buf, received);
 }
 
 
 void
-BinaryClient::on_read(const char *buf, size_t received)
+BinaryClient::on_read(const char *buf, dsize_t received)
 {
-	if (!received) {
+	if (received <= 0) {
 		return;
 	}
 
-	L_BINARY_WIRE(this, "BinaryClient::on_read: %zu bytes", received);
+	L_BINARY_WIRE(this, "BinaryClient::on_read: %zd bytes", received);
 	buffer.append(buf, received);
 	while (buffer.length() >= 2) {
 		const char *o = buffer.data();

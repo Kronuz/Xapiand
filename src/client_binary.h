@@ -68,8 +68,8 @@ class BinaryClient : public BaseClient {
 
 	BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_);
 
-	void on_read(const char *buf, size_t received) override;
-	void on_read_file(const char *buf, size_t received) override;
+	void on_read(const char *buf, ssize_t received) override;
+	void on_read_file(const char *buf, ssize_t received) override;
 	void on_read_file_done() override;
 
 	void checkout_database();

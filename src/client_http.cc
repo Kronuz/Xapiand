@@ -253,14 +253,16 @@ HttpClient::~HttpClient()
 
 
 void
-HttpClient::on_read(const char* buf, size_t received)
+HttpClient::on_read(const char* buf, ssize_t received)
 {
+	L_CALL(this, "HttpClient::on_read(<buf>, %zd)", received);
+
 	unsigned init_state = parser.state;
 
-	if (!received) {
+	if (received <= 0) {
 		response_log.load()->LOG_DELAYED_CLEAR();
-		if (init_state != 18 || !write_queue.empty()) {
-			if (!response_logged.exchange(true)) LOG(LOG_NOTICE, RED, this, "Client unexpectedly closed the other end! [%d]", init_state);
+		if (received < 0 || init_state != 18 || !write_queue.empty()) {
+			LOG(LOG_ERR, LIGHT_RED, this, "Client unexpectedly closed the other end! [%d]", init_state);
 		}
 		return;
 	}
@@ -273,8 +275,8 @@ HttpClient::on_read(const char* buf, size_t received)
 		response_logged = false;
 	}
 
-	L_HTTP_WIRE(this, "HttpClient::on_read: %zu bytes", received);
-	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
+	L_HTTP_WIRE(this, "HttpClient::on_read: %zd bytes", received);
+	ssize_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		unsigned final_state = parser.state;
 		if (final_state == init_state) {
@@ -306,15 +308,19 @@ HttpClient::on_read(const char* buf, size_t received)
 
 
 void
-HttpClient::on_read_file(const char*, size_t received)
+HttpClient::on_read_file(const char*, ssize_t received)
 {
-	L_ERR(this, "Not Implemented: HttpClient::on_read_file: %zu bytes", received);
+	L_CALL(this, "HttpClient::on_read_file(<buf>, %zd)", received);
+
+	L_ERR(this, "Not Implemented: HttpClient::on_read_file: %zd bytes", received);
 }
 
 
 void
 HttpClient::on_read_file_done()
 {
+	L_CALL(this, "HttpClient::on_read_file_done()");
+
 	L_ERR(this, "Not Implemented: HttpClient::on_read_file_done");
 }
 
@@ -336,6 +342,8 @@ int
 HttpClient::on_info(http_parser* p)
 {
 	HttpClient *self = static_cast<HttpClient *>(p->data);
+
+	L_CALL(self, "HttpClient::on_info(...)");
 
 	int state = p->state;
 
@@ -371,6 +379,8 @@ int
 HttpClient::on_data(http_parser* p, const char* at, size_t length)
 {
 	HttpClient *self = static_cast<HttpClient *>(p->data);
+
+	L_CALL(self, "HttpClient::on_data(...)");
 
 	int state = p->state;
 
@@ -465,6 +475,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 void
 HttpClient::run()
 {
+	L_CALL(this, "HttpClient::run()");
 	try {
 		_run();
 	} catch (...) {
@@ -478,7 +489,7 @@ HttpClient::run()
 void
 HttpClient::_run()
 {
-	L_CALL(this, "HttpClient::run()");
+	L_CALL(this, "HttpClient::_run()");
 
 	L_CONN(this, "Start running in worker {sock:%d}.", sock.load());
 

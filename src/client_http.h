@@ -83,8 +83,8 @@ class HttpClient : public BaseClient {
 	struct http_parser parser;
 	DatabaseHandler db_handler;
 
-	void on_read(const char* buf, size_t received) override;
-	void on_read_file(const char* buf, size_t received) override;
+	void on_read(const char* buf, ssize_t received) override;
+	void on_read_file(const char* buf, ssize_t received) override;
 	void on_read_file_done() override;
 
 	static const http_parser_settings settings;
