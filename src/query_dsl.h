@@ -70,6 +70,3 @@ public:
 	Xapian::Query query(const MsgPack& o);
 	Xapian::Query range_query(const MsgPack& o);
 };
-
-extern const std::unordered_map<std::string, dispatch_op_dsl> map_op_dispatch_dsl;
-extern const std::unordered_map<std::string, dispatch_dsl> map_dispatch_dsl;
