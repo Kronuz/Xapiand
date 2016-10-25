@@ -547,120 +547,123 @@ BaseClient::io_cb_read(int fd)
 		if (received < 0) {
 			if (ignored_errorno(errno, true, false)) {
 				L_CONN(this, "Ignored error: {sock:%d, fd:%d} - %d: %s", sock.load(), fd, errno, strerror(errno));
+				return;
 			} else {
 				if (errno == ECONNRESET) {
-					L_WARNING(this, "WARNING: read error {sock:%d, fd:%d} - %d: %s", sock.load(), fd, errno, strerror(errno));
+					received = 0;
 				} else {
 					L_ERR(this, "ERROR: read error {sock:%d, fd:%d} - %d: %s", sock.load(), fd, errno, strerror(errno));
+					destroy();
+					detach();
+					return;
 				}
-				destroy();
-				detach();
-				return;
 			}
-		} else if (received == 0) {
+		}
+
+		if (received == 0) {
 			// The peer has closed its half side of the connection.
 			L_CONN(this, "Received EOF {sock:%d, fd:%d}!", sock.load(), fd);
 			on_read(nullptr, 0);
 			destroy();
 			detach();
 			return;
-		} else {
-			L_TCP_WIRE(this, "{sock:%d, fd:%d} -->> %s (%zu bytes)", sock.load(), fd, repr(buf_data, received, true, true, 500).c_str(), received);
+		}
 
-			if (mode == MODE::READ_FILE_TYPE) {
-				switch (*buf_data++) {
-					case *NO_COMPRESSOR:
-						L_CONN(this, "Receiving uncompressed file {sock:%d, fd:%d}...", sock.load(), fd);
-						decompressor = std::make_unique<ClientNoDecompressor>(this);
-						break;
-					case *LZ4_COMPRESSOR:
-						L_CONN(this, "Receiving LZ4 compressed file {sock:%d, fd:%d}...", sock.load(), fd);
-						decompressor = std::make_unique<ClientLZ4Decompressor>(this);
-						break;
-					default:
-						L_CONN(this, "Received wrong file mode {sock:%d, fd:%d}!", sock.load(), fd);
-						destroy();
-						detach();
-						return;
-				}
-				--received;
-				length_buffer.clear();
-				mode = MODE::READ_FILE;
+		L_TCP_WIRE(this, "{sock:%d, fd:%d} -->> %s (%zu bytes)", sock.load(), fd, repr(buf_data, received, true, true, 500).c_str(), received);
+
+		if (mode == MODE::READ_FILE_TYPE) {
+			switch (*buf_data++) {
+				case *NO_COMPRESSOR:
+					L_CONN(this, "Receiving uncompressed file {sock:%d, fd:%d}...", sock.load(), fd);
+					decompressor = std::make_unique<ClientNoDecompressor>(this);
+					break;
+				case *LZ4_COMPRESSOR:
+					L_CONN(this, "Receiving LZ4 compressed file {sock:%d, fd:%d}...", sock.load(), fd);
+					decompressor = std::make_unique<ClientLZ4Decompressor>(this);
+					break;
+				default:
+					L_CONN(this, "Received wrong file mode {sock:%d, fd:%d}!", sock.load(), fd);
+					destroy();
+					detach();
+					return;
 			}
+			--received;
+			length_buffer.clear();
+			mode = MODE::READ_FILE;
+		}
 
-			if (received && mode == MODE::READ_FILE) {
-				do {
-					if (file_size == -1) {
-						if (buf_data) {
-							length_buffer.append(buf_data, received);
-						}
-						buf_data = length_buffer.data();
+		if (received && mode == MODE::READ_FILE) {
+			do {
+				if (file_size == -1) {
+					if (buf_data) {
+						length_buffer.append(buf_data, received);
+					}
+					buf_data = length_buffer.data();
 
-						buf_end = buf_data + length_buffer.size();
-						try {
-							file_size = unserialise_length(&buf_data, buf_end, false);
-						} catch (Xapian::SerialisationError) {
+					buf_end = buf_data + length_buffer.size();
+					try {
+						file_size = unserialise_length(&buf_data, buf_end, false);
+					} catch (Xapian::SerialisationError) {
+						return;
+					}
+
+					if (receive_checksum) {
+						receive_checksum = false;
+						if (decompressor->verify(static_cast<uint32_t>(file_size))) {
+							on_read_file_done();
+							mode = MODE::READ_BUF;
+							decompressor.reset();
+							break;
+						} else {
+							L_ERR(this, "Data is corrupt!");
 							return;
 						}
-
-						if (receive_checksum) {
-							receive_checksum = false;
-							if (decompressor->verify(static_cast<uint32_t>(file_size))) {
-								on_read_file_done();
-								mode = MODE::READ_BUF;
-								decompressor.reset();
-								break;
-							} else {
-								L_ERR(this, "Data is corrupt!");
-								return;
-							}
-						}
-
-						block_size = file_size;
-						decompressor->clear();
 					}
 
-					const char *file_buf_to_write;
-					size_t block_size_to_write;
-					size_t buf_left_size = buf_end - buf_data;
-					if (block_size < buf_left_size) {
-						file_buf_to_write = buf_data;
-						block_size_to_write = block_size;
-						buf_data += block_size;
-						received = buf_left_size - block_size;
-					} else {
-						file_buf_to_write = buf_data;
-						block_size_to_write = buf_left_size;
+					block_size = file_size;
+					decompressor->clear();
+				}
+
+				const char *file_buf_to_write;
+				size_t block_size_to_write;
+				size_t buf_left_size = buf_end - buf_data;
+				if (block_size < buf_left_size) {
+					file_buf_to_write = buf_data;
+					block_size_to_write = block_size;
+					buf_data += block_size;
+					received = buf_left_size - block_size;
+				} else {
+					file_buf_to_write = buf_data;
+					block_size_to_write = buf_left_size;
+					buf_data = nullptr;
+					received = 0;
+				}
+
+				if (block_size_to_write) {
+					decompressor->append(file_buf_to_write, block_size_to_write);
+					block_size -= block_size_to_write;
+				}
+
+				if (file_size == 0) {
+					decompressor->clear();
+					decompressor->decompress();
+					receive_checksum = true;
+				} else if (block_size == 0) {
+					decompressor->decompress();
+					if (buf_data) {
+						length_buffer = std::string(buf_data, received);
 						buf_data = nullptr;
 						received = 0;
+					} else {
+						length_buffer.clear();
 					}
+				}
+				file_size = -1;
+			} while (file_size == -1);
+		}
 
-					if (block_size_to_write) {
-						decompressor->append(file_buf_to_write, block_size_to_write);
-						block_size -= block_size_to_write;
-					}
-
-					if (file_size == 0) {
-						decompressor->clear();
-						decompressor->decompress();
-						receive_checksum = true;
-					} else if (block_size == 0) {
-						decompressor->decompress();
-						if (buf_data) {
-							length_buffer = std::string(buf_data, received);
-							buf_data = nullptr;
-							received = 0;
-						} else {
-							length_buffer.clear();
-						}
-					}
-					file_size = -1;
-				} while (file_size == -1);
-			}
-
-			if (received && mode == MODE::READ_BUF) {
-				on_read(buf_data, received);
-			}
+		if (received && mode == MODE::READ_BUF) {
+			on_read(buf_data, received);
 		}
 	}
 }
