@@ -604,6 +604,10 @@ XapiandManager::run(const opts_t& o)
 	msg += ", " + std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters");
 	L_NOTICE(this, msg.c_str());
 
+#ifndef XAPIAND_CLUSTERING
+	setup_node();
+#endif
+
 	try {
 		L_EV(this, "Starting manager loop...");
 		run_loop();
