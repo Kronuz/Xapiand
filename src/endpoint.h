@@ -164,6 +164,8 @@ namespace std {
 
 bool operator==(Endpoint const& le, Endpoint const& re);
 bool operator==(Endpoints const& le, Endpoints const& re);
+bool operator!=(Endpoint const& le, Endpoint const& re);
+bool operator!=(Endpoints const& le, Endpoints const& re);
 
 
 class Endpoint {
