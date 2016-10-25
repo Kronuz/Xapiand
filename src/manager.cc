@@ -308,6 +308,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			sig_exit(-EX_CANTCREAT);
 		}
 	}
+
 	try {
 		db_handler.get_document(std::to_string(local_node_->id));
 	} catch (const DocNotFoundError&) {
