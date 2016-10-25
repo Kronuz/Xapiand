@@ -141,6 +141,8 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 MsgPack
 DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_id)
 {
+	L_CALL(this, "DatabaseHandler::run_script(...)");
+
 #if XAPIAND_V8
 
 	std::string script;
@@ -213,16 +215,24 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 }
 
 
-MsgPack
-DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& _obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
+Xapian::docid
+DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
 {
-	L_CALL(this, "DatabaseHandler::_index()");
+	L_CALL(this, "DatabaseHandler::index(%s, <obj>, <blob>)", repr(_document_id).c_str());
+
+	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(obj.to_string()).c_str());
+
+	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
+	L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
+
+	// Create a suitable document.
+	Xapian::Document doc;
 
 	const auto& properties = schema->getProperties();
-	term_id = schema->serialise_id(properties, _document_id);
-	auto prefix_term_id = prefixed(term_id, DOCUMENT_ID_TERM_PREFIX);
+	std::string term_id = schema->serialise_id(properties, _document_id);
+	auto prefixed_term_id = prefixed(term_id, DOCUMENT_ID_TERM_PREFIX);
 
-	auto obj = run_script(_obj, prefix_term_id);
+	auto obj_ = run_script(obj, prefixed_term_id);
 
 	// Index Required Data.
 	auto found = ct_type.find_last_of("/");
@@ -233,9 +243,8 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& _obj, std::string&
 	doc.add_value(DB_SLOT_ID, term_id);
 
 	// Document's id is also a boolean term (otherwise it doesn't replace an existing document)
-	term_id = prefix_term_id;
-	doc.add_boolean_term(term_id);
-	L_INDEX(this, "Slot: %d id: %s (%s)", DB_SLOT_ID, _document_id.c_str(), term_id.c_str());
+	doc.add_boolean_term(prefixed_term_id);
+	L_INDEX(this, "Slot: %d id: %s (%s)", DB_SLOT_ID, _document_id.c_str(), prefixed_term_id.c_str());
 
 	// Indexing the content values of data.
 	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
@@ -248,30 +257,13 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& _obj, std::string&
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
 
-	// Index obj.
-	if (obj.is_map()) {
-		return schema->index(properties, obj, doc);
+	// Index object.
+	if (obj_.is_map()) {
+		obj_ = schema->index(properties, obj_, doc);
 	}
 
-	return obj;
-}
-
-
-Xapian::docid
-DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
-{
-	L_CALL(this, "DatabaseHandler::index(%s, <obj>, <blob>)", repr(_document_id).c_str());
-
-	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(obj.to_string()).c_str());
-
-	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
-	L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
-
-	std::string term_id;
-	Xapian::Document doc;
-	auto f_data = _index(doc, obj, term_id, _document_id, ct_type, ct_length);
-	L_INDEX(this, "Data: %s", repr(f_data.to_string()).c_str());
-	doc.set_data(join_data(f_data.serialise(), blob));
+	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
+	doc.set_data(join_data(obj_.serialise(), blob));
 
 	Xapian::docid did;
 	const auto _endpoints = endpoints;
@@ -280,7 +272,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 		endpoints.add(e);
 		try {
 			DatabaseHandler::lock_database lk(this);
-			did = database->replace_document_term(term_id, doc, commit_);
+			did = database->replace_document_term(prefixed_term_id, doc, commit_);
 		} catch (const Xapian::Error& err) {
 			if (err_list) {
 				err_list->operator[](err.get_error_string()).push_back(e.to_string());
