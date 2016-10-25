@@ -120,7 +120,7 @@ QueryDSL::get_query(const MsgPack& obj)
 				return qry;
 			} else if (find_values(key, obj, qry)) {
 				return qry;
-			} else if (find_operators(key, obj, qry)) {
+			} else if (find_casts(key, obj, qry)) {
 				return qry;
 			} else {
 				auto const& o = obj.at(key);
