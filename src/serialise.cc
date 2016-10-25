@@ -742,7 +742,7 @@ Serialise::date(const std::string& field_value)
 
 
 std::string
-Serialise::date(const ::MsgPack& value, Datetime::tm_t& tm)
+Serialise::date(const class MsgPack& value, Datetime::tm_t& tm)
 {
 	double _timestamp;
 	switch (value.getType()) {
@@ -759,9 +759,18 @@ Serialise::date(const ::MsgPack& value, Datetime::tm_t& tm)
 			tm = Datetime::to_tm_t(_timestamp);
 			return timestamp(_timestamp);
 		case MsgPack::Type::STR:
-			_timestamp = Datetime::timestamp(value.as_string(), tm);
-			tm = Datetime::to_tm_t(_timestamp);
-			return timestamp(_timestamp);
+			return timestamp(Datetime::timestamp(value.as_string(), tm));
+		case MsgPack::Type::MAP:
+			for (const auto& key : value) {
+				auto str_key = key.as_string();
+				try {
+					auto func = map_dispatch_date.at(str_key);
+					(*func)(tm, value.at(str_key));
+				} catch (const std::out_of_range&) {
+					throw MSG_SerialisationError("Unsupported Key: %s in date", str_key.c_str());
+				}
+			}
+			return timestamp(Datetime::timestamp(tm));
 		default:
 			throw MSG_SerialisationError("Date value must be numeric or string");
 	}
@@ -946,10 +955,10 @@ Serialise::type(FieldType type)
 }
 
 
-::MsgPack
+MsgPack
 Unserialise::MsgPack(FieldType field_type, const std::string& serialised_val)
 {
-	::MsgPack result;
+	class MsgPack result;
 	switch (field_type) {
 		case FieldType::FLOAT:
 			result = _float(serialised_val);
