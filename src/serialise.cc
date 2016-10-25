@@ -124,9 +124,6 @@ static void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
 }
 
 
-using dispatch_cast_func = void (*)(Datetime::tm_t&, const MsgPack&);
-
-
 const std::unordered_map<std::string, dispatch_cast_func> map_dispatch_date({
 	{ "_year",    &process_date_year    },
 	{ "_month",   &process_date_month   },
