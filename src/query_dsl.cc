@@ -416,7 +416,7 @@ QueryDSL::find_casts(const std::string& key, const MsgPack& obj, Xapian::Query& 
 
 	try {
 		auto func = map_dispatch_cast.at(key);
-		q = (this->*func)(obj.at(key));
+		q = (this->*func)(obj);
 		return true;
 	} catch (const std::out_of_range&) {
 		return false;
