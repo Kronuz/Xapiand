@@ -1466,7 +1466,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					}
 #endif
 				} catch (const Xapian::DatabaseOpeningError& exc) {
-					L_DEBUG(this, "DEBUG: %s", exc.get_msg().c_str());
+					L_DATABASE(this, "ERROR: %s", exc.get_msg().c_str());
 				} catch (const Xapian::Error& exc) {
 					L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 				}
@@ -1611,7 +1611,7 @@ DatabasePool::_switch_db(const Endpoint& endpoint)
 			queue->switch_cond.notify_all();
 		}
 	} else {
-		L_DEBUG(this, "Inside switch_db not queue->count == queue->size()");
+		L_CRIT(this, "Inside switch_db, but not all queues have (queue->count == queue->size())");
 	}
 
 	return switched;
