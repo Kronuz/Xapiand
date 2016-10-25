@@ -37,18 +37,20 @@ Cast::cast(const MsgPack& obj)
 		auto str_key = obj.begin()->as_string();
 		switch ((Hash)xxh64::hash(str_key)) {
 			case Hash::INTEGER:
-				return integer(obj);
+				return integer(obj.at(str_key));
 			case Hash::POSITIVE:
-				return positive(obj);
+				return positive(obj.at(str_key));
 			case Hash::FLOAT:
-				return _float(obj);
+				return _float(obj.at(str_key));
 			case Hash::BOOLEAN:
-				return boolean(obj);
+				return boolean(obj.at(str_key));
 			case Hash::STRING:
 			case Hash::TEXT:
 			case Hash::UUID:
 			case Hash::EWKT:
-				return string(obj);
+				return string(obj.at(str_key));
+			case Hash::DATE:
+				return date(obj.at(str_key));
 			default:
 				throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
 		}
@@ -138,35 +140,6 @@ Cast::string(const MsgPack& obj)
 }
 
 
-FieldType
-Cast::getType(const std::string& cast_word)
-{
-	switch ((Hash)xxh64::hash(cast_word)) {
-		case Hash::INTEGER:           return FieldType::INTEGER;
-		case Hash::POSITIVE:          return FieldType::POSITIVE;
-		case Hash::FLOAT:             return FieldType::FLOAT;
-		case Hash::BOOLEAN:           return FieldType::BOOLEAN;
-		case Hash::STRING:            return FieldType::STRING;
-		case Hash::TEXT:              return FieldType::TEXT;
-		case Hash::UUID:              return FieldType::UUID;
-		case Hash::DATE:              return FieldType::DATE;
-		case Hash::EWKT:              return FieldType::GEO;
-		case Hash::POINT:             return FieldType::GEO;
-		case Hash::POLYGON:           return FieldType::GEO;
-		case Hash::CIRCLE:            return FieldType::GEO;
-		case Hash::CHULL:             return FieldType::GEO;
-		case Hash::MULTIPOINT:        return FieldType::GEO;
-		case Hash::MULTIPOLYGON:      return FieldType::GEO;
-		case Hash::MULTICIRCLE:       return FieldType::GEO;
-		case Hash::MULTICHULL:        return FieldType::GEO;
-		case Hash::GEO_COLLECTION:    return FieldType::GEO;
-		case Hash::GEO_INTERSECTION:  return FieldType::GEO;
-		default:
-			throw MSG_SerialisationError("Unknown cast type %s", cast_word.c_str());
-	}
-}
-
-
 bool
 Cast::boolean(const MsgPack& obj)
 {
@@ -196,6 +169,51 @@ Cast::boolean(const MsgPack& obj)
 			return obj.as_bool();
 		default:
 			throw MSG_SerialisationError("Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+	}
+}
+
+
+MsgPack
+Cast::date(const MsgPack& obj)
+{
+	switch (obj.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:
+		case MsgPack::Type::FLOAT:
+		case MsgPack::Type::STR:
+		case MsgPack::Type::MAP:
+			return obj;
+		default:
+			throw MSG_SerialisationError("Type %s can not be cast to date", MsgPackTypes[toUType(obj.getType())]);
+	}
+}
+
+
+FieldType
+Cast::getType(const std::string& cast_word)
+{
+	switch ((Hash)xxh64::hash(cast_word)) {
+		case Hash::INTEGER:           return FieldType::INTEGER;
+		case Hash::POSITIVE:          return FieldType::POSITIVE;
+		case Hash::FLOAT:             return FieldType::FLOAT;
+		case Hash::BOOLEAN:           return FieldType::BOOLEAN;
+		case Hash::STRING:            return FieldType::STRING;
+		case Hash::TEXT:              return FieldType::TEXT;
+		case Hash::UUID:              return FieldType::UUID;
+		case Hash::DATE:              return FieldType::DATE;
+		case Hash::EWKT:              return FieldType::GEO;
+		case Hash::POINT:             return FieldType::GEO;
+		case Hash::POLYGON:           return FieldType::GEO;
+		case Hash::CIRCLE:            return FieldType::GEO;
+		case Hash::CHULL:             return FieldType::GEO;
+		case Hash::MULTIPOINT:        return FieldType::GEO;
+		case Hash::MULTIPOLYGON:      return FieldType::GEO;
+		case Hash::MULTICIRCLE:       return FieldType::GEO;
+		case Hash::MULTICHULL:        return FieldType::GEO;
+		case Hash::GEO_COLLECTION:    return FieldType::GEO;
+		case Hash::GEO_INTERSECTION:  return FieldType::GEO;
+		default:
+			throw MSG_SerialisationError("Unknown cast type %s", cast_word.c_str());
 	}
 }
 
@@ -231,18 +249,20 @@ Serialise::cast_object(const required_spc_t& field_spc, const class MsgPack& o)
 		auto str_key = o.begin()->as_string();
 		switch ((Cast::Hash)xxh64::hash(str_key)) {
 			case Cast::Hash::INTEGER:
-				return Serialise::integer(field_spc.get_type(), Cast::integer(o));
+				return Serialise::integer(field_spc.get_type(), Cast::integer(o.at(str_key)));
 			case Cast::Hash::POSITIVE:
-				return Serialise::positive(field_spc.get_type(), Cast::positive(o));
+				return Serialise::positive(field_spc.get_type(), Cast::positive(o.at(str_key)));
 			case Cast::Hash::FLOAT:
-				return Serialise::_float(field_spc.get_type(), Cast::_float(o));
+				return Serialise::_float(field_spc.get_type(), Cast::_float(o.at(str_key)));
 			case Cast::Hash::BOOLEAN:
-				return Serialise::boolean(field_spc.get_type(), Cast::boolean(o));
+				return Serialise::boolean(field_spc.get_type(), Cast::boolean(o.at(str_key)));
 			case Cast::Hash::STRING:
 			case Cast::Hash::TEXT:
 			case Cast::Hash::UUID:
 			case Cast::Hash::EWKT:
-				return Serialise::string(field_spc, Cast::string(o));
+				return Serialise::string(field_spc, Cast::string(o.at(str_key)));
+			case Cast::Hash::DATE:
+				return Serialise::date(field_spc, Cast::date(o.at(str_key)));
 			default:
 				throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
 		}
