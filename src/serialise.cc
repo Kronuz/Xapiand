@@ -30,6 +30,112 @@
 #include "utils.h"
 
 
+static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
+	switch (year.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			tm.year = year.as_u64();
+			return;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			tm.year = year.as_i64();
+			return;
+		case MsgPack::Type::FLOAT:
+			tm.year = year.as_f64();
+			return;
+		default:
+			throw MSG_SerialisationError("_year must be a numeric value");
+	}
+}
+
+
+static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
+	switch (month.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			tm.mon = month.as_u64();
+			return;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			tm.mon = month.as_i64();
+			return;
+		case MsgPack::Type::FLOAT:
+			tm.mon = month.as_f64();
+			return;
+		default:
+			throw MSG_SerialisationError("_month must be a numeric value");
+	}
+}
+
+
+static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
+	switch (day.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			tm.day = day.as_u64();
+			return;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			tm.day = day.as_i64();
+			return;
+		case MsgPack::Type::FLOAT:
+			tm.day = day.as_f64();
+			return;
+		default:
+			throw MSG_SerialisationError("_day must be a numeric value");
+	}
+}
+
+
+static void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
+	try {
+		auto str_time = time.as_string();
+		switch (str_time.length()) {
+			case 12:
+				if (str_time[2] == ':' && str_time[5] == ':' && str_time[8] == '.') {
+					tm.hour = strict(std::stoul, str_time.substr(0, 2));
+					if (tm.hour < 60) {
+						tm.min = strict(std::stoul, str_time.substr(3, 2));
+						if (tm.min < 60) {
+							tm.sec = strict(std::stoul, str_time.substr(6, 2));
+							if (tm.sec < 60) {
+								tm.msec = strict(std::stoul, str_time.substr(8, 3));
+								return;
+							}
+						}
+					}
+				}
+				break;
+			case 8:
+				if (str_time[2] == ':' && str_time[5] == ':') {
+					tm.hour = strict(std::stoul, str_time.substr(0, 2));
+					if (tm.hour < 60) {
+						tm.min = strict(std::stoul, str_time.substr(3, 2));
+						if (tm.min < 60) {
+							tm.sec = strict(std::stoul, str_time.substr(6, 2));
+							if (tm.sec < 60) {
+								return;
+							}
+						}
+					}
+				}
+				break;
+			default:
+				break;
+		}
+		throw MSG_SerialisationError("Error format in: %s, the format must be 00:00:00[.000]", str_time.c_str());
+	} catch (const msgpack::type_error&) {
+		throw MSG_SerialisationError("_time must be string");
+	}
+}
+
+
+using dispatch_cast_func = void (*)(Datetime::tm_t&, const MsgPack&);
+
+
+const std::unordered_map<std::string, dispatch_cast_func> map_dispatch_date({
+	{ "_year",    &process_date_year    },
+	{ "_month",   &process_date_month   },
+	{ "_day",     &process_date_day     },
+	{ "_time",    &process_date_time    },
+});
+
+
+
 MsgPack
 Cast::cast(const MsgPack& obj)
 {
@@ -320,6 +426,37 @@ Serialise::string(const required_spc_t& field_spc, const std::string& field_valu
 			return uuid(field_value);
 		default:
 			throw MSG_SerialisationError("Type: %s is not string", type(field_type).c_str());
+	}
+}
+
+
+std::string
+Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_value)
+{
+	switch (field_value.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return positive(field_spc.get_type(), field_value.as_u64());
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return integer(field_spc.get_type(), field_value.as_i64());
+		case MsgPack::Type::FLOAT:
+			return _float(field_spc.get_type(), field_value.as_f64());
+		case MsgPack::Type::STR:
+			return string(field_spc, field_value.as_string());
+		case MsgPack::Type::MAP: {
+			Datetime::tm_t tm;
+			for (const auto& key : field_value) {
+				auto str_key = key.as_string();
+				try {
+					auto func = map_dispatch_date.at(str_key);
+					(*func)(tm, field_value.at(str_key));
+				} catch (const std::out_of_range&) {
+					throw MSG_SerialisationError("Unsupported Key: %s in date", str_key.c_str());
+				}
+			}
+			return _float(field_spc.get_type(), Datetime::timestamp(tm));
+		}
+		default:
+			throw MSG_SerialisationError("Type: %s is not a date", MsgPackTypes[toUType(field_value.getType())]);
 	}
 }
 
