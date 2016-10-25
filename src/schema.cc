@@ -3355,13 +3355,21 @@ Schema::validate_required_data()
 
 			// Process RESERVED_PREFIX
 			if (specification.prefix.empty()) {
-				specification.prefix = get_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2]));
+				if (specification.full_name == ID_FIELD_NAME) {
+					specification.prefix = DOCUMENT_ID_TERM_PREFIX;
+				} else {
+					specification.prefix = get_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2]));
+				}
 			}
 			properties[RESERVED_PREFIX] = specification.prefix;
 
 			// Process RESERVED_SLOT
 			if (specification.slot == Xapian::BAD_VALUENO) {
-				specification.slot = get_slot(specification.dynamic_full_name);
+				if (specification.full_name == ID_FIELD_NAME) {
+					specification.slot = DB_SLOT_ID;
+				} else {
+					specification.slot = get_slot(specification.dynamic_full_name);
+				}
 			}
 			properties[RESERVED_SLOT] = specification.slot;
 
