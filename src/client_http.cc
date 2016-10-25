@@ -213,9 +213,9 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 
 	L_CONN(this, "New Http Client {sock:%d}, %d client(s) of a total of %d connected.", sock.load(), http_clients, total_clients);
 
-	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
+	response_log = LOG_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
 
-	response_log = LOG_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...").release();
+	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
 }
 
 
@@ -280,7 +280,10 @@ HttpClient::on_read(const char* buf, ssize_t received)
 	if (parsed == received) {
 		unsigned final_state = parser.state;
 		if (final_state == init_state) {
-			if (received == 1 and buf[0] == '\n') {  //ignore '\n' request
+			if (received == 1 and buf[0] == '\n') {  // ignore '\n' request
+				request_begining = true;
+				response_log.load()->LOG_DELAYED_CLEAR();
+				response_log = LOG_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
 				return;
 			}
 		}
