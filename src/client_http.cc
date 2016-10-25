@@ -120,7 +120,6 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 	std::string response;
 	const std::string eol("\r\n");
 
-
 	if (mode & HTTP_STATUS) {
 		response_status = status;
 
@@ -279,11 +278,11 @@ HttpClient::on_read(const char* buf, size_t received)
 	if (parsed == received) {
 		unsigned final_state = parser.state;
 		if (final_state == init_state) {
-			if (received == 1 and (strncmp(buf, "\n", received) == 0)) { //ignore '\n' request
+			if (received == 1 and buf[0] == '\n') {  //ignore '\n' request
 				return;
 			}
 		}
-		if (final_state == 1 || final_state == 18) { // dead or message_complete
+		if (final_state == 1 || final_state == 18) {  // dead or message_complete
 			L_EV(this, "Disable read event {sock:%d}", sock.load());
 			io_read.stop();
 			written = 0;
