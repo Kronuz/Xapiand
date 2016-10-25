@@ -670,7 +670,7 @@ Database::get_revision_info() const
 bool
 Database::commit(bool wal_)
 {
-	L_CALL(this, "Database::commit()");
+	L_CALL(this, "Database::commit(%s)", wal_ ? "true" : "false");
 
 	if (!modified) {
 		L_DATABASE_WRAP(this, "Do not commit, because there are not changes");
@@ -711,7 +711,7 @@ Database::commit(bool wal_)
 void
 Database::cancel(bool wal_)
 {
-	L_CALL(this, "Database::cancel()");
+	L_CALL(this, "Database::cancel(%s)", wal_ ? "true" : "false");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("database is read-only");
@@ -749,7 +749,7 @@ Database::cancel(bool wal_)
 void
 Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::delete_document(%d)", did);
+	L_CALL(this, "Database::delete_document(%d, %s, %s)", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("database is read-only");
@@ -793,7 +793,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 void
 Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::delete_document_term(%s)", repr(term).c_str());
+	L_CALL(this, "Database::delete_document_term(%s, %s, %s)", repr(term).c_str(), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("database is read-only");
@@ -835,7 +835,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 Xapian::docid
 Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::add_document()");
+	L_CALL(this, "Database::add_document(<doc>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 	Xapian::docid did = 0;
 
@@ -879,7 +879,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 Xapian::docid
 Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::replace_document(%d)", did);
+	L_CALL(this, "Database::replace_document(%d, <doc>, %s, %s)", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_replace_document(did, doc);
@@ -921,7 +921,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 Xapian::docid
 Database::replace_document(const std::string& doc_id, const Xapian::Document& doc, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::replace_document(%s)", repr(doc_id).c_str());
+	L_CALL(this, "Database::replace_document(%s, <doc>, %s, %s)", repr(doc_id).c_str(), commit_ ? "true" : "false", wal_ ? "true" : "false");
 	return replace_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), doc, commit_, wal_);
 }
 
@@ -929,7 +929,7 @@ Database::replace_document(const std::string& doc_id, const Xapian::Document& do
 Xapian::docid
 Database::replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::replace_document_term(%s)", repr(term).c_str());
+	L_CALL(this, "Database::replace_document_term(%s, <doc>, %s, %s)", repr(term).c_str(), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 	Xapian::docid did = 0;
 
@@ -973,7 +973,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 void
 Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::add_spelling()");
+	L_CALL(this, "Database::add_spelling(<word, <freqinc>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_add_spelling(word, freqinc);
@@ -1010,7 +1010,7 @@ Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool
 void
 Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::remove_spelling()");
+	L_CALL(this, "Database::remove_spelling(<word>, <freqdec>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_remove_spelling(word, freqdec);
@@ -1047,7 +1047,7 @@ Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, b
 Xapian::docid
 Database::find_document(const Xapian::Query& query)
 {
-	L_CALL(this, "Database::find_document()");
+	L_CALL(this, "Database::find_document(<quer>)");
 
 	Xapian::docid did = 0;
 
@@ -1154,7 +1154,7 @@ Database::get_metadata(const std::string& key)
 void
 Database::set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal_)
 {
-	L_CALL(this, "Database::set_metadata(%s, %s)", repr(key).c_str(), repr(value).c_str());
+	L_CALL(this, "Database::set_metadata(%s, %s, %s, %s)", repr(key).c_str(), repr(value).c_str(), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_set_metadata(key, value);
