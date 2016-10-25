@@ -117,9 +117,9 @@ DatabaseAutocommit::run()
 						auto end = std::chrono::system_clock::now();
 
 						if (successful) {
-							L_DEBUG(this, "Autocommit: %s%s (took %s)", endpoints.to_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "", delta_string(start, end).c_str());
+							L_DEBUG(this, "Autocommit: %s%s (took %s)", repr(endpoints.to_string()).c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "", delta_string(start, end).c_str());
 						} else {
-							L_WARNING(this, "Autocommit failed: %s%s (took %s)", endpoints.to_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "", delta_string(start, end).c_str());
+							L_WARNING(this, "Autocommit failed: %s%s (took %s)", repr(endpoints.to_string()).c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "", delta_string(start, end).c_str());
 						}
 
 						lk.lock();

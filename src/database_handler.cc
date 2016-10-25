@@ -257,12 +257,12 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(obj.to_string()).c_str());
 
 	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
-	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
+	L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
 
 	std::string term_id;
 	Xapian::Document doc;
 	auto f_data = _index(doc, obj, term_id, _document_id, ct_type, ct_length);
-	L_INDEX(this, "Data: %s", f_data.to_string().c_str());
+	L_INDEX(this, "Data: %s", repr(f_data.to_string()).c_str());
 	doc.set_data(join_data(f_data.serialise(), blob));
 
 	Xapian::docid did;
@@ -367,7 +367,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 {
 	L_CALL(this, "DatabaseHandler::write_schema() [2]");
 
-	L_INDEX(this, "Schema to write: %s", obj.to_string().c_str());
+	L_INDEX(this, "Schema to write: %s", repr(obj.to_string()).c_str());
 
 	schema = get_schema();
 

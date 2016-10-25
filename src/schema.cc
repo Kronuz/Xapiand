@@ -1177,7 +1177,7 @@ Schema::set_type(const MsgPack& item_doc)
 			break;
 	}
 
-	throw MSG_ClientError("`%s: %s` is ambiguous", RESERVED_VALUE, item_doc.to_string().c_str());
+	throw MSG_ClientError("`%s: %s` is ambiguous", RESERVED_VALUE, repr(item_doc.to_string()).c_str());
 }
 
 
@@ -2590,7 +2590,7 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 void
 Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL(this, "Schema::index_object(%s, %s)", parent_properties->to_string().c_str(), repr(name).c_str());
+	L_CALL(this, "Schema::index_object(%s, %s)", repr(parent_properties->to_string()).c_str(), repr(name).c_str());
 
 	if (!specification.is_recursive) {
 		if (specification.store) {
@@ -2901,7 +2901,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 void
 Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
 {
-	L_CALL(this, "Schema::index_item(%s, %zu, %d)", value.to_string().c_str(), pos, add_value);
+	L_CALL(this, "Schema::index_item(%s, %zu, %d)", repr(value.to_string()).c_str(), pos, add_value);
 
 	if (specification.prefix.empty()) {
 		switch (specification.index) {
@@ -3001,7 +3001,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 void
 Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values)
 {
-	L_CALL(this, "Schema::index_item(%s, %d)", values.to_string().c_str(), add_values);
+	L_CALL(this, "Schema::index_item(%s, %d)", repr(values.to_string()).c_str(), add_values);
 
 	if (specification.prefix.empty()) {
 		switch (specification.index) {
@@ -3635,7 +3635,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, static_cast<int64_t>(f_val));
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for float type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for float type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::INTEGER: {
@@ -3651,7 +3651,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, i_val);
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for integer type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for integer type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::POSITIVE: {
@@ -3667,7 +3667,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				GenerateTerms::positive(doc, spc.accuracy, spc.acc_prefix, u_val);
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for positive type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for positive type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::DATE: {
@@ -3683,7 +3683,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				GenerateTerms::date(doc, spc.accuracy, spc.acc_prefix, tm);
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for date type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for date type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::GEO: {
@@ -3697,7 +3697,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for geo type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for geo type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::STRING:
@@ -3712,7 +3712,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(spc.sep_types[2]).c_str(), value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -3726,7 +3726,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				}
 				return;
 			} catch (const SerialisationError&) {
-				throw MSG_ClientError("Format invalid for boolean type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for boolean type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::UUID: {
@@ -3740,9 +3740,9 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for uuid type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for uuid type: %s", repr(value.to_string()).c_str());
 			} catch (const SerialisationError&) {
-				throw MSG_ClientError("Format invalid for uuid type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for uuid type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		default:
@@ -3777,7 +3777,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for float type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for float type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::INTEGER: {
@@ -3800,7 +3800,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for integer type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for integer type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::POSITIVE: {
@@ -3823,7 +3823,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for positive type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for positive type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::DATE: {
@@ -3846,7 +3846,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for date type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for date type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::GEO: {
@@ -3880,7 +3880,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for geo type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for geo type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::STRING:
@@ -3897,7 +3897,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[2]).c_str(), value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -3913,7 +3913,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				return;
 			} catch (const SerialisationError&) {
-				throw MSG_ClientError("Format invalid for boolean type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for boolean type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::UUID: {
@@ -3929,7 +3929,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for uuid type: %s", value.to_string().c_str());
+				throw MSG_ClientError("Format invalid for uuid type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		default:

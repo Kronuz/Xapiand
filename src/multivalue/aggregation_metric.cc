@@ -74,8 +74,8 @@ HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& con
 			throw MSG_AggregationError("'%s' must be string", AGGREGATION_FIELD);
 		}
 	} catch (const std::out_of_range&) {
-		throw MSG_AggregationError("'%s' must be specified in '%s'", AGGREGATION_FIELD, conf.to_string().c_str());
+		throw MSG_AggregationError("'%s' must be specified in %s", AGGREGATION_FIELD, repr(conf.to_string()).c_str());
 	} catch (const msgpack::type_error&) {
-		throw MSG_AggregationError("'%s' must be object", conf.to_string().c_str());
+		throw MSG_AggregationError("%s must be object", repr(conf.to_string()).c_str());
 	}
 }

@@ -145,7 +145,7 @@ int test_msgpack_constructors() {
 		} else {
 			MsgPack json_obj(to_json(str_json));
 			if (json_obj.to_string() != expect_json) {
-				L_ERR(nullptr, "MsgPack::MsgPack(rapidjson::Document) is not working correctly. Result: %s\nExpected: %s\n", json_obj.to_string().c_str(), expect_json.c_str());
+				L_ERR(nullptr, "MsgPack::MsgPack(rapidjson::Document) is not working correctly. Result: %s\nExpected: %s\n", repr(json_obj.to_string()).c_str(), repr(expect_json).c_str());
 				++res;
 			}
 		}

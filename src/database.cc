@@ -1810,7 +1810,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 void
 DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack> new_schema)
 {
-	L_CALL(this, "DatabasePool::set_schema(%s, %d, %s)", repr(endpoint.to_string()).c_str(), flags, new_schema ? new_schema->to_string().c_str() : "nullptr");
+	L_CALL(this, "DatabasePool::set_schema(%s, %d, %s)", repr(endpoint.to_string()).c_str(), flags, new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
 
 	atomic_shared_ptr<const MsgPack>* schema;
 	{

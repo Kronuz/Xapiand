@@ -734,7 +734,7 @@ XapiandManager::reset_state()
 bool
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
-	L_CALL(this, "XapiandManager::put_node(%s)", node.to_string().c_str());
+	L_CALL(this, "XapiandManager::put_node(%s)", repr(node.to_string()).c_str());
 
 	auto local_node_ = local_node.load();
 	std::string lower_node_name(lower_string(node->name));
@@ -898,7 +898,7 @@ XapiandManager::get_region()
 std::future<bool>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
-	L_CALL(this, "XapiandManager::trigger_replication(%s, %s)", src_endpoint.to_string().c_str(), dst_endpoint.to_string().c_str());
+	L_CALL(this, "XapiandManager::trigger_replication(%s, %s)", repr(src_endpoint.to_string()).c_str(), repr(dst_endpoint.to_string()).c_str());
 
 	if (auto binary = weak_binary.lock()) {
 		return binary->trigger_replication(src_endpoint, dst_endpoint);

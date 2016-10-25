@@ -33,7 +33,7 @@ int test_guid() {
 	auto g2 = generator.newGuid();
 	auto g3 = generator.newGuid();
 
-	L_DEBUG(nullptr, "Guids generated: %s  %s  %s", g1.to_string().c_str(), g2.to_string().c_str(), g3.to_string().c_str());
+	L_DEBUG(nullptr, "Guids generated: %s  %s  %s", repr(g1.to_string()).c_str(), repr(g2.to_string()).c_str(), repr(g3.to_string()).c_str());
 	if (g1 == g2 || g1 == g3 || g2 == g3) {
 		L_ERR(nullptr, "ERROR: Not all random guids are different");
 		RETURN(1);

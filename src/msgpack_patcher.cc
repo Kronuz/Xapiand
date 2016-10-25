@@ -204,7 +204,7 @@ void patch_test(const MsgPack& obj_patch, MsgPack& object) {
 		const auto& o = object.path(path_split);
 		const auto& val = get_patch_value(obj_patch, PATCH_TES);
 		if (val != o) {
-			throw MSG_ClientError("In patch test: Objects are not equals. Expected: %s Result: %s", val.to_string().c_str(), o.to_string().c_str());
+			throw MSG_ClientError("In patch test: Objects are not equals. Expected: %s Result: %s", repr(val.to_string()).c_str(), repr(o.to_string()).c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch test: Inconsistent data");

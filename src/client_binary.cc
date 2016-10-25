@@ -115,7 +115,7 @@ BinaryClient::init_remote()
 bool
 BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-	L_REPLICATION(this, "init_replication: %s  -->  %s", src_endpoint.to_string().c_str(), dst_endpoint.to_string().c_str());
+	L_REPLICATION(this, "init_replication: %s  -->  %s", repr(src_endpoint.to_string()).c_str(), repr(dst_endpoint.to_string()).c_str());
 	state = State::REPLICATIONPROTOCOL_CLIENT;
 
 	repl_endpoints.add(src_endpoint);
@@ -127,10 +127,10 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		src_endpoint,
 		dst_endpoint
 	] () {
-		L_DEBUG(XapiandManager::manager.get(), "Triggering replication for %s after checkin!", dst_endpoint.to_string().c_str());
+		L_DEBUG(XapiandManager::manager.get(), "Triggering replication for %s after checkin!", repr(dst_endpoint.to_string()).c_str());
 		XapiandManager::manager->trigger_replication(src_endpoint, dst_endpoint);
 	})) {
-		L_ERR(this, "Cannot checkout %s", endpoints.to_string().c_str());
+		L_ERR(this, "Cannot checkout %s", repr(endpoints.to_string()).c_str());
 		return false;
 	}
 
@@ -141,7 +141,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		checkin_database();
 		return false;
 	}
-	L_CONN(this, "Connected to %s {sock:%d}!", src_endpoint.to_string().c_str(), sock.load());
+	L_CONN(this, "Connected to %s {sock:%d}!", repr(src_endpoint.to_string()).c_str(), sock.load());
 
 	XapiandManager::manager->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;

@@ -78,7 +78,7 @@ XapiandReplicator::run()
 	// Function that retrieves a task from a queue, runs it and deletes it
 	Endpoint endpoint;
 	while (XapiandManager::manager->database_pool.updated_databases.pop(endpoint)) {
-		L_DEBUG(this, "Replicator was informed database was updated: %s", endpoint.to_string().c_str());
+		L_DEBUG(this, "Replicator was informed database was updated: %s", repr(endpoint.to_string()).c_str());
 		on_commit(endpoint);
 	}
 
