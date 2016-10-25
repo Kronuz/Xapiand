@@ -337,7 +337,7 @@ HttpClient::on_info(http_parser* p)
 
 	int state = p->state;
 
-	L_HTTP_PROTO_PARSER(self, "%3d. (INFO)", state);
+	L_HTTP_PROTO_PARSER(self, "%4d - (INFO)", state);
 
 	switch (state) {
 		case 18:  // message_complete
@@ -372,7 +372,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 
 	int state = p->state;
 
-	L_HTTP_PROTO_PARSER(self, "%3d. %s", state, repr(at, length).c_str());
+	L_HTTP_PROTO_PARSER(self, "%4d - %s", state, repr(at, length).c_str());
 
 	if (state > 26 && state <= 32) {
 		// s_req_path  ->  s_req_http_start
@@ -1362,7 +1362,8 @@ HttpClient::url_resolve()
 	struct http_parser_url u;
 	std::string b = repr(path, true, false);
 
-	L_HTTP_PROTO_PARSER(this, "URL: %s", b.c_str());
+	L_HTTP(this, "URL: %s", b.c_str());
+
 	if (http_parser_parse_url(path.c_str(), path.size(), 0, &u) == 0) {
 		L_HTTP_PROTO_PARSER(this, "HTTP parsing done!");
 
@@ -1396,7 +1397,7 @@ HttpClient::url_resolve()
 
 		return identify_cmd();
 	} else {
-		L_HTTP_WIRE(this, "Parsing not done");
+		L_HTTP_PROTO_PARSER(this, "Parsing not done");
 		// Bad query
 		return CMD_BAD_QUERY;
 	}
@@ -1499,7 +1500,7 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 			endpoints.add(asked_node);
 		}
 	}
-	L_HTTP_WIRE(this, "Endpoint: -> %s", endpoints.to_string().c_str());
+	L_HTTP(this, "Endpoint: -> %s", endpoints.to_string().c_str());
 }
 
 
