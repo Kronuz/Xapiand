@@ -262,6 +262,15 @@ namespace queue {
 			std::lock_guard<std::mutex> lk(_mutex);
 			return _items_queue.front();
 		}
+
+		bool front(T& element) {
+			std::lock_guard<std::mutex> lk(_mutex);
+			if (_items_queue.empty()) {
+				return false;
+			}
+			element = _items_queue.front();
+			return true;
+		}
 	};
 
 
