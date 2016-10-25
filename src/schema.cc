@@ -2917,7 +2917,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 			case TypeIndex::GLOBAL_VALUES: {
 				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value, s_g, global_spc, pos);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
 				break;
 			}
 			case TypeIndex::ALL:
@@ -2925,7 +2925,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 			case TypeIndex::GLOBAL_ALL: {
 				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value, s_g, global_spc, pos, &Schema::index_field_term);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &Schema::index_field_term);
 				break;
 			}
 		}
@@ -2951,13 +2951,13 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 			}
 			case TypeIndex::FIELD_VALUES: {
 				StringSet& s_f = map_values[specification.slot];
-				index_value(doc, value, s_f, specification, pos);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
 				break;
 			}
 			case TypeIndex::GLOBAL_VALUES: {
 				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value, s_g, global_spc, pos);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
 				break;
 			}
 			case TypeIndex::ALL: {
@@ -2969,13 +2969,13 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 			}
 			case TypeIndex::FIELD_ALL: {
 				StringSet& s_f = map_values[specification.slot];
-				index_value(doc, value, s_f, specification, pos, &Schema::index_field_term);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &Schema::index_field_term);
 				break;
 			}
 			case TypeIndex::GLOBAL_ALL: {
 				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value, s_g, global_spc, pos, &Schema::index_field_term);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &Schema::index_field_term);
 				break;
 			}
 		}
@@ -3031,10 +3031,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 					set_type_to_array();
 					size_t pos = 0;
 					for (const auto& value : values) {
-						index_value(doc, value, s_g, global_spc, pos++);
+						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
 					}
 				} else {
-					index_value(doc, values, s_g, global_spc, 0);
+					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0);
 				}
 				break;
 			}
@@ -3047,10 +3047,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 					set_type_to_array();
 					size_t pos = 0;
 					for (const auto& value : values) {
-						index_value(doc, value, s_g, global_spc, pos++, &Schema::index_field_term);
+						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &Schema::index_field_term);
 					}
 				} else {
-					index_value(doc, values, s_g, global_spc, 0, &Schema::index_field_term);
+					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0, &Schema::index_field_term);
 				}
 				break;
 			}
@@ -3105,10 +3105,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 					set_type_to_array();
 					size_t pos = 0;
 					for (const auto& value : values) {
-						index_all_value(doc, value, s_f, s_g, specification, global_spc, pos++);
+						index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 					}
 				} else {
-					index_all_value(doc, values, s_f, s_g, specification, global_spc, 0);
+					index_all_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, s_g, specification, global_spc, 0);
 				}
 				break;
 			}
@@ -3118,10 +3118,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 					set_type_to_array();
 					size_t pos = 0;
 					for (const auto& value : values) {
-						index_value(doc, value, s_f, specification, pos++);
+						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++);
 					}
 				} else {
-					index_value(doc, values, s_f, specification, 0);
+					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, specification, 0);
 				}
 				break;
 			}
@@ -3132,10 +3132,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 					set_type_to_array();
 					size_t pos = 0;
 					for (const auto& value : values) {
-						index_value(doc, value, s_g, global_spc, pos++);
+						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
 					}
 				} else {
-					index_value(doc, values, s_g, global_spc, 0);
+					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0);
 				}
 				break;
 			}
@@ -3147,10 +3147,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 					set_type_to_array();
 					size_t pos = 0;
 					for (const auto& value : values) {
-						index_all_value(doc, value, s_f, s_g, specification, global_spc, pos++, true);
+						index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++, true);
 					}
 				} else {
-					index_all_value(doc, values, s_f, s_g, specification, global_spc, 0, true);
+					index_all_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, s_g, specification, global_spc, 0, true);
 				}
 				break;
 			}
@@ -3160,10 +3160,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 					set_type_to_array();
 					size_t pos = 0;
 					for (const auto& value : values) {
-						index_value(doc, value, s_f, specification, pos++, &Schema::index_field_term);
+						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &Schema::index_field_term);
 					}
 				} else {
-					index_value(doc, values, s_f, specification, 0, &Schema::index_field_term);
+					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, specification, 0, &Schema::index_field_term);
 				}
 				break;
 			}
@@ -3174,10 +3174,10 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 					set_type_to_array();
 					size_t pos = 0;
 					for (const auto& value : values) {
-						index_value(doc, value, s_g, global_spc, pos++, &Schema::index_field_term);
+						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &Schema::index_field_term);
 					}
 				} else {
-					index_value(doc, values, s_g, global_spc, 0, &Schema::index_field_term);
+					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0, &Schema::index_field_term);
 				}
 				break;
 			}
