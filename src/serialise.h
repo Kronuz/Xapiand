@@ -112,6 +112,7 @@ namespace Cast {
 	 * Functions for doing cast between types.
 	 */
 
+	MsgPack cast(const MsgPack& obj);
 	int64_t integer(const MsgPack& obj);
 	uint64_t positive(const MsgPack& obj);
 	double _float(const MsgPack& obj);

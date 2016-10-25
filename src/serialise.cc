@@ -30,6 +30,27 @@
 #include "utils.h"
 
 
+static constexpr auto hash_integer             = xxh64::hash(RESERVED_INTEGER);
+static constexpr auto hash_positive            = xxh64::hash(RESERVED_POSITIVE);
+static constexpr auto hash_float               = xxh64::hash(RESERVED_FLOAT);
+static constexpr auto hash_boolean             = xxh64::hash(RESERVED_BOOLEAN);
+static constexpr auto hash_string              = xxh64::hash(RESERVED_STRING);
+static constexpr auto hash_text                = xxh64::hash(RESERVED_TEXT);
+static constexpr auto hash_uuid                = xxh64::hash(RESERVED_UUID);
+static constexpr auto hash_date                = xxh64::hash(RESERVED_DATE);
+static constexpr auto hash_ewkt                = xxh64::hash(RESERVED_EWKT);
+static constexpr auto hash_point               = xxh64::hash(RESERVED_POINT);
+static constexpr auto hash_polygon             = xxh64::hash(RESERVED_POLYGON);
+static constexpr auto hash_circle              = xxh64::hash(RESERVED_CIRCLE);
+static constexpr auto hash_chull               = xxh64::hash(RESERVED_CHULL);
+static constexpr auto hash_multipoint          = xxh64::hash(RESERVED_MULTIPOINT);
+static constexpr auto hash_multipolygon        = xxh64::hash(RESERVED_MULTIPOLYGON);
+static constexpr auto hash_multicircle         = xxh64::hash(RESERVED_MULTICIRCLE);
+static constexpr auto hash_multichull          = xxh64::hash(RESERVED_MULTICHULL);
+static constexpr auto hash_geo_collection      = xxh64::hash(RESERVED_GEO_COLLECTION);
+static constexpr auto hash_geo_intersection    = xxh64::hash(RESERVED_GEO_INTERSECTION);
+
+
 const std::unordered_map<std::string, FieldType> map_cast_type({
 	{ RESERVED_INTEGER,           FieldType::INTEGER    },
 	{ RESERVED_POSITIVE,          FieldType::POSITIVE   },
@@ -63,6 +84,34 @@ const std::unordered_map<std::string, dispatch_cast> map_dispatch_cast({
 	{ RESERVED_UUID,          &Serialise::string_cast         },
 	{ RESERVED_EWKT,          &Serialise::string_cast         },
 });
+
+
+MsgPack
+Cast::cast(const MsgPack& obj)
+{
+	if (obj.size() == 1) {
+		auto str_key = obj.begin()->as_string();
+		switch (xxh64::hash(str_key)) {
+			case hash_integer:
+				return Cast::integer(obj);
+			case hash_positive:
+				return Cast::positive(obj);
+			case hash_float:
+				return Cast::_float(obj);
+			case hash_boolean:
+				return Cast::boolean(obj);
+			case hash_string:
+			case hash_text:
+			case hash_uuid:
+			case hash_ewkt:
+				return Cast::string(obj);
+			default:
+				throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
+		}
+	}
+
+	throw MSG_SerialisationError("Expected map with one element");
+}
 
 
 int64_t
@@ -541,40 +590,8 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 			return std::make_pair(FieldType::STRING, field_value.as_string());
 
 		case MsgPack::Type::MAP: {
-			std::string str_key;
-			try {
-				return std::make_pair(FieldType::STRING, field_value.as_string());
-				// for(auto const& elem : field_value) {
-				// 	str_key = elem.as_string();
-				// 	switch(xxh64::hash(str_key)) {
-				// 		case hash_integer:
-				// 			return std::make_pair(FieldType::INTEGER, integer(field_value.at(str_key).as_i64()));
-
-				// 		case hash_positive:
-				// 			return std::make_pair(FieldType::POSITIVE, positive(field_value.at(str_key).as_u64()));
-
-				// 		case hash_float:
-				// 			return std::make_pair(FieldType::FLOAT, _float(field_value.at(str_key).as_f64()));
-
-				// 		case hash_boolean:
-				// 			return std::make_pair(FieldType::BOOLEAN, boolean(field_value.at(str_key).as_bool()));
-
-				// 		case hash_string:
-				// 			return std::make_pair(FieldType::STRING, field_value.at(str_key).as_string());
-
-				// 		case hash_text:
-				// 			return std::make_pair(FieldType::TEXT, field_value.at(str_key).as_string());
-
-				// 		case hash_uuid:
-				// 			return std::make_pair(FieldType::UUID, field_value.at(str_key).as_string());
-
-				// 		case hash_ewkt:
-				// 			return std::make_pair(FieldType::GEO, field_value.at(str_key).as_string());
-				// 	}
-				// }
-			} catch (const msgpack::type_error&) {
-				throw MSG_SerialisationError("Expected type %s", str_key.c_str());
-			}
+			// FIXME: check
+			return std::make_pair(FieldType::STRING, field_value.as_string());
 		}
 
 		default:
