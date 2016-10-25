@@ -623,7 +623,11 @@ XapiandManager::run(const opts_t& o)
 	msg += ", " + std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters");
 	L_NOTICE(this, msg.c_str());
 
-#ifndef XAPIAND_CLUSTERING
+#ifdef XAPIAND_CLUSTERING
+	if (solo) {
+		setup_node();
+	}
+#else
 	setup_node();
 #endif
 
