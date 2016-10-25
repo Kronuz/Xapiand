@@ -1684,10 +1684,14 @@ Schema::process_slot(const std::string& prop_name, const MsgPack& doc_slot)
 
 	try {
 		specification.slot = static_cast<unsigned>(doc_slot.as_u64());
-		if (specification.slot < DB_SLOT_RESERVED) {
+		if (specification.slot == Xapian::BAD_VALUENO) {
+			if (specification.full_name == ID_FIELD_NAME) {
+				specification.slot = DB_SLOT_ID;
+			} else {
+				specification.slot = 0xfffffffe;
+			}
+		} else if (specification.slot < DB_SLOT_RESERVED && specification.full_name != ID_FIELD_NAME) {
 			specification.slot += DB_SLOT_RESERVED;
-		} else if (specification.slot == Xapian::BAD_VALUENO) {
-			specification.slot = 0xfffffffe;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be a positive integer", prop_name.c_str());
