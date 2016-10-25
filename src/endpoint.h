@@ -120,7 +120,7 @@ struct Node {
 		return std::string(ip);
 	}
 
-	inline bool operator==(const Node& other) const {
+	bool operator==(const Node& other) const {
 		return
 			lower_string(name) == lower_string(other.name) &&
 			addr.sin_addr.s_addr == other.addr.sin_addr.s_addr &&
@@ -128,8 +128,12 @@ struct Node {
 			binary_port == other.binary_port;
 	}
 
-	inline bool operator!=(const Node& other) const {
+	bool operator!=(const Node& other) const {
 		return !operator==(other);
+	}
+
+	std::string to_string() const {
+		return name + " (" + std::to_string(id) + ")";
 	}
 };
 
