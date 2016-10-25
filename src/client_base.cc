@@ -423,9 +423,8 @@ BaseClient::write_directly(int fd)
 		return WR::ERR;
 	}
 
-	if (!write_queue.empty()) {
-		std::shared_ptr<Buffer> buffer = write_queue.front();
-
+	std::shared_ptr<Buffer> buffer;
+	if (write_queue.front(buffer)) {
 		size_t buf_size = buffer->nbytes();
 		const char *buf_data = buffer->dpos();
 
