@@ -1232,7 +1232,7 @@ HttpClient::search_view(HttpMethod method)
 					{ RESPONSE_MESSAGE, std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header") }
 				};
 				write_http_response(err_response, error_code, pretty);
-				L_DEBUG(this, "ABORTED SEARCH");
+				L_SEARCH(this, "ABORTED SEARCH");
 				return;
 			}
 
@@ -1313,7 +1313,7 @@ HttpClient::search_view(HttpMethod method)
 	}
 	L_TIME(this, "Searching took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	L_DEBUG(this, "FINISH SEARCH");
+	L_SEARCH(this, "FINISH SEARCH");
 }
 
 
@@ -1592,13 +1592,13 @@ HttpClient::query_field_maker(int flag)
 		query_parser.rewind();
 
 		while (query_parser.next("query") != -1) {
-			L_DEBUG(this, "%s", query_parser.get().c_str());
+			L_SEARCH(this, "query=%s", query_parser.get().c_str());
 			query_field->query.push_back(query_parser.get());
 		}
 		query_parser.rewind();
 
 		while (query_parser.next("q") != -1) {
-			L_DEBUG(this, "%s", query_parser.get().c_str());
+			L_SEARCH(this, "query=%s", query_parser.get().c_str());
 			query_field->query.push_back(query_parser.get());
 		}
 		query_parser.rewind();
