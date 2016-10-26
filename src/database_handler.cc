@@ -139,7 +139,7 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 
 
 MsgPack
-DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_id)
+DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 {
 	L_CALL(this, "DatabaseHandler::run_script(...)");
 
@@ -161,7 +161,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 			case HttpMethod::PUT: {
 				MsgPack old_data;
 				try {
-					auto document = get_document_term(prefix_term_id);
+					auto document = get_document_term(term_id);
 					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
@@ -171,7 +171,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 			case HttpMethod::PATCH: {
 				MsgPack old_data;
 				try {
-					auto document = get_document_term(prefix_term_id);
+					auto document = get_document_term(term_id);
 					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
@@ -181,7 +181,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& prefix_term_
 			case HttpMethod::DELETE: {
 				MsgPack old_data;
 				try {
-					auto document = get_document_term(prefix_term_id);
+					auto document = get_document_term(term_id);
 					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
@@ -225,13 +225,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
 	L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
 
-	// Create a suitable document.
-	Xapian::Document doc;
-
-	const auto& properties = schema->getProperties();
-	std::string term_id = schema->serialise_id(properties, _document_id);
-	auto prefixed_term_id = prefixed(term_id, DOCUMENT_ID_TERM_PREFIX);
-
+	auto prefixed_term_id =  prefixed(schema->write_schema_id(obj, _document_id), DOCUMENT_ID_TERM_PREFIX);
 	auto obj_ = run_script(obj, prefixed_term_id);
 
 	// Index Required Data.
@@ -239,12 +233,11 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	std::string type(ct_type.c_str(), found);
 	std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
 
-	// Saves document's id in DB_SLOT_ID
-	doc.add_value(DB_SLOT_ID, term_id);
+	// Create a suitable document.
+	Xapian::Document doc;
 
-	// Document's id is also a boolean term (otherwise it doesn't replace an existing document)
+	// Document's id must be saved as boolean term (otherwise it doesn't replace an existing document).
 	doc.add_boolean_term(prefixed_term_id);
-	L_INDEX(this, "Slot: %d id: %s (%s)", DB_SLOT_ID, _document_id.c_str(), prefixed_term_id.c_str());
 
 	// Indexing the content values of data.
 	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
@@ -259,7 +252,8 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 
 	// Index object.
 	if (obj_.is_map()) {
-		obj_ = schema->index(properties, obj_, doc);
+		obj_[ID_FIELD_NAME] = Cast::cast(_document_id);
+		obj_ = schema->index(obj_, doc);
 	}
 
 	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
@@ -371,8 +365,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 
 	schema = get_schema();
 
-	const auto& properties = schema->getProperties();
-	schema->write_schema(properties, obj, method == HttpMethod::PUT);
+	schema->write_schema(obj, method == HttpMethod::PUT);
 
 	update_schema();
 }
