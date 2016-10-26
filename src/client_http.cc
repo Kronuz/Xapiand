@@ -513,29 +513,27 @@ HttpClient::_run()
 			return;
 		}
 
-		int cmd = url_resolve();
-
 		switch (static_cast<HttpMethod>(parser.method)) {
 			case HttpMethod::DELETE:
-				_delete(cmd);
+				_delete();
 				break;
 			case HttpMethod::GET:
-				_get(cmd);
+				_get();
 				break;
 			case HttpMethod::POST:
-				_post(cmd);
+				_post();
 				break;
 			case HttpMethod::HEAD:
-				_head(cmd);
+				_head();
 				break;
 			case HttpMethod::PUT:
-				_put(cmd);
+				_put();
 				break;
 			case HttpMethod::OPTIONS:
-				_options(cmd);
+				_options();
 				break;
 			case HttpMethod::PATCH:
-				_patch(cmd);
+				_patch();
 			default:
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 				break;
@@ -591,26 +589,25 @@ HttpClient::_run()
 
 
 void
-HttpClient::_options(int cmd)
+HttpClient::_options()
 {
-	L_CALL(this, "HttpClient::_options(%d)", cmd); (void)cmd;
+	L_CALL(this, "HttpClient::_options()");
 
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS | HTTP_BODY, parser.http_major, parser.http_minor));
 }
 
 
 void
-HttpClient::_head(int cmd)
+HttpClient::_head()
 {
-	L_CALL(this, "HttpClient::_head(%d)", cmd);
+	L_CALL(this, "HttpClient::_head()");
 
-	switch (cmd) {
-		case CMD_NO_CMD:
-			if (path_parser.off_id) {
-				document_info_view(HttpMethod::HEAD);
-			} else {
-				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-			}
+	switch (url_resolve()) {
+		case HttpClient::Command::NO_CMD_NO_ID:
+			write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+			break;
+		case HttpClient::Command::NO_CMD_ID:
+			document_info_view(HttpMethod::HEAD);
 			break;
 		default:
 			bad_request_view();
@@ -620,26 +617,25 @@ HttpClient::_head(int cmd)
 
 
 void
-HttpClient::_get(int cmd)
+HttpClient::_get()
 {
-	L_CALL(this, "HttpClient::_get(%d)", cmd);
+	L_CALL(this, "HttpClient::_get()");
 
-	switch (cmd) {
-		case CMD_NO_CMD:
-			if (path_parser.off_id) {
-				search_view(HttpMethod::GET);
-			} else {
-				home_view(HttpMethod::GET);
-			}
+	switch (url_resolve()) {
+		case HttpClient::Command::NO_CMD_NO_ID:
+			home_view(HttpMethod::GET);
 			break;
-		case CMD_SEARCH:
-			path_parser.off_id = nullptr;
+		case HttpClient::Command::NO_CMD_ID:
 			search_view(HttpMethod::GET);
 			break;
-		case CMD_SCHEMA:
+		case HttpClient::Command::CMD_SEARCH:
+			path_parser.off_id = nullptr;  // Command has no ID
+			search_view(HttpMethod::GET);
+			break;
+		case HttpClient::Command::CMD_SCHEMA:
 			schema_view(HttpMethod::GET);
 			break;
-		case CMD_INFO:
+		case HttpClient::Command::CMD_INFO:
 			info_view(HttpMethod::GET);
 			break;
 		default:
@@ -650,20 +646,16 @@ HttpClient::_get(int cmd)
 
 
 void
-HttpClient::_put(int cmd)
+HttpClient::_put()
 {
-	L_CALL(this, "HttpClient::_put(%d)", cmd);
+	L_CALL(this, "HttpClient::_put()");
 
-	switch (cmd) {
-		case CMD_NO_CMD:
-			if (path_parser.off_id) {
-				index_document_view(HttpMethod::PUT);
-			} else {
-				bad_request_view();
-			}
+	switch (url_resolve()) {
+		case HttpClient::Command::NO_CMD_ID:
+			index_document_view(HttpMethod::PUT);
 			break;
-		case CMD_SCHEMA:
-			path_parser.off_id = nullptr;
+		case HttpClient::Command::CMD_SCHEMA:
+			path_parser.off_id = nullptr;  // Command has no ID
 			write_schema_view(HttpMethod::PUT);
 			break;
 		default:
@@ -674,20 +666,20 @@ HttpClient::_put(int cmd)
 
 
 void
-HttpClient::_post(int cmd)
+HttpClient::_post()
 {
-	L_CALL(this, "HttpClient::_post(%d)", cmd);
+	L_CALL(this, "HttpClient::_post()");
 
-	switch (cmd) {
-		case CMD_NO_CMD:
+	switch (url_resolve()) {
+		case HttpClient::Command::NO_CMD_NO_ID:
 			index_document_view(HttpMethod::POST);
 			break;
-		case CMD_SCHEMA:
-			path_parser.off_id = nullptr;
+		case HttpClient::Command::CMD_SCHEMA:
+			path_parser.off_id = nullptr;  // Command has no ID
 			write_schema_view(HttpMethod::POST);
 			break;
-		case CMD_SEARCH:
-			path_parser.off_id = nullptr;
+		case HttpClient::Command::CMD_SEARCH:
+			path_parser.off_id = nullptr;  // Command has no ID
 			search_view(HttpMethod::POST);
 			break;
 		default:
@@ -698,17 +690,13 @@ HttpClient::_post(int cmd)
 
 
 void
-HttpClient::_patch(int cmd)
+HttpClient::_patch()
 {
-	L_CALL(this, "HttpClient::_patch(%d)", cmd);
+	L_CALL(this, "HttpClient::_patch()");
 
-	switch (cmd) {
-		case CMD_NO_CMD:
-			if (path_parser.off_id) {
-				update_document_view(HttpMethod::PATCH);
-			} else {
-				bad_request_view();
-			}
+	switch (url_resolve()) {
+		case HttpClient::Command::NO_CMD_ID:
+			update_document_view(HttpMethod::PATCH);
 			break;
 		default:
 			bad_request_view();
@@ -718,17 +706,13 @@ HttpClient::_patch(int cmd)
 
 
 void
-HttpClient::_delete(int cmd)
+HttpClient::_delete()
 {
-	L_CALL(this, "HttpClient::_delete(%d)", cmd);
+	L_CALL(this, "HttpClient::_delete()");
 
-	switch (cmd) {
-		case CMD_NO_CMD:
-			if (path_parser.off_id) {
-				delete_document_view(HttpMethod::DELETE);
-			} else {
-				bad_request_view();
-			}
+	switch (url_resolve()) {
+		case HttpClient::Command::NO_CMD_ID:
+			delete_document_view(HttpMethod::DELETE);
 			break;
 		default:
 			bad_request_view();
@@ -1341,36 +1325,7 @@ HttpClient::bad_request_view()
 }
 
 
-static constexpr auto http_search = xxh64::hash("_search");
-static constexpr auto http_schema = xxh64::hash("_schema");
-static constexpr auto http_info = xxh64::hash("_info");
-
-
-int
-HttpClient::identify_cmd()
-{
-	if (!path_parser.off_cmd) {
-		return CMD_NO_CMD;
-	} else {
-		switch (xxh64::hash(lower_string(path_parser.get_cmd()))) {
-			case http_search:
-				return CMD_SEARCH;
-				break;
-			case http_info:
-				return CMD_INFO;
-				break;
-			case http_schema:
-				return CMD_SCHEMA;
-				break;
-			default:
-				return CMD_UNKNOWN;
-				break;
-		}
-	}
-}
-
-
-int
+HttpClient::Command
 HttpClient::url_resolve()
 {
 	L_CALL(this, "HttpClient::url_resolve()");
@@ -1390,14 +1345,14 @@ HttpClient::url_resolve()
 			normalize_path(path_str, path_str + path_size, path_buf_str);
 			if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
 				if (path_parser.init(path_buf_str) >= PathParser::State::END) {
-					return CMD_BAD_QUERY;
+					return HttpClient::Command::BAD_QUERY;
 				}
 			}
 		}
 
 		if (u.field_set & (1 <<  UF_QUERY)) {
 			if (query_parser.init(std::string(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
-				return CMD_BAD_QUERY;
+				return HttpClient::Command::BAD_QUERY;
 			}
 		}
 
@@ -1411,11 +1366,20 @@ HttpClient::url_resolve()
 		}
 		query_parser.rewind();
 
-		return identify_cmd();
+		if (!path_parser.off_cmd) {
+			if (path_parser.off_id) {
+				return HttpClient::Command::NO_CMD_ID;
+			} else {
+				return HttpClient::Command::NO_CMD_NO_ID;
+			}
+		} else {
+			return static_cast<Command>(xxh64::hash(lower_string(path_parser.get_cmd())));
+		}
+
 	} else {
 		L_HTTP_PROTO_PARSER(this, "Parsing not done");
 		// Bad query
-		return CMD_BAD_QUERY;
+		return HttpClient::Command::BAD_QUERY;
 	}
 }
 

@@ -42,14 +42,6 @@
 
 #define RESERVED_FDS  50 /* Better approach? */
 
-#define CMD_NO_CMD     0
-#define CMD_SEARCH     1
-#define CMD_FACETS     2
-#define CMD_INFO       3
-#define CMD_SCHEMA     4
-#define CMD_UNKNOWN   -1
-#define CMD_BAD_QUERY -2
-
 
 #define strict(func, s) \
 	[](const std::string& str) { \

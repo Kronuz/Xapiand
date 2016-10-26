@@ -80,6 +80,15 @@ public:
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
+	enum class Command : uint64_t {
+		NO_CMD_NO_ID,
+		NO_CMD_ID,
+		BAD_QUERY,
+		CMD_SEARCH    = xxh64::hash("_search"),
+		CMD_INFO      = xxh64::hash("_info"),
+		CMD_SCHEMA    = xxh64::hash("_schema"),
+	};
+
 	struct http_parser parser;
 	DatabaseHandler db_handler;
 
@@ -145,16 +154,15 @@ class HttpClient : public BaseClient {
 	void facets_view(HttpMethod method);
 	void bad_request_view();
 
-	void _options(int cmd);
-	void _head(int cmd);
-	void _get(int cmd);
-	void _put(int cmd);
-	void _post(int cmd);
-	void _patch(int cmd);
-	void _delete(int cmd);
+	void _options();
+	void _head();
+	void _get();
+	void _put();
+	void _post();
+	void _patch();
+	void _delete();
 
-	int identify_cmd();
-	int url_resolve();
+	Command url_resolve();
 	void _endpoint_maker(duration<double, std::milli> timeout);
 	void endpoints_maker(duration<double, std::milli> timeout);
 	void query_field_maker(int flags);
