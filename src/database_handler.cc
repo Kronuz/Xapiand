@@ -604,7 +604,7 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 
 	auto field_spc = schema->get_slot_field(ID_FIELD_NAME);
 
-	Xapian::Query query(prefixed(Serialise::MsgPack(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
+	Xapian::Query query(prefixed(Serialise::serialise(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
 
 	DatabaseHandler::lock_database lk(this);
 	return database->find_document(query);
