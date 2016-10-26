@@ -329,6 +329,12 @@ QueryDSL::query(const MsgPack& obj)
 					queryTexts.set_stemmer(Xapian::Stem(global_spc.stem_language));
 					return queryTexts.parse_query(obj.as_string(), q_flags);
 				}
+
+				case FieldType::DATE: {
+					auto ser_date = Serialise::date(global_spc, obj);
+					return Xapian::Query(prefixed(ser_date, global_spc.prefix), _wqf);
+				}
+
 				default:
 					return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
 			}
