@@ -147,7 +147,7 @@ template <typename Result, typename ResultState =
 inline ResultState create_state(Result&, specific_t) { return ResultState(); }
 
 template <typename Result>
-inline void init(Result& result, direct_data_access_result_state<Result>& state, size_t capacity)
+inline void init(Result& result, direct_data_access_result_state<Result>& state, size_t)
 {
     state.init(result);
 }
