@@ -643,7 +643,7 @@ Serialise::get_range_type(const std::string& start, const std::string& end, bool
 }
 
 
-std::pair<FieldType, std::string>
+std::tuple<FieldType, std::string, const required_spc_t&>
 Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 {
 	if (!field_value) {
@@ -652,59 +652,86 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 
 	switch (field_value.getType()) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return std::make_pair(FieldType::INTEGER, integer(field_value.as_i64()));
+			return std::make_tuple(FieldType::INTEGER, integer(field_value.as_i64()), std::cref(Schema::get_data_global(FieldType::INTEGER)));
 
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return std::make_pair(FieldType::INTEGER, positive(field_value.as_u64()));
+			return std::make_tuple(FieldType::POSITIVE, positive(field_value.as_u64()), std::cref(Schema::get_data_global(FieldType::POSITIVE)));
 
 		case MsgPack::Type::FLOAT:
-			return std::make_pair(FieldType::INTEGER, _float(field_value.as_f64()));
+			return std::make_tuple(FieldType::FLOAT, _float(field_value.as_f64()), std::cref(Schema::get_data_global(FieldType::FLOAT)));
 
 		case MsgPack::Type::BOOLEAN:
-			return std::make_pair(FieldType::INTEGER, boolean(field_value.as_bool()));
+			return std::make_tuple(FieldType::BOOLEAN, boolean(field_value.as_bool()), std::cref(Schema::get_data_global(FieldType::BOOLEAN)));
 
 		case MsgPack::Type::STR:
 			// Try like INTEGER.
 			try {
-				return std::make_pair(FieldType::INTEGER, integer(field_value.as_string()));
+				return std::make_tuple(FieldType::STRING, integer(field_value.as_string()), std::cref(Schema::get_data_global(FieldType::STRING)));
 			} catch (const SerialisationError&) { }
 
 			// Try like POSITIVE.
 			try {
-				return std::make_pair(FieldType::POSITIVE, positive(field_value.as_string()));
+				return std::make_tuple(FieldType::POSITIVE, positive(field_value.as_string()), std::cref(Schema::get_data_global(FieldType::POSITIVE)));
 			} catch (const SerialisationError&) { }
 
 			// Try like FLOAT
 			try {
-				return std::make_pair(FieldType::FLOAT, _float(field_value.as_string()));
+				return std::make_tuple(FieldType::FLOAT, _float(field_value.as_string()), std::cref(Schema::get_data_global(FieldType::FLOAT)));
 			} catch (const SerialisationError&) { }
 
 			// Try like DATE
 			try {
-				return std::make_pair(FieldType::DATE, date(field_value.as_string()));
+				return std::make_tuple(FieldType::DATE, date(field_value.as_string()), std::cref(Schema::get_data_global(FieldType::DATE)));
 			} catch (const DatetimeError&) { }
 
 			// Try like GEO
 			try {
-				return std::make_pair(FieldType::GEO, ewkt(field_value.as_string(), default_spc.partials, default_spc.error));
+				return std::make_tuple(FieldType::GEO, ewkt(field_value.as_string(), default_spc.partials, default_spc.error), std::cref(Schema::get_data_global(FieldType::GEO)));
 			} catch (const EWKTError&) { }
 
 			// Like UUID
 			if (isUUID(field_value.as_string())) {
-				return std::make_pair(FieldType::UUID, uuid(field_value.as_string()));
+				return std::make_tuple(FieldType::UUID, uuid(field_value.as_string()), std::cref(Schema::get_data_global(FieldType::UUID)));
 			}
 
 			// Like TEXT
 			if (isText(field_value.as_string(), bool_term)) {
-				return std::make_pair(FieldType::TEXT, field_value.as_string());
+				return std::make_tuple(FieldType::TEXT, field_value.as_string(), std::cref(Schema::get_data_global(FieldType::TEXT)));
 			}
 
 			// Default type STRING.
-			return std::make_pair(FieldType::STRING, field_value.as_string());
+			return std::make_tuple(FieldType::STRING, field_value.as_string(), std::cref(Schema::get_data_global(FieldType::STRING)));
 
 		case MsgPack::Type::MAP: {
-			// FIXME: check
-			return std::make_pair(FieldType::STRING, field_value.as_string());
+			if (field_value.size() == 1) {
+				auto str_key = field_value.begin()->as_string();
+				switch ((Cast::Hash)xxh64::hash(str_key)) {
+					case Cast::Hash::INTEGER:
+						return std::make_tuple(FieldType::INTEGER, Serialise::integer(Cast::integer(field_value.at(str_key))), std::cref(Schema::get_data_global(FieldType::INTEGER)));
+					case Cast::Hash::POSITIVE:
+						return std::make_tuple(FieldType::POSITIVE, Serialise::positive(Cast::positive(field_value.at(str_key))), std::cref(Schema::get_data_global(FieldType::POSITIVE)));
+					case Cast::Hash::FLOAT:
+						return std::make_tuple(FieldType::FLOAT, Serialise::_float(Cast::_float(field_value.at(str_key))), std::cref(Schema::get_data_global(FieldType::FLOAT)));
+					case Cast::Hash::BOOLEAN:
+						return std::make_tuple(FieldType::BOOLEAN, Serialise::boolean(Cast::boolean(field_value.at(str_key))), std::cref(Schema::get_data_global(FieldType::BOOLEAN)));
+					case Cast::Hash::STRING:
+						return std::make_tuple(FieldType::STRING, Cast::string(field_value.at(str_key)), std::cref(Schema::get_data_global(FieldType::STRING)));
+					case Cast::Hash::TEXT:
+						return std::make_tuple(FieldType::TEXT, Cast::string(field_value.at(str_key)), std::cref(Schema::get_data_global(FieldType::TEXT)));
+					case Cast::Hash::UUID:
+						return std::make_tuple(FieldType::UUID, Serialise::uuid(Cast::string(field_value.at(str_key))), std::cref(Schema::get_data_global(FieldType::UUID)));
+					case Cast::Hash::EWKT:
+						// FIXME: fix for geo types
+						return std::make_tuple(FieldType::GEO,  Serialise::ewkt(Cast::string(field_value.at(str_key)), default_spc.partials, default_spc.error), std::cref(Schema::get_data_global(FieldType::GEO)));
+					case Cast::Hash::DATE:
+					{
+						const auto& global_spc = Schema::get_data_global(FieldType::DATE);
+						return std::make_tuple(FieldType::DATE, Serialise::date(global_spc, field_value.at(str_key)), std::cref(global_spc));
+					}
+					default:
+						throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
+				}
+			}
 		}
 
 		default:
@@ -718,22 +745,22 @@ Serialise::get_range_type(const class MsgPack& start, const class MsgPack& end, 
 {
 	if (!start) {
 		auto res = get_type(end, bool_term);
-		return std::make_tuple(res.first, "", res.second);
+		return std::make_tuple(std::get<0>(res), "", std::get<1>(res));
 	}
 
 	if (!end) {
 		auto res = get_type(start, bool_term);
-		return std::make_tuple(res.first, res.second, "");
+		return std::make_tuple(std::get<0>(res), std::get<1>(res), "");
 	}
 
 	auto typ_start = get_type(start, bool_term);
 	auto typ_end = get_type(end, bool_term);
 
-	if (typ_start.first != typ_end.first) {
-		throw MSG_SerialisationError("Mismatch types %c - %c", typ_start.first, typ_end.first);
+	if (std::get<0>(typ_start) != std::get<0>(typ_end)) {
+		throw MSG_SerialisationError("Mismatch types %c - %c", std::get<0>(typ_start), std::get<0>(typ_end));
 	}
 
-	return std::make_tuple(typ_start.first, typ_start.second, typ_end.second);
+	return std::make_tuple(std::get<0>(typ_start), std::get<1>(typ_start), std::get<1>(typ_end));
 }
 
 

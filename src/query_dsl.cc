@@ -321,22 +321,16 @@ QueryDSL::query(const MsgPack& obj)
 		case QUERY::GLOBALQUERY:
 		{
 			auto ser_type = Serialise::get_type(obj);
-			const auto& global_spc = Schema::get_data_global(ser_type.first);
-			switch (ser_type.first) {
+			switch (std::get<0>(ser_type)) {
 				case FieldType::TEXT: {
 					Xapian::QueryParser queryTexts;
-					queryTexts.set_stemming_strategy(getQueryParserStrategy(global_spc.stem_strategy));
-					queryTexts.set_stemmer(Xapian::Stem(global_spc.stem_language));
+					queryTexts.set_stemming_strategy(getQueryParserStrategy(std::get<2>(ser_type).stem_strategy));
+					queryTexts.set_stemmer(Xapian::Stem(std::get<2>(ser_type).stem_language));
 					return queryTexts.parse_query(obj.as_string(), q_flags);
 				}
 
-				case FieldType::DATE: {
-					auto ser_date = Serialise::date(global_spc, obj);
-					return Xapian::Query(prefixed(ser_date, global_spc.prefix), _wqf);
-				}
-
 				default:
-					return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
+					return Xapian::Query(prefixed(std::get<1>(ser_type), std::get<2>(ser_type).prefix));
 			}
 		}
 		break;
