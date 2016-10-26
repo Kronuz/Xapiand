@@ -2380,8 +2380,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		MsgPack data;
 		TaskVector tasks;
 		tasks.reserve(object.size());
-		auto prop_ptr = &schema->at(RESERVED_SCHEMA);
+		auto prop_ptr = mut_schema ? &mut_schema->at(RESERVED_SCHEMA) : &schema->at(RESERVED_SCHEMA);
 		auto data_ptr = &data;
+		specification = default_spc;
 		for (const auto& item_key : object) {
 			const auto str_key = item_key.as_string();
 			try {
