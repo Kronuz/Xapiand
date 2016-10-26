@@ -671,7 +671,7 @@ HttpClient::_post()
 	L_CALL(this, "HttpClient::_post()");
 
 	switch (url_resolve()) {
-		case HttpClient::Command::NO_CMD_NO_ID:
+		case HttpClient::Command::NO_CMD_ID:
 			index_document_view(HttpMethod::POST);
 			break;
 		case HttpClient::Command::CMD_SCHEMA:
