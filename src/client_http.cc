@@ -1333,7 +1333,7 @@ HttpClient::url_resolve()
 
 	L_HTTP(this, "URL: %s", b.c_str());
 
-	if (http_parser_parse_url(path.c_str(), path.size(), 0, &u) == 0) {
+	if (http_parser_parse_url(path.data(), path.size(), 0, &u) == 0) {
 		L_HTTP_PROTO_PARSER(this, "HTTP parsing done!");
 
 		if (u.field_set & (1 << UF_PATH )) {
