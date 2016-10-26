@@ -602,7 +602,7 @@ HttpClient::_head()
 			document_info_view(HttpMethod::HEAD);
 			break;
 		default:
-			bad_request_view();
+			status_view(400);
 			break;
 	}
 }
@@ -635,7 +635,7 @@ HttpClient::_get()
 			nodes_view(HttpMethod::GET);
 			break;
 		default:
-			bad_request_view();
+			status_view(400);
 			break;
 	}
 }
@@ -655,7 +655,7 @@ HttpClient::_put()
 			write_schema_view(HttpMethod::PUT);
 			break;
 		default:
-			bad_request_view();
+			status_view(400);
 			break;
 	}
 }
@@ -680,13 +680,13 @@ HttpClient::_post()
 			search_view(HttpMethod::POST);
 			break;
 #ifndef NDEBUG
-		case HttpClient::Command::CMD_QUIT:
+		case Command::CMD_QUIT:
 			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
 			XapiandManager::manager->shutdown_sig(0);
 			break;
 #endif
 		default:
-			bad_request_view();
+			status_view(400);
 			break;
 	}
 }
@@ -702,7 +702,7 @@ HttpClient::_patch()
 			update_document_view(HttpMethod::PATCH);
 			break;
 		default:
-			bad_request_view();
+			status_view(400);
 			break;
 	}
 }
@@ -718,7 +718,7 @@ HttpClient::_delete()
 			delete_document_view(HttpMethod::DELETE);
 			break;
 		default:
-			bad_request_view();
+			status_view(400);
 			break;
 	}
 }
@@ -1063,16 +1063,34 @@ HttpClient::info_view(HttpMethod method)
 	if (res_stats) {
 		write_http_response(200, response);
 	} else {
-		response[RESPONSE_STATUS] = 404;
-		response[RESPONSE_MESSAGE] = "Not found";
-		write_http_response(404, response);
+		status_view(404);
 	}
 }
 
 
 void
-HttpClient::nodes_view(HttpMethod method)
+HttpClient::nodes_view(HttpMethod)
 {
+	L_CALL(this, "HttpClient::nodes_view()");
+
+	path_parser.off_id = nullptr;  // Command has no ID
+
+	path_parser.next();
+	if (path_parser.next() != PathParser::State::END) {
+		status_view(404);
+		return;
+	}
+
+	if (path_parser.off_pth) {
+		status_view(404);
+		return;
+	}
+
+	if (path_parser.off_pmt) {
+		status_view(404);
+		return;
+	}
+
 	MsgPack response;
 	write_http_response(200, response);
 }
@@ -1310,16 +1328,14 @@ HttpClient::search_view(HttpMethod method)
 
 
 void
-HttpClient::bad_request_view()
+HttpClient::status_view(int status_code, const std::string& message)
 {
-	L_CALL(this, "HttpClient::bad_request_view()");
+	L_CALL(this, "HttpClient::status_view()");
 
-	MsgPack err_response = {
-		{ RESPONSE_STATUS, 400 },
-		{ RESPONSE_MESSAGE, "BAD QUERY" }
-	};
-
-	write_http_response(400, err_response);
+	write_http_response(status_code, {
+		{ RESPONSE_STATUS, status_code },
+		{ RESPONSE_MESSAGE, message.empty() ? http_status[status_code / 100][status_code % 100] : message }
+	});
 }
 
 

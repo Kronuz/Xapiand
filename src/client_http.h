@@ -154,7 +154,7 @@ class HttpClient : public BaseClient {
 	void search_view(HttpMethod method);
 	void schema_view(HttpMethod method);
 	void nodes_view(HttpMethod method);
-	void bad_request_view();
+	void status_view(int status_code, const std::string& message="");
 
 	void _options();
 	void _head();
