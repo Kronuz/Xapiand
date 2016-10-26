@@ -29,17 +29,32 @@
 #include "multivalue/range.h"
 
 
-constexpr const char QUERYDSL_VALUE[]     = "_value";
-constexpr const char QUERYDSL_BOOST[]     = "_boost";
-constexpr const char QUERYDSL_RANGE[]     = "_range";
-constexpr const char QUERYDSL_FROM[]      = "_from";
-constexpr const char QUERYDSL_IN[]        = "_in";
-constexpr const char QUERYDSL_TO[]        = "_to";
+/* Reserved DSL words used for operators */
 constexpr const char QUERYDSL_OR[]        = "_or";
 constexpr const char QUERYDSL_AND[]       = "_and";
 constexpr const char QUERYDSL_XOR[]       = "_xor";
 constexpr const char QUERYDSL_NOT[]       = "_not";
+
+/* Reserved DSL words used for values */
+constexpr const char QUERYDSL_VALUE[]     = "_value";
+constexpr const char QUERYDSL_IN[]        = "_in";
+
+/* Reserved DSL words used for parameters */
+constexpr const char QUERYDSL_BOOST[]     = "_boost";
+
+/* Reserved DSL words used for Match all query */
 constexpr const char QUERYDSL_MATCH_ALL[] = "_all";
+
+/* Reserved DSL words used for dates */
+constexpr const char QUERYDSL_YEAR[]      = "_year";
+constexpr const char QUERYDSL_MOTH[]      = "_moth";
+constexpr const char QUERYDSL_DAY[]       = "_day";
+constexpr const char QUERYDSL_TIME[]      = "_time";
+
+/* Reserved DSL words used for ranges */
+constexpr const char QUERYDSL_RANGE[]     = "_range";
+constexpr const char QUERYDSL_FROM[]      = "_from";
+constexpr const char QUERYDSL_TO[]        = "_to";
 //constexpr const char QUERYDSL_GEO_POLIGON[] = "_polygon";
 
 
