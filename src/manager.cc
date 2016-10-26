@@ -34,8 +34,6 @@
 #include "servers/server_discovery.h"
 #include "servers/server_raft.h"
 #include "utils.h"
-#include "length.h"
-#include "cppcodec/base64_default_url_unpadded.hpp"
 
 #include <list>
 #include <stdlib.h>
@@ -207,10 +205,7 @@ XapiandManager::load_node_id()
 		buf[length] = '\0';
 		for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
 		try {
-			auto serialized = base64::decode<std::string>(buf, length);
-			const char *p = serialized.data();
-			const char *p_end = p + serialized.size();
-			node_id = unserialise_length(&p, p_end);
+			unserialise_node_id(std::string(buf, length));
 		} catch (...) {
 			L_CRIT(nullptr, "Cannot load node_id!");
 			sig_exit(-EX_IOERR);
@@ -227,7 +222,7 @@ XapiandManager::save_node_id(uint64_t node_id)
 
 	int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
 	if (fd >= 0) {
-		auto node_id_str = base64::encode(serialise_length(node_id));
+		auto node_id_str = serialise_node_id(node_id);
 		if (io::write(fd, node_id_str.data(), node_id_str.size()) != static_cast<ssize_t>(node_id_str.size())) {
 			L_CRIT(nullptr, "Cannot write in node file");
 			sig_exit(-EX_IOERR);
@@ -299,7 +294,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				{ "name", { { RESERVED_TYPE,  "string" } } },
 				{ "tagline", { { RESERVED_TYPE,  "string" } } },
 			});
-			db_handler.index(std::to_string(local_node_->id), {
+			db_handler.index("." + serialise_node_id(local_node_->id), {
 				{ "name", local_node_->name },
 				{ "tagline", XAPIAND_TAGLINE },
 			}, true, MSGPACK_CONTENT_TYPE, std::string());
@@ -310,7 +305,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 
 	try {
-		db_handler.get_document(std::to_string(local_node_->id));
+		db_handler.get_document("." + serialise_node_id(local_node_->id));
 	} catch (const DocNotFoundError&) {
 		L_CRIT(this, "Cluster database is corrupt");
 		sig_exit(-EX_DATAERR);
