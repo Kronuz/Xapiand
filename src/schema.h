@@ -537,19 +537,6 @@ public:
 	}
 
 	/*
-	 * specification is updated with the properties of schema.
-	 * Returns the properties of schema.
-	 */
-	const MsgPack& getProperties() {
-		return schema->at(RESERVED_SCHEMA);
-	}
-
-	/*
-	 * Returns serialise value of value_id.
-	 */
-	std::string serialise_id(const MsgPack& schema_properties, const std::string& value_id);
-
-	/*
 	 * Transforms schema into json string.
 	 */
 	std::string to_string(bool prettify=false) const;

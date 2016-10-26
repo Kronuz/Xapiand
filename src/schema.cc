@@ -755,43 +755,6 @@ Schema::clear() noexcept
 }
 
 
-std::string
-Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
-{
-	L_CALL(this, "Schema::serialise_id()");
-
-	specification.set_type = true;
-	try {
-		auto& prop_id = properties.at(ID_FIELD_NAME);
-		update_specification(prop_id);
-		return Serialise::serialise(specification, value_id);
-	} catch (const std::out_of_range&) {
-		auto& prop_id = get_mutable(ID_FIELD_NAME);
-		specification.found_field = false;
-		auto res_serialise = Serialise::get_type(value_id, specification.bool_term);
-		prop_id[RESERVED_INDEX] = TypeIndex::ALL;
-		switch (res_serialise.first) {
-			case FieldType::STRING:
-				prop_id[RESERVED_LANGUAGE]  = default_spc.language;
-				prop_id[RESERVED_BOOL_TERM] = true;
-				break;
-			case FieldType::TEXT:
-				prop_id[RESERVED_STEM_STRATEGY] = default_spc.stem_strategy;
-				prop_id[RESERVED_STEM_LANGUAGE] = default_spc.stem_language;
-				prop_id[RESERVED_LANGUAGE] = default_spc.language;
-				break;
-			default:
-				break;
-		}
-		prop_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
-		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
-		prop_id[RESERVED_TYPE] = std::array<FieldType, 3>({{ FieldType::EMPTY, FieldType::EMPTY, res_serialise.first }});
-
-		return res_serialise.second;
-	}
-}
-
-
 void
 Schema::update_specification(const MsgPack& properties)
 {
