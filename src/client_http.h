@@ -87,6 +87,7 @@ class HttpClient : public BaseClient {
 		CMD_SEARCH    = xxh64::hash("_search"),
 		CMD_INFO      = xxh64::hash("_info"),
 		CMD_SCHEMA    = xxh64::hash("_schema"),
+		CMD_NODES     = xxh64::hash("_nodes"),
 	};
 
 	struct http_parser parser;
@@ -151,7 +152,7 @@ class HttpClient : public BaseClient {
 	void update_document_view(HttpMethod method);
 	void search_view(HttpMethod method);
 	void schema_view(HttpMethod method);
-	void facets_view(HttpMethod method);
+	void nodes_view(HttpMethod method);
 	void bad_request_view();
 
 	void _options();
@@ -174,7 +175,7 @@ class HttpClient : public BaseClient {
 	const type_t& get_acceptable_type(const T& ct_types);
 	const type_t* is_acceptable_type(const type_t& ct_type_pattern, const type_t& ct_type);
 	const type_t* is_acceptable_type(const type_t& ct_type_pattern, const std::vector<type_t>& ct_types);
-	void write_http_response(const MsgPack& response,  int st_code, bool pretty);
+	void write_http_response(int st_code, const MsgPack& response=MsgPack());
 
 	friend Worker;
 

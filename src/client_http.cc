@@ -302,7 +302,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			{ RESPONSE_STATUS,  error_code },
 			{ RESPONSE_MESSAGE, message }
 		};
-		write_http_response(err_response, error_code, false);
+		write_http_response(error_code, err_response);
 		L_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message.c_str() : "incomplete request");
 		destroy();  // Handle error. Just close the connection.
 		detach();
@@ -535,7 +535,7 @@ HttpClient::_run()
 			case HttpMethod::PATCH:
 				_patch();
 			default:
-				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+				write_http_response(501);
 				break;
 		}
 	} catch (const DocNotFoundError&) {
@@ -580,7 +580,7 @@ HttpClient::_run()
 				{ RESPONSE_MESSAGE, error }
 			};
 
-			write_http_response(err_response, error_code, pretty);
+			write_http_response(error_code, err_response);
 		}
 	}
 
@@ -604,7 +604,7 @@ HttpClient::_head()
 
 	switch (url_resolve()) {
 		case Command::NO_CMD_NO_ID:
-			write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+			write_http_response(200);
 			break;
 		case Command::NO_CMD_ID:
 			document_info_view(HttpMethod::HEAD);
@@ -637,6 +637,9 @@ HttpClient::_get()
 			break;
 		case Command::CMD_INFO:
 			info_view(HttpMethod::GET);
+			break;
+		case Command::CMD_NODES:
+			nodes_view(HttpMethod::GET);
 			break;
 		default:
 			bad_request_view();
@@ -787,7 +790,7 @@ HttpClient::home_view(HttpMethod method)
 		{ "_xapian", Xapian::version_string() }
 	};
 
-	write_http_response(obj_data, 200, pretty);
+	write_http_response(200, obj_data);
 }
 
 
@@ -803,7 +806,7 @@ HttpClient::document_info_view(HttpMethod method)
 	MsgPack response;
 	response["doc_id"] = db_handler.get_docid(path_parser.get_id());
 
-	write_http_response(response, 200, pretty);
+	write_http_response(200, response);
 }
 
 
@@ -866,7 +869,7 @@ HttpClient::delete_document_view(HttpMethod method)
 	L_TIME(this, "Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
 
 
-	write_http_response(response, status_code, pretty);
+	write_http_response(status_code, response);
 }
 
 
@@ -930,7 +933,7 @@ HttpClient::index_document_view(HttpMethod method)
 		}
 	}
 
-	write_http_response(response, status_code, pretty);
+	write_http_response(status_code, response);
 }
 
 
@@ -970,7 +973,7 @@ HttpClient::write_schema_view(HttpMethod method)
 		}
 	}
 
-	write_http_response(response, status_code, pretty);
+	write_http_response(status_code, response);
 }
 
 
@@ -1022,7 +1025,7 @@ HttpClient::update_document_view(HttpMethod method)
 		}
 	}
 
-	write_http_response(response, status_code, pretty);
+	write_http_response(status_code, response);
 }
 
 
@@ -1059,12 +1062,20 @@ HttpClient::info_view(HttpMethod method)
 	}
 
 	if (res_stats) {
-		write_http_response(response, 200, pretty);
+		write_http_response(200, response);
 	} else {
 		response[RESPONSE_STATUS] = 404;
 		response[RESPONSE_MESSAGE] = "Not found";
-		write_http_response(response, 404, pretty);
+		write_http_response(404, response);
 	}
+}
+
+
+void
+HttpClient::nodes_view(HttpMethod method)
+{
+	MsgPack response;
+	write_http_response(200, response);
 }
 
 
@@ -1077,8 +1088,7 @@ HttpClient::schema_view(HttpMethod method)
 	endpoints_maker(1s);
 
 	db_handler.reset(endpoints, DB_SPAWN, method);
-	write_http_response(db_handler.get_schema()->get_readable(), 200, pretty);
-	return;
+	write_http_response(200, db_handler.get_schema()->get_readable());
 }
 
 
@@ -1150,7 +1160,7 @@ HttpClient::search_view(HttpMethod method)
 			{ RESPONSE_STATUS, error_code },
 			{ RESPONSE_MESSAGE, "No document found" }
 		};
-		write_http_response(err_response, error_code, pretty);
+		write_http_response(error_code, err_response);
 	} else {
 		std::string first_chunk;
 		std::string last_chunk;
@@ -1215,7 +1225,7 @@ HttpClient::search_view(HttpMethod method)
 					{ RESPONSE_STATUS, error_code },
 					{ RESPONSE_MESSAGE, std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header") }
 				};
-				write_http_response(err_response, error_code, pretty);
+				write_http_response(error_code, err_response);
 				L_SEARCH(this, "ABORTED SEARCH");
 				return;
 			}
@@ -1311,7 +1321,7 @@ HttpClient::bad_request_view()
 		{ RESPONSE_MESSAGE, "BAD QUERY" }
 	};
 
-	write_http_response(err_response, 400, pretty);
+	write_http_response(400, err_response);
 }
 
 
@@ -1830,9 +1840,14 @@ HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, bool p
 
 
 void
-HttpClient::write_http_response(const MsgPack& response,  int status_code, bool pretty)
+HttpClient::write_http_response(int status_code, const MsgPack& response)
 {
 	L_CALL(this, "HttpClient::write_http_response()");
+
+	if (response.is_undefined()) {
+		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+		return;
+	}
 
 	auto ct_type = content_type_pair(content_type);
 	std::vector<type_t> ct_types;
@@ -1841,10 +1856,9 @@ HttpClient::write_http_response(const MsgPack& response,  int status_code, bool 
 	} else {
 		ct_types.push_back(ct_type);
 	}
-
 	const auto& accepted_type = get_acceptable_type(ct_types);
 	try {
-		auto result = serialize_response(response, accepted_type, pretty,  status_code >= 400);
+		auto result = serialize_response(response, accepted_type, pretty, status_code >= 400);
 		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
 	} catch (const SerialisationError& exc) {
 		status_code = 406;
