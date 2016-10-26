@@ -2569,6 +2569,10 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 		}
 
 		if (!specification.set_type && specification.sep_types[2] != FieldType::EMPTY) {
+			// ID_FIELD_NAME can not be TEXT.
+			if (specification.sep_types[2] == FieldType::TEXT && specification.full_name == ID_FIELD_NAME) {
+				specification.sep_types[2] = FieldType::STRING;
+			}
 			validate_required_data();
 		}
 
