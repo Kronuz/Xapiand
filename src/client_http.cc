@@ -603,10 +603,10 @@ HttpClient::_head()
 	L_CALL(this, "HttpClient::_head()");
 
 	switch (url_resolve()) {
-		case HttpClient::Command::NO_CMD_NO_ID:
+		case Command::NO_CMD_NO_ID:
 			write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 			break;
-		case HttpClient::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			document_info_view(HttpMethod::HEAD);
 			break;
 		default:
@@ -622,20 +622,20 @@ HttpClient::_get()
 	L_CALL(this, "HttpClient::_get()");
 
 	switch (url_resolve()) {
-		case HttpClient::Command::NO_CMD_NO_ID:
+		case Command::NO_CMD_NO_ID:
 			home_view(HttpMethod::GET);
 			break;
-		case HttpClient::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			search_view(HttpMethod::GET);
 			break;
-		case HttpClient::Command::CMD_SEARCH:
+		case Command::CMD_SEARCH:
 			path_parser.off_id = nullptr;  // Command has no ID
 			search_view(HttpMethod::GET);
 			break;
-		case HttpClient::Command::CMD_SCHEMA:
+		case Command::CMD_SCHEMA:
 			schema_view(HttpMethod::GET);
 			break;
-		case HttpClient::Command::CMD_INFO:
+		case Command::CMD_INFO:
 			info_view(HttpMethod::GET);
 			break;
 		default:
@@ -651,10 +651,10 @@ HttpClient::_put()
 	L_CALL(this, "HttpClient::_put()");
 
 	switch (url_resolve()) {
-		case HttpClient::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			index_document_view(HttpMethod::PUT);
 			break;
-		case HttpClient::Command::CMD_SCHEMA:
+		case Command::CMD_SCHEMA:
 			path_parser.off_id = nullptr;  // Command has no ID
 			write_schema_view(HttpMethod::PUT);
 			break;
@@ -671,14 +671,14 @@ HttpClient::_post()
 	L_CALL(this, "HttpClient::_post()");
 
 	switch (url_resolve()) {
-		case HttpClient::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			index_document_view(HttpMethod::POST);
 			break;
-		case HttpClient::Command::CMD_SCHEMA:
+		case Command::CMD_SCHEMA:
 			path_parser.off_id = nullptr;  // Command has no ID
 			write_schema_view(HttpMethod::POST);
 			break;
-		case HttpClient::Command::CMD_SEARCH:
+		case Command::CMD_SEARCH:
 			path_parser.off_id = nullptr;  // Command has no ID
 			search_view(HttpMethod::POST);
 			break;
@@ -695,7 +695,7 @@ HttpClient::_patch()
 	L_CALL(this, "HttpClient::_patch()");
 
 	switch (url_resolve()) {
-		case HttpClient::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			update_document_view(HttpMethod::PATCH);
 			break;
 		default:
@@ -711,7 +711,7 @@ HttpClient::_delete()
 	L_CALL(this, "HttpClient::_delete()");
 
 	switch (url_resolve()) {
-		case HttpClient::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			delete_document_view(HttpMethod::DELETE);
 			break;
 		default:
@@ -1306,16 +1306,6 @@ HttpClient::bad_request_view()
 {
 	L_CALL(this, "HttpClient::bad_request_view()");
 
-	/*
-	 REMOVE THIS
-	 switch (cmd) {
-		case CMD_UNKNOWN_HOST:
-			err_response[RESPONSE_MESSAGE] = "Unknown host " + host;
-			break;
-		default:
-			err_response[RESPONSE_MESSAGE] = "BAD QUERY";
-	}*/
-
 	MsgPack err_response = {
 		{ RESPONSE_STATUS, 400 },
 		{ RESPONSE_MESSAGE, "BAD QUERY" }
@@ -1345,14 +1335,14 @@ HttpClient::url_resolve()
 			normalize_path(path_str, path_str + path_size, path_buf_str);
 			if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
 				if (path_parser.init(path_buf_str) >= PathParser::State::END) {
-					return HttpClient::Command::BAD_QUERY;
+					return Command::BAD_QUERY;
 				}
 			}
 		}
 
 		if (u.field_set & (1 <<  UF_QUERY)) {
 			if (query_parser.init(std::string(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
-				return HttpClient::Command::BAD_QUERY;
+				return Command::BAD_QUERY;
 			}
 		}
 
@@ -1368,9 +1358,9 @@ HttpClient::url_resolve()
 
 		if (!path_parser.off_cmd) {
 			if (path_parser.off_id) {
-				return HttpClient::Command::NO_CMD_ID;
+				return Command::NO_CMD_ID;
 			} else {
-				return HttpClient::Command::NO_CMD_NO_ID;
+				return Command::NO_CMD_NO_ID;
 			}
 		} else {
 			return static_cast<Command>(xxh64::hash(lower_string(path_parser.get_cmd())));
@@ -1379,7 +1369,7 @@ HttpClient::url_resolve()
 	} else {
 		L_HTTP_PROTO_PARSER(this, "Parsing not done");
 		// Bad query
-		return HttpClient::Command::BAD_QUERY;
+		return Command::BAD_QUERY;
 	}
 }
 
