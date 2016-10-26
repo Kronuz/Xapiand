@@ -88,6 +88,7 @@ class HttpClient : public BaseClient {
 		CMD_INFO      = xxh64::hash("_info"),
 		CMD_SCHEMA    = xxh64::hash("_schema"),
 		CMD_NODES     = xxh64::hash("_nodes"),
+		CMD_QUIT      = xxh64::hash("_quit"),
 	};
 
 	struct http_parser parser;

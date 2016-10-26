@@ -505,14 +505,6 @@ HttpClient::_run()
 	int error_code = 0;
 
 	try {
-		if (path == "/quit") {
-			time_t now = epoch::now<>();
-			XapiandManager::manager->shutdown_asap.store(now);
-			XapiandManager::manager->shutdown_sig(0);
-			L_OBJ_END(this, "HttpClient::run:END");
-			return;
-		}
-
 		switch (static_cast<HttpMethod>(parser.method)) {
 			case HttpMethod::DELETE:
 				_delete();
@@ -687,6 +679,12 @@ HttpClient::_post()
 			path_parser.off_id = nullptr;  // Command has no ID
 			search_view(HttpMethod::POST);
 			break;
+#ifndef NDEBUG
+		case HttpClient::Command::CMD_QUIT:
+			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
+			XapiandManager::manager->shutdown_sig(0);
+			break;
+#endif
 		default:
 			bad_request_view();
 			break;
