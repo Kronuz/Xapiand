@@ -34,6 +34,8 @@
 #include "servers/server_discovery.h"
 #include "servers/server_raft.h"
 #include "utils.h"
+#include "length.h"
+#include "cppcodec/base64_default_url_unpadded.hpp"
 
 #include <list>
 #include <stdlib.h>
@@ -194,6 +196,7 @@ XapiandManager::get_node_id()
 {
 	L_CALL(this, "XapiandManager::get_node_id()");
 
+	uint64_t node_id = 0;
 	size_t length = 0;
 	unsigned char buf[512];
 	int fd = io::open("node", O_RDONLY | O_CLOEXEC);
@@ -206,10 +209,13 @@ XapiandManager::get_node_id()
 		io::close(fd);
 	}
 	try {
-		return std::stoull(std::string((const char *)buf, length));
+		auto serialized = base64::decode<std::string>((const char *)buf, length);
+		const char *p = serialized.data();
+		const char *p_end = p + serialized.size();
+		node_id = unserialise_length(&p, p_end);
 	} catch (std::invalid_argument) {
-		return 0;
 	}
+	return node_id;
 }
 
 
@@ -235,7 +241,7 @@ XapiandManager::set_node_id(uint64_t node_id_, std::unique_lock<std::mutex>& lk)
 
 		int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
 		if (fd >= 0) {
-			auto node_id_str = std::to_string(node_id);
+			auto node_id_str = base64::encode(serialise_length(node_id));
 			if (io::write(fd, node_id_str.c_str(), node_id_str.size()) != static_cast<ssize_t>(node_id_str.size())) {
 				L_CRIT(nullptr, "Cannot write in node file");
 				sig_exit(-EX_IOERR);
@@ -249,7 +255,7 @@ XapiandManager::set_node_id(uint64_t node_id_, std::unique_lock<std::mutex>& lk)
 
 	auto local_node_ = local_node.load();
 	auto node_copy = std::make_unique<Node>(*local_node_);
-	node_copy->id = get_node_id();
+	node_copy->id = node_id;
 	local_node = std::shared_ptr<const Node>(node_copy.release());
 
 	return true;
