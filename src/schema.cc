@@ -2297,14 +2297,14 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 
 
 void
-Schema::write_schema(const MsgPack& properties, const MsgPack& obj_schema, bool replace)
+Schema::write_schema(const MsgPack& obj_schema, bool replace)
 {
-	L_CALL(this, "Schema::write_schema(%s, %s, %d)", repr(properties.to_string()).c_str(), repr(obj_schema.to_string()).c_str(), replace);
+	L_CALL(this, "Schema::write_schema(%s, %d)", repr(obj_schema.to_string()).c_str(), replace);
 
 	try {
 		TaskVector tasks;
 		tasks.reserve(obj_schema.size());
-		auto prop_ptr = replace ? &clear() : &properties;
+		auto prop_ptr = replace ? &clear() : &schema->at(RESERVED_SCHEMA);
 		specification.found_field = false;
 		for (const auto& item_key : obj_schema) {
 			const auto str_key = item_key.as_string();
@@ -2331,16 +2331,56 @@ Schema::write_schema(const MsgPack& properties, const MsgPack& obj_schema, bool 
 }
 
 
-MsgPack
-Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc)
+std::string
+Schema::write_schema_id(const MsgPack& obj, const std::string& value_id)
 {
-	L_CALL(this, "Schema::index(%s, %s)", repr(properties.to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::write_schema_id(%s)", value_id.c_str());
+
+	try {
+		auto& prop_id = schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
+		update_specification(prop_id);
+		return Serialise::serialise(specification, value_id);
+	} catch (const std::out_of_range&) {
+		specification.full_name = ID_FIELD_NAME;
+		try {
+			const auto& obj_id = obj.at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
+			for (const auto& item_key : obj_id) {
+				const auto str_key = item_key.as_string();
+				try {
+					auto func = map_dispatch_document.at(str_key);
+					(this->*func)(str_key, obj_id.at(str_key));
+				} catch (const std::out_of_range&) { }
+			}
+		} catch (const std::out_of_range&) {
+		} catch (const msgpack::type_error&) { }
+
+		if (specification.sep_types[2] == FieldType::EMPTY) {
+			auto res_serialise = Serialise::get_type(value_id, true);
+			specification.sep_types[2] = res_serialise.first;
+			validate_required_data();
+			return res_serialise.second;
+		} else {
+			// ID_FIELD_NAME can not be TEXT.
+			if (specification.sep_types[2] == FieldType::TEXT) {
+				specification.sep_types[2] = FieldType::STRING;
+			}
+			validate_required_data();
+			return Serialise::serialise(specification, value_id);
+		}
+	}
+}
+
+
+MsgPack
+Schema::index(const MsgPack& object, Xapian::Document& doc)
+{
+	L_CALL(this, "Schema::index(%s)", repr(object.to_string()).c_str());
 
 	try {
 		MsgPack data;
 		TaskVector tasks;
 		tasks.reserve(object.size());
-		auto prop_ptr = &properties;
+		auto prop_ptr = &schema->at(RESERVED_SCHEMA);
 		auto data_ptr = &data;
 		for (const auto& item_key : object) {
 			const auto str_key = item_key.as_string();
@@ -2353,7 +2393,7 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 				} else {
 					try {
 						auto func = map_dispatch_root.at(str_key);
-						tasks.push_back(std::async(std::launch::deferred, func, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc)));
+						tasks.push_back(std::async(std::launch::deferred, func, this, std::ref(*prop_ptr), std::ref(object.at(str_key)), std::ref(data), std::ref(doc)));
 					} catch (const std::out_of_range&) { }
 				}
 			}

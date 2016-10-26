@@ -549,12 +549,17 @@ public:
 	/*
 	 * Function to update the schema according to obj_schema.
 	 */
-	void write_schema(const MsgPack& properties, const MsgPack& obj_schema, bool replace);
+	void write_schema(const MsgPack& obj_schema, bool replace);
+
+	/*
+	 * Updates ID_FIELD_NAME in schema according to obj.
+	 */
+	std::string write_schema_id(const MsgPack& obj, const std::string& value_id);
 
 	/*
 	 * Function to index object in doc.
 	 */
-	MsgPack index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc);
+	MsgPack index(const MsgPack& object, Xapian::Document& doc);
 
 
 	/*
