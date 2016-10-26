@@ -97,21 +97,13 @@ split_data_blob(const std::string& data)
 
 DatabaseHandler::DatabaseHandler()
 	: flags(0),
-	  method(HttpMethod::GET)
-{
-}
+	  method(HttpMethod::GET) { }
 
 
 DatabaseHandler::DatabaseHandler(const Endpoints &endpoints_, int flags_)
 	: endpoints(endpoints_),
 	  flags(flags_),
-	  method(HttpMethod::GET)
-{
-}
-
-
-DatabaseHandler::~DatabaseHandler() {
-}
+	  method(HttpMethod::GET) { }
 
 
 void

@@ -117,7 +117,8 @@ public:
 
 	DatabaseHandler();
 	DatabaseHandler(const Endpoints &endpoints_, int flags_=0);
-	~DatabaseHandler();
+
+	~DatabaseHandler() = default;
 
 	std::shared_ptr<Database> get_database() const noexcept {
 		return database;
