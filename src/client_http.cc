@@ -769,7 +769,7 @@ HttpClient::home_view(HttpMethod method)
 	db_handler.reset(endpoints, DB_SPAWN, method);
 
 	auto local_node_ = local_node.load();
-	auto document = db_handler.get_document(std::to_string(local_node_->id));
+	auto document = db_handler.get_document("." + serialise_node_id(local_node_->id));
 
 	auto obj_data = document.get_obj();
 	try {
