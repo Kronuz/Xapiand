@@ -205,7 +205,7 @@ XapiandManager::load_node_id()
 		buf[length] = '\0';
 		for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
 		try {
-			unserialise_node_id(std::string(buf, length));
+			node_id = unserialise_node_id(std::string(buf, length));
 		} catch (...) {
 			L_CRIT(nullptr, "Cannot load node_id!");
 			sig_exit(-EX_IOERR);
