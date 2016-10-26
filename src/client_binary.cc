@@ -174,6 +174,7 @@ BinaryClient::on_read_file_done()
 		checkin_database();
 		shutdown();
 	} catch (...) {
+		std::exception exc;
 		L_EXC(this, "ERROR: Unkown error!");
 		checkin_database();
 		shutdown();
