@@ -163,6 +163,29 @@ Cast::cast(const MsgPack& obj)
 }
 
 
+MsgPack
+Cast::cast(const std::string& field_value)
+{
+	// Try like INTEGER.
+	try {
+		return MsgPack(strict(std::stoll, field_value));
+	} catch (const std::invalid_argument&) { }
+
+	// Try like POSITIVE.
+	try {
+		return  MsgPack(strict(std::stoull, field_value));
+	} catch (const std::invalid_argument&) { }
+
+	// Try like FLOAT
+	try {
+		return  MsgPack(strict(std::stod, field_value));
+	} catch (const std::invalid_argument&) { }
+
+	// Default type STRING.
+	return MsgPack(field_value);
+}
+
+
 int64_t
 Cast::integer(const MsgPack& obj)
 {
