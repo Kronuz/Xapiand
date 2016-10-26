@@ -72,7 +72,7 @@ static const auto msgpack_serializers = std::vector<type_t>({json_type, msgpack_
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;q=(\\d+(?:\\.\\d+)?))?");
 
 
-static const char* status_code[6][14] = {
+static const char* http_status[6][14] = {
 	{},
 	{
 		"Continue"                  // 100
@@ -125,7 +125,7 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 
 		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", http_major, http_minor, status);
 		headers += buffer;
-		headers += status_code[status / 100][status % 100] + eol;
+		headers += http_status[status / 100][status % 100] + eol;
 		if (!(mode & HTTP_HEADER)) {
 			headers += eol;
 		}
