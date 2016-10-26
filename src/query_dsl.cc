@@ -340,10 +340,17 @@ QueryDSL::query(const MsgPack& obj)
 			auto field_spc = schema->get_data_field(_fieldname);
 			try {
 				switch (field_spc.get_type()) {
+
+					case FieldType::DATE:
+						if (find_date(obj)) {
+							auto field_spc = schema->get_data_field(_fieldname);
+							auto ser_date = Serialise::date(field_spc, obj);
+							return Xapian::Query(prefixed(ser_date, field_spc.prefix), _wqf);
+						}
+
 					case FieldType::INTEGER:
 					case FieldType::POSITIVE:
 					case FieldType::FLOAT:
-					case FieldType::DATE:
 					case FieldType::UUID:
 					case FieldType::BOOLEAN:
 						return Xapian::Query(prefixed(Serialise::MsgPack(field_spc, obj), field_spc.prefix), _wqf);
@@ -466,4 +473,35 @@ QueryDSL::find_ranges(const std::string& key, const MsgPack& obj, Xapian::Query&
 	} catch (const std::out_of_range&) {
 		return false;
 	}
+}
+
+
+bool
+QueryDSL::find_date(const MsgPack& obj)
+{
+	L(this, "QueryDSL::find_date()");
+
+	bool isRange = false;
+
+	try {
+		obj.at(QUERYDSL_YEAR);
+		isRange = true;
+	} catch (const std::out_of_range&) { }
+
+	try {
+		obj.at(QUERYDSL_MOTH);
+		isRange = true;
+	} catch (const std::out_of_range&) { }
+
+	try {
+		obj.at(QUERYDSL_DAY);
+		isRange = true;
+	} catch (const std::out_of_range&) { }
+
+	try {
+		obj.at(QUERYDSL_TIME);
+		isRange = true;
+	} catch (const std::out_of_range&) { }
+
+	return isRange;
 }

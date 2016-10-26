@@ -59,6 +59,7 @@ class QueryDSL {
 	bool find_casts(const std::string& key, const MsgPack& obj, Xapian::Query& q);
 	bool find_values(const std::string& key, const MsgPack& obj, Xapian::Query& q);
 	bool find_ranges(const std::string& key, const MsgPack& obj, Xapian::Query& q);
+	bool find_date(const MsgPack& obj);
 
 public:
 	QueryDSL(std::shared_ptr<Schema> schema_);
