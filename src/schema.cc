@@ -3297,7 +3297,7 @@ Schema::validate_required_data()
 				break;
 			}
 			case FieldType::TEXT: {
-				if (!specification.set_index && specification.full_name != ID_FIELD_NAME) {
+				if (!specification.set_index) {
 					auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
@@ -3318,7 +3318,7 @@ Schema::validate_required_data()
 				break;
 			}
 			case FieldType::STRING: {
-				if (!specification.set_index && specification.full_name != ID_FIELD_NAME) {
+				if (!specification.set_index) {
 					auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
