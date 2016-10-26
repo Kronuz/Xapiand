@@ -82,7 +82,11 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	  state(State::RESET),
 	  cluster_name(o.cluster_name),
 	  node_name(o.node_name),
+#ifdef XAPIAND_CLUSTERING
 	  solo(o.solo),
+#else
+	  solo(true),
+#endif
 	  type_required(o.type_required),
 	  async_shutdown_sig(*ev_loop),
 	  shutdown_sig_sig(0)
@@ -93,14 +97,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	auto node_copy = std::make_unique<Node>(*local_node_);
 	node_copy->id = get_node_id();
 
-	if (node_copy->empty()) {
-		std::unique_lock<std::mutex> lk(qmtx);
-		set_node_id(random_int(1, UINT64_MAX - 1), lk);
-		node_copy->id = get_node_id();
-	}
-
 	// Setup node from node database directory
-	std::string node_name_(get_node_name());
+	std::string node_name_(load_node_name());
 	if (!node_name_.empty()) {
 		if (!node_name.empty() && lower_string(node_name) != lower_string(node_name_)) {
 			node_name = "~";
@@ -108,6 +106,12 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 			node_name = node_name_;
 		}
 	}
+	if (solo) {
+		if (node_name.empty()) {
+			node_name = name_generator();
+		}
+	}
+	node_copy->name = node_name;
 
 	// Set addr in local node
 	node_copy->addr = host_address();
@@ -130,64 +134,109 @@ XapiandManager::~XapiandManager()
 
 
 std::string
-XapiandManager::get_node_name()
+XapiandManager::load_node_name()
 {
-	L_CALL(this, "XapiandManager::get_node_name()");
+	L_CALL(this, "XapiandManager::load_node_name()");
 
-	size_t length = 0;
-	unsigned char buf[512];
+	ssize_t length = 0;
+	char buf[512];
 	int fd = io::open("nodename", O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
-		length = io::read(fd, (char *)buf, sizeof(buf) - 1);
-		if (length > 0) {
-			buf[length] = '\0';
-			for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
-		}
+		length = io::read(fd, buf, sizeof(buf) - 1);
 		io::close(fd);
+		if (length < 0) length = 0;
+		buf[length] = '\0';
+		for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
+
 	}
-	return std::string((const char *)buf, length);
+	return std::string(buf, length);
 }
 
 
-bool
-XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<std::mutex>& lk)
+void
+XapiandManager::save_node_name(const std::string& node_name)
+{
+	L_CALL(this, "XapiandManager::save_node_name(%s)", node_name.c_str());
+
+	int fd = io::open("nodename", O_WRONLY | O_CREAT, 0644);
+	if (fd >= 0) {
+		if (io::write(fd, node_name.c_str(), node_name.size()) != static_cast<ssize_t>(node_name.size())) {
+			L_CRIT(nullptr, "Cannot write in nodename file");
+			sig_exit(-EX_IOERR);
+		}
+		io::close(fd);
+	} else {
+		L_CRIT(nullptr, "Cannot open or create the nodename file");
+		sig_exit(-EX_NOINPUT);
+	}
+}
+
+
+std::string
+XapiandManager::set_node_name(const std::string& node_name_)
 {
 	L_CALL(this, "XapiandManager::set_node_name(%s)", node_name_.c_str());
 
-	if (node_name_.empty()) {
-		lk.unlock();
-		return false;
-	}
+	node_name = load_node_name();
 
-	node_name = get_node_name();
-
-	std::string lower_node_name = lower_string(node_name);
-	std::string _lower_node_name = lower_string(node_name_);
-
-	if (!node_name.empty() && lower_node_name != _lower_node_name) {
-		lk.unlock();
-		return false;
-	}
-
-	if (lower_node_name != _lower_node_name) {
-		node_name = node_name_;
-
-		int fd = io::open("nodename", O_WRONLY | O_CREAT, 0644);
-		if (fd >= 0) {
-			if (io::write(fd, node_name.c_str(), node_name.size()) != static_cast<ssize_t>(node_name.size())) {
-				L_CRIT(nullptr, "Cannot write in nodename file");
-				sig_exit(-EX_IOERR);
-			}
-			io::close(fd);
-		} else {
-			L_CRIT(nullptr, "Cannot open or create the nodename file");
-			sig_exit(-EX_NOINPUT);
+	if (node_name.empty()) {
+		if (!node_name_.empty()) {
+			// Ignore empty node_name
+			node_name = node_name_;
+			save_node_name(node_name);
 		}
 	}
 
-	L_INFO(this, "Node %s accepted to the party!", node_name.c_str());
+	return node_name;
+}
 
-	return true;
+
+uint64_t
+XapiandManager::load_node_id()
+{
+	L_CALL(this, "XapiandManager::load_node_id()");
+
+	uint64_t node_id = 0;
+	ssize_t length = 0;
+	char buf[512];
+	int fd = io::open("node", O_RDONLY | O_CLOEXEC);
+	if (fd >= 0) {
+		length = io::read(fd, buf, sizeof(buf) - 1);
+		io::close(fd);
+		if (length < 0) length = 0;
+		buf[length] = '\0';
+		for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
+		try {
+			auto serialized = base64::decode<std::string>(buf, length);
+			const char *p = serialized.data();
+			const char *p_end = p + serialized.size();
+			node_id = unserialise_length(&p, p_end);
+		} catch (...) {
+			L_CRIT(nullptr, "Cannot load node_id!");
+			sig_exit(-EX_IOERR);
+		}
+	}
+	return node_id;
+}
+
+
+void
+XapiandManager::save_node_id(uint64_t node_id)
+{
+	L_CALL(this, "XapiandManager::save_node_id(%llu)", node_id);
+
+	int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
+	if (fd >= 0) {
+		auto node_id_str = base64::encode(serialise_length(node_id));
+		if (io::write(fd, node_id_str.data(), node_id_str.size()) != static_cast<ssize_t>(node_id_str.size())) {
+			L_CRIT(nullptr, "Cannot write in node file");
+			sig_exit(-EX_IOERR);
+		}
+		io::close(fd);
+	} else {
+		L_CRIT(nullptr, "Cannot open or create the node file");
+		sig_exit(-EX_NOINPUT);
+	}
 }
 
 
@@ -196,69 +245,14 @@ XapiandManager::get_node_id()
 {
 	L_CALL(this, "XapiandManager::get_node_id()");
 
-	uint64_t node_id = 0;
-	size_t length = 0;
-	unsigned char buf[512];
-	int fd = io::open("node", O_RDONLY | O_CLOEXEC);
-	if (fd >= 0) {
-		length = io::read(fd, (char *)buf, sizeof(buf) - 1);
-		if (length > 0) {
-			buf[length] = '\0';
-			for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
-		}
-		io::close(fd);
+	uint64_t node_id = load_node_id();
+
+	if (!node_id) {
+		node_id = random_int(1, UINT64_MAX - 1);
+		save_node_id(node_id);
 	}
-	try {
-		auto serialized = base64::decode<std::string>((const char *)buf, length);
-		const char *p = serialized.data();
-		const char *p_end = p + serialized.size();
-		node_id = unserialise_length(&p, p_end);
-	} catch (std::invalid_argument) {
-	}
+
 	return node_id;
-}
-
-
-bool
-XapiandManager::set_node_id(uint64_t node_id_, std::unique_lock<std::mutex>& lk)
-{
-	L_CALL(this, "XapiandManager::set_node_id(%llu)", node_id_);
-
-	if (!node_id_) {
-		lk.unlock();
-		return false;
-	}
-
-	uint64_t node_id = get_node_id();
-
-	if (node_id && node_id != node_id_) {
-		lk.unlock();
-		return false;
-	}
-
-	if (node_id != node_id_) {
-		node_id = node_id_;
-
-		int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
-		if (fd >= 0) {
-			auto node_id_str = base64::encode(serialise_length(node_id));
-			if (io::write(fd, node_id_str.c_str(), node_id_str.size()) != static_cast<ssize_t>(node_id_str.size())) {
-				L_CRIT(nullptr, "Cannot write in node file");
-				sig_exit(-EX_IOERR);
-			}
-			io::close(fd);
-		} else {
-			L_CRIT(nullptr, "Cannot open or create the node file");
-			sig_exit(-EX_NOINPUT);
-		}
-	}
-
-	auto local_node_ = local_node.load();
-	auto node_copy = std::make_unique<Node>(*local_node_);
-	node_copy->id = node_id;
-	local_node = std::shared_ptr<const Node>(node_copy.release());
-
-	return true;
 }
 
 
@@ -286,7 +280,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 
 	int new_cluster = 0;
 
-	std::unique_lock<std::mutex> lk(qmtx);
+	std::lock_guard<std::mutex> lk(qmtx);
 
 	// Open cluster database
 	Endpoints cluster_endpoints(Endpoint("."));
@@ -326,7 +320,14 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 
 	// Set node as ready!
-	set_node_name(local_node_->name, lk);
+	auto node_name_ = local_node_->name;
+	node_name = set_node_name(node_name_);
+	if (lower_string(node_name) != lower_string(node_name_)) {
+		auto local_node_copy = std::make_unique<Node>(*local_node_);
+		local_node_copy->name = node_name;
+		local_node = std::shared_ptr<const Node>(local_node_copy.release());
+	}
+	L_INFO(this, "Node %s accepted to the party!", node_name.c_str());
 
 	{
 		// Get a node (any node)
@@ -362,8 +363,18 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (auto discovery = weak_discovery.lock()) {
 		discovery->enter();
 	}
+#endif
 
-	if (!solo) {
+	if (solo) {
+		switch (new_cluster) {
+			case 0:
+				L_NOTICE(this, "Using solo cluster: %s.", cluster_name.c_str());
+				break;
+			case 1:
+				L_NOTICE(this, "Using new solo cluster: %s.", cluster_name.c_str());
+				break;
+		}
+	} else {
 		switch (new_cluster) {
 			case 0:
 				L_NOTICE(this, "Joined cluster: %s. It is now online!", cluster_name.c_str());
@@ -373,18 +384,6 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				break;
 			case 2:
 				L_NOTICE(this, "Joined cluster: %s. It was already online!", cluster_name.c_str());
-				break;
-		}
-	}
-	else
-#endif
-	{
-		switch (new_cluster) {
-			case 0:
-				L_NOTICE(this, "Using solo cluster: %s.", cluster_name.c_str());
-				break;
-			case 1:
-				L_NOTICE(this, "Using new solo cluster: %s.", cluster_name.c_str());
 				break;
 		}
 	}
@@ -529,6 +528,7 @@ XapiandManager::make_servers(const opts_t& o)
 	std::shared_ptr<Binary> binary;
 	std::shared_ptr<Discovery> discovery;
 	std::shared_ptr<Raft> raft;
+
 	if (!solo) {
 		binary = Worker::make_shared<Binary>(XapiandManager::manager, ev_loop, ev_flags, o.binary_port);
 		msg += binary->getDescription() + ", ";
@@ -620,7 +620,7 @@ XapiandManager::run(const opts_t& o)
 {
 	L_CALL(this, "XapiandManager::run()");
 
-	if (node_name.compare("~") == 0) {
+	if (node_name == "~") {
 		L_CRIT(this, "Node name %s doesn't match with the one in the cluster's database!", o.node_name.c_str());
 		join();
 		throw Exit(EX_CONFIG);
@@ -644,13 +644,9 @@ XapiandManager::run(const opts_t& o)
 	msg += ", " + std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters");
 	L_NOTICE(this, msg.c_str());
 
-#ifdef XAPIAND_CLUSTERING
 	if (solo) {
 		setup_node();
 	}
-#else
-	setup_node();
-#endif
 
 	try {
 		L_EV(this, "Entered manager loop...");
