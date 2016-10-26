@@ -167,6 +167,7 @@ PathParser::PathParser()
 	  len_hst(0), off_hst(nullptr),
 	  len_nsp(0), off_nsp(nullptr),
 	  len_pmt(0), off_pmt(nullptr),
+	  len_ppmt(0), off_ppmt(nullptr),
 	  len_cmd(0), off_cmd(nullptr),
 	  len_id(0), off_id(nullptr) { }
 
@@ -177,6 +178,8 @@ PathParser::clear() noexcept
 	rewind();
 	len_pmt = 0;
 	off_pmt = nullptr;
+	len_ppmt = 0;
+	off_ppmt = nullptr;
 	len_cmd = 0;
 	off_cmd = nullptr;
 	len_id = 0;
@@ -210,10 +213,30 @@ PathParser::init(const std::string& p)
 	const char *n0, *n1 = nullptr;
 	State state;
 
-	// This first goes backwards, looking for pmt, cmd and id
-	// id is filled only if there's no pmt already:
 	state = State::START;
-	n0 = n1 = nf - 1;
+
+	// First figure out entry point (if it has a command)
+	n1 = ni;
+	while (true) {
+		char cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
+		switch (cn) {
+			case '/':
+				++n1;
+				cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
+				if (cn == '_') {
+					state = State::CMD;
+					cn = '\0';
+				}
+			default:
+				break;
+		}
+		if (!cn) break;
+		++n1;
+	}
+
+	// Then go backwards, looking for pmt, cmd and id
+	// id is filled only if there's no pmt already:
+	n0 = n1 = nf;
 	while (true) {
 		char cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		switch (cn) {
@@ -222,42 +245,42 @@ PathParser::init(const std::string& p)
 				switch (state) {
 					case State::START:
 						if (!cn) {
-							n0 = n1;
+							n0 = n1 - 1;
+							state = State::ID;
+						}
+						break;
+					case State::CMD:
+						if (!cn) {
+							n0 = n1 - 1;
 							state = State::PMT;
 						}
 						break;
 					case State::PMT:
 						assert(n0 >= n1);
 						length = n0 - n1;
-						if (length && *(n1 + 1) != '_') {
-							off_id = n1 + 1;
-							len_id = length;
-							n0 = n1 - 1;
-							state = State::CMD;
-							break;
+						if (length) {
+							if (*(n1 + 1) == '_') {
+								off_cmd = n1 + 1;
+								len_cmd = length;
+								state = State::ID;
+							} else {
+								off_ppmt = off_pmt;
+								len_ppmt += len_pmt;
+								if (off_pmt) {
+									++len_ppmt;
+								}
+								off_pmt = n1 + 1;
+								len_pmt = length;
+							}
 						}
-					case State::CMD:
+						n0 = n1 - 1;
+						break;
+					case State::ID:
 						assert(n0 >= n1);
 						length = n0 - n1;
-						if (length && *(n1 + 1) == '_') {
-							off_pmt = off_id;
-							len_pmt = len_id;
-							off_id = nullptr;
-							len_id = 0;
-							off_cmd = n1 + 1;
-							len_cmd = length;
-							n0 = n1 - 1;
-							state = State::ID;
-							break;
-						}
-					case State::ID:
-						if (!off_id) {
-							assert(n0 >= n1);
-							length = n0 - n1;
-							if (length) {
-								off_id = n1 + 1;
-								len_id = length;
-							}
+						if (length) {
+							off_id = n1 + 1;
+							len_id = length;
 						}
 						off = ni;
 						return state;
@@ -425,7 +448,15 @@ std::string
 PathParser::get_pmt()
 {
 	if (!off_pmt) return std::string();
-	return urldecode(off_pmt, len_pmt);
+	return urldecode(off_pmt, len_pmt + (off_ppmt ? 0 : len_ppmt));
+}
+
+
+std::string
+PathParser::get_ppmt()
+{
+	if (!off_ppmt) return std::string();
+	return urldecode(off_ppmt, len_ppmt - 1);
 }
 
 

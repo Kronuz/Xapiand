@@ -74,6 +74,8 @@ public:
 	const char *off_nsp;
 	size_t len_pmt;
 	const char *off_pmt;
+	size_t len_ppmt;
+	const char *off_ppmt;
 	size_t len_cmd;
 	const char *off_cmd;
 	size_t len_id;
@@ -90,6 +92,7 @@ public:
 	std::string get_hst();
 	std::string get_nsp();
 	std::string get_pmt();
+	std::string get_ppmt();
 	std::string get_cmd();
 	std::string get_id();
 };

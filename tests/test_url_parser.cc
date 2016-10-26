@@ -56,6 +56,9 @@ static std::string run_url_path(const std::string& path, bool clear_id) {
 		if (p.off_pmt) {
 			result += "pmt:" + std::string(p.off_pmt, p.len_pmt) + "|";
 		}
+		if (p.off_ppmt) {
+			result += "ppmt:" + std::string(p.off_ppmt, p.len_ppmt) + "|";
+		}
 		if (p.off_id) {
 			result += "id:" + std::string(p.off_id, p.len_id) + "|";
 		}
@@ -105,6 +108,7 @@ int test_url_path() {
 		{ "/_stats/", false, "_|cmd:_stats|_|pth:|(end)" },
 		{ "/index/_stats", false, "_|cmd:_stats|id:index|_|pth:|(end)" },
 		{ "/index/_stats/1", false, "_|cmd:_stats|pmt:1|id:index|_|pth:|(end)" },
+		{ "/index/_stats/1/2/3", false, "_|cmd:_stats|pmt:1|ppmt:2/3|id:index|_|pth:|(end)" },
 		{ "/index/1/_stats", false, "_|cmd:_stats|id:1|_|pth:/index|(end)" },
 		{ "/_stats/", true, "_|cmd:_stats|_|pth:|(end)" },
 		{ "/index/_stats", true, "_|cmd:_stats|_|pth:/index|(end)" },
