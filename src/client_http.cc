@@ -633,6 +633,7 @@ HttpClient::_get()
 			search_view(HttpMethod::GET);
 			break;
 		case Command::CMD_SCHEMA:
+			path_parser.off_id = nullptr;  // Command has no ID
 			schema_view(HttpMethod::GET);
 			break;
 		case Command::CMD_INFO:
@@ -674,7 +675,8 @@ HttpClient::_post()
 	L_CALL(this, "HttpClient::_post()");
 
 	switch (url_resolve()) {
-		case Command::NO_CMD_ID:
+		case Command::NO_CMD_NO_ID:
+			path_parser.off_id = nullptr;  // Command has no ID
 			index_document_view(HttpMethod::POST);
 			break;
 		case Command::CMD_SCHEMA:
@@ -882,7 +884,6 @@ HttpClient::index_document_view(HttpMethod method)
 	int status_code = 400;
 
 	if (method == HttpMethod::POST) {
-		path_parser.off_id = nullptr;
 		auto g = generator.newGuid();
 		doc_id = g.to_string();
 	} else {
@@ -1084,7 +1085,6 @@ HttpClient::schema_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::schema_view()");
 
-	path_parser.off_id = nullptr;
 	endpoints_maker(1s);
 
 	db_handler.reset(endpoints, DB_SPAWN, method);
