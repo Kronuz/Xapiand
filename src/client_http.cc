@@ -1081,18 +1081,23 @@ HttpClient::nodes_view(HttpMethod)
 		return;
 	}
 
-	if (path_parser.off_pth) {
+	if (path_parser.len_pth || path_parser.len_pmt || path_parser.len_ppmt) {
 		status_view(404);
 		return;
 	}
 
-	if (path_parser.off_pmt) {
-		status_view(404);
-		return;
-	}
+	MsgPack nodes(MsgPack::Type::MAP);
 
-	MsgPack response;
-	write_http_response(200, response);
+	// FIXME: Get all nodes from cluster database:
+	auto local_node_ = local_node.load();
+	nodes["." + serialise_node_id(local_node_->id)] = {
+		{ "_name", local_node_->name },
+	};
+
+	write_http_response(200, {
+		{ "_cluster_name", XapiandManager::manager->cluster_name },
+		{ "_nodes", nodes },
+	});
 }
 
 
