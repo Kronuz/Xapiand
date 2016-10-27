@@ -160,6 +160,81 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 }
 
 
+template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
+Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
+	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
+
+	T start_val, end_val;
+	switch (field_spc.get_type()) {
+		case FieldType::FLOAT:
+			switch (start.getType()) {
+				case MsgPack::Type::MAP:
+					start_val = Cast::cast(start).as_f64();
+					break;
+				default:
+					start_val = Cast::_float(start);
+					break;
+			}
+			switch (end.getType()) {
+				case MsgPack::Type::MAP:
+					end_val = Cast::cast(start).as_f64();
+					break;
+				default:
+					end_val = Cast::_float(end);
+					break;
+			}
+		break;
+		case FieldType::POSITIVE:
+			switch (start.getType()) {
+				case MsgPack::Type::MAP:
+					start_val = Cast::cast(start).as_u64();
+					break;
+				default:
+					start_val = Cast::positive(start);
+					break;
+			}
+			switch (end.getType()) {
+				case MsgPack::Type::MAP:
+					end_val = Cast::cast(start).as_u64();
+					break;
+				default:
+					end_val = Cast::positive(end);
+					break;
+			}
+		break;
+		case FieldType::INTEGER:
+			switch (start.getType()) {
+				case MsgPack::Type::MAP:
+					start_val = Cast::cast(start).as_i64();
+					break;
+				default:
+					start_val = Cast::integer(start);
+					break;
+			}
+			switch (end.getType()) {
+				case MsgPack::Type::MAP:
+					end_val = Cast::cast(start).as_i64();
+					break;
+				default:
+					end_val = Cast::integer(end);
+					break;
+			}
+			break;
+		default:
+			throw MSG_QueryParserError("Expected numeric type for query range");
+	}
+
+	auto query = GenerateTerms::numeric(start_val, end_val, field_spc.accuracy, field_spc.acc_prefix);
+
+	if (query.empty()) {
+		return Xapian::Query(mvr->release());
+	} else {
+		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
+	}
+
+}
+
+
 Xapian::Query
 MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string& field_name, const MsgPack& start, const MsgPack& end)
 {
