@@ -654,13 +654,7 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 	auto document = get_document(doc_id);
 
 	info[ID_FIELD_NAME] = document.get_value(DB_SLOT_ID);
-
-	MsgPack obj_data = document.get_obj();
-	try {
-		obj_data = obj_data.at(RESERVED_DATA);
-	} catch (const std::out_of_range&) { }
-
-	info[RESERVED_DATA] = std::move(obj_data);
+	info[RESERVED_DATA] = document.get_obj();
 
 	auto ct_type = document.get_value(DB_SLOT_CONTENT_TYPE);
 	info["_blob"] = ct_type != JSON_CONTENT_TYPE && ct_type != MSGPACK_CONTENT_TYPE;

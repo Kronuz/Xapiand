@@ -143,16 +143,8 @@ static int make_search(const test_geo_t _tests[], int len) {
 				for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {
 					auto doc = m.get_document();
 					auto obj_data = get_MsgPack(doc);
-					try {
-						auto str_data(obj_data.at(RESERVED_DATA).as_string());
-						if (it->compare(str_data) != 0) {
-							++cont;
-							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
-						}
-					} catch (const msgpack::type_error& exc) {
-						++cont;
-						L_EXC(nullptr, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
-					}
+					++cont;
+					L_EXC(nullptr, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
 				}
 			}
 		} catch (const std::exception& exc) {

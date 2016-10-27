@@ -780,11 +780,7 @@ HttpClient::home_view(HttpMethod method)
 	auto document = db_handler.get_document("." + serialise_node_id(local_node_->id));
 
 	auto obj_data = document.get_obj();
-	try {
-		obj_data = obj_data.at(RESERVED_DATA);
-	} catch (const std::out_of_range&) {
-		obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
-	}
+	obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 
 #ifdef XAPIAND_CLUSTERING
 	obj_data["_cluster_name"] = XapiandManager::manager->cluster_name;
@@ -1271,18 +1267,14 @@ HttpClient::search_view(HttpMethod method)
 			ct_type = *accepted_ct_type;
 			ct_type_str = ct_type.first + "/" + ct_type.second;
 
-			try {
-				obj_data = obj_data.at(RESERVED_DATA);
-			} catch (const std::out_of_range&) {
-				obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
-				// Detailed info about the document:
-				obj_data[RESERVED_RANK] = m.get_rank();
-				obj_data[RESERVED_WEIGHT] = m.get_weight();
-				obj_data[RESERVED_PERCENT] = m.get_percent();
-				int subdatabase = (document.get_docid() - 1) % endpoints.size();
-				auto endpoint = endpoints[subdatabase];
-				obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
-			}
+			obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+			// Detailed info about the document:
+			obj_data[RESERVED_RANK] = m.get_rank();
+			obj_data[RESERVED_WEIGHT] = m.get_weight();
+			obj_data[RESERVED_PERCENT] = m.get_percent();
+			int subdatabase = (document.get_docid() - 1) % endpoints.size();
+			auto endpoint = endpoints[subdatabase];
+			obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
 
 			auto result = serialize_response(obj_data, ct_type, pretty);
 			if (chunked) {

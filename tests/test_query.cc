@@ -218,17 +218,8 @@ static int make_search(const test_query_t _tests[], int len) {
 				for (auto it = p.expect_datas.begin(); m != mset.end(); ++it, ++m) {
 					auto doc = m.get_document();
 					auto obj_data = get_MsgPack(doc);
-					try {
-						auto data = obj_data.at(RESERVED_DATA);
-						auto str_data = data.as_string();
-						if (it->compare(str_data) != 0) {
-							++cont;
-							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
-						}
-					} catch (const msgpack::type_error& exc) {
-						++cont;
-						L_EXC(nullptr, "ERROR: %s", exc.what());
-					}
+					++cont;
+					L_EXC(nullptr, "ERROR: %s", exc.what());
 				}
 			}
 		} catch (const std::exception& exc) {
