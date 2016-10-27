@@ -71,16 +71,24 @@
 #  include "../src/log.h"
 #  define RETURN(x) { Log::finish(); return x; }
 #else
-#  define L_TEST(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
-#  define L_DEBUG(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
-#  define L_INFO(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
-#  define L_NOTICE(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
-#  define L_WARNING(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
-#  define L_ERR(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
-#  define L_CRIT(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
-#  define L_ALERT(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
-#  define L_EMERG(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
-#  define L_EXC(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
+template <typename... Args>
+inline void log(std::string fmt, Args&&... args) {
+	fmt.push_back('\n');
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-security"
+	fprintf(stderr, fmt.c_str(), std::forward<Args>(args)...);
+#pragma clang diagnostic pop
+}
+#  define L_TEST(obj, args...) log(args)
+#  define L_DEBUG(obj, args...) log(args)
+#  define L_INFO(obj, args...) log(args)
+#  define L_NOTICE(obj, args...) log(args)
+#  define L_WARNING(obj, args...) log(args)
+#  define L_ERR(obj, args...) log(args)
+#  define L_CRIT(obj, args...) log(args)
+#  define L_ALERT(obj, args...) log(args)
+#  define L_EMERG(obj, args...) log(args)
+#  define L_EXC(obj, args...) log(args)
 #  define RETURN(x) { return x; }
 #endif
 
