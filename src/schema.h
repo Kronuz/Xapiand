@@ -347,7 +347,6 @@ struct specification_t : required_spc_t {
 	bool set_type;
 	bool set_bool_term;
 	bool set_index;
-	bool fixed_index;
 	bool inside_namespace;
 	std::string aux_stem_lan;
 	std::string aux_lan;
@@ -466,7 +465,6 @@ class Schema {
 	 * Auxiliar functions for index fields in doc.
 	 */
 
-	inline void fixed_index(const MsgPack& properties, const MsgPack& object, MsgPack& data, Xapian::Document& doc, const char* reserved_word);
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name=std::string());
 	void index_array(const MsgPack& properties, const MsgPack& array, MsgPack& data, Xapian::Document& doc);
 
@@ -611,22 +609,6 @@ public:
 
 
 	/*
-	 * Functions for reserved words that are only in document's root.
-	 */
-
-	inline void process_data(const MsgPack&, const MsgPack& doc_data, MsgPack& data, Xapian::Document&);
-	inline void process_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
-	inline void process_field_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
-	inline void process_global_values(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
-	inline void process_terms(const MsgPack& properties, const MsgPack& doc_terms, MsgPack& data, Xapian::Document& doc);
-	inline void process_field_terms(const MsgPack& properties, const MsgPack& doc_terms, MsgPack& data, Xapian::Document& doc);
-	inline void process_global_terms(const MsgPack& properties, const MsgPack& doc_terms, MsgPack& data, Xapian::Document& doc);
-	inline void process_field_all(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
-	inline void process_global_all(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
-	inline void process_none(const MsgPack& properties, const MsgPack& doc_values, MsgPack& data, Xapian::Document& doc);
-
-
-	/*
 	 * Functions used for searching, return a field properties.
 	 */
 
@@ -680,5 +662,4 @@ using dispatch_readable          = void (*)(MsgPack&, MsgPack&);
 
 extern const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document;
 extern const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_properties;
-extern const std::unordered_map<std::string, dispatch_root> map_dispatch_root;
 extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;

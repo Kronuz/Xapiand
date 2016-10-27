@@ -72,14 +72,7 @@
 #define RESERVED_NAMESPACE         "_namespace"
 // Reserved words used only in the root of the  document.
 #define RESERVED_VALUES            "_values"
-#define RESERVED_FIELD_VALUES      "_field_values"
-#define RESERVED_GLOBAL_VALUES     "_global_values"
 #define RESERVED_TERMS             "_terms"
-#define RESERVED_FIELD_TERMS       "_field_terms"
-#define RESERVED_GLOBAL_TERMS      "_global_terms"
-#define RESERVED_FIELD_ALL         "_field_all"
-#define RESERVED_GLOBAL_ALL        "_global_all"
-#define RESERVED_NONE              "_none"
 #define RESERVED_DATA              "_data"
 // Reserved words used in schema only for TEXT fields.
 #define RESERVED_STEM_STRATEGY     "_stem_strategy"
