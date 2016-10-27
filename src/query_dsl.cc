@@ -246,7 +246,7 @@ QueryDSL::in_range_query(const MsgPack& obj)
 		for (const auto& elem : obj) {
 			auto key = elem.as_string();
 			Xapian::Query qry;
-			if (find_ranges(key, obj.at(key), qry)) {
+			if (find_ranges(key, obj, qry)) {
 				return qry;
 			} else {
 				throw MSG_QueryDslError("Unexpected range type %s", key.c_str());
