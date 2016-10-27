@@ -177,7 +177,7 @@ Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack&
 			}
 			switch (end.getType()) {
 				case MsgPack::Type::MAP:
-					end_val = Cast::cast(start).as_f64();
+					end_val = Cast::cast(end).as_f64();
 					break;
 				default:
 					end_val = Cast::_float(end);
@@ -195,7 +195,7 @@ Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack&
 			}
 			switch (end.getType()) {
 				case MsgPack::Type::MAP:
-					end_val = Cast::cast(start).as_u64();
+					end_val = Cast::cast(end).as_u64();
 					break;
 				default:
 					end_val = Cast::positive(end);
@@ -213,7 +213,7 @@ Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack&
 			}
 			switch (end.getType()) {
 				case MsgPack::Type::MAP:
-					end_val = Cast::cast(start).as_i64();
+					end_val = Cast::cast(end).as_i64();
 					break;
 				default:
 					end_val = Cast::integer(end);
