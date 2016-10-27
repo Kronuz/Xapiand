@@ -16,8 +16,8 @@ import os
 buffer_size = 4096
 delay = 0.0001
 
-OUTGOING = 0
-INCOMING = 1
+RECEIVING = 0
+SENDING = 1
 
 
 NO_COL = "\033[0m"
@@ -172,8 +172,8 @@ class ProxyServer(object):
         if forward:
             self.input_list.append(clientsock)
             self.input_list.append(forward)
-            self.channel[clientsock] = (forward, OUTGOING)
-            self.channel[forward] = (clientsock, INCOMING)
+            self.channel[clientsock] = (forward, RECEIVING)
+            self.channel[forward] = (clientsock, SENDING)
             out, from_client, from_peer, to_client, to_peer, direction = self.get_args(clientsock)
             self.on_accept(from_client, from_peer, to_client, to_peer, direction)
         else:
@@ -218,6 +218,14 @@ class ProxyServer(object):
     def on_close(self, from_client, from_peer, to_client, to_peer, direction):
         raise NotImplementedError
 
+    def print(self, from_client, msg):
+        if isinstance(msg, tuple):
+            args = msg[1:]
+            msg = msg[0]
+        else:
+            args = ()
+        print("%10s - %s" % (cyan(from_client), msg), *args)
+
 
 @register('raw', default=True)
 class RawProxyServer(ProxyServer):
@@ -225,21 +233,23 @@ class RawProxyServer(ProxyServer):
 
     def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
         msg = "client connected to %s" % from_peer
-        print("%10s - %s" % (cyan(from_client), msg))
+        self.print(from_client, msg)
 
     def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
         self.reads.setdefault(from_client, [0, 0])[direction] += len(data)
-        print("%10s - %s: %s" % (cyan(from_client), lightyellow("%s <-- %s" % (from_peer, to_peer)), yellow(repr(data))))
+        msg = lightyellow("%s <-- %s" % (from_peer, to_peer)), yellow(repr(data))
+        return msg
 
     def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
         self.reads.setdefault(from_client, [0, 0])[direction] += len(data)
-        print("%10s - %s: %s" % (cyan(from_client), lightgreen("%s --> %s" % (from_peer, to_peer)), green(repr(data))))
+        msg = lightgreen("%s --> %s" % (from_peer, to_peer)), green(repr(data))
+        return msg
 
     def on_close(self, from_client, from_peer, to_client, to_peer, direction):
-        sent = self.reads.setdefault(from_client, [0, 0])[OUTGOING]
-        received = self.reads.setdefault(from_client, [0, 0])[INCOMING]
+        sent = self.reads.setdefault(from_client, [0, 0])[RECEIVING]
+        received = self.reads.setdefault(from_client, [0, 0])[SENDING]
         msg = "%s %s closed the connection (server received %s bytes, sent %s bytes)" % ("server listening on" if direction else "client connected to", to_peer if direction else from_peer, sent, received)
-        print("%10s - %s" % (cyan(from_client), msg))
+        self.print(from_client, msg)
         del self.reads[from_client]
 
 
@@ -364,16 +374,17 @@ class XapianProxyServer(RawProxyServer):
 
     def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
         super(XapianProxyServer, self).on_accept(from_client, from_peer, to_client, to_peer, direction)
-        self.buffers[from_client] = ['', '']
+        self.buffers[from_client] = [dict(buffer=''), dict(buffer='')]
         self.protocol = 'REMOTE'
 
     def on_send_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
-        buf = self.buffers[from_client][direction] + data
-        while buf:
+        buf = self.buffers[from_client][direction]
+        buf['buffer'] += data
+        while buf['buffer']:
             try:
-                msg_id = buf[0]
+                msg_id = buf['buffer'][0]
                 cmd = ord(msg_id)
-                length, msg_length, msg_body, buf = decode_string(buf[1:])
+                length, msg_length, msg_body, buf['buffer'] = decode_string(buf['buffer'][1:])
                 assert length == len(msg_body)
                 if not direction and cmd == ord('\xfe'):
                     self.protocol = 'REPL'
@@ -396,14 +407,15 @@ class XapianProxyServer(RawProxyServer):
                     self.dump(length, msg_length, msg_body)
             except ValueError:
                 break
-        self.buffers[from_client][direction] = buf
 
     def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
-        super(XapianProxyServer, self).on_send(data, from_client, from_peer, to_client, to_peer, direction)
+        msg = super(XapianProxyServer, self).on_send(data, from_client, from_peer, to_client, to_peer, direction)
+        self.print(from_client, msg)
         self.on_send_recv(data, from_client, from_peer, to_client, to_peer, direction)
 
     def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
-        super(XapianProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
+        msg = super(XapianProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
+        self.print(from_client, msg)
         self.on_send_recv(data, from_client, from_peer, to_client, to_peer, direction)
 
     def dump_print(self, name, value):
@@ -427,9 +439,12 @@ class XapianProxyServer(RawProxyServer):
 
     def on_close(self, from_client, from_peer, to_client, to_peer, direction):
         super(XapianProxyServer, self).on_close(from_client, from_peer, to_client, to_peer, direction)
-        buf = self.buffers[from_client][direction]
-        if buf:
-            print("%s bytes where left in the buffer" % len(buf))
+        for color, direction in ((lightgreen, RECEIVING), (lightyellow, SENDING)):
+            buf = self.buffers[from_client][direction]
+            len_buffer = len(buf['buffer'])
+            if len_buffer:
+                msg = red("%s%s %s where left in the %s buffer: %s" % (lightred("ERROR: "), len_buffer, "byte" if len_buffer == 1 else "bytes", "send" if direction else "recv", color(repr(buf['buffer']))))
+                self.print(from_client, msg)
         del self.buffers[from_client]
 
 
@@ -439,39 +454,93 @@ class HttpProxyServer(RawProxyServer):
 
     def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
         super(HttpProxyServer, self).on_accept(from_client, from_peer, to_client, to_peer, direction)
-        self.buffers[from_client] = ['', '']
+        self.buffers[from_client] = [dict(buffer=''), dict(buffer='')]
+
+    def flush_buffer(self, from_client, direction, lightcolor, color):
+        buf = self.buffers[from_client][direction]
+        if 'headers' not in buf:
+            headers, sep, body = buf['buffer'].partition('\r\n\r\n')
+            if not sep:
+                headers, sep, body = buf['buffer'].partition('\n\n')
+            if sep:
+                headers = headers.split('\n')
+                buf['request'] = headers[0]
+                buf['headers'] = dict(map(lambda o: o.lower().strip(), l.split(':', 1)) for l in headers[1:])
+                buf['buffer'] = body
+
+                status_color = color
+
+                if direction == SENDING:
+
+                    # FIXME: Elasticsearch bug where it sends a HEAD with content-length
+                    request = self.buffers[from_client][RECEIVING].get('request', '')
+                    if request.startswith('HEAD '):
+                        buf['headers']['#content-length'] = buf['headers']['content-length']
+                        del buf['headers']['content-length']
+
+                    if 'HTTP/' in buf['request']:
+                        status = buf['request'].split()[1][0]
+                        status_color = {
+                            '2': white,
+                            '3': lightcyan,
+                            '4': lightmagenta,
+                            '5': lightred,
+                        }.get(status, status_color)
+
+                print(status_color('    ' + buf['request']))
+                print(color('    ' + '\n    '.join(': '.join(l) for l in buf['headers'].items())))
+
+        if 'headers' in buf:
+            content_length = int(buf['headers'].get('content-length', 0))
+            if len(buf['buffer']) >= content_length:
+                body = buf['buffer'][:content_length]
+                buf['buffer'] = buf['buffer'][content_length:]
+                if body:
+                    content_type = buf['headers'].get('content-type', '')
+                    if 'application/json' in content_type:
+                        import json
+                        try:
+                            print(lightcolor('    ' + '\n    '.join(json.dumps(json.loads(body), indent=4).split('\n'))))
+                        except ValueError as exc:
+                            print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
+                    elif 'image/' in content_type:
+                        import base64
+                        # From [https://www.iterm2.com/documentation-images.html]
+                        name = "Unnamed file"
+                        print("\033]1337;File=name=%s;inline=1;size=%d:%s\a" % (base64.b64encode(name), len(body), base64.b64encode(body)))
+                if direction == SENDING:
+                    del self.buffers[from_client][SENDING]['headers']
+                    del self.buffers[from_client][SENDING]['request']
+                    del self.buffers[from_client][RECEIVING]['headers']
+                    del self.buffers[from_client][RECEIVING]['request']
+
+    def process_data(self, from_client, direction, data, lightcolor, color):
+        buf = self.buffers[from_client][direction]
+        buf['buffer'] += data
+        self.flush_buffer(from_client, direction, lightcolor, color)
 
     def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
         super(HttpProxyServer, self).on_send(data, from_client, from_peer, to_client, to_peer, direction)
-        buf = self.buffers[from_client][direction]
-        if buf is not None:
-            buf += data.replace('\r', '')
-            headers, sep, body = buf.partition('\n\n')
-            if sep:
-                print(lightyellow('    ' + '\n    '.join(headers.split('\n'))))
-                buf = body
-                self.buffers[from_client][direction] = None
-            else:
-                self.buffers[from_client][direction] = buf
+        msg = lightyellow("%s <-- %s" % (from_peer, to_peer)), yellow("(%s %s)" % (len(data), "byte" if len(data) == 1 else "bytes"))
+        self.print(from_client, msg)
+        self.process_data(from_client, direction, data, lightyellow, yellow)
 
     def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
         super(HttpProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
-        buf = self.buffers[from_client][direction]
-        if buf is not None:
-            buf += data.replace('\r', '')
-            headers, sep, body = buf.partition('\n\n')
-            if sep:
-                print(lightgreen('    ' + '\n    '.join(headers.split('\n'))))
-                buf = body
-                self.buffers[from_client][direction] = None
-            else:
-                self.buffers[from_client][direction] = buf
+        msg = lightgreen("%s --> %s" % (from_peer, to_peer)), green("(%s %s)" % (len(data), "byte" if len(data) == 1 else "bytes"))
+        self.print(from_client, msg)
+        self.process_data(from_client, direction, data, lightgreen, green)
 
     def on_close(self, from_client, from_peer, to_client, to_peer, direction):
         super(HttpProxyServer, self).on_close(from_client, from_peer, to_client, to_peer, direction)
-        buf = self.buffers[from_client][direction]
-        if buf:
-            print("%s bytes where left in the buffer" % len(buf))
+        for lightcolor, color, direction in ((lightgreen, green, RECEIVING), (lightyellow, yellow, SENDING)):
+            self.flush_buffer(from_client, direction, lightcolor, color)
+
+            buf = self.buffers[from_client][direction]
+            len_buffer = len(buf['buffer'])
+            if len_buffer:
+                msg = red("%s%s %s where left in the %s buffer: %s" % (lightred("ERROR: "), len_buffer, "byte" if len_buffer == 1 else "bytes", "send" if direction else "recv", color(repr(buf['buffer']))))
+                self.print(from_client, msg)
         del self.buffers[from_client]
 
 
