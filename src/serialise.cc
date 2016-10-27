@@ -201,7 +201,7 @@ Cast::integer(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			throw MSG_SerialisationError("Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+			throw MSG_SerialisationError("Type %s can not be cast to integer", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -221,7 +221,7 @@ Cast::positive(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			throw MSG_SerialisationError("Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+			throw MSG_SerialisationError("Type %s can not be cast to positive", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -241,7 +241,7 @@ Cast::_float(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			throw MSG_SerialisationError("Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+			throw MSG_SerialisationError("Type %s can not be cast to float", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
