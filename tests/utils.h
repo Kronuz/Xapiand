@@ -22,15 +22,23 @@
 
 #pragma once
 
-#include "../src/database_handler.h"
-#include "../src/endpoint.h"
-#include "../src/log.h"
-#include "../src/manager.h"
-#include "../src/utils.h"
 #include "../src/xapiand.h"
 
 #include <fstream>
 #include <sstream>
+#include <vector>
+
+
+#ifndef TESTING_LOGS
+#  define TESTING_LOGS 1
+#endif
+#ifndef TESTING_ENDPOINTS
+#  define TESTING_ENDPOINTS 1
+#endif
+#ifndef TESTING_DATABASE
+#  define TESTING_DATABASE 1
+#endif
+
 
 #define TEST_VERBOSITY 3
 #define TEST_DETACH false
@@ -56,38 +64,27 @@
 #define TEST_LOCAL_HOST "127.0.0.1"
 
 
-#define RETURN(x) { Log::finish(); return x; }
+#include "../src/utils.h"
 
 
-inline bool write_file_contents(const std::string& filename, const std::string& contents) {
-	std::ofstream of(filename.data(), std::ios::out | std::ios::binary);
-	if (of.bad()) {
-		return false;
-	}
-	of.write(contents.data(), contents.size());
-	return true;
-}
+#if (TESTING_LOGS == 1)
+#  include "../src/log.h"
+#  define RETURN(x) { Log::finish(); return x; }
+#else
+#  define L_INFO(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
+#  define L_NOTICE(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
+#  define L_WARNING(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
+#  define L_ERR(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
+#  define L_CRIT(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
+#  define L_ALERT(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
+#  define L_EMERG(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
+#  define L_EXC(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
+#  define RETURN(x) { return x; }
+#endif
 
 
-inline bool read_file_contents(const std::string& filename, std::string* contents) {
-	std::ifstream in(filename.data(), std::ios::in | std::ios::binary);
-	if (in.bad()) {
-		return false;
-	}
-
-	in.seekg(0, std::ios::end);
-	contents->resize(static_cast<size_t>(in.tellg()));
-	in.seekg(0, std::ios::beg);
-	in.read(&(*contents)[0], contents->size());
-	in.close();
-	return true;
-}
-
-
-/*
- *	The database used in the test is local
- *	so the Endpoints and local_node are manipulated.
- */
+#if (TESTING_ENDPOINTS == 1)
+#include "../src/endpoint.h"
 
 inline Endpoint create_endpoint(const std::string& database) {
 	Endpoint e(database, nullptr, -1, TEST_NODE_NAME);
@@ -95,7 +92,17 @@ inline Endpoint create_endpoint(const std::string& database) {
 	e.host.assign(TEST_LOCAL_HOST);
 	return e;
 }
+#endif
 
+
+#if (TESTING_DATABASE == 1) || (TESTING_ENDPOINTS == 1)
+#include "../src/manager.h"
+#include "../src/database_handler.h"
+
+/*
+ *	The database used in the test is local
+ *	so the Endpoints and local_node are manipulated.
+ */
 
 struct DB_Test {
 	DatabaseHandler db_handler;
@@ -151,3 +158,29 @@ struct DB_Test {
 		}
 	}
 };
+#endif
+
+
+inline bool write_file_contents(const std::string& filename, const std::string& contents) {
+	std::ofstream of(filename.data(), std::ios::out | std::ios::binary);
+	if (of.bad()) {
+		return false;
+	}
+	of.write(contents.data(), contents.size());
+	return true;
+}
+
+
+inline bool read_file_contents(const std::string& filename, std::string* contents) {
+	std::ifstream in(filename.data(), std::ios::in | std::ios::binary);
+	if (in.bad()) {
+		return false;
+	}
+
+	in.seekg(0, std::ios::end);
+	contents->resize(static_cast<size_t>(in.tellg()));
+	in.seekg(0, std::ios::beg);
+	in.read(&(*contents)[0], contents->size());
+	in.close();
+	return true;
+}

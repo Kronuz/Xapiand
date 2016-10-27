@@ -22,8 +22,14 @@
 
 #include "test_url_parser.h"
 
-#include "../src/url_parser.h"
+#ifdef TEST_SINGLE
+#  define TESTING_DATABASE 0
+#  define TESTING_ENDPOINTS 0
+#  define TESTING_LOGS 0
+#endif
+
 #include "utils.h"
+#include "../src/url_parser.h"
 
 
 static std::string run_url_path(const std::string& path, bool clear_id) {
@@ -137,10 +143,19 @@ int test_url_path() {
 	for (auto& url : urls) {
 		std::string result = run_url_path(url.path, url.clear_id);
 		if (result != url.expected) {
-			L_ERR(nullptr, "\nError: the value obtained from the url path:\n%s (%s) should be:\n  %s\nbut it is:\n  %s", url.path.c_str(), url.clear_id ? "true" : "false", url.expected.c_str(), result.c_str());
+			L_ERR(nullptr, "\nError: the value obtained from the url path: { \"%s\", %s }\n  should be:\n    %s\n  but it is:\n    %s\n", url.path.c_str(), url.clear_id ? "true" : "false", url.expected.c_str(), result.c_str());
 			++count;
 		}
 	}
 
 	RETURN(count);
 }
+
+
+#ifdef TEST_SINGLE
+// c++ -std=c++14 -fsanitize=address -Wall -Wextra -g -O2 -o tst -DTEST_SINGLE -Ibuild/src -Isrc tests/test_url_parser.cc && ./tst
+#include "../src/url_parser.cc"
+int main(int, char const *[]) {
+	return test_url_path();
+}
+#endif
