@@ -53,7 +53,7 @@ class PathParser {
 
 public:
 	enum class State : uint8_t {
-		START,
+		NCM,
 		PMT,
 		CMD,
 		ID,

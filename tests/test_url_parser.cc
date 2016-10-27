@@ -22,6 +22,8 @@
 
 #include "test_url_parser.h"
 
+// #define DEBUG_URL_PARSER 1
+
 #ifdef TEST_SINGLE
 #  define TESTING_DATABASE 0
 #  define TESTING_ENDPOINTS 0
@@ -34,7 +36,7 @@
 
 static std::string run_url_path(const std::string& path, bool clear_id) {
 	const char* parser_url_path_states_names[] = {
-		[toUType(PathParser::State::START)] = "start",
+		[toUType(PathParser::State::NCM)]   = "ncm",
 		[toUType(PathParser::State::PMT)]   = "pmt",
 		[toUType(PathParser::State::CMD)]   = "cmd",
 		[toUType(PathParser::State::ID)]    = "id",
@@ -143,7 +145,7 @@ int test_url_path() {
 	for (auto& url : urls) {
 		std::string result = run_url_path(url.path, url.clear_id);
 		if (result != url.expected) {
-			L_ERR(nullptr, "\nError: the value obtained from the url path: { \"%s\", %s }\n  should be:\n    %s\n  but it is:\n    %s\n", url.path.c_str(), url.clear_id ? "true" : "false", url.expected.c_str(), result.c_str());
+			L_ERR(nullptr, "Error: the value obtained from the url path: { \"%s\", %s }\n  should be:\n    %s\n  but it is:\n    %s\n", url.path.c_str(), url.clear_id ? "true" : "false", url.expected.c_str(), result.c_str());
 			++count;
 		}
 	}

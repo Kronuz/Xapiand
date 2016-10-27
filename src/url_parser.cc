@@ -207,18 +207,39 @@ PathParser::init(const std::string& p)
 	clear();
 	path = p;
 
+	char cn;
 	size_t length;
 	const char *ni = path.data();
 	const char *nf = ni + path.length();
 	const char *n0, *n1 = nullptr;
 	State state;
 
-	state = State::START;
+	state = State::NCM;
 
 	// First figure out entry point (if it has a command)
-	n1 = ni;
-	while (true) {
-		char cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
+	n0 = n1 = ni;
+
+	cn = '\xff';
+	while (cn) {
+		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
+		#ifdef DEBUG_URL_PARSER
+		fprintf(stderr, "1>> %3s %02x '%c' [n1:%zu - n0:%zu = length:%zu] total:%zu\n", [state]{
+			switch(state) {
+				case State::NCM: return "ncm";
+				case State::PMT: return "pmt";
+				case State::CMD: return "cmd";
+				case State::ID: return "id";
+				case State::NSP: return "nsp";
+				case State::PTH: return "pth";
+				case State::HST: return "hst";
+				case State::END: return "end";
+				case State::INVALID_STATE: return "INVALID_STATE";
+				case State::INVALID_NSP: return "INVALID_NSP";
+				case State::INVALID_HST: return "INVALID_HST";
+			}
+		}(), (int)cn, cn, n0 - ni, n1 - ni, n1 - n0, nf - ni);
+		#endif
+
 		switch (cn) {
 			case '/':
 				++n1;
@@ -230,31 +251,48 @@ PathParser::init(const std::string& p)
 			default:
 				break;
 		}
-		if (!cn) break;
 		++n1;
 	}
 
 	// Then go backwards, looking for pmt, cmd and id
 	// id is filled only if there's no pmt already:
-	n0 = n1 = nf;
-	while (true) {
-		char cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
+	n0 = n1 = nf - 1;
+
+	cn = '\xff';
+	while (cn) {
+		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
+		#ifdef DEBUG_URL_PARSER
+		fprintf(stderr, "2<< %3s %02x '%c' [n1:%zu - n0:%zu = length:%zu] total:%zu\n", [state]{
+			switch(state) {
+				case State::NCM: return "ncm";
+				case State::PMT: return "pmt";
+				case State::CMD: return "cmd";
+				case State::ID: return "id";
+				case State::NSP: return "nsp";
+				case State::PTH: return "pth";
+				case State::HST: return "hst";
+				case State::END: return "end";
+				case State::INVALID_STATE: return "INVALID_STATE";
+				case State::INVALID_NSP: return "INVALID_NSP";
+				case State::INVALID_HST: return "INVALID_HST";
+			}
+		}(), (int)cn, cn, n1 - ni, n0 - ni, n0 - n1, nf - ni);
+		#endif
+
 		switch (cn) {
 			case '\0':
 			case '/':
 				switch (state) {
-					case State::START:
-						if (!cn) {
-							n0 = n1 - 1;
-							state = State::ID;
-						}
+					case State::NCM:
+						state = State::ID;
+						n0 = n1 - 1;
 						break;
+
 					case State::CMD:
-						if (!cn) {
-							n0 = n1 - 1;
-							state = State::PMT;
-						}
+						state = State::PMT;
+						n0 = n1 - 1;
 						break;
+
 					case State::PMT:
 						assert(n0 >= n1);
 						length = n0 - n1;
@@ -265,25 +303,26 @@ PathParser::init(const std::string& p)
 								state = State::ID;
 							} else {
 								off_ppmt = off_pmt;
+								if (len_ppmt) ++len_ppmt;
 								len_ppmt += len_pmt;
-								if (off_pmt) {
-									++len_ppmt;
-								}
 								off_pmt = n1 + 1;
 								len_pmt = length;
 							}
 						}
 						n0 = n1 - 1;
 						break;
+
 					case State::ID:
 						assert(n0 >= n1);
 						length = n0 - n1;
 						if (length) {
 							off_id = n1 + 1;
 							len_id = length;
+							cn = '\0';
 						}
-						off = ni;
-						return state;
+						n0 = n1 - 1;
+						break;
+
 					default:
 						break;
 				}
@@ -293,17 +332,16 @@ PathParser::init(const std::string& p)
 			case ':':
 			case '@':
 				switch (state) {
-					case State::START:
-						n0 = n1;
+					case State::NCM:
 						state = State::ID;
+						n0 = n1;
 						break;
 					case State::CMD:
-						n0 = n1;
 						state = State::PMT;
+						n0 = n1;
 						break;
 					case State::ID:
-						off = ni;
-						return state;
+						cn = '\0';
 					default:
 						break;
 				}
@@ -311,13 +349,13 @@ PathParser::init(const std::string& p)
 
 			default:
 				switch (state) {
-					case State::START:
+					case State::NCM:
+						state = State::ID;
 						n0 = n1;
-						state = State::PMT;
 						break;
 					case State::CMD:
+						state = State::PMT;
 						n0 = n1;
-						state = State::ID;
 						break;
 					default:
 						break;
@@ -327,6 +365,8 @@ PathParser::init(const std::string& p)
 		--n1;
 	}
 
+
+	off = ni;
 	return state;
 }
 
@@ -334,6 +374,7 @@ PathParser::init(const std::string& p)
 PathParser::State
 PathParser::next()
 {
+	char cn;
 	size_t length;
 	const char *ni = path.data();
 	const char *nf = ni + path.length();
@@ -344,6 +385,9 @@ PathParser::next()
 	state = State::NSP;
 	off_hst = nullptr;
 	n0 = n1 = off;
+	if (off_ppmt && off_ppmt < nf) {
+		nf = off_ppmt - 1;
+	}
 	if (off_pmt && off_pmt < nf) {
 		nf = off_pmt - 1;
 	}
@@ -359,8 +403,28 @@ PathParser::next()
 	if (n1 > nf) {
 		return State::END;
 	}
+
+	cn = '\xff';
 	while (true) {
-		char cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
+		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
+		#ifdef DEBUG_URL_PARSER
+		fprintf(stderr, "3>> %3s %02x '%c' [n1:%zu - n0:%zu = length:%zu] total:%zu\n", [state]{
+			switch(state) {
+				case State::NCM: return "ncm";
+				case State::PMT: return "pmt";
+				case State::CMD: return "cmd";
+				case State::ID: return "id";
+				case State::NSP: return "nsp";
+				case State::PTH: return "pth";
+				case State::HST: return "hst";
+				case State::END: return "end";
+				case State::INVALID_STATE: return "INVALID_STATE";
+				case State::INVALID_NSP: return "INVALID_NSP";
+				case State::INVALID_HST: return "INVALID_HST";
+			}
+		}(), (int)cn, cn, n0 - ni, n1 - ni, n1 - n0, nf - ni);
+		#endif
+
 		switch (cn) {
 			case '\0':
 			case ',':
@@ -376,7 +440,9 @@ PathParser::next()
 					case State::HST:
 						assert(n1 >= n0);
 						length = n1 - n0;
-						if (!length) return State::INVALID_HST;
+						if (!length) {
+							return State::INVALID_HST;
+						}
 						off_hst = n0;
 						len_hst = length;
 						off = ++n1;
@@ -391,11 +457,13 @@ PathParser::next()
 					case State::NSP:
 						assert(n1 >= n0);
 						length = n1 - n0;
-						if (!length) return State::INVALID_NSP;
+						if (!length) {
+							return State::INVALID_NSP;
+						}
 						off_nsp = n0;
 						len_nsp = length;
-						n0 = n1 + 1;
 						state = State::PTH;
+						n0 = n1 + 1;
 						break;
 					default:
 						break;
@@ -410,8 +478,8 @@ PathParser::next()
 						length = n1 - n0;
 						off_pth = n0;
 						len_pth = length;
-						n0 = n1 + 1;
 						state = State::HST;
+						n0 = n1 + 1;
 						break;
 					default:
 						break;
