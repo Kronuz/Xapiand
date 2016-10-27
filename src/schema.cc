@@ -2343,7 +2343,7 @@ Schema::write_schema_id(const MsgPack& obj, const std::string& value_id)
 	} catch (const std::out_of_range&) {
 		specification.full_name = ID_FIELD_NAME;
 		try {
-			const auto& obj_id = obj.at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
+			const auto& obj_id = obj.at(ID_FIELD_NAME);
 			for (const auto& item_key : obj_id) {
 				const auto str_key = item_key.as_string();
 				try {
