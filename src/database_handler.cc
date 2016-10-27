@@ -249,10 +249,8 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
 
 	// Index object.
-	if (obj_.is_map()) {
-		obj_[ID_FIELD_NAME] = Cast::cast(_document_id);
-		obj_ = schema->index(obj_, doc);
-	}
+	obj_[ID_FIELD_NAME] = Cast::cast(_document_id);
+	obj_ = schema->index(obj_, doc);
 
 	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
 	doc.set_data(join_data(obj_.serialise(), blob));
