@@ -236,221 +236,76 @@ Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack&
 
 
 Xapian::Query
-MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string& field_name, const MsgPack& start, const MsgPack& end)
+MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string& field_name, const MsgPack& obj)
 {
-	return Xapian::Query::MatchAll;
-	// try {
-	// 	if (!start) {
-	// 		if (!end) {
-	// 			return Xapian::Query::MatchAll;
-	// 		}
-	// 		if (field_spc.get_type() == FieldType::GEO) {
-	// 			throw MSG_SerialisationError("The format for Geo Spatial range is: _ewkt:\"EWKT\"");
-	// 		}
-	// 		auto mvle = new MultipleValueLE(field_spc.slot, Serialise::serialise(field_spc, end));
-	// 		return Xapian::Query(mvle->release());
-	// 	}  else if (!end) {
-	// 		if (field_spc.get_type() == FieldType::GEO) {
-	// 			auto geo_val = Cast::string(start);
-	// 			} else if (start.is_string()) {
-	// 				geo_val = start.as_string();
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected string in geo type");
-	// 			}
+	MsgPack start;
+	MsgPack end;
+	try {
+		end = obj.at("_to");
+	} catch (const std::out_of_range&) { }
+	try {
+		start = obj.at("_from");
+	} catch (const std::out_of_range&) { }
 
-	// 			auto geo = EWKT_Parser::getGeoSpatial(geo_val, field_spc.partials, field_spc.error);
+	try {
+		if (!start) {
+			if (!end) {
+				return Xapian::Query::MatchAll;
+			}
+			//FIXME: check for geo type (Maybe a throw for this case)
+			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::MsgPack(field_spc, end));
+			return Xapian::Query(mvle->release());
+		} else if (!end) {
+				//FIXME: check for geo type
+				auto mvge = new MultipleValueGE(field_spc.slot, Serialise::MsgPack(field_spc, start));
+				return Xapian::Query(mvge->release());
+		}
 
-	// 			if (geo.ranges.empty()) {
-	// 				return Xapian::Query::MatchNothing;
-	// 			}
+		switch (field_spc.get_type()) {
+			case FieldType::INTEGER:
+			case FieldType::FLOAT:
+				return filterNumericQuery<int64_t>(field_spc, start, end);
+			case FieldType::POSITIVE:
+				return filterNumericQuery<uint64_t>(field_spc, start, end);
+			case FieldType::UUID:
+				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
+			case FieldType::BOOLEAN:
+				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
+			case FieldType::STRING:
+			case FieldType::TEXT:
+				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
+			case FieldType::DATE: {
+				auto ser_start = Serialise::date(field_spc, start);
+				auto ser_end = Serialise::date(field_spc, end);
 
-	// 			auto query_geo = GeoSpatialRange::getQuery(field_spc.slot, geo.ranges, geo.centroids);
+				auto timestamp_s = Cast::date_to_timestamp(start);
+				auto timestamp_e = Cast::date_to_timestamp(end);
 
-	// 			auto query = GenerateTerms::geo(geo.ranges, field_spc.accuracy, field_spc.acc_prefix);
-	// 			if (query.empty()) {
-	// 				return query_geo;
-	// 			} else {
-	// 				return Xapian::Query(Xapian::Query::OP_AND, query, query_geo);
-	// 			}
-	// 		} else {
-	// 			auto mvge = new MultipleValueGE(field_spc.slot, Serialise::serialise(field_spc, start));
-	// 			return Xapian::Query(mvge->release());
-	// 		}
-	// 	}
+				if (timestamp_s > timestamp_e) {
+					return Xapian::Query::MatchNothing;
+				}
 
-	// 	switch (field_spc.get_type()) {
-	// 		case FieldType::FLOAT: {
-	// 			double start_v, end_v;
-	// 			if (start.is_number()) {
-	// 				start_v = start.as_f64();
-	// 			} else if (start.is_string()) {
-	// 				start_v = strict(std::stod, start.as_string());
-	// 			} else if (start.is_map()) {
-	// 				start_v = Cast::float(RESERVED_FLOAT);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			if (end.is_number()) {
-	// 				end_v = end.as_f64();
-	// 			} else if (end.is_string()) {
-	// 				end_v = strict(std::stod, end.as_string());
-	// 			} else if (end.is_map()) {
-	// 				end_v = Serialise::float_cast(end);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			if (start_v > end_v) {
-	// 				return Xapian::Query::MatchNothing;
-	// 			}
-	// 			return filterNumericQuery(field_spc, (int64_t)start_v, (int64_t)end_v, Serialise::_float(start_v), Serialise::_float(end_v));
-	// 		}
-	// 		case FieldType::INTEGER: {
-	// 			long long start_v, end_v;
-	// 			if (start.is_number()) {
-	// 				start_v = start.as_i64();
-	// 			} else if (start.is_string()) {
-	// 				start_v = strict(std::stoll, start.as_string());
-	// 			} else if (start.is_map()) {
-	// 				start_v = Serialise::integer_cast(start);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			if (end.is_number()) {
-	// 				end_v = end.as_i64();
-	// 			} else if (end.is_string()) {
-	// 				end_v = strict(std::stoll, end.as_string());
-	// 			} else if (end.is_map()) {
-	// 				end_v = Serialise::integer_cast(end);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			if (start_v > end_v) {
-	// 				return Xapian::Query::MatchNothing;
-	// 			}
-	// 			return filterNumericQuery(field_spc, start_v, end_v, Serialise::integer(start_v), Serialise::integer(end_v));
-	// 		}
-	// 		case FieldType::POSITIVE: {
-	// 			unsigned long long start_v, end_v;
-	// 			if (start.is_number()) {
-	// 				start_v = start.as_u64();
-	// 			} else if (start.is_string()) {
-	// 				start_v = strict(std::stoull, start.as_string());
-	// 			} else if (start.is_map()) {
-	// 				start_v = Serialise::positive_cast(start);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			if (end.is_number()) {
-	// 				end_v = end.as_u64();
-	// 			} else if (end.is_string()) {
-	// 				end_v = strict(std::stoull, end.as_string());
-	// 			} else if (end.is_map()) {
-	// 				end_v = Serialise::positive_cast(end);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			if (start_v > end_v) {
-	// 				return Xapian::Query::MatchNothing;
-	// 			}
-	// 			return filterNumericQuery(field_spc, start_v, end_v, Serialise::positive(start_v), Serialise::positive(end_v));
-	// 		}
-	// 		case FieldType::UUID: {
-	// 			std::string start_v, end_v;
-	// 			if (start.is_string()) {
-	// 				start_v = start.as_string();
-	// 			} else if (start.is_map()) {
-	// 				start_v = Serialise::string_cast(start);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			if (end.is_string()) {
-	// 				end_v = end.as_string();
-	// 			} else if (end.is_map()) {
-	// 				end_v = Serialise::string_cast(end);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			return filterStringQuery(field_spc, Serialise::uuid(start_v), Serialise::uuid(start_v));
-	// 		}
-	// 		case FieldType::BOOLEAN: {
-	// 			bool start_v, end_v;
-	// 			if (start.is_boolean()) {
-	// 				start_v = start.as_bool();
-	// 			} else if (start.is_map()) {
-	// 				start_v = Serialise::boolean_cast(start);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			if (end.is_boolean()) {
-	// 				end_v = end.as_bool();
-	// 			} else if (end.is_map()) {
-	// 				end_v = Serialise::boolean_cast(end);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			return filterStringQuery(field_spc, Serialise::boolean(start_v), Serialise::boolean(start_v));
-	// 		}
-	// 		case FieldType::STRING:
-	// 		case FieldType::TEXT: {
-	// 			std::string start_v, end_v;
-	// 			if (start.is_string()) {
-	// 				start_v = start.as_string();
-	// 			} else if (start.is_map()) {
-	// 				start_v = Serialise::string_cast(start);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			if (end.is_string()) {
-	// 				end_v = end.as_string();
-	// 			} else if (end.is_map()) {
-	// 				end_v = Serialise::string_cast(end);
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			return filterStringQuery(field_spc, start_v, start_v);
-	// 		}
-	// 		case FieldType::DATE: {
-	// 			double timestamp_s, timestamp_e;
-	// 			if (start.is_string()) {
-	// 				timestamp_s = Datetime::timestamp(start.as_string());
-	// 			} else if (start.is_map()) {
-	// 				timestamp_s = Datetime::timestamp(Serialise::string_cast(start));
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
-	// 			if (end.is_string()) {
-	// 				timestamp_e = Datetime::timestamp(end.as_string());
-	// 			} else if (end.is_map()) {
-	// 				timestamp_e = Datetime::timestamp(Serialise::string_cast(end));
-	// 			} else {
-	// 				throw MSG_QueryParserError("Expected type %s in %s", Serialise::type(field_spc.get_type()).c_str(), field_name.c_str());
-	// 			}
+				auto start_s = Serialise::timestamp(timestamp_s);
+				auto end_s   = Serialise::timestamp(timestamp_e);
 
-	// 			if (timestamp_s > timestamp_e) {
-	// 				return Xapian::Query::MatchNothing;
-	// 			}
-
-	// 			auto start_s = Serialise::timestamp(timestamp_s);
-	// 			auto end_s   = Serialise::timestamp(timestamp_e);
-
-	// 			auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
-
-	// 			auto query = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
-	// 			if (query.empty()) {
-	// 				return Xapian::Query(mvr->release());
-	// 			} else {
-	// 				return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
-	// 			}
-	// 		}
-	// 		case FieldType::GEO:
-	// 			throw MSG_QueryParserError("The format for Geo Spatial range is: _ewkt:\"EWKT\"");
-	// 		default:
-	// 			return Xapian::Query::MatchNothing;
-	// 	}
-
-	// } catch (const Exception& exc) {
-	// 	throw MSG_QueryParserError("Failed to serialize: %s:%s..%s like %s (%s)", field_name.c_str(), MsgPackTypes[static_cast<int>(start.getType())], MsgPackTypes[static_cast<int>(end.getType())], Serialise::type(field_spc.get_type()).c_str(), exc.what());
-	// }
+				auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
+				auto query = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
+				if (query.empty()) {
+					return Xapian::Query(mvr->release());
+				} else {
+					return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
+				}
+			}
+			case FieldType::GEO:
+				throw MSG_QueryParserError("The format for Geo Spatial range is: field_name:[\"EWKT\"]");
+			default:
+				return Xapian::Query::MatchNothing;
+		}
+	}
+	catch (const Exception& exc) {
+		throw MSG_QueryParserError("Failed to serialize: %s:%s - %s like %s (%s)", field_name.c_str(), start.to_string().c_str(), end.to_string().c_str(),
+								   Serialise::type(field_spc.get_type()).c_str(), exc.what());
+	}
 }
 
 

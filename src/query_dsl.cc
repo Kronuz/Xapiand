@@ -277,9 +277,10 @@ QueryDSL::range_query(const MsgPack& obj)
 				from = obj.at(QUERYDSL_FROM);
 			} catch (const std::out_of_range&) { }
 			if (to || from) {
-				std::tuple<FieldType, std::string, std::string> ser_type = Serialise::get_range_type(from, to);
-				const auto& global_spc = Schema::get_data_global(std::get<0>(ser_type));
-				return MultipleValueRange::getQuery(global_spc, "", from, to);
+//				std::tuple<FieldType, std::string, std::string> ser_type = Serialise::get_range_type(from, to);
+//				const auto& global_spc = Schema::get_data_global(std::get<0>(ser_type));
+//				return MultipleValueRange::getQuery(global_spc, "", obj);
+				return Xapian::Query::MatchNothing;
 			} else {
 				throw MSG_QueryDslError("Expected %s and/or %s in %s", QUERYDSL_FROM, QUERYDSL_TO, QUERYDSL_RANGE);
 			}
@@ -288,22 +289,7 @@ QueryDSL::range_query(const MsgPack& obj)
 		break;
 
 		case QUERY::QUERY:
-		{
-			MsgPack to;
-			MsgPack from;
-			try {
-				to = obj.at(QUERYDSL_TO);
-			} catch (const std::out_of_range&) { }
-			try {
-				from = obj.at(QUERYDSL_FROM);
-			} catch (const std::out_of_range&) { }
-			if (to || from) {
-				return MultipleValueRange::getQuery(schema->get_data_field(_fieldname), _fieldname, from, to);
-			} else {
-				throw MSG_QueryDslError("Expected %s and/or %s in %s", QUERYDSL_FROM, QUERYDSL_TO, QUERYDSL_RANGE);
-			}
-		}
-		break;
+			return MultipleValueRange::getQuery(schema->get_data_field(_fieldname), _fieldname, obj);
 
 		default:
 			break;
