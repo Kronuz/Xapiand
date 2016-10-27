@@ -468,7 +468,7 @@ class HttpProxyServer(RawProxyServer):
                 buf['headers'] = dict(map(lambda o: o.lower().strip(), l.split(':', 1)) for l in headers[1:])
                 buf['buffer'] = body
 
-                status_color = color
+                request_color = white
 
                 if direction == SENDING:
 
@@ -478,16 +478,15 @@ class HttpProxyServer(RawProxyServer):
                         buf['headers']['#content-length'] = buf['headers']['content-length']
                         del buf['headers']['content-length']
 
-                    if 'HTTP/' in buf['request']:
-                        status = buf['request'].split()[1][0]
-                        status_color = {
-                            '2': white,
-                            '3': lightcyan,
-                            '4': lightmagenta,
-                            '5': lightred,
-                        }.get(status, status_color)
+                    status = buf['request'].split()[1][0]
+                    request_color = {
+                        '2': white,
+                        '3': lightcyan,
+                        '4': lightmagenta,
+                        '5': lightred,
+                    }.get(status, request_color)
 
-                print(status_color('    ' + buf['request']))
+                print(request_color('    ' + buf['request']))
                 print(color('    ' + '\n    '.join(': '.join(l) for l in buf['headers'].items())))
 
         if 'headers' in buf:
