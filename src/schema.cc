@@ -2358,12 +2358,26 @@ Schema::write_schema_id(const MsgPack& obj, const std::string& value_id)
 		if (specification.sep_types[2] == FieldType::EMPTY) {
 			auto res_serialise = Serialise::get_type(value_id, true);
 			specification.sep_types[2] = res_serialise.first;
+			// RESERVED_STORE by default is false.
+			auto& properties = get_mutable(specification.full_name);
+			try {
+				properties.at(RESERVED_STORE);
+			} catch (const std::out_of_range&) {
+				properties[RESERVED_STORE] = false;
+			}
 			validate_required_data();
 			return res_serialise.second;
 		} else {
 			// ID_FIELD_NAME can not be TEXT.
 			if (specification.sep_types[2] == FieldType::TEXT) {
 				specification.sep_types[2] = FieldType::STRING;
+			}
+			// RESERVED_STORE by default is false.
+			auto& properties = get_mutable(specification.full_name);
+			try {
+				properties.at(RESERVED_STORE);
+			} catch (const std::out_of_range&) {
+				properties[RESERVED_STORE] = false;
 			}
 			validate_required_data();
 			return Serialise::serialise(specification, value_id);
@@ -2571,9 +2585,17 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 		}
 
 		if (!specification.set_type && specification.sep_types[2] != FieldType::EMPTY) {
-			// ID_FIELD_NAME can not be TEXT.
-			if (specification.sep_types[2] == FieldType::TEXT && specification.full_name == ID_FIELD_NAME) {
-				specification.sep_types[2] = FieldType::STRING;
+			if unlikely(specification.full_name == ID_FIELD_NAME) {
+				// ID_FIELD_NAME can not be TEXT.
+				if (specification.sep_types[2] == FieldType::TEXT) {
+					specification.sep_types[2] = FieldType::STRING;
+				}
+				// RESERVED_STORE by default is false.
+				try {
+					properties->at(RESERVED_STORE);
+				} catch (const std::out_of_range&) {
+					get_mutable(specification.full_name)[RESERVED_STORE] = false;
+				}
 			}
 			validate_required_data();
 		}
