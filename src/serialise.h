@@ -149,6 +149,7 @@ namespace Cast {
 	std::string string(const MsgPack& obj);
 	bool boolean(const MsgPack& obj);
 	MsgPack date(const MsgPack& obj);
+	double date_to_timestamp(const  MsgPack& obj);
 
 	FieldType getType(const std::string& cast_word);
 };

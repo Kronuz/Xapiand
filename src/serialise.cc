@@ -315,6 +315,38 @@ Cast::date(const MsgPack& obj)
 }
 
 
+double
+Cast::date_to_timestamp(const  MsgPack& obj)
+{
+	switch (obj.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:
+		case MsgPack::Type::FLOAT:
+			return obj.as_f64();
+		case MsgPack::Type::STR:
+			return Datetime::timestamp(obj.as_string());
+		case MsgPack::Type::MAP: {
+			Datetime::tm_t tm;
+			for (const auto& key : obj) {
+				auto str_key = key.as_string();
+				try {
+					auto func = map_dispatch_date.at(str_key);
+					(*func)(tm, obj.at(str_key));
+				} catch (const std::out_of_range&) {
+					throw MSG_SerialisationError("Unsupported Key: %s in date", str_key.c_str());
+				}
+			}
+			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
+				return Datetime::timestamp(tm);
+			}
+		}
+		default:
+			throw MSG_SerialisationError("Type %s can not be cast to date", MsgPackTypes[toUType(obj.getType())]);
+	}
+}
+
+
+
 FieldType
 Cast::getType(const std::string& cast_word)
 {
