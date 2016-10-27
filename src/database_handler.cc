@@ -240,9 +240,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	doc.add_boolean_term(prefixed_term_id);
 
 	// Indexing the content values of data.
-	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
-	doc.add_value(DB_SLOT_TYPE, ct_type);
-	doc.add_value(DB_SLOT_LENGTH, ct_length);
+	doc.add_value(DB_SLOT_CONTENT_TYPE, ct_type);
 
 	// Index terms for content-type
 	auto term_prefix = get_prefix("content_type", toUType(FieldType::STRING));
@@ -666,7 +664,7 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 
 	info[RESERVED_DATA] = std::move(obj_data);
 
-	auto ct_type = document.get_value(DB_SLOT_TYPE);
+	auto ct_type = document.get_value(DB_SLOT_CONTENT_TYPE);
 	info["_blob"] = ct_type != JSON_CONTENT_TYPE && ct_type != MSGPACK_CONTENT_TYPE;
 
 	auto& stats_terms = info[RESERVED_TERMS];

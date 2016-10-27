@@ -1226,7 +1226,7 @@ HttpClient::search_view(HttpMethod method)
 		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
 			auto document = db_handler.get_document(*m);
 
-			auto ct_type_str = document.get_value(DB_SLOT_TYPE);
+			auto ct_type_str = document.get_value(DB_SLOT_CONTENT_TYPE);
 			if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE) {
 				if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
 					ct_type_str = JSON_CONTENT_TYPE;

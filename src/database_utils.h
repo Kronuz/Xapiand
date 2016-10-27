@@ -105,23 +105,18 @@
 #define DB_OFFSPRING_UNION "."
 #define DB_VERSION_SCHEMA  2.1
 
-#define DB_SLOT_RESERVED   20    // Reserved slots by special data
-#define DB_RETRIES         3     // Number of tries to do an operation on a Xapian::Database
+#define DB_SLOT_RESERVED       20    // Reserved slots by special data
+#define DB_RETRIES             3     // Number of tries to do an operation on a Xapian::Database
 
-#define DB_SLOT_ID         0     // Slot ID document
-#define DB_SLOT_OFFSET     1     // Slot offset for data
-#define DB_SLOT_TYPE       2     // Slot type data
-#define DB_SLOT_LENGTH     3     // Slot length data
-#define DB_SLOT_CREF       4     // Slot that saves the references counter
+#define DB_SLOT_ID             0     // Slot ID document
+#define DB_SLOT_CONTENT_TYPE   1     // Slot content type data
 
-#define DB_SLOT_NUMERIC    5     // Slot for saving global float/integer/positive values
-#define DB_SLOT_DATE       6     // Slot for saving global date values
-#define DB_SLOT_GEO        7     // Slot for saving global geo values
-#define DB_SLOT_STRING     8     // Slot for saving global string/text values.
-#define DB_SLOT_BOOLEAN    9     // Slot for saving global boolean values.
-#define DB_SLOT_UUID       10    // Slot for saving global uuid values.
-
-#define DEFAULT_OFFSET     "0"   // Replace for the real offset.
+#define DB_SLOT_NUMERIC        10    // Slot for saving global float/integer/positive values
+#define DB_SLOT_DATE           11    // Slot for saving global date values
+#define DB_SLOT_GEO            12    // Slot for saving global geo values
+#define DB_SLOT_STRING         13    // Slot for saving global string/text values.
+#define DB_SLOT_BOOLEAN        14    // Slot for saving global boolean values.
+#define DB_SLOT_UUID           15    // Slot for saving global uuid values.
 
 
 // Default prefixes
