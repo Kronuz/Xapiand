@@ -106,7 +106,15 @@ const std::unordered_map<std::string, dispatch_dsl> map_dispatch_cast({
 
 
 const std::unordered_map<std::string, dispatch_dsl> map_range_dispatch_dsl({
-	{ QUERYDSL_RANGE,     &QueryDSL::range_query   },
+	{ QUERYDSL_RANGE,            &QueryDSL::range_query   },
+	{ RESERVED_POINT,            &QueryDSL::range_query   },
+	{ RESERVED_CIRCLE,           &QueryDSL::range_query   },
+	{ RESERVED_CHULL,            &QueryDSL::range_query   },
+	{ RESERVED_MULTIPOINT,       &QueryDSL::range_query   },
+	{ RESERVED_MULTIPOLYGON,     &QueryDSL::range_query   },
+	{ RESERVED_MULTICIRCLE,      &QueryDSL::range_query   },
+	{ RESERVED_GEO_COLLECTION,   &QueryDSL::range_query   },
+	{ RESERVED_GEO_INTERSECTION, &QueryDSL::range_query   },
 	/* Add more types in range */
 });
 
