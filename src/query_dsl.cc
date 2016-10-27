@@ -268,23 +268,8 @@ QueryDSL::range_query(const MsgPack& obj)
 	switch (state) {
 		case QUERY::GLOBALQUERY:
 		{
-			MsgPack to;
-			MsgPack from;
-			try {
-				to = obj.at(QUERYDSL_TO);
-			} catch (const std::out_of_range&) { }
-			try {
-				from = obj.at(QUERYDSL_FROM);
-			} catch (const std::out_of_range&) { }
-			if (to || from) {
-//				std::tuple<FieldType, std::string, std::string> ser_type = Serialise::get_range_type(from, to);
-//				const auto& global_spc = Schema::get_data_global(std::get<0>(ser_type));
-//				return MultipleValueRange::getQuery(global_spc, "", obj);
-				return Xapian::Query::MatchNothing;
-			} else {
-				throw MSG_QueryDslError("Expected %s and/or %s in %s", QUERYDSL_FROM, QUERYDSL_TO, QUERYDSL_RANGE);
-			}
-
+			std::tuple<FieldType, std::string, std::string, const required_spc_t&> ser_type = Serialise::get_range_type(obj);
+			return MultipleValueRange::getQuery(std::get<3>(ser_type), "", obj);
 		}
 		break;
 

@@ -795,27 +795,38 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 }
 
 
-std::tuple<FieldType, std::string, std::string>
-Serialise::get_range_type(const class MsgPack& start, const class MsgPack& end, bool bool_term)
+std::tuple<FieldType, std::string, std::string, const required_spc_t&>
+Serialise::get_range_type(const class MsgPack& obj, bool bool_term)
 {
+	class MsgPack start;
+	class MsgPack end;
+
+	try {
+		start = obj.at("_from");
+	} catch (const std::out_of_range&) { }
+
+	try {
+		end = obj.at("_to");
+	} catch (const std::out_of_range&) { }
+
 	if (!start) {
 		auto res = get_type(end, bool_term);
-		return std::make_tuple(std::get<0>(res), "", std::get<1>(res));
+		return std::make_tuple(std::get<0>(res), "", std::get<1>(res), std::cref(std::get<2>(res)));
 	}
 
 	if (!end) {
 		auto res = get_type(start, bool_term);
-		return std::make_tuple(std::get<0>(res), std::get<1>(res), "");
+		return std::make_tuple(std::get<0>(res), std::get<1>(res), "", std::cref(std::get<2>(res)));
 	}
 
 	auto typ_start = get_type(start, bool_term);
 	auto typ_end = get_type(end, bool_term);
 
 	if (std::get<0>(typ_start) != std::get<0>(typ_end)) {
-		throw MSG_SerialisationError("Mismatch types %c - %c", std::get<0>(typ_start), std::get<0>(typ_end));
+		return std::make_tuple(FieldType::STRING, std::get<1>(typ_start), std::get<1>(typ_end), std::cref(Schema::get_data_global(FieldType::STRING)));
 	}
 
-	return std::make_tuple(std::get<0>(typ_start), std::get<1>(typ_start), std::get<1>(typ_end));
+	return std::make_tuple(std::get<0>(typ_start), std::get<1>(typ_start), std::get<1>(typ_end), std::cref(std::get<2>(typ_start)));
 }
 
 
