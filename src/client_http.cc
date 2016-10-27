@@ -1147,8 +1147,8 @@ HttpClient::search_view(HttpMethod method)
 	operation_begins = std::chrono::system_clock::now();
 
 	MsgPack aggregations;
-	db_handler.reset(endpoints, db_flags, method);
 	try {
+		db_handler.reset(endpoints, db_flags, method);
 		if (!body.empty()) {
 			rapidjson::Document json_aggs;
 			json_load(json_aggs, body);
