@@ -13,7 +13,7 @@ import os
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
-buffer_size = 4096
+buffer_size = 4194304
 delay = 0.0001
 
 RECEIVING = 0
@@ -464,21 +464,20 @@ class HttpProxyServer(RawProxyServer):
                 headers, sep, body = buf['buffer'].partition('\n\n')
             if sep:
                 headers = headers.split('\n')
-                buf['request'] = headers[0]
+                buf['request'] = (headers[0].split(' ', 2) + ['', '', ''])[:3]
                 buf['headers'] = dict(map(lambda o: o.lower().strip(), l.split(':', 1)) for l in headers[1:])
                 buf['buffer'] = body
 
                 request_color = white
 
+                request = self.buffers[from_client][RECEIVING]['request']
                 if direction == SENDING:
-
                     # FIXME: Elasticsearch bug where it sends a HEAD with content-length
-                    request = self.buffers[from_client][RECEIVING].get('request', '')
-                    if request.startswith('HEAD '):
+                    if request[0] == 'HEAD':
                         buf['headers']['#content-length'] = buf['headers']['content-length']
                         del buf['headers']['content-length']
 
-                    status = buf['request'].split()[1][0]
+                    status = buf['request'][1][:1]
                     request_color = {
                         '2': white,
                         '3': lightcyan,
@@ -486,7 +485,7 @@ class HttpProxyServer(RawProxyServer):
                         '5': lightred,
                     }.get(status, request_color)
 
-                print(request_color('    ' + buf['request']))
+                print(request_color('    ' + ' '.join(buf['request'])))
                 print(color('    ' + '\n    '.join(': '.join(l) for l in buf['headers'].items())))
 
         if 'headers' in buf:
@@ -504,9 +503,10 @@ class HttpProxyServer(RawProxyServer):
                             print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
                     elif 'image/' in content_type:
                         import base64
+                        request = self.buffers[from_client][RECEIVING]['request']
+                        name = request[1] or "Unnamed file"
                         # From [https://www.iterm2.com/documentation-images.html]
-                        name = "Unnamed file"
-                        print("\033]1337;File=name=%s;inline=1;size=%d:%s\a" % (base64.b64encode(name), len(body), base64.b64encode(body)))
+                        print("    \033]1337;File=name=%s;inline=1;size=%d;width=70%%:%s\a" % (base64.b64encode(name), len(body), base64.b64encode(body)))
                 if direction == SENDING:
                     del self.buffers[from_client][SENDING]['headers']
                     del self.buffers[from_client][SENDING]['request']
