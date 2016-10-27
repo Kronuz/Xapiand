@@ -252,6 +252,7 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 	  io_write(*ev_loop),
 	  async_write(*ev_loop),
 	  async_read(*ev_loop),
+	  idle(false),
 	  closed(false),
 	  sock(sock_),
 	  written(0),
@@ -705,7 +706,7 @@ BaseClient::shutdown_impl(time_t asap, time_t now)
 
 	Worker::shutdown_impl(asap, now);
 
-	if (now) {
+	if (now || (idle && write_queue.empty())) {
 		destroy();
 		detach();
 	}

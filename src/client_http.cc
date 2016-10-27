@@ -214,6 +214,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 	L_CONN(this, "New Http Client {sock:%d}, %d client(s) of a total of %d connected.", sock.load(), http_clients, total_clients);
 
 	response_log = LOG_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
+	idle = true;
 
 	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
 }
@@ -270,6 +271,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 	}
 
 	if (request_begining) {
+		idle = false;
 		request_begining = false;
 		request_begins = std::chrono::system_clock::now();
 		response_log.load()->LOG_DELAYED_CLEAR();
@@ -286,6 +288,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 				request_begining = true;
 				response_log.load()->LOG_DELAYED_CLEAR();
 				response_log = LOG_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
+				idle = true;
 				return;
 			}
 		}
@@ -1768,6 +1771,7 @@ HttpClient::clean_http_request()
 
 	request_begining = true;
 	L_TIME(this, "Full request took %s, response took %s", request_delta.c_str(), response_delta.c_str());
+	idle = true;
 
 	async_read.send();
 	http_parser_init(&parser, HTTP_REQUEST);

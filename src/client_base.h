@@ -110,6 +110,7 @@ protected:
 	ev::async async_write;
 	ev::async async_read;
 
+	std::atomic_bool idle;
 	std::atomic_bool closed;
 	std::atomic_int sock;
 	int written;
