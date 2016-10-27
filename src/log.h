@@ -369,6 +369,7 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define L_EXC _LOG_EXC
 
 #ifdef NDEBUG
+#define L_TEST _
 #define L_DEBUG _
 #define L_OBJ_BEGIN _
 #define L_OBJ_END _
@@ -378,6 +379,7 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define L_EV_END _
 #define DBG_SET _
 #else
+#define L_TEST _
 #define L_DEBUG _LOG_DEBUG
 #define L_OBJ_BEGIN _LOG_DELAYED_1000
 #define L_OBJ_END _LOG_DELAYED_N_UNLOG

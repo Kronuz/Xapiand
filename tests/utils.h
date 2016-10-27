@@ -71,6 +71,8 @@
 #  include "../src/log.h"
 #  define RETURN(x) { Log::finish(); return x; }
 #else
+#  define L_TEST(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
+#  define L_DEBUG(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
 #  define L_INFO(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
 #  define L_NOTICE(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
 #  define L_WARNING(obj, fmt, args...) fprintf(stderr, fmt "\n", args)
