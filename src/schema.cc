@@ -2410,7 +2410,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		for (const auto& elem : map_values) {
 			auto val_ser = elem.second.serialise();
 			doc.add_value(elem.first, val_ser);
-			L_INDEX(this, "Slot: %zu  Values: %s", elem.first, repr(val_ser).c_str());
+			L_INDEX(this, "Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
 		}
 
 		return data;
