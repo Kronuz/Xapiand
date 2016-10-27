@@ -905,7 +905,7 @@ HttpClient::index_document_view(HttpMethod method)
 	auto body_ = get_body();
 	endpoints_error_list err_list;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	db_handler.index(doc_id, body_.second, query_field->commit, body_.first, content_length, &err_list);
+	db_handler.index(doc_id, body_.second, query_field->commit, body_.first, &err_list);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -997,7 +997,7 @@ HttpClient::update_document_view(HttpMethod method)
 	auto body_ = get_body();
 	endpoints_error_list err_list;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	db_handler.patch(doc_id, body_.second, query_field->commit, body_.first, content_length, &err_list);
+	db_handler.patch(doc_id, body_.second, query_field->commit, body_.first, &err_list);
 
 	operation_ends = std::chrono::system_clock::now();
 

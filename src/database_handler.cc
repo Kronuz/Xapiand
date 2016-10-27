@@ -216,7 +216,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 
 
 Xapian::docid
-DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, <obj>, <blob>)", repr(_document_id).c_str());
 
@@ -278,7 +278,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 
 
 Xapian::docid
-DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, <body>)", repr(_document_id).c_str());
 
@@ -298,12 +298,12 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, boo
 		blob = body.as_string();
 	}
 
-	return index(_document_id, obj, blob, commit_, ct_type, ct_length, err_list);
+	return index(_document_id, obj, blob, commit_, ct_type, err_list);
 }
 
 
 Xapian::docid
-DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, const std::string& ct_length, endpoints_error_list* err_list)
+DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
 {
 	L_CALL(this, "DatabaseHandler::patch(%s, <patches>)", repr(_document_id).c_str());
 
@@ -330,7 +330,7 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 
 	auto blob = document.get_blob();
 
-	return index(_document_id, obj, blob, commit_, ct_type, ct_length, err_list);
+	return index(_document_id, obj, blob, commit_, ct_type, err_list);
 }
 
 
