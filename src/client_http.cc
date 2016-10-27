@@ -263,6 +263,8 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		response_log.load()->LOG_DELAYED_CLEAR();
 		if (received < 0 || init_state != 18 || !write_queue.empty()) {
 			LOG(LOG_ERR, LIGHT_RED, this, "Client unexpectedly closed the other end! [%d]", init_state);
+			destroy();  // Handle error. Just close the connection.
+			detach();
 		}
 		return;
 	}
