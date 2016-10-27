@@ -295,6 +295,10 @@ PathParser::init(const std::string& p)
 				switch (state) {
 					case State::START:
 						n0 = n1;
+						state = State::ID;
+						break;
+					case State::CMD:
+						n0 = n1;
 						state = State::PMT;
 						break;
 					case State::ID:
@@ -310,6 +314,10 @@ PathParser::init(const std::string& p)
 					case State::START:
 						n0 = n1;
 						state = State::PMT;
+						break;
+					case State::CMD:
+						n0 = n1;
+						state = State::ID;
 						break;
 					default:
 						break;
