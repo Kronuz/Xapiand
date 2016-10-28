@@ -672,7 +672,7 @@ HttpClient::_post()
 	L_CALL(this, "HttpClient::_post()");
 
 	switch (url_resolve()) {
-		case Command::NO_CMD_NO_ID:
+		case Command::NO_CMD_ID:
 			path_parser.off_id = nullptr;  // Command has no ID
 			index_document_view(HttpMethod::POST);
 			break;
