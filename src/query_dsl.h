@@ -56,9 +56,13 @@ class QueryDSL {
 	static const std::unordered_map<std::string, dispatch_dsl> map_dispatch_cast;
 	static const std::unordered_map<std::string, dispatch_dsl> map_range_dispatch_dsl;
 
+	Xapian::Query join_queries(const MsgPack& obj, Xapian::Query::op op);
 	Xapian::Query process_query(const MsgPack& obj, const std::string& field_name);
-	void find_parameters(const MsgPack& obj);
+	Xapian::Query in_range_query(const MsgPack& obj);
+	Xapian::Query query(const MsgPack& o);
+	Xapian::Query range_query(const MsgPack& o);
 
+	void find_parameters(const MsgPack& obj);
 	bool find_operators(const std::string& key, const MsgPack& obj, Xapian::Query& q);
 	bool find_casts(const std::string& key, const MsgPack& obj, Xapian::Query& q);
 	bool find_values(const std::string& key, const MsgPack& obj, Xapian::Query& q);
@@ -69,9 +73,4 @@ public:
 	QueryDSL(std::shared_ptr<Schema> schema_);
 
 	Xapian::Query get_query(const MsgPack& obj);
-
-	Xapian::Query join_queries(const MsgPack& obj, Xapian::Query::op op);
-	Xapian::Query in_range_query(const MsgPack& obj);
-	Xapian::Query query(const MsgPack& o);
-	Xapian::Query range_query(const MsgPack& o);
 };
