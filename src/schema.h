@@ -435,7 +435,6 @@ class Schema {
 	/*
 	 * Set type to object in properties.
 	 */
-
 	void set_type_to_object(bool offsprings);
 
 	/*
@@ -604,9 +603,7 @@ class Schema {
 	static void readable_index(MsgPack& prop_index, MsgPack& properties);
 	static void readable_acc_prefix(MsgPack& prop_index, MsgPack& properties);
 
-
 public:
-
 	Schema(const std::shared_ptr<const MsgPack>& schema);
 
 	Schema() = delete;
@@ -643,26 +640,20 @@ public:
 	 */
 	std::string to_string(bool prettify=false) const;
 
-
 	/*
 	 * Function to index object in doc.
 	 */
 	MsgPack index(const MsgPack& object, Xapian::Document& doc);
 
-
 	/*
 	 * Returns readable schema.
 	 */
-
 	const MsgPack get_readable() const;
-
 
 	/*
 	 * Function to update the schema according to obj_schema.
 	 */
-
 	void write_schema(const MsgPack& obj_schema, bool replace);
-
 
 	/*
 	 * Updates ID_FIELD_NAME in schema according to obj.
