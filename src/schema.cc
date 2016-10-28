@@ -3828,13 +3828,9 @@ Schema::write_schema_id(const MsgPack& obj, const std::string& value_id)
 		if (specification.sep_types[2] == FieldType::EMPTY) {
 			auto res_serialise = Serialise::get_type(value_id, true);
 			specification.sep_types[2] = res_serialise.first;
-			// RESERVED_STORE by default is false.
-			auto& properties = get_mutable(specification.full_name);
 			validate_required_data();
 			return res_serialise.second;
 		} else {
-			// RESERVED_STORE by default is false.
-			auto& properties = get_mutable(specification.full_name);
 			validate_required_data();
 			return Serialise::serialise(specification, value_id);
 		}
