@@ -32,11 +32,6 @@
  * Set of reserved field names.
  */
 
-const std::unordered_set<std::string> reserved_field_names({
-	UUID_FIELD_NAME, GEO_FIELD_NAME, DATE_FIELD_NAME
-});
-
-
 /*
  * Unordered Maps used for reading user data specification.
  */
@@ -790,26 +785,11 @@ Schema::detect_dynamic(const std::string& field_name)
 		specification.dynamic_prefix.assign(lower_string(field_name));
 		specification.dynamic_name.assign(UUID_FIELD_NAME);
 		specification.dynamic_type = DynamicFieldType::UUID;
-		return;
+	} else {
+		specification.dynamic_prefix.assign(field_name);
+		specification.dynamic_name.assign(field_name);
+		specification.dynamic_type = DynamicFieldType::NONE;
 	}
-
-	try {
-		specification.dynamic_prefix.assign(Datetime::normalizeISO8601(field_name));
-		specification.dynamic_name.assign(DATE_FIELD_NAME);
-		specification.dynamic_type = DynamicFieldType::DATE;
-		return;
-	} catch (const DatetimeError&) { }
-
-	try {
-		specification.dynamic_prefix.assign(Serialise::ewkt(field_name, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
-		specification.dynamic_name.assign(GEO_FIELD_NAME);
-		specification.dynamic_type = DynamicFieldType::GEO;
-		return;
-	} catch (const EWKTError&) { }
-
-	specification.dynamic_prefix.assign(field_name);
-	specification.dynamic_name.assign(field_name);
-	specification.dynamic_type = DynamicFieldType::NONE;
 }
 
 
@@ -887,8 +867,7 @@ Schema::get_subproperties(const MsgPack& properties)
 	if (specification.paths_namespace.empty()) {
 		for (auto it = field_names.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
-			static const auto reserved_it_e = reserved_field_names.end();
-			if (!is_valid(field_name) || reserved_field_names.find(field_name) != reserved_it_e) {
+			if (!is_valid(field_name) || field_name == UUID_FIELD_NAME) {
 				throw MSG_ClientError("The field name: %s (%s) is not valid or reserved", repr(specification.name).c_str(), repr(field_name).c_str());
 			}
 			restart_specification();
@@ -951,10 +930,9 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 		try {
 			get_subproperties(subproperties, field_name);
 		} catch (const std::out_of_range&) {
-			static const auto fit_e = reserved_field_names.end();
 			MsgPack* mut_subprop = &get_mutable(specification.full_name);
 			for ( ; it != it_e; ++it) {
-				specification.dynamic_type = reserved_field_names.find(*it) == fit_e ? DynamicFieldType::NONE : DynamicFieldType::ANY;
+				specification.dynamic_type = (*it == UUID_FIELD_NAME) ? DynamicFieldType::UUID : DynamicFieldType::NONE;
 				specification.dynamic_prefix.assign(*it);
 				specification.dynamic_name.assign(*it);
 				add_field(mut_subprop, specification.dynamic_name);
@@ -1011,31 +989,6 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 				}
 				continue;
 			}
-
-			try {
-				auto dynamic_name = Datetime::normalizeISO8601(field_name);
-				subproperties = &subproperties->at(DATE_FIELD_NAME);
-				type = DynamicFieldType::DATE;
-				if (dynamic_full_name.empty()) {
-					dynamic_full_name.assign(dynamic_name);
-				} else {
-					dynamic_full_name.append(DB_OFFSPRING_UNION).append(dynamic_name);
-				}
-				continue;
-			} catch (const DatetimeError&) { }
-
-			try {
-				auto dynamic_name = Serialise::ewkt(field_name, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
-				subproperties = &subproperties->at(GEO_FIELD_NAME);
-				type = DynamicFieldType::GEO;
-				if (dynamic_full_name.empty()) {
-					dynamic_full_name.assign(dynamic_name);
-				} else {
-					dynamic_full_name.append(DB_OFFSPRING_UNION).append(dynamic_name);
-				}
-				continue;
-			} catch (const EWKTError&) { }
-
 			throw MSG_ClientError("`%s` does not exist in schema", field_name.c_str());
 		}
 	}
