@@ -53,8 +53,6 @@ constexpr const char QUERYDSL_TIME[]      = "_time";
 
 /* Reserved DSL words used for ranges */
 constexpr const char QUERYDSL_RANGE[]     = "_range";
-constexpr const char QUERYDSL_FROM[]      = "_from";
-constexpr const char QUERYDSL_TO[]        = "_to";
 //constexpr const char QUERYDSL_GEO_POLIGON[] = "_polygon";
 
 
