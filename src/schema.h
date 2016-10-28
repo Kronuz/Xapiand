@@ -367,6 +367,7 @@ class Schema {
 	using dispatch_update_reserved   = void (Schema::*)(const MsgPack&);
 	using dispatch_readable          = void (*)(MsgPack&, MsgPack&);
 
+	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_default_spcs;
 	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document;
 	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_properties;
 	static const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
@@ -575,6 +576,14 @@ class Schema {
 	void process_name(const std::string& prop_name, const MsgPack& doc_name);
 	void process_script(const std::string& prop_name, const MsgPack& doc_script);
 	void process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object);
+
+
+	/*
+	 * Functions to update default specification for fields.
+	 */
+
+	void set_default_spc_id(const MsgPack& properties);
+	void set_default_spc_ct(const MsgPack& properties);
 
 
 	/*

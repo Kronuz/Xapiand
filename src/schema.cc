@@ -166,6 +166,12 @@ static const std::string str_set_type = []() {
 const specification_t default_spc;
 
 
+const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::map_dispatch_default_spcs({
+	{ ID_FIELD_NAME,  &Schema::set_default_spc_id },
+	{ CT_FIELD_NAME,  &Schema::set_default_spc_ct },
+});
+
+
 const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_document({
 	{ RESERVED_WEIGHT,             &Schema::process_weight          },
 	{ RESERVED_POSITION,           &Schema::process_position        },
@@ -1266,6 +1272,11 @@ Schema::validate_required_data()
 	if (!specification.full_name.empty()) {
 		auto& properties = get_mutable(specification.full_name);
 
+		try {
+			auto func = map_dispatch_default_spcs.at(specification.dynamic_full_name);
+			(this->*func)(properties);
+		} catch (const std::out_of_range&) { }
+
 		// Process RESERVED_ACCURACY, RESERVED_ACC_PREFIX.
 		std::set<uint64_t> set_acc;
 		switch (specification.sep_types[2]) {
@@ -1367,7 +1378,7 @@ Schema::validate_required_data()
 					// By default, if field name has upper characters then it is consider bool term.
 					specification.bool_term = strhasupper(specification.dynamic_name);
 				}
-				properties[RESERVED_BOOL_TERM] = specification.bool_term || specification.full_name == ID_FIELD_NAME;
+				properties[RESERVED_BOOL_TERM] = specification.bool_term;
 				break;
 			}
 			case FieldType::BOOLEAN:
@@ -1408,21 +1419,15 @@ Schema::validate_required_data()
 
 			// Process RESERVED_PREFIX
 			if (specification.prefix.empty()) {
-				if (specification.full_name == ID_FIELD_NAME) {
-					specification.prefix = DOCUMENT_ID_TERM_PREFIX;
-				} else {
-					specification.prefix = get_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2]));
-				}
+				specification.prefix = get_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2]));
 			}
 			properties[RESERVED_PREFIX] = specification.prefix;
 
 			// Process RESERVED_SLOT
 			if (specification.slot == Xapian::BAD_VALUENO) {
-				if (specification.full_name == ID_FIELD_NAME) {
-					specification.slot = DB_SLOT_ID;
-				} else {
-					specification.slot = get_slot(specification.dynamic_full_name);
-				}
+				specification.slot = get_slot(specification.dynamic_full_name);
+			} else if (specification.slot < DB_SLOT_RESERVED) {
+				specification.slot += DB_SLOT_RESERVED;
 			}
 			properties[RESERVED_SLOT] = specification.slot;
 		}
@@ -2333,18 +2338,6 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 		}
 
 		if (!specification.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
-			if unlikely(specification.full_name == ID_FIELD_NAME) {
-				// ID_FIELD_NAME can not be TEXT.
-				if (specification.sep_types[2] == FieldType::TEXT) {
-					specification.sep_types[2] = FieldType::STRING;
-				}
-				// RESERVED_STORE by default is false.
-				try {
-					properties->at(RESERVED_STORE);
-				} catch (const std::out_of_range&) {
-					get_mutable(specification.full_name)[RESERVED_STORE] = false;
-				}
-			}
 			validate_required_data();
 		}
 
@@ -2450,9 +2443,10 @@ Schema::get_subproperties(const MsgPack& properties)
 	const auto it_e = field_names.end();
 
 	if (specification.paths_namespace.empty()) {
+		static const auto dsit_e = map_dispatch_default_spcs.end();
 		for (auto it = field_names.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) || field_name == UUID_FIELD_NAME) {
+			if (map_dispatch_default_spcs.find(specification.dynamic_full_name + field_name) == dsit_e && (!is_valid(field_name) || field_name == UUID_FIELD_NAME)) {
 				throw MSG_ClientError("The field name: %s (%s) is not valid or reserved", repr(specification.name).c_str(), repr(field_name).c_str());
 			}
 			restart_specification();
@@ -3201,15 +3195,6 @@ Schema::process_slot(const std::string& prop_name, const MsgPack& doc_slot)
 
 	try {
 		specification.slot = static_cast<unsigned>(doc_slot.as_u64());
-		if (specification.slot == Xapian::BAD_VALUENO) {
-			if (specification.full_name == ID_FIELD_NAME) {
-				specification.slot = DB_SLOT_ID;
-			} else {
-				specification.slot = 0xfffffffe;
-			}
-		} else if (specification.slot < DB_SLOT_RESERVED && specification.full_name != ID_FIELD_NAME) {
-			specification.slot += DB_SLOT_RESERVED;
-		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be a positive integer", prop_name.c_str());
 	}
@@ -3561,6 +3546,60 @@ Schema::process_cast_object(const std::string& prop_name, const MsgPack& doc_cas
 }
 
 
+void
+Schema::set_default_spc_id(const MsgPack& properties)
+{
+	specification.bool_term = true;
+
+	// ID_FIELD_NAME can not be TEXT.
+	if (specification.sep_types[2] == FieldType::TEXT) {
+		specification.sep_types[2] = FieldType::STRING;
+	}
+
+	// RESERVED_STORE by default is false.
+	try {
+		properties.at(RESERVED_STORE);
+	} catch (const std::out_of_range&) {
+		get_mutable(specification.full_name)[RESERVED_STORE] = false;
+	}
+
+	// Process RESERVED_PREFIX
+	if (specification.prefix.empty()) {
+		specification.prefix = DOCUMENT_ID_TERM_PREFIX;
+	}
+
+	// Process RESERVED_SLOT
+	if (specification.slot == Xapian::BAD_VALUENO) {
+		specification.slot = DB_SLOT_ID;
+	}
+}
+
+
+void
+Schema::set_default_spc_ct(const MsgPack& properties)
+{
+	if (!specification.has_index) {
+		specification.index = TypeIndex::FIELD_VALUES;
+	}
+
+	specification.sep_types[2] = FieldType::STRING;
+
+	// RESERVED_STORE by default is false.
+	try {
+		properties.at(RESERVED_STORE);
+	} catch (const std::out_of_range&) {
+		get_mutable(specification.full_name)[RESERVED_STORE] = false;
+	}
+
+	// Process RESERVED_SLOT
+	if (specification.slot == Xapian::BAD_VALUENO) {
+		specification.slot = DB_SLOT_CONTENT_TYPE;
+	}
+
+	specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
+}
+
+
 const MsgPack
 Schema::get_readable() const
 {
@@ -3584,13 +3623,14 @@ Schema::readable(MsgPack& item_schema)
 	L_CALL(nullptr, "Schema::readable(%s)", repr(item_schema.to_string()).c_str());
 
 	// Change this item of schema in readable form.
+	static const auto dsit_e = map_dispatch_default_spcs.end();
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
 		auto str_key = it->as_string();
 		try {
 			auto func = map_dispatch_readable.at(str_key);
 			(*func)(item_schema.at(str_key), item_schema);
 		} catch (const std::out_of_range&) {
-			if (is_valid(str_key)) {
+			if (is_valid(str_key) || map_dispatch_default_spcs.find(str_key) != dsit_e) {
 				auto& sub_item = item_schema.at(str_key);
 				if unlikely(sub_item.is_undefined()) {
 					it = item_schema.erase(it);
@@ -3685,13 +3725,14 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		auto prop_ptr = mut_schema ? &mut_schema->at(RESERVED_SCHEMA) : &schema->at(RESERVED_SCHEMA);
 		auto data_ptr = &data;
 		specification = default_spc;
+		static const auto dsit_e = map_dispatch_default_spcs.end();
 		for (const auto& item_key : object) {
 			const auto str_key = item_key.as_string();
 			try {
 				auto func = map_dispatch_document.at(str_key);
 				(this->*func)(str_key, object.at(str_key));
 			} catch (const std::out_of_range&) {
-				if (is_valid(str_key)) {
+				if (is_valid(str_key) || map_dispatch_default_spcs.find(str_key) != dsit_e) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
 				}
 			}
@@ -3728,13 +3769,14 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		tasks.reserve(obj_schema.size());
 		auto prop_ptr = replace ? &clear() : &schema->at(RESERVED_SCHEMA);
 		specification.field_found = false;
+		static const auto dsit_e = map_dispatch_default_spcs.end();
 		for (const auto& item_key : obj_schema) {
 			const auto str_key = item_key.as_string();
 			try {
 				auto func = map_dispatch_document.at(str_key);
 				(this->*func)(str_key, obj_schema.at(str_key));
 			} catch (const std::out_of_range&) {
-				if (is_valid(str_key)) {
+				if (is_valid(str_key) || map_dispatch_default_spcs.find(str_key) != dsit_e) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(prop_ptr), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 				}
 			}
@@ -3782,25 +3824,11 @@ Schema::write_schema_id(const MsgPack& obj, const std::string& value_id)
 			specification.sep_types[2] = res_serialise.first;
 			// RESERVED_STORE by default is false.
 			auto& properties = get_mutable(specification.full_name);
-			try {
-				properties.at(RESERVED_STORE);
-			} catch (const std::out_of_range&) {
-				properties[RESERVED_STORE] = false;
-			}
 			validate_required_data();
 			return res_serialise.second;
 		} else {
-			// ID_FIELD_NAME can not be TEXT.
-			if (specification.sep_types[2] == FieldType::TEXT) {
-				specification.sep_types[2] = FieldType::STRING;
-			}
 			// RESERVED_STORE by default is false.
 			auto& properties = get_mutable(specification.full_name);
-			try {
-				properties.at(RESERVED_STORE);
-			} catch (const std::out_of_range&) {
-				properties[RESERVED_STORE] = false;
-			}
 			validate_required_data();
 			return Serialise::serialise(specification, value_id);
 		}
