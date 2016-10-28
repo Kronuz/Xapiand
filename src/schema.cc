@@ -2582,6 +2582,8 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos)
 {
+	// L_DEBUG(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
+
 	if (item_value.is_null()) {
 		if (specification.inside_namespace) {
 			auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
@@ -2631,6 +2633,8 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value)
 {
+	// L_DEBUG(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
+
 	if (item_value.is_null()) {
 		if (specification.inside_namespace) {
 			auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
@@ -2680,6 +2684,8 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offsprings)
 {
+	// L_DEBUG(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
+
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
 		if (val->is_null()) {
@@ -3295,6 +3301,8 @@ void
 Schema::validate_required_data(const MsgPack& value)
 {
 	L_CALL(this, "Schema::validate_required_data(%s)", repr(value.to_string()).c_str());
+
+	// L_DEBUG(this, "%s", specification.to_string().c_str());  // Print specification as sent by user
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		if (XapiandManager::manager->type_required && !specification.inside_namespace) {
