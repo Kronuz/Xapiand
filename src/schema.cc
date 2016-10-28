@@ -3580,6 +3580,7 @@ Schema::set_default_spc_ct(const MsgPack& properties)
 {
 	if (!specification.has_index) {
 		specification.index = TypeIndex::FIELD_VALUES;
+		specification.has_index = true;
 	}
 
 	specification.sep_types[2] = FieldType::STRING;
