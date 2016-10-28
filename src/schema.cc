@@ -3815,8 +3815,9 @@ Schema::write_schema_id(const MsgPack& obj, const std::string& value_id)
 		update_specification(prop_id);
 		return Serialise::serialise(specification, value_id);
 	} catch (const std::out_of_range&) {
-		specification.full_name = ID_FIELD_NAME;
 		specification.field_found = false;
+		specification.full_name.assign(ID_FIELD_NAME);
+		specification.dynamic_full_name.assign(ID_FIELD_NAME);
 		try {
 			const auto& obj_id = obj.at(ID_FIELD_NAME);
 			for (const auto& item_key : obj_id) {
