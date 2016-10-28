@@ -347,7 +347,7 @@ specification_t::specification_t()
 	  set_bool_term(false),
 	  set_index(false),
 	  inside_namespace(false),
-	  dynamic_type(DynamicFieldType::NONE) { }
+	  dynamic_type(false) { }
 
 
 specification_t::specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
@@ -374,7 +374,7 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 	  set_bool_term(false),
 	  set_index(false),
 	  inside_namespace(false),
-	  dynamic_type(DynamicFieldType::NONE) { }
+	  dynamic_type(false) { }
 
 
 specification_t::specification_t(const specification_t& o)
@@ -666,7 +666,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_U_DETECTION << ": " << (uuid_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_BOOL_TERM   << ": " << (bool_term         ? "true" : "false") << "\n";
 
-	str << "\t" << "dynamic_type"       << ": " << readable_dynamic_field_type(dynamic_type) << "\n";
+	str << "\t" << "dynamic_type"       << ": " << (dynamic_type ? "true" : "false") << "\n";
 	str << "\t" << "dynamic_prefix"     << ": " << dynamic_prefix << "\n";
 	str << "\t" << "dynamic_name"       << ": " << dynamic_name << "\n";
 	str << "\t" << "dynamic_full_name"  << ": " << dynamic_full_name << "\n";
@@ -784,11 +784,11 @@ Schema::detect_dynamic(const std::string& field_name)
 	if (Serialise::isUUID(field_name)) {
 		specification.dynamic_prefix.assign(lower_string(field_name));
 		specification.dynamic_name.assign(UUID_FIELD_NAME);
-		specification.dynamic_type = DynamicFieldType::UUID;
+		specification.dynamic_type = true;
 	} else {
 		specification.dynamic_prefix.assign(field_name);
 		specification.dynamic_name.assign(field_name);
-		specification.dynamic_type = DynamicFieldType::NONE;
+		specification.dynamic_type = false;
 	}
 }
 
@@ -800,7 +800,7 @@ Schema::add_field(MsgPack*& properties, const std::string& field_name)
 
 	properties = &(*properties)[field_name];
 
-	if (specification.dynamic_type == DynamicFieldType::NONE) {
+	if (!specification.dynamic_type) {
 		try {
 			auto data_lan = map_stem_language.at(field_name);
 			if (data_lan.first) {
@@ -875,7 +875,7 @@ Schema::get_subproperties(const MsgPack& properties)
 				get_subproperties(subproperties, field_name);
 			} catch (const std::out_of_range&) {
 				detect_dynamic(field_name);
-				if (specification.dynamic_type != DynamicFieldType::NONE) {
+				if (specification.dynamic_type) {
 					try {
 						get_subproperties(subproperties, specification.dynamic_name);
 						continue;
@@ -897,10 +897,10 @@ Schema::get_subproperties(const MsgPack& properties)
 		restart_specification();
 		for (const auto& field_name : field_names) {
 			detect_dynamic(field_name);
-			if (specification.dynamic_type == DynamicFieldType::NONE) {
-				specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_name));
-			} else {
+			if (specification.dynamic_type) {
 				specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.dynamic_prefix));
+			} else {
+				specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_name));
 			}
 			specification.inside_namespace = true;
 		}
@@ -932,7 +932,7 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 		} catch (const std::out_of_range&) {
 			MsgPack* mut_subprop = &get_mutable(specification.full_name);
 			for ( ; it != it_e; ++it) {
-				specification.dynamic_type = (*it == UUID_FIELD_NAME) ? DynamicFieldType::UUID : DynamicFieldType::NONE;
+				specification.dynamic_type = (*it == UUID_FIELD_NAME);
 				specification.dynamic_prefix.assign(*it);
 				specification.dynamic_name.assign(*it);
 				add_field(mut_subprop, specification.dynamic_name);
@@ -952,7 +952,7 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 }
 
 
-std::tuple<std::string, DynamicFieldType, const MsgPack&>
+std::tuple<std::string, bool, const MsgPack&>
 Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
 {
 	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
@@ -963,7 +963,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 	const MsgPack* subproperties = &properties;
 	std::string dynamic_full_name;
 	dynamic_full_name.reserve(full_name.length());
-	DynamicFieldType type;
+	bool dynamic_type = false;
 	bool root = true;
 	for (const auto& field_name : field_names) {
 		if (!root && !is_valid(field_name)) {
@@ -972,7 +972,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		root = false;
 		try {
 			subproperties = &subproperties->at(field_name);
-			type = DynamicFieldType::NONE;
+			dynamic_type = false;
 			if (dynamic_full_name.empty()) {
 				dynamic_full_name.assign(field_name);
 			} else {
@@ -981,7 +981,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		} catch (const std::out_of_range&) {
 			if (Serialise::isUUID(field_name)) {
 				subproperties = &subproperties->at(UUID_FIELD_NAME);
-				type = DynamicFieldType::UUID;
+				dynamic_type = true;
 				if (dynamic_full_name.empty()) {
 					dynamic_full_name.assign(lower_string(field_name));
 				} else {
@@ -993,7 +993,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		}
 	}
 
-	return std::forward_as_tuple(std::move(dynamic_full_name), type, *subproperties);
+	return std::forward_as_tuple(std::move(dynamic_full_name), dynamic_type, *subproperties);
 }
 
 
@@ -1885,10 +1885,10 @@ Schema::process_namespace(const std::string& prop_name, const MsgPack& doc_names
 	}
 
 	try {
-		if (specification.dynamic_type == DynamicFieldType::NONE) {
-			specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
-		} else {
+		if (specification.dynamic_type) {
 			specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.dynamic_full_name));
+		} else {
+			specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
 		}
 		get_mutable(specification.full_name)[prop_name] = true;
 	} catch (const msgpack::type_error&) {
@@ -2223,10 +2223,10 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 	L_CALL(this, "Schema::update_namespace(%s)", repr(prop_namespace.to_string()).c_str());
 	(void)prop_namespace;  // silence -Wunused-parameter
 
-	if (specification.dynamic_type == DynamicFieldType::NONE) {
-		specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
-	} else {
+	if (specification.dynamic_type) {
 		specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.dynamic_full_name));
+	} else {
+		specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
 	}
 }
 
@@ -2615,7 +2615,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 
 		if (!specification.set_type) {
 			validate_required_data(item_value);
-		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
+		} else if (specification.dynamic_type) {
 			update_dynamic_specification();
 		}
 
@@ -2664,7 +2664,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 
 		if (!specification.set_type) {
 			validate_required_data(item_value);
-		} else if (specification.dynamic_type != DynamicFieldType::NONE) {
+		} else if (specification.dynamic_type) {
 			update_dynamic_specification();
 		}
 
@@ -2724,7 +2724,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 
 			if (!specification.set_type) {
 				validate_required_data(*val);
-			} else if (specification.dynamic_type != DynamicFieldType::NONE) {
+			} else if (specification.dynamic_type) {
 				update_dynamic_specification();
 			}
 			index_item(doc, *val, *data);
@@ -3180,7 +3180,21 @@ Schema::validate_required_data()
 				throw MSG_ClientError("%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
 		}
 
-		if (specification.dynamic_type == DynamicFieldType::NONE) {
+		if (specification.dynamic_type) {
+			if (!specification.set_index) {
+				auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
+				if (specification.index != index) {
+					specification.index = index;
+					properties[RESERVED_INDEX] = specification.index;
+				}
+			}
+
+			if (set_acc.size()) {
+				specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+				properties[RESERVED_ACCURACY] = specification.accuracy;
+			}
+			update_dynamic_specification();
+		} else {
 			if (set_acc.size()) {
 				if (specification.acc_prefix.empty()) {
 					for (const auto& acc : set_acc) {
@@ -3214,21 +3228,6 @@ Schema::validate_required_data()
 				}
 			}
 			properties[RESERVED_SLOT] = specification.slot;
-
-		} else {
-			if (!specification.set_index) {
-				auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
-				if (specification.index != index) {
-					specification.index = index;
-					properties[RESERVED_INDEX] = specification.index;
-				}
-			}
-
-			if (set_acc.size()) {
-				specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-				properties[RESERVED_ACCURACY] = specification.accuracy;
-			}
-			update_dynamic_specification();
 		}
 
 		// Process RESERVED_TYPE
@@ -3816,7 +3815,39 @@ Schema::get_data_field(const std::string& field_name) const
 			return res;
 		}
 
-		if (std::get<1>(info) == DynamicFieldType::NONE) {
+		if (std::get<1>(info)) {
+			res.slot = get_slot(std::get<0>(info));
+			res.prefix = get_dynamic_prefix(std::get<0>(info), (char)res.sep_types[2]);
+
+			// Get accuracy, acc_prefix and reserved word.
+			switch (res.sep_types[2]) {
+				case FieldType::GEO:
+					res.partials = properties.at(RESERVED_PARTIALS).as_bool();
+					res.error = properties.at(RESERVED_ERROR).as_f64();
+				case FieldType::FLOAT:
+				case FieldType::INTEGER:
+				case FieldType::POSITIVE:
+				case FieldType::DATE:
+					try {
+						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+							res.accuracy.push_back(acc.as_u64());
+							res.acc_prefix.push_back(get_dynamic_prefix(std::get<0>(info) + std::to_string(res.accuracy.back()), (char)res.sep_types[2]));
+						}
+					} catch (const std::out_of_range&) { }
+					break;
+				case FieldType::TEXT:
+					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
+					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
+					res.language = properties.at(RESERVED_LANGUAGE).as_string();
+					break;
+				case FieldType::STRING:
+					res.language = properties.at(RESERVED_LANGUAGE).as_string();
+					res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
+					break;
+				default:
+					break;
+			}
+		} else {
 			res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 			res.prefix = properties.at(RESERVED_PREFIX).as_string();
 
@@ -3835,38 +3866,6 @@ Schema::get_data_field(const std::string& field_name) const
 						}
 						for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
 							res.acc_prefix.push_back(acc_p.as_string());
-						}
-					} catch (const std::out_of_range&) { }
-					break;
-				case FieldType::TEXT:
-					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
-					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
-					res.language = properties.at(RESERVED_LANGUAGE).as_string();
-					break;
-				case FieldType::STRING:
-					res.language = properties.at(RESERVED_LANGUAGE).as_string();
-					res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
-					break;
-				default:
-					break;
-			}
-		} else {
-			res.slot = get_slot(std::get<0>(info));
-			res.prefix = get_dynamic_prefix(std::get<0>(info), (char)res.sep_types[2]);
-
-			// Get accuracy, acc_prefix and reserved word.
-			switch (res.sep_types[2]) {
-				case FieldType::GEO:
-					res.partials = properties.at(RESERVED_PARTIALS).as_bool();
-					res.error = properties.at(RESERVED_ERROR).as_f64();
-				case FieldType::FLOAT:
-				case FieldType::INTEGER:
-				case FieldType::POSITIVE:
-				case FieldType::DATE:
-					try {
-						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-							res.accuracy.push_back(acc.as_u64());
-							res.acc_prefix.push_back(get_dynamic_prefix(std::get<0>(info) + std::to_string(res.accuracy.back()), (char)res.sep_types[2]));
 						}
 					} catch (const std::out_of_range&) { }
 					break;
@@ -3932,10 +3931,10 @@ Schema::get_slot_field(const std::string& field_name) const
 				break;
 		}
 
-		if (std::get<1>(info) == DynamicFieldType::NONE) {
-			res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
-		} else {
+		if (std::get<1>(info)) {
 			res.slot = get_slot(std::get<0>(info));
+		} else {
+			res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		}
 	} catch (const ClientError& exc) {
 		L_EXC(this, "ERROR: %s", exc.what());

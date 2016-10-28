@@ -41,15 +41,6 @@
 #define DEFAULT_BOOL_TERM     false
 
 
-enum class DynamicFieldType : uint8_t {
-	NONE,
-	DATE,
-	GEO,
-	UUID,
-	ANY,
-};
-
-
 enum class UnitTime : uint8_t {
 	SECOND,
 	MINUTE,
@@ -166,17 +157,6 @@ enum class FieldType : uint8_t {
 	ARRAY         =  'A',
 	OBJECT        =  'O',
 	EMPTY         =  ' ',
-};
-
-
-inline static std::string readable_dynamic_field_type(DynamicFieldType type) noexcept {
-	switch (type) {
-		case DynamicFieldType::NONE: return "none";
-		case DynamicFieldType::DATE: return "date";
-		case DynamicFieldType::GEO:  return "geo";
-		case DynamicFieldType::UUID: return "uuid";
-		case DynamicFieldType::ANY:  return "any";
-	}
 };
 
 
@@ -352,7 +332,7 @@ struct specification_t : required_spc_t {
 	std::string aux_lan;
 
 	// Auxiliar variables for dynamic fields.
-	DynamicFieldType dynamic_type;
+	bool dynamic_type;
 	std::string dynamic_prefix;
 	std::string dynamic_name;
 	std::string dynamic_full_name;
@@ -434,7 +414,7 @@ class Schema {
 	 * Returns the propierties of full_name, if the path does not
 	 * exist throw an exception.
 	 */
-	std::tuple<std::string, DynamicFieldType, const MsgPack&> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
+	std::tuple<std::string, bool, const MsgPack&> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 	/*
 	 * Sets type to array in properties.
@@ -649,9 +629,6 @@ public:
 	void update_error(const MsgPack& prop_error);
 	void update_namespace(const MsgPack& prop_namespace);
 };
-
-
-extern const std::unordered_set<std::string> reserved_field_names;
 
 
 using dispatch_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
