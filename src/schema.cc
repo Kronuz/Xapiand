@@ -1149,6 +1149,7 @@ Schema::get_data_namespace(const std::vector<std::string>& paths_namespace, Fiel
 	return data;
 }
 
+
 std::tuple<std::string, bool, const MsgPack&>
 Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
 {
