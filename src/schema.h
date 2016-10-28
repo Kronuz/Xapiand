@@ -171,6 +171,7 @@ inline static std::string readable_acc_date(UnitTime unit) noexcept {
 		case UnitTime::DECADE:     return "decade";
 		case UnitTime::CENTURY:    return "century";
 		case UnitTime::MILLENNIUM: return "millennium";
+		default:                   return "UnitTime::UNKNOWN";
 	}
 }
 
@@ -181,6 +182,7 @@ inline static std::string readable_stem_strategy(StemStrategy stem) noexcept {
 		case StemStrategy::STEM_SOME:   return "stem_some";
 		case StemStrategy::STEM_ALL:    return "stem_all";
 		case StemStrategy::STEM_ALL_Z:  return "stem_all_z";
+		default:                        return "StemStrategy::UNKNOWN";
 	}
 }
 
@@ -197,6 +199,7 @@ inline static std::string readable_index(TypeIndex index) noexcept {
 		case TypeIndex::GLOBAL_TERMS:   return "global_terms";
 		case TypeIndex::GLOBAL_VALUES:  return "global_values";
 		case TypeIndex::GLOBAL_ALL:     return "global_all";
+		default:                        return "TypeIndex::UNKNOWN";
 	}
 }
 
