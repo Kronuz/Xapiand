@@ -285,6 +285,7 @@ struct required_spc_t {
 		bool field_found:1;      // Flag if the property is already in the schema saved in the metadata
 		bool field_with_type:1;  // Reserved properties that shouldn't change once set, are flagged as fixed
 
+		bool reserved_slot:1;
 		bool has_bool_term:1;    // Either RESERVED_BOOL_TERM is in the schema or the user sent it
 		bool has_index:1;        // Either RESERVED_INDEX is in the schema or the user sent it
 

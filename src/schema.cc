@@ -301,6 +301,7 @@ required_spc_t::flags_t::flags_t()
 	  uuid_detection(true),
 	  field_found(true),
 	  field_with_type(false),
+	  reserved_slot(false),
 	  has_bool_term(false),
 	  has_index(false),
 	  inside_namespace(false),
@@ -1340,7 +1341,7 @@ Schema::validate_required_data()
 			// Process RESERVED_SLOT
 			if (specification.slot == Xapian::BAD_VALUENO) {
 				specification.slot = get_slot(specification.dynamic_full_name);
-			} else if (specification.slot < DB_SLOT_RESERVED) {
+			} else if (specification.slot < DB_SLOT_RESERVED && !specification.flags.reserved_slot) {
 				specification.slot += DB_SLOT_RESERVED;
 			}
 			properties[RESERVED_SLOT] = specification.slot;
@@ -3489,6 +3490,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 	if (specification.slot == Xapian::BAD_VALUENO) {
 		specification.slot = DB_SLOT_ID;
 	}
+	specification.flags.reserved_slot = true;
 }
 
 
@@ -3517,6 +3519,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	if (specification.slot == Xapian::BAD_VALUENO) {
 		specification.slot = DB_SLOT_CONTENT_TYPE;
 	}
+	specification.flags.reserved_slot = true;
 
 	specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
 	properties[RESERVED_NAMESPACE] = true;
