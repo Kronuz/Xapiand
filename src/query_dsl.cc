@@ -59,7 +59,15 @@ constexpr const char QUERYDSL_RANGE[]     = "_range";
 static constexpr auto HASH_ALL   = xxh64::hash(QUERYDSL_MATCH_ALL);
 
 
-static const std::unordered_map<std::string, FieldType> map_type({
+const std::unordered_map<std::string, Xapian::Query::op> map_xapian_operator({
+	{ QUERYDSL_OR,        Xapian::Query::OP_OR         },
+	{ QUERYDSL_AND,       Xapian::Query::OP_AND        },
+	{ QUERYDSL_XOR,       Xapian::Query::OP_XOR  	   },
+	{ QUERYDSL_NOT,       Xapian::Query::OP_AND_NOT    },
+});
+
+
+const std::unordered_map<std::string, FieldType> map_type({
 	{ FLOAT_STR,       FieldType::FLOAT        }, { INTEGER_STR,     FieldType::INTEGER     },
 	{ POSITIVE_STR,    FieldType::POSITIVE     }, { STRING_STR,      FieldType::STRING      },
 	{ TEXT_STR,        FieldType::TEXT         }, { DATE_STR,        FieldType::DATE        },
@@ -68,15 +76,7 @@ static const std::unordered_map<std::string, FieldType> map_type({
 });
 
 
-static const std::unordered_map<std::string, Xapian::Query::op> map_xapian_operator({
-	{ QUERYDSL_OR,        Xapian::Query::OP_OR         },
-	{ QUERYDSL_AND,       Xapian::Query::OP_AND        },
-	{ QUERYDSL_XOR,       Xapian::Query::OP_XOR  	   },
-	{ QUERYDSL_NOT,       Xapian::Query::OP_AND_NOT    },
-});
-
-
-const std::unordered_map<std::string, dispatch_op_dsl> map_op_dispatch_dsl({
+const std::unordered_map<std::string, QueryDSL::dispatch_op_dsl> QueryDSL::map_op_dispatch_dsl({
 	{ QUERYDSL_OR,        &QueryDSL::join_queries         },
 	{ QUERYDSL_AND,       &QueryDSL::join_queries         },
 	{ QUERYDSL_XOR,       &QueryDSL::join_queries  		  },
@@ -84,13 +84,13 @@ const std::unordered_map<std::string, dispatch_op_dsl> map_op_dispatch_dsl({
 });
 
 
-const std::unordered_map<std::string, dispatch_dsl> map_dispatch_dsl({
+const std::unordered_map<std::string, QueryDSL::dispatch_dsl> QueryDSL::map_dispatch_dsl({
 	{ QUERYDSL_IN,            &QueryDSL::in_range_query   },
 	{ QUERYDSL_VALUE,         &QueryDSL::query            },
 });
 
 
-const std::unordered_map<std::string, dispatch_dsl> map_dispatch_cast({
+const std::unordered_map<std::string, QueryDSL::dispatch_dsl> QueryDSL::map_dispatch_cast({
 	{ RESERVED_INTEGER,      &QueryDSL::query          },
 	{ RESERVED_POSITIVE,     &QueryDSL::query          },
 	{ RESERVED_FLOAT,        &QueryDSL::query          },
@@ -103,7 +103,7 @@ const std::unordered_map<std::string, dispatch_dsl> map_dispatch_cast({
 });
 
 
-const std::unordered_map<std::string, dispatch_dsl> map_range_dispatch_dsl({
+const std::unordered_map<std::string, QueryDSL::dispatch_dsl> QueryDSL::map_range_dispatch_dsl({
 	{ QUERYDSL_RANGE,            &QueryDSL::range_query   },
 	{ RESERVED_POINT,            &QueryDSL::range_query   },
 	{ RESERVED_CIRCLE,           &QueryDSL::range_query   },
