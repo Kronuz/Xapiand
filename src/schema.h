@@ -323,10 +323,12 @@ struct specification_t : required_spc_t {
 	std::string full_name;
 
 	// Auxiliar variables.
-	bool found_field;
-	bool set_type;
-	bool set_bool_term;
-	bool set_index;
+	bool field_found;      // Flag if the property is already in the schema saved in the metadata
+	bool field_with_type;  // Reserved properties that shouldn't change once set, are flagged as fixed
+
+	bool has_bool_term;    // Either RESERVED_BOOL_TERM is in the schema or the user sent it
+	bool has_index;        // Either RESERVED_INDEX is in the schema or the user sent it
+
 	bool inside_namespace;
 	std::string aux_stem_lan;
 	std::string aux_lan;
@@ -357,92 +359,43 @@ extern const specification_t default_spc;
 using TaskVector = std::vector<std::future<void>>;
 
 
-class Schema;
-
-
 using dispatch_index = void (*)(Xapian::Document&, std::string&&, const specification_t&, size_t);
 
 
 class Schema {
+	using dispatch_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
+	using dispatch_update_reserved   = void (Schema::*)(const MsgPack&);
+	using dispatch_readable          = void (*)(MsgPack&, MsgPack&);
+
+	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document;
+	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_properties;
+	static const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
+
 	std::shared_ptr<const MsgPack> schema;
 	std::unique_ptr<MsgPack> mut_schema;
 
 	std::unordered_map<Xapian::valueno, StringSet> map_values;
 	specification_t specification;
 
-	MsgPack& get_mutable(const std::string& full_name);
-	MsgPack& clear() noexcept;
 
 	/*
-	 * specification is updated with the properties.
+	 * Returns a reference to a mutable schema (a copy of the one stored in the metadata)
 	 */
-	void update_specification(const MsgPack& properties);
+	MsgPack& get_mutable(const std::string& full_name);
+
+	/*
+	 * Deletes the schema from the metadata and returns a reference to the mutable empty schema.
+	 */
+	MsgPack& clear() noexcept;
 
 	/*
 	 * Restarting reserved words than are not inherited.
 	 */
 	void restart_specification();
 
-	/*
-	 * Detect and set dynamic type.
-	 */
-	void detect_dynamic(const std::string& field_name);
 
 	/*
-	 * Add new field to properties.
-	 */
-	void add_field(MsgPack*& properties, const std::string& field_name);
-
-	/*
-	 * Get the subproperties of field_name.
-	 */
-	void get_subproperties(const MsgPack*& properties, const std::string& field_name);
-
-	/*
-	 * Gets the properties of item_key and specification is updated.
-	 * Returns the properties of schema.
-	 */
-	const MsgPack& get_subproperties(const MsgPack& properties);
-
-	/*
-	 * Gets the properties of a item and specifications is updated.
-	 * Do not check for dynamic types.
-	 */
-	const MsgPack& get_schema_subproperties(const MsgPack& properties);
-
-	/*
-	 * Returns the propierties of full_name, if the path does not
-	 * exist throw an exception.
-	 */
-	std::tuple<std::string, bool, const MsgPack&> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
-
-	/*
-	 * Sets type to array in properties.
-	 */
-	void set_type_to_array();
-
-	/*
-	 * Set type to object in properties.
-	 */
-	void set_type_to_object(bool offsprings);
-
-	/*
-	 * Sets in specification the item_doc's type
-	 */
-	void set_type(const MsgPack& item_doc);
-
-	/*
-	 * Recursively transforms item_schema into a readable form.
-	 */
-	static void readable(MsgPack& item_schema);
-
-	/*
-	 * Auxiliar function for update schema.
-	 */
-	void update_schema(const MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name);
-
-	/*
-	 * Auxiliar functions for index fields in doc.
+	 * Main functions to index objects and arrays
 	 */
 
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name=std::string());
@@ -452,23 +405,6 @@ class Schema {
 	void process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value);
 	void process_item_value(Xapian::Document& doc, MsgPack*& data, bool offsprings);
 
-	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value=true);
-	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values=true);
-
-	static void index_field_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, size_t pos);
-	static void index_all_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
-	static void index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, dispatch_index fun=nullptr);
-	static void index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos, bool is_term=false);
-
-
-	/*
-	 * Validates data when RESERVED_TYPE has not been save in schema.
-	 * Insert into properties all required data.
-	 */
-
-	void validate_required_data();
-	void validate_required_namespace_data();
-	void validate_required_data(const MsgPack& value);
 
 	/*
 	 * Get the prefixes for a namespace.
@@ -481,74 +417,127 @@ class Schema {
 	static std::vector<std::pair<std::string, Xapian::valueno>> get_data_namespace(const std::vector<std::string>& paths_namespace, FieldType type);
 
 	/*
+	 * Returns the propierties of full_name, if the path does not
+	 * exist throw an exception.
+	 */
+
+	std::tuple<std::string, bool, const MsgPack&> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
+
+	/*
 	 * Update dynamic field's specifications.
 	 */
 	void update_dynamic_specification();
 
-public:
-	Schema(const std::shared_ptr<const MsgPack>& schema);
+	/*
+	 * Set type to object in properties.
+	 */
 
-	Schema() = delete;
-	Schema(Schema&& schema) = delete;
-	Schema(const Schema& schema) = delete;
-	Schema& operator=(Schema&& schema) = delete;
-	Schema& operator=(const Schema& schema) = delete;
-
-	~Schema() = default;
-
-	auto get_modified_schema() {
-		L_CALL(this, "Schema::get_modified_schema()");
-
-		if (mut_schema) {
-			auto schema = std::shared_ptr<const MsgPack>(mut_schema.release());
-			schema->lock();
-			return schema;
-		} else {
-			return std::shared_ptr<const MsgPack>();
-		}
-	}
-
-	auto get_const_schema() const {
-		L_CALL(this, "Schema::get_const_schema()");
-
-		return schema;
-	}
+	void set_type_to_object(bool offsprings);
 
 	/*
-	 * Transforms schema into json string.
+	 * Sets type to array in properties.
 	 */
-	std::string to_string(bool prettify=false) const;
-
-	/*
-	 * Returns readable schema.
-	 */
-	const MsgPack get_readable() const;
-
-	/*
-	 * Function to update the schema according to obj_schema.
-	 */
-	void write_schema(const MsgPack& obj_schema, bool replace);
-
-	/*
-	 * Updates ID_FIELD_NAME in schema according to obj.
-	 */
-	std::string write_schema_id(const MsgPack& obj, const std::string& value_id);
-
-	/*
-	 * Function to index object in doc.
-	 */
-	MsgPack index(const MsgPack& object, Xapian::Document& doc);
+	void set_type_to_array();
 
 
 	/*
-	 * Tranforms reserved words into a readable form.
+	 * Validates data when RESERVED_TYPE has not been save in schema.
+	 * Insert into properties all required data.
 	 */
 
-	static void readable_type(MsgPack& prop_type, MsgPack& properties);
-	static void readable_prefix(MsgPack& prop_index, MsgPack& properties);
-	static void readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack& properties);
-	static void readable_index(MsgPack& prop_index, MsgPack& properties);
-	static void readable_acc_prefix(MsgPack& prop_index, MsgPack& properties);
+	void validate_required_data();
+	void validate_required_namespace_data();
+	void validate_required_data(const MsgPack& value);
+
+
+	/*
+	 * Sets in specification the item_doc's type
+	 */
+	void guess_field_type(const MsgPack& item_doc);
+
+
+	/*
+	 * Auxiliar functions for index fields in doc.
+	 */
+
+	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value=true);
+	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values=true);
+
+	static void index_field_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, size_t pos);
+	static void index_all_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
+	static void index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, dispatch_index fun=nullptr);
+	static void index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos, bool is_term=false);
+
+
+	/*
+	 * Auxiliar function for update schema.
+	 */
+	void update_schema(const MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name);
+
+	/*
+	 * Gets the properties of a item and specifications is updated.
+	 * Do not check for dynamic types.
+	 * Used by write_schema
+	 */
+	const MsgPack& get_schema_subproperties(const MsgPack& properties);
+
+	/*
+	 * Gets the properties of item_key and specification is updated.
+	 * Returns the properties of schema.
+	 */
+	const MsgPack& get_subproperties(const MsgPack& properties);
+
+	/*
+	 * Get the subproperties of field_name.
+	 */
+	void get_subproperties(const MsgPack*& properties, const std::string& field_name);
+
+	/*
+	 * Detect and set dynamic type.
+	 */
+	void detect_dynamic(const std::string& field_name);
+
+	/*
+	 * Add new field to properties.
+	 */
+	void add_field(MsgPack*& properties, const std::string& field_name);
+
+	/*
+	 * Specification is updated with the properties.
+	 */
+	void update_specification(const MsgPack& properties);
+
+	/*
+	 * Functions for updating specification using the properties in schema.
+	 */
+
+	void update_position(const MsgPack& prop_position);
+	void update_weight(const MsgPack& prop_weight);
+	void update_spelling(const MsgPack& prop_spelling);
+	void update_positions(const MsgPack& prop_positions);
+	void update_stem_strategy(const MsgPack& prop_stem_strategy);
+	void update_stem_language(const MsgPack& prop_stem_language);
+	void update_language(const MsgPack& prop_language);
+	void update_type(const MsgPack& prop_type);
+	void update_accuracy(const MsgPack& prop_accuracy);
+	void update_acc_prefix(const MsgPack& prop_acc_prefix);
+	void update_prefix(const MsgPack& prop_prefix);
+	void update_slot(const MsgPack& prop_slot);
+	void update_index(const MsgPack& prop_index);
+	void update_store(const MsgPack& prop_store);
+	void update_recursive(const MsgPack& prop_namespace);
+	void update_dynamic(const MsgPack& prop_dynamic);
+	void update_d_detection(const MsgPack& prop_d_detection);
+	void update_n_detection(const MsgPack& prop_n_detection);
+	void update_g_detection(const MsgPack& prop_g_detection);
+	void update_b_detection(const MsgPack& prop_b_detection);
+	void update_s_detection(const MsgPack& prop_s_detection);
+	void update_t_detection(const MsgPack& prop_t_detection);
+	void update_u_detection(const MsgPack& prop_u_detection);
+	void update_bool_term(const MsgPack& prop_bool_term);
+	void update_partials(const MsgPack& prop_partials);
+	void update_error(const MsgPack& prop_error);
+	void update_namespace(const MsgPack& prop_namespace);
 
 
 	/*
@@ -589,54 +578,91 @@ public:
 
 
 	/*
+	 * Recursively transforms item_schema into a readable form.
+	 */
+	static void readable(MsgPack& item_schema);
+
+	/*
+	 * Tranforms reserved words into a readable form.
+	 */
+
+	static void readable_type(MsgPack& prop_type, MsgPack& properties);
+	static void readable_prefix(MsgPack& prop_index, MsgPack& properties);
+	static void readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack& properties);
+	static void readable_index(MsgPack& prop_index, MsgPack& properties);
+	static void readable_acc_prefix(MsgPack& prop_index, MsgPack& properties);
+
+
+public:
+
+	Schema(const std::shared_ptr<const MsgPack>& schema);
+
+	Schema() = delete;
+	Schema(Schema&& schema) = delete;
+	Schema(const Schema& schema) = delete;
+	Schema& operator=(Schema&& schema) = delete;
+	Schema& operator=(const Schema& schema) = delete;
+
+	~Schema() = default;
+
+
+	auto get_modified_schema() {
+		L_CALL(this, "Schema::get_modified_schema()");
+
+		if (mut_schema) {
+			auto schema = std::shared_ptr<const MsgPack>(mut_schema.release());
+			schema->lock();
+			return schema;
+		} else {
+			return std::shared_ptr<const MsgPack>();
+		}
+	}
+
+
+	auto get_const_schema() const {
+		L_CALL(this, "Schema::get_const_schema()");
+
+		return schema;
+	}
+
+
+	/*
+	 * Transforms schema into json string.
+	 */
+	std::string to_string(bool prettify=false) const;
+
+
+	/*
+	 * Function to index object in doc.
+	 */
+	MsgPack index(const MsgPack& object, Xapian::Document& doc);
+
+
+	/*
+	 * Returns readable schema.
+	 */
+
+	const MsgPack get_readable() const;
+
+
+	/*
+	 * Function to update the schema according to obj_schema.
+	 */
+
+	void write_schema(const MsgPack& obj_schema, bool replace);
+
+
+	/*
+	 * Updates ID_FIELD_NAME in schema according to obj.
+	 */
+	std::string write_schema_id(const MsgPack& obj, const std::string& value_id);
+
+
+	/*
 	 * Functions used for searching, return a field properties.
 	 */
 
 	required_spc_t get_data_field(const std::string& field_name) const;
 	required_spc_t get_slot_field(const std::string& field_name) const;
 	static const required_spc_t& get_data_global(FieldType field_type);
-
-
-	/*
-	 * Functions for updating specification using the properties in schema.
-	 */
-
-	void update_position(const MsgPack& prop_position);
-	void update_weight(const MsgPack& prop_weight);
-	void update_spelling(const MsgPack& prop_spelling);
-	void update_positions(const MsgPack& prop_positions);
-	void update_stem_strategy(const MsgPack& prop_stem_strategy);
-	void update_stem_language(const MsgPack& prop_stem_language);
-	void update_language(const MsgPack& prop_language);
-	void update_type(const MsgPack& prop_type);
-	void update_accuracy(const MsgPack& prop_accuracy);
-	void update_acc_prefix(const MsgPack& prop_acc_prefix);
-	void update_prefix(const MsgPack& prop_prefix);
-	void update_slot(const MsgPack& prop_slot);
-	void update_index(const MsgPack& prop_index);
-	void update_store(const MsgPack& prop_store);
-	void update_recursive(const MsgPack& prop_namespace);
-	void update_dynamic(const MsgPack& prop_dynamic);
-	void update_d_detection(const MsgPack& prop_d_detection);
-	void update_n_detection(const MsgPack& prop_n_detection);
-	void update_g_detection(const MsgPack& prop_g_detection);
-	void update_b_detection(const MsgPack& prop_b_detection);
-	void update_s_detection(const MsgPack& prop_s_detection);
-	void update_t_detection(const MsgPack& prop_t_detection);
-	void update_u_detection(const MsgPack& prop_u_detection);
-	void update_bool_term(const MsgPack& prop_bool_term);
-	void update_partials(const MsgPack& prop_partials);
-	void update_error(const MsgPack& prop_error);
-	void update_namespace(const MsgPack& prop_namespace);
 };
-
-
-using dispatch_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
-using dispatch_update_reserved   = void (Schema::*)(const MsgPack&);
-using dispatch_root              = void (Schema::*)(const MsgPack&, const MsgPack&, MsgPack&, Xapian::Document&);
-using dispatch_readable          = void (*)(MsgPack&, MsgPack&);
-
-
-extern const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document;
-extern const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_properties;
-extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
