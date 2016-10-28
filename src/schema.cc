@@ -3550,6 +3550,8 @@ Schema::process_cast_object(const std::string& prop_name, const MsgPack& doc_cas
 void
 Schema::set_default_spc_id(const MsgPack& properties)
 {
+	L_CALL(this, "Schema::set_default_spc_id(%s)", repr(properties.to_string()).c_str());
+
 	specification.bool_term = true;
 
 	// ID_FIELD_NAME can not be TEXT.
@@ -3580,6 +3582,8 @@ Schema::set_default_spc_id(const MsgPack& properties)
 void
 Schema::set_default_spc_ct(const MsgPack& properties)
 {
+	L_CALL(this, "Schema::set_default_spc_ct(%s)", repr(properties.to_string()).c_str());
+
 	if (!specification.has_index) {
 		specification.has_index = true;
 		specification.index = TypeIndex::FIELD_VALUES;
@@ -3804,7 +3808,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 std::string
 Schema::write_schema_id(const MsgPack& obj, const std::string& value_id)
 {
-	L_CALL(this, "Schema::write_schema_id(%s)", value_id.c_str());
+	L_CALL(this, "Schema::write_schema_id(%s)", repr(value_id).c_str());
 
 	try {
 		auto& prop_id = schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
