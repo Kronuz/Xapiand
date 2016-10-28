@@ -3560,7 +3560,8 @@ Schema::set_default_spc_id(const MsgPack& properties)
 	try {
 		properties.at(RESERVED_STORE);
 	} catch (const std::out_of_range&) {
-		get_mutable(specification.full_name)[RESERVED_STORE] = false;
+		specification.store = false;
+		get_mutable(specification.full_name)[RESERVED_STORE] = specification.store;
 	}
 
 	// Process RESERVED_PREFIX
@@ -3579,8 +3580,9 @@ void
 Schema::set_default_spc_ct(const MsgPack& properties)
 {
 	if (!specification.has_index) {
-		specification.index = TypeIndex::FIELD_VALUES;
 		specification.has_index = true;
+		specification.index = TypeIndex::FIELD_VALUES;
+		get_mutable(specification.full_name)[RESERVED_INDEX] = specification.index;
 	}
 
 	specification.sep_types[2] = FieldType::STRING;
@@ -3589,7 +3591,8 @@ Schema::set_default_spc_ct(const MsgPack& properties)
 	try {
 		properties.at(RESERVED_STORE);
 	} catch (const std::out_of_range&) {
-		get_mutable(specification.full_name)[RESERVED_STORE] = false;
+		specification.store = false;
+		get_mutable(specification.full_name)[RESERVED_STORE] = specification.store;
 	}
 
 	// Process RESERVED_SLOT
@@ -3598,6 +3601,7 @@ Schema::set_default_spc_ct(const MsgPack& properties)
 	}
 
 	specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
+	get_mutable(specification.full_name)[RESERVED_NAMESPACE] = true;
 }
 
 
