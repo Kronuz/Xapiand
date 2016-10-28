@@ -266,8 +266,6 @@ struct required_spc_t {
 	Xapian::valueno slot;
 
 	struct flags_t {
-		flags_t();
-
 		bool bool_term:1;
 		bool partials:1;
 
@@ -294,6 +292,8 @@ struct required_spc_t {
 
 		// Auxiliar variables for dynamic fields.
 		bool dynamic_type:1;
+
+		flags_t();
 	} flags;
 
 	// For GEO, DATE and Numeric types.
