@@ -241,7 +241,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 				case FieldType::STRING:
 					if (fp.is_double_quote_value() || q_flags & Xapian::QueryParser::FLAG_PARTIAL) {
 						Xapian::QueryParser queryString;
-						field_spc.bool_term ? queryString.add_boolean_prefix("_", field_spc.prefix) : queryString.add_prefix("_", field_spc.prefix);
+						field_spc.flags.bool_term ? queryString.add_boolean_prefix("_", field_spc.prefix) : queryString.add_prefix("_", field_spc.prefix);
 
 						queryString.set_database(*database->db);
 						queryString.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
@@ -253,14 +253,14 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 						suggestions.push_back(queryString.get_corrected_query_string());
 						return queryString.parse_query(str_string, q_flags);
 					} else {
-						return Xapian::Query(prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix));
+						return Xapian::Query(prefixed(field_spc.flags.bool_term ? field_value : lower_string(field_value), field_spc.prefix));
 					}
 				case FieldType::TEXT: {
 					if (fp.is_double_quote_value()) {
 						field_value.assign(fp.get_doubleq_value());
 					}
 					Xapian::QueryParser queryTexts;
-					field_spc.bool_term ? queryTexts.add_boolean_prefix("_", field_spc.prefix) : queryTexts.add_prefix("_", field_spc.prefix);
+					field_spc.flags.bool_term ? queryTexts.add_boolean_prefix("_", field_spc.prefix) : queryTexts.add_prefix("_", field_spc.prefix);
 
 					queryTexts.set_database(*database->db);
 					queryTexts.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
@@ -275,7 +275,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 				case FieldType::DATE:
 					return Xapian::Query(prefixed(Serialise::date(field_value), field_spc.prefix));
 				case FieldType::GEO:
-					field_value.assign(Serialise::ewkt(field_value, field_spc.partials, field_spc.error));
+					field_value.assign(Serialise::ewkt(field_value, field_spc.flags.partials, field_spc.error));
 					// If the region for search is empty, not process this query.
 					if (field_value.empty()) {
 						return Xapian::Query::MatchNothing;

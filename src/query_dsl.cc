@@ -335,13 +335,13 @@ QueryDSL::query(const MsgPack& obj)
 					case FieldType::STRING:
 					{
 						auto field_value = Serialise::MsgPack(field_spc, obj);
-						return Xapian::Query(prefixed(field_spc.bool_term ? field_value : lower_string(field_value), field_spc.prefix), _wqf);
+						return Xapian::Query(prefixed(field_spc.flags.bool_term ? field_value : lower_string(field_value), field_spc.prefix), _wqf);
 					}
 					case FieldType::TEXT:
 					{
 						auto field_value = Serialise::MsgPack(field_spc, obj);
 						Xapian::QueryParser queryTexts;
-						field_spc.bool_term ? queryTexts.add_boolean_prefix(_fieldname, field_spc.prefix) : queryTexts.add_prefix(_fieldname, field_spc.prefix);
+						field_spc.flags.bool_term ? queryTexts.add_boolean_prefix(_fieldname, field_spc.prefix) : queryTexts.add_prefix(_fieldname, field_spc.prefix);
 						queryTexts.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
 						queryTexts.set_stemmer(Xapian::Stem(field_spc.stem_language));
 						std::string str_texts;

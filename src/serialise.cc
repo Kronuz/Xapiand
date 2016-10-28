@@ -450,7 +450,7 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 		case FieldType::TEXT:
 			return field_value;
 		case FieldType::GEO:
-			return ewkt(field_value, field_spc.partials, field_spc.error);
+			return ewkt(field_value, field_spc.flags.partials, field_spc.error);
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
@@ -473,7 +473,7 @@ Serialise::string(const required_spc_t& field_spc, const std::string& field_valu
 		case FieldType::TEXT:
 			return field_value;
 		case FieldType::GEO:
-			return ewkt(field_value, field_spc.partials, field_spc.error);
+			return ewkt(field_value, field_spc.flags.partials, field_spc.error);
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
@@ -609,7 +609,7 @@ Serialise::get_type(const std::string& field_value, bool bool_term)
 
 	// Try like GEO
 	try {
-		return std::make_pair(FieldType::GEO, ewkt(field_value, default_spc.partials, default_spc.error));
+		return std::make_pair(FieldType::GEO, ewkt(field_value, default_spc.flags.partials, default_spc.error));
 	} catch (const EWKTError&) { }
 
 	// Like UUID
@@ -673,7 +673,7 @@ Serialise::get_range_type(const std::string& start, const std::string& end, bool
 			}
 		case FieldType::GEO:
 			try {
-				return std::make_tuple(FieldType::GEO, res.second, ewkt(end, default_spc.partials, default_spc.error));
+				return std::make_tuple(FieldType::GEO, res.second, ewkt(end, default_spc.flags.partials, default_spc.error));
 			} catch (const SerialisationError&) {
 				return std::make_tuple(FieldType::STRING, start, end);
 			}
@@ -741,7 +741,7 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 
 			// Try like GEO
 			try {
-				return std::make_tuple(FieldType::GEO, ewkt(field_value.as_string(), default_spc.partials, default_spc.error), std::cref(Schema::get_data_global(FieldType::GEO)));
+				return std::make_tuple(FieldType::GEO, ewkt(field_value.as_string(), default_spc.flags.partials, default_spc.error), std::cref(Schema::get_data_global(FieldType::GEO)));
 			} catch (const EWKTError&) { }
 
 			// Like UUID
@@ -777,7 +777,7 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 						return std::make_tuple(FieldType::UUID, Serialise::uuid(Cast::string(field_value.at(str_key))), std::cref(Schema::get_data_global(FieldType::UUID)));
 					case Cast::Hash::EWKT:
 						// FIXME: fix for geo types
-						return std::make_tuple(FieldType::GEO,  Serialise::ewkt(Cast::string(field_value.at(str_key)), default_spc.partials, default_spc.error), std::cref(Schema::get_data_global(FieldType::GEO)));
+						return std::make_tuple(FieldType::GEO,  Serialise::ewkt(Cast::string(field_value.at(str_key)), default_spc.flags.partials, default_spc.error), std::cref(Schema::get_data_global(FieldType::GEO)));
 					case Cast::Hash::DATE:
 					{
 						const auto& global_spc = Schema::get_data_global(FieldType::DATE);

@@ -76,7 +76,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 			return Xapian::Query(mvle->release());
 		} else if (end.empty()) {
 			if (field_spc.get_type() == FieldType::GEO) {
-				auto geo = EWKT_Parser::getGeoSpatial(start, field_spc.partials, field_spc.error);
+				auto geo = EWKT_Parser::getGeoSpatial(start, field_spc.flags.partials, field_spc.error);
 
 				if (geo.ranges.empty()) {
 					return Xapian::Query::MatchNothing;

@@ -264,7 +264,37 @@ struct required_spc_t {
 	std::array<FieldType, 3> sep_types;
 	std::string prefix;
 	Xapian::valueno slot;
-	bool bool_term;
+
+	struct flags_t {
+		flags_t();
+
+		bool bool_term:1;
+		bool partials:1;
+
+		bool store:1;
+		bool parent_store:1;
+		bool is_recursive:1;
+		bool dynamic:1;
+		bool date_detection:1;
+		bool numeric_detection:1;
+		bool geo_detection:1;
+		bool bool_detection:1;
+		bool string_detection:1;
+		bool text_detection:1;
+		bool uuid_detection:1;
+
+		// Auxiliar variables.
+		bool field_found:1;      // Flag if the property is already in the schema saved in the metadata
+		bool field_with_type:1;  // Reserved properties that shouldn't change once set, are flagged as fixed
+
+		bool has_bool_term:1;    // Either RESERVED_BOOL_TERM is in the schema or the user sent it
+		bool has_index:1;        // Either RESERVED_INDEX is in the schema or the user sent it
+
+		bool inside_namespace:1;
+
+		// Auxiliar variables for dynamic fields.
+		bool dynamic_type:1;
+	} flags;
 
 	// For GEO, DATE and Numeric types.
 	std::vector<uint64_t> accuracy;
@@ -277,7 +307,6 @@ struct required_spc_t {
 	std::string language;
 
 	// Variables for GEO type.
-	bool partials;
 	double error;
 
 	// Variables for namespaces.
@@ -302,17 +331,9 @@ struct specification_t : required_spc_t {
 	std::vector<bool> positions;
 	TypeIndex index;
 
-	bool store;
-	bool parent_store;
-	bool is_recursive;
-	bool dynamic;
-	bool date_detection;
-	bool numeric_detection;
-	bool geo_detection;
-	bool bool_detection;
-	bool string_detection;
-	bool text_detection;
-	bool uuid_detection;
+	std::string dynamic_prefix;
+	std::string dynamic_name;
+	std::string dynamic_full_name;
 
 	// Value recovered from the item.
 	std::unique_ptr<const MsgPack> value;
@@ -325,22 +346,8 @@ struct specification_t : required_spc_t {
 	std::string name;
 	std::string full_name;
 
-	// Auxiliar variables.
-	bool field_found;      // Flag if the property is already in the schema saved in the metadata
-	bool field_with_type;  // Reserved properties that shouldn't change once set, are flagged as fixed
-
-	bool has_bool_term;    // Either RESERVED_BOOL_TERM is in the schema or the user sent it
-	bool has_index;        // Either RESERVED_INDEX is in the schema or the user sent it
-
-	bool inside_namespace;
 	std::string aux_stem_lan;
 	std::string aux_lan;
-
-	// Auxiliar variables for dynamic fields.
-	bool dynamic_type;
-	std::string dynamic_prefix;
-	std::string dynamic_name;
-	std::string dynamic_full_name;
 
 	specification_t();
 	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);

@@ -187,7 +187,7 @@ class GeoKey : public BaseKey {
 public:
 	GeoKey(const required_spc_t& field_spc, bool reverse, const std::string& value)
 		: BaseKey(field_spc.slot, reverse),
-		  _centroids(EWKT_Parser::getCentroids(value, field_spc.partials, field_spc.error)) { }
+		  _centroids(EWKT_Parser::getCentroids(value, field_spc.flags.partials, field_spc.error)) { }
 };
 
 
