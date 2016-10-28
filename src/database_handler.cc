@@ -228,33 +228,33 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	auto prefixed_term_id =  prefixed(schema->write_schema_id(obj, _document_id), DOCUMENT_ID_TERM_PREFIX);
 	auto obj_ = run_script(obj, prefixed_term_id);
 
-	// Index Required Data.
-	auto found = ct_type.find_last_of("/");
-	std::string type(ct_type.c_str(), found);
-	std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
-
 	// Create a suitable document.
 	Xapian::Document doc;
 
 	// Document's id must be saved as boolean term (otherwise it doesn't replace an existing document).
 	doc.add_boolean_term(prefixed_term_id);
 
-	// Indexing the content values of data.
-	doc.add_value(DB_SLOT_CONTENT_TYPE, ct_type);
-
-	// Index terms for content-type
-	auto term_prefix = get_prefix("content_type", toUType(FieldType::STRING));
-	doc.add_term(prefixed(ct_type, term_prefix));
-	doc.add_term(prefixed(type + "/*", term_prefix));
-	doc.add_term(prefixed("*/" + subtype, term_prefix));
-
-	// Index object.
+	// Add ID.
 	auto& id_field = obj_[ID_FIELD_NAME];
 	if (id_field.is_map()) {
 		id_field[RESERVED_VALUE] = Cast::cast(_document_id);
 	} else {
 		id_field = Cast::cast(_document_id);
 	}
+
+	// Add Content Type.
+	auto found = ct_type.find_last_of("/");
+	std::string type(ct_type.c_str(), found);
+	std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
+
+	auto& ct_field = obj_[CT_FIELD_NAME];
+	if (!ct_field.is_map()) {
+		ct_field = MsgPack();
+	}
+	ct_field[RESERVED_VALUE] = ct_type;
+	ct_field[type][subtype] = nullptr;
+
+	// Index object.
 	obj_ = schema->index(obj_, doc);
 
 	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
