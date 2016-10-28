@@ -366,11 +366,12 @@ using dispatch_index = void (*)(Xapian::Document&, std::string&&, const specific
 
 
 class Schema {
+	using dispatch_set_default_spc   = void (Schema::*)(MsgPack&);
 	using dispatch_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
 	using dispatch_update_reserved   = void (Schema::*)(const MsgPack&);
 	using dispatch_readable          = void (*)(MsgPack&, MsgPack&);
 
-	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_default_spcs;
+	static const std::unordered_map<std::string, dispatch_set_default_spc> map_dispatch_set_default_spc;
 	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document;
 	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_properties;
 	static const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
@@ -584,8 +585,8 @@ class Schema {
 	 * Functions to update default specification for fields.
 	 */
 
-	void set_default_spc_id(const MsgPack& properties);
-	void set_default_spc_ct(const MsgPack& properties);
+	void set_default_spc_id(MsgPack& properties);
+	void set_default_spc_ct(MsgPack& properties);
 
 
 	/*
