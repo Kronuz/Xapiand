@@ -1844,7 +1844,7 @@ HttpClient::get_acceptable_type(const T& ct)
 type_t
 HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, bool pretty, bool serialize_error)
 {
-	L_CALL(this, "HttpClient::serialize_response()");
+	L_CALL(this, "HttpClient::serialize_response(%s, %s, %s, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), pretty ? "true" : "false", serialize_error ? "true" : "false");
 
 	if (is_acceptable_type(ct_type, json_type)) {
 		return std::make_pair(obj.to_string(pretty), json_type.first + "/" + json_type.second + "; charset=utf-8");
