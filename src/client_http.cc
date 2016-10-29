@@ -1185,40 +1185,56 @@ HttpClient::search_view(HttpMethod method)
 		};
 		write_http_response(error_code, err_response);
 	} else {
+		bool indent_chunk = false;
 		std::string first_chunk;
 		std::string last_chunk;
+		std::string sep_chunk;
+		std::string eol_chunk;
 
 		auto ct_type = resolve_ct_type(MSGPACK_CONTENT_TYPE);
 
+		auto total_count = mset.size();
+
 		if (chunked) {
-			if (pretty) {
-				first_chunk.append("{");
-				if (aggregations) {
-					first_chunk.append("\n    \"_aggregations\": ").append(indent_string(aggregations.to_string(true),' ', 4, false)).append(",");
+			MsgPack basic_query({
+				{"_total_count", total_count},
+				{"_matches_estimated", mset.get_matches_estimated()},
+				{ "_hits", MsgPack(MsgPack::Type::ARRAY) },
+			});
+			MsgPack basic_response;
+			if (aggregations) {
+				basic_response["_aggregations"] = aggregations;
+			}
+			basic_response["_query"] = basic_query;
+
+			if (is_acceptable_type(json_type, ct_type)) {
+				first_chunk = basic_response.to_string(pretty);
+				if (pretty) {
+					first_chunk = first_chunk.substr(0, first_chunk.size() - 9) + "\n";
+					last_chunk = "        ]\n    }\n}";
+					eol_chunk = "\n";
+					sep_chunk = ",";
+					indent_chunk = true;
+				} else {
+					first_chunk = first_chunk.substr(0, first_chunk.size() - 3);
+					last_chunk = "]}}";
+					sep_chunk = ",";
 				}
-				first_chunk.append("\n    \"_query\": {");
-				first_chunk.append("\n        \"_total_count\": ").append(std::to_string(mset.size())).append(",");
-				first_chunk.append("\n        \"_matches_estimated\": ").append(std::to_string(mset.get_matches_estimated())).append(",");
-				first_chunk.append("\n        \"_hits\": [");
-				first_chunk.append("\n");
-				first_chunk.append("\n");
-				last_chunk.append("        ]");
-				last_chunk.append("\n    }");
-				last_chunk.append("\n}");
 			} else {
-				first_chunk.append("{");
-				if (aggregations) {
-					first_chunk.append("\"_aggregations\":").append(aggregations.to_string()).append(",");
+				first_chunk = basic_response.serialise();
+				// Remove zero size array and manually add the msgpack array header
+				first_chunk.pop_back();
+				if(total_count < 16) {
+					first_chunk.push_back(static_cast<char>(0x90u | total_count));
+				} else if(total_count < 65536) {
+					char buf[3];
+					buf[0] = static_cast<char>(0xdcu); _msgpack_store16(&buf[1], static_cast<uint16_t>(total_count));
+					first_chunk.append(std::string(buf, 3));
+				} else {
+					char buf[5];
+					buf[0] = static_cast<char>(0xddu); _msgpack_store32(&buf[1], static_cast<uint32_t>(total_count));
+					first_chunk.append(std::string(buf, 5));
 				}
-				first_chunk.append("\"_query\": {");
-				first_chunk.append("\"_total_count\":").append(std::to_string(mset.size())).append(",");
-				first_chunk.append("\"_matches_estimated\":").append(std::to_string(mset.get_matches_estimated())).append(",");
-				first_chunk.append("\"_hits\":[");
-				first_chunk.append("\n");
-				first_chunk.append("\n");
-				last_chunk.append("]");
-				last_chunk.append("}");
-				last_chunk.append("}");
 			}
 		}
 
@@ -1242,9 +1258,7 @@ HttpClient::search_view(HttpMethod method)
 			}
 
 			MsgPack obj_data;
-			if (is_acceptable_type(json_type, ct_type)) {
-				obj_data = document.get_obj();
-			} else if (is_acceptable_type(msgpack_type, ct_type)) {
+			if (is_acceptable_type(json_type, ct_type) || is_acceptable_type(msgpack_type, ct_type)) {
 				obj_data = document.get_obj();
 			} else {
 				// Returns blob_data in case that type is unkown
@@ -1270,7 +1284,7 @@ HttpClient::search_view(HttpMethod method)
 				}
 
 				if (!buffer.empty()) {
-					if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (pretty ? indent_string(buffer, ' ', 3 * 4) : buffer) + ",\n\n"))) {
+					if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + sep_chunk + eol_chunk))) {
 						// TODO: log eror?
 						break;
 					}
@@ -1289,7 +1303,7 @@ HttpClient::search_view(HttpMethod method)
 			}
 
 			if (!buffer.empty()) {
-				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (pretty ? indent_string(buffer, ' ', 3 * 4) : buffer) + "\n\n"));
+				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + eol_chunk));
 			}
 
 			write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
