@@ -464,6 +464,10 @@ class HttpProxyServer(RawProxyServer):
                 headers, sep, body = buf['buffer'].partition('\n\n')
             if sep:
                 headers = headers.split('\n')
+                if 'HTTP/1.' not in headers[0]:
+                    msg = red("%sInvalid HTTP received!" % lightred("ERROR: "))
+                    self.print(from_client, msg)
+                    return
                 buf['request'] = (headers[0].split(' ', 2) + ['', '', ''])[:3]
                 buf['headers'] = dict(map(lambda o: o.lower().strip(), l.split(':', 1)) for l in headers[1:])
                 buf['buffer'] = body
@@ -489,29 +493,62 @@ class HttpProxyServer(RawProxyServer):
                 print(color('    ' + '\n    '.join(': '.join(l) for l in buf['headers'].items())))
 
         if 'headers' in buf:
+            body = None
+
+            transfer_encoding = buf['headers'].get('transfer-encoding')
             content_length = int(buf['headers'].get('content-length', 0))
-            if len(buf['buffer']) >= content_length:
+            if transfer_encoding == 'chunked':
+                chunk_size, sep, chunk = buf['buffer'].partition('\r\n')
+                if sep:
+                    try:
+                        chunk_size = int(chunk_size, 16)
+                    except ValueError:
+                        msg = red("%sIllegal or missing hexadecimal sequence in chunked-encoding (%s)!" % (lightred("ERROR: "), chunk_size))
+                        self.print(from_client, msg)
+                        return
+                    if len(chunk) >= chunk_size + 2:
+                        if 'body' not in buf:
+                            buf['body'] = ''
+                        buf['body'] += chunk[:chunk_size]
+                        buf['buffer'] = chunk[chunk_size + 2:]
+                        if not chunk_size:
+                            body = buf['body']
+                        if chunk[chunk_size:chunk_size + 2] != '\r\n':
+                            msg = red("%sIllegal or missing end of chunk sequence in chunked-encoding!" % lightred("ERROR: "))
+                            self.print(from_client, msg)
+            elif len(buf['buffer']) >= content_length:
                 body = buf['buffer'][:content_length]
                 buf['buffer'] = buf['buffer'][content_length:]
-                if body:
-                    content_type = buf['headers'].get('content-type', '')
-                    if 'application/json' in content_type:
-                        import json
-                        try:
-                            print(lightcolor('    ' + '\n    '.join(json.dumps(json.loads(body), indent=4).split('\n'))))
-                        except ValueError as exc:
-                            print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
-                    elif 'image/' in content_type:
-                        import base64
-                        request = self.buffers[from_client][RECEIVING]['request']
-                        name = request[1] or "Unnamed file"
-                        # From [https://www.iterm2.com/documentation-images.html]
-                        print("    \033]1337;File=name=%s;inline=1;size=%d;width=70%%:%s\a" % (base64.b64encode(name), len(body), base64.b64encode(body)))
+
+            if body is not None:
+                content_type = buf['headers'].get('content-type', '')
+                if 'application/x-msgpack' in content_type:
+                    import msgpack
+                    import json
+                    try:
+                        print(lightcolor('    ' + '\n    '.join(json.dumps(msgpack.unpackb(body), indent=4).split('\n'))))
+                    except ValueError as exc:
+                        print(lightcolor(repr(body)))
+                        print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
+
+                elif 'application/json' in content_type:
+                    import json
+                    try:
+                        print(lightcolor('    ' + '\n    '.join(json.dumps(json.loads(body), indent=4).split('\n'))))
+                    except ValueError as exc:
+                        print(lightcolor(repr(body)))
+                        print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
+
+                elif 'image/' in content_type:
+                    import base64
+                    request = self.buffers[from_client][RECEIVING]['request']
+                    name = request[1] or "Unnamed file"
+                    # From [https://www.iterm2.com/documentation-images.html]
+                    print("    \033]1337;File=name=%s;inline=1;size=%d;width=70%%:%s\a" % (base64.b64encode(name), len(body), base64.b64encode(body)))
+
                 if direction == SENDING:
-                    del self.buffers[from_client][SENDING]['headers']
-                    del self.buffers[from_client][SENDING]['request']
-                    del self.buffers[from_client][RECEIVING]['headers']
-                    del self.buffers[from_client][RECEIVING]['request']
+                    self.buffers[from_client][SENDING] = {'buffer': self.buffers[from_client][SENDING]['buffer']}
+                    self.buffers[from_client][RECEIVING] = {'buffer': self.buffers[from_client][RECEIVING]['buffer']}
 
     def process_data(self, from_client, direction, data, lightcolor, color):
         buf = self.buffers[from_client][direction]
@@ -519,14 +556,14 @@ class HttpProxyServer(RawProxyServer):
         self.flush_buffer(from_client, direction, lightcolor, color)
 
     def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
-        super(HttpProxyServer, self).on_send(data, from_client, from_peer, to_client, to_peer, direction)
-        msg = lightyellow("%s <-- %s" % (from_peer, to_peer)), yellow("(%s %s)" % (len(data), "byte" if len(data) == 1 else "bytes"))
+        msg = super(HttpProxyServer, self).on_send(data, from_client, from_peer, to_client, to_peer, direction)
+        msg = msg[0], yellow("(%s %s)" % (len(data), "byte" if len(data) == 1 else "bytes"))
         self.print(from_client, msg)
         self.process_data(from_client, direction, data, lightyellow, yellow)
 
     def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
-        super(HttpProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
-        msg = lightgreen("%s --> %s" % (from_peer, to_peer)), green("(%s %s)" % (len(data), "byte" if len(data) == 1 else "bytes"))
+        msg = super(HttpProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
+        msg = msg[0], green("(%s %s)" % (len(data), "byte" if len(data) == 1 else "bytes"))
         self.print(from_client, msg)
         self.process_data(from_client, direction, data, lightgreen, green)
 
@@ -553,7 +590,7 @@ def get_server(opts):
     raise NameError("No default server registered")
 
 
-if __name__ == '__main__':
+def main():
     opts = [a for a in sys.argv[1:] if a.startswith('-')]
     args = [a for a in sys.argv[1:] if not a.startswith('-')]
     server_class = get_server(opts)
@@ -571,7 +608,19 @@ if __name__ == '__main__':
         print("    %s %s 8860 localhost:8890" % (os.path.basename(sys.argv[0]), servers_opts[-1]))
         sys.exit(1)
     try:
-        server.main_loop()
+        try:
+            import ipdb
+        except ImportError:
+            ipdb = None
+        if ipdb or '--ipdb' in opts:
+            with ipdb.launch_ipdb_on_exception():
+                server.main_loop()
+        else:
+            server.main_loop()
     except KeyboardInterrupt:
         print("Ctrl C - Stopping server")
         sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
