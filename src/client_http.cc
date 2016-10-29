@@ -61,6 +61,7 @@ type_t content_type_pair(const std::string& ct_type) {
 }
 
 
+static const auto no_type      = std::make_pair("", "");
 static const auto any_type     = content_type_pair(ANY_CONTENT_TYPE);
 static const auto json_type    = content_type_pair(JSON_CONTENT_TYPE);
 static const auto msgpack_type = content_type_pair(MSGPACK_CONTENT_TYPE);
@@ -1187,6 +1188,8 @@ HttpClient::search_view(HttpMethod method)
 		std::string first_chunk;
 		std::string last_chunk;
 
+		auto ct_type = resolve_ct_type(MSGPACK_CONTENT_TYPE);
+
 		if (chunked) {
 			if (pretty) {
 				first_chunk.append("{");
@@ -1218,31 +1221,16 @@ HttpClient::search_view(HttpMethod method)
 				last_chunk.append("}");
 			}
 		}
+
 		std::string buffer;
 		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
 			auto document = db_handler.get_document(*m);
 
-			std::string ct_type_str = chunked ? MSGPACK_CONTENT_TYPE : document.get_value(DB_SLOT_CONTENT_TYPE);
-
-			if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE) {
-				if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
-					ct_type_str = JSON_CONTENT_TYPE;
-				} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
-					ct_type_str = MSGPACK_CONTENT_TYPE;
-				}
-			}
-			auto ct_type = content_type_pair(ct_type_str);
-
-			std::vector<type_t> ct_types;
-			if (ct_type == json_type || ct_type == msgpack_type) {
-				ct_types = msgpack_serializers;
-			} else {
-				ct_types.push_back(ct_type);
+			if (!chunked) {
+				ct_type = resolve_ct_type(document.get_value(DB_SLOT_CONTENT_TYPE));
 			}
 
-			const auto& accepted_type = get_acceptable_type(ct_types);
-			const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
-			if (!accepted_ct_type) {
+			if (ct_type.first == no_type.first && ct_type.second == no_type.second) {
 				int error_code = 406;
 				MsgPack err_response = {
 					{ RESPONSE_STATUS, error_code },
@@ -1261,12 +1249,9 @@ HttpClient::search_view(HttpMethod method)
 			} else {
 				// Returns blob_data in case that type is unkown
 				auto blob_data = document.get_blob();
-				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type_str));
+				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
 				return;
 			}
-
-			ct_type = *accepted_ct_type;
-			ct_type_str = ct_type.first + "/" + ct_type.second;
 
 			obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 			// Detailed info about the document:
@@ -1280,7 +1265,7 @@ HttpClient::search_view(HttpMethod method)
 			auto result = serialize_response(obj_data, ct_type, pretty);
 			if (chunked) {
 				if (rc == 0) {
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type_str));
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
 					write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
 				}
 
@@ -1768,6 +1753,35 @@ HttpClient::clean_http_request()
 
 	async_read.send();
 	http_parser_init(&parser, HTTP_REQUEST);
+}
+
+
+type_t
+HttpClient::resolve_ct_type(std::string ct_type_str)
+{
+	if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE) {
+		if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
+			ct_type_str = JSON_CONTENT_TYPE;
+		} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
+			ct_type_str = MSGPACK_CONTENT_TYPE;
+		}
+	}
+	auto ct_type = content_type_pair(ct_type_str);
+
+	std::vector<type_t> ct_types;
+	if (ct_type == json_type || ct_type == msgpack_type) {
+		ct_types = msgpack_serializers;
+	} else {
+		ct_types.push_back(ct_type);
+	}
+
+	const auto& accepted_type = get_acceptable_type(ct_types);
+	const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
+	if (!accepted_ct_type) {
+		return no_type;
+	}
+
+	return *accepted_ct_type;
 }
 
 
