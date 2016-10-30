@@ -1306,9 +1306,11 @@ HttpClient::search_view(HttpMethod method)
 				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + eol_chunk));
 			}
 
-			write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
+			if (!last_chunk.empty()) {
+				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
+			}
 
-			write(http_response(0, HTTP_BODY, 0, 0, 0, 0, "0\r\n\r\n"));
+			write(http_response(0, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, ""));
 		}
 	}
 
