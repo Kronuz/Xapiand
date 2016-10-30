@@ -32,6 +32,9 @@ except ImportError:
     import json
     NestedDict = dict
 
+import msgpack
+
+
 __all__ = ['Xapiand']
 
 
@@ -154,9 +157,18 @@ class Xapiand(object):
         if stream is not None:
             kwargs['stream'] = stream
 
+        headers = kwargs.setdefault('headers', {})
+        accept = headers.setdefault('accept', 'application/x-msgpack')
+        content_type = headers.setdefault('content-type', accept)
+        is_msgpack = 'application/x-msgpack' in content_type
+        is_json = 'application/json' in content_type
+
         if body is not None:
             if isinstance(body, dict):
-                body = json.dumps(body)
+                if is_msgpack:
+                    body = msgpack.packb(body)
+                elif is_json:
+                    body = json.dumps(body)
             elif os.path.isfile(body):
                 body = open(body, 'r')
             res = method(url, body, **kwargs)
@@ -170,28 +182,47 @@ class Xapiand(object):
         else:
             res.raise_for_status()
 
-        is_json = 'application/json' in res.headers.get('content-type', '')
+        content_type = res.headers.get('content-type', '')
+        is_msgpack = 'application/x-msgpack' in content_type
+        is_json = 'application/json' in content_type
 
         if stream:
-            def results(lines, size=100):
-                def feed():
-                    feed.cache = []
-                    feed.cache.extend(l for l in itertools.islice(lines, size) if l)
-                feed()
-                while feed.cache:
-                    for line in feed.cache:
-                        if is_json:
-                            if line.lstrip().startswith(']'):
+            def results(chunks, size=100):
+                def fetch():
+                    fetch.cache = []
+                    fetch.cache.extend(l for l in itertools.islice(chunks, size) if l)
+                fetch()
+                first = True
+                while fetch.cache:
+                    for chunk in fetch.cache:
+                        if is_msgpack:
+                            if first:
+                                first = False
+                                if ord(chunk[-1]) & 0xf0 == 0x90:
+                                    chunk = chunk[:-1] + '\x90'
+                                elif chunk[-3] == '\xdc':
+                                    chunk = chunk[:-3] + '\x90'
+                                elif chunk[-5] == '\xdd':
+                                    chunk = chunk[:-5] + '\x90'
+                                else:
+                                    raise IOError("Unexpected chunk!")
+                            yield msgpack.unpackb(chunk)
+                        elif is_json:
+                            if first:
+                                first = False
+                                if chunk.rstrip().endswith('['):
+                                    chunk += ']}}'
+                                else:
+                                    raise IOError("Unexpected chunk!")
+                            elif chunk.lstrip().startswith(']'):
                                 continue
-                            elif line.rstrip().endswith('['):
-                                line += ']}}'
                             else:
-                                line = line.rstrip().rstrip(',')
-                            yield json.loads(line)
+                                chunk = chunk.rstrip().rstrip(',')
+                            yield json.loads(chunk)
                         else:
-                            yield line
-                    feed()
-            results = results(res.iter_lines(delimiter='\n\n'))
+                            yield chunk
+                    fetch()
+            results = results(res.iter_content(chunk_size=None))
             meta = next(results)
         else:
             results = [json.loads(res.content) if is_json else res.content]
