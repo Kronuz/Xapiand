@@ -251,6 +251,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	if (!ct_field.is_map()) {
 		ct_field = MsgPack();
 	}
+	ct_field[RESERVED_TYPE] = STRING_STR;
 	ct_field[RESERVED_VALUE] = ct_type;
 	ct_field[type][subtype] = nullptr;
 
