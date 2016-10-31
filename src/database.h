@@ -195,7 +195,7 @@ public:
 	system_clock::time_point access_time;
 	bool modified;
 	long long mastery_level;
-	std::string checkout_revision;
+	uint32_t checkout_revision;
 
 	std::unique_ptr<Xapian::Database> db;
 
@@ -212,7 +212,7 @@ public:
 
 	std::string get_uuid() const;
 	uint32_t get_revision() const;
-	std::string get_revision_info() const;
+	std::string get_revision_str() const;
 
 	bool commit(bool wal_=true);
 	void cancel(bool wal_=true);

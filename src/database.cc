@@ -72,15 +72,7 @@ WalHeader::init(void* param, void* args)
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 	strncpy(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid));
 
-	std::string rev_serialised = wal->database->get_revision_info();
-	const char *p = rev_serialised.data();
-	const char *p_end = p + rev_serialised.size();
-
-	size_t length = unserialise_length(&p, p_end);
-	const char *r_end = p + length;
-	uint32_t revision;
-	unserialise_unsigned(&p, r_end, &revision);
-
+	auto revision = wal->database->get_revision();
 	if (commit_eof) {
 		++revision;
 	}
@@ -108,13 +100,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 {
 	L_CALL(this, "DatabaseWAL::open_current()");
 
-	const char *p = database->checkout_revision.data();
-	const char *p_end = p + database->checkout_revision.size();
-	size_t length = unserialise_length(&p, p_end);
-	const char *r_end = p + length;
-
-	uint32_t revision;
-	unserialise_unsigned(&p, r_end, &revision);
+	uint32_t revision = database->checkout_revision;
 
 	DIR *dir = opendir(path.c_str(), true);
 	if (!dir) {
@@ -253,14 +239,8 @@ DatabaseWAL::execute(const std::string& line)
 		throw MSG_Error("Can not execute WAL on a remote database!");
 	}
 
-	size_t size = unserialise_length(&p, p_end, true);
-	std::string revision(p, size);
-	p += size;
-
-	std::string encoded_db_rev = database->get_revision_info();
-	const char* r = encoded_db_rev.data();
-	const char* r_end = r + encoded_db_rev.size();
-	std::string db_revision = unserialise_string(&r, r_end);
+	auto revision = unserialise_length(&p, p_end);
+	auto db_revision = database->get_revision();
 
 	if (revision != db_revision) {
 		return false;
@@ -274,6 +254,7 @@ DatabaseWAL::execute(const std::string& line)
 	Xapian::Document doc;
 	Xapian::termcount freq;
 	std::string term;
+	size_t size;
 
 	p = data.data();
 	p_end = p + data.size();
@@ -343,20 +324,13 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 	auto endpoint = database->endpoints[0];
 	assert(endpoint.is_local());
 
-	std::string revision_encode = database->get_revision_info();
+	std::string revision_encode = database->get_revision_str();
 	std::string uuid = database->get_uuid();
 	std::string line(revision_encode + serialise_length(toUType(type)) + data);
 
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint.path.c_str(), repr(line, quote).c_str());
 
-	const char* p = revision_encode.data();
-	const char* p_end = p + revision_encode.size();
-	std::string revision = unserialise_string(&p, p_end);
-
-	uint32_t rev;
-	const char* r = revision.data();
-	const char* r_end = r + revision.size();
-	unserialise_unsigned(&r, r_end, &rev);
+	uint32_t rev = database->get_revision();
 
 	uint32_t slot = rev - header.head.revision;
 
@@ -489,7 +463,8 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 	hash(endpoints.hash()),
 	access_time(system_clock::now()),
 	modified(false),
-	mastery_level(-1)
+	mastery_level(-1),
+	checkout_revision(0)
 {
 	reopen();
 
@@ -584,12 +559,12 @@ Database::reopen()
 		db->add_database(wdb);
 
 		if (local) {
-			checkout_revision = get_revision_info();
+			checkout_revision = get_revision();
 		}
 
 #ifdef XAPIAND_DATABASE_WAL
-		/* If checkout_revision.empty() is true then get_revision_info() is not available */
-		if (local && !(flags & DB_NOWAL) && !checkout_revision.empty()) {
+		/* If checkout_revision is not available Wal work as a log for the operations */
+		if (local && !(flags & DB_NOWAL)) {
 			// WAL required on a local writable database, open it.
 			wal = std::make_unique<DatabaseWAL>(this);
 			if (wal->open_current(e.path, true)) {
@@ -668,13 +643,11 @@ Database::get_revision() const
 
 
 std::string
-Database::get_revision_info() const
+Database::get_revision_str() const
 {
-	L_CALL(this, "Database::get_revision_info()");
+	L_CALL(this, "Database::get_revision_str()");
 
-	std::string revision;
-	serialise_unsigned(revision, get_revision());
-	return serialise_length(revision.size()) + revision;
+	return serialise_length(get_revision());
 }
 
 
@@ -1515,7 +1488,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->repr(endpoints.to_string()).c_str());
 	}
 
-	L_DATABASE_END(this, "++ CHECKED OUT DB [%s]: %s (rev:%s)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str(), repr(database->checkout_revision, false).c_str());
+	L_DATABASE_END(this, "++ CHECKED OUT DB [%s]: %s (rev:%u)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str(), database->checkout_revision);
 	return true;
 }
 
@@ -1536,7 +1509,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	if (database->flags & DB_WRITABLE) {
 		Endpoint& endpoint = database->endpoints[0];
 		if (endpoint.is_local()) {
-			std::string new_revision = database->get_revision_info();
+			auto new_revision = database->get_revision();
 			if (database->checkout_revision != new_revision) {
 				database->checkout_revision = new_revision;
 				if (database->mastery_level != -1) {
