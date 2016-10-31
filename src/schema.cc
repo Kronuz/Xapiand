@@ -3466,6 +3466,12 @@ Schema::set_default_spc_id(MsgPack& properties)
 {
 	L_CALL(this, "Schema::set_default_spc_id(%s)", repr(properties.to_string()).c_str());
 
+	if (!specification.flags.has_index) {
+		specification.flags.has_index = true;
+		specification.index = TypeIndex::ALL;
+		get_mutable(specification.full_name)[RESERVED_INDEX] = specification.index;
+	}
+
 	specification.flags.bool_term = true;
 
 	// ID_FIELD_NAME can not be TEXT.
