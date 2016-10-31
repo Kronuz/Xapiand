@@ -672,7 +672,9 @@ Database::get_revision_info() const
 {
 	L_CALL(this, "Database::get_revision_info()");
 
-	return serialise_length(get_revision());
+	std::string revision;
+	serialise_unsigned(revision, get_revision());
+	return revision;
 }
 
 
