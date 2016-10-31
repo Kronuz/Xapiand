@@ -81,8 +81,7 @@ std::string traceback(const char *filename, int line) {
 }
 
 
-Exception::Exception(const char *filename, int line, const char *format, ...)
-	: std::runtime_error("")
+BaseException::BaseException(const char *filename, int line, const char *format, ...)
 {
 	char buffer[BUFFER_SIZE];
 
