@@ -265,8 +265,8 @@ check_cxx_source_compiles ("
 check_cxx_source_compiles ("
 	#include <xapian.h>
 	int main() {
-		&Xapian::Database::get_revision_info;
-	}" HAVE_DATABASE_REVISION_INFO)
+		&Xapian::Database::get_revision;
+	}" HAVE_DATABASE_REVISION)
 cmake_pop_check_state ()
 
 if (CLUSTERING AND HAVE_REMOTE_PROTOCOL)

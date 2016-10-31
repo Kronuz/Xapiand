@@ -245,8 +245,8 @@
 
 
 
-/* Define to 1 if Xapian has Database::get_revision_info() available. */
-#cmakedefine HAVE_DATABASE_REVISION_INFO @HAVE_DATABASE_REVISION_INFO@
+/* Define to 1 if Xapian has Database::get_revision() available. */
+#cmakedefine HAVE_DATABASE_REVISION @HAVE_DATABASE_REVISION@
 
 /* Define to 1 if Xapian has RemoteProtocol available. */
 #cmakedefine HAVE_REMOTE_PROTOCOL @HAVE_REMOTE_PROTOCOL@

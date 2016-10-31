@@ -654,16 +654,25 @@ Database::get_uuid() const
 }
 
 
+uint32_t
+Database::get_revision() const
+{
+	L_CALL(this, "Database::get_revision()");
+
+#if HAVE_DATABASE_REVISION
+	return db->get_revision();
+#else
+	return 0;
+#endif
+}
+
+
 std::string
 Database::get_revision_info() const
 {
 	L_CALL(this, "Database::get_revision_info()");
 
-#if HAVE_DATABASE_REVISION_INFO
-	return db->get_revision_info();
-#else
-	return std::string();
-#endif
+	return serialise_length(get_revision());
 }
 
 

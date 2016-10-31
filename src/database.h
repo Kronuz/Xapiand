@@ -211,6 +211,7 @@ public:
 	bool reopen();
 
 	std::string get_uuid() const;
+	uint32_t get_revision() const;
 	std::string get_revision_info() const;
 
 	bool commit(bool wal_=true);
