@@ -184,10 +184,6 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 	auto this_response_size = response.size();
 	response_size += this_response_size;
 
-	if ((!this_response_size || !(mode & HTTP_CHUNKED)) && !(mode & HTTP_EXPECTED100)) {
-		clean_http_request();
-	}
-
 	return headers + response;
 }
 
@@ -582,6 +578,8 @@ HttpClient::_run()
 			write_http_response(error_code, err_response);
 		}
 	}
+
+	clean_http_request();
 
 	L_OBJ_END(this, "HttpClient::run:END");
 }
