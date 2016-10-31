@@ -163,7 +163,7 @@ struct DB_Test {
 				if (!read_file_contents(doc, &buffer)) {
 					delete_files(name_database);
 					L_ERR(nullptr, "Can not read the file %s", doc.c_str());
-				} else if (db_handler.index(buffer, std::to_string(i++), true, JSON_CONTENT_TYPE, std::to_string(buffer.size())) == 0) {
+				} else if (db_handler.index( std::to_string(i++), buffer, true, JSON_CONTENT_TYPE) == 0) {
 					delete_files(name_database);
 					throw MSG_Error("File %s can not index", doc.c_str());
 				}
