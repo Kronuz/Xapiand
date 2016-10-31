@@ -225,7 +225,13 @@ class Xapiand(object):
             results = results(res.iter_content(chunk_size=None))
             meta = next(results)
         else:
-            results = [json.loads(res.content) if is_json else res.content]
+            if is_msgpack:
+                content = msgpack.unpackb(res.content)
+            elif is_json:
+                content = json.loads(res.content)
+            else:
+                content = res.content
+            results = [content]
             meta = {}
 
         results = Results(meta, results)
