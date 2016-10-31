@@ -3757,14 +3757,10 @@ Schema::serialise_id(const MsgPack& obj, const std::string& value_id)
 			}
 		} catch (const std::out_of_range&) {
 		} catch (const msgpack::type_error&) { }
-
 		if (specification.sep_types[2] == FieldType::EMPTY) {
-			auto res_serialise = Serialise::get_type(value_id, true);
-			specification.sep_types[2] = res_serialise.first;
-			return res_serialise.second;
-		} else {
-			return Serialise::serialise(specification, value_id);
+			guess_field_type(Cast::cast(value_id));
 		}
+		return Serialise::serialise(specification, value_id);
 	}
 }
 
