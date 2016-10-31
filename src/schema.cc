@@ -3738,8 +3738,15 @@ Schema::serialise_id(const MsgPack& obj, const std::string& value_id)
 		return Serialise::serialise(specification, value_id);
 	} catch (const std::out_of_range&) {
 		specification.flags.field_found = true;
-		specification.full_name.assign(ID_FIELD_NAME);
 		try {
+			for (const auto& item_key : obj) {
+				const auto str_key = item_key.as_string();
+				try {
+					auto func = map_dispatch_document.at(str_key);
+					(this->*func)(str_key, obj.at(str_key));
+				} catch (const std::out_of_range&) { }
+			}
+			restart_specification();
 			const auto& obj_id = obj.at(ID_FIELD_NAME);
 			for (const auto& item_key : obj_id) {
 				const auto str_key = item_key.as_string();
