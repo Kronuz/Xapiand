@@ -26,13 +26,22 @@ import os
 import itertools
 
 try:
-    from dfw.core.utils import json
     from dfw.core.utils.datastructures.nested import NestedDict
 except ImportError:
-    import json
     NestedDict = dict
 
-import msgpack
+try:
+    from dfw.core.utils import json
+except ImportError:
+    import json
+
+try:
+    from dfw.core.utils import msgpack
+except ImportError:
+    try:
+        import msgpack
+    except ImportError:
+        msgpack = None
 
 
 __all__ = ['Xapiand']
@@ -98,13 +107,16 @@ class Xapiand(object):
         patch=(session.patch, False, 'result'),
     )
 
-    def __init__(self, ip='127.0.0.1', port=8880, commit=False, prefix=None):
+    def __init__(self, ip='127.0.0.1', port=8880, commit=False, prefix=None, default_accept=None):
         if ip and ':' in ip:
             ip, _, port = ip.partition(':')
         self.ip = ip
         self.port = port
         self.commit = commit
         self.prefix = prefix
+        if default_accept is None:
+            default_accept = 'application/json' if msgpack is None else 'application/x-msgpack'
+        self.default_accept = default_accept
 
     def _build_url(self, action_request, index, ip, port, nodename, id, body):
         if ip and ':' in ip:
@@ -157,7 +169,7 @@ class Xapiand(object):
             kwargs['stream'] = stream
 
         headers = kwargs.setdefault('headers', {})
-        accept = headers.setdefault('accept', 'application/x-msgpack')
+        accept = headers.setdefault('accept', self.default_accept)
         content_type = headers.setdefault('content-type', accept)
         is_msgpack = 'application/x-msgpack' in content_type
         is_json = 'application/json' in content_type
