@@ -674,7 +674,7 @@ Database::get_revision_info() const
 
 	std::string revision;
 	serialise_unsigned(revision, get_revision());
-	return revision;
+	return serialise_length(revision.size()) + revision;
 }
 
 
