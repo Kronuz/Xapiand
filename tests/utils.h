@@ -105,6 +105,31 @@ inline Endpoint create_endpoint(const std::string& database) {
 #endif
 
 
+inline bool write_file_contents(const std::string& filename, const std::string& contents) {
+	std::ofstream of(filename.data(), std::ios::out | std::ios::binary);
+	if (of.bad()) {
+		return false;
+	}
+	of.write(contents.data(), contents.size());
+	return true;
+}
+
+
+inline bool read_file_contents(const std::string& filename, std::string* contents) {
+	std::ifstream in(filename.data(), std::ios::in | std::ios::binary);
+	if (in.bad()) {
+		return false;
+	}
+
+	in.seekg(0, std::ios::end);
+	contents->resize(static_cast<size_t>(in.tellg()));
+	in.seekg(0, std::ios::beg);
+	in.read(&(*contents)[0], contents->size());
+	in.close();
+	return true;
+}
+
+
 #if (TESTING_DATABASE == 1) || (TESTING_ENDPOINTS == 1)
 #include "../src/manager.h"
 #include "../src/database_handler.h"
@@ -169,28 +194,3 @@ struct DB_Test {
 	}
 };
 #endif
-
-
-inline bool write_file_contents(const std::string& filename, const std::string& contents) {
-	std::ofstream of(filename.data(), std::ios::out | std::ios::binary);
-	if (of.bad()) {
-		return false;
-	}
-	of.write(contents.data(), contents.size());
-	return true;
-}
-
-
-inline bool read_file_contents(const std::string& filename, std::string* contents) {
-	std::ifstream in(filename.data(), std::ios::in | std::ios::binary);
-	if (in.bad()) {
-		return false;
-	}
-
-	in.seekg(0, std::ios::end);
-	contents->resize(static_cast<size_t>(in.tellg()));
-	in.seekg(0, std::ios::beg);
-	in.read(&(*contents)[0], contents->size());
-	in.close();
-	return true;
-}
