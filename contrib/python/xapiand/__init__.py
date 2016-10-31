@@ -177,7 +177,7 @@ class Xapiand(object):
         if body is not None:
             if isinstance(body, dict):
                 if is_msgpack:
-                    body = msgpack.packb(body)
+                    body = msgpack.dumps(body)
                 elif is_json:
                     body = json.dumps(body)
             elif os.path.isfile(body):
@@ -217,7 +217,7 @@ class Xapiand(object):
                                     chunk = chunk[:-5] + '\x90'
                                 else:
                                     raise IOError("Unexpected chunk!")
-                            yield msgpack.unpackb(chunk)
+                            yield msgpack.loads(chunk)
                         elif is_json:
                             if first:
                                 first = False
@@ -237,7 +237,7 @@ class Xapiand(object):
             meta = next(results)
         else:
             if is_msgpack:
-                content = msgpack.unpackb(res.content)
+                content = msgpack.loads(res.content)
             elif is_json:
                 content = json.loads(res.content)
             else:
