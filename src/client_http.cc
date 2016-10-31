@@ -1208,20 +1208,7 @@ HttpClient::search_view(HttpMethod method)
 			}
 			basic_response["_query"] = basic_query;
 
-			if (is_acceptable_type(json_type, ct_type)) {
-				first_chunk = basic_response.to_string(pretty);
-				if (pretty) {
-					first_chunk = first_chunk.substr(0, first_chunk.size() - 9) + "\n";
-					last_chunk = "        ]\n    }\n}";
-					eol_chunk = "\n";
-					sep_chunk = ",";
-					indent_chunk = true;
-				} else {
-					first_chunk = first_chunk.substr(0, first_chunk.size() - 3);
-					last_chunk = "]}}";
-					sep_chunk = ",";
-				}
-			} else {
+			if(is_acceptable_type(msgpack_type, ct_type)) {
 				first_chunk = basic_response.serialise();
 				// Remove zero size array and manually add the msgpack array header
 				first_chunk.pop_back();
@@ -1236,6 +1223,28 @@ HttpClient::search_view(HttpMethod method)
 					buf[0] = static_cast<char>(0xddu); _msgpack_store32(&buf[1], static_cast<uint32_t>(total_count));
 					first_chunk.append(std::string(buf, 5));
 				}
+			} else if (is_acceptable_type(json_type, ct_type)) {
+				first_chunk = basic_response.to_string(pretty);
+				if (pretty) {
+					first_chunk = first_chunk.substr(0, first_chunk.size() - 9) + "\n";
+					last_chunk = "        ]\n    }\n}";
+					eol_chunk = "\n";
+					sep_chunk = ",";
+					indent_chunk = true;
+				} else {
+					first_chunk = first_chunk.substr(0, first_chunk.size() - 3);
+					last_chunk = "]}}";
+					sep_chunk = ",";
+				}
+			} else {
+				int error_code = 406;
+				MsgPack err_response = {
+					{ RESPONSE_STATUS, error_code },
+					{ RESPONSE_MESSAGE, std::string("Response type application/x-msgpack or application/json not provided in the accept header") }
+				};
+				write_http_response(error_code, err_response);
+				L_SEARCH(this, "ABORTED SEARCH");
+				return;
 			}
 		}
 
@@ -1259,7 +1268,7 @@ HttpClient::search_view(HttpMethod method)
 			}
 
 			MsgPack obj_data;
-			if (is_acceptable_type(json_type, ct_type) || is_acceptable_type(msgpack_type, ct_type)) {
+			if (is_acceptable_type(msgpack_type, ct_type) || is_acceptable_type(json_type, ct_type)) {
 				obj_data = document.get_obj();
 			} else {
 				// Returns blob_data in case that type is unkown
