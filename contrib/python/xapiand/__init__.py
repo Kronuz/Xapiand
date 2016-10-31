@@ -89,7 +89,6 @@ class Xapiand(object):
     session.mount('http://', requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100))
     _methods = dict(
         search=(session.get, True, 'results'),
-        facets=(session.get, True, 'facets'),
         stats=(session.get, False, 'result'),
         get=(session.get, False, 'result'),
         delete=(session.delete, False, 'result'),
@@ -137,7 +136,7 @@ class Xapiand(object):
 
     def _send_request(self, action_request, index, ip=None, port=None, nodename=None, id=None, body=None, default=NA, **kwargs):
         """
-        :arg action_request: Perform index, delete, serch, facets, stats, patch, head actions per request
+        :arg action_request: Perform index, delete, serch, stats, patch, head actions per request
         :arg query: Query to process on xapiand
         :arg index: index path
         :arg ip: address to connect to xapiand
@@ -243,7 +242,7 @@ class Xapiand(object):
 
         return results
 
-    def search(self, index, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, volatile=False, kwargs=None, **kw):
+    def search(self, index, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, language=None, pretty=False, volatile=False, kwargs=None, **kw):
         kwargs = kwargs or {}
         kwargs.update(kw)
         kwargs['params'] = dict(
@@ -262,36 +261,9 @@ class Xapiand(object):
             kwargs['params']['limit'] = limit
         if sort is not None:
             kwargs['params']['sort'] = sort
-        if facets is not None:
-            kwargs['params']['facets'] = facets
         if language is not None:
             kwargs['params']['language'] = language
         return self._send_request('search', index, **kwargs)
-
-    def facets(self, index, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, volatile=False, kwargs=None, **kw):
-        kwargs = kwargs or {}
-        kwargs.update(kw)
-        kwargs['params'] = dict(
-            pretty=pretty,
-            volatile=volatile,
-        )
-        if query is not None:
-            kwargs['params']['query'] = query
-        if partial is not None:
-            kwargs['params']['partial'] = partial
-        if terms is not None:
-            kwargs['params']['terms'] = terms
-        if offset is not None:
-            kwargs['params']['offset'] = offset
-        if limit is not None:
-            kwargs['params']['limit'] = limit
-        if sort is not None:
-            kwargs['params']['sort'] = sort
-        if facets is not None:
-            kwargs['params']['facets'] = facets
-        if language is not None:
-            kwargs['params']['language'] = language
-        return self._send_request('facets', index, **kwargs)
 
     def stats(self, index, pretty=False, kwargs=None):
         kwargs = kwargs or {}
