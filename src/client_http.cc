@@ -181,9 +181,10 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 		}
 	}
 
-	response_size += response.size();
+	auto this_response_size = response.size();
+	response_size += this_response_size;
 
-	if (!(mode & HTTP_CHUNKED) && !(mode & HTTP_EXPECTED100)) {
+	if ((!this_response_size || !(mode & HTTP_CHUNKED)) && !(mode & HTTP_EXPECTED100)) {
 		clean_http_request();
 	}
 
