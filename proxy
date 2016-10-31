@@ -521,30 +521,31 @@ class HttpProxyServer(RawProxyServer):
                 buf['buffer'] = buf['buffer'][content_length:]
 
             if body is not None:
-                content_type = buf['headers'].get('content-type', '')
-                if 'application/x-msgpack' in content_type:
-                    import msgpack
-                    import json
-                    try:
-                        print(lightcolor('    ' + '\n    '.join(json.dumps(msgpack.unpackb(body), indent=4).split('\n'))))
-                    except ValueError as exc:
-                        print(lightcolor(repr(body)))
-                        print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
+                if body:
+                    content_type = buf['headers'].get('content-type', '')
+                    if 'application/x-msgpack' in content_type:
+                        import msgpack
+                        import json
+                        try:
+                            print(lightcolor('    ' + '\n    '.join(json.dumps(msgpack.unpackb(body), indent=4).split('\n'))))
+                        except ValueError as exc:
+                            print(lightcolor(repr(body)))
+                            print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
 
-                elif 'application/json' in content_type:
-                    import json
-                    try:
-                        print(lightcolor('    ' + '\n    '.join(json.dumps(json.loads(body), indent=4).split('\n'))))
-                    except ValueError as exc:
-                        print(lightcolor(repr(body)))
-                        print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
+                    elif 'application/json' in content_type:
+                        import json
+                        try:
+                            print(lightcolor('    ' + '\n    '.join(json.dumps(json.loads(body), indent=4).split('\n'))))
+                        except ValueError as exc:
+                            print(lightcolor(repr(body)))
+                            print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
 
-                elif 'image/' in content_type:
-                    import base64
-                    request = self.buffers[from_client][RECEIVING]['request']
-                    name = request[1] or "Unnamed file"
-                    # From [https://www.iterm2.com/documentation-images.html]
-                    print("    \033]1337;File=name=%s;inline=1;size=%d;width=70%%:%s\a" % (base64.b64encode(name), len(body), base64.b64encode(body)))
+                    elif 'image/' in content_type:
+                        import base64
+                        request = self.buffers[from_client][RECEIVING]['request']
+                        name = request[1] or "Unnamed file"
+                        # From [https://www.iterm2.com/documentation-images.html]
+                        print("    \033]1337;File=name=%s;inline=1;size=%d;width=70%%:%s\a" % (base64.b64encode(name), len(body), base64.b64encode(body)))
 
                 if direction == SENDING:
                     self.buffers[from_client][SENDING] = {'buffer': self.buffers[from_client][SENDING]['buffer']}
