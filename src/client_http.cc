@@ -1253,7 +1253,7 @@ HttpClient::search_view(HttpMethod method)
 			auto document = db_handler.get_document(*m);
 
 			if (!chunked) {
-				auto ct_type_str = document.get_value(DB_SLOT_CONTENT_TYPE);
+				auto ct_type_str = document.get_value(CT_FIELD_NAME).as_string();
 				ct_type = resolve_ct_type(ct_type_str);
 				if (ct_type.first == no_type.first && ct_type.second == no_type.second) {
 					int error_code = 406;
