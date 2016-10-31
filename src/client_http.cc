@@ -1253,18 +1253,18 @@ HttpClient::search_view(HttpMethod method)
 			auto document = db_handler.get_document(*m);
 
 			if (!chunked) {
-				ct_type = resolve_ct_type(document.get_value(DB_SLOT_CONTENT_TYPE));
-			}
-
-			if (ct_type.first == no_type.first && ct_type.second == no_type.second) {
-				int error_code = 406;
-				MsgPack err_response = {
-					{ RESPONSE_STATUS, error_code },
-					{ RESPONSE_MESSAGE, std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header") }
-				};
-				write_http_response(error_code, err_response);
-				L_SEARCH(this, "ABORTED SEARCH");
-				return;
+				auto ct_type_str = document.get_value(DB_SLOT_CONTENT_TYPE);
+				ct_type = resolve_ct_type(ct_type_str);
+				if (ct_type.first == no_type.first && ct_type.second == no_type.second) {
+					int error_code = 406;
+					MsgPack err_response = {
+						{ RESPONSE_STATUS, error_code },
+						{ RESPONSE_MESSAGE, std::string("Response type " + ct_type_str + " not provided in the accept header") }
+					};
+					write_http_response(error_code, err_response);
+					L_SEARCH(this, "ABORTED SEARCH");
+					return;
+				}
 			}
 
 			MsgPack obj_data;
