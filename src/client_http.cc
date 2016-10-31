@@ -1301,9 +1301,11 @@ HttpClient::search_view(HttpMethod method)
 					}
 				}
 				buffer = result.first;
-			} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
-				// TODO: log eror?
-				break;
+			} else {
+				if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
+					// TODO: log eror?
+					break;
+				}
 			}
 		}
 
