@@ -225,7 +225,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
 	L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
 
-	auto prefixed_term_id =  prefixed(schema->write_schema_id(obj, _document_id), DOCUMENT_ID_TERM_PREFIX);
+	auto prefixed_term_id =  prefixed(schema->serialise_id(obj, _document_id), DOCUMENT_ID_TERM_PREFIX);
 	auto obj_ = run_script(obj, prefixed_term_id);
 
 	// Create a suitable document.
