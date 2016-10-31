@@ -1,35 +1,35 @@
 # Xapiand
 
 
-## A Multi-Partitioning RESTful Search Engine
+## A RESTful Search Engine
 
-Xapiand: A Highly Available Distributed RESTful Storage and Search Engine built for the cloud and with Data Locality in mind. To explain:
+Xapiand aims to be: A Highly Available Distributed RESTful Storage and Search Engine built for the Cloud and with Data Locality in mind.
 
 * HTTP RESTful API:
 	* Document oriented.
-	* Automatic node operation rerouting.
 	* No need for upfront schema definition.
-* Storage and Search Engine  *(Not yet implemented)*:
+
+* Search Engine:
 	* Built on top of [Xapian](http://xapian.org/) indexes.
-	* Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
+
 * Multi Tenant with Multi Types:
 	* Support for more than one index.
 	* Support for different types, one per index.
 	* Index level configuration:
 		* Schema.
-		* Replicas.
-		* Partitioning strategies.  *(Not yet implemented)*
-* Multi-Partitioning and Distribution Strategies  *(Not yet implemented)*:
-	* Random Consistent Partitioning and Replication.
-	* Social-Based Partitioning and Replication (SPAR <sup>[2](#footnote-2)</sup>).
-* Highly Available:  *(Not yet implemented)*
-	* Replicas exists to maximize high availability *and* data locality.
-	* Read and Search operations performed on any of the replicas.
-	* Reliable, asynchronous replication for long term persistency.
+
 * Efficient and Scalable architecture:
 	* (Near) Real Time Search.
 	* Event driven asynchronous architecture using [libev](http://software.schmorp.de/pkg/libev.html).
 	* Written in C++14.
+
+* Geospatial support:
+    * Uses The Hierarchical Triangular Mesh for indexing.
+    * Accepts multiple Coordinate Reference Systems, including WGS84.
+    * Implements EWKT.
+
+* Support for query Aggregations.
+
 * Liberal Open Source license: MIT license (Xapian itself is GPL).
 
 
@@ -49,6 +49,7 @@ Xapiand is written in C++14, it makes use of libev (which is included in the cod
 * CMake
 * libpthread (internally used by the Standard C++ thread library)
 * xapian-core v1.4+ (With patches by Kronuz applied, see https://github.com/Kronuz/xapian)
+* Optionally, Google's V8 Javascript engine library (tested with v5.1)
 
 
 #### Building from Source (GitHub)
@@ -68,8 +69,6 @@ Xapiand is written in C++14, it makes use of libev (which is included in the cod
 3. Run `xapiand` inside a new directory to be assigned to the node.
 
 4. Run `curl -X GET http://localhost:8880/`.
-
-5. Start more nodes.
 
 
 ### Indexing
@@ -115,12 +114,36 @@ curl -XGET 'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty=tru
 ```
 
 
-### Storage
+### Where to go from here?
 
 *TODO: Work in progress...*
 
 
-### Highly Available Data Partitioning
+## The road ahead
+
+This is a list of features that are only partially implemented; but that are planned to be supported
+by Xapiand some time soonish in order to get closer to the final product:
+
+* Storage Engine:
+	* Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
+
+* Multi-Partitioning and Distribution Strategies:
+	* Social-Based Partitioning and Replication (SPAR <sup>[2](#footnote-2)</sup>).
+	* Random Consistent Partitioning and Replication.
+
+* Highly Available:
+	* Automatic node operation rerouting.
+	* Replicas exists to maximize high availability *and* data locality.
+	* Read and Search operations performed on any of the replicas.
+	* Reliable, asynchronous replication for long term persistency.
+
+
+### Storage Engine
+
+*TODO: Work in progress...*
+
+
+### Multi-Partitioning and Distribution Strategies
 
 To achieve high availability, distribution of data and data locality, Xapiand can partition, replicate and distribute indexes across several nodes using any of the following partitioning strategies:
 
@@ -135,11 +158,6 @@ To achieve high availability, distribution of data and data locality, Xapiand ca
 #### Random Consistent Partitioning
 
 * Horizontal scaling by distributing indexes among several nodes.
-
-
-### Where to go from here?
-
-*TODO: Work in progress...*
 
 
 ## License
