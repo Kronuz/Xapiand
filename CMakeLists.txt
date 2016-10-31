@@ -12,7 +12,7 @@ set (PACKAGE_PATH_TEST "${PROJECT_SOURCE_DIR}/tests")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 
 option (BINARY_PROXY "Define to what port binary traffic will be redirected to" OFF)
-option (CLUSTERING "Enable remote clustering" ON)
+option (CLUSTERING "Enable remote clustering" OFF)
 option (DATABASE_WAL "Enable database write ahead log (WAL)" ON)
 option (TRACEBACKS "Enable tracebacks for exceptions" OFF)
 option (V8 "Enable v8 engine" ON)
