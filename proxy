@@ -527,18 +527,22 @@ class HttpProxyServer(RawProxyServer):
                         import msgpack
                         import json
                         try:
-                            print(lightcolor('    ' + '\n    '.join(json.dumps(msgpack.unpackb(body), indent=4).split('\n'))))
+                            unpacked = msgpack.unpackb(body)
+                            json_dump = json.dumps(unpacked, indent=4, ensure_ascii=False)
+                            print(lightcolor('    ' + '\n    '.join(json_dump.split('\n'))))
                         except ValueError as exc:
                             print(lightcolor(repr(body)))
-                            print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
+                            print(lightcolor('    %s%s' % (lightred("ERROR 1: "), exc)))
 
                     elif 'application/json' in content_type:
                         import json
                         try:
-                            print(lightcolor('    ' + '\n    '.join(json.dumps(json.loads(body), indent=4).split('\n'))))
+                            unpacked = json.loads(body.decode('utf-8', errors='replace'))
+                            json_dump = json.dumps(unpacked, indent=4, ensure_ascii=False)
+                            print(lightcolor('    ' + '\n    '.join(json_dump.split('\n'))))
                         except ValueError as exc:
                             print(lightcolor(repr(body)))
-                            print(lightcolor('    %s%s' % (lightred("ERROR: "), exc)))
+                            print(lightcolor('    %s%s' % (lightred("ERROR 2: "), exc)))
 
                     elif 'image/' in content_type:
                         import base64
