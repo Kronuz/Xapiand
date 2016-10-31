@@ -84,7 +84,7 @@ inline constexpr TypeIndexBit operator~(const TypeIndexBit& o) {
 
 enum class TypeIndex : uint8_t {
 	// Not indexed:
-	NONE          = 0b0000,
+	NONE          = static_cast<uint8_t>(TypeIndexBit::FIELD | TypeIndexBit::GLOBAL),
 	// Index the field value like FIELD_TERMS and GLOBAL_TERMS:
 	TERMS         = static_cast<uint8_t>(TypeIndexBit::GLOBAL | TypeIndexBit::FIELD | TypeIndexBit::TERMS),
 	// Index the field value like FIELD_VALUES and GLOBAL_VALUES:

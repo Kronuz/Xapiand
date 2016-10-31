@@ -3468,7 +3468,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
-		specification.index = TypeIndex::ALL;
+		specification.index |= (TypeIndexBit::VALUES | TypeIndexBit::TERMS);
 		get_mutable(specification.full_name)[RESERVED_INDEX] = specification.index;
 	}
 
@@ -3507,7 +3507,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
-		specification.index = TypeIndex::FIELD_VALUES;
+		specification.index |= TypeIndexBit::VALUES;
 		get_mutable(specification.full_name)[RESERVED_INDEX] = specification.index;
 	}
 
@@ -3737,9 +3737,8 @@ Schema::write_schema_id(const MsgPack& obj, const std::string& value_id)
 		update_specification(prop_id);
 		return Serialise::serialise(specification, value_id);
 	} catch (const std::out_of_range&) {
-		specification.flags.field_found = false;
+		specification.flags.field_found = true;
 		specification.full_name.assign(ID_FIELD_NAME);
-		specification.dynamic_full_name.assign(ID_FIELD_NAME);
 		try {
 			const auto& obj_id = obj.at(ID_FIELD_NAME);
 			for (const auto& item_key : obj_id) {
@@ -3755,10 +3754,8 @@ Schema::write_schema_id(const MsgPack& obj, const std::string& value_id)
 		if (specification.sep_types[2] == FieldType::EMPTY) {
 			auto res_serialise = Serialise::get_type(value_id, true);
 			specification.sep_types[2] = res_serialise.first;
-			validate_required_data();
 			return res_serialise.second;
 		} else {
-			validate_required_data();
 			return Serialise::serialise(specification, value_id);
 		}
 	}
