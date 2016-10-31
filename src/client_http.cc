@@ -1178,13 +1178,16 @@ HttpClient::search_view(HttpMethod method)
 	}().to_string().c_str());
 
 	int rc = 0;
-	if (!chunked && mset.empty()) {
+	auto total_count = mset.size();
+
+	if (!chunked && !total_count) {
 		int error_code = 404;
 		MsgPack err_response = {
 			{ RESPONSE_STATUS, error_code },
 			{ RESPONSE_MESSAGE, "No document found" }
 		};
 		write_http_response(error_code, err_response);
+
 	} else {
 		bool indent_chunk = false;
 		std::string first_chunk;
@@ -1193,8 +1196,6 @@ HttpClient::search_view(HttpMethod method)
 		std::string eol_chunk;
 
 		auto ct_type = resolve_ct_type(MSGPACK_CONTENT_TYPE);
-
-		auto total_count = mset.size();
 
 		if (chunked) {
 			MsgPack basic_query({
@@ -1252,7 +1253,10 @@ HttpClient::search_view(HttpMethod method)
 		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
 			auto document = db_handler.get_document(*m);
 
-			if (!chunked) {
+			MsgPack obj_data;
+			if (chunked) {
+				obj_data = document.get_obj();
+			} else {
 				auto ct_type_str = document.get_value(CT_FIELD_NAME).as_string();
 				ct_type = resolve_ct_type(ct_type_str);
 				if (ct_type.first == no_type.first && ct_type.second == no_type.second) {
@@ -1265,16 +1269,15 @@ HttpClient::search_view(HttpMethod method)
 					L_SEARCH(this, "ABORTED SEARCH");
 					return;
 				}
-			}
 
-			MsgPack obj_data;
-			if (is_acceptable_type(msgpack_type, ct_type) || is_acceptable_type(json_type, ct_type)) {
-				obj_data = document.get_obj();
-			} else {
-				// Returns blob_data in case that type is unkown
-				auto blob_data = document.get_blob();
-				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
-				return;
+				if (is_acceptable_type(msgpack_type, ct_type) || is_acceptable_type(json_type, ct_type)) {
+					obj_data = document.get_obj();
+				} else {
+					// Returns blob_data in case that type is unkown
+					auto blob_data = document.get_blob();
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
+					return;
+				}
 			}
 
 			obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
