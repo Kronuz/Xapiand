@@ -1311,7 +1311,7 @@ HttpClient::search_view(HttpMethod method)
 				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
 			}
 
-			write(http_response(0, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, ""));
+			write(http_response(0, HTTP_CHUNKED | HTTP_BODY));
 		}
 	}
 
