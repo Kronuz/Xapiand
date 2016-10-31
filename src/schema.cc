@@ -3730,7 +3730,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 std::string
 Schema::write_schema_id(const MsgPack& obj, const std::string& value_id)
 {
-	L_CALL(this, "Schema::write_schema_id(%s)", repr(value_id).c_str());
+	L_CALL(this, "Schema::write_schema_id(%s, %s)", repr(obj.to_string()).c_str(), repr(value_id).c_str());
 
 	try {
 		auto& prop_id = schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
