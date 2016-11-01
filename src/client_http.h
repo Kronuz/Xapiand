@@ -88,6 +88,7 @@ class HttpClient : public BaseClient {
 		CMD_INFO      = xxh64::hash("_info"),
 		CMD_SCHEMA    = xxh64::hash("_schema"),
 		CMD_NODES     = xxh64::hash("_nodes"),
+		CMD_TOUCH     = xxh64::hash("_touch"),
 		CMD_QUIT      = xxh64::hash("_quit"),
 	};
 
@@ -152,6 +153,7 @@ class HttpClient : public BaseClient {
 	void document_info_view(HttpMethod method);
 	void update_document_view(HttpMethod method);
 	void search_view(HttpMethod method);
+	void touch_view(HttpMethod method);
 	void schema_view(HttpMethod method);
 	void nodes_view(HttpMethod method);
 	void status_view(int status_code, const std::string& message="");

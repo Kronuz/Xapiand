@@ -684,6 +684,10 @@ HttpClient::_post()
 			path_parser.off_id = nullptr;  // Command has no ID
 			search_view(HttpMethod::POST);
 			break;
+		case Command::CMD_TOUCH:
+			path_parser.off_id = nullptr;  // Command has no ID
+			touch_view(HttpMethod::POST);
+			break;
 #ifndef NDEBUG
 		case Command::CMD_QUIT:
 			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
@@ -1103,13 +1107,25 @@ HttpClient::nodes_view(HttpMethod)
 
 
 void
-HttpClient::schema_view(HttpMethod method)
+HttpClient::touch_view(HttpMethod method)
 {
-	L_CALL(this, "HttpClient::schema_view()");
+	L_CALL(this, "HttpClient::touch_view()");
 
 	endpoints_maker(1s);
 
 	db_handler.reset(endpoints, DB_SPAWN, method);
+	write_http_response(200, db_handler.get_schema()->get_readable());
+}
+
+
+void
+HttpClient::schema_view(HttpMethod method)
+{
+	L_CALL(this, "HttpClient::schema_view()");
+	
+	endpoints_maker(1s);
+	
+	db_handler.reset(endpoints, DB_OPEN, method);
 	write_http_response(200, db_handler.get_schema()->get_readable());
 }
 
