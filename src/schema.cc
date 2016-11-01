@@ -3467,13 +3467,13 @@ Schema::set_default_spc_id(MsgPack& properties)
 {
 	L_CALL(this, "Schema::set_default_spc_id(%s)", repr(properties.to_string()).c_str());
 
+	specification.flags.bool_term = true;
+
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
 		specification.index |= (TypeIndexBit::VALUES | TypeIndexBit::TERMS);
-		get_mutable(specification.full_name)[RESERVED_INDEX] = specification.index;
+		properties[RESERVED_INDEX] = specification.index;
 	}
-
-	specification.flags.bool_term = true;
 
 	// ID_FIELD_NAME can not be TEXT.
 	if (specification.sep_types[2] == FieldType::TEXT) {
@@ -3509,7 +3509,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
 		specification.index |= TypeIndexBit::VALUES;
-		get_mutable(specification.full_name)[RESERVED_INDEX] = specification.index;
+		properties[RESERVED_INDEX] = specification.index;
 	}
 
 	specification.sep_types[2] = FieldType::STRING;
