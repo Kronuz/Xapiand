@@ -328,7 +328,7 @@ required_spc_t::flags_t::flags_t()
 required_spc_t::required_spc_t()
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY }}),
 	  slot(Xapian::BAD_VALUENO),
-	  stem_strategy(StemStrategy::STEM_SOME),
+	  stem_strategy(DEFAULT_STEM_STRATEGY),
 	  stem_language(DEFAULT_LANGUAGE),
 	  language(DEFAULT_LANGUAGE),
 	  error(DEFAULT_GEO_ERROR) { }
@@ -341,7 +341,7 @@ required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std:
 	  slot(_slot),
 	  accuracy(acc),
 	  acc_prefix(_acc_prefix),
-	  stem_strategy(StemStrategy::STEM_SOME),
+	  stem_strategy(DEFAULT_STEM_STRATEGY),
 	  stem_language(DEFAULT_LANGUAGE),
 	  language(DEFAULT_LANGUAGE),
 	  error(DEFAULT_GEO_ERROR) { }
@@ -380,7 +380,7 @@ specification_t::specification_t()
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),
 	  positions({ DEFAULT_POSITIONS }),
-	  index(TypeIndex::ALL) { }
+	  index(DEFAULT_INDEX) { }
 
 
 specification_t::specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
@@ -390,7 +390,7 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),
 	  positions({ DEFAULT_POSITIONS }),
-	  index(TypeIndex::ALL) { }
+	  index(DEFAULT_INDEX) { }
 
 
 specification_t::specification_t(const specification_t& o)
