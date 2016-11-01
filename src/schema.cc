@@ -3401,6 +3401,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
 		specification.index |= TypeIndex::FIELD_VALUES;
+		specification.index &= ~TypeIndex::FIELD_TERMS;
 		properties[RESERVED_INDEX] = specification.index;
 	}
 
