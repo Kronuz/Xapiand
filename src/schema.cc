@@ -3729,39 +3729,16 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 
 
 std::string
-Schema::serialise_id(const MsgPack& obj, const std::string& value_id)
+Schema::serialise_id(const std::string& value_id)
 {
-	L_CALL(this, "Schema::serialise_id(%s, %s)", repr(obj.to_string()).c_str(), repr(value_id).c_str());
+	L_CALL(this, "Schema::serialise_id(%s)", repr(value_id).c_str());
 
 	try {
 		auto& prop_id = schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
 		update_specification(prop_id);
 		return Serialise::serialise(specification, value_id);
 	} catch (const std::out_of_range&) {
-		specification.flags.field_found = true;
-		try {
-			for (const auto& item_key : obj) {
-				const auto str_key = item_key.as_string();
-				try {
-					auto func = map_dispatch_document.at(str_key);
-					(this->*func)(str_key, obj.at(str_key));
-				} catch (const std::out_of_range&) { }
-			}
-			restart_specification();
-			const auto& obj_id = obj.at(ID_FIELD_NAME);
-			for (const auto& item_key : obj_id) {
-				const auto str_key = item_key.as_string();
-				try {
-					auto func = map_dispatch_document.at(str_key);
-					(this->*func)(str_key, obj_id.at(str_key));
-				} catch (const std::out_of_range&) { }
-			}
-		} catch (const std::out_of_range&) {
-		} catch (const msgpack::type_error&) { }
-		if (specification.sep_types[2] == FieldType::EMPTY) {
-			guess_field_type(Cast::cast(value_id));
-		}
-		return Serialise::serialise(specification, value_id);
+		return "";
 	}
 }
 

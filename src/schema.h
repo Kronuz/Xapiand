@@ -667,7 +667,7 @@ public:
 	/*
 	 * Updates ID_FIELD_NAME in schema according to obj.
 	 */
-	std::string serialise_id(const MsgPack& obj, const std::string& value_id);
+	std::string serialise_id(const std::string& value_id);
 
 
 	/*

@@ -225,14 +225,20 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
 	L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
 
-	auto prefixed_term_id =  prefixed(schema->serialise_id(obj, _document_id), DOCUMENT_ID_TERM_PREFIX);
-	auto obj_ = run_script(obj, prefixed_term_id);
-
 	// Create a suitable document.
 	Xapian::Document doc;
 
-	// Document's id must be saved as boolean term (otherwise it doesn't replace an existing document).
-	doc.add_boolean_term(prefixed_term_id);
+	MsgPack obj_;
+
+	std::string prefixed_term_id;
+
+	auto serialised_id = schema->serialise_id(_document_id);
+	if (!serialised_id.empty()) {
+		prefixed_term_id = prefixed(serialised_id, DOCUMENT_ID_TERM_PREFIX);
+		obj_ = run_script(obj, prefixed_term_id);
+	} else {
+		obj_ = obj;
+	}
 
 	// Add ID.
 	auto& id_field = obj_[ID_FIELD_NAME];
@@ -260,6 +266,15 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 
 	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
 	doc.set_data(join_data(obj_.serialise(), blob));
+
+	if (serialised_id.empty()) {
+		// Now the schema is full, get prefixed_term_id
+		serialised_id = schema->serialise_id(_document_id);
+		prefixed_term_id = prefixed(serialised_id, DOCUMENT_ID_TERM_PREFIX);
+	}
+
+	// Document's id must be saved as boolean term (otherwise it doesn't replace an existing document).
+	doc.add_boolean_term(prefixed_term_id);
 
 	Xapian::docid did;
 	const auto _endpoints = endpoints;
