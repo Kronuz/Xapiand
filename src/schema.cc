@@ -3482,7 +3482,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 	// ID_FIELD_NAME can not be TEXT.
 	if (specification.sep_types[2] == FieldType::TEXT) {
 		specification.sep_types[2] = FieldType::STRING;
-		properties[RESERVED_TYPE] = STRING_STR;
+		properties[RESERVED_TYPE] = specification.sep_types;
 	}
 
 	// RESERVED_STORE by default is false.
