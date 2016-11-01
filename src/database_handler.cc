@@ -233,11 +233,11 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	std::string prefixed_term_id;
 
 	auto serialised_id = schema->serialise_id(_document_id);
-	if (!serialised_id.empty()) {
+	if (serialised_id.empty()) {
+		obj_ = obj;
+	} else {
 		prefixed_term_id = prefixed(serialised_id, DOCUMENT_ID_TERM_PREFIX);
 		obj_ = run_script(obj, prefixed_term_id);
-	} else {
-		obj_ = obj;
 	}
 
 	// Add ID.
@@ -254,7 +254,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
 
 	auto& ct_field = obj_[CT_FIELD_NAME];
-	if (!ct_field.is_map()) {
+	if (!ct_field.is_map() && !ct_field.is_undefined()) {
 		ct_field = MsgPack();
 	}
 	ct_field[RESERVED_TYPE] = STRING_STR;
@@ -269,8 +269,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 
 	if (serialised_id.empty()) {
 		// Now the schema is full, get prefixed_term_id
-		serialised_id = schema->serialise_id(_document_id);
-		prefixed_term_id = prefixed(serialised_id, DOCUMENT_ID_TERM_PREFIX);
+		prefixed_term_id = prefixed(schema->serialise_id(_document_id), DOCUMENT_ID_TERM_PREFIX);
 	}
 
 	Xapian::docid did;
