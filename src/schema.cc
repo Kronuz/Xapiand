@@ -1566,14 +1566,14 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 		}
 		case TypeIndex::FIELD_TERMS: {
 			for (const MsgPack& value : values) {
-				index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
+				index_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
 			}
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			for (const MsgPack& value : values) {
-				index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
+				index_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
 			}
 			break;
 		}
@@ -1613,7 +1613,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 		case TypeIndex::FIELD_ALL: {
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &Schema::index_field_term);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &Schema::index_term);
 			}
 			break;
 		}
@@ -1621,7 +1621,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &Schema::index_field_term);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &Schema::index_term);
 			}
 			break;
 		}
@@ -1651,9 +1651,9 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 
 
 void
-Schema::index_field_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, size_t pos)
+Schema::index_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, size_t pos)
 {
-	L_CALL(nullptr, "Schema::index_field_term()");
+	L_CALL(nullptr, "Schema::index_term()");
 
 	if (serialise_val.empty()) {
 		return;
@@ -1713,8 +1713,8 @@ Schema::index_all_term(Xapian::Document& doc, std::string&& serialise_val, const
 	}
 
 	auto serialise_val_cp = serialise_val;
-	index_field_term(doc, std::move(serialise_val_cp), field_spc, pos);
-	index_field_term(doc, std::move(serialise_val), global_spc, pos);
+	index_term(doc, std::move(serialise_val_cp), field_spc, pos);
+	index_term(doc, std::move(serialise_val), global_spc, pos);
 }
 
 
@@ -1970,8 +1970,8 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 					EWKT_Parser ewkt(str_ewkt, field_spc.flags.partials, field_spc.error);
 					EWKT_Parser g_ewkt(str_ewkt, global_spc.flags.partials, global_spc.error);
 					if (is_term) {
-						index_field_term(doc, Serialise::trixels(ewkt.trixels), field_spc, pos);
-						index_field_term(doc, Serialise::trixels(g_ewkt.trixels), global_spc, pos);
+						index_term(doc, Serialise::trixels(ewkt.trixels), field_spc, pos);
+						index_term(doc, Serialise::trixels(g_ewkt.trixels), global_spc, pos);
 					}
 					auto ranges = ewkt.getRanges();
 					auto g_ranges = g_ewkt.getRanges();
