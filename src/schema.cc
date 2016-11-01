@@ -3666,7 +3666,11 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		tasks.reserve(object.size());
 		auto prop_ptr = mut_schema ? &mut_schema->at(RESERVED_SCHEMA) : &schema->at(RESERVED_SCHEMA);
 		auto data_ptr = &data;
+
 		specification = default_spc;
+		if (!*prop_ptr) {
+			specification.flags.field_found = false;
+		}
 		static const auto dsit_e = map_dispatch_set_default_spc.end();
 		for (const auto& item_key : object) {
 			const auto str_key = item_key.as_string();
