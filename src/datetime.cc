@@ -107,21 +107,21 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 			// 0000-00-00[T ]00:00:00.000[+-]00:00
 			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 				date[16] == ':' && date[19] == '.' && (date[23] == '+' || date[23] == '-') && date[26] == ':') {
-				tm.year  = strict(std::stoul, date.substr(0, 4));
-				tm.mon   = strict(std::stoul, date.substr(5, 2));
-				tm.day   = strict(std::stoul, date.substr(8, 2));
+				tm.year  = stox(std::stoul, date.substr(0, 4));
+				tm.mon   = stox(std::stoul, date.substr(5, 2));
+				tm.day   = stox(std::stoul, date.substr(8, 2));
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = strict(std::stoul, date.substr(11, 2));
+					tm.hour = stox(std::stoul, date.substr(11, 2));
 					if (tm.hour < 60) {
-						tm.min = strict(std::stoul, date.substr(14, 2));
+						tm.min = stox(std::stoul, date.substr(14, 2));
 						if (tm.min < 60) {
-							tm.sec = strict(std::stoul, date.substr(17, 2));
+							tm.sec = stox(std::stoul, date.substr(17, 2));
 							if (tm.sec < 60) {
-								tm.msec = strict(std::stoul, date.substr(20, 3));
+								tm.msec = stox(std::stoul, date.substr(20, 3));
 								auto tz_h = date.substr(24, 2);
-								if (strict(std::stoul, tz_h) < 60) {
+								if (stox(std::stoul, tz_h) < 60) {
 									auto tz_m = date.substr(27, 2);
-									if (strict(std::stoul, tz_m) < 60) {
+									if (stox(std::stoul, tz_m) < 60) {
 										computeTimeZone(tm, date[23], tz_h, tz_m);
 										return;
 									}
@@ -136,21 +136,21 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 			// 0000-00-00[T ]00:00:00[+-]00:00
 			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 				date[16] == ':' && (date[19] == '+' || date[19] == '-') && date[22] == ':') {
-				tm.year  = strict(std::stoul, date.substr(0, 4));
-				tm.mon   = strict(std::stoul, date.substr(5, 2));
-				tm.day   = strict(std::stoul, date.substr(8, 2));
+				tm.year  = stox(std::stoul, date.substr(0, 4));
+				tm.mon   = stox(std::stoul, date.substr(5, 2));
+				tm.day   = stox(std::stoul, date.substr(8, 2));
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = strict(std::stoul, date.substr(11, 2));
+					tm.hour = stox(std::stoul, date.substr(11, 2));
 					if (tm.hour < 60) {
-						tm.min = strict(std::stoul, date.substr(14, 2));
+						tm.min = stox(std::stoul, date.substr(14, 2));
 						if (tm.min < 60) {
-							tm.sec = strict(std::stoul, date.substr(17, 2));
+							tm.sec = stox(std::stoul, date.substr(17, 2));
 							if (tm.sec < 60) {
 								tm.msec = 0;
 								auto tz_h = date.substr(20, 2);
-								if (strict(std::stoul, tz_h) < 60) {
+								if (stox(std::stoul, tz_h) < 60) {
 									auto tz_m = date.substr(23, 2);
-									if (strict(std::stoul, tz_m) < 60) {
+									if (stox(std::stoul, tz_m) < 60) {
 										computeTimeZone(tm, date[19], tz_h, tz_m);
 										return;
 									}
@@ -165,17 +165,17 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 			// 0000-00-00[T ]00:00:00.000Z
 			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 				date[16] == ':' && date[19] == '.' && date[23] == 'Z') {
-				tm.year  = strict(std::stoul, date.substr(0, 4));
-				tm.mon   = strict(std::stoul, date.substr(5, 2));
-				tm.day   = strict(std::stoul, date.substr(8, 2));
+				tm.year  = stox(std::stoul, date.substr(0, 4));
+				tm.mon   = stox(std::stoul, date.substr(5, 2));
+				tm.day   = stox(std::stoul, date.substr(8, 2));
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = strict(std::stoul, date.substr(11, 2));
+					tm.hour = stox(std::stoul, date.substr(11, 2));
 					if (tm.hour < 60) {
-						tm.min = strict(std::stoul, date.substr(14, 2));
+						tm.min = stox(std::stoul, date.substr(14, 2));
 						if (tm.min < 60) {
-							tm.sec = strict(std::stoul, date.substr(17, 2));
+							tm.sec = stox(std::stoul, date.substr(17, 2));
 							if (tm.sec < 60) {
-								tm.msec = strict(std::stoul, date.substr(20, 3));
+								tm.msec = stox(std::stoul, date.substr(20, 3));
 								return;
 							}
 						}
@@ -187,17 +187,17 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 			// 0000-00-00[T ]00:00:00.000
 			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 				date[16] == ':' && date[19] == '.') {
-				tm.year  = strict(std::stoul, date.substr(0, 4));
-				tm.mon   = strict(std::stoul, date.substr(5, 2));
-				tm.day   = strict(std::stoul, date.substr(8, 2));
+				tm.year  = stox(std::stoul, date.substr(0, 4));
+				tm.mon   = stox(std::stoul, date.substr(5, 2));
+				tm.day   = stox(std::stoul, date.substr(8, 2));
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = strict(std::stoul, date.substr(11, 2));
+					tm.hour = stox(std::stoul, date.substr(11, 2));
 					if (tm.hour < 60) {
-						tm.min = strict(std::stoul, date.substr(14, 2));
+						tm.min = stox(std::stoul, date.substr(14, 2));
 						if (tm.min < 60) {
-							tm.sec = strict(std::stoul, date.substr(17, 2));
+							tm.sec = stox(std::stoul, date.substr(17, 2));
 							if (tm.sec < 60) {
-								tm.msec = strict(std::stoul, date.substr(20, 3));
+								tm.msec = stox(std::stoul, date.substr(20, 3));
 								return;
 							}
 						}
@@ -209,15 +209,15 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 			// 0000-00-00[T ]00:00:00Z
 			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 				date[16] == ':' && date[19] == 'Z') {
-				tm.year  = strict(std::stoul, date.substr(0, 4));
-				tm.mon   = strict(std::stoul, date.substr(5, 2));
-				tm.day   = strict(std::stoul, date.substr(8, 2));
+				tm.year  = stox(std::stoul, date.substr(0, 4));
+				tm.mon   = stox(std::stoul, date.substr(5, 2));
+				tm.day   = stox(std::stoul, date.substr(8, 2));
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = strict(std::stoul, date.substr(11, 2));
+					tm.hour = stox(std::stoul, date.substr(11, 2));
 					if (tm.hour < 60) {
-						tm.min = strict(std::stoul, date.substr(14, 2));
+						tm.min = stox(std::stoul, date.substr(14, 2));
 						if (tm.min < 60) {
-							tm.sec = strict(std::stoul, date.substr(17, 2));
+							tm.sec = stox(std::stoul, date.substr(17, 2));
 							if (tm.sec < 60) {
 								tm.msec = 0;
 								return;
@@ -230,15 +230,15 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 		case 19:
 			// 0000-00-00[T ]00:00:00
 			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
-				tm.year  = strict(std::stoul, date.substr(0, 4));
-				tm.mon   = strict(std::stoul, date.substr(5, 2));
-				tm.day   = strict(std::stoul, date.substr(8, 2));
+				tm.year  = stox(std::stoul, date.substr(0, 4));
+				tm.mon   = stox(std::stoul, date.substr(5, 2));
+				tm.day   = stox(std::stoul, date.substr(8, 2));
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = strict(std::stoul, date.substr(11, 2));
+					tm.hour = stox(std::stoul, date.substr(11, 2));
 					if (tm.hour < 60) {
-						tm.min = strict(std::stoul, date.substr(14, 2));
+						tm.min = stox(std::stoul, date.substr(14, 2));
 						if (tm.min < 60) {
-							tm.sec = strict(std::stoul, date.substr(17, 2));
+							tm.sec = stox(std::stoul, date.substr(17, 2));
 							if (tm.sec < 60) {
 								tm.msec = 0;
 								return;
@@ -251,9 +251,9 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 		case 10:
 			// 0000-00-00
 			if (date[4] == '-' && date[7] == '-') {
-				tm.year  = strict(std::stoul, date.substr(0, 4));
-				tm.mon   = strict(std::stoul, date.substr(5, 2));
-				tm.day   = strict(std::stoul, date.substr(8, 2));
+				tm.year  = stox(std::stoul, date.substr(0, 4));
+				tm.mon   = stox(std::stoul, date.substr(5, 2));
+				tm.day   = stox(std::stoul, date.substr(8, 2));
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
 					tm.hour = 0;
 					tm.min  = 0;
@@ -612,7 +612,7 @@ double
 Datetime::timestamp(const std::string& date)
 {
 	try {
-		return strict(std::stod, date);
+		return stox(std::stod, date);
 	} catch (const std::invalid_argument&) {
 		tm_t tm;
 		dateTimeParser(date, tm);
@@ -630,7 +630,7 @@ double
 Datetime::timestamp(const std::string& date, tm_t& tm)
 {
 	try {
-		return strict(std::stod, date);
+		return stox(std::stod, date);
 	} catch (const std::invalid_argument&) {
 		dateTimeParser(date, tm);
 		return timestamp(tm);

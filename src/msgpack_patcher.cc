@@ -283,7 +283,7 @@ const MsgPack& get_patch_value(const MsgPack& obj_patch, const char* patch_op) {
 
 double get_patch_double(const MsgPack& val, const char* patch_op) {
 	if (val.is_string()) {
-		return strict(std::stod, val.as_string());
+		return stox(std::stod, val.as_string());
 	} else {
 		try {
 			return val.as_f64();

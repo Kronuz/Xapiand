@@ -75,7 +75,7 @@ inline void _add(MsgPack& o, const MsgPack& val, const std::string& target) {
 				o.push_back(val);
 			} else {
 				try {
-					size_t offset = strict(std::stoul, target);
+					size_t offset = stox(std::stoul, target);
 					o.insert(offset, val);
 				} catch (const std::invalid_argument&) {
 					throw MSG_ClientError("Target in array must be a positive integer or '-'");
@@ -96,7 +96,7 @@ inline void _erase(MsgPack& o, const std::string& target) {
 				return;
 			case MsgPack::Type::ARRAY:
 				try {
-					size_t offset = strict(std::stoul, target);
+					size_t offset = stox(std::stoul, target);
 					o.erase(offset);
 				} catch (const std::invalid_argument&) {
 					throw MSG_ClientError("Target in array must be a positive integer");

@@ -98,24 +98,24 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 
 		switch (field_spc.get_type()) {
 			case FieldType::FLOAT: {
-				auto start_v = strict(std::stod, start);
-				auto end_v   = strict(std::stod, end);
+				auto start_v = stox(std::stod, start);
+				auto end_v   = stox(std::stod, end);
 				if (start_v > end_v) {
 					return Xapian::Query::MatchNothing;
 				}
 				return filterNumericQuery(field_spc, (int64_t)start_v, (int64_t)end_v, Serialise::_float(start_v), Serialise::_float(end_v));
 			}
 			case FieldType::INTEGER: {
-				auto start_v = strict(std::stoll, start);
-				auto end_v   = strict(std::stoll, end);
+				auto start_v = stox(std::stoll, start);
+				auto end_v   = stox(std::stoll, end);
 				if (start_v > end_v) {
 					return Xapian::Query::MatchNothing;
 				}
 				return filterNumericQuery(field_spc, start_v, end_v, Serialise::integer(start_v), Serialise::integer(end_v));
 			}
 			case FieldType::POSITIVE: {
-				auto start_v = strict(std::stoull, start);
-				auto end_v   = strict(std::stoull, end);
+				auto start_v = stox(std::stoull, start);
+				auto end_v   = stox(std::stoull, end);
 				if (start_v > end_v) {
 					return Xapian::Query::MatchNothing;
 				}

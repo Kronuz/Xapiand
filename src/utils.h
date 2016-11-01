@@ -43,7 +43,7 @@
 #define RESERVED_FDS  50 /* Better approach? */
 
 
-#define strict(func, s) \
+#define stox(func, s) \
 	[](const std::string& str) { \
 		std::size_t sz; \
 		auto ret = (func)(str, &sz); \

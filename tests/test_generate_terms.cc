@@ -354,22 +354,22 @@ int numeric_test() {
 
 		// try to convert string to uint64_t.
 		try {
-			auto val_s = strict(std::stoull, p.start);
-			auto val_e = strict(std::stoull, p.end);
+			auto val_s = stox(std::stoull, p.start);
+			auto val_e = stox(std::stoull, p.end);
 			result = GenerateTerms::numeric(val_s, val_e, p.accuracy, p.acc_prefix);
 		} catch (const std::exception&) { }
 
 		// try to convert string to int64_t
 		try {
-			auto val_s = strict(std::stoll, p.start);
-			auto val_e = strict(std::stoll, p.end);
+			auto val_s = stox(std::stoll, p.start);
+			auto val_e = stox(std::stoll, p.end);
 			result = GenerateTerms::numeric(val_s, val_e, p.accuracy, p.acc_prefix);
 		} catch (const std::exception&) { }
 
 		// try to convert string to double
 		try {
-			auto val_s = (int64_t)strict(std::stod, p.start);
-			auto val_e = (int64_t)strict(std::stod, p.end);
+			auto val_s = (int64_t)stox(std::stod, p.start);
+			auto val_e = (int64_t)stox(std::stod, p.end);
 			result = GenerateTerms::numeric(val_s, val_e, p.accuracy, p.acc_prefix);
 		} catch (const std::exception&) { }
 

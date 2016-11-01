@@ -87,13 +87,13 @@ static void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
 		switch (str_time.length()) {
 			case 12:
 				if (str_time[2] == ':' && str_time[5] == ':' && str_time[8] == '.') {
-					tm.hour = strict(std::stoul, str_time.substr(0, 2));
+					tm.hour = stox(std::stoul, str_time.substr(0, 2));
 					if (tm.hour < 60) {
-						tm.min = strict(std::stoul, str_time.substr(3, 2));
+						tm.min = stox(std::stoul, str_time.substr(3, 2));
 						if (tm.min < 60) {
-							tm.sec = strict(std::stoul, str_time.substr(6, 2));
+							tm.sec = stox(std::stoul, str_time.substr(6, 2));
 							if (tm.sec < 60) {
-								tm.msec = strict(std::stoul, str_time.substr(9, 3));
+								tm.msec = stox(std::stoul, str_time.substr(9, 3));
 								return;
 							}
 						}
@@ -102,11 +102,11 @@ static void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
 				break;
 			case 8:
 				if (str_time[2] == ':' && str_time[5] == ':') {
-					tm.hour = strict(std::stoul, str_time.substr(0, 2));
+					tm.hour = stox(std::stoul, str_time.substr(0, 2));
 					if (tm.hour < 60) {
-						tm.min = strict(std::stoul, str_time.substr(3, 2));
+						tm.min = stox(std::stoul, str_time.substr(3, 2));
 						if (tm.min < 60) {
-							tm.sec = strict(std::stoul, str_time.substr(6, 2));
+							tm.sec = stox(std::stoul, str_time.substr(6, 2));
 							if (tm.sec < 60) {
 								return;
 							}
@@ -168,17 +168,17 @@ Cast::cast(const std::string& field_value)
 {
 	// Try like INTEGER.
 	try {
-		return MsgPack(strict(std::stoll, field_value));
+		return MsgPack(stox(std::stoll, field_value));
 	} catch (const std::invalid_argument&) { }
 
 	// Try like POSITIVE.
 	try {
-		return  MsgPack(strict(std::stoull, field_value));
+		return  MsgPack(stox(std::stoull, field_value));
 	} catch (const std::invalid_argument&) { }
 
 	// Try like FLOAT
 	try {
-		return  MsgPack(strict(std::stod, field_value));
+		return  MsgPack(stox(std::stod, field_value));
 	} catch (const std::invalid_argument&) { }
 
 	// Default type STRING.
@@ -197,7 +197,7 @@ Cast::integer(const MsgPack& obj)
 		case MsgPack::Type::FLOAT:
 			return obj.as_f64();
 		case MsgPack::Type::STR:
-			return strict(std::stoll, obj.as_string());
+			return stox(std::stoll, obj.as_string());
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
@@ -217,7 +217,7 @@ Cast::positive(const MsgPack& obj)
 		case MsgPack::Type::FLOAT:
 			return obj.as_f64();
 		case MsgPack::Type::STR:
-			return strict(std::stoull, obj.as_string());
+			return stox(std::stoull, obj.as_string());
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
@@ -237,7 +237,7 @@ Cast::_float(const MsgPack& obj)
 		case MsgPack::Type::FLOAT:
 			return obj.as_f64();
 		case MsgPack::Type::STR:
-			return strict(std::stod, obj.as_string());
+			return stox(std::stod, obj.as_string());
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
@@ -880,7 +880,7 @@ std::string
 Serialise::_float(const std::string& field_value)
 {
 	try {
-		return _float(strict(std::stod, field_value));
+		return _float(stox(std::stod, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid float format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
@@ -893,7 +893,7 @@ std::string
 Serialise::integer(const std::string& field_value)
 {
 	try {
-		return integer(strict(std::stoll, field_value));
+		return integer(stox(std::stoll, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
@@ -906,7 +906,7 @@ std::string
 Serialise::positive(const std::string& field_value)
 {
 	try {
-		return positive(strict(std::stoull, field_value));
+		return positive(stox(std::stoull, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid positive integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {

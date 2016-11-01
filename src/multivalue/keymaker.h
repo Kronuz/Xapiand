@@ -97,7 +97,7 @@ class FloatKey : public BaseKey {
 public:
 	FloatKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
-		  _ref_val(strict(std::stod, value)) { }
+		  _ref_val(stox(std::stod, value)) { }
 };
 
 
@@ -112,7 +112,7 @@ class IntegerKey : public BaseKey {
 public:
 	IntegerKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
-		  _ref_val(strict(std::stoll, value)) { }
+		  _ref_val(stox(std::stoll, value)) { }
 };
 
 
@@ -128,7 +128,7 @@ class PositiveKey : public BaseKey {
 public:
 	PositiveKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
-		  _ref_val(strict(std::stoull, value)) { }
+		  _ref_val(stox(std::stoull, value)) { }
 };
 
 
