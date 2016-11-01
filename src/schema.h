@@ -190,30 +190,6 @@ inline static std::string readable_index(TypeIndex index) noexcept {
 		case TypeIndex::ALL:                        return "all";
 		default:                                    return "TypeIndex::UNKNOWN";
 	}
-
-	std::vector<std::string> ret;
-	if ((index & TypeIndex::FIELD_TERMS) == TypeIndex::FIELD_TERMS && (index & TypeIndex::GLOBAL_TERMS) == TypeIndex::GLOBAL_TERMS && (index & TypeIndex::FIELD_VALUES) == TypeIndex::FIELD_VALUES && (index & TypeIndex::GLOBAL_VALUES) == TypeIndex::GLOBAL_VALUES) {
-		ret.push_back("all");
-	} else {
-		if ((index & TypeIndex::FIELD_TERMS) == TypeIndex::FIELD_TERMS && (index & TypeIndex::GLOBAL_TERMS) == TypeIndex::GLOBAL_TERMS) {
-			ret.push_back("terms");
-		} else if ((index & TypeIndex::FIELD_TERMS) == TypeIndex::FIELD_TERMS) {
-			ret.push_back("field_terms");
-		} else if ((index & TypeIndex::GLOBAL_TERMS) == TypeIndex::GLOBAL_TERMS) {
-			ret.push_back("global_terms");
-		}
-		if ((index & TypeIndex::FIELD_VALUES) == TypeIndex::FIELD_VALUES && (index & TypeIndex::GLOBAL_VALUES) == TypeIndex::GLOBAL_VALUES) {
-			ret.push_back("values");
-		} else if ((index & TypeIndex::FIELD_VALUES) == TypeIndex::FIELD_VALUES) {
-			ret.push_back("field_values");
-		} else if ((index & TypeIndex::GLOBAL_VALUES) == TypeIndex::GLOBAL_VALUES) {
-			ret.push_back("global_values");
-		}
-	}
-	if (ret.empty()) {
-		ret.push_back("none");
-	}
-	return join_string(ret, ",");
 }
 
 
