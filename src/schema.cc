@@ -64,11 +64,28 @@ static const std::unordered_map<std::string, StemStrategy> map_stem_strategy({
 
 
 static const std::unordered_map<std::string, TypeIndex> map_index({
-	{ "none",          TypeIndex::NONE          }, { "terms",        TypeIndex::TERMS        },
-	{ "values",        TypeIndex::VALUES        }, { "all",          TypeIndex::ALL          },
-	{ "field_terms",   TypeIndex::FIELD_TERMS   }, { "field_values", TypeIndex::FIELD_VALUES },
-	{ "field_all",     TypeIndex::FIELD_ALL     }, { "global_terms", TypeIndex::GLOBAL_TERMS },
-	{ "global_values", TypeIndex::GLOBAL_VALUES }, { "global_all",   TypeIndex::GLOBAL_ALL   },
+	{ "none",                      TypeIndex::NONE                      },
+	{ "field_terms",               TypeIndex::FIELD_TERMS               },
+	{ "field_values",              TypeIndex::FIELD_VALUES              },
+	{ "field_all",                 TypeIndex::FIELD_ALL                 },
+	{ "global_terms",              TypeIndex::GLOBAL_TERMS              },
+	{ "terms",                     TypeIndex::TERMS                     },
+	{ "global_terms,field_values", TypeIndex::GLOBAL_TERMS_FIELD_VALUES },
+	{ "field_values,global_terms", TypeIndex::GLOBAL_TERMS_FIELD_VALUES },
+	{ "global_terms,field_all",    TypeIndex::GLOBAL_TERMS_FIELD_ALL    },
+	{ "field_all,global_terms",    TypeIndex::GLOBAL_TERMS_FIELD_ALL    },
+	{ "global_values",             TypeIndex::GLOBAL_VALUES             },
+	{ "global_values,field_terms", TypeIndex::GLOBAL_VALUES_FIELD_TERMS },
+	{ "field_terms,global_values", TypeIndex::GLOBAL_VALUES_FIELD_TERMS },
+	{ "values",                    TypeIndex::VALUES                    },
+	{ "global_values,field_all",   TypeIndex::GLOBAL_VALUES_FIELD_ALL   },
+	{ "field_all,global_values",   TypeIndex::GLOBAL_VALUES_FIELD_ALL   },
+	{ "global_all",                TypeIndex::GLOBAL_ALL                },
+	{ "global_all,field_terms",    TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
+	{ "field_terms,global_all",    TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
+	{ "global_all,field_values",   TypeIndex::GLOBAL_ALL_FIELD_VALUES   },
+	{ "field_values,global_all",   TypeIndex::GLOBAL_ALL_FIELD_VALUES   },
+	{ "all",                       TypeIndex::ALL                       },
 });
 
 
@@ -1256,7 +1273,7 @@ Schema::validate_required_data()
 			}
 			case FieldType::TEXT: {
 				if (!specification.flags.has_index) {
-					auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
+					auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
 						properties[RESERVED_INDEX] = specification.index;
@@ -1277,7 +1294,7 @@ Schema::validate_required_data()
 			}
 			case FieldType::STRING: {
 				if (!specification.flags.has_index) {
-					auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
+					auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
 						properties[RESERVED_INDEX] = specification.index;
@@ -1306,7 +1323,7 @@ Schema::validate_required_data()
 
 		if (specification.flags.dynamic_type) {
 			if (!specification.flags.has_index) {
-				auto index = specification.index & ~TypeIndexBit::VALUES; // Fallback to index anything but values
+				auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
 					properties[RESERVED_INDEX] = specification.index;
@@ -1373,7 +1390,7 @@ Schema::validate_required_namespace_data()
 
 			case FieldType::TEXT:
 				if (!specification.flags.has_index) {
-					specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
+					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 				}
 
 				specification.stem_strategy = default_spc.stem_strategy;
@@ -1383,7 +1400,7 @@ Schema::validate_required_namespace_data()
 
 			case FieldType::STRING:
 				if (!specification.flags.has_index) {
-					specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
+					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 				}
 
 				specification.language = default_spc.language;
@@ -1403,7 +1420,7 @@ Schema::validate_required_namespace_data()
 		}
 
 		if (!specification.flags.has_index) {
-			specification.index &= ~TypeIndexBit::VALUES; // Fallback to index anything but values
+			specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 		}
 
 		specification.flags.field_with_type = true;
@@ -3475,7 +3492,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
-		specification.index |= (TypeIndexBit::VALUES | TypeIndexBit::TERMS);
+		specification.index |= (TypeIndex::FIELD_VALUES | TypeIndex::FIELD_TERMS);
 		properties[RESERVED_INDEX] = specification.index;
 	}
 
@@ -3513,7 +3530,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
-		specification.index |= TypeIndexBit::VALUES;
+		specification.index |= TypeIndex::FIELD_VALUES;
 		properties[RESERVED_INDEX] = specification.index;
 	}
 

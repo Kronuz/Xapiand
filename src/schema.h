@@ -54,84 +54,67 @@ enum class UnitTime : uint8_t {
 };
 
 
-enum class TypeIndexBit : uint8_t {
-	TERMS  = 0b0001,                       // Bit for terms
-	VALUES = 0b0010,                       // Bit for values
-	FIELD  = 0b0100,                       // Bit for field
-	GLOBAL = 0b1000,                       // Bit for global
-};
-
-
-inline constexpr TypeIndexBit operator|(const uint8_t& a, const TypeIndexBit& b) {
-	return static_cast<TypeIndexBit>(a | static_cast<uint8_t>(b));
-}
-
-
-inline constexpr TypeIndexBit operator|(const TypeIndexBit& a, const uint8_t& b) {
-	return static_cast<TypeIndexBit>(static_cast<uint8_t>(a) | b);
-}
-
-
-inline constexpr TypeIndexBit operator|(const TypeIndexBit& a, const TypeIndexBit& b) {
-	return static_cast<TypeIndexBit>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
-
-
-inline constexpr TypeIndexBit operator~(const TypeIndexBit& o) {
-	return static_cast<TypeIndexBit>(~static_cast<uint8_t>(o));
-}
-
-
 enum class TypeIndex : uint8_t {
-	// Not indexed:
-	NONE          = static_cast<uint8_t>(TypeIndexBit::FIELD | TypeIndexBit::GLOBAL),
-	// Index the field value like FIELD_TERMS and GLOBAL_TERMS:
-	TERMS         = static_cast<uint8_t>(TypeIndexBit::GLOBAL | TypeIndexBit::FIELD | TypeIndexBit::TERMS),
-	// Index the field value like FIELD_VALUES and GLOBAL_VALUES:
-	VALUES        = static_cast<uint8_t>(TypeIndexBit::GLOBAL | TypeIndexBit::FIELD | TypeIndexBit::VALUES),
-	// Index the field value like FIELD_ALL and GLOBAL_ALL:
-	ALL           = static_cast<uint8_t>(TERMS | VALUES),
-	// Index the field value like terms with prefix:
-	FIELD_TERMS   = static_cast<uint8_t>(TypeIndexBit::FIELD | TypeIndexBit::TERMS),
-	// Index the field value like values with prefix:
-	FIELD_VALUES  = static_cast<uint8_t>(TypeIndexBit::FIELD | TypeIndexBit::VALUES),
-	// Index the field value like FIELD_TERMS and FIELD_VALUES:
-	FIELD_ALL     = static_cast<uint8_t>(FIELD_TERMS | FIELD_VALUES),
-	// Index the field value like terms without prefix:
-	GLOBAL_TERMS  = static_cast<uint8_t>(TypeIndexBit::GLOBAL | TypeIndexBit::TERMS),
-	// Index the field value like values without prefix:
-	GLOBAL_VALUES = static_cast<uint8_t>(TypeIndexBit::GLOBAL | TypeIndexBit::VALUES),
-	// Index the field value like GLOBAL_TERMS and GLOBAL_VALUES:
-	GLOBAL_ALL    = static_cast<uint8_t>(GLOBAL_TERMS | GLOBAL_VALUES),
+	NONE                      = 0,                              // 0000  Bits for  "none"
+	FIELD_TERMS               = 0b0001,                         // 0001  Bit for   "field_terms"
+	FIELD_VALUES              = 0b0010,                         // 0010  Bit for   "field_values"
+	FIELD_ALL                 = FIELD_TERMS  | FIELD_VALUES,    // 0011  Bits for  "field_all"
+	GLOBAL_TERMS              = 0b0100,                         // 0100  Bit for   "global_terms"
+	TERMS                     = GLOBAL_TERMS  | FIELD_TERMS,    // 0101  Bits for  "terms"
+	GLOBAL_TERMS_FIELD_VALUES = GLOBAL_TERMS  | FIELD_VALUES,   // 0110  Bits for  "global_terms,field_values" *
+	GLOBAL_TERMS_FIELD_ALL    = GLOBAL_TERMS  | FIELD_ALL,      // 0111  Bits for  "global_terms,field_all" *
+	GLOBAL_VALUES             = 0b1000,                         // 1000  Bit for   "global_values"
+	GLOBAL_VALUES_FIELD_TERMS = GLOBAL_VALUES | FIELD_TERMS,    // 1001  Bits for  "global_values,field_terms" *
+	VALUES                    = GLOBAL_VALUES | FIELD_VALUES,   // 1010  Bits for  "values"
+	GLOBAL_VALUES_FIELD_ALL   = GLOBAL_VALUES | FIELD_ALL,      // 1011  Bits for  "global_values,field_all" *
+	GLOBAL_ALL                = GLOBAL_VALUES | GLOBAL_TERMS,   // 1100  Bits for  "global_all"
+	GLOBAL_ALL_FIELD_TERMS    = GLOBAL_ALL    | FIELD_TERMS,    // 1101  Bits for  "global_all,field_terms" *
+	GLOBAL_ALL_FIELD_VALUES   = GLOBAL_ALL    | FIELD_VALUES,   // 1110  Bits for  "global_all,field_values" *
+	ALL                       = GLOBAL_ALL    | FIELD_ALL,      // 1111  Bits for  "all"
 };
 
 
-inline constexpr TypeIndex operator&(const TypeIndex& a, const TypeIndexBit& b) {
+inline constexpr TypeIndex operator|(const uint8_t& a, const TypeIndex& b) {
+	return static_cast<TypeIndex>(a | static_cast<uint8_t>(b));
+}
+
+
+inline constexpr TypeIndex operator|(const TypeIndex& a, const uint8_t& b) {
+	return static_cast<TypeIndex>(static_cast<uint8_t>(a) | b);
+}
+
+
+inline constexpr TypeIndex operator~(const TypeIndex& o) {
+	return static_cast<TypeIndex>(~static_cast<uint8_t>(o));
+}
+
+
+inline constexpr TypeIndex operator&(const TypeIndex& a, const TypeIndex& b) {
 	return static_cast<TypeIndex>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
 }
 
 
-inline constexpr void operator&=(TypeIndex& a, const TypeIndexBit& b) {
+inline constexpr void operator&=(TypeIndex& a, const TypeIndex& b) {
 	a = a & b;
 }
 
 
-inline constexpr TypeIndex operator|(const TypeIndex& a, const TypeIndexBit& b) {
+inline constexpr TypeIndex operator|(const TypeIndex& a, const TypeIndex& b) {
 	return static_cast<TypeIndex>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
 }
 
 
-inline constexpr void operator|=(TypeIndex& a, const TypeIndexBit& b) {
+inline constexpr void operator|=(TypeIndex& a, const TypeIndex& b) {
 	a = a | b;
 }
 
 
-inline constexpr TypeIndex operator^(const TypeIndex& a, const TypeIndexBit& b) {
+inline constexpr TypeIndex operator^(const TypeIndex& a, const TypeIndex& b) {
 	return static_cast<TypeIndex>(static_cast<uint8_t>(a) ^ static_cast<uint8_t>(b));
 }
 
 
-inline constexpr void operator^=(TypeIndex& a, const TypeIndexBit& b) {
+inline constexpr void operator^=(TypeIndex& a, const TypeIndex& b) {
 	a = a ^ b;
 }
 
@@ -189,18 +172,48 @@ inline static std::string readable_stem_strategy(StemStrategy stem) noexcept {
 
 inline static std::string readable_index(TypeIndex index) noexcept {
 	switch (index) {
-		case TypeIndex::NONE:           return "none";
-		case TypeIndex::TERMS:          return "terms";
-		case TypeIndex::VALUES:         return "values";
-		case TypeIndex::ALL:            return "all";
-		case TypeIndex::FIELD_TERMS:    return "field_terms";
-		case TypeIndex::FIELD_VALUES:   return "field_values";
-		case TypeIndex::FIELD_ALL:      return "field_all";
-		case TypeIndex::GLOBAL_TERMS:   return "global_terms";
-		case TypeIndex::GLOBAL_VALUES:  return "global_values";
-		case TypeIndex::GLOBAL_ALL:     return "global_all";
-		default:                        return "TypeIndex::UNKNOWN";
+		case TypeIndex::NONE:                       return "none";
+		case TypeIndex::FIELD_TERMS:                return "field_terms";
+		case TypeIndex::FIELD_VALUES:               return "field_values";
+		case TypeIndex::FIELD_ALL:                  return "field_all";
+		case TypeIndex::GLOBAL_TERMS:               return "global_terms";
+		case TypeIndex::TERMS:                      return "terms";
+		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES:  return "global_terms,field_values";
+		case TypeIndex::GLOBAL_TERMS_FIELD_ALL:     return "global_terms,field_all";
+		case TypeIndex::GLOBAL_VALUES:              return "global_values";
+		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS:  return "global_values,field_terms";
+		case TypeIndex::VALUES:                     return "values";
+		case TypeIndex::GLOBAL_VALUES_FIELD_ALL:    return "global_values,field_all";
+		case TypeIndex::GLOBAL_ALL:                 return "global_all";
+		case TypeIndex::GLOBAL_ALL_FIELD_TERMS:     return "global_all,field_terms";
+		case TypeIndex::GLOBAL_ALL_FIELD_VALUES:    return "global_all,field_values";
+		case TypeIndex::ALL:                        return "all";
+		default:                                    return "TypeIndex::UNKNOWN";
 	}
+
+	std::vector<std::string> ret;
+	if ((index & TypeIndex::FIELD_TERMS) == TypeIndex::FIELD_TERMS && (index & TypeIndex::GLOBAL_TERMS) == TypeIndex::GLOBAL_TERMS && (index & TypeIndex::FIELD_VALUES) == TypeIndex::FIELD_VALUES && (index & TypeIndex::GLOBAL_VALUES) == TypeIndex::GLOBAL_VALUES) {
+		ret.push_back("all");
+	} else {
+		if ((index & TypeIndex::FIELD_TERMS) == TypeIndex::FIELD_TERMS && (index & TypeIndex::GLOBAL_TERMS) == TypeIndex::GLOBAL_TERMS) {
+			ret.push_back("terms");
+		} else if ((index & TypeIndex::FIELD_TERMS) == TypeIndex::FIELD_TERMS) {
+			ret.push_back("field_terms");
+		} else if ((index & TypeIndex::GLOBAL_TERMS) == TypeIndex::GLOBAL_TERMS) {
+			ret.push_back("global_terms");
+		}
+		if ((index & TypeIndex::FIELD_VALUES) == TypeIndex::FIELD_VALUES && (index & TypeIndex::GLOBAL_VALUES) == TypeIndex::GLOBAL_VALUES) {
+			ret.push_back("values");
+		} else if ((index & TypeIndex::FIELD_VALUES) == TypeIndex::FIELD_VALUES) {
+			ret.push_back("field_values");
+		} else if ((index & TypeIndex::GLOBAL_VALUES) == TypeIndex::GLOBAL_VALUES) {
+			ret.push_back("global_values");
+		}
+	}
+	if (ret.empty()) {
+		ret.push_back("none");
+	}
+	return join_string(ret, ",");
 }
 
 
