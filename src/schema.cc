@@ -1537,288 +1537,93 @@ Schema::guess_field_type(const MsgPack& item_doc)
 
 
 void
-Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
+Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, size_t pos, bool add_values)
 {
-	L_CALL(this, "Schema::index_item(%s, %zu, %d)", repr(value.to_string()).c_str(), pos, add_value);
+	L_CALL(this, "Schema::index_item(%s, %d)", repr(values.to_string()).c_str(), add_values);
 
-	if (specification.prefix.empty()) {
-		switch (specification.index) {
-			case TypeIndex::NONE:
-				return;
-			case TypeIndex::TERMS:
-			case TypeIndex::FIELD_TERMS:
-			case TypeIndex::GLOBAL_TERMS:
-				index_field_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
-				break;
-			case TypeIndex::VALUES:
-			case TypeIndex::FIELD_VALUES:
-			case TypeIndex::GLOBAL_VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
-				break;
-			}
-			case TypeIndex::ALL:
-			case TypeIndex::FIELD_ALL:
-			case TypeIndex::GLOBAL_ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &Schema::index_field_term);
-				break;
-			}
-		}
+	if (values.is_array()) {
+		set_type_to_array();
+		_index_item(doc, values, data, 0, add_values);
 	} else {
-		switch (specification.index) {
-			case TypeIndex::NONE:
-				return;
-			case TypeIndex::TERMS:
-				index_all_term(doc, Serialise::MsgPack(specification, value), specification, specification_t::get_global(specification.sep_types[2]), pos);
-				break;
-			case TypeIndex::FIELD_TERMS:
-				index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos);
-				break;
-			case TypeIndex::GLOBAL_TERMS:
-				index_field_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
-				break;
-			case TypeIndex::VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_f = map_values[specification.slot];
-				StringSet& s_g = map_values[global_spc.slot];
-				index_all_value(doc, value, s_f, s_g, specification, global_spc, pos);
-				break;
-			}
-			case TypeIndex::FIELD_VALUES: {
-				StringSet& s_f = map_values[specification.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
-				break;
-			}
-			case TypeIndex::GLOBAL_VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
-				break;
-			}
-			case TypeIndex::ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_f = map_values[specification.slot];
-				StringSet& s_g = map_values[global_spc.slot];
-				index_all_value(doc, value, s_f, s_g, specification, global_spc, pos, true);
-				break;
-			}
-			case TypeIndex::FIELD_ALL: {
-				StringSet& s_f = map_values[specification.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &Schema::index_field_term);
-				break;
-			}
-			case TypeIndex::GLOBAL_ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &Schema::index_field_term);
-				break;
-			}
-		}
-	}
-
-	if (specification.flags.store && add_value) {
-		// Add value to data.
-		auto& data_value = data[RESERVED_VALUE];
-		switch (data_value.getType()) {
-			case MsgPack::Type::UNDEFINED:
-				data_value = value;
-				break;
-			case MsgPack::Type::ARRAY:
-				data_value.push_back(value);
-				break;
-			default:
-				data_value = MsgPack({ data_value, value });
-		}
+		_index_item(doc, std::vector<std::reference_wrapper<const MsgPack>>({ values }), data, pos, add_values);
 	}
 }
 
 
-void
-Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values)
+template <typename T>
+inline void
+Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos, bool add_values)
 {
-	L_CALL(this, "Schema::index_item(%s, %d)", repr(values.to_string()).c_str(), add_values);
-
-	if (specification.prefix.empty()) {
-		switch (specification.index) {
-			case TypeIndex::NONE:
-				return;
-			case TypeIndex::TERMS:
-			case TypeIndex::FIELD_TERMS:
-			case TypeIndex::GLOBAL_TERMS: {
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					for (const auto& value : values) {
-						index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
-					}
-				} else {
-					index_field_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
-				}
-				break;
+	switch (specification.index) {
+		case TypeIndex::NONE:
+			return;
+		case TypeIndex::TERMS: {
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			for (const MsgPack& value : values) {
+				index_all_term(doc, Serialise::MsgPack(specification, value), specification, global_spc, pos++);
 			}
-			case TypeIndex::VALUES:
-			case TypeIndex::FIELD_VALUES:
-			case TypeIndex::GLOBAL_VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0);
-				}
-				break;
-			}
-			case TypeIndex::ALL:
-			case TypeIndex::FIELD_ALL:
-			case TypeIndex::GLOBAL_ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &Schema::index_field_term);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0, &Schema::index_field_term);
-				}
-				break;
-			}
+			break;
 		}
-	} else {
-		switch (specification.index) {
-			case TypeIndex::NONE:
-				return;
-			case TypeIndex::TERMS: {
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					for (const auto& value : values) {
-						index_all_term(doc, Serialise::MsgPack(specification, value), specification, global_spc, pos++);
-					}
-				} else {
-					index_all_term(doc, Serialise::MsgPack(specification, values), specification, specification_t::get_global(specification.sep_types[2]), 0);
-				}
-				break;
+		case TypeIndex::FIELD_TERMS: {
+			for (const MsgPack& value : values) {
+				index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
 			}
-			case TypeIndex::FIELD_TERMS: {
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
-					}
-				} else {
-					index_field_term(doc, Serialise::MsgPack(specification, values), specification, 0);
-				}
-				break;
+			break;
+		}
+		case TypeIndex::GLOBAL_TERMS: {
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			for (const MsgPack& value : values) {
+				index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
 			}
-			case TypeIndex::GLOBAL_TERMS: {
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					for (const auto& value : values) {
-						index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
-					}
-				} else {
-					index_field_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
-				}
-				break;
+			break;
+		}
+		case TypeIndex::VALUES: {
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			StringSet& s_f = map_values[specification.slot];
+			StringSet& s_g = map_values[global_spc.slot];
+			for (const MsgPack& value : values) {
+				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 			}
-			case TypeIndex::VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_f = map_values[specification.slot];
-				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
-					}
-				} else {
-					index_all_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, s_g, specification, global_spc, 0);
-				}
-				break;
+			break;
+		}
+		case TypeIndex::FIELD_VALUES: {
+			StringSet& s_f = map_values[specification.slot];
+			for (const MsgPack& value : values) {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++);
 			}
-			case TypeIndex::FIELD_VALUES: {
-				StringSet& s_f = map_values[specification.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, specification, 0);
-				}
-				break;
+			break;
+		}
+		case TypeIndex::GLOBAL_VALUES: {
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			StringSet& s_g = map_values[global_spc.slot];
+			for (const MsgPack& value : values) {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
 			}
-			case TypeIndex::GLOBAL_VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0);
-				}
-				break;
+			break;
+		}
+		case TypeIndex::ALL: {
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			StringSet& s_f = map_values[specification.slot];
+			StringSet& s_g = map_values[global_spc.slot];
+			for (const MsgPack& value : values) {
+				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++, true);
 			}
-			case TypeIndex::ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_f = map_values[specification.slot];
-				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++, true);
-					}
-				} else {
-					index_all_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, s_g, specification, global_spc, 0, true);
-				}
-				break;
+			break;
+		}
+		case TypeIndex::FIELD_ALL: {
+			StringSet& s_f = map_values[specification.slot];
+			for (const MsgPack& value : values) {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &Schema::index_field_term);
 			}
-			case TypeIndex::FIELD_ALL: {
-				StringSet& s_f = map_values[specification.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &Schema::index_field_term);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, specification, 0, &Schema::index_field_term);
-				}
-				break;
+			break;
+		}
+		case TypeIndex::GLOBAL_ALL: {
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			StringSet& s_g = map_values[global_spc.slot];
+			for (const MsgPack& value : values) {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &Schema::index_field_term);
 			}
-			case TypeIndex::GLOBAL_ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &Schema::index_field_term);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0, &Schema::index_field_term);
-				}
-				break;
-			}
+			break;
 		}
 	}
 
@@ -1830,22 +1635,14 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 				data_value = values;
 				break;
 			case MsgPack::Type::ARRAY:
-				if (values.is_array()) {
-					for (const auto& value : values) {
-						data_value.push_back(value);
-					}
-				} else {
-					data_value.push_back(values);
+				for (const auto& value : values) {
+					data_value.push_back(value);
 				}
 				break;
 			default:
-				if (values.is_array()) {
-					data_value = MsgPack({ data_value });
-					for (const auto& value : values) {
-						data_value.push_back(value);
-					}
-				} else {
-					data_value = MsgPack({ data_value, values });
+				data_value = MsgPack({ data_value });
+				for (const auto& value : values) {
+					data_value.push_back(value);
 				}
 				break;
 		}

@@ -485,8 +485,9 @@ class Schema {
 	 * Auxiliar functions for index fields in doc.
 	 */
 
-	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value=true);
-	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values=true);
+	template <typename T>
+	void _index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos, bool add_values=true);
+	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, size_t pos=0, bool add_values=true);
 
 	static void index_field_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, size_t pos);
 	static void index_all_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
