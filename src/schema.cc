@@ -1564,8 +1564,9 @@ inline void
 Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos, bool add_values)
 {
 	switch (specification.index) {
-		case TypeIndex::NONE:
+		case TypeIndex::NONE: {
 			return;
+		}
 		case TypeIndex::TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			for (const MsgPack& value : values) {
