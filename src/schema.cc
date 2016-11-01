@@ -1541,7 +1541,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 {
 	L_CALL(this, "Schema::index_item(%s, %d)", repr(value.to_string()).c_str(), add_value);
 
-	_index_item(doc, std::vector<std::reference_wrapper<const MsgPack>>({ value }), data, pos, add_value);
+	_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({ value }), data, pos, add_value);
 }
 
 
@@ -1554,7 +1554,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 		set_type_to_array();
 		_index_item(doc, values, data, 0, add_values);
 	} else {
-		_index_item(doc, std::vector<std::reference_wrapper<const MsgPack>>({ values }), data, 0, add_values);
+		_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({ values }), data, 0, add_values);
 	}
 }
 
