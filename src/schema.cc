@@ -1602,11 +1602,24 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES: {
-			// TODO: Implement
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			StringSet& s_f = map_values[specification.slot];
+			for (const MsgPack& value : values) {
+				index_term(doc, Serialise::MsgPack(specification, value), global_spc, pos);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
+				++pos;
+			}
+
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_ALL: {
-			// TODO: Implement
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			StringSet& s_f = map_values[specification.slot];
+			for (const MsgPack& value : values) {
+				index_term(doc, Serialise::MsgPack(specification, value), global_spc, pos);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &Schema::index_term);
+				++pos;
+			}
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES: {
@@ -1618,20 +1631,33 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS: {
-			// TODO: Implement
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			StringSet& s_g = map_values[global_spc.slot];
+			for (const MsgPack& value : values) {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
+				index_term(doc, Serialise::MsgPack(specification, value), specification, pos);
+				++pos;
+			}
 			break;
 		}
 		case TypeIndex::VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_f = map_values[specification.slot];
 			StringSet& s_g = map_values[global_spc.slot];
+			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 			}
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_ALL: {
-			// TODO: Implement
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			StringSet& s_g = map_values[global_spc.slot];
+			StringSet& s_f = map_values[specification.slot];
+			for (const MsgPack& value : values) {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &Schema::index_term);
+				++pos;
+			}
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL: {
@@ -1643,11 +1669,24 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_TERMS: {
-			// TODO: Implement
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			StringSet& s_g = map_values[global_spc.slot];
+			for (const MsgPack& value : values) {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &Schema::index_term);
+				index_term(doc, Serialise::MsgPack(specification, value), specification, pos);
+				++pos;
+			}
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_VALUES: {
-			// TODO: Implement
+			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			StringSet& s_g = map_values[global_spc.slot];
+			StringSet& s_f = map_values[specification.slot];
+			for (const MsgPack& value : values) {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &Schema::index_term);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
+				++pos;
+			}
 			break;
 		}
 		case TypeIndex::ALL: {
