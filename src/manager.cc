@@ -290,8 +290,9 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HttpMethod::GET);
 			db_handler.index("." + serialise_node_id(local_node_->id), {
-				{ "name", { { RESERVED_TYPE,  STRING_STR }, { RESERVED_INDEX, "field_terms" }, { RESERVED_VALUE, local_node_->name } } },
-				{ "tagline", { { RESERVED_TYPE,  STRING_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
+				{ ID_FIELD_NAME,  { { RESERVED_TYPE, STRING_STR  } } },
+				{ "name",         { { RESERVED_TYPE,  STRING_STR }, { RESERVED_INDEX, "field_terms" }, { RESERVED_VALUE, local_node_->name } } },
+				{ "tagline",      { { RESERVED_TYPE,  STRING_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
 			}, true, MSGPACK_CONTENT_TYPE);
 		} catch (const CheckoutError&) {
 			L_CRIT(this, "Cannot generate cluster database");
