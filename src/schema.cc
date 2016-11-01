@@ -576,8 +576,8 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_VALUE     << ": " << (value ? value->to_string() : std::string())                 << "\n";
-	str << "\t" << "Recovery value"   << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
+	str << "\t" << RESERVED_VALUE       << ": " << (value ? value->to_string() : std::string())                  << "\n";
+	str << "\t" << "value_rec"          << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
 
 	str << "\t" << RESERVED_SLOT        << ": " << slot                           << "\n";
 	str << "\t" << RESERVED_TYPE        << ": " << readable_type(sep_types)       << "\n";
@@ -594,6 +594,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_T_DETECTION << ": " << (flags.text_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_U_DETECTION << ": " << (flags.uuid_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_BOOL_TERM   << ": " << (flags.bool_term         ? "true" : "false") << "\n";
+	str << "\t" << "field_found"        << ": " << (flags.field_found       ? "true" : "false") << "\n";
 
 	str << "\t" << "dynamic_type"       << ": " << (flags.dynamic_type ? "true" : "false") << "\n";
 	str << "\t" << "dynamic_prefix"     << ": " << dynamic_prefix << "\n";
