@@ -1537,7 +1537,16 @@ Schema::guess_field_type(const MsgPack& item_doc)
 
 
 void
-Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, size_t pos, bool add_values)
+Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
+{
+	L_CALL(this, "Schema::index_item(%s, %d)", repr(value.to_string()).c_str(), add_value);
+
+	_index_item(doc, std::vector<std::reference_wrapper<const MsgPack>>({ value }), data, pos, add_value);
+}
+
+
+void
+Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values)
 {
 	L_CALL(this, "Schema::index_item(%s, %d)", repr(values.to_string()).c_str(), add_values);
 
@@ -1545,7 +1554,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 		set_type_to_array();
 		_index_item(doc, values, data, 0, add_values);
 	} else {
-		_index_item(doc, std::vector<std::reference_wrapper<const MsgPack>>({ values }), data, pos, add_values);
+		_index_item(doc, std::vector<std::reference_wrapper<const MsgPack>>({ values }), data, 0, add_values);
 	}
 }
 
