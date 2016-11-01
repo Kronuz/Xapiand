@@ -1352,6 +1352,8 @@ Schema::validate_required_data()
 		properties[RESERVED_TYPE] = specification.sep_types;
 
 		specification.flags.field_with_type = true;
+
+		// L_DEBUG(this, "\nspecification = %s\nproperties = %s", specification.to_string().c_str(), properties.to_string(true).c_str());
 	}
 }
 
