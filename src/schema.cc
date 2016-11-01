@@ -3469,6 +3469,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 
 	specification.flags.bool_term = true;
 	specification.flags.has_bool_term = true;
+	properties[RESERVED_BOOL_TERM] = true;
 
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
