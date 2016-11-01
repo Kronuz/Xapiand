@@ -58,7 +58,7 @@ enum class TypeIndex : uint8_t {
 	NONE                      = 0,                              // 0000  Bits for  "none"
 	FIELD_TERMS               = 0b0001,                         // 0001  Bit for   "field_terms"
 	FIELD_VALUES              = 0b0010,                         // 0010  Bit for   "field_values"
-	FIELD_ALL                 = FIELD_TERMS  | FIELD_VALUES,    // 0011  Bits for  "field_all"
+	FIELD_ALL                 = FIELD_TERMS   | FIELD_VALUES,   // 0011  Bits for  "field_all"
 	GLOBAL_TERMS              = 0b0100,                         // 0100  Bit for   "global_terms"
 	TERMS                     = GLOBAL_TERMS  | FIELD_TERMS,    // 0101  Bits for  "terms"
 	GLOBAL_TERMS_FIELD_VALUES = GLOBAL_TERMS  | FIELD_VALUES,   // 0110  Bits for  "global_terms,field_values" *
@@ -490,7 +490,7 @@ class Schema {
 
 	static void index_field_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, size_t pos);
 	static void index_all_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
-	static void index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, dispatch_index fun=nullptr);
+	static std::string index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos);
 	static void index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos, bool is_term=false);
 
 

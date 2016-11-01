@@ -1541,81 +1541,37 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 {
 	L_CALL(this, "Schema::index_item(%s, %zu, %d)", repr(value.to_string()).c_str(), pos, add_value);
 
+	const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 	if (specification.prefix.empty()) {
-		switch (specification.index) {
-			case TypeIndex::NONE:
-				return;
-			case TypeIndex::TERMS:
-			case TypeIndex::FIELD_TERMS:
-			case TypeIndex::GLOBAL_TERMS:
-				index_field_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
-				break;
-			case TypeIndex::VALUES:
-			case TypeIndex::FIELD_VALUES:
-			case TypeIndex::GLOBAL_VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
-				break;
-			}
-			case TypeIndex::ALL:
-			case TypeIndex::FIELD_ALL:
-			case TypeIndex::GLOBAL_ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &Schema::index_field_term);
-				break;
-			}
+		std::string ser_value;
+		if (toUType(specification.index & TypeIndex::VALUES)) {
+			StringSet& s_g = map_values[global_spc.slot];
+			ser_value = index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
+		}
+
+		if (toUType(specification.index & TypeIndex::TERMS)) {
+			index_field_term(doc, ser_value.empty() ? Serialise::MsgPack(global_spc, value) : ser_value, global_spc, pos);
 		}
 	} else {
-		switch (specification.index) {
-			case TypeIndex::NONE:
-				return;
-			case TypeIndex::TERMS:
-				index_all_term(doc, Serialise::MsgPack(specification, value), specification, specification_t::get_global(specification.sep_types[2]), pos);
-				break;
-			case TypeIndex::FIELD_TERMS:
-				index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos);
-				break;
-			case TypeIndex::GLOBAL_TERMS:
-				index_field_term(doc, Serialise::MsgPack(specification, value), specification_t::get_global(specification.sep_types[2]), pos);
-				break;
-			case TypeIndex::VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_f = map_values[specification.slot];
-				StringSet& s_g = map_values[global_spc.slot];
-				index_all_value(doc, value, s_f, s_g, specification, global_spc, pos);
-				break;
-			}
-			case TypeIndex::FIELD_VALUES: {
-				StringSet& s_f = map_values[specification.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
-				break;
-			}
-			case TypeIndex::GLOBAL_VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
-				break;
-			}
-			case TypeIndex::ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_f = map_values[specification.slot];
-				StringSet& s_g = map_values[global_spc.slot];
-				index_all_value(doc, value, s_f, s_g, specification, global_spc, pos, true);
-				break;
-			}
-			case TypeIndex::FIELD_ALL: {
-				StringSet& s_f = map_values[specification.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &Schema::index_field_term);
-				break;
-			}
-			case TypeIndex::GLOBAL_ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &Schema::index_field_term);
-				break;
-			}
+		std::string ser_value;
+		if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+			StringSet& s_f = map_values[specification.slot];
+			ser_value = index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
+		}
+
+		if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
+			index_field_term(doc, ser_value.empty() ? Serialise::MsgPack(specification, value) : ser_value, specification, pos);
+		}
+
+		ser_value.clear();
+
+		if (toUType(specification.index & TypeIndex::GLOBAL_VALUES)) {
+			StringSet& s_g = map_values[global_spc.slot];
+			ser_value = index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
+		}
+
+		if (toUType(specification.index & TypeIndex::GLOBAL_TERMS)) {
+			index_field_term(doc, ser_value.empty() ? Serialise::MsgPack(global_spc, value) : ser_value, global_spc, pos);
 		}
 	}
 
@@ -1641,183 +1597,79 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 {
 	L_CALL(this, "Schema::index_item(%s, %d)", repr(values.to_string()).c_str(), add_values);
 
+	const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 	if (specification.prefix.empty()) {
-		switch (specification.index) {
-			case TypeIndex::NONE:
-				return;
-			case TypeIndex::TERMS:
-			case TypeIndex::FIELD_TERMS:
-			case TypeIndex::GLOBAL_TERMS: {
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					for (const auto& value : values) {
-						index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
-					}
-				} else {
-					index_field_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
+		if (values.is_array()) {
+			set_type_to_array();
+			size_t pos = 0;
+			for (const auto& value : values) {
+				std::string ser_value;
+				if (toUType(specification.index & TypeIndex::FIELD_VALUES) || toUType(specification.index & TypeIndex::GLOBAL_VALUES)) {
+					StringSet& s_g = map_values[global_spc.slot];
+					ser_value = index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
 				}
-				break;
+
+				if (toUType(specification.index & TypeIndex::FIELD_TERMS) || toUType(specification.index & TypeIndex::GLOBAL_TERMS)) {
+					index_field_term(doc, ser_value.empty() ? Serialise::MsgPack(global_spc, value) : ser_value, global_spc, pos);
+				}
 			}
-			case TypeIndex::VALUES:
-			case TypeIndex::FIELD_VALUES:
-			case TypeIndex::GLOBAL_VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+		} else {
+			std::string ser_value;
+			if (toUType(specification.index & TypeIndex::FIELD_VALUES) || toUType(specification.index & TypeIndex::GLOBAL_VALUES)) {
 				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0);
-				}
-				break;
+				ser_value = index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0);
 			}
-			case TypeIndex::ALL:
-			case TypeIndex::FIELD_ALL:
-			case TypeIndex::GLOBAL_ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &Schema::index_field_term);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0, &Schema::index_field_term);
-				}
-				break;
+
+			if (toUType(specification.index & TypeIndex::FIELD_TERMS) || toUType(specification.index & TypeIndex::GLOBAL_TERMS)) {
+				index_field_term(doc, ser_value.empty() ? Serialise::MsgPack(global_spc, values) : ser_value, global_spc, 0);
 			}
 		}
 	} else {
-		switch (specification.index) {
-			case TypeIndex::NONE:
-				return;
-			case TypeIndex::TERMS: {
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					for (const auto& value : values) {
-						index_all_term(doc, Serialise::MsgPack(specification, value), specification, global_spc, pos++);
-					}
-				} else {
-					index_all_term(doc, Serialise::MsgPack(specification, values), specification, specification_t::get_global(specification.sep_types[2]), 0);
+		if (values.is_array()) {
+			set_type_to_array();
+			size_t pos = 0;
+			for (const auto& value : values) {
+				std::string ser_value;
+				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+					StringSet& s_f = map_values[specification.slot];
+					ser_value = index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
 				}
-				break;
-			}
-			case TypeIndex::FIELD_TERMS: {
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_field_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
-					}
-				} else {
-					index_field_term(doc, Serialise::MsgPack(specification, values), specification, 0);
+
+				if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
+					index_field_term(doc, ser_value.empty() ? Serialise::MsgPack(specification, value) : ser_value, specification, pos);
 				}
-				break;
-			}
-			case TypeIndex::GLOBAL_TERMS: {
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-					for (const auto& value : values) {
-						index_field_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
-					}
-				} else {
-					index_field_term(doc, Serialise::MsgPack(specification, values), specification_t::get_global(specification.sep_types[2]), 0);
+
+				ser_value.clear();
+
+				if (toUType(specification.index & TypeIndex::GLOBAL_VALUES)) {
+					StringSet& s_g = map_values[global_spc.slot];
+					ser_value = index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
 				}
-				break;
+
+				if (toUType(specification.index & TypeIndex::GLOBAL_TERMS)) {
+					index_field_term(doc, ser_value.empty() ? Serialise::MsgPack(global_spc, value) : ser_value, global_spc, pos);
+				}
 			}
-			case TypeIndex::VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+		} else {
+			std::string ser_value;
+			if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 				StringSet& s_f = map_values[specification.slot];
+				ser_value = index_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, specification, 0);
+			}
+
+			if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
+				index_field_term(doc, ser_value.empty() ? Serialise::MsgPack(specification, values) : ser_value, specification, 0);
+			}
+
+			ser_value.clear();
+
+			if (toUType(specification.index & TypeIndex::GLOBAL_VALUES)) {
 				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
-					}
-				} else {
-					index_all_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, s_g, specification, global_spc, 0);
-				}
-				break;
+				ser_value = index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0);
 			}
-			case TypeIndex::FIELD_VALUES: {
-				StringSet& s_f = map_values[specification.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, specification, 0);
-				}
-				break;
-			}
-			case TypeIndex::GLOBAL_VALUES: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0);
-				}
-				break;
-			}
-			case TypeIndex::ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_f = map_values[specification.slot];
-				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++, true);
-					}
-				} else {
-					index_all_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, s_g, specification, global_spc, 0, true);
-				}
-				break;
-			}
-			case TypeIndex::FIELD_ALL: {
-				StringSet& s_f = map_values[specification.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &Schema::index_field_term);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_f, specification, 0, &Schema::index_field_term);
-				}
-				break;
-			}
-			case TypeIndex::GLOBAL_ALL: {
-				const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-				StringSet& s_g = map_values[global_spc.slot];
-				if (values.is_array()) {
-					set_type_to_array();
-					size_t pos = 0;
-					for (const auto& value : values) {
-						index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &Schema::index_field_term);
-					}
-				} else {
-					index_value(doc, values.is_map() ? Cast::cast(values) : values, s_g, global_spc, 0, &Schema::index_field_term);
-				}
-				break;
+
+			if (toUType(specification.index & TypeIndex::GLOBAL_TERMS)) {
+				index_field_term(doc, ser_value.empty() ? Serialise::MsgPack(global_spc, values) : ser_value, global_spc, 0);
 			}
 		}
 	}
@@ -1921,8 +1773,8 @@ Schema::index_all_term(Xapian::Document& doc, std::string&& serialise_val, const
 }
 
 
-void
-Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, dispatch_index fun)
+std::string
+Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos)
 {
 	L_CALL(nullptr, "Schema::index_value()");
 
@@ -1930,15 +1782,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::FLOAT: {
 			try {
 				auto f_val = value.as_f64();
-				if (fun) {
-					auto ser_value = Serialise::_float(f_val);
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::_float(f_val));
-				}
+				auto ser_value = Serialise::_float(f_val);
+				s.insert(ser_value);
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, static_cast<int64_t>(f_val));
-				return;
+				return ser_value;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for float type: %s", repr(value.to_string()).c_str());
 			}
@@ -1946,15 +1793,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::INTEGER: {
 			try {
 				auto i_val = value.as_i64();
-				if (fun) {
-					auto ser_value = Serialise::integer(i_val);
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::integer(i_val));
-				}
+				auto ser_value = Serialise::integer(i_val);
+				s.insert(ser_value);
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, i_val);
-				return;
+				return ser_value;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for integer type: %s", repr(value.to_string()).c_str());
 			}
@@ -1962,15 +1804,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::POSITIVE: {
 			try {
 				auto u_val = value.as_u64();
-				if (fun) {
-					auto ser_value = Serialise::positive(u_val);
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::positive(u_val));
-				}
+				auto ser_value = Serialise::positive(u_val);
+				s.insert(ser_value);
 				GenerateTerms::positive(doc, spc.accuracy, spc.acc_prefix, u_val);
-				return;
+				return ser_value;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for positive type: %s", repr(value.to_string()).c_str());
 			}
@@ -1978,15 +1815,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::DATE: {
 			try {
 				Datetime::tm_t tm;
-				if (fun) {
-					auto ser_value = Serialise::date(value, tm);
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::date(value, tm));
-				}
+				auto ser_value = Serialise::date(value, tm);
+				s.insert(ser_value);
 				GenerateTerms::date(doc, spc.accuracy, spc.acc_prefix, tm);
-				return;
+				return ser_value;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for date type: %s", repr(value.to_string()).c_str());
 			}
@@ -1994,13 +1826,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::GEO: {
 			try {
 				EWKT_Parser ewkt(value.as_string(), spc.flags.partials, spc.error);
-				if (fun) {
-					(*fun)(doc, Serialise::trixels(ewkt.trixels), spc, pos);
-				}
 				auto ranges = ewkt.getRanges();
 				s.insert(Serialise::geo(ranges, ewkt.centroids));
 				GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
-				return;
+				return Serialise::trixels(ewkt.trixels);
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for geo type: %s", repr(value.to_string()).c_str());
 			}
@@ -2008,42 +1837,27 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::STRING:
 		case FieldType::TEXT: {
 			try {
-				if (fun) {
-					auto ser_value = value.as_string();
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(value.as_string());
-				}
-				return;
+				auto ser_value = value.as_string();
+				s.insert(ser_value);
+				return ser_value;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::BOOLEAN: {
 			try {
-				if (fun) {
-					auto ser_value = Serialise::MsgPack(spc, value);
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::MsgPack(spc, value));
-				}
-				return;
+				auto ser_value = Serialise::MsgPack(spc, value);
+				s.insert(ser_value);
+				return ser_value;
 			} catch (const SerialisationError&) {
 				throw MSG_ClientError("Format invalid for boolean type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::UUID: {
 			try {
-				if (fun) {
-					auto ser_value = Serialise::uuid(value.as_string());
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::uuid(value.as_string()));
-				}
-				return;
+				auto ser_value = Serialise::uuid(value.as_string());
+				s.insert(ser_value);
+				return ser_value;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for uuid type: %s", repr(value.to_string()).c_str());
 			} catch (const SerialisationError&) {
