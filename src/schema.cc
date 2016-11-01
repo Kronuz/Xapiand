@@ -3468,6 +3468,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 	L_CALL(this, "Schema::set_default_spc_id(%s)", repr(properties.to_string()).c_str());
 
 	specification.flags.bool_term = true;
+	specification.flags.has_bool_term = true;
 
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
@@ -3478,6 +3479,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 	// ID_FIELD_NAME can not be TEXT.
 	if (specification.sep_types[2] == FieldType::TEXT) {
 		specification.sep_types[2] = FieldType::STRING;
+		properties[RESERVED_TYPE] = STRING_STR;
 	}
 
 	// RESERVED_STORE by default is false.
@@ -3512,7 +3514,13 @@ Schema::set_default_spc_ct(MsgPack& properties)
 		properties[RESERVED_INDEX] = specification.index;
 	}
 
-	specification.sep_types[2] = FieldType::STRING;
+	// RESERVED_TYPE by default is STRING
+	try {
+		properties.at(RESERVED_TYPE);
+	} catch (const std::out_of_range&) {
+		specification.sep_types[2] = FieldType::STRING;
+		properties[RESERVED_TYPE] = STRING_STR;
+	}
 
 	// RESERVED_STORE by default is false.
 	try {

@@ -273,9 +273,6 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 		prefixed_term_id = prefixed(serialised_id, DOCUMENT_ID_TERM_PREFIX);
 	}
 
-	// Document's id must be saved as boolean term (otherwise it doesn't replace an existing document).
-	doc.add_boolean_term(prefixed_term_id);
-
 	Xapian::docid did;
 	const auto _endpoints = endpoints;
 	for (const auto& e : _endpoints) {
