@@ -3518,11 +3518,9 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	}
 
 	// RESERVED_TYPE by default is STRING
-	try {
-		properties.at(RESERVED_TYPE);
-	} catch (const std::out_of_range&) {
+	if (specification.sep_types[2] == FieldType::EMPTY) {
 		specification.sep_types[2] = FieldType::STRING;
-		properties[RESERVED_TYPE] = STRING_STR;
+		properties[RESERVED_TYPE] = specification.sep_types;
 	}
 
 	// RESERVED_STORE by default is false.
