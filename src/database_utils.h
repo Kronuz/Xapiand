@@ -51,6 +51,7 @@
 #define RESERVED_STORE             "_store"
 #define RESERVED_TYPE              "_type"
 #define RESERVED_DYNAMIC           "_dynamic"
+#define RESERVED_STRICT            "_strict"
 #define RESERVED_D_DETECTION       "_date_detection"
 #define RESERVED_N_DETECTION       "_numeric_detection"
 #define RESERVED_G_DETECTION       "_geo_detection"

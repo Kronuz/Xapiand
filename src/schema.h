@@ -264,6 +264,7 @@ struct required_spc_t {
 		bool parent_store:1;
 		bool is_recursive:1;
 		bool dynamic:1;
+		bool strict:1;
 		bool date_detection:1;
 		bool numeric_detection:1;
 		bool geo_detection:1;
@@ -532,6 +533,7 @@ class Schema {
 	void update_store(const MsgPack& prop_store);
 	void update_recursive(const MsgPack& prop_namespace);
 	void update_dynamic(const MsgPack& prop_dynamic);
+	void update_strict(const MsgPack& prop_strict);
 	void update_d_detection(const MsgPack& prop_d_detection);
 	void update_n_detection(const MsgPack& prop_n_detection);
 	void update_g_detection(const MsgPack& prop_g_detection);
@@ -565,6 +567,7 @@ class Schema {
 	void process_store(const std::string& prop_name, const MsgPack& doc_store);
 	void process_recursive(const std::string& prop_name, const MsgPack& doc_recursive);
 	void process_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic);
+	void process_strict(const std::string& prop_name, const MsgPack& doc_strict);
 	void process_d_detection(const std::string& prop_name, const MsgPack& doc_d_detection);
 	void process_n_detection(const std::string& prop_name, const MsgPack& doc_n_detection);
 	void process_g_detection(const std::string& prop_name, const MsgPack& doc_g_detection);

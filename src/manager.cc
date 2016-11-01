@@ -85,7 +85,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 #else
 	  solo(true),
 #endif
-	  type_required(o.type_required),
+	  strict(o.strict),
 	  async_shutdown_sig(*ev_loop),
 	  shutdown_sig_sig(0)
 

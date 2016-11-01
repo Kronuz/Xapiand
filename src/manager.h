@@ -45,7 +45,7 @@ using opts_t = struct opts_s {
 	bool detach;
 	bool chert;
 	bool solo;
-	bool type_required;
+	bool strict;
 	std::string database;
 	std::string cluster_name;
 	std::string node_name;
@@ -181,7 +181,7 @@ public:
 	std::string cluster_name;
 	std::string node_name;
 	bool solo;
-	bool type_required;
+	bool strict;
 
 	ev::async async_shutdown_sig;
 	std::atomic_int shutdown_sig_sig;

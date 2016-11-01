@@ -201,6 +201,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_STORE,              &Schema::process_store           },
 	{ RESERVED_RECURSIVE,          &Schema::process_recursive       },
 	{ RESERVED_DYNAMIC,            &Schema::process_dynamic         },
+	{ RESERVED_STRICT,             &Schema::process_strict          },
 	{ RESERVED_D_DETECTION,        &Schema::process_d_detection     },
 	{ RESERVED_N_DETECTION,        &Schema::process_n_detection     },
 	{ RESERVED_G_DETECTION,        &Schema::process_g_detection     },
@@ -254,6 +255,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 	{ RESERVED_STORE,           &Schema::update_store            },
 	{ RESERVED_RECURSIVE,       &Schema::update_recursive        },
 	{ RESERVED_DYNAMIC,         &Schema::update_dynamic          },
+	{ RESERVED_STRICT,          &Schema::update_strict           },
 	{ RESERVED_D_DETECTION,     &Schema::update_d_detection      },
 	{ RESERVED_N_DETECTION,     &Schema::update_n_detection      },
 	{ RESERVED_G_DETECTION,     &Schema::update_g_detection      },
@@ -309,6 +311,7 @@ required_spc_t::flags_t::flags_t()
 	  parent_store(true),
 	  is_recursive(true),
 	  dynamic(true),
+	  strict(false),
 	  date_detection(true),
 	  numeric_detection(true),
 	  geo_detection(true),
@@ -603,6 +606,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_STORE       << ": " << (flags.store             ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_RECURSIVE   << ": " << (flags.is_recursive      ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_DYNAMIC     << ": " << (flags.dynamic           ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_STRICT      << ": " << (flags.strict            ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_D_DETECTION << ": " << (flags.date_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_N_DETECTION << ": " << (flags.numeric_detection ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_G_DETECTION << ": " << (flags.geo_detection     ? "true" : "false") << "\n";
@@ -1436,7 +1440,7 @@ Schema::validate_required_data(const MsgPack& value)
 	// L_DEBUG(this, "%s", specification.to_string().c_str());  // Print specification as sent by user
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
-		if (XapiandManager::manager->type_required && !specification.flags.inside_namespace) {
+		if ((XapiandManager::manager->strict || specification.flags.strict) && !specification.flags.inside_namespace) {
 			throw MSG_MissingTypeError("Type of field %s is missing", repr(specification.dynamic_full_name).c_str());
 		}
 		guess_field_type(value);
@@ -2542,6 +2546,15 @@ Schema::update_dynamic(const MsgPack& prop_dynamic)
 
 
 void
+Schema::update_strict(const MsgPack& prop_strict)
+{
+	L_CALL(this, "Schema::update_strict(%s)", repr(prop_strict.to_string()).c_str());
+
+	specification.flags.strict = prop_strict.as_bool();
+}
+
+
+void
 Schema::update_d_detection(const MsgPack& prop_d_detection)
 {
 	L_CALL(this, "Schema::update_d_detection(%s)", repr(prop_d_detection.to_string()).c_str());
@@ -3084,6 +3097,25 @@ Schema::process_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic
 	try {
 		specification.flags.dynamic = doc_dynamic.as_bool();
 		get_mutable(specification.full_name)[prop_name] = static_cast<bool>(specification.flags.dynamic);
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+	} catch (const std::out_of_range&) { }
+}
+
+
+void
+Schema::process_strict(const std::string& prop_name, const MsgPack& doc_strict)
+{
+	// RESERVED_STRICT is heritable but can't change.
+	L_CALL(this, "Schema::process_strict(%s)", repr(doc_strict.to_string()).c_str());
+
+	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
+		return;
+	}
+
+	try {
+		specification.flags.strict = doc_strict.as_bool();
+		get_mutable(specification.full_name)[prop_name] = static_cast<bool>(specification.flags.strict);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	} catch (const std::out_of_range&) { }
