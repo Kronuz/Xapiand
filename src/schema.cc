@@ -1543,22 +1543,61 @@ Schema::guess_field_type(const MsgPack& item_doc)
 void
 Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
 {
-	L_CALL(this, "Schema::index_item(%s, %d)", repr(value.to_string()).c_str(), add_value);
+	L_CALL(this, "Schema::index_item(<doc>, %s, %s, %zu, %s)", repr(value.to_string()).c_str(), repr(data.to_string()).c_str(), pos, add_value ? "true" : "false");
 
 	_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), data, pos, add_value);
+
+	if (specification.flags.store && add_value) {
+		// Add value to data.
+		auto& data_value = data[RESERVED_VALUE];
+		switch (data_value.getType()) {
+			case MsgPack::Type::UNDEFINED:
+				data_value = value;
+				break;
+			case MsgPack::Type::ARRAY:
+				data_value.push_back(value);
+				break;
+			default:
+				data_value = MsgPack({ data_value, value });
+				break;
+		}
+	}
 }
 
 
 void
 Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values)
 {
-	L_CALL(this, "Schema::index_item(%s, %d)", repr(values.to_string()).c_str(), add_values);
+	L_CALL(this, "Schema::index_item(<doc>, %s, %s, %s)", repr(values.to_string()).c_str(), repr(data.to_string()).c_str(), add_values ? "true" : "false");
 
-	if (values.is_array()) {
-		set_type_to_array();
-		_index_item(doc, values, data, 0, add_values);
-	} else {
-		_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ values }}), data, 0, add_values);
+	if (!values.is_array()) {
+		index_item(doc, values, data, 0, add_values);
+		return;
+	}
+
+	set_type_to_array();
+
+	_index_item(doc, values, data, 0, add_values);
+
+	if (specification.flags.store && add_values) {
+		// Add value to data.
+		auto& data_value = data[RESERVED_VALUE];
+		switch (data_value.getType()) {
+			case MsgPack::Type::UNDEFINED:
+				data_value = values;
+				break;
+			case MsgPack::Type::ARRAY:
+				for (const auto& value : values) {
+					data_value.push_back(value);
+				}
+				break;
+			default:
+				data_value = MsgPack({ data_value });
+				for (const auto& value : values) {
+					data_value.push_back(value);
+				}
+				break;
+		}
 	}
 }
 
@@ -1701,27 +1740,6 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++, true);
 			}
 			break;
-		}
-	}
-
-	if (specification.flags.store && add_values) {
-		// Add value to data.
-		auto& data_value = data[RESERVED_VALUE];
-		switch (data_value.getType()) {
-			case MsgPack::Type::UNDEFINED:
-				data_value = values;
-				break;
-			case MsgPack::Type::ARRAY:
-				for (const auto& value : values) {
-					data_value.push_back(value);
-				}
-				break;
-			default:
-				data_value = MsgPack({ data_value });
-				for (const auto& value : values) {
-					data_value.push_back(value);
-				}
-				break;
 		}
 	}
 }
