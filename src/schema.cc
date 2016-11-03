@@ -3099,7 +3099,7 @@ Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
-	} catch (const std::out_of_range&) { }
+	}
 }
 
 
@@ -3137,7 +3137,7 @@ Schema::process_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic
 		get_mutable(specification.full_name)[prop_name] = static_cast<bool>(specification.flags.dynamic);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
-	} catch (const std::out_of_range&) { }
+	}
 }
 
 
@@ -3156,7 +3156,7 @@ Schema::process_strict(const std::string& prop_name, const MsgPack& doc_strict)
 		get_mutable(specification.full_name)[prop_name] = static_cast<bool>(specification.flags.strict);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
-	} catch (const std::out_of_range&) { }
+	}
 }
 
 
