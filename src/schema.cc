@@ -2686,12 +2686,13 @@ void
 Schema::update_namespace(const MsgPack& prop_namespace)
 {
 	L_CALL(this, "Schema::update_namespace(%s)", repr(prop_namespace.to_string()).c_str());
-	(void)prop_namespace;  // silence -Wunused-parameter
 
-	if (specification.flags.dynamic_type) {
-		specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.dynamic_full_name));
-	} else {
-		specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
+	if (prop_namespace.as_bool()) {
+		if (specification.flags.dynamic_type) {
+			specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.dynamic_full_name));
+		} else {
+			specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
+		}
 	}
 }
 
@@ -3353,19 +3354,21 @@ Schema::process_namespace(const std::string& prop_name, const MsgPack& doc_names
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
 	L_CALL(this, "Schema::process_namespace(%s)", repr(doc_namespace.to_string()).c_str());
-	(void)doc_namespace;  // silence -Wunused-parameter
 
 	if likely(specification.flags.field_found || !specification.paths_namespace.empty()) {
 		return;
 	}
 
 	try {
-		if (specification.flags.dynamic_type) {
-			specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.dynamic_full_name));
-		} else {
-			specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
+		// Only save in Schema if RESERVED_NAMESPACE is true.
+		if (doc_namespace.as_bool()) {
+			if (specification.flags.dynamic_type) {
+				specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.dynamic_full_name));
+			} else {
+				specification.paths_namespace.push_back(Serialise::namespace_field(specification.dynamic_full_name));
+			}
+			get_mutable(specification.full_name)[prop_name] = true;
 		}
-		get_mutable(specification.full_name)[prop_name] = true;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
