@@ -1632,7 +1632,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 		case TypeIndex::GLOBAL_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			for (const MsgPack& value : values) {
-				index_term(doc, Serialise::MsgPack(specification, value), global_spc, pos++);
+				index_term(doc, Serialise::MsgPack(global_spc, value), global_spc, pos++);
 			}
 			break;
 		}
