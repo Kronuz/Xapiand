@@ -149,6 +149,7 @@ const char* sys_errnolist[] {
 	"EQFULL",           /* 106: Interface output queue is full */
 };
 
+
 const char* strerrno(int errnum) {
 	return sys_errnolist[errnum];
 }
@@ -363,5 +364,6 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 #endif
 }
 #endif
+
 
 } /* namespace io */

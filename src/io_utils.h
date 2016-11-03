@@ -30,21 +30,28 @@
 
 namespace io {
 
+
 inline int unlink(const char *path) {
 	return ::unlink(path);
 }
+
 
 inline int close(int fd) {
 	return ::close(fd);
 }
 
+
 inline int open(const char *path, int oflag=O_RDONLY, int mode=0644) {
 	return ::open(path, oflag, mode);
 }
 
+
 inline off_t lseek(int fd, off_t offset, int whence) {
 	return ::lseek(fd, offset, whence);
 }
+
+
+const char* strerrno(int errnum);
 
 ssize_t write(int fd, const void* buf, size_t nbyte);
 ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset);
@@ -54,6 +61,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
 
 int fsync(int fd);
 int full_fsync(int fd);
+
 
 #ifdef HAVE_FALLOCATE
 inline int fallocate(int fd, int mode, off_t offset, off_t len) {
@@ -75,6 +83,7 @@ inline int fadvise(int fd, off_t offset, off_t len, int advice) {
 #define POSIX_FADV_WILLNEED   3
 #define POSIX_FADV_DONTNEED   4
 #define POSIX_FADV_NOREUSE    5
+
 
 inline int fadvise(int, off_t, off_t, int) {
 	return 0;
