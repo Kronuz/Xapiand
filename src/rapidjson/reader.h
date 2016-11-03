@@ -640,11 +640,11 @@ private:
             RAPIDJSON_PARSE_ERROR(kParseErrorValueInvalid, is.Tell() - 1);
     }
 
-    // Helper function to parse four hexidecimal digits in \uXXXX in ParseString().
+    // Helper function to parse four hexidecimal digits in \uXXXX and \xXX in ParseString().
     template<typename InputStream>
-    unsigned ParseHex4(InputStream& is) {
+    unsigned ParseHex(int n, InputStream& is) {
         unsigned codepoint = 0;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < n; i++) {
             Ch c = is.Take();
             codepoint <<= 4;
             codepoint += static_cast<unsigned>(c);
@@ -741,19 +741,24 @@ private:
                     os.Put(escape[(unsigned char)e]);
                 }
                 else if (e == 'u') {    // Unicode
-                    unsigned codepoint = ParseHex4(is);
+                    unsigned codepoint = ParseHex(4, is);
                     RAPIDJSON_PARSE_ERROR_EARLY_RETURN_VOID;
                     if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
                         // Handle UTF-16 surrogate pair
                         if (is.Take() != '\\' || is.Take() != 'u')
                             RAPIDJSON_PARSE_ERROR(kParseErrorStringUnicodeSurrogateInvalid, is.Tell() - 2);
-                        unsigned codepoint2 = ParseHex4(is);
+                        unsigned codepoint2 = ParseHex(4, is);
                         RAPIDJSON_PARSE_ERROR_EARLY_RETURN_VOID;
                         if (codepoint2 < 0xDC00 || codepoint2 > 0xDFFF)
                             RAPIDJSON_PARSE_ERROR(kParseErrorStringUnicodeSurrogateInvalid, is.Tell() - 2);
                         codepoint = (((codepoint - 0xD800) << 10) | (codepoint2 - 0xDC00)) + 0x10000;
                     }
                     TEncoding::Encode(os, codepoint);
+                }
+                else if (e == 'x') {
+                    unsigned codepoint = ParseHex(2, is);
+                    RAPIDJSON_PARSE_ERROR_EARLY_RETURN_VOID;
+                    os.Put((unsigned char)codepoint);
                 }
                 else
                     RAPIDJSON_PARSE_ERROR(kParseErrorStringEscapeInvalid, is.Tell() - 1);

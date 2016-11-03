@@ -244,17 +244,21 @@ protected:
     bool WriteString(const Ch* str, SizeType length)  {
         static const char hexDigits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
         static const char escape[256] = {
+#define X 'x'
+#define X16 X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X
 #define Z16 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
             //0    1    2    3    4    5    6    7    8    9    A    B    C    D    E    F
-            'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'b', 't', 'n', 'u', 'f', 'r', 'u', 'u', // 00
-            'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', // 10
+              X,   X,   X,   X,   X,   X,   X,   X, 'b', 't', 'n',   X, 'f', 'r',   X,   X, // 00
+            X16,                                                                            // 10
               0,   0, '"',   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, // 20
             Z16, Z16,                                                                       // 30~4F
               0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,'\\',   0,   0,   0, // 50
-            Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16                                // 60~FF
+            Z16, Z16,                                                                       // 60~7F
+            Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16                                          // 80~FF
+#undef X
+#undef X16
 #undef Z16
         };
-
         os_->Put('\"');
         GenericStringStream<SourceEncoding> is(str);
         while (is.Tell() < length) {
@@ -292,13 +296,64 @@ protected:
             }
             else if ((sizeof(Ch) == 1 || (unsigned)c < 256) && escape[(unsigned char)c])  {
                 is.Take();
-                os_->Put('\\');
-                os_->Put(escape[(unsigned char)c]);
-                if (escape[(unsigned char)c] == 'u') {
-                    os_->Put('0');
-                    os_->Put('0');
-                    os_->Put(hexDigits[(unsigned char)c >> 4]);
-                    os_->Put(hexDigits[(unsigned char)c & 0xF]);
+                char e = escape[(unsigned char)c];
+                switch (e) {
+                    case 'x':
+                        os_->Put('\\');
+                        os_->Put('x');
+                        os_->Put(hexDigits[(unsigned char)c >> 4]);
+                        os_->Put(hexDigits[(unsigned char)c & 0xF]);
+                        break;
+                    case 'u':
+                        os_->Put('\\');
+                        os_->Put('u');
+                        os_->Put('0');
+                        os_->Put('0');
+                        os_->Put(hexDigits[(unsigned char)c >> 4]);
+                        os_->Put(hexDigits[(unsigned char)c & 0xF]);
+                        break;
+                    default:
+                        os_->Put('\\');
+                        os_->Put(e);
+                        break;
+                }
+            }
+            else if (sizeof(Ch) == 1)  {
+                unsigned codepoint;
+                Ch buffer[4];
+                Ch *buffer_end = &buffer[0];
+                if (SourceEncoding::Decode(is, &codepoint, &buffer_end)) {
+                    TargetEncoding::Encode(*os_, codepoint);
+                } else {
+                    for (Ch *b = &buffer[0]; b != buffer_end; ++b) {
+                        Ch c = *b;
+                        char e = escape[(unsigned char)c];
+                        switch (e) {
+                            case 0:
+                            if ((unsigned char)c >= 0x20 && (unsigned char)c < 0x7f) {
+                                os_->Put(c);
+                                break;
+                            }
+                            case 'x':
+                                os_->Put('\\');
+                                os_->Put('x');
+                                os_->Put(hexDigits[(unsigned char)c >> 4]);
+                                os_->Put(hexDigits[(unsigned char)c & 0xF]);
+                                break;
+                            case 'u':
+                                os_->Put('\\');
+                                os_->Put('u');
+                                os_->Put('0');
+                                os_->Put('0');
+                                os_->Put(hexDigits[(unsigned char)c >> 4]);
+                                os_->Put(hexDigits[(unsigned char)c & 0xF]);
+                                break;
+                            default:
+                                os_->Put('\\');
+                                os_->Put(e);
+                                break;
+                        }
+                    }
                 }
             }
             else
