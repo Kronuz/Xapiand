@@ -171,6 +171,7 @@ public:
 
 	bool open_current(const std::string& path, bool current);
 
+	bool set_uuid(const Endpoint& endp) const;
 	void write_line(Type type, const std::string& data, bool commit=false);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();

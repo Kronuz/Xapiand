@@ -25,6 +25,7 @@
 #include "database_autocommit.h"
 #include "length.h"
 #include "schema.h"
+#include "guid/guid.h"
 
 #include <bitset>
 #include <fcntl.h>
@@ -90,7 +91,9 @@ WalHeader::validate(void* param, void*)
 
 	const DatabaseWAL* wal = static_cast<const DatabaseWAL*>(param);
 	if (strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid))) {
-		throw MSG_StorageCorruptVolume("WAL UUID mismatch");
+		if (!wal->set_uuid(wal->database->endpoints[0])) {
+			throw MSG_StorageCorruptVolume("WAL UUID mismatch");
+		}
 	}
 }
 
@@ -308,6 +311,32 @@ DatabaseWAL::execute(const std::string& line)
 		default:
 			throw MSG_Error("Invalid WAL message!");
 	}
+
+	return true;
+}
+
+
+bool
+DatabaseWAL::set_uuid(const Endpoint& endp) const
+{
+	L_CALL(this, "DatabaseWAL::set_uuid(%s)", std::string(header.head.uuid, 36).c_str());
+
+	auto dir = endp.path;
+	auto file = dir + "/iamglass";
+	int fd = io::open(file.c_str(), O_WRONLY);
+	if (-1 == fd) {
+		L_ERR(nullptr, "ERROR: opening file. %s\n", file.c_str());
+		return false;
+	}
+	auto uuid = Serialise::uuid(std::string(header.head.uuid, 36));
+	io::lseek(fd, 16, SEEK_SET);
+	auto r = io::write(fd, uuid.data(), uuid.size());
+	if unlikely(r < 0) {
+		L_ERRNO(nullptr, "io::write() -> %s", strerrno(errno));
+		io::close(fd);
+		return false;
+	}
+	io::close(fd);
 
 	return true;
 }
