@@ -1113,8 +1113,18 @@ HttpClient::touch_view(HttpMethod method)
 
 	endpoints_maker(1s);
 
-	db_handler.reset(endpoints, DB_SPAWN, method);
-	write_http_response(200, db_handler.get_schema()->get_readable());
+	MsgPack response;
+	int status_code;
+	try {
+		db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
+		status_code = 200;
+		response["_touch"] = "Done";
+	} catch (const CheckoutError& e) {
+		status_code = 200;
+		auto ss = "Error: " + std::string(e.what());
+		response["_touch"] = ss;
+	}
+	write_http_response(status_code, response);
 }
 
 
