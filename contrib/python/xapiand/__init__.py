@@ -175,7 +175,7 @@ class Xapiand(object):
         is_json = 'application/json' in content_type
 
         if body is not None:
-            if isinstance(body, dict):
+            if isinstance(body, (dict, list)):
                 if is_msgpack:
                     body = msgpack.dumps(body)
                 elif is_json:
