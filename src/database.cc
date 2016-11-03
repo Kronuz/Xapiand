@@ -332,7 +332,7 @@ DatabaseWAL::set_uuid(const Endpoint& endp) const
 	io::lseek(fd, 16, SEEK_SET);
 	auto r = io::write(fd, uuid.data(), uuid.size());
 	if unlikely(r < 0) {
-		L_ERRNO(nullptr, "io::write() -> %s", strerrno(errno));
+		L_ERRNO(nullptr, "io::write() -> %s", io::strerrno(errno));
 		io::close(fd);
 		return false;
 	}
