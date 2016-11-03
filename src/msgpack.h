@@ -265,6 +265,7 @@ public:
 	friend msgpack::adaptor::object_with_zone<MsgPack>;
 };
 
+
 template <typename T>
 class MsgPack::Iterator : public std::iterator<std::input_iterator_tag, MsgPack> {
 	friend MsgPack;
@@ -353,6 +354,7 @@ public:
 		return !operator==(other);
 	}
 };
+
 
 struct MsgPack::Body {
 	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>> map;
@@ -1751,6 +1753,7 @@ inline bool MsgPack::is_number() const noexcept {
 	}
 }
 
+
 inline bool MsgPack::is_integer() const noexcept {
 	switch (_const_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
@@ -1761,9 +1764,11 @@ inline bool MsgPack::is_integer() const noexcept {
 	}
 }
 
+
 inline bool MsgPack::is_float() const noexcept {
 	return _const_body->getType() == Type::FLOAT;
 }
+
 
 inline bool MsgPack::is_map() const noexcept {
 	return _const_body->getType() == Type::MAP;
