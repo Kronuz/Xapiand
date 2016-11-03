@@ -324,7 +324,7 @@ DatabaseWAL::set_uuid(const Endpoint& endp) const
 	auto dir = endp.path;
 	auto file = dir + "/iamglass";
 	int fd = io::open(file.c_str(), O_WRONLY);
-	if (-1 == fd) {
+	if (unlikely(fd < 0)) {
 		L_ERR(nullptr, "ERROR: opening file. %s\n", file.c_str());
 		return false;
 	}
