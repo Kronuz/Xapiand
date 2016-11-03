@@ -90,10 +90,8 @@ WalHeader::validate(void* param, void*)
 	}
 
 	const DatabaseWAL* wal = static_cast<const DatabaseWAL*>(param);
-	if (strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid))) {
-		if (!wal->set_uuid(wal->database->endpoints[0])) {
-			throw MSG_StorageCorruptVolume("WAL UUID mismatch");
-		}
+	if (wal->validate_uuid && strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid))) {
+		throw MSG_StorageCorruptVolume("WAL UUID mismatch");
 	}
 }
 
@@ -317,23 +315,59 @@ DatabaseWAL::execute(const std::string& line)
 
 
 bool
-DatabaseWAL::set_uuid(const Endpoint& endp) const
+DatabaseWAL::init_database(const std::string& dir)
 {
-	L_CALL(this, "DatabaseWAL::set_uuid(%s)", std::string(header.head.uuid, 36).c_str());
+	L_CALL(this, "DatabaseWAL::init_database(%s)", (repr(dir)).c_str());
 
-	auto dir = endp.path;
-	auto file = dir + "/iamglass";
-	int fd = io::open(file.c_str(), O_WRONLY);
+	auto filename = dir + "/iamglass";
+	if (exist(filename)) {
+		return true;
+	}
+
+	validate_uuid = false;
+
+	try {
+		open(dir + "/" + WAL_STORAGE_PATH + "0", STORAGE_OPEN | STORAGE_COMPRESS);
+	} catch (const StorageIOError&) {
+		return true;
+	}
+
+	static const std::array<std::string, 2> iamglass({{
+		std::to_string("\x0f\x0d\x58\x61\x70\x69\x61\x6e\x20\x47\x6c\x61\x73\x73\x04\x6e"),
+		std::to_string("\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00\x03\x00"
+		 "\x04\x04\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00"
+		 "\x03\x00\x04\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+	}});
+
+	auto uuid = Serialise::uuid(std::string(header.head.uuid, 36));
+
+	int fd = io::open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL);
 	if (unlikely(fd < 0)) {
-		L_ERR(nullptr, "ERROR: opening file. %s\n", file.c_str());
+		L_ERR(nullptr, "ERROR: opening file. %s\n", filename.c_str());
 		return false;
 	}
-	auto uuid = Serialise::uuid(std::string(header.head.uuid, 36));
-	io::lseek(fd, 16, SEEK_SET);
-	auto r = io::write(fd, uuid.data(), uuid.size());
-	if unlikely(r < 0) {
+	if unlikely(io::write(fd, iamglass[0].data(), iamglass[0].size()) < 0) {
 		L_ERRNO(nullptr, "io::write() -> %s", io::strerrno(errno));
 		io::close(fd);
+		return false;
+	}
+	if unlikely(io::write(fd, uuid.data(), uuid.size()) < 0) {
+		L_ERRNO(nullptr, "io::write() -> %s", io::strerrno(errno));
+		io::close(fd);
+		return false;
+	}
+	if unlikely(io::write(fd, iamglass[1].data(), iamglass[1].size()) < 0) {
+		L_ERRNO(nullptr, "io::write() -> %s", io::strerrno(errno));
+		io::close(fd);
+		return false;
+	}
+	io::close(fd);
+
+	filename = dir + "/postlist.glass";
+
+	fd = io::open(filename.c_str(), O_WRONLY | O_CREAT);
+	if (unlikely(fd < 0)) {
+		L_ERR(nullptr, "ERROR: opening file. %s\n", filename.c_str());
 		return false;
 	}
 	io::close(fd);
@@ -580,6 +614,11 @@ Database::reopen()
 		else
 #endif
 		{
+			{
+				DatabaseWAL tmp_wal(this);
+				tmp_wal.init_database(e.path);
+			}
+
 			wdb = Xapian::WritableDatabase(e.path, _flags);
 			local = true;
 			if (endpoints_size == 1) read_mastery(e);
@@ -625,6 +664,11 @@ Database::reopen()
 			else
 #endif
 			{
+				{
+					DatabaseWAL tmp_wal(this);
+					tmp_wal.init_database(e.path);
+				}
+
 				try {
 					rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e);
@@ -633,7 +677,10 @@ Database::reopen()
 						db.reset();
 						throw;
 					}
-					Xapian::WritableDatabase tmp = Xapian::WritableDatabase(e.path, Xapian::DB_CREATE_OR_OPEN);
+					{
+						Xapian::WritableDatabase tmp(e.path, Xapian::DB_CREATE_OR_OPEN);
+					}
+
 					rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e);
 				}

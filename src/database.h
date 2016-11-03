@@ -120,6 +120,8 @@ struct WalBinFooter {
 
 
 class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
+	friend WalHeader;
+
 	static constexpr const char* const names[] = {
 		"ADD_DOCUMENT",
 		"CANCEL",
@@ -133,6 +135,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 		"REMOVE_SPELLING",
 	};
 	bool modified;
+	bool validate_uuid;
 
 	bool execute(const std::string& line);
 	uint32_t highest_valid_slot();
@@ -161,6 +164,7 @@ public:
 	DatabaseWAL(Database* database_)
 		: Storage<WalHeader, WalBinHeader, WalBinFooter>(this),
 		  modified(false),
+		  validate_uuid(true),
 		  database(database_) {
 		L_OBJ(this, "CREATED DATABASE WAL!");
 	}
@@ -171,7 +175,7 @@ public:
 
 	bool open_current(const std::string& path, bool current);
 
-	bool set_uuid(const Endpoint& endp) const;
+	bool init_database(const std::string& dir);
 	void write_line(Type type, const std::string& data, bool commit=false);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();
