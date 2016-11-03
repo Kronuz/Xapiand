@@ -409,11 +409,11 @@ XapiandManager::host_address()
 }
 
 
- void
- XapiandManager::shutdown_sig(int sig)
- {
-	   shutdown_sig_sig = sig;
-	   async_shutdown_sig.send();
+void
+XapiandManager::shutdown_sig(int sig)
+{
+	shutdown_sig_sig = sig;
+	async_shutdown_sig.send();
 }
 
 
@@ -507,6 +507,7 @@ XapiandManager::shutdown_impl(time_t asap, time_t now)
 		break_loop();
 	}
 }
+
 
 void
 XapiandManager::make_servers(const opts_t& o)
@@ -713,6 +714,7 @@ XapiandManager::join()
 	L_DEBUG(this, "Server ended!");
 }
 
+
 size_t
 XapiandManager::nodes_size()
 {
@@ -721,6 +723,7 @@ XapiandManager::nodes_size()
 	std::unique_lock<std::mutex> lk_n(nodes_mtx);
 	return nodes.size();
 }
+
 
 bool
 XapiandManager::is_single_node()
@@ -923,6 +926,7 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 }
 
 #endif
+
 
 bool
 XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout)
