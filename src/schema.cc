@@ -1625,7 +1625,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 		case TypeIndex::FIELD_ALL: {
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &Schema::index_term);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &specification);
 			}
 			break;
 		}
@@ -1639,7 +1639,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 		case TypeIndex::TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			for (const MsgPack& value : values) {
-				index_all_term(doc, Serialise::MsgPack(specification, value), specification, global_spc, pos++);
+				index_all_term(doc, value, specification, global_spc, pos++);
 			}
 			break;
 		}
@@ -1647,20 +1647,15 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				index_term(doc, Serialise::MsgPack(specification, value), global_spc, pos);
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
-				++pos;
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, nullptr, &global_spc);
 			}
-
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				index_term(doc, Serialise::MsgPack(specification, value), global_spc, pos);
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &Schema::index_term);
-				++pos;
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &specification, &global_spc);
 			}
 			break;
 		}
@@ -1676,9 +1671,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
-				index_term(doc, Serialise::MsgPack(specification, value), specification, pos);
-				++pos;
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &specification);
 			}
 			break;
 		}
@@ -1696,9 +1689,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			StringSet& s_g = map_values[global_spc.slot];
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &Schema::index_term);
-				++pos;
+				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 			}
 			break;
 		}
@@ -1706,7 +1697,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &Schema::index_term);
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, nullptr, &global_spc);
 			}
 			break;
 		}
@@ -1714,9 +1705,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &Schema::index_term);
-				index_term(doc, Serialise::MsgPack(specification, value), specification, pos);
-				++pos;
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &specification, &global_spc);
 			}
 			break;
 		}
@@ -1725,9 +1714,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			StringSet& s_g = map_values[global_spc.slot];
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &Schema::index_term);
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
-				++pos;
+				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 			}
 			break;
 		}
@@ -1736,7 +1723,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 			StringSet& s_f = map_values[specification.slot];
 			StringSet& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++, true);
+				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 			}
 			break;
 		}
@@ -1745,7 +1732,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos
 
 
 void
-Schema::index_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, size_t pos)
+Schema::index_term(Xapian::Document& doc, std::string serialise_val, const specification_t& field_spc, size_t pos)
 {
 	L_CALL(nullptr, "Schema::index_term()");
 
@@ -1798,22 +1785,24 @@ Schema::index_term(Xapian::Document& doc, std::string&& serialise_val, const spe
 
 
 void
-Schema::index_all_term(Xapian::Document& doc, std::string&& serialise_val, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
+Schema::index_all_term(Xapian::Document& doc, const MsgPack& value, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
 {
 	L_CALL(nullptr, "Schema::index_all_term()");
 
-	if (serialise_val.empty()) {
-		return;
+	if (field_spc.sep_types[2] == FieldType::GEO && (field_spc.flags.partials != global_spc.flags.partials ||
+		field_spc.error != global_spc.error)) {
+		index_term(doc, Serialise::MsgPack(field_spc, value), field_spc, pos);
+		index_term(doc, Serialise::MsgPack(global_spc, value), global_spc, pos);
+	} else {
+		auto serialise_val = Serialise::MsgPack(field_spc, value);
+		index_term(doc, serialise_val, field_spc, pos);
+		index_term(doc, serialise_val, global_spc, pos);
 	}
-
-	auto serialise_val_cp = serialise_val;
-	index_term(doc, std::move(serialise_val_cp), field_spc, pos);
-	index_term(doc, std::move(serialise_val), global_spc, pos);
 }
 
 
 void
-Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, dispatch_index fun)
+Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, const specification_t* field_spc, const specification_t* global_spc)
 {
 	L_CALL(nullptr, "Schema::index_value()");
 
@@ -1821,13 +1810,14 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::FLOAT: {
 			try {
 				auto f_val = value.as_f64();
-				if (fun) {
-					auto ser_value = Serialise::_float(f_val);
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::_float(f_val));
+				auto ser_value = Serialise::_float(f_val);
+				if (field_spc) {
+					index_term(doc, ser_value, *field_spc, pos);
 				}
+				if (global_spc) {
+					index_term(doc, ser_value, *global_spc, pos);
+				}
+				s.insert(std::move(ser_value));
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, static_cast<int64_t>(f_val));
 				return;
 			} catch (const msgpack::type_error&) {
@@ -1837,13 +1827,14 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::INTEGER: {
 			try {
 				auto i_val = value.as_i64();
-				if (fun) {
-					auto ser_value = Serialise::integer(i_val);
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::integer(i_val));
+				auto ser_value = Serialise::integer(i_val);
+				if (field_spc) {
+					index_term(doc, ser_value, *field_spc, pos);
 				}
+				if (global_spc) {
+					index_term(doc, ser_value, *global_spc, pos);
+				}
+				s.insert(std::move(ser_value));
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, i_val);
 				return;
 			} catch (const msgpack::type_error&) {
@@ -1853,13 +1844,14 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::POSITIVE: {
 			try {
 				auto u_val = value.as_u64();
-				if (fun) {
-					auto ser_value = Serialise::positive(u_val);
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::positive(u_val));
+				auto ser_value = Serialise::positive(u_val);
+				if (field_spc) {
+					index_term(doc, ser_value, *field_spc, pos);
 				}
+				if (global_spc) {
+					index_term(doc, ser_value, *global_spc, pos);
+				}
+				s.insert(std::move(ser_value));
 				GenerateTerms::positive(doc, spc.accuracy, spc.acc_prefix, u_val);
 				return;
 			} catch (const msgpack::type_error&) {
@@ -1869,13 +1861,14 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::DATE: {
 			try {
 				Datetime::tm_t tm;
-				if (fun) {
-					auto ser_value = Serialise::date(value, tm);
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::date(value, tm));
+				auto ser_value = Serialise::date(value, tm);
+				if (field_spc) {
+					index_term(doc, ser_value, *field_spc, pos);
 				}
+				if (global_spc) {
+					index_term(doc, ser_value, *global_spc, pos);
+				}
+				s.insert(std::move(ser_value));
 				GenerateTerms::date(doc, spc.accuracy, spc.acc_prefix, tm);
 				return;
 			} catch (const msgpack::type_error&) {
@@ -1885,8 +1878,22 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::GEO: {
 			try {
 				EWKT_Parser ewkt(value.as_string(), spc.flags.partials, spc.error);
-				if (fun) {
-					(*fun)(doc, Serialise::trixels(ewkt.trixels), spc, pos);
+				auto ser_value = Serialise::trixels(ewkt.trixels);
+				if (field_spc) {
+					if (field_spc->flags.partials != spc.flags.partials || field_spc->error != spc.error) {
+						EWKT_Parser f_ewkt(value.as_string(), field_spc->flags.partials, field_spc->error);
+						index_term(doc, Serialise::trixels(f_ewkt.trixels), *field_spc, pos);
+					} else {
+						index_term(doc, ser_value, *field_spc, pos);
+					}
+				}
+				if (global_spc) {
+					if (global_spc->flags.partials != spc.flags.partials || global_spc->error != spc.error) {
+						EWKT_Parser g_ewkt(value.as_string(), global_spc->flags.partials, global_spc->error);
+						index_term(doc, Serialise::trixels(g_ewkt.trixels), *global_spc, pos);
+					} else {
+						index_term(doc, std::move(ser_value), *global_spc, pos);
+					}
 				}
 				auto ranges = ewkt.getRanges();
 				s.insert(Serialise::geo(ranges, ewkt.centroids));
@@ -1899,13 +1906,14 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::STRING:
 		case FieldType::TEXT: {
 			try {
-				if (fun) {
-					auto ser_value = value.as_string();
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(value.as_string());
+				auto ser_value = value.as_string();
+				if (field_spc) {
+					index_term(doc, ser_value, *field_spc, pos);
 				}
+				if (global_spc) {
+					index_term(doc, ser_value, *global_spc, pos);
+				}
+				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
@@ -1913,13 +1921,14 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		}
 		case FieldType::BOOLEAN: {
 			try {
-				if (fun) {
-					auto ser_value = Serialise::MsgPack(spc, value);
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::MsgPack(spc, value));
+				auto ser_value = Serialise::MsgPack(spc, value);
+				if (field_spc) {
+					index_term(doc, ser_value, *field_spc, pos);
 				}
+				if (global_spc) {
+					index_term(doc, ser_value, *global_spc, pos);
+				}
+				s.insert(std::move(ser_value));
 				return;
 			} catch (const SerialisationError&) {
 				throw MSG_ClientError("Format invalid for boolean type: %s", repr(value.to_string()).c_str());
@@ -1927,13 +1936,14 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		}
 		case FieldType::UUID: {
 			try {
-				if (fun) {
-					auto ser_value = Serialise::uuid(value.as_string());
-					s.insert(ser_value);
-					(*fun)(doc, std::move(ser_value), spc, pos);
-				} else {
-					s.insert(Serialise::uuid(value.as_string()));
+				auto ser_value = Serialise::uuid(value.as_string());
+				if (field_spc) {
+					index_term(doc, ser_value, *field_spc, pos);
 				}
+				if (global_spc) {
+					index_term(doc, ser_value, *global_spc, pos);
+				}
+				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for uuid type: %s", repr(value.to_string()).c_str());
@@ -1948,7 +1958,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 
 
 void
-Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos, bool is_term)
+Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
 {
 	L_CALL(nullptr, "Schema::index_all_value()");
 
@@ -1957,21 +1967,21 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 			try {
 				auto f_val = value.as_f64();
 				auto ser_value = Serialise::_float(f_val);
-				if (is_term) {
-					s_f.insert(ser_value);
-					s_g.insert(ser_value);
-					index_all_term(doc, std::move(ser_value), field_spc, global_spc, pos);
-				} else {
-					s_f.insert(ser_value);
-					s_g.insert(std::move(ser_value));
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+					index_term(doc, ser_value, field_spc, pos);
 				}
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+					index_term(doc, ser_value, global_spc, pos);
+				}
+				s_f.insert(ser_value);
+				s_g.insert(std::move(ser_value));
 				if (field_spc.accuracy == global_spc.accuracy) {
 					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, static_cast<int64_t>(f_val));
 				} else {
 					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, static_cast<int64_t>(f_val));
 					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, static_cast<int64_t>(f_val));
 				}
-				return;
+				break;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for float type: %s", repr(value.to_string()).c_str());
 			}
@@ -1980,21 +1990,21 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 			try {
 				auto i_val = value.as_i64();
 				auto ser_value = Serialise::integer(i_val);
-				if (is_term) {
-					s_f.insert(ser_value);
-					s_g.insert(ser_value);
-					index_all_term(doc, std::move(ser_value), field_spc, global_spc, pos);
-				} else {
-					s_f.insert(ser_value);
-					s_g.insert(std::move(ser_value));
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+					index_term(doc, ser_value, field_spc, pos);
 				}
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+					index_term(doc, ser_value, global_spc, pos);
+				}
+				s_f.insert(ser_value);
+				s_g.insert(std::move(ser_value));
 				if (field_spc.accuracy == global_spc.accuracy) {
 					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, i_val);
 				} else {
 					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, i_val);
 					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, i_val);
 				}
-				return;
+				break;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for integer type: %s", repr(value.to_string()).c_str());
 			}
@@ -2003,21 +2013,21 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 			try {
 				auto u_val = value.as_u64();
 				auto ser_value = Serialise::positive(u_val);
-				if (is_term) {
-					s_f.insert(ser_value);
-					s_g.insert(ser_value);
-					index_all_term(doc, std::move(ser_value), field_spc, global_spc, pos);
-				} else {
-					s_f.insert(ser_value);
-					s_g.insert(std::move(ser_value));
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+					index_term(doc, ser_value, field_spc, pos);
 				}
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+					index_term(doc, ser_value, global_spc, pos);
+				}
+				s_f.insert(ser_value);
+				s_g.insert(std::move(ser_value));
 				if (field_spc.accuracy == global_spc.accuracy) {
 					GenerateTerms::positive(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, u_val);
 				} else {
 					GenerateTerms::positive(doc, field_spc.accuracy, field_spc.acc_prefix, u_val);
 					GenerateTerms::positive(doc, global_spc.accuracy, global_spc.acc_prefix, u_val);
 				}
-				return;
+				break;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for positive type: %s", repr(value.to_string()).c_str());
 			}
@@ -2026,21 +2036,21 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 			try {
 				Datetime::tm_t tm;
 				auto ser_value = Serialise::date(value, tm);
-				if (is_term) {
-					s_f.insert(ser_value);
-					s_g.insert(ser_value);
-					index_all_term(doc, std::move(ser_value), field_spc, global_spc, pos);
-				} else {
-					s_f.insert(ser_value);
-					s_g.insert(std::move(ser_value));
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+					index_term(doc, ser_value, field_spc, pos);
 				}
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+					index_term(doc, ser_value, global_spc, pos);
+				}
+				s_f.insert(ser_value);
+				s_g.insert(std::move(ser_value));
 				if (field_spc.accuracy == global_spc.accuracy) {
 					GenerateTerms::date(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, tm);
 				} else {
 					GenerateTerms::date(doc, field_spc.accuracy, field_spc.acc_prefix, tm);
 					GenerateTerms::date(doc, global_spc.accuracy, global_spc.acc_prefix, tm);
 				}
-				return;
+				break;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for date type: %s", repr(value.to_string()).c_str());
 			}
@@ -2048,23 +2058,32 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 		case FieldType::GEO: {
 			try {
 				auto str_ewkt = value.as_string();
-				if (field_spc.flags.partials == global_spc.flags.partials &&
-					field_spc.error == global_spc.error &&
-					field_spc.accuracy == global_spc.accuracy) {
+				if (field_spc.flags.partials == global_spc.flags.partials && field_spc.error == global_spc.error) {
 					EWKT_Parser ewkt(str_ewkt, field_spc.flags.partials, field_spc.error);
-					if (is_term) {
-						index_all_term(doc, Serialise::trixels(ewkt.trixels), field_spc, global_spc, pos);
+					auto ser_value = Serialise::trixels(ewkt.trixels);
+					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+						index_term(doc, ser_value, field_spc, pos);
+					}
+					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+						index_term(doc, std::move(ser_value), global_spc, pos);
 					}
 					auto ranges = ewkt.getRanges();
-					auto val_ser = Serialise::geo(ranges, ewkt.centroids);
-					s_f.insert(val_ser);
-					s_g.insert(std::move(val_ser));
-					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, ranges);
+					auto ser_ranges = Serialise::geo(ranges, ewkt.centroids);
+					s_f.insert(ser_ranges);
+					s_g.insert(std::move(ser_ranges));
+					if (field_spc.accuracy == global_spc.accuracy) {
+						GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, ranges);
+					} else {
+						GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
+						GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, ranges);
+					}
 				} else {
 					EWKT_Parser ewkt(str_ewkt, field_spc.flags.partials, field_spc.error);
 					EWKT_Parser g_ewkt(str_ewkt, global_spc.flags.partials, global_spc.error);
-					if (is_term) {
+					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 						index_term(doc, Serialise::trixels(ewkt.trixels), field_spc, pos);
+					}
+					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
 						index_term(doc, Serialise::trixels(g_ewkt.trixels), global_spc, pos);
 					}
 					auto ranges = ewkt.getRanges();
@@ -2083,15 +2102,15 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 		case FieldType::TEXT: {
 			try {
 				auto ser_value = value.as_string();
-				if (is_term) {
-					s_f.insert(ser_value);
-					s_g.insert(ser_value);
-					index_all_term(doc, std::move(ser_value), field_spc, global_spc, pos);
-				} else {
-					s_f.insert(ser_value);
-					s_g.insert(std::move(ser_value));
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+					index_term(doc, ser_value, field_spc, pos);
 				}
-				return;
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+					index_term(doc, ser_value, global_spc, pos);
+				}
+				s_f.insert(ser_value);
+				s_g.insert(std::move(ser_value));
+				break;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
 			}
@@ -2099,15 +2118,15 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 		case FieldType::BOOLEAN: {
 			try {
 				auto ser_value = Serialise::MsgPack(field_spc, value);
-				if (is_term) {
-					s_f.insert(ser_value);
-					s_g.insert(ser_value);
-					index_all_term(doc, std::move(ser_value), field_spc, global_spc, pos);
-				} else {
-					s_f.insert(ser_value);
-					s_g.insert(std::move(ser_value));
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+					index_term(doc, ser_value, field_spc, pos);
 				}
-				return;
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+					index_term(doc, ser_value, global_spc, pos);
+				}
+				s_f.insert(ser_value);
+				s_g.insert(std::move(ser_value));
+				break;
 			} catch (const SerialisationError&) {
 				throw MSG_ClientError("Format invalid for boolean type: %s", repr(value.to_string()).c_str());
 			}
@@ -2115,15 +2134,15 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 		case FieldType::UUID: {
 			try {
 				auto ser_value = Serialise::uuid(value.as_string());
-				if (is_term) {
-					s_f.insert(ser_value);
-					s_g.insert(ser_value);
-					index_all_term(doc, std::move(ser_value), field_spc, global_spc, pos);
-				} else {
-					s_f.insert(ser_value);
-					s_g.insert(std::move(ser_value));
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+					index_term(doc, ser_value, field_spc, pos);
 				}
-				return;
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+					index_term(doc, ser_value, global_spc, pos);
+				}
+				s_f.insert(ser_value);
+				s_g.insert(std::move(ser_value));
+				break;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for uuid type: %s", repr(value.to_string()).c_str());
 			}
