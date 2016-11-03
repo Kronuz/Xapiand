@@ -151,9 +151,16 @@ int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
 
 namespace std {
+	template<typename T, int N>
+	inline std::string to_string(const T (&s)[N])
+	{
+		return std::string(s, N - 1);
+	}
+
 	inline auto& to_string(std::string& str) {
 		return str;
 	}
+
 	inline const auto& to_string(const std::string& str) {
 		return str;
 	}
