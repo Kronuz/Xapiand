@@ -151,15 +151,23 @@ std::string repr(const void* p, size_t size, bool friendly, bool quote, size_t m
 		}
 		if (friendly) {
 			switch (c) {
-				case 9:
+				case '\b':
+					*d++ = '\\';
+					*d++ = 'b';
+					break;
+				case '\t':
 					*d++ = '\\';
 					*d++ = 't';
 					break;
-				case 10:
+				case '\n':
 					*d++ = '\\';
 					*d++ = 'n';
 					break;
-				case 13:
+				case '\f':
+					*d++ = '\\';
+					*d++ = 'f';
+					break;
+				case '\r':
 					*d++ = '\\';
 					*d++ = 'r';
 					break;
