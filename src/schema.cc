@@ -1545,7 +1545,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 {
 	L_CALL(this, "Schema::index_item(<doc>, %s, %s, %zu, %s)", repr(value.to_string()).c_str(), repr(data.to_string()).c_str(), pos, add_value ? "true" : "false");
 
-	_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), data, pos, add_value);
+	_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), pos);
 
 	if (specification.flags.store && add_value) {
 		// Add value to data.
@@ -1573,7 +1573,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 	if (values.is_array()) {
 		set_type_to_array();
 
-		_index_item(doc, values, data, 0, add_values);
+		_index_item(doc, values, 0);
 
 		if (specification.flags.store && add_values) {
 			// Add value to data.
@@ -1603,7 +1603,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 
 template <typename T>
 inline void
-Schema::_index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos, bool add_values)
+Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 {
 	switch (specification.index) {
 		case TypeIndex::NONE: {

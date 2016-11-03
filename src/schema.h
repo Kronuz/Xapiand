@@ -465,7 +465,7 @@ class Schema {
 	 */
 
 	template <typename T>
-	void _index_item(Xapian::Document& doc, T&& values, MsgPack& data, size_t pos, bool add_values=true);
+	void _index_item(Xapian::Document& doc, T&& values, size_t pos);
 	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, bool add_value=true);
 	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, size_t pos, bool add_values=true);
 
