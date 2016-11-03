@@ -1570,34 +1570,33 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 {
 	L_CALL(this, "Schema::index_item(<doc>, %s, %s, %s)", repr(values.to_string()).c_str(), repr(data.to_string()).c_str(), add_values ? "true" : "false");
 
-	if (!values.is_array()) {
-		index_item(doc, values, data, 0, add_values);
-		return;
-	}
+	if (values.is_array()) {
+		set_type_to_array();
 
-	set_type_to_array();
+		_index_item(doc, values, data, 0, add_values);
 
-	_index_item(doc, values, data, 0, add_values);
-
-	if (specification.flags.store && add_values) {
-		// Add value to data.
-		auto& data_value = data[RESERVED_VALUE];
-		switch (data_value.getType()) {
-			case MsgPack::Type::UNDEFINED:
-				data_value = values;
-				break;
-			case MsgPack::Type::ARRAY:
-				for (const auto& value : values) {
-					data_value.push_back(value);
-				}
-				break;
-			default:
-				data_value = MsgPack({ data_value });
-				for (const auto& value : values) {
-					data_value.push_back(value);
-				}
-				break;
+		if (specification.flags.store && add_values) {
+			// Add value to data.
+			auto& data_value = data[RESERVED_VALUE];
+			switch (data_value.getType()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = values;
+					break;
+				case MsgPack::Type::ARRAY:
+					for (const auto& value : values) {
+						data_value.push_back(value);
+					}
+					break;
+				default:
+					data_value = MsgPack({ data_value });
+					for (const auto& value : values) {
+						data_value.push_back(value);
+					}
+					break;
+			}
 		}
+	} else {
+		index_item(doc, values, data, 0, add_values);
 	}
 }
 
