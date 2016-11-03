@@ -1843,9 +1843,11 @@ inline std::string MsgPack::to_string(bool prettify) const {
 		doc.Accept(writer);
 		return std::string(buffer.GetString(), buffer.GetSize());
 	} else {
-		std::ostringstream oss;
-		oss << *_const_body->_obj;
-		return oss.str();
+		rapidjson::Document doc = as_document();
+		rapidjson::StringBuffer buffer;
+		rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+		doc.Accept(writer);
+		return std::string(buffer.GetString(), buffer.GetSize());
 	}
 }
 
