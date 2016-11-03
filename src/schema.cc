@@ -2060,12 +2060,14 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				auto str_ewkt = value.as_string();
 				if (field_spc.flags.partials == global_spc.flags.partials && field_spc.error == global_spc.error) {
 					EWKT_Parser ewkt(str_ewkt, field_spc.flags.partials, field_spc.error);
-					auto ser_value = Serialise::trixels(ewkt.trixels);
-					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
-						index_term(doc, ser_value, field_spc, pos);
-					}
-					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
-						index_term(doc, std::move(ser_value), global_spc, pos);
+					if (toUType(field_spc.index & TypeIndex::TERMS)) {
+						auto ser_value = Serialise::trixels(ewkt.trixels);
+						if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+							index_term(doc, ser_value, field_spc, pos);
+						}
+						if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+							index_term(doc, std::move(ser_value), global_spc, pos);
+						}
 					}
 					auto ranges = ewkt.getRanges();
 					auto ser_ranges = Serialise::geo(ranges, ewkt.centroids);
