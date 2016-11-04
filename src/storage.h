@@ -24,7 +24,6 @@
 
 #include "xapiand.h"
 
-#include <cassert>
 #include <limits>
 #include <memory>
 #include <unistd.h>
@@ -32,7 +31,13 @@
 #include "async_fsync.h"
 #include "io_utils.h"
 #include "lz4_compressor.h"
+#include "logger.h"
 
+#ifdef NDEBUG
+#define _L_CALL L_NOTHING
+#else
+#define _L_CALL L_DARK_GREY
+#endif
 
 #define STORAGE_MAGIC 0x02DEBC47
 #define STORAGE_BIN_HEADER_MAGIC 0x2A
@@ -54,14 +59,14 @@
 #define STORAGE_MIN_COMPRESS_SIZE 100
 
 
-constexpr int STORAGE_OPEN           = 0x00;  // Open an existing database.
-constexpr int STORAGE_WRITABLE       = 0x01;  // Opens as writable.
-constexpr int STORAGE_CREATE         = 0x02;  // Automatically creates the database if it doesn't exist
-constexpr int STORAGE_CREATE_OR_OPEN = 0x03;  // Create database if it doesn't already exist.
-constexpr int STORAGE_ASYNC_SYNC     = 0x04;  // fsync (or full_fsync) is async
-constexpr int STORAGE_FULL_SYNC      = 0x08;  // Try to ensure changes are really written to disk.
-constexpr int STORAGE_NO_SYNC        = 0x10;  // Don't attempt to ensure changes have hit disk.
-constexpr int STORAGE_COMPRESS       = 0x20;  // Compress data in storage.
+constexpr int STORAGE_OPEN             = 0x00;  // Open an existing database.
+constexpr int STORAGE_WRITABLE         = 0x01;  // Opens as writable.
+constexpr int STORAGE_CREATE           = 0x02;  // Automatically creates the database if it doesn't exist
+constexpr int STORAGE_CREATE_OR_OPEN   = 0x03;  // Create database if it doesn't already exist.
+constexpr int STORAGE_ASYNC_SYNC       = 0x04;  // fsync (or full_fsync) is async
+constexpr int STORAGE_FULL_SYNC        = 0x08;  // Try to ensure changes are really written to disk.
+constexpr int STORAGE_NO_SYNC          = 0x10;  // Don't attempt to ensure changes have hit disk.
+constexpr int STORAGE_COMPRESS         = 0x20;  // Compress data in storage.
 
 constexpr int STORAGE_FLAG_COMPRESSED  = 0x01;
 constexpr int STORAGE_FLAG_DELETED     = 0x02;
@@ -131,13 +136,13 @@ struct StorageHeader {
 
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
 
-	inline void init(void* /*param*/, void* /*args*/) {
+	void init(void* /*param*/, void* /*args*/) {
 		head.offset = STORAGE_START_BLOCK_OFFSET;
 		// head.magic = STORAGE_MAGIC;
 		// strncpy(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid));
 	}
 
-	inline void validate(void* /*param*/, void* /*args*/) {
+	void validate(void* /*param*/, void* /*args*/) {
 		// if (head.magic != STORAGE_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad header magic number");
 		// }
@@ -154,13 +159,13 @@ struct StorageBinHeader {
 	uint8_t flags;  // required
 	uint32_t size;  // required
 
-	inline void init(void* /*param*/, void* /*args*/, uint32_t size_, uint8_t flags_) {
+	void init(void* /*param*/, void* /*args*/, uint32_t size_, uint8_t flags_) {
 		// magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
 	}
 
-	inline void validate(void* /*param*/, void* /*args*/) {
+	void validate(void* /*param*/, void* /*args*/) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		// }
@@ -175,12 +180,12 @@ struct StorageBinFooter {
 	// uint32_t checksum;
 	// uint8_t magic;
 
-	inline void init(void* /*param*/, void* /*args*/, uint32_t  /*checksum_*/) {
+	void init(void* /*param*/, void* /*args*/, uint32_t  /*checksum_*/) {
 		// magic = STORAGE_BIN_FOOTER_MAGIC;
 		// checksum = checksum_;
 	}
 
-	inline void validate(void* /*param*/, void* /*args*/, uint32_t /*checksum_*/) {
+	void validate(void* /*param*/, void* /*args*/, uint32_t /*checksum_*/) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		// }
@@ -227,7 +232,7 @@ class Storage {
 
 	bool changed;
 
-	inline void growfile() {
+	void growfile() {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
 			if unlikely(file_size < 0) {
@@ -247,7 +252,7 @@ class Storage {
 		}
 	}
 
-	inline void write_buffer(char** buffer_, uint32_t& buffer_offset_, off_t& block_offset_) {
+	void write_buffer(char** buffer_, uint32_t& buffer_offset_, off_t& block_offset_) {
 		buffer_offset_ = 0;
 		if (*buffer_ == buffer_curr) {
 			*buffer_ = buffer_curr == buffer0 ? buffer1 : buffer0;
@@ -273,7 +278,7 @@ class Storage {
 #endif
 	}
 
-	inline void write_bin(char** buffer_, uint32_t& buffer_offset_, const char** data_bin_, size_t& size_bin_) {
+	void write_bin(char** buffer_, uint32_t& buffer_offset_, const char** data_bin_, size_t& size_bin_) {
 		size_t size = STORAGE_BLOCK_SIZE - buffer_offset_;
 		if (size > size_bin_) {
 			size = size_bin_;
@@ -313,7 +318,7 @@ public:
 	}
 
 	void open(const std::string& path_, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
-		L_CALL(this, "Storage::open()");
+		_L_CALL(this, "Storage::open()");
 
 		if (path != path_ || flags != flags_) {
 			close();
@@ -354,7 +359,7 @@ public:
 	}
 
 	void reopen(void* args=nullptr) {
-		L_CALL(this, "Storage::reopen()");
+		_L_CALL(this, "Storage::reopen()");
 
 		if unlikely(fd <= 0) {
 			close();
@@ -384,7 +389,7 @@ public:
 	}
 
 	void close() {
-		L_CALL(this, "Storage::close()");
+		_L_CALL(this, "Storage::close()");
 
 		if (fd) {
 			if (flags & STORAGE_WRITABLE) {
@@ -404,7 +409,7 @@ public:
 	}
 
 	void seek(uint32_t offset) {
-		L_CALL(this, "Storage::seek()");
+		_L_CALL(this, "Storage::seek()");
 
 		if (offset > header.head.offset) {
 			throw MSG_StorageEOF("Storage EOF");
@@ -413,7 +418,7 @@ public:
 	}
 
 	uint32_t write(const char *data, size_t data_size, void* args=nullptr) {
-		L_CALL(this, "Storage::write() [1]");
+		_L_CALL(this, "Storage::write() [1]");
 
 		uint32_t curr_offset = header.head.offset;
 		const char* orig_data = data;
@@ -511,7 +516,7 @@ public:
 	}
 
 	uint32_t write_file(const std::string& filename, void* args=nullptr) {
-		L_CALL(this, "Storage::write_file()");
+		_L_CALL(this, "Storage::write_file()");
 
 		uint32_t curr_offset = header.head.offset;
 
@@ -630,7 +635,7 @@ public:
 	}
 
 	size_t read(char* buf, size_t buf_size, uint32_t limit=-1, void* args=nullptr) {
-		L_CALL(this, "Storage::read() [1]");
+		_L_CALL(this, "Storage::read() [1]");
 
 		if (!buf_size) {
 			return 0;
@@ -712,7 +717,7 @@ public:
 	}
 
 	void commit() {
-		L_CALL(this, "Storage::commit()");
+		_L_CALL(this, "Storage::commit()");
 
 		if (!changed) {
 			return;
@@ -756,14 +761,14 @@ public:
 		growfile();
 	}
 
-	inline uint32_t write(const std::string& data, void* args=nullptr) {
-		L_CALL(this, "Storage::write() [2]");
+	uint32_t write(const std::string& data, void* args=nullptr) {
+		_L_CALL(this, "Storage::write() [2]");
 
 		return write(data.data(), data.size(), args);
 	}
 
-	inline std::string read(uint32_t limit=-1, void* args=nullptr) {
-		L_CALL(this, "Storage::read() [2]");
+	std::string read(uint32_t limit=-1, void* args=nullptr) {
+		_L_CALL(this, "Storage::read() [2]");
 
 		std::string ret;
 
@@ -777,7 +782,7 @@ public:
 	}
 
 	uint32_t get_volume(const std::string& filename) {
-		L_CALL(this, "Storage::get_volume()");
+		_L_CALL(this, "Storage::get_volume()");
 
 		std::size_t found = filename.find_last_of(".");
 		if (found == std::string::npos) {
@@ -786,3 +791,5 @@ public:
 		return static_cast<uint32_t>(std::stoul(filename.substr(found + 1)));
 	}
 };
+
+#undef _L_CALL
