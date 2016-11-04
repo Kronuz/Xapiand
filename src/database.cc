@@ -351,6 +351,13 @@ DatabaseWAL::init_database(const std::string& dir)
 {
 	L_CALL(this, "DatabaseWAL::init_database(%s)", (repr(dir)).c_str());
 
+	static const std::array<std::string, 2> iamglass({{
+		std::to_string("\x0f\x0d\x58\x61\x70\x69\x61\x6e\x20\x47\x6c\x61\x73\x73\x04\x6e"),
+		std::to_string("\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00\x03\x00"
+			"\x04\x04\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00"
+			"\x03\x00\x04\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+	}});
+
 	auto filename = dir + "/iamglass";
 	if (exist(filename)) {
 		return true;
@@ -363,13 +370,6 @@ DatabaseWAL::init_database(const std::string& dir)
 	} catch (const StorageIOError&) {
 		return true;
 	}
-
-	static const std::array<std::string, 2> iamglass({{
-		std::to_string("\x0f\x0d\x58\x61\x70\x69\x61\x6e\x20\x47\x6c\x61\x73\x73\x04\x6e"),
-		std::to_string("\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00\x03\x00"
-		 "\x04\x04\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00"
-		 "\x03\x00\x04\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00")
-	}});
 
 	auto uuid = Serialise::uuid(std::string(header.head.uuid, 36));
 
@@ -396,7 +396,6 @@ DatabaseWAL::init_database(const std::string& dir)
 	io::close(fd);
 
 	filename = dir + "/postlist.glass";
-
 	fd = io::open(filename.c_str(), O_WRONLY | O_CREAT);
 	if (unlikely(fd < 0)) {
 		L_ERR(nullptr, "ERROR: opening file. %s\n", filename.c_str());
