@@ -1137,53 +1137,42 @@ Schema::update_dynamic_specification()
 {
 	L_CALL(this, "Schema::update_dynamic_specification()");
 
-	switch (specification.index) {
-		case TypeIndex::ALL:
-		case TypeIndex::FIELD_ALL:
-		case TypeIndex::GLOBAL_ALL:
-			specification.prefix.assign(get_dynamic_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2])));
-		case TypeIndex::VALUES:
-		case TypeIndex::FIELD_VALUES:
-		case TypeIndex::GLOBAL_VALUES:
-			specification.slot = get_slot(specification.dynamic_full_name);
-			switch (specification.sep_types[2]) {
-				case FieldType::INTEGER:
-				case FieldType::POSITIVE:
-				case FieldType::FLOAT:
-					for (const auto& acc : specification.accuracy) {
-						auto acc_full_name = specification.dynamic_full_name;
-						acc_full_name.append("._");
-						acc_full_name.append(std::to_string(acc));
-						specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
-					}
-					break;
-				case FieldType::DATE:
-					for (const auto& acc : specification.accuracy) {
-						auto acc_full_name = specification.dynamic_full_name;
-						acc_full_name.append("._");
-						acc_full_name.append(readable_acc_date((UnitTime)acc));
-						specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
-					}
-					break;
-				case FieldType::GEO:
-					for (const auto& acc : specification.accuracy) {
-						auto acc_full_name = specification.dynamic_full_name;
-						acc_full_name.append("._geo");
-						acc_full_name.append(std::to_string(acc));
-						specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
-					}
-					break;
-				default:
-					break;
-			}
-			break;
-		case TypeIndex::TERMS:
-		case TypeIndex::FIELD_TERMS:
-		case TypeIndex::GLOBAL_TERMS:
-			specification.prefix.assign(get_dynamic_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2])));
-			break;
-		default:
-			break;
+	if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
+		specification.prefix.assign(get_dynamic_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2])));
+	}
+
+	if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+		specification.slot = get_slot(specification.dynamic_full_name);
+		switch (specification.sep_types[2]) {
+			case FieldType::INTEGER:
+			case FieldType::POSITIVE:
+			case FieldType::FLOAT:
+				for (const auto& acc : specification.accuracy) {
+					auto acc_full_name = specification.dynamic_full_name;
+					acc_full_name.append("._");
+					acc_full_name.append(std::to_string(acc));
+					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+				}
+				break;
+			case FieldType::DATE:
+				for (const auto& acc : specification.accuracy) {
+					auto acc_full_name = specification.dynamic_full_name;
+					acc_full_name.append("._");
+					acc_full_name.append(readable_acc_date((UnitTime)acc));
+					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+				}
+				break;
+			case FieldType::GEO:
+				for (const auto& acc : specification.accuracy) {
+					auto acc_full_name = specification.dynamic_full_name;
+					acc_full_name.append("._geo");
+					acc_full_name.append(std::to_string(acc));
+					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+				}
+				break;
+			default:
+				break;
+		}
 	}
 }
 
