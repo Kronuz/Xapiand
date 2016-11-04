@@ -1786,7 +1786,7 @@ HttpClient::clean_http_request()
 
 	response_log.load()->clear();
 	if (parser.http_errno) {
-		if (!response_logged.exchange(true)) LOG(true, LOG_ERR, LIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
+		if (!response_logged.exchange(true)) L(LOG_ERR, LIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
 	} else {
 		int priority = LOG_DEBUG;
 		const char* color = WHITE;
@@ -1801,7 +1801,7 @@ HttpClient::clean_http_request()
 			color = LIGHT_MAGENTA;
 			priority = LOG_ERR;
 		}
-		if (!response_logged.exchange(true)) LOG(true, priority, color, this, "\"%s %s HTTP/%d.%d\" %d %s %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, bytes_string(response_size).c_str(), request_delta.c_str());
+		if (!response_logged.exchange(true)) L(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %s %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, bytes_string(response_size).c_str(), request_delta.c_str());
 	}
 
 	path.clear();
