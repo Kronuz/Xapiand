@@ -590,6 +590,25 @@ Datetime::to_tm_t(double timestamp)
 
 
 /*
+ * Transforms date to a struct tm_t.
+ */
+Datetime::tm_t
+Datetime::to_tm_t(const std::string& date)
+{
+	try {
+		auto timestamp = stox(std::stod, date);
+		return to_tm_t(timestamp);
+	} catch (const std::invalid_argument&) {
+		tm_t tm;
+		dateTimeParser(date, tm);
+		return tm;
+	} catch (const std::out_of_range&) {
+		throw MSG_DatetimeError("%s is very large", date.c_str());
+	}
+}
+
+
+/*
  * Function to calculate Unix timestamp from Coordinated Universal Time (UTC).
  * Only for year greater than 0.
  * Returns Timestamp with milliseconds as the decimal part.

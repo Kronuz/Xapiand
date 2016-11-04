@@ -87,6 +87,7 @@ namespace Datetime {
 	std::time_t timegm(std::tm* tm);
 	std::time_t timegm(tm_t& tm);
 	tm_t to_tm_t(double timestamp);
+	tm_t to_tm_t(const std::string& date);
 	double timestamp(tm_t& tm);
 	double timestamp(const std::string& date);
 	double timestamp(const std::string& date, tm_t& tm);
