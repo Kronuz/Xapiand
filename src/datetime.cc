@@ -654,7 +654,9 @@ double
 Datetime::timestamp(const std::string& date, tm_t& tm)
 {
 	try {
-		return stox(std::stod, date);
+		auto timestamp = stox(std::stod, date);
+		tm = to_tm_t(timestamp);
+		return timestamp;
 	} catch (const std::invalid_argument&) {
 		dateTimeParser(date, tm);
 		return timestamp(tm);
