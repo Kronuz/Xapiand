@@ -24,16 +24,13 @@
 
 #include "xapiand.h"
 
-#include <list>
-#include <mutex>
-#include <memory>
-#include <cassert>
-
-#include "log.h"
-#include "utils.h"
+#include <cassert>   // for assert
+#include <list>      // for list
+#include <memory>    // for shared_ptr, enable_shared_from_this
+#include <mutex>     // for mutex
+#include <vector>     // for vector
 
 #include "ev/ev++.h"
-#include "exception.h"
 
 
 class Worker : public std::enable_shared_from_this<Worker> {
@@ -68,7 +65,7 @@ private:
 	WorkerList::iterator _iterator;
 
 	template<typename T>
-	inline auto _attach(T&& child) {
+	auto _attach(T&& child) {
 		assert(child);
 		auto it = _children.insert(_children.end(), std::forward<T>(child));
 		child->_iterator = it;
@@ -86,7 +83,7 @@ private:
 	}
 
 	template<typename T>
-	inline decltype(auto) _detach(T&& child) {
+	decltype(auto) _detach(T&& child) {
 		if (child->_parent && child->_iterator != _children.end()) {
 			auto it = _children.erase(child->_iterator);
 			child->_iterator = _children.end();
@@ -95,15 +92,9 @@ private:
 		return _children.end();
 	}
 
-	inline void _set_running(ev::loop_ref* loop, bool running) {
-		std::lock_guard<std::mutex> lk(_mtx);
-		if (ev_loop == loop) {
-			_running = running;
-		}
-		for (const auto& c : _children) {
-			c->_set_running(loop, running);
-		}
-	}
+	void _set_running(ev::loop_ref* loop, bool running);
+
+	void _init();
 
 protected:
 	template<typename T, typename L>
@@ -117,229 +108,47 @@ protected:
 		  _async_detach(*ev_loop),
 		  _parent(std::forward<T>(parent))
 	{
-		if (_parent) {
-			_iterator = _parent->_children.end();
-		}
-
-		_async_shutdown.set<Worker, &Worker::_async_shutdown_cb>(this);
-		_async_shutdown.start();
-		L_EV(this, "Start Worker async shutdown event");
-
-		_async_break_loop.set<Worker, &Worker::_async_break_loop_cb>(this);
-		_async_break_loop.start();
-		L_EV(this, "Start Worker async break_loop event");
-
-		_async_destroy.set<Worker, &Worker::_async_destroy_cb>(this);
-		_async_destroy.start();
-		L_EV(this, "Start Worker async destroy event");
-
-		_async_detach.set<Worker, &Worker::_async_detach_cb>(this);
-		_async_detach.start();
-		L_EV(this, "Start Worker async detach event");
-
-		L_OBJ(this, "CREATED WORKER!");
+		_init();
 	}
 
-	void destroyer() {
-		L_OBJ(this, "DESTROYING WORKER!");
-
-		_async_shutdown.stop();
-		L_EV(this, "Stop Worker async shutdown event");
-		_async_break_loop.stop();
-		L_EV(this, "Stop Worker async break_loop event");
-		_async_destroy.stop();
-		L_EV(this, "Stop Worker async destroy event");
-		_async_detach.stop();
-		L_EV(this, "Stop Worker async detach event");
-
-		L_OBJ(this, "DESTROYED WORKER!");
-	}
+	void destroyer();
 
 private:
-	void _async_shutdown_cb() {
-		L_CALL(this, "Worker::_async_shutdown_cb()");
-
-		L_EV_BEGIN(this, "Worker::_async_shutdown_cb:BEGIN");
-		shutdown_impl(_asap, _now);
-		L_EV_END(this, "Worker::_async_shutdown_cb:END");
-	}
-
-	void _async_break_loop_cb(ev::async&, int revents) {
-		L_CALL(this, "Worker::_async_break_loop_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
-
-		L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
-		break_loop_impl();
-		L_EV_END(this, "Worker::_async_break_loop_cb:END");
-	}
-
-	void _async_destroy_cb(ev::async&, int revents) {
-		L_CALL(this, "Worker::_async_destroy_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
-
-		L_EV_BEGIN(this, "Worker::_async_destroy_cb:BEGIN");
-		destroy_impl();
-		L_EV_END(this, "Worker::_async_destroy_cb:END");
-	}
-
-	void _async_detach_cb(ev::async&, int revents) {
-		L_CALL(this, "Worker::_async_detach_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
-
-		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
-		detach_impl();
-		L_EV_END(this, "Worker::_async_detach_cb:END");
-	}
-
-	std::vector<std::weak_ptr<Worker>> _gather_children() {
-		std::vector<std::weak_ptr<Worker>> weak_children;
-		// Collect active children
-		std::lock_guard<std::mutex> lk(_mtx);
-		weak_children.reserve(_children.size());
-		for (auto it = _children.begin(); it != _children.end();) {
-			auto child = *it;
-			if (child) {
-				weak_children.push_back(child);
-				++it;
-			} else {
-				it = _children.erase(it);
-			}
-		}
-		return weak_children;
-	}
-
-	void _detach_impl(const std::weak_ptr<Worker>& weak_child) {
-		std::lock_guard<std::mutex> lk(_mtx);
-		std::string repr;
-		if (auto child = weak_child.lock()) {
-			_detach(child);
-			repr = child->__repr__();
-		} else {
-			return;
-		}
-		if (auto child = weak_child.lock()) {
-			L_OBJ(this, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), __repr__().c_str(), child.use_count() - 1);
-			_attach(child);
-		} else {
-			L_OBJ(this, "Worker child %s detached from %s", repr.c_str(), __repr__().c_str());
-		}
-	}
-
-	auto _ancestor(int levels=-1) {
-		auto ancestor = shared_from_this();
-		while (ancestor->_parent && levels-- != 0) {
-			ancestor = ancestor->_parent;
-		}
-		return ancestor;
-	}
+	void _async_shutdown_cb();
+	void _async_break_loop_cb(ev::async&, int revents);
+	void _async_destroy_cb(ev::async&, int revents);
+	void _async_detach_cb(ev::async&, int revents);
+	std::vector<std::weak_ptr<Worker>> _gather_children();
+	void _detach_impl(const std::weak_ptr<Worker>& weak_child);
+	auto _ancestor(int levels=-1);
 
 public:
-	std::string dump_tree(int level=1) {
-		std::lock_guard<std::mutex> lk(_mtx);
-		std::string ret;
-		for (int l = 0; l < level; ++l) ret += "    ";
-		ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + (_running ? ") in a running loop\n" : ")\n");
-		for (const auto& c : _children) {
-			ret += c->dump_tree(level + 1);
-		}
-		return ret;
-	}
+	std::string dump_tree(int level=1);
 
 	virtual std::string __repr__() const = 0;
 
-	virtual ~Worker() {
-		destroyer();
+	virtual ~Worker();
 
-		L_OBJ(this, "DELETED WORKER!");
-	}
-
-	virtual void shutdown_impl(time_t asap, time_t now) {
-		auto weak_children = _gather_children();
-		L_OBJ(this , "SHUTDOWN WORKER! (%d %d): %zu children", asap, now, weak_children.size());
-		for (auto& weak_child : weak_children) {
-			if (auto child = weak_child.lock()) {
-				child->shutdown_impl(asap, now);
-			}
-		}
-	}
-
+	virtual void shutdown_impl(time_t asap, time_t now);
 	virtual void destroy_impl() = 0;
 
-	void break_loop_impl() {
-		ev_loop->break_loop();
-	}
+	void break_loop_impl();
+	void detach_impl();
 
-	void detach_impl() {
-		auto weak_children = _gather_children();
-		L_OBJ(this , "CLEANUP WORKER: %zu children", weak_children.size());
-		for (auto& weak_child : weak_children) {
-			if (auto child = weak_child.lock()) {
-				child->detach_impl();
-				if (!child->_detaching) continue;
-			}
-			_detach_impl(weak_child);
-		}
-	}
+	void shutdown(time_t asap, time_t now);
+	void shutdown();
 
-	inline void shutdown(time_t asap, time_t now) {
-		if (_running) {
-			_asap = asap;
-			_now = now;
-			_async_shutdown.send();
-		} else {
-			shutdown_impl(asap, now);
-		}
-	}
+	void break_loop();
 
-	inline void shutdown() {
-		auto now = epoch::now<>();
-		if (_running) {
-			_asap = now;
-			_now = now;
-			_async_shutdown.send();
-		} else {
-			shutdown_impl(now, now);
-		}
-	}
+	void destroy();
+	void detach();
+	void cleanup();
 
-	inline void break_loop() {
-		if (_running) {
-			_async_break_loop.send();
-		} else {
-			break_loop_impl();
-		}
-	}
-
-	inline void destroy() {
-		if (_running) {
-			_async_destroy.send();
-		} else {
-			destroy_impl();
-		}
-	}
-
-	inline void detach() {
-		_detaching = true;
-		cleanup();
-	}
-
-	inline void cleanup() {
-		if (_running) {
-			_ancestor(1)->_async_detach.send();
-		} else {
-			_ancestor(1)->detach_impl();
-		}
-	}
-
-	void set_running(bool running) {
-		_ancestor()->_set_running(ev_loop, running);
-	}
-
-	void run_loop() {
-		set_running(true);
-		ev_loop->run();
-		set_running(false);
-	}
+	void set_running(bool running);
+	void run_loop();
 
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
-	static inline decltype(auto) make_shared(Args&&... args) {
+	static decltype(auto) make_shared(Args&&... args) {
 		/*
 		 * std::make_shared only can call a public constructor, for this reason
 		 * it is neccesary wrap the constructor in a struct.
@@ -351,19 +160,18 @@ public:
 		if (child->_parent) {
 			std::lock_guard<std::mutex> lk(child->_parent->_mtx);
 			child->_parent->_attach(child);
-			L_OBJ(child.get(), "child child %s attached to %s", child->__repr__().c_str(), child->_parent->__repr__().c_str());
 		}
 
 		return child;
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
-	inline decltype(auto) share_parent() noexcept {
+	decltype(auto) share_parent() noexcept {
 		return std::static_pointer_cast<T>(_parent);
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
-	inline decltype(auto) share_this() noexcept {
+	decltype(auto) share_this() noexcept {
 		return std::static_pointer_cast<T>(shared_from_this());
 	}
 };
