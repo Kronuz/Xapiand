@@ -22,10 +22,15 @@
 
 #include "geospatialrange.h"
 
-#include "../length.h"
-#include "../serialise.h"
+#include <cmath>                          // for M_PI, acos
+#include <utility>                        // for pair
 
-#include <cmath>
+#include "length.h"                       // for serialise_length, unseriali...
+#include "geo/cartesian.h"                // for Cartesian
+#include "geo/geometry.h"                 // for M_PER_RADIUS_EARTH
+#include "geo/htm.h"                      // for range_t
+#include "serialise.h"                    // for geo
+#include "stl_serialise.h"                // for RangeList, CartesianUSet
 
 
 static double geo_weight_from_angle(double angle) {

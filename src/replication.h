@@ -22,10 +22,12 @@
 
 #pragma once
 
-#include "client_binary.h"
+#include "xapiand.h"
+
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "client_binary.h"
 
 enum class ReplicationMessageType {
 	MSG_GET_CHANGESETS,

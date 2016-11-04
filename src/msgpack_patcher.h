@@ -22,11 +22,19 @@
 
 #pragma once
 
-#include "exception.h"
-#include "msgpack.h"
-#include "utils.h"
+#include <stddef.h>                         // for size_t
+#include <stdexcept>                        // for out_of_range, invalid_arg...
+#include <string>                           // for string, basic_string, stoul
+#include <unordered_map>                    // for unordered_map
+#include <vector>                           // for vector
 
-#include "rapidjson/pointer.h"
+#include "exception.h"                      // for ClientError, MSG_ClientError
+#include "msgpack.h"                        // for MsgPack, MsgPack::Type, ...
+#include "rapidjson/allocators.h"           // for CrtAllocator
+#include "rapidjson/document.h"             // for GenericValue
+#include "rapidjson/encodings.h"            // for UTF8
+#include "rapidjson/pointer.h"              // for GenericPointer, GenericPo...
+#include "utils.h"                          // for stox
 
 #define PATCH_PATH   "path"
 #define PATCH_FROM   "from"

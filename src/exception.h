@@ -24,13 +24,10 @@
 
 #include "xapiand.h"
 
-#include <xapian.h>
-
-#include <iostream>
-#include <exception>
-#include <stdexcept>
-#include <sstream>
-#include <string>
+#include <xapian.h>     // for DocNotFoundError, InternalError, InvalidArgum...
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string
+#include <type_traits>  // for forward
 
 
 #ifdef XAPIAND_TRACEBACKS

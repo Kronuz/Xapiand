@@ -26,7 +26,6 @@
  * Define macro for endianess.
  */
 
-
 #if defined(__linux__)
 	#include <endian.h>
 #elif defined(__APPLE__)

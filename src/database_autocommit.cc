@@ -22,6 +22,20 @@
 
 #include "database_autocommit.h"
 
+#include <algorithm>         // for move
+#include <ctime>             // for time_t
+#include <ratio>             // for ratio
+#include <type_traits>       // for remove_reference<>::type
+#include <utility>           // for pair
+
+#include "database.h"        // for Database, DatabasePool
+#include "database_utils.h"  // for DB_WRITABLE
+#include "endpoint.h"        // for Endpoints, hash, operator==
+#include "exception.h"       // for Error
+#include "log.h"             // for Log, L_OBJ, L_CALL, L_DEBUG, L_WARNING
+#include "manager.h"         // for XapiandManager, XapiandManager::manager
+#include "utils.h"           // for delta_string, repr
+
 
 std::mutex DatabaseAutocommit::mtx;
 std::mutex DatabaseAutocommit::statuses_mtx;

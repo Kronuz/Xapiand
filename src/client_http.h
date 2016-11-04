@@ -22,16 +22,37 @@
 
 #pragma once
 
-#include "client_base.h"
+#include "xapiand.h"
 
-#include "database_handler.h"
-#include "http_parser.h"
-#include "guid/guid.h"
-#include "url_parser.h"
-#include "servers/server_http.h"
-#include "atomic_shared_ptr.h"
+#include <stdio.h>              // for size_t, snprintf
+#include <sys/syslimits.h>      // for PATH_MAX
+#include <sys/types.h>          // for ssize_t
+#include <atomic>               // for atomic_bool
+#include <chrono>               // for system_clock, time_point, duration
+#include <memory>               // for shared_ptr, unique_ptr
+#include <mutex>                // for mutex, lock_guard
+#include <ratio>                // for milli
+#include <set>                  // for set
+#include <string>               // for string, operator==
+#include <tuple>                // for get, tuple
+#include <utility>              // for pair
+#include <vector>               // for vector
 
-#include <memory>
+#include "atomic_shared_ptr.h"  // for atomic_shared_ptr
+#include "client_base.h"        // for BaseClient
+#include "database_handler.h"   // for DatabaseHandler
+#include "database_utils.h"     // for HttpMethod, query_field_t (ptr only)
+#include "http_parser.h"        // for http_parser, http_parser_settings
+#include "url_parser.h"         // for PathParser, QueryParser
+#include "lru.h"                // for LRU
+#include "msgpack.h"            // for MsgPack
+#include "xxh64.hpp"            // for xxh64
+
+class GuidGenerator;
+class HttpServer;
+class Log;
+class Worker;
+
 
 #define HTTP_STATUS            (1 << 0)
 #define HTTP_HEADER            (1 << 1)
@@ -167,8 +188,8 @@ class HttpClient : public BaseClient {
 	void _delete();
 
 	Command url_resolve();
-	void _endpoint_maker(duration<double, std::milli> timeout);
-	void endpoints_maker(duration<double, std::milli> timeout);
+	void _endpoint_maker(std::chrono::duration<double, std::milli> timeout);
+	void endpoints_maker(std::chrono::duration<double, std::milli> timeout);
 	void query_field_maker(int flags);
 
 	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int total_count=0, int matches_estimated=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");

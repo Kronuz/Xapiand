@@ -22,18 +22,21 @@
 
 #include "tcp_base.h"
 
-#include "../utils.h"
-#include "../manager.h"
+#include <arpa/inet.h>              // for htonl, htons
+#include <netdb.h>                  // for addrinfo, freeaddrinfo, getaddrinfo
+#include <netinet/in.h>             // for sockaddr_in, INADDR_ANY, IPPROTO_TCP
+#include <netinet/tcp.h>            // for TCP_NODELAY
+#include <string.h>                 // for strerror, memset
+#include <sys/_types/_u_int32_t.h>  // for u_int32_t
+#include <sys/errno.h>              // for __error, errno
+#include <sys/fcntl.h>              // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
+#include <sys/socket.h>             // for setsockopt, SOL_SOCKET, SO_NOSIGPIPE
+#include <sysexits.h>               // for EX_CONFIG, EX_IOERR
 
-#include <sysexits.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h> /* for TCP_NODELAY */
-#include <netdb.h> /* for getaddrinfo */
+#include "io_utils.h"               // for close
+#include "log.h"                    // for Log, L_ERR, L_OBJ, L_CRIT, L_DEBUG
+#include "manager.h"                // for sig_exit
+#include "utils.h"                  // for ignored_errorno
 
 
 BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& description_, int tries_, int flags_)

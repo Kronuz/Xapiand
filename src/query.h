@@ -22,10 +22,19 @@
 
 #pragma once
 
+#include "xapiand.h"
+
+#include <xapian.h>  // for Query
+#include <memory>    // for shared_ptr
+#include <string>    // for string
+#include <vector>    // for vector
+
 #include "database.h"
 #include "schema.h"
 
-#include "xapian.h"
+class Database;
+class Schema;
+struct query_field_t;
 
 
 class Query {

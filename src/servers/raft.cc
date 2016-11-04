@@ -24,9 +24,9 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "../endpoint.h"
+#include "endpoint.h"
 
-#include <assert.h>
+#include <cassert>   // for assert
 
 
 constexpr const char* const Raft::MessageNames[];

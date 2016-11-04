@@ -22,13 +22,13 @@
 
 #pragma once
 
-#include "xapian.h"
+#include "xapiand.h"    // for unlikely
 
-#include "exception.h"
-#include "xapiand.h"
+#include <stddef.h>     // for size_t, NULL
+#include <string>       // for string
+#include <cassert>      // for assert
 
-#include <assert.h>
-#include <string>
+#include "exception.h"  // for MSG_SerialisationError, SerialisationError
 
 /** Serialise a length as a variable-length string.
  *

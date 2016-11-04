@@ -22,11 +22,11 @@
 
 #include "endpoint.h"
 
-#include "length.h"
+#include <stdlib.h>         // for atoi
+#include <sys/syslimits.h>  // for PATH_MAX
+#include <xapian.h>         // for SerialisationError
 
-#include <iostream>
-#include <limits.h>
-#include <unistd.h>
+#include "length.h"         // for serialise_length, unserialise_length, ser...
 
 
 atomic_shared_ptr<const Node> local_node = std::make_shared<const Node>();

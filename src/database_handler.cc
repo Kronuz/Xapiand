@@ -22,14 +22,28 @@
 
 #include "database_handler.h"
 
-#include "datetime.h"
-#include "geo/wkt_parser.h"
-#include "msgpack_patcher.h"
-#include "multivalue/aggregation.h"
-#include "multivalue/range.h"
-#include "query.h"
-#include "query_dsl.h"
-#include "serialise.h"
+#include <ctype.h>                          // for isupper, tolower
+#include <algorithm>                        // for min, move
+#include <exception>                        // for exception
+#include <stdexcept>                        // for out_of_range
+
+#include "database.h"                       // for DatabasePool, Database
+#include "exception.h"                      // for CheckoutError, ClientError
+#include "length.h"                         // for unserialise_length, seria...
+#include "log.h"                            // for L_CALL, Log
+#include "manager.h"                        // for XapiandManager, XapiandM...
+#include "msgpack.h"                        // for MsgPack, object::object, ...
+#include "msgpack_patcher.h"                // for apply_patch
+#include "multivalue/aggregation.h"         // for AggregationMatchSpy
+#include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
+#include "query.h"                          // for Query
+#include "query_dsl.h"                      // for QUERYDSL_QUERY, QueryDSL
+#include "rapidjson/document.h"             // for Document
+#include "schema.h"                         // for Schema, required_spc_t
+#include "serialise.h"                      // for cast, serialise, type
+#include "utils.h"                          // for repr
+#include "v8/exception.h"                   // for Error, ReferenceError
+#include "v8/v8pp.h"                        // for Processor::Function, Proc...
 
 
 std::string
@@ -95,6 +109,51 @@ split_data_blob(const std::string& data)
 }
 
 
+DatabaseHandler::lock_database::lock_database(DatabaseHandler* db_handler_)
+	: db_handler(db_handler_),
+	  database(nullptr)
+{
+	lock();
+}
+
+
+DatabaseHandler::lock_database::lock_database(DatabaseHandler& db_handler)
+	: lock_database(&db_handler)
+{ }
+
+
+DatabaseHandler::lock_database::~lock_database()
+{
+	unlock();
+}
+
+
+void
+DatabaseHandler::lock_database::lock()
+{
+	if (db_handler && !db_handler->database) {
+		if (XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
+			database = &db_handler->database;
+		} else {
+			throw MSG_CheckoutError("Cannot checkout database: %s", repr(db_handler->endpoints.to_string()).c_str());
+		}
+	}
+}
+
+
+void
+DatabaseHandler::lock_database::unlock() noexcept
+{
+	if (database) {
+		if (*database) {
+			XapiandManager::manager->database_pool.checkin(*database);
+		}
+		(*database).reset();
+		database = nullptr;
+	}
+}
+
+
 DatabaseHandler::DatabaseHandler()
 	: flags(0),
 	  method(HttpMethod::GET) { }
@@ -104,6 +163,39 @@ DatabaseHandler::DatabaseHandler(const Endpoints &endpoints_, int flags_)
 	: endpoints(endpoints_),
 	  flags(flags_),
 	  method(HttpMethod::GET) { }
+
+
+std::shared_ptr<Database>
+DatabaseHandler::get_database() const noexcept
+{
+	return database;
+}
+
+
+std::shared_ptr<Schema>
+DatabaseHandler::get_schema() const
+{
+	return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+}
+
+
+std::shared_ptr<Schema>
+DatabaseHandler::get_fvschema() const
+{
+	std::shared_ptr<const MsgPack> fvs, fvs_aux;
+	for (const auto& e : endpoints) {
+		fvs_aux = XapiandManager::manager->database_pool.get_schema(e, flags);	/* Get the first valid schema */
+		if (fvs_aux->is_null()) {
+			continue;
+		}
+		if (fvs == nullptr) {
+			fvs = fvs_aux;
+		} else if (*fvs != *fvs_aux) {
+			throw MSG_ClientError("Cannot index in several indexes with different schemas");
+		}
+	}
+	return std::make_shared<Schema>(fvs ? fvs : fvs_aux);
+}
 
 
 void
@@ -715,4 +807,231 @@ DatabaseHandler::get_database_info(MsgPack& info)
 	info["_doc_len_lower"] =  database->db->get_doclength_lower_bound();
 	info["_doc_len_upper"] = database->db->get_doclength_upper_bound();
 	info["_has_positions"] = database->db->has_positions();
+}
+
+
+void
+Document::update()
+{
+	if (db_handler && db_handler->database && database != db_handler->database) {
+		L_CALL(this, "Document::update()");
+		database = db_handler->database;
+		std::shared_ptr<Database> database_ = database;
+		DatabaseHandler* db_handler_ = db_handler;
+		*this = database->get_document(get_docid());
+		db_handler = db_handler_;
+		database = database_;
+	}
+}
+
+
+void
+Document::update() const
+{
+	const_cast<Document*>(this)->update();
+}
+
+
+Document::Document()
+	: db_handler(nullptr)
+{ }
+
+
+Document::Document(const Xapian::Document &doc)
+	: Xapian::Document(doc),
+	  db_handler(nullptr)
+{ }
+
+
+Document::Document(DatabaseHandler* db_handler_, const Xapian::Document &doc)
+	: Xapian::Document(doc),
+	  db_handler(db_handler_),
+	  database(db_handler->database)
+{ }
+
+
+std::string
+Document::get_value(Xapian::valueno slot) const
+{
+	L_CALL(this, "Document::get_value()");
+
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	return Xapian::Document::get_value(slot);
+}
+
+
+MsgPack
+Document::get_value(const std::string& slot_name) const
+{
+	L_CALL(this, "Document::get_value(%s)", slot_name.c_str());
+
+	auto schema = db_handler->get_schema();
+	auto slot_field = schema->get_slot_field(slot_name);
+
+	return Unserialise::MsgPack(slot_field.get_type(), get_value(slot_field.slot));
+}
+
+
+void
+Document::add_value(Xapian::valueno slot, const std::string& value)
+{
+	L_CALL(this, "Document::add_value()");
+
+	Xapian::Document::add_value(slot, value);
+}
+
+
+void
+Document::add_value(const std::string& slot_name, const MsgPack& value)
+{
+	L_CALL(this, "Document::add_value(%s)", slot_name.c_str());
+
+	auto schema = db_handler->get_schema();
+	auto slot_field = schema->get_slot_field(slot_name);
+
+	add_value(slot_field.slot, Serialise::MsgPack(slot_field, value));
+}
+
+
+void
+Document::remove_value(Xapian::valueno slot)
+{
+	L_CALL(this, "Document::remove_value()");
+
+	Xapian::Document::remove_value(slot);
+}
+
+
+void
+Document::remove_value(const std::string& slot_name)
+{
+	L_CALL(this, "Document::remove_value(%s)", slot_name.c_str());
+
+	auto schema = db_handler->get_schema();
+	auto slot_field = schema->get_slot_field(slot_name);
+
+	remove_value(slot_field.slot);
+}
+
+
+std::string
+Document::get_data() const
+{
+	L_CALL(this, "Document::get_data()");
+
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	return Xapian::Document::get_data();
+}
+
+
+void
+Document::set_data(const std::string& data)
+{
+	L_CALL(this, "Document::set_data(%s)", repr(data).c_str());
+
+	Xapian::Document::set_data(data);
+}
+
+
+void
+Document::set_data(const std::string& obj, const std::string& blob)
+{
+	L_CALL(this, "Document::set_data(...)");
+
+	set_data(::join_data(obj, blob));
+}
+
+
+std::string
+Document::get_blob()
+{
+	L_CALL(this, "Document::get_blob()");
+
+	return ::split_data_blob(get_data());
+}
+
+
+void
+Document::set_blob(const std::string& blob)
+{
+	L_CALL(this, "Document::set_blob()");
+
+	DatabaseHandler::lock_database lk(db_handler);  // optimize nested database locking
+	set_data(::split_data_obj(get_data()), blob);
+}
+
+
+MsgPack
+Document::get_obj() const
+{
+	L_CALL(this, "Document::get_obj()");
+
+	return MsgPack::unserialise(::split_data_obj(get_data()));
+}
+
+
+void
+Document::set_obj(const MsgPack& obj)
+{
+	L_CALL(this, "Document::get_obj()");
+
+	DatabaseHandler::lock_database lk(db_handler);  // optimize nested database locking
+	set_data(obj.serialise(), get_blob());
+}
+
+
+Xapian::termcount
+Document::termlist_count() const
+{
+	L_CALL(this, "Document::termlist_count()");
+
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	return Xapian::Document::termlist_count();
+}
+
+
+Xapian::TermIterator
+Document::termlist_begin() const
+{
+	L_CALL(this, "Document::termlist_begin()");
+
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	return Xapian::Document::termlist_begin();
+}
+
+
+Xapian::termcount
+Document::values_count() const
+{
+	L_CALL(this, "Document::values_count()");
+
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	return Xapian::Document::values_count();
+}
+
+
+Xapian::ValueIterator
+Document::values_begin() const
+{
+	L_CALL(this, "Document::values_begin()");
+
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	return Xapian::Document::values_begin();
+}
+
+
+std::string
+Document::serialise() const
+{
+	L_CALL(this, "Document::serialise()");
+
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	return Xapian::Document::serialise();
 }

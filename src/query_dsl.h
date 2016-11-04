@@ -22,13 +22,20 @@
 
 #pragma once
 
+#include "xapiand.h"
+
+#include <xapian.h>         // for Query, Query::op, termcount
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include <unordered_map>    // for unordered_map
+
 #include "msgpack.h"
 #include "schema.h"
 #include "utils.h"
-
-#include "xapian.h"
+#include "msgpack.h"  // for MsgPack
 
 class QueryDSL;
+class Schema;
 
 constexpr const char QUERYDSL_QUERY[] = "_query";
 

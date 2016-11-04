@@ -22,11 +22,13 @@
 
 #pragma once
 
-#include "server_base.h"
+#include "xapiand.h"
+
 
 #ifdef XAPIAND_CLUSTERING
 
 #include "discovery.h"
+#include "server_base.h"
 
 
 // Discovery Server

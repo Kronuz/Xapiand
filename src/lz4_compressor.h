@@ -22,18 +22,26 @@
 
 #pragma once
 
-#include "exception.h"
-#include "io_utils.h"
-#include "lz4/lz4.h"
-#include "lz4/xxhash.h"
+#include "xapiand.h"     // for unlikely
 
 #include <fcntl.h>
-#include <functional>
-#include <iostream>
+#include <stdlib.h>      // for malloc, free
 #include <string.h>
+#include <sys/fcntl.h>   // for O_RDONLY
 #include <sys/stat.h>
-#include <sys/types.h>
+#include <sys/types.h>   // for off_t, uint16_t, ssize_t, uint32_t
+#include <algorithm>     // for move
+#include <cstring>       // for size_t, memcpy
+#include <functional>    // for function, __base
+#include <iostream>
+#include <iterator>      // for input_iterator_tag, iterator
+#include <string>        // for string
+#include <type_traits>   // for forward
 
+#include "exception.h"   // for Error
+#include "io_utils.h"    // for close, open
+#include "lz4/lz4.h"     // for LZ4_COMPRESSBOUND, LZ4_resetStream, LZ4_stre...
+#include "lz4/xxhash.h"  // for XXH32_createState, XXH32_reset, XXH32_digest
 
 #define LZ4_BLOCK_SIZE        (1024 * 2)
 #define LZ4_MAX_CMP_SIZE      (sizeof(uint16_t) + LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE))

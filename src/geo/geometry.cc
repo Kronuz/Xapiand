@@ -22,9 +22,13 @@
 
 #include "geometry.h"
 
-#include <algorithm>
-#include <cmath>
-#include <type_traits>
+#include <stddef.h>            // for size_t
+#include <algorithm>           // for move, sort
+#include <cmath>               // for acos, cos, M_PI
+#include <type_traits>         // for iter_swap
+
+#include "exception.h"         // for Error, MSG_Error
+#include "geo/cartesian.h"     // for Cartesian, DBL_TOLERANCE, PI_HALF
 
 
 Constraint::Constraint()

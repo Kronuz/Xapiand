@@ -22,12 +22,8 @@
 
 #include "exception.h"
 
-#include "log.h"
-
-#include <string.h>
-#include <execinfo.h>
-#include <cxxabi.h>
-#include <stdarg.h>
+#include <stdarg.h>  // for va_end, va_list, va_start
+#include <stdio.h>   // for vsnprintf
 
 #define BUFFER_SIZE 1024
 

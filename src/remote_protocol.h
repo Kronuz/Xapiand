@@ -21,15 +21,17 @@
 
 #pragma once
 
-#include "client_binary.h"
+#include "xapiand.h"
+
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <memory>
-#include <vector>
-#include <string>
-
 #include <xapian.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "client_binary.h"
 
 #define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 39
 #define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 0

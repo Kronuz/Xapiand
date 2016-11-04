@@ -24,11 +24,21 @@
 
 #include "xapiand.h"
 
-#include "servers/server_base.h"
+#include <string.h>      // for size_t, memcpy, strlen
+#include <sys/types.h>   // for ssize_t
+#include <time.h>        // for time_t
+#include <atomic>        // for atomic_bool, atomic_int
+#include <memory>        // for shared_ptr, unique_ptr
+#include <string>        // for string
 
-#include "lz4_compressor.h"
+#include "endpoint.h"    // for Endpoints
+#include "ev/ev++.h"     // for async, io, loop_ref (ptr only)
+#include "queue.h"       // for Queue
+#include "threadpool.h"  // for Task
+#include "worker.h"      // for Worker
 
-#include "ev/ev++.h"
+class BaseServer;
+class LZ4CompressFile;
 
 //
 //   Buffer class - allow for output buffering such that it can be written out

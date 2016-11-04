@@ -25,11 +25,13 @@
 #include "xapiand.h"
 
 #include <errno.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <stddef.h>     // for size_t
+#include <sys/fcntl.h>  // for open, O_RDONLY
+#include <unistd.h>     // for off_t, ssize_t, close, lseek, unlink
+
 
 namespace io {
-
 
 inline int unlink(const char *path) {
 	return ::unlink(path);

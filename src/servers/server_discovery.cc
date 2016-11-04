@@ -22,14 +22,15 @@
 
 #include "server_discovery.h"
 
+
 #ifdef XAPIAND_CLUSTERING
+
+#include <arpa/inet.h>
+#include <cassert>               // for assert
 
 #include "binary.h"
 #include "discovery.h"
 #include "server.h"
-
-#include <assert.h>
-#include <arpa/inet.h>
 
 
 using dispatch_func = void (DiscoveryServer::*)(const std::string&);
@@ -384,8 +385,8 @@ DiscoveryServer::db_updated(const std::string& message)
 void
 DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	DBG_SET(fd, watcher.fd);
-	DBG_SET(sock, discovery->get_socket());
+	int fd = watcher.fd;
+	int sock = discovery->get_socket();
 
 	L_CALL(this, "DiscoveryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents).c_str(), sock, fd); (void)revents;
 

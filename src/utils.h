@@ -22,23 +22,21 @@
 
 #pragma once
 
-#include "ev/ev++.h"
+#include "xapiand.h"
 
-#include <algorithm>
-#include <chrono>
-#include <dirent.h>
-#include <limits.h>
-#include <locale>
-#include <memory>
-#include <random>
-#include <regex>
-#include <sstream>
-#include <string>
-#include <sys/time.h>
-#include <thread>
-#include <unistd.h>
-#include <unordered_set>
-#include <vector>
+#include <ctype.h>      // for tolower, toupper
+#include <dirent.h>     // for DIR
+#include <stdio.h>      // for size_t, snprintf
+#include <sys/errno.h>  // for EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
+#include <sys/types.h>  // for uint64_t, uint16_t, uint8_t, int32_t, uint32_t
+#include <chrono>       // for system_clock, time_point, duration_cast, seconds
+#include <regex>        // for regex
+#include <string>       // for string, allocator
+#include <type_traits>  // for forward, underlying_type_t
+#include <vector>       // for vector
+
+#include "ev/ev++.h"    // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
+
 
 #define RESERVED_FDS  50 /* Better approach? */
 
@@ -295,7 +293,6 @@ namespace epoch {
 		return std::chrono::duration_cast<Period>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 }
-
 
 inline std::string readable_revents(int revents) {
 	std::vector<std::string> values;

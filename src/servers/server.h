@@ -22,13 +22,25 @@
 
 #pragma once
 
-#include "../manager.h"
+#include "xapiand.h"
+
+#include <stdio.h>              // for snprintf
+#include <time.h>               // for time_t
+#include <atomic>               // for atomic_int
+#include <memory>               // for shared_ptr
+#include <mutex>                // for mutex
+#include <string>               // for string
+
+#include "ev/ev++.h"            // for async, loop_ref (ptr only)
+#include "worker.h"             // for Worker
+#include "threadpool.h"         // for Task
 
 class BaseServer;
 class BinaryServer;
-class HttpServer;
 class DiscoveryServer;
+class HttpServer;
 class RaftServer;
+class XapiandManager;
 
 
 class XapiandServer : public Task<>, public Worker {

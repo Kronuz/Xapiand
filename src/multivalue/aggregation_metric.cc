@@ -22,6 +22,11 @@
 
 #include "aggregation_metric.h"
 
+#include "msgpack/object_fwd.hpp"  // for type_error
+#include "multivalue/exception.h"  // for AggregationError, MSG_AggregationE...
+#include "schema.h"                // for FieldType, required_spc_t, FieldTy...
+#include "utils.h"                 // for repr, toUType
+
 
 static func_value_handle get_func_value_handle(FieldType type, const std::string& field_name) {
 	switch (type) {

@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include "xapiand.h"
+
 #include <list>
 #include <unordered_map>
 #include <stdexcept>

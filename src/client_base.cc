@@ -22,13 +22,29 @@
 
 #include "client_base.h"
 
-#include "utils.h"
-#include "length.h"
+#include <stdio.h>               // for SEEK_SET
+#include <sys/errno.h>           // for __error, errno, ECONNRESET
+#include <sys/socket.h>          // for shutdown, SHUT_RDWR
+#include <sysexits.h>            // for EX_SOFTWARE
+#include <xapian.h>              // for SerialisationError
+#include <algorithm>             // for move
+#include <cassert>               // for assert
+#include <chrono>                // for operator""ms
+#include <exception>             // for exception
+#include <memory>                // for shared_ptr, unique_ptr, default_delete
+#include <ratio>                 // for ratio
+#include <type_traits>           // for remove_reference<>::type
 
-#include <sys/socket.h>
-#include <sysexits.h>
-#include <unistd.h>
-#include <memory>
+#include "ev/ev++.h"             // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
+#include "io_utils.h"            // for read, close, lseek, write
+#include "length.h"              // for serialise_length, unserialise_length
+#include "log.h"                 // for Log, L_CALL, L_ERR, L_EV, L_CONN, L_OBJ
+#include "lz4/xxhash.h"          // for XXH32_createState, XXH32_digest, XXH...
+#include "lz4_compressor.h"      // for LZ4BlockStreaming<>::iterator, LZ4Co...
+#include "manager.h"             // for sig_exit
+#include "servers/server.h"      // for XapiandServer, XapiandServer::max_to...
+#include "servers/server_base.h" // for BaseServer
+#include "utils.h"               // for readable_revents, ignored_errorno, repr
 
 #define BUF_SIZE 4096
 

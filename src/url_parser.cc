@@ -22,9 +22,10 @@
 
 #include "url_parser.h"
 
-#include <cassert>
-#include <cstdlib>
-#include <cstring>
+#include <cassert>  // for assert
+#include <cctype>   // for isxdigit
+#include <cstdlib>  // for strtol
+#include <cstring>  // for strlen, memmove, strncpy, strncmp
 
 
 std::string urldecode(const char *str, size_t size) {

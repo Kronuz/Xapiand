@@ -22,10 +22,7 @@
 
 #pragma once
 
-#include "log.h"
-#include "queue.h"
-#include "exception.h"
-#include "utils.h"
+#include "xapiand.h"
 
 #include <iostream>
 #include <string>
@@ -34,7 +31,11 @@
 #include <future>
 #include <cassert>
 #include <vector>
-#include <vector>
+
+#include "log.h"
+#include "queue.h"
+#include "exception.h"
+#include "utils.h"
 
 
 template<typename F, typename Tuple, std::size_t... I>

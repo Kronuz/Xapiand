@@ -22,12 +22,13 @@
 
 #pragma once
 
-#include "../utils.h"
+#include "utils.h"
 
 
 /*
  * Interface for implement soundex with diferent languages.
  */
+
 template <typename Impl>
 class Soundex {
 protected:

@@ -22,15 +22,24 @@
 
 #pragma once
 
-#include "atomic_shared_ptr.h"
-#include "utils.h"
-#include "xapiand.h"
+#include "xapiand.h"            // for XAPIAND_BINARY_SERVERPORT
 
-#include <string>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
+#include <arpa/inet.h>          // for inet_ntop
+#include <netinet/in.h>         // for sockaddr_in, INET_ADDRSTRLEN, in_addr
+#include <string.h>             // for memset
+#include <sys/socket.h>         // for AF_INET
+#include <sys/types.h>          // for int32_t, uint64_t
+#include <time.h>               // for time_t
+#include <algorithm>            // for move
 #include <atomic>
+#include <cstddef>              // for size_t
+#include <functional>           // for hash
+#include <memory>               // for shared_ptr
+#include <string>               // for string, allocator, operator==, operator+
+#include <utility>              // for pair
+
+#include "atomic_shared_ptr.h"  // for atomic_shared_ptr
+#include "utils.h"              // for lower_string
 
 
 struct Node {
@@ -141,12 +150,11 @@ struct Node {
 extern atomic_shared_ptr<const Node> local_node;
 
 
+#include <unordered_set>        // for unordered_set
+#include <vector>               // for vector
+
 class Endpoint;
 class Endpoints;
-
-
-#include <unordered_set>
-#include <vector>
 
 
 namespace std {

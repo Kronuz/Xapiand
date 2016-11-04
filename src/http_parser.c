@@ -24,12 +24,13 @@
  */
 
 #include "http_parser.h"
-#include <assert.h>
-#include <stddef.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
+
+#include <assert.h>          // for assert
+#include <limits.h>          // for ULLONG_MAX
+#include <string.h>          // for memset
+#include <stddef.h>          // for NULL, size_t
+#include <stdlib.h>          // for strtoul
+#include <string.h>          // for memchr
 
 #ifndef ULLONG_MAX
 # define ULLONG_MAX ((uint64_t) -1) /* 2^64-1 */

@@ -22,7 +22,15 @@
 
 #pragma once
 
-#include "geometry.h"
+#include <stdio.h>          // for snprintf
+#include <sys/types.h>      // for uint64_t, int8_t
+#include <cstring>          // for size_t
+#include <functional>       // for hash
+#include <string>           // for string, hash
+#include <vector>           // for vector
+
+#include "geo/cartesian.h"  // for Cartesian
+#include "geometry.h"       // for Constraint, Geometry
 
 #define HTM_FULL 0
 #define HTM_PARTIAL 1

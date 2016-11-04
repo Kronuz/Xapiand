@@ -24,9 +24,11 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "database.h"
 #include "io_utils.h"
 #include "length.h"
 #include "servers/server.h"
+#include "servers/server_binary.h"
 #include "servers/tcp_base.h"
 #include "remote_protocol.h"
 #include "replication.h"

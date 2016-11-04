@@ -26,6 +26,8 @@
 
 #include <unordered_map>
 
+#include "utils.h"
+
 
 static const std::unordered_map<std::string, std::string> spanish_accents({
 	{ "Ñ",  "N" }, { "Á",  "A" }, { "É" , "E" }, { "Í",  "I" },

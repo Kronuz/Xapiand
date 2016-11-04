@@ -22,11 +22,14 @@
 
 #include "matchspy.h"
 
-#include "../exception.h"
-#include "../length.h"
-#include "../stl_serialise.h"
+#include <stdio.h>             // for snprintf
+#include <cassert>             // for assert
+#include <functional>          // for less
+#include <map>                 // for map
 
-#include <cassert>
+#include "exception.h"         // for MSG_NetworkError, NetworkError
+#include "length.h"            // for serialise_length, unserialise_length
+#include "stl_serialise.h"     // for StringList
 
 
 void

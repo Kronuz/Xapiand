@@ -26,14 +26,14 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "endpoint.h"
-#include "lru.h"
-#include "length.h"
-#include "times.h"
-
-#include <queue>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+#include <queue>
+
+#include "endpoint.h"
+#include "length.h"
+#include "lru.h"
+#include "times.h"
 
 class XapiandManager;
 

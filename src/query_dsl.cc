@@ -20,13 +20,20 @@
 * IN THE SOFTWARE.
 */
 
-#include "xxh64.hpp"
-
 #include "query_dsl.h"
 
-#include "database_utils.h"
-#include "exception.h"
-#include "multivalue/range.h"
+#include <stdexcept>               // for out_of_range
+#include <tuple>                   // for get, tuple
+
+#include "database_utils.h"        // for prefixed, RESERVED_BOOLEAN, RESERV...
+#include "exception.h"             // for MSG_QueryDslError, QueryDslError
+#include "log.h"                   // for Log, L_CALL, L
+#include "msgpack/object_fwd.hpp"  // for type_error
+#include "multivalue/range.h"      // for MultipleValueRange
+#include "schema.h"                // for FieldType, required_spc_t, FieldTy...
+#include "serialise.h"             // for MsgPack, date, get_range_type, get...
+#include "utils.h"                 // for repr, lower_string, startswith
+#include "xxh64.hpp"               // for xxh64
 
 
 /* Reserved DSL words used for operators */
@@ -456,7 +463,7 @@ QueryDSL::find_ranges(const std::string& key, const MsgPack& obj, Xapian::Query&
 bool
 QueryDSL::find_date(const MsgPack& obj)
 {
-	L(this, "QueryDSL::find_date()");
+	L_CALL(this, "QueryDSL::find_date(%s)", repr(obj.to_string()).c_str());
 
 	bool isRange = false;
 

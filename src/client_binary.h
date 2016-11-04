@@ -26,15 +26,13 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "client_base.h"
-#include "database.h"
-#include "servers/server_binary.h"
-
-
 #include <xapian.h>
-
 #include <unordered_map>
 
+#include "client_base.h"
+
+class BinaryServer;
+class Database;
 class RemoteProtocol;
 class Replication;
 

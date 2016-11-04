@@ -22,11 +22,12 @@
 
 #include "server_raft.h"
 
+
 #ifdef XAPIAND_CLUSTERING
 
-#include "server.h"
+#include <cassert>   // for assert
 
-#include <assert.h>
+#include "server.h"
 
 
 using dispatch_func = void (RaftServer::*)(const std::string&);
@@ -266,8 +267,8 @@ RaftServer::reset(const std::string& message)
 void
 RaftServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	DBG_SET(fd, watcher.fd);
-	DBG_SET(sock, raft->get_socket());
+	int fd = watcher.fd;
+	int sock = raft->get_socket();
 
 	L_CALL(this, "RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents).c_str(), sock, fd); (void)revents;
 

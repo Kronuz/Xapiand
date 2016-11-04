@@ -22,9 +22,15 @@
 
 #pragma once
 
-#include "../stl_serialise.h"
+#include <stddef.h>            // for size_t
+#include <regex>               // for regex
+#include <string>              // for string
+#include <type_traits>         // for forward
+#include <vector>              // for vector
 
-#include <regex>
+#include "./geometry.h"        // for Geometry, GeometryType
+#include "exception.h"         // for ClientError
+#include "stl_serialise.h"     // for CartesianUSet, RangeList
 
 
 extern const std::regex find_geometry_re;

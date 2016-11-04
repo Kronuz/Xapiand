@@ -24,8 +24,6 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <assert.h>
-
 
 constexpr const char* const Discovery::MessageNames[];
 

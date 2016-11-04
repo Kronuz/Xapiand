@@ -22,8 +22,13 @@
 
 #include "async_fsync.h"
 
-#include "io_utils.h"
-#include "manager.h"
+#include <algorithm>    // for move
+#include <ctime>        // for time_t
+
+#include "manager.h"    // for XapiandManager
+#include "io_utils.h"   // for fsync, full_fsync
+#include "log.h"        // for L_OBJ, Log, L_DEBUG, L_WARNING
+#include "utils.h"      // for delta_string
 
 
 std::mutex AsyncFsync::mtx;

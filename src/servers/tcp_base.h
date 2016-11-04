@@ -22,10 +22,14 @@
 
 #pragma once
 
-#include "../manager.h"
+#include "xapiand.h"
 
+#include <time.h>    // for time_t
 #include <iostream>
-#include <string>
+#include <memory>    // for shared_ptr
+#include <string>    // for string
+
+#include "worker.h"  // for Worker
 
 
 #define CONN_TCP_NODELAY       1

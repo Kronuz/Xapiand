@@ -22,13 +22,17 @@
 
 #pragma once
 
-#include "sortable_serialise.h"
-#include "xxh64.hpp"
-#include "length.h"
-#include "msgpack.h"
-#include "rapidjson/document.h"
+#include "xapiand.h"
 
-#include <xapian.h>
+#include <xapian.h>                // for valueno
+#include <string>                  // for string
+#include <vector>                  // for vector
+
+#include "msgpack.h"               // for object
+#include "rapidjson/document.h"    // for Document
+#include "sortable_serialise.h"    // for sortable_serialise
+#include "xxh64.hpp"               // for xxh64
+
 
 // Reserved words only used in the responses to the user.
 #define RESERVED_ENDPOINT          "_endpoint"

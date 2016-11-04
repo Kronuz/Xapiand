@@ -22,22 +22,40 @@
 
 #include "client_http.h"
 
-#include "xxh64.hpp"
-#include "io_utils.h"
-#include "length.h"
-#include "multivalue/aggregation.h"
-#include "serialise.h"
-#include "utils.h"
+#include <stdlib.h>                         // for mkstemp
+#include <string.h>                         // for strerror, strcpy
+#include <sys/errno.h>                      // for __error, errno
+#include <sysexits.h>                       // for EX_SOFTWARE
+#include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
+#include <xapian.h>                         // for version_string, MSetIterator
+#include <algorithm>                        // for move
+#include <exception>                        // for exception
+#include <functional>                       // for __base, function
+#include <regex>                            // for regex_iterator, match_res...
+#include <stdexcept>                        // for invalid_argument, range_e...
+#include <type_traits>                      // for enable_if<>::type
 
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/stringbuffer.h"
+#include "config.h"                         // for PACKAGE_VERSION, PACKAGE_...
+#include "endpoint.h"                       // for Endpoints, Node, Endpoint
+#include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
+#include "exception.h"                      // for Exception, SerialisationE...
+#include "guid/guid.h"                      // for GuidGenerator, Guid
+#include "io_utils.h"                       // for close, write, unlink
+#include "log.h"                            // for Log, L_CALL, L_ERR, LOG_D...
+#include "manager.h"                        // for XapiandManager, XapiandMa...
+#include "msgpack.h"                        // for MsgPack, object::object, ...
+#include "multivalue/aggregation.h"         // for AggregationMatchSpy
+#include "multivalue/aggregation_metric.h"  // for AGGREGATION_AGGS
+#include "queue.h"                          // for Queue
+#include "rapidjson/document.h"             // for Document
+#include "schema.h"                         // for Schema
+#include "serialise.h"                      // for boolean
+#include "servers/server.h"                 // for XapiandServer, XapiandSer...
+#include "servers/server_http.h"            // for HttpServer
+#include "threadpool.h"                     // for ThreadPool
+#include "utils.h"                          // for b_time, cont_time_t, delt...
+#include "xxh64.hpp"                        // for xxh64
 
-#include <regex>
-#include <unistd.h>
-
-#include <arpa/inet.h>
-#include <sysexits.h>
-#include <sys/socket.h>
 
 #define RESPONSE_MESSAGE "_message"
 #define RESPONSE_STATUS  "_status"
@@ -211,7 +229,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 
 	L_CONN(this, "New Http Client {sock:%d}, %d client(s) of a total of %d connected.", sock.load(), http_clients, total_clients);
 
-	response_log = LOG_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
+	response_log = L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
 	idle = true;
 
 	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
@@ -243,8 +261,8 @@ HttpClient::~HttpClient()
 		}
 	}
 
-	if (!response_log.load()->LOG_DELAYED_CLEAR()) {
-		LOG(LOG_NOTICE, LIGHT_RED, this, "Client killed!");
+	if (!response_log.load()->clear()) {
+		L_WARNING(this, "Client killed!");
 	}
 
 	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)", http_clients);
@@ -259,9 +277,9 @@ HttpClient::on_read(const char* buf, ssize_t received)
 	unsigned init_state = parser.state;
 
 	if (received <= 0) {
-		response_log.load()->LOG_DELAYED_CLEAR();
+		response_log.load()->clear();
 		if (received < 0 || init_state != 18 || !write_queue.empty()) {
-			LOG(LOG_ERR, LIGHT_RED, this, "Client unexpectedly closed the other end! [%d]", init_state);
+			L_WARNING(this, "Client unexpectedly closed the other end! [%d]", init_state);
 			destroy();  // Handle error. Just close the connection.
 			detach();
 		}
@@ -272,8 +290,8 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		idle = false;
 		request_begining = false;
 		request_begins = std::chrono::system_clock::now();
-		response_log.load()->LOG_DELAYED_CLEAR();
-		response_log = LOG_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...").release();
+		response_log.load()->clear();
+		response_log = L_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...").release();
 		response_logged = false;
 	}
 
@@ -284,8 +302,8 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		if (final_state == init_state) {
 			if (received == 1 and buf[0] == '\n') {  // ignore '\n' request
 				request_begining = true;
-				response_log.load()->LOG_DELAYED_CLEAR();
-				response_log = LOG_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
+				response_log.load()->clear();
+				response_log = L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
 				idle = true;
 				return;
 			}
@@ -501,8 +519,8 @@ HttpClient::_run()
 
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
-	response_log.load()->LOG_DELAYED_CLEAR();
-	response_log = LOG_DELAYED(true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long...").release();
+	response_log.load()->clear();
+	response_log = L_DELAYED(true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long...").release();
 
 	std::string error;
 	int error_code = 0;
@@ -1442,7 +1460,7 @@ HttpClient::url_resolve()
 
 
 void
-HttpClient::endpoints_maker(duration<double, std::milli> timeout)
+HttpClient::endpoints_maker(std::chrono::duration<double, std::milli> timeout)
 {
 	endpoints.clear();
 
@@ -1454,7 +1472,7 @@ HttpClient::endpoints_maker(duration<double, std::milli> timeout)
 
 
 void
-HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
+HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 {
 	bool has_node_name = false;
 
@@ -1766,9 +1784,9 @@ HttpClient::clean_http_request()
 	auto request_delta = delta_string(request_begins, response_ends);
 	auto response_delta = delta_string(response_begins, response_ends);
 
-	response_log.load()->LOG_DELAYED_CLEAR();
+	response_log.load()->clear();
 	if (parser.http_errno) {
-		if (!response_logged.exchange(true)) LOG(LOG_ERR, LIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
+		if (!response_logged.exchange(true)) LOG(true, LOG_ERR, LIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
 	} else {
 		int priority = LOG_DEBUG;
 		const char* color = WHITE;
@@ -1783,7 +1801,7 @@ HttpClient::clean_http_request()
 			color = LIGHT_MAGENTA;
 			priority = LOG_ERR;
 		}
-		if (!response_logged.exchange(true)) LOG(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %s %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, bytes_string(response_size).c_str(), request_delta.c_str());
+		if (!response_logged.exchange(true)) LOG(true, priority, color, this, "\"%s %s HTTP/%d.%d\" %d %s %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, bytes_string(response_size).c_str(), request_delta.c_str());
 	}
 
 	path.clear();

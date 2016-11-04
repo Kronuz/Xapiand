@@ -22,10 +22,22 @@
 
 #include "query.h"
 
-#include "booleanParser/BooleanParser.h"
-#include "booleanParser/SyntacticException.h"
-#include "field_parser.h"
-#include "multivalue/range.h"
+#include <tuple>                               // for get, tuple
+#include <utility>                             // for pair
+
+#include "booleanParser/BooleanParser.h"       // for BooleanTree
+#include "booleanParser/LexicalException.h"    // for LexicalException
+#include "booleanParser/SyntacticException.h"  // for SyntacticException
+#include "booleanParser/Token.h"               // for TokenType, Token, Toke...
+#include "database.h"                          // for Database
+#include "database_utils.h"                    // for prefixed, query_field_t
+#include "exception.h"                         // for ClientError, MSG_Clien...
+#include "field_parser.h"                      // for FieldParser
+#include "log.h"                               // for Log, L_SEARCH, L_CALL
+#include "multivalue/range.h"                  // for MultipleValueRange
+#include "schema.h"                            // for required_spc_t, FieldType
+#include "serialise.h"                         // for _float, boolean, date
+#include "utils.h"                             // for lower_string
 
 
 Query::Query(std::shared_ptr<Schema> schema_, std::shared_ptr<Database> database_)

@@ -69,11 +69,15 @@
 
 #pragma once
 
-#include <string>
-#include <stack>
-#include <vector>
-#include <unordered_map>
-#include <memory>  // for std::unique_ptr
+#include "xapiand.h"
+
+#include <stddef.h>       // for size_t
+#include <iosfwd>         // for wstring
+#include <memory>         // for unique_ptr
+#include <stack>          // for stack
+#include <string>         // for string
+#include <unordered_map>  // for unordered_map
+#include <vector>         // for vector
 
 
 namespace NameGen {

@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include <xapian.h>
+#include "xapiand.h"
 
-#include <string>
-#include <vector>
+#include <xapian.h>  // for MatchSpy, ValueCountMatchSpy, valueno
+#include <string>    // for string
 
 
 /// Class for counting the frequencies of values in the matching documents.

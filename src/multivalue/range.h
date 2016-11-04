@@ -22,7 +22,14 @@
 
 #pragma once
 
-#include "../schema.h"
+#include "xapiand.h"
+
+#include <xapian.h>         // for docid, ValuePostingSource, valueno, Query
+#include <string>           // for string
+
+#include "msgpack.h"        // for MsgPack
+
+struct required_spc_t;
 
 
 // New Match Decider for multiple value range.

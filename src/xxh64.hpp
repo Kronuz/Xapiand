@@ -26,6 +26,7 @@
 
 #include <string>
 #include <cstdint>
+
 #include "lz4/xxhash.h"
 
 class xxh64 {

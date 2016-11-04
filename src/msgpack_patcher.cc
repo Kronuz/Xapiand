@@ -22,9 +22,10 @@
 
 #include "msgpack_patcher.h"
 
-#include "exception.h"
-#include "log.h"
-#include "utils.h"
+#include <exception>    // for exception
+
+#include "exception.h"  // for ClientError, MSG_ClientError, Error, MSG_Error
+#include "utils.h"      // for repr, stox
 
 
 const std::unordered_map<std::string, dispatch_patch_op> map_dispatch_patch_op({

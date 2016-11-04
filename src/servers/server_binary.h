@@ -22,14 +22,12 @@
 
 #pragma once
 
-#include "server_base.h"
+#include "xapiand.h"
+
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "config.h"
-
-#include "../database.h"
-#include "../threadpool.h"
+#include "server_base.h"
 
 class Binary;
 

@@ -22,10 +22,30 @@
 
 #pragma once
 
-#include "aggregation.h"
-#include "string_metric.h"
+#include "xapiand.h"
 
-#include <limits>
+#include <math.h>                           // for fmod
+#include <sys/types.h>                      // for int64_t, uint64_t
+#include <xapian.h>                         // for Document, valueno
+#include <cstdint>                          // for int64_t, uint64_t
+#include <limits>                           // for numeric_limits
+#include <memory>                           // for shared_ptr, allocator
+#include <stdexcept>                        // for out_of_range
+#include <string>                           // for string, to_string, hash
+#include <tuple>                            // for forward_as_tuple
+#include <unordered_map>                    // for unordered_map, __hash_map...
+#include <utility>                          // for pair, make_pair, piecewis...
+#include <vector>                           // for vector
+
+#include "aggregation.h"                    // for Aggregation
+#include "msgpack.h"                        // for MsgPack, object::object, ...
+#include "multivalue/aggregation_metric.h"  // for AGGREGATION_INTERVAL, AGG...
+#include "multivalue/exception.h"           // for AggregationError, MSG_Agg...
+#include "serialise.h"                      // for _float
+#include "utils.h"                          // for format_string
+
+class Schema;
+class StringSet;
 
 
 class BucketAggregation : public HandledSubAggregation {

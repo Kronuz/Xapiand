@@ -22,9 +22,22 @@
 
 #include "range.h"
 
-#include "generate_terms.h"
-#include "geospatialrange.h"
-#include "utils.h"
+#include <sys/types.h>                     // for int64_t, uint64_t
+#include <stdexcept>                       // for out_of_range
+#include <type_traits>                     // for decay_t, enable_if_t, is_i...
+#include <vector>                          // for vector
+
+#include "datetime.h"                      // for timestamp
+#include "exception.h"                     // for MSG_QueryParserError, Quer...
+#include "generate_terms.h"                // for date, geo, numeric
+#include "geo/wkt_parser.h"                // for GeoSpatial, EWKT_Parser
+#include "geospatialrange.h"               // for GeoSpatialRange
+#include "length.h"                        // for serialise_length
+#include "schema.h"                        // for required_spc_t, FieldType
+#include "serialise.h"                     // for MsgPack, cast, _float, int...
+#include "sortable_serialise.h"            // for sortable_serialise, sortab...
+#include "stl_serialise.h"                 // for StringList, RangeList
+#include "utils.h"                         // for stox
 
 
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>

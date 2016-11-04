@@ -24,9 +24,15 @@
 
 #include "xapiand.h"
 
-#include "tcp_base.h"
+#include <stdio.h>     // for snprintf
+#include <memory>      // for shared_ptr
+#include <string>      // for string
 
-#include "server_http.h"
+#include "tcp_base.h"  // for BaseTCP
+
+class HttpServer;
+class XapiandManager;
+
 
 #define XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION 1
 #define XAPIAND_HTTP_PROTOCOL_MINOR_VERSION 1

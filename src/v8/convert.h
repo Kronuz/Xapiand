@@ -22,17 +22,18 @@
 
 #pragma once
 
-#if XAPIAND_V8
+#include "xapiand.h"
 
-#include "../msgpack.h"
-#include "exception.h"
+#if XAPIAND_V8
 
 #include <v8.h>
 #include <libplatform/libplatform.h>
 
+#include "msgpack.h"
+#include "exception.h"
+
 
 namespace v8pp {
-
 
 // Generic converter.
 template <typename T, typename Enabler = void>

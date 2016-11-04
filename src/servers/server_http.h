@@ -22,9 +22,16 @@
 
 #pragma once
 
-#include "server_base.h"
+#include "xapiand.h"
+
+#include <stdio.h>        // for snprintf
+#include <memory>         // for shared_ptr
+#include <string>         // for string
+
+#include "server_base.h"  // for BaseServer
 
 class Http;
+class XapiandServer;
 
 
 // Http Server

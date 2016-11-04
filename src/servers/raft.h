@@ -24,9 +24,11 @@
 
 #include "xapiand.h"
 
+
 #ifdef XAPIAND_CLUSTERING
 
-#include "udp_base.h"
+#include "udp_base.h"  // for BaseUDP
+
 
 // Values in seconds
 #define HEARTBEAT_LEADER_MIN 0.150

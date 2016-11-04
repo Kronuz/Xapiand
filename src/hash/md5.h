@@ -21,8 +21,10 @@
 
 #pragma once
 
-#include <string>
+#include <stddef.h>     // for size_t
+#include <sys/types.h>  // for uint32_t, uint64_t, uint8_t
 #include <cstdint>
+#include <string>       // for string
 
 
 /*

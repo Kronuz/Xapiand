@@ -22,11 +22,13 @@
 
 #pragma once
 
-#include "server_base.h"
+#include "xapiand.h"
+
 
 #ifdef XAPIAND_CLUSTERING
 
 #include "raft.h"
+#include "server_base.h"
 
 
 // Raft Server

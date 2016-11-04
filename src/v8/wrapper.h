@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "xapiand.h"
+
 #if XAPIAND_V8
 
 #include "convert.h"

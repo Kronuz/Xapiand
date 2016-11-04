@@ -24,15 +24,15 @@
 
 #include "xapiand.h"
 
+
 #ifdef XAPIAND_CLUSTERING
 
 #include "database.h"
+#include "ev/ev++.h"
+#include "length.h"
+#include "manager.h"
 #include "threadpool.h"
 #include "worker.h"
-#include "manager.h"
-#include "length.h"
-
-#include "ev/ev++.h"
 
 
 class XapiandReplicator : public Task<>, public Worker {

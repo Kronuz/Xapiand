@@ -22,9 +22,10 @@
 
 #include "cartesian.h"
 
-#include <cmath>
-#include <unordered_map>
-#include <vector>
+#include <cmath>          // for sqrt, atan2, cos, sin, abs, pow
+#include <cstdio>         // for snprintf
+#include <stdexcept>      // for out_of_range
+#include <unordered_map>  // for unordered_map, operator!=, __hash_map_const...
 
 
 /*

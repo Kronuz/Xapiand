@@ -22,13 +22,27 @@
 
 #pragma once
 
-#include "../schema.h"
-#include "exception.h"
+#include "xapiand.h"
 
-#include <cfloat>
+#include <xapian.h>            // for valueno
+#include <algorithm>           // for nth_element, max_element
+#include <cfloat>              // for DBL_MAX, DBL_MIN
+#include <cmath>               // for sqrt
 #include <cstdio>
+#include <cstring>             // for size_t
+#include <memory>              // for shared_ptr, allocator
+#include <stdexcept>           // for out_of_range
+#include <string>              // for string
+#include <unordered_map>       // for __hash_map_iterator, unordered_map
+#include <utility>             // for pair
+#include <vector>              // for vector
 
-#include <xapian.h>
+#include "exception.h"         // for AggregationError, MSG_AggregationError
+#include "msgpack.h"           // for MsgPack, object::object
+#include "serialise.h"         // for _float, boolean, geo, integer, positive
+#include "stl_serialise.h"     // for StringList
+
+class Schema;
 
 constexpr const char AGGREGATION_AGGS[]             = "_aggregations";
 constexpr const char AGGREGATION_DOC_COUNT[]        = "_doc_count";
@@ -343,8 +357,8 @@ public:
 };
 
 
-class MetricStats;
 class MetricExtendedStats;
+class MetricStats;
 
 
 class MetricMin : public HandledSubAggregation {

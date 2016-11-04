@@ -22,10 +22,29 @@
 
 #include "schema.h"
 
-#include "geo/wkt_parser.h"
-#include "manager.h"
-#include "multivalue/generate_terms.h"
-#include "utils.h"
+#include <ctype.h>                         // for tolower
+#include <algorithm>                       // for move
+#include <cmath>                           // for pow
+#include <cstdint>                         // for uint64_t
+#include <cstring>                         // for size_t, strlen
+#include <functional>                      // for ref, reference_wrapper
+#include <ostream>                         // for operator<<, basic_ostream
+#include <set>                             // for __tree_const_iterator, set
+#include <stdexcept>                       // for out_of_range
+#include <type_traits>                     // for remove_reference<>::type
+#include <unordered_set>                   // for unordered_set
+
+#include "database_utils.h"                // for get_prefix, is_valid, RESE...
+#include "datetime.h"                      // for isDate, tm_t
+#include "exception.h"                     // for ClientError, MSG_ClientError
+#include "geo/wkt_parser.h"                // for EWKT_Parser
+#include "log.h"                           // for L_CALL
+#include "manager.h"                       // for XapiandManager, XapiandMan...
+#include "msgpack.h"                       // for MsgPack, object::object, t...
+#include "multivalue/generate_terms.h"     // for integer, geo, date, positive
+#include "serialise.h"                     // for type
+#include "stl_serialise.h"                 // for StringSet
+#include "utils.h"                         // for repr, toUType, lower_string
 
 
 /*
@@ -106,6 +125,77 @@ static const std::unordered_map<std::string, FieldType> map_type({
 static const std::vector<uint64_t> def_accuracy_num({ 100, 1000, 10000, 100000, 1000000, 10000000 });
 static const std::vector<uint64_t> def_accuracy_date({ toUType(UnitTime::HOUR), toUType(UnitTime::DAY), toUType(UnitTime::MONTH), toUType(UnitTime::YEAR), toUType(UnitTime::DECADE), toUType(UnitTime::CENTURY) });
 static const std::vector<uint64_t> def_accuracy_geo({ 0, 5, 10, 15, 20, 25 });
+
+
+/*
+ * Helper functions to print readable form of enums
+ */
+
+inline static std::string readable_acc_date(UnitTime unit) noexcept {
+	switch (unit) {
+		case UnitTime::SECOND:     return "second";
+		case UnitTime::MINUTE:     return "minute";
+		case UnitTime::HOUR:       return "hour";
+		case UnitTime::DAY:        return "day";
+		case UnitTime::MONTH:      return "month";
+		case UnitTime::YEAR:       return "year";
+		case UnitTime::DECADE:     return "decade";
+		case UnitTime::CENTURY:    return "century";
+		case UnitTime::MILLENNIUM: return "millennium";
+		default:                   return "UnitTime::UNKNOWN";
+	}
+}
+
+
+inline static std::string readable_stem_strategy(StemStrategy stem) noexcept {
+	switch (stem) {
+		case StemStrategy::STEM_NONE:   return "stem_none";
+		case StemStrategy::STEM_SOME:   return "stem_some";
+		case StemStrategy::STEM_ALL:    return "stem_all";
+		case StemStrategy::STEM_ALL_Z:  return "stem_all_z";
+		default:                        return "StemStrategy::UNKNOWN";
+	}
+}
+
+
+inline static std::string readable_index(TypeIndex index) noexcept {
+	switch (index) {
+		case TypeIndex::NONE:                       return "none";
+		case TypeIndex::FIELD_TERMS:                return "field_terms";
+		case TypeIndex::FIELD_VALUES:               return "field_values";
+		case TypeIndex::FIELD_ALL:                  return "field_all";
+		case TypeIndex::GLOBAL_TERMS:               return "global_terms";
+		case TypeIndex::TERMS:                      return "terms";
+		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES:  return "global_terms,field_values";
+		case TypeIndex::GLOBAL_TERMS_FIELD_ALL:     return "global_terms,field_all";
+		case TypeIndex::GLOBAL_VALUES:              return "global_values";
+		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS:  return "global_values,field_terms";
+		case TypeIndex::VALUES:                     return "values";
+		case TypeIndex::GLOBAL_VALUES_FIELD_ALL:    return "global_values,field_all";
+		case TypeIndex::GLOBAL_ALL:                 return "global_all";
+		case TypeIndex::GLOBAL_ALL_FIELD_TERMS:     return "global_all,field_terms";
+		case TypeIndex::GLOBAL_ALL_FIELD_VALUES:    return "global_all,field_values";
+		case TypeIndex::ALL:                        return "all";
+		default:                                    return "TypeIndex::UNKNOWN";
+	}
+}
+
+
+inline static std::string readable_type(const std::array<FieldType, 3>& sep_types) {
+	std::string result;
+	if (sep_types[0] != FieldType::EMPTY) {
+		result += Serialise::type(sep_types[0]);
+	}
+	if (sep_types[1] != FieldType::EMPTY) {
+		if (!result.empty()) result += "/";
+		result += Serialise::type(sep_types[1]);
+	}
+	if (sep_types[2] != FieldType::EMPTY) {
+		if (!result.empty()) result += "/";
+		result += Serialise::type(sep_types[2]);
+	}
+	return result;
+}
 
 
 /*
@@ -3664,6 +3754,30 @@ Schema::readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack& properties)
 	for (auto& prop_prefix : prop_acc_prefix) {
 		readable_prefix(prop_prefix, properties);
 	}
+}
+
+
+std::shared_ptr<const MsgPack>
+Schema::get_modified_schema()
+{
+	L_CALL(this, "Schema::get_modified_schema()");
+
+	if (mut_schema) {
+		auto schema = std::shared_ptr<const MsgPack>(mut_schema.release());
+		schema->lock();
+		return schema;
+	} else {
+		return std::shared_ptr<const MsgPack>();
+	}
+}
+
+
+std::shared_ptr<const MsgPack>
+Schema::get_const_schema() const
+{
+	L_CALL(this, "Schema::get_const_schema()");
+
+	return schema;
 }
 
 

@@ -22,14 +22,15 @@
 
 #pragma once
 
-#include "config.h"
+#include "xapiand.h"               // for HAVE_CLOCK_GETTIME
 
 #include <sys/time.h>
+#include <time.h>                  // for clock_gettime, CLOCK_REALTIME
 
 
 #ifdef __linux__
 
-#include <time.h>
+#include <time.h>                  // for clock_gettime, CLOCK_REALTIME
 #include <unistd.h>
 
 #endif /*__linux__*/
@@ -38,13 +39,13 @@
 
 #ifndef HAVE_CLOCK_GETTIME
 
-#include <sys/resource.h>
-#include <mach/mach.h>
-#include <mach/clock.h>
-#include <mach/mach_time.h>
 #include <errno.h>
-#include <unistd.h>
+#include <mach/clock.h>
+#include <mach/mach.h>
+#include <mach/mach_time.h>
 #include <sched.h>
+#include <sys/resource.h>
+#include <unistd.h>
 
 #define CLOCK_REALTIME 0
 #define CLOCK_MONOTONIC 4

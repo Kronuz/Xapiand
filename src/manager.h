@@ -24,18 +24,18 @@
 
 #include "xapiand.h"
 
+#include <list>
+#include <mutex>
+#include <regex>
+#include <unordered_map>
+
+#include "cppcodec/base64_default_url_unpadded.hpp"
 #include "database.h"
 #include "endpoint_resolver.h"
 #include "ev/ev++.h"
+#include "length.h"
 #include "threadpool.h"
 #include "worker.h"
-#include "length.h"
-#include "cppcodec/base64_default_url_unpadded.hpp"
-
-#include <list>
-#include <unordered_map>
-#include <mutex>
-#include <regex>
 
 #define UNKNOWN_REGION -1
 
@@ -216,7 +216,7 @@ public:
 	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif
 
-	bool resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps=1, duration<double, std::milli> timeout=1s);
+	bool resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps=1, std::chrono::duration<double, std::milli> timeout=1s);
 
 	void server_status(MsgPack& stats);
 	void get_stats_time(MsgPack& stats, const std::string& time_req);

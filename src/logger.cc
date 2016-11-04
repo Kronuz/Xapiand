@@ -20,14 +20,21 @@
  * IN THE SOFTWARE.
  */
 
-#include "log.h"
+#include "logger.h"
 
-#include "datetime.h"
-#include "utils.h"
+#include <stdarg.h>      // for va_list, va_end, va_start
+#include <stdio.h>       // for fileno, vsnprintf, stderr
+#include <unistd.h>      // for isatty
+#include <ctime>         // for time_t
+#include <functional>    // for ref
+#include <iostream>      // for cerr
+#include <regex>         // for regex_replace, regex
+#include <stdexcept>     // for out_of_range
+#include <system_error>  // for system_error
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <unistd.h>
+#include "datetime.h"    // for to_string
+#include "exception.h"   // for traceback
+#include "utils.h"       // for get_thread_name
 
 #define BUFFER_SIZE (10 * 1024)
 #define STACKED_SEP "<sep>"

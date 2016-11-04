@@ -22,6 +22,8 @@
 
 #include "field_parser.h"
 
+#include <ctype.h>  // for isspace
+
 
 #define DOUBLEDOTS ':'
 #define DOUBLEQUOTE '"'

@@ -22,41 +22,41 @@
 
 #pragma once
 
-#include "database_utils.h"
-#include "endpoint.h"
-#include "log.h"
-#include "lru.h"
-#include "queue.h"
-#include "threadpool.h"
-#include "storage.h"
-#include "atomic_shared_ptr.h"
+#include "xapiand.h"
 
-#include <xapian/matchspy.h>
+#include <sys/types.h>          // for uint32_t, uint8_t, ssize_t
+#include <xapian.h>             // for docid, termcount, Document, ExpandDecider
+#include <atomic>               // for atomic_bool
+#include <chrono>               // for system_clock, system_clock::time_point
+#include <cstring>              // for size_t
+#include <list>                 // for __list_iterator, operator!=
+#include <memory>               // for shared_ptr, enable_shared_from_this, mak...
+#include <mutex>                // for mutex, condition_variable, unique_lock
+#include <stdexcept>            // for range_error
+#include <string>               // for string, operator!=
+#include <type_traits>          // for forward
+#include <unordered_map>        // for unordered_map
+#include <unordered_set>        // for unordered_set
+#include <utility>              // for pair, make_pair
+#include <vector>               // for vector
 
-#include <algorithm>
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
-#include <memory>
-#include <mutex>
-#include <regex>
-#include <unordered_map>
-#include <unordered_set>
-
-
-#define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))
-
-
-using namespace std::chrono;
-
-
-struct WalHeader;
-
+#include "atomic_shared_ptr.h"  // for atomic_shared_ptr
+#include "database_utils.h"     // for DB_WRITABLE
+#include "endpoint.h"           // for Endpoints, Endpoint
+#include "queue.h"              // for Queue, QueueSet
+#include "storage.h"            // for STORAGE_BLOCK_SIZE, MSG_StorageCorruptVo...
+#include "threadpool.h"         // for TaskQueue
+#include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
 
 class Database;
 class DatabasePool;
-class DatabasesLRU;
 class DatabaseQueue;
+class DatabasesLRU;
+class MsgPack;
+struct WalHeader;
+
+
+#define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))
 
 
 #if XAPIAND_DATABASE_WAL
@@ -161,17 +161,8 @@ public:
 
 	Database* database;
 
-	DatabaseWAL(Database* database_)
-		: Storage<WalHeader, WalBinHeader, WalBinFooter>(this),
-		  modified(false),
-		  validate_uuid(true),
-		  database(database_) {
-		L_OBJ(this, "CREATED DATABASE WAL!");
-	}
-
-	~DatabaseWAL() {
-		L_OBJ(this, "DELETED DATABASE WAL!");
-	}
+	DatabaseWAL(Database* database_);
+	~DatabaseWAL();
 
 	bool open_current(const std::string& path, bool current);
 
@@ -197,7 +188,7 @@ public:
 	Endpoints endpoints;
 	int flags;
 	size_t hash;
-	system_clock::time_point access_time;
+	std::chrono::system_clock::time_point access_time;
 	bool modified;
 	long long mastery_level;
 	uint32_t checkout_revision;
@@ -282,29 +273,11 @@ public:
 
 class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
 public:
-	DatabasesLRU(ssize_t max_size) : LRU(max_size) { }
+	DatabasesLRU(ssize_t max_size);
 
-	std::shared_ptr<DatabaseQueue>& operator[] (size_t key) {
-		try {
-			return at(key);
-		} catch (std::range_error) {
-			return insert_and([](std::shared_ptr<DatabaseQueue> & val) {
-				if (val->persistent || val->size() < val->count || val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
-					return lru::DropAction::renew;
-				} else {
-					return lru::DropAction::drop;
-				}
-			}, std::make_pair(key, std::make_shared<DatabaseQueue>()));
-		}
-	}
+	std::shared_ptr<DatabaseQueue>& operator[] (size_t key);
 
-	void finish() {
-		L_CALL(this, "DatabasesLRU::finish()");
-
-		for (iterator it = begin(); it != end(); ++it) {
-			it->second->finish();
-		}
-	}
+	void finish();
 };
 
 

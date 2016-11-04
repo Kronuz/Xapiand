@@ -22,10 +22,13 @@
 
 #pragma once
 
-#include "exception.h"
+#include "xapiand.h"
 
-#include <cstdio>
-#include <string>
+#include <cstdio>       // for size_t
+#include <string>       // for string, allocator, operator+, basic_string
+#include <type_traits>  // for forward
+
+#include "exception.h"  // for ClientError
 
 
 class FieldParserError : public ClientError {

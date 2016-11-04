@@ -26,11 +26,13 @@ THE SOFTWARE.
 
 #pragma once
 
-#include <iostream>
-#include <vector>
-#include <sstream>
-#include <string>
+#include "xapiand.h"
+
 #include <iomanip>
+#include <iostream>  // for ostream
+#include <sstream>
+#include <string>    // for string
+#include <vector>    // for vector
 
 #ifdef GUID_ANDROID
 #include <jni.h>

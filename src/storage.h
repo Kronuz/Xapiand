@@ -24,14 +24,15 @@
 
 #include "xapiand.h"
 
-#include "async_fsync.h"
-#include "io_utils.h"
-#include "lz4_compressor.h"
-
 #include <cassert>
 #include <limits>
 #include <memory>
 #include <unistd.h>
+
+#include "async_fsync.h"
+#include "io_utils.h"
+#include "lz4_compressor.h"
+
 
 #define STORAGE_MAGIC 0x02DEBC47
 #define STORAGE_BIN_HEADER_MAGIC 0x2A

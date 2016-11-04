@@ -24,8 +24,9 @@
 #ifndef MSGPACK_TYPE_RAPIDJSON_DOCUMENT_HPP__
 #define MSGPACK_TYPE_RAPIDJSON_DOCUMENT_HPP__
 
-#include "../msgpack.hpp"
-#include "../rapidjson/document.h"
+#include "msgpack.hpp"           // for msgpack::object
+#include "rapidjson/document.h"  // for GenericDocument
+
 
 namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { namespace adaptor {
 

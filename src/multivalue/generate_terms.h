@@ -22,13 +22,22 @@
 
 #pragma once
 
-#include "../database_utils.h"
-#include "../datetime.h"
-#include "../geo/wkt_parser.h"
+#include "xapiand.h"
 
+#include <stddef.h>          // for size_t
+#include <sys/types.h>       // for uint64_t, int64_t
+#include <xapian.h>          // for Query, Query::op::OP_OR, Query::op::OP_AND
+#include <cstdint>           // for uint64_t
+#include <string>            // for string
+#include <type_traits>       // for decay_t, enable_if_t, is_integral
 #include <unordered_set>
-#include <vector>
-#include <xapian.h>
+#include <vector>            // for vector, allocator
+
+#include "database_utils.h"  // for prefixed
+#include "geo/htm.h"         // for SIZE_BITS_ID, range_t (ptr only)
+#include "serialise.h"       // for serialise
+
+class RangeList;
 
 
 constexpr size_t MAX_TERMS            = 50;

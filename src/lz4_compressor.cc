@@ -22,6 +22,9 @@
 
 #include "lz4_compressor.h"
 
+#include <stdio.h>   // for SEEK_SET
+#include <string.h>  // for size_t, memcpy
+
 
 static void read_uint16(const void* blockStream, uint16_t* i) {
 	memcpy(i, blockStream, sizeof(uint16_t));

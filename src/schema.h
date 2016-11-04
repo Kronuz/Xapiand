@@ -22,16 +22,25 @@
 
 #pragma once
 
-#include "database_utils.h"
-#include "log.h"
-#include "lru.h"
-#include "msgpack.h"
-#include "serialise.h"
-#include "stl_serialise.h"
-#include "utils.h"
-#include "v8/v8pp.h"
+#include "xapiand.h"
 
-#include <future>
+#include <stddef.h>                                       // for size_t
+#include <sys/types.h>                                    // for uint8_t
+#include <xapian.h>                                       // for QueryParser
+#include <array>                                          // for array
+#include <future>                                         // for future
+#include <memory>                                         // for shared_ptr
+#include <string>                                         // for string
+#include <tuple>                                          // for tuple
+#include <unordered_map>                                  // for unordered_map
+#include <utility>                                        // for pair
+#include <vector>                                         // for vector
+
+#include "database_utils.h"
+#include "geo/htm.h"                                      // for HTM_MIN_ERROR
+#include "msgpack.h"                                      // for MsgPack, MS...
+
+class StringSet;
 
 #define DEFAULT_STEM_STRATEGY StemStrategy::STEM_SOME
 #define DEFAULT_LANGUAGE      "en"
@@ -143,73 +152,6 @@ enum class FieldType : uint8_t {
 	OBJECT        =  'O',
 	EMPTY         =  ' ',
 };
-
-
-inline static std::string readable_acc_date(UnitTime unit) noexcept {
-	switch (unit) {
-		case UnitTime::SECOND:     return "second";
-		case UnitTime::MINUTE:     return "minute";
-		case UnitTime::HOUR:       return "hour";
-		case UnitTime::DAY:        return "day";
-		case UnitTime::MONTH:      return "month";
-		case UnitTime::YEAR:       return "year";
-		case UnitTime::DECADE:     return "decade";
-		case UnitTime::CENTURY:    return "century";
-		case UnitTime::MILLENNIUM: return "millennium";
-		default:                   return "UnitTime::UNKNOWN";
-	}
-}
-
-
-inline static std::string readable_stem_strategy(StemStrategy stem) noexcept {
-	switch (stem) {
-		case StemStrategy::STEM_NONE:   return "stem_none";
-		case StemStrategy::STEM_SOME:   return "stem_some";
-		case StemStrategy::STEM_ALL:    return "stem_all";
-		case StemStrategy::STEM_ALL_Z:  return "stem_all_z";
-		default:                        return "StemStrategy::UNKNOWN";
-	}
-}
-
-
-inline static std::string readable_index(TypeIndex index) noexcept {
-	switch (index) {
-		case TypeIndex::NONE:                       return "none";
-		case TypeIndex::FIELD_TERMS:                return "field_terms";
-		case TypeIndex::FIELD_VALUES:               return "field_values";
-		case TypeIndex::FIELD_ALL:                  return "field_all";
-		case TypeIndex::GLOBAL_TERMS:               return "global_terms";
-		case TypeIndex::TERMS:                      return "terms";
-		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES:  return "global_terms,field_values";
-		case TypeIndex::GLOBAL_TERMS_FIELD_ALL:     return "global_terms,field_all";
-		case TypeIndex::GLOBAL_VALUES:              return "global_values";
-		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS:  return "global_values,field_terms";
-		case TypeIndex::VALUES:                     return "values";
-		case TypeIndex::GLOBAL_VALUES_FIELD_ALL:    return "global_values,field_all";
-		case TypeIndex::GLOBAL_ALL:                 return "global_all";
-		case TypeIndex::GLOBAL_ALL_FIELD_TERMS:     return "global_all,field_terms";
-		case TypeIndex::GLOBAL_ALL_FIELD_VALUES:    return "global_all,field_values";
-		case TypeIndex::ALL:                        return "all";
-		default:                                    return "TypeIndex::UNKNOWN";
-	}
-}
-
-
-inline static std::string readable_type(const std::array<FieldType, 3>& sep_types) {
-	std::string result;
-	if (sep_types[0] != FieldType::EMPTY) {
-		result += Serialise::type(sep_types[0]);
-	}
-	if (sep_types[1] != FieldType::EMPTY) {
-		if (!result.empty()) result += "/";
-		result += Serialise::type(sep_types[1]);
-	}
-	if (sep_types[2] != FieldType::EMPTY) {
-		if (!result.empty()) result += "/";
-		result += Serialise::type(sep_types[2]);
-	}
-	return result;
-}
 
 
 inline static Xapian::TermGenerator::stem_strategy getGeneratorStrategy(StemStrategy stem_strategy) noexcept {
@@ -619,26 +561,9 @@ public:
 
 	~Schema() = default;
 
+	std::shared_ptr<const MsgPack> get_modified_schema();
 
-	auto get_modified_schema() {
-		L_CALL(this, "Schema::get_modified_schema()");
-
-		if (mut_schema) {
-			auto schema = std::shared_ptr<const MsgPack>(mut_schema.release());
-			schema->lock();
-			return schema;
-		} else {
-			return std::shared_ptr<const MsgPack>();
-		}
-	}
-
-
-	auto get_const_schema() const {
-		L_CALL(this, "Schema::get_const_schema()");
-
-		return schema;
-	}
-
+	std::shared_ptr<const MsgPack> get_const_schema() const;
 
 	/*
 	 * Transforms schema into json string.

@@ -22,12 +22,20 @@
 
 #include "udp_base.h"
 
-#include "server.h"
-#include "length.h"
+#include <arpa/inet.h>              // for inet_addr, htonl, htons
+#include <string.h>                 // for strerror, memset
+#include <sys/_types/_u_int32_t.h>  // for u_int32_t
+#include <sys/errno.h>              // for __error, errno
+#include <sys/fcntl.h>              // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
+#include <sys/socket.h>             // for setsockopt, bind, recvfrom, sendto
+#include <sysexits.h>               // for EX_CONFIG
 
-#include <sysexits.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include "exception.h"              // for MSG_NetworkError, NetworkError
+#include "io_utils.h"               // for close
+#include "length.h"                 // for serialise_string, unserialise_string
+#include "log.h"                    // for Log, L_ERR, L_OBJ, L_CRIT, L_CONN
+#include "manager.h"                // for XapiandManager, sig_exit, Xapiand...
+#include "utils.h"                  // for ignored_errorno
 
 
 BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& description_, uint16_t version_, const std::string& group_, int tries_)

@@ -24,16 +24,17 @@
 
 #include "xapiand.h"
 
-#include "worker.h"
-#include "threadpool.h"
+#include <stdio.h>        // for snprintf
+#include <time.h>         // for time_t
+#include <atomic>         // for atomic, atomic_bool
+#include <chrono>         // for time_point, system_clock
+#include <memory>         // for shared_ptr
+#include <mutex>          // for mutex, condition_variable
+#include <string>         // for string
+#include <unordered_map>  // for unordered_map
 
-#include <atomic>
-#include <memory>
-#include <chrono>
-#include <mutex>
-#include <unordered_map>
-#include <condition_variable>
-
+#include "threadpool.h"   // for Task
+#include "worker.h"       // for Worker
 
 class XapiandManager;
 

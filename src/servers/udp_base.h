@@ -22,7 +22,17 @@
 
 #pragma once
 
-#include "../manager.h"
+#include "xapiand.h"
+
+#include <netinet/in.h>  // for sockaddr_in
+#include <sys/types.h>   // for uint16_t
+#include <time.h>        // for time_t
+#include <memory>        // for shared_ptr
+#include <string>        // for string
+
+#include "worker.h"      // for Worker
+
+class XapiandManager;
 
 
 // Base class for UDP messages configuration

@@ -22,36 +22,39 @@
 
 #include "utils.h"
 
-#include "field_parser.h"
-#include "io_utils.h"
-#include "log.h"
-#include "namegen.h"
-#include "xapiand.h"
+#include <math.h>                // for powl, logl, floorl
+#include <netinet/in.h>          // for IPPROTO_TCP
+#include <netinet/tcp.h>         // for TCP_NOPUSH
+#include <stdio.h>               // for size_t, sprintf, remove, rename, snp...
+#include <string.h>              // for strerror, strcmp
+#include <sys/_types/_s_ifmt.h>  // for S_IROTH, S_IRWXG, S_IRWXU, S_IXOTH
+#include <sys/dirent.h>          // for dirent, DT_REG, DT_DIR
+#include <sys/fcntl.h>           // for O_CREAT, O_RDONLY, O_WRONLY
+#include <sys/resource.h>        // for rlim_t, rlimit, RLIMIT_NOFILE, getrl...
+#include <sys/socket.h>          // for setsockopt
+#include <sys/stat.h>            // for mkdir, stat
+#include <sys/syslimits.h>       // for PATH_MAX
+#include <sysexits.h>            // for EX_OSFILE
+#include <unistd.h>              // for close, rmdir, write, ssize_t
+#include <algorithm>             // for equal, uniform_int_distribution
+#include <cassert>               // for assert
+#include <cstdint>               // for uint64_t
+#include <functional>            // for function, __base
+#include <memory>                // for allocator
+#include <random>                // for mt19937_64, random_device, uniform_r...
+#include <ratio>                 // for ratio
+#include <string>                // for string, operator+, char_traits, basi...
 
-#include <algorithm>
-#include <cassert>
-#include <cstdlib>
-#include <mutex>
-#include <string>
-#include <thread>
-
-#include <math.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <xapian.h>
-
-#include <sys/resource.h> /* for getrlimit */
-#include <sysexits.h>  /* EX_* */
-
-#include <netinet/in.h> /* for IPPROTO_TCP */
-#include <netinet/tcp.h> /* for TCP_NODELAY */
-#include <sys/socket.h>
+#include "config.h"              // for HAVE_PTHREAD_GETNAME_NP_3, HAVE_PTHR...
+#include "exception.h"           // for Exit
+#include "field_parser.h"        // for FieldParser, FieldParserError
+#include "io_utils.h"            // for open, read
+#include "log.h"                 // for Log, L_ERR, L_WARNING, L_INFO
+#include "namegen.h"             // for Generator
 
 
 #ifdef HAVE_PTHREAD_H
-#include <pthread.h>
+#include <pthread.h>             // for pthread_getname_np, pthread_self
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>
 #endif

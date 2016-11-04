@@ -22,14 +22,15 @@
 
 #include "aggregation.h"
 
-#include "../exception.h"
-#include "../length.h"
-#include "../msgpack.h"
-#include "../stl_serialise.h"
+#include <stdexcept>                        // for out_of_range
 
-#include "aggregation_bucket.h"
-
-#include <cassert>
+#include "./aggregation_metric.h"           // for AGGREGATION_AVG, AGGREGAT...
+#include "./exception.h"                    // for AggregationError, MSG_Agg...
+#include "aggregation_bucket.h"             // for FilterAggregation, Histog...
+#include "database_utils.h"                 // for is_valid
+#include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
+#include "schema.h"                         // for Schema
+#include "stl_serialise.h"                  // for StringList
 
 
 const std::unordered_map<std::string, dispatch_aggregations> map_dispatch_aggregations({

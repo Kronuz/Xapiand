@@ -22,16 +22,28 @@
 
 #pragma once
 
+#include "xapiand.h"
 
-#include "../geo/wkt_parser.h"
-#include "../phonetic.h"
-#include "../schema.h"
-#include "../serialise.h"
-#include "../string_metric.h"
+#include <sys/types.h>                    // for int64_t, uint64_t
+#include <xapian.h>                       // for valueno, KeyMaker
+#include <cfloat>                         // for DBL_MAX
+#include <cmath>                          // for fabs
+#include <cstdlib>                        // for llabs
+#include <memory>                         // for default_delete, unique_ptr
+#include <stdexcept>                      // for out_of_range
+#include <string>                         // for string, operator==, stod
+#include <unordered_map>                  // for unordered_map
+#include <vector>                         // for vector
 
-#include <cfloat>
-#include <cmath>
-#include <cstdlib>
+#include "database_utils.h"               // for query_field_t
+#include "datetime.h"                     // for timestamp
+#include "geo/wkt_parser.h"               // for EWKT_Parser
+#include "phonetic.h"                     // for SoundexEnglish, SoundexFrench...
+#include "schema.h"                       // for required_spc_t, required_sp...
+#include "serialise.h"                    // for _float, positive, integer
+#include "stl_serialise.h"                // for CartesianUSet
+#include "string_metric.h"                // for Jaccard, Jaro, Jaro_Winkler...
+#include "utils.h"                        // for stox
 
 
 const std::string MAX_CMPVALUE(Serialise::_float(DBL_MAX));

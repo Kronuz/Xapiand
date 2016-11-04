@@ -26,6 +26,8 @@
 
 #include <unordered_map>
 
+#include "utils.h"
+
 
 static const std::unordered_map<std::string, std::string> german_accents({
 	{ "Ä",  "A" }, { "ä",  "A" }, { "Ö" , "O" }, { "ö",  "O" },

@@ -22,12 +22,17 @@
 
 #pragma once
 
-#include "exception.h"
+#include "xapiand.h"
 
-#include <chrono>
-#include <ctime>
+#include <chrono>       // for system_clock, time_point
+#include <ctime>        // for time_t
 #include <iostream>
-#include <regex>
+#include <regex>        // for regex
+#include <string>       // for string
+#include <type_traits>  // for forward
+
+#include "exception.h"  // for ClientError
+
 
 #define _EPOCH      1970
 #define _START_YEAR 1900

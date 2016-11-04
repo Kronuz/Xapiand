@@ -22,9 +22,12 @@
 
 #pragma once
 
-#include "../stl_serialise.h"
+#include "xapiand.h"
 
-#include <xapian.h>
+#include <xapian.h>            // for docid, valueno, Query, ValuePostingSource
+#include <string>              // for string
+
+#include "stl_serialise.h"     // for CartesianUSet, RangeList
 
 
 // New Match Decider for GeoSpatial value range.

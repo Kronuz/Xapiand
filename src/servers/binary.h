@@ -24,13 +24,17 @@
 
 #include "xapiand.h"
 
+
 #ifdef XAPIAND_CLUSTERING
 
-#include "tcp_base.h"
+#include <memory>            // for shared_ptr, weak_ptr
+#include <string>            // for string
+#include <vector>            // for vector
 
-#include "server_binary.h"
-#include "../endpoint.h"
-#include "../ev/ev++.h"
+#include "tcp_base.h"        // for BaseTCP
+
+class Endpoint;
+class BinaryServer;
 
 
 // Configuration data for Binary

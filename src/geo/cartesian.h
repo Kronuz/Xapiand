@@ -22,11 +22,13 @@
 
 #pragma once
 
-#include "../exception.h"
-
 #include <cstdio>
-#include <functional>
-#include <string>
+#include <cstring>         // for size_t
+#include <functional>      // for hash
+#include <string>          // for string, basic_string, hash
+#include <type_traits>     // for forward
+
+#include "exception.h"     // for ClientError
 
 
 /*

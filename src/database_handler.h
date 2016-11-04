@@ -22,21 +22,27 @@
 
 #pragma once
 
-#include "database.h"
-#include "manager.h"
-#include "multivalue/matchspy.h"
-#include "multivalue/keymaker.h"
-#include "schema.h"
+#include "xapiand.h"
 
+#include <stddef.h>                          // for size_t
+#include <xapian.h>                          // for Document, docid, MSet
+#include <memory>                            // for shared_ptr, make_shared
+#include <string>                            // for string
+#include <unordered_map>                     // for unordered_map
+#include <vector>                            // for vector
 
-extern const std::regex find_types_re;
+#include "database_utils.h"                  // for HttpMethod, query_field_...
+#include "endpoint.h"                        // for Endpoints
+#include "msgpack.h"                         // for MsgPack
+
+class AggregationMatchSpy;
+class Database;
+class Schema;
+class Document;
+class Multi_MultiValueKeyMaker;
 
 
 using endpoints_error_list = std::unordered_map<std::string, std::vector<std::string>>;
-
-
-class AggregationMatchSpy;
-class Document;
 
 
 class MSet : public Xapian::MSet {
@@ -84,35 +90,12 @@ public:
 		lock_database& operator=(const lock_database&) = delete;
 
 	public:
-		lock_database(DatabaseHandler* db_handler_) : db_handler(db_handler_), database(nullptr) {
-			lock();
-		}
+		lock_database(DatabaseHandler* db_handler_);
+		lock_database(DatabaseHandler& db_handler);
+		~lock_database();
 
-		lock_database(DatabaseHandler& db_handler) : lock_database(&db_handler) { }
-
-		~lock_database() {
-			unlock();
-		}
-
-		void lock() {
-			if (db_handler && !db_handler->database) {
-				if (XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
-					database = &db_handler->database;
-				} else {
-					throw MSG_CheckoutError("Cannot checkout database: %s", repr(db_handler->endpoints.to_string()).c_str());
-				}
-			}
-		}
-
-		void unlock() noexcept {
-			if (database) {
-				if (*database) {
-					XapiandManager::manager->database_pool.checkin(*database);
-				}
-				(*database).reset();
-				database = nullptr;
-			}
-		}
+		void lock();
+		void unlock() noexcept;
 	};
 
 	DatabaseHandler();
@@ -120,29 +103,9 @@ public:
 
 	~DatabaseHandler() = default;
 
-	std::shared_ptr<Database> get_database() const noexcept {
-		return database;
-	}
-
-	std::shared_ptr<Schema> get_schema() const {
-		return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
-	}
-
-	std::shared_ptr<Schema> get_fvschema() const {
-		std::shared_ptr<const MsgPack> fvs, fvs_aux;
-		for (const auto& e : endpoints) {
-			fvs_aux = XapiandManager::manager->database_pool.get_schema(e, flags);	/* Get the first valid schema */
-			if (fvs_aux->is_null()) {
-				continue;
-			}
-			if (fvs == nullptr) {
-				fvs = fvs_aux;
-			} else if (*fvs != *fvs_aux) {
-				throw MSG_ClientError("Cannot index in several indexes with different schemas");
-			}
-		}
-		return std::make_shared<Schema>(fvs ? fvs : fvs_aux);
-	}
+	std::shared_ptr<Database> get_database() const noexcept;
+	std::shared_ptr<Schema> get_schema() const;
+	std::shared_ptr<Schema> get_fvschema() const;
 
 	void reset(const Endpoints& endpoints_, int flags_, HttpMethod method_);
 
@@ -181,165 +144,30 @@ class Document : public Xapian::Document {
 	DatabaseHandler* db_handler;
 	std::shared_ptr<Database> database;
 
-	void update() {
-		if (db_handler && db_handler->database && database != db_handler->database) {
-			L_CALL(this, "Document::update()");
-			database = db_handler->database;
-			std::shared_ptr<Database> database_ = database;
-			DatabaseHandler* db_handler_ = db_handler;
-			*this = database->get_document(get_docid());
-			db_handler = db_handler_;
-			database = database_;
-		}
-	}
-
-	void update() const {
-		const_cast<Document*>(this)->update();
-	}
+	void update();
+	void update() const;
 
 public:
-	Document()
-		: db_handler(nullptr) { }
+	Document();
+	Document(const Xapian::Document &doc);
+	Document(DatabaseHandler* db_handler_, const Xapian::Document &doc);
 
-	Document(const Xapian::Document &doc)
-		: Xapian::Document(doc),
-		  db_handler(nullptr) { }
-
-	Document(DatabaseHandler* db_handler_, const Xapian::Document &doc)
-		: Xapian::Document(doc),
-		  db_handler(db_handler_),
-		  database(db_handler->database) { }
-
-	std::string get_value(Xapian::valueno slot) const {
-		L_CALL(this, "Document::get_value()");
-
-		DatabaseHandler::lock_database lk(db_handler);
-		update();
-		return Xapian::Document::get_value(slot);
-	}
-
-	MsgPack get_value(const std::string& slot_name) const {
-		L_CALL(this, "Document::get_value(%s)", slot_name.c_str());
-
-		auto schema = db_handler->get_schema();
-		auto slot_field = schema->get_slot_field(slot_name);
-
-		return Unserialise::MsgPack(slot_field.get_type(), get_value(slot_field.slot));
-	}
-
-	void add_value(Xapian::valueno slot, const std::string& value) {
-		L_CALL(this, "Document::add_value()");
-
-		Xapian::Document::add_value(slot, value);
-	}
-
-	void add_value(const std::string& slot_name, const MsgPack& value) {
-		L_CALL(this, "Document::add_value(%s)", slot_name.c_str());
-
-		auto schema = db_handler->get_schema();
-		auto slot_field = schema->get_slot_field(slot_name);
-
-		add_value(slot_field.slot, Serialise::MsgPack(slot_field, value));
-	}
-
-	void remove_value(Xapian::valueno slot) {
-		L_CALL(this, "Document::remove_value()");
-
-		Xapian::Document::remove_value(slot);
-	}
-
-	void remove_value(const std::string& slot_name) {
-		L_CALL(this, "Document::remove_value(%s)", slot_name.c_str());
-
-		auto schema = db_handler->get_schema();
-		auto slot_field = schema->get_slot_field(slot_name);
-
-		remove_value(slot_field.slot);
-	}
-
-	std::string get_data() const {
-		L_CALL(this, "Document::get_data()");
-
-		DatabaseHandler::lock_database lk(db_handler);
-		update();
-		return Xapian::Document::get_data();
-	}
-
-	void set_data(const std::string& data) {
-		L_CALL(this, "Document::set_data(%s)", repr(data).c_str());
-
-		Xapian::Document::set_data(data);
-	}
-
-	void set_data(const std::string& obj, const std::string& blob) {
-		L_CALL(this, "Document::set_data(...)");
-
-		set_data(::join_data(obj, blob));
-	}
-
-	std::string get_blob() {
-		L_CALL(this, "Document::get_blob()");
-
-		return ::split_data_blob(get_data());
-	}
-
-	void set_blob(const std::string& blob) {
-		L_CALL(this, "Document::set_blob()");
-
-		DatabaseHandler::lock_database lk(db_handler);  // optimize nested database locking
-		set_data(::split_data_obj(get_data()), blob);
-	}
-
-	MsgPack get_obj() const {
-		L_CALL(this, "Document::get_obj()");
-
-		return MsgPack::unserialise(::split_data_obj(get_data()));
-	}
-
-	void set_obj(const MsgPack& obj) {
-		L_CALL(this, "Document::get_obj()");
-
-		DatabaseHandler::lock_database lk(db_handler);  // optimize nested database locking
-		set_data(obj.serialise(), get_blob());
-	}
-
-	Xapian::termcount termlist_count() const {
-		L_CALL(this, "Document::termlist_count()");
-
-		DatabaseHandler::lock_database lk(db_handler);
-		update();
-		return Xapian::Document::termlist_count();
-	}
-
-	Xapian::TermIterator termlist_begin() const {
-		L_CALL(this, "Document::termlist_begin()");
-
-		DatabaseHandler::lock_database lk(db_handler);
-		update();
-		return Xapian::Document::termlist_begin();
-	}
-
-	Xapian::termcount values_count() const {
-		L_CALL(this, "Document::values_count()");
-
-		DatabaseHandler::lock_database lk(db_handler);
-		update();
-		return Xapian::Document::values_count();
-	}
-
-	Xapian::ValueIterator values_begin() const {
-		L_CALL(this, "Document::values_begin()");
-
-		DatabaseHandler::lock_database lk(db_handler);
-		update();
-		return Xapian::Document::values_begin();
-	}
-
-	std::string serialise() const {
-		L_CALL(this, "Document::serialise()");
-
-		DatabaseHandler::lock_database lk(db_handler);
-		update();
-		return Xapian::Document::serialise();
-	}
+	std::string get_value(Xapian::valueno slot) const;
+	MsgPack get_value(const std::string& slot_name) const;
+	void add_value(Xapian::valueno slot, const std::string& value);
+	void add_value(const std::string& slot_name, const MsgPack& value);
+	void remove_value(Xapian::valueno slot);
+	void remove_value(const std::string& slot_name);
+	std::string get_data() const;
+	void set_data(const std::string& data);
+	void set_data(const std::string& obj, const std::string& blob);
+	std::string get_blob();
+	void set_blob(const std::string& blob);
+	MsgPack get_obj() const;
+	void set_obj(const MsgPack& obj);
+	Xapian::termcount termlist_count() const;
+	Xapian::TermIterator termlist_begin() const;
+	Xapian::termcount values_count() const;
+	Xapian::ValueIterator values_begin() const;
+	std::string serialise() const;
 };

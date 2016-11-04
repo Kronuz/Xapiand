@@ -22,28 +22,57 @@
 
 #include "manager.h"
 
-#include "async_fsync.h"
-#include "client_binary.h"
-#include "database_autocommit.h"
-#include "database_handler.h"
-#include "endpoint.h"
-#include "replicator.h"
-#include "servers/binary.h"
-#include "servers/http.h"
-#include "servers/server.h"
-#include "servers/server_discovery.h"
-#include "servers/server_raft.h"
-#include "utils.h"
+#include <arpa/inet.h>                       // for inet_ntop
+#include <ctype.h>                           // for isspace
+#include <ifaddrs.h>                         // for ifaddrs, freeifaddrs
+#include <net/if.h>                          // for IFF_LOOPBACK
+#include <netinet/in.h>                      // for sockaddr_in, INET_ADDRST...
+#include <stdlib.h>                          // for size_t, exit
+#include <string.h>                          // for strerror
+#include <sys/errno.h>                       // for __error, errno
+#include <sys/fcntl.h>                       // for O_CLOEXEC, O_CREAT, O_RD...
+#include <sys/signal.h>                      // for SIGTERM, SIGINT
+#include <sys/socket.h>                      // for AF_INET, sockaddr
+#include <sys/types.h>                       // for uint64_t
+#include <sysexits.h>                        // for EX_IOERR, EX_NOINPUT
+#include <unistd.h>                          // for ssize_t, getpid
+#include <xapian.h>                          // for Error
+#include <algorithm>                         // for move
+#include <atomic>                            // for atomic, atomic_int
+#include <chrono>                            // for duration, system_clock
+#include <cstdint>                           // for uint64_t, UINT64_MAX
+#include <ctime>                             // for time_t, ctime, NULL
+#include <exception>                         // for exception
+#include <functional>                        // for __base
+#include <memory>                            // for allocator, shared_ptr
+#include <mutex>                             // for mutex, lock_guard, uniqu...
+#include <ratio>                             // for milli
+#include <regex>                             // for smatch, regex, operator|
+#include <string>                            // for string, basic_string
+#include <unordered_map>                     // for __hash_map_const_iterator
+#include <utility>                           // for pair
+#include <vector>                            // for vector
 
-#include <list>
-#include <stdlib.h>
-#include <assert.h>
-#include <sysexits.h>
-#include <sys/sysctl.h>
-#include <fcntl.h>
-#include <net/if.h> /* for IFF_LOOPBACK */
-#include <ifaddrs.h>
-#include <unistd.h>
+#include "async_fsync.h"                     // for AsyncFsync
+#include "atomic_shared_ptr.h"               // for atomic_shared_ptr
+#include "database.h"                        // for DatabasePool
+#include "database_autocommit.h"             // for DatabaseAutocommit
+#include "database_handler.h"                // for DatabaseHandler
+#include "database_utils.h"                  // for RESERVED_TYPE, DB_NOWAL
+#include "endpoint.h"                        // for Node, Endpoint, local_node
+#include "ev/ev++.h"                         // for async, loop_ref (ptr only)
+#include "exception.h"                       // for Exit, ClientError, Excep...
+#include "io_utils.h"                        // for close, open, read, write
+#include "log.h"                             // for Log, L_CALL, L_DEBUG
+#include "manager.h"                         // for XapiandManager, opts_t
+#include "msgpack.h"                         // for MsgPack, object::object
+#include "serialise.h"                       // for STRING_STR
+#include "servers/http.h"                    // for Http
+#include "servers/server.h"                  // for XapiandServer, XapiandSe...
+#include "servers/server_http.h"             // for HttpServer
+#include "threadpool.h"                      // for ThreadPool
+#include "utils.h"                           // for pos_time_t, SLOT_TIME_SE...
+#include "worker.h"                          // for Worker, enable_make_shared
 
 
 static const std::regex time_re("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
@@ -929,7 +958,7 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 
 
 bool
-XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout)
+XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps, std::chrono::duration<double, std::milli> timeout)
 {
 	L_CALL(this, "XapiandManager::resolve_index_endpoint(%s, ...)", path.c_str());
 

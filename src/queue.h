@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "xapiand.h"
+
 #include <cerrno>
 #include <list>
 #include <deque>
@@ -215,8 +217,6 @@ namespace queue {
 		}
 
 		void finish() noexcept {
-			L_CALL(this, "Queue::finish()");
-
 			if (_finished) {
 				return;
 			}

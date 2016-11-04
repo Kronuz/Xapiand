@@ -24,9 +24,11 @@
 
 #include "xapiand.h"
 
+
 #ifdef XAPIAND_CLUSTERING
 
 #include "udp_base.h"
+
 
 // Values in seconds
 #define HEARTBEAT_EXPLORE 0.100

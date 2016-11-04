@@ -22,8 +22,15 @@
 
 #pragma once
 
-#include "../worker.h"
-#include "server.h"
+#include "xapiand.h"
+
+#include <time.h>     // for time_t
+#include <memory>     // for shared_ptr
+
+#include "ev/ev++.h"  // for io, loop_ref (ptr only)
+#include "worker.h"   // for Worker
+
+class XapiandServer;
 
 
 // This class lets make different types of servers.

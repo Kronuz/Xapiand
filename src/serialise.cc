@@ -22,12 +22,25 @@
 
 #include "serialise.h"
 
-#include "guid/guid.h"
-#include "geo/wkt_parser.h"
-#include "length.h"
-#include "schema.h"
-#include "stl_serialise.h"
-#include "utils.h"
+#include <ctype.h>                 // for toupper
+#include <math.h>                  // for round
+#include <stdio.h>                 // for sprintf
+#include <strings.h>               // for strcasecmp
+#include <time.h>                  // for tm, gmtime, time_t
+#include <algorithm>               // for move
+#include <functional>              // for cref
+#include <stdexcept>               // for out_of_range, invalid_argument
+
+#include "exception.h"             // for SerialisationError, MSG_Serialisat...
+#include "geo/cartesian.h"         // for Cartesian
+#include "geo/htm.h"               // for MAX_SIZE_NAME, SIZE_BYTES_ID, range_t
+#include "geo/wkt_parser.h"        // for EWKT_Parser, EWKTError
+#include "guid/guid.h"             // for Guid
+#include "length.h"                // for serialise_length, unserialise_length
+#include "msgpack.h"               // for MsgPack, object::object, type_error
+#include "schema.h"                // for FieldType, FieldType::STRING, Fiel...
+#include "stl_serialise.h"         // for CartesianUSet, RangeList
+#include "utils.h"                 // for toUType, stox, repr
 
 
 static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {

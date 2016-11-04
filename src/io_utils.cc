@@ -22,9 +22,11 @@
 
 #include "io_utils.h"
 
-#include "log.h"
+#include <string.h>     // for strerror, size_t
+#include <sys/errno.h>  // for __error, errno, EINTR
 
-#include <string.h>
+#include "config.h"     // for HAVE_PWRITE, HAVE_FSYNC
+#include "log.h"        // for Log, L_CALL, L_ERRNO
 
 namespace io {
 

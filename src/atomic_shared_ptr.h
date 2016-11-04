@@ -22,8 +22,9 @@
 
 #pragma once
 
-#include <atomic>
-#include <memory>
+#include <algorithm>    // for move
+#include <atomic>       // for atomic_store, atomic_is_lock_free, at...
+#include <memory>       // for shared_ptr
 
 
 /*

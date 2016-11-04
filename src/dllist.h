@@ -22,13 +22,13 @@
 
 #pragma once
 
-#include "atomic_shared_ptr.h"
+#include <array>                // for array
+#include <atomic>               // for atomic
+#include <iterator>             // for bidirectional_iterator_tag
+#include <memory>               // for shared_ptr
+#include <stdexcept>            // for logic_error
 
-#include <array>
-#include <atomic>
-#include <iterator>
-#include <memory>
-#include <stdexcept>
+#include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 
 
 /*

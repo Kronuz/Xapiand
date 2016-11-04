@@ -22,9 +22,11 @@
 
 #include "http.h"
 
-#include "manager.h"
-
-#include <assert.h>
+#include "atomic_shared_ptr.h"  // for atomic_shared_ptr
+#include "endpoint.h"           // for Node, local_node
+#include "log.h"                // for L_OBJ
+#include "manager.h"            // for XapiandManager
+#include "servers/tcp_base.h"   // for BaseTCP, CONN_TCP_DEFER_ACCEPT, CONN_...
 
 
 Http::Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)

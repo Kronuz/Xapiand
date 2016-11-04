@@ -22,7 +22,10 @@
 
 #pragma once
 
-#include <stdexcept>
+#include "xapiand.h"
+
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string
 
 
 namespace v8pp {

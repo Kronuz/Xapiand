@@ -22,15 +22,31 @@
 
 #include "database.h"
 
-#include "database_autocommit.h"
-#include "length.h"
-#include "schema.h"
-#include "guid/guid.h"
+#include <dirent.h>               // for closedir, DIR
+#include <strings.h>              // for strncasecmp
+#include <sys/dirent.h>           // for dirent
+#include <sys/errno.h>            // for __error, errno
+#include <sys/fcntl.h>            // for O_CREAT, O_WRONLY, O_EXCL
+#include <sysexits.h>             // for EX_SOFTWARE
+#include <algorithm>              // for move
+#include <array>                  // for array
+#include <cassert>                // for assert
+#include <iterator>               // for distance
+#include <limits>                 // for numeric_limits
+#include <ratio>                  // for ratio
 
-#include <bitset>
-#include <fcntl.h>
-#include <limits>
-#include <sysexits.h>
+#include "atomic_shared_ptr.h"    // for atomic_shared_ptr
+#include "database_autocommit.h"  // for DatabaseAutocommit
+#include "exception.h"            // for Error, MSG_Error, Exception, DocNot...
+#include "io_utils.h"             // for close, strerrno, write, open
+#include "length.h"               // for serialise_length, unserialise_length
+#include "log.h"                  // for L_OBJ, L_CALL, Log
+#include "manager.h"              // for sig_exit
+#include "msgpack.h"              // for MsgPack
+#include "msgpack/unpack.hpp"     // for unpack_error
+#include "schema.h"               // for FieldType, FieldType::STRING
+#include "serialise.h"            // for uuid
+#include "utils.h"                // for repr, to_string, File_ptr, find_fil...
 
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
@@ -93,6 +109,22 @@ WalHeader::validate(void* param, void*)
 	if (wal->validate_uuid && strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid))) {
 		throw MSG_StorageCorruptVolume("WAL UUID mismatch");
 	}
+}
+
+
+DatabaseWAL::DatabaseWAL(Database* database_)
+	: Storage<WalHeader, WalBinHeader, WalBinFooter>(this),
+	  modified(false),
+	  validate_uuid(true),
+	  database(database_)
+{
+	L_OBJ(this, "CREATED DATABASE WAL!");
+}
+
+
+DatabaseWAL::~DatabaseWAL()
+{
+	L_OBJ(this, "DELETED DATABASE WAL!");
 }
 
 
@@ -524,7 +556,7 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 	endpoints(endpoints_),
 	flags(flags_),
 	hash(endpoints.hash()),
-	access_time(system_clock::now()),
+	access_time(std::chrono::system_clock::now()),
 	modified(false),
 	mastery_level(-1),
 	checkout_revision(0)
@@ -568,7 +600,7 @@ Database::reopen()
 {
 	L_CALL(this, "Database::reopen()");
 
-	access_time = system_clock::now();
+	access_time = std::chrono::system_clock::now();
 
 	if (db) {
 		// Try to reopen
@@ -1341,6 +1373,39 @@ DatabaseQueue::dec_count()
 }
 
 
+DatabasesLRU::DatabasesLRU(ssize_t max_size)
+	: LRU(max_size)
+{ }
+
+
+std::shared_ptr<DatabaseQueue>&
+DatabasesLRU::operator[] (size_t key)
+{
+	try {
+		return at(key);
+	} catch (std::range_error) {
+		return insert_and([](std::shared_ptr<DatabaseQueue> & val) {
+			if (val->persistent || val->size() < val->count || val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
+				return lru::DropAction::renew;
+			} else {
+				return lru::DropAction::drop;
+			}
+		}, std::make_pair(key, std::make_shared<DatabaseQueue>()));
+	}
+}
+
+
+void
+DatabasesLRU::finish()
+{
+	L_CALL(this, "DatabasesLRU::finish()");
+
+	for (iterator it = begin(); it != end(); ++it) {
+		it->second->finish();
+	}
+}
+
+
 //  ____        _        _                    ____             _
 // |  _ \  __ _| |_ __ _| |__   __ _ ___  ___|  _ \ ___   ___ | |
 // | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ |_) / _ \ / _ \| |
@@ -1559,7 +1624,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		return false;
 	}
 
-	if (!writable && duration_cast<seconds>(system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
+	if (!writable && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
 		database->reopen();
 		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->repr(endpoints.to_string()).c_str());
 	}
@@ -1899,7 +1964,8 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 
 
 SchemaLRU::SchemaLRU(ssize_t max_size)
-	: LRU(max_size) { }
+	: LRU(max_size)
+{ }
 
 
 bool

@@ -22,8 +22,20 @@
 
 #include "server_http.h"
 
-#include "../client_http.h"
-#include "http.h"
+#include <string.h>               // for strerror
+#include <sys/errno.h>            // for __error, errno
+#include <cassert>                // for assert
+#include <chrono>                 // for operator""ms
+#include <ratio>                  // for ratio
+
+#include "./server.h"             // for XapiandServer
+#include "./server_base.h"        // for BaseServer
+#include "client_http.h"          // for HttpClient
+#include "ev/ev++.h"              // for io, ::READ, loop_ref (ptr only)
+#include "http.h"                 // for Http
+#include "log.h"                  // for Log, L_EV, L_OBJ, L_CALL, L_ERR
+#include "utils.h"                // for ignored_errorno, readable_revents
+#include "worker.h"               // for Worker
 
 
 HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http_)

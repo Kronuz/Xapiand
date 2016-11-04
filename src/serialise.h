@@ -22,12 +22,23 @@
 
 #pragma once
 
-#include "database_utils.h"
-#include "datetime.h"
-#include "hash/endian.h"
-#include "msgpack.h"
-#include "sortable_serialise.h"
-#include "xxh64.hpp"
+#include "xapiand.h"
+
+#include <stddef.h>              // for size_t
+#include <sys/types.h>           // for uint64_t, int64_t, uint32_t, uint8_t
+#include <cctype>                // for isxdigit
+#include <string>                // for string
+#include <tuple>                 // for tuple
+#include <unordered_map>         // for unordered_map
+#include <utility>               // for pair
+#include <vector>                // for vector
+
+#include "database_utils.h"      // for get_hashed, RESERVED_BOOLEAN, RESERV...
+#include "datetime.h"            // for tm_t (ptr only), timestamp
+#include "hash/endian.h"         // for __BYTE_ORDER, __BIG_ENDIAN, __LITTLE...
+#include "msgpack.h"             // for MsgPack
+#include "sortable_serialise.h"  // for sortable_serialise, sortable_unseria...
+#include "xxh64.hpp"             // for xxh64
 
 
 #ifndef __has_builtin         // Optional of course
@@ -50,6 +61,7 @@
 // don't check for obsolete forms defined(linux) and defined(__linux) on the theory that
 // compilers that predefine only these are so old that byteswap.h probably isn't present.
 #  include <byteswap.h>
+
 #  define BYTE_SWAP_2(x) (bswap_16(x))
 #  define BYTE_SWAP_4(x) (bswap_32(x))
 #  define BYTE_SWAP_8(x) (bswap_64(x))
@@ -57,6 +69,7 @@
 // Microsoft documents these as being compatible since Windows 95 and specificly
 // lists runtime library support since Visual Studio 2003 (aka 7.1).
 #  include <cstdlib>
+
 #  define BYTE_SWAP_2(x) (_byteswap_ushort(x))
 #  define BYTE_SWAP_4(x) (_byteswap_ulong(x))
 #  define BYTE_SWAP_8(x) (_byteswap_uint64(x))
@@ -111,6 +124,7 @@ class Cartesian;
 class CartesianUSet;
 class RangeList;
 struct required_spc_t;
+
 enum class FieldType : uint8_t;
 
 

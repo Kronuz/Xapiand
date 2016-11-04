@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include "xapiand.h"
+
 #include <string>
 
 long double sortable_unserialise(const std::string & value);

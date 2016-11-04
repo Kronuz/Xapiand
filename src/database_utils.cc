@@ -22,18 +22,21 @@
 
 #include "database_utils.h"
 
-#include "io_utils.h"
-#include "log.h"
-#include "serialise.h"
-#include "utils.h"
-#include "schema.h"
+#include <stdio.h>                          // for snprintf, size_t
+#include <string.h>                         // for strlen
+#include <sys/_types/_s_ifmt.h>             // for S_IFDIR
+#include <sys/fcntl.h>                      // for O_CLOEXEC, O_CREAT, O_RDONLY
+#include <sys/stat.h>                       // for stat
+#include <chrono>                           // for seconds, duration_cast
+#include <ratio>                            // for ratio
 
-#include "rapidjson/error/en.h"
-
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <random>
+#include "exception.h"                      // for ClientError, MSG_ClientError
+#include "io_utils.h"                       // for close, open, read, write
+#include "log.h"                            // for L_DATABASE
+#include "rapidjson/document.h"             // for Document, GenericDocument
+#include "rapidjson/error/en.h"             // for GetParseError_En
+#include "rapidjson/error/error.h"          // for ParseResult
+#include "utils.h"                          // for random_int
 
 
 inline static long long save_mastery(const std::string& dir)

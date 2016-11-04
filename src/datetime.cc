@@ -22,8 +22,13 @@
 
 #include "datetime.h"
 
-#include "log.h"
-#include "utils.h"
+#include <stdio.h>    // for snprintf
+#include <cmath>      // for ceil
+#include <exception>  // for exception
+#include <stdexcept>  // for invalid_argument, out_of_range
+
+#include "log.h"      // for L_ERR, Log
+#include "utils.h"    // for stox
 
 #define MILLISECOND 1e-3
 

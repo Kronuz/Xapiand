@@ -22,10 +22,11 @@
 
 #include "htm.h"
 
-#include <algorithm>
-#include <cmath>
-#include <set>
-#include <fstream>
+#include <algorithm>       // for move, sort
+#include <cmath>           // for acos, cos, sin, sqrt
+#include <fstream>         // for char_traits, operator<<, basic_ostream
+
+#include "geo/geometry.h"  // for Constraint, Geometry, POS, NEG
 
 
 static const Cartesian start_vertices[6] = {

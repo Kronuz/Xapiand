@@ -22,25 +22,50 @@
 
 #include "xapiand.h"
 
-#include "utils.h"
-#include "manager.h"
+#include <grp.h>                     // for getgrgid, group, getgrnam, gid_t
+#include <pwd.h>                     // for passwd, getpwnam, getpwuid
+#include <signal.h>                  // for sigaction, sigemptyset
+#include <stdio.h>                   // for snprintf
+#include <stdlib.h>                  // for size_t, atoi, setenv, exit, getenv
+#include <string.h>                  // for strcat, strchr, strlen, strrchr
+#include <sys/fcntl.h>               // for O_RDWR, O_CREAT
+#include <sys/signal.h>              // for sigaction, signal, SIG_IGN, SIGHUP
+#include <sys/syslimits.h>           // for PATH_MAX
+#include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_O...
+#include <time.h>                    // for tm, localtime, mktime, time_t
+#include <unistd.h>                  // for dup2, unlink, STDERR_FILENO, chdir
+#include <v8-version.h>              // for V8_MAJOR_VERSION, V8_MINOR_VERSION
+#include <xapian.h>                  // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
+#include <algorithm>                 // for min
+#include <chrono>                    // for system_clock, time_point
+#include <clocale>                   // for setlocale, LC_CTYPE
+#include <iostream>                  // for operator<<, basic_ostream, ostream
+#include <list>                      // for __list_iterator, list, operator!=
+#include <memory>                    // for unique_ptr, allocator, make_unique
+#include <sstream>                   // for basic_stringbuf<>::int_type, bas...
+#include <thread>                    // for thread
+#include <vector>                    // for vector
 
-#include "tclap/CmdLine.h"
-#include "tclap/ZshCompletionOutput.h"
-
-#include <thread>
-#include <clocale>
-#include <stdlib.h>
-#include <unistd.h>
-#include <pwd.h>
-#include <grp.h>
-#include <sysexits.h>  // EX_*
-#include <dirent.h>    // opendir, readdir, DIR, struct dirent
-#include <fcntl.h>
-
-#if XAPIAND_V8
-#include <v8.h>
-#endif
+#include "config.h"                  // for PACKAGE_BUGREPORT, PACKAGE_STRING
+#include "dllist.h"                  // for DLList
+#include "endpoint.h"                // for Endpoint, Endpoint::cwd
+#include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
+#include "exception.h"               // for Exit
+#include "io_utils.h"                // for close, open, write
+#include "log.h"                     // for Log, L_INFO, L_CRIT, L_NOTICE
+#include "manager.h"                 // for opts_t, XapiandManager, XapiandM...
+#include "tclap/Arg.h"               // for Arg
+#include "tclap/ArgException.h"      // for ArgParseException, ArgException
+#include "tclap/CmdLine.h"           // for CmdLine
+#include "tclap/CmdLineInterface.h"  // for CmdLineInterface
+#include "tclap/MultiSwitchArg.h"    // for MultiSwitchArg
+#include "tclap/StdOutput.h"         // for StdOutput
+#include "tclap/SwitchArg.h"         // for SwitchArg
+#include "tclap/ValueArg.h"          // for ValueArg
+#include "tclap/ValuesConstraint.h"  // for ValuesConstraint
+#include "tclap/XorHandler.h"        // for XorHandler
+#include "utils.h"                   // for format_string, center_string
+#include "worker.h"                  // for Worker
 
 #define LINE_LENGTH 78
 

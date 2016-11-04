@@ -22,16 +22,18 @@
 
 #pragma once
 
-#include "log.h"
-#include "utils.h"
-
-#include "ev/ev++.h"
-#include "exception.h"
+#include "xapiand.h"
 
 #include <list>
 #include <mutex>
 #include <memory>
 #include <cassert>
+
+#include "log.h"
+#include "utils.h"
+
+#include "ev/ev++.h"
+#include "exception.h"
 
 
 class Worker : public std::enable_shared_from_this<Worker> {

@@ -22,13 +22,15 @@
 
 #pragma once
 
+#include "xapiand.h"
+
+#include <set>
+#include <unordered_set>
+
 #include "geo/cartesian.h"
 #include "geo/htm.h"
 #include "length.h"
 #include "serialise.h"
-
-#include <set>
-#include <unordered_set>
 
 
 #define STL_MAGIC '\0'

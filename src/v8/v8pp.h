@@ -22,25 +22,24 @@
 
 #pragma once
 
+#include "xapiand.h"
+
+
 #if XAPIAND_V8
 
-#include "wrapper.h"
+#include <stdio.h>             // for size_t, snprintf
+#include <stdlib.h>            // for malloc, free
+#include <string.h>            // for memset
+#include <array>               // for array
+#include <atomic>              // for atomic_bool
+#include <condition_variable>  // for condition_variable
+#include <mutex>               // for mutex
+#include <string>              // for string
+#include <thread>              // for thread
+#include <unordered_map>       // for unordered_map
 
-#include "../lru.h"
-
-#include <atomic>
-#include <cassert>
-#include <condition_variable>
-#include <iostream>
-#include <map>
-#include <mutex>
-#include <array>
-#include <string>
-#include <thread>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "lru.h"               // for LRU
+#include "wrapper.h"           // for wrap
 
 
 namespace v8pp {

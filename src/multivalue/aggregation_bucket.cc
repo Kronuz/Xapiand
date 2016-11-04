@@ -22,6 +22,15 @@
 
 #include "aggregation_bucket.h"
 
+#include <algorithm>                      // for move, set_intersection
+#include <iterator>                       // for back_insert_iterator, back_...
+#include <map>                            // for __tree_const_iterator, oper...
+
+#include "metrics/basic_string_metric.h"  // for Counter
+#include "multivalue/aggregation.h"       // for Aggregation
+#include "schema.h"                       // for Schema, required_spc_t
+#include "stl_serialise.h"                // for StringSet, StringUSet
+
 
 FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 	: SubAggregation(result),

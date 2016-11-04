@@ -325,7 +325,7 @@ int test_patcher_incr() {
 	try {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
-		L(nullptr, "RESULT FOR TEST_INCR %s", result.c_str());
+		L_DEBUG(nullptr, "RESULT FOR TEST_INCR %s", result.c_str());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
 			RETURN(1);

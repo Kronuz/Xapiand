@@ -26,6 +26,8 @@
 
 #include <unordered_map>
 
+#include "utils.h"
+
 
 static const std::unordered_map<std::string, std::string> french_accents({
 	{ "Á", "A" }, { "À", "A" }, { "Ä", "A" }, { "Â", "A" }, { "Ã", "A" },
