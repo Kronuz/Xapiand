@@ -24,28 +24,27 @@
 
 #include "xapiand.h"
 
-#include <iostream>
-#include <string>
-#include <tuple>
-#include <thread>
-#include <future>
-#include <cassert>
-#include <vector>
+#include <cassert>       // for assert
+#include <future>        // for future
+#include <stdexcept>     // for logic_error
+#include <string>        // for string
+#include <thread>        // for thread
+#include <tuple>         // for tuple_size, tuple_cat
+#include <vector>        // for vector
 
-#include "log.h"
-#include "queue.h"
-#include "exception.h"
-#include "utils.h"
+#include "logger.h"      // for L_DEBUG, L_EXC
+#include "queue.h"       // for Queue
+#include "utils.h"       // for set_thread_name
 
 
 template<typename F, typename Tuple, std::size_t... I>
-static inline constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
+static constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
 	return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
 }
 
 
 template<typename F, typename Tuple>
-static inline constexpr decltype(auto) apply(F&& f, Tuple&& t) {
+static constexpr decltype(auto) apply(F&& f, Tuple&& t) {
 	using Indices = std::make_index_sequence<std::tuple_size<std::decay_t<Tuple>>::value>;
 	return apply_impl(std::forward<F>(f), std::forward<Tuple>(t), Indices{});
 }
@@ -150,22 +149,22 @@ public:
 		});
 	}
 
-	inline void clear() {
+	void clear() {
 		tasks.clear();
 	}
 
 	// Tell the tasks to finish so all threads exit as soon as possible
-	inline void finish() {
+	void finish() {
 		tasks.finish();
 	}
 
 	// Flag the pool as ending, so all threads exit as soon as all queued tasks end
-	inline void end() {
+	void end() {
 		tasks.end();
 	}
 
 	// Return size of the tasks queue
-	inline size_t size() {
+	size_t size() {
 		return tasks.size();
 	}
 };
@@ -188,7 +187,7 @@ class ThreadPool : public TaskQueue<Params...> {
 		set_thread_name(std::string(name));
 		function_mo<void(Params...)> task;
 
-		L_THREADPOOL(this, "Worker %s started! (size: %lu, capacity: %lu)", name, threadpool_size(), threadpool_capacity());
+		L_DEBUG(this, "Worker %s started! (size: %lu, capacity: %lu)", name, threadpool_size(), threadpool_capacity());
 		while (TaskQueue<Params...>::tasks.pop(task)) {
 			++running_tasks;
 			try {
@@ -208,10 +207,10 @@ class ThreadPool : public TaskQueue<Params...> {
 			}
 			--running_tasks;
 		}
-		L_THREADPOOL(this, "Worker %s ended.", name);
+		L_DEBUG(this, "Worker %s ended.", name);
 	}
 
-	inline bool spawn_workers() {
+	bool spawn_workers() {
 		if (full_pool) return false;
 		auto enqueued = TaskQueue<Params...>::size();
 		if (enqueued) {
@@ -252,7 +251,7 @@ public:
 	}
 
 	template<typename... Args>
-	inline auto enqueue(Args&&... args) {
+	auto enqueue(Args&&... args) {
 		auto ret = TaskQueue<Params...>::enqueue(std::forward<Args>(args)...);
 		spawn_workers();
 		return ret;
@@ -269,17 +268,17 @@ public:
 		threads.clear();
 	}
 
-	inline size_t threadpool_capacity() {
+	size_t threadpool_capacity() {
 		std::lock_guard<std::mutex> lk(mtx);
 		return threads.capacity();
 	}
 
-	inline size_t threadpool_size() {
+	size_t threadpool_size() {
 		std::lock_guard<std::mutex> lk(mtx);
 		return threads.size();
 	}
 
-	inline size_t running_size() {
+	size_t running_size() {
 		return running_tasks.load();
 	}
 };
