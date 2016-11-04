@@ -288,7 +288,6 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 
 #define LOG(stacked, level, color, args...) Log::log(false, stacked, 0ms, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 
-#define L_DEBUG(args...) LOG(true, LOG_DEBUG, DEBUG_COL, args)
 #define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
 #define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
 #define L_WARNING(args...) LOG(true, LOG_WARNING, WARNING_COL, args)
@@ -354,3 +353,9 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define L_STACKED_LIGHT_MAGENTA(args...) auto UNIQUE_NAME = L_LIGHT_MAGENTA(args)
 #define L_STACKED_LIGHT_CYAN(args...) auto UNIQUE_NAME = L_LIGHT_CYAN(args)
 #define L_STACKED_WHITE(args...) auto UNIQUE_NAME = L_WHITE(args)
+
+#ifdef NDEBUG
+#define L_DEBUG L_NOTHING
+#else
+#define L_DEBUG(args...) L(LOG_DEBUG, DEBUG_COL, args)
+#endif

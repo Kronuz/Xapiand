@@ -3,8 +3,6 @@
 #define _ L_NOTHING
 
 #ifdef NDEBUG
-#undef L_DEBUG
-#define L_DEBUG _
 #define L_TEST _
 #define L_OBJ_BEGIN _
 #define L_OBJ_END _
