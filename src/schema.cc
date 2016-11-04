@@ -113,30 +113,30 @@ static const std::vector<uint64_t> def_accuracy_date({ toUType(UnitTime::HOUR), 
  */
 
 static const std::vector<std::string> global_acc_prefix_geo({
-	get_prefix("_geo_0",  toUType(FieldType::GEO)),
-	get_prefix("_geo_5",  toUType(FieldType::GEO)),
-	get_prefix("_geo_10", toUType(FieldType::GEO)),
-	get_prefix("_geo_15", toUType(FieldType::GEO)),
-	get_prefix("_geo_20", toUType(FieldType::GEO)),
-	get_prefix("_geo_25", toUType(FieldType::GEO))
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo0"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo5"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo10"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo15"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo20"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo25"),
 });
 
 static const std::vector<std::string> global_acc_prefix_date({
-	get_prefix("_date_hour",    toUType(FieldType::DATE)),
-	get_prefix("_date_day",     toUType(FieldType::DATE)),
-	get_prefix("_date_month",   toUType(FieldType::DATE)),
-	get_prefix("_date_year",    toUType(FieldType::DATE)),
-	get_prefix("_date_decade",  toUType(FieldType::DATE)),
-	get_prefix("_date_century", toUType(FieldType::DATE))
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_hour"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_day"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_month"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_year"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_decade"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_century"),
 });
 
 static const std::vector<std::string> global_acc_prefix_num({
-	get_prefix("_num_100",      toUType(FieldType::INTEGER)),
-	get_prefix("_num_1000",     toUType(FieldType::INTEGER)),
-	get_prefix("_num_10000",    toUType(FieldType::INTEGER)),
-	get_prefix("_num_100000",   toUType(FieldType::INTEGER)),
-	get_prefix("_num_1000000",  toUType(FieldType::INTEGER)),
-	get_prefix("_num_10000000", toUType(FieldType::INTEGER))
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_100"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_1000"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_10000"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_100000"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_1000000"),
+	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_10000000"),
 });
 
 
