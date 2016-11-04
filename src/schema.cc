@@ -103,41 +103,58 @@ static const std::unordered_map<std::string, FieldType> map_type({
  * Default accuracies.
  */
 
-static const std::vector<uint64_t> def_accuracy_geo({ 0, 5, 10, 15, 20, 25 });
 static const std::vector<uint64_t> def_accuracy_num({ 100, 1000, 10000, 100000, 1000000, 10000000 });
 static const std::vector<uint64_t> def_accuracy_date({ toUType(UnitTime::HOUR), toUType(UnitTime::DAY), toUType(UnitTime::MONTH), toUType(UnitTime::YEAR), toUType(UnitTime::DECADE), toUType(UnitTime::CENTURY) });
+static const std::vector<uint64_t> def_accuracy_geo({ 0, 5, 10, 15, 20, 25 });
+
+
+/*
+ *  Functions for generating the name given an accuracy.
+ */
+
+static std::string acc_name_num(uint64_t acc) {
+	return "_" + std::to_string(acc);
+}
+
+static std::string acc_name_date(uint64_t acc) {
+	return "_" + readable_acc_date((UnitTime)(acc));
+}
+
+static std::string acc_name_geo(uint64_t acc) {
+	return "_geo" + std::to_string(acc);
+}
 
 
 /*
  * Default acc_prefixes for global values.
  */
 
-static const std::vector<std::string> global_acc_prefix_geo({
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo0"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo5"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo10"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo15"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo20"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_geo25"),
-});
+static const std::vector<std::string> global_acc_prefix_num = []() {
+	std::vector<std::string> res;
+	res.reserve(def_accuracy_num.size());
+	for (const auto& acc : def_accuracy_num) {
+		res.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_name_num(acc)) + std::string(1, toUType(FieldType::INTEGER)));
+	}
+	return res;
+}();
 
-static const std::vector<std::string> global_acc_prefix_date({
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_hour"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_day"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_month"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_year"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_decade"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_century"),
-});
+static const std::vector<std::string> global_acc_prefix_date = []() {
+	std::vector<std::string> res;
+	res.reserve(def_accuracy_date.size());
+	for (const auto& acc : def_accuracy_date) {
+		res.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_name_date(acc)) + std::string(1, toUType(FieldType::DATE)));
+	}
+	return res;
+}();
 
-static const std::vector<std::string> global_acc_prefix_num({
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_100"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_1000"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_10000"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_100000"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_1000000"),
-	DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field("_10000000"),
-});
+static const std::vector<std::string> global_acc_prefix_geo = []() {
+	std::vector<std::string> res;
+	res.reserve(def_accuracy_geo.size());
+	for (const auto& acc : def_accuracy_geo) {
+		res.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_name_geo(acc)) + std::string(1, toUType(FieldType::GEO)));
+	}
+	return res;
+}();
 
 
 /*
@@ -1149,25 +1166,22 @@ Schema::update_dynamic_specification()
 			case FieldType::FLOAT:
 				for (const auto& acc : specification.accuracy) {
 					auto acc_full_name = specification.dynamic_full_name;
-					acc_full_name.append("._");
-					acc_full_name.append(std::to_string(acc));
-					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+					acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_num(acc));
+					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::dynamic_namespace_field(acc_full_name) + std::string(1, toUType(FieldType::INTEGER)));
 				}
 				break;
 			case FieldType::DATE:
 				for (const auto& acc : specification.accuracy) {
 					auto acc_full_name = specification.dynamic_full_name;
-					acc_full_name.append("._");
-					acc_full_name.append(readable_acc_date((UnitTime)acc));
-					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+					acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_date(acc));
+					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::dynamic_namespace_field(acc_full_name) + std::string(1, toUType(FieldType::DATE)));
 				}
 				break;
 			case FieldType::GEO:
 				for (const auto& acc : specification.accuracy) {
 					auto acc_full_name = specification.dynamic_full_name;
-					acc_full_name.append("._geo");
-					acc_full_name.append(std::to_string(acc));
-					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+					acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_geo(acc));
+					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::dynamic_namespace_field(acc_full_name) + std::string(1, toUType(FieldType::GEO)));
 				}
 				break;
 			default:
@@ -1255,9 +1269,8 @@ Schema::validate_required_data()
 					if (specification.acc_prefix.empty()) {
 						for (const auto& acc : set_acc) {
 							auto acc_full_name = specification.dynamic_full_name;
-							acc_full_name.append("._geo");
-							acc_full_name.append(std::to_string(acc)).push_back(toUType(FieldType::GEO));
-							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+							acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_geo(acc));
+							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name) + std::string(1, toUType(FieldType::GEO)));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -1290,9 +1303,8 @@ Schema::validate_required_data()
 					if (specification.acc_prefix.empty()) {
 						for (const auto& acc : set_acc) {
 							auto acc_full_name = specification.dynamic_full_name;
-							acc_full_name.append("._");
-							acc_full_name.append(readable_acc_date((UnitTime)acc)).push_back(toUType(FieldType::DATE));
-							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+							acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_date(acc));
+							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name) + std::string(1, toUType(FieldType::DATE)));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -1322,9 +1334,8 @@ Schema::validate_required_data()
 					if (specification.acc_prefix.empty()) {
 						for (const auto& acc : set_acc) {
 							auto acc_full_name = specification.dynamic_full_name;
-							acc_full_name.append("._");
-							acc_full_name.append(std::to_string(acc)).push_back(toUType(FieldType::INTEGER));
-							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+							acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_num(acc));
+							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name) + std::string(1, toUType(FieldType::INTEGER)));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
