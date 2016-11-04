@@ -2443,7 +2443,7 @@ Schema::get_subproperties(const MsgPack& properties)
 		static const auto dsit_e = map_dispatch_set_default_spc.end();
 		for (auto it = field_names.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
-			if (map_dispatch_set_default_spc.find(specification.dynamic_full_name + field_name) == dsit_e && (!is_valid(field_name) || field_name == UUID_FIELD_NAME)) {
+			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && specification.dynamic_full_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
 				throw MSG_ClientError("The field name: %s (%s) is not valid or reserved", repr(specification.name).c_str(), repr(field_name).c_str());
 			}
 			restart_specification();
