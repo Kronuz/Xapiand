@@ -880,7 +880,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 
 	if (specification.flags.inside_namespace) {
 		if (!specification.flags.field_with_type) {
-			validate_required_data(item_value);
+			validate_required_namespace_data(item_value);
 		}
 
 		auto data_namespace = get_data_namespace(specification.paths_namespace, specification.sep_types[2]);
@@ -931,7 +931,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 
 	if (specification.flags.inside_namespace) {
 		if (!specification.flags.field_with_type) {
-			validate_required_data(item_value);
+			validate_required_namespace_data(item_value);
 		}
 
 		auto data_namespace = get_data_namespace(specification.paths_namespace, specification.sep_types[2]);
@@ -982,7 +982,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 
 		if (specification.flags.inside_namespace) {
 			if (!specification.flags.field_with_type) {
-				validate_required_data(*val);
+				validate_required_namespace_data(*val);
 			}
 
 			auto data_namespace = get_data_namespace(specification.paths_namespace, specification.sep_types[2]);
@@ -1381,9 +1381,16 @@ Schema::validate_required_data()
 
 
 void
-Schema::validate_required_namespace_data()
+Schema::validate_required_namespace_data(const MsgPack& value)
 {
-	L_CALL(this, "Schema::validate_required_namespace_data()");
+	L_CALL(this, "Schema::validate_required_namespace_data(%s)", repr(value.to_string()).c_str());
+
+	if (specification.sep_types[2] == FieldType::EMPTY) {
+		if ((XapiandManager::manager->strict || specification.flags.strict) && !specification.flags.inside_namespace) {
+			throw MSG_MissingTypeError("Type of field %s is missing", repr(specification.dynamic_full_name).c_str());
+		}
+		guess_field_type(value);
+	}
 
 	if (!specification.full_name.empty()) {
 		switch (specification.sep_types[2]) {
@@ -1447,11 +1454,7 @@ Schema::validate_required_data(const MsgPack& value)
 		guess_field_type(value);
 	}
 
-	if (specification.flags.inside_namespace) {
-		validate_required_namespace_data();
-	} else {
-		validate_required_data();
-	}
+	validate_required_data();
 }
 
 

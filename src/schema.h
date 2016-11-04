@@ -450,7 +450,7 @@ class Schema {
 	 */
 
 	void validate_required_data();
-	void validate_required_namespace_data();
+	void validate_required_namespace_data(const MsgPack& value);
 	void validate_required_data(const MsgPack& value);
 
 
