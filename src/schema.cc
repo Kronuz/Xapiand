@@ -3663,7 +3663,7 @@ Schema::get_readable() const
 	if unlikely(properties.is_undefined()) {
 		schema_readable.erase(RESERVED_SCHEMA);
 	} else {
-		readable(properties);
+		readable(properties, true);
 	}
 
 	return schema_readable;
@@ -3671,7 +3671,7 @@ Schema::get_readable() const
 
 
 void
-Schema::readable(MsgPack& item_schema)
+Schema::readable(MsgPack& item_schema, bool is_root)
 {
 	L_CALL(nullptr, "Schema::readable(%s)", repr(item_schema.to_string()).c_str());
 
@@ -3683,13 +3683,13 @@ Schema::readable(MsgPack& item_schema)
 			auto func = map_dispatch_readable.at(str_key);
 			(*func)(item_schema.at(str_key), item_schema);
 		} catch (const std::out_of_range&) {
-			if (is_valid(str_key) || map_dispatch_set_default_spc.find(str_key) != dsit_e) {
+			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.find(str_key) != dsit_e)) {
 				auto& sub_item = item_schema.at(str_key);
 				if unlikely(sub_item.is_undefined()) {
 					it = item_schema.erase(it);
 					continue;
 				} else {
-					readable(sub_item);
+					readable(sub_item, false);
 				}
 			}
 		}

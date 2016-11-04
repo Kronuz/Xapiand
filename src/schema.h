@@ -538,7 +538,7 @@ class Schema {
 	/*
 	 * Recursively transforms item_schema into a readable form.
 	 */
-	static void readable(MsgPack& item_schema);
+	static void readable(MsgPack& item_schema, bool is_root);
 
 	/*
 	 * Tranforms reserved words into a readable form.
