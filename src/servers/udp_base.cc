@@ -24,7 +24,6 @@
 
 #include <arpa/inet.h>              // for inet_addr, htonl, htons
 #include <string.h>                 // for strerror, memset
-#include <sys/_types/_u_int32_t.h>  // for u_int32_t
 #include <sys/errno.h>              // for __error, errno
 #include <sys/fcntl.h>              // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <sys/socket.h>             // for setsockopt, bind, recvfrom, sendto

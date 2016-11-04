@@ -27,7 +27,6 @@
 #include <netinet/in.h>             // for sockaddr_in, INADDR_ANY, IPPROTO_TCP
 #include <netinet/tcp.h>            // for TCP_NODELAY
 #include <string.h>                 // for strerror, memset
-#include <sys/_types/_u_int32_t.h>  // for u_int32_t
 #include <sys/errno.h>              // for __error, errno
 #include <sys/fcntl.h>              // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <sys/socket.h>             // for setsockopt, SOL_SOCKET, SO_NOSIGPIPE
