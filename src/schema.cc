@@ -1135,24 +1135,46 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 void
 Schema::update_dynamic_specification()
 {
-	L_CALL(nullptr, "Schema::update_dynamic_specification()");
+	L_CALL(this, "Schema::update_dynamic_specification()");
 
 	switch (specification.index) {
 		case TypeIndex::ALL:
 		case TypeIndex::FIELD_ALL:
 		case TypeIndex::GLOBAL_ALL:
 			specification.prefix.assign(get_dynamic_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2])));
-			specification.slot = get_slot(specification.dynamic_full_name);
-			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_dynamic_prefix(specification.dynamic_full_name + std::to_string(acc), toUType(specification.sep_types[2])));
-			}
-			break;
 		case TypeIndex::VALUES:
 		case TypeIndex::FIELD_VALUES:
 		case TypeIndex::GLOBAL_VALUES:
 			specification.slot = get_slot(specification.dynamic_full_name);
-			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_dynamic_prefix(specification.dynamic_full_name + std::to_string(acc), toUType(specification.sep_types[2])));
+			switch (specification.sep_types[2]) {
+				case FieldType::INTEGER:
+				case FieldType::POSITIVE:
+				case FieldType::FLOAT:
+					for (const auto& acc : specification.accuracy) {
+						auto acc_full_name = specification.dynamic_full_name;
+						acc_full_name.append("._");
+						acc_full_name.append(std::to_string(acc));
+						specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+					}
+					break;
+				case FieldType::DATE:
+					for (const auto& acc : specification.accuracy) {
+						auto acc_full_name = specification.dynamic_full_name;
+						acc_full_name.append("._");
+						acc_full_name.append(readable_acc_date((UnitTime)acc));
+						specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+					}
+					break;
+				case FieldType::GEO:
+					for (const auto& acc : specification.accuracy) {
+						auto acc_full_name = specification.dynamic_full_name;
+						acc_full_name.append("._geo");
+						acc_full_name.append(std::to_string(acc));
+						specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+					}
+					break;
+				default:
+					break;
 			}
 			break;
 		case TypeIndex::TERMS:
@@ -1239,6 +1261,22 @@ Schema::validate_required_data()
 				} else {
 					set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
 				}
+				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
+				if (!specification.flags.dynamic_type && set_acc.size()) {
+					if (specification.acc_prefix.empty()) {
+						for (const auto& acc : set_acc) {
+							auto acc_full_name = specification.dynamic_full_name;
+							acc_full_name.append("._geo");
+							acc_full_name.append(std::to_string(acc));
+							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+						}
+					} else if (specification.acc_prefix.size() != set_acc.size()) {
+						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+					}
+					specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+					properties[RESERVED_ACCURACY]   = specification.accuracy;
+					properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
+				}
 				break;
 			}
 			case FieldType::DATE: {
@@ -1258,6 +1296,22 @@ Schema::validate_required_data()
 				} else {
 					set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
 				}
+				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
+				if (!specification.flags.dynamic_type && set_acc.size()) {
+					if (specification.acc_prefix.empty()) {
+						for (const auto& acc : set_acc) {
+							auto acc_full_name = specification.dynamic_full_name;
+							acc_full_name.append("._");
+							acc_full_name.append(readable_acc_date((UnitTime)acc));
+							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+						}
+					} else if (specification.acc_prefix.size() != set_acc.size()) {
+						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+					}
+					specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+					properties[RESERVED_ACCURACY]   = specification.accuracy;
+					properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
+				}
 				break;
 			}
 			case FieldType::INTEGER:
@@ -1273,6 +1327,22 @@ Schema::validate_required_data()
 					}
 				} else {
 					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
+				}
+				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
+				if (!specification.flags.dynamic_type && set_acc.size()) {
+					if (specification.acc_prefix.empty()) {
+						for (const auto& acc : set_acc) {
+							auto acc_full_name = specification.dynamic_full_name;
+							acc_full_name.append("._");
+							acc_full_name.append(std::to_string(acc));
+							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
+						}
+					} else if (specification.acc_prefix.size() != set_acc.size()) {
+						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+					}
+					specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+					properties[RESERVED_ACCURACY]   = specification.accuracy;
+					properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
 				}
 				break;
 			}
@@ -1341,20 +1411,6 @@ Schema::validate_required_data()
 			}
 			update_dynamic_specification();
 		} else {
-			if (set_acc.size()) {
-				if (specification.acc_prefix.empty()) {
-					for (const auto& acc : set_acc) {
-						specification.acc_prefix.push_back(get_prefix(specification.dynamic_full_name + std::to_string(acc), toUType(specification.sep_types[2])));
-					}
-				} else if (specification.acc_prefix.size() != set_acc.size()) {
-					throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
-				}
-
-				specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-				properties[RESERVED_ACCURACY] = specification.accuracy;
-				properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
-			}
-
 			// Process RESERVED_PREFIX
 			if (specification.prefix.empty()) {
 				specification.prefix = get_prefix(specification.dynamic_full_name, toUType(specification.sep_types[2]));
