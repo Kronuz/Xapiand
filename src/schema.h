@@ -33,6 +33,16 @@
 
 #include <future>
 
+#define DEFAULT_STEM_STRATEGY StemStrategy::STEM_SOME
+#define DEFAULT_LANGUAGE      "en"
+#define DEFAULT_GEO_PARTIALS  true
+#define DEFAULT_GEO_ERROR     HTM_MIN_ERROR
+#define DEFAULT_POSITIONS     true
+#define DEFAULT_SPELLING      false
+#define DEFAULT_BOOL_TERM     false
+#define DEFAULT_INDEX         TypeIndex::ALL
+
+
 enum class TypeIndex : uint8_t {
 	NONE                      = 0,                              // 0000  Bits for  "none"
 	FIELD_TERMS               = 0b0001,                         // 0001  Bit for   "field_terms"
@@ -59,16 +69,6 @@ enum class StemStrategy : uint8_t {
 	STEM_ALL,
 	STEM_ALL_Z,
 };
-
-
-#define DEFAULT_STEM_STRATEGY StemStrategy::STEM_SOME
-#define DEFAULT_LANGUAGE      "en"
-#define DEFAULT_GEO_PARTIALS  true
-#define DEFAULT_GEO_ERROR     HTM_MIN_ERROR
-#define DEFAULT_POSITIONS     true
-#define DEFAULT_SPELLING      false
-#define DEFAULT_BOOL_TERM     false
-#define DEFAULT_INDEX         TypeIndex::ALL
 
 
 enum class UnitTime : uint8_t {

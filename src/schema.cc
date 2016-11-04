@@ -27,8 +27,9 @@
 #include "multivalue/generate_terms.h"
 #include "utils.h"
 
+
 /*
- * 1. Try reading schema from the metadata
+ * 1. Try reading schema from the metadata.
  * 2. Feed specification_t with the read schema using update_*;
  *    sets field_found for all found fields.
  * 3. Feed specification_t with the object sent by the user using process_*,
@@ -38,7 +39,7 @@
  *    and a value is received for the field, call validate_required_data() to
  *    initialize the specification with validated data sent by the user.
  * 5. If there are values sent by user, fills the document to be indexed by
- *    using index_object() and index_array()
+ *    using index_object() and index_array().
  */
 
 
