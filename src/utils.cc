@@ -476,7 +476,7 @@ void move_files(const std::string& src, const std::string& dst) {
 }
 
 
-bool exist(const std::string& path) {
+bool exists(const std::string& path) {
 	struct stat buffer;
 	return stat(path.c_str(), &buffer) == 0;
 }
@@ -488,7 +488,7 @@ bool build_path_index(const std::string& path) {
 	if (found != std::string::npos) {
 		dir.resize(found);
 	}
-	if (exist(dir)) {
+	if (exists(dir)) {
 		return true;
 	} else {
 		std::vector<std::string> directories;

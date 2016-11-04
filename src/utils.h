@@ -257,7 +257,7 @@ bool startswith(const std::string& text, const std::string& token);
 bool endswith(const std::string& text, const std::string& token);
 void delete_files(const std::string& path);
 void move_files(const std::string& src, const std::string& dst);
-bool exist(const std::string& name);
+bool exists(const std::string& name);
 bool build_path_index(const std::string& path);
 
 void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pre_suf_fix);

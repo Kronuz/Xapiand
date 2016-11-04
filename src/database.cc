@@ -359,7 +359,7 @@ DatabaseWAL::init_database(const std::string& dir)
 	}});
 
 	auto filename = dir + "/iamglass";
-	if (exist(filename)) {
+	if (exists(filename)) {
 		return true;
 	}
 
