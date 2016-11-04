@@ -29,7 +29,6 @@ THE SOFTWARE.
 #include <algorithm>
 #include <iomanip>
 
-#include "/System/Library/Frameworks/CoreFoundation.framework/Headers/CFBase.h"
 #include "config.h"
 
 #ifdef GUID_LIBUUID
