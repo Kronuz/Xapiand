@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.10)
+cmake_minimum_required (VERSION 3.3 FATAL_ERROR)
 project (xapiand C CXX)
 
 set (PACKAGE_NAME "Xapiand")
@@ -11,6 +11,7 @@ set (PACKAGE_PATH_TEST "${PROJECT_SOURCE_DIR}/tests")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 
+option (IWYU "Enable include-what-you-use" OFF)
 option (BINARY_PROXY "Define to what port binary traffic will be redirected to" OFF)
 option (CLUSTERING "Enable remote clustering" OFF)
 option (DATABASE_WAL "Enable database write ahead log (WAL)" ON)
@@ -18,7 +19,7 @@ option (TRACEBACKS "Enable tracebacks for exceptions" OFF)
 option (V8 "Enable v8 engine" ON)
 option (BUILD_TESTS "Build all tests" OFF)
 
-foreach(opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS V8)
+foreach (opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS V8)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 	else ()
@@ -317,6 +318,28 @@ target_link_libraries (${PROJECT_NAME}
 )
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+
+########################################################################
+# Enable Google's Include What You Use
+########################################################################
+
+if (IWYU)
+	find_program (IWYU_PATH NAMES include-what-you-use iwyu)
+	if (IWYU_PATH)
+		message (STATUS "Looking for include-what-you-use - found")
+		set (IWYU_OPTS
+			${IWYU_PATH}
+			-Xiwyu
+			--mapping_file=${PROJECT_SOURCE_DIR}/iwyu.imp)
+		set_property (TARGET SRC_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET SRC_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET ${PROJECT_NAME} PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET ${PROJECT_NAME} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+	else ()
+		message (STATUS "Looking for include-what-you-use - not found")
+	endif ()
+endif (IWYU)
 
 
 ########################################################################
