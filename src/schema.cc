@@ -1256,7 +1256,7 @@ Schema::validate_required_data()
 						for (const auto& acc : set_acc) {
 							auto acc_full_name = specification.dynamic_full_name;
 							acc_full_name.append("._geo");
-							acc_full_name.append(std::to_string(acc));
+							acc_full_name.append(std::to_string(acc).push_back(toUType(FieldType::GEO)));
 							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
@@ -1291,7 +1291,7 @@ Schema::validate_required_data()
 						for (const auto& acc : set_acc) {
 							auto acc_full_name = specification.dynamic_full_name;
 							acc_full_name.append("._");
-							acc_full_name.append(readable_acc_date((UnitTime)acc));
+							acc_full_name.append(readable_acc_date((UnitTime)acc)).push_back(toUType(FieldType::DATE));
 							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
@@ -1323,7 +1323,7 @@ Schema::validate_required_data()
 						for (const auto& acc : set_acc) {
 							auto acc_full_name = specification.dynamic_full_name;
 							acc_full_name.append("._");
-							acc_full_name.append(std::to_string(acc));
+							acc_full_name.append(std::to_string(acc)).push_back(toUType(FieldType::INTEGER));
 							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
