@@ -300,6 +300,7 @@ public:
 		  xxhash(XXH32_createState()),
 		  bin_hash(0),
 		  changed(false) {
+		memset(&header, 0, sizeof(header));
 		if ((reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header) + sizeof(bin_header.size)) > STORAGE_ALIGNMENT) {
 			XXH32_freeState(xxhash);
 			throw MSG_StorageException("StorageBinHeader's size must be in the first %d bites", STORAGE_ALIGNMENT - sizeof(bin_header.size));
