@@ -125,7 +125,7 @@ private:
 public:
 	std::string dump_tree(int level=1);
 
-	virtual std::string __repr__() const = 0;
+	virtual std::string __repr__() const;
 
 	virtual ~Worker();
 
