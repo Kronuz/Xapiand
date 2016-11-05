@@ -70,22 +70,20 @@ BaseUDP::destroy_impl()
 void
 BaseUDP::destroyer()
 {
-	L_OBJ(this, "DESTROYING BASE UDP!");
+	L_CALL(this, "BaseUDP::destroyer()");
 
 	if (sock == -1) {
 		return;
 	}
 
 	::shutdown(sock, SHUT_RDWR);
-
-	L_OBJ(this, "DESTROYED BASE UDP!");
 }
 
 
 void
 BaseUDP::shutdown_impl(time_t asap, time_t now)
 {
-	L_OBJ(this , "SHUTDOWN BASE UDP! (%d %d)", asap, now);
+	L_CALL(this, "BaseUDP::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 

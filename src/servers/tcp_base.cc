@@ -72,22 +72,20 @@ BaseTCP::destroy_impl()
 void
 BaseTCP::destroyer()
 {
-	L_OBJ(this, "DESTROYING BASE TCP!");
+	L_CALL(this, "BaseTCP::destroyer()");
 
 	if (sock == -1) {
 		return;
 	}
 
 	::shutdown(sock, SHUT_RDWR);
-
-	L_OBJ(this, "DESTROYED BASE TCP!");
 }
 
 
 void
 BaseTCP::shutdown_impl(time_t asap, time_t now)
 {
-	L_OBJ(this , "SHUTDOWN BASE TCP! (%d %d)", asap, now);
+	L_CALL(this, "BaseTCP::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 

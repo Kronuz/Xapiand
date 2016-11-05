@@ -64,6 +64,8 @@ XapiandServer::~XapiandServer()
 void
 XapiandServer::run()
 {
+	L_CALL(this, "XapiandServer::run()");
+
 	L_EV(this, "Starting server loop...");
 	run_loop();
 	L_EV(this, "Server loop ended!");
@@ -96,21 +98,19 @@ XapiandServer::destroy_impl()
 void
 XapiandServer::destroyer()
 {
-	L_OBJ(this, "DESTROYING XAPIAN SERVER!");
+	L_CALL(this, "XapiandServer::destroyer()");
 
 	std::lock_guard<std::mutex> lk(qmtx);
 
 	async_setup_node.stop();
 	L_EV(this, "Stop server's async setup node event");
-
-	L_OBJ(this, "DESTROYED XAPIAN SERVER!");
 }
 
 
 void
 XapiandServer::shutdown_impl(time_t asap, time_t now)
 {
-	L_OBJ(this , "SHUTDOWN XAPIAN SERVER! (%d %d)", asap, now);
+	L_CALL(this, "XapiandServer::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 

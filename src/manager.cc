@@ -507,7 +507,7 @@ XapiandManager::destroy_impl()
 
 void
 XapiandManager::destroyer() {
-	L_OBJ(this, "DESTROYING XAPIAN MANAGER!");
+	L_CALL(this, "XapiandManager::destroyer()");
 
 #ifdef XAPIAND_CLUSTERING
 	if (auto discovery = weak_discovery.lock()) {
@@ -517,15 +517,13 @@ XapiandManager::destroyer() {
 #endif
 
 	finish();
-
-	L_OBJ(this, "DESTROYED XAPIAN MANAGER!");
 }
 
 
 void
 XapiandManager::shutdown_impl(time_t asap, time_t now)
 {
-	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER! (%d %d)", asap, now);
+	L_CALL(this, "XapiandManager::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 

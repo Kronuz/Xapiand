@@ -73,8 +73,6 @@ Worker::destroyer()
 {
 	L_CALL(this, "Worker::destroyer()");
 
-	L_OBJ(this, "DESTROYING WORKER!");
-
 	_async_shutdown.stop();
 	L_EV(this, "Stop Worker async shutdown event");
 	_async_break_loop.stop();
@@ -83,8 +81,6 @@ Worker::destroyer()
 	L_EV(this, "Stop Worker async destroy event");
 	_async_detach.stop();
 	L_EV(this, "Stop Worker async detach event");
-
-	L_OBJ(this, "DESTROYED WORKER!");
 }
 
 

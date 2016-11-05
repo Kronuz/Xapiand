@@ -330,7 +330,6 @@ BaseClient::destroyer()
 {
 	L_CALL(this, "BaseClient::destroyer()");
 
-	L_OBJ(this, "DESTROYING BASE CLIENT!");
 	close();
 
 	int sock_load = sock.exchange(-1);
@@ -352,8 +351,6 @@ BaseClient::destroyer()
 
 	write_queue.finish();
 	write_queue.clear();
-
-	L_OBJ(this, "DESTROYED BASE CLIENT!");
 }
 
 
@@ -715,9 +712,7 @@ BaseClient::async_read_cb(ev::async &, int revents)
 void
 BaseClient::shutdown_impl(time_t asap, time_t now)
 {
-	L_CALL(this, "BaseClient::shutdown_impl()");
-
-	L_OBJ(this , "SHUTDOWN BASE CLIENT! (%d %d)", asap, now);
+	L_CALL(this, "BaseClient::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 

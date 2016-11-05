@@ -69,9 +69,7 @@ BaseServer::destroy_impl()
 void
 BaseServer::destroyer()
 {
-	L_OBJ(this, "DESTROYING BASE SERVER!");
+	L_CALL(this, "BaseServer::destroyer()");
 
 	io.stop();
-
-	L_OBJ(this, "DESTROYED BASE SERVER!");
 }

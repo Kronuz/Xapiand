@@ -35,11 +35,7 @@ XapiandReplicator::XapiandReplicator(const std::shared_ptr<XapiandManager>& mana
 
 XapiandReplicator::~XapiandReplicator()
 {
-	L_OBJ(this, "DESTROYING XAPIAN REPLICATOR!");
-
 	destroyer();
-
-	L_OBJ(this, "DESTROYED XAPIAN REPLICATOR!");
 }
 
 
@@ -53,6 +49,8 @@ XapiandReplicator::destroy_impl()
 void
 XapiandReplicator::destroyer()
 {
+	L_CALL(this, "XapiandReplicator::destroyer()");
+
 	XapiandManager::manager->database_pool.updated_databases.finish();
 }
 
@@ -60,7 +58,7 @@ XapiandReplicator::destroyer()
 void
 XapiandReplicator::shutdown_impl(time_t asap, time_t now)
 {
-	L_OBJ(this , "SHUTDOWN XAPIAN REPLICATOR! (%d %d)", asap, now);
+	L_CALL(this, "XapiandReplicator::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 
@@ -75,6 +73,8 @@ XapiandReplicator::shutdown_impl(time_t asap, time_t now)
 void
 XapiandReplicator::run()
 {
+	L_CALL(this, "XapiandReplicator::run()");
+
 	// Function that retrieves a task from a queue, runs it and deletes it
 	Endpoint endpoint;
 	while (XapiandManager::manager->database_pool.updated_databases.pop(endpoint)) {
@@ -89,6 +89,8 @@ XapiandReplicator::run()
 void
 XapiandReplicator::on_commit(const Endpoint &endpoint)
 {
+	L_CALL(this, "XapiandReplicator::on_commit(%s)", repr(endpoint.to_string()).c_str());
+
 	if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
 		auto local_node_ = local_node.load();
 		discovery->send_message(
