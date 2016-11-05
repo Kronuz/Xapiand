@@ -251,7 +251,12 @@ Worker::detach_impl()
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
 			child->detach_impl();
-			if (!child->_detaching) continue;
+			if (!child->_detaching) {
+				if (ev_loop->depth()) {
+					L_WORKER(this, LIGHT_RED "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__().c_str(), child.use_count() - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+					continue;
+				}
+			}
 		}
 		_detach_impl(weak_child);
 	}
@@ -334,4 +339,7 @@ Worker::run_loop()
 	L_CALL(this, "Worker::run_loop() [%s]", __repr__().c_str());
 
 	ev_loop->run();
+	if (_detaching) {
+		detach();
+	}
 }
