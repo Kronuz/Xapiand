@@ -40,21 +40,6 @@ Worker::~Worker()
 
 
 void
-Worker::_set_running(ev::loop_ref* loop, bool running)
-{
-	L_CALL(this, "Worker::_set_running(<loop>, %s) [%s]", running ? "true" : "false", __repr__().c_str());
-
-	std::lock_guard<std::mutex> lk(_mtx);
-	if (ev_loop == loop) {
-		_running = running;
-	}
-	for (const auto& c : _children) {
-		c->_set_running(loop, running);
-	}
-}
-
-
-void
 Worker::_init()
 {
 	L_CALL(this, "Worker::_init()");
@@ -346,6 +331,22 @@ Worker::cleanup()
 		_ancestor(1)->detach_impl();
 	}
 }
+
+
+void
+Worker::_set_running(ev::loop_ref* loop, bool running)
+{
+	L_CALL(this, "Worker::_set_running(<loop>, %s) [%s]", running ? "true" : "false", __repr__().c_str());
+
+	std::lock_guard<std::mutex> lk(_mtx);
+	if (ev_loop == loop) {
+		_running = running;
+	}
+	for (const auto& child : _children) {
+		child->_set_running(loop, running);
+	}
+}
+
 
 void
 Worker::set_running(bool running)

@@ -63,38 +63,6 @@ private:
 	// use a standard iterator and not const_iterator.
 	WorkerList::iterator _iterator;
 
-	template<typename T>
-	auto _attach(T&& child) {
-		assert(child);
-		auto it = _children.insert(_children.end(), std::forward<T>(child));
-		child->_iterator = it;
-
-		auto parent = shared_from_this();
-		while (parent) {
-			if (parent->ev_loop == child->ev_loop) {
-				child->_running = parent->_running.load();
-				break;
-			}
-			parent = parent->_parent;
-		}
-
-		return it;
-	}
-
-	template<typename T>
-	decltype(auto) _detach(T&& child) {
-		if (child->_parent && child->_iterator != _children.end()) {
-			auto it = _children.erase(child->_iterator);
-			child->_iterator = _children.end();
-			return it;
-		}
-		return _children.end();
-	}
-
-	void _set_running(ev::loop_ref* loop, bool running);
-
-	void _init();
-
 protected:
 	template<typename T, typename L>
 	Worker(T&& parent, L&& ev_loop_, unsigned int ev_flags_)
@@ -113,6 +81,38 @@ protected:
 	void destroyer();
 
 private:
+	template<typename T>
+	auto _attach(T&& child) {
+		ASSERT(child);
+		auto it = _children.insert(_children.end(), std::forward<T>(child));
+		child->_iterator = it;
+
+		auto parent = shared_from_this();
+		while (parent) {
+			if (parent->ev_loop == child->ev_loop) {
+				child->_running = parent->_running.load();
+				break;
+			}
+			parent = parent->_parent;
+		}
+
+		return it;
+	}
+
+	template<typename T>
+	decltype(auto) _detach(T&& child) {
+		ASSERT(child);
+		if (child->_iterator != _children.end()) {
+			ASSERT(child->_parent.get() == this);
+			auto it = _children.erase(child->_iterator);
+			child->_iterator = _children.end();
+			return it;
+		}
+		return _children.end();
+	}
+
+	void _init();
+
 	void _async_shutdown_cb();
 	void _async_break_loop_cb(ev::async&, int revents);
 	void _async_destroy_cb(ev::async&, int revents);
@@ -120,6 +120,7 @@ private:
 	std::vector<std::weak_ptr<Worker>> _gather_children();
 	void _detach_impl(const std::weak_ptr<Worker>& weak_child);
 	auto _ancestor(int levels=-1);
+	void _set_running(ev::loop_ref* loop, bool running);
 
 public:
 	std::string dump_tree(int level=1);
