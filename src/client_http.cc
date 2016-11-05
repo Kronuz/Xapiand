@@ -796,6 +796,8 @@ HttpClient::home_view(HttpMethod method)
 	endpoints.clear();
 	endpoints.add(Endpoint("."));
 
+	operation_begins = std::chrono::system_clock::now();
+
 	db_handler.reset(endpoints, DB_SPAWN, method);
 
 	auto local_node_ = local_node.load();
@@ -803,6 +805,8 @@ HttpClient::home_view(HttpMethod method)
 
 	auto obj_data = document.get_obj();
 	obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+
+	operation_ends = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_CLUSTERING
 	obj_data["_cluster_name"] = XapiandManager::manager->cluster_name;
@@ -824,10 +828,14 @@ HttpClient::document_info_view(HttpMethod method)
 
 	endpoints_maker(1s);
 
+	operation_begins = std::chrono::system_clock::now();
+
 	db_handler.reset(endpoints, DB_SPAWN, method);
 
 	MsgPack response;
 	response["doc_id"] = db_handler.get_docid(path_parser.get_id());
+
+	operation_ends = std::chrono::system_clock::now();
 
 	write_http_response(200, response);
 }
@@ -843,12 +851,13 @@ HttpClient::delete_document_view(HttpMethod method)
 
 	std::string doc_id(path_parser.get_id());
 
+	operation_begins = std::chrono::system_clock::now();
+
 	int status_code;
 	MsgPack response;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
 	if (endpoints.size() == 1) {
-		operation_begins = std::chrono::system_clock::now();
 		db_handler.delete_document(doc_id, query_field->commit);
 		operation_ends = std::chrono::system_clock::now();
 		status_code = 200;
@@ -858,7 +867,6 @@ HttpClient::delete_document_view(HttpMethod method)
 			{ "_commit",  query_field->commit }
 		};
 	} else {
-		operation_begins = std::chrono::system_clock::now();
 		endpoints_error_list err_list = db_handler.multi_db_delete_document(doc_id, query_field->commit);
 		operation_ends = std::chrono::system_clock::now();
 
@@ -1067,6 +1075,8 @@ HttpClient::info_view(HttpMethod method)
 	} else {
 		endpoints_maker(1s);
 
+		operation_begins = std::chrono::system_clock::now();
+
 		db_handler.reset(endpoints, DB_OPEN, method);
 		try {
 			db_handler.get_document_info(response["_document_info"], path_parser.get_id());
@@ -1080,6 +1090,9 @@ HttpClient::info_view(HttpMethod method)
 
 		db_handler.reset(endpoints, DB_OPEN, method);
 		db_handler.get_database_info(response["_database_info"]);
+
+		operation_ends = std::chrono::system_clock::now();
+
 		res_stats = true;
 	}
 
@@ -1134,6 +1147,8 @@ HttpClient::touch_view(HttpMethod method)
 	MsgPack response;
 	int status_code;
 	try {
+		operation_begins = std::chrono::system_clock::now();
+
 		db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
 		status_code = 200;
 		response["_touch"] = "Done";
@@ -1142,6 +1157,9 @@ HttpClient::touch_view(HttpMethod method)
 		auto ss = "Error: " + std::string(e.what());
 		response["_touch"] = ss;
 	}
+
+	operation_ends = std::chrono::system_clock::now();
+
 	write_http_response(status_code, response);
 }
 
@@ -1150,10 +1168,15 @@ void
 HttpClient::schema_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::schema_view()");
-	
+
 	endpoints_maker(1s);
-	
+
+	operation_begins = std::chrono::system_clock::now();
+
 	db_handler.reset(endpoints, DB_OPEN, method);
+
+	operation_begins = std::chrono::system_clock::now();
+
 	write_http_response(200, db_handler.get_schema()->get_readable());
 }
 
