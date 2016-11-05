@@ -142,8 +142,6 @@ check_function_exists (posix_fallocate HAVE_POSIX_FALLOCATE)
 check_function_exists (pread HAVE_PREAD)
 check_function_exists (pwrite HAVE_PWRITE)
 check_function_exists (socket HAVE_SOCKET)
-check_function_exists (__builtin_expect HAVE___BUILTIN_EXPECT)
-
 
 check_function_exists (pthread_getname_np HAVE_PTHREAD_GETNAME_NP_3)
 check_function_exists (pthread_get_name_np HAVE_PTHREAD_GET_NAME_NP_1)
@@ -152,6 +150,12 @@ check_function_exists (pthread_setname_np HAVE_PTHREAD_SETNAME_NP_1)
 # check_function_exists (pthread_setname_np HAVE_PTHREAD_SETNAME_NP_2)
 # check_function_exists (pthread_setname_np HAVE_PTHREAD_SETNAME_NP_3)
 check_function_exists (pthread_set_name_np HAVE_PTHREAD_SET_NAME_NP_2)
+
+include (CheckCXXSourceCompiles)
+check_cxx_source_compiles ("
+	int main() {
+		if(__builtin_expect(1<2, 1)) {}
+	}" HAVE___BUILTIN_EXPECT)
 
 
 if (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
