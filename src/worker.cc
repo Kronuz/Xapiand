@@ -166,11 +166,11 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 
 	std::lock_guard<std::mutex> lk(_mtx);
 	if (auto child = weak_child.lock()) {
+		_detach(child);
 #ifdef L_WORKER
 		child_repr = child->__repr__();
 		child_use_count = child.use_count() - 1;
 #endif
-		_detach(child);
 	} else {
 		return;
 	}
