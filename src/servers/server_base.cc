@@ -47,7 +47,7 @@ BaseServer::~BaseServer()
 void
 BaseServer::shutdown_impl(time_t asap, time_t now)
 {
-	L_OBJ(this , "SHUTDOWN BASE SERVER! (%d %d)", asap, now);
+	L_CALL(this, "BaseServer::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 
