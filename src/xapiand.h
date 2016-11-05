@@ -57,12 +57,6 @@
 #define XAPIAND_TCP_BACKLOG       511     /* TCP listen backlog */
 #endif
 
-/*
- *	RapidJSON uses 32-bit array/string indices even on 64-bit platforms,
- *	instead of using \c size_t. Users may override the SizeType by defining
- */
-// #define RAPIDJSON_NO_SIZETYPEDEFINE
-// namespace rapidjson { typedef ::std::size_t SizeType; }
 
 #ifdef HAVE___BUILTIN_EXPECT
 #define likely(x) __builtin_expect(!!(x), 1)
@@ -70,4 +64,12 @@
 #else
 #define likely(x) (x)
 #define unlikely(x) (x)
+#endif
+
+
+#ifdef NDEBUG
+#define ASSERT(args...)
+#else
+#include <cassert>
+#define ASSERT(args...) assert(args)
 #endif
