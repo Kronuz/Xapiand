@@ -54,7 +54,6 @@ private:
 
 	std::mutex _mtx;
 	std::atomic_bool _detaching;
-	std::atomic_bool _running;
 
 	const WorkerShared _parent;
 	WorkerList _children;
@@ -86,16 +85,6 @@ private:
 		ASSERT(child);
 		auto it = _children.insert(_children.end(), std::forward<T>(child));
 		child->_iterator = it;
-
-		auto parent = shared_from_this();
-		while (parent) {
-			if (parent->ev_loop == child->ev_loop) {
-				child->_running = parent->_running.load();
-				break;
-			}
-			parent = parent->_parent;
-		}
-
 		return it;
 	}
 
@@ -120,7 +109,6 @@ private:
 	std::vector<std::weak_ptr<Worker>> _gather_children();
 	void _detach_impl(const std::weak_ptr<Worker>& weak_child);
 	auto _ancestor(int levels=-1);
-	void _set_running(ev::loop_ref* loop, bool running);
 
 public:
 	std::string dump_tree(int level=1);
@@ -144,7 +132,6 @@ public:
 	void detach();
 	void cleanup();
 
-	void set_running(bool running);
 	void run_loop();
 
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>

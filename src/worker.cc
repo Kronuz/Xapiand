@@ -213,7 +213,7 @@ Worker::dump_tree(int level)
 	std::lock_guard<std::mutex> lk(_mtx);
 	std::string ret = "\n";
 	for (int l = 0; l < level; ++l) ret += "    ";
-	ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + (_running ? ") in a running loop" : ")");
+	ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + (ev_loop->depth() ? ") in a running loop" : ")");
 	for (const auto& c : _children) {
 		ret += c->dump_tree(level + 1);
 	}
@@ -267,11 +267,10 @@ Worker::shutdown(time_t asap, time_t now)
 {
 	L_CALL(this, "Worker::shutdown(%d, %d) [%s]", (int)asap, (int)now, __repr__().c_str());
 
-	if (_running) {
-		_asap = asap;
-		_now = now;
-		_async_shutdown.send();
-	} else {
+	_asap = asap;
+	_now = now;
+	_async_shutdown.send();
+	if (!ev_loop->depth()) {
 		shutdown_impl(asap, now);
 	}
 }
@@ -283,13 +282,7 @@ Worker::shutdown()
 	L_CALL(this, "Worker::shutdown() [%s]", __repr__().c_str());
 
 	auto now = epoch::now<>();
-	if (_running) {
-		_asap = now;
-		_now = now;
-		_async_shutdown.send();
-	} else {
-		shutdown_impl(now, now);
-	}
+	shutdown(now, now);
 }
 
 
@@ -298,9 +291,8 @@ Worker::break_loop()
 {
 	L_CALL(this, "Worker::break_loop() [%s]", __repr__().c_str());
 
-	if (_running) {
-		_async_break_loop.send();
-	} else {
+	_async_break_loop.send();
+	if (!ev_loop->depth()) {
 		break_loop_impl();
 	}
 }
@@ -311,9 +303,8 @@ Worker::destroy()
 {
 	L_CALL(this, "Worker::destroy() [%s]", __repr__().c_str());
 
-	if (_running) {
-		_async_destroy.send();
-	} else {
+	_async_destroy.send();
+	if (!ev_loop->depth()) {
 		destroy_impl();
 	}
 }
@@ -334,35 +325,10 @@ Worker::cleanup()
 {
 	L_CALL(this, "Worker::cleanup() [%s]", __repr__().c_str());
 
-	if (_running) {
-		_ancestor(1)->_async_detach.send();
-	} else {
+	_ancestor(1)->_async_detach.send();
+	if (!ev_loop->depth()) {
 		_ancestor(1)->detach_impl();
 	}
-}
-
-
-void
-Worker::_set_running(ev::loop_ref* loop, bool running)
-{
-	L_CALL(this, "Worker::_set_running(<loop>, %s) [%s]", running ? "true" : "false", __repr__().c_str());
-
-	std::lock_guard<std::mutex> lk(_mtx);
-	if (ev_loop == loop) {
-		_running = running;
-	}
-	for (const auto& child : _children) {
-		child->_set_running(loop, running);
-	}
-}
-
-
-void
-Worker::set_running(bool running)
-{
-	L_CALL(this, "Worker::set_running(%s) [%s]", running ? "true" : "false", __repr__().c_str());
-
-	_ancestor()->_set_running(ev_loop, running);
 }
 
 
@@ -371,7 +337,5 @@ Worker::run_loop()
 {
 	L_CALL(this, "Worker::run_loop() [%s]", __repr__().c_str());
 
-	set_running(true);
 	ev_loop->run();
-	set_running(false);
 }
