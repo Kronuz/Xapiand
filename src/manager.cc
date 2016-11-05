@@ -494,7 +494,7 @@ XapiandManager::async_shutdown_sig_cb(ev::async&, int revents)
 		shutdown_now = now;
 	}
 
-	shutdown(bool(shutdown_asap), bool(shutdown_now));
+	shutdown(shutdown_asap, shutdown_now);
 }
 
 
