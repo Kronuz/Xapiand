@@ -286,7 +286,7 @@ Log::print(const std::string& str, bool clean, bool stacked, std::chrono::time_p
 		handlers.push_back(std::make_unique<StderrLogger>());
 	}
 
-	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {
+	if (priority >= ASYNC_LOG_LEVEL && wakeup > std::chrono::system_clock::now()) {
 		return add(str, clean, stacked, wakeup, priority, created_at);
 	} else {
 		log(priority, str);

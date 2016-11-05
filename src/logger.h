@@ -49,7 +49,7 @@ class Exception;
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
 #define LOCATION_LOG_LEVEL LOG_DEBUG  // The minimum log_level that prints file:line
-#define ASYNC_LOG_LEVEL LOG_CRIT  // The minimum log_level that is asynchronous
+#define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
 
 
 using namespace std::chrono_literals;
@@ -292,10 +292,10 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
 #define L_WARNING(args...) LOG(true, LOG_WARNING, WARNING_COL, args)
 #define L_ERR(args...) LOG(true, LOG_ERR, ERR_COL, args)
-#define L_CRIT(args...) LOG(-true, LOG_CRIT, CRIT_COL, args)
-#define L_ALERT(args...) LOG(-true, LOG_ALERT, ALERT_COL, args)
-#define L_EMERG(args...) LOG(-true, LOG_EMERG, EMERG_COL, args)
-#define L_EXC(args...) Log::log(false, true, 0ms, LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define L_CRIT(args...) LOG(true, LOG_CRIT, CRIT_COL, args)
+#define L_ALERT(args...) LOG(true, -LOG_ALERT, ALERT_COL, args)
+#define L_EMERG(args...) LOG(true, -LOG_EMERG, EMERG_COL, args)
+#define L_EXC(args...) Log::log(false, true, 0ms, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
 #define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
 #define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
