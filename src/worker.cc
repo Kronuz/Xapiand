@@ -165,7 +165,7 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 		_detach(child);
 #ifdef L_WORKER
 		child_repr = child->__repr__();
-		child_use_count = child.use_count() - 1;
+		child_use_count = child.use_count();
 #endif
 	} else {
 		return;
@@ -173,9 +173,9 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 	if (auto child = weak_child.lock()) {
 		_attach(child);
 #ifdef L_WORKER
-		L_WORKER(this, RED "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count, __repr__().c_str(), shared_from_this().use_count() - 1);
+		L_WORKER(this, RED "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
 	} else {
-		L_WORKER(this, GREEN "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count, __repr__().c_str(), shared_from_this().use_count() - 1);
+		L_WORKER(this, GREEN "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
 #endif
 	}
 }
