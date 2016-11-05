@@ -25,7 +25,6 @@
 
 #include "http_parser.h"
 
-#include <assert.h>          // for assert
 #include <stddef.h>          // for NULL, size_t
 #include <ctype.h>
 #include <stdlib.h>          // for strtoul
@@ -71,29 +70,20 @@ do {                                                                 \
   goto reexecute;                                                    \
 
 
-#ifdef __GNUC__
-# define LIKELY(X) __builtin_expect(!!(X), 1)
-# define UNLIKELY(X) __builtin_expect(!!(X), 0)
-#else
-# define LIKELY(X) (X)
-# define UNLIKELY(X) (X)
-#endif
-
-
 /* Run the notify callback FOR, returning ER if it fails */
 #define CALLBACK_NOTIFY_(FOR, ER)                                    \
 do {                                                                 \
-  assert(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
+  ASSERT(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
                                                                      \
-  if (LIKELY(settings->on_##FOR)) {                                  \
+  if likely(settings->on_##FOR) {                                    \
     parser->state = CURRENT_STATE();                                 \
-    if (UNLIKELY(0 != settings->on_##FOR(parser))) {                 \
+    if unlikely(0 != settings->on_##FOR(parser)) {                   \
       SET_ERRNO(HPE_CB_##FOR);                                       \
     }                                                                \
     UPDATE_STATE(parser->state);                                     \
                                                                      \
     /* We either errored above or got paused; get out */             \
-    if (UNLIKELY(HTTP_PARSER_ERRNO(parser) != HPE_OK)) {             \
+    if unlikely(HTTP_PARSER_ERRNO(parser) != HPE_OK) {               \
       return (ER);                                                   \
     }                                                                \
   }                                                                  \
@@ -108,19 +98,19 @@ do {                                                                 \
 /* Run data callback FOR with LEN bytes, returning ER if it fails */
 #define CALLBACK_DATA_(FOR, LEN, ER)                                 \
 do {                                                                 \
-  assert(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
+  ASSERT(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
                                                                      \
   if (FOR##_mark) {                                                  \
-    if (LIKELY(settings->on_##FOR)) {                                \
+    if likely(settings->on_##FOR) {                                  \
       parser->state = CURRENT_STATE();                               \
-      if (UNLIKELY(0 !=                                              \
-                   settings->on_##FOR(parser, FOR##_mark, (LEN)))) { \
+      if unlikely(0 !=                                               \
+                   settings->on_##FOR(parser, FOR##_mark, (LEN))) {  \
         SET_ERRNO(HPE_CB_##FOR);                                     \
       }                                                              \
       UPDATE_STATE(parser->state);                                   \
                                                                      \
       /* We either errored above or got paused; get out */           \
-      if (UNLIKELY(HTTP_PARSER_ERRNO(parser) != HPE_OK)) {           \
+      if unlikely(HTTP_PARSER_ERRNO(parser) != HPE_OK) {             \
         return (ER);                                                 \
       }                                                              \
     }                                                                \
@@ -158,7 +148,7 @@ do {                                                                 \
 #define COUNT_HEADER_SIZE(V)                                         \
 do {                                                                 \
   parser->nread += (V);                                              \
-  if (UNLIKELY(parser->nread > (HTTP_MAX_HEADER_SIZE))) {            \
+  if unlikely(parser->nread > (HTTP_MAX_HEADER_SIZE)) {              \
     SET_ERRNO(HPE_HEADER_OVERFLOW);                                  \
     goto error;                                                      \
   }                                                                  \
@@ -440,7 +430,7 @@ enum http_host_state
 #endif
 
 #define NEXTHEADERCHAR() \
-  if (UNLIKELY(p+1 == (data+len))) {                          \
+  if unlikely(p+1 == (data+len)) {                            \
     COUNT_HEADER_SIZE(0);                                     \
     break;                                                    \
   }                                                           \
@@ -557,7 +547,7 @@ const char* find_crlf(const char* p, const char* data, size_t len) {
       p = p_lf;
     else
       p = p_cr;
-  } else if (UNLIKELY(p_lf != NULL)) {
+  } else if unlikely(p_lf != NULL) {
     p = p_lf;
   } else {
     p = data + len;
@@ -807,7 +797,7 @@ reexecute:
         /* this state is used after a 'Connection: close' message
          * the parser will error out if it reads another message
          */
-        if (LIKELY(ch == CR || ch == LF))
+        if likely(ch == CR || ch == LF)
           break;
 
         SET_ERRNO(HPE_CLOSED_CONNECTION);
@@ -838,7 +828,7 @@ reexecute:
           parser->type = HTTP_RESPONSE;
           UPDATE_STATE(s_res_HT);
         } else {
-          if (UNLIKELY(ch != 'E')) {
+          if unlikely(ch != 'E') {
             SET_ERRNO(HPE_INVALID_CONSTANT);
             goto error;
           }
@@ -894,7 +884,7 @@ reexecute:
         break;
 
       case s_res_first_http_major:
-        if (UNLIKELY(ch < '0' || ch > '9')) {
+        if unlikely(ch < '0' || ch > '9') {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -919,7 +909,7 @@ reexecute:
         parser->http_major *= 10;
         parser->http_major += ch - '0';
 
-        if (UNLIKELY(parser->http_major > 999)) {
+        if unlikely(parser->http_major > 999) {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -929,7 +919,7 @@ reexecute:
 
       /* first digit of minor HTTP version */
       case s_res_first_http_minor:
-        if (UNLIKELY(!IS_NUM(ch))) {
+        if unlikely(!IS_NUM(ch)) {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -946,7 +936,7 @@ reexecute:
           break;
         }
 
-        if (UNLIKELY(!IS_NUM(ch))) {
+        if unlikely(!IS_NUM(ch)) {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -954,7 +944,7 @@ reexecute:
         parser->http_minor *= 10;
         parser->http_minor += ch - '0';
 
-        if (UNLIKELY(parser->http_minor > 999)) {
+        if unlikely(parser->http_minor > 999) {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -1000,7 +990,7 @@ reexecute:
         parser->status_code *= 10;
         parser->status_code += ch - '0';
 
-        if (UNLIKELY(parser->status_code > 999)) {
+        if unlikely(parser->status_code > 999) {
           SET_ERRNO(HPE_INVALID_STATUS);
           goto error;
         }
@@ -1053,7 +1043,7 @@ reexecute:
         parser->flags = 0;
         parser->content_length = ULLONG_MAX;
 
-        if (UNLIKELY(!IS_ALPHA(ch))) {
+        if unlikely(!IS_ALPHA(ch)) {
           SET_ERRNO(HPE_INVALID_METHOD);
           goto error;
         }
@@ -1092,7 +1082,7 @@ reexecute:
       case s_req_method:
       {
         const char *matcher;
-        if (UNLIKELY(ch == '\0')) {
+        if unlikely(ch == '\0') {
           SET_ERRNO(HPE_INVALID_METHOD);
           goto error;
         }
@@ -1155,7 +1145,7 @@ reexecute:
         }
 
         UPDATE_STATE(parse_url_char(CURRENT_STATE(), ch));
-        if (UNLIKELY(CURRENT_STATE() == s_dead)) {
+        if unlikely(CURRENT_STATE() == s_dead) {
           SET_ERRNO(HPE_INVALID_URL);
           goto error;
         }
@@ -1177,7 +1167,7 @@ reexecute:
             goto error;
           default:
             UPDATE_STATE(parse_url_char(CURRENT_STATE(), ch));
-            if (UNLIKELY(CURRENT_STATE() == s_dead)) {
+            if unlikely(CURRENT_STATE() == s_dead) {
               SET_ERRNO(HPE_INVALID_URL);
               goto error;
             }
@@ -1210,7 +1200,7 @@ reexecute:
             break;
           default:
             UPDATE_STATE(parse_url_char(CURRENT_STATE(), ch));
-            if (UNLIKELY(CURRENT_STATE() == s_dead)) {
+            if unlikely(CURRENT_STATE() == s_dead) {
               SET_ERRNO(HPE_INVALID_URL);
               goto error;
             }
@@ -1253,7 +1243,7 @@ reexecute:
 
       /* first digit of major HTTP version */
       case s_req_first_http_major:
-        if (UNLIKELY(ch < '1' || ch > '9')) {
+        if unlikely(ch < '1' || ch > '9') {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -1270,7 +1260,7 @@ reexecute:
           break;
         }
 
-        if (UNLIKELY(!IS_NUM(ch))) {
+        if unlikely(!IS_NUM(ch)) {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -1278,7 +1268,7 @@ reexecute:
         parser->http_major *= 10;
         parser->http_major += ch - '0';
 
-        if (UNLIKELY(parser->http_major > 999)) {
+        if unlikely(parser->http_major > 999) {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -1288,7 +1278,7 @@ reexecute:
 
       /* first digit of minor HTTP version */
       case s_req_first_http_minor:
-        if (UNLIKELY(!IS_NUM(ch))) {
+        if unlikely(!IS_NUM(ch)) {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -1312,7 +1302,7 @@ reexecute:
 
         /* XXX allow spaces after digit? */
 
-        if (UNLIKELY(!IS_NUM(ch))) {
+        if unlikely(!IS_NUM(ch)) {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -1320,7 +1310,7 @@ reexecute:
         parser->http_minor *= 10;
         parser->http_minor += ch - '0';
 
-        if (UNLIKELY(parser->http_minor > 999)) {
+        if unlikely(parser->http_minor > 999) {
           SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
@@ -1331,7 +1321,7 @@ reexecute:
       /* end of request line */
       case s_req_line_almost_done:
       {
-        if (UNLIKELY(ch != LF)) {
+        if unlikely(ch != LF) {
           SET_ERRNO(HPE_LF_EXPECTED);
           goto error;
         }
@@ -1356,7 +1346,7 @@ reexecute:
 
         c = TOKEN(ch);
 
-        if (UNLIKELY(!c)) {
+        if unlikely(!c) {
           SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
           goto error;
         }
@@ -1509,7 +1499,7 @@ header_field_begin:
                 break;
 
               default:
-                assert(0 && "Unknown header_state");
+                ASSERT(0 && "Unknown header_state");
                 break;
             }
           }
@@ -1571,7 +1561,7 @@ header_field_begin:
             break;
 
           case h_content_length:
-            if (UNLIKELY(!IS_NUM(ch))) {
+            if unlikely(!IS_NUM(ch)) {
               SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
               goto error;
             }
@@ -1649,7 +1639,7 @@ header_field_begin:
 
             case h_connection:
             case h_transfer_encoding:
-              assert(0 && "Shouldn't get here.");
+              ASSERT(0 && "Shouldn't get here.");
               break;
 
             case h_content_length:
@@ -1658,7 +1648,7 @@ header_field_begin:
 
               if (ch == ' ') break;
 
-              if (UNLIKELY(!IS_NUM(ch))) {
+              if unlikely(!IS_NUM(ch)) {
                 SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
                 parser->header_state = h_state;
                 goto error;
@@ -1669,7 +1659,7 @@ header_field_begin:
               t += ch - '0';
 
               /* Overflow? Test against a conservative limit for simplicity. */
-              if (UNLIKELY((ULLONG_MAX - 10) / 10 < parser->content_length)) {
+              if unlikely((ULLONG_MAX - 10) / 10 < parser->content_length) {
                 SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
                 parser->header_state = h_state;
                 goto error;
@@ -1786,7 +1776,7 @@ header_field_begin:
 
       case s_header_almost_done:
       {
-        if (UNLIKELY(ch != LF)) {
+        if unlikely(ch != LF) {
           SET_ERRNO(HPE_LF_EXPECTED);
           goto error;
         }
@@ -1974,7 +1964,7 @@ header_field_begin:
         uint64_t to_read = MIN(parser->content_length,
                                (uint64_t) ((data + len) - p));
 
-        assert(parser->content_length != 0
+        ASSERT(parser->content_length != 0
             && parser->content_length != ULLONG_MAX);
 
         /* The difference between advancing content_length and p is because
@@ -2023,11 +2013,11 @@ header_field_begin:
 
       case s_chunk_size_start:
       {
-        assert(parser->nread == 1);
-        assert(parser->flags & F_CHUNKED);
+        ASSERT(parser->nread == 1);
+        ASSERT(parser->flags & F_CHUNKED);
 
         unhex_val = unhex[(unsigned char)ch];
-        if (UNLIKELY(unhex_val == -1)) {
+        if unlikely(unhex_val == -1) {
           SET_ERRNO(HPE_INVALID_CHUNK_SIZE);
           goto error;
         }
@@ -2041,7 +2031,7 @@ header_field_begin:
       {
         uint64_t t;
 
-        assert(parser->flags & F_CHUNKED);
+        ASSERT(parser->flags & F_CHUNKED);
 
         if (ch == CR) {
           UPDATE_STATE(s_chunk_size_almost_done);
@@ -2065,7 +2055,7 @@ header_field_begin:
         t += unhex_val;
 
         /* Overflow? Test against a conservative limit for simplicity. */
-        if (UNLIKELY((ULLONG_MAX - 16) / 16 < parser->content_length)) {
+        if unlikely((ULLONG_MAX - 16) / 16 < parser->content_length) {
           SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
           goto error;
         }
@@ -2076,7 +2066,7 @@ header_field_begin:
 
       case s_chunk_parameters:
       {
-        assert(parser->flags & F_CHUNKED);
+        ASSERT(parser->flags & F_CHUNKED);
         /* just ignore this shit. TODO check for overflow */
         if (ch == CR) {
           UPDATE_STATE(s_chunk_size_almost_done);
@@ -2087,7 +2077,7 @@ header_field_begin:
 
       case s_chunk_size_almost_done:
       {
-        assert(parser->flags & F_CHUNKED);
+        ASSERT(parser->flags & F_CHUNKED);
         STRICT_CHECK(ch != LF);
 
         parser->nread = 0;
@@ -2107,8 +2097,8 @@ header_field_begin:
         uint64_t to_read = MIN(parser->content_length,
                                (uint64_t) ((data + len) - p));
 
-        assert(parser->flags & F_CHUNKED);
-        assert(parser->content_length != 0
+        ASSERT(parser->flags & F_CHUNKED);
+        ASSERT(parser->content_length != 0
             && parser->content_length != ULLONG_MAX);
 
         /* See the explanation in s_body_identity for why the content
@@ -2126,15 +2116,15 @@ header_field_begin:
       }
 
       case s_chunk_data_almost_done:
-        assert(parser->flags & F_CHUNKED);
-        assert(parser->content_length == 0);
+        ASSERT(parser->flags & F_CHUNKED);
+        ASSERT(parser->content_length == 0);
         STRICT_CHECK(ch != CR);
         UPDATE_STATE(s_chunk_data_done);
         CALLBACK_DATA(body);
         break;
 
       case s_chunk_data_done:
-        assert(parser->flags & F_CHUNKED);
+        ASSERT(parser->flags & F_CHUNKED);
         STRICT_CHECK(ch != LF);
         parser->nread = 0;
         UPDATE_STATE(s_chunk_size_start);
@@ -2142,7 +2132,7 @@ header_field_begin:
         break;
 
       default:
-        assert(0 && "unhandled state");
+        ASSERT(0 && "unhandled state");
         SET_ERRNO(HPE_INVALID_INTERNAL_STATE);
         goto error;
     }
@@ -2158,7 +2148,7 @@ header_field_begin:
    * value that's in-bounds).
    */
 
-  assert(((header_field_mark ? 1 : 0) +
+  ASSERT(((header_field_mark ? 1 : 0) +
           (header_value_mark ? 1 : 0) +
           (url_mark ? 1 : 0)  +
           (body_mark ? 1 : 0) +
@@ -2262,13 +2252,13 @@ http_parser_settings_init(http_parser_settings *settings)
 
 const char *
 http_errno_name(enum http_errno err) {
-  assert(((size_t) err) < ARRAY_SIZE(http_strerror_tab));
+  ASSERT(((size_t) err) < ARRAY_SIZE(http_strerror_tab));
   return http_strerror_tab[err].name;
 }
 
 const char *
 http_errno_description(enum http_errno err) {
-  assert(((size_t) err) < ARRAY_SIZE(http_strerror_tab));
+  ASSERT(((size_t) err) < ARRAY_SIZE(http_strerror_tab));
   return http_strerror_tab[err].description;
 }
 
@@ -2361,7 +2351,7 @@ http_parse_host(const char * buf, struct http_parser_url *u, int found_at) {
   const char *p;
   size_t buflen = u->field_data[UF_HOST].off + u->field_data[UF_HOST].len;
 
-  assert(u->field_set & (1 << UF_HOST));
+  ASSERT(u->field_set & (1 << UF_HOST));
 
   u->field_data[UF_HOST].len = 0;
 
@@ -2495,7 +2485,7 @@ http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
         break;
 
       default:
-        assert(!"Unexpected state");
+        ASSERT(!"Unexpected state");
         return 1;
     }
 
@@ -2555,7 +2545,7 @@ http_parser_pause(http_parser *parser, int paused) {
       HTTP_PARSER_ERRNO(parser) == HPE_PAUSED) {
     SET_ERRNO((paused) ? HPE_PAUSED : HPE_OK);
   } else {
-    assert(0 && "Attempting to pause parser in error state");
+    ASSERT(0 && "Attempting to pause parser in error state");
   }
 }
 
