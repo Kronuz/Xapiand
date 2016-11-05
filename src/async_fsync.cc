@@ -95,9 +95,9 @@ AsyncFsync::shutdown_impl(time_t asap, time_t now)
 
 
 void
-AsyncFsync::run_loop(std::unique_lock<std::mutex>& lk)
+AsyncFsync::run_one(std::unique_lock<std::mutex>& lk)
 {
-	L_CALL(this, "AsyncFsync::run_loop()");
+	L_CALL(this, "AsyncFsync::run_one(<lk>)");
 
 	std::unique_lock<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
 
@@ -152,7 +152,7 @@ AsyncFsync::run()
 	while (running) {
 		std::unique_lock<std::mutex> lk(AsyncFsync::mtx);
 		AsyncFsync::wakeup_signal.wait_until(lk, std::chrono::system_clock::from_time_t(AsyncFsync::next_wakeup_time.load()));
-		run_loop(lk);
+		run_one(lk);
 	}
 
 	cleanup();

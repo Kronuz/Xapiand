@@ -101,9 +101,9 @@ DatabaseAutocommit::shutdown_impl(time_t asap, time_t now)
 
 
 void
-DatabaseAutocommit::run_loop(std::unique_lock<std::mutex>& lk)
+DatabaseAutocommit::run_one(std::unique_lock<std::mutex>& lk)
 {
-	L_CALL(this, "DatabaseAutocommit::run_loop()");
+	L_CALL(this, "DatabaseAutocommit::run_one(<lk>)");
 
 	std::unique_lock<std::mutex> statuses_lk(DatabaseAutocommit::statuses_mtx);
 
@@ -162,7 +162,7 @@ DatabaseAutocommit::run()
 	while (running) {
 		std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx);
 		DatabaseAutocommit::wakeup_signal.wait_until(lk, std::chrono::system_clock::from_time_t(DatabaseAutocommit::next_wakeup_time.load()));
-		run_loop(lk);
+		run_one(lk);
 	}
 
 	cleanup();

@@ -62,7 +62,7 @@ class DatabaseAutocommit : public Task<>, public Worker {
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 
-	void run_loop(std::unique_lock<std::mutex>& lk);
+	void run_one(std::unique_lock<std::mutex>& lk);
 
 public:
 	std::string __repr__() const override {
