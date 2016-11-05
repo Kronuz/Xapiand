@@ -26,7 +26,6 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include <arpa/inet.h>
-#include <cassert>               // for assert
 
 #include "binary.h"
 #include "discovery.h"
@@ -395,7 +394,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 		return;
 	}
 
-	assert(sock == fd || sock == -1);
+	ASSERT(sock == fd || sock == -1);
 
 	L_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN");
 

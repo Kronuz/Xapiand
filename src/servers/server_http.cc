@@ -24,7 +24,6 @@
 
 #include <string.h>               // for strerror
 #include <sys/errno.h>            // for __error, errno
-#include <cassert>                // for assert
 #include <chrono>                 // for operator""ms
 #include <ratio>                  // for ratio
 
@@ -68,7 +67,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 		return;
 	}
 
-	assert(sock == fd || sock == -1);
+	ASSERT(sock == fd || sock == -1);
 
 	L_EV_BEGIN(this, "HttpServer::io_accept_cb:BEGIN");
 

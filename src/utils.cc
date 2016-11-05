@@ -37,7 +37,6 @@
 #include <sysexits.h>            // for EX_OSFILE
 #include <unistd.h>              // for close, rmdir, write, ssize_t
 #include <algorithm>             // for equal, uniform_int_distribution
-#include <cassert>               // for assert
 #include <cstdint>               // for uint64_t
 #include <functional>            // for function, __base
 #include <memory>                // for allocator
@@ -358,8 +357,8 @@ void update_pos_time() {
 		fill_zeros_stats_min(b_time_minute + 1, b_time.minute);
 	}
 
-	assert(b_time.second >= 0 && b_time.second < SLOT_TIME_SECOND);
-	assert(b_time.minute >= 0 && b_time.minute < SLOT_TIME_MINUTE);
+	ASSERT(b_time.second >= 0 && b_time.second < SLOT_TIME_SECOND);
+	ASSERT(b_time.minute >= 0 && b_time.minute < SLOT_TIME_MINUTE);
 }
 
 

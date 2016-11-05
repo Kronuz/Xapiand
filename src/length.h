@@ -26,7 +26,6 @@
 
 #include <stddef.h>     // for size_t, NULL
 #include <string>       // for string
-#include <cassert>      // for assert
 
 #include "exception.h"  // for MSG_SerialisationError, SerialisationError
 
@@ -93,7 +92,7 @@ unserialise_unsigned(const char ** p, const char * end, U * result)
 	static_assert(static_cast<U>(-1) > 0, "Type not unsigned");
 
 	const char * ptr = *p;
-	assert(ptr);
+	ASSERT(ptr);
 	const char * start = ptr;
 
 	// Check the length of the encoded integer first.

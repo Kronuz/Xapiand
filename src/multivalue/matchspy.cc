@@ -23,7 +23,6 @@
 #include "matchspy.h"
 
 #include <stdio.h>             // for snprintf
-#include <cassert>             // for assert
 #include <functional>          // for less
 #include <map>                 // for map
 
@@ -35,7 +34,7 @@
 void
 MultiValueCountMatchSpy::operator()(const Xapian::Document &doc, double)
 {
-	assert(internal.get());
+	ASSERT(internal.get());
 	++(internal->total);
 	StringList list;
 	list.unserialise(doc.get_value(internal->slot));
@@ -48,7 +47,7 @@ MultiValueCountMatchSpy::operator()(const Xapian::Document &doc, double)
 Xapian::MatchSpy*
 MultiValueCountMatchSpy::clone() const
 {
-	assert(internal.get());
+	ASSERT(internal.get());
 	return new MultiValueCountMatchSpy(internal->slot);
 }
 
@@ -63,7 +62,7 @@ MultiValueCountMatchSpy::name() const
 std::string
 MultiValueCountMatchSpy::serialise() const
 {
-	assert(internal.get());
+	ASSERT(internal.get());
 	return serialise_length(internal->slot);
 }
 

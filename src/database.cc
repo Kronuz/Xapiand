@@ -30,7 +30,6 @@
 #include <sysexits.h>             // for EX_SOFTWARE
 #include <algorithm>              // for move
 #include <array>                  // for array
-#include <cassert>                // for assert
 #include <iterator>               // for distance
 #include <limits>                 // for numeric_limits
 #include <ratio>                  // for ratio
@@ -412,11 +411,11 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 {
 	L_CALL(this, "DatabaseWAL::write_line()");
 
-	assert(database->flags & DB_WRITABLE);
-	assert(!(database->flags & DB_NOWAL));
+	ASSERT(database->flags & DB_WRITABLE);
+	ASSERT(!(database->flags & DB_NOWAL));
 
 	auto endpoint = database->endpoints[0];
-	assert(endpoint.is_local());
+	ASSERT(endpoint.is_local());
 
 	std::string revision_encode = database->get_revision_str();
 	std::string uuid = database->get_uuid();
@@ -617,7 +616,7 @@ Database::reopen()
 	auto endpoints_size = endpoints.size();
 	auto i = endpoints.cbegin();
 	if (flags & DB_WRITABLE) {
-		assert(endpoints_size == 1);
+		ASSERT(endpoints_size == 1);
 		db = std::make_unique<Xapian::WritableDatabase>();
 		auto& e = *i;
 		Xapian::WritableDatabase wdb;
@@ -1640,7 +1639,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	L_DATABASE_BEGIN(this, "-- CHECKING IN DB [%s]: %s ...", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()).c_str());
 
-	assert(database);
+	ASSERT(database);
 
 	std::unique_lock<std::mutex> lk(qmtx);
 
@@ -1663,7 +1662,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		queue = databases[database->hash];
 	}
 
-	assert(database->weak_queue.lock() == queue);
+	ASSERT(database->weak_queue.lock() == queue);
 
 	int flags = database->flags;
 

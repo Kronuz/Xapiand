@@ -26,8 +26,6 @@
 
 #include "endpoint.h"
 
-#include <cassert>   // for assert
-
 
 constexpr const char* const Raft::MessageNames[];
 constexpr const char* const Raft::StateNames[];
@@ -207,7 +205,7 @@ void
 Raft::_start_leader_heartbeat()
 {
 	auto local_node_ = local_node.load();
-	assert(leader == *local_node_);
+	ASSERT(leader == *local_node_);
 
 	leader_heartbeat.repeat = random_real(HEARTBEAT_LEADER_MIN, HEARTBEAT_LEADER_MAX);
 	leader_heartbeat.again();

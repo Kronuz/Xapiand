@@ -28,7 +28,6 @@
 #include <sysexits.h>            // for EX_SOFTWARE
 #include <xapian.h>              // for SerialisationError
 #include <algorithm>             // for move
-#include <cassert>               // for assert
 #include <chrono>                // for operator""ms
 #include <exception>             // for exception
 #include <memory>                // for shared_ptr, unique_ptr, default_delete
@@ -411,7 +410,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 		detach();
 	}
 
-	assert(sock == fd || sock == -1);
+	ASSERT(sock == fd || sock == -1);
 
 	L_EV_BEGIN(this, "BaseClient::io_cb:BEGIN");
 

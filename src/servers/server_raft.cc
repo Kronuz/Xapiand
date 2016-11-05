@@ -25,8 +25,6 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <cassert>   // for assert
-
 #include "server.h"
 
 
@@ -277,7 +275,7 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 		return;
 	}
 
-	assert(sock == fd || sock == -1);
+	ASSERT(sock == fd || sock == -1);
 
 	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN");
 
