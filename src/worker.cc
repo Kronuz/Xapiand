@@ -28,7 +28,7 @@
 #undef L_CALL
 #define L_CALL L_NOTHING
 
-#define L_WORKER L_NOTHING
+// #define L_WORKER L_DEBUG
 
 
 Worker::~Worker()
@@ -159,19 +159,28 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 {
 	L_CALL(this, "Worker::_detach_impl(<weak_child>) [%s]", __repr__().c_str());
 
+#ifdef L_WORKER
+	std::string child_repr;
+	long child_use_count;
+#endif
+
 	std::lock_guard<std::mutex> lk(_mtx);
-	std::string repr;
 	if (auto child = weak_child.lock()) {
+#ifdef L_WORKER
+		child_repr = child->__repr__();
+		child_use_count = child.use_count() - 1;
+#endif
 		_detach(child);
-		repr = child->__repr__();
 	} else {
 		return;
 	}
 	if (auto child = weak_child.lock()) {
-		L_WORKER(this, RED "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), __repr__().c_str(), child.use_count() - 1);
 		_attach(child);
+#ifdef L_WORKER
+		L_WORKER(this, RED "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count, __repr__().c_str(), shared_from_this().use_count() - 1);
 	} else {
-		L_WORKER(this, GREEN "Worker child %s detached from %s", repr.c_str(), __repr__().c_str());
+		L_WORKER(this, GREEN "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count, __repr__().c_str(), shared_from_this().use_count() - 1);
+#endif
 	}
 }
 
