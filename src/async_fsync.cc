@@ -71,6 +71,8 @@ AsyncFsync::destroy_impl()
 void
 AsyncFsync::destroyer()
 {
+	L_CALL(this, "AsyncFsync::destroyer()");
+
 	running.store(false);
 	auto now = std::chrono::system_clock::now();
 	AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + 100ms));
@@ -81,7 +83,7 @@ AsyncFsync::destroyer()
 void
 AsyncFsync::shutdown_impl(time_t asap, time_t now)
 {
-	L_OBJ(this , "SHUTDOWN ASYNC FSYNC! (%d %d)", asap, now);
+	L_CALL(this, "AsyncFsync::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 
@@ -160,6 +162,8 @@ AsyncFsync::run()
 int
 AsyncFsync::_fsync(int fd, bool full_fsync)
 {
+	L_CALL(nullptr, "AsyncFsync::_fsync(%d, %s)", fd, full_fsync ? "true" : "false");
+
 	std::lock_guard<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
 	AsyncFsync::Status& status = AsyncFsync::statuses[fd];
 

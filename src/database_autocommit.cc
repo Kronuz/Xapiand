@@ -77,6 +77,8 @@ DatabaseAutocommit::destroy_impl()
 void
 DatabaseAutocommit::destroyer()
 {
+	L_CALL(this, "DatabaseAutocommit::destroyer()");
+
 	running.store(false);
 	auto now = std::chrono::system_clock::now();
 	DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + 100ms));
@@ -87,7 +89,7 @@ DatabaseAutocommit::destroyer()
 void
 DatabaseAutocommit::shutdown_impl(time_t asap, time_t now)
 {
-	L_OBJ(this , "SHUTDOWN AUTOCOMMIT! (%d %d)", asap, now);
+	L_CALL(this, "DatabaseAutocommit::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 
