@@ -25,12 +25,12 @@
 
 #include "http_parser.h"
 
-#include <assert.h>
-#include <stddef.h>
+#include <assert.h>          // for assert
+#include <stddef.h>          // for NULL, size_t
 #include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
+#include <stdlib.h>          // for strtoul
+#include <string.h>          // for memset, memchr
+#include <limits.h>          // for ULLONG_MAX
 
 
 #ifndef ULLONG_MAX
