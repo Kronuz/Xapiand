@@ -37,7 +37,7 @@
 #include "utils.h"       // for get_thread_name
 
 #define BUFFER_SIZE (10 * 1024)
-#define STACKED_SEP "<sep>"
+#define STACKED_INDENT "<indent>"
 
 
 const std::regex filter_re("\033\\[[;\\d]*m");
@@ -198,7 +198,7 @@ Log::str_format(bool stacked, int priority, const std::string& exc, const char *
 	(void)obj;
 #endif
 	if (stacked) {
-		result += STACKED_SEP;
+		result += STACKED_INDENT;
 	}
 	result += prefix + msg + suffix;
 	delete []buffer;
@@ -262,11 +262,12 @@ Log::add(const std::string& str, bool clean, bool stacked, std::chrono::time_poi
 
 
 void
-Log::log(int priority, const std::string& str)
+Log::log(int priority, std::string str, int indent)
 {
 	static std::mutex log_mutex;
 	std::lock_guard<std::mutex> lk(log_mutex);
 	static auto& handlers = _handlers();
+	str.replace(str.find(STACKED_INDENT), sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
 	for (auto& handler : handlers) {
 		handler->log(priority, str);
 	}
@@ -286,11 +287,12 @@ Log::print(const std::string& str, bool clean, bool stacked, std::chrono::time_p
 		handlers.push_back(std::make_unique<StderrLogger>());
 	}
 
-	if (priority >= ASYNC_LOG_LEVEL && wakeup > std::chrono::system_clock::now()) {
+	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {
 		return add(str, clean, stacked, wakeup, priority, created_at);
 	} else {
-		log(priority, str);
-		return LogWrapper(std::make_shared<Log>(str, clean, stacked, wakeup, priority, created_at));
+		auto l_ptr = std::make_shared<Log>(str, clean, stacked, wakeup, priority, created_at);
+		log(priority, str, l_ptr->stack_level * 2);
+		return LogWrapper(l_ptr);
 	}
 }
 
@@ -367,14 +369,11 @@ LogThread::thread_function(DLList<const std::shared_ptr<Log>>& _log_list)
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished = true;
 				auto msg = l_ptr->str_start;
-				if (l_ptr->stacked) {
-					msg.replace(msg.find(STACKED_SEP), sizeof(STACKED_SEP) - 1, std::string(l_ptr->stack_level * 2, ' '));
-				}
 				// auto age = l_ptr->age();
 				// if (age > 2e8) {
 				// 	msg += " ~" + delta_string(age, true);
 				// }
-				Log::log(l_ptr->priority, msg);
+				Log::log(l_ptr->priority, msg, l_ptr->stack_level * 2);
 				it = _log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;
