@@ -713,6 +713,8 @@ XapiandManager::join()
 {
 	L_CALL(this, "XapiandManager::join()");
 
+	L_DEBUG(this, "Workers:" BLUE "%s", dump_tree().c_str());
+
 	finish();
 
 	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.running_size(), (server_pool.running_size() == 1) ? "" : "s");
