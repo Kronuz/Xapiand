@@ -267,7 +267,10 @@ Log::log(int priority, std::string str, int indent)
 	static std::mutex log_mutex;
 	std::lock_guard<std::mutex> lk(log_mutex);
 	static auto& handlers = _handlers();
-	str.replace(str.find(STACKED_INDENT), sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
+	auto needle = str.find(STACKED_INDENT);
+	if (needle != std::string::npos) {
+		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
+	}
 	for (auto& handler : handlers) {
 		handler->log(priority, str);
 	}
