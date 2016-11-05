@@ -81,7 +81,7 @@ protected:
 
 private:
 	template<typename T>
-	auto _attach(T&& child) {
+	auto __attach(T&& child) {
 		ASSERT(child);
 		auto it = _children.insert(_children.end(), std::forward<T>(child));
 		child->_iterator = it;
@@ -89,7 +89,7 @@ private:
 	}
 
 	template<typename T>
-	decltype(auto) _detach(T&& child) {
+	decltype(auto) __detach(T&& child) {
 		ASSERT(child);
 		if (child->_iterator != _children.end()) {
 			ASSERT(child->_parent.get() == this);
@@ -146,7 +146,7 @@ public:
 		auto child = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
 		if (child->_parent) {
 			std::lock_guard<std::mutex> lk(child->_parent->_mtx);
-			child->_parent->_attach(child);
+			child->_parent->__attach(child);
 		}
 
 		return child;

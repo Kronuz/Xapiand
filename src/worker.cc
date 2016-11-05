@@ -44,6 +44,8 @@ Worker::_init()
 {
 	L_CALL(this, "Worker::_init()");
 
+	std::lock_guard<std::mutex> lk(_mtx);
+
 	if (_parent) {
 		_iterator = _parent->_children.end();
 	}
@@ -133,9 +135,10 @@ Worker::_gather_children()
 {
 	L_CALL(this, "Worker::_gather_children() [%s]", __repr__().c_str());
 
-	std::vector<std::weak_ptr<Worker>> weak_children;
-	// Collect active children
 	std::lock_guard<std::mutex> lk(_mtx);
+
+	// Collect active children
+	std::vector<std::weak_ptr<Worker>> weak_children;
 	weak_children.reserve(_children.size());
 	for (auto it = _children.begin(); it != _children.end();) {
 		auto child = *it;
@@ -155,14 +158,15 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 {
 	L_CALL(this, "Worker::_detach_impl(<weak_child>) [%s]", __repr__().c_str());
 
+	std::lock_guard<std::mutex> lk(_mtx);
+
 #ifdef L_WORKER
 	std::string child_repr;
 	long child_use_count;
 #endif
 
-	std::lock_guard<std::mutex> lk(_mtx);
 	if (auto child = weak_child.lock()) {
-		_detach(child);
+		__detach(child);
 #ifdef L_WORKER
 		child_repr = child->__repr__();
 		child_use_count = child.use_count();
@@ -171,7 +175,7 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 		return;
 	}
 	if (auto child = weak_child.lock()) {
-		_attach(child);
+		__attach(child);
 #ifdef L_WORKER
 		L_WORKER(this, RED "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
 	} else {
@@ -185,6 +189,8 @@ auto
 Worker::_ancestor(int levels)
 {
 	L_CALL(this, "Worker::_ancestor(%d) [%s]", levels, __repr__().c_str());
+
+	std::lock_guard<std::mutex> lk(_mtx);
 
 	auto ancestor = shared_from_this();
 	while (ancestor->_parent && levels-- != 0) {
@@ -326,9 +332,10 @@ Worker::cleanup()
 {
 	L_CALL(this, "Worker::cleanup() [%s]", __repr__().c_str());
 
-	_ancestor(1)->_async_detach.send();
+	auto ancestor = _ancestor(1);
+	ancestor->_async_detach.send();
 	if (!ev_loop->depth()) {
-		_ancestor(1)->detach_impl();
+		ancestor->detach_impl();
 	}
 }
 
