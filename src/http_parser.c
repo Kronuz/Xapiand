@@ -478,7 +478,7 @@ int http_message_needs_eof(const http_parser *parser);
 const char* find_crlf(const char* p, const char* data, size_t len);
 
 
-#if defined(__SSE2__) && defined(__GNUC__)
+#ifdef __SSE2__
 
 #include <emmintrin.h>
 
