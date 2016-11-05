@@ -24,11 +24,10 @@
 
 #include "xapiand.h"
 
-#include <cassert>   // for assert
 #include <list>      // for list
 #include <memory>    // for shared_ptr, enable_shared_from_this
 #include <mutex>     // for mutex
-#include <vector>     // for vector
+#include <vector>    // for vector
 
 #include "ev/ev++.h"
 
