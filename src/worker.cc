@@ -233,7 +233,7 @@ Worker::shutdown_impl(time_t asap, time_t now)
 	L_CALL(this, "Worker::shutdown_impl(%d, %d) [%s]", (int)asap, (int)now, __repr__().c_str());
 
 	auto weak_children = _gather_children();
-	L_WORKER(this , "Shutdown %s Worker! (%d %d): %zu children: %s", __repr__().c_str(), asap, now, weak_children.size(), dump_tree().c_str());
+	// L_WORKER(this , "Shutdown %s Worker! (%d %d): %zu children: %s", __repr__().c_str(), asap, now, weak_children.size(), dump_tree().c_str());
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
 			child->shutdown_impl(asap, now);
@@ -257,7 +257,7 @@ Worker::detach_impl()
 	L_CALL(this, "Worker::detach_impl() [%s]", __repr__().c_str());
 
 	auto weak_children = _gather_children();
-	L_WORKER(this , "Detach %s Worker: %zu children: %s", __repr__().c_str(), weak_children.size(), dump_tree().c_str());
+	// L_WORKER(this , "Detach %s Worker: %zu children: %s", __repr__().c_str(), weak_children.size(), dump_tree().c_str());
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
 			child->detach_impl();
