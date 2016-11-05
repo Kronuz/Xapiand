@@ -294,6 +294,21 @@ namespace epoch {
 	}
 }
 
+
+inline
+unsigned long long
+system_clock_to_ullong(std::chrono::time_point<std::chrono::system_clock> t) {
+	return *reinterpret_cast<unsigned long long*>(&t);
+}
+
+
+inline
+std::chrono::time_point<std::chrono::system_clock>
+system_clock_from_ullong(unsigned long long t) {
+	return *reinterpret_cast<std::chrono::time_point<std::chrono::system_clock>*>(&t);
+}
+
+
 inline std::string readable_revents(int revents) {
 	std::vector<std::string> values;
 	if (revents == EV_NONE) values.push_back("EV_NONE");
