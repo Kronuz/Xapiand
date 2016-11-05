@@ -93,56 +93,64 @@ AsyncFsync::shutdown_impl(time_t asap, time_t now)
 
 
 void
+AsyncFsync::run_loop(std::unique_lock<std::mutex>& lk)
+{
+	L_CALL(this, "AsyncFsync::run_loop()");
+
+	std::unique_lock<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
+
+	auto now = std::chrono::system_clock::now();
+	AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + (running ? 20s : 100ms)));
+
+	for (auto it = AsyncFsync::statuses.begin(); it != AsyncFsync::statuses.end(); ) {
+		auto status = it->second;
+		auto next_wakeup_time = status.next_wakeup_time();
+		if (next_wakeup_time <= now) {
+			int fd = it->first;
+			AsyncFsync::statuses.erase(it);
+			statuses_lk.unlock();
+			lk.unlock();
+
+			bool successful = false;
+			auto start = std::chrono::system_clock::now();
+			switch (status.mode) {
+				case 1:
+					successful = (io::full_fsync(fd) == 0);
+					break;
+				case 2:
+					successful = (io::fsync(fd) == 0);
+					break;
+			}
+			auto end = std::chrono::system_clock::now();
+
+			if (successful) {
+				L_DEBUG(this, "Async Fsync %d: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_fsync_time ? " (forced)" : "", delta_string(start, end).c_str());
+			} else {
+				L_WARNING(this, "Async Fsync %d falied: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_fsync_time ? " (forced)" : "", delta_string(start, end).c_str());
+			}
+
+			lk.lock();
+			statuses_lk.lock();
+			it = AsyncFsync::statuses.begin();
+		} else if (std::chrono::system_clock::from_time_t(AsyncFsync::next_wakeup_time.load()) > next_wakeup_time) {
+			AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(next_wakeup_time));
+			++it;
+		} else {
+			++it;
+		}
+	}
+}
+
+
+void
 AsyncFsync::run()
 {
+	L_CALL(this, "AsyncFsync::run()");
+
 	while (running) {
 		std::unique_lock<std::mutex> lk(AsyncFsync::mtx);
 		AsyncFsync::wakeup_signal.wait_until(lk, std::chrono::system_clock::from_time_t(AsyncFsync::next_wakeup_time.load()));
-
-		{
-			std::unique_lock<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
-
-			auto now = std::chrono::system_clock::now();
-			AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + (running ? 20s : 100ms)));
-
-			for (auto it = AsyncFsync::statuses.begin(); it != AsyncFsync::statuses.end(); ) {
-				auto status = it->second;
-				auto next_wakeup_time = status.next_wakeup_time();
-				if (next_wakeup_time <= now) {
-					int fd = it->first;
-					AsyncFsync::statuses.erase(it);
-					statuses_lk.unlock();
-					lk.unlock();
-
-					bool successful = false;
-					auto start = std::chrono::system_clock::now();
-					switch (status.mode) {
-						case 1:
-							successful = (io::full_fsync(fd) == 0);
-							break;
-						case 2:
-							successful = (io::fsync(fd) == 0);
-							break;
-					}
-					auto end = std::chrono::system_clock::now();
-
-					if (successful) {
-						L_DEBUG(this, "Async Fsync %d: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_fsync_time ? " (forced)" : "", delta_string(start, end).c_str());
-					} else {
-						L_WARNING(this, "Async Fsync %d falied: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_fsync_time ? " (forced)" : "", delta_string(start, end).c_str());
-					}
-
-					lk.lock();
-					statuses_lk.lock();
-					it = AsyncFsync::statuses.begin();
-				} else if (std::chrono::system_clock::from_time_t(AsyncFsync::next_wakeup_time.load()) > next_wakeup_time) {
-					AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(next_wakeup_time));
-					++it;
-				} else {
-					++it;
-				}
-			}
-		}
+		run_loop(lk);
 	}
 
 	cleanup();

@@ -63,6 +63,8 @@ class AsyncFsync : public Task<>, public Worker {
 
 	static int _fsync(int fd, bool full_fsync);
 
+	void run_loop(std::unique_lock<std::mutex>& lk);
+
 public:
 	std::string __repr__() const override {
 		char buffer[100];
