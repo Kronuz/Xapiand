@@ -405,6 +405,9 @@ size_t http_parser_execute(http_parser *parser,
  */
 int http_should_keep_alive(const http_parser *parser);
 
+/* Returns a string version of the HTTP status. */
+const char *http_status_str(enum http_status s);
+
 /* Returns a string version of the HTTP method. */
 const char *http_method_str(enum http_method m);
 

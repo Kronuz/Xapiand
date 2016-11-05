@@ -2139,6 +2139,18 @@ http_should_keep_alive (const http_parser *parser)
 
 
 const char *
+http_status_str (enum http_status s)
+{
+  switch (s) {
+#define XX(num, name, string) case num : return #string;
+      HTTP_STATUS_MAP(XX)
+#undef XX
+      default: return "<unknown>";
+  }
+}
+
+
+const char *
 http_method_str (enum http_method m)
 {
   return ELEM_AT(method_strings, m, "<unknown>");
