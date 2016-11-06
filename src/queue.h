@@ -44,8 +44,8 @@ namespace queue {
 		mutable std::mutex _mutex;
 
 		// A variable condition to make threads wait on specified condition values
-		std::condition_variable _push_cond;
 		std::condition_variable _pop_cond;
+		std::condition_variable _push_cond;
 
 		std::atomic_bool _ending;
 		std::atomic_bool _finished;
@@ -61,11 +61,11 @@ namespace queue {
 
 			if (timeout) {
 				if (timeout > 0.0) {
-					if (!_pop_cond.wait_until(lk, timeout_tp, check)) {
+					if (!_push_cond.wait_until(lk, timeout_tp, check)) {
 						return false;
 					}
 				} else {
-					_pop_cond.wait(lk, check);
+					_push_cond.wait(lk, check);
 				}
 			} else {
 				if (!check()) {
@@ -90,11 +90,11 @@ namespace queue {
 
 			if (timeout) {
 				if (timeout > 0.0) {
-					if (!_push_cond.wait_until(lk, timeout_tp, check)) {
+					if (!_pop_cond.wait_until(lk, timeout_tp, check)) {
 						return false;
 					}
 				} else {
-					_push_cond.wait(lk, check);
+					_pop_cond.wait(lk, check);
 				}
 			} else {
 				if (!check()) {
@@ -210,8 +210,8 @@ namespace queue {
 			_ending = true;
 
 			// Signal the condition variable in case any threads are waiting
-			_push_cond.notify_all();
 			_pop_cond.notify_all();
+			_push_cond.notify_all();
 
 		}
 
@@ -222,8 +222,8 @@ namespace queue {
 			_finished = true;
 
 			// Signal the condition variable in case any threads are waiting
-			_push_cond.notify_all();
 			_pop_cond.notify_all();
+			_push_cond.notify_all();
 		}
 
 		template<typename E>
@@ -234,12 +234,12 @@ namespace queue {
 
 			if (pushed) {
 				// Notifiy waiting thread it can push/pop now
-				_push_cond.notify_one();
 				_pop_cond.notify_one();
+				_push_cond.notify_one();
 			} else {
 				// Signal the condition variable in case any threads are waiting
-				_push_cond.notify_all();
 				_pop_cond.notify_all();
+				_push_cond.notify_all();
 			}
 
 			return pushed;
@@ -252,12 +252,12 @@ namespace queue {
 
 			if (popped) {
 				// Notifiy waiting thread it can push/pop now
-				_push_cond.notify_one();
 				_pop_cond.notify_one();
+				_push_cond.notify_one();
 			} else {
 				// Signal the condition variable in case any threads are waiting
-				_push_cond.notify_all();
 				_pop_cond.notify_all();
+				_push_cond.notify_all();
 			}
 
 			return popped;
@@ -270,12 +270,12 @@ namespace queue {
 
 			if (cleared) {
 				// Notifiy waiting thread it can push/pop now
-				_push_cond.notify_one();
 				_pop_cond.notify_one();
+				_push_cond.notify_one();
 			} else {
 				// Signal the condition variable in case any threads are waiting
-				_push_cond.notify_all();
 				_pop_cond.notify_all();
+				_push_cond.notify_all();
 			}
 		}
 
@@ -332,12 +332,12 @@ namespace queue {
 
 			if (pushed) {
 				// Notifiy waiting thread it can push/pop now
-				Queue_t::_push_cond.notify_one();
 				Queue_t::_pop_cond.notify_one();
+				Queue_t::_push_cond.notify_one();
 			} else {
 				// Signal the condition variable in case any threads are waiting
-				Queue_t::_push_cond.notify_all();
 				Queue_t::_pop_cond.notify_all();
+				Queue_t::_push_cond.notify_all();
 			}
 
 			return pushed;
@@ -404,12 +404,12 @@ namespace queue {
 
 			if (popped) {
 				// Notifiy waiting thread it can push/pop now
-				Queue_t::_push_cond.notify_one();
 				Queue_t::_pop_cond.notify_one();
+				Queue_t::_push_cond.notify_one();
 			} else {
 				// Signal the condition variable in case any threads are waiting
-				Queue_t::_push_cond.notify_all();
 				Queue_t::_pop_cond.notify_all();
+				Queue_t::_push_cond.notify_all();
 			}
 
 			return popped;
@@ -423,12 +423,12 @@ namespace queue {
 
 			if (cleared) {
 				// Notifiy waiting thread it can push/pop now
-				Queue_t::_push_cond.notify_one();
 				Queue_t::_pop_cond.notify_one();
+				Queue_t::_push_cond.notify_one();
 			} else {
 				// Signal the condition variable in case any threads are waiting
-				Queue_t::_push_cond.notify_all();
 				Queue_t::_pop_cond.notify_all();
+				Queue_t::_push_cond.notify_all();
 			}
 		}
 
