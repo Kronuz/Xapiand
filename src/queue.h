@@ -235,7 +235,6 @@ namespace queue {
 			if (pushed) {
 				// Notifiy waiting thread it can push/pop now
 				_pop_cond.notify_one();
-				_push_cond.notify_all();
 			} else {
 				// Signal the condition variable in case any threads are waiting
 				_pop_cond.notify_all();
@@ -253,7 +252,6 @@ namespace queue {
 			if (popped) {
 				if (_items_queue.size() < _lower) {
 					// Notifiy waiting thread it can push/pop now
-					_pop_cond.notify_all();
 					_push_cond.notify_one();
 				}
 			} else {
@@ -272,7 +270,6 @@ namespace queue {
 
 			if (cleared) {
 				// Notifiy waiting thread it can push/pop now
-				_pop_cond.notify_all();
 				_push_cond.notify_one();
 			} else {
 				// Signal the condition variable in case any threads are waiting
@@ -335,7 +332,6 @@ namespace queue {
 			if (pushed) {
 				// Notifiy waiting thread it can push/pop now
 				Queue_t::_pop_cond.notify_one();
-				Queue_t::_push_cond.notify_all();
 			} else {
 				// Signal the condition variable in case any threads are waiting
 				Queue_t::_pop_cond.notify_all();
@@ -407,7 +403,6 @@ namespace queue {
 			if (popped) {
 				if (Queue_t::_items_queue.size() < Queue_t::_lower) {
 					// Notifiy waiting thread it can push/pop now
-					Queue_t::_pop_cond.notify_all();
 					Queue_t::_push_cond.notify_one();
 				}
 			} else {
@@ -427,7 +422,6 @@ namespace queue {
 
 			if (cleared) {
 				// Notifiy waiting thread it can push/pop now
-				Queue_t::_pop_cond.notify_all();
 				Queue_t::_push_cond.notify_one();
 			} else {
 				// Signal the condition variable in case any threads are waiting
