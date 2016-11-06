@@ -53,14 +53,13 @@ namespace queue {
 		size_t _lower;
 
 		bool _push_wait(double timeout, std::unique_lock<std::mutex>& lk) {
-			auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
-
 			auto check = [this]() {
 				return _finished || _ending || _items_queue.size() < _limit;
 			};
 
 			if (timeout) {
 				if (timeout > 0.0) {
+					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
 					if (!_push_cond.wait_until(lk, timeout_tp, check)) {
 						return false;
 					}
@@ -81,8 +80,6 @@ namespace queue {
 		}
 
 		bool _pop_wait(double timeout, std::unique_lock<std::mutex>& lk) {
-			auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
-
 			auto check = [this]() {
 				// While the queue is empty, make the thread that runs this wait
 				return _finished || _ending || !_items_queue.empty();
@@ -90,6 +87,7 @@ namespace queue {
 
 			if (timeout) {
 				if (timeout > 0.0) {
+					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
 					if (!_pop_cond.wait_until(lk, timeout_tp, check)) {
 						return false;
 					}
