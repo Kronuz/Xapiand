@@ -50,6 +50,7 @@ namespace queue {
 		std::atomic_bool _ending;
 		std::atomic_bool _finished;
 		size_t _limit;
+		size_t _lower;
 
 		bool _push_wait(double timeout, std::unique_lock<std::mutex>& lk) {
 			auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
@@ -163,13 +164,18 @@ namespace queue {
 		}
 
 	public:
-		Queue(size_t limit=-1) : _ending(false), _finished(false), _limit(limit) { }
+		Queue(size_t limit=-1, size_t lower=-1)
+			: _ending(false),
+			  _finished(false),
+			  _limit(limit),
+			  _lower(lower) { }
 
 		// Move Constructor
 		Queue(Queue&& q) {
 			std::lock_guard<std::mutex> lk(q._mutex);
 			_items_queue = std::move(q._items_queue);
 			_limit = std::move(q._limit);
+			_lower = std::move(q._lower);
 			_finished = false;
 			_ending = false;
 		}
@@ -181,6 +187,7 @@ namespace queue {
 			std::lock_guard<std::mutex> other_lock(q._mutex, std::adopt_lock);
 			_items_queue = std::move(q._items_queue);
 			_limit = std::move(q._limit);
+			_lower = std::move(q._lower);
 			_finished = false;
 			_ending = false;
 			return *this;
@@ -322,12 +329,23 @@ namespace queue {
 			}
 
 			lk.unlock();
-			Queue_t::_notify(pushed);
+
+			if (pushed) {
+				// Notifiy waiting thread it can push/pop now
+				Queue_t::_push_cond.notify_one();
+				Queue_t::_pop_cond.notify_one();
+			} else {
+				// Signal the condition variable in case any threads are waiting
+				Queue_t::_push_cond.notify_all();
+				Queue_t::_pop_cond.notify_all();
+			}
+
 			return pushed;
 		}
 
 	public:
-		QueueSet(size_t limit=-1) : Queue<T, std::list<T>>(limit) { }
+		QueueSet(size_t limit=-1, size_t lower=-1)
+			: Queue<T, std::list<T>>(limit, lower) { }
 
 		template<typename E, typename OnDup>
 		bool push(E&& element, double timeout, OnDup on_dup) {
