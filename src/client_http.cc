@@ -302,9 +302,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		if (final_state == init_state) {
 			if (received == 1 and buf[0] == '\n') {  // ignore '\n' request
 				request_begining = true;
-				response_log.load()->clear();
-				response_log = L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
-				idle = true;
+				set_idle();
 				return;
 			}
 		}
@@ -1845,10 +1843,25 @@ HttpClient::clean_http_request()
 
 	request_begining = true;
 	L_TIME(this, "Full request took %s, response took %s", request_delta.c_str(), response_delta.c_str());
-	idle = true;
+
+	set_idle();
 
 	async_read.send();
 	http_parser_init(&parser, HTTP_REQUEST);
+}
+
+
+void
+HttpClient::set_idle()
+{
+	response_log.load()->clear();
+	response_log = L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
+	idle = true;
+
+	if (shutting_down && write_queue.empty()) {
+		destroy();
+		detach();
+	}
 }
 
 

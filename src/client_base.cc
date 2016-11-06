@@ -268,6 +268,7 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 	  async_write(*ev_loop),
 	  async_read(*ev_loop),
 	  idle(false),
+	  shutting_down(false),
 	  closed(false),
 	  sock(sock_),
 	  written(0),
@@ -713,6 +714,8 @@ void
 BaseClient::shutdown_impl(time_t asap, time_t now)
 {
 	L_CALL(this, "BaseClient::shutdown_impl(%d, %d)", (int)asap, (int)now);
+
+	shutting_down = true;
 
 	Worker::shutdown_impl(asap, now);
 
