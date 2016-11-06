@@ -190,8 +190,8 @@ VARx(sigset_t, sigfd_set)
 VARx(unsigned int, origflags) /* original loop flags */
 
 #if EV_FEATURE_API || EV_GENWRAP
-VARx(unsigned int, loop_count) /* total number of loop iterations/blocks */
-VARx(unsigned int, loop_depth) /* #ev_run enters - #ev_run leaves */
+VARx(EV_ATOMIC_T, loop_count) /* total number of loop iterations/blocks */
+VARx(EV_ATOMIC_T, loop_depth) /* #ev_run enters - #ev_run leaves */
 
 VARx(void *, userdata)
 /* C++ doesn't support the ev_loop_callback typedef here. stinks. */
