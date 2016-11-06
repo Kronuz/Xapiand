@@ -51,19 +51,7 @@ namespace queue {
 		std::atomic_bool _finished;
 		size_t _limit;
 
-		inline void _notify(bool one) noexcept {
-			if (one) {
-				// Notifiy waiting thread it can push/pop now
-				_push_cond.notify_one();
-				_pop_cond.notify_one();
-			} else {
-				// Signal the condition variable in case any threads are waiting
-				_push_cond.notify_all();
-				_pop_cond.notify_all();
-			}
-		}
-
-		inline bool _push_wait(double timeout, std::unique_lock<std::mutex>& lk) {
+		bool _push_wait(double timeout, std::unique_lock<std::mutex>& lk) {
 			auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
 
 			auto check = [this]() {
@@ -91,7 +79,7 @@ namespace queue {
 			return true;
 		}
 
-		inline bool _pop_wait(double timeout, std::unique_lock<std::mutex>& lk) {
+		bool _pop_wait(double timeout, std::unique_lock<std::mutex>& lk) {
 			auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
 
 			auto check = [this]() {
@@ -121,7 +109,7 @@ namespace queue {
 		}
 
 		template<typename E>
-		inline bool _push_front_impl(E&& element, double timeout, std::unique_lock<std::mutex>& lk) {
+		bool _push_front_impl(E&& element, double timeout, std::unique_lock<std::mutex>& lk) {
 			bool ret = _push_wait(timeout, lk);
 			if (ret) {
 				// Insert the element in the queue
@@ -131,7 +119,7 @@ namespace queue {
 		}
 
 		template<typename E>
-		inline bool _push_back_impl(E&& element, double timeout, std::unique_lock<std::mutex>& lk) {
+		bool _push_back_impl(E&& element, double timeout, std::unique_lock<std::mutex>& lk) {
 			bool ret = _push_wait(timeout, lk);
 			if (ret) {
 				// Insert the element in the queue
@@ -140,7 +128,7 @@ namespace queue {
 			return ret;
 		}
 
-		inline bool _pop_back_impl(T& element, double timeout, std::unique_lock<std::mutex>& lk) {
+		bool _pop_back_impl(T& element, double timeout, std::unique_lock<std::mutex>& lk) {
 			bool ret = _pop_wait(timeout, lk);
 			if (ret) {
 				//when the condition variable is unlocked, popped the element
@@ -152,7 +140,7 @@ namespace queue {
 			return ret;
 		}
 
-		inline bool _pop_front_impl(T& element, double timeout, std::unique_lock<std::mutex>& lk) {
+		bool _pop_front_impl(T& element, double timeout, std::unique_lock<std::mutex>& lk) {
 			bool ret = _pop_wait(timeout, lk);
 			if (ret) {
 				//when the condition variable is unlocked, popped the element
@@ -164,7 +152,7 @@ namespace queue {
 			return ret;
 		}
 
-		inline bool _clear_impl(std::unique_lock<std::mutex>&) noexcept {
+		bool _clear_impl(std::unique_lock<std::mutex>&) noexcept {
 			_items_queue.clear();
 
 			if (_finished || _ending) {
@@ -213,7 +201,11 @@ namespace queue {
 				return;
 			}
 			_ending = true;
-			_notify(false);
+
+			// Signal the condition variable in case any threads are waiting
+			_push_cond.notify_all();
+			_pop_cond.notify_all();
+
 		}
 
 		void finish() noexcept {
@@ -221,7 +213,10 @@ namespace queue {
 				return;
 			}
 			_finished = true;
-			_notify(false);
+
+			// Signal the condition variable in case any threads are waiting
+			_push_cond.notify_all();
+			_pop_cond.notify_all();
 		}
 
 		template<typename E>
@@ -229,7 +224,17 @@ namespace queue {
 			std::unique_lock<std::mutex> lk(_mutex);
 			bool pushed = _push_front_impl(std::forward<E>(element), timeout, lk);
 			lk.unlock();
-			_notify(pushed);
+
+			if (pushed) {
+				// Notifiy waiting thread it can push/pop now
+				_push_cond.notify_one();
+				_pop_cond.notify_one();
+			} else {
+				// Signal the condition variable in case any threads are waiting
+				_push_cond.notify_all();
+				_pop_cond.notify_all();
+			}
+
 			return pushed;
 		}
 
@@ -237,7 +242,17 @@ namespace queue {
 			std::unique_lock<std::mutex> lk(_mutex);
 			bool popped = _pop_back_impl(element, timeout, lk);
 			lk.unlock();
-			_notify(popped);
+
+			if (popped) {
+				// Notifiy waiting thread it can push/pop now
+				_push_cond.notify_one();
+				_pop_cond.notify_one();
+			} else {
+				// Signal the condition variable in case any threads are waiting
+				_push_cond.notify_all();
+				_pop_cond.notify_all();
+			}
+
 			return popped;
 		}
 
@@ -245,7 +260,16 @@ namespace queue {
 			std::unique_lock<std::mutex> lk(_mutex);
 			bool cleared = _clear_impl(lk);
 			lk.unlock();
-			_notify(cleared);
+
+			if (cleared) {
+				// Notifiy waiting thread it can push/pop now
+				_push_cond.notify_one();
+				_pop_cond.notify_one();
+			} else {
+				// Signal the condition variable in case any threads are waiting
+				_push_cond.notify_all();
+				_pop_cond.notify_all();
+			}
 		}
 
 		bool empty() {
@@ -359,7 +383,17 @@ namespace queue {
 			}
 
 			lk.unlock();
-			Queue_t::_notify(popped);
+
+			if (popped) {
+				// Notifiy waiting thread it can push/pop now
+				Queue_t::_push_cond.notify_one();
+				Queue_t::_pop_cond.notify_one();
+			} else {
+				// Signal the condition variable in case any threads are waiting
+				Queue_t::_push_cond.notify_all();
+				Queue_t::_pop_cond.notify_all();
+			}
+
 			return popped;
 		}
 
@@ -369,7 +403,15 @@ namespace queue {
 
 			_items_map.clear();
 
-			Queue_t::_notify(cleared);
+			if (cleared) {
+				// Notifiy waiting thread it can push/pop now
+				Queue_t::_push_cond.notify_one();
+				Queue_t::_pop_cond.notify_one();
+			} else {
+				// Signal the condition variable in case any threads are waiting
+				Queue_t::_push_cond.notify_all();
+				Queue_t::_pop_cond.notify_all();
+			}
 		}
 
 		size_t erase(const T& key) {
