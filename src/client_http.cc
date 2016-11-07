@@ -91,47 +91,13 @@ static const auto msgpack_serializers = std::vector<type_t>({json_type, msgpack_
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;q=(\\d+(?:\\.\\d+)?))?");
 
 
-static const char* http_status[6][14] = {
-	{},
-	{
-		"Continue"                  // 100
-	},
-	{
-		"OK",                       // 200
-		"Created"                   // 201
-	},
-	{},
-	{
-		"Bad Request",              // 400
-		nullptr,                    // 401
-		nullptr,                    // 402
-		nullptr,                    // 403
-		"Not Found",                // 404
-		nullptr,                    // 405
-		"Not Acceptable",           // 406
-		nullptr,                    // 407
-		nullptr,                    // 408
-		"Conflict",                 // 409
-		nullptr,                    // 410
-		nullptr,                    // 411
-		"Precondition Failed",      // 412
-		"Request Entity Too Large"  // 413
-	},
-	{
-		"Internal Server Error",    // 500
-		"Not Implemented",          // 501
-		"Bad Gateway"               // 502
-	}
-};
-
-
 GuidGenerator HttpClient::generator;
 
 AcceptLRU HttpClient::accept_sets;
 
 
 std::string
-HttpClient::http_response(int status, int mode, unsigned short http_major, unsigned short http_minor, int total_count, int matches_estimated, const std::string& body, const std::string& ct_type, const std::string& ct_encoding) {
+HttpClient::http_response(enum http_status status, int mode, unsigned short http_major, unsigned short http_minor, int total_count, int matches_estimated, const std::string& body, const std::string& ct_type, const std::string& ct_encoding) {
 	L_CALL(this, "HttpClient::http_response()");
 
 	char buffer[20];
@@ -144,7 +110,7 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 
 		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", http_major, http_minor, status);
 		headers += buffer;
-		headers += http_status[status / 100][status % 100] + eol;
+		headers += http_status_str(status) + eol;
 		if (!(mode & HTTP_HEADER)) {
 			headers += eol;
 		}
@@ -315,10 +281,10 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			}
 		}
 	} else {
-		int error_code = 400;
+		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
 		std::string message(http_errno_description(HTTP_PARSER_ERRNO(&parser)));
 		MsgPack err_response = {
-			{ RESPONSE_STATUS,  error_code },
+			{ RESPONSE_STATUS, (int)error_code },
 			{ RESPONSE_MESSAGE, message }
 		};
 		write_http_response(error_code, err_response);
@@ -389,7 +355,7 @@ HttpClient::on_info(http_parser* p)
 		case 50:  // headers done
 			if (self->expect_100) {
 				// Return 100 if client is expecting it
-				self->write(self->http_response(100, HTTP_STATUS | HTTP_EXPECTED100, p->http_major, p->http_minor));
+				self->write(self->http_response(HTTP_STATUS_CONTINUE, HTTP_STATUS | HTTP_EXPECTED_CONTINUE, p->http_major, p->http_minor));
 			}
 	}
 
@@ -425,7 +391,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 				self->host = self->header_value;
 			} else if (name.compare("expect") == 0 && value.compare("100-continue") == 0) {
 				if (p->content_length > MAX_BODY_SIZE) {
-					self->write(self->http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
+					self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS, p->http_major, p->http_minor));
 					self->close();
 					return 0;
 				}
@@ -457,14 +423,14 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 	} else if (state >= 60 && state <= 62) { // s_body_identity  ->  s_message_done
 		self->body_size += length;
 		if (self->body_size > MAX_BODY_SIZE || p->content_length > MAX_BODY_SIZE) {
-			self->write(self->http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
+			self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS, p->http_major, p->http_minor));
 			self->close();
 			return 0;
 		} else if (self->body_descriptor || self->body_size > MAX_BODY_MEM) {
 
 			// The next two lines are switching off the write body in to a file option when the body is too large
 			// (for avoid have it in memory) but this feature is not available yet
-			self->write(self->http_response(413, HTTP_STATUS, p->http_major, p->http_minor)); // <-- remove leater!
+			self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS, p->http_major, p->http_minor)); // <-- remove leater!
 			self->close(); // <-- remove leater!
 
 			if (!self->body_descriptor) {
@@ -521,7 +487,7 @@ HttpClient::_run()
 	response_log = L_DELAYED(true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long...").release();
 
 	std::string error;
-	int error_code = 0;
+	enum http_status error_code = HTTP_STATUS_OK;
 
 	try {
 		switch (static_cast<HttpMethod>(parser.method)) {
@@ -546,36 +512,36 @@ HttpClient::_run()
 			case HttpMethod::PATCH:
 				_patch();
 			default:
-				write_http_response(501);
+				write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
 				break;
 		}
 	} catch (const DocNotFoundError&) {
-		error_code = 404;
+		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign("Document not found");
 	} catch (const MissingTypeError& exc) {
-		error_code = 412;
+		error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		error.assign(exc.what());
 	} catch (const ClientError& exc) {
-		error_code = 400;
+		error_code = HTTP_STATUS_BAD_REQUEST;
 		error.assign(exc.what());
 	} catch (const CheckoutError& exc) {
-		error_code = 502;
+		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(exc.what());
 	} catch (const Exception& exc) {
-		error_code = 500;
+		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.what() ? exc.what() : "Unkown Exception!");
 		L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 	} catch (const Xapian::Error& exc) {
-		error_code = 500;
+		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		auto exc_msg = exc.get_msg().c_str();
 		error.assign(*exc_msg ? exc_msg : "Unkown Xapian::Error!");
 		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const std::exception& exc) {
-		error_code = 500;
+		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.what() ? exc.what() : "Unkown std::exception!");
 		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (...) {
-		error_code = 500;
+		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign("Unknown exception!");
 		std::exception exc;
 		L_EXC(this, "ERROR: %s", error.c_str());
@@ -587,7 +553,7 @@ HttpClient::_run()
 			detach();
 		} else {
 			MsgPack err_response = {
-				{ RESPONSE_STATUS, error_code },
+				{ RESPONSE_STATUS, (int)error_code },
 				{ RESPONSE_MESSAGE, error }
 			};
 
@@ -606,7 +572,7 @@ HttpClient::_options()
 {
 	L_CALL(this, "HttpClient::_options()");
 
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS | HTTP_BODY, parser.http_major, parser.http_minor));
+	write(http_response(HTTP_STATUS_OK, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS | HTTP_BODY, parser.http_major, parser.http_minor));
 }
 
 
@@ -617,13 +583,13 @@ HttpClient::_head()
 
 	switch (url_resolve()) {
 		case Command::NO_CMD_NO_ID:
-			write_http_response(200);
+			write_http_response(HTTP_STATUS_OK);
 			break;
 		case Command::NO_CMD_ID:
 			document_info_view(HttpMethod::HEAD);
 			break;
 		default:
-			status_view(400);
+			status_view(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -656,7 +622,7 @@ HttpClient::_get()
 			nodes_view(HttpMethod::GET);
 			break;
 		default:
-			status_view(400);
+			status_view(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -676,7 +642,7 @@ HttpClient::_put()
 			write_schema_view(HttpMethod::PUT);
 			break;
 		default:
-			status_view(400);
+			status_view(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -711,7 +677,7 @@ HttpClient::_post()
 			break;
 #endif
 		default:
-			status_view(400);
+			status_view(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -727,7 +693,7 @@ HttpClient::_patch()
 			update_document_view(HttpMethod::PATCH);
 			break;
 		default:
-			status_view(400);
+			status_view(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -743,7 +709,7 @@ HttpClient::_delete()
 			delete_document_view(HttpMethod::DELETE);
 			break;
 		default:
-			status_view(400);
+			status_view(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -815,7 +781,7 @@ HttpClient::home_view(HttpMethod method)
 		{ "_xapian", Xapian::version_string() }
 	};
 
-	write_http_response(200, obj_data);
+	write_http_response(HTTP_STATUS_OK, obj_data);
 }
 
 
@@ -835,7 +801,7 @@ HttpClient::document_info_view(HttpMethod method)
 
 	operation_ends = std::chrono::system_clock::now();
 
-	write_http_response(200, response);
+	write_http_response(HTTP_STATUS_OK, response);
 }
 
 
@@ -851,14 +817,14 @@ HttpClient::delete_document_view(HttpMethod method)
 
 	operation_begins = std::chrono::system_clock::now();
 
-	int status_code;
+	enum http_status status_code;
 	MsgPack response;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
 	if (endpoints.size() == 1) {
 		db_handler.delete_document(doc_id, query_field->commit);
 		operation_ends = std::chrono::system_clock::now();
-		status_code = 200;
+		status_code = HTTP_STATUS_OK;
 
 		response["_delete"] = {
 			{ ID_FIELD_NAME, doc_id },
@@ -869,13 +835,13 @@ HttpClient::delete_document_view(HttpMethod method)
 		operation_ends = std::chrono::system_clock::now();
 
 		if (err_list.empty()) {
-			status_code = 200;
+			status_code = HTTP_STATUS_OK;
 			response["_delete"] = {
 				{ ID_FIELD_NAME, doc_id },
 				{ "_commit",  query_field->commit }
 			};
 		} else {
-			status_code = 400;
+			status_code = HTTP_STATUS_BAD_REQUEST;
 			for (const auto& err : err_list) {
 				MsgPack o;
 				for (const auto& end : err.second) {
@@ -908,7 +874,7 @@ HttpClient::index_document_view(HttpMethod method)
 	L_CALL(this, "HttpClient::index_document_view()");
 
 	std::string doc_id;
-	int status_code = 400;
+	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
 	if (method == HttpMethod::POST) {
 		auto g = generator.newGuid();
@@ -946,7 +912,7 @@ HttpClient::index_document_view(HttpMethod method)
 
 	MsgPack response;
 	if (err_list.empty()) {
-		status_code = 200;
+		status_code = HTTP_STATUS_OK;
 		response["_index"] = {
 			{ ID_FIELD_NAME, doc_id },
 			{ "_commit", query_field->commit }
@@ -970,7 +936,7 @@ HttpClient::write_schema_view(HttpMethod method)
 {
 	L_CALL(this, "HttpClient::write_schema_view()");
 
-	int status_code = 400;
+	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
@@ -989,7 +955,7 @@ HttpClient::write_schema_view(HttpMethod method)
 
 	MsgPack response;
 	if (err_list.empty()) {
-		status_code = 200;
+		status_code = HTTP_STATUS_OK;
 		response = db_handler.get_schema()->get_readable();
 	} else {
 		for (const auto& err : err_list) {
@@ -1014,7 +980,7 @@ HttpClient::update_document_view(HttpMethod method)
 	query_field_maker(QUERY_FIELD_COMMIT);
 
 	std::string doc_id(path_parser.get_id());
-	int status_code = 400;
+	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
 	operation_begins = std::chrono::system_clock::now();
 
@@ -1038,7 +1004,7 @@ HttpClient::update_document_view(HttpMethod method)
 
 	MsgPack response;
 	if (err_list.empty()) {
-		status_code = 200;
+		status_code = HTTP_STATUS_OK;
 		response["_update"] = {
 			{ ID_FIELD_NAME, doc_id },
 			{ "_commit", query_field->commit }
@@ -1095,9 +1061,9 @@ HttpClient::info_view(HttpMethod method)
 	}
 
 	if (res_stats) {
-		write_http_response(200, response);
+		write_http_response(HTTP_STATUS_OK, response);
 	} else {
-		status_view(404);
+		status_view(HTTP_STATUS_NOT_FOUND);
 	}
 }
 
@@ -1111,12 +1077,12 @@ HttpClient::nodes_view(HttpMethod)
 
 	path_parser.next();
 	if (path_parser.next() != PathParser::State::END) {
-		status_view(404);
+		status_view(HTTP_STATUS_NOT_FOUND);
 		return;
 	}
 
 	if (path_parser.len_pth || path_parser.len_pmt || path_parser.len_ppmt) {
-		status_view(404);
+		status_view(HTTP_STATUS_NOT_FOUND);
 		return;
 	}
 
@@ -1128,7 +1094,7 @@ HttpClient::nodes_view(HttpMethod)
 		{ "_name", local_node_->name },
 	};
 
-	write_http_response(200, {
+	write_http_response(HTTP_STATUS_OK, {
 		{ "_cluster_name", XapiandManager::manager->cluster_name },
 		{ "_nodes", nodes },
 	});
@@ -1143,15 +1109,15 @@ HttpClient::touch_view(HttpMethod method)
 	endpoints_maker(1s);
 
 	MsgPack response;
-	int status_code;
+	enum http_status status_code;
 	try {
 		operation_begins = std::chrono::system_clock::now();
 
 		db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
-		status_code = 200;
+		status_code = HTTP_STATUS_OK;
 		response["_touch"] = "Done";
 	} catch (const CheckoutError& e) {
-		status_code = 200;
+		status_code = HTTP_STATUS_OK;
 		auto ss = "Error: " + std::string(e.what());
 		response["_touch"] = ss;
 	}
@@ -1175,7 +1141,7 @@ HttpClient::schema_view(HttpMethod method)
 
 	operation_begins = std::chrono::system_clock::now();
 
-	write_http_response(200, db_handler.get_schema()->get_readable());
+	write_http_response(HTTP_STATUS_OK, db_handler.get_schema()->get_readable());
 }
 
 
@@ -1244,9 +1210,9 @@ HttpClient::search_view(HttpMethod method)
 	auto total_count = mset.size();
 
 	if (!chunked && !total_count) {
-		int error_code = 404;
+		enum http_status error_code = HTTP_STATUS_NOT_FOUND;
 		MsgPack err_response = {
-			{ RESPONSE_STATUS, error_code },
+			{ RESPONSE_STATUS, (int)error_code },
 			{ RESPONSE_MESSAGE, "No document found" }
 		};
 		write_http_response(error_code, err_response);
@@ -1301,9 +1267,9 @@ HttpClient::search_view(HttpMethod method)
 					sep_chunk = ",";
 				}
 			} else {
-				int error_code = 406;
+				enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 				MsgPack err_response = {
-					{ RESPONSE_STATUS, error_code },
+					{ RESPONSE_STATUS, (int)error_code },
 					{ RESPONSE_MESSAGE, std::string("Response type application/x-msgpack or application/json not provided in the accept header") }
 				};
 				write_http_response(error_code, err_response);
@@ -1323,9 +1289,9 @@ HttpClient::search_view(HttpMethod method)
 				auto ct_type_str = document.get_value(CT_FIELD_NAME).as_string();
 				ct_type = resolve_ct_type(ct_type_str);
 				if (ct_type.first == no_type.first && ct_type.second == no_type.second) {
-					int error_code = 406;
+					enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 					MsgPack err_response = {
-						{ RESPONSE_STATUS, error_code },
+						{ RESPONSE_STATUS, (int)error_code },
 						{ RESPONSE_MESSAGE, std::string("Response type " + ct_type_str + " not provided in the accept header") }
 					};
 					write_http_response(error_code, err_response);
@@ -1338,7 +1304,7 @@ HttpClient::search_view(HttpMethod method)
 				} else {
 					// Returns blob_data in case that type is unkown
 					auto blob_data = document.get_blob();
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
+					write(http_response(HTTP_STATUS_OK, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
 					return;
 				}
 			}
@@ -1355,19 +1321,19 @@ HttpClient::search_view(HttpMethod method)
 			auto result = serialize_response(obj_data, ct_type, pretty);
 			if (chunked) {
 				if (rc == 0) {
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
-					write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
+					write(http_response(HTTP_STATUS_OK, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
+					write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
 				}
 
 				if (!buffer.empty()) {
-					if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + sep_chunk + eol_chunk))) {
+					if (!write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + sep_chunk + eol_chunk))) {
 						// TODO: log eror?
 						break;
 					}
 				}
 				buffer = result.first;
 			} else {
-				if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
+				if (!write(http_response(HTTP_STATUS_OK, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
 					// TODO: log eror?
 					break;
 				}
@@ -1376,19 +1342,19 @@ HttpClient::search_view(HttpMethod method)
 
 		if (chunked) {
 			if (rc == 0) {
-				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
-				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
+				write(http_response(HTTP_STATUS_OK, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
+				write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
 			}
 
 			if (!buffer.empty()) {
-				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + eol_chunk));
+				write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + eol_chunk));
 			}
 
 			if (!last_chunk.empty()) {
-				write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
+				write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
 			}
 
-			write(http_response(0, HTTP_CHUNKED | HTTP_BODY));
+			write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY));
 		}
 	}
 
@@ -1410,13 +1376,13 @@ HttpClient::search_view(HttpMethod method)
 
 
 void
-HttpClient::status_view(int status_code, const std::string& message)
+HttpClient::status_view(enum http_status status, const std::string& message)
 {
 	L_CALL(this, "HttpClient::status_view()");
 
-	write_http_response(status_code, {
-		{ RESPONSE_STATUS, status_code },
-		{ RESPONSE_MESSAGE, message.empty() ? http_status[status_code / 100][status_code % 100] : message }
+	write_http_response(status, {
+		{ RESPONSE_STATUS, (int)status },
+		{ RESPONSE_MESSAGE, message.empty() ? http_status_str(status) : message }
 	});
 }
 
@@ -1811,18 +1777,18 @@ HttpClient::clean_http_request()
 	} else {
 		int priority = LOG_DEBUG;
 		const char* color = WHITE;
-		if (response_status >= 200 && response_status <= 299) {
+		if ((int)response_status >= 200 && (int)response_status <= 299) {
 			color = GREY;
-		} else if (response_status >= 300 && response_status <= 399) {
+		} else if ((int)response_status >= 300 && (int)response_status <= 399) {
 			color = CYAN;
-		} else if (response_status >= 400 && response_status <= 499) {
+		} else if ((int)response_status >= 400 && (int)response_status <= 499) {
 			color = YELLOW;
 			priority = LOG_INFO;
-		} else if (response_status >= 500 && response_status <= 599) {
+		} else if ((int)response_status >= 500 && (int)response_status <= 599) {
 			color = LIGHT_MAGENTA;
 			priority = LOG_ERR;
 		}
-		if (!response_logged.exchange(true)) L(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %s %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, response_status, bytes_string(response_size).c_str(), request_delta.c_str());
+		if (!response_logged.exchange(true)) L(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %s %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, (int)response_status, bytes_string(response_size).c_str(), request_delta.c_str());
 	}
 
 	path.clear();
@@ -1832,7 +1798,7 @@ HttpClient::clean_http_request()
 	content_type.clear();
 	content_length.clear();
 	host.clear();
-	response_status = 0;
+	response_status = HTTP_STATUS_OK;
 	response_size = 0;
 
 	pretty = false;
@@ -1981,12 +1947,12 @@ HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, bool p
 
 
 void
-HttpClient::write_http_response(int status_code, const MsgPack& response)
+HttpClient::write_http_response(enum http_status status, const MsgPack& response)
 {
 	L_CALL(this, "HttpClient::write_http_response()");
 
 	if (response.is_undefined()) {
-		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+		write(http_response(status, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
@@ -1999,16 +1965,16 @@ HttpClient::write_http_response(int status_code, const MsgPack& response)
 	}
 	const auto& accepted_type = get_acceptable_type(ct_types);
 	try {
-		auto result = serialize_response(response, accepted_type, pretty, status_code >= 400);
-		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
+		auto result = serialize_response(response, accepted_type, pretty, (int)status >= 400);
+		write(http_response(status, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
 	} catch (const SerialisationError& exc) {
-		status_code = 406;
+		status = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack response_err = {
-			{ RESPONSE_STATUS, status_code },
+			{ RESPONSE_STATUS, (int)status },
 			{ RESPONSE_MESSAGE, std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what()) }
 		};
 		auto response_str = response_err.to_string();
-		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, response_str));
+		write(http_response(status, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, response_str));
 		return;
 	}
 }
