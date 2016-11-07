@@ -1,0 +1,33 @@
+# Compile Xapian from Git
+# Needs: automake libtool tcl86
+
+
+# Get repository from GitHub
+######################################
+if [ ! -d "xapian" ]; then
+	git clone -b RELEASE/1.4 --single-branch --depth 1 "https://github.com/xapian/xapian.git"
+fi
+
+
+# Configure environment
+######################################
+
+if [ -d "/usr/local/Cellar" ]; then
+	# Homebrew in OS X has a Cellar directory
+	PREFIX="/usr/local/Cellar/xapian/HEAD"
+else
+	PREFIX="/usr/local"
+fi
+
+
+# Build xapian-core
+######################################
+cd xapian/xapian-core
+# Autoconf, configure and make:
+./preautoreconf
+autoreconf --force --install -Im4 -I/usr/local/share/aclocal
+./configure --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="$PREFIX"
+make
+make check
+make install
+cd ../..
