@@ -99,6 +99,7 @@ Log::Log(const std::string& str, bool clean_, bool stacked_, std::chrono::time_p
 	  stacked(stacked_),
 	  clean(clean_),
 	  created_at(created_at_),
+	  cleared_at(created_at_),
 	  wakeup(wakeup_),
 	  str_start(str),
 	  priority(priority_),
@@ -127,7 +128,9 @@ void
 Log::cleanup()
 {
 	bool f = false;
-	cleared.compare_exchange_strong(f, clean);
+	if (cleared.compare_exchange_strong(f, clean)) {
+		cleared_at = std::chrono::system_clock::now();
+	}
 
 	if (!cleaned.exchange(true)) {
 		if (stacked) {
@@ -143,12 +146,7 @@ Log::cleanup()
 long double
 Log::age()
 {
-	std::chrono::time_point<std::chrono::system_clock> now;
-	if (cleared) {
-		now = cleared_at;
-	} else {
-		now = std::chrono::system_clock::now();
-	}
+	auto now = (cleared_at > created_at) ? cleared_at : std::chrono::system_clock::now();
 	return std::chrono::duration_cast<std::chrono::nanoseconds>(now - created_at).count();
 }
 
