@@ -289,37 +289,68 @@ configure_file (
 	${PROJECT_SOURCE_DIR}/config.h.cmake
 	${PROJECT_BINARY_DIR}/src/config.h)
 
-file (GLOB SRC_LIST
-	${PROJECT_SOURCE_DIR}/src/*.c* ${PROJECT_SOURCE_DIR}/src/*.h
-	${PROJECT_SOURCE_DIR}/src/booleanParser/*.c* ${PROJECT_SOURCE_DIR}/src/booleanParser/*.h
-	${PROJECT_SOURCE_DIR}/src/ev/*.c* ${PROJECT_SOURCE_DIR}/src/ev/*.h
-	${PROJECT_SOURCE_DIR}/src/geo/*.c* ${PROJECT_SOURCE_DIR}/src/geo/*.h
-	${PROJECT_SOURCE_DIR}/src/hash/*.c* ${PROJECT_SOURCE_DIR}/src/hash/*.h
-	${PROJECT_SOURCE_DIR}/src/lz4/*.c* ${PROJECT_SOURCE_DIR}/src/lz4/*.h
-	${PROJECT_SOURCE_DIR}/src/multivalue/*.c* ${PROJECT_SOURCE_DIR}/src/multivalue/*.h
-	${PROJECT_SOURCE_DIR}/src/servers/*.c* ${PROJECT_SOURCE_DIR}/src/servers/*.h
-	${PROJECT_SOURCE_DIR}/src/guid/*.c* ${PROJECT_SOURCE_DIR}/src/guid/*.h
-	${PROJECT_SOURCE_DIR}/src/xchange/*.c* ${PROJECT_SOURCE_DIR}/src/xchange/*.h)
 
-list (REMOVE_ITEM SRC_LIST
+file (GLOB XAPIAND_SRC_LIST
+	${PROJECT_SOURCE_DIR}/src/*.c* ${PROJECT_SOURCE_DIR}/src/*.h
+	${PROJECT_SOURCE_DIR}/src/servers/*.c* ${PROJECT_SOURCE_DIR}/src/servers/*.h
+	${PROJECT_SOURCE_DIR}/src/geo/*.c* ${PROJECT_SOURCE_DIR}/src/geo/*.h
+	${PROJECT_SOURCE_DIR}/src/xchange/*.c* ${PROJECT_SOURCE_DIR}/src/xchange/*.h
+	${PROJECT_SOURCE_DIR}/src/hash/*.c* ${PROJECT_SOURCE_DIR}/src/hash/*.h
+	${PROJECT_SOURCE_DIR}/src/multivalue/*.c* ${PROJECT_SOURCE_DIR}/src/multivalue/*.h
+)
+list (REMOVE_ITEM XAPIAND_SRC_LIST
+	${PROJECT_SOURCE_DIR}/src/xapiand.cc
+)
+add_library (XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
+
+
+file (GLOB BOOLEAN_PARSER_SRC_LIST
+	${PROJECT_SOURCE_DIR}/src/booleanParser/*.c* ${PROJECT_SOURCE_DIR}/src/booleanParser/*.h
+)
+add_library (BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
+
+
+file (GLOB LIBEV_SRC_LIST
+	${PROJECT_SOURCE_DIR}/src/ev/*.c* ${PROJECT_SOURCE_DIR}/src/ev/*.h
+)
+list (REMOVE_ITEM LIBEV_SRC_LIST
 	${PROJECT_SOURCE_DIR}/src/ev/ev_epoll.c
 	${PROJECT_SOURCE_DIR}/src/ev/ev_kqueue.c
 	${PROJECT_SOURCE_DIR}/src/ev/ev_poll.c
 	${PROJECT_SOURCE_DIR}/src/ev/ev_port.c
 	${PROJECT_SOURCE_DIR}/src/ev/ev_select.c
 	${PROJECT_SOURCE_DIR}/src/ev/ev_win32.c
-	${PROJECT_SOURCE_DIR}/src/xapiand.cc)
+)
+add_library (LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
 
-add_library (SRC_OBJ OBJECT ${SRC_LIST})
 
-add_executable (${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/xapiand.cc $<TARGET_OBJECTS:SRC_OBJ>)
+file (GLOB LZ4_SRC_LIST
+	${PROJECT_SOURCE_DIR}/src/lz4/*.c* ${PROJECT_SOURCE_DIR}/src/lz4/*.h
+)
+add_library (LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
+
+
+file (GLOB GUID_SRC_LIST
+	${PROJECT_SOURCE_DIR}/src/guid/*.c* ${PROJECT_SOURCE_DIR}/src/guid/*.h
+)
+add_library (GUID_OBJ OBJECT ${GUID_SRC_LIST})
+
+add_executable (${PROJECT_NAME}
+	${PROJECT_SOURCE_DIR}/src/xapiand.cc
+	$<TARGET_OBJECTS:XAPIAND_OBJ>
+	$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>
+	$<TARGET_OBJECTS:LIBEV_OBJ>
+	$<TARGET_OBJECTS:LZ4_OBJ>
+	$<TARGET_OBJECTS:GUID_OBJ>
+)
 target_link_libraries (${PROJECT_NAME}
+	${V8_LIBRARIES}
+	${UUID_LIBRARIES}
 	${XAPIAN_LIBRARIES}
 	${CMAKE_THREAD_LIBS_INIT}
-	${UUID_LIBRARIES}
-	${V8_LIBRARIES}
 	m
 )
+
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
 
@@ -336,8 +367,16 @@ if (IWYU)
 			${IWYU_PATH}
 			-Xiwyu
 			--mapping_file=${PROJECT_SOURCE_DIR}/iwyu.imp)
-		set_property (TARGET SRC_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property (TARGET SRC_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET XAPIAND_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET XAPIAND_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET BOOLEAN_PARSER_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET BOOLEAN_PARSER_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET LIBEV_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET LIBEV_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET LZ4_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET LZ4_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET GUID_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property (TARGET GUID_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
 		set_property (TARGET ${PROJECT_NAME} PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
 		set_property (TARGET ${PROJECT_NAME} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
 	else ()
