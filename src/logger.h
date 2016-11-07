@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
 
 #include <stdarg.h>       // for va_list
 #include <syslog.h>       // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
@@ -40,8 +39,11 @@
 
 #include "dllist.h"       // for DLList
 #include "exception.h"
+#include "xapiand.h"
+
 
 class Exception;
+
 
 #define MERGE_(a,b)  a##b
 #define LABEL_(a) MERGE_(__unique, a)
@@ -89,6 +91,7 @@ public:
 
 class LogThread;
 class LogWrapper;
+
 
 class Log : public std::enable_shared_from_this<Log> {
 	friend class LogWrapper;
@@ -195,6 +198,7 @@ public:
 	}
 };
 
+
 class LogThread {
 	std::condition_variable wakeup_signal;
 	std::atomic<std::time_t> wakeup;
@@ -219,24 +223,29 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::duration<T, 
 	return log(cleanup, stacked, std::chrono::system_clock::now() + timeout, priority, std::forward<Args>(args)...);
 }
 
+
 template <typename T, typename R>
 inline LogWrapper Log::print(const std::string& str, bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int priority, std::chrono::time_point<std::chrono::system_clock> created_at) {
 	return print(str, cleanup, stacked, std::chrono::system_clock::now() + timeout, priority, created_at);
 }
+
 
 template <typename... Args>
 inline LogWrapper Log::log(bool cleanup, bool stacked, int timeout, int priority, Args&&... args) {
 	return log(cleanup, stacked, std::chrono::milliseconds(timeout), priority, std::forward<Args>(args)...);
 }
 
+
 inline LogWrapper Log::print(const std::string& str, bool cleanup, bool stacked, int timeout, int priority, std::chrono::time_point<std::chrono::system_clock> created_at) {
 	return print(str, cleanup, stacked, std::chrono::milliseconds(timeout), priority, created_at);
 }
+
 
 template <typename T, typename... Args, typename>
 inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args) {
 	return log(cleanup, stacked, wakeup, priority, std::string(exc->get_traceback()), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
 }
+
 
 template <typename... Args>
 inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args) {

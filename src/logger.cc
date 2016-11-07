@@ -116,6 +116,7 @@ Log::Log(const std::string& str, bool clean_, bool stacked_, std::chrono::time_p
 	}
 }
 
+
 Log::~Log()
 {
 	cleanup();
