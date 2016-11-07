@@ -121,7 +121,7 @@ serialise_double(double v)
 
 	n = result.size() - n;
 	if (n > 1) {
-		assert(n <= 8);
+		ASSERT(n <= 8);
 		result[0] = static_cast<unsigned char>(result[0] | ((n - 1) << 4));
 	}
 
