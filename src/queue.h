@@ -233,6 +233,11 @@ namespace queue {
 			if (pushed) {
 				// Notifiy waiting thread it can push/pop now
 				_pop_cond.notify_one();
+			} else {
+				// FIXME: This block shouldn't be needed!
+				// Signal the condition variable in case any threads are waiting
+				_pop_cond.notify_all();
+				_push_cond.notify_all();
 			}
 
 			return pushed;
@@ -248,6 +253,11 @@ namespace queue {
 					// Notifiy waiting thread it can push/pop now
 					_push_cond.notify_one();
 				}
+			} else {
+				// FIXME: This block shouldn't be needed!
+				// Signal the condition variable in case any threads are waiting
+				_pop_cond.notify_all();
+				_push_cond.notify_all();
 			}
 
 			return popped;
@@ -261,6 +271,11 @@ namespace queue {
 			if (cleared) {
 				// Notifiy waiting thread it can push/pop now
 				_push_cond.notify_one();
+			} else {
+				// FIXME: This block shouldn't be needed!
+				// Signal the condition variable in case any threads are waiting
+				_pop_cond.notify_all();
+				_push_cond.notify_all();
 			}
 		}
 
@@ -318,6 +333,11 @@ namespace queue {
 			if (pushed) {
 				// Notifiy waiting thread it can push/pop now
 				Queue_t::_pop_cond.notify_one();
+			} else {
+				// FIXME: This block shouldn't be needed!
+				// Signal the condition variable in case any threads are waiting
+				Queue_t::_pop_cond.notify_all();
+				Queue_t::_push_cond.notify_all();
 			}
 
 			return pushed;
@@ -387,6 +407,11 @@ namespace queue {
 					// Notifiy waiting thread it can push/pop now
 					Queue_t::_push_cond.notify_one();
 				}
+			} else {
+				// FIXME: This block shouldn't be needed!
+				// Signal the condition variable in case any threads are waiting
+				Queue_t::_pop_cond.notify_all();
+				Queue_t::_push_cond.notify_all();
 			}
 
 			return popped;
@@ -401,6 +426,11 @@ namespace queue {
 			if (cleared) {
 				// Notifiy waiting thread it can push/pop now
 				Queue_t::_push_cond.notify_one();
+			} else {
+				// FIXME: This block shouldn't be needed!
+				// Signal the condition variable in case any threads are waiting
+				Queue_t::_pop_cond.notify_all();
+				Queue_t::_push_cond.notify_all();
 			}
 		}
 
