@@ -88,29 +88,6 @@ class DLList {
 			  state(state_),
 			  type(type_) { }
 
-		~Node() {
-			// Update Nxt
-			auto p = nxt.load();
-			while (p && p->state != Node::State::ORDINARY) {
-				nxt = p->nxt.load();
-				p = nxt.load();
-			}
-
-			// Update Prv
-			p = prv.load();
-			while (p && p->state != Node::State::ORDINARY) {
-				prv = p->prv.load();
-				p = prv.load();
-			}
-
-			// Update copy.
-			p = copy.load();
-			while (p) {
-				copy = p->copy.load();
-				p = copy.load();
-			}
-		}
-
 		Node(Node&& other) = delete;
 		Node(const Node& other) = delete;
 		Node& operator=(Node&& other) = delete;
