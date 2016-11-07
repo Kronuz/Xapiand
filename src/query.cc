@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+* Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to
@@ -40,7 +40,7 @@
 #include "utils.h"                             // for lower_string
 
 
-Query::Query(std::shared_ptr<Schema> schema_, std::shared_ptr<Database> database_)
+Query::Query(const std::shared_ptr<Schema>& schema_, const std::shared_ptr<Database>& database_)
 	: schema(schema_),
 	  database(database_) { }
 
