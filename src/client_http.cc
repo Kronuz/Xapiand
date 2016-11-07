@@ -562,6 +562,7 @@ HttpClient::_run()
 	}
 
 	clean_http_request();
+	async_read_start.send();
 
 	L_OBJ_END(this, "HttpClient::run:END");
 }
@@ -1812,7 +1813,6 @@ HttpClient::clean_http_request()
 
 	set_idle();
 
-	async_read.send();
 	http_parser_init(&parser, HTTP_REQUEST);
 }
 

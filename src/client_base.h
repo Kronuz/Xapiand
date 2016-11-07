@@ -86,9 +86,10 @@ class ClientDecompressor;
 class BaseClient : public Task<>, public Worker {
 	friend LZ4CompressFile;
 
-	bool _write(int fd, bool async);
+	bool _write(int fd);
 
 	void destroyer();
+	void stop();
 
 protected:
 	BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
@@ -117,8 +118,8 @@ public:
 protected:
 	ev::io io_read;
 	ev::io io_write;
-	ev::async async_write;
-	ev::async async_read;
+	ev::async async_update;
+	ev::async async_read_start;
 
 	std::atomic_bool idle;
 	std::atomic_bool shutting_down;
@@ -139,8 +140,8 @@ protected:
 
 	queue::Queue<std::shared_ptr<Buffer>> write_queue;
 
-	void async_write_cb(ev::async &watcher, int revents);
-	void async_read_cb(ev::async &watcher, int revents);
+	void async_update_cb(ev::async &watcher, int revents);
+	void async_read_start_cb(ev::async &watcher, int revents);
 
 	void io_cb_update();
 
