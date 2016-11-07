@@ -10,7 +10,7 @@ if [ -z "$endpoint" ]; then
 fi
 
 function json_escape() {
-	python -c 'import sys, json; print json.dumps(sys.stdin.read())'
+	python -c 'import sys, json; json.dump(sys.stdin.read(), sys.stdout)'
 }
 
 for id in $(seq $start $end); do
