@@ -332,6 +332,8 @@ Worker::cleanup()
 {
 	L_CALL(this, "Worker::cleanup() [%s]", __repr__().c_str());
 
+	auto ref = shared_from_this();  // Prevent ancestor->detach_impl() deleting us
+
 	auto ancestor = _ancestor(1);
 	ancestor->_async_detach.send();
 	if (!ev_loop->depth()) {
