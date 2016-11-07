@@ -2799,6 +2799,7 @@ ev_backend (EV_P) EV_THROW
 unsigned int
 ev_iteration (EV_P) EV_THROW
 {
+  ECB_MEMORY_FENCE;
   return loop_count;
 }
 
@@ -3571,6 +3572,7 @@ ev_run (EV_P_ int flags)
 {
 #if EV_FEATURE_API
   ++loop_depth;
+  ECB_MEMORY_FENCE;
 #endif
 
   assert (("libev: ev_loop recursion during release detected", loop_done != EVBREAK_RECURSE));
@@ -3733,6 +3735,7 @@ ev_run (EV_P_ int flags)
 
 #if EV_FEATURE_API
   --loop_depth;
+  ECB_MEMORY_FENCE;
 #endif
 
   return activecnt;
