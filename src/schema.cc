@@ -1208,7 +1208,7 @@ Schema::update_dynamic_specification()
 		switch (specification.sep_types[2]) {
 			case FieldType::INTEGER:
 			case FieldType::POSITIVE:
-			case FieldType::FLOAT:
+			case FieldType::FLOAT: {
 				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
 				for (const auto& acc : specification.accuracy) {
 					auto acc_full_name = specification.dynamic_full_name;
@@ -1216,7 +1216,8 @@ Schema::update_dynamic_specification()
 					specification.acc_prefix.push_back(prefix_type + Serialise::dynamic_namespace_field(acc_full_name));
 				}
 				break;
-			case FieldType::DATE:
+			}
+			case FieldType::DATE: {
 				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE));
 				for (const auto& acc : specification.accuracy) {
 					auto acc_full_name = specification.dynamic_full_name;
@@ -1224,7 +1225,8 @@ Schema::update_dynamic_specification()
 					specification.acc_prefix.push_back(Serialise::dynamic_namespace_field(acc_full_name));
 				}
 				break;
-			case FieldType::GEO:
+			}
+			case FieldType::GEO: {
 				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO));
 				for (const auto& acc : specification.accuracy) {
 					auto acc_full_name = specification.dynamic_full_name;
@@ -1232,6 +1234,7 @@ Schema::update_dynamic_specification()
 					specification.acc_prefix.push_back(prefix_type + Serialise::dynamic_namespace_field(acc_full_name));
 				}
 				break;
+			}
 			default:
 				break;
 		}
