@@ -223,7 +223,7 @@ static const std::vector<std::string> global_acc_prefix_num = []() {
 	std::vector<std::string> res;
 	res.reserve(def_accuracy_num.size());
 	for (const auto& acc : def_accuracy_num) {
-		res.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_name_num(acc)) + std::string(1, toUType(FieldType::INTEGER)));
+		res.push_back(DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER)) + Serialise::namespace_field(acc_name_num(acc)));
 	}
 	return res;
 }();
@@ -232,7 +232,7 @@ static const std::vector<std::string> global_acc_prefix_date = []() {
 	std::vector<std::string> res;
 	res.reserve(def_accuracy_date.size());
 	for (const auto& acc : def_accuracy_date) {
-		res.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_name_date(acc)) + std::string(1, toUType(FieldType::DATE)));
+		res.push_back(DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE)) + Serialise::namespace_field(acc_name_date(acc)));
 	}
 	return res;
 }();
@@ -241,7 +241,7 @@ static const std::vector<std::string> global_acc_prefix_geo = []() {
 	std::vector<std::string> res;
 	res.reserve(def_accuracy_geo.size());
 	for (const auto& acc : def_accuracy_geo) {
-		res.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_name_geo(acc)) + std::string(1, toUType(FieldType::GEO)));
+		res.push_back(DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO)) + Serialise::namespace_field(acc_name_geo(acc)));
 	}
 	return res;
 }();
@@ -1209,24 +1209,27 @@ Schema::update_dynamic_specification()
 			case FieldType::INTEGER:
 			case FieldType::POSITIVE:
 			case FieldType::FLOAT:
+				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
 				for (const auto& acc : specification.accuracy) {
 					auto acc_full_name = specification.dynamic_full_name;
 					acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_num(acc));
-					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::dynamic_namespace_field(acc_full_name) + std::string(1, toUType(FieldType::INTEGER)));
+					specification.acc_prefix.push_back(prefix_type + Serialise::dynamic_namespace_field(acc_full_name));
 				}
 				break;
 			case FieldType::DATE:
+				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE));
 				for (const auto& acc : specification.accuracy) {
 					auto acc_full_name = specification.dynamic_full_name;
 					acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_date(acc));
-					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::dynamic_namespace_field(acc_full_name) + std::string(1, toUType(FieldType::DATE)));
+					specification.acc_prefix.push_back(Serialise::dynamic_namespace_field(acc_full_name));
 				}
 				break;
 			case FieldType::GEO:
+				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO));
 				for (const auto& acc : specification.accuracy) {
 					auto acc_full_name = specification.dynamic_full_name;
 					acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_geo(acc));
-					specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::dynamic_namespace_field(acc_full_name) + std::string(1, toUType(FieldType::GEO)));
+					specification.acc_prefix.push_back(prefix_type + Serialise::dynamic_namespace_field(acc_full_name));
 				}
 				break;
 			default:
@@ -1312,10 +1315,11 @@ Schema::validate_required_data()
 				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
 				if (!specification.flags.dynamic_type && set_acc.size()) {
 					if (specification.acc_prefix.empty()) {
+						static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO));
 						for (const auto& acc : set_acc) {
 							auto acc_full_name = specification.dynamic_full_name;
 							acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_geo(acc));
-							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name) + std::string(1, toUType(FieldType::GEO)));
+							specification.acc_prefix.push_back(prefix_type + Serialise::namespace_field(acc_full_name));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -1346,10 +1350,11 @@ Schema::validate_required_data()
 				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
 				if (!specification.flags.dynamic_type && set_acc.size()) {
 					if (specification.acc_prefix.empty()) {
+						static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE));
 						for (const auto& acc : set_acc) {
 							auto acc_full_name = specification.dynamic_full_name;
 							acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_date(acc));
-							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name) + std::string(1, toUType(FieldType::DATE)));
+							specification.acc_prefix.push_back(prefix_type + Serialise::namespace_field(acc_full_name));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -1377,10 +1382,11 @@ Schema::validate_required_data()
 				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
 				if (!specification.flags.dynamic_type && set_acc.size()) {
 					if (specification.acc_prefix.empty()) {
+						static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
 						for (const auto& acc : set_acc) {
 							auto acc_full_name = specification.dynamic_full_name;
 							acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_num(acc));
-							specification.acc_prefix.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + Serialise::namespace_field(acc_full_name) + std::string(1, toUType(FieldType::INTEGER)));
+							specification.acc_prefix.push_back(prefix_type + Serialise::namespace_field(acc_full_name));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
