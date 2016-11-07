@@ -1194,51 +1194,6 @@ Schema::get_data_namespace(const std::vector<std::string>& paths_namespace, Fiel
 }
 
 
-std::tuple<std::string, bool, const MsgPack&>
-Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
-{
-	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
-
-	std::vector<std::string> field_names;
-	stringTokenizer(full_name, DB_OFFSPRING_UNION, field_names);
-
-	const MsgPack* subproperties = &properties;
-	std::string dynamic_full_name;
-	dynamic_full_name.reserve(full_name.length());
-	bool dynamic_type = false;
-	bool root = true;
-	for (const auto& field_name : field_names) {
-		if (!root && !is_valid(field_name)) {
-			throw MSG_ClientError("The field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
-		}
-		root = false;
-		try {
-			subproperties = &subproperties->at(field_name);
-			dynamic_type = false;
-			if (dynamic_full_name.empty()) {
-				dynamic_full_name.assign(field_name);
-			} else {
-				dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_name);
-			}
-		} catch (const std::out_of_range&) {
-			if (Serialise::isUUID(field_name)) {
-				subproperties = &subproperties->at(UUID_FIELD_NAME);
-				dynamic_type = true;
-				if (dynamic_full_name.empty()) {
-					dynamic_full_name.assign(lower_string(field_name));
-				} else {
-					dynamic_full_name.append(DB_OFFSPRING_UNION).append(lower_string(field_name));
-				}
-				continue;
-			}
-			throw MSG_ClientError("%s does not exist in schema", repr(field_name).c_str());
-		}
-	}
-
-	return std::forward_as_tuple(std::move(dynamic_full_name), dynamic_type, *subproperties);
-}
-
-
 void
 Schema::update_dynamic_specification()
 {
@@ -4092,4 +4047,49 @@ Schema::get_data_global(FieldType field_type)
 		default:
 			throw MSG_ClientError("Type: '%u' is an unknown type", toUType(field_type));
 	}
+}
+
+
+std::tuple<std::string, bool, const MsgPack&>
+Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
+{
+	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
+
+	std::vector<std::string> field_names;
+	stringTokenizer(full_name, DB_OFFSPRING_UNION, field_names);
+
+	const MsgPack* subproperties = &properties;
+	std::string dynamic_full_name;
+	dynamic_full_name.reserve(full_name.length());
+	bool dynamic_type = false;
+	bool root = true;
+	for (const auto& field_name : field_names) {
+		if (!root && !is_valid(field_name)) {
+			throw MSG_ClientError("The field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
+		}
+		root = false;
+		try {
+			subproperties = &subproperties->at(field_name);
+			dynamic_type = false;
+			if (dynamic_full_name.empty()) {
+				dynamic_full_name.assign(field_name);
+			} else {
+				dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_name);
+			}
+		} catch (const std::out_of_range&) {
+			if (Serialise::isUUID(field_name)) {
+				subproperties = &subproperties->at(UUID_FIELD_NAME);
+				dynamic_type = true;
+				if (dynamic_full_name.empty()) {
+					dynamic_full_name.assign(lower_string(field_name));
+				} else {
+					dynamic_full_name.append(DB_OFFSPRING_UNION).append(lower_string(field_name));
+				}
+				continue;
+			}
+			throw MSG_ClientError("%s does not exist in schema", repr(field_name).c_str());
+		}
+	}
+
+	return std::forward_as_tuple(std::move(dynamic_full_name), dynamic_type, *subproperties);
 }

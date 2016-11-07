@@ -363,12 +363,6 @@ class Schema {
 	 */
 	static std::vector<std::pair<std::string, Xapian::valueno>> get_data_namespace(const std::vector<std::string>& paths_namespace, FieldType type);
 
-	/*
-	 * Returns the propierties of full_name, if the path does not
-	 * exist throw an exception.
-	 */
-
-	std::tuple<std::string, bool, const MsgPack&> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 	/*
 	 * Update dynamic field's specifications.
@@ -549,6 +543,14 @@ class Schema {
 	static void readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack& properties);
 	static void readable_index(MsgPack& prop_index, MsgPack& properties);
 	static void readable_acc_prefix(MsgPack& prop_index, MsgPack& properties);
+
+
+	/*
+	 * Returns the propierties of full_name, if the path does not
+	 * exist throw an exception.
+	 */
+
+	std::tuple<std::string, bool, const MsgPack&> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);
