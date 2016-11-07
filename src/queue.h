@@ -50,7 +50,7 @@ namespace queue {
 		std::atomic_bool _ending;
 		std::atomic_bool _finished;
 		size_t _limit;
-		size_t _lower;
+		size_t _threshold;
 
 		bool _push_wait(double timeout, std::unique_lock<std::mutex>& lk) {
 			auto check = [this]() {
@@ -166,14 +166,14 @@ namespace queue {
 			: _ending(false),
 			  _finished(false),
 			  _limit(limit),
-			  _lower(lower) { }
+			  _threshold(lower) { }
 
 		// Move Constructor
 		Queue(Queue&& q) {
 			std::lock_guard<std::mutex> lk(q._mutex);
 			_items_queue = std::move(q._items_queue);
 			_limit = std::move(q._limit);
-			_lower = std::move(q._lower);
+			_threshold = std::move(q._threshold);
 			_finished = false;
 			_ending = false;
 		}
@@ -185,7 +185,7 @@ namespace queue {
 			std::lock_guard<std::mutex> other_lock(q._mutex, std::adopt_lock);
 			_items_queue = std::move(q._items_queue);
 			_limit = std::move(q._limit);
-			_lower = std::move(q._lower);
+			_threshold = std::move(q._threshold);
 			_finished = false;
 			_ending = false;
 			return *this;
@@ -244,7 +244,7 @@ namespace queue {
 			lk.unlock();
 
 			if (popped) {
-				if (_items_queue.size() < _lower) {
+				if (_items_queue.size() < _threshold) {
 					// Notifiy waiting thread it can push/pop now
 					_push_cond.notify_one();
 				}
@@ -383,7 +383,7 @@ namespace queue {
 			lk.unlock();
 
 			if (popped) {
-				if (Queue_t::_items_queue.size() < Queue_t::_lower) {
+				if (Queue_t::_items_queue.size() < Queue_t::_threshold) {
 					// Notifiy waiting thread it can push/pop now
 					Queue_t::_push_cond.notify_one();
 				}
