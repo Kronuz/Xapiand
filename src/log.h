@@ -46,6 +46,9 @@
 
 #define L_MARK _LOG(false, LOG_DEBUG, "🔥  " DEBUG_COL, args)
 
+#define L_INIT auto start = std::chrono::system_clock::now()
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Enable the following when needed. Use L_* or L_STACKED_* or L_UNINDENTED_*
 // ex. L_STACKED_DARK_GREY, L_CYAN, L_STACKED_LOG or L_MAGENTA
