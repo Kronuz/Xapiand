@@ -102,6 +102,13 @@ class DLList {
 				prv = p->prv.load();
 				p = prv.load();
 			}
+
+			// // Update copy.
+			// p = copy.load();
+			// while (p && p->state != Node::State::ORDINARY) {
+			// 	copy = p->copy.load();
+			// 	p = copy.load();
+			// }
 		}
 
 		Node(Node&& other) = delete;
