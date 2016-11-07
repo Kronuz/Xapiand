@@ -193,7 +193,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	L_CONN(this, "New Http Client {sock:%d}, %d client(s) of a total of %d connected.", sock.load(), http_clients, total_clients);
+	L_CONN(this, "New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, http_clients, total_clients);
 
 	response_log = L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
 	idle = true;
@@ -273,7 +273,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			}
 		}
 		if (final_state == 1 || final_state == 18) {  // dead or message_complete
-			L_EV(this, "Disable read event {sock:%d}", sock.load());
+			L_EV(this, "Disable read event");
 			io_read.stop();
 			written = 0;
 			if (!closed) {
@@ -479,7 +479,7 @@ HttpClient::_run()
 {
 	L_CALL(this, "HttpClient::_run()");
 
-	L_CONN(this, "Start running in worker {sock:%d}.", sock.load());
+	L_CONN(this, "Start running in worker.");
 
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();

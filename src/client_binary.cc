@@ -82,7 +82,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* 
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	L_CONN(this, "New Binary Client {sock:%d}, %d client(s) of a total of %d connected.", sock.load(), binary_clients, total_clients);
+	L_CONN(this, "New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, binary_clients, total_clients);
 
 	L_OBJ(this, "CREATED BINARY CLIENT! (%d clients)", binary_clients);
 }
@@ -143,7 +143,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		checkin_database();
 		return false;
 	}
-	L_CONN(this, "Connected to %s {sock:%d}!", repr(src_endpoint.to_string()).c_str(), sock.load());
+	L_CONN(this, "Connected to %s! (in socket %d)", repr(src_endpoint.to_string()).c_str(), sock.load());
 
 	XapiandManager::manager->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
