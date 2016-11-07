@@ -39,7 +39,6 @@ struct query_field_t;
 
 
 class Query {
-
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 

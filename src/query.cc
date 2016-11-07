@@ -305,4 +305,3 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 
 	return Xapian::Query::MatchNothing;
 }
-
