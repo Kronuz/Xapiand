@@ -126,6 +126,7 @@
 // Default prefixes
 #define DOCUMENT_ID_TERM_PREFIX         "Q"
 #define DOCUMENT_NAMESPACE_TERM_PREFIX  "N"
+#define DOCUMENT_ACCURACY_TERM_PREFIX   "A"
 
 #define DOCUMENT_DB_MASTER              "M"
 #define DOCUMENT_DB_SLAVE               "S"
