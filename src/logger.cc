@@ -102,7 +102,7 @@ Log::Log(const std::string& str, bool clean_, bool stacked_, std::chrono::time_p
 	  wakeup(wakeup_),
 	  str_start(str),
 	  priority(priority_),
-	  finished(false),
+	  cleared(false),
 	  cleaned(false) {
 
 	if (stacked) {
@@ -127,7 +127,7 @@ void
 Log::cleanup()
 {
 	bool f = false;
-	finished.compare_exchange_strong(f, clean);
+	cleared.compare_exchange_strong(f, clean);
 
 	if (!cleaned.exchange(true)) {
 		if (stacked) {
@@ -143,7 +143,13 @@ Log::cleanup()
 long double
 Log::age()
 {
-	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - created_at).count();
+	std::chrono::time_point<std::chrono::system_clock> now;
+	if (cleared) {
+		now = cleared_at;
+	} else {
+		now = std::chrono::system_clock::now();
+	}
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(now - created_at).count();
 }
 
 
@@ -229,14 +235,18 @@ Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_c
 bool
 Log::clear()
 {
-	return finished.exchange(true);
+	if (!cleared.exchange(true)) {
+		cleared_at = std::chrono::system_clock::now();
+		return false;
+	}
+	return true;
 }
 
 
 bool
 Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
-	if (finished.exchange(true)) {
+	if (clear()) {
 		va_list argptr;
 		va_start(argptr, format);
 		std::string str(str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
@@ -368,15 +378,15 @@ LogThread::thread_function(DLList<const std::shared_ptr<Log>>& _log_list)
 
 		for (auto it = _log_list.begin(); it != _log_list.end(); ) {
 			auto& l_ptr = *it;
-			if (l_ptr->finished) {
+			if (l_ptr->cleared) {
 				it = _log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
-				l_ptr->finished = true;
 				auto msg = l_ptr->str_start;
-				// auto age = l_ptr->age();
-				// if (age > 2e8) {
-				// 	msg += " ~" + delta_string(age, true);
-				// }
+				auto age = l_ptr->age();
+				if (age > 2e8) {
+					msg += " ~" + delta_string(age, true);
+				}
+				l_ptr->clear();
 				Log::log(l_ptr->priority, msg, l_ptr->stack_level * 2);
 				it = _log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {

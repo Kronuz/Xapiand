@@ -111,10 +111,11 @@ class Log : public std::enable_shared_from_this<Log> {
 
 	bool clean;
 	std::chrono::time_point<std::chrono::system_clock> created_at;
+	std::chrono::time_point<std::chrono::system_clock> cleared_at;
 	std::chrono::time_point<std::chrono::system_clock> wakeup;
 	std::string str_start;
 	int priority;
-	std::atomic_bool finished;
+	std::atomic_bool cleared;
 	std::atomic_bool cleaned;
 
 	Log(Log&&) = delete;
