@@ -352,9 +352,15 @@ target_link_libraries (${PROJECT_NAME}
 	m
 )
 
+########################################################################
+# Manual page generation
+########################################################################
+
+set(MANPAGES ${CMAKE_SOURCE_DIR}/man/xapiand.8)
+
+install (FILES ${MANPAGES} DESTINATION man)
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
-
 
 ########################################################################
 # Enable Google's Include What You Use
