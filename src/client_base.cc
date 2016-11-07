@@ -54,7 +54,9 @@
 #define CMP_SEED 0xCEED
 
 
-constexpr int WRITE_QUEUE_SIZE = 10;
+constexpr int WRITE_QUEUE_LIMIT = 10;
+constexpr int WRITE_QUEUE_THRESHOLD = WRITE_QUEUE_LIMIT * 2 / 3;
+
 
 enum class WR {
 	OK,
@@ -274,7 +276,7 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 	  written(0),
 	  read_buffer(new char[BUF_SIZE]),
 	  mode(MODE::READ_BUF),
-	  write_queue(WRITE_QUEUE_SIZE)
+	  write_queue(WRITE_QUEUE_LIMIT, WRITE_QUEUE_THRESHOLD)
 {
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
 	async_write.start();
