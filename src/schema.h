@@ -546,11 +546,15 @@ class Schema {
 
 
 	/*
-	 * Returns the propierties of full_name, if the path does not
-	 * exist throw an exception.
+	 * Returns:
+	 *   - Normalize full_name
+	 *   - if is a dynamic field
+	 *   - The propierties of full_name
+	 *   - The prefix namespace
+	 * if the path does not exist or is not valid field name throw a ClientError exception.
 	 */
 
-	std::tuple<std::string, bool, const MsgPack&> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
+	std::tuple<std::string, bool, const MsgPack&, std::string> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);
