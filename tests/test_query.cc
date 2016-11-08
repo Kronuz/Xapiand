@@ -216,9 +216,10 @@ static int make_search(const test_query_t _tests[], int len) {
 			} else {
 				Xapian::MSetIterator m = mset.begin();
 				for (auto it = p.expect_datas.begin(); m != mset.end(); ++it, ++m) {
-					auto doc = m.get_document();
-					auto obj_data = get_MsgPack(doc);
+					auto document = db_query.db_handler.get_document(*m);
+					auto aobj_data = document.get_obj();
 					++cont;
+					std::exception exc;
 					L_EXC(nullptr, "ERROR: %s", exc.what());
 				}
 			}
