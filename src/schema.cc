@@ -3856,7 +3856,7 @@ Schema::serialise_id(const std::string& value_id)
 }
 
 
-required_spc_t
+std::pair<required_spc_t, std::string>
 Schema::get_data_field(const std::string& field_name) const
 {
 	L_CALL(this, "Schema::get_data_field(%s)", repr(field_name).c_str());
@@ -3864,7 +3864,7 @@ Schema::get_data_field(const std::string& field_name) const
 	required_spc_t res;
 
 	if (field_name.empty()) {
-		return res;
+		return std::make_pair(res, std::string());
 	}
 
 	try {
@@ -3879,7 +3879,7 @@ Schema::get_data_field(const std::string& field_name) const
 			res.sep_types[2] = (FieldType)sep_types.at(2).as_u64();
 
 			if (res.sep_types[2] == FieldType::EMPTY) {
-				return res;
+				return std::make_pair(res, std::string());
 			}
 
 			if (std::get<1>(info)) {
@@ -3948,6 +3948,7 @@ Schema::get_data_field(const std::string& field_name) const
 		} else {
 			res.flags.inside_namespace = true;
 			res.prefix = std::move(prefix_namespace);
+			return std::make_pair(std::move(res), std::get<4>(info));
 		}
 	} catch (const ClientError& exc) {
 		L_EXC(this, "ERROR: %s", exc.what());
@@ -3955,7 +3956,7 @@ Schema::get_data_field(const std::string& field_name) const
 		L_EXC(this, "ERROR: %s", exc.what());
 	}
 
-	return res;
+	return std::make_pair(std::move(res), std::string());
 }
 
 
@@ -4066,7 +4067,7 @@ Schema::get_data_global(FieldType field_type)
 }
 
 
-std::tuple<std::string, bool, const MsgPack&, std::string>
+std::tuple<std::string, bool, const MsgPack&, std::string, std::string>
 Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
 {
 	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
@@ -4090,10 +4091,10 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 				if (map_dispatch_set_default_spc.find(field_name) == dsit_e) {
 					throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 				}
-			} else if (it == it_e - 1) {
+			} else if (++it == it_e) {
 				dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_name);
 				prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
-				continue;
+				return std::forward_as_tuple(std::move(dynamic_full_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::move(field_name));
 			} else {
 				throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 			}
@@ -4122,29 +4123,33 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			// Verify if parent is a namespace.
 			try {
 				if (subproperties->at(RESERVED_NAMESPACE).as_bool()) {
+					prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
 					for ( ; it != it_e; ++it) {
-						const auto& field_namespace = *it;
+						auto& field_namespace = *it;
 						if (is_valid(field_namespace)) {
 							if (Serialise::isUUID(field_namespace)) {
 								dynamic_type = true;
+								to_lower(field_namespace);
 								if (dynamic_full_name.empty()) {
-									dynamic_full_name.assign(lower_string(field_namespace));
+									dynamic_full_name.assign(field_namespace);
 								} else {
-									dynamic_full_name.append(DB_OFFSPRING_UNION).append(lower_string(field_namespace));
+									dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_namespace);
 								}
 							} else if (dynamic_full_name.empty()) {
 								dynamic_full_name.assign(field_namespace);
 							} else {
 								dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_namespace);
 							}
-							prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
-						} else if (it == it_e - 1) {
+							prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(field_namespace) : Serialise::namespace_field(field_namespace));
+						} else if (++it == it_e) {
 							dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_namespace);
 							prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
+							return std::forward_as_tuple(std::move(dynamic_full_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::move(field_namespace));
 						} else {
 							throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
 						}
 					}
+					break;
 				} else {
 					throw MSG_ClientError("%s does not exist in schema", repr(field_name).c_str());
 				}
@@ -4154,5 +4159,5 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		}
 	}
 
-	return std::forward_as_tuple(std::move(dynamic_full_name), dynamic_type, *subproperties, std::move(prefix_namespace));
+	return std::forward_as_tuple(std::move(dynamic_full_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::string());
 }

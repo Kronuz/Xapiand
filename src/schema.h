@@ -561,10 +561,11 @@ class Schema {
 	 *   - if is a dynamic field
 	 *   - The propierties of full_name
 	 *   - The prefix namespace
+	 *   - The accuracy field_name
 	 * if the path does not exist or is not valid field name throw a ClientError exception.
 	 */
 
-	std::tuple<std::string, bool, const MsgPack&, std::string> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
+	std::tuple<std::string, bool, const MsgPack&, std::string, std::string> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);
@@ -611,7 +612,7 @@ public:
 	 * Functions used for searching, return a field properties.
 	 */
 
-	required_spc_t get_data_field(const std::string& field_name) const;
+	std::pair<required_spc_t, std::string> get_data_field(const std::string& field_name) const;
 	required_spc_t get_slot_field(const std::string& field_name) const;
 	static const required_spc_t& get_data_global(FieldType field_type);
 };
