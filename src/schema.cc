@@ -66,7 +66,7 @@
  * Unordered Maps used for reading user data specification.
  */
 
-static const std::unordered_map<std::string, UnitTime> map_acc_date({
+const std::unordered_map<std::string, UnitTime> map_acc_date({
 	{ "second",     UnitTime::SECOND     }, { "minute",  UnitTime::MINUTE  },
 	{ "hour",       UnitTime::HOUR       }, { "day",     UnitTime::DAY     },
 	{ "month",      UnitTime::MONTH      }, { "year",    UnitTime::YEAR    },
@@ -75,7 +75,7 @@ static const std::unordered_map<std::string, UnitTime> map_acc_date({
 });
 
 
-static const std::unordered_map<std::string, StemStrategy> map_stem_strategy({
+const std::unordered_map<std::string, StemStrategy> map_stem_strategy({
 	{ "stem_none",  StemStrategy::STEM_NONE   }, { "none",  StemStrategy::STEM_NONE   },
 	{ "stem_some",  StemStrategy::STEM_SOME   }, { "some",  StemStrategy::STEM_SOME   },
 	{ "stem_all",   StemStrategy::STEM_ALL    }, { "all",   StemStrategy::STEM_ALL    },
@@ -83,7 +83,7 @@ static const std::unordered_map<std::string, StemStrategy> map_stem_strategy({
 });
 
 
-static const std::unordered_map<std::string, TypeIndex> map_index({
+const std::unordered_map<std::string, TypeIndex> map_index({
 	{ "none",                      TypeIndex::NONE                      },
 	{ "field_terms",               TypeIndex::FIELD_TERMS               },
 	{ "field_values",              TypeIndex::FIELD_VALUES              },
@@ -109,7 +109,7 @@ static const std::unordered_map<std::string, TypeIndex> map_index({
 });
 
 
-static const std::unordered_map<std::string, FieldType> map_type({
+const std::unordered_map<std::string, FieldType> map_type({
 	{ FLOAT_STR,       FieldType::FLOAT        }, { INTEGER_STR,     FieldType::INTEGER     },
 	{ POSITIVE_STR,    FieldType::POSITIVE     }, { STRING_STR,      FieldType::STRING      },
 	{ TEXT_STR,        FieldType::TEXT         }, { DATE_STR,        FieldType::DATE        },

@@ -187,6 +187,16 @@ inline static constexpr auto getPos(size_t pos, size_t size) noexcept {
 };
 
 
+/*
+ * Unordered Maps used for reading user data specification.
+ */
+
+extern const std::unordered_map<std::string, UnitTime> map_acc_date;
+extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
+extern const std::unordered_map<std::string, TypeIndex> map_index;
+extern const std::unordered_map<std::string, FieldType> map_type;
+
+
 MSGPACK_ADD_ENUM(UnitTime);
 MSGPACK_ADD_ENUM(TypeIndex);
 MSGPACK_ADD_ENUM(StemStrategy);
