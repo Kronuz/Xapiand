@@ -4085,62 +4085,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 	const auto it_e = field_names.end();
 	for (auto it = field_names.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
-		if (is_valid(field_name)) {
-			try {
-				subproperties = &subproperties->at(field_name);
-				dynamic_type = false;
-				if (dynamic_full_name.empty()) {
-					dynamic_full_name.assign(field_name);
-				} else {
-					dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_name);
-				}
-			} catch (const std::out_of_range&) {
-				try {
-					if (Serialise::isUUID(field_name)) {
-						dynamic_type = true;
-						subproperties = &subproperties->at(UUID_FIELD_NAME);
-						if (dynamic_full_name.empty()) {
-							dynamic_full_name.assign(lower_string(field_name));
-						} else {
-							dynamic_full_name.append(DB_OFFSPRING_UNION).append(lower_string(field_name));
-						}
-						continue;
-					}
-				} catch (const std::out_of_range&) { }
-				// Verify if parent is a namespace.
-				try {
-					if (subproperties->at(RESERVED_NAMESPACE).as_bool()) {
-						for ( ; it != it_e; ++it) {
-							const auto& field_namespace = *it;
-							if (is_valid(field_namespace)) {
-								if (Serialise::isUUID(field_namespace)) {
-									dynamic_type = true;
-									if (dynamic_full_name.empty()) {
-										dynamic_full_name.assign(lower_string(field_namespace));
-									} else {
-										dynamic_full_name.append(DB_OFFSPRING_UNION).append(lower_string(field_namespace));
-									}
-								} else if (dynamic_full_name.empty()) {
-									dynamic_full_name.assign(field_namespace);
-								} else {
-									dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_namespace);
-								}
-								prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
-							} else if (++it == it_e) {
-								dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_namespace);
-								prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
-							} else {
-								throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
-							}
-						}
-					} else {
-						throw MSG_ClientError("%s does not exist in schema", repr(field_name).c_str());
-					}
-				} catch (const std::out_of_range&) {
-					throw MSG_ClientError("%s does not exist in schema", repr(field_name).c_str());
-				}
-			}
-		} else {
+		if (!is_valid(field_name)) {
 			if (dynamic_full_name.empty()) {
 				if (map_dispatch_set_default_spc.find(field_name) == dsit_e) {
 					throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
@@ -4148,8 +4093,63 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			} else if (it == it_e - 1) {
 				dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_name);
 				prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
+				continue;
 			} else {
 				throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
+			}
+		}
+		try {
+			subproperties = &subproperties->at(field_name);
+			dynamic_type = false;
+			if (dynamic_full_name.empty()) {
+				dynamic_full_name.assign(field_name);
+			} else {
+				dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_name);
+			}
+		} catch (const std::out_of_range&) {
+			try {
+				if (Serialise::isUUID(field_name)) {
+					dynamic_type = true;
+					subproperties = &subproperties->at(UUID_FIELD_NAME);
+					if (dynamic_full_name.empty()) {
+						dynamic_full_name.assign(lower_string(field_name));
+					} else {
+						dynamic_full_name.append(DB_OFFSPRING_UNION).append(lower_string(field_name));
+					}
+					continue;
+				}
+			} catch (const std::out_of_range&) { }
+			// Verify if parent is a namespace.
+			try {
+				if (subproperties->at(RESERVED_NAMESPACE).as_bool()) {
+					for ( ; it != it_e; ++it) {
+						const auto& field_namespace = *it;
+						if (is_valid(field_namespace)) {
+							if (Serialise::isUUID(field_namespace)) {
+								dynamic_type = true;
+								if (dynamic_full_name.empty()) {
+									dynamic_full_name.assign(lower_string(field_namespace));
+								} else {
+									dynamic_full_name.append(DB_OFFSPRING_UNION).append(lower_string(field_namespace));
+								}
+							} else if (dynamic_full_name.empty()) {
+								dynamic_full_name.assign(field_namespace);
+							} else {
+								dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_namespace);
+							}
+							prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
+						} else if (it == it_e - 1) {
+							dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_namespace);
+							prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
+						} else {
+							throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
+						}
+					}
+				} else {
+					throw MSG_ClientError("%s does not exist in schema", repr(field_name).c_str());
+				}
+			} catch (const std::out_of_range&) {
+				throw MSG_ClientError("%s does not exist in schema", repr(field_name).c_str());
 			}
 		}
 	}
