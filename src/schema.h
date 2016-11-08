@@ -39,8 +39,8 @@
 #include "database_utils.h"
 #include "geo/htm.h"                                      // for HTM_MIN_ERROR
 #include "msgpack.h"                                      // for MsgPack, MS...
+#include "stl_serialise.h"                                // for StringSet
 
-class StringSet;
 
 #define DEFAULT_STEM_STRATEGY StemStrategy::STEM_SOME
 #define DEFAULT_LANGUAGE      "en"
