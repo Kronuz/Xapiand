@@ -782,7 +782,7 @@ XapiandManager::reset_state()
 bool
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
-	L_CALL(this, "XapiandManager::put_node(%s)", repr(node.to_string()).c_str());
+	L_CALL(this, "XapiandManager::put_node(%s)", repr(node->to_string()).c_str());
 
 	auto local_node_ = local_node.load();
 	std::string lower_node_name(lower_string(node->name));
