@@ -711,13 +711,14 @@ int main(int argc, char **argv) {
 
 	std::setlocale(LC_CTYPE, "");
 
+	auto& handlers = Log::_handlers();
 	if (opts.logfile.compare("syslog") == 0) {
-		Log::_handlers().push_back(std::make_unique<SysLog>());
+		handlers.push_back(std::make_unique<SysLog>());
 	} else if (!opts.logfile.empty()) {
-		Log::_handlers().push_back(std::make_unique<StreamLogger>(opts.logfile.c_str()));
+		handlers.push_back(std::make_unique<StreamLogger>(opts.logfile.c_str()));
 	}
-	if (!opts.detach) {
-		Log::_handlers().push_back(std::make_unique<StderrLogger>());
+	if (!opts.detach || handlers.empty()) {
+		handlers.push_back(std::make_unique<StderrLogger>());
 	}
 
 	Log::_log_level() += opts.verbosity;

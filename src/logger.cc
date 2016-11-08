@@ -172,10 +172,10 @@ Log::_log_level()
 }
 
 
-DLList<const std::unique_ptr<Logger>>&
+std::vector<std::unique_ptr<Logger>>&
 Log::_handlers()
 {
-	static auto* handlers = new DLList<const std::unique_ptr<Logger>>();
+	static auto* handlers = new std::vector<std::unique_ptr<Logger>>();
 	return *handlers;
 }
 
@@ -275,7 +275,7 @@ Log::log(int priority, std::string str, int indent)
 {
 	static std::mutex log_mutex;
 	std::lock_guard<std::mutex> lk(log_mutex);
-	static auto& handlers = _handlers();
+	static const auto& handlers = _handlers();
 	auto needle = str.find(STACKED_INDENT);
 	if (needle != std::string::npos) {
 		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
@@ -292,11 +292,6 @@ Log::print(const std::string& str, bool clean, bool stacked, std::chrono::time_p
 	static auto& log_level = _log_level();
 	if (priority > log_level) {
 		return LogWrapper(std::make_shared<Log>(str, clean, stacked, wakeup, priority, created_at));
-	}
-
-	static auto& handlers = _handlers();
-	if (!handlers.size()) {
-		handlers.push_back(std::make_unique<StderrLogger>());
 	}
 
 	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {

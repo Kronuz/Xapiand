@@ -36,6 +36,7 @@
 #include <thread>         // for thread, thread::id
 #include <type_traits>    // for forward, decay_t, enable_if_t, is_base_of
 #include <unordered_map>  // for unordered_map
+#include <vector>         // for vector
 
 #include "dllist.h"       // for DLList
 #include "exception.h"
@@ -70,13 +71,13 @@ public:
 	StreamLogger(const char* filename)
 		: ofs(std::ofstream(filename, std::ofstream::out)) { }
 
-	void log(int priority, const std::string& str);
+	void log(int priority, const std::string& str) override;
 };
 
 
 class StderrLogger : public Logger {
 public:
-	void log(int priority, const std::string& str);
+	void log(int priority, const std::string& str) override;
 };
 
 
@@ -85,7 +86,7 @@ public:
 	SysLog(const char *ident="xapiand", int option=LOG_PID|LOG_CONS, int facility=LOG_USER);
 	~SysLog();
 
-	void log(int priority, const std::string& str);
+	void log(int priority, const std::string& str) override;
 };
 
 
@@ -125,7 +126,7 @@ class Log : public std::enable_shared_from_this<Log> {
 
 public:
 	static int& _log_level();
-	static DLList<const std::unique_ptr<Logger>>& _handlers();
+	static std::vector<std::unique_ptr<Logger>>& _handlers();
 
 	Log(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Log();
