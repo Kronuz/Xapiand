@@ -163,7 +163,7 @@ namespace Cast {
 	std::string string(const MsgPack& obj);
 	bool boolean(const MsgPack& obj);
 	MsgPack date(const MsgPack& obj);
-	double date_to_timestamp(const  MsgPack& obj);
+	double date_to_timestamp(const MsgPack& obj);
 
 	FieldType getType(const std::string& cast_word);
 };
@@ -299,27 +299,27 @@ namespace Serialise {
 	}
 
 	inline std::string serialise(int64_t val) {
-		return Serialise::integer(val);
+		return integer(val);
 	}
 
 	inline std::string serialise(uint64_t val) {
-		return Serialise::positive(val);
+		return positive(val);
 	}
 
 	inline std::string serialise(bool val) {
-		return Serialise::boolean(val);
+		return boolean(val);
 	}
 
 	inline std::string serialise(double val) {
-		return Serialise::_float(val);
+		return _float(val);
 	}
 
 	inline std::string serialise(Datetime::tm_t& tm) {
-		return Serialise::date(tm);
+		return date(tm);
 	}
 
 	inline std::string serialise(const std::vector<std::string>& val) {
-		return Serialise::trixels(val);
+		return trixels(val);
 	}
 };
 
