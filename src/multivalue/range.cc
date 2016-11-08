@@ -124,7 +124,8 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				if (start_v > end_v) {
 					return Xapian::Query::MatchNothing;
 				}
-				return filterNumericQuery(field_spc, start_v, end_v, Serialise::integer(start_v), Serialise::integer(end_v));
+				//Cast needed (in some architectures long long int is not int64_t)
+				return filterNumericQuery(field_spc, (int64_t)start_v, (int64_t)end_v, Serialise::integer(start_v), Serialise::integer(end_v));
 			}
 			case FieldType::POSITIVE: {
 				auto start_v = stox(std::stoull, start);
@@ -132,7 +133,8 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				if (start_v > end_v) {
 					return Xapian::Query::MatchNothing;
 				}
-				return filterNumericQuery(field_spc, start_v, end_v, Serialise::positive(start_v), Serialise::positive(end_v));
+				//Cast needed (in some architectures unsigned long long int is not uint64_t)
+				return filterNumericQuery(field_spc, (uint64_t)start_v, (uint64_t)end_v, Serialise::positive(start_v), Serialise::positive(end_v));
 			}
 			case FieldType::UUID:
 				return filterStringQuery(field_spc, Serialise::uuid(start), Serialise::uuid(end));
