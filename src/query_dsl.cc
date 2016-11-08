@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+* Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to
@@ -63,7 +63,7 @@ constexpr const char QUERYDSL_RANGE[]     = "_range";
 //constexpr const char QUERYDSL_GEO_POLIGON[] = "_polygon";
 
 
-static constexpr auto HASH_ALL   = xxh64::hash(QUERYDSL_MATCH_ALL);
+static constexpr auto HASH_ALL = xxh64::hash(QUERYDSL_MATCH_ALL);
 
 
 const std::unordered_map<std::string, Xapian::Query::op> map_xapian_operator({
@@ -127,8 +127,8 @@ const std::unordered_map<std::string, QueryDSL::dispatch_dsl> QueryDSL::map_rang
 /* A domain-specific language (DSL) for query */
 QueryDSL::QueryDSL(std::shared_ptr<Schema> schema_)
 	: schema(schema_),
-      state(QUERY::INIT),
-      _wqf(1)
+	  state(QUERY::INIT),
+	  _wqf(1)
 {
 	q_flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD;
 }

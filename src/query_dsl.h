@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+* Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to
@@ -29,23 +29,25 @@
 #include <string>           // for string
 #include <unordered_map>    // for unordered_map
 
-#include "msgpack.h"
+#include "msgpack.h"        // for MsgPack
 #include "schema.h"
 #include "utils.h"
-#include "msgpack.h"  // for MsgPack
+
 
 class QueryDSL;
 class Schema;
 
+
 constexpr const char QUERYDSL_QUERY[] = "_query";
+
 
 /* A domain-specific language (DSL) for query */
 
 class QueryDSL {
-	enum class QUERY {
+	enum class QUERY : uint8_t {
 		INIT,
 		GLOBALQUERY,
-		QUERY
+		QUERY,
 	};
 
 	std::shared_ptr<Schema> schema;
