@@ -417,7 +417,12 @@ if (BUILD_TESTS)
 		add_executable (${PROJECT_TEST}
 			${PACKAGE_PATH_TEST}/test_${VAR_TEST}.cc
 			${PACKAGE_PATH_TEST}/set_${VAR_TEST}_test.cc
-			$<TARGET_OBJECTS:SRC_OBJ>)
+			$<TARGET_OBJECTS:XAPIAND_OBJ>
+			$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>
+			$<TARGET_OBJECTS:LIBEV_OBJ>
+			$<TARGET_OBJECTS:LZ4_OBJ>
+			$<TARGET_OBJECTS:GUID_OBJ>
+		)
 
 		add_dependencies (${PROJECT_TEST} googletest)
 		target_link_libraries (${PROJECT_TEST}
