@@ -33,7 +33,9 @@
 #include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_O...
 #include <time.h>                    // for tm, localtime, mktime, time_t
 #include <unistd.h>                  // for dup2, unlink, STDERR_FILENO, chdir
+#if XAPIAND_V8
 #include <v8-version.h>              // for V8_MAJOR_VERSION, V8_MINOR_VERSION
+#endif
 #include <xapian.h>                  // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 #include <algorithm>                 // for min
 #include <chrono>                    // for system_clock, time_point
