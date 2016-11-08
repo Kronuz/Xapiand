@@ -25,7 +25,6 @@
 #include "xapiand.h"
 
 #include <stdio.h>              // for size_t, snprintf
-#include <sys/syslimits.h>      // for PATH_MAX
 #include <sys/types.h>          // for ssize_t
 #include <atomic>               // for atomic_bool
 #include <chrono>               // for system_clock, time_point, duration

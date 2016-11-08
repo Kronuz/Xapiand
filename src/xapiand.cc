@@ -30,7 +30,6 @@
 #include <string.h>                  // for strcat, strchr, strlen, strrchr
 #include <sys/fcntl.h>               // for O_RDWR, O_CREAT
 #include <sys/signal.h>              // for sigaction, signal, SIG_IGN, SIGHUP
-#include <sys/syslimits.h>           // for PATH_MAX
 #include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_O...
 #include <time.h>                    // for tm, localtime, mktime, time_t
 #include <unistd.h>                  // for dup2, unlink, STDERR_FILENO, chdir

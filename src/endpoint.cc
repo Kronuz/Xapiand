@@ -23,7 +23,6 @@
 #include "endpoint.h"
 
 #include <stdlib.h>         // for atoi
-#include <sys/syslimits.h>  // for PATH_MAX
 #include <xapian.h>         // for SerialisationError
 
 #include "length.h"         // for serialise_length, unserialise_length, ser...

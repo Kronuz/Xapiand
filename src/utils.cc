@@ -27,13 +27,10 @@
 #include <netinet/tcp.h>         // for TCP_NOPUSH
 #include <stdio.h>               // for size_t, sprintf, remove, rename, snp...
 #include <string.h>              // for strerror, strcmp
-#include <sys/_types/_s_ifmt.h>  // for S_IROTH, S_IRWXG, S_IRWXU, S_IXOTH
-#include <sys/dirent.h>          // for dirent, DT_REG, DT_DIR
 #include <sys/fcntl.h>           // for O_CREAT, O_RDONLY, O_WRONLY
 #include <sys/resource.h>        // for rlim_t, rlimit, RLIMIT_NOFILE, getrl...
 #include <sys/socket.h>          // for setsockopt
 #include <sys/stat.h>            // for mkdir, stat
-#include <sys/syslimits.h>       // for PATH_MAX
 #include <sysexits.h>            // for EX_OSFILE
 #include <unistd.h>              // for close, rmdir, write, ssize_t
 #include <algorithm>             // for equal, uniform_int_distribution

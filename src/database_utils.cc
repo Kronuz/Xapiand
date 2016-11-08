@@ -24,7 +24,6 @@
 
 #include <stdio.h>                          // for snprintf, size_t
 #include <string.h>                         // for strlen
-#include <sys/_types/_s_ifmt.h>             // for S_IFDIR
 #include <sys/fcntl.h>                      // for O_CLOEXEC, O_CREAT, O_RDONLY
 #include <sys/stat.h>                       // for stat
 #include <chrono>                           // for seconds, duration_cast

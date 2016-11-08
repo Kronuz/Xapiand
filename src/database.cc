@@ -24,7 +24,6 @@
 
 #include <dirent.h>               // for closedir, DIR
 #include <strings.h>              // for strncasecmp
-#include <sys/dirent.h>           // for dirent
 #include <sys/errno.h>            // for __error, errno
 #include <sys/fcntl.h>            // for O_CREAT, O_WRONLY, O_EXCL
 #include <sysexits.h>             // for EX_SOFTWARE
