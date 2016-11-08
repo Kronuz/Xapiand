@@ -22,6 +22,8 @@
 
 #include "test_sort.h"
 
+#include "../src/datetime.h"
+#include "../src/schema.h"
 #include "utils.h"
 
 

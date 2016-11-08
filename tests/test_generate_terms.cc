@@ -23,6 +23,7 @@
 #include "test_generate_terms.h"
 
 #include "../src/multivalue/generate_terms.h"
+#include "../src/schema.h"
 #include "utils.h"
 
 #include <limits.h>
