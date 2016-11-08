@@ -47,23 +47,13 @@
 #include <vector>                    // for vector
 
 #include "config.h"                  // for PACKAGE_BUGREPORT, PACKAGE_STRING
-#include "dllist.h"                  // for DLList
 #include "endpoint.h"                // for Endpoint, Endpoint::cwd
 #include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"               // for Exit
 #include "io_utils.h"                // for close, open, write
 #include "log.h"                     // for Log, L_INFO, L_CRIT, L_NOTICE
 #include "manager.h"                 // for opts_t, XapiandManager, XapiandM...
-#include "tclap/Arg.h"               // for Arg
-#include "tclap/ArgException.h"      // for ArgParseException, ArgException
-#include "tclap/CmdLine.h"           // for CmdLine
-#include "tclap/CmdLineInterface.h"  // for CmdLineInterface
-#include "tclap/MultiSwitchArg.h"    // for MultiSwitchArg
-#include "tclap/StdOutput.h"         // for StdOutput
-#include "tclap/SwitchArg.h"         // for SwitchArg
-#include "tclap/ValueArg.h"          // for ValueArg
-#include "tclap/ValuesConstraint.h"  // for ValuesConstraint
-#include "tclap/XorHandler.h"        // for XorHandler
+#include "tclap/CmdLine.h"           // for CmdLine, ArgException, Arg, CmdL...
 #include "utils.h"                   // for format_string, center_string
 #include "worker.h"                  // for Worker
 
