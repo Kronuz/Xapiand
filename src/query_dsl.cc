@@ -74,15 +74,6 @@ const std::unordered_map<std::string, Xapian::Query::op> map_xapian_operator({
 });
 
 
-const std::unordered_map<std::string, FieldType> map_type({
-	{ FLOAT_STR,       FieldType::FLOAT        }, { INTEGER_STR,     FieldType::INTEGER     },
-	{ POSITIVE_STR,    FieldType::POSITIVE     }, { STRING_STR,      FieldType::STRING      },
-	{ TEXT_STR,        FieldType::TEXT         }, { DATE_STR,        FieldType::DATE        },
-	{ GEO_STR,         FieldType::GEO          }, { BOOLEAN_STR,     FieldType::BOOLEAN     },
-	{ UUID_STR,        FieldType::UUID         },
-});
-
-
 const std::unordered_map<std::string, QueryDSL::dispatch_op_dsl> QueryDSL::map_op_dispatch_dsl({
 	{ QUERYDSL_OR,        &QueryDSL::join_queries         },
 	{ QUERYDSL_AND,       &QueryDSL::join_queries         },
