@@ -29,7 +29,7 @@ TEST(Patcher, Working) {
 	EXPECT_EQ(test_patcher_mix(), 0);
 	EXPECT_EQ(test_patcher_add(), 0);
 	EXPECT_EQ(test_patcher_remove(), 0);
-	EXPECT_EQ(test_patcher_remove(), 0);
+	EXPECT_EQ(test_patcher_replace(), 0);
 	EXPECT_EQ(test_patcher_move(), 0);
 	EXPECT_EQ(test_patcher_copy(), 0);
 	EXPECT_EQ(test_patcher_test(), 0);
