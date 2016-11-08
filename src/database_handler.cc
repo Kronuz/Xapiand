@@ -510,7 +510,7 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 	}
 
 	for (const auto& sim_field : similar.field) {
-		auto field_spc = schema->get_data_field(sim_field);
+		auto field_spc = schema->get_data_field(sim_field).first;
 		if (field_spc.get_type() != FieldType::EMPTY) {
 			prefixes.push_back(field_spc.prefix);
 		}

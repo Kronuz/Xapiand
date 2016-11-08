@@ -32,8 +32,9 @@
 #include "database.h"                          // for Database
 #include "database_utils.h"                    // for prefixed, query_field_t
 #include "exception.h"                         // for ClientError, MSG_Clien...
-#include "field_parser.h"                      // for FieldParser
+#include "geo/wkt_parser.h"                    // for ClientError, MSG_Clien...
 #include "log.h"                               // for Log, L_SEARCH, L_CALL
+#include "multivalue/generate_terms.h"         // for GenerateTerms
 #include "multivalue/range.h"                  // for MultipleValueRange
 #include "schema.h"                            // for required_spc_t, FieldType
 #include "serialise.h"                         // for _float, boolean, date
@@ -230,7 +231,16 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 			}
 		}
 	} else {
-		auto field_spc = schema->get_data_field(field_name);
+		auto data_field = schema->get_data_field(field_name);
+		const auto& field_spc = data_field.first;
+		if (!data_field.second.empty()) {
+			return get_accuracy_query(data_field.second, field_spc.prefix, field_value);
+		}
+
+		if (field_spc.flags.inside_namespace) {
+			return get_namespace_query(field_name, field_spc.prefix, field_value, fp, q_flags);
+		}
+
 		if (fp.isrange) {
 			// If this field is not indexed as value, not process this range.
 			if (field_spc.slot == default_spc.slot) {
@@ -304,4 +314,116 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 	}
 
 	return Xapian::Query::MatchNothing;
+}
+
+
+Xapian::Query
+Query::get_accuracy_query(const std::string& field_accuracy, const std::string& prefix_accuracy, const std::string& field_value)
+{
+	try {
+		// Check it is date accuracy.
+		UnitTime unit = map_acc_date.at(field_accuracy.substr(1));
+		static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE));
+		Datetime::tm_t tm = Datetime::to_tm_t(field_value);
+		switch (unit) {
+			case UnitTime::SECOND: {
+				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+			}
+			case UnitTime::MINUTE: {
+				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+			}
+			case UnitTime::HOUR: {
+				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+			}
+			case UnitTime::DAY: {
+				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+			}
+			case UnitTime::MONTH: {
+				Datetime::tm_t _tm(tm.year, tm.mon);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+			}
+			case UnitTime::YEAR: {
+				Datetime::tm_t _tm(tm.year);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+			}
+			case UnitTime::DECADE: {
+				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+			}
+			case UnitTime::CENTURY: {
+				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+			}
+			case UnitTime::MILLENNIUM: {
+				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+			}
+		}
+	} catch (const std::out_of_range&) {
+		try {
+			if (field_accuracy.find("geo") == 0) {
+				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO));
+				auto nivel = stox(std::stoull, field_accuracy.substr(4));
+				EWKT_Parser ewkt(field_value, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
+				auto ranges = ewkt.getRanges();
+				return GenerateTerms::geo(ranges, { nivel }, { prefix_type + prefix_accuracy } );
+			} else {
+				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
+				auto acc = stox(std::stoull, field_accuracy.substr(1));
+				auto value = stox(std::stoull, field_value);
+				return Xapian::Query(prefixed(Serialise::integer(value - GenerateTerms::modulus(value, acc)), prefix_type + prefix_accuracy));
+			}
+		} catch (const std::invalid_argument& e) {
+			throw MSG_ClientError("Invalid numeric value %s [%s]", field_accuracy.c_str(), e.what());
+		}
+	}
+}
+
+
+Xapian::Query
+Query::get_namespace_query(const std::string& full_name, const std::string& prefix_namespace, std::string& field_value, const FieldParser& fp, int q_flags)
+{
+	std::string f_prefix;
+	f_prefix.reserve(std::strlen(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
+	f_prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace);
+	if (field_value.empty()) {
+		return Xapian::Query(DOCUMENT_NAMESPACE_TERM_PREFIX);
+	}
+
+	FieldType type;
+	if (field_value != "*") {
+		auto ser_type = Serialise::get_type(field_value);
+		type = ser_type.first;
+		f_prefix.append(1, toUType(type));
+		field_value.assign(ser_type.second);
+	} else {
+		type = FieldType::TEXT;
+	}
+
+	if (fp.isrange) {
+		auto namespace_spc = Schema::get_data_global(type);
+		namespace_spc.slot = get_slot(f_prefix);
+		return MultipleValueRange::getQuery(namespace_spc, full_name, fp.start, fp.end);
+	}
+
+	const auto& namespace_spc = Schema::get_data_global(type);
+	switch (namespace_spc.get_type()) {
+		case FieldType::TEXT: {
+			Xapian::QueryParser queryTexts;
+			queryTexts.set_database(*database->db);
+			queryTexts.set_stemming_strategy(getQueryParserStrategy(namespace_spc.stem_strategy));
+			queryTexts.set_stemmer(Xapian::Stem(namespace_spc.stem_language));
+			namespace_spc.flags.bool_term ? queryTexts.add_boolean_prefix("_", f_prefix) : queryTexts.add_prefix("_", f_prefix);
+			std::string str_texts;
+			str_texts.reserve(2 + field_value.length());
+			str_texts.assign("_:").append(field_value);
+			return queryTexts.parse_query(str_texts, q_flags);
+		}
+		default:
+			return Xapian::Query(prefixed(field_value, f_prefix));
+	}
 }

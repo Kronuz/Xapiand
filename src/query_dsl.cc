@@ -278,7 +278,7 @@ QueryDSL::range_query(const MsgPack& obj)
 		break;
 
 		case QUERY::QUERY:
-			return MultipleValueRange::getQuery(schema->get_data_field(_fieldname), _fieldname, obj);
+			return MultipleValueRange::getQuery(schema->get_data_field(_fieldname).first, _fieldname, obj);
 
 		default:
 			break;
@@ -312,13 +312,13 @@ QueryDSL::query(const MsgPack& obj)
 
 		case QUERY::QUERY:
 		{
-			auto field_spc = schema->get_data_field(_fieldname);
+			auto field_spc = schema->get_data_field(_fieldname).first;
 			try {
 				switch (field_spc.get_type()) {
 
 					case FieldType::DATE:
 						if (find_date(obj)) {
-							auto field_spc = schema->get_data_field(_fieldname);
+							auto field_spc = schema->get_data_field(_fieldname).first;
 							auto ser_date = Serialise::date(field_spc, obj);
 							return Xapian::Query(prefixed(ser_date, field_spc.prefix), _wqf);
 						}

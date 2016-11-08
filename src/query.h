@@ -24,12 +24,13 @@
 
 #include "xapiand.h"
 
-#include <xapian.h>  // for Query
-#include <memory>    // for shared_ptr
-#include <string>    // for string
-#include <vector>    // for vector
+#include <xapian.h>        // for Query
+#include <memory>          // for shared_ptr
+#include <string>          // for string
+#include <vector>          // for vector
 
 #include "database.h"
+#include "field_parser.h"  // for FieldParser
 #include "schema.h"
 
 
@@ -42,8 +43,11 @@ class Query {
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
-	Xapian::Query build_query(const std::string& token, std::vector<std::string>& suggestions, int q_flags);
 	Xapian::Query make_query(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags);
+	Xapian::Query build_query(const std::string& token, std::vector<std::string>& suggestions, int q_flags);
+
+	Xapian::Query get_accuracy_query(const std::string& field_accuracy, const std::string& prefix_accuracy, const std::string& field_value);
+	Xapian::Query get_namespace_query(const std::string& full_name, const std::string& prefix_namespace, std::string& field_value, const FieldParser& fp, int q_flags);
 
 public:
 	Query(const std::shared_ptr<Schema>& schema_, const std::shared_ptr<Database>& database_);
