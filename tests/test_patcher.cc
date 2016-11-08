@@ -92,7 +92,7 @@ int test_patcher_add() {
 		RETURN(1);
 	}
 
-	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Joker\", \"creation\":\"1939\", \"partnerships\":\"Robin\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}, {\"hero\":\"Green Lantern\", \"name\":\"Hal Jordan\", \"super_power\":\"Use of power ring\", \"enemy\":\"The Gambler\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
+	std::string expected("{\"heroes\":[{\"hero\":\"Batman\",\"name\":\"Bruce Wayne\",\"super_power\":\"High-tech equipment and weapons\",\"enemy\":\"Joker\",\"creation\":\"1939\",\"partnerships\":\"Robin\"},{\"hero\":\"Superman\",\"name\":\"Clark Kent\",\"super_power\":\"too many\",\"enemy\":\"Lex Luthor\",\"creation\":\"1933\"},{\"hero\":\"Flash\",\"name\":\"Bart Allen\",\"super_power\":\"fast\",\"enemy\":\"Zoom\",\"creation\":\"1940\"},{\"hero\":\"Green Lantern\",\"name\":\"Hal Jordan\",\"super_power\":\"Use of power ring\",\"enemy\":\"The Gambler\",\"creation\":\"1940\"}],\"villains\":[{\"villain\":\"Joker\",\"name\":\"unknown\",\"super_power\":\"Genius-level intellect\",\"enemy\":\"Batman\",\"creation\":\"1940\"},{\"villain\":\"Mr. Freeze\",\"name\":\"Dr. Victor Fries\",\"super_power\":\"Sub-zero physiology\",\"enemy\":\"Batman\",\"creation\":\"1956\"}]}");
 
 	rapidjson::Document doc_obj;
 	rapidjson::Document doc_patch;
@@ -132,7 +132,7 @@ int test_patcher_remove() {
 		RETURN(1);
 	}
 
-	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Joker\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
+	std::string expected("{\"heroes\":[{\"hero\":\"Batman\",\"name\":\"Bruce Wayne\",\"super_power\":\"High-tech equipment and weapons\",\"enemy\":\"Joker\"},{\"hero\":\"Superman\",\"name\":\"Clark Kent\",\"super_power\":\"too many\",\"enemy\":\"Lex Luthor\",\"creation\":\"1933\"},{\"hero\":\"Flash\",\"name\":\"Bart Allen\",\"super_power\":\"fast\",\"enemy\":\"Zoom\",\"creation\":\"1940\"}],\"villains\":[{\"villain\":\"Joker\",\"name\":\"unknown\",\"super_power\":\"Genius-level intellect\",\"enemy\":\"Batman\",\"creation\":\"1940\"},{\"villain\":\"Mr. Freeze\",\"name\":\"Dr. Victor Fries\",\"super_power\":\"Sub-zero physiology\",\"enemy\":\"Batman\",\"creation\":\"1956\"}]}");
 
 	rapidjson::Document doc_obj;
 	rapidjson::Document doc_patch;
@@ -172,7 +172,7 @@ int test_patcher_replace() {
 		RETURN(1);
 	}
 
-	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Riddler\", \"creation\":\"1939\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
+	std::string expected("{\"heroes\":[{\"hero\":\"Batman\",\"name\":\"Bruce Wayne\",\"super_power\":\"High-tech equipment and weapons\",\"enemy\":\"Riddler\",\"creation\":\"1939\"},{\"hero\":\"Superman\",\"name\":\"Clark Kent\",\"super_power\":\"too many\",\"enemy\":\"Lex Luthor\",\"creation\":\"1933\"},{\"hero\":\"Flash\",\"name\":\"Bart Allen\",\"super_power\":\"fast\",\"enemy\":\"Zoom\",\"creation\":\"1940\"}],\"villains\":[{\"villain\":\"Joker\",\"name\":\"unknown\",\"super_power\":\"Genius-level intellect\",\"enemy\":\"Batman\",\"creation\":\"1940\"},{\"villain\":\"Mr. Freeze\",\"name\":\"Dr. Victor Fries\",\"super_power\":\"Sub-zero physiology\",\"enemy\":\"Batman\",\"creation\":\"1956\"}]}");
 
 	rapidjson::Document doc_obj;
 	rapidjson::Document doc_patch;
@@ -212,7 +212,7 @@ int test_patcher_move() {
 		RETURN(1);
 	}
 
-	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"creation\":\"1939\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Joker\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
+	std::string expected("{\"heroes\":[{\"hero\":\"Batman\",\"name\":\"Bruce Wayne\",\"super_power\":\"High-tech equipment and weapons\",\"creation\":\"1939\"},{\"hero\":\"Superman\",\"name\":\"Clark Kent\",\"super_power\":\"too many\",\"enemy\":\"Joker\",\"creation\":\"1933\"},{\"hero\":\"Flash\",\"name\":\"Bart Allen\",\"super_power\":\"fast\",\"enemy\":\"Zoom\",\"creation\":\"1940\"}],\"villains\":[{\"villain\":\"Joker\",\"name\":\"unknown\",\"super_power\":\"Genius-level intellect\",\"enemy\":\"Batman\",\"creation\":\"1940\"},{\"villain\":\"Mr. Freeze\",\"name\":\"Dr. Victor Fries\",\"super_power\":\"Sub-zero physiology\",\"enemy\":\"Batman\",\"creation\":\"1956\"}]}");
 
 	rapidjson::Document doc_obj;
 	rapidjson::Document doc_patch;
@@ -252,7 +252,7 @@ int test_patcher_copy() {
 		RETURN(1);
 	}
 
-	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Joker\", \"creation\":\"1939\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\", \"other_enemy\":\"Joker\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
+	std::string expected("{\"heroes\":[{\"hero\":\"Batman\",\"name\":\"Bruce Wayne\",\"super_power\":\"High-tech equipment and weapons\",\"enemy\":\"Joker\",\"creation\":\"1939\"},{\"hero\":\"Superman\",\"name\":\"Clark Kent\",\"super_power\":\"too many\",\"enemy\":\"Lex Luthor\",\"creation\":\"1933\",\"other_enemy\":\"Joker\"},{\"hero\":\"Flash\",\"name\":\"Bart Allen\",\"super_power\":\"fast\",\"enemy\":\"Zoom\",\"creation\":\"1940\"}],\"villains\":[{\"villain\":\"Joker\",\"name\":\"unknown\",\"super_power\":\"Genius-level intellect\",\"enemy\":\"Batman\",\"creation\":\"1940\"},{\"villain\":\"Mr. Freeze\",\"name\":\"Dr. Victor Fries\",\"super_power\":\"Sub-zero physiology\",\"enemy\":\"Batman\",\"creation\":\"1956\"}]}");
 
 	rapidjson::Document doc_obj;
 	rapidjson::Document doc_patch;
