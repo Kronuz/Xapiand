@@ -32,6 +32,8 @@
 #include <iostream>
 #include <algorithm>
 #include <iomanip>
+#include <cstring>
+
 
 
 BooleanTree::BooleanTree(const std::string& input_)
