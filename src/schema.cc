@@ -803,7 +803,6 @@ Schema::restart_specification()
 	specification.flags.bool_term        = default_spc.flags.bool_term;
 	specification.flags.partials         = default_spc.flags.partials;
 	specification.flags.has_index        = default_spc.flags.has_index;
-	specification.flags.dynamic_type     = default_spc.flags.dynamic_type;
 	specification.flags.field_with_type  = default_spc.flags.field_with_type;
 
 	specification.sep_types              = default_spc.sep_types;
@@ -2379,7 +2378,7 @@ Schema::get_subproperties(const MsgPack*& properties, const std::string& field_n
 			specification.language = data_lan.second;
 			specification.aux_lan = data_lan.second;
 		}
-	} catch (const std::out_of_range) { }
+	} catch (const std::out_of_range&) { }
 	if (specification.full_name.empty()) {
 		specification.full_name.assign(field_name);
 		specification.dynamic_full_name.assign(field_name);
@@ -2462,7 +2461,6 @@ Schema::detect_dynamic(const std::string& field_name)
 	} else {
 		specification.dynamic_prefix.assign(field_name);
 		specification.dynamic_name.assign(field_name);
-		specification.flags.dynamic_type = false;
 	}
 }
 
