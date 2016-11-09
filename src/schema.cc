@@ -1184,9 +1184,9 @@ Schema::get_data_namespace(const std::vector<std::string>& paths_namespace, Fiel
 
 	for (auto& val : data) {
 		std::string prefix;
-		prefix.reserve(std::strlen(DOCUMENT_NAMESPACE_TERM_PREFIX) + it_e->length() + 1);
-		prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(*it_e).append(1, toUType(type));
-		val.first.append(prefix);
+		prefix.reserve(it_e->length() + 1);
+		prefix.assign(*it_e).push_back(toUType(type));
+		val.first.append(std::move(prefix));
 		val.second = get_slot(val.first);
 	}
 
