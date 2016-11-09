@@ -140,6 +140,9 @@ FieldParser::parse()
 						currentState = FieldParser::State::INIT_SQUARE_BRACKET;
 						isrange = true;
 						break;
+					case '\0':
+						currentState = FieldParser::State::END;
+						break;
 					default:
 						currentState = FieldParser::State::VALUE;
 						off_value = currentSymbol;
