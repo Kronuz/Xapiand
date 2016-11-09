@@ -234,7 +234,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 		auto data_field = schema->get_data_field(field_name);
 		const auto& field_spc = data_field.first;
 		if (!data_field.second.empty()) {
-			return get_accuracy_query(data_field.second, field_spc.prefix, field_value);
+			return get_accuracy_query(data_field.second, field_spc.prefix, field_value, fp);
 		}
 
 		if (field_spc.flags.inside_namespace) {
@@ -318,8 +318,14 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 
 
 Xapian::Query
-Query::get_accuracy_query(const std::string& field_accuracy, const std::string& prefix_accuracy, const std::string& field_value)
+Query::get_accuracy_query(const std::string& field_accuracy, const std::string& prefix_accuracy, const std::string& field_value, const FieldParser& fp)
 {
+	L_CALL(this, "Query::get_accuracy_query(%s, %s, %s)", repr(field_accuracy).c_str(), repr(prefix_accuracy).c_str(), repr(field_value).c_str());
+
+	if (fp.isrange) {
+		throw MSG_ClientError("Accuracy is only indexed like terms, searching by range is not supported");
+	}
+
 	try {
 		// Check it is date accuracy.
 		UnitTime unit = map_acc_date.at(field_accuracy.substr(1));
@@ -378,7 +384,7 @@ Query::get_accuracy_query(const std::string& field_accuracy, const std::string& 
 				return Xapian::Query(prefixed(Serialise::integer(value - GenerateTerms::modulus(value, acc)), prefix_type + prefix_accuracy));
 			}
 		} catch (const std::invalid_argument& e) {
-			throw MSG_ClientError("Invalid numeric value %s [%s]", field_accuracy.c_str(), e.what());
+			throw MSG_ClientError("Invalid numeric value %s: %s [%s]", field_accuracy.c_str(), field_value.c_str(), e.what());
 		}
 	}
 }
@@ -387,6 +393,8 @@ Query::get_accuracy_query(const std::string& field_accuracy, const std::string& 
 Xapian::Query
 Query::get_namespace_query(const std::string& full_name, const std::string& prefix_namespace, std::string& field_value, const FieldParser& fp, int q_flags)
 {
+	L_CALL(this, "Query::get_namespace_query(%s, %s, %s)", repr(full_name).c_str(), repr(prefix_namespace).c_str(), repr(field_value).c_str());
+
 	std::string f_prefix;
 	f_prefix.reserve(std::strlen(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
 	f_prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace);

@@ -46,7 +46,7 @@ class Query {
 	Xapian::Query make_query(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags);
 	Xapian::Query build_query(const std::string& token, std::vector<std::string>& suggestions, int q_flags);
 
-	Xapian::Query get_accuracy_query(const std::string& field_accuracy, const std::string& prefix_accuracy, const std::string& field_value);
+	Xapian::Query get_accuracy_query(const std::string& field_accuracy, const std::string& prefix_accuracy, const std::string& field_value, const FieldParser& fp);
 	Xapian::Query get_namespace_query(const std::string& full_name, const std::string& prefix_namespace, std::string& field_value, const FieldParser& fp, int q_flags);
 
 public:
