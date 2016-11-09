@@ -39,3 +39,4 @@ int test_msgpack_reserve();
 int test_msgpack_keys();
 int test_msgpack_change_keys();
 int test_msgpack_map();
+int test_msgpack_array();

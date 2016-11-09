@@ -40,6 +40,7 @@ TEST(MsgPackTest, Working) {
 	EXPECT_EQ(test_msgpack_keys(), 0);
 	EXPECT_EQ(test_msgpack_change_keys(), 0);
 	EXPECT_EQ(test_msgpack_map(), 0);
+	EXPECT_EQ(test_msgpack_array(), 0);
 }
 
 

@@ -30,10 +30,10 @@ const std::string path_test_msgpack = std::string(PACKAGE_PATH_TEST) + "/example
 
 
 int test_msgpack_constructors() {
-	std::string res1("[1, 2, 3, 4, 5]");
-	std::string res2("[[\"one\", 1], [\"two\", 2], [\"three\", 3], [\"four\", 4], 100.78, [\"five\", 5, 200.789], 1000, true, \"str_value\"]");
-	std::string res3("{\"one\":1, \"two\":2, \"three\":3, \"four\":4, \"five\":5}");
-	std::string res4("{\"one\":1, \"two\":2, \"three\":{\"value\":30, \"person\":{\"name\":\"José\", \"last\":\"Perez\"}}, \"four\":4, \"five\":5}");
+	std::string res1("[1,2,3,4,5]");
+	std::string res2("[[\"one\",1],[\"two\",2],[\"three\",3],[\"four\",4],100.78,[\"five\",5,200.789],1000,true,\"str_value\"]");
+	std::string res3("{\"one\":1,\"two\":2,\"three\":3,\"four\":4,\"five\":5}");
+	std::string res4("{\"one\":1,\"two\":2,\"three\":{\"value\":30,\"person\":{\"name\":\"José\",\"last\":\"Perez\"}},\"four\":4,\"five\":5}");
 
 	// List initialize ARRAY
 	MsgPack o = { 1, 2, 3, 4, 5 };
@@ -156,8 +156,8 @@ int test_msgpack_constructors() {
 
 
 int test_msgpack_assigment() {
-	std::string res1("[1, 2, 3, 4, 5]");
-	std::string res2("{\"one\":1, \"two\":2, \"three\":3, \"four\":4, \"five\":5}");
+	std::string res1("[1,2,3,4,5]");
+	std::string res2("{\"one\":1,\"two\":2,\"three\":3,\"four\":4,\"five\":5}");
 
 	MsgPack m_array({ 1, 2, 3, 4, 5 });
 	MsgPack m_map({
@@ -340,7 +340,7 @@ int test_msgpack_explore() {
 	auto obj = MsgPack::unserialise(buffer);
 
 	std::string expected(
-		"\"id\":\"56892c5e23700e297bd84cd5\"\n"
+		"\"_id\":\"56892c5e23700e297bd84cd5\"\n"
 		"\"about\":\"Minim ad irure pariatur nulla dolore occaecat ipsum. Qui ipsum enim aute do labore deserunt enim eu nulla duis cupidatat id est. Id cupidatat nostrud ad nulla culpa veniam nulla consequat enim sunt qui id enim. Aliquip ut deserunt irure consequat irure in fugiat. Esse veniam adipisicing deserunt culpa veniam consectetur qui ex amet. Commodo aute sit esse incididunt adipisicing non enim. Aliqua consectetur officia eiusmod veniam et amet qui adipisicing dolore voluptate reprehenderit anim commodo nulla.\"\n"
 		"\"address\":\"422 Whitney Avenue, Walker, Arizona, 7324\"\n"
 		"\"age\":29\n"
@@ -418,14 +418,14 @@ int test_msgpack_copy() {
 	obj["elem1"] = "Final_Elem1";
 	obj["elem2"] = "Final_Elem2";
 
-	std::string str_orig_expect("{\"elem1\":\"Final_Elem1\", \"elem2\":\"Final_Elem2\", \"elem3\":\"Final_Elem3\", \"elem4\":\"Final_Elem4\"}");
+	std::string str_orig_expect("{\"elem1\":\"Final_Elem1\",\"elem2\":\"Final_Elem2\",\"elem3\":\"Final_Elem3\",\"elem4\":\"Final_Elem4\"}");
 
 	copy_obj["elem3"] = "Final_Copy_Elem3";
 	copy_obj["elem4"] = "Final_Copy_Elem4";
 	copy_obj["elem1"] = "Final_Copy_Elem1";
 	copy_obj["elem2"] = "Final_Copy_Elem2";
 
-	std::string str_copy_expect("{\"elem1\":\"Final_Copy_Elem1\", \"elem2\":\"Final_Copy_Elem2\", \"elem3\":\"Final_Copy_Elem3\", \"elem4\":\"Final_Copy_Elem4\"}");
+	std::string str_copy_expect("{\"elem1\":\"Final_Copy_Elem1\",\"elem2\":\"Final_Copy_Elem2\",\"elem3\":\"Final_Copy_Elem3\",\"elem4\":\"Final_Copy_Elem4\"}");
 
 	auto str_orig = obj.to_string();
 	int res = 0;
@@ -464,7 +464,7 @@ int test_msgpack_reference() {
 	copy_obj["elem1"] = "Final_Copy_Elem1";
 	copy_obj["elem2"] = "Final_Copy_Elem2";
 
-	std::string str_expect("{\"elem1\":\"Final_Copy_Elem1\", \"elem2\":\"Final_Copy_Elem2\", \"elem3\":\"Final_Copy_Elem3\", \"elem4\":\"Final_Copy_Elem4\"}");
+	std::string str_expect("{\"elem1\":\"Final_Copy_Elem1\",\"elem2\":\"Final_Copy_Elem2\",\"elem3\":\"Final_Copy_Elem3\",\"elem4\":\"Final_Copy_Elem4\"}");
 
 	auto str_orig = obj.to_string();
 	int res = 0;
@@ -541,7 +541,7 @@ int test_msgpack_erase() {
 	obj["elem2"] = "Final_Elem2";
 	obj["elem4"] = "Final_Elem4";
 
-	std::string str_obj_expect("{\"elem2\":\"Final_Elem2\", \"elem4\":\"Final_Elem4\"}");
+	std::string str_obj_expect("{\"elem2\":\"Final_Elem2\",\"elem4\":\"Final_Elem4\"}");
 	auto str_obj = obj.to_string();
 	if (str_obj_expect != str_obj) {
 		L_ERR(nullptr, "ERROR: MsgPack::erase(key) is not working correctly. Result: %s, Expected: %s\n", str_obj.c_str(), str_obj_expect.c_str());
@@ -574,7 +574,7 @@ int test_msgpack_erase() {
 	obj["elem2"] = "Final_Elem2";
 	obj["elem3"] = "Final_Elem3";
 
-	str_obj_expect = "{\"elem2\":\"Final_Elem2\", \"elem3\":\"Final_Elem3\"}";
+	str_obj_expect = "{\"elem2\":\"Final_Elem2\",\"elem3\":\"Final_Elem3\"}";
 	str_obj = obj.to_string();
 	if (str_obj_expect != str_obj) {
 		L_ERR(nullptr, "ERROR: MsgPack::erase(offset) is not working correctly. Result: %s, Expected: %s\n", str_obj.c_str(), str_obj_expect.c_str());
@@ -585,7 +585,7 @@ int test_msgpack_erase() {
 	obj.erase(1);
 	obj.erase(2);
 
-	str_obj_expect = "[1, 3, 5]";
+	str_obj_expect = "[1,3,5]";
 	str_obj = obj.to_string();
 	if (str_obj_expect != str_obj) {
 		L_ERR(nullptr, "ERROR: MsgPack::erase(offset) is not working correctly. Result: %s, Expected: %s\n", str_obj.c_str(), str_obj_expect.c_str());
@@ -596,7 +596,7 @@ int test_msgpack_erase() {
 	obj[1] = 31;
 	obj[2] = 51;
 
-	str_obj_expect = "[11, 31, 51]";
+	str_obj_expect = "[11,31,51]";
 	str_obj = obj.to_string();
 	if (str_obj_expect != str_obj) {
 		L_ERR(nullptr, "ERROR: MsgPack::erase(offset) is not working correctly. Result: %s, Expected: %s\n", str_obj.c_str(), str_obj_expect.c_str());
@@ -708,7 +708,7 @@ int test_msgpack_change_keys() {
 	obj["key_3"] = "Val3";
 	obj["key_4"] = "Val4";
 
-	std::string expected("{\"key_1\":\"Val1\", \"key_2\":\"Val2\", \"key_3\":\"Val3\", \"key_4\":\"Val4\"}");
+	std::string expected("{\"key_1\":\"Val1\",\"key_2\":\"Val2\",\"key_3\":\"Val3\",\"key_4\":\"Val4\"}");
 
 	auto result = obj.to_string();
 	if (result == expected) {
@@ -808,37 +808,37 @@ int test_msgpack_array() {
 	auto& sub_obj = object["villains"][0];
 
 	if (sub_obj.size() != r0) {
-		L_ERR(nullptr, "Updated the map after erase is not working. Result: %zu\nExpected: %zu\n", sub_obj.size(), r0);
+		L_ERR(nullptr, "Updated the array after erase is not working. Result: %zu\nExpected: %zu\n", sub_obj.size(), r0);
 	}
 
 	try {
 		sub_obj[f1];
 	}	catch (const std::out_of_range& e) {
-		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r1.c_str());
+		L_ERR(nullptr, "Updated the array after erase is not working. Expected: %s\n", r1.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f2];
 	}	catch (const std::out_of_range& e) {
-		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r2.c_str());
+		L_ERR(nullptr, "Updated the array after erase is not working. Expected: %s\n", r2.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f3];
 	}	catch (const std::out_of_range& e) {
-		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r3.c_str());
+		L_ERR(nullptr, "Updated the array after erase is not working. Expected: %s\n", r3.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f4];
 	}	catch (const std::out_of_range& e) {
-		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r4.c_str());
+		L_ERR(nullptr, "Updated the array after erase is not working. Expected: %s\n", r4.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f5];
 	}	catch (const std::out_of_range& e) {
-		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r5.c_str());
+		L_ERR(nullptr, "Updated the array after erase is not working. Expected: %s\n", r5.c_str());
 		RETURN(1);
 	}
 
