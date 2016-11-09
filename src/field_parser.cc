@@ -75,6 +75,9 @@ FieldParser::parse()
 						++len_single_quote_value;
 						++len_value;
 						break;
+					case '\0':
+						currentState = FieldParser::State::END;
+						break;
 					default:
 						switch (*currentSymbol) {
 							case ' ':
