@@ -4099,7 +4099,6 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		}
 		try {
 			subproperties = &subproperties->at(field_name);
-			dynamic_type = false;
 			if (dynamic_full_name.empty()) {
 				dynamic_full_name.assign(field_name);
 			} else {
