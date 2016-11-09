@@ -4140,10 +4140,10 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 							} else {
 								dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_namespace);
 							}
-							prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(field_namespace) : Serialise::namespace_field(field_namespace));
+							prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(field_namespace) : Serialise::namespace_field(field_namespace));
 						} else if (++it == it_e) {
 							dynamic_full_name.append(DB_OFFSPRING_UNION).append(field_namespace);
-							prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
+							prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(dynamic_full_name) : Serialise::namespace_field(dynamic_full_name));
 							return std::forward_as_tuple(std::move(dynamic_full_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::move(field_namespace));
 						} else {
 							throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
