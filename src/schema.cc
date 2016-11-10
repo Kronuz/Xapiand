@@ -763,9 +763,9 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 
 
 MsgPack&
-Schema::get_mutable(const std::string& full_meta_name)
+Schema::get_mutable()
 {
-	L_CALL(this, "Schema::get_mutable(%s)", repr(full_meta_name).c_str());
+	L_CALL(this, "Schema::get_mutable()");
 
 	if (!mut_schema) {
 		mut_schema = std::make_unique<MsgPack>(*schema);
@@ -773,7 +773,7 @@ Schema::get_mutable(const std::string& full_meta_name)
 
 	MsgPack* prop = &mut_schema->at(RESERVED_SCHEMA);
 	std::vector<std::string> field_names;
-	stringTokenizer(full_meta_name, DB_OFFSPRING_UNION, field_names);
+	stringTokenizer(specification.full_meta_name, DB_OFFSPRING_UNION, field_names);
 	for (const auto& field_name : field_names) {
 		prop = &(*prop)[field_name];
 	}
@@ -1248,7 +1248,7 @@ Schema::set_type_to_object(bool offsprings)
 	L_CALL(this, "Schema::set_type_to_object()");
 
 	if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY && !specification.flags.inside_namespace) {
-		auto& _types = get_mutable(specification.full_meta_name)[RESERVED_TYPE];
+		auto& _types = get_mutable()[RESERVED_TYPE];
 		if (_types.is_undefined()) {
 			_types = MsgPack({ FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY });
 			specification.sep_types[0] = FieldType::OBJECT;
@@ -1266,7 +1266,7 @@ Schema::set_type_to_array()
 	L_CALL(this, "Schema::set_type_to_array()");
 
 	if unlikely(specification.sep_types[1] == FieldType::EMPTY && !specification.flags.inside_namespace) {
-		auto& _types = get_mutable(specification.full_meta_name)[RESERVED_TYPE];
+		auto& _types = get_mutable()[RESERVED_TYPE];
 		if (_types.is_undefined()) {
 			_types = MsgPack({ FieldType::EMPTY, FieldType::ARRAY, FieldType::EMPTY });
 			specification.sep_types[1] = FieldType::ARRAY;
@@ -1284,7 +1284,7 @@ Schema::validate_required_data()
 	L_CALL(this, "Schema::validate_required_data()");
 
 	if (!specification.full_meta_name.empty()) {
-		auto& properties = get_mutable(specification.full_meta_name);
+		auto& properties = get_mutable();
 
 		try {
 			auto func = map_dispatch_set_default_spc.at(specification.full_normalized_name);
@@ -2344,7 +2344,7 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 		try {
 			get_subproperties(subproperties, field_name, field_name);
 		} catch (const std::out_of_range&) {
-			MsgPack* mut_subprop = &get_mutable(specification.full_meta_name);
+			MsgPack* mut_subprop = &get_mutable();
 			for ( ; it != it_e; ++it) {
 				specification.meta_name = *it;
 				specification.normalized_name = specification.meta_name;
@@ -2424,7 +2424,7 @@ Schema::get_subproperties(const MsgPack& properties)
 				}
 
 				specification.flags.field_found = false;
-				MsgPack* mut_subprop = &get_mutable(specification.full_meta_name);
+				MsgPack* mut_subprop = &get_mutable();
 				add_field(mut_subprop);
 				for (++it; it != it_e; ++it) {
 					detect_dynamic(*it);
@@ -2823,9 +2823,9 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 
 		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 			if (specification.position.size() == 1) {
-				get_mutable(specification.full_meta_name)[prop_name] = static_cast<uint64_t>(specification.position.front());
+				get_mutable()[prop_name] = static_cast<uint64_t>(specification.position.front());
 			} else {
-				get_mutable(specification.full_meta_name)[prop_name] = specification.position;
+				get_mutable()[prop_name] = specification.position;
 			}
 		}
 	} catch (const msgpack::type_error&) {
@@ -2855,9 +2855,9 @@ Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
 
 		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 			if (specification.weight.size() == 1) {
-				get_mutable(specification.full_meta_name)[prop_name] = static_cast<uint64_t>(specification.weight.front());
+				get_mutable()[prop_name] = static_cast<uint64_t>(specification.weight.front());
 			} else {
-				get_mutable(specification.full_meta_name)[prop_name] = specification.weight;
+				get_mutable()[prop_name] = specification.weight;
 			}
 		}
 	} catch (const msgpack::type_error&) {
@@ -2887,9 +2887,9 @@ Schema::process_spelling(const std::string& prop_name, const MsgPack& doc_spelli
 
 		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 			if (specification.spelling.size() == 1) {
-				get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.spelling.front());
+				get_mutable()[prop_name] = static_cast<bool>(specification.spelling.front());
 			} else {
-				get_mutable(specification.full_meta_name)[prop_name] = specification.spelling;
+				get_mutable()[prop_name] = specification.spelling;
 			}
 		}
 	} catch (const msgpack::type_error&) {
@@ -2919,9 +2919,9 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 
 		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 			if (specification.positions.size() == 1) {
-				get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.positions.front());
+				get_mutable()[prop_name] = static_cast<bool>(specification.positions.front());
 			} else {
-				get_mutable(specification.full_meta_name)[prop_name] = specification.positions;
+				get_mutable()[prop_name] = specification.positions;
 			}
 		}
 	} catch (const msgpack::type_error&) {
@@ -3176,7 +3176,7 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 			specification.index = map_index.at(str_index);
 
 			if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
-				get_mutable(specification.full_meta_name)[prop_name] = specification.index;
+				get_mutable()[prop_name] = specification.index;
 			}
 		} catch (const std::out_of_range&) {
 			throw MSG_ClientError("%s must be in %s (%s not supported)", prop_name.c_str(), str_set_index.c_str(), str_index.c_str());
@@ -3201,7 +3201,7 @@ Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
 		specification.flags.parent_store = specification.flags.store;
 
 		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
-			get_mutable(specification.full_meta_name)[prop_name] = val_store;
+			get_mutable()[prop_name] = val_store;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3220,7 +3220,7 @@ Schema::process_recursive(const std::string& prop_name, const MsgPack& doc_recur
 	try {
 		specification.flags.is_recursive = doc_recursive.as_bool();
 		if likely(!specification.flags.field_found && !specification.flags.inside_namespace) {
-			get_mutable(specification.full_meta_name)[prop_name.c_str()] = static_cast<bool>(specification.flags.is_recursive);
+			get_mutable()[prop_name.c_str()] = static_cast<bool>(specification.flags.is_recursive);
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3240,7 +3240,7 @@ Schema::process_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic
 
 	try {
 		specification.flags.dynamic = doc_dynamic.as_bool();
-		get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.flags.dynamic);
+		get_mutable()[prop_name] = static_cast<bool>(specification.flags.dynamic);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3259,7 +3259,7 @@ Schema::process_strict(const std::string& prop_name, const MsgPack& doc_strict)
 
 	try {
 		specification.flags.strict = doc_strict.as_bool();
-		get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.flags.strict);
+		get_mutable()[prop_name] = static_cast<bool>(specification.flags.strict);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3278,7 +3278,7 @@ Schema::process_d_detection(const std::string& prop_name, const MsgPack& doc_d_d
 
 	try {
 		specification.flags.date_detection = doc_d_detection.as_bool();
-		get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.flags.date_detection);
+		get_mutable()[prop_name] = static_cast<bool>(specification.flags.date_detection);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3297,7 +3297,7 @@ Schema::process_n_detection(const std::string& prop_name, const MsgPack& doc_n_d
 
 	try {
 		specification.flags.numeric_detection = doc_n_detection.as_bool();
-		get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.flags.numeric_detection);
+		get_mutable()[prop_name] = static_cast<bool>(specification.flags.numeric_detection);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3316,7 +3316,7 @@ Schema::process_g_detection(const std::string& prop_name, const MsgPack& doc_g_d
 
 	try {
 		specification.flags.geo_detection = doc_g_detection.as_bool();
-		get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.flags.geo_detection);
+		get_mutable()[prop_name] = static_cast<bool>(specification.flags.geo_detection);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3335,7 +3335,7 @@ Schema::process_b_detection(const std::string& prop_name, const MsgPack& doc_b_d
 
 	try {
 		specification.flags.bool_detection = doc_b_detection.as_bool();
-		get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.flags.bool_detection);
+		get_mutable()[prop_name] = static_cast<bool>(specification.flags.bool_detection);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3354,7 +3354,7 @@ Schema::process_s_detection(const std::string& prop_name, const MsgPack& doc_s_d
 
 	try {
 		specification.flags.string_detection = doc_s_detection.as_bool();
-		get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.flags.string_detection);
+		get_mutable()[prop_name] = static_cast<bool>(specification.flags.string_detection);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3373,7 +3373,7 @@ Schema::process_t_detection(const std::string& prop_name, const MsgPack& doc_t_d
 
 	try {
 		specification.flags.text_detection = doc_t_detection.as_bool();
-		get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.flags.text_detection);
+		get_mutable()[prop_name] = static_cast<bool>(specification.flags.text_detection);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3392,7 +3392,7 @@ Schema::process_u_detection(const std::string& prop_name, const MsgPack& doc_u_d
 
 	try {
 		specification.flags.uuid_detection = doc_u_detection.as_bool();
-		get_mutable(specification.full_meta_name)[prop_name] = static_cast<bool>(specification.flags.uuid_detection);
+		get_mutable()[prop_name] = static_cast<bool>(specification.flags.uuid_detection);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3472,7 +3472,7 @@ Schema::process_namespace(const std::string& prop_name, const MsgPack& doc_names
 			} else {
 				specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
 			}
-			get_mutable(specification.full_meta_name)[prop_name] = true;
+			get_mutable()[prop_name] = true;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());

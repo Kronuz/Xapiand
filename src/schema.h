@@ -337,7 +337,7 @@ class Schema {
 	/*
 	 * Returns a reference to a mutable schema (a copy of the one stored in the metadata)
 	 */
-	MsgPack& get_mutable(const std::string& full_name);
+	MsgPack& get_mutable();
 
 	/*
 	 * Deletes the schema from the metadata and returns a reference to the mutable empty schema.
