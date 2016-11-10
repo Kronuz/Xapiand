@@ -279,6 +279,7 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 	  write_queue(WRITE_QUEUE_LIMIT, WRITE_QUEUE_THRESHOLD)
 {
 	async_update.set<BaseClient, &BaseClient::async_update_cb>(this);
+	async_update.start();
 	L_EV(this, "Start async update event");
 
 	async_read_start.set<BaseClient, &BaseClient::async_read_start_cb>(this);
