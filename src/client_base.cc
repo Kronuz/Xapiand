@@ -451,6 +451,7 @@ BaseClient::write_directly(int fd)
 	}
 
 	std::shared_ptr<Buffer> buffer;
+	std::lock_guard<std::mutex> lk(_mutex);
 	if (write_queue.front(buffer)) {
 		size_t buf_size = buffer->nbytes();
 		const char *buf_data = buffer->dpos();
