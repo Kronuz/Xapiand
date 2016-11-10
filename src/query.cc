@@ -220,11 +220,15 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 			switch (ser_type.first) {
 				case FieldType::TEXT: {
 					Xapian::QueryParser queryTexts;
+					global_spc.flags.bool_term ? queryTexts.add_boolean_prefix("_", global_spc.prefix) : queryTexts.add_prefix("_", global_spc.prefix);
 					queryTexts.set_database(*database->db);
 					queryTexts.set_stemming_strategy(getQueryParserStrategy(global_spc.stem_strategy));
 					queryTexts.set_stemmer(Xapian::Stem(global_spc.stem_language));
+					std::string str_texts;
+					str_texts.reserve(2 + field_value.length());
+					str_texts.assign("_:").append(field_value);
 					suggestions.push_back(queryTexts.get_corrected_query_string());
-					return queryTexts.parse_query(field_value, q_flags);
+					return queryTexts.parse_query(str_texts, q_flags);
 				}
 				default:
 					return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
