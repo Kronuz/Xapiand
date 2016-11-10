@@ -657,7 +657,6 @@ specification_t::to_string() const
 {
 	std::stringstream str;
 	str << "\n{\n";
-	str << "\t" << RESERVED_NAME << ": " << full_meta_name << "\n";
 	str << "\t" << RESERVED_POSITION << ": [ ";
 	for (const auto& _position : position) {
 		str << _position << " ";
@@ -724,10 +723,12 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_U_DETECTION << ": " << (flags.uuid_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_BOOL_TERM   << ": " << (flags.bool_term         ? "true" : "false") << "\n";
 	str << "\t" << "field_found"        << ": " << (flags.field_found       ? "true" : "false") << "\n";
+	str << "\t" << "dynamic_type"       << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
 
-	str << "\t" << "dynamic_type"       << ": " << (flags.dynamic_type ? "true" : "false") << "\n";
-	str << "\t" << "meta_name"     << ": " << meta_name << "\n";
-	str << "\t" << "normalized_name"       << ": " << normalized_name << "\n";
+	str << "\t" << RESERVED_NAME           << ": " << name                 << "\n";
+	str << "\t" << "meta_name"             << ": " << meta_name            << "\n";
+	str << "\t" << "full_meta_name"        << ": " << full_meta_name       << "\n";
+	str << "\t" << "normalized_name"       << ": " << normalized_name      << "\n";
 	str << "\t" << "full_normalized_name"  << ": " << full_normalized_name << "\n";
 
 	str << "}\n";
