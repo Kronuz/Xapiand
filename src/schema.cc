@@ -2441,7 +2441,6 @@ Schema::get_subproperties(const MsgPack& properties)
 			specification.paths_namespace.push_back(specification.flags.dynamic_type ? Serialise::dynamic_namespace_field(specification.normalized_name) : Serialise::namespace_field(specification.normalized_name));
 			specification.flags.inside_namespace = true;
 		}
-		fprintf(stderr, "+++++ %d  %s  %s\n", specification.flags.dynamic_type, specification.normalized_name.c_str(), repr(specification.paths_namespace.back()).c_str());
 	}
 
 	return *subproperties;
@@ -2795,7 +2794,6 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 		} else {
 			specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
 		}
-		fprintf(stderr, "+++++ %d  %s  %s\n", specification.flags.dynamic_type, specification.full_normalized_name.c_str(), repr(specification.paths_namespace.back()).c_str());
 	}
 }
 
@@ -4098,7 +4096,6 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		} catch (const std::out_of_range&) {
 			try {
 				if (Serialise::isUUID(field_name)) {
-					fprintf(stderr, "++++ IS UUID\n");
 					dynamic_type = true;
 					subproperties = &subproperties->at(UUID_FIELD_NAME);
 					if (full_normalized_name.empty()) {
@@ -4129,9 +4126,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 							} else {
 								full_normalized_name.append(DB_OFFSPRING_UNION).append(field_namespace);
 							}
-							fprintf(stderr, "+++++ %d  %s  %s\n", dynamic_type, field_namespace.c_str(), repr(prefix_namespace).c_str());
 							prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(field_namespace) : Serialise::namespace_field(field_namespace));
-							fprintf(stderr, "+++++ %d  %s  %s\n", dynamic_type, field_namespace.c_str(), repr(prefix_namespace).c_str());
 						} else if (++it == it_e) {
 							full_normalized_name.append(DB_OFFSPRING_UNION).append(field_namespace);
 							prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(full_normalized_name) : Serialise::namespace_field(full_normalized_name));
