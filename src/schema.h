@@ -276,10 +276,6 @@ struct specification_t : required_spc_t {
 	std::vector<bool> positions;
 	TypeIndex index;
 
-	std::string dynamic_prefix;
-	std::string dynamic_name;
-	std::string dynamic_full_name;
-
 	// Value recovered from the item.
 	std::unique_ptr<const MsgPack> value;
 	std::unique_ptr<MsgPack> value_rec;
@@ -289,7 +285,10 @@ struct specification_t : required_spc_t {
 	std::shared_ptr<const MsgPack> script;
 
 	std::string name;
-	std::string full_name;
+	std::string meta_name;
+	std::string full_meta_name;
+	std::string normalized_name;
+	std::string full_normalized_name;
 
 	std::string aux_stem_lan;
 	std::string aux_lan;
@@ -442,7 +441,7 @@ class Schema {
 	/*
 	 * Get the subproperties of field_name.
 	 */
-	void get_subproperties(const MsgPack*& properties, const std::string& field_name);
+	void get_subproperties(const MsgPack*& properties, const std::string& meta_name, const std::string& normalized_name);
 
 	/*
 	 * Detect and set dynamic type.
@@ -452,7 +451,7 @@ class Schema {
 	/*
 	 * Add new field to properties.
 	 */
-	void add_field(MsgPack*& properties, const std::string& field_name);
+	void add_field(MsgPack*& properties, const std::string& meta_name, const std::string& normalized_name);
 
 	/*
 	 * Specification is updated with the properties.
@@ -557,9 +556,9 @@ class Schema {
 
 	/*
 	 * Returns:
-	 *   - Normalize full_name
+	 *   - Full normalized name
 	 *   - if is a dynamic field
-	 *   - The propierties of full_name
+	 *   - The propierties of full name
 	 *   - The prefix namespace
 	 *   - The accuracy field_name
 	 * if the path does not exist or is not valid field name throw a ClientError exception.
