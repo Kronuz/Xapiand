@@ -495,7 +495,7 @@ BaseClient::write_directly(int fd)
 }
 
 
-bool
+WR
 BaseClient::_write(int fd)
 {
 	L_CALL(this, "BaseClient::_write(%d)", fd);
@@ -509,16 +509,16 @@ BaseClient::_write(int fd)
 			case WR::ERR:
 			case WR::CLOSED:
 				close();
-				return false;
+				return status;
 			case WR::RETRY:
 			case WR::PENDING:
-				return true;
+				return status;
 			default:
 				break;
 		}
 	} while (status != WR::OK);
 
-	return true;
+	return status;
 }
 
 
@@ -539,11 +539,16 @@ BaseClient::write(const char *buf, size_t buf_size)
 
 	written += 1;
 
-	auto ret = _write(fd);
+	switch (_write(fd)) {
+		case WR::RETRY:
+		case WR::PENDING:
+			async_update.send();
+		case WR::OK:
+			return true;
+		default:
+			return false;
 
-	async_update.send();
-
-	return ret;
+	}
 }
 
 

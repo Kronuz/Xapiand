@@ -86,7 +86,7 @@ class ClientDecompressor;
 class BaseClient : public Task<>, public Worker {
 	friend LZ4CompressFile;
 
-	bool _write(int fd);
+	WR _write(int fd);
 
 	void destroyer();
 	void stop();
