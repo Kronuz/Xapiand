@@ -451,7 +451,7 @@ class Schema {
 	/*
 	 * Add new field to properties.
 	 */
-	void add_field(MsgPack*& properties, const std::string& meta_name, const std::string& normalized_name);
+	void add_field(MsgPack*& properties);
 
 	/*
 	 * Specification is updated with the properties.

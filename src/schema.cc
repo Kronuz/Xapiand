@@ -1437,7 +1437,7 @@ Schema::validate_required_data()
 
 				// Process RESERVED_BOOL_TERM
 				if (!specification.flags.has_bool_term) {
-					// By default, if field name has upper characters then it is consider bool term.
+					// By default, if normalized name has upper characters then it is consider bool term.
 					specification.flags.bool_term = strhasupper(specification.normalized_name);
 				}
 				properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
@@ -2346,11 +2346,10 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 		} catch (const std::out_of_range&) {
 			MsgPack* mut_subprop = &get_mutable(specification.full_meta_name);
 			for ( ; it != it_e; ++it) {
-				const auto& field_name = *it;
-				specification.flags.dynamic_type = (field_name == UUID_FIELD_NAME);
-				specification.meta_name = field_name;
-				specification.normalized_name = field_name;
-				add_field(mut_subprop, field_name, field_name);
+				specification.meta_name = *it;
+				specification.normalized_name = specification.meta_name;
+				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
+				add_field(mut_subprop);
 			}
 
 			// Found field always false for adding inheritable specification.
@@ -2426,10 +2425,10 @@ Schema::get_subproperties(const MsgPack& properties)
 
 				specification.flags.field_found = false;
 				MsgPack* mut_subprop = &get_mutable(specification.full_meta_name);
-				add_field(mut_subprop, specification.meta_name, specification.normalized_name);
+				add_field(mut_subprop);
 				for (++it; it != it_e; ++it) {
 					detect_dynamic(*it);
-					add_field(mut_subprop, specification.meta_name, specification.normalized_name);
+					add_field(mut_subprop);
 				}
 				return *mut_subprop;
 			}
@@ -2465,14 +2464,14 @@ Schema::detect_dynamic(const std::string& field_name)
 
 
 void
-Schema::add_field(MsgPack*& properties, const std::string& meta_name, const std::string& normalized_name)
+Schema::add_field(MsgPack*& properties)
 {
-	L_CALL(this, "Schema::add_field(%s, %s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str(), repr(normalized_name).c_str());
+	L_CALL(this, "Schema::add_field(%s)", repr(properties->to_string()).c_str());
 
-	properties = &(*properties)[meta_name];
+	properties = &(*properties)[specification.meta_name];
 
 	try {
-		auto data_lan = map_stem_language.at(normalized_name);
+		auto data_lan = map_stem_language.at(specification.normalized_name);
 		if (data_lan.first) {
 			specification.language = data_lan.second;
 			specification.aux_lan = data_lan.second;
@@ -2480,11 +2479,11 @@ Schema::add_field(MsgPack*& properties, const std::string& meta_name, const std:
 	} catch (const std::out_of_range) { }
 
 	if (specification.full_meta_name.empty()) {
-		specification.full_meta_name.assign(meta_name);
-		specification.full_normalized_name.assign(normalized_name);
+		specification.full_meta_name.assign(specification.meta_name);
+		specification.full_normalized_name.assign(specification.normalized_name);
 	} else {
-		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(meta_name);
-		specification.full_normalized_name.append(DB_OFFSPRING_UNION).append(normalized_name);
+		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
+		specification.full_normalized_name.append(DB_OFFSPRING_UNION).append(specification.normalized_name);
 	}
 }
 
