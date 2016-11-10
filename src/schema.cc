@@ -2438,7 +2438,11 @@ Schema::get_subproperties(const MsgPack& properties)
 		restart_specification();
 		for (const auto& field_name : field_names) {
 			detect_dynamic(field_name);
-			specification.paths_namespace.push_back(specification.flags.dynamic_type ? Serialise::dynamic_namespace_field(specification.normalized_name) : Serialise::namespace_field(specification.normalized_name));
+			if (specification.flags.dynamic_type) {
+				specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.normalized_name));
+			} else {
+				specification.paths_namespace.push_back(Serialise::namespace_field(specification.normalized_name));
+			}
 			specification.flags.inside_namespace = true;
 		}
 	}
