@@ -368,12 +368,13 @@ LogThread::thread_function(LogQueue& log_queue)
 
 	auto nwt = next_wakeup_time.load();
 
+	auto wakeup = std::chrono::system_clock::now() + 100ms;
+
 	while (running != 0) {
 		if (--running < 0) {
 			running = -1;
 		}
 
-		auto wakeup = std::chrono::system_clock::now() + (running < 0 ? 3s : 100ms);
 		auto wt = time_point_to_ullong(wakeup);
 		if (next_wakeup_time.compare_exchange_strong(nwt, wt)) {
 			nwt = wt;
@@ -381,6 +382,7 @@ LogThread::thread_function(LogQueue& log_queue)
 			wakeup = time_point_from_ullong<std::chrono::system_clock>(next_wakeup_time);
 		}
 		wakeup_signal.wait_until(lk, wakeup);
+		wakeup = std::chrono::system_clock::now() + (running < 0 ? 3s : 100ms);
 
 		try {
 			do {
