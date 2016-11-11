@@ -342,9 +342,18 @@ void
 LogThread::add(const std::shared_ptr<Log>& l_ptr)
 {
 	if (running != 0) {
-		log_queue.add(l_ptr, time_point_to_us(l_ptr->wakeup));
+		auto wakeup = l_ptr->wakeup;
+		log_queue.add(l_ptr, time_point_to_us(wakeup));
 
-		if (time_point_from_ullong<std::chrono::system_clock>(next_wakeup_time) >= l_ptr->wakeup) {
+		bool notify = false;
+
+		auto nwt = next_wakeup_time.load();
+		auto wt = time_point_to_ullong(wakeup);
+		do {
+			notify = (nwt >= wt);
+		} while (nwt >= wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
+
+		if (notify) {
 			wakeup_signal.notify_all();
 		}
 	}
@@ -357,19 +366,21 @@ LogThread::thread_function(LogQueue& log_queue)
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
 
-	auto now = std::chrono::system_clock::now();
-	auto next_wakeup = now + 3s;
+	auto nwt = next_wakeup_time.load();
 
 	while (running != 0) {
 		if (--running < 0) {
 			running = -1;
 		}
 
-		next_wakeup_time = time_point_to_ullong(next_wakeup);
-		wakeup_signal.wait_until(lk, next_wakeup);
-
-		now = std::chrono::system_clock::now();
-		next_wakeup = now + (running < 0 ? 3s : 100ms);
+		auto wakeup = std::chrono::system_clock::now() + (running < 0 ? 3s : 100ms);
+		auto wt = time_point_to_ullong(wakeup);
+		if (next_wakeup_time.compare_exchange_strong(nwt, wt)) {
+			nwt = wt;
+		} else {
+			wakeup = time_point_from_ullong<std::chrono::system_clock>(next_wakeup_time);
+		}
+		wakeup_signal.wait_until(lk, wakeup);
 
 		try {
 			do {
