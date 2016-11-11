@@ -397,6 +397,8 @@ inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<s
 #define L_STACKED_LIGHT_CYAN(args...) auto UNIQUE_NAME = L_LIGHT_CYAN(args)
 #define L_STACKED_WHITE(args...) auto UNIQUE_NAME = L_WHITE(args)
 
+#define L_TEST L_NOTHING
+
 #ifdef NDEBUG
 #define L_DEBUG L_NOTHING
 #else

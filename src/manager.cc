@@ -74,6 +74,10 @@
 #include "utils.h"                           // for pos_time_t, SLOT_TIME_SE...
 #include "worker.h"                          // for Worker, enable_make_shared
 
+#ifndef L_MANAGER
+#define L_MANAGER L_TEST
+#endif
+
 
 static const std::regex time_re("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
 
@@ -690,18 +694,18 @@ XapiandManager::finish()
 {
 	L_CALL(this, "XapiandManager::finish()");
 
-	L_DEBUG(this, "Finishing servers pool!");
+	L_MANAGER(this, "Finishing servers pool!");
 	server_pool.finish();
 
 #ifdef XAPIAND_CLUSTERING
-	L_DEBUG(this, "Finishing replicators pool!");
+	L_MANAGER(this, "Finishing replicators pool!");
 	replicator_pool.finish();
 #endif
 
-	L_DEBUG(this, "Finishing commiters pool!");
+	L_MANAGER(this, "Finishing commiters pool!");
 	autocommit_pool.finish();
 
-	L_DEBUG(this, "Finishing async fsync pool!");
+	L_MANAGER(this, "Finishing async fsync pool!");
 	asyncfsync_pool.finish();
 }
 
@@ -711,36 +715,36 @@ XapiandManager::join()
 {
 	L_CALL(this, "XapiandManager::join()");
 
-	L_DEBUG(this, "Workers:" BLUE "%s", dump_tree().c_str());
+	L_MANAGER(this, "Workers:" BLUE "%s", dump_tree().c_str());
 
 	finish();
 
-	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.running_size(), (server_pool.running_size() == 1) ? "" : "s");
+	L_MANAGER(this, "Waiting for %zu server%s...", server_pool.running_size(), (server_pool.running_size() == 1) ? "" : "s");
 	server_pool.join();
 
 #ifdef XAPIAND_CLUSTERING
 	if (!solo) {
-		L_DEBUG(this, "Waiting for %zu replicator%s...", replicator_pool.running_size(), (replicator_pool.running_size() == 1) ? "" : "s");
+		L_MANAGER(this, "Waiting for %zu replicator%s...", replicator_pool.running_size(), (replicator_pool.running_size() == 1) ? "" : "s");
 		replicator_pool.join();
 	}
 #endif
 
-	L_DEBUG(this, "Waiting for %zu committer%s...", autocommit_pool.running_size(), (autocommit_pool.running_size() == 1) ? "" : "s");
+	L_MANAGER(this, "Waiting for %zu committer%s...", autocommit_pool.running_size(), (autocommit_pool.running_size() == 1) ? "" : "s");
 	autocommit_pool.join();
 
-	L_DEBUG(this, "Waiting for %zu async fsync%s...", asyncfsync_pool.running_size(), (asyncfsync_pool.running_size() == 1) ? "" : "s");
+	L_MANAGER(this, "Waiting for %zu async fsync%s...", asyncfsync_pool.running_size(), (asyncfsync_pool.running_size() == 1) ? "" : "s");
 	asyncfsync_pool.join();
 
-	L_DEBUG(this, "Finishing worker threads pool!");
+	L_MANAGER(this, "Finishing worker threads pool!");
 	thread_pool.finish();
 
-	L_DEBUG(this, "Finishing database pool!");
+	L_MANAGER(this, "Finishing database pool!");
 	database_pool.finish();
 
-	L_DEBUG(this, "Waiting for %zu worker thread%s...", thread_pool.running_size(), (thread_pool.running_size() == 1) ? "" : "s");
+	L_MANAGER(this, "Waiting for %zu worker thread%s...", thread_pool.running_size(), (thread_pool.running_size() == 1) ? "" : "s");
 	thread_pool.join();
 
-	L_DEBUG(this, "Server ended!");
+	L_MANAGER(this, "Server ended!");
 }
 
 
@@ -1103,3 +1107,5 @@ XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time
 		stats["_avg_time_update"] = delta_string(cnt[3] == 0 ? 0.0 : (tm_cnt[3] / cnt[3]));
 	}
 }
+
+#undef L_MANAGER

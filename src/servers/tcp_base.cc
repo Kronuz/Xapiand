@@ -45,7 +45,6 @@ BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* 
 	  description(description_)
 {
 	bind(tries_);
-	L_DEBUG(this, "Listening sock=%d", sock);
 
 	L_OBJ(this, "CREATED BASE TCP!");
 }

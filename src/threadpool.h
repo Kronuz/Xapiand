@@ -32,10 +32,13 @@
 #include <tuple>         // for tuple_size, tuple_cat
 #include <vector>        // for vector
 
-#include "logger.h"      // for L_DEBUG, L_EXC
+#include "logger.h"      // for L_DEBUG, L_EXC, L_NOTHING
 #include "queue.h"       // for Queue
 #include "utils.h"       // for set_thread_name
 
+#ifndef L_THREADPOOL
+#define L_THREADPOOL L_TEST
+#endif
 
 template<typename F, typename Tuple, std::size_t... I>
 static constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
@@ -187,7 +190,7 @@ class ThreadPool : public TaskQueue<Params...> {
 		set_thread_name(std::string(name));
 		function_mo<void(Params...)> task;
 
-		L_DEBUG(this, "Worker %s started! (size: %lu, capacity: %lu)", name, threadpool_size(), threadpool_capacity());
+		L_THREADPOOL(this, "Worker %s started! (size: %lu, capacity: %lu)", name, threadpool_size(), threadpool_capacity());
 		while (TaskQueue<Params...>::tasks.pop(task)) {
 			++running_tasks;
 			try {
@@ -207,7 +210,7 @@ class ThreadPool : public TaskQueue<Params...> {
 			}
 			--running_tasks;
 		}
-		L_DEBUG(this, "Worker %s ended.", name);
+		L_THREADPOOL(this, "Worker %s ended.", name);
 	}
 
 	bool spawn_workers() {
@@ -282,3 +285,5 @@ public:
 		return running_tasks.load();
 	}
 };
+
+#undef L_THREADPOOL

@@ -46,6 +46,9 @@
 #include "stl_serialise.h"                 // for StringSet
 #include "utils.h"                         // for repr, toUType, lower_string
 
+#ifndef L_SCHEMA
+#define L_SCHEMA L_TEST
+#endif
 
 /*
  * 1. Try reading schema from the metadata.
@@ -970,7 +973,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos)
 {
-	L_DEBUG(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
+	L_SCHEMA(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
 
 	if (item_value.is_null()) {
 		if (specification.flags.inside_namespace) {
@@ -1021,7 +1024,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value)
 {
-	L_DEBUG(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
+	L_SCHEMA(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
 
 	if (item_value.is_null()) {
 		if (specification.flags.inside_namespace) {
@@ -1072,7 +1075,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offsprings)
 {
-	L_DEBUG(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
+	L_SCHEMA(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
@@ -4151,3 +4154,5 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 
 	return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::string());
 }
+
+#undef L_SCHEMA

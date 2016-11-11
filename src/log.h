@@ -27,7 +27,6 @@
 #define _ L_NOTHING
 
 #ifdef NDEBUG
-#define L_TEST _
 #define L_OBJ_BEGIN _
 #define L_OBJ_END _
 #define L_DATABASE_BEGIN _
@@ -35,7 +34,6 @@
 #define L_EV_BEGIN _
 #define L_EV_END _
 #else
-#define L_TEST _
 #define L_OBJ_BEGIN L_DELAYED_1000
 #define L_OBJ_END L_DELAYED_N_UNLOG
 #define L_DATABASE_BEGIN L_DELAYED_200

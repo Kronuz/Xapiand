@@ -106,7 +106,8 @@ BinaryClient::~BinaryClient()
 bool
 BinaryClient::init_remote()
 {
-	L_DEBUG(this, "init_remote");
+	L_CALL(this, "BinaryClient::init_remote()");
+
 	state = State::INIT;
 
 	XapiandManager::manager->thread_pool.enqueue(share_this<BinaryClient>());
