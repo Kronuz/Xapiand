@@ -316,7 +316,7 @@ std::atomic_ullong LogThread::next_wakeup_time;
 
 LogThread::LogThread()
 	: running(-1),
-	  inner_thread(&LogThread::thread_function, this, std::ref(log_list)) { }
+	  inner_thread(&LogThread::thread_function, this, std::ref(log_queue)) { }
 
 
 LogThread::~LogThread()
@@ -342,7 +342,7 @@ void
 LogThread::add(const std::shared_ptr<Log>& l_ptr)
 {
 	if (running != 0) {
-		log_list.push_back(l_ptr);
+		log_queue.add(l_ptr, time_point_to_us(l_ptr->wakeup));
 
 		if (time_point_from_ullong<std::chrono::system_clock>(next_wakeup_time) >= l_ptr->wakeup) {
 			wakeup_signal.notify_all();
@@ -352,7 +352,7 @@ LogThread::add(const std::shared_ptr<Log>& l_ptr)
 
 
 void
-LogThread::thread_function(DLList<const std::shared_ptr<Log>>& log_list)
+LogThread::thread_function(LogQueue& log_queue)
 {
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
@@ -371,11 +371,14 @@ LogThread::thread_function(DLList<const std::shared_ptr<Log>>& log_list)
 		now = std::chrono::system_clock::now();
 		next_wakeup = now + (running < 0 ? 3s : 100ms);
 
-		for (auto it = log_list.begin(); it != log_list.end(); ) {
-			auto& l_ptr = *it;
-			if (l_ptr->cleared) {
-				it = log_list.erase(it);
-			} else if (l_ptr->wakeup <= now) {
+		try {
+			do {
+				auto l_ptr = log_queue.next(running < 0);
+
+				if (l_ptr->cleared) {
+					continue;
+				}
+
 				auto msg = l_ptr->str_start;
 				auto age = l_ptr->age();
 				if (age > 2e8) {
@@ -383,20 +386,10 @@ LogThread::thread_function(DLList<const std::shared_ptr<Log>>& log_list)
 				}
 				l_ptr->clear();
 				Log::log(l_ptr->priority, msg, l_ptr->stack_level * 2);
-				it = log_list.erase(it);
-			} else if (next_wakeup > l_ptr->wakeup) {
-				next_wakeup = l_ptr->wakeup;
-				++it;
-			} else {
-				++it;
-			}
-		}
+			} while (true);
+		} catch(const StashContinue&) { }
 
-		if (next_wakeup < now + 100ms) {
-			next_wakeup = now + 100ms;
-		}
-
-		if (running >= 0 && !log_list.size()) {
+		if (running >= 0) {
 			break;
 		}
 	}

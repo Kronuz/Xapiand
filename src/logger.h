@@ -39,12 +39,9 @@
 #include <vector>             // for vector
 #include <condition_variable> // for condition_variable
 
-#include "dllist.h"           // for DLList
 #include "exception.h"
+#include "stash.h"
 #include "xapiand.h"
-
-
-class Exception;
 
 
 #define MERGE_(a,b)  a##b
@@ -202,15 +199,49 @@ public:
 };
 
 
+template <typename T>
+inline uint64_t time_point_to_us(std::chrono::time_point<T> n) {
+	return std::chrono::duration_cast<std::chrono::microseconds>(n.time_since_epoch()).count();
+}
+
+
+static inline uint64_t now() {
+	return time_point_to_us(std::chrono::system_clock::now());
+}
+
+
+class LogQueue {
+	using _logs =         StashValues<Log,         10ULL>;
+	using _50_1ms =       StashSlots<_logs,        10ULL,   &now, 500ULL, 1000ULL,       50ULL,   false>;
+	using _10_50ms =      StashSlots<_50_1ms,      10ULL,   &now, 0ULL,   50000ULL,      10ULL,   false>;
+	using _7200_500ms =   StashSlots<_10_50ms,     1200ULL, &now, 0ULL,   500000ULL,     7200ULL, false>;
+	using _24_3600000ms = StashSlots<_7200_500ms,  24ULL,   &now, 0ULL,   3600000000ULL, 24ULL,   true>;
+	_24_3600000ms queue;
+
+public:
+	LogQueue() : queue(now()) { }
+
+	auto next(bool final=true, uint64_t final_key=0, bool keep_going=true) {
+		keep_going = keep_going && !final_key;
+		return queue.next(final, final_key, keep_going);
+	}
+
+	template <typename T>
+	auto add(T&& value, uint64_t key=0) {
+		return queue.add(std::forward<T>(value), key);
+	}
+};
+
+
 class LogThread {
 	std::condition_variable wakeup_signal;
 	static std::atomic_ullong next_wakeup_time;
 
-	DLList<const std::shared_ptr<Log>> log_list;
+	LogQueue log_queue;
 	std::atomic_int running;
 	std::thread inner_thread;
 
-	void thread_function(DLList<const std::shared_ptr<Log>>& log_list);
+	void thread_function(LogQueue& log_queue);
 
 public:
 	LogThread();
