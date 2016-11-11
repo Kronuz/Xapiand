@@ -214,9 +214,9 @@ class LogQueue {
 	using _logs =         StashValues<Log,         10ULL>;
 	using _50_1ms =       StashSlots<_logs,        10ULL,   &now, 0ULL, 1000000ULL,       50ULL,   false>;
 	using _10_50ms =      StashSlots<_50_1ms,      10ULL,   &now, 0ULL, 50000000ULL,      10ULL,   false>;
-	using _7200_500ms =   StashSlots<_10_50ms,     1200ULL, &now, 0ULL, 500000000ULL,     7200ULL, false>;
-	using _24_3600s =     StashSlots<_7200_500ms,  24ULL,   &now, 0ULL, 3600000000000ULL, 24ULL,   true>;
-	_24_3600s queue;
+	using _3600_500ms =   StashSlots<_10_50ms,     600ULL,  &now, 0ULL, 500000000ULL,     3600ULL, false>;
+	using _48_1800s =     StashSlots<_3600_500ms,  48ULL,   &now, 0ULL, 1800000000000ULL, 48ULL,   true>;
+	_48_1800s queue;
 
 public:
 	LogQueue() : queue(now()) { }
