@@ -295,17 +295,19 @@ namespace epoch {
 }
 
 
+template <typename T>
 inline
 unsigned long long
-system_clock_to_ullong(std::chrono::time_point<std::chrono::system_clock> t) {
+time_point_to_ullong(std::chrono::time_point<T> t) {
 	return *reinterpret_cast<unsigned long long*>(&t);
 }
 
 
+template <typename T>
 inline
-std::chrono::time_point<std::chrono::system_clock>
-system_clock_from_ullong(unsigned long long t) {
-	return *reinterpret_cast<std::chrono::time_point<std::chrono::system_clock>*>(&t);
+std::chrono::time_point<T>
+time_point_from_ullong(unsigned long long t) {
+	return *reinterpret_cast<std::chrono::time_point<T>*>(&t);
 }
 
 
