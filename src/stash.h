@@ -312,17 +312,22 @@ public:
 
 	auto next(bool final, uint64_t final_key, bool keep_going) {
 		// std::cout << "\tTimeStash<_Mod=" << _Mod << ">::next(" << (final ? "true" : "false") <<", " << final_key << ", " << (keep_going ? "true" : "false") << ")" << std::endl;
+
+		auto pos = Stash::pos.load();
+		if (_Ring) {
+			// If it's a ring (top level) start one slot easlier (just in case).
+			while (!Stash::pos.compare_exchange_weak(pos, (pos - 1) % _Mod));
+		}
+
 		keep_going &= final;
 		if (keep_going) {
 			final_key = _CurrentKey();
 		}
-		auto initial_pos = Stash::pos.load();
+		auto initial_pos = pos;
 		auto last_pos = static_cast<size_t>((initial_pos + _Mod - 1) % _Mod);
 		auto final_pos = final ? get_slot(final_key) : last_pos;
 
 		do {
-			auto pos = Stash::pos.load();
-
 			Bin* ptr = nullptr;
 			try {
 				// std::cout << "\t\tTimeStash<_Mod=" << _Mod << "> pos:" << pos << ", initial_pos:" << initial_pos << ", final:" << (final ? "true" : "false") << ", final_pos:" << final_pos << ", last_pos:" << last_pos << std::endl;
@@ -344,6 +349,8 @@ public:
 				// Dispose if it's not in the final slice
 				ptr->val.clear();
 			}
+
+			pos = Stash::pos.load();
 		} while (true);
 	}
 
