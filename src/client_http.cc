@@ -1820,6 +1820,8 @@ HttpClient::clean_http_request()
 void
 HttpClient::set_idle()
 {
+	L_CALL(this, "HttpClient::set_idle()");
+
 	response_log.load()->clear();
 	response_log = L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
 	idle = true;
