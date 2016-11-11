@@ -547,7 +547,7 @@ HttpClient::_run()
 		L_EXC(this, "ERROR: %s", error.c_str());
 	}
 
-	if (error_code) {
+	if (error_code != HTTP_STATUS_OK) {
 		if (written) {
 			destroy();
 			detach();
