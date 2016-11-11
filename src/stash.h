@@ -348,7 +348,7 @@ public:
 
 			final_pos = increment_pos(pos, keep_going, initial_pos, final_pos, last_pos);
 
-			if (!final && ptr) {
+			if (_Ring && !final && ptr) {
 				// Dispose if it's not in the final slice
 				ptr->val.clear();
 			}
