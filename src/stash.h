@@ -314,9 +314,12 @@ public:
 		// std::cout << "\tTimeStash<_Mod=" << _Mod << ">::next(" << (final ? "true" : "false") <<", " << final_key << ", " << (keep_going ? "true" : "false") << ")" << std::endl;
 
 		auto pos = Stash::pos.load();
+
+		// Always start one slot earlier (just in case).
 		if (_Ring) {
-			// If it's a ring (top level) start one slot easlier (just in case).
 			while (!Stash::pos.compare_exchange_weak(pos, (pos - 1) % _Mod));
+		} else {
+			while (pos > 0 && !Stash::pos.compare_exchange_weak(pos, pos - 1));
 		}
 
 		keep_going &= final;
