@@ -1,5 +1,5 @@
 {
-	"_data": "Planet Apes",
+	"movie": "Planet Apes",
 	"actors": {
 		"male": [
 			"Roddy McDowall",

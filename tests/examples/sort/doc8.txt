@@ -1,5 +1,5 @@
 {
-	"_data": "8",
+	"number": "8",
 	"name": {
 		"en": ["cooking", "hello world"],
 		"es": ["cocina", "hola mundo"],

@@ -1,5 +1,5 @@
 {
-	"_data": "6",
+	"number": "6",
 	"name": {
 		"en": ["world"],
 		"es": ["mundo"],

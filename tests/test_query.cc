@@ -30,100 +30,94 @@ const std::string path_test_query = std::string(PACKAGE_PATH_TEST) + "/examples/
 
 // TEST query
 const test_query_t test_query[] {
-	// Testing string field terms.
+	//Testing string field terms.
 	{
-		{ "description:American teenager" }, { }, { }, { "Back to the Future", "Planet Apes" }, { }
+		{ "description:\"American teenager\"" }, { }, { "Back to the Future", "Planet Apes" }, "movie"
 	},
 	{
-		{ "American teenager" }, { }, { }, { "Back to the Future" }, { }
+		{ "\"American teenager\"" }, { }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ "description:Dakota" }, { }, { }, { "North Dakota", "Bismarck", "Minot", "Rapid City", "North Dakota and South Dakota" }, { }
+		{ "name.es:'hola mundo'" }, { }, { "3", "8" }, "number"
 	},
 	{
-		{ "description:dakotA" }, { }, { }, { "North Dakota", "Bismarck", "Minot", "Rapid City", "North Dakota and South Dakota" }, { }
+		{ "name.en:bookstore" }, { }, { "2" }, "number"
+	},
+	// autor.male is a bool_term. Therefore it is case sensitive.
+	{
+		{ "actors.male:'Michael J. Fox'" }, { }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ "name:hola mundo" }, { }, { }, { "3", "4", "7", "8" }, { }
+		{ "actors.male:'Michael j. Fox'" }, { }, { }, "movie"
 	},
 	{
-		{ "name:\"book store\"" }, { }, { }, { "2" }, { }
-	},
-	// autor__male is a bool_term. Therefore it is case sensitive.
-	{
-		{ "actors__male:\"Michael J. Fox\"" }, { }, { }, { "Back to the Future" }, { }
+		{ "actors.male:'Roddy McDowall'" }, { }, { "Planet Apes" }, "movie"
 	},
 	{
-		{ "actors__male:\"Michael j. Fox\"" }, { }, { }, { }, { }
+		{ "actors.male:'roddy mcdowall'" }, { }, { }, "movie"
+	},
+	// autor.female is not a bool_term. Therefore it is not case sensitive.
+	{
+		{ "actors.female:LINDA" }, { }, { "Planet Apes" }, "movie"
 	},
 	{
-		{ "actors__male:\"Roddy McDowall\"" }, { }, { }, { "Planet Apes" }, { }
-	},
-	{
-		{ "actors__male:\"roddy mcdowall\"" }, { }, { }, { }, { }
-	},
-	// autor__female is not a bool_term. Therefore it is not case sensitive.
-	{
-		{ "actors__female:LINDA" }, { }, { }, { "Planet Apes" }, { }
-	},
-	{
-		{ "actors__female:linda" }, { }, { }, { "Planet Apes" }, { }
+		{ "actors.female:linda" }, { }, { "Planet Apes" }, "movie"
 	},
 	// OR
 	{
-		{ "actors__female:linda actors__male:\"Michael J. Fox\"" }, { }, { }, { "Back to the Future", "Planet Apes" }, { }
+		{ "actors.female:linda OR actors.male:'Michael J. Fox'" }, { }, { "Back to the Future", "Planet Apes" }, "movie"
 	},
 	// AND
 	{
-		{ "actors__female:linda", "actors__male:\"Michael J. Fox\"" }, { }, { }, { }, { }
+		{ "actors.female:linda AND actors.male:'Michael J. Fox'" }, { }, { }, "movie"
 	},
 	// Testing date terms
 	{
-		{ "released:1985-07-03" }, { }, { }, { "Back to the Future" }, { }
+		{ "released:1985-07-03" }, { }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ "date:2011-01-01||+1y-1y+3M-3M" }, { }, { }, { "1", "10" }, { }
+		{ "date:'2011-01-01||+1y-1y+3M-3M'" }, { }, { "1", "10" }, "number"
 	},
 	{
-		{ "date:2011-01-01||+4y" }, { }, { }, { "5", "6" }, { }
+		{ "date:'2011-01-01||+4y'" }, { }, { "5", "6" }, "number"
 	},
 	// OR
 	{
-		{ "date:2011-01-01||+1y-1y+3M-3M date:2011-01-01||+4y" }, { }, { }, { "1", "5", "6", "10" }, { }
+		{ "date:'2011-01-01||+1y-1y+3M-3M' OR date:'2011-01-01||+4y'" }, { }, { "1", "5", "6", "10" }, "number"
 	},
 	// AND
 	{
-		{ "date:2011-01-01||+1y-1y+3M-3M", "date:2011-01-01||+4y" }, { }, { }, { }, { }
+		{ "date:'2011-01-01||+1y-1y+3M-3M' AND date:'2011-01-01||+4y'" }, { }, { }, "number"
 	},
 	// Testing numeric terms
 	{
-		{ "year:2001" }, { }, { }, { "2", "9" }, { }
+		{ "year:2001" }, { }, { "2", "9" }, "number"
 	},
 	{
-		{ "year:0" }, { }, { }, { "3", "8" }, { }
+		{ "year:0" }, { }, { "3", "8" }, "number"
 	},
 	// OR
 	{
-		{ "year:2001 year:0" }, { }, { }, { "2", "3", "8", "9" }, { }
+		{ "year:2001 OR year:0" }, { }, { "2", "3", "8", "9" }, "number"
 	},
 	// AND
 	{
-		{ "year:2001", "year:0" }, { }, { }, { }, { }
+		{ "year:2001 AND year:0" }, { }, { }, "number"
 	},
 	// Testing boolean terms
 	{
-		{ "there:true" }, { }, { }, { "1", "3", "4", "7", "8", "10" }, { }
+		{ "there:true" }, { }, { "1", "3", "4", "7", "8", "10" }, "number"
 	},
 	{
-		{ "there:false" }, { }, { }, { "1", "2", "5", "6", "9", "10" }, { }
+		{ "there:false" }, { }, { "1", "2", "5", "6", "9", "10" }, "number"
 	},
 	// OR
 	{
-		{ "there:true there:false" }, { }, { }, { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" }, { }
+		{ "there:true OR there:false" }, { }, { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" }, "number"
 	},
 	// AND
 	{
-		{ "there:true", "there:false" }, { }, { }, { "1", "10" }, { }
+		{ "there:true AND there:false" }, { }, { "1", "10" }, "number"
 	}
 	// Testing geospatials is in test_geo.cc.
 };
@@ -133,33 +127,31 @@ const test_query_t test_query[] {
 const test_query_t test_partials[] {
 	// Only applying for strings types.
 	{
-		{ }, { "directed_by:Rob" }, { }, { "Back to the Future" }, { }
+		{ }, { "directed_by:Rob" }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ }, { "directed_by:Zem" }, { }, { "Back to the Future" }, { }
+		{ }, { "directed_by:Zem" }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ }, { "description:Dak" }, { }, { "North Dakota", "Bismarck", "Minot", "Rapid City", "North Dakota and South Dakota" }, { }
+		{ }, { "description:t" }, {"Back to the Future", "Planet Apes" }, "movie"
 	},
 	{
-		{ }, { "description:t" }, { }, { "North Dakota", "Utah", "Wyoming", "Mountain View, Wyoming", "Back to the Future", "Planet Apes" }, { }
-	},
-	{
-		{ }, { "description:south dak" }, { }, { "Rapid City", "Utah", "North Dakota and South Dakota" }, { }
+		{ }, { "description:south dak" }, { "Rapid City", "Utah", "North Dakota and South Dakota" }, "movie"
 	}
 };
 
 
 static DB_Test db_query(".db_query.db", std::vector<std::string>({
+		// FIXME:
 		// Examples used in test geo.
-		path_test_query + "json/geo_1.txt",
-		path_test_query + "json/geo_2.txt",
-		path_test_query + "json/geo_3.txt",
-		path_test_query + "json/geo_4.txt",
-		path_test_query + "json/geo_5.txt",
-		path_test_query + "json/geo_6.txt",
-		path_test_query + "json/geo_7.txt",
-		path_test_query + "json/geo_8.txt",
+		// path_test_query + "json/geo_1.txt",
+		// path_test_query + "json/geo_2.txt",
+		// path_test_query + "json/geo_3.txt",
+		// path_test_query + "json/geo_4.txt",
+		// path_test_query + "json/geo_5.txt",
+		// path_test_query + "json/geo_6.txt",
+		// path_test_query + "json/geo_7.txt",
+		// path_test_query + "json/geo_8.txt",
 		// Examples used in test sort.
 		path_test_query + "sort/doc1.txt",
 		path_test_query + "sort/doc2.txt",
@@ -217,10 +209,18 @@ static int make_search(const test_query_t _tests[], int len) {
 				Xapian::MSetIterator m = mset.begin();
 				for (auto it = p.expect_datas.begin(); m != mset.end(); ++it, ++m) {
 					auto document = db_query.db_handler.get_document(*m);
-					auto aobj_data = document.get_obj();
-					++cont;
-					std::exception exc;
-					L_EXC(nullptr, "ERROR: %s", exc.what());
+					auto obj_data = document.get_obj();
+					try {
+						auto data = obj_data.at(p.field);
+						auto str_data = data.as_string();
+						if (it->compare(str_data) != 0) {
+							++cont;
+							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", p.field.c_str(), str_data.c_str(), p.field.c_str(), it->c_str());
+						}
+					} catch (const msgpack::type_error& exc) {
+						++cont;
+						L_EXC(nullptr, "ERROR: %s", exc.what());
+					}
 				}
 			}
 		} catch (const std::exception& exc) {

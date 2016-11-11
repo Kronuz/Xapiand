@@ -1,5 +1,5 @@
 {
-	"_data": "7",
+	"number": "7",
 	"name": {
 		"en": ["hello"],
 		"es": ["hola"],

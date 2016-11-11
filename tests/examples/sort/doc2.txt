@@ -1,5 +1,5 @@
 {
-	"_data": "2",
+	"number": "2",
 	"name": {
 		"en": ["bookstore", "book"],
 		"es": ["librería", "libro"],
