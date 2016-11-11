@@ -204,7 +204,7 @@ public:
 
 class LogThread {
 	std::condition_variable wakeup_signal;
-	std::atomic<std::time_t> wakeup;
+	static std::atomic_ullong next_wakeup_time;
 
 	DLList<const std::shared_ptr<Log>> log_list;
 	std::atomic_int running;

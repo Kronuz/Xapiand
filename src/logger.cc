@@ -312,6 +312,8 @@ Log::finish(int wait)
 }
 
 
+std::atomic_ullong LogThread::next_wakeup_time;
+
 LogThread::LogThread()
 	: running(-1),
 	  inner_thread(&LogThread::thread_function, this, std::ref(log_list)) { }
@@ -342,7 +344,7 @@ LogThread::add(const std::shared_ptr<Log>& l_ptr)
 	if (running != 0) {
 		log_list.push_back(l_ptr);
 
-		if (std::chrono::system_clock::from_time_t(wakeup) >= l_ptr->wakeup) {
+		if (time_point_from_ullong<std::chrono::system_clock>(next_wakeup_time) >= l_ptr->wakeup) {
 			wakeup_signal.notify_all();
 		}
 	}
@@ -350,7 +352,7 @@ LogThread::add(const std::shared_ptr<Log>& l_ptr)
 
 
 void
-LogThread::thread_function(DLList<const std::shared_ptr<Log>>& _log_list)
+LogThread::thread_function(DLList<const std::shared_ptr<Log>>& log_list)
 {
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
@@ -363,16 +365,16 @@ LogThread::thread_function(DLList<const std::shared_ptr<Log>>& _log_list)
 			running = -1;
 		}
 
-		wakeup = std::chrono::system_clock::to_time_t(next_wakeup);
+		next_wakeup_time = time_point_to_ullong(next_wakeup);
 		wakeup_signal.wait_until(lk, next_wakeup);
 
 		now = std::chrono::system_clock::now();
 		next_wakeup = now + (running < 0 ? 3s : 100ms);
 
-		for (auto it = _log_list.begin(); it != _log_list.end(); ) {
+		for (auto it = log_list.begin(); it != log_list.end(); ) {
 			auto& l_ptr = *it;
 			if (l_ptr->cleared) {
-				it = _log_list.erase(it);
+				it = log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
 				auto msg = l_ptr->str_start;
 				auto age = l_ptr->age();
@@ -381,7 +383,7 @@ LogThread::thread_function(DLList<const std::shared_ptr<Log>>& _log_list)
 				}
 				l_ptr->clear();
 				Log::log(l_ptr->priority, msg, l_ptr->stack_level * 2);
-				it = _log_list.erase(it);
+				it = log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;
 				++it;
