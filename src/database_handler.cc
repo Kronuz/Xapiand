@@ -424,7 +424,7 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 		throw MSG_ClientError("Document must have an 'id'");
 	}
 
-	if (!patches.is_map()) {
+	if (!patches.is_map() && !patches.is_array()) {
 		throw MSG_ClientError("Patches must be a JSON or MsgPack");
 	}
 
