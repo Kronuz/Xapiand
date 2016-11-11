@@ -205,7 +205,7 @@ enum class HttpMethod : uint8_t {
 	POST     =  3,
 	PUT      =  4,
 	OPTIONS  =  6,
-	PATCH    =  24,
+	PATCH    =  28,
 };
 
 
