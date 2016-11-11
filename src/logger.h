@@ -201,7 +201,7 @@ public:
 
 template <typename T>
 inline uint64_t time_point_to_us(std::chrono::time_point<T> n) {
-	return std::chrono::duration_cast<std::chrono::microseconds>(n.time_since_epoch()).count();
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(n.time_since_epoch()).count();
 }
 
 
@@ -212,11 +212,11 @@ static inline uint64_t now() {
 
 class LogQueue {
 	using _logs =         StashValues<Log,         10ULL>;
-	using _50_1ms =       StashSlots<_logs,        10ULL,   &now, 500ULL, 1000ULL,       50ULL,   false>;
-	using _10_50ms =      StashSlots<_50_1ms,      10ULL,   &now, 0ULL,   50000ULL,      10ULL,   false>;
-	using _7200_500ms =   StashSlots<_10_50ms,     1200ULL, &now, 0ULL,   500000ULL,     7200ULL, false>;
-	using _24_3600000ms = StashSlots<_7200_500ms,  24ULL,   &now, 0ULL,   3600000000ULL, 24ULL,   true>;
-	_24_3600000ms queue;
+	using _50_1ms =       StashSlots<_logs,        10ULL,   &now, 500000ULL, 1000000ULL,       50ULL,   false>;
+	using _10_50ms =      StashSlots<_50_1ms,      10ULL,   &now, 0ULL,      50000000ULL,      10ULL,   false>;
+	using _7200_500ms =   StashSlots<_10_50ms,     1200ULL, &now, 0ULL,      500000000ULL,     7200ULL, false>;
+	using _24_3600s =     StashSlots<_7200_500ms,  24ULL,   &now, 0ULL,      3600000000000ULL, 24ULL,   true>;
+	_24_3600s queue;
 
 public:
 	LogQueue() : queue(now()) { }
