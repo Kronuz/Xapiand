@@ -144,7 +144,7 @@ struct DB_Test {
 	std::string name_database;
 	Endpoints endpoints;
 
-	DB_Test(const std::string& db_name, const std::vector<std::string>& docs, int flags)
+	DB_Test(const std::string& db_name, const std::vector<std::string>& docs, int flags, const std::string& ct_type=JSON_CONTENT_TYPE)
 		: name_database(db_name)
 	{
 		// Delete database to create.
@@ -163,7 +163,7 @@ struct DB_Test {
 				if (!read_file_contents(doc, &buffer)) {
 					delete_files(name_database);
 					L_ERR(nullptr, "Can not read the file %s", doc.c_str());
-				} else if (db_handler.index( std::to_string(i++), buffer, true, JSON_CONTENT_TYPE) == 0) {
+				} else if (db_handler.index(std::to_string(i++), get_body(buffer, ct_type).second, true, ct_type) == 0) {
 					delete_files(name_database);
 					throw MSG_Error("File %s can not index", doc.c_str());
 				}
@@ -191,6 +191,33 @@ struct DB_Test {
 			ev::default_loop default_loop(opts.ev_flags);
 			XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
 		}
+	}
+
+	std::pair<std::string, MsgPack> get_body(const std::string& body, const std::string& ct_type) {
+		MsgPack msgpack;
+		rapidjson::Document rdoc;
+		switch (xxh64::hash(ct_type)) {
+			case xxh64::hash(FORM_URLENCODED_CONTENT_TYPE):
+				try {
+					json_load(rdoc, body);
+					msgpack = MsgPack(rdoc);
+				} catch (const std::exception&) {
+					msgpack = MsgPack(body);
+				}
+				break;
+			case xxh64::hash(JSON_CONTENT_TYPE):
+				json_load(rdoc, body);
+				msgpack = MsgPack(rdoc);
+				break;
+			case xxh64::hash(MSGPACK_CONTENT_TYPE):
+				msgpack = MsgPack::unserialise(body);
+				break;
+			default:
+				msgpack = MsgPack(body);
+				break;
+		}
+
+		return std::make_pair(ct_type, msgpack);
 	}
 };
 #endif
