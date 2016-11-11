@@ -134,9 +134,6 @@ const test_query_t test_partials[] {
 	},
 	{
 		{ }, { "description:t" }, {"Back to the Future", "Planet Apes" }, "movie"
-	},
-	{
-		{ }, { "description:south dak" }, { "Rapid City", "Utah", "North Dakota and South Dakota" }, "movie"
 	}
 };
 
