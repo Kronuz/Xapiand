@@ -156,13 +156,13 @@ DatabaseHandler::lock_database::unlock() noexcept
 
 DatabaseHandler::DatabaseHandler()
 	: flags(0),
-	  method(HttpMethod::GET) { }
+	  method(HTTP_GET) { }
 
 
 DatabaseHandler::DatabaseHandler(const Endpoints &endpoints_, int flags_)
 	: endpoints(endpoints_),
 	  flags(flags_),
-	  method(HttpMethod::GET) { }
+	  method(HTTP_GET) { }
 
 
 std::shared_ptr<Database>
@@ -199,7 +199,7 @@ DatabaseHandler::get_fvschema() const
 
 
 void
-DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, HttpMethod method_)
+DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_)
 {
 	L_CALL(this, "DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()).c_str(), flags_);
 
@@ -250,7 +250,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 		auto processor = v8pp::Processor::compile("_script", script);
 
 		switch (method) {
-			case HttpMethod::PUT: {
+			case HTTP_PUT: {
 				MsgPack old_data;
 				try {
 					auto document = get_document_term(term_id);
@@ -260,7 +260,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 				return (*processor)["on_put"](data_, old_data);
 			}
 
-			case HttpMethod::PATCH: {
+			case HTTP_PATCH: {
 				MsgPack old_data;
 				try {
 					auto document = get_document_term(term_id);
@@ -270,7 +270,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 				return (*processor)["on_patch"](data_, old_data);
 			}
 
-			case HttpMethod::DELETE: {
+			case HTTP_DELETE: {
 				MsgPack old_data;
 				try {
 					auto document = get_document_term(term_id);
@@ -280,12 +280,12 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 				return (*processor)["on_delete"](data_, old_data);
 			}
 
-			case HttpMethod::GET: {
+			case HTTP_GET: {
 				MsgPack data_ = data;
 				return (*processor)["on_get"](data_);
 			}
 
-			case HttpMethod::POST: {
+			case HTTP_POST: {
 				MsgPack data_ = data;
 				return (*processor)["on_post"](data_);
 			}
@@ -470,7 +470,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 
 	schema = get_schema();
 
-	schema->write_schema(obj, method == HttpMethod::PUT);
+	schema->write_schema(obj, method == HTTP_PUT);
 
 	update_schema();
 }
@@ -612,13 +612,13 @@ DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, con
 	Xapian::Query query;
 	DatabaseHandler::lock_database lk(this);
 	switch (method) {
-		case HttpMethod::GET: {
+		case HTTP_GET: {
 			Query query_object(schema, database);
 			query = query_object.get_query(e, suggestions);
 			break;
 		}
 
-		case HttpMethod::POST: {
+		case HTTP_POST: {
 			if (qdsl && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
 				QueryDSL query_object(schema);
 				query = query_object.get_query(qdsl->at(QUERYDSL_QUERY));

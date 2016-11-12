@@ -198,17 +198,6 @@ struct query_field_t {
 };
 
 
-enum class HttpMethod : uint8_t {
-	DELETE   =  0,
-	GET      =  1,
-	HEAD     =  2,
-	POST     =  3,
-	PUT      =  4,
-	OPTIONS  =  6,
-	PATCH    =  28,
-};
-
-
 // All non-empty field names not starting with underscore are valid.
 inline bool is_valid(const std::string& field_name) {
 	return !field_name.empty() && field_name.at(0) != '_';

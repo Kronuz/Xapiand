@@ -62,6 +62,7 @@
 #include "endpoint.h"                        // for Node, Endpoint, local_node
 #include "ev/ev++.h"                         // for async, loop_ref (ptr only)
 #include "exception.h"                       // for Exit, ClientError, Excep...
+#include "http_parser.h"                     // for http_method
 #include "io_utils.h"                        // for close, open, read, write
 #include "log.h"                             // for Log, L_CALL, L_DEBUG
 #include "manager.h"                         // for XapiandManager, opts_t
@@ -316,12 +317,12 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	DatabaseHandler db_handler;
 	auto local_node_ = local_node.load();
 	try {
-		db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL, HttpMethod::GET);
+		db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL, HTTP_GET);
 	} catch (const CheckoutError&) {
 		new_cluster = 1;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		try {
-			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HttpMethod::GET);
+			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HTTP_GET);
 			db_handler.index("." + serialise_node_id(local_node_->id), {
 				{ RESERVED_INDEX, "field_all" },
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  STRING_STR } } },

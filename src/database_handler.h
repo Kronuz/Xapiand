@@ -31,8 +31,9 @@
 #include <unordered_map>                     // for unordered_map
 #include <vector>                            // for vector
 
-#include "database_utils.h"                  // for HttpMethod, query_field_...
+#include "database_utils.h"                  // for query_field_...
 #include "endpoint.h"                        // for Endpoints
+#include "http_parser.h"                     // for http_method
 #include "msgpack.h"                         // for MsgPack
 
 class AggregationMatchSpy;
@@ -72,7 +73,7 @@ class DatabaseHandler {
 
 	Endpoints endpoints;
 	int flags;
-	HttpMethod method;
+	enum http_method method;
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
@@ -107,7 +108,7 @@ public:
 	std::shared_ptr<Schema> get_schema() const;
 	std::shared_ptr<Schema> get_fvschema() const;
 
-	void reset(const Endpoints& endpoints_, int flags_, HttpMethod method_);
+	void reset(const Endpoints& endpoints_, int flags_, enum http_method method_);
 
 	Xapian::docid index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
 	Xapian::docid index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);

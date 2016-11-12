@@ -153,7 +153,7 @@ struct DB_Test {
 
 		endpoints.add(create_endpoint(name_database));
 
-		db_handler.reset(endpoints, flags, HttpMethod::GET);
+		db_handler.reset(endpoints, flags, HTTP_GET);
 
 		// Index documents in the database.
 		size_t i = 1;

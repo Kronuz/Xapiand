@@ -40,7 +40,7 @@
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "client_base.h"        // for BaseClient
 #include "database_handler.h"   // for DatabaseHandler
-#include "database_utils.h"     // for HttpMethod, query_field_t (ptr only)
+#include "database_utils.h"     // for query_field_t (ptr only)
 #include "http_parser.h"        // for http_parser, http_parser_settings
 #include "url_parser.h"         // for PathParser, QueryParser
 #include "lru.h"                // for LRU
@@ -60,7 +60,7 @@ class Worker;
 #define HTTP_CONTENT_TYPE      (1 << 4)
 #define HTTP_CONTENT_ENCODING  (1 << 5)
 #define HTTP_CHUNKED           (1 << 6)
-#define HTTP_OPTIONS           (1 << 7)
+#define HTTP_OPTIONS_RESPONSE  (1 << 7)
 #define HTTP_TOTAL_COUNT       (1 << 8)
 #define HTTP_MATCHES_ESTIMATED (1 << 9)
 #define HTTP_EXPECTED_CONTINUE (1 << 10)
@@ -165,26 +165,26 @@ class HttpClient : public BaseClient {
 
 	std::pair<std::string, MsgPack> get_body();
 
-	void home_view(HttpMethod method);
-	void info_view(HttpMethod method);
-	void delete_document_view(HttpMethod method);
-	void index_document_view(HttpMethod method);
-	void write_schema_view(HttpMethod method);
-	void document_info_view(HttpMethod method);
-	void update_document_view(HttpMethod method);
-	void search_view(HttpMethod method);
-	void touch_view(HttpMethod method);
-	void schema_view(HttpMethod method);
-	void nodes_view(HttpMethod method);
+	void home_view(enum http_method method);
+	void info_view(enum http_method method);
+	void delete_document_view(enum http_method method);
+	void index_document_view(enum http_method method);
+	void write_schema_view(enum http_method method);
+	void document_info_view(enum http_method method);
+	void update_document_view(enum http_method method);
+	void search_view(enum http_method method);
+	void touch_view(enum http_method method);
+	void schema_view(enum http_method method);
+	void nodes_view(enum http_method method);
 	void status_view(enum http_status status, const std::string& message="");
 
-	void _options();
-	void _head();
-	void _get();
-	void _put();
-	void _post();
-	void _patch();
-	void _delete();
+	void _options(enum http_method method);
+	void _head(enum http_method method);
+	void _get(enum http_method method);
+	void _put(enum http_method method);
+	void _post(enum http_method method);
+	void _patch(enum http_method method);
+	void _delete(enum http_method method);
 
 	Command url_resolve();
 	void _endpoint_maker(std::chrono::duration<double, std::milli> timeout);
