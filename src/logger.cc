@@ -151,6 +151,30 @@ Log::age()
 }
 
 
+LogQueue::LogQueue()
+	: queue(now())
+{ }
+
+
+LogType&
+LogQueue::next(bool final, uint64_t final_key, bool keep_going)
+{
+	keep_going = keep_going && !final_key;
+	return queue.next(final, final_key, keep_going);
+}
+
+
+LogType&
+LogQueue::add(const LogType& l_ptr, uint64_t key)
+{
+	auto n = now();
+	if (key < n) {
+		key = n;
+	}
+	return queue.add(l_ptr, key + MUL / 2ULL);
+}
+
+
 /*
  * https://isocpp.org/wiki/faq/ctors#static-init-order
  * Avoid the "static initialization order fiasco"
@@ -339,7 +363,7 @@ LogThread::finish(int wait)
 
 
 void
-LogThread::add(const std::shared_ptr<Log>& l_ptr)
+LogThread::add(const LogType& l_ptr)
 {
 	if (running != 0) {
 		auto wakeup = l_ptr->wakeup;

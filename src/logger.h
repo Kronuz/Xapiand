@@ -160,8 +160,11 @@ public:
 };
 
 
+using LogType = std::shared_ptr<Log>;
+
+
 class LogWrapper {
-	std::shared_ptr<Log> log;
+	LogType log;
 
 	LogWrapper(const LogWrapper&) = delete;
 	LogWrapper& operator=(const LogWrapper&) = delete;
@@ -170,7 +173,7 @@ public:
 	LogWrapper(LogWrapper&& o) : log(std::move(o.log)) { o.log.reset(); }
 	LogWrapper& operator=(LogWrapper&& o) { log = std::move(o.log); o.log.reset(); return *this; }
 
-	LogWrapper(std::shared_ptr<Log> log_) : log(log_) { }
+	LogWrapper(LogType log_) : log(log_) { }
 	~LogWrapper() {
 		if (log) {
 			log->cleanup();
@@ -191,7 +194,7 @@ public:
 		return log->age();
 	}
 
-	std::shared_ptr<Log> release() {
+	LogType release() {
 		auto ret = log;
 		log.reset();
 		return ret;
@@ -213,8 +216,7 @@ static inline uint64_t now() {
 
 
 class LogQueue {
-	using _type = std::shared_ptr<Log>;
-	using _logs =         StashValues<_type,       10ULL>;
+	using _logs =         StashValues<LogType,     10ULL>;
 	using _50_1ms =       StashSlots<_logs,        10ULL,   &now, 1ULL * MUL / 2ULL, 1ULL * MUL,       50ULL,   false>;
 	using _10_50ms =      StashSlots<_50_1ms,      10ULL,   &now, 0ULL,              50ULL * MUL,      10ULL,   false>;
 	using _3600_500ms =   StashSlots<_10_50ms,     600ULL,  &now, 0ULL,              500ULL * MUL,     3600ULL, false>;
@@ -222,17 +224,10 @@ class LogQueue {
 	_48_1800s queue;
 
 public:
-	LogQueue() : queue(now()) { }
+	LogQueue();
 
-	auto& next(bool final=true, uint64_t final_key=0, bool keep_going=true) {
-		keep_going = keep_going && !final_key;
-		return queue.next(final, final_key, keep_going);
-	}
-
-	template <typename T>
-	auto& add(T&& value, uint64_t key=0) {
-		return queue.add(std::forward<T>(value), key);
-	}
+	LogType& next(bool final=true, uint64_t final_key=0, bool keep_going=true);
+	LogType& add(const LogType& l_ptr, uint64_t key=0);
 };
 
 
@@ -251,7 +246,7 @@ public:
 	~LogThread();
 
 	void finish(int wait=10);
-	void add(const std::shared_ptr<Log>& l_ptr);
+	void add(const LogType& l_ptr);
 };
 
 
