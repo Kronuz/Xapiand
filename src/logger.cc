@@ -343,7 +343,7 @@ LogThread::add(const std::shared_ptr<Log>& l_ptr)
 {
 	if (running != 0) {
 		auto wakeup = l_ptr->wakeup;
-		log_queue.add(l_ptr, time_point_to_us(wakeup));
+		log_queue.add(l_ptr, time_point_to_key(wakeup));
 
 		bool notify = false;
 
