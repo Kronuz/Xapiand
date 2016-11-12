@@ -199,6 +199,8 @@ public:
 };
 
 
+#define MUL 1000000ULL
+
 template <typename T>
 inline uint64_t time_point_to_us(std::chrono::time_point<T> n) {
 	return std::chrono::duration_cast<std::chrono::nanoseconds>(n.time_since_epoch()).count();
@@ -211,23 +213,24 @@ static inline uint64_t now() {
 
 
 class LogQueue {
-	using _logs =         StashValues<Log,         10ULL>;
-	using _50_1ms =       StashSlots<_logs,        10ULL,   &now, 0ULL, 1000000ULL,       50ULL,   false>;
-	using _10_50ms =      StashSlots<_50_1ms,      10ULL,   &now, 0ULL, 50000000ULL,      10ULL,   false>;
-	using _3600_500ms =   StashSlots<_10_50ms,     600ULL,  &now, 0ULL, 500000000ULL,     3600ULL, false>;
-	using _48_1800s =     StashSlots<_3600_500ms,  48ULL,   &now, 0ULL, 1800000000000ULL, 48ULL,   true>;
+	using _type = std::shared_ptr<Log>;
+	using _logs =         StashValues<_type,       10ULL>;
+	using _50_1ms =       StashSlots<_logs,        10ULL,   &now, 1ULL * MUL / 2ULL, 1ULL * MUL,       50ULL,   false>;
+	using _10_50ms =      StashSlots<_50_1ms,      10ULL,   &now, 0ULL,              50ULL * MUL,      10ULL,   false>;
+	using _3600_500ms =   StashSlots<_10_50ms,     600ULL,  &now, 0ULL,              500ULL * MUL,     3600ULL, false>;
+	using _48_1800s =     StashSlots<_3600_500ms,  48ULL,   &now, 0ULL,              1800000ULL * MUL, 48ULL,   true>;
 	_48_1800s queue;
 
 public:
 	LogQueue() : queue(now()) { }
 
-	auto next(bool final=true, uint64_t final_key=0, bool keep_going=true) {
+	auto& next(bool final=true, uint64_t final_key=0, bool keep_going=true) {
 		keep_going = keep_going && !final_key;
 		return queue.next(final, final_key, keep_going);
 	}
 
 	template <typename T>
-	auto add(T&& value, uint64_t key=0) {
+	auto& add(T&& value, uint64_t key=0) {
 		return queue.add(std::forward<T>(value), key);
 	}
 };

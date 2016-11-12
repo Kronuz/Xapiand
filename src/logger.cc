@@ -386,19 +386,24 @@ LogThread::thread_function(LogQueue& log_queue)
 
 		try {
 			do {
-				auto l_ptr = log_queue.next(running < 0);
+				auto& l_ptr = log_queue.next(running < 0);
+				if (l_ptr) {
+					if (l_ptr->cleared) {
+						continue;
+					}
 
-				if (l_ptr->cleared) {
-					continue;
-				}
+					auto msg = l_ptr->str_start;
+					auto age = l_ptr->age();
+					if (age > 2e8) {
+						msg += " ~" + delta_string(age, true);
+					}
 
-				auto msg = l_ptr->str_start;
-				auto age = l_ptr->age();
-				if (age > 2e8) {
-					msg += " ~" + delta_string(age, true);
+					l_ptr->clear();
+
+					Log::log(l_ptr->priority, msg, l_ptr->stack_level * 2);
+
+					l_ptr.reset();
 				}
-				l_ptr->clear();
-				Log::log(l_ptr->priority, msg, l_ptr->stack_level * 2);
 			} while (true);
 		} catch(const StashContinue&) { }
 

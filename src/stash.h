@@ -24,20 +24,14 @@
 
 #include <array>     // for array
 #include <atomic>    // for atomic
-#include <memory>    // for shared_ptr
 
 
 class StashException { };
-class StashContinue : StashException { };
-class StashEmpty : StashException { };
-class StashEmptyChunk : StashException { };
-class StashOutOfRange : StashException { };
-class StashSlotsEmpty : StashException { };
-class StashSlotsEmptyChunk : StashException { };
-class StashSlotsOutOfRange : StashException { };
-class StashValuesEmpty : StashException { };
-class StashValuesEmptyChunk : StashException { };
-class StashValuesOutOfRange : StashException { };
+class StashContinue : public StashException { };
+class StashEmptyBin : public StashContinue { };
+class StashEmptyChunk : public StashContinue { };
+class StashOutOfRange : public StashException { };
+class StashEmptyStash : public StashOutOfRange { };
 
 
 template <typename _Tp, size_t _Size>
@@ -107,9 +101,9 @@ protected:
 			} while (n);
 		}
 
-		std::atomic<Bin*>& bin(size_t slot, bool spawn) {
+		auto& bin(size_t slot, bool spawn) {
 			if (!spawn && !next && ! chunk) {
-				throw StashEmpty();
+				throw StashEmptyStash();
 			}
 
 			size_t chunk = 0;
@@ -121,10 +115,10 @@ protected:
 			auto data = this;
 			for (size_t c = 0; c < chunk; ++c) {
 				auto ptr = data->next.load();
+				if (!spawn && !ptr) {
+					throw StashOutOfRange();
+				}
 				if (!ptr) {
-					if (!spawn) {
-						throw StashOutOfRange();
-					}
 					auto tmp = new Data;
 					if (data->next.compare_exchange_strong(ptr, tmp)) {
 						ptr = tmp;
@@ -136,10 +130,10 @@ protected:
 			}
 
 			auto ptr = data->chunk.load();
+			if (!spawn && !ptr) {
+				throw StashEmptyChunk();
+			}
 			if (!ptr) {
-				if (!spawn) {
-					throw StashEmptyChunk();
-				}
 				auto tmp = new Chunks{ {} };
 				if (data->chunk.compare_exchange_strong(ptr, tmp)) {
 					ptr = tmp;
@@ -148,7 +142,11 @@ protected:
 				}
 			}
 
-			return (*ptr)[slot];
+			auto& bin = (*ptr)[slot];
+			if (!spawn && !bin.load()) {
+				throw StashEmptyBin();
+			}
+			return bin;
 		}
 	};
 
@@ -171,22 +169,23 @@ public:
 		data.clear();
 	}
 
-	std::atomic<Bin*>& get_bin(size_t slot) {
+	auto& get_bin(size_t slot) {
 		/* This could fail with:
-		 *   StashEmpty
+		 *   StashEmptyStash
+		 *   StashEmptyBin
 		 *   StashEmptyChunk
 		 *   StashOutOfRange
 		 */
 		return Stash::data.bin(slot, false);
 	}
 
-	std::atomic<Bin*>& spawn_bin(size_t slot) {
+	auto& spawn_bin(size_t slot) {
 		/* This shouldn't fail. */
 		return Stash::data.bin(slot, true);
 	}
 
 	template <typename T>
-	_Tp& _put(std::atomic<Bin*>& bin, T&& value) {
+	auto& _put(std::atomic<Bin*>& bin, T&& value) {
 		auto ptr = bin.load();
 		if (!ptr) {
 			auto tmp = new Bin(std::forward<T>(value));
@@ -213,7 +212,7 @@ class StashSlots : public Stash<_Tp, _Size> {
 		return slot;
 	}
 
-	_Tp& put(uint64_t key) {
+	auto& put(uint64_t key) {
 		auto slot = get_slot(key);
 
 		auto& bin = Stash::spawn_bin(slot);
@@ -283,23 +282,6 @@ class StashSlots : public Stash<_Tp, _Size> {
 		return final_pos;
 	}
 
-	Bin* current_bin_ptr(size_t pos) {
-		try {
-			auto& bin = Stash::get_bin(pos);
-			auto ptr = bin.load();
-			if (!ptr) {
-				throw StashSlotsEmptyChunk();
-			}
-			return ptr;
-		} catch (const StashEmpty&) {
-			throw StashSlotsEmpty();
-		} catch (const StashEmptyChunk&) {
-			throw StashSlotsEmptyChunk();
-		} catch (const StashOutOfRange&) {
-			throw StashSlotsOutOfRange();
-		}
-	}
-
 public:
 	StashSlots(StashSlots&& o) noexcept
 		: Stash::Stash(std::move(o)) { }
@@ -310,7 +292,7 @@ public:
 	StashSlots(uint64_t key)
 		: Stash::Stash(get_slot(key)) { }
 
-	auto next(bool final, uint64_t final_key, bool keep_going) {
+	auto& next(bool final, uint64_t final_key, bool keep_going) {
 		// std::cout << "\tTimeStash<_Mod=" << _Mod << ">::next(" << (final ? "true" : "false") <<", " << final_key << ", " << (keep_going ? "true" : "false") << ")" << std::endl;
 
 		auto pos = Stash::pos.load();
@@ -334,15 +316,9 @@ public:
 			Bin* ptr = nullptr;
 			try {
 				// std::cout << "\t\tTimeStash<_Mod=" << _Mod << "> pos:" << pos << ", initial_pos:" << initial_pos << ", final:" << (final ? "true" : "false") << ", final_pos:" << final_pos << ", last_pos:" << last_pos << std::endl;
-				ptr = current_bin_ptr(pos);
+				ptr = Stash::get_bin(pos).load();
 				return ptr->val.next(final && pos == final_pos, final_key, keep_going);
-			} catch (const StashValuesEmpty&) {
-			} catch (const StashValuesEmptyChunk&) {
-			} catch (const StashValuesOutOfRange&) {
-			} catch (const StashSlotsEmpty&) {
-				throw StashContinue();
-			} catch (const StashSlotsEmptyChunk&) {
-			} catch (const StashSlotsOutOfRange&) {
+			} catch (const StashOutOfRange&) {
 				throw StashContinue();
 			} catch (const StashContinue&) { }
 
@@ -358,7 +334,7 @@ public:
 	}
 
 	template <typename T>
-	auto add(T&& value, uint64_t key) {
+	auto& add(T&& value, uint64_t key) {
 		if (!key) key = _CurrentKey();
 		return put(key).add(std::forward<T>(value), key);
 	}
@@ -366,8 +342,8 @@ public:
 
 
 template <typename _Tp, size_t _Size>
-class StashValues : public Stash<std::shared_ptr<_Tp>, _Size> {
-	using Stash = Stash<std::shared_ptr<_Tp>, _Size>;
+class StashValues : public Stash<_Tp, _Size> {
+	using Stash = Stash<_Tp, _Size>;
 	using Bin = typename Stash::Bin;
 	using Nil = typename Stash::Nil;
 
@@ -391,39 +367,20 @@ public:
 		Stash::pos.compare_exchange_strong(pos, new_pos);
 	}
 
-	Bin* current_bin_ptr(size_t pos) {
-		try {
-			auto& bin = Stash::get_bin(pos);
-			auto ptr = bin.load();
-			if (!ptr) {
-				throw StashValuesEmptyChunk();
-			}
-			return ptr;
-		} catch (const StashEmpty&) {
-			throw StashValuesEmpty();
-		} catch (const StashEmptyChunk&) {
-			throw StashValuesEmptyChunk();
-		} catch (const StashOutOfRange&) {
-			throw StashValuesOutOfRange();
-		}
-	}
-
-	auto next(bool, uint64_t, bool) {
+	auto& next(bool, uint64_t, bool) {
 		// std::cout << "\t\tLogStash::next()" << std::endl;
 		auto pos = Stash::pos.load();
 		// std::cout << "\t\t\tLogStash pos:" << pos << std::endl;
-		Bin* ptr = current_bin_ptr(pos);
-		increment_pos(pos);
-		std::shared_ptr<_Tp> val(ptr->val);
-		if (!val) {
-			throw StashValuesEmptyChunk();
-		}
-		ptr->val.reset();
-		return val;
+		try {
+			auto ptr = Stash::get_bin(pos).load();
+			increment_pos(pos);
+			return ptr->val;
+		} catch (const StashException&) { }
+		throw StashContinue();
 	}
 
 	template <typename T>
-	auto add(T&& value, uint64_t) {
+	auto& add(T&& value, uint64_t) {
 		auto& bin = Stash::spawn_bin(idx++);
 		return Stash::_put(bin, std::forward<T>(value));
 	}
