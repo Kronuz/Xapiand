@@ -297,13 +297,6 @@ public:
 
 		auto pos = Stash::pos.load();
 
-		// Always start one slot earlier (just in case).
-		if (_Ring) {
-			while (!Stash::pos.compare_exchange_weak(pos, (pos - 1) % _Mod));
-		} else {
-			while (pos > 0 && !Stash::pos.compare_exchange_weak(pos, pos - 1));
-		}
-
 		keep_going &= final;
 		if (keep_going) {
 			final_key = _CurrentKey();
@@ -324,7 +317,7 @@ public:
 
 			final_pos = increment_pos(pos, keep_going, initial_pos, final_pos, last_pos);
 
-			if (_Ring && !final && ptr) {
+			if (!final && ptr) {
 				// Dispose if it's not in the final slice
 				ptr->val.clear();
 			}
