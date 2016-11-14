@@ -365,6 +365,7 @@ void
 LogThread::add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system_clock> wakeup)
 {
 	if (running != 0) {
+		wakeup += 2ms;
 		log_queue.add(l_ptr, time_point_to_key(wakeup));
 
 		bool notify = false;
