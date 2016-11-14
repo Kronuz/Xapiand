@@ -259,8 +259,8 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		idle = false;
 		request_begining = false;
 		request_begins = std::chrono::system_clock::now();
-		response_log.load()->clear();
-		response_log = L_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...").release();
+		auto old_response_log = response_log.exchange(L_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...").release());
+		old_response_log->clear();
 		response_logged = false;
 	}
 
@@ -486,8 +486,8 @@ HttpClient::_run()
 
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
-	response_log.load()->clear();
-	response_log = L_DELAYED(true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long...").release();
+	auto old_response_log = response_log.exchange(L_DELAYED(true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long...").release());
+	old_response_log->clear();
 
 	std::string error;
 	enum http_status error_code = HTTP_STATUS_OK;
@@ -1832,8 +1832,9 @@ HttpClient::set_idle()
 {
 	L_CALL(this, "HttpClient::set_idle()");
 
-	response_log.load()->clear();
-	response_log = L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
+	auto old_response_log = response_log.exchange(L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release());
+	old_response_log->clear();
+
 	idle = true;
 
 	if (shutting_down && write_queue.empty()) {
