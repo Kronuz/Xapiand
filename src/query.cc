@@ -402,19 +402,20 @@ Query::get_namespace_query(const std::string& full_name, const std::string& pref
 	std::string f_prefix;
 	f_prefix.reserve(std::strlen(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
 	f_prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace);
-	if (field_value.empty()) {
-		return Xapian::Query(f_prefix);
+
+	if (field_value.empty() || field_value == "*") {
+		// FIXME: Expand terms with special characters.
+		Xapian::QueryParser query_parser;
+		query_parser.set_database(*database->db);
+		q_flags |= Xapian::QueryParser::FLAG_WILDCARD;
+		query_parser.add_prefix("_", f_prefix);
+		return query_parser.parse_query("_:*", q_flags);
 	}
 
-	FieldType type;
-	if (field_value != "*") {
-		auto ser_type = Serialise::get_type(field_value);
-		type = ser_type.first;
-		f_prefix.append(1, toUType(type));
-		field_value.assign(ser_type.second);
-	} else {
-		type = FieldType::TEXT;
-	}
+	auto ser_type = Serialise::get_type(field_value);
+	auto type = ser_type.first;
+	f_prefix.append(1, toUType(type));
+	field_value.assign(ser_type.second);
 
 	if (fp.isrange) {
 		auto namespace_spc = Schema::get_data_global(type);
