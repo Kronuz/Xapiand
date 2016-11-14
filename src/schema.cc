@@ -4103,13 +4103,13 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		} catch (const std::out_of_range&) {
 			try {
 				if (Serialise::isUUID(field_name)) {
-					dynamic_type = true;
 					subproperties = &subproperties->at(UUID_FIELD_NAME);
 					if (full_normalized_name.empty()) {
 						full_normalized_name.assign(lower_string(field_name));
 					} else {
 						full_normalized_name.append(DB_OFFSPRING_UNION).append(lower_string(field_name));
 					}
+					dynamic_type = true;
 					continue;
 				}
 			} catch (const std::out_of_range&) { }
