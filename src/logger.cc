@@ -166,11 +166,7 @@ LogQueue::next(bool final, uint64_t final_key, bool keep_going)
 LogType&
 LogQueue::add(const LogType& l_ptr, uint64_t key)
 {
-	auto n = now();
-	if (key < n) {
-		key = n;
-	}
-	return queue.add(l_ptr, key + MUL / 2ULL);
+	return queue.add(l_ptr, key);
 }
 
 
