@@ -388,14 +388,18 @@ LogThread::thread_function(LogQueue& log_queue)
 	std::unique_lock<std::mutex> lk(mtx);
 
 	auto nwt = next_wakeup_time.load();
-
-	auto wakeup = std::chrono::system_clock::now() + 100ms;
+	auto wakeup = std::chrono::system_clock::now();
 
 	while (running != 0) {
 		if (--running < 0) {
 			running = -1;
 		}
 
+		auto now = std::chrono::system_clock::now();
+		auto new_wakeup = now + (running < 0 ? 3s : 100ms);
+		if (wakeup <= now || new_wakeup < wakeup) {
+			wakeup = new_wakeup;
+		}
 		auto wt = time_point_to_ullong(wakeup);
 		if (next_wakeup_time.compare_exchange_strong(nwt, wt)) {
 			nwt = wt;
@@ -403,7 +407,6 @@ LogThread::thread_function(LogQueue& log_queue)
 			wakeup = time_point_from_ullong(next_wakeup_time);
 		}
 		wakeup_signal.wait_until(lk, wakeup);
-		wakeup = std::chrono::system_clock::now() + (running < 0 ? 3s : 100ms);
 
 		try {
 			do {
