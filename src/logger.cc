@@ -254,16 +254,16 @@ Log::clear()
 {
 	if (!cleared.exchange(true)) {
 		cleared_at = std::chrono::system_clock::now();
-		return false;
+		return true;
 	}
-	return true;
+	return false;
 }
 
 
 bool
 Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
-	if (clear()) {
+	if (!clear()) {
 		va_list argptr;
 		va_start(argptr, format);
 		std::string str(str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
@@ -407,7 +407,7 @@ LogThread::thread_function(LogQueue& log_queue)
 			do {
 				auto& l_ptr = log_queue.next(running < 0);
 				if (l_ptr) {
-					if (l_ptr->cleared) {
+					if (!l_ptr->clear()) {
 						continue;
 					}
 
@@ -416,8 +416,6 @@ LogThread::thread_function(LogQueue& log_queue)
 					if (age > 2e8) {
 						msg += " ~" + delta_string(age, true);
 					}
-
-					l_ptr->clear();
 
 					Log::log(l_ptr->priority, msg, l_ptr->stack_level * 2);
 
