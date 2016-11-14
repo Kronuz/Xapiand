@@ -51,20 +51,20 @@ protected:
 
 		Bin(const _Tp& val_)
 			: val(val_) { }
+
 		Bin(_Tp&& val_) noexcept
 			: val(std::move(val_)) { }
 	};
 
 	class Data {
-	private:
 		using Chunks = std::array<std::atomic<Bin*>, _Size>;
 		std::atomic<Chunks*> chunk;
 		std::atomic<Data*> next;
 
 	public:
 		Data()
-		  : chunk(nullptr),
-		    next(nullptr) { }
+			: chunk(nullptr),
+			  next(nullptr) { }
 
 		Data(Data&& o) noexcept
 			: chunk(o.chunk.load()),
@@ -78,7 +78,7 @@ protected:
 			auto s = chunk.load();
 			while (!chunk.compare_exchange_weak(s, nullptr));
 			if (s) {
-				for (auto & a : *s) {
+				for (auto& a : *s) {
 					auto p = a.load();
 					while (!a.compare_exchange_weak(p, nullptr));
 					if (p) {
@@ -102,7 +102,7 @@ protected:
 		}
 
 		auto& bin(size_t slot, bool spawn) {
-			if (!spawn && !next && ! chunk) {
+			if (!spawn && !next && !chunk) {
 				throw StashEmptyStash();
 			}
 
