@@ -291,7 +291,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			{ RESPONSE_MESSAGE, message }
 		};
 		write_http_response(error_code, err_response);
-		L_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message.c_str() : "incomplete request");
+		L_WARNING(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message.c_str() : "incomplete request");
 		destroy();  // Handle error. Just close the connection.
 		detach();
 	}
@@ -519,18 +519,22 @@ HttpClient::_run()
 				write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
 				break;
 		}
-	} catch (const DocNotFoundError&) {
+	} catch (const DocNotFoundError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign("Document not found");
+		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const MissingTypeError& exc) {
 		error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		error.assign(exc.what());
+		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const ClientError& exc) {
 		error_code = HTTP_STATUS_BAD_REQUEST;
 		error.assign(exc.what());
+		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const CheckoutError& exc) {
 		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(exc.what());
+		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const Exception& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.what() ? exc.what() : "Unkown Exception!");
@@ -1833,6 +1837,7 @@ HttpClient::set_idle()
 	idle = true;
 
 	if (shutting_down && write_queue.empty()) {
+		L_WARNING(this, "Programmed shut down!");
 		destroy();
 		detach();
 	}
