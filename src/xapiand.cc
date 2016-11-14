@@ -652,16 +652,16 @@ void banner() {
 #endif
 
 	L_INFO(nullptr,
-		"\n\n" WHITE
-		"     __  __           _                 _\n"
-		"     \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n"
-		"      \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n"
-		"      /  \\ (_| | |_) | | (_| | | | | (_| |\n"
-		"     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n"
-		"               |_|  " LIGHT_GREEN "v%s\n" GREEN
+		"\n\n"
+		WHITE  "     __  __           _                 _\n"
+		WHITE  "     \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n"
+		WHITE  "      \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n"
+		WHITE  "      /  \\ (_| | |_) | | (_| | | | | (_| |\n"
+		NO_COL "     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n"
+		NO_COL "               |_|" LIGHT_GREEN "%s\n" GREEN
 		"%s\n"
 		"%s\n\n",
-		PACKAGE_VERSION,
+		center_string(format_string("%s v%s", PACKAGE_NAME, PACKAGE_VERSION), 24).c_str(),
 		center_string(format_string("[%s]", PACKAGE_BUGREPORT), 46).c_str(),
 		center_string("Using " + join_string(versions, ", ", " and "), 46).c_str());
 }
