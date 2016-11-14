@@ -730,6 +730,9 @@ int main(int argc, char **argv) {
 		writepid(opts.pidfile.c_str());
 		banner();
 	}
+
+	usleep(100000ULL);
+
 	L_NOTICE(nullptr, "Xapiand started.");
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
