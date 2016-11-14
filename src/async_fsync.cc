@@ -37,6 +37,7 @@ std::condition_variable AsyncFsync::wakeup_signal;
 std::unordered_map<int, AsyncFsync::Status> AsyncFsync::statuses;
 std::atomic_ullong AsyncFsync::next_wakeup_time(time_point_to_ullong(std::chrono::system_clock::now() + 10s));
 
+
 std::chrono::time_point<std::chrono::system_clock>
 AsyncFsync::Status::next_wakeup_time()
 {
