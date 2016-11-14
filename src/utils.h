@@ -223,6 +223,15 @@ inline std::string center_string(const std::string& str, int width) {
 	return result;
 }
 
+inline std::string right_string(const std::string& str, int width) {
+	std::string result;
+	for (auto idx = int(width - str.size()); idx > 0; --idx) {
+		result += " ";
+	}
+	result += str;
+	return result;
+}
+
 template<typename... Args>
 inline std::string upper_string(Args&&... args) {
 	std::string tmp(std::forward<Args>(args)...);
