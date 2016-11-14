@@ -327,9 +327,9 @@ public:
 	}
 
 	template <typename T>
-	auto& add(T&& value, uint64_t key) {
+	void add(T&& value, uint64_t key) {
 		if (!key) key = _CurrentKey();
-		return put(key).add(std::forward<T>(value), key);
+		put(key).add(std::forward<T>(value), key);
 	}
 };
 
@@ -373,8 +373,8 @@ public:
 	}
 
 	template <typename T>
-	auto& add(T&& value, uint64_t) {
+	void add(T&& value, uint64_t) {
 		auto& bin = Stash::spawn_bin(idx++);
-		return Stash::_put(bin, std::forward<T>(value));
+		Stash::_put(bin, std::forward<T>(value));
 	}
 };

@@ -163,10 +163,10 @@ LogQueue::next(bool final, uint64_t final_key, bool keep_going)
 }
 
 
-LogType&
+void
 LogQueue::add(const LogType& l_ptr, uint64_t key)
 {
-	return queue.add(l_ptr, key);
+	queue.add(l_ptr, key);
 }
 
 

@@ -226,7 +226,7 @@ public:
 	LogQueue();
 
 	LogType& next(bool final=true, uint64_t final_key=0, bool keep_going=true);
-	LogType& add(const LogType& l_ptr, uint64_t key=0);
+	void add(const LogType& l_ptr, uint64_t key=0);
 };
 
 
