@@ -27,6 +27,9 @@
 #include <sys/errno.h>                      // for __error, errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
+#if XAPIAND_V8
+#include <v8-version.h>                     // for V8_MAJOR_VERSION, V8_MINOR_VERSION
+#endif
 #include <xapian.h>                         // for version_string, MSetIterator
 #include <algorithm>                        // for move
 #include <exception>                        // for exception
@@ -778,9 +781,11 @@ HttpClient::home_view(enum http_method method)
 	obj_data["_cluster_name"] = XapiandManager::manager->cluster_name;
 #endif
 	obj_data["_version"] = {
-		{ "_mastery", PACKAGE_VERSION },
-		{ "_number", PACKAGE_VERSION  },
-		{ "_xapian", Xapian::version_string() }
+		{ PACKAGE_NAME, format_string("%s", PACKAGE_VERSION) },
+		{ "Xapian", format_string("%s", XAPIAN_VERSION) },
+#if XAPIAND_V8
+		{ "V8", format_string("%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION) },
+#endif
 	};
 
 	write_http_response(HTTP_STATUS_OK, obj_data);
