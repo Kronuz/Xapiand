@@ -230,7 +230,9 @@ HttpClient::~HttpClient()
 		}
 	}
 
-	if (response_log.load()->clear()) {
+	response_log.load()->clear();
+
+	if (shutting_down || !(idle && write_queue.empty())) {
 		L_WARNING(this, "Client killed!");
 	}
 
