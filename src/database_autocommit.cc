@@ -141,7 +141,7 @@ DatabaseAutocommit::run_one(std::unique_lock<std::mutex>& lk)
 				lk.lock();
 				statuses_lk.lock();
 				it = DatabaseAutocommit::statuses.begin();
-			} else if (time_point_from_ullong<std::chrono::system_clock>(DatabaseAutocommit::next_wakeup_time.load()) > next_wakeup_time) {
+			} else if (time_point_from_ullong(DatabaseAutocommit::next_wakeup_time.load()) > next_wakeup_time) {
 				DatabaseAutocommit::next_wakeup_time.store(time_point_to_ullong(next_wakeup_time));
 				++it;
 			} else {
@@ -161,7 +161,7 @@ DatabaseAutocommit::run()
 
 	while (running) {
 		std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx);
-		DatabaseAutocommit::wakeup_signal.wait_until(lk, time_point_from_ullong<std::chrono::system_clock>(DatabaseAutocommit::next_wakeup_time.load()));
+		DatabaseAutocommit::wakeup_signal.wait_until(lk, time_point_from_ullong(DatabaseAutocommit::next_wakeup_time.load()));
 		run_one(lk);
 	}
 
@@ -184,7 +184,7 @@ DatabaseAutocommit::commit(const std::shared_ptr<Database>& database)
 	}
 	status.commit_time = now + 3s;
 
-	if (time_point_from_ullong<std::chrono::system_clock>(DatabaseAutocommit::next_wakeup_time.load()) > status.next_wakeup_time()) {
+	if (time_point_from_ullong(DatabaseAutocommit::next_wakeup_time.load()) > status.next_wakeup_time()) {
 		DatabaseAutocommit::wakeup_signal.notify_one();
 	}
 }

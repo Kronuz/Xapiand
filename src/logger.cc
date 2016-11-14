@@ -398,7 +398,7 @@ LogThread::thread_function(LogQueue& log_queue)
 		if (next_wakeup_time.compare_exchange_strong(nwt, wt)) {
 			nwt = wt;
 		} else {
-			wakeup = time_point_from_ullong<std::chrono::system_clock>(next_wakeup_time);
+			wakeup = time_point_from_ullong(next_wakeup_time);
 		}
 		wakeup_signal.wait_until(lk, wakeup);
 		wakeup = std::chrono::system_clock::now() + (running < 0 ? 3s : 100ms);
