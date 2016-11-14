@@ -375,7 +375,7 @@ LogThread::add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system
 		} while (nwt >= wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
 
 		if (notify) {
-			wakeup_signal.notify_all();
+			wakeup_signal.notify_one();
 		}
 	}
 }
