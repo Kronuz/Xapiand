@@ -35,8 +35,7 @@ std::mutex AsyncFsync::mtx;
 std::mutex AsyncFsync::statuses_mtx;
 std::condition_variable AsyncFsync::wakeup_signal;
 std::unordered_map<int, AsyncFsync::Status> AsyncFsync::statuses;
-std::atomic<std::time_t> AsyncFsync::next_wakeup_time(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now() + 10s));
-
+std::atomic_ullong AsyncFsync::next_wakeup_time(time_point_to_ullong(std::chrono::system_clock::now() + 10s));
 
 std::chrono::time_point<std::chrono::system_clock>
 AsyncFsync::Status::next_wakeup_time()
@@ -75,7 +74,7 @@ AsyncFsync::destroyer()
 
 	running.store(false);
 	auto now = std::chrono::system_clock::now();
-	AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + 100ms));
+	AsyncFsync::next_wakeup_time.store(time_point_to_ullong(now + 100ms));
 	wakeup_signal.notify_all();
 }
 
@@ -102,7 +101,7 @@ AsyncFsync::run_one(std::unique_lock<std::mutex>& lk)
 	std::unique_lock<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
 
 	auto now = std::chrono::system_clock::now();
-	AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + (running ? 20s : 100ms)));
+	AsyncFsync::next_wakeup_time.store(time_point_to_ullong(now + (running ? 20s : 100ms)));
 
 	for (auto it = AsyncFsync::statuses.begin(); it != AsyncFsync::statuses.end(); ) {
 		auto status = it->second;
@@ -134,8 +133,8 @@ AsyncFsync::run_one(std::unique_lock<std::mutex>& lk)
 			lk.lock();
 			statuses_lk.lock();
 			it = AsyncFsync::statuses.begin();
-		} else if (std::chrono::system_clock::from_time_t(AsyncFsync::next_wakeup_time.load()) > next_wakeup_time) {
-			AsyncFsync::next_wakeup_time.store(std::chrono::system_clock::to_time_t(next_wakeup_time));
+		} else if (time_point_from_ullong(AsyncFsync::next_wakeup_time.load()) > next_wakeup_time) {
+			AsyncFsync::next_wakeup_time.store(time_point_to_ullong(next_wakeup_time));
 			++it;
 		} else {
 			++it;
@@ -151,7 +150,7 @@ AsyncFsync::run()
 
 	while (running) {
 		std::unique_lock<std::mutex> lk(AsyncFsync::mtx);
-		AsyncFsync::wakeup_signal.wait_until(lk, std::chrono::system_clock::from_time_t(AsyncFsync::next_wakeup_time.load()));
+		AsyncFsync::wakeup_signal.wait_until(lk, time_point_from_ullong(AsyncFsync::next_wakeup_time.load()));
 		run_one(lk);
 	}
 
@@ -174,7 +173,7 @@ AsyncFsync::_fsync(int fd, bool full_fsync)
 	}
 	status.fsync_time = now + 500ms;
 
-	if (std::chrono::system_clock::from_time_t(AsyncFsync::next_wakeup_time.load()) > status.next_wakeup_time()) {
+	if (time_point_from_ullong(AsyncFsync::next_wakeup_time.load()) > status.next_wakeup_time()) {
 		AsyncFsync::wakeup_signal.notify_one();
 	}
 
