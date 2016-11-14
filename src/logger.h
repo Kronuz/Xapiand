@@ -231,7 +231,7 @@ public:
 
 
 class LogThread {
-	std::condition_variable wakeup_signal;
+	static std::condition_variable wakeup_signal;
 	static std::atomic_ullong next_wakeup_time;
 
 	LogQueue log_queue;

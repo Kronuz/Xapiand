@@ -331,7 +331,9 @@ Log::finish(int wait)
 }
 
 
+std::condition_variable LogThread::wakeup_signal;
 std::atomic_ullong LogThread::next_wakeup_time;
+
 
 LogThread::LogThread()
 	: running(-1),
