@@ -4117,7 +4117,6 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 						auto& field_namespace = *it;
 						if (is_valid(field_namespace)) {
 							if (Serialise::isUUID(field_namespace)) {
-								dynamic_type = true;
 								to_lower(field_namespace);
 								if (full_normalized_name.empty()) {
 									full_normalized_name.assign(field_namespace);
@@ -4132,7 +4131,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 							prefix_namespace.append(Serialise::dynamic_namespace_field(field_namespace));
 						} else if (++it == it_e) {
 							full_normalized_name.append(DB_OFFSPRING_UNION).append(field_namespace);
-							prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(full_normalized_name) : Serialise::namespace_field(full_normalized_name));
+							prefix_namespace.assign(Serialise::dynamic_namespace_field(full_normalized_name));
 							return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::move(field_namespace));
 						} else {
 							throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
