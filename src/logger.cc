@@ -94,13 +94,12 @@ SysLog::log(int priority, const std::string& str)
 }
 
 
-Log::Log(const std::string& str, bool clean_, bool stacked_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
+Log::Log(const std::string& str, bool clean_, bool stacked_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
 	: stack_level(0),
 	  stacked(stacked_),
 	  clean(clean_),
 	  created_at(created_at_),
 	  cleared_at(created_at_),
-	  wakeup(wakeup_),
 	  str_start(str),
 	  priority(priority_),
 	  cleared(false),
@@ -285,10 +284,10 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 LogWrapper
 Log::add(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
-	auto l_ptr = std::make_shared<Log>(str, clean, stacked, wakeup, priority, created_at);
+	auto l_ptr = std::make_shared<Log>(str, clean, stacked, priority, created_at);
 
 	static LogThread& thread = _thread();
-	thread.add(l_ptr);
+	thread.add(l_ptr, wakeup);
 
 	return LogWrapper(l_ptr);
 }
@@ -315,13 +314,13 @@ Log::print(const std::string& str, bool clean, bool stacked, std::chrono::time_p
 {
 	static auto& log_level = _log_level();
 	if (priority > log_level) {
-		return LogWrapper(std::make_shared<Log>(str, clean, stacked, wakeup, priority, created_at));
+		return LogWrapper(std::make_shared<Log>(str, clean, stacked, priority, created_at));
 	}
 
 	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {
 		return add(str, clean, stacked, wakeup, priority, created_at);
 	} else {
-		auto l_ptr = std::make_shared<Log>(str, clean, stacked, wakeup, priority, created_at);
+		auto l_ptr = std::make_shared<Log>(str, clean, stacked, priority, created_at);
 		log(priority, str, l_ptr->stack_level * 2);
 		return LogWrapper(l_ptr);
 	}
@@ -363,10 +362,9 @@ LogThread::finish(int wait)
 
 
 void
-LogThread::add(const LogType& l_ptr)
+LogThread::add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system_clock> wakeup)
 {
 	if (running != 0) {
-		auto wakeup = l_ptr->wakeup;
 		log_queue.add(l_ptr, time_point_to_key(wakeup));
 
 		bool notify = false;

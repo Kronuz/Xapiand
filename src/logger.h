@@ -111,7 +111,6 @@ class Log : public std::enable_shared_from_this<Log> {
 	bool clean;
 	std::chrono::time_point<std::chrono::system_clock> created_at;
 	std::chrono::time_point<std::chrono::system_clock> cleared_at;
-	std::chrono::time_point<std::chrono::system_clock> wakeup;
 	std::string str_start;
 	int priority;
 	std::atomic_bool cleared;
@@ -126,7 +125,7 @@ public:
 	static int& _log_level();
 	static std::vector<std::unique_ptr<Logger>>& _handlers();
 
-	Log(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
+	Log(const std::string& str, bool cleanup, bool stacked, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Log();
 
 	template <typename T, typename R, typename... Args>
@@ -246,7 +245,7 @@ public:
 	~LogThread();
 
 	void finish(int wait=10);
-	void add(const LogType& l_ptr);
+	void add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system_clock> wakeup);
 };
 
 
