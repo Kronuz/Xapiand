@@ -2441,11 +2441,7 @@ Schema::get_subproperties(const MsgPack& properties)
 		restart_specification();
 		for (const auto& field_name : field_names) {
 			detect_dynamic(field_name);
-			if (specification.flags.dynamic_type) {
-				specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.normalized_name));
-			} else {
-				specification.paths_namespace.push_back(Serialise::namespace_field(specification.normalized_name));
-			}
+			specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.normalized_name));
 			specification.flags.inside_namespace = true;
 		}
 	}
@@ -4133,7 +4129,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 							} else {
 								full_normalized_name.append(DB_OFFSPRING_UNION).append(field_namespace);
 							}
-							prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(field_namespace) : Serialise::namespace_field(field_namespace));
+							prefix_namespace.append(Serialise::dynamic_namespace_field(field_namespace));
 						} else if (++it == it_e) {
 							full_normalized_name.append(DB_OFFSPRING_UNION).append(field_namespace);
 							prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(full_normalized_name) : Serialise::namespace_field(full_normalized_name));
