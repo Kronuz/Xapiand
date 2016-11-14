@@ -202,9 +202,9 @@ public:
 
 template <typename _Tp, size_t _Size, uint64_t(*_CurrentKey)(), uint64_t _Sum, uint64_t _Div, uint64_t _Mod, bool _Ring>
 class StashSlots : public Stash<_Tp, _Size> {
-	using Stash = Stash<_Tp, _Size>;
-	using Bin = typename Stash::Bin;
-	using Nil = typename Stash::Nil;
+	using Stash_T = Stash<_Tp, _Size>;
+	using Bin = typename Stash_T::Bin;
+	using Nil = typename Stash_T::Nil;
 
 	size_t get_slot(uint64_t key) {
 		auto slot = ((key + _Sum) / _Div) % _Mod;
@@ -215,15 +215,15 @@ class StashSlots : public Stash<_Tp, _Size> {
 	auto& put(uint64_t key) {
 		auto slot = get_slot(key);
 
-		auto& bin = Stash::spawn_bin(slot);
+		auto& bin = Stash_T::spawn_bin(slot);
 
 		if (!_Ring) {
 			// This is not a ring, any new (older) item added could move the position
-			auto pos = Stash::pos.load();
-			while (slot < pos && !Stash::pos.compare_exchange_weak(pos, slot));
+			auto pos = Stash_T::pos.load();
+			while (slot < pos && !Stash_T::pos.compare_exchange_weak(pos, slot));
 		}
 
-		return Stash::_put(bin, Nil());
+		return Stash_T::_put(bin, Nil());
 	}
 
 	bool check_pos(size_t pos, size_t initial_pos, size_t final_pos, size_t last_pos) {
@@ -277,25 +277,25 @@ class StashSlots : public Stash<_Tp, _Size> {
 			}
 		}
 
-		Stash::pos.compare_exchange_strong(pos, new_pos);
+		Stash_T::pos.compare_exchange_strong(pos, new_pos);
 
 		return final_pos;
 	}
 
 public:
 	StashSlots(StashSlots&& o) noexcept
-		: Stash::Stash(std::move(o)) { }
+		: Stash_T::Stash(std::move(o)) { }
 
 	StashSlots()
-		: Stash::Stash(0) { }
+		: Stash_T::Stash(0) { }
 
 	StashSlots(uint64_t key)
-		: Stash::Stash(get_slot(key)) { }
+		: Stash_T::Stash(get_slot(key)) { }
 
 	auto& next(bool final, uint64_t final_key, bool keep_going) {
 		// std::cout << "\tTimeStash<_Mod=" << _Mod << ">::next(" << (final ? "true" : "false") <<", " << final_key << ", " << (keep_going ? "true" : "false") << ")" << std::endl;
 
-		auto pos = Stash::pos.load();
+		auto pos = Stash_T::pos.load();
 
 		keep_going &= final;
 		if (keep_going) {
@@ -309,7 +309,7 @@ public:
 			Bin* ptr = nullptr;
 			try {
 				// std::cout << "\t\tTimeStash<_Mod=" << _Mod << "> pos:" << pos << ", initial_pos:" << initial_pos << ", final:" << (final ? "true" : "false") << ", final_pos:" << final_pos << ", last_pos:" << last_pos << std::endl;
-				ptr = Stash::get_bin(pos).load();
+				ptr = Stash_T::get_bin(pos).load();
 				return ptr->val.next(final && pos == final_pos, final_key, keep_going);
 			} catch (const StashOutOfRange&) {
 				throw StashContinue();
@@ -322,7 +322,7 @@ public:
 				ptr->val.clear();
 			}
 
-			pos = Stash::pos.load();
+			pos = Stash_T::pos.load();
 		} while (true);
 	}
 
@@ -336,36 +336,36 @@ public:
 
 template <typename _Tp, size_t _Size>
 class StashValues : public Stash<_Tp, _Size> {
-	using Stash = Stash<_Tp, _Size>;
-	using Bin = typename Stash::Bin;
-	using Nil = typename Stash::Nil;
+	using Stash_T = Stash<_Tp, _Size>;
+	using Bin = typename Stash_T::Bin;
+	using Nil = typename Stash_T::Nil;
 
 	std::atomic_size_t idx;
 
 public:
 	StashValues(StashValues&& o) noexcept
-		: Stash::Stash(std::move(o)),
+		: Stash_T::Stash(std::move(o)),
 		  idx(o.idx.load()) { }
 
 	StashValues()
-		: Stash::Stash(0),
+		: Stash_T::Stash(0),
 		  idx(0) { }
 
 	StashValues(uint64_t)
-		: Stash::Stash(0),
+		: Stash_T::Stash(0),
 		  idx(0) { }
 
 	void increment_pos(size_t pos) {
 		auto new_pos = pos + 1;
-		Stash::pos.compare_exchange_strong(pos, new_pos);
+		Stash_T::pos.compare_exchange_strong(pos, new_pos);
 	}
 
 	auto& next(bool, uint64_t, bool) {
 		// std::cout << "\t\tLogStash::next()" << std::endl;
-		auto pos = Stash::pos.load();
+		auto pos = Stash_T::pos.load();
 		// std::cout << "\t\t\tLogStash pos:" << pos << std::endl;
 		try {
-			auto ptr = Stash::get_bin(pos).load();
+			auto ptr = Stash_T::get_bin(pos).load();
 			increment_pos(pos);
 			return ptr->val;
 		} catch (const StashException&) { }
@@ -374,7 +374,7 @@ public:
 
 	template <typename T>
 	void add(T&& value, uint64_t) {
-		auto& bin = Stash::spawn_bin(idx++);
-		Stash::_put(bin, std::forward<T>(value));
+		auto& bin = Stash_T::spawn_bin(idx++);
+		Stash_T::_put(bin, std::forward<T>(value));
 	}
 };
