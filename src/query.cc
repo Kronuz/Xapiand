@@ -404,12 +404,7 @@ Query::get_namespace_query(const std::string& full_name, const std::string& pref
 	f_prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace);
 
 	if (field_value.empty() || field_value == "*") {
-		// FIXME: Expand terms with special characters.
-		Xapian::QueryParser query_parser;
-		query_parser.set_database(*database->db);
-		q_flags |= Xapian::QueryParser::FLAG_WILDCARD;
-		query_parser.add_prefix("_", f_prefix);
-		return query_parser.parse_query("_:*", q_flags);
+		return Xapian::Query(Xapian::Query::OP_WILDCARD, f_prefix);
 	}
 
 	auto ser_type = Serialise::get_type(field_value);
