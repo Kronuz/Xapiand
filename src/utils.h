@@ -312,7 +312,7 @@ time_point_to_ullong(std::chrono::time_point<T> t) {
 }
 
 
-template <typename T>
+template <typename T=std::chrono::system_clock>
 inline
 std::chrono::time_point<T>
 time_point_from_ullong(unsigned long long t) {
