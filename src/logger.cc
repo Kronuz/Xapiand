@@ -175,15 +175,12 @@ SysLog::log(int priority, const std::string& str)
 
 
 Log::Log(const std::string& str, bool clean_, bool stacked_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
-	: stack_level(0),
+	: ScheduledTask(nullptr, created_at_),
+	  stack_level(0),
 	  stacked(stacked_),
 	  clean(clean_),
-	  created_at(created_at_),
-	  cleared_at(created_at_),
-	  wakeup_time(0),
 	  str_start(str),
 	  priority(priority_),
-	  cleared(false),
 	  cleaned(false) {
 
 	if (stacked) {
@@ -207,10 +204,8 @@ Log::~Log()
 void
 Log::cleanup()
 {
-	bool f = false;
-	if (cleared.compare_exchange_strong(f, clean)) {
-		cleared_at = std::chrono::system_clock::now();
-	}
+	unsigned long long c = 0;
+	cleared_at.compare_exchange_strong(c, clean ? time_point_to_ullong(std::chrono::system_clock::now()) : 0);
 
 	if (!cleaned.exchange(true)) {
 		if (stacked) {
@@ -226,34 +221,8 @@ Log::cleanup()
 long double
 Log::age()
 {
-	auto now = (cleared_at > created_at) ? cleared_at : std::chrono::system_clock::now();
-	return std::chrono::duration_cast<std::chrono::nanoseconds>(now - created_at).count();
-}
-
-
-LogQueue::LogQueue()
-	: queue(now())
-{ }
-
-
-LogType&
-LogQueue::next(bool final, uint64_t final_key, bool keep_going)
-{
-	return queue.next(final, final_key, keep_going, false);
-}
-
-
-LogType&
-LogQueue::peep()
-{
-	return queue.next(false, 0, true, true);
-}
-
-
-void
-LogQueue::add(const LogType& l_ptr, uint64_t key)
-{
-	queue.add(l_ptr, key);
+	auto now = (cleared_at > created_at) ? time_point_from_ullong(cleared_at) : std::chrono::system_clock::now();
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(now - time_point_from_ullong(created_at)).count();
 }
 
 
@@ -262,11 +231,37 @@ LogQueue::add(const LogType& l_ptr, uint64_t key)
  * Avoid the "static initialization order fiasco"
  */
 
-LogThread&
-Log::_thread()
+SchedulerThread&
+Log::scheduler()
 {
-	static LogThread thread;
-	return thread;
+	static SchedulerThread scheduler("LSC");
+	return scheduler;
+}
+
+
+void
+Log::finish(int wait)
+{
+	scheduler().finish(wait);
+}
+
+
+void
+Log::join()
+{
+	scheduler().join();
+}
+
+
+void
+Log::run()
+{
+	auto msg = str_start;
+	auto log_age = age();
+	if (log_age > 2e8) {
+		msg += " ~" + delta_string(log_age, true);
+	}
+	Log::log(priority, msg, stack_level * 2);
 }
 
 
@@ -330,23 +325,12 @@ Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_c
 
 
 bool
-Log::clear()
-{
-	if (!cleared.exchange(true)) {
-		cleared_at = std::chrono::system_clock::now();
-		return true;
-	}
-	return false;
-}
-
-
-bool
 Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
 	if (!clear()) {
 		std::string str(str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
 
-		print(str, false, stacked, 0, priority, created_at);
+		print(str, false, stacked, 0, priority, time_point_from_ullong(created_at));
 
 		return true;
 	}
@@ -371,7 +355,7 @@ Log::add(const std::string& str, bool clean, bool stacked, std::chrono::time_poi
 {
 	auto l_ptr = std::make_shared<Log>(str, clean, stacked, priority, created_at);
 
-	_thread().add(l_ptr, wakeup);
+	scheduler().add(l_ptr, wakeup);
 
 	return LogWrapper(l_ptr);
 }
@@ -405,123 +389,5 @@ Log::print(const std::string& str, bool clean, bool stacked, std::chrono::time_p
 		auto l_ptr = std::make_shared<Log>(str, clean, stacked, priority, created_at);
 		log(priority, str, l_ptr->stack_level * 2);
 		return LogWrapper(l_ptr);
-	}
-}
-
-
-void
-Log::finish(int wait)
-{
-	_thread().finish(wait);
-}
-
-
-LogThread::LogThread()
-	: running(-1),
-	  inner_thread(&LogThread::run, this) { }
-
-
-LogThread::~LogThread()
-{
-	finish(true);
-}
-
-
-void
-LogThread::finish(int wait)
-{
-	running = wait;
-	wakeup_signal.notify_all();
-	if (wait) {
-		try {
-			inner_thread.join();
-		} catch (const std::system_error&) { }
-	}
-}
-
-
-void
-LogThread::add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system_clock> wakeup)
-{
-	if (running != 0) {
-		auto now = std::chrono::system_clock::now();
-		if (wakeup < now + 2ms) {
-			wakeup = now + 2ms;  // defer log so we make sure we're not adding messages to the current slot
-		}
-
-		auto wt = time_point_to_ullong(wakeup);
-		l_ptr->wakeup_time = wt;
-
-		log_queue.add(l_ptr, LogQueue::time_point_to_key(wakeup));
-
-		bool notify;
-		auto nwt = next_wakeup_time.load();
-		do {
-			notify = nwt >= wt;
-		} while (notify && !next_wakeup_time.compare_exchange_weak(nwt, wt));
-
-		if (notify) {
-			wakeup_signal.notify_one();
-		}
-	}
-}
-
-
-void
-LogThread::run_one(LogType& l_ptr)
-{
-	if (!l_ptr->cleared) {
-		auto msg = l_ptr->str_start;
-		auto age = l_ptr->age();
-		if (age > 2e8) {
-			msg += " ~" + delta_string(age, true);
-		}
-		if (l_ptr->clear()) {
-			Log::log(l_ptr->priority, msg, l_ptr->stack_level * 2);
-		}
-	}
-}
-
-
-void
-LogThread::run()
-{
-	std::mutex mtx;
-	std::unique_lock<std::mutex> lk(mtx);
-
-	next_wakeup_time = time_point_to_ullong(std::chrono::system_clock::now() + 100ms);
-
-	while (running != 0) {
-		if (--running < 0) {
-			running = -1;
-		}
-
-		auto now = std::chrono::system_clock::now();
-		auto wt = time_point_to_ullong(now + (running < 0 ? 3s : 100ms));
-		try {
-			auto& l_ptr = log_queue.peep();
-			if (l_ptr) {
-				wt = l_ptr->wakeup_time;
-			}
-		} catch(const StashContinue&) { }
-
-		auto nwt = next_wakeup_time.load();
-		while (nwt >= wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
-
-		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
-
-		try {
-			do {
-				auto& l_ptr = log_queue.next(running < 0);
-				if (l_ptr) {
-					run_one(l_ptr);
-					l_ptr.reset();
-				}
-			} while (true);
-		} catch(const StashContinue&) { }
-
-		if (running >= 0) {
-			break;
-		}
 	}
 }

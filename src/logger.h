@@ -80,15 +80,13 @@ public:
 };
 
 
-class LogThread;
 class LogWrapper;
 
 
-class Log : public std::enable_shared_from_this<Log> {
+class Log : public ScheduledTask {
 	friend class LogWrapper;
-	friend class LogThread;
 
-	static LogThread& _thread();
+	static SchedulerThread& scheduler();
 
 	static std::string str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 	static LogWrapper add(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
@@ -101,12 +99,8 @@ class Log : public std::enable_shared_from_this<Log> {
 	bool stacked;
 
 	bool clean;
-	std::chrono::time_point<std::chrono::system_clock> created_at;
-	std::chrono::time_point<std::chrono::system_clock> cleared_at;
-	unsigned long long wakeup_time;
 	std::string str_start;
 	int priority;
-	std::atomic_bool cleared;
 	std::atomic_bool cleaned;
 
 	Log(Log&&) = delete;
@@ -120,6 +114,10 @@ public:
 
 	Log(const std::string& str, bool cleanup, bool stacked, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Log();
+
+	static void finish(int wait=10);
+	static void join();
+	static void add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup);
 
 	template <typename T, typename R, typename... Args>
 	static LogWrapper log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int priority, Args&&... args);
@@ -148,62 +146,11 @@ public:
 
 	bool unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 
-	bool clear();
 	void cleanup();
 
-	static void finish(int wait=10);
-
 	long double age();
-};
 
-
-#define MUL 1000000ULL
-
-class LogQueue {
-public:
-	template <typename T>
-	static inline uint64_t time_point_to_key(std::chrono::time_point<T> n) {
-		return std::chrono::duration_cast<std::chrono::nanoseconds>(n.time_since_epoch()).count();
-	}
-
-	static inline uint64_t now() {
-		return time_point_to_key(std::chrono::system_clock::now());
-	}
-
-private:
-	using _logs =         StashValues<LogType,     10ULL>;
-	using _50_1ms =       StashSlots<_logs,        10ULL,   &now, 1ULL * MUL / 2ULL, 1ULL * MUL,       50ULL,   false>;
-	using _10_50ms =      StashSlots<_50_1ms,      10ULL,   &now, 0ULL,              50ULL * MUL,      10ULL,   false>;
-	using _3600_500ms =   StashSlots<_10_50ms,     600ULL,  &now, 0ULL,              500ULL * MUL,     3600ULL, false>;
-	using _48_1800s =     StashSlots<_3600_500ms,  48ULL,   &now, 0ULL,              1800000ULL * MUL, 48ULL,   true>;
-	_48_1800s queue;
-
-public:
-	LogQueue();
-
-	LogType& peep();
-	LogType& next(bool final=true, uint64_t final_key=0, bool keep_going=true);
-	void add(const LogType& l_ptr, uint64_t key=0);
-};
-
-
-class LogThread {
-	std::condition_variable wakeup_signal;
-	std::atomic_ullong next_wakeup_time;
-
-	LogQueue log_queue;
-	std::atomic_int running;
-	std::thread inner_thread;
-
-	void run_one(LogType& l_ptr);
-	void run();
-
-public:
-	LogThread();
-	~LogThread();
-
-	void finish(int wait=10);
-	void add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system_clock> wakeup);
+	void run() override;
 };
 
 
