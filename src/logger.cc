@@ -158,8 +158,14 @@ LogQueue::LogQueue()
 LogType&
 LogQueue::next(bool final, uint64_t final_key, bool keep_going)
 {
-	keep_going = keep_going && !final_key;
-	return queue.next(final, final_key, keep_going);
+	return queue.next(final, final_key, keep_going, false);
+}
+
+
+LogType&
+LogQueue::peep()
+{
+	return queue.next(false, 0, true, true);
 }
 
 

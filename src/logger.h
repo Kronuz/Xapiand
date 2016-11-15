@@ -225,6 +225,7 @@ class LogQueue {
 public:
 	LogQueue();
 
+	LogType& peep();
 	LogType& next(bool final=true, uint64_t final_key=0, bool keep_going=true);
 	void add(const LogType& l_ptr, uint64_t key=0);
 };
