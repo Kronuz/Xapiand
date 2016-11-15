@@ -124,7 +124,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				if (start_v > end_v) {
 					return Xapian::Query::MatchNothing;
 				}
-				//Cast needed (in some architectures long long int is not int64_t)
+				// Cast needed (in some architectures long long int is not int64_t)
 				return filterNumericQuery(field_spc, (int64_t)start_v, (int64_t)end_v, Serialise::integer(start_v), Serialise::integer(end_v));
 			}
 			case FieldType::POSITIVE: {
@@ -133,7 +133,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				if (start_v > end_v) {
 					return Xapian::Query::MatchNothing;
 				}
-				//Cast needed (in some architectures unsigned long long int is not uint64_t)
+				// Cast needed (in some architectures unsigned long long int is not uint64_t)
 				return filterNumericQuery(field_spc, (uint64_t)start_v, (uint64_t)end_v, Serialise::positive(start_v), Serialise::positive(end_v));
 			}
 			case FieldType::UUID:
@@ -267,11 +267,11 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 			if (!end) {
 				return Xapian::Query::MatchAll;
 			}
-			//FIXME: check for geo type (Maybe a throw for this case)
+			// FIXME: check for geo type (Maybe a throw for this case)
 			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::MsgPack(field_spc, end));
 			return Xapian::Query(mvle->release());
 		} else if (!end) {
-				//FIXME: check for geo type
+				// FIXME: check for geo type
 				auto mvge = new MultipleValueGE(field_spc.slot, Serialise::MsgPack(field_spc, start));
 				return Xapian::Query(mvge->release());
 		}
