@@ -379,12 +379,10 @@ LogThread::add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system
 
 		log_queue.add(l_ptr, time_point_to_key(wakeup));
 
-		auto nwt = next_wakeup_time.load();
-		auto n = time_point_to_ullong(now);
-
 		bool notify;
+		auto nwt = next_wakeup_time.load();
 		do {
-			notify = (nwt < n || nwt >= wt);
+			notify = nwt >= wt;
 		} while (notify && !next_wakeup_time.compare_exchange_weak(nwt, wt));
 
 		if (notify) {
@@ -408,15 +406,16 @@ LogThread::thread_function(LogQueue& log_queue)
 		}
 
 		auto now = std::chrono::system_clock::now();
-		auto wakeup = now + (running < 0 ? 3s : 100ms);
-		auto wt = time_point_to_ullong(wakeup);
-		auto nwt = next_wakeup_time.load();
-		auto n = time_point_to_ullong(now);
+		auto wt = time_point_to_ullong(now + (running < 0 ? 3s : 100ms));
+		try {
+			auto& l_ptr = log_queue.peep();
+			if (l_ptr) {
+				wt = l_ptr->wakeup_time;
+			}
+		} catch(const StashContinue&) { }
 
-		bool notify;
-		do {
-			notify = (nwt < n || nwt >= wt);
-		} while (notify && !next_wakeup_time.compare_exchange_weak(nwt, wt));
+		auto nwt = next_wakeup_time.load();
+		while (nwt >= wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
 
 		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
 
