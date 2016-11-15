@@ -27,9 +27,8 @@
 #include "utils.h"       // for time_point_to_ullong
 
 
-ScheduledTask::ScheduledTask(ThreadPool<>* thread_pool_, std::chrono::time_point<std::chrono::system_clock> created_at_)
-	: thread_pool(thread_pool_),
-	  wakeup_time(0),
+ScheduledTask::ScheduledTask(std::chrono::time_point<std::chrono::system_clock> created_at_)
+	: wakeup_time(0),
 	  created_at(time_point_to_ullong(created_at_)),
 	  cleared_at(0) { }
 
@@ -71,21 +70,26 @@ SchedulerQueue::add(const TaskType& task, uint64_t key)
 }
 
 
-SchedulerThread::SchedulerThread(const std::string& name_)
-	: name(name_),
+Scheduler::Scheduler(const std::string& name_, ThreadPool<>* thread_pool_)
+	: thread_pool(thread_pool_),
+	  name(name_),
 	  running(-1),
-	  inner_thread(&SchedulerThread::run, this) { }
+	  inner_thread(&Scheduler::run, this) { }
 
 
-SchedulerThread::~SchedulerThread()
+Scheduler::~Scheduler()
 {
 	finish(true);
 }
 
 
 void
-SchedulerThread::finish(int wait)
+Scheduler::finish(int wait)
 {
+	if (thread_pool) {
+		thread_pool->finish();
+	}
+
 	running = wait;
 	wakeup_signal.notify_all();
 	if (wait) {
@@ -95,8 +99,12 @@ SchedulerThread::finish(int wait)
 
 
 void
-SchedulerThread::join()
+Scheduler::join()
 {
+	if (thread_pool) {
+		thread_pool->join();
+	}
+
 	if (inner_thread.joinable()) {
 		try {
 			inner_thread.join();
@@ -106,7 +114,7 @@ SchedulerThread::join()
 
 
 void
-SchedulerThread::add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup)
+Scheduler::add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup)
 {
 	if (running != 0) {
 		auto now = std::chrono::system_clock::now();
@@ -133,12 +141,12 @@ SchedulerThread::add(const TaskType& task, std::chrono::time_point<std::chrono::
 
 
 void
-SchedulerThread::run_one(TaskType& task)
+Scheduler::run_one(TaskType& task)
 {
 	if (!task->cleared_at) {
 		if (task->clear()) {
-			if (task->thread_pool) {
-				task->thread_pool->enqueue(task);
+			if (thread_pool) {
+				thread_pool->enqueue(task);
 			} else {
 				task->run();
 			}
@@ -148,7 +156,7 @@ SchedulerThread::run_one(TaskType& task)
 
 
 void
-SchedulerThread::run()
+Scheduler::run()
 {
 	set_thread_name(name);
 

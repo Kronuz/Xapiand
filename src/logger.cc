@@ -175,7 +175,7 @@ SysLog::log(int priority, const std::string& str)
 
 
 Log::Log(const std::string& str, bool clean_, bool stacked_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
-	: ScheduledTask(nullptr, created_at_),
+	: ScheduledTask(created_at_),
 	  stack_level(0),
 	  stacked(stacked_),
 	  clean(clean_),
@@ -231,10 +231,10 @@ Log::age()
  * Avoid the "static initialization order fiasco"
  */
 
-SchedulerThread&
+Scheduler&
 Log::scheduler()
 {
-	static SchedulerThread scheduler("LSC");
+	static Scheduler scheduler("LSC");
 	return scheduler;
 }
 

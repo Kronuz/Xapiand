@@ -35,16 +35,15 @@ using namespace std::chrono_literals;
 
 
 class ScheduledTask;
-class SchedulerThread;
+class Scheduler;
 
 
 using TaskType = std::shared_ptr<ScheduledTask>;
 
 
 class ScheduledTask : public Task<>, public std::enable_shared_from_this<ScheduledTask> {
-	friend class SchedulerThread;
+	friend class Scheduler;
 
-	ThreadPool<>* thread_pool;
 	unsigned long long wakeup_time;
 
 protected:
@@ -52,7 +51,7 @@ protected:
 	std::atomic_ullong cleared_at;
 
 public:
-	ScheduledTask(ThreadPool<>* thread_pool_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
+	ScheduledTask(std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~ScheduledTask();
 
 	bool clear();
@@ -89,7 +88,9 @@ public:
 };
 
 
-class SchedulerThread {
+class Scheduler {
+	ThreadPool<>* thread_pool;
+
 	std::condition_variable wakeup_signal;
 	std::atomic_ullong next_wakeup_time;
 
@@ -103,10 +104,21 @@ class SchedulerThread {
 	void run();
 
 public:
-	SchedulerThread(const std::string& name_);
-	~SchedulerThread();
+	Scheduler(const std::string& name_, ThreadPool<>* thread_pool_=nullptr);
+	~Scheduler();
 
 	void finish(int wait=10);
 	void join();
 	void add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup);
+};
+
+
+class ThreadPoolScheduler : public Scheduler {
+	ThreadPool<> thread_pool;
+
+public:
+	template<typename... Params_>
+	ThreadPoolScheduler(const std::string& name, const std::string format, size_t num_threads, Params_&&... params)
+		: Scheduler(name, &thread_pool),
+		  thread_pool(format, num_threads, std::forward<Params_>(params)...) { }  // o.num_committers
 };

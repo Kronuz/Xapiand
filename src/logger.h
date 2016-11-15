@@ -86,7 +86,7 @@ class LogWrapper;
 class Log : public ScheduledTask {
 	friend class LogWrapper;
 
-	static SchedulerThread& scheduler();
+	static Scheduler& scheduler();
 
 	static std::string str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 	static LogWrapper add(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
