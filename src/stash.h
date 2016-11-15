@@ -263,7 +263,7 @@ class StashSlots : public Stash<_Tp, _Size> {
 		return true;
 	}
 
-	size_t increment_pos(size_t pos, bool keep_going, size_t initial_pos, size_t final_pos, size_t last_pos) {
+	size_t increment_pos(size_t pos, bool keep_going, size_t initial_pos, size_t& final_pos, size_t last_pos) {
 		auto new_pos = (pos + 1) % _Mod;
 
 		if (!check_pos(new_pos, initial_pos, final_pos, last_pos)) {
@@ -277,9 +277,7 @@ class StashSlots : public Stash<_Tp, _Size> {
 			}
 		}
 
-		Stash_T::pos.compare_exchange_strong(pos, new_pos);
-
-		return final_pos;
+		return new_pos;
 	}
 
 public:
@@ -292,12 +290,12 @@ public:
 	StashSlots(uint64_t key)
 		: Stash_T::Stash(get_slot(key)) { }
 
-	auto& next(bool final, uint64_t final_key, bool keep_going) {
+	auto& next(bool final=true, uint64_t final_key=0, bool keep_going=true) {
 		// std::cout << "\tTimeStash<_Mod=" << _Mod << ">::next(" << (final ? "true" : "false") <<", " << final_key << ", " << (keep_going ? "true" : "false") << ")" << std::endl;
 
 		auto pos = Stash_T::pos.load();
 
-		keep_going &= final;
+		keep_going = keep_going && final && !final_key;
 		if (keep_going) {
 			final_key = _CurrentKey();
 		}
@@ -315,14 +313,15 @@ public:
 				throw StashContinue();
 			} catch (const StashContinue&) { }
 
-			final_pos = increment_pos(pos, keep_going, initial_pos, final_pos, last_pos);
+			auto new_pos = increment_pos(pos, keep_going, initial_pos, final_pos, last_pos);
+			if (Stash_T::pos.compare_exchange_strong(pos, new_pos)) {
+				pos = new_pos;
+			}
 
 			if (!final && ptr) {
 				// Dispose if it's not in the final slice
 				ptr->val.clear();
 			}
-
-			pos = Stash_T::pos.load();
 		} while (true);
 	}
 
@@ -355,9 +354,9 @@ public:
 		: Stash_T::Stash(0),
 		  idx(0) { }
 
-	void increment_pos(size_t pos) {
+	size_t increment_pos(size_t pos) {
 		auto new_pos = pos + 1;
-		Stash_T::pos.compare_exchange_strong(pos, new_pos);
+		return new_pos;
 	}
 
 	auto& next(bool, uint64_t, bool) {
@@ -366,10 +365,15 @@ public:
 		// std::cout << "\t\t\tLogStash pos:" << pos << std::endl;
 		try {
 			auto ptr = Stash_T::get_bin(pos).load();
-			increment_pos(pos);
+			auto new_pos = increment_pos(pos);
+			Stash_T::pos.compare_exchange_strong(pos, new_pos);
 			return ptr->val;
 		} catch (const StashException&) { }
 		throw StashContinue();
+	}
+
+	auto& next() {
+		return next(true, 0, true);
 	}
 
 	template <typename T>
