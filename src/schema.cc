@@ -994,11 +994,14 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 			validate_required_namespace_data(item_value);
 		}
 
-		auto data_namespace = get_data_namespace(specification.paths_namespace, specification.sep_types[2]);
+		auto namespace_spc = get_namespace_specifications();
 		bool add_value = true;
-		for (const auto& prefix_slot : data_namespace) {
-			specification.prefix = prefix_slot.first;
-			specification.slot = prefix_slot.second;
+		for (auto& spc : namespace_spc) {
+			specification.sep_types[2] = std::move(spc.sep_types[2]);
+			specification.prefix       = std::move(spc.prefix);
+			specification.slot         = std::move(spc.slot);
+			specification.accuracy     = std::move(spc.accuracy);
+			specification.acc_prefix   = std::move(spc.acc_prefix);
 			index_item(doc, item_value, data, pos, add_value);
 			add_value = false;
 		}
@@ -1045,11 +1048,14 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 			validate_required_namespace_data(item_value);
 		}
 
-		auto data_namespace = get_data_namespace(specification.paths_namespace, specification.sep_types[2]);
+		auto namespace_spc = get_namespace_specifications();
 		bool add_values = true;
-		for (const auto& prefix_slot : data_namespace) {
-			specification.prefix = prefix_slot.first;
-			specification.slot = prefix_slot.second;
+		for (auto& spc : namespace_spc) {
+			specification.sep_types[2] = std::move(spc.sep_types[2]);
+			specification.prefix       = std::move(spc.prefix);
+			specification.slot         = std::move(spc.slot);
+			specification.accuracy     = std::move(spc.accuracy);
+			specification.acc_prefix   = std::move(spc.acc_prefix);
 			index_item(doc, item_value, *data, add_values);
 			add_values = false;
 		}
@@ -1096,22 +1102,28 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 				validate_required_namespace_data(*val);
 			}
 
-			auto data_namespace = get_data_namespace(specification.paths_namespace, specification.sep_types[2]);
+			auto namespace_spc = get_namespace_specifications();
 			bool add_values = true;
 			if (offsprings) {
-				for (const auto& prefix_slot : data_namespace) {
-					specification.prefix = prefix_slot.first;
-					specification.slot = prefix_slot.second;
+				for (auto& spc : namespace_spc) {
+					specification.sep_types[2] = std::move(spc.sep_types[2]);
+					specification.prefix       = std::move(spc.prefix);
+					specification.slot         = std::move(spc.slot);
+					specification.accuracy     = std::move(spc.accuracy);
+					specification.acc_prefix   = std::move(spc.acc_prefix);
 					index_item(doc, *val, *data, add_values);
 					add_values = false;
 				}
 			} else {
-				for (auto& prefix_slot : data_namespace) {
-					specification.prefix = prefix_slot.first;
-					specification.slot = prefix_slot.second;
+				for (auto& spc : namespace_spc) {
+					specification.sep_types[2] = std::move(spc.sep_types[2]);
+					specification.prefix       = std::move(spc.prefix);
+					specification.slot         = std::move(spc.slot);
+					specification.accuracy     = std::move(spc.accuracy);
+					specification.acc_prefix   = std::move(spc.acc_prefix);
 					index_item(doc, *val, *data, add_values);
-					prefix_slot.first.pop_back();
-					doc.add_term(prefix_slot.first);
+					specification.prefix.pop_back();
+					doc.add_term(specification.prefix);
 					add_values = false;
 				}
 			}
@@ -1172,37 +1184,71 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 }
 
 
-std::vector<std::pair<std::string, Xapian::valueno>>
-Schema::get_data_namespace(const std::vector<std::string>& paths_namespace, FieldType type)
+std::vector<required_spc_t>
+Schema::get_namespace_specifications() const
 {
-	if (paths_namespace.size() > NAMESPACE_LIMIT_DEPTH) {
-		throw MSG_ClientError("Namespace limit depth is %d, and the namespace provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, paths_namespace.size());
-	}
+	auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
 
-	std::vector<std::pair<std::string, Xapian::valueno>> data;
-	data.reserve(std::pow(2, paths_namespace.size() - 2));
-	auto it = paths_namespace.begin();
-	data.push_back(std::make_pair(DOCUMENT_NAMESPACE_TERM_PREFIX + *it, Xapian::BAD_VALUENO));
-	auto it_e = paths_namespace.end() - 1;
-	for (++it; it != it_e; ++it) {
-		const auto size = data.size();
-		for (size_t i = 0; i < size; ++i) {
-			std::string prefix;
-			prefix.reserve(data[i].first.length() + it->length());
-			prefix.assign(data[i].first).append(*it);
-			data.push_back(std::make_pair(std::move(prefix), Xapian::BAD_VALUENO));
+	std::vector<required_spc_t> data;
+	data.reserve(prefixes_namespace.size());
+	if (toUType(specification.index & TypeIndex::VALUES)) {
+		for (auto& prefix_namespace : prefixes_namespace) {
+			data.push_back(get_namespace_specification(specification.sep_types[2], prefix_namespace));
+		}
+	} else {
+		for (auto& prefix_namespace : prefixes_namespace) {
+			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
+			spc.prefix.assign(prefix_namespace).push_back(toUType(spc.sep_types[2]));
+			data.push_back(std::move(spc));
 		}
 	}
 
-	for (auto& val : data) {
-		std::string prefix;
-		prefix.reserve(it_e->length() + 1);
-		prefix.assign(*it_e).push_back(toUType(type));
-		val.first.append(std::move(prefix));
-		val.second = get_slot(val.first);
+	return data;
+}
+
+
+required_spc_t
+Schema::get_namespace_specification(FieldType namespace_type, std::string& prefix_namespace)
+{
+	required_spc_t spc = specification_t::get_global(namespace_type);
+	spc.prefix.assign(prefix_namespace).push_back(toUType(spc.sep_types[2]));
+	spc.slot = get_slot(spc.prefix);
+
+	switch (spc.sep_types[2]) {
+		case FieldType::INTEGER:
+		case FieldType::POSITIVE:
+		case FieldType::FLOAT: {
+			static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
+			spc.acc_prefix.clear();
+			for (const auto& acc : spc.accuracy) {
+				prefix_namespace.append(DB_OFFSPRING_UNION).append(acc_name_num(acc));
+				spc.acc_prefix.push_back(prefix_type + Serialise::dynamic_namespace_field(prefix_namespace));
+			}
+			break;
+		}
+		case FieldType::DATE: {
+			static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE));
+			spc.acc_prefix.clear();
+			for (const auto& acc : spc.accuracy) {
+				prefix_namespace.append(DB_OFFSPRING_UNION).append(acc_name_date(acc));
+				spc.acc_prefix.push_back(Serialise::dynamic_namespace_field(prefix_namespace));
+			}
+			break;
+		}
+		case FieldType::GEO: {
+			static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO));
+			spc.acc_prefix.clear();
+			for (const auto& acc : spc.accuracy) {
+				prefix_namespace.append(DB_OFFSPRING_UNION).append(acc_name_geo(acc));
+				spc.acc_prefix.push_back(prefix_type + Serialise::dynamic_namespace_field(prefix_namespace));
+			}
+			break;
+		}
+		default:
+			break;
 	}
 
-	return data;
+	return spc;
 }
 
 
@@ -4139,9 +4185,8 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 							}
 							prefix_namespace.append(Serialise::dynamic_namespace_field(field_namespace));
 						} else if (++it == it_e) {
-							full_normalized_name.append(DB_OFFSPRING_UNION).append(field_namespace);
-							prefix_namespace.assign(Serialise::dynamic_namespace_field(full_normalized_name));
-							return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::move(field_namespace));
+							prefix_namespace.append(DB_OFFSPRING_UNION).append(field_namespace);
+							return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, Serialise::dynamic_namespace_field(DOCUMENT_NAMESPACE_TERM_PREFIX + prefix_namespace), std::move(field_namespace));
 						} else {
 							throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
 						}

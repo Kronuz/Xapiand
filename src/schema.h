@@ -370,10 +370,9 @@ class Schema {
 	static std::vector<std::string> get_prefixes_namespace(const std::vector<std::string>& paths_namespace);
 
 	/*
-	 * Get the prefixes and slots for a namespace.
+	 * Returns a vector with the right specification.
 	 */
-	static std::vector<std::pair<std::string, Xapian::valueno>> get_data_namespace(const std::vector<std::string>& paths_namespace, FieldType type);
-
+	std::vector<required_spc_t> get_namespace_specifications() const;
 
 	/*
 	 * Update dynamic field's specifications.
@@ -607,6 +606,11 @@ public:
 	 * Updates ID_FIELD_NAME in schema according to obj.
 	 */
 	std::string serialise_id(const std::string& value_id);
+
+	/*
+	 * Update namespace specification according to prefix_namespace.
+	 */
+	static required_spc_t get_namespace_specification(FieldType namespace_type, std::string& prefix_namespace);
 
 
 	/*
