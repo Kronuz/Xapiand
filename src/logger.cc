@@ -362,7 +362,7 @@ LogThread::add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system
 		auto wt = time_point_to_ullong(wakeup);
 		l_ptr->wakeup_time = wt;
 
-		log_queue.add(l_ptr, time_point_to_key(wakeup));
+		log_queue.add(l_ptr, LogQueue::time_point_to_key(wakeup));
 
 		bool notify;
 		auto nwt = next_wakeup_time.load();

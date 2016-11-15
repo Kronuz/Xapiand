@@ -202,20 +202,20 @@ public:
 };
 
 
-template <typename T>
-static inline uint64_t time_point_to_key(std::chrono::time_point<T> n) {
-	return std::chrono::duration_cast<std::chrono::nanoseconds>(n.time_since_epoch()).count();
-}
-
-
-static inline uint64_t now() {
-	return time_point_to_key(std::chrono::system_clock::now());
-}
-
-
 #define MUL 1000000ULL
 
 class LogQueue {
+public:
+	template <typename T>
+	static inline uint64_t time_point_to_key(std::chrono::time_point<T> n) {
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(n.time_since_epoch()).count();
+	}
+
+	static inline uint64_t now() {
+		return time_point_to_key(std::chrono::system_clock::now());
+	}
+
+private:
 	using _logs =         StashValues<LogType,     10ULL>;
 	using _50_1ms =       StashSlots<_logs,        10ULL,   &now, 1ULL * MUL / 2ULL, 1ULL * MUL,       50ULL,   false>;
 	using _10_50ms =      StashSlots<_50_1ms,      10ULL,   &now, 0ULL,              50ULL * MUL,      10ULL,   false>;
