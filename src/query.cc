@@ -403,15 +403,14 @@ Query::get_namespace_query(const std::string& full_name, const std::string& pref
 	f_prefix.reserve(arraySize(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
 	f_prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace);
 
-	if (field_value.empty() || field_value == "*") {
-		return Xapian::Query(Xapian::Query::OP_WILDCARD, f_prefix);
-	}
-
 	if (fp.isrange) {
-		// std::tuple<FieldType, std::string, std::string>
 		auto ser_type = Serialise::get_range_type(fp.start, fp.end);
 		auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), f_prefix);
 		return MultipleValueRange::getQuery(spc, full_name, fp.start, fp.end);
+	}
+
+	if (field_value.empty() || field_value == "*") {
+		return Xapian::Query(Xapian::Query::OP_WILDCARD, f_prefix);
 	}
 
 	auto ser_type = Serialise::get_type(field_value);
