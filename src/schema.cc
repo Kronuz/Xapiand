@@ -50,6 +50,7 @@
 #define L_SCHEMA L_TEST
 #endif
 
+
 /*
  * 1. Try reading schema from the metadata.
  * 2. Feed specification_t with the read schema using update_*;
