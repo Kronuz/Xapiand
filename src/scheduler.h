@@ -35,6 +35,7 @@ using namespace std::chrono_literals;
 
 
 class ScheduledTask;
+
 class Scheduler;
 
 
@@ -89,7 +90,7 @@ public:
 
 
 class Scheduler {
-	ThreadPool<>* thread_pool;
+	std::unique_ptr<ThreadPool<>> thread_pool;
 
 	std::condition_variable wakeup_signal;
 	std::atomic_ullong next_wakeup_time;
@@ -104,21 +105,11 @@ class Scheduler {
 	void run();
 
 public:
-	Scheduler(const std::string& name_, ThreadPool<>* thread_pool_=nullptr);
+	Scheduler(const std::string& name_);
+	Scheduler(const std::string& name_, const std::string format, size_t num_threads);
 	~Scheduler();
 
 	void finish(int wait=10);
 	void join();
 	void add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup);
-};
-
-
-class ThreadPoolScheduler : public Scheduler {
-	ThreadPool<> thread_pool;
-
-public:
-	template<typename... Params_>
-	ThreadPoolScheduler(const std::string& name, const std::string format, size_t num_threads, Params_&&... params)
-		: Scheduler(name, &thread_pool),
-		  thread_pool(format, num_threads, std::forward<Params_>(params)...) { }  // o.num_committers
 };

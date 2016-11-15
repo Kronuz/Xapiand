@@ -70,8 +70,14 @@ SchedulerQueue::add(const TaskType& task, uint64_t key)
 }
 
 
-Scheduler::Scheduler(const std::string& name_, ThreadPool<>* thread_pool_)
-	: thread_pool(thread_pool_),
+Scheduler::Scheduler(const std::string& name_)
+	: name(name_),
+	  running(-1),
+	  inner_thread(&Scheduler::run, this) { }
+
+
+Scheduler::Scheduler(const std::string& name_, const std::string format, size_t num_threads)
+	: thread_pool(std::make_unique<ThreadPool<>>(format, num_threads)),
 	  name(name_),
 	  running(-1),
 	  inner_thread(&Scheduler::run, this) { }
@@ -79,19 +85,20 @@ Scheduler::Scheduler(const std::string& name_, ThreadPool<>* thread_pool_)
 
 Scheduler::~Scheduler()
 {
-	finish(true);
+	finish(1);
 }
 
 
 void
 Scheduler::finish(int wait)
 {
+	running = wait;
+	wakeup_signal.notify_all();
+
 	if (thread_pool) {
 		thread_pool->finish();
 	}
 
-	running = wait;
-	wakeup_signal.notify_all();
 	if (wait) {
 		join();
 	}
@@ -101,15 +108,16 @@ Scheduler::finish(int wait)
 void
 Scheduler::join()
 {
-	if (thread_pool) {
-		thread_pool->join();
-	}
-
 	try {
 		if (inner_thread.joinable()) {
 			inner_thread.join();
 		}
 	} catch (const std::system_error&) { }
+
+	if (thread_pool) {
+		thread_pool->join();
+		thread_pool.reset();
+	}
 }
 
 
@@ -146,7 +154,9 @@ Scheduler::run_one(TaskType& task)
 	if (!task->cleared_at) {
 		if (task->clear()) {
 			if (thread_pool) {
-				thread_pool->enqueue(task);
+				try {
+					thread_pool->enqueue(task);
+				} catch (const std::logic_error&) { }
 			} else {
 				task->run();
 			}
