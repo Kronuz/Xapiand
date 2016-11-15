@@ -105,11 +105,11 @@ Scheduler::join()
 		thread_pool->join();
 	}
 
-	if (inner_thread.joinable()) {
-		try {
+	try {
+		if (inner_thread.joinable()) {
 			inner_thread.join();
-		} catch (const std::system_error&) { }
-	}
+		}
+	} catch (const std::system_error&) { }
 }
 
 

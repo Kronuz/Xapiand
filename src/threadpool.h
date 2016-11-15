@@ -273,9 +273,11 @@ public:
 	void join() {
 		std::lock_guard<std::mutex> lk(mtx);
 		for (auto& thread : threads) {
-			if (thread.joinable()) {
-				thread.join();
-			}
+			try {
+				if (thread.joinable()) {
+					thread.join();
+				}
+			} catch (const std::system_error&) { }
 		}
 		threads.clear();
 	}
