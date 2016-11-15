@@ -124,7 +124,7 @@ class Log : public std::enable_shared_from_this<Log> {
 
 public:
 	static int log_level;
-	static std::vector<std::unique_ptr<Logger>>& _handlers();
+	static std::vector<std::unique_ptr<Logger>>& handlers();
 
 	Log(const std::string& str, bool cleanup, bool stacked, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Log();

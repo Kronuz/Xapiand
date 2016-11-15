@@ -191,7 +191,7 @@ Log::_thread()
 
 
 std::vector<std::unique_ptr<Logger>>&
-Log::_handlers()
+Log::handlers()
 {
 	static std::unique_ptr<std::vector<std::unique_ptr<Logger>>> handlers(std::make_unique<std::vector<std::unique_ptr<Logger>>>());
 	return *handlers;
@@ -296,7 +296,7 @@ Log::log(int priority, std::string str, int indent)
 	if (needle != std::string::npos) {
 		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
 	}
-	for (auto& handler : _handlers()) {
+	for (auto& handler : handlers()) {
 		handler->log(priority, str);
 	}
 }
