@@ -53,21 +53,21 @@ namespace queue {
 		size_t _threshold;
 
 		bool _push_wait(double timeout, std::unique_lock<std::mutex>& lk) {
-			auto check = [this]() {
+			auto pred = [this]() {
 				return _finished || _ending || _items_queue.size() < _limit;
 			};
 
 			if (timeout) {
 				if (timeout > 0.0) {
 					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
-					if (!_push_cond.wait_until(lk, timeout_tp, check)) {
+					if (!_push_cond.wait_until(lk, timeout_tp, pred)) {
 						return false;
 					}
 				} else {
-					_push_cond.wait(lk, check);
+					_push_cond.wait(lk, pred);
 				}
 			} else {
-				if (!check()) {
+				if (!pred()) {
 					return false;
 				}
 			}
@@ -80,7 +80,7 @@ namespace queue {
 		}
 
 		bool _pop_wait(double timeout, std::unique_lock<std::mutex>& lk) {
-			auto check = [this]() {
+			auto pred = [this]() {
 				// While the queue is empty, make the thread that runs this wait
 				return _finished || _ending || !_items_queue.empty();
 			};
@@ -88,14 +88,14 @@ namespace queue {
 			if (timeout) {
 				if (timeout > 0.0) {
 					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
-					if (!_pop_cond.wait_until(lk, timeout_tp, check)) {
+					if (!_pop_cond.wait_until(lk, timeout_tp, pred)) {
 						return false;
 					}
 				} else {
-					_pop_cond.wait(lk, check);
+					_pop_cond.wait(lk, pred);
 				}
 			} else {
-				if (!check()) {
+				if (!pred()) {
 					return false;
 				}
 			}
