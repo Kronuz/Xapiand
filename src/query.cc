@@ -400,38 +400,37 @@ Query::get_namespace_query(const std::string& full_name, const std::string& pref
 	L_CALL(this, "Query::get_namespace_query(%s, %s, %s)", repr(full_name).c_str(), repr(prefix_namespace).c_str(), repr(field_value).c_str());
 
 	std::string f_prefix;
-	f_prefix.reserve(std::strlen(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
+	f_prefix.reserve(arraySize(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
 	f_prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace);
 
 	if (field_value.empty() || field_value == "*") {
 		return Xapian::Query(Xapian::Query::OP_WILDCARD, f_prefix);
 	}
 
-	auto ser_type = Serialise::get_type(field_value);
-	auto type = ser_type.first;
-	f_prefix.append(1, toUType(type));
-	field_value.assign(ser_type.second);
-
 	if (fp.isrange) {
-		auto namespace_spc = Schema::get_data_global(type);
-		namespace_spc.slot = get_slot(f_prefix);
-		return MultipleValueRange::getQuery(namespace_spc, full_name, fp.start, fp.end);
+		// std::tuple<FieldType, std::string, std::string>
+		auto ser_type = Serialise::get_range_type(fp.start, fp.end);
+		auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), f_prefix);
+		return MultipleValueRange::getQuery(spc, full_name, fp.start, fp.end);
 	}
 
-	const auto& namespace_spc = Schema::get_data_global(type);
-	switch (namespace_spc.get_type()) {
+	auto ser_type = Serialise::get_type(field_value);
+	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), f_prefix);
+	field_value.assign(ser_type.second);
+
+	switch (spc.get_type()) {
 		case FieldType::TEXT: {
 			Xapian::QueryParser queryTexts;
 			queryTexts.set_database(*database->db);
-			queryTexts.set_stemming_strategy(getQueryParserStrategy(namespace_spc.stem_strategy));
-			queryTexts.set_stemmer(Xapian::Stem(namespace_spc.stem_language));
-			namespace_spc.flags.bool_term ? queryTexts.add_boolean_prefix("_", f_prefix) : queryTexts.add_prefix("_", f_prefix);
+			queryTexts.set_stemming_strategy(getQueryParserStrategy(spc.stem_strategy));
+			queryTexts.set_stemmer(Xapian::Stem(spc.stem_language));
+			spc.flags.bool_term ? queryTexts.add_boolean_prefix("_", spc.prefix) : queryTexts.add_prefix("_", spc.prefix);
 			std::string str_texts;
 			str_texts.reserve(2 + field_value.length());
 			str_texts.assign("_:").append(field_value);
 			return queryTexts.parse_query(str_texts, q_flags);
 		}
 		default:
-			return Xapian::Query(prefixed(field_value, f_prefix));
+			return Xapian::Query(prefixed(field_value, spc.prefix));
 	}
 }
