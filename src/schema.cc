@@ -1157,6 +1157,8 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 std::vector<std::string>
 Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 {
+	L_CALL(nullptr, "Schema::get_prefixes_namespace(%zu)", paths_namespace.size());
+
 	if (paths_namespace.size() > NAMESPACE_LIMIT_DEPTH) {
 		throw MSG_ClientError("Namespace limit depth is %d, and the namespace provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, paths_namespace.size());
 	}
@@ -1187,6 +1189,8 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 std::vector<required_spc_t>
 Schema::get_namespace_specifications() const
 {
+	L_CALL(this, "Schema::get_namespace_specifications()");
+
 	auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
 
 	std::vector<required_spc_t> data;
@@ -1210,6 +1214,8 @@ Schema::get_namespace_specifications() const
 required_spc_t
 Schema::get_namespace_specification(FieldType namespace_type, std::string& prefix_namespace)
 {
+	L_CALL(nullptr, "Schema::get_namespace_specification('%c', %s)", toUType(namespace_type), repr(prefixes_namespace).c_str());
+
 	required_spc_t spc = specification_t::get_global(namespace_type);
 	spc.prefix.assign(prefix_namespace).push_back(toUType(spc.sep_types[2]));
 	spc.slot = get_slot(spc.prefix);
