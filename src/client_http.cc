@@ -517,6 +517,7 @@ HttpClient::_run()
 				break;
 			case HTTP_PATCH:
 				_patch(method);
+				break;
 			default:
 				write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
 				break;
