@@ -4173,6 +4173,10 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			// Verify if parent is a namespace.
 			try {
 				if (subproperties->at(RESERVED_NAMESPACE).as_bool()) {
+					int depth_namespace = std::distance(it, it_e);
+					if (depth_namespace > NAMESPACE_LIMIT_DEPTH) {
+						throw MSG_ClientError("Namespace limit depth is %d, and the namespace provided has a depth of %d", NAMESPACE_LIMIT_DEPTH, depth_namespace);
+					}
 					prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(full_normalized_name) : Serialise::namespace_field(full_normalized_name));
 					for ( ; it != it_e; ++it) {
 						auto& field_namespace = *it;
