@@ -288,8 +288,7 @@ Log::add(const std::string& str, bool clean, bool stacked, std::chrono::time_poi
 {
 	auto l_ptr = std::make_shared<Log>(str, clean, stacked, priority, created_at);
 
-	static LogThread& thread = _thread();
-	thread.add(l_ptr, wakeup);
+	_thread().add(l_ptr, wakeup);
 
 	return LogWrapper(l_ptr);
 }
@@ -332,8 +331,7 @@ Log::print(const std::string& str, bool clean, bool stacked, std::chrono::time_p
 void
 Log::finish(int wait)
 {
-	static LogThread& thread = _thread();
-	thread.finish(wait);
+	_thread().finish(wait);
 }
 
 
@@ -389,6 +387,22 @@ LogThread::add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system
 
 
 void
+LogThread::run_one(LogType& l_ptr)
+{
+	if (!l_ptr->cleared) {
+		auto msg = l_ptr->str_start;
+		auto age = l_ptr->age();
+		if (age > 2e8) {
+			msg += " ~" + delta_string(age, true);
+		}
+		if (l_ptr->clear()) {
+			Log::log(l_ptr->priority, msg, l_ptr->stack_level * 2);
+		}
+	}
+}
+
+
+void
 LogThread::run()
 {
 	std::mutex mtx;
@@ -419,17 +433,7 @@ LogThread::run()
 			do {
 				auto& l_ptr = log_queue.next(running < 0);
 				if (l_ptr) {
-					if (!l_ptr->cleared) {
-						auto msg = l_ptr->str_start;
-						auto age = l_ptr->age();
-						if (age > 2e8) {
-							msg += " ~" + delta_string(age, true);
-						}
-						if (l_ptr->clear()) {
-							Log::log(l_ptr->priority, msg, l_ptr->stack_level * 2);
-						}
-					}
-
+					run_one(l_ptr);
 					l_ptr.reset();
 				}
 			} while (true);

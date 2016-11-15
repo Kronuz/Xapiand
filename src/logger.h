@@ -39,9 +39,9 @@
 #include <vector>             // for vector
 #include <condition_variable> // for condition_variable
 
+#include "xapiand.h"
 #include "exception.h"
 #include "stash.h"
-#include "xapiand.h"
 
 
 #define MERGE_(a,b)  a##b
@@ -240,6 +240,7 @@ class LogThread {
 	std::atomic_int running;
 	std::thread inner_thread;
 
+	void run_one(LogType& l_ptr);
 	void run();
 
 public:
