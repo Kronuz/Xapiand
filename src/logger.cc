@@ -43,6 +43,7 @@
 const std::regex filter_re("\033\\[[;\\d]*m");
 std::mutex Log::stack_mtx;
 std::unordered_map<std::thread::id, unsigned> Log::stack_levels;
+int Log::log_level = DEFAULT_LOG_LEVEL;
 
 
 const char *priorities[] = {
@@ -184,23 +185,15 @@ LogQueue::add(const LogType& l_ptr, uint64_t key)
 LogThread&
 Log::_thread()
 {
-	static LogThread* thread = new LogThread();
+	static std::unique_ptr<LogThread> thread(std::make_unique<LogThread>());
 	return *thread;
-}
-
-
-int&
-Log::_log_level()
-{
-	static auto* log_level = new int(DEFAULT_LOG_LEVEL);
-	return *log_level;
 }
 
 
 std::vector<std::unique_ptr<Logger>>&
 Log::_handlers()
 {
-	static auto* handlers = new std::vector<std::unique_ptr<Logger>>();
+	static std::unique_ptr<std::vector<std::unique_ptr<Logger>>> handlers(std::make_unique<std::vector<std::unique_ptr<Logger>>>());
 	return *handlers;
 }
 
@@ -299,12 +292,11 @@ Log::log(int priority, std::string str, int indent)
 {
 	static std::mutex log_mutex;
 	std::lock_guard<std::mutex> lk(log_mutex);
-	static const auto& handlers = _handlers();
 	auto needle = str.find(STACKED_INDENT);
 	if (needle != std::string::npos) {
 		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
 	}
-	for (auto& handler : handlers) {
+	for (auto& handler : _handlers()) {
 		handler->log(priority, str);
 	}
 }
@@ -313,7 +305,6 @@ Log::log(int priority, std::string str, int indent)
 LogWrapper
 Log::print(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
-	static auto& log_level = _log_level();
 	if (priority > log_level) {
 		return LogWrapper(std::make_shared<Log>(str, clean, stacked, priority, created_at));
 	}

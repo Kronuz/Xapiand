@@ -722,7 +722,7 @@ int main(int argc, char **argv) {
 		handlers.push_back(std::make_unique<StderrLogger>());
 	}
 
-	Log::_log_level() += opts.verbosity;
+	Log::log_level += opts.verbosity;
 
 	banner();
 	if (opts.detach) {
