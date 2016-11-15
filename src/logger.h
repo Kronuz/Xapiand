@@ -233,14 +233,14 @@ public:
 
 
 class LogThread {
-	static std::condition_variable wakeup_signal;
-	static std::atomic_ullong next_wakeup_time;
+	std::condition_variable wakeup_signal;
+	std::atomic_ullong next_wakeup_time;
 
 	LogQueue log_queue;
 	std::atomic_int running;
 	std::thread inner_thread;
 
-	void thread_function(LogQueue& log_queue);
+	void run();
 
 public:
 	LogThread();

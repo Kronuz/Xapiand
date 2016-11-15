@@ -337,13 +337,9 @@ Log::finish(int wait)
 }
 
 
-std::condition_variable LogThread::wakeup_signal;
-std::atomic_ullong LogThread::next_wakeup_time;
-
-
 LogThread::LogThread()
 	: running(-1),
-	  inner_thread(&LogThread::thread_function, this, std::ref(log_queue)) { }
+	  inner_thread(&LogThread::run, this) { }
 
 
 LogThread::~LogThread()
@@ -393,7 +389,7 @@ LogThread::add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system
 
 
 void
-LogThread::thread_function(LogQueue& log_queue)
+LogThread::run()
 {
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
