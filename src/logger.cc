@@ -101,6 +101,7 @@ Log::Log(const std::string& str, bool clean_, bool stacked_, int priority_, std:
 	  clean(clean_),
 	  created_at(created_at_),
 	  cleared_at(created_at_),
+	  wakeup_time(0),
 	  str_start(str),
 	  priority(priority_),
 	  cleared(false),
