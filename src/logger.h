@@ -203,7 +203,7 @@ public:
 
 
 template <typename T>
-inline uint64_t time_point_to_key(std::chrono::time_point<T> n) {
+static inline uint64_t time_point_to_key(std::chrono::time_point<T> n) {
 	return std::chrono::duration_cast<std::chrono::nanoseconds>(n.time_since_epoch()).count();
 }
 
