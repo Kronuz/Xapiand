@@ -1214,7 +1214,7 @@ Schema::get_namespace_specifications() const
 required_spc_t
 Schema::get_namespace_specification(FieldType namespace_type, std::string& prefix_namespace)
 {
-	L_CALL(nullptr, "Schema::get_namespace_specification('%c', %s)", toUType(namespace_type), repr(prefixes_namespace).c_str());
+	L_CALL(nullptr, "Schema::get_namespace_specification('%c', %s)", toUType(namespace_type), repr(prefix_namespace).c_str());
 
 	required_spc_t spc = specification_t::get_global(namespace_type);
 	spc.prefix.assign(prefix_namespace).push_back(toUType(spc.sep_types[2]));
