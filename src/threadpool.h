@@ -100,6 +100,7 @@ template<typename... Params>
 class Task {
 	friend TaskQueue<Params...>;
 
+public:
 	virtual void run(Params...) = 0;
 };
 
