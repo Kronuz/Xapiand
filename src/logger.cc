@@ -370,13 +370,15 @@ LogThread::add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system
 {
 	if (running != 0) {
 		wakeup += 2ms;
+		auto wt = time_point_to_ullong(wakeup);
+		l_ptr->wakeup_time = wt;
+
 		log_queue.add(l_ptr, time_point_to_key(wakeup));
 
 		auto now = std::chrono::system_clock::now();
 		if (wakeup < now) {
 			wakeup = now;
 		}
-		auto wt = time_point_to_ullong(wakeup);
 		auto nwt = next_wakeup_time.load();
 		auto n = time_point_to_ullong(now);
 
