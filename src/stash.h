@@ -290,7 +290,7 @@ public:
 	StashSlots(uint64_t key)
 		: Stash_T::Stash(get_slot(key)) { }
 
-	auto& next(bool final=true, uint64_t final_key=0, bool keep_going=true) {
+	auto& next(bool final=true, uint64_t final_key=0, bool keep_going=true, bool peep=false) {
 		// std::cout << "\tTimeStash<_Mod=" << _Mod << ">::next(" << (final ? "true" : "false") <<", " << final_key << ", " << (keep_going ? "true" : "false") << ")" << std::endl;
 
 		auto pos = Stash_T::pos.load();
@@ -308,17 +308,17 @@ public:
 			try {
 				// std::cout << "\t\tTimeStash<_Mod=" << _Mod << "> pos:" << pos << ", initial_pos:" << initial_pos << ", final:" << (final ? "true" : "false") << ", final_pos:" << final_pos << ", last_pos:" << last_pos << std::endl;
 				ptr = Stash_T::get_bin(pos).load();
-				return ptr->val.next(final && pos == final_pos, final_key, keep_going);
+				return ptr->val.next(final && pos == final_pos, final_key, keep_going, peep);
 			} catch (const StashOutOfRange&) {
 				throw StashContinue();
 			} catch (const StashContinue&) { }
 
 			auto new_pos = increment_pos(pos, keep_going, initial_pos, final_pos, last_pos);
-			if (Stash_T::pos.compare_exchange_strong(pos, new_pos)) {
+			if (peep || Stash_T::pos.compare_exchange_strong(pos, new_pos)) {
 				pos = new_pos;
 			}
 
-			if (!final && ptr) {
+			if (!final && ptr && !peep) {
 				// Dispose if it's not in the final slice
 				ptr->val.clear();
 			}
@@ -359,21 +359,23 @@ public:
 		return new_pos;
 	}
 
-	auto& next(bool, uint64_t, bool) {
+	auto& next(bool, uint64_t, bool, bool peep) {
 		// std::cout << "\t\tLogStash::next()" << std::endl;
 		auto pos = Stash_T::pos.load();
 		// std::cout << "\t\t\tLogStash pos:" << pos << std::endl;
 		try {
 			auto ptr = Stash_T::get_bin(pos).load();
 			auto new_pos = increment_pos(pos);
-			Stash_T::pos.compare_exchange_strong(pos, new_pos);
+			if (!peep) {
+				Stash_T::pos.compare_exchange_strong(pos, new_pos);
+			}
 			return ptr->val;
 		} catch (const StashException&) { }
 		throw StashContinue();
 	}
 
-	auto& next() {
-		return next(true, 0, true);
+	auto& next(bool peep=false) {
+		return next(true, 0, true, peep);
 	}
 
 	template <typename T>
