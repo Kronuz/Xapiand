@@ -32,13 +32,21 @@
 #include <tuple>         // for tuple_size, tuple_cat
 #include <vector>        // for vector
 
-#include "logger.h"      // for L_DEBUG, L_EXC, L_NOTHING
+#include "logger_fwd.h"  // for L_DEBUG, L_EXC, L_NOTHING
+#include "exception.h"   // for Exception
 #include "queue.h"       // for Queue
 #include "utils.h"       // for set_thread_name
 
 #ifndef L_THREADPOOL
-#define L_THREADPOOL L_TEST
+#define L_THREADPOOL_DEFINED
+#define L_THREADPOOL(args...)
 #endif
+
+#ifndef L_EXC
+#define L_EXC_DEFINED
+#define L_EXC(args...)
+#endif
+
 
 template<typename F, typename Tuple, std::size_t... I>
 static constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
@@ -287,4 +295,10 @@ public:
 	}
 };
 
+#ifdef L_THREADPOOL_DEFINED
 #undef L_THREADPOOL
+#endif
+
+#ifdef L_EXC_DEFINED
+#undef L_EXC
+#endif

@@ -59,6 +59,84 @@ const char *priorities[] = {
 };
 
 
+LogWrapper
+log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+{
+	va_list argptr;
+	va_start(argptr, format);
+	auto ret = log(cleanup, stacked, wakeup, priority, std::string(), file, line, suffix, prefix, obj, format, argptr);
+	va_end(argptr);
+	return ret;
+}
+
+
+LogWrapper
+log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+{
+	return Log::log(cleanup, stacked, wakeup, priority, exc, file, line, suffix, prefix, obj, format, argptr);
+}
+
+
+LogWrapper::LogWrapper(LogWrapper&& o)
+	: log(std::move(o.log))
+{
+	o.log.reset();
+}
+
+
+LogWrapper&
+LogWrapper::operator=(LogWrapper&& o)
+{
+	log = std::move(o.log);
+	o.log.reset();
+	return *this;
+}
+
+LogWrapper::LogWrapper(LogType log_)
+	: log(log_)
+{
+}
+
+
+LogWrapper::~LogWrapper()
+{
+	if (log) {
+		log->cleanup();
+	}
+	log.reset();
+}
+
+
+bool
+LogWrapper::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+{
+	return log->unlog(priority, file, line, suffix, prefix, obj, format, argptr);
+}
+
+
+bool
+LogWrapper::clear()
+{
+	return log->clear();
+}
+
+
+long double
+LogWrapper::age()
+{
+	return log->age();
+}
+
+
+LogType
+LogWrapper::release()
+{
+	auto ret = log;
+	log.reset();
+	return ret;
+}
+
+
 void
 StreamLogger::log(int priority, const std::string& str)
 {
@@ -231,14 +309,23 @@ Log::str_format(bool stacked, int priority, const std::string& exc, const char *
 
 
 LogWrapper
+Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+{
+	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, obj, format, argptr));
+
+	return print(str, clean, stacked, wakeup, priority);
+}
+
+
+LogWrapper
 Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, obj, format, argptr));
+	auto ret = log(clean, stacked, wakeup, priority, exc, file, line, suffix, prefix, obj, format, argptr);
 	va_end(argptr);
 
-	return print(str, clean, stacked, wakeup, priority);
+	return ret;
 }
 
 
@@ -254,19 +341,28 @@ Log::clear()
 
 
 bool
-Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
 	if (!clear()) {
-		va_list argptr;
-		va_start(argptr, format);
 		std::string str(str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
-		va_end(argptr);
 
 		print(str, false, stacked, 0, priority, created_at);
 
 		return true;
 	}
 	return false;
+}
+
+
+bool
+Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+{
+	va_list argptr;
+	va_start(argptr, format);
+	auto ret = unlog(priority, file, line, suffix, prefix, obj, format, argptr);
+	va_end(argptr);
+
+	return ret;
 }
 
 

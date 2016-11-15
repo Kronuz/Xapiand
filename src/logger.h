@@ -24,7 +24,6 @@
 
 
 #include <stdarg.h>           // for va_list
-#include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
 #include <time.h>             // for time_t
 #include <algorithm>          // for move
 #include <atomic>             // for atomic_bool, atomic, atomic_int
@@ -40,20 +39,13 @@
 #include <condition_variable> // for condition_variable
 
 #include "xapiand.h"
-#include "exception.h"
-#include "stash.h"
+#include "logger_fwd.h"
+#include "scheduler.h"
 
-
-#define MERGE_(a,b)  a##b
-#define LABEL_(a) MERGE_(__unique, a)
-#define UNIQUE_NAME LABEL_(__LINE__)
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
 #define LOCATION_LOG_LEVEL LOG_DEBUG  // The minimum log_level that prints file:line
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
-
-
-using namespace std::chrono_literals;
 
 
 class Logger {
@@ -142,6 +134,8 @@ public:
 
 	static LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 
+	static LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
+
 	template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Exception, std::decay_t<T>>::value>>
 	static LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args);
 
@@ -151,54 +145,15 @@ public:
 	static LogWrapper print(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
 	bool unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
+
+	bool unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
+
 	bool clear();
 	void cleanup();
 
 	static void finish(int wait=10);
 
 	long double age();
-};
-
-
-using LogType = std::shared_ptr<Log>;
-
-
-class LogWrapper {
-	LogType log;
-
-	LogWrapper(const LogWrapper&) = delete;
-	LogWrapper& operator=(const LogWrapper&) = delete;
-
-public:
-	LogWrapper(LogWrapper&& o) : log(std::move(o.log)) { o.log.reset(); }
-	LogWrapper& operator=(LogWrapper&& o) { log = std::move(o.log); o.log.reset(); return *this; }
-
-	LogWrapper(LogType log_) : log(log_) { }
-	~LogWrapper() {
-		if (log) {
-			log->cleanup();
-		}
-		log.reset();
-	}
-
-	template <typename... Args>
-	bool unlog(Args&&... args) {
-		return log->unlog(std::forward<Args>(args)...);
-	}
-
-	bool clear() {
-		return log->clear();
-	}
-
-	long double age() {
-		return log->age();
-	}
-
-	LogType release() {
-		auto ret = log;
-		log.reset();
-		return ret;
-	}
 };
 
 
@@ -285,122 +240,3 @@ template <typename... Args>
 inline LogWrapper Log::log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args) {
 	return log(cleanup, stacked, wakeup, priority, std::string(), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
 }
-
-
-#define NO_COL "\033[0m"
-#define BLACK "\033[0;30m"
-#define GREY "\033[0;37m"
-#define RED "\033[0;31m"
-#define GREEN "\033[0;32m"
-#define YELLOW "\033[0;33m"
-#define BLUE "\033[0;34m"
-#define MAGENTA "\033[0;35m"
-#define CYAN "\033[0;36m"
-#define DARK_GREY "\033[1;30m"
-#define LIGHT_RED "\033[1;31m"
-#define LIGHT_GREEN "\033[1;32m"
-#define LIGHT_YELLOW "\033[1;33m"
-#define LIGHT_BLUE "\033[1;34m"
-#define LIGHT_MAGENTA "\033[1;35m"
-#define LIGHT_CYAN "\033[1;36m"
-#define WHITE "\033[1;37m"
-
-
-#define LOG_COL WHITE
-#define DEBUG_COL NO_COL
-#define INFO_COL CYAN
-#define NOTICE_COL LIGHT_CYAN
-#define WARNING_COL LIGHT_YELLOW
-#define ERR_COL RED
-#define CRIT_COL LIGHT_RED
-#define ALERT_COL LIGHT_RED
-#define EMERG_COL LIGHT_RED
-
-
-#define L_DELAYED(cleanup, delay, priority, color, args...) Log::log(cleanup, false, delay, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
-#define L_DELAYED_UNLOG(priority, color, args...) unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
-#define L_DELAYED_CLEAR() clear()
-
-#define L_DELAYED_200(args...) auto __log_timed = L_DELAYED(true, 200ms, LOG_WARNING, LIGHT_MAGENTA, args)
-#define L_DELAYED_600(args...) auto __log_timed = L_DELAYED(true, 600ms, LOG_WARNING, LIGHT_MAGENTA, args)
-#define L_DELAYED_1000(args...) auto __log_timed = L_DELAYED(true, 1000ms, LOG_WARNING, LIGHT_MAGENTA, args)
-#define L_DELAYED_N_UNLOG(args...) __log_timed.L_DELAYED_UNLOG(LOG_WARNING, MAGENTA, args)
-#define L_DELAYED_N_CLEAR() __log_timed.L_DELAYED_CLEAR()
-
-#define L_NOTHING(args...)
-
-#define LOG(stacked, level, color, args...) Log::log(false, stacked, 0ms, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
-
-#define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
-#define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
-#define L_WARNING(args...) LOG(true, LOG_WARNING, WARNING_COL, args)
-#define L_ERR(args...) LOG(true, LOG_ERR, ERR_COL, args)
-#define L_CRIT(args...) LOG(true, LOG_CRIT, CRIT_COL, args)
-#define L_ALERT(args...) LOG(true, -LOG_ALERT, ALERT_COL, args)
-#define L_EMERG(args...) LOG(true, -LOG_EMERG, EMERG_COL, args)
-#define L_EXC(args...) Log::log(false, true, 0ms, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
-
-#define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
-#define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
-#define L_UNINDENTED_BLACK(args...) L_UNINDENTED(LOG_DEBUG, BLACK, args)
-#define L_UNINDENTED_GREY(args...) L_UNINDENTED(LOG_DEBUG, GREY, args)
-#define L_UNINDENTED_RED(args...) L_UNINDENTED(LOG_DEBUG, RED, args)
-#define L_UNINDENTED_GREEN(args...) L_UNINDENTED(LOG_DEBUG, GREEN, args)
-#define L_UNINDENTED_YELLOW(args...) L_UNINDENTED(LOG_DEBUG, YELLOW, args)
-#define L_UNINDENTED_BLUE(args...) L_UNINDENTED(LOG_DEBUG, BLUE, args)
-#define L_UNINDENTED_MAGENTA(args...) L_UNINDENTED(LOG_DEBUG, MAGENTA, args)
-#define L_UNINDENTED_CYAN(args...) L_UNINDENTED(LOG_DEBUG, CYAN, args)
-#define L_UNINDENTED_DARK_GREY(args...) L_UNINDENTED(LOG_DEBUG, DARK_GREY, args)
-#define L_UNINDENTED_LIGHT_RED(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_RED, args)
-#define L_UNINDENTED_LIGHT_GREEN(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_GREEN, args)
-#define L_UNINDENTED_LIGHT_YELLOW(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_YELLOW, args)
-#define L_UNINDENTED_LIGHT_BLUE(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_BLUE, args)
-#define L_UNINDENTED_LIGHT_MAGENTA(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_MAGENTA, args)
-#define L_UNINDENTED_LIGHT_CYAN(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_CYAN, args)
-#define L_UNINDENTED_WHITE(args...) L_UNINDENTED(LOG_DEBUG, WHITE, args)
-
-#define L(level, color, args...) LOG(true, level, color, args)
-#define L_LOG(args...) L(LOG_DEBUG, LOG_COL, args)
-#define L_BLACK(args...) L(LOG_DEBUG, BLACK, args)
-#define L_GREY(args...) L(LOG_DEBUG, GREY, args)
-#define L_RED(args...) L(LOG_DEBUG, RED, args)
-#define L_GREEN(args...) L(LOG_DEBUG, GREEN, args)
-#define L_YELLOW(args...) L(LOG_DEBUG, YELLOW, args)
-#define L_BLUE(args...) L(LOG_DEBUG, BLUE, args)
-#define L_MAGENTA(args...) L(LOG_DEBUG, MAGENTA, args)
-#define L_CYAN(args...) L(LOG_DEBUG, CYAN, args)
-#define L_DARK_GREY(args...) L(LOG_DEBUG, DARK_GREY, args)
-#define L_LIGHT_RED(args...) L(LOG_DEBUG, LIGHT_RED, args)
-#define L_LIGHT_GREEN(args...) L(LOG_DEBUG, LIGHT_GREEN, args)
-#define L_LIGHT_YELLOW(args...) L(LOG_DEBUG, LIGHT_YELLOW, args)
-#define L_LIGHT_BLUE(args...) L(LOG_DEBUG, LIGHT_BLUE, args)
-#define L_LIGHT_MAGENTA(args...) L(LOG_DEBUG, LIGHT_MAGENTA, args)
-#define L_LIGHT_CYAN(args...) L(LOG_DEBUG, LIGHT_CYAN, args)
-#define L_WHITE(args...) L(LOG_DEBUG, WHITE, args)
-
-#define L_STACKED(args...) auto UNIQUE_NAME = L(args)
-#define L_STACKED_LOG(args...) auto UNIQUE_NAME = L_LOG(args)
-#define L_STACKED_BLACK(args...) auto UNIQUE_NAME = L_BLACK(args)
-#define L_STACKED_GREY(args...) auto UNIQUE_NAME = L_GREY(args)
-#define L_STACKED_RED(args...) auto UNIQUE_NAME = L_RED(args)
-#define L_STACKED_GREEN(args...) auto UNIQUE_NAME = L_GREEN(args)
-#define L_STACKED_YELLOW(args...) auto UNIQUE_NAME = L_YELLOW(args)
-#define L_STACKED_BLUE(args...) auto UNIQUE_NAME = L_BLUE(args)
-#define L_STACKED_MAGENTA(args...) auto UNIQUE_NAME = L_MAGENTA(args)
-#define L_STACKED_CYAN(args...) auto UNIQUE_NAME = L_CYAN(args)
-#define L_STACKED_DARK_GREY(args...) auto UNIQUE_NAME = L_DARK_GREY(args)
-#define L_STACKED_LIGHT_RED(args...) auto UNIQUE_NAME = L_LIGHT_RED(args)
-#define L_STACKED_LIGHT_GREEN(args...) auto UNIQUE_NAME = L_LIGHT_GREEN(args)
-#define L_STACKED_LIGHT_YELLOW(args...) auto UNIQUE_NAME = L_LIGHT_YELLOW(args)
-#define L_STACKED_LIGHT_BLUE(args...) auto UNIQUE_NAME = L_LIGHT_BLUE(args)
-#define L_STACKED_LIGHT_MAGENTA(args...) auto UNIQUE_NAME = L_LIGHT_MAGENTA(args)
-#define L_STACKED_LIGHT_CYAN(args...) auto UNIQUE_NAME = L_LIGHT_CYAN(args)
-#define L_STACKED_WHITE(args...) auto UNIQUE_NAME = L_WHITE(args)
-
-#define L_TEST L_NOTHING
-
-#ifdef NDEBUG
-#define L_DEBUG L_NOTHING
-#else
-#define L_DEBUG(args...) L(LOG_DEBUG, DEBUG_COL, args)
-#endif

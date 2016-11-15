@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "logger.h"
+#include "logger_fwd.h"
 
 #define _ L_NOTHING
 
