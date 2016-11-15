@@ -44,6 +44,7 @@ const std::regex filter_re("\033\\[[;\\d]*m");
 std::mutex Log::stack_mtx;
 std::unordered_map<std::thread::id, unsigned> Log::stack_levels;
 int Log::log_level = DEFAULT_LOG_LEVEL;
+std::vector<std::unique_ptr<Logger>> Log::handlers;
 
 
 const char *priorities[] = {
@@ -186,16 +187,8 @@ LogQueue::add(const LogType& l_ptr, uint64_t key)
 LogThread&
 Log::_thread()
 {
-	static std::unique_ptr<LogThread> thread(std::make_unique<LogThread>());
-	return *thread;
-}
-
-
-std::vector<std::unique_ptr<Logger>>&
-Log::handlers()
-{
-	static std::unique_ptr<std::vector<std::unique_ptr<Logger>>> handlers(std::make_unique<std::vector<std::unique_ptr<Logger>>>());
-	return *handlers;
+	static LogThread thread;
+	return thread;
 }
 
 
@@ -297,7 +290,7 @@ Log::log(int priority, std::string str, int indent)
 	if (needle != std::string::npos) {
 		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
 	}
-	for (auto& handler : handlers()) {
+	for (auto& handler : handlers) {
 		handler->log(priority, str);
 	}
 }

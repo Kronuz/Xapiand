@@ -712,7 +712,7 @@ int main(int argc, char **argv) {
 
 	std::setlocale(LC_CTYPE, "");
 
-	auto& handlers = Log::handlers();
+	auto& handlers = Log::handlers;
 	if (opts.logfile.compare("syslog") == 0) {
 		handlers.push_back(std::make_unique<SysLog>());
 	} else if (!opts.logfile.empty()) {
