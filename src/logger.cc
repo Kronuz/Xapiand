@@ -369,16 +369,16 @@ void
 LogThread::add(const LogType& l_ptr, std::chrono::time_point<std::chrono::system_clock> wakeup)
 {
 	if (running != 0) {
-		wakeup += 2ms;
+		auto now = std::chrono::system_clock::now();
+		if (wakeup < now + 2ms) {
+			wakeup = now + 2ms;  // defer log so we make sure we're not adding messages to the current slot
+		}
+
 		auto wt = time_point_to_ullong(wakeup);
 		l_ptr->wakeup_time = wt;
 
 		log_queue.add(l_ptr, time_point_to_key(wakeup));
 
-		auto now = std::chrono::system_clock::now();
-		if (wakeup < now) {
-			wakeup = now;
-		}
 		auto nwt = next_wakeup_time.load();
 		auto n = time_point_to_ullong(now);
 
