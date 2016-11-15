@@ -1145,6 +1145,10 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 std::vector<std::string>
 Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 {
+	if (paths_namespace.size() > NAMESPACE_LIMIT_DEPTH) {
+		throw MSG_ClientError("Namespace limit depth is %d, and the namespace provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, paths_namespace.size());
+	}
+
 	std::vector<std::string> prefixes;
 	prefixes.reserve(std::pow(2, paths_namespace.size() - 2));
 	auto it = paths_namespace.begin();
@@ -1171,6 +1175,10 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 std::vector<std::pair<std::string, Xapian::valueno>>
 Schema::get_data_namespace(const std::vector<std::string>& paths_namespace, FieldType type)
 {
+	if (paths_namespace.size() > NAMESPACE_LIMIT_DEPTH) {
+		throw MSG_ClientError("Namespace limit depth is %d, and the namespace provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, paths_namespace.size());
+	}
+
 	std::vector<std::pair<std::string, Xapian::valueno>> data;
 	data.reserve(std::pow(2, paths_namespace.size() - 2));
 	auto it = paths_namespace.begin();

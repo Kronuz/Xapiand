@@ -42,14 +42,16 @@
 #include "stl_serialise.h"                                // for StringSet
 
 
-#define DEFAULT_STEM_STRATEGY StemStrategy::STEM_SOME
-#define DEFAULT_LANGUAGE      "en"
-#define DEFAULT_GEO_PARTIALS  true
-#define DEFAULT_GEO_ERROR     HTM_MIN_ERROR
-#define DEFAULT_POSITIONS     true
-#define DEFAULT_SPELLING      false
-#define DEFAULT_BOOL_TERM     false
-#define DEFAULT_INDEX         TypeIndex::ALL
+#define NAMESPACE_LIMIT_DEPTH  8    // 2^(n - 2) => 2^6 => 64 namespace terms.
+
+#define DEFAULT_STEM_STRATEGY  StemStrategy::STEM_SOME
+#define DEFAULT_LANGUAGE       "en"
+#define DEFAULT_GEO_PARTIALS   true
+#define DEFAULT_GEO_ERROR      HTM_MIN_ERROR
+#define DEFAULT_POSITIONS      true
+#define DEFAULT_SPELLING       false
+#define DEFAULT_BOOL_TERM      false
+#define DEFAULT_INDEX          TypeIndex::ALL
 
 
 enum class TypeIndex : uint8_t {
