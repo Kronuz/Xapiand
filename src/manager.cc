@@ -103,8 +103,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	  database_pool(o.dbpool_size),
 	  thread_pool("W%02zu", o.threadpool_size),
 	  server_pool("S%02zu", o.num_servers),
-	  autocommit_pool("C%02zu", o.num_committers),
-	  asyncfsync_pool("F%02zu", o.num_committers),
 #ifdef XAPIAND_CLUSTERING
 	  replicator_pool("R%02zu", o.num_replicators),
 	  endp_r(o.endpoints_list_size),
@@ -623,26 +621,6 @@ XapiandManager::make_replicators(const opts_t& o)
 
 
 void
-XapiandManager::make_autocommiters(const opts_t& o)
-{
-	for (size_t i = 0; i < o.num_committers; ++i) {
-		auto obj = Worker::make_shared<DatabaseAutocommit>(XapiandManager::manager, nullptr, ev_flags);
-		autocommit_pool.enqueue(std::move(obj));
-	}
-}
-
-
-void
-XapiandManager::make_asyncfsyncs(const opts_t& o)
-{
-	for (size_t i = 0; i < o.num_committers; ++i) {
-		auto obj = Worker::make_shared<AsyncFsync>(XapiandManager::manager, nullptr, ev_flags);
-		asyncfsync_pool.enqueue(std::move(obj));
-	}
-}
-
-
-void
 XapiandManager::run(const opts_t& o)
 {
 	L_CALL(this, "XapiandManager::run()");
@@ -657,9 +635,8 @@ XapiandManager::run(const opts_t& o)
 
 	make_replicators(o);
 
-	make_autocommiters(o);
-
-	make_asyncfsyncs(o);
+	DatabaseAutocommit::scheduler(o.num_committers);
+	AsyncFsync::scheduler(o.num_committers);
 
 	std::string msg = "Started " + std::to_string(o.num_servers) + ((o.num_servers == 1) ? " server" : " servers");
 	msg += ", " + std::to_string(o.threadpool_size) +( (o.threadpool_size == 1) ? " worker thread" : " worker threads");
@@ -704,10 +681,10 @@ XapiandManager::finish()
 #endif
 
 	L_MANAGER(this, "Finishing commiters pool!");
-	autocommit_pool.finish();
+	DatabaseAutocommit::finish();
 
 	L_MANAGER(this, "Finishing async fsync pool!");
-	asyncfsync_pool.finish();
+	AsyncFsync::finish();
 }
 
 
@@ -730,11 +707,17 @@ XapiandManager::join()
 	}
 #endif
 
-	L_MANAGER(this, "Waiting for %zu committer%s...", autocommit_pool.running_size(), (autocommit_pool.running_size() == 1) ? "" : "s");
-	autocommit_pool.join();
+	L_MANAGER(this, "Finishing autocommitter scheduler!");
+	DatabaseAutocommit::finish();
 
-	L_MANAGER(this, "Waiting for %zu async fsync%s...", asyncfsync_pool.running_size(), (asyncfsync_pool.running_size() == 1) ? "" : "s");
-	asyncfsync_pool.join();
+	L_MANAGER(this, "Waiting for %zu autocommitter%s...", DatabaseAutocommit::running_size(), (DatabaseAutocommit::running_size() == 1) ? "" : "s");
+	DatabaseAutocommit::join();
+
+	L_MANAGER(this, "Finishing async fsync threads pool!");
+	AsyncFsync::finish();
+
+	L_MANAGER(this, "Waiting for %zu async fsync%s...", AsyncFsync::running_size(), (AsyncFsync::running_size() == 1) ? "" : "s");
+	AsyncFsync::join();
 
 	L_MANAGER(this, "Finishing worker threads pool!");
 	thread_pool.finish();
@@ -1009,8 +992,8 @@ XapiandManager::server_status(MsgPack& stats)
 	stats["_worker_tasks_pool_size"] = thread_pool.threadpool_size();
 
 	stats["_servers_threads"] = server_pool.running_size();
-	stats["_committers_threads"] = autocommit_pool.running_size();
-	stats["_fsync_threads"] = asyncfsync_pool.running_size();
+	stats["_committers_threads"] = DatabaseAutocommit::running_size();
+	stats["_fsync_threads"] = AsyncFsync::running_size();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
 		stats["_replicator_threads"] = replicator_pool.running_size();

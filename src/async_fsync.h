@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,64 +24,57 @@
 
 #include "xapiand.h"
 
-#include <stdio.h>        // for snprintf
-#include <time.h>         // for time_t
-#include <atomic>         // for atomic, atomic_bool
-#include <chrono>         // for time_point, system_clock
-#include <memory>         // for shared_ptr
-#include <mutex>          // for mutex, condition_variable
-#include <string>         // for string
+#include <mutex>          // for mutex
 #include <unordered_map>  // for unordered_map
 
-#include "threadpool.h"   // for Task
-#include "worker.h"       // for Worker
-
-class XapiandManager;
+#include "scheduler.h"    // for SchedulerTask, SchedulerThread
 
 
-class AsyncFsync : public Task<>, public Worker {
+class AsyncFsync : public ScheduledTask {
 	struct Status {
+		std::shared_ptr<AsyncFsync> task;
+		std::chrono::time_point<std::chrono::system_clock> max_wakeup_time;
+		std::chrono::time_point<std::chrono::system_clock> wakeup_time;
 		int mode;
-		std::chrono::time_point<std::chrono::system_clock> max_fsync_time;
-		std::chrono::time_point<std::chrono::system_clock> fsync_time;
-		std::chrono::time_point<std::chrono::system_clock> next_wakeup_time();
-		Status() : mode(0) {}
 	};
 
-	static std::mutex mtx;
 	static std::mutex statuses_mtx;
-	static std::condition_variable wakeup_signal;
-	static std::unordered_map<int, Status> statuses;
-	static std::atomic_ullong next_wakeup_time;
+	static std::unordered_map<int, std::shared_ptr<Status>> statuses;
 
-	std::atomic_bool running;
+	bool forced;
+	int fd;
+	int mode;
 
-	void destroyer();
-
-	void destroy_impl() override;
-	void shutdown_impl(time_t asap, time_t now) override;
-
-	static int _fsync(int fd, bool full_fsync);
-
-	void run_one(std::unique_lock<std::mutex>& lk);
+	static void async_fsync(int fd, bool full_fsync);
 
 public:
-	std::string __repr__() const override {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "<AsyncFsync at %p>", this);
-		return buffer;
+	static Scheduler& scheduler(size_t num_threads=0) {
+		static Scheduler scheduler("F--", "F%02zu", num_threads);
+		return scheduler;
 	}
 
-	AsyncFsync(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
-	~AsyncFsync();
+	static void finish(int wait=10) {
+		scheduler().finish(wait);
+	}
 
+	static void join() {
+		scheduler().join();
+	}
+
+	static size_t running_size() {
+		return scheduler().running_size();
+	}
+
+	AsyncFsync(bool forced_, int fd_, int mode_);
 	void run() override;
 
 	static inline int fsync(int fd) {
-		return _fsync(fd, false);
+		async_fsync(fd, false);
+		return 0;
 	}
 
 	static inline int full_fsync(int fd) {
-		return _fsync(fd, true);
+		async_fsync(fd, true);
+		return 0;
 	}
 };

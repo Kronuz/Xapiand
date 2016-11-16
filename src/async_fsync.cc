@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,125 +22,62 @@
 
 #include "async_fsync.h"
 
-#include <algorithm>    // for move
-#include <ctime>        // for time_t
-
-#include "manager.h"    // for XapiandManager
 #include "io_utils.h"   // for fsync, full_fsync
-#include "log.h"        // for L_OBJ, Log, L_DEBUG, L_WARNING
+#include "log.h"        // for Log, L_OBJ, L_CALL, L_DEBUG, L_WARNING
 #include "utils.h"      // for delta_string
 
 
-std::mutex AsyncFsync::mtx;
 std::mutex AsyncFsync::statuses_mtx;
-std::condition_variable AsyncFsync::wakeup_signal;
-std::unordered_map<int, AsyncFsync::Status> AsyncFsync::statuses;
-std::atomic_ullong AsyncFsync::next_wakeup_time(time_point_to_ullong(std::chrono::system_clock::now() + 10s));
+std::unordered_map<int, std::shared_ptr<AsyncFsync::Status>> AsyncFsync::statuses;
 
 
-std::chrono::time_point<std::chrono::system_clock>
-AsyncFsync::Status::next_wakeup_time()
-{
-	return max_fsync_time < fsync_time ? max_fsync_time : fsync_time;
-}
-
-
-AsyncFsync::AsyncFsync(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
-	: Worker(std::move(manager_), ev_loop_, ev_flags_),
-	  running(true)
-{
-	L_OBJ(this, "CREATED ASYNC FSYNC!");
-}
-
-
-AsyncFsync::~AsyncFsync()
-{
-	destroyer();
-
-	L_OBJ(this , "DELETED ASYNC FSYNC!");
-}
+AsyncFsync::AsyncFsync(bool forced_, int fd_, int mode_)
+	: forced(forced_),
+	  fd(fd_),
+	  mode(mode_) { }
 
 
 void
-AsyncFsync::destroy_impl()
+AsyncFsync::async_fsync(int fd, bool full_fsync)
 {
-	destroyer();
-}
+	L_CALL(nullptr, "AsyncFsync::async_fsync(%d, %s)", fd, full_fsync ? "true" : "false");
 
+	std::shared_ptr<AsyncFsync> task;
+	std::chrono::time_point<std::chrono::system_clock> next_wakeup_time;
 
-void
-AsyncFsync::destroyer()
-{
-	L_CALL(this, "AsyncFsync::destroyer()");
+	{
+		auto now = std::chrono::system_clock::now();
 
-	running.store(false);
-	auto now = std::chrono::system_clock::now();
-	AsyncFsync::next_wakeup_time.store(time_point_to_ullong(now + 100ms));
-	wakeup_signal.notify_all();
-}
+		std::lock_guard<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
+		auto& status = AsyncFsync::statuses[fd];
 
-
-void
-AsyncFsync::shutdown_impl(time_t asap, time_t now)
-{
-	L_CALL(this, "AsyncFsync::shutdown_impl(%d, %d)", (int)asap, (int)now);
-
-	Worker::shutdown_impl(asap, now);
-
-	if (now) {
-		destroy();
-		detach();
-	}
-}
-
-
-void
-AsyncFsync::run_one(std::unique_lock<std::mutex>& lk)
-{
-	L_CALL(this, "AsyncFsync::run_one(<lk>)");
-
-	std::unique_lock<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
-
-	auto now = std::chrono::system_clock::now();
-	AsyncFsync::next_wakeup_time.store(time_point_to_ullong(now + (running ? 20s : 100ms)));
-
-	for (auto it = AsyncFsync::statuses.begin(); it != AsyncFsync::statuses.end(); ) {
-		auto status = it->second;
-		auto next_wakeup_time = status.next_wakeup_time();
-		if (next_wakeup_time <= now) {
-			int fd = it->first;
-			AsyncFsync::statuses.erase(it);
-			statuses_lk.unlock();
-			lk.unlock();
-
-			bool successful = false;
-			auto start = std::chrono::system_clock::now();
-			switch (status.mode) {
-				case 1:
-					successful = (io::full_fsync(fd) == 0);
-					break;
-				case 2:
-					successful = (io::fsync(fd) == 0);
-					break;
-			}
-			auto end = std::chrono::system_clock::now();
-
-			if (successful) {
-				L_DEBUG(this, "Async Fsync %d: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_fsync_time ? " (forced)" : "", delta_string(start, end).c_str());
-			} else {
-				L_WARNING(this, "Async Fsync %d falied: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_fsync_time ? " (forced)" : "", delta_string(start, end).c_str());
-			}
-
-			lk.lock();
-			statuses_lk.lock();
-			it = AsyncFsync::statuses.begin();
-		} else if (time_point_from_ullong(AsyncFsync::next_wakeup_time.load()) > next_wakeup_time) {
-			AsyncFsync::next_wakeup_time.store(time_point_to_ullong(next_wakeup_time));
-			++it;
-		} else {
-			++it;
+		if (!status) {
+			status = std::make_shared<AsyncFsync::Status>();
+			status->max_wakeup_time = now + 3s;
+			status->wakeup_time = now;
 		}
+
+		bool forced;
+		next_wakeup_time = now + 500ms;
+		if (next_wakeup_time > status->max_wakeup_time) {
+			next_wakeup_time = status->max_wakeup_time;
+			forced = true;
+		} else {
+			forced = false;
+		}
+		if (next_wakeup_time == status->wakeup_time) {
+			return;
+		}
+
+		if (status->task) {
+			status->task->clear();
+		}
+		status->wakeup_time = next_wakeup_time;
+		status->task = std::make_shared<AsyncFsync>(forced, fd, full_fsync ? 1 : 2);
+		task = status->task;
 	}
+
+	scheduler().add(task, next_wakeup_time);
 }
 
 
@@ -149,34 +86,26 @@ AsyncFsync::run()
 {
 	L_CALL(this, "AsyncFsync::run()");
 
-	while (running) {
-		std::unique_lock<std::mutex> lk(AsyncFsync::mtx);
-		AsyncFsync::wakeup_signal.wait_until(lk, time_point_from_ullong(AsyncFsync::next_wakeup_time.load()));
-		run_one(lk);
+	{
+		std::lock_guard<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
+		AsyncFsync::statuses.erase(fd);
 	}
 
-	cleanup();
-}
-
-
-int
-AsyncFsync::_fsync(int fd, bool full_fsync)
-{
-	L_CALL(nullptr, "AsyncFsync::_fsync(%d, %s)", fd, full_fsync ? "true" : "false");
-
-	std::lock_guard<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
-	AsyncFsync::Status& status = AsyncFsync::statuses[fd];
-
-	auto now = std::chrono::system_clock::now();
-	if (!status.mode) {
-		status.mode = full_fsync ? 1 : 2;
-		status.max_fsync_time = now + 3s;
+	bool successful = false;
+	auto start = std::chrono::system_clock::now();
+	switch (mode) {
+		case 1:
+			successful = (io::full_fsync(fd) == 0);
+			break;
+		case 2:
+			successful = (io::fsync(fd) == 0);
+			break;
 	}
-	status.fsync_time = now + 500ms;
+	auto end = std::chrono::system_clock::now();
 
-	if (time_point_from_ullong(AsyncFsync::next_wakeup_time.load()) > status.next_wakeup_time()) {
-		AsyncFsync::wakeup_signal.notify_one();
+	if (successful) {
+		L_DEBUG(this, "Async %s: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", delta_string(start, end).c_str());
+	} else {
+		L_WARNING(this, "Async %s falied: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", delta_string(start, end).c_str());
 	}
-
-	return 0;
 }

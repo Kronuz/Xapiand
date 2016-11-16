@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,56 +24,49 @@
 
 #include "xapiand.h"
 
-#include <stdio.h>        // for snprintf
-#include <time.h>         // for time_t
-#include <atomic>         // for atomic, atomic_bool
-#include <chrono>         // for time_point, system_clock
-#include <memory>         // for shared_ptr, weak_ptr
-#include <mutex>          // for mutex, condition_variable
-#include <string>         // for string
+#include <mutex>          // for mutex
 #include <unordered_map>  // for unordered_map
 
-#include "threadpool.h"   // for Task
-#include "worker.h"       // for Worker
+#include "endpoint.h"     // for Endpoints
+#include "scheduler.h"    // for SchedulerTask, SchedulerThread
+
 
 class Database;
-class Endpoints;
-class XapiandManager;
 
 
-class DatabaseAutocommit : public Task<>, public Worker {
+class DatabaseAutocommit : public ScheduledTask {
 	struct Status {
-		std::weak_ptr<const Database> weak_database;
-		std::chrono::time_point<std::chrono::system_clock> max_commit_time;
-		std::chrono::time_point<std::chrono::system_clock> commit_time;
-		std::chrono::time_point<std::chrono::system_clock> next_wakeup_time();
+		std::shared_ptr<DatabaseAutocommit> task;
+		std::chrono::time_point<std::chrono::system_clock> max_wakeup_time;
+		std::chrono::time_point<std::chrono::system_clock> wakeup_time;
 	};
 
-	static std::mutex mtx;
 	static std::mutex statuses_mtx;
-	static std::condition_variable wakeup_signal;
-	static std::unordered_map<Endpoints, Status> statuses;
-	static std::atomic_ullong next_wakeup_time;
+	static std::unordered_map<Endpoints, std::shared_ptr<Status>> statuses;
 
-	std::atomic_bool running;
-
-	void destroyer();
-
-	void destroy_impl() override;
-	void shutdown_impl(time_t asap, time_t now) override;
-
-	void run_one(std::unique_lock<std::mutex>& lk);
+	bool forced;
+	Endpoints endpoints;
+	std::weak_ptr<const Database> weak_database;
 
 public:
-	std::string __repr__() const override {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "<DatabaseAutocommit at %p>", this);
-		return buffer;
+	static Scheduler& scheduler(size_t num_threads=0) {
+		static Scheduler scheduler("C--", "C%02zu", num_threads);
+		return scheduler;
 	}
 
-	DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
-	~DatabaseAutocommit();
+	static void finish(int wait=10) {
+		scheduler().finish(wait);
+	}
 
+	static void join() {
+		scheduler().join();
+	}
+
+	static size_t running_size() {
+		return scheduler().running_size();
+	}
+
+	DatabaseAutocommit(bool forced_, Endpoints endpoints_, std::weak_ptr<const Database> weak_database_);
 	void run() override;
 
 	static void commit(const std::shared_ptr<Database>& database);

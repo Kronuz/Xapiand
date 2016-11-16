@@ -129,8 +129,6 @@ protected:
 
 	void make_servers(const opts_t& o);
 	void make_replicators(const opts_t& o);
-	void make_autocommiters(const opts_t& o);
-	void make_asyncfsyncs(const opts_t& o);
 
 public:
 	std::string __repr__() const override {
@@ -165,8 +163,6 @@ public:
 	DatabasePool database_pool;
 	ThreadPool<> thread_pool;
 	ThreadPool<> server_pool;
-	ThreadPool<> autocommit_pool;
-	ThreadPool<> asyncfsync_pool;
 #ifdef XAPIAND_CLUSTERING
 	ThreadPool<> replicator_pool;
 #endif
