@@ -138,7 +138,7 @@ Scheduler::add(const TaskType& task, std::chrono::time_point<std::chrono::system
 		bool notify;
 		auto nwt = next_wakeup_time.load();
 		do {
-			notify = nwt >= wt;
+			notify = nwt > wt;
 		} while (notify && !next_wakeup_time.compare_exchange_weak(nwt, wt));
 
 		if (notify) {
@@ -173,7 +173,7 @@ Scheduler::run()
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
 
-	next_wakeup_time = time_point_to_ullong(std::chrono::system_clock::now() + 100ms);
+	auto nwt = next_wakeup_time.load();
 
 	while (running != 0) {
 		if (--running < 0) {
@@ -181,7 +181,8 @@ Scheduler::run()
 		}
 
 		auto now = std::chrono::system_clock::now();
-		auto wt = time_point_to_ullong(now + (running < 0 ? 3s : 100ms));
+		auto wt = time_point_to_ullong(now + (running < 0 ? 5s : 100ms));
+
 		try {
 			auto& task = scheduler_queue.peep();
 			if (task) {
@@ -189,8 +190,9 @@ Scheduler::run()
 			}
 		} catch(const StashContinue&) { }
 
-		auto nwt = next_wakeup_time.load();
-		while (nwt >= wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
+		next_wakeup_time.compare_exchange_strong(nwt, wt);
+		while (nwt > wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
+		// fprintf(stderr, "RUN %s - now:%llu, wakeup:%llu\n", get_thread_name().c_str(), time_point_to_ullong(now), next_wakeup_time.load());
 
 		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
 
