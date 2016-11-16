@@ -5,19 +5,19 @@
 #
 # This archive contains:
 #
-#	v8-51/
-#	v8-51/Makefile
-#	v8-51/distinfo
-#	v8-51/pkg-descr
-#	v8-51/pkg-plist
-#	v8-51/files
-#	v8-51/files/patch-src_base_logging.cc
-#	v8-51/files/patch-Makefile
+#	v8/
+#	v8/Makefile
+#	v8/distinfo
+#	v8/pkg-descr
+#	v8/pkg-plist
+#	v8/files
+#	v8/files/patch-src_base_logging.cc
+#	v8/files/patch-Makefile
 #
-echo c - v8-51/
-mkdir -p v8-51/ > /dev/null 2>&1
-echo x - v8-51/Makefile
-sed 's/^X//' >v8-51/Makefile << 'ee0771b41569c5d2b8b81315323e3587'
+echo c - v8/
+mkdir -p v8/ > /dev/null 2>&1
+echo x - v8/Makefile
+sed 's/^X//' >v8/Makefile << 'ee0771b41569c5d2b8b81315323e3587'
 X# Created by: Kronuz
 X# $FreeBSD: tags/RELEASE_10_2_0/lang/v8/Makefile 393187 2016-07-29 17:01:43Z feld $
 X
@@ -64,11 +64,11 @@ X.include <bsd.port.pre.mk>
 X
 X.if ${COMPILER_TYPE} == clang
 X.if $(COMPILER_VERSION) < 36
-XBUILD_DEPENDS=	clang++38:devel/llvm38
-XCPP=	${LOCALBASE}/bin/clang-cpp38
-XCC=	${LOCALBASE}/bin/clang38
-XCXX=	${LOCALBASE}/bin/clang++38
-X#LINK=	${LOCALBASE}/bin/clang++38
+XBUILD_DEPENDS=	clang++36:devel/llvm36
+XCPP=	${LOCALBASE}/bin/clang-cpp36
+XCC=	${LOCALBASE}/bin/clang36
+XCXX=	${LOCALBASE}/bin/clang++36
+X#LINK=	${LOCALBASE}/bin/clang++36
 X.endif
 XMAKE_ENV+=	GYP_DEFINES="clang=1 v8_use_external_startup_data=0 use_system_icu=1"
 X.else
@@ -108,13 +108,13 @@ X
 X.include <bsd.port.post.mk>
 X
 ee0771b41569c5d2b8b81315323e3587
-echo x - v8-51/distinfo
-sed 's/^X//' >v8-51/distinfo << 'd4c062c0bd80bd60b3b2e02979d30f4c'
+echo x - v8/distinfo
+sed 's/^X//' >v8/distinfo << 'd4c062c0bd80bd60b3b2e02979d30f4c'
 XSHA256 (v8-v8-5.1.281.47-167dc63b4c9a1d0f0fe1b19af93644ac9a561e83_GH0.tar.gz) = 2c86c53aa8d952c121e88dd01945d9f8025d0afa22b7a439fe7a583ef784a72a
 XSIZE (v8-v8-5.1.281.47-167dc63b4c9a1d0f0fe1b19af93644ac9a561e83_GH0.tar.gz) = 22017457
 d4c062c0bd80bd60b3b2e02979d30f4c
-echo x - v8-51/pkg-descr
-sed 's/^X//' >v8-51/pkg-descr << '45e178ca73b14a099d3fd0a374e98367'
+echo x - v8/pkg-descr
+sed 's/^X//' >v8/pkg-descr << '45e178ca73b14a099d3fd0a374e98367'
 XV8 is Google's open source JavaScript engine.
 X
 XV8 is written in C++ and is used in Google Chrome, the open source browser from
@@ -130,8 +130,8 @@ XGit repository at https://github.com/v8/v8
 X
 XWWW: http://code.google.com/p/v8/
 45e178ca73b14a099d3fd0a374e98367
-echo x - v8-51/pkg-plist
-sed 's/^X//' >v8-51/pkg-plist << '44770bfeb07087ccc09b312ce83b4b5f'
+echo x - v8/pkg-plist
+sed 's/^X//' >v8/pkg-plist << '44770bfeb07087ccc09b312ce83b4b5f'
 Xbin/d8
 Xbin/mksnapshot
 Xinclude/libplatform/libplatform.h
@@ -147,10 +147,10 @@ Xinclude/v8config.h
 Xlib/libv8.so
 Xlib/libv8.so.1
 44770bfeb07087ccc09b312ce83b4b5f
-echo c - v8-51/files
-mkdir -p v8-51/files > /dev/null 2>&1
-echo x - v8-51/files/patch-src_base_logging.cc
-sed 's/^X//' >v8-51/files/patch-src_base_logging.cc << '1fb6247da9b9b8f3b4e8328031ac8570'
+echo c - v8/files
+mkdir -p v8/files > /dev/null 2>&1
+echo x - v8/files/patch-src_base_logging.cc
+sed 's/^X//' >v8/files/patch-src_base_logging.cc << '1fb6247da9b9b8f3b4e8328031ac8570'
 X--- src/base/logging.cc.orig	2016-10-08 02:16:09 UTC
 X+++ src/base/logging.cc
 X@@ -54,7 +54,7 @@ DEFINE_CHECK_OP_IMPL(GT)
@@ -163,8 +163,8 @@ X   OS::PrintError("\n==== C stack trace ===============================\n\n");
 X   if (size == 0) {
 X     OS::PrintError("(empty)\n");
 1fb6247da9b9b8f3b4e8328031ac8570
-echo x - v8-51/files/patch-Makefile
-sed 's/^X//' >v8-51/files/patch-Makefile << 'e0edd912514c6cca3794689260da60c4'
+echo x - v8/files/patch-Makefile
+sed 's/^X//' >v8/files/patch-Makefile << 'e0edd912514c6cca3794689260da60c4'
 X--- Makefile.orig	2016-11-16 20:36:51.638691000 +0000
 X+++ Makefile	2016-11-16 20:35:46.988594000 +0000
 X@@ -455,7 +455,7 @@
