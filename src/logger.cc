@@ -234,7 +234,7 @@ Log::age()
 Scheduler&
 Log::scheduler()
 {
-	static Scheduler scheduler("LSC");
+	static Scheduler scheduler("LOG");
 	return scheduler;
 }
 
