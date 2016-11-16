@@ -1,0 +1,181 @@
+# This is a shell archive.  Save it in a file, remove anything before
+# this line, and then unpack it by entering "sh file".  Note, it may
+# create directories; files and directories will be owned by you and
+# have default permissions.
+#
+# This archive contains:
+#
+#	v8-51/
+#	v8-51/Makefile
+#	v8-51/distinfo
+#	v8-51/pkg-descr
+#	v8-51/pkg-plist
+#	v8-51/files
+#	v8-51/files/patch-src_base_logging.cc
+#	v8-51/files/patch-Makefile
+#
+echo c - v8-51/
+mkdir -p v8-51/ > /dev/null 2>&1
+echo x - v8-51/Makefile
+sed 's/^X//' >v8-51/Makefile << 'ee0771b41569c5d2b8b81315323e3587'
+X# Created by: Kronuz
+X# $FreeBSD: tags/RELEASE_10_2_0/lang/v8/Makefile 393187 2016-07-29 17:01:43Z feld $
+X
+XPORTNAME=	v8
+XPORTVERSION=	5.1.281.47
+XCATEGORIES=	lang
+X
+XV8_REVISION=	167dc63b4c9a1d0f0fe1b19af93644ac9a561e83
+XGYP_REVISION=	4ec6c4e3a94bd04a6da2858163d40b2429b8aad1
+XICO_REVISION=	c291cde264469b20ca969ce8832088acb21e0c48
+XBUILDTOOLS_REVISION=	80b5126f91be4eb359248d28696746ef09d5be67
+XCOMMON_REVISION=	c8c8665c2deaf1cc749d9f8e153256d4f67bf1b8
+XSWARMING_CLIENT_REVISION=	df6e95e7669883c8fe9ef956c69a544154701a49
+XGTEST_REVISION=	6f8a66431cb592dad629028a50b3dd418a408c87
+XGMOCK_REVISION=	0421b6f358139f02e102c9c332ce19a33faf75be
+XCLANG_REVISION=	faee82e064e04e5cbf60cc7327e7a81d2a4557ad
+X
+XUSE_GITHUB=	yes
+XGH_TUPLE=	v8:v8:${V8_REVISION}
+X
+XMAINTAINER=	sunpoet@FreeBSD.org
+XCOMMENT=	Open source JavaScript engine by Google
+X
+XLICENSE=	BSD3CLAUSE
+X
+XLIB_DEPENDS=	libicui18n.so:devel/icu
+X
+XCONFLICTS_INSTALL=	v8-devel-[0-9]*
+X
+XONLY_FOR_ARCHS=	i386 amd64
+X
+XALL_TARGET=	native
+XMAKE_ARGS=	library=shared i18nsupport=on snapshot=on
+XUSE_LDCONFIG=	yes
+XUSES=		alias compiler cpe execinfo gmake python:2 shebangfix
+X
+XCPE_VENDOR=	google
+X
+XSHEBANG_FILES=	build/gyp/gyp
+Xpython_OLD_CMD=	${SETENV} python
+Xpython_CMD=	${PYTHON_CMD}
+X
+X.include <bsd.port.pre.mk>
+X
+X.if ${COMPILER_TYPE} == clang
+X.if $(COMPILER_VERSION) < 36
+XBUILD_DEPENDS=	clang++38:devel/llvm38
+XCPP=	${LOCALBASE}/bin/clang-cpp38
+XCC=	${LOCALBASE}/bin/clang38
+XCXX=	${LOCALBASE}/bin/clang++38
+X#LINK=	${LOCALBASE}/bin/clang++38
+X.endif
+XMAKE_ENV+=	GYP_DEFINES="clang=1 v8_use_external_startup_data=0 use_system_icu=1"
+X.else
+XMAKE_ENV+=	GYP_DEFINES="clang=0 v8_use_external_startup_data=0 use_system_icu=1"
+XMAKE_ARGS+=	strictaliasing=off
+XUSE_GCC=	any
+X.endif
+X
+XMAKE_ENV+=	LINK="${CXX}"
+X
+Xpost-extract:
+X	if [ ! -f "${DISTDIR}/${GYP_REVISION}.tar.gz" ]; then ${FETCH_CMD} -o "${DISTDIR}/${GYP_REVISION}.tar.gz" "https://chromium.googlesource.com/external/gyp.git/+archive/${GYP_REVISION}.tar.gz"; fi
+X	${MKDIR} "${WRKSRC}/build/gyp" && cd "${WRKSRC}/build/gyp" && ${TAR} -xf "${DISTDIR}/${GYP_REVISION}.tar.gz"
+X	if [ ! -f "${DISTDIR}/${ICO_REVISION}.tar.gz" ]; then ${FETCH_CMD} -o "${DISTDIR}/${ICO_REVISION}.tar.gz" "https://chromium.googlesource.com/chromium/deps/icu.git/+archive/${ICO_REVISION}.tar.gz"; fi
+X	${MKDIR} "${WRKSRC}/third_party/icu" && cd "${WRKSRC}/third_party/icu" && ${TAR} -xf "${DISTDIR}/${ICO_REVISION}.tar.gz"
+X	if [ ! -f "${DISTDIR}/${BUILDTOOLS_REVISION}.tar.gz" ]; then ${FETCH_CMD} -o "${DISTDIR}/${BUILDTOOLS_REVISION}.tar.gz" "https://chromium.googlesource.com/chromium/buildtools.git/+archive/${BUILDTOOLS_REVISION}.tar.gz"; fi
+X	${MKDIR} "${WRKSRC}/buildtools" && cd "${WRKSRC}/buildtools" && ${TAR} -xf "${DISTDIR}/${BUILDTOOLS_REVISION}.tar.gz"
+X	if [ ! -f "${DISTDIR}/${COMMON_REVISION}.tar.gz" ]; then ${FETCH_CMD} -o "${DISTDIR}/${COMMON_REVISION}.tar.gz" "https://chromium.googlesource.com/chromium/src/base/trace_event/common.git/+archive/${COMMON_REVISION}.tar.gz"; fi
+X	${MKDIR} "${WRKSRC}/base/trace_event/common" && cd "${WRKSRC}/base/trace_event/common" && ${TAR} -xf "${DISTDIR}/${COMMON_REVISION}.tar.gz"
+X	if [ ! -f "${DISTDIR}/${SWARMING_CLIENT_REVISION}.tar.gz" ]; then ${FETCH_CMD} -o "${DISTDIR}/${SWARMING_CLIENT_REVISION}.tar.gz" "https://chromium.googlesource.com/external/swarming.client.git/+archive/${SWARMING_CLIENT_REVISION}.tar.gz"; fi
+X	${MKDIR} "${WRKSRC}/tools/swarming_client" && cd "${WRKSRC}/tools/swarming_client" && ${TAR} -xf "${DISTDIR}/${SWARMING_CLIENT_REVISION}.tar.gz"
+X	if [ ! -f "${DISTDIR}/${GTEST_REVISION}.tar.gz" ]; then ${FETCH_CMD} -o "${DISTDIR}/${GTEST_REVISION}.tar.gz" "https://chromium.googlesource.com/external/github.com/google/googletest.git/+archive/${GTEST_REVISION}.tar.gz"; fi
+X	${MKDIR} "${WRKSRC}/testing/gtest" && cd "${WRKSRC}/testing/gtest" && ${TAR} -xf "${DISTDIR}/${GTEST_REVISION}.tar.gz"
+X	if [ ! -f "${DISTDIR}/${GMOCK_REVISION}.tar.gz" ]; then ${FETCH_CMD} -o "${DISTDIR}/${GMOCK_REVISION}.tar.gz" "https://chromium.googlesource.com/external/googlemock.git/+archive/${GMOCK_REVISION}.tar.gz"; fi
+X	${MKDIR} "${WRKSRC}/testing/gmock" && cd "${WRKSRC}/testing/gmock" && ${TAR} -xf "${DISTDIR}/${GMOCK_REVISION}.tar.gz"
+X	if [ ! -f "${DISTDIR}/${CLANG_REVISION}.tar.gz" ]; then ${FETCH_CMD} -o "${DISTDIR}/${CLANG_REVISION}.tar.gz" "https://chromium.googlesource.com/chromium/src/tools/clang.git/+archive/${CLANG_REVISION}.tar.gz"; fi
+X	${MKDIR} "${WRKSRC}/tools/clang" && cd "${WRKSRC}/tools/clang" && ${TAR} -xf "${DISTDIR}/${CLANG_REVISION}.tar.gz"
+X
+Xdo-install:
+X	${INSTALL_PROGRAM} ${WRKSRC}/out/${ALL_TARGET}/d8 ${STAGEDIR}${PREFIX}/bin/d8
+X	${INSTALL_PROGRAM} ${WRKSRC}/out/${ALL_TARGET}/mksnapshot ${STAGEDIR}${PREFIX}/bin/mksnapshot
+X	cd ${WRKSRC}/include/ && ${INSTALL_DATA} *.h ${STAGEDIR}${PREFIX}/include/
+X	cd ${WRKSRC}/include/libplatform/ && ${MKDIR} ${STAGEDIR}${PREFIX}/include/libplatform/ && ${INSTALL_DATA} *.h ${STAGEDIR}${PREFIX}/include/libplatform/
+X	${INSTALL_LIB} ${WRKSRC}/out/${ALL_TARGET}/lib.target/libv8.so ${STAGEDIR}${PREFIX}/lib/libv8.so.1
+X	${LN} -fs ${PREFIX}/lib/libv8.so.1 ${STAGEDIR}${PREFIX}/lib/libv8.so
+X
+X.include <bsd.port.post.mk>
+X
+ee0771b41569c5d2b8b81315323e3587
+echo x - v8-51/distinfo
+sed 's/^X//' >v8-51/distinfo << 'd4c062c0bd80bd60b3b2e02979d30f4c'
+XSHA256 (v8-v8-5.1.281.47-167dc63b4c9a1d0f0fe1b19af93644ac9a561e83_GH0.tar.gz) = 2c86c53aa8d952c121e88dd01945d9f8025d0afa22b7a439fe7a583ef784a72a
+XSIZE (v8-v8-5.1.281.47-167dc63b4c9a1d0f0fe1b19af93644ac9a561e83_GH0.tar.gz) = 22017457
+d4c062c0bd80bd60b3b2e02979d30f4c
+echo x - v8-51/pkg-descr
+sed 's/^X//' >v8-51/pkg-descr << '45e178ca73b14a099d3fd0a374e98367'
+XV8 is Google's open source JavaScript engine.
+X
+XV8 is written in C++ and is used in Google Chrome, the open source browser from
+XGoogle.
+X
+XV8 implements ECMAScript as specified in ECMA-262, 5th edition, and runs on
+XWindows (XP or newer), Mac OS X (10.5 or newer), and Linux systems that use
+XIA-32, x64, or ARM processors.
+X
+XV8 can run standalone, or can be embedded into any C++ application.
+X
+XGit repository at https://github.com/v8/v8
+X
+XWWW: http://code.google.com/p/v8/
+45e178ca73b14a099d3fd0a374e98367
+echo x - v8-51/pkg-plist
+sed 's/^X//' >v8-51/pkg-plist << '44770bfeb07087ccc09b312ce83b4b5f'
+Xbin/d8
+Xbin/mksnapshot
+Xinclude/libplatform/libplatform.h
+Xinclude/v8-debug.h
+Xinclude/v8-experimental.h
+Xinclude/v8-platform.h
+Xinclude/v8-profiler.h
+Xinclude/v8-testing.h
+Xinclude/v8-util.h
+Xinclude/v8-version.h
+Xinclude/v8.h
+Xinclude/v8config.h
+Xlib/libv8.so
+Xlib/libv8.so.1
+44770bfeb07087ccc09b312ce83b4b5f
+echo c - v8-51/files
+mkdir -p v8-51/files > /dev/null 2>&1
+echo x - v8-51/files/patch-src_base_logging.cc
+sed 's/^X//' >v8-51/files/patch-src_base_logging.cc << '1fb6247da9b9b8f3b4e8328031ac8570'
+X--- src/base/logging.cc.orig	2016-10-08 02:16:09 UTC
+X+++ src/base/logging.cc
+X@@ -54,7 +54,7 @@ DEFINE_CHECK_OP_IMPL(GT)
+X void DumpBacktrace() {
+X #if V8_LIBC_GLIBC || V8_OS_BSD
+X   void* trace[100];
+X-  int size = backtrace(trace, arraysize(trace));
+X+  unsigned long size = backtrace(trace, arraysize(trace));
+X   OS::PrintError("\n==== C stack trace ===============================\n\n");
+X   if (size == 0) {
+X     OS::PrintError("(empty)\n");
+1fb6247da9b9b8f3b4e8328031ac8570
+echo x - v8-51/files/patch-Makefile
+sed 's/^X//' >v8-51/files/patch-Makefile << 'e0edd912514c6cca3794689260da60c4'
+X--- Makefile.orig	2016-11-16 20:36:51.638691000 +0000
+X+++ Makefile	2016-11-16 20:35:46.988594000 +0000
+X@@ -455,7 +455,7 @@
+X $(OUTDIR)/Makefile.native: $(GYPFILES) $(ENVFILE)
+X 	PYTHONPATH="$(shell pwd)/tools/generate_shim_headers:$(shell pwd)/build:$(PYTHONPATH):$(shell pwd)/build/gyp/pylib:$(PYTHONPATH)" \
+X 	GYP_GENERATORS=make \
+X-	build/gyp/gyp --generator-output="$(OUTDIR)" build/all.gyp \
+X+	build/gyp/gyp --generator-output="$(OUTDIR)" src/d8.gyp \
+X 	              -Ibuild/standalone.gypi --depth=. -S.native $(GYPFLAGS)
+X
+X # Note that NACL_SDK_ROOT must be set to point to an appropriate
+e0edd912514c6cca3794689260da60c4
+exit
+
