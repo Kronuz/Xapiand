@@ -53,17 +53,17 @@ class Log;
 class Worker;
 
 
-#define HTTP_STATUS            (1 << 0)
-#define HTTP_HEADER            (1 << 1)
-#define HTTP_ACCEPT            (1 << 2)
-#define HTTP_BODY              (1 << 3)
-#define HTTP_CONTENT_TYPE      (1 << 4)
-#define HTTP_CONTENT_ENCODING  (1 << 5)
-#define HTTP_CHUNKED           (1 << 6)
-#define HTTP_OPTIONS_RESPONSE  (1 << 7)
-#define HTTP_TOTAL_COUNT       (1 << 8)
-#define HTTP_MATCHES_ESTIMATED (1 << 9)
-#define HTTP_EXPECTED_CONTINUE (1 << 10)
+#define HTTP_STATUS_RESPONSE            (1 << 0)
+#define HTTP_HEADER_RESPONSE            (1 << 1)
+#define HTTP_ACCEPT_RESPONSE            (1 << 2)
+#define HTTP_BODY_RESPONSE              (1 << 3)
+#define HTTP_CONTENT_TYPE_RESPONSE      (1 << 4)
+#define HTTP_CONTENT_ENCODING_RESPONSE  (1 << 5)
+#define HTTP_CHUNKED_RESPONSE           (1 << 6)
+#define HTTP_OPTIONS_RESPONSE           (1 << 7)
+#define HTTP_TOTAL_COUNT_RESPONSE       (1 << 8)
+#define HTTP_MATCHES_ESTIMATED_RESPONSE (1 << 9)
+#define HTTP_EXPECTED_CONTINUE_RESPONSE (1 << 10)
 
 
 using type_t = std::pair<std::string, std::string>;

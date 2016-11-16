@@ -108,18 +108,18 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 	std::string response;
 	const std::string eol("\r\n");
 
-	if (mode & HTTP_STATUS) {
+	if (mode & HTTP_STATUS_RESPONSE) {
 		response_status = status;
 
 		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", http_major, http_minor, status);
 		headers += buffer;
 		headers += http_status_str(status) + eol;
-		if (!(mode & HTTP_HEADER)) {
+		if (!(mode & HTTP_HEADER_RESPONSE)) {
 			headers += eol;
 		}
 	}
 
-	if (mode & HTTP_HEADER) {
+	if (mode & HTTP_HEADER_RESPONSE) {
 		headers += "Server: " + std::string(PACKAGE_NAME) + "/" + std::string(VERSION) + eol;
 
 		response_ends = std::chrono::system_clock::now();
@@ -128,27 +128,27 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 			headers += "Operation-Time: " + delta_string(operation_begins, operation_ends) + eol;
 		}
 
-		if (mode & HTTP_OPTIONS) {
+		if (mode & HTTP_OPTIONS_RESPONSE) {
 			headers += "Allow: GET,HEAD,POST,PUT,PATCH,OPTIONS" + eol;
 		}
 
-		if (mode & HTTP_TOTAL_COUNT) {
+		if (mode & HTTP_TOTAL_COUNT_RESPONSE) {
 			headers += "Total-Count: " + std::to_string(total_count) + eol;
 		}
 
-		if (mode & HTTP_MATCHES_ESTIMATED) {
+		if (mode & HTTP_MATCHES_ESTIMATED_RESPONSE) {
 			headers += "Matches-Estimated: " + std::to_string(matches_estimated) + eol;
 		}
 
-		if (mode & HTTP_CONTENT_TYPE) {
+		if (mode & HTTP_CONTENT_TYPE_RESPONSE) {
 			headers += "Content-Type: " + ct_type + eol;
 		}
 
-		if (mode & HTTP_CONTENT_ENCODING) {
+		if (mode & HTTP_CONTENT_ENCODING_RESPONSE) {
 			headers += "Content-Encoding: " + ct_encoding + eol;
 		}
 
-		if (mode & HTTP_CHUNKED) {
+		if (mode & HTTP_CHUNKED_RESPONSE) {
 			headers += "Transfer-Encoding: chunked" + eol;
 		} else {
 			headers += "Content-Length: ";
@@ -158,8 +158,8 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 		headers += eol;
 	}
 
-	if (mode & HTTP_BODY) {
-		if (mode & HTTP_CHUNKED) {
+	if (mode & HTTP_BODY_RESPONSE) {
+		if (mode & HTTP_CHUNKED_RESPONSE) {
 			snprintf(buffer, sizeof(buffer), "%lx", body.size());
 			response += buffer + eol;
 			response += body + eol;
@@ -360,7 +360,7 @@ HttpClient::on_info(http_parser* p)
 		case 50:  // headers done
 			if (self->expect_100) {
 				// Return 100 if client is expecting it
-				self->write(self->http_response(HTTP_STATUS_CONTINUE, HTTP_STATUS | HTTP_EXPECTED_CONTINUE, p->http_major, p->http_minor));
+				self->write(self->http_response(HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE | HTTP_EXPECTED_CONTINUE_RESPONSE, p->http_major, p->http_minor));
 			}
 	}
 
@@ -396,7 +396,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 				self->host = self->header_value;
 			} else if (name.compare("expect") == 0 && value.compare("100-continue") == 0) {
 				if (p->content_length > MAX_BODY_SIZE) {
-					self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS, p->http_major, p->http_minor));
+					self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor));
 					self->close();
 					return 0;
 				}
@@ -428,14 +428,14 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 	} else if (state >= 60 && state <= 62) { // s_body_identity  ->  s_message_done
 		self->body_size += length;
 		if (self->body_size > MAX_BODY_SIZE || p->content_length > MAX_BODY_SIZE) {
-			self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS, p->http_major, p->http_minor));
+			self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor));
 			self->close();
 			return 0;
 		} else if (self->body_descriptor || self->body_size > MAX_BODY_MEM) {
 
 			// The next two lines are switching off the write body in to a file option when the body is too large
 			// (for avoid have it in memory) but this feature is not available yet
-			self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS, p->http_major, p->http_minor)); // <-- remove leater!
+			self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor)); // <-- remove leater!
 			self->close(); // <-- remove leater!
 
 			if (!self->body_descriptor) {
@@ -584,7 +584,7 @@ HttpClient::_options(enum http_method)
 {
 	L_CALL(this, "HttpClient::_options()");
 
-	write(http_response(HTTP_STATUS_OK, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS_RESPONSE | HTTP_BODY, parser.http_major, parser.http_minor));
+	write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor));
 }
 
 
@@ -1318,7 +1318,7 @@ HttpClient::search_view(enum http_method method)
 				} else {
 					// Returns blob_data in case that type is unkown
 					auto blob_data = document.get_blob();
-					write(http_response(HTTP_STATUS_OK, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
+					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
 					return;
 				}
 			}
@@ -1335,19 +1335,19 @@ HttpClient::search_view(enum http_method method)
 			auto result = serialize_response(obj_data, ct_type, pretty);
 			if (chunked) {
 				if (rc == 0) {
-					write(http_response(HTTP_STATUS_OK, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
-					write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
+					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
+					write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, first_chunk));
 				}
 
 				if (!buffer.empty()) {
-					if (!write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + sep_chunk + eol_chunk))) {
+					if (!write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + sep_chunk + eol_chunk))) {
 						// TODO: log eror?
 						break;
 					}
 				}
 				buffer = result.first;
 			} else {
-				if (!write(http_response(HTTP_STATUS_OK, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
+				if (!write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
 					// TODO: log eror?
 					break;
 				}
@@ -1356,19 +1356,19 @@ HttpClient::search_view(enum http_method method)
 
 		if (chunked) {
 			if (rc == 0) {
-				write(http_response(HTTP_STATUS_OK, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
-				write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, first_chunk));
+				write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
+				write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, first_chunk));
 			}
 
 			if (!buffer.empty()) {
-				write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + eol_chunk));
+				write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + eol_chunk));
 			}
 
 			if (!last_chunk.empty()) {
-				write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, last_chunk));
+				write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, last_chunk));
 			}
 
-			write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED | HTTP_BODY));
+			write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE));
 		}
 	}
 
@@ -1969,7 +1969,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 	L_CALL(this, "HttpClient::write_http_response()");
 
 	if (response.is_undefined()) {
-		write(http_response(status, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+		write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor));
 		return;
 	}
 
@@ -1983,7 +1983,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 	const auto& accepted_type = get_acceptable_type(ct_types);
 	try {
 		auto result = serialize_response(response, accepted_type, pretty, (int)status >= 400);
-		write(http_response(status, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
+		write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
 	} catch (const SerialisationError& exc) {
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack response_err = {
@@ -1991,7 +1991,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 			{ RESPONSE_MESSAGE, std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what()) }
 		};
 		auto response_str = response_err.to_string();
-		write(http_response(status, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor, 0, 0, response_str));
+		write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, response_str));
 		return;
 	}
 }
