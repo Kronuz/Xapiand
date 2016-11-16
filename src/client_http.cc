@@ -1328,9 +1328,9 @@ HttpClient::search_view(enum http_method method)
 			obj_data[RESERVED_RANK] = m.get_rank();
 			obj_data[RESERVED_WEIGHT] = m.get_weight();
 			obj_data[RESERVED_PERCENT] = m.get_percent();
-			int subdatabase = (document.get_docid() - 1) % endpoints.size();
-			auto endpoint = endpoints[subdatabase];
-			obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
+			// int subdatabase = (document.get_docid() - 1) % endpoints.size();
+			// auto endpoint = endpoints[subdatabase];
+			// obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
 
 			auto result = serialize_response(obj_data, ct_type, pretty);
 			if (chunked) {
