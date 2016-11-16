@@ -89,6 +89,16 @@ Scheduler::~Scheduler()
 }
 
 
+size_t
+Scheduler::running_size()
+{
+	if (thread_pool) {
+		thread_pool->running_size();
+	}
+	return 0;
+}
+
+
 void
 Scheduler::finish(int wait)
 {

@@ -45,9 +45,8 @@ using TaskType = std::shared_ptr<ScheduledTask>;
 class ScheduledTask : public Task<>, public std::enable_shared_from_this<ScheduledTask> {
 	friend class Scheduler;
 
-	unsigned long long wakeup_time;
-
 protected:
+	unsigned long long wakeup_time;
 	std::atomic_ullong created_at;
 	std::atomic_ullong cleared_at;
 
@@ -109,6 +108,7 @@ public:
 	Scheduler(const std::string& name_, const std::string format, size_t num_threads);
 	~Scheduler();
 
+	size_t running_size();
 	void finish(int wait=10);
 	void join();
 	void add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup);
