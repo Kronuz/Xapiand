@@ -138,7 +138,7 @@ BaseTCP::bind(int tries)
 		struct accept_filter_arg af = {"dataready", ""};
 
 		if (setsockopt(sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) < 0) {
-			L_ERR(nullptr, "ERROR: setsockopt SO_ACCEPTFILTER (sock=%d): [%d] %s", sock, errno, strerror(errno));
+			L_ERR(nullptr, "ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 #endif
 
