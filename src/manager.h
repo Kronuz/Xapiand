@@ -132,9 +132,7 @@ protected:
 
 public:
 	std::string __repr__() const override {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "<XapiandManager at %p>", this);
-		return buffer;
+		return Worker::__repr__("XapiandManager");
 	}
 
 	enum class State {

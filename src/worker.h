@@ -28,6 +28,7 @@
 #include <list>      // for list
 #include <memory>    // for shared_ptr, enable_shared_from_this
 #include <mutex>     // for mutex
+#include <string>	 // for string
 #include <vector>    // for vector
 
 #include "ev/ev++.h"
@@ -115,7 +116,11 @@ private:
 public:
 	std::string dump_tree(int level=1);
 
-	virtual std::string __repr__() const;
+	std::string __repr__(const std::string& name) const;
+
+	virtual std::string __repr__() const {
+		return __repr__("Worker");
+	}
 
 	virtual ~Worker();
 

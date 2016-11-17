@@ -54,9 +54,7 @@ private:
 
 public:
 	std::string __repr__() const override {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "<Discovery at %p>", this);
-		return buffer;
+		return Worker::__repr__("Discovery");
 	}
 
 	enum class Message {

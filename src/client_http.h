@@ -207,9 +207,7 @@ class HttpClient : public BaseClient {
 
 public:
 	std::string __repr__() const override {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "<HttpClient at %p>", this);
-		return buffer;
+		return Worker::__repr__("HttpClient");
 	}
 
 	HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);

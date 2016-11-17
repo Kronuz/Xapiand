@@ -49,9 +49,7 @@ class Binary : public BaseTCP {
 
 public:
 	std::string __repr__() const override {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "<Binary at %p>", this);
-		return buffer;
+		return Worker::__repr__("Binary");
 	}
 
 	Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);

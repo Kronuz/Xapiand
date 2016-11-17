@@ -62,9 +62,7 @@ class XapiandServer : public Task<>, public Worker {
 
 public:
 	std::string __repr__() const override {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "<XapiandServer at %p>", this);
-		return buffer;
+		return Worker::__repr__("XapiandServer");
 	}
 
 	static std::mutex static_mutex;

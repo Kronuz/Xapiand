@@ -44,9 +44,7 @@ class BinaryServer : public BaseServer {
 
 public:
 	std::string __repr__() const override {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "<BinaryServer at %p>", this);
-		return buffer;
+		return Worker::__repr__("BinaryServer");
 	}
 
 	BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_);

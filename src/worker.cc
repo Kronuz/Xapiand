@@ -207,11 +207,9 @@ Worker::_ancestor(int levels)
 
 
 std::string
-Worker::__repr__() const
+Worker::__repr__(const std::string& name) const
 {
-	char buffer[100];
-	snprintf(buffer, sizeof(buffer), "<Worker at %p>", this);
-	return buffer;
+	return format_string("<%s at %p, %s %p>", name.c_str(), this, ev_loop->depth() ? (_runner? "runner in a running loop at" : "worker in a running loop at") : (_runner? "runner of" : "worker of"), ev_loop->raw_loop);
 }
 
 
@@ -221,7 +219,7 @@ Worker::dump_tree(int level)
 	std::lock_guard<std::mutex> lk(_mtx);
 	std::string ret = "\n";
 	for (int l = 0; l < level; ++l) ret += "    ";
-	ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + (_runner && ev_loop->depth() ? ") in a running loop" : ")");
+	ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + ")";
 	for (const auto& c : _children) {
 		ret += c->dump_tree(level + 1);
 	}

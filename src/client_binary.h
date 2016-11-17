@@ -85,9 +85,7 @@ class BinaryClient : public BaseClient {
 
 public:
 	std::string __repr__() const override {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "<BinaryClient at %p>", this);
-		return buffer;
+		return Worker::__repr__("BinaryClient");
 	}
 
 	~BinaryClient();

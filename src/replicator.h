@@ -51,9 +51,7 @@ class XapiandReplicator : public Task<>, public Worker {
 
 public:
 	std::string __repr__() const override {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "<XapiandReplicator at %p>", this);
-		return buffer;
+		return Worker::__repr__("XapiandReplicator");
 	}
 
 	~XapiandReplicator();
