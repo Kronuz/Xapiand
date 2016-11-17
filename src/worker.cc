@@ -321,14 +321,6 @@ Worker::detach()
 	L_CALL(this, "Worker::detach() [%s]", __repr__().c_str());
 
 	_detaching = true;
-	cleanup();
-}
-
-
-void
-Worker::cleanup()
-{
-	L_CALL(this, "Worker::cleanup() [%s]", __repr__().c_str());
 
 	auto ref = shared_from_this();  // Prevent ancestor->detach_impl() deleting us
 

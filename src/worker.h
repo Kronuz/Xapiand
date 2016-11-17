@@ -132,7 +132,6 @@ public:
 
 	void destroy();
 	void detach();
-	void cleanup();
 
 	void run_loop();
 

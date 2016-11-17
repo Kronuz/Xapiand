@@ -472,10 +472,10 @@ HttpClient::run()
 	try {
 		_run();
 	} catch (...) {
-		cleanup();
+		detach();
 		throw;
 	}
-	cleanup();
+	detach();
 }
 
 

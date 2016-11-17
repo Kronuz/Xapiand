@@ -82,7 +82,7 @@ XapiandReplicator::run()
 		on_commit(endpoint);
 	}
 
-	cleanup();
+	detach();
 }
 
 
