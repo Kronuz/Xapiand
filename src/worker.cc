@@ -166,6 +166,12 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 #endif
 
 	if (auto child = weak_child.lock()) {
+		if (child->_runner && child->ev_loop->depth()) {
+#ifdef L_WORKER
+			L_WORKER(this, LIGHT_RED "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__().c_str(), child.use_count() - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+#endif
+			return;
+		}
 		__detach(child);
 #ifdef L_WORKER
 		child_repr = child->__repr__();
@@ -215,7 +221,7 @@ Worker::dump_tree(int level)
 	std::lock_guard<std::mutex> lk(_mtx);
 	std::string ret = "\n";
 	for (int l = 0; l < level; ++l) ret += "    ";
-	ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + (ev_loop->depth() ? ") in a running loop" : ")");
+	ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + (_runner && ev_loop->depth() ? ") in a running loop" : ")");
 	for (const auto& c : _children) {
 		ret += c->dump_tree(level + 1);
 	}
@@ -255,14 +261,6 @@ Worker::detach_impl()
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
 			child->detach_impl();
-			if (!child->_detaching) {
-				if (ev_loop->depth()) {
-#ifdef L_WORKER
-					L_WORKER(this, LIGHT_RED "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__().c_str(), child.use_count() - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
-#endif
-					continue;
-				}
-			}
 		}
 		_detach_impl(weak_child);
 	}
@@ -277,7 +275,7 @@ Worker::shutdown(time_t asap, time_t now)
 	_asap = asap;
 	_now = now;
 	_async_shutdown.send();
-	if (!ev_loop->depth()) {
+	if (_runner && !ev_loop->depth()) {
 		shutdown_impl(asap, now);
 	}
 }
@@ -299,7 +297,7 @@ Worker::break_loop()
 	L_CALL(this, "Worker::break_loop() [%s]", __repr__().c_str());
 
 	_async_break_loop.send();
-	if (!ev_loop->depth()) {
+	if (_runner && !ev_loop->depth()) {
 		break_loop_impl();
 	}
 }
@@ -311,7 +309,7 @@ Worker::destroy()
 	L_CALL(this, "Worker::destroy() [%s]", __repr__().c_str());
 
 	_async_destroy.send();
-	if (!ev_loop->depth()) {
+	if (_runner && !ev_loop->depth()) {
 		destroy_impl();
 	}
 }
@@ -336,7 +334,7 @@ Worker::cleanup()
 
 	auto ancestor = _ancestor(1);
 	ancestor->_async_detach.send();
-	if (!ev_loop->depth()) {
+	if (_runner && !ev_loop->depth()) {
 		ancestor->detach_impl();
 	}
 }
@@ -347,6 +345,7 @@ Worker::run_loop()
 {
 	L_CALL(this, "Worker::run_loop() [%s]", __repr__().c_str());
 
+	_runner = true;
 	ev_loop->run();
 	if (_detaching) {
 		detach();

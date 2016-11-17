@@ -54,6 +54,7 @@ private:
 	ev::async _async_detach;
 
 	std::mutex _mtx;
+	std::atomic_bool _runner;
 	std::atomic_bool _detaching;
 
 	const WorkerShared _parent;
