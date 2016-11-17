@@ -6,30 +6,30 @@
 # This archive contains:
 #
 #	xapian-core/
-#	xapian-core/Makefile
-#	xapian-core/distinfo
-#	xapian-core/files
-#	xapian-core/files/patch-api_omenquireinternal.h
-#	xapian-core/files/patch-backends_dbfactory__remote.cc
-#	xapian-core/files/patch-backends_remote_remote-database.cc
-#	xapian-core/files/patch-backends_remote_remote-database.h
-#	xapian-core/files/patch-common_remoteprotocol.h
-#	xapian-core/files/patch-include_xapian_dbfactory.h
-#	xapian-core/files/patch-include_xapian_enquire.h
-#	xapian-core/files/patch-include_xapian_mset.h
-#	xapian-core/files/patch-net_progclient.cc
-#	xapian-core/files/patch-net_progclient.h
-#	xapian-core/files/patch-net_remoteserver.cc
-#	xapian-core/files/patch-net_remoteserver.h
-#	xapian-core/files/patch-net_remotetcpclient.h
-#	xapian-core/files/patch-api_omenquire.cc
-#	xapian-core/pkg-descr
-#	xapian-core/pkg-plist
+#	xapian-core//Makefile
+#	xapian-core//distinfo
+#	xapian-core//files
+#	xapian-core//files/patch-api_omenquire.cc
+#	xapian-core//files/patch-api_omenquireinternal.h
+#	xapian-core//files/patch-backends_dbfactory__remote.cc
+#	xapian-core//files/patch-backends_remote_remote-database.cc
+#	xapian-core//files/patch-backends_remote_remote-database.h
+#	xapian-core//files/patch-common_remoteprotocol.h
+#	xapian-core//files/patch-include_xapian_dbfactory.h
+#	xapian-core//files/patch-include_xapian_enquire.h
+#	xapian-core//files/patch-include_xapian_mset.h
+#	xapian-core//files/patch-net_progclient.cc
+#	xapian-core//files/patch-net_progclient.h
+#	xapian-core//files/patch-net_remoteserver.cc
+#	xapian-core//files/patch-net_remoteserver.h
+#	xapian-core//files/patch-net_remotetcpclient.h
+#	xapian-core//pkg-descr
+#	xapian-core//pkg-plist
 #
 echo c - xapian-core/
 mkdir -p xapian-core/ > /dev/null 2>&1
-echo x - xapian-core/Makefile
-sed 's/^X//' >xapian-core/Makefile << 'bb15b57be79ed098817542f273cd04f0'
+echo x - xapian-core//Makefile
+sed 's/^X//' >xapian-core//Makefile << 'END-of-xapian-core//Makefile'
 X# Created by: J.F. Dockes
 X# $FreeBSD: head/databases/xapian-core/Makefile 412236 2016-03-31 15:38:43Z sunpoet $
 X
@@ -65,17 +65,208 @@ X	${INSTALL_PROGRAM} ${WRKSRC}/examples/.libs/${file} ${STAGEDIR}${PREFIX}/bin/x
 X.endfor
 X
 X.include <bsd.port.mk>
-bb15b57be79ed098817542f273cd04f0
-echo x - xapian-core/distinfo
-sed 's/^X//' >xapian-core/distinfo << 'b49b3e3560b5e4bda659c2592ac05ff7'
+END-of-xapian-core//Makefile
+echo x - xapian-core//distinfo
+sed 's/^X//' >xapian-core//distinfo << 'END-of-xapian-core//distinfo'
 XTIMESTAMP = 1479337420
 XSHA256 (xapian-core-1.4.1.tar.xz) = c5f2534de73c067ac19eed6d6bec65b7b2c1be00131c8867da9e1dfa8bce70eb
 XSIZE (xapian-core-1.4.1.tar.xz) = 2793644
-b49b3e3560b5e4bda659c2592ac05ff7
-echo c - xapian-core/files
-mkdir -p xapian-core/files > /dev/null 2>&1
-echo x - xapian-core/files/patch-api_omenquireinternal.h
-sed 's/^X//' >xapian-core/files/patch-api_omenquireinternal.h << '42000b6ff3d0b59949c6d3241f1d5cf9'
+END-of-xapian-core//distinfo
+echo c - xapian-core//files
+mkdir -p xapian-core//files > /dev/null 2>&1
+echo x - xapian-core//files/patch-api_omenquire.cc
+sed 's/^X//' >xapian-core//files/patch-api_omenquire.cc << 'END-of-xapian-core//files/patch-api_omenquire.cc'
+X--- api/omenquire.cc
+X+++ api/omenquire.cc
+X@@ -43,6 +43,7 @@
+X #include "api/omenquireinternal.h"
+X #include "str.h"
+X #include "weight/weightinternal.h"
+X+#include "net/serialise.h"
+X
+X #include <algorithm>
+X #include "autoptr.h"
+X@@ -133,6 +134,20 @@ RSet::Internal::get_description() const
+X     return description;
+X }
+X
+X+std::string
+X+RSet::serialise() const
+X+{
+X+    LOGCALL(API, std::string, "RSet::serialise", NO_ARGS);
+X+    RETURN(serialise_rset(*this));
+X+}
+X+
+X+RSet
+X+RSet::unserialise(const std::string &s)
+X+{
+X+    LOGCALL_STATIC(API, RSet, "RSet::unserialise", s);
+X+    RETURN(unserialise_rset(s));
+X+}
+X+
+X namespace Internal {
+X
+X // Methods for Xapian::MSetItem
+X@@ -313,6 +328,20 @@ MSet::get_description() const
+X     return "Xapian::MSet(" + internal->get_description() + ")";
+X }
+X
+X+std::string
+X+MSet::serialise() const
+X+{
+X+    LOGCALL(API, std::string, "MSet::serialise", NO_ARGS);
+X+    RETURN(serialise_mset(*this));
+X+}
+X+
+X+MSet
+X+MSet::unserialise(const std::string &s)
+X+{
+X+    LOGCALL_STATIC(API, MSet, "MSet::unserialise", s);
+X+    RETURN(unserialise_mset(s.data(), s.data() + s.size()));
+X+}
+X+
+X int
+X MSet::Internal::convert_to_percent_internal(double wt) const
+X {
+X@@ -510,6 +539,40 @@ Enquire::Internal::get_query() const
+X     return query;
+X }
+X
+X+void
+X+Enquire::Internal::unserialise_stats(const string& serialised)
+X+{
+X+    stats.reset(new Xapian::Weight::Internal);
+X+    ::unserialise_stats(serialised, *(stats.get()));
+X+    stats->set_bounds_from_db(db);
+X+}
+X+
+X+const string
+X+Enquire::Internal::serialise_stats() const
+X+{
+X+    return ::serialise_stats(*(stats.get()));
+X+}
+X+
+X+void
+X+Enquire::Internal::prepare_mset(const RSet *rset,
+X+				const MatchDecider *mdecider) const
+X+{
+X+    LOGCALL(MATCH, MSet, "Enquire::Internal::prepare_mset", rset | mdecider);
+X+
+X+    if (percent_cutoff && (sort_by == VAL || sort_by == VAL_REL)) {
+X+	throw Xapian::UnimplementedError("Use of a percentage cutoff while sorting primary by value isn't currently supported");
+X+    }
+X+
+X+    stats.reset(new Xapian::Weight::Internal);
+X+    match.reset(new ::MultiMatch(db, query, qlen, rset,
+X+				 collapse_max, collapse_key,
+X+				 percent_cutoff, weight_cutoff,
+X+				 order, sort_key, sort_by, sort_value_forward,
+X+				 time_limit, *(stats.get()), weight, spies,
+X+				 (sorter.get() != NULL),
+X+				 (mdecider != NULL)));
+X+}
+X+
+X MSet
+X Enquire::Internal::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
+X 			    Xapian::doccount check_at_least, const RSet *rset,
+X@@ -534,35 +597,41 @@ Enquire::Internal::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
+X 	check_at_least = max(check_at_least, maxitems);
+X     }
+X
+X-    AutoPtr<Xapian::Weight::Internal> stats(new Xapian::Weight::Internal);
+X-    ::MultiMatch match(db, query, qlen, rset,
+X-		       collapse_max, collapse_key,
+X-		       percent_cutoff, weight_cutoff,
+X-		       order, sort_key, sort_by, sort_value_forward,
+X-		       time_limit, *(stats.get()), weight, spies,
+X-		       (sorter.get() != NULL),
+X-		       (mdecider != NULL));
+X-    // Run query and put results into supplied Xapian::MSet object.
+X-    MSet retval;
+X-    match.get_mset(first, maxitems, check_at_least, retval,
+X-		   *(stats.get()), mdecider, sorter.get());
+X-    if (first_orig != first && retval.internal.get()) {
+X-	retval.internal->firstitem = first_orig;
+X-    }
+X+    try {
+X+	if (!stats || !match) {
+X+	    prepare_mset(rset, mdecider);
+X+	}
+X
+X-    Assert(weight->name() != "bool" || retval.get_max_possible() == 0);
+X+	// Run query and put results into supplied Xapian::MSet object.
+X+	MSet retval;
+X+	match->get_mset(first, maxitems, check_at_least, retval,
+X+		    *(stats.get()), mdecider, sorter.get());
+X+	if (first_orig != first && retval.internal.get()) {
+X+	    retval.internal->firstitem = first_orig;
+X+	}
+X
+X-    // The Xapian::MSet needs to have a pointer to ourselves, so that it can
+X-    // retrieve the documents.  This is set here explicitly to avoid having
+X-    // to pass it into the matcher, which gets messy particularly in the
+X-    // networked case.
+X-    retval.internal->enquire = this;
+X+	Assert(weight->name() != "bool" || retval.get_max_possible() == 0);
+X
+X-    if (!retval.internal->stats) {
+X-	retval.internal->stats = stats.release();
+X-    }
+X+	// The Xapian::MSet needs to have a pointer to ourselves, so that it can
+X+	// retrieve the documents.  This is set here explicitly to avoid having
+X+	// to pass it into the matcher, which gets messy particularly in the
+X+	// networked case.
+X+	retval.internal->enquire = this;
+X+
+X+	if (!retval.internal->stats) {
+X+	    retval.internal->stats = stats.release();
+X+	} else {
+X+	    stats.reset();
+X+	}
+X+
+X+	match.reset();
+X
+X-    RETURN(retval);
+X+	RETURN(retval);
+X+    } catch(...) {
+X+	stats.reset();
+X+	match.reset();
+X+	throw;
+X+    }
+X }
+X
+X ESet
+X@@ -897,6 +966,27 @@ Enquire::set_time_limit(double time_limit)
+X     internal->time_limit = time_limit;
+X }
+X
+X+void
+X+Enquire::unserialise_stats(const string& serialised)
+X+{
+X+    internal->unserialise_stats(serialised);
+X+}
+X+
+X+const string
+X+Enquire::serialise_stats() const
+X+{
+X+    RETURN(internal->serialise_stats());
+X+}
+X+
+X+void
+X+Enquire::prepare_mset(const RSet *rset,
+X+		      const MatchDecider *mdecider) const
+X+{
+X+    LOGCALL(API, Xapian::MSet, "Xapian::Enquire::prepare_mset", maxitems | rset | mdecider);
+X+
+X+    internal->prepare_mset(rset, mdecider);
+X+}
+X+
+X MSet
+X Enquire::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
+X 		  Xapian::doccount check_at_least, const RSet *rset,
+END-of-xapian-core//files/patch-api_omenquire.cc
+echo x - xapian-core//files/patch-api_omenquireinternal.h
+sed 's/^X//' >xapian-core//files/patch-api_omenquireinternal.h << 'END-of-xapian-core//files/patch-api_omenquireinternal.h'
 X--- api/omenquireinternal.h
 X+++ api/omenquireinternal.h
 X@@ -37,6 +37,7 @@
@@ -110,9 +301,9 @@ X+
 X 	MSet get_mset(Xapian::doccount first, Xapian::doccount maxitems,
 X 		      Xapian::doccount check_at_least,
 X 		      const RSet *omrset,
-42000b6ff3d0b59949c6d3241f1d5cf9
-echo x - xapian-core/files/patch-backends_dbfactory__remote.cc
-sed 's/^X//' >xapian-core/files/patch-backends_dbfactory__remote.cc << 'ac69d80474e87d4780bc463a6adc8439'
+END-of-xapian-core//files/patch-api_omenquireinternal.h
+echo x - xapian-core//files/patch-backends_dbfactory__remote.cc
+sed 's/^X//' >xapian-core//files/patch-backends_dbfactory__remote.cc << 'END-of-xapian-core//files/patch-backends_dbfactory__remote.cc'
 X--- backends/dbfactory_remote.cc
 X+++ backends/dbfactory_remote.cc
 X@@ -33,39 +33,68 @@ namespace Xapian {
@@ -196,9 +387,9 @@ X+    return Remote::open_writable(program, args, timeout_, flags, std::string()
 X }
 X
 X }
-ac69d80474e87d4780bc463a6adc8439
-echo x - xapian-core/files/patch-backends_remote_remote-database.cc
-sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.cc << '0ea39a0ec8ec970f8d736e827925e001'
+END-of-xapian-core//files/patch-backends_dbfactory__remote.cc
+echo x - xapian-core//files/patch-backends_remote_remote-database.cc
+sed 's/^X//' >xapian-core//files/patch-backends_remote_remote-database.cc << 'END-of-xapian-core//files/patch-backends_remote_remote-database.cc'
 X--- backends/remote/remote-database.cc
 X+++ backends/remote/remote-database.cc
 X@@ -68,9 +68,12 @@ throw_connection_closed_unexpectedly()
@@ -309,9 +500,9 @@ X+    link.do_close(writable_);
 X }
 X
 X void
-0ea39a0ec8ec970f8d736e827925e001
-echo x - xapian-core/files/patch-backends_remote_remote-database.h
-sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.h << '9fee399553c179cdff94485118d9bd8e'
+END-of-xapian-core//files/patch-backends_remote_remote-database.cc
+echo x - xapian-core//files/patch-backends_remote_remote-database.h
+sed 's/^X//' >xapian-core//files/patch-backends_remote_remote-database.h << 'END-of-xapian-core//files/patch-backends_remote_remote-database.h'
 X--- backends/remote/remote-database.h
 X+++ backends/remote/remote-database.h
 X@@ -49,6 +49,15 @@ class RemoteDatabase : public Xapian::Database::Internal {
@@ -344,9 +535,9 @@ X+		   bool writable, int flags, const string & dir);
 X
 X     /// Receive a message from the server.
 X     reply_type get_message(string & message, reply_type required_type = REPLY_MAX) const;
-9fee399553c179cdff94485118d9bd8e
-echo x - xapian-core/files/patch-common_remoteprotocol.h
-sed 's/^X//' >xapian-core/files/patch-common_remoteprotocol.h << 'f14fb3cbf56cb06e2897cb4e67e23ccc'
+END-of-xapian-core//files/patch-backends_remote_remote-database.h
+echo x - xapian-core//files/patch-common_remoteprotocol.h
+sed 's/^X//' >xapian-core//files/patch-common_remoteprotocol.h << 'END-of-xapian-core//files/patch-common_remoteprotocol.h'
 X--- common/remoteprotocol.h
 X+++ common/remoteprotocol.h
 X@@ -89,6 +89,7 @@ enum message_type {
@@ -357,9 +548,9 @@ X+    MSG_READACCESS,		// Select currenty active read access database
 X     MSG_MAX
 X };
 X
-f14fb3cbf56cb06e2897cb4e67e23ccc
-echo x - xapian-core/files/patch-include_xapian_dbfactory.h
-sed 's/^X//' >xapian-core/files/patch-include_xapian_dbfactory.h << '67bbc4702834efb44fdc7a7a5e85d1c0'
+END-of-xapian-core//files/patch-common_remoteprotocol.h
+echo x - xapian-core//files/patch-include_xapian_dbfactory.h
+sed 's/^X//' >xapian-core//files/patch-include_xapian_dbfactory.h << 'END-of-xapian-core//files/patch-include_xapian_dbfactory.h'
 X--- include/xapian/dbfactory.h
 X+++ include/xapian/dbfactory.h
 X@@ -176,7 +176,13 @@ namespace Remote {
@@ -426,9 +617,9 @@ X+XAPIAN_VISIBILITY_DEFAULT
 X WritableDatabase open_writable(const std::string &program, const std::string &args, useconds_t timeout = 0, int flags = 0);
 X
 X }
-67bbc4702834efb44fdc7a7a5e85d1c0
-echo x - xapian-core/files/patch-include_xapian_enquire.h
-sed 's/^X//' >xapian-core/files/patch-include_xapian_enquire.h << 'afc9ec4ca0a4c778214dbdacfb016ab2'
+END-of-xapian-core//files/patch-include_xapian_dbfactory.h
+echo x - xapian-core//files/patch-include_xapian_enquire.h
+sed 's/^X//' >xapian-core//files/patch-include_xapian_enquire.h << 'END-of-xapian-core//files/patch-include_xapian_enquire.h'
 X--- include/xapian/enquire.h
 X+++ include/xapian/enquire.h
 X@@ -103,6 +103,20 @@ class XAPIAN_VISIBILITY_DEFAULT RSet {
@@ -471,9 +662,9 @@ X+			  const MatchDecider * mdecider = 0) const;
 X 	MSet get_mset(Xapian::doccount first, Xapian::doccount maxitems,
 X 		      Xapian::doccount checkatleast = 0,
 X 		      const RSet * omrset = 0,
-afc9ec4ca0a4c778214dbdacfb016ab2
-echo x - xapian-core/files/patch-include_xapian_mset.h
-sed 's/^X//' >xapian-core/files/patch-include_xapian_mset.h << 'dcd82398ac91b4141e407b22618e7618'
+END-of-xapian-core//files/patch-include_xapian_enquire.h
+echo x - xapian-core//files/patch-include_xapian_mset.h
+sed 's/^X//' >xapian-core//files/patch-include_xapian_mset.h << 'END-of-xapian-core//files/patch-include_xapian_mset.h'
 X--- include/xapian/mset.h
 X+++ include/xapian/mset.h
 X@@ -255,6 +255,19 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
@@ -496,9 +687,9 @@ X+
 X     /** @private @internal MSet is what the C++ STL calls a container.
 X      *
 X      *  The following typedefs allow the class to be used in templates in the
-dcd82398ac91b4141e407b22618e7618
-echo x - xapian-core/files/patch-net_progclient.cc
-sed 's/^X//' >xapian-core/files/patch-net_progclient.cc << '0289b2a578b1454667ac8e80e4c86882'
+END-of-xapian-core//files/patch-include_xapian_mset.h
+echo x - xapian-core//files/patch-net_progclient.cc
+sed 's/^X//' >xapian-core//files/patch-net_progclient.cc << 'END-of-xapian-core//files/patch-net_progclient.cc'
 X--- net/progclient.cc
 X+++ net/progclient.cc
 X@@ -64,16 +64,16 @@ split_words(const string &text, vector<string> &words, char ws = ' ')
@@ -521,9 +712,9 @@ X+    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable | fla
 X }
 X
 X string
-0289b2a578b1454667ac8e80e4c86882
-echo x - xapian-core/files/patch-net_progclient.h
-sed 's/^X//' >xapian-core/files/patch-net_progclient.h << 'af1e8193bdacf07368b21c8e0218ba49'
+END-of-xapian-core//files/patch-net_progclient.cc
+echo x - xapian-core//files/patch-net_progclient.h
+sed 's/^X//' >xapian-core//files/patch-net_progclient.h << 'END-of-xapian-core//files/patch-net_progclient.h'
 X--- net/progclient.h
 X+++ net/progclient.h
 X@@ -88,7 +88,8 @@ class ProgClient : public RemoteDatabase {
@@ -536,9 +727,9 @@ X+	       const std::string & dir);
 X
 X     /** Destructor. */
 X     ~ProgClient();
-af1e8193bdacf07368b21c8e0218ba49
-echo x - xapian-core/files/patch-net_remoteserver.cc
-sed 's/^X//' >xapian-core/files/patch-net_remoteserver.cc << 'cd2359dfb11d830004d48d3043a75101'
+END-of-xapian-core//files/patch-net_progclient.h
+echo x - xapian-core//files/patch-net_remoteserver.cc
+sed 's/^X//' >xapian-core//files/patch-net_remoteserver.cc << 'END-of-xapian-core//files/patch-net_remoteserver.cc'
 X--- net/remoteserver.cc
 X+++ net/remoteserver.cc
 X@@ -36,7 +36,7 @@
@@ -1054,9 +1245,9 @@ X+	wdb = NULL;
 X+    }
 X+    dbpaths = dbpaths_;
 X+}
-cd2359dfb11d830004d48d3043a75101
-echo x - xapian-core/files/patch-net_remoteserver.h
-sed 's/^X//' >xapian-core/files/patch-net_remoteserver.h << '1811e7c1331cf56f9f2c5eb483581c69'
+END-of-xapian-core//files/patch-net_remoteserver.cc
+echo x - xapian-core//files/patch-net_remoteserver.h
+sed 's/^X//' >xapian-core//files/patch-net_remoteserver.h << 'END-of-xapian-core//files/patch-net_remoteserver.h'
 X--- net/remoteserver.h
 X+++ net/remoteserver.h
 X@@ -69,6 +69,8 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
@@ -1080,9 +1271,9 @@ X+
 X   public:
 X     /** Construct a RemoteServer.
 X      *
-1811e7c1331cf56f9f2c5eb483581c69
-echo x - xapian-core/files/patch-net_remotetcpclient.h
-sed 's/^X//' >xapian-core/files/patch-net_remotetcpclient.h << '8edbcb701c2f73405d7c18ffeac9b9b2'
+END-of-xapian-core//files/patch-net_remoteserver.h
+echo x - xapian-core//files/patch-net_remotetcpclient.h
+sed 's/^X//' >xapian-core//files/patch-net_remotetcpclient.h << 'END-of-xapian-core//files/patch-net_remotetcpclient.h'
 X--- net/remotetcpclient.h
 X+++ net/remotetcpclient.h
 X@@ -75,10 +75,10 @@ class RemoteTcpClient : SOCKET_INITIALIZER_MIXIN public RemoteDatabase {
@@ -1098,200 +1289,9 @@ X+			 writable, flags, dir) { }
 X
 X     /** Destructor. */
 X     ~RemoteTcpClient();
-8edbcb701c2f73405d7c18ffeac9b9b2
-echo x - xapian-core/files/patch-api_omenquire.cc
-sed 's/^X//' >xapian-core/files/patch-api_omenquire.cc << '73c1fcc39153e355766ceae99bdf1fc7'
-X--- api/omenquire.cc
-X+++ api/omenquire.cc
-X@@ -43,6 +43,7 @@
-X #include "api/omenquireinternal.h"
-X #include "str.h"
-X #include "weight/weightinternal.h"
-X+#include "net/serialise.h"
-X
-X #include <algorithm>
-X #include "autoptr.h"
-X@@ -133,6 +134,20 @@ RSet::Internal::get_description() const
-X     return description;
-X }
-X
-X+std::string
-X+RSet::serialise() const
-X+{
-X+    LOGCALL(API, std::string, "RSet::serialise", NO_ARGS);
-X+    RETURN(serialise_rset(*this));
-X+}
-X+
-X+RSet
-X+RSet::unserialise(const std::string &s)
-X+{
-X+    LOGCALL_STATIC(API, RSet, "RSet::unserialise", s);
-X+    RETURN(unserialise_rset(s));
-X+}
-X+
-X namespace Internal {
-X
-X // Methods for Xapian::MSetItem
-X@@ -313,6 +328,20 @@ MSet::get_description() const
-X     return "Xapian::MSet(" + internal->get_description() + ")";
-X }
-X
-X+std::string
-X+MSet::serialise() const
-X+{
-X+    LOGCALL(API, std::string, "MSet::serialise", NO_ARGS);
-X+    RETURN(serialise_mset(*this));
-X+}
-X+
-X+MSet
-X+MSet::unserialise(const std::string &s)
-X+{
-X+    LOGCALL_STATIC(API, MSet, "MSet::unserialise", s);
-X+    RETURN(unserialise_mset(s.data(), s.data() + s.size()));
-X+}
-X+
-X int
-X MSet::Internal::convert_to_percent_internal(double wt) const
-X {
-X@@ -510,6 +539,40 @@ Enquire::Internal::get_query() const
-X     return query;
-X }
-X
-X+void
-X+Enquire::Internal::unserialise_stats(const string& serialised)
-X+{
-X+    stats.reset(new Xapian::Weight::Internal);
-X+    ::unserialise_stats(serialised, *(stats.get()));
-X+    stats->set_bounds_from_db(db);
-X+}
-X+
-X+const string
-X+Enquire::Internal::serialise_stats() const
-X+{
-X+    return ::serialise_stats(*(stats.get()));
-X+}
-X+
-X+void
-X+Enquire::Internal::prepare_mset(const RSet *rset,
-X+				const MatchDecider *mdecider) const
-X+{
-X+    LOGCALL(MATCH, MSet, "Enquire::Internal::prepare_mset", rset | mdecider);
-X+
-X+    if (percent_cutoff && (sort_by == VAL || sort_by == VAL_REL)) {
-X+	throw Xapian::UnimplementedError("Use of a percentage cutoff while sorting primary by value isn't currently supported");
-X+    }
-X+
-X+    stats.reset(new Xapian::Weight::Internal);
-X+    match.reset(new ::MultiMatch(db, query, qlen, rset,
-X+				 collapse_max, collapse_key,
-X+				 percent_cutoff, weight_cutoff,
-X+				 order, sort_key, sort_by, sort_value_forward,
-X+				 time_limit, *(stats.get()), weight, spies,
-X+				 (sorter.get() != NULL),
-X+				 (mdecider != NULL)));
-X+}
-X+
-X MSet
-X Enquire::Internal::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
-X 			    Xapian::doccount check_at_least, const RSet *rset,
-X@@ -534,35 +597,41 @@ Enquire::Internal::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
-X 	check_at_least = max(check_at_least, maxitems);
-X     }
-X
-X-    AutoPtr<Xapian::Weight::Internal> stats(new Xapian::Weight::Internal);
-X-    ::MultiMatch match(db, query, qlen, rset,
-X-		       collapse_max, collapse_key,
-X-		       percent_cutoff, weight_cutoff,
-X-		       order, sort_key, sort_by, sort_value_forward,
-X-		       time_limit, *(stats.get()), weight, spies,
-X-		       (sorter.get() != NULL),
-X-		       (mdecider != NULL));
-X-    // Run query and put results into supplied Xapian::MSet object.
-X-    MSet retval;
-X-    match.get_mset(first, maxitems, check_at_least, retval,
-X-		   *(stats.get()), mdecider, sorter.get());
-X-    if (first_orig != first && retval.internal.get()) {
-X-	retval.internal->firstitem = first_orig;
-X-    }
-X+    try {
-X+	if (!stats || !match) {
-X+	    prepare_mset(rset, mdecider);
-X+	}
-X
-X-    Assert(weight->name() != "bool" || retval.get_max_possible() == 0);
-X+	// Run query and put results into supplied Xapian::MSet object.
-X+	MSet retval;
-X+	match->get_mset(first, maxitems, check_at_least, retval,
-X+		    *(stats.get()), mdecider, sorter.get());
-X+	if (first_orig != first && retval.internal.get()) {
-X+	    retval.internal->firstitem = first_orig;
-X+	}
-X
-X-    // The Xapian::MSet needs to have a pointer to ourselves, so that it can
-X-    // retrieve the documents.  This is set here explicitly to avoid having
-X-    // to pass it into the matcher, which gets messy particularly in the
-X-    // networked case.
-X-    retval.internal->enquire = this;
-X+	Assert(weight->name() != "bool" || retval.get_max_possible() == 0);
-X
-X-    if (!retval.internal->stats) {
-X-	retval.internal->stats = stats.release();
-X-    }
-X+	// The Xapian::MSet needs to have a pointer to ourselves, so that it can
-X+	// retrieve the documents.  This is set here explicitly to avoid having
-X+	// to pass it into the matcher, which gets messy particularly in the
-X+	// networked case.
-X+	retval.internal->enquire = this;
-X+
-X+	if (!retval.internal->stats) {
-X+	    retval.internal->stats = stats.release();
-X+	} else {
-X+	    stats.reset();
-X+	}
-X+
-X+	match.reset();
-X
-X-    RETURN(retval);
-X+	RETURN(retval);
-X+    } catch(...) {
-X+	stats.reset();
-X+	match.reset();
-X+	throw;
-X+    }
-X }
-X
-X ESet
-X@@ -897,6 +966,27 @@ Enquire::set_time_limit(double time_limit)
-X     internal->time_limit = time_limit;
-X }
-X
-X+void
-X+Enquire::unserialise_stats(const string& serialised)
-X+{
-X+    internal->unserialise_stats(serialised);
-X+}
-X+
-X+const string
-X+Enquire::serialise_stats() const
-X+{
-X+    RETURN(internal->serialise_stats());
-X+}
-X+
-X+void
-X+Enquire::prepare_mset(const RSet *rset,
-X+		      const MatchDecider *mdecider) const
-X+{
-X+    LOGCALL(API, Xapian::MSet, "Xapian::Enquire::prepare_mset", maxitems | rset | mdecider);
-X+
-X+    internal->prepare_mset(rset, mdecider);
-X+}
-X+
-X MSet
-X Enquire::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
-X 		  Xapian::doccount check_at_least, const RSet *rset,
-73c1fcc39153e355766ceae99bdf1fc7
-echo x - xapian-core/pkg-descr
-sed 's/^X//' >xapian-core/pkg-descr << '98a98df9fcab60de6efa63d29b31972f'
+END-of-xapian-core//files/patch-net_remotetcpclient.h
+echo x - xapian-core//pkg-descr
+sed 's/^X//' >xapian-core//pkg-descr << 'END-of-xapian-core//pkg-descr'
 XXapian is an Open Source Probabilistic Information Retrieval library, released
 Xunder the GPL. It's written in C++, with bindings to allow use from other
 Xlanguages.
@@ -1310,9 +1310,9 @@ X- Platform independent data formats
 X- Allows simultaneous update and searching.
 X
 XWWW: http://www.xapian.org/
-98a98df9fcab60de6efa63d29b31972f
-echo x - xapian-core/pkg-plist
-sed 's/^X//' >xapian-core/pkg-plist << '210f147e6696fa0219151394a79bdd74'
+END-of-xapian-core//pkg-descr
+echo x - xapian-core//pkg-plist
+sed 's/^X//' >xapian-core//pkg-plist << 'END-of-xapian-core//pkg-plist'
 Xbin/copydatabase
 Xbin/quest
 Xbin/simpleexpand
@@ -1384,5 +1384,6 @@ Xman/man1/xapian-replicate.1.gz
 Xman/man1/xapian-replicate-server.1.gz
 Xman/man1/xapian-tcpsrv.1.gz
 Xshare/aclocal/xapian.m4
-210f147e6696fa0219151394a79bdd74
+END-of-xapian-core//pkg-plist
 exit
+
