@@ -246,10 +246,11 @@ namespace queue {
 		bool pop(T& element, double timeout=-1.0) {
 			std::unique_lock<std::mutex> lk(_mutex);
 			bool popped = _pop_back_impl(element, timeout, lk);
+			auto size = _items_queue.size();
 			lk.unlock();
 
 			if (popped) {
-				if (_items_queue.size() < _threshold) {
+				if (size < _threshold) {
 					// Notifiy waiting thread it can push/pop now
 					_push_cond.notify_one();
 				}
@@ -400,10 +401,12 @@ namespace queue {
 				}
 			}
 
+			auto size = Queue_t::_items_queue.size();
+
 			lk.unlock();
 
 			if (popped) {
-				if (Queue_t::_items_queue.size() < Queue_t::_threshold) {
+				if (size < Queue_t::_threshold) {
 					// Notifiy waiting thread it can push/pop now
 					Queue_t::_push_cond.notify_one();
 				}
