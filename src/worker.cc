@@ -339,7 +339,4 @@ Worker::run_loop()
 
 	_runner = true;
 	ev_loop->run();
-	if (_detaching) {
-		detach();
-	}
 }
