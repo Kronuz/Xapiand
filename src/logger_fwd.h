@@ -24,6 +24,7 @@
 
 #include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
 #include <chrono>             // for system_clock, time_point, duration, millise...
+#include <cstdarg>            // for va_list, va_end
 
 #include "exception.h"
 #include "utils.h"
