@@ -29,19 +29,28 @@
 
 
 /*
- * More ellipsoids available in:
- * http://earth-info.nga.mil/GandG/coordsys/datums/ellips.txt
- * http://icvficheros.icv.gva.es/ICV/geova/erva/Utilidades/jornada_ETRS89/1_ANTECEDENTES_IGN.pdf
- * http://www.geocachingtoolbox.com/?page=datumEllipsoidDetails
+ * Datums: with associated ellipsoid and Helmert transform parameters to convert given CRS
+ * to WGS84 CRS.
+ *
+ * More are available from:
+ * http://earth-info.nga.mil/GandG/coordsys/datums/NATO_DT.pdfs
+ * http://georepository.com/search/by-name/?query=&include_world=on
  */
 
 // https://isocpp.org/wiki/faq/ctors#static-init-order
 // Avoid the "static initialization order fiasco"
 
 auto&
-ellipsoids()
+map_datums()
 {
-	static const ellipsoid_t _ellipsoids[12] = {
+	/*
+	* More ellipsoids available in:
+	* http://earth-info.nga.mil/GandG/coordsys/datums/ellips.txt
+	* http://icvficheros.icv.gva.es/ICV/geova/erva/Utilidades/jornada_ETRS89/1_ANTECEDENTES_IGN.pdf
+	* http://www.geocachingtoolbox.com/?page=datumEllipsoidDetails
+	*/
+
+	static const ellipsoid_t ellipsoids[12] = {
 		// Used by GPS and default in this aplication.
 		{ "World Geodetic System 1984 (WE)",	 6378137,     6356752.314245179, 0.00669437999014131699613723 },
 		{ "Geodetic Reference System 1980 (RF)", 6378137,     6356752.314140356, 0.00669438002290078762535911 },
@@ -60,111 +69,92 @@ ellipsoids()
 		{ "Worl Geodetic System 1972 (WD)",		 6378135,     6356750.520016093, 0.00669431777826672197122802 }
 	};
 
-	return _ellipsoids;
-}
-
-
-/*
- * Datums: with associated ellipsoid and Helmert transform parameters to convert given CRS
- * to WGS84 CRS.
- *
- * More are available from:
- * http://earth-info.nga.mil/GandG/coordsys/datums/NATO_DT.pdfs
- * http://georepository.com/search/by-name/?query=&include_world=on
- */
-
-// https://isocpp.org/wiki/faq/ctors#static-init-order
-// Avoid the "static initialization order fiasco"
-
-auto&
-map_datums()
-{
 	static const std::unordered_map<int, datum_t> _map_datums({
 		// World Geodetic System 1984 (WGS84)
 		// EPSG_SRID: 4326
 		// Code NATO: WGE
 		// Code Ellip: WE
-		{ WGS84, { "World Geodetic System 1984 (WGS84)", ellipsoids()[0], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 } },
+		{ WGS84, { "World Geodetic System 1984 (WGS84)", ellipsoids[0], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 } },
 		// World Geodetic System 1972
 		// EPSG_SRID: 4322
 		// Code NATO: WGC-7
 		// Code Ellip: WD
-		{ WGS72, { "Worl Geodetic System 1972 (WGS72)", ellipsoids()[11], 0.0, 0.0, 4.5, 0.0, 0.0, (0.554 / 3600.0) * RAD_PER_DEG, 0.219 / 1E6} },
+		{ WGS72, { "Worl Geodetic System 1972 (WGS72)", ellipsoids[11], 0.0, 0.0, 4.5, 0.0, 0.0, (0.554 / 3600.0) * RAD_PER_DEG, 0.219 / 1E6} },
 		// North American Datum 1983 USA - Hawaii - main islands
 		// EPSG_SRID: 4269
 		// Code NATO: NAR(H)
 		// Code Ellip: RF
-		{ NAD83, { "North American Datum 1983 US - Hawaii (NAD83)", ellipsoids()[1], 1, 1, -1, 0.0, 0.0, 0.0, 0.0 } },
+		{ NAD83, { "North American Datum 1983 US - Hawaii (NAD83)", ellipsoids[1], 1, 1, -1, 0.0, 0.0, 0.0, 0.0 } },
 		// NORTH AMERICAN 1927 USA - CONUS - onshore
 		// EPSG_SRID: 4267
 		// Code NATO: NAS(C)
 		// Code Ellip: CC
-		{ NAD27, { "North American 1927 US-CONUS (NAD27)", ellipsoids()[8], -8, 160, 176, 0.0, 0.0, 0.0, 0.0 } },
+		{ NAD27, { "North American 1927 US-CONUS (NAD27)", ellipsoids[8], -8, 160, 176, 0.0, 0.0, 0.0, 0.0 } },
 		// Ordnance Survey Great Britain 1936 - UK - Great Britain; Isle of Man
 		// EPSG_SRID: 4277
 		// Code NATO: OGB-7
 		// Code Ellip: AA
-		{ OSGB36, { "Ordnance Survey Great Britain 1936 (OSGB36)", ellipsoids()[2], 446.448, -125.157, 542.06, (0.150 / 3600.0) * RAD_PER_DEG, (0.247 / 3600.0) * RAD_PER_DEG, (0.8421 / 3600.0) * RAD_PER_DEG, -20.4894 / 1E6 } },
+		{ OSGB36, { "Ordnance Survey Great Britain 1936 (OSGB36)", ellipsoids[2], 446.448, -125.157, 542.06, (0.150 / 3600.0) * RAD_PER_DEG, (0.247 / 3600.0) * RAD_PER_DEG, (0.8421 / 3600.0) * RAD_PER_DEG, -20.4894 / 1E6 } },
 		// IRELAND 1975, Europe - Ireland (Republic and Ulster) - onshore
 		// EPSG_SRID: 4300
 		// Code Ellip: AM
-		{ TM75, { "Ireland 1975 (TM75)", ellipsoids()[3], 482.5, -130.6, 564.6, (-1.042 / 3600.0) * RAD_PER_DEG, (-0.214 / 3600.0) * RAD_PER_DEG, (-0.631 / 3600.0) * RAD_PER_DEG, 8.150 / 1E6 } },
+		{ TM75, { "Ireland 1975 (TM75)", ellipsoids[3], 482.5, -130.6, 564.6, (-1.042 / 3600.0) * RAD_PER_DEG, (-0.214 / 3600.0) * RAD_PER_DEG, (-0.631 / 3600.0) * RAD_PER_DEG, 8.150 / 1E6 } },
 		// IRELAND 1965, Europe - Ireland (Republic and Ulster) - onshore
 		// EPSG_SRID: 4299
 		// Code NATO: IRL-7
 		// Code Ellip: AM
-		{ TM65, { "Ireland 1965 (TM65)", ellipsoids()[3], 482.530, -130.596, 564.557, (-1.042 / 3600.0) * RAD_PER_DEG, (-0.214 / 3600.0) * RAD_PER_DEG, (-0.631 / 3600.0) * RAD_PER_DEG, 8.150 / 1E6 } },
+		{ TM65, { "Ireland 1965 (TM65)", ellipsoids[3], 482.530, -130.596, 564.557, (-1.042 / 3600.0) * RAD_PER_DEG, (-0.214 / 3600.0) * RAD_PER_DEG, (-0.631 / 3600.0) * RAD_PER_DEG, 8.150 / 1E6 } },
 		// European Datum 1979 (ED79), Europe - west
 		// EPSG_SRID: 4668
 		// Code Ellip: IN
 		// http://georepository.com/transformation_15752/ED79-to-WGS-84-1.html
-		{ ED79, { "European Datum 1979 (ED79)", ellipsoids()[4], -86, -98, -119, 0.0, 0.0, 0.0, 0.0 } },
+		{ ED79, { "European Datum 1979 (ED79)", ellipsoids[4], -86, -98, -119, 0.0, 0.0, 0.0, 0.0 } },
 		// European Datum 1950, Europe - west (DMA ED50 mean)
 		// EPSG_SRID: 4230
 		// Code NATO: EUR(M)
 		// Code Ellip: IN
 		// http://georepository.com/transformation_1133/ED50-to-WGS-84-1.html
-		{ ED50, { "European Datum 1950 (ED50)", ellipsoids()[4], -87, -98, -121, 0.0, 0.0, 0.0, 0.0 } },
+		{ ED50, { "European Datum 1950 (ED50)", ellipsoids[4], -87, -98, -121, 0.0, 0.0, 0.0, 0.0 } },
 		// Tokyo Japan, Asia - Japan and South Korea
 		// EPSG_SRID: 4301
 		// Code NATO: TOY(A)
 		// Code Ellip: BR
-		{ TOYA, { "Tokyo Japan (TOYA)", ellipsoids()[5], -148, 507, 685, 0.0, 0.0, 0.0, 0.0 } },
+		{ TOYA, { "Tokyo Japan (TOYA)", ellipsoids[5], -148, 507, 685, 0.0, 0.0, 0.0, 0.0 } },
 		// DHDN (RAUENBERG), Germany - West Germany all states
 		// EPSG_SRID: 4314
 		// Code NATO: RAU-7
 		// Code Ellip: BR
-		{ DHDN, { "Deutsches Hauptdreiecksnetz (DHDN)", ellipsoids()[5], 582, 105, 414, (1.04 / 3600.0) * RAD_PER_DEG, (0.35 / 3600.0) * RAD_PER_DEG, (-3.08 / 3600.0) * RAD_PER_DEG, 8.3 /1E6 } },
+		{ DHDN, { "Deutsches Hauptdreiecksnetz (DHDN)", ellipsoids[5], 582, 105, 414, (1.04 / 3600.0) * RAD_PER_DEG, (0.35 / 3600.0) * RAD_PER_DEG, (-3.08 / 3600.0) * RAD_PER_DEG, 8.3 /1E6 } },
 		// OLD EGYPTIAN 1907 - Egypt.
 		// EPSG_SRID: 4229
 		// Code NATO: OEG
 		// Code Ellip: HE
-		{ OEG, { "Egypt 1907 (OEG)", ellipsoids()[6], -130, 110, -13, 0.0, 0.0, 0.0, 0.0 } },
+		{ OEG, { "Egypt 1907 (OEG)", ellipsoids[6], -130, 110, -13, 0.0, 0.0, 0.0, 0.0 } },
 		// AUSTRALIAN GEODETIC 1984, Australia - all states
 		// EPSG_SRID: 4203
 		// Code NATO: AUG-7
 		// Code Ellip: AN
-		{ AGD84, { "Australian Geodetic 1984 (AGD84)", ellipsoids()[7], -116, -50.47, 141.69, (0.23 / 3600.0) * RAD_PER_DEG, (0.39 / 3600.0) * RAD_PER_DEG, (0.344 / 3600.0) * RAD_PER_DEG, 0.0983 / 1E6 } },
+		{ AGD84, { "Australian Geodetic 1984 (AGD84)", ellipsoids[7], -116, -50.47, 141.69, (0.23 / 3600.0) * RAD_PER_DEG, (0.39 / 3600.0) * RAD_PER_DEG, (0.344 / 3600.0) * RAD_PER_DEG, 0.0983 / 1E6 } },
 		// SOUTH AMERICAN 1969 - South America - SAD69 by country
 		// EPSG_SRID: 4618
 		// Code NATO: SAN(M)
 		// Code Ellip: SA
-		{ SAD69, { "South American 1969 (SAD69)", ellipsoids()[9], -57, 1, -41, 0.0, 0.0, 0.0, 0.0 } },
+		{ SAD69, { "South American 1969 (SAD69)", ellipsoids[9], -57, 1, -41, 0.0, 0.0, 0.0, 0.0 } },
 		// PULKOVO 1942	- Germany - East Germany all states
 		// EPSG_SRID: 4178
 		// Code NATO: PUK-7
 		// Code Ellip: KA
-		{ PUL42, { "Pulkovo 1942 (PUL42)", ellipsoids()[10], 21.58719, -97.541, -60.925, (1.01378 / 3600.0) * RAD_PER_DEG, (0.58117 / 3600.0) * RAD_PER_DEG, (0.2348 / 3600.0) * RAD_PER_DEG, -4.6121 / 1E6 } },
+		{ PUL42, { "Pulkovo 1942 (PUL42)", ellipsoids[10], 21.58719, -97.541, -60.925, (1.01378 / 3600.0) * RAD_PER_DEG, (0.58117 / 3600.0) * RAD_PER_DEG, (0.2348 / 3600.0) * RAD_PER_DEG, -4.6121 / 1E6 } },
 		// HERMANNSKOGEL, Former Yugoslavia.
 		// EPSG_SRID: 3906
 		// Code NATO: HER-7
 		// Code Ellip: BR
-		{ MGI1901, { "MGI 1901 (MGI1901)", ellipsoids()[5], 515.149, 186.233, 511.959, (5.49721 / 3600.0) * RAD_PER_DEG, (3.51742 / 3600.0) * RAD_PER_DEG, (-12.948 / 3600.0) * RAD_PER_DEG, 0.782 / 1E6 } },
+		{ MGI1901, { "MGI 1901 (MGI1901)", ellipsoids[5], 515.149, 186.233, 511.959, (5.49721 / 3600.0) * RAD_PER_DEG, (3.51742 / 3600.0) * RAD_PER_DEG, (-12.948 / 3600.0) * RAD_PER_DEG, 0.782 / 1E6 } },
 		// GGRS87, Greece
 		// EPSG_SRID: 4121
 		// Code NATO: GRX
 		// Code Ellip: RF
-		{ GGRS87, { "GGRS87", ellipsoids()[1], -199.87, 74.79, 246.62, 0.0, 0.0, 0.0, 0.0  }}
+		{ GGRS87, { "GGRS87", ellipsoids[1], -199.87, 74.79, 246.62, 0.0, 0.0, 0.0, 0.0  }}
 	});
 
 	return _map_datums;
