@@ -370,9 +370,11 @@ add_custom_target (uninstall
 # Manual page generation
 ########################################################################
 
+include (GNUInstallDirs)
+
 set(MANPAGES ${CMAKE_SOURCE_DIR}/man/xapiand.8)
 
-install (FILES ${MANPAGES} DESTINATION man)
+install (FILES ${MANPAGES} DESTINATION ${CMAKE_INSTALL_MANDIR}/man8 COMPONENT doc)
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
 
