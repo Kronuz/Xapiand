@@ -352,6 +352,20 @@ target_link_libraries (${PROJECT_NAME}
 	m
 )
 
+
+########################################################################
+# Uninstall target
+########################################################################
+
+configure_file (
+	"${PROJECT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+	"${PROJECT_BINARY_DIR}/cmake_uninstall.cmake"
+	IMMEDIATE @ONLY)
+
+add_custom_target (uninstall
+	COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/cmake_uninstall.cmake)
+
+
 ########################################################################
 # Manual page generation
 ########################################################################
@@ -361,6 +375,7 @@ set(MANPAGES ${CMAKE_SOURCE_DIR}/man/xapiand.8)
 install (FILES ${MANPAGES} DESTINATION man)
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
+
 
 ########################################################################
 # Enable Google's Include What You Use
