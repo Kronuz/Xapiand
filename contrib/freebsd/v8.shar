@@ -61,6 +61,8 @@ X	${GMOCK_REVISION}.tar.gz:gmock \
 X	${CLANG_REVISION}.tar.gz:clang
 XEXTRACT_ONLY=	${V8_REVISION}.tar.gz
 X
+XWRKSRC=	${WRKDIR}/${PORTNAME}-${V8_REVISION}
+X
 XLIB_DEPENDS=	libicui18n.so:devel/icu
 X
 XCONFLICTS_INSTALL=	v8-devel-[0-9]*
@@ -113,9 +115,13 @@ X	cd ${WRKSRC}/include/ && ${INSTALL_DATA} *.h ${STAGEDIR}${PREFIX}/include/
 X	cd ${WRKSRC}/include/libplatform/ && ${MKDIR} ${STAGEDIR}${PREFIX}/include/libplatform/ && ${INSTALL_DATA} *.h ${STAGEDIR}${PREFIX}/include/libplatform/
 X	${INSTALL_LIB} ${WRKSRC}/out/${ALL_TARGET}/lib.target/libv8.so ${STAGEDIR}${PREFIX}/lib/libv8.so.1
 X	${LN} -fs ${PREFIX}/lib/libv8.so.1 ${STAGEDIR}${PREFIX}/lib/libv8.so
+X	${INSTALL_DATA} ${WRKSRC}/out/${ALL_TARGET}/obj.target/tools/gyp/libv8_libplatform.a ${STAGEDIR}${PREFIX}/lib/libv8_libplatform.a
+X	${INSTALL_DATA} ${WRKSRC}/out/${ALL_TARGET}/obj.target/tools/gyp/libv8_libbase.a ${STAGEDIR}${PREFIX}/lib/libv8_libbase.a
+X	${INSTALL_DATA} ${WRKSRC}/out/${ALL_TARGET}/obj.target/tools/gyp/libv8_nosnapshot.a ${STAGEDIR}${PREFIX}/lib/libv8_nosnapshot.a
+X	${INSTALL_DATA} ${WRKSRC}/out/${ALL_TARGET}/obj.target/tools/gyp/libv8_base.a ${STAGEDIR}${PREFIX}/lib/libv8_base.a
+X	${INSTALL_DATA} ${WRKSRC}/out/${ALL_TARGET}/obj.target/tools/gyp/libv8_snapshot.a ${STAGEDIR}${PREFIX}/lib/libv8_snapshot.a
 X
 X.include <bsd.port.post.mk>
-X
 END-of-v8//Makefile
 echo c - v8//files
 mkdir -p v8//files > /dev/null 2>&1
@@ -180,6 +186,11 @@ Xinclude/v8.h
 Xinclude/v8config.h
 Xlib/libv8.so
 Xlib/libv8.so.1
+Xlib/libv8_libplatform.a
+Xlib/libv8_libbase.a
+Xlib/libv8_nosnapshot.a
+Xlib/libv8_base.a
+Xlib/libv8_snapshot.a
 END-of-v8//pkg-plist
 exit
 
