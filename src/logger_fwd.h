@@ -236,7 +236,11 @@ inline LogWrapper log(bool cleanup, bool stacked, int timeout, bool async, int p
 #define L_STACKED_LIGHT_CYAN(args...) L_STACKED(LOG_DEBUG, LIGHT_CYAN, args)
 #define L_STACKED_WHITE(args...) L_STACKED(LOG_DEBUG, WHITE, args)
 
+#ifdef NDEBUG
+#define L_INFO_HOOK L_NOTHING
+#else
 #define L_INFO_HOOK(hook, args...) if ((logger_info_hook & xxh64::hash(hook)) == xxh64::hash(hook)) { P(args); }
+#endif
 #define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LOG_COL, args)
 #define L_INFO_HOOK_BLACK(hook, args...) L_INFO_HOOK(hook, LOG_INFO, BLACK, args)
 #define L_INFO_HOOK_GREY(hook, args...) L_INFO_HOOK(hook, LOG_INFO, GREY, args)
