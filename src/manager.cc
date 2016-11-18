@@ -664,6 +664,7 @@ XapiandManager::run(const opts_t& o)
 	join();
 
 	detach();
+	detach();  // detach a second time so it cleans lingering protocols
 }
 
 
