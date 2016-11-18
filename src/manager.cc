@@ -497,8 +497,6 @@ XapiandManager::shutdown_sig_async_cb(ev::async&, int revents)
 		shutdown_now = now;
 	}
 
-	L_DEBUG(this, "Workers:" RED "%s", dump_tree().c_str());
-
 	shutdown(shutdown_asap, shutdown_now);
 }
 

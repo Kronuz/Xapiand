@@ -36,8 +36,6 @@ Worker::~Worker()
 	destroyer();
 
 	L_OBJ(this, "DELETED WORKER!");
-
-	fprintf(stderr, "~Worker %s\n", __repr__().c_str());
 }
 
 
@@ -237,7 +235,7 @@ Worker::shutdown_impl(time_t asap, time_t now)
 	auto weak_children = _gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
-			child->shutdown_impl(asap, now);
+			child->shutdown(asap, now);
 		}
 	}
 }
@@ -260,23 +258,9 @@ Worker::detach_impl()
 	auto weak_children = _gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
-			child->detach_impl();
+			child->detach();
 		}
 		_detach_impl(weak_child);
-	}
-}
-
-
-void
-Worker::shutdown(time_t asap, time_t now)
-{
-	L_CALL(this, "Worker::shutdown(%d, %d) [%s]", (int)asap, (int)now, __repr__().c_str());
-
-	_asap = asap;
-	_now = now;
-	_shutdown_async.send();
-	if (_runner && !ev_loop->depth()) {
-		shutdown_impl(asap, now);
 	}
 }
 
@@ -292,12 +276,28 @@ Worker::shutdown()
 
 
 void
+Worker::shutdown(time_t asap, time_t now)
+{
+	L_CALL(this, "Worker::shutdown(%d, %d) [%s]", (int)asap, (int)now, __repr__().c_str());
+
+	if (ev_loop->depth()) {
+		_asap = asap;
+		_now = now;
+		_shutdown_async.send();
+	} else {
+		shutdown_impl(asap, now);
+	}
+}
+
+
+void
 Worker::break_loop()
 {
 	L_CALL(this, "Worker::break_loop() [%s]", __repr__().c_str());
 
-	_break_loop_async.send();
-	if (_runner && !ev_loop->depth()) {
+	if (ev_loop->depth()) {
+		_break_loop_async.send();
+	} else {
 		break_loop_impl();
 	}
 }
@@ -308,8 +308,9 @@ Worker::destroy()
 {
 	L_CALL(this, "Worker::destroy() [%s]", __repr__().c_str());
 
-	_destroy_async.send();
-	if (_runner && !ev_loop->depth()) {
+	if (ev_loop->depth()) {
+		_destroy_async.send();
+	} else {
 		destroy_impl();
 	}
 }
@@ -322,12 +323,10 @@ Worker::detach()
 
 	_detaching = true;
 
-	auto ref = shared_from_this();  // Prevent ancestor->detach_impl() deleting us
-
-	auto ancestor = _ancestor(1);
-	ancestor->_detach_async.send();
-	if (_runner && !ev_loop->depth()) {
-		ancestor->detach_impl();
+	if (ev_loop->depth()) {
+		_detach_async.send();
+	} else {
+		detach_impl();
 	}
 }
 
