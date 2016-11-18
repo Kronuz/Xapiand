@@ -275,6 +275,8 @@ Log::join()
 void
 Log::run()
 {
+	L_INFO_HOOK_LOG("Log::run", this, "Log::run()");
+
 	auto msg = str_start;
 	auto log_age = age();
 	if (log_age > 2e8) {

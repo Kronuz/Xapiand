@@ -415,6 +415,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 	int fd = watcher.fd;
 
 	L_CALL(this, "BaseClient::io_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd); (void)revents;
+	L_INFO_HOOK_LOG("BaseClient::io_cb", this, "BaseClient::io_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
 	if (revents & EV_ERROR) {
 		L_ERR(this, "ERROR: got invalid event {fd:%d} - %d: %s", fd, errno, strerror(errno));

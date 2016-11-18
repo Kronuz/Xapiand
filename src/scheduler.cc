@@ -161,6 +161,8 @@ Scheduler::add(const TaskType& task, std::chrono::time_point<std::chrono::system
 void
 Scheduler::run_one(TaskType& task)
 {
+	L_INFO_HOOK_LOG("Scheduler::run_one", this, "Scheduler::run_one()");
+
 	if (!task->cleared_at) {
 		if (task->clear()) {
 			if (thread_pool) {
@@ -202,8 +204,8 @@ Scheduler::run()
 
 		next_wakeup_time.compare_exchange_strong(nwt, wt);
 		while (nwt > wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
-		// fprintf(stderr, "RUN %s - now:%llu, wakeup:%llu\n", get_thread_name().c_str(), time_point_to_ullong(now), next_wakeup_time.load());
 
+		L_INFO_HOOK_LOG("Scheduler::run::loop", this, "Scheduler::run()::loop - now:%llu, wakeup:%llu", time_point_to_ullong(now), next_wakeup_time.load());
 		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
 
 		try {
