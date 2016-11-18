@@ -209,7 +209,14 @@ Worker::_ancestor(int levels)
 std::string
 Worker::__repr__(const std::string& name) const
 {
-	return format_string("<%s at %p, %s %p>", name.c_str(), this, ev_loop->depth() ? (_runner? "runner in a running loop at" : "worker in a running loop at") : (_runner? "runner of" : "worker of"), ev_loop->raw_loop);
+	return format_string("<%s at %p, %s of %s %p%s>",
+		name.c_str(),
+		this,
+		_runner ? "runner" : "worker",
+		ev_loop->depth() ? "running loop" : "loop",
+		ev_loop->raw_loop,
+		_detaching ? " (deteaching)" : ""
+	);
 }
 
 

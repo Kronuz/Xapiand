@@ -48,7 +48,6 @@ private:
 	time_t _asap;
 	time_t _now;
 
-
 	ev::async _shutdown_async;
 	ev::async _break_loop_async;
 	ev::async _destroy_async;
