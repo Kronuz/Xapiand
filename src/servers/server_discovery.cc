@@ -385,16 +385,16 @@ void
 DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
 	int fd = watcher.fd;
-	int sock = discovery->get_socket();
 
-	L_CALL(this, "DiscoveryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents).c_str(), sock, fd); (void)revents;
+	L_CALL(this, "DiscoveryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd); (void)revents;
+	L_INFO_HOOK_LOG("DiscoveryServer::io_accept_cb", this, "DiscoveryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
 	if (EV_ERROR & revents) {
-		L_EV(this, "ERROR: got invalid discovery event {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
+		L_EV(this, "ERROR: got invalid discovery event {fd:%d}: %s", fd, strerror(errno));
 		return;
 	}
 
-	ASSERT(sock == fd || sock == -1);
+	ASSERT(discovery->get_socket() == fd || discovery->get_socket() == -1);
 
 	L_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN");
 

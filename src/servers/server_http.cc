@@ -58,23 +58,23 @@ void
 HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	int fd = watcher.fd;
-	int sock = http->sock;
 
-	L_CALL(this, "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents).c_str(), sock, fd); (void)revents;
+	L_CALL(this, "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd); (void)revents;
+	L_INFO_HOOK_LOG("HttpServer::io_accept_cb", this, "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
 	if (EV_ERROR & revents) {
-		L_EV(this, "ERROR: got invalid http event {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
+		L_EV(this, "ERROR: got invalid http event {fd:%d}: %s", fd, strerror(errno));
 		return;
 	}
 
-	ASSERT(sock == fd || sock == -1);
+	ASSERT(http->sock == fd || http->sock == -1);
 
 	L_EV_BEGIN(this, "HttpServer::io_accept_cb:BEGIN");
 
 	int client_sock;
 	if ((client_sock = http->accept()) < 0) {
 		if (!ignored_errorno(errno, true, false)) {
-			L_ERR(this, "ERROR: accept http error {sock:%d, fd:%d}: %s", sock, fd, strerror(errno));
+			L_ERR(this, "ERROR: accept http error {fd:%d}: %s", fd, strerror(errno));
 		}
 	} else {
 		Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags, client_sock);
