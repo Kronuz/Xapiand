@@ -695,11 +695,11 @@ void run(const opts_t &opts) {
 		throw;
 	}
 
-	int managers = static_cast<int>(XapiandManager::manager.use_count() - 1);
+	long managers = XapiandManager::manager.use_count() - 1;
 	if (managers == 0) {
 		L_NOTICE(nullptr, "Xapiand is cleanly done with all work!");
 	} else {
-		L_WARNING(nullptr, "Xapiand is uncleanly done with all work (%d)!\n%s", managers, XapiandManager::manager->dump_tree().c_str());
+		L_WARNING(nullptr, "Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree().c_str());
 	}
 	XapiandManager::manager.reset();
 }
