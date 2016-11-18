@@ -135,7 +135,7 @@ const test_trixel_id_t test_seri_trixels[] {
 	// Trixel's id       Expected serialise id.         Expected id after of unserialise.
 	{ 13200083375642939, ".\\xe5g\\xe8\\x9cY;",         13200083375642939 },
 	{ 9106317391687190,  " Z%\\xbdW\\xee\\x16",         9106317391687190  },
-	{ 14549284226108186, "3\\xb0\\x7f6\\x08\\x8b\\x1a", 14549284226108186 },
+	{ 14549284226108186, "3\\xb0\\x7f6\\b\\x8b\\x1a",   14549284226108186 },
 	{ 17752546963481661, "?\\x11\\xd8\\xef\\x9d\\xe4=", 17752546963481661 },
 	{ 0,                 nullptr,                       0                 },
 };
