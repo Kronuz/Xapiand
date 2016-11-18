@@ -30,6 +30,7 @@ using namespace queue;
 
 
 int test_unique() {
+	INIT_LOG
 	Queue<std::unique_ptr<std::string>> messages_queue;
 	messages_queue.push(std::make_unique<std::string>("This is a unique data"));
 	if (messages_queue.size() != 1) {
@@ -58,6 +59,7 @@ int test_unique() {
 
 
 int test_shared() {
+	INIT_LOG
 	Queue<std::shared_ptr<std::string>> messages_queue;
 	messages_queue.push(std::make_shared<std::string>("This is a shared data"));
 	if (messages_queue.size() != 1) {
@@ -97,6 +99,7 @@ int test_shared() {
 
 
 int test_queue() {
+	INIT_LOG
 	Queue<int> q;
 	int val = 1;
 
@@ -128,6 +131,7 @@ int test_queue() {
 
 
 int test_queue_set() {
+	INIT_LOG
 	QueueSet<int> q;
 	int val = 1;
 
@@ -160,6 +164,7 @@ int test_queue_set() {
 
 
 int test_queue_set_on_dup() {
+	INIT_LOG
 	QueueSet<int> q;
 	int val = 1;
 
@@ -196,6 +201,7 @@ int test_queue_set_on_dup() {
 
 
 int test_queue_constructor() {
+	INIT_LOG
 	std::pair<int, Queue<int>> foo = std::make_pair(1, Queue<int>());
 	foo.second.push(1);
 	foo.second.push(2);

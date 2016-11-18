@@ -28,6 +28,7 @@
 
 
 int test_md5() {
+	INIT_LOG
 	std::vector<std::string> test({
 		"Hola Mundo",
 		"Como estas",
@@ -55,6 +56,7 @@ int test_md5() {
 
 
 int test_sha256() {
+	INIT_LOG
 	std::vector<std::string> test({
 		"Hola Mundo",
 		"Como estas",

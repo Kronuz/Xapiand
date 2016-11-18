@@ -30,6 +30,7 @@ using namespace lru;
 
 
 int test_lru() {
+	INIT_LOG
 	LRU<std::string, int> lru(3);
 	lru.insert(std::make_pair("test1", 111));
 	lru.insert(std::make_pair("test2", 222));
@@ -69,6 +70,7 @@ int test_lru() {
 
 
 int test_lru_emplace() {
+	INIT_LOG
 	LRU<std::string, int> lru(1);
 	lru.emplace("test1", 111);
 	lru.emplace_and([](int&){ return DropAction::leave; }, "test2", 222);
@@ -85,6 +87,7 @@ int test_lru_emplace() {
 
 
 int test_lru_actions() {
+	INIT_LOG
 	try {
 		LRU<std::string, int> lru(3);
 		lru.insert(std::make_pair("test1", 111));
@@ -139,6 +142,7 @@ int test_lru_actions() {
 
 
 int test_lru_mutate() {
+	INIT_LOG
 	LRU<std::string, int> lru(3);
 	lru.insert(std::make_pair("test1", 111));
 	if (lru.at_and([](int& o){ o = 123; return GetAction::leave; }, "test1") != 123 ||

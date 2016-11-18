@@ -29,6 +29,7 @@ using namespace queue;
 
 
 int test_pool() {
+	INIT_LOG
 	std::string results;
 	ThreadPool<> pool("W%zu", 4);
 	pool.enqueue(std::make_shared<TestTask>("1", 0.08, results));
@@ -51,6 +52,7 @@ int test_pool() {
 
 
 int test_pool_limit() {
+	INIT_LOG
 	std::string results;
 	ThreadPool<> pool("W%zu", 3);
 	pool.enqueue(std::make_shared<TestTask>("1", 0.08, results));
@@ -72,6 +74,7 @@ int test_pool_limit() {
 
 
 int test_pool_func() {
+	INIT_LOG
 	ThreadPool<> pool("W%zu", 4);
 	std::vector<std::future<int>> results;
 	test_pool_class_t obj;
@@ -118,6 +121,7 @@ int test_pool_func() {
 
 
 int test_pool_func_shared() {
+	INIT_LOG
 	ThreadPool<> pool("W%zu", 4);
 	std::vector<std::future<int>> results;
 	test_pool_class_t obj;
@@ -165,6 +169,7 @@ int test_pool_func_shared() {
 
 
 int test_pool_func_unique() {
+	INIT_LOG
 	ThreadPool<> pool("W%zu", 4);
 	std::vector<std::future<int>> results;
 	test_pool_class_t obj;

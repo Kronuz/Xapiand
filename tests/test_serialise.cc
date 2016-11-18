@@ -142,6 +142,7 @@ const test_trixel_id_t test_seri_trixels[] {
 
 
 int test_datetotimestamp() {
+	INIT_LOG
 	int cont = 0;
 	for (const test_date_t *p = test_timestamp_date; p->str; ++p) {
 		std::string date = std::string(p->str);
@@ -169,6 +170,7 @@ int test_datetotimestamp() {
 
 
 int test_unserialise_date() {
+	INIT_LOG
 	int cont = 0;
 	for (const test_date_t *p = test_unserialisedate; p->str; ++p) {
 		std::string date_s(Serialise::date(std::to_string(Datetime::timestamp(p->str))));
@@ -190,6 +192,7 @@ int test_unserialise_date() {
 
 
 int test_serialise_cartesian() {
+	INIT_LOG
 	int cont = 0;
 	for (const test_cartesian_t *p = test_seri_cartesian; p->expect_serialise; ++p) {
 		Cartesian c = p->cartesian;
@@ -212,6 +215,7 @@ int test_serialise_cartesian() {
 
 
 int test_unserialise_cartesian() {
+	INIT_LOG
 	int cont = 0;
 	for (const test_cartesian_t *p = test_seri_cartesian; p->expect_unserialise; ++p) {
 		Cartesian c = p->cartesian;
@@ -237,6 +241,7 @@ int test_unserialise_cartesian() {
 
 
 int test_serialise_trixel_id() {
+	INIT_LOG
 	int cont = 0;
 	for (const test_trixel_id_t *p = test_seri_trixels; p->expect_serialise; ++p) {
 		uint64_t trixel_id = p->trixel_id;
@@ -258,6 +263,7 @@ int test_serialise_trixel_id() {
 
 
 int test_unserialise_trixel_id() {
+	INIT_LOG
 	int cont = 0;
 	for (const test_trixel_id_t *p = test_seri_trixels; p->expect_serialise; ++p) {
 		uint64_t trixel_id = p->trixel_id;

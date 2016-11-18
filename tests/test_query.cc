@@ -231,6 +231,7 @@ static int make_search(const test_query_t _tests[], int len) {
 
 
 int test_query_search() {
+	INIT_LOG
 	try {
 		int cont = make_search(test_query, arraySize(test_query));
 		if (cont == 0) {
@@ -250,6 +251,7 @@ int test_query_search() {
 
 
 int test_partials_search() {
+	INIT_LOG
 	try {
 		int cont = make_search(test_partials, arraySize(test_partials));
 		if (cont == 0) {

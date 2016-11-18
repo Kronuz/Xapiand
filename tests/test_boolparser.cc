@@ -28,6 +28,7 @@
 
 int test_boolparser() {
 
+	INIT_LOG
 	int count = 0;
 
 	std::vector<boolparser_t> queries {

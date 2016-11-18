@@ -97,6 +97,7 @@ struct Url {
 
 
 int test_url_path() {
+	INIT_LOG
 	std::vector<Url> urls = {
 		{ "/namespace:path1/index1@host1,path2/index2@host2,path3/index3/search", false, "_|id:search|_|hst:host1|nsp:/namespace|pth:path1/index1|_|hst:host2|nsp:/namespace|pth:path2/index2|_|nsp:/namespace|pth:path3/index3|(end)" },
 		{ "/namespace1:path1/index1@host1,path2/index2@host2,/namespace2:path3/index3/1/_cmd", false, "_|cmd:_cmd|id:1|_|hst:host1|nsp:/namespace1|pth:path1/index1|_|hst:host2|nsp:/namespace1|pth:path2/index2|_|nsp:/namespace2|pth:path3/index3|(end)" },

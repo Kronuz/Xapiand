@@ -31,6 +31,7 @@
 
 
 int test_ranking_results() {
+	INIT_LOG
 	std::string str("Healed");
 	std::string strs[] = {
 		"Sealed", "Healthy", "Heard", "Herded", "Help", "Sold", "ealed"
@@ -202,6 +203,7 @@ int test_ranking_results() {
 
 
 int test_special_cases() {
+	INIT_LOG
 	std::string str1[] = { "AA", "A", "A", "A", "A", "AB", "AA", "" };
 	std::string str2[] = { "AAAAA", "A", "AA", "B", "AB", "B", "AA", "" };
 	auto levenshtein = Levenshtein();
@@ -270,6 +272,7 @@ int test_special_cases() {
 
 
 int test_case_sensitive() {
+	INIT_LOG
 	std::string str1[] = { "FRANCE", "FRANCE", "france", "FRaNCe" };
 	std::string str2[] = { "france", "french", "FRENCH", "fReNCh" };
 	auto levenshtein = Levenshtein();
@@ -403,6 +406,7 @@ void run_test_v2(T& metric, const std::string& str1, const std::string& str2) {
 
 
 int test_time() {
+	INIT_LOG
 	std::string str1("Xapiand Project - Release: Beta");
 	std::string str2("Xapiand Beta");
 

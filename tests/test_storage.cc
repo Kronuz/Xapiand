@@ -141,6 +141,7 @@ static const std::vector<std::string> big_files({
 
 
 int test_storage_data(int flags) {
+	INIT_LOG
 	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage(nullptr);
 	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 
@@ -183,6 +184,7 @@ int test_storage_data(int flags) {
 
 
 int test_storage_file(int flags) {
+	INIT_LOG
 	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage(nullptr);
 	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 
@@ -232,6 +234,7 @@ int test_storage_file(int flags) {
 
 
 int test_storage_bad_headers() {
+	INIT_LOG
 	int res = 0;
 
 	try {
@@ -260,6 +263,7 @@ int test_storage_bad_headers() {
 
 
 int test_storage_exception_write(int flags) {
+	INIT_LOG
 	std::atomic_bool finish(false);
 	std::mutex mtx;
 	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage(nullptr);
@@ -326,6 +330,7 @@ int test_storage_exception_write(int flags) {
 
 
 int test_storage_exception_write_file(int flags) {
+	INIT_LOG
 	std::atomic_bool finish(false);
 	std::mutex mtx;
 	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage(nullptr);

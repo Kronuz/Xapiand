@@ -75,6 +75,7 @@ std::string read_file(const std::string& filename) {
 
 
 int test_Compress_Decompress_Data(const std::string& orig_file) {
+	INIT_LOG
 	try {
 		uint32_t cmp_checksum, dec_checksum;
 
@@ -120,6 +121,7 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 
 
 int test_Compress_Decompress_File(const std::string& orig_file) {
+	INIT_LOG
 	try {
 		uint32_t cmp_checksum, dec_checksum;
 
@@ -163,6 +165,7 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 
 
 int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numBytes) {
+	INIT_LOG
 	try {
 		size_t total_size = 0;
 		std::vector<size_t> read_bytes;
@@ -235,6 +238,7 @@ int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numB
 
 
 int test_small_datas() {
+	INIT_LOG
 	unlink(cmp_file.c_str());
 
 	int res = 0;
@@ -247,6 +251,7 @@ int test_small_datas() {
 
 
 int test_big_datas() {
+	INIT_LOG
 	unlink(cmp_file.c_str());
 
 	int res = 0;
@@ -259,6 +264,7 @@ int test_big_datas() {
 
 
 int test_small_files() {
+	INIT_LOG
 	unlink(cmp_file.c_str());
 
 	int res = 0;
@@ -271,6 +277,7 @@ int test_small_files() {
 
 
 int test_big_files() {
+	INIT_LOG
 	unlink(cmp_file.c_str());
 
 	int res = 0;
@@ -283,6 +290,7 @@ int test_big_files() {
 
 
 int test_small_blockFile() {
+	INIT_LOG
 	unlink(cmp_file.c_str());
 
 	int res = 0;
@@ -296,6 +304,7 @@ int test_small_blockFile() {
 
 
 int test_big_blockFile() {
+	INIT_LOG
 	unlink(cmp_file.c_str());
 
 	int res = 0;

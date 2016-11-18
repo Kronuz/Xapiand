@@ -34,6 +34,7 @@ int test_soundex_english() {
 	 * Tests based in the article:
 	 * http://ntz-develop.blogspot.mx/2011/03/phonetic-algorithms.html
 	 */
+	INIT_LOG
 	std::string expected[] = {
 		"", "A0", "B1905", "C30908", "H093", "L7081096", "N807608"
 	};
@@ -87,6 +88,7 @@ int test_soundex_french() {
 	 * Tests based in the article:
 	 * http://www.phpclasses.org/package/2972-PHP-Implementation-of-the-soundex-algorithm-for-French.html#view_files/files/13492
 	 */
+	INIT_LOG
 	std::string expected[] = {
 		"", "A", "MALAN", "GRA", "RASA", "LAMBAR", "LAMPAR", "KATAR", "FAR"
 	};
@@ -139,6 +141,7 @@ int test_soundex_french() {
 
 
 int test_soundex_german() {
+	INIT_LOG
 	std::string expected[] = {
 		"", "0", "6050750206802", "607", "5061072", "60507"
 	};
@@ -185,6 +188,7 @@ int test_soundex_german() {
 
 
 int test_soundex_spanish() {
+	INIT_LOG
 	std::string expected[] = {
 		"", "A0", "O040", "B1602", "K20605", "B1020", "L4051063", "J70403050",
 		"K2020", "K20640", "B1050", "N5050"
@@ -262,6 +266,7 @@ static const std::vector<std::string> time_strs = {
 
 template <typename S>
 void test_time() {
+	INIT_LOG
 	S soundex;
 	auto t1 = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < NUM_TESTS; ++i) {
@@ -276,6 +281,7 @@ void test_time() {
 
 
 int test_soundex_time() {
+	INIT_LOG
 	test_time<SoundexEnglish>();
 	test_time<SoundexFrench>();
 	test_time<SoundexGerman>();

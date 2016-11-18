@@ -27,6 +27,7 @@
 
 int test_field_parser() {
 
+	INIT_LOG
 	std::vector<Fieldparser_t> fields {
 		{ "Color:Blue", "Color:", "Color", "Blue", "", "", "", "" },
 		{ "Color:\"dark blue\"", "Color:", "Color", "dark blue", "\"dark blue\"", "", "", "" },
@@ -79,7 +80,7 @@ int test_field_parser() {
 			L_ERR(nullptr, "\nError: The end value range should be:\n  %s\nbut it is:\n  %s", field.end.c_str(), fp.end.c_str());
 			++count;
 		}
-	}	
+	}
 
 	RETURN(count);
 }

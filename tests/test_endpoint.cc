@@ -25,6 +25,7 @@
 
 int test_endpoint() {
 
+	INIT_LOG
 	std::string uri_test[][3] = {
 		{"/var/db/xapiand/", "/", "/"},
 		{"/var/db/xapiand/", "/home/user/something/", "/home/user/something"},

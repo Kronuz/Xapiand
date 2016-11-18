@@ -657,6 +657,7 @@ static int make_search(const sort_t _tests[], int len, const std::string& metric
 
 
 int sort_test_string_levens() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_levens_tests, arraySize(string_levens_tests), "leven");
 		if (cont == 0) {
@@ -676,6 +677,7 @@ int sort_test_string_levens() {
 
 
 int sort_test_string_jaro() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_jaro_tests, arraySize(string_jaro_tests), "jaro");
 		if (cont == 0) {
@@ -695,6 +697,7 @@ int sort_test_string_jaro() {
 
 
 int sort_test_string_jaro_w() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_jaro_w_tests, arraySize(string_jaro_w_tests), "jarow");
 		if (cont == 0) {
@@ -714,6 +717,7 @@ int sort_test_string_jaro_w() {
 
 
 int sort_test_string_dice() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_dice_tests, arraySize(string_dice_tests), "dice");
 		if (cont == 0) {
@@ -733,6 +737,7 @@ int sort_test_string_dice() {
 
 
 int sort_test_string_jaccard() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_jaccard_tests, arraySize(string_jaccard_tests), "jaccard");
 		if (cont == 0) {
@@ -752,6 +757,7 @@ int sort_test_string_jaccard() {
 
 
 int sort_test_string_lcs() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_lcs_tests, arraySize(string_lcs_tests), "lcs");
 		if (cont == 0) {
@@ -771,6 +777,7 @@ int sort_test_string_lcs() {
 
 
 int sort_test_string_lcsq() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_lcsq_tests, arraySize(string_lcsq_tests), "lcsq");
 		if (cont == 0) {
@@ -790,6 +797,7 @@ int sort_test_string_lcsq() {
 
 
 int sort_test_string_soundex_en() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_soundex_en_tests, arraySize(string_soundex_en_tests), "soundex");
 		if (cont == 0) {
@@ -809,6 +817,7 @@ int sort_test_string_soundex_en() {
 
 
 int sort_test_string_soundex_fr() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_soundex_fr_tests, arraySize(string_soundex_fr_tests), "soundex");
 		if (cont == 0) {
@@ -828,6 +837,7 @@ int sort_test_string_soundex_fr() {
 
 
 int sort_test_string_soundex_de() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_soundex_de_tests, arraySize(string_soundex_de_tests), "soundex");
 		if (cont == 0) {
@@ -847,6 +857,7 @@ int sort_test_string_soundex_de() {
 
 
 int sort_test_string_soundex_es() {
+	INIT_LOG
 	try {
 		int cont = make_search(string_soundex_es_tests, arraySize(string_soundex_es_tests), "soundex");
 		if (cont == 0) {
@@ -866,6 +877,7 @@ int sort_test_string_soundex_es() {
 
 
 int sort_test_numerical() {
+	INIT_LOG
 	try {
 		int cont = make_search(numerical_tests, arraySize(numerical_tests));
 		if (cont == 0) {
@@ -885,6 +897,7 @@ int sort_test_numerical() {
 
 
 int sort_test_date() {
+	INIT_LOG
 	try {
 		int cont = make_search(date_tests, arraySize(date_tests));
 		if (cont == 0) {
@@ -904,6 +917,7 @@ int sort_test_date() {
 
 
 int sort_test_boolean() {
+	INIT_LOG
 	try {
 		int cont = make_search(boolean_tests, arraySize(boolean_tests));
 		if (cont == 0) {
@@ -923,6 +937,7 @@ int sort_test_boolean() {
 
 
 int sort_test_geo() {
+	INIT_LOG
 	try {
 		int cont = make_search(geo_tests, arraySize(geo_tests));
 		if (cont == 0) {

@@ -30,6 +30,7 @@ const std::string path_test_msgpack = std::string(PACKAGE_PATH_TEST) + "/example
 
 
 int test_msgpack_constructors() {
+	INIT_LOG
 	std::string res1("[1,2,3,4,5]");
 	std::string res2("[[\"one\",1],[\"two\",2],[\"three\",3],[\"four\",4],100.78,[\"five\",5,200.789],1000,true,\"str_value\"]");
 	std::string res3("{\"one\":1,\"two\":2,\"three\":3,\"four\":4,\"five\":5}");
@@ -156,6 +157,7 @@ int test_msgpack_constructors() {
 
 
 int test_msgpack_assigment() {
+	INIT_LOG
 	std::string res1("[1,2,3,4,5]");
 	std::string res2("{\"one\":1,\"two\":2,\"three\":3,\"four\":4,\"five\":5}");
 
@@ -229,6 +231,7 @@ int test_msgpack_assigment() {
 
 
 int test_msgpack_iterator() {
+	INIT_LOG
 	std::string expected("\"one\", 1, \"two\", 2, \"three\", 3, \"four\", 4, \"five\", 5, ");
 
 	MsgPack o = { "one", 1, "two", 2, "three", 3, "four", 4, "five", 5 };
@@ -269,6 +272,7 @@ int test_msgpack_iterator() {
 
 
 int test_msgpack_serialise() {
+	INIT_LOG
 	std::string buffer;
 	std::string filename(path_test_msgpack + "msgpack/json_test1.txt");
 	if (!read_file_contents(filename, &buffer)) {
@@ -303,6 +307,7 @@ int test_msgpack_serialise() {
 
 
 int test_msgpack_unserialise() {
+	INIT_LOG
 	std::string buffer;
 	std::string filename(path_test_msgpack + "msgpack/test1.mpack");
 	if (!read_file_contents(filename, &buffer)) {
@@ -330,6 +335,7 @@ int test_msgpack_unserialise() {
 
 
 int test_msgpack_explore() {
+	INIT_LOG
 	std::string buffer;
 	std::string filename(path_test_msgpack + "msgpack/test2.mpack");
 	if (!read_file_contents(filename, &buffer)) {
@@ -404,6 +410,7 @@ int test_msgpack_explore() {
 
 
 int test_msgpack_copy() {
+	INIT_LOG
 	MsgPack obj = {
 		{"elem1", "Elem1"},
 		{"elem2", "Elem2"}
@@ -445,6 +452,7 @@ int test_msgpack_copy() {
 
 
 int test_msgpack_reference() {
+	INIT_LOG
 	MsgPack obj = {
 		{"elem1", "Elem1"},
 		{"elem2", "Elem2"}
@@ -484,6 +492,7 @@ int test_msgpack_reference() {
 
 
 int test_msgpack_path() {
+	INIT_LOG
 	std::string buffer;
 	std::string filename(path_test_msgpack + "json/object_path.txt");
 	if (!read_file_contents(filename, &buffer)) {
@@ -514,6 +523,7 @@ int test_msgpack_path() {
 
 
 int test_msgpack_erase() {
+	INIT_LOG
 	// Erase by key
 	MsgPack obj = {
 		{ "elem1", "Elem1" },
@@ -608,6 +618,7 @@ int test_msgpack_erase() {
 
 
 int test_msgpack_reserve() {
+	INIT_LOG
 	std::string data;
 	std::string filename(path_test_msgpack + "msgpack/test1.mpack");
 	if (!read_file_contents(filename, &data)) {
@@ -651,6 +662,7 @@ int test_msgpack_reserve() {
 
 
 int test_msgpack_keys() {
+	INIT_LOG
 	int res = 0;
 	// Test for duplicate keys.
 	try {
@@ -690,6 +702,7 @@ int test_msgpack_keys() {
 
 
 int test_msgpack_change_keys() {
+	INIT_LOG
 	MsgPack obj = {
 		{ "item1", "Item1" },
 		{ "item2", "Item2" },
@@ -721,6 +734,7 @@ int test_msgpack_change_keys() {
 
 
 int test_msgpack_map() {
+	INIT_LOG
 	size_t r0 = 4;
 	std::string f1 = "firstname";
 	std::string r1 = "Marcial Alejandro";
@@ -779,7 +793,7 @@ int test_msgpack_map() {
 
 
 int test_msgpack_array() {
-
+	INIT_LOG
 	size_t r0 = 4;
 	std::string f1 = "villain";
 	std::string r1 = "Mr. Freeze";

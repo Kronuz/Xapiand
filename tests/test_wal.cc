@@ -127,6 +127,7 @@ int create_db_wal(DB_Test& db_wal) {
 
 
 int restore_database() {
+	INIT_LOG
 	DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
 	try {
 		if (create_db_wal(db_wal) == 0) {

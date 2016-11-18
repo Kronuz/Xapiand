@@ -32,6 +32,7 @@ const std::string path_patcher_test = std::string(PACKAGE_PATH_TEST) + "/example
 
 
 int test_patcher_mix() {
+	INIT_LOG
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
@@ -78,6 +79,7 @@ int test_patcher_mix() {
 
 
 int test_patcher_add() {
+	INIT_LOG
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
@@ -118,6 +120,7 @@ int test_patcher_add() {
 
 
 int test_patcher_remove() {
+	INIT_LOG
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
@@ -158,6 +161,7 @@ int test_patcher_remove() {
 
 
 int test_patcher_replace() {
+	INIT_LOG
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
@@ -198,6 +202,7 @@ int test_patcher_replace() {
 
 
 int test_patcher_move() {
+	INIT_LOG
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
@@ -238,6 +243,7 @@ int test_patcher_move() {
 
 
 int test_patcher_copy() {
+	INIT_LOG
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
@@ -278,6 +284,7 @@ int test_patcher_copy() {
 
 
 int test_patcher_test() {
+	INIT_LOG
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
@@ -310,6 +317,7 @@ int test_patcher_test() {
 
 
 int test_patcher_incr() {
+	INIT_LOG
 	std::string obj_str("{ \"age\" : 24 }");
 	std::string patch_str("[ { \"op\":\"incr\", \"path\":\"/age\", \"value\": \"1\", \"limit\": \"26\"} ]");
 	std::string expected("{\"age\":25}");
@@ -340,6 +348,7 @@ int test_patcher_incr() {
 
 
 int test_patcher_decr() {
+	INIT_LOG
 	std::string obj_str("{ \"age\" : 24 }");
 	std::string patch_str("[ { \"op\":\"decr\", \"path\":\"/age\", \"value\": 1, \"limit\": 22} ]");
 	std::string expected("{\"age\":23}");
@@ -369,6 +378,7 @@ int test_patcher_decr() {
 
 
 int test_patcher_rfc6901() {
+	INIT_LOG
 	std::string obj_str;
 	std::string filename(path_patcher_test + "rfc6901.txt");
 	if (!read_file_contents(filename, &obj_str)) {

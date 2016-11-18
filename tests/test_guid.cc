@@ -27,6 +27,7 @@
 
 
 int test_guid() {
+	INIT_LOG
 	GuidGenerator generator;
 
 	auto g1 = generator.newGuid();
