@@ -118,18 +118,18 @@ void sig_handler(int sig)
 	switch (sig) {
 #ifndef NDEBUG
 		case SIGINFO:
-			fprintf(stderr, BLUE "Signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
+			print(BLUE "Signal received: %d (%s)" NO_COL, sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
 			sig_info(sig);
 			break;
 #endif
 		case SIGTERM:
 		case SIGINT:
-			fprintf(stderr, RED "Signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
+			print(YELLOW "Signal received: %d (%s)" NO_COL, sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
 			sig_exit(sig);
 			break;
 
 		default:
-			fprintf(stderr, LIGHT_RED "Unknown signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
+			print(LIGHT_RED "Unknown signal received: %d (%s)" NO_COL, sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
 			break;
 	}
 }
