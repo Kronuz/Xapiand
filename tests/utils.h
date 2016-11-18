@@ -134,6 +134,14 @@ inline bool read_file_contents(const std::string& filename, std::string* content
 #include "../src/manager.h"
 #include "../src/database_handler.h"
 
+
+/*
+ * The Global Logger handler
+ */
+
+#define INIT_LOG auto& handlers = Log::handlers; \
+				 handlers.push_back(std::make_unique<StderrLogger>()); \
+
 /*
  *	The database used in the test is local
  *	so the Endpoints and local_node are manipulated.
