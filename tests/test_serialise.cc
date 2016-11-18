@@ -155,7 +155,7 @@ int test_datetotimestamp() {
 		}
 		if (timestamp.compare(p->expect) != 0) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", timestamp.c_str(), p->expect);
+			L_ERR(nullptr, "ERROR: Result: %s Expect: %s", timestamp.c_str(), p->expect);
 		}
 	}
 
@@ -177,7 +177,7 @@ int test_unserialise_date() {
 		std::string date = Unserialise::date(date_s);
 		if (date.compare(p->expect) != 0) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", date.c_str(), p->expect);
+			L_ERR(nullptr, "ERROR: Result: %s Expect: %s", date.c_str(), p->expect);
 		}
 	}
 
@@ -200,7 +200,7 @@ int test_serialise_cartesian() {
 		std::string res(repr(Serialise::cartesian(c), true, false));
 		if (res.compare(p->expect_serialise) != 0) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res.c_str(), p->expect_serialise);
+			L_ERR(nullptr, "ERROR: Result: %s Expect: %s", res.c_str(), p->expect_serialise);
 		}
 	}
 
@@ -226,7 +226,7 @@ int test_unserialise_cartesian() {
 		snprintf(res, sizeof(res), "%1.9f %1.9f %1.9f", c.x, c.y, c.z);
 		if (strcmp(res, p->expect_unserialise) != 0) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res, p->expect_unserialise);
+			L_ERR(nullptr, "ERROR: Result: %s Expect: %s", res, p->expect_unserialise);
 		}
 	}
 
@@ -248,7 +248,7 @@ int test_serialise_trixel_id() {
 		std::string res(repr(Serialise::trixel_id(trixel_id), true, false));
 		if (res.compare(p->expect_serialise) != 0) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res.c_str(), p->expect_serialise);
+			L_ERR(nullptr, "ERROR: Result: %s Expect: %s", res.c_str(), p->expect_serialise);
 		}
 	}
 
@@ -271,7 +271,7 @@ int test_unserialise_trixel_id() {
 		trixel_id = Unserialise::trixel_id(serialise);
 		if (p->trixel_id != trixel_id) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Resul: %llu Expect: %llu", trixel_id, p->trixel_id);
+			L_ERR(nullptr, "ERROR: Result: %llu Expect: %llu", trixel_id, p->trixel_id);
 		}
 	}
 
