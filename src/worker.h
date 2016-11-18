@@ -52,7 +52,7 @@ private:
 	ev::async _shutdown_async;
 	ev::async _break_loop_async;
 	ev::async _destroy_async;
-	ev::async _detach_async;
+	ev::async _detach_children_async;
 
 	std::mutex _mtx;
 	std::atomic_bool _runner;
@@ -74,7 +74,7 @@ protected:
 		  _shutdown_async(*ev_loop),
 		  _break_loop_async(*ev_loop),
 		  _destroy_async(*ev_loop),
-		  _detach_async(*ev_loop),
+		  _detach_children_async(*ev_loop),
 		  _parent(std::forward<T>(parent))
 	{
 		_init();
@@ -108,10 +108,11 @@ private:
 	void _shutdown_async_cb();
 	void _break_loop_async_cb(ev::async&, int revents);
 	void _destroy_async_cb(ev::async&, int revents);
-	void _detach_async_cb(ev::async&, int revents);
+	void _detach_children_async_cb(ev::async&, int revents);
 	std::vector<std::weak_ptr<Worker>> _gather_children();
 	void _detach_impl(const std::weak_ptr<Worker>& weak_child);
 	auto _ancestor(int levels=-1);
+	void _detach_children();
 
 public:
 	std::string dump_tree(int level=1);
@@ -128,7 +129,7 @@ public:
 	virtual void destroy_impl() = 0;
 
 	void break_loop_impl();
-	void detach_impl();
+	void detach_children_impl();
 
 	void shutdown(time_t asap, time_t now);
 	void shutdown();

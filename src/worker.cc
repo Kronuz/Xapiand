@@ -62,9 +62,9 @@ Worker::_init()
 	_destroy_async.start();
 	L_EV(this, "Start Worker async destroy event");
 
-	_detach_async.set<Worker, &Worker::_detach_async_cb>(this);
-	_detach_async.start();
-	L_EV(this, "Start Worker async detach event");
+	_detach_children_async.set<Worker, &Worker::_detach_children_async_cb>(this);
+	_detach_children_async.start();
+	L_EV(this, "Start Worker async detach children event");
 
 	L_OBJ(this, "CREATED WORKER!");
 }
@@ -81,8 +81,8 @@ Worker::destroyer()
 	L_EV(this, "Stop Worker async break_loop event");
 	_destroy_async.stop();
 	L_EV(this, "Stop Worker async destroy event");
-	_detach_async.stop();
-	L_EV(this, "Stop Worker async detach event");
+	_detach_children_async.stop();
+	L_EV(this, "Stop Worker async detach children event");
 }
 
 
@@ -120,13 +120,13 @@ Worker::_destroy_async_cb(ev::async&, int revents)
 
 
 void
-Worker::_detach_async_cb(ev::async&, int revents)
+Worker::_detach_children_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Worker::_detach_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
+	L_CALL(this, "Worker::_detach_children_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
 
-	L_EV_BEGIN(this, "Worker::_detach_async_cb:BEGIN");
-	detach_impl();
-	L_EV_END(this, "Worker::_detach_async_cb:END");
+	L_EV_BEGIN(this, "Worker::_detach_children_async_cb:BEGIN");
+	detach_children_impl();
+	L_EV_END(this, "Worker::_detach_children_async_cb:END");
 }
 
 
@@ -251,14 +251,15 @@ Worker::break_loop_impl()
 
 
 void
-Worker::detach_impl()
+Worker::detach_children_impl()
 {
-	L_CALL(this, "Worker::detach_impl() [%s]", __repr__().c_str());
+	L_CALL(this, "Worker::detach_children_impl() [%s]", __repr__().c_str());
 
 	auto weak_children = _gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
-			child->detach();
+			child->_detach_children();
+			if (!child->_detaching) continue;
 		}
 		_detach_impl(weak_child);
 	}
@@ -317,17 +318,24 @@ Worker::destroy()
 
 
 void
+Worker::_detach_children()
+{
+	if (ev_loop->depth()) {
+		_detach_children_async.send();
+	} else {
+		detach_children_impl();
+	}
+}
+
+
+void
 Worker::detach()
 {
 	L_CALL(this, "Worker::detach() [%s]", __repr__().c_str());
 
 	_detaching = true;
 
-	if (ev_loop->depth()) {
-		_detach_async.send();
-	} else {
-		detach_impl();
-	}
+	_ancestor(1)->_detach_children();
 }
 
 
