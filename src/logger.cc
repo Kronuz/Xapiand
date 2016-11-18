@@ -67,7 +67,7 @@ print(const char *format, va_list argptr)
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	std::string msg(buffer);
-	Log::log(LOG_CRIT, msg);
+	Log::log(LOG_CRIT, msg, 0, false, false);
 }
 
 
@@ -150,19 +150,25 @@ LogWrapper::release()
 
 
 void
-StreamLogger::log(int priority, const std::string& str)
+StreamLogger::log(int priority, const std::string& str, bool with_priority, bool with_endl)
 {
-	ofs << std::regex_replace(priorities[priority < 0 ? -priority : priority] + str, filter_re, "") << std::endl;
+	ofs << std::regex_replace((with_priority ? priorities[priority < 0 ? -priority : priority] : "") + str, filter_re, "");
+	if (with_endl) {
+		ofs << std::endl;
+	}
 }
 
 
 void
-StderrLogger::log(int priority, const std::string& str)
+StderrLogger::log(int priority, const std::string& str, bool with_priority, bool with_endl)
 {
 	if (isatty(fileno(stderr))) {
-		std::cerr << priorities[priority < 0 ? -priority : priority] + str << std::endl;
+		std::cerr << (with_priority ? priorities[priority < 0 ? -priority : priority] : "") + str;
 	} else {
-		std::cerr << std::regex_replace(priorities[priority < 0 ? -priority : priority] + str, filter_re, "") << std::endl;
+		std::cerr << std::regex_replace((with_priority ? priorities[priority < 0 ? -priority : priority] : "") + str, filter_re, "");
+	}
+	if (with_endl) {
+		std::cerr << std::endl;
 	}
 }
 
@@ -180,9 +186,9 @@ SysLog::~SysLog()
 
 
 void
-SysLog::log(int priority, const std::string& str)
+SysLog::log(int priority, const std::string& str, bool with_priority, bool)
 {
-	syslog(priority, "%s", std::regex_replace(priorities[priority < 0 ? -priority : priority] + str, filter_re, "").c_str());
+	syslog(priority, "%s", std::regex_replace((with_priority ? priorities[priority < 0 ? -priority : priority] : "") + str, filter_re, "").c_str());
 }
 
 
@@ -374,7 +380,7 @@ Log::add(const std::string& str, bool clean, bool stacked, std::chrono::time_poi
 
 
 void
-Log::log(int priority, std::string str, int indent)
+Log::log(int priority, std::string str, int indent, bool with_priority, bool with_endl)
 {
 	static std::mutex log_mutex;
 	std::lock_guard<std::mutex> lk(log_mutex);
@@ -383,7 +389,7 @@ Log::log(int priority, std::string str, int indent)
 		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
 	}
 	for (auto& handler : handlers) {
-		handler->log(priority, str);
+		handler->log(priority, str, with_priority, with_endl);
 	}
 }
 

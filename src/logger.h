@@ -50,7 +50,7 @@
 
 class Logger {
 public:
-	virtual void log(int priority, const std::string& str) = 0;
+	virtual void log(int priority, const std::string& str, bool with_priority, bool with_endl) = 0;
 };
 
 
@@ -61,13 +61,13 @@ public:
 	StreamLogger(const char* filename)
 		: ofs(std::ofstream(filename, std::ofstream::out)) { }
 
-	void log(int priority, const std::string& str) override;
+	void log(int priority, const std::string& str, bool with_priority, bool with_endl) override;
 };
 
 
 class StderrLogger : public Logger {
 public:
-	void log(int priority, const std::string& str) override;
+	void log(int priority, const std::string& str, bool with_priority, bool with_endl) override;
 };
 
 
@@ -76,7 +76,7 @@ public:
 	SysLog(const char *ident="xapiand", int option=LOG_PID|LOG_CONS, int facility=LOG_USER);
 	~SysLog();
 
-	void log(int priority, const std::string& str) override;
+	void log(int priority, const std::string& str, bool with_priority, bool with_endl) override;
 };
 
 
@@ -118,7 +118,7 @@ public:
 	static void join();
 	static void add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup);
 
-	static void log(int priority, std::string str, int indent=0);
+	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
 
 	template <typename T, typename R, typename... Args>
 	static LogWrapper log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int priority, Args&&... args);
