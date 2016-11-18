@@ -469,20 +469,6 @@ void
 HttpClient::run()
 {
 	L_CALL(this, "HttpClient::run()");
-	try {
-		_run();
-	} catch (...) {
-		detach();
-		throw;
-	}
-	detach();
-}
-
-
-void
-HttpClient::_run()
-{
-	L_CALL(this, "HttpClient::_run()");
 
 	L_CONN(this, "Start running in worker.");
 

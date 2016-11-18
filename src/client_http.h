@@ -215,5 +215,4 @@ public:
 	~HttpClient();
 
 	void run() override;
-	void _run();
 };
