@@ -79,10 +79,6 @@ class Raft;
 class XapiandServer;
 
 
-extern void sig_handler(int sig);
-extern void sig_exit(int sig);
-
-
 inline std::string serialise_node_id(uint64_t node_id) {
 	return base64::encode(serialise_length(node_id));
 }

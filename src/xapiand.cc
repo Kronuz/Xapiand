@@ -64,6 +64,44 @@
 using namespace TCLAP;
 
 
+void sig_exit(int sig)
+{
+	if (XapiandManager::manager) {
+		XapiandManager::manager->shutdown_sig(sig);
+	} else if (sig < 0) {
+		exit(-sig);
+	}
+}
+
+
+void sig_info(int sig)
+{
+}
+
+
+void sig_handler(int sig)
+{
+	switch (sig) {
+		case SIGINFO:
+		case SIGUSR1:
+		case SIGUSR2:
+			fprintf(stderr, BLUE "Signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
+			sig_info(sig);
+			break;
+
+		case SIGTERM:
+		case SIGINT:
+			fprintf(stderr, RED "Signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
+			sig_exit(sig);
+			break;
+
+		default:
+			fprintf(stderr, LIGHT_RED "Unknown signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
+			break;
+	}
+}
+
+
 void setup_signal_handlers(void) {
 	signal(SIGHUP, SIG_IGN);  // Ignore terminal line hangup
 	signal(SIGPIPE, SIG_IGN);  // Ignore write on a pipe with no reader
@@ -81,7 +119,6 @@ void setup_signal_handlers(void) {
 	sigaction(SIGUSR1, &act, nullptr);  // On User defined signal 1
 	sigaction(SIGUSR2, &act, nullptr);  // On User defined signal 2
 }
-
 
 
 #define EV_SELECT_NAME  "select"

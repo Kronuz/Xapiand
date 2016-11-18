@@ -73,3 +73,5 @@
 #include <assert.h>
 #define ASSERT(args...) assert(args)
 #endif
+
+extern void sig_exit(int sig);
