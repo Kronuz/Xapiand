@@ -28,6 +28,7 @@
 #include <stdio.h>                   // for snprintf
 #include <stdlib.h>                  // for size_t, atoi, setenv, exit, getenv
 #include <string.h>                  // for strcat, strchr, strlen, strrchr
+#include <strings.h>                 // for strcasecmp
 #include <sys/fcntl.h>               // for O_RDWR, O_CREAT
 #include <sys/signal.h>              // for sigaction, signal, SIG_IGN, SIGHUP
 #include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_O...
@@ -78,7 +79,7 @@ void sig_exit(int sig)
 #ifndef NDEBUG
 void sig_info(int sig)
 {
-	fprintf(stderr, "hook>> ");
+	fprintf(stderr, BLUE "enter info hook>> " NO_COL);
 
 	char c;
 	char hook[100];
@@ -90,22 +91,22 @@ void sig_info(int sig)
 	}
 
 	if (*hook) {
-		unsigned long long info_hook = xxh64::hash(hook);
-		if (logger_info_hook.exchange(info_hook) == info_hook) {
-			if (logger_info_hook.exchange(0)) {
-				fprintf(stderr, BLUE "Info hook '%s' turned off!" NO_COL "\n", hook);
-			} else {
-				fprintf(stderr, BLUE "Info hook is already off!" NO_COL "\n");
-			}
+		if (strcasecmp(hook, "none") == 0 || *hook == '-') {
+			fprintf(stderr, BLUE "Info hooks cleared! - CONTINUING" NO_COL "\n");
+		} else if (strcasecmp(hook, "all") == 0 || *hook == '!') {
+			logger_info_hook = -1ULL;
+			fprintf(stderr, BLUE "All info hooks activated! - CONTINUING" NO_COL "\n");
 		} else {
-			fprintf(stderr, BLUE "Info hook '%s' turned on!" NO_COL "\n", hook);
+			unsigned long long info_hook = xxh64::hash(hook);
+			logger_info_hook = logger_info_hook ^ info_hook;
+			if ((logger_info_hook & info_hook) == info_hook) {
+				fprintf(stderr, BLUE "Info hook '%s' turned on! - CONTINUING" NO_COL "\n", hook);
+			} else {
+				fprintf(stderr, BLUE "Info hook '%s' turned off! - CONTINUING" NO_COL "\n", hook);
+			}
 		}
 	} else {
-		if (logger_info_hook.exchange(0)) {
-			fprintf(stderr, BLUE "Info hook turned off!" NO_COL "\n");
-		} else {
-			fprintf(stderr, BLUE "Info hook is already off!" NO_COL "\n");
-		}
+		fprintf(stderr, BLUE "No info hook selected! - IGNORING" NO_COL "\n");
 	}
 }
 #endif

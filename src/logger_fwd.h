@@ -72,6 +72,15 @@ public:
 };
 
 
+void print(const char *format, va_list argptr);
+inline void print(const char *format, ...) {
+	va_list argptr;
+	va_start(argptr, format);
+	print(format, argptr);
+	va_end(argptr);
+}
+
+
 LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 
 
@@ -215,7 +224,7 @@ inline LogWrapper log(bool cleanup, bool stacked, int timeout, int priority, Arg
 #define L_STACKED_LIGHT_CYAN(args...) L_STACKED(LOG_DEBUG, LIGHT_CYAN, args)
 #define L_STACKED_WHITE(args...) L_STACKED(LOG_DEBUG, WHITE, args)
 
-#define L_INFO_HOOK(info_hook, args...) if (logger_info_hook == xxh64::hash(info_hook)) { L(args) }
+#define L_INFO_HOOK(hook, args...) if ((logger_info_hook & xxh64::hash(hook)) == xxh64::hash(hook)) { L(args) }
 #define L_INFO_HOOK_LOG(args...) L_INFO(LOG_INFO, LOG, args)
 #define L_INFO_HOOK_BLACK(args...) L_INFO(LOG_INFO, BLACK, args)
 #define L_INFO_HOOK_GREY(args...) L_INFO(LOG_INFO, GREY, args)

@@ -90,7 +90,6 @@ class Log : public ScheduledTask {
 
 	static std::string str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 	static LogWrapper add(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
-	static void log(int priority, std::string str, int indent=0);
 
 	static std::mutex stack_mtx;
 	static std::unordered_map<std::thread::id, unsigned> stack_levels;
@@ -118,6 +117,8 @@ public:
 	static void finish(int wait=10);
 	static void join();
 	static void add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup);
+
+	static void log(int priority, std::string str, int indent=0);
 
 	template <typename T, typename R, typename... Args>
 	static LogWrapper log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int priority, Args&&... args);

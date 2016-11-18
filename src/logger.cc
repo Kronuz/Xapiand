@@ -61,6 +61,16 @@ const char *priorities[] = {
 };
 
 
+void
+print(const char *format, va_list argptr)
+{
+	char* buffer = new char[BUFFER_SIZE];
+	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
+	std::string msg(buffer);
+	Log::log(LOG_CRIT, msg);
+}
+
+
 LogWrapper
 log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
