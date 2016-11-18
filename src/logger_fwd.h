@@ -23,11 +23,16 @@
 #pragma once
 
 #include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
+#include <atomic>             // for atomic_uulong
 #include <chrono>             // for system_clock, time_point, duration, millise...
 #include <cstdarg>            // for va_list, va_end
 
 #include "exception.h"
 #include "utils.h"
+#include "xxh64.hpp"                        // for xxh64
+
+
+extern std::atomic_ullong logger_info_hook;
 
 
 using namespace std::chrono_literals;
@@ -192,23 +197,42 @@ inline LogWrapper log(bool cleanup, bool stacked, int timeout, int priority, Arg
 #define L_WHITE(args...) L(LOG_DEBUG, WHITE, args)
 
 #define L_STACKED(args...) auto UNIQUE_NAME = L(args)
-#define L_STACKED_LOG(args...) auto UNIQUE_NAME = L_LOG(args)
-#define L_STACKED_BLACK(args...) auto UNIQUE_NAME = L_BLACK(args)
-#define L_STACKED_GREY(args...) auto UNIQUE_NAME = L_GREY(args)
-#define L_STACKED_RED(args...) auto UNIQUE_NAME = L_RED(args)
-#define L_STACKED_GREEN(args...) auto UNIQUE_NAME = L_GREEN(args)
-#define L_STACKED_YELLOW(args...) auto UNIQUE_NAME = L_YELLOW(args)
-#define L_STACKED_BLUE(args...) auto UNIQUE_NAME = L_BLUE(args)
-#define L_STACKED_MAGENTA(args...) auto UNIQUE_NAME = L_MAGENTA(args)
-#define L_STACKED_CYAN(args...) auto UNIQUE_NAME = L_CYAN(args)
-#define L_STACKED_DARK_GREY(args...) auto UNIQUE_NAME = L_DARK_GREY(args)
-#define L_STACKED_LIGHT_RED(args...) auto UNIQUE_NAME = L_LIGHT_RED(args)
-#define L_STACKED_LIGHT_GREEN(args...) auto UNIQUE_NAME = L_LIGHT_GREEN(args)
-#define L_STACKED_LIGHT_YELLOW(args...) auto UNIQUE_NAME = L_LIGHT_YELLOW(args)
-#define L_STACKED_LIGHT_BLUE(args...) auto UNIQUE_NAME = L_LIGHT_BLUE(args)
-#define L_STACKED_LIGHT_MAGENTA(args...) auto UNIQUE_NAME = L_LIGHT_MAGENTA(args)
-#define L_STACKED_LIGHT_CYAN(args...) auto UNIQUE_NAME = L_LIGHT_CYAN(args)
-#define L_STACKED_WHITE(args...) auto UNIQUE_NAME = L_WHITE(args)
+#define L_STACKED_LOG(args...) L_STACKED(LOG_DEBUG, LOG, args)
+#define L_STACKED_BLACK(args...) L_STACKED(LOG_DEBUG, BLACK, args)
+#define L_STACKED_GREY(args...) L_STACKED(LOG_DEBUG, GREY, args)
+#define L_STACKED_RED(args...) L_STACKED(LOG_DEBUG, RED, args)
+#define L_STACKED_GREEN(args...) L_STACKED(LOG_DEBUG, GREEN, args)
+#define L_STACKED_YELLOW(args...) L_STACKED(LOG_DEBUG, YELLOW, args)
+#define L_STACKED_BLUE(args...) L_STACKED(LOG_DEBUG, BLUE, args)
+#define L_STACKED_MAGENTA(args...) L_STACKED(LOG_DEBUG, MAGENTA, args)
+#define L_STACKED_CYAN(args...) L_STACKED(LOG_DEBUG, CYAN, args)
+#define L_STACKED_DARK_GREY(args...) L_STACKED(LOG_DEBUG, DARK_GREY, args)
+#define L_STACKED_LIGHT_RED(args...) L_STACKED(LOG_DEBUG, LIGHT_RED, args)
+#define L_STACKED_LIGHT_GREEN(args...) L_STACKED(LOG_DEBUG, LIGHT_GREEN, args)
+#define L_STACKED_LIGHT_YELLOW(args...) L_STACKED(LOG_DEBUG, LIGHT_YELLOW, args)
+#define L_STACKED_LIGHT_BLUE(args...) L_STACKED(LOG_DEBUG, LIGHT_BLUE, args)
+#define L_STACKED_LIGHT_MAGENTA(args...) L_STACKED(LOG_DEBUG, LIGHT_MAGENTA, args)
+#define L_STACKED_LIGHT_CYAN(args...) L_STACKED(LOG_DEBUG, LIGHT_CYAN, args)
+#define L_STACKED_WHITE(args...) L_STACKED(LOG_DEBUG, WHITE, args)
+
+#define L_INFO_HOOK(info_hook, args...) if (logger_info_hook == xxh64::hash(info_hook)) { L(args) }
+#define L_INFO_HOOK_LOG(args...) L_INFO(LOG_INFO, LOG, args)
+#define L_INFO_HOOK_BLACK(args...) L_INFO(LOG_INFO, BLACK, args)
+#define L_INFO_HOOK_GREY(args...) L_INFO(LOG_INFO, GREY, args)
+#define L_INFO_HOOK_RED(args...) L_INFO(LOG_INFO, RED, args)
+#define L_INFO_HOOK_GREEN(args...) L_INFO(LOG_INFO, GREEN, args)
+#define L_INFO_HOOK_YELLOW(args...) L_INFO(LOG_INFO, YELLOW, args)
+#define L_INFO_HOOK_BLUE(args...) L_INFO(LOG_INFO, BLUE, args)
+#define L_INFO_HOOK_MAGENTA(args...) L_INFO(LOG_INFO, MAGENTA, args)
+#define L_INFO_HOOK_CYAN(args...) L_INFO(LOG_INFO, CYAN, args)
+#define L_INFO_HOOK_DARK_GREY(args...) L_INFO(LOG_INFO, DARK_GREY, args)
+#define L_INFO_HOOK_LIGHT_RED(args...) L_INFO(LOG_INFO, LIGHT_RED, args)
+#define L_INFO_HOOK_LIGHT_GREEN(args...) L_INFO(LOG_INFO, LIGHT_GREEN, args)
+#define L_INFO_HOOK_LIGHT_YELLOW(args...) L_INFO(LOG_INFO, LIGHT_YELLOW, args)
+#define L_INFO_HOOK_LIGHT_BLUE(args...) L_INFO(LOG_INFO, LIGHT_BLUE, args)
+#define L_INFO_HOOK_LIGHT_MAGENTA(args...) L_INFO(LOG_INFO, LIGHT_MAGENTA, args)
+#define L_INFO_HOOK_LIGHT_CYAN(args...) L_INFO(LOG_INFO, LIGHT_CYAN, args)
+#define L_INFO_HOOK_WHITE(args...) L_INFO(LOG_INFO, WHITE, args)
 
 #define L_TEST L_NOTHING
 

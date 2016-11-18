@@ -56,6 +56,7 @@
 #include "manager.h"                 // for opts_t, XapiandManager, XapiandM...
 #include "tclap/CmdLine.h"           // for CmdLine, ArgException, Arg, CmdL...
 #include "utils.h"                   // for format_string, center_string
+#include "xxh64.hpp"                 // for xxh64
 #include "worker.h"                  // for Worker
 
 #define LINE_LENGTH 78
@@ -74,21 +75,51 @@ void sig_exit(int sig)
 }
 
 
+#ifndef NDEBUG
 void sig_info(int sig)
 {
+	fprintf(stderr, "hook>> ");
+
+	char c;
+	char hook[100];
+	char *ch = hook;
+	*ch = '\0';
+	while ((c=getchar()) != EOF && c != '\n' && ch < hook + sizeof(hook) - 1) {
+		*ch++ = c;
+		*ch = '\0';
+	}
+
+	if (*hook) {
+		unsigned long long info_hook = xxh64::hash(hook);
+		if (logger_info_hook.exchange(info_hook) == info_hook) {
+			if (logger_info_hook.exchange(0)) {
+				fprintf(stderr, BLUE "Info hook '%s' turned off!" NO_COL "\n", hook);
+			} else {
+				fprintf(stderr, BLUE "Info hook is already off!" NO_COL "\n");
+			}
+		} else {
+			fprintf(stderr, BLUE "Info hook '%s' turned on!" NO_COL "\n", hook);
+		}
+	} else {
+		if (logger_info_hook.exchange(0)) {
+			fprintf(stderr, BLUE "Info hook turned off!" NO_COL "\n");
+		} else {
+			fprintf(stderr, BLUE "Info hook is already off!" NO_COL "\n");
+		}
+	}
 }
+#endif
 
 
 void sig_handler(int sig)
 {
 	switch (sig) {
+#ifndef NDEBUG
 		case SIGINFO:
-		case SIGUSR1:
-		case SIGUSR2:
 			fprintf(stderr, BLUE "Signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
 			sig_info(sig);
 			break;
-
+#endif
 		case SIGTERM:
 		case SIGINT:
 			fprintf(stderr, RED "Signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
@@ -115,9 +146,9 @@ void setup_signal_handlers(void) {
 	act.sa_handler = sig_handler;
 	sigaction(SIGTERM, &act, nullptr);  // On software termination signal
 	sigaction(SIGINT, &act, nullptr);  // On interrupt program (Ctrl-C)
+#ifndef NDEBUG
 	sigaction(SIGINFO, &act, nullptr);  // On status request from keyboard (Ctrl-T)
-	sigaction(SIGUSR1, &act, nullptr);  // On User defined signal 1
-	sigaction(SIGUSR2, &act, nullptr);  // On User defined signal 2
+#endif
 }
 
 
