@@ -98,9 +98,9 @@ void sig_info(int)
 			logger_info_hook = -1ULL;
 			print(BLUE "All info hooks activated (%lx)! - CONTINUING" NO_COL, logger_info_hook.load());
 		} else {
-			unsigned long long info_hook = xxh64::hash(hook);
-			logger_info_hook = logger_info_hook ^ info_hook;
-			if ((logger_info_hook & info_hook) == info_hook) {
+			uint64_t info_hook = xxh64::hash(hook);
+			logger_info_hook = logger_info_hook.load() ^ info_hook;
+			if ((logger_info_hook.load() & info_hook) == info_hook) {
 				print(BLUE "Info hook '%s' turned on (%lx)! - CONTINUING" NO_COL, hook, logger_info_hook.load());
 			} else {
 				print(BLUE "Info hook '%s' turned off (%lx)! - CONTINUING" NO_COL, hook, logger_info_hook.load());

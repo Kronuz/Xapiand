@@ -40,7 +40,7 @@
 #define STACKED_INDENT "<indent>"
 
 
-std::atomic_ullong logger_info_hook;
+std::atomic<uint64_t> logger_info_hook;
 
 const std::regex filter_re("\033\\[[;\\d]*m");
 std::mutex Log::stack_mtx;

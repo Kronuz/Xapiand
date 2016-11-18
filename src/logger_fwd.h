@@ -35,7 +35,7 @@
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
 
 
-extern std::atomic_ullong logger_info_hook;
+extern std::atomic<uint64_t> logger_info_hook;
 
 
 using namespace std::chrono_literals;
@@ -239,7 +239,7 @@ inline LogWrapper log(bool cleanup, bool stacked, int timeout, bool async, int p
 #ifdef NDEBUG
 #define L_INFO_HOOK L_NOTHING
 #else
-#define L_INFO_HOOK(hook, args...) if ((logger_info_hook & xxh64::hash(hook)) == xxh64::hash(hook)) { P(args); }
+#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { P(args); }
 #endif
 #define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LOG_COL, args)
 #define L_INFO_HOOK_BLACK(hook, args...) L_INFO_HOOK(hook, LOG_INFO, BLACK, args)
