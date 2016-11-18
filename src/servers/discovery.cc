@@ -31,12 +31,12 @@ constexpr const char* const Discovery::MessageNames[];
 Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: BaseUDP(manager_, ev_loop_, ev_flags_, port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
 	  heartbeat(*ev_loop),
-	  async_enter(*ev_loop)
+	  enter_async(*ev_loop)
 {
 	heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
 
-	async_enter.set<Discovery, &Discovery::async_enter_cb>(this);
-	async_enter.start();
+	enter_async.set<Discovery, &Discovery::enter_async_cb>(this);
+	enter_async.start();
 	L_EV(this, "Start discovery's async enter event");
 
 	L_OBJ(this, "CREATED DISCOVERY");
@@ -75,9 +75,9 @@ Discovery::stop() {
 
 
 void
-Discovery::async_enter_cb(ev::async&, int revents)
+Discovery::enter_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Discovery::async_enter_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Discovery::enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	_enter();
 }

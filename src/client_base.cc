@@ -267,8 +267,8 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 	: Worker(std::move(server_), ev_loop_, ev_flags_),
 	  io_read(*ev_loop),
 	  io_write(*ev_loop),
-	  async_update(*ev_loop),
-	  async_read_start(*ev_loop),
+	  update_async(*ev_loop),
+	  read_start_async(*ev_loop),
 	  idle(false),
 	  shutting_down(false),
 	  closed(false),
@@ -278,12 +278,12 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 	  mode(MODE::READ_BUF),
 	  write_queue(WRITE_QUEUE_LIMIT, WRITE_QUEUE_THRESHOLD)
 {
-	async_update.set<BaseClient, &BaseClient::async_update_cb>(this);
-	async_update.start();
+	update_async.set<BaseClient, &BaseClient::update_async_cb>(this);
+	update_async.start();
 	L_EV(this, "Start async update event");
 
-	async_read_start.set<BaseClient, &BaseClient::async_read_start_cb>(this);
-	async_read_start.start();
+	read_start_async.set<BaseClient, &BaseClient::read_start_async_cb>(this);
+	read_start_async.start();
 	L_EV(this, "Start async read start event");
 
 	io_read.set<BaseClient, &BaseClient::io_cb>(this);
@@ -356,10 +356,10 @@ BaseClient::stop()
 	io_write.stop();
 	L_EV(this, "Stop write event");
 
-	async_read_start.stop();
+	read_start_async.stop();
 	L_EV(this, "Stop async read start event");
 
-	async_update.stop();
+	update_async.stop();
 	L_EV(this, "Stop async update event");
 
 	write_queue.finish();
@@ -542,7 +542,7 @@ BaseClient::write(const char *buf, size_t buf_size)
 	switch (_write(fd)) {
 		case WR::RETRY:
 		case WR::PENDING:
-			async_update.send();
+			update_async.send();
 		case WR::OK:
 			return true;
 		default:
@@ -695,24 +695,24 @@ BaseClient::io_cb_read(int fd)
 
 
 void
-BaseClient::async_update_cb(ev::async &, int revents)
+BaseClient::update_async_cb(ev::async &, int revents)
 {
-	L_CALL(this, "BaseClient::async_update_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "BaseClient::update_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
-	L_EV_BEGIN(this, "BaseClient::async_update_cb:BEGIN");
+	L_EV_BEGIN(this, "BaseClient::update_async_cb:BEGIN");
 
 	io_cb_update();
 
-	L_EV_END(this, "BaseClient::async_update_cb:END");
+	L_EV_END(this, "BaseClient::update_async_cb:END");
 }
 
 
 void
-BaseClient::async_read_start_cb(ev::async &, int revents)
+BaseClient::read_start_async_cb(ev::async &, int revents)
 {
-	L_CALL(this, "BaseClient::async_read_start_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "BaseClient::read_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
-	L_EV_BEGIN(this, "BaseClient::async_read_start_cb:BEGIN");
+	L_EV_BEGIN(this, "BaseClient::read_start_async_cb:BEGIN");
 
 	if (sock != -1) {
 		if (!closed) {
@@ -723,7 +723,7 @@ BaseClient::async_read_start_cb(ev::async &, int revents)
 		}
 	}
 
-	L_EV_END(this, "BaseClient::async_read_start_cb:END");
+	L_EV_END(this, "BaseClient::read_start_async_cb:END");
 }
 
 

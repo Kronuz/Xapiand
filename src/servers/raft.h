@@ -84,15 +84,15 @@ private:
 
 	ev::timer leader_election_timeout;
 	ev::timer leader_heartbeat;
-	ev::async async_start_leader_heartbeat;
-	ev::async async_reset_leader_election_timeout;
-	ev::async async_reset;
+	ev::async start_leader_heartbeat_async;
+	ev::async reset_leader_election_timeout_async;
+	ev::async reset_async;
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void leader_heartbeat_cb(ev::timer& watcher, int revents);
-	void async_start_leader_heartbeat_cb(ev::async& watcher, int revents);
-	void async_reset_leader_election_timeout_cb(ev::async& watcher, int revents);
-	void async_reset_cb(ev::async& watcher, int revents);
+	void start_leader_heartbeat_async_cb(ev::async& watcher, int revents);
+	void reset_leader_election_timeout_async_cb(ev::async& watcher, int revents);
+	void reset_async_cb(ev::async& watcher, int revents);
 
 	void _start_leader_heartbeat();
 	void _reset_leader_election_timeout();
@@ -107,15 +107,15 @@ public:
 	~Raft();
 
 	inline void start_leader_heartbeat() {
-		async_start_leader_heartbeat.send();
+		start_leader_heartbeat_async.send();
 	}
 
 	inline void reset_leader_election_timeout() {
-		async_reset_leader_election_timeout.send();
+		reset_leader_election_timeout_async.send();
 	}
 
 	inline void reset() {
-		async_reset.send();
+		reset_async.send();
 	}
 
 	void start();

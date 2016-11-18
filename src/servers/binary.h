@@ -42,7 +42,7 @@ class Binary : public BaseTCP {
 	friend BinaryServer;
 
 	std::mutex bsmtx;
-	void async_signal_send();
+	void signal_send_async();
 
 	std::vector<std::weak_ptr<BinaryServer>> servers_weak;
 	TaskQueue<const std::shared_ptr<BinaryServer>&> tasks;

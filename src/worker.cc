@@ -36,6 +36,8 @@ Worker::~Worker()
 	destroyer();
 
 	L_OBJ(this, "DELETED WORKER!");
+
+	fprintf(stderr, "~Worker %s\n", __repr__().c_str());
 }
 
 
@@ -50,20 +52,20 @@ Worker::_init()
 		_iterator = _parent->_children.end();
 	}
 
-	_async_shutdown.set<Worker, &Worker::_async_shutdown_cb>(this);
-	_async_shutdown.start();
+	_shutdown_async.set<Worker, &Worker::_shutdown_async_cb>(this);
+	_shutdown_async.start();
 	L_EV(this, "Start Worker async shutdown event");
 
-	_async_break_loop.set<Worker, &Worker::_async_break_loop_cb>(this);
-	_async_break_loop.start();
+	_break_loop_async.set<Worker, &Worker::_break_loop_async_cb>(this);
+	_break_loop_async.start();
 	L_EV(this, "Start Worker async break_loop event");
 
-	_async_destroy.set<Worker, &Worker::_async_destroy_cb>(this);
-	_async_destroy.start();
+	_destroy_async.set<Worker, &Worker::_destroy_async_cb>(this);
+	_destroy_async.start();
 	L_EV(this, "Start Worker async destroy event");
 
-	_async_detach.set<Worker, &Worker::_async_detach_cb>(this);
-	_async_detach.start();
+	_detach_async.set<Worker, &Worker::_detach_async_cb>(this);
+	_detach_async.start();
 	L_EV(this, "Start Worker async detach event");
 
 	L_OBJ(this, "CREATED WORKER!");
@@ -75,58 +77,58 @@ Worker::destroyer()
 {
 	L_CALL(this, "Worker::destroyer()");
 
-	_async_shutdown.stop();
+	_shutdown_async.stop();
 	L_EV(this, "Stop Worker async shutdown event");
-	_async_break_loop.stop();
+	_break_loop_async.stop();
 	L_EV(this, "Stop Worker async break_loop event");
-	_async_destroy.stop();
+	_destroy_async.stop();
 	L_EV(this, "Stop Worker async destroy event");
-	_async_detach.stop();
+	_detach_async.stop();
 	L_EV(this, "Stop Worker async detach event");
 }
 
 
 void
-Worker::_async_shutdown_cb()
+Worker::_shutdown_async_cb()
 {
-	L_CALL(this, "Worker::_async_shutdown_cb() [%s]", __repr__().c_str());
+	L_CALL(this, "Worker::_shutdown_async_cb() [%s]", __repr__().c_str());
 
-	L_EV_BEGIN(this, "Worker::_async_shutdown_cb:BEGIN");
+	L_EV_BEGIN(this, "Worker::_shutdown_async_cb:BEGIN");
 	shutdown_impl(_asap, _now);
-	L_EV_END(this, "Worker::_async_shutdown_cb:END");
+	L_EV_END(this, "Worker::_shutdown_async_cb:END");
 }
 
 
 void
-Worker::_async_break_loop_cb(ev::async&, int revents)
+Worker::_break_loop_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Worker::_async_break_loop_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
+	L_CALL(this, "Worker::_break_loop_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
 
-	L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
+	L_EV_BEGIN(this, "Worker::_break_loop_async_cb:BEGIN");
 	break_loop_impl();
-	L_EV_END(this, "Worker::_async_break_loop_cb:END");
+	L_EV_END(this, "Worker::_break_loop_async_cb:END");
 }
 
 
 void
-Worker::_async_destroy_cb(ev::async&, int revents)
+Worker::_destroy_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Worker::_async_destroy_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
+	L_CALL(this, "Worker::_destroy_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
 
-	L_EV_BEGIN(this, "Worker::_async_destroy_cb:BEGIN");
+	L_EV_BEGIN(this, "Worker::_destroy_async_cb:BEGIN");
 	destroy_impl();
-	L_EV_END(this, "Worker::_async_destroy_cb:END");
+	L_EV_END(this, "Worker::_destroy_async_cb:END");
 }
 
 
 void
-Worker::_async_detach_cb(ev::async&, int revents)
+Worker::_detach_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Worker::_async_detach_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
+	L_CALL(this, "Worker::_detach_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
 
-	L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
+	L_EV_BEGIN(this, "Worker::_detach_async_cb:BEGIN");
 	detach_impl();
-	L_EV_END(this, "Worker::_async_detach_cb:END");
+	L_EV_END(this, "Worker::_detach_async_cb:END");
 }
 
 
@@ -272,7 +274,7 @@ Worker::shutdown(time_t asap, time_t now)
 
 	_asap = asap;
 	_now = now;
-	_async_shutdown.send();
+	_shutdown_async.send();
 	if (_runner && !ev_loop->depth()) {
 		shutdown_impl(asap, now);
 	}
@@ -294,7 +296,7 @@ Worker::break_loop()
 {
 	L_CALL(this, "Worker::break_loop() [%s]", __repr__().c_str());
 
-	_async_break_loop.send();
+	_break_loop_async.send();
 	if (_runner && !ev_loop->depth()) {
 		break_loop_impl();
 	}
@@ -306,7 +308,7 @@ Worker::destroy()
 {
 	L_CALL(this, "Worker::destroy() [%s]", __repr__().c_str());
 
-	_async_destroy.send();
+	_destroy_async.send();
 	if (_runner && !ev_loop->depth()) {
 		destroy_impl();
 	}
@@ -323,7 +325,7 @@ Worker::detach()
 	auto ref = shared_from_this();  // Prevent ancestor->detach_impl() deleting us
 
 	auto ancestor = _ancestor(1);
-	ancestor->_async_detach.send();
+	ancestor->_detach_async.send();
 	if (_runner && !ev_loop->depth()) {
 		ancestor->detach_impl();
 	}

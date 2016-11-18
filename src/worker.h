@@ -49,10 +49,10 @@ private:
 	time_t _now;
 
 
-	ev::async _async_shutdown;
-	ev::async _async_break_loop;
-	ev::async _async_destroy;
-	ev::async _async_detach;
+	ev::async _shutdown_async;
+	ev::async _break_loop_async;
+	ev::async _destroy_async;
+	ev::async _detach_async;
 
 	std::mutex _mtx;
 	std::atomic_bool _runner;
@@ -71,10 +71,10 @@ protected:
 		: _dynamic_ev_loop(ev_flags_),
 		  ev_flags(ev_flags_),
 		  ev_loop(ev_loop_ ? std::forward<L>(ev_loop_) : &_dynamic_ev_loop),
-		  _async_shutdown(*ev_loop),
-		  _async_break_loop(*ev_loop),
-		  _async_destroy(*ev_loop),
-		  _async_detach(*ev_loop),
+		  _shutdown_async(*ev_loop),
+		  _break_loop_async(*ev_loop),
+		  _destroy_async(*ev_loop),
+		  _detach_async(*ev_loop),
 		  _parent(std::forward<T>(parent))
 	{
 		_init();
@@ -105,10 +105,10 @@ private:
 
 	void _init();
 
-	void _async_shutdown_cb();
-	void _async_break_loop_cb(ev::async&, int revents);
-	void _async_destroy_cb(ev::async&, int revents);
-	void _async_detach_cb(ev::async&, int revents);
+	void _shutdown_async_cb();
+	void _break_loop_async_cb(ev::async&, int revents);
+	void _destroy_async_cb(ev::async&, int revents);
+	void _detach_async_cb(ev::async&, int revents);
 	std::vector<std::weak_ptr<Worker>> _gather_children();
 	void _detach_impl(const std::weak_ptr<Worker>& weak_child);
 	auto _ancestor(int levels=-1);

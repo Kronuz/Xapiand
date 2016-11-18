@@ -38,9 +38,9 @@ class BinaryServer : public BaseServer {
 
 	std::shared_ptr<Binary> binary;
 
-	ev::async async_signal;
+	ev::async signal_async;
 
-	void async_signal_cb(ev::async& watcher, int revents);
+	void signal_async_cb(ev::async& watcher, int revents);
 
 public:
 	std::string __repr__() const override {

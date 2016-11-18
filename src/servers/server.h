@@ -49,7 +49,7 @@ class XapiandServer : public Task<>, public Worker {
 
 	std::mutex qmtx;
 
-	ev::async async_setup_node;
+	ev::async setup_node_async;
 
 	XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
@@ -58,7 +58,7 @@ class XapiandServer : public Task<>, public Worker {
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 
-	void async_setup_node_cb(ev::async& watcher, int revents);
+	void setup_node_async_cb(ev::async& watcher, int revents);
 
 public:
 	std::string __repr__() const override {

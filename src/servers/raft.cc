@@ -39,23 +39,23 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loo
 	  number_servers(1),
 	  leader_election_timeout(*ev_loop),
 	  leader_heartbeat(*ev_loop),
-	  async_reset_leader_election_timeout(*ev_loop),
-	  async_reset(*ev_loop)
+	  reset_leader_election_timeout_async(*ev_loop),
+	  reset_async(*ev_loop)
 {
 	leader_election_timeout.set<Raft, &Raft::leader_election_timeout_cb>(this);
 
 	leader_heartbeat.set<Raft, &Raft::leader_heartbeat_cb>(this);
 
-	async_start_leader_heartbeat.set<Raft, &Raft::async_start_leader_heartbeat_cb>(this);
-	async_start_leader_heartbeat.start();
+	start_leader_heartbeat_async.set<Raft, &Raft::start_leader_heartbeat_async_cb>(this);
+	start_leader_heartbeat_async.start();
 	L_EV(this, "Start raft's async start leader heartbeat event");
 
-	async_reset_leader_election_timeout.set<Raft, &Raft::async_reset_leader_election_timeout_cb>(this);
-	async_reset_leader_election_timeout.start();
+	reset_leader_election_timeout_async.set<Raft, &Raft::reset_leader_election_timeout_async_cb>(this);
+	reset_leader_election_timeout_async.start();
 	L_EV(this, "Start raft's async reset leader election timeout event");
 
-	async_reset.set<Raft, &Raft::async_reset_cb>(this);
-	async_reset.start();
+	reset_async.set<Raft, &Raft::reset_async_cb>(this);
+	reset_async.start();
 	L_EV(this, "Start raft's async reset event");
 
 	L_OBJ(this, "CREATED RAFT CONSENSUS");
@@ -100,27 +100,27 @@ Raft::stop()
 
 
 void
-Raft::async_start_leader_heartbeat_cb(ev::async&, int revents)
+Raft::start_leader_heartbeat_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Raft::async_start_leader_heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::start_leader_heartbeat_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	_start_leader_heartbeat();
 }
 
 
 void
-Raft::async_reset_leader_election_timeout_cb(ev::async&, int revents)
+Raft::reset_leader_election_timeout_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Raft::async_reset_leader_election_timeout_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::reset_leader_election_timeout_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	_reset_leader_election_timeout();
 }
 
 
 void
-Raft::async_reset_cb(ev::async&, int revents)
+Raft::reset_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Raft::async_reset_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::reset_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	_reset();
 }

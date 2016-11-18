@@ -118,7 +118,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	  solo(true),
 #endif
 	  strict(o.strict),
-	  async_shutdown_sig(*ev_loop),
+	  shutdown_sig_async(*ev_loop),
 	  shutdown_sig_sig(0)
 
 {
@@ -148,8 +148,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 
 	local_node = std::shared_ptr<const Node>(node_copy.release());
 
-	async_shutdown_sig.set<XapiandManager, &XapiandManager::async_shutdown_sig_cb>(this);
-	async_shutdown_sig.start();
+	shutdown_sig_async.set<XapiandManager, &XapiandManager::shutdown_sig_async_cb>(this);
+	shutdown_sig_async.start();
 
 	L_OBJ(this, "CREATED XAPIAN MANAGER!");
 }
@@ -290,7 +290,7 @@ XapiandManager::setup_node()
 
 	for (auto& weak_server : servers_weak) {
 		if (auto server = weak_server.lock()) {
-			server->async_setup_node.send();
+			server->setup_node_async.send();
 			return;
 		}
 	}
@@ -445,14 +445,14 @@ void
 XapiandManager::shutdown_sig(int sig)
 {
 	shutdown_sig_sig = sig;
-	async_shutdown_sig.send();
+	shutdown_sig_async.send();
 }
 
 
 void
-XapiandManager::async_shutdown_sig_cb(ev::async&, int revents)
+XapiandManager::shutdown_sig_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "XapiandManager::async_shutdown_sig_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "XapiandManager::shutdown_sig_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
 
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
@@ -496,6 +496,8 @@ XapiandManager::async_shutdown_sig_cb(ev::async&, int revents)
 	if (XapiandServer::http_clients <= 0) {
 		shutdown_now = now;
 	}
+
+	L_DEBUG(this, "Workers:" RED "%s", dump_tree().c_str());
 
 	shutdown(shutdown_asap, shutdown_now);
 }

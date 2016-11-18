@@ -45,10 +45,10 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOC
 class Discovery : public BaseUDP {
 private:
 	ev::timer heartbeat;
-	ev::async async_enter;
+	ev::async enter_async;
 
 	void heartbeat_cb(ev::timer& watcher, int revents);
-	void async_enter_cb(ev::async& watcher, int revents);
+	void enter_async_cb(ev::async& watcher, int revents);
 
 	void _enter();
 
@@ -80,7 +80,7 @@ public:
 	~Discovery();
 
 	inline void enter() {
-		async_enter.send();
+		enter_async.send();
 	}
 
 	void start();

@@ -120,8 +120,8 @@ public:
 protected:
 	ev::io io_read;
 	ev::io io_write;
-	ev::async async_update;
-	ev::async async_read_start;
+	ev::async update_async;
+	ev::async read_start_async;
 
 	std::atomic_bool idle;
 	std::atomic_bool shutting_down;
@@ -142,8 +142,8 @@ protected:
 
 	queue::Queue<std::shared_ptr<Buffer>> write_queue;
 
-	void async_update_cb(ev::async &watcher, int revents);
-	void async_read_start_cb(ev::async &watcher, int revents);
+	void update_async_cb(ev::async &watcher, int revents);
+	void read_start_async_cb(ev::async &watcher, int revents);
 
 	void io_cb_update();
 

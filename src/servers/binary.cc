@@ -100,13 +100,13 @@ Binary::add_server(const std::shared_ptr<BinaryServer>& server)
 
 
 void
-Binary::async_signal_send()
+Binary::signal_send_async()
 {
 	std::lock_guard<std::mutex> lk(bsmtx);
 	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
 		auto server = (*it).lock();
 		if (server) {
-			server->async_signal.send();
+			server->signal_async.send();
 			++it;
 		} else {
 			it = servers_weak.erase(it);
@@ -122,7 +122,7 @@ Binary::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_en
 		return server->trigger_replication(src_endpoint, dst_endpoint);
 	});
 
-	async_signal_send();
+	signal_send_async();
 
 	return future;
 }
