@@ -72,20 +72,20 @@ println(bool with_endl, const char *format, va_list argptr)
 
 
 LogWrapper
-log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = log(cleanup, stacked, wakeup, priority, std::string(), file, line, suffix, prefix, obj, format, argptr);
+	auto ret = log(cleanup, stacked, wakeup, async, priority, std::string(), file, line, suffix, prefix, obj, format, argptr);
 	va_end(argptr);
 	return ret;
 }
 
 
 LogWrapper
-log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
-	return Log::log(cleanup, stacked, wakeup, priority, exc, file, line, suffix, prefix, obj, format, argptr);
+	return Log::log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, obj, format, argptr);
 }
 
 
@@ -192,12 +192,13 @@ SysLog::log(int priority, const std::string& str, bool with_priority, bool)
 }
 
 
-Log::Log(const std::string& str, bool clean_, bool stacked_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
+Log::Log(const std::string& str, bool clean_, bool stacked_, bool async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
 	: ScheduledTask(created_at_),
 	  stack_level(0),
 	  stacked(stacked_),
 	  clean(clean_),
 	  str_start(str),
+	  async(async_),
 	  priority(priority_),
 	  cleaned(false) {
 
@@ -322,20 +323,20 @@ Log::str_format(bool stacked, int priority, const std::string& exc, const char *
 
 
 LogWrapper
-Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
 	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, obj, format, argptr));
 
-	return print(str, clean, stacked, wakeup, priority);
+	return print(str, clean, stacked, wakeup, async, priority);
 }
 
 
 LogWrapper
-Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = log(clean, stacked, wakeup, priority, exc, file, line, suffix, prefix, obj, format, argptr);
+	auto ret = log(clean, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, obj, format, argptr);
 	va_end(argptr);
 
 	return ret;
@@ -348,7 +349,7 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 	if (!clear()) {
 		std::string str(str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
 
-		print(str, false, stacked, 0, priority, time_point_from_ullong(created_at));
+		print(str, false, stacked, 0, async, priority, time_point_from_ullong(created_at));
 
 		return true;
 	}
@@ -369,9 +370,9 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 
 
 LogWrapper
-Log::add(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
+Log::add(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
-	auto l_ptr = std::make_shared<Log>(str, clean, stacked, priority, created_at);
+	auto l_ptr = std::make_shared<Log>(str, clean, stacked, async, priority, created_at);
 
 	scheduler().add(l_ptr, wakeup);
 
@@ -395,16 +396,16 @@ Log::log(int priority, std::string str, int indent, bool with_priority, bool wit
 
 
 LogWrapper
-Log::print(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
+Log::print(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
 	if (priority > log_level) {
-		return LogWrapper(std::make_shared<Log>(str, clean, stacked, priority, created_at));
+		return LogWrapper(std::make_shared<Log>(str, clean, stacked, async, priority, created_at));
 	}
 
-	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {
-		return add(str, clean, stacked, wakeup, priority, created_at);
+	if (async || wakeup > std::chrono::system_clock::now()) {
+		return add(str, clean, stacked, wakeup, async, priority, created_at);
 	} else {
-		auto l_ptr = std::make_shared<Log>(str, clean, stacked, priority, created_at);
+		auto l_ptr = std::make_shared<Log>(str, clean, stacked, async, priority, created_at);
 		log(priority, str, l_ptr->stack_level * 2);
 		return LogWrapper(l_ptr);
 	}

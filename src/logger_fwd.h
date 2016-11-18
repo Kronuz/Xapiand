@@ -32,6 +32,9 @@
 #include "xxh64.hpp"                        // for xxh64
 
 
+#define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
+
+
 extern std::atomic_ullong logger_info_hook;
 
 
@@ -87,31 +90,31 @@ inline void println(bool with_endl, const char *format, ...) {
 }
 
 
-LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
+LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 
 
 template <typename T, typename = std::enable_if_t<std::is_base_of<Exception, std::decay_t<T>>::value>>
-inline LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...) {
+inline LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...) {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = log(cleanup, stacked, wakeup, priority, std::string(exc->get_traceback()), file, line, suffix, prefix, obj, format, argptr);
+	auto ret = log(cleanup, stacked, wakeup, async, priority, std::string(exc->get_traceback()), file, line, suffix, prefix, obj, format, argptr);
 	va_end(argptr);
 	return ret;
 }
 
 
-LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
+LogWrapper log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 
 
 template <typename T, typename R, typename... Args>
-inline LogWrapper log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int priority, Args&&... args) {
-	return log(cleanup, stacked, std::chrono::system_clock::now() + timeout, priority, std::forward<Args>(args)...);
+inline LogWrapper log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, bool async, int priority, Args&&... args) {
+	return log(cleanup, stacked, std::chrono::system_clock::now() + timeout, async, priority, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
-inline LogWrapper log(bool cleanup, bool stacked, int timeout, int priority, Args&&... args) {
-	return log(cleanup, stacked, std::chrono::milliseconds(timeout), priority, std::forward<Args>(args)...);
+inline LogWrapper log(bool cleanup, bool stacked, int timeout, bool async, int priority, Args&&... args) {
+	return log(cleanup, stacked, std::chrono::milliseconds(timeout), async, priority, std::forward<Args>(args)...);
 }
 
 
@@ -150,7 +153,7 @@ inline LogWrapper log(bool cleanup, bool stacked, int timeout, int priority, Arg
 #define EMERG_COL LIGHT_RED
 
 
-#define L_DELAYED(cleanup, delay, priority, color, args...) log(cleanup, false, delay, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define L_DELAYED(cleanup, delay, priority, color, args...) log(cleanup, false, delay, true, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 #define L_DELAYED_UNLOG(priority, color, args...) unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
 #define L_DELAYED_CLEAR() clear()
 
@@ -162,7 +165,8 @@ inline LogWrapper log(bool cleanup, bool stacked, int timeout, int priority, Arg
 
 #define L_NOTHING(args...)
 
-#define LOG(stacked, level, color, args...) log(false, stacked, 0ms, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define PRINT(stacked, level, color, args...) log(false, stacked, 0ms, false, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG(stacked, level, color, args...) log(false, stacked, 0ms, level >= ASYNC_LOG_LEVEL, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 
 #define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
 #define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
@@ -171,7 +175,7 @@ inline LogWrapper log(bool cleanup, bool stacked, int timeout, int priority, Arg
 #define L_CRIT(args...) LOG(true, LOG_CRIT, CRIT_COL, args)
 #define L_ALERT(args...) LOG(true, -LOG_ALERT, ALERT_COL, args)
 #define L_EMERG(args...) LOG(true, -LOG_EMERG, EMERG_COL, args)
-#define L_EXC(args...) log(false, true, 0ms, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define L_EXC(args...) log(false, true, 0ms, true, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
 #define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
 #define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
@@ -191,6 +195,8 @@ inline LogWrapper log(bool cleanup, bool stacked, int timeout, int priority, Arg
 #define L_UNINDENTED_LIGHT_MAGENTA(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_MAGENTA, args)
 #define L_UNINDENTED_LIGHT_CYAN(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_CYAN, args)
 #define L_UNINDENTED_WHITE(args...) L_UNINDENTED(LOG_DEBUG, WHITE, args)
+
+#define P(level, color, args...) PRINT(true, level, color, args)
 
 #define L(level, color, args...) LOG(true, level, color, args)
 #define L_LOG(args...) L(LOG_DEBUG, LOG_COL, args)
@@ -230,7 +236,7 @@ inline LogWrapper log(bool cleanup, bool stacked, int timeout, int priority, Arg
 #define L_STACKED_LIGHT_CYAN(args...) L_STACKED(LOG_DEBUG, LIGHT_CYAN, args)
 #define L_STACKED_WHITE(args...) L_STACKED(LOG_DEBUG, WHITE, args)
 
-#define L_INFO_HOOK(hook, args...) if ((logger_info_hook & xxh64::hash(hook)) == xxh64::hash(hook)) { L(args); }
+#define L_INFO_HOOK(hook, args...) if ((logger_info_hook & xxh64::hash(hook)) == xxh64::hash(hook)) { P(args); }
 #define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LOG_COL, args)
 #define L_INFO_HOOK_BLACK(hook, args...) L_INFO_HOOK(hook, LOG_INFO, BLACK, args)
 #define L_INFO_HOOK_GREY(hook, args...) L_INFO_HOOK(hook, LOG_INFO, GREY, args)
