@@ -65,8 +65,8 @@ using namespace TCLAP;
 
 
 void setup_signal_handlers(void) {
-	signal(SIGHUP, SIG_IGN);
-	signal(SIGPIPE, SIG_IGN);
+	signal(SIGHUP, SIG_IGN);  // Ignore terminal line hangup
+	signal(SIGPIPE, SIG_IGN);  // Ignore write on a pipe with no reader
 
 	struct sigaction act;
 
@@ -74,10 +74,14 @@ void setup_signal_handlers(void) {
 	 * Otherwise, sa_handler is used. */
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = 0;
-	act.sa_handler = sig_exit;
-	sigaction(SIGTERM, &act, nullptr);
-	sigaction(SIGINT, &act, nullptr);
+	act.sa_handler = sig_handler;
+	sigaction(SIGTERM, &act, nullptr);  // On software termination signal
+	sigaction(SIGINT, &act, nullptr);  // On interrupt program (Ctrl-C)
+	sigaction(SIGINFO, &act, nullptr);  // On status request from keyboard (Ctrl-T)
+	sigaction(SIGUSR1, &act, nullptr);  // On User defined signal 1
+	sigaction(SIGUSR2, &act, nullptr);  // On User defined signal 2
 }
+
 
 
 #define EV_SELECT_NAME  "select"

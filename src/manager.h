@@ -79,6 +79,7 @@ class Raft;
 class XapiandServer;
 
 
+extern void sig_handler(int sig);
 extern void sig_exit(int sig);
 
 

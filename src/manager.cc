@@ -98,6 +98,27 @@ void sig_exit(int sig) {
 }
 
 
+void sig_handler(int sig) {
+	switch (sig) {
+		case SIGINFO:
+		case SIGUSR1:
+		case SIGUSR2:
+			fprintf(stderr, BLUE "Signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
+			break;
+
+		case SIGTERM:
+		case SIGINT:
+			fprintf(stderr, RED "Signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
+			sig_exit(sig);
+			break;
+
+		default:
+			fprintf(stderr, LIGHT_RED "Unknown signal received: %s [%d]" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "-", sig);
+			break;
+	}
+}
+
+
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, const opts_t& o)
 	: Worker(nullptr, ev_loop_, ev_flags_),
 	  database_pool(o.dbpool_size),
