@@ -58,16 +58,16 @@ class Result(NestedDict):
         super(Result, self).__init__(*args, **kwargs)
         for k in list(self):
             if k[0] == '_':
-                setattr(self, k, self.pop(k))
+                dict.__setattr__(self, k, self.pop(k))
 
 
 class Results(object):
     def __init__(self, meta, generator):
         for k, v in meta.get('_query', {}).items():
             if k[0] == '_':
-                setattr(self, k, v)
+                dict.__setattr__(self, k, v)
         aggregations = NestedDict(meta.get('_aggregations', {}))
-        setattr(self, 'aggregations', aggregations)
+        dict.__setattr__(self, 'aggregations', aggregations)
         self.generator = generator
 
     def __len__(self):
@@ -250,7 +250,7 @@ class Xapiand(object):
             results = results.next()
 
         for k, v in res.headers.items():
-            setattr(results, k.replace('-', '_'), v)
+            dict.__setattr__(results, k.replace('-', '_'), v)
 
         return results
 
