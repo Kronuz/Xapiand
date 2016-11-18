@@ -62,12 +62,12 @@ const char *priorities[] = {
 
 
 void
-print(const char *format, va_list argptr)
+println(bool with_endl, const char *format, va_list argptr)
 {
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	std::string msg(buffer);
-	Log::log(LOG_CRIT, msg, 0, false, false);
+	Log::log(LOG_CRIT, msg, 0, false, with_endl);
 }
 
 

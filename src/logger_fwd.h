@@ -72,11 +72,17 @@ public:
 };
 
 
-void print(const char *format, va_list argptr);
+void println(bool with_endl, const char *format, va_list argptr);
 inline void print(const char *format, ...) {
 	va_list argptr;
 	va_start(argptr, format);
-	print(format, argptr);
+	println(true, format, argptr);
+	va_end(argptr);
+}
+inline void println(bool with_endl, const char *format, ...) {
+	va_list argptr;
+	va_start(argptr, format);
+	println(with_endl, format, argptr);
 	va_end(argptr);
 }
 

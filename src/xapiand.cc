@@ -77,9 +77,9 @@ void sig_exit(int sig)
 
 
 #ifndef NDEBUG
-void sig_info(int sig)
+void sig_info(int)
 {
-	fprintf(stderr, BLUE "enter info hook>> " NO_COL);
+	println(false, BLUE "enter info hook>> " NO_COL);
 
 	char c;
 	char hook[100];
@@ -92,21 +92,21 @@ void sig_info(int sig)
 
 	if (*hook) {
 		if (strcasecmp(hook, "none") == 0 || *hook == '-') {
-			fprintf(stderr, BLUE "Info hooks cleared! - CONTINUING" NO_COL "\n");
+			print(BLUE "Info hooks cleared! - CONTINUING" NO_COL);
 		} else if (strcasecmp(hook, "all") == 0 || *hook == '!') {
 			logger_info_hook = -1ULL;
-			fprintf(stderr, BLUE "All info hooks activated! - CONTINUING" NO_COL "\n");
+			print(BLUE "All info hooks activated! - CONTINUING" NO_COL);
 		} else {
 			unsigned long long info_hook = xxh64::hash(hook);
 			logger_info_hook = logger_info_hook ^ info_hook;
 			if ((logger_info_hook & info_hook) == info_hook) {
-				fprintf(stderr, BLUE "Info hook '%s' turned on! - CONTINUING" NO_COL "\n", hook);
+				print(BLUE "Info hook '%s' turned on! - CONTINUING" NO_COL, hook);
 			} else {
-				fprintf(stderr, BLUE "Info hook '%s' turned off! - CONTINUING" NO_COL "\n", hook);
+				print(BLUE "Info hook '%s' turned off! - CONTINUING" NO_COL, hook);
 			}
 		}
 	} else {
-		fprintf(stderr, BLUE "No info hook selected! - IGNORING" NO_COL "\n");
+		print(BLUE "No info hook selected! - IGNORING" NO_COL);
 	}
 }
 #endif
