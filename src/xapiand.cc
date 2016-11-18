@@ -92,21 +92,22 @@ void sig_info(int)
 
 	if (*hook) {
 		if (strcasecmp(hook, "none") == 0 || *hook == '-') {
-			print(BLUE "Info hooks cleared! - CONTINUING" NO_COL);
+			logger_info_hook = 0;
+			print(BLUE "Info hooks cleared (%lx)! - CONTINUING" NO_COL, logger_info_hook.load());
 		} else if (strcasecmp(hook, "all") == 0 || *hook == '!') {
 			logger_info_hook = -1ULL;
-			print(BLUE "All info hooks activated! - CONTINUING" NO_COL);
+			print(BLUE "All info hooks activated (%lx)! - CONTINUING" NO_COL, logger_info_hook.load());
 		} else {
 			unsigned long long info_hook = xxh64::hash(hook);
 			logger_info_hook = logger_info_hook ^ info_hook;
 			if ((logger_info_hook & info_hook) == info_hook) {
-				print(BLUE "Info hook '%s' turned on! - CONTINUING" NO_COL, hook);
+				print(BLUE "Info hook '%s' turned on (%lx)! - CONTINUING" NO_COL, hook, logger_info_hook.load());
 			} else {
-				print(BLUE "Info hook '%s' turned off! - CONTINUING" NO_COL, hook);
+				print(BLUE "Info hook '%s' turned off (%lx)! - CONTINUING" NO_COL, hook, logger_info_hook.load());
 			}
 		}
 	} else {
-		print(BLUE "No info hook selected! - IGNORING" NO_COL);
+		print(BLUE "No info hook selected (%lx)! - IGNORING" NO_COL, logger_info_hook.load());
 	}
 }
 #endif
