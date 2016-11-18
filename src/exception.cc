@@ -22,15 +22,20 @@
 
 #include "exception.h"
 
-#include <stdarg.h>  // for va_end, va_list, va_start
-#include <stdio.h>   // for vsnprintf
+#include <cxxabi.h>    // for abi::__cxa_demangle
+#include <execinfo.h>  // for backtrace, backtrace_symbols
+#include <stdarg.h>    // for va_end, va_list, va_start
+#include <stdio.h>     // for vsnprintf
 
 #define BUFFER_SIZE 1024
 
 
 std::string traceback(const char *filename, int line) {
 	std::string t;
-#ifdef TRACEBACK
+#ifdef NDEBUG
+       (void)filename;
+       (void)line;
+#else
 	void* callstack[128];
 
 	// retrieve current stack addresses
@@ -69,9 +74,6 @@ std::string traceback(const char *filename, int line) {
 	}
 
 	free(strs);
-#else
-	(void)filename;
-	(void)line;
 #endif
 	return t;
 }
