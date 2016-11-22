@@ -134,8 +134,6 @@ int test_url_path() {
 		{ "1/", false, "_|id:1|_|pth:|(end)" },
 		{ "/1", false, "_|id:1|_|pth:|(end)" },
 		{ "/1/", false, "_|id:1|_|pth:|(end)" },
-		{ "1,2", false, "_|id:1,2|_|pth:|(end)" },
-		{ "1/,2/", false, "_|id:,2|_|pth:1|(end)" },
 		{ "/1,/2", false, "_|id:2|_|pth:/1|_|pth:|(end)" },
 		{ "1,2", true, "_|_|pth:1|_|pth:2|(end)" },
 		{ "1/,2/", true, "_|_|pth:1/|_|pth:2/|(end)" },
