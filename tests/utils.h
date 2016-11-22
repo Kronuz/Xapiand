@@ -105,7 +105,7 @@ inline Endpoint create_endpoint(const std::string& database) {
 #endif
 
 
-inline bool write_file_contents(const std::string& filename, const std::string& contents);
+bool write_file_contents(const std::string& filename, const std::string& contents);
 bool read_file_contents(const std::string& filename, std::string* contents);
 
 
