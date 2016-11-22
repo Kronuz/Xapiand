@@ -1,10 +1,22 @@
 {
 	"number": "4",
 	"name": {
-		"en": ["hello"],
-		"es": ["hola"],
-		"fr": ["bonjour"],
-		"de": ["hallo"]
+		"en": {
+			"_index": "all",
+			"_value": ["hello"]
+		},
+		"es": {
+			"_index": "all",
+			"_value": ["hola"]
+		},
+		"fr": {
+			"_index": "all",
+			"_value": ["bonjour"]
+		},
+		"de": {
+			"_index": "all",
+			"_value": ["hallo"]
+		}
 	},
 	"location": "CIRCLE(2 2, 2000)",
 	"year": 100,

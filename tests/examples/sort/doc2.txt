@@ -1,10 +1,22 @@
 {
 	"number": "2",
 	"name": {
-		"en": ["bookstore", "book"],
-		"es": ["librería", "libro"],
-		"fr": ["librairie", "livre"],
-		"de": ["buchladen", "buch"]
+		"en": {
+			"_index": "all",
+			"_value": ["bookstore", "book"]
+		},
+		"es": {
+			"_index": "all",
+			"_value": ["librería", "libro"]
+		},
+		"fr": {
+			"_index": "all",
+			"_value": ["librairie", "livre"]
+		},
+		"de": {
+			"_index": "all",
+			"_value": ["buchladen", "buch"]
+		}
 	},
 	"location": ["POINT(20 40)", "POINT(50 60)"],
 	"year": [2000, 2001],

@@ -1,10 +1,22 @@
 {
 	"number": "3",
 	"name": {
-		"en": ["cooking", "hello world"],
-		"es": ["cocina", "hola mundo"],
-		"fr": ["cuisine", "bonjour le monde"],
-		"de": ["kochen", "hallo welt"]
+		"en": {
+			"_index": "all",
+			"_value": ["cooking", "hello world"]
+		},
+		"es": {
+			"_index": "all",
+			"_value": ["cocina", "hola mundo"]
+		},
+		"fr": {
+			"_index": "all",
+			"_value": ["cuisine", "bonjour le monde"]
+		},
+		"de": {
+			"_index": "all",
+			"_value": ["kochen", "hallo welt"]
+		}
 	},
 	"location": ["POINT(0 0)", "POINT(0 70)"],
 	"year": [-10000, 0],

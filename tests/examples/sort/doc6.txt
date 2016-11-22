@@ -1,10 +1,22 @@
 {
 	"number": "6",
 	"name": {
-		"en": ["world"],
-		"es": ["mundo"],
-		"fr": ["monde"],
-		"de": ["welt"]
+		"en": {
+			"_index": "all",
+			"_value": ["world"]
+		},
+		"es": {
+			"_index": "all",
+			"_value": ["mundo"]
+		},
+		"fr": {
+			"_index": "all",
+			"_value": ["monde"]
+		},
+		"de": {
+			"_index": "all",
+			"_value": ["welt"]
+		}
 	},
 	"location": "CIRCLE(10 10, 2000)",
 	"year": 400,

@@ -1,10 +1,22 @@
 {
 	"number": "1",
 	"name": {
-		"en": ["cook", "cooked"],
-		"es": ["cocinar", "cocido"],
-		"fr": ["cuire", "cuit"],
-		"de": ["coch", "gecocht"]
+		"en": {
+			"_index": "all",
+			"_value": ["cook", "cooked"]
+		},
+		"es": {
+			"_index": "all",
+			"_value": ["cocinar", "cocido"]
+		},
+		"fr": {
+			"_index": "all",
+			"_value": ["cuire", "cuit"]
+		},
+		"de": {
+			"_index": "all",
+			"_value": ["coch", "gecocht"]
+		}
 	},
 	"location": ["POINT(10 21)", "POINT(10 20)"],
 	"year": [2010, 2015],
