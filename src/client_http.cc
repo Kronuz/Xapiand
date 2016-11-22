@@ -1634,10 +1634,8 @@ HttpClient::query_field_maker(int flag)
 		}
 		query_parser.rewind();
 
-		if (query_parser.next("sort") != -1) {
+		while (query_parser.next("sort") != -1) {
 			query_field->sort.push_back(query_parser.get());
-		} else {
-			query_field->sort.push_back(ID_FIELD_NAME);
 		}
 		query_parser.rewind();
 
