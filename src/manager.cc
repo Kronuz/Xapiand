@@ -89,6 +89,16 @@ constexpr const char* const XapiandManager::StateNames[];
 std::shared_ptr<XapiandManager> XapiandManager::manager;
 
 
+void sig_exit(int sig)
+{
+	if (XapiandManager::manager) {
+		XapiandManager::manager->shutdown_sig(sig);
+	} else if (sig < 0) {
+		exit(-sig);
+	}
+}
+
+
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, const opts_t& o)
 	: Worker(nullptr, ev_loop_, ev_flags_),
 	  database_pool(o.dbpool_size),

@@ -66,16 +66,6 @@
 using namespace TCLAP;
 
 
-void sig_exit(int sig)
-{
-	if (XapiandManager::manager) {
-		XapiandManager::manager->shutdown_sig(sig);
-	} else if (sig < 0) {
-		exit(-sig);
-	}
-}
-
-
 #ifndef NDEBUG
 void sig_info(int)
 {

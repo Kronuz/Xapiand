@@ -23,16 +23,6 @@
 #include "utils.h"
 
 
-void sig_exit(int sig)
-{
-	if (XapiandManager::manager) {
-		XapiandManager::manager->shutdown_sig(sig);
-	} else if (sig < 0) {
-		exit(-sig);
-	}
-}
-
-
 bool write_file_contents(const std::string& filename, const std::string& contents) {
 	std::ofstream of(filename.data(), std::ios::out | std::ios::binary);
 	if (of.bad()) {
