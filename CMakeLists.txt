@@ -376,6 +376,11 @@ set(MANPAGES ${CMAKE_SOURCE_DIR}/man/xapiand.8)
 
 install (FILES ${MANPAGES} DESTINATION ${CMAKE_INSTALL_MANDIR}/man8 COMPONENT doc)
 
+
+########################################################################
+# Installation of the binary
+########################################################################
+
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 
