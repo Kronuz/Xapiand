@@ -79,7 +79,7 @@ std::string traceback(const char *filename, int line) {
 }
 
 
-BaseException::BaseException(const char *filename, int line, const char *format, ...)
+BaseException::BaseException(const char *filename, int line, const char* type, const char *format, ...)
 {
 	char buffer[BUFFER_SIZE];
 
@@ -88,6 +88,9 @@ BaseException::BaseException(const char *filename, int line, const char *format,
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	va_end(argptr);
 	message.assign(buffer);
+	if (message.empty()) {
+		message.assign(type);
+	}
 
 #ifdef TRACEBACK
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);

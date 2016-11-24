@@ -78,7 +78,7 @@ public:
 	StorageException(Args&&... args) : Error(std::forward<Args>(args)...) { }
 };
 
-#define MSG_StorageException(...) StorageException(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_StorageException(...) StorageException(__FILE__, __LINE__, "StorageException", __VA_ARGS__)
 
 
 class StorageIOError : public StorageException {
@@ -87,7 +87,7 @@ public:
 	StorageIOError(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
 
-#define MSG_StorageIOError(...) StorageIOError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_StorageIOError(...) StorageIOError(__FILE__, __LINE__, "StorageIOError", __VA_ARGS__)
 
 
 class StorageNotFound : public StorageException {
@@ -96,7 +96,7 @@ public:
 	StorageNotFound(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
 
-#define MSG_StorageNotFound(...) StorageNotFound(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_StorageNotFound(...) StorageNotFound(__FILE__, __LINE__, "StorageNotFound", __VA_ARGS__)
 
 
 class StorageEOF : public StorageException {
@@ -105,7 +105,7 @@ public:
 	StorageEOF(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
 
-#define MSG_StorageEOF(...) StorageEOF(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_StorageEOF(...) StorageEOF(__FILE__, __LINE__, "StorageEOF", __VA_ARGS__)
 
 
 class StorageNoFile : public StorageException {
@@ -114,7 +114,7 @@ public:
 	StorageNoFile(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
 
-#define MSG_StorageNoFile(...) StorageNoFile(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_StorageNoFile(...) StorageNoFile(__FILE__, __LINE__, "StorageNoFile", __VA_ARGS__)
 
 
 class StorageCorruptVolume : public StorageException {
@@ -123,7 +123,7 @@ public:
 	StorageCorruptVolume(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
 
-#define MSG_StorageCorruptVolume(...) StorageCorruptVolume(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_StorageCorruptVolume(...) StorageCorruptVolume(__FILE__, __LINE__, "StorageCorruptVolume", __VA_ARGS__)
 
 
 struct StorageHeader {

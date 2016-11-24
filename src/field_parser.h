@@ -38,7 +38,7 @@ public:
 };
 
 
-#define MSG_FieldParserError(...) FieldParserError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_FieldParserError(...) FieldParserError(__FILE__, __LINE__, "FieldParserError", __VA_ARGS__)
 
 
 class FieldParser {

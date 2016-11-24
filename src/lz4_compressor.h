@@ -54,7 +54,7 @@ public:
 	LZ4Exception(Args&&... args) : Error(std::forward<Args>(args)...) { }
 };
 
-#define MSG_LZ4Exception(...) LZ4Exception(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_LZ4Exception(...) LZ4Exception(__FILE__, __LINE__, "LZ4Exception", __VA_ARGS__)
 
 
 class LZ4IOError : public LZ4Exception {
@@ -63,7 +63,7 @@ public:
 	LZ4IOError(Args&&... args) : LZ4Exception(std::forward<Args>(args)...) { }
 };
 
-#define MSG_LZ4IOError(...) LZ4IOError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_LZ4IOError(...) LZ4IOError(__FILE__, __LINE__, "LZ4IOError", __VA_ARGS__)
 
 
 class LZ4CorruptVolume : public LZ4Exception {
@@ -72,7 +72,7 @@ public:
 	LZ4CorruptVolume(Args&&... args) : LZ4Exception(std::forward<Args>(args)...) { }
 };
 
-#define MSG_LZ4CorruptVolume(...) LZ4CorruptVolume(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_LZ4CorruptVolume(...) LZ4CorruptVolume(__FILE__, __LINE__, "LZ4CorruptVolume", __VA_ARGS__)
 
 
 template<typename Impl>
