@@ -25,6 +25,7 @@
 #include <array>     // for array
 #include <atomic>    // for atomic
 
+#include "logger_fwd.h"
 
 class StashException { };
 class StashContinue : public StashException { };
@@ -291,8 +292,6 @@ public:
 		: Stash_T::Stash(get_slot(key)) { }
 
 	auto& next(bool final=true, uint64_t final_key=0, bool keep_going=true, bool peep=false) {
-		// std::cout << "\tTimeStash<_Mod=" << _Mod << ">::next(" << (final ? "true" : "false") <<", " << final_key << ", " << (keep_going ? "true" : "false") << ")" << std::endl;
-
 		auto pos = Stash_T::pos.load();
 
 		keep_going = keep_going && final && !final_key;
@@ -306,7 +305,7 @@ public:
 		do {
 			Bin* ptr = nullptr;
 			try {
-				// std::cout << "\t\tTimeStash<_Mod=" << _Mod << "> pos:" << pos << ", initial_pos:" << initial_pos << ", final:" << (final ? "true" : "false") << ", final_pos:" << final_pos << ", last_pos:" << last_pos << std::endl;
+				L_INFO_HOOK_LOG("StashSlots::next::loop", this, "StashSlots::next()::loop - _Mod:%llu, pos:%llu, initial_pos:%llu, final:%s, final_pos:%llu, last_pos:%llu, keep_going:%s, peep:%s", _Mod, pos, initial_pos, final ? "true" : "false", final_pos, last_pos, keep_going ? "true" : "false", peep ? "true" : "false");
 				ptr = Stash_T::get_bin(pos).load();
 				return ptr->val.next(final && pos == final_pos, final_key, keep_going, peep);
 			} catch (const StashOutOfRange&) {
