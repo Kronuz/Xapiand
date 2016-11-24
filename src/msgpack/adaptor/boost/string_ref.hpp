@@ -38,7 +38,7 @@ struct convert<boost::string_ref> {
             v = boost::string_ref(o.via.str.ptr, o.via.str.size);
             break;
         default:
-            throw msgpack::type_error();
+            THROW(msgpack::type_error);
             break;
         }
         return o;

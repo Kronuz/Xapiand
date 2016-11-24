@@ -29,7 +29,7 @@ namespace adaptor {
 template <typename T, typename Compare, typename Alloc>
 struct as<std::set<T, Compare, Alloc>, typename std::enable_if<msgpack::has_as<T>::value>::type> {
     std::set<T, Compare, Alloc> operator()(msgpack::object const& o) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         msgpack::object* p = o.via.array.ptr + o.via.array.size;
         msgpack::object* const pbegin = o.via.array.ptr;
         std::set<T, Compare, Alloc> v;
@@ -46,7 +46,7 @@ struct as<std::set<T, Compare, Alloc>, typename std::enable_if<msgpack::has_as<T
 template <typename T, typename Compare, typename Alloc>
 struct convert<std::set<T, Compare, Alloc> > {
     msgpack::object const& operator()(msgpack::object const& o, std::set<T, Compare, Alloc>& v) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         msgpack::object* p = o.via.array.ptr + o.via.array.size;
         msgpack::object* const pbegin = o.via.array.ptr;
         std::set<T, Compare, Alloc> tmp;
@@ -106,7 +106,7 @@ struct object_with_zone<std::set<T, Compare, Alloc> > {
 template <typename T, typename Compare, typename Alloc>
 struct as<std::multiset<T, Compare, Alloc>, typename std::enable_if<msgpack::has_as<T>::value>::type> {
     std::multiset<T, Compare, Alloc> operator()(msgpack::object const& o) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         msgpack::object* p = o.via.array.ptr + o.via.array.size;
         msgpack::object* const pbegin = o.via.array.ptr;
         std::multiset<T, Compare, Alloc> v;
@@ -123,7 +123,7 @@ struct as<std::multiset<T, Compare, Alloc>, typename std::enable_if<msgpack::has
 template <typename T, typename Compare, typename Alloc>
 struct convert<std::multiset<T, Compare, Alloc> > {
     msgpack::object const& operator()(msgpack::object const& o, std::multiset<T, Compare, Alloc>& v) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         msgpack::object* p = o.via.array.ptr + o.via.array.size;
         msgpack::object* const pbegin = o.via.array.ptr;
         std::multiset<T, Compare, Alloc> tmp;

@@ -80,7 +80,7 @@ template <>
 struct convert<msgpack::type::ext> {
     msgpack::object const& operator()(msgpack::object const& o, msgpack::type::ext& v) const {
         if(o.type != msgpack::type::EXT) {
-            throw msgpack::type_error();
+            THROW(msgpack::type_error);
         }
         v = msgpack::type::ext(o.via.ext.type(), o.via.ext.data(), o.via.ext.size);
         return o;
@@ -190,7 +190,7 @@ namespace adaptor {
 template <>
 struct convert<msgpack::type::ext_ref> {
     msgpack::object const& operator()(msgpack::object const& o, msgpack::type::ext_ref& v) const {
-        if(o.type != msgpack::type::EXT) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::EXT) { THROW(msgpack::type_error); }
         v = msgpack::type::ext_ref(o.via.ext.ptr, o.via.ext.size + 1);
         return o;
     }

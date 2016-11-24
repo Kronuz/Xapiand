@@ -29,15 +29,15 @@ struct convert<std::array<unsigned char, N>> {
     msgpack::object const& operator()(msgpack::object const& o, std::array<unsigned char, N>& v) const {
         switch (o.type) {
         case msgpack::type::BIN:
-            if(o.via.bin.size != N) { throw msgpack::type_error(); }
+            if(o.via.bin.size != N) { THROW(msgpack::type_error); }
             std::memcpy(v.data(), o.via.bin.ptr, o.via.bin.size);
             break;
         case msgpack::type::STR:
-            if(o.via.str.size != N) { throw msgpack::type_error(); }
+            if(o.via.str.size != N) { THROW(msgpack::type_error); }
             std::memcpy(v.data(), o.via.str.ptr, N);
             break;
         default:
-            throw msgpack::type_error();
+            THROW(msgpack::type_error);
             break;
         }
         return o;

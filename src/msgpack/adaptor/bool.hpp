@@ -24,7 +24,7 @@ namespace adaptor {
 template <>
 struct convert<bool> {
     msgpack::object const& operator()(msgpack::object const& o, bool& v) const {
-        if(o.type != msgpack::type::BOOLEAN) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::BOOLEAN) { THROW(msgpack::type_error); }
         v = o.via.boolean;
         return o;
     }

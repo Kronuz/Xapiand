@@ -325,7 +325,7 @@ public:
 			case Type::ARRAY:
 				return _mobj->at(_off);
 			default:
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 		}
 	}
 
@@ -340,7 +340,7 @@ public:
 			case Type::ARRAY:
 				return _mobj->at(_off);
 			default:
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 		}
 	}
 
@@ -547,7 +547,7 @@ inline void MsgPack::_initializer(const std::initializer_list<MsgPack>& list) {
 inline void MsgPack::_assignment(const msgpack::object& obj) {
 	if (_body->_is_key) {
 		if (obj.type != msgpack::type::STR) {
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 		}
 		if (auto parent_body = _body->_parent.lock()) {
 			if (parent_body->_initialized) {
@@ -687,7 +687,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 		if (p->key.type != msgpack::type::STR) {
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 		}
 		auto last_key = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
 		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, last_key._body, &p->val));
@@ -833,7 +833,7 @@ inline MsgPack& MsgPack::_find(const std::string& key) {
 		case Type::MAP:
 			return _body->at(key);
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -845,7 +845,7 @@ inline const MsgPack& MsgPack::_find(const std::string& key) const {
 		case Type::MAP:
 			return _const_body->at(key);
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -857,7 +857,7 @@ inline MsgPack& MsgPack::_find(size_t pos) {
 		case Type::ARRAY:
 			return _body->at(pos);
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -869,7 +869,7 @@ inline const MsgPack& MsgPack::_find(size_t pos) const {
 		case Type::ARRAY:
 			return _const_body->at(pos);
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -899,7 +899,7 @@ inline MsgPack& MsgPack::_erase(const std::string& key) {
 			}
 		}
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -935,7 +935,7 @@ inline MsgPack& MsgPack::_erase(size_t pos) {
 			}
 		}
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1030,7 +1030,7 @@ inline MsgPack& MsgPack::_put(const std::string& key, T&& val) {
 			return *_init_map(_body->map.size());
 		}
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1064,7 +1064,7 @@ inline MsgPack& MsgPack::_put(size_t pos, T&& val) {
 			}
 		}
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1109,7 +1109,7 @@ inline MsgPack::iterator MsgPack::_insert(size_t pos, T&& val) {
 			}
 			break;
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1121,13 +1121,13 @@ inline MsgPack& MsgPack::put(const M& o, T&& val) {
 			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 			}
 			return _put(static_cast<size_t>(o._body->_obj->via.i64), std::forward<T>(val));
 		case Type::POSITIVE_INTEGER:
 			return _put(static_cast<size_t>(o._body->_obj->via.u64), std::forward<T>(val));
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1140,13 +1140,13 @@ inline MsgPack::iterator MsgPack::insert(const M& o, T&& val) {
 			return  MsgPack::Iterator<MsgPack>(this, size() - 1);
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 			}
 			return _insert(static_cast<size_t>(o._body->_obj->via.i64), std::forward<T>(val));
 		case Type::POSITIVE_INTEGER:
 			return _insert(static_cast<size_t>(o._body->_obj->via.u64), std::forward<T>(val));
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1268,13 +1268,13 @@ inline MsgPack& MsgPack::operator[](const M& o) {
 			return operator[](std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 			}
 			return operator[](static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return operator[](static_cast<size_t>(o._body->_obj->via.u64));
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1287,13 +1287,13 @@ inline const MsgPack& MsgPack::operator[](const M& o) const {
 			return operator[](std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 			}
 			return operator[](static_cast<size_t>(o._const_body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return operator[](static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1342,13 +1342,13 @@ inline MsgPack& MsgPack::at(const M& o) {
 			return at(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 			}
 			return at(static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return at(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1361,13 +1361,13 @@ inline const MsgPack& MsgPack::at(const M& o) const {
 			return at(std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 			}
 			return at(static_cast<size_t>(o._const_body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return at(static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1380,7 +1380,7 @@ inline MsgPack& MsgPack::at(const std::string& key) {
 		case Type::MAP:
 			return _body->at(key);
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1392,7 +1392,7 @@ inline const MsgPack& MsgPack::at(const std::string& key) const {
 		case Type::MAP:
 			return _const_body->at(key);
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1410,7 +1410,7 @@ inline MsgPack& MsgPack::at(size_t pos) {
 		case Type::ARRAY:
 			return _body->at(pos);
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1428,7 +1428,7 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 		case Type::ARRAY:
 			return _const_body->at(pos);
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1442,13 +1442,13 @@ inline MsgPack::iterator MsgPack::find(const M& o) {
 				return MsgPack::iterator(this, _find(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size))._body->_pos);
 			case Type::NEGATIVE_INTEGER:
 				if (o._body->_obj->via.i64 < 0) {
-					throw msgpack::type_error();
+					THROW(msgpack::type_error);
 				}
 				return MsgPack::iterator(this, _find(static_cast<size_t>(o._body->_obj->via.i64))._body->_pos);
 			case Type::POSITIVE_INTEGER:
 				return MsgPack::iterator(this, _find(static_cast<size_t>(o._body->_obj->via.u64))._body->_pos);
 			default:
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 		}
 	} catch (const std::out_of_range&) {
 		return end();
@@ -1465,13 +1465,13 @@ inline MsgPack::const_iterator MsgPack::find(const M& o) const {
 				return MsgPack::const_iterator(this, _find(std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size))._const_body->_pos);
 			case Type::NEGATIVE_INTEGER:
 				if (o._const_body->_obj->via.i64 < 0) {
-					throw msgpack::type_error();
+					THROW(msgpack::type_error);
 				}
 				return MsgPack::const_iterator(this, _find(static_cast<size_t>(o._const_body->_obj->via.i64))._const_body->_pos);
 			case Type::POSITIVE_INTEGER:
 				return MsgPack::const_iterator(this, _find(static_cast<size_t>(o._const_body->_obj->via.u64))._const_body->_pos);
 			default:
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 		}
 	} catch (const std::out_of_range&) {
 		return cend();
@@ -1535,7 +1535,7 @@ inline size_t MsgPack::erase(const M& o) {
 				return 1;
 			case Type::NEGATIVE_INTEGER:
 				if (o._body->_obj->via.i64 < 0) {
-					throw msgpack::type_error();
+					THROW(msgpack::type_error);
 				}
 				_erase(static_cast<size_t>(o._body->_obj->via.i64));
 				return 1;
@@ -1543,7 +1543,7 @@ inline size_t MsgPack::erase(const M& o) {
 				_erase(static_cast<size_t>(o._body->_obj->via.u64));
 				return 1;
 			default:
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 		}
 	} catch (const last_in_range&) {
 		return 1;
@@ -1661,14 +1661,14 @@ inline uint64_t MsgPack::as_u64() const {
 		case Type::NEGATIVE_INTEGER: {
 			auto val = _const_body->_obj->via.i64;
 			if (val < 0) {
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 			}
 			return val;
 		}
 		case Type::POSITIVE_INTEGER:
 			return _const_body->_obj->via.u64;
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1680,12 +1680,12 @@ inline int64_t MsgPack::as_i64() const {
 		case Type::POSITIVE_INTEGER: {
 			auto val = _const_body->_obj->via.u64;
 			if (val > INT64_MAX) {
-				throw msgpack::type_error();
+				THROW(msgpack::type_error);
 			}
 			return val;
 		}
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1699,7 +1699,7 @@ inline double MsgPack::as_f64() const {
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1709,7 +1709,7 @@ inline std::string MsgPack::as_string() const {
 		return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
 	}
 
-	throw msgpack::type_error();
+	THROW(msgpack::type_error);
 }
 
 
@@ -1718,7 +1718,7 @@ inline bool MsgPack::as_bool() const {
 		return _const_body->_obj->via.boolean;
 	}
 
-	throw msgpack::type_error();
+	THROW(msgpack::type_error);
 }
 
 
@@ -1815,7 +1815,7 @@ inline MsgPack MsgPack::operator +(double val) {
 			o._body->_obj->via.f64 += val;
 			return o;
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1832,7 +1832,7 @@ inline MsgPack& MsgPack::operator +=(double val) {
 			_body->_obj->via.f64 += val;
 			return *this;
 		default:
-			throw msgpack::type_error();
+			THROW(msgpack::type_error);
 	}
 }
 
@@ -1864,7 +1864,7 @@ inline std::string MsgPack::unformatted_string() const {
 	if (_body->getType() == Type::STR) {
 		return std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
 	}
-	throw msgpack::type_error();
+	THROW(msgpack::type_error);
 }
 
 

@@ -79,9 +79,9 @@ namespace adaptor {
 template <typename T>
 struct convert<msgpack::type::array_ref<T> > {
     msgpack::object const& operator()(msgpack::object const& o, msgpack::type::array_ref<T>& v) const {
-        if (!v.data) { throw msgpack::type_error(); }
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
-        if (v.data->size() < o.via.bin.size) { throw msgpack::type_error(); }
+        if (!v.data) { THROW(msgpack::type_error); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
+        if (v.data->size() < o.via.bin.size) { THROW(msgpack::type_error); }
         if (o.via.array.size > 0) {
             msgpack::object* p = o.via.array.ptr;
             msgpack::object* const pend = o.via.array.ptr + o.via.array.size;
@@ -99,8 +99,8 @@ struct convert<msgpack::type::array_ref<T> > {
 template <typename T>
 struct convert<msgpack::type::array_ref<std::vector<T> > > {
     msgpack::object const& operator()(msgpack::object const& o, msgpack::type::array_ref<std::vector<T> >& v) const {
-        if (!v.data) { throw msgpack::type_error(); }
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (!v.data) { THROW(msgpack::type_error); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         v.data->resize(o.via.bin.size);
         if (o.via.array.size > 0) {
             msgpack::object* p = o.via.array.ptr;
@@ -120,7 +120,7 @@ template <typename T>
 struct pack<msgpack::type::array_ref<T> > {
     template <typename Stream>
     msgpack::packer<Stream>& operator()(msgpack::packer<Stream>& o, const msgpack::type::array_ref<T>& v) const {
-        if (!v.data) { throw msgpack::type_error(); }
+        if (!v.data) { THROW(msgpack::type_error); }
         uint32_t size = checked_get_container_size(v.data->size());
         o.pack_array(size);
         for (typename T::const_iterator it(v.data->begin()), it_end(v.data->end());
@@ -134,7 +134,7 @@ struct pack<msgpack::type::array_ref<T> > {
 template <typename T>
 struct object_with_zone<msgpack::type::array_ref<T> > {
     void operator()(msgpack::object::with_zone& o, const msgpack::type::array_ref<T>& v) const {
-        if (!v.data) { throw msgpack::type_error(); }
+        if (!v.data) { THROW(msgpack::type_error); }
         o.type = msgpack::type::ARRAY;
         if (v.data->empty()) {
             o.via.array.ptr = nullptr;

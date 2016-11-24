@@ -37,7 +37,7 @@ struct convert<float> {
             v = static_cast<float>(o.via.i64);
         }
         else {
-            throw msgpack::type_error();
+            THROW(msgpack::type_error);
         }
         return o;
     }
@@ -66,7 +66,7 @@ struct convert<double> {
             v = static_cast<double>(o.via.i64);
         }
         else {
-            throw msgpack::type_error();
+            THROW(msgpack::type_error);
         }
         return o;
     }

@@ -11,7 +11,6 @@
 #define MSGPACK_CHECK_CONTAINER_SIZE_HPP
 
 #include "../versioning.hpp"
-#include <stdexcept>
 
 namespace msgpack {
 
@@ -19,20 +18,11 @@ namespace msgpack {
 MSGPACK_API_VERSION_NAMESPACE(v1) {
 /// @endcond
 
-struct container_size_overflow : public std::runtime_error {
-    explicit container_size_overflow(const std::string& msg)
-        :std::runtime_error(msg) {}
-#if !defined(MSGPACK_USE_CPP03)
-    explicit container_size_overflow(const char* msg):
-        std::runtime_error(msg) {}
-#endif // !defined(MSGPACK_USE_CPP03)
-};
-
 namespace detail {
 
 template <std::size_t N>
 inline void check_container_size(std::size_t size) {
-    if (size > 0xffffffff) throw container_size_overflow("container size overflow");
+    if (size > 0xffffffff) THROW(container_size_overflow, "container size overflow");
 }
 
 template <>
@@ -41,12 +31,12 @@ inline void check_container_size<4>(std::size_t /*size*/) {
 
 template <std::size_t N>
 inline void check_container_size_for_ext(std::size_t size) {
-    if (size > 0xffffffff) throw container_size_overflow("container size overflow");
+    if (size > 0xffffffff) THROW(container_size_overflow, "container size overflow");
 }
 
 template <>
 inline void check_container_size_for_ext<4>(std::size_t size) {
-    if (size > 0xfffffffe) throw container_size_overflow("container size overflow");
+    if (size > 0xfffffffe) THROW(container_size_overflow, "container size overflow");
 }
 
 } // namespace detail

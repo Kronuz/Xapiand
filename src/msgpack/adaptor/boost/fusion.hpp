@@ -56,9 +56,9 @@ struct as<
     >::type
 > {
     T operator()(msgpack::object const& o) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         if (o.via.array.size != checked_get_container_size(boost::mpl::size<T>::value)) {
-            throw msgpack::type_error();
+            THROW(msgpack::type_error);
         }
         using tuple_t = decltype(to_tuple(std::declval<T>(), gen_seq<boost::mpl::size<T>::value>()));
         return to_t(
@@ -84,9 +84,9 @@ struct as<
 template <typename T>
 struct convert<T, typename msgpack::enable_if<boost::fusion::traits::is_sequence<T>::value>::type > {
     msgpack::object const& operator()(msgpack::object const& o, T& v) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         if (o.via.array.size != checked_get_container_size(boost::fusion::size(v))) {
-            throw msgpack::type_error();
+            THROW(msgpack::type_error);
         }
         uint32_t index = 0;
         boost::fusion::for_each(v, convert_imp(o, index));

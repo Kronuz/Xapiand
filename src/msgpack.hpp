@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "msgpack/exception.hpp"
 #include "msgpack/object.hpp"
 #include "msgpack/iterator.hpp"
 #include "msgpack/zone.hpp"

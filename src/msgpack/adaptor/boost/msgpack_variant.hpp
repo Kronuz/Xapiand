@@ -383,7 +383,7 @@ struct object_imp : boost::static_visitor<void> {
     }
     template <typename T>
     void operator()(T const&) const {
-        throw msgpack::type_error();
+        THROW(msgpack::type_error);
     }
     object_imp(msgpack::object& o):o_(o) {}
     msgpack::object& o_;

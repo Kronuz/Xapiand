@@ -27,7 +27,7 @@ namespace adaptor {
 template <typename Key, typename Hash, typename Compare, typename Alloc>
 struct as<std::unordered_set<Key, Hash, Compare, Alloc>, typename std::enable_if<msgpack::has_as<Key>::value>::type> {
     std::unordered_set<Key, Hash, Compare, Alloc> operator()(msgpack::object const& o) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         msgpack::object* p = o.via.array.ptr + o.via.array.size;
         msgpack::object* const pbegin = o.via.array.ptr;
         std::unordered_set<Key, Hash, Compare, Alloc> v;
@@ -42,7 +42,7 @@ struct as<std::unordered_set<Key, Hash, Compare, Alloc>, typename std::enable_if
 template <typename Key, typename Hash, typename Compare, typename Alloc>
 struct convert<std::unordered_set<Key, Hash, Compare, Alloc>> {
     msgpack::object const& operator()(msgpack::object const& o, std::unordered_set<Key, Hash, Compare, Alloc>& v) const {
-        if(o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         msgpack::object* p = o.via.array.ptr + o.via.array.size;
         msgpack::object* const pbegin = o.via.array.ptr;
         std::unordered_set<Key, Hash, Compare, Alloc> tmp;
@@ -96,7 +96,7 @@ struct object_with_zone<std::unordered_set<Key, Hash, Compare, Alloc>> {
 template <typename Key, typename Hash, typename Compare, typename Alloc>
 struct as<std::unordered_multiset<Key, Hash, Compare, Alloc>, typename std::enable_if<msgpack::has_as<Key>::value>::type> {
     std::unordered_multiset<Key, Hash, Compare, Alloc> operator()(msgpack::object const& o) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         msgpack::object* p = o.via.array.ptr + o.via.array.size;
         msgpack::object* const pbegin = o.via.array.ptr;
         std::unordered_multiset<Key, Hash, Compare, Alloc> v;
@@ -111,7 +111,7 @@ struct as<std::unordered_multiset<Key, Hash, Compare, Alloc>, typename std::enab
 template <typename Key, typename Hash, typename Compare, typename Alloc>
 struct convert<std::unordered_multiset<Key, Hash, Compare, Alloc>> {
     msgpack::object const& operator()(msgpack::object const& o, std::unordered_multiset<Key, Hash, Compare, Alloc>& v) const {
-        if(o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         msgpack::object* p = o.via.array.ptr + o.via.array.size;
         msgpack::object* const pbegin = o.via.array.ptr;
         std::unordered_multiset<Key, Hash, Compare, Alloc> tmp;

@@ -29,7 +29,7 @@ namespace adaptor {
 template <typename T, typename Alloc>
 struct as<std::vector<T, Alloc>, typename std::enable_if<msgpack::has_as<T>::value>::type> {
     std::vector<T, Alloc> operator()(const msgpack::object& o) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         std::vector<T, Alloc> v;
         v.reserve(o.via.array.size);
         if (o.via.array.size > 0) {
@@ -49,7 +49,7 @@ struct as<std::vector<T, Alloc>, typename std::enable_if<msgpack::has_as<T>::val
 template <typename T, typename Alloc>
 struct convert<std::vector<T, Alloc> > {
     msgpack::object const& operator()(msgpack::object const& o, std::vector<T, Alloc>& v) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         v.resize(o.via.array.size);
         if (o.via.array.size > 0) {
             msgpack::object* p = o.via.array.ptr;

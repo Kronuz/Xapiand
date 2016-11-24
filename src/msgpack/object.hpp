@@ -260,7 +260,7 @@ struct pack<msgpack::object> {
             return o;
 
         default:
-            throw msgpack::type_error();
+            THROW(msgpack::type_error);
         }
     }
 };
@@ -332,7 +332,7 @@ struct object_with_zone<msgpack::object> {
             return;
 
         default:
-            throw msgpack::type_error();
+            THROW(msgpack::type_error);
         }
 
     }
@@ -682,7 +682,7 @@ inline msgpack::packer<Stream>& operator<< (msgpack::packer<Stream>& o, const ms
         return o;
 
     default:
-        throw msgpack::type_error();
+        THROW(msgpack::type_error);
     }
 }
 

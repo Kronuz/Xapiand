@@ -202,8 +202,8 @@ template <typename... Args>
 struct as<msgpack::type::tuple<Args...>, typename std::enable_if<msgpack::all_of<msgpack::has_as, Args...>::value>::type>  {
     msgpack::type::tuple<Args...> operator()(
         msgpack::object const& o) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
-        if (o.via.array.size < sizeof...(Args)) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
+        if (o.via.array.size < sizeof...(Args)) { THROW(msgpack::type_error); }
         return MsgpackTupleAs<Args...>::as(o);
     }
 };
@@ -213,8 +213,8 @@ struct convert<msgpack::type::tuple<Args...>> {
     msgpack::object const& operator()(
         msgpack::object const& o,
         msgpack::type::tuple<Args...>& v) const {
-        if(o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
-        if(o.via.array.size < sizeof...(Args)) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
+        if(o.via.array.size < sizeof...(Args)) { THROW(msgpack::type_error); }
         MsgpackTupleConverter<decltype(v), sizeof...(Args)>::convert(o, v);
         return o;
     }

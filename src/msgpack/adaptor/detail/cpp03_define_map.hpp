@@ -87,7 +87,7 @@ struct define_map<> {
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
     }
     void msgpack_object(msgpack::object* o, msgpack::zone&) const
     {
@@ -113,7 +113,7 @@ struct define_map<A0, A1> {
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -165,7 +165,7 @@ struct define_map<A0, A1, A2, A3> {
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -231,7 +231,7 @@ struct define_map<A0, A1, A2, A3, A4, A5> {
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -311,7 +311,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7> {
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -405,7 +405,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9> {
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -513,7 +513,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11> {
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -635,7 +635,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13> {
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -771,7 +771,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A1
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -921,7 +921,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A1
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -1085,7 +1085,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A1
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -1263,7 +1263,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A1
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -1455,7 +1455,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A1
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -1661,7 +1661,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A1
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -1881,7 +1881,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A1
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -2115,7 +2115,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A1
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(
@@ -2363,7 +2363,7 @@ struct define_map<A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A1
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.insert(

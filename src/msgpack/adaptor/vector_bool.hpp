@@ -25,7 +25,7 @@ namespace adaptor {
 template <typename Alloc>
 struct convert<std::vector<bool, Alloc> > {
     msgpack::object const& operator()(msgpack::object const& o, std::vector<bool, Alloc>& v) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         if (o.via.array.size > 0) {
             v.resize(o.via.array.size);
             msgpack::object* p = o.via.array.ptr;

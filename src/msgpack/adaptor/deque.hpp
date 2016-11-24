@@ -29,7 +29,7 @@ namespace adaptor {
 template <typename T, typename Alloc>
 struct as<std::deque<T, Alloc>, typename std::enable_if<msgpack::has_as<T>::value>::type> {
     std::deque<T, Alloc> operator()(const msgpack::object& o) const {
-        if (o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if (o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         std::deque<T, Alloc> v;
         if (o.via.array.size > 0) {
             msgpack::object* p = o.via.array.ptr;
@@ -48,7 +48,7 @@ struct as<std::deque<T, Alloc>, typename std::enable_if<msgpack::has_as<T>::valu
 template <typename T, typename Alloc>
 struct convert<std::deque<T, Alloc> > {
     msgpack::object const& operator()(msgpack::object const& o, std::deque<T, Alloc>& v) const {
-        if(o.type != msgpack::type::ARRAY) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::ARRAY) { THROW(msgpack::type_error); }
         v.resize(o.via.array.size);
         msgpack::object* p = o.via.array.ptr;
         msgpack::object* const pend = o.via.array.ptr + o.via.array.size;

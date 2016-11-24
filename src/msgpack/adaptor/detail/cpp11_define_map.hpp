@@ -123,7 +123,7 @@ struct define_map {
     }
     void msgpack_unpack(msgpack::object const& o) const
     {
-        if(o.type != msgpack::type::MAP) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::MAP) { THROW(msgpack::type_error); }
         std::map<std::string, msgpack::object const*> kvmap;
         for (uint32_t i = 0; i < o.via.map.size; ++i) {
             kvmap.emplace(

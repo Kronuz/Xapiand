@@ -37,7 +37,7 @@ struct convert<std::vector<char, Alloc> > {
             std::memcpy(&v.front(), o.via.str.ptr, o.via.str.size);
             break;
         default:
-            throw msgpack::type_error();
+            THROW(msgpack::type_error);
             break;
         }
         return o;

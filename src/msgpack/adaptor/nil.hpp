@@ -38,7 +38,7 @@ namespace adaptor {
 template <>
 struct convert<type::nil> {
     msgpack::object const& operator()(msgpack::object const& o, type::nil&) const {
-        if(o.type != msgpack::type::NIL) { throw msgpack::type_error(); }
+        if(o.type != msgpack::type::NIL) { THROW(msgpack::type_error); }
         return o;
     }
 };

@@ -172,8 +172,6 @@ public:
     implicit_type convert() const;
 };
 
-class type_error : public std::bad_cast { };
-
 struct object_kv {
     msgpack::object key;
     msgpack::object val;
