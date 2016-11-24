@@ -45,30 +45,24 @@ protected:
 	std::string traceback;
 
 public:
-	BaseException(const char *filename, int line, const char *format="", ...);
-	BaseException(const char *filename, int line, const std::string& message)
+	BaseException(const char *filename, int line, const char *format, ...);
+	BaseException(const char *filename, int line, const std::string& message="")
 		: BaseException(filename, line, message.c_str()) { }
+
+	virtual const char* get_context() const noexcept {
+		return context.c_str();
+	}
+
+	virtual const char* get_traceback() const noexcept {
+		return traceback.c_str();
+	}
 };
 
 
 class Exception : public BaseException, public std::runtime_error {
-
 public:
 	template<typename... Args>
 	Exception(Args&&... args) : BaseException(std::forward<Args>(args)...), std::runtime_error(BaseException::msg) { }
-	~Exception() = default;
-
-	const char* what() const noexcept override {
-		return msg.c_str();
-	}
-
-	const char* get_context() const noexcept {
-		return context.c_str();
-	}
-
-	const char* get_traceback() const noexcept {
-		return traceback.c_str();
-	}
 };
 
 
