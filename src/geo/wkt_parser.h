@@ -45,8 +45,6 @@ public:
 	EWKTError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
-#define MSG_EWKTError(...) EWKTError(__FILE__, __LINE__, "EWKTError", __VA_ARGS__)
-
 
 struct GeoSpatial {
 	RangeList ranges;

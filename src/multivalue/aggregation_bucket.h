@@ -131,7 +131,7 @@ class HistogramAggregation : public BucketAggregation {
 
 	std::string get_bucket(unsigned long value) {
 		if (!interval_u64) {
-			throw MSG_AggregationError("'%s' must be a non-zero number", AGGREGATION_INTERVAL);
+			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
 		auto rem = value % interval_u64;
 		auto bucket_key = value - rem;
@@ -140,7 +140,7 @@ class HistogramAggregation : public BucketAggregation {
 
 	std::string get_bucket(long value) {
 		if (!interval_i64) {
-			throw MSG_AggregationError("'%s' must be a non-zero number", AGGREGATION_INTERVAL);
+			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
 		auto rem = value % interval_i64;
 		if (rem < 0) {
@@ -152,7 +152,7 @@ class HistogramAggregation : public BucketAggregation {
 
 	std::string get_bucket(double value) {
 		if (!interval_f64) {
-			throw MSG_AggregationError("'%s' must be a non-zero number", AGGREGATION_INTERVAL);
+			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
 		auto rem = fmod(value, interval_f64);
 		if (rem < 0) {
@@ -182,9 +182,9 @@ public:
 				interval_f64 = interval.as_f64();
 			} catch (const msgpack::type_error&) { }
 		} catch (const std::out_of_range&) {
-			throw MSG_AggregationError("'%s' must be specified must be specified in '%s'", AGGREGATION_INTERVAL, AGGREGATION_HISTOGRAM);
+			THROW(AggregationError, "'%s' must be specified must be specified in '%s'", AGGREGATION_INTERVAL, AGGREGATION_HISTOGRAM);
 		} catch (const msgpack::type_error&) {
-			throw MSG_AggregationError("'%s' must be object", AGGREGATION_HISTOGRAM);
+			THROW(AggregationError, "'%s' must be object", AGGREGATION_HISTOGRAM);
 		}
 	}
 
@@ -305,9 +305,9 @@ public:
 				if (!err_f64) ranges_f64.emplace_back(key.empty() ? _as_bucket(from_f64, to_f64) : key, std::make_pair(from_f64, to_f64));
 			}
 		} catch (const std::out_of_range&) {
-			throw MSG_AggregationError("'%s' must be specified must be specified in '%s'", AGGREGATION_RANGES, AGGREGATION_RANGE);
+			THROW(AggregationError, "'%s' must be specified must be specified in '%s'", AGGREGATION_RANGES, AGGREGATION_RANGE);
 		} catch (const msgpack::type_error&) {
-			throw MSG_AggregationError("'%s' must be object", AGGREGATION_RANGE);
+			THROW(AggregationError, "'%s' must be object", AGGREGATION_RANGE);
 		}
 	}
 

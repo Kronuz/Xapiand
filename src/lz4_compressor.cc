@@ -88,7 +88,7 @@ LZ4CompressData::next()
 
 	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, cmpBuf, inpBytes, cmpBuf_size, 1);
 	if (cmpBytes <= 0) {
-		throw MSG_LZ4Exception("LZ4_compress_fast_continue failed!");
+		THROW(LZ4Exception, "LZ4_compress_fast_continue failed!");
 	}
 
 	// Add and wraparound the ringbuffer offset
@@ -139,7 +139,7 @@ LZ4DecompressData::next()
 	}
 
 	if (sizeof(uint16_t) > data_size - data_offset) {
-		throw MSG_LZ4CorruptVolume("Data is corrupt");
+		THROW(LZ4CorruptVolume, "Data is corrupt");
 	}
 
 	uint16_t cmpBytes = 0;
@@ -147,7 +147,7 @@ LZ4DecompressData::next()
 	data_offset += sizeof(uint16_t);
 
 	if (cmpBytes > data_size - data_offset) {
-		throw MSG_LZ4CorruptVolume("Data is corrupt");
+		THROW(LZ4CorruptVolume, "Data is corrupt");
 	}
 
 	read_bin(data + data_offset, cmpBuf, cmpBytes);
@@ -156,7 +156,7 @@ LZ4DecompressData::next()
 	char* const decPtr = &buffer[_offset];
 	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, cmpBuf, decPtr, cmpBytes, LZ4_BLOCK_SIZE);
 	if (decBytes <= 0) {
-		throw MSG_LZ4Exception("LZ4_decompress_safe_continue failed!");
+		THROW(LZ4Exception, "LZ4_decompress_safe_continue failed!");
 	}
 
 	// Add and wraparound the ringbuffer offset
@@ -198,7 +198,7 @@ std::string
 LZ4CompressFile::init()
 {
 	if (fd_offset != -1 && io::lseek(fd, fd_offset, SEEK_SET) != static_cast<off_t>(fd_offset)) {
-		throw MSG_LZ4IOError("IO error: lseek");
+		THROW(LZ4IOError, "IO error: lseek");
 	}
 	return next();
 }
@@ -217,7 +217,7 @@ LZ4CompressFile::next()
 
 	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, cmpBuf, inpBytes, cmpBuf_size, 1);
 	if (cmpBytes <= 0) {
-		throw MSG_LZ4Exception("LZ4_compress_fast_continue failed!");
+		THROW(LZ4Exception, "LZ4_compress_fast_continue failed!");
 	}
 
 	// Add and wraparound the ringbuffer offset
@@ -265,11 +265,11 @@ std::string
 LZ4DecompressFile::init()
 {
 	if (fd_offset != -1 && io::lseek(fd, fd_offset, SEEK_SET) != static_cast<off_t>(fd_offset)) {
-		throw MSG_LZ4IOError("IO error: lseek");
+		THROW(LZ4IOError, "IO error: lseek");
 	}
 
 	if unlikely((data_size = io::read(fd, data, get_read_size())) < 0) {
-		throw MSG_LZ4IOError("IO error: read");
+		THROW(LZ4IOError, "IO error: read");
 	}
 
 	data_offset = 0;
@@ -282,7 +282,7 @@ LZ4DecompressFile::next()
 {
 	if (data_offset == static_cast<size_t>(data_size)) {
 		if unlikely((data_size = io::read(fd, data, get_read_size())) < 0) {
-			throw MSG_LZ4IOError("IO error: read");
+			THROW(LZ4IOError, "IO error: read");
 		}
 		if (data_size == 0) {
 			return std::string();
@@ -296,7 +296,7 @@ LZ4DecompressFile::next()
 		read_partial_uint16(data + data_offset, &cmpBytes, res_size);
 		data_offset = sizeof(uint16_t) - res_size;
 		if ((data_size = io::read(fd, data, get_read_size())) < static_cast<ssize_t>(data_offset)) {
-			throw MSG_LZ4CorruptVolume("File is corrupt");
+			THROW(LZ4CorruptVolume, "File is corrupt");
 		}
 		read_partial_uint16(data, &cmpBytes, data_offset, res_size);
 	} else {
@@ -309,7 +309,7 @@ LZ4DecompressFile::next()
 		read_partial_bin(data + data_offset, cmpBuf, res_size);
 		data_offset = cmpBytes - res_size;
 		if ((data_size = io::read(fd, data, get_read_size())) < static_cast<ssize_t>(data_offset)) {
-			throw MSG_LZ4CorruptVolume("File is corrupt");
+			THROW(LZ4CorruptVolume, "File is corrupt");
 		}
 		read_partial_bin(data, cmpBuf, data_offset, res_size);
 	} else {
@@ -320,7 +320,7 @@ LZ4DecompressFile::next()
 	char* const decPtr = &buffer[_offset];
 	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, cmpBuf, decPtr, cmpBytes, LZ4_BLOCK_SIZE);
 	if (decBytes <= 0) {
-		throw MSG_LZ4Exception("LZ4_decompress_safe_continue failed!");
+		THROW(LZ4Exception, "LZ4_decompress_safe_continue failed!");
 	}
 
 	// Add and wraparound the ringbuffer offset

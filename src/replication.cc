@@ -59,7 +59,7 @@ Replication::replication_server(ReplicationMessageType type, const std::string &
 		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(toUType(type));
-			throw MSG_InvalidArgumentError(errmsg);
+			THROW(InvalidArgumentError, errmsg);
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
@@ -97,7 +97,7 @@ Replication::msg_get_changesets(const std::string &)
 	// 	endpoints.add(endpoint);
 	// 	db_ = get_db();
 	// 	if (!db_)
-	// 		throw MSG_InvalidOperationError("Server has no open database");
+	// 		THROW(InvalidOperationError, "Server has no open database");
 	// } catch (...) {
 	// 	throw;
 	// }
@@ -144,7 +144,7 @@ Replication::replication_client(ReplicationReplyType type, const std::string &me
 		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(toUType(type));
-			throw MSG_InvalidArgumentError(errmsg);
+			THROW(InvalidArgumentError, errmsg);
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
@@ -362,7 +362,7 @@ Replication::replication_client_file_done()
 			p += pos;
 		}
 		if (p_end - p < len) {
-			throw MSG_Error("Replication failure!");
+			THROW(Error, "Replication failure!");
 		}
 		std::string msg(p, len);
 		p += len;

@@ -141,7 +141,7 @@ void json_load(rapidjson::Document& doc, const std::string& str)
 {
 	rapidjson::ParseResult parse_done = doc.Parse(str.data());
 	if (!parse_done) {
-		throw MSG_ClientError("JSON parse error at position %u: %s", parse_done.Offset(), GetParseError_En(parse_done.Code()));
+		THROW(ClientError, "JSON parse error at position %u: %s", parse_done.Offset(), GetParseError_En(parse_done.Code()));
 	}
 }
 

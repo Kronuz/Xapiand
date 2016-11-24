@@ -33,13 +33,9 @@ public:
 	AggregationError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
-#define MSG_AggregationError(...) AggregationError(__FILE__, __LINE__, "AggregationError", __VA_ARGS__)
-
 
 class EmptyValueError : public AggregationError {
 public:
 	template<typename... Args>
 	EmptyValueError(Args&&... args) : AggregationError(std::forward<Args>(args)...) { }
 };
-
-#define MSG_EmptyValueError(...) EmptyValueError(__FILE__, __LINE__, "EmptyValueError", __VA_ARGS__)

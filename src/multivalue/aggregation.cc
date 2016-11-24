@@ -91,14 +91,14 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 					auto func = map_dispatch_aggregations.at(sub_agg_type);
 					(this->*func)(_result[sub_agg_name], sub_agg, schema);
 				} catch (const std::out_of_range&) {
-					throw MSG_AggregationError("Aggregation type: %s is not valid", sub_agg_name.c_str());
+					THROW(AggregationError, "Aggregation type: %s is not valid", sub_agg_name.c_str());
 				}
 			} else {
-				throw MSG_AggregationError("Aggregation sub_agg_name: %s is not valid", sub_agg_name.c_str());
+				THROW(AggregationError, "Aggregation sub_agg_name: %s is not valid", sub_agg_name.c_str());
 			}
 		}
 	} catch (const msgpack::type_error) {
-		throw MSG_AggregationError("Aggregations must be an object");
+		THROW(AggregationError, "Aggregations must be an object");
 	} catch (const std::out_of_range&) {
 	}
 }

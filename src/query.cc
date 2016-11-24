@@ -123,7 +123,7 @@ Query::make_query(const std::string& str_query, std::vector<std::string>& sugges
 			switch (token.type) {
 				case TokenType::Not: {
 					if (stack_query.size() < 1) {
-						throw MSG_ClientError("Bad boolean expression");
+						THROW(ClientError, "Bad boolean expression");
 					} else {
 						auto expression = stack_query.back();
 						stack_query.pop_back();
@@ -134,7 +134,7 @@ Query::make_query(const std::string& str_query, std::vector<std::string>& sugges
 
 				case TokenType::Or: {
 					if (stack_query.size() < 2) {
-						throw MSG_ClientError("Bad boolean expression");
+						THROW(ClientError, "Bad boolean expression");
 					} else {
 						auto letf_expression = stack_query.back();
 						stack_query.pop_back();
@@ -147,7 +147,7 @@ Query::make_query(const std::string& str_query, std::vector<std::string>& sugges
 
 				case TokenType::And: {
 					if (stack_query.size() < 2) {
-						throw MSG_ClientError("Bad boolean expression");
+						THROW(ClientError, "Bad boolean expression");
 					} else {
 						auto letf_expression = stack_query.back();
 						stack_query.pop_back();
@@ -160,7 +160,7 @@ Query::make_query(const std::string& str_query, std::vector<std::string>& sugges
 
 				case TokenType::Xor:{
 					if (stack_query.size() < 2) {
-						throw MSG_ClientError("Bad boolean expression");
+						THROW(ClientError, "Bad boolean expression");
 					} else {
 						auto letf_expression = stack_query.back();
 						stack_query.pop_back();
@@ -183,12 +183,12 @@ Query::make_query(const std::string& str_query, std::vector<std::string>& sugges
 		if (stack_query.size() == 1) {
 			return stack_query.back();
 		} else {
-			throw MSG_ClientError("Bad boolean expression");
+			THROW(ClientError, "Bad boolean expression");
 		}
 	} catch (const LexicalException& err) {
-		throw MSG_ClientError(err.what());
+		THROW(ClientError, err.what());
 	} catch (const SyntacticException& err) {
-		throw MSG_ClientError(err.what());
+		THROW(ClientError, err.what());
 	}
 }
 
@@ -343,7 +343,7 @@ Query::get_accuracy_query(const std::string& field_accuracy, const std::string& 
 	L_CALL(this, "Query::get_accuracy_query(%s, %s, %s)", repr(field_accuracy).c_str(), repr(prefix_accuracy).c_str(), repr(field_value).c_str());
 
 	if (fp.isrange) {
-		throw MSG_ClientError("Accuracy is only indexed like terms, searching by range is not supported");
+		THROW(ClientError, "Accuracy is only indexed like terms, searching by range is not supported");
 	}
 
 	try {
@@ -404,7 +404,7 @@ Query::get_accuracy_query(const std::string& field_accuracy, const std::string& 
 				return Xapian::Query(prefixed(Serialise::integer(value - GenerateTerms::modulus(value, acc)), prefix_type + prefix_accuracy));
 			}
 		} catch (const std::invalid_argument& e) {
-			throw MSG_ClientError("Invalid numeric value %s: %s [%s]", field_accuracy.c_str(), field_value.c_str(), e.what());
+			THROW(ClientError, "Invalid numeric value %s: %s [%s]", field_accuracy.c_str(), field_value.c_str(), e.what());
 		}
 	}
 }

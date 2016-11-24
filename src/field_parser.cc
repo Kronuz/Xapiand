@@ -88,7 +88,7 @@ FieldParser::parse()
 								break;
 							default:
 								if (++len_field >= 1024) {
-									throw MSG_FieldParserError("Syntax error in query");
+									THROW(FieldParserError, "Syntax error in query");
 								}
 								++len_fieldot;
 								currentState = FieldParser::State::FIELD;
@@ -170,7 +170,7 @@ FieldParser::parse()
 						}
 						break;
 					case '\0':
-						throw MSG_FieldParserError("Expected symbol: '%c'", quote);
+						THROW(FieldParserError, "Expected symbol: '%c'", quote);
 					default:
 						if (*currentSymbol == quote) {
 							currentState = FieldParser::State::DOUBLE_DOTS_OR_END;
@@ -228,7 +228,7 @@ FieldParser::parse()
 						break;
 
 					default:
-						 throw MSG_FieldParserError("Unexpected symbol: %c", *currentSymbol);
+						 THROW(FieldParserError, "Unexpected symbol: %c", *currentSymbol);
 						break;
 				}
 
@@ -256,7 +256,7 @@ FieldParser::parse()
 							break;
 					}
 				} else {
-					throw MSG_FieldParserError("Syntax error in query escaped");
+					THROW(FieldParserError, "Syntax error in query escaped");
 				}
 				break;
 
@@ -266,7 +266,7 @@ FieldParser::parse()
 				} else if (!isspace(*currentSymbol)) {
 					++len_value;
 				} else {
-					throw MSG_FieldParserError("Syntax error in query");
+					THROW(FieldParserError, "Syntax error in query");
 				}
 				break;
 
@@ -287,7 +287,7 @@ FieldParser::parse()
 						currentState = FieldParser::State::END;
 						break;
 					case '\0':
-						throw MSG_FieldParserError("Syntax error in query");
+						THROW(FieldParserError, "Syntax error in query");
 					default:
 						start += *currentSymbol;
 						break;
@@ -308,7 +308,7 @@ FieldParser::parse()
 						currentState = FieldParser::State::END;
 						break;
 					case '\0':
-						throw MSG_FieldParserError("Expected symbol: ']'");
+						THROW(FieldParserError, "Expected symbol: ']'");
 					default:
 						end += *currentSymbol;
 						break;
@@ -342,7 +342,7 @@ FieldParser::parse()
 							currentState = FieldParser::State::END;
 							break;
 						default:
-							throw MSG_FieldParserError("Unexpected symbol: %c", *currentSymbol);
+							THROW(FieldParserError, "Unexpected symbol: %c", *currentSymbol);
 					}
 				break;
 
@@ -368,7 +368,7 @@ FieldParser::parse()
 				if (*currentSymbol == RIGHT_SQUARE_BRACKET) {
 					currentState = FieldParser::State::END;
 				} else {
-					throw MSG_FieldParserError("Expected symbol: ']'");
+					THROW(FieldParserError, "Expected symbol: ']'");
 				}
 				break;
 

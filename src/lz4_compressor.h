@@ -54,8 +54,6 @@ public:
 	LZ4Exception(Args&&... args) : Error(std::forward<Args>(args)...) { }
 };
 
-#define MSG_LZ4Exception(...) LZ4Exception(__FILE__, __LINE__, "LZ4Exception", __VA_ARGS__)
-
 
 class LZ4IOError : public LZ4Exception {
 public:
@@ -63,16 +61,12 @@ public:
 	LZ4IOError(Args&&... args) : LZ4Exception(std::forward<Args>(args)...) { }
 };
 
-#define MSG_LZ4IOError(...) LZ4IOError(__FILE__, __LINE__, "LZ4IOError", __VA_ARGS__)
-
 
 class LZ4CorruptVolume : public LZ4Exception {
 public:
 	template<typename... Args>
 	LZ4CorruptVolume(Args&&... args) : LZ4Exception(std::forward<Args>(args)...) { }
 };
-
-#define MSG_LZ4CorruptVolume(...) LZ4CorruptVolume(__FILE__, __LINE__, "LZ4CorruptVolume", __VA_ARGS__)
 
 
 template<typename Impl>
@@ -322,7 +316,7 @@ public:
 	inline void open(const std::string& filename) {
 		fd = io::open(filename.c_str(), O_RDONLY, 0644);
 		if unlikely(fd < 0) {
-			throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
+			THROW(LZ4IOError, "Cannot open file: %s", filename.c_str());
 		}
 		fd_offset = 0;
 		fd_internal = true;

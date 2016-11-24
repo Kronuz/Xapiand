@@ -78,16 +78,12 @@ public:
 	StorageException(Args&&... args) : Error(std::forward<Args>(args)...) { }
 };
 
-#define MSG_StorageException(...) StorageException(__FILE__, __LINE__, "StorageException", __VA_ARGS__)
-
 
 class StorageIOError : public StorageException {
 public:
 	template<typename... Args>
 	StorageIOError(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
-
-#define MSG_StorageIOError(...) StorageIOError(__FILE__, __LINE__, "StorageIOError", __VA_ARGS__)
 
 
 class StorageNotFound : public StorageException {
@@ -96,16 +92,12 @@ public:
 	StorageNotFound(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
 
-#define MSG_StorageNotFound(...) StorageNotFound(__FILE__, __LINE__, "StorageNotFound", __VA_ARGS__)
-
 
 class StorageEOF : public StorageException {
 public:
 	template<typename... Args>
 	StorageEOF(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
-
-#define MSG_StorageEOF(...) StorageEOF(__FILE__, __LINE__, "StorageEOF", __VA_ARGS__)
 
 
 class StorageNoFile : public StorageException {
@@ -114,16 +106,12 @@ public:
 	StorageNoFile(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
 
-#define MSG_StorageNoFile(...) StorageNoFile(__FILE__, __LINE__, "StorageNoFile", __VA_ARGS__)
-
 
 class StorageCorruptVolume : public StorageException {
 public:
 	template<typename... Args>
 	StorageCorruptVolume(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
-
-#define MSG_StorageCorruptVolume(...) StorageCorruptVolume(__FILE__, __LINE__, "StorageCorruptVolume", __VA_ARGS__)
 
 
 struct StorageHeader {
@@ -143,10 +131,10 @@ struct StorageHeader {
 
 	void validate(void* /*param*/, void* /*args*/) {
 		// if (head.magic != STORAGE_MAGIC) {
-		// 	throw MSG_StorageCorruptVolume("Bad header magic number");
+		// 	THROW(StorageCorruptVolume, "Bad header magic number");
 		// }
 		// if (strncasecmp(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid))) {
-		// 	throw MSG_StorageCorruptVolume("UUID mismatch");
+		// 	THROW(StorageCorruptVolume, "UUID mismatch");
 		// }
 	}
 };
@@ -166,10 +154,10 @@ struct StorageBinHeader {
 
 	void validate(void* /*param*/, void* /*args*/) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
-		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
+		// 	THROW(StorageCorruptVolume, "Bad bin header magic number");
 		// }
 		if (flags & STORAGE_FLAG_DELETED) {
-			throw MSG_StorageNotFound("Bin deleted");
+			THROW(StorageNotFound, "Bin deleted");
 		}
 	}
 };
@@ -186,10 +174,10 @@ struct StorageBinFooter {
 
 	void validate(void* /*param*/, void* /*args*/, uint32_t /*checksum_*/) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-		// 	throw MSG_StorageCorruptVolume("Bad bin footer magic number");
+		// 	THROW(StorageCorruptVolume, "Bad bin footer magic number");
 		// }
 		// if (checksum != checksum_) {
-		// 	throw MSG_StorageCorruptVolume("Bad bin checksum");
+		// 	THROW(StorageCorruptVolume, "Bad bin checksum");
 		// }
 	}
 };
@@ -236,7 +224,7 @@ class Storage {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
 			if unlikely(file_size < 0) {
 				close();
-				throw MSG_StorageIOError("IO error: lseek");
+				THROW(StorageIOError, "IO error: lseek");
 			}
 			free_blocks = static_cast<int>((file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE);
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
@@ -263,13 +251,13 @@ class Storage {
 	do_write:
 		if (io::pwrite(fd, *buffer_, STORAGE_BLOCK_SIZE, block_offset_) != STORAGE_BLOCK_SIZE) {
 			close();
-			throw MSG_StorageIOError("IO error: pwrite");
+			THROW(StorageIOError, "IO error: pwrite");
 		}
 
 	do_update:
 		block_offset_ += STORAGE_BLOCK_SIZE;
 		if (block_offset_ >= STORAGE_LAST_BLOCK_OFFSET) {
-			throw MSG_StorageEOF("Storage EOF");
+			THROW(StorageEOF, "Storage EOF");
 		}
 		--free_blocks;
 #if STORAGE_BUFFER_CLEAR
@@ -307,7 +295,7 @@ public:
 		memset(&header, 0, sizeof(header));
 		if ((reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header) + sizeof(bin_header.size)) > STORAGE_ALIGNMENT) {
 			XXH32_freeState(xxhash);
-			throw MSG_StorageException("StorageBinHeader's size must be in the first %d bites", STORAGE_ALIGNMENT - sizeof(bin_header.size));
+			THROW(StorageException, "StorageBinHeader's size must be in the first %d bites", STORAGE_ALIGNMENT - sizeof(bin_header.size));
 		}
 	}
 
@@ -338,7 +326,7 @@ public:
 				}
 				if unlikely(fd < 0) {
 					close();
-					throw MSG_StorageIOError("Cannot open storage file");
+					THROW(StorageIOError, "Cannot open storage file");
 				}
 
 				memset(&header, 0, sizeof(header));
@@ -346,7 +334,7 @@ public:
 
 				if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
 					close();
-					throw MSG_StorageIOError("IO error: write");
+					THROW(StorageIOError, "IO error: write");
 				}
 
 				seek(STORAGE_START_BLOCK_OFFSET);
@@ -362,15 +350,15 @@ public:
 
 		if unlikely(fd <= 0) {
 			close();
-			throw MSG_StorageIOError("Cannot open storage file");
+			THROW(StorageIOError, "Cannot open storage file");
 		}
 
 		ssize_t r = io::pread(fd, &header, sizeof(header), 0);
 		if unlikely(r < 0) {
 			close();
-			throw MSG_StorageIOError("IO error: read");
+			THROW(StorageIOError, "IO error: read");
 		} else if unlikely(r != sizeof(header)) {
-			throw MSG_StorageCorruptVolume("Incomplete bin data");
+			THROW(StorageCorruptVolume, "Incomplete bin data");
 		}
 		header.validate(param, args);
 
@@ -380,7 +368,7 @@ public:
 			buffer_offset -= offset;
 			if unlikely(io::pread(fd, buffer_curr, STORAGE_BLOCK_SIZE, offset) < 0) {
 				close();
-				throw MSG_StorageIOError("IO error: pread");
+				THROW(StorageIOError, "IO error: pread");
 			}
 		}
 
@@ -411,7 +399,7 @@ public:
 		L_CALL(this, "Storage::seek()");
 
 		if (offset > header.head.offset) {
-			throw MSG_StorageEOF("Storage EOF");
+			THROW(StorageEOF, "Storage EOF");
 		}
 		bin_offset = offset * STORAGE_ALIGNMENT;
 	}
@@ -492,7 +480,7 @@ public:
 			}
 			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
-				throw MSG_StorageIOError("IO error: pwrite");
+				THROW(StorageIOError, "IO error: pwrite");
 			}
 			break;
 		}
@@ -501,7 +489,7 @@ public:
 		if (buffer != buffer_curr) {
 			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
-				throw MSG_StorageIOError("IO error: pwrite");
+				THROW(StorageIOError, "IO error: pwrite");
 			}
 			buffer_curr = buffer;
 		}
@@ -544,7 +532,7 @@ public:
 		} else {
 			fd_write = io::open(filename.c_str(), O_RDONLY, 0644);
 			if unlikely(fd_write < 0) {
-				throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
+				THROW(LZ4IOError, "Cannot open file: %s", filename.c_str());
 			}
 			bin_header.init(param, args, 0, 0);
 			it_size = io::read(fd_write, buf_read, sizeof(buf_read));
@@ -610,7 +598,7 @@ public:
 			} else {
 				if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
 					close();
-					throw MSG_StorageIOError("IO error: pwrite");
+					THROW(StorageIOError, "IO error: pwrite");
 				}
 				break;
 			}
@@ -620,7 +608,7 @@ public:
 		if (buffer != buffer_curr) {
 			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
-				throw MSG_StorageIOError("IO error: pwrite");
+				THROW(StorageIOError, "IO error: pwrite");
 			}
 			buffer_curr = buffer;
 		}
@@ -645,15 +633,15 @@ public:
 		if (!bin_header.size) {
 			off_t offset = io::lseek(fd, bin_offset, SEEK_SET);
 			if (offset >= header.head.offset * STORAGE_ALIGNMENT || offset >= limit * STORAGE_ALIGNMENT) {
-				throw MSG_StorageEOF("Storage EOF");
+				THROW(StorageEOF, "Storage EOF");
 			}
 
 			r = io::read(fd, &bin_header, sizeof(StorageBinHeader));
 			if unlikely(r < 0) {
 				close();
-				throw MSG_StorageIOError("IO error: read");
+				THROW(StorageIOError, "IO error: read");
 			} else if unlikely(r != sizeof(StorageBinHeader)) {
-				throw MSG_StorageCorruptVolume("Incomplete bin header");
+				THROW(StorageCorruptVolume, "Incomplete bin header");
 			}
 			bin_offset += r;
 			bin_header.validate(param, args);
@@ -684,9 +672,9 @@ public:
 				r = io::read(fd, buf, buf_size);
 				if unlikely(r < 0) {
 					close();
-					throw MSG_StorageIOError("IO error: read");
+					THROW(StorageIOError, "IO error: read");
 				} else if unlikely(static_cast<size_t>(r) != buf_size) {
-					throw MSG_StorageCorruptVolume("Incomplete bin data");
+					THROW(StorageCorruptVolume, "Incomplete bin data");
 				}
 				bin_offset += r;
 				bin_size += r;
@@ -699,9 +687,9 @@ public:
 		r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
 		if unlikely(r < 0) {
 			close();
-			throw MSG_StorageIOError("IO error: read");
+			THROW(StorageIOError, "IO error: read");
 		} else if unlikely(r != sizeof(StorageBinFooter)) {
-			throw MSG_StorageCorruptVolume("Incomplete bin footer");
+			THROW(StorageCorruptVolume, "Incomplete bin footer");
 		}
 		bin_offset += r;
 		bin_footer.validate(param, args, bin_hash);
@@ -726,7 +714,7 @@ public:
 
 		if unlikely(io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 			close();
-			throw MSG_StorageIOError("IO error: pwrite");
+			THROW(StorageIOError, "IO error: pwrite");
 		}
 
 		if (!(flags & STORAGE_NO_SYNC)) {
@@ -734,24 +722,24 @@ public:
 				if (flags & STORAGE_FULL_SYNC) {
 					if unlikely(AsyncFsync::full_fsync(fd) < 0) {
 						close();
-						throw MSG_StorageIOError("IO error: full_fsync");
+						THROW(StorageIOError, "IO error: full_fsync");
 					}
 				} else {
 					if unlikely(AsyncFsync::fsync(fd) < 0) {
 						close();
-						throw MSG_StorageIOError("IO error: fsync");
+						THROW(StorageIOError, "IO error: fsync");
 					}
 				}
 			} else {
 				if (flags & STORAGE_FULL_SYNC) {
 					if unlikely(io::full_fsync(fd) < 0) {
 						close();
-						throw MSG_StorageIOError("IO error: full_fsync");
+						THROW(StorageIOError, "IO error: full_fsync");
 					}
 				} else {
 					if unlikely(io::fsync(fd) < 0) {
 						close();
-						throw MSG_StorageIOError("IO error: fsync");
+						THROW(StorageIOError, "IO error: fsync");
 					}
 				}
 			}

@@ -129,7 +129,7 @@ Geometry::convexHull(std::vector<Cartesian>&& v)
 	convexHull(std::move(v), points_convex);
 
 	size_t len = points_convex.size();
-	if (len < 3) throw MSG_Error("Convex Hull not found");
+	if (len < 3) THROW(Error, "Convex Hull not found");
 
 	// The corners are in clockwise but we need the corners in counterclockwise order and normalize.
 	corners.reserve(len);
@@ -211,14 +211,14 @@ Geometry::convexPolygon(std::vector<Cartesian>&& v)
 			}
 
 			if (it != (v.begin() + 1) && counterclockwise != first_counterclockwise) {
-				throw MSG_Error("Polygon is not convex, You should use the constructor -> Geometry(g, Geometry::Type::CONVEX_HULL)");
+				THROW(Error, "Polygon is not convex, You should use the constructor -> Geometry(g, Geometry::Type::CONVEX_HULL)");
 			}
 		}
 
 		// The vector product of the two successive corners just gives the correct constraint.
 		constraint = *it ^ *n_it;
 		if (constraint.norm() < DBL_TOLERANCE) {
-			throw MSG_Error("Repeating corners, edge error, You should use the constructor -> Geometry(g, Geometry::Type::CONVEX_HULL)");
+			THROW(Error, "Repeating corners, edge error, You should use the constructor -> Geometry(g, Geometry::Type::CONVEX_HULL)");
 		}
 	}
 
@@ -305,7 +305,7 @@ void
 Geometry::convexHull(std::vector<Cartesian>&& points, std::vector<Cartesian> &points_convex) const
 {
 	auto len = points.size();
-	if (len < 3) throw MSG_Error("Polygon should have at least three corners");
+	if (len < 3) THROW(Error, "Polygon should have at least three corners");
 
 	// Find the min 'y', min 'x' and min 'z'.
 	auto it = points.begin();
@@ -339,7 +339,7 @@ Geometry::convexHull(std::vector<Cartesian>&& points, std::vector<Cartesian> &po
 		*it == *(it + 1) ? it = points.erase(it) : ++it;
 	}
 
-	if ((len = points.size()) < 3) throw MSG_Error("Polygon should have at least three corners");
+	if ((len = points.size()) < 3) THROW(Error, "Polygon should have at least three corners");
 
 	// Points convex
 	it = points.begin();
@@ -350,7 +350,7 @@ Geometry::convexHull(std::vector<Cartesian>&& points, std::vector<Cartesian> &po
 	for ( ; it != points.end(); ++it) {
 		while (true) {
 			// Not found the convex.
-			if (points_convex.size() == 1) throw MSG_Error("Convex Hull not found");
+			if (points_convex.size() == 1) THROW(Error, "Convex Hull not found");
 
 			Cartesian last = points_convex.back();
 			points_convex.pop_back();

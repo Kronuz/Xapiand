@@ -86,12 +86,12 @@ inline void _add(MsgPack& o, const MsgPack& val, const std::string& target) {
 					size_t offset = stox(std::stoul, target);
 					o.insert(offset, val);
 				} catch (const std::invalid_argument&) {
-					throw MSG_ClientError("Target in array must be a positive integer or '-'");
+					THROW(ClientError, "Target in array must be a positive integer or '-'");
 				}
 			}
 			return;
 		default:
-			throw MSG_ClientError("Object is not array or map");
+			THROW(ClientError, "Object is not array or map");
 	}
 }
 
@@ -107,14 +107,14 @@ inline void _erase(MsgPack& o, const std::string& target) {
 					size_t offset = stox(std::stoul, target);
 					o.erase(offset);
 				} catch (const std::invalid_argument&) {
-					throw MSG_ClientError("Target in array must be a positive integer");
+					THROW(ClientError, "Target in array must be a positive integer");
 				}
 				return;
 			default:
-				throw MSG_ClientError("Object is not array or map");
+				THROW(ClientError, "Object is not array or map");
 		}
 	} catch (const std::out_of_range& e) {
-		throw MSG_ClientError("Target %s not found [%s]", target.c_str(), e.what());
+		THROW(ClientError, "Target %s not found [%s]", target.c_str(), e.what());
 	}
 }
 
@@ -123,7 +123,7 @@ inline void _incr(MsgPack& o, double val) {
 	try {
 		o += val;
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Object is not numeric");
+		THROW(ClientError, "Object is not numeric");
 	}
 }
 
@@ -133,13 +133,13 @@ inline void _incr(MsgPack& o, double val, double limit) {
 		o += val;
 		if (val < 0) {
 			if (o.as_f64() <= limit) {
-				throw MSG_LimitError("Limit exceeded");
+				THROW(LimitError, "Limit exceeded");
 			}
 		} else if (o.as_f64() >= limit) {
-			throw MSG_LimitError("Limit exceeded");
+			THROW(LimitError, "Limit exceeded");
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Object is not numeric");
+		THROW(ClientError, "Object is not numeric");
 	}
 }
 
@@ -158,11 +158,11 @@ inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split,
 		}
 
 		if (path_split.size() == 0 and path_str != "") {
-			throw MSG_ClientError("Bad syntax in '%s': %s (check RFC 6901)", path_c, path_str.c_str());
+			THROW(ClientError, "Bad syntax in '%s': %s (check RFC 6901)", path_c, path_str.c_str());
 		}
 	} catch (const std::out_of_range&) {
-		throw MSG_ClientError("Object MUST have exactly one '%s' member for patch operation: '%s'", path_c, patch_op);
+		THROW(ClientError, "Object MUST have exactly one '%s' member for patch operation: '%s'", path_c, patch_op);
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("'%s' must be a string", path_c);
+		THROW(ClientError, "'%s' must be a string", path_c);
 	}
 }

@@ -89,10 +89,10 @@ struct WalBinHeader {
 
 	inline void validate(void*, void*) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
-			throw MSG_StorageCorruptVolume("Bad line header magic number");
+			THROW(StorageCorruptVolume, "Bad line header magic number");
 		}
 		if (flags & STORAGE_FLAG_DELETED) {
-			throw MSG_StorageNotFound("Line deleted");
+			THROW(StorageNotFound, "Line deleted");
 		}
 	}
 };
@@ -109,10 +109,10 @@ struct WalBinFooter {
 
 	inline void validate(void*, void*, uint32_t checksum_) {
 		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-			throw MSG_StorageCorruptVolume("Bad line footer magic number");
+			THROW(StorageCorruptVolume, "Bad line footer magic number");
 		}
 		if (checksum != checksum_) {
-			throw MSG_StorageCorruptVolume("Bad line checksum");
+			THROW(StorageCorruptVolume, "Bad line checksum");
 		}
 	}
 };

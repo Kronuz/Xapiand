@@ -204,16 +204,16 @@ BaseUDP::get_message(std::string& result, char max_type)
 	if (received < 0) {
 		if (!ignored_errorno(errno, true, true)) {
 			L_ERR(this, "ERROR: read error (sock=%d): %s", sock, strerror(errno));
-			throw MSG_NetworkError(strerror(errno));
+			THROW(NetworkError, strerror(errno));
 		}
 		L_CONN(this, "Received EOF (sock=%d)!", sock);
-		throw MSG_DummyException();
+		throw DummyException();
 	} else if (received == 0) {
 		// If no messages are available to be received and the peer has performed an orderly shutdown.
 		L_CONN(this, "Received EOF (sock=%d)!", sock);
-		throw MSG_DummyException();
+		throw DummyException();
 	} else if (received < 4) {
-		throw MSG_NetworkError("Badly formed message: Incomplete!");
+		THROW(NetworkError, "Badly formed message: Incomplete!");
 	}
 
 	L_UDP_WIRE(this, "(sock=%d) -->> %s", sock, repr(buf, received).c_str());
@@ -223,22 +223,22 @@ BaseUDP::get_message(std::string& result, char max_type)
 
 	char type = *p++;
 	if (type >= max_type) {
-		throw MSG_NetworkError("Invalid message type %u", unsigned(type));
+		THROW(NetworkError, "Invalid message type %u", unsigned(type));
 	}
 
 	uint16_t remote_protocol_version = *(uint16_t *)p;
 	if ((remote_protocol_version & 0xff) > version) {
-		throw MSG_NetworkError("Badly formed message: Protocol version mismatch!");
+		THROW(NetworkError, "Badly formed message: Protocol version mismatch!");
 	}
 	p += sizeof(uint16_t);
 
 	std::string remote_cluster_name = unserialise_string(&p, p_end);
 	if (remote_cluster_name.empty()) {
-		throw MSG_NetworkError("Badly formed message: No cluster name!");
+		THROW(NetworkError, "Badly formed message: No cluster name!");
 	}
 
 	if (remote_cluster_name != XapiandManager::manager->cluster_name) {
-		throw MSG_DummyException();
+		throw DummyException();
 	}
 
 	result = std::string(p, p_end - p);

@@ -183,7 +183,7 @@ Cartesian::Cartesian(double lat, double lon, double height, CartesianUnits units
 			transform2WGS84();
 		}
 	} catch (const std::out_of_range&) {
-		throw MSG_CartesianError("SRID = %d is not supported", SRID);
+		THROW(CartesianError, "SRID = %d is not supported", SRID);
 	}
 }
 
@@ -241,7 +241,7 @@ Cartesian::toCartesian(double lat, double lon, double height, CartesianUnits uni
 	}
 
 	if (lat < -PI_HALF || lat > PI_HALF) {
-		throw MSG_CartesianError("Latitude out-of-range");
+		THROW(CartesianError, "Latitude out-of-range");
 	}
 
 	double a = datum.ellipsoid.major_axis;
@@ -445,7 +445,7 @@ Cartesian::normalize()
 {
 	double _norm = norm();
 	if (_norm < DBL_TOLERANCE) {
-		throw MSG_CartesianError("Norm is zero");
+		THROW(CartesianError, "Norm is zero");
 	}
 	x /= _norm;
 	y /= _norm;

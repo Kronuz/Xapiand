@@ -45,10 +45,10 @@ struct StorageBinBadHeader1 {
 
 	inline void validate(void* /*param*/, void* /*args*/) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
-		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
+		// 	THROW(StorageCorruptVolume, "Bad bin header magic number");
 		// }
 		if (flags & STORAGE_FLAG_DELETED) {
-			throw MSG_StorageNotFound("Bin deleted");
+			THROW(StorageNotFound, "Bin deleted");
 		}
 	}
 };
@@ -67,10 +67,10 @@ struct StorageBinBadHeader2 {
 
 	inline void validate(void* /*param*/, void* /*args*/) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
-		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
+		// 	THROW(StorageCorruptVolume, "Bad bin header magic number");
 		// }
 		if (flags & STORAGE_FLAG_DELETED) {
-			throw MSG_StorageNotFound("Bin deleted");
+			THROW(StorageNotFound, "Bin deleted");
 		}
 	}
 };
@@ -90,10 +90,10 @@ struct StorageBinBadHeader3 {
 
 	inline void validate(void* /*param*/, void* /*args*/) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
-		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
+		// 	THROW(StorageCorruptVolume, "Bad bin header magic number");
 		// }
 		if (flags & STORAGE_FLAG_DELETED) {
-			throw MSG_StorageNotFound("Bin deleted");
+			THROW(StorageNotFound, "Bin deleted");
 		}
 	}
 };
@@ -110,10 +110,10 @@ struct StorageBinFooterChecksum {
 
 	inline void validate(void* /*param*/, void* /*args*/, uint32_t checksum_) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-		// 	throw MSG_StorageCorruptVolume("Bad bin footer magic number");
+		// 	THROW(StorageCorruptVolume, "Bad bin footer magic number");
 		// }
 		if (checksum != checksum_) {
-			throw MSG_StorageCorruptVolume("Bad bin checksum");
+			THROW(StorageCorruptVolume, "Bad bin checksum");
 		}
 	}
 };

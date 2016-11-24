@@ -55,7 +55,7 @@ static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
 			tm.year = year.as_f64();
 			return;
 		default:
-			throw MSG_SerialisationError("_year must be a numeric value");
+			THROW(SerialisationError, "_year must be a numeric value");
 	}
 }
 
@@ -72,7 +72,7 @@ static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
 			tm.mon = month.as_f64();
 			return;
 		default:
-			throw MSG_SerialisationError("_month must be a numeric value");
+			THROW(SerialisationError, "_month must be a numeric value");
 	}
 }
 
@@ -89,7 +89,7 @@ static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 			tm.day = day.as_f64();
 			return;
 		default:
-			throw MSG_SerialisationError("_day must be a numeric value");
+			THROW(SerialisationError, "_day must be a numeric value");
 	}
 }
 
@@ -130,9 +130,9 @@ static void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
 			default:
 				break;
 		}
-		throw MSG_SerialisationError("Error format in: %s, the format must be 00:00:00[.000]", str_time.c_str());
+		THROW(SerialisationError, "Error format in: %s, the format must be 00:00:00[.000]", str_time.c_str());
 	} catch (const msgpack::type_error&) {
-		throw MSG_SerialisationError("_time must be string");
+		THROW(SerialisationError, "_time must be string");
 	}
 }
 
@@ -168,11 +168,11 @@ Cast::cast(const MsgPack& obj)
 			case Hash::DATE:
 				return date(obj.at(str_key));
 			default:
-				throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
+				THROW(SerialisationError, "Unknown cast type %s", str_key.c_str());
 		}
 	}
 
-	throw MSG_SerialisationError("Expected map with one element");
+	THROW(SerialisationError, "Expected map with one element");
 }
 
 
@@ -214,7 +214,7 @@ Cast::integer(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			throw MSG_SerialisationError("Type %s can not be cast to integer", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s can not be cast to integer", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -234,7 +234,7 @@ Cast::positive(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			throw MSG_SerialisationError("Type %s can not be cast to positive", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s can not be cast to positive", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -254,7 +254,7 @@ Cast::_float(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			throw MSG_SerialisationError("Type %s can not be cast to float", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s can not be cast to float", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -307,7 +307,7 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			throw MSG_SerialisationError("Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -323,7 +323,7 @@ Cast::date(const MsgPack& obj)
 		case MsgPack::Type::MAP:
 			return obj;
 		default:
-			throw MSG_SerialisationError("Type %s can not be cast to date", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s can not be cast to date", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -346,7 +346,7 @@ Cast::date_to_timestamp(const  MsgPack& obj)
 					auto func = map_dispatch_date.at(str_key);
 					(*func)(tm, obj.at(str_key));
 				} catch (const std::out_of_range&) {
-					throw MSG_SerialisationError("Unsupported Key: %s in date", str_key.c_str());
+					THROW(SerialisationError, "Unsupported Key: %s in date", str_key.c_str());
 				}
 			}
 			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
@@ -354,7 +354,7 @@ Cast::date_to_timestamp(const  MsgPack& obj)
 			}
 		}
 		default:
-			throw MSG_SerialisationError("Type %s can not be cast to date", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s can not be cast to date", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -384,7 +384,7 @@ Cast::getType(const std::string& cast_word)
 		case Hash::GEO_COLLECTION:    return FieldType::GEO;
 		case Hash::GEO_INTERSECTION:  return FieldType::GEO;
 		default:
-			throw MSG_SerialisationError("Unknown cast type %s", cast_word.c_str());
+			THROW(SerialisationError, "Unknown cast type %s", cast_word.c_str());
 	}
 }
 
@@ -394,7 +394,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::NIL:
-			throw MSG_DummyException();
+			throw DummyException();
 		case MsgPack::Type::BOOLEAN:
 			return boolean(field_spc.get_type(), field_value.as_bool());
 		case MsgPack::Type::POSITIVE_INTEGER:
@@ -408,7 +408,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 		case MsgPack::Type::MAP:
 			return cast_object(field_spc, field_value);
 		default:
-			throw MSG_SerialisationError("msgpack::type [%d] is not supported", toUType(field_value.getType()));
+			THROW(SerialisationError, "msgpack::type [%d] is not supported", toUType(field_value.getType()));
 	}
 }
 
@@ -435,11 +435,11 @@ Serialise::cast_object(const required_spc_t& field_spc, const class MsgPack& o)
 			case Cast::Hash::DATE:
 				return Serialise::date(field_spc, Cast::date(o.at(str_key)));
 			default:
-				throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
+				THROW(SerialisationError, "Unknown cast type %s", str_key.c_str());
 		}
 	}
 
-	throw MSG_SerialisationError("Expected map with one element");
+	THROW(SerialisationError, "Expected map with one element");
 }
 
 
@@ -467,7 +467,7 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
-			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(type));
+			THROW(SerialisationError, "Type: '%c' is an unknown type", toUType(type));
 	}
 }
 
@@ -490,7 +490,7 @@ Serialise::string(const required_spc_t& field_spc, const std::string& field_valu
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
-			throw MSG_SerialisationError("Type: %s is not string", type(field_type).c_str());
+			THROW(SerialisationError, "Type: %s is not string", type(field_type).c_str());
 	}
 }
 
@@ -515,16 +515,16 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 					auto func = map_dispatch_date.at(str_key);
 					(*func)(tm, field_value.at(str_key));
 				} catch (const std::out_of_range&) {
-					throw MSG_SerialisationError("Unsupported Key: %s in date", str_key.c_str());
+					THROW(SerialisationError, "Unsupported Key: %s in date", str_key.c_str());
 				}
 			}
 			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
 				return _float(field_spc.get_type(), Datetime::timestamp(tm));
 			}
-			throw MSG_SerialisationError("Date is out of range");
+			THROW(SerialisationError, "Date is out of range");
 		}
 		default:
-			throw MSG_SerialisationError("Type: %s is not a date", MsgPackTypes[toUType(field_value.getType())]);
+			THROW(SerialisationError, "Type: %s is not a date", MsgPackTypes[toUType(field_value.getType())]);
 	}
 }
 
@@ -538,7 +538,7 @@ Serialise::_float(FieldType field_type, double field_value)
 		case FieldType::FLOAT:
 			return _float(field_value);
 		default:
-			throw MSG_SerialisationError("Type: %s is not a float", type(field_type).c_str());
+			THROW(SerialisationError, "Type: %s is not a float", type(field_type).c_str());
 	}
 }
 
@@ -549,7 +549,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 	switch (field_type) {
 		case FieldType::POSITIVE:
 			if (field_value < 0) {
-				throw MSG_SerialisationError("Type: %s must be a positive number [%lld]", type(field_type).c_str(), field_value);
+				THROW(SerialisationError, "Type: %s must be a positive number [%lld]", type(field_type).c_str(), field_value);
 			}
 			return positive(field_value);
 		case FieldType::DATE:
@@ -559,7 +559,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 		case FieldType::INTEGER:
 			return integer(field_value);
 		default:
-			throw MSG_SerialisationError("Type: %s is not a integer [%lld]", type(field_type).c_str(), field_value);
+			THROW(SerialisationError, "Type: %s is not a integer [%lld]", type(field_type).c_str(), field_value);
 	}
 }
 
@@ -577,7 +577,7 @@ Serialise::positive(FieldType field_type, uint64_t field_value)
 		case FieldType::POSITIVE:
 			return positive(field_value);
 		default:
-			throw MSG_SerialisationError("Type: %s is not a positive integer [%llu]", type(field_type).c_str(), field_value);
+			THROW(SerialisationError, "Type: %s is not a positive integer [%llu]", type(field_type).c_str(), field_value);
 	}
 }
 
@@ -589,7 +589,7 @@ Serialise::boolean(FieldType field_type, bool field_value)
 		return boolean(field_value);
 	}
 
-	throw MSG_SerialisationError("%s is not boolean", type(field_type).c_str());
+	THROW(SerialisationError, "%s is not boolean", type(field_type).c_str());
 }
 
 
@@ -797,13 +797,13 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 						return std::make_tuple(FieldType::DATE, Serialise::date(global_spc, field_value.at(str_key)), std::cref(global_spc));
 					}
 					default:
-						throw MSG_SerialisationError("Unknown cast type %s", str_key.c_str());
+						THROW(SerialisationError, "Unknown cast type %s", str_key.c_str());
 				}
 			}
 		}
 
 		default:
-			throw MSG_SerialisationError("Unexpected type %s", MsgPackTypes[toUType(field_value.getType())]);
+			THROW(SerialisationError, "Unexpected type %s", MsgPackTypes[toUType(field_value.getType())]);
 	}
 }
 
@@ -876,15 +876,15 @@ Serialise::date(const class MsgPack& value, Datetime::tm_t& tm)
 					auto func = map_dispatch_date.at(str_key);
 					(*func)(tm, value.at(str_key));
 				} catch (const std::out_of_range&) {
-					throw MSG_SerialisationError("Unsupported Key: %s in date", str_key.c_str());
+					THROW(SerialisationError, "Unsupported Key: %s in date", str_key.c_str());
 				}
 			}
 			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
 				return timestamp(Datetime::timestamp(tm));
 			}
-			throw MSG_SerialisationError("Date is out of range");
+			THROW(SerialisationError, "Date is out of range");
 		default:
-			throw MSG_SerialisationError("Date value must be numeric or string");
+			THROW(SerialisationError, "Date value must be numeric or string");
 	}
 }
 
@@ -895,9 +895,9 @@ Serialise::_float(const std::string& field_value)
 	try {
 		return _float(stox(std::stod, field_value));
 	} catch (const std::invalid_argument&) {
-		throw MSG_SerialisationError("Invalid float format: %s", field_value.c_str());
+		THROW(SerialisationError, "Invalid float format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
-		throw MSG_SerialisationError("Out of range float format: %s", field_value.c_str());
+		THROW(SerialisationError, "Out of range float format: %s", field_value.c_str());
 	}
 }
 
@@ -908,9 +908,9 @@ Serialise::integer(const std::string& field_value)
 	try {
 		return integer(stox(std::stoll, field_value));
 	} catch (const std::invalid_argument&) {
-		throw MSG_SerialisationError("Invalid integer format: %s", field_value.c_str());
+		THROW(SerialisationError, "Invalid integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
-		throw MSG_SerialisationError("Out of range integer format: %s", field_value.c_str());
+		THROW(SerialisationError, "Out of range integer format: %s", field_value.c_str());
 	}
 }
 
@@ -921,9 +921,9 @@ Serialise::positive(const std::string& field_value)
 	try {
 		return positive(stox(std::stoull, field_value));
 	} catch (const std::invalid_argument&) {
-		throw MSG_SerialisationError("Invalid positive integer format: %s", field_value.c_str());
+		THROW(SerialisationError, "Invalid positive integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
-		throw MSG_SerialisationError("Out of range positive integer format: %s", field_value.c_str());
+		THROW(SerialisationError, "Out of range positive integer format: %s", field_value.c_str());
 	}
 }
 
@@ -932,7 +932,7 @@ std::string
 Serialise::uuid(const std::string& field_value)
 {
 	if (!isUUID(field_value)) {
-		throw MSG_SerialisationError("Invalid UUID format in: %s", field_value.c_str());
+		THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
 	}
 
 	Guid guid(field_value);
@@ -1020,7 +1020,7 @@ Serialise::boolean(const std::string& field_value)
 			break;
 	}
 
-	throw MSG_SerialisationError("Boolean format is not valid");
+	THROW(SerialisationError, "Boolean format is not valid");
 }
 
 
@@ -1098,7 +1098,7 @@ Unserialise::MsgPack(FieldType field_type, const std::string& serialised_val)
 			result = uuid(serialised_val);
 			break;
 		default:
-			throw MSG_SerialisationError("Type: '%c' is an unknown type", toUType(field_type));
+			THROW(SerialisationError, "Type: '%c' is an unknown type", toUType(field_type));
 	}
 
 	return result;
@@ -1127,7 +1127,7 @@ Unserialise::unserialise(FieldType field_type, const std::string& serialised_val
 		case FieldType::UUID:
 			return uuid(serialised_val);
 		default:
-			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
+			THROW(SerialisationError, "Type: '%c' is an unknown type", field_type);
 	}
 }
 
@@ -1151,7 +1151,7 @@ Cartesian
 Unserialise::cartesian(const std::string& serialised_val)
 {
 	if (serialised_val.size() != SIZE_SERIALISE_CARTESIAN) {
-		throw MSG_SerialisationError("Can not unserialise cartesian: %s [%zu]", serialised_val.c_str(), serialised_val.size());
+		THROW(SerialisationError, "Can not unserialise cartesian: %s [%zu]", serialised_val.c_str(), serialised_val.size());
 	}
 
 	double x = (((unsigned)serialised_val[0] << 24) & 0xFF000000) | (((unsigned)serialised_val[1] << 16) & 0xFF0000) | (((unsigned)serialised_val[2] << 8) & 0xFF00)  | (((unsigned)serialised_val[3]) & 0xFF);
@@ -1165,7 +1165,7 @@ uint64_t
 Unserialise::trixel_id(const std::string& serialised_val)
 {
 	if (serialised_val.size() != SIZE_BYTES_ID) {
-		throw MSG_SerialisationError("Can not unserialise trixel_id: %s [%zu]", serialised_val.c_str(), serialised_val.size());
+		THROW(SerialisationError, "Can not unserialise trixel_id: %s [%zu]", serialised_val.c_str(), serialised_val.size());
 	}
 
 	uint64_t id = (((uint64_t)serialised_val[0] << 48) & 0xFF000000000000) | (((uint64_t)serialised_val[1] << 40) & 0xFF0000000000) | \
@@ -1275,5 +1275,5 @@ Unserialise::type(const std::string& str_type)
 			break;
 	}
 
-	throw MSG_SerialisationError("Type: %s is an unknown type", repr(str_type).c_str());
+	THROW(SerialisationError, "Type: %s is an unknown type", repr(str_type).c_str());
 }

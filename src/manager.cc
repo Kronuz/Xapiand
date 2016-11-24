@@ -1026,7 +1026,7 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
 		}
 		return _get_stats_time(stats, first_time, second_time);
 	}
-	throw MSG_ClientError("Incorrect input: %s", time_req.c_str());
+	THROW(ClientError, "Incorrect input: %s", time_req.c_str());
 }
 
 
@@ -1054,7 +1054,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time
 	}
 
 	if (end > start) {
-		throw MSG_ClientError("First argument must be less or equal than the second");
+		THROW(ClientError, "First argument must be less or equal than the second");
 	} else {
 		std::vector<uint64_t> cnt{ 0, 0, 0, 0 };
 		std::vector<long double> tm_cnt{ 0.0, 0.0, 0.0, 0.0 };

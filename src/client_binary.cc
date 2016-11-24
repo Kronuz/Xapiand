@@ -245,7 +245,7 @@ BinaryClient::get_message(std::string &result, char max_type)
 {
 	std::unique_ptr<Buffer> msg;
 	if (!messages_queue.pop(msg)) {
-		throw MSG_NetworkError("No message available");
+		THROW(NetworkError, "No message available");
 	}
 
 	char type = msg->type;
@@ -253,7 +253,7 @@ BinaryClient::get_message(std::string &result, char max_type)
 	if (type >= max_type) {
 		std::string errmsg("Invalid message type ");
 		errmsg += std::to_string(int(type));
-		throw MSG_InvalidArgumentError(errmsg);
+		THROW(InvalidArgumentError, errmsg);
 	}
 
 	const char *msg_str = msg->dpos();
@@ -296,7 +296,7 @@ BinaryClient::checkout_database()
 			_flags |= DB_SPAWN;
 		}
 		if (!XapiandManager::manager->database_pool.checkout(database, endpoints, _flags)) {
-			throw MSG_InvalidOperationError("Server has no open database");
+			THROW(InvalidOperationError, "Server has no open database");
 		}
 	}
 }

@@ -185,7 +185,7 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 				slots.push_back(std::make_unique<GeoKey>(field_spc, reverse, value));
 				return;
 			default:
-				throw MSG_InvalidArgumentError("Type '%c' is not supported", field_spc.get_type());
+				THROW(InvalidArgumentError, "Type '%c' is not supported", field_spc.get_type());
 		}
 	}
 }

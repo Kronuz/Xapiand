@@ -69,10 +69,10 @@ DB_Test::DB_Test(const std::string& db_name, const std::vector<std::string>& doc
 				L_ERR(nullptr, "Can not read the file %s", doc.c_str());
 			} else if (db_handler.index(std::to_string(i++), get_body(buffer, ct_type).second, true, ct_type) == 0) {
 				delete_files(name_database);
-				throw MSG_Error("File %s can not index", doc.c_str());
+				THROW(Error, "File %s can not index", doc.c_str());
 			}
 		} catch (const std::exception& e) {
-			throw MSG_Error("File %s can not index [%s]", doc.c_str(), e.what());
+			THROW(Error, "File %s can not index [%s]", doc.c_str(), e.what());
 		}
 	}
 }

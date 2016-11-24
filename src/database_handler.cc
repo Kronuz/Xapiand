@@ -135,7 +135,7 @@ DatabaseHandler::lock_database::lock()
 		if (XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
 			database = &db_handler->database;
 		} else {
-			throw MSG_CheckoutError("Cannot checkout database: %s", repr(db_handler->endpoints.to_string()).c_str());
+			THROW(CheckoutError, "Cannot checkout database: %s", repr(db_handler->endpoints.to_string()).c_str());
 		}
 	}
 }
@@ -191,7 +191,7 @@ DatabaseHandler::get_fvschema() const
 		if (fvs == nullptr) {
 			fvs = fvs_aux;
 		} else if (*fvs != *fvs_aux) {
-			throw MSG_ClientError("Cannot index in several indexes with different schemas");
+			THROW(ClientError, "Cannot index in several indexes with different schemas");
 		}
 	}
 	return std::make_shared<Schema>(fvs ? fvs : fvs_aux);
@@ -204,7 +204,7 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 	L_CALL(this, "DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()).c_str(), flags_);
 
 	if (endpoints_.size() == 0) {
-		throw MSG_ClientError("It is expected at least one endpoint");
+		THROW(ClientError, "It is expected at least one endpoint");
 	}
 
 	method = method_;
@@ -243,7 +243,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 	} catch (const std::out_of_range&) {
 		return data;
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("%s must be string", RESERVED_SCRIPT);
+		THROW(ClientError, "%s must be string", RESERVED_SCRIPT);
 	}
 
 	try {
@@ -296,7 +296,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 	} catch (const v8pp::ReferenceError& e) {
 		return data;
 	} catch (const v8pp::Error& e) {
-		throw MSG_ClientError(e.what());
+		THROW(ClientError, e.what());
 	}
 
 #else
@@ -392,11 +392,11 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, boo
 	L_CALL(this, "DatabaseHandler::index(%s, <body>)", repr(_document_id).c_str());
 
 	if (!(flags & DB_WRITABLE)) {
-		throw MSG_Error("Database is read-only");
+		THROW(Error, "Database is read-only");
 	}
 
 	if (_document_id.empty()) {
-		throw MSG_Error("Document must have an 'id'");
+		THROW(Error, "Document must have an 'id'");
 	}
 
 	MsgPack obj;
@@ -417,15 +417,15 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 	L_CALL(this, "DatabaseHandler::patch(%s, <patches>)", repr(_document_id).c_str());
 
 	if (!(flags & DB_WRITABLE)) {
-		throw MSG_Error("database is read-only");
+		THROW(Error, "database is read-only");
 	}
 
 	if (_document_id.empty()) {
-		throw MSG_ClientError("Document must have an 'id'");
+		THROW(ClientError, "Document must have an 'id'");
 	}
 
 	if (!patches.is_map() && !patches.is_array()) {
-		throw MSG_ClientError("Patches must be a JSON or MsgPack");
+		THROW(ClientError, "Patches must be a JSON or MsgPack");
 	}
 
 	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
@@ -449,7 +449,7 @@ DatabaseHandler::write_schema(const std::string& body)
 	L_CALL(this, "DatabaseHandler::write_schema(<body>)");
 
 	if (!(flags & DB_WRITABLE)) {
-		throw MSG_Error("Database is read-only");
+		THROW(Error, "Database is read-only");
 	}
 
 	// Create MsgPack object
@@ -492,11 +492,11 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			if (!t) THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
-			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+			if (!t) THROW(Error, "Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
+			THROW(Error, exc.get_msg().c_str());
 		}
 		database->reopen();
 	}
@@ -640,21 +640,21 @@ DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, con
 			mset = enquire.get_mset(e.offset, e.limit, check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			if (!t) THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
-			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+			if (!t) THROW(Error, "Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const QueryParserError& exc) {
-			throw MSG_ClientError("%s", exc.what());
+			THROW(ClientError, "%s", exc.what());
 		} catch (const SerialisationError& exc) {
-			throw MSG_ClientError("%s", exc.what());
+			THROW(ClientError, "%s", exc.what());
 		} catch (const QueryDslError& exc) {
-			throw MSG_ClientError("%s", exc.what());
+			THROW(ClientError, "%s", exc.what());
 		} catch (const Xapian::QueryParserError& exc) {
-			throw MSG_ClientError("%s", exc.get_msg().c_str());
+			THROW(ClientError, "%s", exc.get_msg().c_str());
 		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
+			THROW(Error, exc.get_msg().c_str());
 		} catch (const std::exception& exc) {
-			throw MSG_ClientError("The search was not performed (%s)", exc.what());
+			THROW(ClientError, "The search was not performed (%s)", exc.what());
 		}
 		database->reopen();
 	}

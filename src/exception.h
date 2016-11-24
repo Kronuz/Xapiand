@@ -172,18 +172,3 @@ public:
 };
 
 #define THROW(exc, ...) throw exc(__FILE__, __LINE__, #exc, ##__VA_ARGS__)
-
-#define MSG_DummyException() DummyException()
-#define MSG_Error(...) Error(__FILE__, __LINE__, "Error", __VA_ARGS__)
-#define MSG_ClientError(...) ClientError(__FILE__, __LINE__, "ClientError", __VA_ARGS__)
-#define MSG_LimitError(...) LimitError(__FILE__, __LINE__, "LimitError", __VA_ARGS__)
-#define MSG_SerialisationError(...) SerialisationError(__FILE__, __LINE__, "SerialisationError", __VA_ARGS__)
-#define MSG_NetworkError(...) NetworkError(__FILE__, __LINE__, "NetworkError", __VA_ARGS__)
-#define MSG_InvalidArgumentError(...) InvalidArgumentError(__FILE__, __LINE__, "InvalidArgumentError", __VA_ARGS__)
-#define MSG_InvalidOperationError(...) InvalidOperationError(__FILE__, __LINE__, "InvalidOperationError", __VA_ARGS__)
-#define MSG_QueryParserError(...) QueryParserError(__FILE__, __LINE__, "QueryParserError", __VA_ARGS__)
-#define MSG_InternalError(...) InternalError(__FILE__, __LINE__, "InternalError", __VA_ARGS__)
-#define MSG_DocNotFoundError(...) DocNotFoundError(__FILE__, __LINE__, "DocNotFoundError", __VA_ARGS__)
-#define MSG_CheckoutError(...) CheckoutError(__FILE__, __LINE__, "CheckoutError", __VA_ARGS__)
-#define MSG_MissingTypeError(...) MissingTypeError(__FILE__, __LINE__, "MissingTypeError", __VA_ARGS__)
-#define MSG_QueryDslError(...) QueryDslError(__FILE__, __LINE__, "QueryDslError", __VA_ARGS__)

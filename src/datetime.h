@@ -45,16 +45,12 @@ public:
 	DatetimeError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
-#define MSG_DatetimeError(...) DatetimeError(__FILE__, __LINE__, "DatetimeError", __VA_ARGS__)
-
 
 class DateISOError : public DatetimeError {
 public:
 	template<typename... Args>
 	DateISOError(Args&&... args) : DatetimeError(std::forward<Args>(args)...) { }
 };
-
-#define MSG_DateISOError(...) DateISOError(__FILE__, __LINE__, "DateISOError", __VA_ARGS__)
 
 
 namespace Datetime {

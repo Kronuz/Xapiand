@@ -100,7 +100,7 @@ unserialise_unsigned(const char ** p, const char * end, U * result)
 		if unlikely(ptr == end) {
 			// Out of data.
 			*p = NULL;
-			throw MSG_SerialisationError("Bad encoded unsigned: no data");
+			THROW(SerialisationError, "Bad encoded unsigned: no data");
 		}
 	} while (static_cast<unsigned char>(*ptr++) >= 128);
 
@@ -127,7 +127,7 @@ unserialise_unsigned(const char ** p, const char * end, U * result)
 	size_t minbits = maxbits - 6;
 	if unlikely(minbits > sizeof(U) * 8) {
 		// Overflow.
-		throw MSG_SerialisationError("Bad encoded unsigned: overflow");
+		THROW(SerialisationError, "Bad encoded unsigned: overflow");
 	}
 
 	while (--ptr != start) {
@@ -139,7 +139,7 @@ unserialise_unsigned(const char ** p, const char * end, U * result)
 	*result <<= 7;
 	if unlikely(*result < tmp) {
 		// Overflow.
-		throw MSG_SerialisationError("Bad encoded unsigned: overflow");;
+		THROW(SerialisationError, "Bad encoded unsigned: overflow");;
 	}
 	*result |= U(static_cast<unsigned char>(*ptr) & 0x7f);
 	return;

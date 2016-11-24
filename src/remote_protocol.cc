@@ -104,7 +104,7 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(toUType(type));
-			throw MSG_InvalidArgumentError(errmsg);
+			THROW(InvalidArgumentError, errmsg);
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
@@ -284,7 +284,7 @@ RemoteProtocol::msg_writeaccess(const std::string & message)
 		dbpaths_.push_back(dbpath);
 		p += len;
 		if (p != p_end) {
-			throw MSG_NetworkError("only one database directory allowed on writable databases");
+			THROW(NetworkError, "only one database directory allowed on writable databases");
 		}
 	}
 	select_db(dbpaths_, true, flags);
@@ -385,7 +385,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 	// docid order
 
 	if (p_end - p < 4 || *p < '0' || *p > '2') {
-		throw MSG_NetworkError("bad message (docid_order)");
+		THROW(NetworkError, "bad message (docid_order)");
 	}
 	Xapian::Enquire::docid_order order;
 	order = static_cast<Xapian::Enquire::docid_order>(*p++ - '0');
@@ -399,13 +399,13 @@ RemoteProtocol::msg_query(const std::string &message_in)
 	Xapian::valueno sort_key = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
 
 	if (*p < '0' || *p > '3') {
-		throw MSG_NetworkError("bad message (sort_by)");
+		THROW(NetworkError, "bad message (sort_by)");
 	}
 	sort_setting sort_by;
 	sort_by = static_cast<sort_setting>(*p++ - '0');
 
 	if (*p < '0' || *p > '1') {
-		throw MSG_NetworkError("bad message (sort_value_forward)");
+		THROW(NetworkError, "bad message (sort_value_forward)");
 	}
 	bool sort_value_forward(*p++ != '0');
 
@@ -436,12 +436,12 @@ RemoteProtocol::msg_query(const std::string &message_in)
 
 	int percent_cutoff = *p++;
 	if (percent_cutoff < 0 || percent_cutoff > 100) {
-		throw MSG_NetworkError("bad message (percent_cutoff)");
+		THROW(NetworkError, "bad message (percent_cutoff)");
 	}
 
 	double weight_cutoff = unserialise_double(&p, p_end);
 	if (weight_cutoff < 0) {
-		throw MSG_NetworkError("bad message (weight_cutoff)");
+		THROW(NetworkError, "bad message (weight_cutoff)");
 	}
 
 	enquire->set_cutoff(percent_cutoff, weight_cutoff);
@@ -457,7 +457,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 		// Note: user weighting schemes should be registered by adding them to
 		// a Registry, and setting the context using
 		// RemoteServer::set_registry().
-		throw MSG_InvalidArgumentError("Weighting scheme " + wtname + " not registered");
+		THROW(InvalidArgumentError, "Weighting scheme " + wtname + " not registered");
 	}
 
 	len = unserialise_length(&p, p_end, true);
@@ -478,7 +478,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 		std::string spytype(p, len);
 		const Xapian::MatchSpy * spyclass = reg.get_match_spy(spytype);
 		if (spyclass == nullptr) {
-			throw MSG_InvalidArgumentError("Match spy " + spytype + " not registered");
+			THROW(InvalidArgumentError, "Match spy " + spytype + " not registered");
 		}
 		p += len;
 
@@ -502,7 +502,7 @@ void
 RemoteProtocol::msg_getmset(const std::string & message)
 {
 	if (!enquire) {
-		throw MSG_NetworkError("Unexpected MSG_GETMSET");
+		THROW(NetworkError, "Unexpected MSG_GETMSET");
 	}
 
 	const char *p = message.c_str();

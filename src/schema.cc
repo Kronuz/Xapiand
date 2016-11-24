@@ -651,7 +651,7 @@ specification_t::get_global(FieldType field_type)
 			return spc;
 		}
 		default:
-			throw MSG_ClientError("Type: '%u' is an unknown type", field_type);
+			THROW(ClientError, "Type: '%u' is an unknown type", field_type);
 	}
 }
 
@@ -755,12 +755,12 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 		try {
 			const auto& version = schema->at(RESERVED_VERSION);
 			if (version.as_f64() != DB_VERSION_SCHEMA) {
-				throw MSG_Error("Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
+				THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 			}
 		} catch (const std::out_of_range&) {
-			throw MSG_Error("Schema is corrupt, you need provide a new one");
+			THROW(Error, "Schema is corrupt, you need provide a new one");
 		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Schema is corrupt, you need provide a new one");
+			THROW(Error, "Schema is corrupt, you need provide a new one");
 		}
 	}
 }
@@ -1007,7 +1007,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 		}
 	} else {
 		if (!specification.flags.field_found && !specification.flags.dynamic) {
-			throw MSG_ClientError("%s is not dynamic", specification.full_normalized_name.c_str());
+			THROW(ClientError, "%s is not dynamic", specification.full_normalized_name.c_str());
 		}
 
 		if (!specification.flags.field_with_type) {
@@ -1061,7 +1061,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 		}
 	} else {
 		if (!specification.flags.field_found && !specification.flags.dynamic) {
-			throw MSG_ClientError("%s is not dynamic", specification.full_normalized_name.c_str());
+			THROW(ClientError, "%s is not dynamic", specification.full_normalized_name.c_str());
 		}
 
 		if (!specification.flags.field_with_type) {
@@ -1129,7 +1129,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 			}
 		} else {
 			if (!specification.flags.field_found && !specification.flags.dynamic) {
-				throw MSG_ClientError("%s is not dynamic", specification.full_normalized_name.c_str());
+				THROW(ClientError, "%s is not dynamic", specification.full_normalized_name.c_str());
 			}
 
 			if (!specification.flags.field_with_type) {
@@ -1160,7 +1160,7 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 	L_CALL(nullptr, "Schema::get_prefixes_namespace(%zu)", paths_namespace.size());
 
 	if (paths_namespace.size() > NAMESPACE_LIMIT_DEPTH) {
-		throw MSG_ClientError("Namespace limit depth is %d, and the namespace provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, paths_namespace.size());
+		THROW(ClientError, "Namespace limit depth is %d, and the namespace provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, paths_namespace.size());
 	}
 
 	std::vector<std::string> prefixes;
@@ -1370,11 +1370,11 @@ Schema::validate_required_data()
 							if (val_acc <= HTM_MAX_LEVEL) {
 								set_acc.insert(val_acc);
 							} else {
-								throw MSG_ClientError("Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+								THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
 							}
 						}
 					} catch (const msgpack::type_error&) {
-						throw MSG_ClientError("Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+						THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 					}
 				} else {
 					set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
@@ -1389,7 +1389,7 @@ Schema::validate_required_data()
 							specification.acc_prefix.push_back(prefix_type + Serialise::namespace_field(acc_full_name));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
-						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
 					}
 					specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
 					properties[RESERVED_ACCURACY]   = specification.accuracy;
@@ -1405,11 +1405,11 @@ Schema::validate_required_data()
 							try {
 								set_acc.insert(toUType(map_acc_date.at(str_accuracy)));
 							} catch (const std::out_of_range&) {
-								throw MSG_ClientError("Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
+								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
 							}
 						}
 					} catch (const msgpack::type_error&) {
-						throw MSG_ClientError("Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str());
+						THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str());
 					}
 				} else {
 					set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
@@ -1424,7 +1424,7 @@ Schema::validate_required_data()
 							specification.acc_prefix.push_back(prefix_type + Serialise::namespace_field(acc_full_name));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
-						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
 					}
 					specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
 					properties[RESERVED_ACCURACY]   = specification.accuracy;
@@ -1441,7 +1441,7 @@ Schema::validate_required_data()
 							set_acc.insert(_accuracy.as_u64());
 						}
 					} catch (const msgpack::type_error&) {
-						throw MSG_ClientError("Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str());
+						THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str());
 					}
 				} else {
 					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
@@ -1456,7 +1456,7 @@ Schema::validate_required_data()
 							specification.acc_prefix.push_back(prefix_type + Serialise::namespace_field(acc_full_name));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
-						throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
 					}
 					specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
 					properties[RESERVED_ACCURACY]   = specification.accuracy;
@@ -1511,7 +1511,7 @@ Schema::validate_required_data()
 			case FieldType::UUID:
 				break;
 			default:
-				throw MSG_ClientError("%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
+				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
 		}
 
 		if (specification.flags.dynamic_type) {
@@ -1561,7 +1561,7 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		if ((XapiandManager::manager->strict || specification.flags.strict) && !specification.flags.inside_namespace) {
-			throw MSG_MissingTypeError("Type of field %s is missing", repr(specification.full_normalized_name).c_str());
+			THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_normalized_name).c_str());
 		}
 		guess_field_type(value);
 	}
@@ -1602,7 +1602,7 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 				break;
 
 			default:
-				throw MSG_ClientError("%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
+				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
 		}
 
 		if (!specification.flags.has_index) {
@@ -1623,7 +1623,7 @@ Schema::validate_required_data(const MsgPack& value)
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		if ((XapiandManager::manager->strict || specification.flags.strict) && !specification.flags.inside_namespace) {
-			throw MSG_MissingTypeError("Type of field %s is missing", repr(specification.full_normalized_name).c_str());
+			THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_normalized_name).c_str());
 		}
 		guess_field_type(value);
 	}
@@ -1695,7 +1695,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			break;
 		}
 		case MsgPack::Type::ARRAY:
-			throw MSG_ClientError("'%s' can not be array of arrays", RESERVED_VALUE);
+			THROW(ClientError, "'%s' can not be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
 			if (item_doc.size() == 1) {
 				auto cast_word = item_doc.begin()->as_string();
@@ -1703,18 +1703,18 @@ Schema::guess_field_type(const MsgPack& item_doc)
 					specification.sep_types[2] = Cast::getType(cast_word);
 					return;
 				} catch (const std::out_of_range&) {
-					throw MSG_ClientError("Unknown cast type %s", cast_word.c_str());
+					THROW(ClientError, "Unknown cast type %s", cast_word.c_str());
 				}
 			}
-			throw MSG_ClientError("Expected map with one element");
+			THROW(ClientError, "Expected map with one element");
 		case MsgPack::Type::NIL:
 			// Do not process this field.
-			throw MSG_DummyException();
+			throw DummyException();
 		default:
 			break;
 	}
 
-	throw MSG_ClientError("'%s': %s is ambiguous", RESERVED_VALUE, repr(item_doc.to_string()).c_str());
+	THROW(ClientError, "'%s': %s is ambiguous", RESERVED_VALUE, repr(item_doc.to_string()).c_str());
 }
 
 
@@ -1999,7 +1999,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, static_cast<int64_t>(f_val));
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for float type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for float type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::INTEGER: {
@@ -2016,7 +2016,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, i_val);
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for integer type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for integer type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::POSITIVE: {
@@ -2033,7 +2033,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				GenerateTerms::positive(doc, spc.accuracy, spc.acc_prefix, u_val);
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for positive type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for positive type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::DATE: {
@@ -2050,7 +2050,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				GenerateTerms::date(doc, spc.accuracy, spc.acc_prefix, tm);
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for date type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for date type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::GEO: {
@@ -2078,7 +2078,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for geo type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for geo type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::STRING:
@@ -2094,7 +2094,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -2109,7 +2109,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				s.insert(std::move(ser_value));
 				return;
 			} catch (const SerialisationError&) {
-				throw MSG_ClientError("Format invalid for boolean type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for boolean type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::UUID: {
@@ -2124,13 +2124,13 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for uuid type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for uuid type: %s", repr(value.to_string()).c_str());
 			} catch (const SerialisationError&) {
-				throw MSG_ClientError("Format invalid for uuid type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for uuid type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		default:
-			throw MSG_ClientError("Type: '%c' is an unknown type", spc.sep_types[2]);
+			THROW(ClientError, "Type: '%c' is an unknown type", spc.sep_types[2]);
 	}
 }
 
@@ -2161,7 +2161,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				break;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for float type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for float type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::INTEGER: {
@@ -2184,7 +2184,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				break;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for integer type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for integer type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::POSITIVE: {
@@ -2207,7 +2207,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				break;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for positive type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for positive type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::DATE: {
@@ -2230,7 +2230,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				break;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for date type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for date type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::GEO: {
@@ -2275,7 +2275,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for geo type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for geo type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::STRING:
@@ -2292,7 +2292,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				s_g.insert(std::move(ser_value));
 				break;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -2308,7 +2308,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				s_g.insert(std::move(ser_value));
 				break;
 			} catch (const SerialisationError&) {
-				throw MSG_ClientError("Format invalid for boolean type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for boolean type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::UUID: {
@@ -2324,11 +2324,11 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				s_g.insert(std::move(ser_value));
 				break;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for uuid type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for uuid type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		default:
-			throw MSG_ClientError("Type: '%c' is an unknown type", field_spc.sep_types[2]);
+			THROW(ClientError, "Type: '%c' is an unknown type", field_spc.sep_types[2]);
 	}
 }
 
@@ -2368,7 +2368,7 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 
 		if (offsprings) {
 			if (!specification.paths_namespace.empty()) {
-				throw MSG_ClientError("An namespace object can not have children");
+				THROW(ClientError, "An namespace object can not have children");
 			}
 			if unlikely(specification.sep_types[0] == FieldType::EMPTY) {
 				specification.sep_types[0] = FieldType::OBJECT;
@@ -2381,7 +2381,7 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 			task.get();
 		}
 	} else {
-		throw MSG_ClientError("Schema must be an object of objects");
+		THROW(ClientError, "Schema must be an object of objects");
 	}
 
 	specification = std::move(spc_start);
@@ -2402,7 +2402,7 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 	for (auto it = field_names.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
 		if (!is_valid(field_name)) {
-			throw MSG_ClientError("The field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
+			THROW(ClientError, "The field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 		}
 		restart_specification();
 		try {
@@ -2473,7 +2473,7 @@ Schema::get_subproperties(const MsgPack& properties)
 		for (auto it = field_names.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
 			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && specification.full_normalized_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
-				throw MSG_ClientError("The field name: %s (%s) is not valid or reserved", repr(specification.name).c_str(), repr(field_name).c_str());
+				THROW(ClientError, "The field name: %s (%s) is not valid or reserved", repr(specification.name).c_str(), repr(field_name).c_str());
 			}
 			restart_specification();
 			try {
@@ -2872,7 +2872,7 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 		specification.position.clear();
 		if (doc_position.is_array()) {
 			if (doc_position.empty()) {
-				throw MSG_ClientError("Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
+				THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
 			}
 			for (const auto& _position : doc_position) {
 				specification.position.push_back(static_cast<unsigned>(_position.as_u64()));
@@ -2889,7 +2889,7 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 			}
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
 	}
 }
 
@@ -2904,7 +2904,7 @@ Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
 		specification.weight.clear();
 		if (doc_weight.is_array()) {
 			if (doc_weight.empty()) {
-				throw MSG_ClientError("Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
+				THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
 			}
 			for (const auto& _weight : doc_weight) {
 				specification.weight.push_back(static_cast<unsigned>(_weight.as_u64()));
@@ -2921,7 +2921,7 @@ Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
 			}
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
 	}
 }
 
@@ -2936,7 +2936,7 @@ Schema::process_spelling(const std::string& prop_name, const MsgPack& doc_spelli
 		specification.spelling.clear();
 		if (doc_spelling.is_array()) {
 			if (doc_spelling.empty()) {
-				throw MSG_ClientError("Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
+				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
 			}
 			for (const auto& _spelling : doc_spelling) {
 				specification.spelling.push_back(_spelling.as_bool());
@@ -2953,7 +2953,7 @@ Schema::process_spelling(const std::string& prop_name, const MsgPack& doc_spelli
 			}
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
 	}
 }
 
@@ -2968,7 +2968,7 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 		specification.positions.clear();
 		if (doc_positions.is_array()) {
 			if (doc_positions.empty()) {
-				throw MSG_ClientError("Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
+				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
 			}
 			for (const auto& _positions : doc_positions) {
 				specification.positions.push_back(_positions.as_bool());
@@ -2985,7 +2985,7 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 			}
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
 	}
 }
 
@@ -3005,10 +3005,10 @@ Schema::process_stem_strategy(const std::string& prop_name, const MsgPack& doc_s
 		try {
 			specification.stem_strategy = map_stem_strategy.at(_stem_strategy);
 		} catch (const std::out_of_range&) {
-			throw MSG_ClientError("%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stem_strategy.c_str(), _stem_strategy.c_str());
+			THROW(ClientError, "%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stem_strategy.c_str(), _stem_strategy.c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
 }
 
@@ -3030,10 +3030,10 @@ Schema::process_stem_language(const std::string& prop_name, const MsgPack& doc_s
 			specification.stem_language = _stem_language;
 			specification.aux_stem_lan = data_lan.second;
 		} catch (const std::out_of_range&) {
-			throw MSG_ClientError("%s: %s is not supported", repr(prop_name).c_str(), repr(_stem_language).c_str());
+			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_stem_language).c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be string", repr(prop_name).c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -3056,13 +3056,13 @@ Schema::process_language(const std::string& prop_name, const MsgPack& doc_langua
 				specification.language = data_lan.second;
 				specification.aux_lan = data_lan.second;
 			} else {
-				throw MSG_ClientError("%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
+				THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
 			}
 		} catch (const std::out_of_range&) {
-			throw MSG_ClientError("%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
+			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be string", repr(prop_name).c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -3080,7 +3080,7 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 	try {
 		auto str_type = lower_string(doc_type.as_string());
 		if (str_type.empty()) {
-			throw MSG_ClientError("%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
+			THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
 		}
 
 		try {
@@ -3123,13 +3123,13 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 						}
 						break;
 				}
-				throw MSG_ClientError("%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
+				THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
 			} catch (const std::out_of_range&) {
-				throw MSG_ClientError("%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
+				THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
 			}
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
 }
 
@@ -3148,10 +3148,10 @@ Schema::process_accuracy(const std::string& prop_name, const MsgPack& doc_accura
 		try {
 			specification.doc_acc = std::make_unique<const MsgPack>(doc_accuracy);
 		} catch (const msgpack::type_error&) {
-			throw MSG_ClientError("Data inconsistency, %s must be array", prop_name.c_str());
+			THROW(ClientError, "Data inconsistency, %s must be array", prop_name.c_str());
 		}
 	} else {
-		throw MSG_ClientError("Data inconsistency, %s must be array", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be array", prop_name.c_str());
 	}
 }
 
@@ -3179,10 +3179,10 @@ Schema::process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_
 				}
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_ClientError("Data inconsistency, %s must be an array of strings", prop_name.c_str());
+			THROW(ClientError, "Data inconsistency, %s must be an array of strings", prop_name.c_str());
 		}
 	} else {
-		throw MSG_ClientError("Data inconsistency, %s must be an array of strings", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be an array of strings", prop_name.c_str());
 	}
 }
 
@@ -3200,7 +3200,7 @@ Schema::process_prefix(const std::string& prop_name, const MsgPack& doc_prefix)
 	try {
 		specification.prefix = doc_prefix.as_string();
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
 }
 
@@ -3218,7 +3218,7 @@ Schema::process_slot(const std::string& prop_name, const MsgPack& doc_slot)
 	try {
 		specification.slot = static_cast<unsigned>(doc_slot.as_u64());
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be a positive integer", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a positive integer", prop_name.c_str());
 	}
 }
 
@@ -3239,10 +3239,10 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 				get_mutable()[prop_name] = specification.index;
 			}
 		} catch (const std::out_of_range&) {
-			throw MSG_ClientError("%s must be in %s (%s not supported)", prop_name.c_str(), str_set_index.c_str(), str_index.c_str());
+			THROW(ClientError, "%s must be in %s (%s not supported)", prop_name.c_str(), str_set_index.c_str(), str_index.c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
 }
 
@@ -3264,7 +3264,7 @@ Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
 			get_mutable()[prop_name] = val_store;
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3283,7 +3283,7 @@ Schema::process_recursive(const std::string& prop_name, const MsgPack& doc_recur
 			get_mutable()[prop_name.c_str()] = static_cast<bool>(specification.flags.is_recursive);
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3302,7 +3302,7 @@ Schema::process_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic
 		specification.flags.dynamic = doc_dynamic.as_bool();
 		get_mutable()[prop_name] = static_cast<bool>(specification.flags.dynamic);
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3321,7 +3321,7 @@ Schema::process_strict(const std::string& prop_name, const MsgPack& doc_strict)
 		specification.flags.strict = doc_strict.as_bool();
 		get_mutable()[prop_name] = static_cast<bool>(specification.flags.strict);
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3340,7 +3340,7 @@ Schema::process_d_detection(const std::string& prop_name, const MsgPack& doc_d_d
 		specification.flags.date_detection = doc_d_detection.as_bool();
 		get_mutable()[prop_name] = static_cast<bool>(specification.flags.date_detection);
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3359,7 +3359,7 @@ Schema::process_n_detection(const std::string& prop_name, const MsgPack& doc_n_d
 		specification.flags.numeric_detection = doc_n_detection.as_bool();
 		get_mutable()[prop_name] = static_cast<bool>(specification.flags.numeric_detection);
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3378,7 +3378,7 @@ Schema::process_g_detection(const std::string& prop_name, const MsgPack& doc_g_d
 		specification.flags.geo_detection = doc_g_detection.as_bool();
 		get_mutable()[prop_name] = static_cast<bool>(specification.flags.geo_detection);
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3397,7 +3397,7 @@ Schema::process_b_detection(const std::string& prop_name, const MsgPack& doc_b_d
 		specification.flags.bool_detection = doc_b_detection.as_bool();
 		get_mutable()[prop_name] = static_cast<bool>(specification.flags.bool_detection);
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3416,7 +3416,7 @@ Schema::process_s_detection(const std::string& prop_name, const MsgPack& doc_s_d
 		specification.flags.string_detection = doc_s_detection.as_bool();
 		get_mutable()[prop_name] = static_cast<bool>(specification.flags.string_detection);
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3435,7 +3435,7 @@ Schema::process_t_detection(const std::string& prop_name, const MsgPack& doc_t_d
 		specification.flags.text_detection = doc_t_detection.as_bool();
 		get_mutable()[prop_name] = static_cast<bool>(specification.flags.text_detection);
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3454,7 +3454,7 @@ Schema::process_u_detection(const std::string& prop_name, const MsgPack& doc_u_d
 		specification.flags.uuid_detection = doc_u_detection.as_bool();
 		get_mutable()[prop_name] = static_cast<bool>(specification.flags.uuid_detection);
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3473,7 +3473,7 @@ Schema::process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_
 		specification.flags.bool_term = doc_bool_term.as_bool();
 		specification.flags.has_bool_term = true;
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be a boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a boolean", prop_name.c_str());
 	}
 }
 
@@ -3491,7 +3491,7 @@ Schema::process_partials(const std::string& prop_name, const MsgPack& doc_partia
 	try {
 		specification.flags.partials = doc_partials.as_bool();
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3509,7 +3509,7 @@ Schema::process_error(const std::string& prop_name, const MsgPack& doc_error)
 	try {
 		specification.error = doc_error.as_f64();
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be a double", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a double", prop_name.c_str());
 	}
 }
 
@@ -3535,7 +3535,7 @@ Schema::process_namespace(const std::string& prop_name, const MsgPack& doc_names
 			get_mutable()[prop_name] = true;
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
 }
 
@@ -3559,7 +3559,7 @@ Schema::process_name(const std::string& prop_name, const MsgPack& doc_name)
 	try {
 		specification.name.assign(doc_name.as_string());
 	} catch (const msgpack::type_error&) {
-		throw MSG_ClientError("Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
 }
 
@@ -3584,7 +3584,7 @@ Schema::process_cast_object(const std::string& prop_name, const MsgPack& doc_cas
 		specification.value_rec = std::make_unique<MsgPack>();
 		(*specification.value_rec)[prop_name] = doc_cast_object;
 	} else {
-		throw MSG_ClientError("Only one cast object can be defined");
+		THROW(ClientError, "Only one cast object can be defined");
 	}
 }
 
@@ -4113,7 +4113,7 @@ Schema::get_data_global(FieldType field_type)
 			return prop;
 		}
 		default:
-			throw MSG_ClientError("Type: '%u' is an unknown type", toUType(field_type));
+			THROW(ClientError, "Type: '%u' is an unknown type", toUType(field_type));
 	}
 }
 
@@ -4140,14 +4140,14 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		if (!is_valid(field_name)) {
 			if (full_normalized_name.empty()) {
 				if (map_dispatch_set_default_spc.find(field_name) == dsit_e) {
-					throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
+					THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 				}
 			} else if (++it == it_e) {
 				full_normalized_name.append(DB_OFFSPRING_UNION).append(field_name);
 				prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(full_normalized_name) : Serialise::namespace_field(full_normalized_name));
 				return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::move(field_name));
 			} else {
-				throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
+				THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 			}
 		}
 		try {
@@ -4175,7 +4175,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 				if (subproperties->at(RESERVED_NAMESPACE).as_bool()) {
 					int depth_namespace = std::distance(it, it_e);
 					if (depth_namespace > NAMESPACE_LIMIT_DEPTH) {
-						throw MSG_ClientError("Namespace limit depth is %d, and the namespace provided has a depth of %d", NAMESPACE_LIMIT_DEPTH, depth_namespace);
+						THROW(ClientError, "Namespace limit depth is %d, and the namespace provided has a depth of %d", NAMESPACE_LIMIT_DEPTH, depth_namespace);
 					}
 					prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(full_normalized_name) : Serialise::namespace_field(full_normalized_name));
 					for ( ; it != it_e; ++it) {
@@ -4198,15 +4198,15 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 							prefix_namespace.append(DB_OFFSPRING_UNION).append(field_namespace);
 							return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, Serialise::dynamic_namespace_field(DOCUMENT_NAMESPACE_TERM_PREFIX + prefix_namespace), std::move(field_namespace));
 						} else {
-							throw MSG_ClientError("The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
+							THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
 						}
 					}
 					break;
 				} else {
-					throw MSG_ClientError("%s does not exist in schema", repr(field_name).c_str());
+					THROW(ClientError, "%s does not exist in schema", repr(field_name).c_str());
 				}
 			} catch (const std::out_of_range&) {
-				throw MSG_ClientError("%s does not exist in schema", repr(field_name).c_str());
+				THROW(ClientError, "%s does not exist in schema", repr(field_name).c_str());
 			}
 		}
 	}

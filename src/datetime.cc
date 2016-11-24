@@ -72,7 +72,7 @@ Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 		tm.mon = std::stoi(m.str(3));
 		tm.day = std::stoi(m.str(4));
 		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
-			throw MSG_DatetimeError("Date is out of range");
+			THROW(DatetimeError, "Date is out of range");
 		}
 
 		if (m.length(5) > 0) {
@@ -96,7 +96,7 @@ Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 			processDateMath(m.str(16), tm);
 		}
 	} else {
-		throw MSG_DatetimeError("In dateTimeParser, format %s is incorrect", date.c_str());
+		THROW(DatetimeError, "In dateTimeParser, format %s is incorrect", date.c_str());
 	}
 }
 
@@ -270,7 +270,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 			break;
 	}
 
-	throw MSG_DateISOError("Error format in %s", date.c_str());
+	THROW(DateISOError, "Error format in %s", date.c_str());
 }
 
 
@@ -287,7 +287,7 @@ Datetime::processDateMath(const std::string& date_math, tm_t& tm)
 	}
 
 	if (date_math.length() != size_match) {
-		throw MSG_DatetimeError("Date Math (%s) is used incorrectly", date_math.c_str());
+		THROW(DatetimeError, "Date Math (%s) is used incorrectly", date_math.c_str());
 	}
 }
 
@@ -346,7 +346,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 				case 's':
 					tm.sec += num; break;
 				default:
-					throw MSG_DatetimeError("Invalid format in Date Math unit: '%c'. Unit must be in { y, M, w, d, h, m, s }", unit);
+					THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. Unit must be in { y, M, w, d, h, m, s }", unit);
 			}
 			break;
 		}
@@ -374,7 +374,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 				case 's':
 					tm.sec -= num; break;
 				default:
-					throw MSG_DatetimeError("Invalid format in Date Math unit: '%c'. Unit must be in { y, M, w, d, h, m, s }", unit);
+					THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. Unit must be in { y, M, w, d, h, m, s }", unit);
 			}
 			break;
 		}
@@ -391,7 +391,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 						tm.mon = tm.day = 1;
 						tm.hour = tm.min = tm.sec = tm.msec = 0;
 					} else {
-						throw MSG_DatetimeError("Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
+						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
 					}
 					break;
 				case 'M':
@@ -404,7 +404,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 						tm.day = 1;
 						tm.hour = tm.min = tm.sec = tm.msec = 0;
 					} else {
-						throw MSG_DatetimeError("Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
+						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
 					}
 					break;
 				case 'w': {
@@ -419,7 +419,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 						tm.day -= timeinfo->tm_wday;
 						tm.hour = tm.min = tm.sec = tm.msec = 0;
 					} else {
-						throw MSG_DatetimeError("Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
+						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
 					}
 					break;
 				}
@@ -431,7 +431,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.hour = tm.min = tm.sec = tm.msec = 0;
 					} else {
-						throw MSG_DatetimeError("Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
+						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
 					}
 					break;
 				case 'h':
@@ -441,7 +441,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.min = tm.sec = tm.msec = 0;
 					} else {
-						throw MSG_DatetimeError("Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
+						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
 					}
 					break;
 				case 'm':
@@ -451,7 +451,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.sec = tm.msec = 0;
 					} else {
-						throw MSG_DatetimeError("Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
+						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
 					}
 					break;
 				case 's':
@@ -460,13 +460,13 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.msec = 0;
 					} else {
-						throw MSG_DatetimeError("Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
+						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
 					}
 				break;
 			}
 			break;
 		default:
-			throw MSG_DatetimeError("Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
+			THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
 	}
 
 	// Update date.
@@ -508,7 +508,7 @@ Datetime::isleapRef_year(int tm_year)
 int
 Datetime::getDays_month(int year, int month)
 {
-	if (month < 1 || month > 12) throw MSG_DatetimeError("Month must be in 1..12");
+	if (month < 1 || month > 12) THROW(DatetimeError, "Month must be in 1..12");
 
 	int leap = isleapYear(year);
 	return days[leap][month - 1];
@@ -525,8 +525,8 @@ Datetime::getDays_month(int year, int month)
 std::time_t
 Datetime::toordinal(int year, int month, int day)
 {
-	if (year < 1) throw MSG_DatetimeError("Year is out of range");
-	if (day < 1 || day > getDays_month(year, month)) throw MSG_DatetimeError("Day is out of range for month");
+	if (year < 1) THROW(DatetimeError, "Year is out of range");
+	if (day < 1 || day > getDays_month(year, month)) THROW(DatetimeError, "Day is out of range for month");
 
 	int leap = isleapYear(year);
 	std::time_t result = 365 * (year - 1) + (year - 1) / 4 - (year - 1) / 100 + (year - 1) / 400 + cumdays[leap][month - 1] + day;
@@ -603,7 +603,7 @@ Datetime::to_tm_t(const std::string& date)
 		dateTimeParser(date, tm);
 		return tm;
 	} catch (const std::out_of_range&) {
-		throw MSG_DatetimeError("%s is very large", date.c_str());
+		THROW(DatetimeError, "%s is very large", date.c_str());
 	}
 }
 
@@ -642,7 +642,7 @@ Datetime::timestamp(const std::string& date)
 		dateTimeParser(date, tm);
 		return timestamp(tm);
 	} catch (const std::out_of_range&) {
-		throw MSG_DatetimeError("%s is very large", date.c_str());
+		THROW(DatetimeError, "%s is very large", date.c_str());
 	}
 }
 
@@ -661,7 +661,7 @@ Datetime::timestamp(const std::string& date, tm_t& tm)
 		dateTimeParser(date, tm);
 		return timestamp(tm);
 	} catch (const std::out_of_range&) {
-		throw MSG_DatetimeError("%s is very large", date.c_str());
+		THROW(DatetimeError, "%s is very large", date.c_str());
 	}
 }
 

@@ -101,7 +101,7 @@ serialise_double(double v)
 			result += char(exp + 128);
 		} else {
 			if (exp < -32768 || exp > 32767) {
-				throw MSG_InternalError("Insane exponent in floating point number");
+				THROW(InternalError, "Insane exponent in floating point number");
 			}
 			result += negative ? char(0x8f) : char(0x0f);
 			result += char(unsigned(exp + 32768) & 0xff);
@@ -132,7 +132,7 @@ double
 unserialise_double(const char** p, const char* end)
 {
 	if (end - *p < 2) {
-		throw MSG_SerialisationError("Bad encoded double: insufficient data");
+		THROW(SerialisationError, "Bad encoded double: insufficient data");
 	}
 	unsigned char first = *(*p)++;
 	if (first == 0 && *(*p) == 0) {
@@ -148,7 +148,7 @@ unserialise_double(const char** p, const char* end)
 		int bigexp = static_cast<unsigned char>(*(*p)++);
 		if (exp == 15) {
 			if (*p == end) {
-				throw MSG_SerialisationError("Bad encoded double: short large exponent");
+				THROW(SerialisationError, "Bad encoded double: short large exponent");
 			}
 			exp = bigexp | (static_cast<unsigned char>(*(*p)++) << 8);
 			exp -= 32768;
@@ -160,7 +160,7 @@ unserialise_double(const char** p, const char* end)
 	}
 
 	if (size_t(end - *p) < mantissa_len) {
-		throw MSG_SerialisationError("Bad encoded double: short mantissa");
+		THROW(SerialisationError, "Bad encoded double: short mantissa");
 	}
 
 	double v = 0.0;
@@ -229,7 +229,7 @@ unserialise_length(const char** p, const char* end, bool check_remaining)
 {
 	const char *pos = *p;
 	if (pos == end) {
-		throw MSG_SerialisationError("Bad encoded length: no data");
+		THROW(SerialisationError, "Bad encoded length: no data");
 	}
 	unsigned long long len = static_cast<unsigned char>(*pos++);
 	if (len == 0xff) {
@@ -238,7 +238,7 @@ unserialise_length(const char** p, const char* end, bool check_remaining)
 		unsigned shift = 0;
 		do {
 			if (pos == end || shift > (sizeof(unsigned long long) * 8 / 7 * 7)) {
-				throw MSG_SerialisationError("Bad encoded length: insufficient data");
+				THROW(SerialisationError, "Bad encoded length: insufficient data");
 			}
 			ch = *pos++;
 			len |= static_cast<unsigned long long>(ch & 0x7f) << shift;
@@ -247,7 +247,7 @@ unserialise_length(const char** p, const char* end, bool check_remaining)
 		len += 255;
 	}
 	if (check_remaining && len > static_cast<unsigned long long>(end - pos)) {
-		throw MSG_SerialisationError("Bad encoded length: length greater than data");
+		THROW(SerialisationError, "Bad encoded length: length greater than data");
 	}
 	*p = pos;
 	return len;

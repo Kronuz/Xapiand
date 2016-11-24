@@ -82,7 +82,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 			}
 
 			if (field_spc.get_type() == FieldType::GEO) {
-				throw MSG_SerialisationError("The format for Geo Spatial range is: field_name:[\"EWKT\"]");
+				THROW(SerialisationError, "The format for Geo Spatial range is: field_name:[\"EWKT\"]");
 			}
 
 			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::serialise(field_spc, end));
@@ -164,12 +164,12 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				}
 			}
 			case FieldType::GEO:
-				throw MSG_QueryParserError("The format for Geo Spatial range is: field_name:[\"EWKT\"]");
+				THROW(QueryParserError, "The format for Geo Spatial range is: field_name:[\"EWKT\"]");
 			default:
 				return Xapian::Query::MatchNothing;
 		}
 	} catch (const BaseException& exc) {
-		throw MSG_QueryParserError("Failed to serialize: %s:%s..%s like %s (%s)", field_name.c_str(), start.c_str(), end.c_str(),
+		THROW(QueryParserError, "Failed to serialize: %s:%s..%s like %s (%s)", field_name.c_str(), start.c_str(), end.c_str(),
 			Serialise::type(field_spc.get_type()).c_str(), exc.get_message());
 	}
 }
@@ -236,7 +236,7 @@ Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack&
 			}
 			break;
 		default:
-			throw MSG_QueryParserError("Expected numeric type for query range");
+			THROW(QueryParserError, "Expected numeric type for query range");
 	}
 
 	auto query = GenerateTerms::numeric(start_val, end_val, field_spc.accuracy, field_spc.acc_prefix);
@@ -312,13 +312,13 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				}
 			}
 			case FieldType::GEO:
-				throw MSG_QueryParserError("The format for Geo Spatial range is: field_name:[\"EWKT\"]");
+				THROW(QueryParserError, "The format for Geo Spatial range is: field_name:[\"EWKT\"]");
 			default:
 				return Xapian::Query::MatchNothing;
 		}
 	}
 	catch (const Exception& exc) {
-		throw MSG_QueryParserError("Failed to serialize: %s:%s - %s like %s (%s)", field_name.c_str(), start.to_string().c_str(), end.to_string().c_str(),
+		THROW(QueryParserError, "Failed to serialize: %s:%s - %s like %s (%s)", field_name.c_str(), start.to_string().c_str(), end.to_string().c_str(),
 								   Serialise::type(field_spc.get_type()).c_str(), exc.what());
 	}
 }

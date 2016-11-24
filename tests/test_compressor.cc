@@ -53,7 +53,7 @@ const std::vector<std::string> big_files({
 std::string read_file(const std::string& filename) {
 	int fd = io::open(filename.c_str(), O_RDONLY, 0644);
 	if unlikely(fd < 0) {
-		throw MSG_Error("Cannot open file: %s", filename.c_str());
+		THROW(Error, "Cannot open file: %s", filename.c_str());
 	}
 
 	std::string ret;
@@ -65,7 +65,7 @@ std::string read_file(const std::string& filename) {
 	}
 
 	if unlikely(r < 0) {
-		throw MSG_Error("IO error: read");
+		THROW(Error, "IO error: read");
 	}
 
 	io::close(fd);
@@ -84,14 +84,14 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 
 		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(fd < 0) {
-			throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
+			THROW(Error, "Cannot open file: %s", cmp_file.c_str());
 		}
 
 		LZ4CompressData lz4(_data.c_str(), _data.size());
 		auto it = lz4.begin();
 		while (it) {
 			if (io::write(fd, it->c_str(), it.size()) != static_cast<ssize_t>(it.size())) {
-				throw MSG_Error("IO error: write");
+				THROW(Error, "IO error: write");
 			}
 			++it;
 		}
@@ -128,14 +128,14 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 		// Compress File
 		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(fd < 0) {
-			throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
+			THROW(Error, "Cannot open file: %s", cmp_file.c_str());
 		}
 
 		LZ4CompressFile lz4(orig_file);
 		auto it = lz4.begin();
 		while (it) {
 			if (io::write(fd, it->c_str(), it.size()) != static_cast<ssize_t>(it.size())) {
-				throw MSG_Error("IO error: write");
+				THROW(Error, "IO error: write");
 			}
 			++it;
 		}
@@ -174,12 +174,12 @@ int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numB
 		// Compress File
 		int orig_fd = io::open(orig_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(orig_fd < 0) {
-			throw MSG_Error("Cannot open file: %s", orig_file.c_str());
+			THROW(Error, "Cannot open file: %s", orig_file.c_str());
 		}
 
 		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(fd < 0) {
-			throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
+			THROW(Error, "Cannot open file: %s", cmp_file.c_str());
 		}
 
 		LZ4CompressFile lz4;
@@ -189,7 +189,7 @@ int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numB
 			auto it = lz4.begin();
 			while (it) {
 				if (io::write(fd, it->c_str(), it.size()) != static_cast<ssize_t>(it.size())) {
-					throw MSG_Error("IO error: write");
+					THROW(Error, "IO error: write");
 				}
 				++it;
 				more_data = true;

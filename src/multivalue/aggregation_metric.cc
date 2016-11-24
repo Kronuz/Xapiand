@@ -48,9 +48,9 @@ static func_value_handle get_func_value_handle(FieldType type, const std::string
 		case FieldType::UUID:
 			return &SubAggregation::_aggregate_uuid;
 		case FieldType::EMPTY:
-			throw MSG_AggregationError("Field: %s has not been indexed", field_name.c_str());
+			THROW(AggregationError, "Field: %s has not been indexed", field_name.c_str());
 		default:
-			throw MSG_AggregationError("Type: '%c' is not supported", toUType(type));
+			THROW(AggregationError, "Type: '%c' is not supported", toUType(type));
 	}
 }
 
@@ -76,11 +76,11 @@ HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& con
 			auto field_spc = schema->get_slot_field(field_name);
 			_handle.set(field_spc.slot, get_func_value_handle(field_spc.get_type(), field_name));
 		}  catch (const msgpack::type_error&) {
-			throw MSG_AggregationError("'%s' must be string", AGGREGATION_FIELD);
+			THROW(AggregationError, "'%s' must be string", AGGREGATION_FIELD);
 		}
 	} catch (const std::out_of_range&) {
-		throw MSG_AggregationError("'%s' must be specified in %s", AGGREGATION_FIELD, repr(conf.to_string()).c_str());
+		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FIELD, repr(conf.to_string()).c_str());
 	} catch (const msgpack::type_error&) {
-		throw MSG_AggregationError("%s must be object", repr(conf.to_string()).c_str());
+		THROW(AggregationError, "%s must be object", repr(conf.to_string()).c_str());
 	}
 }

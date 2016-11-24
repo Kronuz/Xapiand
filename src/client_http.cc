@@ -1470,7 +1470,7 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 			ns = ns.substr(1, std::string::npos);
 		}
 		if (startswith(ns, "_")) {
-			throw MSG_ClientError("The index directory %s couldn't start with '_', it's reserved", ns.c_str());
+			THROW(ClientError, "The index directory %s couldn't start with '_', it's reserved", ns.c_str());
 		}
 	}
 
@@ -1481,7 +1481,7 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 			path = path.substr(1, std::string::npos);
 		}
 		if (startswith(path, "_")) {
-			throw MSG_ClientError("The index directory %s couldn't start with '_', it's reserved", path.c_str());
+			THROW(ClientError, "The index directory %s couldn't start with '_', it's reserved", path.c_str());
 		}
 	}
 
@@ -1526,7 +1526,7 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 		char node_ip[INET_ADDRSTRLEN];
 		auto node = XapiandManager::manager->touch_node(node_name, UNKNOWN_REGION);
 		if (!node) {
-			throw MSG_Error("Node %s not found", node_name.c_str());
+			THROW(Error, "Node %s not found", node_name.c_str());
 		}
 		if (!node_port) {
 			node_port = node->binary_port;
@@ -1943,7 +1943,7 @@ HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, bool p
 			{{ val1 }}, {{ val2 }}, ...
 		 */
 	}
-	throw MSG_SerialisationError("Type is not serializable");
+	THROW(SerialisationError, "Type is not serializable");
 }
 
 

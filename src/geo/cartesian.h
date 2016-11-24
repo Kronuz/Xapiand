@@ -109,8 +109,6 @@ public:
 	CartesianError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
-#define MSG_CartesianError(...) CartesianError(__FILE__, __LINE__, "CartesianError", __VA_ARGS__)
-
 
 /*
  * The formulas used for the conversions were obtained from:

@@ -62,7 +62,7 @@ RaftServer::raft_server(Raft::Message type, const std::string& message)
 	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
 		std::string errmsg("Unexpected message type ");
 		errmsg += std::to_string(toUType(type));
-		throw MSG_InvalidArgumentError(errmsg);
+		THROW(InvalidArgumentError, errmsg);
 	}
 	(this->*(dispatch[toUType(type)]))(message);
 }

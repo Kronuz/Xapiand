@@ -56,12 +56,12 @@ FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& conf, const
 				_filters.emplace_back(field_spc.slot, std::move(s_values));
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_AggregationError("'%s' must be object of objects", AGGREGATION_TERM);
+			THROW(AggregationError, "'%s' must be object of objects", AGGREGATION_TERM);
 		}
 	} catch (const std::out_of_range&) {
-		throw MSG_AggregationError("'%s' must be specified must be specified in '%s'", AGGREGATION_TERM, AGGREGATION_FILTER);
+		THROW(AggregationError, "'%s' must be specified must be specified in '%s'", AGGREGATION_TERM, AGGREGATION_FILTER);
 	} catch (const msgpack::type_error&) {
-		throw MSG_AggregationError("'%s' must be object", AGGREGATION_FILTER);
+		THROW(AggregationError, "'%s' must be object", AGGREGATION_FILTER);
 	}
 }
 

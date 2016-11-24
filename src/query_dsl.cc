@@ -145,7 +145,7 @@ QueryDSL::get_query(const MsgPack& obj)
 				auto const& o = obj.at(key);
 				switch (o.getType()) {
 					case MsgPack::Type::ARRAY:
-						throw MSG_QueryDslError("Unexpected type %s in %s", MsgPackTypes[static_cast<int>(MsgPack::Type::ARRAY)], key.c_str());
+						THROW(QueryDslError, "Unexpected type %s in %s", MsgPackTypes[static_cast<int>(MsgPack::Type::ARRAY)], key.c_str());
 					case MsgPack::Type::MAP:
 						return process_query(o, key);
 					default: {
@@ -159,7 +159,7 @@ QueryDSL::get_query(const MsgPack& obj)
 	} else if (obj.is_string() && xxh64::hash(lower_string(obj.as_string())) == HASH_ALL) {
 		return Xapian::Query::MatchAll;
 	} else {
-		throw MSG_QueryDslError("Type error expected map of size one at root level in query dsl");
+		THROW(QueryDslError, "Type error expected map of size one at root level in query dsl");
 	}
 	return Xapian::Query();
 }
@@ -192,7 +192,7 @@ QueryDSL::join_queries(const MsgPack& obj, Xapian::Query::op op)
 							const auto& o = elem.at(key);
 							switch (o.getType()) {
 								case MsgPack::Type::ARRAY:
-									throw MSG_QueryDslError("Unexpected type array in %s", key.c_str());
+									THROW(QueryDslError, "Unexpected type array in %s", key.c_str());
 								case MsgPack::Type::MAP:
 									final_query.empty() ? final_query = process_query(o, key) : final_query = Xapian::Query(op, final_query, process_query(o, key));
 									break;
@@ -202,16 +202,16 @@ QueryDSL::join_queries(const MsgPack& obj, Xapian::Query::op op)
 									final_query.empty() ? final_query = query(o) : final_query = Xapian::Query(op, final_query, query(o));
 							}
 						} else {
-							throw MSG_QueryDslError("Unexpected reserved word %s", key.c_str());
+							THROW(QueryDslError, "Unexpected reserved word %s", key.c_str());
 						}
 					}
 				}
 			} else {
-				throw MSG_QueryDslError("Expected array of objects with one element");
+				THROW(QueryDslError, "Expected array of objects with one element");
 			}
 		}
 	} else {
-		throw MSG_QueryDslError("Type error expected map in boolean operator");
+		THROW(QueryDslError, "Type error expected map in boolean operator");
 	}
 	return final_query;
 }
@@ -253,11 +253,11 @@ QueryDSL::in_range_query(const MsgPack& obj)
 			if (find_ranges(key, obj, qry)) {
 				return qry;
 			} else {
-				throw MSG_QueryDslError("Unexpected range type %s", key.c_str());
+				THROW(QueryDslError, "Unexpected range type %s", key.c_str());
 			}
 		}
 	} else {
-		throw MSG_QueryDslError("Expected object type with one element");
+		THROW(QueryDslError, "Expected object type with one element");
 	}
 
 	return Xapian::Query();
@@ -357,10 +357,10 @@ QueryDSL::query(const MsgPack& obj)
 						return Xapian::Query(prefixed(field_value, field_spc.prefix), _wqf);
 					}
 					default:
-						throw MSG_QueryDslError("Type error unexpected %s");
+						THROW(QueryDslError, "Type error unexpected %s");
 				}
 			} catch (const msgpack::type_error&) {
-				throw MSG_QueryDslError("Type error expected %s in %s", Serialise::type(field_spc.get_type()).c_str(), _fieldname.c_str());
+				THROW(QueryDslError, "Type error expected %s in %s", Serialise::type(field_spc.get_type()).c_str(), _fieldname.c_str());
 			}
 
 		}
@@ -383,7 +383,7 @@ QueryDSL::find_parameters(const MsgPack& obj)
 		if (boost.is_number() && boost.getType() != MsgPack::Type::NEGATIVE_INTEGER) {
 			_wqf = boost.as_u64();
 		} else {
-			throw MSG_QueryDslError("Type error expected unsigned int in %s", QUERYDSL_BOOST);
+			THROW(QueryDslError, "Type error expected unsigned int in %s", QUERYDSL_BOOST);
 		}
 	} catch(const std::out_of_range&) { }
 

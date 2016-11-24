@@ -68,7 +68,7 @@ EWKT_Parser::EWKT_Parser(const std::string& EWKT, bool _partials, double _error)
 		if (m.length(2) != 0) {
 			SRID = std::stoi(m.str(2));
 			if (!Cartesian::is_SRID_supported(SRID)) {
-				throw MSG_EWKTError("SRID = %d is not supported", SRID);
+				THROW(EWKTError, "SRID = %d is not supported", SRID);
 			}
 		} else {
 			SRID = WGS84; // WGS84 default.
@@ -101,7 +101,7 @@ EWKT_Parser::EWKT_Parser(const std::string& EWKT, bool _partials, double _error)
 			}
 		}
 	} else {
-		throw MSG_EWKTError("Syntax error in %s, format or geometry object not supported", EWKT.c_str());
+		THROW(EWKTError, "Syntax error in %s, format or geometry object not supported", EWKT.c_str());
 	}
 }
 
@@ -130,7 +130,7 @@ EWKT_Parser::parse_circle(const std::string& specification)
 
 		return _htm.names;
 	} else {
-		throw MSG_EWKTError("The specification for CIRCLE is lat lon [height], radius in meters(double positive)");
+		THROW(EWKTError, "The specification for CIRCLE is lat lon [height], radius in meters(double positive)");
 	}
 }
 
@@ -165,7 +165,7 @@ EWKT_Parser::parse_multicircle(const std::string& specification)
 	}
 
 	if (match_size != specification.size()) {
-		throw MSG_EWKTError("Syntax error in EWKT format (MULTICIRCLE)");
+		THROW(EWKTError, "Syntax error in EWKT format (MULTICIRCLE)");
 	}
 
 	return names_f;
@@ -194,7 +194,7 @@ EWKT_Parser::parse_polygon(const std::string& specification, GeometryType type)
 		// split points
 		std::vector<Cartesian> pts;
 		std::vector<std::string> points = stringSplit(next->str(2), ",");
-		if (points.size() == 0) throw MSG_EWKTError("Syntax error in EWKT format (POLYGON)");
+		if (points.size() == 0) THROW(EWKTError, "Syntax error in EWKT format (POLYGON)");
 
 		for (auto it_p = points.begin(); it_p != points.end(); ++it_p) {
 			// Get lat, lon and height.
@@ -204,7 +204,7 @@ EWKT_Parser::parse_polygon(const std::string& specification, GeometryType type)
 			} else if (coords.size() == 2) {
 				pts.push_back(Cartesian(std::stod(coords.at(0)), std::stod(coords.at(1)), 0, CartesianUnits::DEGREES, SRID));
 			} else {
-				throw MSG_EWKTError("The specification for POLYGON is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
+				THROW(EWKTError, "The specification for POLYGON is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
 			}
 		}
 
@@ -226,7 +226,7 @@ EWKT_Parser::parse_polygon(const std::string& specification, GeometryType type)
 	centroids.insert(HTM::getCentroid(names_f));
 
 	if (match_size != specification.size()) {
-		throw MSG_EWKTError("Syntax error in EWKT format");
+		THROW(EWKTError, "Syntax error in EWKT format");
 	}
 
 	return names_f;
@@ -262,7 +262,7 @@ EWKT_Parser::parse_multipolygon(const std::string& specification, GeometryType t
 	}
 
 	if (match_size != specification.size()) {
-		throw MSG_EWKTError("Syntax error in EWKT format (MULTIPOLYGON)");
+		THROW(EWKTError, "Syntax error in EWKT format (MULTIPOLYGON)");
 	}
 
 	return names_f;
@@ -293,7 +293,7 @@ EWKT_Parser::parse_point(const std::string& specification)
 		res.push_back(HTM::cartesian2name(c));
 		centroids.insert(std::move(c));
 	} else {
-		throw MSG_EWKTError("The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]) or (lat lon [height]), ..., (lat lon [height]), ...");
+		THROW(EWKTError, "The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]) or (lat lon [height]), ..., (lat lon [height]), ...");
 	}
 
 	return res;
@@ -330,7 +330,7 @@ EWKT_Parser::parse_multipoint(const std::string& specification)
 			res.push_back(HTM::cartesian2name(c));
 			centroids.insert(std::move(c));
 		} else {
-			throw MSG_EWKTError("The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
+			THROW(EWKTError, "The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
 		}
 		++next;
 	}
@@ -350,11 +350,11 @@ EWKT_Parser::parse_multipoint(const std::string& specification)
 				res.push_back(HTM::cartesian2name(c));
 				centroids.insert(std::move(c));
 			} else {
-				throw MSG_EWKTError("The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]) or (lat lon [height]), ..., (lat lon [height]), ...");
+				THROW(EWKTError, "The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]) or (lat lon [height]), ..., (lat lon [height]), ...");
 			}
 		}
 	} else if (match_size != specification.size()) {
-		throw MSG_EWKTError("Syntax error in EWKT format (MULTIPOINT)");
+		THROW(EWKTError, "Syntax error in EWKT format (MULTIPOINT)");
 	}
 
 	return res;
@@ -397,7 +397,7 @@ EWKT_Parser::parse_geometry_collection(const std::string& data)
 	}
 
 	if (match_size != data.size()) {
-		throw MSG_EWKTError("Syntax error in EWKT format");
+		THROW(EWKTError, "Syntax error in EWKT format");
 	}
 
 	return names_f;
@@ -441,7 +441,7 @@ EWKT_Parser::parse_geometry_intersection(const std::string& data)
 	}
 
 	if (match_size != data.size()) {
-		throw MSG_EWKTError("Syntax error in EWKT format");
+		THROW(EWKTError, "Syntax error in EWKT format");
 	}
 
 	centroids.clear();

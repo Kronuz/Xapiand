@@ -115,35 +115,35 @@ public:
 		: _result(result) { }
 
 	virtual void aggregate_float(double, const Xapian::Document&) {
-		throw MSG_AggregationError("float type is not supported");
+		THROW(AggregationError, "float type is not supported");
 	}
 
 	virtual void aggregate_integer(long, const Xapian::Document&) {
-		throw MSG_AggregationError("integer type is not supported");
+		THROW(AggregationError, "integer type is not supported");
 	}
 
 	virtual void aggregate_positive(unsigned long, const Xapian::Document&) {
-		throw MSG_AggregationError("positive type is not supported");
+		THROW(AggregationError, "positive type is not supported");
 	}
 
 	virtual void aggregate_date(double, const Xapian::Document&) {
-		throw MSG_AggregationError("date type is not supported");
+		THROW(AggregationError, "date type is not supported");
 	}
 
 	virtual void aggregate_boolean(bool, const Xapian::Document&) {
-		throw MSG_AggregationError("boolean type is not supported");
+		THROW(AggregationError, "boolean type is not supported");
 	}
 
 	virtual void aggregate_string(const std::string&, const Xapian::Document&) {
-		throw MSG_AggregationError("string type is not supported");
+		THROW(AggregationError, "string type is not supported");
 	}
 
 	virtual void aggregate_geo(const std::pair<std::string, std::string>&, const Xapian::Document&) {
-		throw MSG_AggregationError("geo type is not supported");
+		THROW(AggregationError, "geo type is not supported");
 	}
 
 	virtual void aggregate_uuid(const std::string&, const Xapian::Document&) {
-		throw MSG_AggregationError("uuid type is not supported");
+		THROW(AggregationError, "uuid type is not supported");
 	}
 
 	void _aggregate_float(const std::string& s, const Xapian::Document& doc) {

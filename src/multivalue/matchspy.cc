@@ -75,10 +75,10 @@ MultiValueCountMatchSpy::unserialise(const std::string& s, const Xapian::Registr
 
 	Xapian::valueno new_slot = (Xapian::valueno)unserialise_length(&p, end, false);
 	if (new_slot == Xapian::BAD_VALUENO) {
-		throw MSG_NetworkError("Decoding error of serialised MultiValueCountMatchSpy");
+		THROW(NetworkError, "Decoding error of serialised MultiValueCountMatchSpy");
 	}
 	if (p != end) {
-		throw MSG_NetworkError("Junk at end of serialised MultiValueCountMatchSpy");
+		THROW(NetworkError, "Junk at end of serialised MultiValueCountMatchSpy");
 	}
 
 	return new MultiValueCountMatchSpy(new_slot);
