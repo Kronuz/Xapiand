@@ -264,21 +264,24 @@ class StashSlots : public Stash<_Tp, _Size> {
 		return true;
 	}
 
-	size_t increment_pos(size_t pos, bool keep_going, size_t initial_pos, size_t& final_pos, size_t last_pos) {
+	bool increment_pos(bool peep, size_t& pos, bool keep_going, size_t initial_pos, size_t& final_pos, size_t last_pos) {
 		auto new_pos = (pos + 1) % _Mod;
 
 		if (!check_pos(new_pos, initial_pos, final_pos, last_pos)) {
 			if (keep_going) {
 				final_pos = get_slot(_CurrentKey());
 				if (!check_pos(new_pos, initial_pos, final_pos, last_pos)) {
-					throw StashContinue();
+					return false;
 				}
 			} else {
-				throw StashContinue();
+				return false;
 			}
 		}
 
-		return new_pos;
+		if (peep || Stash_T::pos.compare_exchange_strong(pos, new_pos)) {
+			pos = new_pos;
+		}
+		return true;
 	}
 
 public:
@@ -312,9 +315,8 @@ public:
 				throw StashContinue();
 			} catch (const StashContinue&) { }
 
-			auto new_pos = increment_pos(pos, keep_going, initial_pos, final_pos, last_pos);
-			if (peep || Stash_T::pos.compare_exchange_strong(pos, new_pos)) {
-				pos = new_pos;
+			if (!increment_pos(peep, pos, keep_going, initial_pos, final_pos, last_pos)) {
+				throw StashContinue();
 			}
 
 			if (!final && ptr && !peep) {
@@ -353,9 +355,13 @@ public:
 		: Stash_T::Stash(0),
 		  idx(0) { }
 
-	size_t increment_pos(size_t pos) {
+	bool increment_pos(bool peep, size_t& pos) {
 		auto new_pos = pos + 1;
-		return new_pos;
+
+		if (peep || Stash_T::pos.compare_exchange_strong(pos, new_pos)) {
+			pos = new_pos;
+		}
+		return true;
 	}
 
 	auto& next(bool, uint64_t, bool, bool peep) {
@@ -364,9 +370,8 @@ public:
 		// std::cout << "\t\t\tLogStash pos:" << pos << std::endl;
 		try {
 			auto ptr = Stash_T::get_bin(pos).load();
-			auto new_pos = increment_pos(pos);
-			if (!peep) {
-				Stash_T::pos.compare_exchange_strong(pos, new_pos);
+			if (!increment_pos(peep, pos)) {
+				throw StashContinue();
 			}
 			return ptr->val;
 		} catch (const StashException&) { }
