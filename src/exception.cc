@@ -92,7 +92,7 @@ BaseException::BaseException(const char *filename, int line, const char* type, c
 		message.assign(type);
 	}
 
-#ifdef TRACEBACK
+#ifndef NDEBUG
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
 	context.assign(std::string(buffer) + ": " + message);
 
