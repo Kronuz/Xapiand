@@ -34,7 +34,6 @@ enum class StashState {
 	EmptyChunk,
 	OutOfRange,
 	EmptyStash,
-	Continue,
 };
 
 
