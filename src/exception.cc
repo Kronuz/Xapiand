@@ -87,11 +87,11 @@ BaseException::BaseException(const char *filename, int line, const char *format,
 	va_start(argptr, format);
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	va_end(argptr);
-	msg.assign(buffer);
+	message.assign(buffer);
 
 #ifdef TRACEBACK
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
-	context.assign(std::string(buffer) + ": " + msg);
+	context.assign(std::string(buffer) + ": " + message);
 
 	traceback = ::traceback(filename, line);
 #else
@@ -99,6 +99,6 @@ BaseException::BaseException(const char *filename, int line, const char *format,
 
 	(void)filename;
 	(void)line;
-	context = msg;
+	context = message;
 #endif
 }

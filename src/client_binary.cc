@@ -388,16 +388,16 @@ BinaryClient::_run()
 			L_EXC(this, "ERROR: %s", *exc_msg ? exc_msg : "Unkown Xapian::NetworkError!");
 			checkin_database();
 			shutdown();
+		} catch (const BaseException& exc) {
+			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+			checkin_database();
+			shutdown();
 		} catch (const Xapian::Error& exc) {
 			// Propagate the exception to the client, then return to the main
 			// message handling loop.
 			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 			checkin_database();
-		} catch (const Exception& exc) {
-			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
-			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-			checkin_database();
-			shutdown();
 		} catch (const std::exception& exc) {
 			L_EXC(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
 			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());

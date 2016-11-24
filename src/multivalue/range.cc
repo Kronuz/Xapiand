@@ -168,9 +168,9 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 			default:
 				return Xapian::Query::MatchNothing;
 		}
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		throw MSG_QueryParserError("Failed to serialize: %s:%s..%s like %s (%s)", field_name.c_str(), start.c_str(), end.c_str(),
-			Serialise::type(field_spc.get_type()).c_str(), exc.what());
+			Serialise::type(field_spc.get_type()).c_str(), exc.get_message());
 	}
 }
 

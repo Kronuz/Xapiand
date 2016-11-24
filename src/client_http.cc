@@ -524,9 +524,9 @@ HttpClient::run()
 		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(exc.what());
 		L_EXC(this, "ERROR: %s", error.c_str());
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign(*exc.what() ? exc.what() : "Unkown Exception!");
+		error.assign(*exc.get_message() ? exc.get_message() : "Unkown BaseException!");
 		L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 	} catch (const Xapian::Error& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;

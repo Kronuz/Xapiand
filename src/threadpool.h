@@ -204,7 +204,7 @@ class ThreadPool : public TaskQueue<Params...> {
 			++running_tasks;
 			try {
 				task(std::forward<Params_>(params)...);
-			} catch (const Exception& exc) {
+			} catch (const BaseException& exc) {
 				auto exc_context = exc.get_context();
 				L_EXC(this, "Task died with an unhandled exception: %s", *exc_context ? exc_context : "Unkown Exception!");
 			} catch (const Xapian::Error& exc) {

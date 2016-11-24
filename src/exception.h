@@ -40,7 +40,7 @@ std::string traceback(const char *filename, int line);
 
 class BaseException {
 protected:
-	std::string msg;
+	std::string message;
 	std::string context;
 	std::string traceback;
 
@@ -48,6 +48,10 @@ public:
 	BaseException(const char *filename, int line, const char *format, ...);
 	BaseException(const char *filename, int line, const std::string& message="")
 		: BaseException(filename, line, message.c_str()) { }
+
+	virtual const char* get_message() const noexcept {
+		return message.c_str();
+	}
 
 	virtual const char* get_context() const noexcept {
 		return context.c_str();
@@ -62,13 +66,13 @@ public:
 class Exception : public BaseException, public std::runtime_error {
 public:
 	template<typename... Args>
-	Exception(Args&&... args) : BaseException(std::forward<Args>(args)...), std::runtime_error(BaseException::msg) { }
+	Exception(Args&&... args) : BaseException(std::forward<Args>(args)...), std::runtime_error(message) { }
 };
 
 
 class DummyException : public BaseException, public std::runtime_error {
 public:
-	DummyException() : BaseException(__FILE__, __LINE__, "Dummy Exception"), std::runtime_error(BaseException::msg) { }
+	DummyException() : BaseException(__FILE__, __LINE__, "Dummy Exception"), std::runtime_error(message) { }
 };
 
 class CheckoutError : public Exception {
@@ -80,7 +84,7 @@ public:
 class Exit : public BaseException, public std::runtime_error {
 public:
 	int code;
-	Exit(int code_) : BaseException(__FILE__, __LINE__, "Exit"), std::runtime_error(msg), code(code_) { }
+	Exit(int code_) : BaseException(__FILE__, __LINE__, "Exit"), std::runtime_error(message), code(code_) { }
 };
 
 
@@ -108,49 +112,49 @@ public:
 class SerialisationError : public ClientError, public Xapian::SerialisationError {
 public:
 	template<typename... Args>
-	SerialisationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::SerialisationError(BaseException::msg) { }
+	SerialisationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::SerialisationError(message) { }
 };
 
 
 class NetworkError : public ClientError, public Xapian::NetworkError {
 public:
 	template<typename... Args>
-	NetworkError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::NetworkError(BaseException::msg) { }
+	NetworkError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::NetworkError(message) { }
 };
 
 
 class InvalidArgumentError : public ClientError, public Xapian::InvalidArgumentError {
 public:
 	template<typename... Args>
-	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidArgumentError(BaseException::msg) { }
+	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidArgumentError(message) { }
 };
 
 
 class InvalidOperationError : public ClientError, public Xapian::InvalidOperationError {
 public:
 	template<typename... Args>
-	InvalidOperationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidOperationError(BaseException::msg) { }
+	InvalidOperationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidOperationError(message) { }
 };
 
 
 class QueryParserError : public ClientError, public Xapian::QueryParserError {
 public:
 	template<typename... Args>
-	QueryParserError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::QueryParserError(BaseException::msg) { }
+	QueryParserError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::QueryParserError(message) { }
 };
 
 
 class InternalError : public ClientError, public Xapian::InternalError {
 public:
 	template<typename... Args>
-	InternalError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InternalError(BaseException::msg) { }
+	InternalError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InternalError(message) { }
 };
 
 
 class DocNotFoundError : public ClientError, public Xapian::DocNotFoundError {
 public:
 	template<typename... Args>
-	DocNotFoundError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::DocNotFoundError(BaseException::msg) { }
+	DocNotFoundError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::DocNotFoundError(message) { }
 };
 
 
@@ -167,6 +171,7 @@ public:
 	QueryDslError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
+#define THROW(exc, ...) throw exc(__FILE__, __LINE__, ##__VA_ARGS__)
 
 #define MSG_Error(...) Error(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)

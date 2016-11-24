@@ -71,7 +71,7 @@ int test_patcher_mix() {
 		} else {
 			RETURN(0);
 		}
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		RETURN(1);
 	}
@@ -112,7 +112,7 @@ int test_patcher_add() {
 		} else {
 			RETURN(0);
 		}
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		RETURN(1);
 	}
@@ -153,7 +153,7 @@ int test_patcher_remove() {
 		} else {
 			RETURN(0);
 		}
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		RETURN(1);
 	}
@@ -194,7 +194,7 @@ int test_patcher_replace() {
 		} else {
 			RETURN(0);
 		}
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		RETURN(1);
 	}
@@ -235,7 +235,7 @@ int test_patcher_move() {
 		} else {
 			RETURN(0);
 		}
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		RETURN(1);
 	}
@@ -276,7 +276,7 @@ int test_patcher_copy() {
 		} else {
 			RETURN(0);
 		}
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		RETURN(1);
 	}
@@ -309,7 +309,7 @@ int test_patcher_test() {
 	try {
 		apply_patch(patch, obj);
 		RETURN(0);
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		RETURN(1);
 	}
@@ -340,7 +340,7 @@ int test_patcher_incr() {
 		} else {
 			RETURN(0);
 		}
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		RETURN(1);
 	}
@@ -370,7 +370,7 @@ int test_patcher_decr() {
 		} else {
 			RETURN(0);
 		}
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		RETURN(1);
 	}
@@ -403,7 +403,7 @@ int test_patcher_rfc6901() {
 	try {
 		apply_patch(patch, obj);
 		RETURN(0);
-	} catch (const Exception& exc) {
+	} catch (const BaseException& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		RETURN(1);
 	}
