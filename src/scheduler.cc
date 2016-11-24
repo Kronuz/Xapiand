@@ -49,17 +49,21 @@ SchedulerQueue::SchedulerQueue()
 { }
 
 
-TaskType&
+TaskType*
 SchedulerQueue::next(bool final, uint64_t final_key, bool keep_going)
 {
-	return queue.next(final, final_key, keep_going, false);
+	TaskType* task = nullptr;
+	queue.next(&task, final, final_key, keep_going, false);
+	return task;
 }
 
 
-TaskType&
+TaskType*
 SchedulerQueue::peep()
 {
-	return queue.next(false, 0, true, true);
+	TaskType* task = nullptr;
+	queue.next(&task, false, 0, true, true);
+	return task;
 }
 
 
@@ -195,12 +199,11 @@ Scheduler::run()
 		auto now = std::chrono::system_clock::now();
 		auto wt = time_point_to_ullong(now + (running < 0 ? 5s : 100ms));
 
-		try {
-			auto& task = scheduler_queue.peep();
-			if (task) {
-				wt = task->wakeup_time;
-			}
-		} catch(const StashContinue&) { }
+		TaskType* task;
+
+		if ((task = scheduler_queue.peep()) && *task) {
+			wt = (*task)->wakeup_time;
+		}
 
 		next_wakeup_time.compare_exchange_strong(nwt, wt);
 		while (nwt > wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
@@ -208,15 +211,12 @@ Scheduler::run()
 		L_INFO_HOOK_LOG("Scheduler::run::loop", this, "Scheduler::run()::loop - now:%llu, wakeup:%llu", time_point_to_ullong(now), next_wakeup_time.load());
 		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
 
-		try {
-			do {
-				auto& task = scheduler_queue.next(running < 0);
-				if (task) {
-					run_one(task);
-					task.reset();
-				}
-			} while (true);
-		} catch(const StashContinue&) { }
+		while ((task = scheduler_queue.next(running < 0))) {
+			if (*task) {
+				run_one(*task);
+				(*task).reset();
+			}
+		}
 
 		if (running >= 0) {
 			break;

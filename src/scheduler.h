@@ -82,8 +82,8 @@ private:
 public:
 	SchedulerQueue();
 
-	TaskType& peep();
-	TaskType& next(bool final=true, uint64_t final_key=0, bool keep_going=true);
+	TaskType* peep();
+	TaskType* next(bool final=true, uint64_t final_key=0, bool keep_going=true);
 	void add(const TaskType& task, uint64_t key=0);
 };
 

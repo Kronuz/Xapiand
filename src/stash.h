@@ -27,12 +27,15 @@
 
 #include "logger_fwd.h"
 
-class StashException { };
-class StashContinue : public StashException { };
-class StashEmptyBin : public StashContinue { };
-class StashEmptyChunk : public StashContinue { };
-class StashOutOfRange : public StashException { };
-class StashEmptyStash : public StashOutOfRange { };
+
+enum class StashState {
+	Ok,
+	EmptyBin,
+	EmptyChunk,
+	OutOfRange,
+	EmptyStash,
+	Continue,
+};
 
 
 template <typename _Tp, size_t _Size>
@@ -102,9 +105,9 @@ protected:
 			} while (n);
 		}
 
-		auto& bin(size_t slot, bool spawn) {
+		StashState bin(std::atomic<Bin*>** bin_pptr, size_t slot, bool spawn) {
 			if (!spawn && !next && !chunk) {
-				throw StashEmptyStash();
+				return StashState::EmptyStash;
 			}
 
 			size_t chunk = 0;
@@ -117,7 +120,7 @@ protected:
 			for (size_t c = 0; c < chunk; ++c) {
 				auto ptr = data->next.load();
 				if (!spawn && !ptr) {
-					throw StashOutOfRange();
+					return StashState::OutOfRange;
 				}
 				if (!ptr) {
 					auto tmp = new Data;
@@ -132,7 +135,7 @@ protected:
 
 			auto ptr = data->chunk.load();
 			if (!spawn && !ptr) {
-				throw StashEmptyChunk();
+				return StashState::EmptyChunk;
 			}
 			if (!ptr) {
 				auto tmp = new Chunks{ {} };
@@ -145,9 +148,11 @@ protected:
 
 			auto& bin = (*ptr)[slot];
 			if (!spawn && !bin.load()) {
-				throw StashEmptyBin();
+				return StashState::EmptyBin;
 			}
-			return bin;
+
+			*bin_pptr = &bin;
+			return StashState::Ok;
 		}
 	};
 
@@ -170,19 +175,23 @@ public:
 		data.clear();
 	}
 
-	auto& get_bin(size_t slot) {
+	StashState get_bin(std::atomic<Bin*>** bin_pptr, size_t slot) {
 		/* This could fail with:
-		 *   StashEmptyStash
-		 *   StashEmptyBin
-		 *   StashEmptyChunk
-		 *   StashOutOfRange
+		 *   StashState::EmptyStash
+		 *   StashState::EmptyBin
+		 *   StashState::EmptyChunk
+		 *   StashState::OutOfRange
 		 */
-		return Stash::data.bin(slot, false);
+		return Stash::data.bin(bin_pptr, slot, false);
 	}
 
 	auto& spawn_bin(size_t slot) {
 		/* This shouldn't fail. */
-		return Stash::data.bin(slot, true);
+		std::atomic<Bin*>* bin_ptr;
+		if (Stash::data.bin(&bin_ptr, slot, true) != StashState::Ok) {
+			throw std::logic_error("spawn_bin should only return Ok!");
+		}
+		return *bin_ptr;
 	}
 
 	template <typename T>
@@ -294,7 +303,8 @@ public:
 	StashSlots(uint64_t key)
 		: Stash_T::Stash(get_slot(key)) { }
 
-	auto& next(bool final=true, uint64_t final_key=0, bool keep_going=true, bool peep=false) {
+	template <typename T>
+	bool next(T** value_ptr, bool final=true, uint64_t final_key=0, bool keep_going=true, bool peep=false) {
 		auto pos = Stash_T::pos.load();
 
 		keep_going = keep_going && final && !final_key;
@@ -306,17 +316,29 @@ public:
 		auto final_pos = final ? get_slot(final_key) : last_pos;
 
 		do {
+			L_INFO_HOOK_LOG("StashSlots::next::loop", this, "StashSlots::next()::loop - _Mod:%llu, pos:%llu, initial_pos:%llu, final:%s, final_pos:%llu, last_pos:%llu, keep_going:%s, peep:%s", _Mod, pos, initial_pos, final ? "true" : "false", final_pos, last_pos, keep_going ? "true" : "false", peep ? "true" : "false");
+
 			Bin* ptr = nullptr;
-			try {
-				L_INFO_HOOK_LOG("StashSlots::next::loop", this, "StashSlots::next()::loop - _Mod:%llu, pos:%llu, initial_pos:%llu, final:%s, final_pos:%llu, last_pos:%llu, keep_going:%s, peep:%s", _Mod, pos, initial_pos, final ? "true" : "false", final_pos, last_pos, keep_going ? "true" : "false", peep ? "true" : "false");
-				ptr = Stash_T::get_bin(pos).load();
-				return ptr->val.next(final && pos == final_pos, final_key, keep_going, peep);
-			} catch (const StashOutOfRange&) {
-				throw StashContinue();
-			} catch (const StashContinue&) { }
+			std::atomic<Bin*>* bin_ptr;
+			switch (Stash_T::get_bin(&bin_ptr, pos)) {
+				case StashState::Ok: {
+					ptr = (*bin_ptr).load();
+					if (ptr) {
+						if (ptr->val.next(value_ptr, final && pos == final_pos, final_key, keep_going, peep)) {
+							return true;
+						}
+					}
+					break;
+				}
+				case StashState::OutOfRange:
+				case StashState::EmptyStash:
+					return false;
+				default:
+					break;
+			}
 
 			if (!increment_pos(peep, pos, keep_going, initial_pos, final_pos, last_pos)) {
-				throw StashContinue();
+				return false;
 			}
 
 			if (!final && ptr && !peep) {
@@ -364,22 +386,32 @@ public:
 		return true;
 	}
 
-	auto& next(bool, uint64_t, bool, bool peep) {
+	template <typename T>
+	bool next(T** value_ptr, bool, uint64_t, bool, bool peep) {
 		// std::cout << "\t\tLogStash::next()" << std::endl;
 		auto pos = Stash_T::pos.load();
 		// std::cout << "\t\t\tLogStash pos:" << pos << std::endl;
-		try {
-			auto ptr = Stash_T::get_bin(pos).load();
-			if (!increment_pos(peep, pos)) {
-				throw StashContinue();
+		std::atomic<Bin*>* bin_ptr;
+		switch (Stash_T::get_bin(&bin_ptr, pos)) {
+			case StashState::Ok: {
+				if (!increment_pos(peep, pos)) {
+					return false;
+				}
+				auto ptr = (*bin_ptr).load();
+				if (ptr) {
+					*value_ptr = &ptr->val;
+					return true;
+				}
 			}
-			return ptr->val;
-		} catch (const StashException&) { }
-		throw StashContinue();
+			default:
+				break;
+		}
+		return false;
 	}
 
-	auto& next(bool peep=false) {
-		return next(true, 0, true, peep);
+	template <typename T>
+	bool next(T** value_ptr, bool peep=false) {
+		return next(value_ptr, true, 0, true, peep);
 	}
 
 	template <typename T>
