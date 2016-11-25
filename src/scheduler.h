@@ -75,9 +75,9 @@ private:
 	using _tasks =        StashValues<TaskType,     10ULL>;
 	using _50_1ms =       StashSlots<_tasks,        10ULL,  &now,        1ULL * MS,    50ULL,  false>;
 	using _10_50ms =      StashSlots<_50_1ms,       10ULL,  &now,       50ULL * MS,    10ULL,  false>;
-	using _3600_500ms =   StashSlots<_10_50ms,     600ULL,  &now,      500ULL * MS,  3600ULL,  false>;
-	using _48_1800s =     StashSlots<_3600_500ms,   48ULL,  &now,  1800000ULL * MS,    48ULL,  true>;
-	_48_1800s queue;
+	using _36_500ms =     StashSlots<_10_50ms,      12ULL,  &now,      500ULL * MS,    36ULL,  false>;
+	using _4800_18s =     StashSlots<_36_500ms,   4800ULL,  &now,    18000ULL * MS,  4800ULL,  true>;
+	_4800_18s queue;
 
 public:
 	SchedulerQueue();
