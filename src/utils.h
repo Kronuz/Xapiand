@@ -26,9 +26,11 @@
 
 #include <ctype.h>      // for tolower, toupper
 #include <dirent.h>     // for DIR
+#include <math.h>       // for log10, floor, pow
 #include <stdio.h>      // for size_t, snprintf
 #include <sys/errno.h>  // for EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
 #include <sys/types.h>  // for uint64_t, uint16_t, uint8_t, int32_t, uint32_t
+#include <unistd.h>     // for usleep
 #include <chrono>       // for system_clock, time_point, duration_cast, seconds
 #include <regex>        // for regex
 #include <string>       // for string, allocator
@@ -304,11 +306,40 @@ namespace epoch {
 }
 
 
+struct Clk {
+	unsigned long long mul;
+
+	Clk() {
+		auto a = std::chrono::system_clock::now();
+		usleep(5000);
+		auto b = std::chrono::system_clock::now();
+		auto delta = *reinterpret_cast<unsigned long long*>(&b) - *reinterpret_cast<unsigned long long*>(&a);
+		mul = 1000000 / static_cast<unsigned long long>(pow(10, floor(log10(delta))));
+	}
+
+	template <typename T>
+	unsigned long long time_point_to_ullong(std::chrono::time_point<T> t) const {
+		return *reinterpret_cast<unsigned long long*>(&t) * mul;
+	}
+
+	template <typename T=std::chrono::system_clock>
+	std::chrono::time_point<T> time_point_from_ullong(unsigned long long t) const {
+		t /= mul;
+		return *reinterpret_cast<std::chrono::time_point<T>*>(&t);
+	}
+
+	static const Clk& clk() {
+		static const Clk clk;
+		return clk;
+	}
+};
+
+
 template <typename T>
 inline
 unsigned long long
 time_point_to_ullong(std::chrono::time_point<T> t) {
-	return *reinterpret_cast<unsigned long long*>(&t);
+	return Clk::clk().time_point_to_ullong<T>(t);
 }
 
 
@@ -316,7 +347,7 @@ template <typename T=std::chrono::system_clock>
 inline
 std::chrono::time_point<T>
 time_point_from_ullong(unsigned long long t) {
-	return *reinterpret_cast<std::chrono::time_point<T>*>(&t);
+	return Clk::clk().time_point_from_ullong<T>(t);
 }
 
 

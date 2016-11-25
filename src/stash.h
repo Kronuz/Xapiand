@@ -322,8 +322,11 @@ public:
 	}
 
 	template <typename T>
-	void add(T&& value, uint64_t key) {
-		if (!key) key = _CurrentKey();
+	uint64_t add(T&& value, uint64_t key) {
+		auto current_key = _CurrentKey();
+		if (key < current_key) {
+			key = current_key;
+		}
 
 		auto slot = get_slot(key);
 		auto cur_key = atom_cur_key.load();
@@ -334,7 +337,7 @@ public:
 		while (key > end_key && !atom_end_key.compare_exchange_weak(end_key, key));
 
 		L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" BLUE "ADD" NO_COL " - _Mod:%llu, key:%llu, slot:%llu, cur_key:%llu, end_key:%llu", _Mod, key, slot, cur_key, end_key);
-		Stash_T::_put(bin, Nil()).add(std::forward<T>(value), key);
+		return Stash_T::_put(bin, Nil()).add(std::forward<T>(value), key);
 	}
 };
 
@@ -388,12 +391,14 @@ public:
 	}
 
 	template <typename T>
-	void add(T&& value, uint64_t) {
+	uint64_t add(T&& value, uint64_t key) {
 		auto slot = atom_end.load();
 		while (!atom_end.compare_exchange_weak(slot, slot + 1));
 		auto& bin = Stash_T::spawn_bin(slot);
 
 		L_INFO_HOOK_LOG("StashValues::ADD", this, "StashValues::" BLUE "ADD" NO_COL " - slot:%llu", slot);
 		Stash_T::_put(bin, std::forward<T>(value));
+
+		return key;
 	}
 };
