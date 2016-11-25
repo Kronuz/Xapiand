@@ -91,7 +91,9 @@ protected:
 						}
 					}
 					if (next) {
+						auto old_next_next = next_next;
 						while (!next->atom_next.compare_exchange_weak(next_next, nullptr));
+						while (!atom_next.compare_exchange_weak(old_next_next, next_next));
 						delete next;
 					}
 				}
