@@ -249,7 +249,12 @@ class StashSlots : public Stash<_Tp, _Size> {
 		 *
 		 */
 
+
 		if (!_Ring && pos == 0) {
+			return false;
+		}
+
+		if (pos == last_pos) {
 			return false;
 		}
 
@@ -259,13 +264,9 @@ class StashSlots : public Stash<_Tp, _Size> {
 				return false;
 			}
 		} else {
-			if (pos < initial_pos) {
-				if (pos > final_pos) {
-					// We're beyond final_pos, stop
-					return false;
-				} else if (pos == final_pos && final_pos == last_pos) {
-					return false;
-				}
+			if (pos < initial_pos && pos > final_pos) {
+				// We're beyond final_pos, stop
+				return false;
 			}
 		}
 
