@@ -9,7 +9,7 @@ set (PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set (PACKAGE_TARNAME "${PROJECT_NAME}")
 set (PACKAGE_PATH_TEST "${PROJECT_SOURCE_DIR}/tests")
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
 option (IWYU "Enable include-what-you-use" OFF)
 option (BINARY_PROXY "Define to what port binary traffic will be redirected to" OFF)
@@ -37,47 +37,44 @@ set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
 include (CheckCXXCompilerFlag)
 
-set (READABLE_CXX_COMPILER "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 
 # Check for compiler support for C++14
 CHECK_CXX_COMPILER_FLAG(-std=c++14 COMPILER_SUPPORTS_CXX14)
-if (NOT COMPILER_SUPPORTS_CXX14)
-	message (FATAL_ERROR "The compiler ${READABLE_CXX_COMPILER} has no C++14 support. Please use a different C++ compiler.")
+if (COMPILER_SUPPORTS_CXX14)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+else ()
+	message (FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} has no C++14 support. Please use a different C++ compiler.")
 endif ()
+
 
 # Check for fdiagnostics-color flag.
 CHECK_CXX_COMPILER_FLAG(-fdiagnostics-color=always COMPILER_SUPPORTS_DIAG_COLOR)
 if (COMPILER_SUPPORTS_DIAG_COLOR)
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fdiagnostics-color=always")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 else ()
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif ()
 
-# Default value for CMAKE_BUILD_TYPE.
-if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Release)
-endif ()
+
+# Setup CMAKE_CXX_FLAGS Debug flags.
+set (CMAKE_CXX_FLAGS_DEBUG "-O0 -g -DDEBUG")
+
 
 # Check for Wall and Wextra flags.
-string (TOLOWER ${CMAKE_BUILD_TYPE} _build_type)
-if (_build_type STREQUAL release)
-	message (STATUS "Release build")
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-else ()
-	message (STATUS "Debug build")
-	CHECK_CXX_COMPILER_FLAG(-Wall COMPILER_SUPPORTS_WALL)
-	CHECK_CXX_COMPILER_FLAG(-Wextra COMPILER_SUPPORTS_WEXTRA)
-	if (COMPILER_SUPPORTS_WALL AND COMPILER_SUPPORTS_WEXTRA)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -g -O0")
-	else ()
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
-	endif ()
+CHECK_CXX_COMPILER_FLAG(-Wall COMPILER_SUPPORTS_WALL)
+if (COMPILER_SUPPORTS_WALL)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
+endif ()
+CHECK_CXX_COMPILER_FLAG(-Wextra COMPILER_SUPPORTS_WEXTRA)
+if (COMPILER_SUPPORTS_WEXTRA)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wextra")
 endif ()
 
 
 ########################################################################
 # Add Check for sanitizers.
 ########################################################################
+
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
 	find_package (Sanitizers QUIET)
 endif ()
@@ -102,15 +99,6 @@ if (CCACHE_FOUND)
 else ()
 	message (STATUS "Looking for ccache - not found")
 endif ()
-
-
-########################################################################
-# Remove duplicates compilation flags
-########################################################################
-separate_arguments (CMAKE_CXX_FLAGS)
-list (REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
-string (REPLACE ";" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS}")
 
 
 ########################################################################
@@ -382,6 +370,50 @@ install (FILES ${MANPAGES} DESTINATION ${CMAKE_INSTALL_MANDIR}/man8 COMPONENT do
 ########################################################################
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+
+########################################################################
+# Check CMAKE_BUILD_TYPE:  Debug Release RelWithDebInfo MinSizeRel
+########################################################################
+
+# Remove duplicates compilation flags
+separate_arguments (CMAKE_CXX_FLAGS)
+list (REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
+string (REPLACE ";" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+string (TOLOWER ${CMAKE_BUILD_TYPE} _build_type)
+if (_build_type STREQUAL debug)
+	set (CMAKE_BUILD_TYPE "Debug")
+	separate_arguments (CMAKE_CXX_FLAGS_DEBUG)
+	list (REMOVE_DUPLICATES CMAKE_CXX_FLAGS_DEBUG)
+	string (REPLACE ";" " " CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+	message (STATUS "Debug build")
+	message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
+
+elseif (_build_type STREQUAL relwithdebinfo)
+	set (CMAKE_BUILD_TYPE "RelWithDebInfo")
+	separate_arguments (CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+	list (REMOVE_DUPLICATES CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+	string (REPLACE ";" " " CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+	message (STATUS "Release With Debug Info build")
+	message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+
+elseif (_build_type STREQUAL minsizerel)
+	set (CMAKE_BUILD_TYPE "MinSizeRel")
+	separate_arguments (CMAKE_CXX_FLAGS_MINSIZEREL)
+	list (REMOVE_DUPLICATES CMAKE_CXX_FLAGS_MINSIZEREL)
+	string (REPLACE ";" " " CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
+	message (STATUS "Minimum Size Release build")
+	message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_MINSIZEREL}")
+
+else ()
+	set (CMAKE_BUILD_TYPE "Release")
+	separate_arguments (CMAKE_CXX_FLAGS_RELEASE)
+	list (REMOVE_DUPLICATES CMAKE_CXX_FLAGS_RELEASE)
+	string (REPLACE ";" " " CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+	message (STATUS "Release build")
+	message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
+endif ()
 
 
 ########################################################################
