@@ -80,7 +80,7 @@ public:
 
 	TaskType* peep();
 	TaskType* next(uint64_t final_key=0, bool keep_going=true);
-	void add(const TaskType& task, uint64_t key=0);
+	uint64_t add(const TaskType& task, uint64_t key=0);
 };
 
 

@@ -65,10 +65,10 @@ SchedulerQueue::peep()
 }
 
 
-void
+uint64_t
 SchedulerQueue::add(const TaskType& task, uint64_t key)
 {
-	queue.add(task, key);
+	return queue.add(task, key);
 }
 
 
@@ -137,15 +137,8 @@ void
 Scheduler::add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup)
 {
 	if (running != 0) {
-		auto now = std::chrono::system_clock::now();
-		if (wakeup < now + 2ms) {
-			wakeup = now + 2ms;  // defer log so we make sure we're not adding messages to the current slot
-		}
-
-		auto wt = time_point_to_ullong(wakeup);
+		auto wt = scheduler_queue.add(task, time_point_to_ullong(wakeup));
 		task->wakeup_time = wt;
-
-		scheduler_queue.add(task, SchedulerQueue::time_point_to_key(wakeup));
 
 		bool notify;
 		auto nwt = next_wakeup_time.load();
@@ -206,7 +199,7 @@ Scheduler::run()
 		next_wakeup_time.compare_exchange_strong(nwt, wt);
 		while (nwt > wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
 
-		L_INFO_HOOK_LOG("Scheduler::run::loop", this, "Scheduler::run()::loop - now:%llu, wakeup:%llu", time_point_to_ullong(now), next_wakeup_time.load());
+		L_INFO_HOOK_LOG("Scheduler::run::loop", this, "Scheduler::run()::loop - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), next_wakeup_time.load());
 		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
 
 		while ((task = scheduler_queue.next())) {
