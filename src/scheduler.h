@@ -73,17 +73,17 @@ public:
 
 private:
 	using _tasks =        StashValues<TaskType,       10ULL>;
-	using _50_1ms =       StashSlots<_tasks,          10ULL,   &now, 1ULL * MUL / 2ULL, 1ULL * MUL,       50ULL,   false>;
-	using _10_50ms =      StashSlots<_50_1ms,         10ULL,   &now, 0ULL,              50ULL * MUL,      10ULL,   false>;
-	using _3600_500ms =   StashSlots<_10_50ms,        600ULL,  &now, 0ULL,              500ULL * MUL,     3600ULL, false>;
-	using _48_1800s =     StashSlots<_3600_500ms,     48ULL,   &now, 0ULL,              1800000ULL * MUL, 48ULL,   true>;
+	using _50_1ms =       StashSlots<_tasks,          10ULL,   &now, 1ULL * MUL,       50ULL,   false>;
+	using _10_50ms =      StashSlots<_50_1ms,         10ULL,   &now, 50ULL * MUL,      10ULL,   false>;
+	using _3600_500ms =   StashSlots<_10_50ms,        600ULL,  &now, 500ULL * MUL,     3600ULL, false>;
+	using _48_1800s =     StashSlots<_3600_500ms,     48ULL,   &now, 1800000ULL * MUL, 48ULL,   true>;
 	_48_1800s queue;
 
 public:
 	SchedulerQueue();
 
 	TaskType* peep();
-	TaskType* next(bool final=true, uint64_t final_key=0, bool keep_going=true);
+	TaskType* next(uint64_t final_key=0, bool keep_going=true);
 	void add(const TaskType& task, uint64_t key=0);
 };
 

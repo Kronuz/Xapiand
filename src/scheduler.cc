@@ -44,16 +44,14 @@ ScheduledTask::clear()
 }
 
 
-SchedulerQueue::SchedulerQueue()
-	: queue(now())
-{ }
+SchedulerQueue::SchedulerQueue() { }
 
 
 TaskType*
-SchedulerQueue::next(bool final, uint64_t final_key, bool keep_going)
+SchedulerQueue::next(uint64_t final_key, bool keep_going)
 {
 	TaskType* task = nullptr;
-	queue.next(&task, final, final_key, keep_going, false);
+	queue.next(&task, final_key, keep_going, false);
 	return task;
 }
 
@@ -62,7 +60,7 @@ TaskType*
 SchedulerQueue::peep()
 {
 	TaskType* task = nullptr;
-	queue.next(&task, false, 0, true, true);
+	queue.next(&task, 0, true, true);
 	return task;
 }
 
@@ -211,7 +209,7 @@ Scheduler::run()
 		L_INFO_HOOK_LOG("Scheduler::run::loop", this, "Scheduler::run()::loop - now:%llu, wakeup:%llu", time_point_to_ullong(now), next_wakeup_time.load());
 		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
 
-		while ((task = scheduler_queue.next(running < 0))) {
+		while ((task = scheduler_queue.next())) {
 			if (*task) {
 				run_one(*task);
 				(*task).reset();
