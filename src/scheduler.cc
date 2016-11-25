@@ -140,14 +140,12 @@ Scheduler::add(const TaskType& task, std::chrono::time_point<std::chrono::system
 		auto wt = scheduler_queue.add(task, time_point_to_ullong(wakeup));
 		task->wakeup_time = wt;
 
-		bool notify;
 		auto nwt = next_wakeup_time.load();
-		do {
-			notify = nwt > wt;
-		} while (notify && !next_wakeup_time.compare_exchange_weak(nwt, wt));
+		while (nwt > wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
 
-		if (notify) {
-			L_INFO_HOOK_LOG("Scheduler::NOTIFY", this, "Scheduler::" RED "NOTIFY" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), next_wakeup_time.load(), wt);
+		auto now = std::chrono::system_clock::now();
+		if (nwt > wt || nwt < time_point_to_ullong(now)) {
+			L_INFO_HOOK_LOG("Scheduler::NOTIFY", this, "Scheduler::" BLUE "NOTIFY" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", time_point_to_ullong(now), next_wakeup_time.load(), wt);
 			wakeup_signal.notify_one();
 		}
 	}
