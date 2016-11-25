@@ -61,14 +61,10 @@ public:
 #define MS 1000000ULL
 
 class SchedulerQueue {
-public:
-	template <typename T>
-	static inline uint64_t time_point_to_key(std::chrono::time_point<T> n) {
-		return std::chrono::duration_cast<std::chrono::nanoseconds>(n.time_since_epoch()).count();
-	}
 
-	static inline uint64_t now() {
-		return time_point_to_key(std::chrono::system_clock::now());
+public:
+	static unsigned long long now() {
+		return time_point_to_ullong(std::chrono::system_clock::now());
 	}
 
 private:
