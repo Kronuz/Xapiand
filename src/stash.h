@@ -212,34 +212,25 @@ class StashSlots : public Stash<_Tp, _Size> {
 	using Bin = typename Stash_T::Bin;
 	using Nil = typename Stash_T::Nil;
 
-	std::atomic<uint64_t> atom_cur_pos_key;
-	std::atomic<uint64_t> atom_end_pos_key;
+	std::atomic<uint64_t> atom_cur_key;
+	std::atomic<uint64_t> atom_end_key;
 
 	size_t get_slot(uint64_t key) {
 		auto slot = (key / _Div) % _Mod;
 		return slot;
 	}
 
-	auto& put(uint64_t key) {
-		auto slot = get_slot(key);
-		auto cur_pos_key = atom_cur_pos_key.load();
-		auto end_pos_key = atom_end_pos_key.load();
-
-		L_INFO_HOOK_LOG("StashSlots::put", this, "StashSlots::put() - _Mod:%llu, key:%llu, slot:%llu, cur_pos_key:%llu, end_pos_key:%llu", _Mod, key, slot, cur_pos_key, end_pos_key);
-
-		auto& bin = Stash_T::spawn_bin(slot);
-		while (key < cur_pos_key && !atom_cur_pos_key.compare_exchange_weak(cur_pos_key, key));
-		while (key > end_pos_key && !atom_end_pos_key.compare_exchange_weak(end_pos_key, key));
-
-		return Stash_T::_put(bin, Nil());
+	uint64_t get_incremented(uint64_t key) {
+		auto new_key = ((key + _Div) / _Div) * _Div;
+		return new_key;
 	}
 
-	bool check_pos(uint64_t& cur_pos_key, uint64_t& final_pos_key, bool keep_going, bool peep) {
-		auto end_pos_key = atom_end_pos_key.load();
-		if ((!peep && cur_pos_key > final_pos_key) || cur_pos_key > end_pos_key) {
+	bool check(uint64_t& cur_key, uint64_t& final_key, bool keep_going, bool peep) {
+		auto end_key = atom_end_key.load();
+		if ((!peep && cur_key > final_key) || cur_key > end_key) {
 			if (!peep && keep_going) {
-				final_pos_key = _CurrentKey();
-				if ((!peep && cur_pos_key > final_pos_key) || cur_pos_key > end_pos_key) {
+				final_key = _CurrentKey();
+				if ((!peep && cur_key > final_key) || cur_key > end_key) {
 					return false;
 				}
 			} else {
@@ -249,37 +240,51 @@ class StashSlots : public Stash<_Tp, _Size> {
 		return true;
 	}
 
+	auto& put(uint64_t key) {
+		auto slot = get_slot(key);
+		auto cur_key = atom_cur_key.load();
+		auto end_key = atom_end_key.load();
+
+		L_INFO_HOOK_LOG("StashSlots::put", this, "StashSlots::put() - _Mod:%llu, key:%llu, slot:%llu, cur_key:%llu, end_key:%llu", _Mod, key, slot, cur_key, end_key);
+
+		auto& bin = Stash_T::spawn_bin(slot);
+		while (key < cur_key && !atom_cur_key.compare_exchange_weak(cur_key, key));
+		while (key > end_key && !atom_end_key.compare_exchange_weak(end_key, key));
+
+		return Stash_T::_put(bin, Nil());
+	}
+
 public:
 	StashSlots(StashSlots&& o) noexcept
 		: Stash_T::Stash(std::move(o)),
-		  atom_cur_pos_key(std::move(o.atom_cur_pos_key)),
-		  atom_end_pos_key(std::move(o.atom_end_pos_key)) { }
+		  atom_cur_key(std::move(o.atom_cur_key)),
+		  atom_end_key(std::move(o.atom_end_key)) { }
 
 
 	StashSlots()
-		: atom_cur_pos_key(_CurrentKey()),
-		  atom_end_pos_key(_CurrentKey()) { }
+		: atom_cur_key(_CurrentKey()),
+		  atom_end_key(atom_cur_key.load()) { }
 
 	template <typename T>
-	bool next(T** value_ptr, uint64_t final_pos_key=0, bool keep_going=true, bool peep=false) {
-		auto cur_pos_key = atom_cur_pos_key.load();
+	bool next(T** value_ptr, uint64_t final_key=0, bool keep_going=true, bool peep=false) {
+		auto cur_key = atom_cur_key.load();
 
-		if (!check_pos(cur_pos_key, final_pos_key, keep_going, peep)) {
+		if (!check(cur_key, final_key, keep_going, peep)) {
 			return false;
 		}
 
 		do {
-			auto cur_pos = get_slot(cur_pos_key);
+			auto cur = get_slot(cur_key);
 
-			L_INFO_HOOK_LOG("StashSlots::next::loop", this, "StashSlots::next()::loop - _Mod:%llu, cur_pos_key:%llu, cur_pos:%llu, final_pos_key:%llu, keep_going:%s, peep:%s", _Mod, cur_pos_key, cur_pos, final_pos_key, keep_going ? "true" : "false", peep ? "true" : "false");
+			L_INFO_HOOK_LOG("StashSlots::next::loop", this, "StashSlots::next()::loop - _Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, keep_going:%s, peep:%s", _Mod, cur_key, cur, final_key, keep_going ? "true" : "false", peep ? "true" : "false");
 
 			Bin* ptr = nullptr;
 			std::atomic<Bin*>* bin_ptr;
-			switch (Stash_T::get_bin(&bin_ptr, cur_pos)) {
+			switch (Stash_T::get_bin(&bin_ptr, cur)) {
 				case StashState::Ok: {
 					ptr = (*bin_ptr).load();
 					if (ptr) {
-						if (ptr->val.next(value_ptr, final_pos_key, keep_going, peep)) {
+						if (ptr->val.next(value_ptr, final_key, keep_going, peep)) {
 							return true;
 						}
 					}
@@ -292,14 +297,14 @@ public:
 					break;
 			}
 
-			auto new_cur_pos_key = ((cur_pos_key + _Div) / _Div) * _Div;
+			auto new_cur_key = get_incremented(cur_key);
 
-			if (!check_pos(new_cur_pos_key, final_pos_key, keep_going, peep)) {
+			if (!check(new_cur_key, final_key, keep_going, peep)) {
 				return false;
 			}
 
-			if (peep || atom_cur_pos_key.compare_exchange_strong(cur_pos_key, new_cur_pos_key)) {
-				cur_pos_key = new_cur_pos_key;
+			if (peep || atom_cur_key.compare_exchange_strong(cur_key, new_cur_key)) {
+				cur_key = new_cur_key;
 			}
 
 			if (_Ring && !ptr && !peep) {
@@ -322,34 +327,34 @@ class StashValues : public Stash<_Tp, _Size> {
 	using Bin = typename Stash_T::Bin;
 	using Nil = typename Stash_T::Nil;
 
-	std::atomic<size_t> atom_cur_pos;
-	std::atomic<size_t> atom_end_pos;
+	std::atomic<size_t> atom_cur;
+	std::atomic<size_t> atom_end;
 
 public:
 	StashValues(StashValues&& o) noexcept
 		: Stash_T::Stash(std::move(o)),
-		  atom_cur_pos(std::move(o.atom_cur_pos)),
-		  atom_end_pos(std::move(o.atom_end_pos)) { }
+		  atom_cur(std::move(o.atom_cur)),
+		  atom_end(std::move(o.atom_end)) { }
 
 	StashValues()
-		: atom_cur_pos(0),
-		  atom_end_pos(0) { }
+		: atom_cur(0),
+		  atom_end(0) { }
 
 	template <typename T>
 	bool next(T** value_ptr, uint64_t, bool, bool peep) {
-		auto cur_pos = atom_cur_pos.load();
+		auto cur = atom_cur.load();
 
 		std::atomic<Bin*>* bin_ptr;
-		switch (Stash_T::get_bin(&bin_ptr, cur_pos)) {
+		switch (Stash_T::get_bin(&bin_ptr, cur)) {
 			case StashState::Ok: {
-				auto new_cur_pos = cur_pos + 1;
-				if (peep || atom_cur_pos.compare_exchange_strong(cur_pos, new_cur_pos)) {
-					cur_pos = new_cur_pos;
+				auto new_cur = cur + 1;
+				if (peep || atom_cur.compare_exchange_strong(cur, new_cur)) {
+					cur = new_cur;
 				}
 				auto ptr = (*bin_ptr).load();
 				if (ptr) {
 					*value_ptr = &ptr->val;
-					L_INFO_HOOK_LOG("StashValues::next::found", this, "StashValues::next()::found - cur_pos:%llu, peep:%s", cur_pos, peep ? "true" : "false");
+					L_INFO_HOOK_LOG("StashValues::next::found", this, "StashValues::next()::found - cur:%llu, peep:%s", cur, peep ? "true" : "false");
 					return true;
 				}
 			}
@@ -366,7 +371,7 @@ public:
 
 	template <typename T>
 	void add(T&& value, uint64_t) {
-		auto& bin = Stash_T::spawn_bin(atom_end_pos++);
+		auto& bin = Stash_T::spawn_bin(atom_end++);
 		Stash_T::_put(bin, std::forward<T>(value));
 	}
 };
