@@ -48,7 +48,7 @@ SchedulerQueue::SchedulerQueue() { }
 
 
 TaskType*
-SchedulerQueue::next(uint64_t final_key, bool keep_going)
+SchedulerQueue::next(unsigned long long final_key, bool keep_going)
 {
 	TaskType* task = nullptr;
 	queue.next(&task, final_key, keep_going, false);
@@ -65,8 +65,8 @@ SchedulerQueue::peep()
 }
 
 
-uint64_t
-SchedulerQueue::add(const TaskType& task, uint64_t key)
+unsigned long long
+SchedulerQueue::add(const TaskType& task, unsigned long long key)
 {
 	return queue.add(task, key);
 }

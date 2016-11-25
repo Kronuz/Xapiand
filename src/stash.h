@@ -49,7 +49,7 @@ protected:
 
 		Bin(Nil&&) { }
 
-		Bin(uint64_t key)
+		Bin(unsigned long long key)
 			: val(_Tp(key)) { }
 
 		Bin(const _Tp& val_)
@@ -215,28 +215,28 @@ public:
 };
 
 
-template <typename _Tp, size_t _Size, uint64_t(*_CurrentKey)(), uint64_t _Div, uint64_t _Mod, bool _Ring>
+template <typename _Tp, size_t _Size, unsigned long long(*_CurrentKey)(), unsigned long long _Div, unsigned long long _Mod, bool _Ring>
 class StashSlots : public Stash<_Tp, _Size> {
 	using Stash_T = Stash<_Tp, _Size>;
 	using Bin = typename Stash_T::Bin;
 	using Nil = typename Stash_T::Nil;
 
-	std::atomic<uint64_t> atom_cur_key;
-	std::atomic<uint64_t> atom_end_key;
+	std::atomic_ullong atom_cur_key;
+	std::atomic_ullong atom_end_key;
 
-	uint64_t get_base_key(uint64_t key) {
+	unsigned long long get_base_key(unsigned long long key) {
 		return (key / _Div) * _Div;
 	}
 
-	uint64_t get_inc_base_key(uint64_t key) {
+	unsigned long long get_inc_base_key(unsigned long long key) {
 		return get_base_key(key + _Div);
 	}
 
-	size_t get_slot(uint64_t key) {
+	size_t get_slot(unsigned long long key) {
 		return (key / _Div) % _Mod;
 	}
 
-	bool check(uint64_t& cur_key, uint64_t& final_key, bool keep_going, bool peep) {
+	bool check(unsigned long long& cur_key, unsigned long long& final_key, bool keep_going, bool peep) {
 		auto end_key = atom_end_key.load();
 		if ((!peep && cur_key > final_key) || cur_key > end_key) {
 			if (!peep && keep_going) {
@@ -263,7 +263,7 @@ public:
 		  atom_end_key(atom_cur_key.load()) { }
 
 	template <typename T>
-	bool next(T** value_ptr, uint64_t final_key=0, bool keep_going=true, bool peep=false) {
+	bool next(T** value_ptr, unsigned long long final_key=0, bool keep_going=true, bool peep=false) {
 		if (!final_key) {
 			final_key = _CurrentKey();
 		}
@@ -322,7 +322,7 @@ public:
 	}
 
 	template <typename T>
-	uint64_t add(T&& value, uint64_t key) {
+	unsigned long long add(T&& value, unsigned long long key) {
 		auto current_key = _CurrentKey();
 		if (key < current_key) {
 			key = current_key;
@@ -348,8 +348,8 @@ class StashValues : public Stash<_Tp, _Size> {
 	using Bin = typename Stash_T::Bin;
 	using Nil = typename Stash_T::Nil;
 
-	std::atomic<size_t> atom_cur;
-	std::atomic<size_t> atom_end;
+	std::atomic_size_t atom_cur;
+	std::atomic_size_t atom_end;
 
 public:
 	StashValues(StashValues&& o) noexcept
@@ -362,7 +362,7 @@ public:
 		  atom_end(0) { }
 
 	template <typename T>
-	bool next(T** value_ptr, uint64_t, bool, bool peep) {
+	bool next(T** value_ptr, unsigned long long, bool, bool peep) {
 		auto cur = atom_cur.load();
 
 		std::atomic<Bin*>* bin_ptr;
@@ -391,7 +391,7 @@ public:
 	}
 
 	template <typename T>
-	uint64_t add(T&& value, uint64_t key) {
+	unsigned long long add(T&& value, unsigned long long key) {
 		auto slot = atom_end.load();
 		while (!atom_end.compare_exchange_weak(slot, slot + 1));
 		auto& bin = Stash_T::spawn_bin(slot);
