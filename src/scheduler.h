@@ -58,7 +58,7 @@ public:
 };
 
 
-#define MUL 1000000ULL
+#define MS 1000000ULL
 
 class SchedulerQueue {
 public:
@@ -73,10 +73,10 @@ public:
 
 private:
 	using _tasks =        StashValues<TaskType,     10ULL>;
-	using _50_1ms =       StashSlots<_tasks,        10ULL,  &now,        1ULL * MUL,    50ULL,  false>;
-	using _10_50ms =      StashSlots<_50_1ms,       10ULL,  &now,       50ULL * MUL,    10ULL,  false>;
-	using _3600_500ms =   StashSlots<_10_50ms,     600ULL,  &now,      500ULL * MUL,  3600ULL,  false>;
-	using _48_1800s =     StashSlots<_3600_500ms,   48ULL,  &now,  1800000ULL * MUL,    48ULL,  true>;
+	using _50_1ms =       StashSlots<_tasks,        10ULL,  &now,        1ULL * MS,    50ULL,  false>;
+	using _10_50ms =      StashSlots<_50_1ms,       10ULL,  &now,       50ULL * MS,    10ULL,  false>;
+	using _3600_500ms =   StashSlots<_10_50ms,     600ULL,  &now,      500ULL * MS,  3600ULL,  false>;
+	using _48_1800s =     StashSlots<_3600_500ms,   48ULL,  &now,  1800000ULL * MS,    48ULL,  true>;
 	_48_1800s queue;
 
 public:
