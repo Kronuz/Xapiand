@@ -893,9 +893,10 @@ HttpClient::index_document_view(enum http_method method)
 	operation_begins = std::chrono::system_clock::now();
 
 	auto body_ = get_body();
+	MsgPack final_body(MsgPack::Type::MAP);
 	endpoints_error_list err_list;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	db_handler.index(doc_id, body_.second, query_field->commit, body_.first, &err_list);
+	db_handler.index(doc_id, body_.second, query_field->commit, body_.first, &final_body, &err_list);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -917,6 +918,9 @@ HttpClient::index_document_view(enum http_method method)
 			{ ID_FIELD_NAME, doc_id },
 			{ "_commit", query_field->commit }
 		};
+		if (!final_body.empty()) {
+			response["_index"]["_final_body"] = final_body;
+		}
 	} else {
 		for (const auto& err : err_list) {
 			MsgPack o;

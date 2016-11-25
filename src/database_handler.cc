@@ -231,7 +231,7 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 
 
 MsgPack
-DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
+DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id, bool& modified)
 {
 	L_CALL(this, "DatabaseHandler::run_script(...)");
 
@@ -257,7 +257,17 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
-				return (*processor)["on_put"](data_, old_data);
+				auto oldhash = xxh64::hash(old_data.to_string());
+				auto final_data = (*processor)["on_put"](data_, old_data);
+
+				data_.erase("_script");
+				auto datahash = xxh64::hash(data_.to_string());
+				auto finalhash = xxh64::hash(final_data.to_string());
+
+				if (finalhash != datahash && finalhash != oldhash) {
+					modified = true;
+				}
+				return final_data;
 			}
 
 			case HTTP_PATCH: {
@@ -267,7 +277,17 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
-				return (*processor)["on_patch"](data_, old_data);
+				auto oldhash = xxh64::hash(old_data.to_string());
+				auto final_data = (*processor)["on_patch"](data_, old_data);
+
+				data_.erase("_script");
+				auto datahash = xxh64::hash(data_.to_string());
+				auto finalhash = xxh64::hash(final_data.to_string());
+
+				if (finalhash != datahash && finalhash != oldhash) {
+					modified = true;
+				}
+				return final_data;
 			}
 
 			case HTTP_DELETE: {
@@ -277,17 +297,43 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 					old_data = document.get_obj();
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
-				return (*processor)["on_delete"](data_, old_data);
+				auto oldhash = xxh64::hash(old_data.to_string());
+				auto final_data = (*processor)["on_delete"](data_, old_data);
+
+				data_.erase("_script");
+				auto datahash = xxh64::hash(data_.to_string());
+				auto finalhash = xxh64::hash(final_data.to_string());
+
+				if (finalhash != datahash && finalhash != oldhash) {
+					modified = true;
+				}
+				return final_data;
 			}
 
 			case HTTP_GET: {
 				MsgPack data_ = data;
-				return (*processor)["on_get"](data_);
+				auto final_data = (*processor)["on_get"](data_);
+
+				data_.erase("_script");
+				auto datahash = xxh64::hash(data_.to_string());
+				auto finalhash = xxh64::hash(final_data.to_string());
+				if (finalhash != datahash) {
+					modified = true;
+				}
+				return final_data;
 			}
 
 			case HTTP_POST: {
 				MsgPack data_ = data;
-				return (*processor)["on_post"](data_);
+				auto final_data = (*processor)["on_post"](data_);
+
+				data_.erase("_script");
+				auto datahash = xxh64::hash(data_.to_string());
+				auto finalhash = xxh64::hash(final_data.to_string());
+				if (finalhash != datahash) {
+					modified = true;
+				}
+				return final_data;
 			}
 
 			default:
@@ -308,7 +354,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 
 
 Xapian::docid
-DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, MsgPack* out_body, endpoints_error_list* err_list)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, <obj>, <blob>)", repr(_document_id).c_str());
 
@@ -328,8 +374,12 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	if (serialised_id.empty()) {
 		obj_ = obj;
 	} else {
+		bool modified = false;
 		prefixed_term_id = prefixed(serialised_id, DOCUMENT_ID_TERM_PREFIX);
-		obj_ = run_script(obj, prefixed_term_id);
+		obj_ = run_script(obj, prefixed_term_id, modified);
+		if (out_body && modified) {
+			*out_body = obj_;
+		}
 	}
 
 	// Add ID.
@@ -387,7 +437,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 
 
 Xapian::docid
-DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, MsgPack* out_body, endpoints_error_list* err_list)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, <body>)", repr(_document_id).c_str());
 
@@ -407,7 +457,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, boo
 		blob = body.as_string();
 	}
 
-	return index(_document_id, obj, blob, commit_, ct_type, err_list);
+	return index(_document_id, obj, blob, commit_, ct_type, out_body, err_list);
 }
 
 
@@ -439,7 +489,7 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 
 	auto blob = document.get_blob();
 
-	return index(_document_id, obj, blob, commit_, ct_type, err_list);
+	return index(_document_id, obj, blob, commit_, ct_type, nullptr, err_list);
 }
 
 
