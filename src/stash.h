@@ -362,27 +362,44 @@ public:
 		  atom_end(0) { }
 
 	template <typename T>
+	bool is_empty(const std::shared_ptr<T> ptr) {
+		return !ptr;
+	}
+
+	template <typename T, typename = std::enable_if_t<not std::is_same<_Tp, std::shared_ptr<T>>::value>>
+	bool is_empty(_Tp) {
+		return false;
+	}
+
+	template <typename T>
 	bool next(T** value_ptr, unsigned long long, bool, bool peep) {
 		auto cur = atom_cur.load();
 
-		std::atomic<Bin*>* bin_ptr;
-		switch (Stash_T::get_bin(&bin_ptr, cur)) {
-			case StashState::Ok: {
-				auto new_cur = cur + 1;
-				if (peep || atom_cur.compare_exchange_strong(cur, new_cur)) {
-					cur = new_cur;
+		do {
+			L_INFO_HOOK_LOG("StashValues::LOOP", this, "StashValues::" GREEN "LOOP" NO_COL " - %scur:%llu, peep:%s", peep ? DARK_GREY : NO_COL, cur, peep ? "true" : "false");
+
+			std::atomic<Bin*>* bin_ptr;
+			switch (Stash_T::get_bin(&bin_ptr, cur)) {
+				case StashState::Ok: {
+					auto ptr = (*bin_ptr).load();
+					if (ptr) {
+						auto new_cur = cur + 1;
+						if (peep || atom_cur.compare_exchange_strong(cur, new_cur)) {
+							cur = new_cur;
+						}
+						if (!is_empty(ptr->val)) {
+							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" GREEN "FOUND" NO_COL " - %scur:%llu, peep:%s", peep ? DARK_GREY : NO_COL, cur, peep ? "true" : "false");
+							*value_ptr = &ptr->val;
+							return true;
+						}
+						continue;
+					}
 				}
-				auto ptr = (*bin_ptr).load();
-				if (ptr) {
-					*value_ptr = &ptr->val;
-					L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" GREEN "FOUND" NO_COL " - %scur:%llu, peep:%s", peep ? DARK_GREY : NO_COL, cur, peep ? "true" : "false");
-					return true;
-				}
+				default:
+					break;
 			}
-			default:
-				break;
-		}
-		return false;
+			return false;
+		} while(true);
 	}
 
 	template <typename T>
