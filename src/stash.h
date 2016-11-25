@@ -156,15 +156,12 @@ protected:
 	};
 
 	Data data;
-	std::atomic_size_t pos;
 
 public:
 	Stash(Stash&& o) noexcept
-		: data(std::move(o.data)),
-		  pos(std::move(o.pos)) { }
+		: data(std::move(o.data)) { }
 
-	Stash(size_t pos_)
-		: pos(pos_) { }
+	Stash() { }
 
 	~Stash() {
 		clear();
@@ -215,28 +212,38 @@ class StashSlots : public Stash<_Tp, _Size> {
 	using Bin = typename Stash_T::Bin;
 	using Nil = typename Stash_T::Nil;
 
+	std::atomic_size_t atom_cur_pos;
+	std::atomic_size_t atom_end_pos;
+
 	size_t get_slot(uint64_t key) {
 		auto slot = ((key + _Sum) / _Div) % _Mod;
-		// std::cout << "size:" << _Size << ", div:" << _Div << ", mod:" << _Mod << ", key:" << key << ", slot:" << slot << std::endl;
 		return slot;
+	}
+
+	size_t get_slot_size() {
+		static const auto size = _Div + _Sum;
+		return size;
 	}
 
 	auto& put(uint64_t key) {
 		auto slot = get_slot(key);
+		auto cur_pos = atom_cur_pos.load();
+		auto end_pos = atom_end_pos.load();
+
+		L_INFO_HOOK_LOG("StashSlots::put", this, "StashSlots::put() - _Mod:%llu, slot:%llu, cur_pos:%llu, end_pos:%llu", _Mod, slot, cur_pos, end_pos);
 
 		auto& bin = Stash_T::spawn_bin(slot);
 
 		if (!_Ring) {
 			// This is not a ring, any new (older) item added could move the position
-			auto pos = Stash_T::pos.load();
-			while (slot < pos && !Stash_T::pos.compare_exchange_weak(pos, slot));
+			while (slot < cur_pos && !atom_cur_pos.compare_exchange_weak(cur_pos, slot));
 		}
 
 		return Stash_T::_put(bin, Nil());
 	}
 
-	bool check_pos(size_t pos, size_t initial_pos, size_t final_pos, size_t last_pos) {
-		/* There are basically two cases where pos is valid (v) based in the
+	bool check_pos(size_t cur_pos, size_t initial_pos, size_t final_pos, size_t last_pos) {
+		/* There are basically two cases where cur_pos is valid (v) based in the
 		 * values of final_pos (fp) and initial_pos (ip).
 		 *
 		 * 1. When final_pos >= initial_pos:
@@ -250,21 +257,21 @@ class StashSlots : public Stash<_Tp, _Size> {
 		 */
 
 
-		if (!_Ring && pos == 0) {
+		if (!_Ring && cur_pos == 0) {
 			return false;
 		}
 
-		if (pos == last_pos) {
+		if (cur_pos == last_pos) {
 			return false;
 		}
 
 		if (final_pos >= initial_pos) {
-			if (pos < initial_pos || pos > final_pos) {
+			if (cur_pos < initial_pos || cur_pos > final_pos) {
 				// We're beyond final_pos, stop
 				return false;
 			}
 		} else {
-			if (pos < initial_pos && pos > final_pos) {
+			if (cur_pos < initial_pos && cur_pos > final_pos) {
 				// We're beyond final_pos, stop
 				return false;
 			}
@@ -273,8 +280,8 @@ class StashSlots : public Stash<_Tp, _Size> {
 		return true;
 	}
 
-	bool increment_pos(bool peep, size_t& pos, bool keep_going, size_t initial_pos, size_t& final_pos, size_t last_pos) {
-		auto new_pos = (pos + 1) % _Mod;
+	bool increment_pos(bool peep, size_t& cur_pos, bool keep_going, size_t initial_pos, size_t& final_pos, size_t last_pos) {
+		auto new_pos = (cur_pos + 1) % _Mod;
 
 		if (!check_pos(new_pos, initial_pos, final_pos, last_pos)) {
 			if (keep_going) {
@@ -287,44 +294,48 @@ class StashSlots : public Stash<_Tp, _Size> {
 			}
 		}
 
-		if (peep || Stash_T::pos.compare_exchange_strong(pos, new_pos)) {
-			pos = new_pos;
+		if (peep || atom_cur_pos.compare_exchange_strong(cur_pos, new_pos)) {
+			cur_pos = new_pos;
 		}
 		return true;
 	}
 
 public:
 	StashSlots(StashSlots&& o) noexcept
-		: Stash_T::Stash(std::move(o)) { }
+		: Stash_T::Stash(std::move(o)),
+		  atom_cur_pos(std::move(o.atom_cur_pos)),
+		  atom_end_pos(std::move(o.atom_end_pos)) { }
 
 	StashSlots()
-		: Stash_T::Stash(0) { }
+		: atom_cur_pos(0),
+		  atom_end_pos(0) { }
 
 	StashSlots(uint64_t key)
-		: Stash_T::Stash(get_slot(key)) { }
+		: atom_cur_pos(get_slot(key)),
+		  atom_end_pos(get_slot(key)) { }
 
 	template <typename T>
 	bool next(T** value_ptr, bool final=true, uint64_t final_key=0, bool keep_going=true, bool peep=false) {
-		auto pos = Stash_T::pos.load();
+		auto cur_pos = atom_cur_pos.load();
 
 		keep_going = keep_going && final && !final_key;
 		if (keep_going) {
 			final_key = _CurrentKey();
 		}
-		auto initial_pos = pos;
+		auto initial_pos = cur_pos;
 		auto last_pos = static_cast<size_t>((initial_pos + _Mod - 1) % _Mod);
 		auto final_pos = final ? get_slot(final_key) : last_pos;
 
 		do {
-			L_INFO_HOOK_LOG("StashSlots::next::loop", this, "StashSlots::next()::loop - _Mod:%llu, pos:%llu, initial_pos:%llu, final:%s, final_pos:%llu, last_pos:%llu, keep_going:%s, peep:%s", _Mod, pos, initial_pos, final ? "true" : "false", final_pos, last_pos, keep_going ? "true" : "false", peep ? "true" : "false");
+			L_INFO_HOOK_LOG("StashSlots::next::loop", this, "StashSlots::next()::loop - _Mod:%llu, cur_pos:%llu, initial_pos:%llu, final:%s, final_pos:%llu, last_pos:%llu, keep_going:%s, peep:%s", _Mod, cur_pos, initial_pos, final ? "true" : "false", final_pos, last_pos, keep_going ? "true" : "false", peep ? "true" : "false");
 
 			Bin* ptr = nullptr;
 			std::atomic<Bin*>* bin_ptr;
-			switch (Stash_T::get_bin(&bin_ptr, pos)) {
+			switch (Stash_T::get_bin(&bin_ptr, cur_pos)) {
 				case StashState::Ok: {
 					ptr = (*bin_ptr).load();
 					if (ptr) {
-						if (ptr->val.next(value_ptr, final && pos == final_pos, final_key, keep_going, peep)) {
+						if (ptr->val.next(value_ptr, final && cur_pos == final_pos, final_key, keep_going, peep)) {
 							return true;
 						}
 					}
@@ -337,7 +348,7 @@ public:
 					break;
 			}
 
-			if (!increment_pos(peep, pos, keep_going, initial_pos, final_pos, last_pos)) {
+			if (!increment_pos(peep, cur_pos, keep_going, initial_pos, final_pos, last_pos)) {
 				return false;
 			}
 
@@ -362,26 +373,28 @@ class StashValues : public Stash<_Tp, _Size> {
 	using Bin = typename Stash_T::Bin;
 	using Nil = typename Stash_T::Nil;
 
+	std::atomic_size_t atom_cur_pos;
 	std::atomic_size_t idx;
 
 public:
 	StashValues(StashValues&& o) noexcept
 		: Stash_T::Stash(std::move(o)),
-		  idx(o.idx.load()) { }
+		  atom_cur_pos(std::move(o.atom_cur_pos)),
+		  idx(std::move(o.idx)) { }
 
 	StashValues()
-		: Stash_T::Stash(0),
+		: atom_cur_pos(0),
 		  idx(0) { }
 
 	StashValues(uint64_t)
-		: Stash_T::Stash(0),
+		: atom_cur_pos(0),
 		  idx(0) { }
 
-	bool increment_pos(bool peep, size_t& pos) {
-		auto new_pos = pos + 1;
+	bool increment_pos(bool peep, size_t& cur_pos) {
+		auto new_pos = cur_pos + 1;
 
-		if (peep || Stash_T::pos.compare_exchange_strong(pos, new_pos)) {
-			pos = new_pos;
+		if (peep || atom_cur_pos.compare_exchange_strong(cur_pos, new_pos)) {
+			cur_pos = new_pos;
 		}
 		return true;
 	}
@@ -389,17 +402,18 @@ public:
 	template <typename T>
 	bool next(T** value_ptr, bool, uint64_t, bool, bool peep) {
 		// std::cout << "\t\tLogStash::next()" << std::endl;
-		auto pos = Stash_T::pos.load();
-		// std::cout << "\t\t\tLogStash pos:" << pos << std::endl;
+		auto cur_pos = atom_cur_pos.load();
+		// std::cout << "\t\t\tLogStash cur_pos:" << cur_pos << std::endl;
 		std::atomic<Bin*>* bin_ptr;
-		switch (Stash_T::get_bin(&bin_ptr, pos)) {
+		switch (Stash_T::get_bin(&bin_ptr, cur_pos)) {
 			case StashState::Ok: {
-				if (!increment_pos(peep, pos)) {
+				if (!increment_pos(peep, cur_pos)) {
 					return false;
 				}
 				auto ptr = (*bin_ptr).load();
 				if (ptr) {
 					*value_ptr = &ptr->val;
+					L_INFO_HOOK_LOG("StashValues::next::found", this, "StashValues::next()::found - cur_pos:%llu, peep:%s", cur_pos, peep ? "true" : "false");
 					return true;
 				}
 			}
