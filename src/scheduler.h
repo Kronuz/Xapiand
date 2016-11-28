@@ -68,18 +68,20 @@ public:
 	}
 
 private:
-	using _tasks =        StashValues<TaskType,     10ULL>;
+	using _tasks =        StashValues<TaskType,     10ULL,  &now>;
 	using _50_1ms =       StashSlots<_tasks,        10ULL,  &now,        1ULL * MS,    50ULL,  false>;
 	using _10_50ms =      StashSlots<_50_1ms,       10ULL,  &now,       50ULL * MS,    10ULL,  false>;
 	using _36_500ms =     StashSlots<_10_50ms,      12ULL,  &now,      500ULL * MS,    36ULL,  false>;
 	using _4800_18s =     StashSlots<_36_500ms,   4800ULL,  &now,    18000ULL * MS,  4800ULL,  true>;
+
+	StashContext<&now> ctx;
 	_4800_18s queue;
 
 public:
 	SchedulerQueue();
 
+	TaskType* next();
 	TaskType* peep();
-	TaskType* next(unsigned long long final_key=0, bool keep_going=true);
 	unsigned long long add(const TaskType& task, unsigned long long key=0);
 };
 

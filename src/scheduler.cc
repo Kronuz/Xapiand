@@ -44,14 +44,17 @@ ScheduledTask::clear()
 }
 
 
-SchedulerQueue::SchedulerQueue() { }
+SchedulerQueue::SchedulerQueue()
+	: queue(ctx) { }
 
 
 TaskType*
-SchedulerQueue::next(unsigned long long final_key, bool keep_going)
+SchedulerQueue::next()
 {
 	TaskType* task = nullptr;
-	queue.next(&task, final_key, keep_going, false);
+	ctx.current_key = now();
+	ctx.cur_key = ctx.atom_cur_key.load();
+	queue.next(&task, 0, false);
 	return task;
 }
 
@@ -60,7 +63,8 @@ TaskType*
 SchedulerQueue::peep()
 {
 	TaskType* task = nullptr;
-	queue.next(&task, 0, true, true);
+	ctx.cur_key = ctx.atom_cur_key.load();
+	queue.next(&task, 0, true);
 	return task;
 }
 
@@ -191,7 +195,7 @@ Scheduler::run()
 
 		if ((task = scheduler_queue.peep()) && *task) {
 			wt = (*task)->wakeup_time;
-			// L_INFO_HOOK_LOG("Scheduler::PEEP", this, "Scheduler::" MAGENTA "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wt);
+			L_INFO_HOOK_LOG("Scheduler::PEEP", this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wt);
 		}
 
 		next_wakeup_time.compare_exchange_strong(nwt, wt);
@@ -199,7 +203,7 @@ Scheduler::run()
 
 		L_INFO_HOOK_LOG("Scheduler::LOOP", this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), next_wakeup_time.load());
 		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
-		// L_INFO_HOOK_LOG("Scheduler::WAKEUP", this, "Scheduler::" GREEN "WAKEUP" NO_COL " - now:%llu, wt:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wt);
+		L_INFO_HOOK_LOG("Scheduler::WAKEUP", this, "Scheduler::" LIGHT_BLUE "WAKEUP" NO_COL " - now:%llu, wt:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wt);
 
 		while ((task = scheduler_queue.next())) {
 			if (*task) {

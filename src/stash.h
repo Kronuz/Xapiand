@@ -40,14 +40,10 @@ enum class StashState : uint8_t {
 template <typename _Tp, size_t _Size>
 class Stash {
 protected:
-	struct Nil { };
-
 	struct Bin {
 		_Tp val;
 
 		Bin() = default;
-
-		Bin(Nil&&) { }
 
 		Bin(unsigned long long key)
 			: val(_Tp(key)) { }
@@ -70,8 +66,8 @@ protected:
 			  atom_next(nullptr) { }
 
 		Data(Data&& o) noexcept
-			: atom_chunk(std::move(o.atom_chunk)),
-			  atom_next(std::move(o.atom_next)) { }
+			: atom_chunk(o.atom_chunk.load()),
+			  atom_next(o.atom_next.load()) { }
 
 		~Data() {
 			clear();
@@ -215,14 +211,33 @@ public:
 };
 
 
+template <unsigned long long(*_CurrentKey)()>
+struct StashContext {
+	unsigned long long cur_key;
+	unsigned long long current_key;
+	std::atomic_ullong atom_cur_key;
+	std::atomic_ullong atom_end_key;
+
+	StashContext(StashContext<_CurrentKey>&& o) noexcept
+		: cur_key(std::move(o.cur_key)),
+		  current_key(std::move(o.current_key)),
+		  atom_cur_key(o.atom_cur_key.load()),
+		  atom_end_key(o.atom_end_key.load()) { }
+
+	StashContext()
+		: cur_key(_CurrentKey()),
+		  current_key(cur_key),
+		  atom_cur_key(cur_key),
+		  atom_end_key(cur_key) { }
+};
+
+
 template <typename _Tp, size_t _Size, unsigned long long(*_CurrentKey)(), unsigned long long _Div, unsigned long long _Mod, bool _Ring>
 class StashSlots : public Stash<_Tp, _Size> {
 	using Stash_T = Stash<_Tp, _Size>;
 	using Bin = typename Stash_T::Bin;
-	using Nil = typename Stash_T::Nil;
 
-	std::atomic_ullong atom_cur_key;
-	std::atomic_ullong atom_end_key;
+	StashContext<_CurrentKey>& ctx;
 
 	unsigned long long get_base_key(unsigned long long key) {
 		return (key / _Div) * _Div;
@@ -236,46 +251,41 @@ class StashSlots : public Stash<_Tp, _Size> {
 		return (key / _Div) % _Mod;
 	}
 
-	bool check(unsigned long long& cur_key, unsigned long long& final_key, bool keep_going, bool peep) {
-		auto end_key = atom_end_key.load();
-		if ((!peep && cur_key > final_key) || cur_key > end_key) {
-			if (!peep && keep_going) {
-				final_key = _CurrentKey();
-				if ((!peep && cur_key > final_key) || cur_key > end_key) {
-					return false;
-				}
-			} else {
-				return false;
-			}
+	bool check(unsigned long long final_key, bool peep) {
+		if (!peep && ctx.cur_key >= ctx.current_key) {
+			return false;
 		}
+
+		if (final_key && ctx.cur_key > final_key) {
+			return false;
+		}
+
+		if (ctx.cur_key > ctx.atom_end_key.load()) {
+			return false;
+		}
+
 		return true;
 	}
 
 public:
 	StashSlots(StashSlots&& o) noexcept
 		: Stash_T::Stash(std::move(o)),
-		  atom_cur_key(std::move(o.atom_cur_key)),
-		  atom_end_key(std::move(o.atom_end_key)) { }
+		  ctx(o.ctx) { }
 
 
-	StashSlots()
-		: atom_cur_key(_CurrentKey()),
-		  atom_end_key(atom_cur_key.load()) { }
+	StashSlots(StashContext<_CurrentKey>& pos_)
+		: ctx(pos_) { }
 
 	template <typename T>
-	bool next(T** value_ptr, unsigned long long final_key=0, bool keep_going=true, bool peep=false) {
-		if (!final_key) {
-			final_key = _CurrentKey();
-		}
-
-		auto cur_key = atom_cur_key.load();
-
-		auto loop = check(cur_key, final_key, keep_going, peep);
+	bool next(T** value_ptr, unsigned long long final_key=0, bool peep=false) {
+		auto loop = check(final_key, peep);
 
 		while (loop) {
-			auto cur = get_slot(cur_key);
+			auto new_cur_key = get_inc_base_key(ctx.cur_key);
 
-			L_INFO_HOOK_LOG("StashSlots::LOOP", this, "StashSlots::" CYAN "LOOP" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, keep_going:%s, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, cur_key, cur, final_key, keep_going ? "true" : "false", peep ? "true" : "false");
+			auto cur = get_slot(ctx.cur_key);
+
+			L_INFO_HOOK_LOG("StashSlots::LOOP", this, "StashSlots::" CYAN "LOOP" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), peep ? "true" : "false");
 
 			Bin* ptr = nullptr;
 			std::atomic<Bin*>* bin_ptr;
@@ -283,8 +293,8 @@ public:
 				case StashState::Ok: {
 					ptr = (*bin_ptr).load();
 					if (ptr) {
-						if (ptr->val.next(value_ptr, final_key, keep_going, peep)) {
-							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, keep_going:%s, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, cur_key, cur, final_key, keep_going ? "true" : "false", peep ? "true" : "false");
+						if (ptr->val.next(value_ptr, new_cur_key, peep)) {
+							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), peep ? "true" : "false");
 							return true;
 						}
 					}
@@ -292,34 +302,25 @@ public:
 				}
 				case StashState::OutOfRange:
 				case StashState::EmptyStash:
+					L_INFO_HOOK_LOG("StashSlots::BREAK", this, "StashSlots::" YELLOW "BREAK" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), peep ? "true" : "false");
 					return false;
 				default:
 					break;
 			}
 
-			if (!peep && get_base_key(cur_key) == get_base_key(final_key)) {
-				// Do not increment if we're at the same base as the final_key
-				return false;
-			}
-
-			auto new_cur_key = get_inc_base_key(cur_key);
-
-			if (!_Ring && get_slot(new_cur_key) == 0) {
-				atom_end_key = 0;
-			}
-
-			loop = check(new_cur_key, final_key, keep_going, peep);
+			loop = check(final_key, peep);
 
 			if (!peep && ptr) {
-				L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, keep_going:%s, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, cur_key, cur, final_key, keep_going ? "true" : "false", peep ? "true" : "false");
-				ptr->val.clear();
+				L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), peep ? "true" : "false");
+			// 	ptr->val.clear();
 			}
 
-			if (peep || atom_cur_key.compare_exchange_strong(cur_key, new_cur_key)) {
-				cur_key = new_cur_key;
+			if (peep || ctx.atom_cur_key.compare_exchange_strong(ctx.cur_key, new_cur_key)) {
+				ctx.cur_key = new_cur_key;
 			}
 		}
 
+		L_INFO_HOOK_LOG("StashSlots::MISSING", this, "StashSlots::" YELLOW "MISSING" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, ctx.cur_key, get_slot(ctx.cur_key), final_key, ctx.atom_end_key.load(), peep ? "true" : "false");
 		return false;
 	}
 
@@ -331,24 +332,23 @@ public:
 		}
 
 		auto slot = get_slot(key);
-		auto cur_key = atom_cur_key.load();
-		auto end_key = atom_end_key.load();
+		auto cur_key = ctx.atom_cur_key.load();
+		auto end_key = ctx.atom_end_key.load();
 
 		auto& bin = Stash_T::spawn_bin(slot);
-		while (key < cur_key && !atom_cur_key.compare_exchange_weak(cur_key, key));
-		while (key > end_key && !atom_end_key.compare_exchange_weak(end_key, key));
+		while (key < cur_key && !ctx.atom_cur_key.compare_exchange_weak(cur_key, key));
+		while (key > end_key && !ctx.atom_end_key.compare_exchange_weak(end_key, key));
 
-		L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" BLUE "ADD" NO_COL " - _Mod:%llu, key:%llu, slot:%llu, cur_key:%llu, end_key:%llu", _Mod, key, slot, cur_key, end_key);
-		return Stash_T::_put(bin, Nil()).add(std::forward<T>(value), key);
+		L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" MAGENTA "ADD" NO_COL " - _Mod:%llu, key:%llu, slot:%llu, cur_key:%llu, end_key:%llu", _Mod, key, slot, cur_key, end_key);
+		return Stash_T::_put(bin, _Tp(ctx)).add(std::forward<T>(value), key);
 	}
 };
 
 
-template <typename _Tp, size_t _Size>
+template <typename _Tp, size_t _Size, unsigned long long(*_CurrentKey)()>
 class StashValues : public Stash<_Tp, _Size> {
 	using Stash_T = Stash<_Tp, _Size>;
 	using Bin = typename Stash_T::Bin;
-	using Nil = typename Stash_T::Nil;
 
 	std::atomic_size_t atom_cur;
 	std::atomic_size_t atom_end;
@@ -356,10 +356,10 @@ class StashValues : public Stash<_Tp, _Size> {
 public:
 	StashValues(StashValues&& o) noexcept
 		: Stash_T::Stash(std::move(o)),
-		  atom_cur(std::move(o.atom_cur)),
-		  atom_end(std::move(o.atom_end)) { }
+		  atom_cur(o.atom_cur.load()),
+		  atom_end(o.atom_end.load()) { }
 
-	StashValues()
+	StashValues(StashContext<_CurrentKey>&)
 		: atom_cur(0),
 		  atom_end(0) { }
 
@@ -374,11 +374,11 @@ public:
 	}
 
 	template <typename T>
-	bool next(T** value_ptr, unsigned long long, bool, bool peep) {
+	bool next(T** value_ptr, unsigned long long, bool peep) {
 		auto cur = atom_cur.load();
 
 		do {
-			L_INFO_HOOK_LOG("StashValues::LOOP", this, "StashValues::" GREEN "LOOP" NO_COL " - %scur:%llu, peep:%s", peep ? DARK_GREY : NO_COL, cur, peep ? "true" : "false");
+			L_INFO_HOOK_LOG("StashValues::LOOP", this, "StashValues::" LIGHT_CYAN "LOOP" NO_COL " - %scur:%llu, peep:%s", peep ? DARK_GREY : NO_COL, cur, peep ? "true" : "false");
 
 			std::atomic<Bin*>* bin_ptr;
 			switch (Stash_T::get_bin(&bin_ptr, cur)) {
@@ -390,7 +390,7 @@ public:
 							cur = new_cur;
 						}
 						if (!is_empty(ptr->val)) {
-							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" GREEN "FOUND" NO_COL " - %scur:%llu, peep:%s", peep ? DARK_GREY : NO_COL, cur, peep ? "true" : "false");
+							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, peep:%s", peep ? DARK_GREY : NO_COL, cur, peep ? "true" : "false");
 							*value_ptr = &ptr->val;
 							return true;
 						}
@@ -406,7 +406,7 @@ public:
 
 	template <typename T>
 	bool next(T** value_ptr, bool peep=false) {
-		return next(value_ptr, true, 0, true, peep);
+		return next(value_ptr, 0, peep);
 	}
 
 	template <typename T>
@@ -415,7 +415,7 @@ public:
 		while (!atom_end.compare_exchange_weak(slot, slot + 1));
 		auto& bin = Stash_T::spawn_bin(slot);
 
-		L_INFO_HOOK_LOG("StashValues::ADD", this, "StashValues::" BLUE "ADD" NO_COL " - slot:%llu", slot);
+		L_INFO_HOOK_LOG("StashValues::ADD", this, "StashValues::" LIGHT_MAGENTA "ADD" NO_COL " - slot:%llu", slot);
 		Stash_T::_put(bin, std::forward<T>(value));
 
 		return key;
