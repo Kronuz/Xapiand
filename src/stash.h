@@ -304,6 +304,10 @@ public:
 
 			auto new_cur_key = get_inc_base_key(cur_key);
 
+			if (!_Ring && get_slot(new_cur_key) == 0) {
+				atom_end_key = 0;
+			}
+
 			loop = check(new_cur_key, final_key, keep_going, peep);
 
 			if (!peep && ptr) {
