@@ -71,10 +71,12 @@ void sig_info(int)
 {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
-		print(BLUE "Info hooks disabled!" NO_COL, logger_info_hook.load());
+		auto buf = format_string(BLUE "Info hooks disabled!" NO_COL "\n", logger_info_hook.load());
+		write(STDERR_FILENO, buf.data(), buf.size());
 	} else {
 		logger_info_hook = -1ULL;
-		print(BLUE "Info hooks enabled!" NO_COL, logger_info_hook.load());
+		auto buf = format_string(BLUE "Info hooks enabled!" NO_COL "\n", logger_info_hook.load());
+		write(STDERR_FILENO, buf.data(), buf.size());
 	}
 }
 #endif
@@ -84,20 +86,26 @@ void sig_handler(int sig)
 {
 	switch (sig) {
 #ifndef NDEBUG
-		case SIGINFO:
-			print(BLUE "Signal received: %d (%s)" NO_COL, sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+		case SIGINFO: {
+			auto buf = format_string(BLUE "Signal received: %d (%s)" NO_COL "\n", sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+			write(STDERR_FILENO, buf.data(), buf.size());
 			sig_info(sig);
 			break;
+		}
 #endif
 		case SIGTERM:
-		case SIGINT:
-			print(YELLOW "Signal received: %d (%s)" NO_COL, sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+		case SIGINT: {
+			auto buf = format_string(YELLOW "Signal received: %d (%s)" NO_COL "\n", sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+			write(STDERR_FILENO, buf.data(), buf.size());
 			sig_exit(sig);
 			break;
+		}
 
-		default:
-			print(LIGHT_RED "Unknown signal received: %d (%s)" NO_COL, sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+		default: {
+			auto buf = format_string(LIGHT_RED "Unknown signal received: %d (%s)" NO_COL "\n", sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+			write(STDERR_FILENO, buf.data(), buf.size());
 			break;
+		}
 	}
 }
 
