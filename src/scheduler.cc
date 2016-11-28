@@ -28,7 +28,7 @@
 
 
 ScheduledTask::ScheduledTask(std::chrono::time_point<std::chrono::system_clock> created_at_)
-	: wakeup(time_point_from_ullong(0)),
+	: wakeup_time(0),
 	  created_at(time_point_to_ullong(created_at_)),
 	  cleared_at(0) { }
 
@@ -137,23 +137,15 @@ void
 Scheduler::add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup)
 {
 	if (running != 0) {
-		task->wakeup = time_point_from_ullong(scheduler_queue.add(task, time_point_to_ullong(wakeup)));
+		auto wt = scheduler_queue.add(task, time_point_to_ullong(wakeup));
+		task->wakeup_time = wt;
 
-		bool notify = false;
+		auto nwt = next_wakeup_time.load();
+		while (nwt > wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
+
 		auto now = std::chrono::system_clock::now();
-		wakeup = task->wakeup;
-		{
-			std::lock_guard<std::mutex> lk(mtx);
-			if (next_wakeup > wakeup) {
-				next_wakeup = wakeup;
-				notify = true;
-			} else if (next_wakeup < now) {
-				notify = true;
-			}
-		}
-
-		if (notify) {
-			// L_INFO_HOOK_LOG("Scheduler::NOTIFY", this, "Scheduler::" BLUE "NOTIFY" NO_COL " - now:%llu, next_wakeup:%llu, wakeup:%llu", time_point_to_ullong(now), time_point_to_ullong(next_wakeup), task->wakeup);
+		if (nwt > wt || nwt < time_point_to_ullong(now)) {
+			L_INFO_HOOK_LOG("Scheduler::NOTIFY", this, "Scheduler::" BLUE "NOTIFY" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", time_point_to_ullong(now), next_wakeup_time.load(), wt);
 			wakeup_signal.notify_one();
 		}
 	}
@@ -182,8 +174,10 @@ Scheduler::run()
 {
 	set_thread_name(name);
 
+	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
-	lk.unlock();
+
+	auto nwt = next_wakeup_time.load();
 
 	while (running != 0) {
 		if (--running < 0) {
@@ -191,29 +185,21 @@ Scheduler::run()
 		}
 
 		auto now = std::chrono::system_clock::now();
-		auto wakeup = now + (running < 0 ? 5s : 100ms);
+		auto wt = time_point_to_ullong(now + (running < 0 ? 5s : 100ms));
 
 		TaskType* task;
 
 		if ((task = scheduler_queue.peep()) && *task) {
-			wakeup = (*task)->wakeup;
-			// L_INFO_HOOK_LOG("Scheduler::PEEP", this, "Scheduler::" MAGENTA "PEEP" NO_COL " - now:%llu, wakeup:%llu", time_point_to_ullong(now), time_point_to_ullong(wakeup));
+			wt = (*task)->wakeup_time;
+			// L_INFO_HOOK_LOG("Scheduler::PEEP", this, "Scheduler::" MAGENTA "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wt);
 		}
 
-		lk.lock();
-		if (next_wakeup > wakeup) {
-			next_wakeup = wakeup;
-		}
-		L_INFO_HOOK_LOG("Scheduler::LOOP", this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup:%llu", time_point_to_ullong(now), time_point_to_ullong(next_wakeup));
-		if (next_wakeup > now) {
-			if (wakeup_signal.wait_until(lk, next_wakeup) == std::cv_status::no_timeout) {
-				lk.unlock();
-			}
-		} else {
-			lk.unlock();
-		}
+		next_wakeup_time.compare_exchange_strong(nwt, wt);
+		while (nwt > wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
 
-		// L_INFO_HOOK_LOG("Scheduler::WAKEUP", this, "Scheduler::" GREEN "WAKEUP" NO_COL " - now:%llu, wakeup:%llu", time_point_to_ullong(std::chrono::system_clock::now()), time_point_to_ullong(wakeup));
+		L_INFO_HOOK_LOG("Scheduler::LOOP", this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), next_wakeup_time.load());
+		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
+		// L_INFO_HOOK_LOG("Scheduler::WAKEUP", this, "Scheduler::" GREEN "WAKEUP" NO_COL " - now:%llu, wt:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wt);
 
 		while ((task = scheduler_queue.next())) {
 			if (*task) {
