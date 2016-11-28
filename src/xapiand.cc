@@ -69,35 +69,12 @@ using namespace TCLAP;
 #ifndef NDEBUG
 void sig_info(int)
 {
-	println(false, BLUE "enter info hook>> " NO_COL);
-
-	char c;
-	char hook[100];
-	char *ch = hook;
-	*ch = '\0';
-	while ((c=getchar()) != EOF && c != '\n' && ch < hook + sizeof(hook) - 1) {
-		*ch++ = c;
-		*ch = '\0';
-	}
-
-	if (*hook) {
-		if (strcasecmp(hook, "none") == 0 || *hook == '-') {
-			logger_info_hook = 0;
-			print(BLUE "Info hooks cleared (%llx)! - CONTINUING" NO_COL, logger_info_hook.load());
-		} else if (strcasecmp(hook, "all") == 0 || *hook == '!') {
-			logger_info_hook = -1ULL;
-			print(BLUE "All info hooks activated (%llx)! - CONTINUING" NO_COL, logger_info_hook.load());
-		} else {
-			uint64_t info_hook = xxh64::hash(std::string(hook));
-			logger_info_hook = logger_info_hook.load() ^ info_hook;
-			if ((logger_info_hook.load() & info_hook) == info_hook) {
-				print(BLUE "Info hook '%s' turned on (%llx)! - CONTINUING" NO_COL, hook, logger_info_hook.load());
-			} else {
-				print(BLUE "Info hook '%s' turned off (%llx)! - CONTINUING" NO_COL, hook, logger_info_hook.load());
-			}
-		}
+	if (logger_info_hook) {
+		logger_info_hook = 0;
+		print(BLUE "Info hooks disabled!" NO_COL, logger_info_hook.load());
 	} else {
-		print(BLUE "No info hook selected (%llx)! - IGNORING" NO_COL, logger_info_hook.load());
+		logger_info_hook = -1ULL;
+		print(BLUE "Info hooks enabled!" NO_COL, logger_info_hook.load());
 	}
 }
 #endif
