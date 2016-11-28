@@ -270,11 +270,9 @@ public:
 
 		auto cur_key = atom_cur_key.load();
 
-		if (!check(cur_key, final_key, keep_going, peep)) {
-			return false;
-		}
+		auto loop = check(cur_key, final_key, keep_going, peep);
 
-		do {
+		while (loop) {
 			auto cur = get_slot(cur_key);
 
 			L_INFO_HOOK_LOG("StashSlots::LOOP", this, "StashSlots::" CYAN "LOOP" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, keep_going:%s, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, cur_key, cur, final_key, keep_going ? "true" : "false", peep ? "true" : "false");
@@ -306,9 +304,7 @@ public:
 
 			auto new_cur_key = get_inc_base_key(cur_key);
 
-			if (!check(new_cur_key, final_key, keep_going, peep)) {
-				return false;
-			}
+			loop = check(new_cur_key, final_key, keep_going, peep);
 
 			if (!peep && ptr) {
 				L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, keep_going:%s, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, cur_key, cur, final_key, keep_going ? "true" : "false", peep ? "true" : "false");
@@ -318,7 +314,9 @@ public:
 			if (peep || atom_cur_key.compare_exchange_strong(cur_key, new_cur_key)) {
 				cur_key = new_cur_key;
 			}
-		} while (true);
+		}
+
+		return false;
 	}
 
 	template <typename T>
