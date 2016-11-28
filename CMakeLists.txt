@@ -56,6 +56,12 @@ else ()
 endif ()
 
 
+# Default value for CMAKE_BUILD_TYPE.
+if (NOT CMAKE_BUILD_TYPE)
+	set (CMAKE_BUILD_TYPE Release)
+endif ()
+
+
 # Setup CMAKE_CXX_FLAGS Debug flags.
 set (CMAKE_CXX_FLAGS_DEBUG "-O0 -g -DDEBUG")
 
