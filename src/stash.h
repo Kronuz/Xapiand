@@ -28,7 +28,7 @@
 #include "logger_fwd.h"
 
 
-enum class StashState {
+enum class StashState : uint8_t {
 	Ok,
 	EmptyBin,
 	EmptyChunk,
@@ -170,7 +170,7 @@ public:
 	Stash(Stash&& o) noexcept
 		: data(std::move(o.data)) { }
 
-	Stash() { }
+	Stash() = default;
 
 	~Stash() {
 		clear();
