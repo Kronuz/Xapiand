@@ -46,7 +46,7 @@ class ScheduledTask : public Task<>, public std::enable_shared_from_this<Schedul
 	friend class Scheduler;
 
 protected:
-	unsigned long long wakeup_time;
+	std::chrono::time_point<std::chrono::system_clock> wakeup;
 	std::atomic_ullong created_at;
 	std::atomic_ullong cleared_at;
 
@@ -85,10 +85,12 @@ public:
 
 
 class Scheduler {
+	std::mutex mtx;
+
 	std::unique_ptr<ThreadPool<>> thread_pool;
 
 	std::condition_variable wakeup_signal;
-	std::atomic_ullong next_wakeup_time;
+	std::chrono::time_point<std::chrono::system_clock> next_wakeup;
 
 	SchedulerQueue scheduler_queue;
 
