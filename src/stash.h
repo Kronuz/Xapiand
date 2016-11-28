@@ -252,7 +252,7 @@ class StashSlots : public Stash<_Tp, _Size> {
 	}
 
 	bool check(unsigned long long final_key, bool peep) {
-		if (!peep && ctx.cur_key >= ctx.current_key) {
+		if (ctx.current_key && ctx.cur_key >= ctx.current_key) {
 			return false;
 		}
 

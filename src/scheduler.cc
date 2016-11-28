@@ -49,10 +49,10 @@ SchedulerQueue::SchedulerQueue()
 
 
 TaskType*
-SchedulerQueue::next()
+SchedulerQueue::next(unsigned long long current_key)
 {
 	TaskType* task = nullptr;
-	ctx.current_key = now();
+	ctx.current_key = current_key;
 	ctx.cur_key = ctx.atom_cur_key.load();
 	queue.next(&task, 0, false);
 	return task;
@@ -60,9 +60,10 @@ SchedulerQueue::next()
 
 
 TaskType*
-SchedulerQueue::peep()
+SchedulerQueue::peep(unsigned long long current_key)
 {
 	TaskType* task = nullptr;
+	ctx.current_key = current_key;
 	ctx.cur_key = ctx.atom_cur_key.load();
 	queue.next(&task, 0, true);
 	return task;
@@ -197,7 +198,7 @@ Scheduler::run()
 
 		TaskType* task;
 
-		if ((task = scheduler_queue.peep()) && *task) {
+		if ((task = scheduler_queue.peep(wt)) && *task) {
 			wt = (*task)->wakeup_time;
 			L_INFO_HOOK_LOG("Scheduler::PEEP", this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wt);
 		}
@@ -209,7 +210,7 @@ Scheduler::run()
 		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
 		L_INFO_HOOK_LOG("Scheduler::WAKEUP", this, "Scheduler::" LIGHT_BLUE "WAKEUP" NO_COL " - now:%llu, wt:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wt);
 
-		while ((task = scheduler_queue.next())) {
+		while ((task = scheduler_queue.next(time_point_to_ullong(std::chrono::system_clock::now())))) {
 			if (*task) {
 				run_one(*task);
 				(*task).reset();

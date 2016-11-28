@@ -80,8 +80,8 @@ private:
 public:
 	SchedulerQueue();
 
-	TaskType* next();
-	TaskType* peep();
+	TaskType* next(unsigned long long current_key);
+	TaskType* peep(unsigned long long current_key);
 	void add(const TaskType& task, unsigned long long key=0);
 };
 
