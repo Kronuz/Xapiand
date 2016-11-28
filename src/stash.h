@@ -286,7 +286,7 @@ public:
 					ptr = (*bin_ptr).load();
 					if (ptr) {
 						if (ptr->val.next(value_ptr, final_key, keep_going, peep)) {
-							// L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, keep_going:%s, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, cur_key, cur, final_key, keep_going ? "true" : "false", peep ? "true" : "false");
+							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, keep_going:%s, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, cur_key, cur, final_key, keep_going ? "true" : "false", peep ? "true" : "false");
 							return true;
 						}
 					}
@@ -311,7 +311,7 @@ public:
 			}
 
 			if (!peep && ptr) {
-				// L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, keep_going:%s, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, cur_key, cur, final_key, keep_going ? "true" : "false", peep ? "true" : "false");
+				L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, keep_going:%s, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, cur_key, cur, final_key, keep_going ? "true" : "false", peep ? "true" : "false");
 				ptr->val.clear();
 			}
 
@@ -336,7 +336,7 @@ public:
 		while (key < cur_key && !atom_cur_key.compare_exchange_weak(cur_key, key));
 		while (key > end_key && !atom_end_key.compare_exchange_weak(end_key, key));
 
-		// L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" BLUE "ADD" NO_COL " - _Mod:%llu, key:%llu, slot:%llu, cur_key:%llu, end_key:%llu", _Mod, key, slot, cur_key, end_key);
+		L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" BLUE "ADD" NO_COL " - _Mod:%llu, key:%llu, slot:%llu, cur_key:%llu, end_key:%llu", _Mod, key, slot, cur_key, end_key);
 		return Stash_T::_put(bin, Nil()).add(std::forward<T>(value), key);
 	}
 };
@@ -388,7 +388,7 @@ public:
 							cur = new_cur;
 						}
 						if (!is_empty(ptr->val)) {
-							// L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" GREEN "FOUND" NO_COL " - %scur:%llu, peep:%s", peep ? DARK_GREY : NO_COL, cur, peep ? "true" : "false");
+							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" GREEN "FOUND" NO_COL " - %scur:%llu, peep:%s", peep ? DARK_GREY : NO_COL, cur, peep ? "true" : "false");
 							*value_ptr = &ptr->val;
 							return true;
 						}
@@ -413,7 +413,7 @@ public:
 		while (!atom_end.compare_exchange_weak(slot, slot + 1));
 		auto& bin = Stash_T::spawn_bin(slot);
 
-		// L_INFO_HOOK_LOG("StashValues::ADD", this, "StashValues::" BLUE "ADD" NO_COL " - slot:%llu", slot);
+		L_INFO_HOOK_LOG("StashValues::ADD", this, "StashValues::" BLUE "ADD" NO_COL " - slot:%llu", slot);
 		Stash_T::_put(bin, std::forward<T>(value));
 
 		return key;
