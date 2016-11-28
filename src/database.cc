@@ -1512,10 +1512,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB [%s]: %s ...", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 
-	if (database) {
-		L_ERR(this, "Trying to checkout a database with a not null pointer");
-		return false;
-	}
+	ASSERT (!database);
+
 	if (writable && endpoints.size() != 1) {
 		L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()).c_str());
 		return false;
