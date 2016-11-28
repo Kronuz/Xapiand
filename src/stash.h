@@ -325,12 +325,7 @@ public:
 	}
 
 	template <typename T>
-	unsigned long long add(T&& value, unsigned long long key) {
-		auto current_key = _CurrentKey();
-		if (key < current_key) {
-			key = current_key;
-		}
-
+	void add(T&& value, unsigned long long key) {
 		auto slot = get_slot(key);
 		auto cur_key = ctx.atom_cur_key.load();
 		auto end_key = ctx.atom_end_key.load();
@@ -340,7 +335,7 @@ public:
 		while (key > end_key && !ctx.atom_end_key.compare_exchange_weak(end_key, key));
 
 		L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" MAGENTA "ADD" NO_COL " - _Mod:%llu, key:%llu, slot:%llu, cur_key:%llu, end_key:%llu", _Mod, key, slot, cur_key, end_key);
-		return Stash_T::_put(bin, _Tp(ctx)).add(std::forward<T>(value), key);
+		Stash_T::_put(bin, _Tp(ctx)).add(std::forward<T>(value), key);
 	}
 };
 
@@ -410,14 +405,12 @@ public:
 	}
 
 	template <typename T>
-	unsigned long long add(T&& value, unsigned long long key) {
+	void add(T&& value, unsigned long long key) {
 		auto slot = atom_end.load();
 		while (!atom_end.compare_exchange_weak(slot, slot + 1));
 		auto& bin = Stash_T::spawn_bin(slot);
 
 		L_INFO_HOOK_LOG("StashValues::ADD", this, "StashValues::" LIGHT_MAGENTA "ADD" NO_COL " - slot:%llu", slot);
 		Stash_T::_put(bin, std::forward<T>(value));
-
-		return key;
 	}
 };

@@ -69,10 +69,10 @@ SchedulerQueue::peep()
 }
 
 
-unsigned long long
+void
 SchedulerQueue::add(const TaskType& task, unsigned long long key)
 {
-	return queue.add(task, key);
+	queue.add(task, key);
 }
 
 
@@ -141,13 +141,17 @@ void
 Scheduler::add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup)
 {
 	if (running != 0) {
-		auto wt = scheduler_queue.add(task, time_point_to_ullong(wakeup));
+		auto now = std::chrono::system_clock::now();
+		if (wakeup < now) {
+			wakeup = now;
+		}
+		auto wt = time_point_to_ullong(wakeup);
 		task->wakeup_time = wt;
+		scheduler_queue.add(task, wt);
 
 		auto nwt = next_wakeup_time.load();
 		while (nwt > wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
 
-		auto now = std::chrono::system_clock::now();
 		if (nwt > wt || nwt < time_point_to_ullong(now)) {
 			L_INFO_HOOK_LOG("Scheduler::NOTIFY", this, "Scheduler::" BLUE "NOTIFY" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", time_point_to_ullong(now), next_wakeup_time.load(), wt);
 			wakeup_signal.notify_one();
