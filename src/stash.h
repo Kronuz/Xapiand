@@ -319,14 +319,15 @@ public:
 							return true;
 						}
 					}
-					break;
 				}
+				case StashState::EmptyBin:
+				case StashState::EmptyChunk:
+					L_INFO_HOOK_LOG("StashSlots::EMPTY", this, "StashSlots::" YELLOW "EMPTY" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
+					break;
 				case StashState::OutOfRange:
 				case StashState::EmptyStash:
 					L_INFO_HOOK_LOG("StashSlots::BREAK", this, "StashSlots::" YELLOW "BREAK" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 					return false;
-				default:
-					break;
 			}
 
 			loop = ctx.check(new_cur_key, final_key);
@@ -415,7 +416,9 @@ public:
 						if (ctx.op != StashContext::Operation::walk || atom_cur.compare_exchange_strong(cur, new_cur)) {
 							cur = new_cur;
 						}
-						if (!is_empty(ptr->val)) {
+						if (is_empty(ptr->val)) {
+							L_INFO_HOOK_LOG("StashValues::SKIP", this, "StashValues::" DARK_GREY "SKIP" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
+						} else {
 							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 							if (value_ptr) {
 								*value_ptr = &ptr->val;
