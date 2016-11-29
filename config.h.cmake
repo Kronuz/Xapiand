@@ -77,10 +77,16 @@
 #cmakedefine HAVE_CLOCK_SYSCALL @HAVE_CLOCK_SYSCALL@
 
 /* Define to 1 if you have the `pthread' library (-lpthread). */
-#cmakedefine HAVE_LIBPTHREAD @HAVE_LIBPTHREAD@
+#cmakedefine HAVE_PTHREADS @HAVE_PTHREADS@
+
+/* Define to 1 if you have the `m' library (-lm). */
+#cmakedefine HAVE_M @HAVE_M@
 
 /* Define to 1 if you have the `rt' library (-lrt). */
-#cmakedefine HAVE_LIBRT @HAVE_LIBRT@
+#cmakedefine HAVE_RT @HAVE_RT@
+
+/* Define to 1 if you have the `zlib' library (-lz). */
+#cmakedefine HAVE_ZLIB @HAVE_ZLIB@
 
 /* define if the compiler has sstream */
 #cmakedefine HAVE_SSTREAM @HAVE_SSTREAM@
@@ -90,14 +96,14 @@
 
 
 
+/* Define to 1 if you have the <pthread_np.h> header file. */
+#cmakedefine HAVE_PTHREAD_NP_H @HAVE_PTHREAD_NP_H@
+
 /* Define to 1 if you have the <fcntl.h> header file. */
 #cmakedefine HAVE_FCNTL_H @HAVE_FCNTL_H@
 
 /* Define to 1 if you have the <limits.h> header file. */
 #cmakedefine HAVE_LIMITS_H @HAVE_LIMITS_H@
-
-/* Define to 1 if you have the <memory.h> header file. */
-#cmakedefine HAVE_MEMORY_H @HAVE_MEMORY_H@
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #cmakedefine HAVE_NETINET_IN_H @HAVE_NETINET_IN_H@
@@ -107,20 +113,17 @@
 /* Define to 1 if you have the <port.h> header file. */
 #cmakedefine HAVE_PORT_H @HAVE_PORT_H@
 
-/* Define to 1 if you have the <pthread.h> header file. */
-#cmakedefine HAVE_PTHREAD_H @HAVE_PTHREAD_H@
-
-/* Define to 1 if you have the <pthread_np.h> header file. */
-#cmakedefine HAVE_PTHREAD_NP_H @HAVE_PTHREAD_NP_H@
+/* Define to 1 if you have the pthreads threading library. */
+#cmakedefine HAVE_PTHREADS @HAVE_PTHREADS@
 
 /* Define to 1 if you have the <sys/epoll.h> header file. */
 #cmakedefine HAVE_SYS_EPOLL_H @HAVE_SYS_EPOLL_H@
 
-/* Define to 1 if you have the <sys/eventfd.h> header file. */
-#cmakedefine HAVE_SYS_EVENTFD_H @HAVE_SYS_EVENTFD_H@
-
 /* Define to 1 if you have the <sys/event.h> header file. */
 #cmakedefine HAVE_SYS_EVENT_H @HAVE_SYS_EVENT_H@
+
+/* Define to 1 if you have the <sys/eventfd.h> header file. */
+#cmakedefine HAVE_SYS_EVENTFD_H @HAVE_SYS_EVENTFD_H@
 
 /* Define to 1 if you have the <sys/inotify.h> header file. */
 #cmakedefine HAVE_SYS_INOTIFY_H @HAVE_SYS_INOTIFY_H@
@@ -274,9 +277,5 @@
 
 /* Enable V8 engine */
 #cmakedefine XAPIAND_V8 @XAPIAND_V8@
-
-/* Version number of V8 engine */
-#cmakedefine V8_MAJOR_VERSION @V8_MAJOR_VERSION@
-#cmakedefine V8_MINOR_VERSION @V8_MINOR_VERSION@
 
 #endif /*  _CONFIGURATION_HEADER_GUARD_H_ */

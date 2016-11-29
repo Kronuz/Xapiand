@@ -50,10 +50,10 @@
 #include "namegen.h"             // for Generator
 
 
-#ifdef HAVE_PTHREAD_H
-#include <pthread.h>             // for pthread_getname_np, pthread_self
+#ifdef HAVE_PTHREADS
+#include <pthread.h>             // for pthread_self
 #ifdef HAVE_PTHREAD_NP_H
-#include <pthread_np.h>
+#include <pthread_np.h>          // for pthread_getname_np
 #endif
 #endif
 
