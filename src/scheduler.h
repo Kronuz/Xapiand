@@ -74,14 +74,16 @@ private:
 	using _36_500ms =     StashSlots<_10_50ms,      12ULL,  &now,      500ULL * MS,    36ULL,  false>;
 	using _4800_18s =     StashSlots<_36_500ms,   4800ULL,  &now,    18000ULL * MS,  4800ULL,  true>;
 
-	StashContext<&now> ctx;
+	StashContext ctx;
+	StashContext cctx;
 	_4800_18s queue;
 
 public:
 	SchedulerQueue();
 
-	TaskType* next(unsigned long long current_key);
 	TaskType* peep(unsigned long long current_key);
+	TaskType* walk();
+	void clean();
 	void add(const TaskType& task, unsigned long long key=0);
 };
 
