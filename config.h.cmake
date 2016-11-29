@@ -110,11 +110,9 @@
 
 /* Define to 1 if you have the <poll.h> header file. */
 #cmakedefine HAVE_POLL_H @HAVE_POLL_H@
+
 /* Define to 1 if you have the <port.h> header file. */
 #cmakedefine HAVE_PORT_H @HAVE_PORT_H@
-
-/* Define to 1 if you have the pthreads threading library. */
-#cmakedefine HAVE_PTHREADS @HAVE_PTHREADS@
 
 /* Define to 1 if you have the <sys/epoll.h> header file. */
 #cmakedefine HAVE_SYS_EPOLL_H @HAVE_SYS_EPOLL_H@
