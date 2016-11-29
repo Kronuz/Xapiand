@@ -9,7 +9,10 @@ set (PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set (PACKAGE_TARNAME "${PROJECT_NAME}")
 set (PACKAGE_PATH_TEST "${PROJECT_SOURCE_DIR}/tests")
 
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+
+########################################################################
+# Options
+########################################################################
 
 option (IWYU "Enable include-what-you-use" OFF)
 option (BINARY_PROXY "Define to what port binary traffic will be redirected to" OFF)
@@ -28,12 +31,28 @@ foreach (opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS V8)
 endforeach ()
 
 
+########################################################################
+# CMake Includes
+########################################################################
+
 set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
+
+include (AC_HEADER_STDC)
+include (CheckCXXCompilerFlag)
+include (CheckCXXSourceCompiles)
+include (CheckFunctionExists)
+include (CheckIncludeFileCXX)
+include (CheckIncludeFiles)
+include (CheckTypeSize)
+include (CMakePushCheckState)
+include (GNUInstallDirs)
 
 
 ########################################################################
 # Targets
 ########################################################################
+
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
 file (GLOB XAPIAND_SRC_LIST
 	${PROJECT_SOURCE_DIR}/src/*.c* ${PROJECT_SOURCE_DIR}/src/*.h
@@ -98,9 +117,6 @@ include_directories (
 # Compiler Flags
 ########################################################################
 
-include (CheckCXXCompilerFlag)
-
-
 # Check for compiler support for C++14
 check_cxx_compiler_flag (-std=c++14 COMPILER_SUPPORTS_CXX14)
 if (COMPILER_SUPPORTS_CXX14)
@@ -144,9 +160,6 @@ endif ()
 # Xapiand Flags
 ########################################################################
 
-include (AC_HEADER_STDC)
-
-include (CheckIncludeFiles)
 check_include_files (pthread_np.h HAVE_PTHREAD_NP_H)
 check_include_files (fcntl.h HAVE_FCNTL_H)
 check_include_files (limits.h HAVE_LIMITS_H)
@@ -155,11 +168,9 @@ check_include_files (sys/socket.h HAVE_SYS_SOCKET_H)
 check_include_files (sys/time.h HAVE_SYS_TIME_H)
 check_include_files (unistd.h HAVE_UNISTD_H)
 
-include (CheckIncludeFileCXX)
 check_include_file_cxx (sstream HAVE_SSTREAM)
 check_include_file_cxx (strstream HAVE_STRSTREAM)
 
-include (CheckFunctionExists)
 check_function_exists (fallocate HAVE_FALLOCATE)
 check_function_exists (fsync HAVE_FSYNC)
 check_function_exists (getcwd HAVE_GETCWD)
@@ -179,7 +190,6 @@ check_function_exists (pthread_setname_np HAVE_PTHREAD_SETNAME_NP_1)
 # check_function_exists (pthread_setname_np HAVE_PTHREAD_SETNAME_NP_3)
 check_function_exists (pthread_set_name_np HAVE_PTHREAD_SET_NAME_NP_2)
 
-include (CheckCXXSourceCompiles)
 check_cxx_source_compiles ("
 	int main() {
 		if (__builtin_expect(1<2, 1)) {}
@@ -229,7 +239,6 @@ set (HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
 ########################################################################
 
  # check if type long long is supported
-include (CheckTypeSize)
 foreach (opt "long long" "uint16_t" "u_int16_t" "__uint16" "_Bool")
 	string (REPLACE " " "_" OPT "${opt}")
 	string (TOUPPER "${OPT}" OPT)
@@ -356,9 +365,7 @@ find_package (Xapian REQUIRED)
 include_directories (BEFORE "${UUID_INCLUDE_DIRS}")
 target_link_libraries (${PROJECT_NAME} ${XAPIAN_LIBRARIES})
 
-include (CMakePushCheckState)
 cmake_push_check_state ()
-include (CheckCXXSourceCompiles)
 set (CMAKE_REQUIRED_INCLUDES "${XAPIAN_INCLUDE_DIR}")
 set (CMAKE_REQUIRED_LIBRARIES "${XAPIAN_LIBRARIES}")
 check_cxx_source_compiles ("
@@ -405,8 +412,6 @@ add_custom_target (uninstall
 ########################################################################
 # Manual page generation
 ########################################################################
-
-include (GNUInstallDirs)
 
 set (MANPAGES ${CMAKE_SOURCE_DIR}/man/xapiand.8)
 
@@ -503,6 +508,7 @@ endif (IWYU)
 # BUILD_TESTS option to ON.  You can do it by specifying the
 # -DBUILD_TESTS=ON flag when running cmake.
 ########################################################################
+
 if (BUILD_TESTS)
 	enable_testing ()
 
