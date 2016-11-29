@@ -17,6 +17,7 @@
 #include "msgpack/pack.hpp"
 #include "msgpack/unpack.hpp"
 #include "msgpack/sbuffer.hpp"
+#include "msgpack/zbuffer.hpp"
 #include "msgpack/vrefbuffer.hpp"
 #include "msgpack/version.hpp"
 #include "msgpack/type.hpp"

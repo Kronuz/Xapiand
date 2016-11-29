@@ -255,6 +255,7 @@ public:
 	std::string unformatted_string() const;
 	std::string to_string(bool prettify=false) const;
 
+	template <typename B=msgpack::sbuffer>
 	std::string serialise() const;
 	static MsgPack unserialise(const std::string& s);
 
@@ -1863,10 +1864,11 @@ inline std::string MsgPack::unformatted_string() const {
 }
 
 
+template <typename B>
 inline std::string MsgPack::serialise() const {
-	msgpack::sbuffer sbuf;
-	msgpack::pack(&sbuf, *_const_body->_obj);
-	return std::string(sbuf.data(), sbuf.size());
+	B buf;
+	msgpack::pack(&buf, *_const_body->_obj);
+	return std::string(buf.data(), buf.size());
 }
 
 
