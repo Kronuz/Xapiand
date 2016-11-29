@@ -82,10 +82,10 @@ static const std::vector<std::string> vec_signame = []() {
 void sig_info(int) {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
-		write(STDERR_FILENO, BLUE "Info hooks disabled!\n", 30);
+		write(STDERR_FILENO, BLUE "Info hooks disabled!\n", 29);
 	} else {
 		logger_info_hook = -1ULL;
-		write(STDERR_FILENO, BLUE "Info hooks enabled!\n", 30);
+		write(STDERR_FILENO, BLUE "Info hooks enabled!\n", 28);
 	}
 }
 #endif
