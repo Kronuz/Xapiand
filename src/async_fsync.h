@@ -77,4 +77,8 @@ public:
 		async_fsync(fd, true);
 		return 0;
 	}
+
+	std::string __repr__() const override {
+		return ScheduledTask::__repr__("AsyncFsync");
+	}
 };

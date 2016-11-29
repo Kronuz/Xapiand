@@ -24,7 +24,7 @@
 
 #include "scheduler.h"
 
-#include "utils.h"       // for time_point_to_ullong
+#include "utils.h"       // for time_point_to_ullong, format_string
 
 
 ScheduledTask::ScheduledTask(std::chrono::time_point<std::chrono::system_clock> created_at_)
@@ -41,6 +41,16 @@ ScheduledTask::clear()
 {
 	unsigned long long c = 0;
 	return cleared_at.compare_exchange_strong(c, time_point_to_ullong(std::chrono::system_clock::now()));
+}
+
+
+std::string
+ScheduledTask::__repr__(const std::string& name) const
+{
+	return format_string("<%s at %p>",
+		name.c_str(),
+		this
+	);
 }
 
 

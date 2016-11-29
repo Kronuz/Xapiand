@@ -152,6 +152,10 @@ public:
 	long double age();
 
 	void run() override;
+
+	std::string __repr__() const override {
+		return ScheduledTask::__repr__("Log");
+	}
 };
 
 

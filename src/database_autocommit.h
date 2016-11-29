@@ -70,4 +70,8 @@ public:
 	void run() override;
 
 	static void commit(const std::shared_ptr<Database>& database);
+
+	std::string __repr__() const override {
+		return ScheduledTask::__repr__("DatabaseAutocommit");
+	}
 };

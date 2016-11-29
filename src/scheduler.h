@@ -55,6 +55,12 @@ public:
 	~ScheduledTask();
 
 	bool clear();
+
+	std::string __repr__(const std::string& name) const;
+
+	virtual std::string __repr__() const {
+		return __repr__("ScheduledTask");
+	}
 };
 
 
