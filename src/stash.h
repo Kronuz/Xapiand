@@ -301,9 +301,7 @@ public:
 
 	template <typename T>
 	bool next(StashContext& ctx, T** value_ptr, unsigned long long final_key) {
-		auto loop = ctx.check(final_key);
-
-		while (loop) {
+		while (ctx.check(final_key)) {
 			auto new_cur_key = get_inc_base_key(ctx.cur_key);
 			auto cur = get_slot(ctx.cur_key);
 
@@ -312,11 +310,20 @@ public:
 			std::atomic<Bin*>* bin_ptr = nullptr;
 			switch (Stash_T::get_bin(&bin_ptr, cur)) {
 				case StashState::Ok: {
-					auto ptr = (*bin_ptr).load();
-					if (ptr) {
-						if (ptr->val.next(ctx, value_ptr, new_cur_key) && ctx.op != StashContext::Operation::clean) {
-							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
-							return true;
+					if (ctx.op == StashContext::Operation::clean) {
+						auto ptr = (*bin_ptr).exchange(nullptr);
+						if (ptr) {
+							ptr->val.next(ctx, value_ptr, new_cur_key);
+							L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
+							delete ptr;
+						}
+					} else {
+						auto ptr = (*bin_ptr).load();
+						if (ptr) {
+							if (ptr->val.next(ctx, value_ptr, new_cur_key)) {
+								L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
+								return true;
+							}
 						}
 					}
 					break;
@@ -327,18 +334,6 @@ public:
 					return false;
 				default:
 					break;
-			}
-
-			loop = ctx.check(final_key);
-
-			if (ctx.op == StashContext::Operation::clean && loop) {
-				if (bin_ptr) {
-					auto ptr = (*bin_ptr).exchange(nullptr);
-					if (ptr) {
-						L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
-						delete ptr;
-					}
-				}
 			}
 
 			if (ctx.op == StashContext::Operation::peep || ctx.atom_cur_key.compare_exchange_strong(ctx.cur_key, new_cur_key)) {
