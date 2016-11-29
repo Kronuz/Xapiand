@@ -212,7 +212,7 @@ public:
 
 
 struct StashContext {
-	enum class Operation {
+	enum class Operation : uint8_t {
 		walk,
 		peep,
 		clean,
@@ -297,7 +297,7 @@ public:
 	StashSlots(StashSlots&& o) noexcept
 		: Stash_T::Stash(std::move(o)) { }
 
-	StashSlots() { }
+	StashSlots() = default;
 
 	template <typename T>
 	bool next(StashContext& ctx, T** value_ptr, unsigned long long final_key) {
