@@ -359,15 +359,14 @@ public:
 	template <typename T>
 	void add(StashContext& ctx, T&& value, unsigned long long key) {
 		auto slot = get_slot(key);
+		auto& bin = Stash_T::spawn_bin(slot);
+		Stash_T::_put(bin, _Tp()).add(ctx, std::forward<T>(value), key);
+
 		auto cur_key = ctx.atom_cur_key.load();
 		auto end_key = ctx.atom_end_key.load();
-
-		auto& bin = Stash_T::spawn_bin(slot);
+		L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" MAGENTA "ADD" NO_COL " - _Mod:%llu, key:%llu, slot:%llu, cur_key:%llu, end_key:%llu", _Mod, key, slot, cur_key, end_key);
 		while (key < cur_key && !ctx.atom_cur_key.compare_exchange_weak(cur_key, key));
 		while (key > end_key && !ctx.atom_end_key.compare_exchange_weak(end_key, key));
-
-		L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" MAGENTA "ADD" NO_COL " - _Mod:%llu, key:%llu, slot:%llu, cur_key:%llu, end_key:%llu", _Mod, key, slot, cur_key, end_key);
-		Stash_T::_put(bin, _Tp()).add(ctx, std::forward<T>(value), key);
 	}
 };
 
