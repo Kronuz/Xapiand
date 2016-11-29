@@ -251,7 +251,7 @@ class StashSlots : public Stash<_Tp, _Size> {
 		return (key / _Div) % _Mod;
 	}
 
-	bool check(unsigned long long final_key, bool) {
+	bool check(unsigned long long final_key) {
 		if (ctx.current_key && ctx.cur_key >= ctx.current_key) {
 			return false;
 		}
@@ -278,7 +278,7 @@ public:
 
 	template <typename T>
 	bool next(T** value_ptr, unsigned long long final_key=0, bool peep=false) {
-		auto loop = check(final_key, peep);
+		auto loop = check(final_key);
 
 		while (loop) {
 			auto new_cur_key = get_inc_base_key(ctx.cur_key);
@@ -308,11 +308,11 @@ public:
 					break;
 			}
 
-			loop = check(final_key, peep);
+			loop = check(final_key);
 
 			if (!peep && ptr) {
 				L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, peep:%s", peep ? DARK_GREY : NO_COL, _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), peep ? "true" : "false");
-			// 	ptr->val.clear();
+				// ptr->val.clear();
 			}
 
 			if (peep || ctx.atom_cur_key.compare_exchange_strong(ctx.cur_key, new_cur_key)) {
