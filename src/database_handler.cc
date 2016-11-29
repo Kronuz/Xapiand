@@ -382,7 +382,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 
 	update_schema();
 
-	return std::make_pair(did, obj_);
+	return std::make_pair(std::move(did), std::move(obj_));
 }
 
 
