@@ -68,6 +68,8 @@ public:
 };
 
 
+using DataType = std::pair<Xapian::docid, MsgPack>;
+
 class DatabaseHandler {
 	friend class Document;
 
@@ -77,7 +79,7 @@ class DatabaseHandler {
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
-	MsgPack run_script(const MsgPack& data, const std::string& term_id, bool& modified);
+	MsgPack run_script(const MsgPack& data, const std::string& term_id);
 
 	void get_similar(Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar, bool is_fuzzy=false);
 	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, AggregationMatchSpy* aggs);
@@ -110,9 +112,9 @@ public:
 
 	void reset(const Endpoints& endpoints_, int flags_, enum http_method method_);
 
-	Xapian::docid index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, MsgPack* out_body, endpoints_error_list* err_list=nullptr);
-	Xapian::docid index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, MsgPack* out_body, endpoints_error_list* err_list=nullptr);
-	Xapian::docid patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
+	DataType index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
+	DataType index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
+	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
 
 	void write_schema(const std::string& body);
 	void write_schema(const MsgPack& obj);

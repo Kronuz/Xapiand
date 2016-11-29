@@ -893,10 +893,10 @@ HttpClient::index_document_view(enum http_method method)
 	operation_begins = std::chrono::system_clock::now();
 
 	auto body_ = get_body();
-	MsgPack final_body(MsgPack::Type::MAP);
+	MsgPack response;
 	endpoints_error_list err_list;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	db_handler.index(doc_id, body_.second, query_field->commit, body_.first, &final_body, &err_list);
+	response = db_handler.index(doc_id, body_.second, query_field->commit, body_.first, &err_list).second;
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -911,16 +911,11 @@ HttpClient::index_document_view(enum http_method method)
 	}
 	L_TIME(this, "Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	MsgPack response;
+
 	if (err_list.empty()) {
 		status_code = HTTP_STATUS_OK;
-		response["_index"] = {
-			{ ID_FIELD_NAME, doc_id },
-			{ "_commit", query_field->commit }
-		};
-		if (!final_body.empty()) {
-			response["_index"]["_final_body"] = final_body;
-		}
+		response[ID_FIELD_NAME] = doc_id;
+		response["_commit"] = query_field->commit;
 	} else {
 		for (const auto& err : err_list) {
 			MsgPack o;
@@ -989,9 +984,10 @@ HttpClient::update_document_view(enum http_method method)
 	operation_begins = std::chrono::system_clock::now();
 
 	auto body_ = get_body();
+	MsgPack response;
 	endpoints_error_list err_list;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	db_handler.patch(doc_id, body_.second, query_field->commit, body_.first, &err_list);
+	response = db_handler.patch(doc_id, body_.second, query_field->commit, body_.first, &err_list).second;
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -1006,13 +1002,10 @@ HttpClient::update_document_view(enum http_method method)
 	}
 	L_TIME(this, "Updating took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	MsgPack response;
 	if (err_list.empty()) {
 		status_code = HTTP_STATUS_OK;
-		response["_update"] = {
-			{ ID_FIELD_NAME, doc_id },
-			{ "_commit", query_field->commit }
-		};
+		response[ID_FIELD_NAME] = doc_id;
+		response["_commit"] = query_field->commit;
 	} else {
 		for (const auto& err : err_list) {
 			MsgPack o;
