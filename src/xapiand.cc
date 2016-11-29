@@ -66,16 +66,46 @@
 using namespace TCLAP;
 
 
+char*
+ulltostr(unsigned long long val, char* buffer, size_t size, unsigned long long radix=10)
+{
+	size_t len = 1;
+	unsigned long long tmp = val;
+
+	while (tmp / radix) {
+		tmp = tmp / radix;
+		++len;
+	}
+
+	if (len < size) {
+		buffer[len] = '\0';
+	} else if (size > 0) {
+		buffer[size - 1] = '\0';
+	}
+
+	tmp = val;
+	do {
+		if (len + 1 <= size) {
+			buffer[len - 1] = (tmp % radix) + '0';
+		}
+		tmp = tmp / radix;
+	} while (--len);
+
+	return buffer;
+}
+
+
 #ifndef NDEBUG
 void sig_info(int)
 {
+	std::string buf;
 	if (logger_info_hook) {
 		logger_info_hook = 0;
-		auto buf = format_string(BLUE "Info hooks disabled!" NO_COL "\n", logger_info_hook.load());
+		buf.assign(BLUE "Info hooks disabled!" NO_COL "\n");
 		write(STDERR_FILENO, buf.data(), buf.size());
 	} else {
 		logger_info_hook = -1ULL;
-		auto buf = format_string(BLUE "Info hooks enabled!" NO_COL "\n", logger_info_hook.load());
+		buf.assign(BLUE "Info hooks enabled!" NO_COL "\n");
 		write(STDERR_FILENO, buf.data(), buf.size());
 	}
 }
@@ -84,28 +114,40 @@ void sig_info(int)
 
 void sig_handler(int sig)
 {
+	std::string buf;
+	char buffer[21];
+
 	switch (sig) {
 #ifndef NDEBUG
-		case SIGINFO: {
-			auto buf = format_string(BLUE "Signal received: %d (%s)" NO_COL "\n", sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+		case SIGINFO:
+			buf.assign(BLUE "Signal received: ");
+			buf.append(ulltostr(sig, buffer, sizeof(buffer)));
+			buf.append(" (");
+			buf.append((sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+			buf.append(")" NO_COL "\n");
 			write(STDERR_FILENO, buf.data(), buf.size());
 			sig_info(sig);
 			break;
-		}
 #endif
 		case SIGTERM:
-		case SIGINT: {
-			auto buf = format_string(YELLOW "Signal received: %d (%s)" NO_COL "\n", sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+		case SIGINT:
+			buf.assign(YELLOW "Signal received: ");
+			buf.append(ulltostr(sig, buffer, sizeof(buffer)));
+			buf.append(" (");
+			buf.append((sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+			buf.append(")" NO_COL "\n");
 			write(STDERR_FILENO, buf.data(), buf.size());
 			sig_exit(sig);
 			break;
-		}
 
-		default: {
-			auto buf = format_string(LIGHT_RED "Unknown signal received: %d (%s)" NO_COL "\n", sig, (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+		default:
+			buf.assign(LIGHT_RED "Signal received: ");
+			buf.append(ulltostr(sig, buffer, sizeof(buffer)));
+			buf.append(" (");
+			buf.append((sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
+			buf.append(")" NO_COL "\n");
 			write(STDERR_FILENO, buf.data(), buf.size());
 			break;
-		}
 	}
 }
 
