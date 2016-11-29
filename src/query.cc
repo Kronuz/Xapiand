@@ -245,7 +245,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 					} else {
 						return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
 					}
-					
+
 				default:
 					return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
 			}
