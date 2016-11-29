@@ -75,12 +75,22 @@ SchedulerQueue::walk()
 
 
 void
+SchedulerQueue::clean_checkpoint()
+{
+	auto cur_key = ctx.atom_cur_key.load();
+	if (cur_key < cctx.atom_cur_key.load()) {
+		cctx.atom_cur_key = cur_key;
+	}
+	cctx.atom_end_key = ctx.atom_end_key.load();
+}
+
+
+void
 SchedulerQueue::clean()
 {
 	cctx.op = StashContext::Operation::clean;
 	cctx.cur_key = cctx.atom_cur_key.load();
 	cctx.current_key = time_point_to_ullong(std::chrono::system_clock::now() - 5s);
-	cctx.atom_end_key = ctx.atom_end_key.load();
 	queue.next(cctx);
 }
 
@@ -224,6 +234,8 @@ Scheduler::run()
 		L_INFO_HOOK_LOG("Scheduler::LOOP", this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), next_wakeup_time.load());
 		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
 		L_INFO_HOOK_LOG("Scheduler::WAKEUP", this, "Scheduler::" LIGHT_BLUE "WAKEUP" NO_COL " - now:%llu, wt:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wt);
+
+		scheduler_queue.clean_checkpoint();
 
 		while ((task = scheduler_queue.walk())) {
 			if (*task) {
