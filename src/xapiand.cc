@@ -66,93 +66,49 @@
 using namespace TCLAP;
 
 
-char* ulltostr(unsigned long long val, char* buffer, size_t size, unsigned long long radix=10)
-{
-	size_t len = 1;
-	unsigned long long tmp = val;
-
-	while (tmp / radix) {
-		tmp = tmp / radix;
-		++len;
-	}
-
-	if (len < size) {
-		buffer[len] = '\0';
-	} else if (size > 0) {
-		buffer[size - 1] = '\0';
-	}
-
-	tmp = val;
-	do {
-		if (len + 1 <= size) {
-			buffer[len - 1] = (tmp % radix) + '0';
-		}
-		tmp = tmp / radix;
-	} while (--len);
-
-	return buffer;
-}
-
-
 #ifndef NDEBUG
-void sig_info(int)
-{
-	std::string buf;
+void sig_info(int) {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
-		buf.assign(BLUE "Info hooks disabled!" NO_COL "\n");
+		auto buf = format_string(BLUE "Info hooks disabled!" NO_COL "\n", logger_info_hook.load());
 		write(STDERR_FILENO, buf.data(), buf.size());
 	} else {
 		logger_info_hook = -1ULL;
-		buf.assign(BLUE "Info hooks enabled!" NO_COL "\n");
+		auto buf = format_string(BLUE "Info hooks enabled!" NO_COL "\n", logger_info_hook.load());
 		write(STDERR_FILENO, buf.data(), buf.size());
 	}
 }
 #endif
 
 
-void sig_handler(int sig)
-{
-	std::string buf;
-	char buffer[21];
-
+void sig_handler(int sig) {
 	switch (sig) {
 #ifndef NDEBUG
-		case SIGINFO:
-			buf.assign(BLUE "Signal received: ");
-			buf.append(ulltostr(sig, buffer, sizeof(buffer)));
-			buf.append(" (");
-			buf.append((sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
-			buf.append(")" NO_COL "\n");
+		case SIGINFO: {
+			auto buf = format_string(BLUE "Signal received: (%s)" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
 			write(STDERR_FILENO, buf.data(), buf.size());
 			sig_info(sig);
 			break;
+		}
 #endif
 		case SIGTERM:
-		case SIGINT:
-			buf.assign(YELLOW "Signal received: ");
-			buf.append(ulltostr(sig, buffer, sizeof(buffer)));
-			buf.append(" (");
-			buf.append((sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
-			buf.append(")" NO_COL "\n");
+		case SIGINT: {
+			auto buf = format_string(YELLOW "Signal received: (%s)" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
 			write(STDERR_FILENO, buf.data(), buf.size());
 			sig_exit(sig);
 			break;
+		}
 
-		default:
-			buf.assign(LIGHT_RED "Signal received: ");
-			buf.append(ulltostr(sig, buffer, sizeof(buffer)));
-			buf.append(" (");
-			buf.append((sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
-			buf.append(")" NO_COL "\n");
+		default: {
+			auto buf = format_string(LIGHT_RED "Unknown signal received: (%s)" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
 			write(STDERR_FILENO, buf.data(), buf.size());
 			break;
+		}
 	}
 }
 
 
-void setup_signal_handlers(void)
-{
+void setup_signal_handlers(void) {
 	signal(SIGHUP, SIG_IGN);   // Ignore terminal line hangup
 	signal(SIGPIPE, SIG_IGN);  // Ignore write on a pipe with no reader
 
@@ -179,9 +135,7 @@ void setup_signal_handlers(void)
 #define EV_PORT_NAME    "port"
 
 
-unsigned int
-ev_backend(const std::string& name)
-{
+unsigned int ev_backend(const std::string& name) {
 	auto ev_use = lower_string(name);
 	if (ev_use.empty() || ev_use.compare("auto") == 0) {
 		return ev::AUTO;
@@ -207,9 +161,8 @@ ev_backend(const std::string& name)
 	return -1;
 }
 
-const char*
-ev_backend(unsigned int backend)
-{
+
+const char* ev_backend(unsigned int backend) {
 	switch(backend) {
 		case ev::SELECT:
 			return EV_SELECT_NAME;
@@ -227,9 +180,8 @@ ev_backend(unsigned int backend)
 	return "unknown";
 }
 
-std::vector<std::string>
-ev_supported()
-{
+
+std::vector<std::string> ev_supported() {
 	std::vector<std::string> backends;
 	unsigned int supported = ev::supported_backends();
 	if (supported & ev::SELECT) backends.push_back(EV_SELECT_NAME);
