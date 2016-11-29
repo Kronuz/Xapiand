@@ -66,8 +66,7 @@
 using namespace TCLAP;
 
 
-char*
-ulltostr(unsigned long long val, char* buffer, size_t size, unsigned long long radix=10)
+char* ulltostr(unsigned long long val, char* buffer, size_t size, unsigned long long radix=10)
 {
 	size_t len = 1;
 	unsigned long long tmp = val;
@@ -152,7 +151,8 @@ void sig_handler(int sig)
 }
 
 
-void setup_signal_handlers(void) {
+void setup_signal_handlers(void)
+{
 	signal(SIGHUP, SIG_IGN);   // Ignore terminal line hangup
 	signal(SIGPIPE, SIG_IGN);  // Ignore write on a pipe with no reader
 
@@ -177,6 +177,7 @@ void setup_signal_handlers(void) {
 #define EV_KQUEUE_NAME  "kqueue"
 #define EV_DEVPOLL_NAME "devpoll"
 #define EV_PORT_NAME    "port"
+
 
 unsigned int
 ev_backend(const std::string& name)
