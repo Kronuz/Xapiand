@@ -251,7 +251,7 @@ class StashSlots : public Stash<_Tp, _Size> {
 		return (key / _Div) % _Mod;
 	}
 
-	bool check(unsigned long long final_key, bool peep) {
+	bool check(unsigned long long final_key, bool) {
 		if (ctx.current_key && ctx.cur_key >= ctx.current_key) {
 			return false;
 		}
@@ -405,7 +405,7 @@ public:
 	}
 
 	template <typename T>
-	void add(T&& value, unsigned long long key) {
+	void add(T&& value, unsigned long long) {
 		auto slot = atom_end.load();
 		while (!atom_end.compare_exchange_weak(slot, slot + 1));
 		auto& bin = Stash_T::spawn_bin(slot);

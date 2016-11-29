@@ -105,9 +105,7 @@ LogWrapper::operator=(LogWrapper&& o)
 }
 
 LogWrapper::LogWrapper(LogType log_)
-	: log(log_)
-{
-}
+	: log(log_) { }
 
 
 LogWrapper::~LogWrapper()
@@ -200,7 +198,8 @@ Log::Log(const std::string& str, bool clean_, bool stacked_, bool async_, int pr
 	  str_start(str),
 	  async(async_),
 	  priority(priority_),
-	  cleaned(false) {
+	  cleaned(false)
+{
 
 	if (stacked) {
 		std::lock_guard<std::mutex> lk(stack_mtx);
