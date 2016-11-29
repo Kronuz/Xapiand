@@ -66,16 +66,26 @@
 using namespace TCLAP;
 
 
+static const std::vector<std::string> vec_signame = []() {
+	std::vector<std::string> res;
+	auto len = arraySize(sys_signame);
+	res.reserve(len);
+	for (size_t i = 0; i < len; ++i) {
+		res.push_back(YELLOW "Signal received: " + std::string(sys_signame[i]) + "\n");
+	}
+	res.push_back(YELLOW "Signal received: unknown\n");
+	return res;
+}();
+
+
 #ifndef NDEBUG
 void sig_info(int) {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
-		auto buf = format_string(BLUE "Info hooks disabled!" NO_COL "\n", logger_info_hook.load());
-		write(STDERR_FILENO, buf.data(), buf.size());
+		write(STDERR_FILENO, BLUE "Info hooks disabled!\n", 30);
 	} else {
 		logger_info_hook = -1ULL;
-		auto buf = format_string(BLUE "Info hooks enabled!" NO_COL "\n", logger_info_hook.load());
-		write(STDERR_FILENO, buf.data(), buf.size());
+		write(STDERR_FILENO, BLUE "Info hooks enabled!\n", 30);
 	}
 }
 #endif
@@ -85,23 +95,23 @@ void sig_handler(int sig) {
 	switch (sig) {
 #ifndef NDEBUG
 		case SIGINFO: {
-			auto buf = format_string(BLUE "Signal received: (%s)" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
-			write(STDERR_FILENO, buf.data(), buf.size());
+			const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
+			write(STDERR_FILENO, msg.data(), msg.size());
 			sig_info(sig);
 			break;
 		}
 #endif
 		case SIGTERM:
 		case SIGINT: {
-			auto buf = format_string(YELLOW "Signal received: (%s)" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
-			write(STDERR_FILENO, buf.data(), buf.size());
+			const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
+			write(STDERR_FILENO, msg.data(), msg.size());
 			sig_exit(sig);
 			break;
 		}
 
 		default: {
-			auto buf = format_string(LIGHT_RED "Unknown signal received: (%s)" NO_COL "\n", (sig >= 0 || sig < NSIG) ? sys_signame[sig] : "unknown");
-			write(STDERR_FILENO, buf.data(), buf.size());
+			const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
+			write(STDERR_FILENO, msg.data(), msg.size());
 			break;
 		}
 	}
