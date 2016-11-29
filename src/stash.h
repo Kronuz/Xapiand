@@ -251,6 +251,28 @@ struct StashContext {
 
 		return true;
 	}
+
+	const char* _op() {
+		switch (op) {
+			case Operation::walk:
+				return "walk";
+			case Operation::peep:
+				return "peep";
+			case Operation::clean:
+				return "clean";
+		}
+	}
+
+	const char* _col() {
+		switch (op) {
+			case Operation::walk:
+				return NO_COL;
+			case Operation::peep:
+				return DARK_GREY;
+			case Operation::clean:
+				return RED;
+		}
+	}
 };
 
 
@@ -285,7 +307,7 @@ public:
 			auto new_cur_key = get_inc_base_key(ctx.cur_key);
 			auto cur = get_slot(ctx.cur_key);
 
-			L_INFO_HOOK_LOG("StashSlots::LOOP", this, "StashSlots::" CYAN "LOOP" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", (ctx.op == StashContext::Operation::walk) ? NO_COL : (ctx.op == StashContext::Operation::peep) ? DARK_GREY : RED, _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), (ctx.op == StashContext::Operation::walk) ? "walk" : (ctx.op == StashContext::Operation::peep) ? "peep" : "clean");
+			L_INFO_HOOK_LOG("StashSlots::LOOP", this, "StashSlots::" CYAN "LOOP" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 
 			std::atomic<Bin*>* bin_ptr = nullptr;
 			switch (Stash_T::get_bin(&bin_ptr, cur)) {
@@ -293,7 +315,7 @@ public:
 					auto ptr = (*bin_ptr).load();
 					if (ptr) {
 						if (ptr->val.next(ctx, value_ptr, new_cur_key) && ctx.op != StashContext::Operation::clean) {
-							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", (ctx.op == StashContext::Operation::walk) ? NO_COL : (ctx.op == StashContext::Operation::peep) ? DARK_GREY : RED, _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), (ctx.op == StashContext::Operation::walk) ? "walk" : (ctx.op == StashContext::Operation::peep) ? "peep" : "clean");
+							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 							return true;
 						}
 					}
@@ -301,7 +323,7 @@ public:
 				}
 				case StashState::OutOfRange:
 				case StashState::EmptyStash:
-					L_INFO_HOOK_LOG("StashSlots::BREAK", this, "StashSlots::" YELLOW "BREAK" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", (ctx.op == StashContext::Operation::walk) ? NO_COL : (ctx.op == StashContext::Operation::peep) ? DARK_GREY : RED, _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), (ctx.op == StashContext::Operation::walk) ? "walk" : (ctx.op == StashContext::Operation::peep) ? "peep" : "clean");
+					L_INFO_HOOK_LOG("StashSlots::BREAK", this, "StashSlots::" YELLOW "BREAK" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 					return false;
 				default:
 					break;
@@ -313,7 +335,7 @@ public:
 				if (bin_ptr) {
 					auto ptr = (*bin_ptr).exchange(nullptr);
 					if (ptr) {
-						L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", (ctx.op == StashContext::Operation::walk) ? NO_COL : (ctx.op == StashContext::Operation::peep) ? DARK_GREY : RED, _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), (ctx.op == StashContext::Operation::walk) ? "walk" : (ctx.op == StashContext::Operation::peep) ? "peep" : "clean");
+						L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 						delete ptr;
 					}
 				}
@@ -324,7 +346,7 @@ public:
 			}
 		}
 
-		L_INFO_HOOK_LOG("StashSlots::MISSING", this, "StashSlots::" YELLOW "MISSING" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", (ctx.op == StashContext::Operation::walk) ? NO_COL : (ctx.op == StashContext::Operation::peep) ? DARK_GREY : RED, _Mod, ctx.cur_key, get_slot(ctx.cur_key), final_key, ctx.atom_end_key.load(), (ctx.op == StashContext::Operation::walk) ? "walk" : (ctx.op == StashContext::Operation::peep) ? "peep" : "clean");
+		L_INFO_HOOK_LOG("StashSlots::MISSING", this, "StashSlots::" YELLOW "MISSING" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, get_slot(ctx.cur_key), final_key, ctx.atom_end_key.load(), ctx._op());
 		return false;
 	}
 
@@ -382,7 +404,7 @@ public:
 		auto cur = atom_cur.load();
 
 		do {
-			L_INFO_HOOK_LOG("StashValues::LOOP", this, "StashValues::" LIGHT_CYAN "LOOP" NO_COL " - %scur:%llu, op:%s", (ctx.op == StashContext::Operation::walk) ? NO_COL : (ctx.op == StashContext::Operation::peep) ? DARK_GREY : RED, cur, (ctx.op == StashContext::Operation::walk) ? "walk" : (ctx.op == StashContext::Operation::peep) ? "peep" : "clean");
+			L_INFO_HOOK_LOG("StashValues::LOOP", this, "StashValues::" LIGHT_CYAN "LOOP" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 
 			std::atomic<Bin*>* bin_ptr = nullptr;
 			switch (Stash_T::get_bin(&bin_ptr, cur)) {
@@ -394,7 +416,7 @@ public:
 							cur = new_cur;
 						}
 						if (!is_empty(ptr->val)) {
-							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, op:%s", (ctx.op == StashContext::Operation::walk) ? NO_COL : (ctx.op == StashContext::Operation::peep) ? DARK_GREY : RED, cur, (ctx.op == StashContext::Operation::walk) ? "walk" : (ctx.op == StashContext::Operation::peep) ? "peep" : "clean");
+							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 							if (value_ptr) {
 								*value_ptr = &ptr->val;
 							}
