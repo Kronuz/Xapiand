@@ -153,7 +153,7 @@ void sig_handler(int sig)
 
 
 void setup_signal_handlers(void) {
-	signal(SIGHUP, SIG_IGN);  // Ignore terminal line hangup
+	signal(SIGHUP, SIG_IGN);   // Ignore terminal line hangup
 	signal(SIGPIPE, SIG_IGN);  // Ignore write on a pipe with no reader
 
 	struct sigaction act;
@@ -164,7 +164,7 @@ void setup_signal_handlers(void) {
 	act.sa_flags = 0;
 	act.sa_handler = sig_handler;
 	sigaction(SIGTERM, &act, nullptr);  // On software termination signal
-	sigaction(SIGINT, &act, nullptr);  // On interrupt program (Ctrl-C)
+	sigaction(SIGINT, &act, nullptr);   // On interrupt program (Ctrl-C)
 #ifndef NDEBUG
 	sigaction(SIGINFO, &act, nullptr);  // On status request from keyboard (Ctrl-T)
 #endif
