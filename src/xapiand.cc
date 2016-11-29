@@ -66,14 +66,69 @@
 using namespace TCLAP;
 
 
+template<typename T, std::size_t N>
+ssize_t write(int fildes, T (&buf)[N]) {
+	return write(fildes, buf, N - 1);
+}
+
+
 static const std::vector<std::string> vec_signame = []() {
 	std::vector<std::string> res;
 	auto len = arraySize(sys_signame);
 	res.reserve(len);
-	for (size_t i = 0; i < len; ++i) {
-		res.push_back(YELLOW "Signal received: " + std::string(sys_signame[i]) + "\n");
+	for (size_t sig = 0; sig < len; ++sig) {
+		const char* col;
+		switch (sig) {
+			case SIGQUIT:
+			case SIGILL:
+			case SIGTRAP:
+			case SIGABRT:
+			case SIGEMT:
+			case SIGFPE:
+			case SIGBUS:
+			case SIGSEGV:
+			case SIGSYS:
+				// create core image
+				col = LIGHT_RED;
+				break;
+			case SIGHUP:
+			case SIGINT:
+			case SIGKILL:
+			case SIGPIPE:
+			case SIGALRM:
+			case SIGTERM:
+			case SIGXCPU:
+			case SIGXFSZ:
+			case SIGVTALRM:
+			case SIGPROF:
+			case SIGUSR1:
+			case SIGUSR2:
+				// terminate process
+				col = RED;
+				break;
+			case SIGSTOP:
+			case SIGTSTP:
+			case SIGTTIN:
+			case SIGTTOU:
+				// stop process
+				col = YELLOW;
+				break;
+			case SIGURG:
+			case SIGCONT:
+			case SIGCHLD:
+			case SIGIO:
+			case SIGWINCH:
+			case SIGINFO:
+				// discard signal
+				col = BLUE;
+				break;
+			default:
+				col = BLUE;
+				break;
+		}
+		res.push_back(format_string("%sSignal received: %s" NO_COL "\n", col, sys_signame[sig]));
 	}
-	res.push_back(YELLOW "Signal received: unknown\n");
+	res.push_back(BLUE "Signal received: unknown" NO_COL "\n");
 	return res;
 }();
 
@@ -82,38 +137,29 @@ static const std::vector<std::string> vec_signame = []() {
 void sig_info(int) {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
-		write(STDERR_FILENO, BLUE "Info hooks disabled!\n", 29);
+		write(STDERR_FILENO, BLUE "Info hooks disabled!" NO_COL "\n");
 	} else {
 		logger_info_hook = -1ULL;
-		write(STDERR_FILENO, BLUE "Info hooks enabled!\n", 28);
+		write(STDERR_FILENO, BLUE "Info hooks enabled!" NO_COL "\n");
 	}
 }
 #endif
 
 
 void sig_handler(int sig) {
+	const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
+	write(STDERR_FILENO, msg.data(), msg.size());
+
 	switch (sig) {
 #ifndef NDEBUG
-		case SIGINFO: {
-			const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
-			write(STDERR_FILENO, msg.data(), msg.size());
+		case SIGINFO:
 			sig_info(sig);
 			break;
-		}
 #endif
 		case SIGTERM:
-		case SIGINT: {
-			const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
-			write(STDERR_FILENO, msg.data(), msg.size());
+		case SIGINT:
 			sig_exit(sig);
 			break;
-		}
-
-		default: {
-			const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
-			write(STDERR_FILENO, msg.data(), msg.size());
-			break;
-		}
 	}
 }
 
