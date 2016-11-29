@@ -270,7 +270,7 @@ struct StashContext {
 			case Operation::peep:
 				return DARK_GREY;
 			case Operation::clean:
-				return RED;
+				return MAGENTA;
 		}
 	}
 };
