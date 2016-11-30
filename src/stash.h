@@ -37,6 +37,71 @@ enum class StashState : uint8_t {
 };
 
 
+struct StashContext {
+	enum class Operation : uint8_t {
+		walk,
+		peep,
+		clean,
+	};
+
+	Operation op;
+	unsigned long long cur_key;
+	unsigned long long current_key;
+	std::atomic_ullong atom_cur_key;
+	std::atomic_ullong atom_end_key;
+
+	StashContext(StashContext&& o) noexcept
+		: cur_key(std::move(o.cur_key)),
+		  current_key(std::move(o.current_key)),
+		  atom_cur_key(o.atom_cur_key.load()),
+		  atom_end_key(o.atom_end_key.load()) { }
+
+	StashContext(unsigned long long cur_key_)
+		: cur_key(cur_key_),
+		  current_key(cur_key),
+		  atom_cur_key(cur_key),
+		  atom_end_key(cur_key) { }
+
+	bool check(unsigned long long key, unsigned long long final_key) const {
+		if (current_key && key > current_key) {
+			return false;
+		}
+
+		if (final_key && key > final_key) {
+			return false;
+		}
+
+		if (key > atom_end_key.load()) {
+			return false;
+		}
+
+		return true;
+	}
+
+	const char* _op() const noexcept {
+		switch (op) {
+			case Operation::walk:
+				return "walk";
+			case Operation::peep:
+				return "peep";
+			case Operation::clean:
+				return "clean";
+		}
+	}
+
+	const char* _col() const noexcept {
+		switch (op) {
+			case Operation::walk:
+				return NO_COL;
+			case Operation::peep:
+				return DARK_GREY;
+			case Operation::clean:
+				return MAGENTA;
+		}
+	}
+};
+
+
 template <typename _Tp, size_t _Size>
 class Stash {
 protected:
@@ -203,71 +268,6 @@ public:
 			}
 		}
 		return ptr->val;
-	}
-};
-
-
-struct StashContext {
-	enum class Operation : uint8_t {
-		walk,
-		peep,
-		clean,
-	};
-
-	Operation op;
-	unsigned long long cur_key;
-	unsigned long long current_key;
-	std::atomic_ullong atom_cur_key;
-	std::atomic_ullong atom_end_key;
-
-	StashContext(StashContext&& o) noexcept
-		: cur_key(std::move(o.cur_key)),
-		  current_key(std::move(o.current_key)),
-		  atom_cur_key(o.atom_cur_key.load()),
-		  atom_end_key(o.atom_end_key.load()) { }
-
-	StashContext(unsigned long long cur_key_)
-		: cur_key(cur_key_),
-		  current_key(cur_key),
-		  atom_cur_key(cur_key),
-		  atom_end_key(cur_key) { }
-
-	bool check(unsigned long long key, unsigned long long final_key) const {
-		if (current_key && key > current_key) {
-			return false;
-		}
-
-		if (final_key && key > final_key) {
-			return false;
-		}
-
-		if (key > atom_end_key.load()) {
-			return false;
-		}
-
-		return true;
-	}
-
-	const char* _op() const noexcept {
-		switch (op) {
-			case Operation::walk:
-				return "walk";
-			case Operation::peep:
-				return "peep";
-			case Operation::clean:
-				return "clean";
-		}
-	}
-
-	const char* _col() const noexcept {
-		switch (op) {
-			case Operation::walk:
-				return NO_COL;
-			case Operation::peep:
-				return DARK_GREY;
-			case Operation::clean:
-				return MAGENTA;
-		}
 	}
 };
 
