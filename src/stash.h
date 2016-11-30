@@ -236,7 +236,7 @@ struct StashContext {
 		  atom_cur_key(cur_key),
 		  atom_end_key(cur_key) { }
 
-	bool check(unsigned long long key, unsigned long long final_key) {
+	bool check(unsigned long long key, unsigned long long final_key) const {
 		if (current_key && key > current_key) {
 			return false;
 		}
@@ -252,7 +252,7 @@ struct StashContext {
 		return true;
 	}
 
-	const char* _op() {
+	const char* _op() const noexcept {
 		switch (op) {
 			case Operation::walk:
 				return "walk";
@@ -263,7 +263,7 @@ struct StashContext {
 		}
 	}
 
-	const char* _col() {
+	const char* _col() const noexcept {
 		switch (op) {
 			case Operation::walk:
 				return NO_COL;
@@ -281,15 +281,15 @@ class StashSlots : public Stash<_Tp, _Size> {
 	using Stash_T = Stash<_Tp, _Size>;
 	using Bin = typename Stash_T::Bin;
 
-	unsigned long long get_base_key(unsigned long long key) {
+	unsigned long long get_base_key(unsigned long long key) const {
 		return (key / _Div) * _Div;
 	}
 
-	unsigned long long get_inc_base_key(unsigned long long key) {
+	unsigned long long get_inc_base_key(unsigned long long key) const {
 		return get_base_key(key + _Div);
 	}
 
-	size_t get_slot(unsigned long long key) {
+	size_t get_slot(unsigned long long key) const {
 		return (key / _Div) % _Mod;
 	}
 
@@ -312,7 +312,7 @@ public:
 			std::atomic<Bin*>* bin_ptr = nullptr;
 			switch (Stash_T::get_bin(&bin_ptr, cur)) {
 				case StashState::Ok: {
-					auto ptr = (*bin_ptr).load();
+					auto ptr = bin_ptr->load();
 					if (ptr) {
 						if (ptr->val.next(ctx, value_ptr, new_cur_key) && ctx.op != StashContext::Operation::clean) {
 							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
@@ -334,7 +334,7 @@ public:
 
 			if (ctx.op == StashContext::Operation::clean) {
 				if (loop && bin_ptr) {
-					auto ptr = (*bin_ptr).exchange(nullptr);
+					auto ptr = bin_ptr->exchange(nullptr);
 					if (ptr) {
 						L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 						delete ptr;
@@ -380,12 +380,12 @@ class StashValues : public Stash<_Tp, _Size> {
 	std::atomic_size_t atom_end;
 
 	template <typename T>
-	bool is_empty(const std::shared_ptr<T> ptr) {
+	bool is_empty(const std::shared_ptr<T>& ptr) const noexcept {
 		return !ptr;
 	}
 
 	template <typename T, typename = std::enable_if_t<not std::is_same<_Tp, std::shared_ptr<T>>::value>>
-	bool is_empty(_Tp) {
+	bool is_empty(_Tp) const noexcept {
 		return false;
 	}
 
