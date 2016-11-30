@@ -1620,7 +1620,7 @@ Schema::validate_required_data(const MsgPack& value)
 	// L_DEBUG(this, "%s", specification.to_string().c_str());  // Print specification as sent by user
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
-		if ((XapiandManager::manager->strict || specification.flags.strict) && !specification.flags.inside_namespace) {
+		if (XapiandManager::manager->strict || specification.flags.strict) {
 			THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_normalized_name).c_str());
 		}
 		guess_field_type(value);
