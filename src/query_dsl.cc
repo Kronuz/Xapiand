@@ -22,18 +22,22 @@
 
 #include "query_dsl.h"
 
-#include <stdexcept>               // for out_of_range
-#include <tuple>                   // for get, tuple
+#include <stdexcept>                           // for out_of_range
+#include <tuple>                               // for get, tuple
 
-#include "database_utils.h"        // for prefixed, RESERVED_BOOLEAN, RESERV...
-#include "exception.h"             // for MSG_QueryDslError, QueryDslError
-#include "log.h"                   // for Log, L_CALL, L
-#include "msgpack/object_fwd.hpp"  // for type_error
-#include "multivalue/range.h"      // for MultipleValueRange
-#include "schema.h"                // for FieldType, required_spc_t, FieldTy...
-#include "serialise.h"             // for MsgPack, date, get_range_type, get...
-#include "utils.h"                 // for repr, lower_string, startswith
-#include "xxh64.hpp"               // for xxh64
+#include "booleanParser/BooleanParser.h"       // for BooleanTree
+#include "booleanParser/LexicalException.h"    // for LexicalException
+#include "booleanParser/SyntacticException.h"  // for SyntacticException
+#include "database_utils.h"                    // for prefixed, RESERVED_BOOLEAN, RESERV...
+#include "exception.h"                         // for MSG_QueryDslError, QueryDslError
+#include "log.h"                               // for Log, L_CALL, L
+#include "msgpack/object_fwd.hpp"              // for type_error
+#include "multivalue/range.h"                  // for MultipleValueRange
+#include "schema.h"                            // for FieldType, required_spc_t, FieldTy...
+#include "serialise.h"                         // for MsgPack, date, get_range_type, get...
+#include "utils.h"                             // for repr, lower_string, startswith
+#include "xxh64.hpp"                           // for xxh64
+
 
 
 /* Reserved DSL words used for operators */
@@ -479,4 +483,116 @@ QueryDSL::find_date(const MsgPack& obj)
 	} catch (const std::out_of_range&) { }
 
 	return isRange;
+}
+
+
+MsgPack
+QueryDSL::make_dsl_query(const query_field_t& e)
+{
+	L_CALL(this, "Query::make_dsl_query()");
+
+	if (e.query.size() == 1) {
+		return to_dsl_query(*e.query.begin());
+	} else {
+		MsgPack finalDSL(MsgPack::Type::MAP);
+		for (const auto& query : e.query) {
+			finalDSL["_and"].push_back(to_dsl_query(query));
+		}
+		return finalDSL;
+	}
+}
+
+
+MsgPack
+QueryDSL::to_dsl_query(std::string query)
+{
+	L_CALL(this, "Query::to_dsl_query()");
+
+	try {
+		BooleanTree booltree(query);
+		std::vector<MsgPack> stack_msgpack;
+
+		while (!booltree.empty()) {
+			auto token = booltree.front();
+			booltree.pop_front();
+			switch (token.type) {
+				case TokenType::Not:
+					if (stack_msgpack.size() < 1) {
+						THROW(ClientError, "Bad boolean expression");
+					} else {
+						auto expression = stack_msgpack.back();
+						stack_msgpack.pop_back();
+						MsgPack object(MsgPack::Type::MAP);
+						object["_not"] = { expression };
+						stack_msgpack.push_back(object);
+					}
+					break;
+				case TokenType::Or:
+					if (stack_msgpack.size() < 2) {
+						THROW(ClientError, "Bad boolean expression");
+					} else {
+						auto letf_expression = stack_msgpack.back();
+						stack_msgpack.pop_back();
+						auto right_expression = stack_msgpack.back();
+						stack_msgpack.pop_back();
+						MsgPack object(MsgPack::Type::MAP);
+						object["_or"] = { letf_expression, right_expression };
+						stack_msgpack.push_back(object);
+					}
+					break;
+				case TokenType::And:
+					if (stack_msgpack.size() < 2) {
+						THROW(ClientError, "Bad boolean expression");
+					} else {
+						auto letf_expression = stack_msgpack.back();
+						stack_msgpack.pop_back();
+						auto right_expression = stack_msgpack.back();
+						stack_msgpack.pop_back();
+						MsgPack object(MsgPack::Type::MAP);
+						object["_and"] = { letf_expression, right_expression };
+						stack_msgpack.push_back(object);
+					}
+					break;
+				case TokenType::Xor:
+					if (stack_msgpack.size() < 2) {
+						THROW(ClientError, "Bad boolean expression");
+					} else {
+						auto letf_expression = stack_msgpack.back();
+						stack_msgpack.pop_back();
+						auto right_expression = stack_msgpack.back();
+						stack_msgpack.pop_back();
+						MsgPack object(MsgPack::Type::MAP);
+						object["_xor"] = { letf_expression, right_expression };
+						stack_msgpack.push_back(object);
+					}
+					break;
+				case TokenType::Id:	{
+					MsgPack object(MsgPack::Type::MAP);
+					size_t pos = token.lexeme.find(":");
+					if (pos != std::string::npos) {
+						object[token.lexeme.substr(0, pos)] = token.lexeme.substr(pos + 1);
+					} else {
+						object["_value"] = token.lexeme;
+					}
+					stack_msgpack.push_back(object);
+				}
+					break;
+				default:
+					break;
+			}
+		}
+
+		if (stack_msgpack.size() == 1) {
+#ifdef	DEBUG_QUERY_TO_DSL
+			L_DEBUG(this, "QUERY DSL:\n%s", stack_msgpack.back().to_string(true).c_str());
+#endif
+			return stack_msgpack.back();
+		} else {
+			THROW(ClientError, "Bad boolean expression");
+		}
+	} catch (const LexicalException& err) {
+		THROW(ClientError, err.what());
+	} catch (const SyntacticException& err) {
+		THROW(ClientError, err.what());
+	}
 }

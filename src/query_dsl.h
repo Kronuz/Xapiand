@@ -78,8 +78,11 @@ class QueryDSL {
 	bool find_ranges(const std::string& key, const MsgPack& obj, Xapian::Query& q);
 	bool find_date(const MsgPack& obj);
 
+	MsgPack to_dsl_query(std::string query);
+
 public:
 	QueryDSL(std::shared_ptr<Schema> schema_);
 
 	Xapian::Query get_query(const MsgPack& obj);
+	MsgPack make_dsl_query(const query_field_t& e);
 };
