@@ -132,7 +132,7 @@ int restore_database() {
 	try {
 		if (create_db_wal(db_wal) == 0) {
 			/* Trigger the backup wal */
-			std::shared_ptr<DatabaseQueue>b_queue;
+			std::shared_ptr<DatabaseQueue> b_queue;
 			Endpoints endpoints;
 			endpoints.add(create_endpoint(restored_db));
 			std::shared_ptr<Database> res_database = std::make_shared<Database>(b_queue, endpoints, DB_WRITABLE);

@@ -49,7 +49,7 @@ bool read_file_contents(const std::string& filename, std::string* contents) {
 
 
 DB_Test::DB_Test(const std::string& db_name, const std::vector<std::string>& docs, int flags, const std::string& ct_type)
-		: name_database(db_name)
+	: name_database(db_name)
 {
 	// Delete database to create.
 	delete_files(name_database);
