@@ -242,10 +242,8 @@ public:
 	StashSlots() = default;
 
 	template <typename T>
-	bool next(StashContext& ctx, T** value_ptr, unsigned long long final_key) {
-		auto loop = ctx.check(ctx.cur_key, final_key);
-
-		while (loop) {
+	bool next(StashContext& ctx, T* value_ptr, unsigned long long final_key) {
+		while (ctx.check(ctx.cur_key, final_key)) {
 			auto new_cur_key = get_inc_base_key(ctx.cur_key);
 			auto cur = get_slot(ctx.cur_key);
 
@@ -253,16 +251,8 @@ public:
 
 			std::atomic<_Tp*>* ptr_atom_ptr = nullptr;
 			switch (Stash_T::get(&ptr_atom_ptr, cur, false)) {
-				case StashState::Ok: {
-					auto& atom_ptr = *ptr_atom_ptr;
-					auto ptr = atom_ptr.load();
-					if (ptr) {
-						if (ptr->next(ctx, value_ptr, new_cur_key) && ctx.op != StashContext::Operation::clean) {
-							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
-							return true;
-						}
-					}
-				}
+				case StashState::Ok:
+					break;
 				case StashState::ChunkEmpty:
 					L_INFO_HOOK_LOG("StashSlots::EMPTY", this, "StashSlots::" YELLOW "EMPTY" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 					break;
@@ -272,15 +262,22 @@ public:
 					return false;
 			}
 
-			loop = ctx.check(new_cur_key, final_key);
-
-			if (ctx.op == StashContext::Operation::clean) {
-				if (loop && ptr_atom_ptr) {
-					auto& atom_ptr = *ptr_atom_ptr;
+			if (ptr_atom_ptr) {
+				auto& atom_ptr = *ptr_atom_ptr;
+				if (ctx.op == StashContext::Operation::clean && ctx.check(new_cur_key, final_key)) {
 					auto ptr = atom_ptr.exchange(nullptr);
 					if (ptr) {
+						ptr->next(ctx, value_ptr, new_cur_key);
 						L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 						delete ptr;
+					}
+				} else {
+					auto ptr = atom_ptr.load();
+					if (ptr) {
+						if (ptr->next(ctx, value_ptr, new_cur_key)) {
+							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
+							return true;
+						}
 					}
 				}
 			}
@@ -294,8 +291,8 @@ public:
 		return false;
 	}
 
-	template <typename T=void>
-	bool next(StashContext& ctx, T** value_ptr=nullptr) {
+	template <typename T>
+	bool next(StashContext& ctx, T* value_ptr) {
 		return next(ctx, value_ptr, 0);
 	}
 
@@ -354,35 +351,16 @@ public:
 		  atom_end(0) { }
 
 	template <typename T>
-	bool next(StashContext& ctx, T** value_ptr, unsigned long long final_key) {
-		auto loop = ctx.check(ctx.cur_key, final_key);
-
-		while (loop) {
+	bool next(StashContext& ctx, T* value_ptr, unsigned long long) {
+		do {
 			auto new_cur = cur + 1;
 
 			L_INFO_HOOK_LOG("StashValues::LOOP", this, "StashValues::" LIGHT_CYAN "LOOP" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 
 			std::atomic<_Tp*>* ptr_atom_ptr = nullptr;
 			switch (Stash_T::get(&ptr_atom_ptr, cur, false)) {
-				case StashState::Ok: {
-					auto& atom_ptr = *ptr_atom_ptr;
-					auto ptr = atom_ptr.load();
-					if (ptr) {
-						if (ctx.op != StashContext::Operation::clean) {
-							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
-							if (value_ptr) {
-								*value_ptr = ptr;
-							}
-							if (ctx.op == StashContext::Operation::peep) {
-								cur = atom_cur.load();
-							}
-							else if (atom_cur.compare_exchange_strong(cur, new_cur)) {
-								cur = new_cur;
-							}
-							return true;
-						}
-					}
-				}
+				case StashState::Ok:
+					break;
 				case StashState::ChunkEmpty:
 					L_INFO_HOOK_LOG("StashValues::EMPTY", this, "StashValues::" YELLOW "EMPTY" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 					break;
@@ -395,21 +373,38 @@ public:
 					return false;
 			}
 
-			if (ctx.op == StashContext::Operation::clean) {
-				if (loop && ptr_atom_ptr) {
-					auto& atom_ptr = *ptr_atom_ptr;
+			if (ctx.op == StashContext::Operation::peep || atom_cur.compare_exchange_strong(cur, new_cur)) {
+				cur = new_cur;
+			}
+
+			if (ptr_atom_ptr) {
+				auto& atom_ptr = *ptr_atom_ptr;
+				if (ctx.op == StashContext::Operation::clean) {
 					auto ptr = atom_ptr.exchange(nullptr);
 					if (ptr) {
 						L_INFO_HOOK_LOG("StashValues::CLEAR", this, "StashValues::" LIGHT_RED "CLEAR" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 						delete ptr;
 					}
+				} else {
+					auto ptr = atom_ptr.load();
+					if (ptr) {
+						L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
+						if (value_ptr) {
+							*value_ptr = *ptr;
+						}
+						if (ctx.op == StashContext::Operation::peep) {
+							cur = atom_cur.load();
+						} else {
+							auto ptr = atom_ptr.exchange(nullptr);
+							if (ptr) {
+								delete ptr;
+							}
+						}
+						return true;
+					}
 				}
 			}
-
-			if (ctx.op == StashContext::Operation::peep || atom_cur.compare_exchange_strong(cur, new_cur)) {
-				cur = new_cur;
-			}
-		}
+		} while (true);
 
 		L_INFO_HOOK_LOG("StashValues::MISSING", this, "StashValues::" YELLOW "MISSING" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 		if (ctx.op == StashContext::Operation::peep) {

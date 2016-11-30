@@ -56,25 +56,25 @@ SchedulerQueue::SchedulerQueue()
 	  cctx(now()) { }
 
 
-TaskType*
+TaskType
 SchedulerQueue::peep(unsigned long long current_key)
 {
 	ctx.op = StashContext::Operation::peep;
 	ctx.cur_key = ctx.atom_cur_key.load();
 	ctx.current_key = current_key;
-	TaskType* task = nullptr;
+	TaskType task;
 	queue.next(ctx, &task);
 	return task;
 }
 
 
-TaskType*
+TaskType
 SchedulerQueue::walk()
 {
 	ctx.op = StashContext::Operation::walk;
 	ctx.cur_key = ctx.atom_cur_key.load();
 	ctx.current_key = time_point_to_ullong(std::chrono::system_clock::now());
-	TaskType* task = nullptr;
+	TaskType task;
 	queue.next(ctx, &task);
 	return task;
 }
@@ -97,7 +97,8 @@ SchedulerQueue::clean()
 	cctx.op = StashContext::Operation::clean;
 	cctx.cur_key = cctx.atom_cur_key.load();
 	cctx.current_key = time_point_to_ullong(std::chrono::system_clock::now() - 5s);
-	queue.next(cctx);
+	TaskType task;
+	queue.next(cctx, &task);
 }
 
 
@@ -227,11 +228,13 @@ Scheduler::run()
 		auto now = std::chrono::system_clock::now();
 		auto wt = time_point_to_ullong(now + (running < 0 ? 5s : 100ms));
 
-		TaskType* task;
+		TaskType task;
 
-		if ((task = scheduler_queue.peep(wt)) && *task) {
-			wt = (*task)->wakeup_time;
-			L_INFO_HOOK_LOG("Scheduler::PEEP", this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wt);
+		if ((task = scheduler_queue.peep(wt))) {
+			if (task) {
+				wt = task->wakeup_time;
+				L_INFO_HOOK_LOG("Scheduler::PEEP", this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wt);
+			}
 		}
 
 		next_wakeup_time.compare_exchange_strong(nwt, wt);
@@ -244,9 +247,8 @@ Scheduler::run()
 		scheduler_queue.clean_checkpoint();
 
 		while ((task = scheduler_queue.walk())) {
-			if (*task) {
-				run_one(*task);
-				(*task).reset();
+			if (task) {
+				run_one(task);
 			}
 		}
 

@@ -87,8 +87,8 @@ private:
 public:
 	SchedulerQueue();
 
-	TaskType* peep(unsigned long long current_key);
-	TaskType* walk();
+	TaskType peep(unsigned long long current_key);
+	TaskType walk();
 	void clean_checkpoint();
 	void clean();
 	void add(const TaskType& task, unsigned long long key=0);
