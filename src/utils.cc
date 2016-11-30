@@ -653,9 +653,7 @@ static inline std::string humanize(long double delta, bool colored, const int i,
 	const char* unit = units[order];
 	const char* reset = colored ? colors[n + 1] : "";
 
-	char buf[100];
-	snprintf(buf, 100, "%s%Lg%s%s", color, num, unit, reset);
-	return buf;
+	return format_string("%s%Lg%s%s", color, num, unit, reset);
 }
 
 
