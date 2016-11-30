@@ -384,7 +384,7 @@ public:
 							L_INFO_HOOK_LOG("StashValues::CLEAR", this, "StashValues::" LIGHT_RED "CLEAR" NO_COL " - %scur:%llu, atom_cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, atom_cur.load(), atom_end.load(), ctx._op());
 							delete ptr;
 						}
-					} else {
+					} else if (*ptr) {
 						L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, atom_cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, atom_cur.load(), atom_end.load(), ctx._op());
 						if (value_ptr) {
 							*value_ptr = *ptr;

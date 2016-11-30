@@ -54,6 +54,10 @@ public:
 
 	~ScheduledTask() = default;
 
+	explicit operator bool() const noexcept {
+		return !cleared_at;
+	}
+
 	bool clear();
 
 	std::string __repr__(const std::string& name) const;
