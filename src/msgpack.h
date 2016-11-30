@@ -133,8 +133,6 @@ private:
 	MsgPack::iterator _find(size_t pos);
 	MsgPack::const_iterator _find(size_t pos) const;
 
-	MsgPack::iterator _erase(std::unordered_map<std::string, std::pair<MsgPack, MsgPack>>::iterator &it);
-	MsgPack::iterator _erase(std::vector<MsgPack>::iterator &it);
 	std::pair<size_t, MsgPack::iterator> _erase(const std::string& key);
 	std::pair<size_t, MsgPack::iterator> _erase(size_t pos);
 
@@ -918,44 +916,6 @@ inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 }
 
 
-inline MsgPack::iterator MsgPack::_erase(std::unordered_map<std::string, std::pair<MsgPack, MsgPack>>::iterator &it) {
-	auto& mobj = it->second.second;
-	auto pos_ = mobj._body->_pos;
-	assert(pos_ < _body->_obj->via.map.size);
-	auto p = &_body->_obj->via.map.ptr[pos_];
-	std::memmove(p, p + 1, (_body->_obj->via.map.size - pos_ - 1) * sizeof(msgpack::object_kv));
-	--_body->_obj->via.map.size;
-	// Erase from map:
-	_body->map.erase(it);
-	_update_map(pos_);
-
-	auto next = _body->map.find(std::string(p->key.via.str.ptr, p->key.via.str.size));
-	if (next == _body->map.end()) {
-		return end();
-	}
-	return MsgPack::iterator(this, next->second.second._body->_pos);
-}
-
-
-inline MsgPack::iterator MsgPack::_erase(std::vector<MsgPack>::iterator &it) {
-	auto& mobj = *it;
-	auto pos_ = mobj._body->_pos;
-	assert(pos_ < _body->_obj->via.array.size);
-	auto p = &_body->_obj->via.array.ptr[pos_];
-	std::memmove(p, p + 1, (_body->_obj->via.array.size - pos_ - 1) * sizeof(msgpack::object));
-	--_body->_obj->via.array.size;
-	// Erase from map:
-	_body->array.pop_back();
-	_update_array(pos_);
-
-	auto next = _body->array.begin() + pos_;
-	if (next >= _body->array.end()) {
-		return end();
-	}
-	return MsgPack::iterator(this, next->_body->_pos);
-}
-
-
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(const std::string& key) {
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
@@ -965,7 +925,23 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(const std::string& k
 			if (it == _body->map.end()) {
 				return std::make_pair(0, end());
 			}
-			return std::make_pair(1, _erase(it));
+
+			auto& mobj = it->second.second;
+			auto pos_ = mobj._body->_pos;
+			assert(pos_ < _body->_obj->via.map.size);
+			auto p = &_body->_obj->via.map.ptr[pos_];
+			std::memmove(p, p + 1, (_body->_obj->via.map.size - pos_ - 1) * sizeof(msgpack::object_kv));
+			--_body->_obj->via.map.size;
+			// Erase from map:
+			_body->map.erase(it);
+			_update_map(pos_);
+
+			auto next = _body->map.find(std::string(p->key.via.str.ptr, p->key.via.str.size));
+			if (next == _body->map.end()) {
+				return std::make_pair(0, end());
+			}
+
+			return std::make_pair(1, MsgPack::iterator(this, next->second.second._body->_pos));
 		}
 		default:
 			THROW(msgpack::type_error);
@@ -981,11 +957,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 			if (pos >= _body->_obj->via.map.size) {
 				return std::make_pair(0, end());
 			}
-			auto it = _body->map.find(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
-			if (it == _body->map.end()) {
-				return std::make_pair(0, end());
-			}
-			return std::make_pair(1, _erase(it));
+			return _erase(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
 		}
 		case Type::ARRAY: {
 			if (pos >= _body->_obj->via.array.size) {
@@ -995,7 +967,23 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 			if (it >= _body->array.end()) {
 				return std::make_pair(0, end());
 			}
-			return std::make_pair(1, _erase(it));
+
+			auto& mobj = *it;
+			auto pos_ = mobj._body->_pos;
+			assert(pos_ < _body->_obj->via.array.size);
+			auto p = &_body->_obj->via.array.ptr[pos_];
+			std::memmove(p, p + 1, (_body->_obj->via.array.size - pos_ - 1) * sizeof(msgpack::object));
+			--_body->_obj->via.array.size;
+			// Erase from array:
+			_body->array.pop_back();
+			_update_array(pos_);
+
+			auto next = _body->array.begin() + pos_;
+			if (next >= _body->array.end()) {
+				return std::make_pair(0, end());
+			}
+
+			return std::make_pair(1, MsgPack::iterator(this, next->_body->_pos));
 		}
 		default:
 			THROW(msgpack::type_error);
