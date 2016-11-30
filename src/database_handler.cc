@@ -118,8 +118,7 @@ DatabaseHandler::lock_database::lock_database(DatabaseHandler* db_handler_)
 
 
 DatabaseHandler::lock_database::lock_database(DatabaseHandler& db_handler)
-	: lock_database(&db_handler)
-{ }
+	: lock_database(&db_handler) { }
 
 
 DatabaseHandler::lock_database::~lock_database()
