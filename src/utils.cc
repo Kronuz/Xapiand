@@ -22,7 +22,7 @@
 
 #include "utils.h"
 
-#include <math.h>                // for powl, logl, floorl
+#include <math.h>                // for powl, logl, floorl, roundl
 #include <netinet/in.h>          // for IPPROTO_TCP
 #include <netinet/tcp.h>         // for TCP_NOPUSH
 #include <stdio.h>               // for size_t, sprintf, remove, rename, snp...
@@ -639,7 +639,7 @@ void stringTokenizer(const std::string& str, const std::string& delimiter, std::
 }
 
 
-static inline std::string humanize(long double delta, bool colored, const int i, const int n, const long double div, const char* const units[], const long double scaling[], const char* const colors[]) {
+static inline std::string humanize(long double delta, bool colored, const int i, const int n, const long double div, const char* const units[], const long double scaling[], const char* const colors[], long double rounding) {
 	long double num = delta;
 
 	if (delta < 0) delta = -delta;
@@ -649,7 +649,7 @@ static inline std::string humanize(long double delta, bool colored, const int i,
 	else if (order > n) order = n;
 
 	const char* color = colored ? colors[order] : "";
-	num /= scaling[order];
+	num = roundl(rounding * num / scaling[order]) / rounding;
 	const char* unit = units[order];
 	const char* reset = colored ? colors[n + 1] : "";
 
@@ -673,7 +673,7 @@ std::string bytes_string(size_t bytes, bool colored) {
 	static const int n = sizeof(units) / sizeof(const char*) - 1;
 	static const int i = find_val(1, scaling);
 
-	return humanize(bytes, colored, i, n, div, units, scaling, colors);
+	return humanize(bytes, colored, i, n, div, units, scaling, colors, 10.0L);
 }
 
 
@@ -686,7 +686,7 @@ std::string small_time_string(long double seconds, bool colored) {
 	static const int n = sizeof(units) / sizeof(const char*) - 1;
 	static const int i = find_val(1, scaling);
 
-	return humanize(seconds, colored, i, n, div, units, scaling, colors);
+	return humanize(seconds, colored, i, n, div, units, scaling, colors, 1000.0L);
 }
 
 
@@ -699,7 +699,7 @@ std::string time_string(long double seconds, bool colored) {
 	static const int n = sizeof(units) / sizeof(const char*) - 1;
 	static const int i = find_val(1, scaling);
 
-	return humanize(seconds, colored, i, n, div, units, scaling, colors);
+	return humanize(seconds, colored, i, n, div, units, scaling, colors, 100.0L);
 }
 
 
