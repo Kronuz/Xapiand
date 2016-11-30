@@ -880,7 +880,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				}
 			}
 
-			if (!specification.flags.field_found) {
+			if (!specification.flags.field_found && specification.paths_namespace.size() < 2) {
 				load_default_spc();
 			}
 
@@ -2377,15 +2377,15 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 			load_default_spc();
 		}
 
-		if (!specification.flags.inside_namespace && !specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
-			validate_required_data();
-		}
-
-		if (offsprings) {
-			if (specification.flags.inside_namespace) {
+		if (specification.flags.inside_namespace) {
+			if (offsprings) {
 				THROW(ClientError, "An namespace object can not have children");
 			}
-			if unlikely(specification.sep_types[0] == FieldType::EMPTY) {
+		} else {
+			if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
+				validate_required_data();
+			}
+			if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY) {
 				specification.sep_types[0] = FieldType::OBJECT;
 			}
 		}
