@@ -121,10 +121,6 @@ protected:
 			  atom_next(o.atom_next.load()) { }
 
 		~Data() {
-			clear();
-		}
-
-		void clear() {
 			auto next = atom_next.exchange(nullptr);
 			while (next) {
 				auto next_next = next->atom_next.exchange(nullptr);
