@@ -99,7 +99,7 @@ class Scheduler {
 	std::unique_ptr<ThreadPool<>> thread_pool;
 
 	std::condition_variable wakeup_signal;
-	std::atomic_ullong next_wakeup_time;
+	std::atomic_ullong atom_next_wakeup_time;
 
 	SchedulerQueue scheduler_queue;
 

@@ -182,11 +182,11 @@ Scheduler::add(const TaskType& task, unsigned long long wakeup_time)
 		task->wakeup_time = wakeup_time;
 		scheduler_queue.add(task, wakeup_time);
 
-		auto nwt = next_wakeup_time.load();
-		while (nwt > wakeup_time && !next_wakeup_time.compare_exchange_weak(nwt, wakeup_time));
+		auto next_wakeup_time = atom_next_wakeup_time.load();
+		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time));
 
-		if (nwt > wakeup_time || nwt < now) {
-			L_INFO_HOOK_LOG("Scheduler::NOTIFY", this, "Scheduler::" BLUE "NOTIFY" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", now, next_wakeup_time.load(), wakeup_time);
+		if (next_wakeup_time > wakeup_time || next_wakeup_time < now) {
+			L_INFO_HOOK_LOG("Scheduler::NOTIFY", this, "Scheduler::" BLUE "NOTIFY" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", now, atom_next_wakeup_time.load(), wakeup_time);
 			wakeup_signal.notify_one();
 		}
 	}
@@ -225,7 +225,7 @@ Scheduler::run()
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
 
-	auto nwt = next_wakeup_time.load();
+	auto next_wakeup_time = atom_next_wakeup_time.load();
 
 	while (running != 0) {
 		if (--running < 0) {
@@ -233,23 +233,23 @@ Scheduler::run()
 		}
 
 		auto now = std::chrono::system_clock::now();
-		auto wt = time_point_to_ullong(now + (running < 0 ? 5s : 100ms));
+		auto wakeup_time = time_point_to_ullong(now + (running < 0 ? 5s : 100ms));
 
 		TaskType task;
 
-		if ((task = scheduler_queue.peep(wt))) {
+		if ((task = scheduler_queue.peep(wakeup_time))) {
 			if (task) {
-				wt = task->wakeup_time;
-				L_INFO_HOOK_LOG("Scheduler::PEEP", this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wt);
+				wakeup_time = task->wakeup_time;
+				L_INFO_HOOK_LOG("Scheduler::PEEP", this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wakeup_time);
 			}
 		}
 
-		next_wakeup_time.compare_exchange_strong(nwt, wt);
-		while (nwt > wt && !next_wakeup_time.compare_exchange_weak(nwt, wt));
+		atom_next_wakeup_time.compare_exchange_strong(next_wakeup_time, wakeup_time);
+		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time));
 
-		L_INFO_HOOK_LOG("Scheduler::LOOP", this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), next_wakeup_time.load());
-		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time.load()));
-		L_INFO_HOOK_LOG("Scheduler::WAKEUP", this, "Scheduler::" LIGHT_BLUE "WAKEUP" NO_COL " - now:%llu, wt:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wt);
+		L_INFO_HOOK_LOG("Scheduler::LOOP", this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
+		wakeup_signal.wait_until(lk, time_point_from_ullong(atom_next_wakeup_time.load()));
+		L_INFO_HOOK_LOG("Scheduler::WAKEUP", this, "Scheduler::" LIGHT_BLUE "WAKEUP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wakeup_time);
 
 		scheduler_queue.clean_checkpoint();
 
