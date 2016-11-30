@@ -411,12 +411,6 @@ public:
 				}
 			}
 		} while (true);
-
-		L_INFO_HOOK_LOG("StashValues::MISSING", this, "StashValues::" YELLOW "MISSING" NO_COL " - %scur:%llu, atom_cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, atom_cur.load(), atom_end.load(), ctx._op());
-		if (ctx.op == StashContext::Operation::peep) {
-			cur = atom_cur.load();
-		}
-		return -1;
 	}
 
 	template<typename... Args>
