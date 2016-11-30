@@ -196,14 +196,6 @@ public:
 
 	Stash() = default;
 
-	~Stash() {
-		clear();
-	}
-
-	void clear() {
-		data.clear();
-	}
-
 	StashState get(std::atomic<_Tp*>** pptr_atom_ptr, size_t slot, bool spawn) {
 		/* If spawn is false, get() could fail with:
 		 *   StashState::StashEmpty
