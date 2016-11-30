@@ -880,6 +880,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				}
 			}
 
+			if (!specification.flags.field_found) {
+				load_default_spc();
+			}
+
 			process_item_value(doc, data, offsprings);
 
 			const auto spc_object = std::move(specification);
@@ -1159,7 +1163,9 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 {
 	L_CALL(nullptr, "Schema::get_prefixes_namespace(%zu)", paths_namespace.size());
 
-	if (paths_namespace.size() > NAMESPACE_LIMIT_DEPTH) {
+	if (paths_namespace.size() == 1) {
+		return { DOCUMENT_NAMESPACE_TERM_PREFIX + paths_namespace.back() };
+	} else if (paths_namespace.size() > NAMESPACE_LIMIT_DEPTH) {
 		THROW(ClientError, "Namespace limit depth is %d, and the namespace provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, paths_namespace.size());
 	}
 
@@ -1349,11 +1355,6 @@ Schema::validate_required_data()
 
 	if (!specification.full_meta_name.empty()) {
 		auto& properties = get_mutable();
-
-		try {
-			auto func = map_dispatch_set_default_spc.at(specification.full_normalized_name);
-			(this->*func)(properties);
-		} catch (const std::out_of_range&) { }
 
 		// Process RESERVED_ACCURACY, RESERVED_ACC_PREFIX.
 		std::set<uint64_t> set_acc;
@@ -1715,6 +1716,16 @@ Schema::guess_field_type(const MsgPack& item_doc)
 	}
 
 	THROW(ClientError, "'%s': %s is ambiguous", RESERVED_VALUE, repr(item_doc.to_string()).c_str());
+}
+
+
+void
+Schema::load_default_spc()
+{
+	try {
+		auto func = map_dispatch_set_default_spc.at(specification.full_normalized_name);
+		(this->*func)(get_mutable());
+	} catch (const std::out_of_range&) { }
 }
 
 
@@ -2362,12 +2373,16 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 			properties = &get_schema_subproperties(*properties);
 		}
 
-		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
+		if (!specification.flags.field_found) {
+			load_default_spc();
+		}
+
+		if (!specification.flags.inside_namespace && !specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
 			validate_required_data();
 		}
 
 		if (offsprings) {
-			if (!specification.paths_namespace.empty()) {
+			if (specification.flags.inside_namespace) {
 				THROW(ClientError, "An namespace object can not have children");
 			}
 			if unlikely(specification.sep_types[0] == FieldType::EMPTY) {
@@ -2503,7 +2518,6 @@ Schema::get_subproperties(const MsgPack& properties)
 		for (const auto& field_name : field_names) {
 			detect_dynamic(field_name);
 			specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.normalized_name));
-			specification.flags.inside_namespace = true;
 		}
 	}
 
@@ -2858,6 +2872,7 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 		} else {
 			specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
 		}
+		specification.flags.inside_namespace = true;
 	}
 }
 
@@ -3533,6 +3548,7 @@ Schema::process_namespace(const std::string& prop_name, const MsgPack& doc_names
 				specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
 			}
 			get_mutable()[prop_name] = true;
+			specification.flags.inside_namespace = true;
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3643,12 +3659,6 @@ Schema::set_default_spc_ct(MsgPack& properties)
 		properties[RESERVED_INDEX] = specification.index;
 	}
 
-	// RESERVED_TYPE by default is STRING
-	if (specification.sep_types[2] == FieldType::EMPTY) {
-		specification.sep_types[2] = FieldType::STRING;
-		properties[RESERVED_TYPE] = specification.sep_types;
-	}
-
 	// RESERVED_STORE by default is false.
 	try {
 		properties.at(RESERVED_STORE);
@@ -3657,14 +3667,9 @@ Schema::set_default_spc_ct(MsgPack& properties)
 		properties[RESERVED_STORE] = static_cast<bool>(specification.flags.store);
 	}
 
-	// Process RESERVED_SLOT
-	if (specification.slot == Xapian::BAD_VALUENO) {
-		specification.slot = DB_SLOT_CONTENT_TYPE;
-	}
-	specification.flags.reserved_slot = true;
-
 	specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
 	properties[RESERVED_NAMESPACE] = true;
+	specification.flags.inside_namespace = true;
 }
 
 
@@ -4201,13 +4206,21 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 							THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
 						}
 					}
-					break;
+					return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::string());
 				} else {
 					THROW(ClientError, "%s does not exist in schema", repr(field_name).c_str());
 				}
 			} catch (const std::out_of_range&) {
 				THROW(ClientError, "%s does not exist in schema", repr(field_name).c_str());
 			}
+		}
+	}
+
+	if (subproperties->find(RESERVED_NAMESPACE) != subproperties->end() && (*subproperties)[RESERVED_NAMESPACE].as_bool()) {
+		if (dynamic_type) {
+			prefix_namespace = Serialise::dynamic_namespace_field(full_normalized_name);
+		} else {
+			prefix_namespace = Serialise::namespace_field(full_normalized_name);
 		}
 	}
 
