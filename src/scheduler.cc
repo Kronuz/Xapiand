@@ -104,7 +104,7 @@ SchedulerQueue::clean()
 void
 SchedulerQueue::add(const TaskType& task, unsigned long long key)
 {
-	queue.add(ctx, task, key);
+	queue.add(ctx, key, task);
 }
 
 

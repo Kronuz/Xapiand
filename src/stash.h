@@ -105,23 +105,8 @@ struct StashContext {
 template <typename _Tp, size_t _Size>
 class Stash {
 protected:
-	struct Bin {
-		_Tp val;
-
-		Bin() = default;
-
-		Bin(unsigned long long key)
-			: val(_Tp(key)) { }
-
-		Bin(const _Tp& val_)
-			: val(val_) { }
-
-		Bin(_Tp&& val_) noexcept
-			: val(std::move(val_)) { }
-	};
-
 	class Data {
-		using Chunks = std::array<std::atomic<Bin*>, _Size>;
+		using Chunks = std::array<std::atomic<_Tp*>, _Size>;
 		std::atomic<Chunks*> atom_chunk;
 		std::atomic<Data*> atom_next;
 
@@ -159,43 +144,43 @@ protected:
 			auto chunk = atom_chunk.load();
 			while (!atom_chunk.compare_exchange_weak(chunk, nullptr));
 			if (chunk) {
-				for (auto& atom_bin : *chunk) {
-					auto bin_ptr = atom_bin.load();
-					while (!atom_bin.compare_exchange_weak(bin_ptr, nullptr));
-					if (bin_ptr) {
-						delete bin_ptr;
+				for (auto& atom_ptr : *chunk) {
+					auto ptr = atom_ptr.load();
+					while (!atom_ptr.compare_exchange_weak(ptr, nullptr));
+					if (ptr) {
+						delete ptr;
 					}
 				}
 				delete chunk;
 			}
 		}
 
-		StashState bin(std::atomic<Bin*>** bin_pptr, size_t slot, bool spawn) {
+		StashState get(std::atomic<_Tp*>** pptr_atom_ptr, size_t slot, bool spawn) {
 			if (!spawn && !atom_next && !atom_chunk) {
 				return StashState::EmptyStash;
 			}
 
+			auto data = this;
 			size_t chunk_num = 0;
 			if (slot >= _Size) {
 				chunk_num = slot / _Size;
 				slot = slot % _Size;
-			}
 
-			auto data = this;
-			for (size_t c = 0; c < chunk_num; ++c) {
-				auto next = data->atom_next.load();
-				if (!next) {
-					if (!spawn) {
-						return StashState::OutOfRange;
+				for (size_t c = 0; c < chunk_num; ++c) {
+					auto next = data->atom_next.load();
+					if (!next) {
+						if (!spawn) {
+							return StashState::OutOfRange;
+						}
+						auto tmp = new Data;
+						if (data->atom_next.compare_exchange_strong(next, tmp)) {
+							next = tmp;
+						} else {
+							delete tmp;
+						}
 					}
-					auto tmp = new Data;
-					if (data->atom_next.compare_exchange_strong(next, tmp)) {
-						next = tmp;
-					} else {
-						delete tmp;
-					}
+					data = next;
 				}
-				data = next;
 			}
 
 			auto chunk = data->atom_chunk.load();
@@ -211,12 +196,16 @@ protected:
 				}
 			}
 
-			auto& atomic_bin = (*chunk)[slot];
-			if (!spawn && !atomic_bin.load()) {
-				return StashState::EmptyBin;
+			auto& atom_ptr = (*chunk)[slot];
+
+			auto ptr = atom_ptr.load();
+			if (!ptr) {
+				if (!spawn) {
+					return StashState::EmptyBin;
+				}
 			}
 
-			*bin_pptr = &atomic_bin;
+			*pptr_atom_ptr = &atom_ptr;
 			return StashState::Ok;
 		}
 	};
@@ -237,37 +226,14 @@ public:
 		data.clear();
 	}
 
-	StashState get_bin(std::atomic<Bin*>** bin_pptr, size_t slot) {
-		/* This could fail with:
+	StashState get(std::atomic<_Tp*>** pptr_atom_ptr, size_t slot, bool spawn) {
+		/* If spawn is false, get() could fail with:
 		 *   StashState::EmptyStash
 		 *   StashState::EmptyBin
 		 *   StashState::EmptyChunk
 		 *   StashState::OutOfRange
 		 */
-		return Stash::data.bin(bin_pptr, slot, false);
-	}
-
-	auto& spawn_bin(size_t slot) {
-		/* This shouldn't fail. */
-		std::atomic<Bin*>* bin_ptr;
-		if (Stash::data.bin(&bin_ptr, slot, true) != StashState::Ok) {
-			throw std::logic_error("spawn_bin should only return Ok!");
-		}
-		return *bin_ptr;
-	}
-
-	template <typename T>
-	auto& _put(std::atomic<Bin*>& bin, T&& value) {
-		auto ptr = bin.load();
-		if (!ptr) {
-			auto tmp = new Bin(std::forward<T>(value));
-			if (bin.compare_exchange_strong(ptr, tmp)) {
-				ptr = tmp;
-			} else {
-				delete tmp;
-			}
-		}
-		return ptr->val;
+		return data.get(pptr_atom_ptr, slot, spawn);
 	}
 };
 
@@ -275,7 +241,6 @@ public:
 template <typename _Tp, size_t _Size, unsigned long long(*_CurrentKey)(), unsigned long long _Div, unsigned long long _Mod, bool _Ring>
 class StashSlots : public Stash<_Tp, _Size> {
 	using Stash_T = Stash<_Tp, _Size>;
-	using Bin = typename Stash_T::Bin;
 
 	unsigned long long get_base_key(unsigned long long key) const {
 		return (key / _Div) * _Div;
@@ -305,12 +270,13 @@ public:
 
 			L_INFO_HOOK_LOG("StashSlots::LOOP", this, "StashSlots::" CYAN "LOOP" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 
-			std::atomic<Bin*>* bin_ptr = nullptr;
-			switch (Stash_T::get_bin(&bin_ptr, cur)) {
+			std::atomic<_Tp*>* ptr_atom_ptr = nullptr;
+			switch (Stash_T::get(&ptr_atom_ptr, cur, false)) {
 				case StashState::Ok: {
-					auto ptr = bin_ptr->load();
+					auto& atom_ptr = *ptr_atom_ptr;
+					auto ptr = atom_ptr.load();
 					if (ptr) {
-						if (ptr->val.next(ctx, value_ptr, new_cur_key) && ctx.op != StashContext::Operation::clean) {
+						if (ptr->next(ctx, value_ptr, new_cur_key) && ctx.op != StashContext::Operation::clean) {
 							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 							return true;
 						}
@@ -329,8 +295,9 @@ public:
 			loop = ctx.check(new_cur_key, final_key);
 
 			if (ctx.op == StashContext::Operation::clean) {
-				if (loop && bin_ptr) {
-					auto ptr = bin_ptr->exchange(nullptr);
+				if (loop && ptr_atom_ptr) {
+					auto& atom_ptr = *ptr_atom_ptr;
+					auto ptr = atom_ptr.exchange(nullptr);
 					if (ptr) {
 						L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 						delete ptr;
@@ -352,15 +319,35 @@ public:
 		return next(ctx, value_ptr, 0);
 	}
 
-	template <typename T>
-	void add(StashContext& ctx, T&& value, unsigned long long key) {
+	template<typename... Args>
+	void put(unsigned long long key, Args&&... args) {
 		auto slot = get_slot(key);
-		auto& bin = Stash_T::spawn_bin(slot);
-		Stash_T::_put(bin, _Tp()).add(ctx, std::forward<T>(value), key);
+		L_INFO_HOOK_LOG("StashSlots::PUT", this, "StashSlots::" LIGHT_MAGENTA "PUT" NO_COL " - slot:%llu", slot);
+
+		std::atomic<_Tp*>* ptr_atom_ptr;
+		Stash_T::get(&ptr_atom_ptr, slot, true);
+
+		auto& atom_ptr = *ptr_atom_ptr;
+		auto ptr = atom_ptr.load();
+		if (!ptr) {
+			auto tmp = new _Tp();
+			if (atom_ptr.compare_exchange_strong(ptr, tmp)) {
+				ptr = tmp;
+			} else {
+				delete tmp;
+			}
+		}
+
+		ptr->put(key, std::forward<Args>(args)...);
+	}
+
+	template<typename... Args>
+	void add(StashContext& ctx, unsigned long long key, Args&&... args) {
+		put(key, std::forward<Args>(args)...);
 
 		auto cur_key = ctx.atom_cur_key.load();
 		auto end_key = ctx.atom_end_key.load();
-		L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" MAGENTA "ADD" NO_COL " - _Mod:%llu, key:%llu, slot:%llu, cur_key:%llu, end_key:%llu", _Mod, key, slot, cur_key, end_key);
+		L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" MAGENTA "ADD" NO_COL " - _Mod:%llu, key:%llu, cur_key:%llu, end_key:%llu", _Mod, key, cur_key, end_key);
 		while (key < cur_key && !ctx.atom_cur_key.compare_exchange_weak(cur_key, key));
 		while (key > end_key && !ctx.atom_end_key.compare_exchange_weak(end_key, key));
 	}
@@ -370,20 +357,9 @@ public:
 template <typename _Tp, size_t _Size, unsigned long long(*_CurrentKey)()>
 class StashValues : public Stash<_Tp, _Size> {
 	using Stash_T = Stash<_Tp, _Size>;
-	using Bin = typename Stash_T::Bin;
 
 	std::atomic_size_t atom_cur;
 	std::atomic_size_t atom_end;
-
-	template <typename T>
-	bool is_empty(const std::shared_ptr<T>& ptr) const noexcept {
-		return !ptr;
-	}
-
-	template <typename T, typename = std::enable_if_t<not std::is_same<_Tp, std::shared_ptr<T>>::value>>
-	bool is_empty(_Tp) const noexcept {
-		return false;
-	}
 
 public:
 	StashValues(StashValues&& o) noexcept
@@ -402,21 +378,22 @@ public:
 		do {
 			L_INFO_HOOK_LOG("StashValues::LOOP", this, "StashValues::" LIGHT_CYAN "LOOP" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 
-			std::atomic<Bin*>* bin_ptr = nullptr;
-			switch (Stash_T::get_bin(&bin_ptr, cur)) {
+			std::atomic<_Tp*>* ptr_atom_ptr = nullptr;
+			switch (Stash_T::get(&ptr_atom_ptr, cur, false)) {
 				case StashState::Ok: {
-					auto ptr = (*bin_ptr).load();
+					auto& atom_ptr = *ptr_atom_ptr;
+					auto ptr = atom_ptr.load();
 					if (ptr) {
 						auto new_cur = cur + 1;
 						if (ctx.op != StashContext::Operation::walk || atom_cur.compare_exchange_strong(cur, new_cur)) {
 							cur = new_cur;
 						}
-						if (is_empty(ptr->val)) {
+						if (!ptr) {
 							L_INFO_HOOK_LOG("StashValues::SKIP", this, "StashValues::" DARK_GREY "SKIP" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 						} else {
 							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 							if (value_ptr) {
-								*value_ptr = &ptr->val;
+								*value_ptr = ptr;
 							}
 							return true;
 						}
@@ -430,18 +407,23 @@ public:
 		} while(true);
 	}
 
-	template <typename T=void>
-	bool next(StashContext& ctx, T** value_ptr=nullptr) {
-		return next(ctx, value_ptr, 0);
-	}
+	template<typename... Args>
+	void put(unsigned long long, Args&&... args) {
+		auto slot = atom_end++;
+		L_INFO_HOOK_LOG("StashSlots::PUT", this, "StashSlots::" LIGHT_MAGENTA "PUT" NO_COL " - slot:%llu", slot);
 
-	template <typename T>
-	void add(StashContext&, T&& value, unsigned long long) {
-		auto slot = atom_end.load();
-		while (!atom_end.compare_exchange_weak(slot, slot + 1));
-		auto& bin = Stash_T::spawn_bin(slot);
+		std::atomic<_Tp*>* ptr_atom_ptr;
+		Stash_T::get(&ptr_atom_ptr, slot, true);
 
-		L_INFO_HOOK_LOG("StashValues::ADD", this, "StashValues::" LIGHT_MAGENTA "ADD" NO_COL " - slot:%llu", slot);
-		Stash_T::_put(bin, std::forward<T>(value));
+		auto& atom_ptr = *ptr_atom_ptr;
+		auto ptr = atom_ptr.load();
+		if (!ptr) {
+			auto tmp = new _Tp(std::forward<Args>(args)...);
+			if (atom_ptr.compare_exchange_strong(ptr, tmp)) {
+				ptr = tmp;
+			} else {
+				delete tmp;
+			}
+		}
 	}
 };
