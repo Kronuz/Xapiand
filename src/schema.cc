@@ -1561,9 +1561,6 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 	L_CALL(this, "Schema::validate_required_namespace_data(%s)", repr(value.to_string()).c_str());
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
-		if ((XapiandManager::manager->strict || specification.flags.strict) && !specification.flags.inside_namespace) {
-			THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_normalized_name).c_str());
-		}
 		guess_field_type(value);
 	}
 
