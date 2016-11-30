@@ -96,7 +96,7 @@ SchedulerQueue::clean()
 {
 	cctx.op = StashContext::Operation::clean;
 	cctx.cur_key = cctx.atom_cur_key.load();
-	cctx.current_key = time_point_to_ullong(std::chrono::system_clock::now() - 5s);
+	cctx.current_key = time_point_to_ullong(std::chrono::system_clock::now() - 1s);
 	TaskType task;
 	queue.next(cctx, &task);
 }
@@ -186,8 +186,10 @@ Scheduler::add(const TaskType& task, unsigned long long wakeup_time)
 		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time));
 
 		if (next_wakeup_time > wakeup_time || next_wakeup_time < now) {
-			L_INFO_HOOK_LOG("Scheduler::NOTIFY", this, "Scheduler::" BLUE "NOTIFY" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", now, atom_next_wakeup_time.load(), wakeup_time);
+			if (task && task->__repr__()[1] == 'D') log(this, "Scheduler::" GREEN "NOTIFY" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
 			wakeup_signal.notify_one();
+		} else {
+			if (task && task->__repr__()[1] == 'D') log(this, "Scheduler::" BLUE "ADDED" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
 		}
 	}
 }
@@ -205,6 +207,7 @@ Scheduler::run_one(TaskType& task)
 {
 	if (!task->cleared_at) {
 		if (task->clear()) {
+			if (get_thread_name()[0] == 'C') log(this, "Scheduler::" CYAN "RUNNING" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 			if (thread_pool) {
 				try {
 					thread_pool->enqueue(task);
@@ -212,8 +215,10 @@ Scheduler::run_one(TaskType& task)
 			} else {
 				task->run();
 			}
+			return;
 		}
 	}
+	if (get_thread_name()[0] == 'C') log(this, "Scheduler::" RED "ABORTED" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 }
 
 
@@ -233,23 +238,23 @@ Scheduler::run()
 		}
 
 		auto now = std::chrono::system_clock::now();
-		auto wakeup_time = time_point_to_ullong(now + (running < 0 ? 5s : 100ms));
+		auto wakeup_time = time_point_to_ullong(now + (running < 0 ? 32s : 100ms));
 
 		TaskType task;
 
 		if ((task = scheduler_queue.peep(wakeup_time))) {
 			if (task) {
 				wakeup_time = task->wakeup_time;
-				L_INFO_HOOK_LOG("Scheduler::PEEP", this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wakeup_time);
+				// log(this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wakeup_time);
 			}
 		}
 
 		atom_next_wakeup_time.compare_exchange_strong(next_wakeup_time, wakeup_time);
 		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time));
 
-		L_INFO_HOOK_LOG("Scheduler::LOOP", this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
+		// log(this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
 		wakeup_signal.wait_until(lk, time_point_from_ullong(atom_next_wakeup_time.load()));
-		L_INFO_HOOK_LOG("Scheduler::WAKEUP", this, "Scheduler::" LIGHT_BLUE "WAKEUP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wakeup_time);
+		if (get_thread_name()[0] == 'C') log(this, "Scheduler::" LIGHT_BLUE "WAKEUP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wakeup_time);
 
 		scheduler_queue.clean_checkpoint();
 
