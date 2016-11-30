@@ -142,7 +142,7 @@ protected:
 				if (!spawn) {
 					return StashState::EmptyChunk;
 				}
-				auto tmp = new Chunks{ {} };
+				auto tmp = new Chunks{{ }};
 				if (data->atom_chunk.compare_exchange_strong(chunk, tmp)) {
 					chunk = tmp;
 				} else {

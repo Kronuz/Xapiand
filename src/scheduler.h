@@ -35,7 +35,6 @@ using namespace std::chrono_literals;
 
 
 class ScheduledTask;
-
 class Scheduler;
 
 
@@ -52,7 +51,8 @@ protected:
 
 public:
 	ScheduledTask(std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
-	~ScheduledTask();
+
+	~ScheduledTask() = default;
 
 	bool clear();
 
@@ -66,14 +66,8 @@ public:
 
 #define MS 1000000ULL
 
+
 class SchedulerQueue {
-
-public:
-	static unsigned long long now() {
-		return time_point_to_ullong(std::chrono::system_clock::now());
-	}
-
-private:
 	using _tasks =        StashValues<TaskType,     10ULL,  &now>;
 	using _50_1ms =       StashSlots<_tasks,        10ULL,  &now,        1ULL * MS,    50ULL,  false>;
 	using _10_50ms =      StashSlots<_50_1ms,       10ULL,  &now,       50ULL * MS,    10ULL,  false>;
@@ -86,6 +80,10 @@ private:
 
 public:
 	SchedulerQueue();
+
+	static unsigned long long now() {
+		return time_point_to_ullong(std::chrono::system_clock::now());
+	}
 
 	TaskType* peep(unsigned long long current_key);
 	TaskType* walk();

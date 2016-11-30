@@ -33,9 +33,6 @@ ScheduledTask::ScheduledTask(std::chrono::time_point<std::chrono::system_clock> 
 	  cleared_at(0) { }
 
 
-ScheduledTask::~ScheduledTask() { }
-
-
 bool
 ScheduledTask::clear()
 {
@@ -56,8 +53,7 @@ ScheduledTask::__repr__(const std::string& name) const
 
 SchedulerQueue::SchedulerQueue()
 	: ctx(now()),
-	  cctx(now())
-{ }
+	  cctx(now()) { }
 
 
 TaskType*
