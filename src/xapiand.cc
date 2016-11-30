@@ -74,7 +74,7 @@ ssize_t write(int fildes, T (&buf)[N]) {
 
 static const std::vector<std::string> vec_signame = []() {
 	std::vector<std::string> res;
-	auto len = arraySize(sys_signame);
+	auto len = arraySize(sys_siglist); /* same size of sys_signame but sys_signame is not portable */
 	res.reserve(len);
 	for (size_t sig = 0; sig < len; ++sig) {
 		const char* col;
