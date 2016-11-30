@@ -11,6 +11,8 @@
 
 #include "exception.h"
 
+#include <typeinfo>
+
 
 namespace msgpack {
 
