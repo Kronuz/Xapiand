@@ -56,6 +56,9 @@ constexpr const char QUERYDSL_BOOST[]     = "_boost";
 /* Reserved DSL words used for Match all query */
 constexpr const char QUERYDSL_MATCH_ALL[] = "_all";
 
+/* Reserved DSL words used for set partial search */
+constexpr const char QUERYDSL_PARTIAL[] = "_partial";
+
 /* Reserved DSL words used for dates */
 constexpr const char QUERYDSL_YEAR[]      = "_year";
 constexpr const char QUERYDSL_MOTH[]      = "_moth";
@@ -119,14 +122,41 @@ const std::unordered_map<std::string, QueryDSL::dispatch_dsl> QueryDSL::map_rang
 });
 
 
+QueryDSL::specification_dsl::specification_dsl()
+	: q_flags(Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD),
+	  wqf(1) { }
+
+
+QueryDSL::specification_dsl::specification_dsl(const specification_dsl& o)
+	: q_flags(o.q_flags),
+      wqf(o.wqf) { }
+
+
+QueryDSL::specification_dsl::specification_dsl(specification_dsl&& o)
+	: q_flags(std::move(o.q_flags)),
+      wqf(std::move(o.wqf)) { }
+
+
+QueryDSL::specification_dsl&
+QueryDSL::specification_dsl::operator=(const specification_dsl& o) {
+	q_flags = o.q_flags;
+	wqf = o.wqf;
+	return *this;
+}
+
+
+QueryDSL::specification_dsl&
+QueryDSL::specification_dsl::operator=(specification_dsl&& o) noexcept {
+	q_flags = std::move(o.q_flags);
+	wqf = std::move(o.wqf);
+	return *this;
+}
+
+
 /* A domain-specific language (DSL) for query */
 QueryDSL::QueryDSL(std::shared_ptr<Schema> schema_)
 	: schema(schema_),
-	  state(QUERY::INIT),
-	  _wqf(1)
-{
-	q_flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD;
-}
+	  state(QUERY::INIT) { }
 
 
 Xapian::Query
@@ -134,17 +164,21 @@ QueryDSL::get_query(const MsgPack& obj)
 {
 	L_CALL(this, "QueryDSL::get_query()");
 
-	if (obj.is_map() && obj.is_map() == 1) {
+	if (obj.is_map()) {
 		for (auto const& elem : obj) {
 			state =	QUERY::GLOBALQUERY;
 			auto key = elem.as_string();
 			Xapian::Query qry;
-			if (find_operators(key, obj.at(key), qry)) {
-				return qry;
-			} else if (find_values(key, obj, qry)) {
-				return qry;
-			} else if (find_casts(key, obj, qry)) {
-				return qry;
+
+			set_specifications(obj);
+			if (is_reserved(key)) {
+				if (find_operators(key, obj.at(key), qry)) {
+					return qry;
+				} else if (find_values(key, obj, qry)) {
+					return qry;
+				} else if (find_casts(key, obj, qry)) {
+					return qry;
+				}
 			} else {
 				auto const& o = obj.at(key);
 				switch (o.getType()) {
@@ -153,8 +187,8 @@ QueryDSL::get_query(const MsgPack& obj)
 					case MsgPack::Type::MAP:
 						return process_query(o, key);
 					default: {
-						state =	QUERY::QUERY;
-						_fieldname = key;
+						state =	QUERY::FIELDQUERY;
+						fieldname = key;
 						return query(o);
 					}
 				}
@@ -163,7 +197,7 @@ QueryDSL::get_query(const MsgPack& obj)
 	} else if (obj.is_string() && xxh64::hash(lower_string(obj.as_string())) == HASH_ALL) {
 		return Xapian::Query::MatchAll;
 	} else {
-		THROW(QueryDslError, "Type error expected map of size one at root level in query dsl");
+		THROW(QueryDslError, "Type error expected map at root level in query dsl");
 	}
 	return Xapian::Query();
 }
@@ -180,67 +214,73 @@ QueryDSL::join_queries(const MsgPack& obj, Xapian::Query::op op)
 	}
 	if (obj.is_array()) {
 		for (const auto& elem : obj) {
-			if (elem.is_map() && elem.size() == 1) {
+			if (elem.is_map()) {
+				set_specifications(elem);
+
 				for (const auto& field : elem) {
 					state = QUERY::GLOBALQUERY;
 					auto key = field.as_string();
 					Xapian::Query qry;
-					if (find_operators(key, elem.at(key), qry)) {
-						final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
-					} else if (find_values(key, elem, qry)) {
-						final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
-					} else if (find_casts(key, elem, qry)) {
-						final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
+					if (is_reserved(key)) {
+						if (find_operators(key, elem.at(key), qry)) {
+							final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
+						} else if (find_values(key, elem, qry)) {
+							final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
+						} else if (find_casts(key, elem, qry)) {
+							final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
+						}
 					} else {
-						if (!startswith(key, "_")) {
-							const auto& o = elem.at(key);
-							switch (o.getType()) {
-								case MsgPack::Type::ARRAY:
-									THROW(QueryDslError, "Unexpected type array in %s", key.c_str());
-								case MsgPack::Type::MAP:
-									final_query.empty() ? final_query = process_query(o, key) : final_query = Xapian::Query(op, final_query, process_query(o, key));
-									break;
-								default:
-									state = QUERY::QUERY;
-									_fieldname = key;
-									final_query.empty() ? final_query = query(o) : final_query = Xapian::Query(op, final_query, query(o));
-							}
-						} else {
-							THROW(QueryDslError, "Unexpected reserved word %s", key.c_str());
+						const auto& o = elem.at(key);
+						switch (o.getType()) {
+							case MsgPack::Type::ARRAY:
+								THROW(QueryDslError, "Unexpected type array in %s", key.c_str());
+							case MsgPack::Type::MAP:
+								final_query.empty() ? final_query = process_query(o, key) : final_query = Xapian::Query(op, final_query, process_query(o, key));
+								break;
+							default:
+								state = QUERY::FIELDQUERY;
+								fieldname = key;
+								final_query.empty() ? final_query = query(o) : final_query = Xapian::Query(op, final_query, query(o));
 						}
 					}
 				}
 			} else {
-				THROW(QueryDslError, "Expected array of objects with one element");
+				THROW(QueryDslError, "Expected array of objects");
 			}
 		}
 	} else {
 		THROW(QueryDslError, "Type error expected map in boolean operator");
 	}
+
+	clean_specification();
 	return final_query;
 }
 
 
 Xapian::Query
-QueryDSL::process_query(const MsgPack& obj, const std::string& field_name)
+QueryDSL::process_query(const MsgPack& obj, const std::string& field_name_)
 {
-	L_CALL(this, "QueryDSL::process_query(%s)", repr(field_name).c_str());
+	L_CALL(this, "QueryDSL::process_query(%s)", repr(field_name_).c_str());
 
-	_fieldname = field_name;
-	state = QUERY::QUERY;
+	fieldname = field_name_;
+	state = QUERY::FIELDQUERY;
 	if (obj.is_map()) {
-		find_parameters(obj);
+		set_specifications(obj);
 		for (const auto& elem : obj) {
 			auto key = elem.as_string();
 			Xapian::Query qry;
+
 			if (find_values(key, obj, qry)) {
+				clean_specification();
 				return qry;
 			} else if (find_casts(key, obj, qry)) {
+				clean_specification();
 				return qry;
 			}
 		}
 	}
 
+	clean_specification();
 	return Xapian::Query();
 }
 
@@ -281,8 +321,8 @@ QueryDSL::range_query(const MsgPack& obj)
 		}
 		break;
 
-		case QUERY::QUERY:
-			return MultipleValueRange::getQuery(schema->get_data_field(_fieldname).first, _fieldname, obj);
+		case QUERY::FIELDQUERY:
+			return MultipleValueRange::getQuery(schema->get_data_field(fieldname).first, fieldname, obj);
 
 		default:
 			break;
@@ -296,6 +336,9 @@ QueryDSL::query(const MsgPack& obj)
 {
 	L_CALL(this, "QueryDSL::query()");
 
+	auto spc_dsl = specifications.back();
+	clean_specification();
+
 	switch (state) {
 		case QUERY::GLOBALQUERY:
 		{
@@ -305,7 +348,7 @@ QueryDSL::query(const MsgPack& obj)
 					Xapian::QueryParser queryTexts;
 					queryTexts.set_stemming_strategy(getQueryParserStrategy(std::get<2>(ser_type).stem_strategy));
 					queryTexts.set_stemmer(Xapian::Stem(std::get<2>(ser_type).stem_language));
-					return queryTexts.parse_query(obj.as_string(), q_flags);
+					return queryTexts.parse_query(obj.as_string(), spc_dsl.q_flags);
 				}
 
 				default:
@@ -314,57 +357,74 @@ QueryDSL::query(const MsgPack& obj)
 		}
 		break;
 
-		case QUERY::QUERY:
+		case QUERY::FIELDQUERY:
 		{
-			auto field_spc = schema->get_data_field(_fieldname).first;
-			try {
-				switch (field_spc.get_type()) {
+			auto field_spc = schema->get_data_field(fieldname).first;
+			if (!field_spc.prefix.empty()){
+				try {
+					switch (field_spc.get_type()) {
 
-					case FieldType::DATE:
-						if (find_date(obj)) {
-							auto field_spc = schema->get_data_field(_fieldname).first;
-							auto ser_date = Serialise::date(field_spc, obj);
-							return Xapian::Query(prefixed(ser_date, field_spc.prefix), _wqf);
+						case FieldType::DATE:
+							if (find_date(obj)) {
+								auto ser_date = Serialise::date(field_spc, obj);
+								return Xapian::Query(prefixed(ser_date, field_spc.prefix), spc_dsl.wqf);
+							}
+
+						case FieldType::INTEGER:
+						case FieldType::POSITIVE:
+						case FieldType::FLOAT:
+						case FieldType::UUID:
+						case FieldType::BOOLEAN:
+							return Xapian::Query(prefixed(Serialise::MsgPack(field_spc, obj), field_spc.prefix), spc_dsl.wqf);
+
+						case FieldType::STRING:
+						{
+							auto field_value = Serialise::MsgPack(field_spc, obj);
+							if (spc_dsl.q_flags & Xapian::QueryParser::FLAG_PARTIAL) {
+								Xapian::QueryParser queryString;
+								field_spc.flags.bool_term ? queryString.add_boolean_prefix("_", field_spc.prefix) : queryString.add_prefix("_", field_spc.prefix);
+
+								//queryString.set_database(*database->db);
+								queryString.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
+								queryString.set_stemmer(Xapian::Stem(field_spc.stem_language));
+								std::string str_string;
+								str_string.reserve(2 + field_value.length());
+								str_string.assign("_:").append(field_value);
+
+								return queryString.parse_query(str_string, spc_dsl.q_flags);
+							} else {
+								return Xapian::Query(prefixed(field_spc.flags.bool_term ? field_value : lower_string(field_value), field_spc.prefix), spc_dsl.wqf);
+							}
 						}
-
-					case FieldType::INTEGER:
-					case FieldType::POSITIVE:
-					case FieldType::FLOAT:
-					case FieldType::UUID:
-					case FieldType::BOOLEAN:
-						return Xapian::Query(prefixed(Serialise::MsgPack(field_spc, obj), field_spc.prefix), _wqf);
-
-					case FieldType::STRING:
-					{
-						auto field_value = Serialise::MsgPack(field_spc, obj);
-						return Xapian::Query(prefixed(field_spc.flags.bool_term ? field_value : lower_string(field_value), field_spc.prefix), _wqf);
-					}
-					case FieldType::TEXT:
-					{
-						auto field_value = Serialise::MsgPack(field_spc, obj);
-						Xapian::QueryParser queryTexts;
-						field_spc.flags.bool_term ? queryTexts.add_boolean_prefix(_fieldname, field_spc.prefix) : queryTexts.add_prefix(_fieldname, field_spc.prefix);
-						queryTexts.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
-						queryTexts.set_stemmer(Xapian::Stem(field_spc.stem_language));
-						std::string str_texts;
-						str_texts.reserve(field_value.length() + field_value.length() + 1);
-						str_texts.assign(field_value).append(":").append(field_value);
-						return queryTexts.parse_query(str_texts, q_flags);
-					}
-					case FieldType::GEO:
-					{
-						std::string field_value(Serialise::MsgPack(field_spc, obj));
-						// If the region for search is empty, not process this query.
-						if (field_value.empty()) {
-							return Xapian::Query::MatchNothing;
+						case FieldType::TEXT:
+						{
+							auto field_value = Serialise::MsgPack(field_spc, obj);
+							Xapian::QueryParser queryTexts;
+							field_spc.flags.bool_term ? queryTexts.add_boolean_prefix(fieldname, field_spc.prefix) : queryTexts.add_prefix(fieldname, field_spc.prefix);
+							queryTexts.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
+							queryTexts.set_stemmer(Xapian::Stem(field_spc.stem_language));
+							std::string str_texts;
+							str_texts.reserve(field_value.length() + field_value.length() + 1);
+							str_texts.assign(field_value).append(":").append(field_value);
+							return queryTexts.parse_query(str_texts, spc_dsl.q_flags);
 						}
-						return Xapian::Query(prefixed(field_value, field_spc.prefix), _wqf);
+						case FieldType::GEO:
+						{
+							std::string field_value(Serialise::MsgPack(field_spc, obj));
+							// If the region for search is empty, not process this query.
+							if (field_value.empty()) {
+								return Xapian::Query::MatchNothing;
+							}
+							return Xapian::Query(prefixed(field_value, field_spc.prefix), spc_dsl.wqf);
+						}
+						default:
+							THROW(QueryDslError, "Type error unexpected %s");
 					}
-					default:
-						THROW(QueryDslError, "Type error unexpected %s");
+				} catch (const msgpack::type_error&) {
+					THROW(QueryDslError, "Type error expected %s in %s", Serialise::type(field_spc.get_type()).c_str(), fieldname.c_str());
 				}
-			} catch (const msgpack::type_error&) {
-				THROW(QueryDslError, "Type error expected %s in %s", Serialise::type(field_spc.get_type()).c_str(), _fieldname.c_str());
+			} else {
+				THROW(QueryDslError, "Field %s not found in schema", fieldname.c_str());
 			}
 
 		}
@@ -377,21 +437,70 @@ QueryDSL::query(const MsgPack& obj)
 }
 
 
-void
-QueryDSL::find_parameters(const MsgPack& obj)
+bool
+QueryDSL::is_reserved(const std::string key)
 {
-	L_CALL(this, "QueryDSL::find_parameters()");
+	L_CALL(this, "QueryDSL::is_reserved(%s)", key.c_str());
+
+	return startswith(key, "_");
+
+}
+
+
+void
+QueryDSL::clean_specification()
+{
+	L_CALL(this, "QueryDSL::clean_specification()");
+
+	specifications.pop_back();
+}
+
+
+void
+QueryDSL::set_specifications(const MsgPack& obj)
+{
+	L_CALL(this, "QueryDSL::set_field_specifications()");
+
+	bool found = false;
+	specification_dsl spc_dsl;
+	try {
+		auto const& partial = obj.at(QUERYDSL_PARTIAL);
+		if (partial.is_boolean()) {
+			if (partial.as_bool())  {
+				spc_dsl.q_flags = Xapian::QueryParser::FLAG_PARTIAL;
+				found = true;
+			}
+		} else if (partial.is_number()) {
+			if (partial.as_i64()) {
+				spc_dsl.q_flags = Xapian::QueryParser::FLAG_PARTIAL;
+				found = true;
+			}
+		} else {
+			THROW(QueryDslError, "Type error expected boolean in %s", QUERYDSL_PARTIAL);
+		}
+	} catch(const std::out_of_range&) { }
 
 	try {
 		auto const& boost = obj.at(QUERYDSL_BOOST);
 		if (boost.is_number() && boost.getType() != MsgPack::Type::NEGATIVE_INTEGER) {
-			_wqf = boost.as_u64();
+			spc_dsl.wqf = boost.as_u64();
+			found = true;
 		} else {
 			THROW(QueryDslError, "Type error expected unsigned int in %s", QUERYDSL_BOOST);
 		}
 	} catch(const std::out_of_range&) { }
 
-	/* Add here more options for the fields */
+	if (found) {
+		specifications.push_back(spc_dsl);
+	} else {
+		if (specifications.empty()) {
+			specifications.push_back(specification_dsl());
+		} else {
+			specifications.push_back(specifications.back());
+		}
+	}
+
+	/* Add here more specifications */
 }
 
 

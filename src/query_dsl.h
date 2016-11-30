@@ -47,16 +47,25 @@ class QueryDSL {
 	enum class QUERY : uint8_t {
 		INIT,
 		GLOBALQUERY,
-		QUERY,
+		FIELDQUERY,
 	};
 
 	std::shared_ptr<Schema> schema;
-
-	int q_flags;
 	QUERY state;
-	std::string _fieldname;
-	Xapian::termcount _wqf;
+	std::string fieldname;
 
+	struct specification_dsl {
+		int q_flags;
+		Xapian::termcount wqf;
+
+		specification_dsl();
+		specification_dsl(const specification_dsl& o);
+		specification_dsl(specification_dsl&& o);
+		specification_dsl& operator=(const specification_dsl& o);
+		specification_dsl& operator=(specification_dsl&& o) noexcept;
+	};
+
+	std::vector<specification_dsl> specifications;
 	using dispatch_op_dsl = Xapian::Query (QueryDSL::*)(const MsgPack&, Xapian::Query::op);
 	using dispatch_dsl = Xapian::Query (QueryDSL::*)(const MsgPack&);
 
@@ -66,12 +75,14 @@ class QueryDSL {
 	static const std::unordered_map<std::string, dispatch_dsl> map_range_dispatch_dsl;
 
 	Xapian::Query join_queries(const MsgPack& obj, Xapian::Query::op op);
-	Xapian::Query process_query(const MsgPack& obj, const std::string& field_name);
+	Xapian::Query process_query(const MsgPack& obj, const std::string& field_name_);
 	Xapian::Query in_range_query(const MsgPack& obj);
 	Xapian::Query query(const MsgPack& o);
 	Xapian::Query range_query(const MsgPack& o);
 
-	void find_parameters(const MsgPack& obj);
+	bool is_reserved(const std::string key);
+	void clean_specification();
+	void set_specifications(const MsgPack& obj);
 	bool find_operators(const std::string& key, const MsgPack& obj, Xapian::Query& q);
 	bool find_casts(const std::string& key, const MsgPack& obj, Xapian::Query& q);
 	bool find_values(const std::string& key, const MsgPack& obj, Xapian::Query& q);
