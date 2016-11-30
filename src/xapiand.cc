@@ -83,7 +83,9 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGILL:
 			case SIGTRAP:
 			case SIGABRT:
+#if defined(__APPLE__) || defined(__FreeBSD__)
 			case SIGEMT:
+#endif
 			case SIGFPE:
 			case SIGBUS:
 			case SIGSEGV:
@@ -103,6 +105,9 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGPROF:
 			case SIGUSR1:
 			case SIGUSR2:
+#if defined(__linux__)
+			case SIGSTKFLT:
+#endif
 				// terminate process
 				col = RED;
 				break;
@@ -118,7 +123,9 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGCHLD:
 			case SIGIO:
 			case SIGWINCH:
+#if defined(__APPLE__) || defined(__FreeBSD__)
 			case SIGINFO:
+#endif
 				// discard signal
 				col = BLUE;
 				break;
