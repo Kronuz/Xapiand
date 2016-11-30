@@ -62,28 +62,26 @@ const char *priorities[] = {
 
 
 void
-println(bool with_endl, const char *format, va_list argptr)
+println(bool with_endl, const char *format, va_list argptr, const void* obj, bool info)
 {
-	char* buffer = new char[BUFFER_SIZE];
-	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
-	std::string msg(buffer);
-	Log::log(LOG_CRIT, msg, 0, false, with_endl);
+	std::string str(Log::str_format(false, 0, "", "", 0, "", "", obj, format, argptr, info));
+	Log::log(LOG_CRIT, str, 0, info, with_endl);
 }
 
 
 LogWrapper
-log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+_log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = log(cleanup, stacked, wakeup, async, priority, std::string(), file, line, suffix, prefix, obj, format, argptr);
+	auto ret = _log(cleanup, stacked, wakeup, async, priority, std::string(), file, line, suffix, prefix, obj, format, argptr);
 	va_end(argptr);
 	return ret;
 }
 
 
 LogWrapper
-log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+_log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
 	return Log::log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, obj, format, argptr);
 }
@@ -286,20 +284,23 @@ Log::run()
 
 
 std::string
-Log::str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void* obj, const char *format, va_list argptr)
+Log::str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void* obj, const char *format, va_list argptr, bool info)
 {
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	std::string msg(buffer);
-	auto iso8601 = "[" + Datetime::to_string(std::chrono::system_clock::now()) + "]";
-	auto tid = " (" + get_thread_name() + ")";
-	std::string result = iso8601 + tid;
+	std::string result;
+	if (info) {
+		auto iso8601 = "[" + Datetime::to_string(std::chrono::system_clock::now()) + "]";
+		auto tid = " (" + get_thread_name() + ")";
+		result = iso8601 + tid;
 #ifdef LOG_OBJ_ADDRESS
-	if (obj) {
-		snprintf(buffer, BUFFER_SIZE, " [%p]", obj);
-		result += buffer;
-	}
+		if (obj) {
+			snprintf(buffer, BUFFER_SIZE, " [%p]", obj);
+			result += buffer;
+		}
 #endif
+	}
 #ifdef TRACEBACK
 	auto location = (priority >= LOCATION_LOG_LEVEL) ? " " + std::string(file) + ":" + std::to_string(line) : std::string();
 	result += location + ": ";
@@ -326,7 +327,7 @@ Log::str_format(bool stacked, int priority, const std::string& exc, const char *
 LogWrapper
 Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
-	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, obj, format, argptr));
+	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, obj, format, argptr, true));
 
 	return print(str, clean, stacked, wakeup, async, priority);
 }
@@ -348,7 +349,7 @@ bool
 Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
 	if (!clear()) {
-		std::string str(str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
+		std::string str(str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr, true));
 
 		print(str, false, stacked, 0, async, priority, time_point_from_ullong(created_at));
 
