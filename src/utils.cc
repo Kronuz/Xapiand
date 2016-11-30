@@ -355,8 +355,8 @@ void update_pos_time() {
 		fill_zeros_stats_min(b_time_minute + 1, b_time.minute);
 	}
 
-	ASSERT(b_time.second >= 0 && b_time.second < SLOT_TIME_SECOND);
-	ASSERT(b_time.minute >= 0 && b_time.minute < SLOT_TIME_MINUTE);
+	ASSERT(b_time.second < SLOT_TIME_SECOND);
+	ASSERT(b_time.minute < SLOT_TIME_MINUTE);
 }
 
 
