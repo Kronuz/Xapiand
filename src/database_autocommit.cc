@@ -30,7 +30,7 @@
 
 
 std::mutex DatabaseAutocommit::statuses_mtx;
-std::unordered_map<Endpoints, std::shared_ptr<DatabaseAutocommit::Status>> DatabaseAutocommit::statuses;
+std::unordered_map<Endpoints, DatabaseAutocommit::Status> DatabaseAutocommit::statuses;
 
 
 DatabaseAutocommit::DatabaseAutocommit(bool forced_, Endpoints endpoints_, std::weak_ptr<const Database> weak_database_)
@@ -45,36 +45,40 @@ DatabaseAutocommit::commit(const std::shared_ptr<Database>& database)
 	L_CALL(nullptr, "DatabaseAutocommit::commit(<database>)");
 
 	std::shared_ptr<DatabaseAutocommit> task;
-	std::chrono::time_point<std::chrono::system_clock> next_wakeup_time;
+	unsigned long long next_wakeup_time;
 
 	{
 		auto now = std::chrono::system_clock::now();
 
 		std::lock_guard<std::mutex> statuses_lk(DatabaseAutocommit::statuses_mtx);
-		auto& status = DatabaseAutocommit::statuses[database->endpoints];
+		auto it = DatabaseAutocommit::statuses.find(database->endpoints);
 
-		if (!status) {
-			status = std::make_shared<DatabaseAutocommit::Status>();
-			status->max_wakeup_time = now + 9s;
-			status->wakeup_time = now;
+		DatabaseAutocommit::Status* status;
+		if (it == DatabaseAutocommit::statuses.end()) {
+			auto& status_ref = DatabaseAutocommit::statuses[database->endpoints] = {
+				nullptr,
+				time_point_to_ullong(now + 9s)
+			};
+			status = &status_ref;
+		} else {
+			status = &(it->second);
 		}
 
 		bool forced;
-		next_wakeup_time = now + 3s;
+		next_wakeup_time = time_point_to_ullong(now + 3s);
 		if (next_wakeup_time > status->max_wakeup_time) {
 			next_wakeup_time = status->max_wakeup_time;
 			forced = true;
 		} else {
 			forced = false;
 		}
-		if (next_wakeup_time == status->wakeup_time) {
-			return;
-		}
 
 		if (status->task) {
+			if (status->task->wakeup_time == next_wakeup_time) {
+				return;
+			}
 			status->task->clear();
 		}
-		status->wakeup_time = next_wakeup_time;
 		status->task = std::make_shared<DatabaseAutocommit>(forced, database->endpoints, database);
 		task = status->task;
 	}

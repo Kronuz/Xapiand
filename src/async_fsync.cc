@@ -28,7 +28,7 @@
 
 
 std::mutex AsyncFsync::statuses_mtx;
-std::unordered_map<int, std::shared_ptr<AsyncFsync::Status>> AsyncFsync::statuses;
+std::unordered_map<int, AsyncFsync::Status> AsyncFsync::statuses;
 
 
 AsyncFsync::AsyncFsync(bool forced_, int fd_, int mode_)
@@ -43,36 +43,40 @@ AsyncFsync::async_fsync(int fd, bool full_fsync)
 	L_CALL(nullptr, "AsyncFsync::async_fsync(%d, %s)", fd, full_fsync ? "true" : "false");
 
 	std::shared_ptr<AsyncFsync> task;
-	std::chrono::time_point<std::chrono::system_clock> next_wakeup_time;
+	unsigned long long next_wakeup_time;
 
 	{
 		auto now = std::chrono::system_clock::now();
 
 		std::lock_guard<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);
-		auto& status = AsyncFsync::statuses[fd];
+		auto it = AsyncFsync::statuses.find(fd);
 
-		if (!status) {
-			status = std::make_shared<AsyncFsync::Status>();
-			status->max_wakeup_time = now + 3s;
-			status->wakeup_time = now;
+		AsyncFsync::Status* status;
+		if (it == AsyncFsync::statuses.end()) {
+			auto& status_ref = AsyncFsync::statuses[fd] = {
+				nullptr,
+				time_point_to_ullong(now + 3s)
+			};
+			status = &status_ref;
+		} else {
+			status = &(it->second);
 		}
 
 		bool forced;
-		next_wakeup_time = now + 500ms;
+		next_wakeup_time = time_point_to_ullong(now + 500ms);
 		if (next_wakeup_time > status->max_wakeup_time) {
 			next_wakeup_time = status->max_wakeup_time;
 			forced = true;
 		} else {
 			forced = false;
 		}
-		if (next_wakeup_time == status->wakeup_time) {
-			return;
-		}
 
 		if (status->task) {
+			if (status->task->wakeup_time == next_wakeup_time) {
+				return;
+			}
 			status->task->clear();
 		}
-		status->wakeup_time = next_wakeup_time;
 		status->task = std::make_shared<AsyncFsync>(forced, fd, full_fsync ? 1 : 2);
 		task = status->task;
 	}

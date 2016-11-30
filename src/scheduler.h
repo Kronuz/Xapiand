@@ -118,5 +118,6 @@ public:
 	size_t running_size();
 	void finish(int wait=10);
 	void join();
+	void add(const TaskType& task, unsigned long long wakeup_time);
 	void add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup);
 };

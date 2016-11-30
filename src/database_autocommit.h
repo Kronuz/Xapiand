@@ -37,12 +37,11 @@ class Database;
 class DatabaseAutocommit : public ScheduledTask {
 	struct Status {
 		std::shared_ptr<DatabaseAutocommit> task;
-		std::chrono::time_point<std::chrono::system_clock> max_wakeup_time;
-		std::chrono::time_point<std::chrono::system_clock> wakeup_time;
+		unsigned long long max_wakeup_time;
 	};
 
 	static std::mutex statuses_mtx;
-	static std::unordered_map<Endpoints, std::shared_ptr<Status>> statuses;
+	static std::unordered_map<Endpoints, Status> statuses;
 
 	bool forced;
 	Endpoints endpoints;

@@ -33,13 +33,11 @@
 class AsyncFsync : public ScheduledTask {
 	struct Status {
 		std::shared_ptr<AsyncFsync> task;
-		std::chrono::time_point<std::chrono::system_clock> max_wakeup_time;
-		std::chrono::time_point<std::chrono::system_clock> wakeup_time;
-		int mode;
+		unsigned long long max_wakeup_time;
 	};
 
 	static std::mutex statuses_mtx;
-	static std::unordered_map<int, std::shared_ptr<Status>> statuses;
+	static std::unordered_map<int, Status> statuses;
 
 	bool forced;
 	int fd;
