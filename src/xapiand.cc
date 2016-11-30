@@ -133,7 +133,11 @@ static const std::vector<std::string> vec_signame = []() {
 				col = BLUE;
 				break;
 		}
+#if defined(__linux__)
+		res.push_back(format_string("%sSignal received: %s" NO_COL "\n", col, strsignal(sig)));
+#elif defined(__APPLE__) || defined(__FreeBSD__)
 		res.push_back(format_string("%sSignal received: %s" NO_COL "\n", col, sys_signame[sig]));
+#endif
 	}
 	res.push_back(BLUE "Signal received: unknown" NO_COL "\n");
 	return res;
