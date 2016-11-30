@@ -30,10 +30,9 @@
 
 enum class StashState : uint8_t {
 	Ok,
-	EmptyBin,
-	EmptyChunk,
-	OutOfRange,
-	EmptyStash,
+	ChunkEmpty,
+	StashShort,
+	StashEmpty,
 };
 
 
@@ -45,22 +44,24 @@ struct StashContext {
 	};
 
 	Operation op;
+
 	unsigned long long cur_key;
-	unsigned long long current_key;
 	std::atomic_ullong atom_cur_key;
 	std::atomic_ullong atom_end_key;
 
+	unsigned long long current_key;
+
 	StashContext(StashContext&& o) noexcept
 		: cur_key(std::move(o.cur_key)),
-		  current_key(std::move(o.current_key)),
 		  atom_cur_key(o.atom_cur_key.load()),
-		  atom_end_key(o.atom_end_key.load()) { }
+		  atom_end_key(o.atom_end_key.load()),
+		  current_key(std::move(o.current_key)) { }
 
 	StashContext(unsigned long long cur_key_)
 		: cur_key(cur_key_),
-		  current_key(cur_key),
 		  atom_cur_key(cur_key),
-		  atom_end_key(cur_key) { }
+		  atom_end_key(cur_key),
+		  current_key(cur_key_) { }
 
 	bool check(unsigned long long key, unsigned long long final_key) const {
 		if (current_key && key > current_key) {
@@ -145,7 +146,7 @@ protected:
 
 		StashState get(std::atomic<_Tp*>** pptr_atom_ptr, size_t slot, bool spawn) {
 			if (!spawn && !atom_next && !atom_chunk) {
-				return StashState::EmptyStash;
+				return StashState::StashEmpty;
 			}
 
 			auto data = this;
@@ -158,7 +159,7 @@ protected:
 					auto next = data->atom_next.load();
 					if (!next) {
 						if (!spawn) {
-							return StashState::OutOfRange;
+							return StashState::StashShort;
 						}
 						auto tmp = new Data;
 						if (data->atom_next.compare_exchange_strong(next, tmp)) {
@@ -174,7 +175,7 @@ protected:
 			auto chunk = data->atom_chunk.load();
 			if (!chunk) {
 				if (!spawn) {
-					return StashState::EmptyChunk;
+					return StashState::ChunkEmpty;
 				}
 				auto tmp = new Chunks{{ }};
 				if (data->atom_chunk.compare_exchange_strong(chunk, tmp)) {
@@ -185,13 +186,6 @@ protected:
 			}
 
 			auto& atom_ptr = (*chunk)[slot];
-
-			auto ptr = atom_ptr.load();
-			if (!ptr) {
-				if (!spawn) {
-					return StashState::EmptyBin;
-				}
-			}
 
 			*pptr_atom_ptr = &atom_ptr;
 			return StashState::Ok;
@@ -216,10 +210,9 @@ public:
 
 	StashState get(std::atomic<_Tp*>** pptr_atom_ptr, size_t slot, bool spawn) {
 		/* If spawn is false, get() could fail with:
-		 *   StashState::EmptyStash
-		 *   StashState::EmptyBin
-		 *   StashState::EmptyChunk
-		 *   StashState::OutOfRange
+		 *   StashState::StashEmpty
+		 *   StashState::ChunkEmpty
+		 *   StashState::StashShort
 		 */
 		return data.get(pptr_atom_ptr, slot, spawn);
 	}
@@ -270,12 +263,11 @@ public:
 						}
 					}
 				}
-				case StashState::EmptyBin:
-				case StashState::EmptyChunk:
+				case StashState::ChunkEmpty:
 					L_INFO_HOOK_LOG("StashSlots::EMPTY", this, "StashSlots::" YELLOW "EMPTY" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 					break;
-				case StashState::OutOfRange:
-				case StashState::EmptyStash:
+				case StashState::StashShort:
+				case StashState::StashEmpty:
 					L_INFO_HOOK_LOG("StashSlots::BREAK", this, "StashSlots::" YELLOW "BREAK" NO_COL " - %s_Mod:%llu, cur_key:%llu, cur:%llu, final_key:%llu, end_key:%llu, op:%s", ctx._col(), _Mod, ctx.cur_key, cur, final_key, ctx.atom_end_key.load(), ctx._op());
 					return false;
 			}
