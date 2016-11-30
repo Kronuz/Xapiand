@@ -67,7 +67,7 @@ DB_Test::DB_Test(const std::string& db_name, const std::vector<std::string>& doc
 			if (!read_file_contents(doc, &buffer)) {
 				delete_files(name_database);
 				L_ERR(nullptr, "Can not read the file %s", doc.c_str());
-			} else if (db_handler.index(std::to_string(i++), get_body(buffer, ct_type).second, true, ct_type) == 0) {
+			} else if (db_handler.index(std::to_string(i++), get_body(buffer, ct_type).second, true, ct_type).first == 0) {
 				delete_files(name_database);
 				THROW(Error, "File %s can not index", doc.c_str());
 			}
