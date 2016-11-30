@@ -124,29 +124,17 @@ protected:
 		}
 
 		void clear() {
-			while (auto next = atom_next.load()) {
-				auto next_next = next->atom_next.load();
-				while (!atom_next.compare_exchange_weak(next, next_next)) {
-					if (next) {
-						next_next = next->atom_next.load();
-					} else {
-						next_next = nullptr;
-					}
-				}
-				if (next) {
-					auto old_next_next = next_next;
-					while (!next->atom_next.compare_exchange_weak(next_next, nullptr));
-					while (!atom_next.compare_exchange_weak(old_next_next, next_next));
-					delete next;
-				}
+			auto next = atom_next.exchange(nullptr);
+			while (next) {
+				auto next_next = next->atom_next.exchange(nullptr);
+				delete next;
+				next = next_next;
 			}
 
-			auto chunk = atom_chunk.load();
-			while (!atom_chunk.compare_exchange_weak(chunk, nullptr));
+			auto chunk = atom_chunk.exchange(nullptr);
 			if (chunk) {
 				for (auto& atom_ptr : *chunk) {
-					auto ptr = atom_ptr.load();
-					while (!atom_ptr.compare_exchange_weak(ptr, nullptr));
+					auto ptr = atom_ptr.exchange(nullptr);
 					if (ptr) {
 						delete ptr;
 					}
