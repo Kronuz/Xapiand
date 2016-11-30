@@ -338,6 +338,7 @@ template <typename _Tp, size_t _Size, unsigned long long(*_CurrentKey)()>
 class StashValues : public Stash<_Tp, _Size> {
 	using Stash_T = Stash<_Tp, _Size>;
 
+	size_t cur;
 	std::atomic_size_t atom_cur;
 	std::atomic_size_t atom_end;
 
@@ -348,14 +349,17 @@ public:
 		  atom_end(o.atom_end.load()) { }
 
 	StashValues()
-		: atom_cur(0),
+		: cur(0),
+		  atom_cur(0),
 		  atom_end(0) { }
 
 	template <typename T>
-	bool next(StashContext& ctx, T** value_ptr, unsigned long long) {
-		auto cur = atom_cur.load();
+	bool next(StashContext& ctx, T** value_ptr, unsigned long long final_key) {
+		auto loop = ctx.check(ctx.cur_key, final_key);
 
-		do {
+		while (loop) {
+			auto new_cur = cur + 1;
+
 			L_INFO_HOOK_LOG("StashValues::LOOP", this, "StashValues::" LIGHT_CYAN "LOOP" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 
 			std::atomic<_Tp*>* ptr_atom_ptr = nullptr;
@@ -364,33 +368,60 @@ public:
 					auto& atom_ptr = *ptr_atom_ptr;
 					auto ptr = atom_ptr.load();
 					if (ptr) {
-						auto new_cur = cur + 1;
-						if (ctx.op != StashContext::Operation::walk || atom_cur.compare_exchange_strong(cur, new_cur)) {
-							cur = new_cur;
-						}
-						if (!ptr) {
-							L_INFO_HOOK_LOG("StashValues::SKIP", this, "StashValues::" DARK_GREY "SKIP" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
-						} else {
+						if (ctx.op != StashContext::Operation::clean) {
 							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 							if (value_ptr) {
 								*value_ptr = ptr;
 							}
+							if (ctx.op == StashContext::Operation::peep) {
+								cur = atom_cur.load();
+							}
+							else if (atom_cur.compare_exchange_strong(cur, new_cur)) {
+								cur = new_cur;
+							}
 							return true;
 						}
-						continue;
 					}
 				}
-				default:
+				case StashState::ChunkEmpty:
+					L_INFO_HOOK_LOG("StashValues::EMPTY", this, "StashValues::" YELLOW "EMPTY" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
 					break;
+				case StashState::StashShort:
+				case StashState::StashEmpty:
+					L_INFO_HOOK_LOG("StashValues::BREAK", this, "StashValues::" YELLOW "BREAK" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
+					if (ctx.op == StashContext::Operation::peep) {
+						cur = atom_cur.load();
+					}
+					return false;
 			}
-			return false;
-		} while(true);
+
+			if (ctx.op == StashContext::Operation::clean) {
+				if (loop && ptr_atom_ptr) {
+					auto& atom_ptr = *ptr_atom_ptr;
+					auto ptr = atom_ptr.exchange(nullptr);
+					if (ptr) {
+						L_INFO_HOOK_LOG("StashValues::CLEAR", this, "StashValues::" LIGHT_RED "CLEAR" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
+						delete ptr;
+					}
+				}
+			}
+
+			if (ctx.op == StashContext::Operation::peep || atom_cur.compare_exchange_strong(cur, new_cur)) {
+				cur = new_cur;
+			}
+		}
+
+		L_INFO_HOOK_LOG("StashValues::MISSING", this, "StashValues::" YELLOW "MISSING" NO_COL " - %scur:%llu, op:%s", ctx._col(), cur, ctx._op());
+		if (ctx.op == StashContext::Operation::peep) {
+			cur = atom_cur.load();
+		}
+		return false;
 	}
 
 	template<typename... Args>
 	void put(unsigned long long, Args&&... args) {
 		auto slot = atom_end++;
-		L_INFO_HOOK_LOG("StashSlots::PUT", this, "StashSlots::" LIGHT_MAGENTA "PUT" NO_COL " - slot:%llu", slot);
+		L_INFO_HOOK_LOG("StashValues::PUT", this, "StashValues::" LIGHT_MAGENTA "PUT" NO_COL " - slot:%llu", slot);
 
 		std::atomic<_Tp*>* ptr_atom_ptr;
 		Stash_T::get(&ptr_atom_ptr, slot, true);
