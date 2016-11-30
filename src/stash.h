@@ -239,7 +239,9 @@ public:
 
 	template <typename T>
 	int next(StashContext& ctx, T* value_ptr, unsigned long long final_key) {
-		while (ctx.check(ctx.cur_key, final_key)) {
+		auto loop = ctx.check(ctx.cur_key, final_key);
+
+		while (loop) {
 			auto new_cur_key = get_inc_base_key(ctx.cur_key);
 			auto cur = get_slot(ctx.cur_key);
 
@@ -281,8 +283,12 @@ public:
 				}
 			}
 
-			if (ctx.op == StashContext::Operation::peep || ctx.atom_cur_key.compare_exchange_strong(ctx.cur_key, new_cur_key)) {
-				ctx.cur_key = new_cur_key;
+			loop = ctx.check(new_cur_key, final_key);
+
+			if (loop) {
+				if (ctx.op == StashContext::Operation::peep || ctx.atom_cur_key.compare_exchange_strong(ctx.cur_key, new_cur_key)) {
+					ctx.cur_key = new_cur_key;
+				}
 			}
 		}
 
