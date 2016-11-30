@@ -68,6 +68,12 @@ public:
 
 
 class SchedulerQueue {
+public:
+	static unsigned long long now() {
+		return time_point_to_ullong(std::chrono::system_clock::now());
+	}
+
+private:
 	using _tasks =        StashValues<TaskType,     10ULL,  &now>;
 	using _50_1ms =       StashSlots<_tasks,        10ULL,  &now,        1ULL * MS,    50ULL,  false>;
 	using _10_50ms =      StashSlots<_50_1ms,       10ULL,  &now,       50ULL * MS,    10ULL,  false>;
@@ -80,10 +86,6 @@ class SchedulerQueue {
 
 public:
 	SchedulerQueue();
-
-	static unsigned long long now() {
-		return time_point_to_ullong(std::chrono::system_clock::now());
-	}
 
 	TaskType* peep(unsigned long long current_key);
 	TaskType* walk();
