@@ -2893,7 +2893,7 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 			specification.position.push_back(static_cast<unsigned>(doc_position.as_u64()));
 		}
 
-		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
+		if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
 			if (specification.position.size() == 1) {
 				get_mutable()[prop_name] = static_cast<uint64_t>(specification.position.front());
 			} else {
@@ -2925,7 +2925,7 @@ Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
 			specification.weight.push_back(static_cast<unsigned>(doc_weight.as_u64()));
 		}
 
-		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
+		if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
 			if (specification.weight.size() == 1) {
 				get_mutable()[prop_name] = static_cast<uint64_t>(specification.weight.front());
 			} else {
@@ -2957,7 +2957,7 @@ Schema::process_spelling(const std::string& prop_name, const MsgPack& doc_spelli
 			specification.spelling.push_back(doc_spelling.as_bool());
 		}
 
-		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
+		if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
 			if (specification.spelling.size() == 1) {
 				get_mutable()[prop_name] = static_cast<bool>(specification.spelling.front());
 			} else {
@@ -2989,7 +2989,7 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 			specification.positions.push_back(doc_positions.as_bool());
 		}
 
-		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
+		if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
 			if (specification.positions.size() == 1) {
 				get_mutable()[prop_name] = static_cast<bool>(specification.positions.front());
 			} else {
@@ -3247,7 +3247,7 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 		try {
 			specification.index = map_index.at(str_index);
 
-			if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
+			if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
 				get_mutable()[prop_name] = specification.index;
 			}
 		} catch (const std::out_of_range&) {
@@ -3272,7 +3272,7 @@ Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
 		specification.flags.store = val_store && specification.flags.parent_store;
 		specification.flags.parent_store = specification.flags.store;
 
-		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
+		if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
 			get_mutable()[prop_name] = val_store;
 		}
 	} catch (const msgpack::type_error&) {
@@ -3291,7 +3291,7 @@ Schema::process_recursive(const std::string& prop_name, const MsgPack& doc_recur
 	 */
 	try {
 		specification.flags.is_recursive = doc_recursive.as_bool();
-		if likely(!specification.flags.field_found && !specification.flags.inside_namespace) {
+		if likely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
 			get_mutable()[prop_name.c_str()] = static_cast<bool>(specification.flags.is_recursive);
 		}
 	} catch (const msgpack::type_error&) {
@@ -3306,7 +3306,7 @@ Schema::process_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic
 	// RESERVED_DYNAMIC is heritable but can't change.
 	L_CALL(this, "Schema::process_dynamic(%s)", repr(doc_dynamic.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
+	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
 		return;
 	}
 
@@ -3325,7 +3325,7 @@ Schema::process_strict(const std::string& prop_name, const MsgPack& doc_strict)
 	// RESERVED_STRICT is heritable but can't change.
 	L_CALL(this, "Schema::process_strict(%s)", repr(doc_strict.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
+	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
 		return;
 	}
 
@@ -3344,7 +3344,7 @@ Schema::process_d_detection(const std::string& prop_name, const MsgPack& doc_d_d
 	// RESERVED_D_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_d_detection(%s)", repr(doc_d_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
+	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
 		return;
 	}
 
@@ -3363,7 +3363,7 @@ Schema::process_n_detection(const std::string& prop_name, const MsgPack& doc_n_d
 	// RESERVED_N_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_n_detection(%s)", repr(doc_n_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
+	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
 		return;
 	}
 
@@ -3382,7 +3382,7 @@ Schema::process_g_detection(const std::string& prop_name, const MsgPack& doc_g_d
 	// RESERVED_G_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_g_detection(%s)", repr(doc_g_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
+	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
 		return;
 	}
 
@@ -3401,7 +3401,7 @@ Schema::process_b_detection(const std::string& prop_name, const MsgPack& doc_b_d
 	// RESERVED_B_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_b_detection(%s)", repr(doc_b_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
+	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
 		return;
 	}
 
@@ -3420,7 +3420,7 @@ Schema::process_s_detection(const std::string& prop_name, const MsgPack& doc_s_d
 	// RESERVED_S_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_s_detection(%s)", repr(doc_s_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
+	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
 		return;
 	}
 
@@ -3439,7 +3439,7 @@ Schema::process_t_detection(const std::string& prop_name, const MsgPack& doc_t_d
 	// RESERVED_T_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_t_detection(%s)", repr(doc_t_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
+	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
 		return;
 	}
 
@@ -3458,7 +3458,7 @@ Schema::process_u_detection(const std::string& prop_name, const MsgPack& doc_u_d
 	// RESERVED_U_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_u_detection(%s)", repr(doc_u_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
+	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
 		return;
 	}
 
