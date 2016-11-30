@@ -64,8 +64,8 @@ const char *priorities[] = {
 void
 println(bool with_endl, const char *format, va_list argptr, const void* obj, bool info)
 {
-	std::string str(Log::str_format(false, 0, "", "", 0, "", "", obj, format, argptr, info));
-	Log::log(LOG_CRIT, str, 0, info, with_endl);
+	std::string str(Log::str_format(false, LOG_DEBUG, "", "", 0, "", "", obj, format, argptr, info));
+	Log::log(LOG_DEBUG, str, 0, info, with_endl);
 }
 
 
