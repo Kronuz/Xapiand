@@ -91,7 +91,7 @@ static const auto text_type    = content_type_pair(TEXT_CONTENT_TYPE);
 static const auto msgpack_serializers = std::vector<type_t>({json_type, msgpack_type, html_type, text_type});
 
 
-static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;q=(\\d+(?:\\.\\d+)?))?");
+static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;\\s*q=(\\d+(?:\\.\\d+)?))?");
 
 
 GuidGenerator HttpClient::generator;
