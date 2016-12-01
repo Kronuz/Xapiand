@@ -1008,14 +1008,6 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 
 Xapian::docid
-Database::replace_document(const std::string& doc_id, const Xapian::Document& doc, bool commit_, bool wal_)
-{
-	L_CALL(this, "Database::replace_document(%s, <doc>, %s, %s)", repr(doc_id).c_str(), commit_ ? "true" : "false", wal_ ? "true" : "false");
-	return replace_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), doc, commit_, wal_);
-}
-
-
-Xapian::docid
 Database::replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_, bool wal_)
 {
 	L_CALL(this, "Database::replace_document_term(%s, <doc>, %s, %s)", repr(term).c_str(), commit_ ? "true" : "false", wal_ ? "true" : "false");
