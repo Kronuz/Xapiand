@@ -425,7 +425,9 @@ Query::get_namespace_query(const std::string& full_name, const std::string& pref
 		return MultipleValueRange::getQuery(spc, full_name, fp.start, fp.end);
 	}
 
-	if (field_value.empty() || field_value == "*") {
+	if (field_value.empty()) {
+		return Xapian::Query(f_prefix);
+	} else if (field_value == "*") {
 		return Xapian::Query(Xapian::Query::OP_WILDCARD, f_prefix);
 	}
 
