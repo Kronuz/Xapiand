@@ -3910,7 +3910,7 @@ Schema::serialise_id(const std::string& value_id)
 	L_CALL(this, "Schema::serialise_id(%s)", repr(value_id).c_str());
 
 	try {
-		auto& prop_id = schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
+		auto& prop_id = mut_schema ? mut_schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME) : schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
 		update_specification(prop_id);
 		return Serialise::serialise(specification, value_id);
 	} catch (const std::out_of_range&) {
