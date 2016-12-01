@@ -42,7 +42,7 @@
 #include "stl_serialise.h"                                // for StringSet
 
 
-#define NAMESPACE_LIMIT_DEPTH  8    // 2^(n - 2) => 2^6 => 64 namespace terms.
+#define NAMESPACE_LIMIT_DEPTH  10    // 2^(n - 2) => 2^8 => 256 namespace terms.
 
 #define DEFAULT_STEM_STRATEGY  StemStrategy::STEM_SOME
 #define DEFAULT_LANGUAGE       "en"
