@@ -222,7 +222,11 @@ class StashSlots : public Stash<_Tp, _Size> {
 	}
 
 	unsigned long long get_inc_base_key(unsigned long long key) const {
-		return get_base_key(key + _Div);
+		return get_base_key(key) + _Div;
+	}
+
+	unsigned long long get_final_key(unsigned long long key) const {
+		return get_base_key(key) + (_Div * _Mod);
 	}
 
 	size_t get_slot(unsigned long long key) const {
@@ -320,6 +324,10 @@ public:
 
 	template<typename... Args>
 	void add(StashContext& ctx, unsigned long long key, Args&&... args) {
+		if (key >= get_final_key(ctx.atom_cur_key)) {
+			throw std::out_of_range("stash overlow");
+		}
+
 		put(ctx, key, std::forward<Args>(args)...);
 
 		auto cur_key = ctx.atom_cur_key.load();
