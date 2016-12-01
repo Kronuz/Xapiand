@@ -980,6 +980,8 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos)
 {
+	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", data.to_string().c_str(), item_value.to_string().c_str(), pos);
+
 	L_SCHEMA(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
 
 	if (item_value.is_null()) {
@@ -1034,6 +1036,8 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value)
 {
+	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", data->to_string().c_str(), item_value.to_string().c_str());
+
 	L_SCHEMA(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
 
 	if (item_value.is_null()) {
@@ -1088,6 +1092,8 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offsprings)
 {
+	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", data->to_string().c_str(), offsprings ? "true" : "false");
+
 	L_SCHEMA(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
