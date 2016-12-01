@@ -68,7 +68,7 @@
 #define L_HTTP _
 #define L_BINARY _
 #define L_HTTP_PROTO_PARSER _
-#define L_EV _//_
+#define L_EV _
 #define L_HTTP_WIRE _
 #define L_BINARY_WIRE _
 #define L_TCP_WIRE _
