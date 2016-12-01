@@ -3927,7 +3927,6 @@ Schema::get_data_field(const std::string& field_name) const
 		auto prefix_namespace = std::get<3>(info);
 		if (prefix_namespace.empty()) {
 			const auto& properties = std::get<2>(info);
-
 			const auto& sep_types = properties.at(RESERVED_TYPE);
 			res.sep_types[0] = (FieldType)sep_types.at(0).as_u64();
 			res.sep_types[1] = (FieldType)sep_types.at(1).as_u64();
@@ -4062,7 +4061,12 @@ Schema::get_slot_field(const std::string& field_name) const
 				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 			}
 		} else {
-			res.flags.inside_namespace = true;
+			auto namespace_spc = specification_t::get_global(FieldType::STRING);
+			namespace_spc.flags.inside_namespace = true;
+			namespace_spc.prefix.reserve(arraySize(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
+			namespace_spc.prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace).push_back(toUType(namespace_spc.sep_types[2]));
+			namespace_spc.slot = get_slot(namespace_spc.prefix);
+			return namespace_spc;
 		}
 	} catch (const ClientError& exc) {
 		L_EXC(this, "ERROR: %s", exc.what());
