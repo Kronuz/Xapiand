@@ -64,11 +64,11 @@ struct StashContext {
 		  current_key(cur_key_) { }
 
 	bool check(unsigned long long key, unsigned long long final_key) const {
-		if (current_key && key > current_key) {
+		if (current_key && key >= current_key) {
 			return false;
 		}
 
-		if (final_key && key > final_key) {
+		if (final_key && key >= final_key) {
 			return false;
 		}
 
