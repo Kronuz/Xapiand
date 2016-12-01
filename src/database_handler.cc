@@ -832,21 +832,18 @@ Document::update() const
 
 
 Document::Document()
-	: db_handler(nullptr)
-{ }
+	: db_handler(nullptr) { }
 
 
 Document::Document(const Xapian::Document &doc)
 	: Xapian::Document(doc),
-	  db_handler(nullptr)
-{ }
+	  db_handler(nullptr) { }
 
 
 Document::Document(DatabaseHandler* db_handler_, const Xapian::Document &doc)
 	: Xapian::Document(doc),
 	  db_handler(db_handler_),
-	  database(db_handler->database)
-{ }
+	  database(db_handler->database) { }
 
 
 std::string
