@@ -1094,4 +1094,5 @@ XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time
 	}
 }
 
+
 #undef L_MANAGER
