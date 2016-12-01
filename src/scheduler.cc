@@ -252,7 +252,7 @@ Scheduler::run()
 		}
 
 		auto now = std::chrono::system_clock::now();
-		auto wakeup_time = time_point_to_ullong(now + (running < 0 ? 32s : 100ms));
+		auto wakeup_time = time_point_to_ullong(now + (running < 0 ? 30s : 100ms));
 		bool pending = false;
 
 		TaskType task;
