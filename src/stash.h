@@ -332,83 +332,97 @@ template <typename _Tp, size_t _Size, unsigned long long(*_CurrentKey)()>
 class StashValues : public Stash<_Tp, _Size> {
 	using Stash_T = Stash<_Tp, _Size>;
 
-	size_t cur;
-	std::atomic_size_t atom_cur;
+	size_t walk_cur;
+	size_t clean_cur;
 	std::atomic_size_t atom_end;
 
 public:
 	StashValues(StashValues&& o) noexcept
 		: Stash_T::Stash(std::move(o)),
-		  atom_cur(o.atom_cur.load()),
+		  walk_cur(std::move(o.walk_cur)),
+		  clean_cur(std::move(o.clean_cur)),
 		  atom_end(o.atom_end.load()) { }
 
 	StashValues()
-		: cur(0),
-		  atom_cur(0),
+		: walk_cur(0),
+		  clean_cur(0),
 		  atom_end(0) { }
 
 	template <typename T>
 	int next(StashContext& ctx, T* value_ptr, unsigned long long) {
-		do {
+		auto cur = (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur;
+
+		auto loop = cur < ((ctx.op == StashContext::Operation::clean) ? walk_cur : atom_end.load());
+
+		while (loop) {
 			auto new_cur = cur + 1;
 
-			L_INFO_HOOK_LOG("StashValues::LOOP", this, "StashValues::" LIGHT_CYAN "LOOP" NO_COL " - %scur:%llu, atom_cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, atom_cur.load(), atom_end.load(), ctx._op());
+			L_INFO_HOOK_LOG("StashValues::LOOP", this, "StashValues::" LIGHT_CYAN "LOOP" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
 
 			std::atomic<_Tp*>* ptr_atom_ptr = nullptr;
 			switch (Stash_T::get(&ptr_atom_ptr, cur, false)) {
 				case StashState::Ok:
 					break;
 				case StashState::ChunkEmpty:
-					L_INFO_HOOK_LOG("StashValues::EMPTY", this, "StashValues::" YELLOW "EMPTY" NO_COL " - %scur:%llu, atom_cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, atom_cur.load(), atom_end.load(), ctx._op());
+					L_INFO_HOOK_LOG("StashValues::EMPTY", this, "StashValues::" YELLOW "EMPTY" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
 					break;
 				case StashState::StashShort:
 				case StashState::StashEmpty:
-					L_INFO_HOOK_LOG("StashValues::BREAK", this, "StashValues::" YELLOW "BREAK" NO_COL " - %scur:%llu, atom_cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, atom_cur.load(), atom_end.load(), ctx._op());
-					if (ctx.op == StashContext::Operation::peep) {
-						cur = atom_cur.load();
-					}
+					L_INFO_HOOK_LOG("StashValues::BREAK", this, "StashValues::" YELLOW "BREAK" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
 					return 1;
 			}
 
-			if (ctx.op == StashContext::Operation::peep || atom_cur.compare_exchange_strong(cur, new_cur)) {
-				cur = new_cur;
+			loop = new_cur < ((ctx.op == StashContext::Operation::clean) ? walk_cur : atom_end.load());
+
+			if (loop) {
+				switch (ctx.op) {
+					case StashContext::Operation::peep:
+						cur = new_cur;
+						break;
+					case StashContext::Operation::walk:
+						cur = walk_cur = new_cur;
+						break;
+					case StashContext::Operation::clean:
+						cur = clean_cur = new_cur;
+						break;
+				}
 			}
 
 			if (ptr_atom_ptr) {
 				auto& atom_ptr = *ptr_atom_ptr;
 				auto ptr = atom_ptr.load();
 				if (ptr) {
-					if (ctx.op == StashContext::Operation::clean) {
+					bool returning = false;
+					if (ctx.op != StashContext::Operation::clean) {
+						if (*ptr && **ptr) {
+							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
+							if (value_ptr) {
+								*value_ptr = *ptr;
+							}
+							returning = true;
+						}
+					}
+					if (ctx.op != StashContext::Operation::peep) {
 						auto ptr = atom_ptr.exchange(nullptr);
 						if (ptr) {
-							L_INFO_HOOK_LOG("StashValues::CLEAR", this, "StashValues::" LIGHT_RED "CLEAR" NO_COL " - %scur:%llu, atom_cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, atom_cur.load(), atom_end.load(), ctx._op());
+							L_INFO_HOOK_LOG("StashValues::CLEAR", this, "StashValues::" LIGHT_RED "CLEAR" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
 							delete ptr;
 						}
-					} else if (*ptr) {
-						L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, atom_cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, atom_cur.load(), atom_end.load(), ctx._op());
-						if (value_ptr) {
-							*value_ptr = *ptr;
-						}
-						if (ctx.op == StashContext::Operation::peep) {
-							cur = atom_cur.load();
-						} else {
-							auto ptr = atom_ptr.exchange(nullptr);
-							if (ptr) {
-								L_INFO_HOOK_LOG("StashValues::CLEAR", this, "StashValues::" LIGHT_RED "CLEAR" NO_COL " - %scur:%llu, atom_cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, atom_cur.load(), atom_end.load(), ctx._op());
-								delete ptr;
-							}
-						}
+					}
+					if (returning) {
 						return 0;
 					}
 				}
 			}
-		} while (true);
+		}
+
+		return 1;
 	}
 
 	template<typename... Args>
 	void put(StashContext& ctx, unsigned long long, Args&&... args) {
 		auto slot = atom_end++;
-		L_INFO_HOOK_LOG("StashValues::PUT", this, "StashValues::" LIGHT_MAGENTA "PUT" NO_COL " - %sslot:%llu, cur:%llu, atom_cur:%llu, atom_end:%llu, op:%s", ctx._col(), slot, cur, atom_cur.load(), atom_end.load(), ctx._op());
+		L_INFO_HOOK_LOG("StashValues::PUT", this, "StashValues::" LIGHT_MAGENTA "PUT" NO_COL " - %sslot:%llu, atom_end:%llu, op:%s", ctx._col(), slot, atom_end.load(), ctx._op());
 
 		std::atomic<_Tp*>* ptr_atom_ptr;
 		Stash_T::get(&ptr_atom_ptr, slot, true);
