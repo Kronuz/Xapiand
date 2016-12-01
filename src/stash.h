@@ -257,14 +257,14 @@ public:
 				auto ptr = atom_ptr.load();
 				if (ptr) {
 					auto status = ptr->next(ctx, value_ptr, new_cur_key);
-					if (ctx.op == StashContext::Operation::clean) {
-						auto ptr = atom_ptr.exchange(nullptr);
-						if (ptr) {
-							L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
-							delete ptr;
-						}
-					} else {
-						if (status) {
+					if (status) {
+						if (ctx.op == StashContext::Operation::clean) {
+							auto ptr = atom_ptr.exchange(nullptr);
+							if (ptr) {
+								L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
+								delete ptr;
+							}
+						} else {
 							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
 							return true;
 						}
