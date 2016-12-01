@@ -77,7 +77,8 @@ DatabaseAutocommit::commit(const std::shared_ptr<Database>& database)
 			if (status->task->wakeup_time == next_wakeup_time) {
 				return;
 			}
-			status->task->clear();
+			bool cleared = status->task->clear();
+			log(nullptr, "CLEARED: wakeup_time:%llu, cleared:%s  (%s)", status->task->wakeup_time, cleared ? "true" : "false", *(status->task) ? "valid" : "cleared");
 		}
 		status->task = std::make_shared<DatabaseAutocommit>(forced, database->endpoints, database);
 		task = status->task;

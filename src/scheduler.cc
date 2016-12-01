@@ -245,10 +245,11 @@ Scheduler::run()
 
 		TaskType task;
 
+		if (get_thread_name()[0] == 'C') log(this, "Scheduler::" DARK_GREY "PEEPING" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wakeup_time);
 		if ((task = scheduler_queue.peep(wakeup_time))) {
 			if (task) {
 				wakeup_time = task->wakeup_time;
-				// log(this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wakeup_time);
+				if (get_thread_name()[0] == 'C') log(this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu  (%s)", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
 			}
 		}
 
