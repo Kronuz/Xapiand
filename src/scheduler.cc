@@ -187,6 +187,9 @@ Scheduler::add(const TaskType& task, unsigned long long wakeup_time)
 
 		if (next_wakeup_time > wakeup_time || next_wakeup_time < now) {
 			if (task && task->__repr__()[1] == 'D') log(this, "Scheduler::" GREEN "NOTIFY" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
+			{
+				std::lock_guard<std::mutex> lk(mtx);
+			}
 			wakeup_signal.notify_one();
 		} else {
 			if (task && task->__repr__()[1] == 'D') log(this, "Scheduler::" BLUE "ADDED" NO_COL " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
@@ -205,7 +208,7 @@ Scheduler::add(const TaskType& task, std::chrono::time_point<std::chrono::system
 void
 Scheduler::run_one(TaskType& task)
 {
-	if (!task->cleared_at) {
+	if (*task) {
 		if (task->clear()) {
 			if (get_thread_name()[0] == 'C') log(this, "Scheduler::" CYAN "RUNNING" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 			if (thread_pool) {
@@ -227,8 +230,8 @@ Scheduler::run()
 {
 	set_thread_name(name);
 
-	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
+	lk.unlock();
 
 	auto next_wakeup_time = atom_next_wakeup_time.load();
 
@@ -253,7 +256,9 @@ Scheduler::run()
 		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time));
 
 		// log(this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
+		lk.lock();
 		wakeup_signal.wait_until(lk, time_point_from_ullong(atom_next_wakeup_time.load()));
+		lk.unlock();
 		if (get_thread_name()[0] == 'C') log(this, "Scheduler::" LIGHT_BLUE "WAKEUP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wakeup_time);
 
 		scheduler_queue.clean_checkpoint();

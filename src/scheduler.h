@@ -100,6 +100,8 @@ public:
 
 
 class Scheduler {
+	std::mutex mtx;
+
 	std::unique_ptr<ThreadPool<>> thread_pool;
 
 	std::condition_variable wakeup_signal;
