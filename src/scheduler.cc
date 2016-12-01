@@ -253,18 +253,24 @@ Scheduler::run()
 
 		auto now = std::chrono::system_clock::now();
 		auto wakeup_time = time_point_to_ullong(now + (running < 0 ? 32s : 100ms));
+		bool pending = false;
 
 		TaskType task;
 
 		L_SCHEDULER(this, "Scheduler::" DARK_GREY "PEEPING" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wakeup_time);
 		if ((task = scheduler_queue.peep(wakeup_time))) {
 			if (task) {
+				pending = true;
 				wakeup_time = task->wakeup_time;
 				L_SCHEDULER(this, "Scheduler::" BLUE "PEEP" NO_COL " - now:%llu, wakeup_time:%llu  (%s)", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
 			}
 		}
 
-		atom_next_wakeup_time.compare_exchange_strong(next_wakeup_time, wakeup_time);
+		if (atom_next_wakeup_time.compare_exchange_strong(next_wakeup_time, wakeup_time)) {
+			if (running >= 0 && !pending) {
+				break;
+			}
+		}
 		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time));
 
 		L_INFO_HOOK_LOG("Scheduler::LOOP", this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
@@ -282,10 +288,6 @@ Scheduler::run()
 		}
 
 		scheduler_queue.clean();
-
-		if (running >= 0) {
-			break;
-		}
 	}
 }
 
