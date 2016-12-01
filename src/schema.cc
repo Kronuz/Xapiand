@@ -1099,13 +1099,15 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
 		if (val->is_null()) {
-			if (specification.flags.inside_namespace && !offsprings) {
+			if (specification.flags.inside_namespace) {
 				auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
 				for (const auto& prefix_namespace : prefixes_namespace) {
 					doc.add_term(prefix_namespace);
 				}
 			}
-			*data = *val;
+			if (specification.flags.store) {
+				offsprings ? (*data)[RESERVED_VALUE] = *val : *data = *val;
+			}
 			return;
 		}
 
