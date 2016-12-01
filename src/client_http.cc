@@ -1235,13 +1235,13 @@ HttpClient::search_view(enum http_method method)
 			}
 			basic_response["_query"] = basic_query;
 
-			if(is_acceptable_type(msgpack_type, ct_type)) {
+			if (is_acceptable_type(msgpack_type, ct_type)) {
 				first_chunk = basic_response.serialise();
 				// Remove zero size array and manually add the msgpack array header
 				first_chunk.pop_back();
-				if(total_count < 16) {
+				if (total_count < 16) {
 					first_chunk.push_back(static_cast<char>(0x90u | total_count));
-				} else if(total_count < 65536) {
+				} else if (total_count < 65536) {
 					char buf[3];
 					buf[0] = static_cast<char>(0xdcu); _msgpack_store16(&buf[1], static_cast<uint16_t>(total_count));
 					first_chunk.append(std::string(buf, 3));
