@@ -27,6 +27,7 @@
 
 #include "logger_fwd.h"
 
+
 #ifndef L_STASH
 #define L_STASH_DEFINED
 #define L_STASH(args...)
