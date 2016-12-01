@@ -30,7 +30,7 @@
 
 #ifndef L_STASH
 #define L_STASH_DEFINED
-#define L_STASH(args...)
+#define L_STASH L_TEST
 #endif
 
 
@@ -450,6 +450,7 @@ public:
 		}
 	}
 };
+
 
 #ifdef L_STASH_DEFINED
 #undef L_STASH_DEFINED

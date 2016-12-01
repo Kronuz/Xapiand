@@ -75,7 +75,9 @@
 #include "utils.h"                           // for pos_time_t, SLOT_TIME_SE...
 #include "worker.h"                          // for Worker, enable_make_shared
 
+
 #ifndef L_MANAGER
+#define L_MANAGER_DEFINED
 #define L_MANAGER L_TEST
 #endif
 
@@ -1095,4 +1097,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time
 }
 
 
+#ifdef L_MANAGER_DEFINED
+#undef L_MANAGER_DEFINED
 #undef L_MANAGER
+#endif

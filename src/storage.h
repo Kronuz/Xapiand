@@ -33,10 +33,12 @@
 #include "lz4_compressor.h"
 #include "logger.h"
 
+
 #ifndef L_CALL
 #define L_CALL_DEFINED
 #define L_CALL L_NOTHING
 #endif
+
 
 #define STORAGE_MAGIC 0x02DEBC47
 #define STORAGE_BIN_HEADER_MAGIC 0x2A

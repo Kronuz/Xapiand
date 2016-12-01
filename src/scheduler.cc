@@ -30,7 +30,7 @@
 
 #ifndef L_SCHEDULER
 #define L_SCHEDULER_DEFINED
-#define L_SCHEDULER(args...)
+#define L_SCHEDULER L_TEST
 #endif
 
 

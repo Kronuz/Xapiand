@@ -46,7 +46,9 @@
 #include "stl_serialise.h"                 // for StringSet
 #include "utils.h"                         // for repr, toUType, lower_string
 
+
 #ifndef L_SCHEMA
+#define L_SCHEMA_DEFINED
 #define L_SCHEMA L_TEST
 #endif
 
@@ -4225,4 +4227,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 }
 
 
+#ifdef L_SCHEMA_DEFINED
+#undef L_SCHEMA_DEFINED
 #undef L_SCHEMA
+#endif
