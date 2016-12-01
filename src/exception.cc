@@ -26,6 +26,8 @@
 #include <execinfo.h>  // for backtrace, backtrace_symbols
 #include <stdarg.h>    // for va_end, va_list, va_start
 #include <stdio.h>     // for vsnprintf
+#include <string.h>    // for strtok_r
+
 
 #define BUFFER_SIZE 1024
 
