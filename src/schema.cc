@@ -47,6 +47,7 @@
 #include "utils.h"                         // for repr, toUType, lower_string
 
 #ifndef L_SCHEMA
+#define L_SCHEMA_DEFINED
 #define L_SCHEMA L_TEST
 #endif
 
@@ -4224,4 +4225,8 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 	return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::string());
 }
 
+
+#ifdef L_SCHEMA_DEFINED
+#undef L_SCHEMA_DEFINED
 #undef L_SCHEMA
+#endif

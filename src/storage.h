@@ -779,6 +779,7 @@ public:
 	}
 };
 
+
 #ifdef L_CALL_DEFINED
 #undef L_CALL_DEFINED
 #undef L_CALL
