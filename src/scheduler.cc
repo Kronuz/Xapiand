@@ -271,7 +271,7 @@ Scheduler::run()
 				break;
 			}
 		}
-		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time));
+		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time)) { }
 
 		L_INFO_HOOK_LOG("Scheduler::LOOP", this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
 		lk.lock();
