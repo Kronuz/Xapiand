@@ -27,6 +27,11 @@
 
 #include "logger_fwd.h"
 
+#ifndef L_STASH
+#define L_STASH_DEFINED
+#define L_STASH(args...)
+#endif
+
 
 enum class StashState : uint8_t {
 	Ok,
@@ -244,11 +249,11 @@ public:
 				case StashState::Ok:
 					break;
 				case StashState::ChunkEmpty:
-					L_INFO_HOOK_LOG("StashSlots::EMPTY", this, "StashSlots::" YELLOW "EMPTY" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
+					L_STASH(this, "StashSlots::" YELLOW "EMPTY" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
 					break;
 				case StashState::StashShort:
 				case StashState::StashEmpty:
-					L_INFO_HOOK_LOG("StashSlots::BREAK", this, "StashSlots::" YELLOW "BREAK" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
+					L_STASH(this, "StashSlots::" YELLOW "BREAK" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
 					return false;
 			}
 
@@ -261,11 +266,11 @@ public:
 						if (ctx.op == StashContext::Operation::clean) {
 							auto ptr = atom_ptr.exchange(nullptr);
 							if (ptr) {
-								L_INFO_HOOK_LOG("StashSlots::CLEAR", this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
+								L_STASH(this, "StashSlots::" LIGHT_RED "CLEAR" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
 								delete ptr;
 							}
 						} else {
-							L_INFO_HOOK_LOG("StashSlots::FOUND", this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
+							L_STASH(this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
 							return true;
 						}
 					}
@@ -281,7 +286,7 @@ public:
 			}
 		}
 
-		L_INFO_HOOK_LOG("StashSlots::MISSING", this, "StashSlots::" YELLOW "MISSING" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, get_slot(ctx.cur_key), final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
+		L_STASH(this, "StashSlots::" YELLOW "MISSING" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, get_slot(ctx.cur_key), final_key, ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
 		return false;
 	}
 
@@ -293,7 +298,7 @@ public:
 	template<typename... Args>
 	void put(StashContext& ctx, unsigned long long key, Args&&... args) {
 		auto slot = get_slot(key);
-		L_INFO_HOOK_LOG("StashSlots::PUT", this, "StashSlots::" MAGENTA "PUT" NO_COL " - %s_Mod:%llu, current_key:%llu, key:%llu, slot:%llu, cur_key:%llu, cur:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, key, slot, ctx.cur_key, get_slot(ctx.cur_key), ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
+		L_STASH(this, "StashSlots::" MAGENTA "PUT" NO_COL " - %s_Mod:%llu, current_key:%llu, key:%llu, slot:%llu, cur_key:%llu, cur:%llu, atom_cur_key:%llu, atom_end_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, key, slot, ctx.cur_key, get_slot(ctx.cur_key), ctx.atom_cur_key.load(), ctx.atom_end_key.load(), ctx._op());
 
 		std::atomic<_Tp*>* ptr_atom_ptr;
 		Stash_T::get(&ptr_atom_ptr, slot, true);
@@ -318,7 +323,7 @@ public:
 
 		auto cur_key = ctx.atom_cur_key.load();
 		auto end_key = ctx.atom_end_key.load();
-		L_INFO_HOOK_LOG("StashSlots::ADD", this, "StashSlots::" LIGHT_MAGENTA "ADD" NO_COL " - _Mod:%llu, key:%llu, atom_cur_key:%llu, atom_end_key:%llu", _Mod, key, cur_key, end_key);
+		L_STASH(this, "StashSlots::" LIGHT_MAGENTA "ADD" NO_COL " - _Mod:%llu, key:%llu, atom_cur_key:%llu, atom_end_key:%llu", _Mod, key, cur_key, end_key);
 		while (key < cur_key && !ctx.atom_cur_key.compare_exchange_weak(cur_key, key));
 		while (key > end_key && !ctx.atom_end_key.compare_exchange_weak(end_key, key));
 	}
@@ -361,11 +366,11 @@ public:
 				case StashState::Ok:
 					break;
 				case StashState::ChunkEmpty:
-					L_INFO_HOOK_LOG("StashValues::EMPTY", this, "StashValues::" YELLOW "EMPTY" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
+					L_STASH(this, "StashValues::" YELLOW "EMPTY" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
 					break;
 				case StashState::StashShort:
 				case StashState::StashEmpty:
-					L_INFO_HOOK_LOG("StashValues::BREAK", this, "StashValues::" YELLOW "BREAK" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
+					L_STASH(this, "StashValues::" YELLOW "BREAK" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
 					return false;
 			}
 
@@ -392,7 +397,7 @@ public:
 					bool returning = false;
 					if (ctx.op != StashContext::Operation::clean) {
 						if (*ptr && **ptr) {
-							L_INFO_HOOK_LOG("StashValues::FOUND", this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
+							L_STASH(this, "StashValues::" LIGHT_GREEN "FOUND" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
 							if (value_ptr) {
 								*value_ptr = *ptr;
 							}
@@ -402,7 +407,7 @@ public:
 					if (ctx.op != StashContext::Operation::peep) {
 						auto ptr = atom_ptr.exchange(nullptr);
 						if (ptr) {
-							L_INFO_HOOK_LOG("StashValues::CLEAR", this, "StashValues::" LIGHT_RED "CLEAR" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
+							L_STASH(this, "StashValues::" LIGHT_RED "CLEAR" NO_COL " - %scur:%llu, cur:%llu, atom_end:%llu, op:%s", ctx._col(), cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
 							delete ptr;
 						}
 					}
@@ -419,7 +424,7 @@ public:
 	template<typename... Args>
 	void put(StashContext& ctx, unsigned long long, Args&&... args) {
 		auto slot = atom_end++;
-		L_INFO_HOOK_LOG("StashValues::PUT", this, "StashValues::" LIGHT_MAGENTA "PUT" NO_COL " - %sslot:%llu, atom_end:%llu, op:%s", ctx._col(), slot, atom_end.load(), ctx._op());
+		L_STASH(this, "StashValues::" LIGHT_MAGENTA "PUT" NO_COL " - %sslot:%llu, atom_end:%llu, op:%s", ctx._col(), slot, atom_end.load(), ctx._op()); (void)ctx;
 
 		std::atomic<_Tp*>* ptr_atom_ptr;
 		Stash_T::get(&ptr_atom_ptr, slot, true);
@@ -436,3 +441,8 @@ public:
 		}
 	}
 };
+
+#ifdef L_STASH_DEFINED
+#undef L_STASH_DEFINED
+#undef L_STASH
+#endif

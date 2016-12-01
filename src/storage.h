@@ -34,8 +34,8 @@
 #include "logger.h"
 
 #ifndef L_CALL
-#define L_CALL L_NOTHING
 #define L_CALL_DEFINED
+#define L_CALL L_NOTHING
 #endif
 
 #define STORAGE_MAGIC 0x02DEBC47
@@ -780,6 +780,6 @@ public:
 };
 
 #ifdef L_CALL_DEFINED
-#undef L_CALL
 #undef L_CALL_DEFINED
+#undef L_CALL
 #endif

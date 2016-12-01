@@ -298,9 +298,11 @@ public:
 };
 
 #ifdef L_THREADPOOL_DEFINED
+#undef L_THREADPOOL_DEFINED
 #undef L_THREADPOOL
 #endif
 
 #ifdef L_EXC_DEFINED
+#undef L_EXC_DEFINED
 #undef L_EXC
 #endif
