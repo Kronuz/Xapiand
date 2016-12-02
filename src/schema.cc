@@ -3662,6 +3662,11 @@ Schema::set_default_spc_ct(MsgPack& properties)
 		properties[RESERVED_STORE] = static_cast<bool>(specification.flags.store);
 	}
 
+	// Process RESERVED_PREFIX
+	if (specification.prefix.empty()) {
+		specification.prefix = DOCUMENT_CONTENT_TYPE_TERM_PREFIX;
+	}
+
 	// Process RESERVED_SLOT
 	if (specification.slot == Xapian::BAD_VALUENO) {
 		specification.slot = DB_SLOT_CONTENT_TYPE;
