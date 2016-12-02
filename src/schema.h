@@ -609,15 +609,15 @@ public:
 	void write_schema(const MsgPack& obj_schema, bool replace);
 
 	/*
-	 * Updates ID_FIELD_NAME in schema according to obj.
-	 */
-	std::string serialise_id(const std::string& value_id);
-
-	/*
 	 * Update namespace specification according to prefix_namespace.
 	 */
 	static required_spc_t get_namespace_specification(FieldType namespace_type, std::string& prefix_namespace);
 
+
+	/*
+	 * Returns type, slot and prefix of ID_FIELD_NAME
+	 */
+	required_spc_t get_data_id() const;
 
 	/*
 	 * Functions used for searching, return a field properties.

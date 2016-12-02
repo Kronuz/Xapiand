@@ -3913,18 +3913,27 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 }
 
 
-std::string
-Schema::serialise_id(const std::string& value_id)
+required_spc_t
+Schema::get_data_id() const
 {
-	L_CALL(this, "Schema::serialise_id(%s)", repr(value_id).c_str());
+	L_CALL(this, "Schema::get_data_id()");
+
+	required_spc_t res;
 
 	try {
-		auto& prop_id = mut_schema ? mut_schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME) : schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
-		update_specification(prop_id);
-		return Serialise::serialise(specification, value_id);
-	} catch (const std::out_of_range&) {
-		return std::string();
-	}
+		const auto& properties = mut_schema ? mut_schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME) : schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
+		// update_specification(prop_id);
+		const auto& sep_types = properties.at(RESERVED_TYPE);
+		res.sep_types[0] = (FieldType)sep_types.at(0).as_u64();
+		res.sep_types[1] = (FieldType)sep_types.at(1).as_u64();
+		res.sep_types[2] = (FieldType)sep_types.at(2).as_u64();
+
+		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
+		res.prefix = properties.at(RESERVED_PREFIX).as_string();
+		return res;
+	} catch (const std::out_of_range&) { }
+
+	return res;
 }
 
 
