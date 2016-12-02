@@ -162,7 +162,7 @@ void sig_handler(int sig) {
 	write(STDERR_FILENO, msg.data(), msg.size());
 
 	switch (sig) {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && (defined(__APPLE__) || defined(__FreeBSD__))
 		case SIGINFO:
 			sig_info(sig);
 			break;
@@ -188,7 +188,7 @@ void setup_signal_handlers(void) {
 	act.sa_handler = sig_handler;
 	sigaction(SIGTERM, &act, nullptr);  // On software termination signal
 	sigaction(SIGINT, &act, nullptr);   // On interrupt program (Ctrl-C)
-#ifndef NDEBUG
+#if !defined(NDEBUG) && (defined(__APPLE__) || defined(__FreeBSD__))
 	sigaction(SIGINFO, &act, nullptr);  // On status request from keyboard (Ctrl-T)
 #endif
 }
