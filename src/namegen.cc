@@ -725,6 +725,7 @@ size_t Generator::max()
 	return final;
 }
 
+
 std::string Generator::toString() {
 	std::string str;
 	for (auto& g : generators) {
@@ -812,10 +813,12 @@ size_t Literal::combinations()
 {
 	return 1;
 }
+
 size_t Literal::min()
 {
 	return value.size();
 }
+
 size_t Literal::max()
 {
 	return value.size();
@@ -983,7 +986,7 @@ void Generator::Group::add(std::unique_ptr<Generator>&& g)
 
 void Generator::Group::add(char c)
 {
-	std::string value(&c, 1);
+	std::string value(1, c);
 	std::unique_ptr<Generator> g = std::make_unique<Random>();
 	g->add(std::make_unique<Literal>(value));
 	Group::add(std::move(g));
@@ -995,7 +998,7 @@ std::unique_ptr<Generator> Generator::Group::emit()
 		case 0:
 			return std::make_unique<Literal>("");
 		case 1:
-			return std::move(*set.begin());
+			return std::move(set->begin());
 		default:
 			return std::make_unique<Random>(std::move(set));
 	}
@@ -1024,8 +1027,8 @@ void Generator::GroupSymbol::add(char c)
 	std::string value(1, c);
 	std::unique_ptr<Generator> g = std::make_unique<Random>();
 	try {
-		static auto& symbols = SymbolMap();
-		for (auto s : symbols.at(value)) {
+		static const auto& symbols = SymbolMap();
+		for (const auto& s : symbols.at(value)) {
 			g->add(std::make_unique<Literal>(s));
 		}
 	} catch (const std::out_of_range&) {
