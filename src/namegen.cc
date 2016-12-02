@@ -998,7 +998,7 @@ std::unique_ptr<Generator> Generator::Group::emit()
 		case 0:
 			return std::make_unique<Literal>("");
 		case 1:
-			return std::move(set->begin());
+			return std::move(*set.begin());
 		default:
 			return std::make_unique<Random>(std::move(set));
 	}
