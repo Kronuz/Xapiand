@@ -12,6 +12,7 @@
 #include <algorithm>  // for move, reverse
 #include <cwchar>     // for size_t, mbsrtowcs, wcsrtombs
 #include <cwctype>    // for towupper
+#include <memory>     // for make_unique
 #include <random>     // for mt19937, random_device, uniform_real_distribution
 #include <stdexcept>  // for invalid_argument, out_of_range
 
