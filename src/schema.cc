@@ -1526,6 +1526,12 @@ Schema::validate_required_data()
 				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
 		}
 
+		if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
+			specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+			properties[RESERVED_INDEX] = specification.index;
+			specification.flags.has_index = true;
+		}
+
 		if (specification.flags.dynamic_type) {
 			if (!specification.flags.has_index) {
 				auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
@@ -1612,10 +1618,6 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 
 			default:
 				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
-		}
-
-		if (!specification.flags.has_index) {
-			specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 		}
 
 		specification.flags.field_with_type = true;
