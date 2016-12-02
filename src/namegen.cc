@@ -685,6 +685,19 @@ const std::unordered_map<std::string, const std::vector<std::string>>& Generator
 }
 
 
+#ifdef HAVE_CXX14
+using std::make_unique;
+#else
+// make_unique is not available in c++11, so we use this template function
+// to maintain full c++11 compatibility; std::make_unique is part of C++14.
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args)
+{
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+#endif
+
+
 Generator::Generator()
 {
 }
@@ -899,17 +912,17 @@ Generator::Generator(const std::string &pattern, bool collapse_triples) {
 	std::unique_ptr<Generator> last;
 
 	std::stack<std::unique_ptr<Group>> stack;
-	std::unique_ptr<Group> top = std::make_unique<GroupSymbol>();
+	std::unique_ptr<Group> top = make_unique<GroupSymbol>();
 
 	for (auto c : pattern) {
 		switch (c) {
 			case '<':
 				stack.push(std::move(top));
-				top = std::make_unique<GroupSymbol>();
+				top = make_unique<GroupSymbol>();
 				break;
 			case '(':
 				stack.push(std::move(top));
-				top = std::make_unique<GroupLiteral>();
+				top = make_unique<GroupLiteral>();
 				break;
 			case '>':
 			case ')':
@@ -954,7 +967,7 @@ Generator::Generator(const std::string &pattern, bool collapse_triples) {
 
 	std::unique_ptr<Generator> g = top->emit();
 	if (collapse_triples) {
-		g = std::make_unique<Collapser>(std::move(g));
+		g = make_unique<Collapser>(std::move(g));
 	}
 	add(std::move(g));
 }
@@ -970,16 +983,16 @@ void Generator::Group::add(std::unique_ptr<Generator>&& g)
 	while (!wrappers.empty()) {
 		switch (wrappers.top()) {
 			case reverser:
-				g = std::make_unique<Reverser>(std::move(g));
+				g = make_unique<Reverser>(std::move(g));
 				break;
 			case capitalizer:
-				g = std::make_unique<Capitalizer>(std::move(g));
+				g = make_unique<Capitalizer>(std::move(g));
 				break;
 		}
 		wrappers.pop();
 	}
 	if (set.size() == 0) {
-		set.push_back(std::make_unique<Sequence>());
+		set.push_back(make_unique<Sequence>());
 	}
 	set.back()->add(std::move(g));
 }
@@ -987,8 +1000,8 @@ void Generator::Group::add(std::unique_ptr<Generator>&& g)
 void Generator::Group::add(char c)
 {
 	std::string value(1, c);
-	std::unique_ptr<Generator> g = std::make_unique<Random>();
-	g->add(std::make_unique<Literal>(value));
+	std::unique_ptr<Generator> g = make_unique<Random>();
+	g->add(make_unique<Literal>(value));
 	Group::add(std::move(g));
 }
 
@@ -996,20 +1009,20 @@ std::unique_ptr<Generator> Generator::Group::emit()
 {
 	switch (set.size()) {
 		case 0:
-			return std::make_unique<Literal>("");
+			return make_unique<Literal>("");
 		case 1:
 			return std::move(*set.begin());
 		default:
-			return std::make_unique<Random>(std::move(set));
+			return make_unique<Random>(std::move(set));
 	}
 }
 
 void Generator::Group::split()
 {
 	if (set.size() == 0) {
-		set.push_back(std::make_unique<Sequence>());
+		set.push_back(make_unique<Sequence>());
 	}
-	set.push_back(std::make_unique<Sequence>());
+	set.push_back(make_unique<Sequence>());
 }
 
 void Generator::Group::wrap(wrappers_t type)
@@ -1025,14 +1038,14 @@ Generator::GroupSymbol::GroupSymbol() :
 void Generator::GroupSymbol::add(char c)
 {
 	std::string value(1, c);
-	std::unique_ptr<Generator> g = std::make_unique<Random>();
+	std::unique_ptr<Generator> g = make_unique<Random>();
 	try {
 		static const auto& symbols = SymbolMap();
 		for (const auto& s : symbols.at(value)) {
-			g->add(std::make_unique<Literal>(s));
+			g->add(make_unique<Literal>(s));
 		}
 	} catch (const std::out_of_range&) {
-		g->add(std::make_unique<Literal>(value));
+		g->add(make_unique<Literal>(value));
 	}
 	Group::add(std::move(g));
 }
