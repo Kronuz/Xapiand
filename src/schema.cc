@@ -430,7 +430,7 @@ required_spc_t::flags_t::flags_t()
 	  numeric_detection(true),
 	  geo_detection(true),
 	  bool_detection(true),
-	  string_detection(true),
+	  string_detection(false),
 	  text_detection(true),
 	  uuid_detection(true),
 	  field_found(true),
@@ -1686,7 +1686,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[2] = FieldType::UUID;
 				return;
 			}
-			if (specification.flags.text_detection && Serialise::isText(str_value, specification.flags.bool_term)) {
+			if (specification.flags.text_detection && (!specification.flags.string_detection || Serialise::isText(str_value, specification.flags.bool_term))) {
 				specification.sep_types[2] = FieldType::TEXT;
 				return;
 			}
