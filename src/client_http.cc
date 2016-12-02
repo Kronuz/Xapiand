@@ -766,7 +766,9 @@ HttpClient::home_view(enum http_method method)
 	auto document = db_handler.get_document("." + serialise_node_id(local_node_->id));
 
 	auto obj_data = document.get_obj();
-	obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+	if (obj_data.find(ID_FIELD_NAME) == obj_data.end()) {
+		obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+	}
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -914,7 +916,9 @@ HttpClient::index_document_view(enum http_method method)
 
 	if (err_list.empty()) {
 		status_code = HTTP_STATUS_OK;
-		response[ID_FIELD_NAME] = doc_id;
+		if (response.find(ID_FIELD_NAME) == response.end()) {
+			response[ID_FIELD_NAME] = doc_id;
+		}
 		response["_commit"] = query_field->commit;
 	} else {
 		for (const auto& err : err_list) {
@@ -1004,7 +1008,9 @@ HttpClient::update_document_view(enum http_method method)
 
 	if (err_list.empty()) {
 		status_code = HTTP_STATUS_OK;
-		response[ID_FIELD_NAME] = doc_id;
+		if (response.find(ID_FIELD_NAME) == response.end()) {
+			response[ID_FIELD_NAME] = doc_id;
+		}
 		response["_commit"] = query_field->commit;
 	} else {
 		for (const auto& err : err_list) {
@@ -1306,7 +1312,9 @@ HttpClient::search_view(enum http_method method)
 				}
 			}
 
-			obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+			if (obj_data.find(ID_FIELD_NAME) == obj_data.end()) {
+				obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+			}
 			// Detailed info about the document:
 			obj_data[RESERVED_RANK] = m.get_rank();
 			obj_data[RESERVED_WEIGHT] = m.get_weight();
