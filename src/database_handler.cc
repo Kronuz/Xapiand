@@ -323,20 +323,20 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 
 	std::string prefixed_term_id;
 
-	auto serialised_id = schema->serialise_id(_document_id);
-	if (serialised_id.empty()) {
+	auto spc_id = schema->get_data_id();
+	if (spc_id.sep_types[2] == FieldType::EMPTY) {
 		obj_ = obj;
 	} else {
-		prefixed_term_id = prefixed(serialised_id, DOCUMENT_ID_TERM_PREFIX);
+		prefixed_term_id = prefixed(Serialise::serialise(spc_id, _document_id), spc_id.prefix);
 		obj_ = run_script(obj, prefixed_term_id);
 	}
 
 	// Add ID.
 	auto& id_field = obj_[ID_FIELD_NAME];
 	if (id_field.is_map()) {
-		id_field[RESERVED_VALUE] = Cast::cast(_document_id);
+		id_field[RESERVED_VALUE] = Cast::cast(spc_id.sep_types[2], _document_id);
 	} else {
-		id_field = Cast::cast(_document_id);
+		id_field = Cast::cast(spc_id.sep_types[2], _document_id);
 	}
 
 	// Add Content Type.
@@ -358,10 +358,14 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
 	doc.set_data(join_data(obj_.serialise(), blob));
 
-	if (serialised_id.empty()) {
-		// Now the schema is full, get prefixed_term_id
-		prefixed_term_id = prefixed(schema->serialise_id(_document_id), DOCUMENT_ID_TERM_PREFIX);
+	if (prefixed_term_id.empty()) {
+		// Now the schema is full, get specification id.
+		auto spc_id = schema->get_data_id();
+		prefixed_term_id = prefixed(Serialise::serialise(spc_id, _document_id), spc_id.prefix);
 	}
+
+	fprintf(stderr, "+++++++  doc_id: %s\n", repr(_document_id).c_str());
+	fprintf(stderr, "+++++++  prefixed_id: %s\n", repr(prefixed_term_id).c_str());
 
 	Xapian::docid did;
 	const auto _endpoints = endpoints;
@@ -693,9 +697,9 @@ DatabaseHandler::get_document(const std::string& doc_id)
 
 	schema = get_schema();
 
-	auto field_spc = schema->get_slot_field(ID_FIELD_NAME);
+	auto field_spc = schema->get_data_id();
 
-	return get_document_term(prefixed(Serialise::serialise(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
+	return get_document_term(prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix));
 }
 
 
@@ -706,9 +710,9 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 
 	schema = get_schema();
 
-	auto field_spc = schema->get_slot_field(ID_FIELD_NAME);
+	auto field_spc = schema->get_data_id();
 
-	Xapian::Query query(prefixed(Serialise::serialise(field_spc, doc_id), DOCUMENT_ID_TERM_PREFIX));
+	Xapian::Query query(prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix));
 
 	DatabaseHandler::lock_database lk(this);
 	return database->find_document(query);
