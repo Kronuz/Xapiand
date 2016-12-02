@@ -882,10 +882,6 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				}
 			}
 
-			if (!specification.flags.field_found && specification.paths_namespace.size() < 2) {
-				load_default_spc();
-			}
-
 			process_item_value(doc, data, offsprings);
 
 			const auto spc_object = std::move(specification);
@@ -897,18 +893,11 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		}
 
 		case MsgPack::Type::ARRAY:
-			if (!specification.flags.field_found && specification.paths_namespace.size() < 2) {
-				load_default_spc();
-			}
 			set_type_to_array();
 			index_array(*properties, object, *data, doc);
 			break;
 
 		default:
-			if (!specification.flags.field_found && specification.paths_namespace.size() < 2) {
-				load_default_spc();
-			}
-
 			process_item_value(doc, data, object);
 			break;
 	}
@@ -1182,9 +1171,7 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 {
 	L_CALL(nullptr, "Schema::get_prefixes_namespace(%zu)", paths_namespace.size());
 
-	if (paths_namespace.size() == 1) {
-		return { DOCUMENT_NAMESPACE_TERM_PREFIX + paths_namespace.back() };
-	} else if (paths_namespace.size() > NAMESPACE_LIMIT_DEPTH) {
+	if (paths_namespace.size() > NAMESPACE_LIMIT_DEPTH) {
 		THROW(ClientError, "Namespace limit depth is %d, and the namespace provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, paths_namespace.size());
 	}
 
@@ -1374,6 +1361,11 @@ Schema::validate_required_data()
 
 	if (!specification.full_meta_name.empty()) {
 		auto& properties = get_mutable();
+
+		try {
+			auto func = map_dispatch_set_default_spc.at(specification.full_normalized_name);
+			(this->*func)(properties);
+		} catch (const std::out_of_range&) { }
 
 		// Process RESERVED_ACCURACY, RESERVED_ACC_PREFIX.
 		std::set<uint64_t> set_acc;
@@ -1732,16 +1724,6 @@ Schema::guess_field_type(const MsgPack& item_doc)
 	}
 
 	THROW(ClientError, "'%s': %s is ambiguous", RESERVED_VALUE, repr(item_doc.to_string()).c_str());
-}
-
-
-void
-Schema::load_default_spc()
-{
-	try {
-		auto func = map_dispatch_set_default_spc.at(specification.full_normalized_name);
-		(this->*func)(get_mutable());
-	} catch (const std::out_of_range&) { }
 }
 
 
@@ -2389,22 +2371,14 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 			properties = &get_schema_subproperties(*properties);
 		}
 
-		if (!specification.flags.field_found) {
-			load_default_spc();
+		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
+			validate_required_data();
 		}
 
-		if (specification.flags.inside_namespace) {
-			if (offsprings) {
-				THROW(ClientError, "An namespace object can not have children");
-			}
-		} else {
-			if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
-				validate_required_data();
-			}
-			if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY) {
-				specification.sep_types[0] = FieldType::OBJECT;
-			}
+		if (offsprings && specification.flags.inside_namespace) {
+			THROW(ClientError, "An namespace object can not have children in Schema");
 		}
+		set_type_to_object(offsprings);
 
 		const auto spc_object = std::move(specification);
 		for (auto& task : tasks) {
@@ -2535,6 +2509,7 @@ Schema::get_subproperties(const MsgPack& properties)
 			detect_dynamic(field_name);
 			specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.normalized_name));
 		}
+		specification.flags.inside_namespace = true;
 	}
 
 	return *subproperties;
@@ -2888,7 +2863,6 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 		} else {
 			specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
 		}
-		specification.flags.inside_namespace = true;
 	}
 }
 
@@ -2912,7 +2886,7 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 			specification.position.push_back(static_cast<unsigned>(doc_position.as_u64()));
 		}
 
-		if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
+		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 			if (specification.position.size() == 1) {
 				get_mutable()[prop_name] = static_cast<uint64_t>(specification.position.front());
 			} else {
@@ -2944,7 +2918,7 @@ Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
 			specification.weight.push_back(static_cast<unsigned>(doc_weight.as_u64()));
 		}
 
-		if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
+		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 			if (specification.weight.size() == 1) {
 				get_mutable()[prop_name] = static_cast<uint64_t>(specification.weight.front());
 			} else {
@@ -2976,7 +2950,7 @@ Schema::process_spelling(const std::string& prop_name, const MsgPack& doc_spelli
 			specification.spelling.push_back(doc_spelling.as_bool());
 		}
 
-		if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
+		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 			if (specification.spelling.size() == 1) {
 				get_mutable()[prop_name] = static_cast<bool>(specification.spelling.front());
 			} else {
@@ -3008,7 +2982,7 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 			specification.positions.push_back(doc_positions.as_bool());
 		}
 
-		if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
+		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 			if (specification.positions.size() == 1) {
 				get_mutable()[prop_name] = static_cast<bool>(specification.positions.front());
 			} else {
@@ -3266,7 +3240,7 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 		try {
 			specification.index = map_index.at(str_index);
 
-			if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
+			if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 				get_mutable()[prop_name] = specification.index;
 			}
 		} catch (const std::out_of_range&) {
@@ -3291,7 +3265,7 @@ Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
 		specification.flags.store = val_store && specification.flags.parent_store;
 		specification.flags.parent_store = specification.flags.store;
 
-		if unlikely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
+		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 			get_mutable()[prop_name] = val_store;
 		}
 	} catch (const msgpack::type_error&) {
@@ -3310,7 +3284,7 @@ Schema::process_recursive(const std::string& prop_name, const MsgPack& doc_recur
 	 */
 	try {
 		specification.flags.is_recursive = doc_recursive.as_bool();
-		if likely(!specification.flags.field_found && specification.paths_namespace.size() < 2) {
+		if unlikely(!specification.flags.field_found && !specification.flags.inside_namespace) {
 			get_mutable()[prop_name.c_str()] = static_cast<bool>(specification.flags.is_recursive);
 		}
 	} catch (const msgpack::type_error&) {
@@ -3325,7 +3299,7 @@ Schema::process_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic
 	// RESERVED_DYNAMIC is heritable but can't change.
 	L_CALL(this, "Schema::process_dynamic(%s)", repr(doc_dynamic.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
+	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
 		return;
 	}
 
@@ -3344,7 +3318,7 @@ Schema::process_strict(const std::string& prop_name, const MsgPack& doc_strict)
 	// RESERVED_STRICT is heritable but can't change.
 	L_CALL(this, "Schema::process_strict(%s)", repr(doc_strict.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
+	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
 		return;
 	}
 
@@ -3363,7 +3337,7 @@ Schema::process_d_detection(const std::string& prop_name, const MsgPack& doc_d_d
 	// RESERVED_D_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_d_detection(%s)", repr(doc_d_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
+	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
 		return;
 	}
 
@@ -3382,7 +3356,7 @@ Schema::process_n_detection(const std::string& prop_name, const MsgPack& doc_n_d
 	// RESERVED_N_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_n_detection(%s)", repr(doc_n_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
+	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
 		return;
 	}
 
@@ -3401,7 +3375,7 @@ Schema::process_g_detection(const std::string& prop_name, const MsgPack& doc_g_d
 	// RESERVED_G_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_g_detection(%s)", repr(doc_g_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
+	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
 		return;
 	}
 
@@ -3420,7 +3394,7 @@ Schema::process_b_detection(const std::string& prop_name, const MsgPack& doc_b_d
 	// RESERVED_B_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_b_detection(%s)", repr(doc_b_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
+	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
 		return;
 	}
 
@@ -3439,7 +3413,7 @@ Schema::process_s_detection(const std::string& prop_name, const MsgPack& doc_s_d
 	// RESERVED_S_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_s_detection(%s)", repr(doc_s_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
+	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
 		return;
 	}
 
@@ -3458,7 +3432,7 @@ Schema::process_t_detection(const std::string& prop_name, const MsgPack& doc_t_d
 	// RESERVED_T_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_t_detection(%s)", repr(doc_t_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
+	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
 		return;
 	}
 
@@ -3477,7 +3451,7 @@ Schema::process_u_detection(const std::string& prop_name, const MsgPack& doc_u_d
 	// RESERVED_U_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::process_u_detection(%s)", repr(doc_u_detection.to_string()).c_str());
 
-	if likely(specification.flags.field_found || specification.paths_namespace.size() > 1) {
+	if likely(specification.flags.field_found || specification.flags.inside_namespace) {
 		return;
 	}
 
@@ -3564,7 +3538,6 @@ Schema::process_namespace(const std::string& prop_name, const MsgPack& doc_names
 				specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
 			}
 			get_mutable()[prop_name] = true;
-			specification.flags.inside_namespace = true;
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3675,6 +3648,12 @@ Schema::set_default_spc_ct(MsgPack& properties)
 		properties[RESERVED_INDEX] = specification.index;
 	}
 
+	// RESERVED_TYPE by default is STRING
+	if (specification.sep_types[2] == FieldType::EMPTY) {
+		specification.sep_types[2] = FieldType::STRING;
+		properties[RESERVED_TYPE] = specification.sep_types;
+	}
+
 	// RESERVED_STORE by default is false.
 	try {
 		properties.at(RESERVED_STORE);
@@ -3683,9 +3662,14 @@ Schema::set_default_spc_ct(MsgPack& properties)
 		properties[RESERVED_STORE] = static_cast<bool>(specification.flags.store);
 	}
 
+	// Process RESERVED_SLOT
+	if (specification.slot == Xapian::BAD_VALUENO) {
+		specification.slot = DB_SLOT_CONTENT_TYPE;
+	}
+	specification.flags.reserved_slot = true;
+
 	specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
 	properties[RESERVED_NAMESPACE] = true;
-	specification.flags.inside_namespace = true;
 }
 
 
@@ -4235,21 +4219,13 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 							THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
 						}
 					}
-					return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::string());
+					break;
 				} else {
 					THROW(ClientError, "%s does not exist in schema", repr(field_name).c_str());
 				}
 			} catch (const std::out_of_range&) {
 				THROW(ClientError, "%s does not exist in schema", repr(field_name).c_str());
 			}
-		}
-	}
-
-	if (subproperties->find(RESERVED_NAMESPACE) != subproperties->end() && (*subproperties)[RESERVED_NAMESPACE].as_bool()) {
-		if (dynamic_type) {
-			prefix_namespace = Serialise::dynamic_namespace_field(full_normalized_name);
-		} else {
-			prefix_namespace = Serialise::namespace_field(full_normalized_name);
 		}
 	}
 

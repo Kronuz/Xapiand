@@ -407,12 +407,6 @@ class Schema {
 
 
 	/*
-	 * Load the default specifications of reserved fields.
-	 */
-	void load_default_spc();
-
-
-	/*
 	 * Auxiliar functions for index fields in doc.
 	 */
 
