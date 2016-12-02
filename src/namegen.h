@@ -193,6 +193,8 @@ public:
 	Generator(const std::string& pattern, bool collapse_triples=true);
 	Generator(std::vector<std::unique_ptr<Generator>>&& generators_);
 
+	virtual ~Generator() = default;
+
 	virtual size_t combinations();
 	virtual size_t min();
 	virtual size_t max();
