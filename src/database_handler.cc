@@ -364,9 +364,6 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 		prefixed_term_id = prefixed(Serialise::serialise(spc_id, _document_id), spc_id.prefix);
 	}
 
-	fprintf(stderr, "+++++++  doc_id: %s\n", repr(_document_id).c_str());
-	fprintf(stderr, "+++++++  prefixed_id: %s\n", repr(prefixed_term_id).c_str());
-
 	Xapian::docid did;
 	const auto _endpoints = endpoints;
 	for (const auto& e : _endpoints) {
