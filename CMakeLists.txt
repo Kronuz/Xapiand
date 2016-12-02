@@ -120,6 +120,7 @@ include_directories (
 # Check for compiler support for C++14
 check_cxx_compiler_flag (-std=c++14 COMPILER_SUPPORTS_CXX14)
 if (COMPILER_SUPPORTS_CXX14)
+	set (HAVE_CXX14 1)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 else ()
 	message (FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} has no C++14 support. Please use a different C++ compiler.")
