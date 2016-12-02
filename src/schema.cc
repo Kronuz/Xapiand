@@ -895,11 +895,20 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			}
 			break;
 		}
+
 		case MsgPack::Type::ARRAY:
+			if (!specification.flags.field_found && specification.paths_namespace.size() < 2) {
+				load_default_spc();
+			}
 			set_type_to_array();
 			index_array(*properties, object, *data, doc);
 			break;
+
 		default:
+			if (!specification.flags.field_found && specification.paths_namespace.size() < 2) {
+				load_default_spc();
+			}
+
 			process_item_value(doc, data, object);
 			break;
 	}
