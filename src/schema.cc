@@ -1939,7 +1939,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 void
 Schema::index_term(Xapian::Document& doc, std::string serialise_val, const specification_t& field_spc, size_t pos)
 {
-	L_CALL(nullptr, "Schema::index_term()");
+	L_CALL(nullptr, "Schema::index_term(%s)", repr(serialise_val).c_str());
 
 	if (serialise_val.empty()) {
 		return;
