@@ -431,11 +431,6 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 		THROW(ClientError, "Patches must be a JSON or MsgPack");
 	}
 
-	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
-	if (isupper(_document_id[0])) {
-		prefix.append(":");
-	}
-
 	auto document = get_document(_document_id);
 	auto obj = document.get_obj();
 	apply_patch(patches, obj);
