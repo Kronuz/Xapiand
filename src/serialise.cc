@@ -177,25 +177,46 @@ Cast::cast(const MsgPack& obj)
 
 
 MsgPack
-Cast::cast(const std::string& field_value)
+Cast::cast(FieldType type, const std::string& field_value)
 {
-	// Try like INTEGER.
-	try {
-		return MsgPack(stox(std::stoll, field_value));
-	} catch (const std::invalid_argument&) { }
+	switch (type) {
+		case FieldType::INTEGER:
+			try {
+				return MsgPack(stox(std::stoll, field_value));
+			} catch (const std::invalid_argument&) {
+				THROW(SerialisationError, "Value %s can not be cast to integer", field_value.c_str());
+			}
+		case FieldType::POSITIVE:
+			try {
+				return MsgPack(stox(std::stoull, field_value));
+			} catch (const std::invalid_argument&) {
+				THROW(SerialisationError, "Value %s can not be cast to positive", field_value.c_str());
+			}
+		case FieldType::FLOAT:
+			try {
+				return MsgPack(stox(std::stod, field_value));
+			} catch (const std::invalid_argument&) {
+				THROW(SerialisationError, "Value %s can not be cast to float", field_value.c_str());
+			}
+		case FieldType::EMPTY:
+			// Try like INTEGER.
+			try {
+				return MsgPack(stox(std::stoll, field_value));
+			} catch (const std::invalid_argument&) { }
 
-	// Try like POSITIVE.
-	try {
-		return  MsgPack(stox(std::stoull, field_value));
-	} catch (const std::invalid_argument&) { }
+			// Try like POSITIVE.
+			try {
+				return  MsgPack(stox(std::stoull, field_value));
+			} catch (const std::invalid_argument&) { }
 
-	// Try like FLOAT
-	try {
-		return  MsgPack(stox(std::stod, field_value));
-	} catch (const std::invalid_argument&) { }
-
-	// Default type STRING.
-	return MsgPack(field_value);
+			// Try like FLOAT
+			try {
+				return MsgPack(stox(std::stod, field_value));
+			} catch (const std::invalid_argument&) { }
+		default:
+			// Default type STRING.
+			return MsgPack(field_value);
+	}
 }
 
 
