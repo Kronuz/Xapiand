@@ -106,8 +106,8 @@
 #define RESERVED_GEO_INTERSECTION  "_geometryintersection"
 
 
-#define DB_OFFSPRING_UNION "."
-#define DB_VERSION_SCHEMA  2.1
+#define DB_OFFSPRING_UNION     "."
+#define DB_VERSION_SCHEMA      1.0
 
 #define DB_SLOT_RESERVED       20    // Reserved slots by special data
 #define DB_RETRIES             3     // Number of tries to do an operation on a Xapian::Database
