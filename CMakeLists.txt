@@ -245,9 +245,9 @@ foreach (opt "long long" "uint16_t" "u_int16_t" "__uint16" "_Bool")
 	string (TOUPPER "${OPT}" OPT)
 	check_type_size ("${opt}" "${OPT}")
 	if (${OPT})
-		set ("HAVE_${OPT}" 1)
+		set (HAVE_${OPT} 1)
 	else ()
-		set ("HAVE_${OPT}" 0)
+		set (HAVE_${OPT} 0)
 	endif ()
 endforeach ()
 
@@ -289,11 +289,11 @@ endif ()
 
 find_package (ZLIB)
 if (ZLIB_FOUND)
-	set ("HAVE_ZLIB" 1)
+	set (HAVE_ZLIB 1)
 	include_directories (BEFORE "${ZLIB_INCLUDE_DIRS}")
 	target_link_libraries (${PROJECT_NAME} ${ZLIB_LIBRARIES})
 else ()
-	set ("HAVE_ZLIB" 0)
+	set (HAVE_ZLIB 0)
 endif ()
 
 
@@ -313,10 +313,10 @@ endif ()
 
 find_library (RT_LIBRARIES rt)
 if (RT_LIBRARIES)
-	set ("HAVE_RT" 1)
+	set (HAVE_RT 1)
 	target_link_libraries (${PROJECT_NAME} ${RT_LIBRARIES})
 else ()
-	set ("HAVE_RT" 0)
+	set (HAVE_RT 0)
 endif ()
 
 
@@ -326,10 +326,10 @@ endif ()
 
 find_library (M_LIBRARIES m)
 if (M_LIBRARIES)
-	set ("HAVE_M" 1)
+	set (HAVE_M 1)
 	target_link_libraries (${PROJECT_NAME} ${M_LIBRARIES})
 else ()
-	set ("HAVE_M" 0)
+	set (HAVE_M 0)
 	set (M_LIBRARIES "")
 endif ()
 
@@ -343,9 +343,9 @@ find_package (Threads REQUIRED)
 target_link_libraries (${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
 if (CMAKE_USE_PTHREADS_INIT)
-	set ("HAVE_PTHREADS" 1)
+	set (HAVE_PTHREADS 1)
 else ()
-	set ("HAVE_PTHREADS" 0)
+	set (HAVE_PTHREADS 0)
 endif ()
 
 
