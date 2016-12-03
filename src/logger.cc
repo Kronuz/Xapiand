@@ -36,7 +36,7 @@
 #include "exception.h"   // for traceback
 #include "utils.h"       // for get_thread_name
 
-#define BUFFER_SIZE (10 * 1024)
+#define BUFFER_SIZE (500 * 1024)
 #define STACKED_INDENT "<indent>"
 
 
