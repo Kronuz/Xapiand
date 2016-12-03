@@ -94,7 +94,7 @@ std::shared_ptr<XapiandManager> XapiandManager::manager;
 void sig_exit(int sig)
 {
 	if (XapiandManager::manager) {
-		XapiandManager::manager->shutdown_sig(sig);
+		XapiandManager::manager->signal_sig(sig);
 	} else if (sig < 0) {
 		exit(-sig);
 	}
@@ -121,9 +121,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	  solo(true),
 #endif
 	  strict(o.strict),
-	  shutdown_sig_async(*ev_loop),
-	  shutdown_sig_sig(0)
-
+	  atom_sig(0),
+	  signal_sig_async(*ev_loop)
 {
 	// Set the id in local node.
 	auto local_node_ = local_node.load();
@@ -151,8 +150,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 
 	local_node = std::shared_ptr<const Node>(node_copy.release());
 
-	shutdown_sig_async.set<XapiandManager, &XapiandManager::shutdown_sig_async_cb>(this);
-	shutdown_sig_async.start();
+	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
+	signal_sig_async.start();
 
 	L_OBJ(this, "CREATED XAPIAN MANAGER!");
 }
@@ -445,24 +444,42 @@ XapiandManager::host_address()
 
 
 void
-XapiandManager::shutdown_sig(int sig)
+XapiandManager::signal_sig(int sig)
 {
-	shutdown_sig_sig = sig;
-	shutdown_sig_async.send();
+	atom_sig = sig;
+	signal_sig_async.send();
 }
 
 
 void
-XapiandManager::shutdown_sig_async_cb(ev::async&, int revents)
+XapiandManager::signal_sig_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "XapiandManager::shutdown_sig_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "XapiandManager::signal_sig_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+
+	int sig = atom_sig;
+	switch (sig) {
+		case SIGTERM:
+		case SIGINT:
+			shutdown_sig(sig);
+			break;
+
+		case SIGINFO:
+			log(this, "Workers:" BLUE "%s", dump_tree().c_str());
+			break;
+	}
+}
+
+
+void
+XapiandManager::shutdown_sig(int sig)
+{
+	L_CALL(this, "XapiandManager::shutdown_sig(%d)", sig);
 
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
 	 * the user really wanting to quit ASAP without waiting to persist
 	 * on disk. */
 	auto now = epoch::now<>();
-	int sig = shutdown_sig_sig;
 
 	if (sig < 0) {
 		throw Exit(-sig);

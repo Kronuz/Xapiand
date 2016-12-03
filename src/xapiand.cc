@@ -161,16 +161,14 @@ void sig_handler(int sig) {
 	const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
 	write(STDERR_FILENO, msg.data(), msg.size());
 
-	switch (sig) {
 #if !defined(NDEBUG) && (defined(__APPLE__) || defined(__FreeBSD__))
-		case SIGINFO:
-			sig_info(sig);
-			break;
+	if (sig == SIGINFO) {
+		sig_info(sig);
+	}
 #endif
-		case SIGTERM:
-		case SIGINT:
-			sig_exit(sig);
-			break;
+
+	if (XapiandManager::manager) {
+		XapiandManager::manager->signal_sig(sig);
 	}
 }
 
@@ -188,9 +186,9 @@ void setup_signal_handlers(void) {
 	act.sa_handler = sig_handler;
 	sigaction(SIGTERM, &act, nullptr);  // On software termination signal
 	sigaction(SIGINT, &act, nullptr);   // On interrupt program (Ctrl-C)
-#if !defined(NDEBUG) && (defined(__APPLE__) || defined(__FreeBSD__))
 	sigaction(SIGINFO, &act, nullptr);  // On status request from keyboard (Ctrl-T)
-#endif
+	sigaction(SIGUSR1, &act, nullptr);
+	sigaction(SIGUSR1, &act, nullptr);
 }
 
 

@@ -176,10 +176,13 @@ public:
 	bool solo;
 	bool strict;
 
+	std::atomic_int atom_sig;
+	ev::async signal_sig_async;
 	ev::async shutdown_sig_async;
-	std::atomic_int shutdown_sig_sig;
+	void signal_sig(int sig);
+	void signal_sig_async_cb(ev::async&, int);
+
 	void shutdown_sig(int sig);
-	void shutdown_sig_async_cb(ev::async&, int);
 
 	~XapiandManager();
 
