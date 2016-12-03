@@ -74,6 +74,8 @@ protected:
 		  _break_loop_async(*ev_loop),
 		  _destroy_async(*ev_loop),
 		  _detach_children_async(*ev_loop),
+		  _runner(false),
+		  _detaching(false),
 		  _parent(std::forward<T>(parent))
 	{
 		_init();
