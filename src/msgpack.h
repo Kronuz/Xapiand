@@ -783,8 +783,8 @@ inline void MsgPack::_deinit() {
 
 inline void MsgPack::_reserve_map(size_t rsize) {
 	if (_body->_capacity <= static_cast<ssize_t>(rsize)) {
-		size_t nsize = _body->_capacity > 1 ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_MAP_INIT_SIZE;
-		while (nsize < rsize || nsize < MSGPACK_MAP_INIT_SIZE) {
+		size_t nsize = _body->_capacity >= MSGPACK_MAP_INIT_SIZE ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_MAP_INIT_SIZE;
+		while (nsize < rsize) {
 			nsize *= MSGPACK_GROWTH_FACTOR;
 		}
 		auto ptr = static_cast<msgpack::object_kv*>(_body->_zone->allocate_align(nsize * sizeof(msgpack::object_kv)));
@@ -804,8 +804,8 @@ inline void MsgPack::_reserve_map(size_t rsize) {
 
 inline void MsgPack::_reserve_array(size_t rsize) {
 	if (_body->_capacity <= static_cast<ssize_t>(rsize)) {
-		size_t nsize = _body->_capacity > 1 ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_ARRAY_INIT_SIZE;
-		while (nsize < rsize || nsize < MSGPACK_ARRAY_INIT_SIZE) {
+		size_t nsize = _body->_capacity >= MSGPACK_ARRAY_INIT_SIZE ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_ARRAY_INIT_SIZE;
+		while (nsize < rsize) {
 			nsize *= MSGPACK_GROWTH_FACTOR;
 		}
 		auto ptr = static_cast<msgpack::object*>(_body->_zone->allocate_align(nsize * sizeof(msgpack::object)));
