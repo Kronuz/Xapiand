@@ -34,9 +34,9 @@
 #include <sstream>
 #include <unordered_map>
 
-#define MSGPACK_MAP_INIT_SIZE    16
-#define MSGPACK_ARRAY_INIT_SIZE  16
-#define MSGPACK_GROWTH_FACTOR    1.5  // Choosing 1.5 as the factor allows memory reuse after 4 reallocations (https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md)
+#define MSGPACK_MAP_INIT_SIZE    4
+#define MSGPACK_ARRAY_INIT_SIZE  4
+#define MSGPACK_GROWTH_FACTOR    1.5f  // Choosing 1.5 as the factor allows memory reuse after 4 reallocations (https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md)
 
 
 static constexpr const char* const MsgPackTypes[] = {
@@ -783,7 +783,7 @@ inline void MsgPack::_deinit() {
 
 inline void MsgPack::_reserve_map(size_t rsize) {
 	if (_body->_capacity <= static_cast<ssize_t>(rsize)) {
-		size_t nsize = _body->_capacity > 0 ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_MAP_INIT_SIZE;
+		size_t nsize = _body->_capacity > 1 ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_MAP_INIT_SIZE;
 		while (nsize < rsize || nsize < MSGPACK_MAP_INIT_SIZE) {
 			nsize *= MSGPACK_GROWTH_FACTOR;
 		}
@@ -804,7 +804,7 @@ inline void MsgPack::_reserve_map(size_t rsize) {
 
 inline void MsgPack::_reserve_array(size_t rsize) {
 	if (_body->_capacity <= static_cast<ssize_t>(rsize)) {
-		size_t nsize = _body->_capacity > 0 ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_ARRAY_INIT_SIZE;
+		size_t nsize = _body->_capacity > 1 ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_ARRAY_INIT_SIZE;
 		while (nsize < rsize || nsize < MSGPACK_ARRAY_INIT_SIZE) {
 			nsize *= MSGPACK_GROWTH_FACTOR;
 		}
