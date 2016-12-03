@@ -464,7 +464,7 @@ XapiandManager::signal_sig_async_cb(ev::async&, int revents)
 			break;
 
 		case SIGINFO:
-			log(this, "Workers:" BLUE "%s", dump_tree().c_str());
+			print(BLUE "Workers: %s", dump_tree().c_str());
 			break;
 	}
 }
