@@ -117,13 +117,15 @@ SchedulerQueue::add(const TaskType& task, unsigned long long key)
 
 
 Scheduler::Scheduler(const std::string& name_)
-	: name(name_),
+	: atom_next_wakeup_time(0),
+	  name(name_),
 	  running(-1),
 	  inner_thread(&Scheduler::run, this) { }
 
 
 Scheduler::Scheduler(const std::string& name_, const std::string format, size_t num_threads)
 	: thread_pool(std::make_unique<ThreadPool<>>(format, num_threads)),
+	  atom_next_wakeup_time(0),
 	  name(name_),
 	  running(-1),
 	  inner_thread(&Scheduler::run, this) { }

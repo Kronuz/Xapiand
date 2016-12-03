@@ -186,7 +186,7 @@ public:
 template<typename... Params>
 class ThreadPool : public TaskQueue<Params...> {
 	std::function<void(size_t)> worker;
-	std::atomic<size_t> running_tasks;
+	std::atomic_size_t running_tasks;
 	std::atomic_bool full_pool;
 	std::string format;
 	std::vector<std::thread> threads;

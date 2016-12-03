@@ -180,6 +180,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 	  pretty(false),
 	  response_size(0),
 	  body_size(0),
+	  response_logged(false),
 	  body_descriptor(0),
 	  request_begining(true)
 {

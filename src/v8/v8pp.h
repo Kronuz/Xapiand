@@ -308,7 +308,8 @@ class Processor {
 		}
 
 	public:
-		PropertyHandler(v8::Isolate* isolate_) : isolate(isolate_) {
+		PropertyHandler(v8::Isolate* isolate_)
+			: isolate(isolate_) {
 			v8::Local<v8::ObjectTemplate> obj_template_ = v8::ObjectTemplate::New(isolate);
 			obj_template_->SetInternalFieldCount(1);
 			obj_template_->SetNamedPropertyHandler(property_getter_cb, property_setter_cb, property_query_cb, property_deleter_cb, enumerator_cb, v8::External::New(isolate, this));
@@ -469,8 +470,8 @@ class Processor {
 
 public:
 	Processor(const std::string& script_name, const std::string& script_source)
-		: isolate(v8::Isolate::New(engine().create_params))
-	{
+		: isolate(v8::Isolate::New(engine().create_params)),
+		  finished(false) {
 		Initialize(script_name, script_source);
 	}
 
