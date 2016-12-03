@@ -721,7 +721,7 @@ HttpClient::get_body()
 	auto ct_type = content_type;
 
 	if (ct_type.empty()) {
-		ct_type = FORM_URLENCODED_CONTENT_TYPE;
+		ct_type = JSON_CONTENT_TYPE;
 	}
 	MsgPack msgpack;
 	rapidjson::Document rdoc;
