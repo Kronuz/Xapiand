@@ -4073,7 +4073,6 @@ Schema::get_data_id() const
 
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		res.prefix = properties.at(RESERVED_PREFIX).as_string();
-		return res;
 	} catch (const std::out_of_range&) { }
 
 	return res;
