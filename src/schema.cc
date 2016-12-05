@@ -1073,7 +1073,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", data.to_string().c_str(), item_value.to_string().c_str(), pos);
 
-	L_SCHEMA(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
+	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Final specification, as indexed
 
 	if (item_value.is_null()) {
 		if (specification.flags.inside_namespace) {
@@ -1129,7 +1129,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", data->to_string().c_str(), item_value.to_string().c_str());
 
-	L_SCHEMA(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
+	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Final specification, as indexed
 
 	if (item_value.is_null()) {
 		if (specification.flags.inside_namespace) {
@@ -1183,9 +1183,9 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offsprings)
 {
-	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", data->to_string().c_str(), offsprings ? "true" : "false");
+	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", repr(data->to_string()).c_str(), offsprings ? "true" : "false");
 
-	L_SCHEMA(this, "%s", specification.to_string().c_str());  // Final specification, as indexed
+	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Final specification, as indexed
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
@@ -1414,7 +1414,7 @@ Schema::update_dynamic_specification()
 void
 Schema::set_type_to_object(bool offsprings)
 {
-	L_CALL(this, "Schema::set_type_to_object()");
+	L_CALL(this, "Schema::set_type_to_object(%d)", offsprings);
 
 	if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		auto& _types = get_mutable()[RESERVED_TYPE];
@@ -1729,7 +1729,7 @@ Schema::validate_required_data(const MsgPack& value)
 {
 	L_CALL(this, "Schema::validate_required_data(%s)", repr(value.to_string()).c_str());
 
-	// L_DEBUG(this, "%s", specification.to_string().c_str());  // Print specification as sent by user
+	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Print specification as sent by user
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		if (XapiandManager::manager->strict || specification.flags.strict) {
@@ -1745,7 +1745,7 @@ Schema::validate_required_data(const MsgPack& value)
 void
 Schema::guess_field_type(const MsgPack& item_doc)
 {
-	L_CALL(this, "Schema::guess_field_type()");
+	L_CALL(this, "Schema::guess_field_type(%s)", repr(item_doc.to_string()).c_str());
 
 	const auto& field = item_doc.is_array() ? item_doc.at(0) : item_doc;
 	switch (field.getType()) {
@@ -1893,6 +1893,8 @@ template <typename T>
 inline void
 Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 {
+	L_CALL(this, "Schema::_index_item(<doc>, <values>, %zu)", pos);
+
 	switch (specification.index) {
 		case TypeIndex::NONE: {
 			return;
@@ -3719,7 +3721,7 @@ void
 Schema::process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object)
 {
 	// This property isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_radius(%s, %s)", prop_name.c_str(), repr(doc_cast_object.to_string()).c_str());
+	L_CALL(this, "Schema::process_cast_object(%s)", repr(doc_cast_object.to_string()).c_str());
 
 	if (!specification.value_rec) {
 		specification.value_rec = std::make_unique<MsgPack>();
@@ -3834,7 +3836,7 @@ Schema::get_readable() const
 void
 Schema::readable(MsgPack& item_schema, bool is_root)
 {
-	L_CALL(nullptr, "Schema::readable(%s)", repr(item_schema.to_string()).c_str());
+	L_CALL(nullptr, "Schema::readable(%s, %d)", repr(item_schema.to_string()).c_str(), is_root);
 
 	// Change this item of schema in readable form.
 	static const auto dsit_e = map_dispatch_set_default_spc.end();
@@ -3954,7 +3956,7 @@ Schema::get_const_schema() const
 std::string
 Schema::to_string(bool prettify) const
 {
-	L_CALL(this, "Schema::to_string()");
+	L_CALL(this, "Schema::to_string(%d)", prettify);
 
 	return get_readable().to_string(prettify);
 }
@@ -3963,7 +3965,7 @@ Schema::to_string(bool prettify) const
 MsgPack
 Schema::index(const MsgPack& object, Xapian::Document& doc)
 {
-	L_CALL(this, "Schema::index(%s)", repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::index(%s, <doc>)", repr(object.to_string()).c_str());
 
 	try {
 		MsgPack data;
