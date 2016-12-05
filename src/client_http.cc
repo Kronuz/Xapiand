@@ -415,8 +415,11 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					std::sregex_iterator end;
 					int i = 0;
 					while (next != end) {
-						next->length(3) != 0 ? self->accept_set.insert(std::make_tuple(std::stod(next->str(3)), i, std::make_pair(next->str(1), next->str(2))))
-							: self->accept_set.insert(std::make_tuple(1, i, std::make_pair(next->str(1), next->str(2))));
+						if (next->length(3)) {
+							self->accept_set.insert(std::make_tuple(std::stod(next->str(3)), i, std::make_pair(next->str(1), next->str(2))));
+						} else {
+							self->accept_set.insert(std::make_tuple(1, i, std::make_pair(next->str(1), next->str(2))));
+						}
 						++next;
 						++i;
 					}
