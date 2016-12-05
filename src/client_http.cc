@@ -179,8 +179,8 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
 	  pretty(false),
 	  response_size(0),
-	  body_size(0),
 	  response_logged(false),
+	  body_size(0),
 	  body_descriptor(0),
 	  request_begining(true)
 {
