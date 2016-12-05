@@ -346,6 +346,8 @@ QueryDSL::query(const MsgPack& obj)
 			switch (std::get<0>(ser_type)) {
 				case FieldType::TEXT: {
 					Xapian::QueryParser queryTexts;
+					auto stopper = getStopper(std::get<2>(ser_type).stem_language);
+					queryTexts.set_stopper(stopper.get());
 					queryTexts.set_stemming_strategy(getQueryParserStemStrategy(std::get<2>(ser_type).stem_strategy));
 					queryTexts.set_stemmer(Xapian::Stem(std::get<2>(ser_type).stem_language));
 					return queryTexts.parse_query(obj.as_string(), spc_dsl.q_flags);
@@ -385,6 +387,8 @@ QueryDSL::query(const MsgPack& obj)
 								field_spc.flags.bool_term ? queryString.add_boolean_prefix("_", field_spc.prefix) : queryString.add_prefix("_", field_spc.prefix);
 
 								//queryString.set_database(*database->db);
+								auto stopper = getStopper(field_spc.stem_language);
+								queryString.set_stopper(stopper.get());
 								queryString.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 								queryString.set_stemmer(Xapian::Stem(field_spc.stem_language));
 								std::string str_string;
@@ -401,6 +405,8 @@ QueryDSL::query(const MsgPack& obj)
 							auto field_value = Serialise::MsgPack(field_spc, obj);
 							Xapian::QueryParser queryTexts;
 							field_spc.flags.bool_term ? queryTexts.add_boolean_prefix(fieldname, field_spc.prefix) : queryTexts.add_prefix(fieldname, field_spc.prefix);
+							auto stopper = getStopper(field_spc.stem_language);
+							queryTexts.set_stopper(stopper.get());
 							queryTexts.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 							queryTexts.set_stemmer(Xapian::Stem(field_spc.stem_language));
 							std::string str_texts;
