@@ -222,7 +222,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 					Xapian::QueryParser queryTexts;
 					global_spc.flags.bool_term ? queryTexts.add_boolean_prefix("_", global_spc.prefix) : queryTexts.add_prefix("_", global_spc.prefix);
 					queryTexts.set_database(*database->db);
-					queryTexts.set_stemming_strategy(getQueryParserStrategy(global_spc.stem_strategy));
+					queryTexts.set_stemming_strategy(getQueryParserStemStrategy(global_spc.stem_strategy));
 					queryTexts.set_stemmer(Xapian::Stem(global_spc.stem_language));
 					std::string str_texts;
 					str_texts.reserve(2 + field_value.length());
@@ -235,7 +235,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 						Xapian::QueryParser queryString;
 						global_spc.flags.bool_term ? queryString.add_boolean_prefix("_", global_spc.prefix) : queryString.add_prefix("_", global_spc.prefix);
 						queryString.set_database(*database->db);
-						queryString.set_stemming_strategy(getQueryParserStrategy(global_spc.stem_strategy));
+						queryString.set_stemming_strategy(getQueryParserStemStrategy(global_spc.stem_strategy));
 						queryString.set_stemmer(Xapian::Stem(global_spc.stem_language));
 						std::string str_string;
 						str_string.reserve(2 + field_value.length());
@@ -286,7 +286,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 						field_spc.flags.bool_term ? queryString.add_boolean_prefix("_", field_spc.prefix) : queryString.add_prefix("_", field_spc.prefix);
 
 						queryString.set_database(*database->db);
-						queryString.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
+						queryString.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 						queryString.set_stemmer(Xapian::Stem(field_spc.stem_language));
 						std::string str_string;
 						str_string.reserve(2 + field_value.length());
@@ -305,7 +305,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 					field_spc.flags.bool_term ? queryTexts.add_boolean_prefix("_", field_spc.prefix) : queryTexts.add_prefix("_", field_spc.prefix);
 
 					queryTexts.set_database(*database->db);
-					queryTexts.set_stemming_strategy(getQueryParserStrategy(field_spc.stem_strategy));
+					queryTexts.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 					queryTexts.set_stemmer(Xapian::Stem(field_spc.stem_language));
 					std::string str_texts;
 					str_texts.reserve(2 + field_value.length());
@@ -439,7 +439,7 @@ Query::get_namespace_query(const std::string& full_name, const std::string& pref
 		case FieldType::TEXT: {
 			Xapian::QueryParser queryTexts;
 			queryTexts.set_database(*database->db);
-			queryTexts.set_stemming_strategy(getQueryParserStrategy(spc.stem_strategy));
+			queryTexts.set_stemming_strategy(getQueryParserStemStrategy(spc.stem_strategy));
 			queryTexts.set_stemmer(Xapian::Stem(spc.stem_language));
 			spc.flags.bool_term ? queryTexts.add_boolean_prefix("_", spc.prefix) : queryTexts.add_prefix("_", spc.prefix);
 			std::string str_texts;

@@ -79,6 +79,8 @@
 #define RESERVED_TERMS             "_terms"
 #define RESERVED_DATA              "_data"
 // Reserved words used in schema only for TEXT fields.
+#define RESERVED_STOP_STRATEGY     "_stop_strategy"
+#define RESERVED_STOP_WORDS        "_stop_words"
 #define RESERVED_STEM_STRATEGY     "_stem_strategy"
 #define RESERVED_STEM_LANGUAGE     "_stem_language"
 // Reserved words used in schema only for GEO fields.

@@ -81,6 +81,13 @@ const std::unordered_map<std::string, UnitTime> map_acc_date({
 });
 
 
+const std::unordered_map<std::string, StopStrategy> map_stop_strategy({
+	{ "stop_none",    StopStrategy::STOP_NONE    }, { "none",    StopStrategy::STOP_NONE    },
+	{ "stop_all",     StopStrategy::STOP_ALL     }, { "all",     StopStrategy::STOP_ALL     },
+	{ "stop_stemmed", StopStrategy::STOP_STEMMED }, { "stemmed", StopStrategy::STOP_STEMMED },
+});
+
+
 const std::unordered_map<std::string, StemStrategy> map_stem_strategy({
 	{ "stem_none",  StemStrategy::STEM_NONE   }, { "none",  StemStrategy::STEM_NONE   },
 	{ "stem_some",  StemStrategy::STEM_SOME   }, { "some",  StemStrategy::STEM_SOME   },
@@ -124,6 +131,50 @@ const std::unordered_map<std::string, FieldType> map_type({
 });
 
 
+const std::unordered_map<std::string, std::vector<const char* const>> all_stopwords = {
+	{"en", {
+		"a", "an", "and", "are", "as", "at", "be", "but", "by",
+		"for", "if", "in", "into", "is", "it",
+		"no", "not", "of", "on", "or", "such",
+		"that", "the", "their", "then", "there", "these",
+		"they", "this", "to", "was", "will", "with"
+	}},
+	{"es", {
+		"un", "una", "unas", "unos", "uno", "sobre", "todo",
+		"también", "tras", "otro", "algún", "alguno", "alguna",
+		"algunos", "algunas", "ser", "es", "soy", "eres", "somos",
+		"sois", "estoy", "esta", "estamos", "estais", "estan",
+		"en", "para", "atras", "porque", "por qué", "estado",
+		"estaba", "ante", "antes", "siendo", "ambos", "pero",
+		"por", "poder", "puede", "puedo", "podemos", "podeis",
+		"pueden", "fui", "fue", "fuimos", "fueron", "hacer",
+		"hago", "hace", "hacemos", "haceis", "hacen", "cada",
+		"fin", "incluso", "primero", "desde", "conseguir",
+		"consigo", "consigue", "consigues", "conseguimos",
+		"consiguen", "ir", "voy", "va", "vamos", "vais", "van",
+		"vaya", "bueno", "ha", "tener", "tengo", "tiene",
+		"tenemos", "teneis", "tienen", "el", "la", "lo", "las",
+		"los", "su", "aqui", "mio", "tuyo", "ellos", "ellas",
+		"nos", "nosotros", "vosotros", "vosotras", "si",
+		"dentro", "solo", "solamente", "saber", "sabes",
+		"sabe", "sabemos", "sabeis", "saben", "ultimo", "largo",
+		"bastante", "haces", "muchos", "aquellos", "aquellas",
+		"sus", "entonces", "tiempo", "verdad", "verdadero",
+		"verdadera", "cierto", "ciertos", "cierta", "ciertas",
+		"intentar", "intento", "intenta", "intentas", "intentamos",
+		"intentais", "intentan", "dos", "bajo", "arriba", "encima",
+		"usar", "uso", "usas", "usa", "usamos", "usais", "usan",
+		"emplear", "empleo", "empleas", "emplean", "ampleamos",
+		"empleais", "valor", "muy", "era", "eras", "eramos", "eran",
+		"modo", "bien", "cual", "cuando", "donde", "mientras", "quien",
+		"con", "entre", "sin", "trabajo", "trabajar", "trabajas",
+		"trabaja", "trabajamos", "trabajais", "trabajan", "podria",
+		"podrias", "podriamos", "podrian", "podriais", "yo", "aquel",
+		"mi", "de", "a", "e", "i", "o", "u"
+	}},
+};
+
+
 /*
  * Default accuracies.
  */
@@ -153,8 +204,18 @@ inline static std::string readable_acc_date(UnitTime unit) noexcept {
 }
 
 
-inline static std::string readable_stem_strategy(StemStrategy stem) noexcept {
-	switch (stem) {
+inline static std::string readable_stop_strategy(StopStrategy stop_strategy) noexcept {
+	switch (stop_strategy) {
+		case StopStrategy::STOP_NONE:    return "stop_none";
+		case StopStrategy::STOP_ALL:     return "stop_all";
+		case StopStrategy::STOP_STEMMED: return "stop_stemmed";
+		default:                         return "StopStrategy::UNKNOWN";
+	}
+}
+
+
+inline static std::string readable_stem_strategy(StemStrategy stem_strategy) noexcept {
+	switch (stem_strategy) {
 		case StemStrategy::STEM_NONE:   return "stem_none";
 		case StemStrategy::STEM_SOME:   return "stem_some";
 		case StemStrategy::STEM_ALL:    return "stem_all";
@@ -266,6 +327,15 @@ static const std::string str_set_acc_date = []() {
 	return res;
 }();
 
+static const std::string str_set_stop_strategy = []() {
+	std::string res("{ ");
+	for (const auto& p : map_stop_strategy) {
+		res.append(p.first).append(", ");
+	}
+	res.push_back('}');
+	return res;
+}();
+
 static const std::string str_set_stem_strategy = []() {
 	std::string res("{ ");
 	for (const auto& p : map_stem_strategy) {
@@ -328,6 +398,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_NAME,               &Schema::process_name            },
 	{ RESERVED_ACCURACY,           &Schema::process_accuracy        },
 	{ RESERVED_ACC_PREFIX,         &Schema::process_acc_prefix      },
+	{ RESERVED_STOP_STRATEGY,      &Schema::process_stop_strategy   },
 	{ RESERVED_STEM_STRATEGY,      &Schema::process_stem_strategy   },
 	{ RESERVED_STEM_LANGUAGE,      &Schema::process_stem_language   },
 	{ RESERVED_LANGUAGE,           &Schema::process_language        },
@@ -380,6 +451,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 	{ RESERVED_BOOL_TERM,       &Schema::update_bool_term        },
 	{ RESERVED_ACCURACY,        &Schema::update_accuracy         },
 	{ RESERVED_ACC_PREFIX,      &Schema::update_acc_prefix       },
+	{ RESERVED_STOP_STRATEGY,   &Schema::update_stop_strategy    },
 	{ RESERVED_STEM_STRATEGY,   &Schema::update_stem_strategy    },
 	{ RESERVED_STEM_LANGUAGE,   &Schema::update_stem_language    },
 	{ RESERVED_LANGUAGE,        &Schema::update_language         },
@@ -392,6 +464,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_dispatch_readable({
 	{ RESERVED_TYPE,            &Schema::readable_type           },
 	{ RESERVED_PREFIX,          &Schema::readable_prefix         },
+	{ RESERVED_STOP_STRATEGY,   &Schema::readable_stop_strategy  },
 	{ RESERVED_STEM_STRATEGY,   &Schema::readable_stem_strategy  },
 	{ RESERVED_INDEX,           &Schema::readable_index          },
 	{ RESERVED_ACC_PREFIX,      &Schema::readable_acc_prefix     },
@@ -445,6 +518,7 @@ required_spc_t::flags_t::flags_t()
 required_spc_t::required_spc_t()
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY }}),
 	  slot(Xapian::BAD_VALUENO),
+	  stop_strategy(DEFAULT_STOP_STRATEGY),
 	  stem_strategy(DEFAULT_STEM_STRATEGY),
 	  stem_language(DEFAULT_LANGUAGE),
 	  language(DEFAULT_LANGUAGE),
@@ -458,6 +532,7 @@ required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std:
 	  slot(_slot),
 	  accuracy(acc),
 	  acc_prefix(_acc_prefix),
+	  stop_strategy(DEFAULT_STOP_STRATEGY),
 	  stem_strategy(DEFAULT_STEM_STRATEGY),
 	  stem_language(DEFAULT_LANGUAGE),
 	  language(DEFAULT_LANGUAGE),
@@ -471,6 +546,7 @@ required_spc_t::required_spc_t(const required_spc_t& o)
 	  flags(o.flags),
 	  accuracy(o.accuracy),
 	  acc_prefix(o.acc_prefix),
+	  stop_strategy(o.stop_strategy),
 	  stem_strategy(o.stem_strategy),
 	  stem_language(o.stem_language),
 	  language(o.language),
@@ -485,6 +561,7 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 	  flags(std::move(o.flags)),
 	  accuracy(std::move(o.accuracy)),
 	  acc_prefix(std::move(o.acc_prefix)),
+	  stop_strategy(std::move(o.stop_strategy)),
 	  stem_strategy(std::move(o.stem_strategy)),
 	  stem_language(std::move(o.stem_language)),
 	  language(std::move(o.language)),
@@ -562,6 +639,7 @@ specification_t::operator=(const specification_t& o)
 	script = o.script;
 	accuracy = o.accuracy;
 	acc_prefix = o.acc_prefix;
+	stop_strategy = o.stop_strategy;
 	stem_strategy = o.stem_strategy;
 	stem_language = o.stem_language;
 	language = o.language;
@@ -596,6 +674,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	script = std::move(o.script);
 	accuracy = std::move(o.accuracy);
 	acc_prefix = std::move(o.acc_prefix);
+	stop_strategy = std::move(o.stop_strategy);
 	stem_strategy = std::move(o.stem_strategy);
 	stem_language = std::move(o.stem_language);
 	language = std::move(o.language);
@@ -687,6 +766,7 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
+	str << "\t" << RESERVED_STOP_STRATEGY    << ": " << readable_stop_strategy(stop_strategy) << "\n";
 	str << "\t" << RESERVED_STEM_STRATEGY    << ": " << readable_stem_strategy(stem_strategy) << "\n";
 	str << "\t" << RESERVED_STEM_LANGUAGE    << ": " << stem_language     << "\n";
 	str << "\t" << RESERVED_LANGUAGE         << ": " << language          << "\n";
@@ -1485,6 +1565,8 @@ Schema::validate_required_data()
 					}
 				}
 
+				properties[RESERVED_STOP_STRATEGY] = specification.stop_strategy;
+
 				properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
 				if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
 					specification.stem_language = specification.aux_lan;
@@ -1593,6 +1675,8 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 				if (!specification.flags.has_index) {
 					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 				}
+
+				specification.stop_strategy = default_spc.stop_strategy;
 
 				specification.stem_strategy = default_spc.stem_strategy;
 				specification.stem_language = default_spc.stem_language;
@@ -1931,9 +2015,17 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 
 	if (field_spc.sep_types[2] == FieldType::TEXT) {
 		Xapian::TermGenerator term_generator;
+		std::unique_ptr<Xapian::SimpleStopper> stopper;
 		term_generator.set_document(doc);
+		auto it = all_stopwords.find(field_spc.stem_language);
+		if (it != all_stopwords.end()) {
+			auto& stopwords = it->second;
+			stopper = std::make_unique<Xapian::SimpleStopper>(stopwords.data(), stopwords.data() + stopwords.size());
+			term_generator.set_stopper(stopper.get());
+			term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
+		}
 		term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
-		term_generator.set_stemming_strategy(getGeneratorStrategy(field_spc.stem_strategy));
+		term_generator.set_stemming_strategy(getGeneratorStemStrategy(field_spc.stem_strategy));
 		// Xapian::WritableDatabase *wdb = nullptr;
 		// bool spelling = field_spc.spelling[getPos(pos, field_spc.spelling.size())];
 		// if (spelling) {
@@ -2639,6 +2731,15 @@ Schema::update_positions(const MsgPack& prop_positions)
 
 
 void
+Schema::update_stop_strategy(const MsgPack& prop_stop_strategy)
+{
+	L_CALL(this, "Schema::update_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
+
+	specification.stop_strategy = static_cast<StopStrategy>(prop_stop_strategy.as_u64());
+}
+
+
+void
 Schema::update_stem_strategy(const MsgPack& prop_stem_strategy)
 {
 	L_CALL(this, "Schema::update_stem_strategy(%s)", repr(prop_stem_strategy.to_string()).c_str());
@@ -2993,6 +3094,29 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
+	}
+}
+
+
+void
+Schema::process_stop_strategy(const std::string& prop_name, const MsgPack& doc_stop_strategy)
+{
+	// RESERVED_STOP_STRATEGY isn't heritable and can't change once fixed.
+	L_CALL(this, "Schema::process_stop_strategy(%s)", repr(doc_stop_strategy.to_string()).c_str());
+
+	if likely(specification.flags.field_with_type) {
+		return;
+	}
+
+	try {
+		auto _stop_strategy = lower_string(doc_stop_strategy.as_string());
+		try {
+			specification.stop_strategy = map_stop_strategy.at(_stop_strategy);
+		} catch (const std::out_of_range&) {
+			THROW(ClientError, "%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stop_strategy.c_str(), _stop_strategy.c_str());
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
 }
 
@@ -3756,6 +3880,15 @@ Schema::readable_prefix(MsgPack& prop_prefix, MsgPack&)
 
 
 void
+Schema::readable_stop_strategy(MsgPack& prop_stop_strategy, MsgPack&)
+{
+	L_CALL(nullptr, "Schema::readable_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
+
+	prop_stop_strategy = ::readable_stop_strategy((StopStrategy)prop_stop_strategy.as_u64());
+}
+
+
+void
 Schema::readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_stem_strategy(%s)", repr(prop_stem_strategy.to_string()).c_str());
@@ -3972,6 +4105,8 @@ Schema::get_data_field(const std::string& field_name) const
 						}
 						break;
 					case FieldType::TEXT:
+						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
+
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 						res.language = properties.at(RESERVED_LANGUAGE).as_string();
@@ -4004,6 +4139,8 @@ Schema::get_data_field(const std::string& field_name) const
 						}
 						break;
 					case FieldType::TEXT:
+						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
+
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 						res.language = properties.at(RESERVED_LANGUAGE).as_string();
@@ -4060,6 +4197,8 @@ Schema::get_slot_field(const std::string& field_name) const
 					res.error = properties.at(RESERVED_ERROR).as_f64();
 					break;
 				case FieldType::TEXT:
+					res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
+
 					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 					res.language = properties.at(RESERVED_LANGUAGE).as_string();
