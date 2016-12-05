@@ -24,6 +24,7 @@
 
 #include "xapiand.h"
 
+#include "exception.h"
 #include "msgpack.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
@@ -75,8 +76,19 @@ public:
 		UNDEFINED
 	};
 
-	class duplicate_key : public std::out_of_range {
-		using std::out_of_range::out_of_range;
+	struct duplicate_key : public BaseException, public std::out_of_range {
+		template<typename... Args>
+		duplicate_key(Args&&... args) : BaseException(std::forward<Args>(args)...), std::out_of_range(message) { }
+	};
+
+	struct out_of_range : public BaseException, public std::out_of_range {
+		template<typename... Args>
+		out_of_range(Args&&... args) : BaseException(std::forward<Args>(args)...), std::out_of_range(message) { }
+	};
+
+	struct invalid_argument : public BaseException, public std::invalid_argument {
+		template<typename... Args>
+		invalid_argument(Args&&... args) : BaseException(std::forward<Args>(args)...), std::invalid_argument(message) { }
 	};
 
 	struct Undefined {
@@ -559,7 +571,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 					if (parent_body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
 						parent_body->map.erase(it);
 					} else {
-						throw duplicate_key("Duplicate 1 key: " + str_key);
+						THROW(duplicate_key, "Duplicate 1 key: " + str_key);
 					}
 					assert(parent_body->_obj->via.map.size == parent_body->map.size());
 				}
@@ -691,7 +703,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 		auto str_key = std::string(p->key.via.str.ptr, p->key.via.str.size);
 		auto inserted = _body->map.insert(std::make_pair(str_key, std::make_pair(std::move(last_key), std::move(last_val))));
 		if (!inserted.second) {
-			throw duplicate_key("Duplicate key: " + str_key);
+			THROW(duplicate_key, "Duplicate key: " + str_key);
 		}
 		ret = &inserted.first->second.second;
 	}
@@ -1010,14 +1022,14 @@ inline MsgPack& MsgPack::path(const std::vector<std::string>& path) {
 				std::string::size_type sz;
 				int pos = std::stoi(s, &sz);
 				if (pos < 0 || sz != s.size()) {
-					throw std::invalid_argument("The index for the array must be a positive integer, it is: " + s);
+					THROW(invalid_argument, "The index for the array must be a positive integer, it is: " + s);
 				}
 				current = &current->at(pos);
 				break;
 			}
 
 			default:
-				throw std::invalid_argument(("The container must be a map or an array to access: " + s).c_str());
+				THROW(invalid_argument, "The container must be a map or an array to access: " + s);
 		}
 	}
 
@@ -1037,14 +1049,14 @@ inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const 
 				std::string::size_type sz;
 				int pos = std::stoi(s, &sz);
 				if (pos < 0 || sz != s.size()) {
-					throw std::invalid_argument("The index for the array must be a positive integer, it is: " + s);
+					THROW(invalid_argument, "The index for the array must be a positive integer, it is: " + s);
 				}
 				current = &current->at(pos);
 				break;
 			}
 
 			default:
-				throw std::invalid_argument(("The container must be a map or an array to access: " + s).c_str());
+				THROW(invalid_argument, "The container must be a map or an array to access: " + s);
 		}
 	}
 
@@ -1422,7 +1434,7 @@ inline MsgPack& MsgPack::at(const std::string& key) {
 	switch (_body->getType()) {
 		case Type::EXT:
 		case Type::UNDEFINED:
-			throw std::out_of_range("undefined");
+			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			return _body->at(key);
 		default:
@@ -1435,7 +1447,7 @@ inline const MsgPack& MsgPack::at(const std::string& key) const {
 	switch (_const_body->getType()) {
 		case Type::EXT:
 		case Type::UNDEFINED:
-			throw std::out_of_range("undefined");
+			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			return _const_body->at(key);
 		default:
@@ -1449,10 +1461,10 @@ inline MsgPack& MsgPack::at(size_t pos) {
 	switch (_body->getType()) {
 		case Type::EXT:
 		case Type::UNDEFINED:
-			throw std::out_of_range("undefined");
+			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			if (pos >= _body->_obj->via.map.size) {
-				throw std::out_of_range("The map only contains " + std::to_string(_body->_obj->via.map.size) + " elements");
+				THROW(out_of_range, "The map only contains " + std::to_string(_body->_obj->via.map.size) + " elements");
 			}
 			return at(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
 		case Type::ARRAY:
@@ -1468,10 +1480,10 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 	switch (_const_body->getType()) {
 		case Type::EXT:
 		case Type::UNDEFINED:
-			throw std::out_of_range("undefined");
+			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			if (pos >= _const_body->_obj->via.map.size) {
-				throw std::out_of_range("The map only contains " + std::to_string(_const_body->_obj->via.map.size) + " elements");
+				THROW(out_of_range, "The map only contains " + std::to_string(_const_body->_obj->via.map.size) + " elements");
 			}
 			return at(std::string(_const_body->_obj->via.map.ptr[pos].key.via.str.ptr, _const_body->_obj->via.map.ptr[pos].key.via.str.size));
 		case Type::ARRAY:
