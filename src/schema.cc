@@ -2033,7 +2033,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 	if (field_spc.sep_types[2] == FieldType::TEXT) {
 		Xapian::TermGenerator term_generator;
 		term_generator.set_document(doc);
-		auto stopper = getStopper(field_spc.stem_language);
+		auto stopper = getStopper(field_spc.language);
 		term_generator.set_stopper(stopper.get());
 		term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
 		term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
