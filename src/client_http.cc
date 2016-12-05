@@ -771,7 +771,7 @@ HttpClient::home_view(enum http_method method)
 
 	auto obj_data = document.get_obj();
 	if (obj_data.find(ID_FIELD_NAME) == obj_data.end()) {
-		obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+		obj_data[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME);
 	}
 
 	operation_ends = std::chrono::system_clock::now();
@@ -1293,7 +1293,7 @@ HttpClient::search_view(enum http_method method)
 			if (chunked) {
 				obj_data = document.get_obj();
 			} else {
-				auto ct_type_str = document.get_value(CT_FIELD_NAME).as_string();
+				auto ct_type_str = document.get_field(CT_FIELD_NAME).as_string();
 				if (ct_type_str.empty()) {
 					ct_type_str = MSGPACK_CONTENT_TYPE;
 				}
@@ -1320,7 +1320,7 @@ HttpClient::search_view(enum http_method method)
 			}
 
 			if (obj_data.find(ID_FIELD_NAME) == obj_data.end()) {
-				obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+				obj_data[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME);
 			}
 			// Detailed info about the document:
 			obj_data[RESERVED_RANK] = m.get_rank();

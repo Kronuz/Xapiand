@@ -757,10 +757,10 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 
 	auto document = get_document(doc_id);
 
-	info[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+	info[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME);
 	info[RESERVED_DATA] = document.get_obj();
 
-	auto ct_type_str = document.get_value(CT_FIELD_NAME).as_string();
+	auto ct_type_str = document.get_field(CT_FIELD_NAME).as_string();
 	if (ct_type_str.empty()) {
 		ct_type_str = MSGPACK_CONTENT_TYPE;
 	}
@@ -1030,4 +1030,26 @@ Document::serialise() const
 	DatabaseHandler::lock_database lk(db_handler);
 	update();
 	return Xapian::Document::serialise();
+}
+
+
+MsgPack
+Document::get_field(const std::string& slot_name) const
+{
+	L_CALL(this, "Document::get_field(%s)", slot_name.c_str());
+
+	MsgPack field;
+	auto obj = get_obj();
+	auto itf = obj.find(slot_name);
+	if (itf != obj.end()) {
+		if (itf->is_map()) {
+			auto itv = itf->find(RESERVED_VALUE);
+			if (itv != itf->end()) {
+				return *itv;
+			}
+		}
+		return *itf;
+	}
+
+	return get_value(slot_name);
 }
