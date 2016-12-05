@@ -1294,6 +1294,9 @@ HttpClient::search_view(enum http_method method)
 				obj_data = document.get_obj();
 			} else {
 				auto ct_type_str = document.get_value(CT_FIELD_NAME).as_string();
+				if (ct_type_str.empty()) {
+					ct_type_str = MSGPACK_CONTENT_TYPE;
+				}
 				ct_type = resolve_ct_type(ct_type_str);
 				if (ct_type.first == no_type.first && ct_type.second == no_type.second) {
 					enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;

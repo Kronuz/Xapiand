@@ -761,6 +761,10 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 	info[RESERVED_DATA] = document.get_obj();
 
 	auto ct_type_str = document.get_value(CT_FIELD_NAME).as_string();
+	if (ct_type_str.empty()) {
+		ct_type_str = MSGPACK_CONTENT_TYPE;
+	}
+
 	info["_blob"] = ct_type_str != JSON_CONTENT_TYPE && ct_type_str != MSGPACK_CONTENT_TYPE;
 
 	auto& stats_terms = info[RESERVED_TERMS];
