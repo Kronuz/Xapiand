@@ -26,6 +26,7 @@
 #include <string.h>                         // for strlen
 #include <sys/fcntl.h>                      // for O_CLOEXEC, O_CREAT, O_RDONLY
 #include <sys/stat.h>                       // for stat
+#include <algorithm>                        // for count, replace
 #include <chrono>                           // for seconds, duration_cast
 #include <ratio>                            // for ratio
 
@@ -141,7 +142,30 @@ void json_load(rapidjson::Document& doc, const std::string& str)
 {
 	rapidjson::ParseResult parse_done = doc.Parse(str.data());
 	if (!parse_done) {
-		THROW(ClientError, "JSON parse error at position %u: %s", parse_done.Offset(), GetParseError_En(parse_done.Code()));
+		constexpr size_t tabsize = 3;
+		auto offset = parse_done.Offset();
+		char buffer[20];
+		auto a = str.substr(0, offset);
+		auto line = std::count(a.begin(), a.end(), '\n') + 1;
+		if (line > 1) {
+			auto f = a.rfind("\n");
+			if (f != std::string::npos) {
+				a = a.substr(f + 1);
+			}
+		}
+		snprintf(buffer, sizeof(buffer), "%zu. ", line);
+		auto b = str.substr(offset);
+		b = b.substr(0, b.find("\n"));
+		auto tsz = std::count(a.begin(), a.end(), '\t');
+		auto col = a.size() + 1;
+		auto sz = col - 1 - tsz + tsz * tabsize;
+		auto snippet = std::string(buffer) + a + b + "\n" + std::string(sz + strlen(buffer), ' ') + '^';
+		size_t p = 0;
+		while ((p = snippet.find("\t", p)) != std::string::npos) {
+			snippet.replace(p, 1, std::string(tabsize, ' '));
+			++p;
+		}
+		THROW(ClientError, "JSON parse error at line %zu, col: %zu : %s\n%s", line, col, GetParseError_En(parse_done.Code()), snippet.c_str());
 	}
 }
 
