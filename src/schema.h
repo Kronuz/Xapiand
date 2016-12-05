@@ -259,6 +259,7 @@ struct required_spc_t {
 		bool reserved_slot:1;
 		bool has_bool_term:1;    // Either RESERVED_BOOL_TERM is in the schema or the user sent it
 		bool has_index:1;        // Either RESERVED_INDEX is in the schema or the user sent it
+		bool has_namespace:1;    // Either RESERVED_NAMESPACE is in the schema or the user sent it
 
 		bool inside_namespace:1;
 

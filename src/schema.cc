@@ -524,6 +524,7 @@ required_spc_t::flags_t::flags_t()
 	  reserved_slot(false),
 	  has_bool_term(false),
 	  has_index(false),
+	  has_namespace(false),
 	  inside_namespace(false),
 	  dynamic_type(false) { }
 
@@ -904,6 +905,7 @@ Schema::restart_specification()
 	specification.flags.bool_term        = default_spc.flags.bool_term;
 	specification.flags.partials         = default_spc.flags.partials;
 	specification.flags.has_index        = default_spc.flags.has_index;
+	specification.flags.has_namespace    = default_spc.flags.has_namespace;
 	specification.flags.field_with_type  = default_spc.flags.field_with_type;
 
 	specification.sep_types              = default_spc.sep_types;
@@ -2978,6 +2980,7 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 			specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
 		}
 	}
+	specification.flags.has_namespace = true;
 }
 
 
@@ -3675,7 +3678,10 @@ Schema::process_namespace(const std::string& prop_name, const MsgPack& doc_names
 				specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
 			}
 			get_mutable()[prop_name] = true;
+		} else {
+			get_mutable()[prop_name] = false;
 		}
+		specification.flags.has_namespace = true;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3799,8 +3805,11 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	}
 	specification.flags.reserved_slot = true;
 
-	specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
-	properties[RESERVED_NAMESPACE] = true;
+	if (!specification.flags.has_namespace) {
+		specification.flags.has_namespace = true;
+		specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
+		properties[RESERVED_NAMESPACE] = true;
+	}
 }
 
 
