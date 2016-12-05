@@ -3755,9 +3755,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 	}
 
 	// RESERVED_STORE by default is false.
-	try {
-		properties.at(RESERVED_STORE);
-	} catch (const std::out_of_range&) {
+	if (properties.find(RESERVED_STORE) == properties.end()) {
 		specification.flags.store = false;
 		properties[RESERVED_STORE] = static_cast<bool>(specification.flags.store);
 	}
@@ -3796,9 +3794,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	}
 
 	// RESERVED_STORE by default is false.
-	try {
-		properties.at(RESERVED_STORE);
-	} catch (const std::out_of_range&) {
+	if (properties.find(RESERVED_STORE) == properties.end()) {
 		specification.flags.store = false;
 		properties[RESERVED_STORE] = static_cast<bool>(specification.flags.store);
 	}
