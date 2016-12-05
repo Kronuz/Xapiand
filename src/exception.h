@@ -171,4 +171,21 @@ public:
 	QueryDslError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
+
+// Wrapped standard exceptions:
+
+class InvalidArgument : public BaseException, public std::invalid_argument {
+public:
+	template<typename... Args>
+	InvalidArgument(Args&&... args) : BaseException(std::forward<Args>(args)...), std::invalid_argument(message) { }
+};
+
+
+class OutOfRange : public BaseException, public std::out_of_range {
+public:
+	template<typename... Args>
+	OutOfRange(Args&&... args) : BaseException(std::forward<Args>(args)...), std::out_of_range(message) { }
+};
+
+
 #define THROW(exc, ...) throw exc(__FILE__, __LINE__, #exc, ##__VA_ARGS__)

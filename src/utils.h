@@ -38,6 +38,7 @@
 #include <vector>       // for vector
 
 #include "ev/ev++.h"    // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
+#include "exception.h"  // for InvalidArgument, OutOfRange
 
 
 #define RESERVED_FDS  50 /* Better approach? */
@@ -46,11 +47,15 @@
 #define stox(func, s) \
 	[](const std::string& str) { \
 		std::size_t sz; \
-		auto ret = (func)(str, &sz); \
-		if (sz != str.length()) { \
-			throw std::invalid_argument("Cannot convert value: " + str); \
+		try { \
+			auto ret = (func)(str, &sz); \
+			if (sz != str.length()) { \
+				THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
+			} \
+			return ret; \
+		} catch (const std::out_of_range&) { \
+			THROW(OutOfRange, "Out of range value: %s", str.c_str()); \
 		} \
-		return ret; \
 	}(s)
 
 
