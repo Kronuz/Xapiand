@@ -131,48 +131,60 @@ const std::unordered_map<std::string, FieldType> map_type({
 });
 
 
-const std::unordered_map<std::string, std::vector<const char* const>> all_stopwords = {
-	{"en", {
-		"a", "an", "and", "are", "as", "at", "be", "but", "by",
-		"for", "if", "in", "into", "is", "it",
-		"no", "not", "of", "on", "or", "such",
-		"that", "the", "their", "then", "there", "these",
-		"they", "this", "to", "was", "will", "with"
-	}},
-	{"es", {
-		"un", "una", "unas", "unos", "uno", "sobre", "todo",
-		"también", "tras", "otro", "algún", "alguno", "alguna",
-		"algunos", "algunas", "ser", "es", "soy", "eres", "somos",
-		"sois", "estoy", "esta", "estamos", "estais", "estan",
-		"en", "para", "atras", "porque", "por qué", "estado",
-		"estaba", "ante", "antes", "siendo", "ambos", "pero",
-		"por", "poder", "puede", "puedo", "podemos", "podeis",
-		"pueden", "fui", "fue", "fuimos", "fueron", "hacer",
-		"hago", "hace", "hacemos", "haceis", "hacen", "cada",
-		"fin", "incluso", "primero", "desde", "conseguir",
-		"consigo", "consigue", "consigues", "conseguimos",
-		"consiguen", "ir", "voy", "va", "vamos", "vais", "van",
-		"vaya", "bueno", "ha", "tener", "tengo", "tiene",
-		"tenemos", "teneis", "tienen", "el", "la", "lo", "las",
-		"los", "su", "aqui", "mio", "tuyo", "ellos", "ellas",
-		"nos", "nosotros", "vosotros", "vosotras", "si",
-		"dentro", "solo", "solamente", "saber", "sabes",
-		"sabe", "sabemos", "sabeis", "saben", "ultimo", "largo",
-		"bastante", "haces", "muchos", "aquellos", "aquellas",
-		"sus", "entonces", "tiempo", "verdad", "verdadero",
-		"verdadera", "cierto", "ciertos", "cierta", "ciertas",
-		"intentar", "intento", "intenta", "intentas", "intentamos",
-		"intentais", "intentan", "dos", "bajo", "arriba", "encima",
-		"usar", "uso", "usas", "usa", "usamos", "usais", "usan",
-		"emplear", "empleo", "empleas", "emplean", "ampleamos",
-		"empleais", "valor", "muy", "era", "eras", "eramos", "eran",
-		"modo", "bien", "cual", "cuando", "donde", "mientras", "quien",
-		"con", "entre", "sin", "trabajo", "trabajar", "trabajas",
-		"trabaja", "trabajamos", "trabajais", "trabajan", "podria",
-		"podrias", "podriamos", "podrian", "podriais", "yo", "aquel",
-		"mi", "de", "a", "e", "i", "o", "u"
-	}},
-};
+std::unique_ptr<Xapian::SimpleStopper>
+getStopper(const std::string& language)
+{
+	static const std::unordered_map<std::string, std::vector<const char* const>> all_stopwords = {
+		{"en", {
+			"a", "an", "and", "are", "as", "at", "be", "but", "by",
+			"for", "if", "in", "into", "is", "it",
+			"no", "not", "of", "on", "or", "such",
+			"that", "the", "their", "then", "there", "these",
+			"they", "this", "to", "was", "will", "with"
+		}},
+		{"es", {
+			"un", "una", "unas", "unos", "uno", "sobre", "todo",
+			"también", "tras", "otro", "algún", "alguno", "alguna",
+			"algunos", "algunas", "ser", "es", "soy", "eres", "somos",
+			"sois", "estoy", "esta", "estamos", "estais", "estan",
+			"en", "para", "atras", "porque", "por qué", "estado",
+			"estaba", "ante", "antes", "siendo", "ambos", "pero",
+			"por", "poder", "puede", "puedo", "podemos", "podeis",
+			"pueden", "fui", "fue", "fuimos", "fueron", "hacer",
+			"hago", "hace", "hacemos", "haceis", "hacen", "cada",
+			"fin", "incluso", "primero", "desde", "conseguir",
+			"consigo", "consigue", "consigues", "conseguimos",
+			"consiguen", "ir", "voy", "va", "vamos", "vais", "van",
+			"vaya", "bueno", "ha", "tener", "tengo", "tiene",
+			"tenemos", "teneis", "tienen", "el", "la", "lo", "las",
+			"los", "su", "aqui", "mio", "tuyo", "ellos", "ellas",
+			"nos", "nosotros", "vosotros", "vosotras", "si",
+			"dentro", "solo", "solamente", "saber", "sabes",
+			"sabe", "sabemos", "sabeis", "saben", "ultimo", "largo",
+			"bastante", "haces", "muchos", "aquellos", "aquellas",
+			"sus", "entonces", "tiempo", "verdad", "verdadero",
+			"verdadera", "cierto", "ciertos", "cierta", "ciertas",
+			"intentar", "intento", "intenta", "intentas", "intentamos",
+			"intentais", "intentan", "dos", "bajo", "arriba", "encima",
+			"usar", "uso", "usas", "usa", "usamos", "usais", "usan",
+			"emplear", "empleo", "empleas", "emplean", "ampleamos",
+			"empleais", "valor", "muy", "era", "eras", "eramos", "eran",
+			"modo", "bien", "cual", "cuando", "donde", "mientras", "quien",
+			"con", "entre", "sin", "trabajo", "trabajar", "trabajas",
+			"trabaja", "trabajamos", "trabajais", "trabajan", "podria",
+			"podrias", "podriamos", "podrian", "podriais", "yo", "aquel",
+			"mi", "de", "a", "e", "i", "o", "u"
+		}},
+	};
+
+	std::unique_ptr<Xapian::SimpleStopper> stopper;
+	auto it = all_stopwords.find(language);
+	if (it != all_stopwords.end()) {
+		auto& stopwords = it->second;
+		stopper = std::make_unique<Xapian::SimpleStopper>(stopwords.data(), stopwords.data() + stopwords.size());
+	}
+	return stopper;
+}
 
 
 /*
@@ -2015,15 +2027,10 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 
 	if (field_spc.sep_types[2] == FieldType::TEXT) {
 		Xapian::TermGenerator term_generator;
-		std::unique_ptr<Xapian::SimpleStopper> stopper;
 		term_generator.set_document(doc);
-		auto it = all_stopwords.find(field_spc.stem_language);
-		if (it != all_stopwords.end()) {
-			auto& stopwords = it->second;
-			stopper = std::make_unique<Xapian::SimpleStopper>(stopwords.data(), stopwords.data() + stopwords.size());
-			term_generator.set_stopper(stopper.get());
-			term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
-		}
+		std::unique_ptr<Xapian::SimpleStopper> stopper = getStopper(field_spc.stem_language);
+		term_generator.set_stopper(stopper.get());
+		term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
 		term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
 		term_generator.set_stemming_strategy(getGeneratorStemStrategy(field_spc.stem_strategy));
 		// Xapian::WritableDatabase *wdb = nullptr;

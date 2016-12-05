@@ -164,6 +164,9 @@ enum class FieldType : uint8_t {
 };
 
 
+std::unique_ptr<Xapian::SimpleStopper> getStopper(const std::string& language);
+
+
 inline static Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) noexcept {
 	switch (stop_strategy) {
 		case StopStrategy::STOP_NONE:
