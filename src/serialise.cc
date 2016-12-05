@@ -38,7 +38,7 @@
 #include "guid/guid.h"             // for Guid
 #include "length.h"                // for serialise_length, unserialise_length
 #include "msgpack.h"               // for MsgPack, object::object, type_error
-#include "schema.h"                // for FieldType, FieldType::STRING, Fiel...
+#include "schema.h"                // for FieldType, FieldType::TERM, Fiel...
 #include "stl_serialise.h"         // for CartesianUSet, RangeList
 #include "utils.h"                 // for toUType, stox, repr
 
@@ -160,7 +160,7 @@ Cast::cast(const MsgPack& obj)
 				return _float(obj.at(str_key));
 			case Hash::BOOLEAN:
 				return boolean(obj.at(str_key));
-			case Hash::STRING:
+			case Hash::TERM:
 			case Hash::TEXT:
 			case Hash::UUID:
 			case Hash::EWKT:
@@ -214,7 +214,7 @@ Cast::cast(FieldType type, const std::string& field_value)
 				return MsgPack(stox(std::stod, field_value));
 			} catch (const std::invalid_argument&) { }
 		default:
-			// Default type STRING.
+			// Default type TERM.
 			return MsgPack(field_value);
 	}
 }
@@ -389,7 +389,7 @@ Cast::getType(const std::string& cast_word)
 		case Hash::POSITIVE:          return FieldType::POSITIVE;
 		case Hash::FLOAT:             return FieldType::FLOAT;
 		case Hash::BOOLEAN:           return FieldType::BOOLEAN;
-		case Hash::STRING:            return FieldType::STRING;
+		case Hash::TERM:              return FieldType::TERM;
 		case Hash::TEXT:              return FieldType::TEXT;
 		case Hash::UUID:              return FieldType::UUID;
 		case Hash::DATE:              return FieldType::DATE;
@@ -448,7 +448,7 @@ Serialise::cast_object(const required_spc_t& field_spc, const class MsgPack& o)
 				return Serialise::_float(field_spc.get_type(), Cast::_float(o.at(str_key)));
 			case Cast::Hash::BOOLEAN:
 				return Serialise::boolean(field_spc.get_type(), Cast::boolean(o.at(str_key)));
-			case Cast::Hash::STRING:
+			case Cast::Hash::TERM:
 			case Cast::Hash::TEXT:
 			case Cast::Hash::UUID:
 			case Cast::Hash::EWKT:
@@ -480,7 +480,7 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 			return date(field_value);
 		case FieldType::BOOLEAN:
 			return boolean(field_value);
-		case FieldType::STRING:
+		case FieldType::TERM:
 		case FieldType::TEXT:
 			return field_value;
 		case FieldType::GEO:
@@ -503,7 +503,7 @@ Serialise::string(const required_spc_t& field_spc, const std::string& field_valu
 			return date(field_value);
 		case FieldType::BOOLEAN:
 			return boolean(field_value);
-		case FieldType::STRING:
+		case FieldType::TERM:
 		case FieldType::TEXT:
 			return field_value;
 		case FieldType::GEO:
@@ -618,7 +618,7 @@ std::pair<FieldType, std::string>
 Serialise::get_type(const std::string& field_value, bool bool_term)
 {
 	if (field_value.empty()) {
-		std::make_pair(FieldType::STRING, field_value);
+		std::make_pair(FieldType::TERM, field_value);
 	}
 
 	// Try like INTEGER.
@@ -661,8 +661,8 @@ Serialise::get_type(const std::string& field_value, bool bool_term)
 		return std::make_pair(FieldType::TEXT, field_value);
 	}
 
-	// Default type STRING.
-	return std::make_pair(FieldType::STRING, field_value);
+	// Default type TERM.
+	return std::make_pair(FieldType::TERM, field_value);
 }
 
 
@@ -685,48 +685,48 @@ Serialise::get_range_type(const std::string& start, const std::string& end, bool
 			try {
 				return std::make_tuple(FieldType::POSITIVE, res.second, positive(end));
 			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::STRING, start, end);
+				return std::make_tuple(FieldType::TERM, start, end);
 			}
 		case FieldType::INTEGER:
 			try {
 				return std::make_tuple(FieldType::INTEGER, res.second, integer(end));
 			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::STRING, start, end);
+				return std::make_tuple(FieldType::TERM, start, end);
 			}
 		case FieldType::FLOAT:
 			try {
 				return std::make_tuple(FieldType::FLOAT, res.second, _float(end));
 			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::STRING, start, end);
+				return std::make_tuple(FieldType::TERM, start, end);
 			}
 		case FieldType::DATE:
 			try {
 				return std::make_tuple(FieldType::DATE, res.second, date(end));
 			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::STRING, start, end);
+				return std::make_tuple(FieldType::TERM, start, end);
 			}
 		case FieldType::GEO:
 			try {
 				return std::make_tuple(FieldType::GEO, res.second, ewkt(end, default_spc.flags.partials, default_spc.error));
 			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::STRING, start, end);
+				return std::make_tuple(FieldType::TERM, start, end);
 			}
 		case FieldType::UUID:
 			if (isUUID(end)) {
 				return std::make_tuple(FieldType::UUID, res.second, uuid(end));
 			} else {
-				return std::make_tuple(FieldType::STRING, start, end);
+				return std::make_tuple(FieldType::TERM, start, end);
 			}
 		case FieldType::BOOLEAN:
 			try {
 				return std::make_tuple(FieldType::BOOLEAN, res.second, boolean(end));
 			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::STRING, start, end);
+				return std::make_tuple(FieldType::TERM, start, end);
 			}
 		case FieldType::TEXT:
 			return std::make_tuple(FieldType::TEXT, start, end);
 		default:
-			return std::make_tuple(FieldType::STRING, start, end);
+			return std::make_tuple(FieldType::TERM, start, end);
 
 	}
 }
@@ -736,7 +736,7 @@ std::tuple<FieldType, std::string, const required_spc_t&>
 Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 {
 	if (!field_value) {
-		std::make_pair(FieldType::STRING, "");
+		std::make_pair(FieldType::TERM, "");
 	}
 
 	switch (field_value.getType()) {
@@ -755,7 +755,7 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 		case MsgPack::Type::STR:
 			// Try like INTEGER.
 			try {
-				return std::make_tuple(FieldType::STRING, integer(field_value.as_string()), std::cref(Schema::get_data_global(FieldType::STRING)));
+				return std::make_tuple(FieldType::TERM, integer(field_value.as_string()), std::cref(Schema::get_data_global(FieldType::TERM)));
 			} catch (const SerialisationError&) { }
 
 			// Try like POSITIVE.
@@ -788,8 +788,8 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 				return std::make_tuple(FieldType::TEXT, field_value.as_string(), std::cref(Schema::get_data_global(FieldType::TEXT)));
 			}
 
-			// Default type STRING.
-			return std::make_tuple(FieldType::STRING, field_value.as_string(), std::cref(Schema::get_data_global(FieldType::STRING)));
+			// Default type TERM.
+			return std::make_tuple(FieldType::TERM, field_value.as_string(), std::cref(Schema::get_data_global(FieldType::TERM)));
 
 		case MsgPack::Type::MAP: {
 			if (field_value.size() == 1) {
@@ -803,8 +803,8 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 						return std::make_tuple(FieldType::FLOAT, Serialise::_float(Cast::_float(field_value.at(str_key))), std::cref(Schema::get_data_global(FieldType::FLOAT)));
 					case Cast::Hash::BOOLEAN:
 						return std::make_tuple(FieldType::BOOLEAN, Serialise::boolean(Cast::boolean(field_value.at(str_key))), std::cref(Schema::get_data_global(FieldType::BOOLEAN)));
-					case Cast::Hash::STRING:
-						return std::make_tuple(FieldType::STRING, Cast::string(field_value.at(str_key)), std::cref(Schema::get_data_global(FieldType::STRING)));
+					case Cast::Hash::TERM:
+						return std::make_tuple(FieldType::TERM, Cast::string(field_value.at(str_key)), std::cref(Schema::get_data_global(FieldType::TERM)));
 					case Cast::Hash::TEXT:
 						return std::make_tuple(FieldType::TEXT, Cast::string(field_value.at(str_key)), std::cref(Schema::get_data_global(FieldType::TEXT)));
 					case Cast::Hash::UUID:
@@ -857,7 +857,7 @@ Serialise::get_range_type(const class MsgPack& obj, bool bool_term)
 	auto typ_end = get_type(end, bool_term);
 
 	if (std::get<0>(typ_start) != std::get<0>(typ_end)) {
-		return std::make_tuple(FieldType::STRING, std::get<1>(typ_start), std::get<1>(typ_end), std::cref(Schema::get_data_global(FieldType::STRING)));
+		return std::make_tuple(FieldType::TERM, std::get<1>(typ_start), std::get<1>(typ_end), std::cref(Schema::get_data_global(FieldType::TERM)));
 	}
 
 	return std::make_tuple(std::get<0>(typ_start), std::get<1>(typ_start), std::get<1>(typ_end), std::cref(std::get<2>(typ_start)));
@@ -1072,7 +1072,7 @@ std::string
 Serialise::type(FieldType type)
 {
 	switch (type) {
-		case FieldType::STRING:   return STRING_STR;
+		case FieldType::TERM:     return TERM_STR;
 		case FieldType::TEXT:     return TEXT_STR;
 		case FieldType::FLOAT:    return FLOAT_STR;
 		case FieldType::INTEGER:  return INTEGER_STR;
@@ -1108,7 +1108,7 @@ Unserialise::MsgPack(FieldType field_type, const std::string& serialised_val)
 		case FieldType::BOOLEAN:
 			result = boolean(serialised_val);
 			break;
-		case FieldType::STRING:
+		case FieldType::TERM:
 		case FieldType::TEXT:
 			result = serialised_val;
 			break;
@@ -1140,7 +1140,7 @@ Unserialise::unserialise(FieldType field_type, const std::string& serialised_val
 			return date(serialised_val);
 		case FieldType::BOOLEAN:
 			return std::string(boolean(serialised_val) ? "true" : "false");
-		case FieldType::STRING:
+		case FieldType::TERM:
 		case FieldType::TEXT:
 			return serialised_val;
 		case FieldType::GEO:
@@ -1272,9 +1272,9 @@ Unserialise::type(const std::string& str_type)
 				return FieldType::GEO;
 			}
 			break;
-		case FieldType::STRING:
-			if (value[1] == '\0' || strcasecmp(value, STRING_STR) == 0) {
-				return FieldType::STRING;
+		case FieldType::TERM:
+			if (value[1] == '\0' || strcasecmp(value, TERM_STR) == 0) {
+				return FieldType::TERM;
 			}
 			break;
 		case FieldType::TEXT:

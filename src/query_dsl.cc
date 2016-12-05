@@ -100,7 +100,7 @@ const std::unordered_map<std::string, QueryDSL::dispatch_dsl> QueryDSL::map_disp
 	{ RESERVED_POSITIVE,     &QueryDSL::query          },
 	{ RESERVED_FLOAT,        &QueryDSL::query          },
 	{ RESERVED_BOOLEAN,      &QueryDSL::query          },
-	{ RESERVED_STRING,       &QueryDSL::query          },
+	{ RESERVED_TERM,         &QueryDSL::query          },
 	{ RESERVED_TEXT,         &QueryDSL::query          },
 	{ RESERVED_EWKT,         &QueryDSL::query          },
 	{ RESERVED_UUID,         &QueryDSL::query          },
@@ -379,8 +379,7 @@ QueryDSL::query(const MsgPack& obj)
 						case FieldType::BOOLEAN:
 							return Xapian::Query(prefixed(Serialise::MsgPack(field_spc, obj), field_spc.prefix), spc_dsl.wqf);
 
-						case FieldType::STRING:
-						{
+						case FieldType::TERM: {
 							auto field_value = Serialise::MsgPack(field_spc, obj);
 							if (spc_dsl.q_flags & Xapian::QueryParser::FLAG_PARTIAL) {
 								Xapian::QueryParser queryString;
@@ -400,8 +399,8 @@ QueryDSL::query(const MsgPack& obj)
 								return Xapian::Query(prefixed(field_spc.flags.bool_term ? field_value : lower_string(field_value), field_spc.prefix), spc_dsl.wqf);
 							}
 						}
-						case FieldType::TEXT:
-						{
+
+						case FieldType::TEXT: {
 							auto field_value = Serialise::MsgPack(field_spc, obj);
 							Xapian::QueryParser queryTexts;
 							field_spc.flags.bool_term ? queryTexts.add_boolean_prefix(fieldname, field_spc.prefix) : queryTexts.add_prefix(fieldname, field_spc.prefix);
@@ -414,8 +413,8 @@ QueryDSL::query(const MsgPack& obj)
 							str_texts.assign(field_value).append(":").append(field_value);
 							return queryTexts.parse_query(str_texts, spc_dsl.q_flags);
 						}
-						case FieldType::GEO:
-						{
+
+						case FieldType::GEO: {
 							std::string field_value(Serialise::MsgPack(field_spc, obj));
 							// If the region for search is empty, not process this query.
 							if (field_value.empty()) {

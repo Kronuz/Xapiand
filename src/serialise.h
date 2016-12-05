@@ -98,7 +98,7 @@
 #define FLOAT_STR    "float"
 #define INTEGER_STR  "integer"
 #define POSITIVE_STR "positive"
-#define STRING_STR   "string"
+#define TERM_STR     "term"
 #define TEXT_STR     "text"
 #define DATE_STR     "date"
 #define GEO_STR      "geospatial"
@@ -134,7 +134,7 @@ namespace Cast {
 		POSITIVE          = xxh64::hash(RESERVED_POSITIVE),
 		FLOAT             = xxh64::hash(RESERVED_FLOAT),
 		BOOLEAN           = xxh64::hash(RESERVED_BOOLEAN),
-		STRING            = xxh64::hash(RESERVED_STRING),
+		TERM              = xxh64::hash(RESERVED_TERM),
 		TEXT              = xxh64::hash(RESERVED_TEXT),
 		UUID              = xxh64::hash(RESERVED_UUID),
 		DATE              = xxh64::hash(RESERVED_DATE),

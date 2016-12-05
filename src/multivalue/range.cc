@@ -140,7 +140,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				return filterStringQuery(field_spc, Serialise::uuid(start), Serialise::uuid(end));
 			case FieldType::BOOLEAN:
 				return filterStringQuery(field_spc, Serialise::boolean(start), Serialise::boolean(end));
-			case FieldType::STRING:
+			case FieldType::TERM:
 			case FieldType::TEXT:
 				return filterStringQuery(field_spc, start, end);
 			case FieldType::DATE: {
@@ -286,7 +286,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
 			case FieldType::BOOLEAN:
 				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
-			case FieldType::STRING:
+			case FieldType::TERM:
 			case FieldType::TEXT:
 				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
 			case FieldType::DATE: {

@@ -91,7 +91,7 @@
 #define RESERVED_POSITIVE          "_positive"
 #define RESERVED_INTEGER           "_integer"
 #define RESERVED_BOOLEAN           "_boolean"
-#define RESERVED_STRING            "_string"
+#define RESERVED_TERM              "_term"
 #define RESERVED_TEXT              "_text"
 #define RESERVED_DATE              "_date"
 #define RESERVED_UUID              "_uuid"

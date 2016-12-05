@@ -172,7 +172,7 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 				slots.push_back(std::make_unique<BoolKey>(field_spc.slot, reverse, value));
 				return;
 			case FieldType::UUID:
-			case FieldType::STRING:
+			case FieldType::TERM:
 			case FieldType::TEXT:
 				try {
 					auto func = map_dispatch_str_metric.at(qf.metric);

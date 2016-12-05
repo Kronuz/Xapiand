@@ -67,7 +67,7 @@
 #include "log.h"                             // for Log, L_CALL, L_DEBUG
 #include "manager.h"                         // for XapiandManager, opts_t
 #include "msgpack.h"                         // for MsgPack, object::object
-#include "serialise.h"                       // for STRING_STR
+#include "serialise.h"                       // for TERM_STR
 #include "servers/http.h"                    // for Http
 #include "servers/server.h"                  // for XapiandServer, XapiandSe...
 #include "servers/server_http.h"             // for HttpServer
@@ -325,9 +325,9 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HTTP_GET);
 			db_handler.index("." + serialise_node_id(local_node_->id), {
 				{ RESERVED_INDEX, "field_all" },
-				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  STRING_STR } } },
-				{ "name",         { { RESERVED_TYPE,  STRING_STR }, { RESERVED_VALUE, local_node_->name } } },
-				{ "tagline",      { { RESERVED_TYPE,  STRING_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
+				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  TERM_STR } } },
+				{ "name",         { { RESERVED_TYPE,  TERM_STR }, { RESERVED_VALUE, local_node_->name } } },
+				{ "tagline",      { { RESERVED_TYPE,  TERM_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
 			}, true, MSGPACK_CONTENT_TYPE);
 		} catch (const CheckoutError&) {
 			L_CRIT(this, "Cannot generate cluster database");

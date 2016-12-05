@@ -42,7 +42,7 @@
 #include "manager.h"              // for sig_exit
 #include "msgpack.h"              // for MsgPack
 #include "msgpack/unpack.hpp"     // for unpack_error
-#include "schema.h"               // for FieldType, FieldType::STRING
+#include "schema.h"               // for FieldType, FieldType::TERM
 #include "serialise.h"            // for uuid
 #include "utils.h"                // for repr, to_string, File_ptr, find_fil...
 
@@ -1760,7 +1760,7 @@ DatabasePool::init_ref(const Endpoint& endpoint)
 		// Boolean term for the node.
 		doc.add_boolean_term(unique_id);
 		// Start values for the DB.
-		doc.add_boolean_term(prefixed(DOCUMENT_DB_MASTER, get_prefix("master", toUType(FieldType::STRING))));
+		doc.add_boolean_term(prefixed(DOCUMENT_DB_MASTER, get_prefix("master", toUType(FieldType::TERM))));
 		try {
 			ref_database->replace_document_term(unique_id, doc, true);
 		} catch (const BaseException& exc) {

@@ -232,7 +232,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 					suggestions.push_back(queryTexts.get_corrected_query_string());
 					return queryTexts.parse_query(str_texts, q_flags);
 				}
-				case FieldType::STRING:
+				case FieldType::TERM:
 					if (fp.is_double_quote_value() || q_flags & Xapian::QueryParser::FLAG_PARTIAL) {
 						Xapian::QueryParser queryString;
 						global_spc.flags.bool_term ? queryString.add_boolean_prefix("_", global_spc.prefix) : queryString.add_prefix("_", global_spc.prefix);
@@ -284,7 +284,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 					return Xapian::Query(prefixed(Serialise::integer(field_value), field_spc.prefix));
 				case FieldType::POSITIVE:
 					return Xapian::Query(prefixed(Serialise::positive(field_value), field_spc.prefix));
-				case FieldType::STRING:
+				case FieldType::TERM:
 					if (fp.is_double_quote_value() || q_flags & Xapian::QueryParser::FLAG_PARTIAL) {
 						Xapian::QueryParser queryString;
 						field_spc.flags.bool_term ? queryString.add_boolean_prefix("_", field_spc.prefix) : queryString.add_prefix("_", field_spc.prefix);

@@ -124,7 +124,7 @@ const std::unordered_map<std::string, TypeIndex> map_index({
 
 const std::unordered_map<std::string, FieldType> map_type({
 	{ FLOAT_STR,       FieldType::FLOAT        }, { INTEGER_STR,     FieldType::INTEGER     },
-	{ POSITIVE_STR,    FieldType::POSITIVE     }, { STRING_STR,      FieldType::STRING      },
+	{ POSITIVE_STR,    FieldType::POSITIVE     }, { TERM_STR,        FieldType::TERM        },
 	{ TEXT_STR,        FieldType::TEXT         }, { DATE_STR,        FieldType::DATE        },
 	{ GEO_STR,         FieldType::GEO          }, { BOOLEAN_STR,     FieldType::BOOLEAN     },
 	{ UUID_STR,        FieldType::UUID         },
@@ -422,7 +422,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_POSITIVE,           &Schema::process_cast_object     },
 	{ RESERVED_INTEGER,            &Schema::process_cast_object     },
 	{ RESERVED_BOOLEAN,            &Schema::process_cast_object     },
-	{ RESERVED_STRING,             &Schema::process_cast_object     },
+	{ RESERVED_TERM,               &Schema::process_cast_object     },
 	{ RESERVED_TEXT,               &Schema::process_cast_object     },
 	{ RESERVED_DATE,               &Schema::process_cast_object     },
 	{ RESERVED_UUID,               &Schema::process_cast_object     },
@@ -719,7 +719,7 @@ specification_t::get_global(FieldType field_type)
 			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::POSITIVE, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
-		case FieldType::STRING: {
+		case FieldType::TERM: {
 			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
@@ -1592,7 +1592,7 @@ Schema::validate_required_data()
 				properties[RESERVED_LANGUAGE] = specification.language;
 				break;
 			}
-			case FieldType::STRING: {
+			case FieldType::TERM: {
 				if (!specification.flags.has_index) {
 					auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
@@ -1698,7 +1698,7 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 				specification.language = default_spc.language;
 				break;
 
-			case FieldType::STRING:
+			case FieldType::TERM:
 				if (!specification.flags.has_index) {
 					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 				}
@@ -1792,7 +1792,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				return;
 			}
 			if (specification.flags.string_detection) {
-				specification.sep_types[2] = FieldType::STRING;
+				specification.sep_types[2] = FieldType::TERM;
 				return;
 			}
 			if (specification.flags.bool_detection) {
@@ -2053,7 +2053,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 		}
 		L_INDEX(nullptr, "Field Text to Index [%d] => %s:%s [Positions: %d]", pos, field_spc.prefix.c_str(), serialise_val.c_str(), positions);
 	} else {
-		if (!field_spc.flags.bool_term && field_spc.sep_types[2] == FieldType::STRING) {
+		if (!field_spc.flags.bool_term && field_spc.sep_types[2] == FieldType::TERM) {
 			to_lower(serialise_val);
 		}
 
@@ -2196,7 +2196,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				THROW(ClientError, "Format invalid for geo type: %s", repr(value.to_string()).c_str());
 			}
 		}
-		case FieldType::STRING:
+		case FieldType::TERM:
 		case FieldType::TEXT: {
 			try {
 				auto ser_value = value.as_string();
@@ -2393,7 +2393,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 				THROW(ClientError, "Format invalid for geo type: %s", repr(value.to_string()).c_str());
 			}
 		}
-		case FieldType::STRING:
+		case FieldType::TERM:
 		case FieldType::TEXT: {
 			try {
 				auto ser_value = value.as_string();
@@ -3752,7 +3752,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 
 	// ID_FIELD_NAME can not be TEXT.
 	if (specification.sep_types[2] == FieldType::TEXT) {
-		specification.sep_types[2] = FieldType::STRING;
+		specification.sep_types[2] = FieldType::TERM;
 		properties[RESERVED_TYPE] = specification.sep_types;
 	}
 
@@ -3793,7 +3793,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 
 	// RESERVED_TYPE by default is STRING
 	if (specification.sep_types[2] == FieldType::EMPTY) {
-		specification.sep_types[2] = FieldType::STRING;
+		specification.sep_types[2] = FieldType::TERM;
 		properties[RESERVED_TYPE] = specification.sep_types;
 	}
 
@@ -4129,7 +4129,7 @@ Schema::get_data_field(const std::string& field_name) const
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						break;
-					case FieldType::STRING:
+					case FieldType::TERM:
 						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 						break;
@@ -4163,7 +4163,7 @@ Schema::get_data_field(const std::string& field_name) const
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						break;
-					case FieldType::STRING:
+					case FieldType::TERM:
 						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 						break;
@@ -4221,7 +4221,7 @@ Schema::get_slot_field(const std::string& field_name) const
 					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 					res.language = properties.at(RESERVED_LANGUAGE).as_string();
 					break;
-				case FieldType::STRING:
+				case FieldType::TERM:
 					res.language = properties.at(RESERVED_LANGUAGE).as_string();
 					res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 					break;
@@ -4235,7 +4235,7 @@ Schema::get_slot_field(const std::string& field_name) const
 				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 			}
 		} else {
-			auto namespace_spc = specification_t::get_global(FieldType::STRING);
+			auto namespace_spc = specification_t::get_global(FieldType::TERM);
 			namespace_spc.flags.inside_namespace = true;
 			namespace_spc.prefix.reserve(arraySize(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
 			namespace_spc.prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace).push_back(toUType(namespace_spc.sep_types[2]));
@@ -4270,7 +4270,7 @@ Schema::get_data_global(FieldType field_type)
 			static const required_spc_t prop(DB_SLOT_NUMERIC, FieldType::POSITIVE, def_accuracy_num, global_acc_prefix_num);
 			return prop;
 		}
-		case FieldType::STRING: {
+		case FieldType::TERM: {
 			static const required_spc_t prop(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
 			return prop;
 		}
