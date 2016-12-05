@@ -1870,7 +1870,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 
 
 void
-Schema::index_paths_namespace(Xapian::Document& doc, bool offsprings) const
+Schema::index_paths_namespace(Xapian::Document& doc, bool offsprings)
 {
 	if (specification.flags.inside_namespace && !offsprings) {
 		auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
