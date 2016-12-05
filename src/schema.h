@@ -272,12 +272,12 @@ struct required_spc_t {
 	std::vector<uint64_t> accuracy;
 	std::vector<std::string> acc_prefix;
 
+	// For STRING and TEXT type.
+	std::string language;
 	// Variables for TEXT type.
 	StopStrategy stop_strategy;
 	StemStrategy stem_strategy;
 	std::string stem_language;
-	// For STRING and TEXT type.
-	std::string language;
 
 	// Variables for GEO type.
 	double error;
@@ -348,7 +348,7 @@ class Schema {
 	using dispatch_set_default_spc   = void (Schema::*)(MsgPack&);
 	using dispatch_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
 	using dispatch_update_reserved   = void (Schema::*)(const MsgPack&);
-	using dispatch_readable          = void (*)(MsgPack&, MsgPack&);
+	using dispatch_readable          = bool (*)(MsgPack&, MsgPack&);
 
 	static const std::unordered_map<std::string, dispatch_set_default_spc> map_dispatch_set_default_spc;
 	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document;
@@ -493,10 +493,10 @@ class Schema {
 	void update_weight(const MsgPack& prop_weight);
 	void update_spelling(const MsgPack& prop_spelling);
 	void update_positions(const MsgPack& prop_positions);
+	void update_language(const MsgPack& prop_language);
 	void update_stop_strategy(const MsgPack& prop_stop_strategy);
 	void update_stem_strategy(const MsgPack& prop_stem_strategy);
 	void update_stem_language(const MsgPack& prop_stem_language);
-	void update_language(const MsgPack& prop_language);
 	void update_type(const MsgPack& prop_type);
 	void update_accuracy(const MsgPack& prop_accuracy);
 	void update_acc_prefix(const MsgPack& prop_acc_prefix);
@@ -528,10 +528,10 @@ class Schema {
 	void process_position(const std::string& prop_name, const MsgPack& doc_position);
 	void process_spelling(const std::string& prop_name, const MsgPack& doc_spelling);
 	void process_positions(const std::string& prop_name, const MsgPack& doc_positions);
+	void process_language(const std::string& prop_name, const MsgPack& doc_language);
 	void process_stop_strategy(const std::string& prop_name, const MsgPack& doc_stop_strategy);
 	void process_stem_strategy(const std::string& prop_name, const MsgPack& doc_stem_strategy);
 	void process_stem_language(const std::string& prop_name, const MsgPack& doc_stem_language);
-	void process_language(const std::string& prop_name, const MsgPack& doc_language);
 	void process_type(const std::string& prop_name, const MsgPack& doc_type);
 	void process_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy);
 	void process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_prefix);
@@ -576,12 +576,13 @@ class Schema {
 	 * Tranforms reserved words into a readable form.
 	 */
 
-	static void readable_type(MsgPack& prop_type, MsgPack& properties);
-	static void readable_prefix(MsgPack& prop_index, MsgPack& properties);
-	static void readable_stop_strategy(MsgPack& prop_stop_strategy, MsgPack& properties);
-	static void readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack& properties);
-	static void readable_index(MsgPack& prop_index, MsgPack& properties);
-	static void readable_acc_prefix(MsgPack& prop_index, MsgPack& properties);
+	static bool readable_type(MsgPack& prop_type, MsgPack& properties);
+	static bool readable_prefix(MsgPack& prop_index, MsgPack& properties);
+	static bool readable_stop_strategy(MsgPack& prop_stop_strategy, MsgPack& properties);
+	static bool readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack& properties);
+	static bool readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties);
+	static bool readable_index(MsgPack& prop_index, MsgPack& properties);
+	static bool readable_acc_prefix(MsgPack& prop_index, MsgPack& properties);
 
 
 	/*

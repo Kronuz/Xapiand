@@ -410,10 +410,10 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_NAME,               &Schema::process_name            },
 	{ RESERVED_ACCURACY,           &Schema::process_accuracy        },
 	{ RESERVED_ACC_PREFIX,         &Schema::process_acc_prefix      },
+	{ RESERVED_LANGUAGE,           &Schema::process_language        },
 	{ RESERVED_STOP_STRATEGY,      &Schema::process_stop_strategy   },
 	{ RESERVED_STEM_STRATEGY,      &Schema::process_stem_strategy   },
 	{ RESERVED_STEM_LANGUAGE,      &Schema::process_stem_language   },
-	{ RESERVED_LANGUAGE,           &Schema::process_language        },
 	{ RESERVED_PARTIALS,           &Schema::process_partials        },
 	{ RESERVED_ERROR,              &Schema::process_error           },
 	{ RESERVED_NAMESPACE,          &Schema::process_namespace       },
@@ -463,10 +463,10 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 	{ RESERVED_BOOL_TERM,       &Schema::update_bool_term        },
 	{ RESERVED_ACCURACY,        &Schema::update_accuracy         },
 	{ RESERVED_ACC_PREFIX,      &Schema::update_acc_prefix       },
+	{ RESERVED_LANGUAGE,        &Schema::update_language         },
 	{ RESERVED_STOP_STRATEGY,   &Schema::update_stop_strategy    },
 	{ RESERVED_STEM_STRATEGY,   &Schema::update_stem_strategy    },
 	{ RESERVED_STEM_LANGUAGE,   &Schema::update_stem_language    },
-	{ RESERVED_LANGUAGE,        &Schema::update_language         },
 	{ RESERVED_PARTIALS,        &Schema::update_partials         },
 	{ RESERVED_ERROR,           &Schema::update_error            },
 	{ RESERVED_NAMESPACE,       &Schema::update_namespace        },
@@ -478,6 +478,7 @@ const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_dis
 	{ RESERVED_PREFIX,          &Schema::readable_prefix         },
 	{ RESERVED_STOP_STRATEGY,   &Schema::readable_stop_strategy  },
 	{ RESERVED_STEM_STRATEGY,   &Schema::readable_stem_strategy  },
+	{ RESERVED_STEM_LANGUAGE,   &Schema::readable_stem_language  },
 	{ RESERVED_INDEX,           &Schema::readable_index          },
 	{ RESERVED_ACC_PREFIX,      &Schema::readable_acc_prefix     },
 });
@@ -530,10 +531,10 @@ required_spc_t::flags_t::flags_t()
 required_spc_t::required_spc_t()
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY }}),
 	  slot(Xapian::BAD_VALUENO),
+	  language(DEFAULT_LANGUAGE),
 	  stop_strategy(DEFAULT_STOP_STRATEGY),
 	  stem_strategy(DEFAULT_STEM_STRATEGY),
 	  stem_language(DEFAULT_LANGUAGE),
-	  language(DEFAULT_LANGUAGE),
 	  error(DEFAULT_GEO_ERROR) { }
 
 
@@ -544,10 +545,10 @@ required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std:
 	  slot(_slot),
 	  accuracy(acc),
 	  acc_prefix(_acc_prefix),
+	  language(DEFAULT_LANGUAGE),
 	  stop_strategy(DEFAULT_STOP_STRATEGY),
 	  stem_strategy(DEFAULT_STEM_STRATEGY),
 	  stem_language(DEFAULT_LANGUAGE),
-	  language(DEFAULT_LANGUAGE),
 	  error(DEFAULT_GEO_ERROR) { }
 
 
@@ -558,10 +559,10 @@ required_spc_t::required_spc_t(const required_spc_t& o)
 	  flags(o.flags),
 	  accuracy(o.accuracy),
 	  acc_prefix(o.acc_prefix),
+	  language(o.language),
 	  stop_strategy(o.stop_strategy),
 	  stem_strategy(o.stem_strategy),
 	  stem_language(o.stem_language),
-	  language(o.language),
 	  error(o.error),
 	  paths_namespace(o.paths_namespace) { }
 
@@ -573,10 +574,10 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 	  flags(std::move(o.flags)),
 	  accuracy(std::move(o.accuracy)),
 	  acc_prefix(std::move(o.acc_prefix)),
+	  language(std::move(o.language)),
 	  stop_strategy(std::move(o.stop_strategy)),
 	  stem_strategy(std::move(o.stem_strategy)),
 	  stem_language(std::move(o.stem_language)),
-	  language(std::move(o.language)),
 	  error(std::move(o.error)),
 	  paths_namespace(std::move(o.paths_namespace)) { }
 
@@ -651,10 +652,10 @@ specification_t::operator=(const specification_t& o)
 	script = o.script;
 	accuracy = o.accuracy;
 	acc_prefix = o.acc_prefix;
+	language = o.language;
 	stop_strategy = o.stop_strategy;
 	stem_strategy = o.stem_strategy;
 	stem_language = o.stem_language;
-	language = o.language;
 	error = o.error;
 	paths_namespace = o.paths_namespace;
 	name = o.name;
@@ -686,10 +687,10 @@ specification_t::operator=(specification_t&& o) noexcept
 	script = std::move(o.script);
 	accuracy = std::move(o.accuracy);
 	acc_prefix = std::move(o.acc_prefix);
+	language = std::move(o.language);
 	stop_strategy = std::move(o.stop_strategy);
 	stem_strategy = std::move(o.stem_strategy);
 	stem_language = std::move(o.stem_language);
-	language = std::move(o.language);
 	error = std::move(o.error);
 	paths_namespace = std::move(o.paths_namespace);
 	name = std::move(o.name);
@@ -778,10 +779,10 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
+	str << "\t" << RESERVED_LANGUAGE         << ": " << language          << "\n";
 	str << "\t" << RESERVED_STOP_STRATEGY    << ": " << readable_stop_strategy(stop_strategy) << "\n";
 	str << "\t" << RESERVED_STEM_STRATEGY    << ": " << readable_stem_strategy(stem_strategy) << "\n";
 	str << "\t" << RESERVED_STEM_LANGUAGE    << ": " << stem_language     << "\n";
-	str << "\t" << RESERVED_LANGUAGE         << ": " << language          << "\n";
 
 	str << "\t" << RESERVED_ACCURACY << ": [ ";
 	for (const auto& acc : accuracy) {
@@ -911,9 +912,10 @@ Schema::restart_specification()
 	specification.accuracy               = default_spc.accuracy;
 	specification.acc_prefix             = default_spc.acc_prefix;
 	specification.name                   = default_spc.name;
+	specification.language               = default_spc.language;
+	specification.stop_strategy          = default_spc.stop_strategy;
 	specification.stem_strategy          = default_spc.stem_strategy;
 	specification.stem_language          = default_spc.stem_language;
-	specification.language               = default_spc.language;
 	specification.error                  = default_spc.error;
 	specification.aux_stem_lan           = default_spc.aux_stem_lan;
 	specification.aux_lan                = default_spc.aux_lan;
@@ -1578,6 +1580,8 @@ Schema::validate_required_data()
 					}
 				}
 
+				properties[RESERVED_LANGUAGE] = specification.language;
+
 				properties[RESERVED_STOP_STRATEGY] = specification.stop_strategy;
 
 				properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
@@ -1589,7 +1593,6 @@ Schema::validate_required_data()
 				if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
 					specification.language = specification.aux_stem_lan;
 				}
-				properties[RESERVED_LANGUAGE] = specification.language;
 				break;
 			}
 			case FieldType::TERM: {
@@ -1600,11 +1603,6 @@ Schema::validate_required_data()
 						properties[RESERVED_INDEX] = specification.index;
 					}
 				}
-
-				if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
-					specification.language = specification.aux_stem_lan;
-				}
-				properties[RESERVED_LANGUAGE] = specification.language;
 
 				// Process RESERVED_BOOL_TERM
 				if (!specification.flags.has_bool_term) {
@@ -1691,11 +1689,12 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 				}
 
+				specification.language = default_spc.language;
+
 				specification.stop_strategy = default_spc.stop_strategy;
 
 				specification.stem_strategy = default_spc.stem_strategy;
 				specification.stem_language = default_spc.stem_language;
-				specification.language = default_spc.language;
 				break;
 
 			case FieldType::TERM:
@@ -1703,7 +1702,6 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 				}
 
-				specification.language = default_spc.language;
 				specification.flags.bool_term = strhasupper(specification.normalized_name);
 				break;
 
@@ -2743,6 +2741,15 @@ Schema::update_positions(const MsgPack& prop_positions)
 
 
 void
+Schema::update_language(const MsgPack& prop_language)
+{
+	L_CALL(this, "Schema::update_language(%s)", repr(prop_language.to_string()).c_str());
+
+	specification.language = prop_language.as_string();
+}
+
+
+void
 Schema::update_stop_strategy(const MsgPack& prop_stop_strategy)
 {
 	L_CALL(this, "Schema::update_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
@@ -2766,15 +2773,6 @@ Schema::update_stem_language(const MsgPack& prop_stem_language)
 	L_CALL(this, "Schema::update_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
 
 	specification.stem_language = prop_stem_language.as_string();
-}
-
-
-void
-Schema::update_language(const MsgPack& prop_language)
-{
-	L_CALL(this, "Schema::update_language(%s)", repr(prop_language.to_string()).c_str());
-
-	specification.language = prop_language.as_string();
 }
 
 
@@ -3111,6 +3109,35 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 
 
 void
+Schema::process_language(const std::string& prop_name, const MsgPack& doc_language)
+{
+	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
+	L_CALL(this, "Schema::process_language(%s)", repr(doc_language.to_string()).c_str());
+
+	if likely(specification.flags.field_with_type) {
+		return;
+	}
+
+	try {
+		auto _str_language = lower_string(doc_language.as_string());
+		try {
+			auto data_lan = map_stem_language.at(_str_language);
+			if (data_lan.first) {
+				specification.language = data_lan.second;
+				specification.aux_lan = data_lan.second;
+			} else {
+				THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
+			}
+		} catch (const std::out_of_range&) {
+			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
+	}
+}
+
+
+void
 Schema::process_stop_strategy(const std::string& prop_name, const MsgPack& doc_stop_strategy)
 {
 	// RESERVED_STOP_STRATEGY isn't heritable and can't change once fixed.
@@ -3174,35 +3201,6 @@ Schema::process_stem_language(const std::string& prop_name, const MsgPack& doc_s
 			specification.aux_stem_lan = data_lan.second;
 		} catch (const std::out_of_range&) {
 			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_stem_language).c_str());
-		}
-	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
-	}
-}
-
-
-void
-Schema::process_language(const std::string& prop_name, const MsgPack& doc_language)
-{
-	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_language(%s)", repr(doc_language.to_string()).c_str());
-
-	if likely(specification.flags.field_with_type) {
-		return;
-	}
-
-	try {
-		auto _str_language = lower_string(doc_language.as_string());
-		try {
-			auto data_lan = map_stem_language.at(_str_language);
-			if (data_lan.first) {
-				specification.language = data_lan.second;
-				specification.aux_lan = data_lan.second;
-			} else {
-				THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
-			}
-		} catch (const std::out_of_range&) {
-			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
@@ -3849,7 +3847,10 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 		auto str_key = it->as_string();
 		try {
 			auto func = map_dispatch_readable.at(str_key);
-			(*func)(item_schema.at(str_key), item_schema);
+			if (!(*func)(item_schema.at(str_key), item_schema)) {
+				it = item_schema.erase(it);
+				continue;
+			}
 		} catch (const std::out_of_range&) {
 			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.find(str_key) != dsit_e)) {
 				auto& sub_item = item_schema.at(str_key);
@@ -3866,7 +3867,7 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 }
 
 
-void
+bool
 Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 {
 	L_CALL(nullptr, "Schema::readable_type(%s, %s)", repr(prop_type.to_string()).c_str(), repr(properties.to_string()).c_str());
@@ -3884,46 +3885,68 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 			_accuracy = readable_acc_date((UnitTime)_accuracy.as_u64());
 		}
 	}
+
+	return true;
 }
 
 
-void
+bool
 Schema::readable_prefix(MsgPack& prop_prefix, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_prefix(%s)", repr(prop_prefix.to_string()).c_str());
 
 	prop_prefix = prop_prefix.as_string();
+
+	return true;
 }
 
 
-void
+bool
 Schema::readable_stop_strategy(MsgPack& prop_stop_strategy, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
 
 	prop_stop_strategy = ::readable_stop_strategy((StopStrategy)prop_stop_strategy.as_u64());
+
+	return true;
 }
 
 
-void
+bool
 Schema::readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_stem_strategy(%s)", repr(prop_stem_strategy.to_string()).c_str());
 
 	prop_stem_strategy = ::readable_stem_strategy((StemStrategy)prop_stem_strategy.as_u64());
+
+	return true;
 }
 
 
-void
+bool
+Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& prop)
+{
+	L_CALL(nullptr, "Schema::readable_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
+
+	auto language = prop[RESERVED_LANGUAGE].as_string();
+	auto stem_language = prop_stem_language.as_string();
+
+	return (language != stem_language);
+}
+
+
+bool
 Schema::readable_index(MsgPack& prop_index, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_index(%s)", repr(prop_index.to_string()).c_str());
 
 	prop_index = ::readable_index((TypeIndex)prop_index.as_u64());
+
+	return true;
 }
 
 
-void
+bool
 Schema::readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack& properties)
 {
 	L_CALL(nullptr, "Schema::readable_acc_prefix(%s)", repr(prop_acc_prefix.to_string()).c_str());
@@ -3931,6 +3954,8 @@ Schema::readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack& properties)
 	for (auto& prop_prefix : prop_acc_prefix) {
 		readable_prefix(prop_prefix, properties);
 	}
+
+	return true;
 }
 
 
@@ -4123,14 +4148,14 @@ Schema::get_data_field(const std::string& field_name) const
 						}
 						break;
 					case FieldType::TEXT:
+						res.language = properties.at(RESERVED_LANGUAGE).as_string();
+
 						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
 
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						break;
 					case FieldType::TERM:
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 						break;
 					default:
@@ -4157,14 +4182,14 @@ Schema::get_data_field(const std::string& field_name) const
 						}
 						break;
 					case FieldType::TEXT:
+						res.language = properties.at(RESERVED_LANGUAGE).as_string();
+
 						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
 
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						break;
 					case FieldType::TERM:
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 						break;
 					default:
@@ -4215,14 +4240,14 @@ Schema::get_slot_field(const std::string& field_name) const
 					res.error = properties.at(RESERVED_ERROR).as_f64();
 					break;
 				case FieldType::TEXT:
+					res.language = properties.at(RESERVED_LANGUAGE).as_string();
+
 					res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
 
 					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
-					res.language = properties.at(RESERVED_LANGUAGE).as_string();
 					break;
 				case FieldType::TERM:
-					res.language = properties.at(RESERVED_LANGUAGE).as_string();
 					res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 					break;
 				default:
