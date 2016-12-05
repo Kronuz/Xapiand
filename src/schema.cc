@@ -1622,9 +1622,11 @@ Schema::validate_required_data()
 		}
 
 		if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
-			specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
-			properties[RESERVED_INDEX] = specification.index;
-			specification.flags.has_index = true;
+			auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+			if (specification.index != index) {
+				specification.index = index;
+				properties[RESERVED_INDEX] = specification.index;
+			}
 		}
 
 		if (specification.flags.dynamic_type) {
