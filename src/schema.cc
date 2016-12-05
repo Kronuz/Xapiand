@@ -797,7 +797,7 @@ specification_t::to_string() const
 
 	str << "\t" << RESERVED_NAMESPACE  << ": [ ";
 	for (const auto& name : paths_namespace) {
-		str << name << " ";
+		str << repr(name) << " ";
 	}
 	str << "]\n";
 
@@ -822,6 +822,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_BOOL_TERM   << ": " << (flags.bool_term         ? "true" : "false") << "\n";
 	str << "\t" << "field_found"        << ": " << (flags.field_found       ? "true" : "false") << "\n";
 	str << "\t" << "dynamic_type"       << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
+	str << "\t" << "inside_namespace"   << ": " << (flags.inside_namespace  ? "true" : "false") << "\n";
 
 	str << "\t" << RESERVED_NAME           << ": " << name                 << "\n";
 	str << "\t" << "meta_name"             << ": " << meta_name            << "\n";
