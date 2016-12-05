@@ -135,14 +135,14 @@ std::unique_ptr<Xapian::SimpleStopper>
 getStopper(const std::string& language)
 {
 	static const std::unordered_map<std::string, std::vector<const char* const>> all_stopwords = {
-		{"en", {
+		{ "en", {
 			"a", "an", "and", "are", "as", "at", "be", "but", "by",
 			"for", "if", "in", "into", "is", "it",
 			"no", "not", "of", "on", "or", "such",
 			"that", "the", "their", "then", "there", "these",
 			"they", "this", "to", "was", "will", "with"
-		}},
-		{"es", {
+		} },
+		{ "es", {
 			"un", "una", "unas", "unos", "uno", "sobre", "todo",
 			"también", "tras", "otro", "algún", "alguno", "alguna",
 			"algunos", "algunas", "ser", "es", "soy", "eres", "somos",
@@ -174,13 +174,13 @@ getStopper(const std::string& language)
 			"trabaja", "trabajamos", "trabajais", "trabajan", "podria",
 			"podrias", "podriamos", "podrian", "podriais", "yo", "aquel",
 			"mi", "de", "a", "e", "i", "o", "u"
-		}},
+		} },
 	};
 
 	std::unique_ptr<Xapian::SimpleStopper> stopper;
 	auto it = all_stopwords.find(language);
 	if (it != all_stopwords.end()) {
-		auto& stopwords = it->second;
+		const auto& stopwords = it->second;
 		stopper = std::make_unique<Xapian::SimpleStopper>(stopwords.data(), stopwords.data() + stopwords.size());
 	}
 	return stopper;
