@@ -431,6 +431,11 @@ class Schema {
 	 */
 	void guess_field_type(const MsgPack& item_doc);
 
+	/*
+     * Function to index paths namespace in doc.
+     */
+	void index_paths_namespace(Xapian::Document& doc, bool offsprings=false) const;
+
 
 	/*
 	 * Auxiliar functions for index fields in doc.
@@ -440,6 +445,7 @@ class Schema {
 	void _index_item(Xapian::Document& doc, T&& values, size_t pos);
 	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, bool add_value=true);
 	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, size_t pos, bool add_values=true);
+
 
 	static void index_term(Xapian::Document& doc, std::string serialise_val, const specification_t& field_spc, size_t pos);
 	static void index_all_term(Xapian::Document& doc, const MsgPack& value, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
