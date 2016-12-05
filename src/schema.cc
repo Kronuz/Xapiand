@@ -3971,7 +3971,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		auto data_ptr = &data;
 
 		specification = default_spc;
-		if (!*prop_ptr) {
+		if (*prop_ptr) {
+			update_specification(*prop_ptr);
+		} else {
 			specification.flags.field_found = false;
 		}
 
