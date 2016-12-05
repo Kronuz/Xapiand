@@ -3754,12 +3754,6 @@ Schema::set_default_spc_id(MsgPack& properties)
 		properties[RESERVED_TYPE] = specification.sep_types;
 	}
 
-	// RESERVED_STORE by default is false.
-	if (properties.find(RESERVED_STORE) == properties.end()) {
-		specification.flags.store = false;
-		properties[RESERVED_STORE] = static_cast<bool>(specification.flags.store);
-	}
-
 	// Process RESERVED_PREFIX
 	if (specification.prefix.empty()) {
 		specification.prefix = DOCUMENT_ID_TERM_PREFIX;
@@ -3791,12 +3785,6 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		specification.sep_types[2] = FieldType::TERM;
 		properties[RESERVED_TYPE] = specification.sep_types;
-	}
-
-	// RESERVED_STORE by default is false.
-	if (properties.find(RESERVED_STORE) == properties.end()) {
-		specification.flags.store = false;
-		properties[RESERVED_STORE] = static_cast<bool>(specification.flags.store);
 	}
 
 	// Process RESERVED_PREFIX
