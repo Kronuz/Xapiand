@@ -1083,6 +1083,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 			for (const auto& prefix_namespace : prefixes_namespace) {
 				doc.add_term(prefix_namespace);
 			}
+		} else if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
+			auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+			if (specification.index != index) {
+				specification.index = index;
+				get_mutable()[RESERVED_INDEX] = specification.index;
+			}
 		}
 		if (specification.flags.store) {
 			data = item_value;
@@ -1138,6 +1144,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 			auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
 			for (const auto& prefix_namespace : prefixes_namespace) {
 				doc.add_term(prefix_namespace);
+			}
+		} else if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
+			auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+			if (specification.index != index) {
+				specification.index = index;
+				get_mutable()[RESERVED_INDEX] = specification.index;
 			}
 		}
 		if (specification.flags.store) {
@@ -1197,6 +1209,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 				for (const auto& prefix_namespace : prefixes_namespace) {
 					doc.add_term(prefix_namespace);
 				}
+			} else if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
+				auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+				if (specification.index != index) {
+					specification.index = index;
+					get_mutable()[RESERVED_INDEX] = specification.index;
+				}
 			}
 			if (specification.flags.store) {
 				offsprings ? (*data)[RESERVED_VALUE] = *val : *data = *val;
@@ -1254,6 +1272,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 		auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
 		for (const auto& prefix_namespace : prefixes_namespace) {
 			doc.add_term(prefix_namespace);
+		}
+	} else if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
+		auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+		if (specification.index != index) {
+			specification.index = index;
+			get_mutable()[RESERVED_INDEX] = specification.index;
 		}
 	}
 
