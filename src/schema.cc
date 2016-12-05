@@ -3743,8 +3743,11 @@ Schema::set_default_spc_id(MsgPack& properties)
 
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
-		specification.index |= (TypeIndex::FIELD_VALUES | TypeIndex::FIELD_TERMS);
-		properties[RESERVED_INDEX] = specification.index;
+		auto index = specification.index | TypeIndex::FIELD_VALUES | TypeIndex::FIELD_TERMS; // Fallback to index anything but values
+		if (specification.index != index) {
+			specification.index = index;
+			properties[RESERVED_INDEX] = specification.index;
+		}
 	}
 
 	// ID_FIELD_NAME can not be TEXT.
@@ -3781,9 +3784,11 @@ Schema::set_default_spc_ct(MsgPack& properties)
 
 	if (!specification.flags.has_index) {
 		specification.flags.has_index = true;
-		specification.index |= TypeIndex::FIELD_VALUES;
-		specification.index &= ~TypeIndex::FIELD_TERMS;
-		properties[RESERVED_INDEX] = specification.index;
+		auto index = (specification.index | TypeIndex::FIELD_VALUES) & ~TypeIndex::FIELD_TERMS; // Fallback to index anything but values
+		if (specification.index != index) {
+			specification.index = index;
+			properties[RESERVED_INDEX] = specification.index;
+		}
 	}
 
 	// RESERVED_TYPE by default is STRING
