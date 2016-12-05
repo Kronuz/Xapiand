@@ -2508,9 +2508,10 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 	const MsgPack* subproperties = &properties;
 	const auto it_e = field_names.end();
 
+	static const auto dsit_e = map_dispatch_set_default_spc.end();
 	for (auto it = field_names.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
-		if (!is_valid(field_name)) {
+		if (!is_valid(field_name) && specification.full_normalized_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
 			THROW(ClientError, "The field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 		}
 		restart_specification();
