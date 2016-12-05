@@ -416,7 +416,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					int i = 0;
 					while (next != end) {
 						if (next->length(3)) {
-							self->accept_set.insert(std::make_tuple(std::stod(next->str(3)), i, std::make_pair(next->str(1), next->str(2))));
+							self->accept_set.insert(std::make_tuple(stox(std::stod, next->str(3)), i, std::make_pair(next->str(1), next->str(2))));
 						} else {
 							self->accept_set.insert(std::make_tuple(1, i, std::make_pair(next->str(1), next->str(2))));
 						}

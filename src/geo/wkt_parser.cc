@@ -26,6 +26,7 @@
 
 #include "geo/cartesian.h"         // for Cartesian, CartesianUnits, Cartesi...
 #include "geo/htm.h"               // for HTM, HTM_MAX_LEVEL
+#include "utils.h"                 // for stox
 #include "stl_serialise.h"         // for CartesianUSet, RangeList
 
 
@@ -118,10 +119,10 @@ EWKT_Parser::parse_circle(const std::string& specification)
 {
 	std::smatch m;
 	if (std::regex_match(specification, m, find_circle_re) && static_cast<size_t>(m.length(0)) == specification.size()) {
-		double lat = std::stod(m.str(1));
-		double lon = std::stod(m.str(2));
-		double h = m.length(4) > 0 ? std::stod(m.str(4)) : 0;
-		HTM _htm(partials, error, Geometry(Constraint(Cartesian(lat, lon, h, CartesianUnits::DEGREES, SRID), std::stod(m.str(5)))));
+		double lat = stox(std::stod, m.str(1));
+		double lon = stox(std::stod, m.str(2));
+		double h = m.length(4) > 0 ? stox(std::stod, m.str(4)) : 0;
+		HTM _htm(partials, error, Geometry(Constraint(Cartesian(lat, lon, h, CartesianUnits::DEGREES, SRID), stox(std::stod, m.str(5)))));
 		_htm.run();
 
 		centroids.insert(_htm.region.centroid);
@@ -200,9 +201,9 @@ EWKT_Parser::parse_polygon(const std::string& specification, GeometryType type)
 			// Get lat, lon and height.
 			std::vector<std::string> coords = stringSplit(*it_p, " ");
 			if (coords.size() == 3) {
-				pts.push_back(Cartesian(std::stod(coords.at(0)), std::stod(coords.at(1)), std::stod(coords.at(2)), CartesianUnits::DEGREES, SRID));
+				pts.push_back(Cartesian(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), stox(std::stod, coords.at(2)), CartesianUnits::DEGREES, SRID));
 			} else if (coords.size() == 2) {
-				pts.push_back(Cartesian(std::stod(coords.at(0)), std::stod(coords.at(1)), 0, CartesianUnits::DEGREES, SRID));
+				pts.push_back(Cartesian(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), 0, CartesianUnits::DEGREES, SRID));
 			} else {
 				THROW(EWKTError, "The specification for POLYGON is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
 			}
@@ -283,12 +284,12 @@ EWKT_Parser::parse_point(const std::string& specification)
 
 	std::vector<std::string> coords = stringSplit(specification, " (,");
 	if (coords.size() == 3) {
-		Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), std::stod(coords.at(2)), CartesianUnits::DEGREES, SRID);
+		Cartesian c(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), stox(std::stod, coords.at(2)), CartesianUnits::DEGREES, SRID);
 		c.normalize();
 		res.push_back(HTM::cartesian2name(c));
 		centroids.insert(std::move(c));
 	} else if (coords.size() == 2) {
-		Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), 0, CartesianUnits::DEGREES, SRID);
+		Cartesian c(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), 0, CartesianUnits::DEGREES, SRID);
 		c.normalize();
 		res.push_back(HTM::cartesian2name(c));
 		centroids.insert(std::move(c));
@@ -320,12 +321,12 @@ EWKT_Parser::parse_multipoint(const std::string& specification)
 		match_size += next->length(0);
 		std::vector<std::string> coords = stringSplit(next->str(2), " ");
 		if (coords.size() == 3) {
-			Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), std::stod(coords.at(2)), CartesianUnits::DEGREES, SRID);
+			Cartesian c(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), stox(std::stod, coords.at(2)), CartesianUnits::DEGREES, SRID);
 			c.normalize();
 			res.push_back(HTM::cartesian2name(c));
 			centroids.insert(std::move(c));
 		} else if (coords.size() == 2) {
-			Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), 0, CartesianUnits::DEGREES, SRID);
+			Cartesian c(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), 0, CartesianUnits::DEGREES, SRID);
 			c.normalize();
 			res.push_back(HTM::cartesian2name(c));
 			centroids.insert(std::move(c));
@@ -340,12 +341,12 @@ EWKT_Parser::parse_multipoint(const std::string& specification)
 		for (auto it = points.begin(); it != points.end(); ++it) {
 			std::vector<std::string> coords = stringSplit(*it, " ");
 			if (coords.size() == 3) {
-				Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), std::stod(coords.at(2)), CartesianUnits::DEGREES, SRID);
+				Cartesian c(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), stox(std::stod, coords.at(2)), CartesianUnits::DEGREES, SRID);
 				c.normalize();
 				res.push_back(HTM::cartesian2name(c));
 				centroids.insert(std::move(c));
 			} else if (coords.size() == 2) {
-				Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), 0, CartesianUnits::DEGREES, SRID);
+				Cartesian c(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), 0, CartesianUnits::DEGREES, SRID);
 				c.normalize();
 				res.push_back(HTM::cartesian2name(c));
 				centroids.insert(std::move(c));
