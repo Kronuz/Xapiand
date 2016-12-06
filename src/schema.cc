@@ -2049,21 +2049,13 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 		if (!field_spc.flags.bool_term && field_spc.sep_types[2] == FieldType::TERM) {
 			to_lower(serialise_val);
 		}
-
 		serialise_val = prefixed(serialise_val, field_spc.prefix);
+		auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
 		auto position = field_spc.position[getPos(pos, field_spc.position.size())];
 		if (position) {
-			if (field_spc.flags.bool_term) {
-				doc.add_posting(serialise_val, position, 0);
-			} else {
-				doc.add_posting(serialise_val, position, field_spc.weight[getPos(pos, field_spc.weight.size())]);
-			}
+			doc.add_posting(serialise_val, position, weight);
 		} else {
-			if (field_spc.flags.bool_term) {
-				doc.add_boolean_term(serialise_val);
-			} else {
-				doc.add_term(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())]);
-			}
+			doc.add_term(serialise_val, weight);
 		}
 		L_INDEX(nullptr, "Field Term [%d] -> %s  Bool: %d  Posting: %d", pos, repr(serialise_val).c_str(), field_spc.flags.bool_term, position);
 	}
