@@ -407,7 +407,15 @@ QueryDSL::query(const MsgPack& obj)
 
 						case FieldType::TERM: {
 							auto field_value = Serialise::MsgPack(field_spc, obj);
-							return Xapian::Query(prefixed(field_spc.flags.bool_term ? field_value : lower_string(field_value), field_spc.prefix), spc_dsl.wqf);
+							if (!field_spc.flags.bool_term) {
+								to_lower(field_value);
+							}
+							if (endswith(field_value, '*')) {
+								field_value = field_value.substr(0, field_value.length() - 1);
+								return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(field_value, field_spc.prefix));
+							} else {
+								return Xapian::Query(prefixed(field_value, field_spc.prefix), spc_dsl.wqf);
+							}
 						}
 
 						case FieldType::GEO: {
