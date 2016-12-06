@@ -22,7 +22,6 @@
 
 #include "query_dsl.h"
 
-#include <stdexcept>                           // for out_of_range
 #include <tuple>                               // for get, tuple
 
 #include "booleanParser/BooleanParser.h"       // for BooleanTree
@@ -465,15 +464,17 @@ QueryDSL::set_specifications(const MsgPack& obj)
 
 	bool found = false;
 	specification_dsl spc_dsl;
-	try {
-		auto const& boost = obj.at(QUERYDSL_BOOST);
+
+	auto it = obj.find(QUERYDSL_BOOST);
+	if (it != obj.end()) {
+		auto const& boost = obj.at(*it);
 		if (boost.is_number() && boost.getType() != MsgPack::Type::NEGATIVE_INTEGER) {
 			spc_dsl.wqf = boost.as_u64();
 			found = true;
 		} else {
 			THROW(QueryDslError, "Type error expected unsigned int in %s", QUERYDSL_BOOST);
 		}
-	} catch(const std::out_of_range&) { }
+	}
 
 	if (found) {
 		specifications.push_back(spc_dsl);
@@ -494,13 +495,13 @@ QueryDSL::find_operators(const std::string& key, const MsgPack& obj, Xapian::Que
 {
 	L_CALL(this, "QueryDSL::find_operators(%s)", repr(key).c_str());
 
-	try {
-		auto func = map_op_dispatch_dsl.at(key);
+	auto it = map_op_dispatch_dsl.find(key);
+	if (it != map_op_dispatch_dsl.end()) {
+		auto& func = it->second;
 		q = (this->*func)(obj, map_xapian_operator.at(key));
 		return true;
-	} catch (const std::out_of_range&) {
-		return false;
 	}
+	return false;
 }
 
 
@@ -509,13 +510,13 @@ QueryDSL::find_casts(const std::string& key, const MsgPack& obj, Xapian::Query& 
 {
 	L_CALL(this, "QueryDSL::find_casts(%s)", repr(key).c_str());
 
-	try {
-		auto func = map_dispatch_cast.at(key);
+	auto it = map_dispatch_cast.find(key);
+	if (it != map_dispatch_cast.end()) {
+		auto& func = it->second;
 		q = (this->*func)(obj);
 		return true;
-	} catch (const std::out_of_range&) {
-		return false;
 	}
+	return false;
 }
 
 
@@ -524,13 +525,13 @@ QueryDSL::find_values(const std::string& key, const MsgPack& obj, Xapian::Query&
 {
 	L_CALL(this, "QueryDSL::find_values(%s)", repr(key).c_str());
 
-	try {
-		auto func = map_dispatch_dsl.at(key);
+	auto it = map_dispatch_dsl.find(key);
+	if (it != map_dispatch_dsl.end()) {
+		auto& func = it->second;
 		q = (this->*func)(obj.at(key));
 		return true;
-	} catch (const std::out_of_range&) {
-		return false;
 	}
+	return false;
 }
 
 
@@ -539,13 +540,13 @@ QueryDSL::find_ranges(const std::string& key, const MsgPack& obj, Xapian::Query&
 {
 	L_CALL(this, "QueryDSL::find_ranges(%s)", repr(key).c_str());
 
-	try {
-		auto func = map_range_dispatch_dsl.at(key);
+	auto it = map_range_dispatch_dsl.find(key);
+	if (it != map_range_dispatch_dsl.end()) {
+		auto& func = it->second;
 		q = (this->*func)(obj.at(key));
 		return true;
-	} catch (const std::out_of_range&) {
-		return false;
 	}
+	return false;
 }
 
 
@@ -554,29 +555,23 @@ QueryDSL::find_date(const MsgPack& obj)
 {
 	L_CALL(this, "QueryDSL::find_date(%s)", repr(obj.to_string()).c_str());
 
-	bool isRange = false;
+	if (obj.find(QUERYDSL_YEAR) != obj.end()) {
+		return true;
+	}
 
-	try {
-		obj.at(QUERYDSL_YEAR);
-		isRange = true;
-	} catch (const std::out_of_range&) { }
+	if (obj.find(QUERYDSL_MOTH) != obj.end()) {
+		return true;
+	}
 
-	try {
-		obj.at(QUERYDSL_MOTH);
-		isRange = true;
-	} catch (const std::out_of_range&) { }
+	if (obj.find(QUERYDSL_DAY) != obj.end()) {
+		return true;
+	}
 
-	try {
-		obj.at(QUERYDSL_DAY);
-		isRange = true;
-	} catch (const std::out_of_range&) { }
+	if (obj.find(QUERYDSL_TIME) != obj.end()) {
+		return true;
+	}
 
-	try {
-		obj.at(QUERYDSL_TIME);
-		isRange = true;
-	} catch (const std::out_of_range&) { }
-
-	return isRange;
+	return false;
 }
 
 
