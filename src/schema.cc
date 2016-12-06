@@ -1075,7 +1075,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 
 	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Final specification, as indexed
 
-	if (item_value.is_null()) {
+	if (item_value.empty()) {
 		index_paths_namespace(doc);
 		if (specification.flags.store) {
 			data = item_value;
@@ -1126,7 +1126,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 
 	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Final specification, as indexed
 
-	if (item_value.is_null()) {
+	if (item_value.empty()) {
 		index_paths_namespace(doc);
 		if (specification.flags.store) {
 			*data = item_value;
@@ -1181,7 +1181,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
-		if (val->is_null()) {
+		if (val->empty()) {
 			index_paths_namespace(doc, offsprings);
 			if (specification.flags.store) {
 				offsprings ? (*data)[RESERVED_VALUE] = *val : *data = *val;
