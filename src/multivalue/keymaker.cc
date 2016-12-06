@@ -174,6 +174,7 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 			case FieldType::UUID:
 			case FieldType::TERM:
 			case FieldType::TEXT:
+			case FieldType::STRING:
 				try {
 					auto func = map_dispatch_str_metric.at(qf.metric);
 					(this->*func)(field_spc, reverse, value, qf);

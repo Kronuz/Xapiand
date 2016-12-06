@@ -100,6 +100,7 @@
 #define POSITIVE_STR "positive"
 #define TERM_STR     "term"
 #define TEXT_STR     "text"
+#define STRING_STR   "string"
 #define DATE_STR     "date"
 #define GEO_STR      "geospatial"
 #define BOOLEAN_STR  "boolean"
@@ -136,6 +137,7 @@ namespace Cast {
 		BOOLEAN           = xxh64::hash(RESERVED_BOOLEAN),
 		TERM              = xxh64::hash(RESERVED_TERM),
 		TEXT              = xxh64::hash(RESERVED_TEXT),
+		STRING            = xxh64::hash(RESERVED_STRING),
 		UUID              = xxh64::hash(RESERVED_UUID),
 		DATE              = xxh64::hash(RESERVED_DATE),
 		EWKT              = xxh64::hash(RESERVED_EWKT),

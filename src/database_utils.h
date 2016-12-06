@@ -93,6 +93,7 @@
 #define RESERVED_BOOLEAN           "_boolean"
 #define RESERVED_TERM              "_term"
 #define RESERVED_TEXT              "_text"
+#define RESERVED_STRING            "_string"
 #define RESERVED_DATE              "_date"
 #define RESERVED_UUID              "_uuid"
 #define RESERVED_EWKT              "_ewkt"
@@ -129,7 +130,7 @@
 #define DOCUMENT_ID_TERM_PREFIX            "Q"
 #define DOCUMENT_NAMESPACE_TERM_PREFIX     "N"
 #define DOCUMENT_ACCURACY_TERM_PREFIX      "A"
-#define DOCUMENT_CONTENT_TYPE_TERM_PREFIX  "C"
+#define DOCUMENT_CONTENT_TYPE_TERM_PREFIX  "T"
 
 #define DOCUMENT_DB_MASTER                 "M"
 #define DOCUMENT_DB_SLAVE                  "S"

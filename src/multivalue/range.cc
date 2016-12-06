@@ -142,6 +142,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				return filterStringQuery(field_spc, Serialise::boolean(start), Serialise::boolean(end));
 			case FieldType::TERM:
 			case FieldType::TEXT:
+			case FieldType::STRING:
 				return filterStringQuery(field_spc, start, end);
 			case FieldType::DATE: {
 				auto timestamp_s = Datetime::timestamp(start);
@@ -288,6 +289,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
 			case FieldType::TERM:
 			case FieldType::TEXT:
+			case FieldType::STRING:
 				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
 			case FieldType::DATE: {
 				auto ser_start = Serialise::date(field_spc, start);

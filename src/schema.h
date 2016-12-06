@@ -24,22 +24,23 @@
 
 #include "xapiand.h"
 
-#include <stddef.h>                                       // for size_t
-#include <sys/types.h>                                    // for uint8_t
-#include <xapian.h>                                       // for QueryParser
-#include <array>                                          // for array
-#include <future>                                         // for future
-#include <memory>                                         // for shared_ptr
-#include <string>                                         // for string
-#include <tuple>                                          // for tuple
-#include <unordered_map>                                  // for unordered_map
-#include <utility>                                        // for pair
-#include <vector>                                         // for vector
+#include <stddef.h>                        // for size_t
+#include <sys/types.h>                     // for uint8_t
+#include <xapian.h>                        // for QueryParser
+#include <array>                           // for array
+#include <future>                          // for future
+#include <memory>                          // for shared_ptr
+#include <string>                          // for string
+#include <tuple>                           // for tuple
+#include <unordered_map>                   // for unordered_map
+#include <utility>                         // for pair
+#include <vector>                          // for vector
 
 #include "database_utils.h"
-#include "geo/htm.h"                                      // for HTM_MIN_ERROR
-#include "msgpack.h"                                      // for MsgPack, MS...
-#include "stl_serialise.h"                                // for StringSet
+#include "geo/htm.h"                       // for HTM_MIN_ERROR
+#include "msgpack.h"                       // for MsgPack, MS...
+#include "stl_serialise.h"                 // for StringSet
+#include "utils.h"                         // for repr, toUType, lower_string
 
 
 #define NAMESPACE_LIMIT_DEPTH  10    // 2^(n - 2) => 2^8 => 256 namespace terms.
@@ -154,6 +155,7 @@ enum class FieldType : uint8_t {
 	POSITIVE      =  'P',
 	TERM          =  'X',
 	TEXT          =  'S',
+	STRING        =  's',
 	DATE          =  'D',
 	GEO           =  'G',
 	BOOLEAN       =  'B',
@@ -293,6 +295,10 @@ struct required_spc_t {
 
 	FieldType get_type() const noexcept {
 		return sep_types[2];
+	}
+
+	char get_prefix() const noexcept {
+		return toupper(toUType(sep_types[2]));
 	}
 };
 

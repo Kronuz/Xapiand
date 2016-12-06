@@ -34,17 +34,13 @@
 #include <type_traits>                     // for remove_reference<>::type
 #include <unordered_set>                   // for unordered_set
 
-#include "database_utils.h"                // for get_prefix, is_valid, RESE...
 #include "datetime.h"                      // for isDate, tm_t
 #include "exception.h"                     // for ClientError, MSG_ClientError
 #include "geo/wkt_parser.h"                // for EWKT_Parser
 #include "log.h"                           // for L_CALL
 #include "manager.h"                       // for XapiandManager, XapiandMan...
-#include "msgpack.h"                       // for MsgPack, object::object, t...
 #include "multivalue/generate_terms.h"     // for integer, geo, date, positive
 #include "serialise.h"                     // for type
-#include "stl_serialise.h"                 // for StringSet
-#include "utils.h"                         // for repr, toUType, lower_string
 
 
 #ifndef L_SCHEMA
@@ -134,11 +130,11 @@ const std::unordered_map<std::string, TypeIndex> map_index({
 
 
 const std::unordered_map<std::string, FieldType> map_type({
-	{ FLOAT_STR,       FieldType::FLOAT        }, { INTEGER_STR,     FieldType::INTEGER     },
-	{ POSITIVE_STR,    FieldType::POSITIVE     }, { TERM_STR,        FieldType::TERM        },
-	{ TEXT_STR,        FieldType::TEXT         }, { DATE_STR,        FieldType::DATE        },
-	{ GEO_STR,         FieldType::GEO          }, { BOOLEAN_STR,     FieldType::BOOLEAN     },
-	{ UUID_STR,        FieldType::UUID         },
+	{ FLOAT_STR,       FieldType::FLOAT        }, { INTEGER_STR,     FieldType::INTEGER      },
+	{ POSITIVE_STR,    FieldType::POSITIVE     }, { TERM_STR,        FieldType::TERM         },
+	{ TEXT_STR,        FieldType::TEXT         }, { STRING_STR,      FieldType::STRING       }, 
+	{ DATE_STR,        FieldType::DATE         }, { GEO_STR,         FieldType::GEO          },
+	{ BOOLEAN_STR,     FieldType::BOOLEAN      }, { UUID_STR,        FieldType::UUID         },
 });
 
 
@@ -527,7 +523,7 @@ required_spc_t::flags_t::flags_t()
 	  numeric_detection(true),
 	  geo_detection(true),
 	  bool_detection(true),
-	  string_detection(false),
+	  string_detection(true),
 	  text_detection(true),
 	  uuid_detection(true),
 	  field_found(true),
@@ -553,7 +549,7 @@ required_spc_t::required_spc_t()
 required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
 	const std::vector<std::string>& _acc_prefix)
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, type }}),
-	  prefix(1, tolower(toUType(type))),
+	  prefix("G" + std::string(1, toUType(type))),
 	  slot(_slot),
 	  accuracy(acc),
 	  acc_prefix(_acc_prefix),
@@ -738,6 +734,10 @@ specification_t::get_global(FieldType field_type)
 		}
 		case FieldType::TEXT: {
 			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
+			return spc;
+		}
+		case FieldType::STRING: {
+			static const specification_t spc(DB_SLOT_STRING, FieldType::STRING, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
 		case FieldType::BOOLEAN: {
@@ -1304,7 +1304,7 @@ Schema::get_namespace_specifications() const
 	} else {
 		for (auto& prefix_namespace : prefixes_namespace) {
 			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
-			spc.prefix.assign(prefix_namespace).push_back(toUType(spc.sep_types[2]));
+			spc.prefix.assign(prefix_namespace).push_back(spc.get_prefix());
 			data.push_back(std::move(spc));
 		}
 	}
@@ -1319,7 +1319,7 @@ Schema::get_namespace_specification(FieldType namespace_type, std::string& prefi
 	L_CALL(nullptr, "Schema::get_namespace_specification('%c', %s)", toUType(namespace_type), repr(prefix_namespace).c_str());
 
 	required_spc_t spc = specification_t::get_global(namespace_type);
-	spc.prefix.assign(prefix_namespace).push_back(toUType(spc.sep_types[2]));
+	spc.prefix.assign(prefix_namespace).push_back(spc.get_prefix());
 	spc.slot = get_slot(spc.prefix);
 
 	switch (spc.sep_types[2]) {
@@ -1366,7 +1366,7 @@ Schema::update_dynamic_specification()
 	L_CALL(this, "Schema::update_dynamic_specification()");
 
 	if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
-		specification.prefix.assign(get_dynamic_prefix(specification.full_normalized_name, toUType(specification.sep_types[2])));
+		specification.prefix.assign(get_dynamic_prefix(specification.full_normalized_name, specification.get_prefix()));
 	}
 
 	if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
@@ -1590,6 +1590,18 @@ Schema::validate_required_data()
 				}
 				break;
 			}
+			case FieldType::STRING: {
+				if (!specification.flags.has_index) {
+					auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+					if (specification.index != index) {
+						specification.index = index;
+						properties[RESERVED_INDEX] = specification.index;
+					}
+				}
+
+				properties[RESERVED_LANGUAGE] = specification.language;
+				break;
+			}
 			case FieldType::TERM: {
 				if (!specification.flags.has_index) {
 					auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
@@ -1611,7 +1623,7 @@ Schema::validate_required_data()
 			case FieldType::UUID:
 				break;
 			default:
-				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
+				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[2]);
 		}
 
 		if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
@@ -1639,7 +1651,7 @@ Schema::validate_required_data()
 		} else {
 			// Process RESERVED_PREFIX
 			if (specification.prefix.empty()) {
-				specification.prefix = get_prefix(specification.full_normalized_name, toUType(specification.sep_types[2]));
+				specification.prefix = get_prefix(specification.full_normalized_name, specification.get_prefix());
 			}
 			properties[RESERVED_PREFIX] = specification.prefix;
 
@@ -1692,6 +1704,14 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 				specification.stem_language = default_spc.stem_language;
 				break;
 
+			case FieldType::STRING:
+				if (!specification.flags.has_index) {
+					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+				}
+
+				specification.language = default_spc.language;
+				break;
+
 			case FieldType::TERM:
 				if (!specification.flags.has_index) {
 					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
@@ -1709,7 +1729,7 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 				break;
 
 			default:
-				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, toUType(specification.sep_types[2]));
+				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[2]);
 		}
 
 		specification.flags.field_with_type = true;
@@ -1785,7 +1805,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				return;
 			}
 			if (specification.flags.string_detection) {
-				specification.sep_types[2] = FieldType::TERM;
+				specification.sep_types[2] = FieldType::STRING;
 				return;
 			}
 			if (specification.flags.bool_detection) {
@@ -2038,41 +2058,63 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 		return;
 	}
 
-	if (field_spc.sep_types[2] == FieldType::TEXT) {
-		Xapian::TermGenerator term_generator;
-		term_generator.set_document(doc);
-		auto stopper = getStopper(field_spc.language);
-		term_generator.set_stopper(stopper.get());
-		term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
-		term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
-		term_generator.set_stemming_strategy(getGeneratorStemStrategy(field_spc.stem_strategy));
-		// Xapian::WritableDatabase *wdb = nullptr;
-		// bool spelling = field_spc.spelling[getPos(pos, field_spc.spelling.size())];
-		// if (spelling) {
-		// 	wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
-		// 	term_generator.set_database(*wdb);
-		// 	term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
-		// }
-		bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
-		if (positions) {
-			term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
-		} else {
-			term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
+	switch (field_spc.sep_types[2]) {
+		case FieldType::TEXT: {
+			Xapian::TermGenerator term_generator;
+			term_generator.set_document(doc);
+			auto stopper = getStopper(field_spc.language);
+			term_generator.set_stopper(stopper.get());
+			term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
+			term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
+			term_generator.set_stemming_strategy(getGeneratorStemStrategy(field_spc.stem_strategy));
+			// Xapian::WritableDatabase *wdb = nullptr;
+			// bool spelling = field_spc.spelling[getPos(pos, field_spc.spelling.size())];
+			// if (spelling) {
+			// 	wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
+			// 	term_generator.set_database(*wdb);
+			// 	term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
+			// }
+			bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
+			if (positions) {
+				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
+			} else {
+				term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
+			}
+			L_INDEX(nullptr, "Field Text to Index [%d] => %s:%s [Positions: %d]", pos, field_spc.prefix.c_str(), serialise_val.c_str(), positions);
+			break;
 		}
-		L_INDEX(nullptr, "Field Text to Index [%d] => %s:%s [Positions: %d]", pos, field_spc.prefix.c_str(), serialise_val.c_str(), positions);
-	} else {
-		if (!field_spc.flags.bool_term && field_spc.sep_types[2] == FieldType::TERM) {
-			to_lower(serialise_val);
+
+		case FieldType::STRING: {
+			Xapian::TermGenerator term_generator;
+			term_generator.set_document(doc);
+			auto position = field_spc.position[getPos(pos, field_spc.position.size())];
+			if (position) {
+				bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
+				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
+				L_INDEX(nullptr, "Field String to Index [%d] => %s:%s [Positions: %d]", pos, field_spc.prefix.c_str(), serialise_val.c_str(), positions);
+			} else {
+				term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
+				L_INDEX(nullptr, "Field String to Index [%d] => %s:%s", pos, field_spc.prefix.c_str(), serialise_val.c_str());
+			}
+			break;
 		}
-		serialise_val = prefixed(serialise_val, field_spc.prefix);
-		auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
-		auto position = field_spc.position[getPos(pos, field_spc.position.size())];
-		if (position) {
-			doc.add_posting(serialise_val, position, weight);
-		} else {
-			doc.add_term(serialise_val, weight);
+
+		case FieldType::TERM:
+			if (!field_spc.flags.bool_term) {
+				to_lower(serialise_val);
+			}
+		default: {
+			serialise_val = prefixed(serialise_val, field_spc.prefix);
+			auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
+			auto position = field_spc.position[getPos(pos, field_spc.position.size())];
+			if (position) {
+				doc.add_posting(serialise_val, position, weight);
+			} else {
+				doc.add_term(serialise_val, weight);
+			}
+			L_INDEX(nullptr, "Field Term [%d] -> %s  Bool: %d  Posting: %d", pos, repr(serialise_val).c_str(), field_spc.flags.bool_term, position);
+			break;
 		}
-		L_INDEX(nullptr, "Field Term [%d] -> %s  Bool: %d  Posting: %d", pos, repr(serialise_val).c_str(), field_spc.flags.bool_term, position);
 	}
 }
 
@@ -2197,7 +2239,8 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 			}
 		}
 		case FieldType::TERM:
-		case FieldType::TEXT: {
+		case FieldType::TEXT:
+		case FieldType::STRING: {
 			try {
 				auto ser_value = value.as_string();
 				if (field_spc) {
@@ -2394,7 +2437,8 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 			}
 		}
 		case FieldType::TERM:
-		case FieldType::TEXT: {
+		case FieldType::TEXT:
+		case FieldType::STRING: {
 			try {
 				auto ser_value = value.as_string();
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
@@ -3753,8 +3797,8 @@ Schema::set_default_spc_id(MsgPack& properties)
 		properties[RESERVED_INDEX] = specification.index;
 	}
 
-	// ID_FIELD_NAME can not be TEXT.
-	if (specification.sep_types[2] == FieldType::TEXT) {
+	// ID_FIELD_NAME can not be TEXT nor STRING.
+	if (specification.sep_types[2] == FieldType::TEXT || specification.sep_types[2] == FieldType::STRING) {
 		specification.sep_types[2] = FieldType::TERM;
 		properties[RESERVED_TYPE] = specification.sep_types;
 	}
@@ -4142,6 +4186,9 @@ Schema::get_data_field(const std::string& field_name) const
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 						break;
+					case FieldType::STRING:
+						res.language = properties.at(RESERVED_LANGUAGE).as_string();
+						break;
 					case FieldType::TERM:
 						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 						break;
@@ -4175,6 +4222,9 @@ Schema::get_data_field(const std::string& field_name) const
 
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
+						break;
+					case FieldType::STRING:
+						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						break;
 					case FieldType::TERM:
 						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
@@ -4234,6 +4284,9 @@ Schema::get_slot_field(const std::string& field_name) const
 					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 					break;
+				case FieldType::STRING:
+					res.language = properties.at(RESERVED_LANGUAGE).as_string();
+					break;
 				case FieldType::TERM:
 					res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 					break;
@@ -4250,7 +4303,7 @@ Schema::get_slot_field(const std::string& field_name) const
 			auto namespace_spc = specification_t::get_global(FieldType::TERM);
 			namespace_spc.flags.inside_namespace = true;
 			namespace_spc.prefix.reserve(arraySize(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
-			namespace_spc.prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace).push_back(toUType(namespace_spc.sep_types[2]));
+			namespace_spc.prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace).push_back(namespace_spc.get_prefix());
 			namespace_spc.slot = get_slot(namespace_spc.prefix);
 			return namespace_spc;
 		}
@@ -4288,6 +4341,10 @@ Schema::get_data_global(FieldType field_type)
 		}
 		case FieldType::TEXT: {
 			static const required_spc_t prop(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
+			return prop;
+		}
+		case FieldType::STRING: {
+			static const required_spc_t prop(DB_SLOT_STRING, FieldType::STRING, default_spc.accuracy, default_spc.acc_prefix);
 			return prop;
 		}
 		case FieldType::BOOLEAN: {
