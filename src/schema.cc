@@ -1795,9 +1795,6 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				}
 			}
 			THROW(ClientError, "Expected map with one element");
-		case MsgPack::Type::NIL:
-			// Do not process this field.
-			throw DummyException();
 		default:
 			break;
 	}
