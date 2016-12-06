@@ -411,6 +411,24 @@ add_custom_target (uninstall
 
 
 ########################################################################
+# Copy stopwords from source to build directory
+########################################################################
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	${CMAKE_SOURCE_DIR}/stopwords/ ${PROJECT_BINARY_DIR}/src/stopwords/)
+
+
+#######################################################################
+# Copy tests/examples from source to build directory
+########################################################################
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	${CMAKE_SOURCE_DIR}/tests/examples/ ${PROJECT_BINARY_DIR}/tests/examples/)
+
+
+########################################################################
 # Manual page generation
 ########################################################################
 
