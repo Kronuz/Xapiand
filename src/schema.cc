@@ -1010,6 +1010,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			break;
 	}
 
+	if (data->is_undefined()) {
+		parent_data->erase(name);
+	}
+
 	specification = std::move(spc_start);
 }
 
