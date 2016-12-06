@@ -1045,10 +1045,10 @@ Document::get_field(const std::string& slot_name) const
 		if (itf->is_map()) {
 			auto itv = itf->find(RESERVED_VALUE);
 			if (itv != itf->end()) {
-				return *itv;
+				return itf->at(*itv);
 			}
 		}
-		return *itf;
+		return itf->at(*itf);
 	}
 
 	return get_value(slot_name);
