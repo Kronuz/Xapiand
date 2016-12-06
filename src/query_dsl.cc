@@ -38,7 +38,6 @@
 #include "xxh64.hpp"                           // for xxh64
 
 
-
 /* Reserved DSL words used for operators */
 constexpr const char QUERYDSL_OR[]        = "_or";
 constexpr const char QUERYDSL_AND[]       = "_and";
@@ -219,11 +218,23 @@ QueryDSL::join_queries(const MsgPack& obj, Xapian::Query::op op)
 					Xapian::Query qry;
 					if (is_reserved(key)) {
 						if (find_operators(key, elem.at(key), qry)) {
-							final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
+							if (final_query.empty()) {
+								final_query = qry;
+							} else {
+								final_query = Xapian::Query(op, final_query, qry);
+							}
 						} else if (find_values(key, elem, qry)) {
-							final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
+							if (final_query.empty()) {
+								final_query = qry;
+							} else {
+								final_query = Xapian::Query(op, final_query, qry);
+							}
 						} else if (find_casts(key, elem, qry)) {
-							final_query.empty() ?  final_query = qry : final_query = Xapian::Query(op, final_query, qry);
+							if (final_query.empty()) {
+								final_query = qry;
+							} else {
+								final_query = Xapian::Query(op, final_query, qry);
+							}
 						}
 					} else {
 						const auto& o = elem.at(key);
@@ -231,12 +242,20 @@ QueryDSL::join_queries(const MsgPack& obj, Xapian::Query::op op)
 							case MsgPack::Type::ARRAY:
 								THROW(QueryDslError, "Unexpected type array in %s", key.c_str());
 							case MsgPack::Type::MAP:
-								final_query.empty() ? final_query = process_query(o, key) : final_query = Xapian::Query(op, final_query, process_query(o, key));
+								if (final_query.empty()) {
+									final_query = process_query(o, key);
+								} else {
+									final_query = Xapian::Query(op, final_query, process_query(o, key));
+								}
 								break;
 							default:
 								state = QUERY::FIELDQUERY;
 								fieldname = key;
-								final_query.empty() ? final_query = query(o) : final_query = Xapian::Query(op, final_query, query(o));
+								if (final_query.empty()) {
+									final_query = query(o);
+								} else {
+									final_query = Xapian::Query(op, final_query, query(o));
+								}
 						}
 					}
 				}
