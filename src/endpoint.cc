@@ -116,8 +116,8 @@ Endpoint::Endpoint(const std::string &uri_, const Node* node_, long long mastery
 		path.erase(0, Endpoint::cwd.size());
 	}
 
-	if (path.size() != 1 && endswith(path, "/")) {
-		path = path.substr(0, path.size()-1);
+	if (path.length() != 1 && endswith(path, '/')) {
+		path = path.substr(0, path.length() - 1);
 	}
 
 	if (protocol == "file") {
