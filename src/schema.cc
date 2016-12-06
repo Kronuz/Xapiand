@@ -100,23 +100,34 @@ const std::unordered_map<std::string, TypeIndex> map_index({
 	{ "none",                      TypeIndex::NONE                      },
 	{ "field_terms",               TypeIndex::FIELD_TERMS               },
 	{ "field_values",              TypeIndex::FIELD_VALUES              },
+	{ "fields",                    TypeIndex::FIELD_ALL                 },
 	{ "field_all",                 TypeIndex::FIELD_ALL                 },
 	{ "global_terms",              TypeIndex::GLOBAL_TERMS              },
 	{ "terms",                     TypeIndex::TERMS                     },
 	{ "global_terms,field_values", TypeIndex::GLOBAL_TERMS_FIELD_VALUES },
 	{ "field_values,global_terms", TypeIndex::GLOBAL_TERMS_FIELD_VALUES },
+	{ "global_terms,fields",       TypeIndex::GLOBAL_TERMS_FIELD_ALL    },
 	{ "global_terms,field_all",    TypeIndex::GLOBAL_TERMS_FIELD_ALL    },
+	{ "fields,global_terms",       TypeIndex::GLOBAL_TERMS_FIELD_ALL    },
 	{ "field_all,global_terms",    TypeIndex::GLOBAL_TERMS_FIELD_ALL    },
 	{ "global_values",             TypeIndex::GLOBAL_VALUES             },
 	{ "global_values,field_terms", TypeIndex::GLOBAL_VALUES_FIELD_TERMS },
 	{ "field_terms,global_values", TypeIndex::GLOBAL_VALUES_FIELD_TERMS },
 	{ "values",                    TypeIndex::VALUES                    },
+	{ "global_values,fields",      TypeIndex::GLOBAL_VALUES_FIELD_ALL   },
 	{ "global_values,field_all",   TypeIndex::GLOBAL_VALUES_FIELD_ALL   },
+	{ "fields,global_values",      TypeIndex::GLOBAL_VALUES_FIELD_ALL   },
 	{ "field_all,global_values",   TypeIndex::GLOBAL_VALUES_FIELD_ALL   },
+	{ "globals",                   TypeIndex::GLOBAL_ALL                },
 	{ "global_all",                TypeIndex::GLOBAL_ALL                },
+	{ "globals,field_terms",       TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
+	{ "globals,field_terms",       TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
 	{ "global_all,field_terms",    TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
+	{ "field_terms,globals",       TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
 	{ "field_terms,global_all",    TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
 	{ "global_all,field_values",   TypeIndex::GLOBAL_ALL_FIELD_VALUES   },
+	{ "globals,field_values",      TypeIndex::GLOBAL_ALL_FIELD_VALUES   },
+	{ "field_values,globals",      TypeIndex::GLOBAL_ALL_FIELD_VALUES   },
 	{ "field_values,global_all",   TypeIndex::GLOBAL_ALL_FIELD_VALUES   },
 	{ "all",                       TypeIndex::ALL                       },
 });
@@ -242,18 +253,18 @@ inline static std::string readable_index(TypeIndex index) noexcept {
 		case TypeIndex::NONE:                       return "none";
 		case TypeIndex::FIELD_TERMS:                return "field_terms";
 		case TypeIndex::FIELD_VALUES:               return "field_values";
-		case TypeIndex::FIELD_ALL:                  return "field_all";
+		case TypeIndex::FIELD_ALL:                  return "fields";
 		case TypeIndex::GLOBAL_TERMS:               return "global_terms";
 		case TypeIndex::TERMS:                      return "terms";
 		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES:  return "global_terms,field_values";
-		case TypeIndex::GLOBAL_TERMS_FIELD_ALL:     return "global_terms,field_all";
+		case TypeIndex::GLOBAL_TERMS_FIELD_ALL:     return "global_terms,fields";
 		case TypeIndex::GLOBAL_VALUES:              return "global_values";
 		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS:  return "global_values,field_terms";
 		case TypeIndex::VALUES:                     return "values";
-		case TypeIndex::GLOBAL_VALUES_FIELD_ALL:    return "global_values,field_all";
-		case TypeIndex::GLOBAL_ALL:                 return "global_all";
-		case TypeIndex::GLOBAL_ALL_FIELD_TERMS:     return "global_all,field_terms";
-		case TypeIndex::GLOBAL_ALL_FIELD_VALUES:    return "global_all,field_values";
+		case TypeIndex::GLOBAL_VALUES_FIELD_ALL:    return "global_values,fields";
+		case TypeIndex::GLOBAL_ALL:                 return "globals";
+		case TypeIndex::GLOBAL_ALL_FIELD_TERMS:     return "globals,field_terms";
+		case TypeIndex::GLOBAL_ALL_FIELD_VALUES:    return "globals,field_values";
 		case TypeIndex::ALL:                        return "all";
 		default:                                    return "TypeIndex::UNKNOWN";
 	}
