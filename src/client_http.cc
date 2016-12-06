@@ -515,19 +515,15 @@ HttpClient::run()
 	} catch (const DocNotFoundError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign("Document not found");
-		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const MissingTypeError& exc) {
 		error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		error.assign(exc.what());
-		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const ClientError& exc) {
 		error_code = HTTP_STATUS_BAD_REQUEST;
 		error.assign(exc.what());
-		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const CheckoutError& exc) {
 		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(exc.what());
-		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.get_message() ? exc.get_message() : "Unkown BaseException!");
