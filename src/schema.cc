@@ -3793,14 +3793,13 @@ Schema::set_default_spc_id(MsgPack& properties)
 	auto index = specification.index | TypeIndex::FIELD_ALL;  // force field_all
 	if (specification.index != index) {
 		specification.index = index;
-		specification.flags.has_index = true;
 		properties[RESERVED_INDEX] = specification.index;
 	}
+	specification.flags.has_index = true;
 
 	// ID_FIELD_NAME can not be TEXT nor STRING.
 	if (specification.sep_types[2] == FieldType::TEXT || specification.sep_types[2] == FieldType::STRING) {
 		specification.sep_types[2] = FieldType::TERM;
-		properties[RESERVED_TYPE] = specification.sep_types;
 	}
 
 	// Process RESERVED_PREFIX
@@ -3833,7 +3832,6 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	// RESERVED_TYPE by default is STRING
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		specification.sep_types[2] = FieldType::TERM;
-		properties[RESERVED_TYPE] = specification.sep_types;
 	}
 
 	// Process RESERVED_PREFIX
