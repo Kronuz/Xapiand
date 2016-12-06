@@ -203,17 +203,20 @@ Cast::cast(FieldType type, const std::string& field_value)
 			// Try like INTEGER.
 			try {
 				return MsgPack(stox(std::stoll, field_value));
-			} catch (const std::invalid_argument&) { }
+			} catch (const std::invalid_argument&) {
+			} catch (const std::out_of_range&) { }
 
 			// Try like POSITIVE.
 			try {
 				return  MsgPack(stox(std::stoull, field_value));
-			} catch (const std::invalid_argument&) { }
+			} catch (const std::invalid_argument&) {
+			} catch (const std::out_of_range&) { }
 
 			// Try like FLOAT
 			try {
 				return MsgPack(stox(std::stod, field_value));
-			} catch (const std::invalid_argument&) { }
+			} catch (const std::invalid_argument&) {
+			} catch (const std::out_of_range&) { }
 		default:
 			// Default type TERM.
 			return MsgPack(field_value);
