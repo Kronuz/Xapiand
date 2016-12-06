@@ -336,32 +336,41 @@ QueryDSL::query(const MsgPack& obj)
 	clean_specification();
 
 	switch (state) {
-		case QUERY::GLOBALQUERY:
-		{
+		case QUERY::GLOBALQUERY: {
 			auto ser_type = Serialise::get_type(obj);
 			switch (std::get<0>(ser_type)) {
 				case FieldType::TEXT: {
+				auto &field_spc = std::get<2>(ser_type);
 					Xapian::QueryParser parser;
-					auto stopper = getStopper(std::get<2>(ser_type).language);
+					auto stopper = getStopper(field_spc.language);
 					parser.set_stopper(stopper.get());
-					parser.set_stemming_strategy(getQueryParserStemStrategy(std::get<2>(ser_type).stem_strategy));
-					parser.set_stemmer(Xapian::Stem(std::get<2>(ser_type).stem_language));
-					return parser.parse_query(obj.as_string(), spc_dsl.q_flags);
+					parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
+					parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
+					return parser.parse_query(std::get<1>(ser_type), spc_dsl.q_flags);
 				}
 
 				case FieldType::STRING: {
 					Xapian::QueryParser parser;
-					return parser.parse_query(obj.as_string(), spc_dsl.q_flags);
+					return parser.parse_query(std::get<1>(ser_type), spc_dsl.q_flags);
 				}
 
+				case FieldType::TERM: {
+					auto field_value = std::get<1>(ser_type);
+					to_lower(field_value);
+					if (endswith(field_value, '*')) {
+						field_value = field_value.substr(0, field_value.length() - 1);
+						return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(field_value, std::get<2>(ser_type).prefix));
+					} else {
+						return Xapian::Query(prefixed(field_value, std::get<2>(ser_type).prefix), spc_dsl.wqf);
+					}
+				}
 				default:
 					return Xapian::Query(prefixed(std::get<1>(ser_type), std::get<2>(ser_type).prefix));
 			}
+			break;
 		}
-		break;
 
-		case QUERY::FIELDQUERY:
-		{
+		case QUERY::FIELDQUERY: {
 			auto field_spc = schema->get_data_field(fieldname).first;
 			if (!field_spc.prefix.empty()){
 				try {
@@ -426,6 +435,7 @@ QueryDSL::query(const MsgPack& obj)
 							}
 							return Xapian::Query(prefixed(field_value, field_spc.prefix), spc_dsl.wqf);
 						}
+
 						default:
 							THROW(QueryDslError, "Type error unexpected %s");
 					}
@@ -436,8 +446,8 @@ QueryDSL::query(const MsgPack& obj)
 				THROW(QueryDslError, "Field %s not found in schema", fieldname.c_str());
 			}
 
+			break;
 		}
-		break;
 
 		default:
 			break;
