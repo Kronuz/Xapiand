@@ -72,7 +72,7 @@
 #define RESERVED_SCHEMA            "_schema"
 #define RESERVED_VERSION           "_version"
 #define RESERVED_SCRIPT            "_script"
-#define RESERVED_RECURSIVE         "_recursive"
+#define RESERVED_RECURSIVE         "_recurse"
 #define RESERVED_NAMESPACE         "_namespace"
 // Reserved words used only in the root of the  document.
 #define RESERVED_VALUES            "_values"
