@@ -3740,15 +3740,13 @@ Schema::set_default_spc_id(MsgPack& properties)
 
 	specification.flags.bool_term = true;
 	specification.flags.has_bool_term = true;
-	properties[RESERVED_BOOL_TERM] = true;
+	properties[RESERVED_BOOL_TERM] = true;  // force bool term
 
-	if (!specification.flags.has_index) {
+	auto index = specification.index | TypeIndex::FIELD_ALL;  // force field_all
+	if (specification.index != index) {
+		specification.index = index;
 		specification.flags.has_index = true;
-		auto index = specification.index | TypeIndex::FIELD_VALUES | TypeIndex::FIELD_TERMS; // Fallback to index anything but values
-		if (specification.index != index) {
-			specification.index = index;
-			properties[RESERVED_INDEX] = specification.index;
-		}
+		properties[RESERVED_INDEX] = specification.index;
 	}
 
 	// ID_FIELD_NAME can not be TEXT.
