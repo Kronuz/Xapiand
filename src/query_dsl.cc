@@ -615,6 +615,10 @@ QueryDSL::to_dsl_query(std::string query)
 {
 	L_CALL(this, "Query::to_dsl_query()");
 
+	if (query.compare("*") == 0) {
+		return QUERYDSL_MATCH_ALL;
+	}
+
 	try {
 		BooleanTree booltree(query);
 		std::vector<MsgPack> stack_msgpack;
