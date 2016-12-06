@@ -56,9 +56,6 @@ constexpr const char QUERYDSL_BOOST[]     = "_boost";
 /* Reserved DSL words used for Match all query */
 constexpr const char QUERYDSL_MATCH_ALL[] = "_all";
 
-/* Reserved DSL words used for set partial search */
-constexpr const char QUERYDSL_PARTIAL[] = "_partial";
-
 /* Reserved DSL words used for dates */
 constexpr const char QUERYDSL_YEAR[]      = "_year";
 constexpr const char QUERYDSL_MOTH[]      = "_moth";
@@ -411,22 +408,7 @@ QueryDSL::query(const MsgPack& obj)
 
 						case FieldType::TERM: {
 							auto field_value = Serialise::MsgPack(field_spc, obj);
-							if (spc_dsl.q_flags & Xapian::QueryParser::FLAG_PARTIAL) {
-								Xapian::QueryParser parser;
-								if (field_spc.flags.bool_term) {
-									parser.add_boolean_prefix("_", field_spc.prefix);
-								} else {
-									parser.add_prefix("_", field_spc.prefix);
-								}
-								//parser.set_database(*database->db);
-								auto stopper = getStopper(field_spc.language);
-								parser.set_stopper(stopper.get());
-								parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
-								parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
-								return parser.parse_query("_:" + field_value, spc_dsl.q_flags);
-							} else {
-								return Xapian::Query(prefixed(field_spc.flags.bool_term ? field_value : lower_string(field_value), field_spc.prefix), spc_dsl.wqf);
-							}
+							return Xapian::Query(prefixed(field_spc.flags.bool_term ? field_value : lower_string(field_value), field_spc.prefix), spc_dsl.wqf);
 						}
 
 						case FieldType::GEO: {
@@ -483,23 +465,6 @@ QueryDSL::set_specifications(const MsgPack& obj)
 
 	bool found = false;
 	specification_dsl spc_dsl;
-	try {
-		auto const& partial = obj.at(QUERYDSL_PARTIAL);
-		if (partial.is_boolean()) {
-			if (partial.as_bool())  {
-				spc_dsl.q_flags = Xapian::QueryParser::FLAG_PARTIAL;
-				found = true;
-			}
-		} else if (partial.is_number()) {
-			if (partial.as_i64()) {
-				spc_dsl.q_flags = Xapian::QueryParser::FLAG_PARTIAL;
-				found = true;
-			}
-		} else {
-			THROW(QueryDslError, "Type error expected boolean in %s", QUERYDSL_PARTIAL);
-		}
-	} catch(const std::out_of_range&) { }
-
 	try {
 		auto const& boost = obj.at(QUERYDSL_BOOST);
 		if (boost.is_number() && boost.getType() != MsgPack::Type::NEGATIVE_INTEGER) {

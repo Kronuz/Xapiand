@@ -28,7 +28,6 @@
 
 struct test_query_t {
 	std::vector<std::string> query;
-	std::vector<std::string> partial;
 	std::vector<std::string> expect_datas;
 	std::string field;
 };
@@ -36,4 +35,3 @@ struct test_query_t {
 
 int test_query_search();
 int test_partials_search();
-int test_facets_search();

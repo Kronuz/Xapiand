@@ -185,9 +185,7 @@ struct query_field_t {
 	std::string collapse;
 	unsigned collapse_max;
 	std::vector<std::string> query;
-	std::vector<std::string> partial;
 	std::vector<std::string> sort;
-	std::vector<std::string> facets;
 	similar_field_t fuzzy;
 	similar_field_t nearest;
 	std::string time;

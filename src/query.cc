@@ -57,48 +57,18 @@ Query::get_query(const query_field_t& e, std::vector<std::string>& suggestions)
 	L_SEARCH(this, "e.query size: %zu  Spelling: %d Synonyms: %d", e.query.size(), e.spelling, e.synonyms);
 	auto q_flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | aux_flags;
 	auto first = true;
-	Xapian::Query queryQ;
-	for (const auto& query : e.query) {
+	Xapian::Query query;
+	for (const auto& q : e.query) {
 		if (first) {
-			queryQ = make_query(query, suggestions, q_flags);
+			query = make_query(q, suggestions, q_flags);
 			first = false;
 		} else {
-			queryQ = Xapian::Query(Xapian::Query::OP_AND, queryQ, make_query(query, suggestions, q_flags));
+			query = Xapian::Query(Xapian::Query::OP_AND, query, make_query(q, suggestions, q_flags));
 		}
 	}
-	L_SEARCH(this, "e.query: %s", queryQ.get_description().c_str());
+	L_SEARCH(this, "e.query: %s", query.get_description().c_str());
 
-	L_SEARCH(this, "e.partial size: %zu", e.partial.size());
-	q_flags = Xapian::QueryParser::FLAG_PARTIAL | aux_flags;
-	first = true;
-	Xapian::Query queryP;
-	for (const auto& partial : e.partial) {
-		if (first) {
-			queryP = make_query(partial, suggestions, q_flags);
-			first = false;
-		} else {
-			queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, make_query(partial, suggestions, q_flags));
-		}
-	}
-	L_SEARCH(this, "e.partial: %s", queryP.get_description().c_str());
-
-	first = true;
-	Xapian::Query queryF;
-	if (!e.query.empty()) {
-		queryF = queryQ;
-		first = false;
-	}
-
-	if (!e.partial.empty()) {
-		if (first) {
-			queryF = queryP;
-			first = false;
-		} else {
-			queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryP);
-		}
-	}
-
-	return queryF;
+	return query;
 }
 
 
@@ -233,6 +203,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 					suggestions.push_back(parser.get_corrected_query_string());
 					return parser.parse_query("_:" + field_value, q_flags);
 				}
+
 				case FieldType::STRING: {
 					Xapian::QueryParser parser;
 					if (global_spc.flags.bool_term) {
@@ -244,24 +215,9 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 					suggestions.push_back(parser.get_corrected_query_string());
 					return parser.parse_query("_:" + field_value, q_flags);
 				}
+
 				case FieldType::TERM:
-					if (fp.is_double_quote_value() || q_flags & Xapian::QueryParser::FLAG_PARTIAL) {
-						Xapian::QueryParser parser;
-						if (global_spc.flags.bool_term) {
-							parser.add_boolean_prefix("_", global_spc.prefix);
-						} else {
-							parser.add_prefix("_", global_spc.prefix);
-						}
-						parser.set_database(*database->db);
-						auto stopper = getStopper(global_spc.language);
-						parser.set_stopper(stopper.get());
-						parser.set_stemming_strategy(getQueryParserStemStrategy(global_spc.stem_strategy));
-						parser.set_stemmer(Xapian::Stem(global_spc.stem_language));
-						suggestions.push_back(parser.get_corrected_query_string());
-						return parser.parse_query("_:" + field_value, q_flags);
-					} else {
-						return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
-					}
+					return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
 
 				default:
 					return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
@@ -293,10 +249,13 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 			switch (field_spc.get_type()) {
 				case FieldType::FLOAT:
 					return Xapian::Query(prefixed(Serialise::_float(field_value), field_spc.prefix));
+
 				case FieldType::INTEGER:
 					return Xapian::Query(prefixed(Serialise::integer(field_value), field_spc.prefix));
+
 				case FieldType::POSITIVE:
 					return Xapian::Query(prefixed(Serialise::positive(field_value), field_spc.prefix));
+
 				case FieldType::TEXT: {
 					if (fp.is_double_quote_value()) {
 						field_value.assign(fp.get_doubleq_value());
@@ -315,6 +274,7 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 					suggestions.push_back(parser.get_corrected_query_string());
 					return parser.parse_query("_:" + field_value, q_flags);
 				}
+
 				case FieldType::STRING: {
 					if (fp.is_double_quote_value()) {
 						field_value.assign(fp.get_doubleq_value());
@@ -329,26 +289,13 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 					suggestions.push_back(parser.get_corrected_query_string());
 					return parser.parse_query("_:" + field_value, q_flags);
 				}
+
 				case FieldType::TERM:
-					if (fp.is_double_quote_value() || q_flags & Xapian::QueryParser::FLAG_PARTIAL) {
-						Xapian::QueryParser parser;
-						if (field_spc.flags.bool_term) {
-							parser.add_boolean_prefix("_", field_spc.prefix);
-						} else {
-							parser.add_prefix("_", field_spc.prefix);
-						}
-						parser.set_database(*database->db);
-						auto stopper = getStopper(field_spc.language);
-						parser.set_stopper(stopper.get());
-						parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
-						parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
-						suggestions.push_back(parser.get_corrected_query_string());
-						return parser.parse_query("_:" + field_value, q_flags);
-					} else {
-						return Xapian::Query(prefixed(field_spc.flags.bool_term ? field_value : lower_string(field_value), field_spc.prefix));
-					}
+					return Xapian::Query(prefixed(field_spc.flags.bool_term ? field_value : lower_string(field_value), field_spc.prefix));
+
 				case FieldType::DATE:
 					return Xapian::Query(prefixed(Serialise::date(field_value), field_spc.prefix));
+
 				case FieldType::GEO:
 					field_value.assign(Serialise::ewkt(field_value, field_spc.flags.partials, field_spc.error));
 					// If the region for search is empty, not process this query.
@@ -356,10 +303,13 @@ Query::build_query(const std::string& token, std::vector<std::string>& suggestio
 						return Xapian::Query::MatchNothing;
 					}
 					return Xapian::Query(prefixed(field_value, field_spc.prefix));
+
 				case FieldType::UUID:
 					return Xapian::Query(prefixed(Serialise::uuid(field_value), field_spc.prefix));
+
 				case FieldType::BOOLEAN:
 					return Xapian::Query(prefixed(Serialise::boolean(field_value), field_spc.prefix));
+
 				default:
 					break;
 			}

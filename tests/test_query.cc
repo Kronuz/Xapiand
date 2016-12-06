@@ -181,16 +181,10 @@ static int make_search(const test_query_t _tests[], int len) {
 	for (int i = 0; i < len; ++i) {
 		test_query_t p = _tests[i];
 		query.query.clear();
-		query.partial.clear();
 
 		// Insert query
 		for (const auto& _query : p.query) {
 			query.query.push_back(_query);
-		}
-
-		// Insert partials
-		for (const auto& _partial : p.partial) {
-			query.partial.push_back(_partial);
 		}
 
 		MSet mset;

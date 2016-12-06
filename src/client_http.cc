@@ -1637,11 +1637,6 @@ HttpClient::query_field_maker(int flag)
 		}
 		query_parser.rewind();
 
-		while (query_parser.next("partial") != -1) {
-			query_field->partial.push_back(query_parser.get());
-		}
-		query_parser.rewind();
-
 		while (query_parser.next("sort") != -1) {
 			query_field->sort.push_back(query_parser.get());
 		}
