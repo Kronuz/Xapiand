@@ -1047,8 +1047,8 @@ Document::get_field(const std::string& slot_name) const
 			if (itv != itf->end()) {
 				return itf->at(*itv);
 			}
+			return itf->at(*itf);
 		}
-		return itf->at(*itf);
 	}
 
 	return get_value(slot_name);
