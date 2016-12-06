@@ -308,17 +308,28 @@ bool isNumeric(const std::string& str) {
 
 
 bool startswith(const std::string& text, const std::string& token) {
-	if (text.length() < token.length()) {
-		return false;
-	}
+	auto text_len = text.length();
+	auto token_len = token.length();
+	return text_len >= token_len && text.compare(0, token_len, token) == 0;
+}
 
-	return text.compare(0, token.length(), token) == 0;
+
+bool startswith(const std::string& text, char ch) {
+	auto text_len = text.length();
+	return text_len >= 1 && text.at(0) == ch;
 }
 
 
 bool endswith(const std::string& text, const std::string& token) {
-	if (token.length() > text.length()) return false;
-	return std::equal(text.begin() + text.length() - token.length(), text.end(), token.begin());
+	auto text_len = text.length();
+	auto token_len = token.length();
+	return text_len >= token_len && std::equal(text.begin() + text_len - token_len, text.end(), token.begin());
+}
+
+
+bool endswith(const std::string& text, char ch) {
+	auto text_len = text.length();
+	return text_len >= 1 && text.at(text_len - 1) == ch;
 }
 
 
@@ -523,7 +534,12 @@ DIR* opendir(const char* filename, bool create) {
 
 
 void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pre_suf_fix) {
-	std::function<bool(const std::string&, const std::string&)> match_pattern = pre_suf_fix ? startswith : endswith;
+	bool(*match_pattern)(const std::string&, const std::string&);
+	if (pre_suf_fix) {
+		match_pattern = startswith;
+	} else {
+		match_pattern = endswith;
+	}
 
 	if (fptr.ent) {
 #if defined(__APPLE__) && defined(__MACH__)
