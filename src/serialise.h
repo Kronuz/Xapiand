@@ -225,6 +225,7 @@ namespace Serialise {
 
 	// Serialise field_value like date.
 	std::string date(const std::string& field_value);
+	std::string date(const class MsgPack& field_value);
 
 	inline std::string timestamp(double field_value) {
 		return sortable_serialise(field_value);

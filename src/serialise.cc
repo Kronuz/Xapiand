@@ -735,6 +735,13 @@ Serialise::date(const std::string& field_value)
 
 
 std::string
+Serialise::date(const class MsgPack& field_value)
+{
+	return timestamp(Datetime::timestamp(field_value));
+}
+
+
+std::string
 Serialise::date(const class MsgPack& value, Datetime::tm_t& tm)
 {
 	tm = Datetime::to_tm_t(value);
