@@ -295,8 +295,8 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const std::string&
 				auto ser_start = Serialise::date(field_spc, start);
 				auto ser_end = Serialise::date(field_spc, end);
 
-				auto timestamp_s = Cast::date_to_timestamp(start);
-				auto timestamp_e = Cast::date_to_timestamp(end);
+				auto timestamp_s = Datetime::timestamp(start);
+				auto timestamp_e = Datetime::timestamp(end);
 
 				if (timestamp_s > timestamp_e) {
 					return Xapian::Query::MatchNothing;

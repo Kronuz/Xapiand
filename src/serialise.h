@@ -166,7 +166,6 @@ namespace Cast {
 	std::string string(const MsgPack& obj);
 	bool boolean(const MsgPack& obj);
 	MsgPack date(const MsgPack& obj);
-	double date_to_timestamp(const MsgPack& obj);
 
 	FieldType getType(const std::string& cast_word);
 };
@@ -380,9 +379,3 @@ namespace Unserialise {
 	// Unserialise str_type to its FieldType.
 	FieldType type(const std::string& str_type);
 };
-
-
-using dispatch_cast_func = void (*)(Datetime::tm_t&, const MsgPack&);
-
-
-extern const std::unordered_map<std::string, dispatch_cast_func> map_dispatch_date;

@@ -43,109 +43,6 @@
 #include "utils.h"                 // for toUType, stox, repr
 
 
-static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
-	switch (year.getType()) {
-		case MsgPack::Type::POSITIVE_INTEGER:
-			tm.year = year.as_u64();
-			return;
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			tm.year = year.as_i64();
-			return;
-		case MsgPack::Type::FLOAT:
-			tm.year = year.as_f64();
-			return;
-		default:
-			THROW(SerialisationError, "_year must be a numeric value");
-	}
-}
-
-
-static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
-	switch (month.getType()) {
-		case MsgPack::Type::POSITIVE_INTEGER:
-			tm.mon = month.as_u64();
-			return;
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			tm.mon = month.as_i64();
-			return;
-		case MsgPack::Type::FLOAT:
-			tm.mon = month.as_f64();
-			return;
-		default:
-			THROW(SerialisationError, "_month must be a numeric value");
-	}
-}
-
-
-static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
-	switch (day.getType()) {
-		case MsgPack::Type::POSITIVE_INTEGER:
-			tm.day = day.as_u64();
-			return;
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			tm.day = day.as_i64();
-			return;
-		case MsgPack::Type::FLOAT:
-			tm.day = day.as_f64();
-			return;
-		default:
-			THROW(SerialisationError, "_day must be a numeric value");
-	}
-}
-
-
-static void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
-	try {
-		auto str_time = time.as_string();
-		switch (str_time.length()) {
-			case 12:
-				if (str_time[2] == ':' && str_time[5] == ':' && str_time[8] == '.') {
-					tm.hour = stox(std::stoul, str_time.substr(0, 2));
-					if (tm.hour < 60) {
-						tm.min = stox(std::stoul, str_time.substr(3, 2));
-						if (tm.min < 60) {
-							tm.sec = stox(std::stoul, str_time.substr(6, 2));
-							if (tm.sec < 60) {
-								tm.msec = stox(std::stoul, str_time.substr(9, 3));
-								return;
-							}
-						}
-					}
-				}
-				break;
-			case 8:
-				if (str_time[2] == ':' && str_time[5] == ':') {
-					tm.hour = stox(std::stoul, str_time.substr(0, 2));
-					if (tm.hour < 60) {
-						tm.min = stox(std::stoul, str_time.substr(3, 2));
-						if (tm.min < 60) {
-							tm.sec = stox(std::stoul, str_time.substr(6, 2));
-							if (tm.sec < 60) {
-								return;
-							}
-						}
-					}
-				}
-				break;
-			default:
-				break;
-		}
-		THROW(SerialisationError, "Error format in: %s, the format must be 00:00:00[.000]", str_time.c_str());
-	} catch (const msgpack::type_error&) {
-		THROW(SerialisationError, "_time must be string");
-	}
-}
-
-
-const std::unordered_map<std::string, dispatch_cast_func> map_dispatch_date({
-	{ "_year",    &process_date_year    },
-	{ "_month",   &process_date_month   },
-	{ "_day",     &process_date_day     },
-	{ "_time",    &process_date_time    },
-});
-
-
-
 MsgPack
 Cast::cast(const MsgPack& obj)
 {
@@ -353,38 +250,6 @@ Cast::date(const MsgPack& obj)
 }
 
 
-double
-Cast::date_to_timestamp(const  MsgPack& obj)
-{
-	switch (obj.getType()) {
-		case MsgPack::Type::POSITIVE_INTEGER:
-		case MsgPack::Type::NEGATIVE_INTEGER:
-		case MsgPack::Type::FLOAT:
-			return obj.as_f64();
-		case MsgPack::Type::STR:
-			return Datetime::timestamp(obj.as_string());
-		case MsgPack::Type::MAP: {
-			Datetime::tm_t tm;
-			for (const auto& key : obj) {
-				auto str_key = key.as_string();
-				try {
-					auto func = map_dispatch_date.at(str_key);
-					(*func)(tm, obj.at(str_key));
-				} catch (const std::out_of_range&) {
-					THROW(SerialisationError, "Unsupported Key: %s in date", str_key.c_str());
-				}
-			}
-			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
-				return Datetime::timestamp(tm);
-			}
-		}
-		default:
-			THROW(SerialisationError, "Type %s can not be cast to date", MsgPackTypes[toUType(obj.getType())]);
-	}
-}
-
-
-
 FieldType
 Cast::getType(const std::string& cast_word)
 {
@@ -536,22 +401,8 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 			return _float(field_spc.get_type(), field_value.as_f64());
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.as_string());
-		case MsgPack::Type::MAP: {
-			Datetime::tm_t tm;
-			for (const auto& key : field_value) {
-				auto str_key = key.as_string();
-				try {
-					auto func = map_dispatch_date.at(str_key);
-					(*func)(tm, field_value.at(str_key));
-				} catch (const std::out_of_range&) {
-					THROW(SerialisationError, "Unsupported Key: %s in date", str_key.c_str());
-				}
-			}
-			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
-				return _float(field_spc.get_type(), Datetime::timestamp(tm));
-			}
-			THROW(SerialisationError, "Date is out of range");
-		}
+		case MsgPack::Type::MAP:
+			return _float(field_spc.get_type(), Datetime::timestamp(field_value));
 		default:
 			THROW(SerialisationError, "Type: %s is not a date", MsgPackTypes[toUType(field_value.getType())]);
 	}
@@ -886,39 +737,8 @@ Serialise::date(const std::string& field_value)
 std::string
 Serialise::date(const class MsgPack& value, Datetime::tm_t& tm)
 {
-	double _timestamp;
-	switch (value.getType()) {
-		case MsgPack::Type::POSITIVE_INTEGER:
-			_timestamp = value.as_u64();
-			tm = Datetime::to_tm_t(_timestamp);
-			return timestamp(_timestamp);
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			_timestamp = value.as_i64();
-			tm = Datetime::to_tm_t(_timestamp);
-			return timestamp(_timestamp);
-		case MsgPack::Type::FLOAT:
-			_timestamp = value.as_f64();
-			tm = Datetime::to_tm_t(_timestamp);
-			return timestamp(_timestamp);
-		case MsgPack::Type::STR:
-			return timestamp(Datetime::timestamp(value.as_string(), tm));
-		case MsgPack::Type::MAP:
-			for (const auto& key : value) {
-				auto str_key = key.as_string();
-				try {
-					auto func = map_dispatch_date.at(str_key);
-					(*func)(tm, value.at(str_key));
-				} catch (const std::out_of_range&) {
-					THROW(SerialisationError, "Unsupported Key: %s in date", str_key.c_str());
-				}
-			}
-			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
-				return timestamp(Datetime::timestamp(tm));
-			}
-			THROW(SerialisationError, "Date is out of range");
-		default:
-			THROW(SerialisationError, "Date value must be numeric or string");
-	}
+	tm = Datetime::to_tm_t(value);
+	return timestamp(Datetime::timestamp(tm));
 }
 
 

@@ -39,6 +39,9 @@
 #define _EPOCH_ORD  719163  /* toordinal(_EPOCH, 1, 1) */
 
 
+class MsgPack;
+
+
 class DatetimeError : public ClientError {
 public:
 	template<typename... Args>
@@ -84,9 +87,12 @@ namespace Datetime {
 	std::time_t timegm(tm_t& tm);
 	tm_t to_tm_t(double timestamp);
 	tm_t to_tm_t(const std::string& date);
+	tm_t to_tm_t(const MsgPack& value);
 	double timestamp(tm_t& tm);
 	double timestamp(const std::string& date);
 	double timestamp(const std::string& date, tm_t& tm);
+	double timestamp(const MsgPack& value);
+	double timestamp(const MsgPack& value, tm_t& tm);
 	bool isvalidDate(int year, int month, int day);
 	std::string isotime(const std::tm* timep);
 	std::string isotime(double epoch);

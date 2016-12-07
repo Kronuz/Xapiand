@@ -28,6 +28,7 @@
 #include <stdexcept>  // for invalid_argument, out_of_range
 
 #include "log.h"      // for L_ERR, Log
+#include "msgpack.h"  // for MsgPack
 #include "utils.h"    // for stox
 
 #define MILLISECOND 1e-3
@@ -47,6 +48,113 @@ static constexpr int cumdays[2][12] = {
 	{ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 },
 	{ 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 }
 };
+
+
+using dispatch_cast_func = void (*)(Datetime::tm_t&, const MsgPack&);
+
+extern const std::unordered_map<std::string, dispatch_cast_func> map_dispatch_date;
+
+
+static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
+	switch (year.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			tm.year = year.as_u64();
+			return;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			tm.year = year.as_i64();
+			return;
+		case MsgPack::Type::FLOAT:
+			tm.year = year.as_f64();
+			return;
+		default:
+			THROW(DatetimeError, "_year must be a numeric value");
+	}
+}
+
+
+static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
+	switch (month.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			tm.mon = month.as_u64();
+			return;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			tm.mon = month.as_i64();
+			return;
+		case MsgPack::Type::FLOAT:
+			tm.mon = month.as_f64();
+			return;
+		default:
+			THROW(DatetimeError, "_month must be a numeric value");
+	}
+}
+
+
+static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
+	switch (day.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			tm.day = day.as_u64();
+			return;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			tm.day = day.as_i64();
+			return;
+		case MsgPack::Type::FLOAT:
+			tm.day = day.as_f64();
+			return;
+		default:
+			THROW(DatetimeError, "_day must be a numeric value");
+	}
+}
+
+
+static void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
+	try {
+		auto str_time = time.as_string();
+		switch (str_time.length()) {
+			case 12:
+				if (str_time[2] == ':' && str_time[5] == ':' && str_time[8] == '.') {
+					tm.hour = stox(std::stoul, str_time.substr(0, 2));
+					if (tm.hour < 60) {
+						tm.min = stox(std::stoul, str_time.substr(3, 2));
+						if (tm.min < 60) {
+							tm.sec = stox(std::stoul, str_time.substr(6, 2));
+							if (tm.sec < 60) {
+								tm.msec = stox(std::stoul, str_time.substr(9, 3));
+								return;
+							}
+						}
+					}
+				}
+				break;
+			case 8:
+				if (str_time[2] == ':' && str_time[5] == ':') {
+					tm.hour = stox(std::stoul, str_time.substr(0, 2));
+					if (tm.hour < 60) {
+						tm.min = stox(std::stoul, str_time.substr(3, 2));
+						if (tm.min < 60) {
+							tm.sec = stox(std::stoul, str_time.substr(6, 2));
+							if (tm.sec < 60) {
+								return;
+							}
+						}
+					}
+				}
+				break;
+			default:
+				break;
+		}
+		THROW(DatetimeError, "Error format in: %s, the format must be 00:00:00[.000]", str_time.c_str());
+	} catch (const msgpack::type_error&) {
+		THROW(DatetimeError, "_time must be string");
+	}
+}
+
+
+const std::unordered_map<std::string, dispatch_cast_func> map_dispatch_date({
+	{ "_year",    &process_date_year   },
+	{ "_month",   &process_date_month  },
+	{ "_day",     &process_date_day    },
+	{ "_time",    &process_date_time   },
+});
 
 
 /*
@@ -608,6 +716,44 @@ Datetime::to_tm_t(const std::string& date)
 }
 
 
+Datetime::tm_t
+Datetime::to_tm_t(const MsgPack& value)
+{
+	Datetime::tm_t tm;
+	double _timestamp;
+	switch (value.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			_timestamp = value.as_u64();
+			return Datetime::to_tm_t(_timestamp);
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			_timestamp = value.as_i64();
+			return Datetime::to_tm_t(_timestamp);
+		case MsgPack::Type::FLOAT:
+			_timestamp = value.as_f64();
+			return Datetime::to_tm_t(_timestamp);
+		case MsgPack::Type::STR:
+			Datetime::timestamp(value.as_string(), tm);
+			return tm;
+		case MsgPack::Type::MAP:
+			for (const auto& key : value) {
+				auto str_key = key.as_string();
+				try {
+					auto func = map_dispatch_date.at(str_key);
+					(*func)(tm, value.at(str_key));
+				} catch (const std::out_of_range&) {
+					THROW(DatetimeError, "Unsupported Key: %s in date", str_key.c_str());
+				}
+			}
+			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
+				return tm;
+			}
+			THROW(DatetimeError, "Date is out of range");
+		default:
+			THROW(DatetimeError, "Date value must be numeric or string");
+	}
+}
+
+
 /*
  * Function to calculate Unix timestamp from Coordinated Universal Time (UTC).
  * Only for year greater than 0.
@@ -663,6 +809,22 @@ Datetime::timestamp(const std::string& date, tm_t& tm)
 	} catch (const std::out_of_range&) {
 		THROW(DatetimeError, "%s is very large", date.c_str());
 	}
+}
+
+
+double
+Datetime::timestamp(const MsgPack& value)
+{
+	Datetime::tm_t tm = Datetime::to_tm_t(value);
+	return Datetime::timestamp(tm);
+}
+
+
+double
+Datetime::timestamp(const MsgPack& value, Datetime::tm_t& tm)
+{
+	tm = Datetime::to_tm_t(value);
+	return Datetime::timestamp(tm);
 }
 
 
