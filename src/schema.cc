@@ -2085,9 +2085,8 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 		case FieldType::STRING: {
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
-			auto position = field_spc.position[getPos(pos, field_spc.position.size())];
-			if (position) {
-				bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
+			bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
+			if (positions) {
 				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
 				L_INDEX(nullptr, "Field String to Index [%d] => %s:%s [Positions: %d]", pos, field_spc.prefix.c_str(), serialise_val.c_str(), positions);
 			} else {
