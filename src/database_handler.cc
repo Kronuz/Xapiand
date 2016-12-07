@@ -36,7 +36,6 @@
 #include "msgpack_patcher.h"                // for apply_patch
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
-#include "query.h"                          // for Query
 #include "query_dsl.h"                      // for QUERYDSL_QUERY, QueryDSL
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema, required_spc_t
@@ -614,8 +613,8 @@ DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, con
 	DatabaseHandler::lock_database lk(this);
 	switch (method) {
 		case HTTP_GET: {
-			Query query_object(schema, database);
-			query = query_object.get_query(e, suggestions);
+			QueryDSL query_object(schema);
+			query = query_object.get_query(query_object.make_dsl_query(e));
 			break;
 		}
 
@@ -624,8 +623,8 @@ DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, con
 				QueryDSL query_object(schema);
 				query = query_object.get_query(qdsl->at(QUERYDSL_QUERY));
 			} else {
-				Query query_object(schema, database);
-				query = query_object.get_query(e, suggestions);
+				QueryDSL query_object(schema);
+				query = query_object.get_query(query_object.make_dsl_query(e));
 			}
 			break;
 		}

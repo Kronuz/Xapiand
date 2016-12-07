@@ -28,72 +28,34 @@
 #include <memory>           // for shared_ptr
 #include <string>           // for string
 #include <unordered_map>    // for unordered_map
+#include <unordered_set>    // for unordered_set
 
 #include "msgpack.h"        // for MsgPack
-#include "schema.h"
+#include "schema.h"         // for Schema, FieldType, required_spc_t
 #include "utils.h"
-
-
-class QueryDSL;
-class Schema;
 
 
 constexpr const char QUERYDSL_QUERY[] = "_query";
 
-
 /* A domain-specific language (DSL) for query */
 
 class QueryDSL {
-	enum class QUERY : uint8_t {
-		INIT,
-		GLOBALQUERY,
-		FIELDQUERY,
-	};
-
 	std::shared_ptr<Schema> schema;
-	QUERY state;
-	std::string fieldname;
 
-	struct specification_dsl {
-		int q_flags;
-		Xapian::termcount wqf;
+	static const std::unordered_map<std::string, Xapian::Query::op> ops_map;
+	static const std::unordered_set<std::string> casts_set;
 
-		specification_dsl();
-		specification_dsl(const specification_dsl& o);
-		specification_dsl(specification_dsl&& o);
-		specification_dsl& operator=(const specification_dsl& o);
-		specification_dsl& operator=(specification_dsl&& o) noexcept;
-	};
-
-	std::vector<specification_dsl> specifications;
-	using dispatch_op_dsl = Xapian::Query (QueryDSL::*)(const MsgPack&, Xapian::Query::op);
-	using dispatch_dsl = Xapian::Query (QueryDSL::*)(const MsgPack&);
-
-	static const std::unordered_map<std::string, dispatch_op_dsl> map_op_dispatch_dsl;
-	static const std::unordered_map<std::string, dispatch_dsl> map_dispatch_dsl;
-	static const std::unordered_map<std::string, dispatch_dsl> map_dispatch_cast;
-	static const std::unordered_map<std::string, dispatch_dsl> map_range_dispatch_dsl;
-
-	Xapian::Query join_queries(const MsgPack& obj, Xapian::Query::op op);
-	Xapian::Query process_query(const MsgPack& obj, const std::string& field_name_);
-	Xapian::Query in_range_query(const MsgPack& obj);
-	Xapian::Query query(const MsgPack& o);
-	Xapian::Query range_query(const MsgPack& o);
-
-	bool is_reserved(const std::string key);
-	void clean_specification();
-	void set_specifications(const MsgPack& obj);
-	bool find_operators(const std::string& key, const MsgPack& obj, Xapian::Query& q);
-	bool find_casts(const std::string& key, const MsgPack& obj, Xapian::Query& q);
-	bool find_values(const std::string& key, const MsgPack& obj, Xapian::Query& q);
-	bool find_ranges(const std::string& key, const MsgPack& obj, Xapian::Query& q);
-	bool find_date(const MsgPack& obj);
-
-	MsgPack to_dsl_query(std::string query);
+	Xapian::Query process(Xapian::Query::op op, const std::string& parent, const MsgPack& obj);
+	Xapian::Query get_value_query(const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags);
+	Xapian::Query get_accuracy_query(const std::string& field_accuracy, const std::string& prefix_accuracy, const MsgPack& obj);
+	Xapian::Query get_namespace_query(const std::string& full_name, const std::string& prefix_namespace, const MsgPack& obj, int q_flags);
+	Xapian::Query get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags);
 
 public:
 	QueryDSL(std::shared_ptr<Schema> schema_);
 
-	Xapian::Query get_query(const MsgPack& obj);
+	MsgPack make_dsl_query(const std::string& query);
 	MsgPack make_dsl_query(const query_field_t& e);
+
+	Xapian::Query get_query(const MsgPack& obj);
 };
