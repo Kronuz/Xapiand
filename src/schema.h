@@ -209,8 +209,12 @@ inline static Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(Stem
 }
 
 
-inline static constexpr auto getPos(size_t pos, size_t size) noexcept {
-	return pos < size ? pos : size - 1;
+inline static constexpr size_t getPos(size_t pos, size_t size) noexcept {
+	if (pos < size) {
+		return pos;
+	} else {
+		return size - 1;
+	}
 };
 
 
