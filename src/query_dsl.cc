@@ -27,6 +27,7 @@
 #include "booleanParser/SyntacticException.h"  // for SyntacticException
 #include "database_utils.h"                    // for prefixed, RESERVED_VALUE
 #include "exception.h"                         // for THROW, ClientError
+#include "field_parser.h"                      // for FieldParser
 #include "geo/wkt_parser.h"                    // for EWKT_Parser
 #include "log.h"                               // for Log, L_CALL, L
 #include "multivalue/generate_terms.h"         // for GenerateTerms
@@ -80,16 +81,16 @@ QueryDSL::make_dsl_query(const query_field_t& e)
 {
 	L_CALL(this, "Query::make_dsl_query()");
 
+	MsgPack dsl(MsgPack::Type::MAP);
 	if (e.query.size() == 1) {
-		return make_dsl_query(*e.query.begin());
+		dsl = make_dsl_query(*e.query.begin());
 
 	} else {
-		MsgPack finalDSL(MsgPack::Type::MAP);
 		for (const auto& query : e.query) {
-			finalDSL["_and"].push_back(make_dsl_query(query));
+			dsl["_and"].push_back(make_dsl_query(query));
 		}
-		return finalDSL;
 	}
+	return dsl;
 }
 
 
@@ -167,12 +168,27 @@ QueryDSL::make_dsl_query(const std::string& query)
 
 				case TokenType::Id:	{
 					MsgPack object(MsgPack::Type::MAP);
-					size_t pos = token.lexeme.find(":");
-					if (pos != std::string::npos) {
-						object[token.lexeme.substr(0, pos)] = token.lexeme.substr(pos + 1);
+					FieldParser fp(token.lexeme);
+					fp.parse();
+
+					MsgPack value;
+					if (fp.isrange) {
+						if (!fp.start.empty()) {
+							value["_in"]["_range"]["_from"] = fp.start;
+						}
+						if (!fp.end.empty()) {
+							value["_in"]["_range"]["_to"] = fp.end;
+						}
 					} else {
-						object["_value"] = token.lexeme;
+						value = fp.get_value();
 					}
+
+					auto field_name = fp.get_field();
+					if (field_name.empty()) {
+						field_name = "_value";
+					}
+					object[field_name] = value;
+
 					stack_msgpack.push_back(object);
 					break;
 				}
