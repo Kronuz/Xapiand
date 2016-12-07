@@ -27,6 +27,7 @@
 #include <stdarg.h>    // for va_end, va_list, va_start
 #include <stdio.h>     // for vsnprintf
 #include <string.h>    // for strtok_r
+#include <stdlib.h>    // for free
 
 
 #define BUFFER_SIZE 1024
@@ -34,10 +35,7 @@
 
 std::string traceback(const char *filename, int line) {
 	std::string t;
-#ifdef NDEBUG
-       (void)filename;
-       (void)line;
-#else
+#ifdef XAPIAND_TRACEBACKS
 	void* callstack[128];
 
 	// retrieve current stack addresses
@@ -76,6 +74,9 @@ std::string traceback(const char *filename, int line) {
 	}
 
 	free(strs);
+#else
+       (void)filename;
+       (void)line;
 #endif
 	return t;
 }
@@ -94,7 +95,7 @@ BaseException::BaseException(const char *filename, int line, const char* type, c
 		message.assign(type);
 	}
 
-#ifndef NDEBUG
+#ifdef XAPIAND_TRACEBACKS
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
 	context.assign(std::string(buffer) + ": " + message);
 

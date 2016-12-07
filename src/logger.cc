@@ -301,7 +301,7 @@ Log::str_format(bool stacked, int priority, const std::string& exc, const char *
 		}
 #endif
 	}
-#ifdef TRACEBACK
+#ifdef XAPIAND_TRACEBACKS
 	auto location = (priority >= LOCATION_LOG_LEVEL) ? " " + std::string(file) + ":" + std::to_string(line) : std::string();
 	result += location + ": ";
 #else
