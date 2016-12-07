@@ -80,24 +80,20 @@ FieldParser::parse()
 					case '\0':
 						currentState = FieldParser::State::END;
 						break;
+					case ' ':
+					case '\r':
+					case '\n':
+					case '\t':
+						currentState = FieldParser::State::INIT;
+						break;
 					default:
-						switch (*currentSymbol) {
-							case ' ':
-							case '\r':
-							case '\n':
-							case '\t':
-								currentState = FieldParser::State::INIT;
-								break;
-							default:
-								if (++len_field >= 1024) {
-									THROW(FieldParserError, "Syntax error in query");
-								}
-								++len_field_colon;
-								currentState = FieldParser::State::FIELD;
-								off_field = currentSymbol;
-								off_field_colon = currentSymbol;
-								break;
+						if (++len_field >= 1024) {
+							THROW(FieldParserError, "Syntax error in query");
 						}
+						++len_field_colon;
+						currentState = FieldParser::State::FIELD;
+						off_field = currentSymbol;
+						off_field_colon = currentSymbol;
 						break;
 				}
 				break;
@@ -351,18 +347,18 @@ FieldParser::parse()
 				break;
 
 			case FieldParser::State::SQUARE_BRACKET_COMMA_OR_END:
-					switch (*currentSymbol) {
-						case COMMA:
-							currentState = FieldParser::State::SQUARE_BRACKET;
-							++len_value;
-							break;
-						case SQUARE_BRACKET_RIGHT:
-							currentState = FieldParser::State::END;
-							++len_value;
-							break;
-						default:
-							THROW(FieldParserError, "Unexpected symbol: %c", *currentSymbol);
-					}
+				switch (*currentSymbol) {
+					case COMMA:
+						currentState = FieldParser::State::SQUARE_BRACKET;
+						++len_value;
+						break;
+					case SQUARE_BRACKET_RIGHT:
+						currentState = FieldParser::State::END;
+						++len_value;
+						break;
+					default:
+						THROW(FieldParserError, "Unexpected symbol: %c", *currentSymbol);
+				}
 				break;
 
 			case FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE:
