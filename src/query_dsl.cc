@@ -173,12 +173,7 @@ QueryDSL::make_dsl_query(const std::string& query)
 
 					MsgPack value;
 					if (fp.isrange) {
-						if (!fp.start.empty()) {
-							value["_in"]["_range"]["_from"] = fp.start;
-						}
-						if (!fp.end.empty()) {
-							value["_in"]["_range"]["_to"] = fp.end;
-						}
+						value["_in"] = fp.get_value();
 					} else {
 						value = fp.get_value();
 					}
