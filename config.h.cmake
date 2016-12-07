@@ -265,8 +265,11 @@
 /* Enable tracebacks for exceptions. */
 #cmakedefine XAPIAND_TRACEBACKS @XAPIAND_TRACEBACKS@
 
-/* Version number of package */
+/* Path for test files */
 #cmakedefine PACKAGE_PATH_TEST "@PACKAGE_PATH_TEST@"
+
+/* Path for stopwords files */
+#cmakedefine PACKAGE_PATH_STOP_WORDS "@PACKAGE_PATH_STOP_WORDS@"
 
 /* Defines for cross-platform UUID/GUID generation */
 #cmakedefine GUID_LIBUUID @GUID_LIBUUID@
