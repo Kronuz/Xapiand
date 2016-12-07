@@ -525,74 +525,6 @@ Serialise::get_type(const std::string& field_value, bool bool_term)
 }
 
 
-std::tuple<FieldType, std::string, std::string>
-Serialise::get_range_type(const std::string& start, const std::string& end, bool bool_term)
-{
-	if (start.empty()) {
-		auto res = get_type(end, bool_term);
-		return std::make_tuple(res.first, start, res.second);
-	}
-
-	if (end.empty()) {
-		auto res = get_type(start, bool_term);
-		return std::make_tuple(res.first, res.second, end);
-	}
-
-	auto res = get_type(start, bool_term);
-	switch (res.first) {
-		case FieldType::POSITIVE:
-			try {
-				return std::make_tuple(FieldType::POSITIVE, res.second, positive(end));
-			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::TERM, start, end);
-			}
-		case FieldType::INTEGER:
-			try {
-				return std::make_tuple(FieldType::INTEGER, res.second, integer(end));
-			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::TERM, start, end);
-			}
-		case FieldType::FLOAT:
-			try {
-				return std::make_tuple(FieldType::FLOAT, res.second, _float(end));
-			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::TERM, start, end);
-			}
-		case FieldType::DATE:
-			try {
-				return std::make_tuple(FieldType::DATE, res.second, date(end));
-			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::TERM, start, end);
-			}
-		case FieldType::GEO:
-			try {
-				return std::make_tuple(FieldType::GEO, res.second, ewkt(end, default_spc.flags.partials, default_spc.error));
-			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::TERM, start, end);
-			}
-		case FieldType::UUID:
-			if (isUUID(end)) {
-				return std::make_tuple(FieldType::UUID, res.second, uuid(end));
-			} else {
-				return std::make_tuple(FieldType::TERM, start, end);
-			}
-		case FieldType::BOOLEAN:
-			try {
-				return std::make_tuple(FieldType::BOOLEAN, res.second, boolean(end));
-			} catch (const SerialisationError&) {
-				return std::make_tuple(FieldType::TERM, start, end);
-			}
-		case FieldType::TERM:
-			return std::make_tuple(FieldType::TERM, start, end);
-		case FieldType::TEXT:
-			return std::make_tuple(FieldType::TEXT, start, end);
-		default:
-			return std::make_tuple(FieldType::STRING, start, end);
-
-	}
-}
-
-
 std::pair<FieldType, std::string>
 Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 {
@@ -670,13 +602,90 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 			}
 		}
 
+		case MsgPack::Type::UNDEFINED:
+		case MsgPack::Type::NIL:
+			if (bool_term) {
+				return std::make_pair(FieldType::TERM, std::string());
+			}
+
+			// Default type STRING.
+			return std::make_pair(FieldType::STRING, std::string());
+
 		default:
 			THROW(SerialisationError, "Unexpected type %s", MsgPackTypes[toUType(field_value.getType())]);
 	}
 }
 
 
-std::tuple<FieldType, std::string, std::string, const required_spc_t&>
+std::tuple<FieldType, std::string, std::string>
+Serialise::get_range_type(const std::string& start, const std::string& end, bool bool_term)
+{
+	if (start.empty()) {
+		auto res = get_type(end, bool_term);
+		return std::make_tuple(res.first, start, res.second);
+	}
+
+	if (end.empty()) {
+		auto res = get_type(start, bool_term);
+		return std::make_tuple(res.first, res.second, end);
+	}
+
+	auto res = get_type(start, bool_term);
+	switch (res.first) {
+		case FieldType::POSITIVE:
+			try {
+				return std::make_tuple(FieldType::POSITIVE, res.second, positive(end));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::TERM, start, end);
+			}
+		case FieldType::INTEGER:
+			try {
+				return std::make_tuple(FieldType::INTEGER, res.second, integer(end));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::TERM, start, end);
+			}
+		case FieldType::FLOAT:
+			try {
+				return std::make_tuple(FieldType::FLOAT, res.second, _float(end));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::TERM, start, end);
+			}
+		case FieldType::DATE:
+			try {
+				return std::make_tuple(FieldType::DATE, res.second, date(end));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::TERM, start, end);
+			}
+		case FieldType::GEO:
+			try {
+				return std::make_tuple(FieldType::GEO, res.second, ewkt(end, default_spc.flags.partials, default_spc.error));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::TERM, start, end);
+			}
+		case FieldType::UUID:
+			if (isUUID(end)) {
+				return std::make_tuple(FieldType::UUID, res.second, uuid(end));
+			} else {
+				return std::make_tuple(FieldType::TERM, start, end);
+			}
+		case FieldType::BOOLEAN:
+			try {
+				return std::make_tuple(FieldType::BOOLEAN, res.second, boolean(end));
+			} catch (const SerialisationError&) {
+				return std::make_tuple(FieldType::TERM, start, end);
+			}
+		case FieldType::TERM:
+			return std::make_tuple(FieldType::TERM, start, end);
+		case FieldType::TEXT:
+			return std::make_tuple(FieldType::TEXT, start, end);
+		default:
+			return std::make_tuple(FieldType::STRING, start, end);
+
+	}
+}
+
+
+std::tuple<FieldType, std::string, std::string>
 Serialise::get_range_type(const class MsgPack& obj, bool bool_term)
 {
 	class MsgPack start;
@@ -684,30 +693,31 @@ Serialise::get_range_type(const class MsgPack& obj, bool bool_term)
 
 	try {
 		start = obj.at("_from");
-	} catch (const std::out_of_range&) { }
-
-	try {
-		end = obj.at("_to");
-	} catch (const std::out_of_range&) { }
-
-	if (!start) {
-		auto res = get_type(end, bool_term);
-		return std::make_tuple(std::get<0>(res), "", std::get<1>(res), std::cref(std::get<2>(res)));
-	}
-
-	if (!end) {
-		auto res = get_type(start, bool_term);
-		return std::make_tuple(std::get<0>(res), std::get<1>(res), "", std::cref(std::get<2>(res)));
+		try {
+			end = obj.at("_to");
+		} catch (const std::out_of_range&) {
+			auto res = get_type(start, bool_term);
+			return std::make_tuple(res.first, res.second, std::string());
+		}
+	} catch (const std::out_of_range&) {
+		try {
+			end = obj.at("_to");
+			auto res = get_type(end, bool_term);
+			return std::make_tuple(res.first, std::string(), res.second);
+		} catch (const std::out_of_range&) {
+			auto res = get_type(start, bool_term);
+			return std::make_tuple(res.first, res.second, res.second);
+		}
 	}
 
 	auto typ_start = get_type(start, bool_term);
 	auto typ_end = get_type(end, bool_term);
 
-	if (std::get<0>(typ_start) != std::get<0>(typ_end)) {
-		return std::make_tuple(FieldType::TERM, std::get<1>(typ_start), std::get<1>(typ_end), std::cref(Schema::get_data_global(FieldType::TERM)));
+	if (typ_start.first == typ_end.first) {
+		return std::make_tuple(typ_start.first, typ_start.second, typ_end.second);
 	}
 
-	return std::make_tuple(std::get<0>(typ_start), std::get<1>(typ_start), std::get<1>(typ_end), std::cref(std::get<2>(typ_start)));
+	THROW(SerialisationError, "Range type is ambiguous");
 }
 
 
