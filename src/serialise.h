@@ -220,7 +220,7 @@ namespace Serialise {
 
 	std::pair<FieldType, std::string> get_type(const std::string& field_value, bool bool_term=false);
 	std::tuple<FieldType, std::string, std::string> get_range_type(const std::string& start, const std::string& end, bool bool_term=false);
-	std::tuple<FieldType, std::string, const required_spc_t&> get_type(const class MsgPack& field_value, bool bool_term=false);
+	std::pair<FieldType, std::string> get_type(const class MsgPack& field_value, bool bool_term=false);
 	std::tuple<FieldType, std::string, std::string, const required_spc_t&> get_range_type(const class MsgPack& obj, bool bool_term=false);
 
 	// Serialise field_value like date.
