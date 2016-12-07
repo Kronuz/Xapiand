@@ -321,13 +321,15 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 
 	MsgPack obj_;
 
+	std::string term_id;
 	std::string prefixed_term_id;
 
 	auto spc_id = schema->get_data_id();
 	if (spc_id.sep_types[2] == FieldType::EMPTY) {
 		obj_ = obj;
 	} else {
-		prefixed_term_id = prefixed(Serialise::serialise(spc_id, _document_id), spc_id.prefix);
+		term_id = Serialise::serialise(spc_id, _document_id);
+		prefixed_term_id = prefixed(term_id, spc_id.prefix);
 		obj_ = run_script(obj, prefixed_term_id);
 	}
 
@@ -360,9 +362,13 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 
 	if (prefixed_term_id.empty()) {
 		// Now the schema is full, get specification id.
-		auto spc_id = schema->get_data_id();
-		prefixed_term_id = prefixed(Serialise::serialise(spc_id, _document_id), spc_id.prefix);
+		spc_id = schema->get_data_id();
+		term_id = Serialise::serialise(spc_id, _document_id);
+		prefixed_term_id = prefixed(term_id, spc_id.prefix);
 	}
+
+	doc.add_boolean_term(prefixed_term_id);
+	doc.add_value(spc_id.slot, term_id);
 
 	Xapian::docid did;
 	const auto _endpoints = endpoints;
