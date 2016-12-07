@@ -54,6 +54,9 @@ include (GNUInstallDirs)
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
+set (PACKAGE_PATH_STOP_WORDS "${CMAKE_INSTALL_DATAROOTDIR}/xapiand/stopwords")
+
+
 file (GLOB XAPIAND_SRC_LIST
 	${PROJECT_SOURCE_DIR}/src/*.c* ${PROJECT_SOURCE_DIR}/src/*.h
 	${PROJECT_SOURCE_DIR}/src/servers/*.c* ${PROJECT_SOURCE_DIR}/src/servers/*.h
@@ -416,16 +419,21 @@ add_custom_target (uninstall
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/stopwords/ ${CMAKE_INSTALL_DATAROOTDIR}/xapiand/stopwords/)
+	${CMAKE_SOURCE_DIR}/stopwords/ ${PACKAGE_PATH_STOP_WORDS})
+
+
+########################################################################
+# Copy stopwords during the installation
+########################################################################
+
+install (DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${PACKAGE_PATH_STOP_WORDS})
 
 
 ########################################################################
 # Manual page generation
 ########################################################################
 
-set (MANPAGES ${CMAKE_SOURCE_DIR}/man/xapiand.8)
-
-install (FILES ${MANPAGES} DESTINATION ${CMAKE_INSTALL_MANDIR}/man8 COMPONENT doc)
+install (FILES ${CMAKE_SOURCE_DIR}/man/xapiand.8 DESTINATION ${CMAKE_INSTALL_MANDIR}/man8 COMPONENT doc)
 
 
 ########################################################################
