@@ -42,8 +42,8 @@ class FieldParser {
 	std::string fstr;
 	size_t len_field;
 	const char* off_field;
-	size_t len_fieldot;
-	const char* off_fieldot;
+	size_t len_field_colon;
+	const char* off_field_colon;
 	size_t len_value;
 	const char* off_value;
 	size_t len_double_quote_value;
@@ -59,9 +59,9 @@ public:
 		FIELD,
 		QUOTE,
 		ESCAPE,
-		STARTVALUE,
+		START_VALUE,
 		VALUE,
-		DOUBLE_DOTS_OR_END,
+		COLON_OR_END,
 		SQUARE_BRACKET,
 		SQUARE_BRACKET_INIT,
 		SQUARE_BRACKET_END,
@@ -86,11 +86,11 @@ public:
 		return std::string();
 	}
 
-	inline std::string get_field_dot() const {
+	inline std::string get_field_colon() const {
 		if (skip_quote) {
 			return std::string(off_field, len_field) + ":";
-		} else if (off_fieldot) {
-			return std::string(off_fieldot, len_fieldot);
+		} else if (off_field_colon) {
+			return std::string(off_field_colon, len_field_colon);
 		}
 		return std::string();
 	}

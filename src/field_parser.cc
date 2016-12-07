@@ -25,9 +25,9 @@
 #include <ctype.h>  // for isspace
 
 
-#define DOUBLEDOTS ':'
-#define DOUBLEQUOTE '"'
-#define SINGLEQUOTE '\''
+#define COLON ':'
+#define DOUBLE_QUOTE '"'
+#define SINGLE_QUOTE '\''
 #define SQUARE_BRACKET_LEFT '['
 #define SQUARE_BRACKET_RIGHT ']'
 #define COMMA ','
@@ -36,7 +36,7 @@
 FieldParser::FieldParser(const std::string& p)
 	: fstr(p),
 	  len_field(0), off_field(nullptr),
-	  len_fieldot(0), off_fieldot(nullptr),
+	  len_field_colon(0), off_field_colon(nullptr),
 	  len_value(0), off_value(nullptr),
 	  len_double_quote_value(0), off_double_quote_value(nullptr),
 	  len_single_quote_value(0), off_single_quote_value(nullptr),
@@ -61,17 +61,17 @@ FieldParser::parse()
 						++len_value;
 						isrange = true;
 						break;
-					case DOUBLEQUOTE:
+					case DOUBLE_QUOTE:
 						currentState = FieldParser::State::QUOTE;
-						quote = DOUBLEQUOTE;
+						quote = DOUBLE_QUOTE;
 						off_double_quote_value = currentSymbol;
 						off_value = currentSymbol + 1;
 						++len_double_quote_value;
 						++len_value;
 						break;
-					case SINGLEQUOTE:
+					case SINGLE_QUOTE:
 						currentState = FieldParser::State::QUOTE;
-						quote = SINGLEQUOTE;
+						quote = SINGLE_QUOTE;
 						off_single_quote_value = currentSymbol;
 						off_value = currentSymbol + 1;
 						++len_single_quote_value;
@@ -92,10 +92,10 @@ FieldParser::parse()
 								if (++len_field >= 1024) {
 									THROW(FieldParserError, "Syntax error in query");
 								}
-								++len_fieldot;
+								++len_field_colon;
 								currentState = FieldParser::State::FIELD;
 								off_field = currentSymbol;
-								off_fieldot = currentSymbol;
+								off_field_colon = currentSymbol;
 								break;
 						}
 						break;
@@ -104,38 +104,38 @@ FieldParser::parse()
 
 			case FieldParser::State::FIELD:
 				switch (*currentSymbol) {
-					case DOUBLEDOTS:
-						currentState = FieldParser::State::STARTVALUE;
-						++len_fieldot;
+					case COLON:
+						currentState = FieldParser::State::START_VALUE;
+						++len_field_colon;
 						break;
 					case '\0':
 						len_value = len_field;
 						off_value = off_field;
-						len_field = len_fieldot = 0;
-						off_field = off_fieldot = nullptr;
+						len_field = len_field_colon = 0;
+						off_field = off_field_colon = nullptr;
 						return;
 					case ' ':
 						break;
 					default:
 						++len_field;
-						++len_fieldot;
+						++len_field_colon;
 						break;
 				}
 				break;
 
-			case FieldParser::State::STARTVALUE:
+			case FieldParser::State::START_VALUE:
 				switch (*currentSymbol) {
-					case DOUBLEQUOTE:
+					case DOUBLE_QUOTE:
 						currentState = FieldParser::State::QUOTE;
-						quote = DOUBLEQUOTE;
+						quote = DOUBLE_QUOTE;
 						off_double_quote_value = currentSymbol;
 						off_value = off_double_quote_value + 1;
 						++len_double_quote_value;
 						++len_value;
 						break;
-					case SINGLEQUOTE:
+					case SINGLE_QUOTE:
 						currentState = FieldParser::State::QUOTE;
-						quote = SINGLEQUOTE;
+						quote = SINGLE_QUOTE;
 						off_single_quote_value = currentSymbol;
 						off_value = off_single_quote_value + 1;
 						++len_single_quote_value;
@@ -165,10 +165,10 @@ FieldParser::parse()
 						oldState = FieldParser::State::QUOTE;
 						++len_value;
 						switch (quote) {
-							case DOUBLEQUOTE:
+							case DOUBLE_QUOTE:
 								++len_double_quote_value;
 								break;
-							case SINGLEQUOTE:
+							case SINGLE_QUOTE:
 								++len_single_quote_value;
 								break;
 						}
@@ -177,13 +177,13 @@ FieldParser::parse()
 						THROW(FieldParserError, "Expected symbol: '%c'", quote);
 					default:
 						if (*currentSymbol == quote) {
-							currentState = FieldParser::State::DOUBLE_DOTS_OR_END;
+							currentState = FieldParser::State::COLON_OR_END;
 							switch (quote) {
-								case DOUBLEQUOTE:
+								case DOUBLE_QUOTE:
 									++len_double_quote_value;
 									--len_value;	// subtract the last quote count
 									break;
-								case SINGLEQUOTE:
+								case SINGLE_QUOTE:
 									++len_single_quote_value;
 									--len_value;	// subtract the last quote count
 									break;
@@ -191,10 +191,10 @@ FieldParser::parse()
 						} else {
 							++len_value;
 							switch (quote) {
-								case DOUBLEQUOTE:
+								case DOUBLE_QUOTE:
 									++len_double_quote_value;
 									break;
-								case SINGLEQUOTE:
+								case SINGLE_QUOTE:
 									++len_single_quote_value;
 									break;
 							}
@@ -203,16 +203,16 @@ FieldParser::parse()
 				}
 				break;
 
-			case FieldParser::State::DOUBLE_DOTS_OR_END:
+			case FieldParser::State::COLON_OR_END:
 				switch (*currentSymbol) {
 					case '\0':
 						currentState = FieldParser::State::END;
 						break;
 
-					case DOUBLEDOTS:
-						currentState = FieldParser::State::STARTVALUE;
+					case COLON:
+						currentState = FieldParser::State::START_VALUE;
 						switch (quote) {
-							case SINGLEQUOTE:
+							case SINGLE_QUOTE:
 								off_field = off_value;
 								len_field = len_value;
 								off_value = nullptr;
@@ -220,7 +220,7 @@ FieldParser::parse()
 								off_single_quote_value = nullptr;
 								break;
 
-							case DOUBLEQUOTE:
+							case DOUBLE_QUOTE:
 								off_field = off_value;
 								len_field = len_value;
 								off_value = nullptr;
@@ -244,9 +244,9 @@ FieldParser::parse()
 					switch(currentState) {
 						case FieldParser::State::QUOTE:
 							++len_value;
-							if (quote == DOUBLEQUOTE) {
+							if (quote == DOUBLE_QUOTE) {
 								++len_double_quote_value;
-							} else if (quote == SINGLEQUOTE) {
+							} else if (quote == SINGLE_QUOTE) {
 								++len_single_quote_value;
 							}
 							break;
@@ -278,14 +278,14 @@ FieldParser::parse()
 
 			case FieldParser::State::SQUARE_BRACKET_INIT:
 				switch (*currentSymbol) {
-					case DOUBLEQUOTE:
+					case DOUBLE_QUOTE:
 						currentState = FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE;
-						quote = DOUBLEQUOTE;
+						quote = DOUBLE_QUOTE;
 						++len_value;
 						break;
-					case SINGLEQUOTE:
+					case SINGLE_QUOTE:
 						currentState = FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE;
-						quote = SINGLEQUOTE;
+						quote = SINGLE_QUOTE;
 						++len_value;
 						break;
 					case COMMA:
@@ -307,14 +307,14 @@ FieldParser::parse()
 
 			case FieldParser::State::SQUARE_BRACKET:
 				switch (*currentSymbol) {
-					case DOUBLEQUOTE:
+					case DOUBLE_QUOTE:
 						currentState = FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE;
-						quote = DOUBLEQUOTE;
+						quote = DOUBLE_QUOTE;
 						++len_value;
 						break;
-					case SINGLEQUOTE:
+					case SINGLE_QUOTE:
 						currentState = FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE;
-						quote = SINGLEQUOTE;
+						quote = SINGLE_QUOTE;
 						++len_value;
 						break;
 					case SQUARE_BRACKET_RIGHT:
