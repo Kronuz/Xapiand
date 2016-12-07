@@ -46,10 +46,11 @@ class QueryDSL {
 	static const std::unordered_set<std::string> casts_set;
 
 	Xapian::Query process(Xapian::Query::op op, const std::string& parent, const MsgPack& obj);
-	Xapian::Query get_value_query(const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags);
-	Xapian::Query get_accuracy_query(const std::string& field_accuracy, const std::string& prefix_accuracy, const MsgPack& obj);
-	Xapian::Query get_namespace_query(const std::string& full_name, const std::string& prefix_namespace, const MsgPack& obj, int q_flags);
-	Xapian::Query get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags);
+	Xapian::Query process_in(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj);
+	Xapian::Query get_value_query(Xapian::Query::op op, const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool isrange=false);
+	Xapian::Query get_accuracy_query(const required_spc_t& field_spc, Xapian::Query::op op, const std::string& field_accuracy, const MsgPack& obj, bool isrange);
+	Xapian::Query get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool isrange);
+	Xapian::Query get_regular_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool isrange);
 
 public:
 	QueryDSL(std::shared_ptr<Schema> schema_);

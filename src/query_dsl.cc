@@ -209,7 +209,7 @@ QueryDSL::make_dsl_query(const std::string& query)
 Xapian::Query
 QueryDSL::get_query(const MsgPack& obj)
 {
-	L_CALL(this, "QueryDSL::get_query(%s)", obj.to_string().c_str());
+	L_CALL(this, "QueryDSL::get_query(%s)", repr(obj.to_string()).c_str());
 
 	if (obj.is_string() && obj.to_string().compare("*")) {
 		return Xapian::Query::MatchAll;
@@ -222,7 +222,7 @@ QueryDSL::get_query(const MsgPack& obj)
 Xapian::Query
 QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack& obj)
 {
-	L_CALL(this, "QueryDSL::process(%d, %s, %s)", (int)op, repr(parent).c_str(), obj.to_string().c_str());
+	L_CALL(this, "QueryDSL::process(%d, %s, %s)", (int)op, repr(parent).c_str(), repr(obj.to_string()).c_str());
 
 	Xapian::termcount wqf = 1;
 	int q_flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD;
@@ -241,14 +241,17 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 				Xapian::Query query;
 
 				if (field_name == RESERVED_VALUE) {
-					query = get_value_query(parent, o, wqf, q_flags);
+					query = get_value_query(op, parent, o, wqf, q_flags);
+
+				} else if (field_name == "_in") {
+					query = get_value_query(op, parent, o, wqf, q_flags, true);
 
 				} else {
 					auto it = ops_map.find(field_name);
 					if (it != ops_map.end()) {
 						query = process(it->second, parent, o);
 					} else if (casts_set.find(field_name) != casts_set.end()) {
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags);
+						query = get_value_query(op, parent, {{ field_name, o }}, wqf, q_flags);
 					} else {
 						query = process(op, parent.empty() ? field_name : parent + "." + field_name, o);
 					}
@@ -266,7 +269,7 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 			break;
 
 		default:
-			final_query = get_value_query(parent, obj, wqf, q_flags);
+			final_query = get_value_query(op, parent, obj, wqf, q_flags);
 			break;
 	}
 
@@ -275,40 +278,91 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 
 
 Xapian::Query
-QueryDSL::get_value_query(const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags)
+QueryDSL::process_in(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj)
 {
-	L_CALL(this, "QueryDSL::get_value_query(%s, %s)", repr(path).c_str(), obj.to_string().c_str());
+	L_CALL(this, "QueryDSL::process_in(<field_spc>, %d, %s)", (int)op, repr(obj.to_string()).c_str());
+
+	Xapian::Query final_query;
+	if (op == Xapian::Query::OP_AND_NOT) {
+		final_query = Xapian::Query::MatchAll;
+	}
+
+	switch (obj.getType()) {
+		case MsgPack::Type::STR: {
+			FieldParser fp(obj.as_string());
+			fp.parse();
+			if (!fp.isrange) {
+				THROW(ClientError, "Invalid range (1): %s", repr(obj.to_string()).c_str());
+			}
+			MsgPack value;
+			if (!fp.start.empty()) {
+				value["_range"]["_from"] = Cast::cast(field_spc.get_type(), fp.start);
+			}
+			if (!fp.end.empty()) {
+				value["_range"]["_to"] = Cast::cast(field_spc.get_type(), fp.end);
+			}
+			final_query = process_in(field_spc, op, value);
+			break;
+		}
+
+		case MsgPack::Type::MAP:
+			for (auto const& field : obj) {
+				auto field_name = field.as_string();
+				auto const& o = obj.at(field);
+				Xapian::Query query;
+				if (field_name.compare("_range") == 0) {
+					query = MultipleValueRange::getQuery(field_spc, o);
+				} else {
+					THROW(ClientError, "Invalid range (2): %s", repr(obj.to_string()).c_str());
+				}
+				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
+			}
+			break;
+
+		default:
+			THROW(ClientError, "Invalid range (3): %s", repr(obj.to_string()).c_str());
+			break;
+	}
+
+	return final_query;
+}
+
+
+Xapian::Query
+QueryDSL::get_value_query(Xapian::Query::op op, const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool isrange)
+{
+	L_CALL(this, "QueryDSL::get_value_query(%d, %s, %s, <wqf>, <q_flags>, %s)", (int)op, repr(path).c_str(), repr(obj.to_string()).c_str(), isrange ? "true" : "false");
 
 	if (path.empty()) {
 		auto ser_type = Serialise::get_type(obj);
 		const auto& global_spc = Schema::get_data_global(std::get<0>(ser_type));
 
-		return get_regular_query(global_spc, obj, wqf, q_flags);
+		return get_regular_query(global_spc, op, obj, wqf, q_flags, isrange);
 	} else {
 		auto data_field = schema->get_data_field(path);
 		const auto& field_spc = data_field.first;
 
 		if (!data_field.second.empty()) {
-			return get_accuracy_query(data_field.second, field_spc.prefix, obj);
+			return get_accuracy_query(field_spc, op, data_field.second, obj, isrange);
 		}
 
 		if (field_spc.flags.inside_namespace) {
-			return get_namespace_query(path, field_spc.prefix, obj, q_flags);
+			return get_namespace_query(field_spc, op, obj, wqf, q_flags, isrange);
 		}
 
-		return get_regular_query(field_spc, obj, wqf, q_flags);
+		return get_regular_query(field_spc, op, obj, wqf, q_flags, isrange);
 	}
 }
 
 
 Xapian::Query
-QueryDSL::get_accuracy_query(const std::string& field_accuracy, const std::string& prefix_accuracy, const MsgPack& obj)
+QueryDSL::get_accuracy_query(const required_spc_t& field_spc, Xapian::Query::op op, const std::string& field_accuracy, const MsgPack& obj, bool isrange)
 {
-	L_CALL(this, "QueryDSL::get_accuracy_query(%s, %s, %s)", repr(field_accuracy).c_str(), repr(prefix_accuracy).c_str(), obj.to_string().c_str());
+	L_CALL(this, "QueryDSL::get_accuracy_query(<field_spc>, %d, %s, %s, %s, %s)", (int)op, repr(field_accuracy).c_str(), repr(obj.to_string()).c_str(), isrange ? "true" : "false");
 
-	// if (fp.isrange) {
-	// 	THROW(ClientError, "Accuracy is only indexed like terms, searching by range is not supported");
-	// }
+	if (isrange) {
+		THROW(ClientError, "Accuracy is only indexed like terms, searching by range is not supported");
+	}
 
 	auto it = map_acc_date.find(field_accuracy.substr(1));
 	if (it != map_acc_date.end()) {
@@ -318,39 +372,39 @@ QueryDSL::get_accuracy_query(const std::string& field_accuracy, const std::strin
 		switch (it->second) {
 			case UnitTime::SECOND: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
 			}
 			case UnitTime::MINUTE: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
 			}
 			case UnitTime::HOUR: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
 			}
 			case UnitTime::DAY: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
 			}
 			case UnitTime::MONTH: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
 			}
 			case UnitTime::YEAR: {
 				Datetime::tm_t _tm(tm.year);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
 			}
 			case UnitTime::DECADE: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
 			}
 			case UnitTime::CENTURY: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
 			}
 			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + prefix_accuracy));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
 			}
 		}
 	} else {
@@ -361,36 +415,36 @@ QueryDSL::get_accuracy_query(const std::string& field_accuracy, const std::strin
 				auto value = Cast::string(obj);  // TODO: use Cast::geo() instead?
 				EWKT_Parser ewkt(value, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
 				auto ranges = ewkt.getRanges();
-				return GenerateTerms::geo(ranges, { nivel }, { prefix_type + prefix_accuracy } );
+				return GenerateTerms::geo(ranges, { nivel }, { prefix_type + field_spc.prefix } );
 			} else {
 				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
 				auto acc = stox(std::stoull, field_accuracy.substr(1));
 				auto value = Cast::integer(obj);
-				return Xapian::Query(prefixed(Serialise::integer(value - GenerateTerms::modulus(value, acc)), prefix_type + prefix_accuracy));
+				return Xapian::Query(prefixed(Serialise::integer(value - GenerateTerms::modulus(value, acc)), prefix_type + field_spc.prefix));
 			}
 		} catch (const std::invalid_argument& e) {
-			THROW(ClientError, "Invalid numeric value %s: %s [%s]", field_accuracy.c_str(), obj.to_string().c_str(), e.what());
+			THROW(ClientError, "Invalid numeric value %s: %s [%s]", field_accuracy.c_str(), repr(obj.to_string()).c_str(), e.what());
 		}
 	}
 }
 
 
 Xapian::Query
-QueryDSL::get_namespace_query(const std::string& full_name, const std::string& prefix_namespace, const MsgPack& obj, int q_flags)
+QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount, int q_flags, bool isrange)
 {
-	L_CALL(this, "QueryDSL::get_namespace_query(%s, %s, %s)", repr(full_name).c_str(), repr(prefix_namespace).c_str(), obj.to_string().c_str());
+	L_CALL(this, "QueryDSL::get_namespace_query(<field_spc>, %d, %s, <wqf>, <q_flags>, %s)", (int)op, repr(obj.to_string()).c_str(), isrange ? "true" : "false");
 
 	std::string f_prefix;
-	f_prefix.reserve(arraySize(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
-	f_prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace);
-
-	// if (fp.isrange) {
-	// 	auto ser_type = Serialise::get_range_type(fp.start, fp.end);
-	// 	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), f_prefix);
-	// 	return MultipleValueRange::getQuery(spc, full_name, fp.start, fp.end);
-	// }
+	f_prefix.reserve(arraySize(DOCUMENT_NAMESPACE_TERM_PREFIX) + field_spc.prefix.length() + 1);
+	f_prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(field_spc.prefix);
 
 	auto ser_type = Serialise::get_type(obj);
+	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), f_prefix);
+
+	if (isrange) {
+		return process_in(spc, op, obj);
+	}
+
 	auto& field_value = std::get<1>(ser_type);
 
 	if (field_value.empty()) {
@@ -399,7 +453,6 @@ QueryDSL::get_namespace_query(const std::string& full_name, const std::string& p
 		return Xapian::Query(Xapian::Query::OP_WILDCARD, f_prefix);
 	}
 
-	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), f_prefix);
 	field_value.assign(std::get<1>(ser_type));
 
 	switch (spc.get_type()) {
@@ -434,9 +487,13 @@ QueryDSL::get_namespace_query(const std::string& full_name, const std::string& p
 
 
 Xapian::Query
-QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags)
+QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool isrange)
 {
-	L_CALL(this, "QueryDSL::get_regular_query(<field_spc>, %s)", obj.to_string().c_str());
+	L_CALL(this, "QueryDSL::get_regular_query(<field_spc>, %d, %s, <wqf>, <q_flags>, %s)", (int)op, repr(obj.to_string()).c_str(), isrange ? "true" : "false");
+
+	if (isrange) {
+		return process_in(field_spc, op, obj);
+	}
 
 	auto field_value = Serialise::MsgPack(field_spc, obj);
 
