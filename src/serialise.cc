@@ -473,9 +473,9 @@ Serialise::cast_object(const required_spc_t& field_spc, const class MsgPack& o)
 std::string
 Serialise::serialise(const required_spc_t& field_spc, const std::string& field_value)
 {
-	auto type = field_spc.get_type();
+	auto field_type = field_spc.get_type();
 
-	switch (type) {
+	switch (field_type) {
 		case FieldType::INTEGER:
 			return integer(field_value);
 		case FieldType::POSITIVE:
@@ -495,7 +495,7 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
-			THROW(SerialisationError, "Type: '%c' is an unknown type", toUType(type));
+			THROW(SerialisationError, "Type: %s is an unknown type", type(field_type).c_str());
 	}
 }
 
@@ -618,7 +618,7 @@ Serialise::boolean(FieldType field_type, bool field_value)
 		return boolean(field_value);
 	}
 
-	THROW(SerialisationError, "%s is not boolean", type(field_type).c_str());
+	THROW(SerialisationError, "Type: %s is not boolean", type(field_type).c_str());
 }
 
 
@@ -1081,9 +1081,9 @@ Serialise::trixel_id(uint64_t id)
 
 
 std::string
-Serialise::type(FieldType type)
+Serialise::type(FieldType field_type)
 {
-	switch (type) {
+	switch (field_type) {
 		case FieldType::TERM:     return TERM_STR;
 		case FieldType::TEXT:     return TEXT_STR;
 		case FieldType::STRING:   return STRING_STR;
@@ -1096,7 +1096,8 @@ Serialise::type(FieldType type)
 		case FieldType::UUID:     return UUID_STR;
 		case FieldType::OBJECT:   return OBJECT_STR;
 		case FieldType::ARRAY:    return ARRAY_STR;
-		case FieldType::EMPTY:    return std::string();
+		case FieldType::EMPTY:    return EMPTY_STR;
+		default:                  return "unknown";
 	}
 }
 
@@ -1133,7 +1134,7 @@ Unserialise::MsgPack(FieldType field_type, const std::string& serialised_val)
 			result = uuid(serialised_val);
 			break;
 		default:
-			THROW(SerialisationError, "Type: '%c' is an unknown type", toUType(field_type));
+			THROW(SerialisationError, "Type: %s is an unknown type", Serialise::type(field_type).c_str());
 	}
 
 	return result;
@@ -1163,7 +1164,7 @@ Unserialise::unserialise(FieldType field_type, const std::string& serialised_val
 		case FieldType::UUID:
 			return uuid(serialised_val);
 		default:
-			THROW(SerialisationError, "Type: '%c' is an unknown type", field_type);
+			THROW(SerialisationError, "Type: %s is an unknown type", Serialise::type(field_type).c_str());
 	}
 }
 

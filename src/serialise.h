@@ -107,6 +107,7 @@
 #define UUID_STR     "uuid"
 #define ARRAY_STR    "array"
 #define OBJECT_STR   "object"
+#define EMPTY_STR    "empty"
 
 
 #define FALSE_SERIALISED 'f'
