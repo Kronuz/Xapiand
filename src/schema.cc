@@ -735,7 +735,7 @@ specification_t::get_global(FieldType field_type)
 			return spc;
 		}
 		case FieldType::STRING: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::STRING, default_spc.accuracy, default_spc.acc_prefix);
+			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
 		case FieldType::BOOLEAN: {
@@ -4340,7 +4340,7 @@ Schema::get_data_global(FieldType field_type)
 			return prop;
 		}
 		case FieldType::STRING: {
-			static const required_spc_t prop(DB_SLOT_STRING, FieldType::STRING, default_spc.accuracy, default_spc.acc_prefix);
+			static const required_spc_t prop(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
 			return prop;
 		}
 		case FieldType::BOOLEAN: {
