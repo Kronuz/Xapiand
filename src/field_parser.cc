@@ -28,8 +28,8 @@
 #define DOUBLEDOTS ':'
 #define DOUBLEQUOTE '"'
 #define SINGLEQUOTE '\''
-#define LEFT_SQUARE_BRACKET '['
-#define RIGHT_SQUARE_BRACKET ']'
+#define SQUARE_BRACKET_LEFT '['
+#define SQUARE_BRACKET_RIGHT ']'
 #define COMMA ','
 
 
@@ -55,8 +55,10 @@ FieldParser::parse()
 		switch (currentState) {
 			case FieldParser::State::INIT:
 				switch (*currentSymbol) {
-					case LEFT_SQUARE_BRACKET:
-						currentState = FieldParser::State::INIT_SQUARE_BRACKET;
+					case SQUARE_BRACKET_LEFT:
+						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
+						off_value = currentSymbol;
+						++len_value;
 						isrange = true;
 						break;
 					case DOUBLEQUOTE:
@@ -139,8 +141,10 @@ FieldParser::parse()
 						++len_single_quote_value;
 						++len_value;
 						break;
-					case LEFT_SQUARE_BRACKET:
-						currentState = FieldParser::State::INIT_SQUARE_BRACKET;
+					case SQUARE_BRACKET_LEFT:
+						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
+						off_value = currentSymbol;
+						++len_value;
 						isrange = true;
 						break;
 					case '\0':
@@ -246,11 +250,13 @@ FieldParser::parse()
 								++len_single_quote_value;
 							}
 							break;
-						case FieldParser::State::FIRST_QUOTE_SQUARE_BRACKET:
+						case FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE:
 							start += *currentSymbol;
+							++len_value;
 							break;
-						case FieldParser::State::SECOND_QUOTE_SQUARE_BRACKET:
+						case FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE:
 							end += *currentSymbol;
+							++len_value;
 							break;
 						default:
 							break;
@@ -270,26 +276,31 @@ FieldParser::parse()
 				}
 				break;
 
-			case FieldParser::State::INIT_SQUARE_BRACKET:
+			case FieldParser::State::SQUARE_BRACKET_INIT:
 				switch (*currentSymbol) {
 					case DOUBLEQUOTE:
-						currentState = FieldParser::State::FIRST_QUOTE_SQUARE_BRACKET;
+						currentState = FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE;
 						quote = DOUBLEQUOTE;
+						++len_value;
 						break;
 					case SINGLEQUOTE:
-						currentState = FieldParser::State::FIRST_QUOTE_SQUARE_BRACKET;
+						currentState = FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE;
 						quote = SINGLEQUOTE;
+						++len_value;
 						break;
 					case COMMA:
 						currentState = FieldParser::State::SQUARE_BRACKET;
+						++len_value;
 						break;
-					case RIGHT_SQUARE_BRACKET:
+					case SQUARE_BRACKET_RIGHT:
 						currentState = FieldParser::State::END;
+						++len_value;
 						break;
 					case '\0':
 						THROW(FieldParserError, "Syntax error in query");
 					default:
 						start += *currentSymbol;
+						++len_value;
 						break;
 				}
 				break;
@@ -297,76 +308,87 @@ FieldParser::parse()
 			case FieldParser::State::SQUARE_BRACKET:
 				switch (*currentSymbol) {
 					case DOUBLEQUOTE:
-						currentState = FieldParser::State::SECOND_QUOTE_SQUARE_BRACKET;
+						currentState = FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE;
 						quote = DOUBLEQUOTE;
+						++len_value;
 						break;
 					case SINGLEQUOTE:
-						currentState = FieldParser::State::SECOND_QUOTE_SQUARE_BRACKET;
+						currentState = FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE;
 						quote = SINGLEQUOTE;
+						++len_value;
 						break;
-					case RIGHT_SQUARE_BRACKET:
+					case SQUARE_BRACKET_RIGHT:
 						currentState = FieldParser::State::END;
+						++len_value;
 						break;
 					case '\0':
 						THROW(FieldParserError, "Expected symbol: ']'");
 					default:
 						end += *currentSymbol;
+						++len_value;
 						break;
 				}
 				break;
 
-			case FieldParser::State::FIRST_QUOTE_SQUARE_BRACKET:
+			case FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE:
 				switch (*currentSymbol) {
 					case '\\':
 						currentState = FieldParser::State::ESCAPE;
-						oldState = FieldParser::State::FIRST_QUOTE_SQUARE_BRACKET;
+						oldState = FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE;
+						++len_value;
 						break;
 					case '\0':
 						break;
 					default:
 						if (*currentSymbol == quote) {
-							currentState = FieldParser::State::COMMA_OR_END;
+							currentState = FieldParser::State::SQUARE_BRACKET_COMMA_OR_END;
 						} else {
 							start += *currentSymbol;
 						}
+						++len_value;
 						break;
 				}
 				break;
 
-			case FieldParser::State::COMMA_OR_END:
+			case FieldParser::State::SQUARE_BRACKET_COMMA_OR_END:
 					switch (*currentSymbol) {
 						case COMMA:
 							currentState = FieldParser::State::SQUARE_BRACKET;
+							++len_value;
 							break;
-						case RIGHT_SQUARE_BRACKET:
+						case SQUARE_BRACKET_RIGHT:
 							currentState = FieldParser::State::END;
+							++len_value;
 							break;
 						default:
 							THROW(FieldParserError, "Unexpected symbol: %c", *currentSymbol);
 					}
 				break;
 
-			case FieldParser::State::SECOND_QUOTE_SQUARE_BRACKET:
+			case FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE:
 				switch (*currentSymbol) {
 					case '\\':
 						currentState = FieldParser::State::ESCAPE;
-						oldState = FieldParser::State::SECOND_QUOTE_SQUARE_BRACKET;
+						oldState = FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE;
+						++len_value;
 						break;
 					case '\0':
 						break;
 					default:
 						if (*currentSymbol == quote) {
-							currentState = FieldParser::State::END_SQUARE_BRACKET;
+							currentState = FieldParser::State::SQUARE_BRACKET_END;
 						} else {
 							end += *currentSymbol;
 						}
+						++len_value;
 						break;
 				}
 				break;
 
-			case FieldParser::State::END_SQUARE_BRACKET:
-				if (*currentSymbol == RIGHT_SQUARE_BRACKET) {
+			case FieldParser::State::SQUARE_BRACKET_END:
+				if (*currentSymbol == SQUARE_BRACKET_RIGHT) {
 					currentState = FieldParser::State::END;
+					++len_value;
 				} else {
 					THROW(FieldParserError, "Expected symbol: ']'");
 				}
