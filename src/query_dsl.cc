@@ -331,8 +331,8 @@ QueryDSL::range_query(const MsgPack& obj)
 	switch (state) {
 		case QUERY::GLOBALQUERY:
 		{
-			std::tuple<FieldType, std::string, std::string, const required_spc_t&> ser_type = Serialise::get_range_type(obj);
-			return MultipleValueRange::getQuery(std::get<3>(ser_type), "", obj);
+			auto ser_type = Serialise::get_range_type(obj);
+			return MultipleValueRange::getQuery(Schema::get_data_global(std::get<0>(ser_type)), std::string(), obj);
 		}
 		break;
 
@@ -357,48 +357,58 @@ QueryDSL::query(const MsgPack& obj)
 	switch (state) {
 		case QUERY::GLOBALQUERY: {
 			auto ser_type = Serialise::get_type(obj);
-			switch (std::get<0>(ser_type)) {
+			const auto& global_spc = Schema::get_data_global(ser_type.first);
+			switch (global_spc.get_type()) {
 				case FieldType::TEXT: {
-				auto &field_spc = std::get<2>(ser_type);
 					Xapian::QueryParser parser;
-					auto stopper = getStopper(field_spc.language);
+					if (global_spc.flags.bool_term) {
+						parser.add_boolean_prefix("_", global_spc.prefix);
+					} else {
+						parser.add_prefix("_", global_spc.prefix);
+					}
+					auto stopper = getStopper(global_spc.language);
 					parser.set_stopper(stopper.get());
-					parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
-					parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
-					return parser.parse_query(std::get<1>(ser_type), spc_dsl.q_flags);
+					parser.set_stemming_strategy(getQueryParserStemStrategy(global_spc.stem_strategy));
+					parser.set_stemmer(Xapian::Stem(global_spc.stem_language));
+					return parser.parse_query("_:" + ser_type.second, spc_dsl.q_flags);
 				}
 
 				case FieldType::STRING: {
 					Xapian::QueryParser parser;
-					return parser.parse_query(std::get<1>(ser_type), spc_dsl.q_flags);
+					if (global_spc.flags.bool_term) {
+						parser.add_boolean_prefix("_", global_spc.prefix);
+					} else {
+						parser.add_prefix("_", global_spc.prefix);
+					}
+					return parser.parse_query("_:" + ser_type.second, spc_dsl.q_flags);
 				}
 
 				case FieldType::TERM: {
-					auto field_value = std::get<1>(ser_type);
-					to_lower(field_value);
+					auto field_value = lower_string(ser_type.second);
 					if (endswith(field_value, '*')) {
-						field_value = field_value.substr(0, field_value.length() - 1);
-						return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(field_value, std::get<2>(ser_type).prefix));
+						field_value.pop_back();
+						return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(field_value, global_spc.prefix));
 					} else {
-						return Xapian::Query(prefixed(field_value, std::get<2>(ser_type).prefix), spc_dsl.wqf);
+						return Xapian::Query(prefixed(field_value, global_spc.prefix), spc_dsl.wqf);
 					}
 				}
 				default:
-					return Xapian::Query(prefixed(std::get<1>(ser_type), std::get<2>(ser_type).prefix));
+					return Xapian::Query(prefixed(ser_type.second, global_spc.prefix));
 			}
 			break;
 		}
 
 		case QUERY::FIELDQUERY: {
 			auto field_spc = schema->get_data_field(fieldname).first;
-			if (!field_spc.prefix.empty()){
+			if (field_spc.prefix.empty()) {
+				THROW(QueryDslError, "Field %s not found in schema", fieldname.c_str());
+			} else {
 				try {
 					switch (field_spc.get_type()) {
-						case FieldType::DATE:
-							if (find_date(obj)) {
-								auto ser_date = Serialise::date(field_spc, obj);
-								return Xapian::Query(prefixed(ser_date, field_spc.prefix), spc_dsl.wqf);
-							}
+						case FieldType::DATE: {
+							auto ser_date = Serialise::date(obj);
+							return Xapian::Query(prefixed(ser_date, field_spc.prefix), spc_dsl.wqf);
+						}
 
 						case FieldType::INTEGER:
 						case FieldType::POSITIVE:
@@ -461,8 +471,6 @@ QueryDSL::query(const MsgPack& obj)
 				} catch (const msgpack::type_error&) {
 					THROW(QueryDslError, "Type error expected %s in %s", Serialise::type(field_spc.get_type()).c_str(), fieldname.c_str());
 				}
-			} else {
-				THROW(QueryDslError, "Field %s not found in schema", fieldname.c_str());
 			}
 
 			break;
