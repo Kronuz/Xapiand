@@ -132,7 +132,7 @@ const std::unordered_map<std::string, TypeIndex> map_index({
 const std::unordered_map<std::string, FieldType> map_type({
 	{ FLOAT_STR,       FieldType::FLOAT        }, { INTEGER_STR,     FieldType::INTEGER      },
 	{ POSITIVE_STR,    FieldType::POSITIVE     }, { TERM_STR,        FieldType::TERM         },
-	{ TEXT_STR,        FieldType::TEXT         }, { STRING_STR,      FieldType::STRING       }, 
+	{ TEXT_STR,        FieldType::TEXT         }, { STRING_STR,      FieldType::STRING       },
 	{ DATE_STR,        FieldType::DATE         }, { GEO_STR,         FieldType::GEO          },
 	{ BOOLEAN_STR,     FieldType::BOOLEAN      }, { UUID_STR,        FieldType::UUID         },
 });
