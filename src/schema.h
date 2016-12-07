@@ -297,6 +297,9 @@ struct required_spc_t {
 	required_spc_t(const required_spc_t& o);
 	required_spc_t(required_spc_t&& o) noexcept;
 
+	required_spc_t& operator=(const required_spc_t& o);
+	required_spc_t& operator=(required_spc_t&& o) noexcept;
+
 	FieldType get_type() const noexcept {
 		return sep_types[2];
 	}

@@ -588,6 +588,44 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 	  paths_namespace(std::move(o.paths_namespace)) { }
 
 
+required_spc_t&
+required_spc_t::operator=(const required_spc_t& o)
+{
+	sep_types = o.sep_types;
+	prefix = o.prefix;
+	slot = o.slot;
+	flags = o.flags;
+	accuracy = o.accuracy;
+	acc_prefix = o.acc_prefix;
+	language = o.language;
+	stop_strategy = o.stop_strategy;
+	stem_strategy = o.stem_strategy;
+	stem_language = o.stem_language;
+	error = o.error;
+	paths_namespace = o.paths_namespace;
+	return *this;
+}
+
+
+required_spc_t&
+required_spc_t::operator=(required_spc_t&& o) noexcept
+{
+	sep_types = std::move(o.sep_types);
+	prefix = std::move(o.prefix);
+	slot = std::move(o.slot);
+	flags = std::move(o.flags);
+	accuracy = std::move(o.accuracy);
+	acc_prefix = std::move(o.acc_prefix);
+	language = std::move(o.language);
+	stop_strategy = std::move(o.stop_strategy);
+	stem_strategy = std::move(o.stem_strategy);
+	stem_language = std::move(o.stem_language);
+	error = std::move(o.error);
+	paths_namespace = std::move(o.paths_namespace);
+	return *this;
+}
+
+
 specification_t::specification_t()
 	: position({ 0 }),
 	  weight({ 1 }),
@@ -647,23 +685,11 @@ specification_t::operator=(const specification_t& o)
 	weight = o.weight;
 	spelling = o.spelling;
 	positions = o.positions;
-	sep_types = o.sep_types;
-	prefix = o.prefix;
-	slot = o.slot;
-	flags = o.flags;
 	index = o.index;
 	value.reset();
 	value_rec.reset();
 	doc_acc.reset();
 	script = o.script;
-	accuracy = o.accuracy;
-	acc_prefix = o.acc_prefix;
-	language = o.language;
-	stop_strategy = o.stop_strategy;
-	stem_strategy = o.stem_strategy;
-	stem_language = o.stem_language;
-	error = o.error;
-	paths_namespace = o.paths_namespace;
 	name = o.name;
 	meta_name = o.meta_name;
 	full_meta_name = o.full_meta_name;
@@ -671,6 +697,7 @@ specification_t::operator=(const specification_t& o)
 	full_normalized_name = o.full_normalized_name;
 	aux_stem_lan = o.aux_stem_lan;
 	aux_lan = o.aux_lan;
+	required_spc_t::operator=(o);
 	return *this;
 }
 
@@ -682,23 +709,11 @@ specification_t::operator=(specification_t&& o) noexcept
 	weight = std::move(o.weight);
 	spelling = std::move(o.spelling);
 	positions = std::move(o.positions);
-	sep_types = std::move(o.sep_types);
-	prefix = std::move(o.prefix);
-	slot = std::move(o.slot);
-	flags = std::move(o.flags);
 	index = std::move(o.index);
 	value.reset();
 	value_rec.reset();
 	doc_acc.reset();
 	script = std::move(o.script);
-	accuracy = std::move(o.accuracy);
-	acc_prefix = std::move(o.acc_prefix);
-	language = std::move(o.language);
-	stop_strategy = std::move(o.stop_strategy);
-	stem_strategy = std::move(o.stem_strategy);
-	stem_language = std::move(o.stem_language);
-	error = std::move(o.error);
-	paths_namespace = std::move(o.paths_namespace);
 	name = std::move(o.name);
 	meta_name = std::move(o.meta_name);
 	full_meta_name = std::move(o.full_meta_name);
@@ -706,6 +721,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	full_normalized_name = std::move(o.full_normalized_name);
 	aux_stem_lan = std::move(o.aux_stem_lan);
 	aux_lan = std::move(o.aux_lan);
+	required_spc_t::operator=(std::move(o));
 	return *this;
 }
 
