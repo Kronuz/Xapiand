@@ -3800,16 +3800,18 @@ Schema::set_default_spc_id(MsgPack& properties)
 {
 	L_CALL(this, "Schema::set_default_spc_id(%s)", repr(properties.to_string()).c_str());
 
-	specification.flags.bool_term = true;
 	specification.flags.has_bool_term = true;
+	specification.flags.bool_term = true;
 	properties[RESERVED_BOOL_TERM] = true;  // force bool term
 
-	auto index = specification.index | TypeIndex::FIELD_ALL;  // force field_all
-	if (specification.index != index) {
-		specification.index = index;
-		properties[RESERVED_INDEX] = specification.index;
+	if (!specification.flags.has_index) {
+		specification.flags.has_index = true;
+		auto index = specification.index | TypeIndex::FIELD_ALL;  // force field_all
+		if (specification.index != index) {
+			specification.index = index;
+			properties[RESERVED_INDEX] = specification.index;
+		}
 	}
-	specification.flags.has_index = true;
 
 	// ID_FIELD_NAME can not be TEXT nor STRING.
 	if (specification.sep_types[2] == FieldType::TEXT || specification.sep_types[2] == FieldType::STRING) {
