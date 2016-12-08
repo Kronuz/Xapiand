@@ -294,7 +294,7 @@ bool isRange(const std::string& str) {
 	try {
 		FieldParser fieldparser(str);
 		fieldparser.parse();
-		return fieldparser.isrange;
+		return fieldparser.is_range();
 	} catch (const FieldParserError&) {
 		return false;
 	}

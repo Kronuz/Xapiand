@@ -47,45 +47,66 @@ struct Fieldparser_t {
 	std::string start;
 	std::string end;
 	std::string values;
+	FieldParser::Range range;
 };
+
+
+std::string readable_range(FieldParser::Range range) {
+	switch (range) {
+		case FieldParser::Range::none:
+			return "none";
+		case FieldParser::Range::open:
+			return "open";
+		case FieldParser::Range::closed_right:
+			return "closed_right";
+		case FieldParser::Range::closed_left:
+			return "closed_left";
+		case FieldParser::Range::closed:
+			return "closed";
+	}
+}
 
 
 int test_field_parser() {
 	INIT_LOG
 	std::vector<Fieldparser_t> fields {
-		{ "Color:Blue", "Color:", "Color", "Blue", "", "", "", "", "Blue" },
-		{ "Color:\"dark blue\"", "Color:", "Color", "dark blue", "\"dark blue\"", "", "", "", "\"dark blue\"" },
-		{ "Color:'light blue'", "Color:", "Color", "light blue", "", "'light blue'", "", "", "'light blue'" },
-		{ "color_range:[a70d0d,ec500d]", "color_range:", "color_range", "a70d0d", "", "", "a70d0d", "ec500d", "[a70d0d,ec500d]" },
-		{ "green", "", "", "green", "", "", "", "", "green" },
-		{ "\"dark green\"", "", "", "dark green", "\"dark green\"", "", "", "", "\"dark green\"" },
-		{ "'light green'", "", "", "light green", "", "'light green'", "", "", "'light green'" },
-		{ "[100,200]", "", "", "100", "", "", "100", "200", "[100,200]" },
-		{ "Field:[100,200]", "Field:", "Field", "100", "", "", "100", "200", "[100,200]" },
-		{ "['initial range','end of range']", "", "", "initial range", "", "'initial range'", "initial range", "end of range", "['initial range','end of range']" },
-		{ "Field:['initial range','end of range']", "Field:", "Field", "initial range", "", "'initial range'", "initial range", "end of range", "['initial range','end of range']" },
-		{ "[\"initial range\",\"end of range\"]", "", "", "initial range", "\"initial range\"", "", "initial range", "end of range", "[\"initial range\",\"end of range\"]" },
-		{ "Field:[\"initial range\",\"end of range\"]", "Field:", "Field", "initial range", "\"initial range\"", "", "initial range", "end of range", "[\"initial range\",\"end of range\"]" },
-		{ "100..200", "", "", "100", "", "", "100", "200", "100..200" },
-		{ "Field:100..200", "Field:", "Field", "100", "", "", "100", "200", "100..200" },
-		{ "'initial range'..'end of range'", "", "", "initial range", "", "'initial range'", "initial range", "end of range", "'initial range'..'end of range'" },
-		{ "Field:'initial range'..'end of range'", "Field:", "Field", "initial range", "", "'initial range'", "initial range", "end of range", "'initial range'..'end of range'" },
-		{ "\"initial range\"..\"end of range\"", "", "", "initial range", "\"initial range\"", "", "initial range", "end of range", "\"initial range\"..\"end of range\"" },
-		{ "Field:\"initial range\"..\"end of range\"", "Field:", "Field", "initial range", "\"initial range\"", "", "initial range", "end of range", "\"initial range\"..\"end of range\"" },
+		{ "Color:Blue", "Color:", "Color", "Blue", "", "", "", "", "Blue", FieldParser::Range::none },
+		{ "Color:\"dark blue\"", "Color:", "Color", "dark blue", "\"dark blue\"", "", "", "", "\"dark blue\"", FieldParser::Range::none },
+		{ "Color:'light blue'", "Color:", "Color", "light blue", "", "'light blue'", "", "", "'light blue'", FieldParser::Range::none },
+		{ "color_range:[a70d0d,ec500d]", "color_range:", "color_range", "a70d0d", "", "", "a70d0d", "ec500d", "[a70d0d,ec500d]", FieldParser::Range::closed },
+		{ "green", "", "", "green", "", "", "", "", "green", FieldParser::Range::none },
+		{ "\"dark green\"", "", "", "dark green", "\"dark green\"", "", "", "", "\"dark green\"", FieldParser::Range::none },
+		{ "'light green'", "", "", "light green", "", "'light green'", "", "", "'light green'", FieldParser::Range::none },
+		{ "[100,200]", "", "", "100", "", "", "100", "200", "[100,200]", FieldParser::Range::closed },
+		{ "Field:[100,200]", "Field:", "Field", "100", "", "", "100", "200", "[100,200]", FieldParser::Range::closed },
+		{ "['initial range','end of range']", "", "", "initial range", "", "'initial range'", "initial range", "end of range", "['initial range','end of range']", FieldParser::Range::closed },
+		{ "Field:['initial range','end of range']", "Field:", "Field", "initial range", "", "'initial range'", "initial range", "end of range", "['initial range','end of range']", FieldParser::Range::closed },
+		{ "[\"initial range\",\"end of range\"]", "", "", "initial range", "\"initial range\"", "", "initial range", "end of range", "[\"initial range\",\"end of range\"]", FieldParser::Range::closed },
+		{ "Field:[\"initial range\",\"end of range\"]", "Field:", "Field", "initial range", "\"initial range\"", "", "initial range", "end of range", "[\"initial range\",\"end of range\"]", FieldParser::Range::closed },
+		{ "100..200", "", "", "100", "", "", "100", "200", "100..200", FieldParser::Range::closed },
+		{ "Field:100..200", "Field:", "Field", "100", "", "", "100", "200", "100..200", FieldParser::Range::closed },
+		{ "'initial range'..'end of range'", "", "", "initial range", "", "'initial range'", "initial range", "end of range", "'initial range'..'end of range'", FieldParser::Range::closed },
+		{ "Field:'initial range'..'end of range'", "Field:", "Field", "initial range", "", "'initial range'", "initial range", "end of range", "'initial range'..'end of range'", FieldParser::Range::closed },
+		{ "\"initial range\"..\"end of range\"", "", "", "initial range", "\"initial range\"", "", "initial range", "end of range", "\"initial range\"..\"end of range\"", FieldParser::Range::closed },
+		{ "Field:\"initial range\"..\"end of range\"", "Field:", "Field", "initial range", "\"initial range\"", "", "initial range", "end of range", "\"initial range\"..\"end of range\"", FieldParser::Range::closed },
 
-		{ "[100]", "", "", "100", "", "", "100", "", "[100]" },
-		{ "[100,]", "", "", "100", "", "", "100", "", "[100,]" },
-		{ "[,200]", "", "", "", "", "", "", "200", "[,200]" },
-		{ "[,,300]", "", "", "", "", "", "", "", "[,,300]" },
-		{ "[100,200,300,400]", "", "", "100", "", "", "100", "200", "[100,200,300,400]" },
-		{ "100..200..300..400", "", "", "100", "", "", "100", "200", "100..200..300..400" },
+		{ "[100]", "", "", "100", "", "", "100", "", "[100]", FieldParser::Range::closed },
+		{ "[100,]", "", "", "100", "", "", "100", "", "[100,]", FieldParser::Range::closed },
+		{ "[,200]", "", "", "", "", "", "", "200", "[,200]", FieldParser::Range::closed },
+		{ "[,,300]", "", "", "", "", "", "", "", "[,,300]", FieldParser::Range::closed },
+		{ "[100,200,300,400]", "", "", "100", "", "", "100", "200", "[100,200,300,400]", FieldParser::Range::closed },
+		{ "100..200..300..400", "", "", "100", "", "", "100", "200", "100..200..300..400", FieldParser::Range::closed },
 
-		{ "100", "", "", "100", "", "", "", "", "100" },
-		{ "100..", "", "", "100", "", "", "100", "", "100.." },
-		{ "..200", "", "", "", "", "", "", "200", "..200" },
-		{ "....300", "", "", "", "", "", "", "", "....300" },
-		{ "Field:100..", "Field:", "Field", "100", "", "", "100", "", "100.." },
-		{ "Field:..200", "Field:", "Field", "", "", "", "", "200", "..200" },
+		{ "100", "", "", "100", "", "", "", "", "100", FieldParser::Range::none },
+		{ "100..", "", "", "100", "", "", "100", "", "100..", FieldParser::Range::closed },
+		{ "..200", "", "", "", "", "", "", "200", "..200", FieldParser::Range::closed },
+		{ "....300", "", "", "", "", "", "", "", "....300", FieldParser::Range::closed },
+		{ "Field:100..", "Field:", "Field", "100", "", "", "100", "", "100..", FieldParser::Range::closed },
+		{ "Field:..200", "Field:", "Field", "", "", "", "", "200", "..200", FieldParser::Range::closed },
+
+		{ "(100,200]", "", "", "100", "", "", "100", "200", "(100,200]", FieldParser::Range::closed_right },
+		{ "[100,200)", "", "", "100", "", "", "100", "200", "[100,200)", FieldParser::Range::closed_left },
+		{ "(100,200)", "", "", "100", "", "", "100", "200", "(100,200)", FieldParser::Range::open },
 	};
 
 	int count = 0;
@@ -130,6 +151,11 @@ int test_field_parser() {
 
 		if (fp.get_values() != field.values) {
 			L_ERR(nullptr, "\nError: The values should be:\n  %s\nbut are:\n  %s", field.values.c_str(), fp.get_values().c_str());
+			++count;
+		}
+
+		if (fp.range != field.range) {
+			L_ERR(nullptr, "\nError: The range type should be:\n  %s\nbut it is:\n  %s", readable_range(field.range).c_str(), readable_range(fp.range).c_str());
 			++count;
 		}
 	}

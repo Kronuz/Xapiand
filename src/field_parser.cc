@@ -31,6 +31,8 @@
 #define TOKEN_SINGLE_QUOTE '\''
 #define TOKEN_SQUARE_BRACKET_LEFT '['
 #define TOKEN_SQUARE_BRACKET_RIGHT ']'
+#define TOKEN_PARENTHESIS_LEFT '('
+#define TOKEN_PARENTHESIS_RIGHT ')'
 #define TOKEN_COMMA ','
 #define TOKEN_DOT '.'
 
@@ -44,7 +46,7 @@ FieldParser::FieldParser(const std::string& p)
 	  lens{}, offs{},
 	  lens_single_quote{}, offs_single_quote{},
 	  lens_double_quote{}, offs_double_quote{},
-	  skip_quote(false), isrange(false) { }
+	  skip_quote(false), range(Range::none) { }
 
 
 void
@@ -64,9 +66,13 @@ FieldParser::parse(size_t lvl_max)
 		switch (currentState) {
 			case FieldParser::State::INIT:
 				switch (*currentSymbol) {
+					case TOKEN_PARENTHESIS_LEFT:
+						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
+						range = Range::open;
+						break;
 					case TOKEN_SQUARE_BRACKET_LEFT:
 						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
-						isrange = true;
+						range = Range::closed;
 						break;
 					case TOKEN_DOUBLE_QUOTE:
 						currentState = FieldParser::State::QUOTE;
@@ -94,7 +100,7 @@ FieldParser::parse(size_t lvl_max)
 					case TOKEN_DOT:
 						if (*(currentSymbol + 1) == TOKEN_DOT) {
 							currentState = FieldParser::State::DOT_DOT_INIT;
-							isrange = true;
+							range = Range::closed;
 							if (++lvl > lvl_max) {
 								THROW(FieldParserError, "Too many levels!");
 							}
@@ -130,7 +136,7 @@ FieldParser::parse(size_t lvl_max)
 							len_field = len_field_colon = 0;
 							off_field = off_field_colon = nullptr;
 							currentState = FieldParser::State::DOT_DOT_INIT;
-							isrange = true;
+							range = Range::closed;
 							if (++lvl > lvl_max) {
 								THROW(FieldParserError, "Too many levels!");
 							}
@@ -169,9 +175,13 @@ FieldParser::parse(size_t lvl_max)
 						offs[lvl] = currentSymbol + 1;
 						++lens_single_quote[lvl];
 						break;
+					case TOKEN_PARENTHESIS_LEFT:
+						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
+						range = Range::open;
+						break;
 					case TOKEN_SQUARE_BRACKET_LEFT:
 						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
-						isrange = true;
+						range = Range::closed;
 						break;
 					case '\0':
 						currentState = FieldParser::State::END;
@@ -179,7 +189,7 @@ FieldParser::parse(size_t lvl_max)
 					case TOKEN_DOT:
 						if (*(currentSymbol + 1) == TOKEN_DOT) {
 							currentState = FieldParser::State::DOT_DOT_INIT;
-							isrange = true;
+							range = Range::closed;
 							if (++lvl > lvl_max) {
 								THROW(FieldParserError, "Too many levels!");
 							}
@@ -247,7 +257,7 @@ FieldParser::parse(size_t lvl_max)
 					case TOKEN_DOT:
 						if (*(currentSymbol + 1) == TOKEN_DOT) {
 							currentState = FieldParser::State::DOT_DOT_INIT;
-							isrange = true;
+							range = Range::closed;
 							if (++lvl > lvl_max) {
 								THROW(FieldParserError, "Too many levels!");
 							}
@@ -299,7 +309,7 @@ FieldParser::parse(size_t lvl_max)
 					case TOKEN_DOT:
 						if (*(currentSymbol + 1) == TOKEN_DOT) {
 							currentState = FieldParser::State::DOT_DOT_INIT;
-							isrange = true;
+							range = Range::closed;
 							if (++lvl > lvl_max) {
 								THROW(FieldParserError, "Too many levels!");
 							}
@@ -325,7 +335,7 @@ FieldParser::parse(size_t lvl_max)
 					case TOKEN_DOT:
 						if (*(currentSymbol + 1) == TOKEN_DOT) {
 							currentState = FieldParser::State::DOT_DOT_INIT;
-							isrange = true;
+							range = Range::closed;
 							if (++lvl > lvl_max) {
 								THROW(FieldParserError, "Too many levels!");
 							}
@@ -362,7 +372,12 @@ FieldParser::parse(size_t lvl_max)
 							THROW(FieldParserError, "Too many levels!");
 						}
 						break;
+					case TOKEN_PARENTHESIS_RIGHT:
+						if (range == Range::closed) range = Range::closed_left;
+						currentState = FieldParser::State::END;
+						break;
 					case TOKEN_SQUARE_BRACKET_RIGHT:
+						if (range == Range::open) range = Range::closed_right;
 						currentState = FieldParser::State::END;
 						break;
 					default:
@@ -381,7 +396,12 @@ FieldParser::parse(size_t lvl_max)
 							THROW(FieldParserError, "Too many levels!");
 						}
 						break;
+					case TOKEN_PARENTHESIS_RIGHT:
+						if (range == Range::closed) range = Range::closed_left;
+						currentState = FieldParser::State::END;
+						break;
 					case TOKEN_SQUARE_BRACKET_RIGHT:
+						if (range == Range::open) range = Range::closed_right;
 						currentState = FieldParser::State::END;
 						break;
 					case '\0':
@@ -444,7 +464,12 @@ FieldParser::parse(size_t lvl_max)
 							THROW(FieldParserError, "Too many levels!");
 						}
 						break;
+					case TOKEN_PARENTHESIS_RIGHT:
+						if (range == Range::closed) range = Range::closed_left;
+						currentState = FieldParser::State::END;
+						break;
 					case TOKEN_SQUARE_BRACKET_RIGHT:
+						if (range == Range::open) range = Range::closed_right;
 						currentState = FieldParser::State::END;
 						break;
 					default:
@@ -454,7 +479,13 @@ FieldParser::parse(size_t lvl_max)
 
 			case FieldParser::State::SQUARE_BRACKET_END:
 				switch (*currentSymbol) {
+					case TOKEN_PARENTHESIS_RIGHT:
+						if (range == Range::closed) range = Range::closed_left;
+						currentState = FieldParser::State::END;
+						++lens[lvl];
+						break;
 					case TOKEN_SQUARE_BRACKET_RIGHT:
+						if (range == Range::open) range = Range::closed_right;
 						currentState = FieldParser::State::END;
 						++lens[lvl];
 						break;

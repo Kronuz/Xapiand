@@ -172,7 +172,7 @@ QueryDSL::make_dsl_query(const std::string& query)
 					fp.parse();
 
 					MsgPack value;
-					if (fp.isrange) {
+					if (fp.is_range()) {
 						value["_in"] = fp.get_values();
 					} else {
 						value = fp.get_value();
@@ -291,7 +291,7 @@ QueryDSL::process_in(const required_spc_t& field_spc, Xapian::Query::op op, cons
 		case MsgPack::Type::STR: {
 			FieldParser fp(obj.as_string());
 			fp.parse();
-			if (!fp.isrange) {
+			if (!fp.is_range()) {
 				THROW(ClientError, "Invalid range (1): %s", repr(obj.to_string()).c_str());
 			}
 			MsgPack value;

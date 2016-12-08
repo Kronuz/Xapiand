@@ -74,7 +74,15 @@ public:
 		END
 	};
 
-	bool isrange;
+	enum class Range : uint8_t {
+		none,
+		open,          // i.e. ()
+		closed_right,  // i.e. (]
+		closed_left,   // i.e. [)
+		closed,        // i.e. []
+	};
+
+	Range range;
 
 	FieldParser(const std::string& p);
 
@@ -129,15 +137,19 @@ public:
 		return std::string();
 	}
 
+	bool is_range() const {
+		return range != Range::none;
+	}
+
 	std::string get_start() const {
-		if (isrange && offs[0]) {
+		if (is_range() && offs[0]) {
 			return std::string(offs[0], lens[0]);
 		}
 		return std::string();
 	}
 
 	std::string get_end() const {
-		if (isrange && offs[1]) {
+		if (is_range() && offs[1]) {
 			return std::string(offs[1], lens[1]);
 		}
 		return std::string();
