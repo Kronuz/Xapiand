@@ -781,15 +781,9 @@ Datetime::timestamp(tm_t& tm)
 double
 Datetime::timestamp(const std::string& date)
 {
-	try {
-		return stox(std::stod, date);
-	} catch (const std::invalid_argument&) {
-		tm_t tm;
-		dateTimeParser(date, tm);
-		return timestamp(tm);
-	} catch (const std::out_of_range&) {
-		THROW(DatetimeError, "%s is very large", date.c_str());
-	}
+	tm_t tm;
+	dateTimeParser(date, tm);
+	return timestamp(tm);
 }
 
 
@@ -799,16 +793,8 @@ Datetime::timestamp(const std::string& date)
 double
 Datetime::timestamp(const std::string& date, tm_t& tm)
 {
-	try {
-		auto timestamp = stox(std::stod, date);
-		tm = to_tm_t(timestamp);
-		return timestamp;
-	} catch (const std::invalid_argument&) {
-		dateTimeParser(date, tm);
-		return timestamp(tm);
-	} catch (const std::out_of_range&) {
-		THROW(DatetimeError, "%s is very large", date.c_str());
-	}
+	dateTimeParser(date, tm);
+	return timestamp(tm);
 }
 
 
