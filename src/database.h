@@ -44,7 +44,7 @@
 #include "database_utils.h"     // for DB_WRITABLE
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include "queue.h"              // for Queue, QueueSet
-#include "storage.h"            // for STORAGE_BLOCK_SIZE, MSG_StorageCorruptVo...
+#include "storage.h"            // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "threadpool.h"         // for TaskQueue
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
 
@@ -179,7 +179,76 @@ public:
 	void write_add_spelling(const std::string& word, Xapian::termcount freqinc);
 	void write_remove_spelling(const std::string& word, Xapian::termcount freqdec);
 };
-#endif
+#endif /* XAPIAND_DATABASE_WAL */
+
+
+#ifdef XAPIAND_DATA_STORAGE
+struct DataHeader {
+	struct DataHeaderHead {
+		uint32_t magic;
+		uint32_t offset;  // required
+		char uuid[36];
+	} head;
+
+	char padding[(STORAGE_BLOCK_SIZE - sizeof(DataHeader::DataHeaderHead)) / sizeof(char)];
+
+	void init(void* param, void* args);
+	void validate(void* param, void* args);
+};
+
+#pragma pack(push, 1)
+struct DataBinHeader {
+	uint8_t magic;
+	uint8_t flags;  // required
+	uint32_t size;  // required
+
+	inline void init(void*, void*, uint32_t size_, uint8_t flags_) {
+		magic = STORAGE_BIN_HEADER_MAGIC;
+		size = size_;
+		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
+	}
+
+	inline void validate(void*, void*) {
+		if (magic != STORAGE_BIN_HEADER_MAGIC) {
+			THROW(StorageCorruptVolume, "Bad document header magic number");
+		}
+		if (flags & STORAGE_FLAG_DELETED) {
+			THROW(StorageNotFound, "Data Storage document deleted");
+		}
+	}
+};
+
+struct DataBinFooter {
+	uint32_t checksum;
+	uint8_t magic;
+
+	inline void init(void*, void*, uint32_t checksum_) {
+		magic = STORAGE_BIN_FOOTER_MAGIC;
+		checksum = checksum_;
+	}
+
+	inline void validate(void*, void*, uint32_t checksum_) {
+		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
+			THROW(StorageCorruptVolume, "Bad document footer magic number");
+		}
+		if (checksum != checksum_) {
+			THROW(StorageCorruptVolume, "Bad document checksum");
+		}
+	}
+};
+#pragma pack(pop)
+
+
+class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter> {
+public:
+	uint32_t volume;
+
+	DataStorage(void* param_);
+	~DataStorage();
+
+	uint32_t highest_volume(const std::string& path);
+};
+#endif /* XAPIAND_DATA_STORAGE */
 
 
 class Database {
@@ -197,7 +266,12 @@ public:
 
 #if XAPIAND_DATABASE_WAL
 	std::unique_ptr<DatabaseWAL> wal;
-#endif
+#endif /* XAPIAND_DATABASE_WAL */
+
+#ifdef XAPIAND_DATA_STORAGE
+	std::vector<std::unique_ptr<DataStorage>> writable_storages;
+	std::vector<std::unique_ptr<DataStorage>> storages;
+#endif /* XAPIAND_DATA_STORAGE */
 
 	Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints, int flags);
 	~Database();
@@ -205,6 +279,16 @@ public:
 	long long read_mastery(const Endpoint& endpoint);
 
 	bool reopen();
+
+#ifdef XAPIAND_DATA_STORAGE
+		void storage_pull_data(Xapian::Document& doc);
+		void storage_push_data(Xapian::Document& doc);
+		void storage_commit();
+#else
+		void storage_pull_data(Xapian::Document&) { }
+		void storage_push_data(Xapian::Document&) { }
+		void storage_commit() { }
+#endif /* XAPIAND_DATA_STORAGE */
 
 	std::string get_uuid() const;
 	uint32_t get_revision() const;

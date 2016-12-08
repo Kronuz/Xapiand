@@ -262,6 +262,9 @@
 /* Enable database write ahead log (WAL). */
 #cmakedefine XAPIAND_DATABASE_WAL @XAPIAND_DATABASE_WAL@
 
+/* Enable data storage. */
+#cmakedefine XAPIAND_DATA_STORAGE @XAPIAND_DATA_STORAGE@
+
 /* Enable tracebacks for exceptions. */
 #cmakedefine XAPIAND_TRACEBACKS @XAPIAND_TRACEBACKS@
 
