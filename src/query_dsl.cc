@@ -82,6 +82,373 @@ QueryDSL::QueryDSL(std::shared_ptr<Schema> schema_)
 	: schema(schema_) { }
 
 
+FieldType
+QueryDSL::get_in_type(const MsgPack& obj)
+{
+	if (obj.find("_range") != obj.end()) {
+		const auto& range = obj.at("_range");
+		if (range.find("_from") != range.end()) {
+			return std::get<0>(Serialise::get_type(range.at("_from")));
+		} else if (range.find("_to") != range.end()) {
+			return std::get<0>(Serialise::get_type(range.at("_to")));
+		}
+	}
+	return FieldType::EMPTY;
+}
+
+
+std::pair<FieldType, MsgPack>
+QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
+{
+	FieldType field_type;
+	FieldParser fp(range);
+	fp.parse();
+	if (!fp.is_range()) {
+		THROW(ClientError, "Invalid range (1): %s", range.c_str());
+	}
+	MsgPack value;
+	auto start = fp.get_start();
+	if (!start.empty()) {
+		auto& obj = value["_range"]["_from"] = Cast::cast(field_spc.get_type(), start);
+		if (field_type == FieldType::EMPTY) {
+			field_type = std::get<0>(Serialise::get_type(obj));
+		}
+	}
+	auto end = fp.get_end();
+	if (!end.empty()) {
+		auto& obj = value["_range"]["_to"] = Cast::cast(field_spc.get_type(), end);
+		if (field_type == FieldType::EMPTY) {
+			field_type = std::get<0>(Serialise::get_type(obj));
+		}
+	}
+	return std::make_pair(field_type, value);
+}
+
+
+Xapian::Query
+QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process(%d, %s, %s)", (int)op, repr(parent).c_str(), repr(obj.to_string()).c_str());
+
+	Xapian::Query final_query;
+	if (op == Xapian::Query::OP_AND_NOT) {
+		final_query = Xapian::Query::MatchAll;
+	}
+
+	switch (obj.getType()) {
+		case MsgPack::Type::MAP:
+			for (auto const& field : obj) {
+				auto field_name = field.as_string();
+				auto const& o = obj.at(field);
+
+				L_QUERY(this, BLUE "%s = %s" NO_COL, field_name.c_str(), o.to_string().c_str());
+
+				Xapian::Query query;
+
+				if (field_name == RESERVED_RAW) {
+					query = process(op, parent, o, wqf, q_flags, true, is_in);
+
+				} else if (field_name == RESERVED_IN) {
+					query = process(op, parent, o, wqf, q_flags, is_raw, true);
+
+				} else if (field_name == RESERVED_VALUE) {
+					query = get_value_query(op, parent, o, wqf, q_flags, is_raw, is_in);
+
+				} else {
+					auto it = ops_map.find(field_name);
+					if (it != ops_map.end()) {
+						query = process(it->second, parent, o, wqf, q_flags, is_raw, is_in);
+					} else if (casts_set.find(field_name) != casts_set.end()) {
+						query = get_value_query(op, parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in);
+					} else {
+						query = process(op, parent.empty() ? field_name : parent + "." + field_name, o, wqf, q_flags, is_raw, is_in);
+					}
+				}
+
+				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
+			}
+			break;
+
+		case MsgPack::Type::ARRAY:
+			for (auto const& o : obj) {
+				auto query = process(op, parent, o, wqf, q_flags, is_raw, is_in);
+				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
+			}
+			break;
+
+		default:
+			final_query = get_value_query(op, parent, obj, wqf, q_flags, is_raw, is_in);
+			break;
+	}
+
+	return final_query;
+}
+
+
+Xapian::Query
+QueryDSL::get_value_query(Xapian::Query::op op, const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::get_value_query(%d, %s, %s, <wqf>, <q_flags>, %s, %s)", (int)op, repr(path).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false");
+
+	if (path.empty()) {
+		FieldType field_type;
+		MsgPack aux;
+		const MsgPack* pobj;
+		if (is_raw && obj.is_string()) {
+			if (is_in) {
+				field_type = FieldType::EMPTY;
+				pobj = &obj;
+			} else {
+				aux = Cast::cast(FieldType::EMPTY, obj.as_string());
+				field_type = std::get<0>(Serialise::get_type(aux));
+				pobj = &aux;
+			}
+		} else {
+			field_type = std::get<0>(Serialise::get_type(obj));
+			pobj = &obj;
+		}
+		const auto& global_spc = Schema::get_data_global(field_type);
+		return get_regular_query(global_spc, op, *pobj, wqf, q_flags, is_raw, is_in);
+	} else {
+		auto data_field = schema->get_data_field(path);
+		const auto& field_spc = data_field.first;
+
+		if (!data_field.second.empty()) {
+			return get_accuracy_query(field_spc, op, data_field.second, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.as_string()) : obj, is_raw, is_in);
+		}
+
+		if (field_spc.flags.inside_namespace) {
+			return get_namespace_query(field_spc, op, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.as_string()) : obj, wqf, q_flags, is_raw, is_in);
+		}
+
+		return get_regular_query(field_spc, op, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.as_string()) : obj, wqf, q_flags, is_raw, is_in);
+	}
+}
+
+
+Xapian::Query
+QueryDSL::get_accuracy_query(const required_spc_t& field_spc, Xapian::Query::op op, const std::string& field_accuracy, const MsgPack& obj, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::get_accuracy_query(<field_spc>, %d, %s, %s, %s, %s, %s)", (int)op, repr(field_accuracy).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false");
+
+	if (is_in) {
+		THROW(ClientError, "Accuracy is only indexed like terms, searching by range is not supported");
+	}
+
+	auto it = map_acc_date.find(field_accuracy.substr(1));
+	if (it != map_acc_date.end()) {
+		// Check it is date accuracy.
+		Datetime::tm_t tm = Datetime::to_tm_t(obj);
+		static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE));
+		switch (it->second) {
+			case UnitTime::SECOND: {
+				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
+			}
+			case UnitTime::MINUTE: {
+				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
+			}
+			case UnitTime::HOUR: {
+				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
+			}
+			case UnitTime::DAY: {
+				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
+			}
+			case UnitTime::MONTH: {
+				Datetime::tm_t _tm(tm.year, tm.mon);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
+			}
+			case UnitTime::YEAR: {
+				Datetime::tm_t _tm(tm.year);
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
+			}
+			case UnitTime::DECADE: {
+				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
+			}
+			case UnitTime::CENTURY: {
+				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
+			}
+			case UnitTime::MILLENNIUM: {
+				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
+			}
+		}
+	} else {
+		try {
+			if (field_accuracy.find("_geo") == 0) {
+				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO));
+				auto nivel = stox(std::stoull, field_accuracy.substr(4));
+				auto value = Cast::string(obj);  // TODO: use Cast::geo() instead?
+				EWKT_Parser ewkt(value, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
+				auto ranges = ewkt.getRanges();
+				return GenerateTerms::geo(ranges, { nivel }, { prefix_type + field_spc.prefix } );
+			} else {
+				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
+				auto acc = stox(std::stoull, field_accuracy.substr(1));
+				auto value = Cast::integer(obj);
+				return Xapian::Query(prefixed(Serialise::integer(value - GenerateTerms::modulus(value, acc)), prefix_type + field_spc.prefix));
+			}
+		} catch (const std::invalid_argument& e) {
+			THROW(ClientError, "Invalid numeric value %s: %s [%s]", field_accuracy.c_str(), repr(obj.to_string()).c_str(), e.what());
+		}
+	}
+}
+
+
+Xapian::Query
+QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::get_namespace_query(<field_spc>, %d, %s, <wqf>, <q_flags>, %s, %s)", (int)op, repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false");
+
+	std::string f_prefix;
+	f_prefix.reserve(arraySize(DOCUMENT_NAMESPACE_TERM_PREFIX) + field_spc.prefix.length() + 1);
+	f_prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(field_spc.prefix);
+
+	if (is_in) {
+		if (obj.is_string()) {
+			auto parsed = parse_range(field_spc, obj.as_string());
+			auto spc = Schema::get_namespace_specification(parsed.first, f_prefix);
+			return get_in_query(spc, op, parsed.second, wqf, q_flags, is_raw, is_in);
+		} else {
+			auto spc = Schema::get_namespace_specification(get_in_type(obj), f_prefix);
+			return get_in_query(spc, op, obj, wqf, q_flags, is_raw, is_in);
+		}
+	}
+
+	auto ser_type = Serialise::get_type(obj);
+	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), f_prefix);
+
+	auto& field_value = std::get<1>(ser_type);
+
+	if (field_value.empty()) {
+		return Xapian::Query(f_prefix);
+	} else if (field_value == "*") {
+		return Xapian::Query(Xapian::Query::OP_WILDCARD, f_prefix);
+	}
+
+	field_value.assign(std::get<1>(ser_type));
+
+	switch (spc.get_type()) {
+		case FieldType::TEXT: {
+			Xapian::QueryParser parser;
+			// parser.set_database(*database->db);
+			const auto& stopper = getStopper(spc.language);
+			parser.set_stopper(stopper.get());
+			parser.set_stemming_strategy(getQueryParserStemStrategy(spc.stem_strategy));
+			parser.set_stemmer(Xapian::Stem(spc.stem_language));
+			if (spc.flags.bool_term) {
+				parser.add_boolean_prefix("_", spc.prefix);
+			} else {
+				parser.add_prefix("_", spc.prefix);
+			}
+			return parser.parse_query("_:" + field_value, q_flags);
+		}
+		case FieldType::STRING: {
+			Xapian::QueryParser parser;
+			// parser.set_database(*database->db);
+			if (spc.flags.bool_term) {
+				parser.add_boolean_prefix("_", spc.prefix);
+			} else {
+				parser.add_prefix("_", spc.prefix);
+			}
+			return parser.parse_query("_:" + field_value, q_flags);
+		}
+		default:
+			return Xapian::Query(prefixed(field_value, spc.prefix));
+	}
+}
+
+
+Xapian::Query
+QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::get_regular_query(<field_spc>, %d, %s, <wqf>, <q_flags>, %s, %s)", (int)op, repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false");
+
+	if (is_in) {
+		if (obj.is_string()) {
+			auto parsed = parse_range(field_spc, obj.as_string());
+			return get_in_query(field_spc, op, parsed.second, wqf, q_flags, is_raw, is_in);
+		} else {
+			return get_in_query(field_spc, op, obj, wqf, q_flags, is_raw, is_in);
+		}
+	}
+
+	auto field_value = Serialise::MsgPack(field_spc, obj);
+
+	switch (field_spc.get_type()) {
+		case FieldType::TEXT: {
+			Xapian::QueryParser parser;
+			if (field_spc.flags.bool_term) {
+				parser.add_boolean_prefix("_", field_spc.prefix);
+			} else {
+				parser.add_prefix("_", field_spc.prefix);
+			}
+			const auto& stopper = getStopper(field_spc.language);
+			parser.set_stopper(stopper.get());
+			parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
+			parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
+			return parser.parse_query("_:" + field_value, q_flags);
+		}
+
+		case FieldType::STRING: {
+			Xapian::QueryParser parser;
+			if (field_spc.flags.bool_term) {
+				parser.add_boolean_prefix("_", field_spc.prefix);
+			} else {
+				parser.add_prefix("_", field_spc.prefix);
+			}
+			return parser.parse_query("_:" + field_value, q_flags);
+		}
+
+		case FieldType::TERM: {
+			if (!field_spc.flags.bool_term) {
+				to_lower(field_value);
+			}
+			if (endswith(field_value, '*')) {
+				field_value = field_value.substr(0, field_value.length() - 1);
+				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(field_value, field_spc.prefix));
+			} else {
+				return Xapian::Query(prefixed(field_value, field_spc.prefix), wqf);
+			}
+		}
+
+		default:
+			return Xapian::Query(prefixed(field_value, field_spc.prefix), wqf);
+	}
+}
+
+
+Xapian::Query
+QueryDSL::get_in_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::get_in_query(<field_spc>, %d, %s)", (int)op, repr(obj.to_string()).c_str());
+
+	Xapian::Query final_query;
+	if (op == Xapian::Query::OP_AND_NOT) {
+		final_query = Xapian::Query::MatchAll;
+	}
+
+	for (auto const& field : obj) {
+		auto field_name = field.as_string();
+		auto const& o = obj.at(field);
+		Xapian::Query query;
+		if (field_name.compare("_range") == 0) {
+			query = MultipleValueRange::getQuery(field_spc, o);
+		} else {
+			THROW(ClientError, "Invalid _in: %s", repr(obj.to_string()).c_str());
+		}
+		final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
+	}
+
+	return final_query;
+}
+
+
 MsgPack
 QueryDSL::make_dsl_query(const query_field_t& e)
 {
@@ -179,16 +546,17 @@ QueryDSL::make_dsl_query(const std::string& query)
 
 					MsgPack value;
 					if (fp.is_range()) {
-						value["_in"] = fp.get_values();
+						value[RESERVED_IN] = fp.get_values();
 					} else {
 						value = fp.get_value();
 					}
 
 					auto field_name = fp.get_field_name();
 					if (field_name.empty()) {
-						field_name = "_value";
+						object[RESERVED_RAW] = value;
+					} else {
+						object[field_name][RESERVED_RAW] = value;
 					}
-					object[field_name] = value;
 
 					stack_msgpack.push_back(object);
 					break;
@@ -221,334 +589,9 @@ QueryDSL::get_query(const MsgPack& obj)
 		return Xapian::Query::MatchAll;
 	}
 
-	auto query = process(Xapian::Query::OP_AND, "", obj);
+	auto query = process(Xapian::Query::OP_AND, "", obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD, false, false);
 	L_QUERY(this, "query = " CYAN "%s" NO_COL "\n" DARK_GREY "%s" NO_COL, query.get_description().c_str(), repr(query.serialise()).c_str());
 	return query;
-}
-
-
-Xapian::Query
-QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack& obj)
-{
-	L_CALL(this, "QueryDSL::process(%d, %s, %s)", (int)op, repr(parent).c_str(), repr(obj.to_string()).c_str());
-
-	Xapian::termcount wqf = 1;
-	int q_flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD;
-
-	Xapian::Query final_query;
-	if (op == Xapian::Query::OP_AND_NOT) {
-		final_query = Xapian::Query::MatchAll;
-	}
-
-	switch (obj.getType()) {
-		case MsgPack::Type::MAP:
-			for (auto const& field : obj) {
-				auto field_name = field.as_string();
-				auto const& o = obj.at(field);
-
-				L_QUERY(this, BLUE "%s = %s" NO_COL, field_name.c_str(), o.to_string().c_str());
-
-				Xapian::Query query;
-
-				if (field_name == RESERVED_VALUE) {
-					query = get_value_query(op, parent, o, wqf, q_flags);
-
-				} else if (field_name == "_in") {
-					query = get_value_query(op, parent, o, wqf, q_flags, true);
-
-				} else {
-					auto it = ops_map.find(field_name);
-					if (it != ops_map.end()) {
-						query = process(it->second, parent, o);
-					} else if (casts_set.find(field_name) != casts_set.end()) {
-						query = get_value_query(op, parent, {{ field_name, o }}, wqf, q_flags);
-					} else {
-						query = process(op, parent.empty() ? field_name : parent + "." + field_name, o);
-					}
-				}
-
-				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
-			}
-			break;
-
-		case MsgPack::Type::ARRAY:
-			for (auto const& o : obj) {
-				auto query = process(op, parent, o);
-				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
-			}
-			break;
-
-		default:
-			final_query = get_value_query(op, parent, obj, wqf, q_flags);
-			break;
-	}
-
-	return final_query;
-}
-
-
-Xapian::Query
-QueryDSL::process_in(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj)
-{
-	L_CALL(this, "QueryDSL::process_in(<field_spc>, %d, %s)", (int)op, repr(obj.to_string()).c_str());
-
-	Xapian::Query final_query;
-	if (op == Xapian::Query::OP_AND_NOT) {
-		final_query = Xapian::Query::MatchAll;
-	}
-
-	switch (obj.getType()) {
-		case MsgPack::Type::STR: {
-			FieldParser fp(obj.as_string());
-			fp.parse();
-			if (!fp.is_range()) {
-				THROW(ClientError, "Invalid range (1): %s", repr(obj.to_string()).c_str());
-			}
-			MsgPack value;
-			auto start = fp.get_start();
-			if (!start.empty()) {
-				value["_range"]["_from"] = Cast::cast(field_spc.get_type(), start);
-			}
-			auto end = fp.get_end();
-			if (!end.empty()) {
-				value["_range"]["_to"] = Cast::cast(field_spc.get_type(), end);
-			}
-			final_query = process_in(field_spc, op, value);
-			break;
-		}
-
-		case MsgPack::Type::MAP:
-			for (auto const& field : obj) {
-				auto field_name = field.as_string();
-				auto const& o = obj.at(field);
-				Xapian::Query query;
-				if (field_name.compare("_range") == 0) {
-					query = MultipleValueRange::getQuery(field_spc, o);
-				} else {
-					THROW(ClientError, "Invalid range (2): %s", repr(obj.to_string()).c_str());
-				}
-				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
-			}
-			break;
-
-		default:
-			THROW(ClientError, "Invalid range (3): %s", repr(obj.to_string()).c_str());
-			break;
-	}
-
-	return final_query;
-}
-
-
-Xapian::Query
-QueryDSL::get_value_query(Xapian::Query::op op, const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool isrange)
-{
-	L_CALL(this, "QueryDSL::get_value_query(%d, %s, %s, <wqf>, <q_flags>, %s)", (int)op, repr(path).c_str(), repr(obj.to_string()).c_str(), isrange ? "true" : "false");
-
-	if (path.empty()) {
-		auto ser_type = Serialise::get_type(obj);
-		const auto& global_spc = Schema::get_data_global(std::get<0>(ser_type));
-
-		return get_regular_query(global_spc, op, obj, wqf, q_flags, isrange);
-	} else {
-		auto data_field = schema->get_data_field(path);
-		const auto& field_spc = data_field.first;
-
-		if (!data_field.second.empty()) {
-			return get_accuracy_query(field_spc, op, data_field.second, obj, isrange);
-		}
-
-		if (field_spc.flags.inside_namespace) {
-			return get_namespace_query(field_spc, op, obj, wqf, q_flags, isrange);
-		}
-
-		return get_regular_query(field_spc, op, obj, wqf, q_flags, isrange);
-	}
-}
-
-
-Xapian::Query
-QueryDSL::get_accuracy_query(const required_spc_t& field_spc, Xapian::Query::op op, const std::string& field_accuracy, const MsgPack& obj, bool isrange)
-{
-	L_CALL(this, "QueryDSL::get_accuracy_query(<field_spc>, %d, %s, %s, %s, %s)", (int)op, repr(field_accuracy).c_str(), repr(obj.to_string()).c_str(), isrange ? "true" : "false");
-
-	if (isrange) {
-		THROW(ClientError, "Accuracy is only indexed like terms, searching by range is not supported");
-	}
-
-	auto it = map_acc_date.find(field_accuracy.substr(1));
-	if (it != map_acc_date.end()) {
-		// Check it is date accuracy.
-		Datetime::tm_t tm = Datetime::to_tm_t(obj);
-		static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE));
-		switch (it->second) {
-			case UnitTime::SECOND: {
-				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
-			}
-			case UnitTime::MINUTE: {
-				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
-			}
-			case UnitTime::HOUR: {
-				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
-			}
-			case UnitTime::DAY: {
-				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
-			}
-			case UnitTime::MONTH: {
-				Datetime::tm_t _tm(tm.year, tm.mon);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
-			}
-			case UnitTime::YEAR: {
-				Datetime::tm_t _tm(tm.year);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
-			}
-			case UnitTime::DECADE: {
-				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
-			}
-			case UnitTime::CENTURY: {
-				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
-			}
-			case UnitTime::MILLENNIUM: {
-				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), prefix_type + field_spc.prefix));
-			}
-		}
-	} else {
-		try {
-			if (field_accuracy.find("_geo") == 0) {
-				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO));
-				auto nivel = stox(std::stoull, field_accuracy.substr(4));
-				auto value = Cast::string(obj);  // TODO: use Cast::geo() instead?
-				EWKT_Parser ewkt(value, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
-				auto ranges = ewkt.getRanges();
-				return GenerateTerms::geo(ranges, { nivel }, { prefix_type + field_spc.prefix } );
-			} else {
-				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
-				auto acc = stox(std::stoull, field_accuracy.substr(1));
-				auto value = Cast::integer(obj);
-				return Xapian::Query(prefixed(Serialise::integer(value - GenerateTerms::modulus(value, acc)), prefix_type + field_spc.prefix));
-			}
-		} catch (const std::invalid_argument& e) {
-			THROW(ClientError, "Invalid numeric value %s: %s [%s]", field_accuracy.c_str(), repr(obj.to_string()).c_str(), e.what());
-		}
-	}
-}
-
-
-Xapian::Query
-QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount, int q_flags, bool isrange)
-{
-	L_CALL(this, "QueryDSL::get_namespace_query(<field_spc>, %d, %s, <wqf>, <q_flags>, %s)", (int)op, repr(obj.to_string()).c_str(), isrange ? "true" : "false");
-
-	std::string f_prefix;
-	f_prefix.reserve(arraySize(DOCUMENT_NAMESPACE_TERM_PREFIX) + field_spc.prefix.length() + 1);
-	f_prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(field_spc.prefix);
-
-	auto ser_type = Serialise::get_type(obj);
-	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), f_prefix);
-
-	if (isrange) {
-		return process_in(spc, op, obj);
-	}
-
-	auto& field_value = std::get<1>(ser_type);
-
-	if (field_value.empty()) {
-		return Xapian::Query(f_prefix);
-	} else if (field_value == "*") {
-		return Xapian::Query(Xapian::Query::OP_WILDCARD, f_prefix);
-	}
-
-	field_value.assign(std::get<1>(ser_type));
-
-	switch (spc.get_type()) {
-		case FieldType::TEXT: {
-			Xapian::QueryParser parser;
-			// parser.set_database(*database->db);
-			const auto& stopper = getStopper(spc.language);
-			parser.set_stopper(stopper.get());
-			parser.set_stemming_strategy(getQueryParserStemStrategy(spc.stem_strategy));
-			parser.set_stemmer(Xapian::Stem(spc.stem_language));
-			if (spc.flags.bool_term) {
-				parser.add_boolean_prefix("_", spc.prefix);
-			} else {
-				parser.add_prefix("_", spc.prefix);
-			}
-			return parser.parse_query("_:" + field_value, q_flags);
-		}
-		case FieldType::STRING: {
-			Xapian::QueryParser parser;
-			// parser.set_database(*database->db);
-			if (spc.flags.bool_term) {
-				parser.add_boolean_prefix("_", spc.prefix);
-			} else {
-				parser.add_prefix("_", spc.prefix);
-			}
-			return parser.parse_query("_:" + field_value, q_flags);
-		}
-		default:
-			return Xapian::Query(prefixed(field_value, spc.prefix));
-	}
-}
-
-
-Xapian::Query
-QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool isrange)
-{
-	L_CALL(this, "QueryDSL::get_regular_query(<field_spc>, %d, %s, <wqf>, <q_flags>, %s)", (int)op, repr(obj.to_string()).c_str(), isrange ? "true" : "false");
-
-	if (isrange) {
-		return process_in(field_spc, op, obj);
-	}
-
-	auto field_value = Serialise::MsgPack(field_spc, obj);
-
-	switch (field_spc.get_type()) {
-		case FieldType::TEXT: {
-			Xapian::QueryParser parser;
-			if (field_spc.flags.bool_term) {
-				parser.add_boolean_prefix("_", field_spc.prefix);
-			} else {
-				parser.add_prefix("_", field_spc.prefix);
-			}
-			const auto& stopper = getStopper(field_spc.language);
-			parser.set_stopper(stopper.get());
-			parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
-			parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
-			return parser.parse_query("_:" + field_value, q_flags);
-		}
-
-		case FieldType::STRING: {
-			Xapian::QueryParser parser;
-			if (field_spc.flags.bool_term) {
-				parser.add_boolean_prefix("_", field_spc.prefix);
-			} else {
-				parser.add_prefix("_", field_spc.prefix);
-			}
-			return parser.parse_query("_:" + field_value, q_flags);
-		}
-
-		case FieldType::TERM: {
-			if (!field_spc.flags.bool_term) {
-				to_lower(field_value);
-			}
-			if (endswith(field_value, '*')) {
-				field_value = field_value.substr(0, field_value.length() - 1);
-				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(field_value, field_spc.prefix));
-			} else {
-				return Xapian::Query(prefixed(field_value, field_spc.prefix), wqf);
-			}
-		}
-
-		default:
-			return Xapian::Query(prefixed(field_value, field_spc.prefix), wqf);
-	}
 }
 
 

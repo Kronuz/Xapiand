@@ -65,6 +65,8 @@
 #define RESERVED_U_DETECTION       "_uuid_detection"
 #define RESERVED_BOOL_TERM         "_bool_term"
 #define RESERVED_VALUE             "_value"
+#define RESERVED_RAW               "_raw"
+#define RESERVED_IN                "_in"
 #define RESERVED_NAME              "_name"
 #define RESERVED_SLOT              "_slot"
 #define RESERVED_INDEX             "_index"

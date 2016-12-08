@@ -45,12 +45,16 @@ class QueryDSL {
 	static const std::unordered_map<std::string, Xapian::Query::op> ops_map;
 	static const std::unordered_set<std::string> casts_set;
 
-	Xapian::Query process(Xapian::Query::op op, const std::string& parent, const MsgPack& obj);
-	Xapian::Query process_in(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj);
-	Xapian::Query get_value_query(Xapian::Query::op op, const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool isrange=false);
-	Xapian::Query get_accuracy_query(const required_spc_t& field_spc, Xapian::Query::op op, const std::string& field_accuracy, const MsgPack& obj, bool isrange);
-	Xapian::Query get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool isrange);
-	Xapian::Query get_regular_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool isrange);
+	FieldType get_in_type(const MsgPack& obj);
+
+	std::pair<FieldType, MsgPack> parse_range(const required_spc_t& field_spc, const std::string& range);
+
+	Xapian::Query process(Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query get_value_query(Xapian::Query::op op, const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query get_accuracy_query(const required_spc_t& field_spc, Xapian::Query::op op, const std::string& field_accuracy, const MsgPack& obj, bool is_raw, bool is_in);
+	Xapian::Query get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query get_regular_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query get_in_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount, int q_flags, bool is_raw, bool is_in);
 
 public:
 	QueryDSL(std::shared_ptr<Schema> schema_);
