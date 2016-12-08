@@ -31,7 +31,11 @@
 #endif
 
 #include "utils.h"
-#include "../src/url_parser.h"
+#include "url_parser.h"
+
+#include <cstdio>
+#include <string>
+#include <vector>
 
 
 static std::string run_url_path(const std::string& path, bool clear_id) {
@@ -155,6 +159,7 @@ int test_url_path() {
 
 #ifdef TEST_SINGLE
 // c++ -std=c++14 -fsanitize=address -Wall -Wextra -g -O2 -o tst -DTEST_SINGLE -Ibuild/src -Isrc tests/test_url_parser.cc && ./tst
+#include "../src/exception.cc"
 #include "../src/url_parser.cc"
 int main(int, char const *[]) {
 	return test_url_path();
