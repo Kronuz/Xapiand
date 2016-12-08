@@ -299,7 +299,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 		case MsgPack::Type::MAP:
 			return cast_object(field_spc, field_value);
 		default:
-			THROW(SerialisationError, "msgpack::type [%d] is not supported", toUType(field_value.getType()));
+			THROW(SerialisationError, "msgpack::type %s is not supported", MsgPackTypes[toUType(field_value.getType())]);
 	}
 }
 
