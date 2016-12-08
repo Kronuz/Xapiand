@@ -459,8 +459,6 @@ const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& lang
 	static std::unordered_map<std::string, std::unique_ptr<Xapian::SimpleStopper>> stoppers;
 	auto it = stoppers.find(language);
 	if (it == stoppers.end()) {
-		return it->second;
-	} else {
 		std::ifstream words(PATH_STOP_WORDS + std::string("/") + language + ".txt");
 		if (words.is_open()) {
 			auto& stopper = stoppers[language];
@@ -470,6 +468,8 @@ const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& lang
 			static std::unique_ptr<Xapian::SimpleStopper> stopper;
 			return stopper;
 		}
+	} else {
+		return it->second;
 	}
 }
 
