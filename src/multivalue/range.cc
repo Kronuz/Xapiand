@@ -151,12 +151,14 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 {
 	MsgPack start;
 	MsgPack end;
-	try {
-		end = obj.at("_to");
-	} catch (const std::out_of_range&) { }
-	try {
+
+	if (obj.find("_from") != obj.end()) {
 		start = obj.at("_from");
-	} catch (const std::out_of_range&) { }
+	}
+
+	if (obj.find("_to") != obj.end()) {
+		end = obj.at("_to");
+	}
 
 	try {
 		if (!start) {
