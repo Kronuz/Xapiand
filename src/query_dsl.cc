@@ -215,7 +215,8 @@ QueryDSL::get_query(const MsgPack& obj)
 		return Xapian::Query::MatchAll;
 	}
 
-	return process(Xapian::Query::OP_AND, "", obj);
+	auto query = process(Xapian::Query::OP_AND, "", obj);
+	return query;
 }
 
 
