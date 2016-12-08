@@ -54,7 +54,7 @@ include (GNUInstallDirs)
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
-set (PACKAGE_PATH_STOP_WORDS "${CMAKE_INSTALL_DATAROOTDIR}/xapiand/stopwords")
+set (PATH_STOP_WORDS "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/stopwords")
 
 
 file (GLOB XAPIAND_SRC_LIST
@@ -419,14 +419,14 @@ add_custom_target (uninstall
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/stopwords/ ${PACKAGE_PATH_STOP_WORDS})
+	${CMAKE_SOURCE_DIR}/stopwords/ ${CMAKE_INSTALL_DATAROOTDIR}/xapiand/stopwords)
 
 
 ########################################################################
 # Copy stopwords during the installation
 ########################################################################
 
-install (DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${PACKAGE_PATH_STOP_WORDS})
+install (DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${PATH_STOP_WORDS})
 
 
 ########################################################################
