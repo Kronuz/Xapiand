@@ -1807,12 +1807,8 @@ Schema::guess_field_type(const MsgPack& item_doc)
 		case MsgPack::Type::MAP:
 			if (item_doc.size() == 1) {
 				auto cast_word = item_doc.begin()->as_string();
-				try {
-					specification.sep_types[2] = Cast::getType(cast_word);
-					return;
-				} catch (const std::out_of_range&) {
-					THROW(ClientError, "Unknown cast type %s", cast_word.c_str());
-				}
+				specification.sep_types[2] = Cast::getType(cast_word);
+				return;
 			}
 			THROW(ClientError, "Expected map with one element");
 		default:
