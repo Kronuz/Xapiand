@@ -30,6 +30,7 @@
 
 #include "exception.h"  // for ClientError
 
+#define LVL_MAX 10
 
 class FieldParserError : public ClientError {
 public:
@@ -44,12 +45,14 @@ class FieldParser {
 	const char* off_field;
 	size_t len_field_colon;
 	const char* off_field_colon;
-	size_t len_value;
-	const char* off_value;
-	size_t len_double_quote_value;
-	const char* off_double_quote_value;
-	size_t len_single_quote_value;
-	const char* off_single_quote_value;
+	const char* off_values;
+	size_t lvl;
+	size_t lens[LVL_MAX];
+	const char* offs[LVL_MAX];
+	size_t lens_single_quote[LVL_MAX];
+	const char* offs_single_quote[LVL_MAX];
+	size_t lens_double_quote[LVL_MAX];
+	const char* offs_double_quote[LVL_MAX];
 
 	bool skip_quote;
 
@@ -58,35 +61,33 @@ public:
 		INIT,
 		FIELD,
 		QUOTE,
-		ESCAPE,
-		START_VALUE,
+		VALUE_INIT,
 		VALUE,
-		COLON_OR_END,
+		COLON,
 		SQUARE_BRACKET,
 		SQUARE_BRACKET_INIT,
 		SQUARE_BRACKET_END,
-		SQUARE_BRACKET_COMMA_OR_END,
-		SQUARE_BRACKET_FIRST_QUOTE,
-		SQUARE_BRACKET_SECOND_QUOTE,
+		SQUARE_BRACKET_COMMA,
+		SQUARE_BRACKET_QUOTE,
+		DOT_DOT_INIT,
+		DOT_DOT,
 		END
 	};
 
 	bool isrange;
-	std::string start;
-	std::string end;
 
 	FieldParser(const std::string& p);
 
-	void parse();
+	void parse(size_t lvl_max=2);
 
-	inline std::string get_field() const {
+	std::string get_field_name() const {
 		if (off_field) {
 			return std::string(off_field, len_field);
 		}
 		return std::string();
 	}
 
-	inline std::string get_field_colon() const {
+	std::string get_field_name_colon() const {
 		if (skip_quote) {
 			return std::string(off_field, len_field) + ":";
 		} else if (off_field_colon) {
@@ -95,28 +96,50 @@ public:
 		return std::string();
 	}
 
-	inline std::string get_value() const {
-		if (off_value) {
-			return std::string(off_value, len_value);
+	std::string get_values() const {
+		return std::string(off_values, fstr.size() - (off_values - fstr.data()));
+	}
+
+	std::string get_value(int l=0) const {
+		if (offs[l]) {
+			return std::string(offs[l], lens[l]);
 		}
 		return std::string();
 	}
 
-	inline std::string get_doubleq_value() const {
-		if (off_double_quote_value) {
-			return std::string(off_double_quote_value, len_double_quote_value);
+	bool is_double_quoted_value(int l=0) const noexcept {
+		return offs_double_quote[l] != 0;
+	}
+
+	bool is_single_quoted_value(int l=0) const noexcept {
+		return offs_double_quote[l] != 0;
+	}
+
+	std::string get_double_quoted_value(int l=0) const {
+		if (offs_double_quote[l]) {
+			return std::string(offs_double_quote[l], lens_double_quote[l]);
 		}
 		return std::string();
 	}
 
-	inline std::string get_singleq_value() const {
-		if (off_single_quote_value) {
-			return std::string(off_single_quote_value, len_single_quote_value);
+	std::string get_single_quoted_value(int l=0) const {
+		if (offs_single_quote[l]) {
+			return std::string(offs_single_quote[l], lens_single_quote[l]);
 		}
 		return std::string();
 	}
 
-	inline bool is_double_quote_value() const noexcept {
-		return off_double_quote_value != 0;
+	std::string get_start() const {
+		if (isrange && offs[0]) {
+			return std::string(offs[0], lens[0]);
+		}
+		return std::string();
+	}
+
+	std::string get_end() const {
+		if (isrange && offs[1]) {
+			return std::string(offs[1], lens[1]);
+		}
+		return std::string();
 	}
 };

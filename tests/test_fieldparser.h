@@ -22,20 +22,4 @@
 
 #pragma once
 
-#include "utils.h"
-
-#include <string>
-
-struct Fieldparser_t {
-	std::string field;
-	std::string field_name_dot;
-	std::string field_name;
-	std::string value;
-	std::string double_quote;
-	std::string single_quote;
-	std::string start;
-	std::string end;
-};
-
-
 int test_field_parser();

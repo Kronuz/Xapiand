@@ -22,37 +22,84 @@
 
 #include "test_fieldparser.h"
 
+// #define DEBUG_FIELD_PARSER 1
+
+#ifdef TEST_SINGLE
+#  define TESTING_DATABASE 0
+#  define TESTING_ENDPOINTS 0
+#  define TESTING_LOGS 0
+#endif
+
+#include "utils.h"
 #include "field_parser.h"
+
+#include <string>
+#include <vector>
+
+
+struct Fieldparser_t {
+	std::string field;
+	std::string field_name_colon;
+	std::string field_name;
+	std::string value;
+	std::string double_quote_value;
+	std::string single_quote_value;
+	std::string start;
+	std::string end;
+	std::string values;
+};
 
 
 int test_field_parser() {
-
 	INIT_LOG
 	std::vector<Fieldparser_t> fields {
-		{ "Color:Blue", "Color:", "Color", "Blue", "", "", "", "" },
-		{ "Color:\"dark blue\"", "Color:", "Color", "dark blue", "\"dark blue\"", "", "", "" },
-		{ "Color:'light blue'", "Color:", "Color", "light blue", "", "'light blue'", "", "" },
-		{ "color_range:[a70d0d,ec500d]",  "color_range:", "color_range", "", "", "", "a70d0d", "ec500d" },
-		{ "green",  "", "", "green", "", "", "", "" },
-		{ "\"dark green\"",  "", "", "dark green", "\"dark green\"", "", "", "" },
-		{ "'light green'",  "", "", "light green", "", "'light green'", "", "" },
-		{ "[100,200]",  "", "", "", "", "", "100", "200" },
-		{ "[\"initial range\",\"end of range\"]",  "", "", "", "", "", "initial range", "end of range" },
-		{ "['initial range','end of range']",  "", "", "", "", "", "initial range", "end of range" },
+		{ "Color:Blue", "Color:", "Color", "Blue", "", "", "", "", "Blue" },
+		{ "Color:\"dark blue\"", "Color:", "Color", "dark blue", "\"dark blue\"", "", "", "", "\"dark blue\"" },
+		{ "Color:'light blue'", "Color:", "Color", "light blue", "", "'light blue'", "", "", "'light blue'" },
+		{ "color_range:[a70d0d,ec500d]", "color_range:", "color_range", "a70d0d", "", "", "a70d0d", "ec500d", "[a70d0d,ec500d]" },
+		{ "green", "", "", "green", "", "", "", "", "green" },
+		{ "\"dark green\"", "", "", "dark green", "\"dark green\"", "", "", "", "\"dark green\"" },
+		{ "'light green'", "", "", "light green", "", "'light green'", "", "", "'light green'" },
+		{ "[100,200]", "", "", "100", "", "", "100", "200", "[100,200]" },
+		{ "Field:[100,200]", "Field:", "Field", "100", "", "", "100", "200", "[100,200]" },
+		{ "['initial range','end of range']", "", "", "initial range", "", "'initial range'", "initial range", "end of range", "['initial range','end of range']" },
+		{ "Field:['initial range','end of range']", "Field:", "Field", "initial range", "", "'initial range'", "initial range", "end of range", "['initial range','end of range']" },
+		{ "[\"initial range\",\"end of range\"]", "", "", "initial range", "\"initial range\"", "", "initial range", "end of range", "[\"initial range\",\"end of range\"]" },
+		{ "Field:[\"initial range\",\"end of range\"]", "Field:", "Field", "initial range", "\"initial range\"", "", "initial range", "end of range", "[\"initial range\",\"end of range\"]" },
+		{ "100..200", "", "", "100", "", "", "100", "200", "100..200" },
+		{ "Field:100..200", "Field:", "Field", "100", "", "", "100", "200", "100..200" },
+		{ "'initial range'..'end of range'", "", "", "initial range", "", "'initial range'", "initial range", "end of range", "'initial range'..'end of range'" },
+		{ "Field:'initial range'..'end of range'", "Field:", "Field", "initial range", "", "'initial range'", "initial range", "end of range", "'initial range'..'end of range'" },
+		{ "\"initial range\"..\"end of range\"", "", "", "initial range", "\"initial range\"", "", "initial range", "end of range", "\"initial range\"..\"end of range\"" },
+		{ "Field:\"initial range\"..\"end of range\"", "Field:", "Field", "initial range", "\"initial range\"", "", "initial range", "end of range", "\"initial range\"..\"end of range\"" },
+
+		{ "[100]", "", "", "100", "", "", "100", "", "[100]" },
+		{ "[100,]", "", "", "100", "", "", "100", "", "[100,]" },
+		{ "[,200]", "", "", "", "", "", "", "200", "[,200]" },
+		{ "[,,300]", "", "", "", "", "", "", "", "[,,300]" },
+		{ "[100,200,300,400]", "", "", "100", "", "", "100", "200", "[100,200,300,400]" },
+		{ "100..200..300..400", "", "", "100", "", "", "100", "200", "100..200..300..400" },
+
+		{ "100", "", "", "100", "", "", "", "", "100" },
+		{ "100..", "", "", "100", "", "", "100", "", "100.." },
+		{ "..200", "", "", "", "", "", "", "200", "..200" },
+		{ "....300", "", "", "", "", "", "", "", "....300" },
+		{ "Field:100..", "Field:", "Field", "100", "", "", "100", "", "100.." },
+		{ "Field:..200", "Field:", "Field", "", "", "", "", "200", "..200" },
 	};
 
 	int count = 0;
 	for (auto& field : fields) {
 		FieldParser fp(field.field);
-		fp.parse();
+		fp.parse(4);
 
-		if (fp.get_field_dot() != field.field_name_dot) {
-			L_ERR(nullptr, "\nError: The field with dots should be:\n  %s\nbut it is:\n  %s", field.field_name_dot.c_str(), fp.get_field_dot().c_str());
+		if (fp.get_field_name_colon() != field.field_name_colon) {
+			L_ERR(nullptr, "\nError: The field with colon should be:\n  %s\nbut it is:\n  %s", field.field_name_colon.c_str(), fp.get_field_name_colon().c_str());
 			++count;
 		}
 
-		if (fp.get_field() != field.field_name) {
-			L_ERR(nullptr, "\nError: The field should be:\n  %s\nbut it is:\n  %s", field.field_name.c_str(), fp.get_field().c_str());
+		if (fp.get_field_name() != field.field_name) {
+			L_ERR(nullptr, "\nError: The field name should be:\n  %s\nbut it is:\n  %s", field.field_name.c_str(), fp.get_field_name().c_str());
 			++count;
 		}
 
@@ -61,26 +108,41 @@ int test_field_parser() {
 			++count;
 		}
 
-		if (fp.get_doubleq_value() != field.double_quote) {
-			L_ERR(nullptr, "\nError: The double quote value should be:\n  %s\nbut it is:\n  %s", field.double_quote.c_str(), fp.get_doubleq_value().c_str());
+		if (fp.get_double_quoted_value() != field.double_quote_value) {
+			L_ERR(nullptr, "\nError: The double quote value should be:\n  %s\nbut it is:\n  %s", field.double_quote_value.c_str(), fp.get_double_quoted_value().c_str());
 			++count;
 		}
 
-		if (fp.get_singleq_value() != field.single_quote) {
-			L_ERR(nullptr, "\nError: The single quote value should be:\n  %s\nbut it is:\n  %s", field.single_quote.c_str(), fp.get_singleq_value().c_str());
+		if (fp.get_single_quoted_value() != field.single_quote_value) {
+			L_ERR(nullptr, "\nError: The single quote value should be:\n  %s\nbut it is:\n  %s", field.single_quote_value.c_str(), fp.get_single_quoted_value().c_str());
 			++count;
 		}
 
-		if (fp.start != field.start) {
-			L_ERR(nullptr, "\nError: The start value range should be:\n  %s\nbut it is:\n  %s", field.start.c_str(), fp.start.c_str());
+		if (fp.get_start() != field.start) {
+			L_ERR(nullptr, "\nError: The start value range should be:\n  %s\nbut it is:\n  %s", field.start.c_str(), fp.get_start().c_str());
 			++count;
 		}
 
-		if (fp.end != field.end) {
-			L_ERR(nullptr, "\nError: The end value range should be:\n  %s\nbut it is:\n  %s", field.end.c_str(), fp.end.c_str());
+		if (fp.get_end() != field.end) {
+			L_ERR(nullptr, "\nError: The end value range should be:\n  %s\nbut it is:\n  %s", field.end.c_str(), fp.get_end().c_str());
+			++count;
+		}
+
+		if (fp.get_values() != field.values) {
+			L_ERR(nullptr, "\nError: The values should be:\n  %s\nbut are:\n  %s", field.values.c_str(), fp.get_values().c_str());
 			++count;
 		}
 	}
 
 	RETURN(count);
 }
+
+
+#ifdef TEST_SINGLE
+// c++ -std=c++14 -fsanitize=address -Wall -Wextra -g -O2 -o tst -DTEST_SINGLE -Ibuild/src -Isrc tests/test_fieldparser.cc && ./tst
+#include "../src/exception.cc"
+#include "../src/field_parser.cc"
+int main(int, char const *[]) {
+	return test_field_parser();
+}
+#endif

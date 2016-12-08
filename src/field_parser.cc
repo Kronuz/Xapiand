@@ -22,60 +22,65 @@
 
 #include "field_parser.h"
 
+#include <cassert>
 #include <ctype.h>  // for isspace
 
 
-#define COLON ':'
-#define DOUBLE_QUOTE '"'
-#define SINGLE_QUOTE '\''
-#define SQUARE_BRACKET_LEFT '['
-#define SQUARE_BRACKET_RIGHT ']'
-#define COMMA ','
+#define TOKEN_COLON ':'
+#define TOKEN_DOUBLE_QUOTE '"'
+#define TOKEN_SINGLE_QUOTE '\''
+#define TOKEN_SQUARE_BRACKET_LEFT '['
+#define TOKEN_SQUARE_BRACKET_RIGHT ']'
+#define TOKEN_COMMA ','
+#define TOKEN_DOT '.'
 
 
 FieldParser::FieldParser(const std::string& p)
 	: fstr(p),
 	  len_field(0), off_field(nullptr),
 	  len_field_colon(0), off_field_colon(nullptr),
-	  len_value(0), off_value(nullptr),
-	  len_double_quote_value(0), off_double_quote_value(nullptr),
-	  len_single_quote_value(0), off_single_quote_value(nullptr),
+	  off_values(nullptr),
+	  lvl(0),
+	  lens{}, offs{},
+	  lens_single_quote{}, offs_single_quote{},
+	  lens_double_quote{}, offs_double_quote{},
 	  skip_quote(false), isrange(false) { }
 
 
 void
-FieldParser::parse()
+FieldParser::parse(size_t lvl_max)
 {
 	auto currentState = FieldParser::State::INIT;
-	auto oldState = currentState;
 	auto currentSymbol = fstr.data();
 	char quote;
+
+	if (lvl_max > LVL_MAX) {
+		lvl_max = LVL_MAX;
+	}
+
+	off_values = currentSymbol;
 
 	while (true) {
 		switch (currentState) {
 			case FieldParser::State::INIT:
 				switch (*currentSymbol) {
-					case SQUARE_BRACKET_LEFT:
+					case TOKEN_SQUARE_BRACKET_LEFT:
 						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
-						off_value = currentSymbol;
-						++len_value;
 						isrange = true;
 						break;
-					case DOUBLE_QUOTE:
+					case TOKEN_DOUBLE_QUOTE:
 						currentState = FieldParser::State::QUOTE;
-						quote = DOUBLE_QUOTE;
-						off_double_quote_value = currentSymbol;
-						off_value = currentSymbol + 1;
-						++len_double_quote_value;
-						++len_value;
+						quote = TOKEN_DOUBLE_QUOTE;
+						offs_double_quote[lvl] = currentSymbol;
+						offs[lvl] = currentSymbol + 1;
+						++lens_double_quote[lvl];
 						break;
-					case SINGLE_QUOTE:
+					case TOKEN_SINGLE_QUOTE:
 						currentState = FieldParser::State::QUOTE;
-						quote = SINGLE_QUOTE;
-						off_single_quote_value = currentSymbol;
-						off_value = currentSymbol + 1;
-						++len_single_quote_value;
-						++len_value;
+						quote = TOKEN_SINGLE_QUOTE;
+						offs_single_quote[lvl] = currentSymbol;
+						offs[lvl] = currentSymbol + 1;
+						++lens_single_quote[lvl];
 						break;
 					case '\0':
 						currentState = FieldParser::State::END;
@@ -86,6 +91,16 @@ FieldParser::parse()
 					case '\t':
 						currentState = FieldParser::State::INIT;
 						break;
+					case TOKEN_DOT:
+						if (*(currentSymbol + 1) == TOKEN_DOT) {
+							currentState = FieldParser::State::DOT_DOT_INIT;
+							isrange = true;
+							if (++lvl > lvl_max) {
+								THROW(FieldParserError, "Too many levels!");
+							}
+							++currentSymbol;
+							break;
+						}
 					default:
 						if (++len_field >= 1024) {
 							THROW(FieldParserError, "Syntax error in query");
@@ -100,13 +115,31 @@ FieldParser::parse()
 
 			case FieldParser::State::FIELD:
 				switch (*currentSymbol) {
-					case COLON:
-						currentState = FieldParser::State::START_VALUE;
+					case TOKEN_COLON:
+						currentState = FieldParser::State::VALUE_INIT;
+						off_values = currentSymbol + 1;
 						++len_field_colon;
+						memset(lens, 0, sizeof(lens));
+						memset(offs, 0, sizeof(offs));
+						lvl = 0;
 						break;
+					case TOKEN_DOT:
+						if (*(currentSymbol + 1) == TOKEN_DOT) {
+							lens[lvl] = len_field;
+							offs[lvl] = off_field;
+							len_field = len_field_colon = 0;
+							off_field = off_field_colon = nullptr;
+							currentState = FieldParser::State::DOT_DOT_INIT;
+							isrange = true;
+							if (++lvl > lvl_max) {
+								THROW(FieldParserError, "Too many levels!");
+							}
+							++currentSymbol;
+							break;
+						}
 					case '\0':
-						len_value = len_field;
-						off_value = off_field;
+						lens[lvl] = len_field;
+						offs[lvl] = off_field;
 						len_field = len_field_colon = 0;
 						off_field = off_field_colon = nullptr;
 						return;
@@ -119,282 +152,321 @@ FieldParser::parse()
 				}
 				break;
 
-			case FieldParser::State::START_VALUE:
+			case FieldParser::State::VALUE_INIT:
+			case FieldParser::State::DOT_DOT_INIT:
 				switch (*currentSymbol) {
-					case DOUBLE_QUOTE:
+					case TOKEN_DOUBLE_QUOTE:
 						currentState = FieldParser::State::QUOTE;
-						quote = DOUBLE_QUOTE;
-						off_double_quote_value = currentSymbol;
-						off_value = off_double_quote_value + 1;
-						++len_double_quote_value;
-						++len_value;
+						quote = TOKEN_DOUBLE_QUOTE;
+						offs_double_quote[lvl] = currentSymbol;
+						offs[lvl] = currentSymbol + 1;
+						++lens_double_quote[lvl];
 						break;
-					case SINGLE_QUOTE:
+					case TOKEN_SINGLE_QUOTE:
 						currentState = FieldParser::State::QUOTE;
-						quote = SINGLE_QUOTE;
-						off_single_quote_value = currentSymbol;
-						off_value = off_single_quote_value + 1;
-						++len_single_quote_value;
-						++len_value;
+						quote = TOKEN_SINGLE_QUOTE;
+						offs_single_quote[lvl] = currentSymbol;
+						offs[lvl] = currentSymbol + 1;
+						++lens_single_quote[lvl];
 						break;
-					case SQUARE_BRACKET_LEFT:
+					case TOKEN_SQUARE_BRACKET_LEFT:
 						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
-						off_value = currentSymbol;
-						++len_value;
 						isrange = true;
 						break;
 					case '\0':
 						currentState = FieldParser::State::END;
 						break;
+					case TOKEN_DOT:
+						if (*(currentSymbol + 1) == TOKEN_DOT) {
+							currentState = FieldParser::State::DOT_DOT_INIT;
+							isrange = true;
+							if (++lvl > lvl_max) {
+								THROW(FieldParserError, "Too many levels!");
+							}
+							++currentSymbol;
+							break;
+						}
 					default:
-						currentState = FieldParser::State::VALUE;
-						off_value = currentSymbol;
-						++len_value;
+						currentState = (currentState == FieldParser::State::VALUE_INIT) ? FieldParser::State::VALUE : FieldParser::State::DOT_DOT;
+						offs[lvl] = currentSymbol;
+						++lens[lvl];
 						break;
 				}
 				break;
 
 			case FieldParser::State::QUOTE:
 				switch (*currentSymbol) {
-					case '\\':
-						currentState = FieldParser::State::ESCAPE;
-						oldState = FieldParser::State::QUOTE;
-						++len_value;
-						switch (quote) {
-							case DOUBLE_QUOTE:
-								++len_double_quote_value;
-								break;
-							case SINGLE_QUOTE:
-								++len_single_quote_value;
-								break;
-						}
-						break;
 					case '\0':
 						THROW(FieldParserError, "Expected symbol: '%c'", quote);
+					case '\\':
+						if (*(currentSymbol + 1) == '\0') {
+							THROW(FieldParserError, "Syntax error: EOL while scanning quoted string");
+						}
+						++lens[lvl];
+						switch (quote) {
+							case TOKEN_DOUBLE_QUOTE:
+								++lens_double_quote[lvl];
+								break;
+							case TOKEN_SINGLE_QUOTE:
+								++lens_single_quote[lvl];
+								break;
+						}
+						++currentSymbol;
 					default:
 						if (*currentSymbol == quote) {
-							currentState = FieldParser::State::COLON_OR_END;
+							currentState = FieldParser::State::COLON;
 							switch (quote) {
-								case DOUBLE_QUOTE:
-									++len_double_quote_value;
-									--len_value;	// subtract the last quote count
+								case TOKEN_DOUBLE_QUOTE:
+									++lens_double_quote[lvl];
 									break;
-								case SINGLE_QUOTE:
-									++len_single_quote_value;
-									--len_value;	// subtract the last quote count
+								case TOKEN_SINGLE_QUOTE:
+									++lens_single_quote[lvl];
 									break;
 							}
-						} else {
-							++len_value;
-							switch (quote) {
-								case DOUBLE_QUOTE:
-									++len_double_quote_value;
-									break;
-								case SINGLE_QUOTE:
-									++len_single_quote_value;
-									break;
-							}
+							break;
+						}
+						++lens[lvl];
+						switch (quote) {
+							case TOKEN_DOUBLE_QUOTE:
+								++lens_double_quote[lvl];
+								break;
+							case TOKEN_SINGLE_QUOTE:
+								++lens_single_quote[lvl];
+								break;
 						}
 						break;
 				}
 				break;
 
-			case FieldParser::State::COLON_OR_END:
+			case FieldParser::State::COLON:
 				switch (*currentSymbol) {
 					case '\0':
 						currentState = FieldParser::State::END;
 						break;
 
-					case COLON:
-						currentState = FieldParser::State::START_VALUE;
+					case TOKEN_DOT:
+						if (*(currentSymbol + 1) == TOKEN_DOT) {
+							currentState = FieldParser::State::DOT_DOT_INIT;
+							isrange = true;
+							if (++lvl > lvl_max) {
+								THROW(FieldParserError, "Too many levels!");
+							}
+							++currentSymbol;
+							break;
+						}
+
+					case TOKEN_COLON:
+						currentState = FieldParser::State::VALUE_INIT;
+						off_values = currentSymbol + 1;
 						switch (quote) {
-							case SINGLE_QUOTE:
-								off_field = off_value;
-								len_field = len_value;
-								off_value = nullptr;
-								len_value = 0;
-								off_single_quote_value = nullptr;
+							case TOKEN_SINGLE_QUOTE:
+								off_field = offs[lvl];
+								len_field = lens[lvl];
+								offs[lvl] = nullptr;
+								lens[lvl] = 0;
+								offs_single_quote[lvl] = nullptr;
 								break;
 
-							case DOUBLE_QUOTE:
-								off_field = off_value;
-								len_field = len_value;
-								off_value = nullptr;
-								len_value = 0;
-								off_double_quote_value = nullptr;
+							case TOKEN_DOUBLE_QUOTE:
+								off_field = offs[lvl];
+								len_field = lens[lvl];
+								offs[lvl] = nullptr;
+								lens[lvl] = 0;
+								offs_single_quote[lvl] = nullptr;
 								break;
 						}
 						skip_quote = true;
+						memset(lens, 0, sizeof(lens));
+						memset(offs, 0, sizeof(offs));
+						lvl = 0;
 						break;
 
 					default:
-						 THROW(FieldParserError, "Unexpected symbol: %c", *currentSymbol);
-						break;
-				}
-
-				break;
-
-			case FieldParser::State::ESCAPE:
-				if (*currentSymbol != '\0') {
-					currentState = oldState;
-					switch(currentState) {
-						case FieldParser::State::QUOTE:
-							++len_value;
-							if (quote == DOUBLE_QUOTE) {
-								++len_double_quote_value;
-							} else if (quote == SINGLE_QUOTE) {
-								++len_single_quote_value;
-							}
-							break;
-						case FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE:
-							start += *currentSymbol;
-							++len_value;
-							break;
-						case FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE:
-							end += *currentSymbol;
-							++len_value;
-							break;
-						default:
-							break;
-					}
-				} else {
-					THROW(FieldParserError, "Syntax error in query escaped");
+						THROW(FieldParserError, "Unexpected symbol: '%c'", *currentSymbol);
 				}
 				break;
 
 			case FieldParser::State::VALUE:
-				if (*currentSymbol == '\0') {
-					currentState = FieldParser::State::END;
-				} else if (!isspace(*currentSymbol)) {
-					++len_value;
-				} else {
-					THROW(FieldParserError, "Syntax error in query");
+				switch (*currentSymbol) {
+					case '\0':
+						currentState = FieldParser::State::END;
+						break;
+					case ' ':
+					case '\r':
+					case '\n':
+					case '\t':
+						THROW(FieldParserError, "Syntax error in query");
+					case TOKEN_DOT:
+						if (*(currentSymbol + 1) == TOKEN_DOT) {
+							currentState = FieldParser::State::DOT_DOT_INIT;
+							isrange = true;
+							if (++lvl > lvl_max) {
+								THROW(FieldParserError, "Too many levels!");
+							}
+							++currentSymbol;
+							break;
+						}
+					default:
+						++lens[lvl];
+						break;
+				}
+				break;
+
+			case FieldParser::State::DOT_DOT:
+				switch (*currentSymbol) {
+					case '\0':
+						currentState = FieldParser::State::END;
+						break;
+					case ' ':
+					case '\r':
+					case '\n':
+					case '\t':
+						THROW(FieldParserError, "Syntax error in query");
+					case TOKEN_DOT:
+						if (*(currentSymbol + 1) == TOKEN_DOT) {
+							currentState = FieldParser::State::DOT_DOT_INIT;
+							isrange = true;
+							if (++lvl > lvl_max) {
+								THROW(FieldParserError, "Too many levels!");
+							}
+							++currentSymbol;
+							break;
+						}
+					default:
+						++lens[lvl];
+						break;
 				}
 				break;
 
 			case FieldParser::State::SQUARE_BRACKET_INIT:
 				switch (*currentSymbol) {
-					case DOUBLE_QUOTE:
-						currentState = FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE;
-						quote = DOUBLE_QUOTE;
-						++len_value;
+					case TOKEN_DOUBLE_QUOTE:
+						currentState = FieldParser::State::SQUARE_BRACKET_QUOTE;
+						quote = TOKEN_DOUBLE_QUOTE;
+						offs_double_quote[lvl] = currentSymbol;
+						offs[lvl] = currentSymbol + 1;
+						++lens_double_quote[lvl];
 						break;
-					case SINGLE_QUOTE:
-						currentState = FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE;
-						quote = SINGLE_QUOTE;
-						++len_value;
-						break;
-					case COMMA:
-						currentState = FieldParser::State::SQUARE_BRACKET;
-						++len_value;
-						break;
-					case SQUARE_BRACKET_RIGHT:
-						currentState = FieldParser::State::END;
-						++len_value;
+					case TOKEN_SINGLE_QUOTE:
+						currentState = FieldParser::State::SQUARE_BRACKET_QUOTE;
+						quote = TOKEN_SINGLE_QUOTE;
+						offs_single_quote[lvl] = currentSymbol;
+						offs[lvl] = currentSymbol + 1;
+						++lens_single_quote[lvl];
 						break;
 					case '\0':
 						THROW(FieldParserError, "Syntax error in query");
+					case TOKEN_COMMA:
+						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
+						if (++lvl > lvl_max) {
+							THROW(FieldParserError, "Too many levels!");
+						}
+						break;
+					case TOKEN_SQUARE_BRACKET_RIGHT:
+						currentState = FieldParser::State::END;
+						break;
 					default:
-						start += *currentSymbol;
-						++len_value;
+						currentState = FieldParser::State::SQUARE_BRACKET;
+						offs[lvl] = currentSymbol;
+						++lens[lvl];
 						break;
 				}
 				break;
 
 			case FieldParser::State::SQUARE_BRACKET:
 				switch (*currentSymbol) {
-					case DOUBLE_QUOTE:
-						currentState = FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE;
-						quote = DOUBLE_QUOTE;
-						++len_value;
+					case TOKEN_COMMA:
+						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
+						if (++lvl > lvl_max) {
+							THROW(FieldParserError, "Too many levels!");
+						}
 						break;
-					case SINGLE_QUOTE:
-						currentState = FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE;
-						quote = SINGLE_QUOTE;
-						++len_value;
-						break;
-					case SQUARE_BRACKET_RIGHT:
+					case TOKEN_SQUARE_BRACKET_RIGHT:
 						currentState = FieldParser::State::END;
-						++len_value;
 						break;
 					case '\0':
 						THROW(FieldParserError, "Expected symbol: ']'");
 					default:
-						end += *currentSymbol;
-						++len_value;
+						++lens[lvl];
 						break;
 				}
 				break;
 
-			case FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE:
+			case FieldParser::State::SQUARE_BRACKET_QUOTE:
 				switch (*currentSymbol) {
-					case '\\':
-						currentState = FieldParser::State::ESCAPE;
-						oldState = FieldParser::State::SQUARE_BRACKET_FIRST_QUOTE;
-						++len_value;
-						break;
 					case '\0':
 						break;
+					case '\\':
+						if (*(currentSymbol + 1) == '\0') {
+							THROW(FieldParserError, "Syntax error: EOL while scanning quoted string");
+						}
+						++lens[lvl];
+						switch (quote) {
+							case TOKEN_DOUBLE_QUOTE:
+								++lens_double_quote[lvl];
+								break;
+							case TOKEN_SINGLE_QUOTE:
+								++lens_single_quote[lvl];
+								break;
+						}
+						++currentSymbol;
 					default:
 						if (*currentSymbol == quote) {
-							currentState = FieldParser::State::SQUARE_BRACKET_COMMA_OR_END;
-						} else {
-							start += *currentSymbol;
+							currentState = FieldParser::State::SQUARE_BRACKET_COMMA;
+							switch (quote) {
+								case TOKEN_DOUBLE_QUOTE:
+									++lens_double_quote[lvl];
+									break;
+								case TOKEN_SINGLE_QUOTE:
+									++lens_single_quote[lvl];
+									break;
+							}
+							break;
 						}
-						++len_value;
+						++lens[lvl];
+						switch (quote) {
+							case TOKEN_DOUBLE_QUOTE:
+								++lens_double_quote[lvl];
+								break;
+							case TOKEN_SINGLE_QUOTE:
+								++lens_single_quote[lvl];
+								break;
+						}
 						break;
 				}
 				break;
 
-			case FieldParser::State::SQUARE_BRACKET_COMMA_OR_END:
+			case FieldParser::State::SQUARE_BRACKET_COMMA:
 				switch (*currentSymbol) {
-					case COMMA:
-						currentState = FieldParser::State::SQUARE_BRACKET;
-						++len_value;
+					case TOKEN_COMMA:
+						currentState = FieldParser::State::SQUARE_BRACKET_INIT;
+						if (++lvl > lvl_max) {
+							THROW(FieldParserError, "Too many levels!");
+						}
 						break;
-					case SQUARE_BRACKET_RIGHT:
+					case TOKEN_SQUARE_BRACKET_RIGHT:
 						currentState = FieldParser::State::END;
-						++len_value;
 						break;
 					default:
-						THROW(FieldParserError, "Unexpected symbol: %c", *currentSymbol);
-				}
-				break;
-
-			case FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE:
-				switch (*currentSymbol) {
-					case '\\':
-						currentState = FieldParser::State::ESCAPE;
-						oldState = FieldParser::State::SQUARE_BRACKET_SECOND_QUOTE;
-						++len_value;
-						break;
-					case '\0':
-						break;
-					default:
-						if (*currentSymbol == quote) {
-							currentState = FieldParser::State::SQUARE_BRACKET_END;
-						} else {
-							end += *currentSymbol;
-						}
-						++len_value;
-						break;
+						THROW(FieldParserError, "Unexpected symbol: '%c'", *currentSymbol);
 				}
 				break;
 
 			case FieldParser::State::SQUARE_BRACKET_END:
-				if (*currentSymbol == SQUARE_BRACKET_RIGHT) {
-					currentState = FieldParser::State::END;
-					++len_value;
-				} else {
-					THROW(FieldParserError, "Expected symbol: ']'");
+				switch (*currentSymbol) {
+					case TOKEN_SQUARE_BRACKET_RIGHT:
+						currentState = FieldParser::State::END;
+						++lens[lvl];
+						break;
+					default:
+						THROW(FieldParserError, "Expected symbol: ']'");
 				}
 				break;
 
-			case FieldParser::State::END: {
+			case FieldParser::State::END:
 				return;
-			}
 		}
 
-		++currentSymbol;
+		if (*currentSymbol) ++currentSymbol;
 	}
 }

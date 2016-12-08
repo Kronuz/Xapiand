@@ -173,12 +173,12 @@ QueryDSL::make_dsl_query(const std::string& query)
 
 					MsgPack value;
 					if (fp.isrange) {
-						value["_in"] = fp.get_value();
+						value["_in"] = fp.get_values();
 					} else {
 						value = fp.get_value();
 					}
 
-					auto field_name = fp.get_field();
+					auto field_name = fp.get_field_name();
 					if (field_name.empty()) {
 						field_name = "_value";
 					}
@@ -295,11 +295,13 @@ QueryDSL::process_in(const required_spc_t& field_spc, Xapian::Query::op op, cons
 				THROW(ClientError, "Invalid range (1): %s", repr(obj.to_string()).c_str());
 			}
 			MsgPack value;
-			if (!fp.start.empty()) {
-				value["_range"]["_from"] = Cast::cast(field_spc.get_type(), fp.start);
+			auto start = fp.get_start();
+			if (!start.empty()) {
+				value["_range"]["_from"] = Cast::cast(field_spc.get_type(), start);
 			}
-			if (!fp.end.empty()) {
-				value["_range"]["_to"] = Cast::cast(field_spc.get_type(), fp.end);
+			auto end = fp.get_end();
+			if (!end.empty()) {
+				value["_range"]["_to"] = Cast::cast(field_spc.get_type(), end);
 			}
 			final_query = process_in(field_spc, op, value);
 			break;
