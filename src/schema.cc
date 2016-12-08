@@ -459,7 +459,13 @@ const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& lang
 	static std::unordered_map<std::string, std::unique_ptr<Xapian::SimpleStopper>> stoppers;
 	auto it = stoppers.find(language);
 	if (it == stoppers.end()) {
-		std::ifstream words(PATH_STOP_WORDS + std::string("/") + language + ".txt");
+		std::ifstream words;
+		const char *path_stopwords = getenv("XAPIAN_PATH_STOPWORDS");
+		if (path_stopwords) {
+			words.open(path_stopwords + std::string("/") + language + ".txt");
+		} else {
+			words.open(PATH_STOPWORDS + std::string("/") + language + ".txt");
+		}
 		if (words.is_open()) {
 			auto& stopper = stoppers[language];
 			stopper = std::make_unique<Xapian::SimpleStopper>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
