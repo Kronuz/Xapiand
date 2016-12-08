@@ -26,8 +26,11 @@
 
 #if XAPIAND_V8
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
 #include <v8.h>
 #include <libplatform/libplatform.h>
+#pragma clang diagnostic pop
 
 #include "msgpack.h"
 #include "exception.h"
