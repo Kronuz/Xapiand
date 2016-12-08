@@ -459,7 +459,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 		case FieldType::TEXT: {
 			Xapian::QueryParser parser;
 			// parser.set_database(*database->db);
-			auto stopper = getStopper(spc.language);
+			const auto& stopper = getStopper(spc.language);
 			parser.set_stopper(stopper.get());
 			parser.set_stemming_strategy(getQueryParserStemStrategy(spc.stem_strategy));
 			parser.set_stemmer(Xapian::Stem(spc.stem_language));
@@ -505,7 +505,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 			} else {
 				parser.add_prefix("_", field_spc.prefix);
 			}
-			auto stopper = getStopper(field_spc.language);
+			const auto& stopper = getStopper(field_spc.language);
 			parser.set_stopper(stopper.get());
 			parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 			parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
