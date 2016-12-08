@@ -745,15 +745,14 @@ Database::reopen()
 
 #ifdef XAPIAND_DATA_STORAGE
 		if (local) {
-			if (flags & DB_DATA_STORAGE) {
-				// WAL required on a local database, open it.
+			if (flags & DB_NOSTORAGE) {
+				writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
+				storages.push_back(std::make_unique<DataStorage>(this));
+			} else {
 				auto storage = std::make_unique<DataStorage>(this);
 				storage->volume = storage->highest_volume(e.path);
 				storage->open(e.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
 				writable_storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
-				storages.push_back(std::make_unique<DataStorage>(this));
-			} else {
-				writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 				storages.push_back(std::make_unique<DataStorage>(this));
 			}
 		} else {
@@ -1687,7 +1686,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if ((flags & DB_VOLATILE) == DB_VOLATILE) values.push_back("DB_VOLATILE");
 		if ((flags & DB_REPLICATION) == DB_REPLICATION) values.push_back("DB_REPLICATION");
 		if ((flags & DB_NOWAL) == DB_NOWAL) values.push_back("DB_NOWAL");
-		if ((flags & DB_DATA_STORAGE) == DB_DATA_STORAGE) values.push_back("DB_DATA_STORAGE");
+		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
 		return join_string(values, " | ");
 	}().c_str());
 

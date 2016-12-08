@@ -158,7 +158,7 @@ constexpr int DB_INIT_REF     = 0x08; // Initializes the writable index in the d
 constexpr int DB_VOLATILE     = 0x10; // Always drop the database from the database pool as soon as possible
 constexpr int DB_REPLICATION  = 0x20; // Use conditional pop in the queue, only pop when replication is done
 constexpr int DB_NOWAL        = 0x40; // Disable open wal file
-constexpr int DB_DATA_STORAGE = 0x80; // Enable separate data storage file for the database
+constexpr int DB_NOSTORAGE    = 0x80; // Disable separate data storage file for the database
 
 
 struct similar_field_t {
