@@ -129,6 +129,14 @@ FieldParser::parse(size_t lvl_max)
 						memset(offs, 0, sizeof(offs));
 						lvl = 0;
 						break;
+					case '\0':
+						lens[lvl] = len_field;
+						offs[lvl] = off_field;
+						len_field = len_field_colon = 0;
+						off_field = off_field_colon = nullptr;
+						return;
+					case ' ':
+						break;
 					case TOKEN_DOT:
 						if (*(currentSymbol + 1) == TOKEN_DOT) {
 							lens[lvl] = len_field;
@@ -143,14 +151,6 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
-					case '\0':
-						lens[lvl] = len_field;
-						offs[lvl] = off_field;
-						len_field = len_field_colon = 0;
-						off_field = off_field_colon = nullptr;
-						return;
-					case ' ':
-						break;
 					default:
 						++len_field;
 						++len_field_colon;
@@ -254,17 +254,6 @@ FieldParser::parse(size_t lvl_max)
 						currentState = FieldParser::State::END;
 						break;
 
-					case TOKEN_DOT:
-						if (*(currentSymbol + 1) == TOKEN_DOT) {
-							currentState = FieldParser::State::DOT_DOT_INIT;
-							range = Range::closed;
-							if (++lvl > lvl_max) {
-								THROW(FieldParserError, "Too many levels!");
-							}
-							++currentSymbol;
-							break;
-						}
-
 					case TOKEN_COLON:
 						currentState = FieldParser::State::VALUE_INIT;
 						off_values = currentSymbol + 1;
@@ -291,6 +280,16 @@ FieldParser::parse(size_t lvl_max)
 						lvl = 0;
 						break;
 
+					case TOKEN_DOT:
+						if (*(currentSymbol + 1) == TOKEN_DOT) {
+							currentState = FieldParser::State::DOT_DOT_INIT;
+							range = Range::closed;
+							if (++lvl > lvl_max) {
+								THROW(FieldParserError, "Too many levels!");
+							}
+							++currentSymbol;
+							break;
+						}
 					default:
 						THROW(FieldParserError, "Unexpected symbol: '%c'", *currentSymbol);
 				}

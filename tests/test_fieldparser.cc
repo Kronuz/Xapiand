@@ -107,6 +107,8 @@ int test_field_parser() {
 		{ "(100,200]", "", "", "100", "", "", "100", "200", "(100,200]", FieldParser::Range::closed_right },
 		{ "[100,200)", "", "", "100", "", "", "100", "200", "[100,200)", FieldParser::Range::closed_left },
 		{ "(100,200)", "", "", "100", "", "", "100", "200", "(100,200)", FieldParser::Range::open },
+
+		{ "nested.field.name:value", "nested.field.name:", "nested.field.name", "value", "", "", "", "", "value", FieldParser::Range::none },
 	};
 
 	int count = 0;
