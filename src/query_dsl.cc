@@ -36,6 +36,12 @@
 #include "utils.h"                             // for repr, startswith
 
 
+#ifndef L_QUERY
+#define L_QUERY_DEFINED
+#define L_QUERY(args...)
+#endif
+
+
 const std::unordered_map<std::string, Xapian::Query::op> QueryDSL::ops_map({
 	{ "_and",           Xapian::Query::OP_AND           },
 	{ "_or",            Xapian::Query::OP_OR            },
@@ -216,6 +222,7 @@ QueryDSL::get_query(const MsgPack& obj)
 	}
 
 	auto query = process(Xapian::Query::OP_AND, "", obj);
+	L_QUERY(this, "query = " CYAN "%s" NO_COL "\n" DARK_GREY "%s" NO_COL, query.get_description().c_str(), repr(query.serialise()).c_str());
 	return query;
 }
 
@@ -238,6 +245,8 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 			for (auto const& field : obj) {
 				auto field_name = field.as_string();
 				auto const& o = obj.at(field);
+
+				L_QUERY(this, BLUE "%s = %s" NO_COL, field_name.c_str(), o.to_string().c_str());
 
 				Xapian::Query query;
 
@@ -541,3 +550,9 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 			return Xapian::Query(prefixed(field_value, field_spc.prefix), wqf);
 	}
 }
+
+
+#ifdef L_QUERY_DEFINED
+#undef L_QUERY_DEFINED
+#undef L_QUERY
+#endif
