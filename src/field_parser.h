@@ -109,29 +109,29 @@ public:
 	}
 
 	std::string get_value(int l=0) const {
-		if (offs[l]) {
+		if (l <= lvl && offs[l]) {
 			return std::string(offs[l], lens[l]);
 		}
 		return std::string();
 	}
 
 	bool is_double_quoted_value(int l=0) const noexcept {
-		return offs_double_quote[l] != 0;
+		return l <= lvl && offs_double_quote[l] != 0;
 	}
 
 	bool is_single_quoted_value(int l=0) const noexcept {
-		return offs_double_quote[l] != 0;
+		return l <= lvl && offs_double_quote[l] != 0;
 	}
 
 	std::string get_double_quoted_value(int l=0) const {
-		if (offs_double_quote[l]) {
+		if (l <= lvl && offs_double_quote[l]) {
 			return std::string(offs_double_quote[l], lens_double_quote[l]);
 		}
 		return std::string();
 	}
 
 	std::string get_single_quoted_value(int l=0) const {
-		if (offs_single_quote[l]) {
+		if (l <= lvl && offs_single_quote[l]) {
 			return std::string(offs_single_quote[l], lens_single_quote[l]);
 		}
 		return std::string();
@@ -142,15 +142,15 @@ public:
 	}
 
 	std::string get_start() const {
-		if (is_range() && offs[0]) {
-			return std::string(offs[0], lens[0]);
+		if (is_range()) {
+			return get_value(0);
 		}
 		return std::string();
 	}
 
 	std::string get_end() const {
-		if (is_range() && offs[1]) {
-			return std::string(offs[1], lens[1]);
+		if (is_range()) {
+			return get_value(1);
 		}
 		return std::string();
 	}
