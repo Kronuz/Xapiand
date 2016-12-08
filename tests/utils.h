@@ -70,6 +70,7 @@
 #if (TESTING_LOGS == 1)
 #  include "../src/log.h"
 #  define RETURN(x) { Log::finish(); return x; }
+#  define INIT_LOG Log::handlers.push_back(std::make_unique<StderrLogger>());
 #else
 template <typename... Args>
 inline void log(std::string fmt, Args&&... args) {
@@ -90,6 +91,7 @@ inline void log(std::string fmt, Args&&... args) {
 #  define L_EMERG(obj, args...) log(args)
 #  define L_EXC(obj, args...) log(args)
 #  define RETURN(x) { return x; }
+#  define INIT_LOG
 #endif
 
 
@@ -113,13 +115,6 @@ bool read_file_contents(const std::string& filename, std::string* contents);
 #include "../src/manager.h"
 #include "../src/database_handler.h"
 
-
-/*
- * The Global Logger handler
- */
-
-#define INIT_LOG auto& handlers = Log::handlers; \
-				 handlers.push_back(std::make_unique<StderrLogger>()); \
 
 /*
  *	The database used in the test is local
