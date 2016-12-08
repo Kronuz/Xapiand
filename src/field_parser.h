@@ -108,29 +108,29 @@ public:
 		return std::string(off_values, fstr.size() - (off_values - fstr.data()));
 	}
 
-	std::string get_value(int l=0) const {
+	std::string get_value(size_t l=0) const {
 		if (l <= lvl && offs[l]) {
 			return std::string(offs[l], lens[l]);
 		}
 		return std::string();
 	}
 
-	bool is_double_quoted_value(int l=0) const noexcept {
+	bool is_double_quoted_value(size_t l=0) const noexcept {
 		return l <= lvl && offs_double_quote[l] != 0;
 	}
 
-	bool is_single_quoted_value(int l=0) const noexcept {
+	bool is_single_quoted_value(size_t l=0) const noexcept {
 		return l <= lvl && offs_double_quote[l] != 0;
 	}
 
-	std::string get_double_quoted_value(int l=0) const {
+	std::string get_double_quoted_value(size_t l=0) const {
 		if (l <= lvl && offs_double_quote[l]) {
 			return std::string(offs_double_quote[l], lens_double_quote[l]);
 		}
 		return std::string();
 	}
 
-	std::string get_single_quoted_value(int l=0) const {
+	std::string get_single_quoted_value(size_t l=0) const {
 		if (l <= lvl && offs_single_quote[l]) {
 			return std::string(offs_single_quote[l], lens_single_quote[l]);
 		}
