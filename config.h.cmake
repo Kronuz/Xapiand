@@ -269,7 +269,7 @@
 #cmakedefine PATH_TESTS "@PATH_TESTS@"
 
 /* Path for stopwords files */
-#cmakedefine PATH_STOP_WORDS "@PATH_STOP_WORDS@"
+#cmakedefine PATH_STOPWORDS "@PATH_STOPWORDS@"
 
 /* Defines for cross-platform UUID/GUID generation */
 #cmakedefine GUID_LIBUUID @GUID_LIBUUID@
