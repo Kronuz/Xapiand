@@ -27,7 +27,7 @@
 #include "utils.h"
 
 
-const std::string path_test_sort = std::string(PACKAGE_PATH_TEST) + "/examples/sort/";
+const std::string path_test_sort = std::string(PATH_TESTS) + "/examples/sort/";
 
 
 const sort_t string_levens_tests[] {

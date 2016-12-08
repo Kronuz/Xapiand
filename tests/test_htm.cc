@@ -28,7 +28,7 @@
 #include <algorithm>
 
 
-const std::string path_test_htm = std::string(PACKAGE_PATH_TEST) + "/examples/htm/";
+const std::string path_test_htm = std::string(PATH_TESTS) + "/examples/htm/";
 const std::string python_htm = "python_files/htm/";
 
 

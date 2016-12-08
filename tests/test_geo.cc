@@ -25,7 +25,7 @@
 #include "utils.h"
 
 
-const std::string path_test_geo = std::string(PACKAGE_PATH_TEST) + "/examples/json/";
+const std::string path_test_geo = std::string(PATH_TESTS) + "/examples/json/";
 
 
 const test_geo_t geo_range_tests[] {

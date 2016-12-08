@@ -7,7 +7,7 @@ set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
 set (PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
 set (PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set (PACKAGE_TARNAME "${PROJECT_NAME}")
-set (PACKAGE_PATH_TEST "${PROJECT_SOURCE_DIR}/tests")
+set (PATH_TESTS "${PROJECT_SOURCE_DIR}/tests")
 
 
 ########################################################################
@@ -541,9 +541,9 @@ if (BUILD_TESTS)
 		sort storage string_metric threadpool url_parser wal wkt_parser)
 		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 		add_executable (${PROJECT_TEST}
-			${PACKAGE_PATH_TEST}/test_${VAR_TEST}.cc
-			${PACKAGE_PATH_TEST}/set_${VAR_TEST}_test.cc
-			${PACKAGE_PATH_TEST}/utils.cc
+			${PATH_TESTS}/test_${VAR_TEST}.cc
+			${PATH_TESTS}/set_${VAR_TEST}_test.cc
+			${PATH_TESTS}/utils.cc
 			$<TARGET_OBJECTS:XAPIAND_OBJ>
 			$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>
 			$<TARGET_OBJECTS:LIBEV_OBJ>

@@ -266,10 +266,10 @@
 #cmakedefine XAPIAND_TRACEBACKS @XAPIAND_TRACEBACKS@
 
 /* Path for test files */
-#cmakedefine PACKAGE_PATH_TEST "@PACKAGE_PATH_TEST@"
+#cmakedefine PATH_TESTS "@PATH_TESTS@"
 
 /* Path for stopwords files */
-#cmakedefine PACKAGE_PATH_STOP_WORDS "@PACKAGE_PATH_STOP_WORDS@"
+#cmakedefine PATH_STOP_WORDS "@PATH_STOP_WORDS@"
 
 /* Defines for cross-platform UUID/GUID generation */
 #cmakedefine GUID_LIBUUID @GUID_LIBUUID@

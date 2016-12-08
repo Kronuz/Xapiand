@@ -29,7 +29,7 @@
 #include <time.h>
 
 
-const std::string path_test_wkt = std::string(PACKAGE_PATH_TEST) + "/examples/wkt/";
+const std::string path_test_wkt = std::string(PATH_TESTS) + "/examples/wkt/";
 const std::string python_wkt = "python_files/wkt/";;
 
 

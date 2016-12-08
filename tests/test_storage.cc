@@ -27,7 +27,7 @@
 
 
 
-const std::string path_test_storage = std::string(PACKAGE_PATH_TEST) + "/examples/";
+const std::string path_test_storage = std::string(PATH_TESTS) + "/examples/";
 
 
 #pragma pack(push, 1)
