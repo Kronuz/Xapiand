@@ -220,10 +220,8 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 {
 	L_CALL(this, "DatabaseHandler::get_document_term(%s)", repr(term_id).c_str());
 
-	Xapian::Query query(term_id);
-
 	DatabaseHandler::lock_database lk(this);
-	Xapian::docid did = database->find_document(query);
+	Xapian::docid did = database->find_document(term_id);
 	return Document(this, database->get_document(did));
 }
 
@@ -695,8 +693,9 @@ DatabaseHandler::get_document(const std::string& doc_id)
 	schema = get_schema();
 
 	auto field_spc = schema->get_data_id();
+	auto term_id = prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix);
 
-	return get_document_term(prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix));
+	return get_document_term(term_id);
 }
 
 
@@ -708,11 +707,10 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 	schema = get_schema();
 
 	auto field_spc = schema->get_data_id();
-
-	Xapian::Query query(prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix));
+	auto term_id = prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix);
 
 	DatabaseHandler::lock_database lk(this);
-	return database->find_document(query);
+	return database->find_document(term_id);
 }
 
 

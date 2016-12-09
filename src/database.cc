@@ -1126,9 +1126,9 @@ Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, b
 
 
 Xapian::docid
-Database::find_document(const Xapian::Query& query)
+Database::find_document(const std::string& term_id)
 {
-	L_CALL(this, "Database::find_document(<quer>)");
+	L_CALL(this, "Database::find_document(%s)", repr(term_id).c_str());
 
 	Xapian::docid did = 0;
 
@@ -1136,13 +1136,11 @@ Database::find_document(const Xapian::Query& query)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			Xapian::Enquire enquire(*db);
-			enquire.set_query(query);
-			auto mset = enquire.get_mset(0, 1);
-			if (mset.empty()) {
+			Xapian::PostingIterator it = db->postlist_begin(term_id);
+			if (it == db->postlist_end(term_id)) {
 				THROW(DocNotFoundError, "Document not found");
 			}
-			did = *mset.begin();
+			did = *it;
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
