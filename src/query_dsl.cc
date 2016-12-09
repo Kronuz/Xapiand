@@ -424,7 +424,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 
 
 Xapian::Query
-QueryDSL::get_in_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+QueryDSL::get_in_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount, int, bool, bool)
 {
 	L_CALL(this, "QueryDSL::get_in_query(<field_spc>, %d, %s)", (int)op, repr(obj.to_string()).c_str());
 
