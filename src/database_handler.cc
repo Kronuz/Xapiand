@@ -660,6 +660,9 @@ DatabaseHandler::get_document(const std::string& doc_id)
 	schema = get_schema();
 
 	auto field_spc = schema->get_data_id();
+	if (field_spc.sep_types[2] == FieldType::EMPTY) {
+		THROW(DocNotFoundError, "Document not found");
+	}
 	auto term_id = prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix);
 
 	return get_document_term(term_id);
@@ -674,6 +677,9 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 	schema = get_schema();
 
 	auto field_spc = schema->get_data_id();
+	if (field_spc.sep_types[2] == FieldType::EMPTY) {
+		THROW(DocNotFoundError, "Document not found");
+	}
 	auto term_id = prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix);
 
 	DatabaseHandler::lock_database lk(this);
