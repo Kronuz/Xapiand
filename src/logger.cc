@@ -299,15 +299,17 @@ Log::str_format(bool stacked, int priority, const std::string& exc, const char *
 			snprintf(buffer, BUFFER_SIZE, " [%p]", obj);
 			result += buffer;
 		}
+#else
+		(void)obj;
 #endif
 	}
-#ifdef XAPIAND_TRACEBACKS
-	auto location = (priority >= LOCATION_LOG_LEVEL) ? " " + std::string(file) + ":" + std::to_string(line) : std::string();
-	result += location + ": ";
-#else
+
 	result += " ";
-	(void)obj;
+
+#ifdef LOG_LOCATION
+	result += " " + std::string(file) + ":" + std::to_string(line) + ": ";
 #endif
+
 	if (stacked) {
 		result += STACKED_INDENT;
 	}
