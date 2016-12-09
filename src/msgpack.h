@@ -795,7 +795,7 @@ inline void MsgPack::_deinit() {
 
 inline void MsgPack::_reserve_map(size_t rsize) {
 	if (_body->_capacity <= static_cast<ssize_t>(rsize)) {
-		size_t nsize = _body->_capacity >= MSGPACK_MAP_INIT_SIZE ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_MAP_INIT_SIZE;
+		size_t nsize = _body->_capacity < MSGPACK_MAP_INIT_SIZE ? MSGPACK_MAP_INIT_SIZE : _body->_capacity * MSGPACK_GROWTH_FACTOR;
 		while (nsize < rsize) {
 			nsize *= MSGPACK_GROWTH_FACTOR;
 		}
