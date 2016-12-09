@@ -709,11 +709,12 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 		if (store.second.empty()) {
 			info["_blob"] = nullptr;
 		} else {
-			auto location = database->storage_location(store.second);
+			auto locator = database->storage_unserialise_locator(store.second);
 			info["_blob"] = {
 				{"_type", "stored"},
-				{"_volume", location.first},
-				{"_offset", location.second},
+				{"_volume", std::get<0>(locator)},
+				{"_offset", std::get<1>(locator)},
+				{"_size", std::get<2>(locator)},
 			};
 		}
 	} else

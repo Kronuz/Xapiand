@@ -1179,31 +1179,50 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 
 #ifdef XAPIAND_DATA_STORAGE
-std::pair<ssize_t, ssize_t>
-Database::storage_location(const std::string& store)
+std::tuple<ssize_t, size_t, size_t>
+Database::storage_unserialise_locator(const std::string& store)
 {
-	ssize_t volume, offset;
+	ssize_t volume;
+	size_t offset, size;
 
 	const char *p = store.data();
 	const char *p_end = p + store.size();
 	if (*p++ != STORAGE_BIN_HEADER_MAGIC) {
-		return std::make_pair(-1, -1);
+		return std::make_tuple(-1, 0, 0);
 	}
 	try {
 		volume = unserialise_length(&p, p_end);
 	} catch (Xapian::SerialisationError) {
-		return std::make_pair(-1, -1);
+		return std::make_tuple(-1, 0, 0);
 	}
 	try {
 		offset = unserialise_length(&p, p_end);
 	} catch (Xapian::SerialisationError) {
-		return std::make_pair(-1, -1);
+		return std::make_tuple(-1, 0, 0);
+	}
+	try {
+		size = unserialise_length(&p, p_end);
+	} catch (Xapian::SerialisationError) {
+		return std::make_tuple(-1, 0, 0);
 	}
 	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) {
-		return std::make_pair(-1, -1);
+		return std::make_tuple(-1, 0, 0);
 	}
 
-	return std::make_pair(volume, offset);
+	return std::make_tuple(volume, offset, size);
+}
+
+
+std::string
+Database::storage_serialise_locator(ssize_t volume, size_t offset, size_t size)
+{
+	std::string ret;
+	ret.append(std::string(1, STORAGE_BIN_HEADER_MAGIC));
+	ret.append(serialise_length(volume));
+	ret.append(serialise_length(offset));
+	ret.append(serialise_length(size));
+	ret.append(std::string(1, STORAGE_BIN_FOOTER_MAGIC));
+	return ret;
 }
 
 
@@ -1212,10 +1231,10 @@ Database::storage_get(const std::unique_ptr<DataStorage>& storage, const std::st
 {
 	L_CALL(this, "Database::storage_get_blob()");
 
-	auto location = storage_location(store);
+	auto locator = storage_unserialise_locator(store);
 
-	storage->open(DATA_STORAGE_PATH + std::to_string(location.first), STORAGE_OPEN);
-	storage->seek(static_cast<uint32_t>(location.second));
+	storage->open(DATA_STORAGE_PATH + std::to_string(std::get<0>(locator)), STORAGE_OPEN);
+	storage->seek(static_cast<uint32_t>(std::get<1>(locator)));
 
 	return storage->read();
 }
@@ -1301,7 +1320,7 @@ Database::storage_push_blob(Xapian::Document& doc)
 					storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
 				}
 			}
-			auto stored_locator = std::string(1, STORAGE_BIN_HEADER_MAGIC) + serialise_length(storage->volume) + serialise_length(offset) + std::string(1, STORAGE_BIN_FOOTER_MAGIC);
+			auto stored_locator = storage_serialise_locator(storage->volume, offset, blob.size());
 			doc.set_data(join_data(true, stored_locator, split_data_obj(data), ""));
 		} else {
 			doc.set_data(join_data(store.first, store.second, split_data_obj(data), ""));

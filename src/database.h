@@ -295,7 +295,8 @@ public:
 	bool reopen();
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::pair<ssize_t, ssize_t> storage_location(const std::string& store);
+	std::tuple<ssize_t, size_t, size_t> storage_unserialise_locator(const std::string& store);
+	std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size);
 	std::string storage_get_blob(const Xapian::Document& doc);
 #endif /* XAPIAND_DATA_STORAGE */
 
