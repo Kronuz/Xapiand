@@ -440,6 +440,31 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 						accept_sets.insert(std::make_pair(value, self->accept_set));
 					}
 					break;
+				case xxh64::hash("x-http-method-override"):
+					switch (xxh64::hash(upper_string(value))) {
+						case xxh64::hash("PUT"):
+							p->method = HTTP_PUT;
+							break;
+						case xxh64::hash("PATCH"):
+							p->method = HTTP_PATCH;
+							break;
+						case xxh64::hash("MERGE"):
+							p->method = HTTP_MERGE;
+							break;
+						case xxh64::hash("DELETE"):
+							p->method = HTTP_DELETE;
+							break;
+						case xxh64::hash("GET"):
+							p->method = HTTP_GET;
+							break;
+						case xxh64::hash("POST"):
+							p->method = HTTP_POST;
+							break;
+						default:
+							p->http_errno = HPE_INVALID_METHOD;
+							break;
+					}
+					break;
 			}
 
 			self->header_name.clear();
