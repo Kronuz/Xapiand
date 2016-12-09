@@ -197,11 +197,11 @@ inline static std::string readable_index(TypeIndex index) noexcept {
 		case TypeIndex::GLOBAL_TERMS:               return "global_terms";
 		case TypeIndex::TERMS:                      return "terms";
 		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES:  return "global_terms,field_values";
-		case TypeIndex::GLOBAL_TERMS_FIELD_ALL:     return "global_terms,field"; 
+		case TypeIndex::GLOBAL_TERMS_FIELD_ALL:     return "global_terms,field";
 		case TypeIndex::GLOBAL_VALUES:              return "global_values";
 		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS:  return "global_values,field_terms";
 		case TypeIndex::VALUES:                     return "values";
-		case TypeIndex::GLOBAL_VALUES_FIELD_ALL:    return "global_values,field"; 
+		case TypeIndex::GLOBAL_VALUES_FIELD_ALL:    return "global_values,field";
 		case TypeIndex::GLOBAL_ALL:                 return "global";
 		case TypeIndex::GLOBAL_ALL_FIELD_TERMS:     return "global,field_terms";
 		case TypeIndex::GLOBAL_ALL_FIELD_VALUES:    return "global,field_values";
