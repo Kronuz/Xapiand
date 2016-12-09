@@ -733,11 +733,11 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 
 	auto document = get_document(doc_id);
 
-	info[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME);
+	info[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME) || document.get_value(ID_FIELD_NAME);
 	info[RESERVED_DATA] = document.get_obj();
 
-	auto ct_type_str = document.get_field(CT_FIELD_NAME).as_string();
-	info["_content_type"] = ct_type_str.empty() ? "unknown" : ct_type_str;
+	auto ct_type_mp = document.get_field(CT_FIELD_NAME);
+	info["_content_type"] = ct_type_mp ? ct_type_mp.as_string() : "unknown";
 
 #ifdef XAPIAND_DATA_STORAGE
 	auto store = document.get_store();
@@ -1052,9 +1052,6 @@ Document::get_field(const std::string& slot_name) const
 				auto& value_ = value.at(*itv);
 				if (!value_.empty()) {
 					return value_;
-				} else {
-					// there was _value, but it's empty
-					return get_value(slot_name);
 				}
 			}
 		}
@@ -1063,5 +1060,5 @@ Document::get_field(const std::string& slot_name) const
 		}
 	}
 
-	return get_value(slot_name);
+	return MsgPack(MsgPack::Type::NIL);
 }
