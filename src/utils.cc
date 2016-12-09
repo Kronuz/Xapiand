@@ -268,7 +268,7 @@ char* normalize_path(const std::string& src, char* dst, bool slashed) {
 
 std::string normalize_path(const std::string& src, bool slashed) {
 	std::vector<char> dst;
-	dst.reserve(src.size() + 1);
+	dst.resize(src.size() + 2);
 	const char* src_str = src.data();
 	return normalize_path(src_str, src_str + src.length(), &dst[0], slashed);
 }
