@@ -193,7 +193,8 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 				return (*processor)["on_put"](data_, old_data);
 			}
 
-			case HTTP_PATCH: {
+			case HTTP_PATCH:
+			case HTTP_MERGE: {
 				MsgPack old_data;
 				try {
 					auto document = get_document_term(term_id);
