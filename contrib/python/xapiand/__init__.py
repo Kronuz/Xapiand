@@ -94,6 +94,8 @@ class Xapiand(object):
     go-between for API calls to it
     """
 
+    DoesNotExist = DoesNotExist
+
     session = requests.Session()
     session.mount('http://', requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100))
     _methods = dict(
@@ -188,7 +190,7 @@ class Xapiand(object):
 
         if res.status_code == 404 and action_request in ('patch', 'delete', 'get'):
             if default is NA:
-                raise DoesNotExist
+                raise self.DoesNotExist
             return default
         else:
             res.raise_for_status()

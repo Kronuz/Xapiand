@@ -33,25 +33,36 @@ from django.utils.importlib import import_module
 from django.core.exceptions import ImproperlyConfigured
 from django.utils import six
 
-from xapiand import Xapiand
+try:
+    from dfw.contrib.xapiand import Xapiand
+except ImportError:
+    from xapiand import Xapiand
 
 
 DOCUMENT_TAGS_FIELD = 'tags'
 DOCUMENT_AC_FIELD = 'ac'
-KEY_FIELD_VALUE = '_value'
-KEY_FIELD_WEIGHT = '_weight'
-KEY_FIELD_INDEX = '_index'
-KEY_FIELD_STORE = '_store'
-NONE = 'none'
-ALL = 'all'
-ALL_TERMS = 'terms'
-ALL_VALUES = 'values'
-FIELD_ALL = 'field_all'
-FIELD_TERMS = 'field_terms'
-FIELD_VALUES = 'field_values'
-GLOBAL_ALL = 'global_all'
-GLOBAL_TERMS = 'global_terms'
-GLOBAL_VALUES = 'global_values'
+
+RESERVED_VALUE = '_value'
+RESERVED_WEIGHT = '_weight'
+RESERVED_INDEX = '_index'
+RESERVED_STORE = '_store'
+
+NONE = "none"
+FIELD_TERMS = "field_terms"
+FIELD_VALUES = "field_values"
+FIELD_ALL = "field"
+GLOBAL_TERMS = "global_terms"
+TERMS = "terms"
+GLOBAL_TERMS_FIELD_VALUES = "global_terms,field_values"
+GLOBAL_TERMS_FIELD_ALL = "global_terms,field"
+GLOBAL_VALUES = "global_values"
+GLOBAL_VALUES_FIELD_TERMS = "global_values,field_terms"
+VALUES = "values"
+GLOBAL_VALUES_FIELD_ALL = "global_values,field"
+GLOBAL_ALL = "global"
+GLOBAL_ALL_FIELD_TERMS = "global,field_terms"
+GLOBAL_ALL_FIELD_VALUES = "global,field_values"
+ALL = "all"
 
 
 class XapianSearchResults:
@@ -130,7 +141,7 @@ class XapianSearchBackend(BaseSearchBackend):
             value = [x for x in value if x is not None]
             if len(value) == 0:
                 return
-        document_json[field_name] = {KEY_FIELD_VALUE: value, KEY_FIELD_INDEX: index_type, KEY_FIELD_WEIGHT: weight}
+        document_json[field_name] = {RESERVED_VALUE: value, RESERVED_INDEX: index_type, RESERVED_WEIGHT: weight}
 
     def updater(self, index, obj, commit):
             if not obj.pk:
@@ -218,7 +229,7 @@ class XapianSearchBackend(BaseSearchBackend):
                         pass
 
                     if 'stored' in field and in_json:
-                        document_json.setdefault(_field_name, {KEY_FIELD_STORE: field['stored']})
+                        document_json.setdefault(_field_name, {RESERVED_STORE: field['stored']})
 
             model = obj._meta.model
             if model._deferred:
@@ -244,7 +255,10 @@ class XapianSearchBackend(BaseSearchBackend):
         document_id = get_identifier(obj)
         client = Xapiand(ip=settings.XAPIAN_SERVER)
         for endpoint in endpoints:
-            client.delete(endpoint, id=document_id)
+            try:
+                client.delete(endpoint, id=document_id)
+            except client.DoesNotExist:
+                pass
 
     def clear(self, models=[], commit=True):
         pass
