@@ -514,7 +514,7 @@ HttpClient::run()
 		}
 	} catch (const DocNotFoundError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
-		error.assign("Document not found");
+		error.assign(http_status_str(error_code));
 		// L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const MissingTypeError& exc) {
 		error_code = HTTP_STATUS_PRECONDITION_FAILED;
@@ -525,8 +525,8 @@ HttpClient::run()
 		error.assign(exc.what());
 		// L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const CheckoutError& exc) {
-		error_code = HTTP_STATUS_BAD_GATEWAY;
-		error.assign(exc.what());
+		error_code = HTTP_STATUS_NOT_FOUND;
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
 		// L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
@@ -1200,10 +1200,11 @@ HttpClient::search_view(enum http_method method)
 			mset = db_handler.get_mset(*query_field, nullptr, nullptr, suggestions);
 		}
 	} catch (const CheckoutError&) {
-		/* At the moment when the endpoint it not exist and it is chunck it will return 200 response
-		 * and zero matches this behavior may change in the future for instance ( return 404 )
-		 * if is not chunk return 404
-		 */
+		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
+		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
+		if (!chunked) {
+			throw;
+		}
 	}
 
 	L_SEARCH(this, "Suggested queries: %s", [&suggestions]() {
@@ -1221,7 +1222,7 @@ HttpClient::search_view(enum http_method method)
 		enum http_status error_code = HTTP_STATUS_NOT_FOUND;
 		MsgPack err_response = {
 			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, "No document found" }
+			{ RESPONSE_MESSAGE, http_status_str(error_code) }
 		};
 		write_http_response(error_code, err_response);
 
