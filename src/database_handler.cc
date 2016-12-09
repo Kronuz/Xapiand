@@ -45,69 +45,6 @@
 #include "v8/v8pp.h"                        // for Processor::Function, Proc...
 
 
-std::string
-join_data(const std::string& obj, const std::string& blob)
-{
-	L_CALL(nullptr, "::join_data(<obj>, <blob>)");
-
-	auto len = serialise_length(obj.size());
-	std::string data;
-	data.reserve(1 + len.size() + obj.size() + 1 + blob.size());
-	data.push_back(DATABASE_DATA_HEADER_MAGIC);
-	data.append(len);
-	data.append(obj);
-	data.push_back(DATABASE_DATA_FOOTER_MAGIC);
-	data.append(blob);
-	return data;
-}
-
-
-std::string
-split_data_obj(const std::string& data)
-{
-	L_CALL(nullptr, "::split_data_obj(<data>)");
-
-	size_t length;
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) {
-		return std::string();
-	}
-
-	try {
-		length = unserialise_length(&p, p_end, true);
-	} catch (Xapian::SerialisationError) {
-		return std::string();
-	}
-
-	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) {
-		return std::string();
-	}
-
-	return std::string(p, length);
-}
-
-
-std::string
-split_data_blob(const std::string& data)
-{
-	L_CALL(nullptr, "::split_data_blob(<data>)");
-
-	size_t length;
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return data;
-	try {
-		length = unserialise_length(&p, p_end, true);
-	} catch (Xapian::SerialisationError) {
-		return data;
-	}
-	p += length;
-	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) return data;
-	return std::string(p, p_end - p);
-}
-
-
 DatabaseHandler::lock_database::lock_database(DatabaseHandler* db_handler_)
 	: db_handler(db_handler_),
 	  database(nullptr)

@@ -63,6 +63,71 @@
 #define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
 
 
+////////////////////////////////////////////////////////////////////////////////
+
+std::string
+join_data(const std::string& obj, const std::string& blob)
+{
+	L_CALL(nullptr, "::join_data(<obj>, <blob>)");
+
+	auto len = serialise_length(obj.size());
+	std::string data;
+	data.reserve(1 + len.size() + obj.size() + 1 + blob.size());
+	data.push_back(DATABASE_DATA_HEADER_MAGIC);
+	data.append(len);
+	data.append(obj);
+	data.push_back(DATABASE_DATA_FOOTER_MAGIC);
+	data.append(blob);
+	return data;
+}
+
+
+std::string
+split_data_obj(const std::string& data)
+{
+	L_CALL(nullptr, "::split_data_obj(<data>)");
+
+	size_t length;
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	if (*p++ != DATABASE_DATA_HEADER_MAGIC) {
+		return std::string();
+	}
+
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (Xapian::SerialisationError) {
+		return std::string();
+	}
+
+	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) {
+		return std::string();
+	}
+
+	return std::string(p, length);
+}
+
+
+std::string
+split_data_blob(const std::string& data)
+{
+	L_CALL(nullptr, "::split_data_blob(<data>)");
+
+	size_t length;
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return data;
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (Xapian::SerialisationError) {
+		return data;
+	}
+	p += length;
+	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) return data;
+	return std::string(p, p_end - p);
+}
+
+
 //  ____        _        _                  __        ___    _
 // |  _ \  __ _| |_ __ _| |__   __ _ ___  __\ \      / / \  | |
 // | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ \ /\ / / _ \ | |
@@ -1050,9 +1115,12 @@ Database::storage_pull_data(Xapian::Document& doc)
 	}
 
 	ssize_t volume, offset;
-	std::string data = doc.get_data();
-	const char *p = data.data();
-	const char *p_end = p + data.size();
+
+	auto db_data = doc.get_data();
+	auto db_blob = split_data_blob(db_data);
+
+	const char *p = db_blob.data();
+	const char *p_end = p + db_blob.size();
 	if (*p++ != STORAGE_BIN_HEADER_MAGIC) return;
 	try {
 		volume = unserialise_length(&p, p_end);
@@ -1068,7 +1136,8 @@ Database::storage_pull_data(Xapian::Document& doc)
 	auto& endpoint = endpoints[subdatabase];
 	storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN);
 	storage->seek(static_cast<uint32_t>(offset));
-	data = storage->read();
+	blob = storage->read();
+	auto data = join_data(split_data_obj(db_data), blob);
 	doc.set_data(data);
 }
 
@@ -1084,10 +1153,15 @@ Database::storage_push_data(Xapian::Document& doc)
 	}
 
 	uint32_t offset;
-	std::string data = doc.get_data();
+	auto data = doc.get_data();
+	auto blob = split_data_blob(data);
+	if (!blob.size()) {
+		return;
+	}
+
 	while (true) {
 		try {
-			offset = storage->write(data);
+			offset = storage->write(blob);
 			break;
 		} catch (StorageEOF) {
 			++storage->volume;
@@ -1095,9 +1169,10 @@ Database::storage_push_data(Xapian::Document& doc)
 			storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
 		}
 	}
-	char h = STORAGE_BIN_HEADER_MAGIC;
-	char f = STORAGE_BIN_FOOTER_MAGIC;
-	doc.set_data(std::string(&h, 1) + serialise_length(storage->volume) + serialise_length(offset) + std::string(&f, 1));
+
+	auto db_blob = std::string(1, STORAGE_BIN_HEADER_MAGIC) + serialise_length(storage->volume) + serialise_length(offset) + std::string(1, STORAGE_BIN_FOOTER_MAGIC);
+	auto db_data = join_data(split_data_obj(data), db_blob);
+	doc.set_data(db_data);
 }
 
 void

@@ -136,11 +136,6 @@ public:
 };
 
 
-std::string join_data(const std::string& obj, const std::string& blob);
-std::string split_data_obj(const std::string& data);
-std::string split_data_blob(const std::string& data);
-
-
 class Document : public Xapian::Document {
 	friend class DatabaseHandler;
 

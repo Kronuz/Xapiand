@@ -48,6 +48,12 @@
 #include "threadpool.h"         // for TaskQueue
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
 
+
+std::string join_data(const std::string& obj, const std::string& blob);
+std::string split_data_obj(const std::string& data);
+std::string split_data_blob(const std::string& data);
+
+
 class Database;
 class DatabasePool;
 class DatabaseQueue;
