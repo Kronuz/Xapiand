@@ -144,3 +144,8 @@ unserialise_unsigned(const char ** p, const char * end, U * result)
 	*result |= U(static_cast<unsigned char>(*ptr) & 0x7f);
 	return;
 }
+
+std::string unserialise_string(const std::string& data);
+std::string serialise_strings(const std::vector<std::reference_wrapper<const std::string>>& strings);
+std::string unserialise_string_at(size_t at, const char** p, const char* end);
+std::string unserialise_string_at(size_t at, const std::string& data);

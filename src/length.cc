@@ -277,3 +277,54 @@ unserialise_string(const char** p, const char* end) {
 
 	return string;
 }
+
+
+std::string
+unserialise_string(const std::string& data)
+{
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+
+	return unserialise_string(&p, p_end);
+}
+
+
+std::string
+serialise_strings(const std::vector<std::reference_wrapper<const std::string>>& strings)
+{
+	std::string output;
+	for (auto& s : strings) {
+		output.append(serialise_string(s));
+	}
+	return output;
+}
+
+
+std::string
+unserialise_string_at(size_t at, const char** p, const char* end)
+{
+	const char *ptr = *p;
+
+	std::string string;
+	unsigned long long length = 0;
+
+	do {
+		ptr += length;
+		length = unserialise_length(&ptr, end, true);
+	} while(at--);
+
+	string.append(std::string(ptr, length));
+
+	*p = ptr;
+
+	return string;
+}
+
+std::string
+unserialise_string_at(size_t at, const std::string& data)
+{
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+
+	return unserialise_string_at(at, &p, p_end);
+}
