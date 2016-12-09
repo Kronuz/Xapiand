@@ -400,39 +400,48 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 			std::string name = lower_string(self->header_name);
 			std::string value = lower_string(self->header_value);
 
-			if (name.compare("host") == 0) {
-				self->host = self->header_value;
-			} else if (name.compare("expect") == 0 && value.compare("100-continue") == 0) {
-				if (p->content_length > MAX_BODY_SIZE) {
-					self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor));
-					self->close();
-					return 0;
-				}
-				// Respond with HTTP/1.1 100 Continue
-				self->expect_100 = true;
-			} else if (name.compare("content-type") == 0) {
-				self->content_type = value;
-			} else if (name.compare("content-length") == 0) {
-				self->content_length = value;
-			} else if (name.compare("accept") == 0) {
-				try {
-					self->accept_set = accept_sets.at(value);
-				} catch (std::range_error) {
-					std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
-					std::sregex_iterator end;
-					int i = 0;
-					while (next != end) {
-						if (next->length(3)) {
-							self->accept_set.insert(std::make_tuple(stox(std::stod, next->str(3)), i, std::make_pair(next->str(1), next->str(2))));
-						} else {
-							self->accept_set.insert(std::make_tuple(1, i, std::make_pair(next->str(1), next->str(2))));
-						}
-						++next;
-						++i;
+			switch (xxh64::hash(name)) {
+				case xxh64::hash("host"):
+					self->host = self->header_value;
+					break;
+				case xxh64::hash("expect"):
+				case xxh64::hash("100-continue"):
+					if (p->content_length > MAX_BODY_SIZE) {
+						self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor));
+						self->close();
+						return 0;
 					}
-					accept_sets.insert(std::make_pair(value, self->accept_set));
-				}
+					// Respond with HTTP/1.1 100 Continue
+					self->expect_100 = true;
+					break;
+
+				case xxh64::hash("content-type"):
+					self->content_type = value;
+					break;
+				case xxh64::hash("content-length"):
+					self->content_length = value;
+					break;
+				case xxh64::hash("accept"):
+					try {
+						self->accept_set = accept_sets.at(value);
+					} catch (std::range_error) {
+						std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
+						std::sregex_iterator end;
+						int i = 0;
+						while (next != end) {
+							if (next->length(3)) {
+								self->accept_set.insert(std::make_tuple(stox(std::stod, next->str(3)), i, std::make_pair(next->str(1), next->str(2))));
+							} else {
+								self->accept_set.insert(std::make_tuple(1, i, std::make_pair(next->str(1), next->str(2))));
+							}
+							++next;
+							++i;
+						}
+						accept_sets.insert(std::make_pair(value, self->accept_set));
+					}
+					break;
 			}
+
 			self->header_name.clear();
 			self->header_value.clear();
 		}
