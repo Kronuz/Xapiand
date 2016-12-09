@@ -100,7 +100,7 @@ QueryDSL::get_in_type(const MsgPack& obj)
 std::pair<FieldType, MsgPack>
 QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
 {
-	FieldType field_type;
+	FieldType field_type = FieldType::EMPTY;
 	FieldParser fp(range);
 	fp.parse();
 	if (!fp.is_range()) {
