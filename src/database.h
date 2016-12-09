@@ -49,7 +49,8 @@
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
 
 
-std::string join_data(const std::string& obj, const std::string& blob);
+std::string join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob);
+std::pair<bool, std::string> split_data_store(const std::string& data);
 std::string split_data_obj(const std::string& data);
 std::string split_data_blob(const std::string& data);
 
@@ -167,12 +168,12 @@ public:
 
 	Database* database;
 
-	DatabaseWAL(Database* database_);
+	DatabaseWAL(const std::string& base_path_, Database* database_);
 	~DatabaseWAL();
 
-	bool open_current(const std::string& path, bool current);
+	bool open_current(bool current);
 
-	bool init_database(const std::string& dir);
+	bool init_database();
 	void write_line(Type type, const std::string& data, bool commit=false);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();
@@ -249,15 +250,22 @@ class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter> {
 public:
 	uint32_t volume;
 
-	DataStorage(void* param_);
+	DataStorage(const std::string& base_path_, void* param_);
 	~DataStorage();
 
-	uint32_t highest_volume(const std::string& path);
+	uint32_t highest_volume();
 };
 #endif /* XAPIAND_DATA_STORAGE */
 
 
 class Database {
+#ifdef XAPIAND_DATA_STORAGE
+	std::string storage_get(const std::unique_ptr<DataStorage>& storage, const std::string& store);
+	void storage_pull_blob(Xapian::Document& doc);
+	void storage_push_blob(Xapian::Document& doc);
+	void storage_commit();
+#endif /* XAPIAND_DATA_STORAGE */
+
 public:
 	std::weak_ptr<DatabaseQueue> weak_queue;
 	Endpoints endpoints;
@@ -287,13 +295,8 @@ public:
 	bool reopen();
 
 #ifdef XAPIAND_DATA_STORAGE
-		void storage_pull_data(Xapian::Document& doc);
-		void storage_push_data(Xapian::Document& doc);
-		void storage_commit();
-#else
-		void storage_pull_data(Xapian::Document&) { }
-		void storage_push_data(Xapian::Document&) { }
-		void storage_commit() { }
+	std::pair<ssize_t, ssize_t> storage_location(const std::string& store);
+	std::string storage_get_blob(const Xapian::Document& doc);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	std::string get_uuid() const;
@@ -313,7 +316,7 @@ public:
 	void remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
 
 	Xapian::docid find_document(const std::string& term_id);
-	Xapian::Document get_document(const Xapian::docid& did);
+	Xapian::Document get_document(const Xapian::docid& did, bool pull_=false);
 	std::string get_metadata(const std::string& key);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
 

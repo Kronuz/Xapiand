@@ -146,8 +146,9 @@
 #define TEXT_CONTENT_TYPE            "text/plain"
 
 
-#define DATABASE_DATA_HEADER_MAGIC 0x42
-#define DATABASE_DATA_FOOTER_MAGIC 0x2A
+#define DATABASE_DATA_HEADER_MAGIC        0x11
+#define DATABASE_DATA_HEADER_MAGIC_STORED 0x12
+#define DATABASE_DATA_FOOTER_MAGIC        0x15
 
 
 constexpr int DB_OPEN         = 0x00; // Opens a database

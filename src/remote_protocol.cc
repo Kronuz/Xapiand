@@ -540,7 +540,7 @@ RemoteProtocol::msg_document(const std::string &message)
 
 	client->checkout_database();
 
-	Xapian::Document doc = client->database->get_document(did);
+	Xapian::Document doc = client->database->get_document(did, true);
 
 	client->checkin_database();
 

@@ -323,7 +323,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HTTP_GET);
-			db_handler.index("." + serialise_node_id(local_node_->id), {
+			db_handler.index("." + serialise_node_id(local_node_->id), false, {
 				{ RESERVED_INDEX, "field_all" },
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  TERM_STR } } },
 				{ "name",         { { RESERVED_TYPE,  TERM_STR }, { RESERVED_VALUE, local_node_->name } } },

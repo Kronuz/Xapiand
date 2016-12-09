@@ -902,7 +902,8 @@ HttpClient::index_document_view(enum http_method method)
 	MsgPack response;
 	endpoints_error_list err_list;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	response = db_handler.index(doc_id, body_.second, query_field->commit, body_.first, &err_list).second;
+	bool stored = true;
+	response = db_handler.index(doc_id, stored, body_.second, query_field->commit, body_.first, &err_list).second;
 
 	operation_ends = std::chrono::system_clock::now();
 

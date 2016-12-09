@@ -66,19 +66,65 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 std::string
-join_data(const std::string& obj, const std::string& blob)
+join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob)
 {
-	L_CALL(nullptr, "::join_data(<obj>, <blob>)");
+	L_CALL(nullptr, "::join_data(<obj>, <stored>, <stored_locator>, <blob>)");
 
-	auto len = serialise_length(obj.size());
+	auto obj_len = serialise_length(obj.size());
 	std::string data;
-	data.reserve(1 + len.size() + obj.size() + 1 + blob.size());
-	data.push_back(DATABASE_DATA_HEADER_MAGIC);
-	data.append(len);
+	if (stored) {
+		auto stored_locator_len = serialise_length(stored_locator.size());
+		data.reserve(1 + obj_len.size() + obj.size() + stored_locator_len.size() + stored_locator.size() + 1 + blob.size());
+		data.push_back(DATABASE_DATA_HEADER_MAGIC_STORED);
+		data.append(stored_locator_len);
+		data.append(stored_locator);
+	} else {
+		data.reserve(1 + obj_len.size() + obj.size() + 1 + blob.size());
+		data.push_back(DATABASE_DATA_HEADER_MAGIC);
+	}
+	data.append(obj_len);
 	data.append(obj);
 	data.push_back(DATABASE_DATA_FOOTER_MAGIC);
 	data.append(blob);
 	return data;
+}
+
+
+std::pair<bool, std::string>
+split_data_store(const std::string& data)
+{
+	L_CALL(nullptr, "::split_data_store(<data>)");
+
+	std::string stored_locator;
+	size_t length;
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	if (*p == DATABASE_DATA_HEADER_MAGIC) {
+		return std::make_pair(false, std::string());
+	} else if (*p == DATABASE_DATA_HEADER_MAGIC_STORED) {
+		++p;
+		try {
+			length = unserialise_length(&p, p_end, true);
+		} catch (Xapian::SerialisationError) {
+			return std::make_pair(false, std::string());
+		}
+		stored_locator = std::string(p, length);
+		p += length;
+	} else {
+		return std::make_pair(false, std::string());
+	}
+
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (Xapian::SerialisationError) {
+		return std::make_pair(false, std::string());
+	}
+
+	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) {
+		return std::make_pair(false, std::string());
+	}
+
+	return std::make_pair(true, stored_locator);
 }
 
 
@@ -90,7 +136,17 @@ split_data_obj(const std::string& data)
 	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) {
+	if (*p == DATABASE_DATA_HEADER_MAGIC) {
+		++p;
+	} else if (*p == DATABASE_DATA_HEADER_MAGIC_STORED) {
+		++p;
+		try {
+			length = unserialise_length(&p, p_end, true);
+		} catch (Xapian::SerialisationError) {
+			return std::string();
+		}
+		p += length;
+	} else {
 		return std::string();
 	}
 
@@ -116,14 +172,31 @@ split_data_blob(const std::string& data)
 	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return data;
+	if (*p == DATABASE_DATA_HEADER_MAGIC) {
+		++p;
+	} else if (*p == DATABASE_DATA_HEADER_MAGIC_STORED) {
+		++p;
+		try {
+			length = unserialise_length(&p, p_end, true);
+		} catch (Xapian::SerialisationError) {
+			return data;
+		}
+		p += length;
+	} else {
+		return data;
+	}
+
 	try {
 		length = unserialise_length(&p, p_end, true);
 	} catch (Xapian::SerialisationError) {
 		return data;
 	}
 	p += length;
-	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) return data;
+
+	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) {
+		return data;
+	}
+
 	return std::string(p, p_end - p);
 }
 
@@ -175,8 +248,8 @@ WalHeader::validate(void* param, void*)
 }
 
 
-DatabaseWAL::DatabaseWAL(Database* database_)
-	: Storage<WalHeader, WalBinHeader, WalBinFooter>(this),
+DatabaseWAL::DatabaseWAL(const std::string& base_path_, Database* database_)
+	: Storage<WalHeader, WalBinHeader, WalBinFooter>(base_path_, this),
 	  modified(false),
 	  validate_uuid(true),
 	  database(database_)
@@ -192,13 +265,13 @@ DatabaseWAL::~DatabaseWAL()
 
 
 bool
-DatabaseWAL::open_current(const std::string& path, bool commited)
+DatabaseWAL::open_current(bool commited)
 {
 	L_CALL(this, "DatabaseWAL::open_current()");
 
 	uint32_t revision = database->checkout_revision;
 
-	DIR *dir = opendir(path.c_str(), true);
+	DIR *dir = opendir(base_path.c_str(), true);
 	if (!dir) {
 		THROW(Error, "Could not open the dir (%s)", strerror(errno));
 	}
@@ -232,7 +305,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 
 	closedir(dir);
 	if (lowest_revision > revision) {
-		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+		open(WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 	} else {
 		modified = false;
 
@@ -241,7 +314,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 		uint32_t file_rev, begin_rev, end_rev;
 		for (auto slot = lowest_revision; slot <= highest_revision && not reach_end; ++slot) {
 			file_rev = begin_rev = slot;
-			open(path + "/" + WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN);
+			open(WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN);
 
 			uint32_t high_slot = highest_valid_slot();
 			if (high_slot == static_cast<uint32_t>(-1)) {
@@ -297,7 +370,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 			slot = high_slot;
 		}
 
-		open(path + "/" + WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+		open(WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 	}
 	return modified;
 }
@@ -410,9 +483,9 @@ DatabaseWAL::execute(const std::string& line)
 
 
 bool
-DatabaseWAL::init_database(const std::string& dir)
+DatabaseWAL::init_database()
 {
-	L_CALL(this, "DatabaseWAL::init_database(%s)", (repr(dir)).c_str());
+	L_CALL(this, "DatabaseWAL::init_database()");
 
 	static const std::array<std::string, 2> iamglass({{
 		std::to_string("\x0f\x0d\x58\x61\x70\x69\x61\x6e\x20\x47\x6c\x61\x73\x73\x04\x6e"),
@@ -421,7 +494,7 @@ DatabaseWAL::init_database(const std::string& dir)
 			"\x03\x00\x04\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00")
 	}});
 
-	auto filename = dir + "/iamglass";
+	auto filename = base_path + "iamglass";
 	if (exists(filename)) {
 		return true;
 	}
@@ -429,7 +502,7 @@ DatabaseWAL::init_database(const std::string& dir)
 	validate_uuid = false;
 
 	try {
-		open(dir + "/" + WAL_STORAGE_PATH + "0", STORAGE_OPEN | STORAGE_COMPRESS);
+		open(base_path + WAL_STORAGE_PATH + "0", STORAGE_OPEN | STORAGE_COMPRESS);
 	} catch (const StorageIOError&) {
 		return true;
 	}
@@ -458,7 +531,7 @@ DatabaseWAL::init_database(const std::string& dir)
 	}
 	io::close(fd);
 
-	filename = dir + "/postlist.glass";
+	filename = base_path + "postlist.glass";
 	fd = io::open(filename.c_str(), O_WRONLY | O_CREAT);
 	if (unlikely(fd < 0)) {
 		L_ERR(nullptr, "ERROR: opening file. %s\n", filename.c_str());
@@ -639,8 +712,8 @@ DataHeader::validate(void* param, void*)
 }
 
 
-DataStorage::DataStorage(void* param_)
-	: Storage<DataHeader, DataBinHeader, DataBinFooter>(param_)
+DataStorage::DataStorage(const std::string& base_path_, void* param_)
+	: Storage<DataHeader, DataBinHeader, DataBinFooter>(base_path_, param_)
 {
 	L_OBJ(this, "CREATED DATABASE DATA STORAGE!");
 }
@@ -653,11 +726,11 @@ DataStorage::~DataStorage()
 
 
 uint32_t
-DataStorage::highest_volume(const std::string& path)
+DataStorage::highest_volume()
 {
 	L_CALL(this, "DataStorage::highest_volume()");
 
-	DIR *dir = opendir(path.c_str(), true);
+	DIR *dir = opendir(base_path.c_str(), true);
 	if (!dir) {
 		THROW(Error, "Could not open dir (%s)", strerror(errno));
 	}
@@ -793,8 +866,8 @@ Database::reopen()
 #endif /* XAPIAND_CLUSTERING */
 		{
 			{
-				DatabaseWAL tmp_wal(this);
-				tmp_wal.init_database(e.path);
+				DatabaseWAL tmp_wal(e.path, this);
+				tmp_wal.init_database();
 			}
 
 			wdb = Xapian::WritableDatabase(e.path, _flags);
@@ -812,13 +885,13 @@ Database::reopen()
 		if (local) {
 			if (flags & DB_NOSTORAGE) {
 				writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-				storages.push_back(std::make_unique<DataStorage>(this));
+				storages.push_back(std::make_unique<DataStorage>(e.path, this));
 			} else {
-				auto storage = std::make_unique<DataStorage>(this);
-				storage->volume = storage->highest_volume(e.path);
-				storage->open(e.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
+				auto storage = std::make_unique<DataStorage>(e.path, this);
+				storage->volume = storage->highest_volume();
+				storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
 				writable_storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
-				storages.push_back(std::make_unique<DataStorage>(this));
+				storages.push_back(std::make_unique<DataStorage>(e.path, this));
 			}
 		} else {
 			writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
@@ -830,17 +903,17 @@ Database::reopen()
 		/* If checkout_revision is not available Wal work as a log for the operations */
 		if (local && !(flags & DB_NOWAL)) {
 			// WAL required on a local writable database, open it.
-			wal = std::make_unique<DatabaseWAL>(this);
-			if (wal->open_current(e.path, true)) {
+			wal = std::make_unique<DatabaseWAL>(e.path, this);
+			if (wal->open_current(true)) {
 				modified = true;
 			}
 		}
 #endif /* XAPIAND_DATABASE_WAL */
 	} else {
-		bool local = false;
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.cend(); ++i) {
 			auto& e = *i;
 			Xapian::Database rdb;
+			bool local = false;
 #ifdef XAPIAND_CLUSTERING
 			int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN;
 			if (!e.is_local()) {
@@ -863,8 +936,8 @@ Database::reopen()
 #endif /* XAPIAND_CLUSTERING */
 			{
 				{
-					DatabaseWAL tmp_wal(this);
-					tmp_wal.init_database(e.path);
+					DatabaseWAL tmp_wal(e.path, this);
+					tmp_wal.init_database();
 				}
 
 				try {
@@ -888,15 +961,15 @@ Database::reopen()
 
 			db->add_database(rdb);
 
+	#ifdef XAPIAND_DATA_STORAGE
+			if (local && endpoints_size == 1) {
+				// WAL required on a local database, open it.
+				storages.push_back(std::make_unique<DataStorage>(e.path, this));
+			} else {
+				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
+			}
+	#endif /* XAPIAND_DATA_STORAGE */
 		}
-#ifdef XAPIAND_DATA_STORAGE
-		if (local && endpoints_size == 1) {
-			// WAL required on a local database, open it.
-			storages.push_back(std::make_unique<DataStorage>(this));
-		} else {
-			storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-		}
-#endif /* XAPIAND_DATA_STORAGE */
 	}
 
 	L_DATABASE_WRAP(this, "Reopen done (took %s) [1]", delta_string(access_time, std::chrono::system_clock::now()).c_str());
@@ -958,7 +1031,9 @@ Database::commit(bool wal_)
 		// L_DATABASE_WRAP(this, "Commit: t: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
+#ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
+#endif /* XAPIAND_DATA_STORAGE */
 			wdb->commit();
 			modified = false;
 			break;
@@ -1103,10 +1178,77 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 
 #ifdef XAPIAND_DATA_STORAGE
-void
-Database::storage_pull_data(Xapian::Document& doc)
+std::pair<ssize_t, ssize_t>
+Database::storage_location(const std::string& store)
 {
-	L_CALL(this, "Database::storage_pull_data()");
+	ssize_t volume, offset;
+
+	const char *p = store.data();
+	const char *p_end = p + store.size();
+	if (*p++ != STORAGE_BIN_HEADER_MAGIC) {
+		return std::make_pair(-1, -1);
+	}
+	try {
+		volume = unserialise_length(&p, p_end);
+	} catch (Xapian::SerialisationError) {
+		return std::make_pair(-1, -1);
+	}
+	try {
+		offset = unserialise_length(&p, p_end);
+	} catch (Xapian::SerialisationError) {
+		return std::make_pair(-1, -1);
+	}
+	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) {
+		return std::make_pair(-1, -1);
+	}
+
+	return std::make_pair(volume, offset);
+}
+
+
+std::string
+Database::storage_get(const std::unique_ptr<DataStorage>& storage, const std::string& store)
+{
+	L_CALL(this, "Database::storage_get_blob()");
+
+	auto location = storage_location(store);
+
+	storage->open(DATA_STORAGE_PATH + std::to_string(location.first), STORAGE_OPEN);
+	storage->seek(static_cast<uint32_t>(location.second));
+
+	return storage->read();
+}
+
+
+std::string
+Database::storage_get_blob(const Xapian::Document& doc)
+{
+	L_CALL(this, "Database::storage_get_blob()");
+
+	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+	auto& storage = storages[subdatabase];
+	if (!storage) {
+		return "";
+	}
+
+	auto data = doc.get_data();
+	auto blob = split_data_blob(data);
+
+	if (blob.empty()) {
+		auto store = split_data_store(data);
+		if (store.first) {
+			blob = storage_get(storage, store.second);
+		}
+	}
+
+	return blob;
+}
+
+
+void
+Database::storage_pull_blob(Xapian::Document& doc)
+{
+	L_CALL(this, "Database::storage_pull_blob()");
 
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
 	auto& storage = storages[subdatabase];
@@ -1114,37 +1256,23 @@ Database::storage_pull_data(Xapian::Document& doc)
 		return;
 	}
 
-	ssize_t volume, offset;
+	auto data = doc.get_data();
+	auto blob = split_data_blob(data);
 
-	auto db_data = doc.get_data();
-	auto db_blob = split_data_blob(db_data);
-
-	const char *p = db_blob.data();
-	const char *p_end = p + db_blob.size();
-	if (*p++ != STORAGE_BIN_HEADER_MAGIC) return;
-	try {
-		volume = unserialise_length(&p, p_end);
-	} catch (Xapian::SerialisationError) {
-		return;
+	if (blob.empty()) {
+		auto store = split_data_store(data);
+		if (store.first) {
+			blob = storage_get(storage, store.second);
+			doc.set_data(join_data(store.first, "", split_data_obj(data), blob));
+		}
 	}
-	try {
-		offset = unserialise_length(&p, p_end);
-	} catch (Xapian::SerialisationError) {
-		return;
-	}
-	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) return;
-	auto& endpoint = endpoints[subdatabase];
-	storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN);
-	storage->seek(static_cast<uint32_t>(offset));
-	blob = storage->read();
-	auto data = join_data(split_data_obj(db_data), blob);
-	doc.set_data(data);
 }
 
+
 void
-Database::storage_push_data(Xapian::Document& doc)
+Database::storage_push_blob(Xapian::Document& doc)
 {
-	L_CALL(this, "Database::storage_push_data()");
+	L_CALL(this, "Database::storage_push_blob()");
 
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
 	auto& storage = writable_storages[subdatabase];
@@ -1159,20 +1287,25 @@ Database::storage_push_data(Xapian::Document& doc)
 		return;
 	}
 
-	while (true) {
-		try {
-			offset = storage->write(blob);
-			break;
-		} catch (StorageEOF) {
-			++storage->volume;
-			auto& endpoint = endpoints[subdatabase];
-			storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
+	auto store = split_data_store(data);
+	if (store.first) {
+		if (store.second.empty()) {
+			while (true) {
+				try {
+					offset = storage->write(blob);
+					break;
+				} catch (StorageEOF) {
+					++storage->volume;
+					auto& endpoint = endpoints[subdatabase];
+					storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
+				}
+			}
+			auto stored_locator = std::string(1, STORAGE_BIN_HEADER_MAGIC) + serialise_length(storage->volume) + serialise_length(offset) + std::string(1, STORAGE_BIN_FOOTER_MAGIC);
+			doc.set_data(join_data(true, stored_locator, split_data_obj(data), ""));
+		} else {
+			doc.set_data(join_data(store.first, store.second, split_data_obj(data), ""));
 		}
 	}
-
-	auto db_blob = std::string(1, STORAGE_BIN_HEADER_MAGIC) + serialise_length(storage->volume) + serialise_length(offset) + std::string(1, STORAGE_BIN_FOOTER_MAGIC);
-	auto db_data = join_data(split_data_obj(data), db_blob);
-	doc.set_data(db_data);
 }
 
 void
@@ -1201,7 +1334,9 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 #endif /* XAPIAND_DATABASE_WAL */
 
 	Xapian::Document doc_ = doc;
-	storage_push_data(doc_);
+#ifdef XAPIAND_DATA_STORAGE
+	storage_push_blob(doc_);
+#endif /* XAPIAND_DATA_STORAGE */
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1244,7 +1379,9 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 #endif /* XAPIAND_DATABASE_WAL */
 
 	Xapian::Document doc_ = doc;
-	storage_push_data(doc_);
+#ifdef XAPIAND_DATA_STORAGE
+	storage_push_blob(doc_);
+#endif /* XAPIAND_DATA_STORAGE */
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1289,7 +1426,9 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 #endif
 
 	Xapian::Document doc_ = doc;
-	storage_push_data(doc_);
+#ifdef XAPIAND_DATA_STORAGE
+	storage_push_blob(doc_);
+#endif /* XAPIAND_DATA_STORAGE */
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1432,7 +1571,7 @@ Database::find_document(const std::string& term_id)
 
 
 Xapian::Document
-Database::get_document(const Xapian::docid& did)
+Database::get_document(const Xapian::docid& did, bool pull_)
 {
 	L_CALL(this, "Database::get_document(%d)", did);
 
@@ -1443,7 +1582,13 @@ Database::get_document(const Xapian::docid& did)
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			doc = db->get_document(did);
-			storage_pull_data(doc);
+#ifdef XAPIAND_DATA_STORAGE
+			if (pull_) {
+				storage_pull_blob(doc);
+			}
+#else
+	(void)pull_;
+#endif /* XAPIAND_DATA_STORAGE */
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) {
