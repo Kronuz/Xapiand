@@ -217,6 +217,9 @@ public:
 	iterator find(size_t pos);
 	const_iterator find(size_t pos) const;
 
+	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	void update(const M& o);
+
 	template <typename T>
 	size_t count(T&& v) const;
 
@@ -1553,6 +1556,30 @@ inline MsgPack::iterator MsgPack::find(size_t pos) {
 inline MsgPack::const_iterator MsgPack::find(size_t pos) const {
 	_fill(false, false);
 	return _find(pos);
+}
+
+
+template <typename M, typename>
+inline void MsgPack::update(const M& o) {
+	switch (o._body->getType()) {
+		case Type::MAP:
+			for (auto& key : o) {
+				auto& val = o.at(key);
+				if (find(key) == end()) {
+					put(key, val);
+				} else {
+					auto& item = at(key);
+					if (item.is_map()) {
+						item.update(val);
+					} else {
+						put(key, val);
+					}
+				}
+			}
+			break;
+		default:
+			THROW(msgpack::type_error);
+	}
 }
 
 
