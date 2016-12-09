@@ -255,6 +255,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			destroy();  // Handle error. Just close the connection.
 			detach();
 		}
+		clean_http_request();
 		return;
 	}
 
@@ -288,15 +289,21 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		}
 	} else {
 		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
-		std::string message(http_errno_description(HTTP_PARSER_ERRNO(&parser)));
-		MsgPack err_response = {
-			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, message }
-		};
-		write_http_response(error_code, err_response);
-		L_WARNING(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message.c_str() : "incomplete request");
+		http_errno err = HTTP_PARSER_ERRNO(&parser);
+		if (err == HPE_INVALID_METHOD) {
+			write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
+		} else {
+			std::string message(http_errno_description(err));
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, message }
+			};
+			write_http_response(error_code, err_response);
+			L_WARNING(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message.c_str() : "incomplete request");
+		}
 		destroy();  // Handle error. Just close the connection.
 		detach();
+		clean_http_request();
 	}
 }
 
@@ -509,7 +516,8 @@ HttpClient::run()
 				_patch(method);
 				break;
 			default:
-				write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
+				error_code = HTTP_STATUS_NOT_IMPLEMENTED;
+				parser.http_errno = HPE_INVALID_METHOD;
 				break;
 		}
 	} catch (const DocNotFoundError& exc) {
