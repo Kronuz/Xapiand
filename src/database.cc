@@ -1316,7 +1316,6 @@ Database::storage_push_blob(Xapian::Document& doc)
 					break;
 				} catch (StorageEOF) {
 					++storage->volume;
-					auto& endpoint = endpoints[subdatabase];
 					storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
 				}
 			}
