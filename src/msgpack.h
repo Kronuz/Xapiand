@@ -1563,8 +1563,8 @@ template <typename M, typename>
 inline void MsgPack::update(const M& o) {
 	switch (o._body->getType()) {
 		case Type::MAP:
-			for (auto& key : o) {
-				auto& val = o.at(key);
+			for (const auto& key : o) {
+				const auto& val = o.at(key);
 				if (find(key) == end()) {
 					put(key, val);
 				} else {
@@ -1572,7 +1572,7 @@ inline void MsgPack::update(const M& o) {
 					if (item.is_map()) {
 						item.update(val);
 					} else {
-						put(key, val);
+						item = val;
 					}
 				}
 			}
