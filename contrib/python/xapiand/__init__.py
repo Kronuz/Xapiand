@@ -107,6 +107,7 @@ class Xapiand(object):
         post=(session.post, False, 'result'),
         put=(session.put, False, 'result'),
         patch=(session.patch, False, 'result'),
+        merge=(lambda *args, **kwargs: session.request('MERGE', *args, **kwargs), False, 'result'),
     )
 
     def __init__(self, ip='127.0.0.1', port=8880, commit=False, prefix=None, default_accept=None):
@@ -342,6 +343,17 @@ class Xapiand(object):
             pretty=pretty,
         )
         return self._send_request('patch', index, **kwargs)
+
+
+    def merge(self, index, id, body, commit=None, pretty=False, kwargs=None):
+        kwargs = kwargs or {}
+        kwargs['id'] = id
+        kwargs['body'] = body
+        kwargs['params'] = dict(
+            commit=self.commit if commit is None else commit,
+            pretty=pretty,
+        )
+        return self._send_request('merge', index, **kwargs)
 
 
 # TODO: Get settings for these from django.conf.settings:
