@@ -50,8 +50,8 @@
 #define STORAGE_BUFFER_CLEAR 1
 #define STORAGE_BUFFER_CLEAR_CHAR '\0'
 
-#define STORAGE_BLOCKS_GROW 8
-#define STORAGE_BLOCKS_MIN_FREE 2
+#define STORAGE_BLOCKS_GROWTH_FACTOR 1.3f
+#define STORAGE_BLOCKS_MIN_FREE 4
 
 #define STORAGE_LAST_BLOCK_OFFSET (static_cast<off_t>(std::numeric_limits<uint32_t>::max()) * STORAGE_ALIGNMENT)
 
@@ -230,7 +230,9 @@ class Storage {
 			}
 			free_blocks = static_cast<int>((file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE);
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
-				off_t new_size = file_size + STORAGE_BLOCKS_GROW * STORAGE_BLOCK_SIZE;
+				int total_blocks = static_cast<int>(file_size / STORAGE_BLOCK_SIZE);
+				total_blocks = total_blocks < STORAGE_BLOCKS_MIN_FREE ? STORAGE_BLOCKS_MIN_FREE : total_blocks * STORAGE_BLOCKS_GROWTH_FACTOR;
+				off_t new_size = total_blocks * STORAGE_BLOCK_SIZE;
 				if (new_size > STORAGE_LAST_BLOCK_OFFSET) {
 					new_size = STORAGE_LAST_BLOCK_OFFSET;
 				}
@@ -280,9 +282,11 @@ class Storage {
 
 protected:
 	StorageHeader header;
+	std::string base_path;
+
 
 public:
-	Storage(void* param_)
+	Storage(const std::string& base_path_, void* param_)
 		: param(param_),
 		  flags(0),
 		  fd(0),
@@ -293,7 +297,8 @@ public:
 		  bin_size(0),
 		  xxhash(XXH32_createState()),
 		  bin_hash(0),
-		  changed(false) {
+		  changed(false),
+		  base_path(normalize_path(base_path_, true)) {
 		memset(&header, 0, sizeof(header));
 		if ((reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header) + sizeof(bin_header.size)) > STORAGE_ALIGNMENT) {
 			XXH32_freeState(xxhash);
@@ -306,8 +311,10 @@ public:
 		XXH32_freeState(xxhash);
 	}
 
-	void open(const std::string& path_, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
-		L_CALL(this, "Storage::open()");
+	void open(const std::string& relative_path, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
+		L_CALL(this, "Storage::open(%s, %d, <args>)", repr(relative_path).c_str(), flags_);
+
+		auto path_ = base_path + relative_path;
 
 		if (path != path_ || flags != flags_) {
 			close();
@@ -328,7 +335,7 @@ public:
 				}
 				if unlikely(fd < 0) {
 					close();
-					THROW(StorageIOError, "Cannot open storage file");
+					THROW(StorageIOError, "Cannot open storage file: " + path);
 				}
 
 				memset(&header, 0, sizeof(header));
@@ -352,7 +359,7 @@ public:
 
 		if unlikely(fd <= 0) {
 			close();
-			THROW(StorageIOError, "Cannot open storage file");
+			THROW(StorageIOError, "Cannot open storage file: " + path);
 		}
 
 		ssize_t r = io::pread(fd, &header, sizeof(header), 0);

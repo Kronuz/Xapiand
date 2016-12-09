@@ -45,69 +45,6 @@
 #include "v8/v8pp.h"                        // for Processor::Function, Proc...
 
 
-std::string
-join_data(const std::string& obj, const std::string& blob)
-{
-	L_CALL(nullptr, "::join_data(<obj>, <blob>)");
-
-	auto len = serialise_length(obj.size());
-	std::string data;
-	data.reserve(1 + len.size() + obj.size() + 1 + blob.size());
-	data.push_back(DATABASE_DATA_HEADER_MAGIC);
-	data.append(len);
-	data.append(obj);
-	data.push_back(DATABASE_DATA_FOOTER_MAGIC);
-	data.append(blob);
-	return data;
-}
-
-
-std::string
-split_data_obj(const std::string& data)
-{
-	L_CALL(nullptr, "::split_data_obj(<data>)");
-
-	size_t length;
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) {
-		return std::string();
-	}
-
-	try {
-		length = unserialise_length(&p, p_end, true);
-	} catch (Xapian::SerialisationError) {
-		return std::string();
-	}
-
-	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) {
-		return std::string();
-	}
-
-	return std::string(p, length);
-}
-
-
-std::string
-split_data_blob(const std::string& data)
-{
-	L_CALL(nullptr, "::split_data_blob(<data>)");
-
-	size_t length;
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return data;
-	try {
-		length = unserialise_length(&p, p_end, true);
-	} catch (Xapian::SerialisationError) {
-		return data;
-	}
-	p += length;
-	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) return data;
-	return std::string(p, p_end - p);
-}
-
-
 DatabaseHandler::lock_database::lock_database(DatabaseHandler* db_handler_)
 	: db_handler(db_handler_),
 	  database(nullptr)
@@ -304,7 +241,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& _document_id, bool stored, const std::string& store, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, <obj>, <blob>)", repr(_document_id).c_str());
 
@@ -354,15 +291,15 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 	// Index object.
 	obj_ = schema->index(obj_, doc);
 
-	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
-	doc.set_data(join_data(obj_.serialise(), blob));
-
 	if (prefixed_term_id.empty()) {
 		// Now the schema is full, get specification id.
 		spc_id = schema->get_data_id();
 		term_id = Serialise::serialise(spc_id, _document_id);
 		prefixed_term_id = prefixed(term_id, spc_id.prefix);
 	}
+
+	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
+	doc.set_data(join_data(stored, store, obj_.serialise(), serialise_strings({prefixed_term_id, ct_type, blob})));
 
 	doc.add_boolean_term(prefixed_term_id);
 	doc.add_value(spc_id.slot, term_id);
@@ -390,7 +327,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& obj, cons
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, <body>)", repr(_document_id).c_str());
 
@@ -410,7 +347,7 @@ DatabaseHandler::index(const std::string& _document_id, const MsgPack& body, boo
 		blob = body.as_string();
 	}
 
-	return index(_document_id, obj, blob, commit_, ct_type, err_list);
+	return index(_document_id, stored, "", obj, blob, commit_, ct_type, err_list);
 }
 
 
@@ -435,9 +372,9 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 	auto obj = document.get_obj();
 	apply_patch(patches, obj);
 
-	auto blob = document.get_blob();
+	auto store = document.get_store();
 
-	return index(_document_id, obj, blob, commit_, ct_type, err_list);
+	return index(_document_id, store.first, store.second, obj, "", commit_, ct_type, err_list);
 }
 
 
@@ -764,11 +701,35 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 	info[RESERVED_DATA] = document.get_obj();
 
 	auto ct_type_str = document.get_field(CT_FIELD_NAME).as_string();
-	if (ct_type_str.empty()) {
-		ct_type_str = MSGPACK_CONTENT_TYPE;
-	}
+	info["_content_type"] = ct_type_str.empty() ? "unknown" : ct_type_str;
 
-	info["_blob"] = ct_type_str != JSON_CONTENT_TYPE && ct_type_str != MSGPACK_CONTENT_TYPE;
+#ifdef XAPIAND_DATA_STORAGE
+	auto store = document.get_store();
+	if (store.first) {
+		if (store.second.empty()) {
+			info["_blob"] = nullptr;
+		} else {
+			auto locator = database->storage_unserialise_locator(store.second);
+			info["_blob"] = {
+				{"_type", "stored"},
+				{"_volume", std::get<0>(locator)},
+				{"_offset", std::get<1>(locator)},
+				{"_size", std::get<2>(locator)},
+			};
+		}
+	} else
+#endif
+	{
+		auto blob_data = unserialise_string_at(2, document.get_blob());
+		if (blob_data.empty()) {
+			info["_blob"] = nullptr;
+		} else {
+			info["_blob"] = {
+				{"_type", "local"},
+				{"_size", blob_data.size()},
+			};
+		}
+	}
 
 	auto& stats_terms = info[RESERVED_TERMS];
 	const auto it_e = document.termlist_end();
@@ -934,31 +895,33 @@ Document::set_data(const std::string& data)
 }
 
 
-void
-Document::set_data(const std::string& obj, const std::string& blob)
-{
-	L_CALL(this, "Document::set_data(...)");
-
-	set_data(::join_data(obj, blob));
-}
-
-
 std::string
 Document::get_blob()
 {
 	L_CALL(this, "Document::get_blob()");
 
-	return ::split_data_blob(get_data());
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	return db_handler->database->storage_get_blob(*this);
+}
+
+
+std::pair<bool, std::string>
+Document::get_store()
+{
+	L_CALL(this, "Document::get_store()");
+
+	return ::split_data_store(get_data());
 }
 
 
 void
-Document::set_blob(const std::string& blob)
+Document::set_blob(const std::string& blob, bool stored)
 {
 	L_CALL(this, "Document::set_blob()");
 
 	DatabaseHandler::lock_database lk(db_handler);  // optimize nested database locking
-	set_data(::split_data_obj(get_data()), blob);
+	set_data(::join_data(stored, "", ::split_data_obj(get_data()), blob));
 }
 
 
@@ -977,7 +940,9 @@ Document::set_obj(const MsgPack& obj)
 	L_CALL(this, "Document::get_obj()");
 
 	DatabaseHandler::lock_database lk(db_handler);  // optimize nested database locking
-	set_data(obj.serialise(), get_blob());
+	auto blob = get_blob();
+	auto store = get_store();
+	set_data(::join_data(store.first, store.second, obj.serialise(), blob));
 }
 
 
@@ -1041,23 +1006,24 @@ Document::get_field(const std::string& slot_name) const
 {
 	L_CALL(this, "Document::get_field(%s)", slot_name.c_str());
 
-	MsgPack field;
 	auto obj = get_obj();
 	auto itf = obj.find(slot_name);
 	if (itf != obj.end()) {
-		if (itf->is_map()) {
-			auto itv = itf->find(RESERVED_VALUE);
-			if (itv != itf->end()) {
-				auto& value = itf->at(*itv);
-				if (!value.empty()) {
-					return value;
-				}
-			} else {
-				auto& value = itf->at(*itf);
-				if (!value.empty()) {
-					return value;
+		auto& value = obj.at(*itf);
+		if (value.is_map()) {
+			auto itv = value.find(RESERVED_VALUE);
+			if (itv != value.end()) {
+				auto& value_ = value.at(*itv);
+				if (!value_.empty()) {
+					return value_;
+				} else {
+					// there was _value, but it's empty
+					return get_value(slot_name);
 				}
 			}
+		}
+		if (!value.empty()) {
+			return value;
 		}
 	}
 

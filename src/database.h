@@ -44,9 +44,16 @@
 #include "database_utils.h"     // for DB_WRITABLE
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include "queue.h"              // for Queue, QueueSet
-#include "storage.h"            // for STORAGE_BLOCK_SIZE, MSG_StorageCorruptVo...
+#include "storage.h"            // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "threadpool.h"         // for TaskQueue
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
+
+
+std::string join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob);
+std::pair<bool, std::string> split_data_store(const std::string& data);
+std::string split_data_obj(const std::string& data);
+std::string split_data_blob(const std::string& data);
+
 
 class Database;
 class DatabasePool;
@@ -161,12 +168,12 @@ public:
 
 	Database* database;
 
-	DatabaseWAL(Database* database_);
+	DatabaseWAL(const std::string& base_path_, Database* database_);
 	~DatabaseWAL();
 
-	bool open_current(const std::string& path, bool current);
+	bool open_current(bool current);
 
-	bool init_database(const std::string& dir);
+	bool init_database();
 	void write_line(Type type, const std::string& data, bool commit=false);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();
@@ -179,10 +186,86 @@ public:
 	void write_add_spelling(const std::string& word, Xapian::termcount freqinc);
 	void write_remove_spelling(const std::string& word, Xapian::termcount freqdec);
 };
-#endif
+#endif /* XAPIAND_DATABASE_WAL */
+
+
+#ifdef XAPIAND_DATA_STORAGE
+struct DataHeader {
+	struct DataHeaderHead {
+		uint32_t magic;
+		uint32_t offset;  // required
+		char uuid[36];
+	} head;
+
+	char padding[(STORAGE_BLOCK_SIZE - sizeof(DataHeader::DataHeaderHead)) / sizeof(char)];
+
+	void init(void* param, void* args);
+	void validate(void* param, void* args);
+};
+
+#pragma pack(push, 1)
+struct DataBinHeader {
+	uint8_t magic;
+	uint8_t flags;  // required
+	uint32_t size;  // required
+
+	inline void init(void*, void*, uint32_t size_, uint8_t flags_) {
+		magic = STORAGE_BIN_HEADER_MAGIC;
+		size = size_;
+		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
+	}
+
+	inline void validate(void*, void*) {
+		if (magic != STORAGE_BIN_HEADER_MAGIC) {
+			THROW(StorageCorruptVolume, "Bad document header magic number");
+		}
+		if (flags & STORAGE_FLAG_DELETED) {
+			THROW(StorageNotFound, "Data Storage document deleted");
+		}
+	}
+};
+
+struct DataBinFooter {
+	uint32_t checksum;
+	uint8_t magic;
+
+	inline void init(void*, void*, uint32_t checksum_) {
+		magic = STORAGE_BIN_FOOTER_MAGIC;
+		checksum = checksum_;
+	}
+
+	inline void validate(void*, void*, uint32_t checksum_) {
+		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
+			THROW(StorageCorruptVolume, "Bad document footer magic number");
+		}
+		if (checksum != checksum_) {
+			THROW(StorageCorruptVolume, "Bad document checksum");
+		}
+	}
+};
+#pragma pack(pop)
+
+
+class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter> {
+public:
+	uint32_t volume;
+
+	DataStorage(const std::string& base_path_, void* param_);
+	~DataStorage();
+
+	uint32_t highest_volume();
+};
+#endif /* XAPIAND_DATA_STORAGE */
 
 
 class Database {
+#ifdef XAPIAND_DATA_STORAGE
+	std::string storage_get(const std::unique_ptr<DataStorage>& storage, const std::string& store);
+	void storage_pull_blob(Xapian::Document& doc);
+	void storage_push_blob(Xapian::Document& doc);
+	void storage_commit();
+#endif /* XAPIAND_DATA_STORAGE */
+
 public:
 	std::weak_ptr<DatabaseQueue> weak_queue;
 	Endpoints endpoints;
@@ -197,7 +280,12 @@ public:
 
 #if XAPIAND_DATABASE_WAL
 	std::unique_ptr<DatabaseWAL> wal;
-#endif
+#endif /* XAPIAND_DATABASE_WAL */
+
+#ifdef XAPIAND_DATA_STORAGE
+	std::vector<std::unique_ptr<DataStorage>> writable_storages;
+	std::vector<std::unique_ptr<DataStorage>> storages;
+#endif /* XAPIAND_DATA_STORAGE */
 
 	Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints, int flags);
 	~Database();
@@ -205,6 +293,12 @@ public:
 	long long read_mastery(const Endpoint& endpoint);
 
 	bool reopen();
+
+#ifdef XAPIAND_DATA_STORAGE
+	std::tuple<ssize_t, size_t, size_t> storage_unserialise_locator(const std::string& store);
+	std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size);
+	std::string storage_get_blob(const Xapian::Document& doc);
+#endif /* XAPIAND_DATA_STORAGE */
 
 	std::string get_uuid() const;
 	uint32_t get_revision() const;
@@ -223,7 +317,7 @@ public:
 	void remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
 
 	Xapian::docid find_document(const std::string& term_id);
-	Xapian::Document get_document(const Xapian::docid& did);
+	Xapian::Document get_document(const Xapian::docid& did, bool pull_=false);
 	std::string get_metadata(const std::string& key);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
 

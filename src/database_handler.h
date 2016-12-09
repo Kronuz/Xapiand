@@ -112,8 +112,8 @@ public:
 
 	void reset(const Endpoints& endpoints_, int flags_, enum http_method method_);
 
-	DataType index(const std::string& _document_id, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
-	DataType index(const std::string& _document_id, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
+	DataType index(const std::string& _document_id, bool stored, const std::string& storage, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
+	DataType index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
 	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
 
 	void write_schema(const std::string& body);
@@ -134,11 +134,6 @@ public:
 	void get_document_info(MsgPack& info, const std::string& document_id);
 	void get_database_info(MsgPack& info);
 };
-
-
-std::string join_data(const std::string& obj, const std::string& blob);
-std::string split_data_obj(const std::string& data);
-std::string split_data_blob(const std::string& data);
 
 
 class Document : public Xapian::Document {
@@ -164,9 +159,10 @@ public:
 	void remove_value(const std::string& slot_name);
 	std::string get_data() const;
 	void set_data(const std::string& data);
-	void set_data(const std::string& obj, const std::string& blob);
+	void set_data(const std::string& obj, const std::string& blob, bool stored);
+	std::pair<bool, std::string> get_store();
 	std::string get_blob();
-	void set_blob(const std::string& blob);
+	void set_blob(const std::string& blob, bool stored);
 	MsgPack get_obj() const;
 	void set_obj(const MsgPack& obj);
 	Xapian::termcount termlist_count() const;
