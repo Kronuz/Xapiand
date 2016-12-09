@@ -889,7 +889,8 @@ Database::reopen()
 			} else {
 				auto storage = std::make_unique<DataStorage>(e.path, this);
 				storage->volume = storage->highest_volume();
-				storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
+
+				storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
 				writable_storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
 				storages.push_back(std::make_unique<DataStorage>(e.path, this));
 			}
@@ -1297,7 +1298,7 @@ Database::storage_push_blob(Xapian::Document& doc)
 				} catch (StorageEOF) {
 					++storage->volume;
 					auto& endpoint = endpoints[subdatabase];
-					storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
+					storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
 				}
 			}
 			auto stored_locator = std::string(1, STORAGE_BIN_HEADER_MAGIC) + serialise_length(storage->volume) + serialise_length(offset) + std::string(1, STORAGE_BIN_FOOTER_MAGIC);
