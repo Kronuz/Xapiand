@@ -373,8 +373,37 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 	apply_patch(patches, obj);
 
 	auto store = document.get_store();
+	auto blob = store.first ? "" : document.get_blob();
 
-	return index(_document_id, store.first, store.second, obj, "", commit_, ct_type, err_list);
+	return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type, err_list);
+}
+
+
+DataType
+DatabaseHandler::merge(const std::string& _document_id, const MsgPack& update, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
+{
+	L_CALL(this, "DatabaseHandler::merge(%s, <obj>)", repr(_document_id).c_str());
+
+	if (!(flags & DB_WRITABLE)) {
+		THROW(Error, "database is read-only");
+	}
+
+	if (_document_id.empty()) {
+		THROW(ClientError, "Document must have an 'id'");
+	}
+
+	if (!update.is_map() && !update.is_array()) {
+		THROW(ClientError, "Object to be merged must be a JSON or MsgPack");
+	}
+
+	auto document = get_document(_document_id);
+	auto obj = document.get_obj();
+	obj.update(update);
+
+	auto store = document.get_store();
+	auto blob = store.first ? "" : document.get_blob();
+
+	return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type, err_list);
 }
 
 

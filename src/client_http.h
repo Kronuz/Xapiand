@@ -181,6 +181,7 @@ class HttpClient : public BaseClient {
 	void _options(enum http_method method);
 	void _head(enum http_method method);
 	void _get(enum http_method method);
+	void _merge(enum http_method method);
 	void _put(enum http_method method);
 	void _post(enum http_method method);
 	void _patch(enum http_method method);

@@ -506,6 +506,9 @@ HttpClient::run()
 			case HTTP_HEAD:
 				_head(method);
 				break;
+			case HTTP_MERGE:
+				_merge(method);
+				break;
 			case HTTP_PUT:
 				_put(method);
 				break;
@@ -630,6 +633,23 @@ HttpClient::_get(enum http_method method)
 			break;
 		case Command::CMD_NODES:
 			nodes_view(method);
+			break;
+		default:
+			status_view(HTTP_STATUS_BAD_REQUEST);
+			break;
+	}
+}
+
+
+void
+HttpClient::_merge(enum http_method method)
+{
+	L_CALL(this, "HttpClient::_merge()");
+
+
+	switch (url_resolve()) {
+		case Command::NO_CMD_ID:
+			update_document_view(method);
 			break;
 		default:
 			status_view(HTTP_STATUS_BAD_REQUEST);
@@ -1004,7 +1024,11 @@ HttpClient::update_document_view(enum http_method method)
 	MsgPack response;
 	endpoints_error_list err_list;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	response = db_handler.patch(doc_id, body_.second, query_field->commit, body_.first, &err_list).second;
+	if (method == HTTP_PATCH) {
+		response = db_handler.patch(doc_id, body_.second, query_field->commit, body_.first, &err_list).second;
+	} else {
+		response = db_handler.merge(doc_id, body_.second, query_field->commit, body_.first, &err_list).second;
+	}
 
 	operation_ends = std::chrono::system_clock::now();
 
