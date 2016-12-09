@@ -1314,7 +1314,7 @@ HttpClient::search_view(enum http_method method)
 					obj_data = document.get_obj();
 				} else {
 					// Returns blob_data in case that type is unkown
-					auto blob_data = document.get_blob();
+					auto blob_data = unserialise_string_at(2, document.get_blob());
 					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
 					return;
 				}

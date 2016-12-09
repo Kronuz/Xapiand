@@ -291,15 +291,15 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 	// Index object.
 	obj_ = schema->index(obj_, doc);
 
-	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
-	doc.set_data(join_data(stored, store, obj_.serialise(), blob));
-
 	if (prefixed_term_id.empty()) {
 		// Now the schema is full, get specification id.
 		spc_id = schema->get_data_id();
 		term_id = Serialise::serialise(spc_id, _document_id);
 		prefixed_term_id = prefixed(term_id, spc_id.prefix);
 	}
+
+	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
+	doc.set_data(join_data(stored, store, obj_.serialise(), serialise_strings({prefixed_term_id, ct_type, blob})));
 
 	doc.add_boolean_term(prefixed_term_id);
 	doc.add_value(spc_id.slot, term_id);
@@ -720,13 +720,13 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 	} else
 #endif
 	{
-		auto blob = document.get_blob();
-		if (blob.empty()) {
+		auto blob_data = unserialise_string_at(2, document.get_blob());
+		if (blob_data.empty()) {
 			info["_blob"] = nullptr;
 		} else {
 			info["_blob"] = {
 				{"_type", "local"},
-				{"_size", blob.size()},
+				{"_size", blob_data.size()},
 			};
 		}
 	}
