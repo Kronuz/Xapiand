@@ -280,16 +280,6 @@ unserialise_string(const char** p, const char* end) {
 
 
 std::string
-unserialise_string(const std::string& data)
-{
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-
-	return unserialise_string(&p, p_end);
-}
-
-
-std::string
 serialise_strings(const std::vector<std::reference_wrapper<const std::string>>& strings)
 {
 	std::string output;
@@ -318,13 +308,4 @@ unserialise_string_at(size_t at, const char** p, const char* end)
 	*p = ptr;
 
 	return string;
-}
-
-std::string
-unserialise_string_at(size_t at, const std::string& data)
-{
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-
-	return unserialise_string_at(at, &p, p_end);
 }

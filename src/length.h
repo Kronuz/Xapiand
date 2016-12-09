@@ -55,21 +55,25 @@ std::string serialise_string(const std::string &input);
 
 std::string unserialise_string(const char** p, const char* end);
 
+std::string serialise_strings(const std::vector<std::reference_wrapper<const std::string>>& strings);
+
+std::string unserialise_string_at(size_t at, const char** p, const char* end);
+
 std::string serialise_double(double v);
 
 double unserialise_double(const char** p, const char* end);
+
 
 /** Append an encoded unsigned integer to a string.
  *
  *  @param s		The string to append to.
  *  @param value	The unsigned integer to encode.
  */
-template<class U>
-inline void
-serialise_unsigned(std::string & s, U value)
+template<class T>
+inline void serialise_unsigned(std::string & s, T value)
 {
-	// Check U is an unsigned type.
-	static_assert(static_cast<U>(-1) > 0, "Type not unsigned");
+	// Check T is an unsigned type.
+	static_assert(static_cast<T>(-1) > 0, "Type not unsigned");
 
 	while (value >= 128) {
 		s += static_cast<char>(static_cast<unsigned char>(value) | 0x80);
@@ -78,18 +82,17 @@ serialise_unsigned(std::string & s, U value)
 	s += static_cast<char>(value);
 }
 
+
 /** Decode an unsigned integer from a string.
  *
  *  @param p	    Pointer to pointer to the current position in the string.
  *  @param end	    Pointer to the end of the string.
  *  @param result   Where to store the result (or NULL to just skip it).
  */
-template<class U>
-inline void
-unserialise_unsigned(const char ** p, const char * end, U * result)
-{
-	// Check U is an unsigned type.
-	static_assert(static_cast<U>(-1) > 0, "Type not unsigned");
+template<class T>
+inline void unserialise_unsigned(const char** p, const char* end, T* result) {
+	// Check T is an unsigned type.
+	static_assert(static_cast<T>(-1) > 0, "Type not unsigned");
 
 	const char * ptr = *p;
 	ASSERT(ptr);
@@ -108,44 +111,87 @@ unserialise_unsigned(const char ** p, const char * end, U * result)
 
 	if (!result) return;
 
-	*result = U(*--ptr);
+	*result = T(*--ptr);
 	if (ptr == start) {
 		// Special case for small values.
 		return;
 	}
 
 	size_t maxbits = size_t(ptr - start) * 7;
-	if (maxbits <= sizeof(U) * 8) {
+	if (maxbits <= sizeof(T) * 8) {
 		// No possibility of overflow.
 		do {
 			unsigned char chunk = static_cast<unsigned char>(*--ptr) & 0x7f;
-			*result = (*result << 7) | U(chunk);
+			*result = (*result << 7) | T(chunk);
 		} while (ptr != start);
 		return;
 	}
 
 	size_t minbits = maxbits - 6;
-	if unlikely(minbits > sizeof(U) * 8) {
+	if unlikely(minbits > sizeof(T) * 8) {
 		// Overflow.
 		THROW(SerialisationError, "Bad encoded unsigned: overflow");
 	}
 
 	while (--ptr != start) {
 		unsigned char chunk = static_cast<unsigned char>(*--ptr) & 0x7f;
-		*result = (*result << 7) | U(chunk);
+		*result = (*result << 7) | T(chunk);
 	}
 
-	U tmp = *result;
+	T tmp = *result;
 	*result <<= 7;
 	if unlikely(*result < tmp) {
 		// Overflow.
 		THROW(SerialisationError, "Bad encoded unsigned: overflow");;
 	}
-	*result |= U(static_cast<unsigned char>(*ptr) & 0x7f);
+	*result |= T(static_cast<unsigned char>(*ptr) & 0x7f);
 	return;
 }
 
-std::string unserialise_string(const std::string& data);
-std::string serialise_strings(const std::vector<std::reference_wrapper<const std::string>>& strings);
-std::string unserialise_string_at(size_t at, const char** p, const char* end);
-std::string unserialise_string_at(size_t at, const std::string& data);
+
+inline unsigned long long unserialise_length(const std::string& data, bool check_remaining=false) {
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	return unserialise_length(&p, p_end, check_remaining);
+}
+
+
+inline std::string unserialise_string(const std::string& data) {
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	return unserialise_string(&p, p_end);
+}
+
+
+inline std::string unserialise_string_at(size_t at, const std::string& data) {
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	return unserialise_string_at(at, &p, p_end);
+}
+
+
+inline double unserialise_double(const std::string& data) {
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	return unserialise_double(&p, p_end);
+}
+
+
+template<class T>
+inline void unserialise_unsigned(const std::string& data, T* result)
+{
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	unserialise_unsigned(&p, p_end, result);
+}
+
+
+template<class T>
+inline T unserialise_unsigned(const std::string& data)
+{
+	T result;
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	unserialise_unsigned(&p, p_end, &result);
+	return result;
+}
