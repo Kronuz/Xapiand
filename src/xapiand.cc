@@ -745,8 +745,7 @@ void usedir(const char* path, bool solo) {
 
 	char buffer[PATH_MAX];
 	getcwd(buffer, sizeof(buffer));
-	strcat(buffer, "/");  // Endpoint::cwd must always end with slash
-	Endpoint::cwd = normalize_path(buffer, buffer);
+	Endpoint::cwd = normalize_path(buffer, buffer, true);  // Endpoint::cwd must always end with slash
 	L_NOTICE(nullptr, "Changed current working directory to %s", Endpoint::cwd.c_str());
 }
 

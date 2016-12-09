@@ -256,9 +256,9 @@ inline std::string lower_string(Args&&... args) {
 void to_upper(std::string& str);
 void to_lower(std::string& str);
 
-char* normalize_path(const char* src, const char* end, char* dst);
-char* normalize_path(const std::string& src, char* dst);
-std::string normalize_path(const std::string& src);
+char* normalize_path(const char* src, const char* end, char* dst, bool slashed=false);
+char* normalize_path(const std::string& src, char* dst, bool slashed=false);
+std::string normalize_path(const std::string& src, bool slashed=false);
 int url_qs(const char *, const char *, size_t);
 
 // String tokenizer with the delimiter.

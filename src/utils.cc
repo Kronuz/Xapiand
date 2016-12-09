@@ -231,11 +231,12 @@ std::string name_generator() {
 }
 
 
-char* normalize_path(const char* src, const char* end, char* dst) {
+char* normalize_path(const char* src, const char* end, char* dst, bool slashed) {
 	int levels = 0;
 	char* ret = dst;
+	char ch = '\0';
 	while (*src && src < end) {
-		char ch = *src++;
+		ch = *src++;
 		if (ch == '.' && (levels || dst == ret || *(dst - 1) == '/' )) {
 			*dst++ = ch;
 			++levels;
@@ -251,21 +252,25 @@ char* normalize_path(const char* src, const char* end, char* dst) {
 			levels = 0;
 		}
 	}
+	if (slashed && ch != '/') {
+		*dst++ = '/';
+	}
 	*dst++ = '\0';
 	return ret;
 }
 
 
-char* normalize_path(const std::string& src, char* dst) {
+char* normalize_path(const std::string& src, char* dst, bool slashed) {
 	const char* src_str = src.data();
-	return normalize_path(src_str, src_str + src.length(), dst);
+	return normalize_path(src_str, src_str + src.length(), dst, slashed);
 }
 
 
-std::string normalize_path(const std::string& src) {
-	char buffer[PATH_MAX];
+std::string normalize_path(const std::string& src, bool slashed) {
+	std::vector<char> dst;
+	dst.reserve(src.size() + 1);
 	const char* src_str = src.data();
-	return normalize_path(src_str, src_str + src.length(), buffer);
+	return normalize_path(src_str, src_str + src.length(), &dst[0], slashed);
 }
 
 
