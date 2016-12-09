@@ -50,8 +50,8 @@
 #define STORAGE_BUFFER_CLEAR 1
 #define STORAGE_BUFFER_CLEAR_CHAR '\0'
 
-#define STORAGE_BLOCKS_GROW 8
-#define STORAGE_BLOCKS_MIN_FREE 2
+#define STORAGE_BLOCKS_GROWTH_FACTOR 1.3f
+#define STORAGE_BLOCKS_MIN_FREE 4
 
 #define STORAGE_LAST_BLOCK_OFFSET (static_cast<off_t>(std::numeric_limits<uint32_t>::max()) * STORAGE_ALIGNMENT)
 
@@ -230,7 +230,9 @@ class Storage {
 			}
 			free_blocks = static_cast<int>((file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE);
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
-				off_t new_size = file_size + STORAGE_BLOCKS_GROW * STORAGE_BLOCK_SIZE;
+				int total_blocks = static_cast<int>(file_size / STORAGE_BLOCK_SIZE);
+				total_blocks = total_blocks < STORAGE_BLOCKS_MIN_FREE ? STORAGE_BLOCKS_MIN_FREE : total_blocks * STORAGE_BLOCKS_GROWTH_FACTOR;
+				off_t new_size = total_blocks * STORAGE_BLOCK_SIZE;
 				if (new_size > STORAGE_LAST_BLOCK_OFFSET) {
 					new_size = STORAGE_LAST_BLOCK_OFFSET;
 				}
