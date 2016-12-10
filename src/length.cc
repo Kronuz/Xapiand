@@ -310,15 +310,17 @@ unserialise_string_at(size_t at, const char** p, const char* end)
 	std::string string;
 	unsigned long long length = 0;
 
-	while (at--) {
+	do {
 		ptr += length;
+		if (ptr >= end) break;
 		length = unserialise_length(&ptr, end, true);
-	}
+	} while (at--);
 
 	if (at == 0) {
 		string.append(std::string(ptr, length));
+		ptr += length;
+		*p = ptr;
 	}
-	*p = ptr;
 
 	return string;
 }
