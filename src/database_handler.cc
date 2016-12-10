@@ -763,11 +763,12 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 	} else
 #endif
 	{
-		auto blob_data = unserialise_string_at(2, document.get_blob());
+		auto blob = document.get_blob();
+		auto blob_data = unserialise_string_at(2, blob);
 		if (blob_data.empty()) {
 			info["_blob"] = nullptr;
 		} else {
-			auto blob_ct = unserialise_string_at(1, document.get_blob());
+			auto blob_ct = unserialise_string_at(1, blob);
 			info["_blob"] = {
 				{"_type", "local"},
 				{"_content_type", blob_ct},

@@ -1361,8 +1361,17 @@ HttpClient::search_view(enum http_method method)
 			if (chunked) {
 				obj_data = document.get_obj();
 			} else {
-				auto ct_type_mp = document.get_field(CT_FIELD_NAME);
-				auto ct_type_str = ct_type_mp ? ct_type_mp.as_string() : MSGPACK_CONTENT_TYPE;
+				std::string blob;
+				std::string ct_type_str;
+				auto store = document.get_store();
+				if (!store.first) {
+					blob = document.get_blob();
+					ct_type_str = unserialise_string_at(1, blob);
+				}
+				if (ct_type_str.empty()) {
+					auto ct_type_mp = document.get_field(CT_FIELD_NAME);
+					ct_type_str = ct_type_mp ? ct_type_mp.as_string() : MSGPACK_CONTENT_TYPE;
+				}
 				ct_type = resolve_ct_type(ct_type_str);
 				if (ct_type.first == no_type.first && ct_type.second == no_type.second) {
 					enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
@@ -1379,7 +1388,10 @@ HttpClient::search_view(enum http_method method)
 					obj_data = document.get_obj();
 				} else {
 					// Returns blob_data in case that type is unkown
-					auto blob_data = unserialise_string_at(2, document.get_blob());
+					if (blob.empty()) {
+						blob = document.get_blob();
+					}
+					auto blob_data = unserialise_string_at(2, blob);
 					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
 					return;
 				}
