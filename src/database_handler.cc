@@ -744,7 +744,6 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 	info[RESERVED_DATA] = document.get_obj();
 
 	auto ct_type_mp = document.get_field(CT_FIELD_NAME);
-	info["_content_type"] = ct_type_mp ? ct_type_mp.as_string() : "unknown";
 
 #ifdef XAPIAND_DATA_STORAGE
 	auto store = document.get_store();
@@ -755,6 +754,7 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 			auto locator = database->storage_unserialise_locator(store.second);
 			info["_blob"] = {
 				{"_type", "stored"},
+				{"_content_type", ct_type_mp ? ct_type_mp.as_string() : "unknown"},
 				{"_volume", std::get<0>(locator)},
 				{"_offset", std::get<1>(locator)},
 				{"_size", std::get<2>(locator)},
@@ -767,8 +767,10 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 		if (blob_data.empty()) {
 			info["_blob"] = nullptr;
 		} else {
+			auto blob_ct = unserialise_string_at(1, document.get_blob());
 			info["_blob"] = {
 				{"_type", "local"},
+				{"_content_type", blob_ct},
 				{"_size", blob_data.size()},
 			};
 		}
