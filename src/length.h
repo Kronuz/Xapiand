@@ -96,6 +96,8 @@ inline void unserialise_unsigned(const char** p, const char* end, T* result) {
 
 	const char * ptr = *p;
 	ASSERT(ptr);
+	ASSERT(ptr <= end);
+
 	const char * start = ptr;
 
 	// Check the length of the encoded integer first.

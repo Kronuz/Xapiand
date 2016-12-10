@@ -147,7 +147,8 @@ unserialise_double(const char** p, const char* end)
 	if (exp >= 14) {
 		int bigexp = static_cast<unsigned char>(*(*p)++);
 		if (exp == 15) {
-			if (*p == end) {
+			if unlikely(*p == end) {
+				*p = NULL;
 				THROW(SerialisationError, "Bad encoded double: short large exponent");
 			}
 			exp = bigexp | (static_cast<unsigned char>(*(*p)++) << 8);
@@ -227,29 +228,36 @@ serialise_length(unsigned long long len)
 unsigned long long
 unserialise_length(const char** p, const char* end, bool check_remaining)
 {
-	const char *pos = *p;
-	if (pos == end) {
+	const char *ptr = *p;
+	ASSERT(ptr);
+	ASSERT(ptr <= end);
+
+	if unlikely(ptr == end) {
+		// Out of data.
+		*p = NULL;
 		THROW(SerialisationError, "Bad encoded length: no data");
 	}
-	unsigned long long len = static_cast<unsigned char>(*pos++);
+
+	unsigned long long len = static_cast<unsigned char>(*ptr++);
 	if (len == 0xff) {
 		len = 0;
 		unsigned char ch;
 		unsigned shift = 0;
 		do {
-			if (pos == end || shift > (sizeof(unsigned long long) * 8 / 7 * 7)) {
+			if unlikely(ptr == end || shift > (sizeof(unsigned long long) * 8 / 7 * 7)) {
+				*p = NULL;
 				THROW(SerialisationError, "Bad encoded length: insufficient data");
 			}
-			ch = *pos++;
+			ch = *ptr++;
 			len |= static_cast<unsigned long long>(ch & 0x7f) << shift;
 			shift += 7;
 		} while ((ch & 0x80) == 0);
 		len += 255;
 	}
-	if (check_remaining && len > static_cast<unsigned long long>(end - pos)) {
+	if (check_remaining && len > static_cast<unsigned long long>(end - ptr)) {
 		THROW(SerialisationError, "Bad encoded length: length greater than data");
 	}
-	*p = pos;
+	*p = ptr;
 	return len;
 }
 
@@ -266,6 +274,8 @@ serialise_string(const std::string &input) {
 std::string
 unserialise_string(const char** p, const char* end) {
 	const char *ptr = *p;
+	ASSERT(ptr);
+	ASSERT(ptr <= end);
 
 	std::string string;
 
@@ -294,17 +304,20 @@ std::string
 unserialise_string_at(size_t at, const char** p, const char* end)
 {
 	const char *ptr = *p;
+	ASSERT(ptr);
+	ASSERT(ptr <= end);
 
 	std::string string;
 	unsigned long long length = 0;
 
-	do {
+	while (at--) {
 		ptr += length;
 		length = unserialise_length(&ptr, end, true);
-	} while(at--);
+	}
 
-	string.append(std::string(ptr, length));
-
+	if (at == 0) {
+		string.append(std::string(ptr, length));
+	}
 	*p = ptr;
 
 	return string;
