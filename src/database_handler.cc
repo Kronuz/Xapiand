@@ -276,18 +276,20 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 		id_field = Cast::cast(spc_id.sep_types[2], _document_id);
 	}
 
-	// Add Content Type.
-	auto found = ct_type.find_last_of("/");
-	std::string type(ct_type.c_str(), found);
-	std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
+	if (!blob.empty()) {
+		// Add Content Type if indexing a blob.
+		auto found = ct_type.find_last_of("/");
+		std::string type(ct_type.c_str(), found);
+		std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
 
-	auto& ct_field = obj_[CT_FIELD_NAME];
-	if (!ct_field.is_map() && !ct_field.is_undefined()) {
-		ct_field = MsgPack();
+		auto& ct_field = obj_[CT_FIELD_NAME];
+		if (!ct_field.is_map() && !ct_field.is_undefined()) {
+			ct_field = MsgPack();
+		}
+		ct_field[RESERVED_TYPE] = TERM_STR;
+		ct_field[RESERVED_VALUE] = ct_type;
+		ct_field[type][subtype] = nullptr;
 	}
-	ct_field[RESERVED_TYPE] = TERM_STR;
-	ct_field[RESERVED_VALUE] = ct_type;
-	ct_field[type][subtype] = nullptr;
 
 	// Index object.
 	obj_ = schema->index(obj_, doc);
@@ -299,8 +301,13 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 		prefixed_term_id = prefixed(term_id, spc_id.prefix);
 	}
 
-	L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
-	doc.set_data(join_data(stored, store, obj_.serialise(), serialise_strings({prefixed_term_id, ct_type, blob})));
+	if (blob.empty()) {
+		L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
+		doc.set_data(join_data(false, "", obj_.serialise(), ""));
+	} else {
+		L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
+		doc.set_data(join_data(stored, store, obj_.serialise(), serialise_strings({prefixed_term_id, ct_type, blob})));
+	}
 
 	doc.add_boolean_term(prefixed_term_id);
 	doc.add_value(spc_id.slot, term_id);
