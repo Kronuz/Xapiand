@@ -2361,17 +2361,18 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 		schema = &schemas[endpoint.hash()];
 	}
 
+	std::shared_ptr<Database> database;
+	if (!checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
+		THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
+	}
+
 	if (schema->compare_exchange_strong(old_schema, new_schema)) {
-		std::shared_ptr<Database> database;
-		if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-			database->set_metadata(RESERVED_SCHEMA, schema->load()->serialise());
-			checkin(database);
-		} else {
-			THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
-		}
+		database->set_metadata(RESERVED_SCHEMA, new_schema->serialise());
+		checkin(database);
 		return true;
 	}
 
+	checkin(database);
 	return false;
 }
 
