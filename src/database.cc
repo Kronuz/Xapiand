@@ -2350,8 +2350,8 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 }
 
 
-void
-DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack> new_schema)
+bool
+DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack>& old_schema, std::shared_ptr<const MsgPack> new_schema)
 {
 	L_CALL(this, "DatabasePool::set_schema(%s, %d, %s)", repr(endpoint.to_string()).c_str(), flags, new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
 
@@ -2361,15 +2361,18 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 		schema = &schemas[endpoint.hash()];
 	}
 
-	schema->exchange(new_schema);
-
-	std::shared_ptr<Database> database;
-	if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-		database->set_metadata(RESERVED_SCHEMA, schema->load()->serialise());
-		checkin(database);
-	} else {
-		THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
+	if (schema->compare_exchange_strong(old_schema, new_schema)) {
+		std::shared_ptr<Database> database;
+		if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
+			database->set_metadata(RESERVED_SCHEMA, schema->load()->serialise());
+			checkin(database);
+		} else {
+			THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
+		}
+		return true;
 	}
+
+	return false;
 }
 
 

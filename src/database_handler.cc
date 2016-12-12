@@ -248,9 +248,6 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(obj.to_string()).c_str());
 
-	schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
-	L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
-
 	// Create a suitable document.
 	Xapian::Document doc;
 
@@ -258,41 +255,47 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 	std::string term_id;
 	std::string prefixed_term_id;
+	required_spc_t spc_id;
 
-	auto spc_id = schema->get_data_id();
-	if (spc_id.sep_types[2] == FieldType::EMPTY) {
-		obj_ = obj;
-	} else {
-		term_id = Serialise::serialise(spc_id, _document_id);
-		prefixed_term_id = prefixed(term_id, spc_id.prefix);
-		obj_ = run_script(obj, prefixed_term_id);
-	}
+	do {
+		schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
+		L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
 
-	// Add ID.
-	auto& id_field = obj_[ID_FIELD_NAME];
-	if (id_field.is_map()) {
-		id_field[RESERVED_VALUE] = Cast::cast(spc_id.sep_types[2], _document_id);
-	} else {
-		id_field = Cast::cast(spc_id.sep_types[2], _document_id);
-	}
-
-	if (!blob.empty()) {
-		// Add Content Type if indexing a blob.
-		auto found = ct_type.find_last_of("/");
-		std::string type(ct_type.c_str(), found);
-		std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
-
-		auto& ct_field = obj_[CT_FIELD_NAME];
-		if (!ct_field.is_map() && !ct_field.is_undefined()) {
-			ct_field = MsgPack();
+		spc_id = schema->get_data_id();
+		if (spc_id.sep_types[2] == FieldType::EMPTY) {
+			obj_ = obj;
+		} else {
+			term_id = Serialise::serialise(spc_id, _document_id);
+			prefixed_term_id = prefixed(term_id, spc_id.prefix);
+			obj_ = run_script(obj, prefixed_term_id);
 		}
-		ct_field[RESERVED_TYPE] = TERM_STR;
-		ct_field[RESERVED_VALUE] = ct_type;
-		ct_field[type][subtype] = nullptr;
-	}
 
-	// Index object.
-	obj_ = schema->index(obj_, doc);
+		// Add ID.
+		auto& id_field = obj_[ID_FIELD_NAME];
+		if (id_field.is_map()) {
+			id_field[RESERVED_VALUE] = Cast::cast(spc_id.sep_types[2], _document_id);
+		} else {
+			id_field = Cast::cast(spc_id.sep_types[2], _document_id);
+		}
+
+		if (!blob.empty()) {
+			// Add Content Type if indexing a blob.
+			auto found = ct_type.find_last_of("/");
+			std::string type(ct_type.c_str(), found);
+			std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
+
+			auto& ct_field = obj_[CT_FIELD_NAME];
+			if (!ct_field.is_map() && !ct_field.is_undefined()) {
+				ct_field = MsgPack();
+			}
+			ct_field[RESERVED_TYPE] = TERM_STR;
+			ct_field[RESERVED_VALUE] = ct_type;
+			ct_field[type][subtype] = nullptr;
+		}
+
+		// Index object.
+		obj_ = schema->index(obj_, doc);
+	} while (!update_schema());
 
 	if (prefixed_term_id.empty()) {
 		// Now the schema is full, get specification id.
@@ -327,8 +330,6 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 		}
 	}
 	endpoints = std::move(_endpoints);
-
-	update_schema();
 
 	return std::make_pair(std::move(did), std::move(obj_));
 }
@@ -444,7 +445,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 
 	schema->write_schema(obj, method == HTTP_PUT);
 
-	update_schema();
+	while (!update_schema());
 }
 
 
@@ -645,17 +646,21 @@ DatabaseHandler::get_document(const Xapian::docid& did)
 }
 
 
-void
-DatabaseHandler::update_schema() const
+bool
+DatabaseHandler::update_schema()
 {
 	L_CALL(this, "DatabaseHandler::update_schema()");
 
 	auto mod_schema = schema->get_modified_schema();
 	if (mod_schema) {
+		auto old_schema = schema->get_const_schema();
 		for (const auto& e: endpoints) {
-			XapiandManager::manager->database_pool.set_schema(e, flags, mod_schema);
+			if (!XapiandManager::manager->database_pool.set_schema(e, flags, old_schema, mod_schema)) {
+				return false;
+			}
 		}
 	}
+	return true;
 }
 
 

@@ -416,7 +416,7 @@ public:
 	void finish();
 
 	std::shared_ptr<const MsgPack> get_schema(const Endpoint& endpoint, int flags=-1);
-	void set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack> new_schema);
+	bool set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack>& old_schema, std::shared_ptr<const MsgPack> new_schema);
 
 	template<typename F, typename... Args>
 	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args) {

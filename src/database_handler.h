@@ -122,7 +122,7 @@ public:
 
 	MSet get_mset(const query_field_t& e, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions);
 
-	void update_schema() const;
+	bool update_schema();
 
 	Document get_document(const Xapian::docid& did);
 	Document get_document(const std::string& doc_id);
