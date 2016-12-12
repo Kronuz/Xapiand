@@ -24,12 +24,12 @@
 
 #include "xapiand.h"
 
-#include <stddef.h>                          // for size_t
-#include <xapian.h>                          // for Document, docid, MSet
 #include <memory>                            // for shared_ptr, make_shared
+#include <stddef.h>                          // for size_t
 #include <string>                            // for string
 #include <unordered_map>                     // for unordered_map
 #include <vector>                            // for vector
+#include <xapian.h>                          // for Document, docid, MSet
 
 #include "database_utils.h"                  // for query_field_...
 #include "endpoint.h"                        // for Endpoints

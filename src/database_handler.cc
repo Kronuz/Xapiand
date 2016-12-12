@@ -22,8 +22,8 @@
 
 #include "database_handler.h"
 
-#include <ctype.h>                          // for isupper, tolower
 #include <algorithm>                        // for min, move
+#include <ctype.h>                          // for isupper, tolower
 #include <exception>                        // for exception
 #include <stdexcept>                        // for out_of_range
 
