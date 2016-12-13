@@ -294,7 +294,7 @@ std::string
 serialise_strings(const std::vector<std::reference_wrapper<const std::string>>& strings)
 {
 	std::string output;
-	for (auto& s : strings) {
+	for (const std::string& s : strings) {
 		output.append(serialise_string(s));
 	}
 	return output;
