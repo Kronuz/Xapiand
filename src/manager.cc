@@ -462,10 +462,11 @@ XapiandManager::signal_sig_async_cb(ev::async&, int revents)
 		case SIGINT:
 			shutdown_sig(sig);
 			break;
-
+#if defined(__APPLE__) || defined(__FreeBSD__)
 		case SIGINFO:
 			print(BLUE "Workers: %s", dump_tree().c_str());
 			break;
+#endif
 	}
 }
 
