@@ -22,13 +22,25 @@
 
 #include "manager.h"
 
+#include <algorithm>                         // for move
 #include <arpa/inet.h>                       // for inet_ntop
+#include <atomic>                            // for atomic, atomic_int
+#include <chrono>                            // for duration, system_clock
+#include <cstdint>                           // for uint64_t, UINT64_MAX
+#include <ctime>                             // for time_t, ctime, NULL
 #include <ctype.h>                           // for isspace
+#include <exception>                         // for exception
+#include <functional>                        // for __base
 #include <ifaddrs.h>                         // for ifaddrs, freeifaddrs
+#include <memory>                            // for allocator, shared_ptr
+#include <mutex>                             // for mutex, lock_guard, uniqu...
 #include <net/if.h>                          // for IFF_LOOPBACK
 #include <netinet/in.h>                      // for sockaddr_in, INET_ADDRST...
+#include <ratio>                             // for milli
+#include <regex>                             // for smatch, regex, operator|
 #include <stdlib.h>                          // for size_t, exit
 #include <string.h>                          // for strerror
+#include <string>                            // for string, basic_string
 #include <sys/errno.h>                       // for __error, errno
 #include <sys/fcntl.h>                       // for O_CLOEXEC, O_CREAT, O_RD...
 #include <sys/signal.h>                      // for SIGTERM, SIGINT
@@ -36,22 +48,10 @@
 #include <sys/types.h>                       // for uint64_t
 #include <sysexits.h>                        // for EX_IOERR, EX_NOINPUT
 #include <unistd.h>                          // for ssize_t, getpid
-#include <xapian.h>                          // for Error
-#include <algorithm>                         // for move
-#include <atomic>                            // for atomic, atomic_int
-#include <chrono>                            // for duration, system_clock
-#include <cstdint>                           // for uint64_t, UINT64_MAX
-#include <ctime>                             // for time_t, ctime, NULL
-#include <exception>                         // for exception
-#include <functional>                        // for __base
-#include <memory>                            // for allocator, shared_ptr
-#include <mutex>                             // for mutex, lock_guard, uniqu...
-#include <ratio>                             // for milli
-#include <regex>                             // for smatch, regex, operator|
-#include <string>                            // for string, basic_string
 #include <unordered_map>                     // for __hash_map_const_iterator
 #include <utility>                           // for pair
 #include <vector>                            // for vector
+#include <xapian.h>                          // for Error
 
 #include "async_fsync.h"                     // for AsyncFsync
 #include "atomic_shared_ptr.h"               // for atomic_shared_ptr

@@ -22,9 +22,16 @@
 
 #include "xapiand.h"
 
+#include <algorithm>                 // for min
+#include <chrono>                    // for system_clock, time_point
+#include <clocale>                   // for setlocale, LC_CTYPE
 #include <grp.h>                     // for getgrgid, group, getgrnam, gid_t
+#include <iostream>                  // for operator<<, basic_ostream, ostream
+#include <list>                      // for __list_iterator, list, operator!=
+#include <memory>                    // for unique_ptr, allocator, make_unique
 #include <pwd.h>                     // for passwd, getpwnam, getpwuid
 #include <signal.h>                  // for sigaction, sigemptyset
+#include <sstream>                   // for basic_stringbuf<>::int_type, bas...
 #include <stdio.h>                   // for snprintf
 #include <stdlib.h>                  // for size_t, atoi, setenv, exit, getenv
 #include <string.h>                  // for strcat, strchr, strlen, strrchr
@@ -32,21 +39,14 @@
 #include <sys/fcntl.h>               // for O_RDWR, O_CREAT
 #include <sys/signal.h>              // for sigaction, signal, SIG_IGN, SIGHUP
 #include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_O...
+#include <thread>                    // for thread
 #include <time.h>                    // for tm, localtime, mktime, time_t
 #include <unistd.h>                  // for dup2, unlink, STDERR_FILENO, chdir
 #if XAPIAND_V8
 #include <v8-version.h>              // for V8_MAJOR_VERSION, V8_MINOR_VERSION
 #endif
-#include <xapian.h>                  // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
-#include <algorithm>                 // for min
-#include <chrono>                    // for system_clock, time_point
-#include <clocale>                   // for setlocale, LC_CTYPE
-#include <iostream>                  // for operator<<, basic_ostream, ostream
-#include <list>                      // for __list_iterator, list, operator!=
-#include <memory>                    // for unique_ptr, allocator, make_unique
-#include <sstream>                   // for basic_stringbuf<>::int_type, bas...
-#include <thread>                    // for thread
 #include <vector>                    // for vector
+#include <xapian.h>                  // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #include "config.h"                  // for PACKAGE_BUGREPORT, PACKAGE_STRING
 #include "endpoint.h"                // for Endpoint, Endpoint::cwd
@@ -57,8 +57,8 @@
 #include "manager.h"                 // for opts_t, XapiandManager, XapiandM...
 #include "tclap/CmdLine.h"           // for CmdLine, ArgException, Arg, CmdL...
 #include "utils.h"                   // for format_string, center_string
-#include "xxh64.hpp"                 // for xxh64
 #include "worker.h"                  // for Worker
+#include "xxh64.hpp"                 // for xxh64
 
 #define LINE_LENGTH 78
 
