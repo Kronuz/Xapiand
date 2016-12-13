@@ -109,8 +109,7 @@ public:
 	}
 
 	void aggregate_string(const std::string& value, const Xapian::Document& doc) override {
-		auto& bucket = value;
-		aggregate(bucket, doc);
+		aggregate(value, doc);
 	}
 
 	void aggregate_geo(const std::pair<std::string, std::string>& value, const Xapian::Document& doc) override {
@@ -119,8 +118,7 @@ public:
 	}
 
 	void aggregate_uuid(const std::string& value, const Xapian::Document& doc) override {
-		auto& bucket = value;
-		aggregate(bucket, doc);
+		aggregate(value, doc);
 	}
 };
 
@@ -170,9 +168,9 @@ public:
 		  interval_i64(0),
 		  interval_f64(0.0)
 	{
-		auto histogram_conf = _conf.at(AGGREGATION_HISTOGRAM);
+		const auto& histogram_conf = _conf.at(AGGREGATION_HISTOGRAM);
 		try {
-			auto interval = histogram_conf.at(AGGREGATION_INTERVAL);
+			const auto& interval = histogram_conf.at(AGGREGATION_INTERVAL);
 			try {
 				interval_u64 = interval.as_u64();
 			} catch (const msgpack::type_error&) { }
@@ -237,10 +235,10 @@ public:
 	RangeAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 		: BucketAggregation(AGGREGATION_RANGE, result, conf, schema)
 	{
-		auto range_conf = _conf.at(AGGREGATION_RANGE);
+		const auto& range_conf = _conf.at(AGGREGATION_RANGE);
 		try {
-			auto ranges = range_conf.at(AGGREGATION_RANGES);
-			for (auto& range : ranges) {
+			const auto& ranges = range_conf.at(AGGREGATION_RANGES);
+			for (const auto& range : ranges) {
 				std::string key;
 				uint64_t from_u64, to_u64;
 				int64_t from_i64, to_i64;
@@ -251,12 +249,11 @@ public:
 				bool err_f64 = false;
 
 				try {
-					key = range.at("_key").as_string();
-				} catch (const std::out_of_range&) {
-				}
+					key = range.at(AGGREGATION_KEY).as_string();
+				} catch (const std::out_of_range&) { }
 
 				try {
-					auto from = range.at("_from");
+					const auto& from = range.at(AGGREGATION_FROM);
 					try {
 						from_u64 = from.as_u64();
 					} catch (const msgpack::type_error&) {
@@ -279,7 +276,7 @@ public:
 				}
 
 				try {
-					auto to = range.at("_to");
+					const auto& to = range.at(AGGREGATION_TO);
 					try {
 						to_u64 = to.as_u64();
 					} catch (const msgpack::type_error&) {
@@ -313,7 +310,7 @@ public:
 	}
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
-		for (auto& range : ranges_f64) {
+		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);
 			}
@@ -321,7 +318,7 @@ public:
 	}
 
 	void aggregate_integer(long value, const Xapian::Document& doc) override {
-		for (auto& range : ranges_i64) {
+		for (const auto& range : ranges_i64) {
 			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);
 			}
@@ -329,7 +326,7 @@ public:
 	}
 
 	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
-		for (auto& range : ranges_u64) {
+		for (const auto& range : ranges_u64) {
 			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);
 			}
@@ -337,7 +334,7 @@ public:
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
-		for (auto& range : ranges_f64) {
+		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);
 			}
