@@ -99,8 +99,7 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 		}
 	} catch (const msgpack::type_error) {
 		THROW(AggregationError, "Aggregations must be an object");
-	} catch (const std::out_of_range&) {
-	}
+	} catch (const std::out_of_range&) { }
 }
 
 

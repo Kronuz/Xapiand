@@ -44,6 +44,7 @@
 #include "serialise.h"                      // for _float
 #include "utils.h"                          // for format_string
 
+
 class Schema;
 class StringSet;
 

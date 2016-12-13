@@ -76,7 +76,7 @@ FilterAggregation::update()
 void
 FilterAggregation::check_single(const Xapian::Document& doc)
 {
-	for (const auto&  filter : _filters) {
+	for (const auto& filter : _filters) {
 		StringUSet us;
 		us.unserialise(doc.get_value(filter.first));
 		if (us.find(*filter.second.begin()) != us.end()) {
@@ -89,7 +89,7 @@ FilterAggregation::check_single(const Xapian::Document& doc)
 void
 FilterAggregation::check_multiple(const Xapian::Document& doc)
 {
-	for (const auto&  filter : _filters) {
+	for (const auto& filter : _filters) {
 		StringSet s;
 		s.unserialise(doc.get_value(filter.first));
 		Counter c;
