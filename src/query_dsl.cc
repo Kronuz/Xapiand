@@ -585,7 +585,7 @@ QueryDSL::get_query(const MsgPack& obj)
 {
 	L_CALL(this, "QueryDSL::get_query(%s)", repr(obj.to_string()).c_str());
 
-	if (obj.is_string() && obj.as_string().compare("*")) {
+	if (obj.is_string() && obj.as_string().compare("*") == 0) {
 		return Xapian::Query::MatchAll;
 	}
 
