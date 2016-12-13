@@ -22,9 +22,10 @@
 
 #include "length.h"
 
-#include <algorithm>  // for min
-#include <cfloat>     // for FLT_RADIX, DBL_MANT_DIG, DBL_MAX_EXP, DBL_MAX
-#include <cmath>      // for scalbn, frexp, HUGE_VAL
+#include <algorithm>    // for min
+#include <cfloat>       // for FLT_RADIX, DBL_MANT_DIG, DBL_MAX_EXP, DBL_MAX
+#include <cmath>        // for scalbn, frexp, HUGE_VAL
+#include <functional>   // for std::reference_wrapper
 
 // The serialisation we use for doubles is inspired by a comp.lang.c post
 // by Jens Moeller:
