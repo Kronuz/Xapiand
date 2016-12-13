@@ -186,7 +186,9 @@ void setup_signal_handlers(void) {
 	act.sa_handler = sig_handler;
 	sigaction(SIGTERM, &act, nullptr);  // On software termination signal
 	sigaction(SIGINT, &act, nullptr);   // On interrupt program (Ctrl-C)
+#if defined(__APPLE__) || defined(__FreeBSD__)
 	sigaction(SIGINFO, &act, nullptr);  // On status request from keyboard (Ctrl-T)
+#endif
 	sigaction(SIGUSR1, &act, nullptr);
 	sigaction(SIGUSR1, &act, nullptr);
 }
