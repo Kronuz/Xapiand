@@ -24,18 +24,18 @@
 
 #include "xapiand.h"
 
-#include <math.h>                           // for fmod
-#include <sys/types.h>                      // for int64_t, uint64_t
-#include <xapian.h>                         // for Document, valueno
 #include <cstdint>                          // for int64_t, uint64_t
 #include <limits>                           // for numeric_limits
+#include <math.h>                           // for fmod
 #include <memory>                           // for shared_ptr, allocator
 #include <stdexcept>                        // for out_of_range
 #include <string>                           // for string, to_string, hash
+#include <sys/types.h>                      // for int64_t, uint64_t
 #include <tuple>                            // for forward_as_tuple
 #include <unordered_map>                    // for unordered_map, __hash_map...
 #include <utility>                          // for pair, make_pair, piecewis...
 #include <vector>                           // for vector
+#include <xapian.h>                         // for Document, valueno
 
 #include "aggregation.h"                    // for Aggregation
 #include "msgpack.h"                        // for MsgPack, object::object, ...

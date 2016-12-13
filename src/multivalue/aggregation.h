@@ -24,16 +24,17 @@
 
 #include "xapiand.h"
 
-#include <stddef.h>                 // for size_t
-#include <xapian.h>                 // for MatchSpy, doccount
 #include <memory>                   // for shared_ptr, make_shared
+#include <stddef.h>                 // for size_t
 #include <string>                   // for string
 #include <type_traits>              // for decay_t, enable_if_t, forward
 #include <unordered_map>            // for unordered_map
 #include <vector>                   // for vector
+#include <xapian.h>                 // for MatchSpy, doccount
 
-#include "msgpack.h"                // for MsgPack
 #include "aggregation_metric.h"     // for AGGREGATION_AGGS
+#include "msgpack.h"                // for MsgPack
+
 
 class Schema;
 

@@ -24,7 +24,6 @@
 
 #include "xapiand.h"
 
-#include <xapian.h>            // for valueno
 #include <algorithm>           // for nth_element, max_element
 #include <cfloat>              // for DBL_MAX, DBL_MIN
 #include <cmath>               // for sqrt
@@ -36,6 +35,7 @@
 #include <unordered_map>       // for __hash_map_iterator, unordered_map
 #include <utility>             // for pair
 #include <vector>              // for vector
+#include <xapian.h>            // for valueno
 
 #include "exception.h"         // for AggregationError, MSG_AggregationError
 #include "msgpack.h"           // for MsgPack, object::object
