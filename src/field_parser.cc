@@ -27,15 +27,15 @@
 #include <ctype.h>  // for isspace
 
 
-#define TOKEN_COLON ':'
-#define TOKEN_DOUBLE_QUOTE '"'
-#define TOKEN_SINGLE_QUOTE '\''
-#define TOKEN_SQUARE_BRACKET_LEFT '['
-#define TOKEN_SQUARE_BRACKET_RIGHT ']'
-#define TOKEN_PARENTHESIS_LEFT '('
-#define TOKEN_PARENTHESIS_RIGHT ')'
-#define TOKEN_COMMA ','
-#define TOKEN_DOT '.'
+#define TOKEN_COLON                 ':'
+#define TOKEN_COMMA                 ','
+#define TOKEN_DOT                   '.'
+#define TOKEN_DOUBLE_QUOTE          '"'
+#define TOKEN_PARENTHESIS_LEFT      '('
+#define TOKEN_PARENTHESIS_RIGHT     ')'
+#define TOKEN_SINGLE_QUOTE          '\''
+#define TOKEN_SQUARE_BRACKET_LEFT   '['
+#define TOKEN_SQUARE_BRACKET_RIGHT  ']'
 
 
 FieldParser::FieldParser(const std::string& p)
