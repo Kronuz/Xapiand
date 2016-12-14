@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include "exception.h"
 #include "msgpack.hpp"
 #include "rapidjson/document.h"
