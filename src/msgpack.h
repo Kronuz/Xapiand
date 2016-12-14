@@ -724,7 +724,7 @@ inline void MsgPack::_update_map(size_t pos) {
 		assert(it != _body->map.end());
 		auto& elem = it->second;
 		elem.first._body->_obj = &p->key;
-		elem.second._deinit();
+		// elem.second._deinit();
 		elem.second._body->_obj = &p->val;
 		elem.second._body->_capacity = elem.second._body->size();
 		elem.second._body->_pos = pos;
@@ -757,7 +757,7 @@ inline void MsgPack::_update_array(size_t pos) {
 		// If the previous item was a MAP, force map update.
 		_body->array.at(pos)._body->map.clear();
 		auto& mobj = _body->at(pos);
-		mobj._deinit();
+		// mobj._deinit();
 		mobj._body->_pos = pos;
 		mobj._body->_obj = p;
 		mobj._body->_capacity = mobj._body->size();
