@@ -25,18 +25,18 @@
 
 std::string zerr(int ret)
 {
-    switch (ret) {
-	    case Z_ERRNO:
-	    	return "There is an error reading or writing the files";
-	    case Z_STREAM_ERROR:
-	        return "invalid compression level";
-	    case Z_DATA_ERROR:
-	    	return "invalid or incomplete deflate data";
-	    case Z_MEM_ERROR:
-	    	return "memory could not be allocated for processing (out of memory)";
-	    case Z_VERSION_ERROR:
-	    	return "zlib version mismatch!";
-	    }
+	switch (ret) {
+		case Z_ERRNO:
+			return "There is an error reading or writing the files";
+		case Z_STREAM_ERROR:
+			return "invalid compression level";
+		case Z_DATA_ERROR:
+			return "invalid or incomplete deflate data";
+		case Z_MEM_ERROR:
+			return "memory could not be allocated for processing (out of memory)";
+		case Z_VERSION_ERROR:
+			return "zlib version mismatch!";
+		}
 	return std::string();
 }
 
@@ -61,13 +61,13 @@ std::string
 DeflateCompressData::init(bool start)
 {
 	strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
+	strm.zfree = Z_NULL;
+	strm.opaque = Z_NULL;
 
 	stream = deflateInit(&strm, Z_DEFAULT_COMPRESSION);
-    if(stream != Z_OK) {
-        THROW(DeflateException, zerr(stream));
-    }
+	if(stream != Z_OK) {
+		THROW(DeflateException, zerr(stream));
+	}
 
 	if (start && data) {
 		return next();
@@ -86,10 +86,10 @@ DeflateCompressData::next(const char* input, size_t input_size, int flush)
 	std::string result;
 	do {
 		strm.avail_out = input_size;
-        strm.next_out = reinterpret_cast<Bytef*>(out.get());
-        stream = deflate(&strm, flush);    // no bad return value
-        int compress_size = input_size - strm.avail_out;
-        result.append(std::string(out.get(), compress_size));
+		strm.next_out = reinterpret_cast<Bytef*>(out.get());
+		stream = deflate(&strm, flush);    // no bad return value
+		int compress_size = input_size - strm.avail_out;
+		result.append(std::string(out.get(), compress_size));
 	} while (strm.avail_out == 0);
 
 	return result;
@@ -230,13 +230,13 @@ DeflateCompressFile::init()
 	}
 
 	strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
+	strm.zfree = Z_NULL;
+	strm.opaque = Z_NULL;
 
-    stream = deflateInit(&strm, Z_DEFAULT_COMPRESSION);
-    if(stream != Z_OK) {
+	stream = deflateInit(&strm, Z_DEFAULT_COMPRESSION);
+	if(stream != Z_OK) {
 		THROW(DeflateException, zerr(stream));
-    }
+	}
 
 	io::lseek(fd, 0, SEEK_END);
 	size_file = io::lseek(fd, 0, SEEK_CUR);
@@ -272,10 +272,10 @@ DeflateCompressFile::next()
 	strm.next_in = reinterpret_cast<Bytef*>(buffer);
 	do {
 		strm.avail_out = DEFLATE_BLOCK_SIZE;
-	    strm.next_out = reinterpret_cast<Bytef*>(cmpBuf);
-	    stream = deflate(&strm, flush);    /* no bad return value */
-	    auto bytes_compressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
-	    result.append(std::string(cmpBuf, bytes_compressed));
+		strm.next_out = reinterpret_cast<Bytef*>(cmpBuf);
+		stream = deflate(&strm, flush);    /* no bad return value */
+		auto bytes_compressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
+		result.append(std::string(cmpBuf, bytes_compressed));
 	} while (strm.avail_out == 0);
 
 	return result;
@@ -306,13 +306,13 @@ DeflateDecompressFile::init()
 	}
 
 	strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
-    strm.avail_in = 0;
-    strm.next_in = Z_NULL;
+	strm.zfree = Z_NULL;
+	strm.opaque = Z_NULL;
+	strm.avail_in = 0;
+	strm.next_in = Z_NULL;
 
-    stream = inflateInit(&strm);
-    if(stream != Z_OK) {
+	stream = inflateInit(&strm);
+	if(stream != Z_OK) {
 		THROW(DeflateException, zerr(stream));
 	}
 
@@ -336,16 +336,16 @@ DeflateDecompressFile::next()
 	strm.next_in = reinterpret_cast<Bytef*>(cmpBuf);
 
 	std::string result;
-    do {
-        strm.avail_out = DEFLATE_BLOCK_SIZE;
-        strm.next_out = reinterpret_cast<Bytef*>(buffer);
-        stream = inflate(&strm, Z_NO_FLUSH);
+	do {
+		strm.avail_out = DEFLATE_BLOCK_SIZE;
+		strm.next_out = reinterpret_cast<Bytef*>(buffer);
+		stream = inflate(&strm, Z_NO_FLUSH);
 		if (stream != Z_OK && stream != Z_STREAM_END && stream != Z_BUF_ERROR) {
-            THROW(DeflateException, zerr(stream));
-        }
-        auto bytes_decompressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
-        result.append(std::string(buffer, bytes_decompressed));
-    } while (strm.avail_out == 0);
+			THROW(DeflateException, zerr(stream));
+		}
+		auto bytes_decompressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
+		result.append(std::string(buffer, bytes_decompressed));
+	} while (strm.avail_out == 0);
 
-    return result;
+	return result;
 }

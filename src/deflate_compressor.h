@@ -71,8 +71,8 @@ protected:
 public:
 	DeflateBlockStreaming()
 		: stream(0),
-	      state(DeflateState::INT),
-	      cmpBuf_size(DEFLATE_BLOCK_SIZE),
+		  state(DeflateState::INT),
+		  cmpBuf_size(DEFLATE_BLOCK_SIZE),
 		  cmpBuf((char*)malloc(cmpBuf_size)),
 		  buffer((char*)malloc(DEFLATE_BLOCK_SIZE)) { }
 
@@ -275,7 +275,7 @@ public:
 	inline void open(const std::string& filename) {
 		fd = io::open(filename.c_str(), O_RDONLY, 0644);
 		 if unlikely(fd < 0) {
-		 	THROW(DeflateIOError, "Cannot open file: %s", filename.c_str());
+			THROW(DeflateIOError, "Cannot open file: %s", filename.c_str());
 		 }
 		fd_offset = 0;
 		fd_nbytes = -1;
@@ -341,7 +341,7 @@ public:
 	~DeflateDecompressFile();
 
 	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_) {
-	 	add_fildes(fd_, fd_offset_, fd_nbytes_);
+		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	 }
 
 	inline void reset(const std::string& filename) {
