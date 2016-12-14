@@ -154,12 +154,12 @@ DeflateDecompressData::init()
 	strm.opaque = Z_NULL;
 	strm.avail_in = 0;
 	strm.next_in = Z_NULL;
-	
+
 	stream = inflateInit(&strm);
 	if(stream != Z_OK) {
 		THROW(DeflateException, zerr(stream));
 	}
-	
+
 	return next();
 }
 
