@@ -24,11 +24,11 @@
 
 #include "xapiand.h"
 
-#include <xapian.h>         // for Query, Query::op, termcount
 #include <memory>           // for shared_ptr
 #include <string>           // for string
 #include <unordered_map>    // for unordered_map
 #include <unordered_set>    // for unordered_set
+#include <xapian.h>         // for Query, Query::op, termcount
 
 #include "msgpack.h"        // for MsgPack
 #include "schema.h"         // for Schema, FieldType, required_spc_t
@@ -37,7 +37,9 @@
 
 constexpr const char QUERYDSL_QUERY[] = "_query";
 
+
 /* A domain-specific language (DSL) for query */
+
 
 class QueryDSL {
 	std::shared_ptr<Schema> schema;

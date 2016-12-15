@@ -26,7 +26,7 @@
 #include "booleanParser/LexicalException.h"    // for LexicalException
 #include "booleanParser/SyntacticException.h"  // for SyntacticException
 #include "database_utils.h"                    // for prefixed, RESERVED_VALUE
-#include "exception.h"                         // for THROW, ClientError
+#include "exception.h"                         // for THROW, QueryDslError
 #include "field_parser.h"                      // for FieldParser
 #include "geo/wkt_parser.h"                    // for EWKT_Parser
 #include "log.h"                               // for Log, L_CALL, L
@@ -64,16 +64,16 @@ const std::unordered_map<std::string, Xapian::Query::op> QueryDSL::ops_map({
 
 
 const std::unordered_set<std::string> QueryDSL::casts_set({
-	{ RESERVED_FLOAT,             }, { RESERVED_POSITIVE,          },
-	{ RESERVED_INTEGER,           }, { RESERVED_BOOLEAN,           },
-	{ RESERVED_TERM,              }, { RESERVED_TEXT,              },
-	{ RESERVED_DATE,              }, { RESERVED_UUID,              },
-	{ RESERVED_EWKT,              }, { RESERVED_POINT,             },
-	{ RESERVED_POLYGON,           }, { RESERVED_CIRCLE,            },
-	{ RESERVED_CHULL,             }, { RESERVED_MULTIPOINT,        },
-	{ RESERVED_MULTIPOLYGON,      }, { RESERVED_MULTICIRCLE,       },
-	{ RESERVED_MULTICHULL,        }, { RESERVED_GEO_COLLECTION,    },
-	{ RESERVED_GEO_INTERSECTION,  },
+	RESERVED_FLOAT,              RESERVED_POSITIVE,
+	RESERVED_INTEGER,            RESERVED_BOOLEAN,
+	RESERVED_TERM,               RESERVED_TEXT,
+	RESERVED_DATE,               RESERVED_UUID,
+	RESERVED_EWKT,               RESERVED_POINT,
+	RESERVED_POLYGON,            RESERVED_CIRCLE,
+	RESERVED_CHULL,              RESERVED_MULTIPOINT,
+	RESERVED_MULTIPOLYGON,       RESERVED_MULTICIRCLE,
+	RESERVED_MULTICHULL,         RESERVED_GEO_COLLECTION,
+	RESERVED_GEO_INTERSECTION,
 });
 
 
