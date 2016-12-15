@@ -68,15 +68,15 @@ class Worker;
 
 using type_t = std::pair<std::string, std::string>;
 
-
+template <typename T>
 struct accept_preference_comp {
-	constexpr bool operator()(const std::tuple<double, int, type_t>& l, const std::tuple<double, int, type_t>& r) const noexcept {
+	constexpr bool operator()(const std::tuple<double, int, T>& l, const std::tuple<double, int, T>& r) const noexcept {
 		return (std::get<0>(l) == std::get<0>(r)) ? std::get<1>(l) < std::get<1>(r) : std::get<0>(l) > std::get<0>(r);
 	}
 };
 
 
-using accept_set_t = std::set<std::tuple<double, int, type_t>, accept_preference_comp>;
+using accept_set_t = std::set<std::tuple<double, int, type_t>, accept_preference_comp<type_t>>;
 
 
 class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
@@ -92,6 +92,28 @@ public:
 	}
 
 	accept_set_t& insert(std::pair<std::string, accept_set_t> pair) {
+		std::lock_guard<std::mutex> lk(qmtx);
+		return LRU::insert(pair);
+	}
+};
+
+
+using accept_encoding_t = std::set<std::tuple<double, int, std::string>, accept_preference_comp<std::string>>;
+
+
+class AcceptEncodingLRU : private lru::LRU<std::string, accept_encoding_t> {
+	std::mutex qmtx;
+
+public:
+	AcceptEncodingLRU()
+	: LRU<std::string, accept_encoding_t>(100) { }
+
+	accept_encoding_t& at(std::string key) {
+		std::lock_guard<std::mutex> lk(qmtx);
+		return LRU::at(key);
+	}
+
+	accept_encoding_t& insert(std::pair<std::string, accept_encoding_t> pair) {
 		std::lock_guard<std::mutex> lk(qmtx);
 		return LRU::insert(pair);
 	}
@@ -125,6 +147,8 @@ class HttpClient : public BaseClient {
 
 	static AcceptLRU accept_sets;
 	accept_set_t accept_set;
+	static AcceptEncodingLRU accept_encoding_sets;
+	accept_encoding_t accept_encoding_set;
 
 	PathParser path_parser;
 	QueryParser query_parser;

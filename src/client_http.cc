@@ -92,11 +92,14 @@ static const auto msgpack_serializers = std::vector<type_t>({json_type, msgpack_
 
 
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;\\s*q=(\\d+(?:\\.\\d+)?))?");
+static const std::regex header_accept_encoding_re("([-a-z+]+|\\*)(?:[^,]*;\\s*q=(\\d+(?:\\.\\d+)?))?");
 
 
 GuidGenerator HttpClient::generator;
 
 AcceptLRU HttpClient::accept_sets;
+
+AcceptEncodingLRU HttpClient::accept_encoding_sets;
 
 
 std::string
@@ -438,6 +441,27 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 							++i;
 						}
 						accept_sets.insert(std::make_pair(value, self->accept_set));
+					}
+					break;
+
+				case xxh64::hash("accept-encoding"):
+					try {
+						self->accept_encoding_set = accept_encoding_sets.at(value);
+					} catch (std::range_error) {
+						std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
+						std::sregex_iterator end;
+						int i = 0;
+						while (next != end) {
+							L_BLUE(nullptr, "%s q=%s",next->str(1).c_str(), next->str(2).c_str());
+							if (next->length(2) != 0) {
+								self->accept_encoding_set.insert(std::make_tuple(std::stod(next->str(2)), i, next->str(1)));
+							} else {
+								self->accept_encoding_set.insert(std::make_tuple(1, i, next->str(1)));
+							}
+							++next;
+							++i;
+						}
+						accept_encoding_sets.insert(std::make_pair(value, self->accept_encoding_set));
 					}
 					break;
 				case xxh64::hash("x-http-method-override"):
