@@ -287,16 +287,6 @@ namespace Serialise {
 	// Serialise type to its string representation.
 	std::string type(FieldType type);
 
-	// Function for serialization of namespace field.
-	inline std::string namespace_field(const std::string& field_name) {
-		return sortable_serialise(xxh64::hash(field_name) & 0xffffffff);
-	}
-
-	// Function for serialization of dynamic namespace field.
-	inline std::string dynamic_namespace_field(const std::string& field_name) {
-		return get_hashed(field_name);
-	}
-
 	inline std::string serialise(const std::string& val) {
 		return val;
 	}
