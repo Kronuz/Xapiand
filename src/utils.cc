@@ -504,8 +504,7 @@ bool build_path_index(const std::string& path) {
 	if (exists(dir)) {
 		return true;
 	} else {
-		std::vector<std::string> directories;
-		stringTokenizer(dir, "/", directories);
+		auto directories = stringTokenizer(dir, "/");
 		dir.clear();
 		for (const auto& _dir : directories) {
 			dir.append(_dir).append(1, '/');
@@ -643,7 +642,8 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 }
 
 
-void stringTokenizer(const std::string& str, const std::string& delimiter, std::vector<std::string>& tokens) {
+std::vector<std::string> stringTokenizer(const std::string& str, const std::string& delimiter) {
+	std::vector<std::string> tokens;
 	size_t prev = 0, next = 0, len;
 
 	while ((next = str.find(delimiter, prev)) != std::string::npos) {
@@ -657,6 +657,8 @@ void stringTokenizer(const std::string& str, const std::string& delimiter, std::
 	if (prev < str.length()) {
 		tokens.push_back(str.substr(prev));
 	}
+
+	return tokens;
 }
 
 
