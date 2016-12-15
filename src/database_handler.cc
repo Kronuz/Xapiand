@@ -295,14 +295,14 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 		// Index object.
 		obj_ = schema->index(obj_, doc);
-	} while (!update_schema());
 
-	if (prefixed_term_id.empty()) {
-		// Now the schema is full, get specification id.
-		spc_id = schema->get_data_id();
-		term_id = Serialise::serialise(spc_id, _document_id);
-		prefixed_term_id = prefixed(term_id, spc_id.prefix);
-	}
+		if (prefixed_term_id.empty()) {
+			// Now the schema is full, get specification id.
+			spc_id = schema->get_data_id();
+			term_id = Serialise::serialise(spc_id, _document_id);
+			prefixed_term_id = prefixed(term_id, spc_id.prefix);
+		}
+	} while (!update_schema());
 
 	if (blob.empty()) {
 		L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
