@@ -58,7 +58,7 @@ public:
 	std::string snippet(const std::string & text,
 			size_t length = 500,
 			const Xapian::Stem & stemmer = Xapian::Stem(),
-			unsigned flags = SNIPPET_BACKGROUND_MODEL|SNIPPET_EXHAUSTIVE,
+			unsigned flags = SNIPPET_BACKGROUND_MODEL | SNIPPET_EXHAUSTIVE,
 			const std::string & hi_start = "<b>",
 			const std::string & hi_end = "</b>",
 			const std::string & omit = "...") const = delete;
