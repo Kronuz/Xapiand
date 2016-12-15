@@ -78,7 +78,9 @@ const std::unordered_set<std::string> QueryDSL::casts_set({
 
 
 /* A domain-specific language (DSL) for query */
-QueryDSL::QueryDSL(std::shared_ptr<Schema> schema_)
+
+
+QueryDSL::QueryDSL(const std::shared_ptr<Schema>& schema_)
 	: schema(schema_) { }
 
 
