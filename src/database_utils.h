@@ -24,9 +24,9 @@
 
 #include "xapiand.h"
 
-#include <xapian.h>                // for valueno
 #include <string>                  // for string
 #include <vector>                  // for vector
+#include <xapian.h>                // for valueno
 
 #include "msgpack.h"               // for object
 #include "rapidjson/document.h"    // for Document
@@ -132,7 +132,8 @@
 #define DOCUMENT_ID_TERM_PREFIX            "Q"
 #define DOCUMENT_NAMESPACE_TERM_PREFIX     "N"
 #define DOCUMENT_ACCURACY_TERM_PREFIX      "A"
-#define DOCUMENT_CONTENT_TYPE_TERM_PREFIX  "T"
+#define DOCUMENT_CONTENT_TYPE_TERM_PREFIX  "C"
+#define DOCUMENT_USER_DEFINED_TERM_PREFIX  "X"
 
 #define DOCUMENT_DB_MASTER                 "M"
 #define DOCUMENT_DB_SLAVE                  "S"
@@ -214,10 +215,10 @@ inline std::string get_hashed(const std::string& name) {
 }
 
 
-Xapian::valueno get_slot(const std::string& name);
 std::string prefixed(const std::string& term, const std::string& prefix);
-std::string get_prefix(const std::string& name, char type);
-std::string get_dynamic_prefix(const std::string& name, char type);
+Xapian::valueno get_slot(const std::string& field_prefix);
+std::string get_prefix(unsigned long long field_number);
+std::string get_prefix(const std::string& field_name);
 long long read_mastery(const std::string& dir, bool force);
 void json_load(rapidjson::Document& doc, const std::string& str);
 rapidjson::Document to_json(const std::string& str);

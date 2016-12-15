@@ -68,9 +68,9 @@ std::string prefixed(const std::string& term, const std::string& prefix)
 }
 
 
-Xapian::valueno get_slot(const std::string& name)
+Xapian::valueno get_slot(const std::string& field_prefix)
 {
-	auto slot = static_cast<Xapian::valueno>(xxh64::hash(name));
+	auto slot = static_cast<Xapian::valueno>(xxh64::hash(field_prefix));
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
 	} else if (slot == Xapian::BAD_VALUENO) {
@@ -80,25 +80,20 @@ Xapian::valueno get_slot(const std::string& name)
 }
 
 
-std::string get_prefix(const std::string& name, char type)
+std::string get_prefix(unsigned long long field_number)
 {
-	auto hashed = sortable_serialise(xxh64::hash(name) & 0xffffffff);
-	std::string result;
-	result.reserve(1 + hashed.length());
-	result.push_back(type);
-	result.append(hashed);
-	return result;
+	return serialise_length(field_number);
 }
 
 
-std::string get_dynamic_prefix(const std::string& name, char type)
+std::string get_prefix(const std::string& field_name)
 {
-	auto hashed = sortable_serialise(xxh64::hash(name)) + sortable_serialise(xxh64::hash(name, 2654435761U));
-	std::string result;
-	result.reserve(1 + hashed.length());
-	result.push_back(type);
-	result.append(hashed);
-	return result;
+	if (field_name.length() > 4) {
+		// Mask 0x1fffff for maximum length prefix of 4.
+		return serialise_length(xxh64::hash(field_name) & 0x1fffff);
+	} else {
+		return field_name;
+	}
 }
 
 
