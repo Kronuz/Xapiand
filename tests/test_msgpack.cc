@@ -505,8 +505,7 @@ int test_msgpack_path() {
 	MsgPack obj(doc_path);
 
 	std::string path_str("/AMERICA/COUNTRY/1");
-	std::vector <std::string> path;
-	stringTokenizer(path_str, "/", path);
+	auto path = stringTokenizer(path_str, "/");
 
 	const auto& path_msgpack = obj.path(path);
 
