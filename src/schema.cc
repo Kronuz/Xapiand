@@ -4164,12 +4164,22 @@ Schema::get_data_id() const
 
 	try {
 		const auto& properties = mut_schema ? mut_schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME) : schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
-		// update_specification(prop_id);
 		res.sep_types[2] = (FieldType)properties.at(RESERVED_TYPE).at(2).as_u64();
-
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		res.prefix = properties.at(RESERVED_PREFIX).as_string();
 		res.prefix.push_back(toUType(res.sep_types[2]));
+		// Get required specification.
+		switch (res.sep_types[2]) {
+			case FieldType::GEO:
+				res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
+				res.error = properties.at(RESERVED_ERROR).as_f64();
+				break;
+			case FieldType::TERM:
+				res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
+				break;
+			default:
+				break;
+		}
 	} catch (const std::out_of_range&) { }
 
 	return res;
