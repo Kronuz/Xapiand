@@ -24,17 +24,18 @@
 
 #include "xapiand.h"
 
-#include <stddef.h>                        // for size_t
-#include <sys/types.h>                     // for uint8_t
-#include <xapian.h>                        // for QueryParser
 #include <array>                           // for array
+#include <atomic>                          // for atomic
 #include <future>                          // for future
 #include <memory>                          // for shared_ptr
+#include <stddef.h>                        // for size_t
 #include <string>                          // for string
+#include <sys/types.h>                     // for uint8_t
 #include <tuple>                           // for tuple
 #include <unordered_map>                   // for unordered_map
 #include <utility>                         // for pair
 #include <vector>                          // for vector
+#include <xapian.h>                        // for QueryParser
 
 #include "database_utils.h"
 #include "geo/htm.h"                       // for HTM_MIN_ERROR
@@ -150,19 +151,19 @@ inline constexpr void operator^=(TypeIndex& a, const TypeIndex& b) {
 
 
 enum class FieldType : uint8_t {
-	FLOAT         =  'F',
-	INTEGER       =  'I',
-	POSITIVE      =  'P',
-	TERM          =  'X',
-	TEXT          =  'S',
-	STRING        =  's',
-	DATE          =  'D',
-	GEO           =  'G',
-	BOOLEAN       =  'B',
-	UUID          =  'U',
-	ARRAY         =  'A',
-	OBJECT        =  'O',
 	EMPTY         =  ' ',
+	STRING        =  's',
+	ARRAY         =  'A',
+	BOOLEAN       =  'B',
+	DATE          =  'D',
+	FLOAT         =  'F',
+	GEO           =  'G',
+	INTEGER       =  'I',
+	OBJECT        =  'O',
+	POSITIVE      =  'P',
+	TERM          =  'T',
+	TEXT          =  'S',
+	UUID          =  'U',
 };
 
 
@@ -229,6 +230,9 @@ extern const std::unordered_map<std::string, TypeIndex> map_index;
 extern const std::unordered_map<std::string, FieldType> map_type;
 
 
+extern std::atomic<unsigned long long> field_counter;
+
+
 MSGPACK_ADD_ENUM(UnitTime);
 MSGPACK_ADD_ENUM(TypeIndex);
 MSGPACK_ADD_ENUM(StopStrategy);
@@ -261,6 +265,7 @@ struct required_spc_t {
 		// Auxiliar variables.
 		bool field_found:1;      // Flag if the property is already in the schema saved in the metadata
 		bool field_with_type:1;  // Reserved properties that shouldn't change once set, are flagged as fixed
+		bool complete:1;         // Flag if the specification for a field is complete
 
 		bool reserved_slot:1;
 		bool has_bool_term:1;    // Either RESERVED_BOOL_TERM is in the schema or the user sent it
@@ -312,6 +317,7 @@ struct required_spc_t {
 
 struct specification_t : required_spc_t {
 	// Reserved values.
+	std::string local_prefix;
 	std::vector<Xapian::termpos> position;
 	std::vector<Xapian::termcount> weight;
 	std::vector<bool> spelling;
@@ -334,6 +340,8 @@ struct specification_t : required_spc_t {
 
 	std::string aux_stem_lan;
 	std::string aux_lan;
+
+	std::vector<required_spc_t> namespace_spcs;
 
 	specification_t();
 	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
@@ -412,12 +420,17 @@ class Schema {
 	/*
 	 * Returns a vector with the right specification.
 	 */
-	std::vector<required_spc_t> get_namespace_specifications() const;
+	void complete_namespace_specification(const MsgPack& item_value);
 
 	/*
 	 * Update dynamic field's specifications.
 	 */
 	void update_dynamic_specification();
+
+	/*
+	 * Complete the specifications.
+	 */
+	void complete_specification(const MsgPack& item_value);
 
 	/*
 	 * Set type to object in properties.
@@ -477,13 +490,13 @@ class Schema {
 	 * Do not check for dynamic types.
 	 * Used by write_schema
 	 */
-	const MsgPack& get_schema_subproperties(const MsgPack& properties);
+	const MsgPack& get_schema_subproperties(const MsgPack& properties, const MsgPack& o);
 
 	/*
 	 * Gets the properties of item_key and specification is updated.
 	 * Returns the properties of schema.
 	 */
-	const MsgPack& get_subproperties(const MsgPack& properties);
+	const MsgPack& get_subproperties(const MsgPack& properties, const MsgPack& o);
 
 	/*
 	 * Get the subproperties of field_name.
@@ -496,9 +509,14 @@ class Schema {
 	void detect_dynamic(const std::string& field_name);
 
 	/*
+	 * Returns the next valid field counter.
+	 */
+	static unsigned long long get_valid_field_counter();
+
+	/*
 	 * Add new field to properties.
 	 */
-	void add_field(MsgPack*& properties);
+	void add_field(MsgPack*& properties, const MsgPack& o);
 
 	/*
 	 * Specification is updated with the properties.
@@ -607,15 +625,15 @@ class Schema {
 
 	/*
 	 * Returns:
-	 *   - Full normalized name
-	 *   - if is a dynamic field
 	 *   - The propierties of full name
-	 *   - The prefix namespace
+	 *   - If full name is dynamic
+	 *   - If full name is namespace
+	 *   - The prefix
 	 *   - The accuracy field_name
 	 * if the path does not exist or is not valid field name throw a ClientError exception.
 	 */
 
-	std::tuple<std::string, bool, const MsgPack&, std::string, std::string> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
+	std::tuple<const MsgPack&, bool, bool, std::string, std::string> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);
@@ -655,7 +673,7 @@ public:
 	/*
 	 * Update namespace specification according to prefix_namespace.
 	 */
-	static required_spc_t get_namespace_specification(FieldType namespace_type, std::string& prefix_namespace);
+	static required_spc_t get_namespace_specification(FieldType namespace_type, const std::string& prefix_namespace);
 
 
 	/*
@@ -667,7 +685,7 @@ public:
 	 * Functions used for searching, return a field properties.
 	 */
 
-	std::pair<required_spc_t, std::string> get_data_field(const std::string& field_name) const;
+	std::pair<required_spc_t, std::string> get_data_field(const std::string& field_name, bool is_range=true) const;
 	required_spc_t get_slot_field(const std::string& field_name) const;
 	static const required_spc_t& get_data_global(FieldType field_type);
 };

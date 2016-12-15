@@ -22,11 +22,11 @@
 
 #include "schema.h"
 
-#include <ctype.h>                         // for tolower
 #include <algorithm>                       // for move
 #include <cmath>                           // for pow
 #include <cstdint>                         // for uint64_t
 #include <cstring>                         // for size_t, strlen
+#include <ctype.h>                         // for tolower
 #include <functional>                      // for ref, reference_wrapper
 #include <ostream>                         // for operator<<, basic_ostream
 #include <set>                             // for __tree_const_iterator, set
@@ -62,6 +62,9 @@
  * 5. If there are values sent by user, fills the document to be indexed by
  *    using index_object() and index_array().
  */
+
+
+std::atomic<unsigned long long> field_counter(DB_SLOT_RESERVED);
 
 
 /*
@@ -229,19 +232,48 @@ inline static std::string readable_type(const std::array<FieldType, 3>& sep_type
 
 
 /*
- *  Functions for generating the name given an accuracy.
+ *  Functions for generating the prefix given an accuracy.
  */
 
-static std::string acc_name_num(uint64_t acc) {
-	return "_" + std::to_string(acc);
+static std::string acc_prefix_num(uint64_t acc) {
+	auto prefix = get_prefix(acc);
+	prefix.append(DOCUMENT_ACCURACY_TERM_PREFIX).push_back(toUType(FieldType::INTEGER));
+	return prefix;
 }
 
-static std::string acc_name_date(uint64_t acc) {
-	return "_" + readable_acc_date((UnitTime)(acc));
+static std::string acc_prefix_date(uint64_t acc) {
+	auto prefix = get_prefix(acc);
+	prefix.append(DOCUMENT_ACCURACY_TERM_PREFIX).push_back(toUType(FieldType::DATE));
+	return prefix;
 }
 
-static std::string acc_name_geo(uint64_t acc) {
-	return "_geo" + std::to_string(acc);
+static std::string acc_prefix_geo(uint64_t acc) {
+	auto prefix = get_prefix(acc);
+	prefix.append(DOCUMENT_ACCURACY_TERM_PREFIX).push_back(toUType(FieldType::GEO));
+	return prefix;
+}
+
+
+static std::string get_acc_prefix(const std::string& field_acc) {
+	auto it = map_acc_date.find(field_acc.substr(1));
+	if (it == map_acc_date.end()) {
+		if (field_acc.find("_geo") == 0) {
+			return acc_prefix_geo(stox(std::stoull, field_acc.substr(4)));
+		} else {
+			return acc_prefix_num(stox(std::stoull, field_acc.substr(1)));
+		}
+	} else {
+		return acc_prefix_date(toUType(it->second));
+	}
+}
+
+
+static std::string get_dynamic_prefix(const std::string& uuid) {
+	try {
+		return Serialise::uuid(uuid);
+	} catch (const SerialisationError&) {
+		return std::string();
+	}
 }
 
 
@@ -253,7 +285,7 @@ static const std::vector<std::string> global_acc_prefix_num = []() {
 	std::vector<std::string> res;
 	res.reserve(def_accuracy_num.size());
 	for (const auto& acc : def_accuracy_num) {
-		res.push_back(DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER)) + Serialise::namespace_field(acc_name_num(acc)));
+		res.push_back(acc_prefix_num(acc));
 	}
 	return res;
 }();
@@ -262,7 +294,7 @@ static const std::vector<std::string> global_acc_prefix_date = []() {
 	std::vector<std::string> res;
 	res.reserve(def_accuracy_date.size());
 	for (const auto& acc : def_accuracy_date) {
-		res.push_back(DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE)) + Serialise::namespace_field(acc_name_date(acc)));
+		res.push_back(acc_prefix_date(acc));
 	}
 	return res;
 }();
@@ -271,7 +303,7 @@ static const std::vector<std::string> global_acc_prefix_geo = []() {
 	std::vector<std::string> res;
 	res.reserve(def_accuracy_geo.size());
 	for (const auto& acc : def_accuracy_geo) {
-		res.push_back(DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO)) + Serialise::namespace_field(acc_name_geo(acc)));
+		res.push_back(acc_prefix_geo(acc));
 	}
 	return res;
 }();
@@ -497,6 +529,7 @@ required_spc_t::flags_t::flags_t()
 	  uuid_detection(true),
 	  field_found(true),
 	  field_with_type(false),
+	  complete(false),
 	  reserved_slot(false),
 	  has_bool_term(false),
 	  has_index(false),
@@ -518,7 +551,7 @@ required_spc_t::required_spc_t()
 required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
 	const std::vector<std::string>& _acc_prefix)
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, type }}),
-	  prefix("G" + std::string(1, toUType(type))),
+	  prefix(1, get_prefix()),
 	  slot(_slot),
 	  accuracy(acc),
 	  acc_prefix(_acc_prefix),
@@ -617,6 +650,7 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 
 specification_t::specification_t(const specification_t& o)
 	: required_spc_t(o),
+	  local_prefix(o.local_prefix),
 	  position(o.position),
 	  weight(o.weight),
 	  spelling(o.spelling),
@@ -634,6 +668,7 @@ specification_t::specification_t(const specification_t& o)
 
 specification_t::specification_t(specification_t&& o) noexcept
 	: required_spc_t(std::move(o)),
+	  local_prefix(std::move(o.local_prefix)),
 	  position(std::move(o.position)),
 	  weight(std::move(o.weight)),
 	  spelling(std::move(o.spelling)),
@@ -652,6 +687,7 @@ specification_t::specification_t(specification_t&& o) noexcept
 specification_t&
 specification_t::operator=(const specification_t& o)
 {
+	local_prefix = o.local_prefix;
 	position = o.position;
 	weight = o.weight;
 	spelling = o.spelling;
@@ -676,6 +712,7 @@ specification_t::operator=(const specification_t& o)
 specification_t&
 specification_t::operator=(specification_t&& o) noexcept
 {
+	local_prefix = std::move(o.local_prefix);
 	position = std::move(o.position);
 	weight = std::move(o.weight);
 	spelling = std::move(o.spelling);
@@ -789,7 +826,7 @@ specification_t::to_string() const
 
 	str << "\t" << RESERVED_ACC_PREFIX  << ": [ ";
 	for (const auto& acc_p : acc_prefix) {
-		str << acc_p << " ";
+		str << repr(acc_p) << " ";
 	}
 	str << "]\n";
 
@@ -804,7 +841,8 @@ specification_t::to_string() const
 
 	str << "\t" << RESERVED_SLOT        << ": " << slot                           << "\n";
 	str << "\t" << RESERVED_TYPE        << ": " << readable_type(sep_types)       << "\n";
-	str << "\t" << RESERVED_PREFIX      << ": " << prefix                         << "\n";
+	str << "\t" << RESERVED_PREFIX      << ": " << repr(prefix)                   << "\n";
+	str << "\t" << "local_prefix"       << ": " << repr(local_prefix)             << "\n";
 	str << "\t" << RESERVED_INDEX       << ": " << readable_index(index)          << "\n";
 	str << "\t" << RESERVED_STORE       << ": " << (flags.store             ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_RECURSIVE   << ": " << (flags.is_recursive      ? "true" : "false") << "\n";
@@ -821,6 +859,7 @@ specification_t::to_string() const
 	str << "\t" << "field_found"        << ": " << (flags.field_found       ? "true" : "false") << "\n";
 	str << "\t" << "dynamic_type"       << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
 	str << "\t" << "inside_namespace"   << ": " << (flags.inside_namespace  ? "true" : "false") << "\n";
+	str << "\t" << "complete"           << ": " << (flags.complete          ? "true" : "false") << "\n";
 
 	str << "\t" << RESERVED_NAME           << ": " << name                 << "\n";
 	str << "\t" << "meta_name"             << ": " << meta_name            << "\n";
@@ -869,8 +908,7 @@ Schema::get_mutable()
 	}
 
 	MsgPack* prop = &mut_schema->at(RESERVED_SCHEMA);
-	std::vector<std::string> field_names;
-	stringTokenizer(specification.full_meta_name, DB_OFFSPRING_UNION, field_names);
+	auto field_names = stringTokenizer(specification.full_meta_name, DB_OFFSPRING_UNION);
 	for (const auto& field_name : field_names) {
 		prop = &(*prop)[field_name];
 	}
@@ -903,9 +941,11 @@ Schema::restart_specification()
 	specification.flags.has_index        = default_spc.flags.has_index;
 	specification.flags.has_namespace    = default_spc.flags.has_namespace;
 	specification.flags.field_with_type  = default_spc.flags.field_with_type;
+	specification.flags.complete         = default_spc.flags.complete;
+	specification.flags.dynamic_type     = default_spc.flags.dynamic_type;
 
 	specification.sep_types              = default_spc.sep_types;
-	specification.prefix                 = default_spc.prefix;
+	specification.local_prefix           = default_spc.local_prefix;
 	specification.slot                   = default_spc.slot;
 	specification.accuracy               = default_spc.accuracy;
 	specification.acc_prefix             = default_spc.acc_prefix;
@@ -942,7 +982,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 	} else {
 		data = specification.flags.store ? &(*parent_data)[name] : parent_data;
 		specification.name.assign(name);
-		properties = &get_subproperties(*parent_properties);
+		properties = &get_subproperties(*parent_properties, object);
 	}
 
 	switch (object.getType()) {
@@ -969,7 +1009,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 					data = parent_data;
 				}
 			} else {
-				properties = &get_subproperties(*properties);
+				properties = &get_subproperties(*properties, object);
 				if (specification.flags.store) {
 					data = &(*data)[specification.name];
 				}
@@ -1036,7 +1076,7 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				data_pos = specification.flags.store ? &data[pos] : &data;
 
 				if (!specification.name.empty()) {
-					sub_properties = &get_subproperties(*sub_properties);
+					sub_properties = &get_subproperties(*sub_properties, item);
 					if (specification.flags.store) {
 						data_pos = &(*data_pos)[specification.name];
 					}
@@ -1073,8 +1113,6 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", data.to_string().c_str(), item_value.to_string().c_str(), pos);
 
-	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Final specification, as indexed
-
 	if (item_value.is_null()) {
 		index_paths_namespace(doc);
 		if (specification.flags.store) {
@@ -1084,13 +1122,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 	}
 
 	if (specification.flags.inside_namespace) {
-		if (!specification.flags.field_with_type) {
-			validate_required_namespace_data(item_value);
+		if (!specification.flags.complete) {
+			complete_namespace_specification(item_value);
 		}
 
-		auto namespace_spc = get_namespace_specifications();
 		bool add_value = true;
-		for (auto& spc : namespace_spc) {
+		for (auto& spc : specification.namespace_spcs) {
 			specification.sep_types[2] = std::move(spc.sep_types[2]);
 			specification.prefix       = std::move(spc.prefix);
 			specification.slot         = std::move(spc.slot);
@@ -1104,10 +1141,8 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 			THROW(ClientError, "%s is not dynamic", specification.full_normalized_name.c_str());
 		}
 
-		if (!specification.flags.field_with_type) {
-			validate_required_data(item_value);
-		} else if (specification.flags.dynamic_type) {
-			update_dynamic_specification();
+		if (!specification.flags.complete) {
+			complete_specification(item_value);
 		}
 
 		index_item(doc, item_value, data, pos);
@@ -1124,8 +1159,6 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", data->to_string().c_str(), item_value.to_string().c_str());
 
-	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Final specification, as indexed
-
 	if (item_value.is_null()) {
 		index_paths_namespace(doc);
 		if (specification.flags.store) {
@@ -1135,13 +1168,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 	}
 
 	if (specification.flags.inside_namespace) {
-		if (!specification.flags.field_with_type) {
-			validate_required_namespace_data(item_value);
+		if (!specification.flags.complete) {
+			complete_namespace_specification(item_value);
 		}
 
-		auto namespace_spc = get_namespace_specifications();
 		bool add_values = true;
-		for (auto& spc : namespace_spc) {
+		for (auto& spc : specification.namespace_spcs) {
 			specification.sep_types[2] = std::move(spc.sep_types[2]);
 			specification.prefix       = std::move(spc.prefix);
 			specification.slot         = std::move(spc.slot);
@@ -1155,10 +1187,8 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 			THROW(ClientError, "%s is not dynamic", specification.full_normalized_name.c_str());
 		}
 
-		if (!specification.flags.field_with_type) {
-			validate_required_data(item_value);
-		} else if (specification.flags.dynamic_type) {
-			update_dynamic_specification();
+		if (!specification.flags.complete) {
+			complete_specification(item_value);
 		}
 
 		index_item(doc, item_value, *data);
@@ -1175,8 +1205,6 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", repr(data->to_string()).c_str(), offsprings ? "true" : "false");
 
-	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Final specification, as indexed
-
 	set_type_to_object(offsprings);
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
@@ -1190,14 +1218,13 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 		}
 
 		if (specification.flags.inside_namespace) {
-			if (!specification.flags.field_with_type) {
-				validate_required_namespace_data(*val);
+			if (!specification.flags.complete) {
+				complete_namespace_specification(*val);
 			}
 
-			auto namespace_spc = get_namespace_specifications();
 			bool add_values = true;
 			if (offsprings) {
-				for (auto& spc : namespace_spc) {
+				for (auto& spc : specification.namespace_spcs) {
 					specification.sep_types[2] = std::move(spc.sep_types[2]);
 					specification.prefix       = std::move(spc.prefix);
 					specification.slot         = std::move(spc.slot);
@@ -1207,7 +1234,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 					add_values = false;
 				}
 			} else {
-				for (auto& spc : namespace_spc) {
+				for (auto& spc : specification.namespace_spcs) {
 					specification.sep_types[2] = std::move(spc.sep_types[2]);
 					specification.prefix       = std::move(spc.prefix);
 					specification.slot         = std::move(spc.slot);
@@ -1224,11 +1251,10 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 				THROW(ClientError, "%s is not dynamic", specification.full_normalized_name.c_str());
 			}
 
-			if (!specification.flags.field_with_type) {
-				validate_required_data(*val);
-			} else if (specification.flags.dynamic_type) {
-				update_dynamic_specification();
+			if (!specification.flags.complete) {
+				complete_specification(*val);
 			}
+
 			index_item(doc, *val, *data);
 		}
 
@@ -1253,7 +1279,7 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 	std::vector<std::string> prefixes;
 	prefixes.reserve(std::pow(2, paths_namespace.size() - 2));
 	auto it = paths_namespace.begin();
-	prefixes.push_back(DOCUMENT_NAMESPACE_TERM_PREFIX + *it);
+	prefixes.push_back(*it);
 	auto it_e = paths_namespace.end() - 1;
 	for (++it; it != it_e; ++it) {
 		const auto size = prefixes.size();
@@ -1273,67 +1299,53 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 }
 
 
-std::vector<required_spc_t>
-Schema::get_namespace_specifications() const
+void
+Schema::complete_namespace_specification(const MsgPack& item_value)
 {
-	L_CALL(this, "Schema::get_namespace_specifications()");
+	L_CALL(this, "Schema::complete_namespace_specification()");
+
+	if (!specification.flags.field_with_type) {
+		validate_required_namespace_data(item_value);
+	}
 
 	auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
 
-	std::vector<required_spc_t> data;
-	data.reserve(prefixes_namespace.size());
+	specification.namespace_spcs.clear();
+	specification.namespace_spcs.reserve(prefixes_namespace.size());
 	if (toUType(specification.index & TypeIndex::VALUES)) {
 		for (auto& prefix_namespace : prefixes_namespace) {
-			data.push_back(get_namespace_specification(specification.sep_types[2], prefix_namespace));
+			specification.namespace_spcs.push_back(get_namespace_specification(specification.sep_types[2], prefix_namespace));
 		}
 	} else {
 		for (auto& prefix_namespace : prefixes_namespace) {
 			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
 			spc.prefix.assign(prefix_namespace).push_back(spc.get_prefix());
-			data.push_back(std::move(spc));
+			specification.namespace_spcs.push_back(std::move(spc));
 		}
 	}
 
-	return data;
+	specification.flags.complete = true;
 }
 
 
 required_spc_t
-Schema::get_namespace_specification(FieldType namespace_type, std::string& prefix_namespace)
+Schema::get_namespace_specification(FieldType namespace_type, const std::string& prefix_namespace)
 {
 	L_CALL(nullptr, "Schema::get_namespace_specification('%c', %s)", toUType(namespace_type), repr(prefix_namespace).c_str());
 
 	required_spc_t spc = specification_t::get_global(namespace_type);
+
 	spc.prefix.assign(prefix_namespace).push_back(spc.get_prefix());
-	spc.slot = get_slot(spc.prefix);
+	spc.slot = get_slot(prefix_namespace);
 
 	switch (spc.sep_types[2]) {
 		case FieldType::INTEGER:
 		case FieldType::POSITIVE:
-		case FieldType::FLOAT: {
-			static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
-			spc.acc_prefix.clear();
-			for (const auto& acc : spc.accuracy) {
-				prefix_namespace.append(DB_OFFSPRING_UNION).append(acc_name_num(acc));
-				spc.acc_prefix.push_back(prefix_type + Serialise::dynamic_namespace_field(prefix_namespace));
-			}
-			break;
-		}
-		case FieldType::DATE: {
-			static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE));
-			spc.acc_prefix.clear();
-			for (const auto& acc : spc.accuracy) {
-				prefix_namespace.append(DB_OFFSPRING_UNION).append(acc_name_date(acc));
-				spc.acc_prefix.push_back(Serialise::dynamic_namespace_field(prefix_namespace));
-			}
-			break;
-		}
+		case FieldType::FLOAT:
+		case FieldType::DATE:
 		case FieldType::GEO: {
-			static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO));
-			spc.acc_prefix.clear();
-			for (const auto& acc : spc.accuracy) {
-				prefix_namespace.append(DB_OFFSPRING_UNION).append(acc_name_geo(acc));
-				spc.acc_prefix.push_back(prefix_type + Serialise::dynamic_namespace_field(prefix_namespace));
+			for (auto& acc_prefix : spc.acc_prefix) {
+				acc_prefix.insert(0, prefix_namespace);
 			}
 			break;
 		}
@@ -1350,46 +1362,58 @@ Schema::update_dynamic_specification()
 {
 	L_CALL(this, "Schema::update_dynamic_specification()");
 
-	if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
-		specification.prefix.assign(get_dynamic_prefix(specification.full_normalized_name, specification.get_prefix()));
+	specification.slot = get_slot(specification.prefix);
+	switch (specification.sep_types[2]) {
+		case FieldType::INTEGER:
+		case FieldType::POSITIVE:
+		case FieldType::FLOAT: {
+			for (const auto& acc : specification.accuracy) {
+				specification.acc_prefix.push_back(acc_prefix_num(acc));
+			}
+			break;
+		}
+		case FieldType::DATE: {
+			for (const auto& acc : specification.accuracy) {
+				specification.acc_prefix.push_back(acc_prefix_date(acc));
+			}
+			break;
+		}
+		case FieldType::GEO: {
+			for (const auto& acc : specification.accuracy) {
+				specification.acc_prefix.push_back(acc_prefix_geo(acc));
+			}
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+
+void
+Schema::complete_specification(const MsgPack& item_value)
+{
+	L_CALL(this, "Schema::complete_specification(%s)", repr(item_value.to_string()).c_str());
+
+	if (!specification.flags.field_with_type) {
+		validate_required_data(item_value);
 	}
 
 	if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-		specification.slot = get_slot(specification.full_normalized_name);
-		switch (specification.sep_types[2]) {
-			case FieldType::INTEGER:
-			case FieldType::POSITIVE:
-			case FieldType::FLOAT: {
-				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
-				for (const auto& acc : specification.accuracy) {
-					auto acc_full_name = specification.full_normalized_name;
-					acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_num(acc));
-					specification.acc_prefix.push_back(prefix_type + Serialise::dynamic_namespace_field(acc_full_name));
-				}
-				break;
-			}
-			case FieldType::DATE: {
-				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE));
-				for (const auto& acc : specification.accuracy) {
-					auto acc_full_name = specification.full_normalized_name;
-					acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_date(acc));
-					specification.acc_prefix.push_back(Serialise::dynamic_namespace_field(acc_full_name));
-				}
-				break;
-			}
-			case FieldType::GEO: {
-				static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO));
-				for (const auto& acc : specification.accuracy) {
-					auto acc_full_name = specification.full_normalized_name;
-					acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_geo(acc));
-					specification.acc_prefix.push_back(prefix_type + Serialise::dynamic_namespace_field(acc_full_name));
-				}
-				break;
-			}
-			default:
-				break;
+		if (specification.flags.dynamic_type) {
+			update_dynamic_specification();
+		}
+
+		for (auto& acc_prefix : specification.acc_prefix) {
+			acc_prefix.insert(0, specification.prefix);
 		}
 	}
+
+	if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
+		specification.prefix.push_back(specification.get_prefix());
+	}
+
+	specification.flags.complete = true;
 }
 
 
@@ -1469,11 +1493,8 @@ Schema::validate_required_data()
 				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
 				if (!specification.flags.dynamic_type && set_acc.size()) {
 					if (specification.acc_prefix.empty()) {
-						static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::GEO));
 						for (const auto& acc : set_acc) {
-							auto acc_full_name = specification.full_normalized_name;
-							acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_geo(acc));
-							specification.acc_prefix.push_back(prefix_type + Serialise::namespace_field(acc_full_name));
+							specification.acc_prefix.push_back(acc_prefix_geo(acc));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -1504,11 +1525,8 @@ Schema::validate_required_data()
 				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
 				if (!specification.flags.dynamic_type && set_acc.size()) {
 					if (specification.acc_prefix.empty()) {
-						static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::DATE));
 						for (const auto& acc : set_acc) {
-							auto acc_full_name = specification.full_normalized_name;
-							acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_date(acc));
-							specification.acc_prefix.push_back(prefix_type + Serialise::namespace_field(acc_full_name));
+							specification.acc_prefix.push_back(acc_prefix_date(acc));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -1536,11 +1554,8 @@ Schema::validate_required_data()
 				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
 				if (!specification.flags.dynamic_type && set_acc.size()) {
 					if (specification.acc_prefix.empty()) {
-						static std::string prefix_type = DOCUMENT_ACCURACY_TERM_PREFIX + std::string(1, toUType(FieldType::INTEGER));
 						for (const auto& acc : set_acc) {
-							auto acc_full_name = specification.full_normalized_name;
-							acc_full_name.append(DB_OFFSPRING_UNION).append(acc_name_num(acc));
-							specification.acc_prefix.push_back(prefix_type + Serialise::namespace_field(acc_full_name));
+							specification.acc_prefix.push_back(acc_prefix_num(acc));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -1632,17 +1647,10 @@ Schema::validate_required_data()
 				specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
 				properties[RESERVED_ACCURACY] = specification.accuracy;
 			}
-			update_dynamic_specification();
 		} else {
-			// Process RESERVED_PREFIX
-			if (specification.prefix.empty()) {
-				specification.prefix = get_prefix(specification.full_normalized_name, specification.get_prefix());
-			}
-			properties[RESERVED_PREFIX] = specification.prefix;
-
 			// Process RESERVED_SLOT
 			if (specification.slot == Xapian::BAD_VALUENO) {
-				specification.slot = get_slot(specification.full_normalized_name);
+				specification.slot = get_slot(specification.prefix);
 			} else if (specification.slot < DB_SLOT_RESERVED && !specification.flags.reserved_slot) {
 				specification.slot += DB_SLOT_RESERVED;
 			}
@@ -1727,7 +1735,7 @@ Schema::validate_required_data(const MsgPack& value)
 {
 	L_CALL(this, "Schema::validate_required_data(%s)", repr(value.to_string()).c_str());
 
-	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Print specification as sent by user
+	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Print specification as sent by user.
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		if (XapiandManager::manager->strict || specification.flags.strict) {
@@ -1823,6 +1831,8 @@ void
 Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
 {
 	L_CALL(this, "Schema::index_item(<doc>, %s, %s, %zu, %s)", repr(value.to_string()).c_str(), repr(data.to_string()).c_str(), pos, add_value ? "true" : "false");
+
+	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Final specification, as indexed
 
 	_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), pos);
 
@@ -2481,7 +2491,7 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 	const auto spc_start = specification;
 	if (obj_schema.is_map()) {
 		specification.name.assign(name);
-		const MsgPack* properties = &get_schema_subproperties(*parent_properties);
+		const MsgPack* properties = &get_schema_subproperties(*parent_properties, obj_schema);
 		bool offsprings = false;
 		TaskVector tasks;
 		tasks.reserve(obj_schema.size());
@@ -2499,7 +2509,7 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 		}
 
 		if (!specification.name.empty()) {
-			properties = &get_schema_subproperties(*properties);
+			properties = &get_schema_subproperties(*properties, obj_schema);
 		}
 
 		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
@@ -2525,12 +2535,11 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 
 
 const MsgPack&
-Schema::get_schema_subproperties(const MsgPack& properties)
+Schema::get_schema_subproperties(const MsgPack& properties, const MsgPack& o)
 {
-	L_CALL(this, "Schema::get_schema_subproperties(%s)", repr(properties.to_string()).c_str());
+	L_CALL(this, "Schema::get_schema_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(o.to_string()).c_str());
 
-	std::vector<std::string> field_names;
-	stringTokenizer(specification.name, DB_OFFSPRING_UNION, field_names);
+	auto field_names = stringTokenizer(specification.name, DB_OFFSPRING_UNION);
 
 	const MsgPack* subproperties = &properties;
 	const auto it_e = field_names.end();
@@ -2550,7 +2559,7 @@ Schema::get_schema_subproperties(const MsgPack& properties)
 				specification.meta_name = *it;
 				specification.normalized_name = specification.meta_name;
 				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-				add_field(mut_subprop);
+				add_field(mut_subprop, o);
 			}
 
 			// Found field always false for adding inheritable specification.
@@ -2595,12 +2604,11 @@ Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_na
 
 
 const MsgPack&
-Schema::get_subproperties(const MsgPack& properties)
+Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
 {
-	L_CALL(this, "Schema::get_subproperties(%s)", repr(properties.to_string()).c_str());
+	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(o.to_string()).c_str());
 
-	std::vector<std::string> field_names;
-	stringTokenizer(specification.name, DB_OFFSPRING_UNION, field_names);
+	auto field_names = stringTokenizer(specification.name, DB_OFFSPRING_UNION);
 
 	const MsgPack* subproperties = &properties;
 	const auto it_e = field_names.end();
@@ -2620,16 +2628,17 @@ Schema::get_subproperties(const MsgPack& properties)
 				if (specification.flags.dynamic_type) {
 					try {
 						get_subproperties(subproperties, specification.meta_name, specification.normalized_name);
+						specification.prefix.append(get_dynamic_prefix(specification.normalized_name));
 						continue;
 					} catch (const std::out_of_range&) { }
 				}
 
 				specification.flags.field_found = false;
 				MsgPack* mut_subprop = &get_mutable();
-				add_field(mut_subprop);
+				add_field(mut_subprop, o);
 				for (++it; it != it_e; ++it) {
 					detect_dynamic(*it);
-					add_field(mut_subprop);
+					add_field(mut_subprop, o);
 				}
 				return *mut_subprop;
 			}
@@ -2639,7 +2648,7 @@ Schema::get_subproperties(const MsgPack& properties)
 		restart_specification();
 		for (const auto& field_name : field_names) {
 			detect_dynamic(field_name);
-			specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.normalized_name));
+			specification.paths_namespace.push_back(get_prefix(specification.normalized_name));
 		}
 		specification.flags.inside_namespace = true;
 	}
@@ -2664,8 +2673,38 @@ Schema::detect_dynamic(const std::string& field_name)
 }
 
 
+unsigned long long
+Schema::get_valid_field_counter()
+{
+	auto f_counter = (FieldType)field_counter++;
+	while (f_counter <= FieldType::UUID) {
+		switch (f_counter) {
+			case FieldType::EMPTY:
+			case FieldType::STRING:
+			case FieldType::ARRAY:
+			case FieldType::BOOLEAN:
+			case FieldType::DATE:
+			case FieldType::FLOAT:
+			case FieldType::GEO:
+			case FieldType::INTEGER:
+			case FieldType::OBJECT:
+			case FieldType::POSITIVE:
+			case FieldType::TERM:
+			case FieldType::TEXT:
+			case FieldType::UUID:
+				f_counter = (FieldType)field_counter++;
+				break;
+			default:
+				return toUType(f_counter);
+		}
+	}
+
+	return toUType(f_counter);
+}
+
+
 void
-Schema::add_field(MsgPack*& properties)
+Schema::add_field(MsgPack*& properties, const MsgPack& o)
 {
 	L_CALL(this, "Schema::add_field(%s)", repr(properties->to_string()).c_str());
 
@@ -2686,6 +2725,28 @@ Schema::add_field(MsgPack*& properties)
 		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
 		specification.full_normalized_name.append(DB_OFFSPRING_UNION).append(specification.normalized_name);
 	}
+
+	if (specification.flags.dynamic_type) {
+		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
+	} else {
+		if (o.is_map()) {
+			try {
+				const auto& o_prefix = o.at(RESERVED_PREFIX);
+				specification.local_prefix = o_prefix.as_string();
+			} catch (const std::out_of_range&) {
+			} catch (const msgpack::type_error&) {
+				THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_PREFIX);
+			}
+		}
+		try {
+			auto func = map_dispatch_set_default_spc.at(specification.full_normalized_name);
+			(this->*func)(*properties);
+		} catch (const std::out_of_range&) {
+			specification.local_prefix = get_prefix(get_valid_field_counter());
+		}
+		(*properties)[RESERVED_PREFIX] = specification.local_prefix;
+	}
+	specification.prefix.append(specification.local_prefix);
 }
 
 
@@ -2843,7 +2904,8 @@ Schema::update_prefix(const MsgPack& prop_prefix)
 {
 	L_CALL(this, "Schema::update_prefix(%s)", repr(prop_prefix.to_string()).c_str());
 
-	specification.prefix = prop_prefix.as_string();
+	specification.local_prefix = prop_prefix.as_string();
+	specification.prefix.append(specification.local_prefix);
 }
 
 
@@ -3000,9 +3062,9 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 
 	if (prop_namespace.as_bool()) {
 		if (specification.flags.dynamic_type) {
-			specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.full_normalized_name));
+			specification.paths_namespace.push_back(specification.prefix);
 		} else {
-			specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
+			specification.paths_namespace.push_back(specification.prefix);
 		}
 	}
 	specification.flags.has_namespace = true;
@@ -3256,8 +3318,7 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 		try {
 			specification.sep_types[2] = map_type.at(str_type);
 		} catch (const std::out_of_range&) {
-			std::vector<std::string> tokens;
-			stringTokenizer(str_type, "/", tokens);
+			auto tokens = stringTokenizer(str_type, "/");
 			try {
 				switch (tokens.size()) {
 					case 1:
@@ -3363,12 +3424,12 @@ Schema::process_prefix(const std::string& prop_name, const MsgPack& doc_prefix)
 	// RESERVED_PREFIX isn't heritable and can't change once fixed.
 	L_CALL(this, "Schema::process_prefix(%s)", repr(doc_prefix.to_string()).c_str());
 
-	if likely(specification.flags.field_with_type) {
+	if likely(specification.flags.field_found) {
 		return;
 	}
 
 	try {
-		specification.prefix = doc_prefix.as_string();
+		specification.local_prefix = doc_prefix.as_string();
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
@@ -3698,9 +3759,9 @@ Schema::process_namespace(const std::string& prop_name, const MsgPack& doc_names
 		// Only save in Schema if RESERVED_NAMESPACE is true.
 		if (doc_namespace.as_bool()) {
 			if (specification.flags.dynamic_type) {
-				specification.paths_namespace.push_back(Serialise::dynamic_namespace_field(specification.full_normalized_name));
+				specification.paths_namespace.push_back(specification.prefix);
 			} else {
-				specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
+				specification.paths_namespace.push_back(specification.prefix);
 			}
 			get_mutable()[prop_name] = true;
 		} else {
@@ -3786,8 +3847,8 @@ Schema::set_default_spc_id(MsgPack& properties)
 	}
 
 	// Process RESERVED_PREFIX
-	if (specification.prefix.empty()) {
-		specification.prefix = DOCUMENT_ID_TERM_PREFIX;
+	if (specification.local_prefix.empty()) {
+		specification.local_prefix = DOCUMENT_ID_TERM_PREFIX;
 	}
 
 	// Process RESERVED_SLOT
@@ -3818,8 +3879,8 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	}
 
 	// Process RESERVED_PREFIX
-	if (specification.prefix.empty()) {
-		specification.prefix = DOCUMENT_CONTENT_TYPE_TERM_PREFIX;
+	if (specification.local_prefix.empty()) {
+		specification.local_prefix = DOCUMENT_CONTENT_TYPE_TERM_PREFIX;
 	}
 
 	// Process RESERVED_SLOT
@@ -3830,7 +3891,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 
 	if (!specification.flags.has_namespace) {
 		specification.flags.has_namespace = true;
-		specification.paths_namespace.push_back(Serialise::namespace_field(specification.full_normalized_name));
+		specification.paths_namespace.push_back(get_prefix(specification.normalized_name));
 		properties[RESERVED_NAMESPACE] = true;
 	}
 }
@@ -4103,13 +4164,11 @@ Schema::get_data_id() const
 	try {
 		const auto& properties = mut_schema ? mut_schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME) : schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
 		// update_specification(prop_id);
-		const auto& sep_types = properties.at(RESERVED_TYPE);
-		res.sep_types[0] = (FieldType)sep_types.at(0).as_u64();
-		res.sep_types[1] = (FieldType)sep_types.at(1).as_u64();
-		res.sep_types[2] = (FieldType)sep_types.at(2).as_u64();
+		res.sep_types[2] = (FieldType)properties.at(RESERVED_TYPE).at(2).as_u64();
 
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		res.prefix = properties.at(RESERVED_PREFIX).as_string();
+		res.prefix.push_back(toUType(res.sep_types[2]));
 	} catch (const std::out_of_range&) { }
 
 	return res;
@@ -4117,7 +4176,7 @@ Schema::get_data_id() const
 
 
 std::pair<required_spc_t, std::string>
-Schema::get_data_field(const std::string& field_name) const
+Schema::get_data_field(const std::string& field_name, bool is_range) const
 {
 	L_CALL(this, "Schema::get_data_field(%s)", repr(field_name).c_str());
 
@@ -4129,41 +4188,78 @@ Schema::get_data_field(const std::string& field_name) const
 
 	try {
 		auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
-		auto prefix_namespace = std::get<3>(info);
-		if (prefix_namespace.empty()) {
-			const auto& properties = std::get<2>(info);
-			const auto& sep_types = properties.at(RESERVED_TYPE);
-			res.sep_types[0] = (FieldType)sep_types.at(0).as_u64();
-			res.sep_types[1] = (FieldType)sep_types.at(1).as_u64();
-			res.sep_types[2] = (FieldType)sep_types.at(2).as_u64();
 
+		res.flags.inside_namespace = std::get<2>(info);
+
+		if (res.flags.inside_namespace) {
+			res.prefix = std::move(std::get<3>(info));
+		} else {
+			const auto& properties = std::get<0>(info);
+
+			res.sep_types[2] = (FieldType)properties.at(RESERVED_TYPE).at(2).as_u64();
 			if (res.sep_types[2] == FieldType::EMPTY) {
 				return std::make_pair(res, std::string());
 			}
 
-			if (std::get<1>(info)) {
-				res.slot = get_slot(std::get<0>(info));
-				res.prefix = get_dynamic_prefix(std::get<0>(info), (char)res.sep_types[2]);
+			res.prefix = std::move(std::get<3>(info));
 
-				// Get accuracy, acc_prefix and reserved word.
+			if (is_range) {
+				res.slot = get_slot(res.prefix);
+
+				// Get required specification.
 				switch (res.sep_types[2]) {
 					case FieldType::GEO:
 						res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
 						res.error = properties.at(RESERVED_ERROR).as_f64();
+						if (std::get<1>(info)) {
+							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+								res.accuracy.push_back(acc.as_u64());
+								res.acc_prefix.push_back(res.prefix + acc_prefix_geo(res.accuracy.back()));
+							}
+						} else {
+							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+								res.accuracy.push_back(acc.as_u64());
+							}
+							for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
+								res.acc_prefix.push_back(acc_p.as_string());
+							}
+						}
+						break;
 					case FieldType::FLOAT:
 					case FieldType::INTEGER:
 					case FieldType::POSITIVE:
+						if (std::get<1>(info)) {
+							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+								res.accuracy.push_back(acc.as_u64());
+								res.acc_prefix.push_back(res.prefix + acc_prefix_num(res.accuracy.back()));
+							}
+						} else {
+							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+								res.accuracy.push_back(acc.as_u64());
+							}
+							for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
+								res.acc_prefix.push_back(acc_p.as_string());
+							}
+						}
+						break;
 					case FieldType::DATE:
-						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-							res.accuracy.push_back(acc.as_u64());
-							res.acc_prefix.push_back(get_dynamic_prefix(std::get<0>(info) + std::to_string(res.accuracy.back()), (char)res.sep_types[2]));
+						if (std::get<1>(info)) {
+							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+								res.accuracy.push_back(acc.as_u64());
+								res.acc_prefix.push_back(res.prefix + acc_prefix_date(res.accuracy.back()));
+							}
+						} else {
+							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+								res.accuracy.push_back(acc.as_u64());
+							}
+							for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
+								res.acc_prefix.push_back(acc_p.as_string());
+							}
 						}
 						break;
 					case FieldType::TEXT:
 						res.language = properties.at(RESERVED_LANGUAGE).as_string();
-
 						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
-
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 						break;
@@ -4177,30 +4273,15 @@ Schema::get_data_field(const std::string& field_name) const
 						break;
 				}
 			} else {
-				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
-				res.prefix = properties.at(RESERVED_PREFIX).as_string();
-
-				// Get accuracy, acc_prefix and reserved word.
+				// Get required specification.
 				switch (res.sep_types[2]) {
 					case FieldType::GEO:
 						res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
 						res.error = properties.at(RESERVED_ERROR).as_f64();
-					case FieldType::FLOAT:
-					case FieldType::INTEGER:
-					case FieldType::POSITIVE:
-					case FieldType::DATE:
-						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-							res.accuracy.push_back(acc.as_u64());
-						}
-						for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
-							res.acc_prefix.push_back(acc_p.as_string());
-						}
 						break;
 					case FieldType::TEXT:
 						res.language = properties.at(RESERVED_LANGUAGE).as_string();
-
 						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
-
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 						break;
@@ -4214,11 +4295,11 @@ Schema::get_data_field(const std::string& field_name) const
 						break;
 				}
 			}
-		} else {
-			res.flags.inside_namespace = true;
-			res.prefix = std::move(prefix_namespace);
-			return std::make_pair(std::move(res), std::get<4>(info));
+
+			res.prefix.push_back(toUType(res.sep_types[2]));
 		}
+
+		return std::make_pair(std::move(res), std::get<4>(info));
 	} catch (const ClientError& exc) {
 		L_EXC(this, "ERROR: %s", exc.what());
 	} catch (const std::out_of_range& exc) {
@@ -4242,16 +4323,18 @@ Schema::get_slot_field(const std::string& field_name) const
 
 	try {
 		auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
-		auto prefix_namespace = std::get<3>(info);
-		if (prefix_namespace.empty()) {
-			const auto& properties = std::get<2>(info);
+		res.flags.inside_namespace = std::get<2>(info);
+
+		if (res.flags.inside_namespace) {
+			res = specification_t::get_global(FieldType::TERM);
+			res.slot = get_slot(std::get<3>(info));
+		} else {
+			const auto& properties = std::get<0>(info);
 
 			const auto& sep_types = properties.at(RESERVED_TYPE);
-			res.sep_types[0] = (FieldType)sep_types.at(0).as_u64();
-			res.sep_types[1] = (FieldType)sep_types.at(1).as_u64();
 			res.sep_types[2] = (FieldType)sep_types.at(2).as_u64();
 
-			// Get partials and error if type is GEO.
+			// Get required specification.
 			switch (res.sep_types[2]) {
 				case FieldType::GEO:
 					res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
@@ -4259,9 +4342,7 @@ Schema::get_slot_field(const std::string& field_name) const
 					break;
 				case FieldType::TEXT:
 					res.language = properties.at(RESERVED_LANGUAGE).as_string();
-
 					res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
-
 					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 					break;
@@ -4276,17 +4357,10 @@ Schema::get_slot_field(const std::string& field_name) const
 			}
 
 			if (std::get<1>(info)) {
-				res.slot = get_slot(std::get<0>(info));
+				res.slot = get_slot(std::get<3>(info));
 			} else {
 				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 			}
-		} else {
-			auto namespace_spc = specification_t::get_global(FieldType::TERM);
-			namespace_spc.flags.inside_namespace = true;
-			namespace_spc.prefix.reserve(arraySize(DOCUMENT_NAMESPACE_TERM_PREFIX) + prefix_namespace.length() + 1);
-			namespace_spc.prefix.assign(DOCUMENT_NAMESPACE_TERM_PREFIX).append(prefix_namespace).push_back(namespace_spc.get_prefix());
-			namespace_spc.slot = get_slot(namespace_spc.prefix);
-			return namespace_spc;
 		}
 	} catch (const ClientError& exc) {
 		L_EXC(this, "ERROR: %s", exc.what());
@@ -4350,58 +4424,54 @@ Schema::get_data_global(FieldType field_type)
 }
 
 
-std::tuple<std::string, bool, const MsgPack&, std::string, std::string>
+std::tuple<const MsgPack&, bool, bool, std::string, std::string>
 Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
 {
 	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
 
-	std::vector<std::string> field_names;
-	stringTokenizer(full_name, DB_OFFSPRING_UNION, field_names);
+	auto field_names = stringTokenizer(full_name, DB_OFFSPRING_UNION);
 
 	const MsgPack* subproperties = &properties;
-	std::string full_normalized_name;
-	full_normalized_name.reserve(full_name.length());
+	std::string prefix;
 	bool dynamic_type = false;
-	std::string prefix_namespace;
 
 	static const auto dsit_e = map_dispatch_set_default_spc.end();
 
 	const auto it_e = field_names.end();
 	for (auto it = field_names.begin(); it != it_e; ++it) {
+		dynamic_type = false;
 		const auto& field_name = *it;
 		if (!is_valid(field_name)) {
-			if (full_normalized_name.empty()) {
+			if (it == field_names.begin()) {
 				if (map_dispatch_set_default_spc.find(field_name) == dsit_e) {
+					if (++it == it_e) {
+						prefix.append(get_acc_prefix(field_name));
+						return std::forward_as_tuple(*subproperties, dynamic_type, false, std::move(prefix), std::move(field_name));
+					}
 					THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 				}
 			} else if (++it == it_e) {
-				full_normalized_name.append(DB_OFFSPRING_UNION).append(field_name);
-				prefix_namespace.append(dynamic_type ? Serialise::dynamic_namespace_field(full_normalized_name) : Serialise::namespace_field(full_normalized_name));
-				return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::move(field_name));
+				prefix.append(get_acc_prefix(field_name));
+				return std::forward_as_tuple(*subproperties, dynamic_type, false, std::move(prefix), std::move(field_name));
 			} else {
 				THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 			}
 		}
+
 		try {
 			subproperties = &subproperties->at(field_name);
-			if (full_normalized_name.empty()) {
-				full_normalized_name.assign(field_name);
-			} else {
-				full_normalized_name.append(DB_OFFSPRING_UNION).append(field_name);
-			}
+			prefix.append(subproperties->at(RESERVED_PREFIX).as_string());
 		} catch (const std::out_of_range&) {
-			try {
-				if (Serialise::isUUID(field_name)) {
+			auto dynamic_prefix = get_dynamic_prefix(field_name);
+			if (!dynamic_prefix.empty()) {
+				try {
 					subproperties = &subproperties->at(UUID_FIELD_NAME);
-					if (full_normalized_name.empty()) {
-						full_normalized_name.assign(lower_string(field_name));
-					} else {
-						full_normalized_name.append(DB_OFFSPRING_UNION).append(lower_string(field_name));
-					}
+					prefix.append(dynamic_prefix);
 					dynamic_type = true;
 					continue;
-				}
-			} catch (const std::out_of_range&) { }
+				} catch (const std::out_of_range&) { }
+			}
+
 			// Verify if parent is a namespace.
 			try {
 				if (subproperties->at(RESERVED_NAMESPACE).as_bool()) {
@@ -4409,31 +4479,25 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 					if (depth_namespace > NAMESPACE_LIMIT_DEPTH) {
 						THROW(ClientError, "Namespace limit depth is %d, and the namespace provided has a depth of %d", NAMESPACE_LIMIT_DEPTH, depth_namespace);
 					}
-					prefix_namespace.assign(dynamic_type ? Serialise::dynamic_namespace_field(full_normalized_name) : Serialise::namespace_field(full_normalized_name));
 					for ( ; it != it_e; ++it) {
+						dynamic_type = false;
 						auto& field_namespace = *it;
 						if (is_valid(field_namespace)) {
-							if (Serialise::isUUID(field_namespace)) {
-								to_lower(field_namespace);
-								if (full_normalized_name.empty()) {
-									full_normalized_name.assign(field_namespace);
-								} else {
-									full_normalized_name.append(DB_OFFSPRING_UNION).append(field_namespace);
-								}
-							} else if (full_normalized_name.empty()) {
-								full_normalized_name.assign(field_namespace);
+							auto dynamic_prefix = get_dynamic_prefix(field_namespace);
+							if (dynamic_prefix.empty()) {
+								prefix.append(get_prefix(field_namespace));
 							} else {
-								full_normalized_name.append(DB_OFFSPRING_UNION).append(field_namespace);
+								prefix.append(dynamic_prefix);
+								dynamic_type = true;
 							}
-							prefix_namespace.append(Serialise::dynamic_namespace_field(field_namespace));
 						} else if (++it == it_e) {
-							prefix_namespace.append(DB_OFFSPRING_UNION).append(field_namespace);
-							return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, Serialise::dynamic_namespace_field(DOCUMENT_NAMESPACE_TERM_PREFIX + prefix_namespace), std::move(field_namespace));
+							prefix.append(get_acc_prefix(field_namespace));
+							return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(prefix), std::move(field_namespace));
 						} else {
 							THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
 						}
 					}
-					break;
+					return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(prefix), std::string());
 				} else {
 					THROW(ClientError, "%s does not exist in schema", repr(field_name).c_str());
 				}
@@ -4443,7 +4507,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		}
 	}
 
-	return std::forward_as_tuple(std::move(full_normalized_name), dynamic_type, *subproperties, std::move(prefix_namespace), std::string());
+	return std::forward_as_tuple(*subproperties, dynamic_type, false, std::move(prefix), std::string());
 }
 
 
