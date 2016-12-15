@@ -2340,15 +2340,19 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 		schemas.erase(endpoint.hash());
 		THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
 	}
-	try {
-		auto new_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
-		new_schema->lock();
-		schema->store(std::move(new_schema));
-	} catch (const msgpack::unpack_error&) {
-		schema->store(std::make_shared<const MsgPack>());
+
+	if likely(!str_schema.empty()) {
+		try {
+			auto new_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+			new_schema->lock();
+			schema->store(std::move(new_schema));
+			return new_schema;
+		} catch (const msgpack::unpack_error&) { }
 	}
 
-	return schema->load();
+	auto initial_schema = Schema::get_initial_schema();
+	schema->store(initial_schema);
+	return initial_schema;
 }
 
 
