@@ -4039,9 +4039,9 @@ Schema::get_modified_schema()
 	L_CALL(this, "Schema::get_modified_schema()");
 
 	if (mut_schema) {
-		auto schema = std::shared_ptr<const MsgPack>(mut_schema.release());
-		schema->lock();
-		return schema;
+		auto m_schema = std::shared_ptr<const MsgPack>(mut_schema.release());
+		m_schema->lock();
+		return m_schema;
 	} else {
 		return std::shared_ptr<const MsgPack>();
 	}
