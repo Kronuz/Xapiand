@@ -2192,7 +2192,9 @@ DatabasePool::init_ref(const Endpoint& endpoint)
 		// Boolean term for the node.
 		doc.add_boolean_term(unique_id);
 		// Start values for the DB.
-		doc.add_boolean_term(prefixed(DOCUMENT_DB_MASTER, get_prefix("master", toUType(FieldType::TERM))));
+		auto prefix = get_prefix("master");
+		prefix.push_back(toUType(FieldType::TERM));
+		doc.add_boolean_term(prefixed(DOCUMENT_DB_MASTER, prefix));
 		try {
 			ref_database->replace_document_term(unique_id, doc, true);
 		} catch (const BaseException& exc) {
