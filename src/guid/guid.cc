@@ -52,28 +52,31 @@ THE SOFTWARE.
 using namespace std;
 
 // overload << so that it's easy to convert to a string
-ostream& operator<<(ostream& s, const Guid& guid) {
-	return s << hex << setfill('0')
-		<< setw(2) << (int)guid._bytes[0]
-		<< setw(2) << (int)guid._bytes[1]
-		<< setw(2) << (int)guid._bytes[2]
-		<< setw(2) << (int)guid._bytes[3]
+std::ostream& operator<<(std::ostream& s, const Guid& guid) {
+	std::ios::fmtflags flags(s.flags());
+	s << std::hex << std::setfill('0')
+		<< std::setw(2) << (int)guid._bytes[0]
+		<< std::setw(2) << (int)guid._bytes[1]
+		<< std::setw(2) << (int)guid._bytes[2]
+		<< std::setw(2) << (int)guid._bytes[3]
 		<< "-"
-		<< setw(2) << (int)guid._bytes[4]
-		<< setw(2) << (int)guid._bytes[5]
+		<< std::setw(2) << (int)guid._bytes[4]
+		<< std::setw(2) << (int)guid._bytes[5]
 		<< "-"
-		<< setw(2) << (int)guid._bytes[6]
-		<< setw(2) << (int)guid._bytes[7]
+		<< std::setw(2) << (int)guid._bytes[6]
+		<< std::setw(2) << (int)guid._bytes[7]
 		<< "-"
-		<< setw(2) << (int)guid._bytes[8]
-		<< setw(2) << (int)guid._bytes[9]
+		<< std::setw(2) << (int)guid._bytes[8]
+		<< std::setw(2) << (int)guid._bytes[9]
 		<< "-"
-		<< setw(2) << (int)guid._bytes[10]
-		<< setw(2) << (int)guid._bytes[11]
-		<< setw(2) << (int)guid._bytes[12]
-		<< setw(2) << (int)guid._bytes[13]
-		<< setw(2) << (int)guid._bytes[14]
-		<< setw(2) << (int)guid._bytes[15];
+		<< std::setw(2) << (int)guid._bytes[10]
+		<< std::setw(2) << (int)guid._bytes[11]
+		<< std::setw(2) << (int)guid._bytes[12]
+		<< std::setw(2) << (int)guid._bytes[13]
+		<< std::setw(2) << (int)guid._bytes[14]
+		<< std::setw(2) << (int)guid._bytes[15];
+	s.flags(flags);
+	return s;
 }
 
 // create a guid from vector of bytes
