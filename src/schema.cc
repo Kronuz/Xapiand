@@ -876,25 +876,28 @@ specification_t::to_string() const
 Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
-	if (schema->is_undefined()) {
-		MsgPack new_schema = {
-			{ RESERVED_VERSION, DB_VERSION_SCHEMA },
-			{ RESERVED_SCHEMA, MsgPack() },
-		};
-		new_schema.lock();
-		schema = std::make_shared<const MsgPack>(std::move(new_schema));
-	} else {
-		try {
-			const auto& version = schema->at(RESERVED_VERSION);
-			if (version.as_f64() != DB_VERSION_SCHEMA) {
-				THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
-			}
-		} catch (const std::out_of_range&) {
-			THROW(Error, "Schema is corrupt, you need provide a new one");
-		} catch (const msgpack::type_error&) {
-			THROW(Error, "Schema is corrupt, you need provide a new one");
+	try {
+		const auto& version = schema->at(RESERVED_VERSION);
+		if (version.as_f64() != DB_VERSION_SCHEMA) {
+			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
+	} catch (const std::out_of_range&) {
+		THROW(Error, "Schema is corrupt, you need provide a new one");
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt, you need provide a new one");
 	}
+}
+
+
+std::shared_ptr<const MsgPack>
+Schema::get_initial_schema()
+{
+	MsgPack new_schema = {
+		{ RESERVED_VERSION, DB_VERSION_SCHEMA },
+		{ RESERVED_SCHEMA, MsgPack() },
+	};
+	new_schema.lock();
+	return std::make_shared<const MsgPack>(std::move(new_schema));
 }
 
 

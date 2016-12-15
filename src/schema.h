@@ -646,6 +646,8 @@ public:
 
 	~Schema() = default;
 
+	static std::shared_ptr<const MsgPack> get_initial_schema();
+
 	std::shared_ptr<const MsgPack> get_modified_schema();
 
 	std::shared_ptr<const MsgPack> get_const_schema() const;
