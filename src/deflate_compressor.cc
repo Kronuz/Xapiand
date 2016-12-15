@@ -46,9 +46,9 @@ int DeflateCompressData::FINISH_COMPRESS = Z_FINISH;
 /*
  * Constructor compress with data
  */
-DeflateCompressData::DeflateCompressData(const char* data_, size_t data_size_)
+DeflateCompressData::DeflateCompressData(const char* data_, size_t data_size_, bool gzip)
 	: DeflateData(data_, data_size_),
-	  DeflateBlockStreaming() { }
+	  DeflateBlockStreaming(gzip) { }
 
 
 DeflateCompressData::~DeflateCompressData()
@@ -63,8 +63,9 @@ DeflateCompressData::init(bool start)
 	strm.zalloc = Z_NULL;
 	strm.zfree = Z_NULL;
 	strm.opaque = Z_NULL;
+	strm.next_in = Z_NULL;
 
-	stream = deflateInit(&strm, Z_DEFAULT_COMPRESSION);
+	stream = deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 | (gzip ? 16 : 0), 8, Z_DEFAULT_STRATEGY);
 	if(stream != Z_OK) {
 		THROW(DeflateException, zerr(stream));
 	}
@@ -135,9 +136,9 @@ DeflateCompressData::next()
 /*
  * Constructor decompress with data
  */
-DeflateDecompressData::DeflateDecompressData(const char* data_, size_t data_size_)
+DeflateDecompressData::DeflateDecompressData(const char* data_, size_t data_size_, bool gzip)
 	: DeflateData(data_, data_size_),
-	  DeflateBlockStreaming() { }
+	  DeflateBlockStreaming(gzip) { }
 
 
 DeflateDecompressData::~DeflateDecompressData()
@@ -155,7 +156,7 @@ DeflateDecompressData::init()
 	strm.avail_in = 0;
 	strm.next_in = Z_NULL;
 
-	stream = inflateInit(&strm);
+	stream = inflateInit2(&strm, 15 | (gzip ? 16 : 0));
 	if(stream != Z_OK) {
 		THROW(DeflateException, zerr(stream));
 	}
@@ -203,17 +204,17 @@ DeflateDecompressData::next()
 /*
  * Construct for file name
  */
-DeflateCompressFile::DeflateCompressFile(const std::string& filename)
+DeflateCompressFile::DeflateCompressFile(const std::string& filename, bool gzip)
 	: DeflateFile(filename),
-	  DeflateBlockStreaming() { }
+	  DeflateBlockStreaming(gzip) { }
 
 
 /*
  * Construct for file descriptor
  */
-DeflateCompressFile::DeflateCompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_)
+DeflateCompressFile::DeflateCompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_, bool gzip)
 	: DeflateFile(fd_, fd_offset_, fd_nbytes_),
-	  DeflateBlockStreaming() { }
+	  DeflateBlockStreaming(gzip) { }
 
 
 DeflateCompressFile::~DeflateCompressFile()
@@ -233,7 +234,7 @@ DeflateCompressFile::init()
 	strm.zfree = Z_NULL;
 	strm.opaque = Z_NULL;
 
-	stream = deflateInit(&strm, Z_DEFAULT_COMPRESSION);
+	stream = deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 | (gzip ? 16 : 0), 8, Z_DEFAULT_STRATEGY);
 	if(stream != Z_OK) {
 		THROW(DeflateException, zerr(stream));
 	}
@@ -282,14 +283,14 @@ DeflateCompressFile::next()
 }
 
 
-DeflateDecompressFile::DeflateDecompressFile(const std::string& filename)
+DeflateDecompressFile::DeflateDecompressFile(const std::string& filename, bool gzip)
 	: DeflateFile(filename),
-	  DeflateBlockStreaming() { }
+	  DeflateBlockStreaming(gzip) { }
 
 
-DeflateDecompressFile::DeflateDecompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_)
+DeflateDecompressFile::DeflateDecompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_, bool gzip)
 	: DeflateFile(fd_, fd_offset_, fd_nbytes_),
-	  DeflateBlockStreaming() { }
+	  DeflateBlockStreaming(gzip) { }
 
 
 DeflateDecompressFile::~DeflateDecompressFile()
@@ -311,7 +312,7 @@ DeflateDecompressFile::init()
 	strm.avail_in = 0;
 	strm.next_in = Z_NULL;
 
-	stream = inflateInit(&strm);
+	stream = inflateInit2(&strm, 15 | (gzip ? 16 : 0));
 	if(stream != Z_OK) {
 		THROW(DeflateException, zerr(stream));
 	}
