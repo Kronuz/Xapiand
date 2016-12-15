@@ -25,7 +25,6 @@
 #include "xapiand.h"
 
 #include <array>                           // for array
-#include <atomic>                          // for atomic
 #include <future>                          // for future
 #include <memory>                          // for shared_ptr
 #include <stddef.h>                        // for size_t
@@ -228,9 +227,6 @@ extern const std::unordered_map<std::string, StopStrategy> map_stop_strategy;
 extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
 extern const std::unordered_map<std::string, TypeIndex> map_index;
 extern const std::unordered_map<std::string, FieldType> map_type;
-
-
-extern std::atomic<unsigned long long> field_counter;
 
 
 MSGPACK_ADD_ENUM(UnitTime);
@@ -511,7 +507,7 @@ class Schema {
 	/*
 	 * Returns the next valid field counter.
 	 */
-	static unsigned long long get_valid_field_counter();
+	static unsigned long long get_valid_field_counter(size_t field_counter);
 
 	/*
 	 * Add new field to properties.

@@ -64,9 +64,6 @@
  */
 
 
-std::atomic<unsigned long long> field_counter(DB_SLOT_RESERVED);
-
-
 /*
  * Unordered Maps used for reading user data specification.
  */
@@ -2677,11 +2674,10 @@ Schema::detect_dynamic(const std::string& field_name)
 
 
 unsigned long long
-Schema::get_valid_field_counter()
+Schema::get_valid_field_counter(size_t field_counter)
 {
-	auto f_counter = (FieldType)field_counter++;
-	while (f_counter <= FieldType::UUID) {
-		switch (f_counter) {
+	while (field_counter <= toUType(FieldType::UUID)) {
+		switch ((FieldType)field_counter) {
 			case FieldType::EMPTY:
 			case FieldType::STRING:
 			case FieldType::ARRAY:
@@ -2695,14 +2691,14 @@ Schema::get_valid_field_counter()
 			case FieldType::TERM:
 			case FieldType::TEXT:
 			case FieldType::UUID:
-				f_counter = (FieldType)field_counter++;
+				++field_counter;
 				break;
 			default:
-				return toUType(f_counter);
+				return field_counter;
 		}
 	}
 
-	return toUType(f_counter);
+	return field_counter;
 }
 
 
@@ -2710,6 +2706,8 @@ void
 Schema::add_field(MsgPack*& properties, const MsgPack& o)
 {
 	L_CALL(this, "Schema::add_field(%s)", repr(properties->to_string()).c_str());
+
+	auto field_counter = properties->size();
 
 	properties = &(*properties)[specification.meta_name];
 
@@ -2745,7 +2743,7 @@ Schema::add_field(MsgPack*& properties, const MsgPack& o)
 			auto func = map_dispatch_set_default_spc.at(specification.full_normalized_name);
 			(this->*func)(*properties);
 		} catch (const std::out_of_range&) {
-			specification.local_prefix = get_prefix(get_valid_field_counter());
+			specification.local_prefix = get_prefix(get_valid_field_counter(field_counter + 1));
 		}
 		(*properties)[RESERVED_PREFIX] = specification.local_prefix;
 	}
