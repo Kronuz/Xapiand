@@ -38,6 +38,47 @@ THE SOFTWARE.
 #include <jni.h>
 #endif
 
+#define TIME_BITS       60
+#define PADDING1_BITS  (64 - TIME_BITS)
+
+#define COMPACTED_BITS   1
+#define SALT_BITS        5
+#define CLOCK_BITS      14
+#define PADDING2_BITS  (64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS)
+#define NODE_BITS       48
+#define VERSION_BITS     1
+
+union GuidCompactor {
+	struct compact_t {
+		uint64_t time      : TIME_BITS;
+		uint64_t padding1  : PADDING1_BITS;
+
+		uint64_t compacted : COMPACTED_BITS;
+		uint64_t padding2  : PADDING2_BITS;
+		uint64_t salt      : SALT_BITS;
+		uint64_t clock     : CLOCK_BITS;
+	} compact;
+
+	struct expanded_t {
+		uint64_t time      : TIME_BITS;
+		uint64_t padding1  : PADDING1_BITS;
+
+		uint64_t compacted : COMPACTED_BITS;
+		uint64_t version   : VERSION_BITS;
+		uint64_t node      : NODE_BITS;
+		uint64_t clock     : CLOCK_BITS;
+	} expanded;
+
+	GuidCompactor();
+
+	uint32_t get_seed() const;
+	uint64_t calculate_node();
+
+	std::string serialise() const;
+	static GuidCompactor unserialise(const std::string& code);
+};
+
+
 // Class to represent a GUID/UUID. Each instance acts as a wrapper around a
 // 16 byte value that can be passed around by value. It also supports
 // conversion to string (via the stream operator <<) and conversion from a
@@ -76,13 +117,25 @@ public:
 
 	std::string to_string() const;
 
+	void compact();
+	std::string serialise();
+	static Guid unserialise(const std::string& code);
+
+
 private:
 	// actual data
 	std::array<unsigned char, 16> _bytes;
 
 	// make the << operator a friend so it can access _bytes
 	friend std::ostream &operator<<(std::ostream& s, const Guid& guid);
+
+	int get_uuid_version();
+	uint64_t get_uuid1_node();
+	uint64_t get_uuid1_time();
+	uint16_t get_uuid1_clock_seq();
+	GuidCompactor get_compactor(bool compacted);
 };
+
 
 // Class that can create new guids. The only reason this exists instead of
 // just a global "newGuid" function is because some platforms will require
@@ -101,7 +154,7 @@ public:
 	GuidGenerator() { }
 #endif
 
-	Guid newGuid();
+	Guid newGuid(bool compact=true);
 
 #ifdef GUID_ANDROID
 private:
