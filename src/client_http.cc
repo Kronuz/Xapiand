@@ -452,7 +452,6 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 						std::sregex_iterator end;
 						int i = 0;
 						while (next != end) {
-							L_BLUE(nullptr, "%s q=%s",next->str(1).c_str(), next->str(2).c_str());
 							if (next->length(2) != 0) {
 								self->accept_encoding_set.insert(std::make_tuple(std::stod(next->str(2)), i, next->str(1)));
 							} else {
