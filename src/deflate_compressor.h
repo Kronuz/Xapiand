@@ -202,6 +202,7 @@ public:
  */
 class DeflateCompressData : public DeflateData, public DeflateBlockStreaming<DeflateCompressData> {
 
+	bool free_strm;
 	z_stream strm;
 	std::string next();
 
@@ -227,6 +228,7 @@ public:
  */
 class DeflateDecompressData : public DeflateData, public DeflateBlockStreaming<DeflateDecompressData> {
 
+	bool free_strm;
 	z_stream strm;
 	std::string init();
 	std::string next();
@@ -302,6 +304,7 @@ public:
  */
 class DeflateCompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateCompressFile> {
 
+	bool free_strm;
 	z_stream strm;
 	std::string init();
 	std::string next();
@@ -328,6 +331,7 @@ public:
  */
 class DeflateDecompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateDecompressFile> {
 
+	bool free_strm;
 	z_stream strm;
 	ssize_t data_size;
 	size_t data_offset;

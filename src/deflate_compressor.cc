@@ -53,7 +53,9 @@ DeflateCompressData::DeflateCompressData(const char* data_, size_t data_size_, b
 
 DeflateCompressData::~DeflateCompressData()
 {
-	deflateEnd(&strm);
+	if (free_strm) {
+		deflateEnd(&strm);
+	}
 }
 
 
@@ -70,6 +72,7 @@ DeflateCompressData::init(bool start)
 		THROW(DeflateException, zerr(stream));
 	}
 
+	free_strm = true;
 	if (start && data) {
 		return next();
 	}
@@ -143,7 +146,9 @@ DeflateDecompressData::DeflateDecompressData(const char* data_, size_t data_size
 
 DeflateDecompressData::~DeflateDecompressData()
 {
-	inflateEnd(&strm);
+	if (free_strm) {
+		inflateEnd(&strm);
+	}
 }
 
 
@@ -161,6 +166,7 @@ DeflateDecompressData::init()
 		THROW(DeflateException, zerr(stream));
 	}
 
+	free_strm = true;
 	return next();
 }
 
@@ -219,7 +225,9 @@ DeflateCompressFile::DeflateCompressFile(int fd_, off_t fd_offset_, off_t fd_nby
 
 DeflateCompressFile::~DeflateCompressFile()
 {
-	deflateEnd(&strm);
+	if (free_strm) {
+		deflateEnd(&strm);
+	}
 }
 
 
@@ -243,6 +251,7 @@ DeflateCompressFile::init()
 	size_file = io::lseek(fd, 0, SEEK_CUR);
 	io::lseek(fd, 0, SEEK_SET);
 
+	free_strm = true;
 	return next();
 }
 
@@ -295,7 +304,9 @@ DeflateDecompressFile::DeflateDecompressFile(int fd_, off_t fd_offset_, off_t fd
 
 DeflateDecompressFile::~DeflateDecompressFile()
 {
-	inflateEnd(&strm);
+	if (free_strm) {
+		inflateEnd(&strm);
+	}
 }
 
 
@@ -317,6 +328,7 @@ DeflateDecompressFile::init()
 		THROW(DeflateException, zerr(stream));
 	}
 
+	free_strm = true;
 	return next();
 }
 
