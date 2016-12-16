@@ -944,6 +944,7 @@ Schema::restart_specification()
 	specification.error                  = default_spc.error;
 	specification.aux_stem_lan           = default_spc.aux_stem_lan;
 	specification.aux_lan                = default_spc.aux_lan;
+	specification.namespace_spcs.clear();
 }
 
 
