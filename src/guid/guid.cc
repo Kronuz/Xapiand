@@ -52,11 +52,13 @@ THE SOFTWARE.
 
 
 // 0x11f0241243c00ULL = 1yr
-constexpr uint64_t _UUID_TIME_INITIAL = 0x1e6bfffffffffffULL;
+constexpr uint64_t UUID_TIME_INITIAL = 0x1e6bfffffffffffULL;
 
 
 #define SALT_MASK ((1ULL << SALT_BITS) - 1)
+#define CLOCK_MASK ((1ULL << CLOCK_BITS) - 1)
 #define NODE_MASK ((1ULL << NODE_BITS) - 1)
+#define VERSION_MASK ((1ULL << VERSION_BITS) - 1)
 
 
 // This is the linux friendly implementation, but it could work on other
@@ -392,9 +394,9 @@ GuidCompactor::serialise() const
 
 
 GuidCompactor
-GuidCompactor::unserialise(const std::string& code)
+GuidCompactor::unserialise(const std::string& bytes)
 {
-	auto compacted = code.length() < 12;
+	auto compacted = bytes.length() < 12;
 
 	int bits, skip;
 	if (compacted) {
@@ -407,7 +409,7 @@ GuidCompactor::unserialise(const std::string& code)
 
 	char buf[16];
 	std::memset(buf, 0, sizeof(buf));
-	std::memcpy(buf, code.data(), code.size());
+	std::memcpy(buf, bytes.data(), bytes.size());
 	auto ls64 = *(reinterpret_cast<uint64_t*>(buf));
 	auto ms64 = *(reinterpret_cast<uint64_t*>(buf) + 1);
 	auto val1 = (ms64 << skip) | (ls64 >> (64 - skip));
@@ -423,19 +425,21 @@ GuidCompactor::unserialise(const std::string& code)
 }
 
 
-uint32_t
-GuidCompactor::get_seed() const
-{
-	auto val1 = *(reinterpret_cast<const uint64_t*>(this));
-	auto val2 = *(reinterpret_cast<const uint64_t*>(this) + 1);
-	auto seed = fnv_1a(val1) ^ fnv_1a(val2);
-	return seed;
-}
-
-
 inline uint64_t
 GuidCompactor::calculate_node() {
-	uint32_t seed = get_seed();
+	uint32_t seed = 0;
+	if (compact.time) {
+		seed ^= fnv_1a(compact.time);
+	}
+	if (compact.clock) {
+		seed ^= fnv_1a(compact.clock);
+	}
+	if (compact.salt) {
+		seed ^= fnv_1a(compact.salt);
+	}
+	if (!seed) {
+		return 0;
+	}
 	std::mt19937 g(seed);
 	uint64_t node = g();
 	node <<= 32;
@@ -484,8 +488,13 @@ Guid::get_compactor(bool compacted)
 {
 	GuidCompactor compactor;
 	compactor.compact.compacted = compacted;
-	compactor.compact.time = get_uuid1_time() - _UUID_TIME_INITIAL;
+	auto time = get_uuid1_time();
+	if (time) {
+		time -= UUID_TIME_INITIAL;
+	}
+	compactor.compact.time = time;
 	compactor.compact.clock = get_uuid1_clock_seq();
+
 	return compactor;
 }
 
@@ -511,16 +520,16 @@ Guid::compact()
 std::string
 Guid::serialise()
 {
-	auto num_node = get_uuid1_node();
-	auto salt = num_node & SALT_MASK;
+	auto node = get_uuid1_node();
+	auto salt = node & SALT_MASK;
 
 	auto compactor = get_compactor(true);
 	compactor.compact.salt = salt;
-	auto node = compactor.calculate_node();
+	auto compacted_node = compactor.calculate_node();
 
-	if (num_node != node) {
+	if (node != compacted_node) {
 		compactor = get_compactor(false);
-		compactor.expanded.node = num_node;
+		compactor.expanded.node = node;
 		if (get_uuid_version() == 1) {
 			compactor.expanded.version = 0;  // Version 1
 		} else {
@@ -533,16 +542,19 @@ Guid::serialise()
 
 
 Guid
-Guid::unserialise(const std::string& code)
+Guid::unserialise(const std::string& bytes)
 {
-	if (code.empty()) {
+	if (bytes.empty()) {
 		throw std::invalid_argument("Cannot unserialise empty codes");
 	}
 
-	GuidCompactor compactor = GuidCompactor::unserialise(code);
+	GuidCompactor compactor = GuidCompactor::unserialise(bytes);
 
 	uint64_t node;
-	uint64_t time = compactor.compact.time + _UUID_TIME_INITIAL;
+	uint64_t time = compactor.compact.time;
+	if (time) {
+		time += UUID_TIME_INITIAL;
+	}
 	if (compactor.compact.compacted) {
 		node = compactor.calculate_node();
 	} else {

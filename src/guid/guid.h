@@ -38,6 +38,7 @@ THE SOFTWARE.
 #include <jni.h>
 #endif
 
+
 #define TIME_BITS       60
 #define PADDING1_BITS  (64 - TIME_BITS)
 
@@ -72,11 +73,10 @@ union GuidCompactor {
 
 	GuidCompactor();
 
-	uint32_t get_seed() const;
 	uint64_t calculate_node();
 
 	std::string serialise() const;
-	static GuidCompactor unserialise(const std::string& code);
+	static GuidCompactor unserialise(const std::string& bytes);
 };
 
 
@@ -120,7 +120,7 @@ public:
 
 	void compact();
 	std::string serialise();
-	static Guid unserialise(const std::string& code);
+	static Guid unserialise(const std::string& bytes);
 
 
 private:
