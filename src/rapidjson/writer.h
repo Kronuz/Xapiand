@@ -321,11 +321,16 @@ protected:
             else if (sizeof(Ch) == 1)  {
                 unsigned codepoint;
                 Ch buffer[4];
-                Ch *buffer_end = &buffer[0];
+                Ch *buffer_start = &buffer[0];
+                Ch *buffer_end = buffer_start;
+                SizeType start = is.Tell();
                 if (SourceEncoding::Decode(is, &codepoint, &buffer_end)) {
                     TargetEncoding::Encode(*os_, codepoint);
                 } else {
-                    for (Ch *b = &buffer[0]; b != buffer_end; ++b) {
+                    if (buffer_end > buffer_start - start + length) {
+                        buffer_end = buffer_start - start + length;
+                    }
+                    for (Ch *b = buffer_start; b != buffer_end; ++b) {
                         Ch c = *b;
                         char e = escape[(unsigned char)c];
                         switch (e) {
