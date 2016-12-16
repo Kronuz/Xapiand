@@ -2112,7 +2112,11 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 	try {
 		auto result = serialize_response(response, accepted_type, pretty, (int)status >= 400);
 		auto result_encod = encoding_http_response(resolve_encoding(), result.first);
-		write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result_encod, result.second));
+		auto flags = HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE;
+		if (!accept_encoding_set.empty()) {
+			flags |= HTTP_CONTENT_ENCODING_RESPONSE;
+		}
+		write(http_response(status, flags, parser.http_major, parser.http_minor, 0, 0, result_encod, result.second, std::get<2>(*accept_encoding_set.begin())));
 	} catch (const SerialisationError& exc) {
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack response_err = {
