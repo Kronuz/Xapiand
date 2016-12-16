@@ -48,7 +48,8 @@ int DeflateCompressData::FINISH_COMPRESS = Z_FINISH;
  */
 DeflateCompressData::DeflateCompressData(const char* data_, size_t data_size_, bool gzip)
 	: DeflateData(data_, data_size_),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip),
+	  free_strm(false) { }
 
 
 DeflateCompressData::~DeflateCompressData()
@@ -142,7 +143,8 @@ DeflateCompressData::next()
  */
 DeflateDecompressData::DeflateDecompressData(const char* data_, size_t data_size_, bool gzip)
 	: DeflateData(data_, data_size_),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip),
+	  free_strm(false) { }
 
 
 DeflateDecompressData::~DeflateDecompressData()
@@ -213,7 +215,8 @@ DeflateDecompressData::next()
  */
 DeflateCompressFile::DeflateCompressFile(const std::string& filename, bool gzip)
 	: DeflateFile(filename),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip),
+	  free_strm(false) { }
 
 
 /*
@@ -221,7 +224,8 @@ DeflateCompressFile::DeflateCompressFile(const std::string& filename, bool gzip)
  */
 DeflateCompressFile::DeflateCompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_, bool gzip)
 	: DeflateFile(fd_, fd_offset_, fd_nbytes_),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip),
+	  free_strm(false) { }
 
 
 DeflateCompressFile::~DeflateCompressFile()
@@ -295,12 +299,14 @@ DeflateCompressFile::next()
 
 DeflateDecompressFile::DeflateDecompressFile(const std::string& filename, bool gzip)
 	: DeflateFile(filename),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip),
+	  free_strm(false) { }
 
 
 DeflateDecompressFile::DeflateDecompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_, bool gzip)
 	: DeflateFile(fd_, fd_offset_, fd_nbytes_),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip),
+	  free_strm(false) { }
 
 
 DeflateDecompressFile::~DeflateDecompressFile()
