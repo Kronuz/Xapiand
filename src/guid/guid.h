@@ -28,11 +28,11 @@ THE SOFTWARE.
 
 #include "xapiand.h"
 
+#include <array>     // for array
 #include <iomanip>
 #include <iostream>  // for ostream
 #include <sstream>
 #include <string>    // for string
-#include <array>     // for array
 
 #ifdef GUID_ANDROID
 #include <jni.h>
@@ -47,6 +47,7 @@ THE SOFTWARE.
 #define PADDING2_BITS  (64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS)
 #define NODE_BITS       48
 #define VERSION_BITS     1
+
 
 union GuidCompactor {
 	struct compact_t {

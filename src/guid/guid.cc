@@ -26,8 +26,6 @@ THE SOFTWARE.
 
 #include "guid.h"
 
-#include "serialise.h"
-
 #include <algorithm>
 #include <iomanip>
 #include <random>
@@ -37,9 +35,9 @@ THE SOFTWARE.
 #endif
 
 #ifdef GUID_FREEBSD
-#include <uuid.h>
 #include <cstdint>
 #include <cstring>
+#include <uuid.h>
 #endif
 
 #ifdef GUID_CFUUID
@@ -50,10 +48,11 @@ THE SOFTWARE.
 #include <objbase.h>
 #endif
 
+#include "serialise.h"
+
 
 // 0x11f0241243c00ULL = 1yr
 constexpr uint64_t _UUID_TIME_INITIAL = 0x1e6bfffffffffffULL;
-
 
 
 #define SALT_MASK ((1ULL << SALT_BITS) - 1)
@@ -63,7 +62,8 @@ constexpr uint64_t _UUID_TIME_INITIAL = 0x1e6bfffffffffffULL;
 // This is the linux friendly implementation, but it could work on other
 // systems that have libuuid available
 #ifdef GUID_LIBUUID
-inline Guid GuidGenerator::_newGuid()
+inline Guid
+GuidGenerator::_newGuid()
 {
 	std::array<unsigned char, 16> id;
 	uuid_generate_time(id.data());
@@ -74,7 +74,8 @@ inline Guid GuidGenerator::_newGuid()
 
 // This is the FreBSD version.
 #ifdef GUID_FREEBSD
-inline Guid GuidGenerator::_newGuid()
+inline Guid
+GuidGenerator::_newGuid()
 {
 	uuid_t id;
 	uint32_t status;
@@ -92,7 +93,8 @@ inline Guid GuidGenerator::_newGuid()
 
 // this is the mac and ios version
 #ifdef GUID_CFUUID
-inline Guid GuidGenerator::_newGuid()
+inline Guid
+GuidGenerator::_newGuid()
 {
 	auto newId = CFUUIDCreate(nullptr);
 	auto bytes = CFUUIDGetUUIDBytes(newId);
@@ -122,7 +124,8 @@ inline Guid GuidGenerator::_newGuid()
 
 // obviously this is the windows version
 #ifdef GUID_WINDOWS
-inline Guid GuidGenerator::_newGuid()
+inline Guid
+GuidGenerator::_newGuid()
 {
 	GUID newId;
 	CoCreateGuid(&newId);
@@ -164,7 +167,8 @@ GuidGenerator::GuidGenerator(JNIEnv *env)
 }
 
 
-inline Guid GuidGenerator::_newGuid()
+inline Guid
+GuidGenerator::_newGuid()
 {
 	jobject javaUuid = _env->CallStaticObjectMethod(_uuidClass, _newGuidMethod);
 	jlong mostSignificant = _env->CallLongMethod(javaUuid, _mostSignificantBitsMethod);
@@ -192,7 +196,8 @@ inline Guid GuidGenerator::_newGuid()
 #endif
 
 
-Guid GuidGenerator::newGuid(bool compact)
+Guid
+GuidGenerator::newGuid(bool compact)
 {
 	auto guid = _newGuid();
 	if (compact) {
@@ -284,7 +289,7 @@ Guid::Guid(const std::string& fromString)
 
 // create empty guid
 Guid::Guid()
-	: _bytes{} { }
+	: _bytes{ } { }
 
 
 // copy constructor
@@ -298,7 +303,8 @@ Guid::Guid(Guid&& other)
 
 
 // overload assignment operator
-Guid& Guid::operator=(const Guid &other)
+Guid&
+Guid::operator=(const Guid& other)
 {
 	_bytes = other._bytes;
 	return *this;
@@ -306,7 +312,8 @@ Guid& Guid::operator=(const Guid &other)
 
 
 // overload move operator
-Guid& Guid::operator=(Guid&& other)
+Guid&
+Guid::operator=(Guid&& other)
 {
 	_bytes = std::move(other._bytes);
 	return *this;
@@ -314,21 +321,24 @@ Guid& Guid::operator=(Guid&& other)
 
 
 // overload equality operator
-bool Guid::operator==(const Guid& other) const
+bool
+Guid::operator==(const Guid& other) const
 {
 	return _bytes == other._bytes;
 }
 
 
 // overload inequality operator
-bool Guid::operator!=(const Guid& other) const
+bool
+Guid::operator!=(const Guid& other) const
 {
 	return !operator==(other);
 }
 
 
 // converts GUID to std::string.
-std::string Guid::to_string() const
+std::string
+Guid::to_string() const
 {
 	std::ostringstream stream;
 	stream << *this;
@@ -336,8 +346,7 @@ std::string Guid::to_string() const
 }
 
 
-static inline uint64_t fnv_1a(uint64_t num)
-{
+static inline uint64_t fnv_1a(uint64_t num) {
 	// calculate FNV-1a hash
 	uint64_t fnv = 0xcbf29ce484222325ULL;
 	while (num) {
@@ -422,6 +431,7 @@ GuidCompactor::get_seed() const
 	auto seed = fnv_1a(val1) ^ fnv_1a(val2);
 	return seed;
 }
+
 
 inline uint64_t
 GuidCompactor::calculate_node() {
