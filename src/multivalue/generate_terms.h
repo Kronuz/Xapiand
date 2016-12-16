@@ -35,6 +35,7 @@
 
 #include "database_utils.h"  // for prefixed
 #include "geo/htm.h"         // for SIZE_BITS_ID, range_t (ptr only)
+#include "schema.h"
 #include "serialise.h"       // for serialise
 
 class RangeList;
