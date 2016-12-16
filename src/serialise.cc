@@ -1037,7 +1037,7 @@ Unserialise::trixel_id(const std::string& serialised_val)
 std::string
 Unserialise::uuid(const std::string& serialised_uuid)
 {
-	Guid guid(reinterpret_cast<const unsigned char*>(serialised_uuid.data()));
+	Guid guid(serialised_uuid.data());
 	return guid.to_string();
 }
 

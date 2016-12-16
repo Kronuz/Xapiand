@@ -32,7 +32,7 @@ THE SOFTWARE.
 #include <iostream>  // for ostream
 #include <sstream>
 #include <string>    // for string
-#include <vector>    // for vector
+#include <array>     // for array
 
 #ifdef GUID_ANDROID
 #include <jni.h>
@@ -46,13 +46,10 @@ class Guid {
 public:
 
 	// create a guid from vector of bytes
-	Guid(const std::vector<unsigned char>& bytes);
-
-	// create a guid from array of bytes
-	Guid(const unsigned char* bytes);
+	Guid(const std::array<unsigned char, 16>& bytes);
 
 	// create a guid from string
-	Guid(const std::string& fromString);
+	explicit Guid(const std::string& fromString);
 
 	// create empty guid
 	Guid();
@@ -73,7 +70,7 @@ public:
 	bool operator==(const Guid& other) const;
 	bool operator!=(const Guid& other) const;
 
-	inline const std::vector<unsigned char>& get_bytes() const {
+	inline const std::array<unsigned char, 16>& get_bytes() const {
 		return _bytes;
 	}
 
@@ -81,7 +78,7 @@ public:
 
 private:
 	// actual data
-	std::vector<unsigned char> _bytes;
+	std::array<unsigned char, 16> _bytes;
 
 	// make the << operator a friend so it can access _bytes
 	friend std::ostream &operator<<(std::ostream& s, const Guid& guid);
@@ -95,6 +92,8 @@ private:
 // version. Instead, construction of the GuidGenerator may be different on
 // each platform, but the use of newGuid is uniform.
 class GuidGenerator {
+	Guid _newGuid();
+
 public:
 #ifdef GUID_ANDROID
 	GuidGenerator(JNIEnv* env);
