@@ -790,14 +790,7 @@ Serialise::uuid(const std::string& field_value)
 	}
 
 	Guid guid(field_value);
-	const auto& bytes = guid.get_bytes();
-
-	std::string res;
-	res.reserve(bytes.size());
-	for (const char& c : bytes) {
-		res.push_back(c);
-	}
-	return res;
+	return guid.serialise();
 }
 
 
@@ -1037,7 +1030,7 @@ Unserialise::trixel_id(const std::string& serialised_val)
 std::string
 Unserialise::uuid(const std::string& serialised_uuid)
 {
-	Guid guid(serialised_uuid.data());
+	auto guid = Guid::unserialise(serialised_uuid);
 	return guid.to_string();
 }
 
