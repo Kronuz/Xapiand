@@ -24,6 +24,7 @@
 
 #include "../src/msgpack.h"
 #include "utils.h"
+#include "split.h"
 
 
 const std::string path_test_msgpack = std::string(PATH_TESTS) + "/examples/";
@@ -505,7 +506,7 @@ int test_msgpack_path() {
 	MsgPack obj(doc_path);
 
 	std::string path_str("/AMERICA/COUNTRY/1");
-	auto path = stringTokenizer(path_str, "/");
+	auto path = Split::split(path_str, "/");
 
 	const auto& path_msgpack = obj.path(path);
 

@@ -48,6 +48,7 @@
 #include "io_utils.h"            // for open, read
 #include "log.h"                 // for Log, L_ERR, L_WARNING, L_INFO
 #include "namegen.h"             // for Generator
+#include "split.h"               // for Split
 
 
 #ifdef HAVE_PTHREADS
@@ -504,7 +505,7 @@ bool build_path_index(const std::string& path) {
 	if (exists(dir)) {
 		return true;
 	} else {
-		auto directories = stringTokenizer(dir, "/");
+		Split directories(dir, "/");
 		dir.clear();
 		for (const auto& _dir : directories) {
 			dir.append(_dir).append(1, '/');

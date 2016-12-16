@@ -41,6 +41,7 @@
 #include "manager.h"                       // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"     // for integer, geo, date, positive
 #include "serialise.h"                     // for type
+#include "split.h"                         // for Split
 
 
 #ifndef L_SCHEMA
@@ -908,8 +909,8 @@ Schema::get_mutable()
 	}
 
 	MsgPack* prop = &mut_schema->at(RESERVED_SCHEMA);
-	auto field_names = stringTokenizer(specification.full_meta_name, DB_OFFSPRING_UNION);
-	for (const auto& field_name : field_names) {
+	Split _split(specification.full_meta_name, DB_OFFSPRING_UNION);
+	for (const auto& field_name : _split) {
 		prop = &(*prop)[field_name];
 	}
 	return *prop;
@@ -2539,13 +2540,14 @@ Schema::get_schema_subproperties(const MsgPack& properties, const MsgPack& o)
 {
 	L_CALL(this, "Schema::get_schema_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(o.to_string()).c_str());
 
-	auto field_names = stringTokenizer(specification.name, DB_OFFSPRING_UNION);
+	Split _split(specification.name, DB_OFFSPRING_UNION);
 
 	const MsgPack* subproperties = &properties;
-	const auto it_e = field_names.end();
 
 	static const auto dsit_e = map_dispatch_set_default_spc.end();
-	for (auto it = field_names.begin(); it != it_e; ++it) {
+
+	const auto it_e = _split.end();
+	for (auto it = _split.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && specification.full_normalized_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
 			THROW(ClientError, "The field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
@@ -2608,14 +2610,14 @@ Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
 {
 	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(o.to_string()).c_str());
 
-	auto field_names = stringTokenizer(specification.name, DB_OFFSPRING_UNION);
+	Split _split(specification.name, DB_OFFSPRING_UNION);
 
 	const MsgPack* subproperties = &properties;
-	const auto it_e = field_names.end();
 
 	if (specification.paths_namespace.empty()) {
 		static const auto dsit_e = map_dispatch_set_default_spc.end();
-		for (auto it = field_names.begin(); it != it_e; ++it) {
+		const auto it_e = _split.end();
+		for (auto it = _split.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
 			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && specification.full_normalized_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
 				THROW(ClientError, "The field name: %s (%s) is not valid or reserved", repr(specification.name).c_str(), repr(field_name).c_str());
@@ -2646,7 +2648,7 @@ Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
 	} else {
 		specification.flags.field_found = false;
 		restart_specification();
-		for (const auto& field_name : field_names) {
+		for (const auto& field_name : _split) {
 			detect_dynamic(field_name);
 			specification.paths_namespace.push_back(get_prefix(specification.normalized_name));
 		}
@@ -3319,7 +3321,7 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 		try {
 			specification.sep_types[2] = map_type.at(str_type);
 		} catch (const std::out_of_range&) {
-			auto tokens = stringTokenizer(str_type, "/");
+			auto tokens = Split::split(str_type, "/");
 			try {
 				switch (tokens.size()) {
 					case 1:
@@ -4440,7 +4442,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 {
 	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
 
-	auto field_names = stringTokenizer(full_name, DB_OFFSPRING_UNION);
+	Split _split(full_name, DB_OFFSPRING_UNION);
 
 	const MsgPack* subproperties = &properties;
 	std::string prefix;
@@ -4448,12 +4450,13 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 
 	static const auto dsit_e = map_dispatch_set_default_spc.end();
 
-	const auto it_e = field_names.end();
-	for (auto it = field_names.begin(); it != it_e; ++it) {
+	const auto it_e = _split.end();
+	const auto it_b = _split.begin();
+	for (auto it = it_b; it != it_e; ++it) {
 		dynamic_type = false;
 		const auto& field_name = *it;
 		if (!is_valid(field_name)) {
-			if (it == field_names.begin()) {
+			if (it == it_b) {
 				if (map_dispatch_set_default_spc.find(field_name) == dsit_e) {
 					if (++it == it_e) {
 						prefix.append(get_acc_prefix(field_name));
