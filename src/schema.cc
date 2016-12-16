@@ -230,38 +230,19 @@ inline static std::string readable_type(const std::array<FieldType, 3>& sep_type
 
 
 /*
- *  Functions for generating the prefix given an accuracy.
+ *  Functions for generating the prefixes given an accuracy.
  */
-
-static std::string acc_prefix_num(uint64_t acc) {
-	auto prefix = get_prefix(acc);
-	prefix.append(DOCUMENT_ACCURACY_TERM_PREFIX).push_back(toUType(FieldType::INTEGER));
-	return prefix;
-}
-
-static std::string acc_prefix_date(uint64_t acc) {
-	auto prefix = get_prefix(acc);
-	prefix.append(DOCUMENT_ACCURACY_TERM_PREFIX).push_back(toUType(FieldType::DATE));
-	return prefix;
-}
-
-static std::string acc_prefix_geo(uint64_t acc) {
-	auto prefix = get_prefix(acc);
-	prefix.append(DOCUMENT_ACCURACY_TERM_PREFIX).push_back(toUType(FieldType::GEO));
-	return prefix;
-}
-
 
 static std::string get_acc_prefix(const std::string& field_acc) {
 	auto it = map_acc_date.find(field_acc.substr(1));
 	if (it == map_acc_date.end()) {
 		if (field_acc.find("_geo") == 0) {
-			return acc_prefix_geo(stox(std::stoull, field_acc.substr(4)));
+			return get_prefix(stox(std::stoull, field_acc.substr(4)));
 		} else {
-			return acc_prefix_num(stox(std::stoull, field_acc.substr(1)));
+			return get_prefix(stox(std::stoull, field_acc.substr(1)));
 		}
 	} else {
-		return acc_prefix_date(toUType(it->second));
+		return get_prefix(toUType(it->second));
 	}
 }
 
@@ -283,7 +264,7 @@ static const std::vector<std::string> global_acc_prefix_num = []() {
 	std::vector<std::string> res;
 	res.reserve(def_accuracy_num.size());
 	for (const auto& acc : def_accuracy_num) {
-		res.push_back(acc_prefix_num(acc));
+		res.push_back(get_prefix(acc));
 	}
 	return res;
 }();
@@ -292,7 +273,7 @@ static const std::vector<std::string> global_acc_prefix_date = []() {
 	std::vector<std::string> res;
 	res.reserve(def_accuracy_date.size());
 	for (const auto& acc : def_accuracy_date) {
-		res.push_back(acc_prefix_date(acc));
+		res.push_back(get_prefix(acc));
 	}
 	return res;
 }();
@@ -301,7 +282,7 @@ static const std::vector<std::string> global_acc_prefix_geo = []() {
 	std::vector<std::string> res;
 	res.reserve(def_accuracy_geo.size());
 	for (const auto& acc : def_accuracy_geo) {
-		res.push_back(acc_prefix_geo(acc));
+		res.push_back(get_prefix(acc));
 	}
 	return res;
 }();
@@ -549,7 +530,6 @@ required_spc_t::required_spc_t()
 required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
 	const std::vector<std::string>& _acc_prefix)
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, type }}),
-	  prefix(1, get_prefix()),
 	  slot(_slot),
 	  accuracy(acc),
 	  acc_prefix(_acc_prefix),
@@ -1320,7 +1300,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 	} else {
 		for (auto& prefix_namespace : prefixes_namespace) {
 			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
-			spc.prefix.assign(prefix_namespace).push_back(spc.get_prefix());
+			spc.prefix.assign(prefix_namespace);
 			specification.namespace_spcs.push_back(std::move(spc));
 		}
 	}
@@ -1336,7 +1316,7 @@ Schema::get_namespace_specification(FieldType namespace_type, const std::string&
 
 	required_spc_t spc = specification_t::get_global(namespace_type);
 
-	spc.prefix.assign(prefix_namespace).push_back(spc.get_prefix());
+	spc.prefix.assign(prefix_namespace);
 	spc.slot = get_slot(prefix_namespace);
 
 	switch (spc.sep_types[2]) {
@@ -1369,19 +1349,19 @@ Schema::update_dynamic_specification()
 		case FieldType::POSITIVE:
 		case FieldType::FLOAT: {
 			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(acc_prefix_num(acc));
+				specification.acc_prefix.push_back(get_prefix(acc));
 			}
 			break;
 		}
 		case FieldType::DATE: {
 			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(acc_prefix_date(acc));
+				specification.acc_prefix.push_back(get_prefix(acc));
 			}
 			break;
 		}
 		case FieldType::GEO: {
 			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(acc_prefix_geo(acc));
+				specification.acc_prefix.push_back(get_prefix(acc));
 			}
 			break;
 		}
@@ -1408,10 +1388,6 @@ Schema::complete_specification(const MsgPack& item_value)
 		for (auto& acc_prefix : specification.acc_prefix) {
 			acc_prefix.insert(0, specification.prefix);
 		}
-	}
-
-	if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
-		specification.prefix.push_back(specification.get_prefix());
 	}
 
 	specification.flags.complete = true;
@@ -1495,7 +1471,7 @@ Schema::validate_required_data()
 				if (!specification.flags.dynamic_type && set_acc.size()) {
 					if (specification.acc_prefix.empty()) {
 						for (const auto& acc : set_acc) {
-							specification.acc_prefix.push_back(acc_prefix_geo(acc));
+							specification.acc_prefix.push_back(get_prefix(acc));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -1527,7 +1503,7 @@ Schema::validate_required_data()
 				if (!specification.flags.dynamic_type && set_acc.size()) {
 					if (specification.acc_prefix.empty()) {
 						for (const auto& acc : set_acc) {
-							specification.acc_prefix.push_back(acc_prefix_date(acc));
+							specification.acc_prefix.push_back(get_prefix(acc));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -1556,7 +1532,7 @@ Schema::validate_required_data()
 				if (!specification.flags.dynamic_type && set_acc.size()) {
 					if (specification.acc_prefix.empty()) {
 						for (const auto& acc : set_acc) {
-							specification.acc_prefix.push_back(acc_prefix_num(acc));
+							specification.acc_prefix.push_back(get_prefix(acc));
 						}
 					} else if (specification.acc_prefix.size() != set_acc.size()) {
 						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -4169,7 +4145,6 @@ Schema::get_data_id() const
 		res.sep_types[2] = (FieldType)properties.at(RESERVED_TYPE).at(2).as_u64();
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		res.prefix = properties.at(RESERVED_PREFIX).as_string();
-		res.prefix.push_back(toUType(res.sep_types[2]));
 		// Get required specification.
 		switch (res.sep_types[2]) {
 			case FieldType::GEO:
@@ -4227,7 +4202,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 						if (std::get<1>(info)) {
 							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
 								res.accuracy.push_back(acc.as_u64());
-								res.acc_prefix.push_back(res.prefix + acc_prefix_geo(res.accuracy.back()));
+								res.acc_prefix.push_back(res.prefix + get_prefix(res.accuracy.back()));
 							}
 						} else {
 							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
@@ -4244,7 +4219,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 						if (std::get<1>(info)) {
 							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
 								res.accuracy.push_back(acc.as_u64());
-								res.acc_prefix.push_back(res.prefix + acc_prefix_num(res.accuracy.back()));
+								res.acc_prefix.push_back(res.prefix + get_prefix(res.accuracy.back()));
 							}
 						} else {
 							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
@@ -4259,7 +4234,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 						if (std::get<1>(info)) {
 							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
 								res.accuracy.push_back(acc.as_u64());
-								res.acc_prefix.push_back(res.prefix + acc_prefix_date(res.accuracy.back()));
+								res.acc_prefix.push_back(res.prefix + get_prefix(res.accuracy.back()));
 							}
 						} else {
 							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
@@ -4308,10 +4283,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 						break;
 				}
 			}
-
-			res.prefix.push_back(toUType(res.sep_types[2]));
 		}
-
 		return std::make_pair(std::move(res), std::get<4>(info));
 	} catch (const ClientError& exc) {
 		L_EXC(this, "ERROR: %s", exc.what());
