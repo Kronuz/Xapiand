@@ -128,11 +128,11 @@ public:
 		FIND_FIRST_OF,
 	};
 
-	Split(const std::string& str_, const std::string& sep_, Type s_type=Type::FIND)
+	Split(const std::string& str_, const std::string& sep_, Type type=Type::FIND)
 		: sep(sep_),
 		  str(str_)
 	{
-		switch (s_type) {
+		switch (type) {
 			case Type::FIND:
 				inc = sep.length();
 				search_func = &Split::find;
@@ -166,6 +166,25 @@ public:
 				tokens.push_back(str.substr(prev, len));
 			}
 			prev = next + delimiter.length();
+		}
+
+		if (prev < str.length()) {
+			tokens.push_back(str.substr(prev));
+		}
+
+		return tokens;
+	}
+
+	static std::vector<std::string> split_first_of(const std::string& str, const std::string& delimiter) {
+		std::vector<std::string> tokens;
+		size_t prev = 0, next = 0, len;
+
+		while ((next = str.find_first_of(delimiter, prev)) != std::string::npos) {
+			len = next - prev;
+			if (len > 0) {
+				tokens.push_back(str.substr(prev, len));
+			}
+			prev = next + 1;
 		}
 
 		if (prev < str.length()) {
