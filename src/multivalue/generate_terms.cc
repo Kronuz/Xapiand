@@ -544,9 +544,9 @@ GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string
 	size_t num_unions = tm_e.day - tm_s.day;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix);
+		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
 		while (tm_s.day != tm_e.day) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
 			++tm_s.day;
 		}
 	}
@@ -665,7 +665,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	Xapian::Query query;
 	for (++it; it != it_e; ++it) {
 		if (isnotSubtrixel(last_valid, it->first)) {
-			Xapian::Query query_(prefixed(Serialise::serialise(it->first), it->second), toUType(FieldType::GEO));
+			Xapian::Query query_(prefixed(Serialise::serialise(it->first), it->second, toUType(FieldType::GEO)));
 			if (query.empty()) {
 				query = query_;
 			} else {
