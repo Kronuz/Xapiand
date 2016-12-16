@@ -266,7 +266,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			obj_ = obj;
 		} else {
 			term_id = Serialise::serialise(spc_id, _document_id);
-			prefixed_term_id = prefixed(term_id, spc_id.prefix);
+			prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
 			obj_ = run_script(obj, prefixed_term_id);
 		}
 
@@ -300,7 +300,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			// Now the schema is full, get specification id.
 			spc_id = schema->get_data_id();
 			term_id = Serialise::serialise(spc_id, _document_id);
-			prefixed_term_id = prefixed(term_id, spc_id.prefix);
+			prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
 		}
 	} while (!update_schema());
 
@@ -675,7 +675,7 @@ DatabaseHandler::get_document(const std::string& doc_id)
 	if (field_spc.sep_types[2] == FieldType::EMPTY) {
 		THROW(DocNotFoundError, "Document not found");
 	}
-	auto term_id = prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix);
+	auto term_id = prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix, field_spc.get_ctype());
 
 	return get_document_term(term_id);
 }
@@ -692,7 +692,7 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 	if (field_spc.sep_types[2] == FieldType::EMPTY) {
 		THROW(DocNotFoundError, "Document not found");
 	}
-	auto term_id = prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix);
+	auto term_id = prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix, field_spc.get_ctype());
 
 	DatabaseHandler::lock_database lk(this);
 	return database->find_document(term_id);

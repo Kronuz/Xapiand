@@ -2068,9 +2068,9 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			// }
 			bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
 			if (positions) {
-				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
+				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix + field_spc.get_ctype());
 			} else {
-				term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
+				term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix + field_spc.get_ctype());
 			}
 			L_INDEX(nullptr, "Field Text to Index [%d] => %s:%s [Positions: %s]", pos, field_spc.prefix.c_str(), serialise_val.c_str(), positions ? "true" : "false");
 			break;
@@ -2081,10 +2081,10 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			term_generator.set_document(doc);
 			auto position = field_spc.position[getPos(pos, field_spc.position.size())]; // String uses position (not positions) which is off by default
 			if (position) {
-				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
+				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix + field_spc.get_ctype());
 				L_INDEX(nullptr, "Field String to Index [%d] => %s:%s [Positions: %s]", pos, field_spc.prefix.c_str(), serialise_val.c_str(), position ? "true" : "false");
 			} else {
-				term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix);
+				term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix + field_spc.get_ctype());
 				L_INDEX(nullptr, "Field String to Index [%d] => %s:%s", pos, field_spc.prefix.c_str(), serialise_val.c_str());
 			}
 			break;
@@ -2096,7 +2096,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			}
 
 		default: {
-			serialise_val = prefixed(serialise_val, field_spc.prefix);
+			serialise_val = prefixed(serialise_val, field_spc.prefix, field_spc.get_ctype());
 			auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
 			auto position = field_spc.position[getPos(pos, field_spc.position.size())];
 			if (position) {

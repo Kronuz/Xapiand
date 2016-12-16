@@ -234,39 +234,39 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, const std::string&
 		switch (it->second) {
 			case UnitTime::SECOND: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, toUType(FieldType::DATE)));
 			}
 			case UnitTime::MINUTE: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, toUType(FieldType::DATE)));
 			}
 			case UnitTime::HOUR: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, toUType(FieldType::DATE)));
 			}
 			case UnitTime::DAY: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, toUType(FieldType::DATE)));
 			}
 			case UnitTime::MONTH: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, toUType(FieldType::DATE)));
 			}
 			case UnitTime::YEAR: {
 				Datetime::tm_t _tm(tm.year);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, toUType(FieldType::DATE)));
 			}
 			case UnitTime::DECADE: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, toUType(FieldType::DATE)));
 			}
 			case UnitTime::CENTURY: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, toUType(FieldType::DATE)));
 			}
 			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix));
+				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, toUType(FieldType::DATE)));
 			}
 		}
 	}
@@ -281,7 +281,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, const std::string& 
 	try {
 		auto acc = stox(std::stoull, field_accuracy.substr(1));
 		auto value = Cast::integer(obj);
-		return Xapian::Query(prefixed(Serialise::integer(value - GenerateTerms::modulus(value, acc)), field_spc.prefix));
+		return Xapian::Query(prefixed(Serialise::integer(value - GenerateTerms::modulus(value, acc)), field_spc.prefix, toUType(FieldType::INTEGER)));
 	} catch (const InvalidArgument&) {
 	} catch (const OutOfRange&) { }
 
@@ -385,9 +385,9 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 			parser.set_stemming_strategy(getQueryParserStemStrategy(spc.stem_strategy));
 			parser.set_stemmer(Xapian::Stem(spc.stem_language));
 			if (spc.flags.bool_term) {
-				parser.add_boolean_prefix("_", spc.prefix);
+				parser.add_boolean_prefix("_", spc.prefix + spc.get_ctype());
 			} else {
-				parser.add_prefix("_", spc.prefix);
+				parser.add_prefix("_", spc.prefix + spc.get_ctype());
 			}
 			return parser.parse_query("_:" + field_value, q_flags);
 		}
@@ -402,7 +402,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 			return parser.parse_query("_:" + field_value, q_flags);
 		}
 		default:
-			return Xapian::Query(prefixed(field_value, spc.prefix));
+			return Xapian::Query(prefixed(field_value, spc.prefix, spc.get_ctype()));
 	}
 }
 
@@ -426,9 +426,9 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 			auto field_value = Serialise::MsgPack(field_spc, obj);
 			Xapian::QueryParser parser;
 			if (field_spc.flags.bool_term) {
-				parser.add_boolean_prefix("_", field_spc.prefix);
+				parser.add_boolean_prefix("_", field_spc.prefix + field_spc.get_ctype());
 			} else {
-				parser.add_prefix("_", field_spc.prefix);
+				parser.add_prefix("_", field_spc.prefix + field_spc.get_ctype());
 			}
 			const auto& stopper = getStopper(field_spc.language);
 			parser.set_stopper(stopper.get());
@@ -441,9 +441,9 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 			auto field_value = Serialise::MsgPack(field_spc, obj);
 			Xapian::QueryParser parser;
 			if (field_spc.flags.bool_term) {
-				parser.add_boolean_prefix("_", field_spc.prefix);
+				parser.add_boolean_prefix("_", field_spc.prefix + field_spc.get_ctype());
 			} else {
-				parser.add_prefix("_", field_spc.prefix);
+				parser.add_prefix("_", field_spc.prefix + field_spc.get_ctype());
 			}
 			return parser.parse_query("_:" + field_value, q_flags);
 		}
@@ -455,9 +455,9 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 			}
 			if (endswith(field_value, '*')) {
 				field_value = field_value.substr(0, field_value.length() - 1);
-				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(field_value, field_spc.prefix));
+				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(field_value, field_spc.prefix, field_spc.get_ctype()));
 			} else {
-				return Xapian::Query(prefixed(field_value, field_spc.prefix), wqf);
+				return Xapian::Query(prefixed(field_value, field_spc.prefix, field_spc.get_ctype()), wqf);
 			}
 		}
 
@@ -466,7 +466,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 
 		default:
 			auto field_value = Serialise::MsgPack(field_spc, obj);
-			return Xapian::Query(prefixed(field_value, field_spc.prefix), wqf);
+			return Xapian::Query(prefixed(field_value, field_spc.prefix, field_spc.get_ctype()), wqf);
 	}
 }
 

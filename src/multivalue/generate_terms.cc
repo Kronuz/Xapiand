@@ -51,7 +51,7 @@ GenerateTerms::integer(Xapian::Document& doc, const std::vector<uint64_t>& accur
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::integer(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it++));
+		doc.add_term(prefixed(term_v, *it++, toUType(FieldType::INTEGER)));
 	}
 }
 
@@ -62,7 +62,7 @@ GenerateTerms::positive(Xapian::Document& doc, const std::vector<uint64_t>& accu
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::positive(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it++));
+		doc.add_term(prefixed(term_v, *it++, toUType(FieldType::INTEGER)));
 	}
 }
 
@@ -75,47 +75,47 @@ GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy
 		switch ((UnitTime)acc) {
 			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::CENTURY: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::DECADE: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::YEAR: {
 				Datetime::tm_t _tm(tm.year);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::MONTH: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::DAY: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::HOUR: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::MINUTE: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::SECOND: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, toUType(FieldType::DATE)));
 				break;
 			}
 		}
@@ -145,7 +145,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 			int pos = START_POS - acc * 2;
 			if (idx < pos) {
 				uint64_t vterm = val >> pos;
-				set_terms.insert(prefixed(Serialise::trixel_id(vterm), *it++));
+				set_terms.insert(prefixed(Serialise::trixel_id(vterm), *it++, toUType(FieldType::GEO)));
 			} else {
 				break;
 			}
@@ -166,8 +166,8 @@ GenerateTerms::integer(Xapian::Document& doc, const std::vector<uint64_t>& accur
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::integer(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it++));
-		doc.add_term(prefixed(term_v, *itg++));
+		doc.add_term(prefixed(term_v, *it++, toUType(FieldType::INTEGER)));
+		doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::INTEGER)));
 	}
 }
 
@@ -180,8 +180,8 @@ GenerateTerms::positive(Xapian::Document& doc, const std::vector<uint64_t>& accu
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::positive(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it++));
-		doc.add_term(prefixed(term_v, *itg++));
+		doc.add_term(prefixed(term_v, *it++, toUType(FieldType::INTEGER)));
+		doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::INTEGER)));
 	}
 }
 
@@ -197,64 +197,64 @@ GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy
 			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++));
-				doc.add_term(prefixed(term_v, *itg++));
+				doc.add_term(prefixed(term_v, *it++, toUType(FieldType::DATE)));
+				doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::CENTURY: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++));
-				doc.add_term(prefixed(term_v, *itg++));
+				doc.add_term(prefixed(term_v, *it++, toUType(FieldType::DATE)));
+				doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::DECADE: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++));
-				doc.add_term(prefixed(term_v, *itg++));
+				doc.add_term(prefixed(term_v, *it++, toUType(FieldType::DATE)));
+				doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::YEAR: {
 				Datetime::tm_t _tm(tm.year);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++));
-				doc.add_term(prefixed(term_v, *itg++));
+				doc.add_term(prefixed(term_v, *it++, toUType(FieldType::DATE)));
+				doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::MONTH: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++));
-				doc.add_term(prefixed(term_v, *itg++));
+				doc.add_term(prefixed(term_v, *it++, toUType(FieldType::DATE)));
+				doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::DAY: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++));
-				doc.add_term(prefixed(term_v, *itg++));
+				doc.add_term(prefixed(term_v, *it++, toUType(FieldType::DATE)));
+				doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::HOUR: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++));
-				doc.add_term(prefixed(term_v, *itg++));
+				doc.add_term(prefixed(term_v, *it++, toUType(FieldType::DATE)));
+				doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::MINUTE: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++));
-				doc.add_term(prefixed(term_v, *itg++));
+				doc.add_term(prefixed(term_v, *it++, toUType(FieldType::DATE)));
+				doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::DATE)));
 				break;
 			}
 			case UnitTime::SECOND: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++));
-				doc.add_term(prefixed(term_v, *itg++));
+				doc.add_term(prefixed(term_v, *it++, toUType(FieldType::DATE)));
+				doc.add_term(prefixed(term_v, *itg++, toUType(FieldType::DATE)));
 				break;
 			}
 		}
@@ -287,8 +287,8 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 			if (idx < pos) {
 				uint64_t vterm = val >> pos;
 				auto term_s = Serialise::trixel_id(vterm);
-				set_terms.insert(prefixed(term_s, *it++));
-				set_terms.insert(prefixed(term_s, *itg++));
+				set_terms.insert(prefixed(term_s, *it++, toUType(FieldType::GEO)));
+				set_terms.insert(prefixed(term_s, *itg++, toUType(FieldType::GEO)));
 			} else {
 				break;
 			}
@@ -436,9 +436,9 @@ GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std:
 	size_t num_unions = (tm_e.year - tm_s.year) / 1000;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix);
+		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
 		while (tm_s.year != tm_e.year) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
 			tm_s.year += 1000;
 		}
 	}
@@ -459,9 +459,9 @@ GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::st
 	size_t num_unions = (tm_e.year - tm_s.year) / 100;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix);
+		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
 		while (tm_s.year != tm_e.year) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
 			tm_s.year += 100;
 		}
 	}
@@ -482,9 +482,9 @@ GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 	size_t num_unions = (tm_e.year - tm_s.year) / 10;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix);
+		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
 		while (tm_s.year != tm_e.year) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
 			tm_s.year += 10;
 		}
 	}
@@ -503,9 +503,9 @@ GenerateTerms::year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::strin
 	size_t num_unions = tm_e.year - tm_s.year;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix);
+		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
 		while (tm_s.year != tm_e.year) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
 			++tm_s.year;
 		}
 	}
@@ -524,9 +524,9 @@ GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::stri
 	size_t num_unions = tm_e.mon - tm_s.mon;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix);
+		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
 		while (tm_s.mon != tm_e.mon) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
 			++tm_s.mon;
 		}
 	}
@@ -564,9 +564,9 @@ GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::strin
 	size_t num_unions = tm_e.hour - tm_s.hour;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix);
+		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
 		while (tm_s.hour != tm_e.hour) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
 			++tm_s.hour;
 		}
 	}
@@ -584,9 +584,9 @@ GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 	size_t num_unions = tm_e.min - tm_s.min;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix);
+		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
 		while (tm_s.min != tm_e.min) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
 			++tm_s.min;
 		}
 	}
@@ -603,9 +603,9 @@ GenerateTerms::second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 	size_t num_unions = tm_e.sec - tm_s.sec;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix);
+		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
 		while (tm_s.sec != tm_e.sec) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
 			++tm_s.sec;
 		}
 	}
@@ -659,13 +659,13 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	auto it = results.begin();
 	auto last_valid(std::bitset<SIZE_BITS_ID>(it->first).to_string());
 	last_valid.assign(last_valid.substr(last_valid.find('1')));
-	auto result_terms = prefixed(Serialise::serialise(it->first), it->second);
+	auto result_terms = prefixed(Serialise::serialise(it->first), it->second, toUType(FieldType::GEO));
 	const auto it_e = results.end();
 
 	Xapian::Query query;
 	for (++it; it != it_e; ++it) {
 		if (isnotSubtrixel(last_valid, it->first)) {
-			Xapian::Query query_(prefixed(Serialise::serialise(it->first), it->second));
+			Xapian::Query query_(prefixed(Serialise::serialise(it->first), it->second), toUType(FieldType::GEO));
 			if (query.empty()) {
 				query = query_;
 			} else {

@@ -2192,16 +2192,14 @@ DatabasePool::init_ref(const Endpoint& endpoint)
 		return;
 	}
 
-	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
+	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX, toUType(FieldType::TERM)));
 	Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
 	if (p == ref_database->db->postlist_end(unique_id)) {
 		Xapian::Document doc;
 		// Boolean term for the node.
 		doc.add_boolean_term(unique_id);
 		// Start values for the DB.
-		auto prefix = get_prefix("master");
-		prefix.push_back(toUType(FieldType::TERM));
-		doc.add_boolean_term(prefixed(DOCUMENT_DB_MASTER, prefix));
+		doc.add_boolean_term(prefixed(DOCUMENT_DB_MASTER, get_prefix("master"), toUType(FieldType::TERM)));
 		try {
 			ref_database->replace_document_term(unique_id, doc, true);
 		} catch (const BaseException& exc) {
@@ -2228,7 +2226,7 @@ DatabasePool::inc_ref(const Endpoint& endpoint)
 
 	Xapian::Document doc;
 
-	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
+	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX, toUType(FieldType::TERM)));
 	Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 	if (p == ref_database->db->postlist_end(unique_id)) {
 		// QUESTION: Document not found - should add?
@@ -2272,7 +2270,7 @@ DatabasePool::dec_ref(const Endpoint& endpoint)
 
 	Xapian::Document doc;
 
-	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
+	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX, toUType(FieldType::TERM)));
 	Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 	if (p != ref_database->db->postlist_end(unique_id)) {
 		doc = ref_database->db->get_document(*p);

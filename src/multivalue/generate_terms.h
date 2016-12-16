@@ -126,13 +126,13 @@ namespace GenerateTerms {
 					if (up_start == up_end) {
 						size_t num_unions = (low_end - low_start) / low_acc;
 						if (num_unions == 0) {
-							query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low));
+							query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)));
 						} else {
-							query = Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up));
-							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low));
+							query = Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, toUType(FieldType::INTEGER)));
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)));
 							while (low_start != low_end) {
 								low_start += low_acc;
-								query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low)));
+								query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER))));
 							}
 							query = Xapian::Query(Xapian::Query::OP_AND, query, query_low);
 						}
@@ -140,14 +140,14 @@ namespace GenerateTerms {
 					} else {
 						size_t num_unions1 = (up_end - low_start) / low_acc;
 						if (num_unions1 == 0) {
-							query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low));
+							query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)));
 						} else {
-							query = Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up));
-							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low));
+							query = Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, toUType(FieldType::INTEGER)));
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)));
 							while (low_start < up_end) {
 								low_start += low_acc;
 								if (low_start < up_end) {
-									query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low)));
+									query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER))));
 								}
 							}
 							query = Xapian::Query(Xapian::Query::OP_AND, query, query_low);
@@ -155,14 +155,14 @@ namespace GenerateTerms {
 
 						size_t num_unions2 = (low_end - low_start) / low_acc;
 						if (num_unions2 == 0) {
-							Xapian::Query query_low(prefixed(Serialise::serialise(low_end), prefix_low));
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_end), prefix_low, toUType(FieldType::INTEGER)));
 							query = Xapian::Query(Xapian::Query::OP_OR, query, query_low);
 						} else {
-							Xapian::Query query_up(prefixed(Serialise::serialise(up_end), prefix_up));
-							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low));
+							Xapian::Query query_up(prefixed(Serialise::serialise(up_end), prefix_up, toUType(FieldType::INTEGER)));
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)));
 							while (low_start != low_end) {
 								low_start += low_acc;
-								query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low)));
+								query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER))));
 							}
 							query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_AND, query_up, query_low));
 						}
@@ -172,9 +172,9 @@ namespace GenerateTerms {
 			}
 
 			// Only upper accuracy.
-			query = Xapian::Query(prefixed(Serialise::serialise(up_end), prefix_up));
+			query = Xapian::Query(prefixed(Serialise::serialise(up_end), prefix_up, toUType(FieldType::INTEGER)));
 			if (up_start != up_end) {
-				query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up)));
+				query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, toUType(FieldType::INTEGER))));
 			}
 
 		} else if (pos > 0) { // If only there is a lower accuracy.
@@ -187,9 +187,9 @@ namespace GenerateTerms {
 			if (num_unions < MAX_TERMS) {
 				std::string prefix = acc_prefix[pos];
 				// Reserve upper bound.
-				query = Xapian::Query(prefixed(Serialise::serialise(end), prefix));
+				query = Xapian::Query(prefixed(Serialise::serialise(end), prefix, toUType(FieldType::INTEGER)));
 				while (start != end) {
-					query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(start), prefix)));
+					query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(start), prefix, toUType(FieldType::INTEGER))));
 					start += low_acc;
 				}
 			}
