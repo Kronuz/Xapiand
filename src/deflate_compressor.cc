@@ -83,17 +83,18 @@ DeflateCompressData::init(bool start)
 std::string
 DeflateCompressData::next(const char* input, size_t input_size, int flush)
 {
-	std::unique_ptr<char[]> out = std::make_unique<char[]>(input_size);
+	std::vector<char> out;
+	out.resize(input_size);
 	strm.avail_in = input_size;
 	strm.next_in = reinterpret_cast<Bytef*>(const_cast<char*>(input));
 
 	std::string result;
 	do {
 		strm.avail_out = input_size;
-		strm.next_out = reinterpret_cast<Bytef*>(out.get());
+		strm.next_out = reinterpret_cast<Bytef*>(out.data());
 		stream = deflate(&strm, flush);    // no bad return value
 		int compress_size = input_size - strm.avail_out;
-		result.append(std::string(out.get(), compress_size));
+		result.append(std::string(out.data(), compress_size));
 	} while (strm.avail_out == 0);
 
 	return result;
