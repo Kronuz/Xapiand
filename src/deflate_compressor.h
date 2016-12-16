@@ -217,7 +217,8 @@ public:
 
 	static int FINISH_COMPRESS;
 
-	inline void reset(const char* data_, size_t data_size_) {
+	inline void reset(const char* data_, size_t data_size_, bool gzip_=false) {
+		gzip = gzip_;
 		add_data(data_, data_size_);
 	}
 };
@@ -239,7 +240,8 @@ public:
 	DeflateDecompressData(const char* data_=nullptr, size_t data_size_=0, bool gzip=false);
 	~DeflateDecompressData();
 
-	inline void reset(const char* data_, size_t data_size_) {
+	inline void reset(const char* data_, size_t data_size_, bool gzip_=false) {
+		gzip = gzip_;
 		add_data(data_, data_size_);
 	}
 };
@@ -316,11 +318,13 @@ public:
 	DeflateCompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, bool gzip=false);
 	~DeflateCompressFile();
 
-	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_) {
+	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {
+		gzip = gzip_;
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
-	inline void reset(const std::string& filename) {
+	inline void reset(const std::string& filename, bool gzip_=false) {
+		gzip = gzip_;
 		open(filename);
 	}
 };
@@ -346,11 +350,13 @@ public:
 	DeflateDecompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, bool gzip=false);
 	~DeflateDecompressFile();
 
-	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_) {
+	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {
+		gzip = gzip_;
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	 }
 
-	inline void reset(const std::string& filename) {
+	inline void reset(const std::string& filename, bool gzip_=false) {
+		gzip = gzip_;
 		open(filename);
 	}
 };
