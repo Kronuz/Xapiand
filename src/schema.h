@@ -332,7 +332,6 @@ struct specification_t : required_spc_t {
 	std::string meta_name;
 	std::string full_meta_name;
 	std::string normalized_name;
-	std::string full_normalized_name;
 
 	std::string aux_stem_lan;
 	std::string aux_lan;

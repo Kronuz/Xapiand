@@ -639,7 +639,6 @@ specification_t::specification_t(const specification_t& o)
 	  meta_name(o.meta_name),
 	  full_meta_name(o.full_meta_name),
 	  normalized_name(o.normalized_name),
-	  full_normalized_name(o.full_normalized_name),
 	  aux_stem_lan(o.aux_stem_lan),
 	  aux_lan(o.aux_lan) { }
 
@@ -657,7 +656,6 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  meta_name(std::move(o.meta_name)),
 	  full_meta_name(std::move(o.full_meta_name)),
 	  normalized_name(std::move(o.normalized_name)),
-	  full_normalized_name(std::move(o.full_normalized_name)),
 	  aux_stem_lan(std::move(o.aux_stem_lan)),
 	  aux_lan(std::move(o.aux_lan)) { }
 
@@ -679,7 +677,6 @@ specification_t::operator=(const specification_t& o)
 	meta_name = o.meta_name;
 	full_meta_name = o.full_meta_name;
 	normalized_name = o.normalized_name;
-	full_normalized_name = o.full_normalized_name;
 	aux_stem_lan = o.aux_stem_lan;
 	aux_lan = o.aux_lan;
 	required_spc_t::operator=(o);
@@ -704,7 +701,6 @@ specification_t::operator=(specification_t&& o) noexcept
 	meta_name = std::move(o.meta_name);
 	full_meta_name = std::move(o.full_meta_name);
 	normalized_name = std::move(o.normalized_name);
-	full_normalized_name = std::move(o.full_normalized_name);
 	aux_stem_lan = std::move(o.aux_stem_lan);
 	aux_lan = std::move(o.aux_lan);
 	required_spc_t::operator=(std::move(o));
@@ -849,7 +845,6 @@ specification_t::to_string() const
 	str << "\t" << "meta_name"             << ": " << meta_name            << "\n";
 	str << "\t" << "full_meta_name"        << ": " << full_meta_name       << "\n";
 	str << "\t" << "normalized_name"       << ": " << normalized_name      << "\n";
-	str << "\t" << "full_normalized_name"  << ": " << full_normalized_name << "\n";
 
 	str << "}\n";
 
@@ -1126,7 +1121,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 		}
 	} else {
 		if (!specification.flags.field_found && !specification.flags.dynamic) {
-			THROW(ClientError, "%s is not dynamic", specification.full_normalized_name.c_str());
+			THROW(ClientError, "%s is not dynamic", specification.full_meta_name.c_str());
 		}
 
 		if (!specification.flags.complete) {
@@ -1172,7 +1167,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 		}
 	} else {
 		if (!specification.flags.field_found && !specification.flags.dynamic) {
-			THROW(ClientError, "%s is not dynamic", specification.full_normalized_name.c_str());
+			THROW(ClientError, "%s is not dynamic", specification.full_meta_name.c_str());
 		}
 
 		if (!specification.flags.complete) {
@@ -1236,7 +1231,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 			}
 		} else {
 			if (!specification.flags.field_found && !specification.flags.dynamic) {
-				THROW(ClientError, "%s is not dynamic", specification.full_normalized_name.c_str());
+				THROW(ClientError, "%s is not dynamic", specification.full_meta_name.c_str());
 			}
 
 			if (!specification.flags.complete) {
@@ -1445,7 +1440,7 @@ Schema::validate_required_data()
 		auto& properties = get_mutable();
 
 		try {
-			auto func = map_dispatch_set_default_spc.at(specification.full_normalized_name);
+			auto func = map_dispatch_set_default_spc.at(specification.full_meta_name);
 			(this->*func)(properties);
 		} catch (const std::out_of_range&) { }
 
@@ -1722,7 +1717,7 @@ Schema::validate_required_data(const MsgPack& value)
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		if (XapiandManager::manager->strict || specification.flags.strict) {
-			THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_normalized_name).c_str());
+			THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 		}
 		guess_field_type(value);
 	}
@@ -2531,7 +2526,7 @@ Schema::get_schema_subproperties(const MsgPack& properties, const MsgPack& o)
 	const auto it_e = _split.end();
 	for (auto it = _split.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && specification.full_normalized_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
+		if (!is_valid(field_name) && specification.full_meta_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
 			THROW(ClientError, "The field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 		}
 		restart_specification();
@@ -2577,10 +2572,8 @@ Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_na
 
 	if (specification.full_meta_name.empty()) {
 		specification.full_meta_name.assign(meta_name);
-		specification.full_normalized_name.assign(normalized_name);
 	} else {
 		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(meta_name);
-		specification.full_normalized_name.append(DB_OFFSPRING_UNION).append(normalized_name);
 	}
 
 	update_specification(*properties);
@@ -2601,7 +2594,7 @@ Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
 		const auto it_e = _split.end();
 		for (auto it = _split.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
-			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && specification.full_normalized_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
+			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && specification.full_meta_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
 				THROW(ClientError, "The field name: %s (%s) is not valid or reserved", repr(specification.name).c_str(), repr(field_name).c_str());
 			}
 			restart_specification();
@@ -2705,10 +2698,8 @@ Schema::add_field(MsgPack*& properties, const MsgPack& o)
 
 	if (specification.full_meta_name.empty()) {
 		specification.full_meta_name.assign(specification.meta_name);
-		specification.full_normalized_name.assign(specification.normalized_name);
 	} else {
 		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
-		specification.full_normalized_name.append(DB_OFFSPRING_UNION).append(specification.normalized_name);
 	}
 
 	if (specification.flags.dynamic_type) {
@@ -2724,7 +2715,7 @@ Schema::add_field(MsgPack*& properties, const MsgPack& o)
 			}
 		}
 		try {
-			auto func = map_dispatch_set_default_spc.at(specification.full_normalized_name);
+			auto func = map_dispatch_set_default_spc.at(specification.full_meta_name);
 			(this->*func)(*properties);
 		} catch (const std::out_of_range&) {
 			specification.local_prefix = get_prefix(get_valid_field_counter(field_counter + 1));
