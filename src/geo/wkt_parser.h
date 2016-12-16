@@ -22,14 +22,14 @@
 
 #pragma once
 
-#include <stddef.h>            // for size_t
 #include <regex>               // for regex
+#include <stddef.h>            // for size_t
 #include <string>              // for string
 #include <type_traits>         // for forward
 #include <vector>              // for vector
 
-#include "./geometry.h"        // for Geometry, GeometryType
 #include "exception.h"         // for ClientError
+#include "geometry.h"          // for Geometry, GeometryType
 #include "stl_serialise.h"     // for CartesianUSet, RangeList
 
 

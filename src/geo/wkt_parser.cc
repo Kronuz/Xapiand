@@ -26,8 +26,9 @@
 
 #include "geo/cartesian.h"         // for Cartesian, CartesianUnits, Cartesi...
 #include "geo/htm.h"               // for HTM, HTM_MAX_LEVEL
-#include "utils.h"                 // for stox
+#include "split.h"                 // for Split
 #include "stl_serialise.h"         // for CartesianUSet, RangeList
+#include "utils.h"                 // for stox
 
 
 const std::regex find_geometry_re("(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIRCLE|POINT|MULTIPOINT|CHULL|MULTICHULL)[\\s]*\\(([()0-9.\\s,-]*)\\)|(GEOMETRYCOLLECTION|GEOMETRYINTERSECTION)[\\s]*\\(([()0-9.\\s,A-Z-]*)\\)", std::regex::optimize);
