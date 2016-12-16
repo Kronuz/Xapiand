@@ -1298,14 +1298,13 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 
 	auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
 
-	specification.namespace_spcs.clear();
 	specification.namespace_spcs.reserve(prefixes_namespace.size());
 	if (toUType(specification.index & TypeIndex::VALUES)) {
-		for (auto& prefix_namespace : prefixes_namespace) {
+		for (const auto& prefix_namespace : prefixes_namespace) {
 			specification.namespace_spcs.push_back(get_namespace_specification(specification.sep_types[2], prefix_namespace));
 		}
 	} else {
-		for (auto& prefix_namespace : prefixes_namespace) {
+		for (const auto& prefix_namespace : prefixes_namespace) {
 			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
 			spc.prefix.assign(prefix_namespace);
 			specification.namespace_spcs.push_back(std::move(spc));
