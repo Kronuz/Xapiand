@@ -814,6 +814,12 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
+	str << "\t" << "namespace_spcs"    << ": [ ";
+	for (const auto& spc : namespace_spcs) {
+		str << "{" << repr(spc.prefix) << ", " << spc.slot << "} ";
+	}
+	str << "]\n";
+
 	str << "\t" << RESERVED_VALUE       << ": " << (value ? value->to_string() : std::string())                  << "\n";
 	str << "\t" << "value_rec"          << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
 
