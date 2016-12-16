@@ -213,7 +213,7 @@ public:
 	~DeflateCompressData();
 
 	std::string init(bool start=true);
-	std::string next(const char* input, size_t input_size, int flush=Z_NO_FLUSH);
+	std::string next(const char* input, size_t input_size, int flush=Z_PARTIAL_FLUSH);
 
 	static int FINISH_COMPRESS;
 
