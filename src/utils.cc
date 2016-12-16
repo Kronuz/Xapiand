@@ -642,26 +642,6 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 }
 
 
-std::vector<std::string> stringTokenizer(const std::string& str, const std::string& delimiter) {
-	std::vector<std::string> tokens;
-	size_t prev = 0, next = 0, len;
-
-	while ((next = str.find(delimiter, prev)) != std::string::npos) {
-		len = next - prev;
-		if (len > 0) {
-			tokens.push_back(str.substr(prev, len));
-		}
-		prev = next + delimiter.length();
-	}
-
-	if (prev < str.length()) {
-		tokens.push_back(str.substr(prev));
-	}
-
-	return tokens;
-}
-
-
 static inline std::string humanize(long double delta, bool colored, const int i, const int n, const long double div, const char* const units[], const long double scaling[], const char* const colors[], long double rounding) {
 	long double num = delta;
 

@@ -261,9 +261,6 @@ char* normalize_path(const std::string& src, char* dst, bool slashed=false);
 std::string normalize_path(const std::string& src, bool slashed=false);
 int url_qs(const char *, const char *, size_t);
 
-// String tokenizer with the delimiter.
-std::vector<std::string> stringTokenizer(const std::string& str, const std::string& delimiter);
-
 bool strhasupper(const std::string& str);
 
 bool isRange(const std::string& str);
