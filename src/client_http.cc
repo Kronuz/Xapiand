@@ -1368,7 +1368,7 @@ HttpClient::search_view(enum http_method method)
 				enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 				MsgPack err_response = {
 					{ RESPONSE_STATUS, (int)error_code },
-					{ RESPONSE_MESSAGE, std::string("Response type application/x-msgpack or application/json not provided in the accept header") }
+					{ RESPONSE_MESSAGE, std::string("Response type application/x-msgpack or application/json not provided in the Accept header") }
 				};
 				write_http_response(error_code, err_response);
 				L_SEARCH(this, "ABORTED SEARCH");
@@ -1400,7 +1400,7 @@ HttpClient::search_view(enum http_method method)
 					enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 					MsgPack err_response = {
 						{ RESPONSE_STATUS, (int)error_code },
-						{ RESPONSE_MESSAGE, std::string("Response type " + ct_type_str + " not provided in the accept header") }
+						{ RESPONSE_MESSAGE, std::string("Response type " + ct_type_str + " not provided in the Accept header") }
 					};
 					write_http_response(error_code, err_response);
 					L_SEARCH(this, "ABORTED SEARCH");
