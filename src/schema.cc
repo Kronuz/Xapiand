@@ -1115,12 +1115,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 		}
 
 		bool add_value = true;
-		for (auto& spc : specification.namespace_spcs) {
-			specification.sep_types[2] = std::move(spc.sep_types[2]);
-			specification.prefix       = std::move(spc.prefix);
-			specification.slot         = std::move(spc.slot);
-			specification.accuracy     = std::move(spc.accuracy);
-			specification.acc_prefix   = std::move(spc.acc_prefix);
+		for (const auto& spc : specification.namespace_spcs) {
+			specification.sep_types[2] = spc.sep_types[2];
+			specification.prefix       = spc.prefix;
+			specification.slot         = spc.slot;
+			specification.accuracy     = spc.accuracy;
+			specification.acc_prefix   = spc.acc_prefix;
 			index_item(doc, item_value, data, pos, add_value);
 			add_value = false;
 		}
@@ -1161,12 +1161,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 		}
 
 		bool add_values = true;
-		for (auto& spc : specification.namespace_spcs) {
-			specification.sep_types[2] = std::move(spc.sep_types[2]);
-			specification.prefix       = std::move(spc.prefix);
-			specification.slot         = std::move(spc.slot);
-			specification.accuracy     = std::move(spc.accuracy);
-			specification.acc_prefix   = std::move(spc.acc_prefix);
+		for (const auto& spc : specification.namespace_spcs) {
+			specification.sep_types[2] = spc.sep_types[2];
+			specification.prefix       = spc.prefix;
+			specification.slot         = spc.slot;
+			specification.accuracy     = spc.accuracy;
+			specification.acc_prefix   = spc.acc_prefix;
 			index_item(doc, item_value, *data, add_values);
 			add_values = false;
 		}
@@ -1212,22 +1212,22 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 
 			bool add_values = true;
 			if (offsprings) {
-				for (auto& spc : specification.namespace_spcs) {
-					specification.sep_types[2] = std::move(spc.sep_types[2]);
-					specification.prefix       = std::move(spc.prefix);
-					specification.slot         = std::move(spc.slot);
-					specification.accuracy     = std::move(spc.accuracy);
-					specification.acc_prefix   = std::move(spc.acc_prefix);
+				for (const auto& spc : specification.namespace_spcs) {
+					specification.sep_types[2] = spc.sep_types[2];
+					specification.prefix       = spc.prefix;
+					specification.slot         = spc.slot;
+					specification.accuracy     = spc.accuracy;
+					specification.acc_prefix   = spc.acc_prefix;
 					index_item(doc, *val, *data, add_values);
 					add_values = false;
 				}
 			} else {
-				for (auto& spc : specification.namespace_spcs) {
-					specification.sep_types[2] = std::move(spc.sep_types[2]);
-					specification.prefix       = std::move(spc.prefix);
-					specification.slot         = std::move(spc.slot);
-					specification.accuracy     = std::move(spc.accuracy);
-					specification.acc_prefix   = std::move(spc.acc_prefix);
+				for (const auto& spc : specification.namespace_spcs) {
+					specification.sep_types[2] = spc.sep_types[2];
+					specification.prefix       = spc.prefix;
+					specification.slot         = spc.slot;
+					specification.accuracy     = spc.accuracy;
+					specification.acc_prefix   = spc.acc_prefix;
 					index_item(doc, *val, *data, add_values);
 					specification.prefix.pop_back();
 					doc.add_term(specification.prefix);
