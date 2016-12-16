@@ -418,10 +418,9 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 		}
 	}
 
-	auto field_value = Serialise::MsgPack(field_spc, obj);
-
 	switch (field_spc.get_type()) {
 		case FieldType::TEXT: {
+			auto field_value = Serialise::MsgPack(field_spc, obj);
 			Xapian::QueryParser parser;
 			if (field_spc.flags.bool_term) {
 				parser.add_boolean_prefix("_", field_spc.prefix);
@@ -436,6 +435,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 		}
 
 		case FieldType::STRING: {
+			auto field_value = Serialise::MsgPack(field_spc, obj);
 			Xapian::QueryParser parser;
 			if (field_spc.flags.bool_term) {
 				parser.add_boolean_prefix("_", field_spc.prefix);
@@ -446,6 +446,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 		}
 
 		case FieldType::TERM: {
+			auto field_value = Serialise::MsgPack(field_spc, obj);
 			if (!field_spc.flags.bool_term) {
 				to_lower(field_value);
 			}
@@ -457,7 +458,11 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 			}
 		}
 
+		case FieldType::EMPTY:
+			return Xapian::Query();
+
 		default:
+			auto field_value = Serialise::MsgPack(field_spc, obj);
 			return Xapian::Query(prefixed(field_value, field_spc.prefix), wqf);
 	}
 }
