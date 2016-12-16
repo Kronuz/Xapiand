@@ -80,7 +80,6 @@ public:
 
 	RangeList getRanges();
 
-	static std::vector<std::string> stringSplit(const std::string& str, const std::string& delimiter);
 	static std::vector<std::string> get_trixels(const std::string& father, size_t depth, const std::string& son);
 	static void xor_trixels(std::vector<std::string>& txs1, std::vector<std::string>&& txs2);
 	static void or_trixels(std::vector<std::string>& txs1, std::vector<std::string>&& txs2);

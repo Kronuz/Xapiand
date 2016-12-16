@@ -195,12 +195,12 @@ EWKT_Parser::parse_polygon(const std::string& specification, GeometryType type)
 		match_size += next->length(0);
 		// split points
 		std::vector<Cartesian> pts;
-		std::vector<std::string> points = stringSplit(next->str(2), ",");
+		auto points = Split::split_first_of(next->str(2), ",");
 		if (points.size() == 0) THROW(EWKTError, "Syntax error in EWKT format (POLYGON)");
 
 		for (auto it_p = points.begin(); it_p != points.end(); ++it_p) {
 			// Get lat, lon and height.
-			std::vector<std::string> coords = stringSplit(*it_p, " ");
+			std::vector<std::string> coords = Split::split_first_of(*it_p, " ");
 			if (coords.size() == 3) {
 				pts.push_back(Cartesian(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), stox(std::stod, coords.at(2)), CartesianUnits::DEGREES, SRID));
 			} else if (coords.size() == 2) {
@@ -283,7 +283,7 @@ EWKT_Parser::parse_point(const std::string& specification)
 {
 	std::vector<std::string> res;
 
-	std::vector<std::string> coords = stringSplit(specification, " (,");
+	std::vector<std::string> coords = Split::split_first_of(specification, " (,");
 	if (coords.size() == 3) {
 		Cartesian c(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), stox(std::stod, coords.at(2)), CartesianUnits::DEGREES, SRID);
 		c.normalize();
@@ -320,7 +320,7 @@ EWKT_Parser::parse_multipoint(const std::string& specification)
 	std::sregex_iterator end;
 	while (next != end) {
 		match_size += next->length(0);
-		std::vector<std::string> coords = stringSplit(next->str(2), " ");
+		std::vector<std::string> coords = Split::split_first_of(next->str(2), " ");
 		if (coords.size() == 3) {
 			Cartesian c(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), stox(std::stod, coords.at(2)), CartesianUnits::DEGREES, SRID);
 			c.normalize();
@@ -338,9 +338,9 @@ EWKT_Parser::parse_multipoint(const std::string& specification)
 	}
 
 	if (match_size == 0) {
-		std::vector<std::string> points = stringSplit(specification, ",");
+		std::vector<std::string> points = Split::split_first_of(specification, ",");
 		for (auto it = points.begin(); it != points.end(); ++it) {
-			std::vector<std::string> coords = stringSplit(*it, " ");
+			std::vector<std::string> coords = Split::split_first_of(*it, " ");
 			if (coords.size() == 3) {
 				Cartesian c(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), stox(std::stod, coords.at(2)), CartesianUnits::DEGREES, SRID);
 				c.normalize();
@@ -466,29 +466,6 @@ EWKT_Parser::getRanges()
 	HTM::mergeRanges(ranges);
 
 	return ranges;
-}
-
-
-// String tokenizer by characters in delimiter.
-std::vector<std::string>
-EWKT_Parser::stringSplit(const std::string& str, const std::string& delimiter)
-{
-	std::vector<std::string> results;
-	size_t prev = 0, next = 0, len;
-
-	while ((next = str.find_first_of(delimiter, prev)) != std::string::npos) {
-		len = next - prev;
-		if (len > 0) {
-			results.push_back(str.substr(prev, len));
-		}
-		prev = next + 1;
-	}
-
-	if (prev < str.size()) {
-		results.push_back(str.substr(prev));
-	}
-
-	return results;
 }
 
 
