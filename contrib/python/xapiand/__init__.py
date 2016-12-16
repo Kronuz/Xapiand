@@ -110,7 +110,7 @@ class Xapiand(object):
         merge=(lambda *args, **kwargs: session.request('MERGE', *args, **kwargs), False, 'result'),
     )
 
-    def __init__(self, ip='127.0.0.1', port=8880, commit=False, prefix=None, default_accept=None):
+    def __init__(self, ip='127.0.0.1', port=8880, commit=False, prefix=None, default_accept=None, default_accept_encoding=None):
         if ip and ':' in ip:
             ip, _, port = ip.partition(':')
         self.ip = ip
@@ -120,6 +120,9 @@ class Xapiand(object):
         if default_accept is None:
             default_accept = 'application/json' if msgpack is None else 'application/x-msgpack'
         self.default_accept = default_accept
+        if default_accept_encoding is None:
+            default_accept_encoding = 'gzip,deflate,identity'
+        self.default_accept_encoding = default_accept_encoding
 
     def _build_url(self, action_request, index, ip, port, nodename, id, body):
         if ip and ':' in ip:
@@ -173,6 +176,7 @@ class Xapiand(object):
 
         headers = kwargs.setdefault('headers', {})
         accept = headers.setdefault('accept', self.default_accept)
+        accept_encoding = headers.setdefault('accept-encoding', self.default_accept_encoding)
         content_type = headers.setdefault('content-type', accept)
         is_msgpack = 'application/x-msgpack' in content_type
         is_json = 'application/json' in content_type
