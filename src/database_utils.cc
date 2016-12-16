@@ -85,12 +85,8 @@ std::string get_prefix(unsigned long long field_number)
 
 std::string get_prefix(const std::string& field_name)
 {
-	if (field_name.length() > 4) {
-		// Mask 0x1fffff for maximum length prefix of 4.
-		return serialise_length(xxh64::hash(field_name) & 0x1fffff);
-	} else {
-		return field_name;
-	}
+	// Mask 0x1fffff for maximum length prefix of 4.
+	return serialise_length(xxh64::hash(field_name) & 0x1fffff);
 }
 
 
