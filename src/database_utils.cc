@@ -55,16 +55,13 @@ inline static long long save_mastery(const std::string& dir)
 }
 
 
-std::string prefixed(const std::string& term, const std::string& prefix)
+std::string prefixed(const std::string& term, const std::string& field_prefix, char field_type)
 {
-	if (prefix.empty()) {
-		return term;
-	} else {
-		std::string result;
-		result.reserve(prefix.length() + term.length());
-		result.assign(prefix).append(term);
-		return result;
-	}
+	std::string result;
+	result.reserve(field_prefix.length() + term.length() + 1);
+	result.assign(field_prefix).push_back(field_type);
+	result.append(term);
+	return result;
 }
 
 
