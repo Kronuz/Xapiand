@@ -41,6 +41,7 @@
 #include "client_base.h"        // for BaseClient
 #include "database_handler.h"   // for DatabaseHandler
 #include "database_utils.h"     // for query_field_t (ptr only)
+#include "deflate_compressor.h" // for DeflateCompressData
 #include "http_parser.h"        // for http_parser, http_parser_settings
 #include "url_parser.h"         // for PathParser, QueryParser
 #include "lru.h"                // for LRU
@@ -120,6 +121,14 @@ public:
 };
 
 
+enum class Encoding {
+	none,
+	gzip,
+	deflate,
+	identity
+};
+
+
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	enum class Command : uint64_t {
@@ -175,6 +184,9 @@ class HttpClient : public BaseClient {
 	std::string content_length;
 	bool expect_100 = false;
 
+	DeflateCompressData encoding_compressor;
+	DeflateCompressData::iterator it_compressor;
+
 	std::string host;
 
 	bool request_begining;
@@ -227,6 +239,8 @@ class HttpClient : public BaseClient {
 	const type_t* is_acceptable_type(const type_t& ct_type_pattern, const type_t& ct_type);
 	const type_t* is_acceptable_type(const type_t& ct_type_pattern, const std::vector<type_t>& ct_types);
 	void write_http_response(enum http_status status, const MsgPack& response=MsgPack());
+	Encoding resolve_encoding();
+	std::string encoding_http_response(Encoding e, const std::string& response, bool chunk=false, bool start=false, bool end=false);
 
 	friend Worker;
 
