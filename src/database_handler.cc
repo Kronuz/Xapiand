@@ -832,7 +832,7 @@ Document::update()
 		database = db_handler->database;
 		std::shared_ptr<Database> database_ = database;
 		DatabaseHandler* db_handler_ = db_handler;
-		*this = database->get_document(get_docid());
+		*this = database->get_document(get_docid(), true);
 		db_handler = db_handler_;
 		database = database_;
 	}

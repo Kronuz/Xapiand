@@ -317,7 +317,7 @@ public:
 	void remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
 
 	Xapian::docid find_document(const std::string& term_id);
-	Xapian::Document get_document(const Xapian::docid& did, bool pull_=false);
+	Xapian::Document get_document(const Xapian::docid& did, bool assume_valid_=false, bool pull_=false);
 	std::string get_metadata(const std::string& key);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
 

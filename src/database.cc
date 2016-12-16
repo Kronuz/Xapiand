@@ -993,7 +993,7 @@ Database::get_revision() const
 {
 	L_CALL(this, "Database::get_revision()");
 
-#if HAVE_DATABASE_REVISION
+#if HAVE_XAPIAN_DATABASE_GET_REVISION
 	return db->get_revision();
 #else
 	return 0;
@@ -1590,7 +1590,7 @@ Database::find_document(const std::string& term_id)
 
 
 Xapian::Document
-Database::get_document(const Xapian::docid& did, bool pull_)
+Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 {
 	L_CALL(this, "Database::get_document(%d)", did);
 
@@ -1600,7 +1600,14 @@ Database::get_document(const Xapian::docid& did, bool pull_)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			doc = db->get_document(did);
+#ifdef HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS
+			if (assume_valid_) {
+				doc = db->get_document(did, Xapian::DOC_ASSUME_VALID);
+			} else
+#endif
+			{
+				doc = db->get_document(did);
+			}
 #ifdef XAPIAND_DATA_STORAGE
 			if (pull_) {
 				storage_pull_blob(doc);

@@ -247,10 +247,13 @@
 
 
 /* Define to 1 if Xapian has Database::get_revision() available. */
-#cmakedefine HAVE_DATABASE_REVISION @HAVE_DATABASE_REVISION@
+#cmakedefine HAVE_XAPIAN_DATABASE_GET_REVISION @HAVE_XAPIAN_DATABASE_GET_REVISION@
 
 /* Define to 1 if Xapian has RemoteProtocol available. */
-#cmakedefine HAVE_REMOTE_PROTOCOL @HAVE_REMOTE_PROTOCOL@
+#cmakedefine HAVE_XAPIAN_REMOTE_PROTOCOL @HAVE_XAPIAN_REMOTE_PROTOCOL@
+
+/* Define to 1 if Xapian has Database::get_document() with flags available. */
+#cmakedefine HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS @HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS@
 
 
 /* Define to what port binary traffic will be redirected to. */

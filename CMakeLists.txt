@@ -377,16 +377,24 @@ set (CMAKE_REQUIRED_LIBRARIES "${XAPIAN_LIBRARIES}")
 check_cxx_source_compiles ("
 	#include <xapian.h>
 	int main() {
-		&Xapian::MSet::serialise;
-	}" HAVE_REMOTE_PROTOCOL)
+		Xapian::MSet mset;
+		mset.serialise();
+	}" HAVE_XAPIAN_REMOTE_PROTOCOL)
 check_cxx_source_compiles ("
 	#include <xapian.h>
 	int main() {
-		&Xapian::Database::get_revision;
-	}" HAVE_DATABASE_REVISION)
+		Xapian::Database db;
+		db.get_revision();
+	}" HAVE_XAPIAN_DATABASE_GET_REVISION)
+check_cxx_source_compiles ("
+	#include <xapian.h>
+	int main() {
+		Xapian::Database db;
+		db.get_document(0, Xapian::DOC_ASSUME_VALID);
+	}" HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS)
 cmake_pop_check_state ()
 
-if (CLUSTERING AND HAVE_REMOTE_PROTOCOL)
+if (CLUSTERING AND HAVE_XAPIAN_REMOTE_PROTOCOL)
 	set ("XAPIAND_CLUSTERING" 1)
 else ()
 	set ("XAPIAND_CLUSTERING" 0)
