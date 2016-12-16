@@ -362,16 +362,19 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 		}
 	}
 
+	if (obj.is_string()) {
+		auto val = obj.as_string();
+		if (val.empty()) {
+			return Xapian::Query(field_spc.prefix);
+		} else if (val == "*") {
+			return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.prefix);
+		}
+	}
+
 	auto ser_type = Serialise::get_type(obj);
 	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), field_spc.prefix);
 
 	auto& field_value = std::get<1>(ser_type);
-
-	if (field_value.empty()) {
-		return Xapian::Query(spc.prefix);
-	} else if (field_value == "*") {
-		return Xapian::Query(Xapian::Query::OP_WILDCARD, spc.prefix);
-	}
 
 	switch (spc.get_type()) {
 		case FieldType::TEXT: {
