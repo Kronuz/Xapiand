@@ -26,6 +26,8 @@ THE SOFTWARE.
 
 #include "guid.h"
 
+#include "serialise.h"
+
 #include <algorithm>
 #include <iomanip>
 #include <random>
@@ -47,8 +49,6 @@ THE SOFTWARE.
 #ifdef GUID_WINDOWS
 #include <objbase.h>
 #endif
-
-#include "serialise.h"
 
 
 // 0x11f0241243c00ULL = 1yr
