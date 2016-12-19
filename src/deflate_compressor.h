@@ -22,9 +22,9 @@
 
 #pragma once
 
+#include <cstring>       // for string and memcpy
 #include <stdlib.h>      // for malloc, free
 #include <zlib.h>        // for z_stream
-#include <string>        // for string
 
 #include "io_utils.h"    // for close, open
 #include "exception.h"   // for Error
