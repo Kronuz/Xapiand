@@ -502,7 +502,7 @@ Serialise::get_type(const std::string& field_value, bool bool_term)
 
 	// Try like GEO
 	try {
-		return std::make_pair(FieldType::GEO, ewkt(field_value, default_spc.flags.partials, default_spc.error));
+		return std::make_pair(FieldType::GEO, ewkt(field_value, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
 	} catch (const EWKTError&) { }
 
 	// Like UUID
@@ -658,7 +658,7 @@ Serialise::get_range_type(const std::string& start, const std::string& end, bool
 			}
 		case FieldType::GEO:
 			try {
-				return std::make_tuple(FieldType::GEO, res.second, ewkt(end, default_spc.flags.partials, default_spc.error));
+				return std::make_tuple(FieldType::GEO, res.second, ewkt(end, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
 			} catch (const SerialisationError&) {
 				return std::make_tuple(FieldType::TERM, start, end);
 			}
