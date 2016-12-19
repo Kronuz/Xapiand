@@ -477,14 +477,11 @@ const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& lang
 		} else {
 			words.open(PATH_STOPWORDS + std::string("/") + language + ".txt");
 		}
+		auto& stopper = stoppers[language];
 		if (words.is_open()) {
-			auto& stopper = stoppers[language];
 			stopper = std::make_unique<Xapian::SimpleStopper>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
-			return stopper;
-		} else {
-			static std::unique_ptr<Xapian::SimpleStopper> stopper;
-			return stopper;
 		}
+		return stopper;
 	} else {
 		return it->second;
 	}
