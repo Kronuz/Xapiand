@@ -1278,15 +1278,13 @@ HttpClient::search_view(enum http_method method)
 	MsgPack aggregations;
 	try {
 		db_handler.reset(endpoints, db_flags, method);
-		if (!body.empty()) {
-			rapidjson::Document json_aggs;
-			json_load(json_aggs, body);
-			MsgPack object(json_aggs);
-			AggregationMatchSpy aggs(object, db_handler.get_schema());
-			mset = db_handler.get_mset(*query_field, &aggs, &object, suggestions);
-			aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
-		} else {
+		if (body.empty()) {
 			mset = db_handler.get_mset(*query_field, nullptr, nullptr, suggestions);
+		} else {
+			auto body_ = get_body();
+			AggregationMatchSpy aggs(body_.second, db_handler.get_schema());
+			mset = db_handler.get_mset(*query_field, &aggs, &body_.second, suggestions);
+			aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
 		}
 	} catch (const CheckoutError&) {
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
