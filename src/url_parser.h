@@ -28,7 +28,14 @@
 #include <string>
 
 
-inline std::string urldecode(const char *src, size_t);
+std::string urldecode(const void *p, size_t size);
+inline std::string urldecode(const std::string& string) {
+	return urldecode(string.data(), string.size());
+}
+template<typename T, std::size_t N>
+inline std::string urldecode(T (&s)[N]) {
+	return urldecode(s, N - 1);
+}
 
 
 class QueryParser {

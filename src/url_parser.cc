@@ -24,41 +24,40 @@
 
 #include <cctype>   // for isxdigit
 #include <cstdlib>  // for strtol
-#include <cstring>  // for strlen, memmove, strncpy, strncmp
+#include <cstring>  // for strlen, strncmp
 
 
-std::string urldecode(const char *str, size_t size) {
-	char *dStr = new char[size + 1];
-	char eStr[] = "00"; /* for a hex code */
-
-	std::strncpy(dStr, str, size);
-	dStr[size] = '\0';
-
-	for (size_t i = 0; i < std::strlen(dStr); ++i) {
-		if (dStr[i] == '%') {
-			if (dStr[i + 1] == 0) {
-				return std::string(dStr);
-			}
-
-			if (std::isxdigit(dStr[i + 1]) && std::isxdigit(dStr[i + 2])) {
-				/* combine the next to numbers into one */
-				eStr[0] = dStr[i + 1];
-				eStr[1] = dStr[i + 2];
-
-				/* convert it to decimal */
-				long int x = std::strtol(eStr, nullptr, 16);
-
-				/* remove the hex */
-				std::memmove(&dStr[i + 1], &dStr[i + 3], std::strlen(&dStr[i + 3]) + 1);
-
-				dStr[i] = x;
-			}
-		} else if (dStr[i] == '+') {
-			dStr[i] = ' ';
+std::string
+urldecode(const void *p, size_t size)
+{
+	char eStr[3] = "00"; /* for a hex code */
+	const char* q = (const char *)p;
+	char *buff = new char[size + 1];
+	char *d = buff;
+	const char *p_end = q + size;
+	while (q != p_end) {
+		char c = *q++;
+		switch (c) {
+			case '+':
+				*d++ = ' ';
+				break;
+			case '%':
+				if (q < p_end - 1 && std::isxdigit(*q) && std::isxdigit(*(q + 1))) {
+					/* combine the next to numbers into one */
+					eStr[0] = *q++;
+					eStr[1] = *q++;
+					/* convert it to decimal */
+					*d++ = std::strtol(eStr, nullptr, 16);
+					break;
+				}
+			default:
+				*d++ = c;
 		}
 	}
-
-	return std::string(dStr);
+	*d = '\0';
+	std::string ret(buff);
+	delete [] buff;
+	return ret;
 }
 
 
