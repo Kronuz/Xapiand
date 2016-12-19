@@ -46,6 +46,7 @@ struct opts_t {
 	bool chert;
 	bool solo;
 	bool strict;
+	bool optimal;
 	std::string database;
 	std::string cluster_name;
 	std::string node_name;

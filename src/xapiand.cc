@@ -505,6 +505,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 
 		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
 		SwitchArg strict_arg("", "strict", "Force the user to define the type for each field", cmd, false);
+		SwitchArg optimal_arg("", "optimal", "Force the configuration for indexing documents to optimal", cmd, false);
 
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
@@ -579,6 +580,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 
 		opts.solo = solo.getValue();
 		opts.strict = strict_arg.getValue();
+		opts.optimal = optimal_arg.getValue();
 
 		opts.database = database.getValue();
 		opts.cluster_name = cluster_name.getValue();
@@ -862,6 +864,10 @@ int main(int argc, char **argv) {
 
 	if (opts.strict) {
 		L_INFO(nullptr, "Using strict mode.");
+	}
+
+	if (opts.optimal) {
+		L_INFO(nullptr, "Using optimal mode.");
 	}
 
 	// Flush threshold increased
