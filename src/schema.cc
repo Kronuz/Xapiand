@@ -467,19 +467,18 @@ const std::unordered_map<std::string, std::pair<bool, std::string>> map_stem_lan
 
 
 const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& language) {
+	static std::string path_stopwords(getenv("XAPIAN_PATH_STOPWORDS") ? getenv("XAPIAN_PATH_STOPWORDS") : PATH_STOPWORDS);
 	static std::unordered_map<std::string, std::unique_ptr<Xapian::SimpleStopper>> stoppers;
 	auto it = stoppers.find(language);
 	if (it == stoppers.end()) {
+		auto path = path_stopwords + "/" + language + ".txt";
 		std::ifstream words;
-		const char *path_stopwords = getenv("XAPIAN_PATH_STOPWORDS");
-		if (path_stopwords) {
-			words.open(path_stopwords + std::string("/") + language + ".txt");
-		} else {
-			words.open(PATH_STOPWORDS + std::string("/") + language + ".txt");
-		}
+		words.open(path);
 		auto& stopper = stoppers[language];
 		if (words.is_open()) {
 			stopper = std::make_unique<Xapian::SimpleStopper>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
+		} else {
+			L_WARNING(nullptr, "Cannot open stop words file: %s", path.c_str());
 		}
 		return stopper;
 	} else {
