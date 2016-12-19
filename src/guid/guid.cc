@@ -398,12 +398,10 @@ GuidCompactor::unserialise(const std::string& bytes)
 {
 	auto compacted = bytes.length() < 12;
 
-	int bits, skip;
+	int skip;
 	if (compacted) {
-		bits = TIME_BITS + SALT_BITS + CLOCK_BITS;
 		skip = PADDING2_BITS + COMPACTED_BITS;
 	} else {
-		bits = TIME_BITS + VERSION_BITS + NODE_BITS + CLOCK_BITS;
 		skip = COMPACTED_BITS;
 	}
 
