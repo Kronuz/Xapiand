@@ -456,7 +456,7 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto renquire = get_enquire(query, Xapian::BAD_VALUENO, nullptr, nullptr, nullptr);
+			auto renquire = get_enquire(query, nullptr, nullptr);
 			auto mset = renquire.get_mset(0, similar.n_rset);
 			for (const auto& doc : mset) {
 				rset.add_document(doc);
@@ -499,7 +499,7 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 
 
 Xapian::Enquire
-DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, AggregationMatchSpy* aggs)
+DatabaseHandler::get_enquire(Xapian::Query& query, const query_field_t* e, AggregationMatchSpy* aggs)
 {
 	L_CALL(this, "DatabaseHandler::get_enquire(...)");
 
@@ -507,16 +507,44 @@ DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collap
 
 	enquire.set_query(query);
 
-	if (sorter) {
-		enquire.set_sort_by_key_then_relevance(sorter, false);
-	}
-
-	if (aggs) {
-		enquire.add_matchspy(aggs);
-	}
-
+	Xapian::valueno collapse_key = Xapian::BAD_VALUENO;
 	int collapse_max = 1;
+
 	if (e) {
+		if (!e->sort.empty()) {
+			Multi_MultiValueKeyMaker sorter;
+			std::string field, value;
+			for (const auto& sort : e->sort) {
+				size_t pos = sort.find(":");
+				if (pos == std::string::npos) {
+					field.assign(sort);
+					value.clear();
+				} else {
+					field.assign(sort.substr(0, pos));
+					value.assign(sort.substr(pos + 1));
+				}
+				bool descending = false;
+				switch (field.at(0)) {
+					case '-':
+						descending = true;
+					case '+':
+						field.erase(field.begin());
+						break;
+				}
+				auto field_spc = schema->get_slot_field(field);
+				if (field_spc.get_type() != FieldType::EMPTY) {
+					sorter.add_value(field_spc, descending, value, *e);
+				}
+			}
+			enquire.set_sort_by_key_then_relevance(sorter.release(), false);
+		}
+
+		// Get the collapse key to use for queries.
+		if (!e->collapse.empty()) {
+			auto field_spc = schema->get_slot_field(e->collapse);
+			collapse_key = field_spc.slot;
+		}
+
 		if (e->is_nearest) {
 			get_similar(enquire, query, e->nearest);
 		}
@@ -528,57 +556,26 @@ DatabaseHandler::get_enquire(Xapian::Query& query, const Xapian::valueno& collap
 		collapse_max = e->collapse_max;
 	}
 
-	enquire.set_collapse_key(collapse_key, collapse_max);
+	if (collapse_key != Xapian::BAD_VALUENO) {
+		enquire.set_collapse_key(collapse_key, collapse_max);
+	}
+
+	if (aggs) {
+		enquire.add_matchspy(aggs);
+	}
 
 	return enquire;
 }
 
 
 MSet
-DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions)
+DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions)
 {
 	L_CALL(this, "DatabaseHandler::get_mset(...)");
 
 	MSet mset;
 
 	schema = get_schema();
-
-	// Get the collapse key to use for queries.
-	Xapian::valueno collapse_key;
-	if (e.collapse.empty()) {
-		collapse_key = Xapian::BAD_VALUENO;
-	} else {
-		auto field_spc = schema->get_slot_field(e.collapse);
-		collapse_key = field_spc.slot;
-	}
-
-	std::unique_ptr<Multi_MultiValueKeyMaker> sorter;
-	if (!e.sort.empty()) {
-		sorter = std::make_unique<Multi_MultiValueKeyMaker>();
-		std::string field, value;
-		for (const auto& sort : e.sort) {
-			size_t pos = sort.find(":");
-			if (pos == std::string::npos) {
-				field.assign(sort);
-				value.clear();
-			} else {
-				field.assign(sort.substr(0, pos));
-				value.assign(sort.substr(pos + 1));
-			}
-			bool descending = false;
-			switch (field.at(0)) {
-				case '-':
-					descending = true;
-				case '+':
-					field.erase(field.begin());
-					break;
-			}
-			auto field_spc = schema->get_slot_field(field);
-			if (field_spc.get_type() != FieldType::EMPTY) {
-				sorter->add_value(field_spc, descending, value, e);
-			}
-		}
-	}
 
 	Xapian::Query query;
 	DatabaseHandler::lock_database lk(this);
@@ -606,9 +603,8 @@ DatabaseHandler::get_mset(const query_field_t& e, AggregationMatchSpy* aggs, con
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto check_at_least = std::min(database->db->get_doccount(), e.check_at_least);
-			auto enquire = get_enquire(query, collapse_key, &e, sorter.get(), aggs);
-			mset = enquire.get_mset(e.offset, e.limit, check_at_least);
+			auto enquire = get_enquire(query, &e, aggs);
+			mset = enquire.get_mset(e.offset, e.limit, e.check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());

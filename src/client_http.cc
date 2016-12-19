@@ -1283,7 +1283,7 @@ HttpClient::search_view(enum http_method method)
 		} else {
 			auto body_ = get_body();
 			AggregationMatchSpy aggs(body_.second, db_handler.get_schema());
-			mset = db_handler.get_mset(*query_field, &aggs, &body_.second, suggestions);
+			mset = db_handler.get_mset(*query_field, &body_.second, &aggs, suggestions);
 			aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
 		}
 	} catch (const CheckoutError&) {

@@ -82,7 +82,7 @@ class DatabaseHandler {
 	MsgPack run_script(const MsgPack& data, const std::string& term_id);
 
 	void get_similar(Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar, bool is_fuzzy=false);
-	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t* e, Multi_MultiValueKeyMaker* sorter, AggregationMatchSpy* aggs);
+	Xapian::Enquire get_enquire(Xapian::Query& query, const query_field_t* e, AggregationMatchSpy* aggs);
 
 public:
 	class lock_database {
@@ -120,7 +120,7 @@ public:
 	void write_schema(const std::string& body);
 	void write_schema(const MsgPack& obj);
 
-	MSet get_mset(const query_field_t& e, AggregationMatchSpy* aggs, const MsgPack* qdsl, std::vector<std::string>& suggestions);
+	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions);
 
 	bool update_schema();
 
