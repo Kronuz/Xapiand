@@ -75,10 +75,10 @@
 template <typename... Args>
 inline void log(std::string fmt, Args&&... args) {
 	fmt.push_back('\n');
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-security"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
 	fprintf(stderr, fmt.c_str(), std::forward<Args>(args)...);
-#pragma clang diagnostic pop
+#pragma GCC diagnostic pop
 }
 #  define L_TEST(obj, args...) log(args)
 #  define L_DEBUG(obj, args...) log(args)

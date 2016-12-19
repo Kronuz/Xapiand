@@ -37,8 +37,8 @@
  * either the BSD or the GPL.
  */
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-value"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-value"
 
 /*
  * general notes about epoll:
@@ -285,5 +285,5 @@ epoll_fork (EV_P)
 
   fd_rearm_all (EV_A);
 }
-#pragma clang diagnostic pop
+#pragma GCC diagnostic pop
 
