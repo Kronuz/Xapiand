@@ -130,7 +130,7 @@ won't be changing often.
 Lets put something in the storage using PUT:
 
 ```
-curl -XPUT -H "Content-Type: image/png" 'http://localhost:8880/twitter/images/Kronuz.png?commit' --data-binary @'kronuz.png'
+curl -XPUT -H "Content-Type: image/png" 'http://localhost:8880/twitter/images/Kronuz.png?commit' --data-binary @'Kronuz.png'
 ```
 
 And getting it is just a matter of retreiving it using GET:
