@@ -207,11 +207,6 @@ std::string repr(const void* p, size_t size, bool friendly, bool quote, size_t m
 }
 
 
-std::string repr(const std::string& string, bool friendly, bool quote, size_t max_size) {
-	return repr(string.c_str(), string.length(), friendly, quote, max_size);
-}
-
-
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 	/* It outputs a bucket number in the range [0, num_buckets).
 	   A Fast, Minimal Memory, Consistent Hash Algorithm
