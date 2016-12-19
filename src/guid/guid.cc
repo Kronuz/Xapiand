@@ -102,7 +102,7 @@ GuidGenerator::_newGuid()
 	auto bytes = CFUUIDGetUUIDBytes(newId);
 	CFRelease(newId);
 
-	return std::array<unsigned char, 16>{
+	return std::array<unsigned char, 16>{{
 		bytes.byte0,
 		bytes.byte1,
 		bytes.byte2,
@@ -119,7 +119,7 @@ GuidGenerator::_newGuid()
 		bytes.byte13,
 		bytes.byte14,
 		bytes.byte15
-	};
+	}};
 }
 #endif
 
@@ -132,7 +132,7 @@ GuidGenerator::_newGuid()
 	GUID newId;
 	CoCreateGuid(&newId);
 
-	return std::array<unsigned char, 16>{
+	return std::array<unsigned char, 16>{{
 		(newId.Data1 >> 24) & 0xFF,
 		(newId.Data1 >> 16) & 0xFF,
 		(newId.Data1 >> 8) & 0xFF,
@@ -152,7 +152,7 @@ GuidGenerator::_newGuid()
 		newId.Data4[5],
 		newId.Data4[6],
 		newId.Data4[7]
-	};
+	}};
 }
 #endif
 
@@ -176,7 +176,7 @@ GuidGenerator::_newGuid()
 	jlong mostSignificant = _env->CallLongMethod(javaUuid, _mostSignificantBitsMethod);
 	jlong leastSignificant = _env->CallLongMethod(javaUuid, _leastSignificantBitsMethod);
 
-	return std::array<unsigned char, 16>{
+	return std::array<unsigned char, 16>{{
 		(mostSignificant >> 56) & 0xFF,
 		(mostSignificant >> 48) & 0xFF,
 		(mostSignificant >> 40) & 0xFF,
@@ -193,7 +193,7 @@ GuidGenerator::_newGuid()
 		(leastSignificant >> 16) & 0xFF,
 		(leastSignificant >> 8) & 0xFF,
 		(leastSignificant) & 0xFF,
-	};
+	}};
 }
 #endif
 
