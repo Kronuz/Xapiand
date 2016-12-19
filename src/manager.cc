@@ -120,6 +120,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	  solo(true),
 #endif
 	  strict(o.strict),
+	  optimal(o.optimal),
 	  atom_sig(0),
 	  signal_sig_async(*ev_loop)
 {
