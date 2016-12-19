@@ -40,7 +40,7 @@
 #define UNKNOWN_REGION -1
 
 
-using opts_t = struct opts_s {
+struct opts_t {
 	int verbosity;
 	bool detach;
 	bool chert;
