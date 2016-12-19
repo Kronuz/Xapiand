@@ -1576,8 +1576,6 @@ Schema::validate_required_data()
 						properties[RESERVED_INDEX] = specification.index;
 					}
 				}
-
-				properties[RESERVED_LANGUAGE] = specification.language;
 				break;
 			}
 			case FieldType::TERM: {
@@ -1679,8 +1677,6 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 				if (!specification.flags.has_index) {
 					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 				}
-
-				specification.language = default_spc.language;
 				break;
 
 			case FieldType::TERM:
@@ -4248,9 +4244,6 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 						break;
-					case FieldType::STRING:
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
-						break;
 					case FieldType::TERM:
 						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 						break;
@@ -4269,9 +4262,6 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
-						break;
-					case FieldType::STRING:
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						break;
 					case FieldType::TERM:
 						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
@@ -4327,9 +4317,6 @@ Schema::get_slot_field(const std::string& field_name) const
 					res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
 					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
-					break;
-				case FieldType::STRING:
-					res.language = properties.at(RESERVED_LANGUAGE).as_string();
 					break;
 				case FieldType::TERM:
 					res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
