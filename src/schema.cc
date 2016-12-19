@@ -4429,7 +4429,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 				if (map_dispatch_set_default_spc.find(field_name) == dsit_e) {
 					if (++it == it_e) {
 						prefix.append(get_acc_prefix(field_name));
-						return std::forward_as_tuple(*subproperties, dynamic_type, false, std::move(prefix), std::move(field_name));
+						return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(prefix), std::move(field_name));
 					}
 					THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 				}
