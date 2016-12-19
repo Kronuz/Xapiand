@@ -439,13 +439,11 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 {
 	L_CALL(this, "DatabaseHandler::write_schema(<obj>)");
 
-	L_INDEX(this, "Schema to write: %s", repr(obj.to_string()).c_str());
-
-	schema = get_schema();
-
-	schema->write_schema(obj, method == HTTP_PUT);
-
-	while (!update_schema());
+	do {
+		schema = get_schema();
+		schema->write_schema(obj, method == HTTP_PUT);
+		L_INDEX(this, "Schema to write: %s", repr(schema->to_string()).c_str());
+	} while (!update_schema());
 }
 
 
