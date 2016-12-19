@@ -310,7 +310,7 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, const std::string& 
 Xapian::Query
 QueryDSL::get_accuracy_query(const required_spc_t& field_spc, Xapian::Query::op op, const std::string& field_accuracy, const MsgPack& obj, bool is_raw, bool is_in)
 {
-	L_CALL(this, "QueryDSL::get_accuracy_query(<field_spc>, %d, %s, %s, %s, %s, %s)", (int)op, repr(field_accuracy).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false"); (void)op; (void)is_raw;
+	L_CALL(this, "QueryDSL::get_accuracy_query(<field_spc>, %d, %s, %s, %s, %s)", (int)op, repr(field_accuracy).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false"); (void)op; (void)is_raw;
 
 	if (is_in) {
 		THROW(QueryDslError, "Accuracy is only indexed like terms, searching by range is not supported");
