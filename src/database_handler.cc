@@ -27,7 +27,6 @@
 #include <exception>                        // for exception
 #include <stdexcept>                        // for out_of_range
 
-#include "database.h"                       // for DatabasePool, Database
 #include "exception.h"                      // for CheckoutError, ClientError
 #include "length.h"                         // for unserialise_length, seria...
 #include "log.h"                            // for L_CALL, Log
@@ -447,17 +446,18 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 }
 
 
-void
-DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar, bool is_fuzzy)
+Xapian::RSet
+DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 {
-	L_CALL(this, "DatabaseHandler::get_similar(...)");
+	L_CALL(this, "DatabaseHandler::get_rset(...)");
 
 	Xapian::RSet rset;
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto renquire = get_enquire(query, nullptr, nullptr);
-			auto mset = renquire.get_mset(0, similar.n_rset);
+			Xapian::Enquire enquire(*database->db);
+			enquire.set_query(query);
+			auto mset = enquire.get_mset(0, maxitems);
 			for (const auto& doc : mset) {
 				rset.add_document(doc);
 			}
@@ -472,6 +472,16 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 		database->reopen();
 	}
 
+	return rset;
+}
+
+
+std::unique_ptr<ExpandDeciderFilterPrefixes>
+DatabaseHandler::get_edecider(const similar_field_t& similar)
+{
+	L_CALL(this, "DatabaseHandler::get_edecider(...)");
+
+	// Expand Decider filter.
 	std::vector<std::string> prefixes;
 	prefixes.reserve(similar.type.size() + similar.field.size());
 	for (const auto& sim_type : similar.type) {
@@ -479,92 +489,13 @@ DatabaseHandler::get_similar(Xapian::Enquire& enquire, Xapian::Query& query, con
 		prefixes.emplace_back(1, type);
 		prefixes.emplace_back(1, tolower(type));
 	}
-
 	for (const auto& sim_field : similar.field) {
 		auto field_spc = schema->get_data_field(sim_field).first;
 		if (field_spc.get_type() != FieldType::EMPTY) {
 			prefixes.push_back(field_spc.prefix);
 		}
 	}
-
-	ExpandDeciderFilterPrefixes efp(prefixes);
-	auto eset = enquire.get_eset(similar.n_eset, rset, &efp);
-
-	if (is_fuzzy) {
-		query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), similar.n_term));
-	} else {
-		query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), similar.n_term);
-	}
-}
-
-
-Xapian::Enquire
-DatabaseHandler::get_enquire(Xapian::Query& query, const query_field_t* e, AggregationMatchSpy* aggs)
-{
-	L_CALL(this, "DatabaseHandler::get_enquire(...)");
-
-	Xapian::Enquire enquire(*database->db);
-
-	enquire.set_query(query);
-
-	Xapian::valueno collapse_key = Xapian::BAD_VALUENO;
-	int collapse_max = 1;
-
-	if (e) {
-		if (!e->sort.empty()) {
-			Multi_MultiValueKeyMaker sorter;
-			std::string field, value;
-			for (const auto& sort : e->sort) {
-				size_t pos = sort.find(":");
-				if (pos == std::string::npos) {
-					field.assign(sort);
-					value.clear();
-				} else {
-					field.assign(sort.substr(0, pos));
-					value.assign(sort.substr(pos + 1));
-				}
-				bool descending = false;
-				switch (field.at(0)) {
-					case '-':
-						descending = true;
-					case '+':
-						field.erase(field.begin());
-						break;
-				}
-				auto field_spc = schema->get_slot_field(field);
-				if (field_spc.get_type() != FieldType::EMPTY) {
-					sorter.add_value(field_spc, descending, value, *e);
-				}
-			}
-			enquire.set_sort_by_key_then_relevance(sorter.release(), false);
-		}
-
-		// Get the collapse key to use for queries.
-		if (!e->collapse.empty()) {
-			auto field_spc = schema->get_slot_field(e->collapse);
-			collapse_key = field_spc.slot;
-		}
-
-		if (e->is_nearest) {
-			get_similar(enquire, query, e->nearest);
-		}
-
-		if (e->is_fuzzy) {
-			get_similar(enquire, query, e->fuzzy, true);
-		}
-
-		collapse_max = e->collapse_max;
-	}
-
-	if (collapse_key != Xapian::BAD_VALUENO) {
-		enquire.set_collapse_key(collapse_key, collapse_max);
-	}
-
-	if (aggs) {
-		enquire.add_matchspy(aggs);
-	}
-
-	return enquire;
+	return std::make_unique<ExpandDeciderFilterPrefixes>(prefixes);
 }
 
 
@@ -601,9 +532,79 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 			break;
 	}
 
+	// Configure sorter.
+	std::unique_ptr<Multi_MultiValueKeyMaker> sorter;
+	if (!e.sort.empty()) {
+		sorter = std::make_unique<Multi_MultiValueKeyMaker>();
+		std::string field, value;
+		for (const auto& sort : e.sort) {
+			size_t pos = sort.find(":");
+			if (pos == std::string::npos) {
+				field.assign(sort);
+				value.clear();
+			} else {
+				field.assign(sort.substr(0, pos));
+				value.assign(sort.substr(pos + 1));
+			}
+			bool descending = false;
+			switch (field.at(0)) {
+				case '-':
+					descending = true;
+				case '+':
+					field.erase(field.begin());
+					break;
+			}
+			auto field_spc = schema->get_slot_field(field);
+			if (field_spc.get_type() != FieldType::EMPTY) {
+				sorter->add_value(field_spc, descending, value, e);
+			}
+		}
+	}
+
+	// Get the collapse key to use for queries.
+	Xapian::valueno collapse_key = Xapian::BAD_VALUENO;
+	if (!e.collapse.empty()) {
+		auto field_spc = schema->get_slot_field(e.collapse);
+		collapse_key = field_spc.slot;
+	}
+
+	// Configure nearest and fuzzy search:
+	Xapian::RSet nearest_rset;
+	std::unique_ptr<ExpandDeciderFilterPrefixes> nearest_edecider;
+	if (e.is_nearest) {
+		nearest_rset = get_rset(query, e.nearest.n_rset);
+		nearest_edecider = get_edecider(e.nearest);
+	}
+
+	Xapian::RSet fuzzy_rset;
+	std::unique_ptr<ExpandDeciderFilterPrefixes> fuzzy_edecider;
+	if (e.is_fuzzy) {
+		fuzzy_rset = get_rset(query, e.fuzzy.n_rset);
+		fuzzy_edecider = get_edecider(e.fuzzy);
+	}
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto enquire = get_enquire(query, &e, aggs);
+			auto final_query = query;
+			Xapian::Enquire enquire(*database->db);
+			if (collapse_key != Xapian::BAD_VALUENO) {
+				enquire.set_collapse_key(collapse_key, e.collapse_max);
+			}
+			if (aggs) {
+				enquire.add_matchspy(aggs);
+			}
+			if (sorter) {
+				enquire.set_sort_by_key_then_relevance(sorter.get(), false);
+			}
+			if (e.is_nearest) {
+				auto eset = enquire.get_eset(e.nearest.n_eset, nearest_rset, nearest_edecider.get());
+				final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), e.nearest.n_term);
+			}
+			if (e.is_fuzzy) {
+				auto eset = enquire.get_eset(e.fuzzy.n_eset, fuzzy_rset, fuzzy_edecider.get());
+				final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), e.fuzzy.n_term));
+			}
+			enquire.set_query(final_query);
 			mset = enquire.get_mset(e.offset, e.limit, e.check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {

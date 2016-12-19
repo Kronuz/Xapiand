@@ -31,6 +31,7 @@
 #include <vector>                            // for vector
 #include <xapian.h>                          // for Document, docid, MSet
 
+#include "database.h"                        // for DatabasePool, Database
 #include "database_utils.h"                  // for query_field_...
 #include "endpoint.h"                        // for Endpoints
 #include "http_parser.h"                     // for http_method
@@ -81,8 +82,7 @@ class DatabaseHandler {
 
 	MsgPack run_script(const MsgPack& data, const std::string& term_id);
 
-	void get_similar(Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar, bool is_fuzzy=false);
-	Xapian::Enquire get_enquire(Xapian::Query& query, const query_field_t* e, AggregationMatchSpy* aggs);
+	std::unique_ptr<ExpandDeciderFilterPrefixes> get_edecider(const similar_field_t& similar);
 
 public:
 	class lock_database {
@@ -120,6 +120,7 @@ public:
 	void write_schema(const std::string& body);
 	void write_schema(const MsgPack& obj);
 
+	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions);
 
 	bool update_schema();
