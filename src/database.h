@@ -445,14 +445,3 @@ public:
 
 	queue::QueueSet<Endpoint> updated_databases;
 };
-
-
-class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
-	std::vector<std::string> prefixes;
-
-public:
-	ExpandDeciderFilterPrefixes(const std::vector<std::string>& prefixes_)
-		: prefixes(prefixes_) { }
-
-	virtual bool operator() (const std::string& term) const override;
-};

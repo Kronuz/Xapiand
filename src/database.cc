@@ -2400,16 +2400,3 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 SchemaLRU::SchemaLRU(ssize_t max_size)
 	: LRU(max_size)
 { }
-
-
-bool
-ExpandDeciderFilterPrefixes::operator()(const std::string& term) const
-{
-	for (const auto& prefix : prefixes) {
-		if (startswith(term, prefix)) {
-			return true;
-		}
-	}
-
-	return prefixes.empty();
-}

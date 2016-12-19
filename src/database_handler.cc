@@ -27,6 +27,7 @@
 #include <exception>                        // for exception
 #include <stdexcept>                        // for out_of_range
 
+#include "database.h"                       // for DatabasePool, Database
 #include "exception.h"                      // for CheckoutError, ClientError
 #include "length.h"                         // for unserialise_length, seria...
 #include "log.h"                            // for L_CALL, Log
@@ -42,6 +43,25 @@
 #include "utils.h"                          // for repr
 #include "v8/exception.h"                   // for Error, ReferenceError
 #include "v8/v8pp.h"                        // for Processor::Function, Proc...
+
+
+class FilterPrefixesExpandDecider : public Xapian::ExpandDecider {
+	std::vector<std::string> prefixes;
+
+public:
+	FilterPrefixesExpandDecider(const std::vector<std::string>& prefixes_)
+		: prefixes(prefixes_) { }
+
+	virtual bool operator() (const std::string& term) const override {
+		for (const auto& prefix : prefixes) {
+			if (startswith(term, prefix)) {
+				return true;
+			}
+		}
+
+		return prefixes.empty();
+	}
+};
 
 
 DatabaseHandler::lock_database::lock_database(DatabaseHandler* db_handler_)
@@ -476,7 +496,7 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 }
 
 
-std::unique_ptr<ExpandDeciderFilterPrefixes>
+std::unique_ptr<Xapian::ExpandDecider>
 DatabaseHandler::get_edecider(const similar_field_t& similar)
 {
 	L_CALL(this, "DatabaseHandler::get_edecider(...)");
@@ -495,7 +515,7 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 			prefixes.push_back(field_spc.prefix);
 		}
 	}
-	return std::make_unique<ExpandDeciderFilterPrefixes>(prefixes);
+	return std::make_unique<FilterPrefixesExpandDecider>(prefixes);
 }
 
 
@@ -570,14 +590,14 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 
 	// Configure nearest and fuzzy search:
 	Xapian::RSet nearest_rset;
-	std::unique_ptr<ExpandDeciderFilterPrefixes> nearest_edecider;
+	std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
 	if (e.is_nearest) {
 		nearest_rset = get_rset(query, e.nearest.n_rset);
 		nearest_edecider = get_edecider(e.nearest);
 	}
 
 	Xapian::RSet fuzzy_rset;
-	std::unique_ptr<ExpandDeciderFilterPrefixes> fuzzy_edecider;
+	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
 	if (e.is_fuzzy) {
 		fuzzy_rset = get_rset(query, e.fuzzy.n_rset);
 		fuzzy_edecider = get_edecider(e.fuzzy);

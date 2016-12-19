@@ -31,7 +31,6 @@
 #include <vector>                            // for vector
 #include <xapian.h>                          // for Document, docid, MSet
 
-#include "database.h"                        // for DatabasePool, Database
 #include "database_utils.h"                  // for query_field_...
 #include "endpoint.h"                        // for Endpoints
 #include "http_parser.h"                     // for http_method
@@ -82,7 +81,7 @@ class DatabaseHandler {
 
 	MsgPack run_script(const MsgPack& data, const std::string& term_id);
 
-	std::unique_ptr<ExpandDeciderFilterPrefixes> get_edecider(const similar_field_t& similar);
+	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
 public:
 	class lock_database {
