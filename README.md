@@ -12,6 +12,9 @@ Xapiand aims to be: A Highly Available Distributed RESTful Storage and Search En
 * Search Engine:
 	* Built on top of [Xapian](http://xapian.org/) indexes.
 
+* Storage Engine:
+	* Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
+
 * Multi Tenant with Multi Types:
 	* Support for more than one index.
 	* Support for different types, one per index.
@@ -68,29 +71,27 @@ Xapiand is written in C++14, it makes use of libev (which is included in the cod
 
 3. Run `xapiand` inside a new directory to be assigned to the node.
 
-4. Run `curl -X GET http://localhost:8880/`.
+4. Run `curl 'http://localhost:8880/'`.
 
 
 ### Indexing
 
-*TODO: Work in progress...*
-
 Let's try and index some twitter like information. First, let's create a twitter user, and add some tweets (the twitter index will be created automatically):
 
 ```
-curl -XPUT 'http://localhost:8880/twitter/user/Kronuz?commit=1' -d '{ "name" : "German M. Bravo" }'
+curl -XPUT 'http://localhost:8880/twitter/user/Kronuz?commit' -d '{ "name" : "German M. Bravo" }'
 
-curl -XPUT 'http://localhost:8880/twitter/tweet/1?commit=1' -d '
+curl -XPUT 'http://localhost:8880/twitter/tweet/1?commit' -d '
 {
     "user": "Kronuz",
-    "postDate": "2015-11-15T13:12:00",
-    "message": "Trying out Xapiand, so far so good?"
+    "postDate": "2016-11-15T13:12:00",
+    "message": "Trying out Xapiand, so far, so good... so what!"
 }'
 
-curl -XPUT 'http://localhost:8880/twitter/tweet/2?commit=1' -d '
+curl -XPUT 'http://localhost:8880/twitter/tweet/2?commit' -d '
 {
     "user": "Kronuz",
-    "postDate": "2015-10-15T10:31:18",
+    "postDate": "2016-10-15T10:31:18",
     "message": "Another tweet, will it be indexed?"
 }'
 ```
@@ -98,20 +99,47 @@ curl -XPUT 'http://localhost:8880/twitter/tweet/2?commit=1' -d '
 Now, let’s see if the information was added by GETting it:
 
 ```
-curl -XGET 'http://localhost:8880/twitter/user/Kronuz?pretty=true'
-curl -XGET 'http://localhost:8880/twitter/tweet/1?pretty=true'
-curl -XGET 'http://localhost:8880/twitter/tweet/2?pretty=true'
+curl 'http://localhost:8880/twitter/user/Kronuz?pretty'
+curl 'http://localhost:8880/twitter/tweet/1?pretty'
+curl 'http://localhost:8880/twitter/tweet/2?pretty'
 ```
 
-### Searching
-
 *TODO: Work in progress...*
+
+
+### Searching
 
 Let’s find all the tweets that Kronuz posted:
 
 ```
-curl -XGET 'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty=true'
+curl 'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty'
 ```
+
+*TODO: Work in progress...*
+
+
+### Storage Engine
+
+The storage is designed to put files in volumes much in the way Facebook's
+Haystack <sup>[1](#footnote-1)</sup> works; once there a file enters the
+storage it can't really get deleted/modified from the volume, but instead, if a
+change is needed, a new file blob will be written to the volume. Storage is
+envisioned to be used when there are files you need to store which you know
+won't be changing often.
+
+Lets put something in the storage using PUT:
+
+```
+curl -XPUT -H "Content-Type: image/png" 'http://localhost:8880/twitter/images/Kronuz.png?commit' --data-binary @'kronuz.png'
+```
+
+And getting it is just a matter of retreiving it using GET:
+
+```
+curl -H "Accept: image/png" 'http://localhost:8880/twitter/images/Kronuz.png'
+```
+
+*TODO: Work in progress...*
 
 
 ### Where to go from here?
@@ -124,9 +152,6 @@ curl -XGET 'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty=tru
 This is a list of features that are only partially implemented; but that are planned to be supported
 by Xapiand some time soonish in order to get closer to the final product:
 
-* Storage Engine:
-	* Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
-
 * Multi-Partitioning and Distribution Strategies:
 	* Social-Based Partitioning and Replication (SPAR <sup>[2](#footnote-2)</sup>).
 	* Random Consistent Partitioning and Replication.
@@ -136,11 +161,6 @@ by Xapiand some time soonish in order to get closer to the final product:
 	* Replicas exists to maximize high availability *and* data locality.
 	* Read and Search operations performed on any of the replicas.
 	* Reliable, asynchronous replication for long term persistency.
-
-
-### Storage Engine
-
-*TODO: Work in progress...*
 
 
 ### Multi-Partitioning and Distribution Strategies
