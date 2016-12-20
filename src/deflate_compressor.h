@@ -50,12 +50,15 @@ template<typename Impl>
 class DeflateBlockStreaming {
 protected:
 	enum class DeflateState : uint8_t {
-		INT,
-		END
+		NONE,
+		INIT,
+		END,
 	};
 
 	bool gzip;
+	z_stream strm;
 	int stream;
+
 	DeflateState state;
 	const int cmpBuf_size;
 	char* const cmpBuf;
@@ -73,14 +76,14 @@ public:
 	DeflateBlockStreaming(bool gzip_)
 		: gzip(gzip_),
 		  stream(0),
-		  state(DeflateState::INT),
+		  state(DeflateState::NONE),
 		  cmpBuf_size(DEFLATE_BLOCK_SIZE),
 		  cmpBuf((char*)malloc(cmpBuf_size)),
 		  buffer((char*)malloc(DEFLATE_BLOCK_SIZE)) { }
 
 	// This class is not CopyConstructible or CopyAssignable.
 	DeflateBlockStreaming(const DeflateBlockStreaming&) = delete;
-	DeflateBlockStreaming operator=(const DeflateBlockStreaming&) = delete;
+	DeflateBlockStreaming& operator=(const DeflateBlockStreaming&) = delete;
 
 	~DeflateBlockStreaming() {
 		free(cmpBuf);
@@ -200,10 +203,8 @@ public:
 /*
  * Compress Data.
  */
-class DeflateCompressData : public DeflateData, public DeflateBlockStreaming<DeflateCompressData> {
-
-	bool free_strm;
-	z_stream strm;
+class DeflateCompressData : public DeflateData, public DeflateBlockStreaming<DeflateCompressData>
+{
 	std::string next();
 
 	friend class DeflateBlockStreaming<DeflateCompressData>;
@@ -212,13 +213,15 @@ public:
 	DeflateCompressData(const char* data_=nullptr, size_t data_size_=0, bool gzip=false);
 	~DeflateCompressData();
 
-	std::string init(bool start=true);
+	std::string init();
 	std::string next(const char* input, size_t input_size, int flush=Z_PARTIAL_FLUSH);
 
 	static int FINISH_COMPRESS;
 
 	inline void reset(const char* data_, size_t data_size_, bool gzip_=false) {
 		gzip = gzip_;
+		stream = 0;
+		data_offset = 0;
 		add_data(data_, data_size_);
 	}
 };
@@ -227,10 +230,8 @@ public:
 /*
  * Decompress Data.
  */
-class DeflateDecompressData : public DeflateData, public DeflateBlockStreaming<DeflateDecompressData> {
-
-	bool free_strm;
-	z_stream strm;
+class DeflateDecompressData : public DeflateData, public DeflateBlockStreaming<DeflateDecompressData>
+{
 	std::string init();
 	std::string next();
 
@@ -242,6 +243,8 @@ public:
 
 	inline void reset(const char* data_, size_t data_size_, bool gzip_=false) {
 		gzip = gzip_;
+		stream = 0;
+		data_offset = 0;
 		add_data(data_, data_size_);
 	}
 };
@@ -304,10 +307,8 @@ public:
 /*
  * Compress a file.
  */
-class DeflateCompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateCompressFile> {
-
-	bool free_strm;
-	z_stream strm;
+class DeflateCompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateCompressFile>
+{
 	std::string init();
 	std::string next();
 
@@ -320,11 +321,13 @@ public:
 
 	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {
 		gzip = gzip_;
+		stream = 0;
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
 	inline void reset(const std::string& filename, bool gzip_=false) {
 		gzip = gzip_;
+		stream = 0;
 		open(filename);
 	}
 };
@@ -333,10 +336,8 @@ public:
 /*
  * Decompress a file.
  */
-class DeflateDecompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateDecompressFile> {
-
-	bool free_strm;
-	z_stream strm;
+class DeflateDecompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateDecompressFile>
+{
 	ssize_t data_size;
 	size_t data_offset;
 
@@ -352,11 +353,13 @@ public:
 
 	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {
 		gzip = gzip_;
+		stream = 0;
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	 }
 
 	inline void reset(const std::string& filename, bool gzip_=false) {
 		gzip = gzip_;
+		stream = 0;
 		open(filename);
 	}
 };
