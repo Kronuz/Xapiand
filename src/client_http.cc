@@ -1317,7 +1317,7 @@ HttpClient::search_view(enum http_method method)
 
 	} else {
 		auto type_encoding = resolve_encoding();
-		if (type_encoding == Encoding::error) {
+		if (type_encoding == Encoding::unknown) {
 			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 			MsgPack err_response = {
 				{ RESPONSE_STATUS, (int)error_code },
@@ -1430,7 +1430,7 @@ HttpClient::search_view(enum http_method method)
 					if (type_encoding != Encoding::none) {
 						auto encoded = encoding_http_response(type_encoding, blob_data, false, true, true);
 						if (!encoded.empty() && encoded.size() < blob_data.size()) {
-							write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, ct_type.first + "/" + ct_type.second, std::get<2>(*accept_encoding_set.begin())));
+							write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
 						} else {
 							write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
 						}
@@ -1457,7 +1457,7 @@ HttpClient::search_view(enum http_method method)
 				if (rc == 0) {
 					if (type_encoding != Encoding::none) {
 						auto encoded = encoding_http_response(type_encoding, first_chunk, true, true, false);
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, std::get<2>(*accept_encoding_set.begin())));
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
 						if (!encoded.empty()) {
 							write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
 						}
@@ -1487,7 +1487,7 @@ HttpClient::search_view(enum http_method method)
 				if (type_encoding != Encoding::none) {
 					auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
 					if (!encoded.empty() && encoded.size() < result.first.size()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second, std::get<2>(*accept_encoding_set.begin())));
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
 					} else {
 						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
 					}
@@ -1501,7 +1501,7 @@ HttpClient::search_view(enum http_method method)
 			if (rc == 0) {
 				if (type_encoding != Encoding::none) {
 					auto encoded = encoding_http_response(type_encoding, first_chunk, true, true, false);
-					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, std::get<2>(*accept_encoding_set.begin())));
+					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
 					if (!encoded.empty()) {
 						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
 					}
@@ -2141,7 +2141,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 	}
 
 	auto type_encoding = resolve_encoding();
-	if (type_encoding == Encoding::error) {
+	if (type_encoding == Encoding::unknown) {
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack err_response = {
 			{ RESPONSE_STATUS, (int)error_code },
@@ -2165,7 +2165,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 		if (type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
 			if (!encoded.empty() && encoded.size() < result.first.size()) {
-				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second, std::get<2>(*accept_encoding_set.begin())));
+				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
 			} else {
 				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
 			}
@@ -2182,7 +2182,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 		if (type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(type_encoding, response_str, false, true, true);
 			if (!encoded.empty() && encoded.size() < response_str.size()) {
-				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, accepted_type.first + "/" + accepted_type.second, std::get<2>(*accept_encoding_set.begin())));
+				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, accepted_type.first + "/" + accepted_type.second, readable_encoding(type_encoding)));
 			} else {
 				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, response_str, accepted_type.first + "/" + accepted_type.second));
 			}
@@ -2216,7 +2216,25 @@ HttpClient::resolve_encoding()
 					continue;
 			}
 		}
-		return Encoding::error;
+		return Encoding::unknown;
+	}
+}
+
+
+std::string
+HttpClient::readable_encoding(Encoding e)
+{
+	switch (e) {
+		case Encoding::none:
+			return "none";
+		case Encoding::gzip:
+			return "gzip";
+		case Encoding::deflate:
+			return "deflate";
+		case Encoding::identity:
+			return "identity";
+		default:
+			return "Encoding:UNKNOWN";
 	}
 }
 
