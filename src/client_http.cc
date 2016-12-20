@@ -1427,7 +1427,10 @@ HttpClient::search_view(enum http_method method)
 						blob = document.get_blob();
 					}
 					auto blob_data = unserialise_string_at(2, blob);
-					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
+					auto enco_buffer = encoding_http_response(type_encoding, blob_data, false, true, true);
+					if (!enco_buffer.empty()) {
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, enco_buffer, ct_type.first + "/" + ct_type.second, std::get<2>(*accept_encoding_set.begin())));
+					}
 					return;
 				}
 			}
