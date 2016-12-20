@@ -690,12 +690,12 @@ Datetime::tm_t
 Datetime::to_tm_t(double timestamp)
 {
 	auto _time = static_cast<std::time_t>(timestamp);
-	struct tm* timeinfo = nullptr;
-	gmtime_r(&_time, timeinfo);
+	struct tm timeinfo;
+	gmtime_r(&_time, &timeinfo);
 	return tm_t(
-		timeinfo->tm_year + _START_YEAR, timeinfo->tm_mon + 1,
-		timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min,
-		timeinfo->tm_sec, static_cast<int>(std::ceil((timestamp - _time) / MILLISECOND))
+		timeinfo.tm_year + _START_YEAR, timeinfo.tm_mon + 1,
+		timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min,
+		timeinfo.tm_sec, static_cast<int>(std::ceil((timestamp - _time) / MILLISECOND))
 	);
 }
 
