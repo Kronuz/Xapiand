@@ -158,11 +158,11 @@ public:
 			return *this;
 		}
 
-		inline std::string operator*() const {
+		inline std::string operator*() const noexcept {
 			return current_str;
 		}
 
-		inline const std::string* operator->() const {
+		inline const std::string* operator->() const noexcept {
 			return &current_str;
 		}
 
@@ -170,15 +170,15 @@ public:
 			return current_str.size();
 		}
 
-		bool operator==(const iterator& other) const {
+		bool operator==(const iterator& other) const noexcept {
 			return current_str == other.current_str;
 		}
 
-		bool operator!=(const iterator& other) const {
+		bool operator!=(const iterator& other) const noexcept {
 			return !operator==(other);
 		}
 
-		inline explicit operator bool() const {
+		inline explicit operator bool() const noexcept {
 			return !current_str.empty();
 		}
 
