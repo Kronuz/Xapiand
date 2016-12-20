@@ -90,8 +90,7 @@ constexpr const char* const XapiandManager::StateNames[];
 std::shared_ptr<XapiandManager> XapiandManager::manager;
 
 
-void sig_exit(int sig)
-{
+void sig_exit(int sig) {
 	if (XapiandManager::manager) {
 		XapiandManager::manager->signal_sig(sig);
 	} else if (sig < 0) {
