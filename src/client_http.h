@@ -125,7 +125,8 @@ enum class Encoding {
 	none,
 	gzip,
 	deflate,
-	identity
+	identity,
+	error,
 };
 
 

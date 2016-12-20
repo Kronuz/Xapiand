@@ -149,10 +149,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 		}
 
 		if (mode & HTTP_CONTENT_ENCODING_RESPONSE) {
-			if (!accept_encoding_set.empty()) {
-				auto ct_encoding = std::get<2>(*accept_encoding_set.begin());
-				headers += "Content-Encoding: " + ct_encoding + eol;
-			}
+			headers += "Content-Encoding: " + ct_encoding + eol;
 		}
 
 		if (mode & HTTP_CHUNKED_RESPONSE) {
@@ -1319,6 +1316,18 @@ HttpClient::search_view(enum http_method method)
 		write_http_response(error_code, err_response);
 
 	} else {
+		auto type_encoding = resolve_encoding();
+		if (type_encoding == Encoding::error) {
+			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, std::string("Response encoding gzip, deflate or identity not provided in the Accept-Encoding header") }
+			};
+			write_http_response(error_code, err_response);
+			L_SEARCH(this, "ABORTED SEARCH");
+			return;
+		}
+
 		bool indent_chunk = false;
 		std::string first_chunk;
 		std::string last_chunk;
@@ -1379,17 +1388,6 @@ HttpClient::search_view(enum http_method method)
 			}
 		}
 
-		auto type_encoding = resolve_encoding();
-		if (type_encoding == Encoding::none) {
-			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, std::string("Response encoding gzip, deflate or identity not provided in the Accept-Encoding header") }
-			};
-			write_http_response(error_code, err_response);
-			L_SEARCH(this, "ABORTED SEARCH");
-			return;
-		}
 		std::string buffer;
 		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
 			auto document = db_handler.get_document(*m);
@@ -1429,9 +1427,15 @@ HttpClient::search_view(enum http_method method)
 						blob = document.get_blob();
 					}
 					auto blob_data = unserialise_string_at(2, blob);
-					auto encoded = encoding_http_response(type_encoding, blob_data, false, true, true);
-					if (!encoded.empty()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, ct_type.first + "/" + ct_type.second, std::get<2>(*accept_encoding_set.begin())));
+					if (type_encoding != Encoding::none) {
+						auto encoded = encoding_http_response(type_encoding, blob_data, false, true, true);
+						if (!encoded.empty() && encoded.size() < blob_data.size()) {
+							write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, ct_type.first + "/" + ct_type.second, std::get<2>(*accept_encoding_set.begin())));
+						} else {
+							write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
+						}
+					} else {
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
 					}
 					return;
 				}
@@ -1451,55 +1455,88 @@ HttpClient::search_view(enum http_method method)
 			auto result = serialize_response(obj_data, ct_type, pretty);
 			if (chunked) {
 				if (rc == 0) {
-					auto flags = HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE;
-					write(http_response(HTTP_STATUS_OK, flags , parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, std::get<2>(*accept_encoding_set.begin())));
-
-					auto encoded = encoding_http_response(type_encoding, first_chunk, true, true, false);
-					if (!encoded.empty()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+					if (type_encoding != Encoding::none) {
+						auto encoded = encoding_http_response(type_encoding, first_chunk, true, true, false);
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, std::get<2>(*accept_encoding_set.begin())));
+						if (!encoded.empty()) {
+							write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+						}
+					} else {
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
+						if (!first_chunk.empty()) {
+							write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, first_chunk));
+						}
 					}
 				}
 
 				if (!buffer.empty()) {
-					auto encoded = encoding_http_response(type_encoding, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + sep_chunk + eol_chunk, true, false, false);
-					if (!encoded.empty()) {
-						if (!write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded))) {
-							// TODO: log eror?
-							break;
+					auto indented_buffer = (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + sep_chunk + eol_chunk;
+					if (type_encoding != Encoding::none) {
+						auto encoded = encoding_http_response(type_encoding, indented_buffer, true, false, false);
+						if (!encoded.empty()) {
+							write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+						}
+					} else {
+						if (!indented_buffer.empty()) {
+							write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, indented_buffer));
 						}
 					}
 				}
 				buffer = result.first;
 			} else {
-				auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
-				if (!write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second))) {
-					// TODO: log eror?
-					break;
+				if (type_encoding != Encoding::none) {
+					auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
+					if (!encoded.empty() && encoded.size() < result.first.size()) {
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second, std::get<2>(*accept_encoding_set.begin())));
+					} else {
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
+					}
+				} else {
+					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
 				}
 			}
 		}
 
 		if (chunked) {
 			if (rc == 0) {
-				auto flags = HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE;
-				write(http_response(HTTP_STATUS_OK, flags, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
-				auto encoded = encoding_http_response(type_encoding, first_chunk, true, true, false);
-				if (!encoded.empty()) {
-					write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+				if (type_encoding != Encoding::none) {
+					auto encoded = encoding_http_response(type_encoding, first_chunk, true, true, false);
+					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, std::get<2>(*accept_encoding_set.begin())));
+					if (!encoded.empty()) {
+						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+					}
+				} else {
+					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
+					if (!first_chunk.empty()) {
+						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, first_chunk));
+					}
 				}
 			}
 
 			if (!buffer.empty()) {
-				auto encoded = encoding_http_response(type_encoding, (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + eol_chunk, true, false, false);
-				if (!encoded.empty()) {
-					write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+				auto indented_buffer = (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + sep_chunk + eol_chunk;
+				if (type_encoding != Encoding::none) {
+					auto encoded = encoding_http_response(type_encoding, indented_buffer, true, false, false);
+					if (!encoded.empty()) {
+						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+					}
+				} else {
+					if (!indented_buffer.empty()) {
+						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, indented_buffer));
+					}
 				}
 			}
 
 			if (!last_chunk.empty()) {
-				auto encoded = encoding_http_response(type_encoding, last_chunk, true, false, true);
-				if (!encoded.empty()) {
-					write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+				if (type_encoding != Encoding::none) {
+					auto encoded = encoding_http_response(type_encoding, last_chunk, true, false, true);
+					if (!encoded.empty()) {
+						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+					}
+				} else {
+					if (!last_chunk.empty()) {
+						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, last_chunk));
+					}
 				}
 			}
 
@@ -2103,6 +2140,17 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 		return;
 	}
 
+	auto type_encoding = resolve_encoding();
+	if (type_encoding == Encoding::error) {
+		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, std::string("Response encoding gzip, deflate or identity not provided in the Accept-Encoding header") }
+		};
+		write_http_response(error_code, err_response);
+		return;
+	}
+
 	auto ct_type = content_type_pair(content_type);
 	std::vector<type_t> ct_types;
 	if (ct_type == json_type || ct_type == msgpack_type || content_type.empty()) {
@@ -2111,11 +2159,19 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 		ct_types.push_back(ct_type);
 	}
 	const auto& accepted_type = get_acceptable_type(ct_types);
+
 	try {
 		auto result = serialize_response(response, accepted_type, pretty, (int)status >= 400);
-		auto encoded = encoding_http_response(resolve_encoding(), result.first, false, true, true);
-		auto flags = HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE;
-		write(http_response(status, flags, parser.http_major, parser.http_minor, 0, 0, encoded, result.second));
+		if (type_encoding != Encoding::none) {
+			auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
+			if (!encoded.empty() && encoded.size() < result.first.size()) {
+				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second, std::get<2>(*accept_encoding_set.begin())));
+			} else {
+				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
+			}
+		} else {
+			write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
+		}
 	} catch (const SerialisationError& exc) {
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack response_err = {
@@ -2123,8 +2179,16 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 			{ RESPONSE_MESSAGE, std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what()) }
 		};
 		auto response_str = response_err.to_string();
-		auto encoded = encoding_http_response(resolve_encoding(), response_str, false, true, true);
-		write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, response_str));
+		if (type_encoding != Encoding::none) {
+			auto encoded = encoding_http_response(type_encoding, response_str, false, true, true);
+			if (!encoded.empty() && encoded.size() < response_str.size()) {
+				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, accepted_type.first + "/" + accepted_type.second, std::get<2>(*accept_encoding_set.begin())));
+			} else {
+				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, response_str, accepted_type.first + "/" + accepted_type.second));
+			}
+		} else {
+			write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, response_str, accepted_type.first + "/" + accepted_type.second));
+		}
 		return;
 	}
 }
@@ -2136,7 +2200,7 @@ HttpClient::resolve_encoding()
 	L_CALL(this, "HttpClient::resolve_encoding()");
 
 	if (accept_encoding_set.empty()) {
-		return Encoding::identity;
+		return Encoding::none;
 	} else {
 		for (const auto& encoding : accept_encoding_set) {
 			switch(xxh64::hash(std::get<2>(encoding))) {
@@ -2152,7 +2216,7 @@ HttpClient::resolve_encoding()
 					continue;
 			}
 		}
-		return Encoding::none;
+		return Encoding::error;
 	}
 }
 
