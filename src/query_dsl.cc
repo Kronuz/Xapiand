@@ -296,7 +296,7 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, const std::string& 
 		try {
 			auto nivel = stox(std::stoull, field_accuracy.substr(4));
 			auto value = Cast::string(obj);  // FIXME: use Cast::geo() instead?
-			EWKT_Parser ewkt(value, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
+			EWKT_Parser ewkt(value, default_spc.flags.partials, default_spc.error);
 			auto ranges = ewkt.getRanges();
 			return GenerateTerms::geo(ranges, { nivel }, { field_spc.prefix });
 		} catch (const InvalidArgument&) {

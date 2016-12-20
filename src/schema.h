@@ -45,16 +45,6 @@
 
 #define NAMESPACE_LIMIT_DEPTH  10    // 2^(n - 2) => 2^8 => 256 namespace terms.
 
-#define DEFAULT_STOP_STRATEGY  StopStrategy::STOP_ALL
-#define DEFAULT_STEM_STRATEGY  StemStrategy::STEM_SOME
-#define DEFAULT_LANGUAGE       "en"
-#define DEFAULT_GEO_PARTIALS   true
-#define DEFAULT_GEO_ERROR      HTM_MIN_ERROR
-#define DEFAULT_POSITIONS      true
-#define DEFAULT_SPELLING       false
-#define DEFAULT_BOOL_TERM      false
-#define DEFAULT_INDEX          TypeIndex::ALL
-
 
 enum class TypeIndex : uint8_t {
 	NONE                      = 0,                              // 0000  Bits for  "none"
@@ -352,7 +342,7 @@ struct specification_t : required_spc_t {
 };
 
 
-extern const specification_t default_spc;
+extern specification_t default_spc;
 
 
 using TaskVector = std::vector<std::future<void>>;

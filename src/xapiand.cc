@@ -55,6 +55,7 @@
 #include "io_utils.h"                // for close, open, write
 #include "log.h"                     // for Log, L_INFO, L_CRIT, L_NOTICE
 #include "manager.h"                 // for opts_t, XapiandManager, XapiandM...
+#include "schema.h"                  // for default_spc
 #include "tclap/CmdLine.h"           // for CmdLine, ArgException, Arg, CmdL...
 #include "utils.h"                   // for format_string, center_string
 #include "worker.h"                  // for Worker
@@ -868,6 +869,8 @@ int main(int argc, char **argv) {
 
 	if (opts.optimal) {
 		L_INFO(nullptr, "Using optimal mode.");
+		default_spc.index = TypeIndex::FIELD_ALL;
+		default_spc.flags.text_detection = false;
 	}
 
 	// Flush threshold increased

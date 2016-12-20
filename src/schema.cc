@@ -50,6 +50,17 @@
 #endif
 
 
+#define DEFAULT_STOP_STRATEGY  StopStrategy::STOP_ALL
+#define DEFAULT_STEM_STRATEGY  StemStrategy::STEM_SOME
+#define DEFAULT_LANGUAGE       "en"
+#define DEFAULT_GEO_PARTIALS   true
+#define DEFAULT_GEO_ERROR      HTM_MIN_ERROR
+#define DEFAULT_POSITIONS      true
+#define DEFAULT_SPELLING       false
+#define DEFAULT_BOOL_TERM      false
+#define DEFAULT_INDEX          TypeIndex::ALL
+
+
 /*
  * 1. Try reading schema from the metadata.
  * 2. Feed specification_t with the read schema using update_*;
@@ -338,7 +349,7 @@ static const std::string str_set_type = []() {
 }();
 
 
-const specification_t default_spc;
+specification_t default_spc;
 
 
 const std::unordered_map<std::string, Schema::dispatch_set_default_spc> Schema::map_dispatch_set_default_spc({

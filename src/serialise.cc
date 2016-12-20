@@ -502,7 +502,7 @@ Serialise::get_type(const std::string& field_value, bool bool_term)
 
 	// Try like GEO
 	try {
-		return std::make_pair(FieldType::GEO, ewkt(field_value, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+		return std::make_pair(FieldType::GEO, ewkt(field_value, default_spc.flags.partials, default_spc.error));
 	} catch (const EWKTError&) { }
 
 	// Like UUID
@@ -556,7 +556,7 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 
 			// Try like GEO
 			try {
-				return std::make_pair(FieldType::GEO, ewkt(str_obj, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+				return std::make_pair(FieldType::GEO, ewkt(str_obj, default_spc.flags.partials, default_spc.error));
 			} catch (const EWKTError&) { }
 
 			if (bool_term) {
@@ -593,7 +593,7 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 					case Cast::Hash::UUID:
 						return std::make_pair(FieldType::UUID, uuid(Cast::string(field_value.at(str_key))));
 					case Cast::Hash::EWKT:
-						return std::make_pair(FieldType::GEO, ewkt(Cast::string(field_value.at(str_key)), DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+						return std::make_pair(FieldType::GEO, ewkt(Cast::string(field_value.at(str_key)), default_spc.flags.partials, default_spc.error));
 					case Cast::Hash::DATE:
 						return std::make_pair(FieldType::DATE, date(Cast::date(field_value.at(str_key))));
 					default:
@@ -658,7 +658,7 @@ Serialise::get_range_type(const std::string& start, const std::string& end, bool
 			}
 		case FieldType::GEO:
 			try {
-				return std::make_tuple(FieldType::GEO, res.second, ewkt(end, DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+				return std::make_tuple(FieldType::GEO, res.second, ewkt(end, default_spc.flags.partials, default_spc.error));
 			} catch (const SerialisationError&) {
 				return std::make_tuple(FieldType::TERM, start, end);
 			}
