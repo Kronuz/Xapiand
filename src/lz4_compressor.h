@@ -111,7 +111,7 @@ public:
 
 	// This class is not CopyConstructible or CopyAssignable.
 	LZ4BlockStreaming(const LZ4BlockStreaming&) = delete;
-	LZ4BlockStreaming operator=(const LZ4BlockStreaming&) = delete;
+	LZ4BlockStreaming& operator=(const LZ4BlockStreaming&) = delete;
 
 	~LZ4BlockStreaming() {
 		free(cmpBuf);
