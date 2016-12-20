@@ -122,6 +122,7 @@ DB_Test::get_body(const std::string& body, const std::string& ct_type)
 			msgpack = MsgPack(rdoc);
 			break;
 		case xxh64::hash(MSGPACK_CONTENT_TYPE):
+		case xxh64::hash(X_MSGPACK_CONTENT_TYPE):
 			msgpack = MsgPack::unserialise(body);
 			break;
 		default:

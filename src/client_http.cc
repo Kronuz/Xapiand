@@ -82,13 +82,14 @@ type_t content_type_pair(const std::string& ct_type) {
 }
 
 
-static const auto no_type      = std::make_pair("", "");
-static const auto any_type     = content_type_pair(ANY_CONTENT_TYPE);
-static const auto json_type    = content_type_pair(JSON_CONTENT_TYPE);
-static const auto msgpack_type = content_type_pair(MSGPACK_CONTENT_TYPE);
-static const auto html_type    = content_type_pair(HTML_CONTENT_TYPE);
-static const auto text_type    = content_type_pair(TEXT_CONTENT_TYPE);
-static const auto msgpack_serializers = std::vector<type_t>({json_type, msgpack_type, html_type, text_type});
+static const auto no_type        = std::make_pair("", "");
+static const auto any_type       = content_type_pair(ANY_CONTENT_TYPE);
+static const auto html_type      = content_type_pair(HTML_CONTENT_TYPE);
+static const auto text_type      = content_type_pair(TEXT_CONTENT_TYPE);
+static const auto json_type      = content_type_pair(JSON_CONTENT_TYPE);
+static const auto msgpack_type   = content_type_pair(MSGPACK_CONTENT_TYPE);
+static const auto x_msgpack_type = content_type_pair(X_MSGPACK_CONTENT_TYPE);
+static const auto msgpack_serializers = std::vector<type_t>({json_type, msgpack_type, x_msgpack_type, html_type, text_type});
 
 
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;\\s*q=(\\d+(?:\\.\\d+)?))?");
@@ -831,6 +832,7 @@ HttpClient::get_body()
 			msgpack = MsgPack(rdoc);
 			break;
 		case xxh64::hash(MSGPACK_CONTENT_TYPE):
+		case xxh64::hash(X_MSGPACK_CONTENT_TYPE):
 			msgpack = MsgPack::unserialise(body);
 			break;
 		default:
@@ -1369,7 +1371,7 @@ HttpClient::search_view(enum http_method method)
 				enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 				MsgPack err_response = {
 					{ RESPONSE_STATUS, (int)error_code },
-					{ RESPONSE_MESSAGE, std::string("Response type application/x-msgpack or application/json not provided in the Accept header") }
+					{ RESPONSE_MESSAGE, std::string("Response type application/msgpack or application/json not provided in the Accept header") }
 				};
 				write_http_response(error_code, err_response);
 				L_SEARCH(this, "ABORTED SEARCH");
@@ -1977,17 +1979,19 @@ HttpClient::set_idle()
 type_t
 HttpClient::resolve_ct_type(std::string ct_type_str)
 {
-	if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE) {
+	if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE || ct_type_str == X_MSGPACK_CONTENT_TYPE) {
 		if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
 			ct_type_str = JSON_CONTENT_TYPE;
 		} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
 			ct_type_str = MSGPACK_CONTENT_TYPE;
+		} else if (is_acceptable_type(get_acceptable_type(x_msgpack_type), x_msgpack_type)) {
+			ct_type_str = X_MSGPACK_CONTENT_TYPE;
 		}
 	}
 	auto ct_type = content_type_pair(ct_type_str);
 
 	std::vector<type_t> ct_types;
-	if (ct_type == json_type || ct_type == msgpack_type) {
+	if (ct_type == json_type || ct_type == msgpack_type || ct_type == x_msgpack_type) {
 		ct_types = msgpack_serializers;
 	} else {
 		ct_types.push_back(ct_type);

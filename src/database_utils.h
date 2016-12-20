@@ -139,12 +139,13 @@
 #define DOCUMENT_DB_SLAVE                  "S"
 
 
-#define ANY_CONTENT_TYPE             "*/*"
-#define JSON_CONTENT_TYPE            "application/json"
-#define FORM_URLENCODED_CONTENT_TYPE "application/x-www-form-urlencoded"
-#define MSGPACK_CONTENT_TYPE         "application/x-msgpack"
-#define HTML_CONTENT_TYPE            "text/html"
-#define TEXT_CONTENT_TYPE            "text/plain"
+#define ANY_CONTENT_TYPE                "*/*"
+#define HTML_CONTENT_TYPE               "text/html"
+#define TEXT_CONTENT_TYPE               "text/plain"
+#define JSON_CONTENT_TYPE               "application/json"
+#define MSGPACK_CONTENT_TYPE            "application/msgpack"
+#define X_MSGPACK_CONTENT_TYPE          "application/x-msgpack"
+#define FORM_URLENCODED_CONTENT_TYPE    "application/www-form-urlencoded"
 
 
 #define DATABASE_DATA_HEADER_MAGIC        0x11
