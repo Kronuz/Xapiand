@@ -2109,6 +2109,8 @@ HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, bool p
 		return std::make_pair(obj.to_string(pretty), json_type.first + "/" + json_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, msgpack_type)) {
 		return std::make_pair(obj.serialise(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
+	} else if (is_acceptable_type(ct_type, x_msgpack_type)) {
+		return std::make_pair(obj.serialise(), x_msgpack_type.first + "/" + x_msgpack_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, html_type)) {
 		std::function<std::string(const msgpack::object&)> html_serialize = serialize_error ? msgpack_to_html_error : msgpack_to_html;
 		return std::make_pair(obj.external(html_serialize), html_type.first + "/" + html_type.second + "; charset=utf-8");
