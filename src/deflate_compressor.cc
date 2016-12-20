@@ -23,11 +23,10 @@
 #include "deflate_compressor.h"
 
 
-std::string zerr(int ret)
-{
+std::string zerr(int ret) {
 	switch (ret) {
 		case Z_ERRNO:
-			return "There is an error reading or writing the files";
+			return "there is an error reading or writing the files";
 		case Z_STREAM_ERROR:
 			return "invalid compression level";
 		case Z_DATA_ERROR:
@@ -207,7 +206,7 @@ DeflateDecompressData::next()
 		strm.avail_out = DEFLATE_BLOCK_SIZE;
 		strm.next_out = reinterpret_cast<Bytef*>(buffer);
 		stream = inflate(&strm, Z_NO_FLUSH);
-		if (stream < 0) {
+		if (stream < 0 && stream != Z_BUF_ERROR) {
 			THROW(DeflateException, zerr(stream));
 		}
 		auto bytes_decompressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
@@ -373,7 +372,7 @@ DeflateDecompressFile::next()
 		strm.avail_out = DEFLATE_BLOCK_SIZE;
 		strm.next_out = reinterpret_cast<Bytef*>(buffer);
 		stream = inflate(&strm, Z_NO_FLUSH);
-		if (stream < 0) {
+		if (stream < 0 && stream != Z_BUF_ERROR) {
 			THROW(DeflateException, zerr(stream));
 		}
 		auto bytes_decompressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
