@@ -58,8 +58,8 @@ protected:
 	int stream;
 	DeflateState state;
 	const int cmpBuf_size;
-	char* cmpBuf;
-	char* buffer;
+	char* const cmpBuf;
+	char* const buffer;
 
 	inline std::string _init() {
 		return static_cast<Impl*>(this)->init();
