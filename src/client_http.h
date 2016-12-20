@@ -240,7 +240,7 @@ class HttpClient : public BaseClient {
 	const type_t* is_acceptable_type(const type_t& ct_type_pattern, const std::vector<type_t>& ct_types);
 	void write_http_response(enum http_status status, const MsgPack& response=MsgPack());
 	Encoding resolve_encoding();
-	std::string encoding_http_response(Encoding e, const std::string& response, bool chunk=false, bool start=false, bool end=false);
+	std::string encoding_http_response(Encoding e, const std::string& response, bool chunk, bool start, bool end);
 
 	friend Worker;
 
