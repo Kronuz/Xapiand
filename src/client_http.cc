@@ -2135,19 +2135,19 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 {
 	L_CALL(this, "HttpClient::write_http_response()");
 
-	if (response.is_undefined()) {
-		write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor));
-		return;
-	}
-
 	auto type_encoding = resolve_encoding();
-	if (type_encoding == Encoding::unknown) {
+	if (type_encoding == Encoding::unknown && status != HTTP_STATUS_NOT_ACCEPTABLE) {
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack err_response = {
 			{ RESPONSE_STATUS, (int)error_code },
 			{ RESPONSE_MESSAGE, std::string("Response encoding gzip, deflate or identity not provided in the Accept-Encoding header") }
 		};
 		write_http_response(error_code, err_response);
+		return;
+	}
+
+	if (response.is_undefined()) {
+		write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor));
 		return;
 	}
 
