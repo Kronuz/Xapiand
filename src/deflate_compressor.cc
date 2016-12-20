@@ -72,7 +72,7 @@ DeflateCompressData::init()
 	strm.next_in = Z_NULL;
 
 	stream = deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 | (gzip ? 16 : 0), 8, Z_DEFAULT_STRATEGY);
-	if (stream != Z_OK) {
+	if (stream < 0) {
 		THROW(DeflateException, zerr(stream));
 	}
 	state = DeflateState::INIT;
@@ -97,7 +97,7 @@ DeflateCompressData::next(const char* input, size_t input_size, int flush)
 		strm.avail_out = input_size;
 		strm.next_out = reinterpret_cast<Bytef*>(out.data());
 		stream = deflate(&strm, flush);    // no bad return value
-		if (stream != Z_OK) {
+		if (stream < 0) {
 			THROW(DeflateException, zerr(stream));
 		}
 		int compress_size = input_size - strm.avail_out;
@@ -174,7 +174,7 @@ DeflateDecompressData::init()
 	strm.next_in = Z_NULL;
 
 	stream = inflateInit2(&strm, 15 | (gzip ? 16 : 0));
-	if (stream != Z_OK) {
+	if (stream < 0) {
 		THROW(DeflateException, zerr(stream));
 	}
 	state = DeflateState::INIT;
@@ -207,7 +207,7 @@ DeflateDecompressData::next()
 		strm.avail_out = DEFLATE_BLOCK_SIZE;
 		strm.next_out = reinterpret_cast<Bytef*>(buffer);
 		stream = inflate(&strm, Z_NO_FLUSH);
-		if (stream != Z_OK && stream != Z_STREAM_END && stream != Z_BUF_ERROR) {
+		if (stream < 0) {
 			THROW(DeflateException, zerr(stream));
 		}
 		auto bytes_decompressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
@@ -259,7 +259,7 @@ DeflateCompressFile::init()
 	strm.opaque = Z_NULL;
 
 	stream = deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 | (gzip ? 16 : 0), 8, Z_DEFAULT_STRATEGY);
-	if (stream != Z_OK) {
+	if (stream < 0) {
 		THROW(DeflateException, zerr(stream));
 	}
 	state = DeflateState::INIT;
@@ -344,7 +344,7 @@ DeflateDecompressFile::init()
 	strm.next_in = Z_NULL;
 
 	stream = inflateInit2(&strm, 15 | (gzip ? 16 : 0));
-	if (stream != Z_OK) {
+	if (stream < 0) {
 		THROW(DeflateException, zerr(stream));
 	}
 	state = DeflateState::INIT;
@@ -373,7 +373,7 @@ DeflateDecompressFile::next()
 		strm.avail_out = DEFLATE_BLOCK_SIZE;
 		strm.next_out = reinterpret_cast<Bytef*>(buffer);
 		stream = inflate(&strm, Z_NO_FLUSH);
-		if (stream != Z_OK && stream != Z_STREAM_END && stream != Z_BUF_ERROR) {
+		if (stream < 0) {
 			THROW(DeflateException, zerr(stream));
 		}
 		auto bytes_decompressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
