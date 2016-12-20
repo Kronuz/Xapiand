@@ -39,6 +39,7 @@ public:
 	DeflateException(Args&&... args) : Error(std::forward<Args>(args)...) { }
 };
 
+
 class DeflateIOError : public DeflateException {
 public:
 	template<typename... Args>
@@ -46,7 +47,7 @@ public:
 };
 
 
-template<typename Impl>
+template <typename Impl>
 class DeflateBlockStreaming {
 protected:
 	enum class DeflateState : uint8_t {
@@ -129,11 +130,11 @@ public:
 			return *this;
 		}
 
-		inline std::string operator*() const {
+		inline std::string operator*() const noexcept {
 			return current_str;
 		}
 
-		inline const std::string* operator->() const {
+		inline const std::string* operator->() const noexcept {
 			return &current_str;
 		}
 
@@ -141,15 +142,15 @@ public:
 			return current_str.size();
 		}
 
-		bool operator==(const iterator& other) const {
+		bool operator==(const iterator& other) const noexcept {
 			return current_str == other.current_str;
 		}
 
-		bool operator!=(const iterator& other) const {
+		bool operator!=(const iterator& other) const noexcept {
 			return !operator==(other);
 		}
 
-		inline explicit operator bool() const {
+		inline explicit operator bool() const noexcept {
 			return obj->state != DeflateState::END;
 		}
 
@@ -200,17 +201,17 @@ public:
 	}
 };
 
+
 /*
  * Compress Data.
  */
-class DeflateCompressData : public DeflateData, public DeflateBlockStreaming<DeflateCompressData>
-{
+class DeflateCompressData : public DeflateData, public DeflateBlockStreaming<DeflateCompressData> {
 	std::string next();
 
 	friend class DeflateBlockStreaming<DeflateCompressData>;
 
 public:
-	DeflateCompressData(const char* data_=nullptr, size_t data_size_=0, bool gzip=false);
+	DeflateCompressData(const char* data_=nullptr, size_t data_size_=0, bool gzip_=false);
 	~DeflateCompressData();
 
 	std::string init();
@@ -230,15 +231,14 @@ public:
 /*
  * Decompress Data.
  */
-class DeflateDecompressData : public DeflateData, public DeflateBlockStreaming<DeflateDecompressData>
-{
+class DeflateDecompressData : public DeflateData, public DeflateBlockStreaming<DeflateDecompressData> {
 	std::string init();
 	std::string next();
 
 	friend class DeflateBlockStreaming<DeflateDecompressData>;
 
 public:
-	DeflateDecompressData(const char* data_=nullptr, size_t data_size_=0, bool gzip=false);
+	DeflateDecompressData(const char* data_=nullptr, size_t data_size_=0, bool gzip_=false);
 	~DeflateDecompressData();
 
 	inline void reset(const char* data_, size_t data_size_, bool gzip_=false) {
@@ -283,9 +283,9 @@ protected:
 public:
 	inline void open(const std::string& filename) {
 		fd = io::open(filename.c_str(), O_RDONLY, 0644);
-		 if unlikely(fd < 0) {
+		if unlikely(fd < 0) {
 			THROW(DeflateIOError, "Cannot open file: %s", filename.c_str());
-		 }
+		}
 		fd_offset = 0;
 		fd_nbytes = -1;
 		fd_internal = true;
@@ -307,16 +307,15 @@ public:
 /*
  * Compress a file.
  */
-class DeflateCompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateCompressFile>
-{
+class DeflateCompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateCompressFile> {
 	std::string init();
 	std::string next();
 
 	friend class DeflateBlockStreaming<DeflateCompressFile>;
 
 public:
-	DeflateCompressFile(const std::string& filename, bool gzip=false);
-	DeflateCompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, bool gzip=false);
+	DeflateCompressFile(const std::string& filename, bool gzip_=false);
+	DeflateCompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, bool gzip_=false);
 	~DeflateCompressFile();
 
 	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {
@@ -336,8 +335,7 @@ public:
 /*
  * Decompress a file.
  */
-class DeflateDecompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateDecompressFile>
-{
+class DeflateDecompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateDecompressFile> {
 	ssize_t data_size;
 	size_t data_offset;
 
@@ -347,8 +345,8 @@ class DeflateDecompressFile : public DeflateFile, public DeflateBlockStreaming<D
 	friend class DeflateBlockStreaming<DeflateDecompressFile>;
 
 public:
-	DeflateDecompressFile(const std::string& filename, bool gzip=false);
-	DeflateDecompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, bool gzip=false);
+	DeflateDecompressFile(const std::string& filename, bool gzip_=false);
+	DeflateDecompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, bool gzip_=false);
 	~DeflateDecompressFile();
 
 	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {

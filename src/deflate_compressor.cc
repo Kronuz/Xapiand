@@ -35,19 +35,21 @@ std::string zerr(int ret) {
 			return "memory could not be allocated for processing (out of memory)";
 		case Z_VERSION_ERROR:
 			return "zlib version mismatch!";
-		}
-	return std::string();
+		default:
+			return std::string();
+	}
 }
 
 
 int DeflateCompressData::FINISH_COMPRESS = Z_FINISH;
 
+
 /*
  * Constructor compress with data
  */
-DeflateCompressData::DeflateCompressData(const char* data_, size_t data_size_, bool gzip)
+DeflateCompressData::DeflateCompressData(const char* data_, size_t data_size_, bool gzip_)
 	: DeflateData(data_, data_size_),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip_) { }
 
 
 DeflateCompressData::~DeflateCompressData()
@@ -121,7 +123,7 @@ DeflateCompressData::next()
 	}
 
 	auto remain_size = data_size - data_offset;
-	if ( remain_size > DEFLATE_BLOCK_SIZE) {
+	if (remain_size > DEFLATE_BLOCK_SIZE) {
 		strm.avail_in = DEFLATE_BLOCK_SIZE;
 		flush = Z_NO_FLUSH;
 	} else {
@@ -146,9 +148,9 @@ DeflateCompressData::next()
 /*
  * Constructor decompress with data
  */
-DeflateDecompressData::DeflateDecompressData(const char* data_, size_t data_size_, bool gzip)
+DeflateDecompressData::DeflateDecompressData(const char* data_, size_t data_size_, bool gzip_)
 	: DeflateData(data_, data_size_),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip_) { }
 
 
 DeflateDecompressData::~DeflateDecompressData()
@@ -195,7 +197,7 @@ DeflateDecompressData::next()
 	}
 
 	auto remain_size = data_size - data_offset;
-	if ( remain_size > DEFLATE_BLOCK_SIZE) {
+	if (remain_size > DEFLATE_BLOCK_SIZE) {
 		strm.avail_in = DEFLATE_BLOCK_SIZE;
 	} else {
 		strm.avail_in = remain_size;
@@ -221,17 +223,17 @@ DeflateDecompressData::next()
 /*
  * Construct for file name
  */
-DeflateCompressFile::DeflateCompressFile(const std::string& filename, bool gzip)
+DeflateCompressFile::DeflateCompressFile(const std::string& filename, bool gzip_)
 	: DeflateFile(filename),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip_) { }
 
 
 /*
  * Construct for file descriptor
  */
-DeflateCompressFile::DeflateCompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_, bool gzip)
+DeflateCompressFile::DeflateCompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_, bool gzip_)
 	: DeflateFile(fd_, fd_offset_, fd_nbytes_),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip_) { }
 
 
 DeflateCompressFile::~DeflateCompressFile()
@@ -307,14 +309,14 @@ DeflateCompressFile::next()
 }
 
 
-DeflateDecompressFile::DeflateDecompressFile(const std::string& filename, bool gzip)
+DeflateDecompressFile::DeflateDecompressFile(const std::string& filename, bool gzip_)
 	: DeflateFile(filename),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip_) { }
 
 
-DeflateDecompressFile::DeflateDecompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_, bool gzip)
+DeflateDecompressFile::DeflateDecompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_, bool gzip_)
 	: DeflateFile(fd_, fd_offset_, fd_nbytes_),
-	  DeflateBlockStreaming(gzip) { }
+	  DeflateBlockStreaming(gzip_) { }
 
 
 DeflateDecompressFile::~DeflateDecompressFile()
