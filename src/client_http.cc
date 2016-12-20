@@ -1429,10 +1429,10 @@ HttpClient::search_view(enum http_method method)
 					auto blob_data = unserialise_string_at(2, blob);
 					if (type_encoding != Encoding::none) {
 						auto encoded = encoding_http_response(type_encoding, blob_data, false, true, true);
-						if (!encoded.empty() && encoded.size() < blob_data.size()) {
+						if (!encoded.empty() && encoded.size() <= blob_data.size()) {
 							write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
 						} else {
-							write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
+							write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second, readable_encoding(Encoding::identity)));
 						}
 					} else {
 						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
@@ -1486,10 +1486,10 @@ HttpClient::search_view(enum http_method method)
 			} else {
 				if (type_encoding != Encoding::none) {
 					auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
-					if (!encoded.empty() && encoded.size() < result.first.size()) {
+					if (!encoded.empty() && encoded.size() <= result.first.size()) {
 						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
 					} else {
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
 					}
 				} else {
 					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
@@ -2164,10 +2164,10 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 		auto result = serialize_response(response, accepted_type, pretty, (int)status >= 400);
 		if (type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
-			if (!encoded.empty() && encoded.size() < result.first.size()) {
+			if (!encoded.empty() && encoded.size() <= result.first.size()) {
 				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
 			} else {
-				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
+				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
 			}
 		} else {
 			write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
@@ -2181,10 +2181,10 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 		auto response_str = response_err.to_string();
 		if (type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(type_encoding, response_str, false, true, true);
-			if (!encoded.empty() && encoded.size() < response_str.size()) {
+			if (!encoded.empty() && encoded.size() <= response_str.size()) {
 				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, accepted_type.first + "/" + accepted_type.second, readable_encoding(type_encoding)));
 			} else {
-				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, response_str, accepted_type.first + "/" + accepted_type.second));
+				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, response_str, accepted_type.first + "/" + accepted_type.second, readable_encoding(Encoding::identity)));
 			}
 		} else {
 			write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, response_str, accepted_type.first + "/" + accepted_type.second));
