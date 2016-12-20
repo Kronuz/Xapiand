@@ -121,7 +121,7 @@ class Xapiand(object):
             default_accept = 'application/json' if msgpack is None else 'application/x-msgpack'
         self.default_accept = default_accept
         if default_accept_encoding is None:
-            default_accept_encoding = 'gzip,deflate,identity'
+            default_accept_encoding = 'deflate, gzip, identity'
         self.default_accept_encoding = default_accept_encoding
 
     def _build_url(self, action_request, index, ip, port, nodename, id, body):
