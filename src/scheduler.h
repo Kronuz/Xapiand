@@ -118,7 +118,7 @@ class Scheduler {
 
 public:
 	Scheduler(const std::string& name_);
-	Scheduler(const std::string& name_, const std::string format, size_t num_threads);
+	Scheduler(const std::string& name_, const std::string& format, size_t num_threads);
 	~Scheduler();
 
 	size_t running_size();

@@ -123,7 +123,7 @@ Scheduler::Scheduler(const std::string& name_)
 	  inner_thread(&Scheduler::run, this) { }
 
 
-Scheduler::Scheduler(const std::string& name_, const std::string format, size_t num_threads)
+Scheduler::Scheduler(const std::string& name_, const std::string& format, size_t num_threads)
 	: thread_pool(std::make_unique<ThreadPool<>>(format, num_threads)),
 	  atom_next_wakeup_time(0),
 	  name(name_),
