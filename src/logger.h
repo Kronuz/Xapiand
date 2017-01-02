@@ -57,7 +57,7 @@ class StreamLogger : public Logger {
 
 public:
 	StreamLogger(const char* filename)
-		: ofs(std::ofstream(filename, std::ofstream::out)) { }
+		: ofs(filename, std::ofstream::out) { }
 
 	void log(int priority, const std::string& str, bool with_priority, bool with_endl) override;
 };
