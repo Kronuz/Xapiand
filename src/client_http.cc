@@ -1419,7 +1419,7 @@ HttpClient::search_view(enum http_method method)
 					return;
 				}
 
-				if (is_acceptable_type(msgpack_type, ct_type) || is_acceptable_type(json_type, ct_type)) {
+				if (is_acceptable_type(msgpack_type, ct_type) || (is_acceptable_type(x_msgpack_type, ct_type)) || is_acceptable_type(json_type, ct_type)) {
 					obj_data = document.get_obj();
 				} else {
 					// Returns blob_data in case that type is unkown
