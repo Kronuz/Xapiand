@@ -93,6 +93,8 @@ struct StashContext {
 				return "peep";
 			case Operation::clean:
 				return "clean";
+			default:
+				return "Operation::UNKNOWN";
 		}
 	}
 
@@ -104,6 +106,8 @@ struct StashContext {
 				return DARK_GREY;
 			case Operation::clean:
 				return MAGENTA;
+			default:
+				return NO_COL;
 		}
 	}
 };
