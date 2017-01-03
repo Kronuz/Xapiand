@@ -353,11 +353,13 @@ using dispatch_index = void (*)(Xapian::Document&, std::string&&, const specific
 
 class Schema {
 	using dispatch_set_default_spc   = void (Schema::*)(MsgPack&);
+	using dispatch_write_reserved    = void (Schema::*)(MsgPack&, const std::string&, const MsgPack&);
 	using dispatch_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
 	using dispatch_update_reserved   = void (Schema::*)(const MsgPack&);
 	using dispatch_readable          = bool (*)(MsgPack&, MsgPack&);
 
 	static const std::unordered_map<std::string, dispatch_set_default_spc> map_dispatch_set_default_spc;
+	static const std::unordered_map<std::string, dispatch_write_reserved> map_dispatch_write_properties;
 	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document;
 	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_properties;
 	static const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
@@ -544,6 +546,30 @@ class Schema {
 
 
 	/*
+	 * Functions for reserved words that are in document and need to be written in schema properties.
+	 */
+
+	void write_weight(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_weight);
+	void write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position);
+	void write_spelling(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_spelling);
+	void write_positions(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_positions);
+	void write_prefix(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_prefix);
+	void write_index(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index);
+	void write_store(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_store);
+	void write_recursive(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recursive);
+	void write_dynamic(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic);
+	void write_strict(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_strict);
+	void write_d_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_d_detection);
+	void write_n_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_n_detection);
+	void write_g_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_g_detection);
+	void write_b_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_b_detection);
+	void write_s_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_s_detection);
+	void write_t_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_t_detection);
+	void write_u_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_u_detection);
+	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
+
+
+	/*
 	 * Functions for reserved words that are in the document.
 	 */
 
@@ -558,24 +584,13 @@ class Schema {
 	void process_type(const std::string& prop_name, const MsgPack& doc_type);
 	void process_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy);
 	void process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_prefix);
-	void process_prefix(const std::string& prop_name, const MsgPack& doc_prefix);
 	void process_slot(const std::string& prop_name, const MsgPack& doc_slot);
 	void process_index(const std::string& prop_name, const MsgPack& doc_index);
 	void process_store(const std::string& prop_name, const MsgPack& doc_store);
 	void process_recursive(const std::string& prop_name, const MsgPack& doc_recursive);
-	void process_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic);
-	void process_strict(const std::string& prop_name, const MsgPack& doc_strict);
-	void process_d_detection(const std::string& prop_name, const MsgPack& doc_d_detection);
-	void process_n_detection(const std::string& prop_name, const MsgPack& doc_n_detection);
-	void process_g_detection(const std::string& prop_name, const MsgPack& doc_g_detection);
-	void process_b_detection(const std::string& prop_name, const MsgPack& doc_b_detection);
-	void process_s_detection(const std::string& prop_name, const MsgPack& doc_s_detection);
-	void process_t_detection(const std::string& prop_name, const MsgPack& doc_t_detection);
-	void process_u_detection(const std::string& prop_name, const MsgPack& doc_u_detection);
 	void process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term);
 	void process_partials(const std::string& prop_name, const MsgPack& doc_partials);
 	void process_error(const std::string& prop_name, const MsgPack& doc_error);
-	void process_namespace(const std::string& prop_name, const MsgPack& doc_namespace);
 	void process_value(const std::string& prop_name, const MsgPack& doc_value);
 	void process_name(const std::string& prop_name, const MsgPack& doc_name);
 	void process_script(const std::string& prop_name, const MsgPack& doc_script);
