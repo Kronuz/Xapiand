@@ -968,37 +968,37 @@ Schema::restart_specification()
 inline void
 Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings)
 {
-	static const auto it_e = map_dispatch_document.end();
+	static const auto ddit_e = map_dispatch_document.end();
 	if (specification.flags.field_with_type) {
 		for (const auto& item_key : object) {
 			auto str_key = item_key.as_string();
-			const auto it = map_dispatch_document.find(str_key);
-			if (it == it_e) {
+			const auto ddit = map_dispatch_document.find(str_key);
+			if (ddit == ddit_e) {
 				if (is_valid(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
 					offsprings = true;
 				}
 			} else {
-				(this->*it->second)(str_key, object.at(str_key));
+				(this->*ddit->second)(str_key, object.at(str_key));
 			}
 		}
 	} else {
-		static const auto it2_e = map_dispatch_without_type.end();
+		static const auto wtit_e = map_dispatch_without_type.end();
 		for (const auto& item_key : object) {
 			auto str_key = item_key.as_string();
-			const auto it = map_dispatch_document.find(str_key);
-			if (it == it_e) {
-				const auto it2 = map_dispatch_without_type.find(str_key);
-				if (it2 == it2_e) {
+			const auto ddit = map_dispatch_document.find(str_key);
+			if (ddit == ddit_e) {
+				const auto wtit = map_dispatch_without_type.find(str_key);
+				if (wtit == wtit_e) {
 					if (is_valid(str_key)) {
 						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
 						offsprings = true;
 					}
 				} else {
-					(this->*it2->second)(str_key, object.at(str_key));
+					(this->*wtit->second)(str_key, object.at(str_key));
 				}
 			} else {
-				(this->*it->second)(str_key, object.at(str_key));
+				(this->*ddit->second)(str_key, object.at(str_key));
 			}
 		}
 	}
@@ -2501,20 +2501,45 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 	if (obj_schema.is_map()) {
 		specification.name.assign(name);
 		const MsgPack* properties = &get_schema_subproperties(*parent_properties, obj_schema);
-		bool offsprings = false;
 		TaskVector tasks;
 		tasks.reserve(obj_schema.size());
-		for (const auto& item_key : obj_schema) {
-			const auto str_key = item_key.as_string();
-			try {
-				auto func = map_dispatch_document.at(str_key);
-				(this->*func)(str_key, obj_schema.at(str_key));
-			} catch (const std::out_of_range&) {
-				if (is_valid(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
-					offsprings = true;
+		bool offsprings = false;
+
+		static auto const ddit_e = map_dispatch_document.end();
+		if (specification.flags.field_with_type) {
+			for (const auto& item_key : obj_schema) {
+				auto str_key = item_key.as_string();
+				const auto ddit = map_dispatch_document.find(str_key);
+				if (ddit == ddit_e) {
+					if (is_valid(str_key)) {
+						tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
+						offsprings = true;
+					} else {
+						THROW(ClientError, "Field name: %s is not valid", repr(str_key).c_str());
+					}
 				} else {
-					THROW(ClientError, "Field name: %s is not valid", repr(str_key).c_str());
+					(this->*ddit->second)(str_key, obj_schema.at(str_key));
+				}
+			}
+		} else {
+			static const auto wtit_e = map_dispatch_without_type.end();
+			for (const auto& item_key : obj_schema) {
+				auto str_key = item_key.as_string();
+				const auto ddit = map_dispatch_document.find(str_key);
+				if (ddit == ddit_e) {
+					const auto wtit = map_dispatch_without_type.find(str_key);
+					if (wtit == wtit_e) {
+						if (is_valid(str_key)) {
+							tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
+							offsprings = true;
+						} else {
+							THROW(ClientError, "Field name: %s is not valid", repr(str_key).c_str());
+						}
+					} else {
+						(this->*wtit->second)(str_key, obj_schema.at(str_key));
+					}
+				} else {
+					(this->*ddit->second)(str_key, obj_schema.at(str_key));
 				}
 			}
 		}
@@ -2530,6 +2555,7 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 		if (offsprings && specification.flags.inside_namespace) {
 			THROW(ClientError, "An namespace object can not have children in Schema");
 		}
+
 		set_type_to_object(offsprings);
 
 		const auto spc_object = std::move(specification);
@@ -4047,27 +4073,28 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		}
 
 		static const auto dsit_e = map_dispatch_set_default_spc.end();
+		static const auto ddit_e = map_dispatch_document.end();
 		for (const auto& item_key : object) {
-			const auto str_key = item_key.as_string();
-			try {
-				auto func = map_dispatch_document.at(str_key);
-				(this->*func)(str_key, object.at(str_key));
-			} catch (const std::out_of_range&) {
+			auto str_key = item_key.as_string();
+			const auto ddit = map_dispatch_document.find(str_key);
+			if (ddit == ddit_e) {
 				if (is_valid(str_key) || map_dispatch_set_default_spc.find(str_key) != dsit_e) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
 				}
+			} else {
+				(this->*ddit->second)(str_key, object.at(str_key));
 			}
 		}
 
 		restart_specification();
-		const specification_t spc_start = std::move(specification);
+		const auto spc_start = std::move(specification);
 		for (auto& task : tasks) {
 			specification = spc_start;
 			task.get();
 		}
 
 		for (const auto& elem : map_values) {
-			auto val_ser = elem.second.serialise();
+			const auto val_ser = elem.second.serialise();
 			doc.add_value(elem.first, val_ser);
 			L_INDEX(this, "Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
 		}
@@ -4091,22 +4118,23 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		auto prop_ptr = replace ? &clear() : &schema->at(RESERVED_SCHEMA);
 		specification.flags.field_found = false;
 		static const auto dsit_e = map_dispatch_set_default_spc.end();
+		static const auto ddit_e = map_dispatch_document.end();
 		for (const auto& item_key : obj_schema) {
-			const auto str_key = item_key.as_string();
-			try {
-				auto func = map_dispatch_document.at(str_key);
-				(this->*func)(str_key, obj_schema.at(str_key));
-			} catch (const std::out_of_range&) {
+			auto str_key = item_key.as_string();
+			const auto ddit = map_dispatch_document.find(str_key);
+			if (ddit == ddit_e) {
 				if (is_valid(str_key) || map_dispatch_set_default_spc.find(str_key) != dsit_e) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(prop_ptr), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 				} else {
 					THROW(ClientError, "Field name: %s is not valid", repr(str_key).c_str());
 				}
+			} else {
+				(this->*ddit->second)(str_key, obj_schema.at(str_key));
 			}
 		}
 
 		restart_specification();
-		const specification_t spc_start = std::move(specification);
+		const auto spc_start = std::move(specification);
 		for (auto& task : tasks) {
 			specification = spc_start;
 			task.get();
