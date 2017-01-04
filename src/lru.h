@@ -75,6 +75,22 @@ public:
 		return _items_list.cend();
 	}
 
+	auto find(const Key& key) {
+		auto it(_items_map.find(key));
+		if (it == _items_map.end()) {
+			return _items_list.end();
+		}
+		return it->second;
+	}
+
+	auto find(const Key& key) const {
+		auto it(_items_map.find(key));
+		if (it == _items_map.cend()) {
+			return _items_list.cend();
+		}
+		return it->second;
+	}
+
 	LRU(ssize_t max_size=-1) : _max_size(max_size) { }
 
 	size_t erase(const Key& key) {
@@ -113,22 +129,25 @@ public:
 		return insert(std::make_pair(std::forward<Args>(args)...));
 	}
 
+	T& at(const iterator& it) {
+		_items_list.splice(_items_list.begin(), _items_list, it);
+		return it->second;
+	}
+
 	T& at(const Key& key) {
 		auto it(_items_map.find(key));
 		if (it == _items_map.end()) {
 			throw std::range_error("There is no such key in cache");
 		}
-
-		_items_list.splice(_items_list.begin(), _items_list, it->second);
-		return it->second->second;
+		return at(it->second);
 	}
 
 	T& get(const Key& key) {
-		try {
-			return at(key);
-		} catch (const std::range_error&) {
+		auto it(_items_map.find(key));
+		if (it == _items_map.end()) {
 			return insert(std::make_pair(key, T()));
 		}
+		return at(it->second);
 	}
 
 	T& operator[] (const Key& key) {
@@ -192,28 +211,31 @@ public:
 	}
 
 	template<typename OnGet>
-	T& at_and(const OnGet& on_get, const Key& key) {
-		auto it(_items_map.find(key));
-		if (it == _items_map.end()) {
-			throw std::range_error("There is no such key in cache");
-		}
-
-		T& ref = it->second->second;
+	T& at_and(const OnGet& on_get, const iterator& it) {
+		T& ref = it->second;
 		switch (on_get(ref)) {
 			case GetAction::leave:
 				break;
 			case GetAction::renew:
-				_items_list.splice(_items_list.begin(), _items_list, it->second);
+				_items_list.splice(_items_list.begin(), _items_list, it);
 				break;
 		}
 		return ref;
 	}
 
 	template<typename OnGet>
+	T& at_and(const OnGet& on_get, const Key& key) {
+		auto it(_items_map.find(key));
+		if (it == _items_map.end()) {
+			throw std::range_error("There is no such key in cache");
+		}
+		return at_and(on_get, it->second);
+	}
+
+	template<typename OnGet>
 	T& get_and(const OnGet& on_get, const Key& key) {
-		try {
-			return at_and(on_get, key);
-		} catch (const std::range_error&) {
+		auto it(_items_map.find(key));
+		if (it == _items_map.end()) {
 			T& ref = insert(std::make_pair(key, T()));
 			switch (on_get(ref)) {
 				case GetAction::leave:
@@ -223,6 +245,7 @@ public:
 			}
 			return ref;
 		}
+		return at_and(on_get, it->second);
 	}
 };
 
