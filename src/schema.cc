@@ -974,17 +974,9 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 	}
 
 	const auto spc_start = specification;
-	const MsgPack* properties = nullptr;
-	MsgPack* data = nullptr;
-	if (name.empty()) {
-		properties = parent_properties;
-		data = parent_data;
-		specification.flags.field_found = true;
-	} else {
-		data = specification.flags.store ? &(*parent_data)[name] : parent_data;
-		specification.name.assign(name);
-		properties = &get_subproperties(*parent_properties, object);
-	}
+	specification.name.assign(name);
+	auto data = specification.flags.store ? &(*parent_data)[name] : parent_data;
+	auto properties = &get_subproperties(*parent_properties, object);
 
 	switch (object.getType()) {
 		case MsgPack::Type::MAP: {
