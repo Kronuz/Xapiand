@@ -341,7 +341,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	} catch (const DocNotFoundError&) {
 		L_CRIT(this, "Cluster database is corrupt");
 		sig_exit(-EX_DATAERR);
-	} catch (const Error& e) {
+	} catch (const Exception& e) {
 		L_CRIT(this, "Exception:%s", e.what());
 		sig_exit(-EX_SOFTWARE);
 	}
