@@ -329,7 +329,11 @@ Log::str_format(bool stacked, int priority, const std::string& exc, const char *
 LogWrapper
 Log::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
-	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, obj, format, argptr, true));
+	if (priority > log_level) {
+		return LogWrapper(std::make_shared<Log>("", clean, stacked, async, priority, std::chrono::system_clock::now()));
+	}
+
+	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, obj, format, argptr, true)); // TODO: Slow!
 
 	return print(str, clean, stacked, wakeup, async, priority);
 }
