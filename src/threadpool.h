@@ -92,6 +92,28 @@ public:
 	function_mo& operator =(const function_mo&) = delete;
 
 	using std::function<F>::operator();
+
+	virtual void get() { };
+};
+
+
+template<typename F, typename R>
+class packed_function_mo : public function_mo<F> {
+	R r;
+
+public:
+	template<typename Fun, typename = std::enable_if_t<!std::is_copy_constructible<Fun>::value && !std::is_copy_assignable<Fun>::value>>
+	packed_function_mo(Fun fun, R res) : function_mo<F>(std::move(fun)), r(std::move(res)) { }
+
+	packed_function_mo() = default;
+	packed_function_mo(packed_function_mo&&) = default;
+	packed_function_mo& operator =(packed_function_mo&&) = default;
+	packed_function_mo(const packed_function_mo&) = delete;
+	packed_function_mo& operator =(const packed_function_mo&) = delete;
+
+	void get() {
+		r.get();
+	};
 };
 
 
@@ -116,7 +138,7 @@ public:
 template<typename... Params>
 class TaskQueue {
 protected:
-	queue::Queue<function_mo<void(Params...)>> tasks;
+	queue::Queue<std::unique_ptr<function_mo<void(Params...)>>> tasks;
 
 public:
 	// Wait for the threads to finish
@@ -127,9 +149,10 @@ public:
 	// Function that retrieves a task from a fifo queue, runs it and deletes it
 	template<typename... Params_>
 	bool call(Params_&&... params) {
-		function_mo<void(Params...)> task;
+		std::unique_ptr<function_mo<void(Params...)>> task;
 		if (TaskQueue::tasks.pop(task, 0)) {
-			task(std::forward<Params_>(params)...);
+			(*task)(std::forward<Params_>(params)...);
+			task->get();
 			return true;
 		} else {
 			return false;
@@ -138,15 +161,15 @@ public:
 
 	// Enqueues any function to be executed
 	template<typename F, typename... Args>
-	auto enqueue(F&& f, Args&&... args) -> std::future<std::result_of_t<F(Params..., Args...)>> {
-		auto task = std::packaged_task<std::result_of_t<F(Params..., Args...)>(Params...)>
+	auto enqueue(F&& f, Args&&... args) -> std::shared_future<std::result_of_t<F(Params..., Args...)>> {
+		auto packed_task = std::packaged_task<std::result_of_t<F(Params..., Args...)>(Params...)>
 		(
 			[f = std::forward<F>(f), t = std::make_tuple(std::forward<Args>(args)...)] (Params... params) mutable {
 				return apply(std::move(f), std::tuple_cat(std::make_tuple(std::move(params)...), std::move(t)));
 			}
 		);
-		auto res = task.get_future();
-		if (!tasks.push(std::move(task))) {
+		auto res = packed_task.get_future().share();
+		if (!tasks.push(std::make_unique<packed_function_mo<void(Params...), std::shared_future<std::result_of_t<F(Params..., Args...)>>>>(std::move(packed_task), res))) {
 			throw std::logic_error("Unable to enqueue task");
 		}
 		return res;
@@ -196,13 +219,14 @@ class ThreadPool : public TaskQueue<Params...> {
 		char name[100];
 		snprintf(name, sizeof(name), format.c_str(), idx);
 		set_thread_name(std::string(name));
-		function_mo<void(Params...)> task;
+		std::unique_ptr<function_mo<void(Params...)>> task;
 
 		L_THREADPOOL(this, "Worker %s started! (size: %lu, capacity: %lu)", name, threadpool_size(), threadpool_capacity());
 		while (TaskQueue<Params...>::tasks.pop(task)) {
 			++running_tasks;
 			try {
-				task(std::forward<Params_>(params)...);
+				(*task)(std::forward<Params_>(params)...);
+				task->get();
 			} catch (const BaseException& exc) {
 				auto exc_context = exc.get_context();
 				L_EXC(this, "Task died with an unhandled exception: %s", *exc_context ? exc_context : "Unkown Exception!");
