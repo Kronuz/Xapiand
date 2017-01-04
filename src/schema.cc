@@ -1300,7 +1300,7 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 	prefixes.reserve(std::pow(2, paths_namespace.size() - 2));
 	auto it = paths_namespace.begin();
 	prefixes.push_back(*it);
-	auto it_e = paths_namespace.end() - 1;
+	const auto it_e = paths_namespace.end() - 1;
 	for (++it; it != it_e; ++it) {
 		const auto size = prefixes.size();
 		for (size_t i = 0; i < size; ++i) {
@@ -1328,7 +1328,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 		validate_required_namespace_data(item_value);
 	}
 
-	auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
+	const auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
 
 	specification.namespace_spcs.reserve(prefixes_namespace.size());
 	if (toUType(specification.index & TypeIndex::VALUES)) {
@@ -1352,7 +1352,7 @@ Schema::get_namespace_specification(FieldType namespace_type, const std::string&
 {
 	L_CALL(nullptr, "Schema::get_namespace_specification('%c', %s)", toUType(namespace_type), repr(prefix_namespace).c_str());
 
-	required_spc_t spc = specification_t::get_global(namespace_type);
+	auto spc = specification_t::get_global(namespace_type);
 
 	spc.prefix.assign(prefix_namespace);
 	spc.slot = get_slot(prefix_namespace);
@@ -1362,12 +1362,12 @@ Schema::get_namespace_specification(FieldType namespace_type, const std::string&
 		case FieldType::POSITIVE:
 		case FieldType::FLOAT:
 		case FieldType::DATE:
-		case FieldType::GEO: {
+		case FieldType::GEO:
 			for (auto& acc_prefix : spc.acc_prefix) {
 				acc_prefix.insert(0, prefix_namespace);
 			}
 			break;
-		}
+
 		default:
 			break;
 	}
@@ -1385,24 +1385,24 @@ Schema::update_dynamic_specification()
 	switch (specification.sep_types[2]) {
 		case FieldType::INTEGER:
 		case FieldType::POSITIVE:
-		case FieldType::FLOAT: {
+		case FieldType::FLOAT:
 			for (const auto& acc : specification.accuracy) {
 				specification.acc_prefix.push_back(get_prefix(acc));
 			}
 			break;
-		}
-		case FieldType::DATE: {
+
+		case FieldType::DATE:
 			for (const auto& acc : specification.accuracy) {
 				specification.acc_prefix.push_back(get_prefix(acc));
 			}
 			break;
-		}
-		case FieldType::GEO: {
+
+		case FieldType::GEO:
 			for (const auto& acc : specification.accuracy) {
 				specification.acc_prefix.push_back(get_prefix(acc));
 			}
 			break;
-		}
+
 		default:
 			break;
 	}
@@ -1492,7 +1492,7 @@ Schema::validate_required_data()
 				if (specification.doc_acc) {
 					try {
 						for (const auto& _accuracy : *specification.doc_acc) {
-							auto val_acc = _accuracy.as_u64();
+							const auto val_acc = _accuracy.as_u64();
 							if (val_acc <= HTM_MAX_LEVEL) {
 								set_acc.insert(val_acc);
 							} else {
@@ -1583,7 +1583,7 @@ Schema::validate_required_data()
 			}
 			case FieldType::TEXT: {
 				if (!specification.flags.has_index) {
-					auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+					const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
 						properties[RESERVED_INDEX] = specification.index;
@@ -1607,7 +1607,7 @@ Schema::validate_required_data()
 			}
 			case FieldType::STRING: {
 				if (!specification.flags.has_index) {
-					auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+					const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
 						properties[RESERVED_INDEX] = specification.index;
@@ -1617,7 +1617,7 @@ Schema::validate_required_data()
 			}
 			case FieldType::TERM: {
 				if (!specification.flags.has_index) {
-					auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+					const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
 						properties[RESERVED_INDEX] = specification.index;
@@ -1649,7 +1649,7 @@ Schema::validate_required_data()
 
 		if (specification.flags.dynamic_type) {
 			if (!specification.flags.has_index) {
-				auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
 					properties[RESERVED_INDEX] = specification.index;
