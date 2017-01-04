@@ -1086,15 +1086,16 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 				specification = spc_start;
 				break;
 			}
+
 			case MsgPack::Type::ARRAY: {
 				auto data_pos = specification.flags.store ? &data[pos] : &data;
 				process_item_value(doc, data_pos, item);
 				break;
 			}
-			default: {
+
+			default:
 				process_item_value(doc, specification.flags.store ? data[pos] : data, item, pos);
 				break;
-			}
 		}
 		++pos;
 	}
