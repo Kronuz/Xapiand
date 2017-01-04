@@ -146,6 +146,7 @@
 #define MSGPACK_CONTENT_TYPE            "application/msgpack"
 #define X_MSGPACK_CONTENT_TYPE          "application/x-msgpack"
 #define FORM_URLENCODED_CONTENT_TYPE    "application/www-form-urlencoded"
+#define X_FORM_URLENCODED_CONTENT_TYPE  "application/x-www-form-urlencoded"
 
 
 #define DATABASE_DATA_HEADER_MAGIC        0x11

@@ -820,6 +820,7 @@ HttpClient::get_body()
 	rapidjson::Document rdoc;
 	switch (xxh64::hash(ct_type)) {
 		case xxh64::hash(FORM_URLENCODED_CONTENT_TYPE):
+		case xxh64::hash(X_FORM_URLENCODED_CONTENT_TYPE):
 			try {
 				json_load(rdoc, body);
 				msgpack = MsgPack(rdoc);
