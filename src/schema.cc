@@ -1731,7 +1731,7 @@ Schema::validate_required_data(const MsgPack& value)
 {
 	L_CALL(this, "Schema::validate_required_data(%s)", repr(value.to_string()).c_str());
 
-	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Print specification as sent by user.
+	L_SCHEMA(this, "Specification heritable and sent by user: %s", specification.to_string().c_str());
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		if (XapiandManager::manager->strict || specification.flags.strict) {
