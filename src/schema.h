@@ -360,6 +360,7 @@ class Schema {
 
 	static const std::unordered_map<std::string, dispatch_set_default_spc> map_dispatch_set_default_spc;
 	static const std::unordered_map<std::string, dispatch_write_reserved> map_dispatch_write_properties;
+	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_without_type;
 	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document;
 	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_properties;
 	static const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
@@ -385,6 +386,8 @@ class Schema {
 	 * Restarting reserved words than are not inherited.
 	 */
 	void restart_specification();
+
+	inline void process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings);
 
 
 	/*
