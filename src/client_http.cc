@@ -1947,8 +1947,6 @@ HttpClient::clean_http_request()
 	L_CALL(this, "HttpClient::clean_http_request()");
 
 	response_ends = std::chrono::system_clock::now();
-	auto request_delta = delta_string(request_begins, response_ends);
-	auto response_delta = delta_string(response_begins, response_ends);
 
 	response_log.load()->clear();
 	if (parser.http_errno) {
@@ -1967,7 +1965,9 @@ HttpClient::clean_http_request()
 			color = LIGHT_MAGENTA;
 			priority = LOG_ERR;
 		}
-		if (!response_logged.exchange(true)) L(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %s %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, (int)response_status, bytes_string(response_size).c_str(), request_delta.c_str());
+		if (!response_logged.exchange(true)) {
+			L(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %s %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, (int)response_status, bytes_string(response_size).c_str(), delta_string(request_begins, response_ends).c_str());
+		}
 	}
 
 	path.clear();
@@ -1987,7 +1987,7 @@ HttpClient::clean_http_request()
 	accept_set.clear();
 
 	request_begining = true;
-	L_TIME(this, "Full request took %s, response took %s", request_delta.c_str(), response_delta.c_str());
+	L_TIME(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
 
 	set_idle();
 
