@@ -1234,7 +1234,6 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 					specification.accuracy     = spc.accuracy;
 					specification.acc_prefix   = spc.acc_prefix;
 					index_item(doc, *val, *data, add_values);
-					specification.prefix.pop_back();
 					doc.add_term(specification.prefix);
 					add_values = false;
 				}
