@@ -91,10 +91,10 @@ std::shared_ptr<XapiandManager> XapiandManager::manager;
 
 
 void sig_exit(int sig) {
-	if (XapiandManager::manager) {
-		XapiandManager::manager->signal_sig(sig);
-	} else if (sig < 0) {
+	if (sig < 0) {
 		exit(-sig);
+	} else if (XapiandManager::manager) {
+		XapiandManager::manager->signal_sig(sig);
 	}
 }
 
