@@ -355,6 +355,10 @@ bool
 Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
 	if (!clear()) {
+		if (priority > log_level) {
+			return false;
+		}
+
 		std::string str(str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr, true));
 
 		print(str, false, stacked, 0, async, priority, time_point_from_ullong(created_at));
