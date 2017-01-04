@@ -2488,6 +2488,8 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 				if (is_valid(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 					offsprings = true;
+				} else {
+					THROW(ClientError, "Field name: %s is not valid", repr(str_key).c_str());
 				}
 			}
 		}
@@ -2533,7 +2535,7 @@ Schema::get_schema_subproperties(const MsgPack& properties, const MsgPack& o)
 	for (auto it = _split.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && specification.full_meta_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
-			THROW(ClientError, "The field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
+			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 		}
 		restart_specification();
 		try {
@@ -2601,7 +2603,7 @@ Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
 		for (auto it = _split.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
 			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && specification.full_meta_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
-				THROW(ClientError, "The field name: %s (%s) is not valid or reserved", repr(specification.name).c_str(), repr(field_name).c_str());
+				THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 			}
 			restart_specification();
 			try {
@@ -4117,6 +4119,8 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 			} catch (const std::out_of_range&) {
 				if (is_valid(str_key) || map_dispatch_set_default_spc.find(str_key) != dsit_e) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(prop_ptr), std::ref(obj_schema.at(str_key)), std::move(str_key)));
+				} else {
+					THROW(ClientError, "Field name: %s is not valid", repr(str_key).c_str());
 				}
 			}
 		}
@@ -4432,7 +4436,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 				prefix.append(get_acc_prefix(field_name));
 				return std::forward_as_tuple(*subproperties, dynamic_type, false, std::move(prefix), std::move(field_name));
 			} else {
-				THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
+				THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 			}
 		}
 
@@ -4472,7 +4476,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 							prefix.append(get_acc_prefix(field_namespace));
 							return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(prefix), std::move(field_namespace));
 						} else {
-							THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
+							THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
 						}
 					}
 					return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(prefix), std::string());
