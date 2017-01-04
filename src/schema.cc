@@ -1476,10 +1476,11 @@ Schema::validate_required_data()
 	if (!specification.full_meta_name.empty()) {
 		auto& properties = get_mutable();
 
-		try {
-			auto func = map_dispatch_set_default_spc.at(specification.full_meta_name);
-			(this->*func)(properties);
-		} catch (const std::out_of_range&) { }
+		static const auto dsit_e = map_dispatch_set_default_spc.end();
+		const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
+		if (dsit != dsit_e) {
+			(this->*dsit->second)(properties);
+		}
 
 		std::set<uint64_t> set_acc;
 		switch (specification.sep_types[2]) {
@@ -1509,12 +1510,14 @@ Schema::validate_required_data()
 			case FieldType::DATE: {
 				if (specification.doc_acc) {
 					try {
+						static const auto adit_e = map_acc_date.end();
 						for (const auto& _accuracy : *specification.doc_acc) {
-							auto str_accuracy(lower_string(_accuracy.as_string()));
-							try {
-								set_acc.insert(toUType(map_acc_date.at(str_accuracy)));
-							} catch (const std::out_of_range&) {
+							const auto str_accuracy = lower_string(_accuracy.as_string());
+							const auto adit = map_acc_date.find(str_accuracy);
+							if (adit == adit_e) {
 								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
+							} else {
+								set_acc.insert(toUType(adit->second));
 							}
 						}
 					} catch (const msgpack::type_error&) {
@@ -2564,12 +2567,10 @@ Schema::get_schema_subproperties(const MsgPack& properties, const MsgPack& o)
 
 	const MsgPack* subproperties = &properties;
 
-	static const auto dsit_e = map_dispatch_set_default_spc.end();
-
 	const auto it_e = _split.end();
 	for (auto it = _split.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && specification.full_meta_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
+		if (!is_valid(field_name) && specification.full_meta_name.empty() && !map_dispatch_set_default_spc.count(field_name)) {
 			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 		}
 		restart_specification();
@@ -2605,13 +2606,12 @@ Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_na
 
 	properties = &properties->at(meta_name);
 	specification.flags.field_found = true;
-	try {
-		auto data_lan = map_stem_language.at(normalized_name);
-		if (data_lan.first) {
-			specification.language = data_lan.second;
-			specification.aux_lan = data_lan.second;
-		}
-	} catch (const std::out_of_range&) { }
+	static const auto stit_e = map_stem_language.end();
+	const auto stit = map_stem_language.find(normalized_name);
+	if (stit != stit_e && stit->second.first) {
+		specification.language = stit->second.second;
+		specification.aux_lan = stit->second.second;
+	}
 
 	if (specification.full_meta_name.empty()) {
 		specification.full_meta_name.assign(meta_name);
@@ -2633,11 +2633,10 @@ Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
 	const MsgPack* subproperties = &properties;
 
 	if (specification.paths_namespace.empty()) {
-		static const auto dsit_e = map_dispatch_set_default_spc.end();
 		const auto it_e = _split.end();
 		for (auto it = _split.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
-			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && specification.full_meta_name.empty() && map_dispatch_set_default_spc.find(field_name) == dsit_e) {
+			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && specification.full_meta_name.empty() && !map_dispatch_set_default_spc.count(field_name)) {
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 			}
 			restart_specification();
@@ -2746,19 +2745,21 @@ Schema::add_field(MsgPack*& properties, const MsgPack& o)
 	}
 
 	// Load default specifications.
-	try {
-		auto func = map_dispatch_set_default_spc.at(specification.full_meta_name);
-		(this->*func)(*properties);
-	} catch (const std::out_of_range&) { }
+	static const auto dsit_e = map_dispatch_set_default_spc.end();
+	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
+	if (dsit != dsit_e) {
+		(this->*dsit->second)(*properties);
+	}
 
 	// Write obj specifications.
 	if (o.is_map()) {
+		static const auto wpit_e = map_dispatch_write_properties.end();
 		for (const auto& item_key : o) {
 			const auto str_key = item_key.as_string();
-			try {
-				auto func = map_dispatch_write_properties.at(str_key);
-				(this->*func)(*properties, str_key, o.at(str_key));
-			} catch (const std::out_of_range&) { }
+			const auto wpit = map_dispatch_write_properties.find(str_key);
+			if (wpit != wpit_e) {
+				(this->*wpit->second)(*properties, str_key, o.at(str_key));
+			}
 		}
 	}
 
@@ -2779,12 +2780,13 @@ Schema::update_specification(const MsgPack& properties)
 {
 	L_CALL(this, "Schema::update_specification(%s)", repr(properties.to_string()).c_str());
 
+	static const auto dpit_e = map_dispatch_properties.end();
 	for (const auto& property : properties) {
-		auto str_prop = property.as_string();
-		try {
-			auto func = map_dispatch_properties.at(str_prop);
-			(this->*func)(properties.at(str_prop));
-		} catch (const std::out_of_range&) { }
+		const auto str_prop = property.as_string();
+		const auto dpit = map_dispatch_properties.find(str_prop);
+		if (dpit != dpit_e) {
+			(this->*dpit->second)(properties.at(str_prop));
+		}
 	}
 }
 
@@ -3357,17 +3359,15 @@ Schema::process_language(const std::string& prop_name, const MsgPack& doc_langua
 
 	try {
 		auto _str_language = lower_string(doc_language.as_string());
-		try {
-			auto data_lan = map_stem_language.at(_str_language);
-			if (data_lan.first) {
-				specification.language = data_lan.second;
-				specification.aux_lan = data_lan.second;
-			} else {
-				THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
-			}
-		} catch (const std::out_of_range&) {
-			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
+		static const auto slit_e = map_stem_language.end();
+		const auto slit = map_stem_language.find(_str_language);
+		if (slit != slit_e && slit->second.first) {
+			specification.language = slit->second.second;
+			specification.aux_lan = slit->second.second;
+			return;
 		}
+
+		THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_str_language).c_str());
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
@@ -3382,10 +3382,12 @@ Schema::process_stop_strategy(const std::string& prop_name, const MsgPack& doc_s
 
 	try {
 		auto _stop_strategy = lower_string(doc_stop_strategy.as_string());
-		try {
-			specification.stop_strategy = map_stop_strategy.at(_stop_strategy);
-		} catch (const std::out_of_range&) {
+		static const auto ssit_e = map_stop_strategy.end();
+		const auto ssit = map_stop_strategy.find(_stop_strategy);
+		if (ssit == ssit_e) {
 			THROW(ClientError, "%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stop_strategy.c_str(), _stop_strategy.c_str());
+		} else {
+			specification.stop_strategy = map_stop_strategy.at(_stop_strategy);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
@@ -3401,10 +3403,12 @@ Schema::process_stem_strategy(const std::string& prop_name, const MsgPack& doc_s
 
 	try {
 		auto _stem_strategy = lower_string(doc_stem_strategy.as_string());
-		try {
-			specification.stem_strategy = map_stem_strategy.at(_stem_strategy);
-		} catch (const std::out_of_range&) {
+		static const auto ssit_e = map_stem_strategy.end();
+		const auto ssit = map_stem_strategy.find(_stem_strategy);
+		if (ssit == ssit_e) {
 			THROW(ClientError, "%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stem_strategy.c_str(), _stem_strategy.c_str());
+		} else {
+			specification.stem_strategy = map_stem_strategy.at(_stem_strategy);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
@@ -3892,7 +3896,6 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 	L_CALL(nullptr, "Schema::readable(%s, %d)", repr(item_schema.to_string()).c_str(), is_root);
 
 	// Change this item of schema in readable form.
-	static const auto dsit_e = map_dispatch_set_default_spc.end();
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
 		auto str_key = it->as_string();
 		try {
@@ -3902,7 +3905,7 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 				continue;
 			}
 		} catch (const std::out_of_range&) {
-			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.find(str_key) != dsit_e)) {
+			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
 				auto& sub_item = item_schema.at(str_key);
 				readable(sub_item, false);
 			}
@@ -4056,13 +4059,12 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			specification.flags.field_found = false;
 		}
 
-		static const auto dsit_e = map_dispatch_set_default_spc.end();
 		static const auto ddit_e = map_dispatch_document.end();
 		for (const auto& item_key : object) {
 			auto str_key = item_key.as_string();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
-				if (is_valid(str_key) || map_dispatch_set_default_spc.find(str_key) != dsit_e) {
+				if (is_valid(str_key) || map_dispatch_set_default_spc.count(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
 				}
 			} else {
@@ -4101,13 +4103,12 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		tasks.reserve(obj_schema.size());
 		auto prop_ptr = replace ? &clear() : &schema->at(RESERVED_SCHEMA);
 		specification.flags.field_found = false;
-		static const auto dsit_e = map_dispatch_set_default_spc.end();
 		static const auto ddit_e = map_dispatch_document.end();
 		for (const auto& item_key : obj_schema) {
 			auto str_key = item_key.as_string();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
-				if (is_valid(str_key) || map_dispatch_set_default_spc.find(str_key) != dsit_e) {
+				if (is_valid(str_key) || map_dispatch_set_default_spc.count(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(prop_ptr), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 				} else {
 					THROW(ClientError, "Field name: %s is not valid", repr(str_key).c_str());
@@ -4408,8 +4409,6 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 	std::string prefix;
 	bool dynamic_type = false;
 
-	static const auto dsit_e = map_dispatch_set_default_spc.end();
-
 	const auto it_e = _split.end();
 	const auto it_b = _split.begin();
 	for (auto it = it_b; it != it_e; ++it) {
@@ -4417,7 +4416,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		const auto& field_name = *it;
 		if (!is_valid(field_name)) {
 			if (it == it_b) {
-				if (map_dispatch_set_default_spc.find(field_name) == dsit_e) {
+				if (!map_dispatch_set_default_spc.count(field_name)) {
 					if (++it == it_e) {
 						prefix.append(get_acc_prefix(field_name));
 						return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(prefix), std::move(field_name));
