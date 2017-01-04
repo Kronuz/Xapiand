@@ -93,7 +93,7 @@ public:
 
 	using std::function<F>::operator();
 
-	virtual void get() { };
+	virtual void get() { }
 };
 
 
@@ -111,9 +111,9 @@ public:
 	packed_function_mo(const packed_function_mo&) = delete;
 	packed_function_mo& operator =(const packed_function_mo&) = delete;
 
-	void get() {
+	void get() override {
 		r.get();
-	};
+	}
 };
 
 
