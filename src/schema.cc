@@ -893,6 +893,8 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 std::shared_ptr<const MsgPack>
 Schema::get_initial_schema()
 {
+	L_CALL(this, "Schema::get_initial_schema()");
+
 	MsgPack new_schema = {
 		{ RESERVED_VERSION, DB_VERSION_SCHEMA },
 		{ RESERVED_SCHEMA, MsgPack() },
