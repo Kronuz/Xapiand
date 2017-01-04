@@ -1481,7 +1481,6 @@ Schema::validate_required_data()
 			(this->*func)(properties);
 		} catch (const std::out_of_range&) { }
 
-		// Process RESERVED_ACCURACY, RESERVED_ACC_PREFIX.
 		std::set<uint64_t> set_acc;
 		switch (specification.sep_types[2]) {
 			case FieldType::GEO: {
@@ -1505,19 +1504,6 @@ Schema::validate_required_data()
 				} else {
 					set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
 				}
-				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
-				if (!specification.flags.dynamic_type && set_acc.size()) {
-					if (specification.acc_prefix.empty()) {
-						for (const auto& acc : set_acc) {
-							specification.acc_prefix.push_back(get_prefix(acc));
-						}
-					} else if (specification.acc_prefix.size() != set_acc.size()) {
-						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
-					}
-					specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-					properties[RESERVED_ACCURACY]   = specification.accuracy;
-					properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
-				}
 				break;
 			}
 			case FieldType::DATE: {
@@ -1537,19 +1523,6 @@ Schema::validate_required_data()
 				} else {
 					set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
 				}
-				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
-				if (!specification.flags.dynamic_type && set_acc.size()) {
-					if (specification.acc_prefix.empty()) {
-						for (const auto& acc : set_acc) {
-							specification.acc_prefix.push_back(get_prefix(acc));
-						}
-					} else if (specification.acc_prefix.size() != set_acc.size()) {
-						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
-					}
-					specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-					properties[RESERVED_ACCURACY]   = specification.accuracy;
-					properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
-				}
 				break;
 			}
 			case FieldType::INTEGER:
@@ -1566,19 +1539,6 @@ Schema::validate_required_data()
 				} else {
 					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
 				}
-				// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
-				if (!specification.flags.dynamic_type && set_acc.size()) {
-					if (specification.acc_prefix.empty()) {
-						for (const auto& acc : set_acc) {
-							specification.acc_prefix.push_back(get_prefix(acc));
-						}
-					} else if (specification.acc_prefix.size() != set_acc.size()) {
-						THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
-					}
-					specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-					properties[RESERVED_ACCURACY]   = specification.accuracy;
-					properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
-				}
 				break;
 			}
 			case FieldType::TEXT: {
@@ -1586,8 +1546,9 @@ Schema::validate_required_data()
 					const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
-						properties[RESERVED_INDEX] = specification.index;
+						properties[RESERVED_INDEX] = index;
 					}
+					specification.flags.has_index = true;
 				}
 
 				properties[RESERVED_LANGUAGE] = specification.language;
@@ -1610,8 +1571,9 @@ Schema::validate_required_data()
 					const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
-						properties[RESERVED_INDEX] = specification.index;
+						properties[RESERVED_INDEX] = index;
 					}
+					specification.flags.has_index = true;
 				}
 				break;
 			}
@@ -1620,14 +1582,16 @@ Schema::validate_required_data()
 					const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 					if (specification.index != index) {
 						specification.index = index;
-						properties[RESERVED_INDEX] = specification.index;
+						properties[RESERVED_INDEX] = index;
 					}
+					specification.flags.has_index = true;
 				}
 
 				// Process RESERVED_BOOL_TERM
 				if (!specification.flags.has_bool_term) {
 					// By default, if normalized name has upper characters then it is consider bool term.
 					specification.flags.bool_term = strhasupper(specification.normalized_name);
+					specification.flags.has_bool_term = true;
 				}
 				properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
 				break;
@@ -1639,12 +1603,18 @@ Schema::validate_required_data()
 				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[2]);
 		}
 
-		if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
-			auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
-			if (specification.index != index) {
-				specification.index = index;
-				properties[RESERVED_INDEX] = specification.index;
+		// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
+		if (set_acc.size()) {
+			if (specification.acc_prefix.empty()) {
+				for (const auto& acc : set_acc) {
+					specification.acc_prefix.push_back(get_prefix(acc));
+				}
+			} else if (specification.acc_prefix.size() != set_acc.size()) {
+				THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
 			}
+			specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+			properties[RESERVED_ACCURACY]   = specification.accuracy;
+			properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
 		}
 
 		if (specification.flags.dynamic_type) {
@@ -1652,13 +1622,9 @@ Schema::validate_required_data()
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
-					properties[RESERVED_INDEX] = specification.index;
+					properties[RESERVED_INDEX] = index;
 				}
-			}
-
-			if (set_acc.size()) {
-				specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-				properties[RESERVED_ACCURACY] = specification.accuracy;
+				specification.flags.has_index = true;
 			}
 		} else {
 			// Process RESERVED_SLOT
@@ -1668,6 +1634,16 @@ Schema::validate_required_data()
 				specification.slot += DB_SLOT_RESERVED;
 			}
 			properties[RESERVED_SLOT] = specification.slot;
+
+			// If field is namespace fallback to index anything but values.
+			if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
+				const auto index = specification.index & ~TypeIndex::VALUES;
+				if (specification.index != index) {
+					specification.index = index;
+					properties[RESERVED_INDEX] = index;
+				}
+				specification.flags.has_index = true;
+			}
 		}
 
 		// Process RESERVED_TYPE
@@ -1700,6 +1676,7 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 			case FieldType::TEXT:
 				if (!specification.flags.has_index) {
 					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+					specification.flags.has_index = true;
 				}
 
 				specification.language = default_spc.language;
@@ -1713,15 +1690,20 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 			case FieldType::STRING:
 				if (!specification.flags.has_index) {
 					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+					specification.flags.has_index = true;
 				}
 				break;
 
 			case FieldType::TERM:
 				if (!specification.flags.has_index) {
 					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+					specification.flags.has_index = true;
 				}
 
-				specification.flags.bool_term = strhasupper(specification.normalized_name);
+				if (!specification.flags.has_bool_term) {
+					specification.flags.bool_term = strhasupper(specification.normalized_name);
+					specification.flags.has_bool_term = true;
+				}
 				break;
 
 			case FieldType::DATE:
