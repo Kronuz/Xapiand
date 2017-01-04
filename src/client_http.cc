@@ -402,7 +402,6 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 		self->header_value.append(at, length);
 		if (state == 50) {
 			std::string name = lower_string(self->header_name);
-			std::string value = lower_string(self->header_value);
 
 			switch (xxh64::hash(name)) {
 				case xxh64::hash("host"):
@@ -420,15 +419,16 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					break;
 
 				case xxh64::hash("content-type"):
-					self->content_type = value;
+					self->content_type = lower_string(self->header_value);
 					break;
 				case xxh64::hash("content-length"):
-					self->content_length = value;
+					self->content_length = self->header_value;
 					break;
-				case xxh64::hash("accept"):
+				case xxh64::hash("accept"): {
+					auto value = lower_string(self->header_value);
 					try {
 						self->accept_set = accept_sets.at(value);
-					} catch (std::range_error) {
+					} catch (const std::range_error&) {
 						std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
 						std::sregex_iterator end;
 						int i = 0;
@@ -444,11 +444,13 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 						accept_sets.insert(std::make_pair(value, self->accept_set));
 					}
 					break;
+				}
 
-				case xxh64::hash("accept-encoding"):
+				case xxh64::hash("accept-encoding"): {
+					auto value = lower_string(self->header_value);
 					try {
 						self->accept_encoding_set = accept_encoding_sets.at(value);
-					} catch (std::range_error) {
+					} catch (const std::range_error&) {
 						std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
 						std::sregex_iterator end;
 						int i = 0;
@@ -464,8 +466,10 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 						accept_encoding_sets.insert(std::make_pair(value, self->accept_encoding_set));
 					}
 					break;
+				}
+
 				case xxh64::hash("x-http-method-override"):
-					switch (xxh64::hash(upper_string(value))) {
+					switch (xxh64::hash(upper_string(self->header_value))) {
 						case xxh64::hash("PUT"):
 							p->method = HTTP_PUT;
 							break;
