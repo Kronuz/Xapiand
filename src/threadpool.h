@@ -140,10 +140,9 @@ public:
 	// Enqueues any function to be executed
 	template<typename F, typename... Args>
 	auto enqueue(F&& f, Args&&... args) -> std::future<std::result_of_t<F(Params..., Args...)>> {
-		auto t = std::make_tuple(std::forward<Args>(args)...);
 		auto task = std::packaged_task<std::result_of_t<F(Params..., Args...)>(Params...)>
 		(
-			[f = std::forward<F>(f), t = std::move(t)] (Params... params) mutable {
+			[f = std::forward<F>(f), t = std::make_tuple(std::forward<Args>(args)...)] (Params... params) mutable {
 				return apply(std::move(f), std::tuple_cat(std::make_tuple(std::move(params)...), std::move(t)));
 			}
 		);
