@@ -188,6 +188,9 @@ class Xapiand(object):
         if stream is not None:
             kwargs['stream'] = stream
 
+        if 'allow_redirects' not in kwargs:
+            kwargs['allow_redirects'] = False
+
         headers = kwargs.setdefault('headers', {})
         accept = headers.setdefault('accept', self.default_accept)
         accept_encoding = headers.setdefault('accept-encoding', self.default_accept_encoding)
