@@ -35,7 +35,7 @@
 #include <unordered_set>                   // for unordered_set
 
 #include "datetime.h"                      // for isDate, tm_t
-#include "exception.h"                     // for ClientError, MSG_ClientError
+#include "exception.h"                     // for ClientError
 #include "geo/wkt_parser.h"                // for EWKT_Parser
 #include "log.h"                           // for L_CALL
 #include "manager.h"                       // for XapiandManager, XapiandMan...
@@ -1636,7 +1636,7 @@ Schema::validate_required_data()
 			properties[RESERVED_SLOT] = specification.slot;
 
 			// If field is namespace fallback to index anything but values.
-			if (!specification.flags.has_index && specification.flags.has_namespace) {
+			if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
 				const auto index = specification.index & ~TypeIndex::VALUES;
 				if (specification.index != index) {
 					specification.index = index;
@@ -2623,15 +2623,7 @@ Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
 
 	const MsgPack* subproperties = &properties;
 
-	if (specification.flags.has_namespace) {
-		specification.flags.field_found = false;
-		restart_namespace_specification();
-		for (const auto& field_name : _split) {
-			detect_dynamic(field_name);
-			specification.paths_namespace.push_back(get_prefix(specification.normalized_name));
-		}
-		specification.flags.inside_namespace = true;
-	} else {
+	if (specification.paths_namespace.empty()) {
 		const auto it_e = _split.end();
 		for (auto it = _split.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
@@ -2666,6 +2658,14 @@ Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
 				return *mut_subprop;
 			}
 		}
+	} else {
+		specification.flags.field_found = false;
+		restart_namespace_specification();
+		for (const auto& field_name : _split) {
+			detect_dynamic(field_name);
+			specification.paths_namespace.push_back(get_prefix(specification.normalized_name));
+		}
+		specification.flags.inside_namespace = true;
 	}
 
 	return *subproperties;
