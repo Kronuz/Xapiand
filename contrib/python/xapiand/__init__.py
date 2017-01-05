@@ -105,6 +105,7 @@ class Xapiand(object):
     DoesNotExist = DoesNotExist
 
     session = requests.Session()
+    session.trust_env = False
     session.mount('http://', requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100))
     _methods = dict(
         search=(session.get, True, 'results'),
@@ -188,9 +189,7 @@ class Xapiand(object):
         if stream is not None:
             kwargs['stream'] = stream
 
-        if 'allow_redirects' not in kwargs:
-            kwargs['allow_redirects'] = False
-
+        kwargs.setdefault('allow_redirects', False)
         headers = kwargs.setdefault('headers', {})
         accept = headers.setdefault('accept', self.default_accept)
         accept_encoding = headers.setdefault('accept-encoding', self.default_accept_encoding)
