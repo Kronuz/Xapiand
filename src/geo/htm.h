@@ -22,6 +22,8 @@
 
 #pragma once
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>       // for PRIu64
 #include <stdio.h>          // for snprintf
 #include <sys/types.h>      // for uint64_t, int8_t
 #include <cstring>          // for size_t
@@ -84,7 +86,7 @@ struct range_t {
 
 	std::string as_string() const {
 		char result[40];
-		snprintf(result, 40, "%llu-%llu", start, end);
+		snprintf(result, 40, "%" PRIu64 "-%" PRIu64, start, end);
 		return std::string(result);
 	}
 };
