@@ -1773,7 +1773,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			}
 			break;
 		case MsgPack::Type::STR: {
-			auto str_value = field.as_string();
+			const auto str_value = field.as_string();
 			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
 				specification.sep_types[2] = FieldType::DATE;
 				return;
@@ -1807,7 +1807,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			THROW(ClientError, "'%s' can not be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
 			if (item_doc.size() == 1) {
-				auto cast_word = item_doc.begin()->as_string();
+				const auto cast_word = item_doc.begin()->as_string();
 				specification.sep_types[2] = Cast::getType(cast_word);
 				return;
 			}
@@ -1825,7 +1825,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 {
 	L_CALL(this, "Schema::index_item(<doc>, %s, %s, %zu, %s)", repr(value.to_string()).c_str(), repr(data.to_string()).c_str(), pos, add_value ? "true" : "false");
 
-	L_SCHEMA(this, "Specification: %s", specification.to_string().c_str());  // Final specification, as indexed
+	L_SCHEMA(this, "Final Specification: %s", specification.to_string().c_str());
 
 	_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), pos);
 
@@ -1883,19 +1883,13 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 }
 
 
-void
+inline void
 Schema::index_paths_namespace(Xapian::Document& doc, bool offsprings)
 {
 	if (specification.flags.inside_namespace && !offsprings) {
-		auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
+		const auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
 		for (const auto& prefix_namespace : prefixes_namespace) {
 			doc.add_term(prefix_namespace);
-		}
-	} else if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
-		auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
-		if (specification.index != index) {
-			specification.index = index;
-			get_mutable()[RESERVED_INDEX] = specification.index;
 		}
 	}
 }
@@ -1908,9 +1902,9 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 	L_CALL(this, "Schema::_index_item(<doc>, <values>, %zu)", pos);
 
 	switch (specification.index) {
-		case TypeIndex::NONE: {
+		case TypeIndex::NONE:
 			return;
-		}
+
 		case TypeIndex::FIELD_TERMS: {
 			for (const MsgPack& value : values) {
 				index_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
@@ -2058,7 +2052,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			// 	term_generator.set_database(*wdb);
 			// 	term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
 			// }
-			bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
+			const bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
 			if (positions) {
 				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix + field_spc.get_ctype());
 			} else {
@@ -2071,7 +2065,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 		case FieldType::STRING: {
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
-			auto position = field_spc.position[getPos(pos, field_spc.position.size())]; // String uses position (not positions) which is off by default
+			const auto position = field_spc.position[getPos(pos, field_spc.position.size())]; // String uses position (not positions) which is off by default
 			if (position) {
 				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix + field_spc.get_ctype());
 				L_INDEX(nullptr, "Field String to Index [%d] => %s:%s [Positions: %s]", pos, field_spc.prefix.c_str(), serialise_val.c_str(), position ? "true" : "false");
@@ -2089,8 +2083,8 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 
 		default: {
 			serialise_val = prefixed(serialise_val, field_spc.prefix, field_spc.get_ctype());
-			auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
-			auto position = field_spc.position[getPos(pos, field_spc.position.size())];
+			const auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
+			const auto position = field_spc.position[getPos(pos, field_spc.position.size())];
 			if (position) {
 				doc.add_posting(serialise_val, position, weight);
 			} else {
@@ -2128,7 +2122,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 	switch (spc.sep_types[2]) {
 		case FieldType::FLOAT: {
 			try {
-				auto f_val = value.as_f64();
+				const auto f_val = value.as_f64();
 				auto ser_value = Serialise::_float(f_val);
 				if (field_spc) {
 					index_term(doc, ser_value, *field_spc, pos);
@@ -2145,7 +2139,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		}
 		case FieldType::INTEGER: {
 			try {
-				auto i_val = value.as_i64();
+				const auto i_val = value.as_i64();
 				auto ser_value = Serialise::integer(i_val);
 				if (field_spc) {
 					index_term(doc, ser_value, *field_spc, pos);
@@ -2162,7 +2156,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		}
 		case FieldType::POSITIVE: {
 			try {
-				auto u_val = value.as_u64();
+				const auto u_val = value.as_u64();
 				auto ser_value = Serialise::positive(u_val);
 				if (field_spc) {
 					index_term(doc, ser_value, *field_spc, pos);
@@ -2285,7 +2279,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 	switch (field_spc.sep_types[2]) {
 		case FieldType::FLOAT: {
 			try {
-				auto f_val = value.as_f64();
+				const auto f_val = value.as_f64();
 				auto ser_value = Serialise::_float(f_val);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 					index_term(doc, ser_value, field_spc, pos);
@@ -2308,7 +2302,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 		}
 		case FieldType::INTEGER: {
 			try {
-				auto i_val = value.as_i64();
+				const auto i_val = value.as_i64();
 				auto ser_value = Serialise::integer(i_val);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 					index_term(doc, ser_value, field_spc, pos);
@@ -2331,7 +2325,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 		}
 		case FieldType::POSITIVE: {
 			try {
-				auto u_val = value.as_u64();
+				const auto u_val = value.as_u64();
 				auto ser_value = Serialise::positive(u_val);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 					index_term(doc, ser_value, field_spc, pos);
@@ -2723,7 +2717,7 @@ Schema::add_field(MsgPack*& properties, const MsgPack& o)
 {
 	L_CALL(this, "Schema::add_field(%s)", repr(properties->to_string()).c_str());
 
-	auto field_counter = properties->size();
+	const auto field_counter = properties->size();
 
 	properties = &(*properties)[specification.meta_name];
 
@@ -3168,6 +3162,7 @@ void
 Schema::write_store(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_store)
 {
 	L_CALL(this, "Schema::write_store(%s)", repr(doc_store.to_string()).c_str());
+
 	/*
 	 * RESERVED_STORE is heritable and can change, but once fixed in false
 	 * it cannot change in its offsprings.
@@ -3182,6 +3177,7 @@ void
 Schema::write_recursive(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recursive)
 {
 	L_CALL(this, "Schema::write_recursive(%s)", repr(doc_recursive.to_string()).c_str());
+
 	/*
 	 * RESERVED_RECURSIVE is heritable and can change, but once fixed in false
 	 * it does not process its children.
@@ -3717,13 +3713,14 @@ void
 Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
 {
 	L_CALL(this, "Schema::process_store(%s)", repr(doc_store.to_string()).c_str());
+
 	/*
 	 * RESERVED_STORE is heritable and can change, but once fixed in false
 	 * it cannot change in its offsprings.
 	 */
+
 	try {
-		auto val_store = doc_store.as_bool();
-		specification.flags.store = val_store && specification.flags.parent_store;
+		specification.flags.store = specification.flags.parent_store && doc_store.as_bool();
 		specification.flags.parent_store = specification.flags.store;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3735,10 +3732,12 @@ void
 Schema::process_recursive(const std::string& prop_name, const MsgPack& doc_recursive)
 {
 	L_CALL(this, "Schema::process_recursive(%s)", repr(doc_recursive.to_string()).c_str());
+
 	/*
 	 * RESERVED_RECURSIVE is heritable and can change, but once fixed in false
 	 * it does not process its children.
 	 */
+
 	try {
 		specification.flags.is_recursive = doc_recursive.as_bool();
 	} catch (const msgpack::type_error&) {
@@ -3787,11 +3786,11 @@ Schema::process_cast_object(const std::string& prop_name, const MsgPack& doc_cas
 	// This property isn't heritable and is not saved in schema.
 	L_CALL(this, "Schema::process_cast_object(%s)", repr(doc_cast_object.to_string()).c_str());
 
-	if (!specification.value_rec) {
+	if (specification.value_rec) {
+		THROW(ClientError, "Only one cast object can be defined");
+	} else {
 		specification.value_rec = std::make_unique<MsgPack>();
 		(*specification.value_rec)[prop_name] = doc_cast_object;
-	} else {
-		THROW(ClientError, "Only one cast object can be defined");
 	}
 }
 
@@ -3806,12 +3805,12 @@ Schema::set_default_spc_id(MsgPack& properties)
 	properties[RESERVED_BOOL_TERM] = true;  // force bool term
 
 	if (!specification.flags.has_index) {
-		specification.flags.has_index = true;
-		auto index = specification.index | TypeIndex::FIELD_ALL;  // force field_all
+		const auto index = specification.index | TypeIndex::FIELD_ALL;  // force field_all
 		if (specification.index != index) {
 			specification.index = index;
-			properties[RESERVED_INDEX] = specification.index;
+			properties[RESERVED_INDEX] = index;
 		}
+		specification.flags.has_index = true;
 	}
 
 	// ID_FIELD_NAME can not be TEXT nor STRING.
@@ -3838,15 +3837,15 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	L_CALL(this, "Schema::set_default_spc_ct(%s)", repr(properties.to_string()).c_str());
 
 	if (!specification.flags.has_index) {
-		specification.flags.has_index = true;
-		auto index = (specification.index | TypeIndex::FIELD_VALUES) & ~TypeIndex::FIELD_TERMS; // Fallback to index anything but values
+		const auto index = (specification.index | TypeIndex::FIELD_VALUES) & ~TypeIndex::FIELD_TERMS; // Fallback to index anything but values
 		if (specification.index != index) {
 			specification.index = index;
-			properties[RESERVED_INDEX] = specification.index;
+			properties[RESERVED_INDEX] = index;
 		}
+		specification.flags.has_index = true;
 	}
 
-	// RESERVED_TYPE by default is STRING
+	// RESERVED_TYPE by default is TERM
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		specification.sep_types[2] = FieldType::TERM;
 	}
@@ -3973,8 +3972,8 @@ Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& prop)
 {
 	L_CALL(nullptr, "Schema::readable_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
 
-	auto language = prop[RESERVED_LANGUAGE].as_string();
-	auto stem_language = prop_stem_language.as_string();
+	const auto language = prop[RESERVED_LANGUAGE].as_string();
+	const auto stem_language = prop_stem_language.as_string();
 
 	return (language != stem_language);
 }
@@ -4170,7 +4169,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 	}
 
 	try {
-		auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
+		const auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
 
 		res.flags.inside_namespace = std::get<2>(info);
 
