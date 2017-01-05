@@ -949,7 +949,7 @@ Database::reopen()
 					if (!(flags & DB_SPAWN))  {
 						if (endpoints.size() == 1) {
 							db.reset();
-							throw DummyException();
+							throw;
 						} else {
 							continue;
 						}
@@ -2024,7 +2024,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					L_DATABASE(this, "ERROR: %s", exc.get_msg().c_str());
 				} catch (const Xapian::Error& exc) {
 					L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-				} catch (const DummyException&) { }
+				}
 				lk.lock();
 				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
 			} else {
