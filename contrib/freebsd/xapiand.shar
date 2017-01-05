@@ -124,10 +124,28 @@ END-of-xapiand/pkg-descr
 echo x - xapiand/pkg-plist
 sed 's/^X//' >xapiand/pkg-plist << 'END-of-xapiand/pkg-plist'
 Xbin/xapiand
+Xman/man8/xapiand.8.gz
+Xshare/xapiand/stopwords/ca.txt
+Xshare/xapiand/stopwords/da.txt
+Xshare/xapiand/stopwords/de.txt
+Xshare/xapiand/stopwords/en.txt
+Xshare/xapiand/stopwords/es.txt
+Xshare/xapiand/stopwords/eu.txt
+Xshare/xapiand/stopwords/fi.txt
+Xshare/xapiand/stopwords/fr.txt
+Xshare/xapiand/stopwords/hu.txt
+Xshare/xapiand/stopwords/hy.txt
+Xshare/xapiand/stopwords/it.txt
+Xshare/xapiand/stopwords/nl.txt
+Xshare/xapiand/stopwords/no.txt
+Xshare/xapiand/stopwords/pt.txt
+Xshare/xapiand/stopwords/ro.txt
+Xshare/xapiand/stopwords/ru.txt
+Xshare/xapiand/stopwords/sv.txt
+Xshare/xapiand/stopwords/tr.txt
 X@dir(%%XAPIAND_USER%%,%%XAPIAND_GROUP%%,) %%XAPIAND_DBDIR%%
 X@dir(%%XAPIAND_USER%%,%%XAPIAND_GROUP%%,) %%XAPIAND_LOGDIR%%
 X@dir(%%XAPIAND_USER%%,%%XAPIAND_GROUP%%,) %%XAPIAND_PIDDIR%%
-Xman/man8/xapiand.8.gz
 END-of-xapiand/pkg-plist
 exit
 
