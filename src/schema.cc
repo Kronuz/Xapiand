@@ -4455,7 +4455,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 	for (auto it = it_b; it != it_e; ++it) {
 		dynamic_type = false;
 		const auto& field_name = *it;
-		if (!is_valid(field_name)) {
+		if (!is_valid(field_name) || field_name == UUID_FIELD_NAME) {
 			if (it == it_b) {
 				if (!map_dispatch_set_default_spc.count(field_name)) {
 					if (++it == it_e) {
@@ -4496,7 +4496,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 					for ( ; it != it_e; ++it) {
 						dynamic_type = false;
 						auto& field_namespace = *it;
-						if (is_valid(field_namespace)) {
+						if (is_valid(field_namespace) && field_name != UUID_FIELD_NAME) {
 							auto dynamic_prefix = get_dynamic_prefix(field_namespace);
 							if (dynamic_prefix.empty()) {
 								prefix.append(get_prefix(field_namespace));
