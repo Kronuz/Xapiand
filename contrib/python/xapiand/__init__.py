@@ -53,12 +53,21 @@ except ImportError:
 __all__ = ['Xapiand']
 
 
-# TODO: Get settings for these from django.conf.settings:
 XAPIAND_SANDBOX_PREFIX = os.environ.get('XAPIAND_SANDBOX_PREFIX', 'sandbox')
 XAPIAND_LIVE_PREFIX = os.environ.get('XAPIAND_LIVE_PREFIX', 'live')
 XAPIAND_HOST = os.environ.get('XAPIAND_HOST', '127.0.0.1')
 XAPIAND_PORT = os.environ.get('XAPIAND_PORT', 8880)
 XAPIAND_COMMIT = os.environ.get('XAPIAND_COMMIT', False)
+
+try:
+    from django.conf import settings
+    XAPIAND_SANDBOX_PREFIX = getattr(settings, 'XAPIAND_SANDBOX_PREFIX', XAPIAND_SANDBOX_PREFIX)
+    XAPIAND_LIVE_PREFIX = getattr(settings, 'XAPIAND_LIVE_PREFIX', XAPIAND_LIVE_PREFIX)
+    XAPIAND_HOST = getattr(settings, 'XAPIAND_HOST', XAPIAND_HOST)
+    XAPIAND_PORT = getattr(settings, 'XAPIAND_PORT', XAPIAND_PORT)
+    XAPIAND_COMMIT = getattr(settings, 'XAPIAND_COMMIT', XAPIAND_COMMIT)
+except Exception:
+    pass
 
 
 class Result(NestedDict):
