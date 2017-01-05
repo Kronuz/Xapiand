@@ -86,8 +86,8 @@ GuidGenerator::_newGuid()
 		// Can only be uuid_s_no_memory it seems.
 		throw std::bad_alloc();
 	}
-	unsigned char byteArray[16];
-	uuid_enc_be(byteArray, &id);
+	std::array<unsigned char, 16> byteArray;
+	uuid_enc_be(byteArray.data(), &id);
 	return byteArray;
 }
 #endif
