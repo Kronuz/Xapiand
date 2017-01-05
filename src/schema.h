@@ -454,7 +454,7 @@ class Schema {
 	/*
      * Function to index paths namespace in doc.
      */
-	void index_paths_namespace(Xapian::Document& doc, bool offsprings=false);
+	inline void index_paths_namespace(Xapian::Document& doc, bool offsprings=false);
 
 
 	/*
