@@ -472,6 +472,27 @@ const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_dis
 });
 
 
+const std::unordered_set<std::string> set_reserved_words({
+	RESERVED_WEIGHT,          RESERVED_POSITION,         RESERVED_SPELLING,
+	RESERVED_POSITIONS,       RESERVED_TYPE,             RESERVED_PREFIX,
+	RESERVED_SLOT,            RESERVED_INDEX,            RESERVED_STORE,
+	RESERVED_RECURSIVE,       RESERVED_DYNAMIC,          RESERVED_STRICT,
+	RESERVED_D_DETECTION,     RESERVED_N_DETECTION,      RESERVED_G_DETECTION,
+	RESERVED_B_DETECTION,     RESERVED_S_DETECTION,      RESERVED_T_DETECTION,
+	RESERVED_U_DETECTION,     RESERVED_BOOL_TERM,        RESERVED_ACCURACY,
+	RESERVED_ACC_PREFIX,      RESERVED_LANGUAGE,         RESERVED_STOP_STRATEGY,
+	RESERVED_STEM_STRATEGY,   RESERVED_STEM_LANGUAGE,    RESERVED_PARTIALS,
+	RESERVED_ERROR,           RESERVED_NAMESPACE,        RESERVED_VALUE,
+	RESERVED_NAME,            RESERVED_SCRIPT,           RESERVED_FLOAT,
+	RESERVED_POSITIVE,        RESERVED_INTEGER,          RESERVED_BOOLEAN,
+	RESERVED_TERM,            RESERVED_TEXT,             RESERVED_DATE,
+	RESERVED_UUID,            RESERVED_EWKT,             RESERVED_POINT,
+	RESERVED_POLYGON,         RESERVED_CIRCLE,           RESERVED_CHULL,
+	RESERVED_MULTIPOINT,      RESERVED_MULTIPOLYGON,     RESERVED_MULTICIRCLE,
+	RESERVED_MULTICHULL,      RESERVED_GEO_COLLECTION,   RESERVED_GEO_INTERSECTION,
+});
+
+
 const std::unordered_map<std::string, std::pair<bool, std::string>> map_stem_language({
 	{ "armenian",    { true,  "hy" } },  { "hy",               { true,  "hy" } },  { "basque",          { true,  "ue" } },
 	{ "eu",          { true,  "eu" } },  { "catalan",          { true,  "ca" } },  { "ca",              { true,  "ca" } },
@@ -1006,7 +1027,7 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 			auto str_key = item_key.as_string();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
-				if (is_valid(str_key)) {
+				if (!set_reserved_words.count(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
 					offsprings = true;
 				}
@@ -1022,7 +1043,7 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 			if (ddit == ddit_e) {
 				const auto wtit = map_dispatch_without_type.find(str_key);
 				if (wtit == wtit_e) {
-					if (is_valid(str_key)) {
+					if (!set_reserved_words.count(str_key)) {
 						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
 						offsprings = true;
 					}
@@ -2497,11 +2518,9 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 				auto str_key = item_key.as_string();
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
-					if (is_valid(str_key)) {
+					if (!set_reserved_words.count(str_key)) {
 						tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 						offsprings = true;
-					} else {
-						THROW(ClientError, "Field name: %s is not valid", repr(str_key).c_str());
 					}
 				} else {
 					(this->*ddit->second)(str_key, obj_schema.at(str_key));
@@ -2515,11 +2534,9 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 				if (ddit == ddit_e) {
 					const auto wtit = map_dispatch_without_type.find(str_key);
 					if (wtit == wtit_e) {
-						if (is_valid(str_key)) {
+						if (!set_reserved_words.count(str_key)) {
 							tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 							offsprings = true;
-						} else {
-							THROW(ClientError, "Field name: %s is not valid", repr(str_key).c_str());
 						}
 					} else {
 						(this->*wtit->second)(str_key, obj_schema.at(str_key));
@@ -4090,7 +4107,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			auto str_key = item_key.as_string();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
-				tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
+				if (!set_reserved_words.count(str_key)) {
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
+				}
 			} else {
 				(this->*ddit->second)(str_key, object.at(str_key));
 			}
@@ -4132,7 +4151,9 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 			auto str_key = item_key.as_string();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
-				tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(prop_ptr), std::ref(obj_schema.at(str_key)), std::move(str_key)));
+				if (!set_reserved_words.count(str_key)) {
+					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(prop_ptr), std::ref(obj_schema.at(str_key)), std::move(str_key)));
+				}
 			} else {
 				(this->*ddit->second)(str_key, obj_schema.at(str_key));
 			}
