@@ -1407,39 +1407,6 @@ Schema::get_namespace_specification(FieldType namespace_type, const std::string&
 
 
 void
-Schema::update_dynamic_specification()
-{
-	L_CALL(this, "Schema::update_dynamic_specification()");
-
-	specification.slot = get_slot(specification.prefix);
-	switch (specification.sep_types[2]) {
-		case FieldType::INTEGER:
-		case FieldType::POSITIVE:
-		case FieldType::FLOAT:
-			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_prefix(acc));
-			}
-			break;
-
-		case FieldType::DATE:
-			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_prefix(acc));
-			}
-			break;
-
-		case FieldType::GEO:
-			for (const auto& acc : specification.accuracy) {
-				specification.acc_prefix.push_back(get_prefix(acc));
-			}
-			break;
-
-		default:
-			break;
-	}
-}
-
-
-void
 Schema::complete_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_specification(%s)", repr(item_value.to_string()).c_str());
@@ -1450,7 +1417,7 @@ Schema::complete_specification(const MsgPack& item_value)
 
 	if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 		if (specification.flags.dynamic_type) {
-			update_dynamic_specification();
+			specification.slot = get_slot(specification.prefix);
 		}
 
 		for (auto& acc_prefix : specification.acc_prefix) {

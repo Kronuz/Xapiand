@@ -421,11 +421,6 @@ class Schema {
 	void complete_namespace_specification(const MsgPack& item_value);
 
 	/*
-	 * Update dynamic field's specifications.
-	 */
-	void update_dynamic_specification();
-
-	/*
 	 * Complete the specifications.
 	 */
 	void complete_specification(const MsgPack& item_value);
