@@ -156,6 +156,10 @@ public:
 		return iterator(this, std::string::npos);
 	}
 
+	const std::string& get_str() const noexcept {
+		return str;
+	}
+
 	static std::vector<std::string> split(const std::string& str, const std::string& delimiter) {
 		std::vector<std::string> tokens;
 		size_t prev = 0, next = 0, len;
