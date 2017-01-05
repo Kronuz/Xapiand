@@ -4077,9 +4077,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			auto str_key = item_key.as_string();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
-				if (is_valid(str_key) || map_dispatch_set_default_spc.count(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
-				}
+				tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
 			} else {
 				(this->*ddit->second)(str_key, object.at(str_key));
 			}
@@ -4121,11 +4119,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 			auto str_key = item_key.as_string();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
-				if (is_valid(str_key) || map_dispatch_set_default_spc.count(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(prop_ptr), std::ref(obj_schema.at(str_key)), std::move(str_key)));
-				} else {
-					THROW(ClientError, "Field name: %s is not valid", repr(str_key).c_str());
-				}
+				tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(prop_ptr), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 			} else {
 				(this->*ddit->second)(str_key, obj_schema.at(str_key));
 			}
