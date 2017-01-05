@@ -4496,7 +4496,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 					for ( ; it != it_e; ++it) {
 						dynamic_type = false;
 						auto& field_namespace = *it;
-						if (is_valid(field_namespace) && field_name != UUID_FIELD_NAME) {
+						if (is_valid(field_namespace) && field_namespace != UUID_FIELD_NAME) {
 							auto dynamic_prefix = get_dynamic_prefix(field_namespace);
 							if (dynamic_prefix.empty()) {
 								prefix.append(get_prefix(field_namespace));
