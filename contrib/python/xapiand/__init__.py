@@ -44,13 +44,21 @@ except ImportError:
         msgpack = None
 
 
-__all__ = ['Xapiand']
-
-
 try:
     import requests
 except ImportError:
     raise ImportError("Xapiand requires the installation of the requests module.")
+
+
+__all__ = ['Xapiand']
+
+
+# TODO: Get settings for these from django.conf.settings:
+XAPIAND_SANDBOX_PREFIX = os.environ.get('XAPIAND_SANDBOX_PREFIX', 'sandbox')
+XAPIAND_LIVE_PREFIX = os.environ.get('XAPIAND_LIVE_PREFIX', 'live')
+XAPIAND_HOST = os.environ.get('XAPIAND_HOST', '127.0.0.1')
+XAPIAND_PORT = os.environ.get('XAPIAND_PORT', 8880)
+XAPIAND_COMMIT = os.environ.get('XAPIAND_COMMIT', False)
 
 
 class Result(NestedDict):
@@ -110,10 +118,16 @@ class Xapiand(object):
         merge=(lambda *args, **kwargs: session.request('MERGE', *args, **kwargs), False, 'result'),
     )
 
-    def __init__(self, ip='127.0.0.1', port=8880, commit=False, prefix=None, default_accept=None, default_accept_encoding=None):
-        if ip and ':' in ip:
-            ip, _, port = ip.partition(':')
-        self.ip = ip
+    def __init__(self, host=None, port=None, commit=None, prefix=None, default_accept=None, default_accept_encoding=None):
+        if host is None:
+            host = XAPIAND_HOST
+        if port is None:
+            port = XAPIAND_PORT
+        if commit is None:
+            commit = XAPIAND_COMMIT
+        if host and ':' in host:
+            host, _, port = host.partition(':')
+        self.host = host
         self.port = port
         self.commit = commit
         self.prefix = prefix
@@ -124,14 +138,14 @@ class Xapiand(object):
             default_accept_encoding = 'deflate, gzip, identity'
         self.default_accept_encoding = default_accept_encoding
 
-    def _build_url(self, action_request, index, ip, port, nodename, id, body):
-        if ip and ':' in ip:
-            ip, _, port = ip.partition(':')
-        if not ip:
-            ip = self.ip
+    def _build_url(self, action_request, index, host, port, nodename, id, body):
+        if host and ':' in host:
+            host, _, port = host.partition(':')
+        if not host:
+            host = self.host
         if not port:
             port = self.port
-        host = '{}:{}'.format(ip, port)
+        host = '{}:{}'.format(host, port)
 
         prefix = '{}/'.format(self.prefix) if self.prefix else ''
 
@@ -152,19 +166,19 @@ class Xapiand(object):
 
         return url
 
-    def _send_request(self, action_request, index, ip=None, port=None, nodename=None, id=None, body=None, default=NA, **kwargs):
+    def _send_request(self, action_request, index, host=None, port=None, nodename=None, id=None, body=None, default=NA, **kwargs):
         """
         :arg action_request: Perform index, delete, serch, stats, patch, head actions per request
         :arg query: Query to process on xapiand
         :arg index: index path
-        :arg ip: address to connect to xapiand
+        :arg host: address to connect to xapiand
         :arg port: port to connect to xapiand
         :arg nodename: Node name, if empty is assigned randomly
         :arg id: Document ID
         :arg body: File or dictionary with the body of the request
         """
         method, stream, key = self._methods[action_request]
-        url = self._build_url(action_request, index, ip, port, nodename, id, body)
+        url = self._build_url(action_request, index, host, port, nodename, id, body)
 
         params = kwargs.pop('params', None)
         if params is not None:
@@ -336,7 +350,11 @@ class Xapiand(object):
             pretty=pretty,
         )
         return self._send_request('put', index, **kwargs)
-    index = put
+
+    def index(self, index, doc_type, body, id, commit=None, pretty=False, kwargs=None):
+        if doc_type:
+            index = '%s/%s' % (index, doc_type)
+        return self.put(index, body, id, commit, pretty, kwargs)
 
     def patch(self, index, id, body, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
@@ -360,12 +378,5 @@ class Xapiand(object):
         return self._send_request('merge', index, **kwargs)
 
 
-# TODO: Get settings for these from django.conf.settings:
-XAPIAND_SANDBOX_PREFIX = 'sandbox'
-XAPIAND_LIVE_PREFIX = 'live'
-XAPIAND_HOST = '127.0.0.1'
-XAPIAND_PORT = 8880
-XAPIAND_COMMIT = False
-
-live = Xapiand(ip=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_LIVE_PREFIX)
-sandbox = Xapiand(ip=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_SANDBOX_PREFIX)
+live = Xapiand(host=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_LIVE_PREFIX)
+sandbox = Xapiand(host=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_SANDBOX_PREFIX)
