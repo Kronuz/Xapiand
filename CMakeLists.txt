@@ -217,7 +217,7 @@ endif ()
 ########################################################################
 
 check_include_files (sys/epoll.h HAVE_SYS_EPOLL_H)
-check_include_files (sys/event.h HAVE_SYS_EVENT_H)
+check_include_files ("sys/types.h;sys/event.h" HAVE_SYS_EVENT_H)
 check_include_files (sys/eventfd.h HAVE_SYS_EVENTFD_H)
 check_include_files (sys/inotify.h HAVE_SYS_INOTIFY_H)
 check_include_files (sys/select.h HAVE_SYS_SELECT_H)
