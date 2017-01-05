@@ -388,6 +388,11 @@ class Schema {
 	void restart_specification();
 
 	/*
+	 * Restarting reserved words than are not inherited in namespace.
+	 */
+	void restart_namespace_specification();
+
+	/*
 	 * Update specification with the object's properties.
 	 */
 	inline void process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings);
