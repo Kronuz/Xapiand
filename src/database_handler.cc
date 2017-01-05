@@ -129,7 +129,18 @@ DatabaseHandler::get_database() const noexcept
 std::shared_ptr<Schema>
 DatabaseHandler::get_schema() const
 {
-	return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+	if (endpoints.size() == 1) {
+		return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+	} else {
+		for (const auto& endp : endpoints) {
+			try {
+				return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endp, flags));
+			} catch (const CheckoutError&) {
+				continue;
+			}
+		}
+		THROW(CheckoutError, "Cannot checkout none of the databases: %s", repr(endpoints.to_string()).c_str());
+	}
 }
 
 
