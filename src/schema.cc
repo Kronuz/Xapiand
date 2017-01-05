@@ -2586,7 +2586,7 @@ Schema::get_schema_subproperties(const MsgPack& properties, const MsgPack& o)
 	const auto it_e = _split.end();
 	for (auto it = _split.begin(); it != it_e; ++it) {
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && specification.full_meta_name.empty() && !map_dispatch_set_default_spc.count(field_name)) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 		}
 		restart_specification();
@@ -2599,7 +2599,7 @@ Schema::get_schema_subproperties(const MsgPack& properties, const MsgPack& o)
 				specification.meta_name = n_field_name;
 				specification.normalized_name = specification.meta_name;
 				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-				if (!is_valid(n_field_name) && specification.full_meta_name.empty() && !map_dispatch_set_default_spc.count(n_field_name)) {
+				if (!is_valid(n_field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
 				} else {
 					add_field(mut_subprop, o);
@@ -2657,7 +2657,7 @@ Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
 		const auto it_e = _split.end();
 		for (auto it = _split.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
-			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && specification.full_meta_name.empty() && !map_dispatch_set_default_spc.count(field_name)) {
+			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(_split.get_str()).c_str(), repr(field_name).c_str());
 			}
 			restart_specification();
@@ -2679,10 +2679,10 @@ Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
 				for (++it; it != it_e; ++it) {
 					const auto& n_field_name = *it;
 					detect_dynamic(n_field_name);
-					if (is_valid(n_field_name)) {
-						add_field(mut_subprop, o);
-					} else {
+					if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
 						THROW(ClientError, "Field name: %s (%s) is not valid", repr(_split.get_str()).c_str(), repr(n_field_name).c_str());
+					} else {
+						add_field(mut_subprop, o);
 					}
 				}
 				return *mut_subprop;
