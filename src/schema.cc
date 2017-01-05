@@ -2578,10 +2578,15 @@ Schema::get_schema_subproperties(const MsgPack& properties, const MsgPack& o)
 		} catch (const std::out_of_range&) {
 			MsgPack* mut_subprop = &get_mutable();
 			for ( ; it != it_e; ++it) {
-				specification.meta_name = *it;
+				const auto& n_field_name = *it;
+				specification.meta_name = n_field_name;
 				specification.normalized_name = specification.meta_name;
 				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-				add_field(mut_subprop, o);
+				if (!is_valid(n_field_name) && specification.full_meta_name.empty() && !map_dispatch_set_default_spc.count(n_field_name)) {
+					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
+				} else {
+					add_field(mut_subprop, o);
+				}
 			}
 
 			// Found field always false for adding inheritable specification.
