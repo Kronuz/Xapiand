@@ -5,36 +5,36 @@
 #
 # This archive contains:
 #
-#	xapian-core/
-#	xapian-core//Makefile
-#	xapian-core//distinfo
-#	xapian-core//files
-#	xapian-core//files/patch-api_omenquire.cc
-#	xapian-core//files/patch-api_omenquireinternal.h
-#	xapian-core//files/patch-backends_dbfactory__remote.cc
-#	xapian-core//files/patch-backends_remote_remote-database.cc
-#	xapian-core//files/patch-backends_remote_remote-database.h
-#	xapian-core//files/patch-common_remoteprotocol.h
-#	xapian-core//files/patch-include_xapian_dbfactory.h
-#	xapian-core//files/patch-include_xapian_enquire.h
-#	xapian-core//files/patch-include_xapian_mset.h
-#	xapian-core//files/patch-net_progclient.cc
-#	xapian-core//files/patch-net_progclient.h
-#	xapian-core//files/patch-net_remoteserver.cc
-#	xapian-core//files/patch-net_remoteserver.h
-#	xapian-core//files/patch-net_remotetcpclient.h
-#	xapian-core//pkg-descr
-#	xapian-core//pkg-plist
+#	xapian-core
+#	xapian-core/Makefile
+#	xapian-core/distinfo
+#	xapian-core/files
+#	xapian-core/files/patch-api_omenquire.cc
+#	xapian-core/files/patch-api_omenquireinternal.h
+#	xapian-core/files/patch-backends_dbfactory__remote.cc
+#	xapian-core/files/patch-backends_remote_remote-database.cc
+#	xapian-core/files/patch-backends_remote_remote-database.h
+#	xapian-core/files/patch-common_remoteprotocol.h
+#	xapian-core/files/patch-include_xapian_dbfactory.h
+#	xapian-core/files/patch-include_xapian_enquire.h
+#	xapian-core/files/patch-include_xapian_mset.h
+#	xapian-core/files/patch-net_progclient.cc
+#	xapian-core/files/patch-net_progclient.h
+#	xapian-core/files/patch-net_remoteserver.cc
+#	xapian-core/files/patch-net_remoteserver.h
+#	xapian-core/files/patch-net_remotetcpclient.h
+#	xapian-core/pkg-descr
+#	xapian-core/pkg-plist
 #
-echo c - xapian-core/
-mkdir -p xapian-core/ > /dev/null 2>&1
-echo x - xapian-core//Makefile
-sed 's/^X//' >xapian-core//Makefile << 'END-of-xapian-core//Makefile'
+echo c - xapian-core
+mkdir -p xapian-core > /dev/null 2>&1
+echo x - xapian-core/Makefile
+sed 's/^X//' >xapian-core/Makefile << 'END-of-xapian-core/Makefile'
 X# Created by: J.F. Dockes
 X# $FreeBSD: head/databases/xapian-core/Makefile 412236 2016-03-31 15:38:43Z sunpoet $
 X
 XPORTNAME=	xapian-core
-XPORTVERSION=	1.4.1
+XPORTVERSION=	1.4.2
 XCATEGORIES=	databases
 XMASTER_SITES=	http://oligarchy.co.uk/xapian/${PORTVERSION}/ \
 X		LOCAL/sunpoet
@@ -65,17 +65,19 @@ X	${INSTALL_PROGRAM} ${WRKSRC}/examples/.libs/${file} ${STAGEDIR}${PREFIX}/bin/x
 X.endfor
 X
 X.include <bsd.port.mk>
-END-of-xapian-core//Makefile
-echo x - xapian-core//distinfo
-sed 's/^X//' >xapian-core//distinfo << 'END-of-xapian-core//distinfo'
-XTIMESTAMP = 1479337420
-XSHA256 (xapian-core-1.4.1.tar.xz) = c5f2534de73c067ac19eed6d6bec65b7b2c1be00131c8867da9e1dfa8bce70eb
-XSIZE (xapian-core-1.4.1.tar.xz) = 2793644
-END-of-xapian-core//distinfo
-echo c - xapian-core//files
-mkdir -p xapian-core//files > /dev/null 2>&1
-echo x - xapian-core//files/patch-api_omenquire.cc
-sed 's/^X//' >xapian-core//files/patch-api_omenquire.cc << 'END-of-xapian-core//files/patch-api_omenquire.cc'
+END-of-xapian-core/Makefile
+echo x - xapian-core/distinfo
+sed 's/^X//' >xapian-core/distinfo << 'END-of-xapian-core/distinfo'
+XTIMESTAMP = 1483610329
+XSHA256 (xapian-core-1.4.2.tar.xz) = aec2c4352998127a2f2316218bf70f48cef0a466a87af3939f5f547c5246e1ce
+XSIZE (xapian-core-1.4.2.tar.xz) = 2799492
+END-of-xapian-core/distinfo
+echo c - xapian-core/files
+mkdir -p xapian-core/files > /dev/null 2>&1
+echo x - xapian-core/files/patch-api_omenquire.cc
+sed 's/^X//' >xapian-core/files/patch-api_omenquire.cc << 'END-of-xapian-core/files/patch-api_omenquire.cc'
+Xdiff --git api/omenquire.cc api/omenquire.cc
+Xindex 2d40978..25df563 100644
 X--- api/omenquire.cc
 X+++ api/omenquire.cc
 X@@ -43,6 +43,7 @@
@@ -83,13 +85,13 @@ X #include "api/omenquireinternal.h"
 X #include "str.h"
 X #include "weight/weightinternal.h"
 X+#include "net/serialise.h"
-X
+X 
 X #include <algorithm>
 X #include "autoptr.h"
 X@@ -133,6 +134,20 @@ RSet::Internal::get_description() const
 X     return description;
 X }
-X
+X 
 X+std::string
 X+RSet::serialise() const
 X+{
@@ -105,12 +107,12 @@ X+    RETURN(unserialise_rset(s));
 X+}
 X+
 X namespace Internal {
-X
+X 
 X // Methods for Xapian::MSetItem
 X@@ -313,6 +328,20 @@ MSet::get_description() const
 X     return "Xapian::MSet(" + internal->get_description() + ")";
 X }
-X
+X 
 X+std::string
 X+MSet::serialise() const
 X+{
@@ -131,7 +133,7 @@ X {
 X@@ -510,6 +539,40 @@ Enquire::Internal::get_query() const
 X     return query;
 X }
-X
+X 
 X+void
 X+Enquire::Internal::unserialise_stats(const string& serialised)
 X+{
@@ -172,7 +174,7 @@ X 			    Xapian::doccount check_at_least, const RSet *rset,
 X@@ -534,35 +597,41 @@ Enquire::Internal::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
 X 	check_at_least = max(check_at_least, maxitems);
 X     }
-X
+X 
 X-    AutoPtr<Xapian::Weight::Internal> stats(new Xapian::Weight::Internal);
 X-    ::MultiMatch match(db, query, qlen, rset,
 X-		       collapse_max, collapse_key,
@@ -192,7 +194,7 @@ X+    try {
 X+	if (!stats || !match) {
 X+	    prepare_mset(rset, mdecider);
 X+	}
-X
+X 
 X-    Assert(weight->name() != "bool" || retval.get_max_possible() == 0);
 X+	// Run query and put results into supplied Xapian::MSet object.
 X+	MSet retval;
@@ -201,14 +203,14 @@ X+		    *(stats.get()), mdecider, sorter.get());
 X+	if (first_orig != first && retval.internal.get()) {
 X+	    retval.internal->firstitem = first_orig;
 X+	}
-X
+X 
 X-    // The Xapian::MSet needs to have a pointer to ourselves, so that it can
 X-    // retrieve the documents.  This is set here explicitly to avoid having
 X-    // to pass it into the matcher, which gets messy particularly in the
 X-    // networked case.
 X-    retval.internal->enquire = this;
 X+	Assert(weight->name() != "bool" || retval.get_max_possible() == 0);
-X
+X 
 X-    if (!retval.internal->stats) {
 X-	retval.internal->stats = stats.release();
 X-    }
@@ -225,7 +227,7 @@ X+	    stats.reset();
 X+	}
 X+
 X+	match.reset();
-X
+X 
 X-    RETURN(retval);
 X+	RETURN(retval);
 X+    } catch(...) {
@@ -234,12 +236,12 @@ X+	match.reset();
 X+	throw;
 X+    }
 X }
-X
+X 
 X ESet
 X@@ -897,6 +966,27 @@ Enquire::set_time_limit(double time_limit)
 X     internal->time_limit = time_limit;
 X }
-X
+X 
 X+void
 X+Enquire::unserialise_stats(const string& serialised)
 X+{
@@ -264,31 +266,33 @@ X+
 X MSet
 X Enquire::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
 X 		  Xapian::doccount check_at_least, const RSet *rset,
-END-of-xapian-core//files/patch-api_omenquire.cc
-echo x - xapian-core//files/patch-api_omenquireinternal.h
-sed 's/^X//' >xapian-core//files/patch-api_omenquireinternal.h << 'END-of-xapian-core//files/patch-api_omenquireinternal.h'
+END-of-xapian-core/files/patch-api_omenquire.cc
+echo x - xapian-core/files/patch-api_omenquireinternal.h
+sed 's/^X//' >xapian-core/files/patch-api_omenquireinternal.h << 'END-of-xapian-core/files/patch-api_omenquireinternal.h'
+Xdiff --git api/omenquireinternal.h api/omenquireinternal.h
+Xindex 4f25b39..8b0104d 100644
 X--- api/omenquireinternal.h
 X+++ api/omenquireinternal.h
-X@@ -37,6 +37,7 @@
-X #include <map>
+X@@ -38,6 +38,7 @@
 X #include <set>
-X
+X #include <unordered_map>
+X 
 X+#include "autoptr.h"
 X #include "weight/weightinternal.h"
-X
+X 
 X using namespace std;
-X@@ -151,6 +152,9 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
-X
+X@@ -152,6 +153,9 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
+X 
 X 	Xapian::Internal::opt_intrusive_ptr<KeyMaker> sorter;
-X
+X 
 X+	mutable AutoPtr<Xapian::Weight::Internal> stats;
 X+	mutable AutoPtr<::MultiMatch> match;
 X+
 X 	double time_limit;
-X
+X 
 X 	/** The weight to use for this query.
-X@@ -183,6 +187,13 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
-X
+X@@ -184,6 +188,13 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
+X 
 X 	void set_query(const Query & query_, termcount qlen_);
 X 	const Query & get_query() const;
 X+
@@ -301,13 +305,15 @@ X+
 X 	MSet get_mset(Xapian::doccount first, Xapian::doccount maxitems,
 X 		      Xapian::doccount check_at_least,
 X 		      const RSet *omrset,
-END-of-xapian-core//files/patch-api_omenquireinternal.h
-echo x - xapian-core//files/patch-backends_dbfactory__remote.cc
-sed 's/^X//' >xapian-core//files/patch-backends_dbfactory__remote.cc << 'END-of-xapian-core//files/patch-backends_dbfactory__remote.cc'
+END-of-xapian-core/files/patch-api_omenquireinternal.h
+echo x - xapian-core/files/patch-backends_dbfactory__remote.cc
+sed 's/^X//' >xapian-core/files/patch-backends_dbfactory__remote.cc << 'END-of-xapian-core/files/patch-backends_dbfactory__remote.cc'
+Xdiff --git backends/dbfactory_remote.cc backends/dbfactory_remote.cc
+Xindex 5eaab61..3aa4aa9 100644
 X--- backends/dbfactory_remote.cc
 X+++ backends/dbfactory_remote.cc
 X@@ -33,39 +33,68 @@ namespace Xapian {
-X
+X 
 X Database
 X Remote::open(const string &host, unsigned int port, useconds_t timeout_,
 X-	     useconds_t connect_timeout)
@@ -326,7 +332,7 @@ X+	     useconds_t connect_timeout)
 X+{
 X+    return Remote::open(host, port, timeout_, connect_timeout, 0, std::string());
 X }
-X
+X 
 X WritableDatabase
 X Remote::open_writable(const string &host, unsigned int port,
 X 		      useconds_t timeout_, useconds_t connect_timeout,
@@ -348,7 +354,7 @@ X+		      int flags)
 X+{
 X+    return Remote::open_writable(host, port, timeout_, connect_timeout, flags, std::string());
 X }
-X
+X 
 X Database
 X Remote::open(const string &program, const string &args,
 X-	     useconds_t timeout_)
@@ -366,7 +372,7 @@ X+	     useconds_t timeout_, int flags)
 X+{
 X+    return Remote::open(program, args, timeout_, flags, std::string());
 X }
-X
+X 
 X WritableDatabase
 X Remote::open_writable(const string &program, const string &args,
 X-		      useconds_t timeout_, int flags)
@@ -385,16 +391,18 @@ X+		      useconds_t timeout_, int flags)
 X+{
 X+    return Remote::open_writable(program, args, timeout_, flags, std::string());
 X }
-X
+X 
 X }
-END-of-xapian-core//files/patch-backends_dbfactory__remote.cc
-echo x - xapian-core//files/patch-backends_remote_remote-database.cc
-sed 's/^X//' >xapian-core//files/patch-backends_remote_remote-database.cc << 'END-of-xapian-core//files/patch-backends_remote_remote-database.cc'
+END-of-xapian-core/files/patch-backends_dbfactory__remote.cc
+echo x - xapian-core/files/patch-backends_remote_remote-database.cc
+sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.cc << 'END-of-xapian-core/files/patch-backends_remote_remote-database.cc'
+Xdiff --git backends/remote/remote-database.cc backends/remote/remote-database.cc
+Xindex 7bed102..08211d8 100644
 X--- backends/remote/remote-database.cc
 X+++ backends/remote/remote-database.cc
 X@@ -68,9 +68,12 @@ throw_connection_closed_unexpectedly()
 X }
-X
+X 
 X RemoteDatabase::RemoteDatabase(int fd, double timeout_,
 X-			       const string & context_, bool writable,
 X-			       int flags)
@@ -410,7 +418,7 @@ X 	  cached_stats_valid(),
 X 	  mru_valstats(),
 X@@ -95,15 +98,6 @@ RemoteDatabase::RemoteDatabase(int fd, double timeout_,
 X     }
-X
+X 
 X     update_stats(MSG_MAX);
 X-
 X-    if (writable) {
@@ -422,10 +430,10 @@ X-	    update_stats(MSG_WRITEACCESS);
 X-	}
 X-    }
 X }
-X
+X 
 X void
 X@@ -339,7 +333,7 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
-X
+X 
 X     string message;
 X     reply_type type = get_message(message);
 X-    if (type != REPLY_UPDATE || message.size() < 3) {
@@ -436,7 +444,7 @@ X 	    return false;
 X@@ -373,6 +367,46 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 X 	throw Xapian::NetworkError(errmsg, context);
 X     }
-X
+X 
 X+    if (p == p_end) {
 X+	message = encode_length(flags);
 X+	message += encode_length(db_dir.size());
@@ -486,11 +494,11 @@ X     // TRANSACTION_UNIMPLEMENTED if we aren't writable so that we can check
 X     // it here.
 X-    bool writable = (transaction_state != TRANSACTION_UNIMPLEMENTED);
 X+    bool writable_ = (transaction_state != TRANSACTION_UNIMPLEMENTED);
-X
+X 
 X     // Only call dtor_called() if we're writable.
 X-    if (writable) dtor_called();
 X+    if (writable_) dtor_called();
-X
+X 
 X     // If we're writable, wait for a confirmation of the close, so we know that
 X     // changes have been written and flushed, and the database write lock
 X     // released.  For the non-writable case, there's no need to wait, so don't
@@ -498,17 +506,19 @@ X     // slow down searching by waiting here.
 X-    link.do_close(writable);
 X+    link.do_close(writable_);
 X }
-X
+X 
 X void
-END-of-xapian-core//files/patch-backends_remote_remote-database.cc
-echo x - xapian-core//files/patch-backends_remote_remote-database.h
-sed 's/^X//' >xapian-core//files/patch-backends_remote_remote-database.h << 'END-of-xapian-core//files/patch-backends_remote_remote-database.h'
+END-of-xapian-core/files/patch-backends_remote_remote-database.cc
+echo x - xapian-core/files/patch-backends_remote_remote-database.h
+sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.h << 'END-of-xapian-core/files/patch-backends_remote_remote-database.h'
+Xdiff --git backends/remote/remote-database.h backends/remote/remote-database.h
+Xindex a0835a6..7e0b19a 100644
 X--- backends/remote/remote-database.h
 X+++ backends/remote/remote-database.h
 X@@ -49,6 +49,15 @@ class RemoteDatabase : public Xapian::Database::Internal {
 X     /// Don't allow copying.
 X     RemoteDatabase(const RemoteDatabase &);
-X
+X 
 X+    // Directory to store databases in.
 X+    const std::string db_dir;
 X+
@@ -520,7 +530,7 @@ X+    const int flags;
 X+
 X     /// The object which does the I/O.
 X     mutable RemoteConnection link;
-X
+X 
 X@@ -103,10 +112,11 @@ class RemoteDatabase : public Xapian::Database::Internal {
 X      *			operations will never timeout.
 X      *  @param context_ The context to return with any error messages.
@@ -532,12 +542,14 @@ X      */
 X     RemoteDatabase(int fd, double timeout_, const string & context_,
 X-		   bool writable, int flags);
 X+		   bool writable, int flags, const string & dir);
-X
+X 
 X     /// Receive a message from the server.
 X     reply_type get_message(string & message, reply_type required_type = REPLY_MAX) const;
-END-of-xapian-core//files/patch-backends_remote_remote-database.h
-echo x - xapian-core//files/patch-common_remoteprotocol.h
-sed 's/^X//' >xapian-core//files/patch-common_remoteprotocol.h << 'END-of-xapian-core//files/patch-common_remoteprotocol.h'
+END-of-xapian-core/files/patch-backends_remote_remote-database.h
+echo x - xapian-core/files/patch-common_remoteprotocol.h
+sed 's/^X//' >xapian-core/files/patch-common_remoteprotocol.h << 'END-of-xapian-core/files/patch-common_remoteprotocol.h'
+Xdiff --git common/remoteprotocol.h common/remoteprotocol.h
+Xindex fcaa1ec..03adba7 100644
 X--- common/remoteprotocol.h
 X+++ common/remoteprotocol.h
 X@@ -89,6 +89,7 @@ enum message_type {
@@ -547,10 +559,12 @@ X     MSG_UNIQUETERMS,		// Get number of unique terms in doc
 X+    MSG_READACCESS,		// Select currenty active read access database
 X     MSG_MAX
 X };
-X
-END-of-xapian-core//files/patch-common_remoteprotocol.h
-echo x - xapian-core//files/patch-include_xapian_dbfactory.h
-sed 's/^X//' >xapian-core//files/patch-include_xapian_dbfactory.h << 'END-of-xapian-core//files/patch-include_xapian_dbfactory.h'
+X 
+END-of-xapian-core/files/patch-common_remoteprotocol.h
+echo x - xapian-core/files/patch-include_xapian_dbfactory.h
+sed 's/^X//' >xapian-core/files/patch-include_xapian_dbfactory.h << 'END-of-xapian-core/files/patch-include_xapian_dbfactory.h'
+Xdiff --git include/xapian/dbfactory.h include/xapian/dbfactory.h
+Xindex 3a75bf1..e6b148e 100644
 X--- include/xapian/dbfactory.h
 X+++ include/xapian/dbfactory.h
 X@@ -176,7 +176,13 @@ namespace Remote {
@@ -567,7 +581,7 @@ X+
 X+// FIXME: legacy form of above (not breaking ABI when flags and dir are not passed)
 X XAPIAN_VISIBILITY_DEFAULT
 X Database open(const std::string &host, unsigned int port, useconds_t timeout = 10000, useconds_t connect_timeout = 10000);
-X
+X 
 X@@ -197,9 +203,14 @@ Database open(const std::string &host, unsigned int port, useconds_t timeout = 1
 X  *				Xapian::NetworkTimeoutError is thrown.  A
 X  *				timeout of 0 means don't timeout.  (Default is
@@ -582,7 +596,7 @@ X+
 X+// FIXME: legacy form of above (not breaking ABI when dir is not passed)
 X+XAPIAN_VISIBILITY_DEFAULT
 X WritableDatabase open_writable(const std::string &host, unsigned int port, useconds_t timeout = 0, useconds_t connect_timeout = 10000, int flags = 0);
-X
+X 
 X /** Construct a Database object for read-only access to a remote database
 X@@ -215,9 +226,15 @@ WritableDatabase open_writable(const std::string &host, unsigned int port, useco
 X  *			then Xapian::NetworkTimeoutError is thrown.  A timeout
@@ -598,7 +612,7 @@ X+
 X+// FIXME: legacy form of above (not breaking ABI when dir is not passed)
 X+XAPIAN_VISIBILITY_DEFAULT
 X+Database open(const std::string &program, const std::string &args, useconds_t timeout = 10000, int flags = 0);
-X
+X 
 X /** Construct a WritableDatabase object for update access to a remote database
 X  *  accessed via a program.
 X@@ -231,9 +248,14 @@ Database open(const std::string &program, const std::string &args, useconds_t ti
@@ -615,15 +629,17 @@ X+
 X+// FIXME: legacy form of above (not breaking ABI when dir is not passed)
 X+XAPIAN_VISIBILITY_DEFAULT
 X WritableDatabase open_writable(const std::string &program, const std::string &args, useconds_t timeout = 0, int flags = 0);
-X
+X 
 X }
-END-of-xapian-core//files/patch-include_xapian_dbfactory.h
-echo x - xapian-core//files/patch-include_xapian_enquire.h
-sed 's/^X//' >xapian-core//files/patch-include_xapian_enquire.h << 'END-of-xapian-core//files/patch-include_xapian_enquire.h'
+END-of-xapian-core/files/patch-include_xapian_dbfactory.h
+echo x - xapian-core/files/patch-include_xapian_enquire.h
+sed 's/^X//' >xapian-core/files/patch-include_xapian_enquire.h << 'END-of-xapian-core/files/patch-include_xapian_enquire.h'
+Xdiff --git include/xapian/enquire.h include/xapian/enquire.h
+Xindex 4dadede..973a151 100644
 X--- include/xapian/enquire.h
 X+++ include/xapian/enquire.h
 X@@ -103,6 +103,20 @@ class XAPIAN_VISIBILITY_DEFAULT RSet {
-X
+X 
 X 	/// Return a string describing this object.
 X 	std::string get_description() const;
 X+
@@ -641,12 +657,12 @@ X+	 */
 X+	static RSet unserialise(const std::string &serialised);
 X+
 X };
-X
+X 
 X /** Base class for matcher decision functor.
 X@@ -487,6 +501,9 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
 X 	 */
 X 	void set_time_limit(double time_limit);
-X
+X 
 X+	void unserialise_stats(const std::string& serialised);
 X+	const std::string serialise_stats() const;
 X+
@@ -662,15 +678,17 @@ X+			  const MatchDecider * mdecider = 0) const;
 X 	MSet get_mset(Xapian::doccount first, Xapian::doccount maxitems,
 X 		      Xapian::doccount checkatleast = 0,
 X 		      const RSet * omrset = 0,
-END-of-xapian-core//files/patch-include_xapian_enquire.h
-echo x - xapian-core//files/patch-include_xapian_mset.h
-sed 's/^X//' >xapian-core//files/patch-include_xapian_mset.h << 'END-of-xapian-core//files/patch-include_xapian_mset.h'
+END-of-xapian-core/files/patch-include_xapian_enquire.h
+echo x - xapian-core/files/patch-include_xapian_mset.h
+sed 's/^X//' >xapian-core/files/patch-include_xapian_mset.h << 'END-of-xapian-core/files/patch-include_xapian_mset.h'
+Xdiff --git include/xapian/mset.h include/xapian/mset.h
+Xindex 2401e54..39ff724 100644
 X--- include/xapian/mset.h
 X+++ include/xapian/mset.h
 X@@ -255,6 +255,19 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
 X     /// Return a string describing this object.
 X     std::string get_description() const;
-X
+X 
 X+    /** Serialise MSet into a string.
 X+     *
 X+     *  The document representation may change between Xapian releases:
@@ -687,34 +705,39 @@ X+
 X     /** @private @internal MSet is what the C++ STL calls a container.
 X      *
 X      *  The following typedefs allow the class to be used in templates in the
-END-of-xapian-core//files/patch-include_xapian_mset.h
-echo x - xapian-core//files/patch-net_progclient.cc
-sed 's/^X//' >xapian-core//files/patch-net_progclient.cc << 'END-of-xapian-core//files/patch-net_progclient.cc'
+END-of-xapian-core/files/patch-include_xapian_mset.h
+echo x - xapian-core/files/patch-net_progclient.cc
+sed 's/^X//' >xapian-core/files/patch-net_progclient.cc << 'END-of-xapian-core/files/patch-net_progclient.cc'
+Xdiff --git net/progclient.cc net/progclient.cc
+Xindex 3ba0d9e..9357fde 100644
 X--- net/progclient.cc
 X+++ net/progclient.cc
 X@@ -64,16 +64,16 @@ split_words(const string &text, vector<string> &words, char ws = ' ')
 X #endif
-X
+X 
 X ProgClient::ProgClient(const string &progname, const string &args,
 X-		       double timeout_, bool writable, int flags)
-X+		       double timeout_, bool writable, int flags, const string & dir)
+X+		       double timeout_, bool writable_, int flags_, const string & dir)
 X 	: RemoteDatabase(run_program(progname, args
 X #ifndef __WIN32__
 X 						   , pid
 X #endif
 X 	),
-X 			 timeout_, get_progcontext(progname, args), writable,
+X-			 timeout_, get_progcontext(progname, args), writable,
 X-			 flags)
-X+			 flags, dir)
+X+			 timeout_, get_progcontext(progname, args), writable_,
+X+			 flags_, dir)
 X {
 X-    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable | flags);
-X+    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable | flags | dir);
+X+    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable_ | flags_ | dir);
 X }
-X
+X 
 X string
-END-of-xapian-core//files/patch-net_progclient.cc
-echo x - xapian-core//files/patch-net_progclient.h
-sed 's/^X//' >xapian-core//files/patch-net_progclient.h << 'END-of-xapian-core//files/patch-net_progclient.h'
+END-of-xapian-core/files/patch-net_progclient.cc
+echo x - xapian-core/files/patch-net_progclient.h
+sed 's/^X//' >xapian-core/files/patch-net_progclient.h << 'END-of-xapian-core/files/patch-net_progclient.h'
+Xdiff --git net/progclient.h net/progclient.h
+Xindex 5567e55..9ebcde9 100644
 X--- net/progclient.h
 X+++ net/progclient.h
 X@@ -88,7 +88,8 @@ class ProgClient : public RemoteDatabase {
@@ -724,16 +747,18 @@ X 	       bool writable,
 X-	       int flags);
 X+	       int flags,
 X+	       const std::string & dir);
-X
+X 
 X     /** Destructor. */
 X     ~ProgClient();
-END-of-xapian-core//files/patch-net_progclient.h
-echo x - xapian-core//files/patch-net_remoteserver.cc
-sed 's/^X//' >xapian-core//files/patch-net_remoteserver.cc << 'END-of-xapian-core//files/patch-net_remoteserver.cc'
+END-of-xapian-core/files/patch-net_progclient.h
+echo x - xapian-core/files/patch-net_remoteserver.cc
+sed 's/^X//' >xapian-core/files/patch-net_remoteserver.cc << 'END-of-xapian-core/files/patch-net_remoteserver.cc'
+Xdiff --git net/remoteserver.cc net/remoteserver.cc
+Xindex 8185bc0..22a7804 100644
 X--- net/remoteserver.cc
 X+++ net/remoteserver.cc
 X@@ -36,7 +36,7 @@
-X
+X 
 X #include "autoptr.h"
 X #include "length.h"
 X-#include "matcher/multimatch.h"
@@ -744,7 +769,7 @@ X #include "realtime.h"
 X@@ -54,10 +54,17 @@ throw_read_only()
 X     throw Xapian::InvalidOperationError("Server is read-only");
 X }
-X
+X 
 X+XAPIAN_NORETURN(static void throw_no_db());
 X+static void
 X+throw_no_db()
@@ -754,7 +779,7 @@ X+}
 X+
 X /// Class to throw when we receive the connection closing message.
 X struct ConnectionClosed { };
-X
+X 
 X-RemoteServer::RemoteServer(const std::vector<std::string> &dbpaths,
 X+RemoteServer::RemoteServer(const std::vector<std::string> &dbpaths_,
 X 			   int fdin_, int fdout_,
@@ -797,7 +822,7 @@ X 		&RemoteServer::msg_freqs,
 X 		&RemoteServer::msg_uniqueterms,
 X+		&RemoteServer::msg_readaccess,
 X 	    };
-X
+X 
 X 	    string message;
 X@@ -239,6 +233,9 @@ RemoteServer::run()
 X void
@@ -808,7 +833,7 @@ X+	throw_no_db();
 X+
 X     string prev = message;
 X     string reply;
-X
+X 
 X@@ -262,6 +259,9 @@ RemoteServer::msg_allterms(const string &message)
 X void
 X RemoteServer::msg_termlist(const string &message)
@@ -837,11 +862,11 @@ X+    if (!db)
 X+	throw_no_db();
 X+
 X     const string & term = message;
-X
+X 
 X     Xapian::doccount termfreq = db->get_termfreq(term);
 X@@ -333,32 +339,74 @@ RemoteServer::msg_postlist(const string &message)
 X }
-X
+X 
 X void
 X-RemoteServer::msg_writeaccess(const string & msg)
 X+RemoteServer::msg_readaccess(const string &message)
@@ -878,7 +903,7 @@ X+RemoteServer::msg_writeaccess(const string & message)
 X {
 X     if (!writable)
 X 	throw_read_only();
-X
+X 
 X     int flags = Xapian::DB_OPEN;
 X-    const char *p = msg.c_str();
 X-    const char *p_end = p + msg.size();
@@ -905,14 +930,14 @@ X+	select_db(dbpaths_, true, flags);
 X+    } else {
 X+	select_db(dbpaths, true, flags);
 X     }
-X
+X 
 X-    wdb = new Xapian::WritableDatabase(context, flags);
 X-    delete db;
 X-    db = wdb;
 X-    msg_update(msg);
 X+    msg_update(message);
 X }
-X
+X 
 X void
 X RemoteServer::msg_reopen(const string & msg)
 X {
@@ -960,7 +985,7 @@ X+    }
 X+
 X     send_message(REPLY_UPDATE, message);
 X }
-X
+X 
 X void
 X RemoteServer::msg_query(const string &message_in)
 X {
@@ -969,7 +994,7 @@ X+	throw_no_db();
 X+
 X     const char *p = message_in.c_str();
 X     const char *p_end = p + message_in.size();
-X
+X 
 X+    Xapian::Enquire enquire(*db);
 X+
 X     // Unserialise the Query.
@@ -978,16 +1003,16 @@ X     decode_length_and_check(&p, p_end, len);
 X@@ -406,6 +464,8 @@ RemoteServer::msg_query(const string &message_in)
 X     Xapian::termcount qlen;
 X     decode_length(&p, p_end, qlen);
-X
+X 
 X+    enquire.set_query(query, qlen);
 X+
 X     Xapian::valueno collapse_max;
 X     decode_length(&p, p_end, collapse_max);
-X
+X 
 X@@ -413,12 +473,16 @@ RemoteServer::msg_query(const string &message_in)
 X     if (collapse_max)
 X 	decode_length(&p, p_end, collapse_key);
-X
+X 
 X+    enquire.set_collapse_key(collapse_key, collapse_max);
 X+
 X     if (p_end - p < 4 || *p < '0' || *p > '2') {
@@ -995,16 +1020,16 @@ X 	throw Xapian::NetworkError("bad message (docid_order)");
 X     }
 X     Xapian::Enquire::docid_order order;
 X     order = static_cast<Xapian::Enquire::docid_order>(*p++ - '0');
-X
+X 
 X+    enquire.set_docid_order(order);
 X+
 X     Xapian::valueno sort_key;
 X     decode_length(&p, p_end, sort_key);
-X
+X 
 X@@ -433,8 +497,25 @@ RemoteServer::msg_query(const string &message_in)
 X     }
 X     bool sort_value_forward(*p++ != '0');
-X
+X 
 X+    switch(sort_by) {
 X+	case Xapian::Enquire::Internal::REL:
 X+	    enquire.set_sort_by_relevance();
@@ -1021,7 +1046,7 @@ X+	    break;
 X+    }
 X+
 X     double time_limit = unserialise_double(&p, p_end);
-X
+X 
 X+    enquire.set_time_limit(time_limit);
 X+
 X     int percent_cutoff = *p++;
@@ -1030,23 +1055,23 @@ X 	throw Xapian::NetworkError("bad message (percent_cutoff)");
 X@@ -445,6 +526,8 @@ RemoteServer::msg_query(const string &message_in)
 X 	throw Xapian::NetworkError("bad message (weight_cutoff)");
 X     }
-X
+X 
 X+    enquire.set_cutoff(percent_cutoff, weight_cutoff);
 X+
 X     // Unserialise the Weight object.
 X     decode_length_and_check(&p, p_end, len);
 X     string wtname(p, len);
 X@@ -461,6 +544,7 @@ RemoteServer::msg_query(const string &message_in)
-X
+X 
 X     decode_length_and_check(&p, p_end, len);
 X     AutoPtr<Xapian::Weight> wt(wttype->unserialise(string(p, len)));
 X+    enquire.set_weighting_scheme(*wt);
 X     p += len;
-X
+X 
 X     // Unserialise the RSet object.
 X@@ -469,7 +553,7 @@ RemoteServer::msg_query(const string &message_in)
 X     p += len;
-X
+X 
 X     // Unserialise any MatchSpy objects.
 X-    vector<Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy>> matchspies;
 X+    vector<Xapian::MatchSpy*> matchspies;
@@ -1055,7 +1080,7 @@ X 	decode_length_and_check(&p, p_end, len);
 X 	string spytype(p, len);
 X@@ -481,17 +565,15 @@ RemoteServer::msg_query(const string &message_in)
 X 	p += len;
-X
+X 
 X 	decode_length_and_check(&p, p_end, len);
 X-	matchspies.push_back(spyclass->unserialise(string(p, len), reg)->release());
 X+	Xapian::MatchSpy *spy = spyclass->unserialise(string(p, len), reg);
@@ -1063,34 +1088,34 @@ X+	matchspies.push_back(spy);
 X+	enquire.add_matchspy(spy->release());
 X 	p += len;
 X     }
-X
+X 
 X-    Xapian::Weight::Internal local_stats;
 X-    MultiMatch match(*db, query, qlen, &rset, collapse_max, collapse_key,
 X-		     percent_cutoff, weight_cutoff, order,
 X-		     sort_key, sort_by, sort_value_forward, time_limit,
 X-		     local_stats, wt.get(), matchspies, false, false);
 X+    enquire.prepare_mset(&rset, nullptr);
-X
+X 
 X-    send_message(REPLY_STATS, serialise_stats(local_stats));
 X+    send_message(REPLY_STATS, enquire.serialise_stats());
-X
+X 
 X     string message;
 X     get_message(active_timeout, message, MSG_GETMSET);
 X@@ -506,14 +588,9 @@ RemoteServer::msg_query(const string &message_in)
 X     Xapian::termcount check_at_least;
 X     decode_length(&p, p_end, check_at_least);
-X
+X 
 X-    message.erase(0, message.size() - (p_end - p));
 X-    AutoPtr<Xapian::Weight::Internal> total_stats(new Xapian::Weight::Internal);
 X-    unserialise_stats(message, *(total_stats.get()));
 X-    total_stats->set_bounds_from_db(*db);
 X+    enquire.unserialise_stats(std::string(p, p_end));
-X
+X 
 X-    Xapian::MSet mset;
 X-    match.get_mset(first, maxitems, check_at_least, mset, *(total_stats.get()), 0, 0);
 X-    mset.internal->stats = total_stats.release();
 X+    Xapian::MSet mset = enquire.get_mset(first, maxitems, check_at_least);
-X
+X 
 X     message.resize(0);
 X     for (auto i : matchspies) {
 X@@ -521,13 +598,16 @@ RemoteServer::msg_query(const string &message_in)
@@ -1101,7 +1126,7 @@ X-    message += serialise_mset(mset);
 X+    message += mset.serialise();
 X     send_message(REPLY_RESULTS, message);
 X }
-X
+X 
 X void
 X RemoteServer::msg_document(const string &message)
 X {
@@ -1130,7 +1155,7 @@ X+	throw_no_db();
 X+
 X     send_message((db->term_exists(term) ? REPLY_TERMEXISTS : REPLY_TERMDOESNTEXIST), string());
 X }
-X
+X 
 X void
 X RemoteServer::msg_collfreq(const string &term)
 X {
@@ -1139,7 +1164,7 @@ X+	throw_no_db();
 X+
 X     send_message(REPLY_COLLFREQ, encode_length(db->get_collection_freq(term)));
 X }
-X
+X 
 X void
 X RemoteServer::msg_termfreq(const string &term)
 X {
@@ -1148,7 +1173,7 @@ X+	throw_no_db();
 X+
 X     send_message(REPLY_TERMFREQ, encode_length(db->get_termfreq(term)));
 X }
-X
+X 
 X void
 X RemoteServer::msg_freqs(const string &term)
 X {
@@ -1197,7 +1222,7 @@ X+	throw_no_db();
 X+
 X     send_message(REPLY_METADATA, db->get_metadata(message));
 X }
-X
+X 
 X void
 X RemoteServer::msg_openmetadatakeylist(const string & message)
 X {
@@ -1206,7 +1231,7 @@ X+	throw_no_db();
 X+
 X     string prev = message;
 X     string reply;
-X
+X 
 X@@ -778,3 +888,37 @@ RemoteServer::msg_removespelling(const string & message)
 X     decode_length(&p, p_end, freqdec);
 X     wdb->remove_spelling(string(p, p_end - p), freqdec);
@@ -1245,15 +1270,17 @@ X+	wdb = NULL;
 X+    }
 X+    dbpaths = dbpaths_;
 X+}
-END-of-xapian-core//files/patch-net_remoteserver.cc
-echo x - xapian-core//files/patch-net_remoteserver.h
-sed 's/^X//' >xapian-core//files/patch-net_remoteserver.h << 'END-of-xapian-core//files/patch-net_remoteserver.h'
+END-of-xapian-core/files/patch-net_remoteserver.cc
+echo x - xapian-core/files/patch-net_remoteserver.h
+sed 's/^X//' >xapian-core/files/patch-net_remoteserver.h << 'END-of-xapian-core/files/patch-net_remoteserver.h'
+Xdiff --git net/remoteserver.h net/remoteserver.h
+Xindex 857d791..37c0dab 100644
 X--- net/remoteserver.h
 X+++ net/remoteserver.h
 X@@ -69,6 +69,8 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
 X     /// The registry, which allows unserialisation of user subclasses.
 X     Xapian::Registry reg;
-X
+X 
 X+    std::vector<std::string> dbpaths;
 X+
 X     /// Accept a message from the client.
@@ -1262,7 +1289,7 @@ X 			     message_type required_type = MSG_MAX);
 X@@ -170,6 +172,11 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
 X     // get number of unique terms
 X     void msg_uniqueterms(const std::string & message);
-X
+X 
 X+    // select an active database for read access
 X+    void msg_readaccess(const std::string & message);
 X+
@@ -1271,27 +1298,31 @@ X+
 X   public:
 X     /** Construct a RemoteServer.
 X      *
-END-of-xapian-core//files/patch-net_remoteserver.h
-echo x - xapian-core//files/patch-net_remotetcpclient.h
-sed 's/^X//' >xapian-core//files/patch-net_remotetcpclient.h << 'END-of-xapian-core//files/patch-net_remotetcpclient.h'
+END-of-xapian-core/files/patch-net_remoteserver.h
+echo x - xapian-core/files/patch-net_remotetcpclient.h
+sed 's/^X//' >xapian-core/files/patch-net_remotetcpclient.h << 'END-of-xapian-core/files/patch-net_remotetcpclient.h'
+Xdiff --git net/remotetcpclient.h net/remotetcpclient.h
+Xindex 9da59a8..9382f27 100644
 X--- net/remotetcpclient.h
 X+++ net/remotetcpclient.h
-X@@ -75,10 +75,10 @@ class RemoteTcpClient : SOCKET_INITIALIZER_MIXIN public RemoteDatabase {
+X@@ -74,11 +74,11 @@ class RemoteTcpClient : SOCKET_INITIALIZER_MIXIN public RemoteDatabase {
+X      *	@param flags		Xapian::DB_RETRY_LOCK or 0.
 X      */
 X     RemoteTcpClient(const std::string & hostname, int port,
-X 		    double timeout_, double timeout_connect, bool writable,
+X-		    double timeout_, double timeout_connect, bool writable,
 X-		    int flags)
-X+		    int flags, const std::string & dir)
+X+		    double timeout_, double timeout_connect, bool writable_,
+X+		    int flags_, const std::string & dir)
 X 	: RemoteDatabase(open_socket(hostname, port, timeout_connect),
 X 			 timeout_, get_tcpcontext(hostname, port),
 X-			 writable, flags) { }
-X+			 writable, flags, dir) { }
-X
+X+			 writable_, flags_, dir) { }
+X 
 X     /** Destructor. */
 X     ~RemoteTcpClient();
-END-of-xapian-core//files/patch-net_remotetcpclient.h
-echo x - xapian-core//pkg-descr
-sed 's/^X//' >xapian-core//pkg-descr << 'END-of-xapian-core//pkg-descr'
+END-of-xapian-core/files/patch-net_remotetcpclient.h
+echo x - xapian-core/pkg-descr
+sed 's/^X//' >xapian-core/pkg-descr << 'END-of-xapian-core/pkg-descr'
 XXapian is an Open Source Probabilistic Information Retrieval library, released
 Xunder the GPL. It's written in C++, with bindings to allow use from other
 Xlanguages.
@@ -1310,9 +1341,9 @@ X- Platform independent data formats
 X- Allows simultaneous update and searching.
 X
 XWWW: http://www.xapian.org/
-END-of-xapian-core//pkg-descr
-echo x - xapian-core//pkg-plist
-sed 's/^X//' >xapian-core//pkg-plist << 'END-of-xapian-core//pkg-plist'
+END-of-xapian-core/pkg-descr
+echo x - xapian-core/pkg-plist
+sed 's/^X//' >xapian-core/pkg-plist << 'END-of-xapian-core/pkg-plist'
 Xbin/copydatabase
 Xbin/quest
 Xbin/simpleexpand
@@ -1370,7 +1401,7 @@ Xlib/cmake/xapian/xapian-config-version.cmake
 Xlib/cmake/xapian/xapian-config.cmake
 Xlib/libxapian.so
 Xlib/libxapian.so.30
-Xlib/libxapian.so.30.1.0
+Xlib/libxapian.so.30.2.0
 Xlibdata/pkgconfig/xapian-core.pc
 Xman/man1/copydatabase.1.gz
 Xman/man1/quest.1.gz
@@ -1384,6 +1415,6 @@ Xman/man1/xapian-replicate.1.gz
 Xman/man1/xapian-replicate-server.1.gz
 Xman/man1/xapian-tcpsrv.1.gz
 Xshare/aclocal/xapian.m4
-END-of-xapian-core//pkg-plist
+END-of-xapian-core/pkg-plist
 exit
 
