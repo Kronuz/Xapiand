@@ -1495,154 +1495,77 @@ Schema::validate_required_data()
 {
 	L_CALL(this, "Schema::validate_required_data()");
 
-	if (!specification.full_meta_name.empty()) {
-		auto& properties = get_mutable();
+	auto& properties = get_mutable();
 
-		static const auto dsit_e = map_dispatch_set_default_spc.end();
-		const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
-		if (dsit != dsit_e) {
-			(this->*dsit->second)(properties);
-		}
+	static const auto dsit_e = map_dispatch_set_default_spc.end();
+	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
+	if (dsit != dsit_e) {
+		(this->*dsit->second)(properties);
+	}
 
-		std::set<uint64_t> set_acc;
-		switch (specification.sep_types[2]) {
-			case FieldType::GEO: {
-				// Set partials and error.
-				properties[RESERVED_PARTIALS] = static_cast<bool>(specification.flags.partials);
-				properties[RESERVED_ERROR] = specification.error;
+	std::set<uint64_t> set_acc;
+	switch (specification.sep_types[2]) {
+		case FieldType::GEO: {
+			// Set partials and error.
+			properties[RESERVED_PARTIALS] = static_cast<bool>(specification.flags.partials);
+			properties[RESERVED_ERROR] = specification.error;
 
-				if (specification.doc_acc) {
-					try {
-						for (const auto& _accuracy : *specification.doc_acc) {
-							const auto val_acc = _accuracy.as_u64();
-							if (val_acc <= HTM_MAX_LEVEL) {
-								set_acc.insert(val_acc);
-							} else {
-								THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
-							}
+			if (specification.doc_acc) {
+				try {
+					for (const auto& _accuracy : *specification.doc_acc) {
+						const auto val_acc = _accuracy.as_u64();
+						if (val_acc <= HTM_MAX_LEVEL) {
+							set_acc.insert(val_acc);
+						} else {
+							THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
 						}
-					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 					}
-				} else {
-					set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
+				} catch (const msgpack::type_error&) {
+					THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 				}
-				break;
+			} else {
+				set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
 			}
-			case FieldType::DATE: {
-				if (specification.doc_acc) {
-					try {
-						static const auto adit_e = map_acc_date.end();
-						for (const auto& _accuracy : *specification.doc_acc) {
-							const auto str_accuracy = lower_string(_accuracy.as_string());
-							const auto adit = map_acc_date.find(str_accuracy);
-							if (adit == adit_e) {
-								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
-							} else {
-								set_acc.insert(toUType(adit->second));
-							}
-						}
-					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str());
-					}
-				} else {
-					set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
-				}
-				break;
-			}
-			case FieldType::INTEGER:
-			case FieldType::POSITIVE:
-			case FieldType::FLOAT: {
-				if (specification.doc_acc) {
-					try {
-						for (const auto& _accuracy : *specification.doc_acc) {
-							set_acc.insert(_accuracy.as_u64());
-						}
-					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str());
-					}
-				} else {
-					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
-				}
-				break;
-			}
-			case FieldType::TEXT: {
-				if (!specification.flags.has_index) {
-					const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
-					if (specification.index != index) {
-						specification.index = index;
-						properties[RESERVED_INDEX] = index;
-					}
-					specification.flags.has_index = true;
-				}
-
-				properties[RESERVED_LANGUAGE] = specification.language;
-
-				properties[RESERVED_STOP_STRATEGY] = specification.stop_strategy;
-
-				properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
-				if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
-					specification.stem_language = specification.aux_lan;
-				}
-				properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
-
-				if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
-					specification.language = specification.aux_stem_lan;
-				}
-				break;
-			}
-			case FieldType::STRING: {
-				if (!specification.flags.has_index) {
-					const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
-					if (specification.index != index) {
-						specification.index = index;
-						properties[RESERVED_INDEX] = index;
-					}
-					specification.flags.has_index = true;
-				}
-				break;
-			}
-			case FieldType::TERM: {
-				if (!specification.flags.has_index) {
-					const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
-					if (specification.index != index) {
-						specification.index = index;
-						properties[RESERVED_INDEX] = index;
-					}
-					specification.flags.has_index = true;
-				}
-
-				// Process RESERVED_BOOL_TERM
-				if (!specification.flags.has_bool_term) {
-					// By default, if normalized name has upper characters then it is consider bool term.
-					specification.flags.bool_term = strhasupper(specification.normalized_name);
-					specification.flags.has_bool_term = true;
-				}
-				properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
-				break;
-			}
-			case FieldType::BOOLEAN:
-			case FieldType::UUID:
-				break;
-			default:
-				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[2]);
+			break;
 		}
-
-		// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
-		if (set_acc.size()) {
-			if (specification.acc_prefix.empty()) {
-				for (const auto& acc : set_acc) {
-					specification.acc_prefix.push_back(get_prefix(acc));
+		case FieldType::DATE: {
+			if (specification.doc_acc) {
+				try {
+					static const auto adit_e = map_acc_date.end();
+					for (const auto& _accuracy : *specification.doc_acc) {
+						const auto str_accuracy = lower_string(_accuracy.as_string());
+						const auto adit = map_acc_date.find(str_accuracy);
+						if (adit == adit_e) {
+							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
+						} else {
+							set_acc.insert(toUType(adit->second));
+						}
+					}
+				} catch (const msgpack::type_error&) {
+					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str());
 				}
-			} else if (specification.acc_prefix.size() != set_acc.size()) {
-				THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+			} else {
+				set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
 			}
-			specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-			properties[RESERVED_ACCURACY]   = specification.accuracy;
-			properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
+			break;
 		}
-
-		if (specification.flags.dynamic_type) {
+		case FieldType::INTEGER:
+		case FieldType::POSITIVE:
+		case FieldType::FLOAT: {
+			if (specification.doc_acc) {
+				try {
+					for (const auto& _accuracy : *specification.doc_acc) {
+						set_acc.insert(_accuracy.as_u64());
+					}
+				} catch (const msgpack::type_error&) {
+					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str());
+				}
+			} else {
+				set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
+			}
+			break;
+		}
+		case FieldType::TEXT: {
 			if (!specification.flags.has_index) {
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
@@ -1651,33 +1574,108 @@ Schema::validate_required_data()
 				}
 				specification.flags.has_index = true;
 			}
-		} else {
-			// Process RESERVED_SLOT
-			if (specification.slot == Xapian::BAD_VALUENO) {
-				specification.slot = get_slot(specification.prefix);
-			} else if (specification.slot < DB_SLOT_RESERVED && !specification.flags.reserved_slot) {
-				specification.slot += DB_SLOT_RESERVED;
-			}
-			properties[RESERVED_SLOT] = specification.slot;
 
-			// If field is namespace fallback to index anything but values.
-			if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
-				const auto index = specification.index & ~TypeIndex::VALUES;
+			properties[RESERVED_LANGUAGE] = specification.language;
+
+			properties[RESERVED_STOP_STRATEGY] = specification.stop_strategy;
+
+			properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
+			if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
+				specification.stem_language = specification.aux_lan;
+			}
+			properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
+
+			if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
+				specification.language = specification.aux_stem_lan;
+			}
+			break;
+		}
+		case FieldType::STRING: {
+			if (!specification.flags.has_index) {
+				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
 					properties[RESERVED_INDEX] = index;
 				}
 				specification.flags.has_index = true;
 			}
+			break;
 		}
+		case FieldType::TERM: {
+			if (!specification.flags.has_index) {
+				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+				if (specification.index != index) {
+					specification.index = index;
+					properties[RESERVED_INDEX] = index;
+				}
+				specification.flags.has_index = true;
+			}
 
-		// Process RESERVED_TYPE
-		properties[RESERVED_TYPE] = specification.sep_types;
-
-		specification.flags.field_with_type = true;
-
-		// L_DEBUG(this, "\nspecification = %s\nproperties = %s", specification.to_string().c_str(), properties.to_string(true).c_str());
+			// Process RESERVED_BOOL_TERM
+			if (!specification.flags.has_bool_term) {
+				// By default, if normalized name has upper characters then it is consider bool term.
+				specification.flags.bool_term = strhasupper(specification.normalized_name);
+				specification.flags.has_bool_term = true;
+			}
+			properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
+			break;
+		}
+		case FieldType::BOOLEAN:
+		case FieldType::UUID:
+			break;
+		default:
+			THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[2]);
 	}
+
+	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
+	if (set_acc.size()) {
+		if (specification.acc_prefix.empty()) {
+			for (const auto& acc : set_acc) {
+				specification.acc_prefix.push_back(get_prefix(acc));
+			}
+		} else if (specification.acc_prefix.size() != set_acc.size()) {
+			THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+		}
+		specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+		properties[RESERVED_ACCURACY]   = specification.accuracy;
+		properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
+	}
+
+	if (specification.flags.dynamic_type) {
+		if (!specification.flags.has_index) {
+			const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+			if (specification.index != index) {
+				specification.index = index;
+				properties[RESERVED_INDEX] = index;
+			}
+			specification.flags.has_index = true;
+		}
+	} else {
+		// Process RESERVED_SLOT
+		if (specification.slot == Xapian::BAD_VALUENO) {
+			specification.slot = get_slot(specification.prefix);
+		} else if (specification.slot < DB_SLOT_RESERVED && !specification.flags.reserved_slot) {
+			specification.slot += DB_SLOT_RESERVED;
+		}
+		properties[RESERVED_SLOT] = specification.slot;
+
+		// If field is namespace fallback to index anything but values.
+		if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
+			const auto index = specification.index & ~TypeIndex::VALUES;
+			if (specification.index != index) {
+				specification.index = index;
+				properties[RESERVED_INDEX] = index;
+			}
+			specification.flags.has_index = true;
+		}
+	}
+
+	// Process RESERVED_TYPE
+	properties[RESERVED_TYPE] = specification.sep_types;
+
+	specification.flags.field_with_type = true;
+
+	// L_DEBUG(this, "\nspecification = %s\nproperties = %s", specification.to_string().c_str(), properties.to_string(true).c_str());
 }
 
 
@@ -1690,61 +1688,59 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 		guess_field_type(value);
 	}
 
-	if (!specification.full_meta_name.empty()) {
-		switch (specification.sep_types[2]) {
-			case FieldType::GEO:
-				// Set partials and error.
-				specification.flags.partials = default_spc.flags.partials;
-				specification.error = default_spc.error;
-				break;
+	switch (specification.sep_types[2]) {
+		case FieldType::GEO:
+			// Set partials and error.
+			specification.flags.partials = default_spc.flags.partials;
+			specification.error = default_spc.error;
+			break;
 
-			case FieldType::TEXT:
-				if (!specification.flags.has_index) {
-					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
-					specification.flags.has_index = true;
-				}
+		case FieldType::TEXT:
+			if (!specification.flags.has_index) {
+				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+				specification.flags.has_index = true;
+			}
 
-				specification.language = default_spc.language;
+			specification.language = default_spc.language;
 
-				specification.stop_strategy = default_spc.stop_strategy;
+			specification.stop_strategy = default_spc.stop_strategy;
 
-				specification.stem_strategy = default_spc.stem_strategy;
-				specification.stem_language = default_spc.stem_language;
-				break;
+			specification.stem_strategy = default_spc.stem_strategy;
+			specification.stem_language = default_spc.stem_language;
+			break;
 
-			case FieldType::STRING:
-				if (!specification.flags.has_index) {
-					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
-					specification.flags.has_index = true;
-				}
-				break;
+		case FieldType::STRING:
+			if (!specification.flags.has_index) {
+				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+				specification.flags.has_index = true;
+			}
+			break;
 
-			case FieldType::TERM:
-				if (!specification.flags.has_index) {
-					specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
-					specification.flags.has_index = true;
-				}
+		case FieldType::TERM:
+			if (!specification.flags.has_index) {
+				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+				specification.flags.has_index = true;
+			}
 
-				if (!specification.flags.has_bool_term) {
-					specification.flags.bool_term = strhasupper(specification.normalized_name);
-					specification.flags.has_bool_term = true;
-				}
-				break;
+			if (!specification.flags.has_bool_term) {
+				specification.flags.bool_term = strhasupper(specification.normalized_name);
+				specification.flags.has_bool_term = true;
+			}
+			break;
 
-			case FieldType::DATE:
-			case FieldType::INTEGER:
-			case FieldType::POSITIVE:
-			case FieldType::FLOAT:
-			case FieldType::BOOLEAN:
-			case FieldType::UUID:
-				break;
+		case FieldType::DATE:
+		case FieldType::INTEGER:
+		case FieldType::POSITIVE:
+		case FieldType::FLOAT:
+		case FieldType::BOOLEAN:
+		case FieldType::UUID:
+			break;
 
-			default:
-				THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[2]);
-		}
-
-		specification.flags.field_with_type = true;
+		default:
+			THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[2]);
 	}
+
+	specification.flags.field_with_type = true;
 }
 
 
