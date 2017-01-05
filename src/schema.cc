@@ -1042,6 +1042,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 {
 	L_CALL(this, "Schema::index_object(%s, %s)", repr(parent_properties->to_string()).c_str(), repr(name).c_str());
 
+	if (name.empty()) {
+		THROW(ClientError, "Field name must not be empty");
+	}
+
 	if (!specification.flags.is_recursive) {
 		if (specification.flags.store) {
 			(*parent_data)[name] = object;
@@ -2474,6 +2478,10 @@ void
 Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name)
 {
 	L_CALL(this, "Schema::update_schema(%s)", repr(name).c_str());
+
+	if (name.empty()) {
+		THROW(ClientError, "Field name must not be empty");
+	}
 
 	const auto spc_start = specification;
 	if (obj_schema.is_map()) {
