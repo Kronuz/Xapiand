@@ -1636,7 +1636,7 @@ Schema::validate_required_data()
 			properties[RESERVED_SLOT] = specification.slot;
 
 			// If field is namespace fallback to index anything but values.
-			if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
+			if (!specification.flags.has_index && specification.flags.has_namespace) {
 				const auto index = specification.index & ~TypeIndex::VALUES;
 				if (specification.index != index) {
 					specification.index = index;
@@ -2721,25 +2721,17 @@ Schema::add_field(MsgPack*& properties, const MsgPack& o)
 
 	properties = &(*properties)[specification.meta_name];
 
-	try {
-		auto data_lan = map_stem_language.at(specification.normalized_name);
-		if (data_lan.first) {
-			specification.language = data_lan.second;
-			specification.aux_lan = data_lan.second;
-		}
-	} catch (const std::out_of_range) { }
+	static const auto slit_e = map_stem_language.end();
+	const auto slit = map_stem_language.find(specification.normalized_name);
+	if (slit != slit_e && slit->second.first) {
+		specification.language = slit->second.second;
+		specification.aux_lan = slit->second.second;
+	}
 
 	if (specification.full_meta_name.empty()) {
 		specification.full_meta_name.assign(specification.meta_name);
 	} else {
 		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
-	}
-
-	// Load default specifications.
-	static const auto dsit_e = map_dispatch_set_default_spc.end();
-	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
-	if (dsit != dsit_e) {
-		(this->*dsit->second)(*properties);
 	}
 
 	// Write obj specifications.
@@ -2752,6 +2744,13 @@ Schema::add_field(MsgPack*& properties, const MsgPack& o)
 				(this->*wpit->second)(*properties, str_key, o.at(str_key));
 			}
 		}
+	}
+
+	// Load default specifications.
+	static const auto dsit_e = map_dispatch_set_default_spc.end();
+	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
+	if (dsit != dsit_e) {
+		(this->*dsit->second)(*properties);
 	}
 
 	// Verify prefix.
@@ -3437,54 +3436,65 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 	L_CALL(this, "Schema::process_type(%s)", repr(doc_type.to_string()).c_str());
 
 	try {
-		auto str_type = lower_string(doc_type.as_string());
+		const auto str_type = lower_string(doc_type.as_string());
+
 		if (str_type.empty()) {
 			THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
 		}
 
-		try {
-			specification.sep_types[2] = map_type.at(str_type);
-		} catch (const std::out_of_range&) {
-			auto tokens = Split::split(str_type, "/");
-			try {
-				switch (tokens.size()) {
-					case 1:
-						if (tokens[0] == OBJECT_STR) {
-							specification.sep_types[0] = FieldType::OBJECT;
-							return;
-						} else if (tokens[0] == ARRAY_STR) {
+		static const auto tit_e = map_type.end();
+		auto tit = map_type.find(str_type);
+		if (tit != tit_e) {
+			specification.sep_types[2] = tit->second;
+		} else {
+			const auto tokens = Split::split(str_type, "/");
+			switch (tokens.size()) {
+				case 1:
+					if (tokens[0] == OBJECT_STR) {
+						specification.sep_types[0] = FieldType::OBJECT;
+						return;
+					} else if (tokens[0] == ARRAY_STR) {
+						specification.sep_types[1] = FieldType::ARRAY;
+						return;
+					}
+					break;
+
+				case 2:
+					if (tokens[0] == OBJECT_STR) {
+						specification.sep_types[0] = FieldType::OBJECT;
+						if (tokens[1] == ARRAY_STR) {
 							specification.sep_types[1] = FieldType::ARRAY;
 							return;
-						}
-						break;
-					case 2:
-						if (tokens[0] == OBJECT_STR) {
-							specification.sep_types[0] = FieldType::OBJECT;
-							if (tokens[1] == ARRAY_STR) {
-								specification.sep_types[1] = FieldType::ARRAY;
-								return;
-							} else {
-								specification.sep_types[2] = map_type.at(tokens[1]);
+						} else {
+							tit = map_type.find(tokens[1]);
+							if (tit != tit_e) {
+								specification.sep_types[2] = tit->second;
 								return;
 							}
-						} else if (tokens[0] == ARRAY_STR) {
-							specification.sep_types[1] = FieldType::ARRAY;
-							specification.sep_types[2] = map_type.at(tokens[1]);
+						}
+					} else if (tokens[0] == ARRAY_STR) {
+						specification.sep_types[1] = FieldType::ARRAY;
+						tit = map_type.find(tokens[1]);
+						if (tit != tit_e) {
+							specification.sep_types[2] = tit->second;
 							return;
 						}
-						break;
-					case 3:
-						if (tokens[0] == OBJECT_STR && tokens[1] == ARRAY_STR) {
-							specification.sep_types[0] = FieldType::OBJECT;
-							specification.sep_types[1] = FieldType::ARRAY;
-							specification.sep_types[2] = map_type.at(tokens[2]);
+					}
+					break;
+
+				case 3:
+					if (tokens[0] == OBJECT_STR && tokens[1] == ARRAY_STR) {
+						specification.sep_types[0] = FieldType::OBJECT;
+						specification.sep_types[1] = FieldType::ARRAY;
+						tit = map_type.find(tokens[2]);
+						if (tit != tit_e) {
+							specification.sep_types[2] = tit->second;
+							return;
 						}
-						break;
-				}
-				THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
-			} catch (const std::out_of_range&) {
-				THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
+					}
+					break;
 			}
+			THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
@@ -3697,11 +3707,13 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 
 	try {
 		auto str_index = lower_string(doc_index.as_string());
-		try {
-			specification.index = map_index.at(str_index);
-			specification.flags.has_index = true;
-		} catch (const std::out_of_range&) {
+		static const auto miit_e = map_index.end();
+		const auto miit = map_index.find(str_index);
+		if (miit == miit_e) {
 			THROW(ClientError, "%s must be in %s (%s not supported)", prop_name.c_str(), str_set_index.c_str(), str_index.c_str());
+		} else {
+			specification.index = miit->second;
+			specification.flags.has_index = true;
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
@@ -3892,18 +3904,18 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 	L_CALL(nullptr, "Schema::readable(%s, %d)", repr(item_schema.to_string()).c_str(), is_root);
 
 	// Change this item of schema in readable form.
+	static const auto drit_e = map_dispatch_readable.end();
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
-		auto str_key = it->as_string();
-		try {
-			auto func = map_dispatch_readable.at(str_key);
-			if (!(*func)(item_schema.at(str_key), item_schema)) {
+		const auto str_key = it->as_string();
+		const auto drit = map_dispatch_readable.find(str_key);
+		if (drit == drit_e) {
+			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
+				readable(item_schema.at(str_key), false);
+			}
+		} else {
+			if (!(*drit->second)(item_schema.at(str_key), item_schema)) {
 				it = item_schema.erase(it);
 				continue;
-			}
-		} catch (const std::out_of_range&) {
-			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
-				auto& sub_item = item_schema.at(str_key);
-				readable(sub_item, false);
 			}
 		}
 		++it;
