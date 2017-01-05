@@ -366,7 +366,6 @@ class Xapiand(object):
         )
         return self._send_request('patch', index, **kwargs)
 
-
     def merge(self, index, id, body, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
         kwargs['id'] = id
