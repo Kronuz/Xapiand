@@ -142,7 +142,7 @@ static const std::vector<std::string> big_files({
 
 int test_storage_data(int flags) {
 	INIT_LOG
-	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage(nullptr);
+	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage("", nullptr);
 	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 
 	std::string data;
@@ -185,7 +185,7 @@ int test_storage_data(int flags) {
 
 int test_storage_file(int flags) {
 	INIT_LOG
-	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage(nullptr);
+	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage("", nullptr);
 	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 
 	int cont_write = 0;
@@ -238,21 +238,21 @@ int test_storage_bad_headers() {
 	int res = 0;
 
 	try {
-		Storage<StorageHeader, StorageBinBadHeader1, StorageBinFooterChecksum> _storage(nullptr);
+		Storage<StorageHeader, StorageBinBadHeader1, StorageBinFooterChecksum> _storage("", nullptr);
 		res = 1;
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Bad header (1): %s", e.what());
 	}
 
 	try {
-		Storage<StorageHeader, StorageBinBadHeader2, StorageBinFooterChecksum> _storage(nullptr);
+		Storage<StorageHeader, StorageBinBadHeader2, StorageBinFooterChecksum> _storage("", nullptr);
 		res = 1;
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Bad header (2): %s", e.what());
 	}
 
 	try {
-		Storage<StorageHeader, StorageBinBadHeader3, StorageBinFooterChecksum> _storage(nullptr);
+		Storage<StorageHeader, StorageBinBadHeader3, StorageBinFooterChecksum> _storage("", nullptr);
 		res = 1;
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Bad header (3): %s", e.what());
@@ -266,7 +266,7 @@ int test_storage_exception_write(int flags) {
 	INIT_LOG
 	std::atomic_bool finish(false);
 	std::mutex mtx;
-	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage(nullptr);
+	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage("", nullptr);
 
 	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 
@@ -333,7 +333,7 @@ int test_storage_exception_write_file(int flags) {
 	INIT_LOG
 	std::atomic_bool finish(false);
 	std::mutex mtx;
-	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage(nullptr);
+	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage("", nullptr);
 
 	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 
