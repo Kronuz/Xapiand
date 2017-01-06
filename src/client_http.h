@@ -138,6 +138,7 @@ class HttpClient : public BaseClient {
 		BAD_QUERY,
 		CMD_SEARCH    = xxh64::hash("_search"),
 		CMD_INFO      = xxh64::hash("_info"),
+		CMD_STATS     = xxh64::hash("_stats"),
 		CMD_SCHEMA    = xxh64::hash("_schema"),
 		CMD_NODES     = xxh64::hash("_nodes"),
 		CMD_TOUCH     = xxh64::hash("_touch"),
@@ -214,6 +215,7 @@ class HttpClient : public BaseClient {
 	void schema_view(enum http_method method);
 	void nodes_view(enum http_method method);
 	void status_view(enum http_status status, const std::string& message="");
+	void histogram_view(enum http_method method);
 
 	void _options(enum http_method method);
 	void _head(enum http_method method);

@@ -694,6 +694,9 @@ HttpClient::_get(enum http_method method)
 		case Command::CMD_INFO:
 			info_view(method);
 			break;
+		case Command::CMD_STATS:
+			histogram_view(method);
+			break;
 		case Command::CMD_NODES:
 			nodes_view(method);
 			break;
@@ -1541,6 +1544,19 @@ HttpClient::status_view(enum http_status status, const std::string& message)
 	write_http_response(status, {
 		{ RESPONSE_STATUS, (int)status },
 		{ RESPONSE_MESSAGE, message.empty() ? http_status_str(status) : message }
+	});
+}
+
+
+void
+HttpClient::histogram_view(enum http_method)
+{
+	L_CALL(this, "HttpClient::histogram_view()");
+
+	enum http_status error_code = HTTP_STATUS_NOT_FOUND;
+	write_http_response(error_code, {
+		{ RESPONSE_STATUS, (int)error_code },
+		{ RESPONSE_MESSAGE, http_status_str(error_code)}
 	});
 }
 
