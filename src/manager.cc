@@ -1072,21 +1072,9 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 
 	std::unordered_map<std::string, Stats::Counter::Element> added_counters;
 	if (start < SLOT_TIME_SECOND) {
-		auto aux = second_time.second + start - end;
-		if (aux < SLOT_TIME_SECOND) {
-			stats_cnt.add_stats_sec(second_time.second, aux, added_counters);
-		} else {
-			stats_cnt.add_stats_sec(second_time.second, SLOT_TIME_SECOND - 1, added_counters);
-			stats_cnt.add_stats_sec(0, aux % SLOT_TIME_SECOND, added_counters);
-		}
+		stats_cnt.add_stats_sec(second_time.second, second_time.second + (start - end), added_counters);
 	} else {
-		auto aux = second_time.minute + (start - end) / SLOT_TIME_SECOND;
-		if (aux < SLOT_TIME_MINUTE) {
-			stats_cnt.add_stats_min(second_time.minute, aux, added_counters);
-		} else {
-			stats_cnt.add_stats_min(second_time.minute, SLOT_TIME_MINUTE - 1, added_counters);
-			stats_cnt.add_stats_min(0, aux % SLOT_TIME_MINUTE, added_counters);
-		}
+		stats_cnt.add_stats_min(second_time.minute, second_time.minute + (start - end) / SLOT_TIME_SECOND, added_counters);
 	}
 
 	stats["system_time"] = Datetime::isotime(current_time);

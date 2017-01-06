@@ -101,8 +101,18 @@ Stats::Counter::clear_stats_sec(uint8_t start, uint8_t end)
 inline void
 Stats::Counter::add_stats_min(uint16_t start, uint16_t end, Stats::Counter::Element& element)
 {
-	for (auto i = start; i <= end; ++i) {
-		element.add(min[i]);
+	if (end < SLOT_TIME_MINUTE) {
+		for (auto i = start; i <= end; ++i) {
+			element.add(min[i]);
+		}
+	} else {
+		for (auto i = start; i < SLOT_TIME_MINUTE; ++i) {
+			element.add(min[i]);
+		}
+		end %= SLOT_TIME_MINUTE;
+		for (auto i = 0; i <= end; ++i) {
+			element.add(min[i]);
+		}
 	}
 }
 
@@ -110,8 +120,18 @@ Stats::Counter::add_stats_min(uint16_t start, uint16_t end, Stats::Counter::Elem
 inline void
 Stats::Counter::add_stats_sec(uint8_t start, uint8_t end, Element& element)
 {
-	for (auto i = start; i <= end; ++i) {
-		element.add(sec[i]);
+	if (end < SLOT_TIME_SECOND) {
+		for (auto i = start; i <= end; ++i) {
+			element.add(sec[i]);
+		}
+	} else {
+		for (auto i = start; i < SLOT_TIME_SECOND; ++i) {
+			element.add(sec[i]);
+		}
+		end %= SLOT_TIME_SECOND;
+		for (auto i = 0; i <= end; ++i) {
+			element.add(sec[i]);
+		}
 	}
 }
 
