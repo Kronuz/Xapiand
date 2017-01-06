@@ -28,6 +28,7 @@
 #include <cstring>                         // for size_t, strlen
 #include <ctype.h>                         // for tolower
 #include <functional>                      // for ref, reference_wrapper
+#include <mutex>                           // for mutex
 #include <ostream>                         // for operator<<, basic_ostream
 #include <set>                             // for __tree_const_iterator, set
 #include <stdexcept>                       // for out_of_range
@@ -517,8 +518,10 @@ const std::unordered_map<std::string, std::pair<bool, std::string>> map_stem_lan
 
 
 const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& language) {
+	static std::mutex mtx;
 	static std::string path_stopwords(getenv("XAPIAN_PATH_STOPWORDS") ? getenv("XAPIAN_PATH_STOPWORDS") : PATH_STOPWORDS);
 	static std::unordered_map<std::string, std::unique_ptr<Xapian::SimpleStopper>> stoppers;
+	std::lock_guard<std::mutex> lk(mtx);
 	auto it = stoppers.find(language);
 	if (it == stoppers.end()) {
 		auto path = path_stopwords + "/" + language + ".txt";
