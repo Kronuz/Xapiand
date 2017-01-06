@@ -32,7 +32,6 @@
 #include "utils.h"               // for readable_revents
 
 
-std::mutex XapiandServer::static_mutex;
 std::atomic_int XapiandServer::total_clients(0);
 std::atomic_int XapiandServer::http_clients(0);
 std::atomic_int XapiandServer::binary_clients(0);

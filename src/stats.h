@@ -25,6 +25,7 @@
 #include "xapiand.h"
 
 #include <chrono>       // for system_clock, time_point, duration_cast, seconds
+#include <mutex>        // for mutex
 #include <vector>       // for vector
 
 
@@ -57,6 +58,7 @@ struct pos_time_t {
 extern pos_time_t b_time;
 extern std::chrono::time_point<std::chrono::system_clock> init_time;
 extern times_row_t stats_cnt;
+extern std::mutex stats_mutex;
 
 void update_pos_time();
 void fill_zeros_stats_min(uint16_t start, uint16_t end);

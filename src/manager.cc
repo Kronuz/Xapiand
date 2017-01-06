@@ -990,8 +990,6 @@ XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endp
 void
 XapiandManager::server_status(MsgPack& stats)
 {
-	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-
 	// stats["_connections"] = XapiandServer::total_clients.load();
 	stats["_http_connections"] = XapiandServer::http_clients.load();
 #ifdef XAPIAND_CLUSTERING
@@ -1052,7 +1050,7 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
 void
 XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time_t& second_time)
 {
-	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
+	std::unique_lock<std::mutex> lk(stats_mutex);
 	update_pos_time();
 	auto now_time = std::chrono::system_clock::to_time_t(init_time);
 	auto b_time_cpy = b_time;

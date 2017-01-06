@@ -953,7 +953,7 @@ HttpClient::delete_document_view(enum http_method method)
 
 	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
 	{
-		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
+		std::lock_guard<std::mutex> lk(stats_mutex);
 		update_pos_time();
 		++stats_cnt.del.min[b_time.minute];
 		++stats_cnt.del.sec[b_time.second];
@@ -1002,7 +1002,7 @@ HttpClient::index_document_view(enum http_method method)
 
 	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
 	{
-		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
+		std::lock_guard<std::mutex> lk(stats_mutex);
 		update_pos_time();
 		++stats_cnt.index.min[b_time.minute];
 		++stats_cnt.index.sec[b_time.second];
@@ -1099,7 +1099,7 @@ HttpClient::update_document_view(enum http_method method)
 
 	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
 	{
-		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
+		std::lock_guard<std::mutex> lk(stats_mutex);
 		update_pos_time();
 		++stats_cnt.patch.min[b_time.minute];
 		++stats_cnt.patch.sec[b_time.second];
@@ -1554,7 +1554,7 @@ HttpClient::search_view(enum http_method method)
 
 	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
 	{
-		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
+		std::lock_guard<std::mutex> lk(stats_mutex);
 		update_pos_time();
 		++stats_cnt.search.min[b_time.minute];
 		++stats_cnt.search.sec[b_time.second];

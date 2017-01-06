@@ -25,6 +25,7 @@
 pos_time_t b_time;
 std::chrono::time_point<std::chrono::system_clock> init_time;
 times_row_t stats_cnt;
+std::mutex stats_mutex;
 
 
 void update_pos_time() {
