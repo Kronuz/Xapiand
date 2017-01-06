@@ -147,6 +147,7 @@ Stats::Stats(Stats& other)
 	: current(std::chrono::system_clock::now())
 {
 	std::lock_guard<std::mutex> lk(other.mtx);
+	other.update_pos_time();
 	current = other.current;
 	current_pos = other.current_pos;
 	counters = other.counters;
