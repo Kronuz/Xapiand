@@ -55,8 +55,9 @@
 #include "serialise.h"                      // for boolean
 #include "servers/server.h"                 // for XapiandServer, XapiandSer...
 #include "servers/server_http.h"            // for HttpServer
+#include "stats.h"                          // for b_time, stats_cnt
 #include "threadpool.h"                     // for ThreadPool
-#include "utils.h"                          // for b_time, cont_time_t, delt...
+#include "utils.h"                          // for delta_string
 #include "xxh64.hpp"                        // for xxh64
 
 

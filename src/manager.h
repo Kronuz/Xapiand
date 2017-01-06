@@ -36,6 +36,8 @@
 #include "length.h"
 #include "threadpool.h"
 #include "worker.h"
+#include "stats.h"
+
 
 #define UNKNOWN_REGION -1
 

@@ -59,32 +59,6 @@
 	}(s)
 
 
-constexpr uint16_t SLOT_TIME_MINUTE = 1440;
-constexpr uint8_t SLOT_TIME_SECOND = 60;
-
-
-struct cont_time_t {
-	uint32_t min[SLOT_TIME_MINUTE];
-	uint32_t sec[SLOT_TIME_SECOND];
-	uint64_t tm_min[SLOT_TIME_MINUTE];
-	uint64_t tm_sec[SLOT_TIME_SECOND];
-};
-
-
-struct times_row_t {
-	cont_time_t index;
-	cont_time_t search;
-	cont_time_t del;
-	cont_time_t patch;
-};
-
-
-struct pos_time_t {
-	uint16_t minute;
-	uint8_t second;
-};
-
-
 struct File_ptr {
 	struct dirent *ent;
 
@@ -93,11 +67,6 @@ struct File_ptr {
 };
 
 extern const std::regex numeric_re;
-
-// Varibles used by server stats.
-extern pos_time_t b_time;
-extern std::chrono::time_point<std::chrono::system_clock> init_time;
-extern times_row_t stats_cnt;
 
 // It'll return the enum's underlying type.
 template<typename E>
@@ -286,12 +255,6 @@ void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pr
 DIR* opendir(const char* filename, bool create);
 // Copy all directory if file_name and new_name are empty
 int copy_file(const std::string& src, const std::string& dst, bool create=true, const std::string& file_name=std::string(), const std::string& new_name=std::string());
-
-void update_pos_time();
-void fill_zeros_stats_min(uint16_t start, uint16_t end);
-void fill_zeros_stats_sec(uint8_t start, uint8_t end);
-void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy);
-void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy);
 
 std::string bytes_string(size_t bytes, bool colored=false);
 std::string delta_string(long double nanoseconds, bool colored=false);
