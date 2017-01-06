@@ -25,11 +25,10 @@
 Stats::Pos::Pos()
 	: minute(0),
 	  second(0)
-{
-}
+{ }
 
 
-void
+inline void
 Stats::Counter::Element::clear()
 {
 	cnt = 0;
@@ -37,7 +36,7 @@ Stats::Counter::Element::clear()
 }
 
 
-void
+inline void
 Stats::Counter::Element::merge(const Element& other)
 {
 	cnt += other.cnt;
@@ -45,7 +44,7 @@ Stats::Counter::Element::merge(const Element& other)
 }
 
 
-void
+inline void
 Stats::Counter::Element::add(uint64_t duration)
 {
 	++cnt;
@@ -53,6 +52,7 @@ Stats::Counter::Element::add(uint64_t duration)
 }
 
 
+inline
 Stats::Counter::Counter()
 {
 	clear_stats_min(0, SLOT_TIME_MINUTE - 1);
@@ -60,7 +60,7 @@ Stats::Counter::Counter()
 }
 
 
-void
+inline void
 Stats::Counter::clear_stats_min(uint16_t start, uint16_t end)
 {
 	for (auto i = start; i <= end; ++i) {
@@ -69,7 +69,7 @@ Stats::Counter::clear_stats_min(uint16_t start, uint16_t end)
 }
 
 
-void
+inline void
 Stats::Counter::clear_stats_sec(uint8_t start, uint8_t end)
 {
 	for (auto i = start; i <= end; ++i) {
@@ -78,7 +78,7 @@ Stats::Counter::clear_stats_sec(uint8_t start, uint8_t end)
 }
 
 
-void
+inline void
 Stats::Counter::merge_stats_min(uint16_t start, uint16_t end, Stats::Counter::Element& element)
 {
 	for (auto i = start; i <= end; ++i) {
@@ -87,7 +87,7 @@ Stats::Counter::merge_stats_min(uint16_t start, uint16_t end, Stats::Counter::El
 }
 
 
-void
+inline void
 Stats::Counter::merge_stats_sec(uint8_t start, uint8_t end, Element& element)
 {
 	for (auto i = start; i <= end; ++i) {
@@ -109,7 +109,7 @@ Stats::Pos::Pos(std::chrono::time_point<std::chrono::system_clock> current)
 }
 
 
-Stats&
+inline Stats&
 Stats::cnt()
 {
 	static Stats stats_cnt;
@@ -120,8 +120,7 @@ Stats::cnt()
 Stats::Stats()
 	: current(std::chrono::system_clock::now()),
 	  current_pos(current)
-{
-}
+{ }
 
 
 Stats::Stats(Stats& other)
@@ -134,7 +133,7 @@ Stats::Stats(Stats& other)
 }
 
 
-void
+inline void
 Stats::update_pos_time()
 {
 	auto b_time_second = current_pos.second;
@@ -174,7 +173,7 @@ Stats::update_pos_time()
 }
 
 
-void
+inline void
 Stats::clear_stats_min(uint16_t start, uint16_t end)
 {
 	for (auto& counter : counters) {
@@ -183,7 +182,7 @@ Stats::clear_stats_min(uint16_t start, uint16_t end)
 }
 
 
-void
+inline void
 Stats::clear_stats_sec(uint8_t start, uint8_t end)
 {
 	for (auto& counter : counters) {
@@ -212,7 +211,7 @@ Stats::merge_stats_sec(uint8_t start, uint8_t end, std::unordered_map<std::strin
 }
 
 
-void
+inline void
 Stats::add(Counter& counter, uint64_t duration)
 {
 	std::lock_guard<std::mutex> lk(mtx);
