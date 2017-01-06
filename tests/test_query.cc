@@ -32,92 +32,92 @@ const std::string path_test_query = std::string(PATH_TESTS) + "/examples/";
 const test_query_t test_query[] {
 	//Testing string field terms.
 	{
-		{ "description:\"American teenager\"" }, { }, { "Back to the Future", "Planet Apes" }, "movie"
+		{ "description:\"American teenager\"" }, { "Back to the Future", "Planet Apes" }, "movie"
 	},
 	{
-		{ "\"American teenager\"" }, { }, { "Back to the Future" }, "movie"
+		{ "\"American teenager\"" }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ "name.es:'hola mundo'" }, { }, { "3", "8" }, "number"
+		{ "name.es:'hola mundo'" }, { "3", "8" }, "number"
 	},
 	{
-		{ "name.en:bookstore" }, { }, { "2" }, "number"
+		{ "name.en:bookstore" }, { "2" }, "number"
 	},
 	// autor.male is a bool_term. Therefore it is case sensitive.
 	{
-		{ "actors.male:'Michael J. Fox'" }, { }, { "Back to the Future" }, "movie"
+		{ "actors.male:'Michael J. Fox'" }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ "actors.male:'Michael j. Fox'" }, { }, { }, "movie"
+		{ "actors.male:'Michael j. Fox'" }, { }, "movie"
 	},
 	{
-		{ "actors.male:'Roddy McDowall'" }, { }, { "Planet Apes" }, "movie"
+		{ "actors.male:'Roddy McDowall'" }, { "Planet Apes" }, "movie"
 	},
 	{
-		{ "actors.male:'roddy mcdowall'" }, { }, { }, "movie"
+		{ "actors.male:'roddy mcdowall'" }, { }, "movie"
 	},
 	// autor.female is not a bool_term. Therefore it is not case sensitive.
 	{
-		{ "actors.female:LINDA" }, { }, { "Planet Apes" }, "movie"
+		{ "actors.female:LINDA" }, { "Planet Apes" }, "movie"
 	},
 	{
-		{ "actors.female:linda" }, { }, { "Planet Apes" }, "movie"
+		{ "actors.female:linda" }, { "Planet Apes" }, "movie"
 	},
 	// OR
 	{
-		{ "actors.female:linda OR actors.male:'Michael J. Fox'" }, { }, { "Back to the Future", "Planet Apes" }, "movie"
+		{ "actors.female:linda OR actors.male:'Michael J. Fox'" }, { "Back to the Future", "Planet Apes" }, "movie"
 	},
 	// AND
 	{
-		{ "actors.female:linda AND actors.male:'Michael J. Fox'" }, { }, { }, "movie"
+		{ "actors.female:linda AND actors.male:'Michael J. Fox'" }, { }, "movie"
 	},
 	// Testing date terms
 	{
-		{ "released:1985-07-03" }, { }, { "Back to the Future" }, "movie"
+		{ "released:1985-07-03" }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ "date:'2011-01-01||+1y-1y+3M-3M'" }, { }, { "1", "10" }, "number"
+		{ "date:'2011-01-01||+1y-1y+3M-3M'" }, { "1", "10" }, "number"
 	},
 	{
-		{ "date:'2011-01-01||+4y'" }, { }, { "5", "6" }, "number"
+		{ "date:'2011-01-01||+4y'" }, { "5", "6" }, "number"
 	},
 	// OR
 	{
-		{ "date:'2011-01-01||+1y-1y+3M-3M' OR date:'2011-01-01||+4y'" }, { }, { "1", "5", "6", "10" }, "number"
+		{ "date:'2011-01-01||+1y-1y+3M-3M' OR date:'2011-01-01||+4y'" }, { "1", "5", "6", "10" }, "number"
 	},
 	// AND
 	{
-		{ "date:'2011-01-01||+1y-1y+3M-3M' AND date:'2011-01-01||+4y'" }, { }, { }, "number"
+		{ "date:'2011-01-01||+1y-1y+3M-3M' AND date:'2011-01-01||+4y'" }, { }, "number"
 	},
 	// Testing numeric terms
 	{
-		{ "year:2001" }, { }, { "2", "9" }, "number"
+		{ "year:2001" }, { "2", "9" }, "number"
 	},
 	{
-		{ "year:0" }, { }, { "3", "8" }, "number"
+		{ "year:0" }, { "3", "8" }, "number"
 	},
 	// OR
 	{
-		{ "year:2001 OR year:0" }, { }, { "2", "3", "8", "9" }, "number"
+		{ "year:2001 OR year:0" }, { "2", "3", "8", "9" }, "number"
 	},
 	// AND
 	{
-		{ "year:2001 AND year:0" }, { }, { }, "number"
+		{ "year:2001 AND year:0" }, { }, "number"
 	},
 	// Testing boolean terms
 	{
-		{ "there:true" }, { }, { "1", "3", "4", "7", "8", "10" }, "number"
+		{ "there:true" }, { "1", "3", "4", "7", "8", "10" }, "number"
 	},
 	{
-		{ "there:false" }, { }, { "1", "2", "5", "6", "9", "10" }, "number"
+		{ "there:false" }, { "1", "2", "5", "6", "9", "10" }, "number"
 	},
 	// OR
 	{
-		{ "there:true OR there:false" }, { }, { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" }, "number"
+		{ "there:true OR there:false" }, { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" }, "number"
 	},
 	// AND
 	{
-		{ "there:true AND there:false" }, { }, { "1", "10" }, "number"
+		{ "there:true AND there:false" }, { "1", "10" }, "number"
 	}
 	// Testing geospatials is in test_geo.cc.
 };
@@ -127,13 +127,13 @@ const test_query_t test_query[] {
 const test_query_t test_partials[] {
 	// Only applying for strings types.
 	{
-		{ }, { "directed_by:Rob" }, { "Back to the Future" }, "movie"
+		{ }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ }, { "directed_by:Zem" }, { "Back to the Future" }, "movie"
+		{ }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ }, { "description:t" }, {"Back to the Future", "Planet Apes" }, "movie"
+		{ }, {"Back to the Future", "Planet Apes" }, "movie"
 	}
 };
 
