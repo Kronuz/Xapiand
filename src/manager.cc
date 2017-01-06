@@ -1090,16 +1090,17 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 
 		stats["_system_time"] = ctime(&current_time);
 		auto p_time = current_time - start;
-		auto& time_period = stats["period"];
+		auto& time_period = stats["_period"];
 		time_period["_start"] = ctime(&p_time);
 		p_time = current_time - end;
 		time_period["_end"] = ctime(&p_time);
 
 		for (auto& counter : added_counters) {
-			stats["_" + counter.first + "_cnt"] = counter.second.cnt;
-			stats["_" + counter.first + "_min"] = delta_string(counter.second.min);
-			stats["_" + counter.first + "_max"] = delta_string(counter.second.max);
-			stats["_" + counter.first + "_avg"] = delta_string(counter.second.cnt == 0 ? 0.0 : (counter.second.total / counter.second.cnt));
+			auto& counter_stats = stats["_" + counter.first];
+			counter_stats["_cnt"] = counter.second.cnt;
+			counter_stats["_min"] = delta_string(counter.second.min);
+			counter_stats["_max"] = delta_string(counter.second.max);
+			counter_stats["_avg"] = delta_string(counter.second.cnt == 0 ? 0.0 : (counter.second.total / counter.second.cnt));
 		}
 	}
 }
