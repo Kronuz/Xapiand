@@ -1096,9 +1096,9 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 		for (auto& counter : added_counters) {
 			auto& counter_stats = stats[counter.first];
 			counter_stats["cnt"] = counter.second.cnt;
+			counter_stats["avg"] = delta_string(counter.second.cnt == 0 ? 0.0 : (counter.second.total / counter.second.cnt));
 			counter_stats["min"] = delta_string(counter.second.min);
 			counter_stats["max"] = delta_string(counter.second.max);
-			counter_stats["avg"] = delta_string(counter.second.cnt == 0 ? 0.0 : (counter.second.total / counter.second.cnt));
 		}
 	}
 }
