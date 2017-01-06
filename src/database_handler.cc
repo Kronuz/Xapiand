@@ -287,6 +287,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 	std::string prefixed_term_id;
 	required_spc_t spc_id;
 
+	auto schema_begins = std::chrono::system_clock::now();
 	do {
 		schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
 		L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
@@ -332,7 +333,17 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			term_id = Serialise::serialise(spc_id, _document_id);
 			prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
 		}
-	} while (!update_schema());
+		auto update = update_schema();
+		if (update.first) {
+			auto schema_ends = std::chrono::system_clock::now();
+			if (update.second) {
+				Stats::cnt().add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
+			} else {
+				Stats::cnt().add("schema_reads", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
+			}
+			break;
+		}
+	} while (true);
 
 	if (blob.empty()) {
 		L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
@@ -469,11 +480,22 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 {
 	L_CALL(this, "DatabaseHandler::write_schema(<obj>)");
 
+	auto schema_begins = std::chrono::system_clock::now();
 	do {
 		schema = get_schema();
 		schema->write_schema(obj, method == HTTP_PUT);
 		L_INDEX(this, "Schema to write: %s", repr(schema->to_string()).c_str());
-	} while (!update_schema());
+		auto update = update_schema();
+		if (update.first) {
+			auto schema_ends = std::chrono::system_clock::now();
+			if (update.second) {
+				Stats::cnt().add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
+			} else {
+				Stats::cnt().add("schema_reads", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
+			}
+			break;
+		}
+	} while (true);
 }
 
 
@@ -672,7 +694,7 @@ DatabaseHandler::get_document(const Xapian::docid& did)
 }
 
 
-bool
+std::pair<bool, bool>
 DatabaseHandler::update_schema()
 {
 	L_CALL(this, "DatabaseHandler::update_schema()");
@@ -682,11 +704,12 @@ DatabaseHandler::update_schema()
 		auto old_schema = schema->get_const_schema();
 		for (const auto& e: endpoints) {
 			if (!XapiandManager::manager->database_pool.set_schema(e, flags, old_schema, mod_schema)) {
-				return false;
+				return std::make_pair(false, true);
 			}
 		}
+		return std::make_pair(true, true);
 	}
-	return true;
+	return std::make_pair(true, false);
 }
 
 
