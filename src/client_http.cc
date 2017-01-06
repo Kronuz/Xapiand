@@ -1353,7 +1353,7 @@ HttpClient::search_view(enum http_method method)
 			}
 			basic_response["_query"] = basic_query;
 
-			if (is_acceptable_type(msgpack_type, ct_type)) {
+			if (is_acceptable_type(msgpack_type, ct_type) || is_acceptable_type(x_msgpack_type, ct_type)) {
 				first_chunk = basic_response.serialise();
 				// Remove zero size array and manually add the msgpack array header
 				first_chunk.pop_back();
