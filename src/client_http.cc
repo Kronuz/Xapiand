@@ -1125,7 +1125,7 @@ HttpClient::info_view(enum http_method method)
 			db_handler.get_document_info(response["document_info"], path_parser.get_id());
 		} catch (const CheckoutError&) {
 			path_parser.off_id = nullptr;
-			response.erase("_document_info");
+			response.erase("document_info");
 		}
 
 		path_parser.rewind();
