@@ -76,7 +76,7 @@ int test_pool_limit() {
 int test_pool_func() {
 	INIT_LOG
 	ThreadPool<> pool("W%zu", 4);
-	std::vector<std::future<int>> results;
+	std::vector<std::shared_future<int>> results;
 	test_pool_class_t obj;
 
 	int i = 1;
@@ -123,7 +123,7 @@ int test_pool_func() {
 int test_pool_func_shared() {
 	INIT_LOG
 	ThreadPool<> pool("W%zu", 4);
-	std::vector<std::future<int>> results;
+	std::vector<std::shared_future<int>> results;
 	test_pool_class_t obj;
 
 	int i = 1;
@@ -171,7 +171,7 @@ int test_pool_func_shared() {
 int test_pool_func_unique() {
 	INIT_LOG
 	ThreadPool<> pool("W%zu", 4);
-	std::vector<std::future<int>> results;
+	std::vector<std::shared_future<int>> results;
 	test_pool_class_t obj;
 
 	int i = 1;
