@@ -1120,8 +1120,8 @@ HttpClient::info_view(enum http_method method)
 
 		operation_begins = std::chrono::system_clock::now();
 
-		db_handler.reset(endpoints, DB_OPEN, method);
 		try {
+			db_handler.reset(endpoints, DB_OPEN, method);
 			db_handler.get_document_info(response["document_info"], path_parser.get_id());
 		} catch (const CheckoutError&) {
 			path_parser.off_id = nullptr;
