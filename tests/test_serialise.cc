@@ -173,7 +173,7 @@ int test_unserialise_date() {
 	INIT_LOG
 	int cont = 0;
 	for (const test_date_t *p = test_unserialisedate; p->str; ++p) {
-		std::string date_s(Serialise::date(std::to_string(Datetime::timestamp(p->str))));
+		std::string date_s(Serialise::date(std::to_string(Datetime::timestamp(std::string(p->str)))));
 		std::string date = Unserialise::date(date_s);
 		if (date.compare(p->expect) != 0) {
 			++cont;
