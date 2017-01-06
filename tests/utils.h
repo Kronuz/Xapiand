@@ -45,6 +45,7 @@
 #define TEST_CHERT false
 #define TEST_SOLO true
 #define TEST_REQUIRED_TYPE false
+#define TEST_OPTIMAL false
 #define TEST_DATABASE ""
 #define TEST_CLUSTER_NAME "cluster_test"
 #define TEST_NODE_NAME "node_test"
