@@ -40,10 +40,13 @@ struct Stats {
 		struct Element {
 			uint32_t cnt;
 			uint64_t total;
+			uint64_t max;
+			uint64_t min;
 
+			Element();
+			Element(uint64_t duration);
 			void clear();
-			void merge(const Element& other);
-			void add(uint64_t duration);
+			void add(const Element& other);
 		};
 		Element min[SLOT_TIME_MINUTE];
 		Element sec[SLOT_TIME_SECOND];
@@ -51,8 +54,8 @@ struct Stats {
 		Counter();
 		void clear_stats_min(uint16_t start, uint16_t end);
 		void clear_stats_sec(uint8_t start, uint8_t end);
-		void merge_stats_min(uint16_t start, uint16_t end, Element& element);
-		void merge_stats_sec(uint8_t start, uint8_t end, Element& element);
+		void add_stats_min(uint16_t start, uint16_t end, Element& element);
+		void add_stats_sec(uint8_t start, uint8_t end, Element& element);
 	};
 
 	struct Pos {
@@ -79,8 +82,8 @@ struct Stats {
 
 	void clear_stats_min(uint16_t start, uint16_t end);
 	void clear_stats_sec(uint8_t start, uint8_t end);
-	void merge_stats_min(uint16_t start, uint16_t end, std::unordered_map<std::string, Counter::Element>& cnt);
-	void merge_stats_sec(uint8_t start, uint8_t end, std::unordered_map<std::string, Counter::Element>& cnt);
+	void add_stats_min(uint16_t start, uint16_t end, std::unordered_map<std::string, Counter::Element>& cnt);
+	void add_stats_sec(uint8_t start, uint8_t end, std::unordered_map<std::string, Counter::Element>& cnt);
 
 	void add(Counter& counter, uint64_t duration);
 	static void add(const std::string& counter, uint64_t duration);

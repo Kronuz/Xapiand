@@ -1069,22 +1069,22 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 	if (end > start) {
 		THROW(ClientError, "First argument must be less or equal than the second");
 	} else {
-		std::unordered_map<std::string, Stats::Counter::Element> merged;
+		std::unordered_map<std::string, Stats::Counter::Element> added_counters;
 		if (start < SLOT_TIME_SECOND) {
 			auto aux = second_time.second + start - end;
 			if (aux < SLOT_TIME_SECOND) {
-				stats_cnt.merge_stats_sec(second_time.second, aux, merged);
+				stats_cnt.add_stats_sec(second_time.second, aux, added_counters);
 			} else {
-				stats_cnt.merge_stats_sec(second_time.second, SLOT_TIME_SECOND - 1, merged);
-				stats_cnt.merge_stats_sec(0, aux % SLOT_TIME_SECOND, merged);
+				stats_cnt.add_stats_sec(second_time.second, SLOT_TIME_SECOND - 1, added_counters);
+				stats_cnt.add_stats_sec(0, aux % SLOT_TIME_SECOND, added_counters);
 			}
 		} else {
 			auto aux = second_time.minute + (start - end) / SLOT_TIME_SECOND;
 			if (aux < SLOT_TIME_MINUTE) {
-				stats_cnt.merge_stats_min(second_time.minute, aux, merged);
+				stats_cnt.add_stats_min(second_time.minute, aux, added_counters);
 			} else {
-				stats_cnt.merge_stats_min(second_time.minute, SLOT_TIME_MINUTE - 1, merged);
-				stats_cnt.merge_stats_min(0, aux % SLOT_TIME_MINUTE, merged);
+				stats_cnt.add_stats_min(second_time.minute, SLOT_TIME_MINUTE - 1, added_counters);
+				stats_cnt.add_stats_min(0, aux % SLOT_TIME_MINUTE, added_counters);
 			}
 		}
 
@@ -1095,8 +1095,10 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 		p_time = current_time - end;
 		time_period["_end"] = ctime(&p_time);
 
-		for (auto& counter : merged) {
+		for (auto& counter : added_counters) {
 			stats["_" + counter.first + "_cnt"] = counter.second.cnt;
+			stats["_" + counter.first + "_min"] = delta_string(counter.second.min);
+			stats["_" + counter.first + "_max"] = delta_string(counter.second.max);
 			stats["_" + counter.first + "_avg"] = delta_string(counter.second.cnt == 0 ? 0.0 : (counter.second.total / counter.second.cnt));
 		}
 	}

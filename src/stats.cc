@@ -22,10 +22,30 @@
 
 #include "stats.h"
 
+#include <limits>
+
+
 Stats::Pos::Pos()
 	: minute(0),
 	  second(0)
 { }
+
+
+Stats::Counter::Element::Element()
+	: cnt(0),
+	  total(0),
+	  max(0),
+	  min(std::numeric_limits<uint64_t>::max())
+{ }
+
+
+Stats::Counter::Element::Element(uint64_t duration)
+{
+	cnt = 1;
+	total = duration;
+	max = duration;
+	min = duration;
+}
 
 
 inline void
@@ -33,22 +53,22 @@ Stats::Counter::Element::clear()
 {
 	cnt = 0;
 	total = 0;
+	max = 0;
+	min = std::numeric_limits<uint64_t>::max();
 }
 
 
 inline void
-Stats::Counter::Element::merge(const Element& other)
+Stats::Counter::Element::add(const Element& other)
 {
 	cnt += other.cnt;
 	total += other.total;
-}
-
-
-inline void
-Stats::Counter::Element::add(uint64_t duration)
-{
-	++cnt;
-	total += duration;
+	if (max < other.max) {
+		max = other.max;
+	}
+	if (min > other.min) {
+		min = other.min;
+	}
 }
 
 
@@ -79,19 +99,19 @@ Stats::Counter::clear_stats_sec(uint8_t start, uint8_t end)
 
 
 inline void
-Stats::Counter::merge_stats_min(uint16_t start, uint16_t end, Stats::Counter::Element& element)
+Stats::Counter::add_stats_min(uint16_t start, uint16_t end, Stats::Counter::Element& element)
 {
 	for (auto i = start; i <= end; ++i) {
-		element.merge(min[i]);
+		element.add(min[i]);
 	}
 }
 
 
 inline void
-Stats::Counter::merge_stats_sec(uint8_t start, uint8_t end, Element& element)
+Stats::Counter::add_stats_sec(uint8_t start, uint8_t end, Element& element)
 {
 	for (auto i = start; i <= end; ++i) {
-		element.merge(sec[i]);
+		element.add(sec[i]);
 	}
 }
 
@@ -192,21 +212,21 @@ Stats::clear_stats_sec(uint8_t start, uint8_t end)
 
 
 void
-Stats::merge_stats_min(uint16_t start, uint16_t end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
+Stats::add_stats_min(uint16_t start, uint16_t end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
 {
 	for (auto& counter : counters) {
 		auto& element = cnt[counter.first];
-		counter.second.merge_stats_min(start, end, element);
+		counter.second.add_stats_min(start, end, element);
 	}
 }
 
 
 void
-Stats::merge_stats_sec(uint8_t start, uint8_t end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
+Stats::add_stats_sec(uint8_t start, uint8_t end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
 {
 	for (auto& counter : counters) {
 		auto& element = cnt[counter.first];
-		counter.second.merge_stats_sec(start, end, element);
+		counter.second.add_stats_sec(start, end, element);
 	}
 }
 
