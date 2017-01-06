@@ -3897,6 +3897,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 	// Process RESERVED_PREFIX
 	if (specification.local_prefix.empty()) {
 		specification.local_prefix = DOCUMENT_ID_TERM_PREFIX;
+		properties[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 	}
 
 	// Process RESERVED_SLOT
@@ -3929,6 +3930,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	// Process RESERVED_PREFIX
 	if (specification.local_prefix.empty()) {
 		specification.local_prefix = DOCUMENT_CONTENT_TYPE_TERM_PREFIX;
+		properties[RESERVED_PREFIX] = DOCUMENT_CONTENT_TYPE_TERM_PREFIX;
 	}
 
 	// Process RESERVED_SLOT
