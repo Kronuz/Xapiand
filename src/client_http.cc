@@ -870,9 +870,9 @@ HttpClient::home_view(enum http_method method)
 	operation_ends = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_CLUSTERING
-	obj_data["_cluster_name"] = XapiandManager::manager->cluster_name;
+	obj_data["cluster_name"] = XapiandManager::manager->cluster_name;
 #endif
-	obj_data["_version"] = {
+	obj_data["version"] = {
 		{ PACKAGE_NAME, format_string("%s", PACKAGE_VERSION) },
 		{ "Xapian", format_string("%s", XAPIAN_VERSION) },
 #if XAPIAND_V8
@@ -1112,8 +1112,8 @@ HttpClient::info_view(enum http_method method)
 
 	if (!path_parser.off_id) {
 		query_field_maker(QUERY_FIELD_TIME);
-		XapiandManager::manager->server_status(response["_server_info"]);
-		XapiandManager::manager->get_stats_time(response["_stats_time"], query_field->time);
+		XapiandManager::manager->server_status(response["server_info"]);
+		XapiandManager::manager->get_stats_time(response["stats"], query_field->time);
 		res_stats = true;
 	} else {
 		endpoints_maker(1s);
@@ -1122,7 +1122,7 @@ HttpClient::info_view(enum http_method method)
 
 		db_handler.reset(endpoints, DB_OPEN, method);
 		try {
-			db_handler.get_document_info(response["_document_info"], path_parser.get_id());
+			db_handler.get_document_info(response["document_info"], path_parser.get_id());
 		} catch (const CheckoutError&) {
 			path_parser.off_id = nullptr;
 			response.erase("_document_info");
@@ -1132,7 +1132,7 @@ HttpClient::info_view(enum http_method method)
 		endpoints_maker(1s);
 
 		db_handler.reset(endpoints, DB_OPEN, method);
-		db_handler.get_database_info(response["_database_info"]);
+		db_handler.get_database_info(response["database_info"]);
 
 		operation_ends = std::chrono::system_clock::now();
 
