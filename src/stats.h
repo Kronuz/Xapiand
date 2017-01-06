@@ -33,35 +33,47 @@ constexpr uint16_t SLOT_TIME_MINUTE = 1440;
 constexpr uint8_t SLOT_TIME_SECOND = 60;
 
 
-struct cont_time_t {
-	uint32_t min[SLOT_TIME_MINUTE];
-	uint32_t sec[SLOT_TIME_SECOND];
-	uint64_t tm_min[SLOT_TIME_MINUTE];
-	uint64_t tm_sec[SLOT_TIME_SECOND];
+struct Stats {
+	struct Pos {
+		uint16_t minute;
+		uint8_t second;
+
+		Pos();
+		Pos(std::chrono::time_point<std::chrono::system_clock> current);
+	};
+
+	struct Counter {
+		uint32_t min[SLOT_TIME_MINUTE];
+		uint32_t sec[SLOT_TIME_SECOND];
+		uint64_t tm_min[SLOT_TIME_MINUTE];
+		uint64_t tm_sec[SLOT_TIME_SECOND];
+	};
+
+	std::chrono::time_point<std::chrono::system_clock> current;
+	Pos current_pos;
+
+	std::mutex mtx;
+
+	Counter index;
+	Counter search;
+	Counter del;
+	Counter patch;
+
+	static Stats& cnt();
+
+	Stats();
+	Stats(Stats& other);
+
+	void update_pos_time();
+
+	void fill_zeros_stats_min(uint16_t start, uint16_t end);
+	void fill_zeros_stats_sec(uint8_t start, uint8_t end);
+	void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt);
+	void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt);
+
+	void add(Counter& counter, uint64_t duration);
+	static void add_index(uint64_t duration);
+	static void add_search(uint64_t duration);
+	static void add_del(uint64_t duration);
+	static void add_patch(uint64_t duration);
 };
-
-
-struct times_row_t {
-	cont_time_t index;
-	cont_time_t search;
-	cont_time_t del;
-	cont_time_t patch;
-};
-
-
-struct pos_time_t {
-	uint16_t minute;
-	uint8_t second;
-};
-
-// Varibles used by server stats.
-extern pos_time_t b_time;
-extern std::chrono::time_point<std::chrono::system_clock> init_time;
-extern times_row_t stats_cnt;
-extern std::mutex stats_mutex;
-
-void update_pos_time();
-void fill_zeros_stats_min(uint16_t start, uint16_t end);
-void fill_zeros_stats_sec(uint8_t start, uint8_t end);
-void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy);
-void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy);

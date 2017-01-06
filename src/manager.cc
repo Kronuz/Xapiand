@@ -71,7 +71,7 @@
 #include "servers/server.h"                  // for XapiandServer, XapiandSe...
 #include "servers/server_http.h"             // for HttpServer
 #include "threadpool.h"                      // for ThreadPool
-#include "utils.h"                           // for pos_time_t, SLOT_TIME_SE...
+#include "utils.h"                           // for Stats::Pos, SLOT_TIME_SE...
 #include "worker.h"                          // for Worker, enable_make_shared
 
 
@@ -1026,7 +1026,7 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
 {
 	std::smatch m;
 	if (std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.size() && m.length(1) != 0) {
-		pos_time_t first_time, second_time;
+		Stats::Pos first_time, second_time;
 		if (m.length(8) != 0) {
 			first_time.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? std::stoi(m.str(3)) : 0);
 			first_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
@@ -1048,26 +1048,22 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
 
 
 void
-XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time_t& second_time)
+XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::Pos& second_time)
 {
-	std::unique_lock<std::mutex> lk(stats_mutex);
-	update_pos_time();
-	auto now_time = std::chrono::system_clock::to_time_t(init_time);
-	auto b_time_cpy = b_time;
-	auto stats_cnt_cpy = stats_cnt;
-	lk.unlock();
+	Stats stats_cnt(Stats::cnt());
+	auto current_time = std::chrono::system_clock::to_time_t(stats_cnt.current);
 
 	unsigned end, start;
 	if (first_time.minute == 0 && first_time.second == 0) {
 		start = second_time.minute * SLOT_TIME_SECOND + second_time.second;
 		end = 0;
-		second_time.minute = (second_time.minute > b_time_cpy.minute ? SLOT_TIME_MINUTE + b_time_cpy.minute : b_time_cpy.minute) - second_time.minute;
-		second_time.second = (second_time.second > b_time_cpy.second ? SLOT_TIME_SECOND + b_time_cpy.second : b_time_cpy.second) - second_time.second;
+		second_time.minute = (second_time.minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - second_time.minute;
+		second_time.second = (second_time.second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - second_time.second;
 	} else {
 		start = second_time.minute * SLOT_TIME_SECOND + second_time.second;
 		end = first_time.minute * SLOT_TIME_SECOND + first_time.second;
-		second_time.minute = (second_time.minute > b_time_cpy.minute ? SLOT_TIME_MINUTE + b_time_cpy.minute : b_time_cpy.minute) - second_time.minute;
-		second_time.second = (second_time.second > b_time_cpy.second ? SLOT_TIME_SECOND + b_time_cpy.second : b_time_cpy.second) - second_time.second;
+		second_time.minute = (second_time.minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - second_time.minute;
+		second_time.second = (second_time.second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - second_time.second;
 	}
 
 	if (end > start) {
@@ -1078,26 +1074,26 @@ XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time
 		if (start < SLOT_TIME_SECOND) {
 			auto aux = second_time.second + start - end;
 			if (aux < SLOT_TIME_SECOND) {
-				add_stats_sec(second_time.second, aux, cnt, tm_cnt, stats_cnt_cpy);
+				stats_cnt.add_stats_sec(second_time.second, aux, cnt, tm_cnt);
 			} else {
-				add_stats_sec(second_time.second, SLOT_TIME_SECOND - 1, cnt, tm_cnt, stats_cnt_cpy);
-				add_stats_sec(0, aux % SLOT_TIME_SECOND, cnt, tm_cnt, stats_cnt_cpy);
+				stats_cnt.add_stats_sec(second_time.second, SLOT_TIME_SECOND - 1, cnt, tm_cnt);
+				stats_cnt.add_stats_sec(0, aux % SLOT_TIME_SECOND, cnt, tm_cnt);
 			}
 		} else {
 			auto aux = second_time.minute + (start - end) / SLOT_TIME_SECOND;
 			if (aux < SLOT_TIME_MINUTE) {
-				add_stats_min(second_time.minute, aux, cnt, tm_cnt, stats_cnt_cpy);
+				stats_cnt.add_stats_min(second_time.minute, aux, cnt, tm_cnt);
 			} else {
-				add_stats_min(second_time.minute, SLOT_TIME_MINUTE - 1, cnt, tm_cnt, stats_cnt_cpy);
-				add_stats_min(0, aux % SLOT_TIME_MINUTE, cnt, tm_cnt, stats_cnt_cpy);
+				stats_cnt.add_stats_min(second_time.minute, SLOT_TIME_MINUTE - 1, cnt, tm_cnt);
+				stats_cnt.add_stats_min(0, aux % SLOT_TIME_MINUTE, cnt, tm_cnt);
 			}
 		}
 
-		stats["_system_time"] = ctime(&now_time);
-		auto p_time = now_time - start;
+		stats["_system_time"] = ctime(&current_time);
+		auto p_time = current_time - start;
 		auto& time_period = stats["period"];
 		time_period["_start"] = ctime(&p_time);
-		p_time = now_time - end;
+		p_time = current_time - end;
 		time_period["_end"] = ctime(&p_time);
 
 		stats["_docs_indexed"] = cnt[0];

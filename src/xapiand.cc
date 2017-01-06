@@ -785,16 +785,6 @@ void run(const opts_t &opts) {
 
 	demote(opts.uid.c_str(), opts.gid.c_str());
 
-	init_time = std::chrono::system_clock::now();
-	time_t epoch = std::chrono::system_clock::to_time_t(init_time);
-	struct tm *timeinfo = localtime(&epoch);
-	timeinfo->tm_hour   = 0;
-	timeinfo->tm_min    = 0;
-	timeinfo->tm_sec    = 0;
-	auto diff_t = epoch - mktime(timeinfo);
-	b_time.minute = diff_t / SLOT_TIME_SECOND;
-	b_time.second =  diff_t % SLOT_TIME_SECOND;
-
 	setup_signal_handlers();
 	ev::default_loop default_loop(opts.ev_flags);
 

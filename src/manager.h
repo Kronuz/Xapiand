@@ -220,7 +220,7 @@ public:
 
 	void server_status(MsgPack& stats);
 	void get_stats_time(MsgPack& stats, const std::string& time_req);
-	void _get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time_t& second_time);
+	void _get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::Pos& second_time);
 
 	inline decltype(auto) get_lock() noexcept {
 		return std::unique_lock<std::mutex>(qmtx);

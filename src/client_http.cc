@@ -55,7 +55,7 @@
 #include "serialise.h"                      // for boolean
 #include "servers/server.h"                 // for XapiandServer, XapiandSer...
 #include "servers/server_http.h"            // for HttpServer
-#include "stats.h"                          // for b_time, stats_cnt
+#include "stats.h"                          // for Stats
 #include "threadpool.h"                     // for ThreadPool
 #include "utils.h"                          // for delta_string
 #include "xxh64.hpp"                        // for xxh64
@@ -951,17 +951,8 @@ HttpClient::delete_document_view(enum http_method method)
 		}
 	}
 
-	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
-	{
-		std::lock_guard<std::mutex> lk(stats_mutex);
-		update_pos_time();
-		++stats_cnt.del.min[b_time.minute];
-		++stats_cnt.del.sec[b_time.second];
-		stats_cnt.del.tm_min[b_time.minute] += _time;
-		stats_cnt.del.tm_sec[b_time.second] += _time;
-	}
+	Stats::cnt().add_del(std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
-
 
 	write_http_response(status_code, response);
 }
@@ -1000,17 +991,8 @@ HttpClient::index_document_view(enum http_method method)
 
 	operation_ends = std::chrono::system_clock::now();
 
-	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
-	{
-		std::lock_guard<std::mutex> lk(stats_mutex);
-		update_pos_time();
-		++stats_cnt.index.min[b_time.minute];
-		++stats_cnt.index.sec[b_time.second];
-		stats_cnt.index.tm_min[b_time.minute] += _time;
-		stats_cnt.index.tm_sec[b_time.second] += _time;
-	}
+	Stats::cnt().add_index(std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
-
 
 	if (err_list.empty()) {
 		status_code = HTTP_STATUS_OK;
@@ -1097,15 +1079,7 @@ HttpClient::update_document_view(enum http_method method)
 
 	operation_ends = std::chrono::system_clock::now();
 
-	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
-	{
-		std::lock_guard<std::mutex> lk(stats_mutex);
-		update_pos_time();
-		++stats_cnt.patch.min[b_time.minute];
-		++stats_cnt.patch.sec[b_time.second];
-		stats_cnt.patch.tm_min[b_time.minute] += _time;
-		stats_cnt.patch.tm_sec[b_time.second] += _time;
-	}
+	Stats::cnt().add_patch(std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Updating took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	if (err_list.empty()) {
@@ -1552,15 +1526,7 @@ HttpClient::search_view(enum http_method method)
 
 	operation_ends = std::chrono::system_clock::now();
 
-	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
-	{
-		std::lock_guard<std::mutex> lk(stats_mutex);
-		update_pos_time();
-		++stats_cnt.search.min[b_time.minute];
-		++stats_cnt.search.sec[b_time.second];
-		stats_cnt.search.tm_min[b_time.minute] += _time;
-		stats_cnt.search.tm_sec[b_time.second] += _time;
-	}
+	Stats::cnt().add_search(std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Searching took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	L_SEARCH(this, "FINISH SEARCH");
