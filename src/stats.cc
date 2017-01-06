@@ -27,16 +27,14 @@
 
 Stats::Pos::Pos()
 	: minute(0),
-	  second(0)
-{ }
+	  second(0) { }
 
 
 Stats::Counter::Element::Element()
 	: cnt(0),
 	  total(0),
 	  max(0),
-	  min(std::numeric_limits<uint64_t>::max())
-{ }
+	  min(std::numeric_limits<uint64_t>::max()) { }
 
 
 Stats::Counter::Element::Element(uint64_t duration)
@@ -136,7 +134,7 @@ Stats::Counter::add_stats_sec(uint8_t start, uint8_t end, Element& element)
 }
 
 
-Stats::Pos::Pos(std::chrono::time_point<std::chrono::system_clock> current)
+Stats::Pos::Pos(const std::chrono::time_point<std::chrono::system_clock>& current)
 {
 	time_t epoch = std::chrono::system_clock::to_time_t(current);
 	struct tm *timeinfo = localtime(&epoch);
@@ -159,8 +157,7 @@ Stats::cnt()
 
 Stats::Stats()
 	: current(std::chrono::system_clock::now()),
-	  current_pos(current)
-{ }
+	  current_pos(current) { }
 
 
 Stats::Stats(Stats& other)

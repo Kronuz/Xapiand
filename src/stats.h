@@ -25,9 +25,9 @@
 #include "xapiand.h"
 
 #include <chrono>        // for system_clock, time_point, duration_cast, seconds
-#include <unordered_map> // for unordered_map
 #include <mutex>         // for mutex
 #include <string>        // for string
+#include <unordered_map> // for unordered_map
 #include <vector>        // for vector
 
 
@@ -63,7 +63,7 @@ struct Stats {
 		uint8_t second;
 
 		Pos();
-		Pos(std::chrono::time_point<std::chrono::system_clock> current);
+		Pos(const std::chrono::time_point<std::chrono::system_clock>& current);
 	};
 
 	std::chrono::time_point<std::chrono::system_clock> current;
