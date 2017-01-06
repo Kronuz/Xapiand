@@ -1067,40 +1067,40 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 	}
 
 	if (end > start) {
-		THROW(ClientError, "First argument must be less or equal than the second");
-	} else {
-		std::unordered_map<std::string, Stats::Counter::Element> added_counters;
-		if (start < SLOT_TIME_SECOND) {
-			auto aux = second_time.second + start - end;
-			if (aux < SLOT_TIME_SECOND) {
-				stats_cnt.add_stats_sec(second_time.second, aux, added_counters);
-			} else {
-				stats_cnt.add_stats_sec(second_time.second, SLOT_TIME_SECOND - 1, added_counters);
-				stats_cnt.add_stats_sec(0, aux % SLOT_TIME_SECOND, added_counters);
-			}
+		std::swap(end, start);
+	}
+
+	std::unordered_map<std::string, Stats::Counter::Element> added_counters;
+	if (start < SLOT_TIME_SECOND) {
+		auto aux = second_time.second + start - end;
+		if (aux < SLOT_TIME_SECOND) {
+			stats_cnt.add_stats_sec(second_time.second, aux, added_counters);
 		} else {
-			auto aux = second_time.minute + (start - end) / SLOT_TIME_SECOND;
-			if (aux < SLOT_TIME_MINUTE) {
-				stats_cnt.add_stats_min(second_time.minute, aux, added_counters);
-			} else {
-				stats_cnt.add_stats_min(second_time.minute, SLOT_TIME_MINUTE - 1, added_counters);
-				stats_cnt.add_stats_min(0, aux % SLOT_TIME_MINUTE, added_counters);
-			}
+			stats_cnt.add_stats_sec(second_time.second, SLOT_TIME_SECOND - 1, added_counters);
+			stats_cnt.add_stats_sec(0, aux % SLOT_TIME_SECOND, added_counters);
 		}
+	} else {
+		auto aux = second_time.minute + (start - end) / SLOT_TIME_SECOND;
+		if (aux < SLOT_TIME_MINUTE) {
+			stats_cnt.add_stats_min(second_time.minute, aux, added_counters);
+		} else {
+			stats_cnt.add_stats_min(second_time.minute, SLOT_TIME_MINUTE - 1, added_counters);
+			stats_cnt.add_stats_min(0, aux % SLOT_TIME_MINUTE, added_counters);
+		}
+	}
 
-		stats["system_time"] = Datetime::isotime(current_time);
-		auto& time_period = stats["period"];
-		time_period["start"] = Datetime::isotime(current_time - start);
-		time_period["end"] = Datetime::isotime(current_time - end);
+	stats["system_time"] = Datetime::isotime(current_time);
+	auto& time_period = stats["period"];
+	time_period["start"] = Datetime::isotime(current_time - start);
+	time_period["end"] = Datetime::isotime(current_time - end);
 
-		for (auto& counter : added_counters) {
-			auto& counter_stats = stats[counter.first];
-			if (counter.second.cnt) {
-				counter_stats["cnt"] = counter.second.cnt;
-				counter_stats["avg"] = delta_string(counter.second.total / counter.second.cnt);
-				counter_stats["min"] = delta_string(counter.second.min);
-				counter_stats["max"] = delta_string(counter.second.max);
-			}
+	for (auto& counter : added_counters) {
+		auto& counter_stats = stats[counter.first];
+		if (counter.second.cnt) {
+			counter_stats["cnt"] = counter.second.cnt;
+			counter_stats["avg"] = delta_string(counter.second.total / counter.second.cnt);
+			counter_stats["min"] = delta_string(counter.second.min);
+			counter_stats["max"] = delta_string(counter.second.max);
 		}
 	}
 }
