@@ -246,6 +246,7 @@ struct required_spc_t {
 		bool bool_detection:1;
 		bool string_detection:1;
 		bool text_detection:1;
+		bool term_detection:1;
 		bool uuid_detection:1;
 
 		// Auxiliar variables.
@@ -544,6 +545,7 @@ class Schema {
 	void update_b_detection(const MsgPack& prop_b_detection);
 	void update_s_detection(const MsgPack& prop_s_detection);
 	void update_t_detection(const MsgPack& prop_t_detection);
+	void update_tm_detection(const MsgPack& prop_tm_detection);
 	void update_u_detection(const MsgPack& prop_u_detection);
 	void update_bool_term(const MsgPack& prop_bool_term);
 	void update_partials(const MsgPack& prop_partials);
@@ -571,6 +573,7 @@ class Schema {
 	void write_b_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_b_detection);
 	void write_s_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_s_detection);
 	void write_t_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_t_detection);
+	void write_tm_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection);
 	void write_u_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_u_detection);
 	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
 

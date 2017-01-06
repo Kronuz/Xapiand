@@ -375,6 +375,7 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_B_DETECTION,        &Schema::write_b_detection     },
 	{ RESERVED_S_DETECTION,        &Schema::write_s_detection     },
 	{ RESERVED_T_DETECTION,        &Schema::write_t_detection     },
+	{ RESERVED_TM_DETECTION,       &Schema::write_tm_detection    },
 	{ RESERVED_U_DETECTION,        &Schema::write_u_detection     },
 	{ RESERVED_NAMESPACE,          &Schema::write_namespace       },
 });
@@ -447,6 +448,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 	{ RESERVED_B_DETECTION,     &Schema::update_b_detection      },
 	{ RESERVED_S_DETECTION,     &Schema::update_s_detection      },
 	{ RESERVED_T_DETECTION,     &Schema::update_t_detection      },
+	{ RESERVED_TM_DETECTION,    &Schema::update_tm_detection     },
 	{ RESERVED_U_DETECTION,     &Schema::update_u_detection      },
 	{ RESERVED_BOOL_TERM,       &Schema::update_bool_term        },
 	{ RESERVED_ACCURACY,        &Schema::update_accuracy         },
@@ -479,17 +481,18 @@ const std::unordered_set<std::string> set_reserved_words({
 	RESERVED_RECURSIVE,       RESERVED_DYNAMIC,          RESERVED_STRICT,
 	RESERVED_D_DETECTION,     RESERVED_N_DETECTION,      RESERVED_G_DETECTION,
 	RESERVED_B_DETECTION,     RESERVED_S_DETECTION,      RESERVED_T_DETECTION,
-	RESERVED_U_DETECTION,     RESERVED_BOOL_TERM,        RESERVED_ACCURACY,
-	RESERVED_ACC_PREFIX,      RESERVED_LANGUAGE,         RESERVED_STOP_STRATEGY,
-	RESERVED_STEM_STRATEGY,   RESERVED_STEM_LANGUAGE,    RESERVED_PARTIALS,
-	RESERVED_ERROR,           RESERVED_NAMESPACE,        RESERVED_VALUE,
-	RESERVED_NAME,            RESERVED_SCRIPT,           RESERVED_FLOAT,
-	RESERVED_POSITIVE,        RESERVED_INTEGER,          RESERVED_BOOLEAN,
-	RESERVED_TERM,            RESERVED_TEXT,             RESERVED_DATE,
-	RESERVED_UUID,            RESERVED_EWKT,             RESERVED_POINT,
-	RESERVED_POLYGON,         RESERVED_CIRCLE,           RESERVED_CHULL,
-	RESERVED_MULTIPOINT,      RESERVED_MULTIPOLYGON,     RESERVED_MULTICIRCLE,
-	RESERVED_MULTICHULL,      RESERVED_GEO_COLLECTION,   RESERVED_GEO_INTERSECTION,
+	RESERVED_TM_DETECTION,    RESERVED_U_DETECTION,      RESERVED_BOOL_TERM,
+	RESERVED_ACCURACY,        RESERVED_ACC_PREFIX,       RESERVED_LANGUAGE,
+	RESERVED_STOP_STRATEGY,   RESERVED_STEM_STRATEGY,    RESERVED_STEM_LANGUAGE,
+	RESERVED_PARTIALS,        RESERVED_ERROR,            RESERVED_NAMESPACE,
+	RESERVED_VALUE,           RESERVED_NAME,             RESERVED_SCRIPT,
+	RESERVED_FLOAT,           RESERVED_POSITIVE,         RESERVED_INTEGER,
+	RESERVED_BOOLEAN,         RESERVED_TERM,             RESERVED_TEXT,
+	RESERVED_DATE,            RESERVED_UUID,             RESERVED_EWKT,
+	RESERVED_POINT,           RESERVED_POLYGON,          RESERVED_CIRCLE,
+	RESERVED_CHULL,           RESERVED_MULTIPOINT,       RESERVED_MULTIPOLYGON,
+	RESERVED_MULTICIRCLE,     RESERVED_MULTICHULL,       RESERVED_GEO_COLLECTION,
+	RESERVED_GEO_INTERSECTION,
 });
 
 
@@ -548,6 +551,7 @@ required_spc_t::flags_t::flags_t()
 	  bool_detection(true),
 	  string_detection(true),
 	  text_detection(true),
+	  term_detection(true),
 	  uuid_detection(true),
 	  field_found(true),
 	  field_with_type(false),
@@ -859,30 +863,31 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_VALUE       << ": " << (value ? value->to_string() : std::string())                  << "\n";
-	str << "\t" << "value_rec"          << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
+	str << "\t" << RESERVED_VALUE          << ": " << (value ? value->to_string() : std::string())                  << "\n";
+	str << "\t" << "value_rec"             << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
 
-	str << "\t" << RESERVED_SLOT        << ": " << slot                           << "\n";
-	str << "\t" << RESERVED_TYPE        << ": " << readable_type(sep_types)       << "\n";
-	str << "\t" << RESERVED_PREFIX      << ": " << repr(prefix)                   << "\n";
-	str << "\t" << "local_prefix"       << ": " << repr(local_prefix)             << "\n";
-	str << "\t" << RESERVED_INDEX       << ": " << readable_index(index)          << "\n";
-	str << "\t" << RESERVED_STORE       << ": " << (flags.store             ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_RECURSIVE   << ": " << (flags.is_recursive      ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_DYNAMIC     << ": " << (flags.dynamic           ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_STRICT      << ": " << (flags.strict            ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_D_DETECTION << ": " << (flags.date_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_N_DETECTION << ": " << (flags.numeric_detection ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_G_DETECTION << ": " << (flags.geo_detection     ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_B_DETECTION << ": " << (flags.bool_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_S_DETECTION << ": " << (flags.string_detection  ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_T_DETECTION << ": " << (flags.text_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_U_DETECTION << ": " << (flags.uuid_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_BOOL_TERM   << ": " << (flags.bool_term         ? "true" : "false") << "\n";
-	str << "\t" << "field_found"        << ": " << (flags.field_found       ? "true" : "false") << "\n";
-	str << "\t" << "dynamic_type"       << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
-	str << "\t" << "inside_namespace"   << ": " << (flags.inside_namespace  ? "true" : "false") << "\n";
-	str << "\t" << "complete"           << ": " << (flags.complete          ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_SLOT           << ": " << slot                           << "\n";
+	str << "\t" << RESERVED_TYPE           << ": " << readable_type(sep_types)       << "\n";
+	str << "\t" << RESERVED_PREFIX         << ": " << repr(prefix)                   << "\n";
+	str << "\t" << "local_prefix"          << ": " << repr(local_prefix)             << "\n";
+	str << "\t" << RESERVED_INDEX          << ": " << readable_index(index)          << "\n";
+	str << "\t" << RESERVED_STORE          << ": " << (flags.store             ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_RECURSIVE      << ": " << (flags.is_recursive      ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_DYNAMIC        << ": " << (flags.dynamic           ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_STRICT         << ": " << (flags.strict            ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_D_DETECTION    << ": " << (flags.date_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_N_DETECTION    << ": " << (flags.numeric_detection ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_G_DETECTION    << ": " << (flags.geo_detection     ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_B_DETECTION    << ": " << (flags.bool_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_S_DETECTION    << ": " << (flags.string_detection  ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_T_DETECTION    << ": " << (flags.text_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_TM_DETECTION   << ": " << (flags.term_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_U_DETECTION    << ": " << (flags.uuid_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_BOOL_TERM      << ": " << (flags.bool_term         ? "true" : "false") << "\n";
+	str << "\t" << "field_found"           << ": " << (flags.field_found       ? "true" : "false") << "\n";
+	str << "\t" << "dynamic_type"          << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
+	str << "\t" << "inside_namespace"      << ": " << (flags.inside_namespace  ? "true" : "false") << "\n";
+	str << "\t" << "complete"              << ": " << (flags.complete          ? "true" : "false") << "\n";
 
 	str << "\t" << RESERVED_NAME           << ": " << name                 << "\n";
 	str << "\t" << "meta_name"             << ": " << meta_name            << "\n";
@@ -1813,6 +1818,10 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			}
 			if (specification.flags.string_detection) {
 				specification.sep_types[2] = FieldType::STRING;
+				return;
+			}
+			if (specification.flags.term_detection) {
+				specification.sep_types[2] = FieldType::TERM;
 				return;
 			}
 			if (specification.flags.bool_detection) {
@@ -3067,6 +3076,15 @@ Schema::update_t_detection(const MsgPack& prop_t_detection)
 
 
 void
+Schema::update_tm_detection(const MsgPack& prop_tm_detection)
+{
+	L_CALL(this, "Schema::update_tm_detection(%s)", repr(prop_tm_detection.to_string()).c_str());
+
+	specification.flags.term_detection = prop_tm_detection.as_bool();
+}
+
+
+void
 Schema::update_u_detection(const MsgPack& prop_u_detection)
 {
 	L_CALL(this, "Schema::update_u_detection(%s)", repr(prop_u_detection.to_string()).c_str());
@@ -3332,6 +3350,21 @@ Schema::write_t_detection(MsgPack& properties, const std::string& prop_name, con
 	try {
 		specification.flags.text_detection = doc_t_detection.as_bool();
 		properties[prop_name] = static_cast<bool>(specification.flags.text_detection);
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+	}
+}
+
+
+void
+Schema::write_tm_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection)
+{
+	// RESERVED_TM_DETECTION is heritable and can't change.
+	L_CALL(this, "Schema::write_tm_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
+
+	try {
+		specification.flags.term_detection = doc_tm_detection.as_bool();
+		properties[prop_name] = static_cast<bool>(specification.flags.term_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
