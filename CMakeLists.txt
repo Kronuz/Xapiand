@@ -568,6 +568,7 @@ if (BUILD_TESTS)
 			${UUID_LIBRARIES}
 			${V8_LIBRARIES}
 			${M_LIBRARIES}
+			z
 			gtest
 			gtest_main
 		)
