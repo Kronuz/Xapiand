@@ -24,12 +24,12 @@
 
 #include "xapiand.h"
 
-#include <cerrno>
-#include <list>
-#include <deque>
-#include <mutex>
 #include <atomic>
+#include <cerrno>
 #include <condition_variable>
+#include <deque>
+#include <list>
+#include <mutex>
 #include <unordered_map>
 
 
@@ -179,7 +179,7 @@ namespace queue {
 		}
 
 		// Move assigment
-		Queue& operator =(Queue&& q) {
+		Queue& operator=(Queue&& q) {
 			std::lock(_mutex, q._mutex);
 			std::lock_guard<std::mutex> self_lock(_mutex, std::adopt_lock);
 			std::lock_guard<std::mutex> other_lock(q._mutex, std::adopt_lock);
@@ -195,7 +195,7 @@ namespace queue {
 		Queue(const Queue& q) = delete;
 
 		// Copy assigment
-		Queue& operator =(const Queue& q) = delete;
+		Queue& operator=(const Queue& q) = delete;
 
 		~Queue() {
 			finish();
@@ -449,5 +449,4 @@ namespace queue {
 			return items;
 		}
 	};
-
 };
