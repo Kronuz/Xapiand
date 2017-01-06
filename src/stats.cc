@@ -29,6 +29,73 @@ Stats::Pos::Pos()
 }
 
 
+void
+Stats::Counter::Element::clear()
+{
+	cnt = 0;
+	total = 0;
+}
+
+
+void
+Stats::Counter::Element::merge(const Element& other)
+{
+	cnt += other.cnt;
+	total += other.total;
+}
+
+
+void
+Stats::Counter::Element::add(uint64_t duration)
+{
+	++cnt;
+	total += duration;
+}
+
+
+Stats::Counter::Counter()
+{
+	clear_stats_min(0, SLOT_TIME_MINUTE - 1);
+	clear_stats_sec(0, SLOT_TIME_SECOND - 1);
+}
+
+
+void
+Stats::Counter::clear_stats_min(uint16_t start, uint16_t end)
+{
+	for (auto i = start; i <= end; ++i) {
+		min[i].clear();
+	}
+}
+
+
+void
+Stats::Counter::clear_stats_sec(uint8_t start, uint8_t end)
+{
+	for (auto i = start; i <= end; ++i) {
+		sec[i].clear();
+	}
+}
+
+
+void
+Stats::Counter::merge_stats_min(uint16_t start, uint16_t end, Stats::Counter::Element& element)
+{
+	for (auto i = start; i <= end; ++i) {
+		element.merge(min[i]);
+	}
+}
+
+
+void
+Stats::Counter::merge_stats_sec(uint8_t start, uint8_t end, Element& element)
+{
+	for (auto i = start; i <= end; ++i) {
+		element.merge(sec[i]);
+	}
+}
+
+
 Stats::Pos::Pos(std::chrono::time_point<std::chrono::system_clock> current)
 {
 	time_t epoch = std::chrono::system_clock::to_time_t(current);
@@ -63,10 +130,7 @@ Stats::Stats(Stats& other)
 	std::lock_guard<std::mutex> lk(other.mtx);
 	current = other.current;
 	current_pos = other.current_pos;
-	index = other.index;
-	search = other.search;
-	del = other.del;
-	patch = other.patch;
+	counters = other.counters;
 }
 
 
@@ -80,29 +144,29 @@ Stats::update_pos_time()
 	auto t_elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - current).count();
 
 	if (t_elapsed >= SLOT_TIME_SECOND) {
-		fill_zeros_stats_sec(0, SLOT_TIME_SECOND - 1);
+		clear_stats_sec(0, SLOT_TIME_SECOND - 1);
 		current_pos.minute += t_elapsed / SLOT_TIME_SECOND;
 		current_pos.second = t_elapsed % SLOT_TIME_SECOND;
 	} else {
 		current_pos.second += t_elapsed;
 		if (current_pos.second >= SLOT_TIME_SECOND) {
-			fill_zeros_stats_sec(b_time_second + 1, SLOT_TIME_SECOND - 1);
-			fill_zeros_stats_sec(0, current_pos.second % SLOT_TIME_SECOND);
+			clear_stats_sec(b_time_second + 1, SLOT_TIME_SECOND - 1);
+			clear_stats_sec(0, current_pos.second % SLOT_TIME_SECOND);
 			current_pos.minute += current_pos.second / SLOT_TIME_SECOND;
 			current_pos.second = t_elapsed % SLOT_TIME_SECOND;
 		} else {
-			fill_zeros_stats_sec(b_time_second + 1, current_pos.second);
+			clear_stats_sec(b_time_second + 1, current_pos.second);
 		}
 	}
 
 	current = now;
 
 	if (current_pos.minute >= SLOT_TIME_MINUTE) {
-		fill_zeros_stats_min(b_time_minute + 1, SLOT_TIME_MINUTE - 1);
-		fill_zeros_stats_min(0, current_pos.minute % SLOT_TIME_MINUTE);
+		clear_stats_min(b_time_minute + 1, SLOT_TIME_MINUTE - 1);
+		clear_stats_min(0, current_pos.minute % SLOT_TIME_MINUTE);
 		current_pos.minute = current_pos.minute % SLOT_TIME_MINUTE;
 	} else {
-		fill_zeros_stats_min(b_time_minute + 1, current_pos.minute);
+		clear_stats_min(b_time_minute + 1, current_pos.minute);
 	}
 
 	ASSERT(current_pos.second < SLOT_TIME_SECOND);
@@ -111,65 +175,39 @@ Stats::update_pos_time()
 
 
 void
-Stats::fill_zeros_stats_min(uint16_t start, uint16_t end)
+Stats::clear_stats_min(uint16_t start, uint16_t end)
 {
-	for (auto i = start; i <= end; ++i) {
-		index.min[i] = 0;
-		index.tm_min[i] = 0;
-		search.min[i] = 0;
-		search.tm_min[i] = 0;
-		del.min[i] = 0;
-		del.tm_min[i] = 0;
-		patch.min[i] = 0;
-		patch.tm_min[i] = 0;
+	for (auto& counter : counters) {
+		counter.second.clear_stats_min(start, end);
 	}
 }
 
 
 void
-Stats::fill_zeros_stats_sec(uint8_t start, uint8_t end)
+Stats::clear_stats_sec(uint8_t start, uint8_t end)
 {
-	for (auto i = start; i <= end; ++i) {
-		index.sec[i] = 0;
-		index.tm_sec[i] = 0;
-		search.sec[i] = 0;
-		search.tm_sec[i] = 0;
-		del.sec[i] = 0;
-		del.tm_sec[i] = 0;
-		patch.sec[i] = 0;
-		patch.tm_sec[i] = 0;
+	for (auto& counter : counters) {
+		counter.second.clear_stats_sec(start, end);
 	}
 }
 
 
 void
-Stats::add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt)
+Stats::merge_stats_min(uint16_t start, uint16_t end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
 {
-	for (auto i = start; i <= end; ++i) {
-		cnt[0] += index.min[i];
-		cnt[1] += search.min[i];
-		cnt[2] += del.min[i];
-		cnt[3] += patch.min[i];
-		tm_cnt[0] += index.tm_min[i];
-		tm_cnt[1] += search.tm_min[i];
-		tm_cnt[2] += del.tm_min[i];
-		tm_cnt[3] += patch.tm_min[i];
+	for (auto& counter : counters) {
+		auto& element = cnt[counter.first];
+		counter.second.merge_stats_min(start, end, element);
 	}
 }
 
 
 void
-Stats::add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt)
+Stats::merge_stats_sec(uint8_t start, uint8_t end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
 {
-	for (auto i = start; i <= end; ++i) {
-		cnt[0] += index.sec[i];
-		cnt[1] += search.sec[i];
-		cnt[2] += del.sec[i];
-		cnt[3] += patch.sec[i];
-		tm_cnt[0] += index.tm_sec[i];
-		tm_cnt[1] += search.tm_sec[i];
-		tm_cnt[2] += del.tm_sec[i];
-		tm_cnt[3] += patch.tm_sec[i];
+	for (auto& counter : counters) {
+		auto& element = cnt[counter.first];
+		counter.second.merge_stats_sec(start, end, element);
 	}
 }
 
@@ -179,40 +217,14 @@ Stats::add(Counter& counter, uint64_t duration)
 {
 	std::lock_guard<std::mutex> lk(mtx);
 	update_pos_time();
-	++counter.min[current_pos.minute];
-	++counter.sec[current_pos.second];
-	counter.tm_min[current_pos.minute] += duration;
-	counter.tm_sec[current_pos.second] += duration;
+	counter.min[current_pos.minute].add(duration);
+	counter.sec[current_pos.second].add(duration);
 }
 
 
 void
-Stats::add_index(uint64_t duration)
+Stats::add(const std::string& counter, uint64_t duration)
 {
 	auto& stats_cnt = cnt();
-	stats_cnt.add(stats_cnt.index, duration);
-}
-
-
-void
-Stats::add_search(uint64_t duration)
-{
-	auto& stats_cnt = cnt();
-	stats_cnt.add(stats_cnt.search, duration);
-}
-
-
-void
-Stats::add_del(uint64_t duration)
-{
-	auto& stats_cnt = cnt();
-	stats_cnt.add(stats_cnt.del, duration);
-}
-
-
-void
-Stats::add_patch(uint64_t duration)
-{
-	auto& stats_cnt = cnt();
-	stats_cnt.add(stats_cnt.patch, duration);
+	stats_cnt.add(stats_cnt.counters[counter], duration);
 }

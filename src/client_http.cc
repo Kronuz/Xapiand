@@ -951,7 +951,7 @@ HttpClient::delete_document_view(enum http_method method)
 		}
 	}
 
-	Stats::cnt().add_del(std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
+	Stats::cnt().add("del", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	write_http_response(status_code, response);
@@ -991,7 +991,7 @@ HttpClient::index_document_view(enum http_method method)
 
 	operation_ends = std::chrono::system_clock::now();
 
-	Stats::cnt().add_index(std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
+	Stats::cnt().add("index", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	if (err_list.empty()) {
@@ -1079,7 +1079,7 @@ HttpClient::update_document_view(enum http_method method)
 
 	operation_ends = std::chrono::system_clock::now();
 
-	Stats::cnt().add_patch(std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
+	Stats::cnt().add("patch", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Updating took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	if (err_list.empty()) {
@@ -1526,7 +1526,7 @@ HttpClient::search_view(enum http_method method)
 
 	operation_ends = std::chrono::system_clock::now();
 
-	Stats::cnt().add_search(std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
+	Stats::cnt().add("search", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Searching took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	L_SEARCH(this, "FINISH SEARCH");

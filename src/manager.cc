@@ -1069,23 +1069,22 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 	if (end > start) {
 		THROW(ClientError, "First argument must be less or equal than the second");
 	} else {
-		std::vector<uint64_t> cnt{ 0, 0, 0, 0 };
-		std::vector<long double> tm_cnt{ 0.0, 0.0, 0.0, 0.0 };
+		std::unordered_map<std::string, Stats::Counter::Element> merged;
 		if (start < SLOT_TIME_SECOND) {
 			auto aux = second_time.second + start - end;
 			if (aux < SLOT_TIME_SECOND) {
-				stats_cnt.add_stats_sec(second_time.second, aux, cnt, tm_cnt);
+				stats_cnt.merge_stats_sec(second_time.second, aux, merged);
 			} else {
-				stats_cnt.add_stats_sec(second_time.second, SLOT_TIME_SECOND - 1, cnt, tm_cnt);
-				stats_cnt.add_stats_sec(0, aux % SLOT_TIME_SECOND, cnt, tm_cnt);
+				stats_cnt.merge_stats_sec(second_time.second, SLOT_TIME_SECOND - 1, merged);
+				stats_cnt.merge_stats_sec(0, aux % SLOT_TIME_SECOND, merged);
 			}
 		} else {
 			auto aux = second_time.minute + (start - end) / SLOT_TIME_SECOND;
 			if (aux < SLOT_TIME_MINUTE) {
-				stats_cnt.add_stats_min(second_time.minute, aux, cnt, tm_cnt);
+				stats_cnt.merge_stats_min(second_time.minute, aux, merged);
 			} else {
-				stats_cnt.add_stats_min(second_time.minute, SLOT_TIME_MINUTE - 1, cnt, tm_cnt);
-				stats_cnt.add_stats_min(0, aux % SLOT_TIME_MINUTE, cnt, tm_cnt);
+				stats_cnt.merge_stats_min(second_time.minute, SLOT_TIME_MINUTE - 1, merged);
+				stats_cnt.merge_stats_min(0, aux % SLOT_TIME_MINUTE, merged);
 			}
 		}
 
@@ -1096,14 +1095,10 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 		p_time = current_time - end;
 		time_period["_end"] = ctime(&p_time);
 
-		stats["_docs_indexed"] = cnt[0];
-		stats["_num_searches"] = cnt[1];
-		stats["_docs_deleted"] = cnt[2];
-		stats["_docs_updated"] = cnt[3];
-		stats["_avg_time_index"]  = delta_string(cnt[0] == 0 ? 0.0 : (tm_cnt[0] / cnt[0]));
-		stats["_avg_time_search"] = delta_string(cnt[1] == 0 ? 0.0 : (tm_cnt[1] / cnt[1]));
-		stats["_avg_time_delete"] = delta_string(cnt[2] == 0 ? 0.0 : (tm_cnt[2] / cnt[2]));
-		stats["_avg_time_update"] = delta_string(cnt[3] == 0 ? 0.0 : (tm_cnt[3] / cnt[3]));
+		for (auto& counter : merged) {
+			stats["_" + counter.first + "_cnt"] = counter.second.cnt;
+			stats["_" + counter.first + "_avg"] = delta_string(counter.second.cnt == 0 ? 0.0 : (counter.second.total / counter.second.cnt));
+		}
 	}
 }
 

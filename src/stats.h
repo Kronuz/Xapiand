@@ -24,9 +24,11 @@
 
 #include "xapiand.h"
 
-#include <chrono>       // for system_clock, time_point, duration_cast, seconds
-#include <mutex>        // for mutex
-#include <vector>       // for vector
+#include <chrono>        // for system_clock, time_point, duration_cast, seconds
+#include <unordered_map> // for unordered_map
+#include <mutex>         // for mutex
+#include <string>        // for string
+#include <vector>        // for vector
 
 
 constexpr uint16_t SLOT_TIME_MINUTE = 1440;
@@ -34,6 +36,25 @@ constexpr uint8_t SLOT_TIME_SECOND = 60;
 
 
 struct Stats {
+	struct Counter {
+		struct Element {
+			uint32_t cnt;
+			uint64_t total;
+
+			void clear();
+			void merge(const Element& other);
+			void add(uint64_t duration);
+		};
+		Element min[SLOT_TIME_MINUTE];
+		Element sec[SLOT_TIME_SECOND];
+
+		Counter();
+		void clear_stats_min(uint16_t start, uint16_t end);
+		void clear_stats_sec(uint8_t start, uint8_t end);
+		void merge_stats_min(uint16_t start, uint16_t end, Element& element);
+		void merge_stats_sec(uint8_t start, uint8_t end, Element& element);
+	};
+
 	struct Pos {
 		uint16_t minute;
 		uint8_t second;
@@ -42,22 +63,12 @@ struct Stats {
 		Pos(std::chrono::time_point<std::chrono::system_clock> current);
 	};
 
-	struct Counter {
-		uint32_t min[SLOT_TIME_MINUTE];
-		uint32_t sec[SLOT_TIME_SECOND];
-		uint64_t tm_min[SLOT_TIME_MINUTE];
-		uint64_t tm_sec[SLOT_TIME_SECOND];
-	};
-
 	std::chrono::time_point<std::chrono::system_clock> current;
 	Pos current_pos;
 
 	std::mutex mtx;
 
-	Counter index;
-	Counter search;
-	Counter del;
-	Counter patch;
+	std::unordered_map<std::string, Counter> counters;
 
 	static Stats& cnt();
 
@@ -66,14 +77,11 @@ struct Stats {
 
 	void update_pos_time();
 
-	void fill_zeros_stats_min(uint16_t start, uint16_t end);
-	void fill_zeros_stats_sec(uint8_t start, uint8_t end);
-	void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt);
-	void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt);
+	void clear_stats_min(uint16_t start, uint16_t end);
+	void clear_stats_sec(uint8_t start, uint8_t end);
+	void merge_stats_min(uint16_t start, uint16_t end, std::unordered_map<std::string, Counter::Element>& cnt);
+	void merge_stats_sec(uint8_t start, uint8_t end, std::unordered_map<std::string, Counter::Element>& cnt);
 
 	void add(Counter& counter, uint64_t duration);
-	static void add_index(uint64_t duration);
-	static void add_search(uint64_t duration);
-	static void add_del(uint64_t duration);
-	static void add_patch(uint64_t duration);
+	static void add(const std::string& counter, uint64_t duration);
 };
