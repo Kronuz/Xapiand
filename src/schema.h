@@ -50,7 +50,7 @@ enum class TypeIndex : uint8_t {
 	NONE                      = 0,                              // 0000  Bits for  "none"
 	FIELD_TERMS               = 0b0001,                         // 0001  Bit for   "field_terms"
 	FIELD_VALUES              = 0b0010,                         // 0010  Bit for   "field_values"
-	FIELD_ALL                 = FIELD_TERMS  | FIELD_VALUES,    // 0011  Bits for  "field_all"
+	FIELD_ALL                 = FIELD_TERMS   | FIELD_VALUES,   // 0011  Bits for  "field_all"
 	GLOBAL_TERMS              = 0b0100,                         // 0100  Bit for   "global_terms"
 	TERMS                     = GLOBAL_TERMS  | FIELD_TERMS,    // 0101  Bits for  "terms"
 	GLOBAL_TERMS_FIELD_VALUES = GLOBAL_TERMS  | FIELD_VALUES,   // 0110  Bits for  "global_terms,field_values" *
