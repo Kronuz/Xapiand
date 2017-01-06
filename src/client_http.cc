@@ -2286,4 +2286,3 @@ HttpClient::encoding_http_response(Encoding e, const std::string& response, bool
 			return std::string();
 	}
 }
-
