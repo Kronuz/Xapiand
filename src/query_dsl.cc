@@ -281,7 +281,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, const std::string& 
 	try {
 		auto acc = stox(std::stoull, field_accuracy.substr(1));
 		auto value = Cast::integer(obj);
-		return Xapian::Query(prefixed(Serialise::integer(value - GenerateTerms::modulus(value, acc)), field_spc.prefix, toUType(FieldType::INTEGER)));
+		return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, acc)), field_spc.prefix, toUType(FieldType::INTEGER)));
 	} catch (const InvalidArgument&) {
 	} catch (const OutOfRange&) { }
 

@@ -37,6 +37,7 @@
 #include "geo/htm.h"         // for SIZE_BITS_ID, range_t (ptr only)
 #include "schema.h"
 #include "serialise.h"       // for serialise
+#include "utils.h"
 
 
 class RangeList;
@@ -55,16 +56,6 @@ inline constexpr size_t get_upper_bound(size_t length_prefix, size_t number_unio
 
 
 namespace GenerateTerms {
-	template<typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
-	inline uint64_t modulus(T val, uint64_t mod) {
-		if (val < 0) {
-			val = -val;
-			auto m = static_cast<uint64_t>(val) % mod;
-			return m ? mod - m : m;
-		}
-		return static_cast<uint64_t>(val) % mod;
-	}
-
 	/*
 	 * Add generated terms by accuracy for field or global values in doc.
 	 */

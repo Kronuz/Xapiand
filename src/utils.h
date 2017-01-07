@@ -346,3 +346,17 @@ inline std::string readable_revents(int revents) {
 	if ((revents & EV_UNDEF) == EV_UNDEF) values.push_back("EV_UNDEF");
 	return join_string(values, " | ");
 }
+
+
+template<typename T, typename M, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value && std::is_integral<std::decay_t<M>>::value>>
+inline M modulus(T val, M mod) {
+	if (mod < 0) {
+		throw std::invalid_argument("Modulus must be positive");
+	}
+	if (val < 0) {
+		val = -val;
+		auto m = static_cast<M>(val) % mod;
+		return m ? mod - m : m;
+	}
+	return static_cast<M>(val) % mod;
+}
