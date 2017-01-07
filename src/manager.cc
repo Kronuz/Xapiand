@@ -1022,11 +1022,11 @@ XapiandManager::server_status(MsgPack& stats)
 
 
 void
-XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
+XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req, const std::string& gran_req)
 {
 	std::smatch m;
 	if (std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.size() && m.length(1) != 0) {
-		Stats::Pos first_time, second_time;
+		Stats::Pos first_time, second_time, gran;
 		if (m.length(8) != 0) {
 			first_time.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? std::stoi(m.str(3)) : 0);
 			first_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
@@ -1041,19 +1041,31 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
 			second_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
 			second_time.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
 		}
-		return _get_stats_time(stats, first_time, second_time);
+
+		if (!gran_req.empty()) {
+			if (std::regex_match(gran_req, m, time_re) && static_cast<size_t>(m.length()) == gran_req.size() && m.length(1) != 0 && m.length(8) == 0) {
+				gran.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? std::stoi(m.str(3)) : 0);
+				gran.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
+				gran.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
+			} else {
+				THROW(ClientError, "Incorrect input: %s", gran_req.c_str());
+			}
+		}
+
+		return _get_stats_time(stats, first_time, second_time, gran);
 	}
 	THROW(ClientError, "Incorrect input: %s", time_req.c_str());
 }
 
 
 void
-XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::Pos& second_time)
+XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::Pos& second_time, Stats::Pos& gran)
 {
 	Stats stats_cnt(Stats::cnt());
 	auto current_time = std::chrono::system_clock::to_time_t(stats_cnt.current);
 
-	unsigned end, start;
+	unsigned end, start, increment;
+	increment = gran.minute * SLOT_TIME_SECOND + gran.second;
 	if (first_time.minute == 0 && first_time.second == 0) {
 		start = second_time.minute * SLOT_TIME_SECOND + second_time.second;
 		end = 0;
@@ -1067,28 +1079,41 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 	}
 
 	if (end > start) {
-		std::swap(end, start);
+		THROW(ClientError, "Incorrect!");
+		// std::swap(end, start);
 	}
 
-	std::unordered_map<std::string, Stats::Counter::Element> added_counters;
-	if (start < SLOT_TIME_SECOND) {
-		stats_cnt.add_stats_sec(second_time.second, second_time.second + (start - end), added_counters);
-	} else {
-		stats_cnt.add_stats_min(second_time.minute, second_time.minute + (start - end) / SLOT_TIME_SECOND, added_counters);
+	auto total_inc = start - end;
+	if (!increment) {
+		increment = total_inc;
 	}
 
-	stats["system_time"] = Datetime::isotime(current_time);
-	auto& time_period = stats["period"];
-	time_period["start"] = Datetime::isotime(current_time - start);
-	time_period["end"] = Datetime::isotime(current_time - end);
+	for (auto offset = 0; offset < total_inc; offset += increment) {
+		auto& stat = stats.push_back(MsgPack());
+		std::unordered_map<std::string, Stats::Counter::Element> added_counters;
+		if (offset < SLOT_TIME_SECOND) {
+			int end_sec = modulus(second_time.second - offset, SLOT_TIME_SECOND);
+			int start_sec = modulus(end_sec - increment, SLOT_TIME_SECOND);
+			stats_cnt.add_stats_sec(start_sec, end_sec, added_counters);
+		} else {
+			int end_min = modulus(second_time.minute - offset / SLOT_TIME_SECOND, SLOT_TIME_MINUTE);
+			int start_min = modulus(end_min - increment / SLOT_TIME_SECOND, SLOT_TIME_MINUTE);
+			stats_cnt.add_stats_min(start_min, end_min, added_counters);
+		}
 
-	for (auto& counter : added_counters) {
-		auto& counter_stats = stats[counter.first];
-		if (counter.second.cnt) {
-			counter_stats["cnt"] = counter.second.cnt;
-			counter_stats["avg"] = delta_string(counter.second.total / counter.second.cnt);
-			counter_stats["min"] = delta_string(counter.second.min);
-			counter_stats["max"] = delta_string(counter.second.max);
+		// stat["system_time"] = Datetime::isotime(current_time);
+		auto& time_period = stat["period"];
+		time_period["start"] = Datetime::isotime(current_time - (offset + increment));
+		time_period["end"] = Datetime::isotime(current_time - offset);
+
+		for (auto& counter : added_counters) {
+			auto& counter_stats = stat[counter.first];
+			if (counter.second.cnt) {
+				counter_stats["cnt"] = counter.second.cnt;
+				counter_stats["avg"] = delta_string(counter.second.total / counter.second.cnt);
+				counter_stats["min"] = delta_string(counter.second.min);
+				counter_stats["max"] = delta_string(counter.second.max);
+			}
 		}
 	}
 }

@@ -1116,7 +1116,7 @@ HttpClient::info_view(enum http_method method)
 	if (!path_parser.off_id) {
 		query_field_maker(QUERY_FIELD_TIME);
 		XapiandManager::manager->server_status(response["server_info"]);
-		XapiandManager::manager->get_stats_time(response["stats"], query_field->time);
+		XapiandManager::manager->get_stats_time(response["stats"], query_field->time, "");
 		res_stats = true;
 	} else {
 		endpoints_maker(1s);
