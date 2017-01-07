@@ -196,6 +196,7 @@ struct query_field_t {
 	similar_field_t fuzzy;
 	similar_field_t nearest;
 	std::string time;
+	std::string period;
 
 	// Only used when the sort type is string.
 	std::string metric;

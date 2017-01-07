@@ -71,6 +71,7 @@
 #define QUERY_FIELD_SEARCH (1 << 1)
 #define QUERY_FIELD_ID     (1 << 2)
 #define QUERY_FIELD_TIME   (1 << 3)
+#define QUERY_FIELD_PERIOD (1 << 4)
 
 
 type_t content_type_pair(const std::string& ct_type) {
@@ -1114,9 +1115,9 @@ HttpClient::info_view(enum http_method method)
 	bool res_stats = false;
 
 	if (!path_parser.off_id) {
-		query_field_maker(QUERY_FIELD_TIME);
+		query_field_maker(QUERY_FIELD_TIME | QUERY_FIELD_PERIOD);
 		XapiandManager::manager->server_status(response["server_info"]);
-		XapiandManager::manager->get_stats_time(response["stats"], query_field->time, "");
+		XapiandManager::manager->get_stats_time(response["stats"], query_field->time, query_field->period);
 		res_stats = true;
 	} else {
 		endpoints_maker(1s);
@@ -1923,6 +1924,15 @@ HttpClient::query_field_maker(int flag)
 			query_field->time = query_parser.get();
 		} else {
 			query_field->time = "1h";
+		}
+		query_parser.rewind();
+	}
+
+	if (flag & QUERY_FIELD_PERIOD) {
+		if (query_parser.next("period") != -1) {
+			query_field->period = query_parser.get();
+		} else {
+			query_field->period = "";
 		}
 		query_parser.rewind();
 	}
