@@ -31,8 +31,8 @@
 #include <vector>        // for vector
 
 
-constexpr unsigned SLOT_TIME_MINUTE = 1440;
-constexpr unsigned SLOT_TIME_SECOND = 3600;
+constexpr int SLOT_TIME_MINUTE = 1440;
+constexpr int SLOT_TIME_SECOND = 3600;
 
 
 struct Stats {
@@ -52,15 +52,15 @@ struct Stats {
 		Element sec[SLOT_TIME_SECOND];
 
 		Counter();
-		void clear_stats_min(unsigned start, unsigned end);
-		void clear_stats_sec(unsigned start, unsigned end);
-		void add_stats_min(unsigned start, unsigned end, Element& element);
-		void add_stats_sec(unsigned start, unsigned end, Element& element);
+		void clear_stats_min(int start, int end);
+		void clear_stats_sec(int start, int end);
+		void add_stats_min(int start, int end, Element& element);
+		void add_stats_sec(int start, int end, Element& element);
 	};
 
 	struct Pos {
-		unsigned minute;
-		unsigned second;
+		int minute;
+		int second;
 
 		Pos();
 		Pos(const std::chrono::time_point<std::chrono::system_clock>& current);
@@ -80,10 +80,10 @@ struct Stats {
 
 	void update_pos_time();
 
-	void clear_stats_min(unsigned start, unsigned end);
-	void clear_stats_sec(unsigned start, unsigned end);
-	void add_stats_min(unsigned start, unsigned end, std::unordered_map<std::string, Counter::Element>& cnt);
-	void add_stats_sec(unsigned start, unsigned end, std::unordered_map<std::string, Counter::Element>& cnt);
+	void clear_stats_min(int start, int end);
+	void clear_stats_sec(int start, int end);
+	void add_stats_min(int start, int end, std::unordered_map<std::string, Counter::Element>& cnt);
+	void add_stats_sec(int start, int end, std::unordered_map<std::string, Counter::Element>& cnt);
 
 	void add(Counter& counter, uint64_t duration);
 	static void add(const std::string& counter, uint64_t duration);

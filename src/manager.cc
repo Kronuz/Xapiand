@@ -1025,7 +1025,7 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req, cons
 {
 	std::smatch m;
 	if (time_req.length() && std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.length()) {
-		unsigned start = 0, end = 0, increment = 0;
+		int start = 0, end = 0, increment = 0;
 		start += 60 * 60 * (m.length(1) ? std::stoul(m.str(1)) : 0);
 		start += 60 * (m.length(2) ? std::stoul(m.str(2)) : 0);
 		start += (m.length(3) ? std::stoul(m.str(3)) : 0);
@@ -1054,10 +1054,19 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req, cons
 
 
 void
-XapiandManager::_get_stats_time(MsgPack& stats, unsigned start, unsigned end, unsigned increment)
+XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int increment)
 {
 	Stats stats_cnt(Stats::cnt());
 	auto current_time = std::chrono::system_clock::to_time_t(stats_cnt.current);
+
+	auto total_inc = end - start;
+	auto max_seconds = SLOT_TIME_MINUTE * 60;
+	if (start > max_seconds) {
+		return;
+	} else if (total_inc > max_seconds) {
+		total_inc = max_seconds - start;
+		end = max_seconds;
+	}
 
 	Stats::Pos pos;
 	pos.minute = end / 60;
@@ -1065,33 +1074,39 @@ XapiandManager::_get_stats_time(MsgPack& stats, unsigned start, unsigned end, un
 	pos.minute = (pos.minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - pos.minute;
 	pos.second = (pos.second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - pos.second;
 
-	auto total_inc = end - start;
-	if (total_inc > SLOT_TIME_MINUTE * 60) {
-		total_inc = SLOT_TIME_MINUTE * 60;
-	}
 	if (!increment) {
 		increment = total_inc;
 	}
 
-	for (auto offset = 0; offset < total_inc; offset += increment) {
+	for (int offset = 0; offset < total_inc;) {
 		auto& stat = stats.push_back(MsgPack());
-		std::unordered_map<std::string, Stats::Counter::Element> added_counters;
-		if (start + offset < SLOT_TIME_SECOND) {
-			long end_sec = modulus(static_cast<long>(pos.second) - offset, SLOT_TIME_SECOND);
-			long start_sec = modulus(end_sec - increment, SLOT_TIME_SECOND);
-			stats_cnt.add_stats_sec(start_sec, end_sec, added_counters);
-			++offset;
-		} else {
-			long end_min = modulus(static_cast<long>(pos.minute) - offset / 60, SLOT_TIME_MINUTE);
-			long start_min = modulus(end_min - increment / 60, SLOT_TIME_MINUTE);
-			stats_cnt.add_stats_min(start_min, end_min, added_counters);
-			offset += 60;
-		}
-
 		// stat["system_time"] = Datetime::isotime(current_time);
 		auto& time_period = stat["period"];
-		time_period["start"] = Datetime::isotime(current_time - (offset + increment));
-		time_period["end"] = Datetime::isotime(current_time - offset);
+
+		std::unordered_map<std::string, Stats::Counter::Element> added_counters;
+		if (start + offset + increment < SLOT_TIME_SECOND) {
+			if (offset + increment > total_inc - 1) {
+				increment = total_inc - (offset + 1);
+			}
+			time_period["start"] = Datetime::isotime(current_time - (offset + increment));
+			time_period["end"] = Datetime::isotime(current_time - offset);
+			int end_sec = modulus(pos.second - offset, SLOT_TIME_SECOND);
+			int start_sec = modulus(end_sec - increment, SLOT_TIME_SECOND);
+			// L_DEBUG(this, "sec: %d..%d (pos.second:%u, offset:%d, increment:%d)", start_sec, end_sec, pos.second, offset, increment);
+			stats_cnt.add_stats_sec(start_sec, end_sec, added_counters);
+			offset += increment + 1;
+		} else {
+			if (offset + increment > total_inc - 60) {
+				increment = total_inc - (offset + 60);
+			}
+			time_period["start"] = Datetime::isotime(current_time - (offset + increment));
+			time_period["end"] = Datetime::isotime(current_time - offset);
+			int end_min = modulus(pos.minute - offset / 60, SLOT_TIME_MINUTE);
+			int start_min = modulus(end_min - increment / 60, SLOT_TIME_MINUTE);
+			// L_DEBUG(this, "min: %d..%d (pos.minute:%u, offset:%d, increment:%d)", start_min, end_min, pos.minute, offset, increment);
+			stats_cnt.add_stats_min(start_min, end_min, added_counters);
+			offset += increment + 60;
+		}
 
 		for (auto& counter : added_counters) {
 			if (counter.second.cnt) {

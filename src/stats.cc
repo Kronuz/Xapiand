@@ -79,7 +79,7 @@ Stats::Counter::Counter()
 
 
 inline void
-Stats::Counter::clear_stats_min(unsigned start, unsigned end)
+Stats::Counter::clear_stats_min(int start, int end)
 {
 	for (auto i = start; i <= end; ++i) {
 		min[i].clear();
@@ -88,7 +88,7 @@ Stats::Counter::clear_stats_min(unsigned start, unsigned end)
 
 
 inline void
-Stats::Counter::clear_stats_sec(unsigned start, unsigned end)
+Stats::Counter::clear_stats_sec(int start, int end)
 {
 	for (auto i = start; i <= end; ++i) {
 		sec[i].clear();
@@ -97,7 +97,7 @@ Stats::Counter::clear_stats_sec(unsigned start, unsigned end)
 
 
 inline void
-Stats::Counter::add_stats_min(unsigned start, unsigned end, Stats::Counter::Element& element)
+Stats::Counter::add_stats_min(int start, int end, Stats::Counter::Element& element)
 {
 	if (start <= end) {
 		for (auto i = start; i <= end; ++i) {
@@ -115,7 +115,7 @@ Stats::Counter::add_stats_min(unsigned start, unsigned end, Stats::Counter::Elem
 
 
 inline void
-Stats::Counter::add_stats_sec(unsigned start, unsigned end, Element& element)
+Stats::Counter::add_stats_sec(int start, int end, Element& element)
 {
 	if (start <= end) {
 		for (auto i = start; i <= end; ++i) {
@@ -210,7 +210,7 @@ Stats::update_pos_time()
 
 
 inline void
-Stats::clear_stats_min(unsigned start, unsigned end)
+Stats::clear_stats_min(int start, int end)
 {
 	for (auto& counter : counters) {
 		counter.second.clear_stats_min(start, end);
@@ -219,7 +219,7 @@ Stats::clear_stats_min(unsigned start, unsigned end)
 
 
 inline void
-Stats::clear_stats_sec(unsigned start, unsigned end)
+Stats::clear_stats_sec(int start, int end)
 {
 	for (auto& counter : counters) {
 		counter.second.clear_stats_sec(start, end);
@@ -228,7 +228,7 @@ Stats::clear_stats_sec(unsigned start, unsigned end)
 
 
 void
-Stats::add_stats_min(unsigned start, unsigned end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
+Stats::add_stats_min(int start, int end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
 {
 	for (auto& counter : counters) {
 		auto& element = cnt[counter.first];
@@ -238,7 +238,7 @@ Stats::add_stats_min(unsigned start, unsigned end, std::unordered_map<std::strin
 
 
 void
-Stats::add_stats_sec(unsigned start, unsigned end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
+Stats::add_stats_sec(int start, int end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
 {
 	for (auto& counter : counters) {
 		auto& element = cnt[counter.first];

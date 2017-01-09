@@ -116,7 +116,7 @@ class XapiandManager : public Worker  {
 	void finish();
 	void join();
 
-	void _get_stats_time(MsgPack& stats, unsigned start, unsigned end, unsigned increment);
+	void _get_stats_time(MsgPack& stats, int start, int end, int increment);
 
 protected:
 	std::mutex nodes_mtx;
