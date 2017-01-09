@@ -566,7 +566,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 
 	if (slot >= WAL_SLOTS) {
 		close();
-		open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+		open(WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 		slot = rev - header.head.revision;
 	}
 
@@ -576,7 +576,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 	if (commit_) {
 		if (slot + 1 >= WAL_SLOTS) {
 			close();
-			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
+			open(WAL_STORAGE_PATH + std::to_string(rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
 		} else {
 			header.slot[slot + 1] = header.slot[slot];
 		}
