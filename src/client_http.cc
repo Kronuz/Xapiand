@@ -1553,7 +1553,7 @@ HttpClient::stats_view(enum http_method)
 	L_CALL(this, "HttpClient::stats_view()");
 
 	if (!path_parser.off_id) {
-		MsgPack response;
+		MsgPack response(MsgPack::Type::ARRAY);
 		query_field_maker(QUERY_FIELD_TIME | QUERY_FIELD_PERIOD);
 		XapiandManager::manager->get_stats_time(response, query_field->time, query_field->period);
 		write_http_response(HTTP_STATUS_OK, response);
@@ -1937,7 +1937,7 @@ HttpClient::query_field_maker(int flag)
 		if (query_parser.next("period") != -1) {
 			query_field->period = query_parser.get();
 		} else {
-			query_field->period = "";
+			query_field->period = "1m";
 		}
 		query_parser.rewind();
 	}
