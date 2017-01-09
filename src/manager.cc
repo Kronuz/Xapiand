@@ -1088,8 +1088,8 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 			if (offset + increment > total_inc - 1) {
 				increment = total_inc - (offset + 1);
 			}
-			time_period["start"] = Datetime::isotime(current_time - (offset + increment));
-			time_period["end"] = Datetime::isotime(current_time - offset);
+			time_period["start"] = Datetime::isotime(current_time - (start + offset + increment));
+			time_period["end"] = Datetime::isotime(current_time - (start + offset));
 			int end_sec = modulus(pos.second - offset, SLOT_TIME_SECOND);
 			int start_sec = modulus(end_sec - increment, SLOT_TIME_SECOND);
 			// L_DEBUG(this, "sec: %d..%d (pos.second:%u, offset:%d, increment:%d)", start_sec, end_sec, pos.second, offset, increment);
@@ -1099,8 +1099,8 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 			if (offset + increment > total_inc - 60) {
 				increment = total_inc - (offset + 60);
 			}
-			time_period["start"] = Datetime::isotime(current_time - (offset + increment));
-			time_period["end"] = Datetime::isotime(current_time - offset);
+			time_period["start"] = Datetime::isotime(current_time - (start + offset + increment));
+			time_period["end"] = Datetime::isotime(current_time - (start + offset));
 			int end_min = modulus(pos.minute - offset / 60, SLOT_TIME_MINUTE);
 			int start_min = modulus(end_min - increment / 60, SLOT_TIME_MINUTE);
 			// L_DEBUG(this, "min: %d..%d (pos.minute:%u, offset:%d, increment:%d)", start_min, end_min, pos.minute, offset, increment);
