@@ -1076,14 +1076,16 @@ XapiandManager::_get_stats_time(MsgPack& stats, unsigned start, unsigned end, un
 	for (auto offset = 0; offset < total_inc; offset += increment) {
 		auto& stat = stats.push_back(MsgPack());
 		std::unordered_map<std::string, Stats::Counter::Element> added_counters;
-		if (offset < SLOT_TIME_SECOND) {
+		if (start + offset < SLOT_TIME_SECOND) {
 			long end_sec = modulus(static_cast<long>(pos.second) - offset, SLOT_TIME_SECOND);
 			long start_sec = modulus(end_sec - increment, SLOT_TIME_SECOND);
 			stats_cnt.add_stats_sec(start_sec, end_sec, added_counters);
+			++offset;
 		} else {
 			long end_min = modulus(static_cast<long>(pos.minute) - offset / 60, SLOT_TIME_MINUTE);
 			long start_min = modulus(end_min - increment / 60, SLOT_TIME_MINUTE);
 			stats_cnt.add_stats_min(start_min, end_min, added_counters);
+			offset += 60;
 		}
 
 		// stat["system_time"] = Datetime::isotime(current_time);
