@@ -1060,19 +1060,20 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 	auto current_time = std::chrono::system_clock::to_time_t(stats_cnt.current);
 
 	auto total_inc = end - start;
-	auto max_seconds = SLOT_TIME_MINUTE * 60;
-	if (start > max_seconds) {
+	if (start >= MAX_TIME_SECOND) {
 		return;
-	} else if (total_inc > max_seconds) {
-		total_inc = max_seconds - start;
-		end = max_seconds;
 	}
 
-	Stats::Pos pos;
-	pos.minute = end / 60;
-	pos.second = end % SLOT_TIME_SECOND;
-	pos.minute = (pos.minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - pos.minute;
-	pos.second = (pos.second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - pos.second;
+	int minute = 0, second = 0;
+	if (total_inc > MAX_TIME_SECOND) {
+		total_inc = MAX_TIME_SECOND - start;
+		end = MAX_TIME_SECOND;
+	}
+
+	minute = end / 60;
+	second = end % SLOT_TIME_SECOND;
+	minute = (minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - minute;
+	second = (second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - second;
 
 	if (!increment) {
 		increment = total_inc;
@@ -1090,7 +1091,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 			}
 			time_period["start"] = Datetime::isotime(current_time - (start + offset + increment));
 			time_period["end"] = Datetime::isotime(current_time - (start + offset));
-			int end_sec = modulus(pos.second - offset, SLOT_TIME_SECOND);
+			int end_sec = modulus(second - offset, SLOT_TIME_SECOND);
 			int start_sec = modulus(end_sec - increment, SLOT_TIME_SECOND);
 			// L_DEBUG(this, "sec: %d..%d (pos.second:%u, offset:%d, increment:%d)", start_sec, end_sec, pos.second, offset, increment);
 			stats_cnt.add_stats_sec(start_sec, end_sec, added_counters);
@@ -1101,7 +1102,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 			}
 			time_period["start"] = Datetime::isotime(current_time - (start + offset + increment));
 			time_period["end"] = Datetime::isotime(current_time - (start + offset));
-			int end_min = modulus(pos.minute - offset / 60, SLOT_TIME_MINUTE);
+			int end_min = modulus(minute - offset / 60, SLOT_TIME_MINUTE);
 			int start_min = modulus(end_min - increment / 60, SLOT_TIME_MINUTE);
 			// L_DEBUG(this, "min: %d..%d (pos.minute:%u, offset:%d, increment:%d)", start_min, end_min, pos.minute, offset, increment);
 			stats_cnt.add_stats_min(start_min, end_min, added_counters);
