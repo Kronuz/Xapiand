@@ -696,7 +696,7 @@ HttpClient::_get(enum http_method method)
 			info_view(method);
 			break;
 		case Command::CMD_STATS:
-			histogram_view(method);
+			stats_view(method);
 			break;
 		case Command::CMD_NODES:
 			nodes_view(method);
@@ -1115,9 +1115,7 @@ HttpClient::info_view(enum http_method method)
 	bool res_stats = false;
 
 	if (!path_parser.off_id) {
-		query_field_maker(QUERY_FIELD_TIME | QUERY_FIELD_PERIOD);
 		XapiandManager::manager->server_status(response["server_info"]);
-		XapiandManager::manager->get_stats_time(response["stats"], query_field->time, query_field->period);
 		res_stats = true;
 	} else {
 		endpoints_maker(1s);
@@ -1550,9 +1548,16 @@ HttpClient::status_view(enum http_status status, const std::string& message)
 
 
 void
-HttpClient::histogram_view(enum http_method)
+HttpClient::stats_view(enum http_method)
 {
-	L_CALL(this, "HttpClient::histogram_view()");
+	L_CALL(this, "HttpClient::stats_view()");
+
+	if (!path_parser.off_id) {
+		MsgPack response;
+		query_field_maker(QUERY_FIELD_TIME | QUERY_FIELD_PERIOD);
+		XapiandManager::manager->get_stats_time(response, query_field->time, query_field->period);
+		write_http_response(HTTP_STATUS_OK, response);
+	}
 
 	enum http_status error_code = HTTP_STATUS_NOT_FOUND;
 	write_http_response(error_code, {

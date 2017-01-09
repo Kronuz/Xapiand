@@ -215,7 +215,7 @@ class HttpClient : public BaseClient {
 	void schema_view(enum http_method method);
 	void nodes_view(enum http_method method);
 	void status_view(enum http_status status, const std::string& message="");
-	void histogram_view(enum http_method method);
+	void stats_view(enum http_method method);
 
 	void _options(enum http_method method);
 	void _head(enum http_method method);
