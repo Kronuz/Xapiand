@@ -1066,6 +1066,9 @@ XapiandManager::_get_stats_time(MsgPack& stats, unsigned start, unsigned end, un
 	pos.second = (pos.second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - pos.second;
 
 	auto total_inc = end - start;
+	if (total_inc > SLOT_TIME_MINUTE * 60) {
+		total_inc = SLOT_TIME_MINUTE * 60;
+	}
 	if (!increment) {
 		increment = total_inc;
 	}
