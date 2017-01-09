@@ -81,8 +81,7 @@
 #endif
 
 
-static const std::regex time_re("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
-
+static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(\\.\\.(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)?)?", std::regex::icase | std::regex::optimize);
 
 constexpr const char* const XapiandManager::StateNames[];
 
@@ -1025,28 +1024,34 @@ void
 XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req, const std::string& gran_req)
 {
 	std::smatch m;
-	if (std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.size() && m.length(1) != 0) {
+	if (time_req.length() && std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.length()) {
 		Stats::Pos first_time, second_time, gran;
-		if (m.length(8) != 0) {
-			first_time.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? std::stoi(m.str(3)) : 0);
-			first_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
-			first_time.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
-			second_time.minute = SLOT_TIME_SECOND * (m.length(10) != 0 ? std::stoi(m.str(10)) : 0);
-			second_time.minute += m.length(12) != 0 ? std::stoi(m.str(12)) : 0;
-			second_time.second = m.length(14) != 0 ? std::stoi(m.str(14)) : 0;
+		long first_total = 0, second_total = 0;
+		if (m.length(4)) {
+			second_total += 60 * 60 * (m.length(1) ? std::stol(m.str(1)) : 0);
+			second_total += 60 * (m.length(2) ? std::stol(m.str(2)) : 0);
+			second_total += (m.length(3) ? std::stol(m.str(3)) : 0);
 		} else {
-			first_time.minute = 0;
-			first_time.second = 0;
-			second_time.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? std::stoi(m.str(3)) : 0);
-			second_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
-			second_time.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
+			first_total += 60 * 60 * (m.length(1) ? std::stol(m.str(1)) : 0);
+			first_total += 60 * (m.length(2) ? std::stol(m.str(2)) : 0);
+			first_total += (m.length(3) ? std::stol(m.str(3)) : 0);
+			second_total += 60 * 60 * (m.length(5) ? std::stol(m.str(5)) : 0);
+			second_total += 60 * (m.length(6) ? std::stol(m.str(6)) : 0);
+			second_total += (m.length(7) ? std::stol(m.str(7)) : 0);
 		}
+		first_time.minute = first_total / 60;
+		first_time.second = first_total % 60;
+		second_time.minute = second_total / 60;
+		second_time.second = second_total % 60;
 
-		if (!gran_req.empty()) {
-			if (std::regex_match(gran_req, m, time_re) && static_cast<size_t>(m.length()) == gran_req.size() && m.length(1) != 0 && m.length(8) == 0) {
-				gran.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? std::stoi(m.str(3)) : 0);
-				gran.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
-				gran.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
+		if (gran_req.length()) {
+			if (std::regex_match(gran_req, m, time_re) && static_cast<size_t>(m.length()) == gran_req.length() && m.length(4) == 0) {
+				long gran_total = 0;
+				gran_total += 60 * 60 * (m.length(1) ? std::stol(m.str(1)) : 0);
+				gran_total += 60 * (m.length(2) ? std::stol(m.str(2)) : 0);
+				gran_total += (m.length(3) ? std::stol(m.str(3)) : 0);
+				gran.minute = gran_total / 60;
+				gran.second = gran_total % 60;
 			} else {
 				THROW(ClientError, "Incorrect input: %s", gran_req.c_str());
 			}
@@ -1065,15 +1070,15 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 	auto current_time = std::chrono::system_clock::to_time_t(stats_cnt.current);
 
 	unsigned end, start, increment;
-	increment = gran.minute * SLOT_TIME_SECOND + gran.second;
+	increment = gran.minute * 60 + gran.second;
 	if (first_time.minute == 0 && first_time.second == 0) {
-		start = second_time.minute * SLOT_TIME_SECOND + second_time.second;
+		start = second_time.minute * 60 + second_time.second;
 		end = 0;
 		second_time.minute = (second_time.minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - second_time.minute;
 		second_time.second = (second_time.second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - second_time.second;
 	} else {
-		start = second_time.minute * SLOT_TIME_SECOND + second_time.second;
-		end = first_time.minute * SLOT_TIME_SECOND + first_time.second;
+		start = second_time.minute * 60 + second_time.second;
+		end = first_time.minute * 60 + first_time.second;
 		second_time.minute = (second_time.minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - second_time.minute;
 		second_time.second = (second_time.second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - second_time.second;
 	}
