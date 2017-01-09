@@ -33,6 +33,7 @@
 
 constexpr int SLOT_TIME_MINUTE = 1440;
 constexpr int SLOT_TIME_SECOND = 3600;
+constexpr int MAX_TIME_SECOND  = SLOT_TIME_MINUTE * 60;
 
 
 struct Stats {
@@ -59,7 +60,7 @@ struct Stats {
 	};
 
 	struct Pos {
-		int minute;
+		double minute;
 		int second;
 
 		Pos();

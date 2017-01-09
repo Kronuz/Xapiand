@@ -140,7 +140,7 @@ Stats::Pos::Pos(const std::chrono::time_point<std::chrono::system_clock>& curren
 	timeinfo->tm_min    = 0;
 	timeinfo->tm_sec    = 0;
 	auto delta = epoch - mktime(timeinfo);
-	minute = delta / SLOT_TIME_SECOND;
+	minute = delta / 60.0;
 	second =  delta % SLOT_TIME_SECOND;
 }
 
@@ -178,34 +178,36 @@ Stats::update_pos_time()
 	auto now = std::chrono::system_clock::now();
 	auto t_elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - current).count();
 
-	if (t_elapsed >= SLOT_TIME_SECOND) {
-		clear_stats_sec(0, SLOT_TIME_SECOND - 1);
-		current_pos.minute += t_elapsed / SLOT_TIME_SECOND;
-		current_pos.second = t_elapsed % SLOT_TIME_SECOND;
+	current_pos.minute += t_elapsed / 60.0;
+	current_pos.second += t_elapsed;
+
+	if (current_pos.second < SLOT_TIME_SECOND) {
+		clear_stats_sec(b_time_second + 1, current_pos.second);
 	} else {
-		current_pos.second += t_elapsed;
-		if (current_pos.second >= SLOT_TIME_SECOND) {
+		current_pos.second %= SLOT_TIME_SECOND;
+		if (t_elapsed < SLOT_TIME_SECOND) {
 			clear_stats_sec(b_time_second + 1, SLOT_TIME_SECOND - 1);
-			clear_stats_sec(0, current_pos.second % SLOT_TIME_SECOND);
-			current_pos.minute += current_pos.second / SLOT_TIME_SECOND;
-			current_pos.second = t_elapsed % SLOT_TIME_SECOND;
+			clear_stats_sec(0, current_pos.second);
 		} else {
-			clear_stats_sec(b_time_second + 1, current_pos.second);
+			clear_stats_sec(0, SLOT_TIME_SECOND - 1);
+		}
+	}
+
+	if (current_pos.minute < SLOT_TIME_MINUTE) {
+		clear_stats_min(b_time_minute + 1, current_pos.minute);
+	} else {
+		int int_min = static_cast<int>(current_pos.minute);
+		int mod_min = int_min % SLOT_TIME_MINUTE;
+		current_pos.minute = current_pos.minute - int_min + mod_min;
+		if (t_elapsed < SLOT_TIME_MINUTE) {
+			clear_stats_min(b_time_minute + 1, SLOT_TIME_MINUTE - 1);
+			clear_stats_min(0, mod_min);
+		} else {
+			clear_stats_min(0, SLOT_TIME_MINUTE - 1);
 		}
 	}
 
 	current = now;
-
-	if (current_pos.minute >= SLOT_TIME_MINUTE) {
-		clear_stats_min(b_time_minute + 1, SLOT_TIME_MINUTE - 1);
-		clear_stats_min(0, current_pos.minute % SLOT_TIME_MINUTE);
-		current_pos.minute = current_pos.minute % SLOT_TIME_MINUTE;
-	} else {
-		clear_stats_min(b_time_minute + 1, current_pos.minute);
-	}
-
-	ASSERT(current_pos.second < SLOT_TIME_SECOND);
-	ASSERT(current_pos.minute < SLOT_TIME_MINUTE);
 }
 
 
@@ -252,7 +254,7 @@ Stats::add(Counter& counter, uint64_t duration)
 {
 	std::lock_guard<std::mutex> lk(mtx);
 	update_pos_time();
-	counter.min[current_pos.minute].add(duration);
+	counter.min[static_cast<int>(current_pos.minute)].add(duration);
 	counter.sec[current_pos.second].add(duration);
 }
 
