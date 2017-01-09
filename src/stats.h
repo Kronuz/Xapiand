@@ -32,7 +32,7 @@
 
 
 constexpr unsigned SLOT_TIME_MINUTE = 1440;
-constexpr unsigned SLOT_TIME_SECOND = 60;
+constexpr unsigned SLOT_TIME_SECOND = 3600;
 
 
 struct Stats {

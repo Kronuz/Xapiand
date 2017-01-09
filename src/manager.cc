@@ -1025,70 +1025,47 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req, cons
 {
 	std::smatch m;
 	if (time_req.length() && std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.length()) {
-		Stats::Pos first_time, second_time, gran;
-		long first_total = 0, second_total = 0;
-		if (m.length(4)) {
-			second_total += 60 * 60 * (m.length(1) ? std::stol(m.str(1)) : 0);
-			second_total += 60 * (m.length(2) ? std::stol(m.str(2)) : 0);
-			second_total += (m.length(3) ? std::stol(m.str(3)) : 0);
-		} else {
-			first_total += 60 * 60 * (m.length(1) ? std::stol(m.str(1)) : 0);
-			first_total += 60 * (m.length(2) ? std::stol(m.str(2)) : 0);
-			first_total += (m.length(3) ? std::stol(m.str(3)) : 0);
-			second_total += 60 * 60 * (m.length(5) ? std::stol(m.str(5)) : 0);
-			second_total += 60 * (m.length(6) ? std::stol(m.str(6)) : 0);
-			second_total += (m.length(7) ? std::stol(m.str(7)) : 0);
-		}
-		first_time.minute = first_total / 60;
-		first_time.second = first_total % 60;
-		second_time.minute = second_total / 60;
-		second_time.second = second_total % 60;
+		unsigned start = 0, end = 0, increment = 0;
+		start += 60 * 60 * (m.length(1) ? std::stoul(m.str(1)) : 0);
+		start += 60 * (m.length(2) ? std::stoul(m.str(2)) : 0);
+		start += (m.length(3) ? std::stoul(m.str(3)) : 0);
+		end += 60 * 60 * (m.length(5) ? std::stoul(m.str(5)) : 0);
+		end += 60 * (m.length(6) ? std::stoul(m.str(6)) : 0);
+		end += (m.length(7) ? std::stoul(m.str(7)) : 0);
 
 		if (gran_req.length()) {
 			if (std::regex_match(gran_req, m, time_re) && static_cast<size_t>(m.length()) == gran_req.length() && m.length(4) == 0) {
-				long gran_total = 0;
-				gran_total += 60 * 60 * (m.length(1) ? std::stol(m.str(1)) : 0);
-				gran_total += 60 * (m.length(2) ? std::stol(m.str(2)) : 0);
-				gran_total += (m.length(3) ? std::stol(m.str(3)) : 0);
-				gran.minute = gran_total / 60;
-				gran.second = gran_total % 60;
+				increment += 60 * 60 * (m.length(1) ? std::stoul(m.str(1)) : 0);
+				increment += 60 * (m.length(2) ? std::stoul(m.str(2)) : 0);
+				increment += (m.length(3) ? std::stoul(m.str(3)) : 0);
 			} else {
 				THROW(ClientError, "Incorrect input: %s", gran_req.c_str());
 			}
 		}
 
-		return _get_stats_time(stats, first_time, second_time, gran);
+		if (start > end) {
+			std::swap(end, start);
+		}
+
+		return _get_stats_time(stats, start, end, increment);
 	}
 	THROW(ClientError, "Incorrect input: %s", time_req.c_str());
 }
 
 
 void
-XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::Pos& second_time, Stats::Pos& gran)
+XapiandManager::_get_stats_time(MsgPack& stats, unsigned start, unsigned end, unsigned increment)
 {
 	Stats stats_cnt(Stats::cnt());
 	auto current_time = std::chrono::system_clock::to_time_t(stats_cnt.current);
 
-	unsigned end, start, increment;
-	increment = gran.minute * 60 + gran.second;
-	if (first_time.minute == 0 && first_time.second == 0) {
-		start = second_time.minute * 60 + second_time.second;
-		end = 0;
-		second_time.minute = (second_time.minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - second_time.minute;
-		second_time.second = (second_time.second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - second_time.second;
-	} else {
-		start = second_time.minute * 60 + second_time.second;
-		end = first_time.minute * 60 + first_time.second;
-		second_time.minute = (second_time.minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - second_time.minute;
-		second_time.second = (second_time.second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - second_time.second;
-	}
+	Stats::Pos pos;
+	pos.minute = end / 60;
+	pos.second = end % SLOT_TIME_SECOND;
+	pos.minute = (pos.minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - pos.minute;
+	pos.second = (pos.second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - pos.second;
 
-	if (end > start) {
-		std::swap(end, start);
-		std::swap(first_time, second_time);
-	}
-
-	auto total_inc = start - end;
+	auto total_inc = end - start;
 	if (!increment) {
 		increment = total_inc;
 	}
@@ -1097,12 +1074,12 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 		auto& stat = stats.push_back(MsgPack());
 		std::unordered_map<std::string, Stats::Counter::Element> added_counters;
 		if (offset < SLOT_TIME_SECOND) {
-			int end_sec = modulus(second_time.second - offset, SLOT_TIME_SECOND);
-			int start_sec = modulus(end_sec - increment, SLOT_TIME_SECOND);
+			long end_sec = modulus(static_cast<long>(pos.second) - offset, SLOT_TIME_SECOND);
+			long start_sec = modulus(end_sec - increment, SLOT_TIME_SECOND);
 			stats_cnt.add_stats_sec(start_sec, end_sec, added_counters);
 		} else {
-			int end_min = modulus(second_time.minute - offset / SLOT_TIME_SECOND, SLOT_TIME_MINUTE);
-			int start_min = modulus(end_min - increment / SLOT_TIME_SECOND, SLOT_TIME_MINUTE);
+			long end_min = modulus(static_cast<long>(pos.minute) - offset / 60, SLOT_TIME_MINUTE);
+			long start_min = modulus(end_min - increment / 60, SLOT_TIME_MINUTE);
 			stats_cnt.add_stats_min(start_min, end_min, added_counters);
 		}
 
