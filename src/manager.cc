@@ -1064,14 +1064,12 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 		return;
 	}
 
-	int minute = 0, second = 0;
 	if (total_inc > MAX_TIME_SECOND) {
 		total_inc = MAX_TIME_SECOND - start;
 		end = MAX_TIME_SECOND;
 	}
 
-	minute = end / 60;
-	second = end % SLOT_TIME_SECOND;
+	int minute = start / 60, second = start % SLOT_TIME_SECOND;
 	minute = (minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - minute;
 	second = (second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - second;
 
