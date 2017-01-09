@@ -1085,6 +1085,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 
 	if (end > start) {
 		std::swap(end, start);
+		std::swap(first_time, second_time);
 	}
 
 	auto total_inc = start - end;
