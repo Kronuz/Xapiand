@@ -1079,8 +1079,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, Stats::Pos& first_time, Stats::P
 	}
 
 	if (end > start) {
-		THROW(ClientError, "Incorrect!");
-		// std::swap(end, start);
+		std::swap(end, start);
 	}
 
 	auto total_inc = start - end;
