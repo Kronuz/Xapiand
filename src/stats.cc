@@ -25,11 +25,6 @@
 #include <limits>
 
 
-Stats::Pos::Pos()
-	: minute(0),
-	  second(0) { }
-
-
 Stats::Counter::Element::Element()
 	: cnt(0),
 	  total(0),
@@ -132,6 +127,11 @@ Stats::Counter::add_stats_sec(int start, int end, Element& element)
 }
 
 
+Stats::Pos::Pos()
+	: minute(0.0),
+	  second(0) { }
+
+
 Stats::Pos::Pos(const std::chrono::time_point<std::chrono::system_clock>& current)
 {
 	time_t epoch = std::chrono::system_clock::to_time_t(current);
@@ -154,8 +154,7 @@ Stats::cnt()
 
 
 Stats::Stats()
-	: current(std::chrono::system_clock::now()),
-	  current_pos(current) { }
+	: current(std::chrono::system_clock::now()) { }
 
 
 Stats::Stats(Stats& other)
