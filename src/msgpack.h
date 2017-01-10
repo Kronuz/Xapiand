@@ -258,6 +258,7 @@ public:
 
 	MsgPack::Type getType() const noexcept;
 
+	std::size_t hash() const;
 	bool operator ==(const MsgPack& other) const;
 	bool operator !=(const MsgPack& other) const;
 	MsgPack operator +(double val);
@@ -1825,8 +1826,31 @@ inline MsgPack::Type MsgPack::getType() const noexcept {
 }
 
 
+inline std::size_t MsgPack::hash() const
+{
+	switch (_body->getType()) {
+		case Type::MAP: {
+			size_t pos = 0;
+			std::size_t hash = 0;
+			const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
+			for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
+				if (p->key.type != msgpack::type::STR) {
+					THROW(msgpack::type_error);
+				}
+				auto val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->val));
+				hash ^= std::hash<std::string>{}(std::string(p->key.via.str.ptr, p->key.via.str.size));
+				hash ^= val.hash();
+			}
+			return hash;
+		}
+		default:
+			return std::hash<std::string>{}(serialise());
+	}
+}
+
+
 inline bool MsgPack::operator==(const MsgPack& other) const {
-	return *_const_body->_obj == *other._const_body->_obj;
+	return hash() == other.hash();
 }
 
 
@@ -1916,6 +1940,16 @@ inline MsgPack MsgPack::unserialise(const std::string& s) {
 
 inline std::ostream& operator<<(std::ostream& s, const MsgPack& o){
 	return o.operator<<(s);
+}
+
+
+namespace std {
+	template<>
+	struct hash<MsgPack> {
+		std::size_t operator()(const MsgPack &m) const {
+			return m.hash();
+		}
+	};
 }
 
 
