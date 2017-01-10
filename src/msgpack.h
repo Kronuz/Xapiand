@@ -1826,8 +1826,7 @@ inline MsgPack::Type MsgPack::getType() const noexcept {
 }
 
 
-inline std::size_t MsgPack::hash() const
-{
+inline std::size_t MsgPack::hash() const {
 	switch (_body->getType()) {
 		case Type::MAP: {
 			size_t pos = 0;
