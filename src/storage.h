@@ -335,7 +335,7 @@ public:
 				}
 				if unlikely(fd < 0) {
 					close();
-					THROW(StorageIOError, "Cannot open storage file: " + path);
+					THROW(StorageIOError, "Cannot open storage file: " + path + " (" + strerror(errno) +")");
 				}
 
 				memset(&header, 0, sizeof(header));
@@ -359,7 +359,7 @@ public:
 
 		if unlikely(fd <= 0) {
 			close();
-			THROW(StorageIOError, "Cannot open storage file: " + path);
+			THROW(StorageIOError, "Cannot open storage file: " + path + " (" + strerror(errno) +")");
 		}
 
 		ssize_t r = io::pread(fd, &header, sizeof(header), 0);
