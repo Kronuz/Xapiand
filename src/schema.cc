@@ -604,7 +604,7 @@ required_spc_t::required_spc_t(const required_spc_t& o)
 	  stem_strategy(o.stem_strategy),
 	  stem_language(o.stem_language),
 	  error(o.error),
-	  partial_paths(o.partial_paths) { }
+	  partial_paths(o.partial_prefixes) { }
 
 
 required_spc_t::required_spc_t(required_spc_t&& o) noexcept
@@ -619,7 +619,7 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 	  stem_strategy(std::move(o.stem_strategy)),
 	  stem_language(std::move(o.stem_language)),
 	  error(std::move(o.error)),
-	  partial_paths(std::move(o.partial_paths)) { }
+	  partial_paths(std::move(o.partial_prefixes)) { }
 
 
 required_spc_t&
@@ -636,7 +636,7 @@ required_spc_t::operator=(const required_spc_t& o)
 	stem_strategy = o.stem_strategy;
 	stem_language = o.stem_language;
 	error = o.error;
-	partial_paths = o.partial_paths;
+	partial_paths = o.partial_prefixes;
 	return *this;
 }
 
@@ -655,7 +655,7 @@ required_spc_t::operator=(required_spc_t&& o) noexcept
 	stem_strategy = std::move(o.stem_strategy);
 	stem_language = std::move(o.stem_language);
 	error = std::move(o.error);
-	partial_paths = std::move(o.partial_paths);
+	partial_paths = std::move(o.partial_prefixes);
 	return *this;
 }
 
@@ -889,7 +889,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_TM_DETECTION   << ": " << (flags.term_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_U_DETECTION    << ": " << (flags.uuid_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_BOOL_TERM      << ": " << (flags.bool_term         ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_NAMESPACE      << ": " << (flags.is_namespace         ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_NAMESPACE      << ": " << (flags.is_namespace      ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_PARTIAL_PATHS  << ": " << (flags.partial_paths     ? "true" : "false") << "\n";
 	str << "\t" << "field_found"           << ": " << (flags.field_found       ? "true" : "false") << "\n";
 	str << "\t" << "dynamic_type"          << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
@@ -1336,7 +1336,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 		validate_required_namespace_data(item_value);
 	}
 
-	const auto prefixes_namespace = get_partial_prefixes(specification.partial_paths);
+	const auto prefixes_namespace = get_partial_prefixes(specification.partial_prefixes);
 
 	specification.partial_spcs.reserve(prefixes_namespace.size());
 	if (toUType(specification.index & TypeIndex::VALUES)) {
@@ -1613,7 +1613,7 @@ Schema::validate_required_data()
 		properties[RESERVED_SLOT] = specification.slot;
 
 		// If field is namespace fallback to index anything but values.
-		if (!specification.flags.has_index && !specification.partial_paths.empty()) {
+		if (!specification.flags.has_index && !specification.partial_prefixes.empty()) {
 			const auto index = specification.index & ~TypeIndex::VALUES;
 			if (specification.index != index) {
 				specification.index = index;
@@ -1866,7 +1866,7 @@ Schema::index_partial_paths(Xapian::Document& doc, bool offsprings)
 	L_CALL(this, "Schema::index_partial_paths(<Xapian::Document>, %d)", offsprings);
 
 	if (specification.flags.inside_namespace && !offsprings) {
-		const auto prefixes_namespace = get_partial_prefixes(specification.partial_paths);
+		const auto prefixes_namespace = get_partial_prefixes(specification.partial_prefixes);
 		for (const auto& prefix_namespace : prefixes_namespace) {
 			doc.add_term(prefix_namespace);
 		}
@@ -2532,9 +2532,9 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 			specification.local_prefix.assign(get_prefix(specification.normalized_name));
 			specification.prefix.append(specification.local_prefix);
 			if (specification.flags.partial_paths) {
-				specification.partial_paths.push_back(specification.local_prefix);
+				specification.partial_prefixes.push_back(specification.local_prefix);
 			} else {
-				specification.partial_paths.clear();
+				specification.partial_prefixes.clear();
 			}
 		}
 		process_properties_document(properties, object, data, doc, tasks, offsprings);
@@ -2542,9 +2542,9 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 		specification.local_prefix.assign(get_prefix(specification.normalized_name));
 		specification.prefix.append(specification.local_prefix);
 		if (specification.flags.partial_paths) {
-			specification.partial_paths.push_back(specification.local_prefix);
+			specification.partial_prefixes.push_back(specification.local_prefix);
 		} else {
-			specification.partial_paths.clear();
+			specification.partial_prefixes.clear();
 		}
 		specification.flags.inside_namespace = true;
 	} else {
@@ -2557,9 +2557,9 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 			try {
 				get_subproperties(properties, field_name, field_name);
 				if (specification.flags.has_partial_paths) {
-					specification.partial_paths.push_back(specification.local_prefix);
+					specification.partial_prefixes.push_back(specification.local_prefix);
 				} else {
-					specification.partial_paths.clear();
+					specification.partial_prefixes.clear();
 				}
 			} catch (const std::out_of_range&) {
 				detect_dynamic(field_name);
@@ -2569,9 +2569,9 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 						specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
 						specification.prefix.append(specification.local_prefix);
 						if (specification.flags.has_partial_paths) {
-							specification.partial_paths.push_back(specification.local_prefix);
+							specification.partial_prefixes.push_back(specification.local_prefix);
 						} else {
-							specification.partial_paths.clear();
+							specification.partial_prefixes.clear();
 						}
 						continue;
 					} catch (const std::out_of_range&) { }
@@ -2717,9 +2717,9 @@ Schema::get_subproperties(const MsgPack*& properties)
 			specification.local_prefix.assign(get_prefix(specification.normalized_name));
 			specification.prefix.append(specification.local_prefix);
 			if (specification.flags.partial_paths) {
-				specification.partial_paths.push_back(specification.local_prefix);
+				specification.partial_prefixes.push_back(specification.local_prefix);
 			} else {
-				specification.partial_paths.clear();
+				specification.partial_prefixes.clear();
 			}
 		}
 		specification.flags.inside_namespace = true;
@@ -2733,9 +2733,9 @@ Schema::get_subproperties(const MsgPack*& properties)
 			try {
 				get_subproperties(properties, field_name, field_name);
 				if (specification.flags.has_partial_paths) {
-					specification.partial_paths.push_back(specification.local_prefix);
+					specification.partial_prefixes.push_back(specification.local_prefix);
 				} else {
-					specification.partial_paths.clear();
+					specification.partial_prefixes.clear();
 				}
 			} catch (const std::out_of_range&) {
 				detect_dynamic(field_name);
@@ -2745,9 +2745,9 @@ Schema::get_subproperties(const MsgPack*& properties)
 						specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
 						specification.prefix.append(specification.local_prefix);
 						if (specification.flags.has_partial_paths) {
-							specification.partial_paths.push_back(specification.local_prefix);
+							specification.partial_prefixes.push_back(specification.local_prefix);
 						} else {
-							specification.partial_paths.clear();
+							specification.partial_prefixes.clear();
 						}
 						continue;
 					} catch (const std::out_of_range&) { }
@@ -2862,9 +2862,9 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 	}
 
 	if (specification.flags.has_partial_paths) {
-		specification.partial_paths.push_back(specification.local_prefix);
+		specification.partial_prefixes.push_back(specification.local_prefix);
 	} else {
-		specification.partial_paths.clear();
+		specification.partial_prefixes.clear();
 	}
 }
 
@@ -2976,9 +2976,9 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 	specification.prefix.append(specification.local_prefix);
 
 	if (specification.flags.has_partial_paths) {
-		specification.partial_paths.push_back(specification.local_prefix);
+		specification.partial_prefixes.push_back(specification.local_prefix);
 	} else {
-		specification.partial_paths.clear();
+		specification.partial_prefixes.clear();
 	}
 }
 
@@ -3088,9 +3088,9 @@ Schema::add_field(MsgPack*& mut_properties)
 	specification.prefix.append(specification.local_prefix);
 
 	if (specification.flags.has_partial_paths) {
-		specification.partial_paths.push_back(specification.local_prefix);
+		specification.partial_prefixes.push_back(specification.local_prefix);
 	} else {
-		specification.partial_paths.clear();
+		specification.partial_prefixes.clear();
 	}
 }
 
@@ -3417,11 +3417,12 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 
 	if (prop_namespace.as_bool()) {
 		if (specification.flags.dynamic_type) {
-			specification.partial_paths.push_back(specification.prefix);
+			specification.partial_prefixes.push_back(specification.prefix);
 		} else {
-			specification.partial_paths.push_back(specification.prefix);
+			specification.partial_prefixes.push_back(specification.prefix);
 		}
 	}
+
 	specification.flags.has_namespace = true;
 }
 
@@ -4259,7 +4260,6 @@ Schema::set_default_spc_ct(MsgPack& properties)
 
 	if (!specification.flags.has_namespace) {
 		specification.flags.has_namespace = true;
-		specification.partial_paths.push_back(get_prefix(specification.normalized_name));
 		properties[RESERVED_NAMESPACE] = true;
 	}
 }
