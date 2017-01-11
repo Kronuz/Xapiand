@@ -476,6 +476,11 @@ class Schema {
 	void get_subproperties(const MsgPack*& properties, const std::string& meta_name, const std::string& normalized_name);
 
 	/*
+	 * Add partial prefix in specification.partials_prefixes or clear it.
+	 */
+	void update_partial_prefixes();
+
+	/*
 	 * Gets the properties stored in the schema as well as those sent by the user.
 	 */
 
