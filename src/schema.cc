@@ -1030,7 +1030,7 @@ Schema::restart_namespace_specification()
 void
 Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL(this, "Schema::index_object(%s, %s)", repr(parent_properties->to_string()).c_str(), repr(name).c_str());
+	L_CALL(this, "Schema::index_object(%s, %s, <MsgPack*>, <Xapian::Document>, %s)", repr(parent_properties->to_string()).c_str(), repr(object.to_string()).c_str(), repr(name).c_str());
 
 	if (name.empty()) {
 		THROW(ClientError, "Field name must not be empty");
@@ -2009,7 +2009,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 void
 Schema::index_term(Xapian::Document& doc, std::string serialise_val, const specification_t& field_spc, size_t pos)
 {
-	L_CALL(nullptr, "Schema::index_term(%s)", repr(serialise_val).c_str());
+	L_CALL(nullptr, "Schema::index_term(<Xapian::Document>, %s, <specification_t>, %zu)", repr(serialise_val).c_str(), pos);
 
 	if (serialise_val.empty()) {
 		return;
@@ -2079,7 +2079,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 void
 Schema::index_all_term(Xapian::Document& doc, const MsgPack& value, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
 {
-	L_CALL(nullptr, "Schema::index_all_term()");
+	L_CALL(nullptr, "Schema::index_all_term(<Xapian::Document>, %s, <specification_t>, <specification_t>, %zu)", repr(value.to_string()).c_str(), pos);
 
 	if (field_spc.sep_types[2] == FieldType::GEO && (field_spc.flags.partials != global_spc.flags.partials ||
 		field_spc.error != global_spc.error)) {
@@ -2096,7 +2096,7 @@ Schema::index_all_term(Xapian::Document& doc, const MsgPack& value, const specif
 void
 Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, const specification_t* field_spc, const specification_t* global_spc)
 {
-	L_CALL(nullptr, "Schema::index_value()");
+	L_CALL(nullptr, "Schema::index_value(<Xapian::Document>, %s, <StringSet>, <specification_t>, %zu, <specification_t*>, <specification_t*>)", repr(value.to_string()).c_str(), pos);
 
 	switch (spc.sep_types[2]) {
 		case FieldType::FLOAT: {
@@ -2253,7 +2253,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 void
 Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
 {
-	L_CALL(nullptr, "Schema::index_all_value()");
+	L_CALL(nullptr, "Schema::index_all_value(<Xapian::Document>, %s, <StringSet>, <StringSet>, <specification_t>, <specification_t>, %zu)", repr(value.to_string()).c_str(), pos);
 
 	switch (field_spc.sep_types[2]) {
 		case FieldType::FLOAT: {
@@ -2452,7 +2452,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 void
 Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name)
 {
-	L_CALL(this, "Schema::update_schema(%s)", repr(name).c_str());
+	L_CALL(this, "Schema::update_schema(%s, %s, %s)", repr(parent_properties->to_string()).c_str(), repr(obj_schema.to_string()).c_str(), repr(name).c_str());
 
 	if (name.empty()) {
 		THROW(ClientError, "Field name must not be empty");
@@ -4552,7 +4552,7 @@ Schema::get_data_id() const
 std::pair<required_spc_t, std::string>
 Schema::get_data_field(const std::string& field_name, bool is_range) const
 {
-	L_CALL(this, "Schema::get_data_field(%s)", repr(field_name).c_str());
+	L_CALL(this, "Schema::get_data_field(%s, %d)", repr(field_name).c_str(), is_range);
 
 	required_spc_t res;
 
