@@ -3756,7 +3756,7 @@ Schema::process_stop_strategy(const std::string& prop_name, const MsgPack& doc_s
 		if (ssit == ssit_e) {
 			THROW(ClientError, "%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stop_strategy.c_str(), _stop_strategy.c_str());
 		} else {
-			specification.stop_strategy = map_stop_strategy.at(_stop_strategy);
+			specification.stop_strategy = ssit->second;
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
@@ -3777,7 +3777,7 @@ Schema::process_stem_strategy(const std::string& prop_name, const MsgPack& doc_s
 		if (ssit == ssit_e) {
 			THROW(ClientError, "%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stem_strategy.c_str(), _stem_strategy.c_str());
 		} else {
-			specification.stem_strategy = map_stem_strategy.at(_stem_strategy);
+			specification.stem_strategy = ssit->second;
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
