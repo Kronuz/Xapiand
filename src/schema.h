@@ -43,7 +43,7 @@
 #include "utils.h"                         // for repr, toUType, lower_string
 
 
-#define NAMESPACE_LIMIT_DEPTH  10    // 2^(n - 2) => 2^8 => 256 namespace terms.
+#define LIMIT_PARTIAL_PATHS_DEPTH  10    // 2^(n - 2) => 2^8 => 256 namespace terms.
 
 
 enum class TypeIndex : uint8_t {

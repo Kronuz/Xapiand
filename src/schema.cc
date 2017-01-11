@@ -1301,8 +1301,8 @@ Schema::get_partial_prefixes(const std::vector<std::string>& partial_paths)
 {
 	L_CALL(nullptr, "Schema::get_partial_prefixes(%zu)", partial_paths.size());
 
-	if (partial_paths.size() > NAMESPACE_LIMIT_DEPTH) {
-		THROW(ClientError, "Partial paths limit depth is %d, and partial paths provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, partial_paths.size());
+	if (partial_paths.size() > LIMIT_PARTIAL_PATHS_DEPTH) {
+		THROW(ClientError, "Partial paths limit depth is %d, and partial paths provided has a depth of %zu", LIMIT_PARTIAL_PATHS_DEPTH, partial_paths.size());
 	}
 
 	std::vector<std::string> prefixes;
@@ -4811,8 +4811,8 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			try {
 				if (subproperties->at(RESERVED_NAMESPACE).as_bool()) {
 					int depth_namespace = std::distance(it, it_e);
-					if (depth_namespace > NAMESPACE_LIMIT_DEPTH) {
-						THROW(ClientError, "Namespace limit depth is %d, and the namespace provided has a depth of %d", NAMESPACE_LIMIT_DEPTH, depth_namespace);
+					if (depth_namespace > LIMIT_PARTIAL_PATHS_DEPTH) {
+						THROW(ClientError, "Partial paths limit depth is %d, and partial paths provided has a depth of %d", LIMIT_PARTIAL_PATHS_DEPTH, depth_namespace);
 					}
 					for ( ; it != it_e; ++it) {
 						dynamic_type = false;
