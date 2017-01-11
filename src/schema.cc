@@ -2169,11 +2169,12 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		}
 		case FieldType::GEO: {
 			try {
-				EWKT_Parser ewkt(value.as_string(), spc.flags.partials, spc.error);
+				const auto str_value = value.as_string();
+				EWKT_Parser ewkt(str_value, spc.flags.partials, spc.error);
 				auto ser_value = Serialise::trixels(ewkt.trixels);
 				if (field_spc) {
 					if (field_spc->flags.partials != spc.flags.partials || field_spc->error != spc.error) {
-						EWKT_Parser f_ewkt(value.as_string(), field_spc->flags.partials, field_spc->error);
+						EWKT_Parser f_ewkt(str_value, field_spc->flags.partials, field_spc->error);
 						index_term(doc, Serialise::trixels(f_ewkt.trixels), *field_spc, pos);
 					} else {
 						index_term(doc, ser_value, *field_spc, pos);
@@ -2181,7 +2182,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 				}
 				if (global_spc) {
 					if (global_spc->flags.partials != spc.flags.partials || global_spc->error != spc.error) {
-						EWKT_Parser g_ewkt(value.as_string(), global_spc->flags.partials, global_spc->error);
+						EWKT_Parser g_ewkt(str_value, global_spc->flags.partials, global_spc->error);
 						index_term(doc, Serialise::trixels(g_ewkt.trixels), *global_spc, pos);
 					} else {
 						index_term(doc, std::move(ser_value), *global_spc, pos);
@@ -2350,7 +2351,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 		}
 		case FieldType::GEO: {
 			try {
-				auto str_ewkt = value.as_string();
+				const auto str_ewkt = value.as_string();
 				if (field_spc.flags.partials == global_spc.flags.partials && field_spc.error == global_spc.error) {
 					EWKT_Parser ewkt(str_ewkt, field_spc.flags.partials, field_spc.error);
 					if (toUType(field_spc.index & TypeIndex::TERMS)) {
@@ -3726,7 +3727,7 @@ Schema::process_language(const std::string& prop_name, const MsgPack& doc_langua
 	L_CALL(this, "Schema::process_language(%s)", repr(doc_language.to_string()).c_str());
 
 	try {
-		auto _str_language = lower_string(doc_language.as_string());
+		const auto _str_language = lower_string(doc_language.as_string());
 		static const auto slit_e = map_stem_language.end();
 		const auto slit = map_stem_language.find(_str_language);
 		if (slit != slit_e && slit->second.first) {
@@ -3749,7 +3750,7 @@ Schema::process_stop_strategy(const std::string& prop_name, const MsgPack& doc_s
 	L_CALL(this, "Schema::process_stop_strategy(%s)", repr(doc_stop_strategy.to_string()).c_str());
 
 	try {
-		auto _stop_strategy = lower_string(doc_stop_strategy.as_string());
+		const auto _stop_strategy = lower_string(doc_stop_strategy.as_string());
 		static const auto ssit_e = map_stop_strategy.end();
 		const auto ssit = map_stop_strategy.find(_stop_strategy);
 		if (ssit == ssit_e) {
@@ -3770,7 +3771,7 @@ Schema::process_stem_strategy(const std::string& prop_name, const MsgPack& doc_s
 	L_CALL(this, "Schema::process_stem_strategy(%s)", repr(doc_stem_strategy.to_string()).c_str());
 
 	try {
-		auto _stem_strategy = lower_string(doc_stem_strategy.as_string());
+		const auto _stem_strategy = lower_string(doc_stem_strategy.as_string());
 		static const auto ssit_e = map_stem_strategy.end();
 		const auto ssit = map_stem_strategy.find(_stem_strategy);
 		if (ssit == ssit_e) {
@@ -4082,7 +4083,7 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 	L_CALL(this, "Schema::process_index(%s)", repr(doc_index.to_string()).c_str());
 
 	try {
-		auto str_index = lower_string(doc_index.as_string());
+		const auto str_index = lower_string(doc_index.as_string());
 		static const auto miit_e = map_index.end();
 		const auto miit = map_index.find(str_index);
 		if (miit == miit_e) {
