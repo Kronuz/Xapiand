@@ -309,7 +309,9 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			id_field = Cast::cast(spc_id.sep_types[2], _document_id);
 		}
 
-		if (!blob.empty()) {
+		if (blob.empty()) {
+			obj_.erase(CT_FIELD_NAME);
+		} else {
 			// Add Content Type if indexing a blob.
 			auto found = ct_type.find_last_of("/");
 			std::string type(ct_type.c_str(), found);
