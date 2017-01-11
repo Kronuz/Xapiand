@@ -3792,13 +3792,14 @@ Schema::process_stem_language(const std::string& prop_name, const MsgPack& doc_s
 	L_CALL(this, "Schema::process_stem_language(%s)", repr(doc_stem_language.to_string()).c_str());
 
 	try {
-		auto _stem_language = lower_string(doc_stem_language.as_string());
-		try {
-			auto data_lan = map_stem_language.at(_stem_language);
-			specification.stem_language = _stem_language;
-			specification.aux_stem_lan = data_lan.second;
-		} catch (const std::out_of_range&) {
+		const auto _stem_language = lower_string(doc_stem_language.as_string());
+		static const auto slit_e = map_stem_language.end();
+		const auto slit = map_stem_language.find(_stem_language);
+		if (slit == slit_e) {
 			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(_stem_language).c_str());
+		} else {
+			specification.stem_language = _stem_language;
+			specification.aux_stem_lan = slit->second.second;
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
