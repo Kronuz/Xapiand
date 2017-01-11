@@ -326,7 +326,7 @@ struct specification_t : required_spc_t {
 	std::string aux_lan;
 
 	// Auxiliar variables for saving partial prefixes.
-	std::vector<std::string> partial_prefixes;
+	std::vector<std::pair<std::string, bool>> partial_prefixes;
 	std::vector<required_spc_t> partial_spcs;
 
 	specification_t();
@@ -407,7 +407,7 @@ class Schema {
 	/*
 	 * Get the prefixes for a namespace.
 	 */
-	static std::vector<std::string> get_partial_prefixes(const std::vector<std::string>& partial_paths);
+	static std::vector<std::string> get_partial_prefixes(const std::vector<std::pair<std::string, bool>>& partial_prefixes);
 
 	/*
 	 * Returns a vector with the right specification.
@@ -478,7 +478,7 @@ class Schema {
 	/*
 	 * Add partial prefix in specification.partials_prefixes or clear it.
 	 */
-	void update_partial_prefixes();
+	void update_partial_prefixes(const std::string& partial_prefix, bool raw=false);
 
 	/*
 	 * Gets the properties stored in the schema as well as those sent by the user.
