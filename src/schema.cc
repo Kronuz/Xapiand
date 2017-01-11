@@ -604,7 +604,7 @@ required_spc_t::required_spc_t(const required_spc_t& o)
 	  stem_strategy(o.stem_strategy),
 	  stem_language(o.stem_language),
 	  error(o.error),
-	  partial_paths(o.partial_prefixes) { }
+	  partial_prefixes(o.partial_prefixes) { }
 
 
 required_spc_t::required_spc_t(required_spc_t&& o) noexcept
@@ -619,7 +619,7 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 	  stem_strategy(std::move(o.stem_strategy)),
 	  stem_language(std::move(o.stem_language)),
 	  error(std::move(o.error)),
-	  partial_paths(std::move(o.partial_prefixes)) { }
+	  partial_prefixes(std::move(o.partial_prefixes)) { }
 
 
 required_spc_t&
@@ -636,7 +636,7 @@ required_spc_t::operator=(const required_spc_t& o)
 	stem_strategy = o.stem_strategy;
 	stem_language = o.stem_language;
 	error = o.error;
-	partial_paths = o.partial_prefixes;
+	partial_prefixes = o.partial_prefixes;
 	return *this;
 }
 
@@ -655,7 +655,7 @@ required_spc_t::operator=(required_spc_t&& o) noexcept
 	stem_strategy = std::move(o.stem_strategy);
 	stem_language = std::move(o.stem_language);
 	error = std::move(o.error);
-	partial_paths = std::move(o.partial_prefixes);
+	partial_prefixes = std::move(o.partial_prefixes);
 	return *this;
 }
 
@@ -857,7 +857,7 @@ specification_t::to_string() const
 	str << "]\n";
 
 	str << "\t" << RESERVED_NAMESPACE  << ": [ ";
-	for (const auto& name : partial_paths) {
+	for (const auto& name : partial_prefixes) {
 		str << repr(name) << " ";
 	}
 	str << "]\n";
