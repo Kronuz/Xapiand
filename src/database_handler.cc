@@ -395,8 +395,10 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPa
 	std::string blob;
 	if (body.is_map()) {
 		obj = body;
-	} else {
+	} else if (body.is_string()) {
 		blob = body.as_string();
+	} else {
+		THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
 	}
 
 	return index(_document_id, stored, "", obj, blob, commit_, ct_type, err_list);
