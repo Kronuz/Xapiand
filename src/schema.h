@@ -380,7 +380,7 @@ class Schema {
 	/*
 	 * Deletes the schema from the metadata and returns a reference to the mutable empty schema.
 	 */
-	MsgPack& clear() noexcept;
+	MsgPack& clear();
 
 	/*
 	 * Restarting reserved words than are not inherited.
@@ -428,7 +428,6 @@ class Schema {
 	 * Sets type to array in properties.
 	 */
 	void set_type_to_array();
-
 
 	/*
 	 * Validates data when RESERVED_TYPE has not been save in schema.

@@ -955,7 +955,7 @@ Schema::get_mutable()
 
 
 MsgPack&
-Schema::clear() noexcept
+Schema::clear()
 {
 	L_CALL(this, "Schema::clear()");
 
