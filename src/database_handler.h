@@ -114,7 +114,7 @@ public:
 	DataType index(const std::string& _document_id, bool stored, const std::string& storage, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
 	DataType index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
 	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
-	DataType merge(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
+	DataType merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
 
 	void write_schema(const std::string& body);
 	void write_schema(const MsgPack& obj);

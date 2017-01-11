@@ -1078,7 +1078,8 @@ HttpClient::update_document_view(enum http_method method)
 	if (method == HTTP_PATCH) {
 		response = db_handler.patch(doc_id, body_.second, query_field->commit, body_.first, &err_list).second;
 	} else {
-		response = db_handler.merge(doc_id, body_.second, query_field->commit, body_.first, &err_list).second;
+		bool stored = true;
+		response = db_handler.merge(doc_id, stored, body_.second, query_field->commit, body_.first, &err_list).second;
 	}
 
 	operation_ends = std::chrono::system_clock::now();
