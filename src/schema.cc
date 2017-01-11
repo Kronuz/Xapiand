@@ -375,6 +375,7 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_TM_DETECTION,       &Schema::write_tm_detection    },
 	{ RESERVED_U_DETECTION,        &Schema::write_u_detection     },
 	{ RESERVED_NAMESPACE,          &Schema::write_namespace       },
+	{ RESERVED_PARTIAL_PATHS,      &Schema::write_partial_paths   },
 });
 
 
@@ -401,8 +402,8 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_INDEX,              &Schema::process_index           },
 	{ RESERVED_STORE,              &Schema::process_store           },
 	{ RESERVED_RECURSIVE,          &Schema::process_recursive       },
+	{ RESERVED_PARTIAL_PATHS,      &Schema::process_partial_paths   },
 	{ RESERVED_VALUE,              &Schema::process_value           },
-	{ RESERVED_NAME,               &Schema::process_name            },
 	{ RESERVED_SCRIPT,             &Schema::process_script          },
 	{ RESERVED_FLOAT,              &Schema::process_cast_object     },
 	{ RESERVED_POSITIVE,           &Schema::process_cast_object     },
@@ -410,6 +411,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_BOOLEAN,            &Schema::process_cast_object     },
 	{ RESERVED_TERM,               &Schema::process_cast_object     },
 	{ RESERVED_TEXT,               &Schema::process_cast_object     },
+	{ RESERVED_STRING,             &Schema::process_cast_object     },
 	{ RESERVED_DATE,               &Schema::process_cast_object     },
 	{ RESERVED_UUID,               &Schema::process_cast_object     },
 	{ RESERVED_EWKT,               &Schema::process_cast_object     },
@@ -457,6 +459,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 	{ RESERVED_PARTIALS,        &Schema::update_partials         },
 	{ RESERVED_ERROR,           &Schema::update_error            },
 	{ RESERVED_NAMESPACE,       &Schema::update_namespace        },
+	{ RESERVED_PARTIAL_PATHS,   &Schema::update_partial_paths    },
 });
 
 
@@ -552,15 +555,18 @@ required_spc_t::flags_t::flags_t()
 	  text_detection(true),
 	  term_detection(true),
 	  uuid_detection(true),
+	  partial_paths(false),
+	  is_namespace(false),
 	  field_found(true),
 	  field_with_type(false),
 	  complete(false),
 	  reserved_slot(false),
+	  dynamic_type(false),
+	  inside_namespace(false),
 	  has_bool_term(false),
 	  has_index(false),
 	  has_namespace(false),
-	  inside_namespace(false),
-	  dynamic_type(false) { }
+	  has_partial_paths(false) { }
 
 
 required_spc_t::required_spc_t()
@@ -598,7 +604,7 @@ required_spc_t::required_spc_t(const required_spc_t& o)
 	  stem_strategy(o.stem_strategy),
 	  stem_language(o.stem_language),
 	  error(o.error),
-	  paths_namespace(o.paths_namespace) { }
+	  partial_paths(o.partial_paths) { }
 
 
 required_spc_t::required_spc_t(required_spc_t&& o) noexcept
@@ -613,7 +619,7 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 	  stem_strategy(std::move(o.stem_strategy)),
 	  stem_language(std::move(o.stem_language)),
 	  error(std::move(o.error)),
-	  paths_namespace(std::move(o.paths_namespace)) { }
+	  partial_paths(std::move(o.partial_paths)) { }
 
 
 required_spc_t&
@@ -630,7 +636,7 @@ required_spc_t::operator=(const required_spc_t& o)
 	stem_strategy = o.stem_strategy;
 	stem_language = o.stem_language;
 	error = o.error;
-	paths_namespace = o.paths_namespace;
+	partial_paths = o.partial_paths;
 	return *this;
 }
 
@@ -649,7 +655,7 @@ required_spc_t::operator=(required_spc_t&& o) noexcept
 	stem_strategy = std::move(o.stem_strategy);
 	stem_language = std::move(o.stem_language);
 	error = std::move(o.error);
-	paths_namespace = std::move(o.paths_namespace);
+	partial_paths = std::move(o.partial_paths);
 	return *this;
 }
 
@@ -851,13 +857,13 @@ specification_t::to_string() const
 	str << "]\n";
 
 	str << "\t" << RESERVED_NAMESPACE  << ": [ ";
-	for (const auto& name : paths_namespace) {
+	for (const auto& name : partial_paths) {
 		str << repr(name) << " ";
 	}
 	str << "]\n";
 
-	str << "\t" << "namespace_spcs"    << ": [ ";
-	for (const auto& spc : namespace_spcs) {
+	str << "\t" << "partial_spcs"    << ": [ ";
+	for (const auto& spc : partial_spcs) {
 		str << "{" << repr(spc.prefix) << ", " << spc.slot << "} ";
 	}
 	str << "]\n";
@@ -883,12 +889,13 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_TM_DETECTION   << ": " << (flags.term_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_U_DETECTION    << ": " << (flags.uuid_detection    ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_BOOL_TERM      << ": " << (flags.bool_term         ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_NAMESPACE      << ": " << (flags.is_namespace         ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_PARTIAL_PATHS  << ": " << (flags.partial_paths     ? "true" : "false") << "\n";
 	str << "\t" << "field_found"           << ": " << (flags.field_found       ? "true" : "false") << "\n";
 	str << "\t" << "dynamic_type"          << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
-	str << "\t" << "inside_namespace"      << ": " << (flags.inside_namespace  ? "true" : "false") << "\n";
 	str << "\t" << "complete"              << ": " << (flags.complete          ? "true" : "false") << "\n";
 
-	str << "\t" << RESERVED_NAME           << ": " << name                 << "\n";
+	str << "\t" << "name"                  << ": " << name                 << "\n";
 	str << "\t" << "meta_name"             << ": " << meta_name            << "\n";
 	str << "\t" << "full_meta_name"        << ": " << full_meta_name       << "\n";
 	str << "\t" << "normalized_name"       << ": " << normalized_name      << "\n";
@@ -1014,51 +1021,10 @@ Schema::restart_namespace_specification()
 	specification.flags.dynamic_type     = default_spc.flags.dynamic_type;
 
 	specification.sep_types              = default_spc.sep_types;
-	specification.name                   = default_spc.name;
 	specification.aux_stem_lan           = default_spc.aux_stem_lan;
 	specification.aux_lan                = default_spc.aux_lan;
 
-	specification.namespace_spcs.clear();
-}
-
-
-inline void
-Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings)
-{
-	static const auto ddit_e = map_dispatch_document.end();
-	if (specification.flags.field_with_type) {
-		for (const auto& item_key : object) {
-			auto str_key = item_key.as_string();
-			const auto ddit = map_dispatch_document.find(str_key);
-			if (ddit == ddit_e) {
-				if (!set_reserved_words.count(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
-					offsprings = true;
-				}
-			} else {
-				(this->*ddit->second)(str_key, object.at(str_key));
-			}
-		}
-	} else {
-		static const auto wtit_e = map_dispatch_without_type.end();
-		for (const auto& item_key : object) {
-			auto str_key = item_key.as_string();
-			const auto ddit = map_dispatch_document.find(str_key);
-			if (ddit == ddit_e) {
-				const auto wtit = map_dispatch_without_type.find(str_key);
-				if (wtit == wtit_e) {
-					if (!set_reserved_words.count(str_key)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
-						offsprings = true;
-					}
-				} else {
-					(this->*wtit->second)(str_key, object.at(str_key));
-				}
-			} else {
-				(this->*ddit->second)(str_key, object.at(str_key));
-			}
-		}
-	}
+	specification.partial_spcs.clear();
 }
 
 
@@ -1080,28 +1046,18 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 	const auto spc_start = specification;
 	specification.name.assign(name);
-	auto data = specification.flags.store ? &(*parent_data)[name] : parent_data;
-	auto properties = &get_subproperties(*parent_properties, object);
+	auto properties = &*parent_properties;
 
 	switch (object.getType()) {
 		case MsgPack::Type::MAP: {
 			TaskVector tasks;
 			tasks.reserve(object.size());
 			bool offsprings = false;
+			MsgPack* data = nullptr;
 
-			process_properties_document(properties, object, data, doc, tasks, offsprings);
+			properties = &get_subproperties(properties, object, data, doc, tasks, offsprings);
 
-			if (specification.name.empty()) {
-				if (data != parent_data && !specification.flags.store) {
-					parent_data->erase(name);
-					data = parent_data;
-				}
-			} else {
-				properties = &get_subproperties(*properties, object);
-				if (specification.flags.store) {
-					data = &(*data)[specification.name];
-				}
-			}
+			data = specification.flags.store ? &(*parent_data)[name] : parent_data;
 
 			process_item_value(doc, data, offsprings);
 
@@ -1113,18 +1069,19 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			break;
 		}
 
-		case MsgPack::Type::ARRAY:
-			set_type_to_array();
-			index_array(*properties, object, *data, doc);
+		case MsgPack::Type::ARRAY: {
+			properties = &get_subproperties(properties);
+			auto data = specification.flags.store ? &(*parent_data)[name] : parent_data;
+			index_array(properties, object, data, doc);
 			break;
+		}
 
-		default:
+		default: {
+			get_subproperties(properties);
+			auto data = specification.flags.store ? &(*parent_data)[name] : parent_data;
 			process_item_value(doc, data, object);
 			break;
-	}
-
-	if (data->is_undefined()) {
-		parent_data->erase(name);
+		}
 	}
 
 	specification = std::move(spc_start);
@@ -1132,34 +1089,27 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 
 void
-Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& data, Xapian::Document& doc)
+Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& data, Xapian::Document& doc)
 {
-	L_CALL(this, "Schema::index_array()");
+	L_CALL(this, "Schema::index_array(%s, %s, <MsgPack*>, <Xapian::Document>)", repr(properties->to_string()).c_str(), repr(array.to_string()).c_str());
 
 	const auto spc_start = specification;
 	size_t pos = 0;
+
 	for (const auto& item : array) {
 		switch (item.getType()) {
 			case MsgPack::Type::MAP: {
 				TaskVector tasks;
 				tasks.reserve(item.size());
 				bool offsprings = false;
-
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
-				auto sub_properties = &properties;
 				MsgPack* data_pos = nullptr;
+				auto subproperties = properties;
 
-				process_properties_document(sub_properties, item, data_pos, doc, tasks, offsprings);
+				subproperties = &get_subproperties(subproperties, item, data_pos, doc, tasks, offsprings);
 
-				data_pos = specification.flags.store ? &data[pos] : &data;
-
-				if (!specification.name.empty()) {
-					sub_properties = &get_subproperties(*sub_properties, item);
-					if (specification.flags.store) {
-						data_pos = &(*data_pos)[specification.name];
-					}
-				}
+				data_pos = specification.flags.store ? &(*data)[pos] : data;
 
 				process_item_value(doc, data_pos, offsprings);
 
@@ -1174,13 +1124,13 @@ Schema::index_array(const MsgPack& properties, const MsgPack& array, MsgPack& da
 			}
 
 			case MsgPack::Type::ARRAY: {
-				auto data_pos = specification.flags.store ? &data[pos] : &data;
+				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
 				process_item_value(doc, data_pos, item);
 				break;
 			}
 
 			default:
-				process_item_value(doc, specification.flags.store ? data[pos] : data, item, pos);
+				process_item_value(doc, specification.flags.store ? (*data)[pos] : *data, item, pos);
 				break;
 		}
 		++pos;
@@ -1194,7 +1144,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", data.to_string().c_str(), item_value.to_string().c_str(), pos);
 
 	if (item_value.is_null()) {
-		index_paths_namespace(doc);
+		index_partial_paths(doc);
 		if (specification.flags.store) {
 			data = item_value;
 		}
@@ -1207,7 +1157,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 		}
 
 		bool add_value = true;
-		for (const auto& spc : specification.namespace_spcs) {
+		for (const auto& spc : specification.partial_spcs) {
 			specification.sep_types[2] = spc.sep_types[2];
 			specification.prefix       = spc.prefix;
 			specification.slot         = spc.slot;
@@ -1240,7 +1190,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", data->to_string().c_str(), item_value.to_string().c_str());
 
 	if (item_value.is_null()) {
-		index_paths_namespace(doc);
+		index_partial_paths(doc);
 		if (specification.flags.store) {
 			*data = item_value;
 		}
@@ -1253,7 +1203,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 		}
 
 		bool add_values = true;
-		for (const auto& spc : specification.namespace_spcs) {
+		for (const auto& spc : specification.partial_spcs) {
 			specification.sep_types[2] = spc.sep_types[2];
 			specification.prefix       = spc.prefix;
 			specification.slot         = spc.slot;
@@ -1290,7 +1240,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
 		if (val->is_null()) {
-			index_paths_namespace(doc, offsprings);
+			index_partial_paths(doc, offsprings);
 			if (specification.flags.store) {
 				offsprings ? (*data)[RESERVED_VALUE] = *val : *data = *val;
 			}
@@ -1304,7 +1254,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 
 			bool add_values = true;
 			if (offsprings) {
-				for (const auto& spc : specification.namespace_spcs) {
+				for (const auto& spc : specification.partial_spcs) {
 					specification.sep_types[2] = spc.sep_types[2];
 					specification.prefix       = spc.prefix;
 					specification.slot         = spc.slot;
@@ -1314,7 +1264,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 					add_values = false;
 				}
 			} else {
-				for (const auto& spc : specification.namespace_spcs) {
+				for (const auto& spc : specification.partial_spcs) {
 					specification.sep_types[2] = spc.sep_types[2];
 					specification.prefix       = spc.prefix;
 					specification.slot         = spc.slot;
@@ -1341,25 +1291,25 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 			*data = (*data)[RESERVED_VALUE];
 		}
 	} else {
-		index_paths_namespace(doc, offsprings);
+		index_partial_paths(doc, offsprings);
 	}
 }
 
 
 std::vector<std::string>
-Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
+Schema::get_partial_prefixes(const std::vector<std::string>& partial_paths)
 {
-	L_CALL(nullptr, "Schema::get_prefixes_namespace(%zu)", paths_namespace.size());
+	L_CALL(nullptr, "Schema::get_partial_prefixes(%zu)", partial_paths.size());
 
-	if (paths_namespace.size() > NAMESPACE_LIMIT_DEPTH) {
-		THROW(ClientError, "Namespace limit depth is %d, and the namespace provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, paths_namespace.size());
+	if (partial_paths.size() > NAMESPACE_LIMIT_DEPTH) {
+		THROW(ClientError, "Partial paths limit depth is %d, and partial paths provided has a depth of %zu", NAMESPACE_LIMIT_DEPTH, partial_paths.size());
 	}
 
 	std::vector<std::string> prefixes;
-	prefixes.reserve(std::pow(2, paths_namespace.size() - 2));
-	auto it = paths_namespace.begin();
+	prefixes.reserve(std::pow(2, partial_paths.size() - 2));
+	auto it = partial_paths.begin();
 	prefixes.push_back(*it);
-	const auto it_e = paths_namespace.end() - 1;
+	const auto it_e = partial_paths.end() - 1;
 	for (++it; it != it_e; ++it) {
 		const auto size = prefixes.size();
 		for (size_t i = 0; i < size; ++i) {
@@ -1381,24 +1331,24 @@ Schema::get_prefixes_namespace(const std::vector<std::string>& paths_namespace)
 void
 Schema::complete_namespace_specification(const MsgPack& item_value)
 {
-	L_CALL(this, "Schema::complete_namespace_specification()");
+	L_CALL(this, "Schema::complete_namespace_specification(%s)", repr(item_value.to_string()).c_str());
 
 	if (!specification.flags.field_with_type) {
 		validate_required_namespace_data(item_value);
 	}
 
-	const auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
+	const auto prefixes_namespace = get_partial_prefixes(specification.partial_paths);
 
-	specification.namespace_spcs.reserve(prefixes_namespace.size());
+	specification.partial_spcs.reserve(prefixes_namespace.size());
 	if (toUType(specification.index & TypeIndex::VALUES)) {
 		for (const auto& prefix_namespace : prefixes_namespace) {
-			specification.namespace_spcs.push_back(get_namespace_specification(specification.sep_types[2], prefix_namespace));
+			specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], prefix_namespace));
 		}
 	} else {
 		for (const auto& prefix_namespace : prefixes_namespace) {
 			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
 			spc.prefix.assign(prefix_namespace);
-			specification.namespace_spcs.push_back(std::move(spc));
+			specification.partial_spcs.push_back(std::move(spc));
 		}
 	}
 
@@ -1664,7 +1614,7 @@ Schema::validate_required_data()
 		properties[RESERVED_SLOT] = specification.slot;
 
 		// If field is namespace fallback to index anything but values.
-		if (!specification.flags.has_index && !specification.paths_namespace.empty()) {
+		if (!specification.flags.has_index && !specification.partial_paths.empty()) {
 			const auto index = specification.index & ~TypeIndex::VALUES;
 			if (specification.index != index) {
 				specification.index = index;
@@ -1857,7 +1807,6 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	L_SCHEMA(this, "Final Specification: %s", specification.to_string().c_str());
 
 	_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), pos);
-
 	if (specification.flags.store && add_value) {
 		// Add value to data.
 		auto& data_value = data[RESERVED_VALUE];
@@ -1912,11 +1861,13 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 }
 
 
-inline void
-Schema::index_paths_namespace(Xapian::Document& doc, bool offsprings)
+void
+Schema::index_partial_paths(Xapian::Document& doc, bool offsprings)
 {
+	L_CALL(this, "Schema::index_partial_paths(<Xapian::Document>, %d)", offsprings);
+
 	if (specification.flags.inside_namespace && !offsprings) {
-		const auto prefixes_namespace = get_prefixes_namespace(specification.paths_namespace);
+		const auto prefixes_namespace = get_partial_prefixes(specification.partial_paths);
 		for (const auto& prefix_namespace : prefixes_namespace) {
 			doc.add_term(prefix_namespace);
 		}
@@ -2511,49 +2462,12 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 	const auto spc_start = specification;
 	if (obj_schema.is_map()) {
 		specification.name.assign(name);
-		const MsgPack* properties = &get_schema_subproperties(*parent_properties, obj_schema);
 		TaskVector tasks;
 		tasks.reserve(obj_schema.size());
 		bool offsprings = false;
+		auto properties = parent_properties;
 
-		static auto const ddit_e = map_dispatch_document.end();
-		if (specification.flags.field_with_type) {
-			for (const auto& item_key : obj_schema) {
-				auto str_key = item_key.as_string();
-				const auto ddit = map_dispatch_document.find(str_key);
-				if (ddit == ddit_e) {
-					if (!set_reserved_words.count(str_key)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
-						offsprings = true;
-					}
-				} else {
-					(this->*ddit->second)(str_key, obj_schema.at(str_key));
-				}
-			}
-		} else {
-			static const auto wtit_e = map_dispatch_without_type.end();
-			for (const auto& item_key : obj_schema) {
-				auto str_key = item_key.as_string();
-				const auto ddit = map_dispatch_document.find(str_key);
-				if (ddit == ddit_e) {
-					const auto wtit = map_dispatch_without_type.find(str_key);
-					if (wtit == wtit_e) {
-						if (!set_reserved_words.count(str_key)) {
-							tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
-							offsprings = true;
-						}
-					} else {
-						(this->*wtit->second)(str_key, obj_schema.at(str_key));
-					}
-				} else {
-					(this->*ddit->second)(str_key, obj_schema.at(str_key));
-				}
-			}
-		}
-
-		if (!specification.name.empty()) {
-			properties = &get_schema_subproperties(*properties, obj_schema);
-		}
+		properties = &get_subproperties(properties, obj_schema, tasks, offsprings);
 
 		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
 			validate_required_data();
@@ -2575,52 +2489,6 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 	}
 
 	specification = std::move(spc_start);
-}
-
-
-const MsgPack&
-Schema::get_schema_subproperties(const MsgPack& properties, const MsgPack& o)
-{
-	L_CALL(this, "Schema::get_schema_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(o.to_string()).c_str());
-
-	Split _split(specification.name, DB_OFFSPRING_UNION);
-
-	const MsgPack* subproperties = &properties;
-
-	const auto it_e = _split.end();
-	for (auto it = _split.begin(); it != it_e; ++it) {
-		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
-		}
-		restart_specification();
-		try {
-			get_subproperties(subproperties, field_name, field_name);
-		} catch (const std::out_of_range&) {
-			MsgPack* mut_subprop = &get_mutable();
-			for ( ; it != it_e; ++it) {
-				const auto& n_field_name = *it;
-				specification.meta_name = n_field_name;
-				specification.normalized_name = specification.meta_name;
-				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-				if (!is_valid(n_field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
-				} else {
-					add_field(mut_subprop, o);
-				}
-			}
-
-			// Found field always false for adding inheritable specification.
-			specification.flags.field_found = false;
-
-			return *mut_subprop;
-		}
-	}
-
-	// Found field always false for adding inheritable specification.
-	specification.flags.field_found = false;
-
-	return *subproperties;
 }
 
 
@@ -2649,64 +2517,264 @@ Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_na
 
 
 const MsgPack&
-Schema::get_subproperties(const MsgPack& properties, const MsgPack& o)
+Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(o.to_string()).c_str());
+	L_CALL(this, "Schema::get_subproperties(%s, %s, <MsgPack*>, <Xapian::Document>, <tasks>, bool&)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
-	Split _split(specification.name, DB_OFFSPRING_UNION);
+	const auto field_names = Split::split(specification.name, DB_OFFSPRING_UNION);
 
-	const MsgPack* subproperties = &properties;
-
-	if (specification.paths_namespace.empty()) {
-		const auto it_e = _split.end();
-		for (auto it = _split.begin(); it != it_e; ++it) {
+	const auto it_last = field_names.end() - 1;
+	if (specification.flags.is_namespace) {
+		specification.flags.field_found = false;
+		restart_namespace_specification();
+		for (auto it = field_names.begin(); it != it_last; ++it) {
+			detect_dynamic(*it);
+			specification.local_prefix.assign(get_prefix(specification.normalized_name));
+			specification.prefix.append(specification.local_prefix);
+			if (specification.flags.partial_paths) {
+				specification.partial_paths.push_back(specification.local_prefix);
+			} else {
+				specification.partial_paths.clear();
+			}
+		}
+		process_properties_document(properties, object, data, doc, tasks, offsprings);
+		detect_dynamic(*it_last);
+		specification.local_prefix.assign(get_prefix(specification.normalized_name));
+		specification.prefix.append(specification.local_prefix);
+		if (specification.flags.partial_paths) {
+			specification.partial_paths.push_back(specification.local_prefix);
+		} else {
+			specification.partial_paths.clear();
+		}
+		specification.flags.inside_namespace = true;
+	} else {
+		for (auto it = field_names.begin(); it != it_last; ++it) {
 			const auto& field_name = *it;
 			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) is not valid", repr(_split.get_str()).c_str(), repr(field_name).c_str());
+				THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 			}
 			restart_specification();
 			try {
-				get_subproperties(subproperties, field_name, field_name);
+				get_subproperties(properties, field_name, field_name);
+				if (specification.flags.has_partial_paths) {
+					specification.partial_paths.push_back(specification.local_prefix);
+				} else {
+					specification.partial_paths.clear();
+				}
 			} catch (const std::out_of_range&) {
 				detect_dynamic(field_name);
 				if (specification.flags.dynamic_type) {
 					try {
-						get_subproperties(subproperties, specification.meta_name, specification.normalized_name);
-						specification.prefix.append(get_dynamic_prefix(specification.normalized_name));
+						get_subproperties(properties, specification.meta_name, specification.normalized_name);
+						specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
+						specification.prefix.append(specification.local_prefix);
+						if (specification.flags.has_partial_paths) {
+							specification.partial_paths.push_back(specification.local_prefix);
+						} else {
+							specification.partial_paths.clear();
+						}
 						continue;
 					} catch (const std::out_of_range&) { }
 				}
 
 				specification.flags.field_found = false;
-				MsgPack* mut_subprop = &get_mutable();
-				add_field(mut_subprop, o);
-				for (++it; it != it_e; ++it) {
+				auto mut_properties = &get_mutable();
+				add_field(mut_properties);
+				for (++it; it != it_last; ++it) {
 					const auto& n_field_name = *it;
-					detect_dynamic(n_field_name);
 					if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
-						THROW(ClientError, "Field name: %s (%s) is not valid", repr(_split.get_str()).c_str(), repr(n_field_name).c_str());
+						THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
 					} else {
-						add_field(mut_subprop, o);
+						detect_dynamic(n_field_name);
+						add_field(mut_properties);
 					}
 				}
-				return *mut_subprop;
+				const auto& n_field_name = *it_last;
+				if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
+					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
+				} else {
+					detect_dynamic(n_field_name);
+					add_field(mut_properties, properties, object, data, doc, tasks, offsprings);
+				}
+				return *mut_properties;
 			}
 		}
-	} else {
-		specification.flags.field_found = false;
-		restart_namespace_specification();
-		for (const auto& field_name : _split) {
-			detect_dynamic(field_name);
-			specification.paths_namespace.push_back(get_prefix(specification.normalized_name));
+
+		const auto& field_name = *it_last;
+		if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 		}
-		specification.flags.inside_namespace = true;
+		restart_specification();
+		try {
+			get_subproperties(properties, field_name, field_name);
+			process_properties_document(properties, object, data, doc, tasks, offsprings);
+		} catch (const std::out_of_range&) {
+			detect_dynamic(field_name);
+			if (specification.flags.dynamic_type) {
+				try {
+					get_subproperties(properties, specification.meta_name, specification.normalized_name);
+					specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
+					specification.prefix.append(specification.local_prefix);
+					process_properties_document(properties, object, data, doc, tasks, offsprings);
+				} catch (const std::out_of_range&) { }
+			}
+
+			specification.flags.field_found = false;
+			auto mut_properties = &get_mutable();
+			add_field(mut_properties, properties, object, data, doc, tasks, offsprings);
+			return *mut_properties;
+		}
 	}
 
-	return *subproperties;
+	return *properties;
 }
 
 
-void
+const MsgPack&
+Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings)
+{
+	L_CALL(this, "Schema::get_subproperties(%s, %s, <tasks>, bool&)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
+
+	auto field_names = Split::split(specification.name, DB_OFFSPRING_UNION);
+
+	const auto it_last = field_names.end() - 1;
+	for (auto it = field_names.begin(); it != it_last; ++it) {
+		const auto& field_name = *it;
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
+		}
+		restart_specification();
+		try {
+			get_subproperties(properties, field_name, field_name);
+		} catch (const std::out_of_range&) {
+			auto mut_subprop = &get_mutable();
+			for ( ; it != it_last; ++it) {
+				specification.meta_name = *it;
+				specification.normalized_name = specification.meta_name;
+				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
+				if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
+				} else {
+					add_field(mut_subprop);
+				}
+			}
+
+			specification.meta_name = *it_last;
+			specification.normalized_name = specification.meta_name;
+			specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
+			if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+				THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
+			} else {
+				add_field(mut_subprop, properties, object, tasks, offsprings);
+			}
+			// Found field always false for adding inheritable specification.
+			specification.flags.field_found = false;
+			return *mut_subprop;
+		}
+	}
+
+	const auto& field_name = *it_last;
+	if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+		THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
+	}
+	restart_specification();
+	try {
+		get_subproperties(properties, field_name, field_name);
+		process_properties_document(properties, object, tasks, offsprings);
+		// Found field always false for adding inheritable specification.
+		specification.flags.field_found = false;
+		return *properties;
+	} catch (const std::out_of_range&) {
+		auto mut_subprop = &get_mutable();
+		specification.meta_name = field_name;
+		specification.normalized_name = specification.meta_name;
+		specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
+		if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
+		} else {
+			add_field(mut_subprop, properties, object, tasks, offsprings);
+		}
+		// Found field always false for adding inheritable specification.
+		specification.flags.field_found = false;
+		return *mut_subprop;
+	}
+}
+
+
+const MsgPack&
+Schema::get_subproperties(const MsgPack*& properties)
+{
+	L_CALL(this, "Schema::get_subproperties(%s)", repr(properties->to_string()).c_str());
+
+	Split _split(specification.name, DB_OFFSPRING_UNION);
+
+	const auto it_e = _split.end();
+	if (specification.flags.is_namespace) {
+		specification.flags.field_found = false;
+		restart_namespace_specification();
+		for (auto it = _split.begin(); it != it_e; ++it) {
+			detect_dynamic(*it);
+			specification.local_prefix.assign(get_prefix(specification.normalized_name));
+			specification.prefix.append(specification.local_prefix);
+			if (specification.flags.partial_paths) {
+				specification.partial_paths.push_back(specification.local_prefix);
+			} else {
+				specification.partial_paths.clear();
+			}
+		}
+		specification.flags.inside_namespace = true;
+	} else {
+		for (auto it = _split.begin(); it != it_e; ++it) {
+			const auto& field_name = *it;
+			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+				THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
+			}
+			restart_specification();
+			try {
+				get_subproperties(properties, field_name, field_name);
+				if (specification.flags.has_partial_paths) {
+					specification.partial_paths.push_back(specification.local_prefix);
+				} else {
+					specification.partial_paths.clear();
+				}
+			} catch (const std::out_of_range&) {
+				detect_dynamic(field_name);
+				if (specification.flags.dynamic_type) {
+					try {
+						get_subproperties(properties, specification.meta_name, specification.normalized_name);
+						specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
+						specification.prefix.append(specification.local_prefix);
+						if (specification.flags.has_partial_paths) {
+							specification.partial_paths.push_back(specification.local_prefix);
+						} else {
+							specification.partial_paths.clear();
+						}
+						continue;
+					} catch (const std::out_of_range&) { }
+				}
+
+				specification.flags.field_found = false;
+				auto mut_properties = &get_mutable();
+				add_field(mut_properties);
+				for (++it; it != it_e; ++it) {
+					const auto& n_field_name = *it;
+					if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
+						THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
+					} else {
+						detect_dynamic(n_field_name);
+						add_field(mut_properties);
+					}
+				}
+				return *mut_properties;
+			}
+		}
+	}
+
+	return *properties;
+}
+
+
+inline void
 Schema::detect_dynamic(const std::string& field_name)
 {
 	L_CALL(this, "Schema::detect_dynamic(%s)", repr(field_name).c_str());
@@ -2752,13 +2820,103 @@ Schema::get_valid_field_counter(size_t field_counter)
 
 
 void
-Schema::add_field(MsgPack*& properties, const MsgPack& o)
+Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings)
 {
-	L_CALL(this, "Schema::add_field(%s)", repr(properties->to_string()).c_str());
+	L_CALL(this, "Schema::process_properties_document(%s, %s, <MsgPack*>, <Xapian::Document>, <TaskVector>, <bool>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
-	const auto field_counter = properties->size();
+	static const auto ddit_e = map_dispatch_document.end();
+	if (specification.flags.field_with_type) {
+		for (const auto& item_key : object) {
+			auto str_key = item_key.as_string();
+			const auto ddit = map_dispatch_document.find(str_key);
+			if (ddit == ddit_e) {
+				if (!set_reserved_words.count(str_key)) {
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
+					offsprings = true;
+				}
+			} else {
+				(this->*ddit->second)(str_key, object.at(str_key));
+			}
+		}
+	} else {
+		static const auto wtit_e = map_dispatch_without_type.end();
+		for (const auto& item_key : object) {
+			auto str_key = item_key.as_string();
+			const auto ddit = map_dispatch_document.find(str_key);
+			if (ddit == ddit_e) {
+				const auto wtit = map_dispatch_without_type.find(str_key);
+				if (wtit == wtit_e) {
+					if (!set_reserved_words.count(str_key)) {
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
+						offsprings = true;
+					}
+				} else {
+					(this->*wtit->second)(str_key, object.at(str_key));
+				}
+			} else {
+				(this->*ddit->second)(str_key, object.at(str_key));
+			}
+		}
+	}
 
-	properties = &(*properties)[specification.meta_name];
+	if (specification.flags.has_partial_paths) {
+		specification.partial_paths.push_back(specification.local_prefix);
+	} else {
+		specification.partial_paths.clear();
+	}
+}
+
+
+void
+Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings)
+{
+	L_CALL(this, "Schema::process_properties_document(%s, %s, <TaskVector>, <bool>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
+
+	static const auto ddit_e = map_dispatch_document.end();
+	if (specification.flags.field_with_type) {
+		for (const auto& item_key : object) {
+			auto str_key = item_key.as_string();
+			const auto ddit = map_dispatch_document.find(str_key);
+			if (ddit == ddit_e) {
+				if (!set_reserved_words.count(str_key)) {
+					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(object.at(str_key)), std::move(str_key)));
+					offsprings = true;
+				}
+			} else {
+				(this->*ddit->second)(str_key, object.at(str_key));
+			}
+		}
+	} else {
+		static const auto wtit_e = map_dispatch_without_type.end();
+		for (const auto& item_key : object) {
+			auto str_key = item_key.as_string();
+			const auto ddit = map_dispatch_document.find(str_key);
+			if (ddit == ddit_e) {
+				const auto wtit = map_dispatch_without_type.find(str_key);
+				if (wtit == wtit_e) {
+					if (!set_reserved_words.count(str_key)) {
+						tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(object.at(str_key)), std::move(str_key)));
+						offsprings = true;
+					}
+				} else {
+					(this->*wtit->second)(str_key, object.at(str_key));
+				}
+			} else {
+				(this->*ddit->second)(str_key, object.at(str_key));
+			}
+		}
+	}
+}
+
+
+void
+Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings)
+{
+	L_CALL(this, "Schema::add_field(%s, %s, %s, <MsgPack*>, <Xapian::Document>, <TaskVector>, <bool>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
+
+	const auto field_counter = mut_properties->size();
+
+	mut_properties = &(*mut_properties)[specification.meta_name];
 
 	static const auto slit_e = map_stem_language.end();
 	const auto slit = map_stem_language.find(specification.normalized_name);
@@ -2774,14 +2932,27 @@ Schema::add_field(MsgPack*& properties, const MsgPack& o)
 	}
 
 	// Write obj specifications.
-	if (o.is_map()) {
-		static const auto wpit_e = map_dispatch_write_properties.end();
-		for (const auto& item_key : o) {
-			const auto str_key = item_key.as_string();
-			const auto wpit = map_dispatch_write_properties.find(str_key);
-			if (wpit != wpit_e) {
-				(this->*wpit->second)(*properties, str_key, o.at(str_key));
+	static const auto wpit_e = map_dispatch_write_properties.end();
+	static const auto ddit_e = map_dispatch_document.end();
+	static const auto wtit_e = map_dispatch_without_type.end();
+	for (const auto& item_key : object) {
+		auto str_key = item_key.as_string();
+		const auto wpit = map_dispatch_write_properties.find(str_key);
+		if (wpit == wpit_e) {
+			const auto ddit = map_dispatch_document.find(str_key);
+			if (ddit == ddit_e) {
+				const auto wtit = map_dispatch_without_type.find(str_key);
+				if (wtit == wtit_e) {
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
+					offsprings = true;
+				} else {
+					(this->*wtit->second)(str_key, object.at(str_key));
+				}
+			} else {
+				(this->*ddit->second)(str_key, object.at(str_key));
 			}
+		} else {
+			(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
 		}
 	}
 
@@ -2789,18 +2960,136 @@ Schema::add_field(MsgPack*& properties, const MsgPack& o)
 	static const auto dsit_e = map_dispatch_set_default_spc.end();
 	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
 	if (dsit != dsit_e) {
-		(this->*dsit->second)(*properties);
+		(this->*dsit->second)(*mut_properties);
 	}
 
 	// Verify prefix.
 	if (specification.flags.dynamic_type) {
 		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
-		(*properties)[RESERVED_PREFIX] = specification.local_prefix;
+		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 	} else if (specification.local_prefix.empty()) {
 		specification.local_prefix = get_prefix(get_valid_field_counter(field_counter + 1));
-		(*properties)[RESERVED_PREFIX] = specification.local_prefix;
+		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 	}
 	specification.prefix.append(specification.local_prefix);
+
+	if (specification.flags.has_partial_paths) {
+		specification.partial_paths.push_back(specification.local_prefix);
+	} else {
+		specification.partial_paths.clear();
+	}
+}
+
+
+void
+Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings)
+{
+	L_CALL(this, "Schema::add_field(%s, %s, %s, <TaskVector>, <bool>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
+
+	const auto field_counter = mut_properties->size();
+
+	mut_properties = &(*mut_properties)[specification.meta_name];
+
+	static const auto slit_e = map_stem_language.end();
+	const auto slit = map_stem_language.find(specification.normalized_name);
+	if (slit != slit_e && slit->second.first) {
+		specification.language = slit->second.second;
+		specification.aux_lan = slit->second.second;
+	}
+
+	if (specification.full_meta_name.empty()) {
+		specification.full_meta_name.assign(specification.meta_name);
+	} else {
+		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
+	}
+
+	// Write obj specifications.
+	static const auto wpit_e = map_dispatch_write_properties.end();
+	static const auto ddit_e = map_dispatch_document.end();
+	static const auto wtit_e = map_dispatch_without_type.end();
+	for (const auto& item_key : object) {
+		auto str_key = item_key.as_string();
+		const auto wpit = map_dispatch_write_properties.find(str_key);
+		if (wpit == wpit_e) {
+			const auto ddit = map_dispatch_document.find(str_key);
+			if (ddit == ddit_e) {
+				const auto wtit = map_dispatch_without_type.find(str_key);
+				if (wtit == wtit_e) {
+					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(object.at(str_key)), std::move(str_key)));
+					offsprings = true;
+				} else {
+					(this->*wtit->second)(str_key, object.at(str_key));
+				}
+			} else {
+				(this->*ddit->second)(str_key, object.at(str_key));
+			}
+		} else {
+			(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
+		}
+	}
+
+	// Load default specifications.
+	static const auto dsit_e = map_dispatch_set_default_spc.end();
+	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
+	if (dsit != dsit_e) {
+		(this->*dsit->second)(*mut_properties);
+	}
+
+	// Verify prefix.
+	if (specification.flags.dynamic_type) {
+		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
+		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
+	} else if (specification.local_prefix.empty()) {
+		specification.local_prefix = get_prefix(get_valid_field_counter(field_counter + 1));
+		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
+	}
+}
+
+
+void
+Schema::add_field(MsgPack*& mut_properties)
+{
+	L_CALL(this, "Schema::add_field(%s)", repr(mut_properties->to_string()).c_str());
+
+	const auto field_counter = mut_properties->size();
+
+	mut_properties = &(*mut_properties)[specification.meta_name];
+
+	static const auto slit_e = map_stem_language.end();
+	const auto slit = map_stem_language.find(specification.normalized_name);
+	if (slit != slit_e && slit->second.first) {
+		specification.language = slit->second.second;
+		specification.aux_lan = slit->second.second;
+	}
+
+	if (specification.full_meta_name.empty()) {
+		specification.full_meta_name.assign(specification.meta_name);
+	} else {
+		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
+	}
+
+	// Load default specifications.
+	static const auto dsit_e = map_dispatch_set_default_spc.end();
+	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
+	if (dsit != dsit_e) {
+		(this->*dsit->second)(*mut_properties);
+	}
+
+	// Verify prefix.
+	if (specification.flags.dynamic_type) {
+		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
+		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
+	} else if (specification.local_prefix.empty()) {
+		specification.local_prefix = get_prefix(get_valid_field_counter(field_counter + 1));
+		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
+	}
+	specification.prefix.append(specification.local_prefix);
+
+	if (specification.flags.has_partial_paths) {
+		specification.partial_paths.push_back(specification.local_prefix);
+	} else {
+		specification.partial_paths.clear();
+	}
 }
 
 
@@ -3126,12 +3415,22 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 
 	if (prop_namespace.as_bool()) {
 		if (specification.flags.dynamic_type) {
-			specification.paths_namespace.push_back(specification.prefix);
+			specification.partial_paths.push_back(specification.prefix);
 		} else {
-			specification.paths_namespace.push_back(specification.prefix);
+			specification.partial_paths.push_back(specification.prefix);
 		}
 	}
 	specification.flags.has_namespace = true;
+}
+
+
+void
+Schema::update_partial_paths(const MsgPack& prop_partial_paths)
+{
+	L_CALL(this, "Schema::update_partial_paths(%s)", repr(prop_partial_paths.to_string()).c_str());
+
+	specification.flags.partial_paths = prop_partial_paths.as_bool();
+	specification.flags.has_partial_paths = true;
 }
 
 
@@ -3393,16 +3692,29 @@ Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const
 
 	try {
 		// Only save in Schema if RESERVED_NAMESPACE is true.
-		if (doc_namespace.as_bool()) {
-			specification.paths_namespace.push_back(specification.prefix);
-			properties[prop_name] = true;
-		} else {
-			properties[prop_name] = false;
+		specification.flags.is_namespace = doc_namespace.as_bool();
+		if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
+			specification.flags.partial_paths = default_spc.flags.partial_paths;
 		}
+		properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
 		specification.flags.has_namespace = true;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
+}
+
+
+void
+Schema::write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths)
+{
+	L_CALL(this, "Schema::write_partial_paths(%s)", repr(doc_partial_paths.to_string()).c_str());
+
+	/*
+	 * RESERVED_PARTIAL_PATHS is heritable and can change.
+	 */
+
+	process_partial_paths(prop_name, doc_partial_paths);
+	properties[prop_name] = static_cast<bool>(specification.flags.partial_paths);
 }
 
 
@@ -3822,26 +4134,30 @@ Schema::process_recursive(const std::string& prop_name, const MsgPack& doc_recur
 
 
 void
+Schema::process_partial_paths(const std::string& prop_name, const MsgPack& doc_partial_paths)
+{
+	L_CALL(this, "Schema::process_partial_paths(%s)", repr(doc_partial_paths.to_string()).c_str());
+
+	/*
+	 * RESERVED_PARTIAL_PATHS is heritable and can change.
+	 */
+
+	try {
+		specification.flags.partial_paths = doc_partial_paths.as_bool();
+		specification.flags.has_partial_paths = true;
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+	}
+}
+
+
+void
 Schema::process_value(const std::string&, const MsgPack& doc_value)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
 	L_CALL(this, "Schema::process_value(%s)", repr(doc_value.to_string()).c_str());
 
 	specification.value = std::make_unique<const MsgPack>(doc_value);
-}
-
-
-void
-Schema::process_name(const std::string& prop_name, const MsgPack& doc_name)
-{
-	// RESERVED_NAME isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_name(%s)", repr(doc_name.to_string()).c_str());
-
-	try {
-		specification.name.assign(doc_name.as_string());
-	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
-	}
 }
 
 
@@ -3940,7 +4256,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 
 	if (!specification.flags.has_namespace) {
 		specification.flags.has_namespace = true;
-		specification.paths_namespace.push_back(get_prefix(specification.normalized_name));
+		specification.partial_paths.push_back(get_prefix(specification.normalized_name));
 		properties[RESERVED_NAMESPACE] = true;
 	}
 }

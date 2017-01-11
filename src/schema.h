@@ -248,21 +248,21 @@ struct required_spc_t {
 		bool text_detection:1;
 		bool term_detection:1;
 		bool uuid_detection:1;
+		bool partial_paths:1;
+		bool is_namespace:1;
 
 		// Auxiliar variables.
-		bool field_found:1;      // Flag if the property is already in the schema saved in the metadata
-		bool field_with_type:1;  // Reserved properties that shouldn't change once set, are flagged as fixed
-		bool complete:1;         // Flag if the specification for a field is complete
-
-		bool reserved_slot:1;
-		bool has_bool_term:1;    // Either RESERVED_BOOL_TERM is in the schema or the user sent it
-		bool has_index:1;        // Either RESERVED_INDEX is in the schema or the user sent it
-		bool has_namespace:1;    // Either RESERVED_NAMESPACE is in the schema or the user sent it
-
+		bool field_found:1;          // Flag if the property is already in the schema saved in the metadata
+		bool field_with_type:1;      // Reserved properties that shouldn't change once set, are flagged as fixed
+		bool complete:1;             // Flag if the specification for a field is complete
+		bool reserved_slot:1;        // Flag if the field can use a reserved slot
+		bool dynamic_type:1;         // Flag if the field is dynamic
 		bool inside_namespace:1;
 
-		// Auxiliar variables for dynamic fields.
-		bool dynamic_type:1;
+		bool has_bool_term:1;        // Either RESERVED_BOOL_TERM is in the schema or the user sent it
+		bool has_index:1;            // Either RESERVED_INDEX is in the schema or the user sent it
+		bool has_namespace:1;        // Either RESERVED_NAMESPACE is in the schema or the user sent it
+		bool has_partial_paths:1;    // Either RESERVED_PARTIAL_PATHS is in the schema or the user sent it
 
 		flags_t();
 	} flags;
@@ -282,7 +282,7 @@ struct required_spc_t {
 	double error;
 
 	// Variables for namespaces.
-	std::vector<std::string> paths_namespace;
+	std::vector<std::string> partial_paths;
 
 	required_spc_t();
 	required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
@@ -327,7 +327,7 @@ struct specification_t : required_spc_t {
 	std::string aux_stem_lan;
 	std::string aux_lan;
 
-	std::vector<required_spc_t> namespace_spcs;
+	std::vector<required_spc_t> partial_spcs;
 
 	specification_t();
 	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
@@ -372,7 +372,6 @@ class Schema {
 	std::unordered_map<Xapian::valueno, StringSet> map_values;
 	specification_t specification;
 
-
 	/*
 	 * Returns a reference to a mutable schema (a copy of the one stored in the metadata)
 	 */
@@ -394,17 +393,11 @@ class Schema {
 	void restart_namespace_specification();
 
 	/*
-	 * Update specification with the object's properties.
-	 */
-	inline void process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings);
-
-
-	/*
 	 * Main functions to index objects and arrays
 	 */
 
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name=std::string());
-	void index_array(const MsgPack& properties, const MsgPack& array, MsgPack& data, Xapian::Document& doc);
+	void index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& data, Xapian::Document& doc);
 
 	void process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
 	void process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value);
@@ -414,7 +407,7 @@ class Schema {
 	/*
 	 * Get the prefixes for a namespace.
 	 */
-	static std::vector<std::string> get_prefixes_namespace(const std::vector<std::string>& paths_namespace);
+	static std::vector<std::string> get_partial_prefixes(const std::vector<std::string>& partial_paths);
 
 	/*
 	 * Returns a vector with the right specification.
@@ -453,10 +446,9 @@ class Schema {
 	void guess_field_type(const MsgPack& item_doc);
 
 	/*
-     * Function to index paths namespace in doc.
-     */
-	inline void index_paths_namespace(Xapian::Document& doc, bool offsprings=false);
-
+	 * Function to index paths namespace in doc.
+	 */
+	void index_partial_paths(Xapian::Document& doc, bool offsprings=false);
 
 	/*
 	 * Auxiliar functions for index fields in doc.
@@ -480,22 +472,18 @@ class Schema {
 	void update_schema(const MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name);
 
 	/*
-	 * Gets the properties of a item and specifications is updated.
-	 * Do not check for dynamic types.
-	 * Used by write_schema
-	 */
-	const MsgPack& get_schema_subproperties(const MsgPack& properties, const MsgPack& o);
-
-	/*
-	 * Gets the properties of item_key and specification is updated.
-	 * Returns the properties of schema.
-	 */
-	const MsgPack& get_subproperties(const MsgPack& properties, const MsgPack& o);
-
-	/*
-	 * Get the subproperties of field_name.
+	 * Get the properties of meta name of schema.
 	 */
 	void get_subproperties(const MsgPack*& properties, const std::string& meta_name, const std::string& normalized_name);
+
+	/*
+	 * Gets the properties stored in the schema as well as those sent by the user.
+	 */
+
+	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings);
+	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings);
+	const MsgPack& get_subproperties(const MsgPack*& properties);
+
 
 	/*
 	 * Detect and set dynamic type.
@@ -508,9 +496,21 @@ class Schema {
 	static unsigned long long get_valid_field_counter(size_t field_counter);
 
 	/*
+	 * Update specification using object's properties.
+	 */
+
+	void process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings);
+	void process_properties_document(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings);
+
+
+	/*
 	 * Add new field to properties.
 	 */
-	void add_field(MsgPack*& properties, const MsgPack& o);
+
+	void add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings);
+	void add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings);
+	void add_field(MsgPack*& mut_properties);
+
 
 	/*
 	 * Specification is updated with the properties.
@@ -551,6 +551,7 @@ class Schema {
 	void update_partials(const MsgPack& prop_partials);
 	void update_error(const MsgPack& prop_error);
 	void update_namespace(const MsgPack& prop_namespace);
+	void update_partial_paths(const MsgPack& prop_partial_paths);
 
 
 	/*
@@ -576,6 +577,7 @@ class Schema {
 	void write_tm_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection);
 	void write_u_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_u_detection);
 	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
+	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
 
 
 	/*
@@ -597,11 +599,11 @@ class Schema {
 	void process_index(const std::string& prop_name, const MsgPack& doc_index);
 	void process_store(const std::string& prop_name, const MsgPack& doc_store);
 	void process_recursive(const std::string& prop_name, const MsgPack& doc_recursive);
+	void process_partial_paths(const std::string& prop_name, const MsgPack& doc_partial_paths);
 	void process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term);
 	void process_partials(const std::string& prop_name, const MsgPack& doc_partials);
 	void process_error(const std::string& prop_name, const MsgPack& doc_error);
 	void process_value(const std::string& prop_name, const MsgPack& doc_value);
-	void process_name(const std::string& prop_name, const MsgPack& doc_name);
 	void process_script(const std::string& prop_name, const MsgPack& doc_script);
 	void process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object);
 
@@ -685,7 +687,6 @@ public:
 	 * Update namespace specification according to prefix_namespace.
 	 */
 	static required_spc_t get_namespace_specification(FieldType namespace_type, const std::string& prefix_namespace);
-
 
 	/*
 	 * Returns type, slot and prefix of ID_FIELD_NAME
