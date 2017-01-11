@@ -68,7 +68,6 @@
 #define RESERVED_VALUE             "_value"
 #define RESERVED_RAW               "_raw"
 #define RESERVED_IN                "_in"
-#define RESERVED_NAME              "_name"
 #define RESERVED_SLOT              "_slot"
 #define RESERVED_INDEX             "_index"
 #define RESERVED_PREFIX            "_prefix"
@@ -77,13 +76,13 @@
 #define RESERVED_SCRIPT            "_script"
 #define RESERVED_RECURSIVE         "_recurse"
 #define RESERVED_NAMESPACE         "_namespace"
+#define RESERVED_PARTIAL_PATHS     "_partial_paths"
 // Reserved words used only in the root of the  document.
 #define RESERVED_VALUES            "_values"
 #define RESERVED_TERMS             "_terms"
 #define RESERVED_DATA              "_data"
 // Reserved words used in schema only for TEXT fields.
 #define RESERVED_STOP_STRATEGY     "_stop_strategy"
-#define RESERVED_STOP_WORDS        "_stop_words"
 #define RESERVED_STEM_STRATEGY     "_stem_strategy"
 #define RESERVED_STEM_LANGUAGE     "_stem_language"
 // Reserved words used in schema only for GEO fields.
