@@ -604,8 +604,7 @@ required_spc_t::required_spc_t(const required_spc_t& o)
 	  stop_strategy(o.stop_strategy),
 	  stem_strategy(o.stem_strategy),
 	  stem_language(o.stem_language),
-	  error(o.error),
-	  partial_prefixes(o.partial_prefixes) { }
+	  error(o.error) { }
 
 
 required_spc_t::required_spc_t(required_spc_t&& o) noexcept
@@ -619,8 +618,7 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 	  stop_strategy(std::move(o.stop_strategy)),
 	  stem_strategy(std::move(o.stem_strategy)),
 	  stem_language(std::move(o.stem_language)),
-	  error(std::move(o.error)),
-	  partial_prefixes(std::move(o.partial_prefixes)) { }
+	  error(std::move(o.error)) { }
 
 
 required_spc_t&
@@ -637,7 +635,6 @@ required_spc_t::operator=(const required_spc_t& o)
 	stem_strategy = o.stem_strategy;
 	stem_language = o.stem_language;
 	error = o.error;
-	partial_prefixes = o.partial_prefixes;
 	return *this;
 }
 
@@ -656,7 +653,6 @@ required_spc_t::operator=(required_spc_t&& o) noexcept
 	stem_strategy = std::move(o.stem_strategy);
 	stem_language = std::move(o.stem_language);
 	error = std::move(o.error);
-	partial_prefixes = std::move(o.partial_prefixes);
 	return *this;
 }
 
@@ -693,7 +689,8 @@ specification_t::specification_t(const specification_t& o)
 	  full_meta_name(o.full_meta_name),
 	  normalized_name(o.normalized_name),
 	  aux_stem_lan(o.aux_stem_lan),
-	  aux_lan(o.aux_lan) { }
+	  aux_lan(o.aux_lan),
+	  partial_prefixes(o.partial_prefixes) { }
 
 
 specification_t::specification_t(specification_t&& o) noexcept
@@ -710,7 +707,8 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  full_meta_name(std::move(o.full_meta_name)),
 	  normalized_name(std::move(o.normalized_name)),
 	  aux_stem_lan(std::move(o.aux_stem_lan)),
-	  aux_lan(std::move(o.aux_lan)) { }
+	  aux_lan(std::move(o.aux_lan)),
+	  partial_prefixes(std::move(o.partial_prefixes)) { }
 
 
 specification_t&
@@ -732,6 +730,7 @@ specification_t::operator=(const specification_t& o)
 	normalized_name = o.normalized_name;
 	aux_stem_lan = o.aux_stem_lan;
 	aux_lan = o.aux_lan;
+	partial_prefixes = o.partial_prefixes;
 	required_spc_t::operator=(o);
 	return *this;
 }
@@ -756,6 +755,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	normalized_name = std::move(o.normalized_name);
 	aux_stem_lan = std::move(o.aux_stem_lan);
 	aux_lan = std::move(o.aux_lan);
+	partial_prefixes = std::move(o.partial_prefixes);
 	required_spc_t::operator=(std::move(o));
 	return *this;
 }

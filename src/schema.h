@@ -282,9 +282,6 @@ struct required_spc_t {
 	// Variables for GEO type.
 	double error;
 
-	// Variables for saving partial prefixes.
-	std::vector<std::string> partial_prefixes;
-
 	required_spc_t();
 	required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
 	required_spc_t(const required_spc_t& o);
@@ -328,6 +325,8 @@ struct specification_t : required_spc_t {
 	std::string aux_stem_lan;
 	std::string aux_lan;
 
+	// Auxiliar variables for saving partial prefixes.
+	std::vector<std::string> partial_prefixes;
 	std::vector<required_spc_t> partial_spcs;
 
 	specification_t();
