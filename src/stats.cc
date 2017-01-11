@@ -145,7 +145,7 @@ Stats::Pos::Pos(const std::chrono::time_point<std::chrono::system_clock>& curren
 }
 
 
-inline Stats&
+Stats&
 Stats::cnt()
 {
 	static Stats stats_cnt;
