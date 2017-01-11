@@ -260,11 +260,7 @@ static std::string get_acc_prefix(const std::string& field_acc) {
 
 
 static std::string get_dynamic_prefix(const std::string& uuid) {
-	try {
-		return Serialise::uuid(uuid);
-	} catch (const SerialisationError&) {
-		return std::string();
-	}
+	return Serialise::uuid(uuid);
 }
 
 
@@ -4531,12 +4527,11 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 						dynamic_type = false;
 						auto& field_namespace = *it;
 						if (is_valid(field_namespace) && field_namespace != UUID_FIELD_NAME) {
-							auto dynamic_prefix = get_dynamic_prefix(field_namespace);
-							if (dynamic_prefix.empty()) {
-								prefix.append(get_prefix(field_namespace));
-							} else {
-								prefix.append(dynamic_prefix);
+							try {
+								prefix.append(get_dynamic_prefix(field_namespace));
 								dynamic_type = true;
+							} catch (const SerialisationError&) {
+								prefix.append(get_prefix(field_namespace));
 							}
 						} else if (++it == it_e) {
 							prefix.append(get_acc_prefix(field_namespace));
