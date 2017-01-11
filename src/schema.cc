@@ -969,7 +969,7 @@ Schema::clear()
 }
 
 
-void
+inline void
 Schema::restart_specification()
 {
 	L_CALL(this, "Schema::restart_specification()");
@@ -995,15 +995,14 @@ Schema::restart_specification()
 	specification.slot                   = default_spc.slot;
 	specification.accuracy               = default_spc.accuracy;
 	specification.acc_prefix             = default_spc.acc_prefix;
-	specification.name                   = default_spc.name;
 	specification.aux_stem_lan           = default_spc.aux_stem_lan;
 	specification.aux_lan                = default_spc.aux_lan;
 
-	specification.namespace_spcs.clear();
+	specification.partial_spcs.clear();
 }
 
 
-void
+inline void
 Schema::restart_namespace_specification()
 {
 	L_CALL(this, "Schema::restart_namespace_specification()");
@@ -1408,7 +1407,7 @@ Schema::complete_specification(const MsgPack& item_value)
 }
 
 
-void
+inline void
 Schema::set_type_to_object(bool offsprings)
 {
 	L_CALL(this, "Schema::set_type_to_object(%d)", offsprings);
@@ -1426,7 +1425,7 @@ Schema::set_type_to_object(bool offsprings)
 }
 
 
-void
+inline void
 Schema::set_type_to_array()
 {
 	L_CALL(this, "Schema::set_type_to_array()");
@@ -2790,9 +2789,11 @@ Schema::detect_dynamic(const std::string& field_name)
 }
 
 
-unsigned long long
+inline unsigned long long
 Schema::get_valid_field_counter(size_t field_counter)
 {
+	L_CALL(nullptr, "Schema::get_valid_field_counter(%zu)", field_counter);
+
 	while (field_counter <= toUType(FieldType::UUID)) {
 		switch ((FieldType)field_counter) {
 			case FieldType::EMPTY:
