@@ -192,7 +192,7 @@ class Xapiand(object):
 
         params = kwargs.pop('params', None)
         if params is not None:
-            kwargs['params'] = dict((k.replace('__', '.'), (v and 1 or 0) if isinstance(v, bool) else v) for k, v in params.items())
+            kwargs['params'] = dict((k.replace('__', '.'), (v and 1 or 0) if isinstance(v, bool) else v) for k, v in params.items() if k not in ('commit', 'pretty') or v)
 
         stream = kwargs.pop('stream', stream)
         if stream is not None:
