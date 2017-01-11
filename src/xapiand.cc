@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -861,6 +861,7 @@ int main(int argc, char **argv) {
 		L_INFO(nullptr, "Using optimal mode.");
 		default_spc.index = TypeIndex::FIELD_ALL;
 		default_spc.flags.text_detection = false;
+		default_spc.flags.optimal = true;
 	}
 
 	// Flush threshold increased

@@ -557,6 +557,7 @@ required_spc_t::flags_t::flags_t()
 	  uuid_detection(true),
 	  partial_paths(false),
 	  is_namespace(false),
+	  optimal(false),
 	  field_found(true),
 	  field_with_type(false),
 	  complete(false),
@@ -3667,7 +3668,7 @@ Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const
 		// Only save in Schema if RESERVED_NAMESPACE is true.
 		specification.flags.is_namespace = doc_namespace.as_bool();
 		if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
-			specification.flags.partial_paths = default_spc.flags.partial_paths;
+			specification.flags.partial_paths = !default_spc.flags.optimal;
 		}
 		properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
 		specification.flags.has_namespace = true;
