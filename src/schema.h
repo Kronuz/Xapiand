@@ -229,6 +229,7 @@ MSGPACK_ADD_ENUM(FieldType);
 struct required_spc_t {
 	std::array<FieldType, 3> sep_types;
 	std::string prefix;
+	std::string partial_prefix;
 	Xapian::valueno slot;
 
 	struct flags_t {
@@ -303,6 +304,7 @@ struct required_spc_t {
 struct specification_t : required_spc_t {
 	// Reserved values.
 	std::string local_prefix;
+	std::string local_partial_prefix;
 	std::vector<Xapian::termpos> position;
 	std::vector<Xapian::termcount> weight;
 	std::vector<bool> spelling;
@@ -326,7 +328,7 @@ struct specification_t : required_spc_t {
 	std::string aux_lan;
 
 	// Auxiliar variables for saving partial prefixes.
-	std::vector<std::pair<std::string, bool>> partial_prefixes;
+	std::vector<std::string> partial_prefixes;
 	std::vector<required_spc_t> partial_spcs;
 
 	specification_t();
@@ -408,7 +410,7 @@ class Schema {
 	/*
 	 * Get the prefixes for a namespace.
 	 */
-	static std::vector<std::string> get_partial_paths(const std::vector<std::pair<std::string, bool>>& partial_prefixes);
+	static std::vector<std::string> get_partial_paths(const std::vector<std::string>& partial_prefixes);
 
 	/*
 	 * Complete partial specifications.
@@ -484,7 +486,7 @@ class Schema {
 	/*
 	 * Add partial prefix in specification.partials_prefixes or clear it.
 	 */
-	void update_partial_prefixes(const std::string& partial_prefix, bool raw=false);
+	void update_partial_prefixes();
 
 	/*
 	 * Gets the properties stored in the schema as well as those sent by the user.
@@ -557,6 +559,7 @@ class Schema {
 	void update_error(const MsgPack& prop_error);
 	void update_namespace(const MsgPack& prop_namespace);
 	void update_partial_paths(const MsgPack& prop_partial_paths);
+	void update_partial_prefix(const MsgPack& prop_partial_prefix);
 
 
 	/*

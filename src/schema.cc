@@ -460,6 +460,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 	{ RESERVED_ERROR,           &Schema::update_error            },
 	{ RESERVED_NAMESPACE,       &Schema::update_namespace        },
 	{ RESERVED_PARTIAL_PATHS,   &Schema::update_partial_paths    },
+	{ RESERVED_PARTIAL_PREFIX,  &Schema::update_partial_prefix   },
 });
 
 
@@ -596,6 +597,7 @@ required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std:
 required_spc_t::required_spc_t(const required_spc_t& o)
 	: sep_types(o.sep_types),
 	  prefix(o.prefix),
+	  partial_prefix(o.partial_prefix),
 	  slot(o.slot),
 	  flags(o.flags),
 	  accuracy(o.accuracy),
@@ -610,6 +612,7 @@ required_spc_t::required_spc_t(const required_spc_t& o)
 required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 	: sep_types(std::move(o.sep_types)),
 	  prefix(std::move(o.prefix)),
+	  partial_prefix(std::move(o.partial_prefix)),
 	  slot(std::move(o.slot)),
 	  flags(std::move(o.flags)),
 	  accuracy(std::move(o.accuracy)),
@@ -626,6 +629,7 @@ required_spc_t::operator=(const required_spc_t& o)
 {
 	sep_types = o.sep_types;
 	prefix = o.prefix;
+	partial_prefix = o.partial_prefix;
 	slot = o.slot;
 	flags = o.flags;
 	accuracy = o.accuracy;
@@ -644,6 +648,7 @@ required_spc_t::operator=(required_spc_t&& o) noexcept
 {
 	sep_types = std::move(o.sep_types);
 	prefix = std::move(o.prefix);
+	partial_prefix = std::move(o.partial_prefix);
 	slot = std::move(o.slot);
 	flags = std::move(o.flags);
 	accuracy = std::move(o.accuracy);
@@ -678,6 +683,7 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 specification_t::specification_t(const specification_t& o)
 	: required_spc_t(o),
 	  local_prefix(o.local_prefix),
+	  local_partial_prefix(o.local_partial_prefix),
 	  position(o.position),
 	  weight(o.weight),
 	  spelling(o.spelling),
@@ -696,6 +702,7 @@ specification_t::specification_t(const specification_t& o)
 specification_t::specification_t(specification_t&& o) noexcept
 	: required_spc_t(std::move(o)),
 	  local_prefix(std::move(o.local_prefix)),
+	  local_partial_prefix(std::move(o.local_partial_prefix)),
 	  position(std::move(o.position)),
 	  weight(std::move(o.weight)),
 	  spelling(std::move(o.spelling)),
@@ -715,6 +722,7 @@ specification_t&
 specification_t::operator=(const specification_t& o)
 {
 	local_prefix = o.local_prefix;
+	local_partial_prefix = o.local_partial_prefix;
 	position = o.position;
 	weight = o.weight;
 	spelling = o.spelling;
@@ -740,6 +748,7 @@ specification_t&
 specification_t::operator=(specification_t&& o) noexcept
 {
 	local_prefix = std::move(o.local_prefix);
+	local_partial_prefix = std::move(o.local_partial_prefix);
 	position = std::move(o.position);
 	weight = std::move(o.weight);
 	spelling = std::move(o.spelling);
@@ -1264,7 +1273,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 
 
 std::vector<std::string>
-Schema::get_partial_paths(const std::vector<std::pair<std::string, bool>>& partial_prefixes)
+Schema::get_partial_paths(const std::vector<std::string>& partial_prefixes)
 {
 	L_CALL(nullptr, "Schema::get_partial_paths(%zu)", partial_prefixes.size());
 
@@ -1275,36 +1284,20 @@ Schema::get_partial_paths(const std::vector<std::pair<std::string, bool>>& parti
 	std::vector<std::string> prefixes;
 	prefixes.reserve(std::pow(2, partial_prefixes.size() - 2));
 	auto it = partial_prefixes.begin();
-
-	if (it->second) {
-		prefixes.push_back(get_prefix(it->first));
-	} else {
-		prefixes.push_back(it->first);
-	}
-
+	prefixes.push_back(*it);
 	const auto it_last = partial_prefixes.end() - 1;
 	for (++it; it != it_last; ++it) {
 		const auto size = prefixes.size();
 		for (size_t i = 0; i < size; ++i) {
 			std::string prefix;
-			if (it->second) {
-				const auto partial_prefix = get_prefix(it->first);
-				prefix.reserve(prefixes[i].length() + partial_prefix.length());
-				prefix.assign(prefixes[i]).append(partial_prefix);
-			} else {
-				prefix.reserve(prefixes[i].length() + it->first.length());
-				prefix.assign(prefixes[i]).append(it->first);
-			}
+			prefix.reserve(prefixes[i].length() + it->length());
+			prefix.assign(prefixes[i]).append(*it);
 			prefixes.push_back(std::move(prefix));
 		}
 	}
 
 	for (auto& prefix : prefixes) {
-		if (it_last->second) {
-			prefix.append(get_prefix(it_last->first));
-		} else {
-			prefix.append(it_last->first);
-		}
+		prefix.append(*it_last);
 	}
 
 	return prefixes;
@@ -1395,13 +1388,15 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 	}
 
 	if (toUType(specification.index & TypeIndex::VALUES)) {
-		auto spc = get_namespace_specification(specification.sep_types[2], specification.prefix);
+		auto spc = get_namespace_specification(specification.sep_types[2], specification.partial_prefix);
 		specification.sep_types[2] = spc.sep_types[2];
+		specification.prefix       = spc.prefix;
 		specification.slot         = spc.slot;
 		specification.accuracy     = spc.accuracy;
 		specification.acc_prefix   = spc.acc_prefix;
 	} else {
 		specification.sep_types[2] = specification_t::get_global(specification.sep_types[2]).sep_types[2];
+		specification.prefix = specification.partial_prefix;
 	}
 
 	specification.flags.complete = true;
@@ -2523,15 +2518,15 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 
 
 inline void
-Schema::update_partial_prefixes(const std::string& partial_prefix, bool raw)
+Schema::update_partial_prefixes()
 {
-	L_CALL(this, "Schema::update_partial_prefixes(%s, %d)", local_prefix.c_str(), is_prefix);
+	L_CALL(this, "Schema::update_partial_prefixes()");
 
 	if (specification.flags.partial_paths) {
 		if (specification.partial_prefixes.empty()) {
-			specification.partial_prefixes.push_back(std::make_pair(specification.prefix, false));
+			specification.partial_prefixes.push_back(specification.partial_prefix);
 		} else {
-			specification.partial_prefixes.push_back(std::make_pair(partial_prefix, raw));
+			specification.partial_prefixes.push_back(specification.local_partial_prefix);
 		}
 	} else {
 		specification.partial_prefixes.clear();
@@ -2576,15 +2571,15 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 		restart_namespace_specification();
 		for (auto it = field_names.begin(); it != it_last; ++it) {
 			detect_dynamic(*it);
-			specification.local_prefix.assign(specification.flags.dynamic_type ? get_dynamic_prefix(specification.normalized_name) : get_prefix(specification.normalized_name));
-			specification.prefix.append(specification.local_prefix);
-			update_partial_prefixes(specification.local_prefix);
+			specification.local_partial_prefix.assign(specification.flags.dynamic_type ? get_dynamic_prefix(specification.normalized_name) : get_prefix(specification.normalized_name));
+			specification.partial_prefix.append(specification.local_partial_prefix);
+			update_partial_prefixes();
 		}
 		process_properties_document(properties, object, data, doc, tasks, offsprings);
 		detect_dynamic(*it_last);
-		specification.local_prefix.assign(specification.flags.dynamic_type ? get_dynamic_prefix(specification.normalized_name) : get_prefix(specification.normalized_name));
-		specification.prefix.append(specification.local_prefix);
-		update_partial_prefixes(specification.local_prefix);
+		specification.local_partial_prefix.assign(specification.flags.dynamic_type ? get_dynamic_prefix(specification.normalized_name) : get_prefix(specification.normalized_name));
+		specification.partial_prefix.append(specification.local_partial_prefix);
+		update_partial_prefixes();
 		specification.flags.inside_namespace = true;
 	} else {
 		for (auto it = field_names.begin(); it != it_last; ++it) {
@@ -2595,15 +2590,17 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 			restart_specification();
 			try {
 				get_subproperties(properties, field_name, field_name);
-				update_partial_prefixes(field_name, true);
+				update_partial_prefixes();
 			} catch (const std::out_of_range&) {
 				detect_dynamic(field_name);
 				if (specification.flags.dynamic_type) {
 					try {
 						get_subproperties(properties, specification.meta_name, specification.normalized_name);
 						specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
+						specification.local_partial_prefix = specification.local_prefix;
 						specification.prefix.append(specification.local_prefix);
-						update_partial_prefixes(specification.local_prefix);
+						specification.partial_prefix.append(specification.local_partial_prefix);
+						update_partial_prefixes();
 						continue;
 					} catch (const std::out_of_range&) { }
 				}
@@ -2639,16 +2636,18 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 		try {
 			get_subproperties(properties, field_name, field_name);
 			process_properties_document(properties, object, data, doc, tasks, offsprings);
-			update_partial_prefixes(field_name, true);
+			update_partial_prefixes();
 		} catch (const std::out_of_range&) {
 			detect_dynamic(field_name);
 			if (specification.flags.dynamic_type) {
 				try {
 					get_subproperties(properties, specification.meta_name, specification.normalized_name);
 					specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
+					specification.local_partial_prefix = specification.local_prefix;
 					specification.prefix.append(specification.local_prefix);
+					specification.partial_prefix.append(specification.local_partial_prefix);
 					process_properties_document(properties, object, data, doc, tasks, offsprings);
-					update_partial_prefixes(specification.local_prefix);
+					update_partial_prefixes();
 				} catch (const std::out_of_range&) { }
 			}
 
@@ -2679,7 +2678,6 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 		restart_specification();
 		try {
 			get_subproperties(properties, field_name, field_name);
-			update_partial_prefixes(field_name, true);
 		} catch (const std::out_of_range&) {
 			auto mut_subprop = &get_mutable();
 			for ( ; it != it_last; ++it) {
@@ -2749,9 +2747,9 @@ Schema::get_subproperties(const MsgPack*& properties)
 		for (auto it = _split.begin(); it != it_e; ++it) {
 			specification.flags.dynamic_type = false;
 			detect_dynamic(*it);
-			specification.local_prefix.assign(specification.flags.dynamic_type ? get_dynamic_prefix(specification.normalized_name) : get_prefix(specification.normalized_name));
-			specification.prefix.append(specification.local_prefix);
-			update_partial_prefixes(specification.local_prefix);
+			specification.local_partial_prefix.assign(specification.flags.dynamic_type ? get_dynamic_prefix(specification.normalized_name) : get_prefix(specification.normalized_name));
+			specification.partial_prefix.append(specification.local_partial_prefix);
+			update_partial_prefixes();
 		}
 		specification.flags.inside_namespace = true;
 	} else {
@@ -2763,15 +2761,17 @@ Schema::get_subproperties(const MsgPack*& properties)
 			restart_specification();
 			try {
 				get_subproperties(properties, field_name, field_name);
-				update_partial_prefixes(field_name, true);
+				update_partial_prefixes();
 			} catch (const std::out_of_range&) {
 				detect_dynamic(field_name);
 				if (specification.flags.dynamic_type) {
 					try {
 						get_subproperties(properties, specification.meta_name, specification.normalized_name);
 						specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
+						specification.local_partial_prefix = specification.local_prefix;
 						specification.prefix.append(specification.local_prefix);
-						update_partial_prefixes(specification.local_prefix);
+						specification.partial_prefix.append(specification.local_partial_prefix);
+						update_partial_prefixes();
 						continue;
 					} catch (const std::out_of_range&) { }
 				}
@@ -2953,18 +2953,19 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 	// Verify prefix.
 	if (specification.flags.dynamic_type) {
 		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
-		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
-		specification.prefix.append(specification.local_prefix);
-		update_partial_prefixes(specification.local_prefix);
-		return;
-	}
-
-	if (specification.local_prefix.empty()) {
+		specification.local_partial_prefix = specification.local_prefix;
+	} else if (specification.local_prefix.empty()) {
 		specification.local_prefix = get_prefix(specification.normalized_name);
+		specification.local_partial_prefix = specification.local_prefix;
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
+		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
+	} else {
+		specification.local_partial_prefix = get_prefix(specification.normalized_name);
+		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
 	}
 	specification.prefix.append(specification.local_prefix);
-	update_partial_prefixes(specification.normalized_name, true);
+	specification.partial_prefix.append(specification.local_partial_prefix);
+	update_partial_prefixes();
 }
 
 
@@ -3024,12 +3025,22 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 	if (specification.flags.dynamic_type) {
 		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
-		return;
-	}
-
-	if (specification.local_prefix.empty()) {
+	} else if (specification.local_prefix.empty()) {
 		specification.local_prefix = get_prefix(specification.normalized_name);
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
+	}
+
+	if (specification.flags.dynamic_type) {
+		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
+		specification.local_partial_prefix = specification.local_prefix;
+	} else if (specification.local_prefix.empty()) {
+		specification.local_prefix = get_prefix(specification.normalized_name);
+		specification.local_partial_prefix = specification.local_prefix;
+		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
+		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
+	} else {
+		specification.local_partial_prefix = get_prefix(specification.normalized_name);
+		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
 	}
 }
 
@@ -3064,18 +3075,19 @@ Schema::add_field(MsgPack*& mut_properties)
 	// Verify prefix.
 	if (specification.flags.dynamic_type) {
 		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
-		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
-		specification.prefix.append(specification.local_prefix);
-		update_partial_prefixes(specification.local_prefix);
-		return;
-	}
-
-	if (specification.local_prefix.empty()) {
+		specification.local_partial_prefix = specification.local_prefix;
+	} else if (specification.local_prefix.empty()) {
 		specification.local_prefix = get_prefix(specification.normalized_name);
+		specification.local_partial_prefix = specification.local_prefix;
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
+		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
+	} else {
+		specification.local_partial_prefix = get_prefix(specification.normalized_name);
+		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
 	}
 	specification.prefix.append(specification.local_prefix);
-	update_partial_prefixes(specification.normalized_name, true);
+	specification.partial_prefix.append(specification.local_partial_prefix);
+	update_partial_prefixes();
 }
 
 
@@ -3411,6 +3423,16 @@ Schema::update_partial_paths(const MsgPack& prop_partial_paths)
 
 	specification.flags.partial_paths = prop_partial_paths.as_bool();
 	specification.flags.has_partial_paths = true;
+}
+
+
+void
+Schema::update_partial_prefix(const MsgPack& prop_partial_prefix)
+{
+	L_CALL(this, "Schema::update_partial_prefix(%s)", repr(prop_partial_prefix.to_string()).c_str());
+
+	specification.local_partial_prefix = prop_partial_prefix.as_string();
+	specification.partial_prefix.append(specification.local_partial_prefix);
 }
 
 
