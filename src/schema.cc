@@ -2814,37 +2814,6 @@ Schema::detect_dynamic(const std::string& field_name)
 }
 
 
-inline unsigned long long
-Schema::get_valid_field_counter(size_t field_counter)
-{
-	L_CALL(nullptr, "Schema::get_valid_field_counter(%zu)", field_counter);
-
-	while (field_counter <= toUType(FieldType::UUID)) {
-		switch ((FieldType)field_counter) {
-			case FieldType::EMPTY:
-			case FieldType::STRING:
-			case FieldType::ARRAY:
-			case FieldType::BOOLEAN:
-			case FieldType::DATE:
-			case FieldType::FLOAT:
-			case FieldType::GEO:
-			case FieldType::INTEGER:
-			case FieldType::OBJECT:
-			case FieldType::POSITIVE:
-			case FieldType::TERM:
-			case FieldType::TEXT:
-			case FieldType::UUID:
-				++field_counter;
-				break;
-			default:
-				return field_counter;
-		}
-	}
-
-	return field_counter;
-}
-
-
 void
 Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings)
 {
@@ -2993,7 +2962,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 	}
 
 	if (specification.local_prefix.empty()) {
-		specification.local_prefix = get_prefix(get_valid_field_counter(field_counter + 1));
+		specification.local_prefix = get_prefix(specification.normalized_name);
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 	}
 	specification.prefix.append(specification.local_prefix);
@@ -3063,7 +3032,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 	}
 
 	if (specification.local_prefix.empty()) {
-		specification.local_prefix = get_prefix(get_valid_field_counter(field_counter + 1));
+		specification.local_prefix = get_prefix(specification.normalized_name);
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 	}
 }
@@ -3108,7 +3077,7 @@ Schema::add_field(MsgPack*& mut_properties)
 	}
 
 	if (specification.local_prefix.empty()) {
-		specification.local_prefix = get_prefix(get_valid_field_counter(field_counter + 1));
+		specification.local_prefix = get_prefix(specification.normalized_name);
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 	}
 	specification.prefix.append(specification.local_prefix);

@@ -501,11 +501,6 @@ class Schema {
 	void detect_dynamic(const std::string& field_name);
 
 	/*
-	 * Returns the next valid field counter.
-	 */
-	static unsigned long long get_valid_field_counter(size_t field_counter);
-
-	/*
 	 * Update specification using object's properties.
 	 */
 
