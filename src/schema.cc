@@ -2903,8 +2903,6 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 {
 	L_CALL(this, "Schema::add_field(%s, %s, %s, <MsgPack*>, <Xapian::Document>, <TaskVector>, <bool>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
-	const auto field_counter = mut_properties->size();
-
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
 	static const auto slit_e = map_stem_language.end();
@@ -2975,8 +2973,6 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 {
 	L_CALL(this, "Schema::add_field(%s, %s, %s, <TaskVector>, <bool>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
-	const auto field_counter = mut_properties->size();
-
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
 	static const auto slit_e = map_stem_language.end();
@@ -3042,8 +3038,6 @@ void
 Schema::add_field(MsgPack*& mut_properties)
 {
 	L_CALL(this, "Schema::add_field(%s)", repr(mut_properties->to_string()).c_str());
-
-	const auto field_counter = mut_properties->size();
 
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
