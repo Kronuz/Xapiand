@@ -465,13 +465,13 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 
 
 const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_dispatch_readable({
-	{ RESERVED_TYPE,            &Schema::readable_type           },
-	{ RESERVED_PREFIX,          &Schema::readable_prefix         },
-	{ RESERVED_STOP_STRATEGY,   &Schema::readable_stop_strategy  },
-	{ RESERVED_STEM_STRATEGY,   &Schema::readable_stem_strategy  },
-	{ RESERVED_STEM_LANGUAGE,   &Schema::readable_stem_language  },
-	{ RESERVED_INDEX,           &Schema::readable_index          },
-	{ RESERVED_ACC_PREFIX,      &Schema::readable_acc_prefix     },
+	{ RESERVED_TYPE,            &Schema::readable_type            },
+	{ RESERVED_PARTIAL_PREFIX,  &Schema::readable_partial_prefix  },
+	{ RESERVED_STOP_STRATEGY,   &Schema::readable_stop_strategy   },
+	{ RESERVED_STEM_STRATEGY,   &Schema::readable_stem_strategy   },
+	{ RESERVED_STEM_LANGUAGE,   &Schema::readable_stem_language   },
+	{ RESERVED_INDEX,           &Schema::readable_index           },
+	{ RESERVED_ACC_PREFIX,      &Schema::readable_acc_prefix      },
 });
 
 
@@ -4325,13 +4325,22 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 
 
 bool
-Schema::readable_prefix(MsgPack& prop_prefix, MsgPack&)
+Schema::readable_partial_prefix(MsgPack& prop_partial_prefix, MsgPack& properties)
 {
-	L_CALL(nullptr, "Schema::readable_prefix(%s)", repr(prop_prefix.to_string()).c_str());
+	L_CALL(nullptr, "Schema::readable_partial_prefix(%s)", repr(prop_partial_prefix.to_string()).c_str());
 
-	prop_prefix = prop_prefix.as_string();
+	auto& prop_prefix = properties[RESERVED_PREFIX];
 
-	return true;
+	const auto prefix = prop_prefix.as_string();
+	const auto partial_prefix = prop_partial_prefix.as_string();
+	if (prefix != partial_prefix) {
+		prop_prefix = prefix;
+		prop_partial_prefix = partial_prefix;
+		return true;
+	}
+
+	prop_prefix = prefix;
+	return false;
 }
 
 
@@ -4358,11 +4367,11 @@ Schema::readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack&)
 
 
 bool
-Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& prop)
+Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties)
 {
 	L_CALL(nullptr, "Schema::readable_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
 
-	const auto language = prop[RESERVED_LANGUAGE].as_string();
+	const auto language = properties[RESERVED_LANGUAGE].as_string();
 	const auto stem_language = prop_stem_language.as_string();
 
 	return (language != stem_language);
@@ -4381,12 +4390,12 @@ Schema::readable_index(MsgPack& prop_index, MsgPack&)
 
 
 bool
-Schema::readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack& properties)
+Schema::readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_acc_prefix(%s)", repr(prop_acc_prefix.to_string()).c_str());
 
 	for (auto& prop_prefix : prop_acc_prefix) {
-		readable_prefix(prop_prefix, properties);
+		prop_prefix = prop_prefix.as_string();
 	}
 
 	return true;
