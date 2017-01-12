@@ -399,6 +399,7 @@ class Schema {
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name=std::string());
 	void index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& data, Xapian::Document& doc);
 
+	void _process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value);
 	void process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
 	void process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value);
 	void process_item_value(Xapian::Document& doc, MsgPack*& data, bool offsprings);
@@ -410,12 +411,17 @@ class Schema {
 	static std::vector<std::string> get_partial_paths(const std::vector<std::pair<std::string, bool>>& partial_prefixes);
 
 	/*
-	 * Returns a vector with the right specification.
+	 * Complete partial specifications.
+	 */
+	void complete_partial_specification(const MsgPack& item_value);
+
+	/*
+	 * Complete specification of a namespace.
 	 */
 	void complete_namespace_specification(const MsgPack& item_value);
 
 	/*
-	 * Complete the specifications.
+	 * Complete specification of a normal field.
 	 */
 	void complete_specification(const MsgPack& item_value);
 
