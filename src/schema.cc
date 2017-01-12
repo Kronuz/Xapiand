@@ -2963,6 +2963,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
 	} else {
 		specification.local_partial_prefix = get_prefix(specification.normalized_name);
+		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
 	}
 	specification.prefix.append(specification.local_prefix);
@@ -3034,6 +3035,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
 	} else {
 		specification.local_partial_prefix = get_prefix(specification.normalized_name);
+		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
 	}
 }
@@ -3077,6 +3079,7 @@ Schema::add_field(MsgPack*& mut_properties)
 		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
 	} else {
 		specification.local_partial_prefix = get_prefix(specification.normalized_name);
+		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 		(*mut_properties)[RESERVED_PARTIAL_PREFIX] = specification.local_partial_prefix;
 	}
 	specification.prefix.append(specification.local_prefix);
@@ -3475,14 +3478,13 @@ Schema::write_positions(MsgPack& properties, const std::string& prop_name, const
 
 
 void
-Schema::write_prefix(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_prefix)
+Schema::write_prefix(MsgPack&, const std::string& prop_name, const MsgPack& doc_prefix)
 {
 	// RESERVED_PREFIX isn't heritable and can't change once fixed.
 	L_CALL(this, "Schema::write_prefix(%s)", repr(doc_prefix.to_string()).c_str());
 
 	try {
 		specification.local_prefix = doc_prefix.as_string();
-		properties[prop_name] = specification.local_prefix;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
@@ -4209,7 +4211,6 @@ Schema::set_default_spc_id(MsgPack& properties)
 	// Process RESERVED_PREFIX
 	if (specification.local_prefix.empty()) {
 		specification.local_prefix = DOCUMENT_ID_TERM_PREFIX;
-		properties[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 	}
 
 	// Process RESERVED_SLOT
@@ -4242,7 +4243,6 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	// Process RESERVED_PREFIX
 	if (specification.local_prefix.empty()) {
 		specification.local_prefix = DOCUMENT_CONTENT_TYPE_TERM_PREFIX;
-		properties[RESERVED_PREFIX] = DOCUMENT_CONTENT_TYPE_TERM_PREFIX;
 	}
 
 	// Process RESERVED_SLOT
