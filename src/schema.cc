@@ -3026,14 +3026,6 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 	// Verify prefix.
 	if (specification.flags.dynamic_type) {
 		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
-		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
-	} else if (specification.local_prefix.empty()) {
-		specification.local_prefix = get_prefix(specification.normalized_name);
-		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
-	}
-
-	if (specification.flags.dynamic_type) {
-		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
 		specification.local_partial_prefix = specification.local_prefix;
 	} else if (specification.local_prefix.empty()) {
 		specification.local_prefix = get_prefix(specification.normalized_name);
