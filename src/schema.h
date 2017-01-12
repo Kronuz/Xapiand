@@ -407,7 +407,7 @@ class Schema {
 	/*
 	 * Get the prefixes for a namespace.
 	 */
-	static std::vector<std::string> get_partial_prefixes(const std::vector<std::pair<std::string, bool>>& partial_prefixes);
+	static std::vector<std::string> get_partial_paths(const std::vector<std::pair<std::string, bool>>& partial_prefixes);
 
 	/*
 	 * Returns a vector with the right specification.
@@ -447,7 +447,7 @@ class Schema {
 	/*
 	 * Function to index paths namespace in doc.
 	 */
-	void index_partial_paths(Xapian::Document& doc, bool offsprings=false);
+	void index_partial_paths(Xapian::Document& doc);
 
 	/*
 	 * Auxiliar functions for index fields in doc.

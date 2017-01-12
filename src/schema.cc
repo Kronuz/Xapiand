@@ -1240,7 +1240,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
 		if (val->is_null()) {
-			index_partial_paths(doc, offsprings);
+			index_partial_paths(doc);
 			if (specification.flags.store) {
 				offsprings ? (*data)[RESERVED_VALUE] = *val : *data = *val;
 			}
@@ -1291,15 +1291,15 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 			*data = (*data)[RESERVED_VALUE];
 		}
 	} else {
-		index_partial_paths(doc, offsprings);
+		index_partial_paths(doc);
 	}
 }
 
 
 std::vector<std::string>
-Schema::get_partial_prefixes(const std::vector<std::pair<std::string, bool>>& partial_prefixes)
+Schema::get_partial_paths(const std::vector<std::pair<std::string, bool>>& partial_prefixes)
 {
-	L_CALL(nullptr, "Schema::get_partial_prefixes(%zu)", partial_prefixes.size());
+	L_CALL(nullptr, "Schema::get_partial_paths(%zu)", partial_prefixes.size());
 
 	if (partial_prefixes.size() > LIMIT_PARTIAL_PATHS_DEPTH) {
 		THROW(ClientError, "Partial paths limit depth is %d, and partial paths provided has a depth of %zu", LIMIT_PARTIAL_PATHS_DEPTH, partial_prefixes.size());
@@ -1352,16 +1352,16 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 	if (!specification.flags.field_with_type) {
 		validate_required_namespace_data(item_value);
 	}
+	
+	const auto paths = get_partial_paths(specification.partial_prefixes);
 
-	const auto prefixes_namespace = get_partial_prefixes(specification.partial_prefixes);
-
-	specification.partial_spcs.reserve(prefixes_namespace.size());
+	specification.partial_spcs.reserve(paths.size());
 	if (toUType(specification.index & TypeIndex::VALUES)) {
-		for (const auto& prefix_namespace : prefixes_namespace) {
+		for (const auto& prefix_namespace : paths) {
 			specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], prefix_namespace));
 		}
 	} else {
-		for (const auto& prefix_namespace : prefixes_namespace) {
+		for (const auto& prefix_namespace : paths) {
 			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
 			spc.prefix.assign(prefix_namespace);
 			specification.partial_spcs.push_back(std::move(spc));
@@ -1878,16 +1878,18 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 
 
 void
-Schema::index_partial_paths(Xapian::Document& doc, bool offsprings)
+Schema::index_partial_paths(Xapian::Document& doc)
 {
-	L_CALL(this, "Schema::index_partial_paths(<Xapian::Document>, %d)", offsprings);
+	L_CALL(this, "Schema::index_partial_paths(<Xapian::Document>, %d)");
 
-	if (specification.flags.inside_namespace && !offsprings) {
-		const auto prefixes_namespace = get_partial_prefixes(specification.partial_prefixes);
-		for (const auto& prefix_namespace : prefixes_namespace) {
-			doc.add_term(prefix_namespace);
-		}
+	if (specification.partial_prefixes.size() > 1) {
+		const auto paths = get_partial_paths(specification.partial_prefixes);
+		for (const auto& path : paths) {
+			doc.add_term(path);
+		}	
 	}
+
+	doc.add_term(specification.prefix);
 }
 
 
