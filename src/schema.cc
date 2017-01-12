@@ -4790,7 +4790,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 	Split _split(full_name, DB_OFFSPRING_UNION);
 
 	const MsgPack* subproperties = &properties;
-	std::string prefix;
+	std::string prefix, partial_prefix;
 	bool dynamic_type;
 
 	const auto it_e = _split.end();
@@ -4799,6 +4799,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		dynamic_type = false;
 		const auto& field_name = *it;
 		if (!is_valid(field_name) || field_name == UUID_FIELD_NAME) {
+			// Check if the field_name is accuracy.
 			if (it == it_b) {
 				if (!map_dispatch_set_default_spc.count(field_name)) {
 					if (++it == it_e) {
@@ -4818,48 +4819,41 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 		try {
 			subproperties = &subproperties->at(field_name);
 			prefix.append(subproperties->at(RESERVED_PREFIX).as_string());
+			partial_prefix.append(subproperties->at(RESERVED_PARTIAL_PREFIX).as_string());
 		} catch (const std::out_of_range&) {
-			auto dynamic_prefix = get_dynamic_prefix(field_name);
-			if (!dynamic_prefix.empty()) {
+			try {
+				auto dynamic_prefix = get_dynamic_prefix(field_name);
 				try {
 					subproperties = &subproperties->at(UUID_FIELD_NAME);
 					prefix.append(dynamic_prefix);
+					partial_prefix.append(dynamic_prefix);
 					dynamic_type = true;
 					continue;
 				} catch (const std::out_of_range&) { }
+			} catch (const SerialisationError&) { }
+			// It is a search using partial prefix.
+			int depth_partials = std::distance(it, it_e);
+			if (depth_partials > LIMIT_PARTIAL_PATHS_DEPTH) {
+				THROW(ClientError, "Partial paths limit depth is %d, and partial paths provided has a depth of %d", LIMIT_PARTIAL_PATHS_DEPTH, depth_partials);
 			}
-
-			// Verify if parent is a namespace.
-			try {
-				if (subproperties->at(RESERVED_NAMESPACE).as_bool()) {
-					int depth_namespace = std::distance(it, it_e);
-					if (depth_namespace > LIMIT_PARTIAL_PATHS_DEPTH) {
-						THROW(ClientError, "Partial paths limit depth is %d, and partial paths provided has a depth of %d", LIMIT_PARTIAL_PATHS_DEPTH, depth_namespace);
+			for ( ; it != it_e; ++it) {
+				dynamic_type = false;
+				auto& partial_field = *it;
+				if (is_valid(partial_field) && partial_field != UUID_FIELD_NAME) {
+					try {
+						partial_prefix.append(get_dynamic_prefix(partial_field));
+						dynamic_type = true;
+					} catch (const SerialisationError&) {
+						partial_prefix.append(get_prefix(partial_field));
 					}
-					for ( ; it != it_e; ++it) {
-						dynamic_type = false;
-						auto& field_namespace = *it;
-						if (is_valid(field_namespace) && field_namespace != UUID_FIELD_NAME) {
-							try {
-								prefix.append(get_dynamic_prefix(field_namespace));
-								dynamic_type = true;
-							} catch (const SerialisationError&) {
-								prefix.append(get_prefix(field_namespace));
-							}
-						} else if (++it == it_e) {
-							prefix.append(get_acc_prefix(field_namespace));
-							return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(prefix), std::move(field_namespace));
-						} else {
-							THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_namespace).c_str());
-						}
-					}
-					return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(prefix), std::string());
+				} else if (++it == it_e) {
+					partial_prefix.append(get_acc_prefix(partial_field));
+					return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(partial_prefix), std::move(partial_field));
 				} else {
-					THROW(ClientError, "%s does not exist in schema", repr(field_name).c_str());
+					THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(partial_field).c_str());
 				}
-			} catch (const std::out_of_range&) {
-				THROW(ClientError, "%s does not exist in schema", repr(field_name).c_str());
 			}
+			return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(partial_prefix), std::string());
 		}
 	}
 
