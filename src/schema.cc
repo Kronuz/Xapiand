@@ -849,10 +849,10 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_LANGUAGE         << ": " << language          << "\n";
-	str << "\t" << RESERVED_STOP_STRATEGY    << ": " << readable_stop_strategy(stop_strategy) << "\n";
-	str << "\t" << RESERVED_STEM_STRATEGY    << ": " << readable_stem_strategy(stem_strategy) << "\n";
-	str << "\t" << RESERVED_STEM_LANGUAGE    << ": " << stem_language     << "\n";
+	str << "\t" << RESERVED_LANGUAGE          << ": " << language          << "\n";
+	str << "\t" << RESERVED_STOP_STRATEGY     << ": " << readable_stop_strategy(stop_strategy) << "\n";
+	str << "\t" << RESERVED_STEM_STRATEGY     << ": " << readable_stem_strategy(stem_strategy) << "\n";
+	str << "\t" << RESERVED_STEM_LANGUAGE     << ": " << stem_language     << "\n";
 
 	str << "\t" << RESERVED_ACCURACY << ": [ ";
 	for (const auto& acc : accuracy) {
@@ -868,7 +868,7 @@ specification_t::to_string() const
 
 	str << "\t" << RESERVED_NAMESPACE  << ": [ ";
 	for (const auto& partial_prefix : partial_prefixes) {
-		str << repr(partial_prefix.first) << " " << partial_prefix.second << ", ";
+		str << repr(partial_prefix) << " ";
 	}
 	str << "]\n";
 
@@ -878,37 +878,39 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_VALUE          << ": " << (value ? value->to_string() : std::string())                  << "\n";
-	str << "\t" << "value_rec"             << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
+	str << "\t" << RESERVED_VALUE             << ": " << (value ? value->to_string() : std::string())                  << "\n";
+	str << "\t" << "value_rec"                << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
 
-	str << "\t" << RESERVED_SLOT           << ": " << slot                           << "\n";
-	str << "\t" << RESERVED_TYPE           << ": " << readable_type(sep_types)       << "\n";
-	str << "\t" << RESERVED_PREFIX         << ": " << repr(prefix)                   << "\n";
-	str << "\t" << "local_prefix"          << ": " << repr(local_prefix)             << "\n";
-	str << "\t" << RESERVED_INDEX          << ": " << readable_index(index)          << "\n";
-	str << "\t" << RESERVED_STORE          << ": " << (flags.store             ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_RECURSIVE      << ": " << (flags.is_recursive      ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_DYNAMIC        << ": " << (flags.dynamic           ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_STRICT         << ": " << (flags.strict            ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_D_DETECTION    << ": " << (flags.date_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_N_DETECTION    << ": " << (flags.numeric_detection ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_G_DETECTION    << ": " << (flags.geo_detection     ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_B_DETECTION    << ": " << (flags.bool_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_S_DETECTION    << ": " << (flags.string_detection  ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_T_DETECTION    << ": " << (flags.text_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_TM_DETECTION   << ": " << (flags.term_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_U_DETECTION    << ": " << (flags.uuid_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_BOOL_TERM      << ": " << (flags.bool_term         ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_NAMESPACE      << ": " << (flags.is_namespace      ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_PARTIAL_PATHS  << ": " << (flags.partial_paths     ? "true" : "false") << "\n";
-	str << "\t" << "field_found"           << ": " << (flags.field_found       ? "true" : "false") << "\n";
-	str << "\t" << "dynamic_type"          << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
-	str << "\t" << "complete"              << ": " << (flags.complete          ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_SLOT              << ": " << slot                           << "\n";
+	str << "\t" << RESERVED_TYPE              << ": " << readable_type(sep_types)       << "\n";
+	str << "\t" << RESERVED_PREFIX            << ": " << repr(prefix)                   << "\n";
+	str << "\t" << "local_prefix"             << ": " << repr(local_prefix)             << "\n";
+	str << "\t" << RESERVED_PARTIAL_PREFIX    << ": " << repr(partial_prefix)           << "\n";
+	str << "\t" << "local_partial_prefix"     << ": " << repr(local_partial_prefix)     << "\n";
+	str << "\t" << RESERVED_INDEX             << ": " << readable_index(index)          << "\n";
+	str << "\t" << RESERVED_STORE             << ": " << (flags.store             ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_RECURSIVE         << ": " << (flags.is_recursive      ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_DYNAMIC           << ": " << (flags.dynamic           ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_STRICT            << ": " << (flags.strict            ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_D_DETECTION       << ": " << (flags.date_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_N_DETECTION       << ": " << (flags.numeric_detection ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_G_DETECTION       << ": " << (flags.geo_detection     ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_B_DETECTION       << ": " << (flags.bool_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_S_DETECTION       << ": " << (flags.string_detection  ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_T_DETECTION       << ": " << (flags.text_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_TM_DETECTION      << ": " << (flags.term_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_U_DETECTION       << ": " << (flags.uuid_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_BOOL_TERM         << ": " << (flags.bool_term         ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_NAMESPACE         << ": " << (flags.is_namespace      ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_PARTIAL_PATHS     << ": " << (flags.partial_paths     ? "true" : "false") << "\n";
+	str << "\t" << "field_found"              << ": " << (flags.field_found       ? "true" : "false") << "\n";
+	str << "\t" << "dynamic_type"             << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
+	str << "\t" << "complete"                 << ": " << (flags.complete          ? "true" : "false") << "\n";
 
-	str << "\t" << "name"                  << ": " << name                 << "\n";
-	str << "\t" << "meta_name"             << ": " << meta_name            << "\n";
-	str << "\t" << "full_meta_name"        << ": " << full_meta_name       << "\n";
-	str << "\t" << "normalized_name"       << ": " << normalized_name      << "\n";
+	str << "\t" << "name"                     << ": " << name                 << "\n";
+	str << "\t" << "meta_name"                << ": " << meta_name            << "\n";
+	str << "\t" << "full_meta_name"           << ": " << full_meta_name       << "\n";
+	str << "\t" << "normalized_name"          << ": " << normalized_name      << "\n";
 
 	str << "}\n";
 
