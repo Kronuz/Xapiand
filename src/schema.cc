@@ -1351,9 +1351,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_namespace_specification(%s)", repr(item_value.to_string()).c_str());
 
-	if (!specification.flags.field_with_type) {
-		validate_required_namespace_data(item_value);
-	}
+	validate_required_namespace_data(item_value);
 
 	if (specification.partial_prefixes.size() > 2) {
 		const auto paths = get_partial_paths(specification.partial_prefixes);
