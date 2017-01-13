@@ -161,56 +161,32 @@ struct pack<type::fix_uint64> {
 template <>
 struct object<type::fix_int8> {
     void operator()(msgpack::object& o, type::fix_int8 v) const {
-        if (v.get() < 0) {
-            o.type = msgpack::type::NEGATIVE_INTEGER;
-            o.via.i64 = v.get();
-        }
-        else {
-            o.type = msgpack::type::POSITIVE_INTEGER;
-            o.via.u64 = v.get();
-        }
+        o.type = msgpack::type::NEGATIVE_INTEGER;
+        o.via.i64 = v.get();
     }
 };
 
 template <>
 struct object<type::fix_int16> {
     void operator()(msgpack::object& o, type::fix_int16 v) const {
-        if(v.get() < 0) {
-            o.type = msgpack::type::NEGATIVE_INTEGER;
-            o.via.i64 = v.get();
-        }
-        else {
-            o.type = msgpack::type::POSITIVE_INTEGER;
-            o.via.u64 = v.get();
-        }
+        o.type = msgpack::type::NEGATIVE_INTEGER;
+        o.via.i64 = v.get();
     }
 };
 
 template <>
 struct object<type::fix_int32> {
     void operator()(msgpack::object& o, type::fix_int32 v) const {
-        if (v.get() < 0) {
-            o.type = msgpack::type::NEGATIVE_INTEGER;
-            o.via.i64 = v.get();
-        }
-        else {
-            o.type = msgpack::type::POSITIVE_INTEGER;
-            o.via.u64 = v.get();
-        }
+        o.type = msgpack::type::NEGATIVE_INTEGER;
+        o.via.i64 = v.get();
     }
 };
 
 template <>
 struct object<type::fix_int64> {
     void operator()(msgpack::object& o, type::fix_int64 v) const {
-        if (v.get() < 0) {
-            o.type = msgpack::type::NEGATIVE_INTEGER;
-            o.via.i64 = v.get();
-        }
-        else {
-            o.type = msgpack::type::POSITIVE_INTEGER;
-            o.via.u64 = v.get();
-        }
+        o.type = msgpack::type::NEGATIVE_INTEGER;
+        o.via.i64 = v.get();
     }
 };
 

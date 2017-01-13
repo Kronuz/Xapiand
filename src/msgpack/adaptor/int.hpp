@@ -70,14 +70,8 @@ namespace detail {
     template <>
     struct object_char_sign<true> {
         static inline void make(msgpack::object& o, char v) {
-            if (v < 0) {
-                o.type = msgpack::type::NEGATIVE_INTEGER;
-                o.via.i64 = v;
-            }
-            else {
-                o.type = msgpack::type::POSITIVE_INTEGER;
-                o.via.u64 = v;
-            }
+            o.type = msgpack::type::NEGATIVE_INTEGER;
+            o.via.i64 = v;
         }
     };
 
@@ -253,70 +247,40 @@ struct object<char> {
 template <>
 struct object<signed char> {
     void operator()(msgpack::object& o, signed char v) const {
-        if (v < 0) {
-            o.type = msgpack::type::NEGATIVE_INTEGER;
-            o.via.i64 = v;
-        }
-        else {
-            o.type = msgpack::type::POSITIVE_INTEGER;
-            o.via.u64 = v;
-        }
+        o.type = msgpack::type::NEGATIVE_INTEGER;
+        o.via.i64 = v;
     }
 };
 
 template <>
 struct object<signed short> {
     void operator()(msgpack::object& o, signed short v) const {
-        if (v < 0) {
-            o.type = msgpack::type::NEGATIVE_INTEGER;
-            o.via.i64 = v;
-        }
-        else {
-            o.type = msgpack::type::POSITIVE_INTEGER;
-            o.via.u64 = v;
-        }
+        o.type = msgpack::type::NEGATIVE_INTEGER;
+        o.via.i64 = v;
     }
 };
 
 template <>
 struct object<signed int> {
     void operator()(msgpack::object& o, signed int v) const {
-        if (v < 0) {
-            o.type = msgpack::type::NEGATIVE_INTEGER;
-            o.via.i64 = v;
-        }
-        else {
-            o.type = msgpack::type::POSITIVE_INTEGER;
-            o.via.u64 = v;
-        }
+        o.type = msgpack::type::NEGATIVE_INTEGER;
+        o.via.i64 = v;
     }
 };
 
 template <>
 struct object<signed long> {
     void operator()(msgpack::object& o, signed long v) const {
-        if (v < 0) {
-            o.type = msgpack::type::NEGATIVE_INTEGER;
-            o.via.i64 = v;
-        }
-        else {
-            o.type = msgpack::type::POSITIVE_INTEGER;
-            o.via.u64 = v;
-        }
+        o.type = msgpack::type::NEGATIVE_INTEGER;
+        o.via.i64 = v;
     }
 };
 
 template <>
 struct object<signed long long> {
     void operator()(msgpack::object& o, signed long long v) const {
-        if (v < 0) {
-            o.type = msgpack::type::NEGATIVE_INTEGER;
-            o.via.i64 = v;
-        }
-        else{
-            o.type = msgpack::type::POSITIVE_INTEGER;
-            o.via.u64 = v;
-        }
+        o.type = msgpack::type::NEGATIVE_INTEGER;
+        o.via.i64 = v;
     }
 };
 

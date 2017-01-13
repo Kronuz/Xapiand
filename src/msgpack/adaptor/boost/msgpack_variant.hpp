@@ -83,24 +83,14 @@ struct basic_variant :
     template <typename T>
     basic_variant(T const& t):base(t) {}
     basic_variant(char const* p):base(std::string(p)) {}
-    basic_variant(char v) {
-        int_init(v);
-    }
-    basic_variant(signed char v) {
-        int_init(v);
-    }
+    basic_variant(char v):base(int64_t(v)) {}
+    basic_variant(signed char v):base(int64_t(v)) {}
     basic_variant(unsigned char v):base(uint64_t(v)) {}
-    basic_variant(signed int v) {
-        int_init(v);
-    }
+    basic_variant(signed int v):base(int64_t(v)) {}
     basic_variant(unsigned int v):base(uint64_t(v)) {}
-    basic_variant(signed long v) {
-        int_init(v);
-    }
+    basic_variant(signed long v):base(int64_t(v)) {}
     basic_variant(unsigned long v):base(uint64_t(v)) {}
-    basic_variant(signed long long v) {
-        int_init(v);
-    }
+    basic_variant(signed long long v):base(int64_t(v)) {}
     basic_variant(unsigned long long v):base(uint64_t(v)) {}
 
     bool is_nil() const {
@@ -221,16 +211,6 @@ struct basic_variant :
     }
     std::multimap<basic_variant<STR, BIN, EXT>, basic_variant<STR, BIN, EXT> >& as_multimap() {
         return boost::get<std::multimap<basic_variant<STR, BIN, EXT>, basic_variant<STR, BIN, EXT> > >(*this);
-    }
-private:
-    template <typename T>
-    void int_init(T v) {
-        if (v < 0) {
-            static_cast<base&>(*this) = int64_t(v);
-        }
-        else {
-            static_cast<base&>(*this) = uint64_t(v);
-        }
     }
 };
 
