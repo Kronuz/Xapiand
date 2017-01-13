@@ -643,10 +643,11 @@ class Schema {
 	 *   - If full name is namespace
 	 *   - The prefix
 	 *   - The accuracy field_name
+	 *   - The partial prefix
 	 * if the path does not exist or is not valid field name throw a ClientError exception.
 	 */
 
-	std::tuple<const MsgPack&, bool, bool, std::string, std::string> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
+	std::tuple<const MsgPack&, bool, bool, std::string, std::string, std::string> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);

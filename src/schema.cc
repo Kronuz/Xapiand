@@ -1397,8 +1397,7 @@ Schema::complete_specification(const MsgPack& item_value)
 		required_spc_t prev_spc = specification;
 
 		auto paths = get_partial_paths(specification.partial_prefixes);
-		specification.partial_spcs.reserve(paths.size());
-		paths.pop_back(); // Full path is not process like namespace.
+		specification.partial_spcs.reserve(paths.size() + 1);
 
 		if (toUType(specification.index & TypeIndex::VALUES)) {
 			for (const auto& path : paths) {
@@ -1892,24 +1891,13 @@ Schema::index_partial_paths(Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::index_partial_paths(<Xapian::Document>)");
 
-	if (specification.flags.inside_namespace) {
-		if (specification.partial_prefixes.size() > 2) {
-			const auto paths = get_partial_paths(specification.partial_prefixes);
-			for (const auto& path : paths) {
-				doc.add_term(path);
-			}
-		} else {
-			doc.add_term(specification.partial_prefix);
+	if (specification.partial_prefixes.size() > 2) {
+		const auto paths = get_partial_paths(specification.partial_prefixes);
+		for (const auto& path : paths) {
+			doc.add_term(path);
 		}
 	} else {
-		if (specification.partial_prefixes.size() > 2) {
-			auto paths = get_partial_paths(specification.partial_prefixes);
-			paths.pop_back(); // Complete path is not index like namespace.
-			for (const auto& path : paths) {
-				doc.add_term(path);
-			}
-		}
-		doc.add_term(specification.prefix);
+		doc.add_term(specification.partial_prefix);
 	}
 }
 
@@ -4584,7 +4572,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 		res.flags.inside_namespace = std::get<2>(info);
 
 		if (res.flags.inside_namespace) {
-			res.prefix = std::move(std::get<3>(info));
+			res.partial_prefix = std::move(std::get<5>(info));
 		} else {
 			const auto& properties = std::get<0>(info);
 
@@ -4594,6 +4582,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 			}
 
 			res.prefix = std::move(std::get<3>(info));
+			res.partial_prefix = std::move(std::get<5>(info));
 
 			if (is_range) {
 				res.slot = get_slot(res.prefix);
@@ -4710,7 +4699,7 @@ Schema::get_slot_field(const std::string& field_name) const
 
 		if (res.flags.inside_namespace) {
 			res = specification_t::get_global(FieldType::TERM);
-			res.slot = get_slot(std::get<3>(info));
+			res.slot = get_slot(std::get<5>(info));
 		} else {
 			const auto& properties = std::get<0>(info);
 
@@ -4737,6 +4726,7 @@ Schema::get_slot_field(const std::string& field_name) const
 			}
 
 			if (std::get<1>(info)) {
+				// If field is dynamic calculate slot.
 				res.slot = get_slot(std::get<3>(info));
 			} else {
 				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
@@ -4804,7 +4794,7 @@ Schema::get_data_global(FieldType field_type)
 }
 
 
-std::tuple<const MsgPack&, bool, bool, std::string, std::string>
+std::tuple<const MsgPack&, bool, bool, std::string, std::string, std::string>
 Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
 {
 	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
@@ -4825,14 +4815,18 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			if (it == it_b) {
 				if (!map_dispatch_set_default_spc.count(field_name)) {
 					if (++it == it_e) {
-						prefix.append(get_acc_prefix(field_name));
-						return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(prefix), std::move(field_name));
+						const auto acc_prefix = get_acc_prefix(field_name);
+						prefix.append(acc_prefix);
+						partial_prefix.append(acc_prefix);
+						return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(prefix), std::move(field_name), std::move(partial_prefix));
 					}
 					THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 				}
 			} else if (++it == it_e) {
-				prefix.append(get_acc_prefix(field_name));
-				return std::forward_as_tuple(*subproperties, dynamic_type, false, std::move(prefix), std::move(field_name));
+				const auto acc_prefix = get_acc_prefix(field_name);
+				prefix.append(acc_prefix);
+				partial_prefix.append(acc_prefix);
+				return std::forward_as_tuple(*subproperties, dynamic_type, false, std::move(prefix), std::move(field_name), std::move(partial_prefix));
 			} else {
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 			}
@@ -4844,7 +4838,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			partial_prefix.append(subproperties->at(RESERVED_PARTIAL_PREFIX).as_string());
 		} catch (const std::out_of_range&) {
 			try {
-				auto dynamic_prefix = get_dynamic_prefix(field_name);
+				const auto dynamic_prefix = get_dynamic_prefix(field_name);
 				try {
 					subproperties = &subproperties->at(UUID_FIELD_NAME);
 					prefix.append(dynamic_prefix);
@@ -4870,16 +4864,16 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 					}
 				} else if (++it == it_e) {
 					partial_prefix.append(get_acc_prefix(partial_field));
-					return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(partial_prefix), std::move(partial_field));
+					return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(partial_prefix), std::move(partial_field), std::move(partial_prefix));
 				} else {
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(partial_field).c_str());
 				}
 			}
-			return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(partial_prefix), std::string());
+			return std::forward_as_tuple(*subproperties, dynamic_type, true, std::move(partial_prefix), std::string(), std::move(partial_prefix));
 		}
 	}
 
-	return std::forward_as_tuple(*subproperties, dynamic_type, false, std::move(prefix), std::string());
+	return std::forward_as_tuple(*subproperties, dynamic_type, false, std::move(prefix), std::string(), std::move(partial_prefix));
 }
 
 
