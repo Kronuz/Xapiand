@@ -1162,33 +1162,23 @@ Schema::_process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack
 		return;
 	}
 
-	if (specification.partial_prefixes.size() > 1) {
-		if (!specification.flags.complete) {
-			complete_partial_specification(item_value);
-		}
-
-		bool add_value = true;
-		for (const auto& spc : specification.partial_spcs) {
-			specification.sep_types[2] = spc.sep_types[2];
-			specification.prefix       = spc.prefix;
-			specification.slot         = spc.slot;
-			specification.accuracy     = spc.accuracy;
-			specification.acc_prefix   = spc.acc_prefix;
-			index_item(doc, item_value, *data, add_value);
-			add_value = false;
-		}
-	} else if (specification.flags.inside_namespace) {
-		if (!specification.flags.complete) {
+	if (!specification.flags.complete) {
+		if (specification.flags.inside_namespace) {
 			complete_namespace_specification(item_value);
-		}
-
-		index_item(doc, item_value, *data);
-	} else {
-		if (!specification.flags.complete) {
+		} else {
 			complete_specification(item_value);
 		}
+	}
 
-		index_item(doc, item_value, *data);
+	bool add_value = true;
+	for (const auto& spc : specification.partial_spcs) {
+		specification.sep_types[2] = spc.sep_types[2];
+		specification.prefix       = spc.prefix;
+		specification.slot         = spc.slot;
+		specification.accuracy     = spc.accuracy;
+		specification.acc_prefix   = spc.acc_prefix;
+		index_item(doc, item_value, *data, add_value);
+		add_value = false;
 	}
 }
 
@@ -1206,33 +1196,23 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 		return;
 	}
 
-	if (specification.partial_prefixes.size() > 1) {
-		if (!specification.flags.complete) {
-			complete_partial_specification(item_value);
-		}
-
-		bool add_value = true;
-		for (const auto& spc : specification.partial_spcs) {
-			specification.sep_types[2] = spc.sep_types[2];
-			specification.prefix       = spc.prefix;
-			specification.slot         = spc.slot;
-			specification.accuracy     = spc.accuracy;
-			specification.acc_prefix   = spc.acc_prefix;
-			index_item(doc, item_value, data, pos, add_value);
-			add_value = false;
-		}
-	} else if (specification.flags.inside_namespace) {
-		if (!specification.flags.complete) {
+	if (!specification.flags.complete) {
+		if (specification.flags.inside_namespace) {
 			complete_namespace_specification(item_value);
-		}
-
-		index_item(doc, item_value, data, pos);
-	} else {
-		if (!specification.flags.complete) {
+		} else {
 			complete_specification(item_value);
 		}
+	}
 
-		index_item(doc, item_value, data, pos);
+	bool add_value = true;
+	for (const auto& spc : specification.partial_spcs) {
+		specification.sep_types[2] = spc.sep_types[2];
+		specification.prefix       = spc.prefix;
+		specification.slot         = spc.slot;
+		specification.accuracy     = spc.accuracy;
+		specification.acc_prefix   = spc.acc_prefix;
+		index_item(doc, item_value, data, pos, add_value);
+		add_value = false;
 	}
 
 	if (specification.flags.store) {
@@ -1336,51 +1316,6 @@ Schema::get_namespace_specification(FieldType namespace_type, const std::string&
 
 
 void
-Schema::complete_partial_specification(const MsgPack& item_value)
-{
-	L_CALL(this, "Schema::complete_partial_specification(%s)", repr(item_value.to_string()).c_str());
-
-	/*
-	 *  Partial paths are indexing like namespaces.
-	 */
-
-	if (!specification.flags.field_found && !specification.flags.dynamic && !specification.flags.inside_namespace) {
-		THROW(ClientError, "%s is not dynamic", specification.full_meta_name.c_str());
-	}
-
-	if (!specification.flags.field_with_type) {
-		validate_required_namespace_data(item_value);
-	}
-
-	const auto paths = get_partial_paths(specification.partial_prefixes);
-	specification.partial_spcs.reserve(paths.size());
-
-	if (toUType(specification.index & TypeIndex::VALUES)) {
-		for (const auto& path : paths) {
-			specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], path));
-		}
-	} else {
-		for (const auto& path : paths) {
-			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
-			spc.prefix.assign(path);
-			specification.partial_spcs.push_back(std::move(spc));
-		}
-	}
-
-	if (!specification.flags.inside_namespace) {
-		auto& spc        = specification.partial_spcs.back();
-		spc.sep_types[2] = specification.sep_types[2];
-		spc.prefix       = specification.prefix;
-		spc.slot         = specification.slot;
-		spc.accuracy     = specification.accuracy;
-		spc.acc_prefix   = specification.acc_prefix;
-	}
-
-	specification.flags.complete = true;
-}
-
-
-void
 Schema::complete_namespace_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_namespace_specification(%s)", repr(item_value.to_string()).c_str());
@@ -1389,16 +1324,27 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 		validate_required_namespace_data(item_value);
 	}
 
-	if (toUType(specification.index & TypeIndex::VALUES)) {
-		auto spc = get_namespace_specification(specification.sep_types[2], specification.partial_prefix);
-		specification.sep_types[2] = spc.sep_types[2];
-		specification.prefix       = spc.prefix;
-		specification.slot         = spc.slot;
-		specification.accuracy     = spc.accuracy;
-		specification.acc_prefix   = spc.acc_prefix;
+	if (specification.partial_prefixes.size() > 2) {
+		const auto paths = get_partial_paths(specification.partial_prefixes);
+		specification.partial_spcs.reserve(paths.size());
+
+		if (toUType(specification.index & TypeIndex::VALUES)) {
+			for (const auto& path : paths) {
+				specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], path));
+			}
+		} else {
+			for (const auto& path : paths) {
+				required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
+				spc.prefix = path;
+				specification.partial_spcs.push_back(std::move(spc));
+			}
+		}
+	} else if (toUType(specification.index & TypeIndex::VALUES)) {
+		specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], specification.partial_prefix));
 	} else {
-		specification.sep_types[2] = specification_t::get_global(specification.sep_types[2]).sep_types[2];
-		specification.prefix = specification.partial_prefix;
+		required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
+		spc.prefix = specification.partial_prefix;
+		specification.partial_spcs.push_back(std::move(spc));
 	}
 
 	specification.flags.complete = true;
@@ -1418,7 +1364,28 @@ Schema::complete_specification(const MsgPack& item_value)
 		validate_required_data(item_value);
 	}
 
-	if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+	if (specification.partial_prefixes.size() > 3) {
+		required_spc_t prev_spc = specification;
+
+		auto paths = get_partial_paths(specification.partial_prefixes);
+		specification.partial_spcs.reserve(paths.size());
+		paths.pop_back(); // Full path is not process like namespace.
+
+		if (toUType(specification.index & TypeIndex::VALUES)) {
+			for (const auto& path : paths) {
+				specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], path));
+			}
+		} else {
+			for (const auto& path : paths) {
+				required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
+				spc.prefix.assign(path);
+				specification.partial_spcs.push_back(std::move(spc));
+			}
+		}
+
+		// Full path is process like normal field.
+		specification.partial_spcs.push_back(std::move(prev_spc));
+	} else if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 		if (specification.flags.dynamic_type) {
 			specification.slot = get_slot(specification.prefix);
 		}
@@ -1426,6 +1393,8 @@ Schema::complete_specification(const MsgPack& item_value)
 		for (auto& acc_prefix : specification.acc_prefix) {
 			acc_prefix.insert(0, specification.prefix);
 		}
+
+		specification.partial_spcs.push_back(specification);
 	}
 
 	specification.flags.complete = true;
@@ -1662,6 +1631,8 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 {
 	L_CALL(this, "Schema::validate_required_namespace_data(%s)", repr(value.to_string()).c_str());
 
+	L_SCHEMA(this, "Specification heritable and sent by user: %s", specification.to_string().c_str());
+
 	if (specification.sep_types[2] == FieldType::EMPTY) {
 		guess_field_type(value);
 	}
@@ -1890,14 +1861,14 @@ Schema::index_partial_paths(Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::index_partial_paths(<Xapian::Document>, %d)");
 
-	if (specification.partial_prefixes.size() > 1) {
+	if (specification.partial_prefixes.size() > 2) {
 		const auto paths = get_partial_paths(specification.partial_prefixes);
 		for (const auto& path : paths) {
 			doc.add_term(path);
 		}
 	}
 
-	doc.add_term(specification.prefix);
+	doc.add_term(specification.partial_prefix);
 }
 
 

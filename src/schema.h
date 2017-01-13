@@ -413,11 +413,6 @@ class Schema {
 	static std::vector<std::string> get_partial_paths(const std::vector<std::string>& partial_prefixes);
 
 	/*
-	 * Complete partial specifications.
-	 */
-	void complete_partial_specification(const MsgPack& item_value);
-
-	/*
 	 * Complete specification of a namespace.
 	 */
 	void complete_namespace_specification(const MsgPack& item_value);
