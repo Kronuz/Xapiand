@@ -1859,16 +1859,27 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 void
 Schema::index_partial_paths(Xapian::Document& doc)
 {
-	L_CALL(this, "Schema::index_partial_paths(<Xapian::Document>, %d)");
+	L_CALL(this, "Schema::index_partial_paths(<Xapian::Document>)");
 
-	if (specification.partial_prefixes.size() > 2) {
-		const auto paths = get_partial_paths(specification.partial_prefixes);
-		for (const auto& path : paths) {
-			doc.add_term(path);
+	if (specification.flags.inside_namespace) {
+		if (specification.partial_prefixes.size() > 3) {
+			const auto paths = get_partial_paths(specification.partial_prefixes);
+			for (const auto& path : paths) {
+				doc.add_term(path);
+			}
+		} else {
+			doc.add_term(specification.partial_prefix);
 		}
+	} else {
+		if (specification.partial_prefixes.size() > 3) {
+			auto paths = get_partial_paths(specification.partial_prefixes);
+			paths.pop_back(); // Complete path is not index like namespace.
+			for (const auto& path : paths) {
+				doc.add_term(path);
+			}
+		}
+		doc.add_term(specification.prefix);
 	}
-
-	doc.add_term(specification.partial_prefix);
 }
 
 
