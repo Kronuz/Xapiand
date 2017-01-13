@@ -1401,13 +1401,15 @@ Schema::complete_specification(const MsgPack& item_value)
 
 		// Full path is process like normal field.
 		specification.partial_spcs.push_back(std::move(prev_spc));
-	} else if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-		if (specification.flags.dynamic_type) {
-			specification.slot = get_slot(specification.prefix);
-		}
+	} else {
+		if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+			if (specification.flags.dynamic_type) {
+				specification.slot = get_slot(specification.prefix);
+			}
 
-		for (auto& acc_prefix : specification.acc_prefix) {
-			acc_prefix.insert(0, specification.prefix);
+			for (auto& acc_prefix : specification.acc_prefix) {
+				acc_prefix.insert(0, specification.prefix);
+			}
 		}
 
 		specification.partial_spcs.push_back(specification);
