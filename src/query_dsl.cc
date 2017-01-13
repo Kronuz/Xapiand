@@ -416,8 +416,16 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 		if (obj.is_string()) {
 			auto parsed = parse_range(field_spc, obj.as_string());
 			return get_in_query(field_spc, op, parsed.second, wqf, q_flags, is_raw, is_in);
-		} else {
-			return get_in_query(field_spc, op, obj, wqf, q_flags, is_raw, is_in);
+		}
+		return get_in_query(field_spc, op, obj, wqf, q_flags, is_raw, is_in);
+	}
+
+	if (obj.is_string()) {
+		auto val = obj.as_string();
+		if (val.empty()) {
+			return Xapian::Query(field_spc.prefix);
+		} else if (val == "*") {
+			return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.prefix);
 		}
 	}
 
