@@ -866,7 +866,7 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_NAMESPACE  << ": [ ";
+	str << "\t" << RESERVED_PARTIAL_PATHS  << ": [ ";
 	for (const auto& partial_prefix : partial_prefixes) {
 		str << repr(partial_prefix) << " ";
 	}
