@@ -1395,7 +1395,7 @@ Schema::complete_specification(const MsgPack& item_value)
 		validate_required_data(item_value);
 	}
 
-	if (specification.partial_prefixes.size() > 3) {
+	if (specification.partial_prefixes.size() > 2) {
 		required_spc_t prev_spc = specification;
 
 		auto paths = get_partial_paths(specification.partial_prefixes);
@@ -1895,7 +1895,7 @@ Schema::index_partial_paths(Xapian::Document& doc)
 	L_CALL(this, "Schema::index_partial_paths(<Xapian::Document>)");
 
 	if (specification.flags.inside_namespace) {
-		if (specification.partial_prefixes.size() > 3) {
+		if (specification.partial_prefixes.size() > 2) {
 			const auto paths = get_partial_paths(specification.partial_prefixes);
 			for (const auto& path : paths) {
 				doc.add_term(path);
@@ -1904,7 +1904,7 @@ Schema::index_partial_paths(Xapian::Document& doc)
 			doc.add_term(specification.partial_prefix);
 		}
 	} else {
-		if (specification.partial_prefixes.size() > 3) {
+		if (specification.partial_prefixes.size() > 2) {
 			auto paths = get_partial_paths(specification.partial_prefixes);
 			paths.pop_back(); // Complete path is not index like namespace.
 			for (const auto& path : paths) {
