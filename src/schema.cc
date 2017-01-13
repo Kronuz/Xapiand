@@ -866,7 +866,7 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_PARTIAL_PATHS  << ": [ ";
+	str << "\t" << "partial_prefixes"  << ": [ ";
 	for (const auto& partial_prefix : partial_prefixes) {
 		str << repr(partial_prefix) << " ";
 	}
@@ -878,8 +878,9 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_VALUE             << ": " << (value ? value->to_string() : std::string())                  << "\n";
-	str << "\t" << "value_rec"                << ": " << (value_rec ? value_rec->to_string().c_str() : std::string())  << "\n";
+	str << "\t" << RESERVED_VALUE             << ": " << (value     ? value->to_string()     : "null")   << "\n";
+	str << "\t" << "value_rec"                << ": " << (value_rec ? value_rec->to_string() : "null")   << "\n";
+	str << "\t" << RESERVED_SCRIPT            << ": " << (script    ? script->to_string()    : "null")   << "\n";
 
 	str << "\t" << RESERVED_SLOT              << ": " << slot                           << "\n";
 	str << "\t" << RESERVED_TYPE              << ": " << readable_type(sep_types)       << "\n";
@@ -888,7 +889,11 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_PARTIAL_PREFIX    << ": " << repr(partial_prefix)           << "\n";
 	str << "\t" << "local_partial_prefix"     << ": " << repr(local_partial_prefix)     << "\n";
 	str << "\t" << RESERVED_INDEX             << ": " << readable_index(index)          << "\n";
+	str << "\t" << RESERVED_ERROR             << ": " << error                          << "\n";
+
+	str << "\t" << RESERVED_PARTIALS          << ": " << (flags.partials          ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_STORE             << ": " << (flags.store             ? "true" : "false") << "\n";
+	str << "\t" << "parent_store"             << ": " << (flags.parent_store      ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_RECURSIVE         << ": " << (flags.is_recursive      ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_DYNAMIC           << ": " << (flags.dynamic           ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_STRICT            << ": " << (flags.strict            ? "true" : "false") << "\n";
@@ -903,14 +908,24 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_BOOL_TERM         << ": " << (flags.bool_term         ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_NAMESPACE         << ": " << (flags.is_namespace      ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_PARTIAL_PATHS     << ": " << (flags.partial_paths     ? "true" : "false") << "\n";
+	str << "\t" << "optimal"                  << ": " << (flags.optimal           ? "true" : "false") << "\n";
 	str << "\t" << "field_found"              << ": " << (flags.field_found       ? "true" : "false") << "\n";
-	str << "\t" << "dynamic_type"             << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
+	str << "\t" << "field_with_type"          << ": " << (flags.field_with_type   ? "true" : "false") << "\n";
 	str << "\t" << "complete"                 << ": " << (flags.complete          ? "true" : "false") << "\n";
+	str << "\t" << "reserved_slot"            << ": " << (flags.reserved_slot     ? "true" : "false") << "\n";
+	str << "\t" << "dynamic_type"             << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
+	str << "\t" << "inside_namespace"         << ": " << (flags.inside_namespace  ? "true" : "false") << "\n";
+	str << "\t" << "has_bool_term"            << ": " << (flags.has_bool_term     ? "true" : "false") << "\n";
+	str << "\t" << "has_index"                << ": " << (flags.has_index         ? "true" : "false") << "\n";
+	str << "\t" << "has_namespace"            << ": " << (flags.has_namespace     ? "true" : "false") << "\n";
+	str << "\t" << "inside_namespace"         << ": " << (flags.inside_namespace  ? "true" : "false") << "\n";
 
 	str << "\t" << "name"                     << ": " << name                 << "\n";
 	str << "\t" << "meta_name"                << ": " << meta_name            << "\n";
 	str << "\t" << "full_meta_name"           << ": " << full_meta_name       << "\n";
 	str << "\t" << "normalized_name"          << ": " << normalized_name      << "\n";
+	str << "\t" << "aux_stem_lan"             << ": " << aux_stem_lan         << "\n";
+	str << "\t" << "aux_lan"                  << ": " << aux_lan              << "\n";
 
 	str << "}\n";
 
