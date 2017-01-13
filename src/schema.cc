@@ -1150,40 +1150,6 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 
 
 void
-Schema::_process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value)
-{
-	L_CALL(this, "Schema::_process_item_value(<doc>, %s, %s)", data->to_string().c_str(), item_value.to_string().c_str());
-
-	if (item_value.is_null()) {
-		index_partial_paths(doc);
-		if (specification.flags.store) {
-			*data = item_value;
-		}
-		return;
-	}
-
-	if (!specification.flags.complete) {
-		if (specification.flags.inside_namespace) {
-			complete_namespace_specification(item_value);
-		} else {
-			complete_specification(item_value);
-		}
-	}
-
-	bool add_value = true;
-	for (const auto& spc : specification.partial_spcs) {
-		specification.sep_types[2] = spc.sep_types[2];
-		specification.prefix       = spc.prefix;
-		specification.slot         = spc.slot;
-		specification.accuracy     = spc.accuracy;
-		specification.acc_prefix   = spc.acc_prefix;
-		index_item(doc, item_value, *data, add_value);
-		add_value = false;
-	}
-}
-
-
-void
 Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos)
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", data.to_string().c_str(), item_value.to_string().c_str(), pos);
@@ -1226,7 +1192,32 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", data->to_string().c_str(), item_value.to_string().c_str());
 
-	_process_item_value(doc, data, item_value);
+	if (item_value.is_null()) {
+		index_partial_paths(doc);
+		if (specification.flags.store) {
+			*data = item_value;
+		}
+		return;
+	}
+
+	if (!specification.flags.complete) {
+		if (specification.flags.inside_namespace) {
+			complete_namespace_specification(item_value);
+		} else {
+			complete_specification(item_value);
+		}
+	}
+
+	bool add_value = true;
+	for (const auto& spc : specification.partial_spcs) {
+		specification.sep_types[2] = spc.sep_types[2];
+		specification.prefix       = spc.prefix;
+		specification.slot         = spc.slot;
+		specification.accuracy     = spc.accuracy;
+		specification.acc_prefix   = spc.acc_prefix;
+		index_item(doc, item_value, *data, add_value);
+		add_value = false;
+	}
 
 	if (specification.flags.store && data->size() == 1) {
 		*data = (*data)[RESERVED_VALUE];
@@ -1243,7 +1234,32 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offspring
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
-		_process_item_value(doc, data, *val);
+		if (val->is_null()) {
+			index_partial_paths(doc);
+			if (specification.flags.store) {
+				*data = *val;
+			}
+			return;
+		}
+
+		if (!specification.flags.complete) {
+			if (specification.flags.inside_namespace) {
+				complete_namespace_specification(*val);
+			} else {
+				complete_specification(*val);
+			}
+		}
+
+		bool add_value = true;
+		for (const auto& spc : specification.partial_spcs) {
+			specification.sep_types[2] = spc.sep_types[2];
+			specification.prefix       = spc.prefix;
+			specification.slot         = spc.slot;
+			specification.accuracy     = spc.accuracy;
+			specification.acc_prefix   = spc.acc_prefix;
+			index_item(doc, *val, *data, add_value);
+			add_value = false;
+		}
 
 		if (specification.flags.store && !offsprings) {
 			*data = (*data)[RESERVED_VALUE];
