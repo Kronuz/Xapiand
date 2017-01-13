@@ -126,7 +126,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
                     if (v.IsUint())
                         return o.pack_unsigned_int(v.GetUint());
                     if (v.IsInt64())
-                        return o.pack_int64(v.GetUint64());
+                        return o.pack_int64(v.GetInt64());
                     if (v.IsUint64())
                         return o.pack_uint64(v.GetUint64());
                     if (v.IsDouble()||v.IsNumber())
