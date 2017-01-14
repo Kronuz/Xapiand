@@ -384,7 +384,6 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_STEM_STRATEGY,      &Schema::process_stem_strategy   },
 	{ RESERVED_STEM_LANGUAGE,      &Schema::process_stem_language   },
 	{ RESERVED_TYPE,               &Schema::process_type            },
-	{ RESERVED_SLOT,               &Schema::process_slot            },
 	{ RESERVED_BOOL_TERM,          &Schema::process_bool_term       },
 	{ RESERVED_ACCURACY,           &Schema::process_accuracy        },
 	{ RESERVED_PARTIALS,           &Schema::process_partials        },
@@ -475,7 +474,7 @@ const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_dis
 const std::unordered_set<std::string> set_reserved_words({
 	RESERVED_WEIGHT,           RESERVED_POSITION,         RESERVED_SPELLING,
 	RESERVED_POSITIONS,        RESERVED_TYPE,
-	RESERVED_SLOT,             RESERVED_INDEX,            RESERVED_STORE,
+	RESERVED_INDEX,            RESERVED_STORE,
 	RESERVED_RECURSIVE,        RESERVED_DYNAMIC,          RESERVED_STRICT,
 	RESERVED_D_DETECTION,      RESERVED_N_DETECTION,      RESERVED_G_DETECTION,
 	RESERVED_B_DETECTION,      RESERVED_S_DETECTION,      RESERVED_T_DETECTION,
@@ -559,9 +558,9 @@ required_spc_t::flags_t::flags_t()
 	  field_found(true),
 	  field_with_type(false),
 	  complete(false),
-	  reserved_slot(false),
 	  dynamic_type(false),
 	  inside_namespace(false),
+	  dynamic_type_path(false),
 	  has_bool_term(false),
 	  has_index(false),
 	  has_namespace(false),
@@ -899,13 +898,12 @@ specification_t::to_string() const
 	str << "\t" << "field_found"              << ": " << (flags.field_found       ? "true" : "false") << "\n";
 	str << "\t" << "field_with_type"          << ": " << (flags.field_with_type   ? "true" : "false") << "\n";
 	str << "\t" << "complete"                 << ": " << (flags.complete          ? "true" : "false") << "\n";
-	str << "\t" << "reserved_slot"            << ": " << (flags.reserved_slot     ? "true" : "false") << "\n";
 	str << "\t" << "dynamic_type"             << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
 	str << "\t" << "inside_namespace"         << ": " << (flags.inside_namespace  ? "true" : "false") << "\n";
+	str << "\t" << "dynamic_type_path"        << ": " << (flags.dynamic_type_path ? "true" : "false") << "\n";
 	str << "\t" << "has_bool_term"            << ": " << (flags.has_bool_term     ? "true" : "false") << "\n";
 	str << "\t" << "has_index"                << ": " << (flags.has_index         ? "true" : "false") << "\n";
 	str << "\t" << "has_namespace"            << ": " << (flags.has_namespace     ? "true" : "false") << "\n";
-	str << "\t" << "inside_namespace"         << ": " << (flags.inside_namespace  ? "true" : "false") << "\n";
 
 	str << "\t" << "name"                     << ": " << name                 << "\n";
 	str << "\t" << "meta_name"                << ": " << meta_name            << "\n";
@@ -1402,7 +1400,7 @@ Schema::complete_specification(const MsgPack& item_value)
 		specification.partial_spcs.push_back(std::move(prev_spc));
 	} else {
 		if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-			if (specification.flags.dynamic_type) {
+			if (specification.flags.dynamic_type_path) {
 				specification.slot = get_slot(specification.prefix);
 			}
 
@@ -1612,12 +1610,12 @@ Schema::validate_required_data()
 		}
 	} else {
 		// Process RESERVED_SLOT
-		if (specification.slot == Xapian::BAD_VALUENO) {
-			specification.slot = get_slot(specification.prefix);
-		} else if (specification.slot < DB_SLOT_RESERVED && !specification.flags.reserved_slot) {
-			specification.slot += DB_SLOT_RESERVED;
+		if (!specification.flags.dynamic_type_path) {
+			if (specification.slot == Xapian::BAD_VALUENO) {
+				specification.slot = get_slot(specification.prefix);
+			}
+			properties[RESERVED_SLOT] = specification.slot;
 		}
-		properties[RESERVED_SLOT] = specification.slot;
 
 		// If field is namespace fallback to index anything but values.
 		if (!specification.flags.has_index && !specification.partial_prefixes.empty()) {
@@ -2786,6 +2784,7 @@ Schema::detect_dynamic(const std::string& field_name)
 		specification.normalized_name.assign(lower_string(field_name));
 		specification.meta_name.assign(UUID_FIELD_NAME);
 		specification.flags.dynamic_type = true;
+		specification.flags.dynamic_type_path = true;
 	} else {
 		specification.normalized_name.assign(field_name);
 		specification.meta_name.assign(field_name);
@@ -3835,20 +3834,6 @@ Schema::process_accuracy(const std::string& prop_name, const MsgPack& doc_accura
 
 
 void
-Schema::process_slot(const std::string& prop_name, const MsgPack& doc_slot)
-{
-	// RESERVED_SLOT isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_slot(%s)", repr(doc_slot.to_string()).c_str());
-
-	try {
-		specification.slot = static_cast<unsigned>(doc_slot.as_u64());
-	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a positive integer", prop_name.c_str());
-	}
-}
-
-
-void
 Schema::process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
@@ -4122,14 +4107,11 @@ Schema::set_default_spc_id(MsgPack& properties)
 		specification.sep_types[2] = FieldType::TERM;
 	}
 
-	// Process RESERVED_PREFIX
+	// Set default prefix
 	specification.local_prefix = DOCUMENT_ID_TERM_PREFIX;
 
-	// Process RESERVED_SLOT
-	if (specification.slot == Xapian::BAD_VALUENO) {
-		specification.slot = DB_SLOT_ID;
-	}
-	specification.flags.reserved_slot = true;
+	// Set default RESERVED_SLOT
+	specification.slot = DB_SLOT_ID;
 }
 
 
@@ -4152,14 +4134,11 @@ Schema::set_default_spc_ct(MsgPack& properties)
 		specification.sep_types[2] = FieldType::TERM;
 	}
 
-	// Process RESERVED_PREFIX
+	// Set default prefix
 	specification.local_prefix = DOCUMENT_CONTENT_TYPE_TERM_PREFIX;
 
-	// Process RESERVED_SLOT
-	if (specification.slot == Xapian::BAD_VALUENO) {
-		specification.slot = DB_SLOT_CONTENT_TYPE;
-	}
-	specification.flags.reserved_slot = true;
+	// set default slot
+	specification.slot = DB_SLOT_CONTENT_TYPE;
 
 	if (!specification.flags.has_namespace) {
 		specification.flags.is_namespace = true;

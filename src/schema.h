@@ -256,9 +256,9 @@ struct required_spc_t {
 		bool field_found:1;          // Flag if the property is already in the schema saved in the metadata
 		bool field_with_type:1;      // Reserved properties that shouldn't change once set, are flagged as fixed
 		bool complete:1;             // Flag if the specification for a field is complete
-		bool reserved_slot:1;        // Flag if the field can use a reserved slot
-		bool dynamic_type:1;         // Flag if the field is dynamic
-		bool inside_namespace:1;
+		bool dynamic_type:1;         // Flag if the field is dynamic type
+		bool inside_namespace:1;     // Flag if the field is inside a namespace
+		bool dynamic_type_path:1;    // Flag if the path has a dynamic type field
 
 		bool has_bool_term:1;        // Either RESERVED_BOOL_TERM is in the schema or the user sent it
 		bool has_index:1;            // Either RESERVED_INDEX is in the schema or the user sent it
@@ -592,7 +592,6 @@ class Schema {
 	void process_stem_language(const std::string& prop_name, const MsgPack& doc_stem_language);
 	void process_type(const std::string& prop_name, const MsgPack& doc_type);
 	void process_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy);
-	void process_slot(const std::string& prop_name, const MsgPack& doc_slot);
 	void process_index(const std::string& prop_name, const MsgPack& doc_index);
 	void process_store(const std::string& prop_name, const MsgPack& doc_store);
 	void process_recursive(const std::string& prop_name, const MsgPack& doc_recursive);
