@@ -462,7 +462,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 
 const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_dispatch_readable({
 	{ RESERVED_TYPE,            &Schema::readable_type            },
-	{ RESERVED_PREFIX,          &Schema::readable_prefix  },
+	{ RESERVED_PREFIX,          &Schema::readable_prefix          },
 	{ RESERVED_STOP_STRATEGY,   &Schema::readable_stop_strategy   },
 	{ RESERVED_STEM_STRATEGY,   &Schema::readable_stem_strategy   },
 	{ RESERVED_STEM_LANGUAGE,   &Schema::readable_stem_language   },
