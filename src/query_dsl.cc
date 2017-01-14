@@ -221,8 +221,7 @@ QueryDSL::get_value_query(Xapian::Query::op op, const std::string& path, const M
 		}
 
 		try {
-			auto full_q = get_regular_query(field_spc, op, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.as_string()) : obj, wqf, q_flags, is_raw, is_in);
-			return Xapian::Query(Xapian::Query::OP_OR, full_q, get_namespace_query(field_spc, op, (!is_in && is_raw && obj.is_string()) ? Cast::cast(FieldType::EMPTY, obj.as_string()) : obj, wqf, q_flags, is_raw, is_in));
+			return get_regular_query(field_spc, op, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.as_string()) : obj, wqf, q_flags, is_raw, is_in);
 		} catch (const SerialisationError&) {
 			return get_namespace_query(field_spc, op, (!is_in && is_raw && obj.is_string()) ? Cast::cast(FieldType::EMPTY, obj.as_string()) : obj, wqf, q_flags, is_raw, is_in);
 		}
@@ -359,10 +358,10 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 	if (is_in) {
 		if (obj.is_string()) {
 			auto parsed = parse_range(field_spc, obj.as_string());
-			auto spc = Schema::get_namespace_specification(parsed.first, field_spc.partial_prefix);
+			auto spc = Schema::get_namespace_specification(parsed.first, field_spc.prefix);
 			return get_in_query(spc, op, parsed.second, wqf, q_flags, is_raw, is_in);
 		} else {
-			auto spc = Schema::get_namespace_specification(get_in_type(obj), field_spc.partial_prefix);
+			auto spc = Schema::get_namespace_specification(get_in_type(obj), field_spc.prefix);
 			return get_in_query(spc, op, obj, wqf, q_flags, is_raw, is_in);
 		}
 	}
@@ -370,14 +369,14 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 	if (obj.is_string()) {
 		auto val = obj.as_string();
 		if (val.empty()) {
-			return Xapian::Query(field_spc.partial_prefix);
+			return Xapian::Query(field_spc.prefix);
 		} else if (val == "*") {
-			return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.partial_prefix);
+			return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.prefix);
 		}
 	}
 
 	auto ser_type = Serialise::get_type(obj);
-	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), field_spc.partial_prefix);
+	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), field_spc.prefix);
 
 	auto& field_value = std::get<1>(ser_type);
 
@@ -390,9 +389,9 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 			parser.set_stemming_strategy(getQueryParserStemStrategy(spc.stem_strategy));
 			parser.set_stemmer(Xapian::Stem(spc.stem_language));
 			if (spc.flags.bool_term) {
-				parser.add_boolean_prefix("_", spc.partial_prefix + spc.get_ctype());
+				parser.add_boolean_prefix("_", spc.prefix + spc.get_ctype());
 			} else {
-				parser.add_prefix("_", spc.partial_prefix + spc.get_ctype());
+				parser.add_prefix("_", spc.prefix + spc.get_ctype());
 			}
 			return parser.parse_query("_:" + field_value, q_flags);
 		}
@@ -400,14 +399,14 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 			Xapian::QueryParser parser;
 			// parser.set_database(*database->db);
 			if (spc.flags.bool_term) {
-				parser.add_boolean_prefix("_", spc.partial_prefix);
+				parser.add_boolean_prefix("_", spc.prefix);
 			} else {
-				parser.add_prefix("_", spc.partial_prefix);
+				parser.add_prefix("_", spc.prefix);
 			}
 			return parser.parse_query("_:" + field_value, q_flags);
 		}
 		default:
-			return Xapian::Query(prefixed(field_value, spc.partial_prefix, spc.get_ctype()));
+			return Xapian::Query(prefixed(field_value, spc.prefix, spc.get_ctype()));
 	}
 }
 

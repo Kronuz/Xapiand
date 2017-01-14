@@ -229,7 +229,6 @@ MSGPACK_ADD_ENUM(FieldType);
 struct required_spc_t {
 	std::array<FieldType, 3> sep_types;
 	std::string prefix;
-	std::string partial_prefix;
 	Xapian::valueno slot;
 
 	struct flags_t {
@@ -304,7 +303,6 @@ struct required_spc_t {
 struct specification_t : required_spc_t {
 	// Reserved values.
 	std::string local_prefix;
-	std::string local_partial_prefix;
 	std::vector<Xapian::termpos> position;
 	std::vector<Xapian::termcount> weight;
 	std::vector<bool> spelling;
@@ -553,7 +551,6 @@ class Schema {
 	void update_error(const MsgPack& prop_error);
 	void update_namespace(const MsgPack& prop_namespace);
 	void update_partial_paths(const MsgPack& prop_partial_paths);
-	void update_partial_prefix(const MsgPack& prop_partial_prefix);
 
 
 	/*
@@ -564,7 +561,6 @@ class Schema {
 	void write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position);
 	void write_spelling(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_spelling);
 	void write_positions(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_positions);
-	void write_prefix(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_prefix);
 	void write_index(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index);
 	void write_store(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_store);
 	void write_recursive(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recursive);
@@ -628,7 +624,7 @@ class Schema {
 	 */
 
 	static bool readable_type(MsgPack& prop_type, MsgPack& properties);
-	static bool readable_partial_prefix(MsgPack& prop_partial_prefix, MsgPack& properties);
+	static bool readable_prefix(MsgPack& prop_prefix, MsgPack& properties);
 	static bool readable_stop_strategy(MsgPack& prop_stop_strategy, MsgPack& properties);
 	static bool readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack& properties);
 	static bool readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties);
@@ -643,11 +639,10 @@ class Schema {
 	 *   - If full name is namespace
 	 *   - The prefix
 	 *   - The accuracy field_name
-	 *   - The partial prefix
 	 * if the path does not exist or is not valid field name throw a ClientError exception.
 	 */
 
-	std::tuple<const MsgPack&, bool, bool, std::string, std::string, std::string> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
+	std::tuple<const MsgPack&, bool, bool, std::string, std::string> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);
