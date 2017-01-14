@@ -387,7 +387,6 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_SLOT,               &Schema::process_slot            },
 	{ RESERVED_BOOL_TERM,          &Schema::process_bool_term       },
 	{ RESERVED_ACCURACY,           &Schema::process_accuracy        },
-	{ RESERVED_ACC_PREFIX,         &Schema::process_acc_prefix      },
 	{ RESERVED_PARTIALS,           &Schema::process_partials        },
 	{ RESERVED_ERROR,              &Schema::process_error           },
 });
@@ -475,13 +474,13 @@ const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_dis
 
 const std::unordered_set<std::string> set_reserved_words({
 	RESERVED_WEIGHT,           RESERVED_POSITION,         RESERVED_SPELLING,
-	RESERVED_POSITIONS,        RESERVED_TYPE,             RESERVED_PREFIX,
+	RESERVED_POSITIONS,        RESERVED_TYPE,
 	RESERVED_SLOT,             RESERVED_INDEX,            RESERVED_STORE,
 	RESERVED_RECURSIVE,        RESERVED_DYNAMIC,          RESERVED_STRICT,
 	RESERVED_D_DETECTION,      RESERVED_N_DETECTION,      RESERVED_G_DETECTION,
 	RESERVED_B_DETECTION,      RESERVED_S_DETECTION,      RESERVED_T_DETECTION,
 	RESERVED_TM_DETECTION,     RESERVED_U_DETECTION,      RESERVED_BOOL_TERM,
-	RESERVED_ACCURACY,         RESERVED_ACC_PREFIX,       RESERVED_LANGUAGE,
+	RESERVED_ACCURACY,         RESERVED_LANGUAGE,
 	RESERVED_STOP_STRATEGY,    RESERVED_STEM_STRATEGY,    RESERVED_STEM_LANGUAGE,
 	RESERVED_PARTIALS,         RESERVED_ERROR,            RESERVED_NAMESPACE,
 	RESERVED_PARTIAL_PATHS,    RESERVED_VALUE,            RESERVED_SCRIPT,
@@ -1594,12 +1593,8 @@ Schema::validate_required_data()
 
 	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
 	if (set_acc.size()) {
-		if (specification.acc_prefix.empty()) {
-			for (const auto& acc : set_acc) {
-				specification.acc_prefix.push_back(get_prefix(acc));
-			}
-		} else if (specification.acc_prefix.size() != set_acc.size()) {
-			THROW(ClientError, "Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+		for (const auto& acc : set_acc) {
+			specification.acc_prefix.push_back(get_prefix(acc));
 		}
 		specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
 		properties[RESERVED_ACCURACY]   = specification.accuracy;
@@ -3835,32 +3830,6 @@ Schema::process_accuracy(const std::string& prop_name, const MsgPack& doc_accura
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, %s must be array", prop_name.c_str());
-	}
-}
-
-
-void
-Schema::process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_prefix)
-{
-	// RESERVED_ACC_PREFIX isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::process_acc_prefix(%s)", repr(doc_acc_prefix.to_string()).c_str());
-
-	if (doc_acc_prefix.is_array()) {
-		std::unordered_set<std::string> uset_acc_prefix;
-		uset_acc_prefix.reserve(doc_acc_prefix.size());
-		specification.acc_prefix.reserve(doc_acc_prefix.size());
-		try {
-			for (const auto& _acc_prefix : doc_acc_prefix) {
-				auto prefix = _acc_prefix.as_string();
-				if (uset_acc_prefix.insert(prefix).second) {
-					specification.acc_prefix.push_back(std::move(prefix));
-				}
-			}
-		} catch (const msgpack::type_error&) {
-			THROW(ClientError, "Data inconsistency, %s must be an array of strings", prop_name.c_str());
-		}
-	} else {
-		THROW(ClientError, "Data inconsistency, %s must be an array of strings", prop_name.c_str());
 	}
 }
 
