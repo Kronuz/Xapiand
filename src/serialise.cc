@@ -82,19 +82,25 @@ Cast::cast(FieldType type, const std::string& field_value)
 			try {
 				return MsgPack(stox(std::stoll, field_value));
 			} catch (const std::invalid_argument&) {
-				THROW(SerialisationError, "Value %s can not be cast to integer", field_value.c_str());
+				THROW(SerialisationError, "Value %s cannot be cast to integer", field_value.c_str());
+			} catch (const std::out_of_range&) {
+				THROW(SerialisationError, "Value %s cannot be cast to integer", field_value.c_str());
 			}
 		case FieldType::POSITIVE:
 			try {
 				return MsgPack(stox(std::stoull, field_value));
 			} catch (const std::invalid_argument&) {
-				THROW(SerialisationError, "Value %s can not be cast to positive", field_value.c_str());
+				THROW(SerialisationError, "Value %s cannot be cast to positive", field_value.c_str());
+			} catch (const std::out_of_range&) {
+				THROW(SerialisationError, "Value %s cannot be cast to positive", field_value.c_str());
 			}
 		case FieldType::FLOAT:
 			try {
 				return MsgPack(stox(std::stod, field_value));
 			} catch (const std::invalid_argument&) {
-				THROW(SerialisationError, "Value %s can not be cast to float", field_value.c_str());
+				THROW(SerialisationError, "Value %s cannot be cast to float", field_value.c_str());
+			} catch (const std::out_of_range&) {
+				THROW(SerialisationError, "Value %s cannot be cast to float", field_value.c_str());
 			}
 		case FieldType::EMPTY:
 			// Try like INTEGER.
@@ -132,11 +138,17 @@ Cast::integer(const MsgPack& obj)
 		case MsgPack::Type::FLOAT:
 			return obj.as_f64();
 		case MsgPack::Type::STR:
-			return stox(std::stoll, obj.as_string());
+			try {
+				return stox(std::stoll, obj.as_string());
+			} catch (const std::invalid_argument&) {
+				THROW(SerialisationError, "Value %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
+			} catch (const std::out_of_range&) {
+				THROW(SerialisationError, "Value %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
+			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(SerialisationError, "Type %s can not be cast to integer", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -152,11 +164,17 @@ Cast::positive(const MsgPack& obj)
 		case MsgPack::Type::FLOAT:
 			return obj.as_f64();
 		case MsgPack::Type::STR:
-			return stox(std::stoull, obj.as_string());
+			try {
+				return stox(std::stoull, obj.as_string());
+			} catch (const std::invalid_argument&) {
+				THROW(SerialisationError, "Value %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
+			} catch (const std::out_of_range&) {
+				THROW(SerialisationError, "Value %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
+			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(SerialisationError, "Type %s can not be cast to positive", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -172,11 +190,17 @@ Cast::_float(const MsgPack& obj)
 		case MsgPack::Type::FLOAT:
 			return obj.as_f64();
 		case MsgPack::Type::STR:
-			return stox(std::stod, obj.as_string());
+			try{
+				return stox(std::stod, obj.as_string());
+			} catch (const std::invalid_argument&) {
+				THROW(SerialisationError, "Value %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
+			} catch (const std::out_of_range&) {
+				THROW(SerialisationError, "Value %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
+			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(SerialisationError, "Type %s can not be cast to float", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -229,7 +253,7 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(SerialisationError, "Type %s can not be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s cannot be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -245,7 +269,7 @@ Cast::date(const MsgPack& obj)
 		case MsgPack::Type::MAP:
 			return obj;
 		default:
-			THROW(SerialisationError, "Type %s can not be cast to date", MsgPackTypes[toUType(obj.getType())]);
+			THROW(SerialisationError, "Type %s cannot be cast to date", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -1002,7 +1026,7 @@ Cartesian
 Unserialise::cartesian(const std::string& serialised_val)
 {
 	if (serialised_val.size() != SIZE_SERIALISE_CARTESIAN) {
-		THROW(SerialisationError, "Can not unserialise cartesian: %s [%zu]", serialised_val.c_str(), serialised_val.size());
+		THROW(SerialisationError, "Cannot unserialise cartesian: %s [%zu]", serialised_val.c_str(), serialised_val.size());
 	}
 
 	double x = (((unsigned)serialised_val[0] << 24) & 0xFF000000) | (((unsigned)serialised_val[1] << 16) & 0xFF0000) | (((unsigned)serialised_val[2] << 8) & 0xFF00)  | (((unsigned)serialised_val[3]) & 0xFF);
@@ -1016,7 +1040,7 @@ uint64_t
 Unserialise::trixel_id(const std::string& serialised_val)
 {
 	if (serialised_val.size() != SIZE_BYTES_ID) {
-		THROW(SerialisationError, "Can not unserialise trixel_id: %s [%zu]", serialised_val.c_str(), serialised_val.size());
+		THROW(SerialisationError, "Cannot unserialise trixel_id: %s [%zu]", serialised_val.c_str(), serialised_val.size());
 	}
 
 	uint64_t id = (((uint64_t)serialised_val[0] << 48) & 0xFF000000000000) | (((uint64_t)serialised_val[1] << 40) & 0xFF0000000000) | \

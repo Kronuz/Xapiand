@@ -287,9 +287,10 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, const std::string& 
 		auto value = Cast::integer(obj);
 		return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, acc)), field_spc.prefix, toUType(FieldType::INTEGER)));
 	} catch (const InvalidArgument&) {
-	} catch (const OutOfRange&) { }
-
-	THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
+		THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
+	} catch (const OutOfRange&) {
+		THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
+	}
 }
 
 
@@ -304,10 +305,11 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, const std::string& 
 			auto ranges = ewkt.getRanges();
 			return GenerateTerms::geo(ranges, { nivel }, { field_spc.prefix });
 		} catch (const InvalidArgument&) {
-		} catch (const OutOfRange&) { }
+			THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
+		} catch (const OutOfRange&) {
+			THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
+		}
 	}
-
-	THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
 }
 
 
