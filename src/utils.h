@@ -55,6 +55,8 @@
 			return ret; \
 		} catch (const std::out_of_range&) { \
 			THROW(OutOfRange, "Out of range value: %s", str.c_str()); \
+		} catch (const std::invalid_argument&) { \
+			THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
 		} \
 	}(s)
 
