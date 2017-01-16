@@ -112,7 +112,12 @@ SchedulerQueue::clean()
 void
 SchedulerQueue::add(const TaskType& task, unsigned long long key)
 {
-	queue.add(ctx, key, task);
+	try {
+		queue.add(ctx, key, task);
+	} catch (const std::out_of_range&) {
+		clean();
+		queue.add(ctx, key, task);
+	}
 }
 
 
