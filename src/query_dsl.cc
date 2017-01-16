@@ -310,6 +310,8 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, const std::string& 
 			THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
 		}
 	}
+
+	THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
 }
 
 
