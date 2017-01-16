@@ -330,32 +330,15 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, Xapian::Query::op 
 		THROW(QueryDslError, "Accuracy is only indexed like terms, searching by range is not supported");
 	}
 
-	if (field_spc.flags.inside_namespace) {
-		// Check if accuracy field is date.
-		try {
-			return get_acc_date_query(field_spc, field_accuracy, obj);
-		} catch (const QueryDslError&) { }
-
-		// Check if accuracy field is num.
-		try {
+	switch (field_spc.get_type()) {
+		case FieldType::INTEGER:
 			return get_acc_num_query(field_spc, field_accuracy, obj);
-		} catch (const QueryDslError&) { }
-
-		// Accuracy field must be geo.
-		return get_acc_geo_query(field_spc, field_accuracy, obj);
-	} else {
-		switch (field_spc.get_type()) {
-			case FieldType::INTEGER:
-			case FieldType::POSITIVE:
-			case FieldType::FLOAT:
-				return get_acc_num_query(field_spc, field_accuracy, obj);
-			case FieldType::DATE:
-				return get_acc_date_query(field_spc, field_accuracy, obj);
-			case FieldType::GEO:
-				return get_acc_geo_query(field_spc, field_accuracy, obj);
-			default:
-				THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
-		}
+		case FieldType::DATE:
+			return get_acc_date_query(field_spc, field_accuracy, obj);
+		case FieldType::GEO:
+			return get_acc_geo_query(field_spc, field_accuracy, obj);
+		default:
+			THROW(Error, "Type: %s does not handle accuracy terms", Serialise::type(field_spc.get_type()).c_str());
 	}
 }
 
