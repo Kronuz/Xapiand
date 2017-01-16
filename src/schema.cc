@@ -4456,27 +4456,30 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 	}
 
 	try {
-		const auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
+		auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
 
 		res.flags.inside_namespace = std::get<2>(info);
+		res.prefix = std::move(std::get<3>(info));
 
-		if (res.flags.inside_namespace) {
-			res.prefix = std::move(std::get<3>(info));
-		} else {
+		auto& acc_field = std::get<4>(info);
+		if (!acc_field.empty()) {
+			res.sep_types[2] = std::get<5>(info);
+			return std::make_pair(res, std::move(acc_field));
+		}
+
+		if (!res.flags.inside_namespace) {
 			const auto& properties = std::get<0>(info);
 
 			res.sep_types[2] = (FieldType)properties.at(RESERVED_TYPE).at(2).as_u64();
 			if (res.sep_types[2] == FieldType::EMPTY) {
-				return std::make_pair(res, std::string());
+				return std::make_pair(std::move(res), std::string());
 			}
-
-			res.prefix = std::move(std::get<3>(info));
 
 			if (is_range) {
 				if (std::get<1>(info)) {
 					res.slot = get_slot(res.prefix);
 				} else {
-					res.slot = properties.at(RESERVED_SLOT).as_u64();
+					res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 				}
 
 				// Get required specification.
@@ -4528,7 +4531,6 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 				}
 			}
 		}
-		return std::make_pair(std::move(res), std::get<4>(info));
 	} catch (const ClientError& exc) {
 		L_EXC(this, "ERROR: %s", exc.what());
 	} catch (const std::out_of_range& exc) {
@@ -4554,11 +4556,22 @@ Schema::get_slot_field(const std::string& field_name) const
 		auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
 		res.flags.inside_namespace = std::get<2>(info);
 
+		auto& acc_field = std::get<4>(info);
+		if (!acc_field.empty()) {
+			THROW(ClientError, "Field name: %s is an accuracy, therefore does not have slot", repr(field_name).c_str());
+		}
+
 		if (res.flags.inside_namespace) {
-			res = specification_t::get_global(FieldType::TERM);
+			res.sep_types[2] = FieldType::TERM;
 			res.slot = get_slot(std::get<3>(info));
 		} else {
 			const auto& properties = std::get<0>(info);
+
+			if (std::get<1>(info)) {
+				res.slot = get_slot(std::get<3>(info));
+			} else {
+				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
+			}
 
 			const auto& sep_types = properties.at(RESERVED_TYPE);
 			res.sep_types[2] = (FieldType)sep_types.at(2).as_u64();
@@ -4580,13 +4593,6 @@ Schema::get_slot_field(const std::string& field_name) const
 					break;
 				default:
 					break;
-			}
-
-			if (std::get<1>(info)) {
-				// If field is dynamic calculate slot.
-				res.slot = get_slot(std::get<3>(info));
-			} else {
-				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 			}
 		}
 	} catch (const ClientError& exc) {
@@ -4651,7 +4657,7 @@ Schema::get_data_global(FieldType field_type)
 }
 
 
-std::tuple<const MsgPack&, bool, bool, std::string, std::string>
+std::tuple<const MsgPack&, bool, bool, std::string, std::string, FieldType>
 Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
 {
 	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
@@ -4665,20 +4671,22 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 	const auto it_e = _split.end();
 	const auto it_b = _split.begin();
 	for (auto it = it_b; it != it_e; ++it) {
-		const auto& field_name = *it;
+		auto& field_name = *it;
 		if (!is_valid(field_name) || field_name == UUID_FIELD_NAME) {
 			// Check if the field_name is accuracy.
 			if (it == it_b) {
 				if (!map_dispatch_set_default_spc.count(field_name)) {
 					if (++it == it_e) {
-						prefix.append(get_acc_prefix(field_name));
-						return std::forward_as_tuple(*subproperties, dynamic_type_path, true, std::move(prefix), std::move(field_name));
+						auto acc_data = get_acc_data(field_name);
+						prefix.append(acc_data.first);
+						return std::forward_as_tuple(*subproperties, dynamic_type_path, false, std::move(prefix), std::move(field_name), acc_data.second);
 					}
 					THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 				}
 			} else if (++it == it_e) {
-				prefix.append(get_acc_prefix(field_name));
-				return std::forward_as_tuple(*subproperties, dynamic_type_path, false, std::move(prefix), std::move(field_name));
+				auto acc_data = get_acc_data(field_name);
+				prefix.append(acc_data.first);
+				return std::forward_as_tuple(*subproperties, dynamic_type_path, false, std::move(prefix), std::move(field_name), acc_data.second);
 			} else {
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 			}
@@ -4717,17 +4725,18 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 						prefix.append(get_prefix(partial_field));
 					}
 				} else if (++it == it_e) {
-					prefix.append(get_acc_prefix(partial_field));
-					return std::forward_as_tuple(*subproperties, dynamic_type_path, true, std::move(prefix), std::move(partial_field));
+					auto acc_data = get_acc_data(partial_field);
+					prefix.append(acc_data.first);
+					return std::forward_as_tuple(*subproperties, dynamic_type_path, true, std::move(prefix), std::move(partial_field), acc_data.second);
 				} else {
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(partial_field).c_str());
 				}
 			}
-			return std::forward_as_tuple(*subproperties, dynamic_type_path, true, std::move(prefix), std::string());
+			return std::forward_as_tuple(*subproperties, dynamic_type_path, true, std::move(prefix), std::string(), FieldType::EMPTY);
 		}
 	}
 
-	return std::forward_as_tuple(*subproperties, dynamic_type_path, false, std::move(prefix), std::string());
+	return std::forward_as_tuple(*subproperties, dynamic_type_path, false, std::move(prefix), std::string(), FieldType::EMPTY);
 }
 
 
