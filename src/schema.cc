@@ -2633,6 +2633,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 					specification.prefix.append(specification.local_prefix);
 					process_properties_document(properties, object, data, doc, tasks, offsprings);
 					update_partial_prefixes();
+					return *properties;
 				} catch (const std::out_of_range&) { }
 			}
 
