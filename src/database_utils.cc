@@ -37,6 +37,7 @@
 #include "rapidjson/document.h"             // for Document, GenericDocument
 #include "rapidjson/error/en.h"             // for GetParseError_En
 #include "rapidjson/error/error.h"          // for ParseResult
+#include "schema.h"                         // for FieldType
 #include "utils.h"                          // for random_int
 
 
@@ -65,9 +66,9 @@ std::string prefixed(const std::string& term, const std::string& field_prefix, c
 }
 
 
-Xapian::valueno get_slot(const std::string& field_prefix)
+Xapian::valueno get_slot(const std::string& field_prefix, FieldType field_type)
 {
-	auto slot = static_cast<Xapian::valueno>(xxh64::hash(field_prefix));
+	auto slot = static_cast<Xapian::valueno>(xxh64::hash(field_prefix + (char)(field_type)));
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
 	} else if (slot == Xapian::BAD_VALUENO) {

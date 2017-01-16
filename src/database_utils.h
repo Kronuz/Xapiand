@@ -165,6 +165,9 @@ constexpr int DB_NOWAL        = 0x40; // Disable open wal file
 constexpr int DB_NOSTORAGE    = 0x80; // Disable separate data storage file for the database
 
 
+enum class FieldType : uint8_t;
+
+
 struct similar_field_t {
 	unsigned n_rset;
 	unsigned n_eset;
@@ -219,7 +222,7 @@ inline std::string get_hashed(const std::string& name) {
 
 
 std::string prefixed(const std::string& term, const std::string& field_prefix, char field_type);
-Xapian::valueno get_slot(const std::string& field_prefix);
+Xapian::valueno get_slot(const std::string& field_prefix, FieldType field_type);
 std::string get_prefix(unsigned long long field_number);
 std::string get_prefix(const std::string& field_name);
 long long read_mastery(const std::string& dir, bool force);
