@@ -1051,7 +1051,7 @@ Schema::restart_namespace_specification()
 void
 Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL(this, "Schema::index_object(%s, %s, <MsgPack*>, <Xapian::Document>, %s)", repr(parent_properties->to_string()).c_str(), repr(object.to_string()).c_str(), repr(name).c_str());
+	L_CALL(this, "Schema::index_object(%s, %s, %s, <Xapian::Document>, %s)", repr(parent_properties->to_string()).c_str(), repr(object.to_string()).c_str(), repr(parent_data->to_string()).c_str(), repr(name).c_str());
 
 	if (name.empty()) {
 		THROW(ClientError, "Field name must not be empty");
