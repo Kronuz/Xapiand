@@ -248,10 +248,16 @@ inline static std::string readable_type(const std::array<FieldType, 3>& sep_type
 static std::string get_acc_prefix(const std::string& field_acc) {
 	auto it = map_acc_date.find(field_acc.substr(1));
 	if (it == map_acc_date.end()) {
-		if (field_acc.find("_geo") == 0) {
-			return get_prefix(stox(std::stoull, field_acc.substr(4)));
-		} else {
-			return get_prefix(stox(std::stoull, field_acc.substr(1)));
+		try {
+			if (field_acc.find("_geo") == 0) {
+				return get_prefix(stox(std::stoull, field_acc.substr(4)));
+			} else {
+				return get_prefix(stox(std::stoull, field_acc.substr(1)));
+			}
+		} catch (const InvalidArgument&) {
+			THROW(ClientError, "The field name: %s is not valid", repr(field_acc).c_str());
+		} catch (const OutOfRange&) {
+			THROW(ClientError, "The field name: %s is not valid", repr(field_acc).c_str());
 		}
 	} else {
 		return get_prefix(toUType(it->second));
