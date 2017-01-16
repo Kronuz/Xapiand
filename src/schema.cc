@@ -4468,57 +4468,26 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 			res.prefix = std::move(std::get<3>(info));
 
 			if (is_range) {
-				res.slot = get_slot(res.prefix);
+				if (std::get<1>(info)) {
+					res.slot = get_slot(res.prefix);
+				} else {
+					res.slot = properties.at(RESERVED_SLOT).as_u64();
+				}
 
 				// Get required specification.
 				switch (res.sep_types[2]) {
 					case FieldType::GEO:
 						res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
 						res.error = properties.at(RESERVED_ERROR).as_f64();
-						if (std::get<1>(info)) {
-							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-								res.accuracy.push_back(acc.as_u64());
-								res.acc_prefix.push_back(res.prefix + get_prefix(res.accuracy.back()));
-							}
-						} else {
-							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-								res.accuracy.push_back(acc.as_u64());
-							}
-							for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
-								res.acc_prefix.push_back(acc_p.as_string());
-							}
-						}
-						break;
 					case FieldType::FLOAT:
 					case FieldType::INTEGER:
 					case FieldType::POSITIVE:
-						if (std::get<1>(info)) {
-							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-								res.accuracy.push_back(acc.as_u64());
-								res.acc_prefix.push_back(res.prefix + get_prefix(res.accuracy.back()));
-							}
-						} else {
-							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-								res.accuracy.push_back(acc.as_u64());
-							}
-							for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
-								res.acc_prefix.push_back(acc_p.as_string());
-							}
-						}
-						break;
 					case FieldType::DATE:
-						if (std::get<1>(info)) {
-							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-								res.accuracy.push_back(acc.as_u64());
-								res.acc_prefix.push_back(res.prefix + get_prefix(res.accuracy.back()));
-							}
-						} else {
-							for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-								res.accuracy.push_back(acc.as_u64());
-							}
-							for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
-								res.acc_prefix.push_back(acc_p.as_string());
-							}
+						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+							res.accuracy.push_back(acc.as_u64());
+						}
+						for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
+							res.acc_prefix.push_back(res.prefix + acc_p.as_string());
 						}
 						break;
 					case FieldType::TEXT:
