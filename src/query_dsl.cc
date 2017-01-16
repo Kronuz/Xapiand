@@ -232,6 +232,8 @@ QueryDSL::get_value_query(Xapian::Query::op op, const std::string& path, const M
 Xapian::Query
 QueryDSL::get_acc_date_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj)
 {
+	L_CALL(this, "QueryDSL::get_acc_date_query(<required_spc_t>, %s, %s)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
+
 	auto it = map_acc_date.find(field_accuracy.substr(1));
 	if (it != map_acc_date.end()) {
 		Datetime::tm_t tm = Datetime::to_tm_t(obj);
@@ -282,6 +284,8 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, const std::string&
 Xapian::Query
 QueryDSL::get_acc_num_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj)
 {
+	L_CALL(this, "QueryDSL::get_acc_num_query(<required_spc_t>, %s, %s)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
+
 	try {
 		auto acc = stox(std::stoull, field_accuracy.substr(1));
 		auto value = Cast::integer(obj);
@@ -297,6 +301,8 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, const std::string& 
 Xapian::Query
 QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj)
 {
+	L_CALL(this, "QueryDSL::get_acc_geo_query(<required_spc_t>, %s, %s)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
+
 	if (field_accuracy.find("_geo") == 0) {
 		try {
 			auto nivel = stox(std::stoull, field_accuracy.substr(4));

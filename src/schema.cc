@@ -4726,6 +4726,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 					continue;
 				} catch (const std::out_of_range&) { }
 			} catch (const SerialisationError&) { }
+
 			// It is a search using partial prefix.
 			int depth_partials = std::distance(it, it_e);
 			if (depth_partials > LIMIT_PARTIAL_PATHS_DEPTH) {
