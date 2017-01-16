@@ -1352,10 +1352,10 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 				specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], path));
 			}
 		} else {
+			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
 			for (const auto& path : paths) {
-				required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
 				spc.prefix = path;
-				specification.partial_spcs.push_back(std::move(spc));
+				specification.partial_spcs.push_back(spc);
 			}
 		}
 	} else if (toUType(specification.index & TypeIndex::VALUES)) {
@@ -1394,10 +1394,10 @@ Schema::complete_specification(const MsgPack& item_value)
 				specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], path));
 			}
 		} else {
+			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
 			for (const auto& path : paths) {
-				required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
 				spc.prefix.assign(path);
-				specification.partial_spcs.push_back(std::move(spc));
+				specification.partial_spcs.push_back(spc);
 			}
 		}
 
