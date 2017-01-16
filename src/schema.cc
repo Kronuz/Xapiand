@@ -242,17 +242,17 @@ inline static std::string readable_type(const std::array<FieldType, 3>& sep_type
 
 
 /*
- *  Functions for generating the prefixes given an accuracy.
+ *  Function to generate a prefix given an field accuracy.
  */
 
-static std::string get_acc_prefix(const std::string& field_acc) {
+static std::pair<std::string, FieldType> get_acc_data(const std::string& field_acc) {
 	auto it = map_acc_date.find(field_acc.substr(1));
 	if (it == map_acc_date.end()) {
 		try {
 			if (field_acc.find("_geo") == 0) {
-				return get_prefix(stox(std::stoull, field_acc.substr(4)));
+				return std::make_pair(get_prefix(stox(std::stoull, field_acc.substr(4))), FieldType::GEO);
 			} else {
-				return get_prefix(stox(std::stoull, field_acc.substr(1)));
+				return std::make_pair(get_prefix(stox(std::stoull, field_acc.substr(1))), FieldType::INTEGER);
 			}
 		} catch (const InvalidArgument&) {
 			THROW(ClientError, "The field name: %s is not valid", repr(field_acc).c_str());
@@ -260,7 +260,7 @@ static std::string get_acc_prefix(const std::string& field_acc) {
 			THROW(ClientError, "The field name: %s is not valid", repr(field_acc).c_str());
 		}
 	} else {
-		return get_prefix(toUType(it->second));
+		return std::make_pair(get_prefix(toUType(it->second)), FieldType::DATE);
 	}
 }
 
