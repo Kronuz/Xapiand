@@ -265,6 +265,10 @@ static std::pair<std::string, FieldType> get_acc_data(const std::string& field_a
 }
 
 
+/*
+ *  Function to generate a prefix given an uuid.
+ */
+
 static std::string get_dynamic_prefix(const std::string& uuid) {
 	return Serialise::uuid(uuid);
 }
