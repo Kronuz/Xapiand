@@ -140,7 +140,7 @@ class Xapiand(object):
         self.host = host
         self.port = port
         self.commit = commit
-        self.prefix = '{}/'.format(prefix) if prefix else None
+        self.prefix = '{}/'.format(prefix) if prefix else ''
         if default_accept is None:
             default_accept = 'application/json' if msgpack is None else 'application/x-msgpack'
         self.default_accept = default_accept
@@ -159,9 +159,7 @@ class Xapiand(object):
 
         if not isinstance(index, (tuple, list)):
             index = index.split(',')
-        if self.prefix:
-            index = [self.prefix + i for i in index]
-        index = ','.join(index)
+        index = ','.join(self.prefix + i.strip('/') for i in index)
 
         nodename = '@{}'.format(nodename) if nodename else ''
 
