@@ -1831,16 +1831,31 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	if (specification.flags.store && add_value) {
 		// Add value to data.
 		auto& data_value = data[RESERVED_VALUE];
-		switch (data_value.getType()) {
-			case MsgPack::Type::UNDEFINED:
-				data_value = value;
-				break;
-			case MsgPack::Type::ARRAY:
-				data_value.push_back(value);
-				break;
-			default:
-				data_value = MsgPack({ data_value, value });
-				break;
+		if (specification.sep_types[2] == FieldType::UUID) {
+			// Compact uuid value
+			switch (data_value.getType()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = Unserialise::uuid(Serialise::MsgPack(specification, value));
+					break;
+				case MsgPack::Type::ARRAY:
+					data_value.push_back(Unserialise::uuid(Serialise::MsgPack(specification, value)));
+					break;
+				default:
+					data_value = MsgPack({ data_value, Unserialise::uuid(Serialise::MsgPack(specification, value)) });
+					break;
+			}
+		} else {
+			switch (data_value.getType()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = value;
+					break;
+				case MsgPack::Type::ARRAY:
+					data_value.push_back(value);
+					break;
+				default:
+					data_value = MsgPack({ data_value, value });
+					break;
+			}
 		}
 	}
 }
@@ -1859,21 +1874,40 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 		if (specification.flags.store && add_values) {
 			// Add value to data.
 			auto& data_value = data[RESERVED_VALUE];
-			switch (data_value.getType()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = values;
-					break;
-				case MsgPack::Type::ARRAY:
-					for (const auto& value : values) {
-						data_value.push_back(value);
-					}
-					break;
-				default:
-					data_value = MsgPack({ data_value });
-					for (const auto& value : values) {
-						data_value.push_back(value);
-					}
-					break;
+			if (specification.sep_types[2] == FieldType::UUID) {
+				// Compact uuid value
+				switch (data_value.getType()) {
+					case MsgPack::Type::UNDEFINED:
+						data_value = MsgPack(MsgPack::Type::ARRAY);
+					case MsgPack::Type::ARRAY:
+						for (const auto& value : values) {
+							data_value.push_back(Unserialise::uuid(Serialise::MsgPack(specification, value)));
+						}
+						break;
+					default:
+						data_value = MsgPack({ data_value });
+						for (const auto& value : values) {
+							data_value.push_back(Unserialise::uuid(Serialise::MsgPack(specification, value)));
+						}
+						break;
+				}
+			} else {
+				switch (data_value.getType()) {
+					case MsgPack::Type::UNDEFINED:
+						data_value = values;
+						break;
+					case MsgPack::Type::ARRAY:
+						for (const auto& value : values) {
+							data_value.push_back(value);
+						}
+						break;
+					default:
+						data_value = MsgPack({ data_value });
+						for (const auto& value : values) {
+							data_value.push_back(value);
+						}
+						break;
+				}
 			}
 		}
 	} else {
