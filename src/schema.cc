@@ -1086,14 +1086,13 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 	switch (object.getType()) {
 		case MsgPack::Type::MAP: {
 			TaskVector tasks;
-			bool offsprings = false;
 			MsgPack* data = nullptr;
 
-			properties = &get_subproperties(properties, object, data, doc, tasks, offsprings);
+			properties = &get_subproperties(properties, object, data, doc, tasks);
 
 			data = specification.flags.store ? &(*parent_data)[name] : parent_data;
 
-			process_item_value(doc, data, offsprings);
+			process_item_value(doc, data, tasks.size());
 
 			const auto spc_object = std::move(specification);
 			for (auto& task : tasks) {
@@ -1134,17 +1133,16 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 		switch (item.getType()) {
 			case MsgPack::Type::MAP: {
 				TaskVector tasks;
-				bool offsprings = false;
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
 				MsgPack* data_pos = nullptr;
 				auto subproperties = properties;
 
-				subproperties = &get_subproperties(subproperties, item, data_pos, doc, tasks, offsprings);
+				subproperties = &get_subproperties(subproperties, item, data_pos, doc, tasks);
 
 				data_pos = specification.flags.store ? &(*data)[pos] : data;
 
-				process_item_value(doc, data_pos, offsprings);
+				process_item_value(doc, data_pos, tasks.size());
 
 				const auto spc_item = std::move(specification);
 				for (auto& task : tasks) {
@@ -1248,9 +1246,9 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 
 
 inline void
-Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, bool offsprings)
+Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, size_t offsprings)
 {
-	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", repr(data->to_string()).c_str(), offsprings ? "true" : "false");
+	L_CALL(this, "Schema::process_item_value(<doc>, %s, %zu)", repr(data->to_string()).c_str(), offsprings);
 
 	set_type_to_object(offsprings);
 
@@ -1443,9 +1441,9 @@ Schema::complete_specification(const MsgPack& item_value)
 
 
 inline void
-Schema::set_type_to_object(bool offsprings)
+Schema::set_type_to_object(size_t offsprings)
 {
-	L_CALL(this, "Schema::set_type_to_object(%d)", offsprings);
+	L_CALL(this, "Schema::set_type_to_object(%zu)", offsprings);
 
 	if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		auto& _types = get_mutable()[RESERVED_TYPE];
@@ -2498,20 +2496,19 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 	if (obj_schema.is_map()) {
 		specification.name.assign(name);
 		TaskVector tasks;
-		bool offsprings = false;
 		auto properties = parent_properties;
 
-		properties = &get_subproperties(properties, obj_schema, tasks, offsprings);
+		properties = &get_subproperties(properties, obj_schema, tasks);
 
 		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
 			validate_required_data();
 		}
 
-		if (offsprings && specification.flags.inside_namespace) {
+		if (tasks.size() && specification.flags.inside_namespace) {
 			THROW(ClientError, "An namespace object can not have children in Schema");
 		}
 
-		set_type_to_object(offsprings);
+		set_type_to_object(tasks.size());
 
 		const auto spc_object = std::move(specification);
 		for (auto& task : tasks) {
@@ -2568,9 +2565,9 @@ Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_na
 
 
 const MsgPack&
-Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings)
+Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, %s, <MsgPack*>, <Xapian::Document>, <tasks>, bool&)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::get_subproperties(%s, %s, <MsgPack*>, <Xapian::Document>, <tasks>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	const auto field_names = Split::split(specification.name, DB_OFFSPRING_UNION);
 
@@ -2584,7 +2581,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 			specification.prefix.append(specification.local_prefix);
 			update_partial_prefixes();
 		}
-		process_properties_document(properties, object, data, doc, tasks, offsprings);
+		process_properties_document(properties, object, data, doc, tasks);
 		detect_dynamic(*it_last);
 		specification.local_prefix.assign(specification.flags.dynamic_type ? get_dynamic_prefix(specification.normalized_name) : get_prefix(specification.normalized_name));
 		specification.prefix.append(specification.local_prefix);
@@ -2629,7 +2626,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
 				} else {
 					detect_dynamic(n_field_name);
-					add_field(mut_properties, properties, object, data, doc, tasks, offsprings);
+					add_field(mut_properties, properties, object, data, doc, tasks);
 				}
 				return *mut_properties;
 			}
@@ -2642,7 +2639,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 		restart_specification();
 		try {
 			get_subproperties(properties, field_name, field_name);
-			process_properties_document(properties, object, data, doc, tasks, offsprings);
+			process_properties_document(properties, object, data, doc, tasks);
 			update_partial_prefixes();
 		} catch (const std::out_of_range&) {
 			detect_dynamic(field_name);
@@ -2651,7 +2648,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 					get_subproperties(properties, specification.meta_name, specification.normalized_name);
 					specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
 					specification.prefix.append(specification.local_prefix);
-					process_properties_document(properties, object, data, doc, tasks, offsprings);
+					process_properties_document(properties, object, data, doc, tasks);
 					update_partial_prefixes();
 					return *properties;
 				} catch (const std::out_of_range&) { }
@@ -2659,7 +2656,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable();
-			add_field(mut_properties, properties, object, data, doc, tasks, offsprings);
+			add_field(mut_properties, properties, object, data, doc, tasks);
 			return *mut_properties;
 		}
 	}
@@ -2669,9 +2666,9 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 
 
 const MsgPack&
-Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings)
+Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, %s, <tasks>, bool&)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::get_subproperties(%s, %s, <tasks>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	auto field_names = Split::split(specification.name, DB_OFFSPRING_UNION);
 
@@ -2703,7 +2700,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 			} else {
 				specification.normalized_name = specification.meta_name;
 				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-				add_field(mut_subprop, properties, object, tasks, offsprings);
+				add_field(mut_subprop, properties, object, tasks);
 			}
 			// Found field always false for adding inheritable specification.
 			specification.flags.field_found = false;
@@ -2718,7 +2715,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 	restart_specification();
 	try {
 		get_subproperties(properties, field_name, field_name);
-		process_properties_document(properties, object, tasks, offsprings);
+		process_properties_document(properties, object, tasks);
 		// Found field always false for adding inheritable specification.
 		specification.flags.field_found = false;
 		return *properties;
@@ -2730,7 +2727,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 			specification.meta_name = field_name;
 			specification.normalized_name = specification.meta_name;
 			specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-			add_field(mut_subprop, properties, object, tasks, offsprings);
+			add_field(mut_subprop, properties, object, tasks);
 		}
 		// Found field always false for adding inheritable specification.
 		specification.flags.field_found = false;
@@ -2820,9 +2817,9 @@ Schema::detect_dynamic(const std::string& field_name)
 
 
 void
-Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings)
+Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks)
 {
-	L_CALL(this, "Schema::process_properties_document(%s, %s, <MsgPack*>, <Xapian::Document>, <TaskVector>, <bool>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::process_properties_document(%s, %s, <MsgPack*>, <Xapian::Document>, <TaskVector>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	static const auto ddit_e = map_dispatch_document.end();
 	if (specification.flags.field_with_type) {
@@ -2832,7 +2829,6 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 			if (ddit == ddit_e) {
 				if (!set_reserved_words.count(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
-					offsprings = true;
 				}
 			} else {
 				(this->*ddit->second)(str_key, object.at(str_key));
@@ -2848,7 +2844,6 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 				if (wtit == wtit_e) {
 					if (!set_reserved_words.count(str_key)) {
 						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
-						offsprings = true;
 					}
 				} else {
 					(this->*wtit->second)(str_key, object.at(str_key));
@@ -2862,9 +2857,9 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 
 
 void
-Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings)
+Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks)
 {
-	L_CALL(this, "Schema::process_properties_document(%s, %s, <TaskVector>, <bool>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::process_properties_document(%s, %s, <TaskVector>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	static const auto ddit_e = map_dispatch_document.end();
 	if (specification.flags.field_with_type) {
@@ -2874,7 +2869,6 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 			if (ddit == ddit_e) {
 				if (!set_reserved_words.count(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(object.at(str_key)), std::move(str_key)));
-					offsprings = true;
 				}
 			} else {
 				(this->*ddit->second)(str_key, object.at(str_key));
@@ -2890,7 +2884,6 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 				if (wtit == wtit_e) {
 					if (!set_reserved_words.count(str_key)) {
 						tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(object.at(str_key)), std::move(str_key)));
-						offsprings = true;
 					}
 				} else {
 					(this->*wtit->second)(str_key, object.at(str_key));
@@ -2904,9 +2897,9 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 
 
 void
-Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings)
+Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks)
 {
-	L_CALL(this, "Schema::add_field(%s, %s, %s, <MsgPack*>, <Xapian::Document>, <TaskVector>, <bool>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::add_field(%s, %s, %s, <MsgPack*>, <Xapian::Document>, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
@@ -2936,7 +2929,6 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 				const auto wtit = map_dispatch_without_type.find(str_key);
 				if (wtit == wtit_e) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
-					offsprings = true;
 				} else {
 					(this->*wtit->second)(str_key, object.at(str_key));
 				}
@@ -2971,9 +2963,9 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 
 
 void
-Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings)
+Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, TaskVector& tasks)
 {
-	L_CALL(this, "Schema::add_field(%s, %s, %s, <TaskVector>, <bool>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::add_field(%s, %s, %s, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
@@ -3003,7 +2995,6 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 				const auto wtit = map_dispatch_without_type.find(str_key);
 				if (wtit == wtit_e) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(object.at(str_key)), std::move(str_key)));
-					offsprings = true;
 				} else {
 					(this->*wtit->second)(str_key, object.at(str_key));
 				}

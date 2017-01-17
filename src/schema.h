@@ -402,7 +402,7 @@ class Schema {
 
 	void process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
 	void process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value);
-	void process_item_value(Xapian::Document& doc, MsgPack*& data, bool offsprings);
+	void process_item_value(Xapian::Document& doc, MsgPack*& data, size_t offsprings);
 
 
 	/*
@@ -423,7 +423,7 @@ class Schema {
 	/*
 	 * Set type to object in properties.
 	 */
-	void set_type_to_object(bool offsprings);
+	void set_type_to_object(size_t offsprings);
 
 	/*
 	 * Sets type to array in properties.
@@ -485,8 +485,8 @@ class Schema {
 	 * Gets the properties stored in the schema as well as those sent by the user.
 	 */
 
-	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings);
-	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings);
+	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks);
+	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks);
 	const MsgPack& get_subproperties(const MsgPack*& properties);
 
 
@@ -499,16 +499,16 @@ class Schema {
 	 * Update specification using object's properties.
 	 */
 
-	void process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings);
-	void process_properties_document(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings);
+	void process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks);
+	void process_properties_document(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks);
 
 
 	/*
 	 * Add new field to properties.
 	 */
 
-	void add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, bool& offsprings);
-	void add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, TaskVector& tasks, bool& offsprings);
+	void add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks);
+	void add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, TaskVector& tasks);
 	void add_field(MsgPack*& mut_properties);
 
 
