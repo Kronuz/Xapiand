@@ -767,6 +767,30 @@ specification_t::operator=(specification_t&& o) noexcept
 }
 
 
+FieldType
+specification_t::global_type(FieldType field_type)
+{
+	switch (field_type) {
+		case FieldType::FLOAT:
+		case FieldType::INTEGER:
+		case FieldType::POSITIVE:
+		case FieldType::BOOLEAN:
+		case FieldType::DATE:
+		case FieldType::GEO:
+		case FieldType::UUID:
+			return field_type;
+
+		case FieldType::TERM:
+		case FieldType::TEXT:
+		case FieldType::STRING:
+			return FieldType::TEXT;
+
+		default:
+			THROW(ClientError, "Type: '%u' is an unknown type", field_type);
+	}
+}
+
+
 const specification_t&
 specification_t::get_global(FieldType field_type)
 {
@@ -783,18 +807,6 @@ specification_t::get_global(FieldType field_type)
 			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::POSITIVE, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
-		case FieldType::TERM: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
-			return spc;
-		}
-		case FieldType::TEXT: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
-			return spc;
-		}
-		case FieldType::STRING: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
-			return spc;
-		}
 		case FieldType::BOOLEAN: {
 			static const specification_t spc(DB_SLOT_BOOLEAN, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
@@ -809,6 +821,12 @@ specification_t::get_global(FieldType field_type)
 		}
 		case FieldType::UUID: {
 			static const specification_t spc(DB_SLOT_UUID, FieldType::UUID, default_spc.accuracy, default_spc.acc_prefix);
+			return spc;
+		}
+		case FieldType::TERM:
+		case FieldType::TEXT:
+		case FieldType::STRING: {
+			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
 		default:
@@ -1028,13 +1046,8 @@ Schema::restart_namespace_specification()
 {
 	L_CALL(this, "Schema::restart_namespace_specification()");
 
-	specification.flags.partials         = default_spc.flags.partials;
-	specification.error                  = default_spc.error;
-
-	specification.language               = default_spc.language;
-	specification.stop_strategy          = default_spc.stop_strategy;
-	specification.stem_strategy          = default_spc.stem_strategy;
-	specification.stem_language          = default_spc.stem_language;
+	specification.flags.bool_term        = default_spc.flags.bool_term;
+	specification.flags.has_bool_term    = default_spc.flags.has_bool_term;
 
 	specification.flags.field_with_type  = default_spc.flags.field_with_type;
 	specification.flags.complete         = default_spc.flags.complete;
@@ -1356,7 +1369,8 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 				specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], path));
 			}
 		} else {
-			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
+			required_spc_t spc;
+			spc.sep_types[2] = specification_t::global_type(specification.sep_types[2]);
 			for (const auto& path : paths) {
 				spc.prefix = path;
 				specification.partial_spcs.push_back(spc);
@@ -1365,7 +1379,8 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 	} else if (toUType(specification.index & TypeIndex::VALUES)) {
 		specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], specification.prefix));
 	} else {
-		required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
+		required_spc_t spc;
+		spc.sep_types[2] = specification_t::global_type(specification.sep_types[2]);
 		spc.prefix = specification.prefix;
 		specification.partial_spcs.push_back(std::move(spc));
 	}
@@ -1391,16 +1406,18 @@ Schema::complete_specification(const MsgPack& item_value)
 		required_spc_t prev_spc = specification;
 
 		auto paths = get_partial_paths(specification.partial_prefixes);
-		specification.partial_spcs.reserve(paths.size() + 1);
+		specification.partial_spcs.reserve(paths.size());
+		paths.pop_back();
 
 		if (toUType(specification.index & TypeIndex::VALUES)) {
 			for (const auto& path : paths) {
 				specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], path));
 			}
 		} else {
-			required_spc_t spc = specification_t::get_global(specification.sep_types[2]);
+			required_spc_t spc;
+			spc.sep_types[2] = specification_t::global_type(specification.sep_types[2]);
 			for (const auto& path : paths) {
-				spc.prefix.assign(path);
+				spc.prefix = path;
 				specification.partial_spcs.push_back(spc);
 			}
 		}

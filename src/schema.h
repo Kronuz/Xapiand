@@ -339,6 +339,7 @@ struct specification_t : required_spc_t {
 
 	std::string to_string() const;
 
+	static FieldType global_type(FieldType field_type);
 	static const specification_t& get_global(FieldType field_type);
 };
 
