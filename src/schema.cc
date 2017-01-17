@@ -1013,29 +1013,31 @@ Schema::restart_specification()
 {
 	L_CALL(this, "Schema::restart_specification()");
 
-	specification.flags.partials         = default_spc.flags.partials;
-	specification.error                  = default_spc.error;
+	specification.flags.partials             = default_spc.flags.partials;
+	specification.error                      = default_spc.error;
 
-	specification.language               = default_spc.language;
-	specification.stop_strategy          = default_spc.stop_strategy;
-	specification.stem_strategy          = default_spc.stem_strategy;
-	specification.stem_language          = default_spc.stem_language;
+	specification.language                   = default_spc.language;
+	specification.stop_strategy              = default_spc.stop_strategy;
+	specification.stem_strategy              = default_spc.stem_strategy;
+	specification.stem_language              = default_spc.stem_language;
 
-	specification.flags.bool_term        = default_spc.flags.bool_term;
-	specification.flags.has_bool_term    = default_spc.flags.has_bool_term;
-	specification.flags.has_index        = default_spc.flags.has_index;
-	specification.flags.has_namespace    = default_spc.flags.has_namespace;
-	specification.flags.field_with_type  = default_spc.flags.field_with_type;
-	specification.flags.complete         = default_spc.flags.complete;
-	specification.flags.dynamic_type     = default_spc.flags.dynamic_type;
+	specification.flags.bool_term            = default_spc.flags.bool_term;
+	specification.flags.has_bool_term        = default_spc.flags.has_bool_term;
+	specification.flags.has_index            = default_spc.flags.has_index;
+	specification.flags.has_namespace        = default_spc.flags.has_namespace;
+	specification.flags.has_partial_paths    = default_spc.flags.has_partial_paths;
 
-	specification.sep_types              = default_spc.sep_types;
-	specification.local_prefix           = default_spc.local_prefix;
-	specification.slot                   = default_spc.slot;
-	specification.accuracy               = default_spc.accuracy;
-	specification.acc_prefix             = default_spc.acc_prefix;
-	specification.aux_stem_lan           = default_spc.aux_stem_lan;
-	specification.aux_lan                = default_spc.aux_lan;
+	specification.flags.field_with_type      = default_spc.flags.field_with_type;
+	specification.flags.complete             = default_spc.flags.complete;
+	specification.flags.dynamic_type         = default_spc.flags.dynamic_type;
+
+	specification.sep_types                  = default_spc.sep_types;
+	specification.local_prefix               = default_spc.local_prefix;
+	specification.slot                       = default_spc.slot;
+	specification.accuracy                   = default_spc.accuracy;
+	specification.acc_prefix                 = default_spc.acc_prefix;
+	specification.aux_stem_lan               = default_spc.aux_stem_lan;
+	specification.aux_lan                    = default_spc.aux_lan;
 
 	specification.partial_spcs.clear();
 }
