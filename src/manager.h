@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -34,9 +34,9 @@
 #include "endpoint_resolver.h"
 #include "ev/ev++.h"
 #include "length.h"
+#include "stats.h"
 #include "threadpool.h"
 #include "worker.h"
-#include "stats.h"
 
 
 #define UNKNOWN_REGION -1
@@ -83,6 +83,7 @@ class XapiandServer;
 
 
 extern void sig_exit(int sig);
+
 
 inline std::string serialise_node_id(uint64_t node_id) {
 	return base64::encode(serialise_length(node_id));
