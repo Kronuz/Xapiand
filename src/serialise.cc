@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,25 +22,26 @@
 
 #include "serialise.h"
 
-#include <ctype.h>                 // for toupper
-#include <math.h>                  // for round
-#include <stdio.h>                 // for sprintf
-#include <strings.h>               // for strcasecmp
-#include <time.h>                  // for tm, gmtime, time_t
-#include <algorithm>               // for move
-#include <functional>              // for cref
-#include <stdexcept>               // for out_of_range, invalid_argument
+#include <ctype.h>                                    // for toupper
+#include <math.h>                                     // for round
+#include <stdio.h>                                    // for sprintf
+#include <strings.h>                                  // for strcasecmp
+#include <time.h>                                     // for tm, gmtime, time_t
+#include <algorithm>                                  // for move
+#include <functional>                                 // for cref
+#include <stdexcept>                                  // for out_of_range, invalid_argument
 
-#include "exception.h"             // for SerialisationError, MSG_Serialisat...
-#include "geo/cartesian.h"         // for Cartesian
-#include "geo/htm.h"               // for MAX_SIZE_NAME, SIZE_BYTES_ID, range_t
-#include "geo/wkt_parser.h"        // for EWKT_Parser, EWKTError
-#include "guid/guid.h"             // for Guid
-#include "length.h"                // for serialise_length, unserialise_length
-#include "msgpack.h"               // for MsgPack, object::object, type_error
-#include "schema.h"                // for FieldType, FieldType::TERM, Fiel...
-#include "stl_serialise.h"         // for CartesianUSet, RangeList
-#include "utils.h"                 // for toUType, stox, repr
+#include "cppcodec/base64_default_url_unpadded.hpp"   // for base64 namespace
+#include "exception.h"                                // for SerialisationError, MSG_Serialisat...
+#include "geo/cartesian.h"                            // for Cartesian
+#include "geo/htm.h"                                  // for MAX_SIZE_NAME, SIZE_BYTES_ID, range_t
+#include "geo/wkt_parser.h"                           // for EWKT_Parser, EWKTError
+#include "guid/guid.h"                                // for Guid
+#include "length.h"                                   // for serialise_length, unserialise_length
+#include "msgpack.h"                                  // for MsgPack, object::object, type_error
+#include "schema.h"                                   // for FieldType, FieldType::TERM, Fiel...
+#include "stl_serialise.h"                            // for CartesianUSet, RangeList
+#include "utils.h"                                    // for toUType, stox, repr
 
 
 MsgPack
@@ -809,12 +810,53 @@ Serialise::positive(const std::string& field_value)
 std::string
 Serialise::uuid(const std::string& field_value)
 {
-	if (!isUUID(field_value)) {
-		THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
-	}
+	switch (field_value.length()) {
+		case SIZE_CURLY_BRACES_UUID: {
+			if (field_value.front() == '{' && field_value.back() == '}') {
+				auto _field_value = field_value;
+				// Remove curly braces.
+				_field_value.erase(0, 1);
+				_field_value.pop_back();
+				if (_field_value[8] != '-' || _field_value[13] != '-' || _field_value[18] != '-' || _field_value[23] != '-') {
+					THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
+				}
+				for (size_t i = 0; i < SIZE_UUID; ++i) {
+					if (!std::isxdigit(_field_value.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
+						THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
+					}
+				}
+				Guid guid(_field_value);
+				return guid.serialise();
+			}
 
-	Guid guid(field_value);
-	return guid.serialise();
+			THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
+		}
+
+		case SIZE_UUID: {
+			if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
+				THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
+			}
+			for (size_t i = 0; i < SIZE_UUID; ++i) {
+				if (!std::isxdigit(field_value.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
+					THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
+				}
+			}
+			Guid guid(field_value);
+			return guid.serialise();
+		}
+
+		default: {
+			if (field_value.length() >= 3 && field_value.length() <= MAX_SIZE_BASE64_COMPACT_UUID && field_value.front() == '{' && field_value.back() == '}') {
+				// Remove curly braces.
+				auto _field_value = field_value;
+				_field_value.erase(0, 1);
+				_field_value.pop_back();
+				return base64::decode<std::string>(_field_value);
+			}
+
+			THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
+		}
+	}
 }
 
 

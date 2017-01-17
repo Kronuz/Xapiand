@@ -119,7 +119,9 @@ constexpr uint32_t DOUBLE2INT               = 1000000000;
 constexpr uint32_t MAXDOU2INT               =  999999999;
 
 
-constexpr uint8_t SIZE_UUID = 36;
+constexpr uint8_t SIZE_UUID                     = 36;
+constexpr uint8_t SIZE_CURLY_BRACES_UUID        = 38;
+constexpr uint8_t MAX_SIZE_BASE64_COMPACT_UUID  = 24;
 
 
 class Cartesian;
@@ -176,19 +178,40 @@ namespace Serialise {
 		return !bool_term && field_value.find(' ') != std::string::npos;
 	}
 
-	inline static bool isUUID(const std::string& field_name) noexcept {
-		if (field_name.length() != SIZE_UUID) {
-			return false;
-		}
-		if (field_name[8] != '-' || field_name[13] != '-' || field_name[18] != '-' || field_name[23] != '-') {
-			return false;
-		}
-		for (size_t i = 0; i < SIZE_UUID; ++i) {
-			if (!std::isxdigit(field_name.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
+	inline static bool isUUID(const std::string& field_value) noexcept {
+		switch (field_value.length()) {
+			case SIZE_CURLY_BRACES_UUID:
+				// Remove curly braces.
+				if (field_value.front() == '{' && field_value.back() == '}') {
+					if (field_value[9] != '-' || field_value[14] != '-' || field_value[19] != '-' || field_value[24] != '-') {
+						return false;
+					}
+					for (size_t i = 0; i < SIZE_UUID; ++i) {
+						if (!std::isxdigit(field_value.at(i)) && i != 9 && i != 14 && i != 19 && i != 24) {
+							return false;
+						}
+					}
+					return true;
+				}
 				return false;
-			}
+
+			case SIZE_UUID:
+				if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
+					return false;
+				}
+				for (size_t i = 0; i < SIZE_UUID; ++i) {
+					if (!std::isxdigit(field_value.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
+						return false;
+					}
+				}
+				return true;
+
+			default:
+				if (field_value.length() >= 3 && field_value.length() <= MAX_SIZE_BASE64_COMPACT_UUID && field_value.front() == '{' && field_value.back() == '}') {
+					return true;
+				}
+				return false;
 		}
-		return true;
 	}
 
 	/*
