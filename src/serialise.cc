@@ -393,9 +393,7 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 std::string
 Serialise::string(const required_spc_t& field_spc, const std::string& field_value)
 {
-	auto field_type = field_spc.get_type();
-
-	switch (field_type) {
+	switch (field_spc.get_type()) {
 		case FieldType::DATE:
 			return date(field_value);
 		case FieldType::BOOLEAN:
@@ -409,7 +407,7 @@ Serialise::string(const required_spc_t& field_spc, const std::string& field_valu
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
-			THROW(SerialisationError, "Type: %s is not string", type(field_type).c_str());
+			THROW(SerialisationError, "Type: %s is not string", type(field_spc.get_type()).c_str());
 	}
 }
 
