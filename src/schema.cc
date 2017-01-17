@@ -4361,26 +4361,45 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		MsgPack data;
 		TaskVector tasks;
 
-		auto prop_ptr = mut_schema ? &mut_schema->at(RESERVED_SCHEMA) : &schema->at(RESERVED_SCHEMA);
+		auto properties = mut_schema ? &mut_schema->at(RESERVED_SCHEMA) : &schema->at(RESERVED_SCHEMA);
 		auto data_ptr = &data;
 
-		if (*prop_ptr) {
-			update_specification(*prop_ptr);
+		if (*properties) {
+			update_specification(*properties);
+			static const auto ddit_e = map_dispatch_document.end();
+			for (const auto& item_key : object) {
+				auto str_key = item_key.as_string();
+				const auto ddit = map_dispatch_document.find(str_key);
+				if (ddit == ddit_e) {
+					if (!set_reserved_words.count(str_key)) {
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
+					}
+				} else {
+					(this->*ddit->second)(str_key, object.at(str_key));
+				}
+			}
 		} else {
 			specification.flags.field_found = false;
-		}
-
-		static const auto ddit_e = map_dispatch_document.end();
-		for (const auto& item_key : object) {
-			auto str_key = item_key.as_string();
-			const auto ddit = map_dispatch_document.find(str_key);
-			if (ddit == ddit_e) {
-				if (!set_reserved_words.count(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(prop_ptr), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
+			auto mut_properties = &get_mutable();
+			static const auto wpit_e = map_dispatch_write_properties.end();
+			static const auto ddit_e = map_dispatch_document.end();
+			for (const auto& item_key : object) {
+				auto str_key = item_key.as_string();
+				const auto wpit = map_dispatch_write_properties.find(str_key);
+				if (wpit == wpit_e) {
+					const auto ddit = map_dispatch_document.find(str_key);
+					if (ddit == ddit_e) {
+						if (!set_reserved_words.count(str_key)) {
+							tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
+						}
+					} else {
+						(this->*ddit->second)(str_key, object.at(str_key));
+					}
+				} else {
+					(this->*wpit->second)(*mut_properties, str_key, object.at(str_key), true);
 				}
-			} else {
-				(this->*ddit->second)(str_key, object.at(str_key));
 			}
+			properties = &*mut_properties;
 		}
 
 		restart_specification();
@@ -4418,7 +4437,6 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		specification.flags.field_found = false;
 
 		static const auto wpit_e = map_dispatch_write_properties.end();
-
 		for (const auto& item_key : obj_schema) {
 			auto str_key = item_key.as_string();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
