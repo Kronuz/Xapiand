@@ -1086,7 +1086,6 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 	switch (object.getType()) {
 		case MsgPack::Type::MAP: {
 			TaskVector tasks;
-			tasks.reserve(object.size());
 			bool offsprings = false;
 			MsgPack* data = nullptr;
 
@@ -1135,7 +1134,6 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 		switch (item.getType()) {
 			case MsgPack::Type::MAP: {
 				TaskVector tasks;
-				tasks.reserve(item.size());
 				bool offsprings = false;
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
@@ -2500,7 +2498,6 @@ Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_sche
 	if (obj_schema.is_map()) {
 		specification.name.assign(name);
 		TaskVector tasks;
-		tasks.reserve(obj_schema.size());
 		bool offsprings = false;
 		auto properties = parent_properties;
 
@@ -4360,7 +4357,6 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 
 		MsgPack data;
 		TaskVector tasks;
-
 		auto properties = mut_schema ? &mut_schema->at(RESERVED_SCHEMA) : &schema->at(RESERVED_SCHEMA);
 		auto data_ptr = &data;
 
