@@ -60,7 +60,7 @@ const std::regex find_collection_re("[\\s]*(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIR
  *
  * This parser do not accept EMPTY geometries and
  * polygons are not required to be repeated first coordinate to end like EWKT.
-*/
+ */
 EWKT_Parser::EWKT_Parser(const std::string& EWKT, bool _partials, double _error)
 	: error(_error),
 	  partials(_partials)
