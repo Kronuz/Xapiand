@@ -2947,7 +2947,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 				(this->*ddit->second)(str_key, object.at(str_key));
 			}
 		} else {
-			(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
+			(this->*wpit->second)(*mut_properties, str_key, object.at(str_key), false);
 		}
 	}
 
@@ -3014,7 +3014,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 				(this->*ddit->second)(str_key, object.at(str_key));
 			}
 		} else {
-			(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
+			(this->*wpit->second)(*mut_properties, str_key, object.at(str_key), false);
 		}
 	}
 
@@ -3416,7 +3416,7 @@ Schema::update_partial_paths(const MsgPack& prop_partial_paths)
 
 
 void
-Schema::write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position)
+Schema::write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position, bool)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
 	L_CALL(this, "Schema::write_position(%s)", repr(doc_position.to_string()).c_str());
@@ -3427,7 +3427,7 @@ Schema::write_position(MsgPack& properties, const std::string& prop_name, const 
 
 
 void
-Schema::write_weight(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_weight)
+Schema::write_weight(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_weight, bool)
 {
 	// RESERVED_WEIGHT property is heritable and can change between documents.
 	L_CALL(this, "Schema::write_weight(%s)", repr(doc_weight.to_string()).c_str());
@@ -3438,7 +3438,7 @@ Schema::write_weight(MsgPack& properties, const std::string& prop_name, const Ms
 
 
 void
-Schema::write_spelling(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_spelling)
+Schema::write_spelling(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_spelling, bool)
 {
 	// RESERVED_SPELLING is heritable and can change between documents.
 	L_CALL(this, "Schema::write_spelling(%s)", repr(doc_spelling.to_string()).c_str());
@@ -3449,7 +3449,7 @@ Schema::write_spelling(MsgPack& properties, const std::string& prop_name, const 
 
 
 void
-Schema::write_positions(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_positions)
+Schema::write_positions(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_positions, bool)
 {
 	// RESERVED_POSITIONS is heritable and can change between documents.
 	L_CALL(this, "Schema::write_positions(%s)", repr(doc_positions.to_string()).c_str());
@@ -3460,7 +3460,7 @@ Schema::write_positions(MsgPack& properties, const std::string& prop_name, const
 
 
 void
-Schema::write_index(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index)
+Schema::write_index(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index, bool)
 {
 	// RESERVED_INDEX is heritable and can change.
 	L_CALL(this, "Schema::write_index(%s)", repr(doc_index.to_string()).c_str());
@@ -3471,7 +3471,7 @@ Schema::write_index(MsgPack& properties, const std::string& prop_name, const Msg
 
 
 void
-Schema::write_store(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_store)
+Schema::write_store(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_store, bool)
 {
 	L_CALL(this, "Schema::write_store(%s)", repr(doc_store.to_string()).c_str());
 
@@ -3486,7 +3486,7 @@ Schema::write_store(MsgPack& properties, const std::string& prop_name, const Msg
 
 
 void
-Schema::write_recursive(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recursive)
+Schema::write_recursive(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recursive, bool)
 {
 	L_CALL(this, "Schema::write_recursive(%s)", repr(doc_recursive.to_string()).c_str());
 
@@ -3501,7 +3501,7 @@ Schema::write_recursive(MsgPack& properties, const std::string& prop_name, const
 
 
 void
-Schema::write_dynamic(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic)
+Schema::write_dynamic(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic, bool)
 {
 	// RESERVED_DYNAMIC is heritable but can't change.
 	L_CALL(this, "Schema::write_dynamic(%s)", repr(doc_dynamic.to_string()).c_str());
@@ -3516,7 +3516,7 @@ Schema::write_dynamic(MsgPack& properties, const std::string& prop_name, const M
 
 
 void
-Schema::write_strict(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_strict)
+Schema::write_strict(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_strict, bool)
 {
 	// RESERVED_STRICT is heritable but can't change.
 	L_CALL(this, "Schema::write_strict(%s)", repr(doc_strict.to_string()).c_str());
@@ -3531,7 +3531,7 @@ Schema::write_strict(MsgPack& properties, const std::string& prop_name, const Ms
 
 
 void
-Schema::write_d_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_d_detection)
+Schema::write_d_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_d_detection, bool)
 {
 	// RESERVED_D_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::write_d_detection(%s)", repr(doc_d_detection.to_string()).c_str());
@@ -3546,7 +3546,7 @@ Schema::write_d_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_n_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_n_detection)
+Schema::write_n_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_n_detection, bool)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::write_n_detection(%s)", repr(doc_n_detection.to_string()).c_str());
@@ -3561,7 +3561,7 @@ Schema::write_n_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_g_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_g_detection)
+Schema::write_g_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_g_detection, bool)
 {
 	// RESERVED_G_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::write_g_detection(%s)", repr(doc_g_detection.to_string()).c_str());
@@ -3576,7 +3576,7 @@ Schema::write_g_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_b_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_b_detection)
+Schema::write_b_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_b_detection, bool)
 {
 	// RESERVED_B_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::write_b_detection(%s)", repr(doc_b_detection.to_string()).c_str());
@@ -3591,7 +3591,7 @@ Schema::write_b_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_s_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_s_detection)
+Schema::write_s_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_s_detection, bool)
 {
 	// RESERVED_S_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::write_s_detection(%s)", repr(doc_s_detection.to_string()).c_str());
@@ -3606,7 +3606,7 @@ Schema::write_s_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_t_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_t_detection)
+Schema::write_t_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_t_detection, bool)
 {
 	// RESERVED_T_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::write_t_detection(%s)", repr(doc_t_detection.to_string()).c_str());
@@ -3621,7 +3621,7 @@ Schema::write_t_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_tm_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection)
+Schema::write_tm_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection, bool)
 {
 	// RESERVED_TM_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::write_tm_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
@@ -3636,7 +3636,7 @@ Schema::write_tm_detection(MsgPack& properties, const std::string& prop_name, co
 
 
 void
-Schema::write_u_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_u_detection)
+Schema::write_u_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_u_detection, bool)
 {
 	// RESERVED_U_DETECTION is heritable and can't change.
 	L_CALL(this, "Schema::write_u_detection(%s)", repr(doc_u_detection.to_string()).c_str());
@@ -3651,7 +3651,7 @@ Schema::write_u_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace)
+Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace, bool is_root)
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
 	L_CALL(this, "Schema::write_namespace(%s)", repr(doc_namespace.to_string()).c_str());
@@ -3662,8 +3662,10 @@ Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const
 		if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
 			specification.flags.partial_paths = specification.flags.partial_paths || !default_spc.flags.optimal;
 		}
-		properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
 		specification.flags.has_namespace = true;
+		if (!is_root) {
+			properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
+		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -3671,7 +3673,7 @@ Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const
 
 
 void
-Schema::write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths)
+Schema::write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths, bool)
 {
 	L_CALL(this, "Schema::write_partial_paths(%s)", repr(doc_partial_paths.to_string()).c_str());
 
@@ -4354,13 +4356,14 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 	L_CALL(this, "Schema::index(%s, <doc>)", repr(object.to_string()).c_str());
 
 	try {
+		specification = default_spc;
+
 		MsgPack data;
 		TaskVector tasks;
-		tasks.reserve(object.size());
+
 		auto prop_ptr = mut_schema ? &mut_schema->at(RESERVED_SCHEMA) : &schema->at(RESERVED_SCHEMA);
 		auto data_ptr = &data;
 
-		specification = default_spc;
 		if (*prop_ptr) {
 			update_specification(*prop_ptr);
 		} else {
@@ -4407,20 +4410,24 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 	L_CALL(this, "Schema::write_schema(%s, %d)", repr(obj_schema.to_string()).c_str(), replace);
 
 	try {
+		specification = default_spc;
+
 		TaskVector tasks;
-		tasks.reserve(obj_schema.size());
-		auto prop_ptr = replace ? &clear() : &schema->at(RESERVED_SCHEMA);
+		auto mut_properties = replace ? &clear() : &get_mutable();
+		const auto* properties = &*mut_properties;
 		specification.flags.field_found = false;
-		static const auto ddit_e = map_dispatch_document.end();
+
+		static const auto wpit_e = map_dispatch_write_properties.end();
+
 		for (const auto& item_key : obj_schema) {
 			auto str_key = item_key.as_string();
-			const auto ddit = map_dispatch_document.find(str_key);
-			if (ddit == ddit_e) {
+			const auto wpit = map_dispatch_write_properties.find(str_key);
+			if (wpit == wpit_e) {
 				if (!set_reserved_words.count(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(prop_ptr), std::ref(obj_schema.at(str_key)), std::move(str_key)));
+					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 				}
 			} else {
-				(this->*ddit->second)(str_key, obj_schema.at(str_key));
+				(this->*wpit->second)(*mut_properties, str_key, obj_schema.at(str_key), true);
 			}
 		}
 

@@ -355,7 +355,7 @@ using dispatch_index = void (*)(Xapian::Document&, std::string&&, const specific
 
 class Schema {
 	using dispatch_set_default_spc   = void (Schema::*)(MsgPack&);
-	using dispatch_write_reserved    = void (Schema::*)(MsgPack&, const std::string&, const MsgPack&);
+	using dispatch_write_reserved    = void (Schema::*)(MsgPack&, const std::string&, const MsgPack&, bool);
 	using dispatch_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
 	using dispatch_update_reserved   = void (Schema::*)(const MsgPack&);
 	using dispatch_readable          = bool (*)(MsgPack&, MsgPack&);
@@ -558,25 +558,25 @@ class Schema {
 	 * Functions for reserved words that are in document and need to be written in schema properties.
 	 */
 
-	void write_weight(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_weight);
-	void write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position);
-	void write_spelling(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_spelling);
-	void write_positions(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_positions);
-	void write_index(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index);
-	void write_store(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_store);
-	void write_recursive(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recursive);
-	void write_dynamic(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic);
-	void write_strict(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_strict);
-	void write_d_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_d_detection);
-	void write_n_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_n_detection);
-	void write_g_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_g_detection);
-	void write_b_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_b_detection);
-	void write_s_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_s_detection);
-	void write_t_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_t_detection);
-	void write_tm_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection);
-	void write_u_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_u_detection);
-	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
-	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
+	void write_weight(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_weight, bool is_root);
+	void write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position, bool is_root);
+	void write_spelling(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_spelling, bool is_root);
+	void write_positions(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_positions, bool is_root);
+	void write_index(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index, bool is_root);
+	void write_store(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_store, bool is_root);
+	void write_recursive(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recursive, bool is_root);
+	void write_dynamic(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic, bool is_root);
+	void write_strict(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_strict, bool is_root);
+	void write_d_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_d_detection, bool is_root);
+	void write_n_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_n_detection, bool is_root);
+	void write_g_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_g_detection, bool is_root);
+	void write_b_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_b_detection, bool is_root);
+	void write_s_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_s_detection, bool is_root);
+	void write_t_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_t_detection, bool is_root);
+	void write_tm_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection, bool is_root);
+	void write_u_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_u_detection, bool is_root);
+	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace, bool is_root);
+	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths, bool is_root);
 
 
 	/*
