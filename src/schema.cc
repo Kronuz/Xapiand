@@ -4172,6 +4172,10 @@ Schema::set_default_spc_ct(MsgPack& properties)
 		specification.flags.has_namespace = true;
 		properties[RESERVED_NAMESPACE] = true;
 	}
+
+	if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
+		specification.flags.partial_paths = specification.flags.partial_paths || !default_spc.flags.optimal;
+	}
 }
 
 
