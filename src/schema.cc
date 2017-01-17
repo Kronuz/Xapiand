@@ -266,15 +266,6 @@ static std::pair<std::string, FieldType> get_acc_data(const std::string& field_a
 
 
 /*
- *  Function to generate a prefix given an uuid.
- */
-
-static std::string get_dynamic_prefix(const std::string& uuid) {
-	return Serialise::uuid(uuid);
-}
-
-
-/*
  * Default acc_prefixes for global values.
  */
 
@@ -2577,13 +2568,13 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 		restart_namespace_specification();
 		for (auto it = field_names.begin(); it != it_last; ++it) {
 			detect_dynamic(*it);
-			specification.local_prefix.assign(specification.flags.dynamic_type ? get_dynamic_prefix(specification.normalized_name) : get_prefix(specification.normalized_name));
+			specification.local_prefix.assign(specification.flags.dynamic_type ? specification.normalized_name : get_prefix(specification.normalized_name));
 			specification.prefix.append(specification.local_prefix);
 			update_partial_prefixes();
 		}
 		process_properties_document(properties, object, data, doc, tasks);
 		detect_dynamic(*it_last);
-		specification.local_prefix.assign(specification.flags.dynamic_type ? get_dynamic_prefix(specification.normalized_name) : get_prefix(specification.normalized_name));
+		specification.local_prefix.assign(specification.flags.dynamic_type ? specification.normalized_name : get_prefix(specification.normalized_name));
 		specification.prefix.append(specification.local_prefix);
 		update_partial_prefixes();
 		specification.flags.inside_namespace = true;
@@ -2602,7 +2593,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 				if (specification.flags.dynamic_type) {
 					try {
 						get_subproperties(properties, specification.meta_name, specification.normalized_name);
-						specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
+						specification.local_prefix.assign(specification.normalized_name);
 						specification.prefix.append(specification.local_prefix);
 						update_partial_prefixes();
 						continue;
@@ -2646,7 +2637,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 			if (specification.flags.dynamic_type) {
 				try {
 					get_subproperties(properties, specification.meta_name, specification.normalized_name);
-					specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
+					specification.local_prefix.assign(specification.normalized_name);
 					specification.prefix.append(specification.local_prefix);
 					process_properties_document(properties, object, data, doc, tasks);
 					update_partial_prefixes();
@@ -2750,7 +2741,7 @@ Schema::get_subproperties(const MsgPack*& properties)
 		for (auto it = _split.begin(); it != it_e; ++it) {
 			specification.flags.dynamic_type = false;
 			detect_dynamic(*it);
-			specification.local_prefix.assign(specification.flags.dynamic_type ? get_dynamic_prefix(specification.normalized_name) : get_prefix(specification.normalized_name));
+			specification.local_prefix.assign(specification.flags.dynamic_type ? specification.normalized_name : get_prefix(specification.normalized_name));
 			specification.prefix.append(specification.local_prefix);
 			update_partial_prefixes();
 		}
@@ -2770,7 +2761,7 @@ Schema::get_subproperties(const MsgPack*& properties)
 				if (specification.flags.dynamic_type) {
 					try {
 						get_subproperties(properties, specification.meta_name, specification.normalized_name);
-						specification.local_prefix.assign(get_dynamic_prefix(specification.normalized_name));
+						specification.local_prefix.assign(specification.normalized_name);
 						specification.prefix.append(specification.local_prefix);
 						update_partial_prefixes();
 						continue;
@@ -2803,12 +2794,13 @@ Schema::detect_dynamic(const std::string& field_name)
 {
 	L_CALL(this, "Schema::detect_dynamic(%s)", repr(field_name).c_str());
 
-	if (Serialise::isUUID(field_name)) {
-		specification.normalized_name.assign(lower_string(field_name));
+	try {
+		auto ser_uuid = Serialise::uuid(field_name);
+		specification.normalized_name.assign(ser_uuid);
 		specification.meta_name.assign(UUID_FIELD_NAME);
 		specification.flags.dynamic_type = true;
 		specification.flags.dynamic_type_path = true;
-	} else {
+	} catch (const SerialisationError&) {
 		specification.normalized_name.assign(field_name);
 		specification.meta_name.assign(field_name);
 		specification.flags.dynamic_type = false;
@@ -2949,7 +2941,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 
 	// Verify prefix.
 	if (specification.flags.dynamic_type) {
-		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
+		specification.local_prefix = specification.normalized_name;
 	} else if (specification.local_prefix.empty()) {
 		specification.local_prefix = get_prefix(specification.normalized_name);
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
@@ -3015,7 +3007,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 
 	// Verify prefix.
 	if (specification.flags.dynamic_type) {
-		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
+		specification.local_prefix = specification.normalized_name;
 	} else if (specification.local_prefix.empty()) {
 		specification.local_prefix = get_prefix(specification.normalized_name);
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
@@ -3055,7 +3047,7 @@ Schema::add_field(MsgPack*& mut_properties)
 
 	// Verify prefix.
 	if (specification.flags.dynamic_type) {
-		specification.local_prefix = get_dynamic_prefix(specification.normalized_name);
+		specification.local_prefix = specification.normalized_name;
 	} else if (specification.local_prefix.empty()) {
 		specification.local_prefix = get_prefix(specification.normalized_name);
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
@@ -4732,7 +4724,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			prefix.append(subproperties->at(RESERVED_PREFIX).as_string());
 		} catch (const std::out_of_range&) {
 			try {
-				const auto dynamic_prefix = get_dynamic_prefix(field_name);
+				const auto dynamic_prefix = Serialise::uuid(field_name);
 				dynamic_type_path = true;
 				try {
 					subproperties = &subproperties->at(UUID_FIELD_NAME);
@@ -4754,7 +4746,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 				auto& partial_field = *it;
 				if (is_valid(partial_field) && partial_field != UUID_FIELD_NAME) {
 					try {
-						prefix.append(get_dynamic_prefix(partial_field));
+						prefix.append(Serialise::uuid(partial_field));
 						dynamic_type_path = true;
 					} catch (const SerialisationError&) {
 						prefix.append(get_prefix(partial_field));
