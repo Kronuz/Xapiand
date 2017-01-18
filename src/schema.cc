@@ -1463,11 +1463,9 @@ Schema::set_type_to_array()
 
 
 void
-Schema::validate_required_data()
+Schema::_validate_required_data(MsgPack& properties)
 {
-	L_CALL(this, "Schema::validate_required_data()");
-
-	auto& properties = get_mutable();
+	L_CALL(this, "Schema::_validate_required_data(%s)", repr(properties->to_string()).c_str());
 
 	static const auto dsit_e = map_dispatch_set_default_spc.end();
 	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
@@ -1728,7 +1726,7 @@ Schema::validate_required_data(const MsgPack& value)
 		guess_field_type(value);
 	}
 
-	validate_required_data();
+	_validate_required_data(get_mutable());
 }
 
 
@@ -2521,7 +2519,7 @@ Schema::update_schema(MsgPack*& parent_properties, const MsgPack& obj_schema, co
 		properties = &get_subproperties(properties, obj_schema, tasks);
 
 		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
-			validate_required_data();
+			_validate_required_data(*properties);
 		}
 
 		if (tasks.size() && specification.flags.inside_namespace) {

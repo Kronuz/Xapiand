@@ -434,7 +434,7 @@ class Schema {
 	 * Insert into properties all required data.
 	 */
 
-	void validate_required_data();
+	void _validate_required_data(MsgPack& properties);
 	void validate_required_namespace_data(const MsgPack& value);
 	void validate_required_data(const MsgPack& value);
 
@@ -508,7 +508,7 @@ class Schema {
 	 */
 
 	void add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks);
-	void add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, TaskVector& tasks);
+	void add_field(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks);
 	void add_field(MsgPack*& mut_properties);
 
 
