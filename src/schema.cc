@@ -1076,7 +1076,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 			properties = &get_subproperties(properties, object, data, doc, tasks);
 
-			data = specification.flags.store ? &(*parent_data)[name] : parent_data;
+			data = specification.flags.store ? &(*parent_data)[specification.flags.dynamic_type ? normalize_uuid(name) : name] : parent_data;
 
 			process_item_value(doc, data, tasks.size());
 
@@ -1090,14 +1090,14 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 		case MsgPack::Type::ARRAY: {
 			properties = &get_subproperties(properties);
-			auto data = specification.flags.store ? &(*parent_data)[name] : parent_data;
+			auto data = specification.flags.store ? &(*parent_data)[specification.flags.dynamic_type ? normalize_uuid(name) : name] : parent_data;
 			index_array(properties, object, data, doc);
 			break;
 		}
 
 		default: {
 			get_subproperties(properties);
-			auto data = specification.flags.store ? &(*parent_data)[name] : parent_data;
+			auto data = specification.flags.store ? &(*parent_data)[specification.flags.dynamic_type ? normalize_uuid(name) : name] : parent_data;
 			process_item_value(doc, data, object);
 			break;
 		}
