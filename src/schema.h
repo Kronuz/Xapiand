@@ -320,7 +320,6 @@ struct specification_t : required_spc_t {
 	std::string name;
 	std::string meta_name;
 	std::string full_meta_name;
-	std::string normalized_name;
 
 	std::string aux_stem_lan;
 	std::string aux_lan;
@@ -474,7 +473,7 @@ class Schema {
 	/*
 	 * Get the properties of meta name of schema.
 	 */
-	void get_subproperties(const MsgPack*& properties, const std::string& meta_name, const std::string& normalized_name);
+	void get_subproperties(const MsgPack*& properties, const std::string& meta_name);
 
 	/*
 	 * Add partial prefix in specification.partials_prefixes or clear it.

@@ -684,7 +684,6 @@ specification_t::specification_t(const specification_t& o)
 	  name(o.name),
 	  meta_name(o.meta_name),
 	  full_meta_name(o.full_meta_name),
-	  normalized_name(o.normalized_name),
 	  aux_stem_lan(o.aux_stem_lan),
 	  aux_lan(o.aux_lan),
 	  partial_prefixes(o.partial_prefixes) { }
@@ -702,7 +701,6 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  name(std::move(o.name)),
 	  meta_name(std::move(o.meta_name)),
 	  full_meta_name(std::move(o.full_meta_name)),
-	  normalized_name(std::move(o.normalized_name)),
 	  aux_stem_lan(std::move(o.aux_stem_lan)),
 	  aux_lan(std::move(o.aux_lan)),
 	  partial_prefixes(std::move(o.partial_prefixes)) { }
@@ -724,7 +722,6 @@ specification_t::operator=(const specification_t& o)
 	name = o.name;
 	meta_name = o.meta_name;
 	full_meta_name = o.full_meta_name;
-	normalized_name = o.normalized_name;
 	aux_stem_lan = o.aux_stem_lan;
 	aux_lan = o.aux_lan;
 	partial_prefixes = o.partial_prefixes;
@@ -749,7 +746,6 @@ specification_t::operator=(specification_t&& o) noexcept
 	name = std::move(o.name);
 	meta_name = std::move(o.meta_name);
 	full_meta_name = std::move(o.full_meta_name);
-	normalized_name = std::move(o.normalized_name);
 	aux_stem_lan = std::move(o.aux_stem_lan);
 	aux_lan = std::move(o.aux_lan);
 	partial_prefixes = std::move(o.partial_prefixes);
@@ -926,7 +922,6 @@ specification_t::to_string() const
 	str << "\t" << "name"                     << ": " << name                 << "\n";
 	str << "\t" << "meta_name"                << ": " << meta_name            << "\n";
 	str << "\t" << "full_meta_name"           << ": " << full_meta_name       << "\n";
-	str << "\t" << "normalized_name"          << ": " << normalized_name      << "\n";
 	str << "\t" << "aux_stem_lan"             << ": " << aux_stem_lan         << "\n";
 	str << "\t" << "aux_lan"                  << ": " << aux_lan              << "\n";
 
@@ -1591,7 +1586,7 @@ Schema::validate_required_data()
 			// Process RESERVED_BOOL_TERM
 			if (!specification.flags.has_bool_term) {
 				// By default, if normalized name has upper characters then it is consider bool term.
-				specification.flags.bool_term = strhasupper(specification.normalized_name);
+				specification.flags.bool_term = strhasupper(specification.meta_name);
 				specification.flags.has_bool_term = true;
 			}
 			properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
@@ -1698,7 +1693,7 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 			}
 
 			if (!specification.flags.has_bool_term) {
-				specification.flags.bool_term = strhasupper(specification.normalized_name);
+				specification.flags.bool_term = strhasupper(specification.meta_name);
 				specification.flags.has_bool_term = true;
 			}
 			break;
@@ -2566,14 +2561,14 @@ Schema::update_partial_prefixes()
 
 
 void
-Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_name, const std::string& normalized_name)
+Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_name)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, %s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str(), repr(normalized_name).c_str());
+	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str());
 
 	properties = &properties->at(meta_name);
 	specification.flags.field_found = true;
 	static const auto stit_e = map_stem_language.end();
-	const auto stit = map_stem_language.find(normalized_name);
+	const auto stit = map_stem_language.find(meta_name);
 	if (stit != stit_e && stit->second.first) {
 		specification.language = stit->second.second;
 		specification.aux_lan = stit->second.second;
@@ -2602,13 +2597,11 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 		restart_namespace_specification();
 		for (auto it = field_names.begin(); it != it_last; ++it) {
 			detect_dynamic(*it);
-			specification.local_prefix.assign(specification.flags.dynamic_type ? specification.normalized_name : get_prefix(specification.normalized_name));
 			specification.prefix.append(specification.local_prefix);
 			update_partial_prefixes();
 		}
 		process_properties_document(properties, object, data, doc, tasks);
 		detect_dynamic(*it_last);
-		specification.local_prefix.assign(specification.flags.dynamic_type ? specification.normalized_name : get_prefix(specification.normalized_name));
 		specification.prefix.append(specification.local_prefix);
 		update_partial_prefixes();
 		specification.flags.inside_namespace = true;
@@ -2620,14 +2613,13 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 			}
 			restart_specification();
 			try {
-				get_subproperties(properties, field_name, field_name);
+				get_subproperties(properties, field_name);
 				update_partial_prefixes();
 			} catch (const std::out_of_range&) {
 				detect_dynamic(field_name);
 				if (specification.flags.dynamic_type) {
 					try {
-						get_subproperties(properties, specification.meta_name, specification.normalized_name);
-						specification.local_prefix.assign(specification.normalized_name);
+						get_subproperties(properties, specification.meta_name);
 						specification.prefix.append(specification.local_prefix);
 						update_partial_prefixes();
 						continue;
@@ -2663,15 +2655,14 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 		}
 		restart_specification();
 		try {
-			get_subproperties(properties, field_name, field_name);
+			get_subproperties(properties, field_name);
 			process_properties_document(properties, object, data, doc, tasks);
 			update_partial_prefixes();
 		} catch (const std::out_of_range&) {
 			detect_dynamic(field_name);
 			if (specification.flags.dynamic_type) {
 				try {
-					get_subproperties(properties, specification.meta_name, specification.normalized_name);
-					specification.local_prefix.assign(specification.normalized_name);
+					get_subproperties(properties, specification.meta_name);
 					specification.prefix.append(specification.local_prefix);
 					process_properties_document(properties, object, data, doc, tasks);
 					update_partial_prefixes();
@@ -2705,7 +2696,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 		}
 		restart_specification();
 		try {
-			get_subproperties(properties, field_name, field_name);
+			get_subproperties(properties, field_name);
 		} catch (const std::out_of_range&) {
 			auto mut_subprop = &get_mutable();
 			for ( ; it != it_last; ++it) {
@@ -2713,7 +2704,6 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 				if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(specification.meta_name))) {
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
 				} else {
-					specification.normalized_name = specification.meta_name;
 					specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
 					add_field(mut_subprop);
 				}
@@ -2723,7 +2713,6 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 			if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(specification.meta_name))) {
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
 			} else {
-				specification.normalized_name = specification.meta_name;
 				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
 				add_field(mut_subprop, properties, object, tasks);
 			}
@@ -2739,7 +2728,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 	}
 	restart_specification();
 	try {
-		get_subproperties(properties, field_name, field_name);
+		get_subproperties(properties, field_name);
 		process_properties_document(properties, object, tasks);
 		// Found field always false for adding inheritable specification.
 		specification.flags.field_found = false;
@@ -2750,7 +2739,6 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 		} else {
 			specification.meta_name = field_name;
-			specification.normalized_name = specification.meta_name;
 			specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
 			add_field(mut_subprop, properties, object, tasks);
 		}
@@ -2775,7 +2763,6 @@ Schema::get_subproperties(const MsgPack*& properties)
 		for (auto it = _split.begin(); it != it_e; ++it) {
 			specification.flags.dynamic_type = false;
 			detect_dynamic(*it);
-			specification.local_prefix.assign(specification.flags.dynamic_type ? specification.normalized_name : get_prefix(specification.normalized_name));
 			specification.prefix.append(specification.local_prefix);
 			update_partial_prefixes();
 		}
@@ -2788,14 +2775,13 @@ Schema::get_subproperties(const MsgPack*& properties)
 			}
 			restart_specification();
 			try {
-				get_subproperties(properties, field_name, field_name);
+				get_subproperties(properties, field_name);
 				update_partial_prefixes();
 			} catch (const std::out_of_range&) {
 				detect_dynamic(field_name);
 				if (specification.flags.dynamic_type) {
 					try {
-						get_subproperties(properties, specification.meta_name, specification.normalized_name);
-						specification.local_prefix.assign(specification.normalized_name);
+						get_subproperties(properties, specification.meta_name);
 						specification.prefix.append(specification.local_prefix);
 						update_partial_prefixes();
 						continue;
@@ -2830,12 +2816,12 @@ Schema::detect_dynamic(const std::string& field_name)
 
 	try {
 		auto ser_uuid = Serialise::uuid(field_name);
-		specification.normalized_name.assign(ser_uuid);
+		specification.local_prefix.assign(ser_uuid);
 		specification.meta_name.assign(UUID_FIELD_NAME);
 		specification.flags.dynamic_type = true;
 		specification.flags.dynamic_type_path = true;
 	} catch (const SerialisationError&) {
-		specification.normalized_name.assign(field_name);
+		specification.local_prefix.assign(get_prefix(field_name));
 		specification.meta_name.assign(field_name);
 		specification.flags.dynamic_type = false;
 	}
@@ -2930,7 +2916,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
 	static const auto slit_e = map_stem_language.end();
-	const auto slit = map_stem_language.find(specification.normalized_name);
+	const auto slit = map_stem_language.find(specification.meta_name);
 	if (slit != slit_e && slit->second.first) {
 		specification.language = slit->second.second;
 		specification.aux_lan = slit->second.second;
@@ -2973,14 +2959,8 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 		(this->*dsit->second)(*mut_properties);
 	}
 
-	// Verify prefix.
-	if (specification.flags.dynamic_type) {
-		specification.local_prefix = specification.normalized_name;
-	} else if (specification.local_prefix.empty()) {
-		specification.local_prefix = get_prefix(specification.normalized_name);
-		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
-	} else {
-		specification.local_prefix = get_prefix(specification.normalized_name);
+	// Write prefix in properties.
+	if (!specification.flags.dynamic_type) {
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 	}
 	specification.prefix.append(specification.local_prefix);
@@ -2996,7 +2976,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
 	static const auto slit_e = map_stem_language.end();
-	const auto slit = map_stem_language.find(specification.normalized_name);
+	const auto slit = map_stem_language.find(specification.meta_name);
 	if (slit != slit_e && slit->second.first) {
 		specification.language = slit->second.second;
 		specification.aux_lan = slit->second.second;
@@ -3039,14 +3019,8 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 		(this->*dsit->second)(*mut_properties);
 	}
 
-	// Verify prefix.
-	if (specification.flags.dynamic_type) {
-		specification.local_prefix = specification.normalized_name;
-	} else if (specification.local_prefix.empty()) {
-		specification.local_prefix = get_prefix(specification.normalized_name);
-		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
-	} else {
-		specification.local_prefix = get_prefix(specification.normalized_name);
+	// Write prefix in properties.
+	if (!specification.flags.dynamic_type) {
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 	}
 }
@@ -3060,7 +3034,7 @@ Schema::add_field(MsgPack*& mut_properties)
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
 	static const auto slit_e = map_stem_language.end();
-	const auto slit = map_stem_language.find(specification.normalized_name);
+	const auto slit = map_stem_language.find(specification.meta_name);
 	if (slit != slit_e && slit->second.first) {
 		specification.language = slit->second.second;
 		specification.aux_lan = slit->second.second;
@@ -3079,14 +3053,8 @@ Schema::add_field(MsgPack*& mut_properties)
 		(this->*dsit->second)(*mut_properties);
 	}
 
-	// Verify prefix.
-	if (specification.flags.dynamic_type) {
-		specification.local_prefix = specification.normalized_name;
-	} else if (specification.local_prefix.empty()) {
-		specification.local_prefix = get_prefix(specification.normalized_name);
-		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
-	} else {
-		specification.local_prefix = get_prefix(specification.normalized_name);
+	// Write prefix in properties.
+	if (!specification.flags.dynamic_type) {
 		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
 	}
 	specification.prefix.append(specification.local_prefix);
