@@ -2593,7 +2593,6 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 
 	const auto it_last = field_names.end() - 1;
 	if (specification.flags.is_namespace) {
-		specification.flags.field_found = false;
 		restart_namespace_specification();
 		for (auto it = field_names.begin(); it != it_last; ++it) {
 			detect_dynamic(*it);
@@ -2626,7 +2625,6 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 					} catch (const std::out_of_range&) { }
 				}
 
-				specification.flags.field_found = false;
 				auto mut_properties = &get_mutable();
 				add_field(mut_properties);
 				for (++it; it != it_last; ++it) {
@@ -2670,7 +2668,6 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 				} catch (const std::out_of_range&) { }
 			}
 
-			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable();
 			add_field(mut_properties, properties, object, data, doc, tasks);
 			return *mut_properties;
@@ -2716,8 +2713,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
 				add_field(mut_subprop, properties, object, tasks);
 			}
-			// Found field always false for adding inheritable specification.
-			specification.flags.field_found = false;
+
 			return *mut_subprop;
 		}
 	}
@@ -2730,8 +2726,6 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 	try {
 		get_subproperties(properties, field_name);
 		process_properties_document(properties, object, tasks);
-		// Found field always false for adding inheritable specification.
-		specification.flags.field_found = false;
 		return *properties;
 	} catch (const std::out_of_range&) {
 		auto mut_subprop = &get_mutable();
@@ -2742,8 +2736,6 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Tas
 			specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
 			add_field(mut_subprop, properties, object, tasks);
 		}
-		// Found field always false for adding inheritable specification.
-		specification.flags.field_found = false;
 		return *mut_subprop;
 	}
 }
@@ -2758,10 +2750,8 @@ Schema::get_subproperties(const MsgPack*& properties)
 
 	const auto it_e = _split.end();
 	if (specification.flags.is_namespace) {
-		specification.flags.field_found = false;
 		restart_namespace_specification();
 		for (auto it = _split.begin(); it != it_e; ++it) {
-			specification.flags.dynamic_type = false;
 			detect_dynamic(*it);
 			specification.prefix.append(specification.local_prefix);
 			update_partial_prefixes();
@@ -2788,7 +2778,6 @@ Schema::get_subproperties(const MsgPack*& properties)
 					} catch (const std::out_of_range&) { }
 				}
 
-				specification.flags.field_found = false;
 				auto mut_properties = &get_mutable();
 				add_field(mut_properties);
 				for (++it; it != it_e; ++it) {
@@ -2912,6 +2901,8 @@ void
 Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks)
 {
 	L_CALL(this, "Schema::add_field(%s, %s, %s, <MsgPack*>, <Xapian::Document>, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
+
+	specification.flags.field_found = false;
 
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
@@ -4360,7 +4351,6 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 				}
 			}
 		} else {
-			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable();
 			static const auto wpit_e = map_dispatch_write_properties.end();
 			static const auto ddit_e = map_dispatch_document.end();
@@ -4415,7 +4405,6 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		TaskVector tasks;
 		auto mut_properties = replace ? &clear() : &get_mutable();
 		const auto* properties = &*mut_properties;
-		specification.flags.field_found = false;
 
 		static const auto wpit_e = map_dispatch_write_properties.end();
 		for (const auto& item_key : obj_schema) {
