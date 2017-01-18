@@ -1828,13 +1828,13 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 			// Compact uuid value
 			switch (data_value.getType()) {
 				case MsgPack::Type::UNDEFINED:
-					data_value = Unserialise::uuid(Serialise::MsgPack(specification, value));
+					data_value = normalize_uuid(value.is_map() ? Cast::string(value) : value.as_string());
 					break;
 				case MsgPack::Type::ARRAY:
-					data_value.push_back(Unserialise::uuid(Serialise::MsgPack(specification, value)));
+					data_value.push_back(normalize_uuid(value.is_map() ? Cast::string(value) : value.as_string()));
 					break;
 				default:
-					data_value = MsgPack({ data_value, Unserialise::uuid(Serialise::MsgPack(specification, value)) });
+					data_value = MsgPack({ data_value, normalize_uuid(value.is_map() ? Cast::string(value) : value.as_string()) });
 					break;
 			}
 		} else {
@@ -1874,13 +1874,13 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 						data_value = MsgPack(MsgPack::Type::ARRAY);
 					case MsgPack::Type::ARRAY:
 						for (const auto& value : values) {
-							data_value.push_back(Unserialise::uuid(Serialise::MsgPack(specification, value)));
+							data_value.push_back(normalize_uuid(value.is_map() ? Cast::string(value) : value.as_string()));
 						}
 						break;
 					default:
 						data_value = MsgPack({ data_value });
 						for (const auto& value : values) {
-							data_value.push_back(Unserialise::uuid(Serialise::MsgPack(specification, value)));
+							data_value.push_back(normalize_uuid(value.is_map() ? Cast::string(value) : value.as_string()));
 						}
 						break;
 				}
