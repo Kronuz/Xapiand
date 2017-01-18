@@ -2504,7 +2504,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 
 
 void
-Schema::update_schema(const MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name)
+Schema::update_schema(MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name)
 {
 	L_CALL(this, "Schema::update_schema(%s, %s, %s)", repr(parent_properties->to_string()).c_str(), repr(obj_schema.to_string()).c_str(), repr(name).c_str());
 
@@ -2578,6 +2578,24 @@ Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_na
 		specification.full_meta_name.assign(meta_name);
 	} else {
 		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(meta_name);
+	}
+
+	update_specification(*properties);
+}
+
+
+void
+Schema::get_subproperties(MsgPack*& properties, const std::string& meta_name)
+{
+	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str());
+
+	properties = &properties->at(meta_name);
+	specification.flags.field_found = true;
+	static const auto stit_e = map_stem_language.end();
+	const auto stit = map_stem_language.find(meta_name);
+	if (stit != stit_e && stit->second.first) {
+		specification.language = stit->second.second;
+		specification.aux_lan = stit->second.second;
 	}
 
 	update_specification(*properties);
@@ -2679,69 +2697,6 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 
 
 const MsgPack&
-Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks)
-{
-	L_CALL(this, "Schema::get_subproperties(%s, %s, <tasks>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
-
-	auto field_names = Split::split(specification.name, DB_OFFSPRING_UNION);
-
-	const auto it_last = field_names.end() - 1;
-	for (auto it = field_names.begin(); it != it_last; ++it) {
-		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
-		}
-		restart_specification();
-		try {
-			get_subproperties(properties, field_name);
-		} catch (const std::out_of_range&) {
-			auto mut_subprop = &get_mutable();
-			for ( ; it != it_last; ++it) {
-				specification.meta_name = *it;
-				if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(specification.meta_name))) {
-					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
-				} else {
-					specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-					add_field(mut_subprop);
-				}
-			}
-
-			specification.meta_name = *it_last;
-			if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(specification.meta_name))) {
-				THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
-			} else {
-				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-				add_field(mut_subprop, properties, object, tasks);
-			}
-
-			return *mut_subprop;
-		}
-	}
-
-	const auto& field_name = *it_last;
-	if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-		THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
-	}
-	restart_specification();
-	try {
-		get_subproperties(properties, field_name);
-		process_properties_document(properties, object, tasks);
-		return *properties;
-	} catch (const std::out_of_range&) {
-		auto mut_subprop = &get_mutable();
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
-		} else {
-			specification.meta_name = field_name;
-			specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-			add_field(mut_subprop, properties, object, tasks);
-		}
-		return *mut_subprop;
-	}
-}
-
-
-const MsgPack&
 Schema::get_subproperties(const MsgPack*& properties)
 {
 	L_CALL(this, "Schema::get_subproperties(%s)", repr(properties->to_string()).c_str());
@@ -2794,6 +2749,68 @@ Schema::get_subproperties(const MsgPack*& properties)
 		}
 	}
 
+	return *properties;
+}
+
+
+MsgPack&
+Schema::get_subproperties(MsgPack*& properties, const MsgPack& object, TaskVector& tasks)
+{
+	L_CALL(this, "Schema::get_subproperties(%s, %s, <tasks>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
+
+	auto field_names = Split::split(specification.name, DB_OFFSPRING_UNION);
+
+	const auto it_last = field_names.end() - 1;
+	for (auto it = field_names.begin(); it != it_last; ++it) {
+		const auto& field_name = *it;
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
+		}
+		restart_specification();
+		try {
+			get_subproperties(properties, field_name);
+		} catch (const std::out_of_range&) {
+			properties = &(*properties)[field_name];
+			for ( ; it != it_last; ++it) {
+				specification.meta_name = *it;
+				if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(specification.meta_name))) {
+					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
+				} else {
+					specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
+					add_field(properties);
+				}
+			}
+
+			specification.meta_name = *it_last;
+			if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(specification.meta_name))) {
+				THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
+			} else {
+				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
+				add_field(properties, object, tasks);
+			}
+
+			return *properties;
+		}
+	}
+
+	const auto& field_name = *it_last;
+	if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+		THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
+	}
+	restart_specification();
+	try {
+		get_subproperties(properties, field_name);
+		process_properties_document(properties, object, tasks);
+	} catch (const std::out_of_range&) {
+		properties = &(*properties)[field_name];
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
+		} else {
+			specification.meta_name = field_name;
+			specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
+			add_field(properties, object, tasks);
+		}
+	}
 	return *properties;
 }
 
@@ -2858,29 +2875,29 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 
 
 void
-Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, TaskVector& tasks)
+Schema::process_properties_document(MsgPack*& properties, const MsgPack& object, TaskVector& tasks)
 {
 	L_CALL(this, "Schema::process_properties_document(%s, %s, <TaskVector>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
-	static const auto ddit_e = map_dispatch_document.end();
+	static const auto wpit_e = map_dispatch_write_properties.end();
 	if (specification.flags.field_with_type) {
 		for (const auto& item_key : object) {
 			auto str_key = item_key.as_string();
-			const auto ddit = map_dispatch_document.find(str_key);
-			if (ddit == ddit_e) {
+			const auto wpit = map_dispatch_write_properties.find(str_key);
+			if (wpit == wpit_e) {
 				if (!set_reserved_words.count(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(object.at(str_key)), std::move(str_key)));
 				}
 			} else {
-				(this->*ddit->second)(str_key, object.at(str_key));
+				(this->*wpit->second)(*properties, str_key, object.at(str_key), false);
 			}
 		}
 	} else {
 		static const auto wtit_e = map_dispatch_without_type.end();
 		for (const auto& item_key : object) {
 			auto str_key = item_key.as_string();
-			const auto ddit = map_dispatch_document.find(str_key);
-			if (ddit == ddit_e) {
+			const auto wpit = map_dispatch_write_properties.find(str_key);
+			if (wpit == wpit_e) {
 				const auto wtit = map_dispatch_without_type.find(str_key);
 				if (wtit == wtit_e) {
 					if (!set_reserved_words.count(str_key)) {
@@ -2890,7 +2907,7 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 					(this->*wtit->second)(str_key, object.at(str_key));
 				}
 			} else {
-				(this->*ddit->second)(str_key, object.at(str_key));
+				(this->*wpit->second)(*properties, str_key, object.at(str_key), false);
 			}
 		}
 	}
@@ -2960,9 +2977,9 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 
 
 void
-Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, TaskVector& tasks)
+Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks)
 {
-	L_CALL(this, "Schema::add_field(%s, %s, %s, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::add_field(%s, %s, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
@@ -2971,12 +2988,6 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 	if (slit != slit_e && slit->second.first) {
 		specification.language = slit->second.second;
 		specification.aux_lan = slit->second.second;
-	}
-
-	if (specification.full_meta_name.empty()) {
-		specification.full_meta_name.assign(specification.meta_name);
-	} else {
-		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
 	}
 
 	// Write obj specifications.
@@ -2991,7 +3002,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 			if (ddit == ddit_e) {
 				const auto wtit = map_dispatch_without_type.find(str_key);
 				if (wtit == wtit_e) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(object.at(str_key)), std::move(str_key)));
+					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(object.at(str_key)), std::move(str_key)));
 				} else {
 					(this->*wtit->second)(str_key, object.at(str_key));
 				}
@@ -4403,8 +4414,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		specification = default_spc;
 
 		TaskVector tasks;
-		auto mut_properties = replace ? &clear() : &get_mutable();
-		const auto* properties = &*mut_properties;
+		auto properties = replace ? &clear() : &get_mutable();
 
 		static const auto wpit_e = map_dispatch_write_properties.end();
 		for (const auto& item_key : obj_schema) {
@@ -4415,7 +4425,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 				}
 			} else {
-				(this->*wpit->second)(*mut_properties, str_key, obj_schema.at(str_key), true);
+				(this->*wpit->second)(*properties, str_key, obj_schema.at(str_key), true);
 			}
 		}
 
