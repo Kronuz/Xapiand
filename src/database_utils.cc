@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,23 +22,26 @@
 
 #include "database_utils.h"
 
-#include <algorithm>                        // for count, replace
-#include <chrono>                           // for seconds, duration_cast
-#include <ratio>                            // for ratio
-#include <stdio.h>                          // for snprintf, size_t
-#include <string.h>                         // for strlen
-#include <sys/fcntl.h>                      // for O_CLOEXEC, O_CREAT, O_RDONLY
-#include <sys/stat.h>                       // for stat
+#include <algorithm>                                 // for count, replace
+#include <chrono>                                    // for seconds, duration_cast
+#include <ratio>                                     // for ratio
+#include <stdio.h>                                   // for snprintf, size_t
+#include <string.h>                                  // for strlen
+#include <sys/fcntl.h>                               // for O_CLOEXEC, O_CREAT, O_RDONLY
+#include <sys/stat.h>                                // for stat
 
-#include "exception.h"                      // for ClientError, MSG_ClientError
-#include "io_utils.h"                       // for close, open, read, write
-#include "length.h"                         // for serialise_length and unserialise_length
-#include "log.h"                            // for L_DATABASE
-#include "rapidjson/document.h"             // for Document, GenericDocument
-#include "rapidjson/error/en.h"             // for GetParseError_En
-#include "rapidjson/error/error.h"          // for ParseResult
-#include "schema.h"                         // for FieldType
-#include "utils.h"                          // for random_int
+#include "cppcodec/base64_default_url_unpadded.hpp"  // for base64 namespace
+#include "exception.h"                               // for ClientError, MSG_ClientError
+#include "guid/guid.h"                               // for Guid
+#include "io_utils.h"                                // for close, open, read, write
+#include "length.h"                                  // for serialise_length and unserialise_length
+#include "log.h"                                     // for L_DATABASE
+#include "rapidjson/document.h"                      // for Document, GenericDocument
+#include "rapidjson/error/en.h"                      // for GetParseError_En
+#include "rapidjson/error/error.h"                   // for ParseResult
+#include "schema.h"                                  // for FieldType
+#include "serialise.h"                               // for SIZE_CURLY_BRACES_UUID
+#include "utils.h"                                   // for random_int
 
 
 inline static long long save_mastery(const std::string& dir)
@@ -88,6 +91,21 @@ std::string get_prefix(const std::string& field_name)
 {
 	// Mask 0x1fffff for maximum length prefix of 4.
 	return serialise_length(xxh64::hash(field_name) & 0x1fffff);
+}
+
+
+std::string normalize_uuid(const std::string& uuid)
+{
+	if (uuid.length() == SIZE_CURLY_BRACES_UUID) {
+		// Remove curly braces.
+		auto norm_uuid = uuid.substr(1, uuid.length() - 2);
+		Guid guid(norm_uuid);
+		norm_uuid = base64::encode(guid.serialise());
+		norm_uuid.insert(0, 1, '{').push_back('}');
+		return norm_uuid;
+	}
+
+	return uuid;
 }
 
 
