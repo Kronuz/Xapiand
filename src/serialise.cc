@@ -305,6 +305,45 @@ Cast::getType(const std::string& cast_word)
 }
 
 
+bool
+Serialise::isUUID(const std::string& field_value) noexcept
+{
+	switch (field_value.length()) {
+		case SIZE_CURLY_BRACES_UUID:
+			if (field_value.front() == '{' && field_value.back() == '}') {
+				if (field_value[9] != '-' || field_value[14] != '-' || field_value[19] != '-' || field_value[24] != '-') {
+					return false;
+				}
+				static const size_t stop = SIZE_CURLY_BRACES_UUID - 1;
+				for (size_t i = 1; i < stop; ++i) {
+					if (!std::isxdigit(field_value.at(i)) && i != 9 && i != 14 && i != 19 && i != 24) {
+						return false;
+					}
+				}
+				return true;
+			}
+			return false;
+
+		case SIZE_UUID:
+			if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
+				return false;
+			}
+			for (size_t i = 0; i < SIZE_UUID; ++i) {
+				if (!std::isxdigit(field_value.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
+					return false;
+				}
+			}
+			return true;
+
+		default:
+			if (field_value.length() >= 3 && field_value.length() <= MAX_SIZE_BASE64_UUID && field_value.front() == '{' && field_value.back() == '}') {
+				return true;
+			}
+			return false;
+	}
+}
+
+
 std::string
 Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
@@ -842,7 +881,7 @@ Serialise::uuid(const std::string& field_value)
 		}
 
 		default: {
-			if (field_value.length() >= 3 && field_value.length() <= MAX_SIZE_BASE64_COMPACT_UUID && field_value.front() == '{' && field_value.back() == '}') {
+			if (field_value.length() >= 3 && field_value.length() <= MAX_SIZE_BASE64_UUID && field_value.front() == '{' && field_value.back() == '}') {
 				// Remove curly braces.
 				auto _field_value = field_value.substr(1, field_value.length() - 2);
 				return base64::decode<std::string>(_field_value);
