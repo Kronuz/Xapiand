@@ -1465,7 +1465,7 @@ Schema::set_type_to_array()
 void
 Schema::_validate_required_data(MsgPack& properties)
 {
-	L_CALL(this, "Schema::_validate_required_data(%s)", repr(properties->to_string()).c_str());
+	L_CALL(this, "Schema::_validate_required_data(%s)", repr(mut_properties.to_string()).c_str());
 
 	static const auto dsit_e = map_dispatch_set_default_spc.end();
 	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
