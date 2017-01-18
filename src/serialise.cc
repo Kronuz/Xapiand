@@ -811,10 +811,8 @@ Serialise::uuid(const std::string& field_value)
 	switch (field_value.length()) {
 		case SIZE_CURLY_BRACES_UUID: {
 			if (field_value.front() == '{' && field_value.back() == '}') {
-				auto _field_value = field_value;
 				// Remove curly braces.
-				_field_value.erase(0, 1);
-				_field_value.pop_back();
+				auto _field_value = field_value.substr(1, field_value.length() - 2);
 				if (_field_value[8] != '-' || _field_value[13] != '-' || _field_value[18] != '-' || _field_value[23] != '-') {
 					THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
 				}
@@ -846,9 +844,7 @@ Serialise::uuid(const std::string& field_value)
 		default: {
 			if (field_value.length() >= 3 && field_value.length() <= MAX_SIZE_BASE64_COMPACT_UUID && field_value.front() == '{' && field_value.back() == '}') {
 				// Remove curly braces.
-				auto _field_value = field_value;
-				_field_value.erase(0, 1);
-				_field_value.pop_back();
+				auto _field_value = field_value.substr(1, field_value.length() - 2);
 				return base64::decode<std::string>(_field_value);
 			}
 
