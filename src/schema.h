@@ -434,7 +434,7 @@ class Schema {
 	 * Insert into properties all required data.
 	 */
 
-	void _validate_required_data(MsgPack& properties);
+	void _validate_required_data(MsgPack& mut_properties);
 	void validate_required_namespace_data(const MsgPack& value);
 	void validate_required_data(const MsgPack& value);
 
@@ -468,13 +468,13 @@ class Schema {
 	/*
 	 * Auxiliar function for update schema.
 	 */
-	void update_schema(MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name);
+	void update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema, const std::string& name);
 
 	/*
 	 * Get the properties of meta name of schema.
 	 */
 	void get_subproperties(const MsgPack*& properties, const std::string& meta_name);
-	void get_subproperties(MsgPack*& properties, const std::string& meta_name);
+	void get_subproperties(MsgPack*& mut_properties, const std::string& meta_name);
 
 	/*
 	 * Add partial prefix in specification.partials_prefixes or clear it.
@@ -487,7 +487,7 @@ class Schema {
 
 	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks);
 	const MsgPack& get_subproperties(const MsgPack*& properties);
-	MsgPack& get_subproperties(MsgPack*& properties, const MsgPack& object, TaskVector& tasks);
+	MsgPack& get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks);
 
 
 	/*
@@ -500,7 +500,7 @@ class Schema {
 	 */
 
 	void process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks);
-	void process_properties_document(MsgPack*& properties, const MsgPack& object, TaskVector& tasks);
+	void process_properties_document(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks);
 
 
 	/*

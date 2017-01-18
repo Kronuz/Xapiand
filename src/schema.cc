@@ -1463,22 +1463,22 @@ Schema::set_type_to_array()
 
 
 void
-Schema::_validate_required_data(MsgPack& properties)
+Schema::_validate_required_data(MsgPack& mut_properties)
 {
 	L_CALL(this, "Schema::_validate_required_data(%s)", repr(mut_properties.to_string()).c_str());
 
 	static const auto dsit_e = map_dispatch_set_default_spc.end();
 	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
 	if (dsit != dsit_e) {
-		(this->*dsit->second)(properties);
+		(this->*dsit->second)(mut_properties);
 	}
 
 	std::set<uint64_t> set_acc;
 	switch (specification.sep_types[2]) {
 		case FieldType::GEO: {
 			// Set partials and error.
-			properties[RESERVED_PARTIALS] = static_cast<bool>(specification.flags.partials);
-			properties[RESERVED_ERROR] = specification.error;
+			mut_properties[RESERVED_PARTIALS] = static_cast<bool>(specification.flags.partials);
+			mut_properties[RESERVED_ERROR] = specification.error;
 
 			if (specification.doc_acc) {
 				try {
@@ -1540,20 +1540,20 @@ Schema::_validate_required_data(MsgPack& properties)
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
-					properties[RESERVED_INDEX] = index;
+					mut_properties[RESERVED_INDEX] = index;
 				}
 				specification.flags.has_index = true;
 			}
 
-			properties[RESERVED_LANGUAGE] = specification.language;
+			mut_properties[RESERVED_LANGUAGE] = specification.language;
 
-			properties[RESERVED_STOP_STRATEGY] = specification.stop_strategy;
+			mut_properties[RESERVED_STOP_STRATEGY] = specification.stop_strategy;
 
-			properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
+			mut_properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
 			if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
 				specification.stem_language = specification.aux_lan;
 			}
-			properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
+			mut_properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
 
 			if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
 				specification.language = specification.aux_stem_lan;
@@ -1565,7 +1565,7 @@ Schema::_validate_required_data(MsgPack& properties)
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
-					properties[RESERVED_INDEX] = index;
+					mut_properties[RESERVED_INDEX] = index;
 				}
 				specification.flags.has_index = true;
 			}
@@ -1576,7 +1576,7 @@ Schema::_validate_required_data(MsgPack& properties)
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
-					properties[RESERVED_INDEX] = index;
+					mut_properties[RESERVED_INDEX] = index;
 				}
 				specification.flags.has_index = true;
 			}
@@ -1587,7 +1587,7 @@ Schema::_validate_required_data(MsgPack& properties)
 				specification.flags.bool_term = strhasupper(specification.meta_name);
 				specification.flags.has_bool_term = true;
 			}
-			properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
+			mut_properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
 			break;
 		}
 		case FieldType::BOOLEAN:
@@ -1603,8 +1603,8 @@ Schema::_validate_required_data(MsgPack& properties)
 			specification.acc_prefix.push_back(get_prefix(acc));
 		}
 		specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-		properties[RESERVED_ACCURACY]   = specification.accuracy;
-		properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
+		mut_properties[RESERVED_ACCURACY]   = specification.accuracy;
+		mut_properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
 	}
 
 	if (specification.flags.dynamic_type) {
@@ -1612,7 +1612,7 @@ Schema::_validate_required_data(MsgPack& properties)
 			const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 			if (specification.index != index) {
 				specification.index = index;
-				properties[RESERVED_INDEX] = index;
+				mut_properties[RESERVED_INDEX] = index;
 			}
 			specification.flags.has_index = true;
 		}
@@ -1622,7 +1622,7 @@ Schema::_validate_required_data(MsgPack& properties)
 			if (specification.slot == Xapian::BAD_VALUENO) {
 				specification.slot = get_slot(specification.prefix, specification.sep_types[2]);
 			}
-			properties[RESERVED_SLOT] = specification.slot;
+			mut_properties[RESERVED_SLOT] = specification.slot;
 		}
 
 		// If field is namespace fallback to index anything but values.
@@ -1630,18 +1630,18 @@ Schema::_validate_required_data(MsgPack& properties)
 			const auto index = specification.index & ~TypeIndex::VALUES;
 			if (specification.index != index) {
 				specification.index = index;
-				properties[RESERVED_INDEX] = index;
+				mut_properties[RESERVED_INDEX] = index;
 			}
 			specification.flags.has_index = true;
 		}
 	}
 
 	// Process RESERVED_TYPE
-	properties[RESERVED_TYPE] = specification.sep_types;
+	mut_properties[RESERVED_TYPE] = specification.sep_types;
 
 	specification.flags.field_with_type = true;
 
-	// L_DEBUG(this, "\nspecification = %s\nproperties = %s", specification.to_string().c_str(), properties.to_string(true).c_str());
+	// L_DEBUG(this, "\nspecification = %s\nmut_properties = %s", specification.to_string().c_str(), mut_properties.to_string(true).c_str());
 }
 
 
@@ -2502,9 +2502,9 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 
 
 void
-Schema::update_schema(MsgPack*& parent_properties, const MsgPack& obj_schema, const std::string& name)
+Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema, const std::string& name)
 {
-	L_CALL(this, "Schema::update_schema(%s, %s, %s)", repr(parent_properties->to_string()).c_str(), repr(obj_schema.to_string()).c_str(), repr(name).c_str());
+	L_CALL(this, "Schema::update_schema(%s, %s, %s)", repr(mut_parent_properties->to_string()).c_str(), repr(obj_schema.to_string()).c_str(), repr(name).c_str());
 
 	if (name.empty()) {
 		THROW(ClientError, "Field name must not be empty");
@@ -2514,12 +2514,12 @@ Schema::update_schema(MsgPack*& parent_properties, const MsgPack& obj_schema, co
 	if (obj_schema.is_map()) {
 		specification.name.assign(name);
 		TaskVector tasks;
-		auto properties = parent_properties;
+		auto mut_properties = mut_parent_properties;
 
-		properties = &get_subproperties(properties, obj_schema, tasks);
+		mut_properties = &get_subproperties(mut_properties, obj_schema, tasks);
 
 		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
-			_validate_required_data(*properties);
+			_validate_required_data(*mut_properties);
 		}
 
 		if (tasks.size() && specification.flags.inside_namespace) {
@@ -2583,11 +2583,11 @@ Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_na
 
 
 void
-Schema::get_subproperties(MsgPack*& properties, const std::string& meta_name)
+Schema::get_subproperties(MsgPack*& mut_properties, const std::string& meta_name)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str());
+	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(mut_properties->to_string()).c_str(), repr(meta_name).c_str());
 
-	properties = &properties->at(meta_name);
+	mut_properties = &mut_properties->at(meta_name);
 	specification.flags.field_found = true;
 	static const auto stit_e = map_stem_language.end();
 	const auto stit = map_stem_language.find(meta_name);
@@ -2596,7 +2596,7 @@ Schema::get_subproperties(MsgPack*& properties, const std::string& meta_name)
 		specification.aux_lan = stit->second.second;
 	}
 
-	update_specification(*properties);
+	update_specification(*mut_properties);
 }
 
 
@@ -2752,9 +2752,9 @@ Schema::get_subproperties(const MsgPack*& properties)
 
 
 MsgPack&
-Schema::get_subproperties(MsgPack*& properties, const MsgPack& object, TaskVector& tasks)
+Schema::get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, %s, <tasks>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::get_subproperties(%s, %s, <tasks>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	auto field_names = Split::split(specification.name, DB_OFFSPRING_UNION);
 
@@ -2766,16 +2766,16 @@ Schema::get_subproperties(MsgPack*& properties, const MsgPack& object, TaskVecto
 		}
 		restart_specification();
 		try {
-			get_subproperties(properties, field_name);
+			get_subproperties(mut_properties, field_name);
 		} catch (const std::out_of_range&) {
-			properties = &(*properties)[field_name];
+			mut_properties = &(*mut_properties)[field_name];
 			for ( ; it != it_last; ++it) {
 				specification.meta_name = *it;
 				if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(specification.meta_name))) {
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
 				} else {
 					specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-					add_field(properties);
+					add_field(mut_properties);
 				}
 			}
 
@@ -2784,10 +2784,10 @@ Schema::get_subproperties(MsgPack*& properties, const MsgPack& object, TaskVecto
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(specification.meta_name).c_str());
 			} else {
 				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-				add_field(properties, object, tasks);
+				add_field(mut_properties, object, tasks);
 			}
 
-			return *properties;
+			return *mut_properties;
 		}
 	}
 
@@ -2797,19 +2797,19 @@ Schema::get_subproperties(MsgPack*& properties, const MsgPack& object, TaskVecto
 	}
 	restart_specification();
 	try {
-		get_subproperties(properties, field_name);
-		process_properties_document(properties, object, tasks);
+		get_subproperties(mut_properties, field_name);
+		process_properties_document(mut_properties, object, tasks);
 	} catch (const std::out_of_range&) {
-		properties = &(*properties)[field_name];
+		mut_properties = &(*mut_properties)[field_name];
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(field_name).c_str());
 		} else {
 			specification.meta_name = field_name;
 			specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
-			add_field(properties, object, tasks);
+			add_field(mut_properties, object, tasks);
 		}
 	}
-	return *properties;
+	return *mut_properties;
 }
 
 
@@ -2873,9 +2873,9 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 
 
 void
-Schema::process_properties_document(MsgPack*& properties, const MsgPack& object, TaskVector& tasks)
+Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks)
 {
-	L_CALL(this, "Schema::process_properties_document(%s, %s, <TaskVector>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::process_properties_document(%s, %s, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	static const auto wpit_e = map_dispatch_write_properties.end();
 	if (specification.flags.field_with_type) {
@@ -2884,10 +2884,10 @@ Schema::process_properties_document(MsgPack*& properties, const MsgPack& object,
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
 				if (!set_reserved_words.count(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(object.at(str_key)), std::move(str_key)));
+					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(object.at(str_key)), std::move(str_key)));
 				}
 			} else {
-				(this->*wpit->second)(*properties, str_key, object.at(str_key), false);
+				(this->*wpit->second)(*mut_properties, str_key, object.at(str_key), false);
 			}
 		}
 	} else {
@@ -2899,13 +2899,13 @@ Schema::process_properties_document(MsgPack*& properties, const MsgPack& object,
 				const auto wtit = map_dispatch_without_type.find(str_key);
 				if (wtit == wtit_e) {
 					if (!set_reserved_words.count(str_key)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(object.at(str_key)), std::move(str_key)));
+						tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(object.at(str_key)), std::move(str_key)));
 					}
 				} else {
 					(this->*wtit->second)(str_key, object.at(str_key));
 				}
 			} else {
-				(this->*wpit->second)(*properties, str_key, object.at(str_key), false);
+				(this->*wpit->second)(*mut_properties, str_key, object.at(str_key), false);
 			}
 		}
 	}
@@ -4412,7 +4412,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		specification = default_spc;
 
 		TaskVector tasks;
-		auto properties = replace ? &clear() : &get_mutable();
+		auto mut_properties = replace ? &clear() : &get_mutable();
 
 		static const auto wpit_e = map_dispatch_write_properties.end();
 		for (const auto& item_key : obj_schema) {
@@ -4420,10 +4420,10 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
 				if (!set_reserved_words.count(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
+					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 				}
 			} else {
-				(this->*wpit->second)(*properties, str_key, obj_schema.at(str_key), true);
+				(this->*wpit->second)(*mut_properties, str_key, obj_schema.at(str_key), true);
 			}
 		}
 
