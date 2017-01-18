@@ -1122,9 +1122,9 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
 				MsgPack* data_pos = nullptr;
-				auto subproperties = properties;
 
-				subproperties = &get_subproperties(subproperties, item, data_pos, doc, tasks);
+				process_properties_document(properties, item, data_pos, doc, tasks);
+				update_partial_prefixes();
 
 				data_pos = specification.flags.store ? &(*data)[pos] : data;
 
