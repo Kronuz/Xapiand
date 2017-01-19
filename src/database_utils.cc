@@ -109,6 +109,19 @@ std::string normalize_uuid(const std::string& uuid)
 }
 
 
+MsgPack normalize_uuid(const MsgPack& uuid)
+{
+	switch (uuid.getType()) {
+		case MsgPack::Type::NIL:
+			return uuid;
+		case MsgPack::Type::MAP:
+			return normalize_uuid(Cast::string(uuid));
+		default:
+			return normalize_uuid(uuid.as_string());
+	}
+}
+
+
 long long read_mastery(const std::string& dir, bool force)
 {
 	L_DATABASE(nullptr, "+ READING MASTERY OF INDEX '%s'...", dir.c_str());
