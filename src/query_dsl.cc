@@ -424,6 +424,22 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op o
 		return get_in_query(field_spc, op, obj, wqf, q_flags, is_raw, is_in);
 	}
 
+	switch (obj.getType()) {
+		case MsgPack::Type::NIL:
+			return Xapian::Query(field_spc.prefix);
+		case MsgPack::Type::STR: {
+			auto val = obj.as_string();
+			if (val.empty()) {
+				return Xapian::Query(field_spc.prefix);
+			} else if (val == "*") {
+				return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.prefix);
+			}
+			break;
+		}
+		default:
+			break;
+	}
+
 	switch (field_spc.get_type()) {
 		case FieldType::TEXT: {
 			auto field_value = Serialise::MsgPack(field_spc, obj);
