@@ -348,8 +348,6 @@ std::string
 Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
 	switch (field_value.getType()) {
-		case MsgPack::Type::NIL:
-			throw DummyException();
 		case MsgPack::Type::BOOLEAN:
 			return boolean(field_spc.get_type(), field_value.as_bool());
 		case MsgPack::Type::POSITIVE_INTEGER:
