@@ -2733,12 +2733,17 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data)
 	const auto it_e = _split.end();
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
-		for (auto it = _split.begin(); it != it_e; ++it) {
-			auto norm_field_name = detect_dynamic(*it);
-			specification.prefix.append(specification.local_prefix);
-			update_partial_prefixes();
-			if (specification.flags.store) {
-				data = &(*data)[norm_field_name];
+		if (specification.flags.store) {
+			for (auto it = _split.begin(); it != it_e; ++it) {
+				data = &(*data)[detect_dynamic(*it)];
+				specification.prefix.append(specification.local_prefix);
+				update_partial_prefixes();
+			}
+		} else {
+			for (auto it = _split.begin(); it != it_e; ++it) {
+				detect_dynamic(*it);
+				specification.prefix.append(specification.local_prefix);
+				update_partial_prefixes();
 			}
 		}
 		specification.flags.inside_namespace = true;
@@ -2773,16 +2778,23 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data)
 				add_field(mut_properties);
 				if (specification.flags.store) {
 					data = &(*data)[norm_field_name];
-				}
-				for (++it; it != it_e; ++it) {
-					const auto& n_field_name = *it;
-					if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
-						THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
-					} else {
-						norm_field_name = detect_dynamic(n_field_name);
-						add_field(mut_properties);
-						if (specification.flags.store) {
-							data = &(*data)[norm_field_name];
+					for (++it; it != it_e; ++it) {
+						const auto& n_field_name = *it;
+						if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
+							THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
+						} else {
+							data = &(*data)[detect_dynamic(n_field_name)];
+							add_field(mut_properties);
+						}
+					}
+				} else {
+					for (++it; it != it_e; ++it) {
+						const auto& n_field_name = *it;
+						if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
+							THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
+						} else {
+							detect_dynamic(n_field_name);
+							add_field(mut_properties);
 						}
 					}
 				}
