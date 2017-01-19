@@ -1127,6 +1127,7 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 				specification.value_rec = nullptr;
 				MsgPack* data_pos = nullptr;
 
+				update_specification(*properties);
 				process_properties_document(properties, item, data_pos, doc, tasks);
 				update_partial_prefixes();
 
