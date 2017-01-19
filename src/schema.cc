@@ -686,7 +686,8 @@ specification_t::specification_t(const specification_t& o)
 	  full_meta_name(o.full_meta_name),
 	  aux_stem_lan(o.aux_stem_lan),
 	  aux_lan(o.aux_lan),
-	  partial_prefixes(o.partial_prefixes) { }
+	  partial_prefixes(o.partial_prefixes),
+	  partial_spcs(o.partial_spcs) { }
 
 
 specification_t::specification_t(specification_t&& o) noexcept
@@ -703,7 +704,8 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  full_meta_name(std::move(o.full_meta_name)),
 	  aux_stem_lan(std::move(o.aux_stem_lan)),
 	  aux_lan(std::move(o.aux_lan)),
-	  partial_prefixes(std::move(o.partial_prefixes)) { }
+	  partial_prefixes(std::move(o.partial_prefixes)),
+	  partial_spcs(std::move(o.partial_spcs)) { }
 
 
 specification_t&
@@ -725,6 +727,7 @@ specification_t::operator=(const specification_t& o)
 	aux_stem_lan = o.aux_stem_lan;
 	aux_lan = o.aux_lan;
 	partial_prefixes = o.partial_prefixes;
+	partial_spcs = o.partial_spcs;
 	required_spc_t::operator=(o);
 	return *this;
 }
@@ -749,6 +752,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	aux_stem_lan = std::move(o.aux_stem_lan);
 	aux_lan = std::move(o.aux_lan);
 	partial_prefixes = std::move(o.partial_prefixes);
+	partial_spcs = std::move(o.partial_spcs);
 	required_spc_t::operator=(std::move(o));
 	return *this;
 }
