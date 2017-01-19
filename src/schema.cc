@@ -1732,8 +1732,22 @@ Schema::guess_field_type(const MsgPack& item_doc)
 {
 	L_CALL(this, "Schema::guess_field_type(%s)", repr(item_doc.to_string()).c_str());
 
-	const auto& field = item_doc.is_array() ? item_doc.at(0) : item_doc;
-	switch (field.getType()) {
+	const MsgPack* field = nullptr;
+	if (item_doc.is_array()) {
+		for (const auto& item : item_doc) {
+			if (item.getType() != MsgPack::Type::NIL) {
+				field = &item;
+				break;
+			}
+		}
+		if (!field) {
+			return;
+		}
+	} else {
+		field = &item_doc;
+	}
+
+	switch (field->getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
 				specification.sep_types[2] = FieldType::POSITIVE;
@@ -1759,7 +1773,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			}
 			break;
 		case MsgPack::Type::STR: {
-			const auto str_value = field.as_string();
+			const auto str_value = field->as_string();
 			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
 				specification.sep_types[2] = FieldType::DATE;
 				return;
@@ -1796,8 +1810,8 @@ Schema::guess_field_type(const MsgPack& item_doc)
 		case MsgPack::Type::ARRAY:
 			THROW(ClientError, "'%s' can not be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
-			if (item_doc.size() == 1) {
-				const auto cast_word = item_doc.begin()->as_string();
+			if (field->size() == 1) {
+				const auto cast_word = field->begin()->as_string();
 				specification.sep_types[2] = Cast::getType(cast_word);
 				return;
 			}
