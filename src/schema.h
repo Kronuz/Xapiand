@@ -486,14 +486,14 @@ class Schema {
 	 */
 
 	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks);
-	const MsgPack& get_subproperties(const MsgPack*& properties);
+	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data);
 	MsgPack& get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks);
 
 
 	/*
 	 * Detect and set dynamic type.
 	 */
-	void detect_dynamic(const std::string& field_name);
+	std::string detect_dynamic(const std::string& field_name);
 
 	/*
 	 * Update specification using object's properties.

@@ -1072,15 +1072,13 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 	const auto spc_start = specification;
 	specification.name.assign(name);
 	auto properties = &*parent_properties;
+	auto data = parent_data;
 
 	switch (object.getType()) {
 		case MsgPack::Type::MAP: {
 			TaskVector tasks;
-			MsgPack* data = nullptr;
 
 			properties = &get_subproperties(properties, object, data, doc, tasks);
-
-			data = specification.flags.store ? &(*parent_data)[specification.flags.dynamic_type ? normalize_uuid(name) : name] : parent_data;
 
 			process_item_value(doc, data, tasks.size());
 
@@ -1093,15 +1091,13 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		}
 
 		case MsgPack::Type::ARRAY: {
-			properties = &get_subproperties(properties);
-			auto data = specification.flags.store ? &(*parent_data)[specification.flags.dynamic_type ? normalize_uuid(name) : name] : parent_data;
+			properties = &get_subproperties(properties, data);
 			index_array(properties, object, data, doc);
 			break;
 		}
 
 		default: {
-			get_subproperties(properties);
-			auto data = specification.flags.store ? &(*parent_data)[specification.flags.dynamic_type ? normalize_uuid(name) : name] : parent_data;
+			get_subproperties(properties, data);
 			process_item_value(doc, data, object);
 			break;
 		}
@@ -2614,15 +2610,21 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
 		for (auto it = field_names.begin(); it != it_last; ++it) {
-			detect_dynamic(*it);
+			auto norm_field_name = detect_dynamic(*it);
 			specification.prefix.append(specification.local_prefix);
 			update_partial_prefixes();
+			if (specification.flags.store) {
+				data = &(*data)[norm_field_name];
+			}
 		}
 		process_properties_document(properties, object, data, doc, tasks);
-		detect_dynamic(*it_last);
+		auto norm_field_name = detect_dynamic(*it_last);
 		specification.prefix.append(specification.local_prefix);
 		update_partial_prefixes();
 		specification.flags.inside_namespace = true;
+		if (specification.flags.store) {
+			data = &(*data)[norm_field_name];
+		}
 	} else {
 		for (auto it = field_names.begin(); it != it_last; ++it) {
 			const auto& field_name = *it;
@@ -2633,34 +2635,49 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 			try {
 				get_subproperties(properties, field_name);
 				update_partial_prefixes();
+				if (specification.flags.store) {
+					data = &(*data)[field_name];
+				}
 			} catch (const std::out_of_range&) {
-				detect_dynamic(field_name);
+				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.dynamic_type) {
 					try {
 						get_subproperties(properties, specification.meta_name);
 						specification.prefix.append(specification.local_prefix);
 						update_partial_prefixes();
+						if (specification.flags.store) {
+							data = &(*data)[norm_field_name];
+						}
 						continue;
 					} catch (const std::out_of_range&) { }
 				}
 
 				auto mut_properties = &get_mutable();
 				add_field(mut_properties);
+				if (specification.flags.store) {
+					data = &(*data)[norm_field_name];
+				}
 				for (++it; it != it_last; ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
 						THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
 					} else {
-						detect_dynamic(n_field_name);
+						norm_field_name = detect_dynamic(n_field_name);
 						add_field(mut_properties);
+						if (specification.flags.store) {
+							data = &(*data)[norm_field_name];
+						}
 					}
 				}
 				const auto& n_field_name = *it_last;
 				if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
 				} else {
-					detect_dynamic(n_field_name);
+					norm_field_name = detect_dynamic(n_field_name);
 					add_field(mut_properties, properties, object, data, doc, tasks);
+					if (specification.flags.store) {
+						data = &(*data)[norm_field_name];
+					}
 				}
 				return *mut_properties;
 			}
@@ -2675,20 +2692,29 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 			get_subproperties(properties, field_name);
 			process_properties_document(properties, object, data, doc, tasks);
 			update_partial_prefixes();
+			if (specification.flags.store) {
+				data = &(*data)[field_name];
+			}
 		} catch (const std::out_of_range&) {
-			detect_dynamic(field_name);
+			auto norm_field_name = detect_dynamic(field_name);
 			if (specification.flags.dynamic_type) {
 				try {
 					get_subproperties(properties, specification.meta_name);
 					specification.prefix.append(specification.local_prefix);
 					process_properties_document(properties, object, data, doc, tasks);
 					update_partial_prefixes();
+					if (specification.flags.store) {
+						data = &(*data)[norm_field_name];
+					}
 					return *properties;
 				} catch (const std::out_of_range&) { }
 			}
 
 			auto mut_properties = &get_mutable();
 			add_field(mut_properties, properties, object, data, doc, tasks);
+			if (specification.flags.store) {
+				data = &(*data)[norm_field_name];
+			}
 			return *mut_properties;
 		}
 	}
@@ -2698,7 +2724,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 
 
 const MsgPack&
-Schema::get_subproperties(const MsgPack*& properties)
+Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data)
 {
 	L_CALL(this, "Schema::get_subproperties(%s)", repr(properties->to_string()).c_str());
 
@@ -2708,9 +2734,12 @@ Schema::get_subproperties(const MsgPack*& properties)
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
 		for (auto it = _split.begin(); it != it_e; ++it) {
-			detect_dynamic(*it);
+			auto norm_field_name = detect_dynamic(*it);
 			specification.prefix.append(specification.local_prefix);
 			update_partial_prefixes();
+			if (specification.flags.store) {
+				data = &(*data)[norm_field_name];
+			}
 		}
 		specification.flags.inside_namespace = true;
 	} else {
@@ -2723,26 +2752,38 @@ Schema::get_subproperties(const MsgPack*& properties)
 			try {
 				get_subproperties(properties, field_name);
 				update_partial_prefixes();
+				if (specification.flags.store) {
+					data = &(*data)[field_name];
+				}
 			} catch (const std::out_of_range&) {
-				detect_dynamic(field_name);
+				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.dynamic_type) {
 					try {
 						get_subproperties(properties, specification.meta_name);
 						specification.prefix.append(specification.local_prefix);
 						update_partial_prefixes();
+						if (specification.flags.store) {
+							data = &(*data)[norm_field_name];
+						}
 						continue;
 					} catch (const std::out_of_range&) { }
 				}
 
 				auto mut_properties = &get_mutable();
 				add_field(mut_properties);
+				if (specification.flags.store) {
+					data = &(*data)[norm_field_name];
+				}
 				for (++it; it != it_e; ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
 						THROW(ClientError, "Field name: %s (%s) is not valid", repr(specification.name).c_str(), repr(n_field_name).c_str());
 					} else {
-						detect_dynamic(n_field_name);
+						norm_field_name = detect_dynamic(n_field_name);
 						add_field(mut_properties);
+						if (specification.flags.store) {
+							data = &(*data)[norm_field_name];
+						}
 					}
 				}
 				return *mut_properties;
@@ -2816,7 +2857,7 @@ Schema::get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskV
 }
 
 
-inline void
+inline std::string
 Schema::detect_dynamic(const std::string& field_name)
 {
 	L_CALL(this, "Schema::detect_dynamic(%s)", repr(field_name).c_str());
@@ -2827,10 +2868,12 @@ Schema::detect_dynamic(const std::string& field_name)
 		specification.meta_name.assign(UUID_FIELD_NAME);
 		specification.flags.dynamic_type = true;
 		specification.flags.dynamic_type_path = true;
+		return normalize_uuid(field_name);
 	} catch (const SerialisationError&) {
 		specification.local_prefix.assign(get_prefix(field_name));
 		specification.meta_name.assign(field_name);
 		specification.flags.dynamic_type = false;
+		return field_name;
 	}
 }
 
