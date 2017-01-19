@@ -1267,7 +1267,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, size_t offspri
 		if (specification.flags.store && !offsprings) {
 			*data = (*data)[RESERVED_VALUE];
 		}
-	} else {
+	} else if (!offsprings) {
 		index_partial_paths(doc);
 	}
 }
