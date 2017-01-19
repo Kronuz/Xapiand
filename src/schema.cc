@@ -1135,9 +1135,7 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 
 				process_item_value(doc, data_pos, tasks.size());
 
-				const auto spc_item = std::move(specification);
 				for (auto& task : tasks) {
-					specification = spc_item;
 					task.get();
 				}
 
