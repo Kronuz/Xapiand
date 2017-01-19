@@ -359,13 +359,20 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 		}
 	}
 
-	if (obj.is_string()) {
-		auto val = obj.as_string();
-		if (val.empty()) {
+	switch (obj.getType()) {
+		case MsgPack::Type::NIL:
 			return Xapian::Query(field_spc.prefix);
-		} else if (val == "*") {
-			return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.prefix);
+		case MsgPack::Type::STR: {
+			auto val = obj.as_string();
+			if (val.empty()) {
+				return Xapian::Query(field_spc.prefix);
+			} else if (val == "*") {
+				return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.prefix);
+			}
+			break;
 		}
+		default:
+			break;
 	}
 
 	auto ser_type = Serialise::get_type(obj);
