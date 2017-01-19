@@ -317,7 +317,6 @@ struct specification_t : required_spc_t {
 	// Script for the object.
 	std::shared_ptr<const MsgPack> script;
 
-	std::string name;
 	std::string meta_name;
 	std::string full_meta_name;
 
@@ -485,9 +484,9 @@ class Schema {
 	 * Gets the properties stored in the schema as well as those sent by the user.
 	 */
 
-	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks);
-	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data);
-	MsgPack& get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks);
+	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, const std::string& name);
+	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name);
+	MsgPack& get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks, const std::string& name);
 
 
 	/*
