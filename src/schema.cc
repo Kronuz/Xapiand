@@ -1911,13 +1911,15 @@ Schema::index_partial_paths(Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::index_partial_paths(<Xapian::Document>)");
 
-	if (specification.partial_prefixes.size() > 2) {
-		const auto paths = get_partial_paths(specification.partial_prefixes);
-		for (const auto& path : paths) {
-			doc.add_term(path);
+	if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
+		if (specification.partial_prefixes.size() > 2) {
+			const auto paths = get_partial_paths(specification.partial_prefixes);
+			for (const auto& path : paths) {
+				doc.add_term(path);
+			}
+		} else {
+			doc.add_term(specification.prefix);
 		}
-	} else {
-		doc.add_term(specification.prefix);
 	}
 }
 
