@@ -317,9 +317,13 @@ struct specification_t : required_spc_t {
 	// Script for the object.
 	std::shared_ptr<const MsgPack> script;
 
+	// Used to save the last meta name.
 	std::string meta_name;
+
+	// Used to get mutable properties anytime.
 	std::string full_meta_name;
 
+	// Auxiliar variables, only need specify _stem_language or _language.
 	std::string aux_stem_lan;
 	std::string aux_lan;
 
