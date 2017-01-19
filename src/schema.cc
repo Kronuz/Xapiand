@@ -69,11 +69,15 @@
  * 3. Feed specification_t with the object sent by the user using process_*,
  *    except those that are already fixed because are reserved to be and
  *    they already exist in the metadata.
- * 4. If the field in the schema still has no RESERVED_TYPE (field_with_type)
+ * 4. If the field in the schema is normal and still has no RESERVED_TYPE (field_with_type)
  *    and a value is received for the field, call validate_required_data() to
  *    initialize the specification with validated data sent by the user.
- * 5. If there are values sent by user, fills the document to be indexed by
- *    using index_object() and index_array().
+ * 5. If the field is namespace or has partial paths call validate_required_namespace_data() to
+ *    initialize the specification with default specifications and sent by the user.
+ * 6. If there are values sent by user, fills the document to be indexed by
+ *    process_item()
+ * 7. index() does steps 1 to 3 and for each field call index_object()
+ * 8. index_object() does step 1 to 6 and for each field call index_object().
  */
 
 
