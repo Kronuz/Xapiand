@@ -2588,7 +2588,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 			task.get();
 		}
 	} else {
-		THROW(ClientError, "Schema must be an object of objects");
+		THROW(ClientError, "%s must be an object", repr(name).c_str());
 	}
 
 	specification = std::move(spc_start);
