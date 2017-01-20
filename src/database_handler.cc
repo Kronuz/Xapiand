@@ -127,10 +127,10 @@ DatabaseHandler::get_database() const noexcept
 
 
 std::shared_ptr<Schema>
-DatabaseHandler::get_schema() const
+DatabaseHandler::get_schema(const MsgPack* obj) const
 {
 	if (endpoints.size() == 1) {
-		return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+		return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags, obj));
 	} else {
 		for (const auto& endp : endpoints) {
 			try {
@@ -289,7 +289,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 	auto schema_begins = std::chrono::system_clock::now();
 	do {
-		schema = (endpoints.size() == 1) ? get_schema() : get_fvschema();
+		schema = (endpoints.size() == 1) ? get_schema(&obj) : get_fvschema();
 		L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
 
 		spc_id = schema->get_data_id();

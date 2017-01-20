@@ -35,6 +35,7 @@
 
 #include "atomic_shared_ptr.h"    // for atomic_shared_ptr
 #include "database_autocommit.h"  // for DatabaseAutocommit
+#include "database_handler.h"     // for DatabaseHandler
 #include "exception.h"            // for Error, MSG_Error, Exception, DocNot...
 #include "io_utils.h"             // for close, strerrno, write, open
 #include "length.h"               // for serialise_length, unserialise_length
@@ -61,6 +62,8 @@
 #define WAL_SYNC_MODE STORAGE_ASYNC_SYNC
 #define XAPIAN_SYNC_MODE 0  // This could also be Xapian::DB_FULL_SYNC for xapian to ensure full sync
 #define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
+
+#define SCHEMA_FIELD "schema"
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2322,46 +2325,122 @@ DatabasePool::get_master_count()
 }
 
 
+std::pair<bool, atomic_shared_ptr<const MsgPack>*>
+DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPack* obj)
+{
+	bool created = false;
+	auto local_schema_hash = endpoint.hash();
+	atomic_shared_ptr<const MsgPack>* atom_local_schema;
+	{
+		std::lock_guard<std::mutex> lk(smtx);
+		atom_local_schema = &schemas[local_schema_hash];
+	}
+	auto local_schema_ptr = atom_local_schema->load();
+	if (!local_schema_ptr) {
+		std::string str_schema;
+		std::shared_ptr<Database> database;
+		if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
+			str_schema.assign(database->get_metadata(DB_META_SCHEMA));
+			std::shared_ptr<const MsgPack> aux_schema_ptr;
+			if (str_schema.empty()) {
+				created = true;
+				if (obj && obj->find(RESERVED_PATH) != obj->end()) {
+					auto path = obj->at(RESERVED_PATH);
+					if (path.is_string()) {
+						aux_schema_ptr = std::make_shared<const MsgPack>(path.as_string());
+					} else {
+						schemas.erase(local_schema_hash);
+						THROW(ClientError, "%s must be string", RESERVED_PATH);
+					}
+				} else {
+					aux_schema_ptr = Schema::get_initial_schema();
+				}
+			} else {
+				try {
+					aux_schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+				} catch (const msgpack::unpack_error& e) {
+					schemas.erase(local_schema_hash);
+					THROW(SerialisationError, "Unpack error: %s", e.what());
+				}
+			}
+			aux_schema_ptr->lock();
+			if (atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr)) {
+				local_schema_ptr = aux_schema_ptr;
+				if (str_schema.empty()) {
+					database->set_metadata(DB_META_SCHEMA, local_schema_ptr->serialise());
+				}
+			}
+			checkin(database);
+		} else {
+			schemas.erase(local_schema_hash);
+			THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
+		}
+	}
+
+	if (!local_schema_ptr->is_map() && !local_schema_ptr->is_string()) {
+		schemas.erase(local_schema_hash);
+		THROW(Error, "Invalid type for schema: %s", repr(endpoint.to_string()).c_str());
+	}
+
+	return std::make_pair(created, atom_local_schema);
+}
+
+
+MsgPack
+DatabasePool::get_shared_schema(const Endpoint& endpoint, const std::string& id, int flags)
+{
+	L_CALL(this, "DatabasePool::get_shared_schema(%s)(%s)", repr(endpoint.to_string()).c_str(), id.c_str());
+
+	try {
+		DatabaseHandler db_handler;
+		db_handler.reset(Endpoints(endpoint), flags != -1 ? flags : DB_OPEN, HTTP_POST);
+		auto doc = db_handler.get_document(id);
+		return doc.get_obj()[SCHEMA_FIELD];
+	} catch (const DocNotFoundError&) {
+		THROW(DocNotFoundError, "In shared schema %s document not found: %s", repr(endpoint.to_string()).c_str());
+	}
+}
+
+
 std::shared_ptr<const MsgPack>
-DatabasePool::get_schema(const Endpoint& endpoint, int flags)
+DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj)
 {
 	L_CALL(this, "DatabasePool::get_schema(%s, 0x%02x)", repr(endpoint.to_string()).c_str(), flags);
 
 	if (finished) return nullptr;
 
-	atomic_shared_ptr<const MsgPack>* schema;
-	{
-		std::lock_guard<std::mutex> lk(smtx);
-		schema = &schemas[endpoint.hash()];
+	auto atom_local_schema = get_local_schema(endpoint, flags, obj);
+
+	auto schema_ptr = atom_local_schema.second->load();
+	if (!schema_ptr->is_map()) {
+		auto schema_path = split_index(schema_ptr->as_string());
+		auto shared_schema_hash = std::hash<std::string>{}(schema_path.first);
+		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
+		{
+			std::lock_guard<std::mutex> lk(smtx);
+			atom_shared_schema = &schemas[shared_schema_hash];
+		}
+		auto shared_schema_ptr = atom_shared_schema->load();
+		if (shared_schema_ptr) {
+			schema_ptr = shared_schema_ptr;
+		} else {
+			if (atom_local_schema.first) {
+				schema_ptr = Schema::get_initial_schema();
+			} else {
+				schema_ptr = std::make_shared<const MsgPack>(get_shared_schema(schema_path.first, schema_path.second));
+			}
+			schema_ptr->lock();
+			if (!atom_shared_schema->compare_exchange_strong(shared_schema_ptr, schema_ptr)) {
+				schema_ptr = shared_schema_ptr;
+			}
+		}
+		if (!schema_ptr->is_map()) {
+			schemas.erase(shared_schema_hash);
+			THROW(Error, "Schema is not a map: %s", repr(endpoint.to_string()).c_str());
+		}
 	}
 
-	auto schema_ptr = schema->load();
-	if (schema_ptr) {
-		return schema_ptr;
-	}
-
-	std::string str_schema;
-	std::shared_ptr<Database> database;
-	if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-		str_schema.assign(database->get_metadata(DB_META_SCHEMA));
-		checkin(database);
-	} else {
-		schemas.erase(endpoint.hash());
-		THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
-	}
-
-	if likely(!str_schema.empty()) {
-		try {
-			auto new_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
-			new_schema->lock();
-			schema->store(new_schema);
-			return new_schema;
-		} catch (const msgpack::unpack_error&) { }
-	}
-
-	auto initial_schema = Schema::get_initial_schema();
-	schema->store(initial_schema);
-	return initial_schema;
+	return schema_ptr;
 }
 
 
@@ -2370,24 +2449,50 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 {
 	L_CALL(this, "DatabasePool::set_schema(%s, %d, %s)", repr(endpoint.to_string()).c_str(), flags, new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
 
-	atomic_shared_ptr<const MsgPack>* schema;
-	{
-		std::lock_guard<std::mutex> lk(smtx);
-		schema = &schemas[endpoint.hash()];
+	auto atom_local_schema = get_local_schema(endpoint, flags, nullptr);
+	auto local_schema_ptr = atom_local_schema.second->load();
+
+	if (!local_schema_ptr->is_map()) {
+		auto schema_path = split_index(local_schema_ptr->as_string());
+		auto shared_schema_hash = std::hash<std::string>{}(schema_path.first);
+		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
+		{
+			std::lock_guard<std::mutex> lk(smtx);
+			atom_shared_schema = &schemas[shared_schema_hash];
+		}
+		std::shared_ptr<const MsgPack> aux_schema;
+		if (atom_shared_schema->load()) {
+			aux_schema = old_schema;
+		}
+		if (atom_shared_schema->compare_exchange_strong(aux_schema, new_schema)) {
+			DatabaseHandler db_handler;
+			Endpoint shared_endpoint(schema_path.first);
+			try {
+				db_handler.reset(shared_endpoint, DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_GET);
+				MsgPack shared_schema;
+				shared_schema[SCHEMA_FIELD] = *new_schema;
+				shared_schema[SCHEMA_FIELD][RESERVED_RECURSIVE] = false;
+				db_handler.index(schema_path.second, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
+				return true;
+			} catch (const CheckoutError&) {
+				THROW(CheckoutError, "Cannot checkout document: %s", repr(schema_path.first).c_str());
+			}
+		} else {
+			old_schema = aux_schema;
+		}
+	} else {
+		if (atom_local_schema.second->compare_exchange_strong(old_schema, new_schema)) {
+			std::shared_ptr<Database> database;
+			if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
+				database->set_metadata(DB_META_SCHEMA, new_schema->serialise());
+				checkin(database);
+				return true;
+			} else {
+				THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
+			}
+		}
 	}
 
-	std::shared_ptr<Database> database;
-	if (!checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-		THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
-	}
-
-	if (schema->compare_exchange_strong(old_schema, new_schema)) {
-		database->set_metadata(DB_META_SCHEMA, new_schema->serialise());
-		checkin(database);
-		return true;
-	}
-
-	checkin(database);
 	return false;
 }
 

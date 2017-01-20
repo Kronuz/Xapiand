@@ -406,6 +406,8 @@ private:
 	void add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	bool _switch_db(const Endpoint& endpoint);
+	MsgPack get_shared_schema(const Endpoint& endpoint, const std::string& id, int flags=-1);
+	std::pair<bool, atomic_shared_ptr<const MsgPack>*> get_local_schema(const Endpoint& endpoint, int flags=-1, const MsgPack* obj=nullptr);
 
 public:
 	DatabasePool(size_t max_size);
@@ -415,7 +417,7 @@ public:
 
 	void finish();
 
-	std::shared_ptr<const MsgPack> get_schema(const Endpoint& endpoint, int flags=-1);
+	std::shared_ptr<const MsgPack> get_schema(const Endpoint& endpoint, int flags=-1, const MsgPack* obj=nullptr);
 	bool set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack>& old_schema, std::shared_ptr<const MsgPack> new_schema);
 
 	template<typename F, typename... Args>

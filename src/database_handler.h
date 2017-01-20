@@ -106,7 +106,7 @@ public:
 	~DatabaseHandler() = default;
 
 	std::shared_ptr<Database> get_database() const noexcept;
-	std::shared_ptr<Schema> get_schema() const;
+	std::shared_ptr<Schema> get_schema(const MsgPack* obj=nullptr) const;
 	std::shared_ptr<Schema> get_fvschema() const;
 
 	void reset(const Endpoints& endpoints_, int flags_, enum http_method method_);
