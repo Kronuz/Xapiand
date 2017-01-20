@@ -2989,35 +2989,21 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 	L_CALL(this, "Schema::process_properties_document(%s, %s, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	static const auto wpit_e = map_dispatch_write_properties.end();
-	if (specification.flags.field_with_type) {
-		for (const auto& item_key : object) {
-			auto str_key = item_key.as_string();
-			const auto wpit = map_dispatch_write_properties.find(str_key);
-			if (wpit == wpit_e) {
+	static const auto wtit_e = map_dispatch_without_type.end();
+	for (const auto& item_key : object) {
+		auto str_key = item_key.as_string();
+		const auto wpit = map_dispatch_write_properties.find(str_key);
+		if (wpit == wpit_e) {
+			const auto wtit = map_dispatch_without_type.find(str_key);
+			if (wtit == wtit_e) {
 				if (!set_reserved_words.count(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(object.at(str_key)), std::move(str_key)));
 				}
 			} else {
-				(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
+				(this->*wtit->second)(str_key, object.at(str_key));
 			}
-		}
-	} else {
-		static const auto wtit_e = map_dispatch_without_type.end();
-		for (const auto& item_key : object) {
-			auto str_key = item_key.as_string();
-			const auto wpit = map_dispatch_write_properties.find(str_key);
-			if (wpit == wpit_e) {
-				const auto wtit = map_dispatch_without_type.find(str_key);
-				if (wtit == wtit_e) {
-					if (!set_reserved_words.count(str_key)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(object.at(str_key)), std::move(str_key)));
-					}
-				} else {
-					(this->*wtit->second)(str_key, object.at(str_key));
-				}
-			} else {
-				(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
-			}
+		} else {
+			(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
 		}
 	}
 }
@@ -3883,59 +3869,72 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 			THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
 		}
 
+		std::array<FieldType, 3> _sep_types;
+
 		static const auto tit_e = map_type.end();
 		auto tit = map_type.find(str_type);
 		if (tit != tit_e) {
-			specification.sep_types[2] = tit->second;
+			_sep_types[2] = tit->second;
 		} else {
 			const auto tokens = Split::split(str_type, "/");
 			switch (tokens.size()) {
 				case 1:
 					if (tokens[0] == OBJECT_STR) {
-						specification.sep_types[0] = FieldType::OBJECT;
-						return;
+						_sep_types[0] = FieldType::OBJECT;
+						break;
 					} else if (tokens[0] == ARRAY_STR) {
-						specification.sep_types[1] = FieldType::ARRAY;
-						return;
+						_sep_types[1] = FieldType::ARRAY;
+						break;
 					}
-					break;
+
+					THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
 
 				case 2:
 					if (tokens[0] == OBJECT_STR) {
-						specification.sep_types[0] = FieldType::OBJECT;
+						_sep_types[0] = FieldType::OBJECT;
 						if (tokens[1] == ARRAY_STR) {
-							specification.sep_types[1] = FieldType::ARRAY;
-							return;
+							_sep_types[1] = FieldType::ARRAY;
+							break;
 						} else {
 							tit = map_type.find(tokens[1]);
 							if (tit != tit_e) {
-								specification.sep_types[2] = tit->second;
-								return;
+								_sep_types[2] = tit->second;
+								break;
 							}
 						}
 					} else if (tokens[0] == ARRAY_STR) {
-						specification.sep_types[1] = FieldType::ARRAY;
+						_sep_types[1] = FieldType::ARRAY;
 						tit = map_type.find(tokens[1]);
 						if (tit != tit_e) {
-							specification.sep_types[2] = tit->second;
-							return;
+							_sep_types[2] = tit->second;
+							break;
 						}
 					}
-					break;
+
+					THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
 
 				case 3:
 					if (tokens[0] == OBJECT_STR && tokens[1] == ARRAY_STR) {
-						specification.sep_types[0] = FieldType::OBJECT;
-						specification.sep_types[1] = FieldType::ARRAY;
+						_sep_types[0] = FieldType::OBJECT;
+						_sep_types[1] = FieldType::ARRAY;
 						tit = map_type.find(tokens[2]);
 						if (tit != tit_e) {
-							specification.sep_types[2] = tit->second;
-							return;
+							_sep_types[2] = tit->second;
+							break;
 						}
 					}
-					break;
+
+				default:
+					THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
 			}
-			THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", prop_name.c_str(), str_set_type.c_str());
+		}
+
+		if (specification.flags.field_with_type) {
+			if (specification.sep_types[2] != _sep_types[2]) {
+				THROW(ClientError, "Different type for field: %s [%s -> %s] is not allowed in a post to _schema", repr(specification.full_meta_name).c_str(), Serialise::type(_sep_types[2]).c_str(), Serialise::type(specification.sep_types[2]).c_str());
+			}
+		} else {
+			specification.sep_types = std::move(_sep_types);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
