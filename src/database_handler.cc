@@ -303,10 +303,11 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 		// Add ID.
 		auto& id_field = obj_[ID_FIELD_NAME];
+		auto id_value = Cast::cast(spc_id.sep_types[2], _document_id);
 		if (id_field.is_map()) {
-			id_field[RESERVED_VALUE] = Cast::cast(spc_id.sep_types[2], _document_id);
+			id_field[RESERVED_VALUE] = id_value;
 		} else {
-			id_field = Cast::cast(spc_id.sep_types[2], _document_id);
+			id_field = id_value;
 		}
 
 		if (blob.empty()) {
@@ -332,8 +333,16 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 		if (prefixed_term_id.empty()) {
 			// Now the schema is full, get specification id.
 			spc_id = schema->get_data_id();
-			term_id = Serialise::serialise(spc_id, _document_id);
-			prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
+			if (spc_id.get_type() == FieldType::EMPTY) {
+				// Schema is namespace.
+				auto type_ser = Serialise::get_type(id_value);
+				term_id = type_ser.second;
+				static const auto& prefix_id = get_prefix(ID_FIELD_NAME);
+				prefixed_term_id = prefixed(term_id, prefix_id, required_spc_t::get_ctype(type_ser.first));
+			} else {
+				term_id = Serialise::serialise(spc_id, _document_id);
+				prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
+			}
 		}
 		auto update = update_schema();
 		if (update.first) {
