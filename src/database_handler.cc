@@ -293,7 +293,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 		L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
 
 		spc_id = schema->get_data_id();
-		if (spc_id.sep_types[2] == FieldType::EMPTY) {
+		if (spc_id.get_type() == FieldType::EMPTY) {
 			obj_ = obj;
 		} else {
 			term_id = Serialise::serialise(spc_id, _document_id);
@@ -303,7 +303,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 		// Add ID.
 		auto& id_field = obj_[ID_FIELD_NAME];
-		auto id_value = Cast::cast(spc_id.sep_types[2], _document_id);
+		auto id_value = Cast::cast(spc_id.get_type(), _document_id);
 		if (id_field.is_map()) {
 			id_field[RESERVED_VALUE] = id_value;
 		} else {
@@ -736,7 +736,7 @@ DatabaseHandler::get_prefixed_term_id(const std::string& doc_id)
 	schema = get_schema();
 
 	auto field_spc = schema->get_data_id();
-	if (field_spc.sep_types[2] == FieldType::EMPTY) {
+	if (field_spc.get_type() == FieldType::EMPTY) {
 		// Search like namespace.
 		static const auto& prefix_id = get_prefix(ID_FIELD_NAME);
 		auto type_ser = Serialise::get_type(doc_id);
