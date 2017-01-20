@@ -2612,8 +2612,9 @@ Schema::update_partial_prefixes()
 }
 
 
-void
-Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_name)
+template <typename T>
+inline void
+Schema::get_subproperties(T& properties, const std::string& meta_name)
 {
 	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str());
 
@@ -2633,24 +2634,6 @@ Schema::get_subproperties(const MsgPack*& properties, const std::string& meta_na
 	}
 
 	update_specification(*properties);
-}
-
-
-void
-Schema::get_subproperties(MsgPack*& mut_properties, const std::string& meta_name)
-{
-	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(mut_properties->to_string()).c_str(), repr(meta_name).c_str());
-
-	mut_properties = &mut_properties->at(meta_name);
-	specification.flags.field_found = true;
-	static const auto stit_e = map_stem_language.end();
-	const auto stit = map_stem_language.find(meta_name);
-	if (stit != stit_e && stit->second.first) {
-		specification.language = stit->second.second;
-		specification.aux_lan = stit->second.second;
-	}
-
-	update_specification(*mut_properties);
 }
 
 

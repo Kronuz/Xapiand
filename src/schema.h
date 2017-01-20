@@ -476,8 +476,8 @@ class Schema {
 	/*
 	 * Get the properties of meta name of schema.
 	 */
-	void get_subproperties(const MsgPack*& properties, const std::string& meta_name);
-	void get_subproperties(MsgPack*& mut_properties, const std::string& meta_name);
+	template <typename T>
+	void get_subproperties(T& properties, const std::string& meta_name);
 
 	/*
 	 * Add partial prefix in specification.partials_prefixes or clear it.
