@@ -4542,15 +4542,25 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 			}
 		}
 
-		if (specification.flags.is_namespace && tasks.size()) {
-			THROW(ClientError, "An namespace object cannot have children in Schema");
-		}
-
-		restart_specification();
-		const auto spc_start = std::move(specification);
-		for (auto& task : tasks) {
-			specification = spc_start;
-			task.get();
+		if (specification.flags.is_namespace) {
+			if (tasks.size()) {
+				THROW(ClientError, "An namespace object cannot have children in Schema");
+			}
+			// clear schema properties.
+			for (auto it = mut_properties->begin(); it != mut_properties->end(); ) {
+				if (set_reserved_words.count(it->as_string())) {
+					++it;
+				} else {
+					it = mut_properties->erase(it);
+				}
+			}
+		} else {
+			restart_specification();
+			const auto spc_start = std::move(specification);
+			for (auto& task : tasks) {
+				specification = spc_start;
+				task.get();
+			}
 		}
 	} catch (...) {
 		mut_schema.reset();
