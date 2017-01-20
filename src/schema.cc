@@ -3082,6 +3082,12 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, TaskVector& t
 		specification.aux_lan = slit->second.second;
 	}
 
+	if (specification.full_meta_name.empty()) {
+		specification.full_meta_name.assign(specification.meta_name);
+	} else {
+		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
+	}
+
 	// Write obj specifications.
 	static const auto wpit_e = map_dispatch_write_properties.end();
 	static const auto ddit_e = map_dispatch_document.end();
