@@ -2863,20 +2863,20 @@ Schema::get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskV
 			get_subproperties(mut_properties, field_name);
 		} catch (const std::out_of_range&) {
 			for ( ; it != it_last; ++it) {
-				specification.meta_name = *it;
-				if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(specification.meta_name))) {
-					THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(specification.meta_name).c_str());
+				const auto& n_field_name = *it;
+				if (!is_valid(n_field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(n_field_name))) {
+					THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(n_field_name).c_str());
 				} else {
-					specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
+					verify_dynamic(n_field_name);
 					add_field(mut_properties);
 				}
 			}
 
-			specification.meta_name = *it_last;
-			if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(specification.meta_name))) {
-				THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(specification.meta_name).c_str());
+			const auto& n_field_name = *it_last;
+			if (!is_valid(n_field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(n_field_name))) {
+				THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(n_field_name).c_str());
 			} else {
-				specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
+				verify_dynamic(n_field_name);
 				add_field(mut_properties, object, tasks);
 			}
 
@@ -2896,12 +2896,28 @@ Schema::get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskV
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(field_name).c_str());
 		} else {
-			specification.meta_name = field_name;
-			specification.flags.dynamic_type = (specification.meta_name == UUID_FIELD_NAME);
+			verify_dynamic(field_name);
 			add_field(mut_properties, object, tasks);
 		}
 	}
 	return *mut_properties;
+}
+
+
+inline void
+Schema::verify_dynamic(const std::string& field_name)
+{
+	L_CALL(this, "Schema::verify_dynamic(%s)", repr(field_name).c_str());
+
+	if (field_name == UUID_FIELD_NAME) {
+		specification.meta_name.assign(field_name);
+		specification.flags.dynamic_type = true;
+		specification.flags.dynamic_type_path = true;
+	} else {
+		specification.local_prefix = get_prefix(field_name);
+		specification.meta_name.assign(field_name);
+		specification.flags.dynamic_type = false;
+	}
 }
 
 

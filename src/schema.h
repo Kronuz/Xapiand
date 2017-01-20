@@ -494,7 +494,12 @@ class Schema {
 
 
 	/*
-	 * Detect and set dynamic type.
+	 * Verify if field_name is the meta field used for dynamic types.
+	 */
+	void verify_dynamic(const std::string& field_name);
+
+	/*
+	 * Detect if field_name is dynamic type.
 	 */
 	std::string detect_dynamic(const std::string& field_name);
 
