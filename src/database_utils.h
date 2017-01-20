@@ -222,7 +222,7 @@ inline std::string get_hashed(const std::string& name) {
 
 
 std::string prefixed(const std::string& term, const std::string& field_prefix, char field_type);
-Xapian::valueno get_slot(const std::string& field_prefix, FieldType field_type);
+Xapian::valueno get_slot(const std::string& field_prefix, char field_type);
 std::string get_prefix(unsigned long long field_number);
 std::string get_prefix(const std::string& field_name);
 std::string normalize_uuid(const std::string& uuid);

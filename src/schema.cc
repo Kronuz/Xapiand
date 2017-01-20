@@ -1313,7 +1313,7 @@ Schema::get_namespace_specification(FieldType namespace_type, const std::string&
 	auto spc = specification_t::get_global(namespace_type);
 
 	spc.prefix.assign(prefix_namespace);
-	spc.slot = get_slot(prefix_namespace, spc.sep_types[2]);
+	spc.slot = get_slot(prefix_namespace, spc.get_ctype());
 
 	switch (spc.sep_types[2]) {
 		case FieldType::INTEGER:
@@ -1408,7 +1408,7 @@ Schema::complete_specification(const MsgPack& item_value)
 	} else {
 		if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 			if (specification.flags.dynamic_type_path) {
-				specification.slot = get_slot(specification.prefix, specification.sep_types[2]);
+				specification.slot = get_slot(specification.prefix, specification.get_ctype());
 			}
 
 			for (auto& acc_prefix : specification.acc_prefix) {
@@ -1617,7 +1617,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 		// Process RESERVED_SLOT
 		if (!specification.flags.dynamic_type_path) {
 			if (specification.slot == Xapian::BAD_VALUENO) {
-				specification.slot = get_slot(specification.prefix, specification.sep_types[2]);
+				specification.slot = get_slot(specification.prefix, specification.get_ctype());
 			}
 			mut_properties[RESERVED_SLOT] = specification.slot;
 		}
@@ -4619,7 +4619,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 
 			if (is_range) {
 				if (std::get<1>(info)) {
-					res.slot = get_slot(res.prefix, res.sep_types[2]);
+					res.slot = get_slot(res.prefix, res.get_ctype());
 				} else {
 					res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 				}
@@ -4705,7 +4705,7 @@ Schema::get_slot_field(const std::string& field_name) const
 
 		if (res.flags.inside_namespace) {
 			res.sep_types[2] = FieldType::TERM;
-			res.slot = get_slot(std::get<3>(info), res.sep_types[2]);
+			res.slot = get_slot(std::get<3>(info), res.get_ctype());
 		} else {
 			const auto& properties = std::get<0>(info);
 
@@ -4713,7 +4713,7 @@ Schema::get_slot_field(const std::string& field_name) const
 			res.sep_types[2] = (FieldType)sep_types.at(2).as_u64();
 
 			if (std::get<1>(info)) {
-				res.slot = get_slot(std::get<3>(info), res.sep_types[2]);
+				res.slot = get_slot(std::get<3>(info), res.get_ctype());
 			} else {
 				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 			}

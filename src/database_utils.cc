@@ -69,9 +69,9 @@ std::string prefixed(const std::string& term, const std::string& field_prefix, c
 }
 
 
-Xapian::valueno get_slot(const std::string& field_prefix, FieldType field_type)
+Xapian::valueno get_slot(const std::string& field_prefix, char field_type)
 {
-	auto slot = static_cast<Xapian::valueno>(xxh64::hash(field_prefix + (char)(field_type)));
+	auto slot = static_cast<Xapian::valueno>(xxh64::hash(field_prefix + field_type));
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
 	} else if (slot == Xapian::BAD_VALUENO) {

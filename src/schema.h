@@ -294,8 +294,12 @@ struct required_spc_t {
 		return sep_types[2];
 	}
 
+	static char get_ctype(FieldType type) noexcept {
+		return toupper(toUType(type));
+	}
+
 	char get_ctype() const noexcept {
-		return toupper(toUType(sep_types[2]));
+		return get_ctype(sep_types[2]);
 	}
 };
 
