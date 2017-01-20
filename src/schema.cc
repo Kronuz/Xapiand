@@ -2576,7 +2576,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 			_validate_required_data(*mut_properties);
 		}
 
-		if (tasks.size() && specification.flags.inside_namespace) {
+		if (specification.flags.is_namespace && tasks.size()) {
 			THROW(ClientError, "An namespace object cannot have children in Schema");
 		}
 
@@ -3749,7 +3749,7 @@ Schema::write_u_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace, bool is_root)
+Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace, bool)
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
 	L_CALL(this, "Schema::write_namespace(%s)", repr(doc_namespace.to_string()).c_str());
@@ -3761,9 +3761,7 @@ Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const
 			specification.flags.partial_paths = specification.flags.partial_paths || !default_spc.flags.optimal;
 		}
 		specification.flags.has_namespace = true;
-		if (!is_root) {
-			properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
-		}
+		properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -4541,6 +4539,10 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 			} else {
 				(this->*wpit->second)(*mut_properties, str_key, obj_schema.at(str_key), true);
 			}
+		}
+
+		if (specification.flags.is_namespace && tasks.size()) {
+			THROW(ClientError, "An namespace object cannot have children in Schema");
 		}
 
 		restart_specification();
