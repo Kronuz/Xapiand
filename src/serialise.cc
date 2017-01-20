@@ -540,6 +540,11 @@ Serialise::get_type(const std::string& field_value, bool bool_term)
 		std::make_pair(FieldType::TERM, field_value);
 	}
 
+	// Try like UUID
+	try {
+		return std::make_pair(FieldType::UUID, uuid(field_value));
+	} catch (const SerialisationError&) { }
+
 	// Try like INTEGER.
 	try {
 		return std::make_pair(FieldType::INTEGER, integer(field_value));
@@ -564,11 +569,6 @@ Serialise::get_type(const std::string& field_value, bool bool_term)
 	try {
 		return std::make_pair(FieldType::GEO, ewkt(field_value, default_spc.flags.partials, default_spc.error));
 	} catch (const EWKTError&) { }
-
-	// Like UUID
-	if (isUUID(field_value)) {
-		return std::make_pair(FieldType::UUID, uuid(field_value));
-	}
 
 	// Try like BOOLEAN
 	try {
@@ -604,10 +604,10 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 		case MsgPack::Type::STR: {
 			auto str_obj = field_value.as_string();
 
-			// Like UUID
-			if (isUUID(str_obj)) {
+			// Try like UUID
+			try {
 				return std::make_pair(FieldType::UUID, uuid(str_obj));
-			}
+			} catch (const SerialisationError&) { }
 
 			// Try like DATE
 			try {
