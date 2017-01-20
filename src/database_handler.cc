@@ -334,11 +334,11 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			// Now the schema is full, get specification id.
 			spc_id = schema->get_data_id();
 			if (spc_id.get_type() == FieldType::EMPTY) {
-				// Schema is namespace.
+				// Index like a namespace.
+				static const auto& prefix_id = get_prefix(ID_FIELD_NAME);
 				auto type_ser = Serialise::get_type(id_value);
 				term_id = type_ser.second;
-				static const auto& prefix_id = get_prefix(ID_FIELD_NAME);
-				prefixed_term_id = prefixed(term_id, prefix_id, required_spc_t::get_ctype(type_ser.first));
+				prefixed_term_id = prefixed(term_id, prefix_id, required_spc_t::get_ctype(specification_t::global_type(type_ser.first)));
 			} else {
 				term_id = Serialise::serialise(spc_id, _document_id);
 				prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
@@ -702,7 +702,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 Document
 DatabaseHandler::get_document(const Xapian::docid& did)
 {
-	L_CALL(this, "DatabaseHandler::get_document(%d)", did);
+	L_CALL(this, "DatabaseHandler::get_document((Xapian::docid)%d)", did);
 
 	DatabaseHandler::lock_database lk(this);
 	return Document(this, database->get_document(did));
@@ -728,20 +728,31 @@ DatabaseHandler::update_schema()
 }
 
 
-Document
-DatabaseHandler::get_document(const std::string& doc_id)
+std::string
+DatabaseHandler::get_prefixed_term_id(const std::string& doc_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document(%s)", repr(doc_id).c_str());
+	L_CALL(this, "DatabaseHandler::get_prefixed_term_id(%s)", repr(doc_id).c_str());
 
 	schema = get_schema();
 
 	auto field_spc = schema->get_data_id();
 	if (field_spc.sep_types[2] == FieldType::EMPTY) {
-		THROW(DocNotFoundError, "Document not found");
+		// Search like namespace.
+		static const auto& prefix_id = get_prefix(ID_FIELD_NAME);
+		auto type_ser = Serialise::get_type(doc_id);
+		return prefixed(type_ser.second, prefix_id, required_spc_t::get_ctype(specification_t::global_type(type_ser.first)));
+	} else {
+		return prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix, field_spc.get_ctype());
 	}
-	auto term_id = prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix, field_spc.get_ctype());
+}
 
-	return get_document_term(term_id);
+
+Document
+DatabaseHandler::get_document(const std::string& doc_id)
+{
+	L_CALL(this, "DatabaseHandler::get_document((std::string)%s)", repr(doc_id).c_str());
+
+	return get_document_term(get_prefixed_term_id(doc_id));
 }
 
 
@@ -750,16 +761,10 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 {
 	L_CALL(this, "DatabaseHandler::get_docid(%s)", repr(doc_id).c_str());
 
-	schema = get_schema();
-
-	auto field_spc = schema->get_data_id();
-	if (field_spc.sep_types[2] == FieldType::EMPTY) {
-		THROW(DocNotFoundError, "Document not found");
-	}
-	auto term_id = prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix, field_spc.get_ctype());
+	auto prefixed_term_id = get_prefixed_term_id(doc_id);
 
 	DatabaseHandler::lock_database lk(this);
-	return database->find_document(term_id);
+	return database->find_document(prefixed_term_id);
 }
 
 
