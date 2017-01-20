@@ -938,7 +938,7 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
 	try {
-		const auto& version = schema->at(RESERVED_VERSION);
+		const auto& version = schema->at(DB_META_SCHEMA).at(RESERVED_VERSION);
 		if (version.as_f64() != DB_VERSION_SCHEMA) {
 			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
@@ -956,8 +956,7 @@ Schema::get_initial_schema()
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
 	MsgPack new_schema = {
-		{ RESERVED_VERSION, DB_VERSION_SCHEMA },
-		{ RESERVED_SCHEMA, MsgPack() },
+		{ DB_META_SCHEMA, { { RESERVED_VERSION, DB_VERSION_SCHEMA } } }
 	};
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -973,7 +972,7 @@ Schema::get_mutable()
 		mut_schema = std::make_unique<MsgPack>(*schema);
 	}
 
-	MsgPack* prop = &mut_schema->at(RESERVED_SCHEMA);
+	MsgPack* prop = &mut_schema->at(DB_META_SCHEMA);
 	Split _split(specification.full_meta_name, DB_OFFSPRING_UNION);
 	for (const auto& field_name : _split) {
 		prop = &(*prop)[field_name];
@@ -991,8 +990,9 @@ Schema::clear()
 		mut_schema = std::make_unique<MsgPack>(*schema);
 	}
 
-	auto& prop = mut_schema->at(RESERVED_SCHEMA);
+	auto& prop = mut_schema->at(DB_META_SCHEMA);
 	prop.clear();
+	prop[RESERVED_VERSION] = DB_VERSION_SCHEMA;
 	return prop;
 }
 
@@ -4284,9 +4284,9 @@ Schema::get_readable() const
 	L_CALL(this, "Schema::get_readable()");
 
 	auto schema_readable = mut_schema ? *mut_schema : *schema;
-	auto& properties = schema_readable.at(RESERVED_SCHEMA);
+	auto& properties = schema_readable.at(DB_META_SCHEMA);
 	if unlikely(properties.is_undefined()) {
-		schema_readable.erase(RESERVED_SCHEMA);
+		schema_readable.erase(DB_META_SCHEMA);
 	} else {
 		readable(properties, true);
 	}
@@ -4455,7 +4455,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 
 		MsgPack data;
 		TaskVector tasks;
-		auto properties = mut_schema ? &mut_schema->at(RESERVED_SCHEMA) : &schema->at(RESERVED_SCHEMA);
+		auto properties = mut_schema ? &mut_schema->at(DB_META_SCHEMA) : &schema->at(DB_META_SCHEMA);
 		auto data_ptr = &data;
 
 		if (*properties) {
@@ -4561,7 +4561,7 @@ Schema::get_data_id() const
 	required_spc_t res;
 
 	try {
-		const auto& properties = mut_schema ? mut_schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME) : schema->at(RESERVED_SCHEMA).at(ID_FIELD_NAME);
+		const auto& properties = mut_schema ? mut_schema->at(DB_META_SCHEMA).at(ID_FIELD_NAME) : schema->at(DB_META_SCHEMA).at(ID_FIELD_NAME);
 		res.sep_types[2] = (FieldType)properties.at(RESERVED_TYPE).at(2).as_u64();
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		res.prefix = properties.at(RESERVED_PREFIX).as_string();
@@ -4595,7 +4595,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 	}
 
 	try {
-		auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
+		auto info = get_dynamic_subproperties(schema->at(DB_META_SCHEMA), field_name);
 
 		res.flags.inside_namespace = std::get<2>(info);
 		res.prefix = std::move(std::get<3>(info));
@@ -4692,7 +4692,7 @@ Schema::get_slot_field(const std::string& field_name) const
 	}
 
 	try {
-		auto info = get_dynamic_subproperties(schema->at(RESERVED_SCHEMA), field_name);
+		auto info = get_dynamic_subproperties(schema->at(DB_META_SCHEMA), field_name);
 		res.flags.inside_namespace = std::get<2>(info);
 
 		auto& acc_field = std::get<4>(info);

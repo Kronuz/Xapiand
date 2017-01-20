@@ -2343,7 +2343,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 	std::string str_schema;
 	std::shared_ptr<Database> database;
 	if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-		str_schema.assign(database->get_metadata(RESERVED_SCHEMA));
+		str_schema.assign(database->get_metadata(DB_META_SCHEMA));
 		checkin(database);
 	} else {
 		schemas.erase(endpoint.hash());
@@ -2382,7 +2382,7 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 	}
 
 	if (schema->compare_exchange_strong(old_schema, new_schema)) {
-		database->set_metadata(RESERVED_SCHEMA, new_schema->serialise());
+		database->set_metadata(DB_META_SCHEMA, new_schema->serialise());
 		checkin(database);
 		return true;
 	}

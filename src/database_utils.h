@@ -71,7 +71,6 @@
 #define RESERVED_SLOT              "_slot"
 #define RESERVED_INDEX             "_index"
 #define RESERVED_PREFIX            "_prefix"
-#define RESERVED_SCHEMA            "_schema"
 #define RESERVED_VERSION           "_version"
 #define RESERVED_SCRIPT            "_script"
 #define RESERVED_RECURSIVE         "_recurse"
@@ -111,6 +110,7 @@
 #define RESERVED_GEO_INTERSECTION  "_geometryintersection"
 
 
+#define DB_META_SCHEMA         "schema"
 #define DB_OFFSPRING_UNION     "."
 #define DB_VERSION_SCHEMA      1.0
 
