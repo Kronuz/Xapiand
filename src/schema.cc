@@ -2862,7 +2862,6 @@ Schema::get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskV
 		try {
 			get_subproperties(mut_properties, field_name);
 		} catch (const std::out_of_range&) {
-			mut_properties = &(*mut_properties)[field_name];
 			for ( ; it != it_last; ++it) {
 				specification.meta_name = *it;
 				if (!is_valid(specification.meta_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(specification.meta_name))) {
@@ -2894,7 +2893,6 @@ Schema::get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskV
 		get_subproperties(mut_properties, field_name);
 		process_properties_document(mut_properties, object, tasks);
 	} catch (const std::out_of_range&) {
-		mut_properties = &(*mut_properties)[field_name];
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(field_name).c_str());
 		} else {
