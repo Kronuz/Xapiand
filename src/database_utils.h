@@ -76,6 +76,7 @@
 #define RESERVED_RECURSIVE         "_recurse"
 #define RESERVED_NAMESPACE         "_namespace"
 #define RESERVED_PARTIAL_PATHS     "_partial_paths"
+#define RESERVED_PATH              "_path"
 // Reserved words used only in the root of the  document.
 #define RESERVED_VALUES            "_values"
 #define RESERVED_TERMS             "_terms"
