@@ -1808,7 +1808,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			break;
 		}
 		case MsgPack::Type::ARRAY:
-			THROW(ClientError, "'%s' can not be array of arrays", RESERVED_VALUE);
+			THROW(ClientError, "'%s' cannot be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
 			if (field->size() == 1) {
 				const auto cast_word = field->begin()->as_string();
@@ -2577,7 +2577,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 		}
 
 		if (tasks.size() && specification.flags.inside_namespace) {
-			THROW(ClientError, "An namespace object can not have children in Schema");
+			THROW(ClientError, "An namespace object cannot have children in Schema");
 		}
 
 		set_type_to_object(tasks.size());
@@ -4231,7 +4231,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 		specification.flags.has_index = true;
 	}
 
-	// ID_FIELD_NAME can not be TEXT nor STRING.
+	// ID_FIELD_NAME cannot be TEXT nor STRING.
 	if (specification.sep_types[2] == FieldType::TEXT || specification.sep_types[2] == FieldType::STRING) {
 		specification.sep_types[2] = FieldType::TERM;
 	}
