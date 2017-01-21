@@ -301,6 +301,8 @@ struct required_spc_t {
 	char get_ctype() const noexcept {
 		return get_ctype(sep_types[2]);
 	}
+
+	void set_types(const std::string& str_type);
 };
 
 
