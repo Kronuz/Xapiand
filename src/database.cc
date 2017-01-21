@@ -2395,7 +2395,7 @@ DatabasePool::get_shared_schema(const Endpoint& endpoint, const std::string& id,
 		DatabaseHandler db_handler;
 		db_handler.reset(Endpoints(endpoint), flags != -1 ? flags : DB_OPEN, HTTP_POST);
 		auto doc = db_handler.get_document(id);
-		return doc.get_obj()[SCHEMA_FIELD];
+		return doc.get_obj();
 	} catch (const DocNotFoundError&) {
 		THROW(DocNotFoundError, "In shared schema %s document not found: %s", repr(endpoint.to_string()).c_str());
 	}
@@ -2470,8 +2470,8 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 			try {
 				db_handler.reset(shared_endpoint, DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_GET);
 				MsgPack shared_schema;
-				shared_schema[SCHEMA_FIELD] = *new_schema;
-				shared_schema[SCHEMA_FIELD][RESERVED_RECURSIVE] = false;
+				shared_schema = *new_schema;
+				shared_schema[RESERVED_RECURSIVE] = false;
 				db_handler.index(schema_path.second, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
 				return true;
 			} catch (const CheckoutError&) {
