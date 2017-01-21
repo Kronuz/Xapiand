@@ -2473,6 +2473,9 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 				shared_schema = *new_schema;
 				shared_schema[RESERVED_RECURSIVE] = false;
 				db_handler.index(schema_path.second, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
+				if (XapiandManager::manager->strict) {
+					shared_schema[ID_FIELD_NAME][RESERVED_TYPE] = TERM_STR;
+				}
 				return true;
 			} catch (const CheckoutError&) {
 				THROW(CheckoutError, "Cannot checkout document: %s", repr(schema_path.first).c_str());
