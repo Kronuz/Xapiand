@@ -752,6 +752,27 @@ DatabaseHandler::get_prefixed_term_id(const std::string& doc_id)
 }
 
 
+std::string
+DatabaseHandler::get_metadata(const std::string& key)
+{
+	L_CALL(this, "DatabaseHandler::get_metadata(%s)", repr(key).c_str());
+
+	DatabaseHandler::lock_database lk(this);
+	return database->get_metadata(key);
+}
+
+
+
+void
+DatabaseHandler::set_metadata(const std::string& key, const std::string& value)
+{
+	L_CALL(this, "DatabaseHandler::set_metadata(%s, %s)", repr(key).c_str(), repr(value).c_str());
+
+	DatabaseHandler::lock_database lk(this);
+	database->set_metadata(key, value);
+}
+
+
 Document
 DatabaseHandler::get_document(const std::string& doc_id)
 {

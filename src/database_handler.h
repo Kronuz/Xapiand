@@ -127,6 +127,9 @@ public:
 
 	std::string get_prefixed_term_id(const std::string& doc_id);
 
+	std::string get_metadata(const std::string& key);
+	void set_metadata(const std::string& key, const std::string& value);
+
 	Document get_document(const Xapian::docid& did);
 	Document get_document(const std::string& doc_id);
 	Document get_document_term(const std::string& term_id);
