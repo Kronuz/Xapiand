@@ -380,6 +380,8 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_U_DETECTION,        &Schema::write_u_detection     },
 	{ RESERVED_NAMESPACE,          &Schema::write_namespace       },
 	{ RESERVED_PARTIAL_PATHS,      &Schema::write_partial_paths   },
+	{ RESERVED_VERSION,            &Schema::write_version         },
+	{ RESERVED_SCHEMA,             &Schema::write_schema          },
 });
 
 
@@ -407,6 +409,8 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_PARTIAL_PATHS,      &Schema::process_partial_paths   },
 	{ RESERVED_VALUE,              &Schema::process_value           },
 	{ RESERVED_SCRIPT,             &Schema::process_script          },
+	{ RESERVED_VERSION,            &Schema::process_version         },
+	{ RESERVED_SCHEMA,             &Schema::process_schema          },
 	{ RESERVED_FLOAT,              &Schema::process_cast_object     },
 	{ RESERVED_POSITIVE,           &Schema::process_cast_object     },
 	{ RESERVED_INTEGER,            &Schema::process_cast_object     },
@@ -3836,6 +3840,28 @@ Schema::write_partial_paths(MsgPack& properties, const std::string& prop_name, c
 
 
 void
+Schema::write_version(MsgPack&, const std::string& prop_name, const MsgPack& doc_version)
+{
+	L_CALL(this, "Schema::write_version(%s)", repr(doc_version.to_string()).c_str());
+
+	/*
+	 * RESERVED_VERSION must be DB_VERSION_SCHEMA.
+	 */
+
+	process_version(prop_name, doc_version);
+}
+
+
+void
+Schema::write_schema(MsgPack&, const std::string& prop_name, const MsgPack& doc_schema)
+{
+	L_CALL(this, "Schema::write_schema(%s)", repr(doc_schema.to_string()).c_str());
+
+	process_schema(prop_name, doc_schema);
+}
+
+
+void
 Schema::process_language(const std::string& prop_name, const MsgPack& doc_language)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
@@ -4188,6 +4214,43 @@ Schema::process_script(const std::string&, const MsgPack& doc_script)
 	L_CALL(this, "Schema::process_script(%s)", repr(doc_script.to_string()).c_str());
 
 	specification.script = std::make_unique<const MsgPack>(doc_script);
+}
+
+
+void
+Schema::process_version(const std::string& prop_name, const MsgPack& doc_version)
+{
+	// RESERVED_VERSION isn't heritable and only is allowed in root.
+	L_CALL(this, "Schema::process_version(%s)", repr(doc_version.to_string()).c_str());
+
+	if (specification.full_meta_name.empty()) {
+		try {
+			auto user_version = doc_version.as_f64();
+			if (user_version != DB_VERSION_SCHEMA) {
+				THROW(ClientError, "Different versions, version schema: %.2f user: %.2f", DB_VERSION_SCHEMA, user_version);
+			}
+		} catch (const msgpack::type_error&) {
+			THROW(ClientError, "%s must be double", prop_name.c_str());
+		}
+	} else {
+		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());
+	}
+}
+
+
+void
+Schema::process_schema(const std::string& prop_name, const MsgPack& doc_schema)
+{
+	// RESERVED_SCHEMA isn't heritable and only is allowed in root.
+	L_CALL(this, "Schema::process_schema(%s)", repr(doc_schema.to_string()).c_str());
+
+	if (specification.full_meta_name.empty()) {
+		if (!doc_schema.is_string()) {
+			THROW(ClientError, "%s must be string", prop_name.c_str());
+		}
+	} else {
+		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());
+	}
 }
 
 

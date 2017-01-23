@@ -591,6 +591,8 @@ class Schema {
 	void write_u_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_u_detection);
 	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
 	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
+	void write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version);
+	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
 
 
 	/*
@@ -616,6 +618,8 @@ class Schema {
 	void process_error(const std::string& prop_name, const MsgPack& doc_error);
 	void process_value(const std::string& prop_name, const MsgPack& doc_value);
 	void process_script(const std::string& prop_name, const MsgPack& doc_script);
+	void process_version(const std::string& prop_name, const MsgPack& doc_version);
+	void process_schema(const std::string& prop_name, const MsgPack& doc_schema);
 	void process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object);
 
 
