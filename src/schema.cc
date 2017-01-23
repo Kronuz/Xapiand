@@ -3037,21 +3037,35 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 	L_CALL(this, "Schema::process_properties_document(%s, %s, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	static const auto wpit_e = map_dispatch_write_properties.end();
-	static const auto wtit_e = map_dispatch_without_type.end();
-	for (const auto& item_key : object) {
-		auto str_key = item_key.as_string();
-		const auto wpit = map_dispatch_write_properties.find(str_key);
-		if (wpit == wpit_e) {
-			const auto wtit = map_dispatch_without_type.find(str_key);
-			if (wtit == wtit_e) {
+	if (specification.flags.field_with_type) {
+		for (const auto& item_key : object) {
+			auto str_key = item_key.as_string();
+			const auto wpit = map_dispatch_write_properties.find(str_key);
+			if (wpit == wpit_e) {
 				if (!set_reserved_words.count(str_key)) {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(object.at(str_key)), std::move(str_key)));
 				}
 			} else {
-				(this->*wtit->second)(str_key, object.at(str_key));
+				(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
 			}
-		} else {
-			(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
+		}
+	} else {
+		static const auto wtit_e = map_dispatch_without_type.end();
+		for (const auto& item_key : object) {
+			auto str_key = item_key.as_string();
+			const auto wpit = map_dispatch_write_properties.find(str_key);
+			if (wpit == wpit_e) {
+				const auto wtit = map_dispatch_without_type.find(str_key);
+				if (wtit == wtit_e) {
+					if (!set_reserved_words.count(str_key)) {
+						tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(object.at(str_key)), std::move(str_key)));
+					}
+				} else {
+					(this->*wtit->second)(str_key, object.at(str_key));
+				}
+			} else {
+				(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
+			}
 		}
 	}
 }
