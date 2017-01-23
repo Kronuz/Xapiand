@@ -3933,8 +3933,7 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 	L_CALL(this, "Schema::process_type(%s)", repr(doc_type.to_string()).c_str());
 
 	try {
-		const auto str_type = lower_string(doc_type.as_string());
-		specification.set_types(str_type);
+		specification.set_types(doc_type.as_string());
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
