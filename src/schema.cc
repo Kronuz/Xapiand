@@ -4524,7 +4524,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 				auto str_key = item_key.as_string();
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
-					if (!set_reserved_words.count(str_key)) {
+					if (set_reserved_words.count(str_key)) {
+						THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
+					} else {
 						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
 					}
 				} else {
@@ -4541,7 +4543,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 				if (wpit == wpit_e) {
 					const auto ddit = map_dispatch_document.find(str_key);
 					if (ddit == ddit_e) {
-						if (!set_reserved_words.count(str_key)) {
+						if (set_reserved_words.count(str_key)) {
+							THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
+						} else {
 							tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
 						}
 					} else {
@@ -4591,7 +4595,9 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 			auto str_key = item_key.as_string();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
-				if (!set_reserved_words.count(str_key)) {
+				if (set_reserved_words.count(str_key)) {
+					THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
+				} else {
 					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
 				}
 			} else {
