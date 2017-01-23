@@ -4924,19 +4924,8 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		auto properties = mut_schema ? &mut_schema->at(DB_META_SCHEMA) : &schema->at(DB_META_SCHEMA);
 		auto data_ptr = &data;
 
-		if (*properties) {
-			update_specification(*properties);
-			static const auto ddit_e = map_dispatch_document.end();
-			for (const auto& item_key : object) {
-				auto str_key = item_key.as_string();
-				const auto ddit = map_dispatch_document.find(str_key);
-				if (ddit == ddit_e) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
-				} else {
-					(this->*ddit->second)(str_key, object.at(str_key));
-				}
-			}
-		} else {
+		if (properties->size() == 1) {
+			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable();
 			static const auto wpit_e = map_dispatch_write_properties.end();
 			for (const auto& item_key : object) {
@@ -4953,6 +4942,18 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 				}
 			}
 			properties = &*mut_properties;
+		} else {
+			update_specification(*properties);
+			static const auto ddit_e = map_dispatch_document.end();
+			for (const auto& item_key : object) {
+				auto str_key = item_key.as_string();
+				const auto ddit = map_dispatch_document.find(str_key);
+				if (ddit == ddit_e) {
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
+				} else {
+					(this->*ddit->second)(str_key, object.at(str_key));
+				}
+			}
 		}
 
 		restart_specification();
@@ -4987,6 +4988,12 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		TaskVector tasks;
 		auto mut_properties = replace ? &clear() : &get_mutable();
 
+		if (mut_properties->size() == 1) {
+			specification.flags.field_found = false;
+		} else {
+			update_specification(*mut_properties);
+		}
+
 		static const auto wpit_e = map_dispatch_write_properties.end();
 		for (const auto& item_key : obj_schema) {
 			auto str_key = item_key.as_string();
@@ -5002,25 +5009,15 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 			}
 		}
 
-		if (specification.flags.is_namespace) {
-			if (tasks.size()) {
-				THROW(ClientError, "An namespace object cannot have children in Schema");
-			}
-			// Clear schema properties.
-			for (auto it = mut_properties->begin(); it != mut_properties->end(); ) {
-				if (map_dispatch_document.count(it->as_string())) {
-					++it;
-				} else {
-					it = mut_properties->erase(it);
-				}
-			}
-		} else {
-			restart_specification();
-			const auto spc_start = std::move(specification);
-			for (auto& task : tasks) {
-				specification = spc_start;
-				task.get();
-			}
+		if (specification.flags.is_namespace && tasks.size()) {
+			THROW(ClientError, "An namespace object cannot have children in Schema");
+		}
+
+		restart_specification();
+		const auto spc_start = std::move(specification);
+		for (auto& task : tasks) {
+			specification = spc_start;
+			task.get();
 		}
 	} catch (...) {
 		mut_schema.reset();
