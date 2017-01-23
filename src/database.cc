@@ -2344,13 +2344,13 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 			std::shared_ptr<const MsgPack> aux_schema_ptr;
 			if (str_schema.empty()) {
 				created = true;
-				if (obj && obj->find(RESERVED_PATH) != obj->end()) {
-					auto path = obj->at(RESERVED_PATH);
+				if (obj && obj->find(RESERVED_SCHEMA) != obj->end()) {
+					auto path = obj->at(RESERVED_SCHEMA);
 					if (path.is_string()) {
 						aux_schema_ptr = std::make_shared<const MsgPack>(path.as_string());
 					} else {
 						schemas.erase(local_schema_hash);
-						THROW(ClientError, "%s must be string", RESERVED_PATH);
+						THROW(ClientError, "%s must be string", RESERVED_SCHEMA);
 					}
 				} else {
 					aux_schema_ptr = Schema::get_initial_schema();
