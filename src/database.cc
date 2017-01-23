@@ -22,16 +22,16 @@
 
 #include "database.h"
 
+#include <algorithm>              // for move
+#include <array>                  // for array
 #include <dirent.h>               // for closedir, DIR
+#include <iterator>               // for distance
+#include <limits>                 // for numeric_limits
+#include <ratio>                  // for ratio
 #include <strings.h>              // for strncasecmp
 #include <sys/errno.h>            // for __error, errno
 #include <sys/fcntl.h>            // for O_CREAT, O_WRONLY, O_EXCL
 #include <sysexits.h>             // for EX_SOFTWARE
-#include <algorithm>              // for move
-#include <array>                  // for array
-#include <iterator>               // for distance
-#include <limits>                 // for numeric_limits
-#include <ratio>                  // for ratio
 
 #include "atomic_shared_ptr.h"    // for atomic_shared_ptr
 #include "database_autocommit.h"  // for DatabaseAutocommit
@@ -47,6 +47,7 @@
 #include "serialise.h"            // for uuid
 #include "utils.h"                // for repr, to_string, File_ptr, find_fil...
 
+
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
 #define DATABASE_UPDATE_TIME 10
@@ -59,14 +60,13 @@
 
 #define SIZE_UUID 36
 
-#define WAL_SYNC_MODE STORAGE_ASYNC_SYNC
-#define XAPIAN_SYNC_MODE 0  // This could also be Xapian::DB_FULL_SYNC for xapian to ensure full sync
+#define WAL_SYNC_MODE     STORAGE_ASYNC_SYNC
+#define XAPIAN_SYNC_MODE  0       // This could also be Xapian::DB_FULL_SYNC for xapian to ensure full sync
 #define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
-
-#define SCHEMA_FIELD "schema"
 
 
 ////////////////////////////////////////////////////////////////////////////////
+
 
 std::string
 join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob)

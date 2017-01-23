@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,8 +24,6 @@
 
 #include "xapiand.h"
 
-#include <sys/types.h>          // for uint32_t, uint8_t, ssize_t
-#include <xapian.h>             // for docid, termcount, Document, ExpandDecider
 #include <atomic>               // for atomic_bool
 #include <chrono>               // for system_clock, system_clock::time_point
 #include <cstring>              // for size_t
@@ -34,19 +32,21 @@
 #include <mutex>                // for mutex, condition_variable, unique_lock
 #include <stdexcept>            // for range_error
 #include <string>               // for string, operator!=
+#include <sys/types.h>          // for uint32_t, uint8_t, ssize_t
 #include <type_traits>          // for forward
 #include <unordered_map>        // for unordered_map
 #include <unordered_set>        // for unordered_set
 #include <utility>              // for pair, make_pair
 #include <vector>               // for vector
+#include <xapian.h>             // for docid, termcount, Document, ExpandDecider
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "database_utils.h"     // for DB_WRITABLE
 #include "endpoint.h"           // for Endpoints, Endpoint
+#include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
 #include "queue.h"              // for Queue, QueueSet
 #include "storage.h"            // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "threadpool.h"         // for TaskQueue
-#include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
 
 
 std::string join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob);
