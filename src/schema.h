@@ -618,9 +618,30 @@ class Schema {
 	void process_error(const std::string& prop_name, const MsgPack& doc_error);
 	void process_value(const std::string& prop_name, const MsgPack& doc_value);
 	void process_script(const std::string& prop_name, const MsgPack& doc_script);
-	void process_version(const std::string& prop_name, const MsgPack& doc_version);
-	void process_schema(const std::string& prop_name, const MsgPack& doc_schema);
 	void process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object);
+	// Next functions only check the consistency of user provided data.
+	void consistency_language(const std::string& prop_name, const MsgPack& doc_language);
+	void consistency_stop_strategy(const std::string& prop_name, const MsgPack& doc_stop_strategy);
+	void consistency_stem_strategy(const std::string& prop_name, const MsgPack& doc_stem_strategy);
+	void consistency_stem_language(const std::string& prop_name, const MsgPack& doc_stem_language);
+	void consistency_type(const std::string& prop_name, const MsgPack& doc_type);
+	void consistency_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term);
+	void consistency_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy);
+	void consistency_partials(const std::string& prop_name, const MsgPack& doc_partials);
+	void consistency_error(const std::string& prop_name, const MsgPack& doc_error);
+	void consistency_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic);
+	void consistency_strict(const std::string& prop_name, const MsgPack& doc_strict);
+	void consistency_d_detection(const std::string& prop_name, const MsgPack& doc_d_detection);
+	void consistency_n_detection(const std::string& prop_name, const MsgPack& doc_n_detection);
+	void consistency_g_detection(const std::string& prop_name, const MsgPack& doc_g_detection);
+	void consistency_b_detection(const std::string& prop_name, const MsgPack& doc_b_detection);
+	void consistency_s_detection(const std::string& prop_name, const MsgPack& doc_s_detection);
+	void consistency_t_detection(const std::string& prop_name, const MsgPack& doc_t_detection);
+	void consistency_tm_detection(const std::string& prop_name, const MsgPack& doc_tm_detection);
+	void consistency_u_detection(const std::string& prop_name, const MsgPack& doc_u_detection);
+	void consistency_namespace(const std::string& prop_name, const MsgPack& doc_namespace);
+	void consistency_version(const std::string& prop_name, const MsgPack& doc_version);
+	void consistency_schema(const std::string& prop_name, const MsgPack& doc_schema);
 
 
 	/*
