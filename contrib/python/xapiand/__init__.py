@@ -157,9 +157,9 @@ class Xapiand(object):
             port = self.port
         host = '{}:{}'.format(host, port)
 
-        if not isinstance(index, (tuple, list)):
+        if not isinstance(index, (tuple, list, set)):
             index = index.split(',')
-        index = ','.join(self.prefix + i.strip('/') for i in index)
+        index = ','.join(self.prefix + i.strip('/') for i in set(index))
 
         nodename = '@{}'.format(nodename) if nodename else ''
 
