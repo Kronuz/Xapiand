@@ -295,7 +295,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 		spc_id = schema->get_data_id();
 		if (spc_id.get_type() == FieldType::EMPTY) {
 			try {
-				spc_id.set_types(obj.at(RESERVED_TYPE).as_string());
+				spc_id.set_types(obj.at(ID_FIELD_NAME).at(RESERVED_TYPE).as_string());
 			} catch (const msgpack::type_error&) {
 				THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
 			} catch (const std::out_of_range&) { }
