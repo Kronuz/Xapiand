@@ -146,12 +146,50 @@ const std::unordered_map<std::string, TypeIndex> map_index({
 });
 
 
-const std::unordered_map<std::string, FieldType> map_type({
-	{ FLOAT_STR,       FieldType::FLOAT        }, { INTEGER_STR,     FieldType::INTEGER      },
-	{ POSITIVE_STR,    FieldType::POSITIVE     }, { TERM_STR,        FieldType::TERM         },
-	{ TEXT_STR,        FieldType::TEXT         }, { STRING_STR,      FieldType::STRING       },
-	{ DATE_STR,        FieldType::DATE         }, { GEO_STR,         FieldType::GEO          },
-	{ BOOLEAN_STR,     FieldType::BOOLEAN      }, { UUID_STR,        FieldType::UUID         },
+const std::unordered_map<std::string, std::array<FieldType, 3>> map_types({
+	{ "array",                        {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY    }} },
+	{ "array/boolean",                {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN  }} },
+	{ "array/date",                   {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE     }} },
+	{ "array/float",                  {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT    }} },
+	{ "array/geospatial",             {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO      }} },
+	{ "array/integer",                {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER  }} },
+	{ "array/positive",               {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE }} },
+	{ "array/string",                 {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING   }} },
+	{ "array/term",                   {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM     }} },
+	{ "array/text",                   {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT     }} },
+	{ "array/uuid",                   {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID     }} },
+	{ "boolean",                      {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN  }} },
+	{ "date",                         {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE     }} },
+	{ "float",                        {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT    }} },
+	{ "geospatial",                   {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO      }} },
+	{ "integer",                      {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER  }} },
+	{ "object",                       {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY    }} },
+	{ "object/array",                 {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY    }} },
+	{ "object/array/boolean",         {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN  }} },
+	{ "object/array/date",            {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE     }} },
+	{ "object/array/float",           {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT    }} },
+	{ "object/array/geospatial",      {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO      }} },
+	{ "object/array/integer",         {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER  }} },
+	{ "object/array/positive",        {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE }} },
+	{ "object/array/string",          {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING   }} },
+	{ "object/array/term",            {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM     }} },
+	{ "object/array/text",            {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT     }} },
+	{ "object/array/uuid",            {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID     }} },
+	{ "object/boolean",               {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN  }} },
+	{ "object/date",                  {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE     }} },
+	{ "object/float",                 {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT    }} },
+	{ "object/geospatial",            {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO      }} },
+	{ "object/integer",               {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER  }} },
+	{ "object/positive",              {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE }} },
+	{ "object/string",                {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING   }} },
+	{ "object/term",                  {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM     }} },
+	{ "object/text",                  {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT     }} },
+	{ "object/uuid",                  {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID     }} },
+	{ "positive",                     {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE }} },
+	{ "string",                       {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING   }} },
+	{ "term",                         {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM     }} },
+	{ "text",                         {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT     }} },
+	{ "uuid",                         {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID     }} },
 });
 
 
@@ -335,15 +373,6 @@ static const std::string str_set_stem_strategy = []() {
 static const std::string str_set_index = []() {
 	std::string res("{ ");
 	for (const auto& p : map_index) {
-		res.append(p.first).append(", ");
-	}
-	res.push_back('}');
-	return res;
-}();
-
-static const std::string str_set_type = []() {
-	std::string res("{ ");
-	for (const auto& p : map_type) {
 		res.append(p.first).append(", ");
 	}
 	res.push_back('}');
@@ -667,64 +696,13 @@ inline void
 required_spc_t::set_types(const std::string& str_type)
 {
 	L_CALL(this, "required_spc_t::set_types(%s)", repr(str_type).c_str());
-		if (str_type.empty()) {
-			THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", RESERVED_TYPE, str_set_type.c_str());
-		}
 
-		static const auto tit_e = map_type.end();
-		auto tit = map_type.find(str_type);
-		if (tit != tit_e) {
-			sep_types[2] = tit->second;
-		} else {
-			const auto tokens = Split::split(str_type, "/");
-			switch (tokens.size()) {
-				case 1:
-					if (tokens[0] == OBJECT_STR) {
-						sep_types[0] = FieldType::OBJECT;
-						return;
-					} else if (tokens[0] == ARRAY_STR) {
-						sep_types[1] = FieldType::ARRAY;
-						return;
-					}
-					break;
-
-				case 2:
-					if (tokens[0] == OBJECT_STR) {
-						sep_types[0] = FieldType::OBJECT;
-						if (tokens[1] == ARRAY_STR) {
-							sep_types[1] = FieldType::ARRAY;
-							return;
-					} else {
-						tit = map_type.find(tokens[1]);
-						if (tit != tit_e) {
-							sep_types[2] = tit->second;
-							return;
-						}
-					}
-				} else if (tokens[0] == ARRAY_STR) {
-					sep_types[1] = FieldType::ARRAY;
-					tit = map_type.find(tokens[1]);
-					if (tit != tit_e) {
-						sep_types[2] = tit->second;
-						return;
-					}
-				}
-				break;
-
-			case 3:
-				if (tokens[0] == OBJECT_STR && tokens[1] == ARRAY_STR) {
-					sep_types[0] = FieldType::OBJECT;
-					sep_types[1] = FieldType::ARRAY;
-					tit = map_type.find(tokens[2]);
-					if (tit != tit_e) {
-						sep_types[2] = tit->second;
-						return;
-					}
-				}
-				break;
-		}
-
-		THROW(ClientError, "%s must be in { object, array, [object/][array/]< %s > }", RESERVED_TYPE, str_set_type.c_str());
+	static const auto tit_e = map_types.end();
+	auto tit = map_types.find(lower_string(str_type));
+	if (tit == tit_e) {
+		THROW(ClientError, "%s must be in { object, array, object/array, [object/][array/]<boolean, date, float, geospatial, integer, positive, string, term, text, uuid> }", RESERVED_TYPE);
+	} else {
+		sep_types = tit->second;
 	}
 }
 
