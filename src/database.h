@@ -374,9 +374,9 @@ public:
 };
 
 
-class SchemaLRU: public lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
+class MsgPackLRU: public lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
 public:
-	SchemaLRU(ssize_t max_size=-1);
+	MsgPackLRU(ssize_t max_size=-1);
 };
 
 
@@ -394,7 +394,7 @@ private:
 
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
-	SchemaLRU schemas;
+	MsgPackLRU schemas;
 
 	std::condition_variable checkin_cond;
 

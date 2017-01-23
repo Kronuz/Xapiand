@@ -1809,8 +1809,7 @@ DatabaseQueue::dec_count()
 
 
 DatabasesLRU::DatabasesLRU(ssize_t max_size)
-	: LRU(max_size)
-{ }
+	: LRU(max_size) { }
 
 
 std::shared_ptr<DatabaseQueue>&
@@ -2509,6 +2508,5 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 ///////////////////////////////////////////////////////////////////////////////
 
 
-SchemaLRU::SchemaLRU(ssize_t max_size)
-	: LRU(max_size)
-{ }
+MsgPackLRU::MsgPackLRU(ssize_t max_size)
+	: LRU(max_size) { }
