@@ -139,6 +139,7 @@ class HttpClient : public BaseClient {
 		CMD_SEARCH    = xxh64::hash("_search"),
 		CMD_INFO      = xxh64::hash("_info"),
 		CMD_STATS     = xxh64::hash("_stats"),
+		CMD_META      = xxh64::hash("_meta"),
 		CMD_SCHEMA    = xxh64::hash("_schema"),
 		CMD_NODES     = xxh64::hash("_nodes"),
 		CMD_TOUCH     = xxh64::hash("_touch"),
@@ -203,19 +204,21 @@ class HttpClient : public BaseClient {
 
 	std::pair<std::string, MsgPack> get_body();
 
-	void home_view(enum http_method method);
-	void info_view(enum http_method method);
-	void delete_document_view(enum http_method method);
-	void index_document_view(enum http_method method);
-	void write_schema_view(enum http_method method);
-	void document_info_view(enum http_method method);
-	void update_document_view(enum http_method method);
-	void search_view(enum http_method method);
-	void touch_view(enum http_method method);
-	void schema_view(enum http_method method);
-	void nodes_view(enum http_method method);
-	void status_view(enum http_status status, const std::string& message="");
-	void stats_view(enum http_method method);
+	void home_view(enum http_method method, Command cmd);
+	void info_view(enum http_method method, Command cmd);
+	void meta_view(enum http_method method, Command cmd);
+	void write_meta_view(enum http_method method, Command cmd);
+	void update_meta_view(enum http_method method, Command cmd);
+	void delete_document_view(enum http_method method, Command cmd);
+	void index_document_view(enum http_method method, Command cmd);
+	void write_schema_view(enum http_method method, Command cmd);
+	void document_info_view(enum http_method method, Command cmd);
+	void update_document_view(enum http_method method, Command cmd);
+	void search_view(enum http_method method, Command cmd);
+	void touch_view(enum http_method method, Command cmd);
+	void schema_view(enum http_method method, Command cmd);
+	void nodes_view(enum http_method method, Command cmd);
+	void stats_view(enum http_method method, Command cmd);
 
 	void _options(enum http_method method);
 	void _head(enum http_method method);
@@ -241,6 +244,7 @@ class HttpClient : public BaseClient {
 	const type_t& get_acceptable_type(const T& ct_types);
 	const type_t* is_acceptable_type(const type_t& ct_type_pattern, const type_t& ct_type);
 	const type_t* is_acceptable_type(const type_t& ct_type_pattern, const std::vector<type_t>& ct_types);
+	void write_status_response(enum http_status status, const std::string& message="");
 	void write_http_response(enum http_status status, const MsgPack& response=MsgPack());
 	Encoding resolve_encoding();
 	std::string readable_encoding(Encoding e);

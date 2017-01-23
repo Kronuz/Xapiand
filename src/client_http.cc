@@ -659,15 +659,16 @@ HttpClient::_head(enum http_method method)
 {
 	L_CALL(this, "HttpClient::_head()");
 
-	switch (url_resolve()) {
+	auto cmd = url_resolve();
+	switch (cmd) {
 		case Command::NO_CMD_NO_ID:
 			write_http_response(HTTP_STATUS_OK);
 			break;
 		case Command::NO_CMD_ID:
-			document_info_view(method);
+			document_info_view(method, cmd);
 			break;
 		default:
-			status_view(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -678,32 +679,37 @@ HttpClient::_get(enum http_method method)
 {
 	L_CALL(this, "HttpClient::_get()");
 
-	switch (url_resolve()) {
+	auto cmd = url_resolve();
+	switch (cmd) {
 		case Command::NO_CMD_NO_ID:
-			home_view(method);
+			home_view(method, cmd);
 			break;
 		case Command::NO_CMD_ID:
-			search_view(method);
+			search_view(method, cmd);
 			break;
 		case Command::CMD_SEARCH:
 			path_parser.off_id = nullptr;  // Command has no ID
-			search_view(method);
+			search_view(method, cmd);
+			break;
+		case Command::CMD_META:
+			path_parser.off_id = nullptr;  // Command has no ID
+			meta_view(method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
 			path_parser.off_id = nullptr;  // Command has no ID
-			schema_view(method);
+			schema_view(method, cmd);
 			break;
 		case Command::CMD_INFO:
-			info_view(method);
+			info_view(method, cmd);
 			break;
 		case Command::CMD_STATS:
-			stats_view(method);
+			stats_view(method, cmd);
 			break;
 		case Command::CMD_NODES:
-			nodes_view(method);
+			nodes_view(method, cmd);
 			break;
 		default:
-			status_view(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -715,12 +721,17 @@ HttpClient::_merge(enum http_method method)
 	L_CALL(this, "HttpClient::_merge()");
 
 
-	switch (url_resolve()) {
+	auto cmd = url_resolve();
+	switch (cmd) {
 		case Command::NO_CMD_ID:
-			update_document_view(method);
+			update_document_view(method, cmd);
+			break;
+		case Command::CMD_META:
+			path_parser.off_id = nullptr;  // Command has no ID
+			update_meta_view(method, cmd);
 			break;
 		default:
-			status_view(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -731,16 +742,21 @@ HttpClient::_put(enum http_method method)
 {
 	L_CALL(this, "HttpClient::_put()");
 
-	switch (url_resolve()) {
+	auto cmd = url_resolve();
+	switch (cmd) {
 		case Command::NO_CMD_ID:
-			index_document_view(method);
+			index_document_view(method, cmd);
+			break;
+		case Command::CMD_META:
+			path_parser.off_id = nullptr;  // Command has no ID
+			write_meta_view(method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
 			path_parser.off_id = nullptr;  // Command has no ID
-			write_schema_view(method);
+			write_schema_view(method, cmd);
 			break;
 		default:
-			status_view(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -751,22 +767,23 @@ HttpClient::_post(enum http_method method)
 {
 	L_CALL(this, "HttpClient::_post()");
 
-	switch (url_resolve()) {
+	auto cmd = url_resolve();
+	switch (cmd) {
 		case Command::NO_CMD_ID:
 			path_parser.off_id = nullptr;  // Command has no ID
-			index_document_view(method);
+			index_document_view(method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
 			path_parser.off_id = nullptr;  // Command has no ID
-			write_schema_view(method);
+			write_schema_view(method, cmd);
 			break;
 		case Command::CMD_SEARCH:
 			path_parser.off_id = nullptr;  // Command has no ID
-			search_view(method);
+			search_view(method, cmd);
 			break;
 		case Command::CMD_TOUCH:
 			path_parser.off_id = nullptr;  // Command has no ID
-			touch_view(method);
+			touch_view(method, cmd);
 			break;
 #ifndef NDEBUG
 		case Command::CMD_QUIT:
@@ -775,7 +792,7 @@ HttpClient::_post(enum http_method method)
 			break;
 #endif
 		default:
-			status_view(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -786,12 +803,13 @@ HttpClient::_patch(enum http_method method)
 {
 	L_CALL(this, "HttpClient::_patch()");
 
-	switch (url_resolve()) {
+	auto cmd = url_resolve();
+	switch (cmd) {
 		case Command::NO_CMD_ID:
-			update_document_view(method);
+			update_document_view(method, cmd);
 			break;
 		default:
-			status_view(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -802,12 +820,13 @@ HttpClient::_delete(enum http_method method)
 {
 	L_CALL(this, "HttpClient::_delete()");
 
-	switch (url_resolve()) {
+	auto cmd = url_resolve();
+	switch (cmd) {
 		case Command::NO_CMD_ID:
-			delete_document_view(method);
+			delete_document_view(method, cmd);
 			break;
 		default:
-			status_view(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_BAD_REQUEST);
 			break;
 	}
 }
@@ -853,7 +872,7 @@ HttpClient::get_body()
 
 
 void
-HttpClient::home_view(enum http_method method)
+HttpClient::home_view(enum http_method method, Command cmd)
 {
 	L_CALL(this, "HttpClient::home_view()");
 
@@ -890,7 +909,7 @@ HttpClient::home_view(enum http_method method)
 
 
 void
-HttpClient::document_info_view(enum http_method method)
+HttpClient::document_info_view(enum http_method method, Command cmd)
 {
 	L_CALL(this, "HttpClient::document_info_view()");
 
@@ -910,7 +929,7 @@ HttpClient::document_info_view(enum http_method method)
 
 
 void
-HttpClient::delete_document_view(enum http_method method)
+HttpClient::delete_document_view(enum http_method method, Command cmd)
 {
 	L_CALL(this, "HttpClient::delete_document_view()");
 
@@ -964,7 +983,7 @@ HttpClient::delete_document_view(enum http_method method)
 
 
 void
-HttpClient::index_document_view(enum http_method method)
+HttpClient::index_document_view(enum http_method method, Command cmd)
 {
 	L_CALL(this, "HttpClient::index_document_view()");
 
@@ -1020,7 +1039,7 @@ HttpClient::index_document_view(enum http_method method)
 
 
 void
-HttpClient::write_schema_view(enum http_method method)
+HttpClient::write_schema_view(enum http_method method, Command cmd)
 {
 	L_CALL(this, "HttpClient::write_schema_view()");
 
@@ -1060,7 +1079,7 @@ HttpClient::write_schema_view(enum http_method method)
 
 
 void
-HttpClient::update_document_view(enum http_method method)
+HttpClient::update_document_view(enum http_method method, Command cmd)
 {
 	L_CALL(this, "HttpClient::update_document_view()");
 
@@ -1109,7 +1128,59 @@ HttpClient::update_document_view(enum http_method method)
 
 
 void
-HttpClient::info_view(enum http_method method)
+HttpClient::meta_view(enum http_method method, Command cmd)
+{
+	L_CALL(this, "HttpClient::meta_view()");
+
+	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
+
+	endpoints_maker(2s);
+
+	MsgPack response;
+	db_handler.reset(endpoints, DB_OPEN, method);
+	auto key = path_parser.get_pmt();
+	if (!key.empty()) {
+		auto metadata = db_handler.get_metadata(key);
+		if (metadata.empty()) {
+			status_code = HTTP_STATUS_NOT_FOUND;
+		} else {
+			status_code = HTTP_STATUS_OK;
+			response = MsgPack::unserialise(metadata);
+		}
+	}
+
+	write_http_response(status_code, response);
+}
+
+
+void
+HttpClient::write_meta_view(enum http_method method, Command cmd)
+{
+	L_CALL(this, "HttpClient::write_meta_view()");
+
+	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
+
+	MsgPack response;
+
+	write_http_response(status_code, response);
+}
+
+
+void
+HttpClient::update_meta_view(enum http_method method, Command cmd)
+{
+	L_CALL(this, "HttpClient::update_meta_view()");
+
+	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
+
+	MsgPack response;
+
+	write_http_response(status_code, response);
+}
+
+
+void
+HttpClient::info_view(enum http_method method, Command cmd)
 {
 	L_CALL(this, "HttpClient::info_view()");
 
@@ -1146,13 +1217,13 @@ HttpClient::info_view(enum http_method method)
 	if (res_stats) {
 		write_http_response(HTTP_STATUS_OK, response);
 	} else {
-		status_view(HTTP_STATUS_NOT_FOUND);
+		write_status_response(HTTP_STATUS_NOT_FOUND);
 	}
 }
 
 
 void
-HttpClient::nodes_view(enum http_method)
+HttpClient::nodes_view(enum http_method, Command cmd)
 {
 	L_CALL(this, "HttpClient::nodes_view()");
 
@@ -1160,12 +1231,12 @@ HttpClient::nodes_view(enum http_method)
 
 	path_parser.next();
 	if (path_parser.next() != PathParser::State::END) {
-		status_view(HTTP_STATUS_NOT_FOUND);
+		write_status_response(HTTP_STATUS_NOT_FOUND);
 		return;
 	}
 
 	if (path_parser.len_pth || path_parser.len_pmt || path_parser.len_ppmt) {
-		status_view(HTTP_STATUS_NOT_FOUND);
+		write_status_response(HTTP_STATUS_NOT_FOUND);
 		return;
 	}
 
@@ -1185,7 +1256,7 @@ HttpClient::nodes_view(enum http_method)
 
 
 void
-HttpClient::touch_view(enum http_method method)
+HttpClient::touch_view(enum http_method method, Command cmd)
 {
 	L_CALL(this, "HttpClient::touch_view()");
 
@@ -1212,7 +1283,7 @@ HttpClient::touch_view(enum http_method method)
 
 
 void
-HttpClient::schema_view(enum http_method method)
+HttpClient::schema_view(enum http_method method, Command cmd)
 {
 	L_CALL(this, "HttpClient::schema_view()");
 
@@ -1229,7 +1300,7 @@ HttpClient::schema_view(enum http_method method)
 
 
 void
-HttpClient::search_view(enum http_method method)
+HttpClient::search_view(enum http_method method, Command cmd)
 {
 	L_CALL(this, "HttpClient::search_view()");
 
@@ -1538,9 +1609,9 @@ HttpClient::search_view(enum http_method method)
 
 
 void
-HttpClient::status_view(enum http_status status, const std::string& message)
+HttpClient::write_status_response(enum http_status status, const std::string& message)
 {
-	L_CALL(this, "HttpClient::status_view()");
+	L_CALL(this, "HttpClient::write_status_response()");
 
 	write_http_response(status, {
 		{ RESPONSE_STATUS, (int)status },
@@ -1550,7 +1621,7 @@ HttpClient::status_view(enum http_status status, const std::string& message)
 
 
 void
-HttpClient::stats_view(enum http_method)
+HttpClient::stats_view(enum http_method, Command cmd)
 {
 	L_CALL(this, "HttpClient::stats_view()");
 
