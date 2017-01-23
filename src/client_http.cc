@@ -609,7 +609,8 @@ HttpClient::run()
 		L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 	} catch (const Xapian::Error& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		auto exc_msg = exc.get_msg().c_str();
+		auto exc_msg_error =  exc.get_msg() + " (" + exc.get_error_string() + ")";
+		auto exc_msg = exc_msg_error.c_str();
 		error.assign(*exc_msg ? exc_msg : "Unkown Xapian::Error!");
 		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const std::exception& exc) {
