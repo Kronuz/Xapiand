@@ -70,6 +70,7 @@ public:
 
 using DataType = std::pair<Xapian::docid, MsgPack>;
 
+
 class DatabaseHandler {
 	friend class Document;
 
