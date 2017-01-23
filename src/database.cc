@@ -2024,9 +2024,9 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					}
 #endif
 				} catch (const Xapian::DatabaseOpeningError& exc) {
-					L_DATABASE(this, "ERROR: %s", exc.get_msg().c_str());
+					L_DATABASE(this, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
 				} catch (const Xapian::Error& exc) {
-					L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+					L_EXC(this, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
 				}
 				lk.lock();
 				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
