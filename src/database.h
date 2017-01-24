@@ -140,6 +140,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 		"SET_METADATA",
 		"ADD_SPELLING",
 		"REMOVE_SPELLING",
+		"MAX",
 	};
 
 	bool modified;
@@ -153,7 +154,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	}
 
 public:
-	enum class Type {
+	enum class Type : uint8_t {
 		ADD_DOCUMENT,
 		CANCEL,
 		DELETE_DOCUMENT_TERM,
@@ -339,7 +340,7 @@ class DatabaseQueue : public queue::Queue<std::shared_ptr<Database>>,
 	friend class DatabasesLRU;
 
 private:
-	enum class replica_state {
+	enum class replica_state : uint8_t {
 		REPLICA_FREE,
 		REPLICA_LOCK,
 		REPLICA_SWITCH,
