@@ -395,7 +395,7 @@ std::pair<std::string, std::string> split_index(const std::string& path) {
 }
 
 
-inline bool exists(const std::string& path) {
+bool exists(const std::string& path) {
 	struct stat buffer;
 	return stat(path.c_str(), &buffer) == 0;
 }
