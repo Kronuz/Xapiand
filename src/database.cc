@@ -71,7 +71,7 @@
 std::string
 join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob)
 {
-	L_CALL(nullptr, "::join_data(<obj>, <stored>, <stored_locator>, <blob>)");
+	L_CALL(nullptr, "::join_data(<stored>, <stored_locator>, <obj>, <blob>)");
 
 	auto obj_len = serialise_length(obj.size());
 	std::string data;
@@ -214,8 +214,6 @@ split_data_blob(const std::string& data)
 
 
 #if XAPIAND_DATABASE_WAL
-
-constexpr const char* const DatabaseWAL::names[];
 
 
 void
@@ -768,15 +766,15 @@ DataStorage::highest_volume()
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_) :
-	weak_queue(queue_),
-	endpoints(endpoints_),
-	flags(flags_),
-	hash(endpoints.hash()),
-	access_time(std::chrono::system_clock::now()),
-	modified(false),
-	mastery_level(-1),
-	checkout_revision(0)
+Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_)
+	: weak_queue(queue_),
+	  endpoints(endpoints_),
+	  flags(flags_),
+	  hash(endpoints.hash()),
+	  access_time(std::chrono::system_clock::now()),
+	  modified(false),
+	  mastery_level(-1),
+	  checkout_revision(0)
 {
 	reopen();
 
@@ -861,7 +859,7 @@ Database::reopen()
 					local = true;
 					if (endpoints_size == 1) read_mastery(e);
 				}
-			} catch (const Xapian::DatabaseOpeningError& exc) { }
+			} catch (const Xapian::DatabaseOpeningError&) { }
 #endif /* XAPIAN_LOCAL_DB_FALLBACK */
 
 		}
@@ -1236,7 +1234,7 @@ Database::storage_serialise_locator(ssize_t volume, size_t offset, size_t size)
 std::string
 Database::storage_get(const std::unique_ptr<DataStorage>& storage, const std::string& store)
 {
-	L_CALL(this, "Database::storage_get_blob()");
+	L_CALL(this, "Database::storage_get()");
 
 	auto locator = storage_unserialise_locator(store);
 
@@ -1333,6 +1331,7 @@ Database::storage_push_blob(Xapian::Document& doc)
 		}
 	}
 }
+
 
 void
 Database::storage_commit()
@@ -1486,7 +1485,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 
 void
-Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool commit_, bool wal_)
+Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_, bool wal_)
 {
 	L_CALL(this, "Database::add_spelling(<word, <freqinc>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
 
@@ -1523,7 +1522,7 @@ Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool
 
 
 void
-Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_, bool wal_)
+Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_, bool wal_)
 {
 	L_CALL(this, "Database::remove_spelling(<word>, <freqdec>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
 
@@ -1727,7 +1726,8 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 DatabaseQueue::DatabaseQueue()
 	: state(replica_state::REPLICA_FREE),
 	  persistent(false),
-	  count(0) {
+	  count(0)
+{
 	L_OBJ(this, "CREATED DATABASE QUEUE!");
 }
 
@@ -1818,7 +1818,7 @@ DatabasesLRU::operator[] (size_t key)
 	try {
 		return at(key);
 	} catch (std::range_error) {
-		return insert_and([](std::shared_ptr<DatabaseQueue> & val) {
+		return insert_and([](std::shared_ptr<DatabaseQueue>& val) {
 			if (val->persistent || val->size() < val->count || val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
 				return lru::DropAction::renew;
 			} else {
@@ -1853,7 +1853,8 @@ DatabasePool::DatabasePool(size_t max_size)
 	: finished(false),
 	  databases(max_size),
 	  writable_databases(max_size),
-	  schemas(max_size) {
+	  schemas(max_size)
+{
 	L_OBJ(this, "CREATED DATABASE POLL!");
 }
 
@@ -1869,7 +1870,7 @@ DatabasePool::~DatabasePool()
 void
 DatabasePool::add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
-	L_CALL(this, "DatabasePool::add_endpoint_queue(%s)", repr(endpoint.to_string()).c_str());
+	L_CALL(this, "DatabasePool::add_endpoint_queue(%s, <queue>)", repr(endpoint.to_string()).c_str());
 
 	size_t hash = endpoint.hash();
 	auto& queues_set = queues[hash];
@@ -1880,7 +1881,7 @@ DatabasePool::add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr
 void
 DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
-	L_CALL(this, "DatabasePool::drop_endpoint_queue(%s)", repr(endpoint.to_string()).c_str());
+	L_CALL(this, "DatabasePool::drop_endpoint_queue(%s, <queue>)", repr(endpoint.to_string()).c_str());
 
 	size_t hash = endpoint.hash();
 	auto& queues_set = queues[hash];
@@ -2080,7 +2081,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	std::shared_ptr<DatabaseQueue> queue;
 
 	if (database->flags & DB_WRITABLE) {
-		Endpoint& endpoint = database->endpoints[0];
+		auto& endpoint = database->endpoints[0];
 		if (endpoint.is_local()) {
 			auto new_revision = database->get_revision();
 			if (database->checkout_revision != new_revision) {
@@ -2108,7 +2109,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		queue->push(database);
 	}
 
-	Endpoints& endpoints = database->endpoints;
+	auto& endpoints = database->endpoints;
 	bool signal_checkins = false;
 	switch (queue->state) {
 		case DatabaseQueue::replica_state::REPLICA_SWITCH:

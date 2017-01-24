@@ -141,6 +141,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 		"ADD_SPELLING",
 		"REMOVE_SPELLING",
 	};
+
 	bool modified;
 	bool validate_uuid;
 
@@ -163,7 +164,7 @@ public:
 		SET_METADATA,
 		ADD_SPELLING,
 		REMOVE_SPELLING,
-		MAX
+		MAX,
 	};
 
 	Database* database;
@@ -203,6 +204,7 @@ struct DataHeader {
 	void validate(void* param, void* args);
 };
 
+
 #pragma pack(push, 1)
 struct DataBinHeader {
 	uint8_t magic;
@@ -224,6 +226,7 @@ struct DataBinHeader {
 		}
 	}
 };
+
 
 struct DataBinFooter {
 	uint32_t checksum;
@@ -313,8 +316,8 @@ public:
 	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
 	Xapian::docid replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
 
-	void add_spelling(const std::string & word, Xapian::termcount freqinc, bool commit_=false, bool wal_=true);
-	void remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
+	void add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_=false, bool wal_=true);
+	void remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
 
 	Xapian::docid find_document(const std::string& term_id);
 	Xapian::Document get_document(const Xapian::docid& did, bool assume_valid_=false, bool pull_=false);
@@ -418,7 +421,7 @@ public:
 	void finish();
 
 	std::shared_ptr<const MsgPack> get_schema(const Endpoint& endpoint, int flags=-1, const MsgPack* obj=nullptr);
-	bool set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack>& old_schema, std::shared_ptr<const MsgPack> new_schema);
+	bool set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);
 
 	template<typename F, typename... Args>
 	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args) {
