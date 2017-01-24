@@ -1000,10 +1000,6 @@ HttpClient::index_document_view(enum http_method method, Command)
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
 
-	for (auto& index : index_paths) {
-		build_path_index(index);
-	}
-
 	operation_begins = std::chrono::system_clock::now();
 
 	auto body_ = get_body();
@@ -1047,10 +1043,6 @@ HttpClient::write_schema_view(enum http_method method, Command)
 
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
-
-	for (auto& index : index_paths) {
-		build_path_index(index);
-	}
 
 	endpoints_error_list err_list;
 	operation_begins = std::chrono::system_clock::now();

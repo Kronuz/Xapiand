@@ -855,6 +855,7 @@ Database::reopen()
 				if (tmp.get_uuid() == wdb.get_uuid()) {
 					L_DATABASE(this, "Endpoint %s fallback to local database!", repr(e.to_string()).c_str());
 					// Handle remote endpoints and figure out if the endpoint is a local database
+					build_path_index(e.path);
 					wdb = Xapian::WritableDatabase(e.path, _flags);
 					local = true;
 					if (endpoints_size == 1) read_mastery(e);
@@ -871,6 +872,7 @@ Database::reopen()
 				tmp_wal.init_database();
 			}
 
+			build_path_index(e.path);
 			wdb = Xapian::WritableDatabase(e.path, _flags);
 			local = true;
 			if (endpoints_size == 1) read_mastery(e);
@@ -956,6 +958,7 @@ Database::reopen()
 						}
 					}
 					{
+						build_path_index(e.path);
 						Xapian::WritableDatabase tmp(e.path, Xapian::DB_CREATE_OR_OPEN);
 					}
 
