@@ -361,6 +361,7 @@ private:
 public:
 	DatabaseQueue();
 	DatabaseQueue(DatabaseQueue&&);
+	DatabaseQueue(const DatabaseQueue&) = delete;
 	~DatabaseQueue();
 
 	bool inc_count(int max=-1);
