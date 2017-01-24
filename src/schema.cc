@@ -1167,13 +1167,12 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 				std::vector<std::string> fields;
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
-				MsgPack* data_pos = nullptr;
 
 				update_specification(*properties);
 				process_properties_document(item, fields);
 				update_partial_prefixes();
 
-				data_pos = specification.flags.store ? &(*data)[pos] : data;
+				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
 
 				process_item_value(doc, data_pos, fields.size());
 
@@ -4861,10 +4860,8 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 	try {
 		specification = default_spc;
 
-		MsgPack data;
 		std::vector<std::string> fields;
 		auto properties = mut_schema ? &mut_schema->at(DB_META_SCHEMA) : &schema->at(DB_META_SCHEMA);
-		auto data_ptr = &data;
 
 		if (properties->size() == 1) {
 			specification.flags.field_found = false;
@@ -4897,6 +4894,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 				}
 			}
 		}
+
+		MsgPack data;
+		auto data_ptr = &data;
 
 		restart_specification();
 		const auto spc_start = std::move(specification);
