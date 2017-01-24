@@ -355,9 +355,6 @@ struct specification_t : required_spc_t {
 extern specification_t default_spc;
 
 
-using TaskVector = std::vector<std::future<void>>;
-
-
 using dispatch_index = void (*)(Xapian::Document&, std::string&&, const specification_t&, size_t);
 
 
@@ -494,9 +491,9 @@ class Schema {
 	 * Gets the properties stored in the schema as well as those sent by the user.
 	 */
 
-	const MsgPack& get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, const std::string& name);
+	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, std::vector<std::string>& fields);
 	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name);
-	MsgPack& get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks, const std::string& name);
+	MsgPack& get_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, std::vector<std::string>& fields);
 
 
 	/*
@@ -513,16 +510,15 @@ class Schema {
 	 * Update specification using object's properties.
 	 */
 
-	void process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks);
-	void process_properties_document(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks);
+	void process_properties_document(const MsgPack& object, std::vector<std::string>& fields);
+	void process_properties_document(MsgPack*& mut_properties, const MsgPack& object, std::vector<std::string>& fields);
 
 
 	/*
 	 * Add new field to properties.
 	 */
 
-	void add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks);
-	void add_field(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks);
+	void add_field(MsgPack*& mut_properties, const MsgPack& object, std::vector<std::string>& fields);
 	void add_field(MsgPack*& mut_properties);
 
 

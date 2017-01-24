@@ -1122,16 +1122,16 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 	switch (object.getType()) {
 		case MsgPack::Type::MAP: {
-			TaskVector tasks;
+			std::vector<std::string> fields;
 
-			properties = &get_subproperties(properties, object, data, doc, tasks, name);
+			properties = &get_subproperties(properties, data, name, object, fields);
 
-			process_item_value(doc, data, tasks.size());
+			process_item_value(doc, data, fields.size());
 
 			const auto spc_object = std::move(specification);
-			for (auto& task : tasks) {
+			for (const auto& field : fields) {
 				specification = spc_object;
-				task.get();
+				index_object(properties, object.at(field), data, doc, field);
 			}
 			break;
 		}
@@ -1164,21 +1164,21 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 	for (const auto& item : array) {
 		switch (item.getType()) {
 			case MsgPack::Type::MAP: {
-				TaskVector tasks;
+				std::vector<std::string> fields;
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
 				MsgPack* data_pos = nullptr;
 
 				update_specification(*properties);
-				process_properties_document(properties, item, data_pos, doc, tasks);
+				process_properties_document(item, fields);
 				update_partial_prefixes();
 
 				data_pos = specification.flags.store ? &(*data)[pos] : data;
 
-				process_item_value(doc, data_pos, tasks.size());
+				process_item_value(doc, data_pos, fields.size());
 
-				for (auto& task : tasks) {
-					task.get();
+				for (const auto& field : fields) {
+					index_object(properties, item.at(field), data_pos, doc, field);
 				}
 
 				specification = spc_start;
@@ -2615,25 +2615,25 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 
 	const auto spc_start = specification;
 	if (obj_schema.is_map()) {
-		TaskVector tasks;
+		std::vector<std::string> fields;
 		auto mut_properties = mut_parent_properties;
 
-		mut_properties = &get_subproperties(mut_properties, obj_schema, tasks, name);
+		mut_properties = &get_subproperties(mut_properties, name, obj_schema, fields);
 
 		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
 			_validate_required_data(*mut_properties);
 		}
 
-		if (specification.flags.is_namespace && tasks.size()) {
+		if (specification.flags.is_namespace && fields.size()) {
 			THROW(ClientError, "An namespace object cannot have children in Schema");
 		}
 
-		set_type_to_object(tasks.size());
+		set_type_to_object(fields.size());
 
 		const auto spc_object = std::move(specification);
-		for (auto& task : tasks) {
+		for (const auto& field : fields) {
 			specification = spc_object;
-			task.get();
+			update_schema(mut_properties, obj_schema.at(field), field);
 		}
 	} else {
 		THROW(ClientError, "%s must be an object", repr(name).c_str());
@@ -2686,9 +2686,9 @@ Schema::get_subproperties(T& properties, const std::string& meta_name)
 
 
 const MsgPack&
-Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks, const std::string& name)
+Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, std::vector<std::string>& fields)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, %s, <MsgPack*>, <Xapian::Document>, <tasks>, %s)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str(), repr(name).c_str());
+	L_CALL(this, "Schema::get_subproperties(%s, <data>, %s, %s, <fields>)", repr(properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
 
 	const auto field_names = Split::split(name, DB_OFFSPRING_UNION);
 
@@ -2703,7 +2703,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 				data = &(*data)[norm_field_name];
 			}
 		}
-		process_properties_document(properties, object, data, doc, tasks);
+		process_properties_document(object, fields);
 		auto norm_field_name = detect_dynamic(*it_last);
 		specification.prefix.append(specification.local_prefix);
 		update_partial_prefixes();
@@ -2760,7 +2760,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(n_field_name).c_str());
 				} else {
 					norm_field_name = detect_dynamic(n_field_name);
-					add_field(mut_properties, properties, object, data, doc, tasks);
+					add_field(mut_properties, object, fields);
 					if (specification.flags.store) {
 						data = &(*data)[norm_field_name];
 					}
@@ -2776,7 +2776,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 		restart_specification();
 		try {
 			get_subproperties(properties, field_name);
-			process_properties_document(properties, object, data, doc, tasks);
+			process_properties_document(object, fields);
 			update_partial_prefixes();
 			if (specification.flags.store) {
 				data = &(*data)[field_name];
@@ -2787,7 +2787,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 				try {
 					get_subproperties(properties, specification.meta_name);
 					specification.prefix.append(specification.local_prefix);
-					process_properties_document(properties, object, data, doc, tasks);
+					process_properties_document(object, fields);
 					update_partial_prefixes();
 					if (specification.flags.store) {
 						data = &(*data)[norm_field_name];
@@ -2797,7 +2797,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 			}
 
 			auto mut_properties = &get_mutable();
-			add_field(mut_properties, properties, object, data, doc, tasks);
+			add_field(mut_properties, object, fields);
 			if (specification.flags.store) {
 				data = &(*data)[norm_field_name];
 			}
@@ -2812,7 +2812,7 @@ Schema::get_subproperties(const MsgPack*& properties, const MsgPack& object, Msg
 const MsgPack&
 Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, <MsgPack*>, %s)", repr(properties->to_string()).c_str(), repr(name).c_str());
+	L_CALL(this, "Schema::get_subproperties(%s, <data>, %s)", repr(properties->to_string()).c_str(), repr(name).c_str());
 
 	Split _split(name, DB_OFFSPRING_UNION);
 
@@ -2894,9 +2894,9 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 
 
 MsgPack&
-Schema::get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks, const std::string& name)
+Schema::get_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, std::vector<std::string>& fields)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, %s, <tasks>, %s)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str(), repr(name).c_str());
+	L_CALL(this, "Schema::get_subproperties(%s, %s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
 
 	auto field_names = Split::split(name, DB_OFFSPRING_UNION);
 
@@ -2925,7 +2925,7 @@ Schema::get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskV
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(n_field_name).c_str());
 			} else {
 				verify_dynamic(n_field_name);
-				add_field(mut_properties, object, tasks);
+				add_field(mut_properties, object, fields);
 			}
 
 			return *mut_properties;
@@ -2939,13 +2939,13 @@ Schema::get_subproperties(MsgPack*& mut_properties, const MsgPack& object, TaskV
 	restart_specification();
 	try {
 		get_subproperties(mut_properties, field_name);
-		process_properties_document(mut_properties, object, tasks);
+		process_properties_document(mut_properties, object, fields);
 	} catch (const std::out_of_range&) {
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(field_name).c_str());
 		} else {
 			verify_dynamic(field_name);
-			add_field(mut_properties, object, tasks);
+			add_field(mut_properties, object, fields);
 		}
 	}
 	return *mut_properties;
@@ -2991,9 +2991,9 @@ Schema::detect_dynamic(const std::string& field_name)
 
 
 void
-Schema::process_properties_document(const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks)
+Schema::process_properties_document(const MsgPack& object, std::vector<std::string>& fields)
 {
-	L_CALL(this, "Schema::process_properties_document(%s, %s, <MsgPack*>, <Xapian::Document>, <TaskVector>)", repr(properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::process_properties_document(%s, <fields>)", repr(object.to_string()).c_str());
 
 	static const auto ddit_e = map_dispatch_document.end();
 	if (specification.flags.field_with_type) {
@@ -3001,7 +3001,7 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 			auto str_key = item_key.as_string();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
-				tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
+				fields.push_back(std::move(str_key));
 			} else {
 				(this->*ddit->second)(str_key, object.at(str_key));
 			}
@@ -3014,7 +3014,7 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 			if (wtit == wtit_e) {
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
+					fields.push_back(std::move(str_key));
 				} else {
 					(this->*ddit->second)(str_key, object.at(str_key));
 				}
@@ -3027,9 +3027,9 @@ Schema::process_properties_document(const MsgPack*& properties, const MsgPack& o
 
 
 void
-Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks)
+Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& object, std::vector<std::string>& fields)
 {
-	L_CALL(this, "Schema::process_properties_document(%s, %s, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::process_properties_document(%s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	static const auto wpit_e = map_dispatch_write_properties.end();
 	static const auto ddit_e = map_dispatch_document.end();
@@ -3040,7 +3040,7 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 			if (wpit == wpit_e) {
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(object.at(str_key)), std::move(str_key)));
+					fields.push_back(std::move(str_key));
 				} else {
 					(this->*ddit->second)(str_key, object.at(str_key));
 				}
@@ -3058,7 +3058,7 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 				if (wtit == wtit_e) {
 					const auto ddit = map_dispatch_document.find(str_key);
 					if (ddit == ddit_e) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(object.at(str_key)), std::move(str_key)));
+						fields.push_back(std::move(str_key));
 					} else {
 						(this->*ddit->second)(str_key, object.at(str_key));
 					}
@@ -3074,9 +3074,9 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 
 
 void
-Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const MsgPack& object, MsgPack*& data, Xapian::Document& doc, TaskVector& tasks)
+Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, std::vector<std::string>& fields)
 {
-	L_CALL(this, "Schema::add_field(%s, %s, %s, <MsgPack*>, <Xapian::Document>, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::add_field(%s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	specification.flags.field_found = false;
 
@@ -3107,7 +3107,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 			if (wtit == wtit_e) {
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data), std::ref(doc), std::move(str_key)));
+					fields.push_back(std::move(str_key));
 				} else {
 					(this->*ddit->second)(str_key, object.at(str_key));
 				}
@@ -3132,64 +3132,6 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack*& properties, const Ms
 	}
 	specification.prefix.append(specification.local_prefix);
 	update_partial_prefixes();
-}
-
-
-void
-Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, TaskVector& tasks)
-{
-	L_CALL(this, "Schema::add_field(%s, %s, <TaskVector>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
-
-	mut_properties = &(*mut_properties)[specification.meta_name];
-
-	static const auto slit_e = map_stem_language.end();
-	const auto slit = map_stem_language.find(specification.meta_name);
-	if (slit != slit_e && slit->second.first) {
-		specification.language = slit->second.second;
-		specification.aux_lan = slit->second.second;
-	}
-
-	if (specification.full_meta_name.empty()) {
-		specification.full_meta_name.assign(specification.meta_name);
-	} else {
-		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
-	}
-
-	// Write obj specifications.
-	static const auto wpit_e = map_dispatch_write_properties.end();
-	static const auto wtit_e = map_dispatch_without_type.end();
-	static const auto ddit_e = map_dispatch_document.end();
-	for (const auto& item_key : object) {
-		auto str_key = item_key.as_string();
-		const auto wpit = map_dispatch_write_properties.find(str_key);
-		if (wpit == wpit_e) {
-			const auto wtit = map_dispatch_without_type.find(str_key);
-			if (wtit == wtit_e) {
-				const auto ddit = map_dispatch_document.find(str_key);
-				if (ddit == ddit_e) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(object.at(str_key)), std::move(str_key)));
-				} else {
-					(this->*ddit->second)(str_key, object.at(str_key));
-				}
-			} else {
-				(this->*wtit->second)(str_key, object.at(str_key));
-			}
-		} else {
-			(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
-		}
-	}
-
-	// Load default specifications.
-	static const auto dsit_e = map_dispatch_set_default_spc.end();
-	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
-	if (dsit != dsit_e) {
-		(this->*dsit->second)(*mut_properties);
-	}
-
-	// Write prefix in properties.
-	if (!specification.flags.dynamic_type) {
-		(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix;
-	}
 }
 
 
@@ -4920,7 +4862,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		specification = default_spc;
 
 		MsgPack data;
-		TaskVector tasks;
+		std::vector<std::string> fields;
 		auto properties = mut_schema ? &mut_schema->at(DB_META_SCHEMA) : &schema->at(DB_META_SCHEMA);
 		auto data_ptr = &data;
 
@@ -4935,7 +4877,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 					if (map_dispatch_document.count(str_key)) {
 						THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
 					} else {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
+						fields.push_back(std::move(str_key));
 					}
 				} else {
 					(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
@@ -4949,7 +4891,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 				auto str_key = item_key.as_string();
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(data_ptr), std::ref(doc), std::move(str_key)));
+					fields.push_back(std::move(str_key));
 				} else {
 					(this->*ddit->second)(str_key, object.at(str_key));
 				}
@@ -4958,9 +4900,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 
 		restart_specification();
 		const auto spc_start = std::move(specification);
-		for (auto& task : tasks) {
+		for (const auto& field : fields) {
 			specification = spc_start;
-			task.get();
+			index_object(properties, object.at(field), data_ptr, doc, field);
 		}
 
 		for (const auto& elem : map_values) {
@@ -4985,7 +4927,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 	try {
 		specification = default_spc;
 
-		TaskVector tasks;
+		std::vector<std::string> fields;
 		auto mut_properties = replace ? &clear() : &get_mutable();
 
 		if (mut_properties->size() == 1) {
@@ -5002,22 +4944,22 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 				if (map_dispatch_document.count(str_key)) {
 					THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
 				} else {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::update_schema, this, std::ref(mut_properties), std::ref(obj_schema.at(str_key)), std::move(str_key)));
+					fields.push_back(std::move(str_key));
 				}
 			} else {
 				(this->*wpit->second)(*mut_properties, str_key, obj_schema.at(str_key));
 			}
 		}
 
-		if (specification.flags.is_namespace && tasks.size()) {
+		if (specification.flags.is_namespace && fields.size()) {
 			THROW(ClientError, "An namespace object cannot have children in Schema");
 		}
 
 		restart_specification();
 		const auto spc_start = std::move(specification);
-		for (auto& task : tasks) {
+		for (const auto& field : fields) {
 			specification = spc_start;
-			task.get();
+			update_schema(mut_properties, obj_schema.at(field), field);
 		}
 	} catch (...) {
 		mut_schema.reset();
