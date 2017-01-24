@@ -2114,7 +2114,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	if (!writable && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
 		database->reopen();
-		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->repr(endpoints.to_string()).c_str());
+		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()).c_str());
 	}
 
 	L_DATABASE_END(this, "++ CHECKED OUT DB [%s]: %s (rev:%u)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str(), database->checkout_revision);
