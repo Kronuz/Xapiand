@@ -295,9 +295,14 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 		spc_id = schema->get_data_id();
 		if (spc_id.get_type() == FieldType::EMPTY) {
 			try {
-				spc_id.set_types(obj.at(ID_FIELD_NAME).at(RESERVED_TYPE).as_string());
-			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+				const auto& id_field = obj.at(ID_FIELD_NAME);
+				if (id_field.is_map()) {
+					try {
+						spc_id.set_types(id_field.at(RESERVED_TYPE).as_string());
+					} catch (const msgpack::type_error&) {
+						THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+					}
+				}
 			} catch (const std::out_of_range&) { }
 			obj_ = obj;
 		} else {
