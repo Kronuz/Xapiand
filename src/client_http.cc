@@ -872,7 +872,7 @@ HttpClient::get_body()
 
 
 void
-HttpClient::home_view(enum http_method method, Command cmd)
+HttpClient::home_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::home_view()");
 
@@ -909,7 +909,7 @@ HttpClient::home_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::document_info_view(enum http_method method, Command cmd)
+HttpClient::document_info_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::document_info_view()");
 
@@ -929,7 +929,7 @@ HttpClient::document_info_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::delete_document_view(enum http_method method, Command cmd)
+HttpClient::delete_document_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::delete_document_view()");
 
@@ -983,7 +983,7 @@ HttpClient::delete_document_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::index_document_view(enum http_method method, Command cmd)
+HttpClient::index_document_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::index_document_view()");
 
@@ -1039,7 +1039,7 @@ HttpClient::index_document_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::write_schema_view(enum http_method method, Command cmd)
+HttpClient::write_schema_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::write_schema_view()");
 
@@ -1079,7 +1079,7 @@ HttpClient::write_schema_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::update_document_view(enum http_method method, Command cmd)
+HttpClient::update_document_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::update_document_view()");
 
@@ -1128,7 +1128,7 @@ HttpClient::update_document_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::meta_view(enum http_method method, Command cmd)
+HttpClient::meta_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::meta_view()");
 
@@ -1154,7 +1154,7 @@ HttpClient::meta_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::write_meta_view(enum http_method method, Command cmd)
+HttpClient::write_meta_view(enum http_method, Command)
 {
 	L_CALL(this, "HttpClient::write_meta_view()");
 
@@ -1167,7 +1167,7 @@ HttpClient::write_meta_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::update_meta_view(enum http_method method, Command cmd)
+HttpClient::update_meta_view(enum http_method, Command)
 {
 	L_CALL(this, "HttpClient::update_meta_view()");
 
@@ -1180,7 +1180,7 @@ HttpClient::update_meta_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::info_view(enum http_method method, Command cmd)
+HttpClient::info_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::info_view()");
 
@@ -1223,7 +1223,7 @@ HttpClient::info_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::nodes_view(enum http_method, Command cmd)
+HttpClient::nodes_view(enum http_method, Command)
 {
 	L_CALL(this, "HttpClient::nodes_view()");
 
@@ -1256,7 +1256,7 @@ HttpClient::nodes_view(enum http_method, Command cmd)
 
 
 void
-HttpClient::touch_view(enum http_method method, Command cmd)
+HttpClient::touch_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::touch_view()");
 
@@ -1283,7 +1283,7 @@ HttpClient::touch_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::schema_view(enum http_method method, Command cmd)
+HttpClient::schema_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::schema_view()");
 
@@ -1300,7 +1300,7 @@ HttpClient::schema_view(enum http_method method, Command cmd)
 
 
 void
-HttpClient::search_view(enum http_method method, Command cmd)
+HttpClient::search_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::search_view()");
 
@@ -1621,7 +1621,7 @@ HttpClient::write_status_response(enum http_status status, const std::string& me
 
 
 void
-HttpClient::stats_view(enum http_method, Command cmd)
+HttpClient::stats_view(enum http_method, Command)
 {
 	L_CALL(this, "HttpClient::stats_view()");
 
