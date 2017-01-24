@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  * Copyright (C) 2014, lamerman. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,29 +25,30 @@
 
 #include "xapiand.h"
 
-#include <list>
-#include <unordered_map>
-#include <stdexcept>
 #include <cstddef>
+#include <list>
+#include <stdexcept>
+#include <unordered_map>
 
 
 namespace lru {
 
-enum class DropAction {
+
+enum class DropAction : uint8_t {
 	drop,
 	leave,
-	renew
+	renew,
 };
 
-enum class GetAction {
+
+enum class GetAction : uint8_t {
 	leave,
-	renew
+	renew,
 };
+
 
 template<typename Key, typename T>
 class LRU {
-public:
-
 protected:
 	using list_t = std::list<std::pair<const Key, T>>;
 	using map_t = std::unordered_map<Key, typename std::list<std::pair<const Key, T>>::iterator>;
@@ -59,6 +60,9 @@ protected:
 public:
 	using iterator = typename list_t::iterator;
 	using const_iterator = typename list_t::const_iterator;
+
+	LRU(ssize_t max_size=-1)
+		: _max_size(max_size) { }
 
 	auto begin() {
 		return _items_list.begin();
@@ -90,8 +94,6 @@ public:
 		}
 		return it->second;
 	}
-
-	LRU(ssize_t max_size=-1) : _max_size(max_size) { }
 
 	size_t erase(const Key& key) {
 		auto it(_items_map.find(key));
@@ -158,20 +160,20 @@ public:
 		return _items_map.find(key) != _items_map.end();
 	}
 
-	void clear() {
+	void clear() noexcept {
 		_items_map.clear();
 		_items_list.clear();
 	}
 
-	bool empty() const {
+	bool empty() const noexcept {
 		return _items_map.empty();
 	}
 
-	size_t size() const {
+	size_t size() const noexcept {
 		return _items_map.size();
 	}
 
-	size_t max_size() const {
+	size_t max_size() const noexcept {
 		return (_max_size == -1) ? _items_map.max_size() : _max_size;
 	}
 
