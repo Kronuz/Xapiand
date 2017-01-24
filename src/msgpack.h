@@ -1850,7 +1850,7 @@ inline std::size_t MsgPack::hash() const {
 
 
 inline bool MsgPack::operator==(const MsgPack& other) const {
-	return hash() == other.hash();
+	return *_const_body->_obj == *other._const_body->_obj;
 }
 
 
