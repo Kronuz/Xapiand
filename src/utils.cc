@@ -395,30 +395,36 @@ std::pair<std::string, std::string> split_index(const std::string& path) {
 }
 
 
-bool exists(const std::string& path) {
+inline bool exists(const std::string& path) {
 	struct stat buffer;
 	return stat(path.c_str(), &buffer) == 0;
 }
 
 
-bool build_path_index(const std::string& path) {
-	std::string dir = path;
-	std::size_t found = dir.find_last_of("/\\");
-	if (found != std::string::npos) {
-		dir.resize(found);
-	}
-	if (exists(dir)) {
+bool build_path(const std::string& path) {
+	if (exists(path)) {
 		return true;
 	} else {
-		Split directories(dir, "/");
-		dir.clear();
+		Split directories(path, "/");
+		std::string dir;
+		dir.reserve(path.length());
 		for (const auto& _dir : directories) {
-			dir.append(_dir).append(1, '/');
+			dir.append(_dir).push_back('/');
 			if (mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST) {
 				return false;
 			}
 		}
 		return true;
+	}
+}
+
+
+bool build_path_index(const std::string& path_index) {
+	size_t found = path_index.find_last_of("/");
+	if (found == std::string::npos) {
+		return build_path(path_index);
+	} else {
+		return build_path(path_index.substr(0, found));
 	}
 }
 

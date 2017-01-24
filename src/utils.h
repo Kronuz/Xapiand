@@ -251,8 +251,9 @@ bool endswith(const std::string& text, char ch);
 void delete_files(const std::string& path);
 void move_files(const std::string& src, const std::string& dst);
 std::pair<std::string, std::string> split_index(const std::string& path);
-bool exists(const std::string& name);
-bool build_path_index(const std::string& path);
+bool exists(const std::string& path);
+bool build_path(const std::string& path);
+bool build_path_index(const std::string& path_index);
 
 void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pre_suf_fix);
 DIR* opendir(const char* filename, bool create);
