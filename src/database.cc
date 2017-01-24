@@ -840,7 +840,7 @@ Database::reopen()
 	if (flags & DB_WRITABLE) {
 		ASSERT(endpoints_size == 1);
 		db = std::make_unique<Xapian::WritableDatabase>();
-		auto& e = *i;
+		const auto& e = *i;
 		Xapian::WritableDatabase wdb;
 		bool local = false;
 		int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN | XAPIAN_SYNC_MODE : Xapian::DB_OPEN | XAPIAN_SYNC_MODE;
@@ -913,7 +913,7 @@ Database::reopen()
 #endif /* XAPIAND_DATABASE_WAL */
 	} else {
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.cend(); ++i) {
-			auto& e = *i;
+			const auto& e = *i;
 			Xapian::Database rdb;
 			bool local = false;
 #ifdef XAPIAND_CLUSTERING
@@ -1251,7 +1251,7 @@ Database::storage_get_blob(const Xapian::Document& doc)
 	L_CALL(this, "Database::storage_get_blob()");
 
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-	auto& storage = storages[subdatabase];
+	const auto& storage = storages[subdatabase];
 	if (!storage) {
 		return "";
 	}
@@ -1276,7 +1276,7 @@ Database::storage_pull_blob(Xapian::Document& doc)
 	L_CALL(this, "Database::storage_pull_blob()");
 
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-	auto& storage = storages[subdatabase];
+	const auto& storage = storages[subdatabase];
 	if (!storage) {
 		return;
 	}
@@ -1766,7 +1766,7 @@ DatabaseQueue::inc_count(int max)
 
 	if (count == 0) {
 		if (auto database_pool = weak_database_pool.lock()) {
-			for (auto& endpoint : endpoints) {
+			for (const auto& endpoint : endpoints) {
 				database_pool->add_endpoint_queue(endpoint, shared_from_this());
 			}
 		}
@@ -1799,7 +1799,7 @@ DatabaseQueue::dec_count()
 	}
 
 	if (auto database_pool = weak_database_pool.lock()) {
-		for (auto& endpoint : endpoints) {
+		for (const auto& endpoint : endpoints) {
 			database_pool->drop_endpoint_queue(endpoint, shared_from_this());
 		}
 	}
@@ -2006,7 +2006,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 #ifdef XAPIAND_DATABASE_WAL
 					if (!writable && count == 1) {
 						bool reopen = false;
-						for (auto& endpoint : database->endpoints) {
+						for (const auto& endpoint : database->endpoints) {
 							if (endpoint.is_local()) {
 								Endpoints e;
 								e.add(endpoint);
