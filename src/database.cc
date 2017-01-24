@@ -2045,7 +2045,11 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			queue->persistent = old_persistent;
 			if (queue->count == 0) {
 				// There was an error and the queue ended up being empty, remove it!
-				databases.erase(hash);
+				if (writable) {
+					writable_databases.erase(hash);
+				} else {
+					databases.erase(hash);
+				}
 			}
 		}
 	}
