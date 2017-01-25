@@ -720,16 +720,6 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 }
 
 
-Document
-DatabaseHandler::get_document(const Xapian::docid& did)
-{
-	L_CALL(this, "DatabaseHandler::get_document((Xapian::docid)%d)", did);
-
-	DatabaseHandler::lock_database lk(this);
-	return Document(this, database->get_document(did));
-}
-
-
 std::pair<bool, bool>
 DatabaseHandler::update_schema()
 {
@@ -786,6 +776,16 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value)
 
 	DatabaseHandler::lock_database lk(this);
 	database->set_metadata(key, value);
+}
+
+
+Document
+DatabaseHandler::get_document(const Xapian::docid& did)
+{
+	L_CALL(this, "DatabaseHandler::get_document((Xapian::docid)%d)", did);
+
+	DatabaseHandler::lock_database lk(this);
+	return Document(this, database->get_document(did));
 }
 
 

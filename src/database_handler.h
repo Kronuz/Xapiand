@@ -82,6 +82,8 @@ class DatabaseHandler {
 
 	Xapian::docid recover_index(const Xapian::Document& doc, const std::string& prefixed_term_id, bool commit);
 
+	Document get_document_term(const std::string& term_id);
+
 #if XAPIAND_V8
 	MsgPack run_script(const MsgPack& data, const std::string& term_id);
 #endif
@@ -136,7 +138,6 @@ public:
 
 	Document get_document(const Xapian::docid& did);
 	Document get_document(const std::string& doc_id);
-	Document get_document_term(const std::string& term_id);
 	Xapian::docid get_docid(const std::string& doc_id);
 
 	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
