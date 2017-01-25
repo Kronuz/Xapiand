@@ -2121,7 +2121,14 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	}
 
 	if (!writable && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
-		database->reopen();
+		try {
+			database->reopen();
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			// Try to recover from DatabaseOpeningError (i.e when the index is manually deleted)
+			recover_database(database->endpoints, RECOVER_REMOVE_ALL | RECOVER_DECREMENT_COUT);
+			L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
+			return false;
+		}
 		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()).c_str());
 	}
 
