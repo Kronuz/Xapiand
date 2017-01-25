@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,18 +24,18 @@
 
 #include "xapiand.h"            // for XAPIAND_BINARY_SERVERPORT
 
-#include <arpa/inet.h>          // for inet_ntop
-#include <netinet/in.h>         // for sockaddr_in, INET_ADDRSTRLEN, in_addr
-#include <string.h>             // for memset
-#include <sys/socket.h>         // for AF_INET
-#include <sys/types.h>          // for int32_t, uint64_t
-#include <time.h>               // for time_t
 #include <algorithm>            // for move
+#include <arpa/inet.h>          // for inet_ntop
 #include <atomic>
 #include <cstddef>              // for size_t
 #include <functional>           // for hash
 #include <memory>               // for shared_ptr
+#include <netinet/in.h>         // for sockaddr_in, INET_ADDRSTRLEN, in_addr
+#include <string.h>             // for memset
 #include <string>               // for string, allocator, operator==, operator+
+#include <sys/socket.h>         // for AF_INET
+#include <sys/types.h>          // for int32_t, uint64_t
+#include <time.h>               // for time_t
 #include <utility>              // for pair
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
@@ -64,7 +64,7 @@ struct Node {
 		  addr(std::move(other.addr)),
 		  http_port(std::move(other.http_port)),
 		  binary_port(std::move(other.binary_port)),
-		  regions(std::move(other.regions)),   /* should be exist move a copy constructor? */
+		  regions(std::move(other.regions)),
 		  region(std::move(other.region)),
 		  touched(std::move(other.touched)) { }
 
@@ -116,7 +116,7 @@ struct Node {
 		touched = 0;
 	}
 
-	bool empty() const {
+	bool empty() const noexcept {
 		return name.empty();
 	}
 
@@ -153,6 +153,7 @@ extern atomic_shared_ptr<const Node> local_node;
 #include <unordered_set>        // for unordered_set
 #include <vector>               // for vector
 
+
 class Endpoint;
 class Endpoints;
 
@@ -160,25 +161,26 @@ class Endpoints;
 namespace std {
 	template<>
 	struct hash<Endpoint> {
-		size_t operator()(const Endpoint &e) const;
+		size_t operator()(const Endpoint& e) const;
 	};
 
 
 	template<>
 	struct hash<Endpoints> {
-		size_t operator()(const Endpoints &e) const;
+		size_t operator()(const Endpoints& e) const;
 	};
 }
 
-bool operator==(Endpoint const& le, Endpoint const& re);
-bool operator==(Endpoints const& le, Endpoints const& re);
-bool operator!=(Endpoint const& le, Endpoint const& re);
-bool operator!=(Endpoints const& le, Endpoints const& re);
+
+bool operator==(const Endpoint& le, const Endpoint& re);
+bool operator==(const Endpoints& le, const Endpoints& re);
+bool operator!=(const Endpoint& le, const Endpoint& re);
+bool operator!=(const Endpoints& le, const Endpoints& re);
 
 
 class Endpoint {
-	inline std::string slice_after(std::string &subject, std::string delimiter);
-	inline std::string slice_before(std::string &subject, std::string delimiter);
+	std::string slice_after(std::string& subject, const std::string& delimiter) const;
+	std::string slice_before(std::string& subject, const std::string& delimiter) const;
 
 public:
 	static std::string cwd;
@@ -190,7 +192,7 @@ public:
 	long long mastery_level;
 
 	Endpoint();
-	Endpoint(const std::string &path_, const Node* node_=nullptr, long long mastery_level_=-1, const std::string& node_name="");
+	Endpoint(const std::string& path_, const Node* node_=nullptr, long long mastery_level_=-1, const std::string& node_name="");
 
 	bool is_local() const {
 		auto local_node_ = local_node.load();
@@ -202,11 +204,11 @@ public:
 	size_t hash() const;
 	std::string to_string() const;
 
-	bool operator<(const Endpoint & other) const;
-	bool operator==(const Node &other) const;
+	bool operator<(const Endpoint& other) const;
+	bool operator==(const Node& other) const;
 
 	struct compare {
-		constexpr bool operator() (const Endpoint &a, const Endpoint &b) const noexcept {
+		constexpr bool operator() (const Endpoint& a, const Endpoint& b) const noexcept {
 			return b.mastery_level > a.mastery_level;
 		}
 	};
@@ -225,16 +227,16 @@ public:
 	using std::vector<Endpoint>::cbegin;
 	using std::vector<Endpoint>::cend;
 
-	Endpoints() { }
+	Endpoints() = default;
 
-	Endpoints(const Endpoint &endpoint) {
+	Endpoints(const Endpoint& endpoint) {
 		add(endpoint);
 	}
 
 	size_t hash() const;
 	std::string to_string() const;
 
-	void clear() {
+	void clear() noexcept {
 		endpoints.clear();
 		std::vector<Endpoint>::clear();
 	}

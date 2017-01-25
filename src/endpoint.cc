@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -76,7 +76,7 @@ Endpoint::Endpoint()
 	: mastery_level(-1) { }
 
 
-Endpoint::Endpoint(const std::string &uri_, const Node* node_, long long mastery_level_, const std::string& node_name_)
+Endpoint::Endpoint(const std::string& uri_, const Node* node_, long long mastery_level_, const std::string& node_name_)
 	: node_name(node_name_),
 	  mastery_level(mastery_level_)
 {
@@ -133,14 +133,13 @@ Endpoint::Endpoint(const std::string &uri_, const Node* node_, long long mastery
 }
 
 
-std::string
-Endpoint::slice_after(std::string &subject, std::string delimiter)
+inline std::string
+Endpoint::slice_after(std::string& subject, const std::string& delimiter) const
 {
 	size_t delimiter_location = subject.find(delimiter);
-	size_t delimiter_length = delimiter.length();
 	std::string output;
-	if (delimiter_location < std::string::npos) {
-		size_t start = delimiter_location + delimiter_length;
+	if (delimiter_location != std::string::npos) {
+		size_t start = delimiter_location + delimiter.length();
 		output = subject.substr(start, subject.length() - start);
 		if (!output.empty()) {
 			subject = subject.substr(0, delimiter_location);
@@ -150,14 +149,13 @@ Endpoint::slice_after(std::string &subject, std::string delimiter)
 }
 
 
-std::string
-Endpoint::slice_before(std::string &subject, std::string delimiter)
+inline std::string
+Endpoint::slice_before(std::string& subject, const std::string& delimiter) const
 {
 	size_t delimiter_location = subject.find(delimiter);
-	size_t delimiter_length = delimiter.length();
 	std::string output;
-	if (delimiter_location < std::string::npos) {
-		size_t start = delimiter_location + delimiter_length;
+	if (delimiter_location != std::string::npos) {
+		size_t start = delimiter_location + delimiter.length();
 		output = subject.substr(0, delimiter_location);
 		subject = subject.substr(start, subject.length() - start);
 	}
@@ -197,7 +195,7 @@ Endpoint::to_string() const
 
 
 bool
-Endpoint::operator<(const Endpoint & other) const
+Endpoint::operator<(const Endpoint& other) const
 {
 	return hash() < other.hash();
 }
@@ -246,7 +244,7 @@ Endpoints::hash() const
 
 
 bool
-operator==(Endpoint const& le, Endpoint const& re)
+operator==(const Endpoint& le, const Endpoint& re)
 {
 	std::hash<Endpoint> hash_fn;
 	return hash_fn(le) == hash_fn(re);
@@ -254,7 +252,7 @@ operator==(Endpoint const& le, Endpoint const& re)
 
 
 bool
-operator==(Endpoints const& le, Endpoints const& re)
+operator==(const Endpoints& le, const Endpoints& re)
 {
 	std::hash<Endpoints> hash_fn;
 	return hash_fn(le) == hash_fn(re);
@@ -262,28 +260,28 @@ operator==(Endpoints const& le, Endpoints const& re)
 
 
 bool
-operator!=(Endpoint const& le, Endpoint const& re)
+operator!=(const Endpoint& le, const Endpoint& re)
 {
 	return !(le == re);
 }
 
 
 bool
-operator!=(Endpoints const& le, Endpoints const& re)
+operator!=(const Endpoints& le, const Endpoints& re)
 {
 	return !(le == re);
 }
 
 
 size_t
-std::hash<Endpoint>::operator()(const Endpoint &e) const
+std::hash<Endpoint>::operator()(const Endpoint& e) const
 {
 	return e.hash();
 }
 
 
 size_t
-std::hash<Endpoints>::operator()(const Endpoints &e) const
+std::hash<Endpoints>::operator()(const Endpoints& e) const
 {
 	return e.hash();
 }
