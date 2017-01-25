@@ -51,7 +51,7 @@ template<typename Key, typename T>
 class LRU {
 protected:
 	using list_t = std::list<std::pair<const Key, T>>;
-	using map_t = std::unordered_map<Key, typename std::list<std::pair<const Key, T>>::iterator>;
+	using map_t = std::unordered_map<Key, typename list_t::iterator>;
 
 	list_t _items_list;
 	map_t _items_map;
@@ -64,18 +64,19 @@ public:
 	LRU(ssize_t max_size=-1)
 		: _max_size(max_size) { }
 
-	auto begin() {
+	auto begin() noexcept {
 		return _items_list.begin();
 	}
 
-	auto cbegin() const {
+	auto cbegin() const noexcept {
 		return _items_list.cbegin();
 	}
 
-	auto end() {
+	auto end() noexcept {
 		return _items_list.end();
 	}
-	auto cend() const {
+
+	auto cend() const noexcept {
 		return _items_list.cend();
 	}
 
@@ -178,7 +179,7 @@ public:
 	}
 
 	template<typename OnDrop, typename P>
-	T& insert_and(const OnDrop &on_drop, P&& p) {
+	T& insert_and(const OnDrop& on_drop, P&& p) {
 		erase(p.first);
 
 		_items_list.push_front(std::forward<P>(p));
