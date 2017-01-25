@@ -415,6 +415,8 @@ private:
 	std::pair<bool, atomic_shared_ptr<const MsgPack>*> get_local_schema(const Endpoint& endpoint, int flags=-1, const MsgPack* obj=nullptr);
 
 public:
+	queue::QueueSet<Endpoint> updated_databases;
+
 	DatabasePool(size_t max_size);
 	~DatabasePool();
 
@@ -426,29 +428,9 @@ public:
 	bool set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);
 
 	template<typename F, typename... Args>
-	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args) {
-		bool ret = checkout(database, endpoints, flags);
-		if (!ret) {
-			std::unique_lock<std::mutex> lk(qmtx);
+	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args);
+	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
 
-			size_t hash = endpoints.hash();
-
-			std::shared_ptr<DatabaseQueue> queue;
-			if (flags & DB_WRITABLE) {
-				queue = writable_databases[hash];
-			} else {
-				queue = databases[hash];
-			}
-
-			queue->checkin_callbacks.clear();
-			queue->checkin_callbacks.enqueue(std::forward<F>(f), std::forward<Args>(args)...);
-		}
-		return ret;
-	}
-
-	bool checkout(std::shared_ptr<Database>& database, const Endpoints &endpoints, int flags);
 	void checkin(std::shared_ptr<Database>& database);
-	bool switch_db(const Endpoint &endpoint);
-
-	queue::QueueSet<Endpoint> updated_databases;
+	bool switch_db(const Endpoint& endpoint);
 };
