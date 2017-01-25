@@ -687,6 +687,7 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 //                                                  |___/
 ////////////////////////////////////////////////////////////////////////////////
 
+
 #ifdef XAPIAND_DATA_STORAGE
 void
 DataHeader::init(void* param, void*)
@@ -765,6 +766,7 @@ DataStorage::highest_volume()
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
 //
 ////////////////////////////////////////////////////////////////////////////////
+
 
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_)
 	: weak_queue(queue_),
@@ -1811,6 +1813,15 @@ DatabaseQueue::dec_count()
 }
 
 
+//  ____        _        _                    _     ____  _   _
+// |  _ \  __ _| |_ __ _| |__   __ _ ___  ___| |   |  _ \| | | |
+// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ |   | |_) | | | |
+// | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |___|  _ <| |_| |
+// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_____|_| \_\\___/
+//
+///////////////////////////////////////////////////////////////////////////////
+
+
 DatabasesLRU::DatabasesLRU(ssize_t max_size)
 	: LRU(max_size) { }
 
@@ -1841,6 +1852,19 @@ DatabasesLRU::finish()
 		it->second->finish();
 	}
 }
+
+
+//  __  __           ____            _    _     ____  _   _
+// |  \/  |___  __ _|  _ \ __ _  ___| | _| |   |  _ \| | | |
+// | |\/| / __|/ _` | |_) / _` |/ __| |/ / |   | |_) | | | |
+// | |  | \__ \ (_| |  __/ (_| | (__|   <| |___|  _ <| |_| |
+// |_|  |_|___/\__, |_|   \__,_|\___|_|\_\_____|_| \_\\___/
+//             |___/
+///////////////////////////////////////////////////////////////////////////////
+
+
+MsgPackLRU::MsgPackLRU(ssize_t max_size)
+	: LRU(max_size) { }
 
 
 //  ____        _        _                    ____             _
@@ -2436,7 +2460,7 @@ DatabasePool::get_shared_schema(const Endpoint& endpoint, const std::string& id,
 std::shared_ptr<const MsgPack>
 DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj)
 {
-	L_CALL(this, "DatabasePool::get_schema(%s, 0x%02x)", repr(endpoint.to_string()).c_str(), flags);
+	L_CALL(this, "DatabasePool::get_schema(%s, 0x%02x, <obj>)", repr(endpoint.to_string()).c_str(), flags);
 
 	if (finished) return nullptr;
 
@@ -2478,7 +2502,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 bool
 DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema)
 {
-	L_CALL(this, "DatabasePool::set_schema(%s, %d, %s)", repr(endpoint.to_string()).c_str(), flags, new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
+	L_CALL(this, "DatabasePool::set_schema(%s, %d, <old_schema>, %s)", repr(endpoint.to_string()).c_str(), flags, new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
 
 	auto atom_local_schema = get_local_schema(endpoint, flags, nullptr);
 	auto local_schema_ptr = atom_local_schema.second->load();
@@ -2531,14 +2555,46 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 }
 
 
-//  __  __           ____            _    _     ____  _   _
-// |  \/  |___  __ _|  _ \ __ _  ___| | _| |   |  _ \| | | |
-// | |\/| / __|/ _` | |_) / _` |/ __| |/ / |   | |_) | | | |
-// | |  | \__ \ (_| |  __/ (_| | (__|   <| |___|  _ <| |_| |
-// |_|  |_|___/\__, |_|   \__,_|\___|_|\_\_____|_| \_\\___/
-//             |___/
-///////////////////////////////////////////////////////////////////////////////
+#if XAPIAND_V8
+short
+DatabasePool::get_revision_document(size_t hash_endpoint, Xapian::docid docid)
+{
+	L_CALL(this, "DatabasePool::get_revision_document(%s, %u)", repr(endpoint.to_string()).c_str(), docid);
+
+	std::lock_guard<std::mutex> lk(dmtx);
+	auto map_documents = &documents[hash_endpoint];
+	auto it = map_documents->find(docid);
+	if (it == map_documents.end()) {
+		map_documents->emplace(std::piecewise_construct, std::forward_as_tuple(docid), std::forward_as_tuple(1, 0));
+		return 0;
+	} else {
+		++it->second.first;
+		return it->second.second;
+	}
+}
 
 
-MsgPackLRU::MsgPackLRU(ssize_t max_size)
-	: LRU(max_size) { }
+bool
+DatabasePool::set_revision_document(size_t hash_endpoint, Xapian::docid docid, short old_revision)
+{
+	L_CALL(this, "DatabasePool::set_revision_document(%s, %u, %d)", repr(endpoint.to_string()).c_str(), docid, old_revision);
+
+	std::lock_guard<std::mutex> lk(dmtx);
+	auto map_documents = &documents[hash_endpoint];
+	auto it = map_documents->find(docid);
+	if (it == map_documents.end()) {
+		return false;
+	} else {
+		if (old_version == it->second.second) {
+			++it->second.second;
+			if (--it->second.first == 0) {
+				map_documents.erase(doc_id);
+			}
+			return true;
+		} else {
+			--it->second.first;
+			return false;
+		}
+	}
+}
+#endif
