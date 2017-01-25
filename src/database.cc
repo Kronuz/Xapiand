@@ -2564,7 +2564,7 @@ DatabasePool::get_revision_document(size_t hash_endpoint, Xapian::docid docid)
 	std::lock_guard<std::mutex> lk(dmtx);
 	auto map_documents = &documents[hash_endpoint];
 	auto it = map_documents->find(docid);
-	if (it == map_documents.end()) {
+	if (it == map_documents->end()) {
 		map_documents->emplace(std::piecewise_construct, std::forward_as_tuple(docid), std::forward_as_tuple(1, 0));
 		return 0;
 	} else {
@@ -2582,13 +2582,13 @@ DatabasePool::set_revision_document(size_t hash_endpoint, Xapian::docid docid, s
 	std::lock_guard<std::mutex> lk(dmtx);
 	auto map_documents = &documents[hash_endpoint];
 	auto it = map_documents->find(docid);
-	if (it == map_documents.end()) {
+	if (it == map_documents->end()) {
 		return false;
 	} else {
-		if (old_version == it->second.second) {
+		if (old_revision == it->second.second) {
 			++it->second.second;
 			if (--it->second.first == 0) {
-				map_documents.erase(doc_id);
+				map_documents->erase(docid);
 			}
 			return true;
 		} else {
