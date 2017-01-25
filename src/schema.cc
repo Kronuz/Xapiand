@@ -3303,6 +3303,7 @@ Schema::update_accuracy(const MsgPack& prop_accuracy)
 {
 	L_CALL(this, "Schema::update_accuracy(%s)", repr(prop_accuracy.to_string()).c_str());
 
+	specification.accuracy.reserve(prop_accuracy.size());
 	for (const auto& acc : prop_accuracy) {
 		specification.accuracy.push_back(acc.as_f64());
 	}
@@ -3314,6 +3315,7 @@ Schema::update_acc_prefix(const MsgPack& prop_acc_prefix)
 {
 	L_CALL(this, "Schema::update_acc_prefix(%s)", repr(prop_acc_prefix.to_string()).c_str());
 
+	specification.acc_prefix.reserve(prop_acc_prefix.size());
 	for (const auto& acc_p : prop_acc_prefix) {
 		specification.acc_prefix.push_back(acc_p.as_string());
 	}
