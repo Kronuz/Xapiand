@@ -80,7 +80,9 @@ class DatabaseHandler {
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
+#if XAPIAND_V8
 	MsgPack run_script(const MsgPack& data, const std::string& term_id);
+#endif
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 

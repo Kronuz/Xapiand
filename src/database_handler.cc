@@ -193,12 +193,11 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 }
 
 
+#if XAPIAND_V8
 MsgPack
 DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 {
 	L_CALL(this, "DatabaseHandler::run_script(...)");
-
-#if XAPIAND_V8
 
 	std::string script;
 	try {
@@ -262,13 +261,8 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 	} catch (const v8pp::Error& e) {
 		THROW(ClientError, e.what());
 	}
-
-#else
-
-	return data;
-
-#endif
 }
+#endif
 
 
 DataType
@@ -308,7 +302,11 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 		} else {
 			term_id = Serialise::serialise(spc_id, _document_id);
 			prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
+#if XAPIAND_V8
 			obj_ = run_script(obj, prefixed_term_id);
+#else
+			obj_ = obj;
+#endif
 		}
 
 		// Add ID.
