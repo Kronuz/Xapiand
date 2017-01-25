@@ -163,6 +163,16 @@ DatabaseHandler::get_fvschema() const
 }
 
 
+Xapian::docid
+DatabaseHandler::recover_index(const Xapian::Document& doc, const std::string& prefixed_term_id, bool commit)
+{
+	XapiandManager::manager->database_pool.recover_database(endpoints, RECOVER_REMOVE_WRITABLE);
+	reset(endpoints, flags, HTTP_PUT);
+	DatabaseHandler::lock_database lk(this);
+	return database->replace_document_term(prefixed_term_id, doc, commit);
+}
+
+
 void
 DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_)
 {
@@ -383,6 +393,9 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 		try {
 			DatabaseHandler::lock_database lk(this);
 			did = database->replace_document_term(prefixed_term_id, doc, commit_);
+		} catch (const Xapian::DatabaseError& exc) {
+			// Try to recover from DatabaseError (i.e when the index is manually deleted)
+			did = recover_index(doc, prefixed_term_id, commit_);
 		} catch (const Xapian::Error& err) {
 			if (err_list) {
 				err_list->operator[](err.get_error_string()).push_back(e.to_string());

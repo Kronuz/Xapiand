@@ -80,6 +80,8 @@ class DatabaseHandler {
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
+	Xapian::docid recover_index(const Xapian::Document& doc, const std::string& prefixed_term_id, bool commit);
+
 #if XAPIAND_V8
 	MsgPack run_script(const MsgPack& data, const std::string& term_id);
 #endif
