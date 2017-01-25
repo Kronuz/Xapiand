@@ -129,37 +129,7 @@ DatabaseHandler::get_database() const noexcept
 std::shared_ptr<Schema>
 DatabaseHandler::get_schema(const MsgPack* obj) const
 {
-	if (endpoints.size() == 1) {
-		return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags, obj));
-	} else {
-		for (const auto& endp : endpoints) {
-			try {
-				return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endp, flags));
-			} catch (const CheckoutError&) {
-				continue;
-			}
-		}
-		THROW(CheckoutError, "Cannot checkout none of the databases: %s", repr(endpoints.to_string()).c_str());
-	}
-}
-
-
-std::shared_ptr<Schema>
-DatabaseHandler::get_fvschema() const
-{
-	std::shared_ptr<const MsgPack> fvs, fvs_aux;
-	for (const auto& e : endpoints) {
-		fvs_aux = XapiandManager::manager->database_pool.get_schema(e, flags);	/* Get the first valid schema */
-		if (fvs_aux->is_null()) {
-			continue;
-		}
-		if (fvs == nullptr) {
-			fvs = fvs_aux;
-		} else if (*fvs != *fvs_aux) {
-			THROW(ClientError, "Cannot index in several indexes with different schemas");
-		}
-	}
-	return std::make_shared<Schema>(fvs ? fvs : fvs_aux);
+	return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags, obj));
 }
 
 
@@ -276,13 +246,10 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, bool stored, const std::string& store, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& _document_id, bool stored, const std::string& store, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::index(%s, <obj>, <blob>)", repr(_document_id).c_str());
+	L_CALL(this, "DatabaseHandler::index(%s, %s, <store>, %s, <blob>, %s, <ct_type>)", repr(_document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
 
-	L_INDEX(this, "Document to index (%s): %s", repr(_document_id).c_str(), repr(obj.to_string()).c_str());
-
-	// Create a suitable document.
 	Xapian::Document doc;
 
 	MsgPack obj_;
@@ -293,7 +260,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 	auto schema_begins = std::chrono::system_clock::now();
 	do {
-		schema = (endpoints.size() == 1) ? get_schema(&obj) : get_fvschema();
+		schema = get_schema(&obj);
 		L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
 
 		spc_id = schema->get_data_id();
@@ -385,31 +352,21 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 	doc.add_boolean_term(prefixed_term_id);
 	doc.add_value(spc_id.slot, term_id);
 
-	Xapian::docid did;
-	const auto _endpoints = endpoints;
-	for (const auto& e : _endpoints) {
-		endpoints.clear();
-		endpoints.add(e);
-		try {
-			DatabaseHandler::lock_database lk(this);
-			did = database->replace_document_term(prefixed_term_id, doc, commit_);
-		} catch (const Xapian::DatabaseError& exc) {
-			// Try to recover from DatabaseError (i.e when the index is manually deleted)
-			did = recover_index(doc, prefixed_term_id, commit_);
-		} catch (const Xapian::Error& err) {
-			if (err_list) {
-				err_list->operator[](err.get_error_string()).push_back(e.to_string());
-			}
-		}
+	Xapian::docid did = 0;
+	try {
+		DatabaseHandler::lock_database lk(this);
+		did = database->replace_document_term(prefixed_term_id, doc, commit_);
+	} catch (const Xapian::DatabaseError& exc) {
+		// Try to recover from DatabaseError (i.e when the index is manually deleted)
+		did = recover_index(doc, prefixed_term_id, commit_);
 	}
-	endpoints = std::move(_endpoints);
 
 	return std::make_pair(std::move(did), std::move(obj_));
 }
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
+DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, <body>)", repr(_document_id).c_str());
 
@@ -431,12 +388,12 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPa
 		THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
 	}
 
-	return index(_document_id, stored, "", obj, blob, commit_, ct_type, err_list);
+	return index(_document_id, stored, "", obj, blob, commit_, ct_type);
 }
 
 
 DataType
-DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
+DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type)
 {
 	L_CALL(this, "DatabaseHandler::patch(%s, <patches>)", repr(_document_id).c_str());
 
@@ -459,12 +416,12 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 	auto store = document.get_store();
 	auto blob = store.first ? "" : document.get_blob();
 
-	return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type, err_list);
+	return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type);
 }
 
 
 DataType
-DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list)
+DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type)
 {
 	L_CALL(this, "DatabaseHandler::merge(%s, <obj>)", repr(_document_id).c_str());
 
@@ -483,10 +440,10 @@ DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPa
 		auto store = document.get_store();
 		auto blob = store.first ? "" : document.get_blob();
 
-		return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type, err_list);
+		return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type);
 	} else if (body.is_string()) {
 		auto blob = body.as_string();
-		return index(_document_id, stored, "", obj, blob, commit_, ct_type, err_list);
+		return index(_document_id, stored, "", obj, blob, commit_, ct_type);
 	} else {
 		THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
 	}
@@ -819,31 +776,6 @@ DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool w
 
 	DatabaseHandler::lock_database lk(this);
 	database->delete_document(_id, commit_, wal_);
-}
-
-
-endpoints_error_list
-DatabaseHandler::multi_db_delete_document(const std::string& doc_id, bool commit_, bool wal_)
-{
-	L_CALL(this, "DatabaseHandler::multi_db_delete_document(%s)", repr(doc_id).c_str());
-
-	endpoints_error_list err_list;
-	auto _endpoints = endpoints;
-	for (const auto& e : _endpoints) {
-		endpoints.clear();
-		endpoints.add(e);
-		try {
-			auto _id = get_docid(doc_id);
-			DatabaseHandler::lock_database lk(this);
-			database->delete_document(_id, commit_, wal_);
-		} catch (const DocNotFoundError& err) {
-			err_list["Document not found"].push_back(e.to_string());
-		} catch (const Xapian::Error& err) {
-			err_list[err.get_error_string()].push_back(e.to_string());
-		}
-	}
-	endpoints = _endpoints;
-	return err_list;
 }
 
 

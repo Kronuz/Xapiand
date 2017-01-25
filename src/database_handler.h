@@ -43,9 +43,6 @@ class Document;
 class Multi_MultiValueKeyMaker;
 
 
-using endpoints_error_list = std::unordered_map<std::string, std::vector<std::string>>;
-
-
 class MSet : public Xapian::MSet {
 public:
 	MSet() = default;
@@ -114,14 +111,13 @@ public:
 
 	std::shared_ptr<Database> get_database() const noexcept;
 	std::shared_ptr<Schema> get_schema(const MsgPack* obj=nullptr) const;
-	std::shared_ptr<Schema> get_fvschema() const;
 
 	void reset(const Endpoints& endpoints_, int flags_, enum http_method method_);
 
-	DataType index(const std::string& _document_id, bool stored, const std::string& storage, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
-	DataType index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
-	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
-	DataType merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type, endpoints_error_list* err_list=nullptr);
+	DataType index(const std::string& _document_id, bool stored, const std::string& storage, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type);
+	DataType index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type);
+	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type);
+	DataType merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type);
 
 	void write_schema(const std::string& body);
 	void write_schema(const MsgPack& obj);
@@ -141,7 +137,6 @@ public:
 	Xapian::docid get_docid(const std::string& doc_id);
 
 	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
-	endpoints_error_list multi_db_delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 
 	void get_document_info(MsgPack& info, const std::string& document_id);
 	void get_database_info(MsgPack& info);

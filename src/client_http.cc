@@ -944,36 +944,14 @@ HttpClient::delete_document_view(enum http_method method, Command)
 	MsgPack response;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
-	if (endpoints.size() == 1) {
-		db_handler.delete_document(doc_id, query_field->commit);
-		operation_ends = std::chrono::system_clock::now();
-		status_code = HTTP_STATUS_OK;
+	db_handler.delete_document(doc_id, query_field->commit);
+	operation_ends = std::chrono::system_clock::now();
+	status_code = HTTP_STATUS_OK;
 
-		response["_delete"] = {
-			{ ID_FIELD_NAME, doc_id },
-			{ "_commit",  query_field->commit }
-		};
-	} else {
-		endpoints_error_list err_list = db_handler.multi_db_delete_document(doc_id, query_field->commit);
-		operation_ends = std::chrono::system_clock::now();
-
-		if (err_list.empty()) {
-			status_code = HTTP_STATUS_OK;
-			response["_delete"] = {
-				{ ID_FIELD_NAME, doc_id },
-				{ "_commit",  query_field->commit }
-			};
-		} else {
-			status_code = HTTP_STATUS_BAD_REQUEST;
-			for (const auto& err : err_list) {
-				MsgPack o;
-				for (const auto& end : err.second) {
-					o.push_back(end);
-				}
-				response["_delete"].insert(err.first, o);
-			}
-		}
-	}
+	response["_delete"] = {
+		{ ID_FIELD_NAME, doc_id },
+		{ "_commit",  query_field->commit }
+	};
 
 	Stats::cnt().add("del", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
@@ -1004,31 +982,20 @@ HttpClient::index_document_view(enum http_method method, Command)
 
 	auto body_ = get_body();
 	MsgPack response;
-	endpoints_error_list err_list;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	bool stored = true;
-	response = db_handler.index(doc_id, stored, body_.second, query_field->commit, body_.first, &err_list).second;
+	response = db_handler.index(doc_id, stored, body_.second, query_field->commit, body_.first).second;
 
 	operation_ends = std::chrono::system_clock::now();
 
 	Stats::cnt().add("index", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	if (err_list.empty()) {
-		status_code = HTTP_STATUS_OK;
-		if (response.find(ID_FIELD_NAME) == response.end()) {
-			response[ID_FIELD_NAME] = doc_id;
-		}
-		response["_commit"] = query_field->commit;
-	} else {
-		for (const auto& err : err_list) {
-			MsgPack o;
-			for (const auto& end : err.second) {
-				o.push_back(end);
-			}
-			response["_index"].insert(err.first, o);
-		}
+	status_code = HTTP_STATUS_OK;
+	if (response.find(ID_FIELD_NAME) == response.end()) {
+		response[ID_FIELD_NAME] = doc_id;
 	}
+	response["_commit"] = query_field->commit;
 
 	write_http_response(status_code, response);
 }
@@ -1044,7 +1011,6 @@ HttpClient::write_schema_view(enum http_method method, Command)
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
 
-	endpoints_error_list err_list;
 	operation_begins = std::chrono::system_clock::now();
 
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
@@ -1053,18 +1019,8 @@ HttpClient::write_schema_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 	MsgPack response;
-	if (err_list.empty()) {
-		status_code = HTTP_STATUS_OK;
-		response = db_handler.get_schema()->get_readable();
-	} else {
-		for (const auto& err : err_list) {
-			MsgPack o;
-			for (const auto& end : err.second) {
-				o.push_back(end);
-			}
-			response["_schema"].insert(err.first, o);
-		}
-	}
+	status_code = HTTP_STATUS_OK;
+	response = db_handler.get_schema()->get_readable();
 
 	write_http_response(status_code, response);
 }
@@ -1085,13 +1041,12 @@ HttpClient::update_document_view(enum http_method method, Command)
 
 	auto body_ = get_body();
 	MsgPack response;
-	endpoints_error_list err_list;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	if (method == HTTP_PATCH) {
-		response = db_handler.patch(doc_id, body_.second, query_field->commit, body_.first, &err_list).second;
+		response = db_handler.patch(doc_id, body_.second, query_field->commit, body_.first).second;
 	} else {
 		bool stored = true;
-		response = db_handler.merge(doc_id, stored, body_.second, query_field->commit, body_.first, &err_list).second;
+		response = db_handler.merge(doc_id, stored, body_.second, query_field->commit, body_.first).second;
 	}
 
 	operation_ends = std::chrono::system_clock::now();
@@ -1099,21 +1054,11 @@ HttpClient::update_document_view(enum http_method method, Command)
 	Stats::cnt().add("patch", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
 	L_TIME(this, "Updating took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	if (err_list.empty()) {
-		status_code = HTTP_STATUS_OK;
-		if (response.find(ID_FIELD_NAME) == response.end()) {
-			response[ID_FIELD_NAME] = doc_id;
-		}
-		response["_commit"] = query_field->commit;
-	} else {
-		for (const auto& err : err_list) {
-			MsgPack o;
-			for (const auto& end : err.second) {
-				o.push_back(end);
-			}
-			response["_update"].insert(err.first, o);
-		}
+	status_code = HTTP_STATUS_OK;
+	if (response.find(ID_FIELD_NAME) == response.end()) {
+		response[ID_FIELD_NAME] = doc_id;
 	}
+	response["_commit"] = query_field->commit;
 
 	write_http_response(status_code, response);
 }
