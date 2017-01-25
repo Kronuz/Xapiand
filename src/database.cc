@@ -825,6 +825,11 @@ Database::reopen()
 			bool ret = db->reopen();
 			L_DATABASE_WRAP(this, "Reopen done (took %s) [1]", delta_string(access_time, std::chrono::system_clock::now()).c_str());
 			return ret;
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			L_WARNING(this, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
+			db->close();
+			db.reset();
+			throw;
 		} catch (const Xapian::Error& exc) {
 			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 			db->close();
@@ -1052,6 +1057,9 @@ Database::commit(bool wal_)
 			if (!t) THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) THROW(Error, "Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::DatabaseError& exc) {
+			L_WARNING(this, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
+			throw;
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_msg().c_str());
 		}
