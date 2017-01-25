@@ -2973,14 +2973,14 @@ Schema::detect_dynamic(const std::string& field_name)
 {
 	L_CALL(this, "Schema::detect_dynamic(%s)", repr(field_name).c_str());
 
-	try {
+	if (Serialise::isUUID(field_name)) {
 		auto ser_uuid = Serialise::uuid(field_name);
 		specification.local_prefix.assign(ser_uuid);
 		specification.meta_name.assign(UUID_FIELD_NAME);
 		specification.flags.dynamic_type = true;
 		specification.flags.dynamic_type_path = true;
 		return normalize_uuid(field_name);
-	} catch (const SerialisationError&) {
+	} else {
 		specification.local_prefix.assign(get_prefix(field_name));
 		specification.meta_name.assign(field_name);
 		specification.flags.dynamic_type = false;
