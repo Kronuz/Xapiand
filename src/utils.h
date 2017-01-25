@@ -68,7 +68,6 @@ struct File_ptr {
 		: ent(nullptr) { }
 };
 
-extern const std::regex numeric_re;
 
 // It'll return the enum's underlying type.
 template<typename E>
@@ -242,7 +241,6 @@ int url_qs(const char *, const char *, size_t);
 bool strhasupper(const std::string& str);
 
 bool isRange(const std::string& str);
-bool isNumeric(const std::string& str);
 
 bool startswith(const std::string& text, const std::string& token);
 bool startswith(const std::string& text, char ch);

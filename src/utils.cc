@@ -79,9 +79,6 @@
 #define STATE_HST 5
 
 
-const std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
-
-
 static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
 static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
@@ -294,12 +291,6 @@ bool isRange(const std::string& str) {
 	} catch (const FieldParserError&) {
 		return false;
 	}
-}
-
-
-bool isNumeric(const std::string& str) {
-	std::smatch m;
-	return std::regex_match(str, m, numeric_re) && static_cast<size_t>(m.length(0)) == str.length();
 }
 
 
