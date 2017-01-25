@@ -62,6 +62,11 @@ class DatabasesLRU;
 class MsgPack;
 struct WalHeader;
 
+constexpr int RECOVER_REMOVE_WRITABLE         = 0x01; // Remove endpoint from writable database
+constexpr int RECOVER_REMOVE_DATABASE         = 0x02; // Remove endpoint from database
+constexpr int RECOVER_REMOVE_ALL              = 0x04; // Remove endpoint from writable database and database
+constexpr int RECOVER_DECREMENT_COUT          = 0x08; // Decrement count queue
+
 
 #define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))
 
@@ -430,6 +435,7 @@ public:
 
 	void checkin(std::shared_ptr<Database>& database);
 	bool switch_db(const Endpoint& endpoint);
+	void recover_database(const Endpoints& endpoints, int flags);
 
 	std::shared_ptr<const MsgPack> get_schema(const Endpoint& endpoint, int flags=-1, const MsgPack* obj=nullptr);
 	bool set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);

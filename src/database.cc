@@ -2362,6 +2362,31 @@ DatabasePool::dec_ref(const Endpoint& endpoint)
 }
 
 
+void
+DatabasePool::recover_database(const Endpoints& endpoints, int flags)
+{
+	L_CALL(this, "DatabasePool::reestablish_database()");
+
+	size_t hash = endpoints.hash();
+
+	if ((flags & RECOVER_REMOVE_WRITABLE) || (flags & RECOVER_REMOVE_ALL)) {
+		/* erase from writable queue if exist */
+		writable_databases.erase(hash);
+	}
+
+	if (flags & RECOVER_DECREMENT_COUT) {
+		/* Delete the count of the database creation */
+		/* Avoid mismatch between queue size and counter */
+		databases[hash]->dec_count();
+	}
+
+	if ((flags & RECOVER_REMOVE_DATABASE) || (flags & RECOVER_REMOVE_ALL)) {
+		/* erase from queue if exist */
+		databases.erase(hash);
+	}
+}
+
+
 int
 DatabasePool::get_master_count()
 {
