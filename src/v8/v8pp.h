@@ -166,7 +166,12 @@ class Processor {
 			} catch (const std::range_error&) {
 				auto processor = std::make_shared<Processor>(script_name, script);
 				std::lock_guard<std::mutex> lk(mtx);
-				return script_lru.emplace(script_hash, std::move(processor));
+				auto it = script_lru.find(script_hash);
+				if (it == script_lru.end()) {
+					return script_lru.emplace(script_hash, std::move(processor));
+				} else {
+					return script_lru.at(it);
+				}
 			}
 		}
 	};
