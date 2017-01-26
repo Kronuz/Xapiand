@@ -173,7 +173,69 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 }
 
 
-#if XAPIAND_V8
+#ifdef XAPIAND_V8
+std::unordered_map<size_t, std::unordered_map<std::string, std::pair<short, short>>> DatabaseHandler::documents;
+std::mutex DatabaseHandler::doc_mtx;
+
+
+void
+DatabaseHandler::dec_count_document(size_t hash_endpoint, const std::string& term_id)
+{
+	L_CALL(this, "DatabaseHandler::dec_count_document(%zu, %s)", hash_endpoint, repr(term_id).c_str());
+
+	std::lock_guard<std::mutex> lk(doc_mtx);
+	auto map_documents = &documents[hash_endpoint];
+	auto it = map_documents->find(term_id);
+	if (it != map_documents->end()) {
+		--it->second.first;
+	}
+}
+
+
+short
+DatabaseHandler::get_revision_document(size_t hash_endpoint, const std::string& term_id)
+{
+	L_CALL(this, "DatabaseHandler::get_revision_document(%zu, %s)", hash_endpoint, repr(term_id).c_str());
+
+	std::lock_guard<std::mutex> lk(doc_mtx);
+	auto map_documents = &documents[hash_endpoint];
+	auto it = map_documents->find(term_id);
+	if (it == map_documents->end()) {
+		map_documents->emplace(std::piecewise_construct, std::forward_as_tuple(term_id), std::forward_as_tuple(1, 0));
+		return 0;
+	} else {
+		++it->second.first;
+		return it->second.second;
+	}
+}
+
+
+bool
+DatabaseHandler::set_revision_document(size_t hash_endpoint, const std::string& term_id, short old_revision)
+{
+	L_CALL(this, "DatabaseHandler::set_revision_document(%zu, %s, %d)", hash_endpoint, repr(term_id).c_str(), old_revision);
+
+	auto map_documents = &documents[hash_endpoint];
+	auto it = map_documents->find(term_id);
+	if (it == map_documents->end()) {
+		return false;
+	} else {
+		if (old_revision == it->second.second) {
+			++it->second.second;
+			if (--it->second.first == 0) {
+				map_documents->erase(term_id);
+			}
+			return true;
+		} else {
+			if (--it->second.first == 0) {
+				map_documents->erase(term_id);
+			}
+			return false;
+		}
+	}
+}
+
+
 MsgPack
 DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 {
@@ -258,110 +320,130 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 	std::string prefixed_term_id;
 	required_spc_t spc_id;
 
-	auto schema_begins = std::chrono::system_clock::now();
-	do {
-		schema = get_schema(&obj);
-		L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
+	Xapian::docid did = 0;
 
-		spc_id = schema->get_data_id();
-		if (spc_id.get_type() == FieldType::EMPTY) {
-			try {
-				const auto& id_field = obj.at(ID_FIELD_NAME);
-				if (id_field.is_map()) {
+#ifdef XAPIAND_V8
+	size_t hash_endpoint = endpoints[0].hash();
+	try {
+		do {
+			auto doc_revision = get_revision_document(hash_endpoint, _document_id);
+#endif
+			auto schema_begins = std::chrono::system_clock::now();
+			do {
+
+				schema = get_schema(&obj);
+				L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
+
+				spc_id = schema->get_data_id();
+				if (spc_id.get_type() == FieldType::EMPTY) {
 					try {
-						spc_id.set_types(id_field.at(RESERVED_TYPE).as_string());
-					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+						const auto& id_field = obj.at(ID_FIELD_NAME);
+						if (id_field.is_map()) {
+							try {
+								spc_id.set_types(id_field.at(RESERVED_TYPE).as_string());
+							} catch (const msgpack::type_error&) {
+								THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+							}
+						}
+					} catch (const std::out_of_range&) { }
+					obj_ = obj;
+				} else {
+					term_id = Serialise::serialise(spc_id, _document_id);
+					prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
+#ifdef XAPIAND_V8
+					obj_ = run_script(obj, prefixed_term_id);
+#else
+					obj_ = obj;
+#endif
+				}
+
+				// Add ID.
+				auto& id_field = obj_[ID_FIELD_NAME];
+				auto id_value = Cast::cast(spc_id.get_type(), _document_id);
+				if (id_field.is_map()) {
+					id_field[RESERVED_VALUE] = id_value;
+				} else {
+					id_field = id_value;
+				}
+
+				if (blob.empty()) {
+					obj_.erase(CT_FIELD_NAME);
+				} else {
+					// Add Content Type if indexing a blob.
+					auto found = ct_type.find_last_of("/");
+					std::string type(ct_type.c_str(), found);
+					std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
+
+					auto& ct_field = obj_[CT_FIELD_NAME];
+					if (!ct_field.is_map() && !ct_field.is_undefined()) {
+						ct_field = MsgPack();
+					}
+					ct_field[RESERVED_TYPE] = TERM_STR;
+					ct_field[RESERVED_VALUE] = ct_type;
+					ct_field[type][subtype] = nullptr;
+				}
+
+				// Index object.
+				obj_ = schema->index(obj_, doc);
+
+				if (prefixed_term_id.empty()) {
+					// Now the schema is full, get specification id.
+					spc_id = schema->get_data_id();
+					if (spc_id.get_type() == FieldType::EMPTY) {
+						// Index like a namespace.
+						static const auto& prefix_id = get_prefix(ID_FIELD_NAME);
+						auto type_ser = Serialise::get_type(id_value);
+						term_id = type_ser.second;
+						prefixed_term_id = prefixed(term_id, prefix_id, required_spc_t::get_ctype(specification_t::global_type(type_ser.first)));
+					} else {
+						term_id = Serialise::serialise(spc_id, _document_id);
+						prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
 					}
 				}
-			} catch (const std::out_of_range&) { }
-			obj_ = obj;
-		} else {
-			term_id = Serialise::serialise(spc_id, _document_id);
-			prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
-#if XAPIAND_V8
-			obj_ = run_script(obj, prefixed_term_id);
-#else
-			obj_ = obj;
+				auto update = update_schema();
+				if (update.first) {
+					auto schema_ends = std::chrono::system_clock::now();
+					if (update.second) {
+						Stats::cnt().add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
+					} else {
+						Stats::cnt().add("schema_reads", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
+					}
+					break;
+				}
+			} while (true);
+
+			if (blob.empty()) {
+				L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
+				doc.set_data(join_data(false, "", obj_.serialise(), ""));
+			} else {
+				L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
+				doc.set_data(join_data(stored, store, obj_.serialise(), serialise_strings({prefixed_term_id, ct_type, blob})));
+			}
+
+			doc.add_boolean_term(prefixed_term_id);
+			doc.add_value(spc_id.slot, term_id);
+
+#ifdef XAPIAND_V8
+			std::lock_guard<std::mutex> lk(doc_mtx);
+			if (set_revision_document(hash_endpoint, _document_id, doc_revision)) {
 #endif
-		}
+				try {
+					DatabaseHandler::lock_database lk(this);
+					did = database->replace_document_term(prefixed_term_id, doc, commit_);
+				} catch (const Xapian::DatabaseError& exc) {
+					// Try to recover from DatabaseError (i.e when the index is manually deleted)
+					did = recover_index(doc, prefixed_term_id, commit_);
+				}
 
-		// Add ID.
-		auto& id_field = obj_[ID_FIELD_NAME];
-		auto id_value = Cast::cast(spc_id.get_type(), _document_id);
-		if (id_field.is_map()) {
-			id_field[RESERVED_VALUE] = id_value;
-		} else {
-			id_field = id_value;
-		}
-
-		if (blob.empty()) {
-			obj_.erase(CT_FIELD_NAME);
-		} else {
-			// Add Content Type if indexing a blob.
-			auto found = ct_type.find_last_of("/");
-			std::string type(ct_type.c_str(), found);
-			std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
-
-			auto& ct_field = obj_[CT_FIELD_NAME];
-			if (!ct_field.is_map() && !ct_field.is_undefined()) {
-				ct_field = MsgPack();
+				return std::make_pair(std::move(did), std::move(obj_));
+#ifdef XAPIAND_V8
 			}
-			ct_field[RESERVED_TYPE] = TERM_STR;
-			ct_field[RESERVED_VALUE] = ct_type;
-			ct_field[type][subtype] = nullptr;
-		}
-
-		// Index object.
-		obj_ = schema->index(obj_, doc);
-
-		if (prefixed_term_id.empty()) {
-			// Now the schema is full, get specification id.
-			spc_id = schema->get_data_id();
-			if (spc_id.get_type() == FieldType::EMPTY) {
-				// Index like a namespace.
-				static const auto& prefix_id = get_prefix(ID_FIELD_NAME);
-				auto type_ser = Serialise::get_type(id_value);
-				term_id = type_ser.second;
-				prefixed_term_id = prefixed(term_id, prefix_id, required_spc_t::get_ctype(specification_t::global_type(type_ser.first)));
-			} else {
-				term_id = Serialise::serialise(spc_id, _document_id);
-				prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
-			}
-		}
-		auto update = update_schema();
-		if (update.first) {
-			auto schema_ends = std::chrono::system_clock::now();
-			if (update.second) {
-				Stats::cnt().add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
-			} else {
-				Stats::cnt().add("schema_reads", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
-			}
-			break;
-		}
-	} while (true);
-
-	if (blob.empty()) {
-		L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
-		doc.set_data(join_data(false, "", obj_.serialise(), ""));
-	} else {
-		L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
-		doc.set_data(join_data(stored, store, obj_.serialise(), serialise_strings({prefixed_term_id, ct_type, blob})));
+		} while (true);
+	} catch(...) {
+		dec_count_document(hash_endpoint, _document_id);
+		throw;
 	}
-
-	doc.add_boolean_term(prefixed_term_id);
-	doc.add_value(spc_id.slot, term_id);
-
-	Xapian::docid did = 0;
-	try {
-		DatabaseHandler::lock_database lk(this);
-		did = database->replace_document_term(prefixed_term_id, doc, commit_);
-	} catch (const Xapian::DatabaseError& exc) {
-		// Try to recover from DatabaseError (i.e when the index is manually deleted)
-		did = recover_index(doc, prefixed_term_id, commit_);
-	}
-
-	return std::make_pair(std::move(did), std::move(obj_));
+#endif
 }
 
 

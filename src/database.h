@@ -439,12 +439,4 @@ public:
 
 	std::shared_ptr<const MsgPack> get_schema(const Endpoint& endpoint, int flags=-1, const MsgPack* obj=nullptr);
 	bool set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);
-
-#if XAPIAND_V8
-	std::mutex dmtx;
-	std::unordered_map<size_t, std::unordered_map<Xapian::docid, std::pair<short, short>>> documents;
-
-	short get_revision_document(size_t hash_endpoint, Xapian::docid docid);
-	bool set_revision_document(size_t hash_endpoint, Xapian::docid docid, short old_revision);
-#endif
 };
