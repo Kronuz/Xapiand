@@ -133,13 +133,11 @@ DatabaseHandler::get_schema(const MsgPack* obj) const
 }
 
 
-Xapian::docid
-DatabaseHandler::recover_index(const Xapian::Document& doc, const std::string& prefixed_term_id, bool commit)
+void
+DatabaseHandler::recover_index(const Xapian::Document& doc, const std::string& prefixed_term_id)
 {
 	XapiandManager::manager->database_pool.recover_database(endpoints, RECOVER_REMOVE_WRITABLE);
 	reset(endpoints, flags, HTTP_PUT);
-	DatabaseHandler::lock_database lk(this);
-	return database->replace_document_term(prefixed_term_id, doc, commit);
 }
 
 
@@ -174,68 +172,6 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 
 
 #ifdef XAPIAND_V8
-std::unordered_map<size_t, std::unordered_map<std::string, std::pair<short, short>>> DatabaseHandler::documents;
-std::mutex DatabaseHandler::doc_mtx;
-
-
-void
-DatabaseHandler::dec_count_document(size_t hash_endpoint, const std::string& term_id)
-{
-	L_CALL(this, "DatabaseHandler::dec_count_document(%zu, %s)", hash_endpoint, repr(term_id).c_str());
-
-	std::lock_guard<std::mutex> lk(doc_mtx);
-	auto map_documents = &documents[hash_endpoint];
-	auto it = map_documents->find(term_id);
-	if (it != map_documents->end()) {
-		--it->second.first;
-	}
-}
-
-
-short
-DatabaseHandler::get_revision_document(size_t hash_endpoint, const std::string& term_id)
-{
-	L_CALL(this, "DatabaseHandler::get_revision_document(%zu, %s)", hash_endpoint, repr(term_id).c_str());
-
-	std::lock_guard<std::mutex> lk(doc_mtx);
-	auto map_documents = &documents[hash_endpoint];
-	auto it = map_documents->find(term_id);
-	if (it == map_documents->end()) {
-		map_documents->emplace(std::piecewise_construct, std::forward_as_tuple(term_id), std::forward_as_tuple(1, 0));
-		return 0;
-	} else {
-		++it->second.first;
-		return it->second.second;
-	}
-}
-
-
-bool
-DatabaseHandler::set_revision_document(size_t hash_endpoint, const std::string& term_id, short old_revision)
-{
-	L_CALL(this, "DatabaseHandler::set_revision_document(%zu, %s, %d)", hash_endpoint, repr(term_id).c_str(), old_revision);
-
-	auto map_documents = &documents[hash_endpoint];
-	auto it = map_documents->find(term_id);
-	if (it == map_documents->end()) {
-		return false;
-	} else {
-		if (old_revision == it->second.second) {
-			++it->second.second;
-			if (--it->second.first == 0) {
-				map_documents->erase(term_id);
-			}
-			return true;
-		} else {
-			if (--it->second.first == 0) {
-				map_documents->erase(term_id);
-			}
-			return false;
-		}
-	}
-}
-
-
 MsgPack
 DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 {
@@ -323,10 +259,13 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 	Xapian::docid did = 0;
 
 #ifdef XAPIAND_V8
-	size_t hash_endpoint = endpoints[0].hash();
 	try {
 		do {
-			auto doc_revision = get_revision_document(hash_endpoint, _document_id);
+			short doc_revision;
+			{
+				DatabaseHandler::lock_database lk(this);
+				doc_revision = database->get_revision_document(_document_id);
+			}
 #endif
 			auto schema_begins = std::chrono::system_clock::now();
 			do {
@@ -423,24 +362,31 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			doc.add_boolean_term(prefixed_term_id);
 			doc.add_value(spc_id.slot, term_id);
 
+			try {
+				DatabaseHandler::lock_database lk(this);
 #ifdef XAPIAND_V8
-			std::lock_guard<std::mutex> lk(doc_mtx);
-			if (set_revision_document(hash_endpoint, _document_id, doc_revision)) {
+				if (database->set_revision_document(_document_id, doc_revision))
 #endif
-				try {
-					DatabaseHandler::lock_database lk(this);
+				{
 					did = database->replace_document_term(prefixed_term_id, doc, commit_);
-				} catch (const Xapian::DatabaseError& exc) {
-					// Try to recover from DatabaseError (i.e when the index is manually deleted)
-					did = recover_index(doc, prefixed_term_id, commit_);
+					return std::make_pair(std::move(did), std::move(obj_));
 				}
-
-				return std::make_pair(std::move(did), std::move(obj_));
+			} catch (const Xapian::DatabaseError& exc) {
+				// Try to recover from DatabaseError (i.e when the index is manually deleted)
+				recover_index(doc, prefixed_term_id);
 #ifdef XAPIAND_V8
+				if (database->set_revision_document(_document_id, doc_revision))
+#endif
+				{
+					did = database->replace_document_term(prefixed_term_id, doc, commit_);
+					return std::make_pair(std::move(did), std::move(obj_));
+				}
 			}
+#ifdef XAPIAND_V8
 		} while (true);
 	} catch(...) {
-		dec_count_document(hash_endpoint, _document_id);
+		DatabaseHandler::lock_database lk(this);
+		database->dec_count_document(_document_id);
 		throw;
 	}
 #endif

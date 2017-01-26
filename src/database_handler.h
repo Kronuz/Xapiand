@@ -77,17 +77,11 @@ class DatabaseHandler {
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
-	Xapian::docid recover_index(const Xapian::Document& doc, const std::string& prefixed_term_id, bool commit);
+	void recover_index(const Xapian::Document& doc, const std::string& prefixed_term_id);
 
 	Document get_document_term(const std::string& term_id);
 
 #ifdef XAPIAND_V8
-	static std::unordered_map<size_t, std::unordered_map<std::string, std::pair<short, short>>> documents;
-	static std::mutex doc_mtx;
-
-	void dec_count_document(size_t hash_endpoint, const std::string& term_id);
-	short get_revision_document(size_t hash_endpoint, const std::string& term_id);
-	bool set_revision_document(size_t hash_endpoint, const std::string& term_id, short old_revision);
 	MsgPack run_script(const MsgPack& data, const std::string& term_id);
 #endif
 
