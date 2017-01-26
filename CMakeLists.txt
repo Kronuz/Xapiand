@@ -368,7 +368,7 @@ target_link_libraries (${PROJECT_NAME} ${UUID_LIBRARIES})
 ########################################################################
 
 find_package (Xapian REQUIRED)
-include_directories (BEFORE "${UUID_INCLUDE_DIRS}")
+include_directories (BEFORE "${XAPIAN_INCLUDE_DIR}")
 target_link_libraries (${PROJECT_NAME} ${XAPIAN_LIBRARIES})
 
 cmake_push_check_state ()
