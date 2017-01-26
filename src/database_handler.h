@@ -77,7 +77,7 @@ class DatabaseHandler {
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
-	void recover_index(const Xapian::Document& doc, const std::string& prefixed_term_id);
+	void recover_index();
 
 	Document get_document_term(const std::string& term_id);
 

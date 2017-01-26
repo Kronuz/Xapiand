@@ -129,13 +129,17 @@ DatabaseHandler::get_database() const noexcept
 std::shared_ptr<Schema>
 DatabaseHandler::get_schema(const MsgPack* obj) const
 {
+	L_CALL(this, "DatabaseHandler::get_schema(<obj>)");
+
 	return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags, obj));
 }
 
 
 void
-DatabaseHandler::recover_index(const Xapian::Document& doc, const std::string& prefixed_term_id)
+DatabaseHandler::recover_index()
 {
+	L_CALL(this, "DatabaseHandler::recover_index()");
+
 	XapiandManager::manager->database_pool.recover_database(endpoints, RECOVER_REMOVE_WRITABLE);
 	reset(endpoints, flags, HTTP_PUT);
 }
