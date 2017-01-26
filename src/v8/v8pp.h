@@ -314,7 +314,8 @@ class Processor {
 
 	public:
 		PropertyHandler(v8::Isolate* isolate_)
-			: isolate(isolate_) {
+			: isolate(isolate_)
+		{
 			v8::Local<v8::ObjectTemplate> obj_template_ = v8::ObjectTemplate::New(isolate);
 			obj_template_->SetInternalFieldCount(1);
 			obj_template_->SetNamedPropertyHandler(property_getter_cb, property_setter_cb, property_query_cb, property_deleter_cb, enumerator_cb, v8::External::New(isolate, this));
@@ -372,8 +373,8 @@ class Processor {
 	std::unordered_map<std::string, std::unique_ptr<Function>> functions;
 
 	// Auxiliar variables for kill a script.
-	std::mutex mtx;
-	std::condition_variable cond_kill;
+	std::mutex kill_mtx;
+	std::condition_variable kill_cond;
 	std::atomic_bool finished;
 
 	void Initialize(const std::string& script_name_, const std::string& script_source_) {
@@ -427,8 +428,8 @@ class Processor {
 	}
 
 	void kill() {
-		std::unique_lock<std::mutex> lk(mtx);
-		if (!cond_kill.wait_for(lk, std::chrono::milliseconds(TIME_SCRIPT), [this](){ return finished.load(); }) && !v8::V8::IsExecutionTerminating(isolate)) {
+		std::unique_lock<std::mutex> lk(kill_mtx);
+		if (!kill_cond.wait_for(lk, std::chrono::milliseconds(TIME_SCRIPT), [this](){ return finished.load(); }) && !v8::V8::IsExecutionTerminating(isolate)) {
 			v8::V8::TerminateExecution(isolate);
 			finished = true;
 		}
@@ -459,7 +460,7 @@ class Processor {
 		}
 
 		finished = true;
-		cond_kill.notify_one();
+		kill_cond.notify_one();
 
 		if (try_catch.HasCaught()) {
 			throw ScriptSyntaxError(std::string("ScriptSyntaxError: ").append(report_exception(&try_catch)));
