@@ -409,6 +409,7 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_U_DETECTION,        &Schema::write_u_detection     },
 	{ RESERVED_NAMESPACE,          &Schema::write_namespace       },
 	{ RESERVED_PARTIAL_PATHS,      &Schema::write_partial_paths   },
+	{ RESERVED_SCRIPT,             &Schema::write_script          },
 	{ RESERVED_VERSION,            &Schema::write_version         },
 	{ RESERVED_SCHEMA,             &Schema::write_schema          },
 });
@@ -437,7 +438,6 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_RECURSIVE,          &Schema::process_recursive           },
 	{ RESERVED_PARTIAL_PATHS,      &Schema::process_partial_paths       },
 	{ RESERVED_VALUE,              &Schema::process_value               },
-	{ RESERVED_SCRIPT,             &Schema::process_script              },
 	{ RESERVED_FLOAT,              &Schema::process_cast_object         },
 	{ RESERVED_POSITIVE,           &Schema::process_cast_object         },
 	{ RESERVED_INTEGER,            &Schema::process_cast_object         },
@@ -459,6 +459,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_GEO_COLLECTION,     &Schema::process_cast_object         },
 	{ RESERVED_GEO_INTERSECTION,   &Schema::process_cast_object         },
 	// Next functions only check the consistency of user provided data.
+	{ RESERVED_SCRIPT,             &Schema::consistency_script          },
 	{ RESERVED_LANGUAGE,           &Schema::consistency_language        },
 	{ RESERVED_STOP_STRATEGY,      &Schema::consistency_stop_strategy   },
 	{ RESERVED_STEM_STRATEGY,      &Schema::consistency_stem_strategy   },
@@ -732,7 +733,6 @@ specification_t::specification_t(const specification_t& o)
 	  spelling(o.spelling),
 	  positions(o.positions),
 	  index(o.index),
-	  script(o.script),
 	  meta_name(o.meta_name),
 	  full_meta_name(o.full_meta_name),
 	  aux_stem_lan(o.aux_stem_lan),
@@ -749,7 +749,6 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  spelling(std::move(o.spelling)),
 	  positions(std::move(o.positions)),
 	  index(std::move(o.index)),
-	  script(std::move(o.script)),
 	  meta_name(std::move(o.meta_name)),
 	  full_meta_name(std::move(o.full_meta_name)),
 	  aux_stem_lan(std::move(o.aux_stem_lan)),
@@ -770,7 +769,6 @@ specification_t::operator=(const specification_t& o)
 	value.reset();
 	value_rec.reset();
 	doc_acc.reset();
-	script = o.script;
 	meta_name = o.meta_name;
 	full_meta_name = o.full_meta_name;
 	aux_stem_lan = o.aux_stem_lan;
@@ -794,7 +792,6 @@ specification_t::operator=(specification_t&& o) noexcept
 	value.reset();
 	value_rec.reset();
 	doc_acc.reset();
-	script = std::move(o.script);
 	meta_name = std::move(o.meta_name);
 	full_meta_name = std::move(o.full_meta_name);
 	aux_stem_lan = std::move(o.aux_stem_lan);
@@ -934,7 +931,6 @@ specification_t::to_string() const
 
 	str << "\t" << RESERVED_VALUE             << ": " << (value     ? value->to_string()     : "null")   << "\n";
 	str << "\t" << "value_rec"                << ": " << (value_rec ? value_rec->to_string() : "null")   << "\n";
-	str << "\t" << RESERVED_SCRIPT            << ": " << (script    ? script->to_string()    : "null")   << "\n";
 
 	str << "\t" << RESERVED_SLOT              << ": " << slot                           << "\n";
 	str << "\t" << RESERVED_TYPE              << ": " << readable_type(sep_types)       << "\n";
@@ -3781,6 +3777,15 @@ Schema::write_partial_paths(MsgPack& properties, const std::string& prop_name, c
 
 
 void
+Schema::write_script(MsgPack&, const std::string& prop_name, const MsgPack& doc_script)
+{
+	L_CALL(this, "Schema::write_script(%s)", repr(doc_script.to_string()).c_str());
+
+	consistency_script(prop_name, doc_script);
+}
+
+
+void
 Schema::write_version(MsgPack&, const std::string& prop_name, const MsgPack& doc_version)
 {
 	L_CALL(this, "Schema::write_version(%s)", repr(doc_version.to_string()).c_str());
@@ -4140,16 +4145,6 @@ Schema::process_value(const std::string&, const MsgPack& doc_value)
 	L_CALL(this, "Schema::process_value(%s)", repr(doc_value.to_string()).c_str());
 
 	specification.value = std::make_unique<const MsgPack>(doc_value);
-}
-
-
-void
-Schema::process_script(const std::string&, const MsgPack& doc_script)
-{
-	// RESERVED_SCRIPT isn't heritable and is not saved in schema.
-	L_CALL(this, "Schema::process_script(%s)", repr(doc_script.to_string()).c_str());
-
-	specification.script = std::make_unique<const MsgPack>(doc_script);
 }
 
 
@@ -4578,6 +4573,22 @@ Schema::consistency_namespace(const std::string& prop_name, const MsgPack& doc_n
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+	}
+}
+
+
+void
+Schema::consistency_script(const std::string& prop_name, const MsgPack& doc_script)
+{
+	// RESERVED_SCRIPT isn't heritable and is not saved in schema.
+	L_CALL(this, "Schema::consistency_script(%s)", repr(doc_script.to_string()).c_str());
+
+	if (specification.full_meta_name.empty()) {
+		if (!doc_script.is_string()) {
+			THROW(ClientError, "%s must be string", prop_name.c_str());
+		}
+	} else {
+		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());
 	}
 }
 

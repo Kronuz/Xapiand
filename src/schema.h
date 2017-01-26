@@ -320,9 +320,6 @@ struct specification_t : required_spc_t {
 	std::unique_ptr<MsgPack> value_rec;
 	std::unique_ptr<const MsgPack> doc_acc;
 
-	// Script for the object.
-	std::shared_ptr<const MsgPack> script;
-
 	// Used to save the last meta name.
 	std::string meta_name;
 
@@ -587,6 +584,7 @@ class Schema {
 	void write_u_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_u_detection);
 	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
 	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
+	void write_script(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
 	void write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version);
 	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
 
@@ -613,7 +611,6 @@ class Schema {
 	void process_partials(const std::string& prop_name, const MsgPack& doc_partials);
 	void process_error(const std::string& prop_name, const MsgPack& doc_error);
 	void process_value(const std::string& prop_name, const MsgPack& doc_value);
-	void process_script(const std::string& prop_name, const MsgPack& doc_script);
 	void process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object);
 	// Next functions only check the consistency of user provided data.
 	void consistency_language(const std::string& prop_name, const MsgPack& doc_language);
@@ -636,6 +633,7 @@ class Schema {
 	void consistency_tm_detection(const std::string& prop_name, const MsgPack& doc_tm_detection);
 	void consistency_u_detection(const std::string& prop_name, const MsgPack& doc_u_detection);
 	void consistency_namespace(const std::string& prop_name, const MsgPack& doc_namespace);
+	void consistency_script(const std::string& prop_name, const MsgPack& doc_script);
 	void consistency_version(const std::string& prop_name, const MsgPack& doc_version);
 	void consistency_schema(const std::string& prop_name, const MsgPack& doc_schema);
 
