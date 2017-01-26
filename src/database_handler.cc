@@ -191,7 +191,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 	}
 
 	try {
-		auto processor = v8pp::Processor::compile("_script", script);
+		auto processor = v8pp::Processor::compile(RESERVED_SCRIPT, script);
 
 		switch (method) {
 			case HTTP_PUT: {
