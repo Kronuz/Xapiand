@@ -113,7 +113,7 @@ DatabaseHandler::DatabaseHandler()
 	  method(HTTP_GET) { }
 
 
-DatabaseHandler::DatabaseHandler(const Endpoints &endpoints_, int flags_)
+DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_)
 	: endpoints(endpoints_),
 	  flags(flags_),
 	  method(HTTP_GET) { }

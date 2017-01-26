@@ -105,7 +105,7 @@ public:
 	};
 
 	DatabaseHandler();
-	DatabaseHandler(const Endpoints &endpoints_, int flags_=0);
+	DatabaseHandler(const Endpoints& endpoints_, int flags_=0);
 
 	~DatabaseHandler() = default;
 
