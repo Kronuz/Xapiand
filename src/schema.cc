@@ -4583,6 +4583,7 @@ Schema::consistency_script(const std::string& prop_name, const MsgPack& doc_scri
 	// RESERVED_SCRIPT isn't heritable and is not saved in schema.
 	L_CALL(this, "Schema::consistency_script(%s)", repr(doc_script.to_string()).c_str());
 
+#ifdef XAPIAND_V8
 	if (specification.full_meta_name.empty()) {
 		if (!doc_script.is_string()) {
 			THROW(ClientError, "%s must be string", prop_name.c_str());
@@ -4590,6 +4591,9 @@ Schema::consistency_script(const std::string& prop_name, const MsgPack& doc_scri
 	} else {
 		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());
 	}
+#else
+	THROW(ClientError, "%s only is allowed in root object when v8 engine is actived", prop_name.c_str());
+#endif
 }
 
 
