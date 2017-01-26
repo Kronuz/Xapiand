@@ -716,10 +716,8 @@ DatabaseHandler::update_schema()
 	auto mod_schema = schema->get_modified_schema();
 	if (mod_schema) {
 		auto old_schema = schema->get_const_schema();
-		for (const auto& e: endpoints) {
-			if (!XapiandManager::manager->database_pool.set_schema(e, flags, old_schema, mod_schema)) {
-				return std::make_pair(false, true);
-			}
+		if (!XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, old_schema, mod_schema)) {
+			return std::make_pair(false, true);
 		}
 		return std::make_pair(true, true);
 	}
