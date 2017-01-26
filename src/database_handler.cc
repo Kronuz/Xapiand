@@ -264,10 +264,6 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 	try {
 		do {
 			short doc_revision;
-			{
-				DatabaseHandler::lock_database lk(this);
-				doc_revision = database->get_revision_document(_document_id);
-			}
 #endif
 			auto schema_begins = std::chrono::system_clock::now();
 			do {
@@ -292,6 +288,10 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					term_id = Serialise::serialise(spc_id, _document_id);
 					prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
 #ifdef XAPIAND_V8
+					{
+						DatabaseHandler::lock_database lk(this);
+						doc_revision = database->get_revision_document(prefixed_term_id);
+					}
 					obj_ = run_script(obj, prefixed_term_id);
 #else
 					obj_ = obj;
@@ -340,6 +340,12 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 						term_id = Serialise::serialise(spc_id, _document_id);
 						prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
 					}
+#ifdef XAPIAND_V8
+					{
+						DatabaseHandler::lock_database lk(this);
+						doc_revision = database->get_revision_document(prefixed_term_id);
+					}
+#endif
 				}
 				auto update = update_schema();
 				if (update.first) {
@@ -367,7 +373,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			try {
 				DatabaseHandler::lock_database lk(this);
 #ifdef XAPIAND_V8
-				if (database->set_revision_document(_document_id, doc_revision))
+				if (database->set_revision_document(prefixed_term_id, doc_revision))
 #endif
 				{
 					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
@@ -378,7 +384,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 				recover_index();
 				DatabaseHandler::lock_database lk(this);
 #ifdef XAPIAND_V8
-				if (database->set_revision_document(_document_id, doc_revision))
+				if (database->set_revision_document(prefixed_term_id, doc_revision))
 #endif
 				{
 					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
@@ -388,8 +394,10 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 #ifdef XAPIAND_V8
 		} while (true);
 	} catch(...) {
-		DatabaseHandler::lock_database lk(this);
-		database->dec_count_document(_document_id);
+		if (!prefixed_term_id.empty()) {
+			DatabaseHandler::lock_database lk(this);
+			database->dec_count_document(prefixed_term_id);
+		}
 		throw;
 	}
 #endif
