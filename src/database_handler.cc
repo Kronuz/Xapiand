@@ -260,8 +260,6 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 	std::string prefixed_term_id;
 	required_spc_t spc_id;
 
-	Xapian::docid did = 0;
-
 #ifdef XAPIAND_V8
 	try {
 		do {
@@ -372,17 +370,18 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 				if (database->set_revision_document(_document_id, doc_revision))
 #endif
 				{
-					did = database->replace_document_term(prefixed_term_id, doc, commit_);
+					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
 					return std::make_pair(std::move(did), std::move(obj_));
 				}
 			} catch (const Xapian::DatabaseError& exc) {
 				// Try to recover from DatabaseError (i.e when the index is manually deleted)
-				recover_index(doc, prefixed_term_id);
+				recover_index();
+				DatabaseHandler::lock_database lk(this);
 #ifdef XAPIAND_V8
 				if (database->set_revision_document(_document_id, doc_revision))
 #endif
 				{
-					did = database->replace_document_term(prefixed_term_id, doc, commit_);
+					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
 					return std::make_pair(std::move(did), std::move(obj_));
 				}
 			}
