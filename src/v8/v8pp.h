@@ -44,7 +44,7 @@
 
 namespace v8pp {
 
-// v8 version supported: v8-315
+// v8 version supported: v8-5.1
 
 
 constexpr size_t TIME_SCRIPT = 100; // Milliseconds.
