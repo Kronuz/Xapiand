@@ -93,7 +93,7 @@ private:
 	}
 
 	template<typename T>
-	decltype(auto) __detach(T&& child) {
+	auto __detach(T&& child) {
 		ASSERT(child);
 		if (child->_iterator != _children.end()) {
 			ASSERT(child->_parent.get() == this);
@@ -143,7 +143,7 @@ public:
 	void run_loop();
 
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
-	static decltype(auto) make_shared(Args&&... args) {
+	static auto make_shared(Args&&... args) {
 		/*
 		 * std::make_shared only can call a public constructor, for this reason
 		 * it is neccesary wrap the constructor in a struct.
@@ -161,12 +161,12 @@ public:
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
-	decltype(auto) share_parent() noexcept {
+	auto share_parent() noexcept {
 		return std::static_pointer_cast<T>(_parent);
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
-	decltype(auto) share_this() noexcept {
+	auto share_this() noexcept {
 		return std::static_pointer_cast<T>(shared_from_this());
 	}
 };
