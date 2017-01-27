@@ -692,7 +692,7 @@ required_spc_t::operator=(required_spc_t&& o) noexcept
 }
 
 
-inline void
+void
 required_spc_t::set_types(const std::string& str_type)
 {
 	L_CALL(this, "required_spc_t::set_types(%s)", repr(str_type).c_str());
