@@ -1264,6 +1264,15 @@ HttpClient::search_view(enum http_method method, Command)
 	int db_flags = DB_OPEN;
 
 	if (query_field->volatile_) {
+		if (endpoints.size() != 1) {
+			enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, std::string("Expecting exactly one index with volatile")  }
+			};
+			write_http_response(error_code, err_response);
+			return;
+		}
 		db_flags |= DB_WRITABLE;
 	}
 
