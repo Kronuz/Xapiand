@@ -94,6 +94,8 @@ public:
 	using std::function<F>::operator();
 
 	virtual void get() { }
+
+	virtual ~function_mo() = default;
 };
 
 
@@ -132,6 +134,8 @@ class Task {
 
 public:
 	virtual void run(Params...) = 0;
+
+	virtual ~Task() = default;
 };
 
 
