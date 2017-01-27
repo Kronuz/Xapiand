@@ -32,8 +32,8 @@
 #include <tuple>         // for tuple_size, tuple_cat
 #include <vector>        // for vector
 
-#include "logger_fwd.h"  // for L_DEBUG, L_EXC, L_NOTHING
 #include "exception.h"   // for Exception
+#include "logger_fwd.h"  // for L_DEBUG, L_EXC, L_NOTHING
 #include "queue.h"       // for Queue
 #include "utils.h"       // for set_thread_name
 
@@ -119,14 +119,14 @@ public:
 };
 
 
-//
-//   Base task for Tasks
-//   run() should be overloaded and expensive calculations done there
-//
-
 template<typename... Params>
 class TaskQueue;
 
+
+/*
+ *   Base task for Tasks
+ *   run() should be overloaded and expensive calculations done there
+ */
 
 template<typename... Params>
 class Task {
