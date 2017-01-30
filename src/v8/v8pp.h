@@ -446,13 +446,14 @@ class Processor {
 		std::array<v8::Local<v8::Value>, sizeof...(arguments)> args{{ (*property_handler)(std::forward<Args>(arguments))... }};
 		v8::TryCatch try_catch;
 
+		auto global = context_->Global();
+		auto function_ = function.Get(isolate);
+
 		finished = false;
 		std::thread t_kill(&Processor::kill, this);
 		t_kill.detach();
 
 		// Invoke the function, giving the global object as 'this' and one args
-		auto global = context_->Global();
-		auto function_ = function.Get(isolate);
 		v8::Local<v8::Value> result = function_->Call(global, args.size(), args.data());
 
 		if (finished) {
