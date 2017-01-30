@@ -154,8 +154,8 @@ class Document : public Xapian::Document {
 
 public:
 	Document();
-	Document(const Xapian::Document &doc);
-	Document(DatabaseHandler* db_handler_, const Xapian::Document &doc);
+	Document(const Xapian::Document& doc);
+	Document(DatabaseHandler* db_handler_, const Xapian::Document& doc);
 
 	MsgPack get_field(const std::string& slot_name) const;
 	std::string get_value(Xapian::valueno slot) const;
