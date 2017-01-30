@@ -907,8 +907,9 @@ DatabaseHandler::get_database_info(MsgPack& info)
 void
 Document::update()
 {
+	L_CALL(this, "Document::update()");
+
 	if (db_handler && db_handler->database && database != db_handler->database) {
-		L_CALL(this, "Document::update()");
 		database = db_handler->database;
 		std::shared_ptr<Database> database_ = database;
 		DatabaseHandler* db_handler_ = db_handler;
@@ -930,12 +931,12 @@ Document::Document()
 	: db_handler(nullptr) { }
 
 
-Document::Document(const Xapian::Document &doc)
+Document::Document(const Xapian::Document& doc)
 	: Xapian::Document(doc),
 	  db_handler(nullptr) { }
 
 
-Document::Document(DatabaseHandler* db_handler_, const Xapian::Document &doc)
+Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc)
 	: Xapian::Document(doc),
 	  db_handler(db_handler_),
 	  database(db_handler->database) { }
