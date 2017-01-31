@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2014 furan
- * Copyright (C) 2016 deipi.com LLC and contributors.
+ * Copyright (C):
+ *  2014 furan,
+ *  2016,2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,8 +24,8 @@
 
 #include "Lexer.h"
 
-#include <string>
 #include <cstring>
+#include <string>
 
 #define AND "AND"
 #define OR "OR"
@@ -37,7 +38,7 @@
 #define RIGHT_SQUARE_BRACKET ']'
 
 
-Lexer::Lexer(char * input)
+Lexer::Lexer(char* input)
 	: contentReader(ContentReader(input)),
 	  currentSymbol(contentReader.NextSymbol()) { }
 
@@ -267,7 +268,7 @@ Lexer::NextToken()
 
 
 void
-Lexer::IsStringOperator(Token& token)
+Lexer::IsStringOperator(Token& token) const
 {
 	auto lexeme = token.get_lexeme();
 	if (!lexeme.empty()) {
@@ -304,7 +305,7 @@ Lexer::IsStringOperator(Token& token)
 
 
 bool
-Lexer::IsSymbolOp(char c)
+Lexer::IsSymbolOp(char c) const
 {
 	switch (c) {
 		case '(':

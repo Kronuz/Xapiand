@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2014 furan
- * Copyright (C) 2016 deipi.com LLC and contributors.
+ * Copyright (C):
+ *  2014 furan,
+ *  2016,2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,8 +25,8 @@
 #pragma once
 
 #include "ContentReader.h"
-#include "Token.h"
 #include "LexicalException.h"
+#include "Token.h"
 
 
 enum class LexerState : uint8_t {
@@ -45,10 +46,10 @@ class Lexer {
 	Symbol currentSymbol;
 
 	void InitDictionary();
-	void IsStringOperator(Token& token);
-	bool IsSymbolOp(char c);
+	void IsStringOperator(Token& token) const;
+	bool IsSymbolOp(char c) const;
 
 public:
-	Lexer(char * input);
+	Lexer(char* input);
 	Token NextToken();
 };

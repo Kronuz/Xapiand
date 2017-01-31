@@ -25,7 +25,7 @@
 #pragma once
 
 
-struct Symbol{
+struct Symbol {
 	char symbol;
 	int line;
 	int column;
