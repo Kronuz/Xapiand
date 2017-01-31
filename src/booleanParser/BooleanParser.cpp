@@ -101,9 +101,8 @@ BooleanTree::toRPN()
 {
 	currentToken = lexer->NextToken();
 
-	auto type = currentToken.get_type();
-	while (type != TokenType::EndOfFile) {
-		switch (type) {
+	while (currentToken.get_type() != TokenType::EndOfFile) {
+		switch (currentToken.get_type()) {
 			case TokenType::Id:
 				stack_output.push_back(currentToken);
 				break;
