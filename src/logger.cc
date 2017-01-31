@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,15 +22,15 @@
 
 #include "logger.h"
 
-#include <stdarg.h>      // for va_list, va_end, va_start
-#include <stdio.h>       // for fileno, vsnprintf, stderr
-#include <unistd.h>      // for isatty
 #include <ctime>         // for time_t
 #include <functional>    // for ref
 #include <iostream>      // for cerr
 #include <regex>         // for regex_replace, regex
+#include <stdarg.h>      // for va_list, va_end, va_start
 #include <stdexcept>     // for out_of_range
+#include <stdio.h>       // for fileno, vsnprintf, stderr
 #include <system_error>  // for system_error
+#include <unistd.h>      // for isatty
 
 #include "datetime.h"    // for to_string
 #include "exception.h"   // for traceback

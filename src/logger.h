@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,25 +22,24 @@
 
 #pragma once
 
-
-#include <stdarg.h>           // for va_list
-#include <time.h>             // for time_t
 #include <algorithm>          // for move
 #include <atomic>             // for atomic_bool, atomic, atomic_int
 #include <chrono>             // for system_clock, time_point, duration, millise...
+#include <condition_variable> // for condition_variable
 #include <fstream>            // for ofstream
 #include <memory>             // for shared_ptr, enable_shared_from_this, unique...
 #include <mutex>              // for condition_variable, mutex
+#include <stdarg.h>           // for va_list
 #include <string>             // for string, basic_string
 #include <thread>             // for thread, thread::id
+#include <time.h>             // for time_t
 #include <type_traits>        // for forward, decay_t, enable_if_t, is_base_of
 #include <unordered_map>      // for unordered_map
 #include <vector>             // for vector
-#include <condition_variable> // for condition_variable
 
-#include "xapiand.h"
 #include "logger_fwd.h"
 #include "scheduler.h"
+#include "xapiand.h"
 
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
@@ -49,6 +48,8 @@
 class Logger {
 public:
 	virtual void log(int priority, const std::string& str, bool with_priority, bool with_endl) = 0;
+
+	virtual ~Logger() = default;
 };
 
 
