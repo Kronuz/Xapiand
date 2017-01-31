@@ -33,7 +33,14 @@ class NotNode : public BaseNode {
 	std::unique_ptr<BaseNode> node;
 
 public:
-	NotNode(std::unique_ptr<BaseNode>&& _node);
-	BaseNode* getNode() const;
-	NodeType getType() const override;
+	NotNode(std::unique_ptr<BaseNode>&& _node)
+		: node(std::move(_node)) { }
+
+	BaseNode* getNode() const noexcept {
+		return node.get();
+	}
+
+	NodeType getType() const noexcept override {
+		return NodeType::NOT;
+	}
 };

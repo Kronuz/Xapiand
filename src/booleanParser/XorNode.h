@@ -34,8 +34,19 @@ class XorNode : public BaseNode {
 	std::unique_ptr<BaseNode> rig;
 
 public:
-	XorNode(std::unique_ptr<BaseNode>&& _lef, std::unique_ptr<BaseNode>&& _rig);
-	BaseNode* getLeftNode() const;
-	BaseNode* getRightNode() const;
-	NodeType getType() const override;
+	XorNode(std::unique_ptr<BaseNode>&& _lef, std::unique_ptr<BaseNode>&& _rig)
+		: lef(std::move(_lef)),
+		  rig(std::move(_rig)) { }
+
+	BaseNode* getLeftNode() const noexcept {
+		return lef.get();
+	}
+
+	BaseNode* getRightNode() const noexcept {
+		return rig.get();
+	}
+
+	NodeType getType() const noexcept override {
+		return NodeType::XOR;
+	}
 };

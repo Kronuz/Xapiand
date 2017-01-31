@@ -38,7 +38,7 @@ enum class NodeType : uint8_t {
 
 class BaseNode {
 public:
-	virtual NodeType getType() const = 0;
-
 	virtual ~BaseNode() = default;
+
+	virtual NodeType getType() const noexcept = 0;
 };

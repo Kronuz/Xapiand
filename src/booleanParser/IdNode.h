@@ -33,7 +33,14 @@ class IdNode : public BaseNode {
 	std::string id;
 
 public:
-	IdNode(const std::string& _id);
-	NodeType getType() const override;
-	std::string getId() const;
+	IdNode(const std::string& _id)
+		: id(_id) { }
+
+	std::string getId() const noexcept {
+		return id;
+	}
+
+	NodeType getType() const noexcept override {
+		return NodeType::ID;
+	}
 };
