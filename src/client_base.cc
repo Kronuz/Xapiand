@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,17 +22,17 @@
 
 #include "client_base.h"
 
-#include <stdio.h>               // for SEEK_SET
-#include <sys/errno.h>           // for __error, errno, ECONNRESET
-#include <sys/socket.h>          // for shutdown, SHUT_RDWR
-#include <sysexits.h>            // for EX_SOFTWARE
-#include <xapian.h>              // for SerialisationError
 #include <algorithm>             // for move
 #include <chrono>                // for operator""ms
 #include <exception>             // for exception
 #include <memory>                // for shared_ptr, unique_ptr, default_delete
 #include <ratio>                 // for ratio
+#include <stdio.h>               // for SEEK_SET
+#include <sys/errno.h>           // for __error, errno, ECONNRESET
+#include <sys/socket.h>          // for shutdown, SHUT_RDWR
+#include <sysexits.h>            // for EX_SOFTWARE
 #include <type_traits>           // for remove_reference<>::type
+#include <xapian.h>              // for SerialisationError
 
 #include "ev/ev++.h"             // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
 #include "io_utils.h"            // for read, close, lseek, write
