@@ -189,6 +189,8 @@ public:
 	ClientDecompressor(BaseClient *client_)
 		: client(client_) { }
 
+	virtual ~ClientDecompressor() = default;
+
 	inline void clear() noexcept {
 		input.clear();
 	}
