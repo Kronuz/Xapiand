@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,10 +24,10 @@
 
 #include "xapiand.h"
 
-#include <xapian.h>     // for DocNotFoundError, InternalError, InvalidArgum...
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string
 #include <type_traits>  // for forward
+#include <xapian.h>     // for DocNotFoundError, InternalError, InvalidArgum...
 
 
 #ifdef XAPIAND_TRACEBACKS

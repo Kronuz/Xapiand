@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -26,8 +26,8 @@
 #include <execinfo.h>  // for backtrace, backtrace_symbols
 #include <stdarg.h>    // for va_end, va_list, va_start
 #include <stdio.h>     // for vsnprintf
-#include <string.h>    // for strtok_r
 #include <stdlib.h>    // for free
+#include <string.h>    // for strtok_r
 
 
 #define BUFFER_SIZE 1024
