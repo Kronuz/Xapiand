@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2014 furan
- * Copyright (C) 2016 deipi.com LLC and contributors.
+ * Copyright (C):
+ *  2014 furan,
+ *  2016,2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -27,10 +28,14 @@
 #include <string>
 
 
-class LexicalException: public std::exception {
-private:
+class LexicalException : public std::exception {
 	const std::string msg;
+
 public:
-	LexicalException(const std::string& msg);
-	virtual const char* what() const throw();
+	LexicalException(const std::string& _msg)
+		: msg(_msg) { }
+
+	virtual const char* what() const noexcept {
+		return msg.data();
+	}
 };
