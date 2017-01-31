@@ -1127,9 +1127,11 @@ Unserialise::trixel_id(const std::string& serialised_val)
 std::string
 Unserialise::uuid(const std::string& serialised_uuid)
 {
-	auto res = base64::encode(serialised_uuid);
-	res.insert(0, 1, '{').push_back('}');
-	return res;
+	auto guid = Guid::unserialise(serialised_uuid);
+	return guid.to_string();
+	// auto res = base64::encode(serialised_uuid);
+	// res.insert(0, 1, '{').push_back('}');
+	// return res;
 }
 
 
