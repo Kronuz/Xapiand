@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 furan
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,22 +24,25 @@
 
 #pragma once
 
+
 struct Symbol{
 	char symbol;
 	int line;
 	int column;
 };
 
+
 class ContentReader {
 	int currentPosition;
 	int currentLine;
 	int currentColumn;
-	char * content;
+	char* content;
+
 public:
 	ContentReader();
-	ContentReader(char * content);
+	ContentReader(char* _content);
 
-	void setContent(char * content);
+	void setContent(char* _content);
 
 	Symbol NextSymbol();
 };

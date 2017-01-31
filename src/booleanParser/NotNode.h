@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 furan
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -28,12 +30,10 @@
 
 
 class NotNode : public BaseNode {
+	std::unique_ptr<BaseNode> node;
 
 public:
-	NotNode(std::unique_ptr<BaseNode> node);
-	BaseNode* getNode();
-	virtual NodeType getType();
-
-private:
-	std::unique_ptr<BaseNode> node;
+	NotNode(std::unique_ptr<BaseNode>&& _node);
+	BaseNode* getNode() const;
+	NodeType getType() const override;
 };

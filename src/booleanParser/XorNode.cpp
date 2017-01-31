@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2014 furan
- * Copyright (C) 2016 deipi.com LLC and contributors.
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,23 +25,27 @@
 #include "XorNode.h"
 
 
-XorNode::XorNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig)
-{
-	this->lef = std::move(lef);
-	this->rig = std::move(rig);
-}
+XorNode::XorNode(std::unique_ptr<BaseNode>&& _lef, std::unique_ptr<BaseNode>&& _rig)
+	: lef(std::move(_lef)),
+	  rig(std::move(_rig)) { }
 
-BaseNode* XorNode::getRightNode()
+
+BaseNode*
+XorNode::getRightNode() const
 {
 	return rig.get();
 }
 
-BaseNode* XorNode::getLeftNode()
+
+BaseNode*
+XorNode::getLeftNode() const
 {
 	return lef.get();
 }
 
-NodeType XorNode::getType()
+
+NodeType
+XorNode::getType() const
 {
-	return XorNodeType;
+	return NodeType::XOR;
 }

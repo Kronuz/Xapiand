@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 furan
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,18 +25,19 @@
 #include "IdNode.h"
 
 
-IdNode::IdNode(std::string id)
-{
-	this->id = id;
-}
+IdNode::IdNode(const std::string& _id)
+	: id(_id) { }
 
-std::string IdNode::getId()
+
+std::string
+IdNode::getId() const
 {
 	return id;
 }
 
-NodeType IdNode::getType()
-{
-	return IdNodeType;
-}
 
+NodeType
+IdNode::getType() const
+{
+	return NodeType::ID;
+}

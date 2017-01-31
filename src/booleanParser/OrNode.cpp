@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 furan
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,23 +25,27 @@
 #include "OrNode.h"
 
 
-OrNode::OrNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig)
-{
-	this->lef = std::move(lef);
-	this->rig = std::move(rig);
-}
+OrNode::OrNode(std::unique_ptr<BaseNode>&& _lef, std::unique_ptr<BaseNode>&& _rig)
+	: lef(std::move(_lef)),
+	  rig(std::move(_rig)) { }
 
-BaseNode* OrNode::getRightNode()
+
+BaseNode*
+OrNode::getRightNode() const
 {
 	return rig.get();
 }
 
-BaseNode* OrNode::getLeftNode()
+
+BaseNode*
+OrNode::getLeftNode() const
 {
 	return lef.get();
 }
 
-NodeType OrNode::getType()
+
+NodeType
+OrNode::getType() const
 {
-	return OrNodeType;
+	return NodeType::OR;
 }

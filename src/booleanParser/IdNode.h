@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 furan
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -28,11 +30,10 @@
 
 
 class IdNode : public BaseNode {
+	std::string id;
 
 public:
-	IdNode(std::string id);
-	virtual NodeType getType();
-	std::string getId();
-private:
-	std::string id;
+	IdNode(const std::string& _id);
+	NodeType getType() const override;
+	std::string getId() const;
 };

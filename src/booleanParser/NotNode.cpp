@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 furan
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,17 +25,19 @@
 #include "NotNode.h"
 
 
-NotNode::NotNode(std::unique_ptr<BaseNode> node)
-{
-	this->node = std::move(node);
-}
+NotNode::NotNode(std::unique_ptr<BaseNode>&& _node)
+	: node(std::move(_node)) { }
 
-BaseNode* NotNode::getNode()
+
+BaseNode*
+NotNode::getNode() const
 {
 	return node.get();
 }
 
-NodeType NotNode::getType()
+
+NodeType
+NotNode::getType() const
 {
-	return NotNodeType;
+	return NodeType::NOT;
 }

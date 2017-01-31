@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 furan
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,27 +24,30 @@
 
 #include "ContentReader.h"
 
+
 ContentReader::ContentReader()
+	: currentPosition(0),
+	  currentLine(1),
+	  currentColumn(1),
+	  content(nullptr) { }
+
+
+ContentReader::ContentReader(char* _content)
+	: currentPosition(0),
+	  currentLine(1),
+	  currentColumn(1),
+	  content(_content) { }
+
+
+void
+ContentReader::setContent(char* _content)
 {
-	currentLine = 1;
-	currentColumn = 1;
-	currentPosition = 0;
+	content = _content;
 }
 
-ContentReader::ContentReader(char* content)
-{
-	currentLine = 1;
-	currentColumn = 1;
-	currentPosition = 0;
-	this->content = content;
-}
 
-void ContentReader::setContent(char* content)
-{
-	this->content = content;
-}
-
-Symbol ContentReader::NextSymbol()
+Symbol
+ContentReader::NextSymbol()
 {
 	Symbol ret;
 	if (content[currentPosition]) {
@@ -71,4 +76,3 @@ Symbol ContentReader::NextSymbol()
 	ret.column = currentColumn;
 	return ret;
 }
-

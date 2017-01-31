@@ -185,7 +185,7 @@ BooleanTree::postorder(BaseNode* p, int indent)
 {
 	if (p != nullptr) {
 		switch (p->getType()) {
-			case AndNodeType:
+			case NodeType::AND:
 				if (dynamic_cast<AndNode*>(p)->getLeftNode()) {
 					postorder(dynamic_cast<AndNode*>(p)->getLeftNode(), indent+4);
 				}
@@ -197,7 +197,7 @@ BooleanTree::postorder(BaseNode* p, int indent)
 					postorder(dynamic_cast<AndNode*>(p)->getRightNode(), indent+4);
 				}
 				break;
-			case OrNodeType:
+			case NodeType::OR:
 				if (dynamic_cast<OrNode*>(p)->getLeftNode()) {
 					postorder(dynamic_cast<OrNode*>(p)->getLeftNode(), indent+4);
 				}
@@ -209,14 +209,14 @@ BooleanTree::postorder(BaseNode* p, int indent)
 					postorder(dynamic_cast<OrNode*>(p)->getRightNode(), indent+4);
 				}
 				break;
-			case NotNodeType:
+			case NodeType::NOT:
 				if (dynamic_cast<NotNode*>(p)) {
 					std::cout << std::setw(indent) << ' ';
 					std::cout << "NOT" << "\n ";
 					postorder(dynamic_cast<NotNode*>(p)->getNode(), indent+4);
 				}
 				break;
-			case XorNodeType:
+			case NodeType::XOR:
 				if (dynamic_cast<XorNode*>(p)->getLeftNode()) {
 					postorder(dynamic_cast<XorNode*>(p)->getLeftNode(), indent+4);
 				}
@@ -228,7 +228,7 @@ BooleanTree::postorder(BaseNode* p, int indent)
 					postorder(dynamic_cast<XorNode*>(p)->getRightNode(), indent+4);
 				}
 				break;
-			case IdNodeType:
+			case NodeType::ID:
 				std::cout << std::setw(indent) << ' ';
 				if (dynamic_cast<IdNode*>(p)) {
 					std::cout << dynamic_cast<IdNode*>(p)->getId() << "\n ";

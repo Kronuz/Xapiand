@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 furan
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -28,14 +30,12 @@
 
 
 class AndNode : public BaseNode {
-
-public:
-	AndNode(std::unique_ptr<BaseNode> lef, std::unique_ptr<BaseNode> rig);
-	BaseNode* getLeftNode();
-	BaseNode* getRightNode();
-	virtual NodeType getType();
-
-private:
 	std::unique_ptr<BaseNode> lef;
 	std::unique_ptr<BaseNode> rig;
+
+public:
+	AndNode(std::unique_ptr<BaseNode>&& _lef, std::unique_ptr<BaseNode>&& _rig);
+	BaseNode* getLeftNode() const;
+	BaseNode* getRightNode() const;
+	NodeType getType() const override;
 };

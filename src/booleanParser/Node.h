@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 furan
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,17 +24,19 @@
 
 #pragma once
 
-enum NodeType {
-	AndNodeType,
-	OrNodeType,
-	NotNodeType,
-	XorNodeType,
-	IdNodeType,
+
+enum class NodeType : uint8_t {
+	AND,
+	OR,
+	NOT,
+	XOR,
+	ID,
 };
+
 
 class BaseNode {
 public:
-	virtual NodeType getType()=0;
-private:
+	virtual NodeType getType() const = 0;
 
+	virtual ~BaseNode() = default;
 };
