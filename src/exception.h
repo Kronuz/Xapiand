@@ -49,6 +49,8 @@ public:
 	BaseException(const char *filename, int line, const char* type, const std::string& message="")
 		: BaseException(filename, line, type, message.c_str()) { }
 
+	virtual ~BaseException() = default;
+
 	virtual const char* get_message() const noexcept {
 		return message.c_str();
 	}
@@ -75,11 +77,13 @@ public:
 	DummyException() : BaseException(__FILE__, __LINE__, "DummyException"), std::runtime_error(message) { }
 };
 
+
 class CheckoutError : public Exception {
 public:
 	template<typename... Args>
 	CheckoutError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
 };
+
 
 class Exit : public BaseException, public std::runtime_error {
 public:
