@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,16 +24,16 @@
 
 #include "xapiand.h"
 
-#include <sys/types.h>                    // for int64_t, uint64_t
-#include <xapian.h>                       // for valueno, KeyMaker
 #include <cfloat>                         // for DBL_MAX
 #include <cmath>                          // for fabs
 #include <cstdlib>                        // for llabs
 #include <memory>                         // for default_delete, unique_ptr
 #include <stdexcept>                      // for out_of_range
 #include <string>                         // for string, operator==, stod
+#include <sys/types.h>                    // for int64_t, uint64_t
 #include <unordered_map>                  // for unordered_map
 #include <vector>                         // for vector
+#include <xapian.h>                       // for valueno, KeyMaker
 
 #include "database_utils.h"               // for query_field_t
 #include "datetime.h"                     // for timestamp
@@ -72,6 +72,8 @@ public:
 	BaseKey(Xapian::valueno slot, bool reverse)
 		: _slot(slot),
 		  _reverse(reverse) { }
+
+	virtual ~BaseKey() = default;
 
 	virtual std::string findSmallest(const Xapian::Document& doc) const;
 	virtual std::string findLargest(const Xapian::Document& doc) const;
