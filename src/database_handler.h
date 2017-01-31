@@ -90,14 +90,12 @@ class DatabaseHandler {
 public:
 	class lock_database {
 		DatabaseHandler* db_handler;
-		std::shared_ptr<Database>* database;
 
 		lock_database(const lock_database&) = delete;
 		lock_database& operator=(const lock_database&) = delete;
 
 	public:
 		lock_database(DatabaseHandler* db_handler_);
-		lock_database(DatabaseHandler& db_handler);
 		~lock_database();
 
 		void lock();

@@ -65,15 +65,10 @@ public:
 
 
 DatabaseHandler::lock_database::lock_database(DatabaseHandler* db_handler_)
-	: db_handler(db_handler_),
-	  database(nullptr)
+	: db_handler(db_handler_)
 {
 	lock();
 }
-
-
-DatabaseHandler::lock_database::lock_database(DatabaseHandler& db_handler)
-	: lock_database(&db_handler) { }
 
 
 DatabaseHandler::lock_database::~lock_database()
@@ -86,9 +81,7 @@ void
 DatabaseHandler::lock_database::lock()
 {
 	if (db_handler && !db_handler->database) {
-		if (XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
-			database = &db_handler->database;
-		} else {
+		if (!XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
 			THROW(CheckoutError, "Cannot checkout database: %s", repr(db_handler->endpoints.to_string()).c_str());
 		}
 	}
@@ -98,12 +91,8 @@ DatabaseHandler::lock_database::lock()
 void
 DatabaseHandler::lock_database::unlock() noexcept
 {
-	if (database) {
-		if (*database) {
-			XapiandManager::manager->database_pool.checkin(*database);
-		}
-		(*database).reset();
-		database = nullptr;
+	if (db_handler && db_handler->database) {
+		XapiandManager::manager->database_pool.checkin(db_handler->database);
 	}
 }
 
