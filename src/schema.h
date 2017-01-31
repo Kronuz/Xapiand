@@ -237,7 +237,7 @@ struct required_spc_t {
 
 		bool store:1;
 		bool parent_store:1;
-		bool is_recursive:1;
+		bool is_recurse:1;
 		bool dynamic:1;
 		bool strict:1;
 		bool date_detection:1;
@@ -543,7 +543,7 @@ class Schema {
 	void update_slot(const MsgPack& prop_slot);
 	void update_index(const MsgPack& prop_index);
 	void update_store(const MsgPack& prop_store);
-	void update_recursive(const MsgPack& prop_namespace);
+	void update_recurse(const MsgPack& prop_recurse);
 	void update_dynamic(const MsgPack& prop_dynamic);
 	void update_strict(const MsgPack& prop_strict);
 	void update_d_detection(const MsgPack& prop_d_detection);
@@ -571,7 +571,7 @@ class Schema {
 	void write_positions(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_positions);
 	void write_index(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index);
 	void write_store(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_store);
-	void write_recursive(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recursive);
+	void write_recurse(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recurse);
 	void write_dynamic(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic);
 	void write_strict(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_strict);
 	void write_d_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_d_detection);
@@ -605,7 +605,7 @@ class Schema {
 	void process_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy);
 	void process_index(const std::string& prop_name, const MsgPack& doc_index);
 	void process_store(const std::string& prop_name, const MsgPack& doc_store);
-	void process_recursive(const std::string& prop_name, const MsgPack& doc_recursive);
+	void process_recurse(const std::string& prop_name, const MsgPack& doc_recurse);
 	void process_partial_paths(const std::string& prop_name, const MsgPack& doc_partial_paths);
 	void process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term);
 	void process_partials(const std::string& prop_name, const MsgPack& doc_partials);

@@ -396,7 +396,7 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_POSITIONS,          &Schema::write_positions       },
 	{ RESERVED_INDEX,              &Schema::write_index           },
 	{ RESERVED_STORE,              &Schema::write_store           },
-	{ RESERVED_RECURSIVE,          &Schema::write_recursive       },
+	{ RESERVED_RECURSE,            &Schema::write_recurse         },
 	{ RESERVED_DYNAMIC,            &Schema::write_dynamic         },
 	{ RESERVED_STRICT,             &Schema::write_strict          },
 	{ RESERVED_D_DETECTION,        &Schema::write_d_detection     },
@@ -435,7 +435,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_POSITIONS,          &Schema::process_positions           },
 	{ RESERVED_INDEX,              &Schema::process_index               },
 	{ RESERVED_STORE,              &Schema::process_store               },
-	{ RESERVED_RECURSIVE,          &Schema::process_recursive           },
+	{ RESERVED_RECURSE,            &Schema::process_recurse             },
 	{ RESERVED_PARTIAL_PATHS,      &Schema::process_partial_paths       },
 	{ RESERVED_VALUE,              &Schema::process_value               },
 	{ RESERVED_FLOAT,              &Schema::process_cast_object         },
@@ -495,7 +495,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 	{ RESERVED_SLOT,            &Schema::update_slot             },
 	{ RESERVED_INDEX,           &Schema::update_index            },
 	{ RESERVED_STORE,           &Schema::update_store            },
-	{ RESERVED_RECURSIVE,       &Schema::update_recursive        },
+	{ RESERVED_RECURSE,         &Schema::update_recurse          },
 	{ RESERVED_DYNAMIC,         &Schema::update_dynamic          },
 	{ RESERVED_STRICT,          &Schema::update_strict           },
 	{ RESERVED_D_DETECTION,     &Schema::update_d_detection      },
@@ -579,7 +579,7 @@ required_spc_t::flags_t::flags_t()
 	  partials(DEFAULT_GEO_PARTIALS),
 	  store(true),
 	  parent_store(true),
-	  is_recursive(true),
+	  is_recurse(true),
 	  dynamic(true),
 	  strict(false),
 	  date_detection(true),
@@ -942,7 +942,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_PARTIALS          << ": " << (flags.partials          ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_STORE             << ": " << (flags.store             ? "true" : "false") << "\n";
 	str << "\t" << "parent_store"             << ": " << (flags.parent_store      ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_RECURSIVE         << ": " << (flags.is_recursive      ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_RECURSE           << ": " << (flags.is_recurse        ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_DYNAMIC           << ": " << (flags.dynamic           ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_STRICT            << ": " << (flags.strict            ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_D_DETECTION       << ": " << (flags.date_detection    ? "true" : "false") << "\n";
@@ -1105,7 +1105,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		THROW(ClientError, "Field name must not be empty");
 	}
 
-	if (!specification.flags.is_recursive) {
+	if (!specification.flags.is_recurse) {
 		if (specification.flags.store) {
 			(*parent_data)[name] = object;
 		}
@@ -3358,11 +3358,11 @@ Schema::update_store(const MsgPack& prop_store)
 
 
 void
-Schema::update_recursive(const MsgPack& prop_recursive)
+Schema::update_recurse(const MsgPack& prop_recurse)
 {
-	L_CALL(this, "Schema::update_recursive(%s)", repr(prop_recursive.to_string()).c_str());
+	L_CALL(this, "Schema::update_recurse(%s)", repr(prop_recurse.to_string()).c_str());
 
-	specification.flags.is_recursive = prop_recursive.as_bool();
+	specification.flags.is_recurse = prop_recurse.as_bool();
 }
 
 
@@ -3574,17 +3574,17 @@ Schema::write_store(MsgPack& properties, const std::string& prop_name, const Msg
 
 
 void
-Schema::write_recursive(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recursive)
+Schema::write_recurse(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recurse)
 {
-	L_CALL(this, "Schema::write_recursive(%s)", repr(doc_recursive.to_string()).c_str());
+	L_CALL(this, "Schema::write_recurse(%s)", repr(doc_recurse.to_string()).c_str());
 
 	/*
-	 * RESERVED_RECURSIVE is heritable and can change, but once fixed in false
+	 * RESERVED_RECURSE is heritable and can change, but once fixed in false
 	 * it does not process its children.
 	 */
 
-	process_recursive(prop_name, doc_recursive);
-	properties[prop_name] = static_cast<bool>(specification.flags.is_recursive);
+	process_recurse(prop_name, doc_recurse);
+	properties[prop_name] = static_cast<bool>(specification.flags.is_recurse);
 }
 
 
@@ -4103,17 +4103,17 @@ Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
 
 
 void
-Schema::process_recursive(const std::string& prop_name, const MsgPack& doc_recursive)
+Schema::process_recurse(const std::string& prop_name, const MsgPack& doc_recurse)
 {
-	L_CALL(this, "Schema::process_recursive(%s)", repr(doc_recursive.to_string()).c_str());
+	L_CALL(this, "Schema::process_recurse(%s)", repr(doc_recurse.to_string()).c_str());
 
 	/*
-	 * RESERVED_RECURSIVE is heritable and can change, but once fixed in false
+	 * RESERVED_RECURSE is heritable and can change, but once fixed in false
 	 * it does not process its children.
 	 */
 
 	try {
-		specification.flags.is_recursive = doc_recursive.as_bool();
+		specification.flags.is_recurse = doc_recurse.as_bool();
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}

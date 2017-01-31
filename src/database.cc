@@ -2623,7 +2623,7 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 				db_handler.reset(shared_endpoint, DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_GET);
 				MsgPack shared_schema;
 				shared_schema = *new_schema;
-				shared_schema[RESERVED_RECURSIVE] = false;
+				shared_schema[RESERVED_RECURSE] = false;
 				db_handler.index(schema_path.second, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
 				if (XapiandManager::manager->strict) {
 					shared_schema[ID_FIELD_NAME][RESERVED_TYPE] = TERM_STR;
