@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 furan
+ * Copyright (C):
+ *  2014 furan,
+ *  2017 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -25,10 +27,14 @@
 #include <exception>
 
 
-class SyntacticException: public std::exception {
-private:
+class SyntacticException : public std::exception {
 	const char* msg;
+
 public:
-	SyntacticException(const char* msg);
-	virtual const char* what() const throw();
+	SyntacticException(const char* _msg)
+		: msg(_msg) { }
+
+	virtual const char* what() const noexcept {
+		return msg;
+	}
 };
