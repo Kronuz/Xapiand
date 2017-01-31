@@ -25,7 +25,8 @@
 
 #include <string>
 
-enum class TokenType {
+
+enum class TokenType : uint8_t {
 	Not=1,
 	Or,
 	And,
@@ -41,8 +42,6 @@ public:
 
 	std::string lexeme;
 	TokenType type;
-	Token();
-	virtual ~Token();
-private:
-
+	Token() = default;
+	virtual ~Token() = default;
 };

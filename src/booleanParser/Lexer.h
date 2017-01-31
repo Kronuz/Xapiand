@@ -28,7 +28,7 @@
 #include "LexicalException.h"
 
 
-enum class LexerState {
+enum class LexerState : uint8_t {
 	INIT,
 	TOKEN,
 	TOKEN_QUOTE,
@@ -41,15 +41,14 @@ enum class LexerState {
 
 
 class Lexer {
-	Symbol currentSymbol;
 	ContentReader contentReader;
+	Symbol currentSymbol;
 
 	void InitDictionary();
 	void IsStringOperator(Token& token);
 	bool IsSymbolOp(char c);
 
 public:
-	Lexer(ContentReader cr);
 	Lexer(char * input);
 	Token NextToken();
 };

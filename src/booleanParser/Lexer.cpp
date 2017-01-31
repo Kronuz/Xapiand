@@ -37,19 +37,9 @@
 #define RIGHT_SQUARE_BRACKET ']'
 
 
-Lexer::Lexer(ContentReader contentReader)
-{
-	this->contentReader = contentReader;
-	currentSymbol = this->contentReader.NextSymbol();
-}
-
-
 Lexer::Lexer(char * input)
-{
-	ContentReader cr(input);
-	contentReader = cr;
-	currentSymbol = this->contentReader.NextSymbol();
-}
+	: contentReader(ContentReader(input)),
+	  currentSymbol(contentReader.NextSymbol()) { }
 
 
 Token
