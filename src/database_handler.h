@@ -50,17 +50,17 @@ public:
 	MSet(const Xapian::MSet& o) : Xapian::MSet(o) { }
 
 	// The following either use enquire or db (db could have changed)
-	Xapian::doccount get_termfreq(const std::string & term) const = delete;
-	double get_termweight(const std::string & term) const = delete;
-	std::string snippet(const std::string & text,
+	Xapian::doccount get_termfreq(const std::string& term) const = delete;
+	double get_termweight(const std::string& term) const = delete;
+	std::string snippet(const std::string& text,
 			size_t length = 500,
-			const Xapian::Stem & stemmer = Xapian::Stem(),
+			const Xapian::Stem& stemmer = Xapian::Stem(),
 			unsigned flags = SNIPPET_BACKGROUND_MODEL | SNIPPET_EXHAUSTIVE,
-			const std::string & hi_start = "<b>",
-			const std::string & hi_end = "</b>",
-			const std::string & omit = "...") const = delete;
-	void fetch(const Xapian::MSetIterator &begin, const Xapian::MSetIterator &end) const = delete;
-	void fetch(const Xapian::MSetIterator &item) const = delete;
+			const std::string& hi_start = "<b>",
+			const std::string& hi_end = "</b>",
+			const std::string& omit = "...") const = delete;
+	void fetch(const Xapian::MSetIterator& begin, const Xapian::MSetIterator& end) const = delete;
+	void fetch(const Xapian::MSetIterator& item) const = delete;
 	void fetch() const = delete;
 };
 
