@@ -3,7 +3,10 @@
  * @file A fantasy name generator library.
  * @version 1.0.1
  * @license Public Domain
- * @author German M. Bravo (Kronuz)
+ * @authors:
+ *   German M. Bravo (Kronuz)
+ *   2016,2017 deipi.com LLC and contributors
+ *
  *
  * This library is designed after the RinkWorks Fantasy Name Generator.
  * @see http://www.rinkworks.com/namegen/
@@ -71,10 +74,10 @@
 
 #include "xapiand.h"
 
-#include <stddef.h>       // for size_t
 #include <iosfwd>         // for wstring
 #include <memory>         // for unique_ptr
 #include <stack>          // for stack
+#include <stddef.h>       // for size_t
 #include <string>         // for string
 #include <unordered_map>  // for unordered_map
 #include <vector>         // for vector
@@ -140,31 +143,32 @@ namespace NameGen {
 #define FANTASY_S_E "(syth|sith|srr|sen|yth|ssen|then|fen|ssth|kel|syn|est|bess|inth|nen|tin|cor|sv|iss|ith|sen|slar|ssil|sthen|svis|s|ss|s|ss)(|(tys|eus|yn|of|es|en|ath|elth|al|ell|ka|ith|yrrl|is|isl|yr|ast|iy))(us|yn|en|ens|ra|rg|le|en|ith|ast|zon|in|yn|ys)"
 
 
-class Generator
-{
-	typedef enum wrappers {
-		capitalizer,
-		reverser
-	} wrappers_t;
+class Generator {
+	enum class Wrapper : uint8_t {
+		Capitalizer,
+		Reverser,
+	};
 
-	typedef enum group_types {
-		symbol,
-		literal
-	} group_types_t;
+	enum class GroupType : uint8_t {
+		Symbol,
+		Literal,
+	};
 
 
 	class Group {
-		std::stack<wrappers_t> wrappers;
+		std::stack<Wrapper> wrappers;
 		std::vector<std::unique_ptr<Generator>> set;
 
 	public:
-		group_types_t type;
+		GroupType type;
 
-		Group(group_types_t type_);
+		Group(GroupType type_);
+
+		virtual ~Group() = default;
 
 		std::unique_ptr<Generator> emit();
 		void split();
-		void wrap(wrappers_t type);
+		void wrap(Wrapper type);
 		void add(std::unique_ptr<Generator>&& g);
 
 		virtual void add(char c);
@@ -174,7 +178,7 @@ class Generator
 	class GroupSymbol : public Group {
 	public:
 		GroupSymbol();
-		void add(char c);
+		void add(char c) override;
 	};
 
 
@@ -189,53 +193,50 @@ protected:
 public:
 	static const std::unordered_map<std::string, const std::vector<std::string>>& SymbolMap();
 
-	Generator();
+	Generator() = default;
 	Generator(const std::string& pattern, bool collapse_triples=true);
 	Generator(std::vector<std::unique_ptr<Generator>>&& generators_);
 
 	virtual ~Generator() = default;
 
-	virtual size_t combinations();
-	virtual size_t min();
-	virtual size_t max();
-	virtual std::string toString();
+	virtual size_t combinations() const;
+	virtual size_t min() const;
+	virtual size_t max() const;
+	virtual std::string toString() const;
 
 	void add(std::unique_ptr<Generator>&& g);
 };
 
 
-class Random : public Generator
-{
+class Random : public Generator {
 public:
-	Random();
+	Random() = default;
 	Random(std::vector<std::unique_ptr<Generator>>&& generators_);
 
-	size_t combinations();
-	size_t min();
-	size_t max();
-	std::string toString();
+	size_t combinations() const override;
+	size_t min() const override;
+	size_t max() const override;
+	std::string toString() const override;
 };
 
 
-class Sequence : public Generator
-{
+class Sequence : public Generator {
 public:
-	Sequence();
+	Sequence() = default;
 	Sequence(std::vector<std::unique_ptr<Generator>>&& generators_);
 };
 
 
-class Literal : public Generator
-{
+class Literal : public Generator {
 	std::string value;
 
 public:
 	Literal(const std::string& value_);
 
-	size_t combinations();
-	size_t min();
-	size_t max();
-	std::string toString();
+	size_t combinations() const override;
+	size_t min() const override;
+	size_t max() const override;
+	std::string toString() const override;
 };
 
 
@@ -243,28 +244,27 @@ class Reverser : public Generator {
 public:
 	Reverser(std::unique_ptr<Generator>&& g);
 
-	std::string toString();
+	std::string toString() const override;
 };
 
 
-class Capitalizer : public Generator
-{
+class Capitalizer : public Generator {
 public:
 	Capitalizer(std::unique_ptr<Generator>&& g);
 
-	std::string toString();
+	std::string toString() const override;
 };
 
 
-class Collapser : public Generator
-{
+class Collapser : public Generator {
 public:
 	Collapser(std::unique_ptr<Generator>&& g);
 
-	std::string toString();
+	std::string toString() const override;
 };
 
 };
+
 
 std::wstring towstring(const std::string& s);
 std::string tostring(const std::wstring& s);
