@@ -51,7 +51,7 @@ BooleanTree::Parse()
 	root = BuildTree();
 	if (!stack_output.empty()) {
 		Token token = stack_output.back();
-		std::string msj = "'" + token.lexeme + "' not expected";
+		std::string msj = "'" + token.get_lexeme() + "' not expected";
 		throw SyntacticException(msj.c_str());
 	}
 }
@@ -60,21 +60,21 @@ BooleanTree::Parse()
 std::unique_ptr<BaseNode>
 BooleanTree::BuildTree()
 {
-	if (stack_output.size() == 1 || stack_output.back().type == TokenType::Id) {
+	if (stack_output.size() == 1 || stack_output.back().get_type() == TokenType::Id) {
 		Token token = stack_output.back();
 		stack_output.pop_back();
-		std::string id = token.lexeme;
+		std::string id = token.get_lexeme();
 		return std::make_unique<IdNode>(id);
 	}
 	/* Error case */
-	else if (stack_output.size() == 1 && stack_output.back().type != TokenType::Id) {
+	else if (stack_output.size() == 1 && stack_output.back().get_type() != TokenType::Id) {
 		Token token = stack_output.back();
-		std::string msj = "'" + token.lexeme + "' not expected";
+		std::string msj = "'" + token.get_lexeme() + "' not expected";
 		throw SyntacticException(msj.c_str());
 	} else {
 		Token token = stack_output.back();
 		stack_output.pop_back();
-		switch(token.type) {
+		switch(token.get_type()) {
 			case TokenType::Not:
 				return std::make_unique<NotNode>(BuildTree());
 			case TokenType::Or:
@@ -101,8 +101,9 @@ BooleanTree::toRPN()
 {
 	currentToken = lexer->NextToken();
 
-	while (currentToken.type != TokenType::EndOfFile) {
-		switch (currentToken.type) {
+	auto type = currentToken.get_type();
+	while (type != TokenType::EndOfFile) {
+		switch (type) {
 			case TokenType::Id:
 				stack_output.push_back(currentToken);
 				break;
@@ -115,7 +116,7 @@ BooleanTree::toRPN()
 				while (true) {
 					if (!stack_operator.empty()) {
 							Token token_back = stack_operator.back();
-						if (token_back.type != TokenType::LeftParenthesis) {
+						if (token_back.get_type() != TokenType::LeftParenthesis) {
 							stack_output.push_back(token_back);
 							stack_operator.pop_back();
 						} else {
@@ -133,7 +134,7 @@ BooleanTree::toRPN()
 			case TokenType::Or:
 			case TokenType::And:
 			case TokenType::Xor:
-				while (!stack_operator.empty() && precedence(currentToken.type) >= precedence(stack_operator.back().type)) {
+				while (!stack_operator.empty() && precedence(currentToken.get_type()) >= precedence(stack_operator.back().get_type())) {
 					Token token_back = stack_operator.back();
 					stack_operator.pop_back();
 					stack_output.push_back(token_back);

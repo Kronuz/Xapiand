@@ -551,7 +551,7 @@ QueryDSL::make_dsl_query(const std::string& query)
 			auto token = booltree.front();
 			booltree.pop_front();
 
-			switch (token.type) {
+			switch (token.get_type()) {
 				case TokenType::Not:
 					if (stack_msgpack.size() < 1) {
 						THROW(QueryDslError, "Bad boolean expression");
@@ -608,7 +608,7 @@ QueryDSL::make_dsl_query(const std::string& query)
 
 				case TokenType::Id:	{
 					MsgPack object(MsgPack::Type::MAP);
-					FieldParser fp(token.lexeme);
+					FieldParser fp(token.get_lexeme());
 					fp.parse();
 
 					MsgPack value;
