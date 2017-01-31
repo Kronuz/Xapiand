@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 
 enum class NodeType : uint8_t {
 	AND,
