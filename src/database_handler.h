@@ -142,8 +142,6 @@ public:
 
 
 class Document : public Xapian::Document {
-	friend class DatabaseHandler;
-
 	DatabaseHandler* db_handler;
 	std::shared_ptr<Database> database;
 
