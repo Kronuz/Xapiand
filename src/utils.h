@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,17 +24,17 @@
 
 #include "xapiand.h"
 
+#include <chrono>       // for system_clock, time_point, duration_cast, seconds
 #include <ctype.h>      // for tolower, toupper
 #include <dirent.h>     // for DIR
 #include <math.h>       // for log10, floor, pow
+#include <regex>        // for regex
 #include <stdio.h>      // for size_t, snprintf
+#include <string>       // for string, allocator
 #include <sys/errno.h>  // for EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
 #include <sys/types.h>  // for uint64_t, uint16_t, uint8_t, int32_t, uint32_t
-#include <unistd.h>     // for usleep
-#include <chrono>       // for system_clock, time_point, duration_cast, seconds
-#include <regex>        // for regex
-#include <string>       // for string, allocator
 #include <type_traits>  // for forward, underlying_type_t
+#include <unistd.h>     // for usleep
 #include <vector>       // for vector
 
 #include "ev/ev++.h"    // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED

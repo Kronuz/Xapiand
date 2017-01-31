@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,25 +22,25 @@
 
 #include "utils.h"
 
+#include <algorithm>             // for equal, uniform_int_distribution
+#include <cstdint>               // for uint64_t
+#include <functional>            // for function, __base
 #include <math.h>                // for powl, logl, floorl, roundl
+#include <memory>                // for allocator
 #include <netinet/in.h>          // for IPPROTO_TCP
 #include <netinet/tcp.h>         // for TCP_NOPUSH
+#include <random>                // for mt19937_64, random_device, uniform_r...
+#include <ratio>                 // for ratio
 #include <stdio.h>               // for size_t, sprintf, remove, rename, snp...
 #include <string.h>              // for strerror, strcmp
+#include <string>                // for string, operator+, char_traits, basi...
 #include <sys/fcntl.h>           // for O_CREAT, O_RDONLY, O_WRONLY
 #include <sys/resource.h>        // for rlim_t, rlimit, RLIMIT_NOFILE, getrl...
 #include <sys/socket.h>          // for setsockopt
 #include <sys/stat.h>            // for mkdir, stat
 #include <sysexits.h>            // for EX_OSFILE
-#include <unistd.h>              // for close, rmdir, write, ssize_t
-#include <algorithm>             // for equal, uniform_int_distribution
-#include <cstdint>               // for uint64_t
-#include <functional>            // for function, __base
-#include <memory>                // for allocator
-#include <random>                // for mt19937_64, random_device, uniform_r...
-#include <ratio>                 // for ratio
-#include <string>                // for string, operator+, char_traits, basi...
 #include <thread>                // for this_thread
+#include <unistd.h>              // for close, rmdir, write, ssize_t
 
 #include "config.h"              // for HAVE_PTHREAD_GETNAME_NP_3, HAVE_PTHR...
 #include "exception.h"           // for Exit
