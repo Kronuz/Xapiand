@@ -80,8 +80,10 @@ DatabaseHandler::lock_database::~lock_database()
 void
 DatabaseHandler::lock_database::lock()
 {
-	if (db_handler && !db_handler->database) {
-		if (!XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
+	if (db_handler) {
+		if (db_handler->database) {
+			THROW(Error, "lock_database is already locked");
+		} else if (!XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
 			THROW(CheckoutError, "Cannot checkout database: %s", repr(db_handler->endpoints.to_string()).c_str());
 		}
 	}
