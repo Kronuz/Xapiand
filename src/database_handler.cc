@@ -934,7 +934,7 @@ Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc)
 std::string
 Document::get_value(Xapian::valueno slot) const
 {
-	L_CALL(this, "Document::get_value()");
+	L_CALL(this, "Document::get_value(%u)", slot);
 
 	DatabaseHandler::lock_database lk(db_handler);
 	update();
@@ -957,7 +957,7 @@ Document::get_value(const std::string& slot_name) const
 void
 Document::add_value(Xapian::valueno slot, const std::string& value)
 {
-	L_CALL(this, "Document::add_value()");
+	L_CALL(this, "Document::add_value(%u, %s)", slot, value.c_str());
 
 	Xapian::Document::add_value(slot, value);
 }
@@ -966,7 +966,7 @@ Document::add_value(Xapian::valueno slot, const std::string& value)
 void
 Document::add_value(const std::string& slot_name, const MsgPack& value)
 {
-	L_CALL(this, "Document::add_value(%s)", slot_name.c_str());
+	L_CALL(this, "Document::add_value(%s, <value)", slot_name.c_str());
 
 	auto schema = db_handler->get_schema();
 	auto slot_field = schema->get_slot_field(slot_name);
@@ -978,7 +978,7 @@ Document::add_value(const std::string& slot_name, const MsgPack& value)
 void
 Document::remove_value(Xapian::valueno slot)
 {
-	L_CALL(this, "Document::remove_value()");
+	L_CALL(this, "Document::remove_value(%u)", slot);
 
 	Xapian::Document::remove_value(slot);
 }
@@ -1039,7 +1039,7 @@ Document::get_store()
 void
 Document::set_blob(const std::string& blob, bool stored)
 {
-	L_CALL(this, "Document::set_blob()");
+	L_CALL(this, "Document::set_blob(<blob>, %d)", stored);
 
 	DatabaseHandler::lock_database lk(db_handler);  // optimize nested database locking
 	set_data(::join_data(stored, "", ::split_data_obj(get_data()), blob));
@@ -1058,7 +1058,7 @@ Document::get_obj() const
 void
 Document::set_obj(const MsgPack& obj)
 {
-	L_CALL(this, "Document::get_obj()");
+	L_CALL(this, "Document::get_obj(<obj>)");
 
 	DatabaseHandler::lock_database lk(db_handler);  // optimize nested database locking
 	auto blob = get_blob();
