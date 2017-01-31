@@ -151,7 +151,7 @@ endif ()
 set (CMAKE_CXX_FLAGS_DEBUG "-O0 -g -DDEBUG")
 
 
-# Check for Wall and Wextra flags.
+# Check for warnings flags.
 check_cxx_compiler_flag ("-Wall" COMPILER_SUPPORTS_WALL)
 if (COMPILER_SUPPORTS_WALL)
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
@@ -159,6 +159,14 @@ endif ()
 check_cxx_compiler_flag ("-Wextra" COMPILER_SUPPORTS_WEXTRA)
 if (COMPILER_SUPPORTS_WEXTRA)
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wextra")
+endif ()
+check_cxx_compiler_flag ("-Wnon-virtual-dtor" COMPILER_SUPPORTS_WNON_VIRTUAL_DTOR)
+if (COMPILER_SUPPORTS_WNON_VIRTUAL_DTOR)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wnon-virtual-dtor")
+endif ()
+check_cxx_compiler_flag ("-Wsuggest-final-types" COMPILER_SUPPORTS_WSUGGEST_FINAL_TYPES)
+if (COMPILER_SUPPORTS_WSUGGEST_FINAL_TYPES)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wsuggest-final-types")
 endif ()
 
 
