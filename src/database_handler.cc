@@ -901,7 +901,8 @@ Document::update()
 	L_CALL(this, "Document::update()");
 
 	if (db_handler && db_handler->database && database != db_handler->database) {
-		*this = Document(db_handler, database->get_document(get_docid(), true));
+		*this = Document(db_handler, db_handler->database->get_document(get_docid(), true));
+		database = db_handler->database;
 	}
 }
 
