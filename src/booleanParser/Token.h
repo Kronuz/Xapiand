@@ -38,6 +38,7 @@ enum class TokenType : uint8_t {
 	EndOfFile
 };
 
+
 class Token {
 	std::string lexeme;
 	TokenType type;
@@ -46,19 +47,19 @@ public:
 	Token() = default;
 	virtual ~Token() = default;
 
-	inline void set_type(TokenType type_) {
+	void set_type(TokenType type_) {
 		type = type_;
 	}
 
-	inline TokenType get_type() const {
+	TokenType get_type() const noexcept {
 		return type;
 	}
 
-	inline void set_lexeme(const std::string& lexeme_) {
+	void set_lexeme(const std::string& lexeme_) {
 		lexeme = lexeme_;
 	}
 
-	inline const std::string& get_lexeme() const {
+	const std::string& get_lexeme() const noexcept {
 		return lexeme;
 	}
 };
