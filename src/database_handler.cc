@@ -155,14 +155,18 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 }
 
 
-Document
-DatabaseHandler::get_document_term(const std::string& term_id)
+MsgPack
+DatabaseHandler::get_document_obj(const std::string& term_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document_term(%s)", repr(term_id).c_str());
+	L_CALL(this, "DatabaseHandler::get_document_obj(%s)", repr(term_id).c_str());
 
-	DatabaseHandler::lock_database lk(this);
-	Xapian::docid did = database->find_document(term_id);
-	return Document(this, database->get_document(did));
+	std::string data;
+	{
+		DatabaseHandler::lock_database lk(this);
+		Xapian::docid did = database->find_document(term_id);
+		data = database->get_document(did).get_data();
+	}
+	return MsgPack::unserialise(::split_data_obj(data));
 }
 
 
@@ -188,8 +192,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 			case HTTP_PUT: {
 				MsgPack old_data;
 				try {
-					auto document = get_document_term(term_id);
-					old_data = document.get_obj();
+					old_data = get_document_obj(term_id);
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
 				return (*processor)["on_put"](data_, old_data);
@@ -199,8 +202,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 			case HTTP_MERGE: {
 				MsgPack old_data;
 				try {
-					auto document = get_document_term(term_id);
-					old_data = document.get_obj();
+					old_data = get_document_obj(term_id);
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
 				return (*processor)["on_patch"](data_, old_data);
@@ -209,8 +211,7 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 			case HTTP_DELETE: {
 				MsgPack old_data;
 				try {
-					auto document = get_document_term(term_id);
-					old_data = document.get_obj();
+					old_data = get_document_obj(term_id);
 				} catch (const DocNotFoundError&) { }
 				MsgPack data_ = data;
 				return (*processor)["on_delete"](data_, old_data);
@@ -779,7 +780,9 @@ DatabaseHandler::get_document(const std::string& doc_id)
 {
 	L_CALL(this, "DatabaseHandler::get_document((std::string)%s)", repr(doc_id).c_str());
 
-	return get_document_term(get_prefixed_term_id(doc_id));
+	DatabaseHandler::lock_database lk(this);
+	Xapian::docid did = database->find_document(get_prefixed_term_id(doc_id));
+	return Document(this, database->get_document(did));
 }
 
 

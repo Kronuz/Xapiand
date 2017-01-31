@@ -79,7 +79,7 @@ class DatabaseHandler {
 
 	void recover_index();
 
-	Document get_document_term(const std::string& term_id);
+	MsgPack get_document_obj(const std::string& term_id);
 
 #ifdef XAPIAND_V8
 	MsgPack run_script(const MsgPack& data, const std::string& term_id);
