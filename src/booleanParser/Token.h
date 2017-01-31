@@ -38,10 +38,26 @@ enum class TokenType : uint8_t {
 };
 
 class Token {
-public:
-
 	std::string lexeme;
 	TokenType type;
+
+public:
 	Token() = default;
 	virtual ~Token() = default;
+
+	inline void set_type(TokenType type_) {
+		type = type_;
+	}
+
+	inline TokenType get_type() const {
+		return type;
+	}
+
+	inline void set_lexeme(const std::string& lexeme_) {
+		lexeme = lexeme_;
+	}
+
+	inline const std::string& get_lexeme() const {
+		return lexeme;
+	}
 };

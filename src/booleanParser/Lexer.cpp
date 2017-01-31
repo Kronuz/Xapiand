@@ -138,8 +138,8 @@ Lexer::NextToken()
 							currentState =  LexerState::TOKEN;
 							currentSymbol = contentReader.NextSymbol();
 						}  else {
-							token.lexeme = lexeme;
-							token.type = TokenType::Id;
+							token.set_lexeme(lexeme);
+							token.set_type(TokenType::Id);
 							IsStringOperator(token);
 							return token;
 						}
@@ -235,27 +235,27 @@ Lexer::NextToken()
 				break;
 
 			case LexerState::SYMBOL_OP:
-				token.lexeme = lexeme;
+				token.set_lexeme(lexeme);
 				switch(lexeme.at(0)) {
 					case '(':
-						token.type = TokenType::LeftParenthesis;
+						token.set_type(TokenType::LeftParenthesis);
 						break;
 					case ')':
-						token.type = TokenType::RightParenthesis;
+						token.set_type(TokenType::RightParenthesis);
 						break;
 					case '&':
-						token.type = TokenType::And;
+						token.set_type(TokenType::And);
 						break;
 					case '|':
-						token.type = TokenType::Or;
+						token.set_type(TokenType::Or);
 						break;
 					case '~':
-						token.type = TokenType::Not;
+						token.set_type(TokenType::Not);
 						break;
 				}
 				return token;
 			case LexerState::EOFILE:
-				token.type = TokenType::EndOfFile;
+				token.set_type(TokenType::EndOfFile);
 				return token;
 			default:
 				break;
@@ -269,30 +269,31 @@ Lexer::NextToken()
 void
 Lexer::IsStringOperator(Token& token)
 {
-	if (!token.lexeme.empty()) {
-		switch (token.lexeme.at(0)) {
+	auto lexeme = token.get_lexeme();
+	if (!lexeme.empty()) {
+		switch (lexeme.at(0)) {
 			case 'a':
 			case 'A':
-				if (strcasecmp(token.lexeme.data(), AND) == 0) {
-					token.type = TokenType::And;
+				if (strcasecmp(lexeme.data(), AND) == 0) {
+					token.set_type(TokenType::And);
 				}
 				break;
 			case 'o':
 			case 'O':
-				if (strcasecmp(token.lexeme.data(), OR) == 0) {
-					token.type = TokenType::Or;
+				if (strcasecmp(lexeme.data(), OR) == 0) {
+					token.set_type(TokenType::Or);
 				}
 				break;
 			case 'n':
 			case 'N':
-				if (strcasecmp(token.lexeme.data(), NOT) == 0) {
-					token.type = TokenType::Not;
+				if (strcasecmp(lexeme.data(), NOT) == 0) {
+					token.set_type(TokenType::Not);
 				}
 				break;
 			case 'x':
 			case 'X':
-				if (strcasecmp(token.lexeme.data(), XOR) == 0) {
-					token.type = TokenType::Xor;
+				if (strcasecmp(lexeme.data(), XOR) == 0) {
+					token.set_type(TokenType::Xor);
 				}
 				break;
 			default:
