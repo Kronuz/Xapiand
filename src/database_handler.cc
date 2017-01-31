@@ -1130,11 +1130,11 @@ Document::get_field(const std::string& slot_name) const
 	auto obj = get_obj();
 	auto itf = obj.find(slot_name);
 	if (itf != obj.end()) {
-		auto& value = obj.at(*itf);
+		const auto& value = obj.at(*itf);
 		if (value.is_map()) {
 			auto itv = value.find(RESERVED_VALUE);
 			if (itv != value.end()) {
-				auto& value_ = value.at(*itv);
+				const auto& value_ = value.at(*itv);
 				if (!value_.empty()) {
 					return value_;
 				}
