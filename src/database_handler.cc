@@ -780,8 +780,10 @@ DatabaseHandler::get_document(const std::string& doc_id)
 {
 	L_CALL(this, "DatabaseHandler::get_document((std::string)%s)", repr(doc_id).c_str());
 
+	auto term_id = get_prefixed_term_id(doc_id);
+
 	DatabaseHandler::lock_database lk(this);
-	Xapian::docid did = database->find_document(get_prefixed_term_id(doc_id));
+	Xapian::docid did = database->find_document(term_id);
 	return Document(this, database->get_document(did));
 }
 
