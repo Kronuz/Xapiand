@@ -1041,8 +1041,9 @@ Document::set_blob(const std::string& blob, bool stored)
 {
 	L_CALL(this, "Document::set_blob(<blob>, %d)", stored);
 
-	DatabaseHandler::lock_database lk(db_handler);  // optimize nested database locking
-	set_data(::join_data(stored, "", ::split_data_obj(get_data()), blob));
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	set_data(::join_data(stored, "", ::split_data_obj(Xapian::Document::get_data()), blob));
 }
 
 
@@ -1060,9 +1061,10 @@ Document::set_obj(const MsgPack& obj)
 {
 	L_CALL(this, "Document::get_obj(<obj>)");
 
-	DatabaseHandler::lock_database lk(db_handler);  // optimize nested database locking
-	auto blob = get_blob();
-	auto store = get_store();
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	auto blob = db_handler->database->storage_get_blob(*this);
+	auto store = ::split_data_store(Xapian::Document::get_data());
 	set_data(::join_data(store.first, store.second, obj.serialise(), blob));
 }
 
