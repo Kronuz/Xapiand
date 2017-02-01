@@ -817,8 +817,6 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 {
 	L_CALL(this, "DatabaseHandler::get_document_info(%s, %s)", repr(info.to_string()).c_str(), repr(doc_id).c_str());
 
-	DatabaseHandler::lock_database lk(this);  // optimize nested database locking
-
 	auto document = get_document(doc_id);
 
 	info[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME) || document.get_value(ID_FIELD_NAME);
