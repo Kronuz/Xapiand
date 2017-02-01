@@ -159,7 +159,7 @@ enum class FieldType : uint8_t {
 const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& language);
 
 
-inline static Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) noexcept {
+inline static Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {
 	switch (stop_strategy) {
 		case StopStrategy::STOP_NONE:
 			return Xapian::TermGenerator::STOP_NONE;
@@ -167,11 +167,13 @@ inline static Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(Stop
 			return Xapian::TermGenerator::STOP_ALL;
 		case StopStrategy::STOP_STEMMED:
 			return Xapian::TermGenerator::STOP_STEMMED;
+		default:
+			THROW(Error, "Schema is corrupt, you need provide a new one");
 	}
 }
 
 
-inline static Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(StemStrategy stem_strategy) noexcept {
+inline static Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(StemStrategy stem_strategy) {
 	switch (stem_strategy) {
 		case StemStrategy::STEM_NONE:
 			return Xapian::TermGenerator::STEM_NONE;
@@ -181,11 +183,13 @@ inline static Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(Stem
 			return Xapian::TermGenerator::STEM_ALL;
 		case StemStrategy::STEM_ALL_Z:
 			return Xapian::TermGenerator::STEM_ALL_Z;
+		default:
+			THROW(Error, "Schema is corrupt, you need provide a new one");
 	}
 }
 
 
-inline static Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(StemStrategy stem_strategy) noexcept {
+inline static Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(StemStrategy stem_strategy) {
 	switch (stem_strategy) {
 		case StemStrategy::STEM_NONE:
 			return Xapian::QueryParser::STEM_NONE;
@@ -195,6 +199,8 @@ inline static Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(Stem
 			return Xapian::QueryParser::STEM_ALL;
 		case StemStrategy::STEM_ALL_Z:
 			return Xapian::QueryParser::STEM_ALL_Z;
+		default:
+			THROW(Error, "Schema is corrupt, you need provide a new one");
 	}
 }
 
