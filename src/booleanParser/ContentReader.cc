@@ -25,25 +25,11 @@
 #include "ContentReader.h"
 
 
-ContentReader::ContentReader()
-	: currentPosition(0),
-	  currentLine(1),
-	  currentColumn(1),
-	  content(nullptr) { }
-
-
 ContentReader::ContentReader(char* _content)
 	: currentPosition(0),
 	  currentLine(1),
 	  currentColumn(1),
 	  content(_content) { }
-
-
-void
-ContentReader::setContent(char* _content)
-{
-	content = _content;
-}
 
 
 Symbol
@@ -52,24 +38,27 @@ ContentReader::NextSymbol()
 	Symbol ret;
 	if (content[currentPosition]) {
 		char c = content[currentPosition++];
-		if (c == 10) {
-			currentColumn++;
-			currentLine = 1;
-			if (content[currentPosition] == 13) {
-				currentPosition++;
-			}
-		} else if (c == 13){
-			currentColumn++;
-			currentLine = 1;
-			if (content[currentPosition] == 10) {
-				currentPosition++;
-			}
-		} else {
-			currentColumn++;
+		switch (c) {
+			case 10:
+				currentColumn++;
+				currentLine = 1;
+				if (content[currentPosition] == 13) {
+					currentPosition++;
+				}
+				break;
+			case 13:
+				currentColumn++;
+				currentLine = 1;
+				if (content[currentPosition] == 10) {
+					currentPosition++;
+				}
+				break;
+			default:
+				currentColumn++;
+				break;
 		}
 		ret.symbol = c;
-
-	} else{
+	} else {
 		ret.symbol = 0;
 	}
 	ret.line = currentLine;

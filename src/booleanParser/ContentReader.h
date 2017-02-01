@@ -39,10 +39,7 @@ class ContentReader {
 	char* content;
 
 public:
-	ContentReader();
 	ContentReader(char* _content);
-
-	void setContent(char* _content);
 
 	Symbol NextSymbol();
 };
