@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,10 +22,10 @@
 
 #include "datetime.h"
 
-#include <stdio.h>    // for snprintf
 #include <cmath>      // for ceil
 #include <exception>  // for exception
 #include <stdexcept>  // for invalid_argument, out_of_range
+#include <stdio.h>    // for snprintf
 
 #include "log.h"      // for L_ERR, Log
 #include "msgpack.h"  // for MsgPack
