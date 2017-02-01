@@ -42,11 +42,12 @@
 #include <thread>                    // for thread
 #include <time.h>                    // for tm, localtime, mktime, time_t
 #include <unistd.h>                  // for dup2, unlink, STDERR_FILENO, chdir
+#include <vector>                    // for vector
+#include <xapian.h>                  // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
+
 #if XAPIAND_V8
 #include <v8-version.h>              // for V8_MAJOR_VERSION, V8_MINOR_VERSION
 #endif
-#include <vector>                    // for vector
-#include <xapian.h>                  // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #include "config.h"                  // for PACKAGE_BUGREPORT, PACKAGE_STRING
 #include "endpoint.h"                // for Endpoint, Endpoint::cwd

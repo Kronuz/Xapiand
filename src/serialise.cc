@@ -22,14 +22,14 @@
 
 #include "serialise.h"
 
+#include <algorithm>                                  // for move
 #include <ctype.h>                                    // for toupper
+#include <functional>                                 // for cref
 #include <math.h>                                     // for round
+#include <stdexcept>                                  // for out_of_range, invalid_argument
 #include <stdio.h>                                    // for sprintf
 #include <strings.h>                                  // for strcasecmp
 #include <time.h>                                     // for tm, gmtime, time_t
-#include <algorithm>                                  // for move
-#include <functional>                                 // for cref
-#include <stdexcept>                                  // for out_of_range, invalid_argument
 
 #include "cppcodec/base64_default_url_unpadded.hpp"   // for base64 namespace
 #include "exception.h"                                // for SerialisationError, MSG_Serialisat...

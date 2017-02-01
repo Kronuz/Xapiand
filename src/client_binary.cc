@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,21 +24,21 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sysexits.h>
+#include <unistd.h>
+
 #include "database.h"
 #include "io_utils.h"
 #include "length.h"
+#include "remote_protocol.h"
+#include "replication.h"
 #include "servers/server.h"
 #include "servers/server_binary.h"
 #include "servers/tcp_base.h"
-#include "remote_protocol.h"
-#include "replication.h"
 #include "utils.h"
-
-#include <fcntl.h>
-#include <sysexits.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 
 std::string serialise_error(const Xapian::Error &exc) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -26,8 +26,8 @@
 #include <stdlib.h>      // for malloc, free
 #include <zlib.h>        // for z_stream
 
-#include "io_utils.h"    // for close, open
 #include "exception.h"   // for Error
+#include "io_utils.h"    // for close, open
 
 
 #define DEFLATE_BLOCK_SIZE 16384

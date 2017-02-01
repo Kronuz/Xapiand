@@ -24,10 +24,10 @@
 
 #include "xapiand.h"
 
-#include <stddef.h>              // for size_t
-#include <sys/types.h>           // for uint64_t, int64_t, uint32_t, uint8_t
 #include <cctype>                // for isxdigit
+#include <stddef.h>              // for size_t
 #include <string>                // for string
+#include <sys/types.h>           // for uint64_t, int64_t, uint32_t, uint8_t
 #include <tuple>                 // for tuple
 #include <unordered_map>         // for unordered_map
 #include <utility>               // for pair

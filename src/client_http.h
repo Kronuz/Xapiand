@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,15 +24,15 @@
 
 #include "xapiand.h"
 
-#include <stdio.h>              // for size_t, snprintf
-#include <sys/types.h>          // for ssize_t
 #include <atomic>               // for atomic_bool
 #include <chrono>               // for system_clock, time_point, duration
 #include <memory>               // for shared_ptr, unique_ptr
 #include <mutex>                // for mutex, lock_guard
 #include <ratio>                // for milli
 #include <set>                  // for set
+#include <stdio.h>              // for size_t, snprintf
 #include <string>               // for string, operator==
+#include <sys/types.h>          // for ssize_t
 #include <tuple>                // for get, tuple
 #include <utility>              // for pair
 #include <vector>               // for vector
@@ -43,10 +43,11 @@
 #include "database_utils.h"     // for query_field_t (ptr only)
 #include "deflate_compressor.h" // for DeflateCompressData
 #include "http_parser.h"        // for http_parser, http_parser_settings
-#include "url_parser.h"         // for PathParser, QueryParser
 #include "lru.h"                // for LRU
 #include "msgpack.h"            // for MsgPack
+#include "url_parser.h"         // for PathParser, QueryParser
 #include "xxh64.hpp"            // for xxh64
+
 
 class GuidGenerator;
 class HttpServer;

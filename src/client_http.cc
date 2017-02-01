@@ -22,21 +22,22 @@
 
 #include "client_http.h"
 
-#include <stdlib.h>                         // for mkstemp
-#include <string.h>                         // for strerror, strcpy
-#include <sys/errno.h>                      // for __error, errno
-#include <sysexits.h>                       // for EX_SOFTWARE
-#include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
-#if XAPIAND_V8
-#include <v8-version.h>                     // for V8_MAJOR_VERSION, V8_MINOR_VERSION
-#endif
-#include <xapian.h>                         // for version_string, MSetIterator
 #include <algorithm>                        // for move
 #include <exception>                        // for exception
 #include <functional>                       // for __base, function
 #include <regex>                            // for regex_iterator, match_res...
 #include <stdexcept>                        // for invalid_argument, range_e...
+#include <stdlib.h>                         // for mkstemp
+#include <string.h>                         // for strerror, strcpy
+#include <sys/errno.h>                      // for __error, errno
+#include <sysexits.h>                       // for EX_SOFTWARE
+#include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
 #include <type_traits>                      // for enable_if<>::type
+#include <xapian.h>                         // for version_string, MSetIterator
+
+#if XAPIAND_V8
+#include <v8-version.h>                     // for V8_MAJOR_VERSION, V8_MINOR_VERSION
+#endif
 
 #include "config.h"                         // for PACKAGE_VERSION, PACKAGE_...
 #include "endpoint.h"                       // for Endpoints, Node, Endpoint
