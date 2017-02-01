@@ -342,7 +342,9 @@ const http_parser_settings HttpClient::settings = {
 	.on_header_value = HttpClient::on_data,
 	.on_headers_complete = HttpClient::on_info,
 	.on_body = HttpClient::on_data,
-	.on_message_complete = HttpClient::on_info
+	.on_message_complete = HttpClient::on_info,
+	.on_chunk_header = HttpClient::on_info,
+	.on_chunk_complete = HttpClient::on_info
 };
 
 
@@ -377,6 +379,9 @@ HttpClient::on_info(http_parser* p)
 				// Return 100 if client is expecting it
 				self->write(self->http_response(HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE | HTTP_EXPECTED_CONTINUE_RESPONSE, p->http_major, p->http_minor));
 			}
+			break;
+		case 57: //s_chunk_data begin chunk
+			break;
 	}
 
 	return 0;
@@ -501,7 +506,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 			self->header_name.clear();
 			self->header_value.clear();
 		}
-	} else if (state >= 60 && state <= 62) { // s_body_identity  ->  s_message_done
+	} else if (state >= 59 && state <= 62) { // s_chunk_data_done, s_body_identity  ->  s_message_done
 		self->body_size += length;
 		if (self->body_size > MAX_BODY_SIZE || p->content_length > MAX_BODY_SIZE) {
 			self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor));
