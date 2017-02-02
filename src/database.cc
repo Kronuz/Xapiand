@@ -1832,7 +1832,7 @@ DatabaseQueue::inc_count(int max)
 {
 	L_CALL(this, "DatabaseQueue::inc_count(%d)", max);
 
-	std::unique_lock<std::mutex> lk(_mutex);
+	std::lock_guard<std::mutex> lk(_mutex);
 
 	if (count == 0) {
 		if (auto database_pool = weak_database_pool.lock()) {
@@ -1856,7 +1856,7 @@ DatabaseQueue::dec_count()
 {
 	L_CALL(this, "DatabaseQueue::dec_count()");
 
-	std::unique_lock<std::mutex> lk(_mutex);
+	std::lock_guard<std::mutex> lk(_mutex);
 
 	if (count <= 0) {
 		L_CRIT(this, "Inconsistency in the number of databases in queue");
@@ -2024,7 +2024,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 {
 	bool ret = checkout(database, endpoints, flags);
 	if (!ret) {
-		std::unique_lock<std::mutex> lk(qmtx);
+		std::lock_guard<std::mutex> lk(qmtx);
 
 		size_t hash = endpoints.hash();
 
