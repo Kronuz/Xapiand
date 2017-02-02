@@ -823,16 +823,16 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 	const auto obj = MsgPack::unserialise(::split_data_obj(data));
 
 	info[ID_FIELD_NAME] = Document::get_field(ID_FIELD_NAME, obj) || document.get_value(ID_FIELD_NAME);
-
-	const auto ct_type_mp = Document::get_field(CT_FIELD_NAME, obj);
+	info[RESERVED_DATA] = obj;
 
 #ifdef XAPIAND_DATA_STORAGE
-	const auto store =  ::split_data_store(data);
+	const auto store = ::split_data_store(data);
 	if (store.first) {
 		if (store.second.empty()) {
 			info["_blob"] = nullptr;
 		} else {
 			const auto locator = database->storage_unserialise_locator(store.second);
+			const auto ct_type_mp = Document::get_field(CT_FIELD_NAME, obj);
 			info["_blob"] = {
 				{ "_type", "stored" },
 				{ "_content_type", ct_type_mp ? ct_type_mp.as_string() : "unknown" },
@@ -844,7 +844,7 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 	} else
 #endif
 	{
-		std::string blob = document.get_blob();
+		const auto blob = document.get_blob();
 		const auto blob_data = unserialise_string_at(2, blob);
 		if (blob_data.empty()) {
 			info["_blob"] = nullptr;
