@@ -161,7 +161,7 @@ DatabaseHandler::get_document_obj(const std::string& term_id)
 
 	std::string data;
 	{
-		DatabaseHandler::lock_database lk(this);
+		lock_database lk(this);
 		Xapian::docid did = database->find_document(term_id);
 		data = database->get_document(did).get_data();
 	}
@@ -280,7 +280,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
 #ifdef XAPIAND_V8
 					{
-						DatabaseHandler::lock_database lk(this);
+						lock_database lk(this);
 						doc_revision = database->get_revision_document(prefixed_term_id);
 					}
 					obj_ = run_script(obj, prefixed_term_id);
@@ -333,7 +333,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					}
 #ifdef XAPIAND_V8
 					{
-						DatabaseHandler::lock_database lk(this);
+						lock_database lk(this);
 						doc_revision = database->get_revision_document(prefixed_term_id);
 					}
 #endif
@@ -362,7 +362,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			doc.add_value(spc_id.slot, term_id);
 
 			try {
-				DatabaseHandler::lock_database lk(this);
+				lock_database lk(this);
 #ifdef XAPIAND_V8
 				if (database->set_revision_document(prefixed_term_id, doc_revision))
 #endif
@@ -373,7 +373,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			} catch (const Xapian::DatabaseError& exc) {
 				// Try to recover from DatabaseError (i.e when the index is manually deleted)
 				recover_index();
-				DatabaseHandler::lock_database lk(this);
+				lock_database lk(this);
 #ifdef XAPIAND_V8
 				if (database->set_revision_document(prefixed_term_id, doc_revision))
 #endif
@@ -386,7 +386,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 		} while (true);
 	} catch(...) {
 		if (!prefixed_term_id.empty()) {
-			DatabaseHandler::lock_database lk(this);
+			lock_database lk(this);
 			database->dec_count_document(prefixed_term_id);
 		}
 		throw;
@@ -585,7 +585,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 	schema = get_schema();
 
 	Xapian::Query query;
-	DatabaseHandler::lock_database lk(this);
+	lock_database lk(this);
 	switch (method) {
 		case HTTP_GET: {
 			QueryDSL query_object(schema);
@@ -748,7 +748,7 @@ DatabaseHandler::get_metadata(const std::string& key)
 {
 	L_CALL(this, "DatabaseHandler::get_metadata(%s)", repr(key).c_str());
 
-	DatabaseHandler::lock_database lk(this);
+	lock_database lk(this);
 	return database->get_metadata(key);
 }
 
@@ -759,7 +759,7 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value)
 {
 	L_CALL(this, "DatabaseHandler::set_metadata(%s, %s)", repr(key).c_str(), repr(value).c_str());
 
-	DatabaseHandler::lock_database lk(this);
+	lock_database lk(this);
 	database->set_metadata(key, value);
 }
 
@@ -769,7 +769,7 @@ DatabaseHandler::get_document(const Xapian::docid& did)
 {
 	L_CALL(this, "DatabaseHandler::get_document((Xapian::docid)%d)", did);
 
-	DatabaseHandler::lock_database lk(this);
+	lock_database lk(this);
 	return Document(this, database->get_document(did));
 }
 
@@ -781,7 +781,7 @@ DatabaseHandler::get_document(const std::string& doc_id)
 
 	auto term_id = get_prefixed_term_id(doc_id);
 
-	DatabaseHandler::lock_database lk(this);
+	lock_database lk(this);
 	Xapian::docid did = database->find_document(term_id);
 	return Document(this, database->get_document(did));
 }
@@ -794,7 +794,7 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 
 	auto prefixed_term_id = get_prefixed_term_id(doc_id);
 
-	DatabaseHandler::lock_database lk(this);
+	lock_database lk(this);
 	return database->find_document(prefixed_term_id);
 }
 
@@ -806,7 +806,7 @@ DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool w
 
 	auto _id = get_docid(doc_id);
 
-	DatabaseHandler::lock_database lk(this);
+	lock_database lk(this);
 	database->delete_document(_id, commit_, wal_);
 }
 
@@ -883,7 +883,7 @@ DatabaseHandler::get_database_info(MsgPack& info)
 {
 	L_CALL(this, "DatabaseHandler::get_database_info(%s)", repr(info.to_string()).c_str());
 
-	DatabaseHandler::lock_database lk(this);
+	lock_database lk(this);
 	unsigned doccount = database->db->get_doccount();
 	unsigned lastdocid = database->db->get_lastdocid();
 	info["_uuid"] = database->db->get_uuid();
