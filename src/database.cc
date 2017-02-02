@@ -2499,6 +2499,7 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 					if (path.is_string()) {
 						aux_schema_ptr = std::make_shared<const MsgPack>(path.as_string());
 					} else {
+						std::lock_guard<std::mutex> lk(smtx);
 						schemas.erase(local_schema_hash);
 						THROW(ClientError, "%s must be string", RESERVED_SCHEMA);
 					}
@@ -2509,6 +2510,7 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 				try {
 					aux_schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
 				} catch (const msgpack::unpack_error& e) {
+					std::lock_guard<std::mutex> lk(smtx);
 					schemas.erase(local_schema_hash);
 					THROW(SerialisationError, "Unpack error: %s", e.what());
 				}
@@ -2522,12 +2524,14 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 			}
 			checkin(database);
 		} else {
+			std::lock_guard<std::mutex> lk(smtx);
 			schemas.erase(local_schema_hash);
 			THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
 		}
 	}
 
 	if (!local_schema_ptr->is_map() && !local_schema_ptr->is_string()) {
+		std::lock_guard<std::mutex> lk(smtx);
 		schemas.erase(local_schema_hash);
 		THROW(Error, "Invalid type for schema: %s", repr(endpoint.to_string()).c_str());
 	}
@@ -2585,6 +2589,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 			}
 		}
 		if (!schema_ptr->is_map()) {
+			std::lock_guard<std::mutex> lk(smtx);
 			schemas.erase(shared_schema_hash);
 			THROW(Error, "Schema is not a map: %s", repr(endpoint.to_string()).c_str());
 		}
