@@ -150,7 +150,6 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 	if (endpoints != endpoints_ || flags != flags_) {
 		endpoints = endpoints_;
 		flags = flags_;
-		DatabaseHandler::lock_database lk(this);  // Try opening database (raises errors)
 	}
 }
 
