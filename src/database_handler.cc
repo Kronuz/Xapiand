@@ -897,6 +897,22 @@ Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_)
 	  database(db_handler->database) { }
 
 
+Document::Document(const Document& doc_)
+	: doc(doc_.doc),
+	  db_handler(doc_.db_handler),
+	  database(doc_.database) { }
+
+
+Document&
+Document::operator=(const Document& doc_)
+{
+	doc = doc_.doc;
+	db_handler = doc_.db_handler;
+	database = doc_.database;
+	return *this;
+}
+
+
 void
 Document::update()
 {

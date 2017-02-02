@@ -153,6 +153,10 @@ public:
 	Document(const Xapian::Document& doc_);
 	Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_);
 
+	Document(const Document& doc_);
+
+	Document& operator=(const Document& doc_);
+
 	std::string serialise();
 
 	std::string get_value(Xapian::valueno slot);
