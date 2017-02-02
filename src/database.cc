@@ -2073,12 +2073,12 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		return false;
 	}
 
-	std::unique_lock<std::mutex> lk(qmtx);
-
 	if (!finished) {
 		size_t hash = endpoints.hash();
-
 		std::shared_ptr<DatabaseQueue> queue;
+
+		std::unique_lock<std::mutex> lk(qmtx);
+
 		if (writable) {
 			queue = writable_databases[hash];
 		} else {
@@ -2150,10 +2150,10 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				// Lock until a database is available if it can't get one.
 				lk.unlock();
 				int s = queue->pop(database);
-				lk.lock();
 				if (!s) {
 					L_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
 				}
+				lk.lock();
 			}
 		}
 		if (!database) {
@@ -2169,8 +2169,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			}
 		}
 	}
-
-	lk.unlock();
 
 	if (!database) {
 		L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
@@ -2203,9 +2201,9 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	ASSERT(database);
 
-	std::unique_lock<std::mutex> lk(qmtx);
-
 	std::shared_ptr<DatabaseQueue> queue;
+
+	std::unique_lock<std::mutex> lk(qmtx);
 
 	if (database->flags & DB_WRITABLE) {
 		auto& endpoint = database->endpoints[0];
