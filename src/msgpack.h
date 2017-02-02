@@ -359,6 +359,28 @@ public:
 		return &operator*();
 	}
 
+	T& value() {
+		switch (_mobj->_const_body->getType()) {
+			case Type::MAP:
+				return _mobj->at(_off);
+			case Type::ARRAY:
+				return _mobj->at(_off);
+			default:
+				THROW(msgpack::type_error);
+		}
+	}
+
+	T& value() const {
+		switch (_mobj->_const_body->getType()) {
+			case Type::MAP:
+				return _mobj->at(_off);
+			case Type::ARRAY:
+				return _mobj->at(_off);
+			default:
+				THROW(msgpack::type_error);
+		}
+	}
+
 	bool operator==(const Iterator& other) const {
 		return *_mobj == *other._mobj && _off == other._off;
 	}
