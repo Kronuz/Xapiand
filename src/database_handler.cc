@@ -818,63 +818,48 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 
 	auto document = get_document(doc_id);
 
-	info[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME) || document.get_value(ID_FIELD_NAME);
-	info[RESERVED_DATA] = document.get_obj();
+	const auto data = document.get_data();
 
-	auto ct_type_mp = document.get_field(CT_FIELD_NAME);
+	const auto obj = MsgPack::unserialise(::split_data_obj(data));
+
+	info[ID_FIELD_NAME] = Document::get_field(ID_FIELD_NAME, obj) || document.get_value(ID_FIELD_NAME);
+
+	const auto ct_type_mp = Document::get_field(CT_FIELD_NAME, obj);
 
 #ifdef XAPIAND_DATA_STORAGE
-	auto store = document.get_store();
+	const auto store =  ::split_data_store(data);
 	if (store.first) {
 		if (store.second.empty()) {
 			info["_blob"] = nullptr;
 		} else {
-			auto locator = database->storage_unserialise_locator(store.second);
+			const auto locator = database->storage_unserialise_locator(store.second);
 			info["_blob"] = {
-				{"_type", "stored"},
-				{"_content_type", ct_type_mp ? ct_type_mp.as_string() : "unknown"},
-				{"_volume", std::get<0>(locator)},
-				{"_offset", std::get<1>(locator)},
-				{"_size", std::get<2>(locator)},
+				{ "_type", "stored" },
+				{ "_content_type", ct_type_mp ? ct_type_mp.as_string() : "unknown" },
+				{ "_volume", std::get<0>(locator) },
+				{ "_offset", std::get<1>(locator) },
+				{ "_size", std::get<2>(locator) },
 			};
 		}
 	} else
 #endif
 	{
-		auto blob = document.get_blob();
-		auto blob_data = unserialise_string_at(2, blob);
+		std::string blob = document.get_blob();
+		const auto blob_data = unserialise_string_at(2, blob);
 		if (blob_data.empty()) {
 			info["_blob"] = nullptr;
 		} else {
 			auto blob_ct = unserialise_string_at(1, blob);
 			info["_blob"] = {
-				{"_type", "local"},
-				{"_content_type", blob_ct},
-				{"_size", blob_data.size()},
+				{ "_type", "local" },
+				{ "_content_type", blob_ct },
+				{ "_size", blob_data.size() },
 			};
 		}
 	}
 
-	auto& stats_terms = info[RESERVED_TERMS];
-	const auto it_e = document.termlist_end();
-	for (auto it = document.termlist_begin(); it != it_e; ++it) {
-		auto& stat_term = stats_terms[*it];
-		stat_term["_wdf"] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
-		stat_term["_term_freq"] = it.get_termfreq();  // The number of documents which this term indexes.
-		if (it.positionlist_count()) {
-			auto& stat_term_pos = stat_term["_pos"];
-			const auto pit_e = it.positionlist_end();
-			for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
-				stat_term_pos.push_back(*pit);
-			}
-		}
-	}
-
-	auto& stats_values = info[RESERVED_VALUES];
-	const auto iv_e = document.values_end();
-	for (auto iv = document.values_begin(); iv != iv_e; ++iv) {
-		stats_values[std::to_string(iv.get_valueno())] = *iv;
-	}
+	info[RESERVED_TERMS] = document.get_terms();
+	info[RESERVED_VALUES] = document.get_values();
 }
 
 
@@ -897,121 +882,77 @@ DatabaseHandler::get_database_info(MsgPack& info)
 }
 
 
+Document::Document()
+	: db_handler(nullptr) { }
+
+
+Document::Document(const Xapian::Document& doc_)
+	: doc(doc_),
+	  db_handler(nullptr) { }
+
+
+Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_)
+	: doc(doc_),
+	  db_handler(db_handler_),
+	  database(db_handler->database) { }
+
+
 void
 Document::update()
 {
 	L_CALL(this, "Document::update()");
 
 	if (db_handler && db_handler->database && database != db_handler->database) {
-		*this = Document(db_handler, db_handler->database->get_document(get_docid(), true));
+		doc = db_handler->database->get_document(doc.get_docid(), true);
+		database = db_handler->database;
 	}
 }
 
 
-void
-Document::update() const
+std::string
+Document::serialise()
 {
-	const_cast<Document*>(this)->update();
+	L_CALL(this, "Document::serialise()");
+
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+	return doc.serialise();
 }
 
 
-Document::Document()
-	: db_handler(nullptr) { }
-
-
-Document::Document(const Xapian::Document& doc)
-	: Xapian::Document(doc),
-	  db_handler(nullptr) { }
-
-
-Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc)
-	: Xapian::Document(doc),
-	  db_handler(db_handler_),
-	  database(db_handler->database) { }
-
-
 std::string
-Document::get_value(Xapian::valueno slot) const
+Document::get_value(Xapian::valueno slot)
 {
 	L_CALL(this, "Document::get_value(%u)", slot);
 
 	DatabaseHandler::lock_database lk(db_handler);
 	update();
-	return Xapian::Document::get_value(slot);
+	return doc.get_value(slot);
 }
 
 
 MsgPack
-Document::get_value(const std::string& slot_name) const
+Document::get_value(const std::string& slot_name)
 {
 	L_CALL(this, "Document::get_value(%s)", slot_name.c_str());
 
-	auto schema = db_handler->get_schema();
-	auto slot_field = schema->get_slot_field(slot_name);
-
-	return Unserialise::MsgPack(slot_field.get_type(), get_value(slot_field.slot));
-}
-
-
-void
-Document::add_value(Xapian::valueno slot, const std::string& value)
-{
-	L_CALL(this, "Document::add_value(%u, %s)", slot, value.c_str());
-
-	Xapian::Document::add_value(slot, value);
-}
-
-
-void
-Document::add_value(const std::string& slot_name, const MsgPack& value)
-{
-	L_CALL(this, "Document::add_value(%s, <value)", slot_name.c_str());
-
-	auto schema = db_handler->get_schema();
-	auto slot_field = schema->get_slot_field(slot_name);
-
-	add_value(slot_field.slot, Serialise::MsgPack(slot_field, value));
-}
-
-
-void
-Document::remove_value(Xapian::valueno slot)
-{
-	L_CALL(this, "Document::remove_value(%u)", slot);
-
-	Xapian::Document::remove_value(slot);
-}
-
-
-void
-Document::remove_value(const std::string& slot_name)
-{
-	L_CALL(this, "Document::remove_value(%s)", slot_name.c_str());
-
-	auto schema = db_handler->get_schema();
-	auto slot_field = schema->get_slot_field(slot_name);
-
-	remove_value(slot_field.slot);
+	if (db_handler) {
+		auto slot_field = db_handler->get_schema()->get_slot_field(slot_name);
+		return Unserialise::MsgPack(slot_field.get_type(), get_value(slot_field.slot));
+	} else {
+		return MsgPack(MsgPack::Type::NIL);
+	}
 }
 
 
 std::string
-Document::get_data() const
+Document::get_data()
 {
 	L_CALL(this, "Document::get_data()");
 
 	DatabaseHandler::lock_database lk(db_handler);
 	update();
-	return Xapian::Document::get_data();
-}
-
-
-void
-Document::set_data(const std::string& data)
-{
-	L_CALL(this, "Document::set_data(%s)", repr(data).c_str());
-
-	Xapian::Document::set_data(data);
+	return doc.get_data();
 }
 
 
@@ -1022,7 +963,12 @@ Document::get_blob()
 
 	DatabaseHandler::lock_database lk(db_handler);
 	update();
-	return db_handler->database->storage_get_blob(*this);
+	if (db_handler) {
+		return db_handler->database->storage_get_blob(doc);
+	} else {
+		auto data = doc.get_data();
+		return split_data_blob(data);
+	}
 }
 
 
@@ -1035,19 +981,8 @@ Document::get_store()
 }
 
 
-void
-Document::set_blob(const std::string& blob, bool stored)
-{
-	L_CALL(this, "Document::set_blob(<blob>, %d)", stored);
-
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-	set_data(::join_data(stored, "", ::split_data_obj(Xapian::Document::get_data()), blob));
-}
-
-
 MsgPack
-Document::get_obj() const
+Document::get_obj()
 {
 	L_CALL(this, "Document::get_obj()");
 
@@ -1055,87 +990,77 @@ Document::get_obj() const
 }
 
 
-void
-Document::set_obj(const MsgPack& obj)
+MsgPack
+Document::get_terms()
 {
-	L_CALL(this, "Document::get_obj(<obj>)");
+	L_CALL(this, "get_terms()");
+
+	MsgPack terms;
 
 	DatabaseHandler::lock_database lk(db_handler);
 	update();
-	auto blob = db_handler->database->storage_get_blob(*this);
-	auto store = ::split_data_store(Xapian::Document::get_data());
-	set_data(::join_data(store.first, store.second, obj.serialise(), blob));
-}
 
+	terms.reserve(doc.termlist_count());
+	const auto it_e = doc.termlist_end();
+	for (auto it = doc.termlist_begin(); it != it_e; ++it) {
+		auto& term = terms[*it];
+		term["_wdf"] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
+		// term["_term_freq"] = it.get_termfreq();  // The number of documents which this term indexes.
+		if (it.positionlist_count()) {
+			auto& term_pos = term["_pos"];
+			term_pos.reserve(it.positionlist_count());
+			const auto pit_e = it.positionlist_end();
+			for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
+				term_pos.push_back(*pit);
+			}
+		}
+	}
 
-Xapian::termcount
-Document::termlist_count() const
-{
-	L_CALL(this, "Document::termlist_count()");
-
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-	return Xapian::Document::termlist_count();
-}
-
-
-Xapian::TermIterator
-Document::termlist_begin() const
-{
-	L_CALL(this, "Document::termlist_begin()");
-
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-	return Xapian::Document::termlist_begin();
-}
-
-
-Xapian::termcount
-Document::values_count() const
-{
-	L_CALL(this, "Document::values_count()");
-
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-	return Xapian::Document::values_count();
-}
-
-
-Xapian::ValueIterator
-Document::values_begin() const
-{
-	L_CALL(this, "Document::values_begin()");
-
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-	return Xapian::Document::values_begin();
-}
-
-
-std::string
-Document::serialise() const
-{
-	L_CALL(this, "Document::serialise()");
-
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-	return Xapian::Document::serialise();
+	return terms;
 }
 
 
 MsgPack
-Document::get_field(const std::string& slot_name) const
+Document::get_values()
+{
+	L_CALL(this, "get_values()");
+
+	MsgPack values;
+
+	DatabaseHandler::lock_database lk(db_handler);
+	update();
+
+	values.reserve(doc.values_count());
+	const auto iv_e = doc.values_end();
+	for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
+		values[std::to_string(iv.get_valueno())] = *iv;
+	}
+
+	return values;
+}
+
+
+MsgPack
+Document::get_field(const std::string& slot_name)
 {
 	L_CALL(this, "Document::get_field(%s)", slot_name.c_str());
 
-	auto obj = get_obj();
+	return get_field(slot_name, get_obj());
+}
+
+
+MsgPack
+Document::get_field(const std::string& slot_name, const MsgPack& obj)
+{
+	L_CALL(nullptr, "Document::get_field(%s, <obj>)", slot_name.c_str());
+
 	auto itf = obj.find(slot_name);
 	if (itf != obj.end()) {
-		const auto& value = obj.at(*itf);
+		const auto& value = itf.value();
 		if (value.is_map()) {
 			auto itv = value.find(RESERVED_VALUE);
 			if (itv != value.end()) {
-				const auto& value_ = value.at(*itv);
+				const auto& value_ = itv.value();
 				if (!value_.empty()) {
 					return value_;
 				}

@@ -141,36 +141,28 @@ public:
 };
 
 
-class Document : public Xapian::Document {
+class Document {
+	Xapian::Document doc;
 	DatabaseHandler* db_handler;
 	std::shared_ptr<Database> database;
 
 	void update();
-	void update() const;
 
 public:
 	Document();
-	Document(const Xapian::Document& doc);
-	Document(DatabaseHandler* db_handler_, const Xapian::Document& doc);
+	Document(const Xapian::Document& doc_);
+	Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_);
 
-	MsgPack get_field(const std::string& slot_name) const;
-	std::string get_value(Xapian::valueno slot) const;
-	MsgPack get_value(const std::string& slot_name) const;
-	void add_value(Xapian::valueno slot, const std::string& value);
-	void add_value(const std::string& slot_name, const MsgPack& value);
-	void remove_value(Xapian::valueno slot);
-	void remove_value(const std::string& slot_name);
-	std::string get_data() const;
-	void set_data(const std::string& data);
-	void set_data(const std::string& obj, const std::string& blob, bool stored);
-	std::pair<bool, std::string> get_store();
+	std::string serialise();
+
+	std::string get_value(Xapian::valueno slot);
+	MsgPack get_value(const std::string& slot_name);
+	std::string get_data();
 	std::string get_blob();
-	void set_blob(const std::string& blob, bool stored);
-	MsgPack get_obj() const;
-	void set_obj(const MsgPack& obj);
-	Xapian::termcount termlist_count() const;
-	Xapian::TermIterator termlist_begin() const;
-	Xapian::termcount values_count() const;
-	Xapian::ValueIterator values_begin() const;
-	std::string serialise() const;
+	std::pair<bool, std::string> get_store();
+	MsgPack get_obj();
+	MsgPack get_terms();
+	MsgPack get_values();
+	MsgPack get_field(const std::string& slot_name);
+	static MsgPack get_field(const std::string& slot_name, const MsgPack& obj);
 };
