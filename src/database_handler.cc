@@ -171,65 +171,61 @@ DatabaseHandler::get_document_obj(const std::string& term_id)
 
 #ifdef XAPIAND_V8
 MsgPack
-DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
+DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 {
 	L_CALL(this, "DatabaseHandler::run_script(...)");
 
 	std::string script;
-	try {
-		script = data.at(RESERVED_SCRIPT).as_string();
-	} catch (const std::out_of_range&) {
+	auto it = data.find(RESERVED_SCRIPT);
+	if (it == data.end()) {
 		return data;
-	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "%s must be string", RESERVED_SCRIPT);
+	} else {
+		try {
+			script = it.value().as_string();
+		} catch (const msgpack::type_error&) {
+			THROW(ClientError, "%s must be string", RESERVED_SCRIPT);
+		}
 	}
 
 	try {
 		auto processor = v8pp::Processor::compile(RESERVED_SCRIPT, script);
 
 		switch (method) {
-			case HTTP_PUT: {
-				MsgPack old_data;
+			case HTTP_PUT:
 				try {
-					old_data = get_document_obj(term_id);
-				} catch (const DocNotFoundError&) { }
-				MsgPack data_ = data;
-				return (*processor)["on_put"](data_, old_data);
-			}
+					auto old_data = get_document_obj(term_id);
+					return (*processor)["on_put"](data, old_data);
+				} catch (const DocNotFoundError&) {
+					return data;
+				}
 
 			case HTTP_PATCH:
-			case HTTP_MERGE: {
-				MsgPack old_data;
+			case HTTP_MERGE:
 				try {
-					old_data = get_document_obj(term_id);
-				} catch (const DocNotFoundError&) { }
-				MsgPack data_ = data;
-				return (*processor)["on_patch"](data_, old_data);
-			}
+					auto old_data = get_document_obj(term_id);
+					return (*processor)["on_patch"](data, old_data);
+				} catch (const DocNotFoundError&) {
+					return data;
+				}
 
-			case HTTP_DELETE: {
-				MsgPack old_data;
+			case HTTP_DELETE:
 				try {
-					old_data = get_document_obj(term_id);
-				} catch (const DocNotFoundError&) { }
-				MsgPack data_ = data;
-				return (*processor)["on_delete"](data_, old_data);
-			}
+					auto old_data = get_document_obj(term_id);
+					return (*processor)["on_delete"](data, old_data);
+				} catch (const DocNotFoundError&) {
+					return data;
+				}
 
-			case HTTP_GET: {
-				MsgPack data_ = data;
-				return (*processor)["on_get"](data_);
-			}
+			case HTTP_GET:
+				return (*processor)["on_get"](data);
 
-			case HTTP_POST: {
-				MsgPack data_ = data;
-				return (*processor)["on_post"](data_);
-			}
+			case HTTP_POST:
+				return (*processor)["on_post"](data);
 
 			default:
 				return data;
 		}
-	} catch (const v8pp::ReferenceError& e) {
+	} catch (const v8pp::ReferenceError&) {
 		return data;
 	} catch (const v8pp::Error& e) {
 		THROW(ClientError, e.what());
@@ -239,13 +235,11 @@ DatabaseHandler::run_script(const MsgPack& data, const std::string& term_id)
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, bool stored, const std::string& store, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type)
+DatabaseHandler::index(const std::string& _document_id, bool stored, const std::string& store, MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, %s, <store>, %s, <blob>, %s, <ct_type>)", repr(_document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
 
 	Xapian::Document doc;
-
-	MsgPack obj_;
 
 	std::string term_id;
 	std::string prefixed_term_id;
@@ -253,12 +247,11 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 #ifdef XAPIAND_V8
 	try {
+		short doc_revision;
 		do {
-			short doc_revision;
 #endif
 			auto schema_begins = std::chrono::system_clock::now();
 			do {
-
 				schema = get_schema(&obj);
 				L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
 
@@ -274,7 +267,6 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 							}
 						}
 					} catch (const std::out_of_range&) { }
-					obj_ = obj;
 				} else {
 					term_id = Serialise::serialise(spc_id, _document_id);
 					prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
@@ -283,14 +275,12 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 						lock_database lk(this);
 						doc_revision = database->get_revision_document(prefixed_term_id);
 					}
-					obj_ = run_script(obj, prefixed_term_id);
-#else
-					obj_ = obj;
+					obj = run_script(obj, prefixed_term_id);
 #endif
 				}
 
 				// Add ID.
-				auto& id_field = obj_[ID_FIELD_NAME];
+				auto& id_field = obj[ID_FIELD_NAME];
 				auto id_value = Cast::cast(spc_id.get_type(), _document_id);
 				if (id_field.is_map()) {
 					id_field[RESERVED_VALUE] = id_value;
@@ -299,14 +289,14 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 				}
 
 				if (blob.empty()) {
-					obj_.erase(CT_FIELD_NAME);
+					obj.erase(CT_FIELD_NAME);
 				} else {
 					// Add Content Type if indexing a blob.
-					auto found = ct_type.find_last_of("/");
+					const auto found = ct_type.find_last_of("/");
 					std::string type(ct_type.c_str(), found);
 					std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
 
-					auto& ct_field = obj_[CT_FIELD_NAME];
+					auto& ct_field = obj[CT_FIELD_NAME];
 					if (!ct_field.is_map() && !ct_field.is_undefined()) {
 						ct_field = MsgPack();
 					}
@@ -316,7 +306,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 				}
 
 				// Index object.
-				obj_ = schema->index(obj_, doc);
+				obj = schema->index(obj, doc);
 
 				if (prefixed_term_id.empty()) {
 					// Now the schema is full, get specification id.
@@ -324,7 +314,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					if (spc_id.get_type() == FieldType::EMPTY) {
 						// Index like a namespace.
 						static const auto& prefix_id = get_prefix(ID_FIELD_NAME);
-						auto type_ser = Serialise::get_type(id_value);
+						const auto type_ser = Serialise::get_type(id_value);
 						term_id = type_ser.second;
 						prefixed_term_id = prefixed(term_id, prefix_id, required_spc_t::get_ctype(specification_t::global_type(type_ser.first)));
 					} else {
@@ -351,11 +341,11 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			} while (true);
 
 			if (blob.empty()) {
-				L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
-				doc.set_data(join_data(false, "", obj_.serialise(), ""));
+				L_INDEX(this, "Data: %s", repr(obj.to_string()).c_str());
+				doc.set_data(join_data(false, "", obj.serialise(), ""));
 			} else {
-				L_INDEX(this, "Data: %s", repr(obj_.to_string()).c_str());
-				doc.set_data(join_data(stored, store, obj_.serialise(), serialise_strings({prefixed_term_id, ct_type, blob})));
+				L_INDEX(this, "Data: %s", repr(obj.to_string()).c_str());
+				doc.set_data(join_data(stored, store, obj.serialise(), serialise_strings({ prefixed_term_id, ct_type, blob })));
 			}
 
 			doc.add_boolean_term(prefixed_term_id);
@@ -368,9 +358,9 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 #endif
 				{
 					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
-					return std::make_pair(std::move(did), std::move(obj_));
+					return std::make_pair(std::move(did), std::move(obj));
 				}
-			} catch (const Xapian::DatabaseError& exc) {
+			} catch (const Xapian::DatabaseError&) {
 				// Try to recover from DatabaseError (i.e when the index is manually deleted)
 				recover_index();
 				lock_database lk(this);
@@ -379,7 +369,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 #endif
 				{
 					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
-					return std::make_pair(std::move(did), std::move(obj_));
+					return std::make_pair(std::move(did), std::move(obj));
 				}
 			}
 #ifdef XAPIAND_V8
@@ -410,12 +400,15 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPa
 
 	MsgPack obj;
 	std::string blob;
-	if (body.is_map()) {
-		obj = body;
-	} else if (body.is_string()) {
-		blob = body.as_string();
-	} else {
-		THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
+	switch (body.getType()) {
+		case MsgPack::Type::STR:
+			blob = body.as_string();
+			break;
+		case MsgPack::Type::MAP:
+			obj = body;
+			break;
+		default:
+			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
 	}
 
 	return index(_document_id, stored, "", obj, blob, commit_, ct_type);
@@ -440,11 +433,14 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 	}
 
 	auto document = get_document(_document_id);
-	auto obj = document.get_obj();
+
+	const auto data = document.get_data();
+
+	auto obj = MsgPack::unserialise(::split_data_obj(data));
 	apply_patch(patches, obj);
 
-	auto store = document.get_store();
-	auto blob = store.first ? "" : document.get_blob();
+	const auto store = ::split_data_store(data);
+	const auto blob = store.first ? "" : document.get_blob();
 
 	return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type);
 }
@@ -464,18 +460,23 @@ DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPa
 	}
 
 	auto document = get_document(_document_id);
-	auto obj = document.get_obj();
-	if (body.is_map()) {
-		obj.update(body);
-		auto store = document.get_store();
-		auto blob = store.first ? "" : document.get_blob();
 
-		return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type);
-	} else if (body.is_string()) {
-		auto blob = body.as_string();
-		return index(_document_id, stored, "", obj, blob, commit_, ct_type);
-	} else {
-		THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
+	const auto data = document.get_data();
+
+	auto obj = MsgPack::unserialise(::split_data_obj(data));
+	switch (obj.getType()) {
+		case MsgPack::Type::STR: {
+			const auto blob = body.as_string();
+			return index(_document_id, stored, "", obj, blob, commit_, ct_type);
+		}
+		case MsgPack::Type::MAP: {
+			obj.update(body);
+			const auto store = ::split_data_store(data);
+			const auto blob = store.first ? "" : document.get_blob();
+			return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type);
+		}
+		default:
+			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
 	}
 }
 

@@ -83,8 +83,10 @@ class DatabaseHandler {
 	MsgPack get_document_obj(const std::string& term_id);
 
 #ifdef XAPIAND_V8
-	MsgPack run_script(const MsgPack& data, const std::string& term_id);
+	MsgPack run_script(MsgPack& data, const std::string& term_id);
 #endif
+
+	DataType index(const std::string& _document_id, bool stored, const std::string& storage, MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -113,7 +115,6 @@ public:
 
 	void reset(const Endpoints& endpoints_, int flags_, enum http_method method_);
 
-	DataType index(const std::string& _document_id, bool stored, const std::string& storage, const MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type);
 	DataType index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type);
 	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type);
 	DataType merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type);
