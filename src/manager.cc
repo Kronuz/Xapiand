@@ -289,7 +289,7 @@ XapiandManager::setup_node()
 {
 	L_CALL(this, "XapiandManager::setup_node()");
 
-	for (auto& weak_server : servers_weak) {
+	for (const auto& weak_server : servers_weak) {
 		if (auto server = weak_server.lock()) {
 			server->setup_node_async.send();
 			return;
