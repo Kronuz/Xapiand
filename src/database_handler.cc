@@ -395,7 +395,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPa
 	}
 
 	if (_document_id.empty()) {
-		THROW(Error, "Document must have an 'id'");
+		THROW(ClientError, "Document must have an 'id'");
 	}
 
 	MsgPack obj;
