@@ -136,8 +136,8 @@ public:
 
 	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 
-	void get_document_info(MsgPack& info, const std::string& document_id);
-	void get_database_info(MsgPack& info);
+	MsgPack get_document_info(const std::string& document_id);
+	MsgPack get_database_info();
 };
 
 

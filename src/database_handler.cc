@@ -811,10 +811,10 @@ DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool w
 }
 
 
-void
-DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
+MsgPack
+DatabaseHandler::get_document_info(const std::string& doc_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document_info(%s, %s)", repr(info.to_string()).c_str(), repr(doc_id).c_str());
+	L_CALL(this, "DatabaseHandler::get_document_info(%s)", repr(doc_id).c_str());
 
 	auto document = get_document(doc_id);
 
@@ -822,6 +822,7 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 
 	const auto obj = MsgPack::unserialise(::split_data_obj(data));
 
+	MsgPack info;
 	info[ID_FIELD_NAME] = Document::get_field(ID_FIELD_NAME, obj) || document.get_value(ID_FIELD_NAME);
 	info[RESERVED_DATA] = obj;
 
@@ -860,17 +861,20 @@ DatabaseHandler::get_document_info(MsgPack& info, const std::string& doc_id)
 
 	info[RESERVED_TERMS] = document.get_terms();
 	info[RESERVED_VALUES] = document.get_values();
+
+	return info;
 }
 
 
-void
-DatabaseHandler::get_database_info(MsgPack& info)
+MsgPack
+DatabaseHandler::get_database_info()
 {
-	L_CALL(this, "DatabaseHandler::get_database_info(%s)", repr(info.to_string()).c_str());
+	L_CALL(this, "DatabaseHandler::get_database_info()");
 
 	lock_database lk(this);
 	unsigned doccount = database->db->get_doccount();
 	unsigned lastdocid = database->db->get_lastdocid();
+	MsgPack info;
 	info["_uuid"] = database->db->get_uuid();
 	info["_doc_count"] = doccount;
 	info["_last_id"] = lastdocid;
@@ -879,6 +883,7 @@ DatabaseHandler::get_database_info(MsgPack& info)
 	info["_doc_len_lower"] =  database->db->get_doclength_lower_bound();
 	info["_doc_len_upper"] = database->db->get_doclength_upper_bound();
 	info["_has_positions"] = database->db->has_positions();
+	return info;
 }
 
 
