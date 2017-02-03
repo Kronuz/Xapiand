@@ -1138,19 +1138,18 @@ HttpClient::info_view(enum http_method method, Command)
 
 		operation_begins = std::chrono::system_clock::now();
 
+		db_handler.reset(endpoints, DB_OPEN, method);
 		try {
-			db_handler.reset(endpoints, DB_OPEN, method);
-			db_handler.get_document_info(response["document_info"], path_parser.get_id());
-		} catch (const CheckoutError&) {
+			auto info = db_handler.get_document_info(path_parser.get_id());
+			response["document_info"] = std::move(info);
+		} catch (const DocNotFoundError&) {
 			path_parser.off_id = nullptr;
-			response.erase("document_info");
 		}
 
 		path_parser.rewind();
 		endpoints_maker(1s);
 
-		db_handler.reset(endpoints, DB_OPEN, method);
-		db_handler.get_database_info(response["database_info"]);
+		response["database_info"] = db_handler.get_database_info();
 
 		operation_ends = std::chrono::system_clock::now();
 
