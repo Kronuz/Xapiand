@@ -826,7 +826,12 @@ Database::reopen()
 			L_DATABASE_WRAP(this, "Reopen done (took %s) [1]", delta_string(access_time, std::chrono::system_clock::now()).c_str());
 			return ret;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
-			L_WARNING(this, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
+			const char* error = exc.get_error_string();
+			if (error) {
+				L_WARNING(this, "ERROR: %s (%s)", exc.get_msg().c_str(), error);
+			} else {
+				L_WARNING(this, "ERROR: %s", exc.get_msg().c_str());
+			}
 			db->close();
 			db.reset();
 			throw;
@@ -1058,7 +1063,12 @@ Database::commit(bool wal_)
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) THROW(Error, "Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::DatabaseError& exc) {
-			L_WARNING(this, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
+			const char* error = exc.get_error_string();
+			if (error) {
+				L_WARNING(this, "ERROR: %s (%s)", exc.get_msg().c_str(), error);
+			} else {
+				L_WARNING(this, "ERROR: %s", exc.get_msg().c_str());
+			}
 			throw;
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_msg().c_str());
@@ -2140,9 +2150,19 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					}
 #endif
 				} catch (const Xapian::DatabaseOpeningError& exc) {
-					L_DATABASE(this, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
+					const char* error = exc.get_error_string();
+					if (error) {
+						L_DATABASE(this, "ERROR: %s (%s)", exc.get_msg().c_str(), error);
+					} else {
+						L_DATABASE(this, "ERROR: %s", exc.get_msg().c_str());
+					}
 				} catch (const Xapian::Error& exc) {
-					L_EXC(this, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
+					const char* error = exc.get_error_string();
+					if (error) {
+						L_EXC(this, "ERROR: %s (%s)", exc.get_msg().c_str(), error);
+					} else {
+						L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+					}
 				}
 				lk.lock();
 				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
