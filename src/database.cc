@@ -2514,14 +2514,20 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 			std::shared_ptr<const MsgPack> aux_schema_ptr;
 			if (str_schema.empty()) {
 				created = true;
-				if (obj && obj->find(RESERVED_SCHEMA) != obj->end()) {
-					auto path = obj->at(RESERVED_SCHEMA);
-					if (path.is_string()) {
-						aux_schema_ptr = std::make_shared<const MsgPack>(path.as_string());
+				if (obj) {
+					const auto it = obj->find(RESERVED_SCHEMA);
+					if (it != obj->end()) {
+						const auto& path = it.value();
+						if (path.is_string()) {
+							aux_schema_ptr = std::make_shared<const MsgPack>(path.as_string());
+						} else {
+							std::lock_guard<std::mutex> lk(smtx);
+							schemas.erase(local_schema_hash);
+							checkin(database);
+							THROW(ClientError, "%s must be string", RESERVED_SCHEMA);
+						}
 					} else {
-						std::lock_guard<std::mutex> lk(smtx);
-						schemas.erase(local_schema_hash);
-						THROW(ClientError, "%s must be string", RESERVED_SCHEMA);
+						aux_schema_ptr = Schema::get_initial_schema();
 					}
 				} else {
 					aux_schema_ptr = Schema::get_initial_schema();
@@ -2532,6 +2538,7 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 				} catch (const msgpack::unpack_error& e) {
 					std::lock_guard<std::mutex> lk(smtx);
 					schemas.erase(local_schema_hash);
+					checkin(database);
 					THROW(SerialisationError, "Unpack error: %s", e.what());
 				}
 			}
