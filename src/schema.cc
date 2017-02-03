@@ -4941,6 +4941,10 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 {
 	L_CALL(this, "Schema::write_schema(%s, %d)", repr(obj_schema.to_string()).c_str(), replace);
 
+	if (!obj_schema.is_map()) {
+		THROW(ClientError, "Schema must be an object [%s]", MsgPackTypes[toUType(obj_schema.getType())]);
+	}
+
 	try {
 		specification = default_spc;
 
