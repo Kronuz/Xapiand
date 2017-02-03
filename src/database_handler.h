@@ -119,7 +119,6 @@ public:
 	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type);
 	DataType merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type);
 
-	void write_schema(const std::string& body);
 	void write_schema(const MsgPack& obj);
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);

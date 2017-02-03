@@ -482,24 +482,6 @@ DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPa
 
 
 void
-DatabaseHandler::write_schema(const std::string& body)
-{
-	L_CALL(this, "DatabaseHandler::write_schema(<body>)");
-
-	if (!(flags & DB_WRITABLE)) {
-		THROW(Error, "Database is read-only");
-	}
-
-	// Create MsgPack object
-	rapidjson::Document rdoc;
-	json_load(rdoc, body);
-	MsgPack obj(rdoc);
-
-	write_schema(obj);
-}
-
-
-void
 DatabaseHandler::write_schema(const MsgPack& obj)
 {
 	L_CALL(this, "DatabaseHandler::write_schema(<obj>)");
