@@ -388,7 +388,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 DataType
 DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::index(%s, <body>)", repr(_document_id).c_str());
+	L_CALL(this, "DatabaseHandler::index(%s, %s, <body>, %s, %s)", repr(_document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "Database is read-only");
@@ -418,7 +418,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPa
 DataType
 DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::patch(%s, <patches>)", repr(_document_id).c_str());
+	L_CALL(this, "DatabaseHandler::patch(%s, <patches>, %s, %s)", repr(_document_id).c_str(), commit_ ? "true" : "false", ct_type.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "database is read-only");
@@ -449,7 +449,7 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 DataType
 DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::merge(%s, <obj>)", repr(_document_id).c_str());
+	L_CALL(this, "DatabaseHandler::merge(%s, %s, <body>, %s, %s)", repr(_document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "database is read-only");
