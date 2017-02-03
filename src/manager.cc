@@ -313,15 +313,15 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	// Open cluster database
 	Endpoints cluster_endpoints(Endpoint("."));
 
-	DatabaseHandler db_handler;
+	DatabaseHandler db_handler(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
 	auto local_node_ = local_node.load();
 	try {
-		db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL, HTTP_GET);
+		db_handler.get_document("." + serialise_node_id(local_node_->id));
 	} catch (const CheckoutError&) {
 		new_cluster = 1;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		try {
-			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL, HTTP_GET);
+			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 			db_handler.index("." + serialise_node_id(local_node_->id), false, {
 				{ RESERVED_INDEX, "field_all" },
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  TERM_STR } } },
@@ -331,13 +331,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		} catch (const CheckoutError&) {
 			L_CRIT(this, "Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
-		} catch (const ClientError& e) {
-			L_ERR(this, "ERROR: %s", e.what());
 		}
-	}
-
-	try {
-		db_handler.get_document("." + serialise_node_id(local_node_->id));
 	} catch (const DocNotFoundError&) {
 		L_CRIT(this, "Cluster database is corrupt");
 		sig_exit(-EX_DATAERR);
