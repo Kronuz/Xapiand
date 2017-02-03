@@ -1021,12 +1021,16 @@ Document::get_terms()
 	DatabaseHandler::lock_database lk(db_handler);
 	update();
 
-	terms.reserve(doc.termlist_count());
+	// doc.termlist_count() disassociates the database in doc.
+
 	const auto it_e = doc.termlist_end();
 	for (auto it = doc.termlist_begin(); it != it_e; ++it) {
 		auto& term = terms[*it];
 		term["_wdf"] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
-		// term["_term_freq"] = it.get_termfreq();  // The number of documents which this term indexes.
+		try {
+			auto _term_freq = it.get_termfreq();  // The number of documents which this term indexes.
+			term["_term_freq"] = _term_freq;
+		} catch (const Xapian::InvalidOperationError&) { } // Iterator has moved, and does not support random access or doc is not associated with a database.
 		if (it.positionlist_count()) {
 			auto& term_pos = term["_pos"];
 			term_pos.reserve(it.positionlist_count());
