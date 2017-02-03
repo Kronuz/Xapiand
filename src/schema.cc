@@ -4768,13 +4768,11 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 
 
 bool
-Schema::readable_prefix(MsgPack& prop_prefix, MsgPack&)
+Schema::readable_prefix(MsgPack&, MsgPack&)
 {
-	L_CALL(nullptr, "Schema::readable_prefix(%s)", repr(prop_prefix.to_string()).c_str());
+	L_CALL(nullptr, "Schema::readable_prefix(...)");
 
-	prop_prefix = prop_prefix.as_string();
-
-	return true;
+	return false;
 }
 
 
@@ -4824,15 +4822,11 @@ Schema::readable_index(MsgPack& prop_index, MsgPack&)
 
 
 bool
-Schema::readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack&)
+Schema::readable_acc_prefix(MsgPack&, MsgPack&)
 {
-	L_CALL(nullptr, "Schema::readable_acc_prefix(%s)", repr(prop_acc_prefix.to_string()).c_str());
+	L_CALL(nullptr, "Schema::readable_acc_prefix(...)");
 
-	for (auto& prop_prefix : prop_acc_prefix) {
-		prop_prefix = prop_prefix.as_string();
-	}
-
-	return true;
+	return false;
 }
 
 
