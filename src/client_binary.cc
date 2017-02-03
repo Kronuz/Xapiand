@@ -49,7 +49,7 @@ std::string serialise_error(const Xapian::Error &exc) {
 	result += serialise_length(exc.get_msg().length());
 	result += exc.get_msg();
 	// The "error string" goes last so we don't need to store its length.
-	const char * err = exc.get_error_string();
+	const char* err = exc.get_error_string();
 	if (err) result += err;
 	return result;
 }
