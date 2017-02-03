@@ -631,7 +631,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 					field.erase(field.begin());
 					break;
 			}
-			auto field_spc = schema->get_slot_field(field);
+			const auto field_spc = schema->get_slot_field(field);
 			if (field_spc.get_type() != FieldType::EMPTY) {
 				sorter->add_value(field_spc, descending, value, e);
 			}
@@ -641,7 +641,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 	// Get the collapse key to use for queries.
 	Xapian::valueno collapse_key = Xapian::BAD_VALUENO;
 	if (!e.collapse.empty()) {
-		auto field_spc = schema->get_slot_field(e.collapse);
+		const auto field_spc = schema->get_slot_field(e.collapse);
 		collapse_key = field_spc.slot;
 	}
 
@@ -780,7 +780,7 @@ DatabaseHandler::get_document(const std::string& doc_id)
 {
 	L_CALL(this, "DatabaseHandler::get_document((std::string)%s)", repr(doc_id).c_str());
 
-	auto term_id = get_prefixed_term_id(doc_id);
+	const auto term_id = get_prefixed_term_id(doc_id);
 
 	lock_database lk(this);
 	Xapian::docid did = database->find_document(term_id);
@@ -793,10 +793,10 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 {
 	L_CALL(this, "DatabaseHandler::get_docid(%s)", repr(doc_id).c_str());
 
-	auto prefixed_term_id = get_prefixed_term_id(doc_id);
+	const auto term_id = get_prefixed_term_id(doc_id);
 
 	lock_database lk(this);
-	return database->find_document(prefixed_term_id);
+	return database->find_document(term_id);
 }
 
 
