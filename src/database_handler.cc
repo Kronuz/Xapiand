@@ -104,10 +104,10 @@ DatabaseHandler::DatabaseHandler()
 	  method(HTTP_GET) { }
 
 
-DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_)
+DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, enum http_method method_)
 	: endpoints(endpoints_),
 	  flags(flags_),
-	  method(HTTP_GET) { }
+	  method(method_) { }
 
 
 std::shared_ptr<Database>

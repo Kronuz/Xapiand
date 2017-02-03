@@ -106,14 +106,14 @@ public:
 	};
 
 	DatabaseHandler();
-	DatabaseHandler(const Endpoints& endpoints_, int flags_=0);
+	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET);
 
 	~DatabaseHandler() = default;
 
 	std::shared_ptr<Database> get_database() const noexcept;
 	std::shared_ptr<Schema> get_schema(const MsgPack* obj=nullptr) const;
 
-	void reset(const Endpoints& endpoints_, int flags_, enum http_method method_);
+	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET);
 
 	DataType index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type);
 	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type);
