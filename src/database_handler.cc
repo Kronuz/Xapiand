@@ -805,10 +805,10 @@ DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool w
 {
 	L_CALL(this, "DatabaseHandler::delete_document(%s)", repr(doc_id).c_str());
 
-	auto _id = get_docid(doc_id);
+	const auto term_id = get_prefixed_term_id(doc_id);
 
 	lock_database lk(this);
-	database->delete_document(_id, commit_, wal_);
+	database->delete_document(database->find_document(term_id), commit_, wal_);
 }
 
 
