@@ -148,7 +148,12 @@ int restore_database() {
 		delete_files(restored_db);
 		RETURN(1);
 	} catch (const Xapian::Error& exc) {
-		L_EXC(nullptr, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
+		const char* error = exc.get_error_string();
+		if (error) {
+			L_EXC(nullptr, "ERROR: %s (%s)", exc.get_msg().c_str(), error);
+		} else {
+			L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		}
 		delete_files(restored_db);
 		RETURN(1);
 	} catch (const std::exception& exc) {
