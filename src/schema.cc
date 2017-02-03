@@ -1200,7 +1200,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", data.to_string().c_str(), item_value.to_string().c_str(), pos);
 
-	if (item_value.is_null()) {
+	if (item_value.is_null() || item_value.is_undefined()) {
 		index_partial_paths(doc);
 		if (specification.flags.store) {
 			data = item_value;
@@ -1238,7 +1238,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", data->to_string().c_str(), item_value.to_string().c_str());
 
-	if (item_value.is_null()) {
+	if (item_value.is_null() || item_value.is_undefined()) {
 		index_partial_paths(doc);
 		if (specification.flags.store) {
 			*data = item_value;
@@ -1280,7 +1280,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, size_t offspri
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
-		if (val->is_null()) {
+		if (val->is_null() || val->is_undefined()) {
 			index_partial_paths(doc);
 			if (specification.flags.store) {
 				*data = *val;
@@ -1993,7 +1993,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 
 		case TypeIndex::FIELD_TERMS: {
 			for (const MsgPack& value : values) {
-				if (value.is_null()) {
+				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
 				} else {
 					index_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
@@ -2004,7 +2004,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		case TypeIndex::FIELD_VALUES: {
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (!value.is_null()) {
+				if (!(value.is_null() || value.is_undefined())) {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++);
 				}
 			}
@@ -2013,7 +2013,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		case TypeIndex::FIELD_ALL: {
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (value.is_null()) {
+				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
 				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &specification);
@@ -2024,7 +2024,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		case TypeIndex::GLOBAL_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			for (const MsgPack& value : values) {
-				if (!value.is_null()) {
+				if (!(value.is_null() || value.is_undefined())) {
 					index_term(doc, Serialise::MsgPack(global_spc, value), global_spc, pos++);
 				}
 			}
@@ -2033,7 +2033,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		case TypeIndex::TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			for (const MsgPack& value : values) {
-				if (value.is_null()) {
+				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
 				} else {
 					index_all_term(doc, value, specification, global_spc, pos++);
@@ -2045,7 +2045,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (!value.is_null()) {
+				if (!(value.is_null() || value.is_undefined())) {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, nullptr, &global_spc);
 				}
 			}
@@ -2055,7 +2055,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (value.is_null()) {
+				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
 				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &specification, &global_spc);
@@ -2067,7 +2067,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				if (!value.is_null()) {
+				if (!(value.is_null() || value.is_undefined())) {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
 				}
 			}
@@ -2077,7 +2077,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				if (value.is_null()) {
+				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
 				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &specification);
@@ -2090,7 +2090,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			StringSet& s_g = map_values[global_spc.slot];
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (!value.is_null()) {
+				if (!(value.is_null() || value.is_undefined())) {
 					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 				}
 			}
@@ -2101,7 +2101,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			StringSet& s_g = map_values[global_spc.slot];
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (value.is_null()) {
+				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
 				} else {
 					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
@@ -2113,7 +2113,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				if (!value.is_null()) {
+				if (!(value.is_null() || value.is_undefined())) {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, nullptr, &global_spc);
 				}
 			}
@@ -2123,7 +2123,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
 			StringSet& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				if (value.is_null()) {
+				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
 				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &specification, &global_spc);
@@ -2136,7 +2136,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			StringSet& s_g = map_values[global_spc.slot];
 			StringSet& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (!value.is_null()) {
+				if (!(value.is_null() || value.is_undefined())) {
 					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 				}
 			}
@@ -2147,7 +2147,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			StringSet& s_f = map_values[specification.slot];
 			StringSet& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				if (value.is_null()) {
+				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
 				} else {
 					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
