@@ -91,7 +91,7 @@ DatabaseHandler::lock_database::lock()
 
 
 void
-DatabaseHandler::lock_database::unlock() noexcept
+DatabaseHandler::lock_database::unlock()
 {
 	if (db_handler && db_handler->database) {
 		XapiandManager::manager->database_pool.checkin(db_handler->database);

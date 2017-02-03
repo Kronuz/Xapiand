@@ -36,6 +36,7 @@
 #include "http_parser.h"                     // for http_method
 #include "msgpack.h"                         // for MsgPack
 
+
 class AggregationMatchSpy;
 class Database;
 class Schema;
@@ -99,7 +100,7 @@ public:
 		~lock_database();
 
 		void lock();
-		void unlock() noexcept;
+		void unlock();
 	};
 
 	DatabaseHandler();
