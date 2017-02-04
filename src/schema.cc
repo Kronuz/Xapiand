@@ -1310,12 +1310,14 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, size_t offspri
 		if (specification.flags.store && !offsprings) {
 			*data = (*data)[RESERVED_VALUE];
 		}
-	} else if (!offsprings) {
+	} else {
 		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
 			_validate_required_data(get_mutable());
 		}
 
-		index_partial_paths(doc);
+		if (!offsprings) {
+			index_partial_paths(doc);
+		}
 	}
 }
 
