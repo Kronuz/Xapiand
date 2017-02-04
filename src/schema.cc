@@ -1281,6 +1281,10 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, size_t offspri
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
 		if (val->is_null() || val->is_undefined()) {
+			if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
+				_validate_required_data(get_mutable());
+			}
+
 			index_partial_paths(doc);
 			if (specification.flags.store) {
 				*data = *val;
