@@ -1311,6 +1311,10 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, size_t offspri
 			*data = (*data)[RESERVED_VALUE];
 		}
 	} else if (!offsprings) {
+		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
+			_validate_required_data(get_mutable());
+		}
+
 		index_partial_paths(doc);
 	}
 }
