@@ -2587,7 +2587,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 	auto atom_local_schema = get_local_schema(endpoint, flags, obj);
 
 	auto schema_ptr = atom_local_schema.second->load();
-	if (!schema_ptr->is_map()) {
+	if (schema_ptr->is_string()) {
 		auto schema_path = split_index(schema_ptr->as_string());
 		auto shared_schema_hash = std::hash<std::string>{}(schema_path.first);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
@@ -2626,7 +2626,7 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 	auto atom_local_schema = get_local_schema(endpoint, flags, nullptr);
 	auto local_schema_ptr = atom_local_schema.second->load();
 
-	if (!local_schema_ptr->is_map()) {
+	if (local_schema_ptr->is_string()) {
 		auto schema_path = split_index(local_schema_ptr->as_string());
 		auto shared_schema_hash = std::hash<std::string>{}(schema_path.first);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
