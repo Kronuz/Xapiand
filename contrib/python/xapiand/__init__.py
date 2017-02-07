@@ -212,6 +212,12 @@ class Xapiand(object):
                 body = open(body, 'r')
             res = method(url, body, **kwargs)
         else:
+            data = kwargs.get('data')
+            if data:
+                if is_msgpack:
+                    kwargs['data'] = msgpack.dumps(data)
+                elif is_json:
+                    kwargs['data'] = json.dumps(data)
             res = method(url, **kwargs)
 
         if res.status_code == 404 and action_request in ('patch', 'delete', 'get'):
