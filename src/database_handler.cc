@@ -568,7 +568,6 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 	schema = get_schema();
 
 	Xapian::Query query;
-	lock_database lk(this);
 	switch (method) {
 		case HTTP_GET: {
 			QueryDSL query_object(schema);
@@ -628,20 +627,23 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 	}
 
 	// Configure nearest and fuzzy search:
-	Xapian::RSet nearest_rset;
 	std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
+	Xapian::RSet nearest_rset;
 	if (e.is_nearest) {
-		nearest_rset = get_rset(query, e.nearest.n_rset);
 		nearest_edecider = get_edecider(e.nearest);
+		lock_database lk(this);
+		nearest_rset = get_rset(query, e.nearest.n_rset);
 	}
 
 	Xapian::RSet fuzzy_rset;
 	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
 	if (e.is_fuzzy) {
-		fuzzy_rset = get_rset(query, e.fuzzy.n_rset);
 		fuzzy_edecider = get_edecider(e.fuzzy);
+		lock_database lk(this);
+		fuzzy_rset = get_rset(query, e.fuzzy.n_rset);
 	}
 
+	lock_database lk(this);
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto final_query = query;
@@ -815,7 +817,7 @@ DatabaseHandler::get_document_info(const std::string& doc_id)
 		if (store.second.empty()) {
 			info["_blob"] = nullptr;
 		} else {
-			const auto locator = database->storage_unserialise_locator(store.second);
+			const auto locator = ::storage_unserialise_locator(store.second);
 			const auto ct_type_mp = Document::get_field(CT_FIELD_NAME, obj);
 			info["_blob"] = {
 				{ "_type", "stored" },
@@ -829,11 +831,11 @@ DatabaseHandler::get_document_info(const std::string& doc_id)
 #endif
 	{
 		const auto blob = document.get_blob();
-		const auto blob_data = unserialise_string_at(2, blob);
+		const auto blob_data = ::unserialise_string_at(2, blob);
 		if (blob_data.empty()) {
 			info["_blob"] = nullptr;
 		} else {
-			auto blob_ct = unserialise_string_at(1, blob);
+			auto blob_ct = ::unserialise_string_at(1, blob);
 			info["_blob"] = {
 				{ "_type", "local" },
 				{ "_content_type", blob_ct },
