@@ -2547,8 +2547,6 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 			}
 			checkin(database);
 		} else {
-			std::lock_guard<std::mutex> lk(smtx);
-			schemas.erase(local_schema_hash);
 			THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
 		}
 	}
