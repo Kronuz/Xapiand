@@ -163,7 +163,7 @@ DatabaseHandler::get_document_obj(const std::string& term_id)
 	{
 		lock_database lk(this);
 		Xapian::docid did = database->find_document(term_id);
-		data = database->get_document(did).get_data();
+		data = database->get_document(did, database->flags & DB_WRITABLE).get_data();
 	}
 	return MsgPack::unserialise(::split_data_obj(data));
 }
@@ -766,7 +766,7 @@ DatabaseHandler::get_document(const std::string& doc_id)
 
 	lock_database lk(this);
 	Xapian::docid did = database->find_document(term_id);
-	return Document(this, database->get_document(did));
+	return Document(this, database->get_document(did, database->flags & DB_WRITABLE));
 }
 
 
@@ -907,7 +907,7 @@ Document::update()
 	L_CALL(this, "Document::update()");
 
 	if (db_handler && db_handler->database && database != db_handler->database) {
-		doc = db_handler->database->get_document(doc.get_docid(), true);
+		doc = db_handler->database->get_document(doc.get_docid());
 		database = db_handler->database;
 	}
 }
