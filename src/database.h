@@ -267,9 +267,9 @@ class Database {
 #endif
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get(const std::unique_ptr<DataStorage>& storage, const std::string& store);
-	void storage_pull_blob(Xapian::Document& doc);
-	void storage_push_blob(Xapian::Document& doc);
+	std::string storage_get(const std::unique_ptr<DataStorage>& storage, const std::string& store) const;
+	void storage_pull_blob(Xapian::Document& doc) const;
+	void storage_push_blob(Xapian::Document& doc) const;
 	void storage_commit();
 #endif /* XAPIAND_DATA_STORAGE */
 
@@ -302,7 +302,7 @@ public:
 	bool reopen();
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get_blob(const Xapian::Document& doc);
+	std::string storage_get_blob(const Xapian::Document& doc) const;
 #endif /* XAPIAND_DATA_STORAGE */
 
 	std::string get_uuid() const;

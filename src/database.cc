@@ -1069,7 +1069,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get(const std::unique_ptr<DataStorage>& storage, const std::string& store)
+Database::storage_get(const std::unique_ptr<DataStorage>& storage, const std::string& store) const
 {
 	L_CALL(this, "Database::storage_get()");
 
@@ -1083,7 +1083,7 @@ Database::storage_get(const std::unique_ptr<DataStorage>& storage, const std::st
 
 
 std::string
-Database::storage_get_blob(const Xapian::Document& doc)
+Database::storage_get_blob(const Xapian::Document& doc) const
 {
 	L_CALL(this, "Database::storage_get_blob()");
 
@@ -1108,7 +1108,7 @@ Database::storage_get_blob(const Xapian::Document& doc)
 
 
 void
-Database::storage_pull_blob(Xapian::Document& doc)
+Database::storage_pull_blob(Xapian::Document& doc) const
 {
 	L_CALL(this, "Database::storage_pull_blob()");
 
@@ -1132,12 +1132,12 @@ Database::storage_pull_blob(Xapian::Document& doc)
 
 
 void
-Database::storage_push_blob(Xapian::Document& doc)
+Database::storage_push_blob(Xapian::Document& doc) const
 {
 	L_CALL(this, "Database::storage_push_blob()");
 
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-	auto& storage = writable_storages[subdatabase];
+	const auto& storage = writable_storages[subdatabase];
 	if (!storage) {
 		return;
 	}
