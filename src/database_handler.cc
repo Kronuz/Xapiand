@@ -351,30 +351,23 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			doc.add_boolean_term(prefixed_term_id);
 			doc.add_value(spc_id.slot, term_id);
 
-			try {
-				lock_database lk(this);
+			lock_database lk(this);
 #ifdef XAPIAND_V8
-				if (database->set_revision_document(prefixed_term_id, doc_revision))
+			if (database->set_revision_document(prefixed_term_id, doc_revision)) {
 #endif
-				{
+				try {
+					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
+					return std::make_pair(std::move(did), std::move(obj));
+				} catch (const Xapian::DatabaseError&) {
+					// Try to recover from DatabaseError (i.e when the index is manually deleted)
+					recover_index();
 					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
 					return std::make_pair(std::move(did), std::move(obj));
 				}
-			} catch (const Xapian::DatabaseError&) {
-				// Try to recover from DatabaseError (i.e when the index is manually deleted)
-				recover_index();
-				lock_database lk(this);
 #ifdef XAPIAND_V8
-				if (database->set_revision_document(prefixed_term_id, doc_revision))
-#endif
-				{
-					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
-					return std::make_pair(std::move(did), std::move(obj));
-				}
 			}
-#ifdef XAPIAND_V8
 		} while (true);
-	} catch(...) {
+	} catch (...) {
 		if (!prefixed_term_id.empty()) {
 			lock_database lk(this);
 			database->dec_count_document(prefixed_term_id);
