@@ -108,7 +108,7 @@ split_data_store(const std::string& data)
 		++p;
 		try {
 			length = unserialise_length(&p, p_end, true);
-		} catch (Xapian::SerialisationError) {
+		} catch (const Xapian::SerialisationError&) {
 			return std::make_pair(false, std::string());
 		}
 		stored_locator = std::string(p, length);
@@ -123,11 +123,11 @@ split_data_store(const std::string& data)
 		return std::make_pair(false, std::string());
 	}
 
-	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) {
-		return std::make_pair(false, std::string());
+	if (*(p + length) == DATABASE_DATA_FOOTER_MAGIC) {
+		return std::make_pair(true, stored_locator);
 	}
 
-	return std::make_pair(true, stored_locator);
+	return std::make_pair(false, std::string());
 }
 
 
@@ -145,7 +145,7 @@ split_data_obj(const std::string& data)
 		++p;
 		try {
 			length = unserialise_length(&p, p_end, true);
-		} catch (Xapian::SerialisationError) {
+		} catch (const Xapian::SerialisationError&) {
 			return std::string();
 		}
 		p += length;
@@ -155,15 +155,15 @@ split_data_obj(const std::string& data)
 
 	try {
 		length = unserialise_length(&p, p_end, true);
-	} catch (Xapian::SerialisationError) {
+	} catch (const Xapian::SerialisationError&) {
 		return std::string();
 	}
 
-	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) {
-		return std::string();
+	if (*(p + length) == DATABASE_DATA_FOOTER_MAGIC) {
+		return std::string(p, length);
 	}
 
-	return std::string(p, length);
+	return std::string();
 }
 
 
@@ -181,7 +181,7 @@ split_data_blob(const std::string& data)
 		++p;
 		try {
 			length = unserialise_length(&p, p_end, true);
-		} catch (Xapian::SerialisationError) {
+		} catch (const Xapian::SerialisationError&) {
 			return data;
 		}
 		p += length;
@@ -191,16 +191,17 @@ split_data_blob(const std::string& data)
 
 	try {
 		length = unserialise_length(&p, p_end, true);
-	} catch (Xapian::SerialisationError) {
+	} catch (const Xapian::SerialisationError&) {
 		return data;
 	}
 	p += length;
 
-	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) {
-		return data;
+	if (*p == DATABASE_DATA_FOOTER_MAGIC) {
+		++p;
+		return std::string(p, p_end - p);
 	}
 
-	return std::string(p, p_end - p);
+	return data;
 }
 
 
