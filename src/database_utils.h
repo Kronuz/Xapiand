@@ -234,3 +234,13 @@ rapidjson::Document to_json(const std::string& str);
 std::string msgpack_to_html(const msgpack::object& o);
 std::string msgpack_map_value_to_html(const msgpack::object& o);
 std::string msgpack_to_html_error(const msgpack::object& o);
+
+
+std::string join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob);
+std::pair<bool, std::string> split_data_store(const std::string& data);
+std::string split_data_obj(const std::string& data);
+std::string split_data_blob(const std::string& data);
+#ifdef XAPIAND_DATA_STORAGE
+std::tuple<ssize_t, size_t, size_t> storage_unserialise_locator(const std::string& store);
+std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size);
+#endif /* XAPIAND_DATA_STORAGE */

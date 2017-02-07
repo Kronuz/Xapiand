@@ -41,6 +41,7 @@
 #include "rapidjson/error/error.h"                   // for ParseResult
 #include "schema.h"                                  // for FieldType
 #include "serialise.h"                               // for SIZE_CURLY_BRACES_UUID
+#include "storage.h"                                 // for STORAGE_BIN_HEADER_MAGIC and STORAGE_BIN_FOOTER_MAGIC
 #include "utils.h"                                   // for random_int
 
 
@@ -321,3 +322,183 @@ std::string msgpack_to_html_error(const msgpack::object& o)
 
 	return html;
 }
+
+
+std::string join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob)
+{
+	L_CALL(nullptr, "::join_data(<stored>, <stored_locator>, <obj>, <blob>)");
+
+	auto obj_len = serialise_length(obj.size());
+	std::string data;
+	if (stored) {
+		auto stored_locator_len = serialise_length(stored_locator.size());
+		data.reserve(1 + obj_len.size() + obj.size() + stored_locator_len.size() + stored_locator.size() + 1 + blob.size());
+		data.push_back(DATABASE_DATA_HEADER_MAGIC_STORED);
+		data.append(stored_locator_len);
+		data.append(stored_locator);
+	} else {
+		data.reserve(1 + obj_len.size() + obj.size() + 1 + blob.size());
+		data.push_back(DATABASE_DATA_HEADER_MAGIC);
+	}
+	data.append(obj_len);
+	data.append(obj);
+	data.push_back(DATABASE_DATA_FOOTER_MAGIC);
+	data.append(blob);
+	return data;
+}
+
+
+std::pair<bool, std::string> split_data_store(const std::string& data)
+{
+	L_CALL(nullptr, "::split_data_store(<data>)");
+
+	std::string stored_locator;
+	size_t length;
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	if (*p == DATABASE_DATA_HEADER_MAGIC) {
+		return std::make_pair(false, std::string());
+	} else if (*p == DATABASE_DATA_HEADER_MAGIC_STORED) {
+		++p;
+		try {
+			length = unserialise_length(&p, p_end, true);
+		} catch (const Xapian::SerialisationError&) {
+			return std::make_pair(false, std::string());
+		}
+		stored_locator = std::string(p, length);
+		p += length;
+	} else {
+		return std::make_pair(false, std::string());
+	}
+
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (Xapian::SerialisationError) {
+		return std::make_pair(false, std::string());
+	}
+
+	if (*(p + length) == DATABASE_DATA_FOOTER_MAGIC) {
+		return std::make_pair(true, stored_locator);
+	}
+
+	return std::make_pair(false, std::string());
+}
+
+
+std::string split_data_obj(const std::string& data)
+{
+	L_CALL(nullptr, "::split_data_obj(<data>)");
+
+	size_t length;
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	if (*p == DATABASE_DATA_HEADER_MAGIC) {
+		++p;
+	} else if (*p == DATABASE_DATA_HEADER_MAGIC_STORED) {
+		++p;
+		try {
+			length = unserialise_length(&p, p_end, true);
+		} catch (const Xapian::SerialisationError&) {
+			return std::string();
+		}
+		p += length;
+	} else {
+		return std::string();
+	}
+
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (const Xapian::SerialisationError&) {
+		return std::string();
+	}
+
+	if (*(p + length) == DATABASE_DATA_FOOTER_MAGIC) {
+		return std::string(p, length);
+	}
+
+	return std::string();
+}
+
+
+std::string split_data_blob(const std::string& data)
+{
+	L_CALL(nullptr, "::split_data_blob(<data>)");
+
+	size_t length;
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	if (*p == DATABASE_DATA_HEADER_MAGIC) {
+		++p;
+	} else if (*p == DATABASE_DATA_HEADER_MAGIC_STORED) {
+		++p;
+		try {
+			length = unserialise_length(&p, p_end, true);
+		} catch (const Xapian::SerialisationError&) {
+			return data;
+		}
+		p += length;
+	} else {
+		return data;
+	}
+
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (const Xapian::SerialisationError&) {
+		return data;
+	}
+	p += length;
+
+	if (*p == DATABASE_DATA_FOOTER_MAGIC) {
+		++p;
+		return std::string(p, p_end - p);
+	}
+
+	return data;
+}
+
+
+#ifdef XAPIAND_DATA_STORAGE
+std::tuple<ssize_t, size_t, size_t> storage_unserialise_locator(const std::string& store)
+{
+	ssize_t volume;
+	size_t offset, size;
+
+	const char *p = store.data();
+	const char *p_end = p + store.size();
+	if (*p++ != STORAGE_BIN_HEADER_MAGIC) {
+		return std::make_tuple(-1, 0, 0);
+	}
+	try {
+		volume = unserialise_length(&p, p_end);
+	} catch (const Xapian::SerialisationError&) {
+		return std::make_tuple(-1, 0, 0);
+	}
+	try {
+		offset = unserialise_length(&p, p_end);
+	} catch (const Xapian::SerialisationError&) {
+		return std::make_tuple(-1, 0, 0);
+	}
+	try {
+		size = unserialise_length(&p, p_end);
+	} catch (const Xapian::SerialisationError&) {
+		return std::make_tuple(-1, 0, 0);
+	}
+	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) {
+		return std::make_tuple(-1, 0, 0);
+	}
+
+	return std::make_tuple(volume, offset, size);
+}
+
+
+std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size)
+{
+	std::string ret;
+	ret.append(1, STORAGE_BIN_HEADER_MAGIC);
+	ret.append(serialise_length(volume));
+	ret.append(serialise_length(offset));
+	ret.append(serialise_length(size));
+	ret.append(1, STORAGE_BIN_FOOTER_MAGIC);
+	return ret;
+}
+#endif /* XAPIAND_DATA_STORAGE */
