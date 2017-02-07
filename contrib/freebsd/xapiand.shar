@@ -109,7 +109,7 @@ X: ${xapiand_uid="%%XAPIAND_USER%%"}
 X: ${xapiand_gid="%%XAPIAND_GROUP%%"}
 X: ${xapiand_flags=""}
 X
-Xcommand_args="--detach --database=${xapiand_database} --pidfile=${xapiand_pidfile} --logfile=${xapiand_logfile} --verbosity=${xapiand_verbosity} --uid=${xapiand_uid} --gid=${xapiand_gid} ${xapiand_flags}"
+Xcommand_args="--detach --strict --database=${xapiand_database} --pidfile=${xapiand_pidfile} --logfile=${xapiand_logfile} --verbosity=${xapiand_verbosity} --uid=${xapiand_uid} --gid=${xapiand_gid} ${xapiand_flags}"
 X
 Xpidfile=${xapiand_pidfile}
 X
