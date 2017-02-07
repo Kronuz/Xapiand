@@ -1804,9 +1804,10 @@ Database::dec_count_document(const std::string& term_id)
  */
 
 
-DatabaseQueue::DatabaseQueue()
+DatabaseQueue::DatabaseQueue(bool volatile_)
 	: state(replica_state::REPLICA_FREE),
 	  persistent(false),
+	  _volatile(volatile_),
 	  count(0)
 {
 	L_OBJ(this, "CREATED DATABASE QUEUE!");
@@ -1903,18 +1904,24 @@ DatabasesLRU::DatabasesLRU(ssize_t max_size)
 
 
 std::shared_ptr<DatabaseQueue>&
-DatabasesLRU::operator[] (size_t key)
+DatabasesLRU::operator[] (std::pair<bool, size_t> key)
 {
 	try {
-		return at(key);
+		return at(key.second);
 	} catch (std::range_error) {
 		return insert_and([](std::shared_ptr<DatabaseQueue>& val) {
+			lru::DropAction drop_action;
 			if (val->persistent || val->size() < val->count || val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
-				return lru::DropAction::renew;
+				drop_action = lru::DropAction::renew;
 			} else {
-				return lru::DropAction::drop;
+				drop_action =  lru::DropAction::drop;
 			}
-		}, std::make_pair(key, std::make_shared<DatabaseQueue>()));
+			if (val->_volatile) {
+				return std::make_pair(lru::InsertAction::last, drop_action);
+			} else {
+				return std::make_pair(lru::InsertAction::front, drop_action);
+			}
+		}, std::make_pair(key.second, std::make_shared<DatabaseQueue>(key.first)));
 	}
 }
 
@@ -2038,12 +2045,13 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		std::lock_guard<std::mutex> lk(qmtx);
 
 		size_t hash = endpoints.hash();
+		auto index = std::make_pair(flags & DB_VOLATILE, hash);
 
 		std::shared_ptr<DatabaseQueue> queue;
 		if (flags & DB_WRITABLE) {
-			queue = writable_databases[hash];
+			queue = writable_databases[index];
 		} else {
-			queue = databases[hash];
+			queue = databases[index];
 		}
 
 		queue->checkin_callbacks.clear();
@@ -2074,6 +2082,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	bool persistent = flags & DB_PERSISTENT;
 	bool initref = flags & DB_INIT_REF;
 	bool replication = flags & DB_REPLICATION;
+	bool _volatile = flags & DB_VOLATILE;
 
 	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB [%s]: %s ...", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 
@@ -2086,14 +2095,15 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	if (!finished) {
 		size_t hash = endpoints.hash();
+		auto index = std::make_pair(_volatile, hash);
 		std::shared_ptr<DatabaseQueue> queue;
 
 		std::unique_lock<std::mutex> lk(qmtx);
 
 		if (writable) {
-			queue = writable_databases[hash];
+			queue = writable_databases[index];
 		} else {
-			queue = databases[hash];
+			queue = databases[index];
 		}
 
 		auto old_state = queue->state;
@@ -2238,9 +2248,9 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 				}
 			}
 		}
-		queue = writable_databases[database->hash];
+		queue = writable_databases[std::make_pair(false, database->hash)];
 	} else {
-		queue = databases[database->hash];
+		queue = databases[std::make_pair(false, database->hash)];
 	}
 
 	ASSERT(database->weak_queue.lock() == queue);
@@ -2460,7 +2470,7 @@ DatabasePool::recover_database(const Endpoints& endpoints, int flags)
 	if (flags & RECOVER_DECREMENT_COUT) {
 		/* Delete the count of the database creation */
 		/* Avoid mismatch between queue size and counter */
-		databases[hash]->dec_count();
+		databases[std::make_pair(false, hash)]->dec_count();
 	}
 
 	if ((flags & RECOVER_REMOVE_DATABASE) || (flags & RECOVER_REMOVE_ALL)) {

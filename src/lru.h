@@ -47,6 +47,12 @@ enum class GetAction : uint8_t {
 };
 
 
+enum class InsertAction : uint8_t {
+	front,
+	last,
+};
+
+
 template<typename Key, typename T>
 class LRU {
 protected:
@@ -178,34 +184,54 @@ public:
 		return (_max_size == -1) ? _items_map.max_size() : _max_size;
 	}
 
+	template<typename OnDrop>
+	void trim(const OnDrop& on_drop, ssize_t m_size) {
+		auto last(_items_list.rbegin());
+		for (size_t i= _items_map.size(); i != 0 && m_size > _max_size && last != _items_list.rend(); --i) {
+			auto it = --last.base();
+			switch (on_drop(it->second).second) {
+				case DropAction::renew:
+					_items_list.splice(_items_list.begin(), _items_list, it);
+					break;
+				case DropAction::leave:
+					break;
+				case DropAction::drop:
+					_items_map.erase(it->first);
+					_items_list.erase(it);
+					break;
+			}
+			last = _items_list.rbegin();
+		}
+	}
+
 	template<typename OnDrop, typename P>
 	T& insert_and(const OnDrop& on_drop, P&& p) {
 		erase(p.first);
 
-		_items_list.push_front(std::forward<P>(p));
-		auto first(_items_list.begin());
-		_items_map[first->first] = first;
+		switch (on_drop(p.second).first) {
+			case InsertAction::front: {
+				_items_list.push_front(std::forward<P>(p));
+				auto first(_items_list.begin());
+				_items_map[first->first] = first;
 
-		if (_max_size != -1) {
-			auto last(_items_list.rbegin());
-			for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); --i) {
-				auto it = --last.base();
-				switch (on_drop(it->second)) {
-					case DropAction::renew:
-						_items_list.splice(_items_list.begin(), _items_list, it);
-						break;
-					case DropAction::leave:
-						break;
-					case DropAction::drop:
-						_items_map.erase(it->first);
-						_items_list.erase(it);
-						break;
+				if (_max_size != -1) {
+					trim(on_drop, static_cast<ssize_t>(_items_map.size()));
 				}
-				last = _items_list.rbegin();
+				return first->second;
+			}
+			break;
+			case InsertAction::last:{
+				auto m_size = static_cast<ssize_t>(_items_map.size());
+				if (_max_size != -1 && m_size == _max_size) {
+					trim(on_drop, m_size + 1);
+				}
+
+				_items_list.push_back(std::forward<P>(p));
+				auto last(_items_list.rbegin());
+				_items_map[last->first] = --last.base();
+				return last->second;
 			}
 		}
-
-		return first->second;
 	}
 
 	template<typename OnDrop, typename... Args>

@@ -363,6 +363,7 @@ private:
 
 	replica_state state;
 	bool persistent;
+	bool _volatile;
 
 	size_t count;
 
@@ -374,7 +375,7 @@ private:
 	TaskQueue<> checkin_callbacks;
 
 public:
-	DatabaseQueue();
+	DatabaseQueue(bool volatile_=false);
 	DatabaseQueue(DatabaseQueue&&);
 	DatabaseQueue(const DatabaseQueue&) = delete;
 	~DatabaseQueue();
@@ -388,7 +389,7 @@ class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
 public:
 	DatabasesLRU(ssize_t max_size);
 
-	std::shared_ptr<DatabaseQueue>& operator[] (size_t key);
+	std::shared_ptr<DatabaseQueue>& operator[] (std::pair<bool, size_t> key);
 
 	void finish();
 };
