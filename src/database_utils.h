@@ -116,7 +116,7 @@
 #define DB_VERSION_SCHEMA      1.0
 
 #define DB_SLOT_RESERVED       20    // Reserved slots by special data
-#define DB_RETRIES             3     // Number of tries to do an operation on a Xapian::Database
+#define DB_RETRIES             3     // Number of tries to do an operation on a Xapian::Database or Document
 
 #define DB_SLOT_ID             0     // Slot ID document
 #define DB_SLOT_CONTENT_TYPE   1     // Slot content type data

@@ -909,24 +909,151 @@ Document::update()
 
 
 std::string
-Document::serialise()
+Document::serialise(size_t retries)
 {
-	L_CALL(this, "Document::serialise()");
+	L_CALL(this, "Document::serialise(%zu)", retries);
 
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-	return doc.serialise();
+	try {
+		DatabaseHandler::lock_database lk(db_handler);
+		update();
+		return doc.serialise();
+	} catch (const Xapian::DatabaseModifiedError& exc) {
+		if (retries) {
+			return serialise(--retries);
+		} else {
+			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+		}
+	}
 }
 
 
 std::string
-Document::get_value(Xapian::valueno slot)
+Document::get_value(Xapian::valueno slot, size_t retries)
 {
-	L_CALL(this, "Document::get_value(%u)", slot);
+	L_CALL(this, "Document::get_value(%u, %zu)", slot, retries);
 
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-	return doc.get_value(slot);
+	try {
+		DatabaseHandler::lock_database lk(db_handler);
+		update();
+		return doc.get_value(slot);
+	} catch (const Xapian::DatabaseModifiedError& exc) {
+		if (retries) {
+			return get_value(slot, --retries);
+		} else {
+			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+		}
+	}
+}
+
+
+std::string
+Document::get_data(size_t retries)
+{
+	L_CALL(this, "Document::get_data(%zu)", retries);
+
+	try {
+		DatabaseHandler::lock_database lk(db_handler);
+		update();
+		return doc.get_data();
+	} catch (const Xapian::DatabaseModifiedError& exc) {
+		if (retries) {
+			return get_data(--retries);
+		} else {
+			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+		}
+	}
+}
+
+
+std::string
+Document::get_blob(size_t retries)
+{
+	L_CALL(this, "Document::get_blob(%zu)", retries);
+
+	try {
+		DatabaseHandler::lock_database lk(db_handler);
+		update();
+		if (db_handler) {
+			return db_handler->database->storage_get_blob(doc);
+		} else {
+			auto data = doc.get_data();
+			return split_data_blob(data);
+		}
+	} catch (const Xapian::DatabaseModifiedError& exc) {
+		if (retries) {
+			return get_blob(--retries);
+		} else {
+			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+		}
+	}
+}
+
+
+MsgPack
+Document::get_terms(size_t retries)
+{
+	L_CALL(this, "get_terms(%zu)", retries);
+
+	try {
+		MsgPack terms;
+
+		DatabaseHandler::lock_database lk(db_handler);
+		update();
+
+		// doc.termlist_count() disassociates the database in doc.
+
+		const auto it_e = doc.termlist_end();
+		for (auto it = doc.termlist_begin(); it != it_e; ++it) {
+			auto& term = terms[*it];
+			term["_wdf"] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
+			try {
+				auto _term_freq = it.get_termfreq();  // The number of documents which this term indexes.
+				term["_term_freq"] = _term_freq;
+			} catch (const Xapian::InvalidOperationError&) { }  // Iterator has moved, and does not support random access or doc is not associated with a database.
+			if (it.positionlist_count()) {
+				auto& term_pos = term["_pos"];
+				term_pos.reserve(it.positionlist_count());
+				const auto pit_e = it.positionlist_end();
+				for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
+					term_pos.push_back(*pit);
+				}
+			}
+		}
+		return terms;
+	} catch (const Xapian::DatabaseModifiedError& exc) {
+		if (retries) {
+			return get_terms(--retries);
+		} else {
+			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+		}
+	}
+}
+
+
+MsgPack
+Document::get_values(size_t retries)
+{
+	L_CALL(this, "get_values(%zu)", retries);
+
+	try {
+		MsgPack values;
+
+		DatabaseHandler::lock_database lk(db_handler);
+		update();
+
+		values.reserve(doc.values_count());
+		const auto iv_e = doc.values_end();
+		for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
+			values[std::to_string(iv.get_valueno())] = *iv;
+		}
+		return values;
+	} catch (const Xapian::DatabaseModifiedError& exc) {
+		if (retries) {
+			return get_values(--retries);
+		} else {
+			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+		}
+	}
 }
 
 
@@ -940,33 +1067,6 @@ Document::get_value(const std::string& slot_name)
 		return Unserialise::MsgPack(slot_field.get_type(), get_value(slot_field.slot));
 	} else {
 		return MsgPack(MsgPack::Type::NIL);
-	}
-}
-
-
-std::string
-Document::get_data()
-{
-	L_CALL(this, "Document::get_data()");
-
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-	return doc.get_data();
-}
-
-
-std::string
-Document::get_blob()
-{
-	L_CALL(this, "Document::get_blob()");
-
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-	if (db_handler) {
-		return db_handler->database->storage_get_blob(doc);
-	} else {
-		auto data = doc.get_data();
-		return split_data_blob(data);
 	}
 }
 
@@ -986,60 +1086,6 @@ Document::get_obj()
 	L_CALL(this, "Document::get_obj()");
 
 	return MsgPack::unserialise(::split_data_obj(get_data()));
-}
-
-
-MsgPack
-Document::get_terms()
-{
-	L_CALL(this, "get_terms()");
-
-	MsgPack terms;
-
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-
-	// doc.termlist_count() disassociates the database in doc.
-
-	const auto it_e = doc.termlist_end();
-	for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-		auto& term = terms[*it];
-		term["_wdf"] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
-		try {
-			auto _term_freq = it.get_termfreq();  // The number of documents which this term indexes.
-			term["_term_freq"] = _term_freq;
-		} catch (const Xapian::InvalidOperationError&) { } // Iterator has moved, and does not support random access or doc is not associated with a database.
-		if (it.positionlist_count()) {
-			auto& term_pos = term["_pos"];
-			term_pos.reserve(it.positionlist_count());
-			const auto pit_e = it.positionlist_end();
-			for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
-				term_pos.push_back(*pit);
-			}
-		}
-	}
-
-	return terms;
-}
-
-
-MsgPack
-Document::get_values()
-{
-	L_CALL(this, "get_values()");
-
-	MsgPack values;
-
-	DatabaseHandler::lock_database lk(db_handler);
-	update();
-
-	values.reserve(doc.values_count());
-	const auto iv_e = doc.values_end();
-	for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
-		values[std::to_string(iv.get_valueno())] = *iv;
-	}
-
-	return values;
 }
 
 

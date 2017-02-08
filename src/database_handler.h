@@ -158,16 +158,16 @@ public:
 
 	Document& operator=(const Document& doc_);
 
-	std::string serialise();
+	std::string serialise(size_t retries=DB_RETRIES);
+	std::string get_value(Xapian::valueno slot, size_t retries=DB_RETRIES);
+	std::string get_data(size_t retries=DB_RETRIES);
+	std::string get_blob(size_t retries=DB_RETRIES);
+	MsgPack get_terms(size_t retries=DB_RETRIES);
+	MsgPack get_values(size_t retries=DB_RETRIES);
 
-	std::string get_value(Xapian::valueno slot);
 	MsgPack get_value(const std::string& slot_name);
-	std::string get_data();
-	std::string get_blob();
 	std::pair<bool, std::string> get_store();
 	MsgPack get_obj();
-	MsgPack get_terms();
-	MsgPack get_values();
 	MsgPack get_field(const std::string& slot_name);
 	static MsgPack get_field(const std::string& slot_name, const MsgPack& obj);
 };
