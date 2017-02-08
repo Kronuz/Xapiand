@@ -457,6 +457,16 @@ std::string split_data_blob(const std::string& data)
 }
 
 
+void split_path_id(const std::string& path_id, std::string& path, std::string& id)
+{
+	std::size_t found = path_id.find_last_of('/');
+	if (found != std::string::npos) {
+		path = path_id.substr(0, found);
+		id = path_id.substr(found + 1);
+	}
+}
+
+
 #ifdef XAPIAND_DATA_STORAGE
 std::tuple<ssize_t, size_t, size_t> storage_unserialise_locator(const std::string& store)
 {

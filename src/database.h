@@ -420,7 +420,7 @@ private:
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	bool _switch_db(const Endpoint& endpoint);
 	MsgPack get_shared_schema(const Endpoint& endpoint, const std::string& id, int flags=-1);
-	std::pair<bool, atomic_shared_ptr<const MsgPack>*> get_local_schema(const Endpoint& endpoint, int flags=-1, const MsgPack* obj=nullptr);
+	std::tuple<bool, atomic_shared_ptr<const MsgPack>*, std::string, std::string> get_local_schema(const Endpoint& endpoint, int flags=-1, const MsgPack* obj=nullptr);
 
 public:
 	queue::QueueSet<Endpoint> updated_databases;

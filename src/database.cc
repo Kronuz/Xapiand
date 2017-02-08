@@ -2319,22 +2319,40 @@ DatabasePool::get_master_count()
 }
 
 
-std::pair<bool, atomic_shared_ptr<const MsgPack>*>
+std::tuple<bool, atomic_shared_ptr<const MsgPack>*, std::string, std::string>
 DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPack* obj)
 {
 	bool created = false;
-	auto local_schema_hash = endpoint.hash();
+	const auto local_schema_hash = endpoint.hash();
+
 	atomic_shared_ptr<const MsgPack>* atom_local_schema;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
 		atom_local_schema = &schemas[local_schema_hash];
 	}
 	auto local_schema_ptr = atom_local_schema->load();
-	if (!local_schema_ptr) {
-		std::string str_schema;
+
+	std::string schema_path_str, schema_id;
+	if (local_schema_ptr) {
+		switch (local_schema_ptr->getType()) {
+			case MsgPack::Type::STR: {
+				const auto aux_schema_str = local_schema_ptr->as_string();
+				split_path_id(aux_schema_str, schema_path_str, schema_id);
+				if (schema_path_str.empty() || schema_id.empty()) {
+					THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must contain index and docid [%s]", DB_META_SCHEMA, aux_schema_str.c_str());
+				}
+				break;
+			}
+			case MsgPack::Type::MAP:
+				break;
+			default:
+				THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, MsgPackTypes[toUType(local_schema_ptr->getType())]);
+		}
+	} else {
 		std::shared_ptr<Database> database;
+		std::string str_schema;
 		if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-			str_schema.assign(database->get_metadata(DB_META_SCHEMA));
+			str_schema = database->get_metadata(DB_META_SCHEMA);
 			std::shared_ptr<const MsgPack> aux_schema_ptr;
 			if (str_schema.empty()) {
 				created = true;
@@ -2342,9 +2360,9 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 					const auto it = obj->find(RESERVED_SCHEMA);
 					if (it != obj->end()) {
 						const auto& path = it.value();
-						if (path.is_string()) {
+						try {
 							aux_schema_ptr = std::make_shared<const MsgPack>(path.as_string());
-						} else {
+						} catch (const msgpack::type_error&) {
 							checkin(database);
 							THROW(ClientError, "%s must be string", RESERVED_SCHEMA);
 						}
@@ -2359,15 +2377,32 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 					aux_schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
 				} catch (const msgpack::unpack_error& e) {
 					checkin(database);
-					THROW(SerialisationError, "Unpack error: %s", e.what());
+					THROW(Error, "Metadata %s is corrupt, you need provide a new one [%s]", DB_META_SCHEMA, e.what());
 				}
 			}
 			aux_schema_ptr->lock();
-			if (atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr)) {
-				local_schema_ptr = aux_schema_ptr;
-				if (str_schema.empty()) {
-					database->set_metadata(DB_META_SCHEMA, local_schema_ptr->serialise());
+
+			switch (aux_schema_ptr->getType()) {
+				case MsgPack::Type::STR: {
+					const auto aux_schema_str = aux_schema_ptr->as_string();
+					split_path_id(aux_schema_str, schema_path_str, schema_id);
+					if (schema_path_str.empty() || schema_id.empty()) {
+						if (created) {
+							THROW(ClientError, "%s must contain index and docid [%s]", RESERVED_SCHEMA, aux_schema_str.c_str());
+						} else {
+							THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must contain index and docid [%s]", DB_META_SCHEMA, aux_schema_str.c_str());
+						}
+					}
+					break;
 				}
+				case MsgPack::Type::MAP:
+					break;
+				default:
+					THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, MsgPackTypes[toUType(aux_schema_ptr->getType())]);
+			}
+
+			if (atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr) && str_schema.empty()) {
+				database->set_metadata(DB_META_SCHEMA, aux_schema_ptr->serialise());
 			}
 			checkin(database);
 		} else {
@@ -2375,11 +2410,7 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 		}
 	}
 
-	if (!local_schema_ptr->is_map() && !local_schema_ptr->is_string()) {
-		THROW(Error, "Invalid type for schema: %s", repr(endpoint.to_string()).c_str());
-	}
-
-	return std::make_pair(created, atom_local_schema);
+	return std::make_tuple(created, atom_local_schema, std::move(schema_path_str), std::move(schema_id));
 }
 
 
@@ -2406,29 +2437,27 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 
 	if (finished) return nullptr;
 
-	auto atom_local_schema = get_local_schema(endpoint, flags, obj);
+	auto info_local_schema = get_local_schema(endpoint, flags, obj);
 
-	auto schema_ptr = atom_local_schema.second->load();
-	if (schema_ptr->is_string()) {
-		const auto schema_str = schema_ptr->as_string();
-		const auto schema_path = split_index(schema_str);
-		if (schema_path.first.empty() || schema_path.second.empty()) {
-			THROW(ClientError, "%s must contain index and docid [%s]", RESERVED_SCHEMA, schema_str.c_str());
-		}
-		auto shared_schema_hash = std::hash<std::string>{}(schema_path.first);
+	const auto path_schema = std::get<2>(info_local_schema);
+	if (path_schema.empty()) {
+		return std::get<1>(info_local_schema)->load();
+	} else {
+		const auto shared_schema_hash = std::hash<std::string>{}(path_schema);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
 			atom_shared_schema = &schemas[shared_schema_hash];
 		}
 		auto shared_schema_ptr = atom_shared_schema->load();
+		std::shared_ptr<const MsgPack> schema_ptr;
 		if (shared_schema_ptr) {
 			schema_ptr = shared_schema_ptr;
 		} else {
-			if (atom_local_schema.first) {
+			if (std::get<0>(info_local_schema)) {
 				schema_ptr = Schema::get_initial_schema();
 			} else {
-				schema_ptr = std::make_shared<const MsgPack>(get_shared_schema(schema_path.first, schema_path.second));
+				schema_ptr = std::make_shared<const MsgPack>(get_shared_schema(path_schema, std::get<3>(info_local_schema)));
 			}
 			schema_ptr->lock();
 			if (!atom_shared_schema->compare_exchange_strong(shared_schema_ptr, schema_ptr)) {
@@ -2438,9 +2467,8 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 		if (!schema_ptr->is_map()) {
 			THROW(Error, "Schema must be a map [%s]", repr(endpoint.to_string()).c_str());
 		}
+		return schema_ptr;
 	}
-
-	return schema_ptr;
 }
 
 
@@ -2449,16 +2477,22 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 {
 	L_CALL(this, "DatabasePool::set_schema(%s, %d, <old_schema>, %s)", repr(endpoint.to_string()).c_str(), flags, new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
 
-	auto atom_local_schema = get_local_schema(endpoint, flags);
-	auto local_schema_ptr = atom_local_schema.second->load();
+	auto info_local_schema = get_local_schema(endpoint, flags);
 
-	if (local_schema_ptr->is_string()) {
-		const auto schema_str = local_schema_ptr->as_string();
-		const auto schema_path = split_index(schema_str);
-		if (schema_path.first.empty() || schema_path.second.empty()) {
-			THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must contain index and docid [%s]", DB_META_SCHEMA, schema_str.c_str());
+	const auto path_schema = std::get<2>(info_local_schema);
+	if (path_schema.empty()) {
+		if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
+			std::shared_ptr<Database> database;
+			if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
+				database->set_metadata(DB_META_SCHEMA, new_schema->serialise());
+				checkin(database);
+				return true;
+			} else {
+				THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
+			}
 		}
-		auto shared_schema_hash = std::hash<std::string>{}(schema_path.first);
+	} else {
+		const auto shared_schema_hash = std::hash<std::string>{}(path_schema);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
@@ -2470,33 +2504,23 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 		}
 		if (atom_shared_schema->compare_exchange_strong(aux_schema, new_schema)) {
 			DatabaseHandler db_handler;
-			Endpoint shared_endpoint(schema_path.first);
+			Endpoint shared_endpoint(path_schema);
 			try {
-				db_handler.reset(shared_endpoint, DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_GET);
-				MsgPack shared_schema;
-				shared_schema = *new_schema;
+				db_handler.reset(shared_endpoint, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+				MsgPack shared_schema = *new_schema;
 				shared_schema[RESERVED_RECURSE] = false;
-				db_handler.index(schema_path.second, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
 				if (XapiandManager::manager->strict) {
 					shared_schema[ID_FIELD_NAME][RESERVED_TYPE] = TERM_STR;
 				}
+				db_handler.index(std::get<3>(info_local_schema), true, shared_schema, false, MSGPACK_CONTENT_TYPE);
 				return true;
 			} catch (const CheckoutError&) {
-				THROW(CheckoutError, "Cannot checkout document: %s", repr(schema_path.first).c_str());
+				THROW(CheckoutError, "Cannot checkout database: %s", repr(path_schema).c_str());
+			} catch (const DocNotFoundError&) {
+				THROW(CheckoutError, "Cannot found document: %s/%s", repr(path_schema).c_str(), repr(std::get<3>(info_local_schema)).c_str());
 			}
 		} else {
 			old_schema = aux_schema;
-		}
-	} else {
-		if (atom_local_schema.second->compare_exchange_strong(old_schema, new_schema)) {
-			std::shared_ptr<Database> database;
-			if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-				database->set_metadata(DB_META_SCHEMA, new_schema->serialise());
-				checkin(database);
-				return true;
-			} else {
-				THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
-			}
 		}
 	}
 
