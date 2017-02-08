@@ -1407,6 +1407,9 @@ HttpClient::search_view(enum http_method method, Command)
 			auto document = db_handler.get_document(*m);
 
 			const auto data = document.get_data();
+			if (data.empty()) {
+				continue;
+			}
 
 			MsgPack obj_data;
 			if (chunked) {
