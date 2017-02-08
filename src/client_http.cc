@@ -1402,22 +1402,25 @@ HttpClient::search_view(enum http_method method, Command)
 		}
 
 		std::string buffer;
-		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
+		const auto m_e = mset.end();
+		for (auto m = mset.begin(); m != m_e; ++rc, ++m) {
 			auto document = db_handler.get_document(*m);
+
+			const auto data = document.get_data();
 
 			MsgPack obj_data;
 			if (chunked) {
-				obj_data = document.get_obj();
+				obj_data = MsgPack::unserialise(::split_data_obj(data));
 			} else {
 				std::string blob;
 				std::string ct_type_str;
-				auto store = document.get_store();
+				auto store = ::split_data_store(data);
 				if (!store.first) {
 					blob = document.get_blob();
 					ct_type_str = unserialise_string_at(1, blob);
 				}
 				if (ct_type_str.empty()) {
-					auto ct_type_mp = document.get_field(CT_FIELD_NAME);
+					const auto ct_type_mp = Document::get_field(CT_FIELD_NAME, obj_data);
 					ct_type_str = ct_type_mp ? ct_type_mp.as_string() : MSGPACK_CONTENT_TYPE;
 				}
 				ct_type = resolve_ct_type(ct_type_str);
@@ -1433,7 +1436,7 @@ HttpClient::search_view(enum http_method method, Command)
 				}
 
 				if (is_acceptable_type(ct_type, msgpack_serializers)) {
-					obj_data = document.get_obj();
+					obj_data = MsgPack::unserialise(::split_data_obj(data));
 				} else {
 					// Returns blob_data in case that type is unkown
 					if (blob.empty()) {
@@ -1455,8 +1458,9 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 
 			if (obj_data.find(ID_FIELD_NAME) == obj_data.end()) {
-				obj_data[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME) || document.get_value(ID_FIELD_NAME);
+				obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 			}
+
 			// Detailed info about the document:
 			obj_data[RESERVED_RANK] = m.get_rank();
 			obj_data[RESERVED_WEIGHT] = m.get_weight();
