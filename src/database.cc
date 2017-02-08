@@ -2413,7 +2413,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 		const auto schema_str = schema_ptr->as_string();
 		const auto schema_path = split_index(schema_str);
 		if (schema_path.first.empty() || schema_path.second.empty()) {
-			THROW(ClientError, "Error _schema must contain index and docid: %s ", schema_str.c_str());
+			THROW(ClientError, "%s must contain index and docid [%s]", DB_META_SCHEMA, schema_str.c_str());
 		}
 		auto shared_schema_hash = std::hash<std::string>{}(schema_path.first);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
@@ -2449,11 +2449,15 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 {
 	L_CALL(this, "DatabasePool::set_schema(%s, %d, <old_schema>, %s)", repr(endpoint.to_string()).c_str(), flags, new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
 
-	auto atom_local_schema = get_local_schema(endpoint, flags, nullptr);
+	auto atom_local_schema = get_local_schema(endpoint, flags);
 	auto local_schema_ptr = atom_local_schema.second->load();
 
 	if (local_schema_ptr->is_string()) {
-		auto schema_path = split_index(local_schema_ptr->as_string());
+		const auto schema_str = local_schema_ptr->as_string();
+		const auto schema_path = split_index(schema_str);
+		if (schema_path.first.empty() || schema_path.second.empty()) {
+			THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must contain index and docid [%s]", DB_META_SCHEMA, schema_str.c_str());
+		}
 		auto shared_schema_hash = std::hash<std::string>{}(schema_path.first);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 		{
