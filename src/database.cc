@@ -2439,11 +2439,12 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 
 	const auto info_local_schema = get_local_schema(endpoint, flags, obj);
 
-	const auto& path_schema = std::get<2>(info_local_schema);
-	if (path_schema.empty()) {
+	const auto& schema_path = std::get<2>(info_local_schema);
+	if (schema_path.empty()) {
 		return std::get<1>(info_local_schema)->load();
 	} else {
-		const auto shared_schema_hash = std::hash<std::string>{}(path_schema);
+		const auto& schema_id = std::get<3>(info_local_schema);
+		const auto shared_schema_hash = std::hash<std::string>{}(schema_path + schema_id);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
@@ -2457,7 +2458,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 			if (std::get<0>(info_local_schema)) {
 				schema_ptr = Schema::get_initial_schema();
 			} else {
-				schema_ptr = std::make_shared<const MsgPack>(get_shared_schema(path_schema, std::get<3>(info_local_schema)));
+				schema_ptr = std::make_shared<const MsgPack>(get_shared_schema(schema_path, schema_id));
 			}
 			schema_ptr->lock();
 			if (!atom_shared_schema->compare_exchange_strong(shared_schema_ptr, schema_ptr)) {
@@ -2479,8 +2480,8 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 
 	const auto info_local_schema = get_local_schema(endpoint, flags);
 
-	const auto& path_schema = std::get<2>(info_local_schema);
-	if (path_schema.empty()) {
+	const auto& schema_path = std::get<2>(info_local_schema);
+	if (schema_path.empty()) {
 		if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
 			std::shared_ptr<Database> database;
 			if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
@@ -2492,7 +2493,8 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 			}
 		}
 	} else {
-		const auto shared_schema_hash = std::hash<std::string>{}(path_schema);
+		const auto& schema_id = std::get<3>(info_local_schema);
+		const auto shared_schema_hash = std::hash<std::string>{}(schema_path + schema_id);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
@@ -2504,21 +2506,17 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 		}
 		if (atom_shared_schema->compare_exchange_strong(aux_schema, new_schema)) {
 			DatabaseHandler db_handler;
-			Endpoint shared_endpoint(path_schema);
-			const auto& doc_id = std::get<3>(info_local_schema);
+			Endpoint shared_endpoint(schema_path);
 			try {
 				db_handler.reset(shared_endpoint, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 				MsgPack shared_schema = *new_schema;
-				shared_schema[DB_META_SCHEMA][RESERVED_RECURSE] = false;
-				if (XapiandManager::manager->strict) {
-					shared_schema[ID_FIELD_NAME][RESERVED_TYPE] = Serialise::type(Serialise::get_type(doc_id).first);
-				}
-				db_handler.index(doc_id, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
+				shared_schema[RESERVED_RECURSE] = false;
+				db_handler.index(schema_id, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
 				return true;
 			} catch (const CheckoutError&) {
-				THROW(CheckoutError, "Cannot checkout database: %s", repr(path_schema).c_str());
+				THROW(CheckoutError, "Cannot checkout database: %s", repr(schema_path).c_str());
 			} catch (const DocNotFoundError&) {
-				THROW(CheckoutError, "Cannot found document: %s/%s", repr(path_schema).c_str(), repr(doc_id).c_str());
+				THROW(CheckoutError, "Cannot found document: %s/%s", repr(schema_path).c_str(), repr(schema_id).c_str());
 			}
 		} else {
 			old_schema = aux_schema;
