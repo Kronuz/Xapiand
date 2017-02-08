@@ -666,13 +666,13 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) THROW(Error, "Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const QueryParserError& exc) {
-			THROW(ClientError, "%s", exc.what());
+			THROW(ClientError, exc.what());
 		} catch (const SerialisationError& exc) {
-			THROW(ClientError, "%s", exc.what());
+			THROW(ClientError, exc.what());
 		} catch (const QueryDslError& exc) {
-			THROW(ClientError, "%s", exc.what());
+			THROW(ClientError, exc.what());
 		} catch (const Xapian::QueryParserError& exc) {
-			THROW(ClientError, "%s", exc.get_msg().c_str());
+			THROW(ClientError, exc.get_msg().c_str());
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_msg().c_str());
 		} catch (const std::exception& exc) {

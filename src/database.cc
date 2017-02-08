@@ -2413,7 +2413,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 		const auto schema_str = schema_ptr->as_string();
 		const auto schema_path = split_index(schema_str);
 		if (schema_path.first.empty() || schema_path.second.empty()) {
-			THROW(ClientError, "%s must contain index and docid [%s]", DB_META_SCHEMA, schema_str.c_str());
+			THROW(ClientError, "%s must contain index and docid [%s]", RESERVED_SCHEMA, schema_str.c_str());
 		}
 		auto shared_schema_hash = std::hash<std::string>{}(schema_path.first);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
