@@ -2437,9 +2437,9 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 
 	if (finished) return nullptr;
 
-	auto info_local_schema = get_local_schema(endpoint, flags, obj);
+	const auto info_local_schema = get_local_schema(endpoint, flags, obj);
 
-	const auto path_schema = std::get<2>(info_local_schema);
+	const auto& path_schema = std::get<2>(info_local_schema);
 	if (path_schema.empty()) {
 		return std::get<1>(info_local_schema)->load();
 	} else {
@@ -2477,9 +2477,9 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 {
 	L_CALL(this, "DatabasePool::set_schema(%s, %d, <old_schema>, %s)", repr(endpoint.to_string()).c_str(), flags, new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
 
-	auto info_local_schema = get_local_schema(endpoint, flags);
+	const auto info_local_schema = get_local_schema(endpoint, flags);
 
-	const auto path_schema = std::get<2>(info_local_schema);
+	const auto& path_schema = std::get<2>(info_local_schema);
 	if (path_schema.empty()) {
 		if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
 			std::shared_ptr<Database> database;
@@ -2505,19 +2505,20 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 		if (atom_shared_schema->compare_exchange_strong(aux_schema, new_schema)) {
 			DatabaseHandler db_handler;
 			Endpoint shared_endpoint(path_schema);
+			const auto& doc_id = std::get<3>(info_local_schema);
 			try {
 				db_handler.reset(shared_endpoint, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 				MsgPack shared_schema = *new_schema;
-				shared_schema[RESERVED_RECURSE] = false;
+				shared_schema[DB_META_SCHEMA][RESERVED_RECURSE] = false;
 				if (XapiandManager::manager->strict) {
-					shared_schema[ID_FIELD_NAME][RESERVED_TYPE] = TERM_STR;
+					shared_schema[ID_FIELD_NAME][RESERVED_TYPE] = Serialise::type(Serialise::get_type(doc_id).first);
 				}
-				db_handler.index(std::get<3>(info_local_schema), true, shared_schema, false, MSGPACK_CONTENT_TYPE);
+				db_handler.index(doc_id, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
 				return true;
 			} catch (const CheckoutError&) {
 				THROW(CheckoutError, "Cannot checkout database: %s", repr(path_schema).c_str());
 			} catch (const DocNotFoundError&) {
-				THROW(CheckoutError, "Cannot found document: %s/%s", repr(path_schema).c_str(), repr(std::get<3>(info_local_schema)).c_str());
+				THROW(CheckoutError, "Cannot found document: %s/%s", repr(path_schema).c_str(), repr(doc_id).c_str());
 			}
 		} else {
 			old_schema = aux_schema;
