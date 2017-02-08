@@ -378,11 +378,11 @@ void move_files(const std::string& src, const std::string& dst) {
 
 
 std::pair<std::string, std::string> split_index(const std::string& path) {
-	std::size_t found = path.find_last_of("/");
+	std::size_t found = path.find_last_of('/');
 	if (found != std::string::npos) {
-		return std::make_pair(path.substr(0, found), path.substr(found+1));
+		return std::make_pair(path.substr(0, found), path.substr(found + 1));
 	}
-	return std::make_pair(std::string(""), std::string(""));
+	return std::make_pair(std::string(), std::string());
 }
 
 
