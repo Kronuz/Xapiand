@@ -2417,7 +2417,7 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 MsgPack
 DatabasePool::get_shared_schema(const Endpoint& endpoint, const std::string& id, int flags)
 {
-	L_CALL(this, "DatabasePool::get_shared_schema(%s)(%s)", repr(endpoint.to_string()).c_str(), id.c_str());
+	L_CALL(this, "DatabasePool::get_shared_schema(%s, %s, %d)", repr(endpoint.to_string()).c_str(), id.c_str(), flags);
 
 	try {
 		DatabaseHandler db_handler;
@@ -2425,7 +2425,7 @@ DatabasePool::get_shared_schema(const Endpoint& endpoint, const std::string& id,
 		auto doc = db_handler.get_document(id);
 		return doc.get_obj();
 	} catch (const DocNotFoundError&) {
-		THROW(DocNotFoundError, "In shared schema %s document not found: %s", repr(endpoint.to_string()).c_str());
+		THROW(DocNotFoundError, "In shared schema %s document not found: %s", repr(endpoint.to_string()).c_str(), id.c_str());
 	}
 }
 
