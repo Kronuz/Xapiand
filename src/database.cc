@@ -2410,9 +2410,10 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags, const MsgPack* obj
 
 	auto schema_ptr = atom_local_schema.second->load();
 	if (schema_ptr->is_string()) {
-		auto schema_path = split_index(schema_ptr->as_string());
+		const auto schema_str = schema_ptr->as_string();
+		const auto schema_path = split_index(schema_str);
 		if (schema_path.first.empty() || schema_path.second.empty()) {
-			THROW(ClientError, "Error _schema must contain index and docid: %s ", schema_ptr->as_string().c_str());
+			THROW(ClientError, "Error _schema must contain index and docid: %s ", schema_str.c_str());
 		}
 		auto shared_schema_hash = std::hash<std::string>{}(schema_path.first);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
