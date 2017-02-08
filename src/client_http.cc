@@ -76,12 +76,11 @@
 
 
 type_t content_type_pair(const std::string& ct_type) {
-	std::size_t found = ct_type.find_last_of("/");
+	const std::size_t found = ct_type.find_last_of('/');
 	if (found == std::string::npos) {
 		return  make_pair(std::string(), std::string());
 	}
-	const char* content_type_str = ct_type.c_str();
-	return make_pair(std::string(content_type_str, found), std::string(content_type_str, found + 1, ct_type.size()));
+	return make_pair(std::string(ct_type, 0, found), std::string(ct_type, found + 1));
 }
 
 
