@@ -84,14 +84,14 @@ type_t content_type_pair(const std::string& ct_type) {
 }
 
 
-static const auto no_type        = std::make_pair("", "");
-static const auto any_type       = content_type_pair(ANY_CONTENT_TYPE);
-static const auto html_type      = content_type_pair(HTML_CONTENT_TYPE);
-static const auto text_type      = content_type_pair(TEXT_CONTENT_TYPE);
-static const auto json_type      = content_type_pair(JSON_CONTENT_TYPE);
-static const auto msgpack_type   = content_type_pair(MSGPACK_CONTENT_TYPE);
-static const auto x_msgpack_type = content_type_pair(X_MSGPACK_CONTENT_TYPE);
-static const auto msgpack_serializers = std::vector<type_t>({json_type, msgpack_type, x_msgpack_type, html_type, text_type});
+static const auto no_type             = std::make_pair("", "");
+static const auto any_type            = content_type_pair(ANY_CONTENT_TYPE);
+static const auto html_type           = content_type_pair(HTML_CONTENT_TYPE);
+static const auto text_type           = content_type_pair(TEXT_CONTENT_TYPE);
+static const auto json_type           = content_type_pair(JSON_CONTENT_TYPE);
+static const auto msgpack_type        = content_type_pair(MSGPACK_CONTENT_TYPE);
+static const auto x_msgpack_type      = content_type_pair(X_MSGPACK_CONTENT_TYPE);
+static const auto msgpack_serializers = std::vector<type_t>({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
 
 
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;\\s*q=(\\d+(?:\\.\\d+)?))?");
@@ -1328,7 +1328,6 @@ HttpClient::search_view(enum http_method method, Command)
 			{ RESPONSE_MESSAGE, http_status_str(error_code) }
 		};
 		write_http_response(error_code, err_response);
-
 	} else {
 		auto type_encoding = resolve_encoding();
 		if (type_encoding == Encoding::unknown) {
