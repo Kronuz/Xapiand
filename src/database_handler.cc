@@ -954,7 +954,13 @@ Document::get_data(size_t retries)
 	try {
 		DatabaseHandler::lock_database lk(db_handler);
 		update();
-		return doc.get_data();
+		const auto data = doc.get_data();
+		if (data.empty()) {
+			static const auto def_data = join_data(false, "", MsgPack().serialise(), "");
+			return def_data;
+		} else {
+			return data;
+		}
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries) {
 			return get_data(--retries);
