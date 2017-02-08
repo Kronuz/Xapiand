@@ -517,15 +517,15 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 					break;
 				case 'w': {
 					auto dateGMT = timegm(tm);
-					struct tm* timeinfo = nullptr;
-					gmtime_r(&dateGMT, timeinfo);
+					struct tm timeinfo;
+					gmtime_r(&dateGMT, &timeinfo);
 					if (op.length() == 1) {
-						tm.day += 6 - timeinfo->tm_wday;
+						tm.day += 6 - timeinfo.tm_wday;
 						tm.hour = 23;
 						tm.min = tm.sec = 59;
 						tm.msec = 999;
 					} else if (op.length() == 2 && op[1] == '/') {
-						tm.day -= timeinfo->tm_wday;
+						tm.day -= timeinfo.tm_wday;
 						tm.hour = tm.min = tm.sec = tm.msec = 0;
 					} else {
 						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op.c_str());
@@ -580,14 +580,14 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 
 	// Update date.
 	auto dateGMT = timegm(tm);
-	struct tm* timeinfo = nullptr;
-	gmtime_r(&dateGMT, timeinfo);
-	tm.year = timeinfo->tm_year + _START_YEAR;
-	tm.mon = timeinfo->tm_mon + 1;
-	tm.day = timeinfo->tm_mday;
-	tm.hour = timeinfo->tm_hour;
-	tm.min = timeinfo->tm_min;
-	tm.sec = timeinfo->tm_sec;
+	struct tm timeinfo;
+	gmtime_r(&dateGMT, &timeinfo);
+	tm.year = timeinfo.tm_year + _START_YEAR;
+	tm.mon = timeinfo.tm_mon + 1;
+	tm.day = timeinfo.tm_mday;
+	tm.hour = timeinfo.tm_hour;
+	tm.min = timeinfo.tm_min;
+	tm.sec = timeinfo.tm_sec;
 }
 
 
