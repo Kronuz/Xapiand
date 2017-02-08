@@ -4613,7 +4613,7 @@ Schema::consistency_version(const std::string& prop_name, const MsgPack& doc_ver
 	// RESERVED_VERSION isn't heritable and only is allowed in root.
 	L_CALL(this, "Schema::consistency_version(%s)", repr(doc_version.to_string()).c_str());
 
-	if (specification.full_meta_name.empty()) {
+	if (specification.full_meta_name.empty() || specification.full_meta_name == DB_META_SCHEMA) {
 		try {
 			const auto _version = doc_version.as_f64();
 			if (_version != DB_VERSION_SCHEMA) {
