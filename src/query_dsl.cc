@@ -87,12 +87,19 @@ QueryDSL::QueryDSL(const std::shared_ptr<Schema>& schema_)
 FieldType
 QueryDSL::get_in_type(const MsgPack& obj)
 {
-	if (obj.find("_range") != obj.end()) {
-		const auto& range = obj.at("_range");
-		if (range.find("_from") != range.end()) {
-			return std::get<0>(Serialise::get_type(range.at("_from")));
-		} else if (range.find("_to") != range.end()) {
-			return std::get<0>(Serialise::get_type(range.at("_to")));
+	L_CALL(this, "QueryDSL::get_in_type(%s)", repr(obj.to_string()).c_str());
+
+	auto it = obj.find("_range");
+	if (it != obj.end()) {
+		const auto& range = it.value();
+		auto it_f = range.find("_from");
+		if (it_f != range.end()) {
+			return std::get<0>(Serialise::get_type(it_f.value()));
+		} else {
+			auto it_t = range.find("_to");
+			if (it_t != range.end()) {
+				return std::get<0>(Serialise::get_type(it_t.value()));
+			}
 		}
 	}
 	return FieldType::EMPTY;
@@ -102,6 +109,8 @@ QueryDSL::get_in_type(const MsgPack& obj)
 std::pair<FieldType, MsgPack>
 QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
 {
+	L_CALL(this, "QueryDSL::parse_range(<field_spc>, %s)", repr(range).c_str());
+
 	FieldParser fp(range);
 	fp.parse();
 	if (!fp.is_range()) {
@@ -110,7 +119,7 @@ QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
 	MsgPack value;
 	auto& _range = value["_range"];
 	auto start = fp.get_start();
-	FieldType field_type = FieldType::EMPTY;
+	auto field_type = FieldType::EMPTY;
 	if (!start.empty()) {
 		auto& obj = _range["_from"] = Cast::cast(field_spc.get_type(), start);
 		field_type = std::get<0>(Serialise::get_type(obj));
@@ -130,7 +139,7 @@ QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
 Xapian::Query
 QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
 {
-	L_CALL(this, "QueryDSL::process(%d, %s, %s)", (int)op, repr(parent).c_str(), repr(obj.to_string()).c_str());
+	L_CALL(this, "QueryDSL::process(%d, %s, %s, <wqf>, <q_flags>, %s, %s)", (int)op, repr(parent).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false");
 
 	Xapian::Query final_query;
 	if (op == Xapian::Query::OP_AND_NOT) {
@@ -138,10 +147,11 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 	}
 
 	switch (obj.getType()) {
-		case MsgPack::Type::MAP:
-			for (auto const& field : obj) {
-				auto field_name = field.as_string();
-				auto const& o = obj.at(field_name);
+		case MsgPack::Type::MAP: {
+			const auto it_e = obj.end();
+			for (auto it = obj.begin(); it != it_e; ++it) {
+				const auto field_name = it->as_string();
+				auto const& o = it.value();
 
 				L_QUERY(this, BLUE "%s = %s" NO_COL, field_name.c_str(), o.to_string().c_str());
 
@@ -153,6 +163,8 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 					query = process(op, parent, o, wqf, q_flags, is_raw, true);
 				} else if (field_name == RESERVED_VALUE) {
 					query = get_value_query(op, parent, o, wqf, q_flags, is_raw, is_in);
+				} else if (field_name == "_range") {
+					query = get_value_query(op, parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in);
 				} else {
 					auto it = ops_map.find(field_name);
 					if (it != ops_map.end()) {
@@ -167,6 +179,7 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
 			}
 			break;
+		}
 
 		case MsgPack::Type::ARRAY:
 			for (auto const& o : obj) {
@@ -190,24 +203,11 @@ QueryDSL::get_value_query(Xapian::Query::op op, const std::string& path, const M
 	L_CALL(this, "QueryDSL::get_value_query(%d, %s, %s, <wqf>, <q_flags>, %s, %s)", (int)op, repr(path).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false");
 
 	if (path.empty()) {
-		FieldType field_type;
-		MsgPack aux;
-		const MsgPack* pobj;
-		if (is_raw && obj.is_string()) {
-			if (is_in) {
-				field_type = FieldType::TEXT;
-				pobj = &obj;
-			} else {
-				aux = Cast::cast(FieldType::EMPTY, obj.as_string());
-				field_type = std::get<0>(Serialise::get_type(aux));
-				pobj = &aux;
-			}
-		} else {
-			field_type = std::get<0>(Serialise::get_type(obj));
-			pobj = &obj;
+		if (!is_in && is_raw && obj.is_string()) {
+			const auto aux = Cast::cast(FieldType::EMPTY, obj.as_string());
+			return get_namespace_query(default_spc, op, aux, wqf, q_flags, is_in);
 		}
-		const auto& global_spc = specification_t::get_global(field_type);
-		return get_regular_query(global_spc, op, *pobj, wqf, q_flags, is_in);
+		return get_namespace_query(default_spc, op, obj, wqf, q_flags, is_in);
 	} else {
 		auto data_field = schema->get_data_field(path, is_in);
 		const auto& field_spc = data_field.first;
@@ -351,10 +351,20 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 	if (is_in) {
 		if (obj.is_string()) {
 			auto parsed = parse_range(field_spc, obj.as_string());
-			auto spc = Schema::get_namespace_specification(parsed.first, field_spc.prefix);
+			required_spc_t spc;
+			if (field_spc.prefix.empty()) {
+				spc = specification_t::get_global(parsed.first);
+			} else {
+				spc = Schema::get_namespace_specification(parsed.first, field_spc.prefix);
+			}
 			return get_in_query(spc, op, parsed.second);
 		} else {
-			auto spc = Schema::get_namespace_specification(get_in_type(obj), field_spc.prefix);
+			required_spc_t spc;
+			if (field_spc.prefix.empty()) {
+				spc = specification_t::get_global(get_in_type(obj));
+			} else {
+				spc = Schema::get_namespace_specification(get_in_type(obj), field_spc.prefix);
+			}
 			return get_in_query(spc, op, obj);
 		}
 	}
