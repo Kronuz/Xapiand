@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -83,7 +83,7 @@ namespace Datetime {
 	bool isleapRef_year(int tm_year);
 	int getDays_month(int year, int month);
 	std::time_t toordinal(int year, int month, int day);
-	std::time_t timegm(std::tm* tm);
+	std::time_t timegm(const std::tm& tm);
 	std::time_t timegm(tm_t& tm);
 	tm_t to_tm_t(double timestamp);
 	tm_t to_tm_t(const std::string& date);
@@ -94,7 +94,7 @@ namespace Datetime {
 	double timestamp(const MsgPack& value);
 	double timestamp(const MsgPack& value, tm_t& tm);
 	bool isvalidDate(int year, int month, int day);
-	std::string isotime(const std::tm* timep);
+	std::string isotime(const std::tm& timep);
 	std::string isotime(double epoch);
 	void normalizeMonths(int& year, int& mon);
 	bool isDate(const std::string& date);

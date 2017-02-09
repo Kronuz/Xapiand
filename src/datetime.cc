@@ -649,17 +649,17 @@ Datetime::toordinal(int year, int month, int day)
  * Only for year greater than 0.
  */
 std::time_t
-Datetime::timegm(std::tm* tm)
+Datetime::timegm(const std::tm& tm)
 {
-	int year = tm->tm_year + _START_YEAR, mon = tm->tm_mon + 1;
+	int year = tm.tm_year + _START_YEAR, mon = tm.tm_mon + 1;
 	normalizeMonths(year, mon);
-	auto result = toordinal(year, mon, 1) - _EPOCH_ORD + tm->tm_mday - 1;
+	auto result = toordinal(year, mon, 1) - _EPOCH_ORD + tm.tm_mday - 1;
 	result *= 24;
-	result += tm->tm_hour;
+	result += tm.tm_hour;
 	result *= 60;
-	result += tm->tm_min;
+	result += tm.tm_min;
 	result *= 60;
-	result += tm->tm_sec;
+	result += tm.tm_sec;
 	return result;
 }
 
@@ -846,12 +846,12 @@ Datetime::isvalidDate(int year, int month, int day)
  * Return a string with the date in ISO 8601 Format.
  */
 std::string
-Datetime::isotime(const std::tm* tm)
+Datetime::isotime(const std::tm& tm)
 {
 	char result[20];
 	snprintf(result, 20, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d",
-		tm->tm_year + _START_YEAR, tm->tm_mon + 1, tm->tm_mday,
-		tm->tm_hour, tm->tm_min, tm->tm_sec);
+		tm.tm_year + _START_YEAR, tm.tm_mon + 1, tm.tm_mday,
+		tm.tm_hour, tm.tm_min, tm.tm_sec);
 	return std::string(result);
 }
 
