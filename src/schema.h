@@ -356,6 +356,7 @@ struct specification_t : required_spc_t {
 
 
 extern specification_t default_spc;
+extern const std::string NAMESPACE_PREFIX_ID_FIELD_NAME;
 
 
 using dispatch_index = void (*)(Xapian::Document&, std::string&&, const specification_t&, size_t);

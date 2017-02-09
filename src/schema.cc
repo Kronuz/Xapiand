@@ -61,7 +61,8 @@
 #define DEFAULT_BOOL_TERM      false
 #define DEFAULT_INDEX          TypeIndex::ALL
 
-#define NAMESPACE_PREFIX_ID_FIELD_NAME  get_prefix(ID_FIELD_NAME)
+
+const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
 
 
 /*
