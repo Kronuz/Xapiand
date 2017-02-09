@@ -149,15 +149,17 @@ Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack&
 Xapian::Query
 MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 {
-	MsgPack start;
-	MsgPack end;
+	const MsgPack* start = nullptr;
+	const MsgPack* end = nullptr;
 
-	if (obj.find("_from") != obj.end()) {
-		start = obj.at("_from");
+	auto it = obj.find("_from");
+	if (it != obj.end()) {
+		start = &it.value();
 	}
 
-	if (obj.find("_to") != obj.end()) {
-		end = obj.at("_to");
+	it = obj.find("_to");
+	if (it != obj.end()) {
+		end = &it.value();
 	}
 
 	try {
@@ -166,34 +168,34 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 				return Xapian::Query::MatchAll;
 			}
 			// FIXME: check for geo type (Maybe a throw for this case)
-			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::MsgPack(field_spc, end));
+			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::MsgPack(field_spc, *end));
 			return Xapian::Query(mvle->release());
 		} else if (!end) {
-				// FIXME: check for geo type
-				auto mvge = new MultipleValueGE(field_spc.slot, Serialise::MsgPack(field_spc, start));
-				return Xapian::Query(mvge->release());
+			// FIXME: check for geo type
+			auto mvge = new MultipleValueGE(field_spc.slot, Serialise::MsgPack(field_spc, *start));
+			return Xapian::Query(mvge->release());
 		}
 
 		switch (field_spc.get_type()) {
 			case FieldType::INTEGER:
 			case FieldType::FLOAT:
-				return filterNumericQuery<int64_t>(field_spc, start, end);
+				return filterNumericQuery<int64_t>(field_spc, *start, *end);
 			case FieldType::POSITIVE:
-				return filterNumericQuery<uint64_t>(field_spc, start, end);
+				return filterNumericQuery<uint64_t>(field_spc, *start, *end);
 			case FieldType::UUID:
-				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
+				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));
 			case FieldType::BOOLEAN:
-				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
+				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));
 			case FieldType::TERM:
 			case FieldType::TEXT:
 			case FieldType::STRING:
-				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
+				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));
 			case FieldType::DATE: {
-				auto ser_start = Serialise::date(start);
-				auto ser_end = Serialise::date(end);
+				auto ser_start = Serialise::date(*start);
+				auto ser_end = Serialise::date(*end);
 
-				auto timestamp_s = Datetime::timestamp(start);
-				auto timestamp_e = Datetime::timestamp(end);
+				auto timestamp_s = Datetime::timestamp(*start);
+				auto timestamp_e = Datetime::timestamp(*end);
 
 				if (timestamp_s > timestamp_e) {
 					return Xapian::Query::MatchNothing;
@@ -217,8 +219,8 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 		}
 	}
 	catch (const Exception& exc) {
-		THROW(QueryParserError, "Failed to serialize: %s - %s like %s (%s)", start.to_string().c_str(), end.to_string().c_str(),
-								   Serialise::type(field_spc.get_type()).c_str(), exc.what());
+		THROW(QueryParserError, "Failed to serialize: %s - %s like %s (%s)", start->to_string().c_str(), end->to_string().c_str(),
+				Serialise::type(field_spc.get_type()).c_str(), exc.what());
 	}
 }
 

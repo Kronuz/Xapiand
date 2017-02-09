@@ -475,7 +475,7 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, Xapian::Query::op op, co
 	}
 
 	for (auto const& field : obj) {
-		auto field_name = field.as_string();
+		const auto field_name = field.as_string();
 		auto const& o = obj.at(field);
 		if (field_name.compare("_range") == 0) {
 			auto query = MultipleValueRange::getQuery(field_spc, o);
