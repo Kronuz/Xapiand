@@ -61,6 +61,8 @@
 #define DEFAULT_BOOL_TERM      false
 #define DEFAULT_INDEX          TypeIndex::ALL
 
+#define NAMESPACE_PREFIX_ID_FIELD_NAME  get_prefix(ID_FIELD_NAME)
+
 
 /*
  * 1. Try reading schema from the metadata.
@@ -1365,8 +1367,13 @@ Schema::get_namespace_specification(FieldType namespace_type, const std::string&
 
 	auto spc = specification_t::get_global(namespace_type);
 
-	spc.prefix.assign(prefix_namespace);
-	spc.slot = get_slot(prefix_namespace, spc.get_ctype());
+	// If the namespace field is ID_FIELD_NAME, restart its default values.
+	if (prefix_namespace == NAMESPACE_PREFIX_ID_FIELD_NAME) {
+		set_namespace_spc_id(spc);
+	} else {
+		spc.prefix.assign(prefix_namespace);
+		spc.slot = get_slot(prefix_namespace, spc.get_ctype());
+	}
 
 	switch (spc.sep_types[2]) {
 		case FieldType::INTEGER:
@@ -4641,6 +4648,20 @@ Schema::consistency_schema(const std::string& prop_name, const MsgPack& doc_sche
 	} else {
 		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());
 	}
+}
+
+
+void
+Schema::set_namespace_spc_id(required_spc_t& spc)
+{
+	L_CALL(nullptr, "Schema::set_namespace_spc_id(<spc>)");
+
+	// ID_FIELD_NAME cannot be text or string.
+	if (spc.sep_types[2] == FieldType::TEXT || spc.sep_types[2] == FieldType::STRING) {
+		spc.sep_types[2] = FieldType::TERM;
+	}
+	spc.prefix = NAMESPACE_PREFIX_ID_FIELD_NAME;
+	spc.slot = get_slot(spc.prefix, spc.get_ctype());
 }
 
 

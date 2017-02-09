@@ -313,10 +313,11 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					spc_id = schema->get_data_id();
 					if (spc_id.get_type() == FieldType::EMPTY) {
 						// Index like a namespace.
-						static const auto& prefix_id = get_prefix(ID_FIELD_NAME);
-						const auto type_ser = Serialise::get_type(id_value);
+						const auto type_ser = Serialise::get_type(_document_id);
+						spc_id.sep_types[2] = type_ser.first;
+						Schema::set_namespace_spc_id(spc_id);
 						term_id = type_ser.second;
-						prefixed_term_id = prefixed(term_id, prefix_id, required_spc_t::get_ctype(specification_t::global_type(type_ser.first)));
+						prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
 					} else {
 						term_id = Serialise::serialise(spc_id, _document_id);
 						prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
@@ -712,9 +713,10 @@ DatabaseHandler::get_prefixed_term_id(const std::string& doc_id)
 	auto field_spc = schema->get_data_id();
 	if (field_spc.get_type() == FieldType::EMPTY) {
 		// Search like namespace.
-		static const auto& prefix_id = get_prefix(ID_FIELD_NAME);
-		auto type_ser = Serialise::get_type(doc_id);
-		return prefixed(type_ser.second, prefix_id, required_spc_t::get_ctype(specification_t::global_type(type_ser.first)));
+		const auto type_ser = Serialise::get_type(doc_id);
+		field_spc.sep_types[2] = type_ser.first;
+		Schema::set_namespace_spc_id(field_spc);
+		return prefixed(type_ser.second, field_spc.prefix, field_spc.get_ctype());
 	} else {
 		return prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix, field_spc.get_ctype());
 	}

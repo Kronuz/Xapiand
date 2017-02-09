@@ -721,6 +721,11 @@ public:
 	void write_schema(const MsgPack& obj_schema, bool replace);
 
 	/*
+	 * Set default specification in namespace FIELD_ID_NAME
+	 */
+	static void set_namespace_spc_id(required_spc_t& spc);
+
+	/*
 	 * Update namespace specification according to prefix_namespace.
 	 */
 	static required_spc_t get_namespace_specification(FieldType namespace_type, const std::string& prefix_namespace);
