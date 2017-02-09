@@ -816,12 +816,12 @@ specification_t::global_type(FieldType field_type)
 		case FieldType::DATE:
 		case FieldType::GEO:
 		case FieldType::UUID:
+		case FieldType::TERM:
 			return field_type;
 
-		case FieldType::TERM:
 		case FieldType::TEXT:
 		case FieldType::STRING:
-			return FieldType::TEXT;
+			return FieldType::STRING;
 
 		default:
 			THROW(ClientError, "Type: '%u' is an unknown type", field_type);
@@ -861,10 +861,13 @@ specification_t::get_global(FieldType field_type)
 			static const specification_t spc(DB_SLOT_UUID, FieldType::UUID, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case FieldType::TERM:
+		case FieldType::TERM: {
+			static const specification_t spc(DB_SLOT_STRING, FieldType::TERM, default_spc.accuracy, default_spc.acc_prefix);
+			return spc;
+		}
 		case FieldType::TEXT:
 		case FieldType::STRING: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
+			static const specification_t spc(DB_SLOT_STRING, FieldType::STRING, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
 		default:
