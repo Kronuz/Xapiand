@@ -302,7 +302,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 
 
 Xapian::Query
-GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix)
+GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
 {
 	if (accuracy.empty() || end_ < start_) {
 		return Xapian::Query();
@@ -350,31 +350,31 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 		auto c_tm_e = tm_e;
 		switch ((UnitTime)accuracy[pos]) {
 			case UnitTime::MILLENNIUM:
-				query_upper = millennium(c_tm_s, c_tm_e, acc_prefix[pos]);
+				query_upper = millennium(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::CENTURY:
-				query_upper = century(c_tm_s, c_tm_e, acc_prefix[pos]);
+				query_upper = century(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::DECADE:
-				query_upper = decade(c_tm_s, c_tm_e, acc_prefix[pos]);
+				query_upper = decade(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::YEAR:
-				query_upper = year(c_tm_s, c_tm_e, acc_prefix[pos]);
+				query_upper = year(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::MONTH:
-				query_upper = month(c_tm_s, c_tm_e, acc_prefix[pos]);
+				query_upper = month(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::DAY:
-				query_upper = day(c_tm_s, c_tm_e, acc_prefix[pos]);
+				query_upper = day(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::HOUR:
-				query_upper = hour(c_tm_s, c_tm_e, acc_prefix[pos]);
+				query_upper = hour(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::MINUTE:
-				query_upper = minute(c_tm_s, c_tm_e, acc_prefix[pos]);
+				query_upper = minute(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::SECOND:
-				query_upper = second(c_tm_s, c_tm_e, acc_prefix[pos]);
+				query_upper = second(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
 		}
 	}
@@ -383,31 +383,31 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 	if (pos > 0 && acc == accuracy[--pos]) {
 		switch ((UnitTime)accuracy[pos]) {
 			case UnitTime::MILLENNIUM:
-				query_needed = millennium(tm_s, tm_e, acc_prefix[pos]);
+				query_needed = millennium(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::CENTURY:
-				query_needed = century(tm_s, tm_e, acc_prefix[pos]);
+				query_needed = century(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::DECADE:
-				query_needed = decade(tm_s, tm_e, acc_prefix[pos]);
+				query_needed = decade(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::YEAR:
-				query_needed = year(tm_s, tm_e, acc_prefix[pos]);
+				query_needed = year(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::MONTH:
-				query_needed = month(tm_s, tm_e, acc_prefix[pos]);
+				query_needed = month(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::DAY:
-				query_needed = day(tm_s, tm_e, acc_prefix[pos]);
+				query_needed = day(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::HOUR:
-				query_needed = hour(tm_s, tm_e, acc_prefix[pos]);
+				query_needed = hour(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::MINUTE:
-				query_needed = minute(tm_s, tm_e, acc_prefix[pos]);
+				query_needed = minute(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::SECOND:
-				query_needed = second(tm_s, tm_e, acc_prefix[pos]);
+				query_needed = second(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
 		}
 	}
@@ -416,16 +416,14 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 		return Xapian::Query(Xapian::Query::OP_AND, query_upper, query_needed);
 	} else if (!query_upper.empty()) {
 		return query_upper;
-	} else if (!query_needed.empty()) {
-		return query_needed;
 	} else {
-		return Xapian::Query();
+		return query_needed;
 	}
 }
 
 
 Xapian::Query
-GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
+GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
 {
 	Xapian::Query query;
 
@@ -436,9 +434,9 @@ GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std:
 	size_t num_unions = (tm_e.year - tm_s.year) / 1000;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
+		query = Xapian::Query(prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE)), wqf);
 		while (tm_s.year != tm_e.year) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)), wqf));
 			tm_s.year += 1000;
 		}
 	}
@@ -448,7 +446,7 @@ GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std:
 
 
 Xapian::Query
-GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
+GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
 {
 	Xapian::Query query;
 
@@ -459,9 +457,9 @@ GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::st
 	size_t num_unions = (tm_e.year - tm_s.year) / 100;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
+		query = Xapian::Query(prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE)), wqf);
 		while (tm_s.year != tm_e.year) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)), wqf));
 			tm_s.year += 100;
 		}
 	}
@@ -471,7 +469,7 @@ GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::st
 
 
 Xapian::Query
-GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
+GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
 {
 	Xapian::Query query;
 
@@ -482,9 +480,9 @@ GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 	size_t num_unions = (tm_e.year - tm_s.year) / 10;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
+		query = Xapian::Query(prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE)), wqf);
 		while (tm_s.year != tm_e.year) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)), wqf));
 			tm_s.year += 10;
 		}
 	}
@@ -494,7 +492,7 @@ GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 
 
 Xapian::Query
-GenerateTerms::year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
+GenerateTerms::year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
 {
 	Xapian::Query query;
 
@@ -503,9 +501,9 @@ GenerateTerms::year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::strin
 	size_t num_unions = tm_e.year - tm_s.year;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
+		query = Xapian::Query(prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE)), wqf);
 		while (tm_s.year != tm_e.year) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)), wqf));
 			++tm_s.year;
 		}
 	}
@@ -515,7 +513,7 @@ GenerateTerms::year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::strin
 
 
 Xapian::Query
-GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
+GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
 {
 	Xapian::Query query;
 
@@ -524,9 +522,9 @@ GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::stri
 	size_t num_unions = tm_e.mon - tm_s.mon;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
+		query = Xapian::Query(prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE)), wqf);
 		while (tm_s.mon != tm_e.mon) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)), wqf));
 			++tm_s.mon;
 		}
 	}
@@ -536,7 +534,7 @@ GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::stri
 
 
 Xapian::Query
-GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
+GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
 {
 	Xapian::Query query;
 
@@ -544,9 +542,9 @@ GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string
 	size_t num_unions = tm_e.day - tm_s.day;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
+		query = Xapian::Query(prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE)), wqf);
 		while (tm_s.day != tm_e.day) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)), wqf));
 			++tm_s.day;
 		}
 	}
@@ -556,7 +554,7 @@ GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string
 
 
 Xapian::Query
-GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
+GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
 {
 	Xapian::Query query;
 
@@ -564,9 +562,9 @@ GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::strin
 	size_t num_unions = tm_e.hour - tm_s.hour;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
+		query = Xapian::Query(prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE)), wqf);
 		while (tm_s.hour != tm_e.hour) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)), wqf));
 			++tm_s.hour;
 		}
 	}
@@ -576,7 +574,7 @@ GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::strin
 
 
 Xapian::Query
-GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
+GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
 {
 	Xapian::Query query;
 
@@ -584,9 +582,9 @@ GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 	size_t num_unions = tm_e.min - tm_s.min;
 	if (num_unions < MAX_TERMS) {
 		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
+		query = Xapian::Query(prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE)), wqf);
 		while (tm_s.min != tm_e.min) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)), wqf));
 			++tm_s.min;
 		}
 	}
@@ -596,16 +594,15 @@ GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 
 
 Xapian::Query
-GenerateTerms::second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix)
+GenerateTerms::second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
 {
 	Xapian::Query query;
 
 	size_t num_unions = tm_e.sec - tm_s.sec;
 	if (num_unions < MAX_TERMS) {
-		// Reserve upper bound.
-		query = prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE));
+		query = Xapian::Query(prefixed(Serialise::serialise(tm_e), prefix, toUType(FieldType::DATE)), wqf);
 		while (tm_s.sec != tm_e.sec) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(tm_s), prefix, toUType(FieldType::DATE)), wqf));
 			++tm_s.sec;
 		}
 	}
@@ -615,7 +612,7 @@ GenerateTerms::second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 
 
 Xapian::Query
-GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix)
+GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
 {
 	// The user does not specify the accuracy.
 	if (acc_prefix.empty() || ranges.empty()) {
@@ -659,18 +656,14 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	auto it = results.begin();
 	auto last_valid(std::bitset<SIZE_BITS_ID>(it->first).to_string());
 	last_valid.assign(last_valid.substr(last_valid.find('1')));
-	auto result_terms = prefixed(Serialise::serialise(it->first), it->second, toUType(FieldType::GEO));
-	const auto it_e = results.end();
 
-	Xapian::Query query;
+	Xapian::Query query(prefixed(Serialise::serialise(it->first), it->second, toUType(FieldType::GEO)), wqf);
+
+	const auto it_e = results.end();
 	for (++it; it != it_e; ++it) {
 		if (isnotSubtrixel(last_valid, it->first)) {
-			Xapian::Query query_(prefixed(Serialise::serialise(it->first), it->second, toUType(FieldType::GEO)));
-			if (query.empty()) {
-				query = query_;
-			} else {
-				query = Xapian::Query(Xapian::Query::OP_OR, query, query_);
-			}
+			Xapian::Query query_(prefixed(Serialise::serialise(it->first), it->second, toUType(FieldType::GEO)), wqf);
+			query = Xapian::Query(Xapian::Query::OP_OR, query, query_);
 		}
 	}
 

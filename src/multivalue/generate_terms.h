@@ -84,7 +84,7 @@ namespace GenerateTerms {
 	 * Generate terms for numerical ranges.
 	 */
 	template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
-	Xapian::Query numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix) {
+	Xapian::Query numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf=1) {
 		Xapian::Query query;
 
 		if (accuracy.empty() || end < start) {
@@ -119,13 +119,13 @@ namespace GenerateTerms {
 					if (up_start == up_end) {
 						size_t num_unions = (low_end - low_start) / low_acc;
 						if (num_unions == 0) {
-							query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)));
+							query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)), wqf);
 						} else {
-							query = Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, toUType(FieldType::INTEGER)));
-							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)));
+							query = Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, toUType(FieldType::INTEGER)), wqf);
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)), wqf);
 							while (low_start != low_end) {
 								low_start += low_acc;
-								query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER))));
+								query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)), wqf));
 							}
 							query = Xapian::Query(Xapian::Query::OP_AND, query, query_low);
 						}
@@ -133,14 +133,14 @@ namespace GenerateTerms {
 					} else {
 						size_t num_unions1 = (up_end - low_start) / low_acc;
 						if (num_unions1 == 0) {
-							query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)));
+							query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)), wqf);
 						} else {
-							query = Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, toUType(FieldType::INTEGER)));
-							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)));
+							query = Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, toUType(FieldType::INTEGER)), wqf);
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)), wqf);
 							while (low_start < up_end) {
 								low_start += low_acc;
 								if (low_start < up_end) {
-									query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER))));
+									query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)), wqf));
 								}
 							}
 							query = Xapian::Query(Xapian::Query::OP_AND, query, query_low);
@@ -148,14 +148,14 @@ namespace GenerateTerms {
 
 						size_t num_unions2 = (low_end - low_start) / low_acc;
 						if (num_unions2 == 0) {
-							Xapian::Query query_low(prefixed(Serialise::serialise(low_end), prefix_low, toUType(FieldType::INTEGER)));
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_end), prefix_low, toUType(FieldType::INTEGER)), wqf);
 							query = Xapian::Query(Xapian::Query::OP_OR, query, query_low);
 						} else {
-							Xapian::Query query_up(prefixed(Serialise::serialise(up_end), prefix_up, toUType(FieldType::INTEGER)));
-							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)));
+							Xapian::Query query_up(prefixed(Serialise::serialise(up_end), prefix_up, toUType(FieldType::INTEGER)), wqf);
+							Xapian::Query query_low(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)), wqf);
 							while (low_start != low_end) {
 								low_start += low_acc;
-								query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER))));
+								query_low = Xapian::Query(Xapian::Query::OP_OR, query_low, Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, toUType(FieldType::INTEGER)), wqf));
 							}
 							query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_AND, query_up, query_low));
 						}
@@ -165,9 +165,9 @@ namespace GenerateTerms {
 			}
 
 			// Only upper accuracy.
-			query = Xapian::Query(prefixed(Serialise::serialise(up_end), prefix_up, toUType(FieldType::INTEGER)));
+			query = Xapian::Query(prefixed(Serialise::serialise(up_end), prefix_up, toUType(FieldType::INTEGER)), wqf);
 			if (up_start != up_end) {
-				query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, toUType(FieldType::INTEGER))));
+				query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, toUType(FieldType::INTEGER)), wqf));
 			}
 
 		} else if (pos > 0) { // If only there is a lower accuracy.
@@ -180,9 +180,9 @@ namespace GenerateTerms {
 			if (num_unions < MAX_TERMS) {
 				std::string prefix = acc_prefix[pos];
 				// Reserve upper bound.
-				query = Xapian::Query(prefixed(Serialise::serialise(end), prefix, toUType(FieldType::INTEGER)));
+				query = Xapian::Query(prefixed(Serialise::serialise(end), prefix, toUType(FieldType::INTEGER)), wqf);
 				while (start != end) {
-					query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(start), prefix, toUType(FieldType::INTEGER))));
+					query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(start), prefix, toUType(FieldType::INTEGER)), wqf));
 					start += low_acc;
 				}
 			}
@@ -194,21 +194,21 @@ namespace GenerateTerms {
 	/*
 	 * Generate Terms for date ranges.
 	 */
-	Xapian::Query date(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix);
+	Xapian::Query date(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf=1);
 
 	/*
 	 * Auxiliar functions for date ranges.
 	 */
 
-	Xapian::Query millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	Xapian::Query century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	Xapian::Query decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	Xapian::Query year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	Xapian::Query month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	Xapian::Query day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	Xapian::Query hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	Xapian::Query minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
-	Xapian::Query second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix);
+	Xapian::Query millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
+	Xapian::Query century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
+	Xapian::Query decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
+	Xapian::Query year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
+	Xapian::Query month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
+	Xapian::Query day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
+	Xapian::Query hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
+	Xapian::Query minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
+	Xapian::Query second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
 
 	// Datetime only accepts year greater than 0.
 	inline constexpr int year(int year, int accuracy) noexcept {
@@ -219,5 +219,5 @@ namespace GenerateTerms {
 	/*
 	 * Generate ters for geospatial ranges.
 	 */
-	Xapian::Query geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix);
+	Xapian::Query geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf=1);
 };
