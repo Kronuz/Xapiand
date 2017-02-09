@@ -2515,8 +2515,6 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 				return true;
 			} catch (const CheckoutError&) {
 				THROW(CheckoutError, "Cannot checkout database: %s", repr(schema_path).c_str());
-			} catch (const DocNotFoundError&) {
-				THROW(CheckoutError, "Cannot found document: %s/%s", repr(schema_path).c_str(), repr(schema_id).c_str());
 			}
 		} else {
 			old_schema = aux_schema;
