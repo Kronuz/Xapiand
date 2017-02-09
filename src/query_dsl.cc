@@ -346,7 +346,7 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, const std::string&
 Xapian::Query
 QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_in)
 {
-	L_CALL(this, "QueryDSL::get_namespace_query(<field_spc>, %d, %s, <wqf>, <q_flags>, %s, %s)", (int)op, repr(obj.to_string()).c_str(), is_in ? "true" : "false");
+	L_CALL(this, "QueryDSL::get_namespace_query(<field_spc>, %d, %s, <wqf>, <q_flags>, %s)", (int)op, repr(obj.to_string()).c_str(), is_in ? "true" : "false");
 
 	if (is_in) {
 		if (obj.is_string()) {
@@ -385,7 +385,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, Xapian::Query::op
 Xapian::Query
 QueryDSL::get_regular_query(const required_spc_t& field_spc, Xapian::Query::op op, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_in)
 {
-	L_CALL(this, "QueryDSL::get_regular_query(<field_spc>, %d, %s, <wqf>, <q_flags>, %s, %s)", (int)op, repr(obj.to_string()).c_str(), is_in ? "true" : "false");
+	L_CALL(this, "QueryDSL::get_regular_query(<field_spc>, %d, %s, <wqf>, <q_flags>, %s)", (int)op, repr(obj.to_string()).c_str(), is_in ? "true" : "false");
 
 	if (is_in) {
 		if (obj.is_string()) {
