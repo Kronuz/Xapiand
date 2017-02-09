@@ -5208,58 +5208,6 @@ Schema::get_slot_field(const std::string& field_name) const
 }
 
 
-const required_spc_t&
-Schema::get_data_global(FieldType field_type)
-{
-	L_CALL(nullptr, "Schema::get_data_global('%c')", toUType(field_type));
-
-	switch (field_type) {
-		case FieldType::FLOAT: {
-			static const required_spc_t prop(DB_SLOT_NUMERIC, FieldType::FLOAT, def_accuracy_num, global_acc_prefix_num);
-			return prop;
-		}
-		case FieldType::INTEGER: {
-			static const required_spc_t prop(DB_SLOT_NUMERIC, FieldType::INTEGER, def_accuracy_num, global_acc_prefix_num);
-			return prop;
-		}
-		case FieldType::POSITIVE: {
-			static const required_spc_t prop(DB_SLOT_NUMERIC, FieldType::POSITIVE, def_accuracy_num, global_acc_prefix_num);
-			return prop;
-		}
-		case FieldType::TERM: {
-			static const required_spc_t prop(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
-			return prop;
-		}
-		case FieldType::TEXT: {
-			static const required_spc_t prop(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
-			return prop;
-		}
-		case FieldType::STRING: {
-			static const required_spc_t prop(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
-			return prop;
-		}
-		case FieldType::BOOLEAN: {
-			static const required_spc_t prop(DB_SLOT_BOOLEAN, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
-			return prop;
-		}
-		case FieldType::DATE: {
-			static const required_spc_t prop(DB_SLOT_DATE, FieldType::DATE, def_accuracy_date, global_acc_prefix_date);
-			return prop;
-		}
-		case FieldType::GEO: {
-			static const required_spc_t prop(DB_SLOT_GEO, FieldType::GEO, def_accuracy_geo, global_acc_prefix_geo);
-			return prop;
-		}
-		case FieldType::UUID: {
-			static const required_spc_t prop(DB_SLOT_UUID, FieldType::UUID, default_spc.accuracy, default_spc.acc_prefix);
-			return prop;
-		}
-		default:
-			THROW(ClientError, "Type: '%u' is an unknown type", toUType(field_type));
-	}
-}
-
-
 std::tuple<const MsgPack&, bool, bool, std::string, std::string, FieldType>
 Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
 {

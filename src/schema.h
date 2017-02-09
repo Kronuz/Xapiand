@@ -741,5 +741,4 @@ public:
 
 	std::pair<required_spc_t, std::string> get_data_field(const std::string& field_name, bool is_range=true) const;
 	required_spc_t get_slot_field(const std::string& field_name) const;
-	static const required_spc_t& get_data_global(FieldType field_type);
 };

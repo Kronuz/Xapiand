@@ -206,7 +206,7 @@ QueryDSL::get_value_query(Xapian::Query::op op, const std::string& path, const M
 			field_type = std::get<0>(Serialise::get_type(obj));
 			pobj = &obj;
 		}
-		const auto& global_spc = Schema::get_data_global(field_type);
+		const auto& global_spc = specification_t::get_global(field_type);
 		return get_regular_query(global_spc, op, *pobj, wqf, q_flags, is_in);
 	} else {
 		auto data_field = schema->get_data_field(path, is_in);
