@@ -378,9 +378,11 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 			}
 			break;
 
-		default:
-			final_query = get_value_query(op, parent, obj, wqf, q_flags, is_raw, is_in);
+		default: {
+			auto query = get_value_query(op, parent, obj, wqf, q_flags, is_raw, is_in);
+			final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
 			break;
+		}
 	}
 
 	return final_query;
@@ -669,23 +671,17 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, Xapian::Query::op op, co
 {
 	L_CALL(this, "QueryDSL::get_in_query(<field_spc>, %d, %s)", (int)op, repr(obj.to_string()).c_str());
 
-	Xapian::Query final_query;
-	if (op == Xapian::Query::OP_AND_NOT) {
-		final_query = Xapian::Query::MatchAll;
-	}
-
-	for (auto const& field : obj) {
-		const auto field_name = field.as_string();
-		auto const& o = obj.at(field);
+	const auto it_e = obj.end();
+	for (auto it = obj.begin(); it != it_e; ++it) {
+		const auto field_name = it->as_string();
 		if (field_name.compare(QUERYDSL_RANGE) == 0) {
-			auto query = MultipleValueRange::getQuery(field_spc, o);
-			final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
+			return MultipleValueRange::getQuery(field_spc, it.value());
 		} else {
-			THROW(QueryDslError, "Invalid _in: %s", repr(obj.to_string()).c_str());
+			THROW(QueryDslError, "Invalid %s: %s", QUERYDSL_IN, repr(obj.to_string()).c_str());
 		}
 	}
 
-	return final_query;
+	return Xapian::Query::MatchAll;
 }
 
 
