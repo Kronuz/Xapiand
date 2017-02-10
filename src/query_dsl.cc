@@ -362,7 +362,14 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 				Xapian::Query query;
 				auto it_d = map_dispatch.find(field_name);
 				if (it_d == map_dispatch.end()) {
-					query = process(op, parent.empty() ? field_name : parent + "." + field_name, o, wqf, q_flags, is_raw, is_in);
+					if (parent.empty()) {
+						query = process(op, field_name, o, wqf, q_flags, is_raw, is_in);
+					} else {
+						std::string n_parent;
+						n_parent.reserve(parent.length() + std::strlen(DB_OFFSPRING_UNION) + field_name.length());
+						n_parent.append(parent).append(DB_OFFSPRING_UNION).append(field_name);
+						query = process(op, n_parent, o, wqf, q_flags, is_raw, is_in);
+					}
 				} else {
 					query = (this->*it_d->second)(field_name, op, parent, o, wqf, q_flags, is_raw, is_in);
 				}
