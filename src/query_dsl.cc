@@ -678,17 +678,20 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 {
 	L_CALL(this, "QueryDSL::get_in_query(<field_spc>, %s)", repr(obj.to_string()).c_str());
 
-	const auto it_e = obj.end();
-	for (auto it = obj.begin(); it != it_e; ++it) {
-		const auto field_name = it->as_string();
-		if (field_name.compare(QUERYDSL_RANGE) == 0) {
-			return MultipleValueRange::getQuery(field_spc, it.value());
-		} else {
-			THROW(QueryDslError, "Invalid %s: %s", QUERYDSL_IN, repr(obj.to_string()).c_str());
+	if (obj.is_map()) {
+		const auto it_e = obj.end();
+		for (auto it = obj.begin(); it != it_e; ++it) {
+			const auto field_name = it->as_string();
+			if (field_name.compare(QUERYDSL_RANGE) == 0) {
+				return MultipleValueRange::getQuery(field_spc, it.value());
+			} else {
+				THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_IN, repr(obj.to_string()).c_str());
+			}
 		}
+		THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_IN, repr(obj.to_string()).c_str());
+	} else {
+		THROW(QueryDslError, "%s must be an object [%s]", QUERYDSL_IN, repr(obj.to_string()).c_str());
 	}
-
-	return Xapian::Query::MatchAll;
 }
 
 
