@@ -34,7 +34,7 @@ class DatabaseHandler;
 
 
 class SchemasLRU : public lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
-	MsgPack get_shared(const Endpoint& endpoint, const std::string& id, int flags=-1);
+	MsgPack get_shared(const Endpoint& endpoint, const std::string& id);
 	std::tuple<bool, atomic_shared_ptr<const MsgPack>*, std::string, std::string> get_local(DatabaseHandler* db_handler, const MsgPack* obj=nullptr);
 
 	std::mutex smtx;

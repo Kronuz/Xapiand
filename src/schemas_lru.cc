@@ -59,24 +59,21 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 				THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, MsgPackTypes[toUType(local_schema_ptr->getType())]);
 		}
 	} else {
-		DatabaseHandler local_db_handler(db_handler->endpoints, db_handler->flags != -1 ? db_handler->flags : DB_WRITABLE);
-
-		const auto str_schema = local_db_handler.get_metadata(DB_META_SCHEMA);
-
+		const auto str_schema = db_handler->get_metadata(DB_META_SCHEMA);
 		std::shared_ptr<const MsgPack> aux_schema_ptr;
 		if (str_schema.empty()) {
 			created = true;
 			if (obj) {
 				const auto it = obj->find(RESERVED_SCHEMA);
-				if (it != obj->end()) {
+				if (it == obj->end()) {
+					aux_schema_ptr = Schema::get_initial_schema();
+				} else {
 					const auto& path = it.value();
 					try {
 						aux_schema_ptr = std::make_shared<const MsgPack>(path.as_string());
 					} catch (const msgpack::type_error&) {
 						THROW(ClientError, "%s must be string", RESERVED_SCHEMA);
 					}
-				} else {
-					aux_schema_ptr = Schema::get_initial_schema();
 				}
 			} else {
 				aux_schema_ptr = Schema::get_initial_schema();
@@ -117,14 +114,13 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 
 
 MsgPack
-SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, int flags)
+SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id)
 {
-	L_CALL(this, "SchemasLRU::get_shared(%s, %s, %d)", repr(endpoint.to_string()).c_str(), id.c_str(), flags);
+	L_CALL(this, "SchemasLRU::get_shared(%s, %s)", repr(endpoint.to_string()).c_str(), id.c_str());
 
 	try {
-		DatabaseHandler db_handler;
-		db_handler.reset(Endpoints(endpoint), flags != -1 ? flags : DB_OPEN, HTTP_POST);
-		auto doc = db_handler.get_document(id);
+		DatabaseHandler _db_handler(endpoint, DB_OPEN);
+		auto doc = _db_handler.get_document(id);
 		return doc.get_obj();
 	} catch (const DocNotFoundError&) {
 		THROW(DocNotFoundError, "In shared schema %s document not found: %s", repr(endpoint.to_string()).c_str(), id.c_str());
@@ -166,7 +162,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			}
 		}
 		if (!schema_ptr->is_map()) {
-			THROW(Error, "Schema must be a map [%s]", repr(db_handler->endpoints.to_string()).c_str());
+			THROW(Error, "Schema of %s must be map [%s]", repr(db_handler->endpoints.to_string()).c_str(), repr(schema_ptr->to_string()).c_str());
 		}
 		return schema_ptr;
 	}
@@ -199,13 +195,11 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			aux_schema = old_schema;
 		}
 		if (atom_shared_schema->compare_exchange_strong(aux_schema, new_schema)) {
-			Endpoints endpoints = Endpoint(schema_path);
-			DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+			DatabaseHandler _db_handler(Endpoint(schema_path), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 			MsgPack shared_schema = *new_schema;
 			shared_schema[RESERVED_RECURSE] = false;
-			db_handler.index(schema_id, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
-			db_handler.reset(endpoints, DB_WRITABLE);
-			db_handler.set_metadata(DB_META_SCHEMA, (std::get<1>(info_local_schema)->load()->serialise()));
+			_db_handler.index(schema_id, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
+			db_handler->set_metadata(DB_META_SCHEMA, (std::get<1>(info_local_schema)->load()->serialise()));
 		} else {
 			old_schema = aux_schema;
 		}
