@@ -49,12 +49,40 @@ constexpr const char QUERYDSL_TO[]     = "_to";
 class QueryDSL {
 	std::shared_ptr<Schema> schema;
 
-	static const std::unordered_map<std::string, Xapian::Query::op> ops_map;
-	static const std::unordered_set<std::string> casts_set;
+	using dispatch_func = Xapian::Query (QueryDSL::*)(const std::string&, Xapian::Query::op, const std::string&, const MsgPack&, Xapian::termcount, int, bool, bool);
+
+	static const std::unordered_map<std::string, dispatch_func> map_dispatch;
 
 	FieldType get_in_type(const MsgPack& obj);
 
 	std::pair<FieldType, MsgPack> parse_range(const required_spc_t& field_spc, const std::string& range);
+
+	/*
+	 * Dispatch functions.
+	 */
+
+	Xapian::Query process_in(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_range(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_raw(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_value(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_and(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_and_maybe(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_and_not(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_elite_set(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_filter(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_max(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_near(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_or(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_phrase(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_scale_weight(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_synonym(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_value_ge(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_value_le(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_value_range(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_wildcard(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_xor(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+	Xapian::Query process_cast(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
+
 
 	Xapian::Query process(Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);
 	Xapian::Query get_value_query(Xapian::Query::op op, const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in);

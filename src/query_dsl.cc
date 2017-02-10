@@ -42,38 +42,50 @@
 #endif
 
 
-const std::unordered_map<std::string, Xapian::Query::op> QueryDSL::ops_map({
-	{ "_and",           Xapian::Query::OP_AND           },
-	{ "_or",            Xapian::Query::OP_OR            },
-	{ "_and_not",       Xapian::Query::OP_AND_NOT       },
-	{ "_not",           Xapian::Query::OP_AND_NOT       },
-	{ "_xor",           Xapian::Query::OP_XOR           },
-	{ "_and_maybe",     Xapian::Query::OP_AND_MAYBE     },
-	{ "_filter",        Xapian::Query::OP_FILTER        },
-	{ "_near",          Xapian::Query::OP_NEAR          },
-	{ "_phrase",        Xapian::Query::OP_PHRASE        },
-	{ "_value_range",   Xapian::Query::OP_VALUE_RANGE   },
-	{ "_scale_weight",  Xapian::Query::OP_SCALE_WEIGHT  },
-	{ "_elite_set",     Xapian::Query::OP_ELITE_SET     },
-	{ "_value_ge",      Xapian::Query::OP_VALUE_GE      },
-	{ "_value_le",      Xapian::Query::OP_VALUE_LE      },
-	{ "_synonym",       Xapian::Query::OP_SYNONYM       },
-	{ "_max",           Xapian::Query::OP_MAX           },
-	{ "_wildcard",      Xapian::Query::OP_WILDCARD      },
-});
-
-
-const std::unordered_set<std::string> QueryDSL::casts_set({
-	RESERVED_FLOAT,              RESERVED_POSITIVE,
-	RESERVED_INTEGER,            RESERVED_BOOLEAN,
-	RESERVED_TERM,               RESERVED_TEXT,
-	RESERVED_DATE,               RESERVED_UUID,
-	RESERVED_EWKT,               RESERVED_POINT,
-	RESERVED_POLYGON,            RESERVED_CIRCLE,
-	RESERVED_CHULL,              RESERVED_MULTIPOINT,
-	RESERVED_MULTIPOLYGON,       RESERVED_MULTICIRCLE,
-	RESERVED_MULTICHULL,         RESERVED_GEO_COLLECTION,
-	RESERVED_GEO_INTERSECTION,
+const std::unordered_map<std::string, QueryDSL::dispatch_func> QueryDSL::map_dispatch({
+	// Leaf query clauses.
+	{ QUERYDSL_IN,                    &QueryDSL::process_in            },
+	{ QUERYDSL_RANGE,                 &QueryDSL::process_range         },
+	{ QUERYDSL_RAW,                   &QueryDSL::process_raw           },
+	{ RESERVED_VALUE,                 &QueryDSL::process_value         },
+	// Compound query clauses
+	{ "_and",                         &QueryDSL::process_and           },
+	{ "_and_maybe",                   &QueryDSL::process_and_maybe     },
+	{ "_and_not",                     &QueryDSL::process_and_not       },
+	{ "_elite_set",                   &QueryDSL::process_elite_set     },
+	{ "_filter",                      &QueryDSL::process_filter        },
+	{ "_max",                         &QueryDSL::process_max           },
+	{ "_near",                        &QueryDSL::process_near          },
+	{ "_not",                         &QueryDSL::process_and_not       },
+	{ "_or",                          &QueryDSL::process_or            },
+	{ "_phrase",                      &QueryDSL::process_phrase        },
+	{ "_scale_weight",                &QueryDSL::process_scale_weight  },
+	{ "_synonym",                     &QueryDSL::process_synonym       },
+	{ "_value_ge",                    &QueryDSL::process_value_ge      },
+	{ "_value_le",                    &QueryDSL::process_value_le      },
+	{ "_value_range",                 &QueryDSL::process_value_range   },
+	{ "_wildcard",                    &QueryDSL::process_wildcard      },
+	{ "_xor",                         &QueryDSL::process_xor           },
+	// Reserved cast words
+	{ RESERVED_FLOAT,                 &QueryDSL::process_cast          },
+	{ RESERVED_POSITIVE,              &QueryDSL::process_cast          },
+	{ RESERVED_INTEGER,               &QueryDSL::process_cast          },
+	{ RESERVED_BOOLEAN,               &QueryDSL::process_cast          },
+	{ RESERVED_TERM,                  &QueryDSL::process_cast          },
+	{ RESERVED_TEXT,                  &QueryDSL::process_cast          },
+	{ RESERVED_DATE,                  &QueryDSL::process_cast          },
+	{ RESERVED_UUID,                  &QueryDSL::process_cast          },
+	{ RESERVED_EWKT,                  &QueryDSL::process_cast          },
+	{ RESERVED_POINT,                 &QueryDSL::process_cast          },
+	{ RESERVED_POLYGON,               &QueryDSL::process_cast          },
+	{ RESERVED_CIRCLE,                &QueryDSL::process_cast          },
+	{ RESERVED_CHULL,                 &QueryDSL::process_cast          },
+	{ RESERVED_MULTIPOINT,            &QueryDSL::process_cast          },
+	{ RESERVED_MULTIPOLYGON,          &QueryDSL::process_cast          },
+	{ RESERVED_MULTICIRCLE,           &QueryDSL::process_cast          },
+	{ RESERVED_MULTICHULL,            &QueryDSL::process_cast          },
+	{ RESERVED_GEO_COLLECTION,        &QueryDSL::process_cast          },
+	{ RESERVED_GEO_INTERSECTION,      &QueryDSL::process_cast          },
 });
 
 
@@ -90,18 +102,21 @@ QueryDSL::get_in_type(const MsgPack& obj)
 	L_CALL(this, "QueryDSL::get_in_type(%s)", repr(obj.to_string()).c_str());
 
 	auto it = obj.find(QUERYDSL_RANGE);
-	if (it != obj.end()) {
-		const auto& range = it.value();
-		auto it_f = range.find(QUERYDSL_FROM);
-		if (it_f != range.end()) {
-			return std::get<0>(Serialise::get_type(it_f.value()));
-		} else {
-			auto it_t = range.find(QUERYDSL_TO);
-			if (it_t != range.end()) {
-				return std::get<0>(Serialise::get_type(it_t.value()));
-			}
+	if (it == obj.end()) {
+		THROW(QueryDslError, "Invalid range [<obj>]: %s", repr(obj.to_string()).c_str());
+	}
+
+	const auto& range = it.value();
+	auto it_f = range.find(QUERYDSL_FROM);
+	if (it_f != range.end()) {
+		return std::get<0>(Serialise::get_type(it_f.value()));
+	} else {
+		auto it_t = range.find(QUERYDSL_TO);
+		if (it_t != range.end()) {
+			return std::get<0>(Serialise::get_type(it_t.value()));
 		}
 	}
+
 	return FieldType::EMPTY;
 }
 
@@ -132,7 +147,196 @@ QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
 		}
 	}
 
-	return std::make_pair(field_type, value);
+	return std::make_pair(field_type, std::move(value));
+}
+
+
+Xapian::Query
+QueryDSL::process_in(const std::string&, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool)
+{
+	L_CALL(this, "QueryDSL::process_in(...)");
+
+	return process(op, parent, obj, wqf, q_flags, is_raw, true);
+}
+
+
+Xapian::Query
+QueryDSL::process_range(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_range(...)");
+
+	return get_value_query(op, parent, {{ word, obj }}, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_raw(const std::string&, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_raw(...)");
+
+	return process(op, parent, obj, wqf, q_flags, true, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_value(const std::string&, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_value(...)");
+
+	return get_value_query(op, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_and(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_and(...)");
+
+	return process(Xapian::Query::OP_AND, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_and_maybe(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_and_maybe(...)");
+
+	return process(Xapian::Query::OP_AND_MAYBE, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_and_not(const std::string& word, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_and_not(%s, ...)", repr(word).c_str());
+
+	return process(Xapian::Query::OP_AND_NOT, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_elite_set(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_elite_set(...)");
+
+	return process(Xapian::Query::OP_ELITE_SET, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_filter(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_filter(...)");
+
+	return process(Xapian::Query::OP_FILTER, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_max(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_max(...)");
+
+	return process(Xapian::Query::OP_MAX, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_near(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_near(...)");
+
+	return process(Xapian::Query::OP_NEAR, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_or(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_or(...)");
+
+	return process(Xapian::Query::OP_OR, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_phrase(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_phrase(...)");
+
+	return process(Xapian::Query::OP_PHRASE, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_scale_weight(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_scale_weight(...)");
+
+	return process(Xapian::Query::OP_SCALE_WEIGHT, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_synonym(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_synonym(...)");
+
+	return process(Xapian::Query::OP_SYNONYM, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_value_ge(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_value_ge(...)");
+
+	return process(Xapian::Query::OP_VALUE_GE, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_value_le(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_value_le(...)");
+
+	return process(Xapian::Query::OP_VALUE_LE, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_value_range(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_value_range(...)");
+
+	return process(Xapian::Query::OP_VALUE_RANGE, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_wildcard(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_wildcard(...)");
+
+	return process(Xapian::Query::OP_WILDCARD, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_xor(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_xor(...)");
+
+	return process(Xapian::Query::OP_XOR, parent, obj, wqf, q_flags, is_raw, is_in);
+}
+
+
+Xapian::Query
+QueryDSL::process_cast(const std::string& word, Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in)
+{
+	L_CALL(this, "QueryDSL::process_cast(%s, ...)", repr(word).c_str());
+
+	return get_value_query(op, parent, {{ word, obj }}, wqf, q_flags, is_raw, is_in);
 }
 
 
@@ -156,26 +360,12 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 				L_QUERY(this, BLUE "%s = %s" NO_COL, field_name.c_str(), o.to_string().c_str());
 
 				Xapian::Query query;
-
-				if (field_name == QUERYDSL_RAW) {
-					query = process(op, parent, o, wqf, q_flags, true, is_in);
-				} else if (field_name == QUERYDSL_IN) {
-					query = process(op, parent, o, wqf, q_flags, is_raw, true);
-				} else if (field_name == RESERVED_VALUE) {
-					query = get_value_query(op, parent, o, wqf, q_flags, is_raw, is_in);
-				} else if (field_name == QUERYDSL_RANGE) {
-					query = get_value_query(op, parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in);
+				auto it_d = map_dispatch.find(field_name);
+				if (it_d == map_dispatch.end()) {
+					query = process(op, parent.empty() ? field_name : parent + "." + field_name, o, wqf, q_flags, is_raw, is_in);
 				} else {
-					auto it = ops_map.find(field_name);
-					if (it != ops_map.end()) {
-						query = process(it->second, parent, o, wqf, q_flags, is_raw, is_in);
-					} else if (casts_set.find(field_name) != casts_set.end()) {
-						query = get_value_query(op, parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in);
-					} else {
-						query = process(op, parent.empty() ? field_name : parent + "." + field_name, o, wqf, q_flags, is_raw, is_in);
-					}
+					query = (this->*it_d->second)(field_name, op, parent, o, wqf, q_flags, is_raw, is_in);
 				}
-
 				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
 			}
 			break;
