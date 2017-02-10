@@ -89,14 +89,14 @@ QueryDSL::get_in_type(const MsgPack& obj)
 {
 	L_CALL(this, "QueryDSL::get_in_type(%s)", repr(obj.to_string()).c_str());
 
-	auto it = obj.find("_range");
+	auto it = obj.find(QUERYDSL_RANGE);
 	if (it != obj.end()) {
 		const auto& range = it.value();
-		auto it_f = range.find("_from");
+		auto it_f = range.find(QUERYDSL_FROM);
 		if (it_f != range.end()) {
 			return std::get<0>(Serialise::get_type(it_f.value()));
 		} else {
-			auto it_t = range.find("_to");
+			auto it_t = range.find(QUERYDSL_TO);
 			if (it_t != range.end()) {
 				return std::get<0>(Serialise::get_type(it_t.value()));
 			}
@@ -117,16 +117,16 @@ QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
 		THROW(QueryDslError, "Invalid range (1): %s", range.c_str());
 	}
 	MsgPack value;
-	auto& _range = value["_range"];
+	auto& _range = value[QUERYDSL_RANGE];
 	auto start = fp.get_start();
 	auto field_type = FieldType::EMPTY;
 	if (!start.empty()) {
-		auto& obj = _range["_from"] = Cast::cast(field_spc.get_type(), start);
+		auto& obj = _range[QUERYDSL_FROM] = Cast::cast(field_spc.get_type(), start);
 		field_type = std::get<0>(Serialise::get_type(obj));
 	}
 	auto end = fp.get_end();
 	if (!end.empty()) {
-		auto& obj = _range["_to"] = Cast::cast(field_spc.get_type(), end);
+		auto& obj = _range[QUERYDSL_TO] = Cast::cast(field_spc.get_type(), end);
 		if (field_type == FieldType::EMPTY) {
 			field_type = std::get<0>(Serialise::get_type(obj));
 		}
@@ -157,13 +157,13 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 
 				Xapian::Query query;
 
-				if (field_name == RESERVED_RAW) {
+				if (field_name == QUERYDSL_RAW) {
 					query = process(op, parent, o, wqf, q_flags, true, is_in);
-				} else if (field_name == RESERVED_IN) {
+				} else if (field_name == QUERYDSL_IN) {
 					query = process(op, parent, o, wqf, q_flags, is_raw, true);
 				} else if (field_name == RESERVED_VALUE) {
 					query = get_value_query(op, parent, o, wqf, q_flags, is_raw, is_in);
-				} else if (field_name == "_range") {
+				} else if (field_name == QUERYDSL_RANGE) {
 					query = get_value_query(op, parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in);
 				} else {
 					auto it = ops_map.find(field_name);
@@ -487,7 +487,7 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, Xapian::Query::op op, co
 	for (auto const& field : obj) {
 		const auto field_name = field.as_string();
 		auto const& o = obj.at(field);
-		if (field_name.compare("_range") == 0) {
+		if (field_name.compare(QUERYDSL_RANGE) == 0) {
 			auto query = MultipleValueRange::getQuery(field_spc, o);
 			final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
 		} else {
@@ -596,16 +596,16 @@ QueryDSL::make_dsl_query(const std::string& query)
 
 					MsgPack value;
 					if (fp.is_range()) {
-						value[RESERVED_IN] = fp.get_values();
+						value[QUERYDSL_IN] = fp.get_values();
 					} else {
 						value = fp.get_value();
 					}
 
 					auto field_name = fp.get_field_name();
 					if (field_name.empty()) {
-						object[RESERVED_RAW] = value;
+						object[QUERYDSL_RAW] = value;
 					} else {
-						object[field_name][RESERVED_RAW] = value;
+						object[field_name][QUERYDSL_RAW] = value;
 					}
 
 					stack_msgpack.push_back(object);

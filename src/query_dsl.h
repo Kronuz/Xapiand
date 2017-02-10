@@ -35,7 +35,12 @@
 #include "utils.h"
 
 
-constexpr const char QUERYDSL_QUERY[] = "_query";
+constexpr const char QUERYDSL_FROM[]   = "_from";
+constexpr const char QUERYDSL_IN[]     = "_in";
+constexpr const char QUERYDSL_QUERY[]  = "_query";
+constexpr const char QUERYDSL_RANGE[]  = "_range";
+constexpr const char QUERYDSL_RAW[]    = "_raw";
+constexpr const char QUERYDSL_TO[]     = "_to";
 
 
 /* A domain-specific language (DSL) for query */
