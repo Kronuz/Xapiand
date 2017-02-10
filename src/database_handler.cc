@@ -64,6 +64,14 @@ public:
 };
 
 
+template<typename F, typename... Args>
+DatabaseHandler::lock_database::lock_database(DatabaseHandler* db_handler_, F&& f, Args&&... args)
+	: db_handler(db_handler_)
+{
+	lock(std::forward<F>(f), std::forward<Args>(args)...);
+}
+
+
 DatabaseHandler::lock_database::lock_database(DatabaseHandler* db_handler_)
 	: db_handler(db_handler_)
 {
@@ -74,6 +82,20 @@ DatabaseHandler::lock_database::lock_database(DatabaseHandler* db_handler_)
 DatabaseHandler::lock_database::~lock_database()
 {
 	unlock();
+}
+
+
+template<typename F, typename... Args>
+void
+DatabaseHandler::lock_database::lock(F&& f, Args&&... args)
+{
+	if (db_handler) {
+		if (db_handler->database) {
+			THROW(Error, "lock_database is already locked");
+		} else if (!XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags, std::forward<F>(f), std::forward<Args>(args)...)) {
+			THROW(CheckoutError, "Cannot checkout database: %s", repr(db_handler->endpoints.to_string()).c_str());
+		}
+	}
 }
 
 
