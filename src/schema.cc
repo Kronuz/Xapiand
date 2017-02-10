@@ -3012,30 +3012,31 @@ Schema::process_properties_document(const MsgPack& object, std::vector<std::stri
 	L_CALL(this, "Schema::process_properties_document(%s, <fields>)", repr(object.to_string()).c_str());
 
 	static const auto ddit_e = map_dispatch_document.end();
+	const auto it_e = object.end();
 	if (specification.flags.field_with_type) {
-		for (const auto& item_key : object) {
-			auto str_key = item_key.as_string();
+		for (auto it = object.begin(); it != it_e; ++it) {
+			auto str_key = it->as_string();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
 				fields.push_back(std::move(str_key));
 			} else {
-				(this->*ddit->second)(str_key, object.at(str_key));
+				(this->*ddit->second)(str_key, it.value());
 			}
 		}
 	} else {
 		static const auto wtit_e = map_dispatch_without_type.end();
-		for (const auto& item_key : object) {
-			auto str_key = item_key.as_string();
+		for (auto it = object.begin(); it != it_e; ++it) {
+			auto str_key = it->as_string();
 			const auto wtit = map_dispatch_without_type.find(str_key);
 			if (wtit == wtit_e) {
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
 					fields.push_back(std::move(str_key));
 				} else {
-					(this->*ddit->second)(str_key, object.at(str_key));
+					(this->*ddit->second)(str_key, it.value());
 				}
 			} else {
-				(this->*wtit->second)(str_key, object.at(str_key));
+				(this->*wtit->second)(str_key, it.value());
 			}
 		}
 	}
@@ -3049,25 +3050,26 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 
 	static const auto wpit_e = map_dispatch_write_properties.end();
 	static const auto ddit_e = map_dispatch_document.end();
+	const auto it_e = object.end();
 	if (specification.flags.field_with_type) {
-		for (const auto& item_key : object) {
-			auto str_key = item_key.as_string();
+		for (auto it = object.begin(); it != it_e; ++it) {
+			auto str_key = it->as_string();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
 					fields.push_back(std::move(str_key));
 				} else {
-					(this->*ddit->second)(str_key, object.at(str_key));
+					(this->*ddit->second)(str_key, it.value());
 				}
 			} else {
-				(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
+				(this->*wpit->second)(*mut_properties, str_key, it.value());
 			}
 		}
 	} else {
 		static const auto wtit_e = map_dispatch_without_type.end();
-		for (const auto& item_key : object) {
-			auto str_key = item_key.as_string();
+		for (auto it = object.begin(); it != it_e; ++it) {
+			auto str_key = it->as_string();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
 				const auto wtit = map_dispatch_without_type.find(str_key);
@@ -3076,13 +3078,13 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 					if (ddit == ddit_e) {
 						fields.push_back(std::move(str_key));
 					} else {
-						(this->*ddit->second)(str_key, object.at(str_key));
+						(this->*ddit->second)(str_key, it.value());
 					}
 				} else {
-					(this->*wtit->second)(str_key, object.at(str_key));
+					(this->*wtit->second)(str_key, it.value());
 				}
 			} else {
-				(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
+				(this->*wpit->second)(*mut_properties, str_key, it.value());
 			}
 		}
 	}
@@ -3115,8 +3117,9 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, std::vector<s
 	static const auto wpit_e = map_dispatch_write_properties.end();
 	static const auto wtit_e = map_dispatch_without_type.end();
 	static const auto ddit_e = map_dispatch_document.end();
-	for (const auto& item_key : object) {
-		auto str_key = item_key.as_string();
+	const auto it_e = object.end();
+	for (auto it = object.begin(); it != it_e; ++it) {
+		auto str_key = it->as_string();
 		const auto wpit = map_dispatch_write_properties.find(str_key);
 		if (wpit == wpit_e) {
 			const auto wtit = map_dispatch_without_type.find(str_key);
@@ -3125,13 +3128,13 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, std::vector<s
 				if (ddit == ddit_e) {
 					fields.push_back(std::move(str_key));
 				} else {
-					(this->*ddit->second)(str_key, object.at(str_key));
+					(this->*ddit->second)(str_key, it.value());
 				}
 			} else {
-				(this->*wtit->second)(str_key, object.at(str_key));
+				(this->*wtit->second)(str_key, it.value());
 			}
 		} else {
-			(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
+			(this->*wpit->second)(*mut_properties, str_key, it.value());
 		}
 	}
 
@@ -3193,11 +3196,11 @@ Schema::update_specification(const MsgPack& properties)
 	L_CALL(this, "Schema::update_specification(%s)", repr(properties.to_string()).c_str());
 
 	static const auto dpit_e = map_dispatch_properties.end();
-	for (const auto& property : properties) {
-		const auto str_prop = property.as_string();
-		const auto dpit = map_dispatch_properties.find(str_prop);
+	const auto it_e = properties.end();
+	for (auto it = properties.begin(); it != it_e; ++it) {
+		const auto dpit = map_dispatch_properties.find(it->as_string());
 		if (dpit != dpit_e) {
-			(this->*dpit->second)(properties.at(str_prop));
+			(this->*dpit->second)(it.value());
 		}
 	}
 }
@@ -4766,10 +4769,10 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 		const auto drit = map_dispatch_readable.find(str_key);
 		if (drit == drit_e) {
 			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
-				readable(item_schema.at(str_key), false);
+				readable(it.value(), false);
 			}
 		} else {
-			if (!(*drit->second)(item_schema.at(str_key), item_schema)) {
+			if (!(*drit->second)(it.value(), item_schema)) {
 				it = item_schema.erase(it);
 				continue;
 			}
@@ -4909,12 +4912,13 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		std::vector<std::string> fields;
 		auto properties = mut_schema ? &mut_schema->at(DB_META_SCHEMA) : &schema->at(DB_META_SCHEMA);
 
+		const auto it_e = object.end();
 		if (properties->size() == 1) {
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable();
 			static const auto wpit_e = map_dispatch_write_properties.end();
-			for (const auto& item_key : object) {
-				auto str_key = item_key.as_string();
+			for (auto it = object.begin(); it != it_e; ++it) {
+				auto str_key = it->as_string();
 				const auto wpit = map_dispatch_write_properties.find(str_key);
 				if (wpit == wpit_e) {
 					if (map_dispatch_document.count(str_key)) {
@@ -4923,20 +4927,20 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 						fields.push_back(std::move(str_key));
 					}
 				} else {
-					(this->*wpit->second)(*mut_properties, str_key, object.at(str_key));
+					(this->*wpit->second)(*mut_properties, str_key, it.value());
 				}
 			}
 			properties = &*mut_properties;
 		} else {
 			update_specification(*properties);
 			static const auto ddit_e = map_dispatch_document.end();
-			for (const auto& item_key : object) {
-				auto str_key = item_key.as_string();
+			for (auto it = object.begin(); it != it_e; ++it) {
+				auto str_key = it->as_string();
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
 					fields.push_back(std::move(str_key));
 				} else {
-					(this->*ddit->second)(str_key, object.at(str_key));
+					(this->*ddit->second)(str_key, it.value());
 				}
 			}
 		}
@@ -4987,8 +4991,9 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		}
 
 		static const auto wpit_e = map_dispatch_write_properties.end();
-		for (const auto& item_key : obj_schema) {
-			auto str_key = item_key.as_string();
+		const auto it_e = obj_schema.end();
+		for (auto it = obj_schema.begin(); it != it_e; ++it) {
+			auto str_key = it->as_string();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
 				if (map_dispatch_document.count(str_key)) {
@@ -4997,7 +5002,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 					fields.push_back(std::move(str_key));
 				}
 			} else {
-				(this->*wpit->second)(*mut_properties, str_key, obj_schema.at(str_key));
+				(this->*wpit->second)(*mut_properties, str_key, it.value());
 			}
 		}
 
