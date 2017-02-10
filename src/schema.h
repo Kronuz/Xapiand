@@ -369,6 +369,8 @@ class Schema {
 	using dispatch_update_reserved   = void (Schema::*)(const MsgPack&);
 	using dispatch_readable          = bool (*)(MsgPack&, MsgPack&);
 
+	using FieldVector = std::vector<std::pair<std::string, const MsgPack*>>;
+
 	static const std::unordered_map<std::string, dispatch_set_default_spc> map_dispatch_set_default_spc;
 	static const std::unordered_map<std::string, dispatch_write_reserved> map_dispatch_write_properties;
 	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_without_type;
@@ -495,9 +497,9 @@ class Schema {
 	 * Gets the properties stored in the schema as well as those sent by the user.
 	 */
 
-	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, std::vector<std::string>& fields);
+	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields);
 	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name);
-	MsgPack& get_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, std::vector<std::string>& fields);
+	MsgPack& get_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields);
 
 
 	/*
@@ -514,15 +516,15 @@ class Schema {
 	 * Update specification using object's properties.
 	 */
 
-	void process_properties_document(const MsgPack& object, std::vector<std::string>& fields);
-	void process_properties_document(MsgPack*& mut_properties, const MsgPack& object, std::vector<std::string>& fields);
+	void process_properties_document(const MsgPack& object, FieldVector& fields);
+	void process_properties_document(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields);
 
 
 	/*
 	 * Add new field to properties.
 	 */
 
-	void add_field(MsgPack*& mut_properties, const MsgPack& object, std::vector<std::string>& fields);
+	void add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields);
 	void add_field(MsgPack*& mut_properties);
 
 

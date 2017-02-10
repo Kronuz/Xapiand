@@ -1124,7 +1124,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 	switch (object.getType()) {
 		case MsgPack::Type::MAP: {
-			std::vector<std::string> fields;
+			FieldVector fields;
 
 			properties = &get_subproperties(properties, data, name, object, fields);
 
@@ -1133,7 +1133,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			const auto spc_object = std::move(specification);
 			for (const auto& field : fields) {
 				specification = spc_object;
-				index_object(properties, object.at(field), data, doc, field);
+				index_object(properties, *field.second, data, doc, field.first);
 			}
 			break;
 		}
@@ -1166,7 +1166,7 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 	for (const auto& item : array) {
 		switch (item.getType()) {
 			case MsgPack::Type::MAP: {
-				std::vector<std::string> fields;
+				FieldVector fields;
 				specification.value = nullptr;
 				specification.value_rec = nullptr;
 
@@ -1179,7 +1179,7 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 				process_item_value(doc, data_pos, fields.size());
 
 				for (const auto& field : fields) {
-					index_object(properties, item.at(field), data_pos, doc, field);
+					index_object(properties, *field.second, data_pos, doc, field.first);
 				}
 
 				specification = spc_start;
@@ -2631,7 +2631,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 
 	const auto spc_start = specification;
 	if (obj_schema.is_map()) {
-		std::vector<std::string> fields;
+		FieldVector fields;
 		auto mut_properties = mut_parent_properties;
 
 		mut_properties = &get_subproperties(mut_properties, name, obj_schema, fields);
@@ -2649,7 +2649,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 		const auto spc_object = std::move(specification);
 		for (const auto& field : fields) {
 			specification = spc_object;
-			update_schema(mut_properties, obj_schema.at(field), field);
+			update_schema(mut_properties, *field.second, field.first);
 		}
 	} else {
 		THROW(ClientError, "%s must be an object", repr(name).c_str());
@@ -2702,7 +2702,7 @@ Schema::get_subproperties(T& properties, const std::string& meta_name)
 
 
 const MsgPack&
-Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, std::vector<std::string>& fields)
+Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields)
 {
 	L_CALL(this, "Schema::get_subproperties(%s, <data>, %s, %s, <fields>)", repr(properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
 
@@ -2910,7 +2910,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 
 
 MsgPack&
-Schema::get_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, std::vector<std::string>& fields)
+Schema::get_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields)
 {
 	L_CALL(this, "Schema::get_subproperties(%s, %s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
 
@@ -3007,7 +3007,7 @@ Schema::detect_dynamic(const std::string& field_name)
 
 
 void
-Schema::process_properties_document(const MsgPack& object, std::vector<std::string>& fields)
+Schema::process_properties_document(const MsgPack& object, FieldVector& fields)
 {
 	L_CALL(this, "Schema::process_properties_document(%s, <fields>)", repr(object.to_string()).c_str());
 
@@ -3018,7 +3018,7 @@ Schema::process_properties_document(const MsgPack& object, std::vector<std::stri
 			auto str_key = it->as_string();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
-				fields.push_back(std::move(str_key));
+				fields.emplace_back(std::move(str_key), &it.value());
 			} else {
 				(this->*ddit->second)(str_key, it.value());
 			}
@@ -3031,7 +3031,7 @@ Schema::process_properties_document(const MsgPack& object, std::vector<std::stri
 			if (wtit == wtit_e) {
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
-					fields.push_back(std::move(str_key));
+					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
 					(this->*ddit->second)(str_key, it.value());
 				}
@@ -3044,7 +3044,7 @@ Schema::process_properties_document(const MsgPack& object, std::vector<std::stri
 
 
 void
-Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& object, std::vector<std::string>& fields)
+Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields)
 {
 	L_CALL(this, "Schema::process_properties_document(%s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
@@ -3058,7 +3058,7 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 			if (wpit == wpit_e) {
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
-					fields.push_back(std::move(str_key));
+					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
 					(this->*ddit->second)(str_key, it.value());
 				}
@@ -3076,7 +3076,7 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 				if (wtit == wtit_e) {
 					const auto ddit = map_dispatch_document.find(str_key);
 					if (ddit == ddit_e) {
-						fields.push_back(std::move(str_key));
+						fields.emplace_back(std::move(str_key), &it.value());
 					} else {
 						(this->*ddit->second)(str_key, it.value());
 					}
@@ -3092,7 +3092,7 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 
 
 void
-Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, std::vector<std::string>& fields)
+Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields)
 {
 	L_CALL(this, "Schema::add_field(%s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
@@ -3126,7 +3126,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, std::vector<s
 			if (wtit == wtit_e) {
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
-					fields.push_back(std::move(str_key));
+					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
 					(this->*ddit->second)(str_key, it.value());
 				}
@@ -4909,7 +4909,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 	try {
 		specification = default_spc;
 
-		std::vector<std::string> fields;
+		FieldVector fields;
 		auto properties = mut_schema ? &mut_schema->at(DB_META_SCHEMA) : &schema->at(DB_META_SCHEMA);
 
 		const auto it_e = object.end();
@@ -4924,7 +4924,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 					if (map_dispatch_document.count(str_key)) {
 						THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
 					} else {
-						fields.push_back(std::move(str_key));
+						fields.emplace_back(std::move(str_key), &it.value());
 					}
 				} else {
 					(this->*wpit->second)(*mut_properties, str_key, it.value());
@@ -4938,7 +4938,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 				auto str_key = it->as_string();
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
-					fields.push_back(std::move(str_key));
+					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
 					(this->*ddit->second)(str_key, it.value());
 				}
@@ -4952,7 +4952,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		const auto spc_start = std::move(specification);
 		for (const auto& field : fields) {
 			specification = spc_start;
-			index_object(properties, object.at(field), data_ptr, doc, field);
+			index_object(properties, *field.second, data_ptr, doc, field.first);
 		}
 
 		for (const auto& elem : map_values) {
@@ -4981,7 +4981,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 	try {
 		specification = default_spc;
 
-		std::vector<std::string> fields;
+		FieldVector fields;
 		auto mut_properties = replace ? &clear() : &get_mutable();
 
 		if (mut_properties->size() == 1) {
@@ -4999,7 +4999,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 				if (map_dispatch_document.count(str_key)) {
 					THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
 				} else {
-					fields.push_back(std::move(str_key));
+					fields.emplace_back(std::move(str_key), &it.value());
 				}
 			} else {
 				(this->*wpit->second)(*mut_properties, str_key, it.value());
@@ -5014,7 +5014,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		const auto spc_start = std::move(specification);
 		for (const auto& field : fields) {
 			specification = spc_start;
-			update_schema(mut_properties, obj_schema.at(field), field);
+			update_schema(mut_properties, *field.second, field.first);
 		}
 	} catch (...) {
 		mut_schema.reset();
