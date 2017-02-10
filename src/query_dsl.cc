@@ -101,20 +101,28 @@ QueryDSL::get_in_type(const MsgPack& obj)
 {
 	L_CALL(this, "QueryDSL::get_in_type(%s)", repr(obj.to_string()).c_str());
 
-	auto it = obj.find(QUERYDSL_RANGE);
-	if (it == obj.end()) {
-		THROW(QueryDslError, "Invalid range [<obj>]: %s", repr(obj.to_string()).c_str());
-	}
-
-	const auto& range = it.value();
-	auto it_f = range.find(QUERYDSL_FROM);
-	if (it_f != range.end()) {
-		return std::get<0>(Serialise::get_type(it_f.value()));
-	} else {
-		auto it_t = range.find(QUERYDSL_TO);
-		if (it_t != range.end()) {
-			return std::get<0>(Serialise::get_type(it_t.value()));
+	try {
+		auto it = obj.find(QUERYDSL_RANGE);
+		if (it == obj.end()) {
+			THROW(QueryDslError, "Invalid range [<obj>]: %s", repr(obj.to_string()).c_str());
 		}
+
+		const auto& range = it.value();
+		try {
+			auto it_f = range.find(QUERYDSL_FROM);
+			if (it_f != range.end()) {
+				return std::get<0>(Serialise::get_type(it_f.value()));
+			} else {
+				auto it_t = range.find(QUERYDSL_TO);
+				if (it_t != range.end()) {
+					return std::get<0>(Serialise::get_type(it_t.value()));
+				}
+			}
+		} catch (const msgpack::type_error&) {
+			THROW(QueryDslError, "%s must be object [%s]", QUERYDSL_RANGE, repr(range.to_string()).c_str());
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(QueryDslError, "%s must be object [%s]", QUERYDSL_IN, repr(obj.to_string()).c_str());
 	}
 
 	return FieldType::EMPTY;
@@ -683,14 +691,19 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 		for (auto it = obj.begin(); it != it_e; ++it) {
 			const auto field_name = it->as_string();
 			if (field_name.compare(QUERYDSL_RANGE) == 0) {
-				return MultipleValueRange::getQuery(field_spc, it.value());
+				const auto& range = it.value();
+				if (range.is_map()) {
+					return MultipleValueRange::getQuery(field_spc, range);
+				} else {
+					THROW(QueryDslError, "%s must be object [%s]", field_name.c_str(), repr(range.to_string()).c_str());
+				}
 			} else {
 				THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_IN, repr(obj.to_string()).c_str());
 			}
 		}
 		THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_IN, repr(obj.to_string()).c_str());
 	} else {
-		THROW(QueryDslError, "%s must be an object [%s]", QUERYDSL_IN, repr(obj.to_string()).c_str());
+		THROW(QueryDslError, "%s must be object [%s]", QUERYDSL_IN, repr(obj.to_string()).c_str());
 	}
 }
 
