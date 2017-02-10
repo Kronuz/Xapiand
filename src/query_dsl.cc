@@ -711,12 +711,11 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 MsgPack
 QueryDSL::make_dsl_query(const query_field_t& e)
 {
-	L_CALL(this, "Query::make_dsl_query()");
+	L_CALL(this, "Query::make_dsl_query(<query_field_t>)");
 
 	MsgPack dsl(MsgPack::Type::MAP);
 	if (e.query.size() == 1) {
 		dsl = make_dsl_query(*e.query.begin());
-
 	} else {
 		for (const auto& query : e.query) {
 			dsl["_and"].push_back(make_dsl_query(query));
@@ -740,19 +739,16 @@ QueryDSL::make_dsl_query(const std::string& query)
 		std::vector<MsgPack> stack_msgpack;
 
 		while (!booltree.empty()) {
-			auto token = booltree.front();
-			booltree.pop_front();
+			const auto& token = booltree.front();
 
 			switch (token.get_type()) {
 				case TokenType::Not:
 					if (stack_msgpack.size() < 1) {
 						THROW(QueryDslError, "Bad boolean expression");
 					} else {
-						auto expression = stack_msgpack.back();
+						MsgPack object = {{ "_not", stack_msgpack.back() }}; // expression.
 						stack_msgpack.pop_back();
-						MsgPack object(MsgPack::Type::MAP);
-						object["_not"] = { expression };
-						stack_msgpack.push_back(object);
+						stack_msgpack.push_back(std::move(object));
 					}
 					break;
 
@@ -760,13 +756,12 @@ QueryDSL::make_dsl_query(const std::string& query)
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
 					} else {
-						auto letf_expression = stack_msgpack.back();
+						MsgPack object;
+						auto& _or = object["_or"] = { stack_msgpack.back() }; // letf expression
 						stack_msgpack.pop_back();
-						auto right_expression = stack_msgpack.back();
+						_or.push_back(stack_msgpack.back()); // right expression
 						stack_msgpack.pop_back();
-						MsgPack object(MsgPack::Type::MAP);
-						object["_or"] = { letf_expression, right_expression };
-						stack_msgpack.push_back(object);
+						stack_msgpack.push_back(std::move(object));
 					}
 					break;
 
@@ -774,13 +769,12 @@ QueryDSL::make_dsl_query(const std::string& query)
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
 					} else {
-						auto letf_expression = stack_msgpack.back();
+						MsgPack object;
+						auto& _and = object["_and"] = { stack_msgpack.back() }; // letf expression
 						stack_msgpack.pop_back();
-						auto right_expression = stack_msgpack.back();
+						_and.push_back(stack_msgpack.back()); // right expression
 						stack_msgpack.pop_back();
-						MsgPack object(MsgPack::Type::MAP);
-						object["_and"] = { letf_expression, right_expression };
-						stack_msgpack.push_back(object);
+						stack_msgpack.push_back(std::move(object));
 					}
 					break;
 
@@ -788,18 +782,16 @@ QueryDSL::make_dsl_query(const std::string& query)
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
 					} else {
-						auto letf_expression = stack_msgpack.back();
+						MsgPack object;
+						auto& _xor = object["_xor"] = { stack_msgpack.back() }; // letf expression
 						stack_msgpack.pop_back();
-						auto right_expression = stack_msgpack.back();
+						_xor.push_back(stack_msgpack.back()); // right expression
 						stack_msgpack.pop_back();
-						MsgPack object(MsgPack::Type::MAP);
-						object["_xor"] = { letf_expression, right_expression };
-						stack_msgpack.push_back(object);
+						stack_msgpack.push_back(std::move(object));
 					}
 					break;
 
 				case TokenType::Id:	{
-					MsgPack object(MsgPack::Type::MAP);
 					FieldParser fp(token.get_lexeme());
 					fp.parse();
 
@@ -811,19 +803,22 @@ QueryDSL::make_dsl_query(const std::string& query)
 					}
 
 					auto field_name = fp.get_field_name();
+
+					MsgPack object;
 					if (field_name.empty()) {
 						object[QUERYDSL_RAW] = value;
 					} else {
 						object[field_name][QUERYDSL_RAW] = value;
 					}
-
-					stack_msgpack.push_back(object);
+					stack_msgpack.push_back(std::move(object));
 					break;
 				}
 
 				default:
 					break;
 			}
+
+			booltree.pop_front();
 		}
 
 		if (stack_msgpack.size() == 1) {
@@ -848,7 +843,7 @@ QueryDSL::get_query(const MsgPack& obj)
 		return Xapian::Query::MatchAll;
 	}
 
-	auto query = process(Xapian::Query::OP_AND, "", obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD, false, false);
+	auto query = process(Xapian::Query::OP_AND, std::string(), obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD, false, false);
 	L_QUERY(this, "query = " CYAN "%s" NO_COL "\n" DARK_GREY "%s" NO_COL, query.get_description().c_str(), repr(query.serialise()).c_str());
 	return query;
 }
