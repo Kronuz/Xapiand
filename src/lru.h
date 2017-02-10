@@ -70,6 +70,8 @@ public:
 	LRU(ssize_t max_size=-1)
 		: _max_size(max_size) { }
 
+	virtual ~LRU() = default;
+
 	auto begin() noexcept {
 		return _items_list.begin();
 	}
