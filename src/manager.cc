@@ -102,6 +102,7 @@ void sig_exit(int sig) {
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, const opts_t& o)
 	: Worker(nullptr, ev_loop_, ev_flags_),
 	  database_pool(o.dbpool_size),
+	  schemas(o.dbpool_size),
 	  thread_pool("W%02zu", o.threadpool_size),
 	  server_pool("S%02zu", o.num_servers),
 #ifdef XAPIAND_CLUSTERING

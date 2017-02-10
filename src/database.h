@@ -387,12 +387,6 @@ public:
 };
 
 
-class MsgPackLRU: public lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
-public:
-	MsgPackLRU(ssize_t max_size=-1);
-};
-
-
 class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
@@ -400,14 +394,12 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 
 private:
 	std::mutex qmtx;
-	std::mutex smtx;
 	std::atomic_bool finished;
 
 	std::unordered_map<size_t, std::unordered_set<std::shared_ptr<DatabaseQueue>>> queues;
 
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
-	MsgPackLRU schemas;
 
 	std::condition_variable checkin_cond;
 
@@ -419,8 +411,6 @@ private:
 	void add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	bool _switch_db(const Endpoint& endpoint);
-	MsgPack get_shared_schema(const Endpoint& endpoint, const std::string& id, int flags=-1);
-	std::tuple<bool, atomic_shared_ptr<const MsgPack>*, std::string, std::string> get_local_schema(const Endpoint& endpoint, int flags=-1, const MsgPack* obj=nullptr);
 
 public:
 	queue::QueueSet<Endpoint> updated_databases;
@@ -439,7 +429,4 @@ public:
 	void checkin(std::shared_ptr<Database>& database);
 	bool switch_db(const Endpoint& endpoint);
 	void recover_database(const Endpoints& endpoints, int flags);
-
-	std::shared_ptr<const MsgPack> get_schema(const Endpoint& endpoint, int flags=-1, const MsgPack* obj=nullptr);
-	bool set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);
 };

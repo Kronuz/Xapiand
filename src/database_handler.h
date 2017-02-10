@@ -39,9 +39,10 @@
 
 class AggregationMatchSpy;
 class Database;
-class Schema;
 class Document;
 class Multi_MultiValueKeyMaker;
+class Schema;
+class SchemasLRU;
 
 
 class MSet : public Xapian::MSet {
@@ -71,6 +72,7 @@ using DataType = std::pair<Xapian::docid, MsgPack>;
 
 class DatabaseHandler {
 	friend class Document;
+	friend class SchemasLRU;
 
 	Endpoints endpoints;
 	int flags;
@@ -111,7 +113,7 @@ public:
 	~DatabaseHandler() = default;
 
 	std::shared_ptr<Database> get_database() const noexcept;
-	std::shared_ptr<Schema> get_schema(const MsgPack* obj=nullptr) const;
+	std::shared_ptr<Schema> get_schema(const MsgPack* obj=nullptr);
 
 	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET);
 

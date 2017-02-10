@@ -39,6 +39,7 @@
 #include "query_dsl.h"                      // for QUERYDSL_QUERY, QueryDSL
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema, required_spc_t
+#include "schemas_lru.h"                    // for SchemasLRU
 #include "serialise.h"                      // for cast, serialise, type
 #include "utils.h"                          // for repr
 #include "v8/exception.h"                   // for Error, ReferenceError
@@ -118,11 +119,11 @@ DatabaseHandler::get_database() const noexcept
 
 
 std::shared_ptr<Schema>
-DatabaseHandler::get_schema(const MsgPack* obj) const
+DatabaseHandler::get_schema(const MsgPack* obj)
 {
 	L_CALL(this, "DatabaseHandler::get_schema(<obj>)");
 
-	return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags, obj));
+	return std::make_shared<Schema>(XapiandManager::manager->schemas.get(this, obj));
 }
 
 
@@ -694,7 +695,7 @@ DatabaseHandler::update_schema()
 	auto mod_schema = schema->get_modified_schema();
 	if (mod_schema) {
 		auto old_schema = schema->get_const_schema();
-		if (!XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, old_schema, mod_schema)) {
+		if (!XapiandManager::manager->schemas.set(this, old_schema, mod_schema)) {
 			return std::make_pair(false, true);
 		}
 		return std::make_pair(true, true);

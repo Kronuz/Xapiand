@@ -34,6 +34,7 @@
 #include "endpoint_resolver.h"
 #include "ev/ev++.h"
 #include "length.h"
+#include "schemas_lru.h"
 #include "stats.h"
 #include "threadpool.h"
 #include "worker.h"
@@ -164,6 +165,8 @@ public:
 #endif
 
 	DatabasePool database_pool;
+	SchemasLRU schemas;
+
 	ThreadPool<> thread_pool;
 	ThreadPool<> server_pool;
 #ifdef XAPIAND_CLUSTERING
