@@ -33,6 +33,7 @@
 #include "geo/wkt_parser.h"                // for GeoSpatial, EWKT_Parser
 #include "geospatialrange.h"               // for GeoSpatialRange
 #include "length.h"                        // for serialise_length
+#include "query_dsl.h"                     // for QUERYDSL_FROM, QUERYDSL_TO
 #include "schema.h"                        // for required_spc_t, FieldType
 #include "serialise.h"                     // for MsgPack, cast, _float, int...
 #include "sortable_serialise.h"            // for sortable_serialise, sortab...
@@ -152,12 +153,12 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 	const MsgPack* start = nullptr;
 	const MsgPack* end = nullptr;
 
-	auto it = obj.find("_from");
+	auto it = obj.find(QUERYDSL_FROM);
 	if (it != obj.end()) {
 		start = &it.value();
 	}
 
-	it = obj.find("_to");
+	it = obj.find(QUERYDSL_TO);
 	if (it != obj.end()) {
 		end = &it.value();
 	}

@@ -39,6 +39,7 @@
 #include "guid/guid.h"                                // for Guid
 #include "length.h"                                   // for serialise_length, unserialise_length
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
+#include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "schema.h"                                   // for FieldType, FieldType::TERM, Fiel...
 #include "stl_serialise.h"                            // for CartesianUSet, RangeList
 #include "utils.h"                                    // for toUType, stox, repr
@@ -752,16 +753,16 @@ Serialise::get_range_type(const class MsgPack& obj, bool bool_term)
 	class MsgPack end;
 
 	try {
-		start = obj.at("_from");
+		start = obj.at(QUERYDSL_FROM);
 		try {
-			end = obj.at("_to");
+			end = obj.at(QUERYDSL_TO);
 		} catch (const std::out_of_range&) {
 			auto res = get_type(start, bool_term);
 			return std::make_tuple(res.first, res.second, std::string());
 		}
 	} catch (const std::out_of_range&) {
 		try {
-			end = obj.at("_to");
+			end = obj.at(QUERYDSL_TO);
 			auto res = get_type(end, bool_term);
 			return std::make_tuple(res.first, std::string(), res.second);
 		} catch (const std::out_of_range&) {
