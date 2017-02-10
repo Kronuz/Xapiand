@@ -2401,9 +2401,7 @@ DatabasePool::get_local_schema(const Endpoint& endpoint, int flags, const MsgPac
 					THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, MsgPackTypes[toUType(aux_schema_ptr->getType())]);
 			}
 
-			if (atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr) && str_schema.empty()) {
-				database->set_metadata(DB_META_SCHEMA, aux_schema_ptr->serialise());
-			}
+			atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr);
 			checkin(database);
 		} else {
 			THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoint.to_string()).c_str());
@@ -2512,6 +2510,8 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 				MsgPack shared_schema = *new_schema;
 				shared_schema[RESERVED_RECURSE] = false;
 				db_handler.index(schema_id, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
+				db_handler.reset(endpoint, DB_WRITABLE);
+				db_handler.set_metadata(DB_META_SCHEMA, (std::get<1>(info_local_schema)->load()->serialise()));
 				return true;
 			} catch (const CheckoutError&) {
 				THROW(CheckoutError, "Cannot checkout database: %s", repr(schema_path).c_str());
