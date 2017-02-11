@@ -53,8 +53,10 @@ class Database;
 class DatabasePool;
 class DatabaseQueue;
 class DatabasesLRU;
+class lock_database;
 class MsgPack;
 struct WalHeader;
+
 
 constexpr int RECOVER_REMOVE_WRITABLE         = 0x01; // Remove endpoint from writable database
 constexpr int RECOVER_REMOVE_DATABASE         = 0x02; // Remove endpoint from database
@@ -391,8 +393,8 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
 	friend class DatabaseQueue;
+	friend class lock_database;
 
-private:
 	std::mutex qmtx;
 	std::atomic_bool finished;
 
@@ -412,6 +414,12 @@ private:
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	bool _switch_db(const Endpoint& endpoint);
 
+	template<typename F, typename... Args>
+	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args);
+	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
+
+	void checkin(std::shared_ptr<Database>& database);
+
 public:
 	queue::QueueSet<Endpoint> updated_databases;
 
@@ -421,12 +429,6 @@ public:
 	long long get_mastery_level(const std::string& dir);
 
 	void finish();
-
-	template<typename F, typename... Args>
-	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args);
-	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
-
-	void checkin(std::shared_ptr<Database>& database);
 	bool switch_db(const Endpoint& endpoint);
 	void recover_database(const Endpoints& endpoints, int flags);
 };

@@ -1821,20 +1821,6 @@ DatabasePool::get_mastery_level(const std::string& dir)
 }
 
 
-void
-DatabasePool::finish()
-{
-	L_CALL(this, "DatabasePool::finish()");
-
-	finished = true;
-
-	writable_databases.finish();
-	databases.finish();
-
-	L_OBJ(this, "FINISH DATABASE!");
-}
-
-
 template<typename F, typename... Args>
 inline bool
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args)
@@ -2097,6 +2083,20 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	if (signal_checkins) {
 		while (queue->checkin_callbacks.call());
 	}
+}
+
+
+void
+DatabasePool::finish()
+{
+	L_CALL(this, "DatabasePool::finish()");
+
+	finished = true;
+
+	writable_databases.finish();
+	databases.finish();
+
+	L_OBJ(this, "FINISH DATABASE!");
 }
 
 
