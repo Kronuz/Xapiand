@@ -351,7 +351,7 @@ QueryDSL::process_cast(const std::string& word, Xapian::Query::op, const std::st
 Xapian::Query
 QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
-	L_CALL(this, "QueryDSL::process(%d, %s, %s, <wqf>, <q_flags>, %s, %s %s)", (int)op, repr(parent).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false", is_wildcard ? "true" : "false");
+	L_CALL(this, "QueryDSL::process(%d, %s, %s, <wqf>, <q_flags>, %s, %s, %s)", (int)op, repr(parent).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false", is_wildcard ? "true" : "false");
 
 	Xapian::Query final_query;
 	if (op == Xapian::Query::OP_AND_NOT) {
@@ -407,7 +407,7 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 Xapian::Query
 QueryDSL::get_value_query(const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
-	L_CALL(this, "QueryDSL::get_value_query(%s, %s, <wqf>, <q_flags>, %s, %s %s)", repr(path).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false", is_wildcard ? "true" : "false");
+	L_CALL(this, "QueryDSL::get_value_query(%s, %s, <wqf>, <q_flags>, %s, %s, %s)", repr(path).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false", is_wildcard ? "true" : "false");
 
 	if (path.empty()) {
 		if (!is_in && is_raw && obj.is_string()) {
@@ -553,7 +553,7 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, const std::string&
 Xapian::Query
 QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_in, bool is_wildcard)
 {
-	L_CALL(this, "QueryDSL::get_namespace_query(<field_spc>, %s, <wqf>, <q_flags>, %s %s)", repr(obj.to_string()).c_str(), is_in ? "true" : "false", is_wildcard ? "true" : "false");
+	L_CALL(this, "QueryDSL::get_namespace_query(<field_spc>, %s, <wqf>, <q_flags>, %s, %s)", repr(obj.to_string()).c_str(), is_in ? "true" : "false", is_wildcard ? "true" : "false");
 
 	if (is_in) {
 		if (obj.is_string()) {
@@ -602,7 +602,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 Xapian::Query
 QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_in, bool is_wildcard)
 {
-	L_CALL(this, "QueryDSL::get_regular_query(<field_spc>, %s, <wqf>, <q_flags>, %s %s)", repr(obj.to_string()).c_str(), is_in ? "true" : "false", is_wildcard ? "true" : "false");
+	L_CALL(this, "QueryDSL::get_regular_query(<field_spc>, %s, <wqf>, <q_flags>, %s, %s)", repr(obj.to_string()).c_str(), is_in ? "true" : "false", is_wildcard ? "true" : "false");
 
 	if (is_in) {
 		if (obj.is_string()) {
@@ -636,7 +636,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 Xapian::Query
 QueryDSL::get_term_query(const required_spc_t& field_spc, std::string& serialised_term, Xapian::termcount wqf, int q_flags, bool is_wildcard)
 {
-	L_CALL(this, "QueryDSL::get_term_query(<field_spc>, %s, <wqf>, <q_flags>)", repr(serialised_term).c_str());
+	L_CALL(this, "QueryDSL::get_term_query(<field_spc>, %s, <wqf>, <q_flags>, %s)", repr(serialised_term).c_str(), is_wildcard ? "true" : "false");
 
 	switch (field_spc.get_type()) {
 		case FieldType::TEXT: {
@@ -668,14 +668,12 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string& serialise
 				to_lower(serialised_term);
 			}
 			if (endswith(serialised_term, '*')) {
-				serialised_term = serialised_term.substr(0, serialised_term.length() - 1);
-				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix, field_spc.get_ctype()));
+				serialised_term.pop_back();
+				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix, field_spc.get_ctype()), wqf);
+			} else if (is_wildcard) {
+				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix, field_spc.get_ctype()), wqf);
 			} else {
-				if (is_wildcard) {
-					return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix, field_spc.get_ctype()), wqf);
-				} else {
-					return Xapian::Query(prefixed(serialised_term, field_spc.prefix, field_spc.get_ctype()), wqf);
-				}
+				return Xapian::Query(prefixed(serialised_term, field_spc.prefix, field_spc.get_ctype()), wqf);
 			}
 		}
 
