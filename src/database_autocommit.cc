@@ -22,11 +22,12 @@
 
 #include "database_autocommit.h"
 
-#include "database.h"        // for Database, DatabasePool
-#include "endpoint.h"        // for Endpoints
-#include "log.h"             // for Log, L_OBJ, L_CALL, L_DEBUG, L_WARNING
-#include "manager.h"         // for XapiandManager
-#include "utils.h"           // for delta_string
+#include "database.h"          // for Database, DatabasePool
+#include "database_handler.h"  // for DatabaseHandler
+#include "endpoint.h"          // for Endpoints
+#include "log.h"               // for Log, L_OBJ, L_CALL, L_DEBUG, L_WARNING
+#include "manager.h"           // for XapiandManager
+#include "utils.h"             // for delta_string
 
 
 std::mutex DatabaseAutocommit::statuses_mtx;
@@ -101,14 +102,13 @@ DatabaseAutocommit::run()
 	if (weak_database.lock()) {
 		bool successful = false;
 		auto start = std::chrono::system_clock::now();
-		std::shared_ptr<Database> database;
-		if (XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
-			try {
-				database->commit();
-				successful = true;
-			} catch (const Error& e) {}
-			XapiandManager::manager->database_pool.checkin(database);
-		}
+
+		DatabaseHandler db_handler(endpoints, DB_WRITABLE);
+		try {
+			db_handler.commit();
+			successful = true;
+		} catch (const Error& e) { }
+
 		auto end = std::chrono::system_clock::now();
 
 		if (successful) {
