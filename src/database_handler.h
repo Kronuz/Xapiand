@@ -147,6 +147,8 @@ public:
 
 	MsgPack get_document_info(const std::string& document_id);
 	MsgPack get_database_info();
+
+	bool commit(bool _wal=true);
 };
 
 
