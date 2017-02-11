@@ -214,9 +214,9 @@ QueryDSL::process_and_maybe(const std::string&, Xapian::Query::op, const std::st
 
 
 Xapian::Query
-QueryDSL::process_and_not(const std::string& word, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_and_not(const std::string&, Xapian::Query::op, const std::string& parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
-	L_CALL(this, "QueryDSL::process_and_not(%s, ...)", repr(word).c_str());
+	L_CALL(this, "QueryDSL::process_and_not(...)");
 
 	return process(Xapian::Query::OP_AND_NOT, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
 }
