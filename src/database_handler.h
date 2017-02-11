@@ -40,6 +40,7 @@
 
 class AggregationMatchSpy;
 class Database;
+class DatabaseHandler;
 class Document;
 class Multi_MultiValueKeyMaker;
 class Schema;
@@ -68,11 +69,32 @@ public:
 };
 
 
+class lock_database {
+	DatabaseHandler* db_handler;
+
+	lock_database(const lock_database&) = delete;
+	lock_database& operator=(const lock_database&) = delete;
+
+public:
+	template<typename F, typename... Args>
+	lock_database(DatabaseHandler* db_handler_, F&& f, Args&&... args);
+	lock_database(DatabaseHandler* db_handler_);
+	~lock_database();
+
+	template<typename F, typename... Args>
+	void lock(F&& f, Args&&... args);
+	void lock();
+
+	void unlock();
+};
+
+
 using DataType = std::pair<Xapian::docid, MsgPack>;
 
 
 class DatabaseHandler {
 	friend class Document;
+	friend class lock_database;
 	friend class SchemasLRU;
 
 	Endpoints endpoints;
@@ -94,25 +116,6 @@ class DatabaseHandler {
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
 public:
-	class lock_database {
-		DatabaseHandler* db_handler;
-
-		lock_database(const lock_database&) = delete;
-		lock_database& operator=(const lock_database&) = delete;
-
-	public:
-		template<typename F, typename... Args>
-		lock_database(DatabaseHandler* db_handler_, F&& f, Args&&... args);
-		lock_database(DatabaseHandler* db_handler_);
-		~lock_database();
-
-		template<typename F, typename... Args>
-		void lock(F&& f, Args&&... args);
-		void lock();
-
-		void unlock();
-	};
-
 	DatabaseHandler();
 	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET);
 
