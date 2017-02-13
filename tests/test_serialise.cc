@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,9 +22,8 @@
 
 #include "test_serialise.h"
 
-
-#include "serialise.h"
 #include "datetime.h"
+#include "serialise.h"
 #include "utils.h"
 
 
@@ -110,14 +109,14 @@ const test_date_t test_unserialisedate[] {
 	{ "2015-10-10T23:55:58.765-6:40||+5y/M", "2020-10-31T23:59:59.999" },
 	{ "9115/01/0115:10:50.897-6:40",         "9115-01-01T21:50:50.897" },
 	{ "9999/12/20T08:10-03:00||/y",          "9999-12-31T23:59:59.999" },
-	{ "-62135596800.000",                    "0001-01-01T00:00:00.000" },
-	{ "253402300799",                        "9999-12-31T23:59:59.000" },
+	{ "0001-01-01T00:00:00.000",             "0001-01-01T00:00:00.000" },
+	{ "9999-12-31T23:59:59.000",             "9999-12-31T23:59:59.000" },
 	{ nullptr,                               nullptr                   },
 };
 
 
 const test_cartesian_t test_seri_cartesian[] {
-	// Cartesian.		                                    Expected serialise Cartesian.                       Expected Cartesian after of unserialise.
+	// Cartesian.                                                Expected serialise Cartesian.                       Expected Cartesian after of unserialise.
 	{ Cartesian(10.0, 20.0, 0.0, CartesianUnits::DEGREES),       "r\\xc6]\\xfdO\\xafY\\xe0E\\xe3=\\xe5",             "0.925602814 0.336891873 0.172520422"    },
 	{ Cartesian(30.0, 15.0, 0.0, CartesianUnits::DEGREES),       "m\\x8c[\\xe2H\\xfc\\xac\\x13YA\\xc8$",             "0.837915107 0.224518676 0.497483301"    },
 	{ Cartesian(40.0, 30.0, 21.0, CartesianUnits::DEGREES),      "cA\\xb4BR\\x7fl0a\\xc4BE",                         "0.665250371 0.384082481 0.640251974"    },
@@ -173,7 +172,7 @@ int test_unserialise_date() {
 	INIT_LOG
 	int cont = 0;
 	for (const test_date_t *p = test_unserialisedate; p->str; ++p) {
-		std::string date_s(Serialise::date(std::to_string(Datetime::timestamp(std::string(p->str)))));
+		std::string date_s = Serialise::date(std::string(p->str));
 		std::string date = Unserialise::date(date_s);
 		if (date.compare(p->expect) != 0) {
 			++cont;
