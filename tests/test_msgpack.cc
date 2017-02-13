@@ -629,7 +629,10 @@ int test_msgpack_reserve() {
 	auto obj = MsgPack::unserialise(data);
 
 	int res = 0;
-	size_t r_size = 64 * obj.size();
+	size_t r_size = obj.size();
+	while (r_size < 100) {
+		r_size = MSGPACK_GROWTH_FACTOR * r_size;
+	}
 	obj.reserve(r_size);
 	if (obj.capacity() != r_size) {
 		L_ERR(nullptr, "ERROR: MsgPack::reserve(msgpack::map) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
