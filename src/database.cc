@@ -2036,7 +2036,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	switch (queue->state) {
 		case DatabaseQueue::replica_state::REPLICA_SWITCH:
 			for (auto& endpoint : endpoints) {
-				_switch_db(endpoint);
+				switch_db(endpoint);
 			}
 			if (queue->state == DatabaseQueue::replica_state::REPLICA_FREE) {
 				signal_checkins = true;
@@ -2087,7 +2087,7 @@ DatabasePool::switch_db(const Endpoint& endpoint)
 	L_CALL(this, "DatabasePool::switch_db(%s)", repr(endpoint.to_string()).c_str());
 
 	std::lock_guard<std::mutex> lk(qmtx);
-	auto queues_set = queues[endpoint.hash()];
+	auto& queues_set = queues[endpoint.hash()];
 
 	bool switched = true;
 	for (auto& queue : queues_set) {
