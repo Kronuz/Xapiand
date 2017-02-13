@@ -913,6 +913,100 @@ DatabaseHandler::get_mastery_level()
 }
 
 
+void
+DatabaseHandler::init_ref(const Endpoint& endpoint)
+{
+	L_CALL(nullptr, "DatabaseHandler::init_ref(%s)", repr(endpoint.to_string()).c_str());
+
+	DatabaseHandler db_handler(Endpoint(".refs"), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+
+	const auto doc_id = get_hashed(endpoint.path);
+
+	try {
+		try {
+			db_handler.get_document(doc_id);
+		} catch (const DocNotFoundError&) {
+			static const MsgPack obj = {
+				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
+				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
+				{ "reference", { { "_value", 1                  }, { "_type",  "integer" }, { "_index", "field_values" } } },
+			};
+			db_handler.index(doc_id, false, obj, true, MSGPACK_CONTENT_TYPE);
+		}
+	} catch (const CheckoutError&) {
+		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
+		return;
+	}
+}
+
+
+void
+DatabaseHandler::inc_ref(const Endpoint& endpoint)
+{
+	L_CALL(nullptr, "DatabaseHandler::inc_ref(%s)", repr(endpoint.to_string()).c_str());
+
+	DatabaseHandler db_handler(Endpoint(".refs"), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+
+	const auto doc_id = get_hashed(endpoint.path);
+
+	try {
+		try {
+			auto document = db_handler.get_document(doc_id);
+			auto nref = document.get_value("reference").as_i64() + 1;
+			const MsgPack obj = {
+				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
+				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
+				{ "reference", { { "_value", nref               }, { "_type",  "integer" }, { "_index", "field_values" } } },
+			};
+			db_handler.index(doc_id, false, obj, true, MSGPACK_CONTENT_TYPE);
+		} catch (const DocNotFoundError&) {
+			// QUESTION: Document not found - should add?
+			// QUESTION: This case could happen?
+			static const MsgPack obj = {
+				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
+				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
+				{ "reference", { { "_value", 1                  }, { "_type",  "integer" }, { "_index", "field_values" } } },
+			};
+			db_handler.index(doc_id, false, obj, true, MSGPACK_CONTENT_TYPE);
+		}
+	} catch (const CheckoutError&) {
+		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
+		return;
+	}
+}
+
+
+void
+DatabaseHandler::dec_ref(const Endpoint& endpoint)
+{
+	L_CALL(nullptr, "DatabaseHandler::dec_ref(%s)", repr(endpoint.to_string()).c_str());
+
+	DatabaseHandler db_handler(Endpoint(".refs"), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+
+	const auto doc_id = get_hashed(endpoint.path);
+
+	try {
+		try {
+			auto document = db_handler.get_document(doc_id);
+			auto nref = document.get_value("reference").as_i64() - 1;
+			const MsgPack obj = {
+				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
+				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
+				{ "reference", { { "_value", nref               }, { "_type",  "integer" }, { "_index", "field_values" } } },
+			};
+			db_handler.index(doc_id, false, obj, true, MSGPACK_CONTENT_TYPE);
+			if (nref == 0) {
+				// qmtx need a lock
+				delete_files(endpoint.path);
+			}
+		} catch (const DocNotFoundError&) { }
+	} catch (const CheckoutError&) {
+		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
+		return;
+	}
+}
+
+
 Document::Document()
 	: db_handler(nullptr) { }
 

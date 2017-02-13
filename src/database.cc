@@ -1903,7 +1903,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					database = std::make_shared<Database>(queue, endpoints, flags);
 
 					if (writable && initref) {
-						init_ref(endpoints[0]);
+						DatabaseHandler::init_ref(endpoints[0]);
 					}
 
 #ifdef XAPIAND_DATABASE_WAL
@@ -2119,119 +2119,6 @@ DatabasePool::switch_db(const Endpoint& endpoint)
 
 	std::lock_guard<std::mutex> lk(qmtx);
 	return _switch_db(endpoint);
-}
-
-
-void
-DatabasePool::init_ref(const Endpoint& endpoint)
-{
-	L_CALL(this, "DatabasePool::init_ref(%s)", repr(endpoint.to_string()).c_str());
-
-	Endpoints ref_endpoints;
-	ref_endpoints.add(Endpoint(".refs"));
-	std::shared_ptr<Database> ref_database;
-	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Cannot open %s database.", repr(ref_endpoints.to_string()).c_str());
-		return;
-	}
-
-	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX, required_spc_t::get_ctype(FieldType::TERM)));
-	Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
-	if (p == ref_database->db->postlist_end(unique_id)) {
-		Xapian::Document doc;
-		// Boolean term for the node.
-		doc.add_boolean_term(unique_id);
-		// Start values for the DB.
-		doc.add_boolean_term(prefixed(DOCUMENT_DB_MASTER, get_prefix("master"), required_spc_t::get_ctype(FieldType::TERM)));
-		try {
-			ref_database->replace_document_term(unique_id, doc, true);
-		} catch (const BaseException& exc) {
-			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
-		}
-	}
-
-	checkin(ref_database);
-}
-
-
-void
-DatabasePool::inc_ref(const Endpoint& endpoint)
-{
-	L_CALL(this, "DatabasePool::inc_ref(%s)", repr(endpoint.to_string()).c_str());
-
-	Endpoints ref_endpoints;
-	ref_endpoints.add(Endpoint(".refs"));
-	std::shared_ptr<Database> ref_database;
-	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Cannot open %s database.", repr(ref_endpoints.to_string()).c_str());
-		return;
-	}
-
-	Xapian::Document doc;
-
-	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX, required_spc_t::get_ctype(FieldType::TERM)));
-	Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
-	if (p == ref_database->db->postlist_end(unique_id)) {
-		// QUESTION: Document not found - should add?
-		// QUESTION: This case could happen?
-		doc.add_boolean_term(unique_id);
-		doc.add_value(0, "0");
-		try {
-			ref_database->replace_document_term(unique_id, doc, true);
-		} catch (const BaseException& exc) {
-			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
-		}
-	} else {
-		// Document found - reference increased
-		doc = ref_database->db->get_document(*p);
-		doc.add_boolean_term(unique_id);
-		int nref = std::stoi(doc.get_value(0));
-		doc.add_value(0, std::to_string(nref + 1));
-		try {
-			ref_database->replace_document_term(unique_id, doc, true);
-		} catch (const BaseException& exc) {
-			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
-		}
-	}
-
-	checkin(ref_database);
-}
-
-
-void
-DatabasePool::dec_ref(const Endpoint& endpoint)
-{
-	L_CALL(this, "DatabasePool::dec_ref(%s)", repr(endpoint.to_string()).c_str());
-
-	Endpoints ref_endpoints;
-	ref_endpoints.add(Endpoint(".refs"));
-	std::shared_ptr<Database> ref_database;
-	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Cannot open %s database.", repr(ref_endpoints.to_string()).c_str());
-		return;
-	}
-
-	Xapian::Document doc;
-
-	std::string unique_id(prefixed(get_hashed(endpoint.path), DOCUMENT_ID_TERM_PREFIX, required_spc_t::get_ctype(FieldType::TERM)));
-	Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
-	if (p != ref_database->db->postlist_end(unique_id)) {
-		doc = ref_database->db->get_document(*p);
-		doc.add_boolean_term(unique_id);
-		int nref = std::stoi(doc.get_value(0)) - 1;
-		doc.add_value(0, std::to_string(nref));
-		try {
-			ref_database->replace_document_term(unique_id, doc, true);
-		} catch (const BaseException& exc) {
-			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
-		}
-		if (nref == 0) {
-			// qmtx need a lock
-			delete_files(endpoint.path);
-		}
-	}
-
-	checkin(ref_database);
 }
 
 

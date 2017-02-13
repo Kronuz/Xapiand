@@ -154,6 +154,10 @@ public:
 	bool commit(bool _wal=true);
 
 	long long get_mastery_level();
+
+	static void init_ref(const Endpoint& endpoint);
+	static void inc_ref(const Endpoint& endpoint);
+	static void dec_ref(const Endpoint& endpoint);
 };
 
 
