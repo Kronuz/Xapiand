@@ -1717,10 +1717,10 @@ DatabasesLRU::DatabasesLRU(ssize_t max_size)
 
 
 std::shared_ptr<DatabaseQueue>&
-DatabasesLRU::operator[] (std::pair<bool, size_t> key)
+DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 {
 	try {
-		return at(key.second);
+		return at(key.first);
 	} catch (std::range_error) {
 		return insert_and([](std::shared_ptr<DatabaseQueue>& val) {
 			lru::DropAction drop_action;
@@ -1734,7 +1734,7 @@ DatabasesLRU::operator[] (std::pair<bool, size_t> key)
 			} else {
 				return std::make_pair(lru::InsertAction::front, drop_action);
 			}
-		}, std::make_pair(key.second, std::make_shared<DatabaseQueue>(key.first)));
+		}, std::make_pair(key.first, std::make_shared<DatabaseQueue>(key.second)));
 	}
 }
 
@@ -1744,7 +1744,7 @@ DatabasesLRU::finish()
 {
 	L_CALL(this, "DatabasesLRU::finish()");
 
-	for (iterator it = begin(); it != end(); ++it) {
+	for (auto it = begin(); it != end(); ++it) {
 		it->second->finish();
 	}
 }
@@ -1810,8 +1810,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	if (!ret) {
 		std::lock_guard<std::mutex> lk(qmtx);
 
-		size_t hash = endpoints.hash();
-		auto index = std::make_pair(flags & DB_VOLATILE, hash);
+		const auto index = std::make_pair(endpoints.hash(), flags & DB_VOLATILE);
 
 		std::shared_ptr<DatabaseQueue> queue;
 		if (flags & DB_WRITABLE) {
@@ -1861,7 +1860,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	if (!finished) {
 		size_t hash = endpoints.hash();
-		auto index = std::make_pair(_volatile, hash);
+		const auto index = std::make_pair(hash, _volatile);
 		std::shared_ptr<DatabaseQueue> queue;
 
 		std::unique_lock<std::mutex> lk(qmtx);
@@ -1911,10 +1910,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 						bool reopen = false;
 						for (const auto& endpoint : database->endpoints) {
 							if (endpoint.is_local()) {
-								Endpoints e;
-								e.add(endpoint);
 								std::shared_ptr<Database> d;
-								if (checkout(d, e, DB_WRITABLE)) {
+								if (checkout(d, endpoint, DB_WRITABLE)) {
 									// Checkout executes any commands from the WAL
 									reopen = true;
 									checkin(d);

@@ -383,7 +383,7 @@ class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
 public:
 	DatabasesLRU(ssize_t max_size);
 
-	std::shared_ptr<DatabaseQueue>& operator[] (std::pair<bool, size_t> key);
+	std::shared_ptr<DatabaseQueue>& operator[](const std::pair<size_t, bool>& key);
 
 	void finish();
 };
