@@ -258,7 +258,8 @@ DiscoveryServer::db(const std::string& message)
 
 	std::string index_path = unserialise_string(&p, p_end);
 
-	long long mastery_level = XapiandManager::manager->database_pool.get_mastery_level(index_path);
+	DatabaseHandler db_handler(Endpoint(index_path), DB_OPEN);
+	long long mastery_level = db_handler.get_mastery_level();
 
 	if (XapiandManager::manager->get_region() == XapiandManager::manager->get_region(index_path) /* FIXME: missing leader check */) {
 		std::shared_ptr<const Node> node;
@@ -351,7 +352,8 @@ DiscoveryServer::db_updated(const std::string& message)
 	long long remote_mastery_level = unserialise_length(&p, p_end);
 	std::string index_path = unserialise_string(&p, p_end);
 
-	long long mastery_level = XapiandManager::manager->database_pool.get_mastery_level(index_path);
+	DatabaseHandler db_handler(Endpoint(index_path), DB_OPEN);
+	long long mastery_level = db_handler.get_mastery_level();
 	if (mastery_level == -1) {
 		return;
 	}

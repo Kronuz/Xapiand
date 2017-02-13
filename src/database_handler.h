@@ -152,6 +152,8 @@ public:
 	MsgPack get_database_info();
 
 	bool commit(bool _wal=true);
+
+	long long get_mastery_level();
 };
 
 

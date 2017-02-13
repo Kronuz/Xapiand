@@ -899,6 +899,20 @@ DatabaseHandler::commit(bool _wal)
 }
 
 
+long long
+DatabaseHandler::get_mastery_level()
+{
+	L_CALL(this, "DatabaseHandler::get_mastery_level()");
+
+	try {
+		lock_database lk_db(this);
+		return database->mastery_level;
+	} catch (const CheckoutError&) {
+		return ::read_mastery(endpoints[0].path, false);
+	}
+}
+
+
 Document::Document()
 	: db_handler(nullptr) { }
 

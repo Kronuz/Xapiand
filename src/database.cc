@@ -1802,25 +1802,6 @@ DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_pt
 }
 
 
-long long
-DatabasePool::get_mastery_level(const std::string& dir)
-{
-	L_CALL(this, "DatabasePool::get_mastery_level(%s)", repr(dir).c_str());
-
-	Endpoints endpoints;
-	endpoints.add(Endpoint(dir));
-
-	std::shared_ptr<Database> database;
-	if (checkout(database, endpoints, 0)) {
-		long long mastery_level = database->mastery_level;
-		checkin(database);
-		return mastery_level;
-	}
-
-	return read_mastery(dir, false);
-}
-
-
 template<typename F, typename... Args>
 inline bool
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args)

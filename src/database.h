@@ -426,8 +426,6 @@ public:
 	DatabasePool(size_t max_size);
 	~DatabasePool();
 
-	long long get_mastery_level(const std::string& dir);
-
 	void finish();
 	bool switch_db(const Endpoint& endpoint);
 	void recover_database(const Endpoints& endpoints, int flags);
