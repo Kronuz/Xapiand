@@ -2131,17 +2131,20 @@ DatabasePool::recover_database(const Endpoints& endpoints, int flags)
 
 	if ((flags & RECOVER_REMOVE_WRITABLE) || (flags & RECOVER_REMOVE_ALL)) {
 		/* erase from writable queue if exist */
+		std::lock_guard<std::mutex> lk(qmtx);
 		writable_databases.erase(hash);
 	}
 
 	if (flags & RECOVER_DECREMENT_COUT) {
 		/* Delete the count of the database creation */
 		/* Avoid mismatch between queue size and counter */
+		std::lock_guard<std::mutex> lk(qmtx);
 		databases[std::make_pair(false, hash)]->dec_count();
 	}
 
 	if ((flags & RECOVER_REMOVE_DATABASE) || (flags & RECOVER_REMOVE_ALL)) {
 		/* erase from queue if exist */
+		std::lock_guard<std::mutex> lk(qmtx);
 		databases.erase(hash);
 	}
 }
