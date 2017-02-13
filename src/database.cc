@@ -2125,7 +2125,7 @@ DatabasePool::switch_db(const Endpoint& endpoint)
 void
 DatabasePool::recover_database(const Endpoints& endpoints, int flags)
 {
-	L_CALL(this, "DatabasePool::reestablish_database()");
+	L_CALL(this, "DatabasePool::recover_database(%s, %d)", repr(endpoints.to_string()).c_str(), flags);
 
 	size_t hash = endpoints.hash();
 
