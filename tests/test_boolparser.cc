@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -20,45 +20,44 @@
  * IN THE SOFTWARE.
  */
 
-
 #include "test_boolparser.h"
 
 #include "booleanParser/BooleanParser.h"
 
 
 int test_boolparser() {
-
 	INIT_LOG
 	int count = 0;
 
-	std::vector<boolparser_t> queries {
-		{"A AND B", {"A", "B", "AND"} },
-		{"A & B", {"A", "B", "&"} },
-		{"A OR B OR C", {"A", "B", "OR", "C", "OR"} },
-		{"A OR B AND C", {"A", "B", "C", "AND", "OR"} },
-		{"A XOR B AND C", {"A", "B", "C", "AND", "XOR"} },
-		{"A AND B XOR C", {"A", "B", "AND", "C", "XOR"} },
-		{"     A OR        B", {"A", "B", "OR"} },
-		{"( A OR B ) AND C", {"A", "B", "OR", "C", "AND"} },
-		{"( A OR B ) AND ( ( C XOR D ) AND E )", {"A", "B", "OR", "C", "D", "XOR", "E", "AND", "AND"} },
-		{"\"Hello world\" AND \"Bye world\"", {"\"Hello world\"", "\"Bye world\"", "AND"} },
-		{"'Hello world' AND 'Bye world'", {"'Hello world'", "'Bye world'", "AND"} },
-		{"[123, 322] OR [567, 766]", {"[123, 322]", "[567, 766]", "OR"} },
-		{"NOT A", {"A", "NOT"} },
-		{"A OR NOT B", {"A", "B", "NOT", "OR"} },
-		{"NOT ( A AND NOT B ) XOR ( C OR ( D AND NOT E) )", {"A", "B", "NOT", "AND", "NOT", "C", "D", "E", "NOT", "AND", "OR", "XOR"} }
-	};
+	std::vector<boolparser_t> queries ({
+		{ "A AND B", { "A", "B", "AND" } },
+		{ "A & B", { "A", "B", "&" } },
+		{ "A OR B OR C", { "A", "B", "OR", "C", "OR" } },
+		{ "A OR B AND C", { "A", "B", "C", "AND", "OR" } },
+		{ "A XOR B AND C", { "A", "B", "C", "AND", "XOR" } },
+		{ "A AND B XOR C", { "A", "B", "AND", "C", "XOR" } },
+		{ "     A OR        B", { "A", "B", "OR" } },
+		{ "( A OR B ) AND C", { "A", "B", "OR", "C", "AND" } },
+		{ "( A OR B ) AND ( ( C XOR D ) AND E )", { "A", "B", "OR", "C", "D", "XOR", "E", "AND", "AND" } },
+		{ "\"Hello world\" AND \"Bye world\"", { "\"Hello world\"", "\"Bye world\"", "AND" } },
+		{ "'Hello world' AND 'Bye world'", { "'Hello world'", "'Bye world'", "AND" } },
+		{ "[123, 322] OR [567, 766]", { "[123, 322]", "[567, 766]", "OR" } },
+		{ "NOT A", { "A", "NOT" } },
+		{ "A OR NOT B", { "A", "B", "NOT", "OR" } },
+		{ "NOT ( A AND NOT B ) XOR ( C OR ( D AND NOT E) )", { "A", "B", "NOT", "AND", "NOT", "C", "D", "E", "NOT", "AND", "OR", "XOR" } }
+	});
 
-	for (auto& query : queries) {
+	for (const auto& query : queries) {
 		BooleanTree booltree(query.query);
 
 		if (booltree.size() != query.stack_expected.size()) {
-			L_ERR(nullptr, "\nError: Boolean parser mismatch sizes in stacks:\n expected stack size %zu\nbut it is:\n  %zu", query.stack_expected.size(), booltree.size());
+			L_ERR(nullptr, "ERROR: Boolean parser mismatch sizes in stacks: expected %zu, result is: %zu", query.stack_expected.size(), booltree.size());
 			++count;
 		} else {
-			for (auto& token : query.stack_expected) {
-				if (token != booltree.front().lexeme) {
-					L_ERR(nullptr, "\nError: Boolean parser:\n expected token %s\nbut it is:\n  %s", token.c_str(), booltree.front().lexeme.c_str());
+			for (const auto& token : query.stack_expected) {
+				const auto& lexeme = booltree.front().get_lexeme();
+				if (token != lexeme) {
+					L_ERR(nullptr, "ERROR: Boolean parser: expected token %s, result is: %s", token.c_str(), lexeme.c_str());
 					++count;
 				}
 				booltree.pop_front();
