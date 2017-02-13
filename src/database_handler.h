@@ -158,7 +158,7 @@ public:
 	static void init_ref(const Endpoint& endpoint);
 	static void inc_ref(const Endpoint& endpoint);
 	static void dec_ref(const Endpoint& endpoint);
-	static void get_master_count();
+	static int get_master_count();
 };
 
 
