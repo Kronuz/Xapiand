@@ -2145,29 +2145,3 @@ DatabasePool::recover_database(const Endpoints& endpoints, int flags)
 		databases.erase(hash);
 	}
 }
-
-
-int
-DatabasePool::get_master_count()
-{
-	L_CALL(this, "DatabasePool::get_master_count()");
-
-	Endpoints ref_endpoints;
-	ref_endpoints.add(Endpoint(".refs"));
-	std::shared_ptr<Database> ref_database;
-	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Cannot open %s database.", repr(ref_endpoints.to_string()).c_str());
-		return -1;
-	}
-
-	int count = 0;
-
-	if (ref_database) {
-		Xapian::PostingIterator p(ref_database->db->postlist_begin(DOCUMENT_DB_MASTER));
-		count = std::distance(ref_database->db->postlist_begin(DOCUMENT_DB_MASTER), ref_database->db->postlist_end(DOCUMENT_DB_MASTER));
-	}
-
-	checkin(ref_database);
-
-	return count;
-}

@@ -405,8 +405,6 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 
 	std::condition_variable checkin_cond;
 
-	int get_master_count();
-
 	void add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	bool _switch_db(const Endpoint& endpoint);

@@ -1007,6 +1007,27 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 }
 
 
+int
+DatabaseHandler::get_master_count()
+{
+	L_CALL(this, "DatabaseHandler::get_master_count()");
+
+	DatabaseHandler db_handler(Endpoint(".refs"), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+
+	try {
+		std::vector<std::string> suggestions;
+		query_field_t q_t;
+		q_t.limit = 0;
+		q_t.query.push_back("master:M");
+		auto mset = db_handler.get_mset(q_t, nullptr, nullptr, suggestions);
+		return mset.get_matches_estimated();
+	} catch (const CheckoutError&) {
+		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
+		return - 1;
+	}
+}
+
+
 Document::Document()
 	: db_handler(nullptr) { }
 
