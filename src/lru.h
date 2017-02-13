@@ -221,8 +221,7 @@ public:
 				}
 				return first->second;
 			}
-			break;
-			case InsertAction::last:{
+			case InsertAction::last: {
 				auto m_size = static_cast<ssize_t>(_items_map.size());
 				if (_max_size != -1 && m_size == _max_size) {
 					trim(on_drop, m_size + 1);
