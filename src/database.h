@@ -407,7 +407,6 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 
 	void add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
-	bool _switch_db(const Endpoint& endpoint);
 
 	template<typename F, typename... Args>
 	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args);

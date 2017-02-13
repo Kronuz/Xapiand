@@ -2082,10 +2082,11 @@ DatabasePool::finish()
 
 
 bool
-DatabasePool::_switch_db(const Endpoint& endpoint)
+DatabasePool::switch_db(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::_switch_db(%s)", repr(endpoint.to_string()).c_str());
+	L_CALL(this, "DatabasePool::switch_db(%s)", repr(endpoint.to_string()).c_str());
 
+	std::lock_guard<std::mutex> lk(qmtx);
 	auto queues_set = queues[endpoint.hash()];
 
 	bool switched = true;
@@ -2109,16 +2110,6 @@ DatabasePool::_switch_db(const Endpoint& endpoint)
 	}
 
 	return switched;
-}
-
-
-bool
-DatabasePool::switch_db(const Endpoint& endpoint)
-{
-	L_CALL(this, "DatabasePool::switch_db(%s)", repr(endpoint.to_string()).c_str());
-
-	std::lock_guard<std::mutex> lk(qmtx);
-	return _switch_db(endpoint);
 }
 
 
