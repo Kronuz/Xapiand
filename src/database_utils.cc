@@ -463,6 +463,9 @@ void split_path_id(const std::string& path_id, std::string& path, std::string& i
 	if (found != std::string::npos) {
 		path = path_id.substr(0, found);
 		id = path_id.substr(found + 1);
+	} else {
+		path.empty();
+		id.empty();
 	}
 }
 
