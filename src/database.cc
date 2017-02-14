@@ -1947,7 +1947,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				lk.unlock();
 				int s = queue->pop(database, DB_TIMEOUT);
 				if (!s) {
-					L_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
 					THROW(TimeOutError, "Database is not available");
 				}
 				lk.lock();
