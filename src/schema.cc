@@ -4616,7 +4616,7 @@ Schema::consistency_script(const std::string& prop_name, const MsgPack& doc_scri
 		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());
 	}
 #else
-	THROW(ClientError, "%s only is allowed in root object when v8 engine is actived", prop_name.c_str());
+	THROW(ClientError, "%s only is allowed in root object when v8 engine is actived [%s]", prop_name.c_str(), repr(doc_script.to_string()).c_str());
 #endif
 }
 
