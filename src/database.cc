@@ -129,7 +129,7 @@ DatabaseWAL::~DatabaseWAL()
 bool
 DatabaseWAL::open_current(bool commited)
 {
-	L_CALL(this, "DatabaseWAL::open_current()");
+	L_CALL(this, "DatabaseWAL::open_current(%s)", commited ? "true" : "false");
 
 	uint32_t revision = database->checkout_revision;
 
@@ -257,7 +257,7 @@ DatabaseWAL::highest_valid_slot()
 bool
 DatabaseWAL::execute(const std::string& line)
 {
-	L_CALL(this, "DatabaseWAL::execute()");
+	L_CALL(this, "DatabaseWAL::execute(<line>)");
 
 	const char *p = line.data();
 	const char *p_end = p + line.size();
@@ -408,7 +408,7 @@ DatabaseWAL::init_database()
 void
 DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 {
-	L_CALL(this, "DatabaseWAL::write_line()");
+	L_CALL(this, "DatabaseWAL::write_line(...)");
 
 	ASSERT(database->flags & DB_WRITABLE);
 	ASSERT(!(database->flags & DB_NOWAL));
@@ -451,7 +451,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 void
 DatabaseWAL::write_add_document(const Xapian::Document& doc)
 {
-	L_CALL(this, "DatabaseWAL::write_add_document()");
+	L_CALL(this, "DatabaseWAL::write_add_document(<doc>)");
 
 	write_line(Type::ADD_DOCUMENT, doc.serialise());
 }
@@ -469,7 +469,7 @@ DatabaseWAL::write_cancel()
 void
 DatabaseWAL::write_delete_document_term(const std::string& term)
 {
-	L_CALL(this, "DatabaseWAL::write_delete_document_term()");
+	L_CALL(this, "DatabaseWAL::write_delete_document_term(<term>)");
 
 	write_line(Type::DELETE_DOCUMENT_TERM, serialise_length(term.size()) + term);
 }
@@ -487,7 +487,7 @@ DatabaseWAL::write_commit()
 void
 DatabaseWAL::write_replace_document(Xapian::docid did, const Xapian::Document& doc)
 {
-	L_CALL(this, "DatabaseWAL::write_replace_document()");
+	L_CALL(this, "DatabaseWAL::write_replace_document(...)");
 
 	write_line(Type::REPLACE_DOCUMENT, serialise_length(did) + doc.serialise());
 }
@@ -496,7 +496,7 @@ DatabaseWAL::write_replace_document(Xapian::docid did, const Xapian::Document& d
 void
 DatabaseWAL::write_replace_document_term(const std::string& term, const Xapian::Document& doc)
 {
-	L_CALL(this, "DatabaseWAL::write_replace_document_term()");
+	L_CALL(this, "DatabaseWAL::write_replace_document_term(...)");
 
 	write_line(Type::REPLACE_DOCUMENT_TERM, serialise_length(term.size()) + term + doc.serialise());
 }
@@ -505,7 +505,7 @@ DatabaseWAL::write_replace_document_term(const std::string& term, const Xapian::
 void
 DatabaseWAL::write_delete_document(Xapian::docid did)
 {
-	L_CALL(this, "DatabaseWAL::write_delete_document()");
+	L_CALL(this, "DatabaseWAL::write_delete_document(<did>)");
 
 	write_line(Type::DELETE_DOCUMENT, serialise_length(did));
 }
@@ -514,7 +514,7 @@ DatabaseWAL::write_delete_document(Xapian::docid did)
 void
 DatabaseWAL::write_set_metadata(const std::string& key, const std::string& val)
 {
-	L_CALL(this, "DatabaseWAL::write_set_metadata()");
+	L_CALL(this, "DatabaseWAL::write_set_metadata(...)");
 
 	write_line(Type::SET_METADATA, serialise_length(key.size()) + key + val);
 }
@@ -523,7 +523,7 @@ DatabaseWAL::write_set_metadata(const std::string& key, const std::string& val)
 void
 DatabaseWAL::write_add_spelling(const std::string& word, Xapian::termcount freqinc)
 {
-	L_CALL(this, "DatabaseWAL::write_add_spelling()");
+	L_CALL(this, "DatabaseWAL::write_add_spelling(...)");
 
 	write_line(Type::ADD_SPELLING, serialise_length(freqinc) + word);
 }
@@ -532,7 +532,7 @@ DatabaseWAL::write_add_spelling(const std::string& word, Xapian::termcount freqi
 void
 DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount freqdec)
 {
-	L_CALL(this, "DatabaseWAL::write_remove_spelling()");
+	L_CALL(this, "DatabaseWAL::write_remove_spelling(...)");
 
 	write_line(Type::REMOVE_SPELLING, serialise_length(freqdec) + word);
 }
