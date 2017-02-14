@@ -99,6 +99,13 @@ public:
 };
 
 
+class TimeOutError : public Exception {
+public:
+	template<typename... Args>
+	TimeOutError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
+};
+
+
 class ClientError : public Exception {
 public:
 	template<typename... Args>

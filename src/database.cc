@@ -64,6 +64,8 @@
 #define XAPIAN_SYNC_MODE  0       // This could also be Xapian::DB_FULL_SYNC for xapian to ensure full sync
 #define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
 
+#define DB_TIMEOUT 3
+
 
 /*  ____        _        _                  __        ___    _
  * |  _ \  __ _| |_ __ _| |__   __ _ ___  __\ \      / / \  | |
@@ -1943,9 +1945,10 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			} else {
 				// Lock until a database is available if it can't get one.
 				lk.unlock();
-				int s = queue->pop(database);
+				int s = queue->pop(database, DB_TIMEOUT);
 				if (!s) {
 					L_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
+					THROW(TimeOutError, "Database is not available");
 				}
 				lk.lock();
 			}

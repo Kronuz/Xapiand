@@ -608,6 +608,10 @@ HttpClient::run()
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
 		// L_EXC(this, "ERROR: %s", error.c_str());
+	} catch (const TimeOutError& exc) {
+		error_code = HTTP_STATUS_REQUEST_TIMEOUT;
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
+		// L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.get_message() ? exc.get_message() : "Unkown BaseException!");
