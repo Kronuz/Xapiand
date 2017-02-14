@@ -2011,9 +2011,9 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 				}
 			}
 		}
-		queue = writable_databases[std::make_pair(false, database->hash)];
+		queue = writable_databases[std::make_pair(database->hash, false)];
 	} else {
-		queue = databases[std::make_pair(false, database->hash)];
+		queue = databases[std::make_pair(database->hash, false)];
 	}
 
 	ASSERT(database->weak_queue.lock() == queue);
@@ -2136,7 +2136,7 @@ DatabasePool::recover_database(const Endpoints& endpoints, int flags)
 		/* Delete the count of the database creation */
 		/* Avoid mismatch between queue size and counter */
 		std::lock_guard<std::mutex> lk(qmtx);
-		databases[std::make_pair(false, hash)]->dec_count();
+		databases[std::make_pair(hash, false)]->dec_count();
 	}
 
 	if ((flags & RECOVER_REMOVE_DATABASE) || (flags & RECOVER_REMOVE_ALL)) {
