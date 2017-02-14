@@ -1954,7 +1954,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			queue->state = old_state;
 			queue->persistent = old_persistent;
 			if (queue->count == 0) {
-				L_ERR(this, "ERROR: The queue ended up being empty, remove it");
+				L_DEBUG(this, "There is a error, the queue ended up being empty, remove it");
 				if (writable) {
 					writable_databases.erase(hash);
 				} else {
