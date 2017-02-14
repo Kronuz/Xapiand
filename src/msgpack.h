@@ -39,8 +39,8 @@
 
 
 static constexpr const char* const MsgPackTypes[] = {
-	"NIL", "BOOLEAN", "POSITIVE_INTEGER", "NEGATIVE_INTEGER", "FLOAT", "STR", "BIN", "ARRAY",
-	"MAP", "EXT", "UNDEFINED"
+	"NIL", "BOOLEAN", "POSITIVE_INTEGER", "NEGATIVE_INTEGER", "FLOAT", "STR", "ARRAY",
+	"MAP", "BIN", "EXT", "UNDEFINED"
 };
 
 
@@ -61,17 +61,17 @@ class MsgPack {
 
 public:
 	enum class Type : uint8_t {
-		NIL                 = msgpack::type::NIL,
-		BOOLEAN             = msgpack::type::BOOLEAN,
-		POSITIVE_INTEGER    = msgpack::type::POSITIVE_INTEGER,
-		NEGATIVE_INTEGER    = msgpack::type::NEGATIVE_INTEGER,
-		FLOAT               = msgpack::type::FLOAT,
-		STR                 = msgpack::type::STR,
-		BIN                 = msgpack::type::BIN,
-		ARRAY               = msgpack::type::ARRAY,
-		MAP                 = msgpack::type::MAP,
-		EXT                 = msgpack::type::EXT,
-		UNDEFINED
+		NIL                 = msgpack::type::NIL,               //0x00
+		BOOLEAN             = msgpack::type::BOOLEAN,           //0x01
+		POSITIVE_INTEGER    = msgpack::type::POSITIVE_INTEGER,  //0x02
+		NEGATIVE_INTEGER    = msgpack::type::NEGATIVE_INTEGER,  //0x03
+		FLOAT               = msgpack::type::FLOAT,             //0x04
+		STR                 = msgpack::type::STR,               //0x05
+		ARRAY               = msgpack::type::ARRAY,             //0x06
+		MAP                 = msgpack::type::MAP,               //0x07
+		BIN                 = msgpack::type::BIN,               //0x08
+		EXT                 = msgpack::type::EXT,               //0x09
+		UNDEFINED           = 0x10,                             //0x10
 	};
 
 	struct duplicate_key : public BaseException, public std::out_of_range {
