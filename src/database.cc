@@ -689,12 +689,7 @@ Database::reopen()
 			L_DATABASE_WRAP(this, "Reopen done (took %s) [1]", delta_string(access_time, std::chrono::system_clock::now()).c_str());
 			return ret;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
-			const char* error = exc.get_error_string();
-			if (error) {
-				L_WARNING(this, "ERROR: %s (%s)", exc.get_msg().c_str(), error);
-			} else {
-				L_WARNING(this, "ERROR: %s", exc.get_msg().c_str());
-			}
+			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 			db->close();
 			db.reset();
 		} catch (const Xapian::Error& exc) {
