@@ -697,7 +697,6 @@ Database::reopen()
 			}
 			db->close();
 			db.reset();
-			throw;
 		} catch (const Xapian::Error& exc) {
 			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 			db->close();
