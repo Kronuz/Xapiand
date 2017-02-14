@@ -538,7 +538,7 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) THROW(Error, "Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::Error& exc) {
@@ -685,7 +685,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 			mset = enquire.get_mset(e.offset, e.limit, e.check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) THROW(Error, "Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const QueryParserError& exc) {
@@ -1084,7 +1084,7 @@ Document::serialise(size_t retries)
 		if (retries) {
 			return serialise(--retries);
 		} else {
-			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+			THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		}
 	}
 }
@@ -1103,7 +1103,7 @@ Document::get_value(Xapian::valueno slot, size_t retries)
 		if (retries) {
 			return get_value(slot, --retries);
 		} else {
-			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+			THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		}
 	}
 }
@@ -1122,7 +1122,7 @@ Document::get_data(size_t retries)
 		if (retries) {
 			return get_data(--retries);
 		} else {
-			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+			THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		}
 	}
 }
@@ -1146,7 +1146,7 @@ Document::get_blob(size_t retries)
 		if (retries) {
 			return get_blob(--retries);
 		} else {
-			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+			THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		}
 	}
 }
@@ -1187,7 +1187,7 @@ Document::get_terms(size_t retries)
 		if (retries) {
 			return get_terms(--retries);
 		} else {
-			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+			THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		}
 	}
 }
@@ -1214,7 +1214,7 @@ Document::get_values(size_t retries)
 		if (retries) {
 			return get_values(--retries);
 		} else {
-			THROW(Error, "Database was modified, try again (%s)", exc.get_msg().c_str());
+			THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
 		}
 	}
 }
