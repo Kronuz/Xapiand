@@ -232,6 +232,8 @@ public:
 				_items_map[last->first] = --last.base();
 				return last->second;
 			}
+			default:
+				throw std::invalid_argument("Unknown InsertAction");
 		}
 	}
 
