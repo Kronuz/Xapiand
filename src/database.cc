@@ -690,13 +690,12 @@ Database::reopen()
 			return ret;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			db->close();
-			db.reset();
 		} catch (const Xapian::Error& exc) {
 			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			db->close();
-			db.reset();
 		}
+
+		db->close();
+		db.reset();
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
