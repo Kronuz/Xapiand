@@ -106,7 +106,23 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 				THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, MsgPackTypes[toUType(aux_schema_ptr->getType())]);
 		}
 
-		atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr);
+		if (!atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr) && local_schema_ptr) {
+			created = false;
+			switch (local_schema_ptr->getType()) {
+				case MsgPack::Type::STR: {
+					const auto aux_schema_str = local_schema_ptr->as_string();
+					split_path_id(aux_schema_str, schema_path_str, schema_id);
+					if (schema_path_str.empty() || schema_id.empty()) {
+						THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must contain index and docid [%s]", DB_META_SCHEMA, aux_schema_str.c_str());
+					}
+					break;
+				}
+				case MsgPack::Type::MAP:
+					break;
+				default:
+					THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, MsgPackTypes[toUType(local_schema_ptr->getType())]);
+			}
+		}
 	}
 
 	return std::make_tuple(created, atom_local_schema, std::move(schema_path_str), std::move(schema_id));
