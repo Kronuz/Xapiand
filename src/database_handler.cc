@@ -1010,7 +1010,7 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 int
 DatabaseHandler::get_master_count()
 {
-	L_CALL(this, "DatabaseHandler::get_master_count()");
+	L_CALL(nullptr, "DatabaseHandler::get_master_count()");
 
 	DatabaseHandler db_handler(Endpoint(".refs"), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
