@@ -2024,9 +2024,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		DatabaseAutocommit::commit(database);
 	}
 
-	if (!(flags & DB_VOLATILE)) {
-		queue->push(database);
-	}
+	queue->push(database);
 
 	auto& endpoints = database->endpoints;
 	bool signal_checkins = false;
