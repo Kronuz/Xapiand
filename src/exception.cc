@@ -45,7 +45,7 @@ std::string traceback(const char *filename, int line) {
 
 	if (frames == 0) {
 		t += "\n    <empty, possibly corrupt>";
-		return t.c_str();
+		return t;
 	}
 
 	// resolve addresses into strings containing "filename(function+address)"
@@ -53,7 +53,7 @@ std::string traceback(const char *filename, int line) {
 
 	// iterate over the returned symbol lines. skip the first, it is the
 	// address of this function.
-	for (int i = 0; i < frames; ++i) {
+	for (int i = 1; i < frames; ++i) {
 		int status = 0;
 		const char *sep = "\t ()+";
 		char *mangled, *lasts;
@@ -75,8 +75,8 @@ std::string traceback(const char *filename, int line) {
 
 	free(strs);
 #else
-       (void)filename;
-       (void)line;
+	(void)filename;
+	(void)line;
 #endif
 	return t;
 }
