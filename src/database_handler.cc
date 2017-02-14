@@ -892,7 +892,7 @@ DatabaseHandler::get_database_info()
 bool
 DatabaseHandler::commit(bool _wal)
 {
-	L_CALL(this, "DatabaseHandler::commit(%s)", _wal : "true" : "false");
+	L_CALL(this, "DatabaseHandler::commit(%s)", _wal ? "true" : "false");
 
 	lock_database lk_db(this);
 	return database->commit(_wal);
