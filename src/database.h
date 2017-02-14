@@ -61,7 +61,7 @@ struct WalHeader;
 constexpr int RECOVER_REMOVE_WRITABLE         = 0x01; // Remove endpoint from writable database
 constexpr int RECOVER_REMOVE_DATABASE         = 0x02; // Remove endpoint from database
 constexpr int RECOVER_REMOVE_ALL              = 0x04; // Remove endpoint from writable database and database
-constexpr int RECOVER_DECREMENT_COUT          = 0x08; // Decrement count queue
+constexpr int RECOVER_DECREMENT_COUNT         = 0x08; // Decrement count queue
 
 
 #define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))
@@ -413,6 +413,8 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
 
 	void checkin(std::shared_ptr<Database>& database);
+
+	bool _switch_db(const Endpoint& endpoint);
 
 public:
 	queue::QueueSet<Endpoint> updated_databases;

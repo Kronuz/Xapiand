@@ -1974,8 +1974,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			database->reopen();
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			// Try to recover from DatabaseOpeningError (i.e when the index is manually deleted)
-			recover_database(database->endpoints, RECOVER_REMOVE_ALL | RECOVER_DECREMENT_COUT);
-			L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
+			recover_database(database->endpoints, RECOVER_REMOVE_ALL | RECOVER_DECREMENT_COUNT);
+			L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s (reopen)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
 			return false;
 		}
 		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()).c_str());
@@ -2032,8 +2032,8 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	bool signal_checkins = false;
 	switch (queue->state) {
 		case DatabaseQueue::replica_state::REPLICA_SWITCH:
-			for (auto& endpoint : endpoints) {
-				switch_db(endpoint);
+			for (const auto& endpoint : endpoints) {
+				_switch_db(endpoint);
 			}
 			if (queue->state == DatabaseQueue::replica_state::REPLICA_FREE) {
 				signal_checkins = true;
@@ -2079,11 +2079,10 @@ DatabasePool::finish()
 
 
 bool
-DatabasePool::switch_db(const Endpoint& endpoint)
+DatabasePool::_switch_db(const Endpoint& endpoint)
 {
-	L_CALL(this, "DatabasePool::switch_db(%s)", repr(endpoint.to_string()).c_str());
+	L_CALL(this, "DatabasePool::_switch_db(%s)", repr(endpoint.to_string()).c_str());
 
-	std::lock_guard<std::mutex> lk(qmtx);
 	auto& queues_set = queues[endpoint.hash()];
 
 	bool switched = true;
@@ -2110,6 +2109,16 @@ DatabasePool::switch_db(const Endpoint& endpoint)
 }
 
 
+bool
+DatabasePool::switch_db(const Endpoint& endpoint)
+{
+	L_CALL(this, "DatabasePool::switch_db(%s)", repr(endpoint.to_string()).c_str());
+
+	std::lock_guard<std::mutex> lk(qmtx);
+	return _switch_db(endpoint);
+}
+
+
 void
 DatabasePool::recover_database(const Endpoints& endpoints, int flags)
 {
@@ -2123,7 +2132,7 @@ DatabasePool::recover_database(const Endpoints& endpoints, int flags)
 		writable_databases.erase(hash);
 	}
 
-	if (flags & RECOVER_DECREMENT_COUT) {
+	if (flags & RECOVER_DECREMENT_COUNT) {
 		/* Delete the count of the database creation */
 		/* Avoid mismatch between queue size and counter */
 		std::lock_guard<std::mutex> lk(qmtx);
