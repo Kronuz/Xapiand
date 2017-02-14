@@ -2018,8 +2018,6 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	ASSERT(database->weak_queue.lock() == queue);
 
-	int flags = database->flags;
-
 	if (database->modified) {
 		DatabaseAutocommit::commit(database);
 	}
@@ -2050,7 +2048,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	L_DATABASE_END(this, "-- CHECKED IN DB [%s]: %s", (flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()).c_str());
+	L_DATABASE_END(this, "-- CHECKED IN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 
 	database.reset();
 
