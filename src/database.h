@@ -406,7 +406,7 @@ public:
 };
 
 
-class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
+class DatabasePool {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
 	friend class DatabaseQueue;
@@ -437,6 +437,10 @@ public:
 	queue::QueueSet<Endpoint> updated_databases;
 
 	DatabasePool(size_t max_size);
+	DatabasePool(const DatabasePool&) = delete;
+	DatabasePool(DatabasePool&&) = delete;
+	DatabasePool& operator=(const DatabasePool&) = delete;
+	DatabasePool& operator=(DatabasePool&&) = delete;
 	~DatabasePool();
 
 	void finish();
