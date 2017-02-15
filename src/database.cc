@@ -1927,7 +1927,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				lk.lock();
 			}
 		}
-		if (!database) {
+		if (!database || !database->db) {
 			queue->state = old_state;
 			queue->persistent = old_persistent;
 			if (queue->count == 0) {
@@ -1938,6 +1938,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					databases.erase(hash);
 				}
 			}
+			database.reset();
 		}
 	}
 
@@ -1953,6 +1954,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			// Try to recover from DatabaseOpeningError (i.e when the index is manually deleted)
 			recover_database(database->endpoints, RECOVER_REMOVE_ALL | RECOVER_DECREMENT_COUNT);
 			L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s (reopen)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
+			database.reset();
 			return false;
 		}
 		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()).c_str());
