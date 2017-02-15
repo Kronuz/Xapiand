@@ -1618,20 +1618,6 @@ DatabaseQueue::DatabaseQueue(bool volatile_)
 }
 
 
-DatabaseQueue::DatabaseQueue(DatabaseQueue&& q)
-{
-	std::lock_guard<std::mutex> lk(q._mutex);
-	_items_queue = std::move(q._items_queue);
-	_limit = std::move(q._limit);
-	state = std::move(q.state);
-	persistent = std::move(q.persistent);
-	count = std::move(q.count);
-	weak_database_pool = std::move(q.weak_database_pool);
-
-	L_OBJ(this, "CREATED DATABASE QUEUE!");
-}
-
-
 DatabaseQueue::~DatabaseQueue()
 {
 	if (size() != count) {
@@ -1725,7 +1711,7 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 			} else {
 				return std::make_pair(lru::InsertAction::front, drop_action);
 			}
-		}, std::make_pair(key.first, std::make_shared<DatabaseQueue>(key.second)));
+		}, std::make_pair(key.first, DatabaseQueue::make_shared(key.second)));
 	}
 }
 

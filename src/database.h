@@ -368,14 +368,31 @@ private:
 
 	TaskQueue<> checkin_callbacks;
 
-public:
+protected:
 	DatabaseQueue(bool volatile_=false);
-	DatabaseQueue(DatabaseQueue&&);
+
+public:
 	DatabaseQueue(const DatabaseQueue&) = delete;
+	DatabaseQueue(DatabaseQueue&&) = delete;
+	DatabaseQueue& operator=(const DatabaseQueue&) = delete;
+	DatabaseQueue& operator=(DatabaseQueue&&) = delete;
 	~DatabaseQueue();
 
 	bool inc_count(int max=-1);
 	bool dec_count();
+
+	template <typename... Args>
+	static std::shared_ptr<DatabaseQueue> make_shared(Args&&... args) {
+		/*
+		 * std::make_shared only can call a public constructor, for this reason
+		 * it is neccesary wrap the constructor in a struct.
+		 */
+		struct enable_make_shared : DatabaseQueue {
+			enable_make_shared(Args&&... args) : DatabaseQueue(std::forward<Args>(args)...) { }
+		};
+
+		return std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
+	}
 };
 
 
