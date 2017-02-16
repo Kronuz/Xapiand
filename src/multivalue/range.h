@@ -40,6 +40,9 @@ class MultipleValueRange : public Xapian::ValuePostingSource {
 
 	// Calculate if some their values is inside range.
 	bool insideRange() const noexcept;
+	
+	// Get the geospatial query
+	static Xapian::Query query_geo(const std::string& ewkt, const required_spc_t& field_spc);
 
 public:
 	/* Construct a new match decider which returns only documents with a

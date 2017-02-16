@@ -148,6 +148,25 @@ Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack&
 
 
 Xapian::Query
+MultipleValueRange::query_geo(const std::string& ewkt, const required_spc_t& field_spc)
+{
+	auto geo = EWKT_Parser::getGeoSpatial(ewkt, field_spc.flags.partials, field_spc.error);
+
+	if (geo.ranges.empty()) {
+		return Xapian::Query::MatchNothing;
+	}
+
+	auto query_geo = GeoSpatialRange::getQuery(field_spc.slot, geo.ranges, geo.centroids);
+	auto query = GenerateTerms::geo(geo.ranges, field_spc.accuracy, field_spc.acc_prefix);
+	if (query.empty()) {
+		return query_geo;
+	} else {
+		return Xapian::Query(Xapian::Query::OP_AND, query, query_geo);
+	}
+}
+
+
+Xapian::Query
 MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 {
 	const MsgPack* start = nullptr;
@@ -168,10 +187,16 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 			if (!end) {
 				return Xapian::Query::MatchAll;
 			}
+			if (field_spc.get_type() == FieldType::GEO) {
+				return query_geo(end->as_string(), field_spc);
+			}
 			// FIXME: check for geo type (Maybe a throw for this case)
 			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::MsgPack(field_spc, *end));
 			return Xapian::Query(mvle->release());
 		} else if (!end) {
+			if (field_spc.get_type() == FieldType::GEO) {
+				return query_geo(start->as_string(), field_spc);
+			}
 			// FIXME: check for geo type
 			auto mvge = new MultipleValueGE(field_spc.slot, Serialise::MsgPack(field_spc, *start));
 			return Xapian::Query(mvge->release());
