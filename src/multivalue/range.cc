@@ -190,14 +190,12 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 			if (field_spc.get_type() == FieldType::GEO) {
 				return query_geo(end->as_string(), field_spc);
 			}
-			// FIXME: check for geo type (Maybe a throw for this case)
 			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::MsgPack(field_spc, *end));
 			return Xapian::Query(mvle->release());
 		} else if (!end) {
 			if (field_spc.get_type() == FieldType::GEO) {
 				return query_geo(start->as_string(), field_spc);
 			}
-			// FIXME: check for geo type
 			auto mvge = new MultipleValueGE(field_spc.slot, Serialise::MsgPack(field_spc, *start));
 			return Xapian::Query(mvge->release());
 		}
