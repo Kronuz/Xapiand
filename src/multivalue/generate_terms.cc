@@ -662,13 +662,16 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	auto last_valid(std::bitset<SIZE_BITS_ID>(it->first).to_string());
 	last_valid.assign(last_valid.substr(last_valid.find('1')));
 
-	Xapian::Query query(prefixed(Serialise::serialise(it->first), it->second, ctype_geo), wqf);
-
+	Xapian::Query query;
 	const auto it_e = results.end();
 	for (++it; it != it_e; ++it) {
 		if (isnotSubtrixel(last_valid, it->first)) {
 			Xapian::Query query_(prefixed(Serialise::serialise(it->first), it->second, ctype_geo), wqf);
-			query = Xapian::Query(Xapian::Query::OP_OR, query, query_);
+			if (query.empty()) {
+				query = query_;
+			} else {
+				query = Xapian::Query(Xapian::Query::OP_OR, query, query_);
+			}
 		}
 	}
 
