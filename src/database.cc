@@ -733,11 +733,12 @@ Database::reopen()
 		else
 #endif /* XAPIAND_CLUSTERING */
 		{
+#ifdef XAPIAND_DATABASE_WAL
 			{
 				DatabaseWAL tmp_wal(e.path, this);
 				tmp_wal.init_database();
 			}
-
+#endif
 			build_path_index(e.path);
 			wdb = Xapian::WritableDatabase(e.path, _flags);
 			local = true;
@@ -805,11 +806,12 @@ Database::reopen()
 			else
 #endif /* XAPIAND_CLUSTERING */
 			{
+#ifdef XAPIAND_DATABASE_WAL
 				{
 					DatabaseWAL tmp_wal(e.path, this);
 					tmp_wal.init_database();
 				}
-
+#endif
 				try {
 					rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
 					local = true;
