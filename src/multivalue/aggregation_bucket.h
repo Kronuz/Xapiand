@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -46,7 +46,6 @@
 
 
 class Schema;
-class StringSet;
 
 
 class BucketAggregation : public HandledSubAggregation {
@@ -346,7 +345,7 @@ public:
 class FilterAggregation : public SubAggregation {
 	using func_filter = void (FilterAggregation::*)(const Xapian::Document&);
 
-	std::vector<std::pair<Xapian::valueno, StringSet>> _filters;
+	std::vector<std::pair<Xapian::valueno, std::set<std::string>>> _filters;
 	Aggregation _agg;
 	func_filter func;
 

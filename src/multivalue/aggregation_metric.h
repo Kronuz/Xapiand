@@ -40,7 +40,6 @@
 #include "exception.h"         // for AggregationError, MSG_AggregationError
 #include "msgpack.h"           // for MsgPack, object::object
 #include "serialise.h"         // for _float, boolean, geo, integer, positive
-#include "stl_serialise.h"     // for StringList
 
 
 class Schema;
@@ -155,65 +154,65 @@ public:
 	}
 
 	void _aggregate_float(const std::string& s, const Xapian::Document& doc) {
-		StringList l;
-		l.unserialise(s);
-		for (const auto& value : l) {
+		std::vector<std::string> values;
+		Unserialise::STLString(s, std::back_inserter(values));
+		for (const auto& value : values) {
 			aggregate_float(Unserialise::_float(value), doc);
 		}
 	}
 
 	void _aggregate_integer(const std::string& s, const Xapian::Document& doc) {
-		StringList l;
-		l.unserialise(s);
-		for (const auto& value : l) {
+		std::vector<std::string> values;
+		Unserialise::STLString(s, std::back_inserter(values));
+		for (const auto& value : values) {
 			aggregate_integer(Unserialise::integer(value), doc);
 		}
 	}
 
 	void _aggregate_positive(const std::string& s, const Xapian::Document& doc) {
-		StringList l;
-		l.unserialise(s);
-		for (const auto& value : l) {
+		std::vector<std::string> values;
+		Unserialise::STLString(s, std::back_inserter(values));
+		for (const auto& value : values) {
 			aggregate_positive(Unserialise::positive(value), doc);
 		}
 	}
 
 	void _aggregate_date(const std::string& s, const Xapian::Document& doc) {
-		StringList l;
-		l.unserialise(s);
-		for (const auto& value : l) {
+		std::vector<std::string> values;
+		Unserialise::STLString(s, std::back_inserter(values));
+		for (const auto& value : values) {
 			aggregate_date(Unserialise::timestamp(value), doc);
 		}
 	}
 
 	void _aggregate_boolean(const std::string& s, const Xapian::Document& doc)  {
-		StringList l;
-		l.unserialise(s);
-		for (const auto& value : l) {
+		std::vector<std::string> values;
+		Unserialise::STLString(s, std::back_inserter(values));
+		for (const auto& value : values) {
 			aggregate_boolean(Unserialise::boolean(value), doc);
 		}
 	}
 
 	void _aggregate_string(const std::string& s, const Xapian::Document& doc) {
-		StringList l;
-		l.unserialise(s);
-		for (const auto& value : l) {
+		std::vector<std::string> values;
+		Unserialise::STLString(s, std::back_inserter(values));
+		for (const auto& value : values) {
 			aggregate_string(value, doc);
 		}
 	}
 
 	void _aggregate_geo(const std::string& s, const Xapian::Document& doc) {
-		StringList l;
-		l.unserialise(s);
-		for (const auto& value : l) {
+		std::vector<std::string> values;
+		Unserialise::STLString(s, std::back_inserter(values));
+		for (const auto& value : values) {
 			aggregate_geo(Unserialise::geo(value), doc);
 		}
 	}
 
 	void _aggregate_uuid(const std::string& s, const Xapian::Document& doc) {
-		StringList l;
-		l.unserialise(s);
-		for (const auto& value : l) {
+		std::vector<std::string> values;
+		Unserialise::STLString(s, std::back_inserter(values));
+		for (const auto& value : values) {
 			aggregate_uuid(Unserialise::uuid(value), doc);
 		}
 	}

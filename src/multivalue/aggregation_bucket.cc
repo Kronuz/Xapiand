@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -29,7 +29,6 @@
 #include "metrics/basic_string_metric.h"  // for Counter
 #include "multivalue/aggregation.h"       // for Aggregation
 #include "schema.h"                       // for Schema, required_spc_t
-#include "stl_serialise.h"                // for StringSet, StringUSet
 
 
 FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
@@ -43,7 +42,7 @@ FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& conf, const
 				auto field_name = field.as_string();
 				auto field_spc = schema->get_slot_field(field_name);
 				const auto& values = field_term.at(field_name);
-				StringSet s_values;
+				std::set<std::string> s_values;
 				if (values.is_array()) {
 					for (const auto& value : values) {
 						s_values.insert(Serialise::MsgPack(field_spc, value));
@@ -77,9 +76,9 @@ void
 FilterAggregation::check_single(const Xapian::Document& doc)
 {
 	for (const auto& filter : _filters) {
-		StringUSet us;
-		us.unserialise(doc.get_value(filter.first));
-		if (us.find(*filter.second.begin()) != us.end()) {
+		std::unordered_set<std::string> values;
+		Unserialise::STLString(doc.get_value(filter.first), std::inserter(values, values.begin()));
+		if (values.find(*filter.second.begin()) != values.end()) {
 			return _agg(doc);
 		}
 	}
@@ -90,10 +89,10 @@ void
 FilterAggregation::check_multiple(const Xapian::Document& doc)
 {
 	for (const auto& filter : _filters) {
-		StringSet s;
-		s.unserialise(doc.get_value(filter.first));
+		std::set<std::string> values;
+		Unserialise::STLString(doc.get_value(filter.first), std::inserter(values, values.begin()));
 		Counter c;
-		std::set_intersection(s.begin(), s.end(), filter.second.begin(), filter.second.end(), std::back_inserter(c));
+		std::set_intersection(values.begin(), values.end(), filter.second.begin(), filter.second.end(), std::back_inserter(c));
 		if (c.count) {
 			return _agg(doc);
 		}
