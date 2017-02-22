@@ -52,7 +52,8 @@ public:
 	 *  @param start_  range's start.
 	 *  @param end_ range's end.
 	*/
-	MultipleValueRange(Xapian::valueno slot_, const std::string& start_, const std::string& end_);
+	template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value>>
+	MultipleValueRange(Xapian::valueno slot_, T&& start_, T&& end_);
 
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;
@@ -85,7 +86,8 @@ public:
 	 *  @param slot_ The value slot to read values from.
 	 *  @param start_  range's start.
 	*/
-	MultipleValueGE(Xapian::valueno slot_, const std::string& start_);
+	template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value>>
+	MultipleValueGE(Xapian::valueno slot_, T&& start_);
 
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;
@@ -115,7 +117,8 @@ public:
 	 *  @param slot_ The value slot to read values from.
 	 *  @param end_  range's end.
 	*/
-	MultipleValueLE(Xapian::valueno slot_, const std::string& end_);
+	template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value>>
+	MultipleValueLE(Xapian::valueno slot_, T&& end_);
 
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;

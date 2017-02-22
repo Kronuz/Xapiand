@@ -201,8 +201,18 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 		}
 	} catch (const Exception& exc) {
 		THROW(QueryParserError, "Failed to serialize: %s - %s like %s (%s)", start->to_string().c_str(), end->to_string().c_str(),
-				Serialise::type(field_spc.get_type()).c_str(), exc.what());
+			Serialise::type(field_spc.get_type()).c_str(), exc.what());
 	}
+}
+
+
+template <typename T, typename>
+MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, T&& start_, T&& end_)
+	: Xapian::ValuePostingSource(slot_),
+	  start(std::forward<T>(start_)),
+	  end(std::forward<T>(end_))
+{
+	set_maxweight(1.0);
 }
 
 
@@ -323,9 +333,10 @@ MultipleValueRange::get_description() const
 }
 
 
-MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, const std::string& start_)
+template <typename T, typename>
+MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, T&& start_)
 	: Xapian::ValuePostingSource(slot_),
-	  start(start_)
+	  start(std::forward<T>(start_))
 {
 	set_maxweight(1.0);
 }
@@ -436,13 +447,15 @@ std::string
 MultipleValueGE::get_description() const
 {
 	std::string result("MultipleValueGE ");
-	result += std::to_string(get_slot()) + " " + start + ")";
+	result += std::to_string(get_slot()) + " " + start;
 	return result;
 }
 
 
-MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, const std::string& end_)
-	: Xapian::ValuePostingSource(slot_), end(end_)
+template <typename T, typename>
+MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, T&& end_)
+	: Xapian::ValuePostingSource(slot_),
+	  end(std::forward<T>(end_))
 {
 	set_maxweight(1.0);
 }
@@ -553,6 +566,6 @@ std::string
 MultipleValueLE::get_description() const
 {
 	std::string result("MultipleValueLE ");
-	result += std::to_string(get_slot()) + " " + end + ")";
+	result += std::to_string(get_slot()) + " " + end;
 	return result;
 }
