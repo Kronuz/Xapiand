@@ -210,10 +210,7 @@ template <typename T, typename>
 MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, T&& start_, T&& end_)
 	: Xapian::ValuePostingSource(slot_),
 	  start(std::forward<T>(start_)),
-	  end(std::forward<T>(end_))
-{
-	set_maxweight(1.0);
-}
+	  end(std::forward<T>(end_)) { }
 
 
 bool
@@ -336,10 +333,7 @@ MultipleValueRange::get_description() const
 template <typename T, typename>
 MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, T&& start_)
 	: Xapian::ValuePostingSource(slot_),
-	  start(std::forward<T>(start_))
-{
-	set_maxweight(1.0);
-}
+	  start(std::forward<T>(start_)) { }
 
 
 bool
@@ -455,10 +449,7 @@ MultipleValueGE::get_description() const
 template <typename T, typename>
 MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, T&& end_)
 	: Xapian::ValuePostingSource(slot_),
-	  end(std::forward<T>(end_))
-{
-	set_maxweight(1.0);
-}
+	  end(std::forward<T>(end_)) { }
 
 
 bool

@@ -53,10 +53,7 @@ public:
 	template <typename R, typename = std::enable_if_t<std::is_same<std::vector<range_t>, std::decay_t<R>>::value>>
 	GeoSpatialRange(Xapian::valueno slot_, R&& ranges_)
 		: Xapian::ValuePostingSource(slot_),
-		  ranges(std::forward<R>(ranges_))
-	{
-		set_maxweight(1.0);
-	}
+		  ranges(std::forward<R>(ranges_)) { }
 
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;
