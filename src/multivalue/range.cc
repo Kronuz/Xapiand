@@ -40,117 +40,93 @@
 
 
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
-Xapian::Query filterNumericQuery(const required_spc_t& field_spc, T start, T end, const std::string& start_s, const std::string& end_s) {
-	auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
-
-	auto query = GenerateTerms::numeric(start, end, field_spc.accuracy, field_spc.acc_prefix);
-
-	if (query.empty()) {
-		return Xapian::Query(mvr->release());
-	} else {
-		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
-	}
-}
-
-
-Xapian::Query filterStringQuery(const required_spc_t& field_spc, const std::string& start_s, const std::string& end_s) {
-	if (start_s > end_s) {
-		return Xapian::Query::MatchNothing;
-	}
-
-	auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
-	return Xapian::Query(mvr->release());
-}
-
-
-MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string& start_, const std::string& end_)
-	: Xapian::ValuePostingSource(slot_),
-	  start(start_),
-	  end(end_)
-{
-	set_maxweight(1.0);
-}
-
-
-template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
 Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
-	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::MsgPack(field_spc, start), Serialise::MsgPack(field_spc, end));
-
-	T start_val, end_val;
+	std::string ser_start, ser_end;
+	T value_s, value_e;
 	switch (field_spc.get_type()) {
-		case FieldType::FLOAT:
-			switch (start.getType()) {
-				case MsgPack::Type::MAP:
-					start_val = Cast::cast(start).as_f64();
-					break;
-				default:
-					start_val = Cast::_float(start);
-					break;
+		case FieldType::FLOAT: {
+			double val_s = start.is_map() ? Cast::cast(start).as_f64() : Cast::_float(start);
+			double val_e = end.is_map() ? Cast::cast(end).as_f64() : Cast::_float(end);
+			if (val_s > val_e) {
+				return Xapian::Query::MatchNothing;
 			}
-			switch (end.getType()) {
-				case MsgPack::Type::MAP:
-					end_val = Cast::cast(end).as_f64();
-					break;
-				default:
-					end_val = Cast::_float(end);
-					break;
-			}
-		break;
-		case FieldType::POSITIVE:
-			switch (start.getType()) {
-				case MsgPack::Type::MAP:
-					start_val = Cast::cast(start).as_u64();
-					break;
-				default:
-					start_val = Cast::positive(start);
-					break;
-			}
-			switch (end.getType()) {
-				case MsgPack::Type::MAP:
-					end_val = Cast::cast(end).as_u64();
-					break;
-				default:
-					end_val = Cast::positive(end);
-					break;
-			}
-		break;
-		case FieldType::INTEGER:
-			switch (start.getType()) {
-				case MsgPack::Type::MAP:
-					start_val = Cast::cast(start).as_i64();
-					break;
-				default:
-					start_val = Cast::integer(start);
-					break;
-			}
-			switch (end.getType()) {
-				case MsgPack::Type::MAP:
-					end_val = Cast::cast(end).as_i64();
-					break;
-				default:
-					end_val = Cast::integer(end);
-					break;
-			}
+
+			ser_start = Serialise::_float(val_s);
+			ser_end = Serialise::_float(val_e);
+			value_s = val_s;
+			value_e = val_e;
 			break;
+		}
+		case FieldType::INTEGER: {
+			int64_t val_s = start.is_map() ? Cast::cast(start).as_i64() : Cast::integer(start);
+			int64_t val_e = end.is_map() ? Cast::cast(end).as_i64() : Cast::integer(end);
+			if (val_s > val_e) {
+				return Xapian::Query::MatchNothing;
+			}
+
+			ser_start = Serialise::integer(val_s);
+			ser_end = Serialise::integer(val_e);
+			value_s = val_s;
+			value_e = val_e;
+			break;
+		}
+		case FieldType::POSITIVE: {
+			uint64_t val_s = start.is_map() ? Cast::cast(start).as_u64() : Cast::positive(start);
+			uint64_t val_e = end.is_map() ? Cast::cast(end).as_u64() : Cast::positive(end);
+			if (val_s > val_e) {
+				return Xapian::Query::MatchNothing;
+			}
+
+			ser_start = Serialise::positive(val_s);
+			ser_end = Serialise::positive(val_e);
+			value_s = val_s;
+			value_e = val_e;
+			break;
+		}
 		default:
 			THROW(QueryParserError, "Expected numeric type for query range");
 	}
 
-	auto query = GenerateTerms::numeric(start_val, end_val, field_spc.accuracy, field_spc.acc_prefix);
-
+	auto query = GenerateTerms::numeric(value_s, value_e, field_spc.accuracy, field_spc.acc_prefix);
+	auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
 	} else {
 		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 	}
-
 }
 
 
-Xapian::Query
-MultipleValueRange::query_geo(const std::string& str, const required_spc_t& field_spc)
-{
-	EWKT ewkt(str);
+Xapian::Query filterStringQuery(const required_spc_t& field_spc, std::string&& start_s, std::string&& end_s) {
+	if (start_s > end_s) {
+		return Xapian::Query::MatchNothing;
+	}
+
+	auto mvr = new MultipleValueRange(field_spc.slot, std::move(start_s), std::move(end_s));
+	return Xapian::Query(mvr->release());
+}
+
+
+Xapian::Query filterDateQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
+	auto timestamp_s = Datetime::timestamp(start);
+	auto timestamp_e = Datetime::timestamp(end);
+
+	if (timestamp_s > timestamp_e) {
+		return Xapian::Query::MatchNothing;
+	}
+
+	auto query = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
+	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::timestamp(timestamp_s), Serialise::timestamp(timestamp_e));
+	if (query.empty()) {
+		return Xapian::Query(mvr->release());
+	} else {
+		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
+	}
+}
+
+
+Xapian::Query filterGeoQuery(const required_spc_t& field_spc, const MsgPack& obj) {
+	EWKT ewkt(obj.as_string());
 
 	auto ranges = ewkt.geometry->getRanges(field_spc.flags.partials, field_spc.error);
 
@@ -159,11 +135,11 @@ MultipleValueRange::query_geo(const std::string& str, const required_spc_t& fiel
 	}
 
 	auto query = GenerateTerms::geo(ranges, field_spc.accuracy, field_spc.acc_prefix);
-	auto query_geo = GeoSpatialRange::getQuery(field_spc.slot, std::move(ranges), ewkt.geometry->getCentroids());
+	auto geoQ = GeoSpatialRange::getQuery(field_spc.slot, std::move(ranges), ewkt.geometry->getCentroids());
 	if (query.empty()) {
-		return query_geo;
+		return geoQ;
 	} else {
-		return Xapian::Query(Xapian::Query::OP_AND, query, query_geo);
+		return Xapian::Query(Xapian::Query::OP_AND, query, geoQ);
 	}
 }
 
@@ -190,13 +166,15 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 				return Xapian::Query::MatchAll;
 			}
 			if (field_spc.get_type() == FieldType::GEO) {
-				return query_geo(end->as_string(), field_spc);
+				return filterGeoQuery(field_spc, *end);
 			}
 			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::MsgPack(field_spc, *end));
 			return Xapian::Query(mvle->release());
-		} else if (!end) {
+		}
+
+		if (!end) {
 			if (field_spc.get_type() == FieldType::GEO) {
-				return query_geo(start->as_string(), field_spc);
+				return filterGeoQuery(field_spc, *start);
 			}
 			auto mvge = new MultipleValueGE(field_spc.slot, Serialise::MsgPack(field_spc, *start));
 			return Xapian::Query(mvge->release());
@@ -209,35 +187,13 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 			case FieldType::POSITIVE:
 				return filterNumericQuery<uint64_t>(field_spc, *start, *end);
 			case FieldType::UUID:
-				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));
 			case FieldType::BOOLEAN:
-				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));
 			case FieldType::TERM:
 			case FieldType::TEXT:
 			case FieldType::STRING:
 				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));
-			case FieldType::DATE: {
-				auto ser_start = Serialise::date(*start);
-				auto ser_end = Serialise::date(*end);
-
-				auto timestamp_s = Datetime::timestamp(*start);
-				auto timestamp_e = Datetime::timestamp(*end);
-
-				if (timestamp_s > timestamp_e) {
-					return Xapian::Query::MatchNothing;
-				}
-
-				auto start_s = Serialise::timestamp(timestamp_s);
-				auto end_s   = Serialise::timestamp(timestamp_e);
-
-				auto mvr = new MultipleValueRange(field_spc.slot, start_s, end_s);
-				auto query = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
-				if (query.empty()) {
-					return Xapian::Query(mvr->release());
-				} else {
-					return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
-				}
-			}
+			case FieldType::DATE:
+				return filterDateQuery(field_spc, *start, *end);
 			case FieldType::GEO:
 				THROW(QueryParserError, "The format for Geo Spatial range is: <field>:[\"EWKT\"]");
 			default:
