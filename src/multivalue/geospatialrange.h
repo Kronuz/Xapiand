@@ -35,34 +35,29 @@
 class GeoSpatialRange : public Xapian::ValuePostingSource {
 	// Ranges for the search.
 	std::vector<range_t> ranges;
-	std::vector<Cartesian> centroids;
-	double angle;
 
-	static double geo_weight_from_angle(double angle) {
-		return (M_PI - angle) * M_PER_RADIUS_EARTH;
-	}
+	/*
+	 * Calculates the smallest angle between its centroids and search centroids.
+	 * void calc_angle(const std::vector<Cartesian>& centroids_);
+	 * Calculates if some their values is inside ranges.
+	 */
+	bool insideRanges();
 
+public:
 	/* Construct a new match decider which returns only documents with a
 	 *  some of their values inside of ranges.
 	 *
 	 *  @param slot_ The value slot to read values from.
 	 *  @param ranges
 	*/
-	template <typename R, typename C>
-	GeoSpatialRange(Xapian::valueno slot_, R&& ranges_, C&& centroids_)
+	template <typename R, typename = std::enable_if_t<std::is_same<std::vector<range_t>, std::decay_t<R>>::value>>
+	GeoSpatialRange(Xapian::valueno slot_, R&& ranges_)
 		: Xapian::ValuePostingSource(slot_),
-		  ranges(std::forward<R>(ranges_)),
-		  centroids(std::forward<C>(centroids_))
+		  ranges(std::forward<R>(ranges_))
 	{
-		set_maxweight(geo_weight_from_angle(0.0));
+		set_maxweight(1.0);
 	}
 
-	// Calculates the smallest angle between its centroids  and search centroids.
-	void calc_angle(const std::vector<Cartesian>& centroids_);
-	// Calculates if some their values is inside ranges.
-	bool insideRanges();
-
-public:
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;
 	bool check(Xapian::docid min_docid, double min_wt) override;
@@ -75,13 +70,13 @@ public:
 	std::string get_description() const override;
 
 	// Call this function for create a new Query based in ranges.
-	template <typename R, typename C>
-	static Xapian::Query getQuery(Xapian::valueno slot_, R&& ranges_, C&& centroids_) {
+	template <typename R, typename = std::enable_if_t<std::is_same<std::vector<range_t>, std::decay_t<R>>::value>>
+	static Xapian::Query getQuery(Xapian::valueno slot_, R&& ranges_) {
 		if (ranges_.empty()){
 			return Xapian::Query::MatchNothing;
 		}
 
-		auto gsr = new GeoSpatialRange(slot_, std::forward<R>(ranges_), std::forward<C>(centroids_));
+		auto gsr = new GeoSpatialRange(slot_, std::forward<R>(ranges_));
 		return Xapian::Query(gsr->release());
 	}
 };

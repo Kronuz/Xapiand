@@ -28,21 +28,6 @@
 #include "serialise.h"                    // for STLRanges, STLString
 
 
-void
-GeoSpatialRange::calc_angle(const std::vector<Cartesian>& centroids_)
-{
-	angle = M_PI;
-	for (const auto& centroid_ : centroids_) {
-		double aux = M_PI;
-		for (const auto& centroid : centroids) {
-			double rad_angle = acos(centroid_ * centroid);
-			if (rad_angle < aux) aux = rad_angle;
-		}
-		if (aux < angle) angle = aux;
-	}
-}
-
-
 bool
 GeoSpatialRange::insideRanges()
 {
@@ -117,14 +102,14 @@ GeoSpatialRange::check(Xapian::docid min_docid, double min_wt)
 double
 GeoSpatialRange::get_weight() const
 {
-	return geo_weight_from_angle(angle);
+	return 1.0;
 }
 
 
 GeoSpatialRange*
 GeoSpatialRange::clone() const
 {
-	return new GeoSpatialRange(get_slot(), ranges, centroids);
+	return new GeoSpatialRange(get_slot(), ranges);
 }
 
 
@@ -138,7 +123,7 @@ GeoSpatialRange::name() const
 std::string
 GeoSpatialRange::serialise() const
 {
-	std::vector<std::string> data = { serialise_length(get_slot()), Serialise::geo(ranges, centroids) };
+	std::vector<std::string> data = { serialise_length(get_slot()), Serialise::ranges(ranges) };
 	return Serialise::STLString(data.begin(), data.end());
 }
 
@@ -150,13 +135,7 @@ GeoSpatialRange::unserialise_with_registry(const std::string& s, const Xapian::R
 	Unserialise::STLString(s, std::back_inserter(data));
 
 	const auto slot_ = static_cast<Xapian::valueno>(unserialise_length(data.at(0)));
-
-	const auto unser_geo = Unserialise::geo(data.at(1));
-	std::vector<range_t> ranges_;
-	Unserialise::STLRange(unser_geo.first, std::back_inserter(ranges_));
-	std::vector<Cartesian> centroids_;
-	Unserialise::STLCartesian(unser_geo.second, std::back_inserter(centroids_));
-	return new GeoSpatialRange(slot_, ranges_, centroids_);
+	return new GeoSpatialRange(slot_, Unserialise::ranges(data.at(1)));
 }
 
 

@@ -135,7 +135,7 @@ Xapian::Query filterGeoQuery(const required_spc_t& field_spc, const MsgPack& obj
 	}
 
 	auto query = GenerateTerms::geo(ranges, field_spc.accuracy, field_spc.acc_prefix);
-	auto geoQ = GeoSpatialRange::getQuery(field_spc.slot, std::move(ranges), ewkt.geometry->getCentroids());
+	auto geoQ = GeoSpatialRange::getQuery(field_spc.slot, std::move(ranges));
 	if (query.empty()) {
 		return geoQ;
 	} else {
@@ -309,7 +309,7 @@ MultipleValueRange::unserialise_with_registry(const std::string& s, const Xapian
 {
 	std::vector<std::string> data;
 	Unserialise::STLString(s, std::back_inserter(data));
-	return new MultipleValueRange(unserialise_length(data.at(0)), data.at(1), data.at(2));
+	return new MultipleValueRange(unserialise_length(data.at(0)), std::move(data.at(1)), std::move(data.at(2)));
 }
 
 
@@ -429,7 +429,7 @@ MultipleValueGE::unserialise_with_registry(const std::string& s, const Xapian::R
 {
 	std::vector<std::string> data;
 	Unserialise::STLString(s, std::back_inserter(data));
-	return new MultipleValueGE(unserialise_length(data.at(0)), data.at(1));
+	return new MultipleValueGE(unserialise_length(data.at(0)), std::move(data.at(1)));
 }
 
 
@@ -548,7 +548,7 @@ MultipleValueLE::unserialise_with_registry(const std::string& s, const Xapian::R
 {
 	std::vector<std::string> data;
 	Unserialise::STLString(s, std::back_inserter(data));
-	return new MultipleValueLE(unserialise_length(data.at(0)), data.at(1));
+	return new MultipleValueLE(unserialise_length(data.at(0)), std::move(data.at(1)));
 }
 
 
