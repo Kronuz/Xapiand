@@ -30,14 +30,12 @@
 #include "datetime.h"                      // for timestamp
 #include "exception.h"                     // for MSG_QueryParserError, Quer...
 #include "generate_terms.h"                // for date, geo, numeric
-#include "geo/wkt_parser.h"                // for GeoSpatial, EWKT_Parser
+#include "geo/ewkt.h"                      // for EWKT
 #include "geospatialrange.h"               // for GeoSpatialRange
 #include "length.h"                        // for serialise_length
 #include "query_dsl.h"                     // for QUERYDSL_FROM, QUERYDSL_TO
 #include "schema.h"                        // for required_spc_t, FieldType
 #include "serialise.h"                     // for MsgPack, cast, _float, int...
-#include "sortable_serialise.h"            // for sortable_serialise, sortab...
-#include "stl_serialise.h"                 // for StringList, RangeList
 #include "utils.h"                         // for stox
 
 
@@ -66,7 +64,9 @@ Xapian::Query filterStringQuery(const required_spc_t& field_spc, const std::stri
 
 
 MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string& start_, const std::string& end_)
-	: Xapian::ValuePostingSource(slot_), start(start_), end(end_)
+	: Xapian::ValuePostingSource(slot_),
+	  start(start_),
+	  end(end_)
 {
 	set_maxweight(1.0);
 }
@@ -148,16 +148,18 @@ Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack&
 
 
 Xapian::Query
-MultipleValueRange::query_geo(const std::string& ewkt, const required_spc_t& field_spc)
+MultipleValueRange::query_geo(const std::string& str, const required_spc_t& field_spc)
 {
-	auto geo = EWKT_Parser::getGeoSpatial(ewkt, field_spc.flags.partials, field_spc.error);
+	EWKT ewkt(str);
 
-	if (geo.ranges.empty()) {
+	auto ranges = ewkt.geometry->getRanges(field_spc.flags.partials, field_spc.error);
+
+	if (ranges.empty()) {
 		return Xapian::Query::MatchNothing;
 	}
 
-	auto query_geo = GeoSpatialRange::getQuery(field_spc.slot, geo.ranges, geo.centroids);
-	auto query = GenerateTerms::geo(geo.ranges, field_spc.accuracy, field_spc.acc_prefix);
+	auto query = GenerateTerms::geo(ranges, field_spc.accuracy, field_spc.acc_prefix);
+	auto query_geo = GeoSpatialRange::getQuery(field_spc.slot, std::move(ranges), ewkt.geometry->getCentroids());
 	if (query.empty()) {
 		return query_geo;
 	} else {
@@ -241,8 +243,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 			default:
 				return Xapian::Query::MatchNothing;
 		}
-	}
-	catch (const Exception& exc) {
+	} catch (const Exception& exc) {
 		THROW(QueryParserError, "Failed to serialize: %s - %s like %s (%s)", start->to_string().c_str(), end->to_string().c_str(),
 				Serialise::type(field_spc.get_type()).c_str(), exc.what());
 	}
@@ -252,13 +253,19 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 bool
 MultipleValueRange::insideRange() const noexcept
 {
-	StringList list;
-	list.unserialise(get_value());
-	for (const auto& value_ : list) {
-		if (value_ >= start && value_ <= end) {
-			return true;
+	std::vector<std::string> data;
+	Unserialise::STLString(get_value(), std::back_inserter(data));
+
+	if (data.empty() || start > data.back() || end < data.front()) {
+		return false;
+	}
+
+	for (const auto& value_ : data) {
+		if (value_ >= start) {
+			return value_ <= end;
 		}
 	}
+
 	return false;
 }
 
@@ -326,25 +333,17 @@ MultipleValueRange::name() const
 std::string
 MultipleValueRange::serialise() const
 {
-	std::string serialised, values, s_slot(sortable_serialise(get_slot()));
-	values.append(serialise_length(s_slot.size()));
-	values.append(s_slot);
-	values.append(serialise_length(start.size()));
-	values.append(start);
-	values.append(serialise_length(end.size()));
-	values.append(end);
-	serialised.append(serialise_length(values.size()));
-	serialised.append(values);
-	return serialised;
+	std::vector<std::string> data = { serialise_length(get_slot()), start, end };
+	return Serialise::STLString(data.begin(), data.end());
 }
 
 
 MultipleValueRange*
 MultipleValueRange::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
-	StringList data;
-	data.unserialise(s);
-	return new MultipleValueRange(sortable_unserialise(data[0]), data[1], data[2]);
+	std::vector<std::string> data;
+	Unserialise::STLString(s, std::back_inserter(data));
+	return new MultipleValueRange(unserialise_length(data.at(0)), data.at(1), data.at(2));
 }
 
 
@@ -369,7 +368,8 @@ MultipleValueRange::get_description() const
 
 
 MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, const std::string& start_)
-	: Xapian::ValuePostingSource(slot_), start(start_)
+	: Xapian::ValuePostingSource(slot_),
+	  start(start_)
 {
 	set_maxweight(1.0);
 }
@@ -378,14 +378,14 @@ MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, const std::string& start
 bool
 MultipleValueGE::insideRange() const noexcept
 {
-	StringList list;
-	list.unserialise(get_value());
-	for (const auto& value_ : list) {
-		if (value_ >= start) {
-			return true;
-		}
+	std::vector<std::string> data;
+	Unserialise::STLString(get_value(), std::back_inserter(data));
+
+	if (data.empty()) {
+		return false;
 	}
-	return false;
+
+	return data.back() >= start;
 }
 
 
@@ -452,23 +452,17 @@ MultipleValueGE::name() const
 std::string
 MultipleValueGE::serialise() const
 {
-	std::string serialised, values, s_slot(sortable_serialise(get_slot()));
-	values.append(serialise_length(s_slot.size()));
-	values.append(s_slot);
-	values.append(serialise_length(start.size()));
-	values.append(start);
-	serialised.append(serialise_length(values.size()));
-	serialised.append(values);
-	return serialised;
+	std::vector<std::string> data = { serialise_length(get_slot()), start };
+	return Serialise::STLString(data.begin(), data.end());
 }
 
 
 MultipleValueGE*
 MultipleValueGE::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
-	StringList data;
-	data.unserialise(s);
-	return new MultipleValueGE(sortable_unserialise(data[0]), data[1]);
+	std::vector<std::string> data;
+	Unserialise::STLString(s, std::back_inserter(data));
+	return new MultipleValueGE(unserialise_length(data.at(0)), data.at(1));
 }
 
 
@@ -501,14 +495,14 @@ MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, const std::string& end_)
 bool
 MultipleValueLE::insideRange() const noexcept
 {
-	StringList list;
-	list.unserialise(get_value());
-	for (const auto& value_ : list) {
-		if (value_ <= end) {
-			return true;
-		}
+	std::vector<std::string> data;
+	Unserialise::STLString(get_value(), std::back_inserter(data));
+
+	if (data.empty()) {
+		return false;
 	}
-	return false;
+
+	return data.front() <= end;
 }
 
 
@@ -575,23 +569,17 @@ MultipleValueLE::name() const
 std::string
 MultipleValueLE::serialise() const
 {
-	std::string serialised, values, s_slot(sortable_serialise(get_slot()));
-	values.append(serialise_length(s_slot.size()));
-	values.append(s_slot);
-	values.append(serialise_length(end.size()));
-	values.append(end);
-	serialised.append(serialise_length(values.size()));
-	serialised.append(values);
-	return serialised;
+	std::vector<std::string> data = { serialise_length(get_slot()), end };
+	return Serialise::STLString(data.begin(), data.end());
 }
 
 
 MultipleValueLE*
 MultipleValueLE::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
-	StringList data;
-	data.unserialise(s);
-	return new MultipleValueLE(sortable_unserialise(data[0]), data[1]);
+	std::vector<std::string> data;
+	Unserialise::STLString(s, std::back_inserter(data));
+	return new MultipleValueLE(unserialise_length(data.at(0)), data.at(1));
 }
 
 
