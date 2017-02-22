@@ -58,8 +58,6 @@
 
 #define MAGIC 0xC0DE
 
-#define SIZE_UUID 36
-
 #define WAL_SYNC_MODE     STORAGE_ASYNC_SYNC
 #define XAPIAN_SYNC_MODE  0       // This could also be Xapian::DB_FULL_SYNC for xapian to ensure full sync
 #define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
