@@ -37,7 +37,7 @@
 
 #include "datetime.h"                      // for isDate, tm_t
 #include "exception.h"                     // for ClientError
-#include "geo/wkt_parser.h"                // for EWKT_Parser
+#include "geo/ewkt.h"                      // for EWKT
 #include "log.h"                           // for L_CALL
 #include "manager.h"                       // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"     // for integer, geo, date, positive
@@ -1842,7 +1842,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[2] = FieldType::DATE;
 				return;
 			}
-			if (specification.flags.geo_detection && EWKT_Parser::isEWKT(str_value)) {
+			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
 				specification.sep_types[2] = FieldType::GEO;
 				return;
 			}
@@ -2023,7 +2023,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::FIELD_VALUES: {
-			StringSet& s_f = map_values[specification.slot];
+			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++);
@@ -2032,7 +2032,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::FIELD_ALL: {
-			StringSet& s_f = map_values[specification.slot];
+			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
@@ -2064,7 +2064,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_f = map_values[specification.slot];
+			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, nullptr, &global_spc);
@@ -2074,7 +2074,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_f = map_values[specification.slot];
+			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
@@ -2086,7 +2086,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_g = map_values[global_spc.slot];
+			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
@@ -2096,7 +2096,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_g = map_values[global_spc.slot];
+			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
@@ -2108,8 +2108,8 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_g = map_values[global_spc.slot];
-			StringSet& s_f = map_values[specification.slot];
+			std::set<std::string>& s_g = map_values[global_spc.slot];
+			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
 					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
@@ -2119,8 +2119,8 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_g = map_values[global_spc.slot];
-			StringSet& s_f = map_values[specification.slot];
+			std::set<std::string>& s_g = map_values[global_spc.slot];
+			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
@@ -2132,7 +2132,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_g = map_values[global_spc.slot];
+			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, nullptr, &global_spc);
@@ -2142,7 +2142,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_g = map_values[global_spc.slot];
+			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
@@ -2154,8 +2154,8 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_g = map_values[global_spc.slot];
-			StringSet& s_f = map_values[specification.slot];
+			std::set<std::string>& s_g = map_values[global_spc.slot];
+			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
 					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
@@ -2165,8 +2165,8 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
-			StringSet& s_f = map_values[specification.slot];
-			StringSet& s_g = map_values[global_spc.slot];
+			std::set<std::string>& s_f = map_values[specification.slot];
+			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix);
@@ -2264,9 +2264,9 @@ Schema::index_all_term(Xapian::Document& doc, const MsgPack& value, const specif
 
 
 void
-Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, const specification_t* field_spc, const specification_t* global_spc)
+Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s, const specification_t& spc, size_t pos, const specification_t* field_spc, const specification_t* global_spc)
 {
-	L_CALL(nullptr, "Schema::index_value(<Xapian::Document>, %s, <StringSet>, <specification_t>, %zu, <specification_t*>, <specification_t*>)", repr(value.to_string()).c_str(), pos);
+	L_CALL(nullptr, "Schema::index_value(<Xapian::Document>, %s, <std::set<std::string>>, <specification_t>, %zu, <specification_t*>, <specification_t*>)", repr(value.to_string()).c_str(), pos);
 
 	switch (spc.sep_types[2]) {
 		case FieldType::FLOAT: {
@@ -2340,26 +2340,27 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 		case FieldType::GEO: {
 			try {
 				const auto str_value = value.as_string();
-				EWKT_Parser ewkt(str_value, spc.flags.partials, spc.error);
-				auto ser_value = Serialise::trixels(ewkt.trixels);
+				EWKT ewkt(str_value);
+				const auto ranges = ewkt.geometry->getRanges(spc.flags.partials, spc.error);
+				auto ser_value = Serialise::ranges(ranges);
 				if (field_spc) {
-					if (field_spc->flags.partials != spc.flags.partials || field_spc->error != spc.error) {
-						EWKT_Parser f_ewkt(str_value, field_spc->flags.partials, field_spc->error);
-						index_term(doc, Serialise::trixels(f_ewkt.trixels), *field_spc, pos);
-					} else {
+					if (field_spc->flags.partials == spc.flags.partials && field_spc->error == spc.error) {
 						index_term(doc, ser_value, *field_spc, pos);
+					} else {
+						const auto f_ranges = ewkt.geometry->getRanges(field_spc->flags.partials, field_spc->error);
+						index_term(doc, Serialise::ranges(f_ranges), *field_spc, pos);
 					}
 				}
 				if (global_spc) {
-					if (global_spc->flags.partials != spc.flags.partials || global_spc->error != spc.error) {
-						EWKT_Parser g_ewkt(str_value, global_spc->flags.partials, global_spc->error);
-						index_term(doc, Serialise::trixels(g_ewkt.trixels), *global_spc, pos);
-					} else {
+					if (global_spc->flags.partials == spc.flags.partials && global_spc->error == spc.error) {
 						index_term(doc, std::move(ser_value), *global_spc, pos);
+					} else {
+						const auto g_ranges = ewkt.geometry->getRanges(global_spc->flags.partials, global_spc->error);
+						index_term(doc, Serialise::ranges(g_ranges), *global_spc, pos);
 					}
 				}
-				auto ranges = ewkt.getRanges();
-				s.insert(Serialise::geo(ranges, ewkt.centroids));
+				// FIXME: ONLY SAVED A SET OF RANGES.
+				s.insert(Serialise::geo(ranges, ewkt.geometry->getCentroids()));
 				GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
 				return;
 			} catch (const msgpack::type_error&) {
@@ -2422,9 +2423,9 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, c
 
 
 void
-Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
+Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s_f, std::set<std::string>& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
 {
-	L_CALL(nullptr, "Schema::index_all_value(<Xapian::Document>, %s, <StringSet>, <StringSet>, <specification_t>, <specification_t>, %zu)", repr(value.to_string()).c_str(), pos);
+	L_CALL(nullptr, "Schema::index_all_value(<Xapian::Document>, %s, <std::set<std::string>>, <std::set<std::string>>, <specification_t>, <specification_t>, %zu)", repr(value.to_string()).c_str(), pos);
 
 	switch (field_spc.sep_types[2]) {
 		case FieldType::FLOAT: {
@@ -2522,10 +2523,11 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 		case FieldType::GEO: {
 			try {
 				const auto str_ewkt = value.as_string();
+				EWKT ewkt(str_ewkt);
 				if (field_spc.flags.partials == global_spc.flags.partials && field_spc.error == global_spc.error) {
-					EWKT_Parser ewkt(str_ewkt, field_spc.flags.partials, field_spc.error);
+					const auto ranges = ewkt.geometry->getRanges(field_spc.flags.partials, field_spc.error);
 					if (toUType(field_spc.index & TypeIndex::TERMS)) {
-						auto ser_value = Serialise::trixels(ewkt.trixels);
+						auto ser_value = Serialise::ranges(ranges);
 						if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 							index_term(doc, ser_value, field_spc, pos);
 						}
@@ -2533,10 +2535,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 							index_term(doc, std::move(ser_value), global_spc, pos);
 						}
 					}
-					auto ranges = ewkt.getRanges();
-					auto ser_ranges = Serialise::geo(ranges, ewkt.centroids);
-					s_f.insert(ser_ranges);
-					s_g.insert(std::move(ser_ranges));
+					auto ser_geo = Serialise::geo(ranges, ewkt.geometry->getCentroids());
+					// FIXME: ONLY SAVED A SET OF RANGES.
+					s_f.insert(ser_geo);
+					s_g.insert(std::move(ser_geo));
 					if (field_spc.accuracy == global_spc.accuracy) {
 						GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, ranges);
 					} else {
@@ -2544,18 +2546,17 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& 
 						GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, ranges);
 					}
 				} else {
-					EWKT_Parser ewkt(str_ewkt, field_spc.flags.partials, field_spc.error);
-					EWKT_Parser g_ewkt(str_ewkt, global_spc.flags.partials, global_spc.error);
+					const auto ranges = ewkt.geometry->getRanges(field_spc.flags.partials, field_spc.error);
+					const auto g_ranges = ewkt.geometry->getRanges(global_spc.flags.partials, global_spc.error);
 					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
-						index_term(doc, Serialise::trixels(ewkt.trixels), field_spc, pos);
+						index_term(doc, Serialise::ranges(ranges), field_spc, pos);
 					}
 					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
-						index_term(doc, Serialise::trixels(g_ewkt.trixels), global_spc, pos);
+						index_term(doc, Serialise::ranges(g_ranges), global_spc, pos);
 					}
-					auto ranges = ewkt.getRanges();
-					auto g_ranges = g_ewkt.getRanges();
-					s_f.insert(Serialise::geo(ranges, ewkt.centroids));
-					s_g.insert(Serialise::geo(g_ranges, g_ewkt.centroids));
+					// FIXME: ONLY SAVED A SET OF RANGES.
+					s_f.insert(Serialise::geo(ranges, ewkt.geometry->getCentroids()));
+					s_g.insert(Serialise::geo(g_ranges, ewkt.geometry->getCentroids()));
 					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
 					GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, g_ranges);
 				}
@@ -4956,7 +4957,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		}
 
 		for (const auto& elem : map_values) {
-			const auto val_ser = elem.second.serialise();
+			const auto val_ser = Serialise::STLString(elem.second.begin(), elem.second.end());
 			doc.add_value(elem.first, val_ser);
 			L_INDEX(this, "Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
 		}

@@ -39,7 +39,6 @@
 #include "database_utils.h"
 #include "geo/htm.h"                       // for HTM_MIN_ERROR
 #include "msgpack.h"                       // for MsgPack, MS...
-#include "stl_serialise.h"                 // for StringSet
 #include "utils.h"                         // for repr, toUType, lower_string
 
 
@@ -381,7 +380,7 @@ class Schema {
 	std::shared_ptr<const MsgPack> schema;
 	std::unique_ptr<MsgPack> mut_schema;
 
-	std::unordered_map<Xapian::valueno, StringSet> map_values;
+	std::unordered_map<Xapian::valueno, std::set<std::string>> map_values;
 	specification_t specification;
 
 	/*
@@ -473,8 +472,8 @@ class Schema {
 
 	static void index_term(Xapian::Document& doc, std::string serialise_val, const specification_t& field_spc, size_t pos);
 	static void index_all_term(Xapian::Document& doc, const MsgPack& value, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
-	static void index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, const specification_t& spc, size_t pos, const specification_t* field_spc=nullptr, const specification_t* global_spc=nullptr);
-	static void index_all_value(Xapian::Document& doc, const MsgPack& value, StringSet& s_f, StringSet& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
+	static void index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s, const specification_t& spc, size_t pos, const specification_t* field_spc=nullptr, const specification_t* global_spc=nullptr);
+	static void index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s_f, std::set<std::string>& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
 
 
 	/*
