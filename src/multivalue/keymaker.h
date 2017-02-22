@@ -31,17 +31,14 @@
 #include <stdexcept>                      // for out_of_range
 #include <string>                         // for string, operator==, stod
 #include <sys/types.h>                    // for int64_t, uint64_t
-#include <unordered_map>                  // for unordered_map
-#include <vector>                         // for vector
 #include <xapian.h>                       // for valueno, KeyMaker
 
 #include "database_utils.h"               // for query_field_t
 #include "datetime.h"                     // for timestamp
-#include "geo/wkt_parser.h"               // for EWKT_Parser
+#include "geo/ewkt.h"                     // for EWKT
 #include "phonetic.h"                     // for SoundexEnglish, SoundexFrench...
 #include "schema.h"                       // for required_spc_t, required_sp...
 #include "serialise.h"                    // for _float, positive, integer
-#include "stl_serialise.h"                // for CartesianUSet
 #include "string_metric.h"                // for Jaccard, Jaro, Jaro_Winkler...
 #include "utils.h"                        // for stox
 
@@ -79,7 +76,7 @@ public:
 	virtual std::string findLargest(const Xapian::Document& doc) const;
 	virtual std::string get_cmpvalue(const std::string& serialise_val) const = 0;
 
-	bool get_reverse() const {
+	bool get_reverse() const noexcept {
 		return _reverse;
 	}
 };
@@ -194,14 +191,14 @@ public:
 
 // Class for create the key using as a reference a geospatial value.
 class GeoKey : public BaseKey {
-	CartesianUSet _centroids;
+	std::vector<Cartesian> _centroids;
 
 	std::string get_cmpvalue(const std::string& serialise_val) const override;
 
 public:
 	GeoKey(const required_spc_t& field_spc, bool reverse, const std::string& value)
 		: BaseKey(field_spc.slot, reverse),
-		  _centroids(EWKT_Parser::getCentroids(value, field_spc.flags.partials, field_spc.error)) { }
+		  _centroids(EWKT(value).geometry->getCentroids()) { }
 };
 
 

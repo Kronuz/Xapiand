@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -25,10 +25,6 @@
 #include <utility>                        // for pair
 
 #include "exception.h"                    // for InvalidArgumentError, MSG_I...
-#include "geo/cartesian.h"                // for Cartesian
-#include "schema.h"                       // for FieldType, required_spc_t
-#include "serialise.h"                    // for _float, geo
-#include "stl_serialise.h"                // for StringList, CartesianUSet
 
 
 const dispatch_str_metric def_str_metric     = &Multi_MultiValueKeyMaker::jaro;
@@ -71,15 +67,16 @@ BaseKey::findSmallest(const Xapian::Document& doc) const
 {
 	auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) return MAX_CMPVALUE;
-	StringList s;
-	s.unserialise(multiValues);
 
-	StringList::const_iterator it(s.begin());
-	std::string smallest(get_cmpvalue(*it));
-	const auto it_e = s.end();
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	const auto it_e = values.end();
+	auto it = values.begin();
+	auto smallest = get_cmpvalue(*it);
 	for (++it; it != it_e; ++it) {
 		auto aux = get_cmpvalue(*it);
-		if (smallest > aux) smallest = aux;
+		if (smallest > aux) smallest = std::move(aux);
 	}
 
 	return smallest;
@@ -91,15 +88,16 @@ BaseKey::findLargest(const Xapian::Document& doc) const
 {
 	auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) return MAX_CMPVALUE;
-	StringList s;
-	s.unserialise(multiValues);
 
-	StringList::const_iterator it(s.begin());
-	std::string largest(get_cmpvalue(*it));
-	const auto it_e = s.end();
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	const auto it_e = values.end();
+	auto it = values.begin();
+	auto largest = get_cmpvalue(*it);
 	for (++it; it != it_e; ++it) {
-		std::string aux(get_cmpvalue(*it));
-		if (aux > largest) largest = aux;
+		const auto aux = get_cmpvalue(*it);
+		if (aux > largest) largest = std::move(aux);
 	}
 
 	return largest;
@@ -111,9 +109,11 @@ SerialiseKey::findSmallest(const Xapian::Document& doc) const
 {
 	auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) return STR_FOR_EMPTY;
-	StringList s;
-	s.unserialise(multiValues);
-	return *s.cbegin();
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	return values.front();
 }
 
 
@@ -122,18 +122,26 @@ SerialiseKey::findLargest(const Xapian::Document& doc) const
 {
 	auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) return STR_FOR_EMPTY;
-	StringList s;
-	s.unserialise(multiValues);
-	return *s.crbegin();
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	return values.back();
 }
 
 
 std::string
 GeoKey::get_cmpvalue(const std::string& serialise_val) const
 {
-	auto geo_val = Unserialise::geo(serialise_val);
-	CartesianUSet centroids;
-	centroids.unserialise(geo_val.second);
+	const auto geo_val = Unserialise::geo(serialise_val);
+
+	std::vector<Cartesian> centroids;
+	Unserialise::STLCartesian(geo_val.second, std::back_inserter(centroids));
+
+	if (centroids.empty() || _centroids.empty()) {
+		return MAX_CMPVALUE;
+	}
+
 	double angle = M_PI;
 	for (const auto& _centroid : _centroids) {
 		double aux = M_PI;
