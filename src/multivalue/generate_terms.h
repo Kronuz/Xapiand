@@ -34,18 +34,15 @@
 #include <xapian.h>          // for Query, Query::op::OP_OR, Query::op::OP_AND
 
 #include "database_utils.h"  // for prefixed
-#include "geo/htm.h"         // for SIZE_BITS_ID, range_t (ptr only)
+#include "geo/htm.h"         // for HTM_BITS_ID, range_t (ptr only)
 #include "schema.h"
 #include "serialise.h"       // for serialise
 #include "utils.h"
 
 
-class RangeList;
-
-
 constexpr size_t MAX_TERMS            = 50;
 constexpr size_t MAX_SERIALISE_LENGTH = 18;
-constexpr size_t START_POS            = SIZE_BITS_ID - 4;
+constexpr size_t START_POS            = HTM_BITS_ID - 4;
 
 
 extern const char ctype_date;
@@ -68,7 +65,7 @@ namespace GenerateTerms {
 	void integer(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, int64_t value);
 	void positive(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, uint64_t value);
 	void date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const Datetime::tm_t& tm);
-	void geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const RangeList& ranges);
+	void geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const std::vector<range_t>& ranges);
 
 
 	/*
@@ -82,7 +79,7 @@ namespace GenerateTerms {
 	void date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
 		const std::vector<std::string>& acc_global_prefix, const Datetime::tm_t& tm);
 	void geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
-		const std::vector<std::string>& acc_global_prefix, const RangeList& ranges);
+		const std::vector<std::string>& acc_global_prefix, const std::vector<range_t>& ranges);
 
 
 	/*
