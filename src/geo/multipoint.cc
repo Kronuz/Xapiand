@@ -1,0 +1,88 @@
+/*
+ * Copyright (C) 2017 deipi.com LLC and contributors. All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+#include "multipoint.h"
+
+
+void
+MultiPoint::simplify()
+{
+	// Sort points.
+	std::sort(points.begin(), points.end(), std::less<Point>());
+	// Delete duplicate points
+	points.erase(std::unique(points.begin(), points.end()), points.end());
+}
+
+
+std::string
+MultiPoint::toWKT() const
+{
+	std::string wkt("MULTIPOINT Z ");
+	wkt.append(to_string());
+	return wkt;
+}
+
+
+std::string
+MultiPoint::to_string() const
+{
+	if (points.empty()) {
+		return "EMPTY";
+	}
+
+	std::string str("(");
+	for (const auto& point : points) {
+		auto str_point = point.to_string();
+		str.reserve(str.length() + str_point.length() + 2);
+		str.append(str_point).append(", ");
+	}
+	str.pop_back();
+	str.back() = ')';
+	return str;
+}
+
+
+std::vector<std::string>
+MultiPoint::getTrixels(bool, double) const
+{
+	std::vector<std::string> trixels;
+	trixels.reserve(points.size());
+	for (const auto& point : points) {
+		trixels.push_back(HTM::getTrixelName(point.p));
+	}
+
+	return trixels;
+}
+
+
+std::vector<range_t>
+MultiPoint::getRanges(bool, double) const
+{
+	std::vector<range_t> ranges;
+	ranges.reserve(points.size());
+	for (const auto& point : points) {
+		auto id = HTM::getId(point.p);
+		ranges.emplace_back(id, id);
+	}
+
+	return ranges;
+}
