@@ -1138,12 +1138,13 @@ Document::get_blob(size_t retries)
 	try {
 		lock_database lk_db(db_handler);
 		update();
+#ifdef XAPIAND_DATA_STORAGE
 		if (db_handler) {
 			return db_handler->database->storage_get_blob(doc);
-		} else {
-			auto data = doc.get_data();
-			return split_data_blob(data);
 		}
+#endif
+		auto data = doc.get_data();
+		return split_data_blob(data);
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries) {
 			return get_blob(--retries);
