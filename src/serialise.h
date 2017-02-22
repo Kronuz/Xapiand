@@ -35,7 +35,10 @@
 
 #include "database_utils.h"      // for get_hashed, RESERVED_BOOLEAN, RESERV...
 #include "datetime.h"            // for tm_t (ptr only), timestamp
+#include "geo/cartesian.h"       // for Cartesian
+#include "geo/htm.h"             // for range_t
 #include "hash/endian.h"         // for __BYTE_ORDER, __BIG_ENDIAN, __LITTLE...
+#include "length.h"              // for serialise_length, unserialise_length
 #include "msgpack.h"             // for MsgPack
 #include "sortable_serialise.h"  // for sortable_serialise, sortable_unseria...
 #include "xxh64.hpp"             // for xxh64
@@ -110,13 +113,17 @@
 #define EMPTY_STR    "empty"
 
 
-#define FALSE_SERIALISED 'f'
-#define TRUE_SERIALISED  't'
+constexpr char SERIALISED_FALSE      = 'f';
+constexpr char SERIALISED_TRUE       = 't';
+constexpr char SERIALISED_STL_MAGIC  = '\0';
 
 
-constexpr uint32_t SIZE_SERIALISE_CARTESIAN = 12;
-constexpr uint32_t DOUBLE2INT               = 1000000000;
-constexpr uint32_t MAXDOU2INT               =  999999999;
+constexpr uint8_t SERIALISED_LENGTH_CARTESIAN = 12;
+constexpr uint8_t SERIALISED_LENGTH_RANGE     = 2 * HTM_BYTES_ID;
+
+
+constexpr uint32_t DOUBLE2INT = 1000000000;
+constexpr uint32_t MAXDOU2INT =  999999999;
 
 
 constexpr uint8_t SIZE_UUID                 = 36;
@@ -124,11 +131,7 @@ constexpr uint8_t SIZE_CURLY_BRACES_UUID    = 38;
 constexpr uint8_t MAX_SIZE_BASE64_UUID      = 24;
 
 
-class Cartesian;
-class CartesianUSet;
-class RangeList;
 struct required_spc_t;
-
 enum class FieldType : uint8_t;
 
 
@@ -181,6 +184,7 @@ namespace Serialise {
 	// Returns if field_value is UUID.
 	bool isUUID(const std::string& field_value) noexcept;
 
+
 	/*
 	 * Serialise field_value according to field_spc.
 	 */
@@ -191,6 +195,7 @@ namespace Serialise {
 	std::string string(const required_spc_t& field_spc, const std::string& field_value);
 	std::string date(const required_spc_t& field_spc, const class MsgPack& field_value);
 
+
 	/*
 	 * Serialise field_value according to field_type.
 	 */
@@ -199,6 +204,7 @@ namespace Serialise {
 	std::string integer(FieldType field_type, int64_t field_value);
 	std::string positive(FieldType field_type, uint64_t field_value);
 	std::string boolean(FieldType field_type, bool field_value);
+
 
 	/*
 	 * Given a field_value, it gets the type.
@@ -255,24 +261,27 @@ namespace Serialise {
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value, bool partials, double error);
 
-	// Serialise a vector of trixel's id (HTM).
-	std::string trixels(const std::vector<std::string>& trixels);
+	// Serialise a vector of ranges (HTM).
+	std::string ranges(const std::vector<range_t>& ranges);
 
-	// Serialise a geo specification.
-	std::string geo(const RangeList& ranges, const CartesianUSet& centroids);
+	// Serialise a geo data.
+	std::string geo(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids);
 
 	// Serialise field_value like boolean.
 	std::string boolean(const std::string& field_value);
 
 	inline std::string boolean(bool field_value) {
-		return std::string(1, field_value ? TRUE_SERIALISED : FALSE_SERIALISED);
+		return std::string(1, field_value ? SERIALISED_TRUE : SERIALISED_FALSE);
 	}
 
-	// Serialise a normalize cartesian coordinate in SIZE_SERIALISE_CARTESIAN bytes.
+	// Serialise a normalize cartesian coordinate in SERIALISED_LENGTH_CARTESIAN bytes.
 	std::string cartesian(const Cartesian& norm_cartesian);
 
 	// Serialise a trixel's id (HTM).
 	std::string trixel_id(uint64_t id);
+
+	// Serialise a range_t.
+	std::string range(const range_t& range);
 
 	// Serialise type to its string representation.
 	std::string type(FieldType type);
@@ -301,8 +310,65 @@ namespace Serialise {
 		return date(tm);
 	}
 
-	inline std::string serialise(const std::vector<std::string>& val) {
-		return trixels(val);
+	inline std::string serialise(const std::vector<range_t>& val) {
+		return ranges(val);
+	}
+
+
+	/*
+	 * Serialise functions to serialise a range of values.
+	 */
+
+	template <typename InputIt>
+	std::string STLString(InputIt first, InputIt last) {
+		const auto size = std::distance(first, last);
+		if (size == 1) {
+			return *first;
+		} else if (size > 1) {
+			std::string serialised(1, SERIALISED_STL_MAGIC);
+			for ( ; first != last; ++first) {
+				serialised.append(serialise_length(first->length())).append(*first);
+			}
+			return serialised;
+		}
+
+		return std::string();
+	}
+
+	template <typename InputIt>
+	std::string STLCartesian(InputIt first, InputIt last) {
+		const auto size = std::distance(first, last);
+		if (size == 1) {
+			return Serialise::cartesian(*first);
+		} else if (size > 1) {
+			std::string serialised;
+			serialised.reserve(SERIALISED_LENGTH_CARTESIAN * size + 1);
+			serialised.push_back(SERIALISED_STL_MAGIC);
+			for ( ; first != last; ++first) {
+				serialised.append(Serialise::cartesian(*first));
+			}
+			return serialised;
+		}
+
+		return std::string();
+	}
+
+	template <typename InputIt>
+	std::string STLRange(InputIt first, InputIt last) {
+		const auto size = std::distance(first, last);
+		if (size == 1) {
+			return Serialise::range(*first);
+		} else if (size > 1) {
+			std::string serialised;
+			serialised.reserve(SERIALISED_LENGTH_RANGE * size + 1);
+			serialised.push_back(SERIALISED_STL_MAGIC);
+			for ( ; first != last; ++first) {
+				serialised.append(Serialise::range(*first));
+			}
+			return serialised;
+		}
+
+		return std::string();
 	}
 };
 
@@ -339,24 +405,105 @@ namespace Unserialise {
 
 	// Unserialise a serialised boolean.
 	inline bool boolean(const std::string& serialised_boolean) {
-		return serialised_boolean.at(0) == TRUE_SERIALISED;
+		return serialised_boolean.at(0) == SERIALISED_TRUE;
 	}
 
 	// Unserialise a serialised cartesian coordinate.
 	Cartesian cartesian(const std::string& serialised_cartesian);
 
 	// Unserialise a serialised trixel's id (HTM).
-	uint64_t trixel_id(const std::string& serialised_trixel_id);
+	uint64_t trixel_id(const std::string& serialised_id);
+
+	// Unserialise a serialised range_t
+	range_t range(const std::string& serialised_range);
 
 	// Unserialise a serialised UUID.
 	std::string uuid(const std::string& serialised_uuid);
 
-	// Unserialise a serialised EWKT (save as value), in serialised ranges and serialises centroids.
-	std::string ewkt(const std::string& serialised_ewkt);
+	// Unserialise a serialised GEO (save as value), in serialised ranges and serialises centroids.
+	std::string ewkt(const std::string& serialised_geo);
 
-	// Unserialise a serialised EWKT (Save as a Value), in unserialised ranges and unserialised centroids.
-	std::pair<std::string, std::string> geo(const std::string& serialised_ewkt);
+	// Unserialise a serialised GEO (Save as value).
+	std::vector<range_t> ranges(const std::string& serialised_geo);
+
+	// Unserialise a serialised GEO (Save as a value), returns unserialised ranges and centroids.
+	std::pair<std::string, std::string> geo(const std::string& serialised_geo);
 
 	// Unserialise str_type to its FieldType.
 	FieldType type(const std::string& str_type);
+
+
+	/*
+	 * Unserialise functions for add the unserialised range of values  in d_first.
+	 */
+
+	template <typename OutputIt>
+	void STLString(const char** ptr, const char* end, OutputIt d_first) {
+		const char* pos = *ptr;
+		if (pos != end) {
+			if (*pos == SERIALISED_STL_MAGIC) {
+				++pos;
+				for ( ; pos != end; ++d_first) {
+					const auto length = unserialise_length(&pos, end, true);
+					*d_first = std::string(pos, length);
+					pos += length;
+				}
+			} else {
+				*d_first = std::string(pos, end - pos);
+			}
+		}
+	}
+
+	template <typename OutputIt>
+	inline void STLString(const std::string& serialised, OutputIt d_first) {
+		const char* ptr = serialised.data();
+		const char* end = serialised.data() + serialised.length();
+		STLString(&ptr, end, d_first);
+	}
+
+	template <typename OutputIt>
+	void STLCartesian(const char** ptr, const char* end, OutputIt d_first) {
+		const char* pos = *ptr;
+		if (pos != end) {
+			if (*pos == SERIALISED_STL_MAGIC) {
+				++pos;
+				for ( ; end - pos >= SERIALISED_LENGTH_CARTESIAN; ++d_first) {
+					*d_first = Unserialise::cartesian(std::string(pos, SERIALISED_LENGTH_CARTESIAN));
+					pos += SERIALISED_LENGTH_CARTESIAN;
+				}
+			} else if (end - pos == SERIALISED_LENGTH_CARTESIAN) {
+				*d_first = Unserialise::cartesian(std::string(pos, SERIALISED_LENGTH_CARTESIAN));
+			}
+		}
+	}
+
+	template <typename OutputIt>
+	inline void STLCartesian(const std::string& serialised, OutputIt d_first) {
+		const char* ptr = serialised.data();
+		const char* end = serialised.data() + serialised.length();
+		STLCartesian(&ptr, end, d_first);
+	}
+
+	template <typename OutputIt>
+	void STLRange(const char** ptr, const char* end, OutputIt d_first) {
+		const char* pos = *ptr;
+		if (pos != end) {
+			if (*pos == SERIALISED_STL_MAGIC) {
+				++pos;
+				for ( ; end - pos >= SERIALISED_LENGTH_RANGE; ++d_first) {
+					*d_first = Unserialise::range(std::string(pos, SERIALISED_LENGTH_RANGE));
+					pos += SERIALISED_LENGTH_RANGE;
+				}
+			} else if (end - pos == SERIALISED_LENGTH_RANGE) {
+				*d_first = Unserialise::range(std::string(pos, SERIALISED_LENGTH_RANGE));
+			}
+		}
+	}
+
+	template <typename OutputIt>
+	inline void STLRange(const std::string& serialised, OutputIt d_first) {
+		const char* ptr = serialised.data();
+		const char* end = serialised.data() + serialised.length();
+		STLRange(&ptr, end, d_first);
+	}
 };

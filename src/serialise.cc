@@ -34,14 +34,12 @@
 #include "cppcodec/base64_default_url_unpadded.hpp"   // for base64 namespace
 #include "exception.h"                                // for SerialisationError, MSG_Serialisat...
 #include "geo/cartesian.h"                            // for Cartesian
-#include "geo/htm.h"                                  // for MAX_SIZE_NAME, SIZE_BYTES_ID, range_t
-#include "geo/wkt_parser.h"                           // for EWKT_Parser, EWKTError
+#include "geo/ewkt.h"                                 // for EWKT
+#include "geo/htm.h"                                  // for HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
 #include "guid/guid.h"                                // for Guid
-#include "length.h"                                   // for serialise_length, unserialise_length
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "schema.h"                                   // for FieldType, FieldType::TERM, Fiel...
-#include "stl_serialise.h"                            // for CartesianUSet, RangeList
 #include "utils.h"                                    // for toUType, stox, repr
 
 
@@ -895,48 +893,38 @@ Serialise::uuid(const std::string& field_value)
 std::string
 Serialise::ewkt(const std::string& field_value, bool partials, double error)
 {
-	EWKT_Parser ewkt(field_value, partials, error);
-	if (ewkt.trixels.empty()) {
-		return std::string();
-	}
-
-	std::string result;
-	result.reserve(MAX_SIZE_NAME * ewkt.trixels.size());
-	for (const auto& trixel : ewkt.trixels) {
-		result.append(trixel);
-	}
-
-	return get_hashed(result);
+	EWKT ewkt(field_value);
+	return Serialise::ranges(ewkt.geometry->getRanges(partials, error));
 }
 
 
 std::string
-Serialise::trixels(const std::vector<std::string>& trixels)
+Serialise::ranges(const std::vector<range_t>& ranges)
 {
-	if (trixels.empty()) {
+	if (ranges.empty()) {
 		return std::string();
 	}
 
-	std::string result;
-	result.reserve(MAX_SIZE_NAME * trixels.size());
-	for (const auto& trixel : trixels) {
-		result.append(trixel);
+	size_t hash = 0;
+	for (const auto& range : ranges) {
+		hash ^= std::hash<range_t>{}(range);
 	}
 
-	return get_hashed(result);
+	return sortable_serialise(hash);
 }
 
 
 std::string
-Serialise::geo(const RangeList& ranges, const CartesianUSet& centroids)
+Serialise::geo(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids)
 {
-	auto aux = ranges.serialise();
-	auto values = serialise_length(aux.size());
+	auto aux = STLRange(ranges.begin(), ranges.end());
+	auto values = serialise_length(aux.length());
 	values.append(aux);
-	aux = centroids.serialise();
-	values.append(serialise_length(aux.size()));
+	aux = STLCartesian(centroids.begin(), centroids.end());
+	values.append(serialise_length(aux.length()));
 	values.append(aux);
-	return serialise_length(values.size()) + values;
+	values.insert(0, serialise_length(values.length()));
+	return values;
 }
 
 
@@ -946,19 +934,19 @@ Serialise::boolean(const std::string& field_value)
 	const char *value = field_value.c_str();
 	switch (value[0]) {
 		case '\0':
-			return std::string(1, FALSE_SERIALISED);
+			return std::string(1, SERIALISED_FALSE);
 		case '1':
 		case 't':
 		case 'T':
 			if (value[1] == '\0' || strcasecmp(value, "true") == 0) {
-				return std::string(1, TRUE_SERIALISED);
+				return std::string(1, SERIALISED_TRUE);
 			}
 			break;
 		case '0':
 		case 'f':
 		case 'F':
 			if (value[1] == '\0' || strcasecmp(value, "false") == 0) {
-				return std::string(1, FALSE_SERIALISED);
+				return std::string(1, SERIALISED_FALSE);
 			}
 			break;
 		default:
@@ -978,7 +966,7 @@ Serialise::cartesian(const Cartesian& norm_cartesian)
 	const char serialise[] = { (char)(x & 0xFF), (char)((x >>  8) & 0xFF), (char)((x >> 16) & 0xFF), (char)((x >> 24) & 0xFF),
 							   (char)(y & 0xFF), (char)((y >>  8) & 0xFF), (char)((y >> 16) & 0xFF), (char)((y >> 24) & 0xFF),
 							   (char)(z & 0xFF), (char)((z >>  8) & 0xFF), (char)((z >> 16) & 0xFF), (char)((z >> 24) & 0xFF) };
-	return std::string(serialise, SIZE_SERIALISE_CARTESIAN);
+	return std::string(serialise, SERIALISED_LENGTH_CARTESIAN);
 }
 
 
@@ -986,9 +974,28 @@ std::string
 Serialise::trixel_id(uint64_t id)
 {
 	id = Swap7Bytes(id);
-	const char serialise[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
-							   (char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF) };
-	return std::string(serialise, SIZE_BYTES_ID);
+	const char serialised[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
+								(char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF) };
+	return std::string(serialised, HTM_BYTES_ID);
+}
+
+
+std::string
+Serialise::range(const range_t& range)
+{
+	std::string serialised;
+	serialised.reserve(SERIALISED_LENGTH_RANGE);
+
+	uint64_t start = Swap7Bytes(range.start);
+	const char serialised_start[] = { (char)(start & 0xFF), (char)((start >>  8) & 0xFF), (char)((start >> 16) & 0xFF), (char)((start >> 24) & 0xFF),
+									  (char)((start >> 32) & 0xFF), (char)((start >> 40) & 0xFF), (char)((start >> 48) & 0xFF) };
+
+	uint64_t end = Swap7Bytes(range.end);
+	const char serialised_end[] = { (char)(end & 0xFF), (char)((end >>  8) & 0xFF), (char)((end >> 16) & 0xFF), (char)((end >> 24) & 0xFF),
+									  (char)((end >> 32) & 0xFF), (char)((end >> 40) & 0xFF), (char)((end >> 48) & 0xFF) };
+
+	serialised.assign(serialised_start, HTM_BYTES_ID).append(serialised_end, HTM_BYTES_ID);
+	return serialised;
 }
 
 
@@ -1099,8 +1106,8 @@ Unserialise::date(const std::string& serialised_date)
 Cartesian
 Unserialise::cartesian(const std::string& serialised_val)
 {
-	if (serialised_val.size() != SIZE_SERIALISE_CARTESIAN) {
-		THROW(SerialisationError, "Cannot unserialise cartesian: %s [%zu]", serialised_val.c_str(), serialised_val.size());
+	if (serialised_val.size() != SERIALISED_LENGTH_CARTESIAN) {
+		THROW(SerialisationError, "Cannot unserialise cartesian: %s [%zu]", repr(serialised_val).c_str(), serialised_val.size());
 	}
 
 	double x = (((unsigned)serialised_val[0] << 24) & 0xFF000000) | (((unsigned)serialised_val[1] << 16) & 0xFF0000) | (((unsigned)serialised_val[2] << 8) & 0xFF00)  | (((unsigned)serialised_val[3]) & 0xFF);
@@ -1111,17 +1118,38 @@ Unserialise::cartesian(const std::string& serialised_val)
 
 
 uint64_t
-Unserialise::trixel_id(const std::string& serialised_val)
+Unserialise::trixel_id(const std::string& serialised_id)
 {
-	if (serialised_val.size() != SIZE_BYTES_ID) {
-		THROW(SerialisationError, "Cannot unserialise trixel_id: %s [%zu]", serialised_val.c_str(), serialised_val.size());
+	if (serialised_id.length() != HTM_BYTES_ID) {
+		THROW(SerialisationError, "Cannot unserialise trixel_id: %s [%zu]", repr(serialised_id).c_str(), serialised_id.length());
 	}
 
-	uint64_t id = (((uint64_t)serialised_val[0] << 48) & 0xFF000000000000) | (((uint64_t)serialised_val[1] << 40) & 0xFF0000000000) | \
-				  (((uint64_t)serialised_val[2] << 32) & 0xFF00000000)     | (((uint64_t)serialised_val[3] << 24) & 0xFF000000)     | \
-				  (((uint64_t)serialised_val[4] << 16) & 0xFF0000)         | (((uint64_t)serialised_val[5] <<  8) & 0xFF00)         | \
-				  (serialised_val[6] & 0xFF);
+	uint64_t id = (((uint64_t)serialised_id[0] << 48) & 0xFF000000000000) | (((uint64_t)serialised_id[1] << 40) & 0xFF0000000000) | \
+				  (((uint64_t)serialised_id[2] << 32) & 0xFF00000000)     | (((uint64_t)serialised_id[3] << 24) & 0xFF000000)     | \
+				  (((uint64_t)serialised_id[4] << 16) & 0xFF0000)         | (((uint64_t)serialised_id[5] <<  8) & 0xFF00)         | \
+				  (serialised_id[6] & 0xFF);
 	return id;
+}
+
+
+range_t
+Unserialise::range(const std::string& serialised_range)
+{
+	if (serialised_range.length() != SERIALISED_LENGTH_RANGE) {
+		THROW(SerialisationError, "Cannot unserialise range_t: %s [%zu]", repr(serialised_range).c_str(), serialised_range.length());
+	}
+
+	uint64_t start = (((uint64_t)serialised_range[0] << 48) & 0xFF000000000000) | (((uint64_t)serialised_range[1] << 40) & 0xFF0000000000) | \
+					 (((uint64_t)serialised_range[2] << 32) & 0xFF00000000)     | (((uint64_t)serialised_range[3] << 24) & 0xFF000000)     | \
+					 (((uint64_t)serialised_range[4] << 16) & 0xFF0000)         | (((uint64_t)serialised_range[5] <<  8) & 0xFF00)         | \
+					 (serialised_range[6] & 0xFF);
+
+	uint64_t end = (((uint64_t)serialised_range[7] << 48) & 0xFF000000000000) | (((uint64_t)serialised_range[8] << 40) & 0xFF0000000000) | \
+				   (((uint64_t)serialised_range[9] << 32) & 0xFF00000000)     | (((uint64_t)serialised_range[10] << 24) & 0xFF000000)     | \
+				   (((uint64_t)serialised_range[11] << 16) & 0xFF0000)         | (((uint64_t)serialised_range[12] <<  8) & 0xFF00)         | \
+				   (serialised_range[13] & 0xFF);
+
+	return range_t(start, end);
 }
 
 
@@ -1136,11 +1164,29 @@ Unserialise::uuid(const std::string& serialised_uuid)
 }
 
 
-std::pair<std::string, std::string>
-Unserialise::geo(const std::string& serialised_ewkt)
+std::vector<range_t>
+Unserialise::ranges(const std::string& serialised_geo)
 {
-	const char* pos = serialised_ewkt.data();
-	const char* end = pos + serialised_ewkt.length();
+	const char* pos = serialised_geo.data();
+	const char* end = pos + serialised_geo.length();
+	try {
+		unserialise_length(&pos, end, true);
+		const auto length = unserialise_length(&pos, end, true);
+		const std::string serialised_ranges(pos, length);
+		std::vector<range_t> ranges;
+		STLRange(serialised_ranges, std::back_inserter(ranges));
+		return ranges;
+	} catch (const SerialisationError&) {
+		return std::vector<range_t>();
+	}
+}
+
+
+std::pair<std::string, std::string>
+Unserialise::geo(const std::string& serialised_geo)
+{
+	const char* pos = serialised_geo.data();
+	const char* end = pos + serialised_geo.length();
 	try {
 		unserialise_length(&pos, end, true);
 		auto length = unserialise_length(&pos, end, true);
@@ -1158,16 +1204,16 @@ std::string
 Unserialise::ewkt(const std::string& serialised_ewkt)
 {
 	auto unserialise = geo(serialised_ewkt);
-	RangeList ranges;
-	ranges.unserialise(unserialise.first);
+	std::vector<range_t> ranges;
+	STLRange(unserialise.first, std::back_inserter(ranges));
 	std::string res("Ranges: { ");
 	for (const auto& range : ranges) {
 		res += "[" + std::to_string(range.start) + ", " + std::to_string(range.end) + "] ";
 	}
 	res += "}";
 
-	CartesianUSet centroids;
-	centroids.unserialise(unserialise.second);
+	std::vector<Cartesian> centroids;
+	STLCartesian(unserialise.second, std::back_inserter(centroids));
 	res += "  Centroids: { ";
 	for (const auto& centroid : centroids) {
 		res += "(" + std::to_string(centroid.x) + ", " + std::to_string(centroid.y) + ", " + std::to_string(centroid.z) + ") ";
