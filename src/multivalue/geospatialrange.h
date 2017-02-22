@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,33 +24,45 @@
 
 #include "xapiand.h"
 
-#include <xapian.h>            // for docid, valueno, Query, ValuePostingSource
-#include <string>              // for string
+#include <cmath>            // for M_PI
+#include <string>           // for string
+#include <xapian.h>         // for docid, valueno, Query, ValuePostingSource
 
-#include "stl_serialise.h"     // for CartesianUSet, RangeList
+#include "geo/geometry.h"   // for range_t, M_PER_RADIUS_EARTH, ...
 
 
 // New Match Decider for GeoSpatial value range.
 class GeoSpatialRange : public Xapian::ValuePostingSource {
 	// Ranges for the search.
-	RangeList ranges;
-	CartesianUSet centroids;
+	std::vector<range_t> ranges;
+	std::vector<Cartesian> centroids;
 	double angle;
 
-	// Calculates the smallest angle between its centroids  and search centroids.
-	void calc_angle(const CartesianUSet& centroids_);
-	// Calculates if some their values is inside ranges.
-	bool insideRanges();
+	static double geo_weight_from_angle(double angle) {
+		return (M_PI - angle) * M_PER_RADIUS_EARTH;
+	}
 
-public:
 	/* Construct a new match decider which returns only documents with a
 	 *  some of their values inside of ranges.
 	 *
 	 *  @param slot_ The value slot to read values from.
 	 *  @param ranges
 	*/
-	GeoSpatialRange(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_);
+	template <typename R, typename C>
+	GeoSpatialRange(Xapian::valueno slot_, R&& ranges_, C&& centroids_)
+		: Xapian::ValuePostingSource(slot_),
+		  ranges(std::forward<R>(ranges_)),
+		  centroids(std::forward<C>(centroids_))
+	{
+		set_maxweight(geo_weight_from_angle(0.0));
+	}
 
+	// Calculates the smallest angle between its centroids  and search centroids.
+	void calc_angle(const std::vector<Cartesian>& centroids_);
+	// Calculates if some their values is inside ranges.
+	bool insideRanges();
+
+public:
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;
 	bool check(Xapian::docid min_docid, double min_wt) override;
@@ -63,5 +75,13 @@ public:
 	std::string get_description() const override;
 
 	// Call this function for create a new Query based in ranges.
-	static Xapian::Query getQuery(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_);
+	template <typename R, typename C>
+	static Xapian::Query getQuery(Xapian::valueno slot_, R&& ranges_, C&& centroids_) {
+		if (ranges_.empty()){
+			return Xapian::Query::MatchNothing;
+		}
+
+		auto gsr = new GeoSpatialRange(slot_, std::forward<R>(ranges_), std::forward<C>(centroids_));
+		return Xapian::Query(gsr->release());
+	}
 };

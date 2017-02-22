@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -25,43 +25,11 @@
 #include <cmath>                          // for M_PI, acos
 #include <utility>                        // for pair
 
-#include "length.h"                       // for serialise_length, unseriali...
-#include "geo/cartesian.h"                // for Cartesian
-#include "geo/geometry.h"                 // for M_PER_RADIUS_EARTH
-#include "geo/htm.h"                      // for range_t
-#include "serialise.h"                    // for geo
-#include "stl_serialise.h"                // for RangeList, CartesianUSet
-
-
-static double geo_weight_from_angle(double angle) {
-	return (M_PI - angle) * M_PER_RADIUS_EARTH;
-}
-
-
-GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_)
-	: Xapian::ValuePostingSource(slot_),
-	  ranges(ranges_),
-	  centroids(centroids_)
-{
-	set_maxweight(geo_weight_from_angle(0.0));
-}
-
-
-// Receive start and end did not serialize.
-Xapian::Query
-GeoSpatialRange::getQuery(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_)
-{
-	if (ranges_.empty()){
-		return Xapian::Query::MatchNothing;
-	}
-
-	auto gsr = new GeoSpatialRange(slot_, ranges_, centroids_);
-	return Xapian::Query(gsr->release());
-}
+#include "serialise.h"                    // for STLRanges, STLString
 
 
 void
-GeoSpatialRange::calc_angle(const CartesianUSet& centroids_)
+GeoSpatialRange::calc_angle(const std::vector<Cartesian>& centroids_)
 {
 	angle = M_PI;
 	for (const auto& centroid_ : centroids_) {
@@ -78,22 +46,28 @@ GeoSpatialRange::calc_angle(const CartesianUSet& centroids_)
 bool
 GeoSpatialRange::insideRanges()
 {
-	StringList list;
-	list.unserialise(get_value());
-	RangeList ranges_;
-	CartesianUSet centroids_;
-	for (const auto& value : list) {
-		auto unser_value = Unserialise::geo(value);
-		ranges_.add_unserialise(unser_value.first);
-		centroids_.add_unserialise(unser_value.second);
+	const auto _ranges = Unserialise::ranges(get_value());
+
+	if (_ranges.empty() || ranges.front().start > _ranges.back().end || ranges.back().end < _ranges.front().start) {
+		return false;
 	}
 
-	for (const auto& range_ : ranges_) {
-		for (const auto& range : ranges) {
-			if (range_.start <= range.end && range_.end >= range.start) {
-				calc_angle(centroids_);
+	auto it1 = ranges.begin();
+	auto it2 = _ranges.begin();
+	const auto it1_e = ranges.end();
+	const auto it2_e = _ranges.end();
+
+	while (it1 != it1_e && it2 != it2_e) {
+		if (it1->start < it2->start) {
+			if (it1->end >= it2->start) {
 				return true;
 			}
+			++it1;
+		} else {
+			if (it2->end >= it1->start) {
+				return true;
+			}
+			++it2;
 		}
 	}
 
@@ -164,21 +138,24 @@ GeoSpatialRange::name() const
 std::string
 GeoSpatialRange::serialise() const
 {
-	return serialise_length(get_slot()) + Serialise::geo(ranges, centroids);
+	std::vector<std::string> data = { serialise_length(get_slot()), Serialise::geo(ranges, centroids) };
+	return Serialise::STLString(data.begin(), data.end());
 }
 
 
 GeoSpatialRange*
 GeoSpatialRange::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
-	const char* pos = s.data();
-	const char* end = pos + s.size();
-	auto slot_ = static_cast<Xapian::valueno>(unserialise_length(&pos, end, false));
-	auto unser_geo = Unserialise::geo(std::string(pos, end - pos));
-	RangeList ranges_;
-	ranges_.unserialise(unser_geo.first);
-	CartesianUSet centroids_;
-	centroids_.unserialise(unser_geo.second);
+	std::vector<std::string> data;
+	Unserialise::STLString(s, std::back_inserter(data));
+
+	const auto slot_ = static_cast<Xapian::valueno>(unserialise_length(data.at(0)));
+
+	const auto unser_geo = Unserialise::geo(data.at(1));
+	std::vector<range_t> ranges_;
+	Unserialise::STLRange(unser_geo.first, std::back_inserter(ranges_));
+	std::vector<Cartesian> centroids_;
+	Unserialise::STLCartesian(unser_geo.second, std::back_inserter(centroids_));
 	return new GeoSpatialRange(slot_, ranges_, centroids_);
 }
 
