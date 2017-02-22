@@ -901,6 +901,16 @@ DatabaseHandler::commit(bool _wal)
 }
 
 
+bool
+DatabaseHandler::reopen()
+{
+	L_CALL(this, "DatabaseHandler::reopen()");
+
+	lock_database lk_db(this);
+	return database->reopen();
+}
+
+
 long long
 DatabaseHandler::get_mastery_level()
 {

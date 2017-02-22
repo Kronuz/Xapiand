@@ -1290,7 +1290,10 @@ HttpClient::search_view(enum http_method method, Command)
 			write_http_response(error_code, err_response);
 			return;
 		}
-		db_flags |= DB_WRITABLE;
+		db_handler.reset(endpoints, db_flags | DB_WRITABLE, method);
+		db_handler.commit();
+		db_handler.reset(endpoints, db_flags, method);
+		db_handler.reopen();
 	}
 
 	operation_begins = std::chrono::system_clock::now();

@@ -152,6 +152,7 @@ public:
 	MsgPack get_database_info();
 
 	bool commit(bool _wal=true);
+	bool reopen();
 	long long get_mastery_level();
 
 	static void init_ref(const Endpoint& endpoint);
