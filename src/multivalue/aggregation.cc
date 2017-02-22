@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -30,7 +30,6 @@
 #include "exception.h"                      // for AggregationError, MSG_Agg...
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
 #include "schema.h"                         // for Schema
-#include "stl_serialise.h"                  // for StringList
 
 
 const std::unordered_map<std::string, dispatch_aggregations> map_dispatch_aggregations({
@@ -148,20 +147,18 @@ AggregationMatchSpy::name() const
 std::string
 AggregationMatchSpy::serialise() const
 {
-	StringList l;
-	l.push_back(_aggs.serialise());
-	l.push_back(_schema->get_const_schema()->serialise());
-	return l.serialise();
+	std::vector<std::string> data = { _aggs.serialise(), _schema->get_const_schema()->serialise() };
+	return Serialise::STLString(data.begin(), data.end());
 }
 
 
 Xapian::MatchSpy*
 AggregationMatchSpy::unserialise(const std::string& s, const Xapian::Registry&) const
 {
-	StringList l;
-	l.unserialise(s);
-	std::shared_ptr<const MsgPack> internal_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(l.at(1)));
-	return new AggregationMatchSpy(MsgPack::unserialise(l.at(0)), std::make_shared<Schema>(internal_schema));
+	std::vector<std::string> data;
+	Unserialise::STLString(s, std::back_inserter(data));
+	auto internal_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(data.at(1)));
+	return new AggregationMatchSpy(MsgPack::unserialise(data.at(0)), std::make_shared<Schema>(internal_schema));
 }
 
 
