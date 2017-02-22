@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,304 +22,348 @@
 
 #include "htm.h"
 
-#include <algorithm>       // for move, sort
-#include <cmath>           // for acos, cos, sin, sqrt
-#include <fstream>         // for char_traits, operator<<, basic_ostream
+#include <algorithm>
+#include <cmath>
+#include <fstream>
+#include <set>
 
-#include "geo/geometry.h"  // for Constraint, Geometry, POS, NEG
-
-
-static const Cartesian start_vertices[6] = {
-	Cartesian(0.0,  0.0,  1.0),
-	Cartesian(1.0,  0.0,  0.0),
-	Cartesian(0.0,  1.0,  0.0),
-	Cartesian(-1.0, 0.0,  0.0),
-	Cartesian(0.0,  -1.0, 0.0),
-	Cartesian(0.0,  0.0,  -1.0)
-};
+#include "circle.h"
+#include "convex.h"
+#include "multicircle.h"
+#include "point.h"
 
 
-static const trixel_t start_trixels[8] = {
-	{ S2, "s2", 3, 5, 4 },
-	{ N1, "n1", 4, 0, 3 },
-	{ S1, "s1", 2, 5, 3 },
-	{ N2, "n2", 3, 0, 2 },
-	{ S3, "s3", 4, 5, 1 },
-	{ N0, "n0", 1, 0, 4 },
-	{ S0, "s0", 1, 5, 2 },
-	{ N3, "n3", 2, 0, 1 }
-};
+// Number of decimal places to print the file python.
+constexpr int HTM_DIGITS          = 50;
+constexpr double HTM_INC_CIRCLE   = RAD_PER_CIRCUMFERENCE / 50.0;
+constexpr int HTM_LINE_POINTS     = 25;
 
 
-static const index_t S[4] = {
-	{ 1, 5, 2 },
-	{ 2, 5, 3 },
-	{ 3, 5, 4 },
-	{ 4, 5, 1 }
-};
-
-
-static const index_t N[4] = {
-	{ 1, 0, 4 },
-	{ 4, 0, 3 },
-	{ 3, 0, 2 },
-	{ 2, 0, 1 }
-};
-
-
-HTM::HTM(bool _partials, double error, Geometry&& _region)
-	: partials(_partials),
-	  region(std::move(_region))
+std::vector<std::string>
+HTM::trixel_union(std::vector<std::string>&& txs1, std::vector<std::string>&& txs2)
 {
-	// Get the error with respect to the radius.
-	error = error > 0.5 ? 2 * HTM_MAX_ERROR : error < 0.2 ? 2 * HTM_MIN_ERROR : 2 * error;
-	double errorD = error * region.boundingCircle.radius;
-	max_level = HTM_MAX_LEVEL;
-	for (int i = 0; i <= HTM_MAX_LEVEL; ++i) {
-		if (ERROR_NIVEL[i] < errorD || i == HTM_MAX_LEVEL) {
-			max_level = i;
-			break;
-		}
+	if (txs1.empty()) {
+		return std::move(txs2);
 	}
+
+	if (txs2.empty()) {
+		return std::move(txs1);
+	}
+
+	std::vector<std::string> res;
+	res.reserve(txs1.size() + txs2.size());
+
+	std::merge(std::make_move_iterator(txs1.begin()), std::make_move_iterator(txs1.end()),
+		std::make_move_iterator(txs2.begin()), std::make_move_iterator(txs2.end()), std::back_inserter(res));
+
+	return res;
 }
 
 
-std::string
-HTM::startTrixel(Cartesian& v0, Cartesian& v1, Cartesian& v2, const Cartesian& coord) noexcept
+std::vector<std::string>
+HTM::trixel_intersection(std::vector<std::string>&& txs1, std::vector<std::string>&& txs2)
 {
-	size_t num = (coord.x > 0 ? 4 : 0) + (coord.y > 0 ? 2 : 0) + (coord.z > 0 ? 1 : 0);
-	v0 = start_vertices[start_trixels[num].v0];
-	v1 = start_vertices[start_trixels[num].v1];
-	v2 = start_vertices[start_trixels[num].v2];
-	return start_trixels[num].name;
-}
+	if (txs1.empty() || txs2.empty()) {
+		return std::vector<std::string>();
+	}
 
+	std::vector<std::string> res;
+	res.reserve(txs1.size() < txs2.size() ? txs1.size() : txs2.size());
 
-void
-HTM::midPoint(const Cartesian& v0, const Cartesian& v1, Cartesian& w)
-{
-	w = v0 + v1;
-	w.normalize();
-}
+	const auto it1_e = txs1.end();
+	const auto it2_e = txs2.end();
+	auto it1 = txs1.begin();
+	auto it2 = txs2.begin();
 
-
-std::string
-HTM::cartesian2name(const Cartesian& coord)
-{
-	Cartesian v0, v1, v2;
-	Cartesian w0, w1, w2;
-
-	std::string name(startTrixel(v0, v1, v2, coord));
-
-	// Search in children's trixel
-	int8_t depth = HTM_MAX_LEVEL;
-	while (depth-- > 0) {
-		midPoint(v0, v1, w2);
-		midPoint(v1, v2, w0);
-		midPoint(v2, v0, w1);
-		if (insideVector(v0, w2, w1, coord)) {
-			name += "0";
-			v1 = w2;
-			v2 = w1;
-		} else if(insideVector(v1, w0, w2, coord)) {
-			name += "1";
-			v0 = v1;
-			v1 = w0;
-			v2 = w2;
-		} else if(insideVector(v2, w1, w0, coord)) {
-			name += "2";
-			v0 = v2;
-			v1 = w1;
-			v2 = w0;
+	while (it1 != it1_e && it2 != it2_e) {
+		if (*it1 > *it2) {
+			if (it1->find(*it2) == 0) {
+				res.push_back(std::move(*it1));
+				++it1;
+			} else {
+				++it2;
+			}
 		} else {
-			name += "3";
-			v0 = w0;
-			v1 = w1;
-			v2 = w2;
-		}
-	}
-
-	return name;
-}
-
-
-uint64_t
-HTM::name2id(const std::string& name)
-{
-	size_t _size = name.size();
-
-	uint64_t id = name[0] == 'n' ? 3 : 2;
-
-	for (size_t i = 1; i < _size; ++i) {
-		id <<= 2;
-		id |= name[i] - '0';
-	}
-
-	return id;
-}
-
-
-int
-HTM::insideVertex(const Cartesian& v) const noexcept
-{
-	for (const auto& constraint : region.constraints) {
-		if (constraint.center * v <= constraint.distance) return 0;
-	}
-
-	return 1;
-}
-
-
-int
-HTM::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
-{
-	int sum = insideVertex(v0) + insideVertex(v1) + insideVertex(v2);
-
-	if (sum == 1 || sum == 2) return HTM_PARTIAL;
-
-	/*
-	 * If corners are inside.
-	 *   Case 1: the sign is NEG and there is a hole, the trixel will be mark as HTM_PARTIAL.
-	 *   Case 2: the sign is NEG and there are intersections, the trixel will be mark as HTM_PARTIAL.
-	 *   Other case: HTM_FULL.
-	 */
-	if (sum == 3) {
-		// We need to test whether there is a hole inside the triangle for negative halfspace’s boundary circle.
-		// If there is a hole the trixel is flag to PARTIAL.
-		if (region.constraints[0].sign == NEG) {
-			if (thereisHole(v0, v1, v2)) return HTM_PARTIAL;
-			// Test whether one of the negative halfspace’s boundary circles intersects with one of the edges of the triangle.
-			if (intersectEdge(v0, v1, v2)) return HTM_PARTIAL;
-		}
-		return HTM_FULL;
-	}
-
-	if (region.constraints[0].sign == NEG || !boundingCircle(v0, v1, v2)) {
-		return HTM_OUTSIDE;
-	}
-
-	// If region is a bounding circle
-	if (region.constraints[0].sign == POS || region.constraints.size() == 1) {
-		// The constraint intersect with a side.
-		if (intersectEdge(v0, v1, v2)) {
-			return HTM_PARTIAL;
-			// Constraint in triangle.
-		} else if (insideVector(v0, v1, v2, region.boundingCircle.center)) {
-			return HTM_PARTIAL;
-		} else {
-			return HTM_OUTSIDE;
-		}
-	// If region it is a Polygon
-	} else if (testEdgePolygon(v0, v1, v2)) {
-		return HTM_PARTIAL;
-	} else {
-		return HTM_OUTSIDE;
-	}
-}
-
-
-bool
-HTM::testEdgePolygon(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
-{
-	/*
-	 * We need to check each polygon's side against the 3 triangle edges.
-	 * If any of the triangle's edges has its intersection INSIDE the polygon's side, return true.
-	 * Otherwise return if a corner is inside.
-	 */
-
-	Cartesian coords[3];
-	double length[3];  // length of edge in radians.
-	Cartesian start_e[3]; // Start edge.
-	Cartesian end_e[3]; // End edge.
-
-	// For the first edge
-	coords[0] = v0 ^ v1;
-	length[0] = std::acos(v0 * v1);
-	start_e[0] = v0;
-	end_e[0] = v1;
-
-	// For the second edge
-	coords[1] = v1 ^ v2;
-	length[1] = std::acos(v1 * v2);
-	start_e[1] = v1;
-	end_e[1] = v2;
-
-	// For the third edge
-	coords[2] = v2 ^ v0;
-	length[2] = std::acos(v2 * v0);
-	start_e[2] = v2;
-	end_e[2] = v0;
-
-	// Checking each polygon's side against the 3 triangle edges for intersections.
-	auto numCorners = region.corners.size();
-	for (size_t i = 0; i < numCorners; ++i) {
-		size_t j = (i == numCorners - 1) ? 0 : i + 1;
-		double d1, d2;
-		double dij = std::acos(region.corners[i] * region.corners[j]);  // Distance between points i and j.
-
-		// Calculate the intersection with the 3 triangle's edges.
-		for (size_t k = 0; k < 3; ++k) {
-			auto aux = coords[k] ^ (region.corners[i] ^ region.corners[j]);
-			aux.normalize();
-			// If the intersection is inside the edge of the convex, its distance to the corners
-			// is smaller than the side of Polygon. This test has to be done for:
-			//     convex's edge and
-			//     triangle's edge.
-			for (size_t kk = 0; kk < 2; ++kk) {
-				d1 = std::acos(region.corners[i] * aux); // distance to the corner i
-				d2 = std::acos(region.corners[j] * aux); // distance to the corner j
-				// Test with the convex's edge
-				if (d1 - dij < DBL_TOLERANCE && d2 - dij < DBL_TOLERANCE) {
-					d1 = std::acos(start_e[k] * aux);
-					d2 = std::acos(end_e[k] * aux);
-					// Test with triangle's edge.
-					if ((d1 - length[k]) < DBL_TOLERANCE && (d2 - length[k]) < DBL_TOLERANCE) {
-						return true;
-					}
-				}
-				aux.inverse(); // Do the same for the other intersection
+			if (it2->find(*it1) == 0) {
+				res.push_back(std::move(*it2));
+				++it2;
+			} else {
+				++it1;
 			}
 		}
 	}
 
-	return insideVector(v0, v1, v2, region.corners[0]);
+	return res;
+}
+
+
+std::vector<range_t>
+HTM::range_union(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2)
+{
+	if (rs1.empty()) {
+		return std::move(rs2);
+	}
+
+	if (rs2.empty()) {
+		return std::move(rs1);
+	}
+
+	std::vector<range_t> res;
+	res.reserve(rs1.size() + rs2.size());
+
+	const auto it1_e = rs1.end();
+	const auto it2_e = rs2.end();
+	auto it1 = rs1.begin();
+	auto it2 = rs2.begin();
+
+	res.push_back(it1->start < it2->start ? std::move(*it1++) : std::move(*it2++));
+
+	while (it1 != it1_e && it2 != it2_e) {
+		if (it1->start < it2->start) {
+			insertRange(res, std::move(*it1));
+			++it1;
+		} else {
+			insertRange(res, std::move(*it2));
+			++it2;
+		}
+	}
+
+	while (it1 != it1_e) {
+		auto& prev = res.back();
+		if (prev.end < it1->start - 1) {   // (start - 1) for join adjacent integer ranges.
+			res.insert(res.end(), std::make_move_iterator(it1), std::make_move_iterator(it1_e));
+			break;
+		} else if (prev.end < it1->end) {  // if ranges overlap, previous range end is updated.
+			prev.end = it1->end;
+		}
+		++it1;
+	}
+
+	while (it2 != it2_e) {
+		auto& prev = res.back();
+		if (prev.end < it2->start - 1) {  // (start - 1) for join adjacent integer ranges.
+			res.insert(res.end(), std::make_move_iterator(it2), std::make_move_iterator(it2_e));
+			break;
+		} else if (prev.end < it2->end) {  // if ranges overlap, previous range end is updated.
+			prev.end = it2->end;
+		}
+		++it2;
+	}
+
+	return res;
+}
+
+
+std::vector<range_t>
+HTM::range_intersection(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2)
+{
+	if (rs1.empty() || rs2.empty() || rs1.front().start > rs2.back().end || rs1.back().end < rs2.front().start) {
+		return std::vector<range_t>();
+	}
+
+	std::vector<range_t> res;
+	res.reserve(rs1.size() < rs2.size() ? rs1.size() : rs2.size());
+
+	const auto it1_e = rs1.end();
+	const auto it2_e = rs2.end();
+	auto it1 = rs1.begin();
+	auto it2 = rs2.begin();
+
+	while (it1 != it1_e && it2 != it2_e) {
+		if (it1->start < it2->start) {
+			if (it1->end >= it2->start) {
+				if (it1->end < it2->end) {
+					insertRange(res, range_t(it2->start, it1->end));
+				} else {
+					insertRange(res, *it2);
+				}
+			}
+			++it1;
+		} else {
+			if (it2->end >= it1->start) {
+				if (it2->end < it1->end) {
+					insertRange(res, range_t(it1->start, it2->end));
+				} else {
+					insertRange(res, *it1);
+				}
+			}
+			++it2;
+		}
+	}
+
+	return res;
+}
+
+
+std::vector<range_t>
+HTM::range_exclusive_disjunction(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2)
+{
+	if (rs1.empty()) {
+		return std::move(rs2);
+	}
+
+	if (rs2.empty()) {
+		return std::move(rs1);
+	}
+
+	std::vector<range_t> res;
+	res.reserve(rs1.size() + rs2.size());
+
+	const auto it1_e = rs1.end();
+	const auto it2_e = rs2.end();
+	auto it1 = rs1.begin();
+	auto it2 = rs2.begin();
+
+	res.push_back(it1->start < it2->start ? *it1++ : *it2++);
+
+	while (it1 != it1_e && it2 != it2_e) {
+		auto& prev = res.back();
+		if (it1->start < it2->start) {
+			if (prev.end > it1->start) {
+				if (prev.end > it1->end) {
+					std::swap(prev.end, it1->start);
+					std::swap(it1->start, it1->end);
+					insertRange(res, std::move(*it1));
+				} else {
+					std::swap(prev.end, it1->start);
+					insertRange(res, std::move(*it1));
+				}
+			} else {
+				insertRange(res, std::move(*it1));
+			}
+			++it1;
+		} else {
+			if (prev.end > it2->start) {
+				if (prev.end > it2->end) {
+					std::swap(prev.end, it2->start);
+					std::swap(it2->start, it2->end);
+					insertRange(res, std::move(*it2));
+				} else {
+					std::swap(prev.end, it2->start);
+					insertRange(res, std::move(*it2));
+				}
+			} else {
+				insertRange(res, std::move(*it2));
+			}
+			++it2;
+		}
+	}
+
+	while (it1 != it1_e) {
+		auto& prev = res.back();
+		if (prev.end < it1->start - 1) {   // (start - 1) for join adjacent integer ranges.
+			res.insert(res.end(), std::make_move_iterator(it1), std::make_move_iterator(it1_e));
+			break;
+		} else {
+			if (prev.end > it1->start) {
+				if (prev.end > it1->end) {
+					std::swap(prev.end, it1->start);
+					std::swap(it1->start, it1->end);
+					insertRange(res, std::move(*it1));
+				} else {
+					std::swap(prev.end, it1->start);
+					insertRange(res, std::move(*it1));
+				}
+			} else {
+				insertRange(res, std::move(*it1));
+			}
+			++it1;
+		}
+	}
+
+	while (it2 != it2_e) {
+		auto& prev = res.back();
+		if (prev.end < it2->start - 1) {   // (start - 1) for join adjacent integer ranges.
+			res.insert(res.end(), std::make_move_iterator(it2), std::make_move_iterator(it2_e));
+			break;
+		} else {
+			if (prev.end > it2->start) {
+				if (prev.end > it2->end) {
+					std::swap(prev.end, it2->start);
+					std::swap(it2->start, it2->end);
+					insertRange(res, std::move(*it2));
+				} else {
+					std::swap(prev.end, it2->start);
+					insertRange(res, std::move(*it2));
+				}
+			} else {
+				insertRange(res, std::move(*it2));
+			}
+			++it2;
+		}
+	}
+
+	return res;
+}
+
+
+const trixel_t&
+HTM::startTrixel(const Cartesian& coord) noexcept
+{
+	size_t num = (coord.x > 0 ? 4 : 0) + (coord.y > 0 ? 2 : 0) + (coord.z > 0 ? 1 : 0);
+	return start_trixels[num];
+}
+
+
+Cartesian
+HTM::midPoint(const Cartesian& v0, const Cartesian& v1)
+{
+	auto w = v0 + v1;
+	w.normalize();
+	return w;
 }
 
 
 bool
-HTM::thereisHole(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
+HTM::thereisHole(const Constraint& c, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2)
 {
-	if (((v0 ^ v1) * region.boundingCircle.center) >= 0.0 ||
-		((v1 ^ v2) * region.boundingCircle.center) >= 0.0 ||
-		((v2 ^ v0) * region.boundingCircle.center) >= 0.0)
-		return false;
-	return true;
+	return (v0 ^ v1) * c.center < 0.0 && (v1 ^ v2) * c.center < 0.0 && (v2 ^ v0) * c.center < 0.0;
+}
+
+
+Constraint
+HTM::getBoundingCircle(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2)
+{
+	// Normal vector to the triangle plane.
+	Constraint boundingCircle((v1 - v0) ^ (v2 - v1));
+	boundingCircle.arcangle = std::acos(v0 * boundingCircle.center);
+	return boundingCircle;
 }
 
 
 bool
-HTM::insideVector(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, const Cartesian& v)
+HTM::intersectConstraints(const Constraint& c1, const Constraint& c2)
 {
-	if (((v0 ^ v1) * v) < 0 ||
-		((v1 ^ v2) * v) < 0 ||
-		((v2 ^ v0) * v) < 0)
-		return false;
-	return true;
+	return std::acos(c1.center * c2.center) < (c1.arcangle + c2.arcangle);
 }
 
 
 bool
-HTM::intersectEdge(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
+HTM::insideVertex_Trixel( const Cartesian& v, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2)
 {
-	if (intersection(v0, v1, region.boundingCircle) ||
-		intersection(v1, v2, region.boundingCircle) ||
-		intersection(v2, v0, region.boundingCircle)) return true;
+	return (v0 ^ v1) * v > 0 && (v1 ^ v2) * v > 0 && (v2 ^ v0) * v > 0;
+}
+
+
+bool
+HTM::insideVertex_Constraint(const Cartesian& v, const Constraint& c)
+{
+	return c.center * v > c.distance;
+}
+
+
+bool
+HTM::intersectConstraint_EdgeTrixel(const Constraint& c, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2)
+{
+	if (intersection(c, v0, v1) ||
+		intersection(c, v1, v2) ||
+		intersection(c, v2, v0)) return true;
 	return false;
 }
 
 
 bool
-HTM::intersection(const Cartesian& v1, const Cartesian& v2, const Constraint& c)
+HTM::intersection(const Constraint& c, const Cartesian& v1, const Cartesian& v2)
 {
 	double gamma1 = v1 * c.center;
 	double gamma2 = v2 * c.center;
@@ -346,119 +390,34 @@ HTM::intersection(const Cartesian& v1, const Cartesian& v2, const Constraint& c)
 }
 
 
-bool
-HTM::boundingCircle(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
-{
-	Cartesian vb = (v1 - v0) ^ (v2 - v1);
-	vb.normalize();
-	double phi_d = std::acos(v0 * vb);
-
-	double tetha = std::acos(vb * region.boundingCircle.center);
-	if (tetha >= (phi_d + region.boundingCircle.arcangle)) return false;
-	return true;
-}
-
-
 void
-HTM::lookupTrixels(int8_t level, std::string name, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2)
+HTM::simplifyTrixels(std::vector<std::string>& trixels)
 {
-	// Finish the recursion.
-	if (--level < 0) {
-		partials ? names.push_back(std::move(name)) : partial_names.push_back(std::move(name));
-		return;
-	}
-
-	Cartesian w0, w1, w2;
-	midPoint(v0, v1, w2);
-	midPoint(v1, v2, w0);
-	midPoint(v2, v0, w1);
-
-	int type_trixels[4] = {
-		verifyTrixel(v0, w2, w1),
-		verifyTrixel(v1, w0, w2),
-		verifyTrixel(v2, w1, w0),
-		verifyTrixel(w0, w1, w2)
-	};
-
-	// Number of full and partial subtrixels.
-	int F = (type_trixels[0] == HTM_FULL) + (type_trixels[1] == HTM_FULL) + (type_trixels[2] == HTM_FULL) + (type_trixels[3] == HTM_FULL);
-
-	if (F == 4) {
-		names.push_back(std::move(name));
-		return;
-	}
-
-	// Save the full subtrixels' id
-	if (type_trixels[0] == HTM_FULL) {
-		names.push_back(name + "0");
-	}
-	if (type_trixels[1] == HTM_FULL) {
-		names.push_back(name + "1");
-	}
-	if (type_trixels[2] == HTM_FULL) {
-		names.push_back(name + "2");
-	}
-	if (type_trixels[3] == HTM_FULL) {
-		names.push_back(name + "3");
-	}
-
-	// Recursion
-	if (type_trixels[0] == HTM_PARTIAL) lookupTrixels(level, name + "0", v0, w2, w1);
-	if (type_trixels[1] == HTM_PARTIAL) lookupTrixels(level, name + "1", v1, w0, w2);
-	if (type_trixels[2] == HTM_PARTIAL) lookupTrixels(level, name + "2", v2, w1, w0);
-	if (type_trixels[3] == HTM_PARTIAL) lookupTrixels(level, name + "3", w0, w1, w2);
-}
-
-
-void
-HTM::run()
-{
-	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2]))
-		lookupTrixels(max_level, start_trixels[0].name, start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2]);
-	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2]))
-		lookupTrixels(max_level, start_trixels[1].name, start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2]);
-	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2]))
-		lookupTrixels(max_level, start_trixels[2].name, start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2]);
-	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2]))
-		lookupTrixels(max_level, start_trixels[3].name, start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2]);
-	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2]))
-		lookupTrixels(max_level, start_trixels[4].name, start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2]);
-	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2]))
-		lookupTrixels(max_level, start_trixels[5].name, start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2]);
-	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2]))
-		lookupTrixels(max_level, start_trixels[6].name, start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2]);
-	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2]))
-		lookupTrixels(max_level, start_trixels[7].name, start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2]);
-
-	// If there is not full trixels, return the partial trixels although the partials is false.
-	if (names.size() == 0) {
-		names.reserve(partial_names.size());
-		names.insert(names.begin(), partial_names.begin(), partial_names.end());
-	}
-
-	simplifyTrixels();
-}
-
-
-void
-HTM::simplifyTrixels()
-{
-	for (auto i = 0u;  names.size() - i > 3; ) {
-		auto l = i + 1;
-		auto j = l++;
-		auto k = l++;
-		auto tlen = names[i].size();
-		auto flen = tlen - 1;
-		std::string father(names[i].substr(0, flen));
-		if (names[j].size() == tlen && names[j].compare(0, flen, father) == 0 && \
-			names[k].size() == tlen && names[k].compare(0, flen, father) == 0 && \
-			names[l].size() == tlen && names[l].compare(0, flen, father) == 0) {
-			auto it = names.erase(names.begin() + j);
-			it = names.erase(it);
-			names.erase(it);
-			names[i] = father;
-			i < 3 ? i = 0 : i -= 3;
-			continue;
+	for (size_t i = 0;  trixels.size() - i > 3; ) {
+		auto tlen = trixels[i].length();
+		if (tlen > 2) {
+			auto j = i + 1;
+			auto k = i + 2;
+			auto l = i + 3;
+			if (trixels[j].length() == tlen && trixels[k].length() == tlen && trixels[l].length() == tlen) {
+				--tlen;
+				bool equals = true;
+				for (size_t p = 0; p < tlen; ++p) {
+					const auto& c = trixels[i][p];
+					if (!(trixels[j][p] == c && trixels[k][p] == c && trixels[l][p] == c)) {
+						equals = false;
+						break;
+					}
+				}
+				if (equals) {
+					auto it = trixels.erase(trixels.begin() + j);
+					it = trixels.erase(it);
+					trixels.erase(it);
+					trixels[i].pop_back();
+					i < 3 ? i = 0 : i -= 3;
+					continue;
+				}
+			}
 		}
 		++i;
 	}
@@ -466,73 +425,204 @@ HTM::simplifyTrixels()
 
 
 void
-HTM::insertRange(const std::string& name, std::vector<range_t>& ranges, int8_t _max_level)
+HTM::simplifyRanges(std::vector<range_t>& ranges)
 {
-	int8_t mask;
-	uint64_t start, end;
-	uint64_t id = name2id(name);
+	if (ranges.empty()) return;
 
-	int8_t level = name.size() - 2;
-	if (level < _max_level) {
-		mask = (_max_level - level) << 1;
-		start = id << mask;
-		end = start + ((uint64_t) 1 << mask) - 1;
-	} else {
-		start = end = id;
+	for (auto it = ranges.begin() + 1; it != ranges.end(); ) {
+		// Get previous range.
+		auto tmp = it - 1;
+		// Test if current range is not overlapping with previous.
+		if (tmp->end < it->start - 1) {   // (start - 1) for join adjacent integer ranges.
+			++it;
+		} else if (tmp->end < it->end) {  // if ranges overlap, previous range end is updated.
+			tmp->end = it->end;
+			it = ranges.erase(it);
+		} else {
+			// Ranges overlapping.
+			it = ranges.erase(it);
+		}
 	}
-
-	ranges.push_back({ start, end });
 }
 
 
-void
-HTM::mergeRanges(std::vector<range_t>& ranges)
+std::string
+HTM::getTrixelName(const Cartesian& coord)
 {
-	if (ranges.size() == 0) return;
+	const auto& start_trixel = startTrixel(coord);
+	auto v0 = start_vertices[start_trixel.v0];
+	auto v1 = start_vertices[start_trixel.v1];
+	auto v2 = start_vertices[start_trixel.v2];
+	auto name = start_trixel.name;
 
-	// Vector sorted Low to High according to start.
-	std::sort(ranges.begin(), ranges.end(), [](const range_t &r1, const range_t &r2) {
-		return r1.start < r2.start;
-	});
-
-	for (auto it = ranges.begin() + 1; it != ranges.end(); ) {
-		auto tmp = it - 1;	 // Get previous range.
-		// If current range is not overlapping with previous.
-		if (tmp->end < it->start - 1) {  // (start-1) for join adjacent integer ranges).
-			++it;
-			continue;
-		} else if (tmp->end < it->end) {  // range, continue. Otherwise update the end of
-			tmp->end = it->end;			  // previous range, if ending of current range is more.
-			it = ranges.erase(it);
-			continue;
+	// Search in children's trixel
+	int8_t depth = HTM_MAX_LEVEL;
+	while (depth-- > 0) {
+		auto w2 = midPoint(v0, v1);
+		auto w0 = midPoint(v1, v2);
+		auto w1 = midPoint(v2, v0);
+		if (insideVertex_Trixel(coord, v0, w2, w1)) {
+			name.push_back('0');
+			v1 = w2;
+			v2 = w1;
+		} else if (insideVertex_Trixel(coord, v1, w0, w2)) {
+			name.push_back('1');
+			v0 = v1;
+			v1 = w0;
+			v2 = w2;
+		} else if (insideVertex_Trixel(coord, v2, w1, w0)) {
+			name.push_back('2');
+			v0 = v2;
+			v1 = w1;
+			v2 = w0;
+		} else {
+			name.push_back('3');
+			v0 = w0;
+			v1 = w1;
+			v2 = w2;
 		}
-
-		it = ranges.erase(it);  // If ranges overlapping.
 	}
+
+	return name;
+}
+
+
+uint64_t
+HTM::getId(const Cartesian& coord)
+{
+	const auto& start_trixel = startTrixel(coord);
+	auto v0 = start_vertices[start_trixel.v0];
+	auto v1 = start_vertices[start_trixel.v1];
+	auto v2 = start_vertices[start_trixel.v2];
+	auto id = start_trixel.id;
+
+	// Search in children's trixel
+	int8_t depth = HTM_MAX_LEVEL;
+	while (depth-- > 0) {
+		auto w2 = midPoint(v0, v1);
+		auto w0 = midPoint(v1, v2);
+		auto w1 = midPoint(v2, v0);
+		id <<= 2;
+		if (insideVertex_Trixel(coord, v0, w2, w1)) {
+			v1 = w2;
+			v2 = w1;
+		} else if (insideVertex_Trixel(coord, v1, w0, w2)) {
+			id += 1;
+			v0 = v1;
+			v1 = w0;
+			v2 = w2;
+		} else if (insideVertex_Trixel(coord, v2, w1, w0)) {
+			id += 2;
+			v0 = v2;
+			v1 = w1;
+			v2 = w0;
+		} else {
+			id += 3;
+			v0 = w0;
+			v1 = w1;
+			v2 = w2;
+		}
+	}
+
+	return id;
+}
+
+
+uint64_t
+HTM::getId(const std::string& name)
+{
+	const auto len = name.length();
+
+	uint64_t id = name[0] == 'N' ? 2 : 3;
+
+	for (size_t i = 1; i < len; ++i) {
+		id <<= 2;
+		id |= name[i] - '0';
+	}
+
+	return id;
+}
+
+
+range_t
+HTM::getRange(uint64_t id, uint8_t level)
+{
+	if (level < HTM_MAX_LEVEL) {
+		int8_t mask = (HTM_MAX_LEVEL - level) << 1;
+		uint64_t start = id << mask;
+		return range_t(start, start + ((uint64_t) 1 << mask) - 1);
+	} else {
+		return range_t(id, id);
+	}
+}
+
+
+range_t
+HTM::getRange(const std::string& name)
+{
+	return getRange(getId(name), name.length() - 2);
+}
+
+
+std::vector<std::string>
+HTM::getTrixels(const std::vector<range_t>& ranges)
+{
+	std::vector<std::string> trixels;
+	trixels.reserve(ranges.size());
+	for (const auto& range : ranges) {
+		std::bitset<HTM_BITS_ID> s(range.start);
+		std::bitset<HTM_BITS_ID> e(range.end);
+		size_t idx = 0;
+		while (idx < s.size() - 4 && s.test(idx) == 0 && e.test(idx) == 1 && s.test(idx + 1) == 0 && e.test(idx + 1) == 1) {
+			idx += 2;
+		}
+		uint64_t inc = std::pow(2, idx), start = range.start;
+		size_t len = (HTM_BITS_ID - idx) / 2;
+		while (start < range.end) {
+			std::string trixel;
+			trixel.reserve(len);
+			s = start;
+			size_t i = HTM_BITS_ID - 2;
+			if (s.test(i)) {
+				trixel.push_back('S');
+			} else {
+				trixel.push_back('N');
+			}
+			while (--i >= idx) {
+				trixel.push_back('0' + 2 * s.test(i) + s.test(i - 1));
+				--i;
+			}
+			start += inc;
+			trixels.push_back(std::move(trixel));
+		}
+	}
+	HTM::simplifyTrixels(trixels);
+	return trixels;
 }
 
 
 void
 HTM::getCorners(const std::string& name, Cartesian& v0, Cartesian& v1, Cartesian& v2)
 {
-	Cartesian w0, w1, w2;
 	size_t trixel = name[1] - '0';
 
-	if (name[0] == 's') {
-		v0 = start_vertices[S[trixel].v0];
-		v1 = start_vertices[S[trixel].v1];
-		v2 = start_vertices[S[trixel].v2];
+	if (name[0] == 'S') {
+		const auto& corner = S[trixel];
+		v0 = start_vertices[corner.v0];
+		v1 = start_vertices[corner.v1];
+		v2 = start_vertices[corner.v2];
 	} else {
-		v0 = start_vertices[N[trixel].v0];
-		v1 = start_vertices[N[trixel].v1];
-		v2 = start_vertices[N[trixel].v2];
+		const auto& corner = N[trixel];
+		v0 = start_vertices[corner.v0];
+		v1 = start_vertices[corner.v1];
+		v2 = start_vertices[corner.v2];
 	}
 
-	size_t i = 2, len = name.size();
+	size_t i = 2, len = name.length();
 	while (i < len) {
-		midPoint(v0, v1, w2);
-		midPoint(v1, v2, w0);
-		midPoint(v2, v0, w1);
+		auto w2 = midPoint(v0, v1);
+		auto w0 = midPoint(v1, v2);
+		auto w1 = midPoint(v2, v0);
 		switch (name[i]) {
 			case '0':
 				v1 = w2;
@@ -560,324 +650,309 @@ HTM::getCorners(const std::string& name, Cartesian& v0, Cartesian& v1, Cartesian
 
 
 std::string
-HTM::getCircle3D(size_t points) const
+HTM::getConstraint3D(const Constraint& bCircle, char color)
 {
-	double inc = RAD_PER_CIRCUMFERENCE / points;
-	char x0s[DIGITS];
-	char y0s[DIGITS];
-	char z0s[DIGITS];
-	snprintf(x0s, DIGITS, "%.50f", region.boundingCircle.center.x);
-	snprintf(y0s, DIGITS, "%.50f", region.boundingCircle.center.y);
-	snprintf(z0s, DIGITS, "%.50f", region.boundingCircle.center.z);
+	char x0s[HTM_DIGITS];
+	char y0s[HTM_DIGITS];
+	char z0s[HTM_DIGITS];
+	snprintf(x0s, HTM_DIGITS, "%.50f", bCircle.center.x);
+	snprintf(y0s, HTM_DIGITS, "%.50f", bCircle.center.y);
+	snprintf(z0s, HTM_DIGITS, "%.50f", bCircle.center.z);
+
 	std::string xs = "x = [" + std::string(x0s) + "]\n";
 	xs += "y = [" + std::string(y0s) + "]\n";
 	xs += "z = [" + std::string(z0s) + "]\n";
-	xs += "ax.plot3D(x, y, z, 'ko', linewidth = 2.0)\n\n";
+	xs += "ax.plot3D(x, y, z, '" + std::string(1, color) + "o', linewidth = 2.0)\n\n"; // 211
+
+	auto c_inv = bCircle.center;
+	c_inv.inverse();
+
 	std::string ys, zs;
-	if (region.boundingCircle.sign == POS) {
-		std::string x0, y0, z0;
-		xs += "x = [";
-		ys = "y = [";
-		zs = "z = [";
-		Cartesian a = (region.boundingCircle.center.y == 0) ? Cartesian(0, 1, 0) : Cartesian(1.0, - (region.boundingCircle.center.x + region.boundingCircle.center.z) / region.boundingCircle.center.y, 1.0);
-		a.normalize();
-		Cartesian b = a ^ region.boundingCircle.center;
+	std::string x0, y0, z0;
+	xs += "x = [";
+	ys = "y = [";
+	zs = "z = [";
+	auto a = bCircle.center.y == 0 ? Cartesian(0.0, 1.0, 0.0) : Cartesian(1.0, - (1.0 * (bCircle.center.x + bCircle.center.z) / bCircle.center.y), 1.0);
+	a.normalize();
+	auto b = a ^ bCircle.center;
 
-		Cartesian vc;
-		for (double t = 0; t <= RAD_PER_CIRCUMFERENCE; t += inc) {
-			double rc = region.boundingCircle.arcangle * std::cos(t);
-			double rs = region.boundingCircle.arcangle * std::sin(t);
-			vc.x = region.boundingCircle.center.x + rc * a.x + rs * b.x;
-			vc.y = region.boundingCircle.center.y + rc * a.y + rs * b.y;
-			vc.z = region.boundingCircle.center.z + rc * a.z + rs * b.z;
-			char vcx[DIGITS];
-			char vcy[DIGITS];
-			char vcz[DIGITS];
-			snprintf(vcx, DIGITS, "%.50f", vc.x);
-			snprintf(vcy, DIGITS, "%.50f", vc.y);
-			snprintf(vcz, DIGITS, "%.50f", vc.z);
-			xs += std::string(vcx) + ", ";
-			ys += std::string(vcy) + ", ";
-			zs += std::string(vcz) + ", ";
-			if (t == 0.0) {
-				x0 = std::string(vcx) + ", ";
-				y0 = std::string(vcy) + ", ";
-				z0 = std::string(vcz) + ", ";
-			}
+	Cartesian vc;
+	auto f = std::sin(bCircle.arcangle);
+	int i = 0;
+	for (double t = 0; t <= RAD_PER_CIRCUMFERENCE; t += HTM_INC_CIRCLE) {
+		double rc = f * std::cos(t);
+		double rs = f * std::sin(t);
+		vc.x = bCircle.distance * bCircle.center.x + rc * a.x + rs * b.x;
+		vc.y = bCircle.distance * bCircle.center.y + rc * a.y + rs * b.y;
+		vc.z = bCircle.distance * bCircle.center.z + rc * a.z + rs * b.z;
+		char vcx[HTM_DIGITS];
+		char vcy[HTM_DIGITS];
+		char vcz[HTM_DIGITS];
+		snprintf(vcx, HTM_DIGITS, "%.50f", vc.x);
+		snprintf(vcy, HTM_DIGITS, "%.50f", vc.y);
+		snprintf(vcz, HTM_DIGITS, "%.50f", vc.z);
+		xs += std::string(vcx) + ", ";
+		ys += std::string(vcy) + ", ";
+		zs += std::string(vcz) + ", ";
+		if (t == 0.0) {
+			x0 = std::string(vcx);
+			y0 = std::string(vcy);
+			z0 = std::string(vcz);
 		}
-		xs += x0 + "]\n";
-		ys += y0 + "]\n";
-		zs += z0 + "]\n";
+		++i;
 	}
-
-	return xs + ys + zs;
-}
-
-
-std::string
-HTM::getCircle3D(const Constraint& bCircle, size_t points)
-{
-	double inc = RAD_PER_CIRCUMFERENCE / points;
-	char x0s[DIGITS];
-	char y0s[DIGITS];
-	char z0s[DIGITS];
-	snprintf(x0s, DIGITS, "%.50f", bCircle.center.x);
-	snprintf(y0s, DIGITS, "%.50f", bCircle.center.y);
-	snprintf(z0s, DIGITS, "%.50f", bCircle.center.z);
-	std::string xs = "x = [" + std::string(x0s) + "]\n";
-	xs += "y = [" + std::string(y0s) + "]\n";
-	xs += "z = [" + std::string(z0s) + "]\n";
-	xs += "ax.plot3D(x, y, z, 'ko', linewidth = 2.0)\n\n";
-	std::string ys, zs;
-	if (bCircle.sign == POS) {
-		std::string x0, y0, z0;
-		xs += "x = [";
-		ys = "y = [";
-		zs = "z = [";
-		Cartesian a = (bCircle.center.y == 0) ? Cartesian(0, 1, 0) : Cartesian(1.0, - (bCircle.center.x + bCircle.center.z) / bCircle.center.y, 1.0);
-		a.normalize();
-		Cartesian b = a ^ bCircle.center;
-
-		Cartesian vc;
-		for (double t = 0; t <= RAD_PER_CIRCUMFERENCE; t += inc) {
-			double rc = bCircle.arcangle * std::cos(t);
-			double rs = bCircle.arcangle * std::sin(t);
-			vc.x = bCircle.center.x + rc * a.x + rs * b.x;
-			vc.y = bCircle.center.y + rc * a.y + rs * b.y;
-			vc.z = bCircle.center.z + rc * a.z + rs * b.z;
-			char vcx[DIGITS];
-			char vcy[DIGITS];
-			char vcz[DIGITS];
-			snprintf(vcx, DIGITS, "%.50f", vc.x);
-			snprintf(vcy, DIGITS, "%.50f", vc.y);
-			snprintf(vcz, DIGITS, "%.50f", vc.z);
-			xs += std::string(vcx) + ", ";
-			ys += std::string(vcy) + ", ";
-			zs += std::string(vcz) + ", ";
-			if (t == 0.0) {
-				x0 = std::string(vcx) + ", ";
-				y0 = std::string(vcy) + ", ";
-				z0 = std::string(vcz) + ", ";
-			}
-		}
-		xs += x0 + "]\n";
-		ys += y0 + "]\n";
-		zs += z0 + "]\n";
-	}
+	xs += x0 + "]\n";
+	ys += y0 + "]\n";
+	zs += z0 + "]\n";
 
 	return xs + ys + zs;
 }
 
 
 void
-HTM::writePython3D(const std::string& file) const
+HTM::writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels, const std::string& path_google_map)
 {
-	std::ofstream fs(file);
-	std::string x("x = ["), y("y = ["), z("z = [");
-	int numCorners = (int)region.corners.size() - 1;
+	std::ofstream fs(file + ".py");
+	fs.precision(HTM_DIGITS);
 
-	fs << "from mpl_toolkits.mplot3d import Axes3D\n";
-	fs << "from mpl_toolkits.mplot3d.art3d import Poly3DCollection\n";
-	fs << "import matplotlib.pyplot as plt\n\n\n";
-	fs << "ax = Axes3D(plt.figure())\n";
-	if (numCorners > 1) {
-		for (int i = 0; i < numCorners; ++i) {
-			char vx[DIGITS];
-			char vy[DIGITS];
-			char vz[DIGITS];
-			auto aux = region.corners[i];
-			snprintf(vx, DIGITS, "%.50f", aux.x);
-			snprintf(vy, DIGITS, "%.50f", aux.y);
-			snprintf(vz, DIGITS, "%.50f", aux.z);
-			x += std::string(vx) + ", ";
-			y += std::string(vy) + ", ";
-			z += std::string(vz) + ", ";
+	fs << "import sys\n";
+	fs << "import os\n\n";
+	fs << "sys.path.append(os.path.abspath('" << path_google_map << "'))\n\n";
+	fs << "from google_map_plotter import GoogleMapPlotter\n";
+
+	// Draw Geometry.
+	switch (g->getType()) {
+		case Geometry::Type::POINT: {
+			double lat, lon, height;
+			std::static_pointer_cast<Point>(g)->getCartesian().toGeodetic(lat, lon, height);
+			fs << "mymap = GoogleMapPlotter(" << lat << ", " << lon << ",  20)\n";
+			fs << "mymap.marker(" << lat << ", " << lon << ",  'red')\n";
+			break;
 		}
-		char v0x[DIGITS];
-		char v0y[DIGITS];
-		char v0z[DIGITS];
-		auto aux = region.corners[numCorners];
-		snprintf(v0x, DIGITS, "%.50f", aux.x);
-		snprintf(v0y, DIGITS, "%.50f", aux.y);
-		snprintf(v0z, DIGITS, "%.50f", aux.z);
-		char v1x[DIGITS];
-		char v1y[DIGITS];
-		char v1z[DIGITS];
-		aux = region.corners[0];
-		snprintf(v1x, DIGITS, "%.50f", aux.x);
-		snprintf(v1y, DIGITS, "%.50f", aux.y);
-		snprintf(v1z, DIGITS, "%.50f", aux.z);
-		x += std::string(v0x) + ", " + std::string(v1x) + "]\n";
-		y += std::string(v0y) + ", " + std::string(v1y) + "]\n";
-		z += std::string(v0z) + ", " + std::string(v1z) + "]\n";
-		fs << (x + y + z) << "ax.plot3D(x, y, z, 'k-', linewidth = 2.0)\n\n";
-	} else {
-		fs << getCircle3D(100) << "ax.plot3D(x, y, z, 'k-', linewidth = 2.0)\n\n";
+		case Geometry::Type::CIRCLE: {
+			double lat, lon, height;
+			const auto& constraint = std::static_pointer_cast<Circle>(g)->getConstraint();
+			constraint.center.toGeodetic(lat, lon, height);
+			fs << "mymap = GoogleMapPlotter(" << lat << ", " << lon << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
+			fs << "mymap.marker(" << lat << ", " << lon << ",  'red')\n";
+			if (constraint.sign == Constraint::Sign::NEG) {
+				fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#FF0000', ew=2)\n";
+			} else {
+				fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#0000FF', ew=2)\n";
+			}
+			break;
+		}
+		case Geometry::Type::MULTICIRCLE: {
+			double lat, lon, height;
+			const auto& circles = std::static_pointer_cast<MultiCircle>(g)->getCircles();
+			bool first = true;
+			for (const auto& circle : circles) {
+				const auto& constraint = circle.getConstraint();
+				constraint.center.toGeodetic(lat, lon, height);
+				if (first) {
+					fs << "mymap = GoogleMapPlotter(" << lat << ", " << lon << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
+					first = false;
+				}
+				fs << "mymap.marker(" << lat << ", " << lon << ",  'red')\n";
+				if (constraint.sign == Constraint::Sign::NEG) {
+					fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#FF0000', ew=2)\n";
+				} else {
+					fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#0000FF', ew=2)\n";
+				}
+			}
+			break;
+		}
+		case Geometry::Type::CONVEX: {
+			double lat, lon, height;
+			const auto& circles = std::static_pointer_cast<Convex>(g)->getCircles();
+			bool first = true;
+			for (const auto& circle : circles) {
+				const auto& constraint = circle.getConstraint();
+				constraint.center.toGeodetic(lat, lon, height);
+				if (first) {
+					fs << "mymap = GoogleMapPlotter(" << lat << ", " << lon << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
+					first = false;
+				}
+				fs << "mymap.marker(" << lat << ", " << lon << ",  'red')\n";
+				if (constraint.sign == Constraint::Sign::NEG) {
+					fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#FF0000', ew=2)\n";
+				} else {
+					fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#0000FF', ew=2)\n";
+				}
+			}
+			break;
+		}
 	}
 
-	for (auto itn = names.begin(); itn != names.end(); ++itn) {
-		Cartesian v0, v1, v2;
-		getCorners((*itn), v0, v1, v2);
-		char v0x[DIGITS];
-		char v0y[DIGITS];
-		char v0z[DIGITS];
-		snprintf(v0x, DIGITS, "%.50f", v0.x);
-		snprintf(v0y, DIGITS, "%.50f", v0.y);
-		snprintf(v0z, DIGITS, "%.50f", v0.z);
-		char v1x[DIGITS];
-		char v1y[DIGITS];
-		char v1z[DIGITS];
-		snprintf(v1x, DIGITS, "%.50f", v1.x);
-		snprintf(v1y, DIGITS, "%.50f", v1.y);
-		snprintf(v1z, DIGITS, "%.50f", v1.z);
-		char v2x[DIGITS];
-		char v2y[DIGITS];
-		char v2z[DIGITS];
-		snprintf(v2x, DIGITS, "%.50f", v2.x);
-		snprintf(v2y, DIGITS, "%.50f", v2.y);
-		snprintf(v2z, DIGITS, "%.50f", v2.z);
-		x = "x = [" + std::string(v0x) + ", " + std::string(v1x) + ", " + std::string(v2x) + ", " + std::string(v0x) + "]\n";
-		y = "y = [" + std::string(v0y) + ", " + std::string(v1y) + ", " + std::string(v2y) + ", " + std::string(v0y) + "]\n";
-		z = "z = [" + std::string(v0z) + ", " + std::string(v1z) + ", " + std::string(v2z) + ", " + std::string(v0z) + "]\n";
-		fs << (x + y + z) << "ax.plot3D(x, y, z, 'r-')\n\n";
-	}
+	// Draw trixels.
+	Cartesian v0, v1, v2;
+	for (const auto& trixel : trixels) {
+		getCorners(trixel, v0, v1, v2);
+		v0.scale = M_PER_RADIUS_EARTH;
+		v1.scale = M_PER_RADIUS_EARTH;
+		v2.scale = M_PER_RADIUS_EARTH;
 
-	fs << "plt.ion()\nplt.grid()\nplt.show()";
+		double lat[3], lon[3], height[3];
+		v0.toGeodetic(lat[0], lon[0], height[0]);
+		v1.toGeodetic(lat[1], lon[1], height[1]);
+		v2.toGeodetic(lat[2], lon[2], height[2]);
+
+		fs << "mymap.polygon(";
+		fs << "[" << lat[0] << ", " << lat[1] << ", " << lat[2] << "],";
+		fs << "[" << lon[0] << ", " << lon[1] << ", " << lon[2] << "],";
+		fs << "edge_color='cyan', edge_width=2, face_color='blue', face_alpha=0.2)\n";
+	}
+	fs << "mymap.draw('" << file << ".html')";
 	fs.close();
 }
 
 
 void
-HTM::writePython3D(const std::string& file, const std::vector<Geometry>& g, const std::vector<std::string>& names_f)
+HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels)
 {
-	std::ofstream fs(file);
+	std::ofstream fs(file + ".py");
+	fs.precision(HTM_DIGITS);
 
-	fs << "from mpl_toolkits.mplot3d import Axes3D\n";
-	fs << "from mpl_toolkits.mplot3d.art3d import Poly3DCollection\n";
-	fs << "import matplotlib.pyplot as plt\n\n\n";
-	fs << "ax = Axes3D(plt.figure())\n";
+	fs << "import mpl_toolkits.mplot3d as a3\n";
+	fs << "import matplotlib.pyplot as plt\n";
+	fs << "import numpy as np\n\n\n";
+	fs << "ax = a3.Axes3D(plt.figure())\n";
 
-	for (auto it_g = g.begin(); it_g != g.end(); ++it_g) {
-		std::string x("x = ["), y("y = ["), z("z = [");
-		int numCorners = (int)(it_g->corners.size()) - 1;
-		if (numCorners > 1) {
-			for (int i = 0; i < numCorners; ++i) {
-				char vx[DIGITS];
-				char vy[DIGITS];
-				char vz[DIGITS];
-				auto aux = (*it_g).corners[i];
-				snprintf(vx, DIGITS, "%.50f", aux.x);
-				snprintf(vy, DIGITS, "%.50f", aux.y);
-				snprintf(vz, DIGITS, "%.50f", aux.z);
-				x += std::string(vx) + ", ";
-				y += std::string(vy) + ", ";
-				z += std::string(vz) + ", ";
+	// Draw Geometry.
+	bool sphere =  false;
+	double umbral = 0.95;
+	switch (g->getType()) {
+		case Geometry::Type::POINT: {
+			const auto& c = std::static_pointer_cast<Point>(g)->getCartesian();
+			fs << "x = [" << c.x << "]\n";
+			fs << "y = [" << c.y << "]\n";
+			fs << "z = [" << c.z << "]\n";
+			fs << "ax.plot3D(x, y, z, 'ko', linewidth = 2.0)\n\n";
+			break;
+		}
+		case Geometry::Type::CIRCLE: {
+			const auto& constraint = std::static_pointer_cast<Circle>(g)->getConstraint();
+			char color;
+			if (constraint.sign == Constraint::Sign::NEG) {
+				color = 'r';
+				sphere = true;
+			} else {
+				color = 'b';
+				if (constraint.distance < umbral) {
+					sphere = true;
+				}
 			}
-			char v0x[DIGITS];
-			char v0y[DIGITS];
-			char v0z[DIGITS];
-			auto aux = (*it_g).corners[numCorners];
-			snprintf(v0x, DIGITS, "%.50f", aux.x);
-			snprintf(v0y, DIGITS, "%.50f", aux.y);
-			snprintf(v0z, DIGITS, "%.50f", aux.z);
-			char v1x[DIGITS];
-			char v1y[DIGITS];
-			char v1z[DIGITS];
-			aux = (*it_g).corners[0];
-			snprintf(v1x, DIGITS, "%.50f", aux.x);
-			snprintf(v1y, DIGITS, "%.50f", aux.y);
-			snprintf(v1z, DIGITS, "%.50f", aux.z);
-			x += std::string(v0x) + ", " + std::string(v1x) + "]\n";
-			y += std::string(v0y) + ", " + std::string(v1y) + "]\n";
-			z += std::string(v0z) + ", " + std::string(v1z) + "]\n";
-			fs << (x + y + z) << "ax.plot3D(x, y, z, 'k-', linewidth = 2.0)\n\n";
-		} else {
-			fs << getCircle3D((*it_g).boundingCircle, 100) << "ax.plot3D(x, y, z, 'k-', linewidth = 2.0)\n\n";
+			fs << getConstraint3D(constraint, color) << "ax.plot3D(x, y, z, '" << color << "-', linewidth = 2.0)\n\n";
+			break;
+		}
+		case Geometry::Type::MULTICIRCLE: {
+			const auto& multicircle = std::static_pointer_cast<MultiCircle>(g);
+			for (const auto& circle : multicircle->getCircles()) {
+				const auto& constraint = circle.getConstraint();
+				char color;
+				if (constraint.sign == Constraint::Sign::NEG) {
+					color = 'r';
+					sphere = true;
+				} else {
+					color = 'b';
+					if (constraint.distance < umbral) {
+						sphere = true;
+					}
+				}
+				fs << getConstraint3D(constraint, color) << "ax.plot3D(x, y, z, '" << color << "-', linewidth = 2.0)\n\n";
+			}
+			break;
+		}
+		case Geometry::Type::CONVEX: {
+			const auto& convex = std::static_pointer_cast<Convex>(g);
+			for (const auto& circle : convex->getCircles()) {
+				char color;
+				const auto& constraint = circle.getConstraint();
+				if (constraint.sign == Constraint::Sign::NEG) {
+					color = 'r';
+					sphere = true;
+				} else {
+					color = 'b';
+					if (constraint.distance < umbral) {
+						sphere = true;
+					}
+				}
+				fs << getConstraint3D(constraint, color) << "ax.plot3D(x, y, z, '" << color << "-', linewidth = 2.0)\n\n";
+			}
+			break;
 		}
 	}
 
 	std::string x, y, z;
-	for (auto itn = names_f.begin(); itn != names_f.end(); ++itn) {
-		Cartesian v0, v1, v2;
-		getCorners((*itn), v0, v1, v2);
-		char v0x[DIGITS];
-		char v0y[DIGITS];
-		char v0z[DIGITS];
-		snprintf(v0x, DIGITS, "%.50f", v0.x);
-		snprintf(v0y, DIGITS, "%.50f", v0.y);
-		snprintf(v0z, DIGITS, "%.50f", v0.z);
-		char v1x[DIGITS];
-		char v1y[DIGITS];
-		char v1z[DIGITS];
-		snprintf(v1x, DIGITS, "%.50f", v1.x);
-		snprintf(v1y, DIGITS, "%.50f", v1.y);
-		snprintf(v1z, DIGITS, "%.50f", v1.z);
-		char v2x[DIGITS];
-		char v2y[DIGITS];
-		char v2z[DIGITS];
-		snprintf(v2x, DIGITS, "%.50f", v2.x);
-		snprintf(v2y, DIGITS, "%.50f", v2.y);
-		snprintf(v2z, DIGITS, "%.50f", v2.z);
-		x = "x = [" + std::string(v0x) + ", " + std::string(v1x) + ", " + std::string(v2x) + ", " + std::string(v0x) + "]\n";
-		y = "y = [" + std::string(v0y) + ", " + std::string(v1y) + ", " + std::string(v2y) + ", " + std::string(v0y) + "]\n";
-		z = "z = [" + std::string(v0z) + ", " + std::string(v1z) + ", " + std::string(v2z) + ", " + std::string(v0z) + "]\n";
-		fs << (x + y + z) << "ax.plot3D(x, y, z, 'r-')\n\n";
+	Cartesian v0, v1, v2;
+	// Draw trixels.
+	std::string rule_trixel;
+	std::string show_graphics;
+	if (sphere) {
+		rule_trixel = "ax.plot3D(x, y, z, 'c-', linewidth = 2.0)\n";
+		// Draw unary sphere.
+		show_graphics = "phi, theta = np.mgrid[0.0:np.pi:50j, 0.0:2.0*np.pi:50j];\n" \
+			"x = np.sin(phi) * np.cos(theta);\n" \
+			"y = np.sin(phi) * np.sin(theta);\n" \
+			"z = np.cos(phi);\n" \
+			"ax.plot_surface(x, y, z,  rstride=1, cstride=1, color='g', alpha=0.03, linewidth=1)\n" \
+			"plt.ion()\nplt.grid()\nplt.show()";
+	} else {
+		rule_trixel = "vtx = [zip(x, y, z)];\n" \
+			"tri = a3.art3d.Poly3DCollection(vtx, alpha=0.3);\n" \
+			"tri.set_color('cyan')\n" \
+			"tri.set_edgecolor('c')\n" \
+			"ax.add_collection3d(tri)\n";
+		show_graphics = "plt.ion()\nplt.grid()\nplt.show()";
 	}
-	fs << "plt.ion()\nplt.grid()\nplt.show()";
+	for (const auto& trixel : trixels) {
+		getCorners(trixel, v0, v1, v2);
+		char vx[HTM_DIGITS];
+		char vy[HTM_DIGITS];
+		char vz[HTM_DIGITS];
+		x = "x = [";
+		y = "y = [";
+		z = "z = [";
+		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
+			const auto inc = i / HTM_LINE_POINTS;
+			const auto mp = ((1.0 - inc) * v0 + inc * v1).normalize();
+			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
+			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
+			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
+			x += vx + std::string(", ");
+			y += vy + std::string(", ");
+			z += vz + std::string(", ");
+		}
+		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
+			const auto inc = i / HTM_LINE_POINTS;
+			const auto mp = ((1.0 - inc) * v1 + inc * v2).normalize();
+			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
+			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
+			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
+			x += vx + std::string(", ");
+			y += vy + std::string(", ");
+			z += vz + std::string(", ");
+		}
+		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
+			const auto inc = i / HTM_LINE_POINTS;
+			const auto mp = ((1.0 - inc) * v2 + inc * v0).normalize();
+			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
+			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
+			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
+			x += vx + std::string(", ");
+			y += vy + std::string(", ");
+			z += vz + std::string(", ");
+		}
+		// Close the trixel.
+		snprintf(vx, HTM_DIGITS, "%.50f", v0.x);
+		snprintf(vy, HTM_DIGITS, "%.50f", v0.y);
+		snprintf(vz, HTM_DIGITS, "%.50f", v0.z);
+		x += vx + std::string("]\n");
+		y += vy + std::string("]\n");
+		z += vz + std::string("]\n");
+		fs << (x + y + z);
+		fs << rule_trixel;
+	}
+	fs << show_graphics;
 	fs.close();
-}
-
-
-Cartesian
-HTM::getCentroid(const std::vector<std::string>& trixel_names)
-{
-	Cartesian w0, w1, w2, v0, v1, v2, centroid(0, 0, 0);
-
-	for (const auto& trixel_name : trixel_names) {
-		size_t trixel = trixel_name.at(1) - '0';
-		if (trixel_name.at(0) == 's') {
-			v0 = start_vertices[S[trixel].v0];
-			v1 = start_vertices[S[trixel].v1];
-			v2 = start_vertices[S[trixel].v2];
-		} else {
-			v0 = start_vertices[N[trixel].v0];
-			v1 = start_vertices[N[trixel].v1];
-			v2 = start_vertices[N[trixel].v2];
-		}
-
-		size_t i = 2, len = trixel_name.size();
-		while (i < len) {
-			midPoint(v0, v1, w2);
-			midPoint(v1, v2, w0);
-			midPoint(v2, v0, w1);
-			switch (trixel_name.at(i)) {
-				case '0':
-					v1 = w2;
-					v2 = w1;
-					break;
-				case '1':
-					v0 = v1;
-					v1 = w0;
-					v2 = w2;
-					break;
-				case '2':
-					v0 = v2;
-					v1 = w1;
-					v2 = w0;
-					break;
-				case '3':
-					v0 = w0;
-					v1 = w1;
-					v2 = w2;
-					break;
-			}
-			++i;
-		}
-
-		centroid += v0 + v1 + v2;
-	}
-
-	centroid.normalize();
-
-	return centroid;
 }

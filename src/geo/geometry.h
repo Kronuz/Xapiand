@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,17 +22,7 @@
 
 #pragma once
 
-#include "cartesian.h"
-
-#include <vector>
-
-// Constants used for specify the sign of the bounding circle.
-#define NEG -1
-#define ZERO 0
-#define POS 1
-#define COLLINEAR 0
-#define CLOCKWISE 1
-#define COUNTERCLOCKWISE 2
+#include "htm.h"
 
 
 // Earth radius in meters
@@ -54,109 +44,130 @@ constexpr double MIN_RADIUS_RADIANS = 0.00000001570488707974173690;
 constexpr double RADIUS_GREAT_CIRCLE = 10001958.7458296325;
 
 
-enum class GeometryType {
-	CONVEX_POLYGON,
-	CONVEX_HULL
-};
-
-
 /*
  * A circular area, given by the plane slicing it off sphere.
+ *
+ * All Cartesians are normalized because Geometry and HTM works around a unary sphere
+ * instead of a spheroid.
  */
 class Constraint {
-	void set_data(double meters);
+	void set_data(double _radius);
 
 public:
+	// Constants used for specify the sign of the bounding circle or a convex.
+	enum class Sign : uint8_t {
+		POS       = 0b0001,
+		NEG       = 0b0010,
+		ZERO      = 0b0011,
+	};
+
 	Cartesian center;
 	double arcangle;
 	double distance;
-	double radius;    // Radius in meters
-	int sign;
+	double radius;         // Radius in meters
+	Sign sign;
 
 	/*
 	 * Does a great circle with center in
-	 * (lat = 0, lon = 0, h = 0) -> (x = 1, y = 0, z = 0)
+	 * lat = 0, lon = 0, h = 0 (Default Cartesian)
 	 */
 	Constraint();
-	// Does a great circle with the defined center
-	Constraint(Cartesian&& _center);
-	// Constraint in the Earth. Radius in meters
-	Constraint(Cartesian&& _center, double radius);
-	// Move constructor
+
+	// Does a great circle with the defined center.
+	template <typename T, typename = std::enable_if_t<std::is_same<Cartesian, std::decay_t<T>>::value>>
+	Constraint(T&& _center)
+		: center(std::forward<T>(_center)),
+		  arcangle(PI_HALF),
+		  distance(0.0),
+		  radius(RADIUS_GREAT_CIRCLE),
+		  sign(Sign::ZERO)
+	{
+		center.normalize();
+	}
+
+	// Constraint in the Earth. Radius in meters.
+	template <typename T, typename = std::enable_if_t<std::is_same<Cartesian, std::decay_t<T>>::value>>
+	Constraint(T&& _center, double _radius)
+		: center(std::forward<T>(_center))
+	{
+		center.normalize();
+		set_data(_radius);
+	}
+
+	// Move and copy constructor.
 	Constraint(Constraint&& c) = default;
-	// Copy constructor
 	Constraint(const Constraint& c) = default;
 
-	// Move assignment
+	// Move and copy assignment.
 	Constraint& operator=(Constraint&& c) = default;
-	// Copy assignment
 	Constraint& operator=(const Constraint& c) = default;
+
 	bool operator==(const Constraint& c) const noexcept;
 	bool operator!=(const Constraint& c) const noexcept;
+	bool operator<(const Constraint& c) const noexcept;
+	bool operator>(const Constraint& c) const noexcept;
+
+	std::string to_string() const;
 };
 
 
 class Geometry {
-	// Calculates the convex hull of a set of points using Graham Scan Algorithm
-	void convexHull(std::vector<Cartesian>&& points, std::vector<Cartesian> &points_convex) const;
+public:
+	enum class Type : uint8_t {
+		POINT,
+		CIRCLE,
+		CONVEX,
+		POLYGON,
+		CONVEX_HULL,
+		XOR_POLYGON,
+		MULTIPOINT,
+		MULTICIRCLE,
+		MULTIPOLYGON,
+		COLLECTION,
+		INTERSECTION,
+	};
 
-	// Set the Polygon's centroid
-	void setCentroid();
-
-	// Average angle from the vertices to the polygon's centroid
-	double meanAngle2centroid() const;
-
-	/*
-	 * Obtains the direction of the vectors.
-	 * Returns:
-	 *   If the vectors are COLLINEAR, CLOCKWISE or COUNTERCLOCKWISE
-	 */
-	static int direction(const Cartesian &a, const Cartesian &b, const Cartesian &c) noexcept;
-
-	// Returns the squared distance between two vectors
-	static double dist(const Cartesian &a, const Cartesian &b) noexcept;
+protected:
+	Type type;
 
 public:
-	Constraint boundingCircle;
-	std::vector<Constraint> constraints;
-	std::vector<Cartesian> corners;
-	Cartesian centroid;
+	Geometry(Type t)
+		: type(t) { }
 
-	Geometry() = delete;
-	// The region is specified by a bounding circle.
-	Geometry(Constraint&& constraint);
-	// Constructor from a set of points (v) in the Earth
-	Geometry(std::vector<Cartesian>&& v, const GeometryType &type);
-	// Move Constructor
-	Geometry(Geometry&&) = default;
-	// Copy Constructor
-	Geometry(const Geometry&) = delete;
+	Geometry(Geometry&& g) noexcept
+		: type(std::move(g.type)) { }
 
-	// Move assignment
-	Geometry& operator=(Geometry&& c) = default;
-	// Copy assignment
-	Geometry& operator=(const Geometry& c) = delete;
+	Geometry(const Geometry& g)
+		: type(g.type) { }
 
-	/*
-	 * Constraints:
-	 *  For each side, we have a 0-halfspace (great circle) passing through the 2 corners.
-	 *  Since we are in counterclockwise order, the vector product of the two
-	 *  successive corners just gives the correct constraint.
-	 *
-	 * Requirements:
-	 *  All points should fit within half of the globe.
-	 */
-	void convexHull(std::vector<Cartesian>&& v);
+	virtual ~Geometry() = default;
 
-	/*
-	 * Constraints:
-	 *    For each side, we have a 0-halfspace (great circle) passing through the 2 corners.
-	 *    Since we are in counterclockwise order, the vector product of the two
-	 *    successive corners just gives the correct constraint.
-	 *
-	 * Requirements:
-	 *    Polygons should be counterclockwise.
-	 *    Polygons should be convex.
-	 */
-	void convexPolygon(std::vector<Cartesian>&& v);
+	Geometry& operator=(Geometry&& g) noexcept {
+		type = std::move(g.type);
+		return *this;
+	}
+
+	Geometry& operator=(const Geometry& g) {
+		type = g.type;
+		return *this;
+	}
+
+	Type getType() const noexcept {
+		return type;
+	}
+
+	std::string toEWKT() const {
+		std::string ewkt(DEFAULT_CRS);
+		ewkt.append(toWKT());
+		return ewkt;
+	}
+
+	virtual std::string toWKT() const = 0;
+	virtual std::string to_string() const = 0;
+	virtual std::vector<std::string> getTrixels(bool partials, double error) const = 0;
+	virtual std::vector<range_t> getRanges(bool partials, double error) const = 0;
+
+	virtual std::vector<Cartesian> getCentroids() const {
+		return std::vector<Cartesian>();
+	}
 };

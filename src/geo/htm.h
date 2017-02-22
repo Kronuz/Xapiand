@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,37 +22,30 @@
 
 #pragma once
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>       // for PRIu64
-#include <stdio.h>          // for snprintf
-#include <sys/types.h>      // for uint64_t, int8_t
-#include <cstring>          // for size_t
-#include <functional>       // for hash
-#include <string>           // for string, hash
+#include <cinttypes>        // for PRIu64
+#include <cstdint>          // for uint64_t, int8_t
+#include <cstdio>           // for snprintf
 #include <vector>           // for vector
 
-#include "geo/cartesian.h"  // for Cartesian
-#include "geometry.h"       // for Constraint, Geometry
+#include "cartesian.h"
 
-#define HTM_FULL 0
-#define HTM_PARTIAL 1
-#define HTM_OUTSIDE 2
 
-// number of decimal places to print the file python.
-#define DIGITS 50
+#define __STDC_FORMAT_MACROS
+
 
 // Maximum level allowed (In this level the accuracy is 30 centimeters).
-#define HTM_MAX_LEVEL 25
+constexpr size_t HTM_MAX_LEVEL = 25;
+
 
 // Error for generating the trixels
-#define HTM_MIN_ERROR 0.2
-#define HTM_MAX_ERROR 0.5
+constexpr double HTM_MIN_ERROR = 0.1;
+constexpr double HTM_MAX_ERROR = 1.0;
 
 
 // Constants.
-constexpr size_t MAX_SIZE_NAME = HTM_MAX_LEVEL | '\x02';
-constexpr size_t SIZE_BYTES_ID = 7;
-constexpr size_t SIZE_BITS_ID = 2 * MAX_SIZE_NAME;
+constexpr size_t HTM_MAX_LENGTH_NAME = HTM_MAX_LEVEL | '\x02';
+constexpr size_t HTM_BYTES_ID        = 7;
+constexpr size_t HTM_BITS_ID         = 2 * HTM_MAX_LENGTH_NAME;
 
 
 // Radians in a circumference (2pi).
@@ -68,30 +61,6 @@ constexpr double ERROR_NIVEL[] = {
 };
 
 
-struct range_t {
-	uint64_t start;
-	uint64_t end;
-
-	bool operator<(const range_t& p) const noexcept {
-		return start < p.start;
-	}
-
-	bool operator==(const range_t& p) const noexcept {
-		return start == p.start && end == p.end;
-	}
-
-	bool operator!=(const range_t& p) const noexcept {
-		return !operator==(p);
-	}
-
-	std::string as_string() const {
-		char result[40];
-		snprintf(result, 40, "%" PRIu64 "-%" PRIu64, start, end);
-		return std::string(result);
-	}
-};
-
-
 struct trixel_t {
 	uint64_t id;
 	std::string name;
@@ -104,7 +73,96 @@ struct index_t {
 };
 
 
-constexpr uint64_t S0 = 8, S1 = 9, S2 = 10, S3 = 11, N0 = 12, N1 = 13, N2 = 14, N3 = 15;
+enum class TypeTrixel : uint8_t {
+	FULL,
+	PARTIAL,
+	OUTSIDE,
+};
+
+
+struct range_t {
+	uint64_t start;
+	uint64_t end;
+
+	range_t(uint64_t _start, uint64_t _end)
+		: start(_start),
+		  end(_end) { }
+
+	bool operator==(const range_t& r) const noexcept {
+		return start == r.start && end == r.end;
+	}
+
+	bool operator!=(const range_t& r) const noexcept {
+		return !operator==(r);
+	}
+
+	bool operator>(const range_t& r) const noexcept {
+		return start > r.start;
+	}
+
+	bool operator<(const range_t& r) const noexcept {
+		return start < r.start;
+	}
+
+	std::string as_string() const {
+		char result[36];
+		snprintf(result, 36, "%" PRIu64 "-%" PRIu64, start, end);
+		return std::string(result);
+	}
+};
+
+
+namespace std {
+	template<>
+	struct hash<range_t> {
+		inline size_t operator()(const range_t& p) const {
+			static std::hash<std::string> hash_fn;
+			return hash_fn(p.as_string());
+		}
+	};
+}
+
+
+const Cartesian start_vertices[6] = {
+	Cartesian(0.0,  0.0,  1.0),
+	Cartesian(1.0,  0.0,  0.0),
+	Cartesian(0.0,  1.0,  0.0),
+	Cartesian(-1.0, 0.0,  0.0),
+	Cartesian(0.0,  -1.0, 0.0),
+	Cartesian(0.0,  0.0,  -1.0)
+};
+
+
+const trixel_t start_trixels[8] = {
+	{ 14, "S2", 3, 5, 4 },
+	{ 9,  "N1", 4, 0, 3 },
+	{ 13, "S1", 2, 5, 3 },
+	{ 10, "N2", 3, 0, 2 },
+	{ 15, "S3", 4, 5, 1 },
+	{ 8,  "N0", 1, 0, 4 },
+	{ 12, "S0", 1, 5, 2 },
+	{ 11, "N3", 2, 0, 1 }
+};
+
+
+const index_t S[4] = {
+	{ 1, 5, 2 },
+	{ 2, 5, 3 },
+	{ 3, 5, 4 },
+	{ 4, 5, 1 }
+};
+
+
+const index_t N[4] = {
+	{ 1, 0, 4 },
+	{ 4, 0, 3 },
+	{ 3, 0, 2 },
+	{ 2, 0, 1 }
+};
+
+
+class Constraint;
+class Geometry;
 
 
 /*
@@ -114,87 +172,82 @@ constexpr uint64_t S0 = 8, S1 = 9, S2 = 10, S3 = 11, N0 = 12, N1 = 13, N2 = 14, 
  *    http://research.microsoft.com/apps/pubs/default.aspx?id=64531
  * - P. Z. Kunszt, A. S. Szalay, A. R. Thakar (631-637 2001). "The Hierarchical Triangular Mesh".
  *   Dept. of Physics and Astronomy, Johns Hopkins University, Baltimore
+ *   http://www.noao.edu/noao/staff/yao/sdss_papers/kunszt.pdf
  */
-class HTM {
-	int8_t max_level;
-	bool partials;
-	std::vector<std::string> partial_names;
+namespace HTM {
+	// Union and intersection and exclusive disjunction of two sort vectors of ranges.
+	std::vector<std::string> trixel_union(std::vector<std::string>&& txs1, std::vector<std::string>&& txs2);
+	std::vector<std::string> trixel_intersection(std::vector<std::string>&& txs1, std::vector<std::string>&& txs2);
 
-	void lookupTrixels(int8_t level, std::string name, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2);
-	// Returns 1 if trixel's vertex are inside, otherwise return 0.
-	int insideVertex(const Cartesian& v) const noexcept;
-	// Verifies if a trixel is inside, outside or partial of the convex.
-	int verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
-	// Returns if a trixel is intersecting or inside of a polygon.
-	bool testEdgePolygon(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
-	// Return whether there is a hole inside the triangle.
-	bool thereisHole(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
-
-	/*
-	 * Test whether one of the halfspace’s boundary circles intersects with
-	 * one of the edges of the triangle.
-	 */
-	bool intersectEdge(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
-
-	// Returns if there is an overlap between trixel and convex, calculating the bounding circle of the trixel.
-	bool boundingCircle(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
-	std::string getCircle3D(size_t points) const;
-	void simplifyTrixels();
+	// Union, intersection and exclusive disjunction of two sort vectors of ranges.
+	std::vector<range_t> range_union(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2);
+	std::vector<range_t> range_intersection(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2);
+	std::vector<range_t> range_exclusive_disjunction(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2);
 
 	// Finds the start trixel containing the coord.
-	static std::string startTrixel(Cartesian& v0, Cartesian& v1, Cartesian& v2, const Cartesian& coord) noexcept;
+	const trixel_t& startTrixel(const Cartesian& coord) noexcept;
+
 	// Finds the midpoint of two edges.
-	static void midPoint(const Cartesian& v0, const Cartesian& v1, Cartesian& w);
-	// Receives a name of a trixel and calculates its id.
-	static uint64_t name2id(const std::string& name);
-	// Returns if v is inside of a trixel.
-	static bool insideVector(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, const Cartesian& v);
-	// Returns true if there is a intersection between trixel and convex.
-	static bool intersection(const Cartesian& v1, const Cartesian& v2, const Constraint& c);
-	static void getCorners(const std::string& name, Cartesian& v0, Cartesian& v1, Cartesian& v2);
-	static std::string getCircle3D(const Constraint& bCircle, size_t points);
+	Cartesian midPoint(const Cartesian& v0, const Cartesian& v1);
 
-public:
-	Geometry region;
-	std::vector<std::string> names;
+	// Returns if there is a Hole between c and the trixel (v0, v1, v2).
+	bool thereisHole(const Constraint& c, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2);
 
-	HTM() = delete;
-	// Move constructor.
-	HTM(HTM&&) = default;
-	// Copy Constructor.
-	HTM(const HTM&) = delete;
+	// Returns the Constraint defined by the bounding circle of the trixel (v0, v1, v2).
+	Constraint getBoundingCircle(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2);
 
-	/*
-	 * Constructor for HTM.
-	 *  If _partials then return triangles partials.
-	 *  error should be in [HTM_MIN_VALUE, HTM_MAX_VALUE]; it specifics the error according to
-	 *  the diameter of the circle or the circle that adjusts the Polygon's area.
-	 */
-	HTM(bool _partials, double error, Geometry&& _region);
+	// Returns if the constraints intersect.
+	bool intersectConstraints(const Constraint& c1, const Constraint& c2);
 
-	// Move assignment.
-	HTM& operator=(HTM&&) = default;
-	// Copy assignment.
-	HTM& operator=(const HTM&) = delete;
+	// Returns if vertex v is inside trixel (v0,v1,v2).
+	bool insideVertex_Trixel(const Cartesian& v, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2);
 
-	void run();
-	void writePython3D(const std::string& file) const;
+	// Returns if vertex v is inside Constraint c.
+	bool insideVertex_Constraint(const Cartesian& v, const Constraint& c);
 
-	// Given a coord, calculates its HTM name.
-	static std::string cartesian2name(const Cartesian& coord);
-	static Cartesian getCentroid(const std::vector<std::string>& trixel_names);
-	static void insertRange(const std::string& name, std::vector<range_t>& ranges, int8_t _max_level);
-	static void mergeRanges(std::vector<range_t>& ranges);
-	static void writePython3D(const std::string& file, const std::vector<Geometry>& g, const std::vector<std::string>& names_f);
-};
+	// Returns if Constraint c intersects with an edge of the trixel (v0,v1,v2).
+	bool intersectConstraint_EdgeTrixel(const Constraint& c, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2);
 
+	// Returns if there is a intersection between Constraint c and the edge (v1, v2).
+	bool intersection(const Constraint& c, const Cartesian& v1, const Cartesian& v2);
 
-namespace std {
-	template<>
-	struct hash<range_t> {
-		inline size_t operator()(const range_t& p) const {
-			std::hash<std::string> hash_fn;
-			return hash_fn(p.as_string());
+	// Simplify a sort vector of trixels.
+	void simplifyTrixels(std::vector<std::string>& trixels);
+
+	// Simplify a sort vector of ranges.
+	void simplifyRanges(std::vector<range_t>& ranges);
+
+	// Given a coord, calculates its HTM trixel name.
+	std::string getTrixelName(const Cartesian& name);
+
+	// Calculates its HTM id.
+	uint64_t getId(const Cartesian& coord);
+	uint64_t getId(const std::string& name);
+
+	// Get range of given data.
+	range_t getRange(uint64_t id, uint8_t level);
+	range_t getRange(const std::string& trixel_name);
+
+	// Get trixels of ranges.
+	std::vector<std::string> getTrixels(const std::vector<range_t>& ranges);
+
+	template <typename T, typename = std::enable_if_t<std::is_same<range_t, std::decay_t<T>>::value>>
+	void insertRange(std::vector<range_t>& ranges, T&& range) {
+		if (ranges.empty()) {
+			ranges.push_back(std::forward<T>(range));
+		} else {
+			auto& prev = ranges.back();
+			if (prev.end < range.start - 1) {     // (start - 1) for join adjacent integer ranges.
+				ranges.push_back(std::forward<T>(range));
+			} else if (prev.end < range.end) {    // if ranges overlap, last range end is updated.
+				prev.end = range.end;
+			}
 		}
-	};
-}
+	}
+
+	// Functions to test HTM.
+	void getCorners(const std::string& name, Cartesian& v0, Cartesian& v1, Cartesian& v2);
+	std::string getConstraint3D(const Constraint& bCircle, char color);
+	void writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels, const std::string& path_google_map="");
+	void writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels);
+};

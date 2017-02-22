@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,13 +22,11 @@
 
 #pragma once
 
-#include <cstdio>
-#include <cstring>         // for size_t
-#include <functional>      // for hash
-#include <string>          // for string, basic_string, hash
-#include <type_traits>     // for forward
+#include "exception.h"
 
-#include "exception.h"     // for ClientError
+#include <cstdio>
+#include <functional>
+#include <string>
 
 
 /*
@@ -37,7 +35,7 @@
  *   http://earth-info.nga.mil/GandG/coordsys/datums/NATO_DT.pdf
  *      CRS     SRID
  */
-#define WGS84   4326 // Cartesian uses this Coordinate Reference System (CRS).
+#define WGS84   4326   // Cartesian uses this Coordinate Reference System (CRS).
 #define WGS72   4322
 #define NAD83   4269
 #define NAD27   4267
@@ -54,6 +52,10 @@
 #define PUL42   4178
 #define MGI1901 3906
 #define GGRS87  4121
+
+
+// Default Coordinate Reference System (CRS).
+constexpr const char DEFAULT_CRS[] = "SRID=4326;";
 
 
 // Double tolerance.
@@ -97,38 +99,35 @@ struct datum_t {
 };
 
 
-enum class CartesianUnits {
-	RADIANS,
-	DEGREES
-};
-
-
-class CartesianError : public ClientError {
-public:
-	template<typename... Args>
-	CartesianError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
-};
-
-
 /*
  * The formulas used for the conversions were obtained from:
  *    "A guide to coordinate systems in Great Britain"
  */
 class Cartesian {
-	int SRID;
-	datum_t datum;
+public:
+	enum class Units : uint8_t {
+		RADIANS,
+		DEGREES,
+	};
 
-	void transform2WGS84() noexcept;
-	void toCartesian(double lat, double lon, double height, CartesianUnits units);
+private:
+	int SRID;
+
+	void toWGS84();
+	void toCartesian(double lat, double lon, double height, Units units);
 
 public:
+	// Cartesian, geocentric coordinates of a point.
 	double x;
 	double y;
 	double z;
 
+	// Scale factor.
+	double scale{1};
+
 	Cartesian();
-	Cartesian(double lat, double lon, double height, CartesianUnits units, int SRID=WGS84);
-	Cartesian(double x, double y, double z);
+	Cartesian(double lat, double lon, double height, Units units, int _SRID=WGS84);
+	Cartesian(double _x, double _y, double _z, int _SRID=WGS84);
 	// Move constructor
 	Cartesian(Cartesian&& p) = default;
 	// Copy constructor
@@ -138,11 +137,12 @@ public:
 	Cartesian& operator=(Cartesian&& p) = default;
 	// Copy assignment
 	Cartesian& operator=(const Cartesian& p) = default;
-	bool operator<(const Cartesian& p) const noexcept;
 	bool operator==(const Cartesian& p) const noexcept;
 	bool operator!=(const Cartesian& p) const noexcept;
+	bool operator<(const Cartesian& p) const noexcept;
 	// Dot product
 	double operator*(const Cartesian& p) const noexcept;
+	Cartesian& operator*(double scale) noexcept;
 	// Vector product
 	Cartesian operator^(const Cartesian& p) const noexcept;
 	Cartesian& operator^=(const Cartesian& p) noexcept;
@@ -151,31 +151,37 @@ public:
 	Cartesian operator-(const Cartesian& p) const noexcept;
 	Cartesian& operator-=(const Cartesian& p) noexcept;
 
-	std::string Decimal2Degrees() const;
 	void toGeodetic(double& lat, double& lon, double& height) const;
-	void normalize();
-	void inverse() noexcept;
+	std::string toDegMinSec() const;
+	Cartesian& normalize();
+	Cartesian& inverse() noexcept;
 	double norm() const;
-	std::string as_string() const;
+	std::string to_string() const;
 
 	static bool is_SRID_supported(int _SRID);
 
 	inline int getSRID() const noexcept {
 		return SRID;
 	}
-
-	inline datum_t getDatum() const noexcept {
-		return datum;
-	}
 };
+
+
+inline static Cartesian operator*(const Cartesian& c, double scale) {
+	return Cartesian(c.x * scale, c.y * scale, c.z * scale);
+}
+
+
+inline static Cartesian operator*(double scale, const Cartesian& c) {
+	return Cartesian(c.x * scale, c.y * scale, c.z * scale);
+}
 
 
 namespace std {
 	template<>
 	struct hash<Cartesian> {
-		inline size_t operator()(const Cartesian& p) const {
-			std::hash<std::string> hash_fn;
-			return hash_fn(p.as_string());
+		size_t operator()(const Cartesian& p) const {
+			static std::hash<std::string> hash_fn;
+			return hash_fn(p.to_string());
 		}
 	};
-}
+};
