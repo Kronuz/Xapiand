@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -170,6 +170,25 @@ public:
 				tokens.push_back(str.substr(prev, len));
 			}
 			prev = next + delimiter.length();
+		}
+
+		if (prev < str.length()) {
+			tokens.push_back(str.substr(prev));
+		}
+
+		return tokens;
+	}
+
+	static std::vector<std::string> split(const std::string& str, char delimiter) {
+		std::vector<std::string> tokens;
+		size_t prev = 0, next = 0, len;
+
+		while ((next = str.find(delimiter, prev)) != std::string::npos) {
+			len = next - prev;
+			if (len > 0) {
+				tokens.push_back(str.substr(prev, len));
+			}
+			prev = next + 1;
 		}
 
 		if (prev < str.length()) {

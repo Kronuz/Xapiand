@@ -97,7 +97,7 @@ EWKT::EWKT(const std::string& str)
 Point
 EWKT::_parse_point(int SRID, const std::string& specification)
 {
-	const auto coords = Split::split(specification, " ");
+	const auto coords = Split::split(specification, ' ');
 	switch (coords.size()) {
 		case 2:
 			return Point(Cartesian(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), 0, Cartesian::Units::DEGREES, SRID));
@@ -218,7 +218,7 @@ EWKT::_parse_multipoint(int SRID, const std::string& specification)
 	}
 
 	if (match_len == 0) {
-		const auto spc_points = Split::split(specification, ",");
+		const auto spc_points = Split::split(specification, ',');
 		for (const auto& spc_point : spc_points) {
 			multipoint.add(_parse_point(SRID, spc_point));
 		}
