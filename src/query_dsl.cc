@@ -140,7 +140,7 @@ QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
 		THROW(QueryDslError, "Invalid range [<string>]: %s", repr(range).c_str());
 	}
 	MsgPack value;
-	auto& _range = value[QUERYDSL_RANGE];
+	auto& _range = value[QUERYDSL_RANGE] = MsgPack(MsgPack::Type::MAP);
 	auto start = fp.get_start();
 	auto field_type = FieldType::EMPTY;
 	if (!start.empty()) {
