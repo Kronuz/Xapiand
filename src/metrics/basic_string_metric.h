@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -44,7 +44,7 @@ public:
 		  _str(_icase ? upper_string(std::forward<T>(str)) : std::forward<T>(str)) { }
 
 	template <typename T>
-	inline double distance(T&& str1, T&& str2) const {
+	double distance(T&& str1, T&& str2) const {
 		// Check base cases.
 		if (str1.empty() || str2.empty()) {
 			return 1.0;
@@ -61,7 +61,7 @@ public:
 	}
 
 	template <typename T>
-	inline double distance(T&& str2) const {
+	double distance(T&& str2) const {
 		// Check base cases.
 		if (_str.empty() || str2.empty()) {
 			return 1.0;
@@ -77,7 +77,7 @@ public:
 	}
 
 	template <typename T>
-	inline double similarity(T&& str1, T&& str2) const {
+	double similarity(T&& str1, T&& str2) const {
 		// Check base cases.
 		if (str1.empty() || str2.empty()) {
 			return 0.0;
@@ -94,7 +94,7 @@ public:
 	}
 
 	template <typename T>
-	inline double similarity(T&& str2) const {
+	double similarity(T&& str2) const {
 		// Check base cases.
 		if (_str.empty() || str2.empty()) {
 			return 0.0;
@@ -109,7 +109,7 @@ public:
 		);
 	}
 
-	inline std::string description() const noexcept {
+	std::string description() const noexcept {
 		auto desc = static_cast<const Impl*>(this)->_description();
 		desc.append(_icase ? " ignore case" : " case sensitive");
 		return desc;
