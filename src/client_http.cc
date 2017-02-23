@@ -1291,9 +1291,12 @@ HttpClient::search_view(enum http_method method, Command)
 			return;
 		}
 		db_handler.reset(endpoints, db_flags | DB_WRITABLE, method);
-		db_handler.commit();
-		db_handler.reset(endpoints, db_flags, method);
-		db_handler.reopen();
+		if (db_handler.commit()) {
+			db_handler.reset(endpoints, db_flags, method);
+			db_handler.reopen();
+		} else {
+			db_handler.reset(endpoints, db_flags, method);
+		}
 	}
 
 	operation_begins = std::chrono::system_clock::now();
