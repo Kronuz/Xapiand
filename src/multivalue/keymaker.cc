@@ -63,52 +63,10 @@ const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metr
 
 
 std::string
-BaseKey::findSmallest(const Xapian::Document& doc) const
-{
-	auto multiValues = doc.get_value(_slot);
-	if (multiValues.empty()) return MAX_CMPVALUE;
-
-	std::vector<std::string> values;
-	Unserialise::STLString(multiValues, std::back_inserter(values));
-
-	const auto it_e = values.end();
-	auto it = values.begin();
-	auto smallest = get_cmpvalue(*it);
-	for (++it; it != it_e; ++it) {
-		auto aux = get_cmpvalue(*it);
-		if (smallest > aux) smallest = std::move(aux);
-	}
-
-	return smallest;
-}
-
-
-std::string
-BaseKey::findLargest(const Xapian::Document& doc) const
-{
-	auto multiValues = doc.get_value(_slot);
-	if (multiValues.empty()) return MAX_CMPVALUE;
-
-	std::vector<std::string> values;
-	Unserialise::STLString(multiValues, std::back_inserter(values));
-
-	const auto it_e = values.end();
-	auto it = values.begin();
-	auto largest = get_cmpvalue(*it);
-	for (++it; it != it_e; ++it) {
-		const auto aux = get_cmpvalue(*it);
-		if (aux > largest) largest = std::move(aux);
-	}
-
-	return largest;
-}
-
-
-std::string
 SerialiseKey::findSmallest(const Xapian::Document& doc) const
 {
 	auto multiValues = doc.get_value(_slot);
-	if (multiValues.empty()) return STR_FOR_EMPTY;
+	if (multiValues.empty()) return MAX_STR_CMPVALUE;
 
 	std::vector<std::string> values;
 	Unserialise::STLString(multiValues, std::back_inserter(values));
@@ -118,10 +76,10 @@ SerialiseKey::findSmallest(const Xapian::Document& doc) const
 
 
 std::string
-SerialiseKey::findLargest(const Xapian::Document& doc) const
+SerialiseKey::findBiggest(const Xapian::Document& doc) const
 {
 	auto multiValues = doc.get_value(_slot);
-	if (multiValues.empty()) return STR_FOR_EMPTY;
+	if (multiValues.empty()) return MIN_STR_CMPVALUE;
 
 	std::vector<std::string> values;
 	Unserialise::STLString(multiValues, std::back_inserter(values));
@@ -131,27 +89,271 @@ SerialiseKey::findLargest(const Xapian::Document& doc) const
 
 
 std::string
-GeoKey::get_cmpvalue(const std::string& serialise_val) const
+FloatKey::findSmallest(const Xapian::Document& doc) const
 {
-	const auto geo_val = Unserialise::geo(serialise_val);
+	const auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) return MAX_CMPVALUE;
 
-	std::vector<Cartesian> centroids;
-	Unserialise::STLCartesian(geo_val.second, std::back_inserter(centroids));
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
 
-	if (centroids.empty() || _centroids.empty()) {
-		return MAX_CMPVALUE;
+	if (values.size() == 1 || values.front() >= _ser_ref_val) {
+		return Serialise::_float(std::fabs(Unserialise::_float(values.front()) - _ref_val));
 	}
 
-	double angle = M_PI;
-	for (const auto& _centroid : _centroids) {
-		double aux = M_PI;
-		for (const auto& centroid : centroids) {
-			double rad_angle = std::acos(_centroid * centroid);
-			if (rad_angle < aux) aux = rad_angle;
+	if (values.back() <= _ser_ref_val) {
+		return Serialise::_float(std::fabs(Unserialise::_float(values.back()) - _ref_val));
+	}
+
+	const auto it = std::upper_bound(values.begin(), values.end(), _ser_ref_val);
+	double distance1 = std::fabs(Unserialise::_float(*(it - 1)) - _ref_val);
+	if (distance1 < DBL_TOLERANCE) {
+		return SERIALISED_ZERO;
+	}
+	double distance2 = std::fabs(Unserialise::_float(*it) - _ref_val);
+	return Serialise::_float(distance1 < distance2 ? distance1 : distance2);
+}
+
+
+std::string
+FloatKey::findBiggest(const Xapian::Document& doc) const
+{
+	const auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) return MIN_CMPVALUE;
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	if (values.size() == 1 || values.front() >= _ser_ref_val) {
+		return Serialise::_float(std::fabs(Unserialise::_float(values.back()) - _ref_val));
+	}
+
+	if (values.back() <= _ser_ref_val) {
+		return Serialise::_float(std::fabs(Unserialise::_float(values.front()) - _ref_val));
+	}
+
+	const auto it = std::upper_bound(values.begin(), values.end(), _ser_ref_val);
+	double distance1 = std::fabs(Unserialise::_float(*(it - 1)) - _ref_val);
+	double distance2 = std::fabs(Unserialise::_float(*it) - _ref_val);
+	return Serialise::_float(distance1 > distance2 ? distance1 : distance2);
+}
+
+
+std::string
+IntegerKey::findSmallest(const Xapian::Document& doc) const
+{
+	const auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) return MAX_CMPVALUE;
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	if (values.size() == 1 || values.front() >= _ser_ref_val) {
+		return Serialise::integer(std::llabs(Unserialise::integer(values.front()) - _ref_val));
+	}
+
+	if (values.back() <= _ser_ref_val) {
+		return Serialise::integer(std::llabs(Unserialise::integer(values.back()) - _ref_val));
+	}
+
+	const auto it = std::upper_bound(values.begin(), values.end(), _ser_ref_val);
+	int64_t distance1 = std::llabs(Unserialise::integer(*(it - 1)) - _ref_val);
+	if (distance1 < DBL_TOLERANCE) {
+		return SERIALISED_ZERO;
+	}
+	int64_t distance2 = std::llabs(Unserialise::integer(*it) - _ref_val);
+	return Serialise::integer(distance1 < distance2 ? distance1 : distance2);
+}
+
+
+std::string
+IntegerKey::findBiggest(const Xapian::Document& doc) const
+{
+	const auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) return MIN_CMPVALUE;
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	if (values.size() == 1 || values.front() >= _ser_ref_val) {
+		return Serialise::integer(std::llabs(Unserialise::integer(values.back()) - _ref_val));
+	}
+
+	if (values.back() <= _ser_ref_val) {
+		return Serialise::integer(std::llabs(Unserialise::integer(values.front()) - _ref_val));
+	}
+
+	const auto it = std::upper_bound(values.begin(), values.end(), _ser_ref_val);
+	int64_t distance1 = std::llabs(Unserialise::integer(*(it - 1)) - _ref_val);
+	int64_t distance2 = std::llabs(Unserialise::integer(*it) - _ref_val);
+	return Serialise::integer(distance1 > distance2 ? distance1 : distance2);
+}
+
+
+std::string
+PositiveKey::findSmallest(const Xapian::Document& doc) const
+{
+	const auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) return MAX_CMPVALUE;
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	if (values.size() == 1 || values.front() >= _ser_ref_val) {
+		uint64_t val = Unserialise::positive(values.front());
+		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
+	}
+
+	if (values.back() <= _ser_ref_val) {
+		uint64_t val = Unserialise::positive(values.back());
+		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
+	}
+
+	const auto it = std::upper_bound(values.begin(), values.end(), _ser_ref_val);
+	uint64_t val = Unserialise::positive(*(it - 1));
+	uint64_t distance1 = val > _ref_val ? val - _ref_val : _ref_val - val;
+	if (distance1 < DBL_TOLERANCE) {
+		return SERIALISED_ZERO;
+	}
+	val = Unserialise::positive(*it);
+	uint64_t distance2 = val > _ref_val ? val - _ref_val : _ref_val - val;
+	return Serialise::positive(distance1 < distance2 ? distance1 : distance2);
+}
+
+
+std::string
+PositiveKey::findBiggest(const Xapian::Document& doc) const
+{
+	const auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) return MIN_CMPVALUE;
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	if (values.size() == 1 || values.front() >= _ser_ref_val) {
+		uint64_t val = Unserialise::positive(values.back());
+		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
+	}
+
+	if (values.back() <= _ser_ref_val) {
+		uint64_t val = Unserialise::positive(values.front());
+		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
+	}
+
+	const auto it = std::upper_bound(values.begin(), values.end(), _ser_ref_val);
+	uint64_t val = Unserialise::positive(*(it - 1));
+	uint64_t distance1 = val > _ref_val ? val - _ref_val : _ref_val - val;
+	val = Unserialise::positive(*it);
+	uint64_t distance2 = val > _ref_val ? val - _ref_val : _ref_val - val;
+	return Serialise::positive(distance1 > distance2 ? distance1 : distance2);
+}
+
+
+std::string
+BoolKey::findSmallest(const Xapian::Document& doc) const
+{
+	const auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) return MAX_CMPVALUE;
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	if (values.front().at(0) == _ref_val.at(0) || values.back().at(0) == _ref_val.at(0)) {
+		return SERIALISED_ZERO;
+	} else {
+		return SERIALISED_ONE;
+	}
+}
+
+
+std::string
+BoolKey::findBiggest(const Xapian::Document& doc) const
+{
+	const auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) return MIN_CMPVALUE;
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	if (values.front().at(0) != _ref_val.at(0) || values.back().at(0) != _ref_val.at(0)) {
+		return SERIALISED_ONE;
+	} else {
+		return SERIALISED_ZERO;
+	}
+}
+
+
+std::string
+GeoKey::findSmallest(const Xapian::Document& doc) const
+{
+	const auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) return MAX_CMPVALUE;
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	double min_angle = M_PI;
+	for (const auto& value : values) {
+		const auto geo_val = Unserialise::geo(value);
+		std::vector<Cartesian> centroids;
+		Unserialise::STLCartesian(geo_val.second, std::back_inserter(centroids));
+		if (!centroids.empty()) {
+			double angle = M_PI;
+			for (const auto& _centroid : _centroids) {
+				for (const auto& centroid : centroids) {
+					double rad_angle = std::acos(_centroid * centroid);
+					if (rad_angle < angle) {
+						angle = rad_angle;
+					}
+				}
+			}
+			if (angle < min_angle) {
+				if (angle < DBL_TOLERANCE) {
+					return SERIALISED_ZERO;
+				}
+				min_angle = angle;
+			}
 		}
-		if (aux < angle) angle = aux;
 	}
-	return Serialise::_float(angle);
+
+	return Serialise::_float(min_angle);
+}
+
+
+std::string
+GeoKey::findBiggest(const Xapian::Document& doc) const
+{
+	const auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) return MIN_CMPVALUE;
+
+	std::vector<std::string> values;
+	Unserialise::STLString(multiValues, std::back_inserter(values));
+
+	double max_angle = 0;
+	for (const auto& value : values) {
+		const auto geo_val = Unserialise::geo(value);
+		std::vector<Cartesian> centroids;
+		Unserialise::STLCartesian(geo_val.second, std::back_inserter(centroids));
+
+		if (centroids.empty()) {
+			return SERIALISED_M_PI;
+		}
+
+		double angle = 0;
+		for (const auto& _centroid : _centroids) {
+			for (const auto& centroid : centroids) {
+				double rad_angle = std::acos(_centroid * centroid);
+				if (rad_angle > angle) {
+					angle = rad_angle;
+				}
+			}
+		}
+		if (angle > max_angle) {
+			max_angle = angle;
+		}
+	}
+
+	return Serialise::_float(max_angle);
 }
 
 
@@ -190,9 +392,14 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 					(this->*def_str_metric)(field_spc, reverse, value, qf);
 				}
 				return;
-			case FieldType::GEO:
-				slots.push_back(std::make_unique<GeoKey>(field_spc, reverse, value));
+			case FieldType::GEO: {
+				EWKT ewkt(value);
+				auto centroids = ewkt.geometry->getCentroids();
+				if (!centroids.empty()) {
+					slots.push_back(std::make_unique<GeoKey>(field_spc, reverse, std::move(centroids)));
+				}
 				return;
+			}
 			default:
 				THROW(InvalidArgumentError, "Type '%c' is not supported", field_spc.get_type());
 		}
@@ -216,7 +423,7 @@ Multi_MultiValueKeyMaker::operator()(const Xapian::Document& doc) const
 		// be adjusted.
 		auto reverse_sort = (*i)->get_reverse();
 		// Select The most representative value to create the key.
-		auto v = reverse_sort ? (*i)->findLargest(doc) : (*i)->findSmallest(doc);
+		auto v = reverse_sort ? (*i)->findBiggest(doc) : (*i)->findSmallest(doc);
 		// RULE: v is never empty, because if there is not value in the slot v is MAX_CMPVALUE or STR_FOR_EMPTY.
 
 		if (++i == slots.end() && !reverse_sort) {

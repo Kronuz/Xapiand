@@ -24,7 +24,7 @@
 
 #include "xapiand.h"
 
-#include <cfloat>                         // for DBL_MAX
+#include <cfloat>                         // for DBL_MAX, DBL_MIN
 #include <cmath>                          // for fabs
 #include <cstdlib>                        // for llabs
 #include <memory>                         // for default_delete, unique_ptr
@@ -44,7 +44,14 @@
 
 
 const std::string MAX_CMPVALUE(Serialise::_float(DBL_MAX));
-const std::string STR_FOR_EMPTY("\xff");
+const std::string MIN_CMPVALUE(Serialise::_float(DBL_MIN));
+
+const std::string SERIALISED_ZERO(Serialise::_float(0));
+const std::string SERIALISED_ONE(Serialise::_float(1));
+const std::string SERIALISED_M_PI(Serialise::_float(M_PI));
+
+const std::string MAX_STR_CMPVALUE("\xff");
+const std::string MIN_STR_CMPVALUE("\x00");
 
 
 class Multi_MultiValueKeyMaker;
@@ -59,7 +66,7 @@ extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_s
 extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_soundex_metric;
 
 
-// Base class for create keys.
+// Base class for creating keys.
 class BaseKey {
 protected:
 	Xapian::valueno _slot;
@@ -72,133 +79,166 @@ public:
 
 	virtual ~BaseKey() = default;
 
-	virtual std::string findSmallest(const Xapian::Document& doc) const;
-	virtual std::string findLargest(const Xapian::Document& doc) const;
-	virtual std::string get_cmpvalue(const std::string& serialise_val) const = 0;
-
 	bool get_reverse() const noexcept {
 		return _reverse;
 	}
+
+	virtual std::string findSmallest(const Xapian::Document& doc) const = 0;
+	virtual std::string findBiggest(const Xapian::Document& doc) const = 0;
 };
 
 
-// Class for create the key from the serialized value.
+// Class for creating key from serialised value.
 class SerialiseKey : public BaseKey {
-	std::string get_cmpvalue(const std::string&) const override {
-		return STR_FOR_EMPTY;
-	}
-
 public:
-	std::string findSmallest(const Xapian::Document& doc) const override;
-	std::string findLargest(const Xapian::Document& doc) const override;
-
 	SerialiseKey(Xapian::valueno slot, bool reverse)
 		: BaseKey(slot, reverse) { }
+
+	std::string findSmallest(const Xapian::Document& doc) const override;
+	std::string findBiggest(const Xapian::Document& doc) const override;
 };
 
 
-// Class for create the key using as a reference a float value.
+// Class for creating key using as reference a float value.
 class FloatKey : public BaseKey {
 	double _ref_val;
-
-	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		return Serialise::_float(std::fabs(Unserialise::_float(serialise_val) - _ref_val));
-	}
+	std::string _ser_ref_val;
 
 public:
 	FloatKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
-		  _ref_val(stox(std::stod, value)) { }
+		  _ref_val(stox(std::stod, value)),
+		  _ser_ref_val(Serialise::_float(_ref_val)) { }
+
+	FloatKey(Xapian::valueno slot, bool reverse, double value)
+		: BaseKey(slot, reverse),
+		  _ref_val(value),
+		  _ser_ref_val(Serialise::_float(_ref_val)) { }
+
+	virtual ~FloatKey() = default;
+
+	std::string findSmallest(const Xapian::Document& doc) const override;
+	std::string findBiggest(const Xapian::Document& doc) const override;
 };
 
 
-// Class for create the key using as a reference a integer value.
+// Class for creating key using as reference a integer value.
 class IntegerKey : public BaseKey {
 	int64_t _ref_val;
-
-	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		return Serialise::integer(std::llabs(Unserialise::integer(serialise_val) - _ref_val));
-	}
+	std::string _ser_ref_val;
 
 public:
 	IntegerKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
-		  _ref_val(stox(std::stoll, value)) { }
+		  _ref_val(stox(std::stoll, value)),
+		  _ser_ref_val(Serialise::integer(_ref_val)) { }
+
+	std::string findSmallest(const Xapian::Document& doc) const override;
+	std::string findBiggest(const Xapian::Document& doc) const override;
 };
 
 
-// Class for create the key using as a reference a positive value.
+// Class for creating key using as reference a positive value.
 class PositiveKey : public BaseKey {
 	uint64_t _ref_val;
-
-	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		int64_t val = Unserialise::positive(serialise_val) - _ref_val;
-		return Serialise::positive(std::llabs(val));
-	}
+	std::string _ser_ref_val;
 
 public:
 	PositiveKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
-		  _ref_val(stox(std::stoull, value)) { }
+		  _ref_val(stox(std::stoull, value)),
+		  _ser_ref_val(Serialise::positive(_ref_val)) { }
+
+	std::string findSmallest(const Xapian::Document& doc) const override;
+	std::string findBiggest(const Xapian::Document& doc) const override;
 };
 
 
-// Class for create the key using as a reference a date value.
-class DateKey : public BaseKey {
-	double _ref_val;
-
-	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		return Serialise::timestamp(std::fabs(Unserialise::timestamp(serialise_val) - _ref_val));
-	}
-
+// Class for creating key using as reference a date value.
+class DateKey : public FloatKey {
 public:
 	DateKey(Xapian::valueno slot, bool reverse, const std::string& value)
-		: BaseKey(slot, reverse),
-		  _ref_val(Datetime::timestamp(value)) { }
+		: FloatKey(slot, reverse, Datetime::timestamp(value)) { }
 };
 
 
-// Class for create the key using as a reference a boolean value.
+// Class for creating key using as reference a boolean value.
 class BoolKey : public BaseKey {
 	std::string _ref_val;
-
-	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		return Serialise::positive(serialise_val[0] != _ref_val[0]);
-	}
 
 public:
 	BoolKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
 		  _ref_val(Serialise::boolean(value)) { }
+
+	std::string findSmallest(const Xapian::Document& doc) const override;
+	std::string findBiggest(const Xapian::Document& doc) const override;
 };
 
 
-// Class for create the key using as a reference a string value.
+// Class for creating key using as reference a string value.
 template <typename StringMetric>
 class StringKey : public BaseKey {
 	StringMetric _metric;
-
-	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		return Serialise::_float(_metric.distance(serialise_val));
-	}
 
 public:
 	StringKey(Xapian::valueno slot, bool reverse, const std::string& value, bool icase)
 		: BaseKey(slot, reverse),
 		  _metric(value, icase) { }
+
+	std::string findSmallest(const Xapian::Document& doc) const override {
+		const auto multiValues = doc.get_value(_slot);
+		if (multiValues.empty()) return MAX_CMPVALUE;
+
+		std::vector<std::string> values;
+		Unserialise::STLString(multiValues, std::back_inserter(values));
+
+		double min_distance = DBL_MAX;
+		for (const auto& value : values) {
+			double distance = _metric.distance(value);
+			if (distance < min_distance) {
+				if (distance < DBL_TOLERANCE) {
+					return SERIALISED_ZERO;
+				}
+				min_distance = distance;
+			}
+		}
+
+		return Serialise::_float(min_distance);
+	}
+
+	std::string findBiggest(const Xapian::Document& doc) const override {
+		const auto multiValues = doc.get_value(_slot);
+		if (multiValues.empty()) return MIN_CMPVALUE;
+
+		std::vector<std::string> values;
+		Unserialise::STLString(multiValues, std::back_inserter(values));
+
+		double max_distance = DBL_MIN;
+		for (const auto& value : values) {
+			double distance = _metric.distance(value);
+			if (distance > max_distance) {
+				max_distance = distance;
+			}
+		}
+
+		return Serialise::_float(max_distance);
+	}
 };
 
 
-// Class for create the key using as a reference a geospatial value.
+// Class for creating key using as reference a geospatial value.
 class GeoKey : public BaseKey {
 	std::vector<Cartesian> _centroids;
 
-	std::string get_cmpvalue(const std::string& serialise_val) const override;
-
 public:
-	GeoKey(const required_spc_t& field_spc, bool reverse, const std::string& value)
+	template <typename T, typename = std::enable_if_t<std::is_same<std::vector<Cartesian>, std::decay_t<T>>::value>>
+	GeoKey(const required_spc_t& field_spc, bool reverse, T&& centroids)
 		: BaseKey(field_spc.slot, reverse),
-		  _centroids(EWKT(value).geometry->getCentroids()) { }
+		  _centroids(std::forward<T>(centroids)) { }
+
+	std::string findSmallest(const Xapian::Document& doc) const override;
+	std::string findBiggest(const Xapian::Document& doc) const override;
 };
 
 
