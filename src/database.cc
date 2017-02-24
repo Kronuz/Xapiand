@@ -364,7 +364,7 @@ DatabaseWAL::init_database()
 	validate_uuid = false;
 
 	try {
-		open(base_path + WAL_STORAGE_PATH + "0", STORAGE_OPEN | STORAGE_COMPRESS);
+		open(std::string(WAL_STORAGE_PATH) + "0", STORAGE_OPEN | STORAGE_COMPRESS);
 	} catch (const StorageIOError&) {
 		return true;
 	}
