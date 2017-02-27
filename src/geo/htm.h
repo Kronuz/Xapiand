@@ -84,9 +84,19 @@ struct range_t {
 	uint64_t start;
 	uint64_t end;
 
+	range_t()
+		: start(0),
+		  end(0) { }
+
 	range_t(uint64_t _start, uint64_t _end)
 		: start(_start),
 		  end(_end) { }
+
+	range_t(range_t&& o) noexcept = default;
+	range_t(const range_t& o) = default;
+
+	range_t& operator=(range_t&& o) noexcept = default;
+	range_t& operator=(const range_t& o) = default;
 
 	bool operator==(const range_t& r) const noexcept {
 		return start == r.start && end == r.end;
