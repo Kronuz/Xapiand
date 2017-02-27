@@ -40,6 +40,7 @@
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "schema.h"                                   // for FieldType, FieldType::TERM, Fiel...
+#include "serialise_list.h"                           // for StringList, CartesianList and RangeList
 #include "utils.h"                                    // for toUType, stox, repr
 
 
@@ -917,10 +918,10 @@ Serialise::ranges(const std::vector<range_t>& ranges)
 std::string
 Serialise::geo(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids)
 {
-	auto aux = STLRange(ranges.begin(), ranges.end());
+	auto aux = RangeList::serialise(ranges.begin(), ranges.end());
 	auto values = serialise_length(aux.length());
 	values.append(aux);
-	aux = STLCartesian(centroids.begin(), centroids.end());
+	aux = CartesianList::serialise(centroids.begin(), centroids.end());
 	values.append(serialise_length(aux.length()));
 	values.append(aux);
 	values.insert(0, serialise_length(values.length()));
@@ -1172,9 +1173,8 @@ Unserialise::ranges(const std::string& serialised_geo)
 	try {
 		unserialise_length(&pos, end, true);
 		const auto length = unserialise_length(&pos, end, true);
-		const std::string serialised_ranges(pos, length);
 		std::vector<range_t> ranges;
-		STLRange(serialised_ranges, std::back_inserter(ranges));
+		RangeList::unserialise(std::string(pos, length), std::back_inserter(ranges));
 		return ranges;
 	} catch (const SerialisationError&) {
 		return std::vector<range_t>();
@@ -1204,16 +1204,14 @@ std::string
 Unserialise::ewkt(const std::string& serialised_ewkt)
 {
 	auto unserialise = geo(serialised_ewkt);
-	std::vector<range_t> ranges;
-	STLRange(unserialise.first, std::back_inserter(ranges));
+	RangeList ranges(std::move(unserialise.first));
 	std::string res("Ranges: { ");
 	for (const auto& range : ranges) {
 		res += "[" + std::to_string(range.start) + ", " + std::to_string(range.end) + "] ";
 	}
 	res += "}";
 
-	std::vector<Cartesian> centroids;
-	STLCartesian(unserialise.second, std::back_inserter(centroids));
+	CartesianList centroids(std::move(unserialise.second));
 	res += "  Centroids: { ";
 	for (const auto& centroid : centroids) {
 		res += "(" + std::to_string(centroid.x) + ", " + std::to_string(centroid.y) + ", " + std::to_string(centroid.z) + ") ";

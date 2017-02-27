@@ -115,7 +115,6 @@
 
 constexpr char SERIALISED_FALSE      = 'f';
 constexpr char SERIALISED_TRUE       = 't';
-constexpr char SERIALISED_STL_MAGIC  = '\0';
 
 
 constexpr uint8_t SERIALISED_LENGTH_CARTESIAN = 12;
@@ -313,63 +312,6 @@ namespace Serialise {
 	inline std::string serialise(const std::vector<range_t>& val) {
 		return ranges(val);
 	}
-
-
-	/*
-	 * Serialise functions to serialise a range of values.
-	 */
-
-	template <typename InputIt>
-	std::string STLString(InputIt first, InputIt last) {
-		const auto size = std::distance(first, last);
-		if (size == 1) {
-			return *first;
-		} else if (size > 1) {
-			std::string serialised(1, SERIALISED_STL_MAGIC);
-			for ( ; first != last; ++first) {
-				serialised.append(serialise_length(first->length())).append(*first);
-			}
-			return serialised;
-		}
-
-		return std::string();
-	}
-
-	template <typename InputIt>
-	std::string STLCartesian(InputIt first, InputIt last) {
-		const auto size = std::distance(first, last);
-		if (size == 1) {
-			return Serialise::cartesian(*first);
-		} else if (size > 1) {
-			std::string serialised;
-			serialised.reserve(SERIALISED_LENGTH_CARTESIAN * size + 1);
-			serialised.push_back(SERIALISED_STL_MAGIC);
-			for ( ; first != last; ++first) {
-				serialised.append(Serialise::cartesian(*first));
-			}
-			return serialised;
-		}
-
-		return std::string();
-	}
-
-	template <typename InputIt>
-	std::string STLRange(InputIt first, InputIt last) {
-		const auto size = std::distance(first, last);
-		if (size == 1) {
-			return Serialise::range(*first);
-		} else if (size > 1) {
-			std::string serialised;
-			serialised.reserve(SERIALISED_LENGTH_RANGE * size + 1);
-			serialised.push_back(SERIALISED_STL_MAGIC);
-			for ( ; first != last; ++first) {
-				serialised.append(Serialise::range(*first));
-			}
-			return serialised;
-		}
-
-		return std::string();
-	}
 };
 
 
@@ -431,79 +373,4 @@ namespace Unserialise {
 
 	// Unserialise str_type to its FieldType.
 	FieldType type(const std::string& str_type);
-
-
-	/*
-	 * Unserialise functions for add the unserialised range of values  in d_first.
-	 */
-
-	template <typename OutputIt>
-	void STLString(const char** ptr, const char* end, OutputIt d_first) {
-		const char* pos = *ptr;
-		if (pos != end) {
-			if (*pos == SERIALISED_STL_MAGIC) {
-				++pos;
-				for ( ; pos != end; ++d_first) {
-					const auto length = unserialise_length(&pos, end, true);
-					*d_first = std::string(pos, length);
-					pos += length;
-				}
-			} else {
-				*d_first = std::string(pos, end - pos);
-			}
-		}
-	}
-
-	template <typename OutputIt>
-	inline void STLString(const std::string& serialised, OutputIt d_first) {
-		const char* ptr = serialised.data();
-		const char* end = serialised.data() + serialised.length();
-		STLString(&ptr, end, d_first);
-	}
-
-	template <typename OutputIt>
-	void STLCartesian(const char** ptr, const char* end, OutputIt d_first) {
-		const char* pos = *ptr;
-		if (pos != end) {
-			if (*pos == SERIALISED_STL_MAGIC) {
-				++pos;
-				for ( ; end - pos >= SERIALISED_LENGTH_CARTESIAN; ++d_first) {
-					*d_first = Unserialise::cartesian(std::string(pos, SERIALISED_LENGTH_CARTESIAN));
-					pos += SERIALISED_LENGTH_CARTESIAN;
-				}
-			} else if (end - pos == SERIALISED_LENGTH_CARTESIAN) {
-				*d_first = Unserialise::cartesian(std::string(pos, SERIALISED_LENGTH_CARTESIAN));
-			}
-		}
-	}
-
-	template <typename OutputIt>
-	inline void STLCartesian(const std::string& serialised, OutputIt d_first) {
-		const char* ptr = serialised.data();
-		const char* end = serialised.data() + serialised.length();
-		STLCartesian(&ptr, end, d_first);
-	}
-
-	template <typename OutputIt>
-	void STLRange(const char** ptr, const char* end, OutputIt d_first) {
-		const char* pos = *ptr;
-		if (pos != end) {
-			if (*pos == SERIALISED_STL_MAGIC) {
-				++pos;
-				for ( ; end - pos >= SERIALISED_LENGTH_RANGE; ++d_first) {
-					*d_first = Unserialise::range(std::string(pos, SERIALISED_LENGTH_RANGE));
-					pos += SERIALISED_LENGTH_RANGE;
-				}
-			} else if (end - pos == SERIALISED_LENGTH_RANGE) {
-				*d_first = Unserialise::range(std::string(pos, SERIALISED_LENGTH_RANGE));
-			}
-		}
-	}
-
-	template <typename OutputIt>
-	inline void STLRange(const std::string& serialised, OutputIt d_first) {
-		const char* ptr = serialised.data();
-		const char* end = serialised.data() + serialised.length();
-		STLRange(&ptr, end, d_first);
-	}
 };
