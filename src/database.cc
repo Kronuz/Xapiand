@@ -1890,7 +1890,9 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if (!queue->pop(database, 0)) {
 			// Increment so other threads don't delete the queue
 			if (queue->inc_count(writable ? 1 : -1)) {
-				bool count = queue->count;
+#ifdef XAPIAND_DATABASE_WAL
+				size_t count = queue->count;
+#endif
 				lk.unlock();
 				try {
 					database = std::make_shared<Database>(queue, endpoints, flags);
