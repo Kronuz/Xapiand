@@ -218,7 +218,7 @@ MultipleValueRange::insideRange() const noexcept
 {
 	StringList data(get_value());
 
-	if (data.empty() || start > data.back() || end < data.front()) {
+	if (data.empty() || end < data.front() || start > data.back()) {
 		return false;
 	}
 
