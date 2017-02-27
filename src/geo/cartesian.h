@@ -128,15 +128,17 @@ public:
 	Cartesian();
 	Cartesian(double lat, double lon, double height, Units units, int _SRID=WGS84);
 	Cartesian(double _x, double _y, double _z, int _SRID=WGS84);
+
 	// Move constructor
-	Cartesian(Cartesian&& p) = default;
+	Cartesian(Cartesian&& p) noexcept = default;
 	// Copy constructor
 	Cartesian(const Cartesian& p) = default;
 
 	// Move assignment
-	Cartesian& operator=(Cartesian&& p) = default;
+	Cartesian& operator=(Cartesian&& p) noexcept = default;
 	// Copy assignment
 	Cartesian& operator=(const Cartesian& p) = default;
+
 	bool operator==(const Cartesian& p) const noexcept;
 	bool operator!=(const Cartesian& p) const noexcept;
 	bool operator<(const Cartesian& p) const noexcept;
