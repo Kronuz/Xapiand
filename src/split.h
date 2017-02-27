@@ -47,17 +47,17 @@ class Split {
 		return (this->*search_func)(pos);
 	}
 
-public:
-	class iterator : public std::iterator<std::input_iterator_tag, std::string> {
+	template <typename T>
+	class Iterator : public std::iterator<std::forward_iterator_tag, T> {
 		friend class Split;
 
 		const Split* split;
 		std::string::size_type start;
 		std::string::size_type end;
-		std::string str;
+		mutable std::string value;
 		size_t inc;
 
-		iterator(const Split* split_, std::string::size_type pos_=0)
+		Iterator(const Split* split_, std::string::size_type pos_=0)
 			: split(split_),
 			  start(pos_),
 			  end(pos_),
@@ -94,35 +94,57 @@ public:
 		}
 
 	public:
-		iterator& operator++() {
+		Iterator& operator++() {
 			next();
 			return *this;
 		}
 
-		iterator operator++(int) {
+		Iterator operator++(int) {
 			iterator it = *this;
 			next();
 			return it;
 		}
 
-		std::string& operator*() {
+		T& operator*() const {
 			if (end == std::string::npos) {
-				str.assign(split->str.substr(start));
+				value.assign(split->str.substr(start));
 			} else {
-				str.assign(split->str.substr(start, end - start));
+				value.assign(split->str.substr(start, end - start));
 			}
-			return str;
+			return value;
 		}
 
-		bool operator==(const iterator& other) const {
+		T& operator*() {
+			if (end == std::string::npos) {
+				value.assign(split->str.substr(start));
+			} else {
+				value.assign(split->str.substr(start, end - start));
+			}
+			return value;
+		}
+
+		T* operator->() const {
+			return &operator*();
+		}
+
+		T* operator->() {
+			return &operator*();
+		}
+
+		bool operator==(const Iterator& other) const {
 			return split == other.split && start == other.start && end == other.end;
 		}
 
-		bool operator!=(const iterator& other) const {
+		bool operator!=(const Iterator& other) const {
 			return !operator==(other);
+		}
+
+		explicit operator bool() const noexcept {
+			return start != std::string::npos;
 		}
 	};
 
+public:
 	enum class Type : uint8_t {
 		FIND,
 		FIND_FIRST_OF,
@@ -148,12 +170,35 @@ public:
 		}
 	}
 
-	iterator begin() const {
+	using iterator = Iterator<std::string>;
+	using const_iterator = Iterator<const std::string>;
+
+	iterator begin() {
 		return iterator(this);
 	}
 
-	iterator end() const {
+	const_iterator begin() const {
+		return const_iterator(this);
+	}
+
+	const_iterator cbegin() const {
+		return const_iterator(this);
+	}
+
+	iterator end() {
 		return iterator(this, std::string::npos);
+	}
+
+	const_iterator end() const {
+		return const_iterator(this, std::string::npos);
+	}
+
+	const_iterator cend() const {
+		return const_iterator(this, std::string::npos);
+	}
+
+	size_t size() const noexcept {
+		return std::distance(begin(), end());
 	}
 
 	const std::string& get_str() const noexcept {
