@@ -175,6 +175,9 @@ namespace Cast {
 };
 
 
+class RangeList;
+
+
 namespace Serialise {
 	inline static bool isText(const std::string& field_value, bool bool_term) noexcept {
 		return !bool_term && field_value.find(' ') != std::string::npos;
@@ -366,7 +369,7 @@ namespace Unserialise {
 	std::string ewkt(const std::string& serialised_geo);
 
 	// Unserialise a serialised GEO (Save as value).
-	std::vector<range_t> ranges(const std::string& serialised_geo);
+	RangeList ranges(const std::string& serialised_geo);
 
 	// Unserialise a serialised GEO (Save as a value), returns unserialised ranges and centroids.
 	std::pair<std::string, std::string> geo(const std::string& serialised_geo);

@@ -33,7 +33,7 @@ GeoSpatialRange::insideRanges()
 {
 	const auto _ranges = Unserialise::ranges(get_value());
 
-	if (_ranges.empty() || ranges.front().start > _ranges.back().end || ranges.back().end < _ranges.front().start) {
+	if (_ranges.empty() || _ranges.front().start > ranges.back().end || _ranges.back().end < ranges.front().start) {
 		return false;
 	}
 
@@ -140,7 +140,8 @@ GeoSpatialRange::unserialise_with_registry(const std::string& s, const Xapian::R
 
 		auto it = data.begin();
 		const auto slot_ = static_cast<Xapian::valueno>(unserialise_length(*it));
-		return new GeoSpatialRange(slot_, Unserialise::ranges(*(++it)));
+		auto ranges_ = Unserialise::ranges(*++it);
+		return new GeoSpatialRange(slot_, std::vector<range_t>(std::make_move_iterator(ranges_.begin()), std::make_move_iterator(ranges_.end())));
 	} catch (const SerialisationError&) {
 		throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
 	}

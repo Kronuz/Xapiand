@@ -1165,7 +1165,7 @@ Unserialise::uuid(const std::string& serialised_uuid)
 }
 
 
-std::vector<range_t>
+RangeList
 Unserialise::ranges(const std::string& serialised_geo)
 {
 	const char* pos = serialised_geo.data();
@@ -1173,11 +1173,9 @@ Unserialise::ranges(const std::string& serialised_geo)
 	try {
 		unserialise_length(&pos, end, true);
 		const auto length = unserialise_length(&pos, end, true);
-		std::vector<range_t> ranges;
-		RangeList::unserialise(std::string(pos, length), std::back_inserter(ranges));
-		return ranges;
+		return RangeList(std::string(pos, length));
 	} catch (const SerialisationError&) {
-		return std::vector<range_t>();
+		return RangeList(std::string());
 	}
 }
 
