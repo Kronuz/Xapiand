@@ -148,17 +148,25 @@ std::string
 AggregationMatchSpy::serialise() const
 {
 	std::vector<std::string> data = { _aggs.serialise(), _schema->get_const_schema()->serialise() };
-	return Serialise::STLString(data.begin(), data.end());
+	return StringList::serialise(data.begin(), data.end());
 }
 
 
 Xapian::MatchSpy*
 AggregationMatchSpy::unserialise(const std::string& s, const Xapian::Registry&) const
 {
-	std::vector<std::string> data;
-	Unserialise::STLString(s, std::back_inserter(data));
-	auto internal_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(data.at(1)));
-	return new AggregationMatchSpy(MsgPack::unserialise(data.at(0)), std::make_shared<Schema>(internal_schema));
+	try {
+		StringList data(s);
+
+		if (data.size() != 2) {
+			throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
+		}
+
+		auto it = data.begin();
+		return new AggregationMatchSpy(MsgPack::unserialise(*it), std::make_shared<Schema>(std::make_shared<const MsgPack>(MsgPack::unserialise(*++it))));
+	} catch (const SerialisationError&) {
+		throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
+	}
 }
 
 

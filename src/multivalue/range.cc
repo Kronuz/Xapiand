@@ -22,21 +22,21 @@
 
 #include "range.h"
 
-#include <stdexcept>                       // for out_of_range
-#include <sys/types.h>                     // for int64_t, uint64_t
-#include <type_traits>                     // for decay_t, enable_if_t, is_i...
-#include <vector>                          // for vector
+#include <stdexcept>                // for out_of_range
+#include <sys/types.h>              // for int64_t, uint64_t
+#include <type_traits>              // for decay_t, enable_if_t, is_i...
+#include <vector>                   // for vector
 
-#include "datetime.h"                      // for timestamp
-#include "exception.h"                     // for MSG_QueryParserError, Quer...
-#include "generate_terms.h"                // for date, geo, numeric
-#include "geo/ewkt.h"                      // for EWKT
-#include "geospatialrange.h"               // for GeoSpatialRange
-#include "length.h"                        // for serialise_length
-#include "query_dsl.h"                     // for QUERYDSL_FROM, QUERYDSL_TO
-#include "schema.h"                        // for required_spc_t, FieldType
-#include "serialise.h"                     // for MsgPack, cast, _float, int...
-#include "utils.h"                         // for stox
+#include "datetime.h"               // for timestamp
+#include "exception.h"              // for MSG_QueryParserError, Quer...
+#include "generate_terms.h"         // for date, geo, numeric
+#include "geo/ewkt.h"               // for EWKT
+#include "geospatialrange.h"        // for GeoSpatialRange
+#include "length.h"                 // for serialise_length
+#include "query_dsl.h"              // for QUERYDSL_FROM, QUERYDSL_TO
+#include "schema.h"                 // for required_spc_t, FieldType
+#include "serialise_list.h"         // for StringList
+#include "utils.h"                  // for stox
 
 
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
@@ -216,8 +216,7 @@ MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, T&& start_, T&& en
 bool
 MultipleValueRange::insideRange() const noexcept
 {
-	std::vector<std::string> data;
-	Unserialise::STLString(get_value(), std::back_inserter(data));
+	StringList data(get_value());
 
 	if (data.empty() || start > data.back() || end < data.front()) {
 		return false;
@@ -297,16 +296,25 @@ std::string
 MultipleValueRange::serialise() const
 {
 	std::vector<std::string> data = { serialise_length(get_slot()), start, end };
-	return Serialise::STLString(data.begin(), data.end());
+	return StringList::serialise(data.begin(), data.end());
 }
 
 
 MultipleValueRange*
 MultipleValueRange::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
-	std::vector<std::string> data;
-	Unserialise::STLString(s, std::back_inserter(data));
-	return new MultipleValueRange(unserialise_length(data.at(0)), std::move(data.at(1)), std::move(data.at(2)));
+	try {
+		StringList data(s);
+
+		if (data.size() != 3) {
+			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
+		}
+
+		auto it = data.begin();
+		return new MultipleValueRange(unserialise_length(*it), std::move(*(++it)), std::move(*(++it)));
+	} catch (const SerialisationError& er) {
+		throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
+	}
 }
 
 
@@ -339,8 +347,7 @@ MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, T&& start_)
 bool
 MultipleValueGE::insideRange() const noexcept
 {
-	std::vector<std::string> data;
-	Unserialise::STLString(get_value(), std::back_inserter(data));
+	StringList data(get_value());
 
 	if (data.empty()) {
 		return false;
@@ -414,16 +421,25 @@ std::string
 MultipleValueGE::serialise() const
 {
 	std::vector<std::string> data = { serialise_length(get_slot()), start };
-	return Serialise::STLString(data.begin(), data.end());
+	return StringList::serialise(data.begin(), data.end());
 }
 
 
 MultipleValueGE*
 MultipleValueGE::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
-	std::vector<std::string> data;
-	Unserialise::STLString(s, std::back_inserter(data));
-	return new MultipleValueGE(unserialise_length(data.at(0)), std::move(data.at(1)));
+	try {
+		StringList data(s);
+
+		if (data.size() != 2) {
+			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
+		}
+
+		auto it = data.begin();
+		return new MultipleValueGE(unserialise_length(*it), std::move(*(++it)));
+	} catch (const SerialisationError& er) {
+		throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
+	}
 }
 
 
@@ -455,8 +471,7 @@ MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, T&& end_)
 bool
 MultipleValueLE::insideRange() const noexcept
 {
-	std::vector<std::string> data;
-	Unserialise::STLString(get_value(), std::back_inserter(data));
+	StringList data(get_value());
 
 	if (data.empty()) {
 		return false;
@@ -530,16 +545,25 @@ std::string
 MultipleValueLE::serialise() const
 {
 	std::vector<std::string> data = { serialise_length(get_slot()), end };
-	return Serialise::STLString(data.begin(), data.end());
+	return StringList::serialise(data.begin(), data.end());
 }
 
 
 MultipleValueLE*
 MultipleValueLE::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
-	std::vector<std::string> data;
-	Unserialise::STLString(s, std::back_inserter(data));
-	return new MultipleValueLE(unserialise_length(data.at(0)), std::move(data.at(1)));
+	try {
+		StringList data(s);
+
+		if (data.size() != 2) {
+			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
+		}
+
+		auto it = data.begin();
+		return new MultipleValueLE(unserialise_length(*it), std::move(*(++it)));
+	} catch (const SerialisationError& er) {
+		throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
+	}
 }
 
 

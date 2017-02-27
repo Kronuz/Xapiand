@@ -38,7 +38,7 @@
 #include "geo/ewkt.h"                     // for EWKT
 #include "phonetic.h"                     // for SoundexEnglish, SoundexFrench...
 #include "schema.h"                       // for required_spc_t, required_sp...
-#include "serialise.h"                    // for _float, positive, integer
+#include "serialise_list.h"               // for StringList, ...
 #include "string_metric.h"                // for Jaccard, Jaro, Jaro_Winkler...
 #include "utils.h"                        // for stox
 
@@ -188,10 +188,11 @@ public:
 
 	std::string findSmallest(const Xapian::Document& doc) const override {
 		const auto multiValues = doc.get_value(_slot);
-		if (multiValues.empty()) return MAX_CMPVALUE;
+		if (multiValues.empty()) {
+			return MAX_CMPVALUE;
+		}
 
-		std::vector<std::string> values;
-		Unserialise::STLString(multiValues, std::back_inserter(values));
+		StringList values(std::move(multiValues));
 
 		double min_distance = DBL_MAX;
 		for (const auto& value : values) {
@@ -209,10 +210,11 @@ public:
 
 	std::string findBiggest(const Xapian::Document& doc) const override {
 		const auto multiValues = doc.get_value(_slot);
-		if (multiValues.empty()) return MIN_CMPVALUE;
+		if (multiValues.empty()) {
+			return MIN_CMPVALUE;
+		}
 
-		std::vector<std::string> values;
-		Unserialise::STLString(multiValues, std::back_inserter(values));
+		StringList values(std::move(multiValues));
 
 		double max_distance = DBL_MIN;
 		for (const auto& value : values) {

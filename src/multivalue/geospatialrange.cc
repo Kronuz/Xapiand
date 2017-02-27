@@ -22,10 +22,10 @@
 
 #include "geospatialrange.h"
 
-#include <cmath>                          // for M_PI, acos
-#include <utility>                        // for pair
+#include <cmath>               // for M_PI, acos
+#include <utility>             // for pair
 
-#include "serialise.h"                    // for STLRanges, STLString
+#include "serialise_list.h"    // for StringList, RangeList
 
 
 bool
@@ -124,18 +124,26 @@ std::string
 GeoSpatialRange::serialise() const
 {
 	std::vector<std::string> data = { serialise_length(get_slot()), Serialise::ranges(ranges) };
-	return Serialise::STLString(data.begin(), data.end());
+	return StringList::serialise(data.begin(), data.end());
 }
 
 
 GeoSpatialRange*
 GeoSpatialRange::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
-	std::vector<std::string> data;
-	Unserialise::STLString(s, std::back_inserter(data));
+	try {
+		StringList data(s);
 
-	const auto slot_ = static_cast<Xapian::valueno>(unserialise_length(data.at(0)));
-	return new GeoSpatialRange(slot_, Unserialise::ranges(data.at(1)));
+		if (data.size() != 2) {
+			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
+		}
+
+		auto it = data.begin();
+		const auto slot_ = static_cast<Xapian::valueno>(unserialise_length(*it));
+		return new GeoSpatialRange(slot_, Unserialise::ranges(*(++it)));
+	} catch (const SerialisationError&) {
+		throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
+	}
 }
 
 

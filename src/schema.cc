@@ -41,7 +41,7 @@
 #include "log.h"                           // for L_CALL
 #include "manager.h"                       // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"     // for integer, geo, date, positive
-#include "serialise.h"                     // for type
+#include "serialise_list.h"                // for StringList
 #include "split.h"                         // for Split
 
 
@@ -4957,7 +4957,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		}
 
 		for (const auto& elem : map_values) {
-			const auto val_ser = Serialise::STLString(elem.second.begin(), elem.second.end());
+			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
 			doc.add_value(elem.first, val_ser);
 			L_INDEX(this, "Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
 		}
