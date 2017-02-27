@@ -672,7 +672,6 @@ void demote(const char* username, const char* group) {
 void detach() {
 	pid_t pid = fork();
 	if (pid != 0) {
-		L_NOTICE(nullptr, "Xapiand is done with all work here. Daemon on process ID [%d] taking over!", pid);
 		exit(EX_OK); /* parent exits */
 	}
 	setsid(); /* create a new session */
@@ -816,6 +815,12 @@ int main(int argc, char **argv) {
 
 	std::setlocale(LC_CTYPE, "");
 
+	if (opts.detach) {
+		detach();
+		writepid(opts.pidfile.c_str());
+	}
+
+	//Log thread must be created after fork the parent process
 	auto& handlers = Log::handlers;
 	if (opts.logfile.compare("syslog") == 0) {
 		handlers.push_back(std::make_unique<SysLog>());
@@ -829,10 +834,9 @@ int main(int argc, char **argv) {
 	Log::log_level += opts.verbosity;
 
 	banner();
+
 	if (opts.detach) {
-		detach();
-		writepid(opts.pidfile.c_str());
-		banner();
+		L_NOTICE(nullptr, "Xapiand is done with all work here. Daemon on process ID [%d] taking over!", getpid());
 	}
 
 	usleep(100000ULL);
