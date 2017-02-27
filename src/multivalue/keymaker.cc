@@ -345,13 +345,12 @@ GeoKey::findSmallest(const Xapian::Document& doc) const
 
 	double min_angle = M_PI;
 	for (const auto& value : values) {
-		const auto geo_val = Unserialise::geo(value);
-		std::vector<Cartesian> centroids;
-		CartesianList::unserialise(geo_val.second, std::back_inserter(centroids));
+		auto geo_val = Unserialise::geo(value);
+		CartesianList centroids(std::move(geo_val.second));
 		if (!centroids.empty()) {
 			double angle = M_PI;
-			for (const auto& _centroid : _centroids) {
-				for (const auto& centroid : centroids) {
+			for (const auto& centroid : centroids) {
+				for (const auto& _centroid : _centroids) {
 					double rad_angle = std::acos(_centroid * centroid);
 					if (rad_angle < angle) {
 						angle = rad_angle;
@@ -384,17 +383,15 @@ GeoKey::findBiggest(const Xapian::Document& doc) const
 
 	double max_angle = 0;
 	for (const auto& value : values) {
-		const auto geo_val = Unserialise::geo(value);
-		std::vector<Cartesian> centroids;
-		CartesianList::unserialise(geo_val.second, std::back_inserter(centroids));
-
+		auto geo_val = Unserialise::geo(value);
+		CartesianList centroids(std::move(geo_val.second));
 		if (centroids.empty()) {
 			return SERIALISED_M_PI;
 		}
 
 		double angle = 0;
-		for (const auto& _centroid : _centroids) {
-			for (const auto& centroid : centroids) {
+		for (const auto& centroid : centroids) {
+			for (const auto& _centroid : _centroids) {
 				double rad_angle = std::acos(_centroid * centroid);
 				if (rad_angle > angle) {
 					angle = rad_angle;
