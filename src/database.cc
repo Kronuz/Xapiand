@@ -37,6 +37,7 @@
 #include "database_autocommit.h"  // for DatabaseAutocommit
 #include "database_handler.h"     // for DatabaseHandler
 #include "exception.h"            // for Error, MSG_Error, Exception, DocNot...
+#include "guid/guid.h"            // for Guid
 #include "io_utils.h"             // for close, strerrno, write, open
 #include "length.h"               // for serialise_length, unserialise_length
 #include "log.h"                  // for L_OBJ, L_CALL, Log
@@ -369,7 +370,23 @@ DatabaseWAL::init_database()
 		return true;
 	}
 
-	auto uuid = Serialise::uuid(std::string(header.head.uuid, 36));
+	std::string uuid_str(header.head.uuid, 36);
+	if (uuid_str[8] != '-' || uuid_str[13] != '-' || uuid_str[18] != '-' || uuid_str[23] != '-') {
+		THROW(SerialisationError, "Invalid UUID format in: %s", uuid_str.c_str());
+	}
+	for (size_t i = 0; i < SIZE_UUID; ++i) {
+		if (!std::isxdigit(uuid_str.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
+			THROW(SerialisationError, "Invalid UUID format in: %s", uuid_str.c_str());
+		}
+	}
+
+	Guid guid(uuid_str);
+	const auto& bytes = guid.get_bytes();
+	std::string uuid;
+	uuid.reserve(bytes.size());
+	for (const char& c : bytes) {
+		uuid.push_back(c);
+	}
 
 	int fd = io::open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL);
 	if (unlikely(fd < 0)) {
