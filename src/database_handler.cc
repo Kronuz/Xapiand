@@ -27,6 +27,7 @@
 #include <exception>                        // for exception
 #include <stdexcept>                        // for out_of_range
 
+#include "cast.h"                           // for Cast
 #include "database.h"                       // for DatabasePool, Database
 #include "exception.h"                      // for CheckoutError, ClientError
 #include "length.h"                         // for unserialise_length, seria...

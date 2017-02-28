@@ -30,6 +30,7 @@
 #include <sys/fcntl.h>                               // for O_CLOEXEC, O_CREAT, O_RDONLY
 #include <sys/stat.h>                                // for stat
 
+#include "cast.h"                                    // for Cast
 #include "cppcodec/base64_default_url_unpadded.hpp"  // for base64 namespace
 #include "exception.h"                               // for ClientError, MSG_ClientError
 #include "guid/guid.h"                               // for Guid

@@ -27,6 +27,7 @@
 #include <type_traits>              // for decay_t, enable_if_t, is_i...
 #include <vector>                   // for vector
 
+#include "cast.h"                   // for Cast
 #include "datetime.h"               // for timestamp
 #include "exception.h"              // for MSG_QueryParserError, Quer...
 #include "generate_terms.h"         // for date, geo, numeric

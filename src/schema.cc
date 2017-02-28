@@ -35,6 +35,7 @@
 #include <type_traits>                     // for remove_reference<>::type
 #include <unordered_set>                   // for unordered_set
 
+#include "cast.h"                          // for Cast
 #include "datetime.h"                      // for isDate, tm_t
 #include "exception.h"                     // for ClientError
 #include "geo/ewkt.h"                      // for EWKT

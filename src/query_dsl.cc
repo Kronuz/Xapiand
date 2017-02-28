@@ -25,6 +25,7 @@
 #include "booleanParser/BooleanParser.h"       // for BooleanTree
 #include "booleanParser/LexicalException.h"    // for LexicalException
 #include "booleanParser/SyntacticException.h"  // for SyntacticException
+#include "cast.h"                              // for Cast
 #include "database_utils.h"                    // for prefixed, RESERVED_VALUE
 #include "exception.h"                         // for THROW, QueryDslError
 #include "field_parser.h"                      // for FieldParser

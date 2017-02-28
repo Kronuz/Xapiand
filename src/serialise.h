@@ -33,7 +33,6 @@
 #include <utility>               // for pair
 #include <vector>                // for vector
 
-#include "database_utils.h"      // for get_hashed, RESERVED_BOOLEAN, RESERV...
 #include "datetime.h"            // for tm_t (ptr only), timestamp
 #include "geo/cartesian.h"       // for Cartesian
 #include "geo/htm.h"             // for range_t
@@ -41,7 +40,6 @@
 #include "length.h"              // for serialise_length, unserialise_length
 #include "msgpack.h"             // for MsgPack
 #include "sortable_serialise.h"  // for sortable_serialise, sortable_unseria...
-#include "xxh64.hpp"             // for xxh64
 
 
 #ifndef __has_builtin         // Optional of course
@@ -130,52 +128,9 @@ constexpr uint8_t SIZE_CURLY_BRACES_UUID    = 38;
 constexpr uint8_t MAX_SIZE_BASE64_UUID      = 24;
 
 
-struct required_spc_t;
-enum class FieldType : uint8_t;
-
-
-namespace Cast {
-	enum class Hash : uint64_t {
-		INTEGER           = xxh64::hash(RESERVED_INTEGER),
-		POSITIVE          = xxh64::hash(RESERVED_POSITIVE),
-		FLOAT             = xxh64::hash(RESERVED_FLOAT),
-		BOOLEAN           = xxh64::hash(RESERVED_BOOLEAN),
-		TERM              = xxh64::hash(RESERVED_TERM),
-		TEXT              = xxh64::hash(RESERVED_TEXT),
-		STRING            = xxh64::hash(RESERVED_STRING),
-		UUID              = xxh64::hash(RESERVED_UUID),
-		DATE              = xxh64::hash(RESERVED_DATE),
-		EWKT              = xxh64::hash(RESERVED_EWKT),
-		POINT             = xxh64::hash(RESERVED_POINT),
-		POLYGON           = xxh64::hash(RESERVED_POLYGON),
-		CIRCLE            = xxh64::hash(RESERVED_CIRCLE),
-		CHULL             = xxh64::hash(RESERVED_CHULL),
-		MULTIPOINT        = xxh64::hash(RESERVED_MULTIPOINT),
-		MULTIPOLYGON      = xxh64::hash(RESERVED_MULTIPOLYGON),
-		MULTICIRCLE       = xxh64::hash(RESERVED_MULTICIRCLE),
-		MULTICHULL        = xxh64::hash(RESERVED_MULTICHULL),
-		GEO_COLLECTION    = xxh64::hash(RESERVED_GEO_COLLECTION),
-		GEO_INTERSECTION  = xxh64::hash(RESERVED_GEO_INTERSECTION),
-	};
-
-	/*
-	 * Functions for doing cast between types.
-	 */
-
-	MsgPack cast(const MsgPack& obj);
-	MsgPack cast(FieldType type, const std::string& field_value);
-	int64_t integer(const MsgPack& obj);
-	uint64_t positive(const MsgPack& obj);
-	double _float(const MsgPack& obj);
-	std::string string(const MsgPack& obj);
-	bool boolean(const MsgPack& obj);
-	MsgPack date(const MsgPack& obj);
-
-	FieldType getType(const std::string& cast_word);
-};
-
-
 class RangeList;
+enum class FieldType : uint8_t;
+struct required_spc_t;
 
 
 namespace Serialise {
@@ -192,7 +147,7 @@ namespace Serialise {
 	 */
 
 	std::string MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value);
-	std::string cast_object(const required_spc_t& field_spc, const class MsgPack& o);
+	std::string object(const required_spc_t& field_spc, const class MsgPack& o);
 	std::string serialise(const required_spc_t& field_spc, const std::string& field_value);
 	std::string string(const required_spc_t& field_spc, const std::string& field_value);
 	std::string date(const required_spc_t& field_spc, const class MsgPack& field_value);
