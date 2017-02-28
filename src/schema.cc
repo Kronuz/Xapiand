@@ -38,7 +38,7 @@
 #include "cast.h"                          // for Cast
 #include "datetime.h"                      // for isDate, tm_t
 #include "exception.h"                     // for ClientError
-#include "geo/ewkt.h"                      // for EWKT
+#include "geo/geospatial.h"                // for GeoSpatial
 #include "log.h"                           // for L_CALL
 #include "manager.h"                       // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"     // for integer, geo, date, positive
@@ -2340,15 +2340,14 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		}
 		case FieldType::GEO: {
 			try {
-				const auto str_value = value.as_string();
-				EWKT ewkt(str_value);
-				const auto ranges = ewkt.geometry->getRanges(spc.flags.partials, spc.error);
+				GeoSpatial geo(value);
+				const auto ranges = geo.geometry->getRanges(spc.flags.partials, spc.error);
 				auto ser_value = Serialise::ranges(ranges);
 				if (field_spc) {
 					if (field_spc->flags.partials == spc.flags.partials && field_spc->error == spc.error) {
 						index_term(doc, ser_value, *field_spc, pos);
 					} else {
-						const auto f_ranges = ewkt.geometry->getRanges(field_spc->flags.partials, field_spc->error);
+						const auto f_ranges = geo.geometry->getRanges(field_spc->flags.partials, field_spc->error);
 						index_term(doc, Serialise::ranges(f_ranges), *field_spc, pos);
 					}
 				}
@@ -2356,12 +2355,12 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 					if (global_spc->flags.partials == spc.flags.partials && global_spc->error == spc.error) {
 						index_term(doc, std::move(ser_value), *global_spc, pos);
 					} else {
-						const auto g_ranges = ewkt.geometry->getRanges(global_spc->flags.partials, global_spc->error);
+						const auto g_ranges = geo.geometry->getRanges(global_spc->flags.partials, global_spc->error);
 						index_term(doc, Serialise::ranges(g_ranges), *global_spc, pos);
 					}
 				}
 				// FIXME: ONLY SAVED A SET OF RANGES.
-				s.insert(Serialise::geo(ranges, ewkt.geometry->getCentroids()));
+				s.insert(Serialise::geo(ranges, geo.geometry->getCentroids()));
 				GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
 				return;
 			} catch (const msgpack::type_error&) {
@@ -2523,10 +2522,9 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		}
 		case FieldType::GEO: {
 			try {
-				const auto str_ewkt = value.as_string();
-				EWKT ewkt(str_ewkt);
+				GeoSpatial geo(value);
 				if (field_spc.flags.partials == global_spc.flags.partials && field_spc.error == global_spc.error) {
-					const auto ranges = ewkt.geometry->getRanges(field_spc.flags.partials, field_spc.error);
+					const auto ranges = geo.geometry->getRanges(field_spc.flags.partials, field_spc.error);
 					if (toUType(field_spc.index & TypeIndex::TERMS)) {
 						auto ser_value = Serialise::ranges(ranges);
 						if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
@@ -2536,7 +2534,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 							index_term(doc, std::move(ser_value), global_spc, pos);
 						}
 					}
-					auto ser_geo = Serialise::geo(ranges, ewkt.geometry->getCentroids());
+					auto ser_geo = Serialise::geo(ranges, geo.geometry->getCentroids());
 					// FIXME: ONLY SAVED A SET OF RANGES.
 					s_f.insert(ser_geo);
 					s_g.insert(std::move(ser_geo));
@@ -2547,8 +2545,8 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 						GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, ranges);
 					}
 				} else {
-					const auto ranges = ewkt.geometry->getRanges(field_spc.flags.partials, field_spc.error);
-					const auto g_ranges = ewkt.geometry->getRanges(global_spc.flags.partials, global_spc.error);
+					const auto ranges = geo.geometry->getRanges(field_spc.flags.partials, field_spc.error);
+					const auto g_ranges = geo.geometry->getRanges(global_spc.flags.partials, global_spc.error);
 					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 						index_term(doc, Serialise::ranges(ranges), field_spc, pos);
 					}
@@ -2556,8 +2554,8 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 						index_term(doc, Serialise::ranges(g_ranges), global_spc, pos);
 					}
 					// FIXME: ONLY SAVED A SET OF RANGES.
-					s_f.insert(Serialise::geo(ranges, ewkt.geometry->getCentroids()));
-					s_g.insert(Serialise::geo(g_ranges, ewkt.geometry->getCentroids()));
+					s_f.insert(Serialise::geo(ranges, geo.geometry->getCentroids()));
+					s_g.insert(Serialise::geo(g_ranges, geo.geometry->getCentroids()));
 					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
 					GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, g_ranges);
 				}
