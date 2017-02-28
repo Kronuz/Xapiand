@@ -26,11 +26,12 @@
 #include <vector>
 
 
+template <typename T=char>
 class Split {
 	using dispatch_search = std::string::size_type (Split::*)(std::string::size_type) const;
 
-	std::string sep;
 	std::string str;
+	T sep;
 	size_t inc;
 
 	dispatch_search search_func;
@@ -47,8 +48,8 @@ class Split {
 		return (this->*search_func)(pos);
 	}
 
-	template <typename T>
-	class Iterator : public std::iterator<std::forward_iterator_tag, T> {
+	template <typename Value>
+	class Iterator : public std::iterator<std::forward_iterator_tag, Value> {
 		friend class Split;
 
 		const Split* split;
@@ -105,7 +106,7 @@ class Split {
 			return it;
 		}
 
-		T& operator*() const {
+		Value& operator*() const {
 			if (end == std::string::npos) {
 				value.assign(split->str.substr(start));
 			} else {
@@ -114,7 +115,7 @@ class Split {
 			return value;
 		}
 
-		T& operator*() {
+		Value& operator*() {
 			if (end == std::string::npos) {
 				value.assign(split->str.substr(start));
 			} else {
@@ -123,11 +124,11 @@ class Split {
 			return value;
 		}
 
-		T* operator->() const {
+		Value* operator->() const {
 			return &operator*();
 		}
 
-		T* operator->() {
+		Value* operator->() {
 			return &operator*();
 		}
 
@@ -150,9 +151,10 @@ public:
 		FIND_FIRST_OF,
 	};
 
-	Split(const std::string& str_, const std::string& sep_, Type type=Type::FIND)
-		: sep(sep_),
-		  str(str_)
+	template <typename String, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<String>>::value && std::is_same<T, std::decay_t<String>>::value>>
+	Split(String&& str_, String&& sep_, Type type=Type::FIND)
+		: str(std::forward<String>(str_)),
+		  sep(std::forward<String>(sep_))
 	{
 		switch (type) {
 			case Type::FIND:
@@ -165,6 +167,25 @@ public:
 				break;
 			default:
 				inc = sep.length();
+				search_func = &Split::find;
+				break;
+		}
+	}
+
+	template <typename String, typename Sep, typename = std::enable_if_t<std::is_same<char, std::decay_t<Sep>>::value && std::is_same<T, std::decay_t<Sep>>::value>>
+	Split(String&& str_, Sep&& sep_, Type type=Type::FIND)
+		: str(std::forward<String>(str_)),
+		  sep(std::forward<Sep>(sep_)),
+		  inc(1)
+	{
+		switch (type) {
+			case Type::FIND:
+				search_func = &Split::find;
+				break;
+			case Type::FIND_FIRST_OF:
+				search_func = &Split::find_first_of;
+				break;
+			default:
 				search_func = &Split::find;
 				break;
 		}
@@ -205,60 +226,62 @@ public:
 		return str;
 	}
 
-	static std::vector<std::string> split(const std::string& str, const std::string& delimiter) {
-		std::vector<std::string> tokens;
+	template <typename OutputIt>
+	static void split(const std::string& str, const std::string& delimiter, OutputIt d_first) {
 		size_t prev = 0, next = 0, len;
 
 		while ((next = str.find(delimiter, prev)) != std::string::npos) {
 			len = next - prev;
 			if (len > 0) {
-				tokens.push_back(str.substr(prev, len));
+				*d_first = str.substr(prev, len);
+				++d_first;
 			}
 			prev = next + delimiter.length();
 		}
 
 		if (prev < str.length()) {
-			tokens.push_back(str.substr(prev));
+			*d_first = str.substr(prev);
 		}
-
-		return tokens;
 	}
 
-	static std::vector<std::string> split(const std::string& str, char delimiter) {
-		std::vector<std::string> tokens;
+	template <typename OutputIt>
+	static void split(const std::string& str, char delimiter, OutputIt d_first) {
 		size_t prev = 0, next = 0, len;
 
 		while ((next = str.find(delimiter, prev)) != std::string::npos) {
 			len = next - prev;
 			if (len > 0) {
-				tokens.push_back(str.substr(prev, len));
+				*d_first = str.substr(prev, len);
+				++d_first;
 			}
 			prev = next + 1;
 		}
 
 		if (prev < str.length()) {
-			tokens.push_back(str.substr(prev));
+			*d_first = str.substr(prev);
 		}
-
-		return tokens;
 	}
 
-	static std::vector<std::string> split_first_of(const std::string& str, const std::string& delimiter) {
-		std::vector<std::string> tokens;
+	template <typename OutputIt>
+	static void split_first_of(const std::string& str, const std::string& delimiter, OutputIt d_first) {
 		size_t prev = 0, next = 0, len;
 
 		while ((next = str.find_first_of(delimiter, prev)) != std::string::npos) {
 			len = next - prev;
 			if (len > 0) {
-				tokens.push_back(str.substr(prev, len));
+				*d_first = str.substr(prev, len);
+				++d_first;
 			}
 			prev = next + 1;
 		}
 
 		if (prev < str.length()) {
-			tokens.push_back(str.substr(prev));
+			*d_first = str.substr(prev);
 		}
+	}
 
-		return tokens;
+	template <typename OutputIt>
+	static void split_first_of(const std::string& str, char delimiter, OutputIt d_first) {
+		return split(str, delimiter, d_first);
 	}
 };
