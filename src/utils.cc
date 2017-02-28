@@ -387,7 +387,7 @@ bool build_path(const std::string& path) {
 	if (exists(path)) {
 		return true;
 	} else {
-		Split directories(path, "/");
+		Split<char> directories(path, '/');
 		std::string dir;
 		dir.reserve(path.length());
 		for (const auto& _dir : directories) {

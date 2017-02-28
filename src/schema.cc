@@ -1023,8 +1023,8 @@ Schema::get_mutable()
 	}
 
 	MsgPack* prop = &mut_schema->at(DB_META_SCHEMA);
-	Split _split(specification.full_meta_name, DB_OFFSPRING_UNION);
-	for (const auto& field_name : _split) {
+	Split<char> field_names(specification.full_meta_name, DB_OFFSPRING_UNION);
+	for (const auto& field_name : field_names) {
 		prop = &(*prop)[field_name];
 	}
 	return *prop;
@@ -2695,7 +2695,7 @@ Schema::get_subproperties(T& properties, const std::string& meta_name)
 	if (specification.full_meta_name.empty()) {
 		specification.full_meta_name.assign(meta_name);
 	} else {
-		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(meta_name);
+		specification.full_meta_name.append(1, DB_OFFSPRING_UNION).append(meta_name);
 	}
 
 	update_specification(*properties);
@@ -2707,7 +2707,8 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 {
 	L_CALL(this, "Schema::get_subproperties(%s, <data>, %s, %s, <fields>)", repr(properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
 
-	const auto field_names = Split::split(name, DB_OFFSPRING_UNION);
+	std::vector<std::string> field_names;
+	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
 
 	const auto it_last = field_names.end() - 1;
 	if (specification.flags.is_namespace) {
@@ -2831,27 +2832,27 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 {
 	L_CALL(this, "Schema::get_subproperties(%s, <data>, %s)", repr(properties->to_string()).c_str(), repr(name).c_str());
 
-	Split _split(name, DB_OFFSPRING_UNION);
+	Split<char> field_names(name, DB_OFFSPRING_UNION);
 
-	const auto it_e = _split.end();
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
 		if (specification.flags.store) {
-			for (auto it = _split.begin(); it != it_e; ++it) {
-				data = &(*data)[detect_dynamic(*it)];
+			for (const auto& field_name : field_names) {
+				data = &(*data)[detect_dynamic(field_name)];
 				specification.prefix.append(specification.local_prefix);
 				update_partial_prefixes();
 			}
 		} else {
-			for (auto it = _split.begin(); it != it_e; ++it) {
-				detect_dynamic(*it);
+			for (const auto& field_name : field_names) {
+				detect_dynamic(field_name);
 				specification.prefix.append(specification.local_prefix);
 				update_partial_prefixes();
 			}
 		}
 		specification.flags.inside_namespace = true;
 	} else {
-		for (auto it = _split.begin(); it != it_e; ++it) {
+		const auto it_e = field_names.end();
+		for (auto it = field_names.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
 			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(field_name).c_str());
@@ -2915,7 +2916,8 @@ Schema::get_subproperties(MsgPack*& mut_properties, const std::string& name, con
 {
 	L_CALL(this, "Schema::get_subproperties(%s, %s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
 
-	auto field_names = Split::split(name, DB_OFFSPRING_UNION);
+	std::vector<std::string> field_names;
+	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
 
 	const auto it_last = field_names.end() - 1;
 	for (auto it = field_names.begin(); it != it_last; ++it) {
@@ -3111,7 +3113,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 	if (specification.full_meta_name.empty()) {
 		specification.full_meta_name.assign(specification.meta_name);
 	} else {
-		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
+		specification.full_meta_name.append(1, DB_OFFSPRING_UNION).append(specification.meta_name);
 	}
 
 	// Write obj specifications.
@@ -3172,7 +3174,7 @@ Schema::add_field(MsgPack*& mut_properties)
 	if (specification.full_meta_name.empty()) {
 		specification.full_meta_name.assign(specification.meta_name);
 	} else {
-		specification.full_meta_name.append(DB_OFFSPRING_UNION).append(specification.meta_name);
+		specification.full_meta_name.append(1, DB_OFFSPRING_UNION).append(specification.meta_name);
 	}
 
 	// Load default specifications.
@@ -5220,14 +5222,14 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 {
 	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
 
-	Split _split(full_name, DB_OFFSPRING_UNION);
+	Split<char> field_names(full_name, DB_OFFSPRING_UNION);
 
 	const MsgPack* subproperties = &properties;
 	std::string prefix;
 	bool dynamic_type_path = false;
 
-	const auto it_e = _split.end();
-	const auto it_b = _split.begin();
+	const auto it_e = field_names.end();
+	const auto it_b = field_names.begin();
 	for (auto it = it_b; it != it_e; ++it) {
 		auto& field_name = *it;
 		if (!is_valid(field_name) || field_name == UUID_FIELD_NAME) {

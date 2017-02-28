@@ -376,8 +376,8 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 						query = process(op, field_name, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 					} else {
 						std::string n_parent;
-						n_parent.reserve(parent.length() + std::strlen(DB_OFFSPRING_UNION) + field_name.length());
-						n_parent.append(parent).append(DB_OFFSPRING_UNION).append(field_name);
+						n_parent.reserve(parent.length() + 1 + field_name.length());
+						n_parent.append(parent).append(1, DB_OFFSPRING_UNION).append(field_name);
 						query = process(op, n_parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 					}
 				} else {

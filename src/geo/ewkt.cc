@@ -97,12 +97,16 @@ EWKT::EWKT(const std::string& str)
 Point
 EWKT::_parse_point(int SRID, const std::string& specification)
 {
-	const auto coords = Split::split(specification, ' ');
+	const Split<char> coords(specification, ' ');
 	switch (coords.size()) {
-		case 2:
-			return Point(Cartesian(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), 0, Cartesian::Units::DEGREES, SRID));
-		case 3:
-			return Point(Cartesian(stox(std::stod, coords.at(0)), stox(std::stod, coords.at(1)), stox(std::stod, coords.at(2)), Cartesian::Units::DEGREES, SRID));
+		case 2: {
+			auto it = coords.begin();
+			return Point(Cartesian(stox(std::stod, *it), stox(std::stod, *++it), 0, Cartesian::Units::DEGREES, SRID));
+		}
+		case 3: {
+			auto it = coords.begin();
+			return Point(Cartesian(stox(std::stod, *it), stox(std::stod, *++it), stox(std::stod, *++it), Cartesian::Units::DEGREES, SRID));
+		}
 		default:
 			THROW(InvalidArgument, "Invalid specification");
 	}
@@ -218,7 +222,7 @@ EWKT::_parse_multipoint(int SRID, const std::string& specification)
 	}
 
 	if (match_len == 0) {
-		const auto spc_points = Split::split(specification, ',');
+		Split<char> spc_points(specification, ',');
 		for (const auto& spc_point : spc_points) {
 			multipoint.add(_parse_point(SRID, spc_point));
 		}
