@@ -1844,12 +1844,12 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[2] = FieldType::DATE;
 				return;
 			}
-			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
-				specification.sep_types[2] = FieldType::GEO;
-				return;
-			}
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
 				specification.sep_types[2] = FieldType::UUID;
+				return;
+			}
+			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
+				specification.sep_types[2] = FieldType::GEO;
 				return;
 			}
 			if (specification.flags.text_detection && (!specification.flags.string_detection || Serialise::isText(str_value, specification.flags.bool_term))) {
