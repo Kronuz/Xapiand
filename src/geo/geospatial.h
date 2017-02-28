@@ -45,7 +45,11 @@ class GeoSpatial {
 		int srid;
 
 		data_t(bool has_radius_)
-			: has_radius(has_radius_),
+			: lat(nullptr),
+			  lon(nullptr),
+			  height(nullptr),
+			  has_radius(has_radius_),
+			  radius(nullptr),
 			  units(Cartesian::Units::DEGREES),
 			  srid(WGS84) { }
 	};
