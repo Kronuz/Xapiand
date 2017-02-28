@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "geo.h"
+#include "geospatial.h"
 
 #include "../cast.h"
 
