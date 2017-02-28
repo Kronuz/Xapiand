@@ -34,7 +34,7 @@ constexpr const char GEO_UNITS[]      = "_units";
 constexpr const char GEO_SRID[]       = "_srid";
 
 
-class Geo {
+class GeoSpatial {
 	struct data_t {
 		const MsgPack* lat;
 		const MsgPack* lon;
@@ -50,7 +50,7 @@ class Geo {
 			  srid(WGS84) { }
 	};
 
-	using dispatch_func = void (Geo::*)(data_t&, const MsgPack&);
+	using dispatch_func = void (GeoSpatial::*)(data_t&, const MsgPack&);
 
 	static const std::unordered_map<std::string, dispatch_func> map_dispatch;
 
@@ -72,5 +72,5 @@ class Geo {
 public:
 	std::unique_ptr<Geometry> geometry;
 
-	Geo(const MsgPack& obj);
+	GeoSpatial(const MsgPack& obj);
 };

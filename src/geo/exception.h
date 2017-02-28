@@ -25,24 +25,24 @@
 #include "../exception.h"
 
 
-class GeoError : public ClientError {
+class GeoSpatialError : public ClientError {
 public:
 	template<typename... Args>
-	GeoError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+	GeoSpatialError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
 
-class CartesianError : public GeoError {
+class CartesianError : public GeoSpatialError {
 public:
 	template<typename... Args>
-	CartesianError(Args&&... args) : GeoError(std::forward<Args>(args)...) { }
+	CartesianError(Args&&... args) : GeoSpatialError(std::forward<Args>(args)...) { }
 };
 
 
-class GeometryError : public GeoError {
+class GeometryError : public GeoSpatialError {
 public:
 	template<typename... Args>
-	GeometryError(Args&&... args) : GeoError(std::forward<Args>(args)...) { }
+	GeometryError(Args&&... args) : GeoSpatialError(std::forward<Args>(args)...) { }
 };
 
 
@@ -53,15 +53,15 @@ public:
 };
 
 
-class HTMError : public GeoError {
+class HTMError : public GeoSpatialError {
 public:
 	template<typename... Args>
-	HTMError(Args&&... args) : GeoError(std::forward<Args>(args)...) { }
+	HTMError(Args&&... args) : GeoSpatialError(std::forward<Args>(args)...) { }
 };
 
 
-class EWKTError : public GeoError {
+class EWKTError : public GeoSpatialError {
 public:
 	template<typename... Args>
-	EWKTError(Args&&... args) : GeoError(std::forward<Args>(args)...) { }
+	EWKTError(Args&&... args) : GeoSpatialError(std::forward<Args>(args)...) { }
 };
