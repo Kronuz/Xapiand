@@ -30,7 +30,7 @@ MsgPack
 Cast::cast(const MsgPack& obj)
 {
 	if (obj.size() == 1) {
-		auto str_key = obj.begin()->as_string();
+		const auto str_key = obj.begin()->as_string();
 		switch ((Hash)xxh64::hash(str_key)) {
 			case Hash::INTEGER:
 				return integer(obj.at(str_key));
@@ -44,10 +44,22 @@ Cast::cast(const MsgPack& obj)
 			case Hash::TEXT:
 			case Hash::STRING:
 			case Hash::UUID:
-			case Hash::EWKT:
-				return string(obj.at(str_key));
 			case Hash::DATE:
 				return date(obj.at(str_key));
+			case Hash::EWKT:
+				return string(obj.at(str_key));
+			case Hash::POINT:
+			case Hash::CIRCLE:
+			case Hash::CONVEX:
+			case Hash::POLYGON:
+			case Hash::CHULL:
+			case Hash::MULTIPOINT:
+			case Hash::MULTICIRCLE:
+			case Hash::MULTIPOLYGON:
+			case Hash::MULTICHULL:
+			case Hash::GEO_COLLECTION:
+			case Hash::GEO_INTERSECTION:
+				return obj;
 			default:
 				THROW(SerialisationError, "Unknown cast type %s", str_key.c_str());
 		}
