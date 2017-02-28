@@ -284,12 +284,13 @@ Cast::getType(const std::string& cast_word)
 		case Hash::DATE:              return FieldType::DATE;
 		case Hash::EWKT:              return FieldType::GEO;
 		case Hash::POINT:             return FieldType::GEO;
-		case Hash::POLYGON:           return FieldType::GEO;
 		case Hash::CIRCLE:            return FieldType::GEO;
+		case Hash::CONVEX:            return FieldType::GEO;
+		case Hash::POLYGON:           return FieldType::GEO;
 		case Hash::CHULL:             return FieldType::GEO;
 		case Hash::MULTIPOINT:        return FieldType::GEO;
-		case Hash::MULTIPOLYGON:      return FieldType::GEO;
 		case Hash::MULTICIRCLE:       return FieldType::GEO;
+		case Hash::MULTIPOLYGON:      return FieldType::GEO;
 		case Hash::MULTICHULL:        return FieldType::GEO;
 		case Hash::GEO_COLLECTION:    return FieldType::GEO;
 		case Hash::GEO_INTERSECTION:  return FieldType::GEO;

@@ -1877,8 +1877,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			THROW(ClientError, "'%s' cannot be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
 			if (field->size() == 1) {
-				const auto cast_word = field->begin()->as_string();
-				specification.sep_types[2] = Cast::getType(cast_word);
+				specification.sep_types[2] = Cast::getType(field->begin()->as_string());
 				return;
 			}
 			THROW(ClientError, "Expected map with one element");
