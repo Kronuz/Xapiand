@@ -49,7 +49,7 @@ class Split {
 	}
 
 	template <typename Value>
-	class Iterator : public std::iterator<std::forward_iterator_tag, Value> {
+	class Iterator : public std::iterator<std::input_iterator_tag, Value> {
 		friend class Split;
 
 		const Split* split;
