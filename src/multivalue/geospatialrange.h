@@ -58,6 +58,9 @@ public:
 		: Xapian::ValuePostingSource(slot_),
 		  ranges(std::forward<R>(ranges_)) { }
 
+	// Call this function for create a new Geo Spatial Query.
+	static Xapian::Query getQuery(const required_spc_t& field_spc, const MsgPack& obj);
+
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;
 	bool check(Xapian::docid min_docid, double min_wt) override;
@@ -68,15 +71,4 @@ public:
 	GeoSpatialRange* unserialise_with_registry(const std::string& serialised, const Xapian::Registry&) const override;
 	void init(const Xapian::Database& db_) override;
 	std::string get_description() const override;
-
-	// Call this function for create a new Query based in ranges.
-	template <typename R, typename = std::enable_if_t<std::is_same<std::vector<range_t>, std::decay_t<R>>::value>>
-	static Xapian::Query getQuery(Xapian::valueno slot_, R&& ranges_) {
-		if (ranges_.empty()){
-			return Xapian::Query::MatchNothing;
-		}
-
-		auto gsr = new GeoSpatialRange(slot_, std::forward<R>(ranges_));
-		return Xapian::Query(gsr->release());
-	}
 };
