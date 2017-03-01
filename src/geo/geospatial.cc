@@ -228,7 +228,7 @@ GeoSpatial::make_convex(const MsgPack& o)
 				}
 				THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 			} catch (const msgpack::type_error&) {
-				THROW(GeoSpatialError, "%s, %s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
+				THROW(GeoSpatialError, "%s, %s, %s and %s must be numeric array", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
 			}
 		} else {
 			THROW(GeoSpatialError, "%s must contain %s, %s and %s", RESERVED_CONVEX, GEO_LATITUDE, GEO_LONGITUDE, GEO_RADIUS);
@@ -270,7 +270,7 @@ GeoSpatial::make_multipoint(const MsgPack& o)
 				}
 				THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 			} catch (const msgpack::type_error&) {
-				THROW(GeoSpatialError, "%s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+				THROW(GeoSpatialError, "%s, %s and %s must be numeric array", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 			}
 		} else {
 			THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_MULTIPOINT, GEO_LATITUDE, GEO_LONGITUDE);
@@ -312,7 +312,7 @@ GeoSpatial::make_multicircle(const MsgPack& o)
 				}
 				THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 			} catch (const msgpack::type_error&) {
-				THROW(GeoSpatialError, "%s, %s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
+				THROW(GeoSpatialError, "%s, %s, %s and %s must be numeric array", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
 			}
 		} else {
 			THROW(GeoSpatialError, "%s must contain %s, %s and %s", RESERVED_MULTICIRCLE, GEO_LATITUDE, GEO_LONGITUDE, GEO_RADIUS);
