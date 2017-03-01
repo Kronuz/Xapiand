@@ -2241,15 +2241,9 @@ Schema::index_all_term(Xapian::Document& doc, const MsgPack& value, const specif
 {
 	L_CALL(nullptr, "Schema::index_all_term(<Xapian::Document>, %s, <specification_t>, <specification_t>, %zu)", repr(value.to_string()).c_str(), pos);
 
-	if (field_spc.sep_types[2] == FieldType::GEO && (field_spc.flags.partials != global_spc.flags.partials ||
-		field_spc.error != global_spc.error)) {
-		index_term(doc, Serialise::MsgPack(field_spc, value), field_spc, pos);
-		index_term(doc, Serialise::MsgPack(global_spc, value), global_spc, pos);
-	} else {
-		auto serialise_val = Serialise::MsgPack(field_spc, value);
-		index_term(doc, serialise_val, field_spc, pos);
-		index_term(doc, serialise_val, global_spc, pos);
-	}
+	auto serialise_val = Serialise::MsgPack(field_spc, value);
+	index_term(doc, serialise_val, field_spc, pos);
+	index_term(doc, serialise_val, global_spc, pos);
 }
 
 
@@ -2331,21 +2325,27 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			try {
 				GeoSpatial geo(value);
 				const auto ranges = geo.geometry->getRanges(spc.flags.partials, spc.error);
-				auto ser_value = Serialise::ranges(ranges);
+				std::string term;
 				if (field_spc) {
-					if (field_spc->flags.partials == spc.flags.partials && field_spc->error == spc.error) {
-						index_term(doc, ser_value, *field_spc, pos);
+					if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
+						term = Serialise::ranges(ranges);
+						index_term(doc, term, *field_spc, pos);
 					} else {
-						const auto f_ranges = geo.geometry->getRanges(field_spc->flags.partials, field_spc->error);
-						index_term(doc, Serialise::ranges(f_ranges), *field_spc, pos);
+						const auto f_ranges = geo.geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
+						term = Serialise::ranges(f_ranges);
+						index_term(doc, term, *field_spc, pos);
 					}
 				}
 				if (global_spc) {
-					if (global_spc->flags.partials == spc.flags.partials && global_spc->error == spc.error) {
-						index_term(doc, std::move(ser_value), *global_spc, pos);
+					if (field_spc) {
+						index_term(doc, std::move(term), *global_spc, pos);
 					} else {
-						const auto g_ranges = geo.geometry->getRanges(global_spc->flags.partials, global_spc->error);
-						index_term(doc, Serialise::ranges(g_ranges), *global_spc, pos);
+						if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
+							index_term(doc, Serialise::ranges(ranges), *global_spc, pos);
+						} else {
+							const auto g_ranges = geo.geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
+							index_term(doc, Serialise::ranges(g_ranges), *global_spc, pos);
+						}
 					}
 				}
 				// FIXME: ONLY SAVED A SET OF RANGES.
@@ -2536,11 +2536,14 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				} else {
 					const auto ranges = geo.geometry->getRanges(field_spc.flags.partials, field_spc.error);
 					const auto g_ranges = geo.geometry->getRanges(global_spc.flags.partials, global_spc.error);
-					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
-						index_term(doc, Serialise::ranges(ranges), field_spc, pos);
-					}
-					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
-						index_term(doc, Serialise::ranges(g_ranges), global_spc, pos);
+					if (toUType(field_spc.index & TypeIndex::TERMS)) {
+						const auto ser_value = Serialise::ranges(g_ranges);
+						if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+							index_term(doc, ser_value, field_spc, pos);
+						}
+						if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+							index_term(doc, std::move(ser_value), global_spc, pos);
+						}
 					}
 					// FIXME: ONLY SAVED A SET OF RANGES.
 					s_f.insert(Serialise::ranges_centroids(ranges, geo.geometry->getCentroids()));
