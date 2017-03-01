@@ -46,6 +46,15 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 		case MsgPack::Type::MAP: {
 			const auto str_key = obj.begin()->as_string();
 			switch ((Cast::Hash)xxh64::hash(str_key)) {
+				case Cast::Hash::EWKT: {
+					try {
+						EWKT ewkt(obj.at(str_key).as_string());
+						geometry = std::move(ewkt.geometry);
+						return;
+					} catch (const msgpack::type_error&) {
+						THROW(GeoSpatialError, "%s must be string", RESERVED_EWKT);
+					}
+				}
 				case Cast::Hash::POINT:
 					geometry = make_point(obj.at(str_key));
 					return;
