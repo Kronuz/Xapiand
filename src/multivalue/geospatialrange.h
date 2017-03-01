@@ -24,11 +24,14 @@
 
 #include "xapiand.h"
 
-#include <cmath>            // for M_PI
-#include <string>           // for string
-#include <xapian.h>         // for docid, valueno, Query, ValuePostingSource
+#include <cmath>              // for M_PI
+#include <string>             // for string
+#include <xapian.h>           // for docid, valueno, Query, ValuePostingSource
 
-#include "geo/geometry.h"   // for range_t, M_PER_RADIUS_EARTH, ...
+#include "geo/geospatial.h"   // for GeoSpatial, MsgPack
+
+
+struct required_spc_t;
 
 
 // New Match Decider for GeoSpatial value range.

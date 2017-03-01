@@ -25,7 +25,33 @@
 #include <cmath>               // for M_PI, acos
 #include <utility>             // for pair
 
+#include "generate_terms.h"    // for GeneratTerms::geo
+#include "schema.h"            // for required_spc_t
 #include "serialise_list.h"    // for StringList, RangeList
+
+
+Xapian::Query
+GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
+{
+	GeoSpatial geo(obj);
+
+	auto ranges = geo.geometry->getRanges(field_spc.flags.partials, field_spc.error);
+
+	if (ranges.empty()) {
+		return Xapian::Query::MatchNothing;
+	}
+
+	auto query = GenerateTerms::geo(ranges, field_spc.accuracy, field_spc.acc_prefix);
+
+	auto gsr = new GeoSpatialRange(field_spc.slot, std::move(ranges));
+	auto geoQ = Xapian::Query(gsr->release());
+
+	if (query.empty()) {
+		return geoQ;
+	} else {
+		return Xapian::Query(Xapian::Query::OP_AND, query, geoQ);
+	}
+}
 
 
 bool
