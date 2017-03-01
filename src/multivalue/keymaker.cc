@@ -341,28 +341,18 @@ GeoKey::findSmallest(const Xapian::Document& doc) const
 		return MAX_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	auto centroids = Unserialise::centroids(std::move(multiValues));
+
+	if (centroids.empty()) {
+		return SERIALISED_M_PI;
+	}
 
 	double min_angle = M_PI;
-	for (const auto& value : values) {
-		auto geo_val = Unserialise::geo(value);
-		CartesianList centroids(std::move(geo_val.second));
-		if (!centroids.empty()) {
-			double angle = M_PI;
-			for (const auto& centroid : centroids) {
-				for (const auto& _centroid : _centroids) {
-					double rad_angle = std::acos(_centroid * centroid);
-					if (rad_angle < angle) {
-						angle = rad_angle;
-					}
-				}
-			}
-
-			if (angle < min_angle) {
-				if (angle < DBL_TOLERANCE) {
-					return SERIALISED_ZERO;
-				}
-				min_angle = angle;
+	for (const auto& centroid : centroids) {
+		for (const auto& _centroid : _centroids) {
+			double rad_angle = std::acos(_centroid * centroid);
+			if (rad_angle < min_angle) {
+				min_angle = rad_angle;
 			}
 		}
 	}
@@ -379,28 +369,19 @@ GeoKey::findBiggest(const Xapian::Document& doc) const
 		return MIN_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	auto centroids = Unserialise::centroids(std::move(multiValues));
+
+	if (centroids.empty()) {
+		return SERIALISED_ZERO;
+	}
 
 	double max_angle = 0;
-	for (const auto& value : values) {
-		auto geo_val = Unserialise::geo(value);
-		CartesianList centroids(std::move(geo_val.second));
-		if (centroids.empty()) {
-			return SERIALISED_M_PI;
-		}
-
-		double angle = 0;
-		for (const auto& centroid : centroids) {
-			for (const auto& _centroid : _centroids) {
-				double rad_angle = std::acos(_centroid * centroid);
-				if (rad_angle > angle) {
-					angle = rad_angle;
-				}
+	for (const auto& centroid : centroids) {
+		for (const auto& _centroid : _centroids) {
+			double rad_angle = std::acos(_centroid * centroid);
+			if (rad_angle > max_angle) {
+				max_angle = rad_angle;
 			}
-		}
-
-		if (angle > max_angle) {
-			max_angle = angle;
 		}
 	}
 
