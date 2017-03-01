@@ -31,7 +31,6 @@
 #include "datetime.h"               // for timestamp
 #include "exception.h"              // for MSG_QueryParserError, Quer...
 #include "generate_terms.h"         // for date, geo, numeric
-#include "geo/ewkt.h"               // for EWKT
 #include "geospatialrange.h"        // for GeoSpatialRange
 #include "length.h"                 // for serialise_length
 #include "query_dsl.h"              // for QUERYDSL_FROM, QUERYDSL_TO
@@ -41,7 +40,7 @@
 
 
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
-Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
+Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
 	std::string ser_start, ser_end;
 	T value_s, value_e;
 	switch (field_spc.get_type()) {
@@ -98,7 +97,7 @@ Xapian::Query filterNumericQuery(const required_spc_t& field_spc, const MsgPack&
 }
 
 
-Xapian::Query filterStringQuery(const required_spc_t& field_spc, std::string&& start_s, std::string&& end_s) {
+Xapian::Query getStringQuery(const required_spc_t& field_spc, std::string&& start_s, std::string&& end_s) {
 	if (start_s > end_s) {
 		return Xapian::Query::MatchNothing;
 	}
@@ -108,7 +107,7 @@ Xapian::Query filterStringQuery(const required_spc_t& field_spc, std::string&& s
 }
 
 
-Xapian::Query filterDateQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
+Xapian::Query getDateQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
 	auto timestamp_s = Datetime::timestamp(start);
 	auto timestamp_e = Datetime::timestamp(end);
 
@@ -122,25 +121,6 @@ Xapian::Query filterDateQuery(const required_spc_t& field_spc, const MsgPack& st
 		return Xapian::Query(mvr->release());
 	} else {
 		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
-	}
-}
-
-
-Xapian::Query filterGeoQuery(const required_spc_t& field_spc, const MsgPack& obj) {
-	EWKT ewkt(obj.as_string());
-
-	auto ranges = ewkt.geometry->getRanges(field_spc.flags.partials, field_spc.error);
-
-	if (ranges.empty()) {
-		return Xapian::Query::MatchNothing;
-	}
-
-	auto query = GenerateTerms::geo(ranges, field_spc.accuracy, field_spc.acc_prefix);
-	auto geoQ = GeoSpatialRange::getQuery(field_spc.slot, std::move(ranges));
-	if (query.empty()) {
-		return geoQ;
-	} else {
-		return Xapian::Query(Xapian::Query::OP_AND, query, geoQ);
 	}
 }
 
@@ -167,7 +147,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 				return Xapian::Query::MatchAll;
 			}
 			if (field_spc.get_type() == FieldType::GEO) {
-				return filterGeoQuery(field_spc, *end);
+				return GeoSpatialRange::getQuery(field_spc, *end);
 			}
 			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::MsgPack(field_spc, *end));
 			return Xapian::Query(mvle->release());
@@ -175,7 +155,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 
 		if (!end) {
 			if (field_spc.get_type() == FieldType::GEO) {
-				return filterGeoQuery(field_spc, *start);
+				return GeoSpatialRange::getQuery(field_spc, *start);
 			}
 			auto mvge = new MultipleValueGE(field_spc.slot, Serialise::MsgPack(field_spc, *start));
 			return Xapian::Query(mvge->release());
@@ -184,19 +164,19 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 		switch (field_spc.get_type()) {
 			case FieldType::INTEGER:
 			case FieldType::FLOAT:
-				return filterNumericQuery<int64_t>(field_spc, *start, *end);
+				return getNumericQuery<int64_t>(field_spc, *start, *end);
 			case FieldType::POSITIVE:
-				return filterNumericQuery<uint64_t>(field_spc, *start, *end);
+				return getNumericQuery<uint64_t>(field_spc, *start, *end);
 			case FieldType::UUID:
 			case FieldType::BOOLEAN:
 			case FieldType::TERM:
 			case FieldType::TEXT:
 			case FieldType::STRING:
-				return filterStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));
+				return getStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));
 			case FieldType::DATE:
-				return filterDateQuery(field_spc, *start, *end);
+				return getDateQuery(field_spc, *start, *end);
 			case FieldType::GEO:
-				THROW(QueryParserError, "The format for Geo Spatial range is: <field>:[\"EWKT\"]");
+				THROW(QueryParserError, "The format for Geo Spatial range is: <field>: [\"EWKT\"]");
 			default:
 				return Xapian::Query::MatchNothing;
 		}
