@@ -291,8 +291,13 @@ class MsgPack::Iterator : public std::iterator<std::input_iterator_tag, MsgPack>
 		: _mobj(o),
 		  _off(off)
 	{
-		if (_mobj->_const_body->getType() != MsgPack::Type::MAP && _mobj->_const_body->getType() != MsgPack::Type::ARRAY) {
-			THROW(msgpack::type_error);
+		switch (_mobj->_const_body->getType()) {
+			case MsgPack::Type::MAP:
+			case MsgPack::Type::ARRAY:
+			case MsgPack::Type::UNDEFINED:
+				return;
+			default:
+				THROW(msgpack::type_error);
 		}
 	}
 
