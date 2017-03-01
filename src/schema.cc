@@ -1840,12 +1840,12 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			break;
 		case MsgPack::Type::STR: {
 			const auto str_value = field->as_string();
-			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
-				specification.sep_types[2] = FieldType::DATE;
-				return;
-			}
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
 				specification.sep_types[2] = FieldType::UUID;
+				return;
+			}
+			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
+				specification.sep_types[2] = FieldType::DATE;
 				return;
 			}
 			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
