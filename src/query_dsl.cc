@@ -106,7 +106,8 @@ QueryDSL::get_in_type(const MsgPack& obj)
 	try {
 		auto it = obj.find(QUERYDSL_RANGE);
 		if (it == obj.end()) {
-			THROW(QueryDslError, "Invalid range [<obj>]: %s", repr(obj.to_string()).c_str());
+			// If is not range must be geo.
+			return FieldType::GEO;
 		}
 
 		const auto& range = it.value();
