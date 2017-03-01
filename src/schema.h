@@ -42,6 +42,17 @@
 #include "utils.h"                         // for repr, toUType, lower_string
 
 
+#define DEFAULT_STOP_STRATEGY  StopStrategy::STOP_ALL
+#define DEFAULT_STEM_STRATEGY  StemStrategy::STEM_SOME
+#define DEFAULT_LANGUAGE       "en"
+#define DEFAULT_GEO_PARTIALS   true
+#define DEFAULT_GEO_ERROR      HTM_MIN_ERROR
+#define DEFAULT_POSITIONS      true
+#define DEFAULT_SPELLING       false
+#define DEFAULT_BOOL_TERM      false
+#define DEFAULT_INDEX          TypeIndex::ALL
+
+
 #define LIMIT_PARTIAL_PATHS_DEPTH  10    // 2^(n - 2) => 2^8 => 256 namespace terms.
 
 
