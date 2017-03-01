@@ -392,10 +392,10 @@ Serialise::get_type(const class MsgPack& field_value, bool bool_term)
 						return std::make_pair(FieldType::STRING, Cast::string(field_value.at(str_key)));
 					case Cast::Hash::UUID:
 						return std::make_pair(FieldType::UUID, uuid(Cast::string(field_value.at(str_key))));
-					case Cast::Hash::EWKT:
-						return std::make_pair(FieldType::GEO, ewkt(Cast::string(field_value.at(str_key)), default_spc.flags.partials, default_spc.error));
 					case Cast::Hash::DATE:
 						return std::make_pair(FieldType::DATE, date(Cast::date(field_value.at(str_key))));
+					case Cast::Hash::EWKT:
+						return std::make_pair(FieldType::GEO, ewkt(Cast::string(field_value.at(str_key)), default_spc.flags.partials, default_spc.error));
 					default:
 						THROW(SerialisationError, "Unknown cast type: %s", str_key.c_str());
 				}

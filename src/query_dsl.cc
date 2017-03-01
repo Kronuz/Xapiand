@@ -32,6 +32,7 @@
 #include "geo/ewkt.h"                          // for EWKT
 #include "log.h"                               // for Log, L_CALL, L
 #include "multivalue/generate_terms.h"         // for GenerateTerms
+#include "multivalue/geospatialrange.h"        // for GeoSpatialRange
 #include "multivalue/range.h"                  // for MultipleValueRange
 #include "serialise.h"                         // for MsgPack, get_range_type...
 #include "utils.h"                             // for repr, startswith
@@ -691,24 +692,37 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 {
 	L_CALL(this, "QueryDSL::get_in_query(<field_spc>, %s)", repr(obj.to_string()).c_str());
 
-	if (obj.is_map()) {
-		const auto it_e = obj.end();
-		for (auto it = obj.begin(); it != it_e; ++it) {
-			const auto field_name = it->as_string();
-			if (field_name.compare(QUERYDSL_RANGE) == 0) {
-				const auto& range = it.value();
-				if (range.is_map()) {
-					return MultipleValueRange::getQuery(field_spc, range);
-				} else {
-					THROW(QueryDslError, "%s must be object [%s]", field_name.c_str(), repr(range.to_string()).c_str());
-				}
+	if (obj.is_map() && obj.size() == 1) {
+		const auto it = obj.begin();
+		const auto field_name = it->as_string();
+		if (field_name.compare(QUERYDSL_RANGE) == 0) {
+			const auto& value = it.value();
+			if (value.is_map()) {
+				return MultipleValueRange::getQuery(field_spc, value);
 			} else {
-				THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_IN, repr(obj.to_string()).c_str());
+				THROW(QueryDslError, "%s must be object [%s]", field_name.c_str(), repr(value.to_string()).c_str());
+			}
+		} else {
+			switch ((Cast::Hash)xxh64::hash(field_name)) {
+				case Cast::Hash::EWKT:
+				case Cast::Hash::POINT:
+				case Cast::Hash::CIRCLE:
+				case Cast::Hash::CONVEX:
+				case Cast::Hash::POLYGON:
+				case Cast::Hash::CHULL:
+				case Cast::Hash::MULTIPOINT:
+				case Cast::Hash::MULTICIRCLE:
+				case Cast::Hash::MULTIPOLYGON:
+				case Cast::Hash::MULTICHULL:
+				case Cast::Hash::GEO_COLLECTION:
+				case Cast::Hash::GEO_INTERSECTION:
+					return GeoSpatialRange::getQuery(field_spc, obj);
+				default:
+					THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_IN, repr(obj.to_string()).c_str());
 			}
 		}
-		THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_IN, repr(obj.to_string()).c_str());
 	} else {
-		THROW(QueryDslError, "%s must be object [%s]", QUERYDSL_IN, repr(obj.to_string()).c_str());
+		THROW(QueryDslError, "%s must be object and only contains one element [%s]", QUERYDSL_IN, repr(obj.to_string()).c_str());
 	}
 }
 
