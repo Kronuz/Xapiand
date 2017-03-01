@@ -202,22 +202,22 @@ namespace Serialise {
 	// Serialise field_value like UUID.
 	std::string uuid(const std::string& field_value);
 
-	// Serialise field_value like geospatial.
-	std::string geospatial(const class MsgPack& field_value);
-	std::string geospatial(const std::string& field_value);
-
-	// Serialise a vector of ranges generates by GeoSpatial.
-	std::string ranges(const std::vector<range_t>& ranges);
-
-	// Serialise a vector of ranges and a vector of centroids generate by GeoSpatial.
-	std::string ranges_centroids(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids);
-
 	// Serialise field_value like boolean.
 	std::string boolean(const std::string& field_value);
 
 	inline std::string boolean(bool field_value) {
 		return std::string(1, field_value ? SERIALISED_TRUE : SERIALISED_FALSE);
 	}
+
+	// Serialise field_value like geospatial.
+	std::string geospatial(const std::string& field_value);
+	std::string geospatial(const class MsgPack& field_value);
+
+	// Serialise a vector of ranges and a vector of centroids generate by GeoSpatial.
+	std::string ranges_centroids(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids);
+
+	// Serialise a vector of ranges generates by GeoSpatial.
+	std::string ranges(const std::vector<range_t>& ranges);
 
 	// Serialise a normalize cartesian coordinate in SERIALISED_LENGTH_CARTESIAN bytes.
 	std::string cartesian(const Cartesian& norm_cartesian);
@@ -277,6 +277,9 @@ namespace Unserialise {
 	// Unserialise serialised_val according to field_type and returns a MsgPack.
 	MsgPack MsgPack(FieldType field_type, const std::string& serialised_val);
 
+	// Unserialise a serialised date.
+	std::string date(const std::string& serialised_date);
+
 	// Unserialise a serialised float.
 	inline double _float(const std::string& serialised_float) {
 		return sortable_unserialise(serialised_float);
@@ -292,9 +295,6 @@ namespace Unserialise {
 		return sortable_unserialise(serialised_positive);
 	}
 
-	// Unserialise a serialised date.
-	std::string date(const std::string& serialised_date);
-
 	// Unserialise a serialised date and returns the timestamp.
 	inline double timestamp(const std::string& serialised_timestamp) {
 		return sortable_unserialise(serialised_timestamp);
@@ -305,18 +305,6 @@ namespace Unserialise {
 		return serialised_boolean.at(0) == SERIALISED_TRUE;
 	}
 
-	// Unserialise a serialised cartesian coordinate.
-	Cartesian cartesian(const std::string& serialised_cartesian);
-
-	// Unserialise a serialised HTM trixel's id.
-	uint64_t trixel_id(const std::string& serialised_id);
-
-	// Unserialise a serialised range_t
-	range_t range(const std::string& serialised_range);
-
-	// Unserialise a serialised UUID.
-	std::string uuid(const std::string& serialised_uuid);
-
 	// Unserialise a serialised pair of ranges and centroids.
 	std::pair<RangeList, CartesianList> ranges_centroids(const std::string& serialised_geo);
 
@@ -325,6 +313,18 @@ namespace Unserialise {
 
 	// Unserialise centroids from serialised pair of ranges and centroids.
 	CartesianList centroids(const std::string& serialised_geo);
+
+	// Unserialise a serialised UUID.
+	std::string uuid(const std::string& serialised_uuid);
+
+	// Unserialise a serialised cartesian coordinate.
+	Cartesian cartesian(const std::string& serialised_cartesian);
+
+	// Unserialise a serialised HTM trixel's id.
+	uint64_t trixel_id(const std::string& serialised_id);
+
+	// Unserialise a serialised range_t
+	range_t range(const std::string& serialised_range);
 
 	// Unserialise str_type to its FieldType.
 	FieldType type(const std::string& str_type);

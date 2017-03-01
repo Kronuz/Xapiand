@@ -384,46 +384,6 @@ Serialise::uuid(const std::string& field_value)
 
 
 std::string
-Serialise::geospatial(const class MsgPack& field_value)
-{
-	GeoSpatial geo(field_value);
-	return Serialise::ranges(geo.geometry->getRanges(false, HTM_MIN_ERROR));
-}
-
-
-std::string
-Serialise::geospatial(const std::string& field_value)
-{
-	EWKT ewkt(field_value);
-	return Serialise::ranges(ewkt.geometry->getRanges(false, HTM_MIN_ERROR));
-}
-
-
-std::string
-Serialise::ranges(const std::vector<range_t>& ranges)
-{
-	if (ranges.empty()) {
-		return std::string();
-	}
-
-	size_t hash = 0;
-	for (const auto& range : ranges) {
-		hash ^= std::hash<range_t>{}(range);
-	}
-
-	return sortable_serialise(hash);
-}
-
-
-std::string
-Serialise::ranges_centroids(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids)
-{
-	std::vector<std::string> data = {  RangeList::serialise(ranges.begin(), ranges.end()), CartesianList::serialise(centroids.begin(), centroids.end()) };
-	return StringList::serialise(data.begin(), data.end());
-}
-
-
-std::string
 Serialise::boolean(const std::string& field_value)
 {
 	const char *value = field_value.c_str();
@@ -449,6 +409,46 @@ Serialise::boolean(const std::string& field_value)
 	}
 
 	THROW(SerialisationError, "Boolean format is not valid");
+}
+
+
+std::string
+Serialise::geospatial(const std::string& field_value)
+{
+	EWKT ewkt(field_value);
+	return Serialise::ranges(ewkt.geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+}
+
+
+std::string
+Serialise::geospatial(const class MsgPack& field_value)
+{
+	GeoSpatial geo(field_value);
+	return Serialise::ranges(geo.geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+}
+
+
+std::string
+Serialise::ranges_centroids(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids)
+{
+	std::vector<std::string> data = { RangeList::serialise(ranges.begin(), ranges.end()), CartesianList::serialise(centroids.begin(), centroids.end()) };
+	return StringList::serialise(data.begin(), data.end());
+}
+
+
+std::string
+Serialise::ranges(const std::vector<range_t>& ranges)
+{
+	if (ranges.empty()) {
+		return std::string();
+	}
+
+	size_t hash = 0;
+	for (const auto& range : ranges) {
+		hash ^= std::hash<range_t>{}(range);
+	}
+
+	return sortable_serialise(hash);
 }
 
 
@@ -788,6 +788,54 @@ Unserialise::date(const std::string& serialised_date)
 }
 
 
+std::string
+Unserialise::uuid(const std::string& serialised_uuid)
+{
+	auto guid = Guid::unserialise(serialised_uuid);
+	return guid.to_string();
+	// auto res = base64::encode(serialised_uuid);
+	// res.insert(0, 1, '{').push_back('}');
+	// return res;
+}
+
+
+std::pair<RangeList, CartesianList>
+Unserialise::ranges_centroids(const std::string& serialised_geo)
+{
+	StringList data(serialised_geo);
+	if (data.size() == 2) {
+		auto it = data.begin();
+		return std::make_pair(RangeList(*it), CartesianList(*++it));
+	} else {
+		THROW(SerialisationError, "Serialised geospatial must contain two elements");
+	}
+}
+
+
+RangeList
+Unserialise::ranges(const std::string& serialised_geo)
+{
+	StringList data(serialised_geo);
+	if (data.size() == 2) {
+		return RangeList(data.front());
+	} else {
+		THROW(SerialisationError, "Serialised geospatial must contain two elements");
+	}
+}
+
+
+CartesianList
+Unserialise::centroids(const std::string& serialised_geo)
+{
+	StringList data(serialised_geo);
+	if (data.size() == 2) {
+		return CartesianList(data.back());
+	} else {
+		THROW(SerialisationError, "Serialised geospatial must contain two elements");
+	}
+}
+
+
 Cartesian
 Unserialise::cartesian(const std::string& serialised_val)
 {
@@ -835,54 +883,6 @@ Unserialise::range(const std::string& serialised_range)
 				   (serialised_range[13] & 0xFF);
 
 	return range_t(start, end);
-}
-
-
-std::string
-Unserialise::uuid(const std::string& serialised_uuid)
-{
-	auto guid = Guid::unserialise(serialised_uuid);
-	return guid.to_string();
-	// auto res = base64::encode(serialised_uuid);
-	// res.insert(0, 1, '{').push_back('}');
-	// return res;
-}
-
-
-RangeList
-Unserialise::ranges(const std::string& serialised_geo)
-{
-	StringList data(serialised_geo);
-	if (data.size() == 2) {
-		return RangeList(data.front());
-	} else {
-		THROW(SerialisationError, "Serialised geospatial must contain two elements");
-	}
-}
-
-
-CartesianList
-Unserialise::centroids(const std::string& serialised_geo)
-{
-	StringList data(serialised_geo);
-	if (data.size() == 2) {
-		return CartesianList(data.back());
-	} else {
-		THROW(SerialisationError, "Serialised geospatial must contain two elements");
-	}
-}
-
-
-std::pair<RangeList, CartesianList>
-Unserialise::ranges_centroids(const std::string& serialised_geo)
-{
-	StringList data(serialised_geo);
-	if (data.size() == 2) {
-		auto it = data.begin();
-		return std::make_pair(RangeList(*it), CartesianList(*++it));
-	} else {
-		THROW(SerialisationError, "Serialised geospatial must contain two elements");
-	}
 }
 
 
