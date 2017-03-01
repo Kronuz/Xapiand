@@ -114,11 +114,11 @@ QueryDSL::get_in_type(const MsgPack& obj)
 		try {
 			auto it_f = range.find(QUERYDSL_FROM);
 			if (it_f != range.end()) {
-				return std::get<0>(Serialise::get_type(it_f.value()));
+				return Serialise::guess_type(it_f.value());
 			} else {
 				auto it_t = range.find(QUERYDSL_TO);
 				if (it_t != range.end()) {
-					return std::get<0>(Serialise::get_type(it_t.value()));
+					return Serialise::guess_type(it_t.value());
 				}
 			}
 		} catch (const msgpack::type_error&) {
@@ -148,13 +148,13 @@ QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
 	auto field_type = FieldType::EMPTY;
 	if (!start.empty()) {
 		auto& obj = _range[QUERYDSL_FROM] = Cast::cast(field_spc.get_type(), start);
-		field_type = std::get<0>(Serialise::get_type(obj));
+		field_type = Serialise::guess_type(obj);
 	}
 	auto end = fp.get_end();
 	if (!end.empty()) {
 		auto& obj = _range[QUERYDSL_TO] = Cast::cast(field_spc.get_type(), end);
 		if (field_type == FieldType::EMPTY) {
-			field_type = std::get<0>(Serialise::get_type(obj));
+			field_type = Serialise::guess_type(obj);
 		}
 	}
 
@@ -597,7 +597,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 			break;
 	}
 
-	auto ser_type = Serialise::get_type(obj);
+	auto ser_type = Serialise::guess_serialise(obj);
 	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), field_spc.prefix);
 
 	return get_term_query(spc, std::get<1>(ser_type), wqf, q_flags, is_wildcard);

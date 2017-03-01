@@ -336,7 +336,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					spc_id = schema->get_data_id();
 					if (spc_id.get_type() == FieldType::EMPTY) {
 						// Index like a namespace.
-						const auto type_ser = Serialise::get_type(_document_id);
+						const auto type_ser = Serialise::guess_serialise(_document_id);
 						spc_id.sep_types[2] = type_ser.first;
 						Schema::set_namespace_spc_id(spc_id);
 						term_id = type_ser.second;
@@ -738,7 +738,7 @@ DatabaseHandler::get_prefixed_term_id(const std::string& doc_id)
 	auto field_spc = schema->get_data_id();
 	if (field_spc.get_type() == FieldType::EMPTY) {
 		// Search like namespace.
-		const auto type_ser = Serialise::get_type(doc_id);
+		const auto type_ser = Serialise::guess_serialise(doc_id);
 		field_spc.sep_types[2] = type_ser.first;
 		Schema::set_namespace_spc_id(field_spc);
 		return prefixed(type_ser.second, field_spc.prefix, field_spc.get_ctype());

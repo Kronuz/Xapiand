@@ -2360,7 +2360,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 					}
 				}
 				// FIXME: ONLY SAVED A SET OF RANGES.
-				s.insert(Serialise::geo(ranges, geo.geometry->getCentroids()));
+				s.insert(Serialise::ranges_centroids(ranges, geo.geometry->getCentroids()));
 				GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
 				return;
 			} catch (const msgpack::type_error&) {
@@ -2534,7 +2534,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 							index_term(doc, std::move(ser_value), global_spc, pos);
 						}
 					}
-					auto ser_geo = Serialise::geo(ranges, geo.geometry->getCentroids());
+					auto ser_geo = Serialise::ranges_centroids(ranges, geo.geometry->getCentroids());
 					// FIXME: ONLY SAVED A SET OF RANGES.
 					s_f.insert(ser_geo);
 					s_g.insert(std::move(ser_geo));
@@ -2554,8 +2554,8 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 						index_term(doc, Serialise::ranges(g_ranges), global_spc, pos);
 					}
 					// FIXME: ONLY SAVED A SET OF RANGES.
-					s_f.insert(Serialise::geo(ranges, geo.geometry->getCentroids()));
-					s_g.insert(Serialise::geo(g_ranges, geo.geometry->getCentroids()));
+					s_f.insert(Serialise::ranges_centroids(ranges, geo.geometry->getCentroids()));
+					s_g.insert(Serialise::ranges_centroids(g_ranges, geo.geometry->getCentroids()));
 					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
 					GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, g_ranges);
 				}

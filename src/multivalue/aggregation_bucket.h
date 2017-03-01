@@ -111,9 +111,8 @@ public:
 		aggregate(value, doc);
 	}
 
-	void aggregate_geo(const std::pair<std::string, std::string>& value, const Xapian::Document& doc) override {
-		auto bucket = format_string("(%f, %f)", Unserialise::_float(value.first), Unserialise::_float(value.second));
-		aggregate(bucket, doc);
+	void aggregate_geo(const range_t& value, const Xapian::Document& doc) override {
+		aggregate(value.as_string(), doc);
 	}
 
 	void aggregate_uuid(const std::string& value, const Xapian::Document& doc) override {

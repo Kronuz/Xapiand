@@ -39,7 +39,7 @@
 
 #include "exception.h"         // for AggregationError, MSG_AggregationError
 #include "msgpack.h"           // for MsgPack, object::object
-#include "serialise_list.h"    // for _float, boolean, geo, integer, positive
+#include "serialise_list.h"    // for StringList, RangeList
 
 
 class Schema;
@@ -145,7 +145,7 @@ public:
 		THROW(AggregationError, "string type is not supported");
 	}
 
-	virtual void aggregate_geo(const std::pair<std::string, std::string>&, const Xapian::Document&) {
+	virtual void aggregate_geo(const range_t&, const Xapian::Document&) {
 		THROW(AggregationError, "geo type is not supported");
 	}
 
@@ -196,9 +196,9 @@ public:
 	}
 
 	void _aggregate_geo(const std::string& s, const Xapian::Document& doc) {
-		StringList values(s);
-		for (const auto& value : values) {
-			aggregate_geo(Unserialise::geo(value), doc);
+		const auto ranges = Unserialise::ranges(s);
+		for (const auto& range : ranges) {
+			aggregate_geo(range, doc);
 		}
 	}
 
@@ -271,7 +271,7 @@ public:
 		_aggregate();
 	}
 
-	void aggregate_geo(const std::pair<std::string, std::string>&, const Xapian::Document&) override {
+	void aggregate_geo(const range_t&, const Xapian::Document&) override {
 		_aggregate();
 	}
 
