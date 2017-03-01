@@ -22,6 +22,10 @@
 
 #pragma once
 
+#include <memory>
+#include <sstream>
+#include <unordered_map>
+
 #include "exception.h"
 #include "msgpack.hpp"
 #include "rapidjson/document.h"
@@ -29,9 +33,6 @@
 #include "rapidjson/stringbuffer.h"
 #include "xchange/rapidjson.hpp"
 
-#include <memory>
-#include <sstream>
-#include <unordered_map>
 
 #define MSGPACK_MAP_INIT_SIZE    4
 #define MSGPACK_ARRAY_INIT_SIZE  4
@@ -46,6 +47,9 @@ static constexpr const char* const MsgPackTypes[] = {
 
 class MsgPack {
 	struct Body;
+
+	template <typename T>
+	class Iterator;
 
 	const std::shared_ptr<Body> _body;
 	const Body* const _const_body;
@@ -96,9 +100,6 @@ public:
 			return Type::UNDEFINED;
 		}
 	};
-
-	template <typename T>
-	class Iterator;
 
 	using iterator = Iterator<MsgPack>;
 	using const_iterator = Iterator<const MsgPack>;
@@ -286,20 +287,19 @@ class MsgPack::Iterator : public std::iterator<std::input_iterator_tag, MsgPack>
 	T* _mobj;
 	off_t _off;
 
-public:
 	Iterator(T* o, off_t off)
 		: _mobj(o),
 		  _off(off)
 	{
-		assert(_off >= 0);
+		if (_mobj->_const_body->getType() != MsgPack::Type::MAP && _mobj->_const_body->getType() != MsgPack::Type::ARRAY) {
+			THROW(msgpack::type_error);
+		}
 	}
 
+public:
 	Iterator(const Iterator& it)
 		: _mobj(it._mobj),
-		  _off(it._off)
-	{
-		assert(_off >= 0);
-	}
+		  _off(it._off)	{ }
 
 	Iterator& operator++() {
 		++_off;
@@ -330,13 +330,10 @@ public:
 	}
 
 	T& operator*() {
-		switch (_mobj->_const_body->getType()) {
-			case Type::MAP:
-				return _mobj->at(_off)._body->_key;
-			case Type::ARRAY:
-				return _mobj->at(_off);
-			default:
-				THROW(msgpack::type_error);
+		if (_mobj->_const_body->getType() == MsgPack::Type::MAP) {
+			return _mobj->at(_off)._body->_key;
+		} else {
+			return _mobj->at(_off);
 		}
 	}
 
@@ -345,13 +342,10 @@ public:
 	}
 
 	T& operator*() const {
-		switch (_mobj->_const_body->getType()) {
-			case Type::MAP:
-				return _mobj->at(_off)._const_body->_key;
-			case Type::ARRAY:
-				return _mobj->at(_off);
-			default:
-				THROW(msgpack::type_error);
+		if (_mobj->_const_body->getType() == MsgPack::Type::MAP) {
+			return _mobj->at(_off)._const_body->_key;
+		} else {
+			return _mobj->at(_off);
 		}
 	}
 
@@ -360,25 +354,11 @@ public:
 	}
 
 	T& value() {
-		switch (_mobj->_const_body->getType()) {
-			case Type::MAP:
-				return _mobj->at(_off);
-			case Type::ARRAY:
-				return _mobj->at(_off);
-			default:
-				THROW(msgpack::type_error);
-		}
+		return _mobj->at(_off);
 	}
 
 	T& value() const {
-		switch (_mobj->_const_body->getType()) {
-			case Type::MAP:
-				return _mobj->at(_off);
-			case Type::ARRAY:
-				return _mobj->at(_off);
-			default:
-				THROW(msgpack::type_error);
-		}
+		return _mobj->at(_off);
 	}
 
 	bool operator==(const Iterator& other) const {
