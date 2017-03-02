@@ -29,10 +29,9 @@
 #include "database_utils.h"                    // for prefixed, RESERVED_VALUE
 #include "exception.h"                         // for THROW, QueryDslError
 #include "field_parser.h"                      // for FieldParser
-#include "geo/ewkt.h"                          // for EWKT
 #include "log.h"                               // for Log, L_CALL, L
 #include "multivalue/generate_terms.h"         // for GenerateTerms
-#include "multivalue/geospatialrange.h"        // for GeoSpatialRange
+#include "multivalue/geospatialrange.h"        // for GeoSpatial, GeoSpatialRange
 #include "multivalue/range.h"                  // for MultipleValueRange
 #include "serialise.h"                         // for MsgPack, get_range_type...
 #include "utils.h"                             // for repr, startswith
@@ -518,9 +517,8 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, const std::string& 
 	if (field_accuracy.find("_geo") == 0) {
 		try {
 			auto nivel = stox(std::stoull, field_accuracy.substr(4));
-			auto value = Cast::string(obj);  // FIXME: use Cast::geo() instead?
-			EWKT ewkt(value);
-			const auto ranges = ewkt.geometry->getRanges(default_spc.flags.partials, default_spc.error);
+			GeoSpatial geo(obj);
+			const auto ranges = geo.geometry->getRanges(default_spc.flags.partials, default_spc.error);
 			return GenerateTerms::geo(ranges, { nivel }, { field_spc.prefix }, wqf);
 		} catch (const InvalidArgument&) {
 			THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
