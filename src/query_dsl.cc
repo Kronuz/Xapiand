@@ -586,21 +586,20 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 	if (is_in) {
 		if (obj.is_string()) {
 			auto parsed = parse_guess_range(field_spc, obj.as_string());
-			required_spc_t spc;
-			if (field_spc.prefix.empty()) {
-				spc = specification_t::get_global(parsed.first);
+			if (parsed.first == FieldType::EMPTY) {
+				return Xapian::Query::MatchAll;
+			} else if (field_spc.prefix.empty()) {
+				return get_in_query(specification_t::get_global(parsed.first), parsed.second);
 			} else {
-				spc = Schema::get_namespace_specification(parsed.first, field_spc.prefix);
+				return get_in_query(Schema::get_namespace_specification(parsed.first, field_spc.prefix), parsed.second);
 			}
-			return get_in_query(spc, parsed.second);
 		} else {
 			required_spc_t spc;
 			if (field_spc.prefix.empty()) {
-				spc = specification_t::get_global(get_in_type(obj));
+				return get_in_query(specification_t::get_global(get_in_type(obj)), obj);
 			} else {
-				spc = Schema::get_namespace_specification(get_in_type(obj), field_spc.prefix);
+				return get_in_query(Schema::get_namespace_specification(get_in_type(obj), field_spc.prefix), obj);
 			}
-			return get_in_query(spc, obj);
 		}
 	}
 
@@ -635,8 +634,9 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 	if (is_in) {
 		if (obj.is_string()) {
 			return get_in_query(field_spc, parse_range(field_spc, obj.as_string()));
+		} else {
+			return get_in_query(field_spc, obj);
 		}
-		return get_in_query(field_spc, obj);
 	}
 
 	switch (obj.getType()) {
