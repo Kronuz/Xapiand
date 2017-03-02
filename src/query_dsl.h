@@ -55,7 +55,9 @@ class QueryDSL {
 
 	FieldType get_in_type(const MsgPack& obj);
 
-	std::pair<FieldType, MsgPack> parse_range(const required_spc_t& field_spc, const std::string& range);
+	std::pair<FieldType, MsgPack> parse_guess_range(const required_spc_t& field_spc, const std::string& range);
+	MsgPack parse_range(const required_spc_t& field_spc, const std::string& range);
+
 
 	/*
 	 * Dispatch functions.

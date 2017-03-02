@@ -132,9 +132,9 @@ QueryDSL::get_in_type(const MsgPack& obj)
 
 
 std::pair<FieldType, MsgPack>
-QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
+QueryDSL::parse_guess_range(const required_spc_t& field_spc, const std::string& range)
 {
-	L_CALL(this, "QueryDSL::parse_range(<field_spc>, %s)", repr(range).c_str());
+	L_CALL(this, "QueryDSL::parse_guess_range(<field_spc>, %s)", repr(range).c_str());
 
 	FieldParser fp(range);
 	fp.parse();
@@ -158,6 +158,31 @@ QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
 	}
 
 	return std::make_pair(field_type, std::move(value));
+}
+
+
+MsgPack
+QueryDSL::parse_range(const required_spc_t& field_spc, const std::string& range)
+{
+	L_CALL(this, "QueryDSL::parse_range(<field_spc>, %s)", repr(range).c_str());
+
+	FieldParser fp(range);
+	fp.parse();
+	if (!fp.is_range()) {
+		THROW(QueryDslError, "Invalid range [<string>]: %s", repr(range).c_str());
+	}
+	MsgPack value;
+	auto& _range = value[QUERYDSL_RANGE] = MsgPack(MsgPack::Type::MAP);
+	auto start = fp.get_start();
+	if (!start.empty()) {
+		_range[QUERYDSL_FROM] = Cast::cast(field_spc.get_type(), start);
+	}
+	auto end = fp.get_end();
+	if (!end.empty()) {
+		_range[QUERYDSL_TO] = Cast::cast(field_spc.get_type(), end);
+	}
+
+	return value;
 }
 
 
@@ -560,7 +585,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 
 	if (is_in) {
 		if (obj.is_string()) {
-			auto parsed = parse_range(field_spc, obj.as_string());
+			auto parsed = parse_guess_range(field_spc, obj.as_string());
 			required_spc_t spc;
 			if (field_spc.prefix.empty()) {
 				spc = specification_t::get_global(parsed.first);
@@ -609,8 +634,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 
 	if (is_in) {
 		if (obj.is_string()) {
-			auto parsed = parse_range(field_spc, obj.as_string());
-			return get_in_query(field_spc, parsed.second);
+			return get_in_query(field_spc, parse_range(field_spc, obj.as_string()));
 		}
 		return get_in_query(field_spc, obj);
 	}
