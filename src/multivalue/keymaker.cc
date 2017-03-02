@@ -22,9 +22,10 @@
 
 #include "keymaker.h"
 
-#include <utility>                        // for pair
+#include <utility>          // for pair
 
-#include "exception.h"                    // for InvalidArgumentError, MSG_I...
+#include "exception.h"      // for InvalidArgumentError, MSG_I...
+#include "geo/ewkt.h"       // for EWKT
 
 
 const dispatch_str_metric def_str_metric     = &Multi_MultiValueKeyMaker::jaro;
