@@ -175,7 +175,7 @@ Circle::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 {
 	// Finish the recursion.
 	if (level == data.max_level) {
-		HTM::insertRange(data.aux_ranges, HTM::getRange(id, level));
+		HTM::insertGreaterRange(data.aux_ranges, HTM::getRange(id, level));
 		return;
 	}
 
@@ -194,7 +194,7 @@ Circle::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 	int F = (type_trixels[0] == TypeTrixel::FULL) + (type_trixels[1] == TypeTrixel::FULL) + (type_trixels[2] == TypeTrixel::FULL) + (type_trixels[3] == TypeTrixel::FULL);
 
 	if (F == 4) {
-		HTM::insertRange(data.ranges, HTM::getRange(id, level));
+		HTM::insertGreaterRange(data.ranges, HTM::getRange(id, level));
 		return;
 	}
 
@@ -203,7 +203,7 @@ Circle::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 
 	switch (type_trixels[0]) {
 		case TypeTrixel::FULL:
-			HTM::insertRange(data.ranges, HTM::getRange(id, level));
+			HTM::insertGreaterRange(data.ranges, HTM::getRange(id, level));
 			break;
 		case TypeTrixel::PARTIAL:
 			lookupTrixel(v0, w2, w1, id, data, level);
@@ -214,7 +214,7 @@ Circle::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 
 	switch (type_trixels[1]) {
 		case TypeTrixel::FULL:
-			HTM::insertRange(data.ranges, HTM::getRange(id + 1, level));
+			HTM::insertGreaterRange(data.ranges, HTM::getRange(id + 1, level));
 			break;
 		case TypeTrixel::PARTIAL:
 			lookupTrixel(v1, w0, w2, id + 1, data, level);
@@ -225,7 +225,7 @@ Circle::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 
 	switch (type_trixels[2]) {
 		case TypeTrixel::FULL:
-			HTM::insertRange(data.ranges, HTM::getRange(id + 2, level));
+			HTM::insertGreaterRange(data.ranges, HTM::getRange(id + 2, level));
 			break;
 		case TypeTrixel::PARTIAL:
 			lookupTrixel(v2, w1, w0, id + 2, data, level);
@@ -236,7 +236,7 @@ Circle::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 
 	switch (type_trixels[3]) {
 		case TypeTrixel::FULL:
-			HTM::insertRange(data.ranges, HTM::getRange(id + 3, level));
+			HTM::insertGreaterRange(data.ranges, HTM::getRange(id + 3, level));
 			break;
 		case TypeTrixel::PARTIAL:
 			lookupTrixel(w0, w1, w2, id + 3, data, level);

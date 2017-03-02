@@ -243,7 +243,7 @@ namespace HTM {
 
 	// Insert a range into ranges, range must be greater than or equal to last value in ranges.
 	template <typename T, typename = std::enable_if_t<std::is_same<range_t, std::decay_t<T>>::value>>
-	void insertRange(std::vector<range_t>& ranges, T&& range) {
+	void insertGreaterRange(std::vector<range_t>& ranges, T&& range) {
 		if (ranges.empty()) {
 			ranges.push_back(std::forward<T>(range));
 		} else {

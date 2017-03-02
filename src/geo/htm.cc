@@ -120,10 +120,10 @@ HTM::range_union(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2)
 
 	while (it1 != it1_e && it2 != it2_e) {
 		if (it1->start < it2->start) {
-			insertRange(res, std::move(*it1));
+			insertGreaterRange(res, std::move(*it1));
 			++it1;
 		} else {
-			insertRange(res, std::move(*it2));
+			insertGreaterRange(res, std::move(*it2));
 			++it2;
 		}
 	}
@@ -173,18 +173,18 @@ HTM::range_intersection(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2)
 		if (it1->start < it2->start) {
 			if (it1->end >= it2->start) {
 				if (it1->end < it2->end) {
-					insertRange(res, range_t(it2->start, it1->end));
+					insertGreaterRange(res, range_t(it2->start, it1->end));
 				} else {
-					insertRange(res, *it2);
+					insertGreaterRange(res, *it2);
 				}
 			}
 			++it1;
 		} else {
 			if (it2->end >= it1->start) {
 				if (it2->end < it1->end) {
-					insertRange(res, range_t(it1->start, it2->end));
+					insertGreaterRange(res, range_t(it1->start, it2->end));
 				} else {
-					insertRange(res, *it1);
+					insertGreaterRange(res, *it1);
 				}
 			}
 			++it2;
@@ -223,13 +223,13 @@ HTM::range_exclusive_disjunction(std::vector<range_t>&& rs1, std::vector<range_t
 				if (prev.end > it1->end) {
 					std::swap(prev.end, it1->start);
 					std::swap(it1->start, it1->end);
-					insertRange(res, std::move(*it1));
+					insertGreaterRange(res, std::move(*it1));
 				} else {
 					std::swap(prev.end, it1->start);
-					insertRange(res, std::move(*it1));
+					insertGreaterRange(res, std::move(*it1));
 				}
 			} else {
-				insertRange(res, std::move(*it1));
+				insertGreaterRange(res, std::move(*it1));
 			}
 			++it1;
 		} else {
@@ -237,13 +237,13 @@ HTM::range_exclusive_disjunction(std::vector<range_t>&& rs1, std::vector<range_t
 				if (prev.end > it2->end) {
 					std::swap(prev.end, it2->start);
 					std::swap(it2->start, it2->end);
-					insertRange(res, std::move(*it2));
+					insertGreaterRange(res, std::move(*it2));
 				} else {
 					std::swap(prev.end, it2->start);
-					insertRange(res, std::move(*it2));
+					insertGreaterRange(res, std::move(*it2));
 				}
 			} else {
-				insertRange(res, std::move(*it2));
+				insertGreaterRange(res, std::move(*it2));
 			}
 			++it2;
 		}
@@ -259,13 +259,13 @@ HTM::range_exclusive_disjunction(std::vector<range_t>&& rs1, std::vector<range_t
 				if (prev.end > it1->end) {
 					std::swap(prev.end, it1->start);
 					std::swap(it1->start, it1->end);
-					insertRange(res, std::move(*it1));
+					insertGreaterRange(res, std::move(*it1));
 				} else {
 					std::swap(prev.end, it1->start);
-					insertRange(res, std::move(*it1));
+					insertGreaterRange(res, std::move(*it1));
 				}
 			} else {
-				insertRange(res, std::move(*it1));
+				insertGreaterRange(res, std::move(*it1));
 			}
 			++it1;
 		}
@@ -281,13 +281,13 @@ HTM::range_exclusive_disjunction(std::vector<range_t>&& rs1, std::vector<range_t
 				if (prev.end > it2->end) {
 					std::swap(prev.end, it2->start);
 					std::swap(it2->start, it2->end);
-					insertRange(res, std::move(*it2));
+					insertGreaterRange(res, std::move(*it2));
 				} else {
 					std::swap(prev.end, it2->start);
-					insertRange(res, std::move(*it2));
+					insertGreaterRange(res, std::move(*it2));
 				}
 			} else {
-				insertRange(res, std::move(*it2));
+				insertGreaterRange(res, std::move(*it2));
 			}
 			++it2;
 		}
