@@ -105,7 +105,7 @@ QueryDSL::get_in_type(const MsgPack& obj)
 	try {
 		auto it = obj.find(QUERYDSL_RANGE);
 		if (it == obj.end()) {
-			// If is not range must be geo.
+			// If is not _range must be geo.
 			return FieldType::GEO;
 		}
 

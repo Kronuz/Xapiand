@@ -863,7 +863,7 @@ specification_t::get_global(FieldType field_type)
 			return spc;
 		}
 		default:
-			THROW(ClientError, "Type: '%u' is an unknown type", field_type);
+			THROW(ClientError, "Type: '%c' is an unknown type", field_type);
 	}
 }
 
