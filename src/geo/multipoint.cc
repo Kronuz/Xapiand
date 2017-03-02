@@ -70,6 +70,8 @@ MultiPoint::getTrixels(bool, double) const
 		trixels.push_back(HTM::getTrixelName(point.p));
 	}
 
+	std::sort(trixels.begin(), trixels.end());
+
 	return trixels;
 }
 
@@ -80,9 +82,12 @@ MultiPoint::getRanges(bool, double) const
 	std::vector<range_t> ranges;
 	ranges.reserve(points.size());
 	for (const auto& point : points) {
-		auto id = HTM::getId(point.p);
+		const auto id = HTM::getId(point.p);
 		ranges.emplace_back(id, id);
 	}
+
+	std::sort(ranges.begin(), ranges.end(), std::less<range_t>());
+	HTM::simplifyRanges(ranges);
 
 	return ranges;
 }
