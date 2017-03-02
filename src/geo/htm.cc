@@ -303,11 +303,11 @@ HTM::startTrixel(const Cartesian& coord) noexcept
 	int num;
 	if (coord.x > 0 && coord.y >= 0) {
 		num = (coord.z >= 0) ? 3 : 4; // N3  S0
-	} else if(coord.x <= 0 && coord.y > 0) {
+	} else if (coord.x <= 0 && coord.y > 0) {
 		num = (coord.z >= 0) ? 2 : 5; // N2  S1
-	} else if(coord.x < 0 && coord.y <= 0) {
+	} else if (coord.x < 0 && coord.y <= 0) {
 		num = (coord.z >= 0) ? 1 : 6; // N1  S2
-	} else if(coord.x >= 0 && coord.y < 0) {
+	} else if (coord.x >= 0 && coord.y < 0) {
 		num = (coord.z >= 0) ? 0 : 7; // N0  S3
 	} else {
 		num = (coord.z >= 0) ? 3 : 4; // N3  S0
