@@ -803,11 +803,15 @@ std::pair<RangeList, CartesianList>
 Unserialise::ranges_centroids(const std::string& serialised_geo)
 {
 	StringList data(serialised_geo);
-	if (data.size() == 2) {
-		auto it = data.begin();
-		return std::make_pair(RangeList(*it), CartesianList(*++it));
-	} else {
-		THROW(SerialisationError, "Serialised geospatial must contain two elements");
+	switch (data.size()) {
+		case 0:
+			return std::make_pair(RangeList(std::string()), CartesianList(std::string()));
+		case 1:
+			return std::make_pair(RangeList(data.front()), CartesianList(std::string()));
+		case 2:
+			return std::make_pair(RangeList(data.front()), CartesianList(data.back()));
+		default:
+			THROW(SerialisationError, "Serialised geospatial must contain at most two elements");
 	}
 }
 
@@ -816,10 +820,14 @@ RangeList
 Unserialise::ranges(const std::string& serialised_geo)
 {
 	StringList data(serialised_geo);
-	if (data.size() == 2) {
-		return RangeList(data.front());
-	} else {
-		THROW(SerialisationError, "Serialised geospatial must contain two elements");
+	switch (data.size()) {
+		case 0:
+			return RangeList(std::string());
+		case 1:
+		case 2:
+			return RangeList(data.front());
+		default:
+			THROW(SerialisationError, "Serialised geospatial must contain at most two elements");
 	}
 }
 
@@ -828,10 +836,14 @@ CartesianList
 Unserialise::centroids(const std::string& serialised_geo)
 {
 	StringList data(serialised_geo);
-	if (data.size() == 2) {
-		return CartesianList(data.back());
-	} else {
-		THROW(SerialisationError, "Serialised geospatial must contain two elements");
+	switch (data.size()) {
+		case 0:
+		case 1:
+			return CartesianList(std::string());
+		case 2:
+			return CartesianList(data.back());
+		default:
+			THROW(SerialisationError, "Serialised geospatial must contain at most two elements");
 	}
 }
 
