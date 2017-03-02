@@ -112,13 +112,15 @@ QueryDSL::get_in_type(const MsgPack& obj)
 		const auto& range = it.value();
 		try {
 			auto it_f = range.find(QUERYDSL_FROM);
-			if (it_f != range.end()) {
-				return Serialise::guess_type(it_f.value());
-			} else {
+			if (it_f == range.end()) {
 				auto it_t = range.find(QUERYDSL_TO);
-				if (it_t != range.end()) {
+				if (it_t == range.end()) {
+					return FieldType::EMPTY;
+				} else {
 					return Serialise::guess_type(it_t.value());
 				}
+			} else {
+				return Serialise::guess_type(it_f.value());
 			}
 		} catch (const msgpack::type_error&) {
 			THROW(QueryDslError, "%s must be object [%s]", QUERYDSL_RANGE, repr(range.to_string()).c_str());
@@ -594,11 +596,13 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 				return get_in_query(Schema::get_namespace_specification(parsed.first, field_spc.prefix), parsed.second);
 			}
 		} else {
-			required_spc_t spc;
-			if (field_spc.prefix.empty()) {
-				return get_in_query(specification_t::get_global(get_in_type(obj)), obj);
+			auto field_type = get_in_type(obj);
+			if (field_type == FieldType::EMPTY) {
+				return Xapian::Query::MatchAll;
+			} else if (field_spc.prefix.empty()) {
+				return get_in_query(specification_t::get_global(field_type), obj);
 			} else {
-				return get_in_query(Schema::get_namespace_specification(get_in_type(obj), field_spc.prefix), obj);
+				return get_in_query(Schema::get_namespace_specification(field_type, field_spc.prefix), obj);
 			}
 		}
 	}
