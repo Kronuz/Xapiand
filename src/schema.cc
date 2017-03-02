@@ -2248,6 +2248,31 @@ Schema::index_all_term(Xapian::Document& doc, const MsgPack& value, const specif
 
 
 void
+Schema::merge_geospatial_values(std::set<std::string>& s, std::vector<range_t> ranges, std::vector<Cartesian> centroids)
+{
+	L_CALL(nullptr, "Schema::merge_geospatial_values(...)");
+
+	if (s.empty()) {
+		s.insert(Serialise::ranges_centroids(ranges, centroids));
+	} else {
+		auto prev_value = Unserialise::ranges_centroids(*s.begin());
+		s.clear();
+		ranges = HTM::range_union(std::move(ranges), std::vector<range_t>(std::make_move_iterator(prev_value.first.begin()), std::make_move_iterator(prev_value.first.end())));
+		if (prev_value.second.empty()) {
+			s.insert(Serialise::ranges_centroids(ranges, centroids));
+		} else {
+			for (const auto& _centroid : prev_value.second) {
+				if (std::find(centroids.begin(), centroids.end(), _centroid) == centroids.end()) {
+					centroids.push_back(_centroid);
+				}
+			}
+			s.insert(Serialise::ranges_centroids(ranges, centroids));
+		}
+	}
+}
+
+
+void
 Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s, const specification_t& spc, size_t pos, const specification_t* field_spc, const specification_t* global_spc)
 {
 	L_CALL(nullptr, "Schema::index_value(<Xapian::Document>, %s, <std::set<std::string>>, <specification_t>, %zu, <specification_t*>, <specification_t*>)", repr(value.to_string()).c_str(), pos);
@@ -2351,9 +2376,8 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 						}
 					}
 				}
-				// FIXME: ONLY SAVED A SET OF RANGES.
-				s.insert(Serialise::ranges_centroids(ranges, geo.geometry->getCentroids()));
 				GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
+				merge_geospatial_values(s, std::move(ranges), geo.geometry->getCentroids());
 				return;
 			} catch (const msgpack::type_error&) {
 				THROW(ClientError, "Format invalid for geo type: %s", repr(value.to_string()).c_str());
@@ -2529,16 +2553,14 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 							index_term(doc, std::move(ser_value), global_spc, pos);
 						}
 					}
-					auto ser_geo = Serialise::ranges_centroids(ranges, geo.geometry->getCentroids());
-					// FIXME: ONLY SAVED A SET OF RANGES.
-					s_f.insert(ser_geo);
-					s_g.insert(std::move(ser_geo));
 					if (field_spc.accuracy == global_spc.accuracy) {
 						GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, ranges);
 					} else {
 						GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
 						GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, ranges);
 					}
+					merge_geospatial_values(s_f, ranges, geo.geometry->getCentroids());
+					merge_geospatial_values(s_g, std::move(ranges), geo.geometry->getCentroids());
 				} else {
 					auto g_ranges = geo.geometry->getRanges(global_spc.flags.partials, global_spc.error);
 					if (toUType(field_spc.index & TypeIndex::TERMS)) {
@@ -2550,11 +2572,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 							index_term(doc, std::move(ser_value), global_spc, pos);
 						}
 					}
-					// FIXME: ONLY SAVED A SET OF RANGES.
-					s_f.insert(Serialise::ranges_centroids(ranges, geo.geometry->getCentroids()));
-					s_g.insert(Serialise::ranges_centroids(g_ranges, geo.geometry->getCentroids()));
 					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
 					GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, g_ranges);
+					merge_geospatial_values(s_f, std::move(ranges), geo.geometry->getCentroids());
+					merge_geospatial_values(s_g, std::move(g_ranges), geo.geometry->getCentroids());
 				}
 				return;
 			} catch (const msgpack::type_error&) {
