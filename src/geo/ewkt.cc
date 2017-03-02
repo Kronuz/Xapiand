@@ -22,8 +22,8 @@
 
 #include "ewkt.h"
 
-#include "../split.h"              // for Split
-#include "../utils.h"              // for stox
+#include "../split.h"      // for Split
+#include "../utils.h"      // for stox
 
 
 const std::regex find_geometry_re("(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?([A-Z]{5,20})[\\s]*\\(([()-.0-9\\s,A-Z]*)\\)", std::regex::optimize);
