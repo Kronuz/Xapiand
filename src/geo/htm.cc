@@ -300,7 +300,18 @@ HTM::range_exclusive_disjunction(std::vector<range_t>&& rs1, std::vector<range_t
 const trixel_t&
 HTM::startTrixel(const Cartesian& coord) noexcept
 {
-	size_t num = (coord.x > 0 ? 4 : 0) + (coord.y > 0 ? 2 : 0) + (coord.z > 0 ? 1 : 0);
+	int num;
+	if (coord.x > 0 && coord.y >= 0) {
+		num = (coord.z >= 0) ? 3 : 4; // N3  S0
+	} else if(coord.x <= 0 && coord.y > 0) {
+		num = (coord.z >= 0) ? 2 : 5; // N2  S1
+	} else if(coord.x < 0 && coord.y <= 0) {
+		num = (coord.z >= 0) ? 1 : 6; // N1  S2
+	} else if(coord.x >= 0 && coord.y < 0) {
+		num = (coord.z >= 0) ? 0 : 7; // N0  S3
+	} else {
+		num = (coord.z >= 0) ? 3 : 4; // N3  S0
+	}
 	return start_trixels[num];
 }
 
@@ -604,19 +615,10 @@ HTM::getTrixels(const std::vector<range_t>& ranges)
 void
 HTM::getCorners(const std::string& name, Cartesian& v0, Cartesian& v1, Cartesian& v2)
 {
-	size_t trixel = name[1] - '0';
-
-	if (name[0] == 'S') {
-		const auto& corner = S[trixel];
-		v0 = start_vertices[corner.v0];
-		v1 = start_vertices[corner.v1];
-		v2 = start_vertices[corner.v2];
-	} else {
-		const auto& corner = N[trixel];
-		v0 = start_vertices[corner.v0];
-		v1 = start_vertices[corner.v1];
-		v2 = start_vertices[corner.v2];
-	}
+	const auto& start_trixel = start_trixels[name[1] - '0' + (name[0] == 'S' ? 4 : 0)];
+	v0 = start_vertices[start_trixel.v0];
+	v1 = start_vertices[start_trixel.v1];
+	v2 = start_vertices[start_trixel.v2];
 
 	size_t i = 2, len = name.length();
 	while (i < len) {
