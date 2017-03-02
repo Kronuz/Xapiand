@@ -149,7 +149,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 			int pos = START_POS - acc * 2;
 			if (idx < pos) {
 				uint64_t vterm = val >> pos;
-				set_terms.insert(prefixed(Serialise::trixel_id(vterm), *it++, ctype_geo));
+				set_terms.insert(prefixed(Serialise::positive(vterm), *it++, ctype_geo));
 			} else {
 				break;
 			}
@@ -290,7 +290,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 			int pos = START_POS - acc * 2;
 			if (idx < pos) {
 				uint64_t vterm = val >> pos;
-				auto term_s = Serialise::trixel_id(vterm);
+				auto term_s = Serialise::positive(vterm);
 				set_terms.insert(prefixed(term_s, *it++, ctype_geo));
 				set_terms.insert(prefixed(term_s, *itg++, ctype_geo));
 			} else {
@@ -665,7 +665,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	const auto it_e = results.end();
 	for (++it; it != it_e; ++it) {
 		if (isnotSubtrixel(last_valid, it->first)) {
-			Xapian::Query query_(prefixed(Serialise::serialise(it->first), it->second, ctype_geo), wqf);
+			Xapian::Query query_(prefixed(Serialise::positive(it->first), it->second, ctype_geo), wqf);
 			if (query.empty()) {
 				query = query_;
 			} else {
