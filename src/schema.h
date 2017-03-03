@@ -24,29 +24,29 @@
 
 #include "xapiand.h"
 
-#include <array>                           // for array
-#include <future>                          // for future
-#include <memory>                          // for shared_ptr
-#include <stddef.h>                        // for size_t
-#include <string>                          // for string
-#include <sys/types.h>                     // for uint8_t
-#include <tuple>                           // for tuple
-#include <unordered_map>                   // for unordered_map
-#include <utility>                         // for pair
-#include <vector>                          // for vector
-#include <xapian.h>                        // for QueryParser
+#include <array>                   // for array
+#include <future>                  // for future
+#include <memory>                  // for shared_ptr
+#include <stddef.h>                // for size_t
+#include <string>                  // for string
+#include <sys/types.h>             // for uint8_t
+#include <tuple>                   // for tuple
+#include <unordered_map>           // for unordered_map
+#include <utility>                 // for pair
+#include <vector>                  // for vector
+#include <xapian.h>                // for QueryParser
 
 #include "database_utils.h"
-#include "geo/htm.h"                       // for HTM_MIN_ERROR
-#include "msgpack.h"                       // for MsgPack, MS...
-#include "utils.h"                         // for repr, toUType, lower_string
+#include "geo/htm.h"               // for range_t
+#include "msgpack.h"               // for MsgPack, MS...
+#include "utils.h"                 // for repr, toUType, lower_string
 
 
 #define DEFAULT_STOP_STRATEGY  StopStrategy::STOP_ALL
 #define DEFAULT_STEM_STRATEGY  StemStrategy::STEM_SOME
 #define DEFAULT_LANGUAGE       "en"
 #define DEFAULT_GEO_PARTIALS   true
-#define DEFAULT_GEO_ERROR      HTM_MIN_ERROR
+#define DEFAULT_GEO_ERROR      0.3
 #define DEFAULT_POSITIONS      true
 #define DEFAULT_SPELLING       false
 #define DEFAULT_BOOL_TERM      false
