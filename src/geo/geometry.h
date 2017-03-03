@@ -31,9 +31,6 @@ constexpr double M_PER_RADIUS_EARTH = 6367444.7;
 // Radius maximum in meters allowed in a constraint (all the earth)
 constexpr double MAX_RADIUS_HALFSPACE_EARTH = 20003917.491659265;
 
-// Constant for scaling the radius of a Polygon
-constexpr double SCALE_RADIUS = 0.70710678118654752440084436;
-
 // Min radius in meters allowed
 constexpr double MIN_RADIUS_METERS = 0.1;
 
