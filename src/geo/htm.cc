@@ -580,9 +580,10 @@ HTM::getTrixels(const std::vector<range_t>& ranges)
 {
 	std::vector<std::string> trixels;
 	trixels.reserve(ranges.size());
+	std::bitset<HTM_BITS_ID> s, e;
 	for (const auto& range : ranges) {
-		std::bitset<HTM_BITS_ID> s(range.start);
-		std::bitset<HTM_BITS_ID> e(range.end);
+		s = range.start;
+		e = range.end;
 		size_t idx = 0;
 		while (idx < s.size() - 4 && s.test(idx) == 0 && e.test(idx) == 1 && s.test(idx + 1) == 0 && e.test(idx + 1) == 1) {
 			idx += 2;
