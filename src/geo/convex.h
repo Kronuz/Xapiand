@@ -38,7 +38,7 @@ class Convex : public Geometry {
 	Sign sign;
 
 	int insideVertex(const Cartesian& v) const noexcept;
-	bool intersectConstraint(const Constraint& bounding_circle) const;
+	bool intersectCircles(const Constraint& bounding_circle) const;
 	TypeTrixel verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
 
 	void lookupTrixels(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, std::string name, trixel_data& info, uint8_t level, uint8_t Pp) const;

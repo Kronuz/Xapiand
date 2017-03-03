@@ -63,7 +63,7 @@ Convex::insideVertex(const Cartesian& v) const noexcept
 
 
 bool
-Convex::intersectConstraint(const Constraint& c) const
+Convex::intersectCircles(const Constraint& c) const
 {
 	for (const auto& circle : circles) {
 		if (!HTM::intersectConstraints(circle.constraint, c)) {
@@ -82,7 +82,7 @@ Convex::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 	switch (sum) {
 		case 0: {
 			// If bounding circle doesnot intersect all circles, the trixel is considered OUTSIDE.
-			if (!intersectConstraint(HTM::getBoundingCircle(v0, v1, v2))) {
+			if (!intersectCircles(HTM::getBoundingCircle(v0, v1, v2))) {
 				return TypeTrixel::OUTSIDE;
 			}
 
