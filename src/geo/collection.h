@@ -29,18 +29,14 @@
 
 
 class Collection : public Geometry {
-protected:
 	MultiPoint multipoint;
 	MultiCircle multicircle;
 	MultiConvex multiconvex;
 	MultiPolygon multipolygon;
 
-	Collection(Type type)
-		: Geometry(type) { }
-
 public:
 	Collection()
-		: Collection(Type::COLLECTION) { }
+		: Geometry(Type::COLLECTION) { }
 
 	Collection(Collection&& collection) noexcept
 		: Geometry(std::move(collection)),
@@ -127,6 +123,18 @@ public:
 	void add_multicircle(MultiCircle&& multicircle_) {
 		for (auto& circle : multicircle_.getCircles()) {
 			multicircle.add(std::move(circle));
+		}
+	}
+
+	void add_multiconvex(const MultiConvex& multiconvex_) {
+		for (const auto& convex : multiconvex_.getConvexs()) {
+			multiconvex.add(convex);
+		}
+	}
+
+	void add_multiconvex(MultiConvex&& multiconvex_) {
+		for (auto& convex : multiconvex_.getConvexs()) {
+			multiconvex.add(std::move(convex));
 		}
 	}
 
