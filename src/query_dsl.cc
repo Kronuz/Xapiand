@@ -84,6 +84,7 @@ const std::unordered_map<std::string, QueryDSL::dispatch_func> QueryDSL::map_dis
 	{ RESERVED_MULTIPOINT,            &QueryDSL::process_cast          },
 	{ RESERVED_MULTIPOLYGON,          &QueryDSL::process_cast          },
 	{ RESERVED_MULTICIRCLE,           &QueryDSL::process_cast          },
+	{ RESERVED_MULTICONVEX,           &QueryDSL::process_cast          },
 	{ RESERVED_MULTICHULL,            &QueryDSL::process_cast          },
 	{ RESERVED_GEO_COLLECTION,        &QueryDSL::process_cast          },
 	{ RESERVED_GEO_INTERSECTION,      &QueryDSL::process_cast          },

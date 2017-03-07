@@ -448,6 +448,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_CHULL,              &Schema::process_cast_object         },
 	{ RESERVED_MULTIPOINT,         &Schema::process_cast_object         },
 	{ RESERVED_MULTICIRCLE,        &Schema::process_cast_object         },
+	{ RESERVED_MULTICONVEX,        &Schema::process_cast_object         },
 	{ RESERVED_MULTIPOLYGON,       &Schema::process_cast_object         },
 	{ RESERVED_MULTICHULL,         &Schema::process_cast_object         },
 	{ RESERVED_GEO_COLLECTION,     &Schema::process_cast_object         },

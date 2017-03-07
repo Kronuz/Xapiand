@@ -104,6 +104,7 @@
 #define RESERVED_CHULL             "_chull"
 #define RESERVED_MULTIPOINT        "_multipoint"
 #define RESERVED_MULTICIRCLE       "_multicircle"
+#define RESERVED_MULTICONVEX       "_multiconvex"
 #define RESERVED_MULTIPOLYGON      "_multipolygon"
 #define RESERVED_MULTICHULL        "_multichull"
 #define RESERVED_GEO_COLLECTION    "_geometrycollection"
