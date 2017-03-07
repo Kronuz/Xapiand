@@ -94,7 +94,7 @@ public:
 		return corners;
 	}
 
-	virtual std::string toWKT() const override;
+	std::string toWKT() const override;
 	std::string to_string() const override;
 	std::vector<std::string> getTrixels(bool, double) const override;
 	std::vector<range_t> getRanges(bool, double) const override;
