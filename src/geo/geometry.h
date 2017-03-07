@@ -112,12 +112,12 @@ class Geometry {
 public:
 	enum class Type : uint8_t {
 		POINT,
+		MULTIPOINT,
 		CIRCLE,
 		CONVEX,
 		POLYGON,
 		CONVEX_HULL,
 		XOR_POLYGON,
-		MULTIPOINT,
 		MULTICIRCLE,
 		MULTICONVEX,
 		MULTIPOLYGON,
