@@ -90,6 +90,14 @@ public:
 		return *this;
 	}
 
+	bool operator<(const Polygon& polygon) const noexcept {
+		return corners < polygon.corners;
+	}
+
+	bool operator==(const Polygon& polygon) const noexcept {
+		return corners == polygon.corners;
+	}
+
 	const std::vector<Cartesian>& getCorners() const noexcept {
 		return corners;
 	}

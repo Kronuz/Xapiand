@@ -81,6 +81,14 @@ public:
 		return *this;
 	}
 
+	bool operator<(const Convex& convex) const noexcept {
+		return circles < convex.circles;
+	}
+
+	bool operator==(const Convex& convex) const noexcept {
+		return circles == convex.circles;
+	}
+
 	template <typename T, typename = std::enable_if_t<std::is_same<Circle, std::decay_t<T>>::value>>
 	void add(T&& circle) {
 		sign = static_cast<Convex::Sign>(static_cast<uint8_t>(sign) & static_cast<uint8_t>(circle.constraint.sign));
