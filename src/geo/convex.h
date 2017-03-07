@@ -36,6 +36,7 @@ class Convex : public Geometry {
 
 	std::vector<Circle> circles;
 	Sign sign;
+	bool simplified;
 
 	int insideVertex(const Cartesian& v) const noexcept;
 	bool intersectCircles(const Constraint& bounding_circle) const;
@@ -47,17 +48,20 @@ class Convex : public Geometry {
 public:
 	Convex()
 		: Geometry(Type::CONVEX),
-		  sign(Sign::ZERO) { }
+		  sign(Sign::ZERO),
+		  simplified(true) { }
 
 	Convex(Convex&& convex) noexcept
 		: Geometry(std::move(convex)),
 		  circles(std::move(convex.circles)),
-		  sign(std::move(convex.sign)) { }
+		  sign(std::move(convex.sign)),
+		  simplified(std::move(convex.simplified)) { }
 
 	Convex(const Convex& convex)
 		: Geometry(convex),
 		  circles(convex.circles),
-		  sign(convex.sign) { }
+		  sign(convex.sign),
+		  simplified(convex.simplified) { }
 
 	~Convex() = default;
 
@@ -65,6 +69,7 @@ public:
 		Geometry::operator=(std::move(convex));
 		circles = std::move(convex.circles);
 		sign = std::move(convex.sign);
+		simplified = std::move(convex.simplified);
 		return *this;
 	}
 
@@ -72,6 +77,7 @@ public:
 		Geometry::operator=(convex);
 		circles = convex.circles;
 		sign = convex.sign;
+		simplified = convex.simplified;
 		return *this;
 	}
 
@@ -79,6 +85,11 @@ public:
 	void add(T&& circle) {
 		sign = static_cast<Convex::Sign>(static_cast<uint8_t>(sign) & static_cast<uint8_t>(circle.constraint.sign));
 		circles.push_back(std::forward<T>(circle));
+		simplified = false;
+	}
+
+	bool empty() const noexcept {
+		return circles.empty();
 	}
 
 	const std::vector<Circle>& getCircles() const noexcept {

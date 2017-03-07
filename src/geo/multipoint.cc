@@ -26,10 +26,14 @@
 void
 MultiPoint::simplify()
 {
-	// Sort points.
-	std::sort(points.begin(), points.end(), std::less<Point>());
-	// Delete duplicate points
-	points.erase(std::unique(points.begin(), points.end()), points.end());
+	if (!simplified) {
+		// Sort points.
+		std::sort(points.begin(), points.end(), std::less<Point>());
+		// Delete duplicate points
+		points.erase(std::unique(points.begin(), points.end()), points.end());
+
+		simplified = true;
+	}
 }
 
 

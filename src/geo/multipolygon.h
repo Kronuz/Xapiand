@@ -28,20 +28,24 @@
 class MultiPolygon : public Geometry {
 	std::vector<std::shared_ptr<Polygon>> polygons;
 	std::vector<std::shared_ptr<XorPolygon>> xorpolygons;
+	bool simplified;
 
 public:
 	MultiPolygon()
-		: Geometry(Type::MULTIPOLYGON) { }
+		: Geometry(Type::MULTIPOLYGON),
+		  simplified(true) { }
 
 	MultiPolygon(MultiPolygon&& multipolygon) noexcept
 		: Geometry(std::move(multipolygon)),
 		  polygons(std::move(multipolygon.polygons)),
-		  xorpolygons(std::move(multipolygon.xorpolygons)) { }
+		  xorpolygons(std::move(multipolygon.xorpolygons)),
+		  simplified(std::move(multipolygon.simplified)) { }
 
 	MultiPolygon(const MultiPolygon& multipolygon)
 		: Geometry(multipolygon),
 		  polygons(multipolygon.polygons),
-		  xorpolygons(multipolygon.xorpolygons) { }
+		  xorpolygons(multipolygon.xorpolygons),
+		  simplified(multipolygon.simplified) { }
 
 	~MultiPolygon() = default;
 
@@ -49,6 +53,7 @@ public:
 		Geometry::operator=(std::move(multipolygon));
 		polygons = std::move(multipolygon.polygons);
 		xorpolygons = std::move(multipolygon.xorpolygons);
+		simplified = std::move(multipolygon.simplified);
 		return *this;
 	}
 
@@ -56,22 +61,40 @@ public:
 		Geometry::operator=(multipolygon);
 		polygons = multipolygon.polygons;
 		xorpolygons = multipolygon.xorpolygons;
+		simplified = multipolygon.simplified;
 		return *this;
 	}
 
 	template <typename T, typename = std::enable_if_t<std::is_same<Polygon, std::decay_t<T>>::value>>
 	void add_polygon(T&& polygon) {
 		polygons.push_back(std::make_shared<T>(std::forward<T>(polygon)));
+		simplified = false;
 	}
 
 	template <typename T, typename = std::enable_if_t<std::is_same<ConvexHull, std::decay_t<T>>::value>>
 	void add_chull(T&& chull) {
 		polygons.push_back(std::make_shared<T>(std::forward<T>(chull)));
+		simplified = false;
 	}
 
 	template <typename T, typename = std::enable_if_t<std::is_same<XorPolygon, std::decay_t<T>>::value>>
 	void add_xorpolygon(T&& xorpolygon) {
 		xorpolygons.push_back(std::make_shared<T>(std::forward<T>(xorpolygon)));
+		simplified = false;
+	}
+
+	void add_ptr_polygon(const std::shared_ptr<Polygon>& polygon) {
+		polygons.push_back(polygon);
+		simplified = false;
+	}
+
+	void add_ptr_xorpolygon(const std::shared_ptr<XorPolygon>& xorpolygon) {
+		xorpolygons.push_back(xorpolygon);
+		simplified = false;
+	}
+
+	bool empty() const noexcept {
+		return polygons.empty();
 	}
 
 	const std::vector<std::shared_ptr<Polygon>>& getPolygons() const noexcept {

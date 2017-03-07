@@ -26,29 +26,33 @@
 void
 XorPolygon::simplify()
 {
-	// Sort polygons.
-	std::sort(polygons.begin(), polygons.end(), [](const std::shared_ptr<Polygon>& p1, const std::shared_ptr<Polygon>& p2) {
-		return p1->getCorners() < p2->getCorners();
-	});
+	if (!simplified) {
+		// Sort polygons.
+		std::sort(polygons.begin(), polygons.end(), [](const std::shared_ptr<Polygon>& p1, const std::shared_ptr<Polygon>& p2) {
+			return *p1 < *p2;
+		});
 
-	// Deleting redundant polygons.
-	for (auto it = polygons.begin(); it != polygons.end(); ) {
-		auto n_it = it + 1;
-		if (n_it != polygons.end() && (*it)->getCorners() == (*n_it)->getCorners()) {
-			n_it = polygons.erase(n_it);
-			int cont = 1;
-			while (n_it != polygons.end() && (*it)->getCorners() == (*n_it)->getCorners()) {
+		// Deleting redundant polygons.
+		for (auto it = polygons.begin(); it != polygons.end(); ) {
+			auto n_it = it + 1;
+			if (n_it != polygons.end() && *it == *n_it) {
 				n_it = polygons.erase(n_it);
-				++cont;
-			}
-			if (cont % 2) {
-				it = polygons.erase(it);
+				int cont = 1;
+				while (n_it != polygons.end() && *it == *n_it) {
+					n_it = polygons.erase(n_it);
+					++cont;
+				}
+				if (cont % 2) {
+					it = polygons.erase(it);
+				} else {
+					++it;
+				}
 			} else {
 				++it;
 			}
-		} else {
-			++it;
 		}
+
+		simplified = true;
 	}
 }
 

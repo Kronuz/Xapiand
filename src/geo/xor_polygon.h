@@ -27,41 +27,49 @@
 
 class XorPolygon : public Geometry {
 	std::vector<std::shared_ptr<Polygon>> polygons;
+	bool simplified;
 
 public:
 	XorPolygon()
-		: Geometry(Type::XOR_POLYGON) { }
+		: Geometry(Type::XOR_POLYGON),
+		  simplified(true) { }
 
 	XorPolygon(XorPolygon&& xor_polygon) noexcept
 		: Geometry(std::move(xor_polygon)),
-		  polygons(std::move(xor_polygon.polygons)) { }
+		  polygons(std::move(xor_polygon.polygons)),
+		  simplified(std::move(xor_polygon.simplified)) { }
 
 	XorPolygon(const XorPolygon& xor_polygon)
 		: Geometry(xor_polygon),
-		  polygons(xor_polygon.polygons) { }
+		  polygons(xor_polygon.polygons),
+		  simplified(xor_polygon.simplified) { }
 
 	~XorPolygon() = default;
 
 	XorPolygon& operator=(XorPolygon&& xor_polygon) noexcept {
 		Geometry::operator=(std::move(xor_polygon));
 		polygons = std::move(xor_polygon.polygons);
+		simplified = std::move(xor_polygon.simplified);
 		return *this;
 	}
 
 	XorPolygon& operator=(const XorPolygon& xor_polygon) {
 		Geometry::operator=(xor_polygon);
 		polygons = xor_polygon.polygons;
+		simplified = xor_polygon.simplified;
 		return *this;
 	}
 
 	template <typename T, typename = std::enable_if_t<std::is_same<Polygon, std::decay_t<T>>::value>>
 	void add_polygon(T&& polygon) {
 		polygons.push_back(std::make_shared<T>(std::forward<T>(polygon)));
+		simplified = false;
 	}
 
 	template <typename T, typename = std::enable_if_t<std::is_same<ConvexHull, std::decay_t<T>>::value>>
 	void add_chull(T&& chull) {
 		polygons.push_back(std::make_shared<T>(std::forward<T>(chull)));
+		simplified = false;
 	}
 
 	const std::vector<std::shared_ptr<Polygon>>& getPolygons() const noexcept {

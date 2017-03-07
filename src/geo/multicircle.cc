@@ -28,19 +28,23 @@
 void
 MultiCircle::simplify()
 {
-	// Sort circles.
-	std::sort(circles.begin(), circles.end(), std::greater<Circle>());
+	if (!simplified) {
+		// Sort circles.
+		std::sort(circles.begin(), circles.end(), std::greater<Circle>());
 
-	// Deleting redundant circles.
-	for (auto it = circles.begin(); it != circles.end(); ++it) {
-		for (auto it_n = it + 1; it_n != circles.end(); ) {
-			auto gamma = std::acos(it->constraint.center * it_n->constraint.center);
-			if ((it->constraint.arcangle - it_n->constraint.arcangle) >= gamma) {
-				it_n = circles.erase(it_n);
-			} else {
-				++it_n;
+		// Deleting redundant circles.
+		for (auto it = circles.begin(); it != circles.end(); ++it) {
+			for (auto it_n = it + 1; it_n != circles.end(); ) {
+				auto gamma = std::acos(it->constraint.center * it_n->constraint.center);
+				if ((it->constraint.arcangle - it_n->constraint.arcangle) >= gamma) {
+					it_n = circles.erase(it_n);
+				} else {
+					++it_n;
+				}
 			}
 		}
+
+		simplified = true;
 	}
 }
 

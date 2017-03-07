@@ -28,24 +28,32 @@
 void
 Convex::simplify()
 {
-	// Sort circles.
-	std::sort(circles.begin(), circles.end(), std::less<Circle>());
+	if (!simplified) {
+		// Sort circles.
+		std::sort(circles.begin(), circles.end(), std::less<Circle>());
 
-	for (auto it = circles.begin(); it != circles.end(); ++it) {
-		for (auto it_n = it + 1; it_n != circles.end(); ) {
-			auto gamma = std::acos(it->constraint.center * it_n->constraint.center);
-			if (gamma >= (it->constraint.arcangle + it_n->constraint.arcangle)) {
-				// Empty intersection.
-				circles.clear();
-				return;
-			}
-			// Deleting redundants circles.
-			if ((it_n->constraint.arcangle - it->constraint.arcangle) >= gamma) {
-				it_n = circles.erase(it_n);
-			} else {
-				++it_n;
+		sign = Sign::ZERO;
+		for (auto it = circles.begin(); it != circles.end(); ++it) {
+			sign = static_cast<Convex::Sign>(static_cast<uint8_t>(sign) & static_cast<uint8_t>(it->constraint.sign));
+			for (auto it_n = it + 1; it_n != circles.end(); ) {
+				auto gamma = std::acos(it->constraint.center * it_n->constraint.center);
+				if (gamma >= (it->constraint.arcangle + it_n->constraint.arcangle)) {
+					// Empty intersection.
+					circles.clear();
+					sign = Sign::ZERO;
+					simplified = true;
+					return;
+				}
+				// Deleting redundants circles.
+				if ((it_n->constraint.arcangle - it->constraint.arcangle) >= gamma) {
+					it_n = circles.erase(it_n);
+				} else {
+					++it_n;
+				}
 			}
 		}
+
+		simplified = true;
 	}
 }
 

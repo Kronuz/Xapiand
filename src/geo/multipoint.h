@@ -27,36 +27,47 @@
 
 class MultiPoint : public Geometry {
 	std::vector<Point> points;
+	bool simplified;
 
 public:
 	MultiPoint()
-		: Geometry(Type::MULTIPOINT) { }
+		: Geometry(Type::MULTIPOINT),
+		  simplified(true) { }
 
 	MultiPoint(MultiPoint&& multipoint) noexcept
 		: Geometry(std::move(multipoint)),
-		  points(std::move(multipoint.points)) { }
+		  points(std::move(multipoint.points)),
+		  simplified(std::move(multipoint.simplified)) { }
 
 	MultiPoint(const MultiPoint& multipoint)
 		: Geometry(multipoint),
-		  points(multipoint.points) { }
+		  points(multipoint.points),
+		  simplified(multipoint.simplified) { }
 
 	~MultiPoint() = default;
 
 	MultiPoint& operator=(MultiPoint&& multipoint) noexcept {
 		Geometry::operator=(std::move(multipoint));
 		points = std::move(multipoint.points);
+		simplified = std::move(multipoint.simplified);
 		return *this;
 	}
 
 	MultiPoint& operator=(const MultiPoint& multipoint) {
 		Geometry::operator=(multipoint);
 		points = multipoint.points;
+		simplified = multipoint.simplified;
 		return *this;
 	}
 
 	template <typename T, typename = std::enable_if_t<std::is_same<Point, std::decay_t<T>>::value>>
 	void add(T&& point) {
 		points.push_back(std::forward<T>(point));
+		simplified = false;
+	}
+
+	bool empty() const noexcept {
+		return points.empty();
 	}
 
 	const std::vector<Point>& getPoints() const noexcept {

@@ -27,36 +27,47 @@
 
 class MultiCircle : public Geometry {
 	std::vector<Circle> circles;
+	bool simplified;
 
 public:
 	MultiCircle()
-		: Geometry(Type::MULTICIRCLE) { }
+		: Geometry(Type::MULTICIRCLE),
+		  simplified(true) { }
 
 	MultiCircle(MultiCircle&& multicircle) noexcept
 		: Geometry(std::move(multicircle)),
-		  circles(std::move(multicircle.circles)) { }
+		  circles(std::move(multicircle.circles)),
+		  simplified(std::move(multicircle.simplified)) { }
 
 	MultiCircle(const MultiCircle& multicircle)
 		: Geometry(multicircle),
-		  circles(multicircle.circles) { }
+		  circles(multicircle.circles),
+		  simplified(multicircle.simplified) { }
 
 	~MultiCircle() = default;
 
 	MultiCircle& operator=(MultiCircle&& multicircle) noexcept {
 		Geometry::operator=(std::move(multicircle));
 		circles = std::move(multicircle.circles);
+		simplified = std::move(multicircle.simplified);
 		return *this;
 	}
 
 	MultiCircle& operator=(const MultiCircle& multicircle) {
 		Geometry::operator=(multicircle);
 		circles = multicircle.circles;
+		simplified = multicircle.simplified;
 		return *this;
 	}
 
 	template <typename T, typename = std::enable_if_t<std::is_same<Circle, std::decay_t<T>>::value>>
 	void add(T&& circle) {
 		circles.push_back(std::forward<T>(circle));
+		simplified = false;
+	}
+
+	bool empty() const noexcept {
+		return circles.empty();
 	}
 
 	const std::vector<Circle>& getCircles() const noexcept {
