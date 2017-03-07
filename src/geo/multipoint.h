@@ -74,7 +74,7 @@ public:
 		return points;
 	}
 
-	void simplify();
+	void simplify() override;
 
 	std::string toWKT() const override;
 	std::string to_string() const override;

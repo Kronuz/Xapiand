@@ -160,6 +160,8 @@ public:
 		return ewkt;
 	}
 
+	virtual void simplify() { }
+
 	virtual std::string toWKT() const = 0;
 	virtual std::string to_string() const = 0;
 	virtual std::vector<std::string> getTrixels(bool partials, double error) const = 0;
