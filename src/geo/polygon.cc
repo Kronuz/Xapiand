@@ -427,6 +427,10 @@ Polygon::toWKT() const
 std::string
 Polygon::to_string() const
 {
+	if (corners.empty()) {
+		return "()";
+	}
+
 	std::string str;
 	const size_t size_corner = 50;
 	str.reserve(size_corner * (corners.size() + 1));
