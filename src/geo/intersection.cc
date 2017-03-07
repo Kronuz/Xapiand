@@ -27,7 +27,7 @@ void
 Intersection::simplify()
 {
 	std::sort(geometries.begin(), geometries.end(), [](const std::shared_ptr<Geometry>& g1, const std::shared_ptr<Geometry>& g2) {
-		return g1.getType() < g2.getType();
+		return g1->getType() < g2->getType();
 	});
 
 	for (auto& geometry : geometries) {
