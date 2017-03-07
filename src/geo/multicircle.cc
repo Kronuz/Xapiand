@@ -76,15 +76,9 @@ MultiCircle::to_string() const
 std::vector<std::string>
 MultiCircle::getTrixels(bool partials, double error) const
 {
-	if (circles.empty()) {
-		return std::vector<std::string>();
-	}
-
-	auto it = circles.begin();
-	auto trixels = it->getTrixels(partials, error);
-	const auto it_e = circles.end();
-	for (++it; it != it_e; ++it) {
-		trixels = HTM::trixel_union(std::move(trixels), it->getTrixels(partials, error));
+	std::vector<std::string> trixels;
+	for (const auto& circle : circles) {
+		trixels = HTM::trixel_union(std::move(trixels), circle.getTrixels(partials, error));
 	}
 
 	return trixels;
@@ -94,15 +88,9 @@ MultiCircle::getTrixels(bool partials, double error) const
 std::vector<range_t>
 MultiCircle::getRanges(bool partials, double error) const
 {
-	if (circles.empty()) {
-		return std::vector<range_t>();
-	}
-
-	auto it = circles.begin();
-	auto ranges = it->getRanges(partials, error);
-	const auto it_e = circles.end();
-	for (++it; it != it_e; ++it) {
-		ranges = HTM::range_union(std::move(ranges), it->getRanges(partials, error));
+	std::vector<range_t> ranges;
+	for (const auto& circle : circles) {
+		ranges = HTM::range_union(std::move(ranges), circle.getRanges(partials, error));
 	}
 
 	return ranges;
