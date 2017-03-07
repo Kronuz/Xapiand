@@ -67,6 +67,4 @@ public:
 		Polygon::operator=(chull);
 		return *this;
 	}
-
-	std::string toWKT() const override;
 };

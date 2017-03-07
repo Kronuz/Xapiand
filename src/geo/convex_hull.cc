@@ -152,14 +152,3 @@ ConvexHull::process(std::vector<Cartesian>&& points)
 
 	init();
 }
-
-
-std::string
-ConvexHull::toWKT() const
-{
-	std::string wkt;
-	const auto str_chull = to_string();
-	wkt.reserve(str_chull.length() + 10);
-	wkt.assign("CHULL Z (").append(str_chull).push_back(')');
-	return wkt;
-}
