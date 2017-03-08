@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "intersection.h"
 #include "multicircle.h"
 #include "multiconvex.h"
 #include "multipoint.h"
@@ -34,23 +35,31 @@ class Collection : public Geometry {
 	MultiConvex multiconvex;
 	MultiPolygon multipolygon;
 
+	std::vector<Intersection> intersections;
+	bool simplified;
+
 public:
 	Collection()
-		: Geometry(Type::COLLECTION) { }
+		: Geometry(Type::COLLECTION),
+		  simplified(true) { }
 
 	Collection(Collection&& collection) noexcept
 		: Geometry(std::move(collection)),
 		  multipoint(std::move(collection.multipoint)),
 		  multicircle(std::move(collection.multicircle)),
 		  multiconvex(std::move(collection.multiconvex)),
-		  multipolygon(std::move(collection.multipolygon)) { }
+		  multipolygon(std::move(collection.multipolygon)),
+		  intersections(std::move(collection.intersections)),
+		  simplified(std::move(collection.simplified)) { }
 
 	Collection(const Collection& collection)
 		: Geometry(collection),
 		  multipoint(collection.multipoint),
 		  multicircle(collection.multicircle),
 		  multiconvex(collection.multiconvex),
-		  multipolygon(collection.multipolygon) { }
+		  multipolygon(collection.multipolygon),
+		  intersections(collection.intersections),
+		  simplified(collection.simplified) { }
 
 	~Collection() = default;
 
@@ -60,6 +69,8 @@ public:
 		multicircle = std::move(collection.multicircle);
 		multiconvex = std::move(collection.multiconvex);
 		multipolygon = std::move(collection.multipolygon);
+		intersections = std::move(collection.intersections);
+		simplified = std::move(collection.simplified);
 		return *this;
 	}
 
@@ -69,6 +80,8 @@ public:
 		multicircle = collection.multicircle;
 		multiconvex = collection.multiconvex;
 		multipolygon = collection.multipolygon;
+		intersections = collection.intersections;
+		simplified = collection.simplified;
 		return *this;
 	}
 
@@ -112,6 +125,12 @@ public:
 		multipolygon.add(std::forward<T>(multipolygon_));
 	}
 
+	template <typename T, typename = std::enable_if_t<std::is_same<Intersection, std::decay_t<T>>::value>>
+	void add_intersection(T&& intersection) {
+		intersections.push_back(std::forward<T>(intersection));
+		simplified = false;
+	}
+
 	const MultiPoint& getMultiPoint() const noexcept {
 		return multipoint;
 	}
@@ -126,6 +145,10 @@ public:
 
 	const MultiPolygon& getMultiPolygon() const noexcept {
 		return multipolygon;
+	}
+
+	const std::vector<Intersection>& getIntersection() const noexcept {
+		return intersections;
 	}
 
 	void simplify() override;

@@ -30,6 +30,14 @@ Collection::simplify()
 	multicircle.simplify();
 	multiconvex.simplify();
 	multipolygon.simplify();
+
+	if (!simplified) {
+		for (auto& intersection : intersections) {
+			intersection.simplify();
+		}
+
+		simplified = true;
+	}
 }
 
 
@@ -66,6 +74,11 @@ Collection::to_string() const
 		str.reserve(str.length() + str_geometry.length() + 2);
 		str.append(str_geometry).append(", ");
 	}
+	for (const auto& intersection : intersections) {
+		const auto str_geometry = intersection.toWKT();
+		str.reserve(str.length() + str_geometry.length() + 2);
+		str.append(str_geometry).append(", ");
+	}
 
 	if (str.empty()) {
 		return std::string("EMPTY");
@@ -85,6 +98,9 @@ Collection::getTrixels(bool partials, double error) const
 	trixels = HTM::trixel_union(std::move(trixels), multicircle.getTrixels(partials, error));
 	trixels = HTM::trixel_union(std::move(trixels), multiconvex.getTrixels(partials, error));
 	trixels = HTM::trixel_union(std::move(trixels), multipolygon.getTrixels(partials, error));
+	for (const auto& intersection : intersections) {
+		trixels = HTM::trixel_union(std::move(trixels), intersection.getTrixels(partials, error));
+	}
 
 	return trixels;
 }
@@ -98,6 +114,9 @@ Collection::getRanges(bool partials, double error) const
 	ranges = HTM::range_union(std::move(ranges), multicircle.getRanges(partials, error));
 	ranges = HTM::range_union(std::move(ranges), multiconvex.getRanges(partials, error));
 	ranges = HTM::range_union(std::move(ranges), multipolygon.getRanges(partials, error));
+	for (const auto& intersection : intersections) {
+		ranges = HTM::range_union(std::move(ranges), intersection.getRanges(partials, error));
+	}
 
 	return ranges;
 }
