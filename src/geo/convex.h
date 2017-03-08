@@ -96,6 +96,10 @@ public:
 		simplified = false;
 	}
 
+	void reserve(size_t new_cap) {
+		circles.reserve(new_cap);
+	}
+
 	bool empty() const noexcept {
 		return circles.empty();
 	}

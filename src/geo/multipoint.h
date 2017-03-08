@@ -66,6 +66,10 @@ public:
 		simplified = false;
 	}
 
+	void reserve(size_t new_cap) {
+		points.reserve(new_cap);
+	}
+
 	bool empty() const noexcept {
 		return points.empty();
 	}
