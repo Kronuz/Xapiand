@@ -77,16 +77,6 @@ public:
 		geometries.push_back(std::make_shared<Polygon>(std::forward<T>(polygon)));
 	}
 
-	template <typename T, typename = std::enable_if_t<std::is_same<ConvexHull, std::decay_t<T>>::value>>
-	void add_chull(T&& chull) {
-		geometries.push_back(std::make_shared<ConvexHull>(std::forward<T>(chull)));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<XorPolygon, std::decay_t<T>>::value>>
-	void add_xorpolygon(T&& xorpolygon) {
-		geometries.push_back(std::make_shared<XorPolygon>(std::forward<T>(xorpolygon)));
-	}
-
 	template <typename T, typename = std::enable_if_t<std::is_same<MultiPoint, std::decay_t<T>>::value>>
 	void add_multipoint(T&& multipoint) {
 		geometries.push_back(std::make_shared<MultiPoint>(std::forward<T>(multipoint)));

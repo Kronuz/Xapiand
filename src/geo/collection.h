@@ -89,17 +89,7 @@ public:
 
 	template <typename T, typename = std::enable_if_t<std::is_same<Polygon, std::decay_t<T>>::value>>
 	void add_polygon(T&& polygon) {
-		multipolygon.add_polygon(std::forward<T>(polygon));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<ConvexHull, std::decay_t<T>>::value>>
-	void add_chull(T&& chull) {
-		multipolygon.add_polygon(std::forward<T>(chull));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<XorPolygon, std::decay_t<T>>::value>>
-	void add_xorpolygon(T&& xorpolygon) {
-		multipolygon.add_xorpolygon(std::forward<T>(xorpolygon));
+		multipolygon.add(std::forward<T>(polygon));
 	}
 
 	void add_multipoint(const MultiPoint& multipoint_) {
@@ -140,19 +130,13 @@ public:
 
 	void add_multipolygon(const MultiPolygon& multipolygon_) {
 		for (const auto& polygon : multipolygon_.getPolygons()) {
-			multipolygon.add_ptr_polygon(polygon);
-		}
-		for (const auto& xorpolygon : multipolygon_.getXorPolygons()) {
-			multipolygon.add_ptr_xorpolygon(xorpolygon);
+			multipolygon.add(polygon);
 		}
 	}
 
 	void add_multipolygon(MultiPolygon&& multipolygon_) {
-		for (auto& polygon : multipolygon_.getPolygons()) {
-			multipolygon.add_ptr_polygon(std::move(polygon));
-		}
-		for (auto& xorpolygon : multipolygon_.getXorPolygons()) {
-			multipolygon.add_ptr_xorpolygon(std::move(xorpolygon));
+		for (const auto& polygon : multipolygon_.getPolygons()) {
+			multipolygon.add(std::move(polygon));
 		}
 	}
 

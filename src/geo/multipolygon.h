@@ -22,12 +22,11 @@
 
 #pragma once
 
-#include "xor_polygon.h"
+#include "polygon.h"
 
 
 class MultiPolygon : public Geometry {
-	std::vector<std::shared_ptr<Polygon>> polygons;
-	std::vector<std::shared_ptr<XorPolygon>> xorpolygons;
+	std::vector<Polygon> polygons;
 	bool simplified;
 
 public:
@@ -38,13 +37,11 @@ public:
 	MultiPolygon(MultiPolygon&& multipolygon) noexcept
 		: Geometry(std::move(multipolygon)),
 		  polygons(std::move(multipolygon.polygons)),
-		  xorpolygons(std::move(multipolygon.xorpolygons)),
 		  simplified(std::move(multipolygon.simplified)) { }
 
 	MultiPolygon(const MultiPolygon& multipolygon)
 		: Geometry(multipolygon),
 		  polygons(multipolygon.polygons),
-		  xorpolygons(multipolygon.xorpolygons),
 		  simplified(multipolygon.simplified) { }
 
 	~MultiPolygon() = default;
@@ -52,7 +49,6 @@ public:
 	MultiPolygon& operator=(MultiPolygon&& multipolygon) noexcept {
 		Geometry::operator=(std::move(multipolygon));
 		polygons = std::move(multipolygon.polygons);
-		xorpolygons = std::move(multipolygon.xorpolygons);
 		simplified = std::move(multipolygon.simplified);
 		return *this;
 	}
@@ -60,49 +56,30 @@ public:
 	MultiPolygon& operator=(const MultiPolygon& multipolygon) {
 		Geometry::operator=(multipolygon);
 		polygons = multipolygon.polygons;
-		xorpolygons = multipolygon.xorpolygons;
 		simplified = multipolygon.simplified;
 		return *this;
 	}
 
-	template <typename T, typename = std::enable_if_t<std::is_same<Polygon, std::decay_t<T>>::value>>
-	void add_polygon(T&& polygon) {
-		polygons.push_back(std::make_shared<T>(std::forward<T>(polygon)));
-		simplified = false;
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<ConvexHull, std::decay_t<T>>::value>>
-	void add_chull(T&& chull) {
-		polygons.push_back(std::make_shared<T>(std::forward<T>(chull)));
-		simplified = false;
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<XorPolygon, std::decay_t<T>>::value>>
-	void add_xorpolygon(T&& xorpolygon) {
-		xorpolygons.push_back(std::make_shared<T>(std::forward<T>(xorpolygon)));
-		simplified = false;
-	}
-
-	void add_ptr_polygon(const std::shared_ptr<Polygon>& polygon) {
+	void add(const Polygon& polygon) {
 		polygons.push_back(polygon);
 		simplified = false;
 	}
 
-	void add_ptr_xorpolygon(const std::shared_ptr<XorPolygon>& xorpolygon) {
-		xorpolygons.push_back(xorpolygon);
+	void add(Polygon&& polygon) {
+		polygons.push_back(std::move(polygon));
 		simplified = false;
+	}
+
+	void reserve(size_t new_cap) {
+		polygons.reserve(new_cap);
 	}
 
 	bool empty() const noexcept {
 		return polygons.empty();
 	}
 
-	const std::vector<std::shared_ptr<Polygon>>& getPolygons() const noexcept {
+	const std::vector<Polygon>& getPolygons() const noexcept {
 		return polygons;
-	}
-
-	const std::vector<std::shared_ptr<XorPolygon>>& getXorPolygons() const noexcept {
-		return xorpolygons;
 	}
 
 	void simplify() override;

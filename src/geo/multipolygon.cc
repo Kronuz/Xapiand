@@ -27,24 +27,26 @@ void
 MultiPolygon::simplify()
 {
 	if (!simplified) {
-		// Sort polygons.
-		std::sort(polygons.begin(), polygons.end(), [](const std::shared_ptr<Polygon>& p1, const std::shared_ptr<Polygon>& p2) {
-			return *p1 < *p2;
-		});
-
-		// Deleting duplicated polygons.
-		for (auto it = polygons.begin(); it != polygons.end(); ) {
-			auto n_it = it + 1;
-			if (n_it != polygons.end() && *it == *n_it) {
-				it = polygons.erase(it);
-			} else {
-				++it;
-			}
+		// Simplify xorpolygons.
+		for (auto& polygon : polygons) {
+			polygon.simplify();
 		}
 
-		// Simplify xorpolygons.
-		for (auto& xorpolygon : xorpolygons) {
-			xorpolygon->simplify();
+		// Sort polygons.
+		std::sort(polygons.begin(), polygons.end(), std::less<Polygon>());
+
+		// Deleting duplicated and empty polygons.
+		for (auto it = polygons.begin(); it != polygons.end(); ) {
+			if (it->empty()) {
+				it = polygons.erase(it);
+			} else {
+				auto n_it = it + 1;
+				if (n_it != polygons.end() && *it == *n_it) {
+					it = polygons.erase(it);
+				} else {
+					++it;
+				}
+			}
 		}
 
 		simplified = true;
@@ -64,20 +66,15 @@ MultiPolygon::toWKT() const
 std::string
 MultiPolygon::to_string() const
 {
-	if (polygons.empty() && xorpolygons.empty()) {
-		return "()";
+	if (polygons.empty()) {
+		return "EMPTY";
 	}
 
 	std::string str("(");
 	for (const auto& polygon : polygons) {
-		const auto str_polygon = polygon->to_string();
+		const auto str_polygon = polygon.to_string();
 		str.reserve(str.length() + str_polygon.length() + 4);
 		str.append(1, '(').append(str_polygon).append("), ");
-	}
-	for (const auto& xorpolygon : xorpolygons) {
-		const auto str_xorpolygon = xorpolygon->to_string();
-		str.reserve(str.length() + str_xorpolygon.length() + 2);
-		str.append(str_xorpolygon).append(", ");
 	}
 	str.pop_back();
 	str.back() = ')';
@@ -91,10 +88,7 @@ MultiPolygon::getTrixels(bool partials, double error) const
 {
 	std::vector<std::string> trixels;
 	for (const auto& polygon : polygons) {
-		trixels = HTM::trixel_union(std::move(trixels), polygon->getTrixels(partials, error));
-	}
-	for (const auto& xorpolygon : xorpolygons) {
-		trixels = HTM::trixel_union(std::move(trixels), xorpolygon->getTrixels(partials, error));
+		trixels = HTM::trixel_union(std::move(trixels), polygon.getTrixels(partials, error));
 	}
 
 	return trixels;
@@ -106,10 +100,7 @@ MultiPolygon::getRanges(bool partials, double error) const
 {
 	std::vector<range_t> ranges;
 	for (const auto& polygon : polygons) {
-		ranges = HTM::range_union(std::move(ranges), polygon->getRanges(partials, error));
-	}
-	for (const auto& xorpolygon : xorpolygons) {
-		ranges = HTM::range_union(std::move(ranges), xorpolygon->getRanges(partials, error));
+		ranges = HTM::range_union(std::move(ranges), polygon.getRanges(partials, error));
 	}
 
 	return ranges;
