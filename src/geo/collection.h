@@ -131,6 +131,28 @@ public:
 		simplified = false;
 	}
 
+	void add(const Collection& collection) {
+		add_multipoint(collection.multipoint);
+		add_multicircle(collection.multicircle);
+		add_multiconvex(collection.multiconvex);
+		add_multipolygon(collection.multipolygon);
+		for (const auto& intersection : collection.intersections) {
+			intersections.push_back(intersection);
+		}
+		simplified = false;
+	}
+
+	void add(Collection&& collection) {
+		add_multipoint(std::move(collection.multipoint));
+		add_multicircle(std::move(collection.multicircle));
+		add_multiconvex(std::move(collection.multiconvex));
+		add_multipolygon(std::move(collection.multipolygon));
+		for (auto& intersection : collection.intersections) {
+			intersections.push_back(std::move(intersection));
+		}
+		simplified = false;
+	}
+
 	const MultiPoint& getMultiPoint() const noexcept {
 		return multipoint;
 	}
