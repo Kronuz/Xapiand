@@ -58,6 +58,10 @@ public:
 		geometries.push_back(geometry);
 	}
 
+	void reserve(size_t new_cap) {
+		geometries.reserve(new_cap);
+	}
+
 	const std::vector<std::shared_ptr<Geometry>>& getGeometries() const noexcept {
 		return geometries;
 	}
