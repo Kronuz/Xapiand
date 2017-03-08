@@ -25,8 +25,110 @@
 #include <cmath>
 
 
+Polygon::ConvexPolygon::Direction
+Polygon::ConvexPolygon::get_direction(const Cartesian& a, const Cartesian& b, const Cartesian& c) noexcept
+{
+	double angle = (a ^ b) * c;
+	if (angle > DBL_TOLERANCE) {
+		return Direction::CLOCKWISE;
+	} else if (angle < -DBL_TOLERANCE) {
+		return Direction::COUNTERCLOCKWISE;
+	} else {
+		return Direction::COLLINEAR;
+	}
+}
+
+
+double
+Polygon::ConvexPolygon::dist(const Cartesian& a, const Cartesian& b) noexcept
+{
+	Cartesian p = a - b;
+	return p.x * p.x + p.y * p.y + p.z * p.z;
+}
+
+
+std::vector<Cartesian>
+Polygon::ConvexPolygon::graham_scan(std::vector<Cartesian>&& points)
+{
+	if (points.size() < 3) {
+		THROW(GeometryError, "Polygon must have at least three corners");
+	}
+
+	// Find the min 'y', min 'x' and min 'z'.
+	auto it = points.begin();
+	auto it_e = points.end();
+	it->normalize(); // Normalize the point.
+	auto it_swap = it;
+	for (++it; it != it_e; ++it) {
+		it->normalize(); // Normalize the point.
+		if (*it < *it_swap) {
+			it_swap = it;
+		}
+	}
+
+	// Swap positions.
+	std::iter_swap(it_swap, points.begin());
+
+	// Sort the n - 1 elements in ascending angle with respect to the first point P0.
+	it = points.begin();
+	std::sort(it + 1, points.end(), [P0 = *it](const Cartesian &a, const Cartesian &b) {
+		// Calculate direction.
+		const auto dir = get_direction(P0, a, b);
+		switch (dir) {
+			case Direction::COLLINEAR:
+				return ((dist(P0, b) > dist(P0, a)) ? true : false);
+			case Direction::COUNTERCLOCKWISE:
+				return true;
+			case Direction::CLOCKWISE:
+				return false;
+		}
+	});
+
+	// Deleting duplicates points.
+	while (it != points.end() - 1) {
+		*it == *(it + 1) ? it = points.erase(it) : ++it;
+	}
+
+	if (points.size() < 3) {
+		THROW(GeometryError, "Polygon should have at least three corners");
+	}
+
+	// Points convex polygon
+	std::vector<Cartesian> convex_points;
+	convex_points.reserve(points.size() + 1);
+
+	it = points.begin();
+	it_e = points.end();
+	convex_points.push_back(*it++);
+	convex_points.push_back(*it++);
+	convex_points.push_back(*it++);
+	for ( ; it != it_e; ++it) {
+		while (true) {
+			// Not found the convex polygon.
+			if (convex_points.size() == 1) {
+				THROW(GeometryError, "Convex Hull not found");
+			}
+
+			const auto it_last = convex_points.end() - 1;
+			const auto dir = get_direction(*(it_last - 1), *it_last, *it);
+			if (dir != Direction::COUNTERCLOCKWISE) {
+				convex_points.pop_back();
+				continue;
+			} else {
+				break;
+			}
+		}
+		convex_points.push_back(std::move(*it));
+	}
+	// Duplicate first point.
+	convex_points.push_back(convex_points.front());
+
+	return convex_points;
+}
+
+
 void
-Polygon::init()
+Polygon::ConvexPolygon::init()
 {
 	/*
 	 * Calculate the bounding circle for Polygon.
@@ -72,7 +174,36 @@ Polygon::init()
 
 
 void
-Polygon::process(std::vector<Cartesian>&& points)
+Polygon::ConvexPolygon::process_chull(std::vector<Cartesian>&& points)
+{
+	// The convex is formed in counterclockwise.
+	auto convex_points = graham_scan(std::move(points));
+
+	if (convex_points.size() < 3) {
+		THROW(GeometryError, "Convex Hull not found");
+	}
+
+	// The corners are in clockwise but we need the corners in counterclockwise order and normalize.
+	corners.reserve(convex_points.size());
+
+	// Duplicates the last point at the begin.
+	convex_points.insert(convex_points.begin(), convex_points.back());
+
+	auto it_last = convex_points.rend() - 1;
+	for (auto it = convex_points.rbegin(); it != it_last; ++it) {
+		auto center = *it ^ *(it + 1);
+		center.normalize();
+		constraints.push_back(Constraint(std::move(center)));
+		corners.push_back(std::move(*it));
+	}
+	corners.push_back(std::move(*it_last));
+
+	init();
+}
+
+
+void
+Polygon::ConvexPolygon::process_polygon(std::vector<Cartesian>&& points)
 {
 	// Repeats the first corner at the end if it does not repeat.
 	if (points.size() && points.front() != points.back()) {
@@ -150,7 +281,7 @@ Polygon::process(std::vector<Cartesian>&& points)
 
 
 inline bool
-Polygon::intersectEdges(Cartesian aux, double length_v0_v1, const Cartesian& v0, const Cartesian& v1, double length_corners, const Cartesian& corner, const Cartesian& n_corner) const
+Polygon::ConvexPolygon::intersectEdges(Cartesian aux, double length_v0_v1, const Cartesian& v0, const Cartesian& v1, double length_corners, const Cartesian& corner, const Cartesian& n_corner) const
 {
 	/*
 	 * If the intersection is inside trixel's edge (v0, v1), its distance to the corners
@@ -190,7 +321,7 @@ Polygon::intersectEdges(Cartesian aux, double length_v0_v1, const Cartesian& v0,
 
 
 bool
-Polygon::intersectTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
+Polygon::ConvexPolygon::intersectTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
 {
 	/*
 	 * We need to check each polygon's edges against trixel's edges.
@@ -225,7 +356,7 @@ Polygon::intersectTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesi
 
 
 int
-Polygon::insideVertex(const Cartesian& v) const noexcept
+Polygon::ConvexPolygon::insideVertex(const Cartesian& v) const noexcept
 {
 	for (const auto& constraint : constraints) {
 		if (!HTM::insideVertex_Constraint(v, constraint)) {
@@ -237,7 +368,7 @@ Polygon::insideVertex(const Cartesian& v) const noexcept
 
 
 TypeTrixel
-Polygon::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
+Polygon::ConvexPolygon::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
 {
 	int sum = insideVertex(v0) + insideVertex(v1) + insideVertex(v2);
 
@@ -261,7 +392,7 @@ Polygon::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian&
 
 
 void
-Polygon::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, std::string name, trixel_data& data, uint8_t level) const
+Polygon::ConvexPolygon::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, std::string name, trixel_data& data, uint8_t level) const
 {
 	// Finish the recursion.
 	if (level == data.max_level) {
@@ -337,7 +468,7 @@ Polygon::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian&
 
 
 void
-Polygon::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, uint64_t id, range_data& data, uint8_t level) const
+Polygon::ConvexPolygon::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, uint64_t id, range_data& data, uint8_t level) const
 {
 	// Finish the recursion.
 	if (level == data.max_level) {
@@ -414,7 +545,7 @@ Polygon::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian&
 
 
 std::string
-Polygon::toWKT() const
+Polygon::ConvexPolygon::toWKT() const
 {
 	std::string wkt;
 	const auto str_polygon = to_string();
@@ -425,10 +556,10 @@ Polygon::toWKT() const
 
 
 std::string
-Polygon::to_string() const
+Polygon::ConvexPolygon::to_string() const
 {
 	if (corners.empty()) {
-		return "()";
+		return std::string("EMPTY");
 	}
 
 	std::string str;
@@ -456,7 +587,7 @@ Polygon::to_string() const
 
 
 std::vector<std::string>
-Polygon::getTrixels(bool partials, double error) const
+Polygon::ConvexPolygon::getTrixels(bool partials, double error) const
 {
 	if (error < HTM_MIN_ERROR || error > HTM_MAX_ERROR) {
 		THROW(HTMError, "Error must be in [%f, %f]", HTM_MIN_ERROR, HTM_MAX_ERROR);
@@ -508,7 +639,7 @@ Polygon::getTrixels(bool partials, double error) const
 
 
 std::vector<range_t>
-Polygon::getRanges(bool partials, double error) const
+Polygon::ConvexPolygon::getRanges(bool partials, double error) const
 {
 	if (error < HTM_MIN_ERROR || error > HTM_MAX_ERROR) {
 		THROW(HTMError, "Error must be in [%f, %f]", HTM_MIN_ERROR, HTM_MAX_ERROR);
@@ -556,4 +687,83 @@ Polygon::getRanges(bool partials, double error) const
 	}
 
 	return data.getRanges();
+}
+
+
+void
+Polygon::simplify()
+{
+	if (!simplified && polygons.size() > 1) {
+		// Sort polygons.
+		std::sort(polygons.begin(), polygons.end(), std::less<ConvexPolygon>());
+
+		// Deleting redundant polygons.
+		for (auto it = polygons.begin(); it != polygons.end(); ) {
+			auto n_it = it + 1;
+			if (n_it != polygons.end() && *it == *n_it) {
+				n_it = polygons.erase(n_it);
+				int cont = 1;
+				while (n_it != polygons.end() && *it == *n_it) {
+					n_it = polygons.erase(n_it);
+					++cont;
+				}
+				if (cont % 2) {
+					it = polygons.erase(it);
+				} else {
+					++it;
+				}
+			} else {
+				++it;
+			}
+		}
+
+		simplified = true;
+	}
+}
+
+
+std::string
+Polygon::toWKT() const
+{
+	std::string wkt("POLYGON Z ");
+	wkt.append(to_string());
+	return wkt;
+}
+
+
+std::string
+Polygon::to_string() const
+{
+	if (polygons.empty()) {
+		return "EMPTY";
+	}
+
+	std::string str("(");
+	for (const auto& polygon : polygons) {
+		const auto str_polygon = polygon.to_string();
+		str.reserve(str.length() + str_polygon.length() + 2);
+		str.append(str_polygon).append(", ");
+	}
+	str.pop_back();
+	str.back() = ')';
+	return str;
+}
+
+
+std::vector<std::string>
+Polygon::getTrixels(bool partials, double error) const
+{
+	return HTM::getTrixels(getRanges(partials, error));
+}
+
+
+std::vector<range_t>
+Polygon::getRanges(bool partials, double error) const
+{
+	std::vector<range_t> ranges;
+	for (const auto& polygon : polygons) {
+		ranges = HTM::range_exclusive_disjunction(std::move(ranges), polygon.getRanges(partials, error));
+	}
+
+	return ranges;
 }

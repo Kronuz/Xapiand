@@ -24,86 +24,186 @@
 
 #include "circle.h"
 
-
 class Polygon : public Geometry {
-protected:
-	std::vector<Cartesian> corners;
-	std::vector<Constraint> constraints;
-	Constraint boundingCircle;
-	Cartesian centroid;
-	double max_radius;
+public:
+	class ConvexPolygon : public Geometry {
+		enum class Direction : uint8_t {
+			COLLINEAR,
+			CLOCKWISE,
+			COUNTERCLOCKWISE,
+		};
 
-	void init();
+		std::vector<Cartesian> corners;
+		std::vector<Constraint> constraints;
+		Constraint boundingCircle;
+		Cartesian centroid;
+		double max_radius;
 
-	void process(std::vector<Cartesian>&& points);
+		// Gets the direction of the three points.
+		static Direction get_direction(const Cartesian& a, const Cartesian& b, const Cartesian& c) noexcept;
 
-	bool intersectEdges(Cartesian aux, double length_v0_v1, const Cartesian& v0, const Cartesian& v1, double length_corners, const Cartesian& corner, const Cartesian& n_corner) const;
-	bool intersectTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
+		// Returns the squared distance between two points
+		static double dist(const Cartesian& a, const Cartesian& b) noexcept;
 
-	int insideVertex(const Cartesian& v) const noexcept;
-	TypeTrixel verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
-	void lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, std::string name, trixel_data& data, uint8_t level) const;
-	void lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, uint64_t id, range_data& data, uint8_t level) const;
+		// Calculates the convex hull of vector of points using Graham Scan Algorithm.
+		static std::vector<Cartesian> graham_scan(std::vector<Cartesian>&& points);
 
-	Polygon(Type type)
-		: Geometry(type),
-		  centroid(0, 0, 0) { }
+		void init();
+
+		void process_chull(std::vector<Cartesian>&& points);
+		void process_polygon(std::vector<Cartesian>&& points);
+
+		bool intersectEdges(Cartesian aux, double length_v0_v1, const Cartesian& v0, const Cartesian& v1, double length_corners, const Cartesian& corner, const Cartesian& n_corner) const;
+		bool intersectTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
+
+		int insideVertex(const Cartesian& v) const noexcept;
+		TypeTrixel verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
+		void lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, std::string name, trixel_data& data, uint8_t level) const;
+		void lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, uint64_t id, range_data& data, uint8_t level) const;
+
+	public:
+		ConvexPolygon(Geometry::Type type, std::vector<Cartesian>&& points)
+			: Geometry(type),
+			  centroid(0, 0, 0)
+		{
+			switch (type) {
+				case Geometry::Type::POLYGON:
+					process_polygon(std::move(points));
+					return;
+				case Geometry::Type::CONVEX_HULL:
+					process_chull(std::move(points));
+					return;
+				default:
+					THROW(GeometryError, "Type: %d is not Polygon", static_cast<int>(type));
+			}
+		}
+
+		ConvexPolygon(ConvexPolygon&& polygon) noexcept
+			: Geometry(std::move(polygon)),
+			  corners(std::move(polygon.corners)),
+			  constraints(std::move(polygon.constraints)),
+			  boundingCircle(std::move(polygon.boundingCircle)),
+			  centroid(std::move(polygon.centroid)) { }
+
+		ConvexPolygon(const ConvexPolygon& polygon)
+			: Geometry(polygon),
+			  corners(polygon.corners),
+			  constraints(polygon.constraints),
+			  boundingCircle(polygon.boundingCircle),
+			  centroid(polygon.centroid) { }
+
+		virtual ~ConvexPolygon() = default;
+
+		ConvexPolygon& operator=(ConvexPolygon&& polygon) noexcept {
+			Geometry::operator=(std::move(polygon));
+			corners = std::move(polygon.corners);
+			constraints = std::move(polygon.constraints);
+			boundingCircle = std::move(polygon.boundingCircle);
+			centroid = std::move(polygon.centroid);
+			return *this;
+		}
+
+		ConvexPolygon& operator=(const ConvexPolygon& polygon) {
+			Geometry::operator=(polygon);
+			corners = polygon.corners;
+			constraints = polygon.constraints;
+			boundingCircle = polygon.boundingCircle;
+			centroid = polygon.centroid;
+			return *this;
+		}
+
+		bool operator<(const ConvexPolygon& polygon) const noexcept {
+			return corners < polygon.corners;
+		}
+
+		bool operator==(const ConvexPolygon& polygon) const noexcept {
+			return corners == polygon.corners;
+		}
+
+		const std::vector<Cartesian>& getCorners() const noexcept {
+			return corners;
+		}
+
+		std::string toWKT() const override;
+		std::string to_string() const override;
+		std::vector<std::string> getTrixels(bool, double) const override;
+		std::vector<range_t> getRanges(bool, double) const override;
+	};
+
+private:
+	std::vector<ConvexPolygon> polygons;
+	bool simplified;
 
 public:
-	Polygon(std::vector<Cartesian>&& points)
-		: Polygon(Type::POLYGON)
-	{
-		process(std::move(points));
-	}
+	Polygon(Geometry::Type type)
+		: Geometry(type),
+		  simplified(true) { }
+
+	Polygon(Geometry::Type type, std::vector<Cartesian>&& points)
+		: Geometry(type),
+		  polygons({ ConvexPolygon(type, std::move(points)) }),
+		  simplified(true) { }
 
 	Polygon(Polygon&& polygon) noexcept
 		: Geometry(std::move(polygon)),
-		  corners(std::move(polygon.corners)),
-		  constraints(std::move(polygon.constraints)),
-		  boundingCircle(std::move(polygon.boundingCircle)),
-		  centroid(std::move(polygon.centroid)) { }
+		  polygons(std::move(polygon.polygons)),
+		  simplified(std::move(polygon.simplified)) { }
 
 	Polygon(const Polygon& polygon)
 		: Geometry(polygon),
-		  corners(polygon.corners),
-		  constraints(polygon.constraints),
-		  boundingCircle(polygon.boundingCircle),
-		  centroid(polygon.centroid) { }
+		  polygons(polygon.polygons),
+		  simplified(polygon.simplified) { }
 
-	virtual ~Polygon() = default;
+	~Polygon() = default;
 
 	Polygon& operator=(Polygon&& polygon) noexcept {
 		Geometry::operator=(std::move(polygon));
-		corners = std::move(polygon.corners);
-		constraints = std::move(polygon.constraints);
-		boundingCircle = std::move(polygon.boundingCircle);
-		centroid = std::move(polygon.centroid);
+		polygons = std::move(polygon.polygons);
+		simplified = std::move(polygon.simplified);
 		return *this;
 	}
 
 	Polygon& operator=(const Polygon& polygon) {
 		Geometry::operator=(polygon);
-		corners = polygon.corners;
-		constraints = polygon.constraints;
-		boundingCircle = polygon.boundingCircle;
-		centroid = polygon.centroid;
+		polygons = polygon.polygons;
+		simplified = polygon.simplified;
 		return *this;
 	}
 
 	bool operator<(const Polygon& polygon) const noexcept {
-		return corners < polygon.corners;
+		return polygons < polygon.polygons;
 	}
 
 	bool operator==(const Polygon& polygon) const noexcept {
-		return corners == polygon.corners;
+		return polygons == polygon.polygons;
 	}
 
-	const std::vector<Cartesian>& getCorners() const noexcept {
-		return corners;
+	void add(std::vector<Cartesian>&& points) {
+		polygons.emplace_back(type, std::move(points));
+		simplified = false;
 	}
+
+	template <typename T, typename = std::enable_if_t<std::is_same<Polygon, std::decay_t<T>>::value>>
+	void add(T&& polygon) {
+		polygons.push_back(std::forward<T>(polygon));
+	}
+
+	void reserve(size_t new_cap) {
+		polygons.reserve(new_cap);
+	}
+
+	bool empty() const noexcept {
+		return polygons.empty();
+	}
+
+	const std::vector<ConvexPolygon>& getPolygons() const noexcept {
+		return polygons;
+	}
+
+	void simplify() override;
 
 	std::string toWKT() const override;
 	std::string to_string() const override;
-	std::vector<std::string> getTrixels(bool, double) const override;
-	std::vector<range_t> getRanges(bool, double) const override;
+	std::vector<std::string> getTrixels(bool partials, double error) const override;
+	std::vector<range_t> getRanges(bool partials, double error) const override;
 };
