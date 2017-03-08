@@ -410,7 +410,7 @@ std::string
 Convex::to_string() const
 {
 	if (circles.empty()) {
-		return "()";
+		return std::string("EMPTY");
 	}
 
 	std::string str("(");

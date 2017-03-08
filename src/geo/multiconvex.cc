@@ -68,7 +68,7 @@ std::string
 MultiConvex::to_string() const
 {
 	if (convexs.empty()) {
-		return "()";
+		return std::string("EMPTY");
 	}
 
 	std::string str("(");

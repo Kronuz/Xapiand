@@ -49,7 +49,7 @@ std::string
 Intersection::to_string() const
 {
 	if (geometries.empty()) {
-		return std::string("()");
+		return std::string("EMPTY");
 	}
 
 	std::string str(1, '(');

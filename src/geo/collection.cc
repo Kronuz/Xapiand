@@ -68,12 +68,12 @@ Collection::to_string() const
 	}
 
 	if (str.empty()) {
-		return std::string("()");
-	} else {
-		str.pop_back();
-		str.back() = ')';
-		return str;
+		return std::string("EMPTY");
 	}
+
+	str.pop_back();
+	str.back() = ')';
+	return str;
 }
 
 
