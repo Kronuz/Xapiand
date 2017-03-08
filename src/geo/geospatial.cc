@@ -44,11 +44,12 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 			return;
 		}
 		case MsgPack::Type::MAP: {
-			const auto str_key = obj.begin()->as_string();
+			auto it = obj.begin();
+			const auto str_key = it->as_string();
 			switch ((Cast::Hash)xxh64::hash(str_key)) {
 				case Cast::Hash::EWKT: {
 					try {
-						EWKT ewkt(obj.at(str_key).as_string());
+						EWKT ewkt(it.value().as_string());
 						geometry = std::move(ewkt.geometry);
 						return;
 					} catch (const msgpack::type_error&) {
@@ -56,30 +57,35 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 					}
 				}
 				case Cast::Hash::POINT:
-					geometry = std::make_unique<Point>(make_point(obj.at(str_key)));
+					geometry = std::make_unique<Point>(make_point(it.value()));
 					return;
 				case Cast::Hash::CIRCLE:
-					geometry = std::make_unique<Circle>(make_circle(obj.at(str_key)));
+					geometry = std::make_unique<Circle>(make_circle(it.value()));
 					return;
 				case Cast::Hash::CONVEX:
-					geometry = std::make_unique<Convex>(make_convex(obj.at(str_key)));
+					geometry = std::make_unique<Convex>(make_convex(it.value()));
 					return;
 				case Cast::Hash::POLYGON:
-					geometry = std::make_unique<Polygon>(make_polygon(obj.at(str_key), Geometry::Type::POLYGON));
+					geometry = std::make_unique<Polygon>(make_polygon(it.value(), Geometry::Type::POLYGON));
 					return;
 				case Cast::Hash::CHULL:
-					geometry = std::make_unique<Polygon>(make_polygon(obj.at(str_key), Geometry::Type::CONVEX_HULL));
+					geometry = std::make_unique<Polygon>(make_polygon(it.value(), Geometry::Type::CONVEX_HULL));
 					return;
 				case Cast::Hash::MULTIPOINT:
-					geometry = std::make_unique<MultiPoint>(make_multipoint(obj.at(str_key)));
+					geometry = std::make_unique<MultiPoint>(make_multipoint(it.value()));
 					return;
 				case Cast::Hash::MULTICIRCLE:
-					geometry = std::make_unique<MultiCircle>(make_multicircle(obj.at(str_key)));
+					geometry = std::make_unique<MultiCircle>(make_multicircle(it.value()));
 					return;
 				case Cast::Hash::MULTIPOLYGON:
+					geometry = std::make_unique<MultiPolygon>(make_multipolygon(it.value()));
+					return;
 				case Cast::Hash::GEO_COLLECTION:
+					geometry = std::make_unique<Collection>(make_collection(it.value()));
+					return;
 				case Cast::Hash::GEO_INTERSECTION:
-					THROW(GeoSpatialError, "Not implemented yet");
+					geometry = std::make_unique<Intersection>(make_intersection(it.value()));
+					return;
 				default:
 					THROW(GeoSpatialError, "Unknown geometry %s", str_key.c_str());
 			}
@@ -293,38 +299,30 @@ GeoSpatial::make_polygon(const MsgPack& o, Geometry::Type type)
 		if (data.lat && data.lon) {
 			if (data.lat->size() == data.lon->size()) {
 				auto it = data.lon->begin();
-				switch (it->getType()) {
-					case MsgPack::Type::FLOAT:
-					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::POSITIVE_INTEGER: {
-						return Polygon(type, getPoints(data, *data.lat, *data.lon, data.height));
-					}
-					case MsgPack::Type::ARRAY: {
-						Polygon polygon(type);
-						if (data.height) {
-							if (data.lat->size() == data.height->size()) {
-								auto hit = data.height->begin();
-								polygon.reserve(data.lat->size());
-								for (const auto& lat : *data.lat) {
-									polygon.add(getPoints(data, lat, *it, &*hit));
-									++it;
-									++hit;
-								}
-							} else {
-								THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-							}
-						} else {
+				if (it->is_array()) {
+					Polygon polygon(type);
+					if (data.height) {
+						if (data.lat->size() == data.height->size()) {
+							auto hit = data.height->begin();
 							polygon.reserve(data.lat->size());
 							for (const auto& lat : *data.lat) {
-								polygon.add(getPoints(data, lat, *it));
+								polygon.add(getPoints(data, lat, *it, &*hit));
 								++it;
+								++hit;
 							}
+						} else {
+							THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 						}
-						return polygon;
+					} else {
+						polygon.reserve(data.lat->size());
+						for (const auto& lat : *data.lat) {
+							polygon.add(getPoints(data, lat, *it));
+							++it;
+						}
 					}
-					default: {
-						THROW(GeoSpatialError, "%s, %s and %s must be array of numbers or nested array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-					}
+					return polygon;
+				} else {
+					return Polygon(type, getPoints(data, *data.lat, *data.lon, data.height));
 				}
 			} else {
 				THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
@@ -426,5 +424,193 @@ GeoSpatial::make_multicircle(const MsgPack& o)
 		}
 	} else {
 		THROW(GeoSpatialError, "%s must be map", RESERVED_MULTICIRCLE);
+	}
+}
+
+
+MultiPolygon
+GeoSpatial::make_multipolygon(const MsgPack& o)
+{
+	switch (o.getType()) {
+		case MsgPack::Type::MAP: {
+			MultiPolygon multipolygon;
+			multipolygon.reserve(o.size());
+			const auto it_e = o.end();
+			for (auto it = o.begin(); it != it_e; ++it) {
+				const auto str_key = it->as_string();
+				switch ((Cast::Hash)xxh64::hash(str_key)) {
+					case Cast::Hash::POLYGON:
+						multipolygon.add(make_polygon(it.value(), Geometry::Type::POLYGON));
+						break;
+					case Cast::Hash::CHULL:
+						multipolygon.add(make_polygon(it.value(), Geometry::Type::CONVEX_HULL));
+						break;
+					default:
+						THROW(GeoSpatialError, "%s must be a map only with %s and %s", RESERVED_MULTIPOLYGON, RESERVED_POLYGON, RESERVED_CHULL);
+				}
+			}
+			return multipolygon;
+		}
+		case MsgPack::Type::ARRAY: {
+			const auto data = get_data(o);
+			if (data.lat && data.lon) {
+				if (data.lat->size() == data.lon->size()) {
+					MultiPolygon multipolygon;
+					multipolygon.reserve(data.lat->size());
+					if (data.height) {
+						if (data.lat->size() == data.height->size()) {
+							auto m_it = data.lon->begin();
+							auto m_hit = data.height->begin();
+							for (const auto& m_lat : *data.lat) {
+								if (m_lat.is_array()) {
+									Polygon polygon(Geometry::Type::POLYGON);
+									polygon.reserve(m_lat.size());
+									auto it = m_it->begin();
+									auto hit = m_hit->begin();
+									for (const auto& lat : m_lat) {
+										polygon.add(getPoints(data, lat, *it, &*hit));
+										++it;
+										++hit;
+									}
+									multipolygon.add(std::move(polygon));
+								} else {
+									multipolygon.add(Polygon(Geometry::Type::POLYGON, getPoints(data, m_lat, *m_it, &*m_hit)));
+								}
+								++m_it;
+								++m_hit;
+							}
+						} else {
+							THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+						}
+					} else {
+						auto m_it = data.lon->begin();
+						for (const auto& m_lat : *data.lat) {
+							if (m_lat.is_array()) {
+								Polygon polygon(Geometry::Type::POLYGON);
+								polygon.reserve(m_lat.size());
+								auto it = m_it->begin();
+								for (const auto& lat : m_lat) {
+									polygon.add(getPoints(data, lat, *it));
+									++it;
+								}
+								multipolygon.add(std::move(polygon));
+							} else {
+								multipolygon.add(Polygon(Geometry::Type::POLYGON, getPoints(data, m_lat, *m_it)));
+							}
+							++m_it;
+						}
+					}
+					return multipolygon;
+				} else {
+					THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
+				}
+			} else {
+				THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_MULTIPOLYGON, GEO_LATITUDE, GEO_LONGITUDE);
+			}
+		}
+		default: {
+			THROW(GeoSpatialError, "%s must be map or nested array of numbers", RESERVED_MULTIPOLYGON);
+		}
+	}
+}
+
+
+Collection
+GeoSpatial::make_collection(const MsgPack& o)
+{
+	if (o.is_map()) {
+		Collection collection;
+		const auto it_e = o.end();
+		for (auto it = o.begin(); it != it_e; ++it) {
+			const auto str_key = it->as_string();
+			switch ((Cast::Hash)xxh64::hash(str_key)) {
+				case Cast::Hash::POINT:
+					collection.add_point(make_point(it.value()));
+					break;
+				case Cast::Hash::CIRCLE:
+					collection.add_circle(make_circle(it.value()));
+					break;
+				case Cast::Hash::CONVEX:
+					collection.add_convex(make_convex(it.value()));
+					break;
+				case Cast::Hash::POLYGON:
+					collection.add_polygon(make_polygon(it.value(), Geometry::Type::POLYGON));
+					break;
+				case Cast::Hash::CHULL:
+					collection.add_polygon(make_polygon(it.value(), Geometry::Type::CONVEX_HULL));
+					break;
+				case Cast::Hash::MULTIPOINT:
+					collection.add_multipoint(make_multipoint(it.value()));
+					break;
+				case Cast::Hash::MULTICIRCLE:
+					collection.add_multicircle(make_multicircle(it.value()));
+					break;
+				case Cast::Hash::MULTIPOLYGON:
+					collection.add_multipolygon(make_multipolygon(it.value()));
+					break;
+				case Cast::Hash::GEO_COLLECTION:
+					collection.add(make_collection(it.value()));
+					break;
+				case Cast::Hash::GEO_INTERSECTION:
+					collection.add_intersection(make_intersection(it.value()));
+					break;
+				default:
+					THROW(GeoSpatialError, "Unknown geometry %s", str_key.c_str());
+			}
+		}
+		return collection;
+	} else {
+		THROW(GeoSpatialError, "%s must be map", RESERVED_GEO_COLLECTION);
+	}
+}
+
+
+Intersection
+GeoSpatial::make_intersection(const MsgPack& o)
+{
+	if (o.is_map()) {
+		Intersection intersection;
+		intersection.reserve(o.size());
+		const auto it_e = o.end();
+		for (auto it = o.begin(); it != it_e; ++it) {
+			const auto str_key = it->as_string();
+			switch ((Cast::Hash)xxh64::hash(str_key)) {
+				case Cast::Hash::POINT:
+					intersection.add(std::make_shared<Point>(make_point(it.value())));
+					break;
+				case Cast::Hash::CIRCLE:
+					intersection.add(std::make_shared<Circle>(make_circle(it.value())));
+					break;
+				case Cast::Hash::CONVEX:
+					intersection.add(std::make_shared<Convex>(make_convex(it.value())));
+					break;
+				case Cast::Hash::POLYGON:
+					intersection.add(std::make_shared<Polygon>(make_polygon(it.value(), Geometry::Type::POLYGON)));
+					break;
+				case Cast::Hash::CHULL:
+					intersection.add(std::make_shared<Polygon>(make_polygon(it.value(), Geometry::Type::CONVEX_HULL)));
+					break;
+				case Cast::Hash::MULTIPOINT:
+					intersection.add(std::make_shared<MultiPoint>(make_multipoint(it.value())));
+					break;
+				case Cast::Hash::MULTICIRCLE:
+					intersection.add(std::make_shared<MultiCircle>(make_multicircle(it.value())));
+					break;
+				case Cast::Hash::MULTIPOLYGON:
+					intersection.add(std::make_shared<MultiPolygon>(make_multipolygon(it.value())));
+					break;
+				case Cast::Hash::GEO_COLLECTION:
+					intersection.add(std::make_shared<Collection>(make_collection(it.value())));
+					break;
+				case Cast::Hash::GEO_INTERSECTION:
+					intersection.add(std::make_shared<Intersection>(make_intersection(it.value())));
+					break;
+				default:
+					THROW(GeoSpatialError, "Unknown geometry %s", str_key.c_str());
+			}
+		}
+		return intersection;
+	} else {
+		THROW(GeoSpatialError, "%s must be map", RESERVED_GEO_INTERSECTION);
 	}
 }

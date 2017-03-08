@@ -74,6 +74,9 @@ class GeoSpatial {
 	Polygon make_polygon(const MsgPack& o, Geometry::Type type);
 	MultiPoint make_multipoint(const MsgPack& o);
 	MultiCircle make_multicircle(const MsgPack& o);
+	MultiPolygon make_multipolygon(const MsgPack& o);
+	Collection make_collection(const MsgPack& o);
+	Intersection make_intersection(const MsgPack& o);
 
 public:
 	std::unique_ptr<Geometry> geometry;
