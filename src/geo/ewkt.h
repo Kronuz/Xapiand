@@ -36,10 +36,15 @@ extern const std::regex parenthesis_list_split_re;
 extern const std::regex find_collection_re;
 
 
+class GeoSpatial;
+
+
 class EWKT {
 	using dispatch_func = void (EWKT::*)(int, const std::string&);
 
 	static const std::unordered_map<std::string, dispatch_func> map_dispatch;
+
+	std::unique_ptr<Geometry> geometry;
 
 	Point _parse_point(int SRID, const std::string& specification);
 	Circle _parse_circle(int SRID, const std::string& specification);
@@ -53,9 +58,9 @@ class EWKT {
 	void parse_multipoint(int SRID, const std::string& specification);
 	void parse_multicircle(int SRID, const std::string& specification);
 
-public:
-	std::unique_ptr<Geometry> geometry;
+	friend class GeoSpatial;
 
+public:
 	EWKT(const std::string& str);
 
 	EWKT(EWKT&& ewkt) noexcept
@@ -73,4 +78,9 @@ public:
 	EWKT& operator=(const EWKT&) = delete;
 
 	static bool isEWKT(const std::string& str);
+
+	const std::unique_ptr<Geometry>& getGeometry() const {
+		geometry->simplify();
+		return geometry;
+	}
 };

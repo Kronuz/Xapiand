@@ -2350,7 +2350,8 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		case FieldType::GEO: {
 			try {
 				GeoSpatial geo(value);
-				auto ranges = geo.geometry->getRanges(spc.flags.partials, spc.error);
+				const auto& geometry = geo.getGeometry();
+				auto ranges = geometry->getRanges(spc.flags.partials, spc.error);
 				if (ranges.empty()) {
 					return;
 				}
@@ -2360,7 +2361,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 						term = Serialise::ranges(ranges);
 						index_term(doc, term, *field_spc, pos);
 					} else {
-						const auto f_ranges = geo.geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
+						const auto f_ranges = geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
 						term = Serialise::ranges(f_ranges);
 						index_term(doc, term, *field_spc, pos);
 					}
@@ -2372,13 +2373,13 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 						if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
 							index_term(doc, Serialise::ranges(ranges), *global_spc, pos);
 						} else {
-							const auto g_ranges = geo.geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
+							const auto g_ranges = geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
 							index_term(doc, Serialise::ranges(g_ranges), *global_spc, pos);
 						}
 					}
 				}
 				GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
-				merge_geospatial_values(s, std::move(ranges), geo.geometry->getCentroids());
+				merge_geospatial_values(s, std::move(ranges), geometry->getCentroids());
 				return;
 			} catch (const msgpack::type_error&) {
 				THROW(ClientError, "Format invalid for geo type: %s", repr(value.to_string()).c_str());
@@ -2540,7 +2541,8 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		case FieldType::GEO: {
 			try {
 				GeoSpatial geo(value);
-				auto ranges = geo.geometry->getRanges(field_spc.flags.partials, field_spc.error);
+				const auto& geometry = geo.getGeometry();
+				auto ranges = geometry->getRanges(field_spc.flags.partials, field_spc.error);
 				if (ranges.empty()) {
 					return;
 				}
@@ -2560,10 +2562,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 						GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
 						GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, ranges);
 					}
-					merge_geospatial_values(s_f, ranges, geo.geometry->getCentroids());
-					merge_geospatial_values(s_g, std::move(ranges), geo.geometry->getCentroids());
+					merge_geospatial_values(s_f, ranges, geometry->getCentroids());
+					merge_geospatial_values(s_g, std::move(ranges), geometry->getCentroids());
 				} else {
-					auto g_ranges = geo.geometry->getRanges(global_spc.flags.partials, global_spc.error);
+					auto g_ranges = geometry->getRanges(global_spc.flags.partials, global_spc.error);
 					if (toUType(field_spc.index & TypeIndex::TERMS)) {
 						const auto ser_value = Serialise::ranges(g_ranges);
 						if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
@@ -2575,8 +2577,8 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 					}
 					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
 					GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, g_ranges);
-					merge_geospatial_values(s_f, std::move(ranges), geo.geometry->getCentroids());
-					merge_geospatial_values(s_g, std::move(g_ranges), geo.geometry->getCentroids());
+					merge_geospatial_values(s_f, std::move(ranges), geometry->getCentroids());
+					merge_geospatial_values(s_g, std::move(g_ranges), geometry->getCentroids());
 				}
 				return;
 			} catch (const msgpack::type_error&) {

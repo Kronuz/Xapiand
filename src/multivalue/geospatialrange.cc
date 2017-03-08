@@ -35,7 +35,7 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 {
 	GeoSpatial geo(obj);
 
-	auto ranges = geo.geometry->getRanges(field_spc.flags.partials, field_spc.error);
+	auto ranges = geo.getGeometry()->getRanges(field_spc.flags.partials, field_spc.error);
 
 	if (ranges.empty()) {
 		return Xapian::Query::MatchNothing;

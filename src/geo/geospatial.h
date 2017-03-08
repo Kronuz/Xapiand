@@ -58,6 +58,8 @@ class GeoSpatial {
 
 	static const std::unordered_map<std::string, dispatch_func> map_dispatch;
 
+	std::unique_ptr<Geometry> geometry;
+
 	void process_latitude(data_t& data, const MsgPack& latitude);
 	void process_longitude(data_t& data, const MsgPack& longitude);
 	void process_height(data_t& data, const MsgPack& height);
@@ -79,7 +81,10 @@ class GeoSpatial {
 	Intersection make_intersection(const MsgPack& o);
 
 public:
-	std::unique_ptr<Geometry> geometry;
-
 	GeoSpatial(const MsgPack& obj);
+
+	const std::unique_ptr<Geometry>& getGeometry() const {
+		geometry->simplify();
+		return geometry;
+	}
 };

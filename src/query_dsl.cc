@@ -546,7 +546,7 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, const std::string& 
 		try {
 			auto nivel = stox(std::stoull, field_accuracy.substr(4));
 			GeoSpatial geo(obj);
-			const auto ranges = geo.geometry->getRanges(default_spc.flags.partials, default_spc.error);
+			const auto ranges = geo.getGeometry()->getRanges(default_spc.flags.partials, default_spc.error);
 			return GenerateTerms::geo(ranges, { nivel }, { field_spc.prefix }, wqf);
 		} catch (const InvalidArgument&) {
 			THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());

@@ -427,7 +427,7 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 				return;
 			case FieldType::GEO: {
 				EWKT ewkt(value);
-				auto centroids = ewkt.geometry->getCentroids();
+				auto centroids = ewkt.getGeometry()->getCentroids();
 				if (!centroids.empty()) {
 					slots.push_back(std::make_unique<GeoKey>(field_spc, reverse, std::move(centroids)));
 				}
