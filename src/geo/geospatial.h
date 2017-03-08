@@ -66,12 +66,14 @@ class GeoSpatial {
 	void process_srid(data_t& data, const MsgPack& srid);
 
 	data_t get_data(const MsgPack& o, bool has_radius=false);
+	std::vector<Cartesian> getPoints(const data_t& data, const MsgPack& latitude, const MsgPack& longitude, const MsgPack* height=nullptr);
 
-	std::unique_ptr<Point> make_point(const MsgPack& o);
-	std::unique_ptr<Circle> make_circle(const MsgPack& o);
-	std::unique_ptr<Convex> make_convex(const MsgPack& o);
-	std::unique_ptr<MultiPoint> make_multipoint(const MsgPack& o);
-	std::unique_ptr<MultiCircle> make_multicircle(const MsgPack& o);
+	Point make_point(const MsgPack& o);
+	Circle make_circle(const MsgPack& o);
+	Convex make_convex(const MsgPack& o);
+	Polygon make_polygon(const MsgPack& o, Geometry::Type type);
+	MultiPoint make_multipoint(const MsgPack& o);
+	MultiCircle make_multicircle(const MsgPack& o);
 
 public:
 	std::unique_ptr<Geometry> geometry;

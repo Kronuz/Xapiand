@@ -56,26 +56,27 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 					}
 				}
 				case Cast::Hash::POINT:
-					geometry = make_point(obj.at(str_key));
+					geometry = std::make_unique<Point>(make_point(obj.at(str_key)));
 					return;
 				case Cast::Hash::CIRCLE:
-					geometry = make_circle(obj.at(str_key));
+					geometry = std::make_unique<Circle>(make_circle(obj.at(str_key)));
 					return;
 				case Cast::Hash::CONVEX:
-					geometry = make_convex(obj.at(str_key));
+					geometry = std::make_unique<Convex>(make_convex(obj.at(str_key)));
 					return;
 				case Cast::Hash::POLYGON:
-					THROW(GeoSpatialError, "Not implemented yet");
+					geometry = std::make_unique<Polygon>(make_polygon(obj.at(str_key), Geometry::Type::POLYGON));
+					return;
 				case Cast::Hash::CHULL:
-					THROW(GeoSpatialError, "Not implemented yet");
+					geometry = std::make_unique<Polygon>(make_polygon(obj.at(str_key), Geometry::Type::CONVEX_HULL));
+					return;
 				case Cast::Hash::MULTIPOINT:
-					geometry = make_multipoint(obj.at(str_key));
+					geometry = std::make_unique<MultiPoint>(make_multipoint(obj.at(str_key)));
 					return;
 				case Cast::Hash::MULTICIRCLE:
-					geometry = make_multicircle(obj.at(str_key));
+					geometry = std::make_unique<MultiCircle>(make_multicircle(obj.at(str_key)));
 					return;
 				case Cast::Hash::MULTIPOLYGON:
-				case Cast::Hash::MULTICHULL:
 				case Cast::Hash::GEO_COLLECTION:
 				case Cast::Hash::GEO_INTERSECTION:
 					THROW(GeoSpatialError, "Not implemented yet");
@@ -166,14 +167,46 @@ GeoSpatial::get_data(const MsgPack& o, bool has_radius)
 }
 
 
-std::unique_ptr<Point>
+std::vector<Cartesian>
+GeoSpatial::getPoints(const data_t& data, const MsgPack& latitude, const MsgPack& longitude, const MsgPack* height)
+{
+	try {
+		if (data.lat->size() == data.lon->size()) {
+			std::vector<Cartesian> points;
+			points.reserve(latitude.size());
+			if (height) {
+				auto it = latitude.begin();
+				auto hit = height->begin();
+				for (const auto& lon : longitude) {
+					points.emplace_back(it->as_f64(), lon.as_f64(), hit->as_f64(), data.units, data.srid);
+					++it;
+					++hit;
+				}
+			} else {
+				auto it = latitude.begin();
+				for (const auto& lon : longitude) {
+					points.emplace_back(it->as_f64(), lon.as_f64(), 0, data.units, data.srid);
+					++it;
+				}
+			}
+			return points;
+		} else {
+			THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(GeoSpatialError, "%s, %s and %s must be array of numbers or nested array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+	}
+}
+
+
+Point
 GeoSpatial::make_point(const MsgPack& o)
 {
 	if (o.is_map()) {
 		const auto data = get_data(o);
 		if (data.lat && data.lon) {
 			try {
-				return std::make_unique<Point>(Cartesian(data.lat->as_f64(), data.lon->as_f64(), data.height ? data.height->as_f64() : 0, data.units, data.srid));
+				return Point(Cartesian(data.lat->as_f64(), data.lon->as_f64(), data.height ? data.height->as_f64() : 0, data.units, data.srid));
 			} catch (const msgpack::type_error&) {
 				THROW(GeoSpatialError, "%s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 			}
@@ -186,14 +219,14 @@ GeoSpatial::make_point(const MsgPack& o)
 }
 
 
-std::unique_ptr<Circle>
+Circle
 GeoSpatial::make_circle(const MsgPack& o)
 {
 	if (o.is_map()) {
 		const auto data = get_data(o, true);
 		if (data.lat && data.lon && data.radius) {
 			try {
-				return std::make_unique<Circle>(Cartesian(data.lat->as_f64(), data.lon->as_f64(), data.height ? data.height->as_f64() : 0, data.units, data.srid), data.radius->as_f64());
+				return Circle(Cartesian(data.lat->as_f64(), data.lon->as_f64(), data.height ? data.height->as_f64() : 0, data.units, data.srid), data.radius->as_f64());
 			} catch (const msgpack::type_error&) {
 				THROW(GeoSpatialError, "%s, %s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
 			}
@@ -206,38 +239,42 @@ GeoSpatial::make_circle(const MsgPack& o)
 }
 
 
-std::unique_ptr<Convex>
+Convex
 GeoSpatial::make_convex(const MsgPack& o)
 {
 	if (o.is_map()) {
 		const auto data = get_data(o, true);
 		if (data.lat && data.lon && data.radius) {
-			try {
-				if (data.lat->size() == data.lon->size()) {
-					if (!data.height) {
-						auto convex = std::make_unique<Convex>();
+			if (data.lat->size() == data.lon->size()) {
+				try {
+					Convex convex;
+					if (data.height) {
+						if (data.lat->size() == data.height->size()) {
+							auto it = data.lon->begin();
+							auto hit = data.height->begin();
+							convex.reserve(data.lat->size());
+							for (const auto& latitude : *data.lat) {
+								convex.add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), hit->as_f64(), data.units, data.srid), data.radius->as_f64()));
+								++it;
+								++hit;
+							}
+						} else {
+							THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+						}
+					} else {
 						auto it = data.lon->begin();
+						convex.reserve(data.lat->size());
 						for (const auto& latitude : *data.lat) {
-							convex->add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), 0, data.units, data.srid), data.radius->as_f64()));
+							convex.add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), 0, data.units, data.srid), data.radius->as_f64()));
 							++it;
 						}
-						return convex;
-					} else if (data.lat->size() == data.height->size()) {
-						auto convex = std::make_unique<Convex>();
-						auto it = data.lon->begin();
-						auto hit = data.height->begin();
-						for (const auto& latitude : *data.lat) {
-							convex->add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), hit->as_f64(), data.units, data.srid), data.radius->as_f64()));
-							++it;
-							++hit;
-						}
-						return convex;
 					}
-
+					return convex;
+				} catch (const msgpack::type_error&) {
+					THROW(GeoSpatialError, "%s, %s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
 				}
-				THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-			} catch (const msgpack::type_error&) {
-				THROW(GeoSpatialError, "%s, %s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
+			} else {
+				THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
 			}
 		} else {
 			THROW(GeoSpatialError, "%s must contain %s, %s and %s", RESERVED_CONVEX, GEO_LATITUDE, GEO_LONGITUDE, GEO_RADIUS);
@@ -248,38 +285,95 @@ GeoSpatial::make_convex(const MsgPack& o)
 }
 
 
-std::unique_ptr<MultiPoint>
+Polygon
+GeoSpatial::make_polygon(const MsgPack& o, Geometry::Type type)
+{
+	if (o.is_map()) {
+		const auto data = get_data(o);
+		if (data.lat && data.lon) {
+			if (data.lat->size() == data.lon->size()) {
+				auto it = data.lon->begin();
+				switch (it->getType()) {
+					case MsgPack::Type::FLOAT:
+					case MsgPack::Type::NEGATIVE_INTEGER:
+					case MsgPack::Type::POSITIVE_INTEGER: {
+						return Polygon(type, getPoints(data, *data.lat, *data.lon, data.height));
+					}
+					case MsgPack::Type::ARRAY: {
+						Polygon polygon(type);
+						if (data.height) {
+							if (data.lat->size() == data.height->size()) {
+								auto hit = data.height->begin();
+								polygon.reserve(data.lat->size());
+								for (const auto& lat : *data.lat) {
+									polygon.add(getPoints(data, lat, *it, &*hit));
+									++it;
+									++hit;
+								}
+							} else {
+								THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+							}
+						} else {
+							polygon.reserve(data.lat->size());
+							for (const auto& lat : *data.lat) {
+								polygon.add(getPoints(data, lat, *it));
+								++it;
+							}
+						}
+						return polygon;
+					}
+					default: {
+						THROW(GeoSpatialError, "%s, %s and %s must be array of numbers or nested array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+					}
+				}
+			} else {
+				THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
+			}
+		} else {
+			THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_POLYGON, GEO_LATITUDE, GEO_LONGITUDE);
+		}
+	} else {
+		THROW(GeoSpatialError, "%s must be map", RESERVED_POLYGON);
+	}
+}
+
+
+MultiPoint
 GeoSpatial::make_multipoint(const MsgPack& o)
 {
 	if (o.is_map()) {
 		const auto data = get_data(o);
 		if (data.lat && data.lon) {
-			try {
-				if (data.lat->size() == data.lon->size()) {
-					if (!data.height) {
-						auto multipoint = std::make_unique<MultiPoint>();
+			if (data.lat->size() == data.lon->size()) {
+				try {
+					MultiPoint multipoint;
+					if (data.height) {
+						if (data.lat->size() == data.height->size()) {
+							auto it = data.lon->begin();
+							auto hit = data.height->begin();
+							multipoint.reserve(data.lat->size());
+							for (const auto& latitude : *data.lat) {
+								multipoint.add(Point(Cartesian(latitude.as_f64(), it->as_f64(), hit->as_f64(), data.units, data.srid)));
+								++it;
+								++hit;
+							}
+						} else {
+							THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+						}
+					} else {
 						auto it = data.lon->begin();
+						multipoint.reserve(data.lat->size());
 						for (const auto& latitude : *data.lat) {
-							multipoint->add(Point(Cartesian(latitude.as_f64(), it->as_f64(), 0, data.units, data.srid)));
+							multipoint.add(Point(Cartesian(latitude.as_f64(), it->as_f64(), 0, data.units, data.srid)));
 							++it;
 						}
-						return multipoint;
-					} else if (data.lat->size() == data.height->size()) {
-						auto multipoint = std::make_unique<MultiPoint>();
-						auto it = data.lon->begin();
-						auto hit = data.height->begin();
-						for (const auto& latitude : *data.lat) {
-							multipoint->add(Point(Cartesian(latitude.as_f64(), it->as_f64(), hit->as_f64(), data.units, data.srid)));
-							++it;
-							++hit;
-						}
-						return multipoint;
 					}
-
+					return multipoint;
+				} catch (const msgpack::type_error&) {
+					THROW(GeoSpatialError, "%s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 				}
-				THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-			} catch (const msgpack::type_error&) {
-				THROW(GeoSpatialError, "%s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+			} else {
+				THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
 			}
 		} else {
 			THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_MULTIPOINT, GEO_LATITUDE, GEO_LONGITUDE);
@@ -290,38 +384,42 @@ GeoSpatial::make_multipoint(const MsgPack& o)
 }
 
 
-std::unique_ptr<MultiCircle>
+MultiCircle
 GeoSpatial::make_multicircle(const MsgPack& o)
 {
 	if (o.is_map()) {
 		const auto data = get_data(o, true);
 		if (data.lat && data.lon && data.radius) {
-			try {
-				if (data.lat->size() == data.lon->size()) {
-					if (!data.height) {
-						auto multicircle = std::make_unique<MultiCircle>();
+			if (data.lat->size() == data.lon->size()) {
+				try {
+					MultiCircle multicircle;
+					if (data.height) {
+						if (data.lat->size() == data.height->size()) {
+							auto it = data.lon->begin();
+							auto hit = data.height->begin();
+							multicircle.reserve(data.lat->size());
+							for (const auto& latitude : *data.lat) {
+								multicircle.add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), hit->as_f64(), data.units, data.srid), data.radius->as_f64()));
+								++it;
+								++hit;
+							}
+						} else {
+							THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+						}
+					} else {
 						auto it = data.lon->begin();
+						multicircle.reserve(data.lat->size());
 						for (const auto& latitude : *data.lat) {
-							multicircle->add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), 0, data.units, data.srid), data.radius->as_f64()));
+							multicircle.add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), 0, data.units, data.srid), data.radius->as_f64()));
 							++it;
 						}
-						return multicircle;
-					} else if (data.lat->size() == data.height->size()) {
-						auto multicircle = std::make_unique<MultiCircle>();
-						auto it = data.lon->begin();
-						auto hit = data.height->begin();
-						for (const auto& latitude : *data.lat) {
-							multicircle->add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), hit->as_f64(), data.units, data.srid), data.radius->as_f64()));
-							++it;
-							++hit;
-						}
-						return multicircle;
 					}
-
+					return multicircle;
+				} catch (const msgpack::type_error&) {
+					THROW(GeoSpatialError, "%s, %s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
 				}
-				THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-			} catch (const msgpack::type_error&) {
-				THROW(GeoSpatialError, "%s, %s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
+			} else {
+				THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
 			}
 		} else {
 			THROW(GeoSpatialError, "%s must contain %s, %s and %s", RESERVED_MULTICIRCLE, GEO_LATITUDE, GEO_LONGITUDE, GEO_RADIUS);

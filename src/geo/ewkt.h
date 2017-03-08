@@ -26,10 +26,8 @@
 #include <regex>               // for regex
 #include <unordered_map>       // for regex
 
-#include "convex.h"            // for Circle, Convex, Geometry
-#include "multicircle.h"       // for MiltiCircle
-#include "multipoint.h"        // for MultiPoint
-#include "point.h"             // for Point
+#include "collection.h"
+#include "intersection.h"
 
 
 extern const std::regex find_geometry_re;
