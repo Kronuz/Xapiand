@@ -92,52 +92,24 @@ public:
 		multipolygon.add(std::forward<T>(polygon));
 	}
 
-	void add_multipoint(const MultiPoint& multipoint_) {
-		for (const auto& point : multipoint_.getPoints()) {
-			multipoint.add(point);
-		}
+	template <typename T, typename = std::enable_if_t<std::is_same<MultiPoint, std::decay_t<T>>::value>>
+	void add_multipoint(T&& multipoint_) {
+		multipoint.add(std::forward<T>(multipoint_));
 	}
 
-	void add_multipoint(MultiPoint&& multipoint_) {
-		for (auto& point : multipoint_.getPoints()) {
-			multipoint.add(std::move(point));
-		}
+	template <typename T, typename = std::enable_if_t<std::is_same<MultiCircle, std::decay_t<T>>::value>>
+	void add_multicircle(T&& multicircle_) {
+		multicircle.add(std::forward<T>(multicircle_));
 	}
 
-	void add_multicircle(const MultiCircle& multicircle_) {
-		for (const auto& circle : multicircle_.getCircles()) {
-			multicircle.add(circle);
-		}
+	template <typename T, typename = std::enable_if_t<std::is_same<MultiConvex, std::decay_t<T>>::value>>
+	void add_multiconvex(T&& multiconvex_) {
+		multiconvex.add(std::forward<T>(multiconvex_));
 	}
 
-	void add_multicircle(MultiCircle&& multicircle_) {
-		for (auto& circle : multicircle_.getCircles()) {
-			multicircle.add(std::move(circle));
-		}
-	}
-
-	void add_multiconvex(const MultiConvex& multiconvex_) {
-		for (const auto& convex : multiconvex_.getConvexs()) {
-			multiconvex.add(convex);
-		}
-	}
-
-	void add_multiconvex(MultiConvex&& multiconvex_) {
-		for (auto& convex : multiconvex_.getConvexs()) {
-			multiconvex.add(std::move(convex));
-		}
-	}
-
-	void add_multipolygon(const MultiPolygon& multipolygon_) {
-		for (const auto& polygon : multipolygon_.getPolygons()) {
-			multipolygon.add(polygon);
-		}
-	}
-
-	void add_multipolygon(MultiPolygon&& multipolygon_) {
-		for (const auto& polygon : multipolygon_.getPolygons()) {
-			multipolygon.add(std::move(polygon));
-		}
+	template <typename T, typename = std::enable_if_t<std::is_same<MultiPolygon, std::decay_t<T>>::value>>
+	void add_multipolygon(T&& multipolygon_) {
+		multipolygon.add(std::forward<T>(multipolygon_));
 	}
 
 	const MultiPoint& getMultiPoint() const noexcept {

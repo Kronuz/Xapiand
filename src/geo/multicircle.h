@@ -66,6 +66,22 @@ public:
 		simplified = false;
 	}
 
+	void add(const MultiCircle& multicircle) {
+		circles.reserve(circles.size() + multicircle.circles.size());
+		for (const auto& circle : multicircle.circles) {
+			circles.push_back(circle);
+		}
+		simplified = false;
+	}
+
+	void add(MultiCircle&& multicircle) {
+		circles.reserve(circles.size() + multicircle.circles.size());
+		for (auto& circle : multicircle.circles) {
+			circles.push_back(std::move(circle));
+		}
+		simplified = false;
+	}
+
 	void reserve(size_t new_cap) {
 		circles.reserve(new_cap);
 	}

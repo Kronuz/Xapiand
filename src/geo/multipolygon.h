@@ -70,6 +70,22 @@ public:
 		simplified = false;
 	}
 
+	void add(const MultiPolygon& multipolygon) {
+		polygons.reserve(polygons.size() + multipolygon.polygons.size());
+		for (const auto& polygon : multipolygon.polygons) {
+			polygons.push_back(polygon);
+		}
+		simplified = false;
+	}
+
+	void add(MultiPolygon&& multipolygon) {
+		polygons.reserve(polygons.size() + multipolygon.polygons.size());
+		for (auto& polygon : multipolygon.polygons) {
+			polygons.push_back(std::move(polygon));
+		}
+		simplified = false;
+	}
+
 	void reserve(size_t new_cap) {
 		polygons.reserve(new_cap);
 	}

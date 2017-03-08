@@ -96,6 +96,22 @@ public:
 		simplified = false;
 	}
 
+	void add(const Convex& convex) {
+		circles.reserve(circles.size() + convex.circles.size());
+		for (const auto& circle : convex.circles) {
+			circles.push_back(circle);
+		}
+		simplified = false;
+	}
+
+	void add(Convex&& convex) {
+		circles.reserve(circles.size() + convex.circles.size());
+		for (auto& circle : convex.circles) {
+			circles.push_back(std::move(circle));
+		}
+		simplified = false;
+	}
+
 	void reserve(size_t new_cap) {
 		circles.reserve(new_cap);
 	}

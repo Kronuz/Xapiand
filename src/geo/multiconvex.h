@@ -66,6 +66,22 @@ public:
 		simplified = false;
 	}
 
+	void add(const MultiConvex& multiconvex) {
+		convexs.reserve(convexs.size() + multiconvex.convexs.size());
+		for (const auto& convex : multiconvex.convexs) {
+			convexs.push_back(convex);
+		}
+		simplified = false;
+	}
+
+	void add(MultiConvex&& multiconvex) {
+		convexs.reserve(convexs.size() + multiconvex.convexs.size());
+		for (auto& convex : multiconvex.convexs) {
+			convexs.push_back(std::move(convex));
+		}
+		simplified = false;
+	}
+
 	bool empty() const noexcept {
 		return convexs.empty();
 	}

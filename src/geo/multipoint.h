@@ -66,6 +66,22 @@ public:
 		simplified = false;
 	}
 
+	void add(const MultiPoint& multipoint) {
+		points.reserve(points.size() + multipoint.points.size());
+		for (const auto& point : multipoint.points) {
+			points.push_back(point);
+		}
+		simplified = false;
+	}
+
+	void add(MultiPoint&& multipoint) {
+		points.reserve(points.size() + multipoint.points.size());
+		for (auto& point : multipoint.points) {
+			points.push_back(std::move(point));
+		}
+		simplified = false;
+	}
+
 	void reserve(size_t new_cap) {
 		points.reserve(new_cap);
 	}
