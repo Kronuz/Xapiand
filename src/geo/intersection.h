@@ -22,10 +22,7 @@
 
 #pragma once
 
-#include "multicircle.h"
-#include "multiconvex.h"
-#include "multipoint.h"
-#include "multipolygon.h"
+#include "geometry.h"
 
 
 class Intersection : public Geometry {
@@ -57,44 +54,8 @@ public:
 		return *this;
 	}
 
-	template <typename T, typename = std::enable_if_t<std::is_same<Point, std::decay_t<T>>::value>>
-	void add_point(T&& point) {
-		geometries.push_back(std::make_shared<Point>(std::forward<T>(point)));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<Circle, std::decay_t<T>>::value>>
-	void add_circle(T&& circle) {
-		geometries.push_back(std::make_shared<Circle>(std::forward<T>(circle)));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<Convex, std::decay_t<T>>::value>>
-	void add_convex(T&& convex) {
-		geometries.push_back(std::make_shared<Convex>(std::forward<T>(convex)));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<Polygon, std::decay_t<T>>::value>>
-	void add_polygon(T&& polygon) {
-		geometries.push_back(std::make_shared<Polygon>(std::forward<T>(polygon)));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<MultiPoint, std::decay_t<T>>::value>>
-	void add_multipoint(T&& multipoint) {
-		geometries.push_back(std::make_shared<MultiPoint>(std::forward<T>(multipoint)));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<MultiCircle, std::decay_t<T>>::value>>
-	void add_multicircle(T&& multicircle) {
-		geometries.push_back(std::make_shared<MultiCircle>(std::forward<T>(multicircle)));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<MultiConvex, std::decay_t<T>>::value>>
-	void add_multiconvex(T&& multiconvex) {
-		geometries.push_back(std::make_shared<MultiConvex>(std::forward<T>(multiconvex)));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_same<MultiPolygon, std::decay_t<T>>::value>>
-	void add_multipolygon(T&& multipolygon) {
-		geometries.push_back(std::make_shared<MultiPolygon>(std::forward<T>(multipolygon)));
+	void add(const std::shared_ptr<Geometry>& geometry) {
+		geometries.push_back(geometry);
 	}
 
 	const std::vector<std::shared_ptr<Geometry>>& getGeometries() const noexcept {
