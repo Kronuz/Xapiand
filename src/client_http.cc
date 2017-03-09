@@ -1280,29 +1280,29 @@ HttpClient::search_view(enum http_method method, Command)
 
 	int db_flags = DB_OPEN;
 
-	if (query_field->volatile_) {
-		if (endpoints.size() != 1) {
-			enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, std::string("Expecting exactly one index with volatile")  }
-			};
-			write_http_response(error_code, err_response);
-			return;
-		}
-		db_handler.reset(endpoints, db_flags | DB_WRITABLE, method);
-		if (db_handler.commit()) {
-			db_handler.reset(endpoints, db_flags, method);
-			db_handler.reopen();
-		} else {
-			db_handler.reset(endpoints, db_flags, method);
-		}
-	}
-
 	operation_begins = std::chrono::system_clock::now();
 
 	MsgPack aggregations;
 	try {
+		if (query_field->volatile_) {
+			if (endpoints.size() != 1) {
+				enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
+				MsgPack err_response = {
+					{ RESPONSE_STATUS, (int)error_code },
+					{ RESPONSE_MESSAGE, std::string("Expecting exactly one index with volatile")  }
+				};
+				write_http_response(error_code, err_response);
+				return;
+			}
+			db_handler.reset(endpoints, db_flags | DB_WRITABLE, method);
+			if (db_handler.commit()) {
+				db_handler.reset(endpoints, db_flags, method);
+				db_handler.reopen();
+			} else {
+				db_handler.reset(endpoints, db_flags, method);
+			}
+		}
+
 		db_handler.reset(endpoints, db_flags, method);
 		if (body.empty()) {
 			mset = db_handler.get_mset(*query_field, nullptr, nullptr, suggestions);
