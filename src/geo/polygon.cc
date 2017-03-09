@@ -169,7 +169,7 @@ Polygon::ConvexPolygon::init()
 		}
 	}
 
-	max_radius = std::acos(max) * M_PER_RADIUS_EARTH;
+	radius = std::acos(max) * M_PER_RADIUS_EARTH;
 }
 
 
@@ -594,7 +594,7 @@ Polygon::ConvexPolygon::getTrixels(bool partials, double error) const
 	}
 
 	trixel_data data(partials, HTM_MAX_LEVEL);
-	error = error * max_radius;
+	error = error * radius;
 	for (size_t i = 0; i < HTM_MAX_LEVEL; ++i) {
 		if (ERROR_NIVEL[i] < error) {
 			data.max_level = i;
@@ -646,7 +646,7 @@ Polygon::ConvexPolygon::getRanges(bool partials, double error) const
 	}
 
 	range_data data(partials, HTM_MAX_LEVEL);
-	error = error * max_radius;
+	error = error * radius;
 	for (size_t i = 0; i < HTM_MAX_LEVEL; ++i) {
 		if (ERROR_NIVEL[i] < error) {
 			data.max_level = i;
@@ -693,22 +693,22 @@ Polygon::ConvexPolygon::getRanges(bool partials, double error) const
 void
 Polygon::simplify()
 {
-	if (!simplified && polygons.size() > 1) {
-		// Sort polygons.
-		std::sort(polygons.begin(), polygons.end(), std::less<ConvexPolygon>());
+	if (!simplified && convexpolygons.size() > 1) {
+		// Sort convexpolygons.
+		std::sort(convexpolygons.begin(), convexpolygons.end(), std::less<ConvexPolygon>());
 
-		// Deleting redundant polygons.
-		for (auto it = polygons.begin(); it != polygons.end(); ) {
+		// Deleting redundant convexpolygons.
+		for (auto it = convexpolygons.begin(); it != convexpolygons.end(); ) {
 			auto n_it = it + 1;
-			if (n_it != polygons.end() && *it == *n_it) {
-				n_it = polygons.erase(n_it);
+			if (n_it != convexpolygons.end() && *it == *n_it) {
+				n_it = convexpolygons.erase(n_it);
 				int cont = 1;
-				while (n_it != polygons.end() && *it == *n_it) {
-					n_it = polygons.erase(n_it);
+				while (n_it != convexpolygons.end() && *it == *n_it) {
+					n_it = convexpolygons.erase(n_it);
 					++cont;
 				}
 				if (cont % 2) {
-					it = polygons.erase(it);
+					it = convexpolygons.erase(it);
 				} else {
 					++it;
 				}
@@ -734,15 +734,15 @@ Polygon::toWKT() const
 std::string
 Polygon::to_string() const
 {
-	if (polygons.empty()) {
+	if (convexpolygons.empty()) {
 		return "EMPTY";
 	}
 
 	std::string str("(");
-	for (const auto& polygon : polygons) {
-		const auto str_polygon = polygon.to_string();
-		str.reserve(str.length() + str_polygon.length() + 2);
-		str.append(str_polygon).append(", ");
+	for (const auto& convexpolygon : convexpolygons) {
+		const auto str_convexpolygon = convexpolygon.to_string();
+		str.reserve(str.length() + str_convexpolygon.length() + 2);
+		str.append(str_convexpolygon).append(", ");
 	}
 	str.pop_back();
 	str.back() = ')';
@@ -761,8 +761,8 @@ std::vector<range_t>
 Polygon::getRanges(bool partials, double error) const
 {
 	std::vector<range_t> ranges;
-	for (const auto& polygon : polygons) {
-		ranges = HTM::range_exclusive_disjunction(std::move(ranges), polygon.getRanges(partials, error));
+	for (const auto& convexpolygon : convexpolygons) {
+		ranges = HTM::range_exclusive_disjunction(std::move(ranges), convexpolygon.getRanges(partials, error));
 	}
 
 	return ranges;

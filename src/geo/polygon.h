@@ -37,7 +37,7 @@ public:
 		std::vector<Constraint> constraints;
 		Constraint boundingCircle;
 		Cartesian centroid;
-		double max_radius;
+		double radius;
 
 		// Gets the direction of the three points.
 		static Direction get_direction(const Cartesian& a, const Cartesian& b, const Cartesian& c) noexcept;
@@ -124,6 +124,14 @@ public:
 			return corners;
 		}
 
+		const Cartesian& getCentroid() const noexcept {
+			return centroid;
+		}
+
+		double getRadius() const noexcept {
+			return radius;
+		}
+
 		std::string toWKT() const override;
 		std::string to_string() const override;
 		std::vector<std::string> getTrixels(bool, double) const override;
@@ -131,7 +139,7 @@ public:
 	};
 
 private:
-	std::vector<ConvexPolygon> polygons;
+	std::vector<ConvexPolygon> convexpolygons;
 	bool simplified;
 
 public:
@@ -141,63 +149,63 @@ public:
 
 	Polygon(Geometry::Type type, std::vector<Cartesian>&& points)
 		: Geometry(type),
-		  polygons({ ConvexPolygon(type, std::move(points)) }),
+		  convexpolygons({ ConvexPolygon(type, std::move(points)) }),
 		  simplified(true) { }
 
 	Polygon(Polygon&& polygon) noexcept
 		: Geometry(std::move(polygon)),
-		  polygons(std::move(polygon.polygons)),
+		  convexpolygons(std::move(polygon.convexpolygons)),
 		  simplified(std::move(polygon.simplified)) { }
 
 	Polygon(const Polygon& polygon)
 		: Geometry(polygon),
-		  polygons(polygon.polygons),
+		  convexpolygons(polygon.convexpolygons),
 		  simplified(polygon.simplified) { }
 
 	~Polygon() = default;
 
 	Polygon& operator=(Polygon&& polygon) noexcept {
 		Geometry::operator=(std::move(polygon));
-		polygons = std::move(polygon.polygons);
+		convexpolygons = std::move(polygon.convexpolygons);
 		simplified = std::move(polygon.simplified);
 		return *this;
 	}
 
 	Polygon& operator=(const Polygon& polygon) {
 		Geometry::operator=(polygon);
-		polygons = polygon.polygons;
+		convexpolygons = polygon.convexpolygons;
 		simplified = polygon.simplified;
 		return *this;
 	}
 
 	bool operator<(const Polygon& polygon) const noexcept {
-		return polygons < polygon.polygons;
+		return convexpolygons < polygon.convexpolygons;
 	}
 
 	bool operator==(const Polygon& polygon) const noexcept {
-		return polygons == polygon.polygons;
+		return convexpolygons == polygon.convexpolygons;
 	}
 
 	void add(std::vector<Cartesian>&& points) {
-		polygons.emplace_back(type, std::move(points));
+		convexpolygons.emplace_back(type, std::move(points));
 		simplified = false;
 	}
 
 	template <typename T, typename = std::enable_if_t<std::is_same<Polygon, std::decay_t<T>>::value>>
 	void add(T&& polygon) {
-		polygons.push_back(std::forward<T>(polygon));
+		convexpolygons.push_back(std::forward<T>(polygon));
 	}
 
 	void reserve(size_t new_cap) {
-		polygons.reserve(new_cap);
+		convexpolygons.reserve(new_cap);
 	}
 
 	bool empty() const noexcept {
-		return polygons.empty();
+		return convexpolygons.empty();
 	}
 
-	const std::vector<ConvexPolygon>& getPolygons() const noexcept {
-		return polygons;
+	const std::vector<ConvexPolygon>& getConvexPolygons() const noexcept {
+		return convexpolygons;
 	}
 
 	void simplify() override;
