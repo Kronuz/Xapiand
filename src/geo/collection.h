@@ -161,7 +161,7 @@ public:
 		return multipoint;
 	}
 
-	const MultiCircle& getMultiCirlce() const noexcept {
+	const MultiCircle& getMultiCircle() const noexcept {
 		return multicircle;
 	}
 
@@ -173,7 +173,7 @@ public:
 		return multipolygon;
 	}
 
-	const std::vector<Intersection>& getIntersection() const noexcept {
+	const std::vector<Intersection>& getIntersections() const noexcept {
 		return intersections;
 	}
 
