@@ -153,6 +153,10 @@ public:
 		simplified = false;
 	}
 
+	bool empty() const noexcept {
+		return multipoint.empty() && multicircle.empty() && multiconvex.empty() && multipolygon.empty() && intersections.empty();
+	}
+
 	const MultiPoint& getMultiPoint() const noexcept {
 		return multipoint;
 	}
