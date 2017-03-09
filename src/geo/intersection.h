@@ -58,6 +58,10 @@ public:
 		geometries.push_back(geometry);
 	}
 
+	bool empty() const noexcept {
+		return geometries.empty();
+	}
+
 	void reserve(size_t new_cap) {
 		geometries.reserve(new_cap);
 	}
