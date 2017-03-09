@@ -364,8 +364,8 @@ Cartesian::toCartesian(double lat, double lon, double height, Units units)
  *
  * Used method: Lin and Wang (1995)
  */
-void
-Cartesian::toGeodetic(double& lat, double& lon, double& height) const
+std::tuple<double, double, double>
+Cartesian::toGeodetic() const
 {
 	const auto& datum = map_datums.at(SRID);
 
@@ -400,12 +400,14 @@ Cartesian::toGeodetic(double& lat, double& lon, double& height) const
 	double pe = p / (1 + dm / a2);
 	double ze = _z / (1 + dm / b2);
 
-	lon = 2 * std::atan2(_y, _x + p) * DEG_PER_RAD;
-	lat = std::atan2(a2 * ze, b2 * pe) * DEG_PER_RAD;
-	height = std::sqrt(std::pow(pe - p, 2) + std::pow(ze - _z, 2));
+	double lat = std::atan2(a2 * ze, b2 * pe) * DEG_PER_RAD;
+	double lon = 2 * std::atan2(_y, _x + p) * DEG_PER_RAD;
+	double height = std::sqrt(std::pow(pe - p, 2) + std::pow(ze - _z, 2));
 	if ((p + std::abs(_z)) < (pe + std::abs(ze))) {
 		height = - height;
 	}
+
+	return std::make_tuple(lat, lon, height);
 }
 
 
@@ -417,17 +419,16 @@ Cartesian::toGeodetic(double& lat, double& lon, double& height) const
 std::string
 Cartesian::toDegMinSec() const
 {
-	double lat, lon, height;
-	toGeodetic(lat, lon, height);
-	int dlat = (int)lat;
-	int dlon = (int)lon;
-	int mlat = (int)((lat - dlat) * 60.0);
-	int mlon = (int)((lon - dlon) * 60.0);
-	double slat = (lat - dlat - mlat / 60.0) * 3600.0;
-	double slon = (lon - dlon - mlon / 60.0) * 3600.0;
+	const auto geodetic = toGeodetic();
+	int dlat = (int)std::get<0>(geodetic);
+	int dlon = (int)std::get<1>(geodetic);
+	int mlat = (int)((std::get<0>(geodetic) - dlat) * 60.0);
+	int mlon = (int)((std::get<1>(geodetic) - dlon) * 60.0);
+	double slat = (std::get<0>(geodetic) - dlat - mlat / 60.0) * 3600.0;
+	double slon = (std::get<1>(geodetic) - dlon - mlon / 60.0) * 3600.0;
 
 	std::string direction;
-	if (lat < 0) {
+	if (std::get<0>(geodetic) < 0) {
 		direction.assign("''S");
 		dlat = - 1 * dlat;
 		mlat = - 1 * mlat;
@@ -441,7 +442,7 @@ Cartesian::toDegMinSec() const
 	res.append(std::to_string(dlat)).append("°");
 	res.append(std::to_string(mlat)).append("'");
 	res.append(std::to_string(slat)).append(direction);
-	if (lon < 0) {
+	if (std::get<1>(geodetic) < 0) {
 		direction.assign("''W");
 		dlon = - 1 * dlon;
 		mlon = - 1 * mlon;
@@ -451,7 +452,7 @@ Cartesian::toDegMinSec() const
 	}
 	res.append("  ").append(std::to_string(dlon)).append("°");
 	res.append(std::to_string(mlon)).append("'");
-	res.append(std::to_string(slon)).append(direction).append("  ").append(std::to_string(height));
+	res.append(std::to_string(slon)).append(direction).append("  ").append(std::to_string(std::get<2>(geodetic)));
 
 	return res;
 }
