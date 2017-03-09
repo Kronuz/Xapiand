@@ -27,7 +27,6 @@
 #include <unordered_map>       // for regex
 
 #include "collection.h"
-#include "intersection.h"
 
 
 extern const std::regex find_geometry_re;
