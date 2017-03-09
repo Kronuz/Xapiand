@@ -32,7 +32,8 @@
 
 extern const std::regex find_geometry_re;
 extern const std::regex find_circle_re;
-extern const std::regex parenthesis_list_split_re;
+extern const std::regex find_parenthesis_list_re;
+extern const std::regex find_nested_parenthesis_list_re;
 extern const std::regex find_collection_re;
 
 
@@ -43,20 +44,33 @@ class EWKT {
 	using dispatch_func = void (EWKT::*)(int, const std::string&);
 
 	static const std::unordered_map<std::string, dispatch_func> map_dispatch;
+	static const std::unordered_map<std::string, Geometry::Type> map_recursive_dispatch;
 
 	std::unique_ptr<Geometry> geometry;
 
-	Point _parse_point(int SRID, const std::string& specification);
-	Circle _parse_circle(int SRID, const std::string& specification);
-	Convex _parse_convex(int SRID, const std::string& specification);
-	MultiPoint _parse_multipoint(int SRID, const std::string& specification);
-	MultiCircle _parse_multicircle(int SRID, const std::string& specification);
+	static Point _parse_point(int SRID, const std::string& specification);
+	static Circle _parse_circle(int SRID, const std::string& specification);
+	static Convex _parse_convex(int SRID, const std::string& specification);
+	static Polygon _parse_polygon(int SRID, const std::string& specification, Geometry::Type type);
+	static MultiPoint _parse_multipoint(int SRID, const std::string& specification);
+	static MultiCircle _parse_multicircle(int SRID, const std::string& specification);
+	static MultiConvex _parse_multiconvex(int SRID, const std::string& specification);
+	static MultiPolygon _parse_multipolygon(int SRID, const std::string& specification, Geometry::Type type);
+	static Collection _parse_geometry_collection(int SRID, const std::string& specification);
+	static Intersection _parse_geometry_intersection(int SRID, const std::string& specification);
 
 	void parse_point(int SRID, const std::string& specification);
 	void parse_circle(int SRID, const std::string& specification);
 	void parse_convex(int SRID, const std::string& specification);
+	void parse_polygon(int SRID, const std::string& specification);
+	void parse_chull(int SRID, const std::string& specification);
 	void parse_multipoint(int SRID, const std::string& specification);
 	void parse_multicircle(int SRID, const std::string& specification);
+	void parse_multiconvex(int SRID, const std::string& specification);
+	void parse_multipolygon(int SRID, const std::string& specification);
+	void parse_multichull(int SRID, const std::string& specification);
+	void parse_geometry_collection(int SRID, const std::string& specification);
+	void parse_geometry_intersection(int SRID, const std::string& specification);
 
 	friend class GeoSpatial;
 

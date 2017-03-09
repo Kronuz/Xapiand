@@ -28,7 +28,8 @@
 
 const std::regex find_geometry_re("(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?([A-Z]{5,20})[\\s]*\\(([()-.0-9\\s,A-Z]*)\\)", std::regex::optimize);
 const std::regex find_circle_re("[\\s]*([-.0-9]+)[\\s]+([-.0-9]+)([\\s]+([-.0-9]+))?[\\s]*\\,[\\s]*([.0-9]+)[\\s]*");
-const std::regex parenthesis_list_split_re("[\\s]*\\((.*?)\\)[\\s]*(\\,|$)", std::regex::optimize);
+const std::regex find_parenthesis_list_re("[\\s]*\\((.*?)\\)[\\s]*(\\,|$)", std::regex::optimize);
+const std::regex find_nested_parenthesis_list_re("[\\s]*[\\s]*\\([\\s]*(.*?\\))[\\s]*\\)[\\s]*(\\,|$)", std::regex::optimize);
 const std::regex find_collection_re("[\\s]*([A-Z]{5,12})[\\s]*\\(([()-.0-9\\s,]*)\\)[\\s]*(\\,|$)?", std::regex::optimize);
 
 
@@ -36,27 +37,44 @@ const std::unordered_map<std::string, EWKT::dispatch_func> EWKT::map_dispatch({
 	{ "POINT",                   &EWKT::parse_point                   },
 	{ "CIRCLE",                  &EWKT::parse_circle                  },
 	{ "CONVEX",                  &EWKT::parse_convex                  },
-	// { "POLYGON",                 &EWKT::parse_polygon                 },
-	// { "CHULL",                   &EWKT::parse_chull                   },
+	{ "POLYGON",                 &EWKT::parse_polygon                 },
+	{ "CHULL",                   &EWKT::parse_chull                   },
 	{ "MULTIPOINT",              &EWKT::parse_multipoint              },
 	{ "MULTICIRCLE",             &EWKT::parse_multicircle             },
-	// { "MULTIPOLYGON",            &EWKT::parse_multipolygon            },
-	// { "MULTICHULL",              &EWKT::parse_multichull              },
-	// { "GEOMETRYCOLLECTION",      &EWKT::parse_geometry_collection     },
-	// { "GEOMETRYINTERSECTION",    &EWKT::parse_geometry_intersection   },
+	{ "MULTICONVEX",             &EWKT::parse_multiconvex             },
+	{ "MULTIPOLYGON",            &EWKT::parse_multipolygon            },
+	{ "MULTICHULL",              &EWKT::parse_multichull              },
+	{ "GEOMETRYCOLLECTION",      &EWKT::parse_geometry_collection     },
+	{ "GEOMETRYINTERSECTION",    &EWKT::parse_geometry_intersection   },
+});
+
+
+const std::unordered_map<std::string, Geometry::Type> EWKT::map_recursive_dispatch({
+	{ "POINT",                   Geometry::Type::POINT              },
+	{ "CIRCLE",                  Geometry::Type::CIRCLE             },
+	{ "CONVEX",                  Geometry::Type::CONVEX             },
+	{ "POLYGON",                 Geometry::Type::POLYGON            },
+	{ "CHULL",                   Geometry::Type::CHULL              },
+	{ "MULTIPOINT",              Geometry::Type::MULTIPOINT         },
+	{ "MULTICIRCLE",             Geometry::Type::MULTICIRCLE        },
+	{ "MULTICONVEX",             Geometry::Type::MULTICONVEX        },
+	{ "MULTIPOLYGON",            Geometry::Type::MULTIPOLYGON       },
+	{ "MULTICHULL",              Geometry::Type::MULTICHULL         },
+	{ "GEOMETRYCOLLECTION",      Geometry::Type::COLLECTION         },
+	{ "GEOMETRYINTERSECTION",    Geometry::Type::INTERSECTION       },
 });
 
 
 /*
  * Parser for EWKT (A PostGIS-specific format that includes the spatial reference system identifier (SRID))
- * Geometric objects WKT supported:
+ * Geometric objects EWKT supported:
  *  POINT
  *  MULTIPOINT
  *  POLYGON       // Polygon should be convex. Otherwise it should be used CHULL.
  *  MULTIPOLYGON
  *  GEOMETRYCOLLECTION
  *
- * Geometric objects not defined in wkt, but defined here by their relevance:
+ * Geometric objects not defined in EWKT, but defined here by their relevance:
  *  CIRCLE
  *  MULTICIRCLE
  *  CHULL  			// Convex Hull from a points' set.
@@ -158,7 +176,7 @@ EWKT::parse_circle(int SRID, const std::string& specification)
 {
 	try {
 		geometry = std::make_unique<Circle>(_parse_circle(SRID, specification));
-	} catch (const std::exception& err) {
+	} catch (const InvalidArgument& err) {
 		THROW(EWKTError, "Specification for CIRCLE is '(lat lon[ height], radius)' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
 		THROW(EWKTError, "Specification for CIRCLE is '(lat lon[ height], radius)' [(%s) -> %s]", specification.c_str(), err.what());
@@ -172,7 +190,7 @@ EWKT::_parse_convex(int SRID, const std::string& specification)
 	size_t match_len = 0;
 	Convex convex;
 
-	std::sregex_iterator next(specification.begin(), specification.end(), parenthesis_list_split_re, std::regex_constants::match_continuous);
+	std::sregex_iterator next(specification.begin(), specification.end(), find_parenthesis_list_re, std::regex_constants::match_continuous);
 	std::sregex_iterator end;
 	while (next != end) {
 		convex.add(_parse_circle(SRID, next->str(1)));
@@ -199,10 +217,95 @@ EWKT::parse_convex(int SRID, const std::string& specification)
 {
 	try {
 		geometry = std::make_unique<Convex>(_parse_convex(SRID, specification));
-	} catch (const std::exception& err) {
+	} catch (const InvalidArgument& err) {
 		THROW(EWKTError, "Specification for CONVEX is '((lat lon[ height], radius), ... (lat lon[ height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
 		THROW(EWKTError, "Specification for CONVEX is '((lat lon[ height], radius), ... (lat lon[ height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
+	}
+}
+
+
+
+Polygon
+EWKT::_parse_polygon(int SRID, const std::string& specification, Geometry::Type type)
+{
+	size_t match_len = 0;
+	Polygon polygon(type);
+
+	std::sregex_iterator next(specification.begin(), specification.end(), find_parenthesis_list_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	while (next != end) {
+		std::vector<Cartesian> pts;
+		// Split points
+		const Split<char> points(next->str(1), ',');
+		const auto num_pts = points.size();
+		if (num_pts < 3) {
+			THROW(InvalidArgument, "Polygon must have at least three points");
+		}
+		pts.reserve(num_pts);
+		for (const auto& point : points) {
+			// Get lat, lon and height.
+			const Split<char> coords(point, ' ');
+			switch (coords.size()) {
+				case 2: {
+					auto it = coords.begin();
+					pts.emplace_back(stox(std::stod, *it), stox(std::stod, *++it), 0, Cartesian::Units::DEGREES, SRID);
+					break;
+				}
+				case 3: {
+					auto it = coords.begin();
+					pts.emplace_back(stox(std::stod, *it), stox(std::stod, *++it), stox(std::stod, *++it), Cartesian::Units::DEGREES, SRID);
+					break;
+				}
+				default:
+					THROW(InvalidArgument, "Invalid specification");
+			}
+		}
+		polygon.add(std::move(pts));
+		match_len += next->length(0);
+		++next;
+	}
+
+	if (match_len != specification.length()) {
+		THROW(InvalidArgument, "Invalid specification [%zu]", match_len);
+	}
+
+	return polygon;
+}
+
+
+/*
+ * The specification is ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))
+ * lat and lon in degrees.
+ * height in meters.
+ */
+void
+EWKT::parse_polygon(int SRID, const std::string& specification)
+{
+	try {
+		geometry = std::make_unique<Polygon>(_parse_polygon(SRID, specification, Geometry::Type::POLYGON));
+	} catch (const InvalidArgument& err) {
+		THROW(EWKTError, "Specification for POLYGON is '((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
+	} catch (const OutOfRange& err) {
+		THROW(EWKTError, "Specification for POLYGON is '((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
+	}
+}
+
+
+/*
+ * The specification is ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))
+ * lat and lon in degrees.
+ * height in meters.
+ */
+void
+EWKT::parse_chull(int SRID, const std::string& specification)
+{
+	try {
+		geometry = std::make_unique<Polygon>(_parse_polygon(SRID, specification, Geometry::Type::CHULL));
+	} catch (const InvalidArgument& err) {
+		THROW(EWKTError, "Specification for CHULL is '((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
+	} catch (const OutOfRange& err) {
+		THROW(EWKTError, "Specification for CHULL is '((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
@@ -213,7 +316,7 @@ EWKT::_parse_multipoint(int SRID, const std::string& specification)
 	size_t match_len = 0;
 	MultiPoint multipoint;
 
-	std::sregex_iterator next(specification.begin(), specification.end(), parenthesis_list_split_re, std::regex_constants::match_continuous);
+	std::sregex_iterator next(specification.begin(), specification.end(), find_parenthesis_list_re, std::regex_constants::match_continuous);
 	std::sregex_iterator end;
 	while (next != end) {
 		multipoint.add(_parse_point(SRID, next->str(1)));
@@ -244,7 +347,7 @@ EWKT::parse_multipoint(int SRID, const std::string& specification)
 {
 	try {
 		geometry = std::make_unique<MultiPoint>(_parse_multipoint(SRID, specification));
-	} catch (const std::exception& err) {
+	} catch (const InvalidArgument& err) {
 		THROW(EWKTError, "Specification for MULTIPOINT is '(lat lon [height], ..., lat lon [height]) or ((lat lon [height]), ..., (lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
 		THROW(EWKTError, "Specification for MULTIPOINT is '(lat lon [height], ..., lat lon [height]) or ((lat lon [height]), ..., (lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
@@ -258,7 +361,7 @@ EWKT::_parse_multicircle(int SRID, const std::string& specification)
 	size_t match_len = 0;
 	MultiCircle multicircle;
 
-	std::sregex_iterator next(specification.begin(), specification.end(), parenthesis_list_split_re, std::regex_constants::match_continuous);
+	std::sregex_iterator next(specification.begin(), specification.end(), find_parenthesis_list_re, std::regex_constants::match_continuous);
 	std::sregex_iterator end;
 	while (next != end) {
 		multicircle.add(_parse_circle(SRID, next->str(1)));
@@ -285,10 +388,279 @@ EWKT::parse_multicircle(int SRID, const std::string& specification)
 {
 	try {
 		geometry = std::make_unique<MultiCircle>(_parse_multicircle(SRID, specification));
-	} catch (const std::exception& err) {
+	} catch (const InvalidArgument& err) {
 		THROW(EWKTError, "Specification for MULTICIRCLE is '((lat lon [height], radius), ... (lat lon [height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
 		THROW(EWKTError, "Specification for MULTICIRCLE is '((lat lon [height], radius), ... (lat lon [height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
+	}
+}
+
+
+MultiConvex
+EWKT::_parse_multiconvex(int SRID, const std::string& specification)
+{
+	size_t match_len = 0;
+	MultiConvex multiconvex;
+
+	std::sregex_iterator next(specification.begin(), specification.end(), find_nested_parenthesis_list_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	while (next != end) {
+		multiconvex.add(_parse_convex(SRID, next->str(1)));
+		match_len += next->length(0);
+		++next;
+	}
+
+	if (match_len != specification.length()) {
+		THROW(InvalidArgument, "Invalid specification [%zu]", match_len);
+	}
+
+	return multiconvex;
+}
+
+
+/*
+ * The specification is: (..., ((lat lon [height], radius), ... (lat lon [height], radius)), ...)
+ * lat and lon in degrees.
+ * height in meters.
+ * radius in meters and positive.
+ */
+void
+EWKT::parse_multiconvex(int SRID, const std::string& specification)
+{
+	try {
+		geometry = std::make_unique<MultiConvex>(_parse_multiconvex(SRID, specification));
+	} catch (const InvalidArgument& err) {
+		THROW(EWKTError, "Specification for MULTICONVEX is '(..., ((lat lon [height], radius), ... (lat lon [height], radius)), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+	} catch (const OutOfRange& err) {
+		THROW(EWKTError, "Specification for MULTICONVEX is '(..., ((lat lon [height], radius), ... (lat lon [height], radius)), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+	}
+}
+
+
+MultiPolygon
+EWKT::_parse_multipolygon(int SRID, const std::string& specification, Geometry::Type type)
+{
+	size_t match_len = 0;
+	MultiPolygon multipolygon;
+
+	std::sregex_iterator next(specification.begin(), specification.end(), find_nested_parenthesis_list_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	while (next != end) {
+		multipolygon.add(_parse_polygon(SRID, next->str(1), type));
+		match_len += next->length(0);
+		++next;
+	}
+
+	if (match_len != specification.length()) {
+		THROW(InvalidArgument, "Invalid specification [%zu]", match_len);
+	}
+
+	return multipolygon;
+}
+
+
+/*
+ * The specification is: (..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)
+ * lat and lon in degrees.
+ * height in meters.
+ * radius in meters and positive.
+ */
+void
+EWKT::parse_multipolygon(int SRID, const std::string& specification)
+{
+	try {
+		geometry = std::make_unique<MultiPolygon>(_parse_multipolygon(SRID, specification, Geometry::Type::POLYGON));
+	} catch (const InvalidArgument& err) {
+		THROW(EWKTError, "Specification for MULTIPOLYGON is '(..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+	} catch (const OutOfRange& err) {
+		THROW(EWKTError, "Specification for MULTIPOLYGON is '(..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+	}
+}
+
+
+/*
+ * The specification is: (..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)
+ * lat and lon in degrees.
+ * height in meters.
+ * radius in meters and positive.
+ */
+void
+EWKT::parse_multichull(int SRID, const std::string& specification)
+{
+	try {
+		geometry = std::make_unique<MultiPolygon>(_parse_multipolygon(SRID, specification, Geometry::Type::CHULL));
+	} catch (const InvalidArgument& err) {
+		THROW(EWKTError, "Specification for MULTICHULL is '(..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+	} catch (const OutOfRange& err) {
+		THROW(EWKTError, "Specification for MULTICHULL is '(..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+	}
+}
+
+
+Collection
+EWKT::_parse_geometry_collection(int SRID, const std::string& specification)
+{
+	size_t match_len = 0;
+	Collection collection;
+
+	std::sregex_iterator next(specification.begin(), specification.end(), find_collection_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	while (next != end) {
+		static const auto it_e = map_recursive_dispatch.end();
+		const auto geometry = next->str(1);
+		const auto it = map_recursive_dispatch.find(geometry);
+		if (it == it_e) {
+			THROW(InvalidArgument, "Geometry '%s' is not supported", geometry.c_str());
+		} else {
+			switch (it->second) {
+				case Geometry::Type::POINT:
+					collection.add_point(_parse_point(SRID, next->str(2)));
+					break;
+				case Geometry::Type::MULTIPOINT:
+					collection.add_multipoint(_parse_multipoint(SRID, next->str(2)));
+					break;
+				case Geometry::Type::CIRCLE:
+					collection.add_circle(_parse_circle(SRID, next->str(2)));
+					break;
+				case Geometry::Type::CONVEX:
+					collection.add_convex(_parse_convex(SRID, next->str(2)));
+					break;
+				case Geometry::Type::POLYGON:
+					collection.add_polygon(_parse_polygon(SRID, next->str(2), Geometry::Type::POLYGON));
+					break;
+				case Geometry::Type::CHULL:
+					collection.add_polygon(_parse_polygon(SRID, next->str(2), Geometry::Type::CHULL));
+					break;
+				case Geometry::Type::MULTICIRCLE:
+					collection.add_multicircle(_parse_multicircle(SRID, next->str(2)));
+					break;
+				case Geometry::Type::MULTICONVEX:
+					collection.add_multiconvex(_parse_multiconvex(SRID, next->str(2)));
+					break;
+				case Geometry::Type::MULTIPOLYGON:
+					collection.add_multipolygon(_parse_multipolygon(SRID, next->str(2), Geometry::Type::POLYGON));
+					break;
+				case Geometry::Type::MULTICHULL:
+					collection.add_multipolygon(_parse_multipolygon(SRID, next->str(2), Geometry::Type::CHULL));
+					break;
+				case Geometry::Type::COLLECTION:
+					collection.add(_parse_geometry_collection(SRID, next->str(2)));
+					break;
+				case Geometry::Type::INTERSECTION:
+					collection.add_intersection(_parse_geometry_intersection(SRID, next->str(2)));
+					break;
+				default:
+					break;
+			}
+		}
+		match_len += next->length(0);
+		++next;
+	}
+
+	if (match_len != specification.length()) {
+		THROW(InvalidArgument, "Invalid specification [%zu]", match_len);
+	}
+
+	return collection;
+}
+
+
+/*
+ * The specification is: (geometry_1, ..., geometry_n)
+ */
+void
+EWKT::parse_geometry_collection(int SRID, const std::string& specification)
+{
+	try {
+		geometry = std::make_unique<Collection>(_parse_geometry_collection(SRID, specification));
+	} catch (const InvalidArgument& err) {
+		THROW(EWKTError, "Specification for GEOMETRYCOLLECTION is '(geometry_1, ..., geometry_n)' [(%s) -> %s]", specification.c_str(), err.what());
+	} catch (const OutOfRange& err) {
+		THROW(EWKTError, "Specification for GEOMETRYCOLLECTION is '(geometry_1, ..., geometry_n)' [(%s) -> %s]", specification.c_str(), err.what());
+	}
+}
+
+
+Intersection
+EWKT::_parse_geometry_intersection(int SRID, const std::string& specification)
+{
+	size_t match_len = 0;
+	Intersection intersection;
+
+	std::sregex_iterator next(specification.begin(), specification.end(), find_collection_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	while (next != end) {
+		static const auto it_e = map_recursive_dispatch.end();
+		const auto geometry = next->str(1);
+		const auto it = map_recursive_dispatch.find(geometry);
+		if (it == it_e) {
+			THROW(InvalidArgument, "Geometry '%s' is not supported", geometry.c_str());
+		} else {
+			switch (it->second) {
+				case Geometry::Type::POINT:
+					intersection.add(std::make_shared<Point>(_parse_point(SRID, next->str(2))));
+					break;
+				case Geometry::Type::MULTIPOINT:
+					intersection.add(std::make_shared<MultiPoint>(_parse_multipoint(SRID, next->str(2))));
+					break;
+				case Geometry::Type::CIRCLE:
+					intersection.add(std::make_shared<Circle>(_parse_circle(SRID, next->str(2))));
+					break;
+				case Geometry::Type::CONVEX:
+					intersection.add(std::make_shared<Convex>(_parse_convex(SRID, next->str(2))));
+					break;
+				case Geometry::Type::POLYGON:
+					intersection.add(std::make_shared<Polygon>(_parse_polygon(SRID, next->str(2), Geometry::Type::POLYGON)));
+					break;
+				case Geometry::Type::CHULL:
+					intersection.add(std::make_shared<Polygon>(_parse_polygon(SRID, next->str(2), Geometry::Type::CHULL)));
+					break;
+				case Geometry::Type::MULTICIRCLE:
+					intersection.add(std::make_shared<MultiCircle>(_parse_multicircle(SRID, next->str(2))));
+					break;
+				case Geometry::Type::MULTICONVEX:
+					intersection.add(std::make_shared<MultiConvex>(_parse_multiconvex(SRID, next->str(2))));
+					break;
+				case Geometry::Type::MULTIPOLYGON:
+					intersection.add(std::make_shared<MultiPolygon>(_parse_multipolygon(SRID, next->str(2), Geometry::Type::POLYGON)));
+					break;
+				case Geometry::Type::MULTICHULL:
+					intersection.add(std::make_shared<MultiPolygon>(_parse_multipolygon(SRID, next->str(2), Geometry::Type::CHULL)));
+					break;
+				case Geometry::Type::COLLECTION:
+					intersection.add(std::make_shared<Collection>(_parse_geometry_collection(SRID, next->str(2))));
+					break;
+				case Geometry::Type::INTERSECTION:
+					intersection.add(std::make_shared<Intersection>(_parse_geometry_intersection(SRID, next->str(2))));
+					break;
+				default:
+					break;
+			}
+		}
+		match_len += next->length(0);
+		++next;
+	}
+
+	if (match_len != specification.length()) {
+		THROW(InvalidArgument, "Invalid specification [%zu]", match_len);
+	}
+
+	return intersection;
+}
+
+
+/*
+ * The specification is: (geometry_1, ..., geometry_n)
+ */
+void
+EWKT::parse_geometry_intersection(int SRID, const std::string& specification)
+{
+	try {
+		geometry = std::make_unique<Intersection>(_parse_geometry_intersection(SRID, specification));
+	} catch (const InvalidArgument& err) {
+		THROW(EWKTError, "Specification for GEOMETRYINTERSECTION is '(geometry_1, ..., geometry_n)' [(%s) -> %s]", specification.c_str(), err.what());
+	} catch (const OutOfRange& err) {
+		THROW(EWKTError, "Specification for GEOMETRYINTERSECTION is '(geometry_1, ..., geometry_n)' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
