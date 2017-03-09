@@ -240,9 +240,9 @@ namespace HTM {
 		}
 	}
 
+	std::tuple<Cartesian, Cartesian, Cartesian> getCorners(const std::string& name);
+
 	// Functions to test HTM.
-	void getCorners(const std::string& name, Cartesian& v0, Cartesian& v1, Cartesian& v2);
-	std::string getConstraint3D(const Constraint& bCircle, char color);
 	void writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels, const std::string& path_google_map="");
 	void writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels);
 };

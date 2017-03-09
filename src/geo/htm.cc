@@ -27,16 +27,7 @@
 #include <fstream>
 #include <set>
 
-#include "circle.h"
-#include "convex.h"
-#include "multicircle.h"
-#include "point.h"
-
-
-// Number of decimal places to print the file python.
-constexpr int HTM_DIGITS          = 50;
-constexpr double HTM_INC_CIRCLE   = RAD_PER_CIRCUMFERENCE / 50.0;
-constexpr int HTM_LINE_POINTS     = 25;
+#include "collection.h"
 
 
 std::vector<std::string>
@@ -613,13 +604,13 @@ HTM::getTrixels(const std::vector<range_t>& ranges)
 }
 
 
-void
-HTM::getCorners(const std::string& name, Cartesian& v0, Cartesian& v1, Cartesian& v2)
+std::tuple<Cartesian, Cartesian, Cartesian>
+HTM::getCorners(const std::string& name)
 {
 	const auto& start_trixel = start_trixels[name[1] - '0' + (name[0] == 'S' ? 4 : 0)];
-	v0 = start_vertices[start_trixel.v0];
-	v1 = start_vertices[start_trixel.v1];
-	v2 = start_vertices[start_trixel.v2];
+	Cartesian v0 = start_vertices[start_trixel.v0];
+	Cartesian v1 = start_vertices[start_trixel.v1];
+	Cartesian v2 = start_vertices[start_trixel.v2];
 
 	size_t i = 2, len = name.length();
 	while (i < len) {
@@ -646,15 +637,33 @@ HTM::getCorners(const std::string& name, Cartesian& v0, Cartesian& v1, Cartesian
 				v1 = w1;
 				v2 = w2;
 				break;
+			default:
+				THROW(HTMError, "Invalid trixel's name: %s", name.c_str());
 		}
 		++i;
 	}
+
+	return std::make_tuple(std::move(v0), std::move(v1), std::move(v2));
 }
 
 
-std::string
-HTM::getConstraint3D(const Constraint& bCircle, char color)
-{
+/*
+ *  _____         _     _   _ _____ __  __
+ * |_   _|__  ___| |_  | | | |_   _|  \/  |
+ *   | |/ _ \/ __| __| | |_| | | | | |\/| |
+ *   | |  __/\__ \ |_  |  _  | | | | |  | |
+ *   |_|\___||___/\__| |_| |_| |_| |_|  |_|
+ *
+ */
+
+
+// Number of decimal places to print the file python.
+constexpr int HTM_DIGITS          = 50;
+constexpr double HTM_INC_CIRCLE   = RAD_PER_CIRCUMFERENCE / 50.0;
+constexpr int HTM_LINE_POINTS     = 25;
+
+
+static std::string getConstraint3D(const Constraint& bCircle, char color) {
 	char x0s[HTM_DIGITS];
 	char y0s[HTM_DIGITS];
 	char z0s[HTM_DIGITS];
@@ -712,6 +721,327 @@ HTM::getConstraint3D(const Constraint& bCircle, char color)
 }
 
 
+static void writeGoogleMap(std::ofstream& fs, const Point& point) {
+	const auto geodetic = point.getCartesian().toGeodetic();
+	fs << "mymap.marker(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  'red')\n";
+}
+
+
+static void writeGoogleMap(std::ofstream& fs, const MultiPoint& multipoint) {
+	for (const auto& point :  multipoint.getPoints()) {
+		writeGoogleMap(fs, point);
+	}
+}
+
+
+static void writeGoogleMap(std::ofstream& fs, const Circle& circle) {
+	const auto& constraint = circle.getConstraint();
+	const auto geodetic = constraint.center.toGeodetic();
+	fs << "mymap.marker(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  'red')\n";
+	if (constraint.sign == Constraint::Sign::NEG) {
+		fs << "mymap.circle(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ", " << constraint.arcangle << ", '#FF0000', ew=2)\n";
+	} else {
+		fs << "mymap.circle(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ", " << constraint.arcangle << ", '#0000FF', ew=2)\n";
+	}
+}
+
+
+static void writeGoogleMap(std::ofstream& fs, const Convex& convex) {
+	for (const auto& circle : convex.getCircles()) {
+		writeGoogleMap(fs, circle);
+	}
+}
+
+
+static void writeGoogleMap(std::ofstream& fs, const Polygon& polygon) {
+	std::string lat;
+	std::string lon;
+	for (const auto& convexpolygon : polygon.getConvexPolygons()) {
+		const auto& corners = convexpolygon.getCorners();
+		for (const auto& corner : corners) {
+			const auto geodetic = corner.toGeodetic();
+			lat.append(std::to_string(std::get<0>(geodetic))).push_back(',');
+			lon.append(std::to_string(std::get<1>(geodetic))).push_back(',');
+		}
+		lat.back() = ']';
+		lon.back() = ']';
+		fs << "map.polygon(" << lat << ',' << lon << ',' << "edge_color='cyan', edge_width=2, face_color='blue', face_alpha=0.2)\n";
+	}
+}
+
+
+static void writeGoogleMap(std::ofstream& fs, const MultiCircle& multicircle) {
+	for (const auto& circle : multicircle.getCircles()) {
+		writeGoogleMap(fs, circle);
+	}
+}
+
+
+static void writeGoogleMap(std::ofstream& fs, const MultiConvex& multiconvex) {
+	for (const auto& convex : multiconvex.getConvexs()) {
+		writeGoogleMap(fs, convex);
+	}
+}
+
+
+static void writeGoogleMap(std::ofstream& fs, const MultiPolygon& multipolygon) {
+	for (const auto& polygon : multipolygon.getPolygons()) {
+		writeGoogleMap(fs, polygon);
+	}
+}
+
+
+static void writeGoogleMap(std::ofstream& fs, const Intersection& intersection);
+
+
+static void writeGoogleMap(std::ofstream& fs, const Collection& collection) {
+	writeGoogleMap(fs, collection.getMultiPoint());
+	writeGoogleMap(fs, collection.getMultiCircle());
+	writeGoogleMap(fs, collection.getMultiConvex());
+	writeGoogleMap(fs, collection.getMultiPolygon());
+	for (const auto& intersection : collection.getIntersections()) {
+		writeGoogleMap(fs, intersection);
+	}
+}
+
+
+static void writeGoogleMap(std::ofstream& fs, const Intersection& intersection) {
+	for (const auto& geometry : intersection.getGeometries()) {
+		switch (geometry->getType()) {
+			case Geometry::Type::POINT: {
+				writeGoogleMap(fs, *std::static_pointer_cast<Point>(geometry));
+				break;
+			}
+			case Geometry::Type::MULTIPOINT: {
+				writeGoogleMap(fs, *std::static_pointer_cast<MultiPoint>(geometry));
+				break;
+			}
+			case Geometry::Type::CIRCLE: {
+				writeGoogleMap(fs, *std::static_pointer_cast<Circle>(geometry));
+				break;
+			}
+			case Geometry::Type::CONVEX: {
+				writeGoogleMap(fs, *std::static_pointer_cast<Convex>(geometry));
+				break;
+			}
+			case Geometry::Type::CHULL:
+			case Geometry::Type::POLYGON: {
+				writeGoogleMap(fs, *std::static_pointer_cast<Polygon>(geometry));
+				break;
+			}
+			case Geometry::Type::MULTICIRCLE: {
+				writeGoogleMap(fs, *std::static_pointer_cast<MultiCircle>(geometry));
+				break;
+			}
+			case Geometry::Type::MULTICONVEX: {
+				writeGoogleMap(fs, *std::static_pointer_cast<MultiConvex>(geometry));
+				break;
+			}
+			case Geometry::Type::MULTICHULL:
+			case Geometry::Type::MULTIPOLYGON: {
+				writeGoogleMap(fs, *std::static_pointer_cast<MultiPolygon>(geometry));
+				break;
+			}
+			case Geometry::Type::COLLECTION: {
+				writeGoogleMap(fs, *std::static_pointer_cast<Collection>(geometry));
+				break;
+			}
+			case Geometry::Type::INTERSECTION: {
+				writeGoogleMap(fs, *std::static_pointer_cast<Intersection>(geometry));
+				break;
+			}
+			default:
+				break;
+		}
+	}
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const Point& point) {
+	const auto geodetic = point.getCartesian().toGeodetic();
+	fs << "mymap = GoogleMapPlotter(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  20)\n";
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const MultiPoint& multipoint) {
+	writeGoogleMapPlotter(fs, multipoint.getPoints().back());
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const Circle& circle) {
+	const auto& constraint = circle.getConstraint();
+	auto geodetic = constraint.center.toGeodetic();
+	fs << "mymap = GoogleMapPlotter(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const Convex& convex) {
+	writeGoogleMapPlotter(fs, convex.getCircles().back());
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const Polygon& polygon) {
+	const auto& convexpolygon = polygon.getConvexPolygons().back();
+	const auto geodetic = convexpolygon.getCentroid().toGeodetic();
+	fs << "mymap = GoogleMapPlotter(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  " << (20 - 2 * std::log10(convexpolygon.getRadius())) << ")\n";
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const MultiCircle& multicircle) {
+	writeGoogleMapPlotter(fs, multicircle.getCircles().front());
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const MultiConvex& multiconvex) {
+	writeGoogleMapPlotter(fs, multiconvex.getConvexs().back());
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const MultiPolygon& multipolygon) {
+	writeGoogleMapPlotter(fs, multipolygon.getPolygons().back());
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const Intersection& intersection);
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const Collection& collection) {
+	const auto& multicircle = collection.getMultiCircle();
+	if (multicircle.empty()) {
+		const auto& multipolygon = collection.getMultiPolygon();
+		if (multipolygon.empty()) {
+			const auto& multiconvex = collection.getMultiConvex();
+			if (multiconvex.empty()) {
+				const auto& intersections = collection.getIntersections();
+				if (intersections.empty()) {
+					const auto& multipoint = collection.getMultiPoint();
+					if (multipoint.empty()) {
+						THROW(NullConvex, "Empty Collection");
+					} else {
+						writeGoogleMapPlotter(fs, collection.getMultiPoint());
+					}
+				} else {
+					for (const auto& intersection : intersections) {
+						writeGoogleMapPlotter(fs, intersection);
+					}
+				}
+			} else {
+				writeGoogleMapPlotter(fs, multiconvex);
+			}
+		} else {
+			writeGoogleMapPlotter(fs, multipolygon);
+		}
+	} else {
+		writeGoogleMapPlotter(fs, multicircle);
+	}
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const Intersection& intersection) {
+	const auto& geometries = intersection.getGeometries();
+	const auto it_e = geometries.rend();
+	for (auto it = geometries.rbegin(); it != it_e; ++it) {
+		switch ((*it)->getType()) {
+			case Geometry::Type::POINT: {
+				writeGoogleMapPlotter(fs, *std::static_pointer_cast<Point>(*it));
+				return;
+			}
+			case Geometry::Type::MULTIPOINT: {
+				const auto& multipoint = *std::static_pointer_cast<MultiPoint>(*it);
+				if (!multipoint.empty()) {
+					writeGoogleMapPlotter(fs, multipoint);
+					return;
+				}
+				break;
+			}
+			case Geometry::Type::CIRCLE: {
+				writeGoogleMapPlotter(fs, *std::static_pointer_cast<Circle>(*it));
+				return;
+			}
+			case Geometry::Type::CONVEX: {
+				const auto& convex = *std::static_pointer_cast<Convex>(*it);
+				if (!convex.empty()) {
+					writeGoogleMapPlotter(fs, convex);
+					return;
+				}
+				break;
+			}
+			case Geometry::Type::CHULL:
+			case Geometry::Type::POLYGON: {
+				const auto& polygon = *std::static_pointer_cast<Polygon>(*it);
+				if (!polygon.empty()) {
+					writeGoogleMapPlotter(fs, polygon);
+					return;
+				}
+				return;
+			}
+			case Geometry::Type::MULTICIRCLE: {
+				const auto& multicircle = *std::static_pointer_cast<MultiCircle>(*it);
+				if (!multicircle.empty()) {
+					writeGoogleMapPlotter(fs, multicircle);
+					return;
+				}
+				break;
+			}
+			case Geometry::Type::MULTICONVEX: {
+				const auto& multiconvex = *std::static_pointer_cast<MultiConvex>(*it);
+				if (!multiconvex.empty()) {
+					writeGoogleMapPlotter(fs, multiconvex);
+					return;
+				}
+				break;
+			}
+			case Geometry::Type::MULTICHULL:
+			case Geometry::Type::MULTIPOLYGON: {
+				const auto& multipolygon = *std::static_pointer_cast<MultiPolygon>(*it);
+				if (!multipolygon.empty()) {
+					writeGoogleMapPlotter(fs, multipolygon);
+					return;
+				}
+				break;
+			}
+			case Geometry::Type::COLLECTION: {
+				const auto& collection = *std::static_pointer_cast<Collection>(*it);
+				if (!collection.empty()) {
+					writeGoogleMapPlotter(fs, collection);
+					return;
+				}
+				break;
+			}
+			case Geometry::Type::INTERSECTION:  {
+				const auto& intersertion = *std::static_pointer_cast<Intersection>(*it);
+				if (!intersertion.empty()) {
+					writeGoogleMapPlotter(fs, intersertion);
+					return;
+				}
+				break;
+			}
+			default:
+				break;
+		}
+	}
+
+	THROW(NullConvex, "Empty Intersection");
+}
+
+
+static void writeGoogleMapPlotter(std::ofstream& fs, const std::vector<std::string>& trixels) {
+	if (trixels.empty()) {
+		// default center on United States
+		fs << "mymap = GoogleMapPlotter(41.850033, -87.6500523,  20)\n";
+	} else {
+		const auto& trixel = trixels.front();
+		auto corners = HTM::getCorners(trixel);
+		auto& corner = std::get<0>(corners);
+		corner.scale = M_PER_RADIUS_EARTH;
+
+		const auto geodetic = corner.toGeodetic();
+
+		fs << "mymap = GoogleMapPlotter(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  " << (20 - 2 * std::log10(ERROR_NIVEL[trixel.length() - 2])) << ")\n";
+	}
+}
+
+
 void
 HTM::writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels, const std::string& path_google_map)
 {
@@ -726,87 +1056,300 @@ HTM::writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g,
 	// Draw Geometry.
 	switch (g->getType()) {
 		case Geometry::Type::POINT: {
-			double lat, lon, height;
-			std::static_pointer_cast<Point>(g)->getCartesian().toGeodetic(lat, lon, height);
-			fs << "mymap = GoogleMapPlotter(" << lat << ", " << lon << ",  20)\n";
-			fs << "mymap.marker(" << lat << ", " << lon << ",  'red')\n";
+			const auto& point = *std::static_pointer_cast<Point>(g);
+			writeGoogleMapPlotter(fs, point);
+			writeGoogleMap(fs, point);
+			break;
+		}
+		case Geometry::Type::MULTIPOINT: {
+			const auto& multipoint = *std::static_pointer_cast<MultiPoint>(g);
+			if (!multipoint.empty()) {
+				writeGoogleMapPlotter(fs, multipoint);
+				writeGoogleMap(fs, multipoint);
+			} else {
+				writeGoogleMapPlotter(fs, trixels);
+			}
 			break;
 		}
 		case Geometry::Type::CIRCLE: {
-			double lat, lon, height;
-			const auto& constraint = std::static_pointer_cast<Circle>(g)->getConstraint();
-			constraint.center.toGeodetic(lat, lon, height);
-			fs << "mymap = GoogleMapPlotter(" << lat << ", " << lon << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
-			fs << "mymap.marker(" << lat << ", " << lon << ",  'red')\n";
-			if (constraint.sign == Constraint::Sign::NEG) {
-				fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#FF0000', ew=2)\n";
+			const auto& circle = *std::static_pointer_cast<Circle>(g);
+			writeGoogleMapPlotter(fs, circle);
+			writeGoogleMap(fs, circle);
+			break;
+		}
+		case Geometry::Type::CONVEX: {
+			const auto& convex = *std::static_pointer_cast<Convex>(g);
+			if (!convex.empty()) {
+				writeGoogleMapPlotter(fs, convex);
+				writeGoogleMap(fs, convex);
 			} else {
-				fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#0000FF', ew=2)\n";
+				writeGoogleMapPlotter(fs, trixels);
+			}
+			break;
+		}
+		case Geometry::Type::POLYGON:
+		case Geometry::Type::CHULL: {
+			const auto& polygon = *std::static_pointer_cast<Polygon>(g);
+			if (!polygon.empty()) {
+				writeGoogleMapPlotter(fs, polygon);
+				writeGoogleMap(fs, polygon);
+			} else {
+				writeGoogleMapPlotter(fs, trixels);
 			}
 			break;
 		}
 		case Geometry::Type::MULTICIRCLE: {
-			double lat, lon, height;
-			const auto& circles = std::static_pointer_cast<MultiCircle>(g)->getCircles();
-			bool first = true;
-			for (const auto& circle : circles) {
-				const auto& constraint = circle.getConstraint();
-				constraint.center.toGeodetic(lat, lon, height);
-				if (first) {
-					fs << "mymap = GoogleMapPlotter(" << lat << ", " << lon << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
-					first = false;
-				}
-				fs << "mymap.marker(" << lat << ", " << lon << ",  'red')\n";
-				if (constraint.sign == Constraint::Sign::NEG) {
-					fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#FF0000', ew=2)\n";
-				} else {
-					fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#0000FF', ew=2)\n";
-				}
+			const auto& multicircle = *std::static_pointer_cast<MultiCircle>(g);
+			if (!multicircle.empty()) {
+				writeGoogleMapPlotter(fs, multicircle);
+				writeGoogleMap(fs, multicircle);
+			} else {
+				writeGoogleMapPlotter(fs, trixels);
 			}
 			break;
 		}
-		case Geometry::Type::CONVEX: {
-			double lat, lon, height;
-			const auto& circles = std::static_pointer_cast<Convex>(g)->getCircles();
-			bool first = true;
-			for (const auto& circle : circles) {
-				const auto& constraint = circle.getConstraint();
-				constraint.center.toGeodetic(lat, lon, height);
-				if (first) {
-					fs << "mymap = GoogleMapPlotter(" << lat << ", " << lon << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
-					first = false;
-				}
-				fs << "mymap.marker(" << lat << ", " << lon << ",  'red')\n";
-				if (constraint.sign == Constraint::Sign::NEG) {
-					fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#FF0000', ew=2)\n";
-				} else {
-					fs << "mymap.circle(" << lat << ", " << lon << ", " << constraint.arcangle << ", '#0000FF', ew=2)\n";
-				}
+		case Geometry::Type::MULTICONVEX: {
+			const auto& multiconvex = *std::static_pointer_cast<MultiConvex>(g);
+			if (!multiconvex.empty()) {
+				writeGoogleMapPlotter(fs, multiconvex);
+				writeGoogleMap(fs, multiconvex);
+			} else {
+				writeGoogleMapPlotter(fs, trixels);
+			}
+			break;
+		}
+		case Geometry::Type::MULTICHULL:
+		case Geometry::Type::MULTIPOLYGON: {
+			const auto& multipolygon = *std::static_pointer_cast<MultiPolygon>(g);
+			if (!multipolygon.empty()) {
+				writeGoogleMapPlotter(fs, multipolygon);
+				writeGoogleMap(fs, multipolygon);
+			} else {
+				writeGoogleMapPlotter(fs, trixels);
+			}
+			break;
+		}
+		case Geometry::Type::COLLECTION: {
+			const auto& collection = *std::static_pointer_cast<Collection>(g);
+			try {
+				writeGoogleMapPlotter(fs, collection);
+				writeGoogleMap(fs, collection);
+			} catch (const NullConvex&) {
+				writeGoogleMapPlotter(fs, trixels);
+			}
+			break;
+		}
+		case Geometry::Type::INTERSECTION: {
+			const auto& intersection = *std::static_pointer_cast<Intersection>(g);
+			try {
+				writeGoogleMapPlotter(fs, intersection);
+				writeGoogleMap(fs, intersection);
+			} catch (const NullConvex&) {
+				writeGoogleMapPlotter(fs, trixels);
 			}
 			break;
 		}
 	}
 
 	// Draw trixels.
-	Cartesian v0, v1, v2;
-	for (const auto& trixel : trixels) {
-		getCorners(trixel, v0, v1, v2);
-		v0.scale = M_PER_RADIUS_EARTH;
-		v1.scale = M_PER_RADIUS_EARTH;
-		v2.scale = M_PER_RADIUS_EARTH;
+	if (!trixels.empty()) {
+		for (const auto& trixel : trixels) {
+			auto corners = getCorners(trixel);
+			std::get<0>(corners).scale = M_PER_RADIUS_EARTH;
+			std::get<1>(corners).scale = M_PER_RADIUS_EARTH;
+			std::get<2>(corners).scale = M_PER_RADIUS_EARTH;
 
-		double lat[3], lon[3], height[3];
-		v0.toGeodetic(lat[0], lon[0], height[0]);
-		v1.toGeodetic(lat[1], lon[1], height[1]);
-		v2.toGeodetic(lat[2], lon[2], height[2]);
+			const auto geodetic0 = std::get<0>(corners).toGeodetic();
+			const auto geodetic1 = std::get<1>(corners).toGeodetic();
+			const auto geodetic2 = std::get<2>(corners).toGeodetic();
 
-		fs << "mymap.polygon(";
-		fs << "[" << lat[0] << ", " << lat[1] << ", " << lat[2] << "],";
-		fs << "[" << lon[0] << ", " << lon[1] << ", " << lon[2] << "],";
-		fs << "edge_color='cyan', edge_width=2, face_color='blue', face_alpha=0.2)\n";
+			fs << "mymap.polygon(";
+			fs << "[" << std::get<0>(geodetic0) << ", " << std::get<0>(geodetic1) << ", " << std::get<0>(geodetic2) << "],";
+			fs << "[" << std::get<1>(geodetic0) << ", " << std::get<1>(geodetic1) << ", " << std::get<1>(geodetic2) << "],";
+			fs << "edge_color='cyan', edge_width=2, face_color='blue', face_alpha=0.2)\n";
+		}
+		fs << "mymap.draw('" << file << ".html')";
+		fs.close();
 	}
-	fs << "mymap.draw('" << file << ".html')";
-	fs.close();
+}
+
+
+static void writePython3D(std::ofstream& fs, const Point& point) {
+	const auto& c = point.getCartesian();
+	fs << "ax.plot3D([" << c.x << "], [" << c.y << "], [" << c.z << "], 'ko', linewidth = 2.0)\n\n";
+}
+
+
+static void writePython3D(std::ofstream& fs, const MultiPoint& multipoint, bool& sphere, double umbral) {
+	if (!sphere) {
+		// Check distance between points.
+		const auto it_e = multipoint.getPoints().end();
+		for (auto it = multipoint.getPoints().begin(); it != it_e; ++it) {
+			for (auto it_n = it + 1; it_n != it_e; ++it_n) {
+				if ((it->getCartesian() * it_n->getCartesian()) < umbral) {
+					sphere = true;
+					it = it_e;
+					break;
+				}
+			}
+		}
+	}
+
+	for (const auto& point : multipoint.getPoints()) {
+		writePython3D(fs, point);
+	}
+}
+
+
+static void writePython3D(std::ofstream& fs, const Circle& circle, bool& sphere, double umbral) {
+	const auto& constraint = circle.getConstraint();
+	char color;
+	if (constraint.sign == Constraint::Sign::NEG) {
+		color = 'r';
+		sphere = true;
+	} else {
+		color = 'b';
+		if (constraint.distance < umbral) {
+			sphere = true;
+		}
+	}
+	fs << getConstraint3D(constraint, color) << "ax.plot3D(x, y, z, '" << color << "-', linewidth = 2.0)\n\n";
+}
+
+
+static void writePython3D(std::ofstream& fs, const Convex& convex, bool& sphere, double umbral) {
+	for (const auto& circle : convex.getCircles()) {
+		writePython3D(fs, circle, sphere, umbral);
+	}
+}
+
+
+static void writePython3D(std::ofstream& fs, const Polygon& polygon, bool& sphere, double umbral) {
+	char vx[HTM_DIGITS];
+	char vy[HTM_DIGITS];
+	char vz[HTM_DIGITS];
+	std::string x, y, z;
+	for (const auto& convexpolygon : polygon.getConvexPolygons()) {
+		if (!sphere && std::acos(convexpolygon.getRadius() / M_PER_RADIUS_EARTH) < umbral) {
+			sphere = true;
+		}
+		x = "x = [";
+		y = "y = [";
+		z = "z = [";
+		const auto& corners = convexpolygon.getCorners();
+		const auto it_last = corners.end() - 1;
+		auto it = corners.begin();
+		for ( ; it != it_last; ++it) {
+			const auto& v0 = *it;
+			const auto& v1 = *(it + 1);
+			for (double i = 0; i < HTM_LINE_POINTS; ++i) {
+				const auto inc = i / HTM_LINE_POINTS;
+				const auto mp = ((1.0 - inc) * v0 + inc * v1).normalize();
+				snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
+				snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
+				snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
+				x.append(vx).append(", ");
+				y.append(vy).append(", ");
+				z.append(vz).append(", ");
+			}
+		}
+		// Close polygon.
+		snprintf(vx, HTM_DIGITS, "%.50f", it->x);
+		snprintf(vy, HTM_DIGITS, "%.50f", it->y);
+		snprintf(vz, HTM_DIGITS, "%.50f", it->z);
+		x.append(vx).append("]\n");
+		y.append(vy).append("]\n");
+		z.append(vz).append("]\n");
+		fs << x << y << z;
+		fs << "ax.plot3D(x, y, z, 'c-', linewidth = 2.0)\n";
+	}
+}
+
+
+static void writePython3D(std::ofstream& fs, const MultiCircle& multicircle, bool& sphere, double umbral) {
+	for (const auto& circle : multicircle.getCircles()) {
+		writePython3D(fs, circle, sphere, umbral);
+	}
+}
+
+
+static void writePython3D(std::ofstream& fs, const MultiConvex& multiconvex, bool& sphere, double umbral) {
+	for (const auto& convex : multiconvex.getConvexs()) {
+		writePython3D(fs, convex, sphere, umbral);
+	}
+}
+
+
+static void writePython3D(std::ofstream& fs, const MultiPolygon& multipolygon, bool& sphere, double umbral) {
+	for (const auto& polygon : multipolygon.getPolygons()) {
+		writePython3D(fs, polygon, sphere, umbral);
+	}
+}
+
+
+static void writePython3D(std::ofstream& fs, const Intersection& intersection, bool& sphere, double umbral);
+
+
+static void writePython3D(std::ofstream& fs, const Collection& collection, bool& sphere, double umbral) {
+	writePython3D(fs, collection.getMultiPoint(), sphere, umbral);
+	writePython3D(fs, collection.getMultiCircle(), sphere, umbral);
+	writePython3D(fs, collection.getMultiConvex(), sphere, umbral);
+	writePython3D(fs, collection.getMultiPolygon(), sphere, umbral);
+	for (const auto& intersection : collection.getIntersections()) {
+		writePython3D(fs, intersection, sphere, umbral);
+	}
+}
+
+
+static void writePython3D(std::ofstream& fs, const Intersection& intersection, bool& sphere, double umbral) {
+	for (const auto& geometry : intersection.getGeometries()) {
+		switch (geometry->getType()) {
+			case Geometry::Type::POINT: {
+				writePython3D(fs, *std::static_pointer_cast<Point>(geometry));
+				break;
+			}
+			case Geometry::Type::MULTIPOINT: {
+				writePython3D(fs, *std::static_pointer_cast<MultiPoint>(geometry), sphere, umbral);
+				break;
+			}
+			case Geometry::Type::CIRCLE: {
+				writePython3D(fs, *std::static_pointer_cast<Circle>(geometry), sphere, umbral);
+				break;
+			}
+			case Geometry::Type::CONVEX: {
+				writePython3D(fs, *std::static_pointer_cast<Convex>(geometry), sphere, umbral);
+				break;
+			}
+			case Geometry::Type::CHULL:
+			case Geometry::Type::POLYGON: {
+				writePython3D(fs, *std::static_pointer_cast<Polygon>(geometry), sphere, umbral);
+				break;
+			}
+			case Geometry::Type::MULTICIRCLE: {
+				writePython3D(fs, *std::static_pointer_cast<MultiCircle>(geometry), sphere, umbral);
+				break;
+			}
+			case Geometry::Type::MULTICONVEX: {
+				writePython3D(fs, *std::static_pointer_cast<MultiConvex>(geometry), sphere, umbral);
+				break;
+			}
+			case Geometry::Type::MULTICHULL:
+			case Geometry::Type::MULTIPOLYGON: {
+				writePython3D(fs, *std::static_pointer_cast<MultiPolygon>(geometry), sphere, umbral);
+				break;
+			}
+			case Geometry::Type::COLLECTION: {
+				writePython3D(fs, *std::static_pointer_cast<Collection>(geometry), sphere, umbral);
+				break;
+			}
+			case Geometry::Type::INTERSECTION: {
+				writePython3D(fs, *std::static_pointer_cast<Intersection>(geometry), sphere, umbral);
+				break;
+			}
+			default:
+				break;
+		}
+	}
 }
 
 
@@ -826,69 +1369,51 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 	double umbral = 0.95;
 	switch (g->getType()) {
 		case Geometry::Type::POINT: {
-			const auto& c = std::static_pointer_cast<Point>(g)->getCartesian();
-			fs << "x = [" << c.x << "]\n";
-			fs << "y = [" << c.y << "]\n";
-			fs << "z = [" << c.z << "]\n";
-			fs << "ax.plot3D(x, y, z, 'ko', linewidth = 2.0)\n\n";
+			writePython3D(fs, *std::static_pointer_cast<Point>(g));
+			break;
+		}
+		case Geometry::Type::MULTIPOINT: {
+			writePython3D(fs, *std::static_pointer_cast<MultiPoint>(g), sphere, umbral);
 			break;
 		}
 		case Geometry::Type::CIRCLE: {
-			const auto& constraint = std::static_pointer_cast<Circle>(g)->getConstraint();
-			char color;
-			if (constraint.sign == Constraint::Sign::NEG) {
-				color = 'r';
-				sphere = true;
-			} else {
-				color = 'b';
-				if (constraint.distance < umbral) {
-					sphere = true;
-				}
-			}
-			fs << getConstraint3D(constraint, color) << "ax.plot3D(x, y, z, '" << color << "-', linewidth = 2.0)\n\n";
-			break;
-		}
-		case Geometry::Type::MULTICIRCLE: {
-			const auto& multicircle = std::static_pointer_cast<MultiCircle>(g);
-			for (const auto& circle : multicircle->getCircles()) {
-				const auto& constraint = circle.getConstraint();
-				char color;
-				if (constraint.sign == Constraint::Sign::NEG) {
-					color = 'r';
-					sphere = true;
-				} else {
-					color = 'b';
-					if (constraint.distance < umbral) {
-						sphere = true;
-					}
-				}
-				fs << getConstraint3D(constraint, color) << "ax.plot3D(x, y, z, '" << color << "-', linewidth = 2.0)\n\n";
-			}
+			writePython3D(fs, *std::static_pointer_cast<Circle>(g), sphere, umbral);
 			break;
 		}
 		case Geometry::Type::CONVEX: {
-			const auto& convex = std::static_pointer_cast<Convex>(g);
-			for (const auto& circle : convex->getCircles()) {
-				char color;
-				const auto& constraint = circle.getConstraint();
-				if (constraint.sign == Constraint::Sign::NEG) {
-					color = 'r';
-					sphere = true;
-				} else {
-					color = 'b';
-					if (constraint.distance < umbral) {
-						sphere = true;
-					}
-				}
-				fs << getConstraint3D(constraint, color) << "ax.plot3D(x, y, z, '" << color << "-', linewidth = 2.0)\n\n";
-			}
+			writePython3D(fs, *std::static_pointer_cast<Convex>(g), sphere, umbral);
 			break;
 		}
+		case Geometry::Type::POLYGON:
+		case Geometry::Type::CHULL: {
+			writePython3D(fs, *std::static_pointer_cast<Polygon>(g), sphere, umbral);
+			break;
+		}
+		case Geometry::Type::MULTICIRCLE: {
+			writePython3D(fs, *std::static_pointer_cast<MultiCircle>(g), sphere, umbral);
+			break;
+		}
+		case Geometry::Type::MULTICONVEX: {
+			writePython3D(fs, *std::static_pointer_cast<MultiConvex>(g), sphere, umbral);
+			break;
+		}
+		case Geometry::Type::MULTIPOLYGON:
+		case Geometry::Type::MULTICHULL: {
+			writePython3D(fs, *std::static_pointer_cast<MultiPolygon>(g), sphere, umbral);
+			break;
+		}
+		case Geometry::Type::COLLECTION: {
+			writePython3D(fs, *std::static_pointer_cast<Collection>(g), sphere, umbral);
+			break;
+		}
+		case Geometry::Type::INTERSECTION: {
+			writePython3D(fs, *std::static_pointer_cast<Intersection>(g), sphere, umbral);
+			break;
+		}
+		default:
+			break;
 	}
 
-	std::string x, y, z;
-	Cartesian v0, v1, v2;
-	// Draw trixels.
 	std::string rule_trixel;
 	std::string show_graphics;
 	if (sphere) {
@@ -908,8 +1433,14 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 			"ax.add_collection3d(tri)\n";
 		show_graphics = "plt.ion()\nplt.grid()\nplt.show()";
 	}
+
+	// Draw trixels.
+	std::string x, y, z;
 	for (const auto& trixel : trixels) {
-		getCorners(trixel, v0, v1, v2);
+		const auto geodetic = getCorners(trixel);
+		const auto& v0 = std::get<0>(geodetic);
+		const auto& v1 = std::get<1>(geodetic);
+		const auto& v2 = std::get<2>(geodetic);
 		char vx[HTM_DIGITS];
 		char vy[HTM_DIGITS];
 		char vz[HTM_DIGITS];
@@ -922,9 +1453,9 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
 			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
 			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
-			x += vx + std::string(", ");
-			y += vy + std::string(", ");
-			z += vz + std::string(", ");
+			x.append(vx).append(", ");
+			y.append(vy).append(", ");
+			z.append(vz).append(", ");
 		}
 		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 			const auto inc = i / HTM_LINE_POINTS;
@@ -932,9 +1463,9 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
 			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
 			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
-			x += vx + std::string(", ");
-			y += vy + std::string(", ");
-			z += vz + std::string(", ");
+			x.append(vx).append(", ");
+			y.append(vy).append(", ");
+			z.append(vz).append(", ");
 		}
 		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 			const auto inc = i / HTM_LINE_POINTS;
@@ -942,17 +1473,17 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
 			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
 			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
-			x += vx + std::string(", ");
-			y += vy + std::string(", ");
-			z += vz + std::string(", ");
+			x.append(vx).append(", ");
+			y.append(vy).append(", ");
+			z.append(vz).append(", ");
 		}
 		// Close the trixel.
 		snprintf(vx, HTM_DIGITS, "%.50f", v0.x);
 		snprintf(vy, HTM_DIGITS, "%.50f", v0.y);
 		snprintf(vz, HTM_DIGITS, "%.50f", v0.z);
-		x += vx + std::string("]\n");
-		y += vy + std::string("]\n");
-		z += vz + std::string("]\n");
+		x.append(vx).append("]\n");
+		y.append(vy).append("]\n");
+		z.append(vz).append("]\n");
 		fs << (x + y + z);
 		fs << rule_trixel;
 	}
