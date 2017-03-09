@@ -74,7 +74,7 @@ public:
 					process_chull(std::move(points));
 					return;
 				default:
-					THROW(GeometryError, "Type: %d is not Polygon", static_cast<int>(type));
+					THROW(GeometryError, "Invalid type for Polygon");
 			}
 		}
 
