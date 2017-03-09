@@ -69,7 +69,7 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 					geometry = std::make_unique<Polygon>(make_polygon(it.value(), Geometry::Type::POLYGON));
 					return;
 				case Cast::Hash::CHULL:
-					geometry = std::make_unique<Polygon>(make_polygon(it.value(), Geometry::Type::CONVEX_HULL));
+					geometry = std::make_unique<Polygon>(make_polygon(it.value(), Geometry::Type::CHULL));
 					return;
 				case Cast::Hash::MULTIPOINT:
 					geometry = std::make_unique<MultiPoint>(make_multipoint(it.value()));
@@ -443,7 +443,7 @@ GeoSpatial::make_multipolygon(const MsgPack& o)
 						multipolygon.add(make_polygon(it.value(), Geometry::Type::POLYGON));
 						break;
 					case Cast::Hash::CHULL:
-						multipolygon.add(make_polygon(it.value(), Geometry::Type::CONVEX_HULL));
+						multipolygon.add(make_polygon(it.value(), Geometry::Type::CHULL));
 						break;
 					default:
 						THROW(GeoSpatialError, "%s must be a map only with %s and %s", RESERVED_MULTIPOLYGON, RESERVED_POLYGON, RESERVED_CHULL);
@@ -537,7 +537,7 @@ GeoSpatial::make_collection(const MsgPack& o)
 					collection.add_polygon(make_polygon(it.value(), Geometry::Type::POLYGON));
 					break;
 				case Cast::Hash::CHULL:
-					collection.add_polygon(make_polygon(it.value(), Geometry::Type::CONVEX_HULL));
+					collection.add_polygon(make_polygon(it.value(), Geometry::Type::CHULL));
 					break;
 				case Cast::Hash::MULTIPOINT:
 					collection.add_multipoint(make_multipoint(it.value()));
@@ -588,7 +588,7 @@ GeoSpatial::make_intersection(const MsgPack& o)
 					intersection.add(std::make_shared<Polygon>(make_polygon(it.value(), Geometry::Type::POLYGON)));
 					break;
 				case Cast::Hash::CHULL:
-					intersection.add(std::make_shared<Polygon>(make_polygon(it.value(), Geometry::Type::CONVEX_HULL)));
+					intersection.add(std::make_shared<Polygon>(make_polygon(it.value(), Geometry::Type::CHULL)));
 					break;
 				case Cast::Hash::MULTIPOINT:
 					intersection.add(std::make_shared<MultiPoint>(make_multipoint(it.value())));

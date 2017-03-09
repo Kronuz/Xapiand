@@ -70,7 +70,7 @@ public:
 				case Geometry::Type::POLYGON:
 					process_polygon(std::move(points));
 					return;
-				case Geometry::Type::CONVEX_HULL:
+				case Geometry::Type::CHULL:
 					process_chull(std::move(points));
 					return;
 				default:
