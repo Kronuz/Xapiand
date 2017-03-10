@@ -475,16 +475,16 @@ Cartesian::toLatLon() const
 std::string
 Cartesian::toDegMinSec() const
 {
-	const auto latlon = toLatLon();
-	int dlat = (int)latlon.first;
-	int dlon = (int)latlon.second;
-	int mlat = (int)((latlon.first - dlat) * 60.0);
-	int mlon = (int)((latlon.second - dlon) * 60.0);
-	double slat = (latlon.first - dlat - mlat / 60.0) * 3600.0;
-	double slon = (latlon.second - dlon - mlon / 60.0) * 3600.0;
+	const auto geodetic = toGeodetic();
+	int dlat = (int)std::get<0>(geodetic);
+	int dlon = (int)std::get<1>(geodetic);
+	int mlat = (int)((std::get<0>(geodetic) - dlat) * 60.0);
+	int mlon = (int)((std::get<1>(geodetic) - dlon) * 60.0);
+	double slat = (std::get<0>(geodetic) - dlat - mlat / 60.0) * 3600.0;
+	double slon = (std::get<1>(geodetic) - dlon - mlon / 60.0) * 3600.0;
 
 	std::string direction;
-	if (latlon.first < 0) {
+	if (std::get<0>(geodetic) < 0) {
 		direction.assign("''S");
 		dlat = - 1 * dlat;
 		mlat = - 1 * mlat;
@@ -498,7 +498,7 @@ Cartesian::toDegMinSec() const
 	res.append(std::to_string(dlat)).append("°");
 	res.append(std::to_string(mlat)).append("'");
 	res.append(std::to_string(slat)).append(direction);
-	if (latlon.second < 0) {
+	if (std::get<1>(geodetic) < 0) {
 		direction.assign("''W");
 		dlon = - 1 * dlon;
 		mlon = - 1 * mlon;
