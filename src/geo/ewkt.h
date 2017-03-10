@@ -39,6 +39,28 @@ extern const std::regex find_collection_re;
 class GeoSpatial;
 
 
+/*
+ * Parser for EWKT (A PostGIS-specific format that includes the spatial reference system identifier (SRID))
+ * Geometric objects EWKT supported:
+ *  POINT
+ *  MULTIPOINT
+ *  POLYGON       // Polygon should be convex. Otherwise it should be used CHULL.
+ *  MULTIPOLYGON
+ *  GEOMETRYCOLLECTION
+ *
+ * Geometric objects not defined in EWKT, but defined here by their relevance:
+ *  CIRCLE
+ *  MULTICIRCLE
+ *  CHULL  			// Convex Hull from a points' set.
+ *  MULTICHULL
+ *  GEOMETRYINTERSECTION
+ *
+ * Coordinates for geometries can be:
+ * (lon lat) or (lon lat height)
+ *
+ * This parser do not accept EMPTY geometries and
+ * polygons are not required to be repeated first coordinate to end like EWKT.
+ */
 class EWKT {
 	using dispatch_func = void (EWKT::*)(int, const std::string&);
 

@@ -65,28 +65,6 @@ const std::unordered_map<std::string, Geometry::Type> EWKT::map_recursive_dispat
 });
 
 
-/*
- * Parser for EWKT (A PostGIS-specific format that includes the spatial reference system identifier (SRID))
- * Geometric objects EWKT supported:
- *  POINT
- *  MULTIPOINT
- *  POLYGON       // Polygon should be convex. Otherwise it should be used CHULL.
- *  MULTIPOLYGON
- *  GEOMETRYCOLLECTION
- *
- * Geometric objects not defined in EWKT, but defined here by their relevance:
- *  CIRCLE
- *  MULTICIRCLE
- *  CHULL  			// Convex Hull from a points' set.
- *  MULTICHULL
- *  GEOMETRYINTERSECTION
- *
- * Coordinates for geometries can be:
- * (lat lon) or (lat lon height)
- *
- * This parser do not accept EMPTY geometries and
- * polygons are not required to be repeated first coordinate to end like EWKT.
- */
 EWKT::EWKT(const std::string& str)
 {
 	std::smatch m;
@@ -119,11 +97,16 @@ EWKT::_parse_point(int SRID, const std::string& specification)
 	switch (coords.size()) {
 		case 2: {
 			auto it = coords.begin();
-			return Point(Cartesian(stox(std::stod, *it), stox(std::stod, *++it), 0, Cartesian::Units::DEGREES, SRID));
+			double lon = stox(std::stod, *it);
+			double lat = stox(std::stod, *++it);
+			return Point(Cartesian(lat, lon, 0, Cartesian::Units::DEGREES, SRID));
 		}
 		case 3: {
 			auto it = coords.begin();
-			return Point(Cartesian(stox(std::stod, *it), stox(std::stod, *++it), stox(std::stod, *++it), Cartesian::Units::DEGREES, SRID));
+			double lon = stox(std::stod, *it);
+			double lat = stox(std::stod, *++it);
+			double h = stox(std::stod, *++it);
+			return Point(Cartesian(lat, lon, h, Cartesian::Units::DEGREES, SRID));
 		}
 		default:
 			THROW(InvalidArgument, "Invalid specification");
@@ -132,8 +115,8 @@ EWKT::_parse_point(int SRID, const std::string& specification)
 
 
 /*
- * The specification is (lat lon[ height])
- * lat and lon in degrees.
+ * The specification is (lon lat[ height])
+ * lon and lat in degrees.
  * height in meters.
  */
 void
@@ -142,9 +125,9 @@ EWKT::parse_point(int SRID, const std::string& specification)
 	try {
 		geometry = std::make_unique<Point>(_parse_point(SRID, specification));
 	} catch (const InvalidArgument& err) {
-		THROW(EWKTError, "Specification for POINT is '(lat lon[ height])' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for POINT is '(lon lat[ height])' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
-		THROW(EWKTError, "Specification for POINT is '(lat lon[ height])' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for POINT is '(lon lat[ height])' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
@@ -154,8 +137,8 @@ EWKT::_parse_circle(int SRID, const std::string& specification)
 {
 	std::smatch m;
 	if (std::regex_match(specification, m, find_circle_re) && static_cast<size_t>(m.length(0)) == specification.size()) {
-		double lat = stox(std::stod, m.str(1));
-		double lon = stox(std::stod, m.str(2));
+		double lon = stox(std::stod, m.str(1));
+		double lat = stox(std::stod, m.str(2));
 		double h = m.length(4) == 0 ? 0 : stox(std::stod, m.str(4));
 		double radius = stox(std::stod, m.str(5));
 		return Circle(Cartesian(lat, lon, h, Cartesian::Units::DEGREES, SRID), radius);
@@ -166,8 +149,8 @@ EWKT::_parse_circle(int SRID, const std::string& specification)
 
 
 /*
- * The specification is: (lat lon[ height], radius)
- * lat and lon in degrees.
+ * The specification is: (lon lat[ height], radius)
+ * lon and lat in degrees.
  * height in meters.
  * radius in meters and positive.
  */
@@ -177,9 +160,9 @@ EWKT::parse_circle(int SRID, const std::string& specification)
 	try {
 		geometry = std::make_unique<Circle>(_parse_circle(SRID, specification));
 	} catch (const InvalidArgument& err) {
-		THROW(EWKTError, "Specification for CIRCLE is '(lat lon[ height], radius)' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for CIRCLE is '(lon lat[ height], radius)' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
-		THROW(EWKTError, "Specification for CIRCLE is '(lat lon[ height], radius)' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for CIRCLE is '(lon lat[ height], radius)' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
@@ -207,8 +190,8 @@ EWKT::_parse_convex(int SRID, const std::string& specification)
 
 
 /*
- * The specification is: ((lat lon[ height], radius), ... (lat lon[ height], radius))
- * lat and lon in degrees.
+ * The specification is: ((lon lat[ height], radius), ... (lon lat[ height], radius))
+ * lon and lat in degrees.
  * height in meters.
  * radius in meters and positive.
  */
@@ -218,9 +201,9 @@ EWKT::parse_convex(int SRID, const std::string& specification)
 	try {
 		geometry = std::make_unique<Convex>(_parse_convex(SRID, specification));
 	} catch (const InvalidArgument& err) {
-		THROW(EWKTError, "Specification for CONVEX is '((lat lon[ height], radius), ... (lat lon[ height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for CONVEX is '((lon lat[ height], radius), ... (lon lat[ height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
-		THROW(EWKTError, "Specification for CONVEX is '((lat lon[ height], radius), ... (lat lon[ height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for CONVEX is '((lon lat[ height], radius), ... (lon lat[ height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
@@ -249,12 +232,17 @@ EWKT::_parse_polygon(int SRID, const std::string& specification, Geometry::Type 
 			switch (coords.size()) {
 				case 2: {
 					auto it = coords.begin();
-					pts.emplace_back(stox(std::stod, *it), stox(std::stod, *++it), 0, Cartesian::Units::DEGREES, SRID);
+					double lon = stox(std::stod, *it);
+					double lat = stox(std::stod, *++it);
+					pts.emplace_back(lat, lon, 0, Cartesian::Units::DEGREES, SRID);
 					break;
 				}
 				case 3: {
 					auto it = coords.begin();
-					pts.emplace_back(stox(std::stod, *it), stox(std::stod, *++it), stox(std::stod, *++it), Cartesian::Units::DEGREES, SRID);
+					double lon = stox(std::stod, *it);
+					double lat = stox(std::stod, *++it);
+					double h = stox(std::stod, *++it);
+					pts.emplace_back(lat, lon, h, Cartesian::Units::DEGREES, SRID);
 					break;
 				}
 				default:
@@ -275,8 +263,8 @@ EWKT::_parse_polygon(int SRID, const std::string& specification, Geometry::Type 
 
 
 /*
- * The specification is ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))
- * lat and lon in degrees.
+ * The specification is ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height]))
+ * lon and lat in degrees.
  * height in meters.
  */
 void
@@ -285,16 +273,16 @@ EWKT::parse_polygon(int SRID, const std::string& specification)
 	try {
 		geometry = std::make_unique<Polygon>(_parse_polygon(SRID, specification, Geometry::Type::POLYGON));
 	} catch (const InvalidArgument& err) {
-		THROW(EWKTError, "Specification for POLYGON is '((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for POLYGON is '((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height]))' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
-		THROW(EWKTError, "Specification for POLYGON is '((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for POLYGON is '((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height]))' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
 
 /*
- * The specification is ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))
- * lat and lon in degrees.
+ * The specification is ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height]))
+ * lon and lat in degrees.
  * height in meters.
  */
 void
@@ -303,9 +291,9 @@ EWKT::parse_chull(int SRID, const std::string& specification)
 	try {
 		geometry = std::make_unique<Polygon>(_parse_polygon(SRID, specification, Geometry::Type::CHULL));
 	} catch (const InvalidArgument& err) {
-		THROW(EWKTError, "Specification for CHULL is '((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for CHULL is '((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height]))' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
-		THROW(EWKTError, "Specification for CHULL is '((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for CHULL is '((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height]))' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
@@ -338,8 +326,8 @@ EWKT::_parse_multipoint(int SRID, const std::string& specification)
 
 
 /*
- * The specification is (lat lon [height], ..., lat lon [height]) or ((lat lon [height]), ..., (lat lon [height]))
- * lat and lon in degrees.
+ * The specification is (lon lat [height], ..., lon lat [height]) or ((lon lat [height]), ..., (lon lat [height]))
+ * lon and lat in degrees.
  * height in meters.
  */
 void
@@ -348,9 +336,9 @@ EWKT::parse_multipoint(int SRID, const std::string& specification)
 	try {
 		geometry = std::make_unique<MultiPoint>(_parse_multipoint(SRID, specification));
 	} catch (const InvalidArgument& err) {
-		THROW(EWKTError, "Specification for MULTIPOINT is '(lat lon [height], ..., lat lon [height]) or ((lat lon [height]), ..., (lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for MULTIPOINT is '(lon lat [height], ..., lon lat [height]) or ((lon lat [height]), ..., (lon lat [height]))' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
-		THROW(EWKTError, "Specification for MULTIPOINT is '(lat lon [height], ..., lat lon [height]) or ((lat lon [height]), ..., (lat lon [height]))' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for MULTIPOINT is '(lon lat [height], ..., lon lat [height]) or ((lon lat [height]), ..., (lon lat [height]))' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
@@ -378,8 +366,8 @@ EWKT::_parse_multicircle(int SRID, const std::string& specification)
 
 
 /*
- * The specification is: ((lat lon [height], radius), ... (lat lon [height], radius))
- * lat and lon in degrees.
+ * The specification is: ((lon lat [height], radius), ... (lon lat [height], radius))
+ * lon and lat in degrees.
  * height in meters.
  * radius in meters and positive.
  */
@@ -389,9 +377,9 @@ EWKT::parse_multicircle(int SRID, const std::string& specification)
 	try {
 		geometry = std::make_unique<MultiCircle>(_parse_multicircle(SRID, specification));
 	} catch (const InvalidArgument& err) {
-		THROW(EWKTError, "Specification for MULTICIRCLE is '((lat lon [height], radius), ... (lat lon [height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for MULTICIRCLE is '((lon lat [height], radius), ... (lon lat [height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
-		THROW(EWKTError, "Specification for MULTICIRCLE is '((lat lon [height], radius), ... (lat lon [height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for MULTICIRCLE is '((lon lat [height], radius), ... (lon lat [height], radius))' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
@@ -419,8 +407,8 @@ EWKT::_parse_multiconvex(int SRID, const std::string& specification)
 
 
 /*
- * The specification is: (..., ((lat lon [height], radius), ... (lat lon [height], radius)), ...)
- * lat and lon in degrees.
+ * The specification is: (..., ((lon lat [height], radius), ... (lon lat [height], radius)), ...)
+ * lon and lat in degrees.
  * height in meters.
  * radius in meters and positive.
  */
@@ -430,9 +418,9 @@ EWKT::parse_multiconvex(int SRID, const std::string& specification)
 	try {
 		geometry = std::make_unique<MultiConvex>(_parse_multiconvex(SRID, specification));
 	} catch (const InvalidArgument& err) {
-		THROW(EWKTError, "Specification for MULTICONVEX is '(..., ((lat lon [height], radius), ... (lat lon [height], radius)), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for MULTICONVEX is '(..., ((lon lat [height], radius), ... (lon lat [height], radius)), ...)' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
-		THROW(EWKTError, "Specification for MULTICONVEX is '(..., ((lat lon [height], radius), ... (lat lon [height], radius)), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for MULTICONVEX is '(..., ((lon lat [height], radius), ... (lon lat [height], radius)), ...)' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
@@ -460,8 +448,8 @@ EWKT::_parse_multipolygon(int SRID, const std::string& specification, Geometry::
 
 
 /*
- * The specification is: (..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)
- * lat and lon in degrees.
+ * The specification is: (..., ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height])), ...)
+ * lon and lat in degrees.
  * height in meters.
  * radius in meters and positive.
  */
@@ -471,16 +459,16 @@ EWKT::parse_multipolygon(int SRID, const std::string& specification)
 	try {
 		geometry = std::make_unique<MultiPolygon>(_parse_multipolygon(SRID, specification, Geometry::Type::POLYGON));
 	} catch (const InvalidArgument& err) {
-		THROW(EWKTError, "Specification for MULTIPOLYGON is '(..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for MULTIPOLYGON is '(..., ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
-		THROW(EWKTError, "Specification for MULTIPOLYGON is '(..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for MULTIPOLYGON is '(..., ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
 
 /*
- * The specification is: (..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)
- * lat and lon in degrees.
+ * The specification is: (..., ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height])), ...)
+ * lon and lat in degrees.
  * height in meters.
  * radius in meters and positive.
  */
@@ -490,9 +478,9 @@ EWKT::parse_multichull(int SRID, const std::string& specification)
 	try {
 		geometry = std::make_unique<MultiPolygon>(_parse_multipolygon(SRID, specification, Geometry::Type::CHULL));
 	} catch (const InvalidArgument& err) {
-		THROW(EWKTError, "Specification for MULTICHULL is '(..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for MULTICHULL is '(..., ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
 	} catch (const OutOfRange& err) {
-		THROW(EWKTError, "Specification for MULTICHULL is '(..., ((lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
+		THROW(EWKTError, "Specification for MULTICHULL is '(..., ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height])), ...)' [(%s) -> %s]", specification.c_str(), err.what());
 	}
 }
 
