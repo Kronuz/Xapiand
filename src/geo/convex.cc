@@ -183,7 +183,7 @@ Convex::lookupTrixels(const Cartesian& v0, const Cartesian& v1, const Cartesian&
 		return;
 	}
 
-	if (level++ == data.max_level || (P == 4 || F > 2 || (P == 3 && F == 1) || (P && Pp > 1))) {
+	if (level++ == data.max_level || (F > 2 || (P == 3 && F == 1) || (P == 4 && Pp == 4))) {
 		switch (type_trixels[0]) {
 			case TypeTrixel::FULL:
 				data.trixels.push_back(name + "0");
@@ -303,7 +303,7 @@ Convex::lookupTrixels(const Cartesian& v0, const Cartesian& v1, const Cartesian&
 
 	id <<= 2;
 
-	if (level++ == data.max_level || (P == 4 || F > 2 || (P == 3 && F == 1) || (P && Pp > 1))) {
+	if (level++ == data.max_level || (F > 2 || (P == 3 && F == 1) || (P == 4 && Pp == 4))) {
 		switch (type_trixels[0]) {
 			case TypeTrixel::FULL:
 				HTM::insertGreaterRange(data.ranges, HTM::getRange(id, level));
