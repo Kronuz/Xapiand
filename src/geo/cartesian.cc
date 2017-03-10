@@ -352,7 +352,7 @@ Cartesian::toCartesian(double lat, double lon, double height, Units units)
 
 
 /*
- * Converts (geocentric) cartesian (x, y, z) to (ellipsoidal geodetic) latitude / longitude coordinates.
+ * Converts (geocentric) cartesian (x, y, z) to (ellipsoidal geodetic) latitude, longitude, height coordinates.
  * Sets lat and lon in degrees, height in meters.
  *
  * Reference:
@@ -408,6 +408,62 @@ Cartesian::toGeodetic() const
 	}
 
 	return std::make_tuple(lat, lon, height);
+}
+
+
+/*
+ * Converts (geocentric) cartesian (x, y, z) to (ellipsoidal geodetic) latitude / longitude coordinates.
+ * Sets lat and lon in degrees.
+ *
+ * Reference:
+ *   + A COMPARISON OF METHODS USED IN RECTANGULAR TO GEODETIC COORDINATE TRANSFORMATIONS.
+ *     http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.139.7504&rep=rep1&type=pdf
+ *   + Conversion between Cartesian and geodetic coordinates on a rotational ellipsoid
+ *     by solving a system of nonlinear equations
+ *     http://www.iag-aig.org/attach/989c8e501d9c5b5e2736955baf2632f5/V60N2_5FT.pdf
+ *
+ * Used method: Lin and Wang (1995)
+ */
+std::pair<double, double>
+Cartesian::toLatLon() const
+{
+	const auto& datum = map_datums.at(SRID);
+
+	double _x = scale * x;
+	double _y = scale * y;
+	double _z = scale * z;
+	double p2 = _x * _x + _y * _y;
+	// Distance from the polar axis to the point.
+	double p = std::sqrt(p2);
+	double z2 = _z * _z;
+	double a = datum.ellipsoid.major_axis;
+	double b = datum.ellipsoid.minor_axis;
+
+	double a2 = a * a;
+	double b2 = b * b;
+	double aux = a2 * z2 + b2 * p2;
+	double m0 = (a * b * aux * std::sqrt(aux) - a2 * b2 * aux) / (2 * (a2 * a2 * z2 + b2 * b2 * p2));
+	double dm = 2 * m0;
+	for (int itr = 0; itr < 10; ++itr) {
+		double f_a = a + dm / a, f_b = b + dm / b;
+		double f_a2 = f_a * f_a, f_b2 = f_b * f_b;
+		double fm = p2 / f_a2 + z2 / f_b2 - 1;
+		double dfm = - 4 * (p2 / (a * f_a2 * f_a) + z2 / (b * f_b2 * f_b));
+		double h = fm / dfm;
+		if (h > -DBL_TOLERANCE && h < DBL_TOLERANCE) {
+			break;
+		}
+		m0 = m0 - h;
+		dm = 2 * m0;
+	}
+
+	double pe = p / (1 + dm / a2);
+	double ze = _z / (1 + dm / b2);
+
+	double lat = std::atan2(a2 * ze, b2 * pe) * DEG_PER_RAD;
+	double lon = 2 * std::atan2(_y, _x + p) * DEG_PER_RAD;
+
+	return std::make_pair(lat, lon);
 }
 
 

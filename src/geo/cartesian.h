@@ -153,7 +153,10 @@ public:
 	Cartesian operator-(const Cartesian& p) const noexcept;
 	Cartesian& operator-=(const Cartesian& p) noexcept;
 
+	// Returns <Latitude, Longitude, Height>
 	std::tuple<double, double, double> toGeodetic() const;
+	// Returns <Latitude, Longitude>
+	std::pair<double, double> toLatLon() const;
 	std::string toDegMinSec() const;
 	Cartesian& normalize();
 	Cartesian& inverse() noexcept;
