@@ -1164,8 +1164,8 @@ HTM::writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g,
 			const auto latlon2 = std::get<2>(corners).toLatLon();
 
 			fs << "mymap.polygon(";
-			fs << "[" << latlot0.first << ", " << latlot1.first << ", " << latlot2.first << "],";
-			fs << "[" << latlot0.second << ", " << latlot1.second << ", " << latlot2.second << "],";
+			fs << "[" << latlon0.first << ", " << latlon1.first << ", " << latlon2.first << "],";
+			fs << "[" << latlon0.second << ", " << latlon1.second << ", " << latlon2.second << "],";
 			fs << "edge_color='cyan', edge_width=2, face_color='blue', face_alpha=0.2)\n";
 		}
 		fs << "mymap.draw('" << file << ".html')";
