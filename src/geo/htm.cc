@@ -859,12 +859,28 @@ static void writeGoogleMap(std::ofstream& fs, const Intersection& intersection) 
 
 static void writeGoogleMapPlotter(std::ofstream& fs, const Point& point) {
 	const auto latlon = point.getCartesian().toLatLon();
-	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  20)\n";
+	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  18)\n";
 }
 
 
 static void writeGoogleMapPlotter(std::ofstream& fs, const MultiPoint& multipoint) {
-	writeGoogleMapPlotter(fs, multipoint.getPoints().back());
+	if (!multipoint.empty()) {
+		// Check distance between points.
+		double distance = 1.0;
+		const auto points = multipoint.getPoints();
+		const auto it_e = points.end();
+		const auto it_last = it_e - 1;
+		for (auto it = points.begin(); it != it_last; ++it) {
+			for (auto it_n = it + 1; it_n != it_e; ++it_n) {
+				double d = it->getCartesian() * it_n->getCartesian();
+				if (d < distance) {
+					distance = d;
+				}
+			}
+		}
+		const auto latlon = points.back().getCartesian().toLatLon();
+		fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(std::acos(distance) * M_PER_RADIUS_EARTH)) << ")\n";
+	}
 }
 
 
