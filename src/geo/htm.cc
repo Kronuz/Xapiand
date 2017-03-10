@@ -1437,10 +1437,10 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 	// Draw trixels.
 	std::string x, y, z;
 	for (const auto& trixel : trixels) {
-		const auto geodetic = getCorners(trixel);
-		const auto& v0 = std::get<0>(geodetic);
-		const auto& v1 = std::get<1>(geodetic);
-		const auto& v2 = std::get<2>(geodetic);
+		const auto corners = getCorners(trixel);
+		const auto& v0 = std::get<0>(corners);
+		const auto& v1 = std::get<1>(corners);
+		const auto& v2 = std::get<2>(corners);
 		char vx[HTM_DIGITS];
 		char vy[HTM_DIGITS];
 		char vz[HTM_DIGITS];
