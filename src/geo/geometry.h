@@ -25,8 +25,8 @@
 #include "htm.h"
 
 
-// Earth radius in meters
-constexpr double M_PER_RADIUS_EARTH = 6367444.7;
+// Earth radius in meters (https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html)
+constexpr double M_PER_RADIUS_EARTH = 6371008.8; // Volumetric mean radius (m)
 
 // Radius maximum in meters allowed in a constraint (all the earth)
 constexpr double MAX_RADIUS_HALFSPACE_EARTH = 20003917.491659265;
