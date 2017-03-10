@@ -722,8 +722,8 @@ static std::string getConstraint3D(const Constraint& bCircle, char color) {
 
 
 static void writeGoogleMap(std::ofstream& fs, const Point& point) {
-	const auto geodetic = point.getCartesian().toGeodetic();
-	fs << "mymap.marker(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  'red')\n";
+	const auto latlon = point.getCartesian().toLatLon();
+	fs << "mymap.marker(" << latlon.first << ", " << latlon.second << ",  'red')\n";
 }
 
 
@@ -736,12 +736,12 @@ static void writeGoogleMap(std::ofstream& fs, const MultiPoint& multipoint) {
 
 static void writeGoogleMap(std::ofstream& fs, const Circle& circle) {
 	const auto& constraint = circle.getConstraint();
-	const auto geodetic = constraint.center.toGeodetic();
-	fs << "mymap.marker(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  'red')\n";
+	const auto latlon = constraint.center.toLatLon();
+	fs << "mymap.marker(" << latlon.first << ", " << latlon.second << ",  'red')\n";
 	if (constraint.sign == Constraint::Sign::NEG) {
-		fs << "mymap.circle(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ", " << constraint.arcangle << ", '#FF0000', ew=2)\n";
+		fs << "mymap.circle(" << latlon.first << ", " << latlon.second << ", " << constraint.arcangle << ", '#FF0000', ew=2)\n";
 	} else {
-		fs << "mymap.circle(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ", " << constraint.arcangle << ", '#0000FF', ew=2)\n";
+		fs << "mymap.circle(" << latlon.first << ", " << latlon.second << ", " << constraint.arcangle << ", '#0000FF', ew=2)\n";
 	}
 }
 
@@ -759,9 +759,9 @@ static void writeGoogleMap(std::ofstream& fs, const Polygon& polygon) {
 	for (const auto& convexpolygon : polygon.getConvexPolygons()) {
 		const auto& corners = convexpolygon.getCorners();
 		for (const auto& corner : corners) {
-			const auto geodetic = corner.toGeodetic();
-			lat.append(std::to_string(std::get<0>(geodetic))).push_back(',');
-			lon.append(std::to_string(std::get<1>(geodetic))).push_back(',');
+			const auto latlon = corner.toLatLon();
+			lat.append(std::to_string(latlon.first)).push_back(',');
+			lon.append(std::to_string(latlon.second)).push_back(',');
 		}
 		lat.back() = ']';
 		lon.back() = ']';
@@ -858,8 +858,8 @@ static void writeGoogleMap(std::ofstream& fs, const Intersection& intersection) 
 
 
 static void writeGoogleMapPlotter(std::ofstream& fs, const Point& point) {
-	const auto geodetic = point.getCartesian().toGeodetic();
-	fs << "mymap = GoogleMapPlotter(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  20)\n";
+	const auto latlon = point.getCartesian().toLatLon();
+	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  20)\n";
 }
 
 
@@ -870,8 +870,8 @@ static void writeGoogleMapPlotter(std::ofstream& fs, const MultiPoint& multipoin
 
 static void writeGoogleMapPlotter(std::ofstream& fs, const Circle& circle) {
 	const auto& constraint = circle.getConstraint();
-	auto geodetic = constraint.center.toGeodetic();
-	fs << "mymap = GoogleMapPlotter(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
+	auto latlon = constraint.center.toLatLon();
+	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
 }
 
 
@@ -882,8 +882,8 @@ static void writeGoogleMapPlotter(std::ofstream& fs, const Convex& convex) {
 
 static void writeGoogleMapPlotter(std::ofstream& fs, const Polygon& polygon) {
 	const auto& convexpolygon = polygon.getConvexPolygons().back();
-	const auto geodetic = convexpolygon.getCentroid().toGeodetic();
-	fs << "mymap = GoogleMapPlotter(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  " << (20 - 2 * std::log10(convexpolygon.getRadius())) << ")\n";
+	const auto latlon = convexpolygon.getCentroid().toLatLon();
+	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(convexpolygon.getRadius())) << ")\n";
 }
 
 
@@ -1035,9 +1035,9 @@ static void writeGoogleMapPlotter(std::ofstream& fs, const std::vector<std::stri
 		auto& corner = std::get<0>(corners);
 		corner.scale = M_PER_RADIUS_EARTH;
 
-		const auto geodetic = corner.toGeodetic();
+		const auto latlon = corner.toLatLon();
 
-		fs << "mymap = GoogleMapPlotter(" << std::get<0>(geodetic) << ", " << std::get<1>(geodetic) << ",  " << (20 - 2 * std::log10(ERROR_NIVEL[trixel.length() - 2])) << ")\n";
+		fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(ERROR_NIVEL[trixel.length() - 2])) << ")\n";
 	}
 }
 
@@ -1159,13 +1159,13 @@ HTM::writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g,
 			std::get<1>(corners).scale = M_PER_RADIUS_EARTH;
 			std::get<2>(corners).scale = M_PER_RADIUS_EARTH;
 
-			const auto geodetic0 = std::get<0>(corners).toGeodetic();
-			const auto geodetic1 = std::get<1>(corners).toGeodetic();
-			const auto geodetic2 = std::get<2>(corners).toGeodetic();
+			const auto latlon0 = std::get<0>(corners).toLatLon();
+			const auto latlon1 = std::get<1>(corners).toLatLon();
+			const auto latlon2 = std::get<2>(corners).toLatLon();
 
 			fs << "mymap.polygon(";
-			fs << "[" << std::get<0>(geodetic0) << ", " << std::get<0>(geodetic1) << ", " << std::get<0>(geodetic2) << "],";
-			fs << "[" << std::get<1>(geodetic0) << ", " << std::get<1>(geodetic1) << ", " << std::get<1>(geodetic2) << "],";
+			fs << "[" << latlot0.first << ", " << latlot1.first << ", " << latlot2.first << "],";
+			fs << "[" << latlot0.second << ", " << latlot1.second << ", " << latlot2.second << "],";
 			fs << "edge_color='cyan', edge_width=2, face_color='blue', face_alpha=0.2)\n";
 		}
 		fs << "mymap.draw('" << file << ".html')";
