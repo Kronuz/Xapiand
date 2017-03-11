@@ -434,8 +434,8 @@ Convex::getTrixels(bool partials, double error) const
 
 	trixel_data data(partials, HTM_MAX_LEVEL);
 	error = error * circles.begin()->constraint.radius;
-	for (size_t i = 0; i <= HTM_MAX_LEVEL; ++i) {
-		if (ERROR_NIVEL[i] < error || i == HTM_MAX_LEVEL) {
+	for (size_t i = 0; i < HTM_MAX_LEVEL; ++i) {
+		if (ERROR_NIVEL[i] < error) {
 			data.max_level = i;
 			break;
 		}
@@ -486,8 +486,8 @@ Convex::getRanges(bool partials, double error) const
 
 	range_data data(partials, HTM_MAX_LEVEL);
 	error = error * circles.begin()->constraint.radius;
-	for (size_t i = 0; i <= HTM_MAX_LEVEL; ++i) {
-		if (ERROR_NIVEL[i] < error || i == HTM_MAX_LEVEL) {
+	for (size_t i = 0; i < HTM_MAX_LEVEL; ++i) {
+		if (ERROR_NIVEL[i] < error) {
 			data.max_level = i;
 			break;
 		}
