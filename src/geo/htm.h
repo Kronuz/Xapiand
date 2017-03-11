@@ -56,8 +56,8 @@ constexpr double RAD_PER_CIRCUMFERENCE = 6.28318530717958647692528677;
 constexpr double ERROR_NIVEL[] = {
 	10066329.6, 5033164.8, 2516582.4, 1258291.2, 629145.6, 314572.8, 157286.4,
 	78643.2,    39321.6,   19660.8,   9830.4,    4915.2,   2457.6,   1228.8,
-	614.4,     307.2,     153.6,      76.8,      38.4,     19.2,     9.6,
-	4.8,       2.4,       1.2,        0.6,       0.3
+	614.4,      307.2,     153.6,     76.8,      38.4,     19.2,     9.6,
+	4.8,        2.4,       1.2,       0.6,       0.3
 };
 
 
@@ -114,7 +114,7 @@ struct range_t {
 		return start < r.start;
 	}
 
-	std::string as_string() const {
+	std::string to_string() const {
 		char result[36];
 		snprintf(result, 36, "%" PRIu64 "-%" PRIu64, start, end);
 		return std::string(result);
@@ -127,7 +127,7 @@ namespace std {
 	struct hash<range_t> {
 		inline size_t operator()(const range_t& p) const {
 			static std::hash<std::string> hash_fn;
-			return hash_fn(p.as_string());
+			return hash_fn(p.to_string());
 		}
 	};
 }

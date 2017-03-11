@@ -112,7 +112,7 @@ public:
 	}
 
 	void aggregate_geo(const range_t& value, const Xapian::Document& doc) override {
-		aggregate(value.as_string(), doc);
+		aggregate(value.to_string(), doc);
 	}
 
 	void aggregate_uuid(const std::string& value, const Xapian::Document& doc) override {
