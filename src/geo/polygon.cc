@@ -135,10 +135,10 @@ Polygon::ConvexPolygon::init()
 	 * Take it as the bounding circle of the triangle with the widest opening angle.
 	 */
 	boundingCircle.distance = 1.0;
-	const auto it_e = corners.end();
-	for (auto it_i = corners.begin(); it_i != it_e; ++it_i) {
-		for (auto it_j = it_i + 1; it_j != it_e; ++it_j) {
-			for (auto it_k = it_j + 1; it_k != it_e; ++it_k) {
+	const auto it_last = corners.end() - 1;
+	for (auto it_i = corners.begin(); it_i != it_last; ++it_i) {
+		for (auto it_j = it_i + 1; it_j != it_last; ++it_j) {
+			for (auto it_k = it_j + 1; it_k != it_last; ++it_k) {
 				auto v_aux = (*it_j - *it_i) ^ (*it_k - *it_j);
 				v_aux.normalize();
 				/*
@@ -154,17 +154,15 @@ Polygon::ConvexPolygon::init()
 			}
 		}
 
-		centroid.x += it_i->x;
-		centroid.y += it_i->y;
-		centroid.z += it_i->z;
+		centroid += *it_i;
 	}
 
 	centroid.normalize();
 
-	double max = 0;
-	for (const auto& corner : corners) {
-		double d = corner * centroid;
-		if (d > max) {
+	double max = 1.0;
+	for (auto it = corners.begin(); it != it_last; ++it) {
+		double d = *it * centroid;
+		if (d < max) {
 			max = d;
 		}
 	}
