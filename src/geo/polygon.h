@@ -83,14 +83,16 @@ public:
 			  corners(std::move(polygon.corners)),
 			  constraints(std::move(polygon.constraints)),
 			  boundingCircle(std::move(polygon.boundingCircle)),
-			  centroid(std::move(polygon.centroid)) { }
+			  centroid(std::move(polygon.centroid)),
+			  radius(std::move(polygon.radius)) { }
 
 		ConvexPolygon(const ConvexPolygon& polygon)
 			: Geometry(polygon),
 			  corners(polygon.corners),
 			  constraints(polygon.constraints),
 			  boundingCircle(polygon.boundingCircle),
-			  centroid(polygon.centroid) { }
+			  centroid(polygon.centroid),
+			  radius(polygon.radius) { }
 
 		virtual ~ConvexPolygon() = default;
 
@@ -100,6 +102,7 @@ public:
 			constraints = std::move(polygon.constraints);
 			boundingCircle = std::move(polygon.boundingCircle);
 			centroid = std::move(polygon.centroid);
+			radius = std::move(polygon.radius);
 			return *this;
 		}
 
@@ -109,6 +112,7 @@ public:
 			constraints = polygon.constraints;
 			boundingCircle = polygon.boundingCircle;
 			centroid = polygon.centroid;
+			radius = polygon.radius;
 			return *this;
 		}
 
