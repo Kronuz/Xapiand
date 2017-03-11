@@ -576,7 +576,7 @@ HTM::getTrixels(const std::vector<range_t>& ranges)
 		s = range.start;
 		e = range.end;
 		size_t idx = 0;
-		while (idx < s.size() - 4 && s.test(idx) == 0 && e.test(idx) == 1 && s.test(idx + 1) == 0 && e.test(idx + 1) == 1) {
+		while (idx < HTM_BITS_ID - 4 && s.test(idx) == 0 && e.test(idx) == 1 && s.test(idx + 1) == 0 && e.test(idx + 1) == 1) {
 			idx += 2;
 		}
 		uint64_t inc = std::pow(2, idx), start = range.start;
@@ -592,14 +592,15 @@ HTM::getTrixels(const std::vector<range_t>& ranges)
 				trixel.push_back('N');
 			}
 			while (--i >= idx) {
-				trixel.push_back('0' + 2 * s.test(i) + s.test(i - 1));
-				--i;
+				trixel.push_back('0' + 2 * s.test(i) + s.test(--i));
 			}
 			start += inc;
 			trixels.push_back(std::move(trixel));
 		}
 	}
+
 	HTM::simplifyTrixels(trixels);
+
 	return trixels;
 }
 
