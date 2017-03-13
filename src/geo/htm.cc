@@ -845,6 +845,8 @@ static void writeGoogleMap(std::ofstream& fs, const Polygon& polygon) {
 	std::string lon;
 	for (const auto& convexpolygon : polygon.getConvexPolygons()) {
 		const auto& corners = convexpolygon.getCorners();
+		lat.assign(1, '[');
+		lon.assign(1, '[');
 		for (const auto& corner : corners) {
 			const auto latlon = corner.toLatLon();
 			lat.append(std::to_string(latlon.first)).push_back(',');
