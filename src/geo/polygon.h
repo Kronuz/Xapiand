@@ -198,6 +198,7 @@ public:
 	template <typename T, typename = std::enable_if_t<std::is_same<Polygon, std::decay_t<T>>::value>>
 	void add(T&& polygon) {
 		convexpolygons.push_back(std::forward<T>(polygon));
+		simplified = false;
 	}
 
 	void reserve(size_t new_cap) {
