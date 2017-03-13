@@ -752,11 +752,12 @@ Polygon::to_string() const
 std::vector<std::string>
 Polygon::getTrixels(bool partials, double error) const
 {
-	if (convexpolygons.size() == 1) {
-		return convexpolygons.back().getTrixels(partials, error);
-	} else {
-		return HTM::getTrixels(getRanges(partials, error));
+	std::vector<std::string> trixels;
+	for (const auto& convexpolygon : convexpolygons) {
+		trixels = HTM::trixel_exclusive_disjunction(std::move(trixels), convexpolygon.getTrixels(partials, error));
 	}
+
+	return trixels;
 }
 
 
