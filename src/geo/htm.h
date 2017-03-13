@@ -172,6 +172,19 @@ namespace HTM {
 	// Union and intersection and exclusive disjunction of two sort vectors of ranges.
 	std::vector<std::string> trixel_union(std::vector<std::string>&& txs1, std::vector<std::string>&& txs2);
 	std::vector<std::string> trixel_intersection(std::vector<std::string>&& txs1, std::vector<std::string>&& txs2);
+	std::vector<std::string> trixel_exclusive_disjunction(std::vector<std::string>&& txs1, std::vector<std::string>&& txs2);
+
+	/*
+	 * Fills result with the trixels that conform to the father except trixel's son.
+	 *   Father      Son			 Trixels back:
+	 *     /\	     /\
+	 *    /__\      /__\	   =>	     __
+	 *   /\  /\					       /\  /\
+	 *  /__\/__\					  /__\/__\
+	 *
+	 * result is sort.
+	 */
+	void exclusive_disjunction(std::vector<std::string>& result, const std::string& father, const std::string& son, size_t depth);
 
 	// Union, intersection and exclusive disjunction of two sort vectors of ranges.
 	std::vector<range_t> range_union(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2);

@@ -88,6 +88,92 @@ HTM::trixel_intersection(std::vector<std::string>&& txs1, std::vector<std::strin
 }
 
 
+std::vector<std::string>
+HTM::trixel_exclusive_disjunction(std::vector<std::string>&& txs1, std::vector<std::string>&& txs2)
+{
+	if (txs1.empty()) {
+		return std::move(txs2);
+	}
+
+	if (txs2.empty()) {
+		return std::move(txs1);
+	}
+
+	auto it1 = txs1.begin();
+	auto it2 = txs2.begin();
+
+	while (it1 != txs1.end() && it2 != txs2.end()) {
+		if (*it1 > *it2) {
+			if (it1->find(*it2) == 0) {
+				size_t depth = it1->length() - it2->length();
+				std::vector<std::string> subtrixels;
+				subtrixels.reserve(3 * depth);
+				exclusive_disjunction(subtrixels, *it2, *it1, depth);
+				it2 = txs2.erase(it2);
+				it2 = txs2.insert(it2, std::make_move_iterator(subtrixels.begin()), std::make_move_iterator(subtrixels.end()));
+				it1 = txs1.erase(it1);
+			} else {
+				++it2;
+			}
+		} else {
+			if (it2->find(*it1) == 0) {
+				size_t depth = it2->length() - it1->length();
+				std::vector<std::string> subtrixels;
+				subtrixels.reserve(3 * depth);
+				exclusive_disjunction(subtrixels, *it1, *it2, depth);
+				it1 = txs1.erase(it1);
+				it1 = txs1.insert(it1, std::make_move_iterator(subtrixels.begin()), std::make_move_iterator(subtrixels.end()));
+				it2 = txs2.erase(it2);
+			} else {
+				++it1;
+			}
+		}
+	}
+
+	std::vector<std::string> res;
+	res.reserve(txs1.size() + txs2.size());
+
+	std::merge(std::make_move_iterator(txs1.begin()), std::make_move_iterator(txs1.end()),
+		std::make_move_iterator(txs2.begin()), std::make_move_iterator(txs2.end()), std::back_inserter(res));
+
+	return res;
+}
+
+
+void
+HTM::exclusive_disjunction(std::vector<std::string>& result, const std::string& father, const std::string& son, size_t depth)
+{
+	if (depth) {
+		switch (son.at(father.length())) {
+			case '0':
+				exclusive_disjunction(result, father + std::string(1, '0'), son, --depth);
+				result.push_back(father + std::string(1, '1'));
+				result.push_back(father + std::string(1, '2'));
+				result.push_back(father + std::string(1, '3'));
+				return;
+			case '1':
+				result.push_back(father + std::string(1, '0'));
+				exclusive_disjunction(result, father + std::string(1, '1'), son, --depth);
+				result.push_back(father + std::string(1, '2'));
+				result.push_back(father + std::string(1, '3'));
+				return;
+			case '2':
+				result.push_back(father + std::string(1, '0'));
+				result.push_back(father + std::string(1, '1'));
+				exclusive_disjunction(result, father + std::string(1, '2'), son, --depth);
+				result.push_back(father + std::string(1, '3'));
+				return;
+			case '3':
+				result.push_back(father + std::string(1, '0'));
+				result.push_back(father + std::string(1, '1'));
+				result.push_back(father + std::string(1, '2'));
+				exclusive_disjunction(result, father + std::string(1, '3'), son, --depth);
+				return;
+		}
+	}
+}
+
+
 std::vector<range_t>
 HTM::range_union(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2)
 {
