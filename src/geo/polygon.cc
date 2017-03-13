@@ -158,6 +158,7 @@ Polygon::ConvexPolygon::init()
 	}
 
 	centroid.normalize();
+	centroid.scale = M_PER_RADIUS_EARTH;
 
 	double max = 1.0;
 	for (auto it = corners.begin(); it != it_last; ++it) {
