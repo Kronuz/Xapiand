@@ -854,7 +854,9 @@ static void writeGoogleMap(std::ofstream& fs, const Polygon& polygon) {
 		}
 		lat.back() = ']';
 		lon.back() = ']';
-		fs << "map.polygon(" << lat << ',' << lon << ',' << "edge_color='cyan', edge_width=2, face_color='blue', face_alpha=0.2)\n";
+		const auto latlon = convexpolygon.getCentroid().toLatLon();
+		fs << "mymap.marker(" << latlon.first << ", " << latlon.second << ",  'red')\n";
+		fs << "mymap.polygon(" << lat << ',' << lon << ',' << "edge_color='blue', edge_width=2, face_color='blue', face_alpha=0.2)\n";
 	}
 }
 
@@ -1366,7 +1368,9 @@ static void writePython3D(std::ofstream& fs, const Polygon& polygon, bool& spher
 		y.append(vy).append("]\n");
 		z.append(vz).append("]\n");
 		fs << x << y << z;
-		fs << "ax.plot3D(x, y, z, 'c-', linewidth = 2.0)\n";
+		fs << "ax.plot3D(x, y, z, 'b-', linewidth = 2.0)\n";
+		const auto& c = convexpolygon.getCentroid();
+		fs << "ax.plot3D([" << c.x << "], [" << c.y << "], [" << c.z << "], 'ko', linewidth = 2.0)\n\n";
 	}
 }
 
