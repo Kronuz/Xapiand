@@ -482,33 +482,45 @@ HTM::intersection(const Constraint& c, const Cartesian& v1, const Cartesian& v2)
 void
 HTM::simplifyTrixels(std::vector<std::string>& trixels)
 {
-	for (size_t i = 0;  trixels.size() - i > 3; ) {
-		auto tlen = trixels[i].length();
+	// Delete duplicates and redundants.
+	for (auto it = trixels.begin(); it != trixels.end() - 1; ) {
+		auto n_it = it + 1;
+		if (n_it->find(*it) == 0) {
+			trixels.erase(n_it);
+		} else {
+			++it;
+		}
+	}
+
+	// To compact.
+	for (auto it = trixels.begin(); it < trixels.end() - 3; ) {
+		auto tlen = it->length();
 		if (tlen > 2) {
-			auto j = i + 1;
-			auto k = i + 2;
-			auto l = i + 3;
-			if (trixels[j].length() == tlen && trixels[k].length() == tlen && trixels[l].length() == tlen) {
+			auto it_j = it + 1;
+			auto it_k = it + 2;
+			auto it_l = it + 3;
+			if (it_j->length() == tlen && it_k->length() == tlen && it_l->length() == tlen) {
 				--tlen;
 				bool equals = true;
 				for (size_t p = 0; p < tlen; ++p) {
-					const auto& c = trixels[i][p];
-					if (!(trixels[j][p] == c && trixels[k][p] == c && trixels[l][p] == c)) {
+					const auto& c = (*it)[p];
+					if ((*it_j)[p] != c || (*it_k)[p] != c || (*it_l)[p] != c) {
 						equals = false;
 						break;
 					}
 				}
 				if (equals) {
-					auto it = trixels.erase(trixels.begin() + j);
-					it = trixels.erase(it);
-					trixels.erase(it);
-					trixels[i].pop_back();
-					i < 3 ? i = 0 : i -= 3;
+					it_j = trixels.erase(it_j);
+					it_j = trixels.erase(it_j);
+					trixels.erase(it_j);
+					it->pop_back();
+					it_j = trixels.begin();
+					it < it_j + 3 ? it = it_j : it -= 3;
 					continue;
 				}
 			}
 		}
-		++i;
+		++it;
 	}
 }
 
