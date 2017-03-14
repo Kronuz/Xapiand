@@ -1135,8 +1135,8 @@ static void writeGoogleMapPlotter(std::ofstream& fs, const Intersection& interse
 
 static void writeGoogleMapPlotter(std::ofstream& fs, const std::vector<std::string>& trixels) {
 	if (trixels.empty()) {
-		// default center on United States
-		fs << "mymap = GoogleMapPlotter(41.850033, -87.6500523,  20)\n";
+		// Default center
+		fs << "mymap = GoogleMapPlotter(0, 0, 1)\n";
 	} else {
 		const auto& trixel = trixels.front();
 		auto corners = HTM::getCorners(trixel);
@@ -1276,9 +1276,9 @@ HTM::writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g,
 			fs << "[" << latlon0.second << ", " << latlon1.second << ", " << latlon2.second << "],";
 			fs << "edge_color='cyan', edge_width=2, face_color='blue', face_alpha=0.2)\n";
 		}
-		fs << "mymap.draw('" << file << ".html')";
-		fs.close();
 	}
+	fs << "mymap.draw('" << file << ".html')";
+	fs.close();
 }
 
 
