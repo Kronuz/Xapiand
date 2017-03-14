@@ -88,6 +88,48 @@ HTM::trixel_intersection(std::vector<std::string>&& txs1, std::vector<std::strin
 }
 
 
+/*
+ * Fills result with the trixels that conform to the father except trixel's son.
+ *   Father      Son			 Trixels back:
+ *     /\	     /\
+ *    /__\      /__\	   =>	     __
+ *   /\  /\					       /\  /\
+ *  /__\/__\					  /__\/__\
+ *
+ * result is sort.
+ */
+inline static void exclusive_disjunction(std::vector<std::string>& result, const std::string& father, const std::string& son, size_t depth) {
+	if (depth) {
+		switch (son.at(father.length())) {
+			case '0':
+				exclusive_disjunction(result, father + std::string(1, '0'), son, --depth);
+				result.push_back(father + std::string(1, '1'));
+				result.push_back(father + std::string(1, '2'));
+				result.push_back(father + std::string(1, '3'));
+				return;
+			case '1':
+				result.push_back(father + std::string(1, '0'));
+				exclusive_disjunction(result, father + std::string(1, '1'), son, --depth);
+				result.push_back(father + std::string(1, '2'));
+				result.push_back(father + std::string(1, '3'));
+				return;
+			case '2':
+				result.push_back(father + std::string(1, '0'));
+				result.push_back(father + std::string(1, '1'));
+				exclusive_disjunction(result, father + std::string(1, '2'), son, --depth);
+				result.push_back(father + std::string(1, '3'));
+				return;
+			case '3':
+				result.push_back(father + std::string(1, '0'));
+				result.push_back(father + std::string(1, '1'));
+				result.push_back(father + std::string(1, '2'));
+				exclusive_disjunction(result, father + std::string(1, '3'), son, --depth);
+				return;
+		}
+	}
+}
+
+
 std::vector<std::string>
 HTM::trixel_exclusive_disjunction(std::vector<std::string>&& txs1, std::vector<std::string>&& txs2)
 {
@@ -137,40 +179,6 @@ HTM::trixel_exclusive_disjunction(std::vector<std::string>&& txs1, std::vector<s
 		std::make_move_iterator(txs2.begin()), std::make_move_iterator(txs2.end()), std::back_inserter(res));
 
 	return res;
-}
-
-
-void
-HTM::exclusive_disjunction(std::vector<std::string>& result, const std::string& father, const std::string& son, size_t depth)
-{
-	if (depth) {
-		switch (son.at(father.length())) {
-			case '0':
-				exclusive_disjunction(result, father + std::string(1, '0'), son, --depth);
-				result.push_back(father + std::string(1, '1'));
-				result.push_back(father + std::string(1, '2'));
-				result.push_back(father + std::string(1, '3'));
-				return;
-			case '1':
-				result.push_back(father + std::string(1, '0'));
-				exclusive_disjunction(result, father + std::string(1, '1'), son, --depth);
-				result.push_back(father + std::string(1, '2'));
-				result.push_back(father + std::string(1, '3'));
-				return;
-			case '2':
-				result.push_back(father + std::string(1, '0'));
-				result.push_back(father + std::string(1, '1'));
-				exclusive_disjunction(result, father + std::string(1, '2'), son, --depth);
-				result.push_back(father + std::string(1, '3'));
-				return;
-			case '3':
-				result.push_back(father + std::string(1, '0'));
-				result.push_back(father + std::string(1, '1'));
-				result.push_back(father + std::string(1, '2'));
-				exclusive_disjunction(result, father + std::string(1, '3'), son, --depth);
-				return;
-		}
-	}
 }
 
 
