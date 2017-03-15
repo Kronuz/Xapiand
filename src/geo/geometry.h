@@ -103,8 +103,6 @@ public:
 	bool operator!=(const Constraint& c) const noexcept;
 	bool operator<(const Constraint& c) const noexcept;
 	bool operator>(const Constraint& c) const noexcept;
-
-	std::string to_string() const;
 };
 
 

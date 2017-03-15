@@ -99,15 +99,3 @@ Constraint::operator>(const Constraint& c) const noexcept
 		return arcangle >= c.arcangle;
 	}
 }
-
-
-std::string
-Constraint::to_string() const
-{
-	char result[128];
-	snprintf(result, 128, "(%.6f %.6f %.6f, %.6f)",
-		center.x * center.scale, center.y * center.scale,
-		center.z * center.scale, radius
-	);
-	return std::string(result);
-}
