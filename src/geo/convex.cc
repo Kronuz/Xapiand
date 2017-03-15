@@ -123,7 +123,12 @@ Convex::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 				return TypeTrixel::PARTIAL;
 			}
 			if (sign == Sign::POS || sign == Sign::ZERO) {
+				// Constraint center inside trixel (v0, v1, v2).
 				if (HTM::insideVertex_Trixel(smallest_c.center, v0, v1, v2)) {
+					return TypeTrixel::PARTIAL;
+				}
+				// The triangle is inside of constraint.
+				if (HTM::insideVertex_Constraint(v0, smallest_c)) {
 					return TypeTrixel::PARTIAL;
 				}
 				return TypeTrixel::OUTSIDE;
