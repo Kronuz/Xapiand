@@ -30,7 +30,7 @@ const std::regex find_geometry_re("(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?
 const std::regex find_circle_re("[\\s]*([-.0-9]+)[\\s]+([-.0-9]+)([\\s]+([-.0-9]+))?[\\s]*\\,[\\s]*([.0-9]+)[\\s]*");
 const std::regex find_parenthesis_list_re("[\\s]*\\((.*?)\\)[\\s]*(\\,|$)", std::regex::optimize);
 const std::regex find_nested_parenthesis_list_re("[\\s]*[\\s]*\\([\\s]*(.*?\\))[\\s]*\\)[\\s]*(\\,|$)", std::regex::optimize);
-const std::regex find_collection_re("[\\s]*([A-Z]{5,12})[\\s]*\\(([()-.0-9\\s,]*)\\)[\\s]*(\\,|$)?", std::regex::optimize);
+const std::regex find_collection_re("[\\s]*([A-Z]{5,20})[\\s]*\\(([()-.0-9\\s,]*)\\)[\\s]*(\\,|$)?", std::regex::optimize);
 
 
 const std::unordered_map<std::string, EWKT::dispatch_func> EWKT::map_dispatch({

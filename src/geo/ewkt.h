@@ -56,7 +56,7 @@ class GeoSpatial;
  *  GEOMETRYINTERSECTION
  *
  * Coordinates for geometries can be:
- * (lon lat) or (lon lat height)
+ *   (lon lat) or (lon lat height)
  *
  * This parser do not accept EMPTY geometries and
  * polygons are not required to be repeated first coordinate to end like EWKT.
