@@ -157,6 +157,7 @@ public:
 	std::tuple<double, double, double> toGeodetic() const;
 	// Returns <Latitude, Longitude>
 	std::pair<double, double> toLatLon() const;
+	// Returns a string with "DegMinSec(lat) DegMinSec(lon) height".
 	std::string toDegMinSec() const;
 	Cartesian& normalize();
 	Cartesian& inverse() noexcept;

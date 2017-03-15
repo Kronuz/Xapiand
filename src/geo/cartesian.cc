@@ -469,8 +469,6 @@ Cartesian::toLatLon() const
 
 /*
  * Converts (geocentric) cartesian (x, y, z) to Degrees Minutes Seconds.
- *
- * Returns a string with "lat  lon  height".
  */
 std::string
 Cartesian::toDegMinSec() const
@@ -508,7 +506,7 @@ Cartesian::toDegMinSec() const
 	}
 	res.append("  ").append(std::to_string(dlon)).append("°");
 	res.append(std::to_string(mlon)).append("'");
-	res.append(std::to_string(slon)).append(direction).append("  ").append(std::to_string(std::get<2>(geodetic)));
+	res.append(std::to_string(slon)).append(direction).append(" ").append(std::to_string(std::get<2>(geodetic)));
 
 	return res;
 }
