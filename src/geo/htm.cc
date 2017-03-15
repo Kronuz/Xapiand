@@ -700,7 +700,7 @@ inline static void get_trixels(std::vector<std::string>& trixels, uint64_t start
 	uint64_t mod = start % max_inc;
 	uint64_t _start = mod ? start + max_inc - mod : start;
 
-	while (end < _start) {
+	while (end < (_start + max_inc - 1)) {
 		log_inc -= 2;
 		max_inc = std::pow(2, log_inc);
 		mod = start % max_inc;
