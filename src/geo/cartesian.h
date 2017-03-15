@@ -142,6 +142,7 @@ public:
 	bool operator==(const Cartesian& p) const noexcept;
 	bool operator!=(const Cartesian& p) const noexcept;
 	bool operator<(const Cartesian& p) const noexcept;
+	bool operator>(const Cartesian& p) const noexcept;
 	// Dot product
 	double operator*(const Cartesian& p) const noexcept;
 	Cartesian& operator*(double scale) noexcept;

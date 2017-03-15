@@ -210,6 +210,13 @@ Cartesian::operator<(const Cartesian& p) const noexcept
 }
 
 
+bool
+Cartesian::operator>(const Cartesian& p) const noexcept
+{
+	return y > p.y || (y == p.y && x > p.x) || (y == p.y && x == p.x && z > p.z);
+}
+
+
 double
 Cartesian::operator*(const Cartesian& p) const noexcept
 {
