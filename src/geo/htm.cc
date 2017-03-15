@@ -482,6 +482,10 @@ HTM::intersection(const Constraint& c, const Cartesian& v1, const Cartesian& v2)
 void
 HTM::simplifyTrixels(std::vector<std::string>& trixels)
 {
+	if (trixels.empty()) {
+		return;
+	}
+
 	// Delete duplicates and redundants.
 	for (auto it = trixels.begin(); it != trixels.end() - 1; ) {
 		auto n_it = it + 1;
@@ -493,7 +497,7 @@ HTM::simplifyTrixels(std::vector<std::string>& trixels)
 	}
 
 	// To compact.
-	for (auto it = trixels.begin(); it < trixels.end() - 3; ) {
+	for (auto it = trixels.begin(); trixels.size() > 3 && it < trixels.end() - 3; ) {
 		auto tlen = it->length();
 		if (tlen > 2) {
 			auto it_j = it + 1;
