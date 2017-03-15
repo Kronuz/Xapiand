@@ -683,40 +683,50 @@ HTM::getRange(const std::string& name)
 }
 
 
+inline static void get_trixels(std::vector<std::string>& trixels, uint64_t start, uint64_t end) {
+	if (start == end) {
+		trixels.push_back(HTM::getTrixelName(start));
+		return;
+	}
+
+	uint64_t log_inc = std::ceil(std::log2(end - start));
+	log_inc -= (log_inc % 2 == 1);
+	uint64_t max_inc = std::pow(2, log_inc);
+
+	uint64_t mod = start % max_inc;
+	uint64_t _start = mod ? start + max_inc - mod : start;
+
+	while (end < _start) {
+		log_inc -= 2;
+		max_inc = std::pow(2, log_inc);
+		mod = start % max_inc;
+		_start = mod ? start + max_inc - mod : start;
+	}
+
+	if (_start > start) {
+		get_trixels(trixels, start, _start - 1);
+	}
+
+	uint64_t _end = end - max_inc + 2;
+	while (_start < _end) {
+		trixels.push_back(HTM::getTrixelName(_start >> log_inc));
+		_start += max_inc;
+	}
+
+	if (_start <= end) {
+		get_trixels(trixels, _start, end);
+	}
+}
+
+
 std::vector<std::string>
 HTM::getTrixels(const std::vector<range_t>& ranges)
 {
 	std::vector<std::string> trixels;
 	trixels.reserve(ranges.size());
-	std::bitset<HTM_BITS_ID> s, e;
 	for (const auto& range : ranges) {
-		s = range.start;
-		e = range.end;
-		size_t idx = 0;
-		while (idx < HTM_BITS_ID - 4 && s.test(idx) == 0 && e.test(idx) == 1 && s.test(idx + 1) == 0 && e.test(idx + 1) == 1) {
-			idx += 2;
-		}
-		uint64_t inc = std::pow(2, idx), start = range.start;
-		size_t len = (HTM_BITS_ID - idx) / 2;
-		while (start < range.end) {
-			std::string trixel;
-			trixel.reserve(len);
-			s = start;
-			size_t i = HTM_BITS_ID - 2;
-			if (s.test(i)) {
-				trixel.push_back('S');
-			} else {
-				trixel.push_back('N');
-			}
-			while (--i >= idx) {
-				trixel.push_back('0' + 2 * s.test(i) + s.test(--i));
-			}
-			start += inc;
-			trixels.push_back(std::move(trixel));
-		}
+		get_trixels(trixels, range.start, range.end);
 	}
-
-	HTM::simplifyTrixels(trixels);
 
 	return trixels;
 }
