@@ -42,8 +42,8 @@ class Convex : public Geometry {
 	bool intersectCircles(const Constraint& bounding_circle) const;
 	TypeTrixel verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
 
-	void lookupTrixels(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, std::string name, trixel_data& info, uint8_t level, uint8_t Pp) const;
-	void lookupTrixels(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, uint64_t id, range_data& info, uint8_t level, uint8_t Pp) const;
+	void lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, std::string name, trixel_data& info, uint8_t level, uint8_t Pp) const;
+	void lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, uint64_t id, range_data& info, uint8_t level, uint8_t Pp) const;
 
 public:
 	Convex()
