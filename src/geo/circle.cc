@@ -250,7 +250,7 @@ Circle::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 std::string
 Circle::toWKT() const
 {
-	std::string wkt("CIRCLE Z ");
+	std::string wkt("CIRCLE ");
 	wkt.append(to_string());
 	return wkt;
 }
@@ -259,11 +259,12 @@ Circle::toWKT() const
 std::string
 Circle::to_string() const
 {
-	char result[128];
-	snprintf(result, 128, "(%.6f %.6f %.6f, %.6f)",
-		constraint.center.x * constraint.center.scale,
-		constraint.center.y * constraint.center.scale,
-		constraint.center.z * constraint.center.scale,
+	char result[55];
+	const auto geodetic = constraint.center.toGeodetic();
+	snprintf(result, 55, "(%.7f %.7f %.7f, %.6f)",
+		std::get<1>(geodetic),
+		std::get<0>(geodetic),
+		std::get<2>(geodetic),
 		constraint.radius
 	);
 	return std::string(result);

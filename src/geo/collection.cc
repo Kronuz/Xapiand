@@ -44,7 +44,7 @@ Collection::simplify()
 std::string
 Collection::toWKT() const
 {
-	std::string wkt("GEOMETRYCOLLECTION Z ");
+	std::string wkt("GEOMETRYCOLLECTION ");
 	wkt.append(to_string());
 	return wkt;
 }

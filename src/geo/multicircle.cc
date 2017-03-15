@@ -52,7 +52,7 @@ MultiCircle::simplify()
 std::string
 MultiCircle::toWKT() const
 {
-	std::string wkt("MULTICIRCLE Z ");
+	std::string wkt("MULTICIRCLE ");
 	wkt.append(to_string());
 	return wkt;
 }

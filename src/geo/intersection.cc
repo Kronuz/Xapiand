@@ -39,7 +39,7 @@ Intersection::simplify()
 std::string
 Intersection::toWKT() const
 {
-	std::string wkt("GEOMETRYINTERSECTION Z ");
+	std::string wkt("GEOMETRYINTERSECTION ");
 	wkt.append(to_string());
 	return wkt;
 }

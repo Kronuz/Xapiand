@@ -40,7 +40,7 @@ MultiPoint::simplify()
 std::string
 MultiPoint::toWKT() const
 {
-	std::string wkt("MULTIPOINT Z ");
+	std::string wkt("MULTIPOINT ");
 	wkt.append(to_string());
 	return wkt;
 }

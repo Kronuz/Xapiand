@@ -77,17 +77,18 @@ public:
 	}
 
 	std::string toWKT() const override {
-		std::string wkt("POINT Z ");
+		std::string wkt("POINT ");
 		wkt.append(to_string());
 		return wkt;
 	}
 
 	std::string to_string() const override {
-		char result[128];
-		snprintf(result, 128, "(%.6f %.6f %.6f)",
-			p.x * p.scale,
-			p.y * p.scale,
-			p.z * p.scale
+		char result[40];
+		const auto geodetic = p.toGeodetic();
+		snprintf(result, 40, "(%.7f %.7f %.7f)",
+			std::get<1>(geodetic),
+			std::get<0>(geodetic),
+			std::get<2>(geodetic)
 		);
 		return std::string(result);
 	}

@@ -400,7 +400,7 @@ Convex::lookupTrixels(const Cartesian& v0, const Cartesian& v1, const Cartesian&
 std::string
 Convex::toWKT() const
 {
-	std::string wkt("CONVEX Z ");
+	std::string wkt("CONVEX ");
 	wkt.append(to_string());
 	return wkt;
 }

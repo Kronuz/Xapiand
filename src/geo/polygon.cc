@@ -548,8 +548,8 @@ Polygon::ConvexPolygon::toWKT() const
 {
 	std::string wkt;
 	const auto str_polygon = to_string();
-	wkt.reserve(str_polygon.length() + 12);
-	wkt.assign("POLYGON Z (").append(str_polygon).push_back(')');
+	wkt.reserve(str_polygon.length() + 10);
+	wkt.assign("POLYGON (").append(str_polygon).push_back(')');
 	return wkt;
 }
 
@@ -562,25 +562,21 @@ Polygon::ConvexPolygon::to_string() const
 	}
 
 	std::string str;
-	const size_t size_corner = 50;
-	str.reserve(size_corner * (corners.size() + 1));
+	const size_t size_corner = 40;
+	str.reserve(size_corner * corners.size());
 	str.push_back('(');
 	char result[size_corner];
 	for (const auto& corner : corners) {
-		snprintf(result, size_corner, "%.6f %.6f %.6f, ",
-			corner.x * corner.scale,
-			corner.y * corner.scale,
-			corner.z * corner.scale
+		const auto geodetic = corner.toGeodetic();
+		snprintf(result, size_corner, "%.7f %.7f %.7f, ",
+			std::get<1>(geodetic),
+			std::get<0>(geodetic),
+			std::get<2>(geodetic)
 		);
 		str.append(result);
 	}
-	const auto& corner_e = *corners.begin();
-	snprintf(result, size_corner, "%.6f %.6f %.6f)",
-		corner_e.x * corner_e.scale,
-		corner_e.y * corner_e.scale,
-		corner_e.z * corner_e.scale
-	);
-	str.append(result);
+	str.pop_back();
+	str.back() = ')';
 	return str;
 }
 
@@ -724,7 +720,7 @@ Polygon::simplify()
 std::string
 Polygon::toWKT() const
 {
-	std::string wkt("POLYGON Z ");
+	std::string wkt("POLYGON ");
 	wkt.append(to_string());
 	return wkt;
 }

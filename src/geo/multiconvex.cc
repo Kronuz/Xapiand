@@ -58,7 +58,7 @@ MultiConvex::simplify()
 std::string
 MultiConvex::toWKT() const
 {
-	std::string wkt("MULTICONVEX Z ");
+	std::string wkt("MULTICONVEX ");
 	wkt.append(to_string());
 	return wkt;
 }

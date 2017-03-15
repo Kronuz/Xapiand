@@ -57,7 +57,7 @@ MultiPolygon::simplify()
 std::string
 MultiPolygon::toWKT() const
 {
-	std::string wkt("MULTIPOLYGON Z ");
+	std::string wkt("MULTIPOLYGON ");
 	wkt.append(to_string());
 	return wkt;
 }
