@@ -43,7 +43,7 @@ constexpr double HTM_MAX_ERROR = 1.0;
 
 
 // Constants.
-constexpr size_t HTM_MAX_LENGTH_NAME = HTM_MAX_LEVEL | '\x02';
+constexpr size_t HTM_MAX_LENGTH_NAME = HTM_MAX_LEVEL + 2;
 constexpr size_t HTM_BYTES_ID        = 7;
 constexpr size_t HTM_BITS_ID         = 2 * HTM_MAX_LENGTH_NAME;
 
@@ -212,8 +212,9 @@ namespace HTM {
 	// Simplify a sort vector of ranges.
 	void simplifyRanges(std::vector<range_t>& ranges);
 
-	// Given a coord, calculates its HTM trixel name.
+	// Calculates its trixel name.
 	std::string getTrixelName(const Cartesian& name);
+	std::string getTrixelName(uint64_t id);
 
 	// Calculates its HTM id.
 	uint64_t getId(const Cartesian& coord);
