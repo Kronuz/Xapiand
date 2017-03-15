@@ -38,7 +38,7 @@ constexpr size_t HTM_MAX_LEVEL = 25;
 
 
 // Error for generating the trixels
-constexpr double HTM_MIN_ERROR = 0.1;
+constexpr double HTM_MIN_ERROR = 0.05;
 constexpr double HTM_MAX_ERROR = 1.0;
 
 
