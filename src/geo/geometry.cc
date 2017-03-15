@@ -82,10 +82,10 @@ Constraint::operator!=(const Constraint& c) const noexcept
 bool
 Constraint::operator<(const Constraint& c) const noexcept
 {
-	if (center == c.center) {
-		return arcangle < c.arcangle;
+	if (arcangle == c.arcangle) {
+		return center < c.center;
 	} else {
-		return arcangle <= c.arcangle;
+		return arcangle < c.arcangle;
 	}
 }
 
@@ -93,9 +93,9 @@ Constraint::operator<(const Constraint& c) const noexcept
 bool
 Constraint::operator>(const Constraint& c) const noexcept
 {
-	if (center == c.center) {
-		return arcangle > c.arcangle;
+	if (arcangle == c.arcangle) {
+		return center > c.center;
 	} else {
-		return arcangle >= c.arcangle;
+		return arcangle > c.arcangle;
 	}
 }
