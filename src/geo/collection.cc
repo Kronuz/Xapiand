@@ -53,7 +53,7 @@ Collection::toWKT() const
 std::string
 Collection::to_string() const
 {
-	std::string str;
+	std::string str(1, '(');
 	if (!multipoint.empty()) {
 		const auto str_geometry = multipoint.toWKT();
 		str.reserve(str_geometry.length() + 2);
@@ -80,12 +80,13 @@ Collection::to_string() const
 		str.append(str_geometry).append(", ");
 	}
 
-	if (str.empty()) {
+	if (str.length() == 1) {
 		return std::string("EMPTY");
 	}
 
 	str.pop_back();
 	str.back() = ')';
+
 	return str;
 }
 
