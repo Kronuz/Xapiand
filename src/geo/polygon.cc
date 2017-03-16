@@ -185,9 +185,6 @@ Polygon::ConvexPolygon::process_chull(std::vector<Cartesian>&& points)
 	// The corners are in clockwise but we need the corners in counterclockwise order and normalize.
 	corners.reserve(convex_points.size());
 
-	// Duplicates the last point at the begin.
-	convex_points.insert(convex_points.begin(), convex_points.back());
-
 	auto it_last = convex_points.rend() - 1;
 	for (auto it = convex_points.rbegin(); it != it_last; ++it) {
 		auto center = *it ^ *(it + 1);
@@ -219,7 +216,7 @@ Polygon::ConvexPolygon::process_polygon(std::vector<Cartesian>&& points)
 	auto it_last = points.end() - 1;
 	const auto it_b = points.begin();
 	for (auto it = it_b; it != it_last; ++it) {
-		// Direction should be the same for all.
+		// Direction must be the same for all.
 		const auto& n_point = *(it + 1);
 		if (it != it_b) {
 			// Calculate the direction of the third corner and restriction formed in the previous iteration.
