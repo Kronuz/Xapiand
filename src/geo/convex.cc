@@ -164,8 +164,14 @@ Convex::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 
 
 void
-Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, std::string name, trixel_data& data, uint8_t level, uint8_t Pp) const
+Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, std::string name, trixel_data& data, uint8_t level) const
 {
+	// Finish the recursion.
+	if (level == data.max_level) {
+		data.aux_trixels.push_back(std::move(name));
+		return;
+	}
+
 	auto w2 = HTM::midPoint(v0, v1);
 	auto w0 = HTM::midPoint(v1, v2);
 	auto w1 = HTM::midPoint(v2, v0);
@@ -177,9 +183,8 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 		verifyTrixel(w0, w1, w2)
 	};
 
-	// Number of full and partial subtrixels.
+	// Number of full subtrixels.
 	uint8_t F = (type_trixels[0] == TypeTrixel::FULL) + (type_trixels[1] == TypeTrixel::FULL) + (type_trixels[2] == TypeTrixel::FULL) + (type_trixels[3] == TypeTrixel::FULL);
-	uint8_t P = (type_trixels[0] == TypeTrixel::PARTIAL) + (type_trixels[1] == TypeTrixel::PARTIAL) + (type_trixels[2] == TypeTrixel::PARTIAL) + (type_trixels[3] == TypeTrixel::PARTIAL);
 
 	// Finish the recursion.
 	if (F == 4) {
@@ -187,60 +192,14 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 		return;
 	}
 
-	if (level++ == data.max_level || (F > 2 || (P == 3 && F == 1) || (P == 4 && Pp == 4))) {
-		switch (type_trixels[0]) {
-			case TypeTrixel::FULL:
-				data.trixels.push_back(name + "0");
-				break;
-			case TypeTrixel::PARTIAL:
-				data.aux_trixels.push_back(name + "0");
-				break;
-			default:
-				break;
-		}
-
-		switch (type_trixels[1]) {
-			case TypeTrixel::FULL:
-				data.trixels.push_back(name + "1");
-				break;
-			case TypeTrixel::PARTIAL:
-				data.aux_trixels.push_back(name + "1");
-				break;
-			default:
-				break;
-		}
-
-		switch (type_trixels[2]) {
-			case TypeTrixel::FULL:
-				data.trixels.push_back(name + "2");
-				break;
-			case TypeTrixel::PARTIAL:
-				data.aux_trixels.push_back(name + "2");
-				break;
-			default:
-				break;
-		}
-
-		switch (type_trixels[3]) {
-			case TypeTrixel::FULL:
-				data.trixels.push_back(name + "3");
-				break;
-			case TypeTrixel::PARTIAL:
-				data.aux_trixels.push_back(name + "3");
-				break;
-			default:
-				break;
-		}
-
-		return;
-	}
+	++level;
 
 	switch (type_trixels[0]) {
 		case TypeTrixel::FULL:
 			data.trixels.push_back(name + "0");
 			break;
 		case TypeTrixel::PARTIAL:
-			lookupTrixel(v0, w2, w1, name + "0", data, level, P);
+			lookupTrixel(v0, w2, w1, name + "0", data, level);
 			break;
 		default:
 			break;
@@ -251,7 +210,7 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 			data.trixels.push_back(name + "1");
 			break;
 		case TypeTrixel::PARTIAL:
-			lookupTrixel(v1, w0, w2, name + "1", data, level, P);
+			lookupTrixel(v1, w0, w2, name + "1", data, level);
 			break;
 		default:
 			break;
@@ -262,7 +221,7 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 			data.trixels.push_back(name + "2");
 			break;
 		case TypeTrixel::PARTIAL:
-			lookupTrixel(v2, w1, w0, name + "2", data, level, P);
+			lookupTrixel(v2, w1, w0, name + "2", data, level);
 			break;
 		default:
 			break;
@@ -273,7 +232,7 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 			data.trixels.push_back(name + "3");
 			break;
 		case TypeTrixel::PARTIAL:
-			lookupTrixel(w0, w1, w2, name + "3", data, level, P);
+			lookupTrixel(w0, w1, w2, name + "3", data, level);
 			break;
 		default:
 			break;
@@ -282,8 +241,14 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 
 
 void
-Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, uint64_t id, range_data& data, uint8_t level, uint8_t Pp) const
+Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, uint64_t id, range_data& data, uint8_t level) const
 {
+	// Finish the recursion.
+	if (level == data.max_level) {
+		HTM::insertGreaterRange(data.aux_ranges, HTM::getRange(id, level));
+		return;
+	}
+
 	auto w2 = HTM::midPoint(v0, v1);
 	auto w0 = HTM::midPoint(v1, v2);
 	auto w1 = HTM::midPoint(v2, v0);
@@ -295,9 +260,8 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 		verifyTrixel(w0, w1, w2)
 	};
 
-	// Number of full and partial subtrixels.
+	// Number of full subtrixels.
 	uint8_t F = (type_trixels[0] == TypeTrixel::FULL) + (type_trixels[1] == TypeTrixel::FULL) + (type_trixels[2] == TypeTrixel::FULL) + (type_trixels[3] == TypeTrixel::FULL);
-	uint8_t P = (type_trixels[0] == TypeTrixel::PARTIAL) + (type_trixels[1] == TypeTrixel::PARTIAL) + (type_trixels[2] == TypeTrixel::PARTIAL) + (type_trixels[3] == TypeTrixel::PARTIAL);
 
 	// Finish the recursion.
 	if (F == 4) {
@@ -305,62 +269,15 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 		return;
 	}
 
+	++level;
 	id <<= 2;
-
-	if (level++ == data.max_level || (F > 2 || (P == 3 && F == 1) || (P == 4 && Pp == 4))) {
-		switch (type_trixels[0]) {
-			case TypeTrixel::FULL:
-				HTM::insertGreaterRange(data.ranges, HTM::getRange(id, level));
-				break;
-			case TypeTrixel::PARTIAL:
-				HTM::insertGreaterRange(data.aux_ranges, HTM::getRange(id, level));
-				break;
-			default:
-				break;
-		}
-
-		switch (type_trixels[1]) {
-			case TypeTrixel::FULL:
-				HTM::insertGreaterRange(data.ranges, HTM::getRange(id + 1, level));
-				break;
-			case TypeTrixel::PARTIAL:
-				HTM::insertGreaterRange(data.aux_ranges, HTM::getRange(id + 1, level));
-				break;
-			default:
-				break;
-		}
-
-		switch (type_trixels[2]) {
-			case TypeTrixel::FULL:
-				HTM::insertGreaterRange(data.ranges, HTM::getRange(id + 2, level));
-				break;
-			case TypeTrixel::PARTIAL:
-				HTM::insertGreaterRange(data.aux_ranges, HTM::getRange(id + 2, level));
-				break;
-			default:
-				break;
-		}
-
-		switch (type_trixels[3]) {
-			case TypeTrixel::FULL:
-				HTM::insertGreaterRange(data.ranges, HTM::getRange(id + 3, level));
-				break;
-			case TypeTrixel::PARTIAL:
-				HTM::insertGreaterRange(data.aux_ranges, HTM::getRange(id + 3, level));
-				break;
-			default:
-				break;
-		}
-
-		return;
-	}
 
 	switch (type_trixels[0]) {
 		case TypeTrixel::FULL:
 			HTM::insertGreaterRange(data.ranges, HTM::getRange(id, level));
 			break;
 		case TypeTrixel::PARTIAL:
-			lookupTrixel(v0, w2, w1, id, data, level, P);
+			lookupTrixel(v0, w2, w1, id, data, level);
 			break;
 		default:
 			break;
@@ -371,7 +288,7 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 			HTM::insertGreaterRange(data.ranges, HTM::getRange(id + 1, level));
 			break;
 		case TypeTrixel::PARTIAL:
-			lookupTrixel(v1, w0, w2, id + 1, data, level, P);
+			lookupTrixel(v1, w0, w2, id + 1, data, level);
 			break;
 		default:
 			break;
@@ -382,7 +299,7 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 			HTM::insertGreaterRange(data.ranges, HTM::getRange(id + 2, level));
 			break;
 		case TypeTrixel::PARTIAL:
-			lookupTrixel(v2, w1, w0, id + 2, data, level, P);
+			lookupTrixel(v2, w1, w0, id + 2, data, level);
 			break;
 		default:
 			break;
@@ -393,7 +310,7 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 			HTM::insertGreaterRange(data.ranges, HTM::getRange(id + 3, level));
 			break;
 		case TypeTrixel::PARTIAL:
-			lookupTrixel(w0, w1, w2, id + 3, data, level, P);
+			lookupTrixel(w0, w1, w2, id + 3, data, level);
 			break;
 		default:
 			break;
@@ -446,35 +363,35 @@ Convex::getTrixels(bool partials, double error) const
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2], start_trixels[0].name, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2], start_trixels[0].name, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2], start_trixels[1].name, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2], start_trixels[1].name, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2], start_trixels[2].name, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2], start_trixels[2].name, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2], start_trixels[3].name, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2], start_trixels[3].name, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2], start_trixels[4].name, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2], start_trixels[4].name, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2], start_trixels[5].name, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2], start_trixels[5].name, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2], start_trixels[6].name, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2], start_trixels[6].name, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2], start_trixels[7].name, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2], start_trixels[7].name, data, 0);
 	}
 
 	return data.getTrixels();
@@ -498,35 +415,35 @@ Convex::getRanges(bool partials, double error) const
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2], start_trixels[0].id, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2], start_trixels[0].id, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2], start_trixels[1].id, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2], start_trixels[1].id, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2], start_trixels[2].id, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2], start_trixels[2].id, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2], start_trixels[3].id, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2], start_trixels[3].id, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2], start_trixels[4].id, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2], start_trixels[4].id, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2], start_trixels[5].id, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2], start_trixels[5].id, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2], start_trixels[6].id, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2], start_trixels[6].id, data, 0);
 	}
 
 	if (verifyTrixel(start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2]) != TypeTrixel::OUTSIDE) {
-		lookupTrixel(start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2], start_trixels[7].id, data, 0, 0);
+		lookupTrixel(start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2], start_trixels[7].id, data, 0);
 	}
 
 	return data.getRanges();
