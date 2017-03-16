@@ -68,12 +68,15 @@ Intersection::to_string() const
 std::vector<std::string>
 Intersection::getTrixels(bool partials, double error) const
 {
-	std::vector<std::string> trixels;
-	for (const auto& geometry : geometries) {
-		trixels = HTM::trixel_intersection(std::move(trixels), geometry->getTrixels(partials, error));
-		if (trixels.empty()) {
-			return trixels;
-		}
+	if (geometries.empty()) {
+		return std::vector<std::string>();
+	}
+
+	const auto it_e = geometries.end();
+	auto it = geometries.begin();
+	auto trixels = (*it)->getTrixels(partials, error);
+	for (++it; !trixels.empty() && it != it_e; ++it) {
+		trixels = HTM::trixel_intersection(std::move(trixels), (*it)->getTrixels(partials, error));
 	}
 
 	return trixels;
@@ -83,12 +86,15 @@ Intersection::getTrixels(bool partials, double error) const
 std::vector<range_t>
 Intersection::getRanges(bool partials, double error) const
 {
-	std::vector<range_t> ranges;
-	for (const auto& geometry : geometries) {
-		ranges = HTM::range_intersection(std::move(ranges), geometry->getRanges(partials, error));
-		if (ranges.empty()) {
-			return ranges;
-		}
+	if (geometries.empty()) {
+		return std::vector<range_t>();
+	}
+
+	const auto it_e = geometries.end();
+	auto it = geometries.begin();
+	auto ranges = (*it)->getRanges(partials, error);
+	for (++it; !ranges.empty() && it != it_e; ++it) {
+		ranges = HTM::range_intersection(std::move(ranges), (*it)->getRanges(partials, error));
 	}
 
 	return ranges;
