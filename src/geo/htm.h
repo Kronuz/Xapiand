@@ -23,6 +23,7 @@
 #pragma once
 
 #include <cinttypes>        // for PRIu64
+#include <cmath>            // for M_PI
 #include <cstdint>          // for uint64_t, int8_t
 #include <cstdio>           // for snprintf
 #include <vector>           // for vector
@@ -49,7 +50,7 @@ constexpr size_t HTM_BITS_ID         = 2 * HTM_MAX_LENGTH_NAME;
 
 
 // Radians in a circumference (2pi).
-constexpr double RAD_PER_CIRCUMFERENCE = 6.28318530717958647692528677;
+constexpr double RAD_PER_CIRCUMFERENCE = 2.0 * M_PI;
 
 
 // error = 0.30*2^(25-level) (depth 25 is about 10 milli-arcseconds for astronomers or 0.30 meters on the earth’s surface)

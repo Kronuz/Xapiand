@@ -23,7 +23,6 @@
 #include "geometry.h"
 
 #include <algorithm>
-#include <cmath>
 #include <type_traits>
 
 

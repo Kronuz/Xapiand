@@ -29,16 +29,16 @@
 constexpr double M_PER_RADIUS_EARTH = 6371008.8; // Volumetric mean radius (m)
 
 // Radius maximum in meters allowed in a constraint (all the earth)
-constexpr double MAX_RADIUS_HALFSPACE_EARTH = 20003917.491659265;
+constexpr double MAX_RADIUS_HALFSPACE_EARTH = M_PI * M_PER_RADIUS_EARTH;
 
 // Min radius in meters allowed
 constexpr double MIN_RADIUS_METERS = 0.1;
 
 // Min radius in radians allowed, MIN_RADIUS_METERS / M_PER_RADIUS_EARTH.
-constexpr double MIN_RADIUS_RADIANS = 0.00000001570488707974173690;
+constexpr double MIN_RADIUS_RADIANS = MIN_RADIUS_METERS / M_PER_RADIUS_EARTH;
 
 // Radius in meters of a great circle
-constexpr double RADIUS_GREAT_CIRCLE = 10001958.7458296325;
+constexpr double RADIUS_GREAT_CIRCLE = MAX_RADIUS_HALFSPACE_EARTH / 2.0;
 
 
 /*

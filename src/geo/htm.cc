@@ -23,7 +23,6 @@
 #include "htm.h"
 
 #include <algorithm>
-#include <cmath>
 #include <fstream>
 #include <set>
 
