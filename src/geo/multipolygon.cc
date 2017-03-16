@@ -74,7 +74,7 @@ MultiPolygon::to_string() const
 	for (const auto& polygon : polygons) {
 		const auto str_polygon = polygon.to_string();
 		str.reserve(str.length() + str_polygon.length() + 4);
-		str.append(1, '(').append(str_polygon).append("), ");
+		str.append(str_polygon).append(", ");
 	}
 	str.pop_back();
 	str.back() = ')';
