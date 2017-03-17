@@ -549,7 +549,7 @@ Polygon::ConvexPolygon::toWKT() const
 
 	std::string wkt;
 	const auto str_polygon = to_string();
-	wkt.reserve(str_polygon.length() + 9)
+	wkt.reserve(str_polygon.length() + 9);
 	wkt.assign("POLYGON(").append(str_polygon).push_back(')');
 	return wkt;
 }
