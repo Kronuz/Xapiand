@@ -250,7 +250,7 @@ Circle::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 std::string
 Circle::toWKT() const
 {
-	std::string wkt("CIRCLE ");
+	std::string wkt("CIRCLE");
 	wkt.append(to_string());
 	return wkt;
 }

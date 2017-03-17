@@ -39,7 +39,7 @@ Intersection::simplify()
 std::string
 Intersection::toWKT() const
 {
-	std::string wkt("GEOMETRYINTERSECTION ");
+	std::string wkt("GEOMETRYINTERSECTION");
 	wkt.append(to_string());
 	return wkt;
 }
@@ -49,17 +49,15 @@ std::string
 Intersection::to_string() const
 {
 	if (geometries.empty()) {
-		return std::string("EMPTY");
+		return std::string(" EMPTY");
 	}
 
 	std::string str(1, '(');
 	for (const auto& geometry : geometries) {
 		const auto str_geometry = geometry->toWKT();
-		str.reserve(str.length() + str_geometry.length() + 2);
-		str.append(str_geometry).append(", ");
+		str.reserve(str.length() + str_geometry.length() + 1);
+		str.append(str_geometry).push_back(',');
 	}
-
-	str.pop_back();
 	str.back() = ')';
 	return str;
 }

@@ -57,7 +57,7 @@ MultiPolygon::simplify()
 std::string
 MultiPolygon::toWKT() const
 {
-	std::string wkt("MULTIPOLYGON ");
+	std::string wkt("MULTIPOLYGON");
 	wkt.append(to_string());
 	return wkt;
 }
@@ -67,16 +67,15 @@ std::string
 MultiPolygon::to_string() const
 {
 	if (polygons.empty()) {
-		return "EMPTY";
+		return " EMPTY";
 	}
 
 	std::string str("(");
 	for (const auto& polygon : polygons) {
 		const auto str_polygon = polygon.to_string();
-		str.reserve(str.length() + str_polygon.length() + 4);
-		str.append(str_polygon).append(", ");
+		str.reserve(str.length() + str_polygon.length() + 1);
+		str.append(str_polygon).push_back(',');
 	}
-	str.pop_back();
 	str.back() = ')';
 	return str;
 }

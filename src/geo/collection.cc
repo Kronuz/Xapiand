@@ -44,7 +44,7 @@ Collection::simplify()
 std::string
 Collection::toWKT() const
 {
-	std::string wkt("GEOMETRYCOLLECTION ");
+	std::string wkt("GEOMETRYCOLLECTION");
 	wkt.append(to_string());
 	return wkt;
 }
@@ -56,37 +56,34 @@ Collection::to_string() const
 	std::string str(1, '(');
 	if (!multipoint.empty()) {
 		const auto str_geometry = multipoint.toWKT();
-		str.reserve(str_geometry.length() + 2);
-		str.append(str_geometry).append(", ");
+		str.reserve(str_geometry.length() + 1);
+		str.append(str_geometry).push_back(',');
 	}
 	if (!multicircle.empty()) {
 		const auto str_geometry = multicircle.toWKT();
-		str.reserve(str.length() + str_geometry.length() + 2);
-		str.append(str_geometry).append(", ");
+		str.reserve(str.length() + str_geometry.length() + 1);
+		str.append(str_geometry).push_back(',');
 	}
 	if (!multiconvex.empty()) {
 		const auto str_geometry = multiconvex.toWKT();
-		str.reserve(str.length() + str_geometry.length() + 2);
-		str.append(str_geometry).append(", ");
+		str.reserve(str.length() + str_geometry.length() + 1);
+		str.append(str_geometry).push_back(',');
 	}
 	if (!multipolygon.empty()) {
 		const auto str_geometry = multipolygon.toWKT();
-		str.reserve(str.length() + str_geometry.length() + 2);
-		str.append(str_geometry).append(", ");
+		str.reserve(str.length() + str_geometry.length() + 1);
+		str.append(str_geometry).push_back(',');
 	}
 	for (const auto& intersection : intersections) {
 		const auto str_geometry = intersection.toWKT();
-		str.reserve(str.length() + str_geometry.length() + 2);
-		str.append(str_geometry).append(", ");
+		str.reserve(str.length() + str_geometry.length() + 1);
+		str.append(str_geometry).push_back(',');
 	}
 
 	if (str.length() == 1) {
-		return std::string("EMPTY");
+		return std::string(" EMPTY");
 	}
-
-	str.pop_back();
 	str.back() = ')';
-
 	return str;
 }
 

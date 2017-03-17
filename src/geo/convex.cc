@@ -321,7 +321,7 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 std::string
 Convex::toWKT() const
 {
-	std::string wkt("CONVEX ");
+	std::string wkt("CONVEX");
 	wkt.append(to_string());
 	return wkt;
 }
@@ -331,16 +331,15 @@ std::string
 Convex::to_string() const
 {
 	if (circles.empty()) {
-		return std::string("EMPTY");
+		return std::string(" EMPTY");
 	}
 
 	std::string str("(");
 	for (const auto& constraint : circles) {
 		auto str_constraint = constraint.to_string();
-		str.reserve(str.length() + str_constraint.length() + 2);
-		str.append(str_constraint).append(", ");
+		str.reserve(str.length() + str_constraint.length() + 1);
+		str.append(str_constraint).push_back(',');
 	}
-	str.pop_back();
 	str.back() = ')';
 	return str;
 }

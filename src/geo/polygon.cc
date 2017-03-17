@@ -543,10 +543,14 @@ Polygon::ConvexPolygon::lookupTrixel(const Cartesian& v0, const Cartesian& v1, c
 std::string
 Polygon::ConvexPolygon::toWKT() const
 {
+	if (corners.empty()) {
+		return std::string("POLYGON EMPTY");
+	}
+
 	std::string wkt;
 	const auto str_polygon = to_string();
-	wkt.reserve(str_polygon.length() + 10);
-	wkt.assign("POLYGON (").append(str_polygon).push_back(')');
+	wkt.reserve(str_polygon.length() + 9)
+	wkt.assign("POLYGON(").append(str_polygon).push_back(')');
 	return wkt;
 }
 
@@ -555,7 +559,7 @@ std::string
 Polygon::ConvexPolygon::to_string() const
 {
 	if (corners.empty()) {
-		return std::string("EMPTY");
+		return std::string(" EMPTY");
 	}
 
 	std::string str;
@@ -717,7 +721,7 @@ Polygon::simplify()
 std::string
 Polygon::toWKT() const
 {
-	std::string wkt("POLYGON ");
+	std::string wkt("POLYGON");
 	wkt.append(to_string());
 	return wkt;
 }
@@ -727,7 +731,7 @@ std::string
 Polygon::to_string() const
 {
 	if (convexpolygons.empty()) {
-		return "EMPTY";
+		return " EMPTY";
 	}
 
 	std::string str("(");

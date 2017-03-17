@@ -40,7 +40,7 @@ MultiPoint::simplify()
 std::string
 MultiPoint::toWKT() const
 {
-	std::string wkt("MULTIPOINT ");
+	std::string wkt("MULTIPOINT");
 	wkt.append(to_string());
 	return wkt;
 }
@@ -50,16 +50,15 @@ std::string
 MultiPoint::to_string() const
 {
 	if (points.empty()) {
-		return "EMPTY";
+		return " EMPTY";
 	}
 
 	std::string str("(");
 	for (const auto& point : points) {
 		auto str_point = point.to_string();
-		str.reserve(str.length() + str_point.length() + 2);
-		str.append(str_point).append(", ");
+		str.reserve(str.length() + str_point.length() + 1);
+		str.append(str_point).push_back(',');
 	}
-	str.pop_back();
 	str.back() = ')';
 	return str;
 }

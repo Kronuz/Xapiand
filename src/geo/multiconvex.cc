@@ -58,7 +58,7 @@ MultiConvex::simplify()
 std::string
 MultiConvex::toWKT() const
 {
-	std::string wkt("MULTICONVEX ");
+	std::string wkt("MULTICONVEX");
 	wkt.append(to_string());
 	return wkt;
 }
@@ -68,16 +68,15 @@ std::string
 MultiConvex::to_string() const
 {
 	if (convexs.empty()) {
-		return std::string("EMPTY");
+		return std::string(" EMPTY");
 	}
 
 	std::string str("(");
 	for (const auto& convex : convexs) {
 		auto str_convex = convex.to_string();
-		str.reserve(str.length() + str_convex.length() + 2);
-		str.append(str_convex).append(", ");
+		str.reserve(str.length() + str_convex.length() + 1);
+		str.append(str_convex).push_back(',');
 	}
-	str.pop_back();
 	str.back() = ')';
 	return str;
 }

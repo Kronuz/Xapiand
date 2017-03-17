@@ -77,7 +77,7 @@ public:
 	}
 
 	std::string toWKT() const override {
-		std::string wkt("POINT ");
+		std::string wkt("POINT");
 		wkt.append(to_string());
 		return wkt;
 	}

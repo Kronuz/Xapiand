@@ -52,7 +52,7 @@ MultiCircle::simplify()
 std::string
 MultiCircle::toWKT() const
 {
-	std::string wkt("MULTICIRCLE ");
+	std::string wkt("MULTICIRCLE");
 	wkt.append(to_string());
 	return wkt;
 }
@@ -62,16 +62,15 @@ std::string
 MultiCircle::to_string() const
 {
 	if (circles.empty()) {
-		return std::string("EMPTY");
+		return std::string(" EMPTY");
 	}
 
 	std::string str("(");
 	for (const auto& circle : circles) {
 		auto str_circle = circle.to_string();
-		str.reserve(str.length() + str_circle.length() + 2);
-		str.append(str_circle).append(", ");
+		str.reserve(str.length() + str_circle.length() + 1);
+		str.append(str_circle).push_back(',');
 	}
-	str.pop_back();
 	str.back() = ')';
 	return str;
 }
