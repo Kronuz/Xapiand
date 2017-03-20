@@ -670,10 +670,10 @@ EWKT::_parse_geometry_intersection(int SRID, Iterator first, Iterator last)
 					intersection.add(std::make_shared<Convex>(_parse_convex(SRID, first, it_geo_last)));
 					break;
 				case Geometry::Type::POLYGON:
-					intersection.add(std::make_shared<Polygon>(_parse_polygon(SRID, first, it_geo_last, data.first)));
+					intersection.add(std::make_shared<Polygon>(_parse_polygon(SRID, first, it_geo_last, Geometry::Type::POLYGON)));
 					break;
 				case Geometry::Type::CHULL:
-					intersection.add(std::make_shared<Polygon>(_parse_polygon(SRID, first, it_geo_last, data.first)));
+					intersection.add(std::make_shared<Polygon>(_parse_polygon(SRID, first, it_geo_last, Geometry::Type::CHULL)));
 					break;
 				case Geometry::Type::MULTICIRCLE:
 					intersection.add(std::make_shared<MultiCircle>(_parse_multicircle(SRID, first, it_geo_last)));
@@ -682,10 +682,10 @@ EWKT::_parse_geometry_intersection(int SRID, Iterator first, Iterator last)
 					intersection.add(std::make_shared<MultiConvex>(_parse_multiconvex(SRID, first, it_geo_last)));
 					break;
 				case Geometry::Type::MULTIPOLYGON:
-					intersection.add(std::make_shared<MultiPolygon>(_parse_multipolygon(SRID, first, it_geo_last, data.first)));
+					intersection.add(std::make_shared<MultiPolygon>(_parse_multipolygon(SRID, first, it_geo_last, Geometry::Type::POLYGON)));
 					break;
 				case Geometry::Type::MULTICHULL:
-					intersection.add(std::make_shared<MultiPolygon>(_parse_multipolygon(SRID, first, it_geo_last, data.first)));
+					intersection.add(std::make_shared<MultiPolygon>(_parse_multipolygon(SRID, first, it_geo_last, Geometry::Type::CHULL)));
 					break;
 				case Geometry::Type::COLLECTION:
 					intersection.add(std::make_shared<Collection>(_parse_geometry_collection(SRID, first, it_geo_last)));
