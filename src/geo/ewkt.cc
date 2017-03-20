@@ -235,13 +235,13 @@ EWKT::find_geometry(Iterator& first, Iterator& last)
 		THROW(EWKTError, "Syntax error in '%s'", std::string(_first, last).c_str());
 	} else {
 		static const auto it_e = map_dispatch.end();
+		const std::string geometry(_first, first);
+		auto it = map_dispatch.find(geometry);
+		if (it == it_e) {
+			THROW(EWKTError, "Geometry '%s' is not supported", geometry.c_str());
+		}
 		switch (*first) {
 			case '(': {
-				const std::string geometry(_first, first);
-				auto it = map_dispatch.find(geometry);
-				if (it == it_e) {
-					THROW(EWKTError, "Geometry '%s' is not supported", geometry.c_str());
-				}
 				auto closed_it = closed_parenthesis(++first, last);
 				if (closed_it == last) {
 					THROW(EWKTError, "Sintax error [expected ')' at the end]");
@@ -251,11 +251,6 @@ EWKT::find_geometry(Iterator& first, Iterator& last)
 				return std::make_pair(it->second, false);
 			}
 			case ' ': {
-				const std::string geometry(_first, first);
-				auto it = map_dispatch.find(geometry);
-				if (it == it_e) {
-					THROW(EWKTError, "Geometry '%s' is not supported", geometry.c_str());
-				}
 				if (std::string(++first, last).compare("EMPTY") == 0) {
 					return std::make_pair(it->second, true);
 				}
