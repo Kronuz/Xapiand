@@ -40,7 +40,7 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 	switch (obj.getType()) {
 		case MsgPack::Type::STR: {
 			EWKT ewkt(obj.as_string());
-			geometry = std::move(ewkt.geometry);
+			geometry = ewkt.getGeometry();
 			return;
 		}
 		case MsgPack::Type::MAP: {
@@ -50,7 +50,7 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 				case Cast::Hash::EWKT: {
 					try {
 						EWKT ewkt(it.value().as_string());
-						geometry = std::move(ewkt.geometry);
+						geometry = ewkt.getGeometry();
 						return;
 					} catch (const msgpack::type_error&) {
 						THROW(GeoSpatialError, "%s must be string", RESERVED_EWKT);

@@ -58,7 +58,7 @@ class GeoSpatial {
 
 	static const std::unordered_map<std::string, dispatch_func> map_dispatch;
 
-	std::unique_ptr<Geometry> geometry;
+	std::shared_ptr<Geometry> geometry;
 
 	void process_latitude(data_t& data, const MsgPack& latitude);
 	void process_longitude(data_t& data, const MsgPack& longitude);
@@ -83,7 +83,7 @@ class GeoSpatial {
 public:
 	GeoSpatial(const MsgPack& obj);
 
-	const std::unique_ptr<Geometry>& getGeometry() const {
+	std::shared_ptr<Geometry> getGeometry() const {
 		geometry->simplify();
 		return geometry;
 	}
