@@ -256,22 +256,28 @@ HTM::range_intersection(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2)
 	while (it1 != it1_e && it2 != it2_e) {
 		if (it1->start < it2->start) {
 			if (it1->end >= it2->start) {
-				if (it1->end < it2->end) {
+				if (it1->end <= it2->end) {
 					insertGreaterRange(res, range_t(it2->start, it1->end));
+					++it1;
 				} else {
 					insertGreaterRange(res, *it2);
+					++it2;
 				}
+			} else {
+				++it1;
 			}
-			++it1;
 		} else {
 			if (it2->end >= it1->start) {
-				if (it2->end < it1->end) {
+				if (it2->end <= it1->end) {
 					insertGreaterRange(res, range_t(it1->start, it2->end));
+					++it2;
 				} else {
 					insertGreaterRange(res, *it1);
+					++it1;
 				}
+			} else {
+				++it2;
 			}
-			++it2;
 		}
 	}
 
