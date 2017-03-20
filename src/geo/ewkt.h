@@ -76,6 +76,8 @@ class EWKT {
 	static Collection _parse_geometry_collection(int SRID, Iterator first, Iterator last);
 	static Intersection _parse_geometry_intersection(int SRID, Iterator first, Iterator last);
 
+	static bool _isEWKT(Iterator first, Iterator last);
+
 public:
 	EWKT(const std::string& str);
 

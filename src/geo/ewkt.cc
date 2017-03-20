@@ -719,10 +719,48 @@ EWKT::_parse_geometry_intersection(int SRID, Iterator first, Iterator last)
 
 
 bool
+EWKT::_isEWKT(Iterator first, Iterator last)
+{
+	auto _first = first;
+	while (first != last && *first != '(' && *first != ' ') {
+		++first;
+	}
+
+	if (first == last) {
+		return false;
+	} else {
+		static const auto it_e = map_dispatch.end();
+		const std::string geometry(_first, first);
+		auto it = map_dispatch.find(geometry);
+		if (it == it_e) {
+			return false;
+		}
+		switch (*first) {
+			case '(': {
+				auto closed_it = closed_parenthesis(++first, last);
+				if (closed_it == last) {
+					return false;
+				}
+				return closed_it == (last - 1);
+			}
+			case ' ':
+				return std::string(++first, last).compare("EMPTY") == 0;
+			default:
+				return false;
+		}
+	}
+}
+
+
+bool
 EWKT::isEWKT(const std::string& str)
 {
-	return true;
-	// std::smatch m;
-	// static const auto it_e = map_dispatch.end();
-	// return std::regex_match(str, m, find_geometry_re) && static_cast<size_t>(m.length(0)) == str.length() && map_dispatch.find(m.str(3)) != it_e;
+	if (str.compare(0, 5, "SRID=") == 0) {
+		if (str.length() > 9 && str[9] == ';') {
+			return _isEWKT(str.begin() + 10, str.end());
+		}
+		return false;
+	} else {
+		return _isEWKT(str.begin(), str.end());
+	}
 }
