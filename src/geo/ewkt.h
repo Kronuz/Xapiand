@@ -23,17 +23,9 @@
 #pragma once
 
 #include <memory>              // for default_delete, unique_ptr
-#include <regex>               // for regex
-#include <unordered_map>       // for regex
+#include <unordered_map>       // for unordered_map
 
 #include "collection.h"
-
-
-extern const std::regex find_geometry_re;
-extern const std::regex find_circle_re;
-extern const std::regex find_parenthesis_list_re;
-extern const std::regex find_nested_parenthesis_list_re;
-extern const std::regex find_collection_re;
 
 
 class GeoSpatial;
@@ -62,59 +54,39 @@ class GeoSpatial;
  * polygons are not required to be repeated first coordinate to end like EWKT.
  */
 class EWKT {
-	using dispatch_func = void (EWKT::*)(int, const std::string&);
+	using Iterator = std::string::const_iterator;
+	static const std::unordered_map<std::string, Geometry::Type> map_dispatch;
 
-	static const std::unordered_map<std::string, dispatch_func> map_dispatch;
-	static const std::unordered_map<std::string, Geometry::Type> map_recursive_dispatch;
+	std::shared_ptr<Geometry> geometry;
 
-	std::unique_ptr<Geometry> geometry;
+	void parse_geometry(int SRID, Geometry::Type type, bool empty, Iterator first, Iterator last);
 
-	static Point _parse_point(int SRID, const std::string& specification);
-	static Circle _parse_circle(int SRID, const std::string& specification);
-	static Convex _parse_convex(int SRID, const std::string& specification);
-	static Polygon _parse_polygon(int SRID, const std::string& specification, Geometry::Type type);
-	static MultiPoint _parse_multipoint(int SRID, const std::string& specification);
-	static MultiCircle _parse_multicircle(int SRID, const std::string& specification);
-	static MultiConvex _parse_multiconvex(int SRID, const std::string& specification);
-	static MultiPolygon _parse_multipolygon(int SRID, const std::string& specification, Geometry::Type type);
-	static Collection _parse_geometry_collection(int SRID, const std::string& specification);
-	static Intersection _parse_geometry_intersection(int SRID, const std::string& specification);
+	static Iterator closed_parenthesis(Iterator first, Iterator last);
+	static std::pair<Geometry::Type, bool> find_geometry(Iterator& first, Iterator& last);
 
-	void parse_point(int SRID, const std::string& specification);
-	void parse_circle(int SRID, const std::string& specification);
-	void parse_convex(int SRID, const std::string& specification);
-	void parse_polygon(int SRID, const std::string& specification);
-	void parse_chull(int SRID, const std::string& specification);
-	void parse_multipoint(int SRID, const std::string& specification);
-	void parse_multicircle(int SRID, const std::string& specification);
-	void parse_multiconvex(int SRID, const std::string& specification);
-	void parse_multipolygon(int SRID, const std::string& specification);
-	void parse_multichull(int SRID, const std::string& specification);
-	void parse_geometry_collection(int SRID, const std::string& specification);
-	void parse_geometry_intersection(int SRID, const std::string& specification);
-
-	friend class GeoSpatial;
+	static Cartesian _parse_cartesian(int SRID, Iterator first, Iterator last);
+	static Point _parse_point(int SRID, Iterator first, Iterator last);
+	static Circle _parse_circle(int SRID, Iterator first, Iterator last);
+	static Convex _parse_convex(int SRID, Iterator first, Iterator last);
+	static Polygon _parse_polygon(int SRID, Iterator first, Iterator last, Geometry::Type type);
+	static MultiPoint _parse_multipoint(int SRID, Iterator first, Iterator last);
+	static MultiCircle _parse_multicircle(int SRID, Iterator first, Iterator last);
+	static MultiConvex _parse_multiconvex(int SRID, Iterator first, Iterator last);
+	static MultiPolygon _parse_multipolygon(int SRID, Iterator first, Iterator last, Geometry::Type type);
+	static Collection _parse_geometry_collection(int SRID, Iterator first, Iterator last);
+	static Intersection _parse_geometry_intersection(int SRID, Iterator first, Iterator last);
 
 public:
 	EWKT(const std::string& str);
 
-	EWKT(EWKT&& ewkt) noexcept
-		: geometry(std::move(ewkt.geometry)) { }
-
-	EWKT(const EWKT&) = delete;
+	EWKT(const EWKT& ewkt) noexcept
+		: geometry(ewkt.geometry) { }
 
 	~EWKT() = default;
 
-	EWKT& operator=(EWKT&& ewkt) noexcept {
-		geometry = std::move(ewkt.geometry);
-		return *this;
-	}
-
-	EWKT& operator=(const EWKT&) = delete;
-
 	static bool isEWKT(const std::string& str);
 
-	const std::unique_ptr<Geometry>& getGeometry() const {
+	std::shared_ptr<Geometry> getGeometry() const {
 		geometry->simplify();
 		return geometry;
 	}
