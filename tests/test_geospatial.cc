@@ -193,14 +193,14 @@ int testCartesianTransforms() {
  */
 int testGrahamScanAlgorithm() {
 	int cont = 0;
-	std::vector<std::string> tests({ "convex_hull/ColoradoPoly", "convex_hull/Georgia", "convex_hull/Utah" });
+	std::vector<std::string> tests({ "ColoradoPoly", "Georgia", "Utah" });
 
 	// Make the path for the python files generated.
-	build_path_index(python_geospatial);
+	build_path_index(python_geospatial + "convex_hull/");
 
 	for (const auto& test : tests) {
-		std::string source_file = path_test_geospatial + test + ".txt";
-		std::string expected_file = path_test_geospatial + test + "_expect_convex.txt";
+		std::string source_file = path_test_geospatial + "convex_hull/" + test + ".txt";
+		std::string expected_file = path_test_geospatial + "convex_hull/" + test + "_expect_convex.txt";
 		std::ifstream source_points(source_file);
 		std::ifstream expected(expected_file);
 		if (source_points.is_open() && expected.is_open()) {
@@ -212,11 +212,10 @@ int testGrahamScanAlgorithm() {
 				source_points >> output;
 				double lon = std::stod(output);
 				Cartesian c(lat, lon, 0, Cartesian::Units::DEGREES);
-				c.normalize();
 				points.push_back(std::move(c));
 			}
 
-			const auto convex_points = Polygon::ConvexPolygon::graham_scan(std::move(points));
+			const auto convex_points = Polygon::ConvexPolygon::graham_scan(std::vector<Cartesian>(points.begin(), points.end()));
 			for (const auto& point : convex_points) {
 				std::string coord_get;
 				coord_get.append(std::to_string(point.x)).push_back(' ');
@@ -245,8 +244,8 @@ int testGrahamScanAlgorithm() {
 			expected.close();
 			source_points.close();
 
-			HTM::writeGrahamScanMap(path_test_geospatial + test + "GM.txt", points, convex_points, path_test_geospatial);
-			HTM::writeGrahamScan3D(path_test_geospatial + test + "3D.txt", points, convex_points);
+			HTM::writeGrahamScanMap(python_geospatial + "convex_hull/" + test + "GM.py", test + "GM.html", points, convex_points, path_test_geospatial);
+			HTM::writeGrahamScan3D(python_geospatial + "convex_hull/" + test + "3D.py", points, convex_points);
 		} else {
 			L_ERR(nullptr, "ERROR: File %s or %s not found.", source_file.c_str(), expected_file.c_str());
 			++cont;
@@ -453,8 +452,8 @@ int testPoint() {
 	auto point = std::make_shared<Point>(getPoint());
 	auto trixels = point->getTrixels(partials, error);
 	auto ranges = point->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "Point3D", point, trixels);
-	HTM::writeGoogleMap(python_geospatial + "PointGM", point, trixels, path_test_geospatial);
+	HTM::writePython3D(python_geospatial + "Point3D.py", point, trixels);
+	HTM::writeGoogleMap(python_geospatial + "PointGM.py", "PointGM.html", point, trixels, path_test_geospatial);
 	RETURN(verify_trixels_ranges(point, trixels, ranges));
 }
 
@@ -465,8 +464,8 @@ int testMultiPoint() {
 	auto trixels = multipoint->getTrixels(partials, error);
 	HTM::simplifyTrixels(trixels);
 	auto ranges = multipoint->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "MultiPoint3D", multipoint, trixels);
-	HTM::writeGoogleMap(python_geospatial + "MultiPointGM", multipoint, trixels, path_test_geospatial);
+	HTM::writePython3D(python_geospatial + "MultiPoint3D.py", multipoint, trixels);
+	HTM::writeGoogleMap(python_geospatial + "MultiPointGM.py", "MultiPointGM.html", multipoint, trixels, path_test_geospatial);
 	RETURN(verify_trixels_ranges(multipoint, trixels, ranges));
 }
 
@@ -476,8 +475,8 @@ int testCircle() {
 	auto trixels = circle->getTrixels(partials, error);
 	HTM::simplifyTrixels(trixels);
 	auto ranges = circle->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "Circle3D", circle, trixels);
-	HTM::writeGoogleMap(python_geospatial + "CircleGM", circle, trixels, path_test_geospatial);
+	HTM::writePython3D(python_geospatial + "Circle3D.py", circle, trixels);
+	HTM::writeGoogleMap(python_geospatial + "CircleGM.py", "CircleGM.html", circle, trixels, path_test_geospatial);
 	RETURN(verify_trixels_ranges(circle, trixels, ranges));
 }
 
@@ -488,8 +487,8 @@ int testConvex() {
 	auto trixels = convex->getTrixels(partials, error);
 	HTM::simplifyTrixels(trixels);
 	auto ranges = convex->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "Convex3D", convex, trixels);
-	HTM::writeGoogleMap(python_geospatial + "ConvexGM", convex, trixels, path_test_geospatial);
+	HTM::writePython3D(python_geospatial + "Convex3D.py", convex, trixels);
+	HTM::writeGoogleMap(python_geospatial + "ConvexGM.py", "ConvexGM.html", convex, trixels, path_test_geospatial);
 	RETURN(verify_trixels_ranges(convex, trixels, ranges));
 }
 
@@ -500,8 +499,8 @@ int testPolygon() {
 	auto trixels = polygon->getTrixels(partials, error);
 	HTM::simplifyTrixels(trixels);
 	auto ranges = polygon->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "Polygon3D", polygon, trixels);
-	HTM::writeGoogleMap(python_geospatial + "PolygonGM", polygon, trixels, path_test_geospatial);
+	HTM::writePython3D(python_geospatial + "Polygon3D.py", polygon, trixels);
+	HTM::writeGoogleMap(python_geospatial + "PolygonGM.py", "PolygonGM.html", polygon, trixels, path_test_geospatial);
 	RETURN(verify_trixels_ranges(polygon, trixels, ranges));
 }
 
@@ -512,8 +511,8 @@ int testMultiCircle() {
 	auto trixels = multicircle->getTrixels(partials, error);
 	HTM::simplifyTrixels(trixels);
 	auto ranges = multicircle->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "MultiCircle3D", multicircle, trixels);
-	HTM::writeGoogleMap(python_geospatial + "MultiCircleGM", multicircle, trixels, path_test_geospatial);
+	HTM::writePython3D(python_geospatial + "MultiCircle3D.py", multicircle, trixels);
+	HTM::writeGoogleMap(python_geospatial + "MultiCircleGM.py", "MultiCircleGM.html", multicircle, trixels, path_test_geospatial);
 	RETURN(verify_trixels_ranges(multicircle, trixels, ranges));
 }
 
@@ -524,8 +523,8 @@ int testMultiConvex() {
 	auto trixels = multiconvex->getTrixels(partials, error);
 	HTM::simplifyTrixels(trixels);
 	auto ranges = multiconvex->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "MultiConvex3D", multiconvex, trixels);
-	HTM::writeGoogleMap(python_geospatial + "MultiConvexGM", multiconvex, trixels, path_test_geospatial);
+	HTM::writePython3D(python_geospatial + "MultiConvex3D.py", multiconvex, trixels);
+	HTM::writeGoogleMap(python_geospatial + "MultiConvexGM.py", "MultiConvexGM.html", multiconvex, trixels, path_test_geospatial);
 	RETURN(verify_trixels_ranges(multiconvex, trixels, ranges));
 }
 
@@ -536,8 +535,8 @@ int testMultiPolygon() {
 	auto trixels = multipolygon->getTrixels(partials, error);
 	HTM::simplifyTrixels(trixels);
 	auto ranges = multipolygon->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "MultiPolygon3D", multipolygon, trixels);
-	HTM::writeGoogleMap(python_geospatial + "MultiPolygonGM", multipolygon, trixels, path_test_geospatial);
+	HTM::writePython3D(python_geospatial + "MultiPolygon3D.py", multipolygon, trixels);
+	HTM::writeGoogleMap(python_geospatial + "MultiPolygonGM.py", "MultiPolygonGM.html", multipolygon, trixels, path_test_geospatial);
 	RETURN(verify_trixels_ranges(multipolygon, trixels, ranges));
 }
 
@@ -548,8 +547,8 @@ int testCollection() {
 	auto trixels = collection->getTrixels(partials, error);
 	HTM::simplifyTrixels(trixels);
 	auto ranges = collection->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "Collection3D", collection, trixels);
-	HTM::writeGoogleMap(python_geospatial + "CollectionGM", collection, trixels, path_test_geospatial);
+	HTM::writePython3D(python_geospatial + "Collection3D.py", collection, trixels);
+	HTM::writeGoogleMap(python_geospatial + "CollectionGM.py", "CollectionGM.html", collection, trixels, path_test_geospatial);
 	RETURN(verify_trixels_ranges(collection, trixels, ranges));
 }
 
@@ -560,7 +559,7 @@ int testIntersection() {
 	auto trixels = intersection->getTrixels(partials, error);
 	HTM::simplifyTrixels(trixels);
 	auto ranges = intersection->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "Intersection3D", intersection, trixels);
-	HTM::writeGoogleMap(python_geospatial + "IntersectionGM", intersection, trixels, path_test_geospatial);
+	HTM::writePython3D(python_geospatial + "Intersection3D.py", intersection, trixels);
+	HTM::writeGoogleMap(python_geospatial + "IntersectionGM.py", "IntersectionGM.html", intersection, trixels, path_test_geospatial);
 	RETURN(verify_trixels_ranges(intersection, trixels, ranges));
 }
