@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,8 +22,21 @@
 
 #pragma once
 
-#include <iostream>
+#include <cstdio>
+#include <string>
+#include <vector>
 
 
-int test_wkt_parser();
-int test_wkt_speed();
+int test_cartesian_transforms();
+int test_graham_scan();
+
+int testPoint();
+int testMultiPoint();
+int testCircle();
+int testConvex();
+int testPolygon();
+int testMultiCircle();
+int testMultiConvex();
+int testMultiPolygon();
+int testCollection();
+int testIntersection();
