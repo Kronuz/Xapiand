@@ -45,9 +45,6 @@ public:
 		// Returns the squared distance between two points
 		static double dist(const Cartesian& a, const Cartesian& b) noexcept;
 
-		// Calculates the convex hull of vector of points using Graham Scan Algorithm.
-		static std::vector<Cartesian> graham_scan(std::vector<Cartesian>&& points);
-
 		void init();
 
 		void process_chull(std::vector<Cartesian>&& points);
@@ -135,6 +132,9 @@ public:
 		double getRadius() const noexcept {
 			return radius;
 		}
+
+		// Calculates the convex hull of vector of points using Graham Scan Algorithm.
+		static std::vector<Cartesian> graham_scan(std::vector<Cartesian>&& points);
 
 		std::string toWKT() const override;
 		std::string to_string() const override;
