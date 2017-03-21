@@ -159,16 +159,16 @@ class Xapiand(object):
 
         if not isinstance(index, (tuple, list, set)):
             index = index.split(',')
-        index = ','.join(self.prefix + i.strip('/') for i in set(index))
+
+        indexes = [self.prefix + i.strip('/') for i in set(index)]
+        index = ','.join(['/'.join((i, id or '')) for i in indexes])
 
         nodename = '@{}'.format(nodename) if nodename else ''
 
-        if id is None and action_request != 'post':
-            action_request = '/_{}'.format(action_request)
-        elif action_request == 'post':
-            action_request = ''
+        if action_request in ('search', 'stats',):
+            action_request = '_{}'.format(action_request)
         else:
-            action_request = '/{}'.format(id)
+            action_request = ''
 
         return 'http://{}{}{}{}'.format(host, index, nodename, action_request)
 
