@@ -245,7 +245,10 @@ namespace HTM {
 
 	std::tuple<Cartesian, Cartesian, Cartesian> getCorners(const std::string& name);
 
-	// Functions to test HTM.
-	void writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels, const std::string& path_google_map="");
+	// Functions to test HTM trixels.
+	void writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels, const std::string& path_google_map);
 	void writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels);
+	// Functions to test Graham scan algorithm.
+	void writeGrahamScanMap(const std::string& file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points, const std::string& path_google_map);
+	void writeGrahamScan3D(const std::string& file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points);
 };

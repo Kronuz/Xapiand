@@ -1649,3 +1649,91 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 	fs << show_graphics;
 	fs.close();
 }
+
+
+void
+HTM::writeGrahamScanMap(const std::string& file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points, const std::string& path_google_map)
+{
+	std::ofstream fs(file + ".py");
+	fs.precision(HTM_DIGITS);
+
+	fs << "import sys\n";
+	fs << "import os\n\n";
+	fs << "sys.path.append(os.path.abspath('" << path_google_map << "'))\n\n";
+	fs << "from google_map_plotter import GoogleMapPlotter\n";
+
+	// Original Points.
+	for (const auto& point : points) {
+		const auto latlon = point.toLatLon();
+		fs << "mymap.circle(" << latlon.first << ", " << latlon.second << ", " << MIN_RADIUS_RADIANS << ", '#FF0000', ew=2)\n";
+	}
+
+	// Polygon formed by convex points
+	std::string lat(1, '[');
+	std::string lon(1, '[');
+	for (const auto& point : convex_points) {
+		const auto latlon = point.toLatLon();
+		lat.append(std::to_string(latlon.first)).push_back(',');
+		lon.append(std::to_string(latlon.second)).push_back(',');
+	}
+	lat.back() = ']';
+	lon.back() = ']';
+	fs << "mymap.polygon(" << lat << ',' << lon << ',' << "edge_color='blue', edge_width=2, face_color='blue', face_alpha=0.2)\n";
+	fs << "mymap.draw('" << file << ".html')";
+	fs.close();
+}
+
+
+void
+HTM::writeGrahamScan3D(const std::string& file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points)
+{
+	std::ofstream fs(file + ".py");
+	fs.precision(HTM_DIGITS);
+
+	fs << "import mpl_toolkits.mplot3d as a3\n";
+	fs << "import matplotlib.pyplot as plt\n";
+	fs << "import numpy as np\n\n\n";
+	fs << "ax = a3.Axes3D(plt.figure())\n";
+
+	// Original Points.
+	for (auto& point : points) {
+		fs << "x = [" << point.x << "];\ny = [" << point.y << "];\nz = [" << point.z << "]\n";
+		fs << "ax.plot3D(x, y, z, 'ro', lw = 2.0, ms = 6);\n";
+	}
+
+	// Polygon formed by convex points
+	char vx[HTM_DIGITS];
+	char vy[HTM_DIGITS];
+	char vz[HTM_DIGITS];
+
+	std::string x = "x = [";
+	std::string y = "y = [";
+	std::string z = "z = [";
+	const auto it_last = convex_points.end() - 1;
+	auto it = convex_points.begin();
+	for ( ; it != it_last; ++it) {
+		const auto& v0 = *it;
+		const auto& v1 = *(it + 1);
+		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
+			const auto inc = i / HTM_LINE_POINTS;
+			const auto mp = ((1.0 - inc) * v0 + inc * v1).normalize();
+			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
+			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
+			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
+			x.append(vx).append(", ");
+			y.append(vy).append(", ");
+			z.append(vz).append(", ");
+		}
+	}
+	// Close polygon.
+	snprintf(vx, HTM_DIGITS, "%.50f", it->x);
+	snprintf(vy, HTM_DIGITS, "%.50f", it->y);
+	snprintf(vz, HTM_DIGITS, "%.50f", it->z);
+	x.append(vx).append("]\n");
+	y.append(vy).append("]\n");
+	z.append(vz).append("]\n");
+	fs << x << y << z;
+	fs << "ax.plot3D(x, y, z, 'b-', linewidth = 2.0)\n";
+	fs << "plt.ion()\nplt.grid()\nplt.show()";
+	fs.close();
+}
