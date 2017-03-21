@@ -25,6 +25,16 @@
 #include "gtest/gtest.h"
 
 
+TEST(testCartesianTransforms, GeoCartesian) {
+	EXPECT_EQ(testCartesianTransforms(), 0);
+}
+
+
+TEST(testGrahamScanAlgorithm, GeoGraham) {
+	EXPECT_EQ(testGrahamScanAlgorithm(), 0);
+}
+
+
 TEST(testPoint, GeoPoint) {
 	EXPECT_EQ(testPoint(), 0);
 }

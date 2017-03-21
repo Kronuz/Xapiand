@@ -23,12 +23,11 @@
 #pragma once
 
 #include <cstdio>
-#include <string>
-#include <vector>
 
 
-int test_cartesian_transforms();
-int test_graham_scan();
+int testCartesianTransforms();
+int testGrahamScanAlgorithm();
+
 
 int testPoint();
 int testMultiPoint();

@@ -38,7 +38,7 @@ constexpr double error = HTM_MIN_ERROR;
 /*
  * Testing the transformation of coordinates between CRS.
  */
-int test_cartesian_transforms() {
+int testCartesianTransforms() {
 	struct test_transform_t {
 		// Source CRS.
 		int SRID;
@@ -191,23 +191,25 @@ int test_cartesian_transforms() {
 /*
  * Testing Graham Scan Algorithm.
  */
-int test_graham_scan() {
+int testGrahamScanAlgorithm() {
 	int cont = 0;
-	std::vector<std::string> tests({ "ColoradoPoly", "Georgia", "Utah" });
+	std::vector<std::string> tests({ "convex_hull/ColoradoPoly", "convex_hull/Georgia", "convex_hull/Utah" });
 
 	// Make the path for the python files generated.
 	build_path_index(python_geospatial);
 
 	for (const auto& test : tests) {
-		std::string exp_file = path_test_geospatial + test + ".txt";
-		std::ifstream expected(exp_file);
-		if (expected.is_open()) {
+		std::string source_file = path_test_geospatial + test + ".txt";
+		std::string expected_file = path_test_geospatial + test + "_expect_convex.txt";
+		std::ifstream source_points(source_file);
+		std::ifstream expected(expected_file);
+		if (source_points.is_open() && expected.is_open()) {
 			std::vector<Cartesian> points;
 			char output[50];
-			while (!expected.eof()) {
-				expected >> output;
+			while (!source_points.eof()) {
+				source_points >> output;
 				double lat = std::stod(output);
-				expected >> output;
+				source_points >> output;
 				double lon = std::stod(output);
 				Cartesian c(lat, lon, 0, Cartesian::Units::DEGREES);
 				c.normalize();
@@ -215,10 +217,7 @@ int test_graham_scan() {
 			}
 
 			const auto convex_points = Polygon::ConvexPolygon::graham_scan(std::move(points));
-
-			const auto it_last = convex_points.end() - 1;
-			for (auto it = convex_points.begin(); it != it_last; ++it) {
-				const auto& point = *it;
+			for (const auto& point : convex_points) {
 				std::string coord_get;
 				coord_get.append(std::to_string(point.x)).push_back(' ');
 				coord_get.append(std::to_string(point.y)).push_back(' ');
@@ -244,11 +243,12 @@ int test_graham_scan() {
 			}
 
 			expected.close();
+			source_points.close();
 
 			HTM::writeGrahamScanMap(path_test_geospatial + test + "GM.txt", points, convex_points, path_test_geospatial);
 			HTM::writeGrahamScan3D(path_test_geospatial + test + "3D.txt", points, convex_points);
 		} else {
-			L_ERR(nullptr, "ERROR: File %s not found.", exp_file.c_str());
+			L_ERR(nullptr, "ERROR: File %s or %s not found.", source_file.c_str(), expected_file.c_str());
 			++cont;
 		}
 	}
