@@ -61,11 +61,11 @@ set (PATH_STOPWORDS "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/stopwords")
 
 file (GLOB XAPIAND_SRC_LIST
 	${PROJECT_SOURCE_DIR}/src/*.c* ${PROJECT_SOURCE_DIR}/src/*.h
-	${PROJECT_SOURCE_DIR}/src/servers/*.c* ${PROJECT_SOURCE_DIR}/src/servers/*.h
-	${PROJECT_SOURCE_DIR}/src/geo/*.c* ${PROJECT_SOURCE_DIR}/src/geo/*.h
-	${PROJECT_SOURCE_DIR}/src/xchange/*.c* ${PROJECT_SOURCE_DIR}/src/xchange/*.h
+	${PROJECT_SOURCE_DIR}/src/geospatial/*.c* ${PROJECT_SOURCE_DIR}/src/geo/*.h
 	${PROJECT_SOURCE_DIR}/src/hash/*.c* ${PROJECT_SOURCE_DIR}/src/hash/*.h
 	${PROJECT_SOURCE_DIR}/src/multivalue/*.c* ${PROJECT_SOURCE_DIR}/src/multivalue/*.h
+	${PROJECT_SOURCE_DIR}/src/servers/*.c* ${PROJECT_SOURCE_DIR}/src/servers/*.h
+	${PROJECT_SOURCE_DIR}/src/xchange/*.c* ${PROJECT_SOURCE_DIR}/src/xchange/*.h
 )
 list (REMOVE_ITEM XAPIAND_SRC_LIST
 	${PROJECT_SOURCE_DIR}/src/xapiand.cc

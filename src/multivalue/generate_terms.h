@@ -34,7 +34,7 @@
 #include <xapian.h>          // for Query, Query::op::OP_OR, Query::op::OP_AND
 
 #include "database_utils.h"  // for prefixed
-#include "geo/htm.h"         // for HTM_BITS_ID, range_t (ptr only)
+#include "geospatial/htm.h"  // for HTM_BITS_ID, range_t (ptr only)
 #include "schema.h"
 #include "serialise.h"       // for serialise
 #include "utils.h"

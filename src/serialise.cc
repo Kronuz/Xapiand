@@ -34,9 +34,8 @@
 #include "cast.h"                                     // for Cast
 #include "cppcodec/base64_default_url_unpadded.hpp"   // for base64 namespace
 #include "exception.h"                                // for SerialisationError, MSG_Serialisat...
-#include "geo/cartesian.h"                            // for Cartesian
-#include "geo/geospatial.h"                           // for GeoSpatial, EWKT
-#include "geo/htm.h"                                  // for HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
+#include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
+#include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
 #include "guid/guid.h"                                // for Guid
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO

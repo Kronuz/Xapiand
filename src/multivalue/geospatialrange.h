@@ -28,7 +28,7 @@
 #include <string>             // for string
 #include <xapian.h>           // for docid, valueno, Query, ValuePostingSource
 
-#include "geo/geospatial.h"   // for GeoSpatial, MsgPack
+#include "geospatial/geospatial.h"   // for GeoSpatial, MsgPack
 
 
 struct required_spc_t;

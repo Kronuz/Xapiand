@@ -38,7 +38,7 @@
 #include "cast.h"                          // for Cast
 #include "datetime.h"                      // for isDate, tm_t
 #include "exception.h"                     // for ClientError
-#include "geo/geospatial.h"                // for GeoSpatial
+#include "geospatial/geospatial.h"         // for GeoSpatial
 #include "log.h"                           // for L_CALL
 #include "manager.h"                       // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"     // for integer, geo, date, positive

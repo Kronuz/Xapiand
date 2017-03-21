@@ -24,22 +24,22 @@
 
 #include "xapiand.h"
 
-#include <cctype>                // for isxdigit
-#include <stddef.h>              // for size_t
-#include <string>                // for string
-#include <sys/types.h>           // for uint64_t, int64_t, uint32_t, uint8_t
-#include <tuple>                 // for tuple
-#include <unordered_map>         // for unordered_map
-#include <utility>               // for pair
-#include <vector>                // for vector
+#include <cctype>                   // for isxdigit
+#include <stddef.h>                 // for size_t
+#include <string>                   // for string
+#include <sys/types.h>              // for uint64_t, int64_t, uint32_t, uint8_t
+#include <tuple>                    // for tuple
+#include <unordered_map>            // for unordered_map
+#include <utility>                  // for pair
+#include <vector>                   // for vector
 
-#include "datetime.h"            // for tm_t (ptr only), timestamp
-#include "geo/cartesian.h"       // for Cartesian
-#include "geo/htm.h"             // for range_t
-#include "hash/endian.h"         // for __BYTE_ORDER, __BIG_ENDIAN, __LITTLE...
-#include "length.h"              // for serialise_length, unserialise_length
-#include "msgpack.h"             // for MsgPack
-#include "sortable_serialise.h"  // for sortable_serialise, sortable_unseria...
+#include "datetime.h"               // for tm_t (ptr only), timestamp
+#include "geospatial/cartesian.h"   // for Cartesian
+#include "geospatial/htm.h"         // for range_t
+#include "hash/endian.h"            // for __BYTE_ORDER, __BIG_ENDIAN, __LITTLE...
+#include "length.h"                 // for serialise_length, unserialise_length
+#include "msgpack.h"                // for MsgPack
+#include "sortable_serialise.h"     // for sortable_serialise, sortable_unseria...
 
 
 #ifndef __has_builtin         // Optional of course

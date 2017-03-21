@@ -37,8 +37,8 @@
 #include <xapian.h>                // for QueryParser
 
 #include "database_utils.h"
-#include "geo/htm.h"               // for range_t
-#include "msgpack.h"               // for MsgPack, MS...
+#include "geospatial/htm.h"        // for GeoSpatial, range_t
+#include "msgpack.h"               // for MsgPack
 #include "utils.h"                 // for repr, toUType, lower_string
 
 

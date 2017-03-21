@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "../src/geo/htm.h"
+#include "../src/geospatial/htm.h"
 
 
 struct test_date_t {

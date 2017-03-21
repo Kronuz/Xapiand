@@ -22,7 +22,7 @@
 
 #include "test_geospatial.h"
 
-#include "../src/geo/ewkt.h"
+#include "../src/geospatial/ewkt.h"
 #include "../src/log.h"
 #include "utils.h"
 
