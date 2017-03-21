@@ -1200,9 +1200,9 @@ static void writeGoogleMapPlotter(std::ofstream& fs, const std::vector<std::stri
 
 
 void
-HTM::writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels, const std::string& path_google_map)
+HTM::writeGoogleMap(const std::string& file, const std::string& output_file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels, const std::string& path_google_map)
 {
-	std::ofstream fs(file + ".py");
+	std::ofstream fs(file);
 	fs.precision(HTM_DIGITS);
 
 	fs << "import sys\n";
@@ -1326,7 +1326,7 @@ HTM::writeGoogleMap(const std::string& file, const std::shared_ptr<Geometry>& g,
 			fs << "edge_color='cyan', edge_width=2, face_color='blue', face_alpha=0.2)\n";
 		}
 	}
-	fs << "mymap.draw('" << file << ".html')";
+	fs << "mymap.draw('" << output_file << "')";
 	fs.close();
 }
 
@@ -1515,7 +1515,7 @@ static void writePython3D(std::ofstream& fs, const Intersection& intersection, b
 void
 HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels)
 {
-	std::ofstream fs(file + ".py");
+	std::ofstream fs(file);
 	fs.precision(HTM_DIGITS);
 
 	fs << "import mpl_toolkits.mplot3d as a3\n";
@@ -1652,15 +1652,18 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 
 
 void
-HTM::writeGrahamScanMap(const std::string& file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points, const std::string& path_google_map)
+HTM::writeGrahamScanMap(const std::string& file, const std::string& output_file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points, const std::string& path_google_map)
 {
-	std::ofstream fs(file + ".py");
+	std::ofstream fs(file);
 	fs.precision(HTM_DIGITS);
 
 	fs << "import sys\n";
 	fs << "import os\n\n";
 	fs << "sys.path.append(os.path.abspath('" << path_google_map << "'))\n\n";
 	fs << "from google_map_plotter import GoogleMapPlotter\n";
+
+	const auto latlon = convex_points.back().toLatLon();
+	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ", 6)\n";
 
 	// Original Points.
 	for (const auto& point : points) {
@@ -1679,7 +1682,7 @@ HTM::writeGrahamScanMap(const std::string& file, const std::vector<Cartesian>& p
 	lat.back() = ']';
 	lon.back() = ']';
 	fs << "mymap.polygon(" << lat << ',' << lon << ',' << "edge_color='blue', edge_width=2, face_color='blue', face_alpha=0.2)\n";
-	fs << "mymap.draw('" << file << ".html')";
+	fs << "mymap.draw('" << output_file << "')";
 	fs.close();
 }
 
@@ -1687,7 +1690,7 @@ HTM::writeGrahamScanMap(const std::string& file, const std::vector<Cartesian>& p
 void
 HTM::writeGrahamScan3D(const std::string& file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points)
 {
-	std::ofstream fs(file + ".py");
+	std::ofstream fs(file);
 	fs.precision(HTM_DIGITS);
 
 	fs << "import mpl_toolkits.mplot3d as a3\n";
@@ -1696,7 +1699,8 @@ HTM::writeGrahamScan3D(const std::string& file, const std::vector<Cartesian>& po
 	fs << "ax = a3.Axes3D(plt.figure())\n";
 
 	// Original Points.
-	for (auto& point : points) {
+	for (auto point : points) {
+		point.normalize();
 		fs << "x = [" << point.x << "];\ny = [" << point.y << "];\nz = [" << point.z << "]\n";
 		fs << "ax.plot3D(x, y, z, 'ro', lw = 2.0, ms = 6);\n";
 	}
