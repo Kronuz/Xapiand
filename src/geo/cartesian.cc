@@ -513,7 +513,7 @@ Cartesian::toDegMinSec() const
 	}
 	res.append("  ").append(std::to_string(dlon)).append("°");
 	res.append(std::to_string(mlon)).append("'");
-	res.append(std::to_string(slon)).append(direction).append(" ").append(std::to_string(std::get<2>(geodetic)));
+	res.append(std::to_string(slon)).append(direction).append("  ").append(std::to_string(std::get<2>(geodetic)));
 
 	return res;
 }
