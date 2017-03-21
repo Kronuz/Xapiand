@@ -798,6 +798,7 @@ Database::reopen()
 		}
 #endif /* XAPIAND_DATABASE_WAL */
 	} else {
+		auto size_endp = endpoints.size();
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.cend(); ++i) {
 			const auto& e = *i;
 			Xapian::Database rdb;
@@ -839,6 +840,7 @@ Database::reopen()
 							db.reset();
 							throw;
 						} else {
+							--size_endp;
 							continue;
 						}
 					}
@@ -863,6 +865,10 @@ Database::reopen()
 				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 			}
 	#endif /* XAPIAND_DATA_STORAGE */
+		}
+
+		if (!size_endp) {
+			throw Xapian::DatabaseOpeningError("Empty set of databases");
 		}
 	}
 
