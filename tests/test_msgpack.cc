@@ -23,7 +23,7 @@
 #include "test_msgpack.h"
 
 #include "../src/msgpack.h"
-#include "split.h"
+#include "../src/split.h"
 #include "utils.h"
 
 
@@ -506,9 +506,10 @@ int test_msgpack_path() {
 	MsgPack obj(doc_path);
 
 	std::string path_str("/AMERICA/COUNTRY/1");
-	auto path = Split::split(path_str, "/");
+	std::vector<std::string> paths;
+	Split<>::split(path_str, '/', std::back_inserter(paths));
 
-	const auto& path_msgpack = obj.path(path);
+	const auto& path_msgpack = obj.path(paths);
 
 	auto target = path_msgpack.to_string();
 

@@ -24,6 +24,7 @@
 
 #include "../src/datetime.h"
 #include "../src/schema.h"
+#include "../src/serialise.h"
 #include "utils.h"
 
 
@@ -639,7 +640,7 @@ static int make_search(const sort_t _tests[], int len, const std::string& metric
 			} else {
 				Xapian::MSetIterator m = mset.begin();
 				for (auto it = p.expect_result.begin(); m != mset.end(); ++it, ++m) {
-					auto val = Unserialise::unserialise(FieldType::INTEGER, m.get_document().get_value(0));
+					auto val = Unserialise::MsgPack(FieldType::INTEGER, m.get_document().get_value(0)).to_string();
 					if (it->compare(val) != 0) {
 						++cont;
 						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", ID_FIELD_NAME, val.c_str(), ID_FIELD_NAME, it->c_str());
