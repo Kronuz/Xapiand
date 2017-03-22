@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,20 +22,11 @@
 
 #include "test_url_parser.h"
 
-// #define DEBUG_URL_PARSER 1
-
-#ifdef TEST_SINGLE
-#  define TESTING_DATABASE 0
-#  define TESTING_ENDPOINTS 0
-#  define TESTING_LOGS 0
-#endif
-
-#include "utils.h"
-#include "url_parser.h"
-
-#include <cstdio>
 #include <string>
 #include <vector>
+
+#include "../src/url_parser.h"
+#include "utils.h"
 
 
 static std::string run_url_path(const std::string& path, bool clear_id) {
@@ -145,7 +136,7 @@ int test_url_path() {
 	};
 
 	int count = 0;
-	for (auto& url : urls) {
+	for (const auto& url : urls) {
 		std::string result = run_url_path(url.path, url.clear_id);
 		if (result != url.expected) {
 			L_ERR(nullptr, "Error: the value obtained from the url path: { \"%s\", %s }\n  should be:\n    %s\n  but it is:\n    %s\n", url.path.c_str(), url.clear_id ? "true" : "false", url.expected.c_str(), result.c_str());
@@ -155,13 +146,3 @@ int test_url_path() {
 
 	RETURN(count);
 }
-
-
-#ifdef TEST_SINGLE
-// c++ -std=c++14 -fsanitize=address -Wall -Wextra -g -O2 -o tst -DTEST_SINGLE -Ibuild/src -Isrc tests/test_url_parser.cc && ./tst
-#include "../src/exception.cc"
-#include "../src/url_parser.cc"
-int main(int, char const *[]) {
-	return test_url_path();
-}
-#endif

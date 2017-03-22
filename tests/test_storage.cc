@@ -26,7 +26,6 @@
 #include "utils.h"
 
 
-
 const std::string path_test_storage = std::string(PATH_TESTS) + "/examples/";
 
 
