@@ -448,7 +448,7 @@ int test_msgpack_copy() {
 		++res;
 	}
 
-	return res;
+	RETURN(res);
 }
 
 
@@ -488,7 +488,7 @@ int test_msgpack_reference() {
 		++res;
 	}
 
-	return res;
+	RETURN(res);
 }
 
 
@@ -770,29 +770,30 @@ int test_msgpack_map() {
 
 	try {
 		sub_obj[f1];
-	}	catch (const std::out_of_range& e) {
+	} catch (const std::out_of_range& e) {
 		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r1.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f2];
-	}	catch (const std::out_of_range& e) {
+	} catch (const std::out_of_range& e) {
 		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r2.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f3];
-	}	catch (const std::out_of_range& e) {
+	} catch (const std::out_of_range& e) {
 		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r3.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f4];
-	}	catch (const std::out_of_range& e) {
+	} catch (const std::out_of_range& e) {
 		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r4.c_str());
 		RETURN(1);
 	}
-	return 0;
+
+	RETURN(0);
 }
 
 
@@ -831,34 +832,34 @@ int test_msgpack_array() {
 
 	try {
 		sub_obj[f1];
-	}	catch (const std::out_of_range& e) {
+	} catch (const std::out_of_range& e) {
 		L_ERR(nullptr, "Updated the array after erase is not working. Expected: %s\n", r1.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f2];
-	}	catch (const std::out_of_range& e) {
+	} catch (const std::out_of_range& e) {
 		L_ERR(nullptr, "Updated the array after erase is not working. Expected: %s\n", r2.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f3];
-	}	catch (const std::out_of_range& e) {
+	} catch (const std::out_of_range& e) {
 		L_ERR(nullptr, "Updated the array after erase is not working. Expected: %s\n", r3.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f4];
-	}	catch (const std::out_of_range& e) {
+	} catch (const std::out_of_range& e) {
 		L_ERR(nullptr, "Updated the array after erase is not working. Expected: %s\n", r4.c_str());
 		RETURN(1);
 	}
 	try {
 		sub_obj[f5];
-	}	catch (const std::out_of_range& e) {
+	} catch (const std::out_of_range& e) {
 		L_ERR(nullptr, "Updated the array after erase is not working. Expected: %s\n", r5.c_str());
 		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
