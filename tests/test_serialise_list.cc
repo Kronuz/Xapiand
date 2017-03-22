@@ -126,6 +126,7 @@ inline int testing(const std::vector<range_t>& ranges) {
 
 
 int test_StringList() {
+	INIT_LOG
 	std::vector<std::string> strs;
 
 	int cont = testing(strs);
@@ -149,6 +150,7 @@ int test_StringList() {
 
 
 int test_CartesianList() {
+	INIT_LOG
 	std::vector<Cartesian> ptos;
 
 	int cont = testing(ptos);
@@ -171,6 +173,7 @@ int test_CartesianList() {
 
 
 int test_RangeList() {
+	INIT_LOG
 	std::vector<range_t> ranges;
 
 	int cont = testing(ranges);

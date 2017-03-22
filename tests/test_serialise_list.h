@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include <stdio.h>
+#include <cstdio>
 
 
 int test_StringList();
