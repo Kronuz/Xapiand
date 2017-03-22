@@ -26,22 +26,20 @@
 
 
 struct test_date_t {
-	const char *str;
-	const char *expect;
+	std::string date;
+	std::string serialised;
 };
 
 
 struct test_cartesian_t {
-	const Cartesian cartesian;
-	const char *expect_serialise;
-	const char *expect_unserialise;
+	Cartesian cartesian;
+	std::string serialised;
 };
 
 
-struct test_trixel_id_t {
-	const uint64_t trixel_id;
-	const char *expect_serialise;
-	const uint64_t expect_unserialise;
+struct test_range_t {
+	range_t range;
+	std::string serialised;
 };
 
 
@@ -53,7 +51,7 @@ int test_unserialise_date();
 int test_serialise_cartesian();
 // Testing unserialise Cartesian.
 int test_unserialise_cartesian();
-// Testing serialise HTM trixel's id.
-int test_serialise_trixel_id();
-// Testing unserialise HTM trixel's id.
-int test_unserialise_trixel_id();
+// Testing serialise range_t.
+int test_serialise_range();
+// Testing unserialise range_t.
+int test_unserialise_range();

@@ -27,7 +27,7 @@
 #include "utils.h"
 
 
-const test_date_t test_timestamp_date[] = {
+const std::vector<test_date_t> test_timestamp_date({
 	// Date 									Expected timestamp.
 	{ "2014-01-01||-1M/y",                      "1388534399.999000"   },
 	{ "2014-10-10||-12M",                       "1381363200.000000"   },
@@ -97,11 +97,10 @@ const test_date_t test_timestamp_date[] = {
 	{ "2010-10-10Z",                            ""                    },
 	{ "2010-10-10 09:10:10 - 6:56",             ""                    },
 	{ "2010-10-10 09:10:10 -656",               ""                    },
-	{ nullptr,                                  nullptr               },
-};
+});
 
 
-const test_date_t test_unserialisedate[] {
+const std::vector<test_date_t> test_unserialisedate({
 	// Date to be serialised.				 Expected date after unserialise.
 	{ "2010-10-10T23:05:24.800",             "2010-10-10T23:05:24.800" },
 	{ "2010101023:05:24",                    "2010-10-10T23:05:24.000" },
@@ -111,50 +110,48 @@ const test_date_t test_unserialisedate[] {
 	{ "9999/12/20T08:10-03:00||/y",          "9999-12-31T23:59:59.999" },
 	{ "0001-01-01T00:00:00.000",             "0001-01-01T00:00:00.000" },
 	{ "9999-12-31T23:59:59.000",             "9999-12-31T23:59:59.000" },
-	{ nullptr,                               nullptr                   },
-};
+});
 
 
-const test_cartesian_t test_seri_cartesian[] {
-	// Cartesian.                                                  Expected serialise Cartesian.                       Expected Cartesian after of unserialise.
-	{ Cartesian(10.0, 20.0, 0.0, Cartesian::Units::DEGREES),       "r\\xc6]\\xfdO\\xafY\\xe0E\\xe3=\\xe5",             "0.925602814 0.336891873 0.172520422"    },
-	{ Cartesian(30.0, 15.0, 0.0, Cartesian::Units::DEGREES),       "m\\x8c[\\xe2H\\xfc\\xac\\x13YA\\xc8$",             "0.837915107 0.224518676 0.497483301"    },
-	{ Cartesian(40.0, 30.0, 21.0, Cartesian::Units::DEGREES),      "cA\\xb4BR\\x7fl0a\\xc4BE",                         "0.665250371 0.384082481 0.640251974"    },
-	{ Cartesian(30.0, 28.0, 100.0, Cartesian::Units::DEGREES),     "iB\\x02`S\\xe0\\xfe\\x88YA\\xc8L",                 "0.765933665 0.407254153 0.497483341"    },
-	{ Cartesian(-10.0, -20.0, 0.0, Cartesian::Units::DEGREES),     "r\\xc6]\\xfd\\'\\x86:\\x1e1RV\\x19",               "0.925602814 -0.336891873 -0.172520422"  },
-	{ Cartesian(-30.0, 15.0, 0.0, Cartesian::Units::DEGREES),      "m\\x8c[\\xe2H\\xfc\\xac\\x13\\x1d\\xf3\\xcb\\xda", "0.837915107 0.224518676 -0.497483301"   },
-	{ Cartesian(40.0, -30.0, 21.0, Cartesian::Units::DEGREES),     "cA\\xb4B$\\xb6\\'\\xcea\\xc4BE",                   "0.665250371 -0.384082481 0.640251974"   },
-	{ Cartesian(30.0, 28.0, -100.0, Cartesian::Units::DEGREES),    "iB\\x02\\x88S\\xe0\\xfe\\x9eYA\\xc7\\xfd",         "0.765933705 0.407254175 0.497483262"    },
-	{ Cartesian(-0.765933705, -0.407254175, -0.497483262),         "\\r\\xf3\\x91v#T\\x95`\\x1d\\xf3\\xcc\\x01",       "-0.765933705 -0.407254175 -0.497483262" },
-	{ Cartesian(),                                                 nullptr,                                            nullptr                                  },
-};
+const std::vector<test_cartesian_t> test_seri_cartesian({
+	// Cartesian.                                             Expected serialise Cartesian.
+	{ Cartesian( 0.925602814,  0.336891873,  0.172520422),    "\\xaea\\'\\xfe\\x8bJ#\\xe1\\x81~\\x07\\xe6"                },
+	{ Cartesian( 0.837915107,  0.224518676,  0.497483301),    "\\xa9\\'%\\xe3\\x84\\x97v\\x14\\x94\\xdc\\x92%"            },
+	{ Cartesian( 0.665250371,  0.384082481,  0.640251974),    "\\x9e\\xdc~C\\x8e\\x1a61\\x9d_\\fF"                        },
+	{ Cartesian( 0.765933665,  0.407254153,  0.497483341),    "\\xa4\\xdc\\xcca\\x8f{\\xc8\\x89\\x94\\xdc\\x92M"          },
+	{ Cartesian( 0.925602814, -0.336891873, -0.172520422),    "\\xaea\\'\\xfec!\\x04\\x1fl\\xed \\x1a"                    },
+	{ Cartesian( 0.837915107,  0.224518676, -0.497483301),    "\\xa9\\'%\\xe3\\x84\\x97v\\x14Y\\x8e\\x95\\xdb"            },
+	{ Cartesian( 0.665250371, -0.384082481,  0.640251974),    "\\x9e\\xdc~C`P\\xf1\\xcf\\x9d_\\fF"                        },
+	{ Cartesian( 0.765933705,  0.407254175,  0.497483262),    "\\xa4\\xdc\\xcc\\x89\\x8f{\\xc8\\x9f\\x94\\xdc\\x91\\xfe"  },
+	{ Cartesian(-0.765933705, -0.407254175, -0.497483262),    "I\\x8e[w^\\xef_aY\\x8e\\x96\\x02",                         },
+	{ Cartesian(-1.000000000,  0.000000000,  0.000000000),    ";\\x9a\\xca\\x00w5\\x94\\x00w5\\x94\\x00",                 },
+	{ Cartesian( 1.000000000,  0.000000000,  0.000000000),    "\\xb2\\xd0^\\x00w5\\x94\\x00w5\\x94\\x00",                 },
+});
 
 
-const test_trixel_id_t test_seri_trixels[] {
-	// Trixel's id       Expected serialise id.         Expected id after of unserialise.
-	{ 13200083375642939, ".\\xe5g\\xe8\\x9cY;",         13200083375642939 },
-	{ 9106317391687190,  " Z%\\xbdW\\xee\\x16",         9106317391687190  },
-	{ 14549284226108186, "3\\xb0\\x7f6\\b\\x8b\\x1a",   14549284226108186 },
-	{ 17752546963481661, "?\\x11\\xd8\\xef\\x9d\\xe4=", 17752546963481661 },
-	{ 0,                 nullptr,                       0                 },
-};
+const std::vector<test_range_t> test_seri_ranges({
+	// Range                                          Expected serialise range.
+	{ range_t(15061110277275648, 15061247716229119),  "5\\x82\\x00\\x00\\x00\\x00\\x005\\x82\\x1f\\xff\\xff\\xff\\xff" },
+	{ range_t(15628458277208064, 15628526996684799),  "7\\x86\\x00\\x00\\x00\\x00\\x007\\x86\\x0f\\xff\\xff\\xff\\xff" },
+	{ range_t(15635605102788608, 15635673822265343),  "7\\x8c\\x80\\x00\\x00\\x00\\x007\\x8c\\x8f\\xff\\xff\\xff\\xff" },
+	{ range_t(15638628759764992, 15638697479241727),  "7\\x8f@\\x00\\x00\\x00\\x007\\x8fO\\xff\\xff\\xff\\xff"         },
+	{ range_t(9007199254740992,   9007199321849855),  " \\x00\\x00\\x00\\x00\\x00\\x00 \\x00\\x00\\x03\\xff\\xff\\xff" },
+});
 
 
 int test_datetotimestamp() {
 	INIT_LOG
 	int cont = 0;
-	for (const test_date_t *p = test_timestamp_date; p->str; ++p) {
-		std::string date = std::string(p->str);
+	for (const auto& test : test_timestamp_date) {
 		std::string timestamp;
 		try {
-			timestamp = std::to_string(Datetime::timestamp(date));
+			timestamp = std::to_string(Datetime::timestamp(test.date));
 		} catch (const std::exception &exc) {
-			L_EXC(nullptr, "ERROR: %s", exc.what());
 			timestamp = "";
 		}
-		if (timestamp.compare(p->expect) != 0) {
+		if (timestamp != test.serialised) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Result: %s Expect: %s", timestamp.c_str(), p->expect);
+			L_ERR(nullptr, "ERROR: Serialise::date is not working. Result: %s Expect: %s", timestamp.c_str(), test.serialised.c_str());
 		}
 	}
 
@@ -171,12 +168,12 @@ int test_datetotimestamp() {
 int test_unserialise_date() {
 	INIT_LOG
 	int cont = 0;
-	for (const test_date_t *p = test_unserialisedate; p->str; ++p) {
-		std::string date_s = Serialise::date(std::string(p->str));
-		std::string date = Unserialise::date(date_s);
-		if (date.compare(p->expect) != 0) {
+	for (const auto& test : test_unserialisedate) {
+		const auto serialised = Serialise::date(test.date);
+		const auto date = Unserialise::date(serialised);
+		if (date != test.serialised) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Result: %s Expect: %s", date.c_str(), p->expect);
+			L_ERR(nullptr, "ERROR: Unserialise::date is not working. Result: %s Expect: %s", date.c_str(), test.serialised.c_str());
 		}
 	}
 
@@ -193,13 +190,11 @@ int test_unserialise_date() {
 int test_serialise_cartesian() {
 	INIT_LOG
 	int cont = 0;
-	for (const test_cartesian_t *p = test_seri_cartesian; p->expect_serialise; ++p) {
-		Cartesian c = p->cartesian;
-		c.normalize();
-		std::string res(repr(Serialise::cartesian(c), true, false));
-		if (res.compare(p->expect_serialise) != 0) {
+	for (const auto& test : test_seri_cartesian) {
+		const auto serialised = repr(Serialise::cartesian(test.cartesian), true, false);
+		if (serialised != test.serialised) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Result: %s Expect: %s", res.c_str(), p->expect_serialise);
+			L_ERR(nullptr, "ERROR: Serialise::cartesian is not working. Result: %s Expect: %s", serialised.c_str(), test.serialised.c_str());
 		}
 	}
 
@@ -216,16 +211,12 @@ int test_serialise_cartesian() {
 int test_unserialise_cartesian() {
 	INIT_LOG
 	int cont = 0;
-	for (const test_cartesian_t *p = test_seri_cartesian; p->expect_unserialise; ++p) {
-		Cartesian c = p->cartesian;
-		c.normalize();
-		std::string serialise(Serialise::cartesian(c));
-		c = Unserialise::cartesian(serialise);
-		char res[40];
-		snprintf(res, sizeof(res), "%1.9f %1.9f %1.9f", c.x, c.y, c.z);
-		if (strcmp(res, p->expect_unserialise) != 0) {
+	for (const auto& test : test_seri_cartesian) {
+		const auto serialised = Serialise::cartesian(test.cartesian);
+		const auto cartesian = Unserialise::cartesian(serialised);
+		if (cartesian != test.cartesian) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Result: %s Expect: %s", res, p->expect_unserialise);
+			L_ERR(nullptr, "ERROR: Unserialise::cartesian is not working. Result: %s Expect: %s", cartesian.to_string().c_str(), test.cartesian.to_string().c_str());
 		}
 	}
 
@@ -239,46 +230,44 @@ int test_unserialise_cartesian() {
 }
 
 
-int test_serialise_trixel_id() {
+int test_serialise_range() {
 	INIT_LOG
 	int cont = 0;
-	for (const test_trixel_id_t *p = test_seri_trixels; p->expect_serialise; ++p) {
-		uint64_t trixel_id = p->trixel_id;
-		std::string res(repr(Serialise::trixel_id(trixel_id), true, false));
-		if (res.compare(p->expect_serialise) != 0) {
+	for (const auto& test : test_seri_ranges) {
+		const auto serialised = repr(Serialise::range(test.range), true, false);
+		if (serialised != test.serialised) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Result: %s Expect: %s", res.c_str(), p->expect_serialise);
+			L_ERR(nullptr, "ERROR: Serialise::range is not working. Result: %s Expect: %s", serialised.c_str(), test.serialised.c_str());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing serialise HTM Trixel's id is correct!");
+		L_DEBUG(nullptr, "Testing serialise range_t is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing serialise HTM Trixel's id has mistakes.");
+		L_ERR(nullptr, "ERROR: Testing serialise range_t has mistakes.");
 		RETURN(1);
 	}
 }
 
 
-int test_unserialise_trixel_id() {
+int test_unserialise_range() {
 	INIT_LOG
 	int cont = 0;
-	for (const test_trixel_id_t *p = test_seri_trixels; p->expect_serialise; ++p) {
-		uint64_t trixel_id = p->trixel_id;
-		std::string serialise(Serialise::trixel_id(trixel_id));
-		trixel_id = Unserialise::trixel_id(serialise);
-		if (p->trixel_id != trixel_id) {
+	for (const auto& test : test_seri_ranges) {
+		const auto serialised = Serialise::range(test.range);
+		const auto range = Unserialise::range(serialised);
+		if (range != test.range) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Result: %llu Expect: %llu", trixel_id, p->trixel_id);
+			L_ERR(nullptr, "ERROR: Unserialise::range is not working. Result: %s Expect: %s", range.to_string().c_str(), test.range.to_string().c_str());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing unserialise HTM Trixel's id is correct!");
+		L_DEBUG(nullptr, "Testing unserialise range_t is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing unserialise HTM Trixel's id has mistakes.");
+		L_ERR(nullptr, "ERROR: Testing unserialise range_t has mistakes.");
 		RETURN(1);
 	}
 }

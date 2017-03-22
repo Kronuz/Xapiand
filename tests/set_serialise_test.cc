@@ -37,9 +37,9 @@ TEST(SerialiseUnserialiseTest, Cartesian) {
 }
 
 
-TEST(SerialiseUnserialiseTest, Trixel_id) {
-	EXPECT_EQ(test_serialise_trixel_id(), 0);
-	EXPECT_EQ(test_unserialise_trixel_id(), 0);
+TEST(SerialiseUnserialiseTest, Range) {
+	EXPECT_EQ(test_serialise_range(), 0);
+	EXPECT_EQ(test_unserialise_range(), 0);
 }
 
 
