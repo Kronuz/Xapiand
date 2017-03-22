@@ -175,16 +175,18 @@ int test_RangeList() {
 
 	int cont = testing(ranges);
 
-	ranges.emplace_back(1, 10);
+	// Small level range.
+	ranges.emplace_back(14363263991021568, 14363298350759935);
 	cont += testing(ranges);
 
-	ranges.emplace_back(20, 30);
-	ranges.emplace_back(40, 50);
-	ranges.emplace_back(60, 70);
-	ranges.emplace_back(80, 90);
-	ranges.emplace_back(100, 110);
-	ranges.emplace_back(120, 130);
-	ranges.emplace_back(140, 150);
+	ranges.emplace_back(14363315530629120, 14363332710498303);
+	ranges.emplace_back(14363367070236672, 14363384250105855);
+	ranges.emplace_back(14363401429975040, 14363418609844223);
+	ranges.emplace_back(14363607588405248, 14363624768274431);
+	ranges.emplace_back(14363641948143616, 14363676307881983);
+	ranges.emplace_back(14363745027358720, 14363813746835455);
+	ranges.emplace_back(14363899646181376, 14363916826050559);
+	ranges.emplace_back(14363968365658112, 14364019905265663);
 	cont += testing(ranges);
 
 	RETURN(cont);
