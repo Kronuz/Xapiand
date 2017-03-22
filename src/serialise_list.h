@@ -179,13 +179,11 @@ protected:
 	const char *_end;
 	bool _single;
 
-	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
-	SerialiseList(S&& serialised)
-		: _serialised(std::forward<S>(serialised)),
-		  _ptr(_serialised.data()),
-		  _end(_ptr + _serialised.length()),
-		  _single(true)
-	{
+	void init() {
+		_ptr = _serialised.data();
+		_end = _ptr + _serialised.length();
+		_single = true;
+
 		if (!_serialised.empty()) {
 			if (*_ptr == SERIALISED_LIST_MAGIC) {
 				++_ptr;
@@ -196,6 +194,35 @@ protected:
 		_i_end = iterator(this, _end);
 		_i_cbegin = const_iterator(_i_begin.owner, _i_begin.pos, _i_begin.length);
 		_i_cend = const_iterator(_i_end.owner, _i_end.pos, _i_end.length);
+	}
+
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
+	SerialiseList(S&& serialised)
+		: _serialised(std::forward<S>(serialised))
+	{
+		init();
+	}
+
+	SerialiseList(SerialiseList&& o) noexcept
+		: _serialised(std::move(o._serialised))
+	{
+		init();
+	}
+
+	SerialiseList(const SerialiseList& o) noexcept
+		: _serialised(o._serialised)
+	{
+		init();
+	}
+
+	SerialiseList& operator=(SerialiseList&& o) noexcept {
+		_serialised = std::move(o._serialised);
+		init();
+	}
+
+	SerialiseList& operator=(const SerialiseList& o) noexcept {
+		_serialised = o._serialised;
+		init();
 	}
 
 public:
