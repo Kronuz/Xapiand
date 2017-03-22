@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include <cstdio.h>
+#include <cstdio>
 
 
 int test_field_parser();

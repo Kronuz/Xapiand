@@ -22,6 +22,7 @@
 
 #include "test_storage.h"
 
+#include "../src/storage.h"
 #include "gtest/gtest.h"
 
 
