@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "test_geo.h"
+#include "test_geospatial_query.h"
 
 #include "utils.h"
 
@@ -32,27 +32,22 @@ const test_geo_t geo_range_tests[] {
 	// The range search always is sort by centroids' search.
 	{
 		// Search: The polygon's search  describes North Dakota.
-		"location:\"..POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"",
-		{ "North Dakota and South Dakota", "North Dakota", "Bismarck", "Minot" }
+		"location:..\"POLYGON((-104.026930 48.998427, -104.039833 45.931363, -96.569131 45.946643, -97.228311 48.990383))\"",
+		{ "North Dakota", "Bismarck", "Minot", "North Dakota and South Dakota" }
 	},
 	{
 		// Search: The Multipolygon's search  describes North Dakota and South Dakota.
-		"location:\"..MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"",
-		{ "North Dakota and South Dakota", "North Dakota", "Bismarck", "Minot", "Rapid City", "Wyoming" }
+		"location:..\"MULTIPOLYGON(((-104.026930 48.998427, -104.039833 45.931363, -96.569131 45.946643, -97.228311 48.990383)), ((-104.039833 45.931363, -104.050903 43.005315, -96.514283 42.513275, -96.569131 45.946643)))\"",
+		{ "North Dakota", "Bismarck", "Minot", "Rapid City", "Wyoming", "North Dakota and South Dakota" }
 	},
-	// { 0.073730, 0.073730, 0.094108, 0.122473, 0.122473, 0.122925, 0.273593, 0.273593, 0.648657, 0.648657 }
 	{
-		// Search: The polygon's search  describes Wyoming but the corners with a different heights.
-		"location:\"..POLYGON ((44.96479793 -111.02783203, 44.96479793 -104.08447266, 41.04621681 -104.08447266, 41.00477542 -111.02783203))\"",
-		{ "Wyoming", "Mountain View, Wyoming", "Utah", "North Dakota and South Dakota" }
+		// Search: The polygon's search  describes Wyoming.
+		"location:..\"POLYGON((-111.038993 44.991571, -111.039795 41.002575, -104.044008 41.000901, -104.055265 44.988552))\"",
+		{ "Utah", "Wyoming", "Mountain View, Wyoming", "North Dakota and South Dakota" }
 	},
-	// Search for all documents with location.
+	// Empty regions inside.
 	{
-		"location:..", { "North Dakota", "Bismarck", "Minot", "Rapid City", "Utah", "Wyoming", "Mountain View, Wyoming", "North Dakota and South Dakota" }
-	},
-	// There are not regions inside.
-	{
-		"location:\"..CIRCLE (40 -100, 1000)\"", { }
+		"location:..\"CIRCLE(-100 40, 1000)\"", { }
 	}
 };
 
@@ -60,44 +55,44 @@ const test_geo_t geo_range_tests[] {
 const test_geo_t geo_terms_tests[] {
 	// Test for search by terms.
 	{
-		"location:\"POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"",
+		"location:\"POLYGON((-104.026930 48.998427, -104.039833 45.931363, -96.569131 45.946643, -97.228311 48.990383))\"",
 		{ "North Dakota" }
 	},
 	{
-		"location:\"POINT ((46.84516443029276 -100.78857421875))\"",
+		"location:\"POINT(-100.783990 46.808598)\"",
 		{ "Bismarck" }
 	},
 	{
-		"location:\"POINT ((48.25394114463431 -101.2939453125))\"",
+		"location:\"POINT(-101.293014 48.233434)\"",
 		{ "Minot" }
 	},
 	{
-		"location:\"POINT ((43.992814500489914 -103.18359375))\"",
+		"location:\"POINT(-103.237178 44.079583)\"",
 		{ "Rapid City" }
 	},
 	{
-		"location:\"CHULL ((41.89409956 -113.93920898 1987, 42.02481361 -111.12670898 2095, 41.00477542 -111.02783203 2183, 40.95501133 -109.0612793 2606, 37.01132594 -109.03930664 1407, 37.02886945 -114.00512695 696))\"",
+		"location:\"MULTIPOLYGON(((-114.0475 41, -114.0475 42, -111.01 42, -111.01 41, -114.0475 41)), ((-114.0475 37, -114.0475 41, -109.0475 41, -109.0475 37, -114.0475 37)))\"",
 		{ "Utah" }
 	},
 	{
-		"location:\"POLYGON ((44.96479793 -111.02783203 2244, 44.96479793 -104.08447266 969, 41.04621681 -104.08447266 1654, 41.00477542 -111.02783203 2183))\"",
+		"location:\"POLYGON((-111.038993 44.991571, -111.039795 41.002575, -104.044008 41.000901, -104.055265 44.988552))\"",
 		{ "Wyoming" }
 	},
 	{
-		"location:\"POINT (41.2695495 -110.34118652)\"",
+		"location:\"POINT(-110.34118652 41.2695495)\"",
 		{ "Mountain View, Wyoming" }
 	},
 	{
-		"location:\"MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"",
+		"location:\"MULTIPOLYGON(((-104.026930 48.998427, -104.039833 45.931363, -96.569131 45.946643, -97.228311 48.990383)), ((-104.039833 45.931363, -104.050903 43.005315, -96.514283 42.513275, -96.569131 45.946643)))\"",
 		{ "North Dakota and South Dakota" }
 	},
 	{
-		"attraction_location:\"POINT (44.42789588, -110.58837891)\"",
+		"attraction_location:\"POINT(-110.58837891 44.42789588)\"",
 		{ "Wyoming" }
 	},
 	// There are not terms.
 	{
-		"location:\"POINT (40, -100)\"", { }
+		"location:\"POINT(-100 40)\"", { }
 	}
 };
 
@@ -128,13 +123,13 @@ static int make_search(const test_geo_t _tests[], int len) {
 	for (int i = 0; i < len; ++i) {
 		test_geo_t p = _tests[i];
 		query.query.clear();
+		query.sort.clear();
 		query.query.push_back(p.query);
-
-		MSet mset;
-		std::vector<std::string> suggestions;
+		query.sort.push_back("_id");
 
 		try {
-			mset = db_geo.db_handler.get_mset(query, nullptr, nullptr, suggestions);
+			std::vector<std::string> suggestions;
+			auto mset = db_geo.db_handler.get_mset(query, nullptr, nullptr, suggestions);
 			if (mset.size() != p.expect_datas.size()) {
 				++cont;
 				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), p.expect_datas.size());
@@ -142,10 +137,11 @@ static int make_search(const test_geo_t _tests[], int len) {
 				auto it = p.expect_datas.begin();
 				for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {
 					auto document = db_geo.db_handler.get_document(*m);
-					auto obj_data = document.get_obj();
-					++cont;
-					std::exception exc;
-					L_EXC(nullptr, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
+					auto region = document.get_obj().at("region").as_string();
+					if (region != *it) {
+						++cont;
+						L_ERR(nullptr, "Different regions. Result: %s Expected: %s", region.c_str(), it->c_str());
+					}
 				}
 			}
 		} catch (const std::exception& exc) {
@@ -159,6 +155,7 @@ static int make_search(const test_geo_t _tests[], int len) {
 
 
 int geo_range_test() {
+	INIT_LOG
 	try {
 		int cont = make_search(geo_range_tests, arraySize(geo_range_tests));
 		if (cont == 0) {
@@ -178,6 +175,7 @@ int geo_range_test() {
 
 
 int geo_terms_test() {
+	INIT_LOG
 	try {
 		int cont = make_search(geo_terms_tests, arraySize(geo_terms_tests));
 		if (cont == 0) {
