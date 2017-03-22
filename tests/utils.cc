@@ -51,7 +51,7 @@ bool read_file_contents(const std::string& filename, std::string* contents) {
 DB_Test::DB_Test(const std::string& db_name, const std::vector<std::string>& docs, int flags, const std::string& ct_type)
 	: name_database(db_name)
 {
-	// Delete database to create.
+	// Delete database to create new db.
 	delete_files(name_database);
 	create_manager();
 
@@ -65,13 +65,14 @@ DB_Test::DB_Test(const std::string& db_name, const std::vector<std::string>& doc
 		std::string buffer;
 		try {
 			if (!read_file_contents(doc, &buffer)) {
-				delete_files(name_database);
+				destroy();
 				L_ERR(nullptr, "Can not read the file %s", doc.c_str());
 			} else if (db_handler.index(std::to_string(i++), false, get_body(buffer, ct_type).second, true, ct_type).first == 0) {
-				delete_files(name_database);
+				destroy();
 				THROW(Error, "File %s can not index", doc.c_str());
 			}
 		} catch (const std::exception& e) {
+			destroy();
 			THROW(Error, "File %s can not index [%s]", doc.c_str(), e.what());
 		}
 	}
@@ -80,6 +81,14 @@ DB_Test::DB_Test(const std::string& db_name, const std::vector<std::string>& doc
 
 DB_Test::~DB_Test()
 {
+	destroy();
+}
+
+
+void
+DB_Test::destroy()
+{
+	XapiandManager::manager.reset();
 	delete_files(name_database);
 }
 

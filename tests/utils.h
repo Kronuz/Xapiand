@@ -113,8 +113,8 @@ bool read_file_contents(const std::string& filename, std::string* contents);
 
 
 #if (TESTING_DATABASE == 1) || (TESTING_ENDPOINTS == 1)
-#include "../src/manager.h"
 #include "../src/database_handler.h"
+#include "../src/manager.h"
 
 
 /*
@@ -130,6 +130,7 @@ struct DB_Test {
 	DB_Test(const std::string& db_name, const std::vector<std::string>& docs, int flags, const std::string& ct_type=JSON_CONTENT_TYPE);
 	~DB_Test();
 
+	void destroy();
 	void create_manager();
 	std::pair<std::string, MsgPack> get_body(const std::string& body, const std::string& ct_type);
 };
