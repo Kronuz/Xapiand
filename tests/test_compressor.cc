@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -75,7 +75,6 @@ std::string read_file(const std::string& filename) {
 
 
 int test_Compress_Decompress_Data(const std::string& orig_file) {
-	INIT_LOG
 	try {
 		uint32_t cmp_checksum, dec_checksum;
 
@@ -121,7 +120,6 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 
 
 int test_Compress_Decompress_File(const std::string& orig_file) {
-	INIT_LOG
 	try {
 		uint32_t cmp_checksum, dec_checksum;
 
@@ -165,7 +163,6 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 
 
 int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numBytes) {
-	INIT_LOG
 	try {
 		size_t total_size = 0;
 		std::vector<size_t> read_bytes;

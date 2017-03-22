@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,19 +22,11 @@
 
 #include "test_fieldparser.h"
 
-// #define DEBUG_FIELD_PARSER 1
-
-#ifdef TEST_SINGLE
-#  define TESTING_DATABASE 0
-#  define TESTING_ENDPOINTS 0
-#  define TESTING_LOGS 0
-#endif
-
-#include "utils.h"
-#include "field_parser.h"
-
 #include <string>
 #include <vector>
+
+#include "field_parser.h"
+#include "utils.h"
 
 
 struct Fieldparser_t {
@@ -164,13 +156,3 @@ int test_field_parser() {
 
 	RETURN(count);
 }
-
-
-#ifdef TEST_SINGLE
-// c++ -std=c++14 -fsanitize=address -Wall -Wextra -g -O2 -o tst -DTEST_SINGLE -Ibuild/src -Isrc tests/test_fieldparser.cc && ./tst
-#include "../src/exception.cc"
-#include "../src/field_parser.cc"
-int main(int, char const *[]) {
-	return test_field_parser();
-}
-#endif

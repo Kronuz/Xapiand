@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,9 +22,10 @@
 
 #include "test_endpoint.h"
 
+#include "utils.h"
+
 
 int test_endpoint() {
-
 	INIT_LOG
 	std::string uri_test[][3] = {
 		{"/var/db/xapiand/", "/", "/"},

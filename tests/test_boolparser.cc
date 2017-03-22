@@ -23,6 +23,7 @@
 #include "test_boolparser.h"
 
 #include "booleanParser/BooleanParser.h"
+#include "utils.h"
 
 
 int test_boolparser() {
