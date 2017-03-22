@@ -29,6 +29,6 @@
 		"views": 500000,
 		"budget": "$10 million"
 	},
-	"location": "POINT (40.7127837 -74.00594130000002)",
+	"location": "POINT(-74.00594130000002 40.7127837)",
 	"_weight": 0
 }

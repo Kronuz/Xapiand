@@ -1,5 +1,5 @@
 {
-	"_data": "Rapid City",
-	"description": "South Dakota county",
-	"location": "POINT ((43.992814500489914 -103.18359375))"
+	"region": "Rapid City",
+	"description": "Rapid City lies east of Black Hills National Forest in western South Dakota. It’s known as a gateway to Mt. Rushmore, the massive iconic sculpture of 4 U.S. presidents",
+	"location": "POINT(-103.237178 44.079583)"
 }

@@ -1,5 +1,5 @@
 {
-	"_data": "Bismarck",
-	"description": "North Dakota county",
-	"location": "POINT ((46.84516443029276 -100.78857421875))"
+	"region": "Bismarck",
+	"description": "Bismarck is the capital of the U.S. state of North Dakota and the county seat of Burleigh County",
+	"location": "POINT(-100.783990 46.808598)"
 }
