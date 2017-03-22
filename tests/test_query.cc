@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -139,16 +139,15 @@ const test_query_t test_partials[] {
 
 
 static DB_Test db_query(".db_query.db", std::vector<std::string>({
-		// FIXME:
 		// Examples used in test geo.
-		// path_test_query + "json/geo_1.txt",
-		// path_test_query + "json/geo_2.txt",
-		// path_test_query + "json/geo_3.txt",
-		// path_test_query + "json/geo_4.txt",
-		// path_test_query + "json/geo_5.txt",
-		// path_test_query + "json/geo_6.txt",
-		// path_test_query + "json/geo_7.txt",
-		// path_test_query + "json/geo_8.txt",
+		path_test_query + "json/geo_1.txt",
+		path_test_query + "json/geo_2.txt",
+		path_test_query + "json/geo_3.txt",
+		path_test_query + "json/geo_4.txt",
+		path_test_query + "json/geo_5.txt",
+		path_test_query + "json/geo_6.txt",
+		path_test_query + "json/geo_7.txt",
+		path_test_query + "json/geo_8.txt",
 		// Examples used in test sort.
 		path_test_query + "sort/doc1.txt",
 		path_test_query + "sort/doc2.txt",
