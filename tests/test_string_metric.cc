@@ -27,7 +27,7 @@
 #include "utils.h"
 
 
-#define NUM_TESTS 10000
+#define NUM_TESTS 1000
 
 
 int test_ranking_results() {
