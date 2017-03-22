@@ -555,7 +555,7 @@ if (BUILD_TESTS)
 	link_directories (${GTEST_LIBS})
 
 	foreach (VAR_TEST boolparser compressor endpoint fieldparser generate_terms
-		geo geospatial guid hash lru msgpack patcher phonetic query queue
+		geospatial geospatial_query guid hash lru msgpack patcher phonetic query queue
 		serialise serialise_list sort storage string_metric threadpool url_parser wal)
 		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 		add_executable (${PROJECT_TEST}
