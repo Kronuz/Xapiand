@@ -153,16 +153,17 @@ int test_CartesianList() {
 
 	int cont = testing(ptos);
 
-	ptos.emplace_back(1, 2, 3);
+	ptos.emplace_back(-1, 0, 0);
 	cont += testing(ptos);
 
-	ptos.emplace_back(4, 5, 6);
-	ptos.emplace_back(7, 8, 9);
-	ptos.emplace_back(10, 11, 12);
-	ptos.emplace_back(13, 14, 15);
-	ptos.emplace_back(16, 17, 18);
-	ptos.emplace_back(19, 20, 21);
-	ptos.emplace_back(22, 23, 24);
+	ptos.emplace_back(0.267261, 0.534522, 0.801784);
+	ptos.emplace_back(0.455842, 0.569803, 0.683763);
+	ptos.emplace_back(0.502571, 0.574367, 0.646162);
+	ptos.emplace_back(0.523424, 0.575766, 0.628109);
+	ptos.emplace_back(-0.267261, 0.534522, 0.801784);
+	ptos.emplace_back(0.455842, -0.569803, 0.683763);
+	ptos.emplace_back(0.502571, 0.574367, -0.646162);
+	ptos.emplace_back(-0.523424, -0.575766, -0.628109);
 	cont += testing(ptos);
 
 	RETURN(cont);
