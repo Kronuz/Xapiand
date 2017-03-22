@@ -120,7 +120,7 @@ constexpr uint8_t SERIALISED_LENGTH_RANGE     = 2 * HTM_BYTES_ID;
 
 
 constexpr uint32_t DOUBLE2INT = 1000000000;
-constexpr uint32_t MAXDOU2INT =  999999999;
+constexpr uint32_t MAXDOU2INT = 2000000000;
 
 
 constexpr uint8_t SIZE_UUID                 = 36;

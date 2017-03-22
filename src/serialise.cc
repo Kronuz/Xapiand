@@ -457,10 +457,10 @@ Serialise::cartesian(const Cartesian& norm_cartesian)
 	uint32_t x = Swap4Bytes(((uint32_t)(norm_cartesian.x * DOUBLE2INT) + MAXDOU2INT));
 	uint32_t y = Swap4Bytes(((uint32_t)(norm_cartesian.y * DOUBLE2INT) + MAXDOU2INT));
 	uint32_t z = Swap4Bytes(((uint32_t)(norm_cartesian.z * DOUBLE2INT) + MAXDOU2INT));
-	const char serialise[] = { (char)(x & 0xFF), (char)((x >>  8) & 0xFF), (char)((x >> 16) & 0xFF), (char)((x >> 24) & 0xFF),
-							   (char)(y & 0xFF), (char)((y >>  8) & 0xFF), (char)((y >> 16) & 0xFF), (char)((y >> 24) & 0xFF),
-							   (char)(z & 0xFF), (char)((z >>  8) & 0xFF), (char)((z >> 16) & 0xFF), (char)((z >> 24) & 0xFF) };
-	return std::string(serialise, SERIALISED_LENGTH_CARTESIAN);
+	const char serialised[] = { (char)(x & 0xFF), (char)((x >>  8) & 0xFF), (char)((x >> 16) & 0xFF), (char)((x >> 24) & 0xFF),
+								(char)(y & 0xFF), (char)((y >>  8) & 0xFF), (char)((y >> 16) & 0xFF), (char)((y >> 24) & 0xFF),
+								(char)(z & 0xFF), (char)((z >>  8) & 0xFF), (char)((z >> 16) & 0xFF), (char)((z >> 24) & 0xFF) };
+	return std::string(serialised, SERIALISED_LENGTH_CARTESIAN);
 }
 
 
@@ -477,19 +477,13 @@ Serialise::trixel_id(uint64_t id)
 std::string
 Serialise::range(const range_t& range)
 {
-	std::string serialised;
-	serialised.reserve(SERIALISED_LENGTH_RANGE);
-
 	uint64_t start = Swap7Bytes(range.start);
-	const char serialised_start[] = { (char)(start & 0xFF), (char)((start >>  8) & 0xFF), (char)((start >> 16) & 0xFF), (char)((start >> 24) & 0xFF),
-									  (char)((start >> 32) & 0xFF), (char)((start >> 40) & 0xFF), (char)((start >> 48) & 0xFF) };
-
 	uint64_t end = Swap7Bytes(range.end);
-	const char serialised_end[] = { (char)(end & 0xFF), (char)((end >>  8) & 0xFF), (char)((end >> 16) & 0xFF), (char)((end >> 24) & 0xFF),
-									  (char)((end >> 32) & 0xFF), (char)((end >> 40) & 0xFF), (char)((end >> 48) & 0xFF) };
-
-	serialised.assign(serialised_start, HTM_BYTES_ID).append(serialised_end, HTM_BYTES_ID);
-	return serialised;
+	const char serialised[] = { (char)(start & 0xFF), (char)((start >>  8) & 0xFF), (char)((start >> 16) & 0xFF), (char)((start >> 24) & 0xFF),
+								(char)((start >> 32) & 0xFF), (char)((start >> 40) & 0xFF), (char)((start >> 48) & 0xFF),
+								(char)(end & 0xFF), (char)((end >>  8) & 0xFF), (char)((end >> 16) & 0xFF), (char)((end >> 24) & 0xFF),
+								(char)((end >> 32) & 0xFF), (char)((end >> 40) & 0xFF), (char)((end >> 48) & 0xFF) };
+	return std::string(serialised, SERIALISED_LENGTH_RANGE);
 }
 
 
@@ -889,8 +883,8 @@ Unserialise::range(const std::string& serialised_range)
 					 (serialised_range[6] & 0xFF);
 
 	uint64_t end = (((uint64_t)serialised_range[7] << 48) & 0xFF000000000000) | (((uint64_t)serialised_range[8] << 40) & 0xFF0000000000) | \
-				   (((uint64_t)serialised_range[9] << 32) & 0xFF00000000)     | (((uint64_t)serialised_range[10] << 24) & 0xFF000000)     | \
-				   (((uint64_t)serialised_range[11] << 16) & 0xFF0000)         | (((uint64_t)serialised_range[12] <<  8) & 0xFF00)         | \
+				   (((uint64_t)serialised_range[9] << 32) & 0xFF00000000)     | (((uint64_t)serialised_range[10] << 24) & 0xFF000000)    | \
+				   (((uint64_t)serialised_range[11] << 16) & 0xFF0000)        | (((uint64_t)serialised_range[12] <<  8) & 0xFF00)        | \
 				   (serialised_range[13] & 0xFF);
 
 	return range_t(start, end);

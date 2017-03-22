@@ -341,7 +341,7 @@ public:
 	CartesianList(T&& serialised)
 		: SerialiseList<CartesianList, Cartesian>(std::forward<T>(serialised))
 	{
-		if ((_end - _ptr) % SERIALISED_LENGTH_CARTESIAN != 0) {
+		if (((_end - _ptr) % SERIALISED_LENGTH_CARTESIAN) != 0) {
 			THROW(SerialisationError, "Bad encoded length: insufficient data");
 		}
 	}
@@ -415,7 +415,7 @@ public:
 	RangeList(T&& serialised)
 		: SerialiseList<RangeList, range_t>(std::forward<T>(serialised))
 	{
-		if ((_end - _ptr) % SERIALISED_LENGTH_RANGE != 0) {
+		if (((_end - _ptr) % SERIALISED_LENGTH_RANGE) != 0) {
 			THROW(SerialisationError, "Bad encoded length: insufficient data");
 		}
 	}
