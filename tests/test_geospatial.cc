@@ -39,6 +39,7 @@ constexpr double error = HTM_MIN_ERROR;
  * Testing the transformation of coordinates between CRS.
  */
 int testCartesianTransforms() {
+	INIT_LOG
 	struct test_transform_t {
 		// Source CRS.
 		int SRID;
@@ -192,6 +193,7 @@ int testCartesianTransforms() {
  * Testing Graham Scan Algorithm.
  */
 int testGrahamScanAlgorithm() {
+	INIT_LOG
 	int cont = 0;
 	std::vector<std::string> tests({ "ColoradoPoly", "Georgia", "Utah" });
 
@@ -448,7 +450,7 @@ inline int verify_trixels_ranges(const std::shared_ptr<Geometry>& geometry, cons
 
 
 int testPoint() {
-	// Catedral Morelia
+	INIT_LOG
 	auto point = std::make_shared<Point>(getPoint());
 	auto trixels = point->getTrixels(partials, error);
 	auto ranges = point->getRanges(partials, error);
@@ -459,6 +461,7 @@ int testPoint() {
 
 
 int testMultiPoint() {
+	INIT_LOG
 	auto multipoint = std::make_shared<MultiPoint>(getMultiPoint());
 	multipoint->simplify();
 	auto trixels = multipoint->getTrixels(partials, error);
@@ -471,6 +474,7 @@ int testMultiPoint() {
 
 
 int testCircle() {
+	INIT_LOG
 	auto circle = std::make_shared<Circle>(getCircle());
 	auto trixels = circle->getTrixels(partials, error);
 	HTM::simplifyTrixels(trixels);
@@ -482,6 +486,7 @@ int testCircle() {
 
 
 int testConvex() {
+	INIT_LOG
 	auto convex = std::make_shared<Convex>(getConvex());
 	convex->simplify();
 	auto trixels = convex->getTrixels(partials, error);
@@ -494,6 +499,7 @@ int testConvex() {
 
 
 int testPolygon() {
+	INIT_LOG
 	auto polygon = std::make_shared<Polygon>(getPolygon());
 	polygon->simplify();
 	auto trixels = polygon->getTrixels(partials, error);
@@ -506,6 +512,7 @@ int testPolygon() {
 
 
 int testMultiCircle() {
+	INIT_LOG
 	auto multicircle = std::make_shared<MultiCircle>(getMultiCircle());
 	multicircle->simplify();
 	auto trixels = multicircle->getTrixels(partials, error);
@@ -518,6 +525,7 @@ int testMultiCircle() {
 
 
 int testMultiConvex() {
+	INIT_LOG
 	auto multiconvex = std::make_shared<MultiConvex>(getMultiConvex());
 	multiconvex->simplify();
 	auto trixels = multiconvex->getTrixels(partials, error);
@@ -530,6 +538,7 @@ int testMultiConvex() {
 
 
 int testMultiPolygon() {
+	INIT_LOG
 	auto multipolygon = std::make_shared<MultiPolygon>(getMultiPolygon());
 	multipolygon->simplify();
 	auto trixels = multipolygon->getTrixels(partials, error);
@@ -542,6 +551,7 @@ int testMultiPolygon() {
 
 
 int testCollection() {
+	INIT_LOG
 	auto collection = std::make_shared<Collection>(getCollection());
 	collection->simplify();
 	auto trixels = collection->getTrixels(partials, error);
@@ -554,6 +564,7 @@ int testCollection() {
 
 
 int testIntersection() {
+	INIT_LOG
 	auto intersection = std::make_shared<Intersection>(getIntersection());
 	intersection->simplify();
 	auto trixels = intersection->getTrixels(partials, error);
