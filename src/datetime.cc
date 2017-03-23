@@ -687,6 +687,22 @@ Datetime::timegm(tm_t& tm)
  * Transforms timestamp to a struct tm_t.
  */
 Datetime::tm_t
+Datetime::to_tm_t(std::time_t timestamp)
+{
+	struct tm timeinfo;
+	gmtime_r(&timestamp, &timeinfo);
+	return tm_t(
+		timeinfo.tm_year + _START_YEAR, timeinfo.tm_mon + 1,
+		timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min,
+		timeinfo.tm_sec, 0
+	);
+}
+
+
+/*
+ * Transforms timestamp to a struct tm_t.
+ */
+Datetime::tm_t
 Datetime::to_tm_t(double timestamp)
 {
 	auto _time = static_cast<std::time_t>(timestamp);

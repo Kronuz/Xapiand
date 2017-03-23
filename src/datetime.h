@@ -85,6 +85,7 @@ namespace Datetime {
 	std::time_t toordinal(int year, int month, int day);
 	std::time_t timegm(const std::tm& tm);
 	std::time_t timegm(tm_t& tm);
+	tm_t to_tm_t(std::time_t timestamp);
 	tm_t to_tm_t(double timestamp);
 	tm_t to_tm_t(const std::string& date);
 	tm_t to_tm_t(const MsgPack& value);
