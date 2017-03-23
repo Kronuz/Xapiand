@@ -600,7 +600,7 @@ HTM::getTrixelName(const Cartesian& coord)
 std::string
 HTM::getTrixelName(uint64_t id)
 {
-	uint64_t last_pos = std::ceil(std::log2(id));
+	uint8_t last_pos = std::ceil(std::log2(id));
 	std::string trixel;
 	trixel.reserve(last_pos / 2);
 	last_pos -= 2;
@@ -698,7 +698,7 @@ inline static void get_trixels(std::vector<std::string>& trixels, uint64_t start
 		return;
 	}
 
-	uint64_t log_inc = std::ceil(std::log2(end - start));
+	uint8_t log_inc = std::ceil(std::log2(end - start));
 	log_inc -= (log_inc % 2 == 1);
 	uint64_t max_inc = std::pow(2, log_inc);
 
@@ -738,6 +738,55 @@ HTM::getTrixels(const std::vector<range_t>& ranges)
 	}
 
 	return trixels;
+}
+
+
+inline static void get_id_trixels(std::vector<uint64_t>& id_trixels, uint64_t start, uint64_t end) {
+	if (start == end) {
+		id_trixels.push_back(start);
+		return;
+	}
+
+	uint8_t log_inc = std::ceil(std::log2(end - start));
+	log_inc -= (log_inc % 2 == 1);
+	uint64_t max_inc = std::pow(2, log_inc);
+
+	uint64_t mod = start % max_inc;
+	uint64_t _start = mod ? start + max_inc - mod : start;
+
+	while (end < (_start + max_inc - 1)) {
+		log_inc -= 2;
+		max_inc = std::pow(2, log_inc);
+		mod = start % max_inc;
+		_start = mod ? start + max_inc - mod : start;
+	}
+
+	if (_start > start) {
+		get_id_trixels(id_trixels, start, _start - 1);
+	}
+
+	uint64_t _end = end - max_inc + 2;
+	while (_start < _end) {
+		id_trixels.push_back(_start >> log_inc);
+		_start += max_inc;
+	}
+
+	if (_start <= end) {
+		get_id_trixels(id_trixels, _start, end);
+	}
+}
+
+
+std::vector<uint64_t>
+HTM::getIdTrixels(const std::vector<range_t>& ranges)
+{
+	std::vector<uint64_t> id_trixels;
+	id_trixels.reserve(ranges.size());
+	for (const auto& range : ranges) {
+		get_id_trixels(id_trixels, range.start, range.end);
+	}
+
+	return id_trixels;
 }
 
 
