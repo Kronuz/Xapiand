@@ -601,11 +601,12 @@ std::string
 HTM::getTrixelName(uint64_t id)
 {
 	uint8_t last_pos = std::ceil(std::log2(id));
+	last_pos += (last_pos % 2 == 1); // Must be multiple of two.
 	std::string trixel;
 	trixel.reserve(last_pos / 2);
 	last_pos -= 2;
 	uint64_t mask = static_cast<uint64_t>(3) << last_pos;
-	trixel.push_back((id & mask) == 3 ? 'S' : 'N');
+	trixel.push_back(((id & mask) >> last_pos) == 3 ? 'S' : 'N');
 	while (mask >>= 2) {
 		last_pos -= 2;
 		trixel.push_back('0' + ((id & mask) >> last_pos));
