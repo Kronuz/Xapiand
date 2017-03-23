@@ -47,6 +47,7 @@ constexpr double HTM_MAX_ERROR = 1.0;
 constexpr size_t HTM_MAX_LENGTH_NAME = HTM_MAX_LEVEL + 2;
 constexpr size_t HTM_BYTES_ID        = 7;
 constexpr size_t HTM_BITS_ID         = 2 * HTM_MAX_LENGTH_NAME;
+constexpr size_t HTM_START_POS       = HTM_BITS_ID - 4;
 
 
 // Radians in a circumference (2pi).
