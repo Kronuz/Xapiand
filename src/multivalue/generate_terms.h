@@ -42,7 +42,6 @@
 
 constexpr size_t MAX_TERMS            = 50;
 constexpr size_t MAX_SERIALISE_LENGTH = 18;
-constexpr size_t START_POS            = HTM_BITS_ID - 4;
 
 
 extern const char ctype_date;

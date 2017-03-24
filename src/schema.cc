@@ -192,7 +192,7 @@ const std::unordered_map<std::string, std::array<FieldType, 3>> map_types({
 
 static const std::vector<uint64_t> def_accuracy_num({ 100, 1000, 10000, 100000, 1000000, 10000000 });
 static const std::vector<uint64_t> def_accuracy_date({ toUType(UnitTime::HOUR), toUType(UnitTime::DAY), toUType(UnitTime::MONTH), toUType(UnitTime::YEAR), toUType(UnitTime::DECADE), toUType(UnitTime::CENTURY) });
-static const std::vector<uint64_t> def_accuracy_geo({ START_POS - 40, START_POS - 30, START_POS - 20, START_POS - 10, START_POS }); // HTM's level 20, 15, 10, 5, 0
+static const std::vector<uint64_t> def_accuracy_geo({ HTM_START_POS - 40, HTM_START_POS - 30, HTM_START_POS - 20, HTM_START_POS - 10, HTM_START_POS }); // HTM's level 20, 15, 10, 5, 0
 
 
 /*
@@ -1538,7 +1538,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 					for (const auto& _accuracy : *specification.doc_acc) {
 						const auto val_acc = _accuracy.as_u64();
 						if (val_acc <= HTM_MAX_LEVEL) {
-							set_acc.insert(START_POS - 2 * val_acc);
+							set_acc.insert(HTM_START_POS - 2 * val_acc);
 						} else {
 							THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
 						}
@@ -4826,7 +4826,7 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 			break;
 		case FieldType::GEO:
 			for (auto& _accuracy : properties.at(RESERVED_ACCURACY)) {
-				_accuracy = (START_POS - _accuracy.as_u64()) / 2;
+				_accuracy = (HTM_START_POS - _accuracy.as_u64()) / 2;
 			}
 			break;
 		default:
