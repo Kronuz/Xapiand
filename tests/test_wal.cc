@@ -61,8 +61,8 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 	struct dirent *ent;
 	while ((ent = readdir(d1)) != nullptr) {
 		if (ent->d_type == DT_REG) {
-			std::string dir1_file (dir1 + "/" + std::string(ent->d_name));
-			std::string dir2_file (dir2 + "/" + std::string(ent->d_name));
+			std::string dir1_file(dir1 + "/" + std::string(ent->d_name));
+			std::string dir2_file(dir2 + "/" + std::string(ent->d_name));
 
 			int fd1 = open(dir1_file.c_str(), O_RDONLY);
 			if (-1 == fd1) {
