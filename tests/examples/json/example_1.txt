@@ -22,10 +22,17 @@
 		"Back to the Future III"
 	],
 	"directed_by": "Robert Zemeckis",
-	"_values": {
-		"year": 1985,
-		"views": 200000,
-		"budget": "$19 million"
+	"year": {
+		"_value": 1985,
+		"_index": "values"
+	},
+	"views": {
+		"_value": 200000,
+		"_index": "values"
+	},
+	"budget":  {
+		"_value": "$19 million",
+		"_index": "values"
 	},
 	"location": "POINT(-120.16011 36.81674)",
 	"description": {

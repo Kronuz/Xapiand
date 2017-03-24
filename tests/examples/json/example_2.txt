@@ -24,10 +24,17 @@
 		"_weight": 0,
 		"_index": "field_all"
 	},
-	"_values": {
-		"year": 1968,
-		"views": 500000,
-		"budget": "$10 million"
+	"year": {
+		"_value": 1968,
+		"_index": "values"
+	},
+	"views": {
+		"_value": 500000,
+		"_index": "values"
+	},
+	"budget": {
+		"_value": "$10 million",
+		"_index": "values"
 	},
 	"location": "POINT(-74.00594130000002 40.7127837)",
 	"_weight": 0

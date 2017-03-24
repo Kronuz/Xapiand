@@ -3,19 +3,23 @@
 	"name": {
 		"en": {
 			"_index": "all",
-			"_value": ["cook", "cooked"]
+			"_value": ["cook", "cooked"],
+			"_type": "term"
 		},
 		"es": {
 			"_index": "all",
-			"_value": ["cocinar", "cocido"]
+			"_value": ["cocinar", "cocido"],
+			"_type": "term"
 		},
 		"fr": {
 			"_index": "all",
-			"_value": ["cuire", "cuit"]
+			"_value": ["cuire", "cuit"],
+			"_type": "term"
 		},
 		"de": {
 			"_index": "all",
-			"_value": ["coch", "gecocht"]
+			"_value": ["coch", "gecocht"],
+			"_type": "term"
 		}
 	},
 	"location": ["POINT(10 21)", "POINT(10 20)"],
