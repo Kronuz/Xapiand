@@ -290,8 +290,8 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 		return Xapian::Query();
 	}
 
-	auto tm_s = Datetime::to_tm_t(start_);
-	auto tm_e = Datetime::to_tm_t(end_);
+	auto tm_s = Datetime::to_tm_t(static_cast<std::time_t>(start_));
+	auto tm_e = Datetime::to_tm_t(static_cast<std::time_t>(end_));
 
 	uint64_t diff = tm_e.year - tm_s.year, acc = -1;
 	// Find the accuracy needed.
