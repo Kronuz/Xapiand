@@ -112,12 +112,11 @@ static DB_Test db_geo(".db_geo.db", std::vector<std::string>({
 static int make_search(const std::vector<test_geo_t> _tests) {
 	int cont = 0;
 	query_field_t query;
+	query.sort.push_back(ID_FIELD_NAME);
 
 	for (const auto& test : _tests) {
 		query.query.clear();
-		query.sort.clear();
 		query.query.push_back(test.query);
-		query.sort.push_back("_id");
 
 		try {
 			std::vector<std::string> suggestions;
