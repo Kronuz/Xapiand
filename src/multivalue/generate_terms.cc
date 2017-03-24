@@ -22,12 +22,9 @@
 
 #include "generate_terms.h"
 
-#include <bitset>             // for bitset
 #include <map>                // for __map_iterator, map, operator!=
 #include <unordered_set>      // for unordered_set
-#include <utility>            // for pair, make_pair
 
-#include "database_utils.h"
 #include "datetime.h"         // for tm_t, timegm, to_tm_t
 #include "utils.h"            // for toUType
 

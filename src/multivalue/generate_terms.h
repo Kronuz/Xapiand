@@ -29,7 +29,6 @@
 #include <string>            // for string
 #include <sys/types.h>       // for uint64_t, int64_t
 #include <type_traits>       // for decay_t, enable_if_t, is_integral
-#include <unordered_set>
 #include <vector>            // for vector, allocator
 #include <xapian.h>          // for Query, Query::op::OP_OR, Query::op::OP_AND
 
@@ -37,7 +36,6 @@
 #include "geospatial/htm.h"  // for HTM_BITS_ID, range_t (ptr only)
 #include "schema.h"
 #include "serialise.h"       // for serialise
-#include "utils.h"
 
 
 constexpr size_t MAX_TERMS            = 50;
