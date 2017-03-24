@@ -29,7 +29,7 @@ const std::string path_test_query = std::string(PATH_TESTS) + "/examples/";
 
 
 // TEST query
-const test_query_t test_query[] {
+const std::vector<test_query_t> test_query({
 	//Testing string field terms.
 	{
 		{ "description:\"American teenager\"" }, { "Back to the Future", "Planet Apes" }, "movie"
@@ -120,22 +120,22 @@ const test_query_t test_query[] {
 		{ "there:true AND there:false" }, { "1", "10" }, "number"
 	}
 	// Testing geospatials is in test_geo.cc.
-};
+});
 
 
 // TEST partials.
-const test_query_t test_partials[] {
+const std::vector<test_query_t> test_partials({
 	// Only applying for strings types.
 	{
-		{ }, { "Back to the Future" }, "movie"
+		{ "actors.male:Michael*" }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ }, { "Back to the Future" }, "movie"
+		{ "actors.male:Roddy*" }, { "Planet Apes" }, "movie"
 	},
 	{
-		{ }, {"Back to the Future", "Planet Apes" }, "movie"
+		{ "actors.male:'Thomas F*'" }, { "Back to the Future" }, "movie"
 	}
-};
+});
 
 
 static DB_Test db_query(".db_query.db", std::vector<std::string>({
@@ -165,26 +165,14 @@ static DB_Test db_query(".db_query.db", std::vector<std::string>({
 	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 
-static int make_search(const test_query_t _tests[], int len) {
+static int make_search(const std::vector<test_query_t> _tests) {
 	int cont = 0;
 	query_field_t query;
-	query.offset = 0;
 	query.limit = 20;
-	query.check_at_least = 0;
-	query.spelling = true;
-	query.synonyms = false;
-	query.is_fuzzy = false;
-	query.is_nearest = false;
 	query.sort.push_back(ID_FIELD_NAME); // All the result are sort by its id.
 
-	for (int i = 0; i < len; ++i) {
-		test_query_t p = _tests[i];
-		query.query.clear();
-
-		// Insert query
-		for (const auto& _query : p.query) {
-			query.query.push_back(_query);
-		}
+	for (const auto& test : _tests) {
+		query.query = test.query;
 
 		MSet mset;
 		std::vector<std::string> suggestions;
@@ -192,20 +180,20 @@ static int make_search(const test_query_t _tests[], int len) {
 		try {
 			mset = db_query.db_handler.get_mset(query, nullptr, nullptr, suggestions);
 			// Check by documents
-			if (mset.size() != p.expect_datas.size()) {
+			if (mset.size() != test.expect_datas.size()) {
 				++cont;
-				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), p.expect_datas.size());
+				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), test.expect_datas.size());
 			} else {
 				Xapian::MSetIterator m = mset.begin();
-				for (auto it = p.expect_datas.begin(); m != mset.end(); ++it, ++m) {
+				for (auto it = test.expect_datas.begin(); m != mset.end(); ++it, ++m) {
 					auto document = db_query.db_handler.get_document(*m);
 					auto obj_data = document.get_obj();
 					try {
-						auto data = obj_data.at(p.field);
+						auto data = obj_data.at(test.field);
 						auto str_data = data.as_string();
 						if (it->compare(str_data) != 0) {
 							++cont;
-							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", p.field.c_str(), str_data.c_str(), p.field.c_str(), it->c_str());
+							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", test.field.c_str(), str_data.c_str(), test.field.c_str(), it->c_str());
 						}
 					} catch (const msgpack::type_error& exc) {
 						++cont;
@@ -226,7 +214,7 @@ static int make_search(const test_query_t _tests[], int len) {
 int test_query_search() {
 	INIT_LOG
 	try {
-		int cont = make_search(test_query, arraySize(test_query));
+		int cont = make_search(test_query);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using query is correct!");
 		} else {
@@ -246,7 +234,7 @@ int test_query_search() {
 int test_partials_search() {
 	INIT_LOG
 	try {
-		int cont = make_search(test_partials, arraySize(test_partials));
+		int cont = make_search(test_partials);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using partials is correct!");
 		} else {
