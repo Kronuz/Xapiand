@@ -423,14 +423,14 @@ inline int verify_trixels_ranges(const std::shared_ptr<Geometry>& geometry, cons
 		HTM::insertGreaterRange(_ranges, HTM::getRange(trixel));
 	}
 	if (_ranges != ranges) {
-		L_ERR(nullptr, "ERROR: Different ranges [%zu %zu]\n", ranges.size(), _ranges.size());
+		L_ERR(nullptr, "ERROR: Different ranges [%zu %zu]", ranges.size(), _ranges.size());
 		++cont;
 	}
 
 	// Test ranges to trixels
 	auto _trixels = HTM::getTrixels(ranges);
 	if (_trixels != trixels) {
-		L_ERR(nullptr, "ERROR: Different trixels [%zu %zu]\n", trixels.size(), _trixels.size());
+		L_ERR(nullptr, "ERROR: Different trixels [%zu %zu]", trixels.size(), _trixels.size());
 		++cont;
 	}
 
@@ -475,13 +475,60 @@ int testMultiPoint() {
 
 int testCircle() {
 	INIT_LOG
-	auto circle = std::make_shared<Circle>(getCircle());
-	auto trixels = circle->getTrixels(partials, error);
-	HTM::simplifyTrixels(trixels);
-	auto ranges = circle->getRanges(partials, error);
-	HTM::writePython3D(python_geospatial + "Circle3D.py", circle, trixels);
-	HTM::writeGoogleMap(python_geospatial + "CircleGM.py", "CircleGM.html", circle, trixels, path_test_geospatial);
-	RETURN(verify_trixels_ranges(circle, trixels, ranges));
+	int cont = 0;
+	{
+		// Test all the globe
+		auto circle = std::make_shared<Circle>(Cartesian(19.702778, -101.192222, 0, Cartesian::Units::DEGREES), 20015114);
+		auto trixels = circle->getTrixels(partials, error);
+		HTM::simplifyTrixels(trixels);
+		auto ranges = circle->getRanges(partials, error);
+		HTM::writePython3D(python_geospatial + "AllCircle3D.py", circle, trixels);
+		HTM::writeGoogleMap(python_geospatial + "AllCircleGM.py", "AllCircleGM.html", circle, trixels, path_test_geospatial);
+		if (verify_trixels_ranges(circle, trixels, ranges) != 0) {
+			++cont;
+			L_ERR(nullptr, "Testing circle (all the globe) is not working");
+		}
+	}
+	{
+		// Test negative circle
+		auto circle = std::make_shared<Circle>(Cartesian(19.702778, -101.192222, 0, Cartesian::Units::DEGREES), 15011335.5);
+		auto trixels = circle->getTrixels(partials, error);
+		HTM::simplifyTrixels(trixels);
+		auto ranges = circle->getRanges(partials, error);
+		HTM::writePython3D(python_geospatial + "NegCircle3D.py", circle, trixels);
+		HTM::writeGoogleMap(python_geospatial + "NegCircleGM.py", "NegCircleGM.html", circle, trixels, path_test_geospatial);
+		if (verify_trixels_ranges(circle, trixels, ranges) != 0) {
+			++cont;
+			L_ERR(nullptr, "Testing negative circle is not working");
+		}
+	}
+	{
+		// Test positive circle.
+		auto circle = std::make_shared<Circle>(Cartesian(-23.6994215, 133.873049, 0, Cartesian::Units::DEGREES), 1500);
+		auto trixels = circle->getTrixels(partials, error);
+		HTM::simplifyTrixels(trixels);
+		auto ranges = circle->getRanges(partials, error);
+		HTM::writePython3D(python_geospatial + "PosCircle3D.py", circle, trixels);
+		HTM::writeGoogleMap(python_geospatial + "PosCircleGM.py", "PosCircleGM.html", circle, trixels, path_test_geospatial);
+		if (verify_trixels_ranges(circle, trixels, ranges) != 0) {
+			++cont;
+			L_ERR(nullptr, "Testing positive circle is not working");
+		}
+	}
+	{
+		// Test positive circle
+		auto circle = std::make_shared<Circle>(getCircle());
+		auto trixels = circle->getTrixels(partials, error);
+		HTM::simplifyTrixels(trixels);
+		auto ranges = circle->getRanges(partials, error);
+		HTM::writePython3D(python_geospatial + "PosCircle3D2.py", circle, trixels);
+		HTM::writeGoogleMap(python_geospatial + "PosCircleGM2.py", "PosCircleGM2.html", circle, trixels, path_test_geospatial);
+		if (verify_trixels_ranges(circle, trixels, ranges) != 0) {
+			++cont;
+			L_ERR(nullptr, "Testing positive circle is not working");
+		}
+	}
+	RETURN(cont);
 }
 
 
