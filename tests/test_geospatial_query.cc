@@ -28,7 +28,7 @@
 const std::string path_test_geo = std::string(PATH_TESTS) + "/examples/json/";
 
 
-const test_geo_t geo_range_tests[] {
+const std::vector<test_geo_t> geo_range_tests({
 	// The range search always is sort by centroids' search.
 	{
 		// Search: The polygon's search  describes North Dakota.
@@ -49,10 +49,10 @@ const test_geo_t geo_range_tests[] {
 	{
 		"location:..\"CIRCLE(-100 40, 1000)\"", { }
 	}
-};
+});
 
 
-const test_geo_t geo_terms_tests[] {
+const std::vector<test_geo_t> geo_terms_tests({
 	// Test for search by terms.
 	{
 		"location:\"POLYGON((-104.026930 48.998427, -104.039833 45.931363, -96.569131 45.946643, -97.228311 48.990383))\"",
@@ -94,7 +94,7 @@ const test_geo_t geo_terms_tests[] {
 	{
 		"location:\"POINT(-100 40)\"", { }
 	}
-};
+});
 
 
 static DB_Test db_geo(".db_geo.db", std::vector<std::string>({
@@ -109,32 +109,24 @@ static DB_Test db_geo(".db_geo.db", std::vector<std::string>({
 	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 
-static int make_search(const test_geo_t _tests[], int len) {
+static int make_search(const std::vector<test_geo_t> _tests) {
 	int cont = 0;
 	query_field_t query;
-	query.offset = 0;
-	query.limit = 10;
-	query.check_at_least = 0;
-	query.spelling = false;
-	query.synonyms = false;
-	query.is_fuzzy = false;
-	query.is_nearest = false;
 
-	for (int i = 0; i < len; ++i) {
-		test_geo_t p = _tests[i];
+	for (const auto& test : _tests) {
 		query.query.clear();
 		query.sort.clear();
-		query.query.push_back(p.query);
+		query.query.push_back(test.query);
 		query.sort.push_back("_id");
 
 		try {
 			std::vector<std::string> suggestions;
 			auto mset = db_geo.db_handler.get_mset(query, nullptr, nullptr, suggestions);
-			if (mset.size() != p.expect_datas.size()) {
+			if (mset.size() != test.expect_datas.size()) {
 				++cont;
-				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), p.expect_datas.size());
+				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), test.expect_datas.size());
 			} else {
-				auto it = p.expect_datas.begin();
+				auto it = test.expect_datas.begin();
 				for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {
 					auto document = db_geo.db_handler.get_document(*m);
 					auto region = document.get_obj().at("region").as_string();
@@ -157,7 +149,7 @@ static int make_search(const test_geo_t _tests[], int len) {
 int geo_range_test() {
 	INIT_LOG
 	try {
-		int cont = make_search(geo_range_tests, arraySize(geo_range_tests));
+		int cont = make_search(geo_range_tests);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search range geospatials is correct!");
 		} else {
@@ -177,7 +169,7 @@ int geo_range_test() {
 int geo_terms_test() {
 	INIT_LOG
 	try {
-		int cont = make_search(geo_terms_tests, arraySize(geo_terms_tests));
+		int cont = make_search(geo_terms_tests);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search by geospatial terms is correct!");
 		} else {
