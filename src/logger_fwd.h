@@ -22,14 +22,14 @@
 
 #pragma once
 
-#include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
 #include <atomic>             // for atomic_uulong
 #include <chrono>             // for system_clock, time_point, duration, millise...
 #include <cstdarg>            // for va_list, va_end
+#include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
 
 #include "exception.h"
 #include "utils.h"
-#include "xxh64.hpp"                        // for xxh64
+#include "xxh64.hpp"          // for xxh64
 
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
@@ -82,12 +82,16 @@ inline void print(const char *format, ...) {
 	println(true, format, argptr);
 	va_end(argptr);
 }
+
+
 inline void println(bool with_endl, const char *format, ...) {
 	va_list argptr;
 	va_start(argptr, format);
 	println(with_endl, format, argptr);
 	va_end(argptr);
 }
+
+
 inline void log(const void* obj, const char *format, ...) {
 	va_list argptr;
 	va_start(argptr, format);
