@@ -44,7 +44,7 @@
 
 #define L_MARK _LOG(false, LOG_DEBUG, "🔥  " DEBUG_COL, args)
 
-#define L_INIT auto start = std::chrono::system_clock::now()
+#define L_INIT auto start = std::chrono::system_clock::now
 
 
 ////////////////////////////////////////////////////////////////////////////////
