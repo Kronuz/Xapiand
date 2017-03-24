@@ -1842,11 +1842,11 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[2] = FieldType::GEO;
 				return;
 			}
-			if (specification.flags.text_detection && (!specification.flags.string_detection || Serialise::isText(str_value, specification.flags.bool_term))) {
+			if (specification.flags.text_detection && (!specification.flags.string_detection && Serialise::isText(str_value, specification.flags.bool_term))) {
 				specification.sep_types[2] = FieldType::TEXT;
 				return;
 			}
-			if (specification.flags.string_detection) {
+			if (specification.flags.string_detection && !specification.flags.bool_term) {
 				specification.sep_types[2] = FieldType::STRING;
 				return;
 			}
