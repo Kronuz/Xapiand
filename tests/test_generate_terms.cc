@@ -363,8 +363,9 @@ const std::vector<testQueryG_t> geo_tests({
 		// CIRCLE(-104.026930 48.998427, 20015114)
 		std::vector<range_t>({
 			{ 9007199254740992, 18014398509481983 },
-		}), { 25, 20, 15, 10, 5, 0 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
-		"G6:8 OR G6:9 OR G6:10 OR G6:11 OR G6:12 OR G6:13 OR G6:14 OR G6:15"
+		}), { 0, 10, 20, 30, 40, 50 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
+		"Query((((((((G6G\\xbe\\xf8 OR G6G\\xbe\\xf0) OR G6G\\xbe\\xe8) OR G6G\\xbe\\xe0) OR G6G\\xbe\\xd8) OR G6G\\xbe\\xd0) OR G6G\\xbe\\xc8) OR G6G\\xbe\\xc0))"
+		// "G6:8 OR G6:9 OR G6:10 OR G6:11 OR G6:12 OR G6:13 OR G6:14 OR G6:15"
 	},
 	{
 		// CIRCLE(-104.026930 48.998427, 15011335.5)
@@ -377,16 +378,19 @@ const std::vector<testQueryG_t> geo_tests({
 			range_t(14777436277309440, 15058911254020095),
 			range_t(15129279998197760, 15621861207441407),
 			range_t(15692229951619072, 18014398509481983),
-		}), { 25, 20, 15, 10, 5, 0 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
-		"G6:8 OR G6:9 OR G6:10 OR G6:11 OR G6:12 OR G6:13 OR G6:14 OR G6:15"
+		}), { 0, 10, 20, 30, 40, 50 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
+		"Query((((((((G6G\\xbe\\xf8 OR G6G\\xbe\\xf0) OR G6G\\xbe\\xe8) OR G6G\\xbe\\xe0) OR G6G\\xbe\\xd8) OR G6G\\xbe\\xd0) OR G6G\\xbe\\xc8) OR G6G\\xbe\\xc0))"
+		// "G6:8 OR G6:9 OR G6:10 OR G6:11 OR G6:12 OR G6:13 OR G6:14 OR G6:15"
 	},
 	{
 		std::vector<range_t>({
 			{ 15629289656149997, 15629289656149997 }
-		}), { 25, 20, 15, 10, 5, 0 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
+		}), { 0, 10, 20, 30, 40, 50 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
 		"Query(G1G˯\\x0d\\x83$\\x17\\xcf\\xda)"
 		// G1:15629289656149997
 	},
+
+	// Upper and lower accuracy
 	{
 		std::vector<range_t>({
 			range_t(11125203589398528, 11125203656507391),
@@ -418,9 +422,11 @@ const std::vector<testQueryG_t> geo_tests({
 			range_t(11126386785779712, 11126386919997439),
 			range_t(11126386987106304, 11126387121324031),
 			range_t(11126387523977216, 11126387591086079),
-		}), { 25, 20, 15, 10, 5, 0 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
-		"G1:13"
+		}), { 0, 10, 20, 30, 40, 50 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
+		"Query(((G5G\\xc1\\x8f\\x0c OR G5G\\xc1\\x8f\\x0e) AND ((((((((((((((((((G4G\\xc4\\x0f\\x0eǀ OR G4G\\xc4\\x0f\\x0e\\xc7) OR G4G\\xc4\\x0f\\x0e\\xc6) OR G4G\\xc4\\x0f\\x0c\\xa7\\x80) OR G4G\\xc4\\x0f\\x0e\\xc2) OR G4G\\xc4\\x0f\\x0c\\xa5\\x80) OR G4G\\xc4\\x0f\\x0c\\xa5) OR G4G\\xc4\\x0f\\x0c\\xa4\\x80) OR G4G\\xc4\\x0f\\x0e\\xc0\\x80) OR G4G\\xc4\\x0f\\x0c\\xa4) OR G4G\\xc4\\x0f\\x0eÀ) OR G4G\\xc4\\x0f\\x0c\\xa7) OR G4G\\xc4\\x0f\\x0c\\xa1\\x80) OR G4G\\xc4\\x0f\\x0e\\xc3) OR G4G\\xc4\\x0f\\x0c\\xa6\\x80) OR G4G\\xc4\\x0f\\x0c\\xa1) OR G4G\\xc4\\x0f\\x0e) OR G4G\\xc4\\x0f\\x0c\\xa6) OR G4G\\xc4\\x0f\\x0c\\xa0\\x80)))"
+		// ((G5:10118 OR G5:10119) AND (G4:10361153 OR G4:10361154 OR G4:10361155 OR G4:10361160 OR G4:10361161 OR G4:10361162 OR G4:10361163 OR G4:10361164 OR G4:10361165 OR G4:10361166 OR G4:10361167 OR G4:10362241 OR G4:10362244 OR G4:10362245 OR G4:10362246 OR G4:10362247 OR G4:10362252 OR G4:10362254 OR G4:10362255))
 	},
+
 	// There are not accuracy
 	{
 		std::vector<range_t>({
@@ -432,10 +438,6 @@ const std::vector<testQueryG_t> geo_tests({
 
 
 int numeric_test() {
-	//std::vector<int64_t> values({ 0, 1000, 2000, 1200, 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000, 2000000, 3000000, 4000000, 5000000, 6000000, 7000000, 8000000, 9000000, 10000000 });
-	// for (const auto& val : values) {
-	// 	fprintf(stderr, "++++ %lld '%s'\n", val, repr(sortable_serialise(val), true, false).c_str());
-	// }
 	INIT_LOG
 	int cont = 0;
 	for (const auto& test : numeric_tests) {
@@ -506,7 +508,7 @@ int geo_test() {
 	for (const auto& test : geo_tests) {
 		auto result_query_terms = GenerateTerms::geo(test.ranges, test.accuracy, test.acc_prefix).get_description();
 		if (result_query_terms != test.expected_query_terms) {
-			fprintf(stderr, "ERROR: Different numeric filter query.\n\tResult: %s\n\tExpected: %s\n", result_query_terms.c_str(), test.expected_query_terms.c_str());
+			L_ERR(nullptr, "ERROR: Different numeric filter query.\n\tResult: %s\n\tExpected: %s", result_query_terms.c_str(), test.expected_query_terms.c_str());
 			++cont;
 		}
 	}
