@@ -530,7 +530,7 @@ class HttpProxyServer(RawProxyServer):
                             unpacked = msgpack.unpackb(body)
                             json_dump = json.dumps(unpacked, indent=4, ensure_ascii=False)
                             print(lightcolor('    ' + '\n    '.join(json_dump.split('\n'))))
-                        except ValueError as exc:
+                        except Exception as exc:
                             print(lightcolor(repr(body)))
                             print(lightcolor('    %s%s' % (lightred("ERROR 1: "), exc)))
 
@@ -540,9 +540,20 @@ class HttpProxyServer(RawProxyServer):
                             unpacked = json.loads(body.decode('utf-8', errors='replace'))
                             json_dump = json.dumps(unpacked, indent=4, ensure_ascii=False)
                             print(lightcolor('    ' + '\n    '.join(json_dump.split('\n'))))
-                        except ValueError as exc:
+                        except Exception as exc:
                             print(lightcolor(repr(body)))
                             print(lightcolor('    %s%s' % (lightred("ERROR 2: "), exc)))
+
+                    elif 'application/x-www-form-urlencoded' in content_type:
+                        import json
+                        import urlparse
+                        try:
+                            unpacked = urlparse.parse_qs(body)
+                            json_dump = json.dumps(unpacked, indent=4, ensure_ascii=False)
+                            print(lightcolor('    ' + '\n    '.join(json_dump.split('\n'))))
+                        except Exception as exc:
+                            print(lightcolor(repr(body)))
+                            print(lightcolor('    %s%s' % (lightred("ERROR 3: "), exc)))
 
                     elif 'image/' in content_type:
                         import base64
@@ -550,6 +561,10 @@ class HttpProxyServer(RawProxyServer):
                         name = request[1] or "Unnamed file"
                         # From [https://www.iterm2.com/documentation-images.html]
                         print("    \033]1337;File=name=%s;inline=1;size=%d;width=70%%:%s\a" % (base64.b64encode(name), len(body), base64.b64encode(body)))
+
+                    else:
+                        print(lightcolor('    %s%s:' % (lightred("ERROR 3: "), content_type)))
+                        print(lightcolor(repr(body)))
 
                 if direction == SENDING:
                     self.buffers[from_client][SENDING] = {'buffer': self.buffers[from_client][SENDING]['buffer']}
