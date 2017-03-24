@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -30,8 +30,7 @@ struct testQuery_t {
 	std::string end;
 	std::vector<uint64_t> accuracy;
 	std::vector<std::string> acc_prefix;
-	std::string expected_terms;
-	std::vector<std::string> expected_prefixes;
+	std::string expected_query_terms;
 };
 
 
@@ -39,8 +38,7 @@ struct testQueryG_t {
 	std::vector<range_t> ranges;
 	std::vector<uint64_t> accuracy;
 	std::vector<std::string> acc_prefix;
-	std::string expected_terms;
-	std::vector<std::string> expected_prefixes;
+	std::string expected_query_terms;
 };
 
 
