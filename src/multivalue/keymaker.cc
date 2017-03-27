@@ -101,25 +101,29 @@ FloatKey::findSmallest(const Xapian::Document& doc) const
 
 	StringList values(std::move(multiValues));
 
+	if (values.single()) {
+		return Serialise::_float(std::fabs(Unserialise::_float(values.front()) - _ref_val));
+	}
+
 	auto it = values.cbegin();
-	if (values.single() || it.compare(_ser_ref_val) >= 0) {
-		return Serialise::_float(std::fabs(Unserialise::_float(*it) - _ref_val));
+	if (it.compare(_ser_ref_val) >= 0) {
+		return Serialise::_float(Unserialise::_float(*it) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::_float(std::fabs(Unserialise::_float(*last) - _ref_val));
+		return Serialise::_float(_ref_val - Unserialise::_float(*last));
 	}
 
 	auto it_p = it++;
-	for ( ; it != last && it.compare(_ser_ref_val) <= 0; it_p = it++);
+	for ( ; it != last && it.compare(_ser_ref_val) < 0; it_p = it++);
 
-	if (it_p.compare(_ser_ref_val) == 0) {
+	if (it.compare(_ser_ref_val) == 0) {
 		return SERIALISED_ZERO;
 	}
 
-	double distance1 = std::fabs(Unserialise::_float(*it_p) - _ref_val);
-	double distance2 = std::fabs(Unserialise::_float(*it) - _ref_val);
+	double distance1 = _ref_val - Unserialise::_float(*it_p);
+	double distance2 = Unserialise::_float(*it) - _ref_val;
 	return Serialise::_float(distance1 < distance2 ? distance1 : distance2);
 }
 
@@ -134,25 +138,22 @@ FloatKey::findBiggest(const Xapian::Document& doc) const
 
 	StringList values(std::move(multiValues));
 
+	if (values.single()) {
+		return Serialise::_float(std::fabs(Unserialise::_float(values.front()) - _ref_val));
+	}
+
 	auto it = values.cbegin();
-	if (values.single() || it.compare(_ser_ref_val) >= 0) {
-		return Serialise::_float(std::fabs(Unserialise::_float(values.back()) - _ref_val));
+	if (it.compare(_ser_ref_val) >= 0) {
+		return Serialise::_float(Unserialise::_float(values.back()) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::_float(std::fabs(Unserialise::_float(*last) - _ref_val));
+		return Serialise::_float(_ref_val - Unserialise::_float(*it));
 	}
 
-	auto it_p = it++;
-	for ( ; it != last && it.compare(_ser_ref_val) <= 0; it_p = it++);
-
-	if (it_p.compare(_ser_ref_val) == 0) {
-		return Serialise::_float(std::fabs(Unserialise::_float(*it) - _ref_val));
-	}
-
-	double distance1 = std::fabs(Unserialise::_float(*it_p) - _ref_val);
-	double distance2 = std::fabs(Unserialise::_float(*it) - _ref_val);
+	double distance1 = _ref_val - Unserialise::_float(*it);
+	double distance2 = Unserialise::_float(*last) - _ref_val;
 	return Serialise::_float(distance1 > distance2 ? distance1 : distance2);
 }
 
@@ -167,25 +168,29 @@ IntegerKey::findSmallest(const Xapian::Document& doc) const
 
 	StringList values(std::move(multiValues));
 
+	if (values.single()) {
+		return Serialise::integer(std::llabs(Unserialise::integer(values.front()) - _ref_val));
+	}
+
 	auto it = values.cbegin();
-	if (values.single() || it.compare(_ser_ref_val) >= 0) {
-		return Serialise::integer(std::llabs(Unserialise::integer(*it) - _ref_val));
+	if (it.compare(_ser_ref_val) >= 0) {
+		return Serialise::integer(Unserialise::integer(*it) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::integer(std::llabs(Unserialise::integer(*last) - _ref_val));
+		return Serialise::integer(_ref_val - Unserialise::integer(*last));
 	}
 
 	auto it_p = it++;
-	for ( ; it != last && it.compare(_ser_ref_val) <= 0; it_p = it++);
+	for ( ; it != last && it.compare(_ser_ref_val) < 0; it_p = it++);
 
-	if (it_p.compare(_ser_ref_val) == 0) {
+	if (it.compare(_ser_ref_val) == 0) {
 		return SERIALISED_ZERO;
 	}
 
-	int64_t distance1 = std::llabs(Unserialise::integer(*it_p) - _ref_val);
-	int64_t distance2 = std::llabs(Unserialise::integer(*it) - _ref_val);
+	int64_t distance1 = _ref_val - Unserialise::integer(*it_p);
+	int64_t distance2 = Unserialise::integer(*it) - _ref_val;
 	return Serialise::integer(distance1 < distance2 ? distance1 : distance2);
 }
 
@@ -200,25 +205,22 @@ IntegerKey::findBiggest(const Xapian::Document& doc) const
 
 	StringList values(std::move(multiValues));
 
+	if (values.single()) {
+		return Serialise::integer(std::llabs(Unserialise::integer(values.front()) - _ref_val));
+	}
+
 	auto it = values.cbegin();
-	if (values.single() || it.compare(_ser_ref_val) >= 0) {
-		return Serialise::integer(std::llabs(Unserialise::integer(values.back()) - _ref_val));
+	if (it.compare(_ser_ref_val) >= 0) {
+		return Serialise::integer(Unserialise::integer(values.back()) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::integer(std::llabs(Unserialise::integer(*last) - _ref_val));
+		return Serialise::integer(_ref_val - Unserialise::integer(*it));
 	}
 
-	auto it_p = it++;
-	for ( ; it != last && it.compare(_ser_ref_val) <= 0; it_p = it++);
-
-	if (it_p.compare(_ser_ref_val) == 0) {
-		return Serialise::integer(std::llabs(Unserialise::integer(*it) - _ref_val));
-	}
-
-	int64_t distance1 = std::llabs(Unserialise::integer(*it_p) - _ref_val);
-	int64_t distance2 = std::llabs(Unserialise::integer(*it) - _ref_val);
+	int64_t distance1 = _ref_val - Unserialise::integer(*it);
+	int64_t distance2 = Unserialise::integer(*last) - _ref_val;
 	return Serialise::integer(distance1 > distance2 ? distance1 : distance2);
 }
 
@@ -233,29 +235,30 @@ PositiveKey::findSmallest(const Xapian::Document& doc) const
 
 	StringList values(std::move(multiValues));
 
-	auto it = values.cbegin();
-	if (values.single() || it.compare(_ser_ref_val) >= 0) {
-		uint64_t val = Unserialise::positive(*it);
+	if (values.single()) {
+		uint64_t val = Unserialise::positive(values.front());
 		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
+	}
+
+	auto it = values.cbegin();
+	if (it.compare(_ser_ref_val) >= 0) {
+		return Serialise::positive(Unserialise::positive(*it) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		uint64_t val = Unserialise::positive(*last);
-		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
+		return Serialise::positive(_ref_val - Unserialise::positive(*last));
 	}
 
 	auto it_p = it++;
-	for ( ; it != last && it.compare(_ser_ref_val) <= 0; it_p = it++);
+	for ( ; it != last && it.compare(_ser_ref_val) < 0; it_p = it++);
 
-	if (it_p.compare(_ser_ref_val) == 0) {
+	if (it.compare(_ser_ref_val) == 0) {
 		return SERIALISED_ZERO;
 	}
 
-	uint64_t val = Unserialise::positive(*it_p);
-	uint64_t distance1 = val > _ref_val ? val - _ref_val : _ref_val - val;
-	val = Unserialise::positive(*it);
-	uint64_t distance2 = val > _ref_val ? val - _ref_val : _ref_val - val;
+	uint64_t distance1 = _ref_val - Unserialise::positive(*it_p);
+	uint64_t distance2 = Unserialise::positive(*it) - _ref_val;
 	return Serialise::positive(distance1 < distance2 ? distance1 : distance2);
 }
 
@@ -270,30 +273,23 @@ PositiveKey::findBiggest(const Xapian::Document& doc) const
 
 	StringList values(std::move(multiValues));
 
-	auto it = values.cbegin();
-	if (values.single() || it.compare(_ser_ref_val) >= 0) {
-		uint64_t val = Unserialise::positive(values.back());
+	if (values.single()) {
+		uint64_t val = Unserialise::positive(values.front());
 		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
+	}
+
+	auto it = values.cbegin();
+	if (it.compare(_ser_ref_val) >= 0) {
+		return Serialise::positive(Unserialise::positive(values.back()) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		uint64_t val = Unserialise::positive(*it);
-		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
+		return Serialise::positive(_ref_val - Unserialise::positive(*it));
 	}
 
-	auto it_p = it++;
-	for ( ; it != last && it.compare(_ser_ref_val) <= 0; it_p = it++);
-
-	if (it_p.compare(_ser_ref_val) == 0) {
-		uint64_t val = Unserialise::positive(*it);
-		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
-	}
-
-	uint64_t val = Unserialise::positive(*it_p);
-	uint64_t distance1 = val > _ref_val ? val - _ref_val : _ref_val - val;
-	val = Unserialise::positive(*it);
-	uint64_t distance2 = val > _ref_val ? val - _ref_val : _ref_val - val;
+	uint64_t distance1 = _ref_val - Unserialise::positive(*it);
+	uint64_t distance2 = Unserialise::positive(*last) - _ref_val;
 	return Serialise::positive(distance1 > distance2 ? distance1 : distance2);
 }
 
