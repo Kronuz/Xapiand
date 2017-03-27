@@ -41,7 +41,9 @@ TEST(SortQueryTest, String) {
 
 
 TEST(SortQueryTest, Numerical) {
-	EXPECT_EQ(sort_test_numerical(), 0);
+	EXPECT_EQ(sort_test_floats(), 0);
+	EXPECT_EQ(sort_test_integers(), 0);
+	EXPECT_EQ(sort_test_positives(), 0);
 }
 
 

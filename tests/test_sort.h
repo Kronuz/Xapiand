@@ -48,7 +48,11 @@ int sort_test_string_soundex_fr();
 int sort_test_string_soundex_de();
 int sort_test_string_soundex_es();
 
-int sort_test_numerical();
+// Numericals
+int sort_test_floats();
+int sort_test_integers();
+int sort_test_positives();
+
 int sort_test_date();
 int sort_test_boolean();
 int sort_test_geo();
