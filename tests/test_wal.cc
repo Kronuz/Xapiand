@@ -130,6 +130,7 @@ int create_db_wal(DB_Test& db_wal) {
 
 int restore_database() {
 	INIT_LOG
+#if XAPIAND_DATABASE_WAL
 	DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
 	try {
 		if (create_db_wal(db_wal) == 0) {
@@ -164,5 +165,8 @@ int restore_database() {
 		RETURN(1);
 	}
 	delete_files(restored_db);
+#else
+	L_ERR(nullptr, "XAPIAND_DATABASE_WAL is not activated");
+#endif
 	RETURN(1);
 }
