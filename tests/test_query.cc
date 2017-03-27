@@ -76,14 +76,14 @@ const std::vector<test_query_t> test_query({
 		{ "released:1985-07-03" }, { "Back to the Future" }, "movie"
 	},
 	{
-		{ "date:'2011-01-01||+1y-1y+3M-3M'" }, { "1", "10" }, "number"
+		{ "date:'2011-01-01||+1y-1y+3M-3M'" }, { "1" }, "number"
 	},
 	{
 		{ "date:'2011-01-01||+4y'" }, { "5", "6" }, "number"
 	},
 	// OR
 	{
-		{ "date:'2011-01-01||+1y-1y+3M-3M' OR date:'2011-01-01||+4y'" }, { "1", "5", "6", "10" }, "number"
+		{ "date:'2011-01-01||+1y-1y+3M-3M' OR date:'2011-01-01||+4y'" }, { "1", "5", "6" }, "number"
 	},
 	// AND
 	{
@@ -94,11 +94,11 @@ const std::vector<test_query_t> test_query({
 		{ "year:2001" }, { "2", "9" }, "number"
 	},
 	{
-		{ "year:0" }, { "3", "8" }, "number"
+		{ "year:0" }, { "8" }, "number"
 	},
 	// OR
 	{
-		{ "year:2001 OR year:0" }, { "2", "3", "8", "9" }, "number"
+		{ "year:2001 OR year:0" }, { "2", "8", "9" }, "number"
 	},
 	// AND
 	{
@@ -106,18 +106,18 @@ const std::vector<test_query_t> test_query({
 	},
 	// Testing boolean terms
 	{
-		{ "there:true" }, { "1", "3", "4", "7", "8", "10" }, "number"
+		{ "there:true" }, { "1", "3", "4", "7", "8", }, "number"
 	},
 	{
-		{ "there:false" }, { "1", "2", "5", "6", "9", "10" }, "number"
+		{ "there:false" }, { "1", "2", "5", "6", "9" }, "number"
 	},
 	// OR
 	{
-		{ "there:true OR there:false" }, { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" }, "number"
+		{ "there:true OR there:false" }, { "1", "2", "3", "4", "5", "6", "7", "8", "9" }, "number"
 	},
 	// AND
 	{
-		{ "there:true AND there:false" }, { "1", "10" }, "number"
+		{ "there:true AND there:false" }, { "1" }, "number"
 	}
 	// Testing geospatials is in test_geo.cc.
 });
