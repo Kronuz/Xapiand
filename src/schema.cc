@@ -1598,6 +1598,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 				specification.flags.has_index = true;
 			}
 
+			// It is needed for soundex.
 			mut_properties[RESERVED_LANGUAGE] = specification.language;
 
 			mut_properties[RESERVED_STOP_STRATEGY] = specification.stop_strategy;
@@ -1622,6 +1623,9 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 				}
 				specification.flags.has_index = true;
 			}
+
+			// It is needed for soundex.
+			mut_properties[RESERVED_LANGUAGE] = specification.language;
 			break;
 		}
 		case FieldType::TERM: {
@@ -1641,6 +1645,9 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 				specification.flags.has_bool_term = true;
 			}
 			mut_properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
+
+			// It is needed for soundex.
+			mut_properties[RESERVED_LANGUAGE] = specification.language;
 			break;
 		}
 		case FieldType::BOOLEAN:
@@ -5145,7 +5152,11 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 						break;
+					case FieldType::STRING:
+						res.language = properties.at(RESERVED_LANGUAGE).as_string();
+						break;
 					case FieldType::TERM:
+						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 						break;
 					default:
@@ -5164,7 +5175,11 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 						break;
+					case FieldType::STRING:
+						res.language = properties.at(RESERVED_LANGUAGE).as_string();
+						break;
 					case FieldType::TERM:
+						res.language = properties.at(RESERVED_LANGUAGE).as_string();
 						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 						break;
 					default:
@@ -5229,7 +5244,11 @@ Schema::get_slot_field(const std::string& field_name) const
 					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
 					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
 					break;
+				case FieldType::STRING:
+					res.language = properties.at(RESERVED_LANGUAGE).as_string();
+					break;
 				case FieldType::TERM:
+					res.language = properties.at(RESERVED_LANGUAGE).as_string();
 					res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 					break;
 				default:
