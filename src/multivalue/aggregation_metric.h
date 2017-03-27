@@ -25,7 +25,7 @@
 #include "xapiand.h"
 
 #include <algorithm>           // for nth_element, max_element
-#include <cfloat>              // for DBL_MAX, DBL_MIN
+#include <cfloat>              // for DBL_MAX
 #include <cmath>               // for sqrt
 #include <cstdio>
 #include <cstring>             // for size_t
@@ -413,12 +413,12 @@ protected:
 
 	MetricMax(MsgPack& result)
 		: HandledSubAggregation(result),
-		  _max(DBL_MIN) { }
+		  _max(-DBL_MAX) { }
 
 public:
 	MetricMax(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation(result, conf, schema),
-		  _max(DBL_MIN) { }
+		  _max(-DBL_MAX) { }
 
 	void update() override {
 		_result[AGGREGATION_MAX] = _max;

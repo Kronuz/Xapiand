@@ -24,7 +24,7 @@
 
 #include "xapiand.h"
 
-#include <cfloat>                         // for DBL_MAX, DBL_MIN
+#include <cfloat>                         // for DBL_MAX
 #include <cmath>                          // for fabs
 #include <cstdlib>                        // for llabs
 #include <memory>                         // for default_delete, unique_ptr
@@ -43,7 +43,7 @@
 
 
 const std::string MAX_CMPVALUE(Serialise::_float(DBL_MAX));
-const std::string MIN_CMPVALUE(Serialise::_float(DBL_MIN));
+const std::string MIN_CMPVALUE(Serialise::_float(-DBL_MAX));
 
 const std::string SERIALISED_ZERO(Serialise::_float(0));
 const std::string SERIALISED_ONE(Serialise::_float(1));
@@ -215,7 +215,7 @@ public:
 
 		StringList values(std::move(multiValues));
 
-		double max_distance = DBL_MIN;
+		double max_distance = -DBL_MAX;
 		for (const auto& value : values) {
 			double distance = _metric.distance(value);
 			if (distance > max_distance) {
