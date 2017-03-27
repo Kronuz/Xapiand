@@ -152,23 +152,25 @@ private:
 
 	iterator& get_last() const {
 		if (!_i_last.owner) {
-			auto it = _i_begin;
-			_i_last = it;
-			while (++it) {
-				_i_last = it;
+			if (!_i_clast.owner) {
+				auto it = _i_cbegin;
+				_i_clast = it;
+				while (++it) {
+					_i_clast = it;
+				}
 			}
+			_i_last = iterator(_i_clast.owner, _i_clast.pos, _i_clast.length);
 		}
 		return _i_last;
 	}
 
 	const_iterator& get_clast() const {
-		if (!_i_last.owner) {
-			auto it = _i_begin;
-			_i_last = it;
+		if (!_i_clast.owner) {
+			auto it = _i_cbegin;
+			_i_clast = it;
 			while (++it) {
-				_i_last = it;
+				_i_clast = it;
 			}
-			_i_clast = const_iterator(_i_last.owner, _i_last.pos, _i_last.length);
 		}
 		return _i_clast;
 	}
@@ -253,15 +255,15 @@ public:
 	}
 
 	iterator last() {
-		return _i_last;
+		return get_last();
 	}
 
 	const_iterator last() const {
-		return _i_clast;
+		return get_clast();
 	}
 
 	const_iterator clast() const {
-		return _i_clast;
+		return get_clast();
 	}
 
 	iterator end() {
