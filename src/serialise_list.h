@@ -122,7 +122,7 @@ class SerialiseList {
 		}
 
 		int compare(const std::string& ref) const noexcept {
-			return owner->_serialised.compare(owner->_end - pos, length, ref);
+			return -ref.compare(0, ref.length(), pos, length);
 		}
 
 		bool operator==(const Iterator& other) const noexcept {
