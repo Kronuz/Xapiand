@@ -183,4 +183,5 @@ public:
 	std::string to_string() const override;
 	std::vector<std::string> getTrixels(bool partials, double error) const override;
 	std::vector<range_t> getRanges(bool partials, double error) const override;
+	std::vector<Cartesian> getCentroids() const override;
 };

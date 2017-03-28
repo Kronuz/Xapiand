@@ -373,3 +373,10 @@ Circle::getRanges(bool partials, double error) const
 
 	return data.getRanges();
 }
+
+
+std::vector<Cartesian>
+Circle::getCentroids() const
+{
+	return std::vector<Cartesian>({ constraint.center });
+}

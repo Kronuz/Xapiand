@@ -104,3 +104,20 @@ MultiPolygon::getRanges(bool partials, double error) const
 
 	return ranges;
 }
+
+
+std::vector<Cartesian>
+MultiPolygon::getCentroids() const
+{
+	std::vector<Cartesian> centroids;
+	for (const auto& polygon : polygons) {
+		const auto& convex_polygons = polygon.getConvexPolygons();
+		if (convex_polygons.size() == 1) {
+			centroids.push_back(convex_polygons.back().getCentroid());
+		} else {
+			// FIXME: Efficient way for calculate centroids for a Polygon with holes.
+		}
+	}
+
+	return centroids;
+}

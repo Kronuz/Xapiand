@@ -104,3 +104,11 @@ MultiConvex::getRanges(bool partials, double error) const
 
 	return ranges;
 }
+
+
+std::vector<Cartesian>
+MultiConvex::getCentroids() const
+{
+	// FIXME: Efficient way for calculate centroids for a MultiConvex.
+	return std::vector<Cartesian>();
+}

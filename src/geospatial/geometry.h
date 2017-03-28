@@ -165,7 +165,5 @@ public:
 	virtual std::vector<std::string> getTrixels(bool partials, double error) const = 0;
 	virtual std::vector<range_t> getRanges(bool partials, double error) const = 0;
 
-	virtual std::vector<Cartesian> getCentroids() const {
-		return std::vector<Cartesian>();
-	}
+	virtual std::vector<Cartesian> getCentroids() const = 0;
 };

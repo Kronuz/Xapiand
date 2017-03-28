@@ -447,3 +447,11 @@ Convex::getRanges(bool partials, double error) const
 
 	return data.getRanges();
 }
+
+
+std::vector<Cartesian>
+Convex::getCentroids() const
+{
+	// FIXME: Efficient way for calculate centroids for a Convex.
+	return std::vector<Cartesian>();
+}

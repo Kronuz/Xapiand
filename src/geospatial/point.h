@@ -101,4 +101,8 @@ public:
 		auto id = HTM::getId(p);
 		return { range_t(id, id) };
 	}
+
+	std::vector<Cartesian> getCentroids() const override {
+		return std::vector<Cartesian>({ p });
+	}
 };

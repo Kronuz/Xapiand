@@ -118,3 +118,19 @@ Collection::getRanges(bool partials, double error) const
 
 	return ranges;
 }
+
+
+std::vector<Cartesian>
+Collection::getCentroids() const
+{
+	auto centroids = multipoint.getCentroids();
+	auto aux = multicircle.getCentroids();
+	centroids.insert(centroids.end(), std::make_move_iterator(aux.begin()), std::make_move_iterator(aux.end()));
+	aux = multiconvex.getCentroids();
+	centroids.insert(centroids.end(), std::make_move_iterator(aux.begin()), std::make_move_iterator(aux.end()));
+	aux = multipolygon.getCentroids();
+	centroids.insert(centroids.end(), std::make_move_iterator(aux.begin()), std::make_move_iterator(aux.end()));
+	// FIXME: Efficient way for calculate centroids for Intersections.
+
+	return centroids;
+}

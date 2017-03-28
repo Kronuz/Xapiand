@@ -94,3 +94,16 @@ MultiPoint::getRanges(bool, double) const
 
 	return ranges;
 }
+
+
+std::vector<Cartesian>
+MultiPoint::getCentroids() const
+{
+	std::vector<Cartesian> centroids;
+	centroids.reserve(points.size());
+	for (const auto& point : points) {
+		centroids.push_back(point.getCartesian());
+	}
+
+	return centroids;
+}

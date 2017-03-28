@@ -97,3 +97,11 @@ Intersection::getRanges(bool partials, double error) const
 
 	return ranges;
 }
+
+
+std::vector<Cartesian>
+Intersection::getCentroids() const
+{
+	// FIXME: Efficient way for calculate centroids for a Intersection.
+	return std::vector<Cartesian>();
+}

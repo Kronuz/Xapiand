@@ -98,3 +98,16 @@ MultiCircle::getRanges(bool partials, double error) const
 
 	return ranges;
 }
+
+
+std::vector<Cartesian>
+MultiCircle::getCentroids() const
+{
+	std::vector<Cartesian> centroids;
+	centroids.reserve(circles.size());
+	for (const auto& circle : circles) {
+		centroids.push_back(circle.getConstraint().center);
+	}
+
+	return centroids;
+}

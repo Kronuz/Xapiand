@@ -686,6 +686,13 @@ Polygon::ConvexPolygon::getRanges(bool partials, double error) const
 }
 
 
+std::vector<Cartesian>
+Polygon::ConvexPolygon::getCentroids() const
+{
+	return std::vector<Cartesian>({ centroid });
+}
+
+
 void
 Polygon::simplify()
 {
@@ -767,4 +774,16 @@ Polygon::getRanges(bool partials, double error) const
 	}
 
 	return ranges;
+}
+
+
+std::vector<Cartesian>
+Polygon::getCentroids() const
+{
+	if (convexpolygons.size() == 1) {
+		return convexpolygons.back().getCentroids();
+	} else {
+		// FIXME: Efficient way for calculate centroids for a Polygon with holes.
+		return std::vector<Cartesian>();
+	}
 }
