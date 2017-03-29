@@ -167,14 +167,14 @@ public:
 	const MsgPack& path(const std::vector<std::string>& path) const;
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	MsgPack& put(const M& o, T&& val);
+	MsgPack& put(M&& o, T&& val);
 	template <typename T>
 	MsgPack& put(const std::string& s, T&& val);
 	template <typename T>
 	MsgPack& put(size_t pos, T&& val);
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	MsgPack::iterator insert(const M& o, T&& val);
+	MsgPack::iterator insert(M&& o, T&& val);
 	template <typename T>
 	MsgPack::iterator insert(const std::string& s, T&& val);
 	template <typename T>
@@ -190,40 +190,40 @@ public:
 	std::pair<iterator, bool> insert(T&& v);
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	MsgPack& operator[](const M& o);
+	MsgPack& operator[](M&& o);
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	const MsgPack& operator[](const M& o) const;
+	const MsgPack& operator[](M&& o) const;
 	MsgPack& operator[](const std::string& s);
 	const MsgPack& operator[](const std::string& s) const;
 	MsgPack& operator[](size_t pos);
 	const MsgPack& operator[](size_t pos) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	MsgPack& at(const M& o);
+	MsgPack& at(M&& o);
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	const MsgPack& at(const M& o) const;
+	const MsgPack& at(M&& o) const;
 	MsgPack& at(const std::string& s);
 	const MsgPack& at(const std::string& s) const;
 	MsgPack& at(size_t pos);
 	const MsgPack& at(size_t pos) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	iterator find(const M& o);
+	iterator find(M&& o);
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	const_iterator find(const M& o) const;
+	const_iterator find(M&& o) const;
 	iterator find(const std::string& s);
 	const_iterator find(const std::string& s) const;
 	iterator find(size_t pos);
 	const_iterator find(size_t pos) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	void update(const M& o);
+	void update(M&& o);
 
 	template <typename T>
 	size_t count(T&& v) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	size_t erase(const M& o);
+	size_t erase(M&& o);
 	size_t erase(const std::string& s);
 	size_t erase(size_t pos);
 	iterator erase(const iterator& it);
@@ -1180,7 +1180,7 @@ inline MsgPack::iterator MsgPack::_insert(size_t pos, T&& val) {
 
 
 template <typename M, typename T, typename>
-inline MsgPack& MsgPack::put(const M& o, T&& val) {
+inline MsgPack& MsgPack::put(M&& o, T&& val) {
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val));
@@ -1198,7 +1198,7 @@ inline MsgPack& MsgPack::put(const M& o, T&& val) {
 
 
 template <typename M, typename T, typename>
-inline MsgPack::iterator MsgPack::insert(const M& o, T&& val) {
+inline MsgPack::iterator MsgPack::insert(M&& o, T&& val) {
 	switch (o._body->getType()) {
 		case Type::STR:
 			_put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val));
@@ -1326,7 +1326,7 @@ inline std::pair<MsgPack::iterator, bool> MsgPack::insert(T&& v) {
 
 
 template <typename M, typename>
-inline MsgPack& MsgPack::operator[](const M& o) {
+inline MsgPack& MsgPack::operator[](M&& o) {
 	_fill(false, false);
 	switch (o._body->getType()) {
 		case Type::STR:
@@ -1345,7 +1345,7 @@ inline MsgPack& MsgPack::operator[](const M& o) {
 
 
 template <typename M, typename>
-inline const MsgPack& MsgPack::operator[](const M& o) const {
+inline const MsgPack& MsgPack::operator[](M&& o) const {
 	_fill(false, false);
 	switch (o._const_body->getType()) {
 		case Type::STR:
@@ -1400,7 +1400,7 @@ inline const MsgPack& MsgPack::operator[](size_t pos) const {
 
 
 template <typename M, typename>
-inline MsgPack& MsgPack::at(const M& o) {
+inline MsgPack& MsgPack::at(M&& o) {
 	_fill(false, false);
 	switch (o._body->getType()) {
 		case Type::STR:
@@ -1419,7 +1419,7 @@ inline MsgPack& MsgPack::at(const M& o) {
 
 
 template <typename M, typename>
-inline const MsgPack& MsgPack::at(const M& o) const {
+inline const MsgPack& MsgPack::at(M&& o) const {
 	_fill(false, false);
 	switch (o._const_body->getType()) {
 		case Type::STR:
@@ -1503,7 +1503,7 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 
 
 template <typename M, typename>
-inline MsgPack::iterator MsgPack::find(const M& o) {
+inline MsgPack::iterator MsgPack::find(M&& o) {
 	_fill(false, false);
 	switch (o._body->getType()) {
 		case Type::STR:
@@ -1522,7 +1522,7 @@ inline MsgPack::iterator MsgPack::find(const M& o) {
 
 
 template <typename M, typename>
-inline MsgPack::const_iterator MsgPack::find(const M& o) const {
+inline MsgPack::const_iterator MsgPack::find(M&& o) const {
 	_fill(false, false);
 	switch (o._const_body->getType()) {
 		case Type::STR:
@@ -1565,7 +1565,7 @@ inline MsgPack::const_iterator MsgPack::find(size_t pos) const {
 
 
 template <typename M, typename>
-inline void MsgPack::update(const M& o) {
+inline void MsgPack::update(M&& o) {
 	switch (o._body->getType()) {
 		case Type::MAP:
 			for (const auto& key : o) {
@@ -1595,7 +1595,7 @@ inline size_t MsgPack::count(T&& v) const {
 
 
 template <typename M, typename>
-inline size_t MsgPack::erase(const M& o) {
+inline size_t MsgPack::erase(M&& o) {
 	_fill(false, false);
 	switch (o._body->getType()) {
 		case Type::STR:
