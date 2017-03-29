@@ -260,11 +260,11 @@ public:
 	MsgPack::Type getType() const noexcept;
 
 	std::size_t hash() const;
-	bool operator ==(const MsgPack& other) const;
-	bool operator !=(const MsgPack& other) const;
-	MsgPack operator +(double val);
-	MsgPack& operator +=(double val);
-	std::ostream& operator <<(std::ostream& s) const;
+	bool operator==(const MsgPack& other) const;
+	bool operator!=(const MsgPack& other) const;
+	MsgPack operator+(double val);
+	MsgPack& operator+=(double val);
+	std::ostream& operator<<(std::ostream& s) const;
 
 	std::string unformatted_string() const;
 	std::string to_string(bool prettify=false) const;
@@ -1866,7 +1866,7 @@ inline bool MsgPack::operator!=(const MsgPack& other) const {
 }
 
 
-inline MsgPack MsgPack::operator +(double val) {
+inline MsgPack MsgPack::operator+(double val) {
 	MsgPack o(_body);
 	switch (o.getType()) {
 		case Type::NEGATIVE_INTEGER:
@@ -1884,7 +1884,7 @@ inline MsgPack MsgPack::operator +(double val) {
 }
 
 
-inline MsgPack& MsgPack::operator +=(double val) {
+inline MsgPack& MsgPack::operator+=(double val) {
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 += val;
