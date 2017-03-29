@@ -407,7 +407,7 @@ GuidCompactor::unserialise(const std::string& bytes)
 
 	char buf[16];
 	std::memset(buf, 0, sizeof(buf));
-	std::memcpy(buf, bytes.data(), bytes.size());
+	std::memcpy(buf, bytes.data(), bytes.length());
 	auto ls64 = *(reinterpret_cast<uint64_t*>(buf));
 	auto ms64 = *(reinterpret_cast<uint64_t*>(buf) + 1);
 	auto val1 = (ms64 << skip) | (ls64 >> (64 - skip));
