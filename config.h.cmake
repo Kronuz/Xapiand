@@ -282,6 +282,9 @@
 #cmakedefine GUID_CFUUID @GUID_CFUUID@
 #cmakedefine GUID_FREEBSD @GUID_FREEBSD@
 
+/* Enable CHAISCRIPT engine */
+#cmakedefine XAPIAND_CHAISCRIPT @XAPIAND_CHAISCRIPT@
+
 /* Enable V8 engine */
 #cmakedefine XAPIAND_V8 @XAPIAND_V8@
 

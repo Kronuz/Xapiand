@@ -23,8 +23,9 @@ option (DATABASE_WAL "Enable database write ahead log (WAL)" ON)
 option (DATA_STORAGE "Enable data storage" ON)
 option (TRACEBACKS "Enable tracebacks for exceptions" OFF)
 option (V8 "Enable v8 engine" OFF)
+option (CHAISCRIPT "Enable ChaiScript engine" OFF)
 
-foreach (opt BINARY_PROXY CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS V8)
+foreach (opt BINARY_PROXY CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS V8 CHAISCRIPT)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 	else ()
@@ -311,9 +312,18 @@ endif ()
 
 
 ########################################################################
+# ChaiScript Engine Library
+########################################################################
+if (CHAISCRIPT)
+	find_package (CHAISCRIPT REQUIRED)
+	include_directories (BEFORE "${CHAISCRIPT_INCLUDE_DIRS}")
+	if (V8)
+		message (WARNING "CHAISCRIPT is actived, V8 will be ignored")
+	endif()
+########################################################################
 # V8 Engine Library
 ########################################################################
-if (V8)
+elseif (V8)
 	find_package (V8 REQUIRED)
 	include_directories (BEFORE "${V8_INCLUDE_DIRS}")
 	target_link_libraries (${PROJECT_NAME} ${V8_LIBRARIES})
@@ -574,6 +584,7 @@ if (BUILD_TESTS)
 			${XAPIAN_LIBRARIES}
 			${CMAKE_THREAD_LIBS_INIT}
 			${UUID_LIBRARIES}
+			${CHAISCRIPT_LIBRARIES}
 			${V8_LIBRARIES}
 			${M_LIBRARIES}
 			z
