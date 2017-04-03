@@ -329,7 +329,6 @@ public:
 	template<typename... Args>
 	void add(StashContext& ctx, unsigned long long key, Args&&... args) {
 		if (key >= get_final_key(ctx.atom_cur_key)) {
-			L_ERR(this, "key: %llu _Div:%llu _Mod:%llu get_base_key(key):%llu", key, _Div, _Mod, get_base_key(key));  // <- Delete later
 			throw std::out_of_range("stash overlow");
 		}
 
