@@ -5188,9 +5188,9 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 			}
 		}
 	} catch (const ClientError& exc) {
-		L_EXC(this, "ERROR: %s", exc.what());
+		L_DEBUG(this, "%s", exc.what());
 	} catch (const std::out_of_range& exc) {
-		L_EXC(this, "ERROR: %s", exc.what());
+		L_DEBUG(this, "%s", exc.what());
 	}
 
 	return std::make_pair(std::move(res), std::string());
@@ -5256,9 +5256,9 @@ Schema::get_slot_field(const std::string& field_name) const
 			}
 		}
 	} catch (const ClientError& exc) {
-		L_EXC(this, "ERROR: %s", exc.what());
+		L_DEBUG(this, "%s", exc.what());
 	} catch (const std::out_of_range& exc) {
-		L_EXC(this, "ERROR: %s", exc.what());
+		L_DEBUG(this, "%s", exc.what());
 	}
 
 	return res;
