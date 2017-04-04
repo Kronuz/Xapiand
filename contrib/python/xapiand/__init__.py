@@ -26,6 +26,11 @@ import os
 import itertools
 
 try:
+    from django.core.exceptions import ObjectDoesNotExist
+except ImportError:
+    ObjectDoesNotExist = Exception
+
+try:
     from dfw.core.utils.datastructures.nested import NestedDict
 except ImportError:
     NestedDict = dict
@@ -98,7 +103,7 @@ class Results(object):
     __next__ = next
 
 
-class DoesNotExist(Exception):
+class DoesNotExist(ObjectDoesNotExist):
     pass
 
 NA = object()
