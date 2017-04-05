@@ -123,11 +123,6 @@ constexpr uint32_t DOUBLE2INT = 1000000000;
 constexpr uint32_t MAXDOU2INT = 2000000000;
 
 
-constexpr uint8_t SIZE_UUID                 = 36;
-constexpr uint8_t SIZE_CURLY_BRACES_UUID    = 38;
-constexpr uint8_t MAX_SIZE_BASE64_UUID      = 24;
-
-
 class CartesianList;
 class RangeList;
 enum class FieldType : uint8_t;
