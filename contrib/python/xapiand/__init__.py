@@ -103,8 +103,14 @@ class Results(object):
     __next__ = next
 
 
+class Session(requests.Session):
+    def merge(self, url, data=None, **kwargs):
+        return self.request('MERGE', url, data=data, **kwargs)
+
+
 class DoesNotExist(ObjectDoesNotExist):
     pass
+
 
 NA = object()
 
@@ -118,7 +124,7 @@ class Xapiand(object):
 
     DoesNotExist = DoesNotExist
 
-    session = requests.Session()
+    session = Session()
     session.trust_env = False
     session.mount('http://', requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100))
     _methods = dict(
@@ -130,7 +136,7 @@ class Xapiand(object):
         post=(session.post, False, 'result'),
         put=(session.put, False, 'result'),
         patch=(session.patch, False, 'result'),
-        merge=(lambda *args, **kwargs: session.request('MERGE', *args, **kwargs), False, 'result'),
+        merge=(session.merge, False, 'result'),
     )
 
     def __init__(self, host=None, port=None, commit=None, prefix=None, default_accept=None, default_accept_encoding=None):
