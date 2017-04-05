@@ -41,7 +41,7 @@
 #include "rapidjson/error/en.h"                      // for GetParseError_En
 #include "rapidjson/error/error.h"                   // for ParseResult
 #include "schema.h"                                  // for FieldType
-#include "serialise.h"                               // for SIZE_CURLY_BRACES_UUID
+#include "serialise.h"                               // for Serialise
 #include "storage.h"                                 // for STORAGE_BIN_HEADER_MAGIC and STORAGE_BIN_FOOTER_MAGIC
 #include "utils.h"                                   // for random_int
 
@@ -98,15 +98,11 @@ std::string get_prefix(const std::string& field_name)
 
 std::string normalize_uuid(const std::string& uuid)
 {
-	if (uuid.length() == SIZE_CURLY_BRACES_UUID) {
-		// Remove curly braces.
-		auto norm_uuid = uuid.substr(1, uuid.length() - 2);
-		Guid guid(norm_uuid);
-		norm_uuid = base64::encode(guid.serialise());
+	if (uuid.front() == '{' && uuid.back() == '}') {
+		auto norm_uuid = base64::encode(Serialise::uuid(uuid));
 		norm_uuid.insert(0, 1, '{').push_back('}');
 		return norm_uuid;
 	}
-
 	return uuid;
 }
 
