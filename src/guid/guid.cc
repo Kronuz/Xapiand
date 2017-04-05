@@ -52,15 +52,12 @@ THE SOFTWARE.
 
 
 // 0x11f0241243c00ULL = 1yr
-constexpr uint64_t UUID_TIME_INITIAL = 0x1e6bfffffffffffULL;
+constexpr uint64_t UUID_TIME_INITIAL           = 0x1e6bfffffffffffULL;
+constexpr uint8_t  UUID_MAX_SERIALISED_LENGTH  = 17;
 
-constexpr uint8_t MAX_SIZE_SERIALISED_UUID  = 17;
 
-
-#define SALT_MASK    ((1ULL << SALT_BITS)    - 1)
-#define CLOCK_MASK   ((1ULL << CLOCK_BITS)   - 1)
-#define NODE_MASK    ((1ULL << NODE_BITS)    - 1)
-#define VERSION_MASK ((1ULL << VERSION_BITS) - 1)
+constexpr uint64_t SALT_MASK     =  ((1ULL << SALT_BITS)    - 1);
+constexpr uint64_t NODE_MASK     =  ((1ULL << NODE_BITS)    - 1);
 
 
 static inline uint64_t fnv_1a(uint64_t num) {
@@ -480,7 +477,7 @@ Guid::is_valid(const std::string& bytes)
 Guid
 Guid::unserialise(const std::string& bytes)
 {
-	if (bytes.length() < 2 || bytes.length() > MAX_SIZE_SERIALISED_UUID) {
+	if (bytes.length() < 2 || bytes.length() > UUID_MAX_SERIALISED_LENGTH) {
 		THROW(SerialisationError, "Bad encoded uuid");
 	}
 
