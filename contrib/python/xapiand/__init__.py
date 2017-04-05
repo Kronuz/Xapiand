@@ -234,7 +234,7 @@ class Xapiand(object):
 
         if res.status_code == 404 and action_request in ('patch', 'delete', 'get'):
             if default is NA:
-                raise self.DoesNotExist
+                raise self.DoesNotExist("Matching query does not exist.")
             return default
         else:
             res.raise_for_status()
