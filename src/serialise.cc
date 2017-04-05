@@ -32,7 +32,6 @@
 #include <time.h>                                     // for tm, gmtime, time_t
 
 #include "cast.h"                                     // for Cast
-#include "cppcodec/base64_default_url_unpadded.hpp"   // for base64 namespace
 #include "exception.h"                                // for SerialisationError, MSG_Serialisat...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
@@ -41,45 +40,65 @@
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "schema.h"                                   // for FieldType, FieldType::TERM, Fiel...
 #include "serialise_list.h"                           // for StringList, CartesianList and RangeList
+#include "split.h"                                    // for Split
 #include "utils.h"                                    // for toUType, stox, repr
 
 
 bool
 Serialise::isUUID(const std::string& field_value) noexcept
 {
-	switch (field_value.length()) {
-		case SIZE_CURLY_BRACES_UUID:
-			if (field_value.front() == '{' && field_value.back() == '}') {
-				if (field_value[9] != '-' || field_value[14] != '-' || field_value[19] != '-' || field_value[24] != '-') {
-					return false;
-				}
-				static const size_t stop = SIZE_CURLY_BRACES_UUID - 1;
-				for (size_t i = 1; i < stop; ++i) {
-					if (!std::isxdigit(field_value.at(i)) && i != 9 && i != 14 && i != 19 && i != 24) {
+	if (field_value.length() > 2) {
+		if (field_value.front() == '{' && field_value.back() == '}') {
+			Split<char> split(field_value.substr(1, field_value.length() - 2), ';');
+			for (const auto& uuid : split) {
+				if (uuid.length() == UUID_LENGTH) {
+					if (uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-') {
 						return false;
 					}
-				}
-				return true;
-			}
-			return false;
-
-		case SIZE_UUID:
-			if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
-				return false;
-			}
-			for (size_t i = 0; i < SIZE_UUID; ++i) {
-				if (!std::isxdigit(field_value.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
-					return false;
+					int i = 0;
+					for (const auto& c : uuid) {
+						if (!std::isxdigit(c) && i != 8 && i != 13 && i != 18 && i != 23) {
+							return false;
+						}
+						++i;
+					}
+				} else {
+					if (uuid.empty()) {
+						return false;
+					} else {
+						static const std::unordered_set<char> set_base64_rfc4648_alphabet({
+							'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+							'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+							'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+							'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+							'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/',
+						});
+						static auto it_e = set_base64_rfc4648_alphabet.end();
+						for (const auto& c : uuid) {
+							if (set_base64_rfc4648_alphabet.find(c) == it_e) {
+								return false;
+							}
+						}
+					}
 				}
 			}
 			return true;
-
-		default:
-			if (field_value.length() >= 3 && field_value.length() <= MAX_SIZE_BASE64_UUID && field_value.front() == '{' && field_value.back() == '}') {
-				return true;
+		} else if (field_value.length() == UUID_LENGTH) {
+			if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
+				return false;
 			}
-			return false;
+			int i = 0;
+			for (const auto& c : field_value) {
+				if (!std::isxdigit(c) && i != 8 && i != 13 && i != 18 && i != 23) {
+					return false;
+				}
+				++i;
+			}
+			return true;
+		}
 	}
+
+	return false;
 }
 
 
@@ -336,49 +355,27 @@ Serialise::positive(const std::string& field_value)
 std::string
 Serialise::uuid(const std::string& field_value)
 {
-	switch (field_value.length()) {
-		case SIZE_CURLY_BRACES_UUID: {
-			if (field_value.front() == '{' && field_value.back() == '}') {
-				// Remove curly braces.
-				auto _field_value = field_value.substr(1, field_value.length() - 2);
-				if (_field_value[8] != '-' || _field_value[13] != '-' || _field_value[18] != '-' || _field_value[23] != '-') {
-					THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
-				}
-				for (size_t i = 0; i < SIZE_UUID; ++i) {
-					if (!std::isxdigit(_field_value.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
-						THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
-					}
-				}
-				Guid guid(_field_value);
-				return guid.serialise();
-			}
-
-			THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
-		}
-
-		case SIZE_UUID: {
+	if (field_value.length() > 2) {
+		if (field_value.front() == '{' && field_value.back() == '}') {
+			std::vector<std::string> result;
+			Split<>::split(field_value.substr(1, field_value.length() - 2), ';', std::back_inserter(result));
+			return Guid::serialise(result.begin(), result.end());
+		} else if (field_value.length() == UUID_LENGTH) {
 			if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
-				THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
+				THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
 			}
-			for (size_t i = 0; i < SIZE_UUID; ++i) {
-				if (!std::isxdigit(field_value.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
-					THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
+			int i = 0;
+			for (const auto& c : field_value) {
+				if (!std::isxdigit(c) && i != 8 && i != 13 && i != 18 && i != 23) {
+					THROW(SerialisationError, "Invalid UUID format in: '%s' [%c -> %d]", field_value.c_str(), c, i);
 				}
+				++i;
 			}
-			Guid guid(field_value);
-			return guid.serialise();
-		}
-
-		default: {
-			if (field_value.length() >= 3 && field_value.length() <= MAX_SIZE_BASE64_UUID && field_value.front() == '{' && field_value.back() == '}') {
-				// Remove curly braces.
-				auto _field_value = field_value.substr(1, field_value.length() - 2);
-				return base64::decode<std::string>(_field_value);
-			}
-
-			THROW(SerialisationError, "Invalid UUID format in: %s", field_value.c_str());
+			return Guid(field_value).serialise();
 		}
 	}
+
+	THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
 }
 
 
@@ -784,11 +781,15 @@ Unserialise::date(const std::string& serialised_date)
 std::string
 Unserialise::uuid(const std::string& serialised_uuid)
 {
-	auto guid = Guid::unserialise(serialised_uuid);
-	return guid.to_string();
-	// auto res = base64::encode(serialised_uuid);
-	// res.insert(0, 1, '{').push_back('}');
-	// return res;
+	std::vector<Guid> uuids;
+	Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
+	if (uuids.size() == 1) {
+		return uuids.back().to_string();
+	} else {
+		std::string result = base64::encode(serialised_uuid);
+		result.insert(0, 1, '{').push_back('}');
+		return result;
+	}
 }
 
 
