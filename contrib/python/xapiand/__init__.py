@@ -123,6 +123,7 @@ class Xapiand(object):
     """
 
     DoesNotExist = DoesNotExist
+    NA = NA
 
     session = Session()
     session.trust_env = False
