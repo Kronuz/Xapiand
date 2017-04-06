@@ -128,7 +128,7 @@ GuidCompactor::serialise(uint8_t variant) const
 		*(reinterpret_cast<uint64_t*>(buf) + 1) = ms64;
 
 		auto ptr = buf + 16;
-		const auto min_buf = ptr + 1;
+		const auto min_buf = buf + 1;
 		while (ptr != min_buf && !*--ptr);
 		auto length = ptr - buf;
 
