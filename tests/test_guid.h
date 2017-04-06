@@ -26,3 +26,8 @@
 
 
 int test_guid();
+int test_special_guids();
+int test_compacted_guids();
+int test_condensed_guids();
+int test_expanded_guids();
+int test_several_guids();

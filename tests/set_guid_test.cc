@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -27,6 +27,19 @@
 
 TEST(GUIDTest, Working) {
 	EXPECT_EQ(test_guid(), 0);
+}
+
+
+TEST(GUIDTest, SingleUUID) {
+	EXPECT_EQ(test_special_guids(), 0);
+	EXPECT_EQ(test_compacted_guids(), 0);
+	EXPECT_EQ(test_condensed_guids(), 0);
+	EXPECT_EQ(test_expanded_guids(), 0);
+}
+
+
+TEST(GUIDTest, SeveralUUID) {
+	EXPECT_EQ(test_several_guids(), 0);
 }
 
 
