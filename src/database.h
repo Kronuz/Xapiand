@@ -43,6 +43,7 @@
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "database_utils.h"     // for DB_WRITABLE
 #include "endpoint.h"           // for Endpoints, Endpoint
+#include "guid/guid.h"          // for Guid
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
 #include "queue.h"              // for Queue, QueueSet
 #include "storage.h"            // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
@@ -72,7 +73,7 @@ struct WalHeader {
 	struct StorageHeaderHead {
 		uint32_t magic;
 		uint32_t offset;
-		char uuid[36];
+		char uuid[UUID_LENGTH];
 		uint32_t revision;
 	} head;
 
@@ -197,7 +198,7 @@ struct DataHeader {
 	struct DataHeaderHead {
 		uint32_t magic;
 		uint32_t offset;  // required
-		char uuid[36];
+		char uuid[UUID_LENGTH];
 	} head;
 
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(DataHeader::DataHeaderHead)) / sizeof(char)];
