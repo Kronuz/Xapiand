@@ -65,6 +65,8 @@
 
 #define DB_TIMEOUT 3
 
+constexpr uint8_t SIZE_UUID = 36;
+
 
 /*  ____        _        _                  __        ___    _
  * |  _ \  __ _| |_ __ _| |__   __ _ ___  __\ \      / / \  | |
