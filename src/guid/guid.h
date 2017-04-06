@@ -52,7 +52,7 @@ constexpr uint8_t PADDING_BITS    = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS
 constexpr uint8_t PADDING1_BITS   = 64 - COMPACTED_BITS - NODE_BITS - CLOCK_BITS;
 
 
-constexpr uint8_t UUID_LENGTH             = 36;
+constexpr uint8_t UUID_LENGTH     = 36;
 
 
 class Guid;
