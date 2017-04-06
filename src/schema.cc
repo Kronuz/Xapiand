@@ -4722,7 +4722,8 @@ Schema::set_default_spc_id(MsgPack& properties)
 
 	// ID_FIELD_NAME cannot be TEXT nor STRING.
 	if (specification.sep_types[2] == FieldType::TEXT || specification.sep_types[2] == FieldType::STRING) {
-		THROW(ClientError, "%s cannot be type text or string", ID_FIELD_NAME);
+		specification.sep_types[2] = FieldType::TERM;
+		L_DEBUG(this, "%s cannot be type text or string, it's type was changed to term", ID_FIELD_NAME);
 	}
 
 	// Set default prefix
