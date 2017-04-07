@@ -108,14 +108,6 @@ LogWrapper::LogWrapper(LogWrapper&& o)
 }
 
 
-LogWrapper&
-LogWrapper::operator=(LogWrapper&& o)
-{
-	log = std::move(o.log);
-	o.log.reset();
-	return *this;
-}
-
 LogWrapper::LogWrapper(LogType log_)
 	: log(log_) { }
 
@@ -126,6 +118,15 @@ LogWrapper::~LogWrapper()
 		log->cleanup();
 	}
 	log.reset();
+}
+
+
+LogWrapper&
+LogWrapper::operator=(LogWrapper&& o)
+{
+	log = std::move(o.log);
+	o.log.reset();
+	return *this;
 }
 
 
