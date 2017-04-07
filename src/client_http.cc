@@ -584,7 +584,9 @@ HttpClient::run()
 
 	if (Log::log_level > LOG_DEBUG) {
 		auto msgpack = get_body().second;
-		request_body = msgpack.to_string(true);
+		if (msgpack) {
+			request_body = msgpack.to_string(true);
+		}
 		log_request();
 	}
 
