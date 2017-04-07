@@ -26,6 +26,7 @@
 #include <chrono>             // for system_clock, time_point, duration, millise...
 #include <cstdarg>            // for va_list, va_end
 #include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
+#include <unordered_map>      // for unordered_map
 
 #include "exception.h"
 #include "utils.h"
@@ -155,23 +156,24 @@ inline LogWrapper _log(bool cleanup, bool stacked, int timeout, bool async, int 
 inline const char*
 ansi_color(float red, float green, float blue, float alpha, bool bold)
 {
-	static std::set<const std::string> strings;
-	char buffer[30];
-	int r = (int)(red * alpha + 0.5);
-	int g = (int)(green * alpha + 0.5);
-	int b = (int)(blue * alpha + 0.5);
-	sprintf(buffer, "\033[%d;38;2;%d;%d;%dm",
-		bold ? 1 : 0,
-		r < 0 ? 0 : r > 255 ? 255 : r,
-		g < 0 ? 0 : g > 255 ? 255 : g,
-		b < 0 ? 0 : b > 255 ? 255 : b);
-	return strings.insert(buffer).first->c_str();
+	static std::unordered_map<size_t, const std::string> colors;
+	uint8_t r = static_cast<uint8_t>(red * alpha + 0.5);
+	uint8_t g = static_cast<uint8_t>(green * alpha + 0.5);
+	uint8_t b = static_cast<uint8_t>(blue * alpha + 0.5);
+	size_t hash = r << 17 | g << 9 | b << 1 | bold;
+	auto it = colors.find(hash);
+	if (it == colors.end()) {
+		char buffer[30];
+		sprintf(buffer, "\033[%d;38;2;%d;%d;%dm", bold, r, g, b);
+		it = colors.insert(std::make_pair(hash, buffer)).first;
+	}
+	return it->second.c_str();
 }
 
 
-#define rgb(r, g, b) ansi_color(r, g, b, 1, false)
-#define rgba(r, g, b, a) ansi_color(r, g, b, a, false)
-#define brgb(r, g, b) ansi_color(r, g, b, 1, true)
+#define rgb(r, g, b)      ansi_color(r, g, b, 1, false)
+#define rgba(r, g, b, a)  ansi_color(r, g, b, a, false)
+#define brgb(r, g, b)     ansi_color(r, g, b, 1, true)
 #define brgba(r, g, b, a) ansi_color(r, g, b, a, true)
 
 
