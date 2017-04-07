@@ -58,7 +58,20 @@ const char *priorities[] = {
 	NOTICE_COL "▍" NO_COL,  // LOG_NOTICE   5 = Normal but significant condition
 	INFO_COL "▎" NO_COL,    // LOG_INFO     6 = Informational
 	DEBUG_COL "▏" NO_COL,   // LOG_DEBUG    7 = Debug-level messages
+	NO_COL,                 // VERBOSE    > 7 = Verbose messages
 };
+
+
+static inline int
+validated_priority(int priority) {
+	if (priority < 0) {
+		priority = -priority;
+	}
+	if (priority > LOG_DEBUG + 1) {
+		priority = LOG_DEBUG + 1;
+	}
+	return priority;
+}
 
 
 void
@@ -144,11 +157,10 @@ LogWrapper::release()
 	return ret;
 }
 
-
 void
 StreamLogger::log(int priority, const std::string& str, bool with_priority, bool with_endl)
 {
-	ofs << std::regex_replace((with_priority ? priorities[priority < 0 ? -priority : priority] : "") + str, filter_re, "");
+	ofs << std::regex_replace((with_priority ? priorities[validated_priority(priority)] : "") + str, filter_re, "");
 	if (with_endl) {
 		ofs << std::endl;
 	}
@@ -159,9 +171,9 @@ void
 StderrLogger::log(int priority, const std::string& str, bool with_priority, bool with_endl)
 {
 	if (isatty(fileno(stderr))) {
-		std::cerr << (with_priority ? priorities[priority < 0 ? -priority : priority] : "") + str;
+		std::cerr << (with_priority ? priorities[validated_priority(priority)] : "") + str;
 	} else {
-		std::cerr << std::regex_replace((with_priority ? priorities[priority < 0 ? -priority : priority] : "") + str, filter_re, "");
+		std::cerr << std::regex_replace((with_priority ? priorities[validated_priority(priority)] : "") + str, filter_re, "");
 	}
 	if (with_endl) {
 		std::cerr << std::endl;
@@ -184,7 +196,7 @@ SysLog::~SysLog()
 void
 SysLog::log(int priority, const std::string& str, bool with_priority, bool)
 {
-	syslog(priority, "%s", std::regex_replace((with_priority ? priorities[priority < 0 ? -priority : priority] : "") + str, filter_re, "").c_str());
+	syslog(priority, "%s", std::regex_replace((with_priority ? priorities[validated_priority(priority)] : "") + str, filter_re, "").c_str());
 }
 
 
