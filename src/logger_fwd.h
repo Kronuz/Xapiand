@@ -151,6 +151,25 @@ inline LogWrapper _log(bool cleanup, bool stacked, int timeout, bool async, int 
 #define LIGHT_CYAN "\033[1;36m"
 #define WHITE "\033[1;37m"
 
+inline const char*
+ansi_color(float red, float green, float blue, float alpha, bool bold) {
+	static std::set<const std::string> strings;
+	char buffer[30];
+	int r = (int)(red * alpha + 0.5);
+	int g = (int)(green * alpha + 0.5);
+	int b = (int)(blue * alpha + 0.5);
+	sprintf(buffer, "\033[%d;38;2;%d;%d;%dm",
+		bold ? 1 : 0,
+		r < 0 ? 0 : r > 255 ? 255 : r,
+		g < 0 ? 0 : g > 255 ? 255 : g,
+		b < 0 ? 0 : b > 255 ? 255 : b);
+	return strings.insert(buffer).first->c_str();
+}
+#define rgb(r, g, b) ansi_color(r, g, b, 1, false)
+#define rgba(r, g, b, a) ansi_color(r, g, b, a, false)
+#define brgb(r, g, b) ansi_color(r, g, b, 1, true)
+#define brgba(r, g, b, a) ansi_color(r, g, b, a, true)
+
 
 #define LOG_COL WHITE
 #define DEBUG_COL NO_COL
