@@ -1501,10 +1501,12 @@ HttpClient::search_view(enum http_method method, Command)
 					blob = document.get_blob();
 					ct_type_str = unserialise_string_at(1, blob);
 				}
+
 				if (ct_type_str.empty()) {
-					const auto ct_type_mp = Document::get_field(CT_FIELD_NAME, obj_data);
+					const auto ct_type_mp = Document::get_field(CT_FIELD_NAME, document.get_obj());
 					ct_type_str = ct_type_mp ? ct_type_mp.as_string() : MSGPACK_CONTENT_TYPE;
 				}
+
 				ct_type = resolve_ct_type(ct_type_str);
 				if (ct_type.first == no_type.first && ct_type.second == no_type.second) {
 					enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
