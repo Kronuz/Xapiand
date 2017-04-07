@@ -193,7 +193,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 
 HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
 	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
-	  pretty(false),
+	  indent(0),
 	  response_size(0),
 	  response_logged(false),
 	  body_size(0),
@@ -463,7 +463,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 						std::sregex_iterator end;
 						int i = 0;
 						while (next != end) {
-							int indent = 0;
+							unsigned indent = 4;
 							double q = 1.0;
 							if (next->length(3)) {
 								auto param = next->str(3);
@@ -473,12 +473,12 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 										q = stox(std::stod, next_param->str(2));
 									}
 									else if (next_param->str(1) == "indent") {
-										indent = (int)stox(std::stod, next_param->str(2));
+										indent = (unsigned)stox(std::stod, next_param->str(2));
 									}
 									++next_param;
 								}
 							}
-							self->accept_set.insert(std::make_tuple(q, i, std::make_pair(next->str(1), next->str(2))));
+							self->accept_set.insert(std::make_tuple(q, i, std::make_pair(next->str(1), next->str(2)), indent));
 							++next;
 							++i;
 						}
@@ -508,7 +508,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 								}
 							} else {
 							}
-							self->accept_encoding_set.insert(std::make_tuple(q, i, next->str(1)));
+							self->accept_encoding_set.insert(std::make_tuple(q, i, next->str(1), 0));
 							++next;
 							++i;
 						}
@@ -605,7 +605,7 @@ HttpClient::run()
 	if (Log::log_level > LOG_DEBUG) {
 		auto msgpack = get_body().second;
 		if (msgpack) {
-			request_body = msgpack.to_string(true);
+			request_body = msgpack.to_string(4);
 		}
 		log_request();
 	}
@@ -1432,7 +1432,7 @@ HttpClient::search_view(enum http_method method, Command)
 			basic_response["_query"] = basic_query;
 
 			if (Log::log_level > LOG_DEBUG) {
-				l_first_chunk = basic_response.to_string(true);
+				l_first_chunk = basic_response.to_string(4);
 				l_first_chunk = l_first_chunk.substr(0, l_first_chunk.size() - 9) + "\n";
 				l_last_chunk = "        ]\n    }\n}";
 				l_eol_chunk = "\n";
@@ -1455,10 +1455,10 @@ HttpClient::search_view(enum http_method method, Command)
 					first_chunk.append(std::string(buf, 5));
 				}
 			} else if (is_acceptable_type(json_type, ct_type)) {
-				first_chunk = basic_response.to_string(pretty);
-				if (pretty) {
-					first_chunk = first_chunk.substr(0, first_chunk.size() - 9) + "\n";
-					last_chunk = "        ]\n    }\n}";
+				first_chunk = basic_response.to_string(indent);
+				if (indent) {
+					first_chunk = first_chunk.substr(0, first_chunk.size() - (indent * 2) - 1) + "\n";
+					last_chunk = std::string(' ', indent * 2) + "]\n" + std::string(' ', indent) + "}\n}";
 					eol_chunk = "\n";
 					sep_chunk = ",";
 					indent_chunk = true;
@@ -1559,13 +1559,13 @@ HttpClient::search_view(enum http_method method, Command)
 					if (!l_buffer.empty()) {
 						response_body += indent_string(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
 					}
-					l_buffer = obj_data.to_string(true);
+					l_buffer = obj_data.to_string(4);
 				} else {
-					response_body += obj_data.to_string(true);
+					response_body += obj_data.to_string(4);
 				}
 			}
 
-			auto result = serialize_response(obj_data, ct_type, pretty);
+			auto result = serialize_response(obj_data, ct_type, indent);
 			if (chunked) {
 				if (rc == 0) {
 					if (type_encoding != Encoding::none) {
@@ -1583,7 +1583,7 @@ HttpClient::search_view(enum http_method method, Command)
 				}
 
 				if (!buffer.empty()) {
-					auto indented_buffer = (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + sep_chunk + eol_chunk;
+					auto indented_buffer = (indent_chunk ? indent_string(buffer, ' ', 3 * indent) : buffer) + sep_chunk + eol_chunk;
 					if (type_encoding != Encoding::none) {
 						auto encoded = encoding_http_response(type_encoding, indented_buffer, true, false, false);
 						if (!encoded.empty()) {
@@ -1641,7 +1641,7 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 
 			if (!buffer.empty()) {
-				auto indented_buffer = (indent_chunk ? indent_string(buffer, ' ', 3 * 4) : buffer) + sep_chunk + eol_chunk;
+				auto indented_buffer = (indent_chunk ? indent_string(buffer, ' ', 3 * indent) : buffer) + sep_chunk + eol_chunk;
 				if (type_encoding != Encoding::none) {
 					auto encoded = encoding_http_response(type_encoding, indented_buffer, true, false, false);
 					if (!encoded.empty()) {
@@ -1744,11 +1744,12 @@ HttpClient::url_resolve()
 		}
 
 		if (query_parser.next("pretty") != -1) {
-			pretty = true;
 			if (query_parser.len) {
 				try {
-					pretty = Serialise::boolean(query_parser.get()) == "t";
+					indent = Serialise::boolean(query_parser.get()) == "t" ? 4 : 0;
 				} catch (const Exception&) { }
+			} else if (indent == 0) {
+				indent = 4;
 			}
 		}
 		query_parser.rewind();
@@ -2184,7 +2185,7 @@ HttpClient::clean_http_request()
 	response_status = HTTP_STATUS_OK;
 	response_size = 0;
 
-	pretty = false;
+	indent = 0;
 	query_field.reset();
 	path_parser.clear();
 	query_parser.clear();
@@ -2292,25 +2293,34 @@ HttpClient::get_acceptable_type(const T& ct)
 	L_CALL(this, "HttpClient::get_acceptable_type()");
 
 	if (accept_set.empty()) {
-		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, type_t>(1, 0, content_type_pair(content_type)));
-		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string("*"), std::string("*"))));
+		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, type_t, unsigned>(1, 0, content_type_pair(content_type), 0));
+		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string("*"), std::string("*")), 0));
 	}
 	for (const auto& accept : accept_set) {
 		if (is_acceptable_type(std::get<2>(accept), ct)) {
+			auto _indent = std::get<3>(accept);
+			if (_indent) {
+				indent = _indent;
+			}
 			return std::get<2>(accept);
 		}
 	}
-	return std::get<2>(*accept_set.begin());
+	const auto& accept = *accept_set.begin();
+	auto _indent = std::get<3>(accept);
+	if (_indent) {
+		indent = _indent;
+	}
+	return std::get<2>(accept);
 }
 
 
 type_t
-HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, bool pretty, bool serialize_error)
+HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, unsigned indent, bool serialize_error)
 {
-	L_CALL(this, "HttpClient::serialize_response(%s, %s, %s, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), pretty ? "true" : "false", serialize_error ? "true" : "false");
+	L_CALL(this, "HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), indent, serialize_error ? "true" : "false");
 
 	if (is_acceptable_type(ct_type, json_type)) {
-		return std::make_pair(obj.to_string(pretty), json_type.first + "/" + json_type.second + "; charset=utf-8");
+		return std::make_pair(obj.to_string(indent), json_type.first + "/" + json_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, msgpack_type)) {
 		return std::make_pair(obj.serialise(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, x_msgpack_type)) {
@@ -2368,9 +2378,9 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 
 	try {
 		if (Log::log_level > LOG_DEBUG) {
-			response_body += response.to_string(true);
+			response_body += response.to_string(4);
 		}
-		auto result = serialize_response(response, accepted_type, pretty, (int)status >= 400);
+		auto result = serialize_response(response, accepted_type, indent, (int)status >= 400);
 		if (type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
 			if (!encoded.empty() && encoded.size() <= result.first.size()) {

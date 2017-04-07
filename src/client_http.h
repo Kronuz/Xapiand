@@ -72,13 +72,13 @@ using type_t = std::pair<std::string, std::string>;
 
 template <typename T>
 struct accept_preference_comp {
-	constexpr bool operator()(const std::tuple<double, int, T>& l, const std::tuple<double, int, T>& r) const noexcept {
+	constexpr bool operator()(const std::tuple<double, int, T, unsigned>& l, const std::tuple<double, int, T, unsigned>& r) const noexcept {
 		return (std::get<0>(l) == std::get<0>(r)) ? std::get<1>(l) < std::get<1>(r) : std::get<0>(l) > std::get<0>(r);
 	}
 };
 
 
-using accept_set_t = std::set<std::tuple<double, int, type_t>, accept_preference_comp<type_t>>;
+using accept_set_t = std::set<std::tuple<double, int, type_t, unsigned>, accept_preference_comp<type_t>>;
 
 
 class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
@@ -100,7 +100,7 @@ public:
 };
 
 
-using accept_encoding_t = std::set<std::tuple<double, int, std::string>, accept_preference_comp<std::string>>;
+using accept_encoding_t = std::set<std::tuple<double, int, std::string, unsigned>, accept_preference_comp<std::string>>;
 
 
 class AcceptEncodingLRU : private lru::LRU<std::string, accept_encoding_t> {
@@ -166,7 +166,7 @@ class HttpClient : public BaseClient {
 	PathParser path_parser;
 	QueryParser query_parser;
 
-	bool pretty;
+	unsigned indent;
 	std::unique_ptr<query_field_t> query_field;
 
 	enum http_status response_status;
@@ -249,7 +249,7 @@ class HttpClient : public BaseClient {
 	std::string http_response(enum http_status status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int total_count=0, int matches_estimated=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
 	void clean_http_request();
 	void set_idle();
-	type_t serialize_response(const MsgPack& obj, const type_t& ct_type, bool pretty, bool serialize_error=false);
+	type_t serialize_response(const MsgPack& obj, const type_t& ct_type, unsigned indent, bool serialize_error=false);
 
 	type_t resolve_ct_type(std::string ct_type_str);
 	template <typename T>
