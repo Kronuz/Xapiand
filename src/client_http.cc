@@ -94,9 +94,9 @@ static const auto x_msgpack_type      = content_type_pair(X_MSGPACK_CONTENT_TYPE
 static const auto msgpack_serializers = std::vector<type_t>({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
 
 
-static const std::regex header_params_re("\\s*;\\s*([a-z]+)=(\\d+(?:\\.\\d+)?)");
-static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)((?:\\s*;\\s*[a-z]+=\\d+(?:\\.\\d+)?)*)");
-static const std::regex header_accept_encoding_re("([-a-z+]+|\\*)((?:\\s*;\\s*[a-z]+=\\d+(?:\\.\\d+)?)*)");
+static const std::regex header_params_re("\\s*;\\s*([a-z]+)=(\\d+(?:\\.\\d+)?)", std::regex::optimize);
+static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)((?:\\s*;\\s*[a-z]+=\\d+(?:\\.\\d+)?)*)", std::regex::optimize);
+static const std::regex header_accept_encoding_re("([-a-z+]+|\\*)((?:\\s*;\\s*[a-z]+=\\d+(?:\\.\\d+)?)*)", std::regex::optimize);
 
 static const std::string eol("\r\n");
 
