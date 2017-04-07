@@ -61,12 +61,13 @@ DatabaseAutocommit::commit(const std::shared_ptr<Database>& database)
 				time_point_to_ullong(now + 9s)
 			};
 			status = &status_ref;
+			next_wakeup_time = time_point_to_ullong(now + 1s);
 		} else {
 			status = &(it->second);
+			next_wakeup_time = time_point_to_ullong(now + 3s);
 		}
 
 		bool forced;
-		next_wakeup_time = time_point_to_ullong(now + 3s);
 		if (next_wakeup_time > status->max_wakeup_time) {
 			next_wakeup_time = status->max_wakeup_time;
 			forced = true;
