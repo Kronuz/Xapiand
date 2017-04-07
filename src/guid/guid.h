@@ -148,28 +148,20 @@ public:
 			const auto& uuid = *first;
 			if (uuid.length() == UUID_LENGTH) {
 				if (uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-') {
-					THROW(SerialisationError, "Invalid UUID format in: %s", uuid.c_str());
-				}
-				int i = 0;
-				for (const auto& c : uuid) {
-					if (!std::isxdigit(c) && i != 8 && i != 13 && i != 18 && i != 23) {
-						THROW(SerialisationError, "Invalid UUID format in: %s [%c -> %d]", uuid.c_str(), c, i);
+					serialised.append(serialise_base64(uuid));
+				} else {
+					int i = 0;
+					for (const auto& c : uuid) {
+						if (!std::isxdigit(c) && i != 8 && i != 13 && i != 18 && i != 23) {
+							THROW(SerialisationError, "Invalid UUID format in: %s [%c -> %d]", uuid.c_str(), c, i);
+						}
+						++i;
 					}
-					++i;
+					Guid guid(uuid);
+					serialised.append(guid.serialise());
 				}
-				Guid guid(uuid);
-				serialised.append(guid.serialise());
 			} else {
-				try {
-					const auto decoded = base64::decode<std::string>(uuid);
-					if (is_valid(decoded)) {
-						serialised.append(decoded);
-					} else {
-						THROW(SerialisationError, "Invalid base64 UUID format in: %s", uuid.c_str());
-					}
-				} catch (const cppcodec::padding_error&) {
-					THROW(SerialisationError, "Invalid base64 UUID format in: %s", uuid.c_str());
-				}
+				serialised.append(serialise_base64(uuid));
 			}
 			++first;
 		}
@@ -217,6 +209,8 @@ private:
 	uint8_t get_uuid_variant() const;
 	uint8_t get_uuid_version() const;
 	GuidCompactor get_compactor(bool compacted) const;
+
+	static std::string serialise_base64(const std::string& uuid_base64);
 
 	// Aux functions for unserialise a serialised uuid's list.
 	static Guid unserialise_full(uint8_t length, const char** pos);
