@@ -42,7 +42,7 @@
 
 std::atomic<uint64_t> logger_info_hook;
 
-const std::regex filter_re("\033\\[[;\\d]*m");
+const std::regex filter_re("\033\\[[;\\d]*m", std::regex::optimize);
 std::mutex Log::stack_mtx;
 std::unordered_map<std::thread::id, unsigned> Log::stack_levels;
 int Log::log_level = DEFAULT_LOG_LEVEL;
