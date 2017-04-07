@@ -210,7 +210,8 @@ class HttpClient : public BaseClient {
 	static int on_info(http_parser* p);
 	static int on_data(http_parser* p, const char* at, size_t length);
 
-	std::pair<std::string, MsgPack> get_body();
+	std::pair<std::string, MsgPack> decoded_body;
+	std::pair<std::string, MsgPack>& get_body();
 
 	void home_view(enum http_method method, Command cmd);
 	void info_view(enum http_method method, Command cmd);

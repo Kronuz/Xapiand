@@ -381,6 +381,7 @@ HttpClient::on_info(http_parser* p)
 			}
 			self->path.clear();
 			self->body.clear();
+			self->decoded_body.first.clear();
 			self->body_size = 0;
 			self->header_name.clear();
 			self->header_value.clear();
@@ -580,6 +581,12 @@ HttpClient::run()
 
 	std::string error;
 	enum http_status error_code = HTTP_STATUS_OK;
+
+	if (Log::log_level > LOG_DEBUG) {
+		auto msgpack = get_body().second;
+		request_body = msgpack.to_string(true);
+		log_request();
+	}
 
 	try {
 		auto method = HTTP_PARSER_METHOD(&parser);
@@ -871,47 +878,49 @@ HttpClient::_delete(enum http_method method)
 }
 
 
-std::pair<std::string, MsgPack>
+std::pair<std::string, MsgPack>&
 HttpClient::get_body()
 {
-	// Create MsgPack object for the body
-	auto ct_type = content_type;
+	if (decoded_body.first.empty()) {
+		// Create MsgPack object for the body
+		auto ct_type = content_type;
 
-	if (ct_type.empty()) {
-		ct_type = JSON_CONTENT_TYPE;
-	}
-	MsgPack msgpack;
-	rapidjson::Document rdoc;
-	switch (xxh64::hash(ct_type)) {
-		case xxh64::hash(FORM_URLENCODED_CONTENT_TYPE):
-		case xxh64::hash(X_FORM_URLENCODED_CONTENT_TYPE):
-			try {
-				json_load(rdoc, body);
-				msgpack = MsgPack(rdoc);
-				ct_type = JSON_CONTENT_TYPE;
-			} catch (const std::exception&) {
-				msgpack = MsgPack(body);
+		if (ct_type.empty()) {
+			ct_type = JSON_CONTENT_TYPE;
+		}
+
+		MsgPack msgpack;
+		if (!body.empty()) {
+			rapidjson::Document rdoc;
+			switch (xxh64::hash(ct_type)) {
+				case xxh64::hash(FORM_URLENCODED_CONTENT_TYPE):
+				case xxh64::hash(X_FORM_URLENCODED_CONTENT_TYPE):
+					try {
+						json_load(rdoc, body);
+						msgpack = MsgPack(rdoc);
+						ct_type = JSON_CONTENT_TYPE;
+					} catch (const std::exception&) {
+						msgpack = MsgPack(body);
+					}
+					break;
+				case xxh64::hash(JSON_CONTENT_TYPE):
+					json_load(rdoc, body);
+					msgpack = MsgPack(rdoc);
+					break;
+				case xxh64::hash(MSGPACK_CONTENT_TYPE):
+				case xxh64::hash(X_MSGPACK_CONTENT_TYPE):
+					msgpack = MsgPack::unserialise(body);
+					break;
+				default:
+					msgpack = MsgPack(body);
+					break;
 			}
-			break;
-		case xxh64::hash(JSON_CONTENT_TYPE):
-			json_load(rdoc, body);
-			msgpack = MsgPack(rdoc);
-			break;
-		case xxh64::hash(MSGPACK_CONTENT_TYPE):
-		case xxh64::hash(X_MSGPACK_CONTENT_TYPE):
-			msgpack = MsgPack::unserialise(body);
-			break;
-		default:
-			msgpack = MsgPack(body);
-			break;
+		}
+
+		decoded_body = std::make_pair(ct_type, msgpack);
 	}
 
-	if (Log::log_level > LOG_DEBUG) {
-		request_body += msgpack.to_string(true);
-		log_request();
-	}
-
-	return std::make_pair(ct_type, msgpack);
+	return decoded_body;
 }
 
 
@@ -2144,6 +2153,7 @@ HttpClient::clean_http_request()
 	}
 	path.clear();
 	body.clear();
+	decoded_body.first.clear();
 	header_name.clear();
 	header_value.clear();
 	content_type.clear();
