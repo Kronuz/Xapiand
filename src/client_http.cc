@@ -94,8 +94,9 @@ static const auto x_msgpack_type      = content_type_pair(X_MSGPACK_CONTENT_TYPE
 static const auto msgpack_serializers = std::vector<type_t>({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
 
 
-static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;\\s*q=(\\d+(?:\\.\\d+)?))?");
-static const std::regex header_accept_encoding_re("([-a-z+]+|\\*)(?:[^,]*;\\s*q=(\\d+(?:\\.\\d+)?))?");
+static const std::regex header_params_re("\\s*;\\s*([a-z]+)=(\\d+(?:\\.\\d+)?)");
+static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)((?:\\s*;\\s*[a-z]+=\\d+(?:\\.\\d+)?)*)");
+static const std::regex header_accept_encoding_re("([-a-z+]+|\\*)((?:\\s*;\\s*[a-z]+=\\d+(?:\\.\\d+)?)*)");
 
 static const std::string eol("\r\n");
 
@@ -462,11 +463,22 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 						std::sregex_iterator end;
 						int i = 0;
 						while (next != end) {
+							int indent = 0;
+							double q = 1.0;
 							if (next->length(3)) {
-								self->accept_set.insert(std::make_tuple(stox(std::stod, next->str(3)), i, std::make_pair(next->str(1), next->str(2))));
-							} else {
-								self->accept_set.insert(std::make_tuple(1, i, std::make_pair(next->str(1), next->str(2))));
+								auto param = next->str(3);
+								std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
+								while (next_param != end) {
+									if (next_param->str(1) == "q") {
+										q = stox(std::stod, next_param->str(2));
+									}
+									else if (next_param->str(1) == "indent") {
+										indent = (int)stox(std::stod, next_param->str(2));
+									}
+									++next_param;
+								}
 							}
+							self->accept_set.insert(std::make_tuple(q, i, std::make_pair(next->str(1), next->str(2))));
 							++next;
 							++i;
 						}
@@ -484,11 +496,19 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 						std::sregex_iterator end;
 						int i = 0;
 						while (next != end) {
+							double q = 1.0;
 							if (next->length(2) != 0) {
-								self->accept_encoding_set.insert(std::make_tuple(std::stod(next->str(2)), i, next->str(1)));
+								auto param = next->str(2);
+								std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
+								while (next_param != end) {
+									if (next_param->str(1) == "q") {
+										q = stox(std::stod, next_param->str(2));
+									}
+									++next_param;
+								}
 							} else {
-								self->accept_encoding_set.insert(std::make_tuple(1, i, next->str(1)));
 							}
+							self->accept_encoding_set.insert(std::make_tuple(q, i, next->str(1)));
 							++next;
 							++i;
 						}
