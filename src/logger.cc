@@ -49,7 +49,7 @@ int Log::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Log::handlers;
 
 
-const char *priorities[] = {
+static constexpr const char * const priorities[] = {
 	EMERG_COL "█" NO_COL,   // LOG_EMERG    0 = System is unusable
 	ALERT_COL "▉" NO_COL,   // LOG_ALERT    1 = Action must be taken immediately
 	CRIT_COL "▊" NO_COL,    // LOG_CRIT     2 = Critical conditions
@@ -62,8 +62,9 @@ const char *priorities[] = {
 };
 
 
-static inline int
-validated_priority(int priority) {
+static inline constexpr int
+validated_priority(int priority)
+{
 	if (priority < 0) {
 		priority = -priority;
 	}
