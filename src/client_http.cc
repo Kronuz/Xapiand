@@ -1307,6 +1307,8 @@ HttpClient::search_view(enum http_method method, Command)
 
 	MsgPack aggregations;
 	try {
+		db_handler.reset(endpoints, db_flags, method);
+
 		if (query_field->volatile_) {
 			if (endpoints.size() != 1) {
 				enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
@@ -1317,16 +1319,12 @@ HttpClient::search_view(enum http_method method, Command)
 				write_http_response(error_code, err_response);
 				return;
 			}
-			db_handler.reset(endpoints, db_flags | DB_WRITABLE, method);
-			if (db_handler.commit()) {
-				db_handler.reset(endpoints, db_flags, method);
+			DatabaseHandler commit_handler(endpoints, db_flags | DB_WRITABLE, method);
+			if (commit_handler.commit()) {
 				db_handler.reopen();
-			} else {
-				db_handler.reset(endpoints, db_flags, method);
 			}
 		}
 
-		db_handler.reset(endpoints, db_flags, method);
 		if (body.empty()) {
 			mset = db_handler.get_mset(*query_field, nullptr, nullptr, suggestions);
 		} else {
