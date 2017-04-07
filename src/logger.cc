@@ -302,7 +302,7 @@ Log::str_format(bool stacked, int priority, const std::string& exc, const char *
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	std::string msg(buffer);
 	std::string result;
-	if (info) {
+	if (info && validated_priority(priority) <= LOG_DEBUG) {
 		auto iso8601 = "[" + Datetime::to_string(std::chrono::system_clock::now()) + "]";
 		auto tid = " (" + get_thread_name() + ")";
 		result = iso8601 + tid;
@@ -314,13 +314,12 @@ Log::str_format(bool stacked, int priority, const std::string& exc, const char *
 #else
 		(void)obj;
 #endif
-	}
-
-	result += " ";
+		result += " ";
 
 #ifdef LOG_LOCATION
-	result += " " + std::string(file) + ":" + std::to_string(line) + ": ";
+		result += std::string(file) + ":" + std::to_string(line) + ": ";
 #endif
+	}
 
 	if (stacked) {
 		result += STACKED_INDENT;
