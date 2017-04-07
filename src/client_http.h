@@ -179,6 +179,12 @@ class HttpClient : public BaseClient {
 	std::string header_name;
 	std::string header_value;
 
+	std::string request_headers;
+	std::string request_body;
+	std::string response_head;
+	std::string response_headers;
+	std::string response_body;
+
 	size_t body_size;
 	int body_descriptor;
 	char body_path[PATH_MAX];

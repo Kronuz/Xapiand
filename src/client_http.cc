@@ -97,6 +97,7 @@ static const auto msgpack_serializers = std::vector<type_t>({ json_type, msgpack
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;\\s*q=(\\d+(?:\\.\\d+)?))?");
 static const std::regex header_accept_encoding_re("([-a-z+]+|\\*)(?:[^,]*;\\s*q=(\\d+(?:\\.\\d+)?))?");
 
+static const std::string eol("\r\n");
 
 GuidGenerator HttpClient::generator;
 
@@ -110,18 +111,21 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 	L_CALL(this, "HttpClient::http_response()");
 
 	char buffer[20];
+	std::string head;
 	std::string headers;
+	std::string head_sep;
+	std::string headers_sep;
 	std::string response;
-	const std::string eol("\r\n");
 
 	if (mode & HTTP_STATUS_RESPONSE) {
 		response_status = status;
 
 		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", http_major, http_minor, status);
-		headers += buffer;
-		headers += http_status_str(status) + eol;
+		head += buffer;
+		head += http_status_str(status);
+		head_sep += eol;
 		if (!(mode & HTTP_HEADER_RESPONSE)) {
-			headers += eol;
+			headers_sep += eol;
 		}
 	}
 
@@ -161,7 +165,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 			snprintf(buffer, sizeof(buffer), "%lu", body.size());
 			headers += buffer + eol;
 		}
-		headers += eol;
+		headers_sep += eol;
 	}
 
 	if (mode & HTTP_BODY_RESPONSE) {
@@ -177,7 +181,12 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 	auto this_response_size = response.size();
 	response_size += this_response_size;
 
-	return headers + response;
+	if (Log::log_level > LOG_DEBUG) {
+		response_head += head;
+		response_headers += headers;
+	}
+
+	return head + head_sep + headers + headers_sep + response;
 }
 
 
@@ -362,6 +371,13 @@ HttpClient::on_info(http_parser* p)
 		case 18:  // message_complete
 			break;
 		case 19:  // message_begin
+			if (Log::log_level > LOG_DEBUG) {
+				self->request_headers.clear();
+				self->request_body.clear();
+				self->response_head.clear();
+				self->response_headers.clear();
+				self->response_body.clear();
+			}
 			self->path.clear();
 			self->body.clear();
 			self->body_size = 0;
@@ -407,6 +423,9 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 	} else if (state >= 45 && state <= 50) {
 		// s_header_value_discard_ws_almost_done  ->  s_header_almost_done
 		self->header_value.append(at, length);
+		if (Log::log_level > LOG_DEBUG) {
+			self->request_headers += self->header_name + ": " + self->header_value + eol;
+		}
 		if (state == 50) {
 			std::string name = lower_string(self->header_name);
 
@@ -885,6 +904,10 @@ HttpClient::get_body()
 			break;
 	}
 
+	if (Log::log_level > LOG_DEBUG) {
+		request_body += msgpack.to_string(true);
+	}
+
 	return std::make_pair(ct_type, msgpack);
 }
 
@@ -1357,6 +1380,11 @@ HttpClient::search_view(enum http_method method, Command)
 		std::string sep_chunk;
 		std::string eol_chunk;
 
+		std::string l_first_chunk;
+		std::string l_last_chunk;
+		std::string l_eol_chunk;
+		std::string l_sep_chunk;
+
 		auto ct_type = resolve_ct_type(MSGPACK_CONTENT_TYPE);
 
 		if (chunked) {
@@ -1370,6 +1398,14 @@ HttpClient::search_view(enum http_method method, Command)
 				basic_response["_aggregations"] = aggregations;
 			}
 			basic_response["_query"] = basic_query;
+
+			if (Log::log_level > LOG_DEBUG) {
+				l_first_chunk = basic_response.to_string(true);
+				l_first_chunk = l_first_chunk.substr(0, l_first_chunk.size() - 9) + "\n";
+				l_last_chunk = "        ]\n    }\n}";
+				l_eol_chunk = "\n";
+				l_sep_chunk = ",";
+			}
 
 			if (is_acceptable_type(msgpack_type, ct_type) || is_acceptable_type(x_msgpack_type, ct_type)) {
 				first_chunk = basic_response.serialise();
@@ -1412,6 +1448,7 @@ HttpClient::search_view(enum http_method method, Command)
 		}
 
 		std::string buffer;
+		std::string l_buffer;
 		const auto m_e = mset.end();
 		for (auto m = mset.begin(); m != m_e; ++rc, ++m) {
 			auto document = db_handler.get_document(*m);
@@ -1482,6 +1519,20 @@ HttpClient::search_view(enum http_method method, Command)
 			// auto endpoint = endpoints[subdatabase];
 			// obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
 
+			if (Log::log_level > LOG_DEBUG) {
+				if (chunked) {
+					if (rc == 0) {
+						response_body += l_first_chunk;
+					}
+					if (!l_buffer.empty()) {
+						response_body += indent_string(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
+					}
+					l_buffer = obj_data.to_string(true);
+				} else {
+					response_body += obj_data.to_string(true);
+				}
+			}
+
 			auto result = serialize_response(obj_data, ct_type, pretty);
 			if (chunked) {
 				if (rc == 0) {
@@ -1524,6 +1575,20 @@ HttpClient::search_view(enum http_method method, Command)
 				} else {
 					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
 				}
+			}
+		}
+
+		if (Log::log_level > LOG_DEBUG) {
+			if (chunked) {
+				if (rc == 0) {
+					response_body += l_first_chunk;
+				}
+
+				if (!l_buffer.empty()) {
+					response_body += indent_string(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
+				}
+
+				response_body += l_last_chunk;
 			}
 		}
 
@@ -2005,22 +2070,60 @@ HttpClient::clean_http_request()
 	} else {
 		int priority = LOG_DEBUG;
 		const char* color = WHITE;
+
+		// For request/response logging:
+		std::string request_prefix = "🕸   ";
+		auto request_headers_color = rgba(0, 136, 255, 0.6);
+		auto request_head_color = brgb(0, 136, 255);
+		auto request_body_color = rgb(0, 136, 255);
+		std::string response_prefix = "💊   ";
+		auto response_headers_color = rgba(68, 136, 68, 0.6);
+		auto response_head_color = brgb(68, 136, 68);
+		auto response_body_color = rgb(68, 136, 68);
+
 		if ((int)response_status >= 200 && (int)response_status <= 299) {
 			color = GREY;
 		} else if ((int)response_status >= 300 && (int)response_status <= 399) {
 			color = CYAN;
+			response_prefix = "💫   ";
+			response_headers_color = rgba(255, 168, 50, 0.6);
+			response_head_color = brgb(255, 168, 50);
+			response_body_color = rgb(255, 168, 50);
 		} else if ((int)response_status >= 400 && (int)response_status <= 499) {
 			color = YELLOW;
 			priority = LOG_INFO;
+			response_prefix = "💥   ";
+			response_headers_color = rgba(255, 68, 0, 0.6);
+			response_head_color = brgb(255, 68, 0);
+			response_body_color = rgb(255, 68, 0);
 		} else if ((int)response_status >= 500 && (int)response_status <= 599) {
 			color = LIGHT_MAGENTA;
 			priority = LOG_ERR;
+			response_prefix = "🔥   ";
+			response_headers_color = rgba(255, 34, 0, 0.6);
+			response_head_color = brgb(255, 34, 0);
+			response_body_color = rgb(255, 34, 0);
 		}
 		if (!response_logged.exchange(true)) {
-			L(priority, color, this, "\"%s %s HTTP/%d.%d\" %d %s %s", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor, (int)response_status, bytes_string(response_size).c_str(), delta_string(request_begins, response_ends).c_str());
+			auto head = format_string("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor);
+			L(priority, color, this, "\"%s\" %d %s %s", head.c_str(), (int)response_status, bytes_string(response_size).c_str(), delta_string(request_begins, response_ends).c_str());
+			if (Log::log_level > LOG_DEBUG) {
+				auto request = format_string("%s%s\n%s%s%s%s", request_head_color, head.c_str(), request_headers_color, request_headers.c_str(), request_body_color, request_body.c_str());
+				L(LOG_DEBUG + 1, NO_COL, this, "%s%s", request_prefix.c_str(), indent_string(request, ' ', 4, false).c_str());
+
+				auto response = format_string("%s%s\n%s%s%s%s", response_head_color, response_head.c_str(), response_headers_color, response_headers.c_str(), response_body_color, response_body.c_str());
+				L(LOG_DEBUG + 1, NO_COL, this, "%s%s", response_prefix.c_str(), indent_string(response, ' ', 4, false).c_str());
+			}
 		}
 	}
 
+	if (Log::log_level > LOG_DEBUG) {
+		request_headers.clear();
+		request_body.clear();
+		response_head.clear();
+		response_headers.clear();
+		response_body.clear();
+	}
 	path.clear();
 	body.clear();
 	header_name.clear();
@@ -2214,6 +2317,9 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 	const auto& accepted_type = get_acceptable_type(ct_types);
 
 	try {
+		if (Log::log_level > LOG_DEBUG) {
+			response_body += response.to_string(true);
+		}
 		auto result = serialize_response(response, accepted_type, pretty, (int)status >= 400);
 		if (type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
