@@ -179,6 +179,7 @@ class HttpClient : public BaseClient {
 	std::string header_name;
 	std::string header_value;
 
+	std::string request_head;
 	std::string request_headers;
 	std::string request_body;
 	std::string response_head;
@@ -240,6 +241,9 @@ class HttpClient : public BaseClient {
 	void _endpoint_maker(std::chrono::duration<double, std::milli> timeout);
 	void endpoints_maker(std::chrono::duration<double, std::milli> timeout);
 	void query_field_maker(int flags);
+
+	void log_request();
+	void log_response();
 
 	std::string http_response(enum http_status status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int total_count=0, int matches_estimated=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
 	void clean_http_request();

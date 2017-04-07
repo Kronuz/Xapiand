@@ -372,6 +372,7 @@ HttpClient::on_info(http_parser* p)
 			break;
 		case 19:  // message_begin
 			if (Log::log_level > LOG_DEBUG) {
+				self->request_head.clear();
 				self->request_headers.clear();
 				self->request_body.clear();
 				self->response_head.clear();
@@ -417,6 +418,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 	if (state > 26 && state <= 32) {
 		// s_req_path  ->  s_req_http_start
 		self->path.append(at, length);
+		self->request_head = format_string("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(p)), self->path.c_str(), p->http_major, p->http_minor);
 	} else if (state >= 43 && state <= 44) {
 		// s_header_field  ->  s_header_value_discard_ws
 		self->header_name.append(at, length);
@@ -906,6 +908,7 @@ HttpClient::get_body()
 
 	if (Log::log_level > LOG_DEBUG) {
 		request_body += msgpack.to_string(true);
+		log_request();
 	}
 
 	return std::make_pair(ct_type, msgpack);
@@ -2056,6 +2059,49 @@ HttpClient::query_field_maker(int flag)
 
 
 void
+HttpClient::log_request()
+{
+	std::string request_prefix = "🕸   ";
+	auto request_headers_color = rgba(0, 136, 255, 0.6);
+	auto request_head_color = brgb(0, 136, 255);
+	auto request_body_color = rgb(0, 136, 255);
+
+	auto request = format_string("%s%s\n%s%s%s%s", request_head_color, request_head.c_str(), request_headers_color, request_headers.c_str(), request_body_color, request_body.c_str());
+	L(LOG_DEBUG + 1, NO_COL, this, "%s%s", request_prefix.c_str(), indent_string(request, ' ', 4, false).c_str());
+}
+
+
+void
+HttpClient::log_response()
+{
+	std::string response_prefix = "💊   ";
+	auto response_headers_color = rgba(68, 136, 68, 0.6);
+	auto response_head_color = brgb(68, 136, 68);
+	auto response_body_color = rgb(68, 136, 68);
+
+	if ((int)response_status >= 300 && (int)response_status <= 399) {
+		response_prefix = "💫   ";
+		response_headers_color = rgba(255, 168, 50, 0.6);
+		response_head_color = brgb(255, 168, 50);
+		response_body_color = rgb(255, 168, 50);
+	} else if ((int)response_status >= 400 && (int)response_status <= 499) {
+		response_prefix = "💥   ";
+		response_headers_color = rgba(255, 68, 0, 0.6);
+		response_head_color = brgb(255, 68, 0);
+		response_body_color = rgb(255, 68, 0);
+	} else if ((int)response_status >= 500 && (int)response_status <= 599) {
+		response_prefix = "🔥   ";
+		response_headers_color = rgba(255, 34, 0, 0.6);
+		response_head_color = brgb(255, 34, 0);
+		response_body_color = rgb(255, 34, 0);
+	}
+
+	auto response = format_string("%s%s\n%s%s%s%s", response_head_color, response_head.c_str(), response_headers_color, response_headers.c_str(), response_body_color, response_body.c_str());
+	L(LOG_DEBUG + 1, NO_COL, this, "%s%s", response_prefix.c_str(), indent_string(response, ' ', 4, false).c_str());
+}
+
+
+void
 HttpClient::clean_http_request()
 {
 	L_CALL(this, "HttpClient::clean_http_request()");
@@ -2069,53 +2115,27 @@ HttpClient::clean_http_request()
 		int priority = LOG_DEBUG;
 		const char* color = WHITE;
 
-		// For request/response logging:
-		std::string request_prefix = "🕸   ";
-		auto request_headers_color = rgba(0, 136, 255, 0.6);
-		auto request_head_color = brgb(0, 136, 255);
-		auto request_body_color = rgb(0, 136, 255);
-		std::string response_prefix = "💊   ";
-		auto response_headers_color = rgba(68, 136, 68, 0.6);
-		auto response_head_color = brgb(68, 136, 68);
-		auto response_body_color = rgb(68, 136, 68);
-
 		if ((int)response_status >= 200 && (int)response_status <= 299) {
 			color = GREY;
 		} else if ((int)response_status >= 300 && (int)response_status <= 399) {
 			color = CYAN;
-			response_prefix = "💫   ";
-			response_headers_color = rgba(255, 168, 50, 0.6);
-			response_head_color = brgb(255, 168, 50);
-			response_body_color = rgb(255, 168, 50);
 		} else if ((int)response_status >= 400 && (int)response_status <= 499) {
 			color = YELLOW;
 			priority = LOG_INFO;
-			response_prefix = "💥   ";
-			response_headers_color = rgba(255, 68, 0, 0.6);
-			response_head_color = brgb(255, 68, 0);
-			response_body_color = rgb(255, 68, 0);
 		} else if ((int)response_status >= 500 && (int)response_status <= 599) {
 			color = LIGHT_MAGENTA;
 			priority = LOG_ERR;
-			response_prefix = "🔥   ";
-			response_headers_color = rgba(255, 34, 0, 0.6);
-			response_head_color = brgb(255, 34, 0);
-			response_body_color = rgb(255, 34, 0);
 		}
 		if (!response_logged.exchange(true)) {
-			auto head = format_string("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(&parser)), path.c_str(), parser.http_major, parser.http_minor);
-			L(priority, color, this, "\"%s\" %d %s %s", head.c_str(), (int)response_status, bytes_string(response_size).c_str(), delta_string(request_begins, response_ends).c_str());
 			if (Log::log_level > LOG_DEBUG) {
-				auto request = format_string("%s%s\n%s%s%s%s", request_head_color, head.c_str(), request_headers_color, request_headers.c_str(), request_body_color, request_body.c_str());
-				L(LOG_DEBUG + 1, NO_COL, this, "%s%s", request_prefix.c_str(), indent_string(request, ' ', 4, false).c_str());
-
-				auto response = format_string("%s%s\n%s%s%s%s", response_head_color, response_head.c_str(), response_headers_color, response_headers.c_str(), response_body_color, response_body.c_str());
-				L(LOG_DEBUG + 1, NO_COL, this, "%s%s", response_prefix.c_str(), indent_string(response, ' ', 4, false).c_str());
+				log_response();
 			}
+			L(priority, color, this, "\"%s\" %d %s %s", request_head.c_str(), (int)response_status, bytes_string(response_size).c_str(), delta_string(request_begins, response_ends).c_str());
 		}
 	}
 
 	if (Log::log_level > LOG_DEBUG) {
+		request_head.clear();
 		request_headers.clear();
 		request_body.clear();
 		response_head.clear();
