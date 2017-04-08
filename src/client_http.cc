@@ -2096,9 +2096,55 @@ void
 HttpClient::log_request()
 {
 	std::string request_prefix = "🕸   ";
-	auto request_headers_color = rgba(0, 136, 255, 0.6);
-	auto request_head_color = brgb(0, 136, 255);
-	auto request_body_color = rgb(0, 136, 255);
+
+	const char* request_headers_color = NO_COL;
+	const char* request_head_color = NO_COL;
+	const char* request_body_color = NO_COL;
+
+	switch (HTTP_PARSER_METHOD(&parser)) {
+		case HTTP_OPTIONS:
+			request_headers_color = rgba(100, 100, 36, 0.6);
+			request_head_color = brgb(100, 100, 36);
+			request_body_color = rgb(100, 100, 36);
+			break;
+		case HTTP_HEAD:
+			request_headers_color = rgba(100, 100, 36, 0.6);
+			request_head_color = brgb(100, 100, 36);
+			request_body_color = rgb(100, 100, 36);
+			break;
+		case HTTP_GET:
+			request_headers_color = rgba(0, 100, 36, 0.6);
+			request_head_color = brgb(0, 100, 36);
+			request_body_color = rgb(0, 100, 36);
+			break;
+		case HTTP_POST:
+			request_headers_color = rgba(0, 55, 200, 0.6);
+			request_head_color = brgb(0, 55, 200);
+			request_body_color = rgb(0, 55, 200);
+			break;
+		case HTTP_PATCH:
+			request_headers_color = rgba(100, 36, 255, 0.6);
+			request_head_color = brgb(100, 36, 255);
+			request_body_color = rgb(100, 36, 255);
+			break;
+		case HTTP_MERGE:
+			request_headers_color = rgba(100, 36, 255, 0.6);
+			request_head_color = brgb(100, 36, 255);
+			request_body_color = rgb(100, 36, 255);
+			break;
+		case HTTP_PUT:
+			request_headers_color = rgba(155, 36, 100, 0.6);
+			request_head_color = brgb(155, 36, 100);
+			request_body_color = rgb(155, 36, 100);
+			break;
+		case HTTP_DELETE:
+			request_headers_color = rgba(155, 36, 0, 0.6);
+			request_head_color = brgb(155, 36, 0);
+			request_body_color = rgb(155, 36, 0);
+			break;
+		default:
+			break;
+	};
 
 	auto request = format_string("%s%s\n%s%s%s%s", request_head_color, request_head.c_str(), request_headers_color, request_headers.c_str(), request_body_color, request_body.c_str());
 	L(LOG_DEBUG + 1, NO_COL, this, "%s%s", request_prefix.c_str(), indent_string(request, ' ', 4, false).c_str());
@@ -2109,20 +2155,24 @@ void
 HttpClient::log_response()
 {
 	std::string response_prefix = "💊   ";
-	auto response_headers_color = rgba(68, 136, 68, 0.6);
-	auto response_head_color = brgb(68, 136, 68);
-	auto response_body_color = rgb(68, 136, 68);
+	const char* response_headers_color = NO_COL;
+	const char* response_head_color = NO_COL;
+	const char* response_body_color = NO_COL;
 
-	if ((int)response_status >= 300 && (int)response_status <= 399) {
+	if ((int)response_status >= 200 && (int)response_status <= 299) {
+		response_headers_color = rgba(68, 136, 68, 0.6);
+		response_head_color = brgb(68, 136, 68);
+		response_body_color = rgb(68, 136, 68);
+	} else if ((int)response_status >= 300 && (int)response_status <= 399) {
 		response_prefix = "💫   ";
+		response_headers_color = rgba(68, 136, 120, 0.6);
+		response_head_color = brgb(68, 136, 120);
+		response_body_color = rgb(68, 136, 120);
+	} else if ((int)response_status >= 400 && (int)response_status <= 499) {
+		response_prefix = "💥   ";
 		response_headers_color = rgba(255, 168, 50, 0.6);
 		response_head_color = brgb(255, 168, 50);
 		response_body_color = rgb(255, 168, 50);
-	} else if ((int)response_status >= 400 && (int)response_status <= 499) {
-		response_prefix = "💥   ";
-		response_headers_color = rgba(255, 68, 0, 0.6);
-		response_head_color = brgb(255, 68, 0);
-		response_body_color = rgb(255, 68, 0);
 	} else if ((int)response_status >= 500 && (int)response_status <= 599) {
 		response_prefix = "🔥   ";
 		response_headers_color = rgba(255, 34, 0, 0.6);
