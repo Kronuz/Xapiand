@@ -4311,9 +4311,13 @@ Schema::consistency_type(const std::string& prop_name, const MsgPack& doc_type)
 
 	try {
 		const auto _str_type = lower_string(doc_type.as_string());
-		const auto str_type = ::readable_type(specification.sep_types);
-		if (str_type != _str_type) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), str_type.c_str(), _str_type.c_str());
+		auto init_pos = _str_type.rfind('/');
+		if (init_pos == std::string::npos) {
+			init_pos = 0;
+		}
+		const auto str_type = Serialise::type(specification.sep_types[2]);
+		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), str_type.c_str(), _str_type.substr(init_pos).c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
