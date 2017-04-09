@@ -2118,29 +2118,29 @@ HttpClient::log_request()
 			request_body_color = rgb(0, 100, 36);
 			break;
 		case HTTP_POST:
-			request_headers_color = rgba(0, 55, 200, 0.6);
-			request_head_color = brgb(0, 55, 200);
-			request_body_color = rgb(0, 55, 200);
+			request_headers_color = rgba(0, 55, 136, 0.6);
+			request_head_color = brgb(0, 55, 136);
+			request_body_color = rgb(0, 55, 136);
 			break;
 		case HTTP_PATCH:
-			request_headers_color = rgba(100, 36, 255, 0.6);
-			request_head_color = brgb(100, 36, 255);
-			request_body_color = rgb(100, 36, 255);
+			request_headers_color = rgba(100, 55, 100, 0.6);
+			request_head_color = brgb(100, 55, 100);
+			request_body_color = rgb(100, 55, 100);
 			break;
 		case HTTP_MERGE:
-			request_headers_color = rgba(100, 36, 255, 0.6);
-			request_head_color = brgb(100, 36, 255);
-			request_body_color = rgb(100, 36, 255);
+			request_headers_color = rgba(100, 55, 100, 0.6);
+			request_head_color = brgb(100, 55, 100);
+			request_body_color = rgb(100, 55, 100);
 			break;
 		case HTTP_PUT:
-			request_headers_color = rgba(155, 36, 100, 0.6);
-			request_head_color = brgb(155, 36, 100);
-			request_body_color = rgb(155, 36, 100);
+			request_headers_color = rgba(136, 55, 68, 0.6);
+			request_head_color = brgb(136, 55, 68);
+			request_body_color = rgb(136, 55, 68);
 			break;
 		case HTTP_DELETE:
-			request_headers_color = rgba(155, 36, 0, 0.6);
-			request_head_color = brgb(155, 36, 0);
-			request_body_color = rgb(155, 36, 0);
+			request_headers_color = rgba(136, 36, 0, 0.6);
+			request_head_color = brgb(136, 36, 0);
+			request_body_color = rgb(136, 36, 0);
 			break;
 		default:
 			break;
@@ -2170,14 +2170,14 @@ HttpClient::log_response()
 		response_body_color = rgb(68, 136, 120);
 	} else if ((int)response_status >= 400 && (int)response_status <= 499) {
 		response_prefix = "💥   ";
-		response_headers_color = rgba(255, 168, 50, 0.6);
-		response_head_color = brgb(255, 168, 50);
-		response_body_color = rgb(255, 168, 50);
+		response_headers_color = rgba(168, 100, 0, 0.6);
+		response_head_color = brgb(168, 100, 0);
+		response_body_color = rgb(168, 100, 0);
 	} else if ((int)response_status >= 500 && (int)response_status <= 599) {
 		response_prefix = "🔥   ";
-		response_headers_color = rgba(255, 34, 0, 0.6);
-		response_head_color = brgb(255, 34, 0);
-		response_body_color = rgb(255, 34, 0);
+		response_headers_color = rgba(190, 30, 10, 0.6);
+		response_head_color = brgb(190, 30, 10);
+		response_body_color = rgb(190, 30, 10);
 	}
 
 	auto response = format_string("%s%s\n%s%s%s%s", response_head_color, response_head.c_str(), response_headers_color, response_headers.c_str(), response_body_color, response_body.c_str());
