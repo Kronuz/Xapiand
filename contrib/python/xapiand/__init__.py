@@ -72,7 +72,7 @@ try:
     XAPIAND_PORT = getattr(settings, 'XAPIAND_PORT', XAPIAND_PORT)
     XAPIAND_COMMIT = getattr(settings, 'XAPIAND_COMMIT', XAPIAND_COMMIT)
 except Exception:
-    pass
+    settings = None
 
 
 class Object(NestedDict):
@@ -404,3 +404,7 @@ class Xapiand(object):
 
 live = Xapiand(host=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_LIVE_PREFIX)
 sandbox = Xapiand(host=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_SANDBOX_PREFIX)
+
+
+def client():
+    return live if settings and settings.IS_LIVE else sandbox
