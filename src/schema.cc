@@ -4387,7 +4387,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 			case FieldType::POSITIVE:
 			case FieldType::FLOAT: {
 				try {
-					for (const auto& _accuracy : *specification.doc_acc) {
+					for (const auto& _accuracy : doc_accuracy) {
 						set_acc.insert(_accuracy.as_u64());
 					}
 				} catch (const msgpack::type_error&) {
