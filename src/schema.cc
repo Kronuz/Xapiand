@@ -4227,7 +4227,7 @@ Schema::consistency_language(const std::string& prop_name, const MsgPack& doc_la
 		if (specification.sep_types[2] == FieldType::TEXT) {
 			const auto _str_language = lower_string(doc_language.as_string());
 			if (specification.language != _str_language) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.language.c_str(), _str_language.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.language.c_str(), _str_language.c_str(), specification.full_meta_name.c_str());
 			}
 		} else {
 			THROW(ClientError, "%s only is allowed in text type fields", prop_name.c_str());
@@ -4249,7 +4249,7 @@ Schema::consistency_stop_strategy(const std::string& prop_name, const MsgPack& d
 			const auto _stop_strategy = lower_string(doc_stop_strategy.as_string());
 			const auto stop_strategy = ::readable_stop_strategy(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), stop_strategy.c_str(), _stop_strategy.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), stop_strategy.c_str(), _stop_strategy.c_str(), specification.full_meta_name.c_str());
 			}
 		} else {
 			THROW(ClientError, "%s only is allowed in text type fields", prop_name.c_str());
@@ -4271,7 +4271,7 @@ Schema::consistency_stem_strategy(const std::string& prop_name, const MsgPack& d
 			const auto _stem_strategy = lower_string(doc_stem_strategy.as_string());
 			const auto stem_strategy = ::readable_stem_strategy(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), stem_strategy.c_str(), _stem_strategy.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), stem_strategy.c_str(), _stem_strategy.c_str(), specification.full_meta_name.c_str());
 			}
 		} else {
 			THROW(ClientError, "%s only is allowed in text type fields", prop_name.c_str());
@@ -4292,7 +4292,7 @@ Schema::consistency_stem_language(const std::string& prop_name, const MsgPack& d
 		if (specification.sep_types[2] == FieldType::TEXT) {
 			const auto _stem_language = lower_string(doc_stem_language.as_string());
 			if (specification.stem_language != _stem_language) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.stem_language.c_str(), _stem_language.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.stem_language.c_str(), _stem_language.c_str(), specification.full_meta_name.c_str());
 			}
 		} else {
 			THROW(ClientError, "%s only is allowed in text type fields", prop_name.c_str());
@@ -4319,7 +4319,7 @@ Schema::consistency_type(const std::string& prop_name, const MsgPack& doc_type)
 		}
 		const auto str_type = Serialise::type(specification.sep_types[2]);
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), str_type.c_str(), _str_type.substr(init_pos).c_str());
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), str_type.c_str(), _str_type.substr(init_pos).c_str(), specification.full_meta_name.c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
@@ -4371,7 +4371,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 						set_acc.insert(_accuracy.as_u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str());
+					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers in %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), specification.full_meta_name.c_str());
 				}
 				break;
 			}
@@ -4379,7 +4379,14 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				THROW(ClientError, "%s is not allowed in %s type fields", prop_name.c_str(), Serialise::type(specification.sep_types[2]).c_str());
 		}
 		if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
-			THROW(ClientError, "It is not allowed to change %s", prop_name.c_str());
+			std::string str_accuracy, _str_accuracy;
+			for (const auto& acc : set_acc) {
+				str_accuracy.append(std::to_string(acc)).push_back(' ');
+			}
+			for (const auto& acc : specification.accuracy) {
+				_str_accuracy.append(std::to_string(acc)).push_back(' ');
+			}
+			THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", prop_name.c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, %s must be array", prop_name.c_str());
@@ -4397,7 +4404,7 @@ Schema::consistency_bool_term(const std::string& prop_name, const MsgPack& doc_b
 		if (specification.sep_types[2] == FieldType::TERM) {
 			const auto _bool_term = doc_bool_term.as_bool();
 			if (specification.flags.bool_term != _bool_term) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false");
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", specification.full_meta_name.c_str());
 			}
 		} else {
 			THROW(ClientError, "%s only is allowed in term type fields", prop_name.c_str());
