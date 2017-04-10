@@ -602,15 +602,15 @@ HttpClient::run()
 	std::string error;
 	enum http_status error_code = HTTP_STATUS_OK;
 
-	if (Log::log_level > LOG_DEBUG) {
-		auto msgpack = get_body().second;
-		if (msgpack) {
-			request_body = msgpack.to_string(4);
-		}
-		log_request();
-	}
-
 	try {
+		if (Log::log_level > LOG_DEBUG) {
+			auto msgpack = get_body().second;
+			if (msgpack) {
+				request_body = msgpack.to_string(4);
+			}
+			log_request();
+		}
+
 		auto method = HTTP_PARSER_METHOD(&parser);
 		switch (method) {
 			case HTTP_DELETE:
@@ -903,6 +903,8 @@ HttpClient::_delete(enum http_method method)
 std::pair<std::string, MsgPack>&
 HttpClient::get_body()
 {
+	L_CALL(this, "HttpClient::get_body()");
+
 	if (decoded_body.first.empty()) {
 		// Create MsgPack object for the body
 		auto ct_type = content_type;
