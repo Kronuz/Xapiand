@@ -26,6 +26,7 @@
 #include <cmath>            // for M_PI
 #include <cstdint>          // for uint64_t, int8_t
 #include <cstdio>           // for snprintf
+#include <memory>           // for shared_ptr
 #include <vector>           // for vector
 
 #include "cartesian.h"
