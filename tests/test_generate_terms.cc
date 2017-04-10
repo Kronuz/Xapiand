@@ -444,22 +444,22 @@ int numeric_test() {
 		std::string result_query_terms;
 		// try to convert string to uint64_t.
 		try {
-			auto val_s = stox(std::stoull, test.start);
-			auto val_e = stox(std::stoull, test.end);
+			uint64_t val_s = stox(std::stoull, test.start);
+			uint64_t val_e = stox(std::stoull, test.end);
 			result_query_terms = GenerateTerms::numeric(val_s, val_e, test.accuracy, test.acc_prefix).get_description();
 		} catch (const std::exception&) { }
 
 		// try to convert string to int64_t
 		try {
-			auto val_s = stox(std::stoll, test.start);
-			auto val_e = stox(std::stoll, test.end);
+			int64_t val_s = stox(std::stoll, test.start);
+			int64_t val_e = stox(std::stoll, test.end);
 			result_query_terms = GenerateTerms::numeric(val_s, val_e, test.accuracy, test.acc_prefix).get_description();
 		} catch (const std::exception&) { }
 
 		// try to convert string to double
 		try {
-			auto val_s = (int64_t)stox(std::stod, test.start);
-			auto val_e = (int64_t)stox(std::stod, test.end);
+			int64_t val_s = (int64_t)stox(std::stod, test.start);
+			int64_t val_e = (int64_t)stox(std::stod, test.end);
 			result_query_terms = GenerateTerms::numeric(val_s, val_e, test.accuracy, test.acc_prefix).get_description();
 		} catch (const std::exception&) { }
 
