@@ -73,9 +73,7 @@ static inline uint64_t fnv_1a(uint64_t num) {
 
 
 GuidCompactor::GuidCompactor()
-{
-	std::memset(this, 0, sizeof(GuidCompactor));
-}
+	: compact({ 0, 0, 0, 0, 0, 0 }) { }
 
 
 inline uint64_t
