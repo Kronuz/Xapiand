@@ -498,11 +498,11 @@ Guid::unserialise(const std::string& bytes)
 	uint8_t length = *pos & 0x0f;
 	if (length == 0) {
 		length = (*pos & 0xf0) >> 4;
-		if (length == 0 || bytes.length() != (length + 2)) {
+		if (length == 0 || bytes.length() != static_cast<size_t>(length + 2)) {
 			THROW(SerialisationError, "Bad encoded uuid");
 		}
 		return unserialise_full(length, &pos);
-	} else if (bytes.length() != (length + 1)) {
+	} else if (bytes.length() != static_cast<size_t>(length + 1)) {
 		THROW(SerialisationError, "Bad encoded uuid");
 	}
 
