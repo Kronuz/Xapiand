@@ -4314,6 +4314,8 @@ Schema::consistency_type(const std::string& prop_name, const MsgPack& doc_type)
 		auto init_pos = _str_type.rfind('/');
 		if (init_pos == std::string::npos) {
 			init_pos = 0;
+		} else {
+			++init_pos;
 		}
 		const auto str_type = Serialise::type(specification.sep_types[2]);
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
