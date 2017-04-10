@@ -598,7 +598,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 		return Xapian::Query();
 	}
 
-	std::map<size_t, std::unordered_set<uint64_t>> map_terms;
+	std::map<size_t, std::set<uint64_t>> map_terms;
 
 	auto id_trixels = HTM::getIdTrixels(ranges);
 
