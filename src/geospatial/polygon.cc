@@ -82,6 +82,8 @@ Polygon::ConvexPolygon::graham_scan(std::vector<Cartesian>&& points)
 				return true;
 			case Direction::CLOCKWISE:
 				return false;
+			default:
+				return false;
 		}
 	});
 
