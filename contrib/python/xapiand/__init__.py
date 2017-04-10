@@ -75,9 +75,9 @@ except Exception:
     pass
 
 
-class Result(NestedDict):
+class Object(NestedDict):
     def __init__(self, *args, **kwargs):
-        super(Result, self).__init__(*args, **kwargs)
+        super(Object, self).__init__(*args, **kwargs)
         for k in list(self):
             if k[0] == '_':
                 dict.__setattr__(self, k, self.pop(k))
@@ -99,7 +99,7 @@ class Results(object):
         return self
 
     def next(self):
-        return Result(next(iter(self.generator)))
+        return Object(next(iter(self.generator)))
     __next__ = next
 
 
