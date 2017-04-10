@@ -4339,12 +4339,22 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 			case FieldType::GEO: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
-						set_acc.insert(_accuracy.as_u64());
+						set_acc.insert(HTM_START_POS - 2 * _accuracy.as_u64());
 					}
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 				}
-				break;
+				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
+					std::string str_accuracy, _str_accuracy;
+					for (const auto& acc : set_acc) {
+						str_accuracy.append(std::to_string((HTM_START_POS - acc) / 2)).push_back(' ');
+					}
+					for (const auto& acc : specification.accuracy) {
+						_str_accuracy.append(std::to_string((HTM_START_POS - acc) / 2)).push_back(' ');
+					}
+					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", prop_name.c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+				}
+				return;
 			}
 			case FieldType::DATE: {
 				try {
@@ -4361,7 +4371,17 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str());
 				}
-				break;
+				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
+					std::string str_accuracy, _str_accuracy;
+					for (const auto& acc : set_acc) {
+						str_accuracy.append(std::to_string(readable_acc_date((UnitTime)acc))).push_back(' ');
+					}
+					for (const auto& acc : specification.accuracy) {
+						_str_accuracy.append(std::to_string(readable_acc_date((UnitTime)acc))).push_back(' ');
+					}
+					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", prop_name.c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+				}
+				return;
 			}
 			case FieldType::INTEGER:
 			case FieldType::POSITIVE:
@@ -4373,20 +4393,20 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers in %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), specification.full_meta_name.c_str());
 				}
-				break;
+				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
+					std::string str_accuracy, _str_accuracy;
+					for (const auto& acc : set_acc) {
+						str_accuracy.append(std::to_string(acc)).push_back(' ');
+					}
+					for (const auto& acc : specification.accuracy) {
+						_str_accuracy.append(std::to_string(acc)).push_back(' ');
+					}
+					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", prop_name.c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+				}
+				return;
 			}
 			default:
 				THROW(ClientError, "%s is not allowed in %s type fields", prop_name.c_str(), Serialise::type(specification.sep_types[2]).c_str());
-		}
-		if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
-			std::string str_accuracy, _str_accuracy;
-			for (const auto& acc : set_acc) {
-				str_accuracy.append(std::to_string(acc)).push_back(' ');
-			}
-			for (const auto& acc : specification.accuracy) {
-				_str_accuracy.append(std::to_string(acc)).push_back(' ');
-			}
-			THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", prop_name.c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, %s must be array", prop_name.c_str());
