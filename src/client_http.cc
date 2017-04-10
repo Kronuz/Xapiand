@@ -2123,24 +2123,24 @@ HttpClient::log_request()
 			request_body_color = rgb(0, 55, 136);
 			break;
 		case HTTP_PATCH:
-			request_headers_color = rgba(100, 55, 100, 0.6);
-			request_head_color = brgb(100, 55, 100);
-			request_body_color = rgb(100, 55, 100);
+			request_headers_color = rgba(63, 63, 136, 0.6);
+			request_head_color = brgb(63, 63, 136);
+			request_body_color = rgb(63, 63, 136);
 			break;
 		case HTTP_MERGE:
-			request_headers_color = rgba(100, 55, 100, 0.6);
-			request_head_color = brgb(100, 55, 100);
-			request_body_color = rgb(100, 55, 100);
+			request_headers_color = rgba(63, 63, 136, 0.6);
+			request_head_color = brgb(63, 63, 136);
+			request_body_color = rgb(63, 63, 136);
 			break;
 		case HTTP_PUT:
-			request_headers_color = rgba(136, 55, 68, 0.6);
-			request_head_color = brgb(136, 55, 68);
-			request_body_color = rgb(136, 55, 68);
+			request_headers_color = rgba(90, 63, 120, 0.6);
+			request_head_color = brgb(90, 63, 120);
+			request_body_color = rgb(90, 63, 120);
 			break;
 		case HTTP_DELETE:
-			request_headers_color = rgba(136, 36, 0, 0.6);
-			request_head_color = brgb(136, 36, 0);
-			request_body_color = rgb(136, 36, 0);
+			request_headers_color = rgba(136, 63, 63, 0.6);
+			request_head_color = brgb(136, 63, 63);
+			request_body_color = rgb(136, 63, 63);
 			break;
 		default:
 			break;
