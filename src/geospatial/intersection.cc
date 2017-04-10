@@ -22,6 +22,8 @@
 
 #include "intersection.h"
 
+#include <algorithm>
+
 
 void
 Intersection::simplify()

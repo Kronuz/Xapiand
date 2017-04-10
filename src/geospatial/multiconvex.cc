@@ -22,6 +22,7 @@
 
 #include "multiconvex.h"
 
+#include <algorithm>
 #include <cmath>
 
 

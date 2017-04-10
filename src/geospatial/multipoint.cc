@@ -22,6 +22,8 @@
 
 #include "multipoint.h"
 
+#include <algorithm>
+
 
 void
 MultiPoint::simplify()

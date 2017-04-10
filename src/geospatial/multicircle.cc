@@ -22,6 +22,7 @@
 
 #include "multicircle.h"
 
+#include <algorithm>
 #include <cmath>
 
 

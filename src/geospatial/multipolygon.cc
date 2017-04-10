@@ -22,6 +22,8 @@
 
 #include "multipolygon.h"
 
+#include <algorithm>
+
 
 void
 MultiPolygon::simplify()

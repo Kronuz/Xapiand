@@ -22,6 +22,7 @@
 
 #include "convex.h"
 
+#include <algorithm>
 #include <cmath>
 
 

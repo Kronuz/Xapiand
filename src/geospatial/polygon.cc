@@ -22,6 +22,7 @@
 
 #include "polygon.h"
 
+#include <algorithm>
 #include <cmath>
 
 
