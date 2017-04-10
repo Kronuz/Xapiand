@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "guid.h"
 
-#include "serialise.h"
+#include "serialise.h"  // For BYTE_SWAP_*
 
 #include <algorithm>
 #include <iomanip>
