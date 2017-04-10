@@ -522,7 +522,7 @@ Guid::unserialise(uint8_t length, const char** pos)
 
 	unsigned char clock_seq_low = compactor.compact.clock & 0xffULL;
 	unsigned char clock_seq_hi_variant = compactor.compact.clock >> 8 | 0x80ULL;  // Variant: RFC 4122
-	uint64_t node = compactor.compact.compacted ? compactor.calculate_node() : node = compactor.expanded.node;
+	uint64_t node = compactor.compact.compacted ? compactor.calculate_node() : compactor.expanded.node;
 	unsigned time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
