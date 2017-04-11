@@ -178,11 +178,11 @@ public:
 			if (length == 0) {
 				length = (*pos & 0xf0) >> 4;
 				if (length == 0 || (end - pos) < (length + 2)) {
-					THROW(SerialisationError, "Bad encoded uuid (1)");
+					THROW(SerialisationError, "Bad encoded expanded uuid");
 				}
 				*d_first = unserialise_full(length, &pos);
 			} else if ((end - pos) < (length + 1)) {
-				THROW(SerialisationError, "Bad encoded uuid (2)");
+				THROW(SerialisationError, "Bad encoded compacted/condensed uuid");
 			} else {
 				*d_first = unserialise(length, &pos);
 			}
