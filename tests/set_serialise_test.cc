@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -40,6 +40,12 @@ TEST(SerialiseUnserialiseTest, Cartesian) {
 TEST(SerialiseUnserialiseTest, Range) {
 	EXPECT_EQ(test_serialise_range(), 0);
 	EXPECT_EQ(test_unserialise_range(), 0);
+}
+
+
+TEST(SerialiseUnserialiseTest, UUID) {
+	EXPECT_EQ(test_serialise_uuid(), 0);
+	EXPECT_EQ(test_unserialise_uuid(), 0);
 }
 
 

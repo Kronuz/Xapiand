@@ -43,6 +43,13 @@ struct test_range_t {
 };
 
 
+struct test_uuid_t {
+	std::string uuid;
+	std::string serialised;
+	std::string unserialised;
+};
+
+
 // Testing the transformation between date string and timestamp.
 int test_datetotimestamp();
 // Testing unserialise date.
@@ -55,3 +62,7 @@ int test_unserialise_cartesian();
 int test_serialise_range();
 // Testing unserialise range_t.
 int test_unserialise_range();
+// Testing serialise uuid.
+int test_serialise_uuid();
+// Testing unserialise uuid.
+int test_unserialise_uuid();

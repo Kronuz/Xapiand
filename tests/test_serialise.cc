@@ -139,6 +139,64 @@ const std::vector<test_range_t> test_seri_ranges({
 });
 
 
+const std::vector<test_uuid_t> test_seri_uuids({
+	// Guid                                     Expected serialised uuid.                                            Expected unserialise uuid
+	{ "00000000-0000-0000-0000-000000000000",   "\\x10\\x00\\x00",                                                   "00000000-0000-0000-0000-000000000000" },
+	{ "00000000-0000-1000-8000-000000000000",   "1\\x00",                                                            "00000000-0000-1000-8000-000000000000" },
+	{ "00000000-0000-1000-a000-000000000000",   "(\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\b",                           "00000000-0000-1000-a000-000000000000" },
+	{ "00000000-0000-4000-b000-000000000000",   "\\b\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\f",                         "00000000-0000-4000-b000-000000000000" },
+	{ "00000000-2000-1000-c000-000000000000",   "\\x80\\x01\\x00\\x00\\x00\\x00`\\x19\\x1e\\x03",                    "00000000-2000-1000-c000-000000000000" },
+	{ "00000000-2000-4000-c000-000000000000",   "\\x80\\x01\\x00\\x00\\x00\\x00`\\x19N\\x03",                        "00000000-2000-4000-c000-000000000000" },
+	{ "{00000000-2000-2000-0000-000000000000}", "p\\x01\\x00\\x00\\x00\\x00`\\x19.",                                 "00000000-2000-2000-0000-000000000000" },
+	{ "4ec97478-c3a9-11e6-bbd0-a46ba9ba5662",   "\\xb8\\x80\\xde\\xf3\\xe8\\x92\\x9dR\\x07",                         "4ec97478-c3a9-11e6-bbd0-a46ba9ba5662" },
+	{ "b6e0e797-80fc-11e6-b58a-60f81dc76762",   "\\xaf\\xd8\\xd9q\\x07>\\x98b\\x8dy\\x0en\\xcb\\x0f\\xfc\\xff",      "b6e0e797-80fc-11e6-b58a-60f81dc76762" },
+	{ "d095e48f-c64f-4f08-91ec-888e6068dfe0",   "\\x0f\\xf87\\x1a\\x98#\"{\\x04I^\\t\\xfdd \\xd2",                   "d095e48f-c64f-4f08-91ec-888e6068dfe0" },
+	{ "c5c52a08-c3b4-11e6-9231-339cb51d7742",   "\\xb8\\x88\\x91\\x12T\\x8a\\x8bi\\x07",                             "c5c52a08-c3b4-11e6-9231-339cb51d7742" },
+	{ "{c5c52a08-c3b4-51e6-7231-339cb51d7742}", "\\xf0\\t*\\xc5\\xc5\\xb4\\x03\\x00P\\t\\xddu\\xd4r\\xce\\xc4\\xc8", "c5c52a08-c3b4-51e6-7231-339cb51d7742" },
+	// Compound uuids
+	{
+		"{00000000-0000-0000-0000-000000000000;00000000-0000-1000-8000-000000000000;00000000-0000-1000-a000-000000000000}",
+		"\\x10\\x00\\x001\\x00(\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\b",
+		"{EAAAMQAoAAAAAAAAAAg}"
+	},
+	{
+		"{00000000-0000-4000-b000-000000000000;00000000-2000-1000-c000-000000000000;00000000-2000-4000-c000-000000000000}",
+		"\\b\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\f\\x80\\x01\\x00\\x00\\x00\\x00`\\x19\\x1e\\x03\\x80\\x01\\x00\\x00\\x00\\x00`\\x19N\\x03",
+		"{CAAAAAAAAAAMgAEAAAAAYBkeA4ABAAAAAGAZTgM}"
+	},
+	{
+		"{00000000-2000-2000-0000-000000000000;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662;b6e0e797-80fc-11e6-b58a-60f81dc76762}",
+		"p\\x01\\x00\\x00\\x00\\x00`\\x19.\\xb8\\x80\\xde\\xf3\\xe8\\x92\\x9dR\\x07\\xaf\\xd8\\xd9q\\x07>\\x98b\\x8dy\\x0en\\xcb\\x0f\\xfc\\xff",
+		"{cAEAAAAAYBkuuIDe8-iSnVIHr9jZcQc-mGKNeQ5uyw_8_w}"
+	},
+	{
+		"{d095e48f-c64f-4f08-91ec-888e6068dfe0;c5c52a08-c3b4-11e6-9231-339cb51d7742;c5c52a08-c3b4-51e6-7231-339cb51d7742}",
+		"\\x0f\\xf87\\x1a\\x98#\"{\\x04I^\\t\\xfdd \\xd2\\xb8\\x88\\x91\\x12T\\x8a\\x8bi\\x07\\xf0\\t*\\xc5\\xc5\\xb4\\x03\\x00P\\t\\xddu\\xd4r\\xce\\xc4\\xc8",
+		"{D_g3GpgjInsESV4J_WQg0riIkRJUiotpB_AJKsXFtAMAUAndddRyzsTI}"
+	},
+	{
+		"{EAAAMQAoAAAAAAAAAAg}",
+		"\\x10\\x00\\x001\\x00(\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\b",
+		"{EAAAMQAoAAAAAAAAAAg}"
+	},
+	{
+		"{CAAAAAAAAAAMgAEAAAAAYBkeA4ABAAAAAGAZTgM}",
+		"\\b\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\f\\x80\\x01\\x00\\x00\\x00\\x00`\\x19\\x1e\\x03\\x80\\x01\\x00\\x00\\x00\\x00`\\x19N\\x03",
+		"{CAAAAAAAAAAMgAEAAAAAYBkeA4ABAAAAAGAZTgM}"
+	},
+	{
+		"{cAEAAAAAYBkuuIDe8-iSnVIHr9jZcQc-mGKNeQ5uyw_8_w}",
+		"p\\x01\\x00\\x00\\x00\\x00`\\x19.\\xb8\\x80\\xde\\xf3\\xe8\\x92\\x9dR\\x07\\xaf\\xd8\\xd9q\\x07>\\x98b\\x8dy\\x0en\\xcb\\x0f\\xfc\\xff",
+		"{cAEAAAAAYBkuuIDe8-iSnVIHr9jZcQc-mGKNeQ5uyw_8_w}"
+	},
+	{
+		"{D_g3GpgjInsESV4J_WQg0riIkRJUiotpB_AJKsXFtAMAUAndddRyzsTI}",
+		"\\x0f\\xf87\\x1a\\x98#\"{\\x04I^\\t\\xfdd \\xd2\\xb8\\x88\\x91\\x12T\\x8a\\x8bi\\x07\\xf0\\t*\\xc5\\xc5\\xb4\\x03\\x00P\\t\\xddu\\xd4r\\xce\\xc4\\xc8",
+		"{D_g3GpgjInsESV4J_WQg0riIkRJUiotpB_AJKsXFtAMAUAndddRyzsTI}"
+	},
+});
+
+
 int test_datetotimestamp() {
 	INIT_LOG
 	int cont = 0;
@@ -268,6 +326,49 @@ int test_unserialise_range() {
 		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing unserialise range_t has mistakes.");
+		RETURN(1);
+	}
+}
+
+
+int test_serialise_uuid() {
+	INIT_LOG
+	int cont = 0;
+	for (const auto& test : test_seri_uuids) {
+		const auto serialised = repr(Serialise::uuid(test.uuid), true, false);
+		if (serialised != test.serialised) {
+			++cont;
+			L_ERR(nullptr, "ERROR: Serialise::uuid is not working. Result: %s Expect: %s", serialised.c_str(), test.serialised.c_str());
+		}
+	}
+
+	if (cont == 0) {
+		L_DEBUG(nullptr, "Testing serialise uuid is correct!");
+		RETURN(0);
+	} else {
+		L_ERR(nullptr, "ERROR: Testing serialise uuid has mistakes.");
+		RETURN(1);
+	}
+}
+
+
+int test_unserialise_uuid() {
+	INIT_LOG
+	int cont = 0;
+	for (const auto& test : test_seri_uuids) {
+		const auto serialised = Serialise::uuid(test.uuid);
+		const auto uuid = Unserialise::uuid(serialised);
+		if (uuid != test.unserialised) {
+			++cont;
+			L_ERR(nullptr, "ERROR: Unserialise::uuid is not working. Result: %s Expect: %s", uuid.c_str(), test.unserialised.c_str());
+		}
+	}
+
+	if (cont == 0) {
+		L_DEBUG(nullptr, "Testing unserialise uuid is correct!");
+		RETURN(0);
+	} else {
+		L_ERR(nullptr, "ERROR: Testing unserialise uuid has mistakes.");
 		RETURN(1);
 	}
 }
