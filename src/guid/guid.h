@@ -177,12 +177,12 @@ public:
 			uint8_t length = *pos & 0x0f;
 			if (length == 0) {
 				length = (*pos & 0xf0) >> 4;
-				if (length < 2 || (end - pos) < (length + 2)) {
-					THROW(SerialisationError, "Bad encoded uuid");
+				if (length == 0 || (end - pos) < (length + 2)) {
+					THROW(SerialisationError, "Bad encoded uuid (1)");
 				}
 				*d_first = unserialise_full(length, &pos);
-			} else if (length < 2 || (end - pos) < (length + 1)) {
-				THROW(SerialisationError, "Bad encoded uuid");
+			} else if ((end - pos) < (length + 1)) {
+				THROW(SerialisationError, "Bad encoded uuid (2)");
 			} else {
 				*d_first = unserialise(length, &pos);
 			}
