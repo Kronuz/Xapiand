@@ -45,7 +45,8 @@ protected:
 	std::string traceback;
 
 public:
-	BaseException(const char *filename, int line, const char* type, const char *format, ...);
+	BaseException(const char *filename, int line, const char* type, const char* format, ...);
+
 	BaseException(const char *filename, int line, const char* type, const std::string& message="")
 		: BaseException(filename, line, type, message.c_str()) { }
 

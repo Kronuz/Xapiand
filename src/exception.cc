@@ -95,16 +95,11 @@ BaseException::BaseException(const char *filename, int line, const char* type, c
 		message.assign(type);
 	}
 
-#ifdef XAPIAND_TRACEBACKS
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
 	context.assign(std::string(buffer) + ": " + message);
-
+#ifdef XAPIAND_TRACEBACKS
 	traceback = ::traceback(filename, line);
 #else
 	traceback = "\n== Exception at (" + std::string(filename) + ":" + std::to_string(line) + ")";
-
-	(void)filename;
-	(void)line;
-	context = message;
 #endif
 }
