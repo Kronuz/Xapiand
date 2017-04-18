@@ -2097,7 +2097,7 @@ HttpClient::query_field_maker(int flag)
 void
 HttpClient::log_request()
 {
-	std::string request_prefix = "🕸   ";
+	std::string request_prefix = "🌎   ";
 
 	const char* request_headers_color = NO_COL;
 	const char* request_head_color = NO_COL;
@@ -2171,7 +2171,7 @@ HttpClient::log_response()
 		response_head_color = brgb(68, 136, 120);
 		response_body_color = rgb(68, 136, 120);
 	} else if ((int)response_status == 404) {
-		response_prefix = "💥   ";
+		response_prefix = "🕸   ";
 		response_headers_color = rgba(116, 100, 77, 0.6);
 		response_head_color = brgb(116, 100, 77);
 		response_body_color = rgb(116, 100, 77);
