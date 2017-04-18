@@ -57,9 +57,9 @@ class MsgPack {
 	MsgPack(const std::shared_ptr<Body>& b);
 	MsgPack(std::shared_ptr<Body>&& b);
 
-	void _initializer_array(const std::initializer_list<MsgPack>& list);
-	void _initializer_map(const std::initializer_list<MsgPack>& list);
-	void _initializer(const std::initializer_list<MsgPack>& list);
+	void _initializer_array(std::initializer_list<MsgPack> list);
+	void _initializer_map(std::initializer_list<MsgPack> list);
+	void _initializer(std::initializer_list<MsgPack> list);
 
 	void _assignment(const msgpack::object& obj);
 
@@ -114,7 +114,7 @@ public:
 	MsgPack();
 	MsgPack(const MsgPack& other);
 	MsgPack(MsgPack&& other);
-	MsgPack(const std::initializer_list<MsgPack>& list);
+	MsgPack(std::initializer_list<MsgPack> list);
 	MsgPack(Type type);
 
 	template <typename T, typename = std::enable_if_t<not std::is_same<std::shared_ptr<Body>, std::decay_t<T>>::value>>
@@ -122,7 +122,7 @@ public:
 
 	MsgPack& operator=(const MsgPack& other);
 	MsgPack& operator=(MsgPack&& other);
-	MsgPack& operator=(const std::initializer_list<MsgPack>& list);
+	MsgPack& operator=(std::initializer_list<MsgPack> list);
 
 	template <typename T>
 	MsgPack& operator=(T&& v);
@@ -226,7 +226,7 @@ public:
 	size_t erase(M&& o);
 	size_t erase(const std::string& s);
 	size_t erase(size_t pos);
-	iterator erase(const iterator& it);
+	iterator erase(iterator it);
 
 	void clear() noexcept;
 
@@ -519,7 +519,7 @@ inline MsgPack::MsgPack(std::shared_ptr<MsgPack::Body>&& b)
 	  _const_body(_body.get()) { }
 
 
-inline void MsgPack::_initializer_array(const std::initializer_list<MsgPack>& list) {
+inline void MsgPack::_initializer_array(std::initializer_list<MsgPack> list) {
 	if (_body->_obj->type != msgpack::type::ARRAY) {
 		_body->_capacity = 0;
 	}
@@ -534,7 +534,7 @@ inline void MsgPack::_initializer_array(const std::initializer_list<MsgPack>& li
 }
 
 
-inline void MsgPack::_initializer_map(const std::initializer_list<MsgPack>& list) {
+inline void MsgPack::_initializer_map(std::initializer_list<MsgPack> list) {
 	if (_body->_obj->type != msgpack::type::MAP) {
 		_body->_capacity = 0;
 	}
@@ -549,7 +549,7 @@ inline void MsgPack::_initializer_map(const std::initializer_list<MsgPack>& list
 }
 
 
-inline void MsgPack::_initializer(const std::initializer_list<MsgPack>& list) {
+inline void MsgPack::_initializer(std::initializer_list<MsgPack> list) {
 	auto isMap = true;
 	for (const auto& val : list) {
 		if (!val.is_array() || val.size() != 2 || !val.at(0).is_string()) {
@@ -613,7 +613,7 @@ inline MsgPack::MsgPack(T&& v)
 	  _const_body(_body.get()) { }
 
 
-inline MsgPack::MsgPack(const std::initializer_list<MsgPack>& list)
+inline MsgPack::MsgPack(std::initializer_list<MsgPack> list)
 	: MsgPack(Undefined())
 {
 	_initializer(list);
@@ -687,7 +687,7 @@ inline MsgPack& MsgPack::operator=(MsgPack&& other) {
 }
 
 
-inline MsgPack& MsgPack::operator=(const std::initializer_list<MsgPack>& list) {
+inline MsgPack& MsgPack::operator=(std::initializer_list<MsgPack> list) {
 	_initializer(list);
 	return *this;
 }
@@ -1590,7 +1590,7 @@ inline void MsgPack::update(M&& o) {
 
 template <typename T>
 inline size_t MsgPack::count(T&& v) const {
-	return (find(std::forward<T>(v)) == end()) ? 0 : 1;
+	return find(std::forward<T>(v)) == end() ? 0 : 1;
 }
 
 
@@ -1625,7 +1625,7 @@ inline size_t MsgPack::erase(size_t pos) {
 }
 
 
-inline MsgPack::iterator MsgPack::erase(const MsgPack::iterator& it) {
+inline MsgPack::iterator MsgPack::erase(MsgPack::iterator it) {
 	_fill(false, false);
 	return _erase(it._off).second;
 }
