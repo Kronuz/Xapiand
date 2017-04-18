@@ -2105,44 +2105,44 @@ HttpClient::log_request()
 
 	switch (HTTP_PARSER_METHOD(&parser)) {
 		case HTTP_OPTIONS:
-			request_headers_color = rgba(100, 100, 36, 0.6);
-			request_head_color = brgb(100, 100, 36);
-			request_body_color = rgb(100, 100, 36);
+			request_headers_color = rgba(14, 83, 104, 0.6);
+			request_head_color = brgb(14, 83, 104);
+			request_body_color = rgb(14, 83, 104);
 			break;
 		case HTTP_HEAD:
-			request_headers_color = rgba(100, 100, 36, 0.6);
-			request_head_color = brgb(100, 100, 36);
-			request_body_color = rgb(100, 100, 36);
+			request_headers_color = rgba(14, 83, 104, 0.6);
+			request_head_color = brgb(14, 83, 104);
+			request_body_color = rgb(14, 83, 104);
 			break;
 		case HTTP_GET:
-			request_headers_color = rgba(0, 100, 36, 0.6);
-			request_head_color = brgb(0, 100, 36);
-			request_body_color = rgb(0, 100, 36);
+			request_headers_color = rgba(25, 80, 126, 0.6);
+			request_head_color = brgb(25, 80, 126);
+			request_body_color = rgb(25, 80, 126);
 			break;
 		case HTTP_POST:
-			request_headers_color = rgba(0, 55, 136, 0.6);
-			request_head_color = brgb(0, 55, 136);
-			request_body_color = rgb(0, 55, 136);
+			request_headers_color = rgba(30, 114, 60, 0.6);
+			request_head_color = brgb(30, 114, 60);
+			request_body_color = rgb(30, 114, 60);
 			break;
 		case HTTP_PATCH:
-			request_headers_color = rgba(63, 63, 136, 0.6);
-			request_head_color = brgb(63, 63, 136);
-			request_body_color = rgb(63, 63, 136);
+			request_headers_color = rgba(141, 81, 22, 0.6);
+			request_head_color = brgb(141, 81, 22);
+			request_body_color = rgb(141, 81, 22);
 			break;
 		case HTTP_MERGE:
-			request_headers_color = rgba(63, 63, 136, 0.6);
-			request_head_color = brgb(63, 63, 136);
-			request_body_color = rgb(63, 63, 136);
+			request_headers_color = rgba(141, 81, 22, 0.6);
+			request_head_color = brgb(141, 81, 22);
+			request_body_color = rgb(141, 81, 22);
 			break;
 		case HTTP_PUT:
-			request_headers_color = rgba(90, 63, 120, 0.6);
-			request_head_color = brgb(90, 63, 120);
-			request_body_color = rgb(90, 63, 120);
+			request_headers_color = rgba(141, 81, 22, 0.6);
+			request_head_color = brgb(141, 81, 22);
+			request_body_color = rgb(141, 81, 22);
 			break;
 		case HTTP_DELETE:
-			request_headers_color = rgba(136, 63, 63, 0.6);
-			request_head_color = brgb(136, 63, 63);
-			request_body_color = rgb(136, 63, 63);
+			request_headers_color = rgba(156, 41, 26, 0.6);
+			request_head_color = brgb(156, 41, 26);
+			request_body_color = rgb(156, 41, 26);
 			break;
 		default:
 			break;
@@ -2170,11 +2170,16 @@ HttpClient::log_response()
 		response_headers_color = rgba(68, 136, 120, 0.6);
 		response_head_color = brgb(68, 136, 120);
 		response_body_color = rgb(68, 136, 120);
+	} else if ((int)response_status == 404) {
+		response_prefix = "💥   ";
+		response_headers_color = rgba(116, 100, 77, 0.6);
+		response_head_color = brgb(116, 100, 77);
+		response_body_color = rgb(116, 100, 77);
 	} else if ((int)response_status >= 400 && (int)response_status <= 499) {
 		response_prefix = "💥   ";
-		response_headers_color = rgba(168, 100, 0, 0.6);
-		response_head_color = brgb(168, 100, 0);
-		response_body_color = rgb(168, 100, 0);
+		response_headers_color = rgba(147, 96, 21, 0.6);
+		response_head_color = brgb(147, 96, 21);
+		response_body_color = rgb(147, 96, 21);
 	} else if ((int)response_status >= 500 && (int)response_status <= 599) {
 		response_prefix = "🔥   ";
 		response_headers_color = rgba(190, 30, 10, 0.6);
