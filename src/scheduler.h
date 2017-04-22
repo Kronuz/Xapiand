@@ -78,6 +78,7 @@ public:
 	}
 
 private:
+	/*                               <  _Tp         _Size  _CurrentKey     _Div        _Mod    _Ring >*/
 	using _tasks =        StashValues<TaskType,     10ULL,  &now>;
 	using _50_1ms =       StashSlots<_tasks,        10ULL,  &now,        1ULL * MS,    50ULL,  false>;
 	using _10_50ms =      StashSlots<_50_1ms,       10ULL,  &now,       50ULL * MS,    10ULL,  false>;
