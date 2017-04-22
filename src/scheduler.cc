@@ -115,8 +115,7 @@ SchedulerQueue::add(const TaskType& task, unsigned long long key)
 	try {
 		queue.add(ctx, key, task);
 	} catch (const std::out_of_range&) {
-		clean();
-		queue.add(ctx, key, task);
+		fprintf(stderr, RED "Stash overflow!" NO_COL "\n");
 	}
 }
 
