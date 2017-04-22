@@ -328,7 +328,7 @@ public:
 
 	template<typename... Args>
 	void add(StashContext& ctx, unsigned long long key, Args&&... args) {
-		if (key >= get_end_base_key(ctx.atom_first_key)) {
+		if (key >= get_end_base_key(ctx.atom_first_key.load())) {
 			throw std::out_of_range("stash overlow");
 		}
 
