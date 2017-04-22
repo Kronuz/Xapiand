@@ -67,8 +67,8 @@ TaskType
 SchedulerQueue::peep(unsigned long long current_key)
 {
 	ctx.op = StashContext::Operation::peep;
-	ctx.cur_key = ctx.atom_first_key.load();
-	ctx.current_key = current_key;
+	ctx.atom_cur_key = ctx.atom_first_key.load();
+	ctx.atom_current_key = current_key;
 	TaskType task;
 	queue.next(ctx, &task);
 	return task;
@@ -79,8 +79,8 @@ TaskType
 SchedulerQueue::walk()
 {
 	ctx.op = StashContext::Operation::walk;
-	ctx.cur_key = ctx.atom_first_key.load();
-	ctx.current_key = time_point_to_ullong(std::chrono::system_clock::now());
+	ctx.atom_cur_key = ctx.atom_first_key.load();
+	ctx.atom_current_key = time_point_to_ullong(std::chrono::system_clock::now());
 	TaskType task;
 	queue.next(ctx, &task);
 	return task;
@@ -102,8 +102,8 @@ void
 SchedulerQueue::clean()
 {
 	cctx.op = StashContext::Operation::clean;
-	cctx.cur_key = cctx.atom_first_key.load();
-	cctx.current_key = time_point_to_ullong(std::chrono::system_clock::now() - 1s);
+	cctx.atom_cur_key = cctx.atom_first_key.load();
+	cctx.atom_current_key = time_point_to_ullong(std::chrono::system_clock::now() - 1s);
 	TaskType task;
 	queue.next(cctx, &task);
 }
