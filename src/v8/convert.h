@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -28,12 +28,12 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-#include <v8.h>
 #include <libplatform/libplatform.h>
+#include <v8.h>
 #pragma GCC diagnostic pop
 
-#include "msgpack.h"
 #include "exception.h"
+#include "msgpack.h"
 
 
 namespace v8pp {
