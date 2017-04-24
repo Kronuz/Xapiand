@@ -281,7 +281,8 @@ Scheduler::run()
 
 		L_INFO_HOOK_LOG("Scheduler::LOOP", this, "Scheduler::" CYAN "LOOP" NO_COL " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
 		lk.lock();
-		wakeup_signal.wait_until(lk, time_point_from_ullong(atom_next_wakeup_time.load()));
+		next_wakeup_time = atom_next_wakeup_time.load();
+		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time));
 		lk.unlock();
 		L_SCHEDULER(this, "Scheduler::" LIGHT_BLUE "WAKEUP" NO_COL " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wakeup_time);
 
