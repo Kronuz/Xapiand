@@ -75,8 +75,14 @@ class Processor {
 
 		template <typename... Args>
 		MsgPack eval(Args&&... args) const {
-			auto func = chaiscript::boxed_cast<std::function<chaiscript::Boxed_Value(Args...)>>(value);
-			return chaipp::convert<MsgPack>()(func(std::forward<Args>(args)...));
+			try {
+				auto func = chaiscript::boxed_cast<std::function<chaiscript::Boxed_Value(Args...)>>(value);
+				return chaipp::convert<MsgPack>()(func(std::forward<Args>(args)...));
+			} catch (const chaiscript::exception::bad_boxed_cast& er) {
+				throw InvalidArgument(er.what());
+			} catch (const chaiscript::exception::eval_error& er) {
+				throw ScriptSyntaxError(er.pretty_print());
+			}
 		}
 
 	public:
@@ -118,15 +124,23 @@ class Processor {
 
 public:
 	Processor(const std::string& script_source) {
-		chai.eval(script_source);
+		try {
+			chai.eval(script_source);
+		} catch (const std::exception& er) {
+			throw ScriptSyntaxError(er.what());
+		}
 	}
 
 	const Function& operator[](const std::string& name) {
 		try {
 			return functions.at(name);
 		} catch (const std::out_of_range&) {
-			auto p = functions.emplace(name, chai.eval(name));
-			return p.first->second;
+			try {
+				auto p = functions.emplace(name, chai.eval(name));
+				return p.first->second;
+			} catch (const chaiscript::exception::eval_error& er) {
+				throw ReferenceError(er.pretty_print());
+			}
 		}
 	}
 

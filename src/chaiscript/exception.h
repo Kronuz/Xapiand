@@ -50,4 +50,10 @@ public:
 	ReferenceError(const std::string& what_arg) : Error(what_arg) { }
 };
 
+
+class InvalidArgument : public Error {
+public:
+	InvalidArgument(const std::string& what_arg) : Error(what_arg) { }
+};
+
 }; // End namespace chaipp
