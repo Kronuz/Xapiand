@@ -229,6 +229,10 @@ class StashSlots : public Stash<_Tp, _Size> {
 		return get_base_key(key) + _Div;
 	}
 
+	unsigned long long get_dec_base_key(unsigned long long key) const {
+		return get_base_key(key) - _Div;
+	}
+
 	unsigned long long get_end_base_key(unsigned long long key) const {
 		return get_base_key(key) + (_Div * _Mod);
 	}
@@ -245,6 +249,8 @@ public:
 
 	template <typename T>
 	bool next(StashContext& ctx, T* value_ptr, unsigned long long final_key) {
+		bool ret = false;
+
 		auto loop = ctx.check(ctx.cur_key, final_key);
 
 		while (loop) {
@@ -263,7 +269,7 @@ public:
 				case StashState::StashShort:
 				case StashState::StashEmpty:
 					L_STASH(this, "StashSlots::" YELLOW "BREAK" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_first_key:%llu, atom_last_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_first_key.load(), ctx.atom_last_key.load(), ctx._op());
-					return false;
+					goto ret_next;
 			}
 
 			if (ptr_atom_ptr) {
@@ -280,7 +286,8 @@ public:
 							}
 						} else {
 							L_STASH(this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_first_key:%llu, atom_last_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_first_key.load(), ctx.atom_last_key.load(), ctx._op());
-							return true;
+							ret = true;
+							goto ret_next;
 						}
 					}
 				}
@@ -289,14 +296,20 @@ public:
 			loop = ctx.check(new_first_key, final_key);
 
 			if (loop) {
-				if (ctx.op == StashContext::Operation::peep || ctx.atom_first_key.compare_exchange_strong(ctx.cur_key, new_first_key)) {
-					ctx.cur_key = new_first_key;
-				}
+				ctx.cur_key = new_first_key;
 			}
 		}
 
 		L_STASH(this, "StashSlots::" YELLOW "MISSING" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_first_key:%llu, atom_last_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, get_slot(ctx.cur_key), final_key, ctx.atom_first_key.load(), ctx.atom_last_key.load(), ctx._op());
-		return false;
+
+	ret_next:
+		if (ctx.op != StashContext::Operation::peep) {
+			auto new_first_key = get_dec_base_key(ctx.cur_key);
+			auto first_key = ctx.atom_first_key.load();
+			while (new_first_key < first_key && !ctx.atom_first_key.compare_exchange_weak(first_key, new_first_key));
+		}
+
+		return ret;
 	}
 
 	template <typename T>
