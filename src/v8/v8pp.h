@@ -170,7 +170,7 @@ class Processor {
 				if (it == script_lru.end()) {
 					return script_lru.emplace(script_hash, std::move(processor));
 				} else {
-					return script_lru.at(it);
+					return it->second;
 				}
 			}
 		}
