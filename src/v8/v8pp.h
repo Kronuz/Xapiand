@@ -509,9 +509,8 @@ public:
 		}
 	}
 
-	template<typename... Args>
-	static auto compile(Args&&... args) {
-		return engine().compile(std::forward<Args>(args)...);
+	static auto compile(const std::string& script_name, const std::string& script) {
+		return engine().compile(script_name, script);
 	}
 };
 
