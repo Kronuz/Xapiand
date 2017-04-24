@@ -249,7 +249,7 @@ public:
 
 	template <typename T>
 	bool next(StashContext& ctx, T* value_ptr, unsigned long long final_key) {
-		bool ret = false;
+		bool found = false;
 
 		auto loop = ctx.check(ctx.cur_key, final_key);
 
@@ -286,7 +286,7 @@ public:
 							}
 						} else {
 							L_STASH(this, "StashSlots::" GREEN "FOUND" NO_COL " - %s_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_first_key:%llu, atom_last_key:%llu, op:%s", ctx._col(), _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_first_key.load(), ctx.atom_last_key.load(), ctx._op());
-							ret = true;
+							found = true;
 							goto ret_next;
 						}
 					}
@@ -304,12 +304,24 @@ public:
 
 	ret_next:
 		if (ctx.op != StashContext::Operation::peep) {
+			if (!found) {
+				unsigned long long new_cur_key;
+				if (!final_key || (ctx.current_key && ctx.current_key < final_key)) {
+					ASSERT(ctx.current_key);
+					new_cur_key = get_base_key(ctx.current_key);
+				} else {
+					new_cur_key = get_base_key(final_key);
+				}
+				if (new_cur_key > ctx.cur_key) {
+					ctx.cur_key = new_cur_key;
+				}
+			}
 			auto new_first_key = get_dec_base_key(ctx.cur_key);
 			auto first_key = ctx.atom_first_key.load();
-			while (new_first_key < first_key && !ctx.atom_first_key.compare_exchange_weak(first_key, new_first_key));
+			while (new_first_key > first_key && !ctx.atom_first_key.compare_exchange_weak(first_key, new_first_key));
 		}
 
-		return ret;
+		return found;
 	}
 
 	template <typename T>
