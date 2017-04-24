@@ -2264,8 +2264,8 @@ HttpClient::set_idle()
 {
 	L_CALL(this, "HttpClient::set_idle()");
 
-	auto old_response_log = response_log.exchange(L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release());
-	old_response_log->clear();
+	// auto old_response_log = response_log.exchange(L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release());
+	// old_response_log->clear();
 
 	idle = true;
 
