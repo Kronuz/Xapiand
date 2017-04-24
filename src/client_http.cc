@@ -35,8 +35,10 @@
 #include <type_traits>                      // for enable_if<>::type
 #include <xapian.h>                         // for version_string, MSetIterator
 
-#if XAPIAND_V8
-#include <v8-version.h>                     // for V8_MAJOR_VERSION, V8_MINOR_VERSION
+#ifdef XAPIAND_CHAISCRIPT
+#include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
+#elif defined(XAPIAND_V8)
+#include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
 #endif
 
 #include "config.h"                         // for PACKAGE_VERSION, PACKAGE_...
@@ -976,7 +978,9 @@ HttpClient::home_view(enum http_method method, Command)
 	obj_data["version"] = {
 		{ PACKAGE_NAME, format_string("%s", PACKAGE_VERSION) },
 		{ "Xapian", format_string("%s", XAPIAN_VERSION) },
-#if XAPIAND_V8
+#ifdef XAPIAND_CHAISCRIPT
+		{ "ChaiScript", format_string("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
+#elif defined(XAPIAND_V8)
 		{ "V8", format_string("%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION) },
 #endif
 	};

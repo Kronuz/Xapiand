@@ -1564,7 +1564,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 }
 
 
-#ifdef XAPIAND_V8
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 short
 Database::get_revision_document(const std::string& term_id)
 {

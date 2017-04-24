@@ -45,8 +45,10 @@
 #include <vector>                    // for vector
 #include <xapian.h>                  // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
-#if XAPIAND_V8
-#include <v8-version.h>              // for V8_MAJOR_VERSION, V8_MINOR_VERSION
+#ifdef XAPIAND_CHAISCRIPT
+#include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
+#elif defined(XAPIAND_V8)
+#include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
 #endif
 
 #include "config.h"                  // for PACKAGE_BUGREPORT, PACKAGE_STRING
@@ -760,7 +762,9 @@ void banner() {
 
 	std::vector<std::string> versions;
 	versions.push_back(format_string("Xapian v%s", XAPIAN_VERSION));
-#if XAPIAND_V8
+#ifdef XAPIAND_CHAISCRIPT
+	versions.push_back(format_string("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()));
+#elif defined(XAPIAND_V8)
 	versions.push_back(format_string("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION));
 #endif
 
