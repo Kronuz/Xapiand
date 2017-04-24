@@ -311,6 +311,9 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 						doc_revision = database->get_revision_document(prefixed_term_id);
 					}
 					obj = run_script(obj, prefixed_term_id);
+					if (!obj.is_map()) {
+						THROW(ClientError, "Script must return an object [%s]", MsgPackTypes[toUType(obj.getType())]);
+					}
 #endif
 				}
 
