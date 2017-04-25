@@ -142,7 +142,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 		}
 
 		if (mode & HTTP_OPTIONS_RESPONSE) {
-			headers += "Allow: GET,HEAD,POST,PUT,PATCH,OPTIONS" + eol;
+			headers += "Allow: GET, POST, PUT, PATCH, MERGE, DELETE, HEAD, OPTIONS" + eol;
 		}
 
 		if (mode & HTTP_TOTAL_COUNT_RESPONSE) {
