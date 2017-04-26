@@ -1117,9 +1117,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 	switch (object.getType()) {
 		case MsgPack::Type::MAP: {
 			FieldVector fields;
-
 			properties = &get_subproperties(properties, data, name, object, fields);
-
 			process_item_value(properties, doc, data, fields);
 			break;
 		}
