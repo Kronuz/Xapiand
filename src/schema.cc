@@ -1232,20 +1232,42 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", data->to_string().c_str(), item_value.to_string().c_str());
 
-	if (item_value.is_null() || item_value.is_undefined()) {
-		index_partial_paths(doc);
-		if (specification.flags.store) {
-			*data = item_value;
+	switch (item_value.getType()) {
+		case MsgPack::Type::ARRAY: {
+			bool valid = false;
+			for (const auto& item : item_value) {
+				if (!item.is_null() && !item.is_undefined()) {
+					if (!specification.flags.complete) {
+						if (specification.flags.inside_namespace) {
+							complete_namespace_specification(item);
+						} else {
+							complete_specification(item);
+						}
+					}
+					valid = true;
+					break;
+				}
+			}
+			if (valid) {
+				break;
+			}
 		}
-		return;
-	}
-
-	if (!specification.flags.complete) {
-		if (specification.flags.inside_namespace) {
-			complete_namespace_specification(item_value);
-		} else {
-			complete_specification(item_value);
-		}
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED:
+			index_partial_paths(doc);
+			if (specification.flags.store) {
+				*data = item_value;
+			}
+			return;
+		default:
+			if (!specification.flags.complete) {
+				if (specification.flags.inside_namespace) {
+					complete_namespace_specification(item_value);
+				} else {
+					complete_specification(item_value);
+				}
+			}
+			break;
 	}
 
 	bool add_value = true;
@@ -1274,24 +1296,45 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
-		if (val->is_null() || val->is_undefined()) {
-			if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
-				_validate_required_data(get_mutable());
+		switch (val->getType()) {
+			case MsgPack::Type::ARRAY: {
+				bool valid = false;
+				for (const auto& item : *val) {
+					if (!item.is_null() && !item.is_undefined()) {
+						if (!specification.flags.complete) {
+							if (specification.flags.inside_namespace) {
+								complete_namespace_specification(item);
+							} else {
+								complete_specification(item);
+							}
+						}
+						valid = true;
+						break;
+					}
+				}
+				if (valid) {
+					break;
+				}
 			}
-
-			index_partial_paths(doc);
-			if (specification.flags.store) {
-				*data = *val;
-			}
-			return;
-		}
-
-		if (!specification.flags.complete) {
-			if (specification.flags.inside_namespace) {
-				complete_namespace_specification(*val);
-			} else {
-				complete_specification(*val);
-			}
+			case MsgPack::Type::NIL:
+			case MsgPack::Type::UNDEFINED:
+				if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
+					_validate_required_data(get_mutable());
+				}
+				index_partial_paths(doc);
+				if (specification.flags.store) {
+					*data = *val;
+				}
+				return;
+			default:
+				if (!specification.flags.complete) {
+					if (specification.flags.inside_namespace) {
+						complete_namespace_specification(*val);
+					} else {
+						complete_specification(*val);
+					}
+				}
+				break;
 		}
 
 		bool add_value = true;
