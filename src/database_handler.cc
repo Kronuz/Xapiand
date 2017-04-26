@@ -493,6 +493,10 @@ DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPa
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
+	if (!body.is_map()) {
+		THROW(ClientError, "Must be a JSON or MsgPack");
+	}
+
 	auto document = get_document(_document_id);
 
 	const auto data = document.get_data();
