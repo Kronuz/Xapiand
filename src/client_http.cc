@@ -1360,9 +1360,8 @@ HttpClient::search_view(enum http_method method, Command)
 				return;
 			}
 			DatabaseHandler commit_handler(endpoints, db_flags | DB_WRITABLE, method);
-			if (commit_handler.commit()) {
-				db_handler.reopen();
-			}
+			commit_handler.commit();
+			db_handler.reopen();  // Reopen as the commit may have been done by some other thread and volatile should always get the latest.
 		}
 
 		if (body.empty()) {
