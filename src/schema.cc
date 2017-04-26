@@ -1851,22 +1851,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 {
 	L_CALL(this, "Schema::guess_field_type(%s)", repr(item_doc.to_string()).c_str());
 
-	const MsgPack* field = nullptr;
-	if (item_doc.is_array()) {
-		for (const auto& item : item_doc) {
-			if (item.getType() != MsgPack::Type::NIL) {
-				field = &item;
-				break;
-			}
-		}
-		if (!field) {
-			return;
-		}
-	} else {
-		field = &item_doc;
-	}
-
-	switch (field->getType()) {
+	switch (item_doc.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
 				specification.sep_types[2] = FieldType::POSITIVE;
@@ -1892,7 +1877,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			}
 			break;
 		case MsgPack::Type::STR: {
-			const auto str_value = field->as_string();
+			const auto str_value = item_doc.as_string();
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
 				specification.sep_types[2] = FieldType::UUID;
 				return;
@@ -1929,8 +1914,8 @@ Schema::guess_field_type(const MsgPack& item_doc)
 		case MsgPack::Type::ARRAY:
 			THROW(ClientError, "'%s' cannot be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
-			if (field->size() == 1) {
-				specification.sep_types[2] = Cast::getType(field->begin()->as_string());
+			if (item_doc.size() == 1) {
+				specification.sep_types[2] = Cast::getType(item_doc.begin()->as_string());
 				return;
 			}
 			THROW(ClientError, "Expected map with one element");
