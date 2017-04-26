@@ -1130,7 +1130,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 		default: {
 			get_subproperties(properties, data, name);
-			process_item_value(doc, data, object);
+			process_item_value(doc, *data, object, 0);
 			break;
 		}
 	}
