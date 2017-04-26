@@ -1123,9 +1123,15 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			process_item_value(doc, data, fields.size());
 
 			const auto spc_object = std::move(specification);
-			for (const auto& field : fields) {
-				specification = spc_object;
-				index_object(properties, *field.second, data, doc, field.first);
+			if (fields.empty()) {
+				if (specification.flags.store) {
+					*data = MsgPack(MsgPack::Type::MAP);
+				}
+			} else {
+				for (const auto& field : fields) {
+					specification = spc_object;
+					index_object(properties, *field.second, data, doc, field.first);
+				}
 			}
 			break;
 		}
