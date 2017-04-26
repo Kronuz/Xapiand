@@ -423,7 +423,7 @@ class Schema {
 
 	void process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
 	void process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value);
-	void process_item_value(Xapian::Document& doc, MsgPack*& data, size_t offsprings);
+	void process_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields);
 
 
 	/*
@@ -444,7 +444,7 @@ class Schema {
 	/*
 	 * Set type to object in properties.
 	 */
-	void set_type_to_object(size_t offsprings);
+	void set_type_to_object(bool offsprings);
 
 	/*
 	 * Sets type to array in properties.

@@ -1120,19 +1120,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 			properties = &get_subproperties(properties, data, name, object, fields);
 
-			process_item_value(doc, data, fields.size());
-
-			const auto spc_object = std::move(specification);
-			if (fields.empty()) {
-				if (specification.flags.store) {
-					*data = MsgPack(MsgPack::Type::MAP);
-				}
-			} else {
-				for (const auto& field : fields) {
-					specification = spc_object;
-					index_object(properties, *field.second, data, doc, field.first);
-				}
-			}
+			process_item_value(properties, doc, data, fields);
 			break;
 		}
 
@@ -1161,6 +1149,14 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 	const auto spc_start = specification;
 	size_t pos = 0;
 
+	if (array.empty()) {
+		set_type_to_array();
+		if (specification.flags.store) {
+			*data = MsgPack(MsgPack::Type::ARRAY);
+		}
+		return;
+	}
+
 	for (const auto& item : array) {
 		switch (item.getType()) {
 			case MsgPack::Type::MAP: {
@@ -1174,11 +1170,7 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
 
-				process_item_value(doc, data_pos, fields.size());
-
-				for (const auto& field : fields) {
-					index_object(properties, *field.second, data_pos, doc, field.first);
-				}
+				process_item_value(properties, doc, data_pos, fields);
 
 				specification = spc_start;
 				break;
@@ -1276,11 +1268,11 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 
 
 inline void
-Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, size_t offsprings)
+Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields)
 {
-	L_CALL(this, "Schema::process_item_value(<doc>, %s, %zu)", repr(data->to_string()).c_str(), offsprings);
+	L_CALL(this, "Schema::process_item_value(<MsgPack*>, <doc>, %s, <FieldVector>)", repr(data->to_string()).c_str());
 
-	set_type_to_object(offsprings);
+	set_type_to_object(fields.empty());
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
@@ -1315,16 +1307,33 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, size_t offspri
 			add_value = false;
 		}
 
-		if (specification.flags.store && !offsprings) {
-			*data = (*data)[RESERVED_VALUE];
+		if (fields.empty()) {
+			if (specification.flags.store) {
+				*data = (*data)[RESERVED_VALUE];
+			}
+		} else {
+			const auto spc_object = std::move(specification);
+			for (const auto& field : fields) {
+				specification = spc_object;
+				index_object(properties, *field.second, data, doc, field.first);
+			}
 		}
 	} else {
 		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
 			_validate_required_data(get_mutable());
 		}
 
-		if (!offsprings) {
+		if (fields.empty()) {
 			index_partial_paths(doc);
+			if (specification.flags.store) {
+				*data = MsgPack(MsgPack::Type::MAP);
+			}
+		} else {
+			const auto spc_object = std::move(specification);
+			for (const auto& field : fields) {
+				specification = spc_object;
+				index_object(properties, *field.second, data, doc, field.first);
+			}
 		}
 	}
 }
@@ -1486,9 +1495,9 @@ Schema::complete_specification(const MsgPack& item_value)
 
 
 inline void
-Schema::set_type_to_object(size_t offsprings)
+Schema::set_type_to_object(bool offsprings)
 {
-	L_CALL(this, "Schema::set_type_to_object(%zu)", offsprings);
+	L_CALL(this, "Schema::set_type_to_object(%s)", offsprings ? "true" : "false");
 
 	if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		auto& _types = get_mutable()[RESERVED_TYPE];
