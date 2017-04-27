@@ -2190,9 +2190,9 @@ HttpClient::log_response()
 		response_body_color = rgb(116, 100, 77);
 	} else if ((int)response_status >= 400 && (int)response_status <= 499) {
 		response_prefix = " 💥 ";
-		response_headers_color = rgba(147, 96, 21, 0.6);
-		response_head_color = brgb(147, 96, 21);
-		response_body_color = rgb(147, 96, 21);
+		response_headers_color = rgba(183, 70, 17, 0.6);
+		response_head_color = brgb(183, 70, 17);
+		response_body_color = rgb(183, 70, 17);
 	} else if ((int)response_status >= 500 && (int)response_status <= 599) {
 		response_prefix = " 🔥 ";
 		response_headers_color = rgba(190, 30, 10, 0.6);
