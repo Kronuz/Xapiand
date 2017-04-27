@@ -63,11 +63,8 @@ static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			tm.year = year.as_i64();
 			return;
-		case MsgPack::Type::FLOAT:
-			tm.year = year.as_f64();
-			return;
 		default:
-			THROW(DatetimeError, "_year must be a numeric value");
+			THROW(DatetimeError, "_year must be a positive integer value");
 	}
 }
 
@@ -80,11 +77,8 @@ static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			tm.mon = month.as_i64();
 			return;
-		case MsgPack::Type::FLOAT:
-			tm.mon = month.as_f64();
-			return;
 		default:
-			THROW(DatetimeError, "_month must be a numeric value");
+			THROW(DatetimeError, "_month must be a positive integer value");
 	}
 }
 
@@ -97,11 +91,8 @@ static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			tm.day = day.as_i64();
 			return;
-		case MsgPack::Type::FLOAT:
-			tm.day = day.as_f64();
-			return;
 		default:
-			THROW(DatetimeError, "_day must be a numeric value");
+			THROW(DatetimeError, "_day must be a positive integer value");
 	}
 }
 
