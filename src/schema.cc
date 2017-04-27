@@ -1119,6 +1119,9 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			FieldVector fields;
 			properties = &get_subproperties(properties, data, name, object, fields);
 			process_item_value(properties, doc, data, fields);
+			if (specification.flags.store && (data->is_undefined() || data->is_null())) {
+				parent_data->erase(name);
+			}
 			break;
 		}
 
