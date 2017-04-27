@@ -282,7 +282,6 @@ public:
 	int flags;
 	size_t hash;
 	std::chrono::system_clock::time_point access_time;
-	bool modified;
 	long long mastery_level;
 	uint32_t checkout_revision;
 
@@ -357,6 +356,7 @@ private:
 	};
 
 	replica_state state;
+	std::atomic_bool modified;
 	bool persistent;
 	bool _volatile;
 

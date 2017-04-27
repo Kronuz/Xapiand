@@ -155,15 +155,16 @@
 #define DATABASE_DATA_FOOTER_MAGIC        0x15
 
 
-constexpr int DB_OPEN         = 0x00; // Opens a database
-constexpr int DB_WRITABLE     = 0x01; // Opens as writable
-constexpr int DB_SPAWN        = 0x02; // Automatically creates the database if it doesn't exist
-constexpr int DB_PERSISTENT   = 0x04; // Always try keeping the database in the database pool
-constexpr int DB_INIT_REF     = 0x08; // Initializes the writable index in the database .refs
-constexpr int DB_VOLATILE     = 0x10; // Always drop the database from the database pool as soon as possible
-constexpr int DB_REPLICATION  = 0x20; // Use conditional pop in the queue, only pop when replication is done
-constexpr int DB_NOWAL        = 0x40; // Disable open wal file
-constexpr int DB_NOSTORAGE    = 0x80; // Disable separate data storage file for the database
+constexpr int DB_OPEN         = 0x0000; // Opens a database
+constexpr int DB_WRITABLE     = 0x0001; // Opens as writable
+constexpr int DB_SPAWN        = 0x0002; // Automatically creates the database if it doesn't exist
+constexpr int DB_PERSISTENT   = 0x0004; // Always try keeping the database in the database pool
+constexpr int DB_INIT_REF     = 0x0008; // Initializes the writable index in the database .refs
+constexpr int DB_VOLATILE     = 0x0010; // Always drop the database from the database pool as soon as possible
+constexpr int DB_REPLICATION  = 0x0020; // Use conditional pop in the queue, only pop when replication is done
+constexpr int DB_NOWAL        = 0x0040; // Disable open wal file
+constexpr int DB_NOSTORAGE    = 0x0080; // Disable separate data storage file for the database
+constexpr int DB_COMMIT       = 0x0101; // Commits database when needed
 
 
 enum class FieldType : uint8_t;

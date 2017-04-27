@@ -1359,8 +1359,10 @@ HttpClient::search_view(enum http_method method, Command)
 				write_http_response(error_code, err_response);
 				return;
 			}
-			DatabaseHandler commit_handler(endpoints, db_flags | DB_WRITABLE, method);
-			commit_handler.commit();
+			try {
+				DatabaseHandler commit_handler(endpoints, db_flags | DB_COMMIT, method);
+				commit_handler.commit();
+			} catch (const CheckoutError&) { }
 			db_handler.reopen();  // Reopen as the commit may have been done by some other thread and volatile should always get the latest.
 		}
 

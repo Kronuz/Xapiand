@@ -651,7 +651,6 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 	  flags(flags_),
 	  hash(endpoints.hash()),
 	  access_time(std::chrono::system_clock::now()),
-	  modified(false),
 	  mastery_level(-1),
 	  checkout_revision(0)
 {
@@ -792,7 +791,9 @@ Database::reopen()
 			// WAL required on a local writable database, open it.
 			wal = std::make_unique<DatabaseWAL>(e.path, this);
 			if (wal->open_current(true)) {
-				modified = true;
+				if (auto queue = weak_queue.lock()) {
+					queue->modified = true;
+				}
 			}
 		}
 #endif /* XAPIAND_DATABASE_WAL */
@@ -913,7 +914,8 @@ Database::commit(bool wal_)
 {
 	L_CALL(this, "Database::commit(%s)", wal_ ? "true" : "false");
 
-	if (!modified) {
+	auto queue = weak_queue.lock();
+	if (queue && !queue->modified) {
 		L_DATABASE_WRAP(this, "Do not commit, because there are not changes");
 		return false;
 	}
@@ -934,7 +936,9 @@ Database::commit(bool wal_)
 			storage_commit();
 #endif /* XAPIAND_DATA_STORAGE */
 			wdb->commit();
-			modified = false;
+			if (queue) {
+				queue->modified = false;
+			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1022,7 +1026,9 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(did);
-			modified = true;
+			if (auto queue = weak_queue.lock()) {
+				queue->modified = true;
+			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1064,7 +1070,9 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(term);
-			modified = true;
+			if (auto queue = weak_queue.lock()) {
+				queue->modified = true;
+			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1224,7 +1232,9 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			did = wdb->add_document(doc_);
-			modified = true;
+			if (auto queue = weak_queue.lock()) {
+				queue->modified = true;
+			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1269,7 +1279,9 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->replace_document(did, doc_);
-			modified = true;
+			if (auto queue = weak_queue.lock()) {
+				queue->modified = true;
+			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1316,7 +1328,9 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			did = wdb->replace_document(term, doc_);
-			modified = true;
+			if (auto queue = weak_queue.lock()) {
+				queue->modified = true;
+			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database %s was modified, try again (%s)", repr(endpoints.to_string()).c_str(), exc.get_msg().c_str());
@@ -1355,7 +1369,9 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->add_spelling(word, freqinc);
-			modified = true;
+			if (auto queue = weak_queue.lock()) {
+				queue->modified = true;
+			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1392,7 +1408,9 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->remove_spelling(word, freqdec);
-			modified = true;
+			if (auto queue = weak_queue.lock()) {
+				queue->modified = true;
+			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1544,7 +1562,9 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->set_metadata(key, value);
-			modified = true;
+			if (auto queue = weak_queue.lock()) {
+				queue->modified = true;
+			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1632,6 +1652,7 @@ Database::dec_count_document(const std::string& term_id)
 
 DatabaseQueue::DatabaseQueue(bool volatile_)
 	: state(replica_state::REPLICA_FREE),
+	  modified(false),
 	  persistent(false),
 	  _volatile(volatile_),
 	  count(0)
@@ -1843,6 +1864,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	}().c_str());
 
 	bool writable = flags & DB_WRITABLE;
+	bool writable_for_commit = (flags & DB_COMMIT) == DB_COMMIT;
 	bool persistent = flags & DB_PERSISTENT;
 	bool initref = flags & DB_INIT_REF;
 	bool replication = flags & DB_REPLICATION;
@@ -1866,6 +1888,10 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 		if (writable) {
 			queue = writable_databases[index];
+			if (writable_for_commit && !queue->modified) {
+				L_DATABASE_END(this, "!! ABORTED CHECKOUT DB COMMIT NOT NEEDED [%s]: %s", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
+				return false;
+			}
 		} else {
 			queue = databases[index];
 		}
@@ -2021,7 +2047,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	ASSERT(database->weak_queue.lock() == queue);
 
-	if (database->modified) {
+	if (queue->modified) {
 		DatabaseAutocommit::commit(database);
 	}
 
