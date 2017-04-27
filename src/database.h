@@ -427,8 +427,8 @@ class DatabasePool {
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 
 	template<typename F, typename... Args>
-	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args);
-	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
+	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args);
+	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
 
 	void checkin(std::shared_ptr<Database>& database);
 

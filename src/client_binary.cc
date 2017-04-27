@@ -126,13 +126,15 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	writable = true;
 
-	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
-		src_endpoint,
-		dst_endpoint
-	] () {
-		L_DEBUG(XapiandManager::manager.get(), "Triggering replication for %s after checkin!", repr(dst_endpoint.to_string()).c_str());
-		XapiandManager::manager->trigger_replication(src_endpoint, dst_endpoint);
-	})) {
+	try {
+		XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
+			src_endpoint,
+			dst_endpoint
+		] () {
+			L_DEBUG(XapiandManager::manager.get(), "Triggering replication for %s after checkin!", repr(dst_endpoint.to_string()).c_str());
+			XapiandManager::manager->trigger_replication(src_endpoint, dst_endpoint);
+		});
+	} catch (const CheckoutError&) {
 		L_ERR(this, "Cannot checkout %s", repr(endpoints.to_string()).c_str());
 		return false;
 	}
@@ -295,7 +297,9 @@ BinaryClient::checkout_database()
 		} else if ((flags & Xapian::DB_CREATE) == Xapian::DB_CREATE) {
 			_flags |= DB_SPAWN;
 		}
-		if (!XapiandManager::manager->database_pool.checkout(database, endpoints, _flags)) {
+		try {
+			XapiandManager::manager->database_pool.checkout(database, endpoints, _flags);
+		} catch (const CheckoutError&) {
 			THROW(InvalidOperationError, "Server has no open database");
 		}
 	}

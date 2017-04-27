@@ -1823,11 +1823,12 @@ DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_pt
 
 
 template<typename F, typename... Args>
-inline bool
+inline void
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args)
 {
-	bool ret = checkout(database, endpoints, flags);
-	if (!ret) {
+	try {
+		checkout(database, endpoints, flags);
+	} catch (const CheckoutError& e) {
 		std::lock_guard<std::mutex> lk(qmtx);
 
 		const auto index = std::make_pair(endpoints.hash(), flags & DB_VOLATILE);
@@ -1841,12 +1842,13 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 		queue->checkin_callbacks.clear();
 		queue->checkin_callbacks.enqueue(std::forward<F>(f), std::forward<Args>(args)...);
+
+		throw e;
 	}
-	return ret;
 }
 
 
-bool
+void
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {
 	L_CALL(this, "DatabasePool::checkout(%s, 0x%02x (%s))", repr(endpoints.to_string()).c_str(), flags, [&flags]() {
@@ -1876,7 +1878,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	if (writable && endpoints.size() != 1) {
 		L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()).c_str());
-		return false;
+		THROW(CheckoutError, "Cannot checkout database: %s (only one)", repr(endpoints.to_string()).c_str());
 	}
 
 	if (!finished) {
@@ -1890,7 +1892,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			queue = writable_databases[index];
 			if (writable_for_commit && !queue->modified) {
 				L_DATABASE_END(this, "!! ABORTED CHECKOUT DB COMMIT NOT NEEDED [%s]: %s", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
-				return false;
+				THROW(CheckoutError, "Cannot checkout database: %s (commit)", repr(endpoints.to_string()).c_str());
 			}
 		} else {
 			queue = databases[index];
@@ -1907,7 +1909,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				case DatabaseQueue::replica_state::REPLICA_SWITCH:
 					L_REPLICATION(this, "A replication task is already waiting");
 					L_DATABASE_END(this, "!! ABORTED CHECKOUT DB [%s]: %s", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
-					return false;
+					THROW(CheckoutError, "Cannot checkout database: %s (aborted)", repr(endpoints.to_string()).c_str());
 			}
 		} else {
 			if (queue->state == DatabaseQueue::replica_state::REPLICA_SWITCH) {
@@ -1938,11 +1940,12 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 						for (const auto& endpoint : database->endpoints) {
 							if (endpoint.is_local()) {
 								std::shared_ptr<Database> d;
-								if (checkout(d, endpoint, DB_WRITABLE)) {
+								try {
 									// Checkout executes any commands from the WAL
+									checkout(d, endpoint, DB_WRITABLE);
 									reopen = true;
 									checkin(d);
-								}
+								} catch (const CheckoutError&) { }
 							}
 						}
 						if (reopen) {
@@ -1994,7 +1997,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	if (!database) {
 		L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
-		return false;
+		THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoints.to_string()).c_str());
 	}
 
 	if (!writable && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
@@ -2003,15 +2006,14 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			// Try to recover from DatabaseOpeningError (i.e when the index is manually deleted)
 			recover_database(database->endpoints, RECOVER_REMOVE_ALL | RECOVER_DECREMENT_COUNT);
-			L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s (reopen)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
 			database.reset();
-			return false;
+			L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s (reopen)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
+			THROW(CheckoutError, "Cannot checkout database: %s (reopen)", repr(endpoints.to_string()).c_str());
 		}
 		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()).c_str());
 	}
 
 	L_DATABASE_END(this, "++ CHECKED OUT DB [%s]: %s (rev:%u)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str(), database->checkout_revision);
-	return true;
 }
 
 

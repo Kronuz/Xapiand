@@ -93,8 +93,8 @@ lock_database::lock(F&& f, Args&&... args)
 	if (db_handler) {
 		if (db_handler->database) {
 			THROW(Error, "lock_database is already locked");
-		} else if (!XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags, std::forward<F>(f), std::forward<Args>(args)...)) {
-			THROW(CheckoutError, "Cannot checkout database: %s", repr(db_handler->endpoints.to_string()).c_str());
+		} else {
+			XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags, std::forward<F>(f), std::forward<Args>(args)...);
 		}
 	}
 }
@@ -106,8 +106,8 @@ lock_database::lock()
 	if (db_handler) {
 		if (db_handler->database) {
 			THROW(Error, "lock_database is already locked");
-		} else if (!XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags)) {
-			THROW(CheckoutError, "Cannot checkout database: %s", repr(db_handler->endpoints.to_string()).c_str());
+		} else {
+			XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags);
 		}
 	}
 }

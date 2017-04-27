@@ -264,7 +264,9 @@ Replication::reply_db_footer(const std::string &)
 	// endpoints_tmp.insert(endpoint_tmp);
 
 	// if (!repl_database_tmp) {
-	// 	if (!XapiandManager::manager->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
+	// 	try {
+	// 		XapiandManager::manager->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE);
+	// 	} catch (const CheckoutError&)
 	// 		L_ERR(this, "Cannot checkout tmp %s", endpoint_tmp.path.c_str());
 	// 	}
 	// }
