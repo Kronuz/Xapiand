@@ -444,7 +444,7 @@ class Schema {
 	/*
 	 * Set type to object in properties.
 	 */
-	void set_type_to_object(bool offsprings);
+	void set_type_to_object();
 
 	/*
 	 * Sets type to array in properties.

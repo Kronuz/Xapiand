@@ -1292,8 +1292,6 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 {
 	L_CALL(this, "Schema::process_item_value(<MsgPack*>, <doc>, %s, <FieldVector>)", repr(data->to_string()).c_str());
 
-	set_type_to_object(fields.empty());
-
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val) {
 		switch (val->getType()) {
@@ -1353,6 +1351,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 				*data = (*data)[RESERVED_VALUE];
 			}
 		} else {
+			set_type_to_object();
 			const auto spc_object = std::move(specification);
 			for (const auto& field : fields) {
 				specification = spc_object;
@@ -1365,11 +1364,20 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 		}
 
 		if (fields.empty()) {
+			if (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY) {
+				if (XapiandManager::manager->strict || specification.flags.strict) {
+					THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+				} else {
+					specification.sep_types[0] = FieldType::OBJECT;
+				}
+			}
+
 			index_partial_paths(doc);
-			if (specification.flags.store) {
+			if (specification.flags.store && specification.sep_types[0] == FieldType::OBJECT) {
 				*data = MsgPack(MsgPack::Type::MAP);
 			}
 		} else {
+			set_type_to_object();
 			const auto spc_object = std::move(specification);
 			for (const auto& field : fields) {
 				specification = spc_object;
@@ -1536,11 +1544,11 @@ Schema::complete_specification(const MsgPack& item_value)
 
 
 inline void
-Schema::set_type_to_object(bool offsprings)
+Schema::set_type_to_object()
 {
-	L_CALL(this, "Schema::set_type_to_object(%s)", offsprings ? "true" : "false");
+	L_CALL(this, "Schema::set_type_to_object()");
 
-	if unlikely(offsprings && specification.sep_types[0] == FieldType::EMPTY && !specification.flags.inside_namespace) {
+	if unlikely(specification.sep_types[0] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		auto& _types = get_mutable()[RESERVED_TYPE];
 		if (_types.is_undefined()) {
 			_types = MsgPack({ FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY });
@@ -2713,7 +2721,9 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 			THROW(ClientError, "An namespace object cannot have children in Schema");
 		}
 
-		set_type_to_object(fields.size());
+		if (!fields.empty()) {
+			set_type_to_object();
+		}
 
 		const auto spc_object = std::move(specification);
 		for (const auto& field : fields) {
