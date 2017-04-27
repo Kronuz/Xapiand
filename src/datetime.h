@@ -64,11 +64,11 @@ namespace Datetime {
 		int hour;
 		int min;
 		int sec;
-		int msec;
+		double fsec;
 
-		tm_t(int y=_EPOCH, int M=1, int d=1, int h=0, int m=0, int s=0, int ms=0)
+		tm_t(int y=_EPOCH, int M=1, int d=1, int h=0, int m=0, int s=0, double fs=0.0)
 			: year(y), mon(M), day(d), hour(h),
-			  min(m), sec(s), msec(ms) { }
+			  min(m), sec(s), fsec(fs) { }
 	};
 
 	extern const std::regex date_re;
@@ -96,6 +96,7 @@ namespace Datetime {
 	double timestamp(const MsgPack& value, tm_t& tm);
 	bool isvalidDate(int year, int month, int day);
 	std::string isotime(const std::tm& timep);
+	std::string isotime(const tm_t& timep);
 	std::string isotime(double epoch);
 	void normalizeMonths(int& year, int& mon);
 	bool isDate(const std::string& date);
