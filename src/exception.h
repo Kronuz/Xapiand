@@ -86,6 +86,27 @@ public:
 };
 
 
+class CheckoutErrorCommited : public CheckoutError {
+public:
+	template<typename... Args>
+	CheckoutErrorCommited(Args&&... args) : CheckoutError(std::forward<Args>(args)...) { }
+};
+
+
+class CheckoutErrorReplicating : public CheckoutError {
+public:
+	template<typename... Args>
+	CheckoutErrorReplicating(Args&&... args) : CheckoutError(std::forward<Args>(args)...) { }
+};
+
+
+class CheckoutErrorBadEndpoint : public CheckoutError {
+public:
+	template<typename... Args>
+	CheckoutErrorBadEndpoint(Args&&... args) : CheckoutError(std::forward<Args>(args)...) { }
+};
+
+
 class Exit : public BaseException, public std::runtime_error {
 public:
 	int code;

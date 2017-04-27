@@ -1878,7 +1878,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	if (writable && endpoints.size() != 1) {
 		L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()).c_str());
-		THROW(CheckoutError, "Cannot checkout database: %s (only one)", repr(endpoints.to_string()).c_str());
+		THROW(CheckoutErrorBadEndpoint, "Cannot checkout database: %s (only one)", repr(endpoints.to_string()).c_str());
 	}
 
 	if (!finished) {
@@ -1892,7 +1892,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			queue = writable_databases[index];
 			if (writable_for_commit && !queue->modified) {
 				L_DATABASE_END(this, "!! ABORTED CHECKOUT DB COMMIT NOT NEEDED [%s]: %s", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
-				THROW(CheckoutError, "Cannot checkout database: %s (commit)", repr(endpoints.to_string()).c_str());
+				THROW(CheckoutErrorCommited, "Cannot checkout database: %s (commit)", repr(endpoints.to_string()).c_str());
 			}
 		} else {
 			queue = databases[index];
@@ -1909,7 +1909,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				case DatabaseQueue::replica_state::REPLICA_SWITCH:
 					L_REPLICATION(this, "A replication task is already waiting");
 					L_DATABASE_END(this, "!! ABORTED CHECKOUT DB [%s]: %s", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
-					THROW(CheckoutError, "Cannot checkout database: %s (aborted)", repr(endpoints.to_string()).c_str());
+					THROW(CheckoutErrorReplicating, "Cannot checkout database: %s (aborted)", repr(endpoints.to_string()).c_str());
 			}
 		} else {
 			if (queue->state == DatabaseQueue::replica_state::REPLICA_SWITCH) {
