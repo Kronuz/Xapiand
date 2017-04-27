@@ -173,8 +173,16 @@ ansi_color(float red, float green, float blue, float alpha, bool bold)
 	auto it = colors.find(hash);
 	if (it == colors.end()) {
 		if (coloring == Coloring::Unknown) {
-			auto colorterm = std::string(getenv("COLORTERM"));
-			auto term = std::string(getenv("TERM"));
+			std::string colorterm;
+			const char *env_colorterm = getenv("COLORTERM");
+			if (env_colorterm) {
+				colorterm = env_colorterm;
+			}
+			std::string term;
+			const char* env_term = getenv("TERM");
+			if (env_term) {
+				term = env_term;
+			}
 			if (colorterm.find("truecolor") != std::string::npos || term.find("24bit") != std::string::npos) {
 				coloring = Coloring::TrueColor;
 			} else if (term.find("256color") != std::string::npos) {
