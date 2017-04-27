@@ -1131,6 +1131,15 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			break;
 		}
 
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED:
+			get_subproperties(properties, data, name);
+			index_partial_paths(doc);
+			if (specification.flags.store) {
+				parent_data->erase(name);
+			}
+			return;
+
 		default: {
 			get_subproperties(properties, data, name);
 			process_item_value(doc, *data, object, 0);
@@ -1183,6 +1192,14 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 				break;
 			}
 
+			case MsgPack::Type::NIL:
+			case MsgPack::Type::UNDEFINED:
+				index_partial_paths(doc);
+				if (specification.flags.store) {
+					(*data)[pos] = item;
+				}
+				return;
+
 			default:
 				process_item_value(doc, specification.flags.store ? (*data)[pos] : *data, item, pos);
 				break;
@@ -1196,14 +1213,6 @@ void
 Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos)
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", data.to_string().c_str(), item_value.to_string().c_str(), pos);
-
-	if (item_value.is_null() || item_value.is_undefined()) {
-		index_partial_paths(doc);
-		if (specification.flags.store) {
-			data = item_value;
-		}
-		return;
-	}
 
 	if (!specification.flags.complete) {
 		if (specification.flags.inside_namespace) {
