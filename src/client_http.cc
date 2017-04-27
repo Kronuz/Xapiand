@@ -1360,11 +1360,13 @@ HttpClient::search_view(enum http_method method, Command)
 				return;
 			}
 			try {
+				// Try the commit may have been done by some other thread and volatile should always get the latest.
 				DatabaseHandler commit_handler(endpoints, db_flags | DB_COMMIT, method);
 				commit_handler.commit();
 			} catch (const CheckoutErrorCommited&) { }
-			db_handler.reopen();  // Reopen as the commit may have been done by some other thread and volatile should always get the latest.
 		}
+
+		db_handler.reopen();  // Ensure the database is current.
 
 		if (body.empty()) {
 			mset = db_handler.get_mset(*query_field, nullptr, nullptr, suggestions);
