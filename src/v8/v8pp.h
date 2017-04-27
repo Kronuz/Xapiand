@@ -47,7 +47,7 @@ namespace v8pp {
 // v8 version supported: v8-5.1
 
 
-constexpr size_t TIME_SCRIPT = 100; // Milliseconds.
+constexpr auto DURATION_SCRIPT = std::chrono::milliseconds(100);
 
 
 inline static size_t hash(const std::string& source) {
@@ -429,7 +429,7 @@ class Processor {
 
 	void kill() {
 		std::unique_lock<std::mutex> lk(kill_mtx);
-		if (!kill_cond.wait_for(lk, std::chrono::milliseconds(TIME_SCRIPT), [this](){ return finished.load(); }) && !v8::V8::IsExecutionTerminating(isolate)) {
+		if (!kill_cond.wait_for(lk, DURATION_SCRIPT, [this](){ return finished.load(); }) && !v8::V8::IsExecutionTerminating(isolate)) {
 			v8::V8::TerminateExecution(isolate);
 			finished = true;
 		}
