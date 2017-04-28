@@ -198,7 +198,7 @@ Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 						tm.fsec = 0.0;
 					} else {
 						auto fs = m.str(11);
-						fs[0] = '.';
+						fs.insert(0, 1, '.');
 						tm.fsec = normalize_fsec(std::stod(fs));
 					}
 				}
