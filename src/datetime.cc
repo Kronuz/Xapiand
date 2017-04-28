@@ -901,8 +901,14 @@ Datetime::normalizeMonths(int& year, int& mon)
 bool
 Datetime::isDate(const std::string& date)
 {
-	std::smatch m;
-	return std::regex_match(date, m, date_re) && static_cast<std::size_t>(m.length(0)) == date.length();
+	try {
+		tm_t tm;
+		ISO8601(date, tm);
+		return true;
+	} catch (const DateISOError&) {
+		std::smatch m;
+		return std::regex_match(date, m, date_re) && static_cast<std::size_t>(m.length(0)) == date.length();
+	}
 }
 
 
