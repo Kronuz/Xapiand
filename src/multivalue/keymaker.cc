@@ -295,6 +295,73 @@ PositiveKey::findBiggest(const Xapian::Document& doc) const
 
 
 std::string
+DateKey::findSmallest(const Xapian::Document& doc) const
+{
+	auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) {
+		return MAX_CMPVALUE;
+	}
+
+	StringList values(std::move(multiValues));
+
+	if (values.single()) {
+		return Serialise::timestamp(std::fabs(Unserialise::timestamp(values.front()) - _ref_val));
+	}
+
+	auto it = values.cbegin();
+	if (it.compare(_ser_ref_val) >= 0) {
+		return Serialise::timestamp(Unserialise::timestamp(*it) - _ref_val);
+	}
+
+	auto last = values.clast();
+	if (last.compare(_ser_ref_val) <= 0) {
+		return Serialise::timestamp(_ref_val - Unserialise::timestamp(*last));
+	}
+
+	auto it_p = it++;
+	for ( ; it != last && it.compare(_ser_ref_val) < 0; it_p = it++);
+
+	if (it.compare(_ser_ref_val) == 0) {
+		return SERIALISED_ZERO;
+	}
+
+	double distance1 = _ref_val - Unserialise::timestamp(*it_p);
+	double distance2 = Unserialise::timestamp(*it) - _ref_val;
+	return Serialise::timestamp(distance1 < distance2 ? distance1 : distance2);
+}
+
+
+std::string
+DateKey::findBiggest(const Xapian::Document& doc) const
+{
+	auto multiValues = doc.get_value(_slot);
+	if (multiValues.empty()) {
+		return MIN_CMPVALUE;
+	}
+
+	StringList values(std::move(multiValues));
+
+	if (values.single()) {
+		return Serialise::timestamp(std::fabs(Unserialise::timestamp(values.front()) - _ref_val));
+	}
+
+	auto it = values.cbegin();
+	if (it.compare(_ser_ref_val) >= 0) {
+		return Serialise::timestamp(Unserialise::timestamp(values.back()) - _ref_val);
+	}
+
+	auto last = values.clast();
+	if (last.compare(_ser_ref_val) <= 0) {
+		return Serialise::timestamp(_ref_val - Unserialise::timestamp(*it));
+	}
+
+	double distance1 = _ref_val - Unserialise::timestamp(*it);
+	double distance2 = Unserialise::timestamp(*last) - _ref_val;
+	return Serialise::timestamp(distance1 > distance2 ? distance1 : distance2);
+}
+
+
+std::string
 BoolKey::findSmallest(const Xapian::Document& doc) const
 {
 	auto multiValues = doc.get_value(_slot);

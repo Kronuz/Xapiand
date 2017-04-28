@@ -109,13 +109,6 @@ public:
 		  _ref_val(stox(std::stod, value)),
 		  _ser_ref_val(Serialise::_float(_ref_val)) { }
 
-	FloatKey(Xapian::valueno slot, bool reverse, double value)
-		: BaseKey(slot, reverse),
-		  _ref_val(value),
-		  _ser_ref_val(Serialise::_float(_ref_val)) { }
-
-	virtual ~FloatKey() = default;
-
 	std::string findSmallest(const Xapian::Document& doc) const override;
 	std::string findBiggest(const Xapian::Document& doc) const override;
 };
@@ -154,10 +147,18 @@ public:
 
 
 // Class for creating key using as reference a date value.
-class DateKey : public FloatKey {
+class DateKey : public BaseKey {
+	double _ref_val;
+	std::string _ser_ref_val;
+
 public:
 	DateKey(Xapian::valueno slot, bool reverse, const std::string& value)
-		: FloatKey(slot, reverse, Datetime::timestamp(value)) { }
+		: BaseKey(slot, reverse),
+		  _ref_val(Datetime::timestamp(value)),
+		  _ser_ref_val(Serialise::timestamp(_ref_val)) { }
+
+	std::string findSmallest(const Xapian::Document& doc) const override;
+	std::string findBiggest(const Xapian::Document& doc) const override;
 };
 
 
