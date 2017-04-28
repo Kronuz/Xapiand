@@ -292,7 +292,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 			}
 			break;
 		default:
-			if (length > 21 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
+			if (length > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
 				date[13] == ':' && date[16] == ':') {
 				tm.year  = stox(std::stoul, date.substr(0, 4));
 				tm.mon   = stox(std::stoul, date.substr(5, 2));
