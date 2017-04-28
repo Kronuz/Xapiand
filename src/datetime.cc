@@ -874,13 +874,13 @@ Datetime::isotime(const tm_t& tm)
 			tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
 		return std::string(result);
 	} else {
-		char result[32];
-		snprintf(result, 32, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.%.10f",
+		char result[28];
+		snprintf(result, 28, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d%.6f",
 			tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec, tm.fsec);
 		std::string res(result);
-		auto it = res.erase(res.begin() + 19);
-		for (auto it_last = res.end() - 1; it_last != it; ) {
-			it_last = res.erase(it_last) - 1;
+		auto it = res.erase(res.begin() + 19) + 1;
+		for (auto it_last = res.end() - 1; it_last != it && *it_last == '0'; --it_last) {
+			it_last = res.erase(it_last);
 		}
 		return res;
 	}
