@@ -25,6 +25,7 @@
 #include "xapiand.h"
 
 #include <chrono>       // for system_clock, time_point
+#include <cmath>        // for std::round
 #include <ctime>        // for time_t
 #include <iostream>
 #include <regex>        // for regex
@@ -34,9 +35,11 @@
 #include "exception.h"  // for ClientError
 
 
-#define _EPOCH      1970
-#define _START_YEAR 1900
-#define _EPOCH_ORD  719163  /* toordinal(_EPOCH, 1, 1) */
+constexpr int DATETIME_EPOCH            = 1970;
+constexpr int DATETIME_START_YEAR       = 1900;
+constexpr int DATETIME_EPOCH_ORD        = 719163;  /* toordinal(DATETIME_EPOCH, 1, 1) */
+constexpr double DATETIME_MICROSECONDS  = 1e-6;
+constexpr double DATETIME_MAX_FSEC      = 0.999999;
 
 
 class MsgPack;
@@ -57,6 +60,16 @@ public:
 
 
 namespace Datetime {
+	inline double normalize_fsec(double fsec) {
+		if (fsec > DATETIME_MAX_FSEC) {
+			return DATETIME_MAX_FSEC;
+		} else if (fsec < 0.0) {
+			return 0.0;
+		} else {
+			return std::round(fsec / DATETIME_MICROSECONDS) * DATETIME_MICROSECONDS;
+		}
+	}
+
 	struct tm_t {
 		int year;
 		int mon;
@@ -66,7 +79,7 @@ namespace Datetime {
 		int sec;
 		double fsec;
 
-		tm_t(int y=_EPOCH, int M=1, int d=1, int h=0, int m=0, int s=0, double fs=0.0)
+		tm_t(int y=DATETIME_EPOCH, int M=1, int d=1, int h=0, int m=0, int s=0, double fs=0.0)
 			: year(y), mon(M), day(d), hour(h),
 			  min(m), sec(s), fsec(fs) { }
 	};

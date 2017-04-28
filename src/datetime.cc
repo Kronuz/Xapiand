@@ -32,11 +32,6 @@
 #include "utils.h"    // for stox
 
 
-constexpr double MICROSECONDS = 1e-6;
-constexpr double MAX_FSEC     = 0.999999;
-constexpr double MIN_FSEC     = 0.000001;
-
-
 const std::regex Datetime::date_re("([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]+))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?", std::regex::optimize);
 const std::regex Datetime::date_math_re("([+-]\\d+|\\/{1,2})([dyMwhms])", std::regex::optimize);
 
@@ -51,17 +46,6 @@ static constexpr int cumdays[2][12] = {
 	{ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 },
 	{ 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 }
 };
-
-
-static double normalize_fsec(double fsec) {
-	if (fsec > MAX_FSEC) {
-		return MAX_FSEC;
-	} else if (fsec < MIN_FSEC) {
-		return 0.0;
-	} else {
-		return fsec;
-	}
-}
 
 
 static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
@@ -134,7 +118,7 @@ static void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
 						if (tm.min < 60) {
 							tm.sec = stox(std::stoul, str_time.substr(6, 2));
 							if (tm.sec < 60) {
-								tm.fsec = normalize_fsec(stox(std::stod, str_time.substr(8)));
+								tm.fsec = Datetime::normalize_fsec(stox(std::stod, str_time.substr(8)));
 								return;
 							}
 						}
@@ -478,7 +462,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 						tm.day = getDays_month(tm.year, 12);
 						tm.hour = 23;
 						tm.min = tm.sec = 59;
-						tm.fsec = MAX_FSEC;
+						tm.fsec = DATETIME_MAX_FSEC;
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.mon = tm.day = 1;
 						tm.hour = tm.min = tm.sec = 0;
@@ -492,7 +476,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 						tm.day = getDays_month(tm.year, tm.mon);
 						tm.hour = 23;
 						tm.min = tm.sec = 59;
-						tm.fsec = MAX_FSEC;
+						tm.fsec = DATETIME_MAX_FSEC;
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.day = 1;
 						tm.hour = tm.min = tm.sec = 0;
@@ -509,7 +493,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 						tm.day += 6 - timeinfo.tm_wday;
 						tm.hour = 23;
 						tm.min = tm.sec = 59;
-						tm.fsec = MAX_FSEC;
+						tm.fsec = DATETIME_MAX_FSEC;
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.day -= timeinfo.tm_wday;
 						tm.hour = tm.min = tm.sec = 0;
@@ -523,7 +507,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 					if (op.length() == 1) {
 						tm.hour = 23;
 						tm.min = tm.sec = 59;
-						tm.fsec = MAX_FSEC;
+						tm.fsec = DATETIME_MAX_FSEC;
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.hour = tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
@@ -534,7 +518,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 				case 'h':
 					if (op.length() == 1) {
 						tm.min = tm.sec = 59;
-						tm.fsec = MAX_FSEC;
+						tm.fsec = DATETIME_MAX_FSEC;
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
@@ -545,7 +529,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 				case 'm':
 					if (op.length() == 1) {
 						tm.sec = 59;
-						tm.fsec = MAX_FSEC;
+						tm.fsec = DATETIME_MAX_FSEC;
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.sec = 0;
 						tm.fsec = 0.0;
@@ -555,7 +539,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 					break;
 				case 's':
 					if (op.length() == 1) {
-						tm.fsec = MAX_FSEC;
+						tm.fsec = DATETIME_MAX_FSEC;
 					} else if (op.length() == 2 && op[1] == '/') {
 						tm.fsec = 0.0;
 					} else {
@@ -572,7 +556,7 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, char unit)
 	auto dateGMT = timegm(tm);
 	struct tm timeinfo;
 	gmtime_r(&dateGMT, &timeinfo);
-	tm.year = timeinfo.tm_year + _START_YEAR;
+	tm.year = timeinfo.tm_year + DATETIME_START_YEAR;
 	tm.mon = timeinfo.tm_mon + 1;
 	tm.day = timeinfo.tm_mday;
 	tm.hour = timeinfo.tm_hour;
@@ -597,7 +581,7 @@ Datetime::isleapYear(int year)
 bool
 Datetime::isleapRef_year(int tm_year)
 {
-	tm_year += _START_YEAR;
+	tm_year += DATETIME_START_YEAR;
 	return isleapYear(tm_year);
 }
 
@@ -641,9 +625,9 @@ Datetime::toordinal(int year, int month, int day)
 std::time_t
 Datetime::timegm(const std::tm& tm)
 {
-	int year = tm.tm_year + _START_YEAR, mon = tm.tm_mon + 1;
+	int year = tm.tm_year + DATETIME_START_YEAR, mon = tm.tm_mon + 1;
 	normalizeMonths(year, mon);
-	auto result = toordinal(year, mon, 1) - _EPOCH_ORD + tm.tm_mday - 1;
+	auto result = toordinal(year, mon, 1) - DATETIME_EPOCH_ORD + tm.tm_mday - 1;
 	result *= 24;
 	result += tm.tm_hour;
 	result *= 60;
@@ -662,7 +646,7 @@ std::time_t
 Datetime::timegm(tm_t& tm)
 {
 	normalizeMonths(tm.year, tm.mon);
-	auto result = toordinal(tm.year, tm.mon, 1) - _EPOCH_ORD + tm.day - 1;
+	auto result = toordinal(tm.year, tm.mon, 1) - DATETIME_EPOCH_ORD + tm.day - 1;
 	result *= 24;
 	result += tm.hour;
 	result *= 60;
@@ -682,7 +666,7 @@ Datetime::to_tm_t(std::time_t timestamp)
 	struct tm timeinfo;
 	gmtime_r(&timestamp, &timeinfo);
 	return tm_t(
-		timeinfo.tm_year + _START_YEAR, timeinfo.tm_mon + 1,
+		timeinfo.tm_year + DATETIME_START_YEAR, timeinfo.tm_mon + 1,
 		timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min,
 		timeinfo.tm_sec
 	);
@@ -699,7 +683,7 @@ Datetime::to_tm_t(double timestamp)
 	struct tm timeinfo;
 	gmtime_r(&_time, &timeinfo);
 	return tm_t(
-		timeinfo.tm_year + _START_YEAR, timeinfo.tm_mon + 1,
+		timeinfo.tm_year + DATETIME_START_YEAR, timeinfo.tm_mon + 1,
 		timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min,
 		timeinfo.tm_sec, normalize_fsec(timestamp - _time)
 	);
@@ -772,7 +756,7 @@ double
 Datetime::timestamp(tm_t& tm)
 {
 	normalizeMonths(tm.year, tm.mon);
-	auto result = static_cast<double>(toordinal(tm.year, tm.mon, 1) - _EPOCH_ORD + tm.day - 1);
+	auto result = static_cast<double>(toordinal(tm.year, tm.mon, 1) - DATETIME_EPOCH_ORD + tm.day - 1);
 	result *= 24;
 	result += tm.hour;
 	result *= 60;
@@ -856,7 +840,7 @@ Datetime::isotime(const std::tm& tm)
 {
 	char result[20];
 	snprintf(result, 20, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d",
-		tm.tm_year + _START_YEAR, tm.tm_mon + 1, tm.tm_mday,
+		tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
 		tm.tm_hour, tm.tm_min, tm.tm_sec);
 	return std::string(result);
 }
@@ -868,12 +852,7 @@ Datetime::isotime(const std::tm& tm)
 std::string
 Datetime::isotime(const tm_t& tm)
 {
-	if (tm.fsec < MIN_FSEC) {
-		char result[20];
-		snprintf(result, 20, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d",
-			tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-		return std::string(result);
-	} else {
+	if (tm.fsec > 0.0) {
 		char result[28];
 		snprintf(result, 28, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d%.6f",
 			tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec, tm.fsec);
@@ -883,6 +862,11 @@ Datetime::isotime(const tm_t& tm)
 			it_last = res.erase(it_last);
 		}
 		return res;
+	} else {
+		char result[20];
+		snprintf(result, 20, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d",
+			tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
+		return std::string(result);
 	}
 }
 
@@ -925,7 +909,7 @@ Datetime::isDate(const std::string& date)
 std::string
 Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock>& tp)
 {
-	return isotime(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * MICROSECONDS);
+	return isotime(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS);
 }
 
 
