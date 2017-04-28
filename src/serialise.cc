@@ -766,15 +766,7 @@ Unserialise::MsgPack(FieldType field_type, const std::string& serialised_val)
 std::string
 Unserialise::date(const std::string& serialised_date)
 {
-	static char date[25];
-	double epoch = timestamp(serialised_date);
-	time_t timestamp = (time_t) epoch;
-	int msec = round((epoch - timestamp) * 1000);
-	struct tm *timeinfo = gmtime(&timestamp);
-	sprintf(date, "%.4d-%.2d-%.2dT%.2d:%.2d:%.2d.%.3d", timeinfo->tm_year + _START_YEAR,
-		timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min,
-		timeinfo->tm_sec, msec);
-	return date;
+	return Datetime::isotime(timestamp(serialised_date));
 }
 
 
