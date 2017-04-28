@@ -32,9 +32,9 @@
 #include "utils.h"    // for stox
 
 
-constexpr double NANOSECONDS = 1e-9;
-constexpr double MAX_FSEC    = 0.9999999999;
-constexpr double MIN_FSEC    = 0.0000000001;
+constexpr double MICROSECONDS = 1e-6;
+constexpr double MAX_FSEC     = 0.999999;
+constexpr double MIN_FSEC     = 0.000001;
 
 
 const std::regex Datetime::date_re("([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]+))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?", std::regex::optimize);
@@ -925,7 +925,7 @@ Datetime::isDate(const std::string& date)
 std::string
 Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock>& tp)
 {
-	return isotime(std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count() * NANOSECONDS);
+	return isotime(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * MICROSECONDS);
 }
 
 
