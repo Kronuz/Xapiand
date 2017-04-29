@@ -49,6 +49,98 @@ int Log::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Log::handlers;
 
 
+const char*
+ansi_color(float red, float green, float blue, float alpha, bool bold)
+{
+	static enum class Coloring : uint8_t {
+		Unknown,
+		TrueColor,
+		Palette,
+		Standard256,
+		Standard16,
+		None,
+	} coloring = Coloring::Unknown;
+	static std::unordered_map<size_t, const std::string> colors;
+	uint8_t r = static_cast<uint8_t>(red * alpha + 0.5);
+	uint8_t g = static_cast<uint8_t>(green * alpha + 0.5);
+	uint8_t b = static_cast<uint8_t>(blue * alpha + 0.5);
+	size_t hash = r << 17 | g << 9 | b << 1 | bold;
+	auto it = colors.find(hash);
+	if (it == colors.end()) {
+		if (coloring == Coloring::Unknown) {
+			std::string colorterm;
+			const char *env_colorterm = getenv("COLORTERM");
+			if (env_colorterm) {
+				colorterm = env_colorterm;
+			}
+			std::string term;
+			const char* env_term = getenv("TERM");
+			if (env_term) {
+				term = env_term;
+			}
+			if (colorterm.find("truecolor") != std::string::npos || term.find("24bit") != std::string::npos) {
+				coloring = Coloring::TrueColor;
+			} else if (term.find("256color") != std::string::npos) {
+				coloring = Coloring::Standard256;
+			} else if (term.find("ansi") != std::string::npos || term.find("16color") != std::string::npos) {
+				coloring = Coloring::Standard16;
+			} else {
+				coloring = Coloring::Standard16;
+			}
+		}
+		char buffer[30] = "";
+		switch (coloring) {
+			case Coloring::TrueColor:
+				sprintf(buffer, "\033[%d;38;2;%d;%d;%dm", bold, r, g, b);
+				break;
+			case Coloring::Palette:
+			case Coloring::Standard256: {
+				uint8_t color;
+				if (r == g == b) {
+					if (r < 8) {
+						color = 16;
+					} else if (r > 248) {
+						color = 231;
+					} else {
+						color = 232 + (((r - 8) / 247) * 24);
+					}
+				} else {
+					r = r / 255.0 * 5.0 + 0.5;
+					g = g / 255.0 * 5.0 + 0.5;
+					b = b / 255.0 * 5.0 + 0.5;
+					color = 16 + 36 * r + 6 * g + b;
+				}
+				sprintf(buffer, "\033[%d;38;5;%dm", bold, color);
+				break;
+			}
+			case Coloring::Standard16: {
+				uint8_t max = std::max({r, g, b});
+				uint8_t min = std::min({r, g, b});
+				uint8_t color;
+				if (max < 32) {
+					color = 0;
+				} else {
+					r = static_cast<uint8_t>((r - min) * 255.0 / (max - min) + 0.5) > 128 ? 1 : 0;
+					g = static_cast<uint8_t>((g - min) * 255.0 / (max - min) + 0.5) > 128 ? 1 : 0;
+					b = static_cast<uint8_t>((b - min) * 255.0 / (max - min) + 0.5) > 128 ? 1 : 0;
+					color = (b << 2) | (g << 1) | r;
+					if (max > 192) {
+						color += 8;
+					}
+				}
+				sprintf(buffer, "\033[%d;38;5;%dm", bold, color);
+				break;
+			}
+			case Coloring::None:
+			default:
+				break;
+		}
+		it = colors.insert(std::make_pair(hash, buffer)).first;
+	}
+	return it->second.c_str();
+}
+
+
 static constexpr const char * const priorities[] = {
 	EMERG_COL "█" NO_COL,   // LOG_EMERG    0 = System is unusable
 	ALERT_COL "▉" NO_COL,   // LOG_ALERT    1 = Action must be taken immediately
