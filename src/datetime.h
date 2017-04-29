@@ -113,6 +113,8 @@ namespace Datetime {
 	std::string isotime(double epoch);
 	void normalizeMonths(int& year, int& mon);
 	bool isDate(const std::string& date);
+	bool isTime(const std::string& date);
+	bool isTimeDelta(const std::string& date);
 	std::string to_string(const std::chrono::time_point<std::chrono::system_clock>& tp);
 	std::string normalizeISO8601(const std::string& iso_date);
 };

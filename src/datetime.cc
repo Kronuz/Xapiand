@@ -22,6 +22,7 @@
 
 #include "datetime.h"
 
+#include <cctype>     // for std::is_digit
 #include <cmath>      // for ceil
 #include <exception>  // for exception
 #include <stdexcept>  // for invalid_argument, out_of_range
@@ -905,9 +906,75 @@ Datetime::isDate(const std::string& date)
 		tm_t tm;
 		ISO8601(date, tm);
 		return true;
-	} catch (const DateISOError&) {
+	} catch (const DateISOError&) {
 		std::smatch m;
 		return std::regex_match(date, m, date_re) && static_cast<std::size_t>(m.length(0)) == date.length();
+	}
+}
+
+
+bool
+Datetime::isTime(const std::string& _time) {
+	auto length = _time.length();
+	switch (length) {
+		case 5: // 00:00
+			return std::is_digit(_time[0]) && std::is_digit(_time[1]) && _time[2] == ':' &&
+				std::is_digit(_time[3]) && std::is_digit(_time[4]);
+		case 8: // 00:00:00
+			return std::is_digit(_time[0]) && std::is_digit(_time[1]) && _time[2] == ':' &&
+				std::is_digit(_time[3]) && std::is_digit(_time[4]) && _time[5] == ':' &&
+				std::is_digit(_time[6]) && std::is_digit(_time[7]);
+		default: //  00:00:00[+/-]00:00  00:00:00.000...  00:00:00.000...[+/-]00:00
+			if (length > 9 && std::is_digit(_time[0]) && std::is_digit(_time[1]) && _time[2] == ':' &&
+				std::is_digit(_time[3]) && std::is_digit(_time[4]) && _time[5] == ':' &&
+				std::is_digit(_time[6]) && std::is_digit(_time[7])) {
+				switch (_time[8]) {
+					case '+':
+					case '-':
+						return length == 14 && std::is_digit(_time[9]) && std::is_digit(_time[10]) && _time[11] == ':' &&
+							std::is_digit(_time[12]) && std::is_digit(_time[13]);
+					case '.':
+						for (int i = 9; i < length; ++i) {
+							const auto c = _time[i];
+							if (!std::is_digit(c)) {
+								return (c == '+' || c == '-') && length == (i + 6) && std::is_digit(_time[i + 1]) &&
+									std::is_digit(_time[i + 2]) && _time[i + 3] == ':' && std::is_digit(_time[i + 4]) &&
+									std::is_digit(_time[i + 5]);
+							}
+						}
+						return true;
+				}
+			}
+			return false;
+	}
+}
+
+
+bool
+Datetime::isTimeDelta(const std::string& timedelta)
+{
+	auto length = _time.length();
+	switch (length) {
+		case 6: // [+/-]00:00
+			return (timedelta[0] == '+' || timedelta[0] == '-') && std::is_digit(timedelta[1]) && std::is_digit(timedelta[2]) &&
+				timedelta[3] == ':' && std::is_digit(timedelta[4]) && std::is_digit(timedelta[5]);
+		case 9: // [+/-]00:00:00
+			return (timedelta[0] == '+' || timedelta[0] == '-') && std::is_digit(timedelta[1]) && std::is_digit(timedelta[2]) &&
+				timedelta[3] == ':' && std::is_digit(timedelta[4]) && std::is_digit(timedelta[5]) &&
+				timedelta[6] == ':' && std::is_digit(timedelta[7]) && std::is_digit(timedelta[8]);
+		default: // [+/-]00:00:00  [+/-]00:00:00.000...
+			if (length > 10 && (timedelta[0] == '+' || timedelta[0] == '-') && std::is_digit(timedelta[1]) &&
+				std::is_digit(timedelta[2]) && timedelta[3] == ':' && std::is_digit(timedelta[4]) &&
+				std::is_digit(timedelta[5]) && timedelta[6] == ':' && std::is_digit(timedelta[7]) &&
+				std::is_digit(timedelta[8]) && timedelta[9] == '.') {
+				for (int i = 10; i < length; ++i) {
+					if (!std::is_digit(timedelta[i])) {
+						return false;
+					}
+				}
+				return true;
+			}
+			return false;
 	}
 }
 
