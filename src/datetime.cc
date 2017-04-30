@@ -149,56 +149,73 @@ void
 Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 {
 	// Check if date is ISO 8601.
-	try {
-		auto pos = date.find("||");
-		if (pos == std::string::npos) {
-			return ISO8601(date, tm);
-		} else {
-			ISO8601(date.substr(0, pos), tm);
-			return processDateMath(date.substr(pos + 2), tm);
+	auto pos = date.find("||");
+	if (pos == std::string::npos) {
+		auto format = ISO8601(date, tm);
+		switch (format) {
+			case Format::VALID:
+				return;
+			case Format::INVALID:
+				break;
+			case Format::OUT_OF_RANGE:
+				THROW(DatetimeError, "Date: %s is out of range", date.c_str());
+			default:
+				THROW(DatetimeError, "In dateTimeParser, format %s is incorrect", date.c_str());
 		}
-	} catch (const DateISOError&) {
-		std::smatch m;
-		if (std::regex_match(date, m, date_re) && static_cast<std::size_t>(m.length(0)) == date.length()) {
-			tm.year = std::stoi(m.str(1));
-			tm.mon = std::stoi(m.str(3));
-			tm.day = std::stoi(m.str(4));
-			if (!isvalidDate(tm.year, tm.mon, tm.day)) {
-				THROW(DatetimeError, "Date is out of range");
-			}
+	} else {
+		auto format = ISO8601(date.substr(0, pos), tm);
+		switch (format) {
+			case Format::VALID:
+				return processDateMath(date.substr(pos + 2), tm);
+			case Format::INVALID:
+				break;
+			case Format::OUT_OF_RANGE:
+				THROW(DatetimeError, "Date: %s is out of range", date.c_str());
+			default:
+				THROW(DatetimeError, "In dateTimeParser, format %s is incorrect", date.c_str());
+		}
+	}
 
-			// Process time
-			if (m.length(5) == 0) {
-				tm.hour = tm.min = tm.sec = 0;
+	std::smatch m;
+	if (std::regex_match(date, m, date_re) && static_cast<std::size_t>(m.length(0)) == date.length()) {
+		tm.year = std::stoi(m.str(1));
+		tm.mon = std::stoi(m.str(3));
+		tm.day = std::stoi(m.str(4));
+		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
+			THROW(DatetimeError, "Date: %s is out of range", date.c_str());
+		}
+
+		// Process time
+		if (m.length(5) == 0) {
+			tm.hour = tm.min = tm.sec = 0;
+			tm.fsec = 0.0;
+		} else {
+			tm.hour = std::stoi(m.str(6));
+			tm.min = std::stoi(m.str(7));
+			if (m.length(8) == 0) {
+				tm.sec = 0;
 				tm.fsec = 0.0;
 			} else {
-				tm.hour = std::stoi(m.str(6));
-				tm.min = std::stoi(m.str(7));
-				if (m.length(8) == 0) {
-					tm.sec = 0;
+				tm.sec = std::stoi(m.str(9));
+				if (m.length(10) == 0) {
 					tm.fsec = 0.0;
 				} else {
-					tm.sec = std::stoi(m.str(9));
-					if (m.length(10) == 0) {
-						tm.fsec = 0.0;
-					} else {
-						auto fs = m.str(11);
-						fs.insert(0, 1, '.');
-						tm.fsec = normalize_fsec(std::stod(fs));
-					}
-				}
-				if (m.length(12) != 0) {
-					computeTimeZone(tm, date[m.position(13) - 1], m.str(13), m.str(14));
+					auto fs = m.str(11);
+					fs.insert(0, 1, '.');
+					tm.fsec = normalize_fsec(std::stod(fs));
 				}
 			}
-
-			// Process Date Math
-			if (m.length(16) != 0) {
-				processDateMath(m.str(16), tm);
+			if (m.length(12) != 0) {
+				computeTimeZone(tm, date[m.position(13) - 1], m.str(13), m.str(14));
 			}
-		} else {
-			THROW(DatetimeError, "In dateTimeParser, format %s is incorrect", date.c_str());
 		}
+
+		// Process Date Math
+		if (m.length(16) != 0) {
+			processDateMath(m.str(16), tm);
+		}
+	} else {
+		THROW(DatetimeError, "In dateTimeParser, format %s is incorrect", date.c_str());
 	}
 }
 
@@ -206,146 +223,154 @@ Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 /*
  * Full struct tm according to the date in ISO 8601 format.
  */
-void
+Datetime::Format
 Datetime::ISO8601(const std::string& date, tm_t& tm)
 {
 	auto length = date.length();
-	switch (length) {
-		case 10: // 0000-00-00
-			if (date[4] == '-' && date[7] == '-') {
-				tm.year  = stox(std::stoul, date.substr(0, 4));
-				tm.mon   = stox(std::stoul, date.substr(5, 2));
-				tm.day   = stox(std::stoul, date.substr(8, 2));
-				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = 0;
-					tm.min  = 0;
-					tm.sec  = 0;
-					tm.fsec = 0.0;
-					return;
-				} else {
-					THROW(DatetimeError, "Date is out of range");
+	try {
+		switch (length) {
+			case 10: // 0000-00-00
+				if (date[4] == '-' && date[7] == '-') {
+					tm.year  = stox(std::stoul, date.substr(0, 4));
+					tm.mon   = stox(std::stoul, date.substr(5, 2));
+					tm.day   = stox(std::stoul, date.substr(8, 2));
+					if (isvalidDate(tm.year, tm.mon, tm.day)) {
+						tm.hour = 0;
+						tm.min  = 0;
+						tm.sec  = 0;
+						tm.fsec = 0.0;
+						return Format::VALID;
+					}
+					return Format::OUT_OF_RANGE;
 				}
-			}
-			break;
-		case 19:
-			// 0000-00-00[T ]00:00:00
-			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
-				tm.year  = stox(std::stoul, date.substr(0, 4));
-				tm.mon   = stox(std::stoul, date.substr(5, 2));
-				tm.day   = stox(std::stoul, date.substr(8, 2));
-				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = stox(std::stoul, date.substr(11, 2));
-					if (tm.hour < 60) {
-						tm.min = stox(std::stoul, date.substr(14, 2));
-						if (tm.min < 60) {
-							tm.sec = stox(std::stoul, date.substr(17, 2));
-							if (tm.sec < 60) {
-								tm.fsec = 0.0;
-								return;
+				return Format::INVALID;
+			case 19:
+				// 0000-00-00[T ]00:00:00
+				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
+					tm.year  = stox(std::stoul, date.substr(0, 4));
+					tm.mon   = stox(std::stoul, date.substr(5, 2));
+					tm.day   = stox(std::stoul, date.substr(8, 2));
+					if (isvalidDate(tm.year, tm.mon, tm.day)) {
+						tm.hour = stox(std::stoul, date.substr(11, 2));
+						if (tm.hour < 60) {
+							tm.min = stox(std::stoul, date.substr(14, 2));
+							if (tm.min < 60) {
+								tm.sec = stox(std::stoul, date.substr(17, 2));
+								if (tm.sec < 60) {
+									tm.fsec = 0.0;
+									return Format::VALID;
+								}
 							}
 						}
 					}
-					THROW(DatetimeError, "In dateTimeParser, format %s is incorrect", date.c_str());
-				} else {
-					THROW(DatetimeError, "Date is out of range");
+					return Format::OUT_OF_RANGE;
 				}
-			}
-			break;
-		case 20:
-			// 0000-00-00[T ]00:00:00Z
-			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
-				date[16] == ':' && date[19] == 'Z') {
-				tm.year  = stox(std::stoul, date.substr(0, 4));
-				tm.mon   = stox(std::stoul, date.substr(5, 2));
-				tm.day   = stox(std::stoul, date.substr(8, 2));
-				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = stox(std::stoul, date.substr(11, 2));
-					if (tm.hour < 60) {
-						tm.min = stox(std::stoul, date.substr(14, 2));
-						if (tm.min < 60) {
-							tm.sec = stox(std::stoul, date.substr(17, 2));
-							if (tm.sec < 60) {
-								tm.fsec = 0.0;
-								return;
+				return Format::INVALID;
+			case 20:
+				// 0000-00-00[T ]00:00:00Z
+				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
+					date[16] == ':' && date[19] == 'Z') {
+					tm.year  = stox(std::stoul, date.substr(0, 4));
+					tm.mon   = stox(std::stoul, date.substr(5, 2));
+					tm.day   = stox(std::stoul, date.substr(8, 2));
+					if (isvalidDate(tm.year, tm.mon, tm.day)) {
+						tm.hour = stox(std::stoul, date.substr(11, 2));
+						if (tm.hour < 60) {
+							tm.min = stox(std::stoul, date.substr(14, 2));
+							if (tm.min < 60) {
+								tm.sec = stox(std::stoul, date.substr(17, 2));
+								if (tm.sec < 60) {
+									tm.fsec = 0.0;
+									return Format::VALID;
+								}
 							}
 						}
 					}
-					THROW(DatetimeError, "In dateTimeParser, format %s is incorrect", date.c_str());
-				} else {
-					THROW(DatetimeError, "Date is out of range");
+					return Format::OUT_OF_RANGE;
 				}
-			}
-			break;
-		default:
-			if (length > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
-				date[13] == ':' && date[16] == ':') {
-				tm.year  = stox(std::stoul, date.substr(0, 4));
-				tm.mon   = stox(std::stoul, date.substr(5, 2));
-				tm.day   = stox(std::stoul, date.substr(8, 2));
-				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = stox(std::stoul, date.substr(11, 2));
-					if (tm.hour < 60) {
-						tm.min = stox(std::stoul, date.substr(14, 2));
-						if (tm.min < 60) {
-							tm.sec = stox(std::stoul, date.substr(17, 2));
-							if (tm.sec < 60) {
-								switch (date[19]) {
-									case '+':
-									case '-':
-										if (length == 25 && date[22] == ':') {
-											tm.fsec = 0.0;
-											auto tz_h = date.substr(20, 2);
-											auto tz_m = date.substr(23, 2);
-											if (stox(std::stoul, tz_h) < 60 && stox(std::stoul, tz_m) < 60) {
-												computeTimeZone(tm, date[19], tz_h, tz_m);
-												return;
+				return Format::INVALID;
+			default:
+				if (length > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
+					date[13] == ':' && date[16] == ':') {
+					tm.year  = stox(std::stoul, date.substr(0, 4));
+					tm.mon   = stox(std::stoul, date.substr(5, 2));
+					tm.day   = stox(std::stoul, date.substr(8, 2));
+					if (isvalidDate(tm.year, tm.mon, tm.day)) {
+						tm.hour = stox(std::stoul, date.substr(11, 2));
+						if (tm.hour < 60) {
+							tm.min = stox(std::stoul, date.substr(14, 2));
+							if (tm.min < 60) {
+								tm.sec = stox(std::stoul, date.substr(17, 2));
+								if (tm.sec < 60) {
+									switch (date[19]) {
+										case '+':
+										case '-':
+											if (length == 25 && date[22] == ':') {
+												tm.fsec = 0.0;
+												auto tz_h = date.substr(20, 2);
+												auto tz_m = date.substr(23, 2);
+												if (stox(std::stoul, tz_h) < 60 && stox(std::stoul, tz_m) < 60) {
+													computeTimeZone(tm, date[19], tz_h, tz_m);
+													return Format::VALID;
+												}
+												return Format::OUT_OF_RANGE;
 											}
-										}
-										break;
-									case '.': {
-										auto it = date.begin() + 19;
-										const auto it_e = date.end();
-										for (auto aux = it + 1; aux != it_e; ++aux) {
-											const auto& c = *aux;
-											if (c < '0' || c > '9') {
-												switch (c) {
-													case 'Z':
-														if ((aux + 1) == it_e) {
-															tm.fsec = normalize_fsec(std::stod(std::string(it, aux)));
-															return;
-														}
-														THROW(DateISOError, "Error format in %s", date.c_str());
-													case '+':
-													case '-':
-														if ((it_e - aux) == 6) {
-															auto aux_end = aux + 3;
-															if (*aux_end == ':') {
-																auto tz_h = std::string(aux + 1, aux_end);
-																auto tz_m = std::string(aux_end + 1, it_e);
-																if (stox(std::stoul, tz_h) < 60 && stox(std::stoul, tz_m) < 60) {
-																	computeTimeZone(tm, c, tz_h, tz_m);
-																	tm.fsec = normalize_fsec(std::stod(std::string(it, aux)));
-																	return;
+											return Format::ERROR;
+										case '.': {
+											auto it = date.begin() + 19;
+											const auto it_e = date.end();
+											for (auto aux = it + 1; aux != it_e; ++aux) {
+												const auto& c = *aux;
+												if (c < '0' || c > '9') {
+													switch (c) {
+														case 'Z':
+															if ((aux + 1) == it_e) {
+																tm.fsec = normalize_fsec(std::stod(std::string(it, aux)));
+																return Format::VALID;
+															}
+															return Format::ERROR;
+														case '+':
+														case '-':
+															if ((it_e - aux) == 6) {
+																auto aux_end = aux + 3;
+																if (*aux_end == ':') {
+																	auto tz_h = std::string(aux + 1, aux_end);
+																	auto tz_m = std::string(aux_end + 1, it_e);
+																	if (stox(std::stoul, tz_h) < 60 && stox(std::stoul, tz_m) < 60) {
+																		computeTimeZone(tm, c, tz_h, tz_m);
+																		tm.fsec = normalize_fsec(std::stod(std::string(it, aux)));
+																		return Format::VALID;
+																	}
+																	return Format::OUT_OF_RANGE;
 																}
 															}
-															THROW(DateISOError, "Error format in %s", date.c_str());
-														}
-													default:
-														THROW(DateISOError, "Error format in %s", date.c_str());
+															return Format::ERROR;
+														default:
+															return Format::INVALID;
+													}
 												}
 											}
+											tm.fsec = normalize_fsec(std::stod(std::string(it, it_e)));
+											return Format::VALID;
 										}
-										tm.fsec = normalize_fsec(std::stod(std::string(it, it_e)));
-										return;
+										default:
+											return Format::INVALID;
 									}
 								}
 							}
 						}
 					}
+					return Format::OUT_OF_RANGE;
 				}
-			}
-			break;
+				return Format::INVALID;
+		}
+	} catch (const OutOfRange&) {
+		return Format::ERROR;
+	} catch (const InvalidArgument&) {
+		return Format::ERROR;
 	}
+}
+
 
 	THROW(DateISOError, "Error format in %s", date.c_str());
 }

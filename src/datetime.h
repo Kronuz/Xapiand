@@ -84,11 +84,18 @@ namespace Datetime {
 			  min(m), sec(s), fsec(fs) { }
 	};
 
+	enum class Format : uint8_t {
+		VALID,
+		INVALID,
+		OUT_OF_RANGE,
+		ERROR,
+	};
+
 	extern const std::regex date_re;
 	extern const std::regex date_math_re;
 
 	void dateTimeParser(const std::string& date, tm_t& tm);
-	void ISO8601(const std::string& date, tm_t& tm);
+	Format ISO8601(const std::string& date, tm_t& tm);
 	void processDateMath(const std::string& date_math, tm_t& tm);
 	void computeTimeZone(tm_t& tm, char op, const std::string& hour, const std::string& min);
 	void computeDateMath(tm_t& tm, const std::string& op, char unit);
