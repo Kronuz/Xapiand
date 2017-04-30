@@ -949,7 +949,7 @@ Datetime::isTime(const std::string& _time) {
 			return std::isdigit(_time[0]) && std::isdigit(_time[1]) && _time[2] == ':' &&
 				std::isdigit(_time[3]) && std::isdigit(_time[4]) && _time[5] == ':' &&
 				std::isdigit(_time[6]) && std::isdigit(_time[7]);
-		default: //  00:00:00[+/-]00:00  00:00:00.000...  00:00:00.000...[+/-]00:00
+		default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
 			if (length > 9 && std::isdigit(_time[0]) && std::isdigit(_time[1]) && _time[2] == ':' &&
 				std::isdigit(_time[3]) && std::isdigit(_time[4]) && _time[5] == ':' &&
 				std::isdigit(_time[6]) && std::isdigit(_time[7])) {
@@ -980,14 +980,14 @@ Datetime::isTimeDelta(const std::string& timedelta)
 {
 	auto length = timedelta.length();
 	switch (length) {
-		case 6: // [+/-]00:00
+		case 6: // [+-]00:00
 			return (timedelta[0] == '+' || timedelta[0] == '-') && std::isdigit(timedelta[1]) && std::isdigit(timedelta[2]) &&
 				timedelta[3] == ':' && std::isdigit(timedelta[4]) && std::isdigit(timedelta[5]);
-		case 9: // [+/-]00:00:00
+		case 9: // [+-]00:00:00
 			return (timedelta[0] == '+' || timedelta[0] == '-') && std::isdigit(timedelta[1]) && std::isdigit(timedelta[2]) &&
 				timedelta[3] == ':' && std::isdigit(timedelta[4]) && std::isdigit(timedelta[5]) &&
 				timedelta[6] == ':' && std::isdigit(timedelta[7]) && std::isdigit(timedelta[8]);
-		default: // [+/-]00:00:00  [+/-]00:00:00.000...
+		default: // [+-]00:00:00  [+-]00:00:00.000...
 			if (length > 10 && (timedelta[0] == '+' || timedelta[0] == '-') && std::isdigit(timedelta[1]) &&
 				std::isdigit(timedelta[2]) && timedelta[3] == ':' && std::isdigit(timedelta[4]) &&
 				std::isdigit(timedelta[5]) && timedelta[6] == ':' && std::isdigit(timedelta[7]) &&
