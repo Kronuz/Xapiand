@@ -307,7 +307,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 					tm.day   = stox(std::stoul, date.substr(8, 2));
 					if (isvalidDate(tm.year, tm.mon, tm.day)) {
 						tm.hour = stox(std::stoul, date.substr(11, 2));
-						if (tm.hour < 60) {
+						if (tm.hour < 24) {
 							tm.min = stox(std::stoul, date.substr(14, 2));
 							if (tm.min < 60) {
 								tm.sec = stox(std::stoul, date.substr(17, 2));
@@ -330,7 +330,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 					tm.day   = stox(std::stoul, date.substr(8, 2));
 					if (isvalidDate(tm.year, tm.mon, tm.day)) {
 						tm.hour = stox(std::stoul, date.substr(11, 2));
-						if (tm.hour < 60) {
+						if (tm.hour < 24) {
 							tm.min = stox(std::stoul, date.substr(14, 2));
 							if (tm.min < 60) {
 								tm.sec = stox(std::stoul, date.substr(17, 2));
@@ -352,7 +352,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 					tm.day   = stox(std::stoul, date.substr(8, 2));
 					if (isvalidDate(tm.year, tm.mon, tm.day)) {
 						tm.hour = stox(std::stoul, date.substr(11, 2));
-						if (tm.hour < 60) {
+						if (tm.hour < 24) {
 							tm.min = stox(std::stoul, date.substr(14, 2));
 							if (tm.min < 60) {
 								tm.sec = stox(std::stoul, date.substr(17, 2));
@@ -364,7 +364,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 												tm.fsec = 0.0;
 												auto tz_h = date.substr(20, 2);
 												auto tz_m = date.substr(23, 2);
-												if (stox(std::stoul, tz_h) < 60 && stox(std::stoul, tz_m) < 60) {
+												if (stox(std::stoul, tz_h) < 24 && stox(std::stoul, tz_m) < 60) {
 													computeTimeZone(tm, date[19], tz_h, tz_m);
 													return Format::VALID;
 												}
@@ -391,7 +391,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 																if (*aux_end == ':') {
 																	auto tz_h = std::string(aux + 1, aux_end);
 																	auto tz_m = std::string(aux_end + 1, it_e);
-																	if (stox(std::stoul, tz_h) < 60 && stox(std::stoul, tz_m) < 60) {
+																	if (stox(std::stoul, tz_h) < 24 && stox(std::stoul, tz_m) < 60) {
 																		computeTimeZone(tm, c, tz_h, tz_m);
 																		tm.fsec = normalize_fsec(std::stod(std::string(it, aux)));
 																		return Format::VALID;
@@ -451,7 +451,7 @@ Datetime::ISO8601(const std::string& date)
 					auto day   = stox(std::stoul, date.substr(8, 2));
 					if (isvalidDate(year, mon, day)) {
 						auto hour = stox(std::stoul, date.substr(11, 2));
-						if (hour < 60) {
+						if (hour < 24) {
 							auto min = stox(std::stoul, date.substr(14, 2));
 							if (min < 60) {
 								auto sec = stox(std::stoul, date.substr(17, 2));
@@ -473,7 +473,7 @@ Datetime::ISO8601(const std::string& date)
 					auto day   = stox(std::stoul, date.substr(8, 2));
 					if (isvalidDate(year, mon, day)) {
 						auto hour = stox(std::stoul, date.substr(11, 2));
-						if (hour < 60) {
+						if (hour < 24) {
 							auto min = stox(std::stoul, date.substr(14, 2));
 							if (min < 60) {
 								auto sec = stox(std::stoul, date.substr(17, 2));
@@ -494,7 +494,7 @@ Datetime::ISO8601(const std::string& date)
 					auto day   = stox(std::stoul, date.substr(8, 2));
 					if (isvalidDate(year, mon, day)) {
 						auto hour = stox(std::stoul, date.substr(11, 2));
-						if (hour < 60) {
+						if (hour < 24) {
 							auto min = stox(std::stoul, date.substr(14, 2));
 							if (min < 60) {
 								auto sec = stox(std::stoul, date.substr(17, 2));
@@ -505,7 +505,7 @@ Datetime::ISO8601(const std::string& date)
 											if (length == 25 && date[22] == ':') {
 												auto tz_h = date.substr(20, 2);
 												auto tz_m = date.substr(23, 2);
-												if (stox(std::stoul, tz_h) < 60 && stox(std::stoul, tz_m) < 60) {
+												if (stox(std::stoul, tz_h) < 24 && stox(std::stoul, tz_m) < 60) {
 													return Format::VALID;
 												}
 												return Format::OUT_OF_RANGE;
@@ -530,7 +530,7 @@ Datetime::ISO8601(const std::string& date)
 																if (*aux_end == ':') {
 																	auto tz_h = std::string(aux + 1, aux_end);
 																	auto tz_m = std::string(aux_end + 1, it_e);
-																	if (stox(std::stoul, tz_h) < 60 && stox(std::stoul, tz_m) < 60) {
+																	if (stox(std::stoul, tz_h) < 24 && stox(std::stoul, tz_m) < 60) {
 																		return Format::VALID;
 																	}
 																	return Format::OUT_OF_RANGE;
