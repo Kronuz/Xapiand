@@ -46,7 +46,7 @@
 #include "exception.h"           // for Exit
 #include "field_parser.h"        // for FieldParser, FieldParserError
 #include "io_utils.h"            // for open, read
-#include "log.h"                 // for Log, L_ERR, L_WARNING, L_INFO
+#include "log.h"                 // for L_ERR, L_WARNING, L_INFO
 #include "namegen.h"             // for Generator
 #include "split.h"               // for Split
 

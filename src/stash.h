@@ -25,7 +25,7 @@
 #include <array>     // for array
 #include <atomic>    // for atomic
 
-#include "logger_fwd.h"
+#include "log.h"
 
 
 #ifndef L_STASH

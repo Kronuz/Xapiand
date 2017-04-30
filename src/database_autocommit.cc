@@ -25,7 +25,7 @@
 #include "database.h"          // for Database, DatabasePool
 #include "database_handler.h"  // for DatabaseHandler
 #include "endpoint.h"          // for Endpoints
-#include "log.h"               // for Log, L_OBJ, L_CALL, L_DEBUG, L_WARNING
+#include "log.h"               // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
 #include "manager.h"           // for XapiandManager
 #include "utils.h"             // for delta_string
 

@@ -27,7 +27,7 @@
 #include <ratio>                 // for ratio
 #include <type_traits>           // for remove_reference<>::type
 
-#include "log.h"                 // for L_EV, L_OBJ, Log, L_CALL, L_EV_BEGIN
+#include "log.h"                 // for L_EV, L_OBJ, L_CALL, L_EV_BEGIN
 #include "manager.h"             // for XapiandManager, XapiandManager::manager
 #include "utils.h"               // for readable_revents
 

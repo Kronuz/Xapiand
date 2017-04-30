@@ -70,8 +70,8 @@
 
 #if (TESTING_LOGS == 1)
 #  include "../src/log.h"
-#  define RETURN(x) { Log::finish(); return x; }
-#  define INIT_LOG Log::handlers.push_back(std::make_unique<StderrLogger>());
+#  define RETURN(x) { Logging::finish(); return x; }
+#  define INIT_LOG Logging::handlers.push_back(std::make_unique<StderrLogger>());
 #else
 template <typename... Args>
 inline void log(std::string fmt, Args&&... args) {

@@ -33,7 +33,7 @@
 #include <vector>        // for vector
 
 #include "exception.h"   // for Exception
-#include "logger_fwd.h"  // for L_DEBUG, L_EXC, L_NOTHING
+#include "log.h"         // for L_DEBUG, L_EXC, L_NOTHING
 #include "queue.h"       // for Queue
 #include "utils.h"       // for set_thread_name
 

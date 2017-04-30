@@ -37,7 +37,7 @@
 #include "ev/ev++.h"             // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
 #include "io_utils.h"            // for read, close, lseek, write
 #include "length.h"              // for serialise_length, unserialise_length
-#include "log.h"                 // for Log, L_CALL, L_ERR, L_EV, L_CONN, L_OBJ
+#include "log.h"                 // for L_CALL, L_ERR, L_EV, L_CONN, L_OBJ
 #include "lz4/xxhash.h"          // for XXH32_createState, XXH32_digest, XXH...
 #include "lz4_compressor.h"      // for LZ4BlockStreaming<>::iterator, LZ4Co...
 #include "manager.h"             // for sig_exit

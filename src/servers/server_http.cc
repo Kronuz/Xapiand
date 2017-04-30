@@ -32,7 +32,7 @@
 #include "client_http.h"          // for HttpClient
 #include "ev/ev++.h"              // for io, ::READ, loop_ref (ptr only)
 #include "http.h"                 // for Http
-#include "log.h"                  // for Log, L_EV, L_OBJ, L_CALL, L_ERR
+#include "log.h"                  // for L_EV, L_OBJ, L_CALL, L_ERR
 #include "utils.h"                // for ignored_errorno, readable_revents
 #include "worker.h"               // for Worker
 

@@ -47,7 +47,7 @@
 #include "exception.h"                      // for Exception, SerialisationE...
 #include "guid/guid.h"                      // for GuidGenerator, Guid
 #include "io_utils.h"                       // for close, write, unlink
-#include "log.h"                            // for Log, L_CALL, L_ERR, LOG_D...
+#include "log.h"                            // for L_CALL, L_ERR, LOG_D...
 #include "manager.h"                        // for XapiandManager, XapiandMa...
 #include "msgpack.h"                        // for MsgPack, object::object, ...
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy
@@ -184,7 +184,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 	auto this_response_size = response.size();
 	response_size += this_response_size;
 
-	if (Log::log_level > LOG_DEBUG) {
+	if (Logging::log_level > LOG_DEBUG) {
 		response_head += head;
 		response_headers += headers;
 	}
@@ -374,7 +374,7 @@ HttpClient::on_info(http_parser* p)
 		case 18:  // message_complete
 			break;
 		case 19:  // message_begin
-			if (Log::log_level > LOG_DEBUG) {
+			if (Logging::log_level > LOG_DEBUG) {
 				self->request_head.clear();
 				self->request_headers.clear();
 				self->request_body.clear();
@@ -429,7 +429,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 	} else if (state >= 45 && state <= 50) {
 		// s_header_value_discard_ws_almost_done  ->  s_header_almost_done
 		self->header_value.append(at, length);
-		if (Log::log_level > LOG_DEBUG) {
+		if (Logging::log_level > LOG_DEBUG) {
 			self->request_headers += self->header_name + ": " + self->header_value + eol;
 		}
 		if (state == 50) {
@@ -605,7 +605,7 @@ HttpClient::run()
 	enum http_status error_code = HTTP_STATUS_OK;
 
 	try {
-		if (Log::log_level > LOG_DEBUG) {
+		if (Logging::log_level > LOG_DEBUG) {
 			auto msgpack = get_body().second;
 			if (msgpack) {
 				request_body = msgpack.to_string(4);
@@ -1440,7 +1440,7 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 			basic_response["_query"] = basic_query;
 
-			if (Log::log_level > LOG_DEBUG) {
+			if (Logging::log_level > LOG_DEBUG) {
 				l_first_chunk = basic_response.to_string(4);
 				l_first_chunk = l_first_chunk.substr(0, l_first_chunk.size() - 9) + "\n";
 				l_last_chunk = "        ]\n    }\n}";
@@ -1562,7 +1562,7 @@ HttpClient::search_view(enum http_method method, Command)
 			// auto endpoint = endpoints[subdatabase];
 			// obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
 
-			if (Log::log_level > LOG_DEBUG) {
+			if (Logging::log_level > LOG_DEBUG) {
 				if (chunked) {
 					if (rc == 0) {
 						response_body += l_first_chunk;
@@ -1621,7 +1621,7 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 		}
 
-		if (Log::log_level > LOG_DEBUG) {
+		if (Logging::log_level > LOG_DEBUG) {
 			if (chunked) {
 				if (rc == 0) {
 					response_body += l_first_chunk;
@@ -2233,14 +2233,14 @@ HttpClient::clean_http_request()
 			priority = LOG_ERR;
 		}
 		if (!response_logged.exchange(true)) {
-			if (Log::log_level > LOG_DEBUG) {
+			if (Logging::log_level > LOG_DEBUG) {
 				log_response();
 			}
 			L(priority, color, this, "\"%s\" %d %s %s", request_head.c_str(), (int)response_status, bytes_string(response_size).c_str(), delta_string(request_begins, response_ends).c_str());
 		}
 	}
 
-	if (Log::log_level > LOG_DEBUG) {
+	if (Logging::log_level > LOG_DEBUG) {
 		request_head.clear();
 		request_headers.clear();
 		request_body.clear();
@@ -2451,7 +2451,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 	const auto& accepted_type = get_acceptable_type(ct_types);
 
 	try {
-		if (Log::log_level > LOG_DEBUG) {
+		if (Logging::log_level > LOG_DEBUG) {
 			response_body += response.to_string(4);
 		}
 		auto result = serialize_response(response, accepted_type, indent, (int)status >= 400);

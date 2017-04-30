@@ -51,7 +51,7 @@
 
 class GuidGenerator;
 class HttpServer;
-class Log;
+class Logging;
 class Worker;
 
 
@@ -171,7 +171,7 @@ class HttpClient : public BaseClient {
 
 	enum http_status response_status;
 	size_t response_size;
-	atomic_shared_ptr<Log> response_log;
+	atomic_shared_ptr<Logging> response_log;
 	std::atomic_bool response_logged;
 
 	std::string path;

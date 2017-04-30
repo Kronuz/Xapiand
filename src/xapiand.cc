@@ -56,7 +56,7 @@
 #include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"               // for Exit
 #include "io_utils.h"                // for close, open, write
-#include "log.h"                     // for Log, L_INFO, L_CRIT, L_NOTICE
+#include "log.h"                     // for Logging, L_INFO, L_CRIT, L_NOTICE
 #include "manager.h"                 // for opts_t, XapiandManager, XapiandM...
 #include "schema.h"                  // for default_spc
 #include "tclap/CmdLine.h"           // for CmdLine, ArgException, Arg, CmdL...
@@ -824,8 +824,8 @@ int main(int argc, char **argv) {
 		writepid(opts.pidfile.c_str());
 	}
 
-	//Log thread must be created after fork the parent process
-	auto& handlers = Log::handlers;
+	// Logging thread must be created after fork the parent process
+	auto& handlers = Logging::handlers;
 	if (opts.logfile.compare("syslog") == 0) {
 		handlers.push_back(std::make_unique<SysLog>());
 	} else if (!opts.logfile.empty()) {
@@ -835,7 +835,7 @@ int main(int argc, char **argv) {
 		handlers.push_back(std::make_unique<StderrLogger>());
 	}
 
-	Log::log_level += opts.verbosity;
+	Logging::log_level += opts.verbosity;
 
 	banner();
 
@@ -890,7 +890,7 @@ int main(int argc, char **argv) {
 			unlink(opts.pidfile.c_str());
 		}
 
-		Log::finish();
+		Logging::finish();
 		return exc.code;
 	}
 
@@ -899,6 +899,6 @@ int main(int argc, char **argv) {
 		unlink(opts.pidfile.c_str());
 	}
 
-	Log::finish();
+	Logging::finish();
 	return EX_OK;
 }

@@ -32,7 +32,7 @@
 #include "database.h"                       // for DatabasePool, Database
 #include "exception.h"                      // for CheckoutError, ClientError
 #include "length.h"                         // for unserialise_length, seria...
-#include "log.h"                            // for L_CALL, Log
+#include "log.h"                            // for L_CALL
 #include "msgpack.h"                        // for MsgPack, object::object, ...
 #include "msgpack_patcher.h"                // for apply_patch
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy

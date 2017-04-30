@@ -28,7 +28,7 @@
 #include <stdexcept>  // for invalid_argument, out_of_range
 #include <stdio.h>    // for snprintf
 
-#include "log.h"      // for L_ERR, Log
+#include "log.h"      // for L_ERR
 #include "msgpack.h"  // for MsgPack
 #include "utils.h"    // for stox
 

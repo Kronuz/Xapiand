@@ -26,7 +26,7 @@
 #include <sys/errno.h>  // for __error, errno, EINTR
 
 #include "config.h"     // for HAVE_PWRITE, HAVE_FSYNC
-#include "log.h"        // for Log, L_CALL, L_ERRNO
+#include "log.h"        // for L_CALL, L_ERRNO
 
 namespace io {
 

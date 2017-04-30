@@ -64,7 +64,7 @@
 #include "exception.h"                       // for Exit, ClientError, Excep...
 #include "http_parser.h"                     // for http_method
 #include "io_utils.h"                        // for close, open, read, write
-#include "log.h"                             // for Log, L_CALL, L_DEBUG
+#include "log.h"                             // for L_CALL, L_DEBUG
 #include "msgpack.h"                         // for MsgPack, object::object
 #include "serialise.h"                       // for TERM_STR
 #include "servers/http.h"                    // for Http

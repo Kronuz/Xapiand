@@ -32,7 +32,7 @@
 #include "exception.h"              // for MSG_NetworkError, NetworkError
 #include "io_utils.h"               // for close
 #include "length.h"                 // for serialise_string, unserialise_string
-#include "log.h"                    // for Log, L_ERR, L_OBJ, L_CRIT, L_CONN
+#include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_CONN
 #include "manager.h"                // for XapiandManager, sig_exit, Xapiand...
 #include "utils.h"                  // for ignored_errorno
 

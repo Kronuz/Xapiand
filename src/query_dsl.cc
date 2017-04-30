@@ -29,7 +29,7 @@
 #include "database_utils.h"                    // for prefixed, RESERVED_VALUE
 #include "exception.h"                         // for THROW, QueryDslError
 #include "field_parser.h"                      // for FieldParser
-#include "log.h"                               // for Log, L_CALL, L
+#include "log.h"                               // for L_CALL, L
 #include "multivalue/generate_terms.h"         // for GenerateTerms
 #include "multivalue/geospatialrange.h"        // for GeoSpatial, GeoSpatialRange
 #include "multivalue/range.h"                  // for MultipleValueRange

@@ -39,7 +39,7 @@
 #include "exception.h"            // for Error, MSG_Error, Exception, DocNot...
 #include "io_utils.h"             // for close, strerrno, write, open
 #include "length.h"               // for serialise_length, unserialise_length
-#include "log.h"                  // for L_OBJ, L_CALL, Log
+#include "log.h"                  // for L_OBJ, L_CALL
 #include "manager.h"              // for sig_exit
 #include "msgpack.h"              // for MsgPack
 #include "msgpack/unpack.hpp"     // for unpack_error

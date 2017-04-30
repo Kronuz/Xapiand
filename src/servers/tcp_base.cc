@@ -33,7 +33,7 @@
 #include <sysexits.h>               // for EX_CONFIG, EX_IOERR
 
 #include "io_utils.h"               // for close
-#include "log.h"                    // for Log, L_ERR, L_OBJ, L_CRIT, L_DEBUG
+#include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_DEBUG
 #include "manager.h"                // for sig_exit
 #include "utils.h"                  // for ignored_errorno
 
