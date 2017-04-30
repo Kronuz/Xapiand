@@ -96,6 +96,7 @@ namespace Datetime {
 
 	void dateTimeParser(const std::string& date, tm_t& tm);
 	Format ISO8601(const std::string& date, tm_t& tm);
+	Format ISO8601(const std::string& date);
 	void processDateMath(const std::string& date_math, tm_t& tm);
 	void computeTimeZone(tm_t& tm, char op, const std::string& hour, const std::string& min);
 	void computeDateMath(tm_t& tm, const std::string& op, char unit);
