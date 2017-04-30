@@ -315,7 +315,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 												}
 												return Format::OUT_OF_RANGE;
 											}
-											return Format::ERROR;
+											return Format::INVALID;
 										case '.': {
 											auto it = date.begin() + 19;
 											const auto it_e = date.end();
@@ -344,7 +344,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 																	return Format::OUT_OF_RANGE;
 																}
 															}
-															return Format::ERROR;
+															return Format::INVALID;
 														default:
 															return Format::INVALID;
 													}
@@ -455,7 +455,7 @@ Datetime::ISO8601(const std::string& date)
 												}
 												return Format::OUT_OF_RANGE;
 											}
-											return Format::ERROR;
+											return Format::INVALID;
 										case '.': {
 											auto it = date.begin() + 19;
 											const auto it_e = date.end();
@@ -481,7 +481,7 @@ Datetime::ISO8601(const std::string& date)
 																	return Format::OUT_OF_RANGE;
 																}
 															}
-															return Format::ERROR;
+															return Format::INVALID;
 														default:
 															return Format::INVALID;
 													}
