@@ -166,37 +166,38 @@ inline Log log(bool cleanup, bool stacked, int timeout, bool async, int priority
 	return log(cleanup, stacked, std::chrono::milliseconds(timeout), async, priority, std::forward<Args>(args)...);
 }
 
-const char* ansi_color(float red, float green, float blue, float alpha, bool bold);
-
-
-#define MERGE_(a,b)  a##b
-#define LABEL_(a) MERGE_(__unique, a)
-#define UNIQUE_NAME LABEL_(__LINE__)
-
-
-#define NO_COL "\033[0m"
-#define BLACK "\033[0;30m"
-#define GREY "\033[0;37m"
-#define RED "\033[0;31m"
-#define GREEN "\033[0;32m"
-#define YELLOW "\033[0;33m"
-#define BLUE "\033[0;34m"
-#define MAGENTA "\033[0;35m"
-#define CYAN "\033[0;36m"
-#define DARK_GREY "\033[1;30m"
-#define LIGHT_RED "\033[1;31m"
-#define LIGHT_GREEN "\033[1;32m"
-#define LIGHT_YELLOW "\033[1;33m"
-#define LIGHT_BLUE "\033[1;34m"
-#define LIGHT_MAGENTA "\033[1;35m"
-#define LIGHT_CYAN "\033[1;36m"
-#define WHITE "\033[1;37m"
+const std::string& ansi_color(float red, float green, float blue, float alpha, bool bold);
 
 
 #define rgb(r, g, b)      ansi_color(r, g, b, 1, false)
 #define rgba(r, g, b, a)  ansi_color(r, g, b, a, false)
 #define brgb(r, g, b)     ansi_color(r, g, b, 1, true)
 #define brgba(r, g, b, a) ansi_color(r, g, b, a, true)
+
+
+const std::string NO_COL("\033[0m");
+
+#define BLACK rgb(0, 0, 0)
+#define GREY rgb(192, 192, 192)
+#define RED rgb(128, 0, 0)
+#define GREEN rgb(0, 128, 0)
+#define YELLOW rgb(128, 128, 0)
+#define BLUE rgb(0, 0, 128)
+#define MAGENTA rgb(128, 0, 128)
+#define CYAN rgb(0, 128, 128)
+#define DARK_GREY rgb(96, 96, 96)
+#define LIGHT_RED rgb(255, 0, 0)
+#define LIGHT_GREEN rgb(0, 255, 0)
+#define LIGHT_YELLOW rgb(255, 255, 0)
+#define LIGHT_BLUE rgb(0, 0, 255)
+#define LIGHT_MAGENTA rgb(255, 0, 255)
+#define LIGHT_CYAN rgb(0, 255, 255)
+#define WHITE rgb(255, 255, 255)
+
+
+#define MERGE_(a,b)  a##b
+#define LABEL_(a) MERGE_(__unique, a)
+#define UNIQUE_NAME LABEL_(__LINE__)
 
 
 #define LOG_COL WHITE

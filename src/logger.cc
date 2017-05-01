@@ -49,7 +49,7 @@ int Logging::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Logging::handlers;
 
 
-const char*
+const std::string&
 ansi_color(float red, float green, float blue, float alpha, bool bold)
 {
 	static enum class Coloring : uint8_t {
@@ -137,20 +137,20 @@ ansi_color(float red, float green, float blue, float alpha, bool bold)
 		}
 		it = colors.insert(std::make_pair(hash, buffer)).first;
 	}
-	return it->second.c_str();
+	return it->second;
 }
 
 
-static constexpr const char * const priorities[] = {
-	EMERG_COL "█" NO_COL,   // LOG_EMERG    0 = System is unusable
-	ALERT_COL "▉" NO_COL,   // LOG_ALERT    1 = Action must be taken immediately
-	CRIT_COL "▊" NO_COL,    // LOG_CRIT     2 = Critical conditions
-	ERR_COL "▋" NO_COL,     // LOG_ERR      3 = Error conditions
-	WARNING_COL "▌" NO_COL, // LOG_WARNING  4 = Warning conditions
-	NOTICE_COL "▍" NO_COL,  // LOG_NOTICE   5 = Normal but significant condition
-	INFO_COL "▎" NO_COL,    // LOG_INFO     6 = Informational
-	DEBUG_COL "▏" NO_COL,   // LOG_DEBUG    7 = Debug-level messages
-	NO_COL,                 // VERBOSE    > 7 = Verbose messages
+static const std::string priorities[] = {
+	EMERG_COL   + "█" + NO_COL, // LOG_EMERG    0 = System is unusable
+	ALERT_COL   + "▉" + NO_COL, // LOG_ALERT    1 = Action must be taken immediately
+	CRIT_COL    + "▊" + NO_COL, // LOG_CRIT     2 = Critical conditions
+	ERR_COL     + "▋" + NO_COL, // LOG_ERR      3 = Error conditions
+	WARNING_COL + "▌" + NO_COL, // LOG_WARNING  4 = Warning conditions
+	NOTICE_COL  + "▍" + NO_COL, // LOG_NOTICE   5 = Normal but significant condition
+	INFO_COL    + "▎" + NO_COL, // LOG_INFO     6 = Informational
+	DEBUG_COL   + "▏" + NO_COL, // LOG_DEBUG    7 = Debug-level messages
+	NO_COL,                     // VERBOSE    > 7 = Verbose messages
 };
 
 

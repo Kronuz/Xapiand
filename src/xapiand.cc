@@ -81,7 +81,7 @@ static const std::vector<std::string> vec_signame = []() {
 	auto len = arraySize(sys_siglist); /* same size of sys_signame but sys_signame is not portable */
 	res.reserve(len);
 	for (size_t sig = 0; sig < len; ++sig) {
-		const char* col;
+		auto col = &NO_COL;
 		switch (sig) {
 			case SIGQUIT:
 			case SIGILL:
@@ -95,7 +95,7 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGSEGV:
 			case SIGSYS:
 				// create core image
-				col = LIGHT_RED;
+				col = &LIGHT_RED;
 				break;
 			case SIGHUP:
 			case SIGINT:
@@ -113,14 +113,14 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGSTKFLT:
 #endif
 				// terminate process
-				col = RED;
+				col = &RED;
 				break;
 			case SIGSTOP:
 			case SIGTSTP:
 			case SIGTTIN:
 			case SIGTTOU:
 				// stop process
-				col = YELLOW;
+				col = &YELLOW;
 				break;
 			case SIGURG:
 			case SIGCONT:
@@ -131,19 +131,19 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGINFO:
 #endif
 				// discard signal
-				col = BLUE;
+				col = &BLUE;
 				break;
 			default:
-				col = BLUE;
+				col = &BLUE;
 				break;
 		}
 #if defined(__linux__)
-		res.push_back(format_string("%sSignal received: %s" NO_COL "\n", col, strsignal(sig)));
+		res.push_back(format_string(*col + "Signal received: %s" + NO_COL + "\n", strsignal(sig)));
 #elif defined(__APPLE__) || defined(__FreeBSD__)
-		res.push_back(format_string("%sSignal received: %s" NO_COL "\n", col, sys_signame[sig]));
+		res.push_back(format_string(*col + "Signal received: %s" + NO_COL + "\n", sys_signame[sig]));
 #endif
 	}
-	res.push_back(BLUE "Signal received: unknown" NO_COL "\n");
+	res.push_back(BLUE + "Signal received: unknown" + NO_COL + "\n");
 	return res;
 }();
 
@@ -152,10 +152,10 @@ static const std::vector<std::string> vec_signame = []() {
 void sig_info(int) {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
-		write(STDERR_FILENO, BLUE "Info hooks disabled!" NO_COL "\n");
+		write(STDERR_FILENO, BLUE + "Info hooks disabled!" + NO_COL + "\n");
 	} else {
 		logger_info_hook = -1ULL;
-		write(STDERR_FILENO, BLUE "Info hooks enabled!" NO_COL "\n");
+		write(STDERR_FILENO, BLUE + "Info hooks enabled!" + NO_COL + "\n");
 	}
 }
 #endif
@@ -769,18 +769,15 @@ void banner() {
 #endif
 
 	L_INFO(nullptr,
-		"\n\n"
-		WHITE  "     __  __           _                 _\n"
-		WHITE  "     \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n"
-		WHITE  "      \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n"
-		WHITE  "      /  \\ (_| | |_) | | (_| | | | | (_| |\n"
-		NO_COL "     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n"
-		NO_COL "               |_|" LIGHT_GREEN "%s\n" GREEN
-		"%s\n"
-		"%s\n\n",
-		center_string(format_string("%s v%s", PACKAGE_NAME, PACKAGE_VERSION), 24).c_str(),
-		center_string(format_string("[%s]", PACKAGE_BUGREPORT), 46).c_str(),
-		center_string("Using " + join_string(versions, ", ", " and "), 46).c_str());
+		"\n\n" +
+		rgb(255, 255, 255) + "     __  __           _                 _\n" +
+		rgb(224, 224, 224) + "     \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n" +
+		rgb(192, 192, 192) + "      \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
+		rgb(160, 160, 160) + "      /  \\ (_| | |_) | | (_| | | | | (_| |\n" +
+		rgb(128, 128, 128) + "     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
+		rgb(96, 96, 96)    + "               |_|" + LIGHT_GREEN + center_string(format_string("%s v%s", PACKAGE_NAME, PACKAGE_VERSION), 24) + "\n" + GREEN +
+		center_string(format_string("[%s]", PACKAGE_BUGREPORT), 46) + "\n" +
+		center_string("Using " + join_string(versions, ", ", " and "), 46) + "\n\n");
 }
 
 
