@@ -183,7 +183,7 @@ const std::string NO_COL("\033[0m");
 #define YELLOW rgb(131, 87, 11)
 #define BLUE rgb(11, 69, 131)
 #define MAGENTA rgb(131, 11, 103)
-#define CYAN rgb(11, 131, 129)
+#define CYAN rgb(11, 103, 131)
 #define GREY rgb(192, 192, 192)
 #define DARK_GREY rgb(96, 96, 96)
 #define LIGHT_RED rgb(232, 25, 10)
@@ -191,7 +191,7 @@ const std::string NO_COL("\033[0m");
 #define LIGHT_YELLOW rgb(232, 195, 10)
 #define LIGHT_BLUE rgb(10, 114, 232)
 #define LIGHT_MAGENTA rgb(232, 10, 180)
-#define LIGHT_CYAN rgb(10, 232, 228)
+#define LIGHT_CYAN rgb(6, 220, 255)
 #define WHITE rgb(255, 255, 255)
 
 
