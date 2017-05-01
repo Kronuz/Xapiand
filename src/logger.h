@@ -113,7 +113,7 @@ public:
 	Logging(const std::string& str, bool cleanup, bool stacked, bool async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Logging();
 
-	static std::string str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr, bool info);
+	static std::string _str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr, bool info);
 
 	static void finish(int wait=10);
 	static void join();
@@ -132,9 +132,14 @@ public:
 
 	static Log print(const std::string& str, bool cleanup, bool stacked, int timeout=0, bool async=true, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
-	static Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
+	static Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 
-	static Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
+	static Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
+
+	template <typename... Args>
+	static Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const std::string& suffix, const std::string& prefix, const void *obj, const std::string& fmt, Args&&... args) {
+		return _log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix.c_str(), prefix.c_str(), obj, fmt.c_str(), std::forward<Args>(args)...);
+	}
 
 	template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
 	static Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args);
@@ -144,9 +149,14 @@ public:
 
 	static Log print(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
-	bool unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
+	bool _unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 
-	bool unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
+	bool _unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
+
+	template <typename... Args>
+	bool unlog(int priority, const char *file, int line, const std::string& suffix, const std::string& prefix, const void *obj, const std::string& fmt, Args&&... args) {
+		return _unlog(priority, file, line, suffix.c_str(), prefix.c_str(), obj, fmt.c_str(), std::forward<Args>(args)...);
+	}
 
 	void cleanup();
 

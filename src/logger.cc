@@ -168,26 +168,26 @@ validated_priority(int priority)
 
 
 void
-println(bool with_endl, const char *format, va_list argptr, const void* obj, bool info)
+_println(bool with_endl, const char *format, va_list argptr, const void* obj, bool info)
 {
-	std::string str(Logging::str_format(false, LOG_DEBUG, "", "", 0, "", "", obj, format, argptr, info));
+	std::string str(Logging::_str_format(false, LOG_DEBUG, "", "", 0, "", "", obj, format, argptr, info));
 	Logging::log(LOG_DEBUG, str, 0, info, with_endl);
 }
 
 
 Log
-log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+_log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = log(cleanup, stacked, wakeup, async, priority, std::string(), file, line, suffix, prefix, obj, format, argptr);
+	auto ret = _log(cleanup, stacked, wakeup, async, priority, std::string(), file, line, suffix, prefix, obj, format, argptr);
 	va_end(argptr);
 	return ret;
 }
 
 
 Log
-log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+_log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
 	return Logging::log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, obj, format, argptr);
 }
@@ -223,9 +223,9 @@ Log::operator=(Log&& o)
 
 
 bool
-Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+Log::_unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
-	return log->unlog(priority, file, line, suffix, prefix, obj, format, argptr);
+	return log->_unlog(priority, file, line, suffix, prefix, obj, format, argptr);
 }
 
 
@@ -390,7 +390,7 @@ Logging::run()
 
 
 std::string
-Logging::str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void* obj, const char *format, va_list argptr, bool info)
+Logging::_str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void* obj, const char *format, va_list argptr, bool info)
 {
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
@@ -432,24 +432,24 @@ Logging::str_format(bool stacked, int priority, const std::string& exc, const ch
 
 
 Log
-Logging::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
 	if (priority > log_level) {
 		return Log(std::make_shared<Logging>("", clean, stacked, async, priority, std::chrono::system_clock::now()));
 	}
 
-	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, obj, format, argptr, true)); // TODO: Slow!
+	std::string str(_str_format(stacked, priority, exc, file, line, suffix, prefix, obj, format, argptr, true)); // TODO: Slow!
 
 	return print(str, clean, stacked, wakeup, async, priority);
 }
 
 
 Log
-Logging::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = log(clean, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, obj, format, argptr);
+	auto ret = _log(clean, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, obj, format, argptr);
 	va_end(argptr);
 
 	return ret;
@@ -457,14 +457,14 @@ Logging::log(bool clean, bool stacked, std::chrono::time_point<std::chrono::syst
 
 
 bool
-Logging::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+Logging::_unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
 	if (!clear()) {
 		if (priority > log_level) {
 			return false;
 		}
 
-		std::string str(str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr, true));
+		std::string str(_str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr, true));
 
 		print(str, false, stacked, 0, async, priority, time_point_from_ullong(created_at));
 
@@ -475,11 +475,11 @@ Logging::unlog(int priority, const char *file, int line, const char *suffix, con
 
 
 bool
-Logging::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+Logging::_unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = unlog(priority, file, line, suffix, prefix, obj, format, argptr);
+	auto ret = _unlog(priority, file, line, suffix, prefix, obj, format, argptr);
 	va_end(argptr);
 
 	return ret;
