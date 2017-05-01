@@ -178,13 +178,13 @@ const std::string& ansi_color(float red, float green, float blue, float alpha, b
 const std::string NO_COL("\033[0m");
 
 #define BLACK rgb(0, 0, 0)
-#define GREY rgb(192, 192, 192)
 #define RED rgb(131, 19, 11)
 #define GREEN rgb(11, 131, 61)
 #define YELLOW rgb(131, 87, 11)
 #define BLUE rgb(11, 69, 131)
 #define MAGENTA rgb(131, 11, 103)
 #define CYAN rgb(11, 131, 129)
+#define GREY rgb(192, 192, 192)
 #define DARK_GREY rgb(96, 96, 96)
 #define LIGHT_RED rgb(232, 25, 10)
 #define LIGHT_GREEN rgb(10, 232, 103)
