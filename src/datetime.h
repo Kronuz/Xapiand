@@ -117,12 +117,12 @@ namespace Datetime {
 	double timestamp(const MsgPack& value, tm_t& tm);
 	bool isvalidDate(int year, int month, int day);
 	std::string isotime(const std::tm& timep);
-	std::string isotime(const tm_t& timep);
-	std::string isotime(double epoch);
+	std::string isotime(const tm_t& timep, bool trim=true);
+	std::string isotime(double epoch, bool trim=true);
 	void normalizeMonths(int& year, int& mon);
 	bool isDate(const std::string& date);
 	bool isTime(const std::string& date);
 	bool isTimeDelta(const std::string& date);
-	std::string to_string(const std::chrono::time_point<std::chrono::system_clock>& tp);
-	std::string normalizeISO8601(const std::string& iso_date);
+	std::string to_string(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim=true);
+	std::string normalizeISO8601(const std::string& iso_date, bool trim=true);
 };

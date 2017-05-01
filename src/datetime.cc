@@ -1063,16 +1063,18 @@ Datetime::isotime(const std::tm& tm)
  * Return a string with the date in ISO 8601 Format.
  */
 std::string
-Datetime::isotime(const tm_t& tm)
+Datetime::isotime(const tm_t& tm, bool trim)
 {
-	if (tm.fsec > 0.0) {
+	if (tm.fsec > 0.0 || !trim) {
 		char result[28];
 		snprintf(result, 28, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d%.6f",
 			tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec, tm.fsec);
 		std::string res(result);
-		auto it = res.erase(res.begin() + 19) + 1;
-		for (auto it_last = res.end() - 1; it_last != it && *it_last == '0'; --it_last) {
-			it_last = res.erase(it_last);
+		if (trim) {
+			auto it = res.erase(res.begin() + 19) + 1;
+			for (auto it_last = res.end() - 1; it_last != it && *it_last == '0'; --it_last) {
+				it_last = res.erase(it_last);
+			}
 		}
 		return res;
 	} else {
@@ -1088,10 +1090,10 @@ Datetime::isotime(const tm_t& tm)
  * Transforms a timestamp in seconds with decimal fraction to ISO 8601 format.
  */
 std::string
-Datetime::isotime(double timestamp)
+Datetime::isotime(double timestamp, bool trim)
 {
 	auto tm = to_tm_t(timestamp);
-	return isotime(tm);
+	return isotime(tm, trim);
 }
 
 
@@ -1195,9 +1197,9 @@ Datetime::isTimeDelta(const std::string& timedelta)
 
 
 std::string
-Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock>& tp)
+Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim)
 {
-	return isotime(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS);
+	return isotime(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS, trim);
 }
 
 
@@ -1205,9 +1207,9 @@ Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock>& tp
  * Normalize date in ISO 8601 format.
  */
 std::string
-Datetime::normalizeISO8601(const std::string& iso_date)
+Datetime::normalizeISO8601(const std::string& iso_date, bool trim)
 {
 	tm_t tm;
 	ISO8601(iso_date, tm);
-	return isotime(tm);
+	return isotime(tm, trim);
 }

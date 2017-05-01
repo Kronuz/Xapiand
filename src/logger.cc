@@ -397,7 +397,7 @@ Logging::_str_format(bool stacked, int priority, const std::string& exc, const c
 	std::string msg(buffer);
 	std::string result;
 	if (info && validated_priority(priority) <= LOG_DEBUG) {
-		auto iso8601 = "[" + Datetime::to_string(std::chrono::system_clock::now()) + "]";
+		auto iso8601 = "[" + Datetime::to_string(std::chrono::system_clock::now(), false) + "]";
 		auto tid = " (" + get_thread_name() + ")";
 		result = iso8601 + tid;
 #ifdef LOG_OBJ_ADDRESS
