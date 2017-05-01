@@ -96,13 +96,13 @@ ansi_color(float red, float green, float blue, float alpha, bool bold)
 			case Coloring::Palette:
 			case Coloring::Standard256: {
 				uint8_t color;
-				if (r == g == b) {
+				if (r == g && g == b) {
 					if (r < 8) {
 						color = 16;
 					} else if (r > 248) {
 						color = 231;
 					} else {
-						color = 232 + (((r - 8) / 247) * 24);
+						color = 232 + static_cast<uint8_t>((((r - 8.0) / 247.0) * 24.0) + 0.5);
 					}
 				} else {
 					r = r / 255.0 * 5.0 + 0.5;
@@ -114,18 +114,30 @@ ansi_color(float red, float green, float blue, float alpha, bool bold)
 				break;
 			}
 			case Coloring::Standard16: {
-				uint8_t max = std::max({r, g, b});
-				uint8_t min = std::min({r, g, b});
 				uint8_t color;
-				if (max < 32) {
-					color = 0;
+				if (r == g && g == b) {
+					if (r > 192) {
+						color = 15;
+					} else if (r > 128) {
+						color = 7;
+					} else if (r > 32) {
+						color = 8;
+					} else {
+						color = 0;
+					}
 				} else {
-					r = static_cast<uint8_t>((r - min) * 255.0 / (max - min) + 0.5) > 128 ? 1 : 0;
-					g = static_cast<uint8_t>((g - min) * 255.0 / (max - min) + 0.5) > 128 ? 1 : 0;
-					b = static_cast<uint8_t>((b - min) * 255.0 / (max - min) + 0.5) > 128 ? 1 : 0;
-					color = (b << 2) | (g << 1) | r;
-					if (max > 192) {
-						color += 8;
+					uint8_t max = std::max({r, g, b});
+					uint8_t min = std::min({r, g, b}) - 1;
+					if (max <= 32) {
+						color = 0;
+					} else {
+						r = static_cast<int>((r - min) * 255.0 / (max - min) + 0.5) > 128 ? 1 : 0;
+						g = static_cast<int>((g - min) * 255.0 / (max - min) + 0.5) > 128 ? 1 : 0;
+						b = static_cast<int>((b - min) * 255.0 / (max - min) + 0.5) > 128 ? 1 : 0;
+						color = (b << 2) | (g << 1) | r;
+						if (max > 192) {
+							color += 8;
+						}
 					}
 				}
 				sprintf(buffer, "\033[%d;38;5;%dm", bold, color);
