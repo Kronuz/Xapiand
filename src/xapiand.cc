@@ -75,6 +75,10 @@ ssize_t write(int fildes, T (&buf)[N]) {
 	return write(fildes, buf, N - 1);
 }
 
+ssize_t write(int fildes, const std::string& buf) {
+	return write(fildes, buf.data(), buf.size());
+}
+
 
 static const std::vector<std::string> vec_signame = []() {
 	std::vector<std::string> res;
