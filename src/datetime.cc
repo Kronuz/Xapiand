@@ -167,7 +167,7 @@ static void process_date_time(Datetime::tm_t& tm, const std::string& str_time) {
 													}
 												}
 											}
-											THROW(DatetimeError, "Error format in: %s, the format must be '00:00(:00(.0...)(+/-00:00))'", str_time.c_str());
+											THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", str_time.c_str());
 										}
 									}
 									tm.fsec = Datetime::normalize_fsec(std::stod(std::string(it, it_e)));
@@ -182,7 +182,7 @@ static void process_date_time(Datetime::tm_t& tm, const std::string& str_time) {
 			}
 			break;
 	}
-	THROW(DatetimeError, "Error format in: %s, the format must be 00:00(:00(.0...)(+/-00:00))", str_time.c_str());
+	THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))'", str_time.c_str());
 }
 
 
