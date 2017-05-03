@@ -44,10 +44,10 @@ Cast::cast(const MsgPack& obj)
 			case Hash::TEXT:
 			case Hash::STRING:
 			case Hash::UUID:
-			case Hash::DATE:
-				return date(obj.at(str_key));
 			case Hash::EWKT:
 				return string(obj.at(str_key));
+			case Hash::DATE:
+				return date(obj.at(str_key));
 			case Hash::POINT:
 			case Hash::CIRCLE:
 			case Hash::CONVEX:
