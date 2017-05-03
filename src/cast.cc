@@ -43,9 +43,12 @@ Cast::cast(const MsgPack& obj)
 			case Hash::TERM:
 			case Hash::TEXT:
 			case Hash::STRING:
+				return string(obj.at(str_key));
+			case Hash::TIME:
+			case Hash::TIMEDELTA:
 			case Hash::UUID:
 			case Hash::EWKT:
-				return string(obj.at(str_key));
+				return strict_string(obj.at(str_key));
 			case Hash::DATE:
 				return date(obj.at(str_key));
 			case Hash::POINT:
@@ -220,6 +223,16 @@ Cast::string(const MsgPack& obj)
 }
 
 
+std::string
+Cast::strict_string(const MsgPack& obj)
+{
+	if (obj.is_string()) {
+		return obj.as_string();
+	}
+	THROW(SerialisationError, "Type %s cannot be cast to strict string", MsgPackTypes[toUType(obj.getType())]);
+}
+
+
 bool
 Cast::boolean(const MsgPack& obj)
 {
@@ -282,6 +295,8 @@ Cast::getType(const std::string& cast_word)
 		case Hash::STRING:            return FieldType::STRING;
 		case Hash::UUID:              return FieldType::UUID;
 		case Hash::DATE:              return FieldType::DATE;
+		case Hash::TIME:              return FieldType::TIME;
+		case Hash::TIMEDELTA:         return FieldType::TIMEDELTA;
 		case Hash::EWKT:              return FieldType::GEO;
 		case Hash::POINT:             return FieldType::GEO;
 		case Hash::CIRCLE:            return FieldType::GEO;

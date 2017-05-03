@@ -41,6 +41,8 @@ namespace Cast {
 		STRING            = xxh64::hash(RESERVED_STRING),
 		UUID              = xxh64::hash(RESERVED_UUID),
 		DATE              = xxh64::hash(RESERVED_DATE),
+		TIME              = xxh64::hash(RESERVED_TIME),
+		TIMEDELTA         = xxh64::hash(RESERVED_TIMEDELTA),
 		EWKT              = xxh64::hash(RESERVED_EWKT),
 		POINT             = xxh64::hash(RESERVED_POINT),
 		CIRCLE            = xxh64::hash(RESERVED_CIRCLE),
@@ -66,6 +68,7 @@ namespace Cast {
 	uint64_t positive(const MsgPack& obj);
 	double _float(const MsgPack& obj);
 	std::string string(const MsgPack& obj);
+	std::string strict_string(const MsgPack& obj);
 	bool boolean(const MsgPack& obj);
 	MsgPack date(const MsgPack& obj);
 
