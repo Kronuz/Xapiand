@@ -149,6 +149,13 @@ public:
 };
 
 
+class CastError : public ClientError, public Xapian::SerialisationError {
+public:
+	template<typename... Args>
+	CastError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::SerialisationError(message) { }
+};
+
+
 class NetworkError : public ClientError, public Xapian::NetworkError {
 public:
 	template<typename... Args>

@@ -23,7 +23,6 @@
 #include "cast.h"
 
 #include "schema.h"
-#include "serialise.h"
 
 
 MsgPack
@@ -64,11 +63,11 @@ Cast::cast(const MsgPack& obj)
 			case Hash::GEO_INTERSECTION:
 				return obj;
 			default:
-				THROW(SerialisationError, "Unknown cast type %s", str_key.c_str());
+				THROW(CastError, "Unknown cast type %s", str_key.c_str());
 		}
 	}
 
-	THROW(SerialisationError, "Expected map with one element");
+	THROW(CastError, "Expected map with one element");
 }
 
 
@@ -80,25 +79,25 @@ Cast::cast(FieldType type, const std::string& field_value)
 			try {
 				return MsgPack(stox(std::stoll, field_value));
 			} catch (const std::invalid_argument&) {
-				THROW(SerialisationError, "Value %s cannot be cast to integer", field_value.c_str());
+				THROW(CastError, "Value %s cannot be cast to integer", field_value.c_str());
 			} catch (const std::out_of_range&) {
-				THROW(SerialisationError, "Value %s cannot be cast to integer", field_value.c_str());
+				THROW(CastError, "Value %s cannot be cast to integer", field_value.c_str());
 			}
 		case FieldType::POSITIVE:
 			try {
 				return MsgPack(stox(std::stoull, field_value));
 			} catch (const std::invalid_argument&) {
-				THROW(SerialisationError, "Value %s cannot be cast to positive", field_value.c_str());
+				THROW(CastError, "Value %s cannot be cast to positive", field_value.c_str());
 			} catch (const std::out_of_range&) {
-				THROW(SerialisationError, "Value %s cannot be cast to positive", field_value.c_str());
+				THROW(CastError, "Value %s cannot be cast to positive", field_value.c_str());
 			}
 		case FieldType::FLOAT:
 			try {
 				return MsgPack(stox(std::stod, field_value));
 			} catch (const std::invalid_argument&) {
-				THROW(SerialisationError, "Value %s cannot be cast to float", field_value.c_str());
+				THROW(CastError, "Value %s cannot be cast to float", field_value.c_str());
 			} catch (const std::out_of_range&) {
-				THROW(SerialisationError, "Value %s cannot be cast to float", field_value.c_str());
+				THROW(CastError, "Value %s cannot be cast to float", field_value.c_str());
 			}
 		case FieldType::EMPTY:
 			// Try like INTEGER.
@@ -109,7 +108,7 @@ Cast::cast(FieldType type, const std::string& field_value)
 
 			// Try like POSITIVE.
 			try {
-				return  MsgPack(stox(std::stoull, field_value));
+				return MsgPack(stox(std::stoull, field_value));
 			} catch (const std::invalid_argument&) {
 			} catch (const std::out_of_range&) { }
 
@@ -139,14 +138,14 @@ Cast::integer(const MsgPack& obj)
 			try {
 				return stox(std::stoll, obj.as_string());
 			} catch (const std::invalid_argument&) {
-				THROW(SerialisationError, "Value %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
+				THROW(CastError, "Value %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
 			} catch (const std::out_of_range&) {
-				THROW(SerialisationError, "Value %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
+				THROW(CastError, "Value %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
 			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(SerialisationError, "Type %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -165,14 +164,14 @@ Cast::positive(const MsgPack& obj)
 			try {
 				return stox(std::stoull, obj.as_string());
 			} catch (const std::invalid_argument&) {
-				THROW(SerialisationError, "Value %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
+				THROW(CastError, "Value %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
 			} catch (const std::out_of_range&) {
-				THROW(SerialisationError, "Value %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
+				THROW(CastError, "Value %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
 			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(SerialisationError, "Type %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -191,14 +190,14 @@ Cast::_float(const MsgPack& obj)
 			try {
 				return stox(std::stod, obj.as_string());
 			} catch (const std::invalid_argument&) {
-				THROW(SerialisationError, "Value %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
+				THROW(CastError, "Value %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
 			} catch (const std::out_of_range&) {
-				THROW(SerialisationError, "Value %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
+				THROW(CastError, "Value %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
 			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(SerialisationError, "Type %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -229,7 +228,7 @@ Cast::strict_string(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.as_string();
 	}
-	THROW(SerialisationError, "Type %s cannot be cast to strict string", MsgPackTypes[toUType(obj.getType())]);
+	THROW(CastError, "Type %s cannot be cast to strict string", MsgPackTypes[toUType(obj.getType())]);
 }
 
 
@@ -261,7 +260,7 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(SerialisationError, "Type %s cannot be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -277,7 +276,7 @@ Cast::date(const MsgPack& obj)
 		case MsgPack::Type::MAP:
 			return obj;
 		default:
-			THROW(SerialisationError, "Type %s cannot be cast to date", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to date", MsgPackTypes[toUType(obj.getType())]);
 	}
 }
 
@@ -310,6 +309,6 @@ Cast::getType(const std::string& cast_word)
 		case Hash::GEO_COLLECTION:    return FieldType::GEO;
 		case Hash::GEO_INTERSECTION:  return FieldType::GEO;
 		default:
-			THROW(SerialisationError, "Unknown cast type %s", cast_word.c_str());
+			THROW(CastError, "Unknown cast type %s", cast_word.c_str());
 	}
 }
