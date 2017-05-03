@@ -43,13 +43,16 @@ Cast::cast(const MsgPack& obj)
 			case Hash::TEXT:
 			case Hash::STRING:
 				return string(obj.at(str_key));
-			case Hash::TIME:
-			case Hash::TIMEDELTA:
-			case Hash::UUID:
-			case Hash::EWKT:
-				return strict_string(obj.at(str_key));
 			case Hash::DATE:
 				return date(obj.at(str_key));
+			case Hash::TIME:
+				return time(obj.at(str_key));
+			case Hash::TIMEDELTA:
+				return timedelta(obj.at(str_key));
+			case Hash::UUID:
+				return uuid(obj.at(str_key));
+			case Hash::EWKT:
+				return ewkt(obj.at(str_key));
 			case Hash::POINT:
 			case Hash::CIRCLE:
 			case Hash::CONVEX:
@@ -118,7 +121,7 @@ Cast::cast(FieldType type, const std::string& field_value)
 			} catch (const std::invalid_argument&) {
 			} catch (const std::out_of_range&) { }
 		default:
-			// Default type TERM.
+			// Default type String.
 			return MsgPack(field_value);
 	}
 }
@@ -222,16 +225,6 @@ Cast::string(const MsgPack& obj)
 }
 
 
-std::string
-Cast::strict_string(const MsgPack& obj)
-{
-	if (obj.is_string()) {
-		return obj.as_string();
-	}
-	THROW(CastError, "Type %s cannot be cast to strict string", MsgPackTypes[toUType(obj.getType())]);
-}
-
-
 bool
 Cast::boolean(const MsgPack& obj)
 {
@@ -278,6 +271,46 @@ Cast::date(const MsgPack& obj)
 		default:
 			THROW(CastError, "Type %s cannot be cast to date", MsgPackTypes[toUType(obj.getType())]);
 	}
+}
+
+
+std::string
+Cast::time(const MsgPack& obj)
+{
+	if (obj.is_string()) {
+		return obj.as_string();
+	}
+	THROW(CastError, "Type %s cannot be cast to time", MsgPackTypes[toUType(obj.getType())]);
+}
+
+
+std::string
+Cast::timedelta(const MsgPack& obj)
+{
+	if (obj.is_string()) {
+		return obj.as_string();
+	}
+	THROW(CastError, "Type %s cannot be cast to timedelta", MsgPackTypes[toUType(obj.getType())]);
+}
+
+
+std::string
+Cast::uuid(const MsgPack& obj)
+{
+	if (obj.is_string()) {
+		return obj.as_string();
+	}
+	THROW(CastError, "Type %s cannot be cast to uuid", MsgPackTypes[toUType(obj.getType())]);
+}
+
+
+std::string
+Cast::ewkt(const MsgPack& obj)
+{
+	if (obj.is_string()) {
+		return obj.as_string();
+	}
+	THROW(CastError, "Type %s cannot be cast to ewkt", MsgPackTypes[toUType(obj.getType())]);
 }
 
 
