@@ -185,7 +185,7 @@ Cast::_float(const MsgPack& obj)
 		case MsgPack::Type::FLOAT:
 			return obj.as_f64();
 		case MsgPack::Type::STR:
-			try{
+			try {
 				return stox(std::stod, obj.as_string());
 			} catch (const std::invalid_argument&) {
 				THROW(SerialisationError, "Value %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
