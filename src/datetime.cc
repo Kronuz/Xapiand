@@ -147,7 +147,7 @@ static void process_date_time(Datetime::tm_t& tm, const std::string& str_time) {
 									}
 									THROW(DatetimeError, "Error format in: %s, the format must be '00:00:00[+-]00:00'", str_time.c_str());
 								case '.': {
-									auto it = str_time.begin() + 19;
+									auto it = str_time.begin() + 8;
 									const auto it_e = str_time.end();
 									for (auto aux = it + 1; aux != it_e; ++aux) {
 										const auto& c = *aux;
