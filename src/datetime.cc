@@ -295,8 +295,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 					return Format::OUT_OF_RANGE;
 				}
 				return Format::INVALID;
-			case 19:
-				// 0000-00-00[T ]00:00:00
+			case 19: // 0000-00-00[T ]00:00:00
 				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
 					tm.year  = stox(std::stoul, date.substr(0, 4));
 					tm.mon   = stox(std::stoul, date.substr(5, 2));
@@ -317,8 +316,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 					return Format::OUT_OF_RANGE;
 				}
 				return Format::INVALID;
-			case 20:
-				// 0000-00-00[T ]00:00:00Z
+			case 20: // 0000-00-00[T ]00:00:00Z
 				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 					date[16] == ':' && date[19] == 'Z') {
 					tm.year  = stox(std::stoul, date.substr(0, 4));
@@ -340,7 +338,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 					return Format::OUT_OF_RANGE;
 				}
 				return Format::INVALID;
-			default:
+			default: // 0000-00-00[T ]00:00:00[+-]00:00  0000-00-00[T ]00:00:00.0...  0000-00-00[T ]00:00:00.0...[+-]00:00
 				if (length > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
 					date[13] == ':' && date[16] == ':') {
 					tm.year  = stox(std::stoul, date.substr(0, 4));
@@ -460,8 +458,7 @@ Datetime::ISO8601(const std::string& date)
 					return Format::OUT_OF_RANGE;
 				}
 				return Format::INVALID;
-			case 20:
-				// 0000-00-00[T ]00:00:00Z
+			case 20: // 0000-00-00[T ]00:00:00Z
 				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 					date[16] == ':' && date[19] == 'Z') {
 					auto year  = stox(std::stoul, date.substr(0, 4));
@@ -482,7 +479,7 @@ Datetime::ISO8601(const std::string& date)
 					return Format::OUT_OF_RANGE;
 				}
 				return Format::INVALID;
-			default:
+			default: // 0000-00-00[T ]00:00:00[+-]00:00  0000-00-00[T ]00:00:00.0...  0000-00-00[T ]00:00:00.0...[+-]00:00
 				if (length > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
 					date[13] == ':' && date[16] == ':') {
 					auto year  = stox(std::stoul, date.substr(0, 4));
