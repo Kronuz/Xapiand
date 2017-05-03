@@ -109,14 +109,10 @@ std::string normalize_uuid(const std::string& uuid)
 
 MsgPack normalize_uuid(const MsgPack& uuid)
 {
-	switch (uuid.getType()) {
-		case MsgPack::Type::NIL:
-			return uuid;
-		case MsgPack::Type::MAP:
-			return normalize_uuid(Cast::string(uuid));
-		default:
-			return normalize_uuid(uuid.as_string());
+	if (uuid.is_string()) {
+		return normalize_uuid(uuid.as_string());
 	}
+	return uuid;
 }
 
 
