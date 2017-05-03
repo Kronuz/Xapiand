@@ -152,6 +152,7 @@ inline constexpr void operator^=(TypeIndex& a, const TypeIndex& b) {
 enum class FieldType : uint8_t {
 	EMPTY         =  ' ',
 	STRING        =  's',
+	TIMEDELTA     =  'z',
 	ARRAY         =  'A',
 	BOOLEAN       =  'B',
 	DATE          =  'D',
@@ -160,9 +161,10 @@ enum class FieldType : uint8_t {
 	INTEGER       =  'I',
 	OBJECT        =  'O',
 	POSITIVE      =  'P',
-	TERM          =  'T',
 	TEXT          =  'S',
+	TERM          =  'T',
 	UUID          =  'U',
+	TIME          =  'Z',
 };
 
 
@@ -257,6 +259,8 @@ struct required_spc_t {
 		bool dynamic:1;
 		bool strict:1;
 		bool date_detection:1;
+		bool time_detection:1;
+		bool timedelta_detection:1;
 		bool numeric_detection:1;
 		bool geo_detection:1;
 		bool bool_detection:1;
