@@ -43,14 +43,14 @@ Cast::cast(const MsgPack& obj)
 			case Hash::TEXT:
 			case Hash::STRING:
 				return string(obj.at(str_key));
+			case Hash::UUID:
+				return uuid(obj.at(str_key));
 			case Hash::DATE:
 				return date(obj.at(str_key));
 			case Hash::TIME:
 				return time(obj.at(str_key));
 			case Hash::TIMEDELTA:
 				return timedelta(obj.at(str_key));
-			case Hash::UUID:
-				return uuid(obj.at(str_key));
 			case Hash::EWKT:
 				return ewkt(obj.at(str_key));
 			case Hash::POINT:
@@ -258,6 +258,16 @@ Cast::boolean(const MsgPack& obj)
 }
 
 
+std::string
+Cast::uuid(const MsgPack& obj)
+{
+	if (obj.is_string()) {
+		return obj.as_string();
+	}
+	THROW(CastError, "Type %s cannot be cast to uuid", MsgPackTypes[toUType(obj.getType())]);
+}
+
+
 MsgPack
 Cast::date(const MsgPack& obj)
 {
@@ -291,16 +301,6 @@ Cast::timedelta(const MsgPack& obj)
 		return obj.as_string();
 	}
 	THROW(CastError, "Type %s cannot be cast to timedelta", MsgPackTypes[toUType(obj.getType())]);
-}
-
-
-std::string
-Cast::uuid(const MsgPack& obj)
-{
-	if (obj.is_string()) {
-		return obj.as_string();
-	}
-	THROW(CastError, "Type %s cannot be cast to uuid", MsgPackTypes[toUType(obj.getType())]);
 }
 
 
