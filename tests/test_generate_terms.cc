@@ -459,7 +459,7 @@ int numeric_test() {
 		// try to convert string to double
 		try {
 			int64_t val_s = (int64_t)strict_stod(test.start);
-			int64_t val_e = (int64_t)strict_stod(stod, test.end);
+			int64_t val_e = (int64_t)strict_stod(test.end);
 			result_query_terms = GenerateTerms::numeric(val_s, val_e, test.accuracy, test.acc_prefix).get_description();
 		} catch (const std::exception&) { }
 
