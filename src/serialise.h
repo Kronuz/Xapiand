@@ -96,19 +96,21 @@
 #endif
 
 
-#define FLOAT_STR    "float"
-#define INTEGER_STR  "integer"
-#define POSITIVE_STR "positive"
-#define TERM_STR     "term"
-#define TEXT_STR     "text"
-#define STRING_STR   "string"
-#define DATE_STR     "date"
-#define GEO_STR      "geospatial"
-#define BOOLEAN_STR  "boolean"
-#define UUID_STR     "uuid"
-#define ARRAY_STR    "array"
-#define OBJECT_STR   "object"
-#define EMPTY_STR    "empty"
+#define FLOAT_STR       "float"
+#define INTEGER_STR     "integer"
+#define POSITIVE_STR    "positive"
+#define TERM_STR        "term"
+#define TEXT_STR        "text"
+#define STRING_STR      "string"
+#define DATE_STR        "date"
+#define TIME_STR        "time"
+#define TIMEDELTA_STR   "timedelta"
+#define GEO_STR         "geospatial"
+#define BOOLEAN_STR     "boolean"
+#define UUID_STR        "uuid"
+#define ARRAY_STR       "array"
+#define OBJECT_STR      "object"
+#define EMPTY_STR       "empty"
 
 
 constexpr char SERIALISED_FALSE      = 'f';
@@ -172,6 +174,12 @@ namespace Serialise {
 	inline std::string date(Datetime::tm_t& tm) {
 		return sortable_serialise(Datetime::timestamp(tm));
 	}
+
+	// Serialise value like time.
+	std::string time(const std::string& field_value);
+
+	// Serialise value like timedelta.
+	std::string timedelta(const std::string& field_value);
 
 	// Serialise field_value like float.
 	std::string _float(const std::string& field_value);
@@ -274,6 +282,12 @@ namespace Unserialise {
 
 	// Unserialise a serialised date.
 	std::string date(const std::string& serialised_date);
+
+	// Unserialise a serialised time.
+	std::string time(const std::string& serialised_time);
+
+	// Unserialise a serialised timedelta.
+	std::string timedelta(const std::string& serialised_timedelta);
 
 	// Unserialise a serialised float.
 	inline double _float(const std::string& serialised_float) {
