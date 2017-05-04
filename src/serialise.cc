@@ -314,10 +314,155 @@ Serialise::date(const class MsgPack& value, Datetime::tm_t& tm)
 
 
 std::string
+Serialise::time(const std::string& field_value)
+{
+	auto length = field_value.length();
+	switch (length) {
+		case 5: // 00:00
+			if (field_value[2] == ':') {
+				auto hour = strict_stoul(field_value.substr(0, 2));
+				auto min = strict_stoul(field_value.substr(3, 2));
+				return timestamp(((hour * 60) + min) * 60);
+			}
+			break;
+		case 8: // 00:00:00
+			if (field_value[2] == ':' && field_value[5] == ':') {
+				auto hour = strict_stoul(field_value.substr(0, 2));
+				auto min = strict_stoul(field_value.substr(3, 2));
+				auto sec = strict_stoul(field_value.substr(6, 2));
+				return timestamp(((hour * 60) + min) * 60 + sec);
+			}
+			break;
+		default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
+			if (length > 9 && (field_value[2] == ':' && field_value[5] == ':')) {
+				auto hour = strict_stoul(field_value.substr(0, 2));
+				auto min = strict_stoul(field_value.substr(3, 2));
+				auto sec = strict_stoul(field_value.substr(6, 2));
+				double val = 1.0;
+				switch (field_value[8]) {
+					case '+':
+						val = -1.0;
+					case '-':
+						if (length == 14 && field_value[11] == ':') {
+							auto tz_h = strict_stoul(field_value.substr(9, 2));
+							auto tz_m = strict_stoul(field_value.substr(12, 2));
+							hour += val * tz_h;
+							min += val * tz_m;
+							return timestamp(((hour * 60) + min) * 60 + sec);
+						}
+						break;
+					case '.': {
+						auto it = field_value.begin() + 8;
+						const auto it_e = field_value.end();
+						for (auto aux = it + 1; aux != it_e; ++aux) {
+							const auto& c = *aux;
+							if (c < '0' || c > '9') {
+								switch (c) {
+									case '+':
+										val = -1.0;
+									case '-':
+										if ((it_e - aux) == 6) {
+											auto aux_end = aux + 3;
+											if (*aux_end == ':') {
+												auto tz_h = strict_stoul(std::string(aux + 1, aux_end));
+												auto tz_m = strict_stoul(std::string(aux_end + 1, it_e));
+												hour += val * tz_h;
+												min += val * tz_m;
+												auto fsec = Datetime::normalize_fsec(std::stod(std::string(it, aux)));
+												return timestamp(((hour * 60) + min) * 60 + sec + fsec);
+											}
+										}
+										break;
+									default:
+										break;
+								}
+								THROW(SerialisationError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", field_value.c_str());
+							}
+						}
+						auto fsec = Datetime::normalize_fsec(std::stod(std::string(it, it_e)));
+						return timestamp(((hour * 60) + min) * 60 + sec + fsec);
+					}
+					default:
+						break;
+				}
+			}
+			break;
+	}
+	THROW(SerialisationError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", field_value.c_str());
+}
+
+
+std::string
+Serialise::timedelta(const std::string& field_value)
+{
+	auto length = field_value.length();
+	double val = 1.0;
+	switch (length) {
+		case 6: // [+-]00:00
+			switch (field_value[0]) {
+				case '-':
+					val = -1.0;
+				case '+':
+					if (field_value[3] == ':') {
+						auto hour = strict_stoul(field_value.substr(1, 2));
+						auto min = strict_stoul(field_value.substr(4, 2));
+						return timestamp(val * (((hour * 60) + min) * 60));
+					}
+				default:
+					break;
+			}
+			break;
+
+		case 9: // [+-]00:00:00
+			switch (field_value[0]) {
+				case '-':
+					val = -1.0;
+				case '+':
+					if (field_value[3] == ':' && field_value[6] == ':') {
+						auto hour = strict_stoul(field_value.substr(1, 2));
+						auto min = strict_stoul(field_value.substr(4, 2));
+						auto sec = strict_stoul(field_value.substr(7, 2));
+						return timestamp(val * (((hour * 60) + min) * 60 + sec));
+					}
+				default:
+					break;
+			}
+			break;
+
+		default: //  [+-]00:00:00.000...
+			switch (field_value[0]) {
+				case '-':
+					val = -1.0;
+				case '+':
+					if (length > 10 && (field_value[3] == ':' && field_value[6] == ':' && field_value[9] == '.')) {
+						auto hour = strict_stoul(field_value.substr(1, 2));
+						auto min = strict_stoul(field_value.substr(4, 2));
+						auto sec = strict_stoul(field_value.substr(7, 2));
+						auto it = field_value.begin() + 9;
+						const auto it_e = field_value.end();
+						for (auto aux = it + 1; aux != it_e; ++aux) {
+							const auto& c = *aux;
+							if (c < '0' || c > '9') {
+								THROW(SerialisationError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", field_value.c_str());
+							}
+						}
+						auto fsec = Datetime::normalize_fsec(std::stod(std::string(it, it_e)));
+						return timestamp(val * (((hour * 60) + min) * 60 + sec + fsec));
+					}
+				default:
+					break;
+			}
+			break;
+	}
+	THROW(SerialisationError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", field_value.c_str());
+}
+
+
+std::string
 Serialise::_float(const std::string& field_value)
 {
 	try {
-		return _float(stox(std::stod, field_value));
+		return _float(strict_stod(field_value));
 	} catch (const std::invalid_argument&) {
 		THROW(SerialisationError, "Invalid float format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
@@ -330,7 +475,7 @@ std::string
 Serialise::integer(const std::string& field_value)
 {
 	try {
-		return integer(stox(std::stoll, field_value));
+		return integer(strict_stoll(field_value));
 	} catch (const std::invalid_argument&) {
 		THROW(SerialisationError, "Invalid integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
@@ -343,7 +488,7 @@ std::string
 Serialise::positive(const std::string& field_value)
 {
 	try {
-		return positive(stox(std::stoull, field_value));
+		return positive(strict_stoull(field_value));
 	} catch (const std::invalid_argument&) {
 		THROW(SerialisationError, "Invalid positive integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {

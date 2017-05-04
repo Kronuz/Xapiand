@@ -48,7 +48,7 @@ EWKT::EWKT(const std::string& str)
 		const auto str_srid = str.substr(5, 4);
 		if (str.length() > 9 && str[9] == ';') {
 			try {
-				auto SRID = stox(std::stoi, str_srid);
+				auto SRID = strict_stoi(str_srid);
 				if (!Cartesian::is_SRID_supported(SRID)) {
 					THROW(EWKTError, "SRID=%d is not supported", SRID);
 				}
@@ -273,18 +273,18 @@ EWKT::_parse_cartesian(int SRID, Iterator first, Iterator last)
 	if (first == last) {
 		THROW(InvalidArgument, "Expected ' ' after of longitude [%s]");
 	}
-	double lon = stox(std::stod, std::string(_first, first));
+	double lon = strict_stod(std::string(_first, first));
 
 	_first = ++first;
 	while (first != last && *first != ' ') {
 		++first;
 	}
-	double lat = stox(std::stod, std::string(_first, first));
+	double lat = strict_stod(std::string(_first, first));
 
 	if (first == last) {
 		return Cartesian(lat, lon, 0, Cartesian::Units::DEGREES, SRID);
 	}
-	double height = stox(std::stod, std::string(++first, last));
+	double height = strict_stod(std::string(++first, last));
 	return Cartesian(lat, lon, height, Cartesian::Units::DEGREES, SRID);
 }
 
@@ -320,9 +320,9 @@ EWKT::_parse_circle(int SRID, Iterator first, Iterator last)
 	auto center = _parse_cartesian(SRID, _first, first);
 
 	if (++first != last && *first == ' ') {
-		return Circle(std::move(center), stox(std::stod, std::string(++first, last)));
+		return Circle(std::move(center), strict_stod(std::string(++first, last)));
 	} else {
-		return Circle(std::move(center), stox(std::stod, std::string(first, last)));
+		return Circle(std::move(center), strict_stod(std::string(first, last)));
 	}
 }
 

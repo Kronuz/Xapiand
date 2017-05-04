@@ -96,9 +96,9 @@ static void process_date_time(Datetime::tm_t& tm, const std::string& str_time) {
 	switch (length) {
 		case 5: // 00:00
 			if (str_time[2] == ':') {
-				tm.hour = stox(std::stoul, str_time.substr(0, 2));
+				tm.hour = strict_stoul(str_time.substr(0, 2));
 				if (tm.hour < 24) {
-					tm.min = stox(std::stoul, str_time.substr(3, 2));
+					tm.min = strict_stoul(str_time.substr(3, 2));
 					if (tm.min < 60) {
 						tm.sec = 0;
 						tm.fsec = 0.0;
@@ -110,11 +110,11 @@ static void process_date_time(Datetime::tm_t& tm, const std::string& str_time) {
 			break;
 		case 8: // 00:00:00
 			if (str_time[2] == ':' && str_time[5] == ':') {
-				tm.hour = stox(std::stoul, str_time.substr(0, 2));
+				tm.hour = strict_stoul(str_time.substr(0, 2));
 				if (tm.hour < 24) {
-					tm.min = stox(std::stoul, str_time.substr(3, 2));
+					tm.min = strict_stoul(str_time.substr(3, 2));
 					if (tm.min < 60) {
-						tm.sec = stox(std::stoul, str_time.substr(6, 2));
+						tm.sec = strict_stoul(str_time.substr(6, 2));
 						if (tm.sec < 60) {
 							tm.fsec = 0.0;
 							return;
@@ -126,11 +126,11 @@ static void process_date_time(Datetime::tm_t& tm, const std::string& str_time) {
 			break;
 		default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
 			if (length > 9 && (str_time[2] == ':' && str_time[5] == ':')) {
-				tm.hour = stox(std::stoul, str_time.substr(0, 2));
+				tm.hour = strict_stoul(str_time.substr(0, 2));
 				if (tm.hour < 24) {
-					tm.min = stox(std::stoul, str_time.substr(3, 2));
+					tm.min = strict_stoul(str_time.substr(3, 2));
 					if (tm.min < 60) {
-						tm.sec = stox(std::stoul, str_time.substr(6, 2));
+						tm.sec = strict_stoul(str_time.substr(6, 2));
 						if (tm.sec < 60) {
 							switch (str_time[8]) {
 								case '+':
@@ -139,7 +139,7 @@ static void process_date_time(Datetime::tm_t& tm, const std::string& str_time) {
 										tm.fsec = 0.0;
 										auto tz_h = str_time.substr(9, 2);
 										auto tz_m = str_time.substr(12, 2);
-										if (stox(std::stoul, tz_h) < 24 && stox(std::stoul, tz_m) < 60) {
+										if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
 											computeTimeZone(tm, str_time[8], tz_h, tz_m);
 											return;
 										}
@@ -158,7 +158,7 @@ static void process_date_time(Datetime::tm_t& tm, const std::string& str_time) {
 													if (*aux_end == ':') {
 														auto tz_h = std::string(aux + 1, aux_end);
 														auto tz_m = std::string(aux_end + 1, it_e);
-														if (stox(std::stoul, tz_h) < 24 && stox(std::stoul, tz_m) < 60) {
+														if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
 															computeTimeZone(tm, c, tz_h, tz_m);
 															tm.fsec = Datetime::normalize_fsec(std::stod(std::string(it, aux)));
 															return;
@@ -282,9 +282,9 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 		switch (length) {
 			case 10: // 0000-00-00
 				if (date[4] == '-' && date[7] == '-') {
-					tm.year  = stox(std::stoul, date.substr(0, 4));
-					tm.mon   = stox(std::stoul, date.substr(5, 2));
-					tm.day   = stox(std::stoul, date.substr(8, 2));
+					tm.year  = strict_stoul(date.substr(0, 4));
+					tm.mon   = strict_stoul(date.substr(5, 2));
+					tm.day   = strict_stoul(date.substr(8, 2));
 					if (isvalidDate(tm.year, tm.mon, tm.day)) {
 						tm.hour = 0;
 						tm.min  = 0;
@@ -297,15 +297,15 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 				return Format::INVALID;
 			case 19: // 0000-00-00[T ]00:00:00
 				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
-					tm.year  = stox(std::stoul, date.substr(0, 4));
-					tm.mon   = stox(std::stoul, date.substr(5, 2));
-					tm.day   = stox(std::stoul, date.substr(8, 2));
+					tm.year  = strict_stoul(date.substr(0, 4));
+					tm.mon   = strict_stoul(date.substr(5, 2));
+					tm.day   = strict_stoul(date.substr(8, 2));
 					if (isvalidDate(tm.year, tm.mon, tm.day)) {
-						tm.hour = stox(std::stoul, date.substr(11, 2));
+						tm.hour = strict_stoul(date.substr(11, 2));
 						if (tm.hour < 24) {
-							tm.min = stox(std::stoul, date.substr(14, 2));
+							tm.min = strict_stoul(date.substr(14, 2));
 							if (tm.min < 60) {
-								tm.sec = stox(std::stoul, date.substr(17, 2));
+								tm.sec = strict_stoul(date.substr(17, 2));
 								if (tm.sec < 60) {
 									tm.fsec = 0.0;
 									return Format::VALID;
@@ -319,15 +319,15 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 			case 20: // 0000-00-00[T ]00:00:00Z
 				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 					date[16] == ':' && date[19] == 'Z') {
-					tm.year  = stox(std::stoul, date.substr(0, 4));
-					tm.mon   = stox(std::stoul, date.substr(5, 2));
-					tm.day   = stox(std::stoul, date.substr(8, 2));
+					tm.year  = strict_stoul(date.substr(0, 4));
+					tm.mon   = strict_stoul(date.substr(5, 2));
+					tm.day   = strict_stoul(date.substr(8, 2));
 					if (isvalidDate(tm.year, tm.mon, tm.day)) {
-						tm.hour = stox(std::stoul, date.substr(11, 2));
+						tm.hour = strict_stoul(date.substr(11, 2));
 						if (tm.hour < 24) {
-							tm.min = stox(std::stoul, date.substr(14, 2));
+							tm.min = strict_stoul(date.substr(14, 2));
 							if (tm.min < 60) {
-								tm.sec = stox(std::stoul, date.substr(17, 2));
+								tm.sec = strict_stoul(date.substr(17, 2));
 								if (tm.sec < 60) {
 									tm.fsec = 0.0;
 									return Format::VALID;
@@ -341,15 +341,15 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 			default: // 0000-00-00[T ]00:00:00[+-]00:00  0000-00-00[T ]00:00:00.0...  0000-00-00[T ]00:00:00.0...[+-]00:00
 				if (length > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
 					date[13] == ':' && date[16] == ':') {
-					tm.year  = stox(std::stoul, date.substr(0, 4));
-					tm.mon   = stox(std::stoul, date.substr(5, 2));
-					tm.day   = stox(std::stoul, date.substr(8, 2));
+					tm.year  = strict_stoul(date.substr(0, 4));
+					tm.mon   = strict_stoul(date.substr(5, 2));
+					tm.day   = strict_stoul(date.substr(8, 2));
 					if (isvalidDate(tm.year, tm.mon, tm.day)) {
-						tm.hour = stox(std::stoul, date.substr(11, 2));
+						tm.hour = strict_stoul(date.substr(11, 2));
 						if (tm.hour < 24) {
-							tm.min = stox(std::stoul, date.substr(14, 2));
+							tm.min = strict_stoul(date.substr(14, 2));
 							if (tm.min < 60) {
-								tm.sec = stox(std::stoul, date.substr(17, 2));
+								tm.sec = strict_stoul(date.substr(17, 2));
 								if (tm.sec < 60) {
 									switch (date[19]) {
 										case '+':
@@ -358,7 +358,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 												tm.fsec = 0.0;
 												auto tz_h = date.substr(20, 2);
 												auto tz_m = date.substr(23, 2);
-												if (stox(std::stoul, tz_h) < 24 && stox(std::stoul, tz_m) < 60) {
+												if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
 													computeTimeZone(tm, date[19], tz_h, tz_m);
 													return Format::VALID;
 												}
@@ -385,7 +385,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 																if (*aux_end == ':') {
 																	auto tz_h = std::string(aux + 1, aux_end);
 																	auto tz_m = std::string(aux_end + 1, it_e);
-																	if (stox(std::stoul, tz_h) < 24 && stox(std::stoul, tz_m) < 60) {
+																	if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
 																		computeTimeZone(tm, c, tz_h, tz_m);
 																		tm.fsec = normalize_fsec(std::stod(std::string(it, aux)));
 																		return Format::VALID;
@@ -429,9 +429,9 @@ Datetime::ISO8601(const std::string& date)
 		switch (length) {
 			case 10: // 0000-00-00
 				if (date[4] == '-' && date[7] == '-') {
-					auto year  = stox(std::stoul, date.substr(0, 4));
-					auto mon   = stox(std::stoul, date.substr(5, 2));
-					auto day   = stox(std::stoul, date.substr(8, 2));
+					auto year  = strict_stoul(date.substr(0, 4));
+					auto mon   = strict_stoul(date.substr(5, 2));
+					auto day   = strict_stoul(date.substr(8, 2));
 					if (isvalidDate(year, mon, day)) {
 						return Format::VALID;
 					}
@@ -440,15 +440,15 @@ Datetime::ISO8601(const std::string& date)
 				return Format::INVALID;
 			case 19: // 0000-00-00[T ]00:00:00
 				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
-					auto year  = stox(std::stoul, date.substr(0, 4));
-					auto mon   = stox(std::stoul, date.substr(5, 2));
-					auto day   = stox(std::stoul, date.substr(8, 2));
+					auto year  = strict_stoul(date.substr(0, 4));
+					auto mon   = strict_stoul(date.substr(5, 2));
+					auto day   = strict_stoul(date.substr(8, 2));
 					if (isvalidDate(year, mon, day)) {
-						auto hour = stox(std::stoul, date.substr(11, 2));
+						auto hour = strict_stoul(date.substr(11, 2));
 						if (hour < 24) {
-							auto min = stox(std::stoul, date.substr(14, 2));
+							auto min = strict_stoul(date.substr(14, 2));
 							if (min < 60) {
-								auto sec = stox(std::stoul, date.substr(17, 2));
+								auto sec = strict_stoul(date.substr(17, 2));
 								if (sec < 60) {
 									return Format::VALID;
 								}
@@ -461,15 +461,15 @@ Datetime::ISO8601(const std::string& date)
 			case 20: // 0000-00-00[T ]00:00:00Z
 				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 					date[16] == ':' && date[19] == 'Z') {
-					auto year  = stox(std::stoul, date.substr(0, 4));
-					auto mon   = stox(std::stoul, date.substr(5, 2));
-					auto day   = stox(std::stoul, date.substr(8, 2));
+					auto year  = strict_stoul(date.substr(0, 4));
+					auto mon   = strict_stoul(date.substr(5, 2));
+					auto day   = strict_stoul(date.substr(8, 2));
 					if (isvalidDate(year, mon, day)) {
-						auto hour = stox(std::stoul, date.substr(11, 2));
+						auto hour = strict_stoul(date.substr(11, 2));
 						if (hour < 24) {
-							auto min = stox(std::stoul, date.substr(14, 2));
+							auto min = strict_stoul(date.substr(14, 2));
 							if (min < 60) {
-								auto sec = stox(std::stoul, date.substr(17, 2));
+								auto sec = strict_stoul(date.substr(17, 2));
 								if (sec < 60) {
 									return Format::VALID;
 								}
@@ -482,15 +482,15 @@ Datetime::ISO8601(const std::string& date)
 			default: // 0000-00-00[T ]00:00:00[+-]00:00  0000-00-00[T ]00:00:00.0...  0000-00-00[T ]00:00:00.0...[+-]00:00
 				if (length > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
 					date[13] == ':' && date[16] == ':') {
-					auto year  = stox(std::stoul, date.substr(0, 4));
-					auto mon   = stox(std::stoul, date.substr(5, 2));
-					auto day   = stox(std::stoul, date.substr(8, 2));
+					auto year  = strict_stoul(date.substr(0, 4));
+					auto mon   = strict_stoul(date.substr(5, 2));
+					auto day   = strict_stoul(date.substr(8, 2));
 					if (isvalidDate(year, mon, day)) {
-						auto hour = stox(std::stoul, date.substr(11, 2));
+						auto hour = strict_stoul(date.substr(11, 2));
 						if (hour < 24) {
-							auto min = stox(std::stoul, date.substr(14, 2));
+							auto min = strict_stoul(date.substr(14, 2));
 							if (min < 60) {
-								auto sec = stox(std::stoul, date.substr(17, 2));
+								auto sec = strict_stoul(date.substr(17, 2));
 								if (sec < 60) {
 									switch (date[19]) {
 										case '+':
@@ -498,7 +498,7 @@ Datetime::ISO8601(const std::string& date)
 											if (length == 25 && date[22] == ':') {
 												auto tz_h = date.substr(20, 2);
 												auto tz_m = date.substr(23, 2);
-												if (stox(std::stoul, tz_h) < 24 && stox(std::stoul, tz_m) < 60) {
+												if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
 													return Format::VALID;
 												}
 												return Format::OUT_OF_RANGE;
@@ -523,7 +523,7 @@ Datetime::ISO8601(const std::string& date)
 																if (*aux_end == ':') {
 																	auto tz_h = std::string(aux + 1, aux_end);
 																	auto tz_m = std::string(aux_end + 1, it_e);
-																	if (stox(std::stoul, tz_h) < 24 && stox(std::stoul, tz_m) < 60) {
+																	if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
 																		return Format::VALID;
 																	}
 																	return Format::OUT_OF_RANGE;
@@ -903,7 +903,7 @@ Datetime::tm_t
 Datetime::to_tm_t(const std::string& date)
 {
 	try {
-		auto timestamp = stox(std::stod, date);
+		auto timestamp = strict_stod(date);
 		return to_tm_t(timestamp);
 	} catch (const std::invalid_argument&) {
 		tm_t tm;

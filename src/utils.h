@@ -44,21 +44,59 @@
 #define RESERVED_FDS  50 /* Better approach? */
 
 
-#define stox(func, s) \
+/* Strict converter for unsigned types */
+#define stoux(func, s) \
 	[](const std::string& str) { \
-		std::size_t sz; \
-		try { \
-			auto ret = (func)(str, &sz); \
-			if (sz != str.length()) { \
+		if (str.empty() || str[0] < '0' || str[0] > '9') { \
+			THROW(InvalidArgument, "Cannot convert value: '%s'", str.c_str()); \
+		} else { \
+			std::size_t sz; \
+			try { \
+				auto ret = (func)(str, &sz); \
+				if (sz != str.length()) { \
+					THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
+				} \
+				return ret; \
+			} catch (const std::out_of_range&) { \
+				THROW(OutOfRange, "Out of range value: %s", str.c_str()); \
+			} catch (const std::invalid_argument&) { \
 				THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
 			} \
-			return ret; \
-		} catch (const std::out_of_range&) { \
-			THROW(OutOfRange, "Out of range value: %s", str.c_str()); \
-		} catch (const std::invalid_argument&) { \
-			THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
 		} \
 	}(s)
+
+
+/* Strict converter for signed types */
+#define stosx(func, s) \
+	[](const std::string& str) { \
+		if (str.empty() || str[0] == ' ') { \
+			THROW(InvalidArgument, "Cannot convert value: '%s'", str.c_str()); \
+		} else { \
+			std::size_t sz; \
+			try { \
+				auto ret = (func)(str, &sz); \
+				if (sz != str.length()) { \
+					THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
+				} \
+				return ret; \
+			} catch (const std::out_of_range&) { \
+				THROW(OutOfRange, "Out of range value: %s", str.c_str()); \
+			} catch (const std::invalid_argument&) { \
+				THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
+			} \
+		} \
+	}(s)
+
+
+#define strict_stoul(s)     stoux(std::stoul, s)
+#define strict_stoull(s)    stoux(std::stoull, s)
+#define strict_stoi(s)      stosx(std::stoi, s)
+#define strict_stol(s)      stosx(std::stol, s)
+#define strict_stoll(s)     stosx(std::stoll, s)
+#define strict_stof(s)      stosx(std::stof, s)
+#define strict_stod(s)      stosx(std::stod, s)
+#define strict_stold(s)     stosx(std::stoi, s)
+#define stox(func, s)       strict_##func(#s)
 
 
 struct File_ptr {

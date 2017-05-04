@@ -526,7 +526,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, const std::string& 
 	L_CALL(this, "QueryDSL::get_acc_num_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
 	try {
-		auto acc = stox(std::stoull, field_accuracy.substr(1));
+		auto acc = strict_stoull(field_accuracy.substr(1));
 		auto value = Cast::integer(obj);
 		return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, acc)), field_spc.prefix, required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
 	} catch (const InvalidArgument&) {
@@ -544,7 +544,7 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, const std::string& 
 
 	if (field_accuracy.find("_geo") == 0) {
 		try {
-			auto nivel = stox(std::stoull, field_accuracy.substr(4));
+			auto nivel = strict_stoull(field_accuracy.substr(4));
 			GeoSpatial geo(obj);
 			const auto ranges = geo.getGeometry()->getRanges(default_spc.flags.partials, default_spc.error);
 			return GenerateTerms::geo(ranges, { nivel }, { field_spc.prefix }, wqf);

@@ -106,7 +106,7 @@ class FloatKey : public BaseKey {
 public:
 	FloatKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
-		  _ref_val(stox(std::stod, value)),
+		  _ref_val(strict_stod(value)),
 		  _ser_ref_val(Serialise::_float(_ref_val)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
@@ -122,7 +122,7 @@ class IntegerKey : public BaseKey {
 public:
 	IntegerKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
-		  _ref_val(stox(std::stoll, value)),
+		  _ref_val(strict_stoll(value)),
 		  _ser_ref_val(Serialise::integer(_ref_val)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
@@ -138,7 +138,7 @@ class PositiveKey : public BaseKey {
 public:
 	PositiveKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
-		  _ref_val(stox(std::stoull, value)),
+		  _ref_val(strict_stoull(value)),
 		  _ser_ref_val(Serialise::positive(_ref_val)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;

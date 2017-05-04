@@ -472,10 +472,10 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 								std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
 								while (next_param != end) {
 									if (next_param->str(1) == "q") {
-										q = stox(std::stod, next_param->str(2));
+										q = strict_stod(next_param->str(2));
 									}
 									else if (next_param->str(1) == "indent") {
-										indent = (unsigned)stox(std::stod, next_param->str(2));
+										indent = (unsigned)strict_stod(next_param->str(2));
 									}
 									++next_param;
 								}
@@ -504,7 +504,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 								std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
 								while (next_param != end) {
 									if (next_param->str(1) == "q") {
-										q = stox(std::stod, next_param->str(2));
+										q = strict_stod(next_param->str(2));
 									}
 									++next_param;
 								}

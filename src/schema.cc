@@ -285,9 +285,9 @@ static std::pair<std::string, FieldType> get_acc_data(const std::string& field_a
 	if (it == map_acc_date.end()) {
 		try {
 			if (field_acc.find("_geo") == 0) {
-				return std::make_pair(get_prefix(stox(std::stoull, field_acc.substr(4))), FieldType::GEO);
+				return std::make_pair(get_prefix(strict_stoull(field_acc.substr(4))), FieldType::GEO);
 			} else {
-				return std::make_pair(get_prefix(stox(std::stoull, field_acc.substr(1))), FieldType::INTEGER);
+				return std::make_pair(get_prefix(strict_stoull(field_acc.substr(1))), FieldType::INTEGER);
 			}
 		} catch (const InvalidArgument&) {
 			THROW(ClientError, "The field name: %s is not valid", repr(field_acc).c_str());
