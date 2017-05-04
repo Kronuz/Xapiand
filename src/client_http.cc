@@ -473,9 +473,8 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 								while (next_param != end) {
 									if (next_param->str(1) == "q") {
 										q = strict_stod(next_param->str(2));
-									}
-									else if (next_param->str(1) == "indent") {
-										indent = (unsigned)strict_stod(next_param->str(2));
+									} else if (next_param->str(1) == "indent") {
+										indent = (unsigned)strict_stoul(next_param->str(2));
 									}
 									++next_param;
 								}
