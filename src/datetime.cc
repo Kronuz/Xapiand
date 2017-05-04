@@ -93,96 +93,102 @@ static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 
 static void process_date_time(Datetime::tm_t& tm, const std::string& str_time) {
 	auto length = str_time.length();
-	switch (length) {
-		case 5: // 00:00
-			if (str_time[2] == ':') {
-				tm.hour = strict_stoul(str_time.substr(0, 2));
-				if (tm.hour < 24) {
-					tm.min = strict_stoul(str_time.substr(3, 2));
-					if (tm.min < 60) {
-						tm.sec = 0;
-						tm.fsec = 0.0;
-						return;
-					}
-				}
-				THROW(DatetimeError, "Time: %s is out of range", str_time.c_str());
-			}
-			break;
-		case 8: // 00:00:00
-			if (str_time[2] == ':' && str_time[5] == ':') {
-				tm.hour = strict_stoul(str_time.substr(0, 2));
-				if (tm.hour < 24) {
-					tm.min = strict_stoul(str_time.substr(3, 2));
-					if (tm.min < 60) {
-						tm.sec = strict_stoul(str_time.substr(6, 2));
-						if (tm.sec < 60) {
+	try {
+		switch (length) {
+			case 5: // 00:00
+				if (str_time[2] == ':') {
+					tm.hour = strict_stoul(str_time.substr(0, 2));
+					if (tm.hour < 24) {
+						tm.min = strict_stoul(str_time.substr(3, 2));
+						if (tm.min < 60) {
+							tm.sec = 0;
 							tm.fsec = 0.0;
 							return;
 						}
 					}
+					THROW(DatetimeError, "Time: %s is out of range", str_time.c_str());
 				}
-				THROW(DatetimeError, "Time: %s is out of range", str_time.c_str());
-			}
-			break;
-		default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
-			if (length > 9 && (str_time[2] == ':' && str_time[5] == ':')) {
-				tm.hour = strict_stoul(str_time.substr(0, 2));
-				if (tm.hour < 24) {
-					tm.min = strict_stoul(str_time.substr(3, 2));
-					if (tm.min < 60) {
-						tm.sec = strict_stoul(str_time.substr(6, 2));
-						if (tm.sec < 60) {
-							switch (str_time[8]) {
-								case '+':
-								case '-':
-									if (length == 14 && str_time[11] == ':') {
-										tm.fsec = 0.0;
-										auto tz_h = str_time.substr(9, 2);
-										auto tz_m = str_time.substr(12, 2);
-										if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
-											computeTimeZone(tm, str_time[8], tz_h, tz_m);
-											return;
+				break;
+			case 8: // 00:00:00
+				if (str_time[2] == ':' && str_time[5] == ':') {
+					tm.hour = strict_stoul(str_time.substr(0, 2));
+					if (tm.hour < 24) {
+						tm.min = strict_stoul(str_time.substr(3, 2));
+						if (tm.min < 60) {
+							tm.sec = strict_stoul(str_time.substr(6, 2));
+							if (tm.sec < 60) {
+								tm.fsec = 0.0;
+								return;
+							}
+						}
+					}
+					THROW(DatetimeError, "Time: %s is out of range", str_time.c_str());
+				}
+				break;
+			default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
+				if (length > 9 && (str_time[2] == ':' && str_time[5] == ':')) {
+					tm.hour = strict_stoul(str_time.substr(0, 2));
+					if (tm.hour < 24) {
+						tm.min = strict_stoul(str_time.substr(3, 2));
+						if (tm.min < 60) {
+							tm.sec = strict_stoul(str_time.substr(6, 2));
+							if (tm.sec < 60) {
+								switch (str_time[8]) {
+									case '+':
+									case '-':
+										if (length == 14 && str_time[11] == ':') {
+											tm.fsec = 0.0;
+											auto tz_h = str_time.substr(9, 2);
+											auto tz_m = str_time.substr(12, 2);
+											if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
+												computeTimeZone(tm, str_time[8], tz_h, tz_m);
+												return;
+											}
+											THROW(DatetimeError, "Time: %s is out of range", str_time.c_str());
 										}
-										THROW(DatetimeError, "Time: %s is out of range", str_time.c_str());
-									}
-									THROW(DatetimeError, "Error format in: %s, the format must be '00:00:00[+-]00:00'", str_time.c_str());
-								case '.': {
-									auto it = str_time.begin() + 8;
-									const auto it_e = str_time.end();
-									for (auto aux = it + 1; aux != it_e; ++aux) {
-										const auto& c = *aux;
-										if (c < '0' || c > '9') {
-											if (c == '+' || c == '-') {
-												if ((it_e - aux) == 6) {
-													auto aux_end = aux + 3;
-													if (*aux_end == ':') {
-														auto tz_h = std::string(aux + 1, aux_end);
-														auto tz_m = std::string(aux_end + 1, it_e);
-														if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
-															computeTimeZone(tm, c, tz_h, tz_m);
-															tm.fsec = Datetime::normalize_fsec(std::stod(std::string(it, aux)));
-															return;
+										THROW(DatetimeError, "Error format in: %s, the format must be '00:00:00[+-]00:00'", str_time.c_str());
+									case '.': {
+										auto it = str_time.begin() + 8;
+										const auto it_e = str_time.end();
+										for (auto aux = it + 1; aux != it_e; ++aux) {
+											const auto& c = *aux;
+											if (c < '0' || c > '9') {
+												if (c == '+' || c == '-') {
+													if ((it_e - aux) == 6) {
+														auto aux_end = aux + 3;
+														if (*aux_end == ':') {
+															auto tz_h = std::string(aux + 1, aux_end);
+															auto tz_m = std::string(aux_end + 1, it_e);
+															if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
+																computeTimeZone(tm, c, tz_h, tz_m);
+																tm.fsec = Datetime::normalize_fsec(std::stod(std::string(it, aux)));
+																return;
+															}
+															THROW(DatetimeError, "Time: %s is out of range", str_time.c_str());
 														}
-														THROW(DatetimeError, "Time: %s is out of range", str_time.c_str());
 													}
 												}
+												THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", str_time.c_str());
 											}
-											THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", str_time.c_str());
 										}
+										tm.fsec = Datetime::normalize_fsec(std::stod(std::string(it, it_e)));
+										return;
 									}
-									tm.fsec = Datetime::normalize_fsec(std::stod(std::string(it, it_e)));
-									return;
+									default:
+										break;
 								}
-								default:
-									break;
 							}
 						}
 					}
 				}
-			}
-			break;
+				break;
+		}
+		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))'", str_time.c_str());
+	} catch (const OutOfRange& er) {
+		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))' %s", str_time.c_str(), er.what());
+	} catch (const InvalidArgument& er) {
+		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))' %s", str_time.c_str(), er.what());
 	}
-	THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))'", str_time.c_str());
 }
 
 
