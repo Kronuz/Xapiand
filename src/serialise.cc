@@ -1003,24 +1003,31 @@ Unserialise::time(const std::string& serialised_time)
 {
 	double t = sortable_unserialise(serialised_time);
 	if (t < 0) {
-		t *= -1.0;
-		auto _time = static_cast<int>(t);
-		int tz_h = _time / 3600, tz_m = 0, aux;
+		auto _time = static_cast<int>(-t);
+		double diff = t + _time;
+		if (diff < 0.0) {
+			++_time;
+		}
+		int tz_h = _time / 3600, aux;
 		if (tz_h < 100) {
 			aux = tz_h * 3600;
 		} else {
 			tz_h = 99;
 			aux = tz_h * 3600;
 		}
-		tz_m = (_time - aux) / 60;
-		if (_time != (aux + tz_m * 60)) {
+		int tz_m = (_time - aux) / 60;
+		int sec = _time - aux - tz_m * 60;
+		if (sec > 60) {
 			THROW(SerialisationError, "Bad serialised time value");
+		} else if (sec) {
+			sec = 60 - sec;
+			++tz_m;
 		}
 
-		double diff = t - _time;
-		if (diff > 0) {
+		if (diff < 0) {
+			diff = 1.0 + (t + _time);
 			char result[23];
-			snprintf(result, 23, "00:00:00%.6f+%2.2d:%2.2d", diff, tz_h, tz_m);
+			snprintf(result, 23, "00:00:%2.2d%.6f+%2.2d:%2.2d", sec, diff, tz_h, tz_m);
 			std::string res(result);
 			auto it = res.erase(res.begin() + 8) + 1;
 			for (auto it_last = res.end() - 7; it_last != it && *it_last == '0'; --it_last) {
@@ -1029,7 +1036,7 @@ Unserialise::time(const std::string& serialised_time)
 			return res;
 		} else {
 			char result[15];
-			snprintf(result, 15, "00:00:00+%2.2d:%2.2d", tz_h, tz_m);
+			snprintf(result, 15, "00:00:%2.2d+%2.2d:%2.2d", sec, tz_h, tz_m);
 			return std::string(result);
 		}
 	} else {
