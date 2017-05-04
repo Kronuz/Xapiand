@@ -159,6 +159,7 @@ namespace Serialise {
 	std::string integer(FieldType field_type, int64_t field_value);
 	std::string positive(FieldType field_type, uint64_t field_value);
 	std::string boolean(FieldType field_type, bool field_value);
+	std::string geospatial(FieldType field_type, const class MsgPack& field_value);
 
 	// Serialise field_value like date.
 	std::string date(const std::string& field_value);

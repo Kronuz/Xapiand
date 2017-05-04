@@ -318,6 +318,17 @@ Serialise::boolean(FieldType field_type, bool field_value)
 
 
 std::string
+Serialise::geospatial(FieldType field_type, const class MsgPack& field_value)
+{
+	if (field_type == FieldType::GEO) {
+		return geospatial(field_value);
+	}
+
+	THROW(SerialisationError, "Type: %s is not geospatial", type(field_type).c_str());
+}
+
+
+std::string
 Serialise::date(const std::string& field_value)
 {
 	return timestamp(Datetime::timestamp(field_value));
