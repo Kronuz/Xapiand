@@ -373,9 +373,9 @@ Serialise::time(const std::string& field_value)
 				break;
 			default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
 				if (length > 9 && (field_value[2] == ':' && field_value[5] == ':')) {
-					auto hour = strict_stoul(field_value.substr(0, 2));
-					auto min = strict_stoul(field_value.substr(3, 2));
-					auto sec = strict_stoul(field_value.substr(6, 2));
+					int hour = strict_stoul(field_value.substr(0, 2));
+					int min = strict_stoul(field_value.substr(3, 2));
+					int sec = strict_stoul(field_value.substr(6, 2));
 					double val = 1.0;
 					switch (field_value[8]) {
 						case '+':
@@ -407,7 +407,9 @@ Serialise::time(const std::string& field_value)
 													hour += val * tz_h;
 													min += val * tz_m;
 													auto fsec = Datetime::normalize_fsec(std::stod(std::string(it, aux)));
-													return timestamp(((hour * 60) + min) * 60 + sec + fsec);
+													double val = (hour * 60 + min) * 60 + sec;
+													val += val < 0 ? -fsec : fsec;
+													return timestamp(val);
 												}
 											}
 											break;
