@@ -1022,7 +1022,7 @@ Unserialise::time(const std::string& serialised_time)
 			char result[23];
 			snprintf(result, 23, "00:00:00%.6f+%2.2d:%2.2d", diff, tz_h, tz_m);
 			std::string res(result);
-			auto it = res.erase(res.begin() + 9) + 1;
+			auto it = res.erase(res.begin() + 8) + 1;
 			for (auto it_last = res.end() - 7; it_last != it && *it_last == '0'; --it_last) {
 				it_last = res.erase(it_last);
 			}
@@ -1076,7 +1076,7 @@ Unserialise::time(const std::string& serialised_time)
 				char result[17];
 				snprintf(result, 17, "%2.2d:%2.2d:%2.2d%.6f", hour, min, sec, diff);
 				std::string res(result);
-				auto it = res.erase(res.begin() + 9) + 1;
+				auto it = res.erase(res.begin() + 8) + 1;
 				for (auto it_last = res.end() - 1; it_last != it && *it_last == '0'; --it_last) {
 					it_last = res.erase(it_last);
 				}
@@ -1085,7 +1085,7 @@ Unserialise::time(const std::string& serialised_time)
 				char result[23];
 				snprintf(result, 23, "%2.2d:%2.2d:%2.2d%.6f-%2.2d:%2.2d", hour, min, sec, diff, tz_h, tz_m);
 				std::string res(result);
-				auto it = res.erase(res.begin() + 9) + 1;
+				auto it = res.erase(res.begin() + 8) + 1;
 				for (auto it_last = res.end() - 7; it_last != it && *it_last == '0'; --it_last) {
 					it_last = res.erase(it_last);
 				}
