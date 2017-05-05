@@ -131,27 +131,27 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 		auto str_key = o.begin()->as_string();
 		switch ((Cast::Hash)xxh64::hash(str_key)) {
 			case Cast::Hash::INTEGER:
-				return Serialise::integer(field_spc.get_type(), Cast::integer(o.at(str_key)));
+				return integer(field_spc.get_type(), Cast::integer(o.at(str_key)));
 			case Cast::Hash::POSITIVE:
-				return Serialise::positive(field_spc.get_type(), Cast::positive(o.at(str_key)));
+				return positive(field_spc.get_type(), Cast::positive(o.at(str_key)));
 			case Cast::Hash::FLOAT:
-				return Serialise::_float(field_spc.get_type(), Cast::_float(o.at(str_key)));
+				return _float(field_spc.get_type(), Cast::_float(o.at(str_key)));
 			case Cast::Hash::BOOLEAN:
-				return Serialise::boolean(field_spc.get_type(), Cast::boolean(o.at(str_key)));
+				return boolean(field_spc.get_type(), Cast::boolean(o.at(str_key)));
 			case Cast::Hash::TERM:
 			case Cast::Hash::TEXT:
 			case Cast::Hash::STRING:
-				return Serialise::string(field_spc, Cast::string(o.at(str_key)));
+				return string(field_spc, Cast::string(o.at(str_key)));
 			case Cast::Hash::UUID:
-				return Serialise::string(field_spc, Cast::uuid(o.at(str_key)));
+				return string(field_spc, Cast::uuid(o.at(str_key)));
 			case Cast::Hash::DATE:
-				return Serialise::date(field_spc, Cast::date(o.at(str_key)));
+				return date(field_spc, Cast::date(o.at(str_key)));
 			case Cast::Hash::TIME:
-				return Serialise::string(field_spc, Cast::time(o.at(str_key)));
+				return string(field_spc, Cast::time(o.at(str_key)));
 			case Cast::Hash::TIMEDELTA:
-				return Serialise::string(field_spc, Cast::timedelta(o.at(str_key)));
+				return string(field_spc, Cast::timedelta(o.at(str_key)));
 			case Cast::Hash::EWKT:
-				return Serialise::string(field_spc, Cast::ewkt(o.at(str_key)));
+				return string(field_spc, Cast::ewkt(o.at(str_key)));
 			case Cast::Hash::POINT:
 			case Cast::Hash::CIRCLE:
 			case Cast::Hash::CONVEX:
