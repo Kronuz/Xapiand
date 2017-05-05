@@ -131,6 +131,8 @@
 #define DB_SLOT_STRING         13    // Slot for saving global string/text values.
 #define DB_SLOT_BOOLEAN        14    // Slot for saving global boolean values.
 #define DB_SLOT_UUID           15    // Slot for saving global uuid values.
+#define DB_SLOT_TIME           16    // Slot for saving global time values.
+#define DB_SLOT_TIMEDELTA      17    // Slot for saving global timedelta values.
 
 
 // Default prefixes

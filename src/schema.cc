@@ -87,6 +87,12 @@ const std::unordered_map<std::string, UnitTime> map_acc_date({
 });
 
 
+const std::unordered_map<std::string, UnitTime> map_acc_time({
+	{ "second",     UnitTime::SECOND     }, { "minute",  UnitTime::MINUTE  },
+	{ "hour",       UnitTime::HOUR       },
+});
+
+
 const std::unordered_map<std::string, StopStrategy> map_stop_strategy({
 	{ "stop_none",    StopStrategy::STOP_NONE    }, { "none",    StopStrategy::STOP_NONE    },
 	{ "stop_all",     StopStrategy::STOP_ALL     }, { "all",     StopStrategy::STOP_ALL     },
@@ -200,6 +206,7 @@ const std::unordered_map<std::string, std::array<FieldType, 3>> map_types({
 
 static const std::vector<uint64_t> def_accuracy_num({ 100, 1000, 10000, 100000, 1000000, 10000000 });
 static const std::vector<uint64_t> def_accuracy_date({ toUType(UnitTime::HOUR), toUType(UnitTime::DAY), toUType(UnitTime::MONTH), toUType(UnitTime::YEAR), toUType(UnitTime::DECADE), toUType(UnitTime::CENTURY) });
+static const std::vector<uint64_t> def_accuracy_time({ toUType(UnitTime::MINUTE), toUType(UnitTime::HOUR) });
 static const std::vector<uint64_t> def_accuracy_geo({ HTM_START_POS - 40, HTM_START_POS - 30, HTM_START_POS - 20, HTM_START_POS - 10, HTM_START_POS }); // HTM's level 20, 15, 10, 5, 0
 
 
@@ -330,6 +337,15 @@ static const std::vector<std::string> global_acc_prefix_date = []() {
 	return res;
 }();
 
+static const std::vector<std::string> global_acc_prefix_time = []() {
+	std::vector<std::string> res;
+	res.reserve(def_accuracy_time.size());
+	for (const auto& acc : def_accuracy_time) {
+		res.push_back(get_prefix(acc));
+	}
+	return res;
+}();
+
 static const std::vector<std::string> global_acc_prefix_geo = []() {
 	std::vector<std::string> res;
 	res.reserve(def_accuracy_geo.size());
@@ -347,6 +363,15 @@ static const std::vector<std::string> global_acc_prefix_geo = []() {
 static const std::string str_set_acc_date = []() {
 	std::string res("{ ");
 	for (const auto& p : map_acc_date) {
+		res.append(p.first).append(", ");
+	}
+	res.push_back('}');
+	return res;
+}();
+
+static const std::string str_set_acc_time = []() {
+	std::string res("{ ");
+	for (const auto& p : map_acc_time) {
 		res.append(p.first).append(", ");
 	}
 	res.push_back('}');
@@ -815,6 +840,8 @@ specification_t::global_type(FieldType field_type)
 		case FieldType::POSITIVE:
 		case FieldType::BOOLEAN:
 		case FieldType::DATE:
+		case FieldType::TIME:
+		case FieldType::TIMEDELTA:
 		case FieldType::GEO:
 		case FieldType::UUID:
 		case FieldType::TERM:
@@ -852,6 +879,14 @@ specification_t::get_global(FieldType field_type)
 		}
 		case FieldType::DATE: {
 			static const specification_t spc(DB_SLOT_DATE, FieldType::DATE, def_accuracy_date, global_acc_prefix_date);
+			return spc;
+		}
+		case FieldType::TIME: {
+			static const specification_t spc(DB_SLOT_TIME, FieldType::TIME, def_accuracy_time, global_acc_prefix_time);
+			return spc;
+		}
+		case FieldType::TIMEDELTA: {
+			static const specification_t spc(DB_SLOT_TIMEDELTA, FieldType::TIMEDELTA, def_accuracy_time, global_acc_prefix_time);
 			return spc;
 		}
 		case FieldType::GEO: {
@@ -1460,6 +1495,8 @@ Schema::get_namespace_specification(FieldType namespace_type, const std::string&
 		case FieldType::POSITIVE:
 		case FieldType::FLOAT:
 		case FieldType::DATE:
+		case FieldType::TIME:
+		case FieldType::TIMEDELTA:
 		case FieldType::GEO:
 			for (auto& acc_prefix : spc.acc_prefix) {
 				acc_prefix.insert(0, prefix_namespace);
@@ -1656,6 +1693,28 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 			}
 			break;
 		}
+		case FieldType::TIME:
+		case FieldType::TIMEDELTA: {
+			if (specification.doc_acc) {
+				try {
+					static const auto adit_e = map_acc_time.end();
+					for (const auto& _accuracy : *specification.doc_acc) {
+						const auto str_accuracy = lower_string(_accuracy.as_string());
+						const auto adit = map_acc_time.find(str_accuracy);
+						if (adit == adit_e) {
+							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
+						} else {
+							set_acc.insert(toUType(adit->second));
+						}
+					}
+				} catch (const msgpack::type_error&) {
+					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), repr(str_set_acc_time).c_str());
+				}
+			} else {
+				set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
+			}
+			break;
+		}
 		case FieldType::INTEGER:
 		case FieldType::POSITIVE:
 		case FieldType::FLOAT: {
@@ -1841,6 +1900,8 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 			break;
 
 		case FieldType::DATE:
+		case FieldType::TIME:
+		case FieldType::TIMEDELTA:
 		case FieldType::INTEGER:
 		case FieldType::POSITIVE:
 		case FieldType::FLOAT:
@@ -1912,6 +1973,14 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			}
 			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
 				specification.sep_types[2] = FieldType::DATE;
+				return;
+			}
+			if (specification.flags.time_detection && Datetime::isTime(str_value)) {
+				specification.sep_types[2] = FieldType::TIME;
+				return;
+			}
+			if (specification.flags.timedelta_detection && Datetime::isTimeDelta(str_value)) {
+				specification.sep_types[2] = FieldType::TIMEDELTA;
 				return;
 			}
 			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
@@ -2407,9 +2476,22 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			}
 		}
 		case FieldType::DATE: {
+			Datetime::tm_t tm;
+			auto ser_value = Serialise::date(value, tm);
+			if (field_spc) {
+				index_term(doc, ser_value, *field_spc, pos);
+			}
+			if (global_spc) {
+				index_term(doc, ser_value, *global_spc, pos);
+			}
+			s.insert(std::move(ser_value));
+			GenerateTerms::date(doc, spc.accuracy, spc.acc_prefix, tm);
+			return;
+		}
+		case FieldType::TIME: {
 			try {
-				Datetime::tm_t tm;
-				auto ser_value = Serialise::date(value, tm);
+				Datetime::clk_t clk = Datetime::TimeParser(value.as_string());
+				auto ser_value = Serialise::time(clk);
 				if (field_spc) {
 					index_term(doc, ser_value, *field_spc, pos);
 				}
@@ -2417,49 +2499,66 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 					index_term(doc, ser_value, *global_spc, pos);
 				}
 				s.insert(std::move(ser_value));
-				GenerateTerms::date(doc, spc.accuracy, spc.acc_prefix, tm);
+				if (spc.accuracy.empty()) {
+					GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, Datetime::time_to_double(clk));
+				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for date type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for time type: %s", repr(value.to_string()).c_str());
+			}
+		}
+		case FieldType::TIMEDELTA: {
+			try {
+				Datetime::clk_t clk = Datetime::TimedeltaParser(value.as_string());
+				auto ser_value = Serialise::timedelta(clk);
+				if (field_spc) {
+					index_term(doc, ser_value, *field_spc, pos);
+				}
+				if (global_spc) {
+					index_term(doc, ser_value, *global_spc, pos);
+				}
+				s.insert(std::move(ser_value));
+				if (spc.accuracy.empty()) {
+					GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, Datetime::timedelta_to_double(clk));
+				}
+				return;
+			} catch (const msgpack::type_error&) {
+				THROW(ClientError, "Format invalid for timedelta type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::GEO: {
-			try {
-				GeoSpatial geo(value);
-				const auto& geometry = geo.getGeometry();
-				auto ranges = geometry->getRanges(spc.flags.partials, spc.error);
-				if (ranges.empty()) {
-					return;
-				}
-				std::string term;
-				if (field_spc) {
-					if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
-						term = Serialise::ranges(ranges);
-						index_term(doc, term, *field_spc, pos);
-					} else {
-						const auto f_ranges = geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
-						term = Serialise::ranges(f_ranges);
-						index_term(doc, term, *field_spc, pos);
-					}
-				}
-				if (global_spc) {
-					if (field_spc) {
-						index_term(doc, std::move(term), *global_spc, pos);
-					} else {
-						if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
-							index_term(doc, Serialise::ranges(ranges), *global_spc, pos);
-						} else {
-							const auto g_ranges = geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
-							index_term(doc, Serialise::ranges(g_ranges), *global_spc, pos);
-						}
-					}
-				}
-				GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
-				merge_geospatial_values(s, std::move(ranges), geometry->getCentroids());
+			GeoSpatial geo(value);
+			const auto& geometry = geo.getGeometry();
+			auto ranges = geometry->getRanges(spc.flags.partials, spc.error);
+			if (ranges.empty()) {
 				return;
-			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for geo type: %s", repr(value.to_string()).c_str());
 			}
+			std::string term;
+			if (field_spc) {
+				if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
+					term = Serialise::ranges(ranges);
+					index_term(doc, term, *field_spc, pos);
+				} else {
+					const auto f_ranges = geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
+					term = Serialise::ranges(f_ranges);
+					index_term(doc, term, *field_spc, pos);
+				}
+			}
+			if (global_spc) {
+				if (field_spc) {
+					index_term(doc, std::move(term), *global_spc, pos);
+				} else {
+					if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
+						index_term(doc, Serialise::ranges(ranges), *global_spc, pos);
+					} else {
+						const auto g_ranges = geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
+						index_term(doc, Serialise::ranges(g_ranges), *global_spc, pos);
+					}
+				}
+			}
+			GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
+			merge_geospatial_values(s, std::move(ranges), geometry->getCentroids());
+			return;
 		}
 		case FieldType::TERM:
 		case FieldType::TEXT:
@@ -2479,19 +2578,15 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			}
 		}
 		case FieldType::BOOLEAN: {
-			try {
-				auto ser_value = Serialise::MsgPack(spc, value);
-				if (field_spc) {
-					index_term(doc, ser_value, *field_spc, pos);
-				}
-				if (global_spc) {
-					index_term(doc, ser_value, *global_spc, pos);
-				}
-				s.insert(std::move(ser_value));
-				return;
-			} catch (const SerialisationError&) {
-				THROW(ClientError, "Format invalid for boolean type: %s", repr(value.to_string()).c_str());
+			auto ser_value = Serialise::MsgPack(spc, value);
+			if (field_spc) {
+				index_term(doc, ser_value, *field_spc, pos);
 			}
+			if (global_spc) {
+				index_term(doc, ser_value, *global_spc, pos);
+			}
+			s.insert(std::move(ser_value));
+			return;
 		}
 		case FieldType::UUID: {
 			try {
@@ -2505,8 +2600,6 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for uuid type: %s", repr(value.to_string()).c_str());
-			} catch (const SerialisationError&) {
 				THROW(ClientError, "Format invalid for uuid type: %s", repr(value.to_string()).c_str());
 			}
 		}
@@ -2592,9 +2685,28 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 		}
 		case FieldType::DATE: {
+			Datetime::tm_t tm;
+			auto ser_value = Serialise::date(value, tm);
+			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+				index_term(doc, ser_value, field_spc, pos);
+			}
+			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+				index_term(doc, ser_value, global_spc, pos);
+			}
+			s_f.insert(ser_value);
+			s_g.insert(std::move(ser_value));
+			if (field_spc.accuracy == global_spc.accuracy) {
+				GenerateTerms::date(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, tm);
+			} else {
+				GenerateTerms::date(doc, field_spc.accuracy, field_spc.acc_prefix, tm);
+				GenerateTerms::date(doc, global_spc.accuracy, global_spc.acc_prefix, tm);
+			}
+			break;
+		}
+		case FieldType::TIME: {
 			try {
-				Datetime::tm_t tm;
-				auto ser_value = Serialise::date(value, tm);
+				Datetime::clk_t clk = Datetime::TimeParser(value.as_string());
+				auto ser_value = Serialise::time(clk);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 					index_term(doc, ser_value, field_spc, pos);
 				}
@@ -2603,63 +2715,84 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				s_f.insert(ser_value);
 				s_g.insert(std::move(ser_value));
+				auto t_val = Datetime::time_to_double(clk);
 				if (field_spc.accuracy == global_spc.accuracy) {
-					GenerateTerms::date(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, tm);
+					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, t_val);
 				} else {
-					GenerateTerms::date(doc, field_spc.accuracy, field_spc.acc_prefix, tm);
-					GenerateTerms::date(doc, global_spc.accuracy, global_spc.acc_prefix, tm);
+					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, t_val);
+					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, t_val);
 				}
 				break;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for date type: %s", repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for time type: %s", repr(value.to_string()).c_str());
+			}
+		}
+		case FieldType::TIMEDELTA: {
+			try {
+				Datetime::clk_t clk = Datetime::TimedeltaParser(value.as_string());
+				auto ser_value = Serialise::timedelta(clk);
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+					index_term(doc, ser_value, field_spc, pos);
+				}
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+					index_term(doc, ser_value, global_spc, pos);
+				}
+				s_f.insert(ser_value);
+				s_g.insert(std::move(ser_value));
+				auto t_val = Datetime::timedelta_to_double(clk);
+				if (field_spc.accuracy == global_spc.accuracy) {
+					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, t_val);
+				} else {
+					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, t_val);
+					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, t_val);
+				}
+				break;
+			} catch (const msgpack::type_error&) {
+				THROW(ClientError, "Format invalid for timedelta type: %s", repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::GEO: {
-			try {
-				GeoSpatial geo(value);
-				const auto& geometry = geo.getGeometry();
-				auto ranges = geometry->getRanges(field_spc.flags.partials, field_spc.error);
-				if (ranges.empty()) {
-					return;
-				}
-				if (field_spc.flags.partials == global_spc.flags.partials && field_spc.error == global_spc.error) {
-					if (toUType(field_spc.index & TypeIndex::TERMS)) {
-						auto ser_value = Serialise::ranges(ranges);
-						if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
-							index_term(doc, ser_value, field_spc, pos);
-						}
-						if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
-							index_term(doc, std::move(ser_value), global_spc, pos);
-						}
-					}
-					if (field_spc.accuracy == global_spc.accuracy) {
-						GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, ranges);
-					} else {
-						GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
-						GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, ranges);
-					}
-					merge_geospatial_values(s_f, ranges, geometry->getCentroids());
-					merge_geospatial_values(s_g, std::move(ranges), geometry->getCentroids());
-				} else {
-					auto g_ranges = geometry->getRanges(global_spc.flags.partials, global_spc.error);
-					if (toUType(field_spc.index & TypeIndex::TERMS)) {
-						const auto ser_value = Serialise::ranges(g_ranges);
-						if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
-							index_term(doc, ser_value, field_spc, pos);
-						}
-						if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
-							index_term(doc, std::move(ser_value), global_spc, pos);
-						}
-					}
-					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
-					GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, g_ranges);
-					merge_geospatial_values(s_f, std::move(ranges), geometry->getCentroids());
-					merge_geospatial_values(s_g, std::move(g_ranges), geometry->getCentroids());
-				}
+			GeoSpatial geo(value);
+			const auto& geometry = geo.getGeometry();
+			auto ranges = geometry->getRanges(field_spc.flags.partials, field_spc.error);
+			if (ranges.empty()) {
 				return;
-			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for geo type: %s", repr(value.to_string()).c_str());
 			}
+			if (field_spc.flags.partials == global_spc.flags.partials && field_spc.error == global_spc.error) {
+				if (toUType(field_spc.index & TypeIndex::TERMS)) {
+					auto ser_value = Serialise::ranges(ranges);
+					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+						index_term(doc, ser_value, field_spc, pos);
+					}
+					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+						index_term(doc, std::move(ser_value), global_spc, pos);
+					}
+				}
+				if (field_spc.accuracy == global_spc.accuracy) {
+					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, ranges);
+				} else {
+					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
+					GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, ranges);
+				}
+				merge_geospatial_values(s_f, ranges, geometry->getCentroids());
+				merge_geospatial_values(s_g, std::move(ranges), geometry->getCentroids());
+			} else {
+				auto g_ranges = geometry->getRanges(global_spc.flags.partials, global_spc.error);
+				if (toUType(field_spc.index & TypeIndex::TERMS)) {
+					const auto ser_value = Serialise::ranges(g_ranges);
+					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+						index_term(doc, ser_value, field_spc, pos);
+					}
+					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+						index_term(doc, std::move(ser_value), global_spc, pos);
+					}
+				}
+				GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
+				GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, g_ranges);
+				merge_geospatial_values(s_f, std::move(ranges), geometry->getCentroids());
+				merge_geospatial_values(s_g, std::move(g_ranges), geometry->getCentroids());
+			}
+			return;
 		}
 		case FieldType::TERM:
 		case FieldType::TEXT:
@@ -2680,20 +2813,16 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 		}
 		case FieldType::BOOLEAN: {
-			try {
-				auto ser_value = Serialise::MsgPack(field_spc, value);
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
-					index_term(doc, ser_value, field_spc, pos);
-				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
-					index_term(doc, ser_value, global_spc, pos);
-				}
-				s_f.insert(ser_value);
-				s_g.insert(std::move(ser_value));
-				break;
-			} catch (const SerialisationError&) {
-				THROW(ClientError, "Format invalid for boolean type: %s", repr(value.to_string()).c_str());
+			auto ser_value = Serialise::MsgPack(field_spc, value);
+			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+				index_term(doc, ser_value, field_spc, pos);
 			}
+			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+				index_term(doc, ser_value, global_spc, pos);
+			}
+			s_f.insert(ser_value);
+			s_g.insert(std::move(ser_value));
+			break;
 		}
 		case FieldType::UUID: {
 			try {
@@ -4454,6 +4583,34 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				}
 				return;
 			}
+			case FieldType::TIME:
+			case FieldType::TIMEDELTA: {
+				try {
+					static const auto adit_e = map_acc_time.end();
+					for (const auto& _accuracy : doc_accuracy) {
+						const auto str_accuracy = lower_string(_accuracy.as_string());
+						const auto adit = map_acc_time.find(str_accuracy);
+						if (adit == adit_e) {
+							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
+						} else {
+							set_acc.insert(toUType(adit->second));
+						}
+					}
+				} catch (const msgpack::type_error&) {
+					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), repr(str_set_acc_time).c_str());
+				}
+				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
+					std::string str_accuracy, _str_accuracy;
+					for (const auto& acc : set_acc) {
+						str_accuracy.append(std::to_string(readable_acc_date((UnitTime)acc))).push_back(' ');
+					}
+					for (const auto& acc : specification.accuracy) {
+						_str_accuracy.append(std::to_string(readable_acc_date((UnitTime)acc))).push_back(' ');
+					}
+					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", prop_name.c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+				}
+				return;
+			}
 			case FieldType::INTEGER:
 			case FieldType::POSITIVE:
 			case FieldType::FLOAT: {
@@ -4932,6 +5089,8 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 	// Readable accuracy.
 	switch (sep_types[2]) {
 		case FieldType::DATE:
+		case FieldType::TIME:
+		case FieldType::TIMEDELTA:
 			for (auto& _accuracy : properties.at(RESERVED_ACCURACY)) {
 				_accuracy = readable_acc_date((UnitTime)_accuracy.as_u64());
 			}
@@ -5244,6 +5403,8 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 					case FieldType::INTEGER:
 					case FieldType::POSITIVE:
 					case FieldType::DATE:
+					case FieldType::TIME:
+					case FieldType::TIMEDELTA:
 						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
 							res.accuracy.push_back(acc.as_u64());
 						}

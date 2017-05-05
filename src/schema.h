@@ -91,10 +91,10 @@ enum class StemStrategy : uint8_t {
 };
 
 
-enum class UnitTime : uint8_t {
-	SECOND,
-	MINUTE,
-	HOUR,
+enum class UnitTime : uint16_t {
+	SECOND    = 1,
+	MINUTE    = 60,
+	HOUR      = 3600,
 	DAY,
 	MONTH,
 	YEAR,
