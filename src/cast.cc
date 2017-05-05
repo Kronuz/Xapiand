@@ -81,45 +81,45 @@ Cast::cast(FieldType type, const std::string& field_value)
 		case FieldType::INTEGER:
 			try {
 				return MsgPack(strict_stoll(field_value));
-			} catch (const std::invalid_argument&) {
-				THROW(CastError, "Value %s cannot be cast to integer", field_value.c_str());
-			} catch (const std::out_of_range&) {
-				THROW(CastError, "Value %s cannot be cast to integer", field_value.c_str());
+			} catch (const InvalidArgument& er) {
+				THROW(CastError, "Value %s cannot be cast to integer [%s]", field_value.c_str(), er.what());
+			} catch (const OutOfRange& er) {
+				THROW(CastError, "Value %s cannot be cast to integer [%s]", field_value.c_str(), er.what());
 			}
 		case FieldType::POSITIVE:
 			try {
 				return MsgPack(strict_stoull(field_value));
-			} catch (const std::invalid_argument&) {
-				THROW(CastError, "Value %s cannot be cast to positive", field_value.c_str());
-			} catch (const std::out_of_range&) {
-				THROW(CastError, "Value %s cannot be cast to positive", field_value.c_str());
+			} catch (const InvalidArgument& er) {
+				THROW(CastError, "Value %s cannot be cast to positive [%s]", field_value.c_str(), er.what());
+			} catch (const OutOfRange& er) {
+				THROW(CastError, "Value %s cannot be cast to positive [%s]", field_value.c_str(), er.what());
 			}
 		case FieldType::FLOAT:
 			try {
 				return MsgPack(strict_stod(field_value));
-			} catch (const std::invalid_argument&) {
-				THROW(CastError, "Value %s cannot be cast to float", field_value.c_str());
-			} catch (const std::out_of_range&) {
-				THROW(CastError, "Value %s cannot be cast to float", field_value.c_str());
+			} catch (const InvalidArgument& er) {
+				THROW(CastError, "Value %s cannot be cast to float [%s]", field_value.c_str(), er.what());
+			} catch (const OutOfRange& er) {
+				THROW(CastError, "Value %s cannot be cast to float [%s]", field_value.c_str(), er.what());
 			}
 		case FieldType::EMPTY:
 			// Try like INTEGER.
 			try {
 				return MsgPack(strict_stoll(field_value));
-			} catch (const std::invalid_argument&) {
-			} catch (const std::out_of_range&) { }
+			} catch (const InvalidArgument&) {
+			} catch (const OutOfRange&) { }
 
 			// Try like POSITIVE.
 			try {
 				return MsgPack(strict_stoull(field_value));
-			} catch (const std::invalid_argument&) {
-			} catch (const std::out_of_range&) { }
+			} catch (const InvalidArgument&) {
+			} catch (const OutOfRange&) { }
 
 			// Try like FLOAT
 			try {
 				return MsgPack(strict_stod(field_value));
-			} catch (const std::invalid_argument&) {
-			} catch (const std::out_of_range&) { }
+			} catch (const InvalidArgument&) {
+			} catch (const OutOfRange&) { }
 		default:
 			// Default type String.
 			return MsgPack(field_value);
@@ -140,10 +140,10 @@ Cast::integer(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			try {
 				return strict_stoll(obj.as_string());
-			} catch (const std::invalid_argument&) {
-				THROW(CastError, "Value %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
-			} catch (const std::out_of_range&) {
-				THROW(CastError, "Value %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
+			} catch (const InvalidArgument& er) {
+				THROW(CastError, "Value %s cannot be cast to integer [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
+			} catch (const OutOfRange& er) {
+				THROW(CastError, "Value %s cannot be cast to integer [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
 			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
@@ -166,10 +166,10 @@ Cast::positive(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			try {
 				return strict_stoull(obj.as_string());
-			} catch (const std::invalid_argument&) {
-				THROW(CastError, "Value %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
-			} catch (const std::out_of_range&) {
-				THROW(CastError, "Value %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
+			} catch (const InvalidArgument& er) {
+				THROW(CastError, "Value %s cannot be cast to positive [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
+			} catch (const OutOfRange& er) {
+				THROW(CastError, "Value %s cannot be cast to positive [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
 			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
@@ -192,10 +192,10 @@ Cast::_float(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			try {
 				return strict_stod(obj.as_string());
-			} catch (const std::invalid_argument&) {
-				THROW(CastError, "Value %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
-			} catch (const std::out_of_range&) {
-				THROW(CastError, "Value %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
+			} catch (const InvalidArgument& er) {
+				THROW(CastError, "Value %s cannot be cast to float [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
+			} catch (const OutOfRange& er) {
+				THROW(CastError, "Value %s cannot be cast to float [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
 			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
