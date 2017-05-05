@@ -1110,6 +1110,222 @@ Datetime::isDate(const std::string& date)
 }
 
 
+Datetime::clk_t
+Datetime::TimeParser(const std::string& _time)
+{
+	clk_t clk;
+	auto length = _time.length();
+	try {
+		switch (length) {
+			case 5: // 00:00
+				if (_time[2] == ':') {
+					clk.hour = strict_stoul(_time.substr(0, 2));
+					clk.min = strict_stoul(_time.substr(3, 2));
+					return clk;
+				}
+				break;
+			case 8: // 00:00:00
+				if (_time[2] == ':' && _time[5] == ':') {
+					clk.hour = strict_stoul(_time.substr(0, 2));
+					clk.min = strict_stoul(_time.substr(3, 2));
+					clk.sec = strict_stoul(_time.substr(6, 2));
+					return clk;
+				}
+				break;
+			default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
+				if (length > 9 && (_time[2] == ':' && _time[5] == ':')) {
+					clk.hour = strict_stoul(_time.substr(0, 2));
+					clk.min = strict_stoul(_time.substr(3, 2));
+					clk.sec = strict_stoul(_time.substr(6, 2));
+					switch (_time[8]) {
+						case '-':
+							clk.tz_s = '-';
+						case '+':
+							if (length == 14 && _time[11] == ':') {
+								clk.tz_h = strict_stoul(_time.substr(9, 2));
+								clk.tz_m = strict_stoul(_time.substr(12, 2));
+								return clk;
+							}
+							break;
+						case '.': {
+							auto it = _time.begin() + 8;
+							const auto it_e = _time.end();
+							for (auto aux = it + 1; aux != it_e; ++aux) {
+								const auto& c = *aux;
+								if (c < '0' || c > '9') {
+									switch (c) {
+										case '-':
+											clk.tz_s = '-';
+										case '+':
+											if ((it_e - aux) == 6) {
+												auto aux_end = aux + 3;
+												if (*aux_end == ':') {
+													clk.tz_h = strict_stoul(std::string(aux + 1, aux_end));
+													clk.tz_m = strict_stoul(std::string(aux_end + 1, it_e));
+													clk.fsec = Datetime::normalize_fsec(std::stod(std::string(it, aux)));
+													return clk;
+												}
+											}
+											break;
+										default:
+											break;
+									}
+									THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", _time.c_str());
+								}
+							}
+							clk.fsec = Datetime::normalize_fsec(std::stod(std::string(it, it_e)));
+							return clk;
+						}
+						default:
+							break;
+					}
+				}
+				break;
+		}
+		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", _time.c_str());
+	} catch (const OutOfRange& er) {
+		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))' [%s]", _time.c_str(), er.what());
+	} catch (const InvalidArgument& er) {
+		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))' [%s]", _time.c_str(), er.what());
+	}
+}
+
+
+/*
+ * Transforms double time to a struct clk_t.
+ */
+Datetime::clk_t
+Datetime::time_to_clk_t(double t)
+{
+	clk_t clk;
+	if (t < 0) {
+		auto _time = static_cast<int>(-t);
+		clk.fsec = t + _time;
+		if (clk.fsec < 0.0) {
+			++_time;
+		}
+		clk.tz_h = _time / 3600;
+		int aux;
+		if (clk.tz_h < 100) {
+			aux = clk.tz_h * 3600;
+		} else {
+			clk.tz_h = 99;
+			aux = clk.tz_h * 3600;
+		}
+		clk.tz_m = (_time - aux) / 60;
+		clk.sec = _time - aux - clk.tz_m * 60;
+		if (clk.sec > 60) {
+			THROW(TimeError, "Bad serialised time value");
+		} else if (clk.sec) {
+			clk.sec = 60 - clk.sec;
+			++clk.tz_m;
+		}
+		clk.tz_s = '+';
+		if (clk.fsec < 0) {
+			clk.fsec += 1.0;
+		}
+	} else {
+		auto _time = static_cast<int>(t);
+		clk.hour = _time / 3600;
+		if (clk.hour < 100) {
+			auto aux = _time - clk.hour * 3600;
+			clk.min = aux / 60;
+			clk.sec = aux - clk.min * 60;
+		} else {
+			if (clk.hour < 199) {
+				auto aux = _time - clk.hour * 3600;
+				clk.tz_h = clk.hour - 99;
+				clk.hour = 99;
+				clk.min = aux / 60;
+				clk.sec = aux - clk.min * 60;
+			} else {
+				clk.tz_h = 99;
+				clk.hour = 99;
+				auto aux = _time - 712800; // 198 * 3600
+				clk.min = aux / 60;
+				if (clk.min < 100) {
+					clk.sec = aux - clk.min * 60;
+				} else {
+					if (clk.min < 199) {
+						clk.sec = aux - clk.min * 60;
+						clk.tz_m = 198 - clk.min;
+						clk.min = 99;
+					} else {
+						clk.tz_m = 99;
+						clk.min = 99;
+						clk.sec = aux - 11880; // 198 * 60
+						if (clk.sec > 99) {
+							THROW(TimeError, "Bad serialised time value");
+						}
+					}
+				}
+			}
+		}
+		clk.tz_s = '-';
+		clk.fsec = t - _time;
+	}
+
+	return clk;
+}
+
+
+double
+Datetime::time_to_double(const clk_t& clk)
+{
+	int hour, min;
+	if (clk.tz_s == '-') {
+		hour = clk.hour + clk.tz_h;
+		min = clk.min + clk.tz_m;
+	} else {
+		hour = clk.hour - clk.tz_h;
+		min = clk.min - clk.tz_m;
+	}
+	return clk.sec + clk.fsec + (hour * 60 + min) * 60;
+}
+
+
+std::string
+Datetime::time_to_string(const clk_t& clk, bool trim)
+{
+	if (clk.fsec > 0 || !trim) {
+		if (trim && clk.tz_h == 0 && clk.tz_m == 0) {
+			char result[17];
+			snprintf(result, 17, "%2.2d:%2.2d:%2.2d%.6f", clk.hour, clk.min, clk.sec, clk.fsec);
+			std::string res(result);
+			auto it = res.erase(res.begin() + 8) + 1;
+			for (auto it_last = res.end() - 1; it_last != it && *it_last == '0'; --it_last) {
+				it_last = res.erase(it_last);
+			}
+			return res;
+		} else {
+			char result[23];
+			snprintf(result, 23, "%2.2d:%2.2d:%2.2d%.6f%c%2.2d:%2.2d", clk.hour, clk.min, clk.sec, clk.fsec, clk.tz_s, clk.tz_h, clk.tz_m);
+			std::string res(result);
+			auto it = res.erase(res.begin() + 8) + 1;
+			for (auto it_last = res.end() - 7; it_last != it && *it_last == '0'; --it_last) {
+				it_last = res.erase(it_last);
+			}
+			return res;
+		}
+	} else if (clk.tz_h == 0 && clk.tz_m == 0) {
+		char result[9];
+		snprintf(result, 9, "%2.2d:%2.2d:%2.2d", clk.hour, clk.min, clk.sec);
+		return std::string(result);
+	} else {
+		char result[15];
+		snprintf(result, 15, "%2.2d:%2.2d:%2.2d%c%2.2d:%2.2d", clk.hour, clk.min, clk.sec, clk.tz_s, clk.tz_h, clk.tz_m);
+		return std::string(result);
+	}
+}
+
+
+std::string
+Datetime::time_to_string(double t, bool trim)
+{
+	return time_to_string(time_to_clk_t(t), trim);
+}
+
+
 bool
 Datetime::isTime(const std::string& _time) {
 	auto length = _time.length();
@@ -1147,8 +1363,159 @@ Datetime::isTime(const std::string& _time) {
 }
 
 
+Datetime::clk_t
+Datetime::TimedeltaParser(const std::string& timedelta)
+{
+	clk_t clk;
+	auto length = timedelta.length();
+	try {
+		switch (length) {
+			case 6: // [+-]00:00
+				switch (timedelta[0]) {
+					case '-':
+						clk.tz_s = '-';
+					case '+':
+						if (timedelta[3] == ':') {
+							clk.hour = strict_stoul(timedelta.substr(1, 2));
+							clk.min = strict_stoul(timedelta.substr(4, 2));
+							return clk;
+						}
+					default:
+						break;
+				}
+				break;
+
+			case 9: // [+-]00:00:00
+				switch (timedelta[0]) {
+					case '-':
+						clk.tz_s = '-';
+					case '+':
+						if (timedelta[3] == ':' && timedelta[6] == ':') {
+							clk.hour = strict_stoul(timedelta.substr(1, 2));
+							clk.min = strict_stoul(timedelta.substr(4, 2));
+							clk.sec = strict_stoul(timedelta.substr(7, 2));
+							return clk;
+						}
+					default:
+						break;
+				}
+				break;
+
+			default: //  [+-]00:00:00.000...
+				switch (timedelta[0]) {
+					case '-':
+						clk.tz_s = '-';
+					case '+':
+						if (length > 10 && (timedelta[3] == ':' && timedelta[6] == ':' && timedelta[9] == '.')) {
+							clk.hour = strict_stoul(timedelta.substr(1, 2));
+							clk.min = strict_stoul(timedelta.substr(4, 2));
+							clk.sec = strict_stoul(timedelta.substr(7, 2));
+							auto it = timedelta.begin() + 9;
+							const auto it_e = timedelta.end();
+							for (auto aux = it + 1; aux != it_e; ++aux) {
+								const auto& c = *aux;
+								if (c < '0' || c > '9') {
+									THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", timedelta.c_str());
+								}
+							}
+							clk.fsec = Datetime::normalize_fsec(std::stod(std::string(it, it_e)));
+							return clk;
+						}
+					default:
+						break;
+				}
+				break;
+		}
+		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", timedelta.c_str());
+	} catch (const OutOfRange& er) {
+		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))' %s", timedelta.c_str(), er.what());
+	} catch (const InvalidArgument& er) {
+		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))' %s", timedelta.c_str(), er.what());
+	}
+}
+
+
+/*
+ * Transforms double timedelta to a struct clk_t.
+ */
+Datetime::clk_t
+Datetime::timedelta_to_clk_t(double t)
+{
+	clk_t clk;
+	if (t < 0) {
+		t *= -1.0;
+		clk.tz_s = '-';
+	}
+
+	auto _time = static_cast<int>(t);
+	clk.hour = _time / 3600;
+	if (clk.hour < 100) {
+		auto aux = _time - clk.hour * 3600;
+		clk.min = aux / 60;
+		clk.sec = aux - clk.min * 60;
+	} else {
+		clk.hour = 99;
+		auto aux = _time - clk.hour * 3600;
+		clk.min = aux / 60;
+		if (clk.min < 100) {
+			clk.sec =  aux - clk.min * 60;
+		} else {
+			clk.min = 99;
+			clk.sec =  aux - clk.min * 60;
+			if (clk.sec > 99) {
+				THROW(TimedeltaError, "Bad serialised timedelta value");
+			}
+		}
+	}
+	clk.fsec = t - _time;
+
+	return clk;
+}
+
+
+double
+Datetime::timedelta_to_double(const clk_t& clk)
+{
+	double t = (clk.hour * 60 + clk.min) * 60 + clk.sec + clk.fsec;
+	if (clk.tz_s == '-') {
+		return -t;
+	} else {
+		return t;
+	}
+}
+
+
+std::string
+Datetime::timedelta_to_string(const clk_t& clk, bool trim)
+{
+	if (clk.fsec > 0 || !trim) {
+		char result[18];
+		snprintf(result, 18, "%c%2.2d:%2.2d:%2.2d%.6f", clk.tz_s, clk.hour, clk.min, clk.sec, clk.fsec);
+		std::string res(result);
+		if (trim) {
+			auto it = res.erase(res.begin() + 9) + 1;
+			for (auto it_last = res.end() - 1; it_last != it && *it_last == '0'; --it_last) {
+				it_last = res.erase(it_last);
+			}
+		}
+		return res;
+	} else {
+		char result[10];
+		snprintf(result, 10, "%c%2.2d:%2.2d:%2.2d", clk.tz_s, clk.hour, clk.min, clk.sec);
+		return std::string(result);
+	}
+}
+
+
+std::string
+Datetime::timedelta_to_string(double t, bool trim)
+{
+	return timedelta_to_string(timedelta_to_clk_t(t), trim);
+}
+
+
 bool
-Datetime::isTimeDelta(const std::string& timedelta)
+Datetime::isTimedelta(const std::string& timedelta)
 {
 	auto length = timedelta.length();
 	switch (length) {
@@ -1173,23 +1540,4 @@ Datetime::isTimeDelta(const std::string& timedelta)
 			}
 			return false;
 	}
-}
-
-
-std::string
-Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim)
-{
-	return isotime(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS, trim);
-}
-
-
-/*
- * Normalize date in ISO 8601 format.
- */
-std::string
-Datetime::normalizeISO8601(const std::string& iso_date, bool trim)
-{
-	tm_t tm;
-	ISO8601(iso_date, tm);
-	return isotime(tm, trim);
 }

@@ -59,6 +59,20 @@ public:
 };
 
 
+class TimeError : public DatetimeError {
+public:
+	template<typename... Args>
+	TimeError(Args&&... args) : DatetimeError(std::forward<Args>(args)...) { }
+};
+
+
+class TimedeltaError : public DatetimeError {
+public:
+	template<typename... Args>
+	TimedeltaError(Args&&... args) : DatetimeError(std::forward<Args>(args)...) { }
+};
+
+
 namespace Datetime {
 	inline double normalize_fsec(double fsec) {
 		if (fsec > DATETIME_MAX_FSEC) {
@@ -117,8 +131,47 @@ namespace Datetime {
 	std::string iso8601(double epoch, bool trim=true);
 	std::string iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim=true);
 	bool isDate(const std::string& date);
+
+
+	/*
+	 * Struct for time with zone.
+	 */
+
+	struct clk_t {
+		int hour;
+		int min;
+		int sec;
+		double fsec;
+
+		char tz_s;
+		int tz_h;
+		int tz_m;
+
+		clk_t(int h=0, int m=0, int s=0, double fs=0.0, char tzs='+', int tzh=0, int tzm=0)
+			: hour(h), min(m), sec(s), fsec(fs), tz_s(tzs), tz_h(tzh), tz_m(tzm)  { }
+	};
+
+
+	/*
+	 * Specialized functions for time.
+	 */
+
+	clk_t TimeParser(const std::string& _time);
+	clk_t time_to_clk_t(double t);
+	double time_to_double(const clk_t& clk);
+	std::string time_to_string(const clk_t& clk, bool trim=true);
+	std::string time_to_string(double t, bool trim=true);
 	bool isTime(const std::string& date);
-	bool isTimeDelta(const std::string& date);
-	std::string to_string(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim=true);
-	std::string normalizeISO8601(const std::string& iso_date, bool trim=true);
+
+
+	/*
+	 * Specialized functions for timedelta.
+	 */
+
+	clk_t TimedeltaParser(const std::string& timedelta);
+	clk_t timedelta_to_clk_t(double t);
+	double timedelta_to_double(const clk_t& clk);
+	std::string timedelta_to_string(const clk_t& clk, bool trim=true);
+	std::string timedelta_to_string(double t, bool trim=true);
+	bool isTimedelta(const std::string& date);
 };
