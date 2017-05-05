@@ -246,7 +246,16 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.as_string());
 		case MsgPack::Type::MAP:
-			return _float(field_spc.get_type(), Datetime::timestamp(field_value));
+			switch (field_spc.get_type()) {
+				case FieldType::DATE:
+					return date(field_value);
+				case FieldType::FLOAT:
+					return _float(Datetime::timestamp(Datetime::DateParser(field_value)));
+				case FieldType::STRING:
+					return Datetime::iso8601(Datetime::DateParser(field_value));
+				default:
+					THROW(SerialisationError, "Type: %s is not a date", MsgPackTypes[toUType(field_value.getType())]);
+			}
 		default:
 			THROW(SerialisationError, "Type: %s is not a date", MsgPackTypes[toUType(field_value.getType())]);
 	}
