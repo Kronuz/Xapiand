@@ -200,36 +200,38 @@ static const std::unordered_map<std::string, void (*)(Datetime::tm_t&, const Msg
 
 
 /*
- * Full struct tm according to the date specified by date.
+ * Returnd struct tm according to the date specified by date.
  */
-void
-Datetime::dateTimeParser(const std::string& date, tm_t& tm)
+Datetime::tm_t
+Datetime::DateParser(const std::string& date)
 {
+	tm_t tm;
 	// Check if date is ISO 8601.
 	auto pos = date.find("||");
 	if (pos == std::string::npos) {
-		auto format = ISO8601(date, tm);
+		auto format = Iso8601Parser(date, tm);
 		switch (format) {
 			case Format::VALID:
-				return;
+				return tm;
 			case Format::INVALID:
 				break;
 			case Format::OUT_OF_RANGE:
 				THROW(DatetimeError, "Date: %s is out of range", date.c_str());
 			default:
-				THROW(DatetimeError, "In dateTimeParser, format %s is incorrect", date.c_str());
+				THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", date.c_str());
 		}
 	} else {
-		auto format = ISO8601(date.substr(0, pos), tm);
+		auto format = Iso8601Parser(date.substr(0, pos), tm);
 		switch (format) {
 			case Format::VALID:
-				return processDateMath(date.substr(pos + 2), tm);
+				processDateMath(date.substr(pos + 2), tm);
+				return tm;
 			case Format::INVALID:
 				break;
 			case Format::OUT_OF_RANGE:
 				THROW(DatetimeError, "Date: %s is out of range", date.c_str());
 			default:
-				THROW(DatetimeError, "In dateTimeParser, format %s is incorrect", date.c_str());
+				THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", date.c_str());
 		}
 	}
 
@@ -271,8 +273,64 @@ Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 		if (m.length(16) != 0) {
 			processDateMath(m.str(16), tm);
 		}
-	} else {
-		THROW(DatetimeError, "In dateTimeParser, format %s is incorrect", date.c_str());
+
+		return tm;
+	}
+
+	THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", date.c_str());
+}
+
+
+/*
+ * Returnd struct tm according to the date specified by value.
+ */
+Datetime::tm_t
+Datetime::DateParser(const MsgPack& value)
+{
+	double _timestamp;
+	switch (value.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			_timestamp = value.as_u64();
+			return Datetime::to_tm_t(_timestamp);
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			_timestamp = value.as_i64();
+			return Datetime::to_tm_t(_timestamp);
+		case MsgPack::Type::FLOAT:
+			_timestamp = value.as_f64();
+			return Datetime::to_tm_t(_timestamp);
+		case MsgPack::Type::STR:
+			return Datetime::DateParser(value.as_string());
+		case MsgPack::Type::MAP: {
+			Datetime::tm_t tm;
+			std::string str_time;
+			const auto it_e = value.end();
+			for (auto it = value.begin(); it != it_e; ++it) {
+				auto str_key = it->as_string();
+				try {
+					auto func = map_dispatch_date.at(str_key);
+					(*func)(tm, it.value());
+				} catch (const std::out_of_range&) {
+					if (str_key == "_time") {
+						try {
+							str_time = it.value().as_string();
+						} catch (const msgpack::type_error&) {
+							THROW(DatetimeError, "_time must be string");
+						}
+					} else {
+						THROW(DatetimeError, "Unsupported Key: %s in date", str_key.c_str());
+					}
+				}
+			}
+			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
+				if (!str_time.empty()) {
+					process_date_time(tm, str_time);
+				}
+				return tm;
+			}
+			THROW(DatetimeError, "Date is out of range");
+		}
+		default:
+			THROW(DatetimeError, "Date value must be numeric or string");
 	}
 }
 
@@ -281,7 +339,7 @@ Datetime::dateTimeParser(const std::string& date, tm_t& tm)
  * Full struct tm according to the date in ISO 8601 format.
  */
 Datetime::Format
-Datetime::ISO8601(const std::string& date, tm_t& tm)
+Datetime::Iso8601Parser(const std::string& date, tm_t& tm)
 {
 	auto length = date.length();
 	try {
@@ -428,7 +486,7 @@ Datetime::ISO8601(const std::string& date, tm_t& tm)
 
 
 Datetime::Format
-Datetime::ISO8601(const std::string& date)
+Datetime::Iso8601Parser(const std::string& date)
 {
 	auto length = date.length();
 	try {
@@ -812,6 +870,22 @@ Datetime::getDays_month(int year, int month)
 
 
 /*
+ * Normalize months between -11 and 11
+ */
+void
+Datetime::normalizeMonths(int& year, int& mon)
+{
+	if (mon > 12) {
+		year += mon / 12;
+		mon %= 12;
+	} else while (mon < 1) {
+		mon += 12;
+		year--;
+	}
+}
+
+
+/*
  * Returns the proleptic Gregorian ordinal of the date,
  * where January 1 of year 1 has ordinal 1 (reference date).
  * year -> Any positive number except zero.
@@ -903,86 +977,16 @@ Datetime::to_tm_t(double timestamp)
 
 
 /*
- * Transforms date to a struct tm_t.
- */
-Datetime::tm_t
-Datetime::to_tm_t(const std::string& date)
-{
-	try {
-		auto timestamp = strict_stod(date);
-		return to_tm_t(timestamp);
-	} catch (const std::invalid_argument&) {
-		tm_t tm;
-		dateTimeParser(date, tm);
-		return tm;
-	} catch (const std::out_of_range&) {
-		THROW(DatetimeError, "%s is very large", date.c_str());
-	}
-}
-
-
-Datetime::tm_t
-Datetime::to_tm_t(const MsgPack& value)
-{
-	Datetime::tm_t tm;
-	double _timestamp;
-	switch (value.getType()) {
-		case MsgPack::Type::POSITIVE_INTEGER:
-			_timestamp = value.as_u64();
-			return Datetime::to_tm_t(_timestamp);
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			_timestamp = value.as_i64();
-			return Datetime::to_tm_t(_timestamp);
-		case MsgPack::Type::FLOAT:
-			_timestamp = value.as_f64();
-			return Datetime::to_tm_t(_timestamp);
-		case MsgPack::Type::STR:
-			Datetime::timestamp(value.as_string(), tm);
-			return tm;
-		case MsgPack::Type::MAP: {
-			std::string str_time;
-			const auto it_e = value.end();
-			for (auto it = value.begin(); it != it_e; ++it) {
-				auto str_key = it->as_string();
-				try {
-					auto func = map_dispatch_date.at(str_key);
-					(*func)(tm, it.value());
-				} catch (const std::out_of_range&) {
-					if (str_key == "_time") {
-						try {
-							str_time = it.value().as_string();
-						} catch (const msgpack::type_error&) {
-							THROW(DatetimeError, "_time must be string");
-						}
-					} else {
-						THROW(DatetimeError, "Unsupported Key: %s in date", str_key.c_str());
-					}
-				}
-			}
-			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
-				if (!str_time.empty()) {
-					process_date_time(tm, str_time);
-				}
-				return tm;
-			}
-			THROW(DatetimeError, "Date is out of range");
-		}
-		default:
-			THROW(DatetimeError, "Date value must be numeric or string");
-	}
-}
-
-
-/*
  * Function to calculate Unix timestamp from Coordinated Universal Time (UTC).
  * Only for year greater than 0.
  * Returns Timestamp with milliseconds as the decimal part.
  */
 double
-Datetime::timestamp(tm_t& tm)
+Datetime::timestamp(const tm_t& tm)
 {
-	normalizeMonths(tm.year, tm.mon);
-	auto result = static_cast<double>(toordinal(tm.year, tm.mon, 1) - DATETIME_EPOCH_ORD + tm.day - 1);
+	int year = tm.year, mon = mon;
+	normalizeMonths(year, mon);
+	auto result = static_cast<double>(toordinal(year, mon, 1) - DATETIME_EPOCH_ORD + tm.day - 1);
 	result *= 24;
 	result += tm.hour;
 	result *= 60;
@@ -991,45 +995,6 @@ Datetime::timestamp(tm_t& tm)
 	result += tm.sec;
 	result < 0 ? result -= tm.fsec : result += tm.fsec;
 	return result;
-}
-
-
-/*
- * Returns the timestamp of date.
- */
-double
-Datetime::timestamp(const std::string& date)
-{
-	tm_t tm;
-	dateTimeParser(date, tm);
-	return timestamp(tm);
-}
-
-
-/*
- * Returns the timestamp of date and fill tm.
- */
-double
-Datetime::timestamp(const std::string& date, tm_t& tm)
-{
-	dateTimeParser(date, tm);
-	return timestamp(tm);
-}
-
-
-double
-Datetime::timestamp(const MsgPack& value)
-{
-	Datetime::tm_t tm = Datetime::to_tm_t(value);
-	return Datetime::timestamp(tm);
-}
-
-
-double
-Datetime::timestamp(const MsgPack& value, Datetime::tm_t& tm)
-{
-	tm = Datetime::to_tm_t(value);
-	return Datetime::timestamp(tm);
 }
 
 
@@ -1062,13 +1027,21 @@ Datetime::isvalidDate(int year, int month, int day)
  * Return a string with the date in ISO 8601 Format.
  */
 std::string
-Datetime::isotime(const std::tm& tm)
+Datetime::iso8601(const std::tm& tm, bool trim)
 {
-	char result[20];
-	snprintf(result, 20, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d",
-		tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
-		tm.tm_hour, tm.tm_min, tm.tm_sec);
-	return std::string(result);
+	if (trim) {
+		char result[20];
+		snprintf(result, 20, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d",
+			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
+			tm.tm_hour, tm.tm_min, tm.tm_sec);
+		return std::string(result);
+	} else {
+		char result[27];
+		snprintf(result, 27, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.000000",
+			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
+			tm.tm_hour, tm.tm_min, tm.tm_sec);
+		return std::string(result);
+	}
 }
 
 
@@ -1076,7 +1049,7 @@ Datetime::isotime(const std::tm& tm)
  * Return a string with the date in ISO 8601 Format.
  */
 std::string
-Datetime::isotime(const tm_t& tm, bool trim)
+Datetime::iso8601(const tm_t& tm, bool trim)
 {
 	if (tm.fsec > 0.0 || !trim) {
 		char result[28];
@@ -1103,33 +1076,27 @@ Datetime::isotime(const tm_t& tm, bool trim)
  * Transforms a timestamp in seconds with decimal fraction to ISO 8601 format.
  */
 std::string
-Datetime::isotime(double timestamp, bool trim)
+Datetime::iso8601(double timestamp, bool trim)
 {
 	auto tm = to_tm_t(timestamp);
-	return isotime(tm, trim);
+	return iso8601(tm, trim);
 }
 
 
 /*
- * Normalize months between -11 and 11
+ * Transforms a time_point in seconds with decimal fraction to ISO 8601 format.
  */
-void
-Datetime::normalizeMonths(int& year, int& mon)
+std::string
+Datetime::iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim)
 {
-	if (mon > 12) {
-		year += mon / 12;
-		mon %= 12;
-	} else while (mon < 1) {
-		mon += 12;
-		year--;
-	}
+	return iso8601(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS, trim);
 }
 
 
 bool
 Datetime::isDate(const std::string& date)
 {
-	auto format = ISO8601(date);
+	auto format = Iso8601Parser(date);
 	switch (format) {
 		case Format::VALID:
 			return true;
