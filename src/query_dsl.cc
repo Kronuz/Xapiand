@@ -475,7 +475,7 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, const std::string&
 
 	auto it = map_acc_date.find(field_accuracy.substr(1));
 	if (it != map_acc_date.end()) {
-		Datetime::tm_t tm = Datetime::to_tm_t(obj);
+		Datetime::tm_t tm = Datetime::DateParser(obj);
 		switch (it->second) {
 			case UnitTime::SECOND: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);

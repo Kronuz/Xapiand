@@ -108,8 +108,8 @@ Xapian::Query getStringQuery(const required_spc_t& field_spc, std::string&& star
 
 
 Xapian::Query getDateQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
-	auto timestamp_s = Datetime::timestamp(start);
-	auto timestamp_e = Datetime::timestamp(end);
+	auto timestamp_s = Datetime::timestamp(Datetime::DateParser(start));
+	auto timestamp_e = Datetime::timestamp(Datetime::DateParser(end));
 
 	if (timestamp_s > timestamp_e) {
 		return Xapian::Query::MatchNothing;

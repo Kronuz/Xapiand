@@ -154,7 +154,7 @@ class DateKey : public BaseKey {
 public:
 	DateKey(Xapian::valueno slot, bool reverse, const std::string& value)
 		: BaseKey(slot, reverse),
-		  _ref_val(Datetime::timestamp(value)),
+		  _ref_val(Datetime::timestamp(Datetime::DateParser(value))),
 		  _ser_ref_val(Serialise::timestamp(_ref_val)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
