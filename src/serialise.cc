@@ -619,7 +619,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 				return FieldType::TIME;
 			}
 
-			if (Datetime::isTimeDelta(str_value)) {
+			if (Datetime::isTimedelta(str_value)) {
 				return FieldType::TIMEDELTA;
 			}
 

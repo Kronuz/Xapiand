@@ -1979,7 +1979,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[2] = FieldType::TIME;
 				return;
 			}
-			if (specification.flags.timedelta_detection && Datetime::isTimeDelta(str_value)) {
+			if (specification.flags.timedelta_detection && Datetime::isTimedelta(str_value)) {
 				specification.sep_types[2] = FieldType::TIMEDELTA;
 				return;
 			}
