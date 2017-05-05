@@ -172,15 +172,25 @@ namespace Serialise {
 	// Serialise value like date and fill tm.
 	std::string date(const class MsgPack& value, Datetime::tm_t& tm);
 
-	inline std::string date(Datetime::tm_t& tm) {
-		return sortable_serialise(Datetime::timestamp(tm));
+	inline std::string date(const Datetime::tm_t& tm) {
+		return timestamp(Datetime::timestamp(tm));
 	}
 
 	// Serialise value like time.
 	std::string time(const std::string& field_value);
+	std::string time(const std::string& field_value, Datetime::clk_t& clk);
+
+	inline std::string time(const Datetime::clk_t& clk) {
+		return timestamp(Datetime::time_to_double(clk));
+	}
 
 	// Serialise value like timedelta.
 	std::string timedelta(const std::string& field_value);
+	std::string timedelta(const std::string& field_value, Datetime::clk_t& clk);
+
+	inline std::string timedelta(const Datetime::clk_t& clk) {
+		return timestamp(Datetime::timedelta_to_double(clk));
+	}
 
 	// Serialise field_value like float.
 	std::string _float(const std::string& field_value);
