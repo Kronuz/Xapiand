@@ -40,7 +40,8 @@ GenerateTerms::integer(Xapian::Document& doc, const std::vector<uint64_t>& accur
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::integer(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it++, ctype_integer));
+		doc.add_term(prefixed(term_v, *it, ctype_integer));
+		++it;
 	}
 }
 
@@ -51,7 +52,8 @@ GenerateTerms::positive(Xapian::Document& doc, const std::vector<uint64_t>& accu
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::positive(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it++, ctype_integer));
+		doc.add_term(prefixed(term_v, *it, ctype_integer));
+		++it;
 	}
 }
 
@@ -64,50 +66,53 @@ GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy
 		switch ((UnitTime)acc) {
 			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, ctype_date));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
 			case UnitTime::CENTURY: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, ctype_date));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
 			case UnitTime::DECADE: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, ctype_date));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
 			case UnitTime::YEAR: {
 				Datetime::tm_t _tm(tm.year);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, ctype_date));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
 			case UnitTime::MONTH: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, ctype_date));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
 			case UnitTime::DAY: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, ctype_date));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
 			case UnitTime::HOUR: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, ctype_date));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
 			case UnitTime::MINUTE: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, ctype_date));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
 			case UnitTime::SECOND: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it++, ctype_date));
+				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
+			default:
+				break;
 		}
+		++it;
 	}
 }
 
@@ -150,8 +155,10 @@ GenerateTerms::integer(Xapian::Document& doc, const std::vector<uint64_t>& accur
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::integer(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it++, ctype_integer));
-		doc.add_term(prefixed(term_v, *itg++, ctype_integer));
+		doc.add_term(prefixed(term_v, *it, ctype_integer));
+		doc.add_term(prefixed(term_v, *itg, ctype_integer));
+		++it;
+		++itg;
 	}
 }
 
@@ -164,8 +171,10 @@ GenerateTerms::positive(Xapian::Document& doc, const std::vector<uint64_t>& accu
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::positive(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it++, ctype_integer));
-		doc.add_term(prefixed(term_v, *itg++, ctype_integer));
+		doc.add_term(prefixed(term_v, *it, ctype_integer));
+		doc.add_term(prefixed(term_v, *itg, ctype_integer));
+		++it;
+		++itg;
 	}
 }
 
@@ -181,67 +190,71 @@ GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy
 			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++, ctype_date));
-				doc.add_term(prefixed(term_v, *itg++, ctype_date));
+				doc.add_term(prefixed(term_v, *it, ctype_date));
+				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
 			case UnitTime::CENTURY: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++, ctype_date));
-				doc.add_term(prefixed(term_v, *itg++, ctype_date));
+				doc.add_term(prefixed(term_v, *it, ctype_date));
+				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
 			case UnitTime::DECADE: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++, ctype_date));
-				doc.add_term(prefixed(term_v, *itg++, ctype_date));
+				doc.add_term(prefixed(term_v, *it, ctype_date));
+				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
 			case UnitTime::YEAR: {
 				Datetime::tm_t _tm(tm.year);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++, ctype_date));
-				doc.add_term(prefixed(term_v, *itg++, ctype_date));
+				doc.add_term(prefixed(term_v, *it, ctype_date));
+				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
 			case UnitTime::MONTH: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++, ctype_date));
-				doc.add_term(prefixed(term_v, *itg++, ctype_date));
+				doc.add_term(prefixed(term_v, *it, ctype_date));
+				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
 			case UnitTime::DAY: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++, ctype_date));
-				doc.add_term(prefixed(term_v, *itg++, ctype_date));
+				doc.add_term(prefixed(term_v, *it, ctype_date));
+				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
 			case UnitTime::HOUR: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++, ctype_date));
-				doc.add_term(prefixed(term_v, *itg++, ctype_date));
+				doc.add_term(prefixed(term_v, *it, ctype_date));
+				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
 			case UnitTime::MINUTE: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++, ctype_date));
-				doc.add_term(prefixed(term_v, *itg++, ctype_date));
+				doc.add_term(prefixed(term_v, *it, ctype_date));
+				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
 			case UnitTime::SECOND: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it++, ctype_date));
-				doc.add_term(prefixed(term_v, *itg++, ctype_date));
+				doc.add_term(prefixed(term_v, *it, ctype_date));
+				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
+			default:
+				break;
 		}
+		++it;
+		++itg;
 	}
 }
 
@@ -355,6 +368,8 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 			case UnitTime::SECOND:
 				query_upper = second(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
+			default:
+				break;
 		}
 	}
 
@@ -387,6 +402,8 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 				break;
 			case UnitTime::SECOND:
 				query_needed = second(tm_s, tm_e, acc_prefix[pos], wqf);
+				break;
+			default:
 				break;
 		}
 	}
