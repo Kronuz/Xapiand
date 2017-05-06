@@ -984,7 +984,7 @@ Datetime::to_tm_t(double timestamp)
 double
 Datetime::timestamp(const tm_t& tm)
 {
-	int year = tm.year, mon = mon;
+	int year = tm.year, mon = tm.mon;
 	normalizeMonths(year, mon);
 	auto result = static_cast<double>(toordinal(year, mon, 1) - DATETIME_EPOCH_ORD + tm.day - 1);
 	result *= 24;
