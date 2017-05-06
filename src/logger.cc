@@ -411,7 +411,7 @@ Logging::_str_format(bool stacked, int priority, const std::string& exc, const c
 	if (info && validated_priority(priority) <= LOG_DEBUG) {
 		auto iso8601 = "[" + Datetime::iso8601(std::chrono::system_clock::now(), false, ' ') + "]";
 		auto tid = " (" + get_thread_name() + ")";
-		result = iso8601 + tid;
+		result = DARK_GREY + iso8601 + tid;
 #ifdef LOG_OBJ_ADDRESS
 		if (obj) {
 			snprintf(buffer, BUFFER_SIZE, " [%p]", obj);
@@ -425,6 +425,7 @@ Logging::_str_format(bool stacked, int priority, const std::string& exc, const c
 #ifdef LOG_LOCATION
 		result += std::string(file) + ":" + std::to_string(line) + ": ";
 #endif
+		result += NO_COL;
 	}
 
 	if (stacked) {
