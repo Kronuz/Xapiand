@@ -126,10 +126,10 @@ namespace Datetime {
 	tm_t to_tm_t(double timestamp);
 	double timestamp(const tm_t& tm);
 	bool isvalidDate(int year, int month, int day);
-	std::string iso8601(const std::tm& timep, bool trim=true);
-	std::string iso8601(const tm_t& timep, bool trim=true);
-	std::string iso8601(double epoch, bool trim=true);
-	std::string iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim=true);
+	std::string iso8601(const std::tm& timep, bool trim=true, char sep='T');
+	std::string iso8601(const tm_t& timep, bool trim=true, char sep='T');
+	std::string iso8601(double epoch, bool trim=true, char sep='T');
+	std::string iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim=true, char sep='T');
 	bool isDate(const std::string& date);
 
 

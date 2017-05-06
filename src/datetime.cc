@@ -1027,18 +1027,20 @@ Datetime::isvalidDate(int year, int month, int day)
  * Return a string with the date in ISO 8601 Format.
  */
 std::string
-Datetime::iso8601(const std::tm& tm, bool trim)
+Datetime::iso8601(const std::tm& tm, bool trim, char sep)
 {
 	if (trim) {
 		char result[20];
-		snprintf(result, 20, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d",
+		snprintf(result, 20, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d",
 			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
+			sep,
 			tm.tm_hour, tm.tm_min, tm.tm_sec);
 		return std::string(result);
 	} else {
 		char result[27];
-		snprintf(result, 27, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.000000",
+		snprintf(result, 27, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d.000000",
 			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
+			sep,
 			tm.tm_hour, tm.tm_min, tm.tm_sec);
 		return std::string(result);
 	}
@@ -1049,12 +1051,14 @@ Datetime::iso8601(const std::tm& tm, bool trim)
  * Return a string with the date in ISO 8601 Format.
  */
 std::string
-Datetime::iso8601(const tm_t& tm, bool trim)
+Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 {
 	if (tm.fsec > 0.0 || !trim) {
 		char result[28];
-		snprintf(result, 28, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d%.6f",
-			tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec, tm.fsec);
+		snprintf(result, 28, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d%.6f",
+			tm.year, tm.mon, tm.day,
+			sep,
+			tm.hour, tm.min, tm.sec, tm.fsec);
 		std::string res(result);
 		if (trim) {
 			auto it = res.erase(res.begin() + 19) + 1;
@@ -1065,8 +1069,10 @@ Datetime::iso8601(const tm_t& tm, bool trim)
 		return res;
 	} else {
 		char result[20];
-		snprintf(result, 20, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d",
-			tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
+		snprintf(result, 20, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d",
+			tm.year, tm.mon, tm.day,
+			sep,
+			tm.hour, tm.min, tm.sec);
 		return std::string(result);
 	}
 }
@@ -1076,10 +1082,10 @@ Datetime::iso8601(const tm_t& tm, bool trim)
  * Transforms a timestamp in seconds with decimal fraction to ISO 8601 format.
  */
 std::string
-Datetime::iso8601(double timestamp, bool trim)
+Datetime::iso8601(double timestamp, bool trim, char sep)
 {
 	auto tm = to_tm_t(timestamp);
-	return iso8601(tm, trim);
+	return iso8601(tm, trim, sep);
 }
 
 
@@ -1087,9 +1093,9 @@ Datetime::iso8601(double timestamp, bool trim)
  * Transforms a time_point in seconds with decimal fraction to ISO 8601 format.
  */
 std::string
-Datetime::iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim)
+Datetime::iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim, char sep)
 {
-	return iso8601(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS, trim);
+	return iso8601(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS, trim, sep);
 }
 
 
