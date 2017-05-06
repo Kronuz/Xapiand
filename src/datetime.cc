@@ -1055,10 +1055,10 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 {
 	if (tm.fsec > 0.0 || !trim) {
 		char result[28];
-		snprintf(result, 28, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d%.6f",
+		snprintf(result, 28, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d.%6.6d",
 			tm.year, tm.mon, tm.day,
 			sep,
-			tm.hour, tm.min, tm.sec, tm.fsec);
+			tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec / DATETIME_MICROSECONDS));
 		std::string res(result);
 		if (trim) {
 			auto it = res.erase(res.begin() + 19) + 1;
@@ -1296,7 +1296,7 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 	if (clk.fsec > 0 || !trim) {
 		if (trim && clk.tz_h == 0 && clk.tz_m == 0) {
 			char result[17];
-			snprintf(result, 17, "%2.2d:%2.2d:%2.2d%.6f", clk.hour, clk.min, clk.sec, clk.fsec);
+			snprintf(result, 17, "%2.2d:%2.2d:%2.2d.%6.6d", clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec / DATETIME_MICROSECONDS));
 			std::string res(result);
 			auto it = res.erase(res.begin() + 8) + 1;
 			for (auto it_last = res.end() - 1; it_last != it && *it_last == '0'; --it_last) {
@@ -1305,7 +1305,7 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 			return res;
 		} else {
 			char result[23];
-			snprintf(result, 23, "%2.2d:%2.2d:%2.2d%.6f%c%2.2d:%2.2d", clk.hour, clk.min, clk.sec, clk.fsec, clk.tz_s, clk.tz_h, clk.tz_m);
+			snprintf(result, 23, "%2.2d:%2.2d:%2.2d.%6.6d%c%2.2d:%2.2d", clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec / DATETIME_MICROSECONDS), clk.tz_s, clk.tz_h, clk.tz_m);
 			std::string res(result);
 			auto it = res.erase(res.begin() + 8) + 1;
 			for (auto it_last = res.end() - 7; it_last != it && *it_last == '0'; --it_last) {
@@ -1496,7 +1496,7 @@ Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 {
 	if (clk.fsec > 0 || !trim) {
 		char result[18];
-		snprintf(result, 18, "%c%2.2d:%2.2d:%2.2d%.6f", clk.tz_s, clk.hour, clk.min, clk.sec, clk.fsec);
+		snprintf(result, 18, "%c%2.2d:%2.2d:%2.2d%6.6d", clk.tz_s, clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec / DATETIME_MICROSECONDS));
 		std::string res(result);
 		if (trim) {
 			auto it = res.erase(res.begin() + 9) + 1;
