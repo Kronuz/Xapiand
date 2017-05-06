@@ -5,7 +5,6 @@ set (PACKAGE_NAME "Xapiand")
 set (PACKAGE_VERSION "1.0.0")
 set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
 set (PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
-set (PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set (PACKAGE_TARNAME "${PROJECT_NAME}")
 set (PATH_TESTS "${PROJECT_SOURCE_DIR}/tests")
 
@@ -113,6 +112,8 @@ add_executable (${PROJECT_NAME}
 	$<TARGET_OBJECTS:LZ4_OBJ>
 	$<TARGET_OBJECTS:GUID_OBJ>
 )
+
+ADD_DEPENDENCIES(${PROJECT_NAME} version)
 
 include_directories (
 	"${PROJECT_SOURCE_DIR}/src"
@@ -420,11 +421,36 @@ endif ()
 
 
 ########################################################################
+# Version
+########################################################################
+
+find_package (Git)
+file (WRITE ${PROJECT_BINARY_DIR}/version.cmake "
+set (PACKAGE_NAME \"${PACKAGE_NAME}\")
+set (PACKAGE_VERSION \"${PACKAGE_VERSION}\")
+set (PACKAGE_URL \"${PACKAGE_URL}\")
+set (PACKAGE_BUGREPORT \"${PACKAGE_BUGREPORT}\")
+set (PACKAGE_TARNAME \"${PACKAGE_TARNAME}\")
+set (PATH_TESTS \"${PATH_TESTS}\")
+execute_process (
+    COMMAND ${GIT_EXECUTABLE} --git-dir ./.git rev-parse --short HEAD
+    WORKING_DIRECTORY \"${PROJECT_SOURCE_DIR}\"
+    OUTPUT_VARIABLE GIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+configure_file (\"${PROJECT_SOURCE_DIR}/version.h.in\" \"${PROJECT_BINARY_DIR}/src/version.h\" @ONLY)
+")
+add_custom_target (
+    version
+    ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/version.cmake
+)
+
+########################################################################
 # Configuration
 ########################################################################
 
 configure_file (
-	${PROJECT_SOURCE_DIR}/config.h.cmake
+	${PROJECT_SOURCE_DIR}/config.h.in
 	${PROJECT_BINARY_DIR}/src/config.h)
 
 
@@ -445,7 +471,7 @@ add_custom_target (uninstall
 # Copy stopwords from source to build directory
 ########################################################################
 
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+add_custom_command (TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/stopwords/ ${CMAKE_INSTALL_DATAROOTDIR}/xapiand/stopwords)
 

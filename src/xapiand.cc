@@ -51,7 +51,7 @@
 #include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
 #endif
 
-#include "config.h"                  // for PACKAGE_BUGREPORT, PACKAGE_STRING
+#include "version.h"                 // for PACKAGE_BUGREPORT, PACKAGE_STRING
 #include "endpoint.h"                // for Endpoint, Endpoint::cwd
 #include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"               // for Exit
@@ -779,7 +779,7 @@ void banner() {
 		rgb(192, 192, 192) + "      \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
 		rgb(160, 160, 160) + "      /  \\ (_| | |_) | | (_| | | | | (_| |\n" +
 		rgb(128, 128, 128) + "     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
-		rgb(96, 96, 96)    + "               |_|" + LIGHT_GREEN + center_string(format_string("%s v%s", PACKAGE_NAME, PACKAGE_VERSION), 24) + "\n" + GREEN +
+		rgb(96, 96, 96)    + "               |_|" + LIGHT_GREEN + center_string(format_string("%s", PACKAGE_STRING), 24) + "\n" + GREEN +
 		center_string(format_string("[%s]", PACKAGE_BUGREPORT), 46) + "\n" +
 		center_string("Using " + join_string(versions, ", ", " and "), 46) + "\n\n");
 }

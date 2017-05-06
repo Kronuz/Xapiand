@@ -7,8 +7,9 @@
 /Makefile.in
 /aclocal.m4
 /configure
+/version.h
+/version.h.in~
 /config.h
-/config.h.in
 /config.h.in~
 /config.log
 /config.status

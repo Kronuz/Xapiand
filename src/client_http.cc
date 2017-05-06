@@ -41,7 +41,7 @@
 #include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
 #endif
 
-#include "config.h"                         // for PACKAGE_VERSION, PACKAGE_...
+#include "version.h"                        // for PACKAGE_STRING
 #include "endpoint.h"                       // for Endpoints, Node, Endpoint
 #include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception.h"                      // for Exception, SerialisationE...
@@ -133,7 +133,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 	}
 
 	if (mode & HTTP_HEADER_RESPONSE) {
-		headers += "Server: " + std::string(PACKAGE_NAME) + "/" + std::string(VERSION) + eol;
+		headers += "Server: " + std::string(PACKAGE_STRING) + eol;
 
 		response_ends = std::chrono::system_clock::now();
 		headers += "Response-Time: " + delta_string(request_begins, response_ends) + eol;
@@ -975,8 +975,7 @@ HttpClient::home_view(enum http_method method, Command)
 	obj_data["cluster_name"] = XapiandManager::manager->cluster_name;
 #endif
 	obj_data["version"] = {
-		{ PACKAGE_NAME, format_string("%s", PACKAGE_VERSION) },
-		{ "Xapian", format_string("%s", XAPIAN_VERSION) },
+		{ "Xapian", format_string("%s", PACKAGE_STRING) },
 #ifdef XAPIAND_CHAISCRIPT
 		{ "ChaiScript", format_string("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #elif defined(XAPIAND_V8)
