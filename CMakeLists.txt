@@ -435,7 +435,7 @@ set (PATH_TESTS \"${PATH_TESTS}\")
 execute_process (
     COMMAND ${GIT_EXECUTABLE} --git-dir ./.git rev-parse --short HEAD
     WORKING_DIRECTORY \"${PROJECT_SOURCE_DIR}\"
-    OUTPUT_VARIABLE GIT_HASH
+    OUTPUT_VARIABLE PACKAGE_HASH
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 configure_file (\"${PROJECT_SOURCE_DIR}/version.h.in\" \"${PROJECT_BINARY_DIR}/src/version.h\" @ONLY)

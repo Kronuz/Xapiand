@@ -3,8 +3,8 @@
  * during the cmake configuration of your project. If you need to make changes
  * edit the original file NOT THIS FILE.
  * --------------------------------------------------------------------------*/
-#ifndef _CONFIGURATION_HEADER_GUARD_H_
-#define _CONFIGURATION_HEADER_GUARD_H_
+#ifndef _CONFIG_H_
+#define _CONFIG_H_
 
 
 /* define if the compiler supports basic C++14 syntax */
@@ -264,4 +264,4 @@
 /* Enable V8 engine */
 #cmakedefine XAPIAND_V8 @XAPIAND_V8@
 
-#endif /*  _CONFIGURATION_HEADER_GUARD_H_ */
+#endif /*  _CONFIG_H_ */
