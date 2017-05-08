@@ -732,7 +732,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 
 			// Try like TIMEDELTA
 			try {
-				return std::make_pair(FieldType::TIMEDELTA, date(str_obj));
+				return std::make_pair(FieldType::TIMEDELTA, timedelta(str_obj));
 			} catch (const TimedeltaError&) { }
 
 			// Try like GEO
