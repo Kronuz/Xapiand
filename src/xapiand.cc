@@ -779,7 +779,7 @@ void banner() {
 		rgb(192, 192, 192) + "      \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
 		rgb(160, 160, 160) + "      /  \\ (_| | |_) | | (_| | | | | (_| |\n" +
 		rgb(128, 128, 128) + "     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
-		rgb(96, 96, 96)    + "               |_|" + LIGHT_GREEN + center_string(Package::STRING, 24) + "\n" + GREEN +
+		rgb(96, 96, 96)    + "               |_|" + LIGHT_GREEN + center_string(Package::STRING, 25) + "\n" + GREEN +
 		center_string("[" + Package::BUGREPORT + "]", 46) + "\n" +
 		center_string("Using " + join_string(versions, ", ", " and "), 46) + "\n\n");
 }
