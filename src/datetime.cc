@@ -1033,15 +1033,13 @@ Datetime::iso8601(const std::tm& tm, bool trim, char sep)
 		char result[20];
 		snprintf(result, 20, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d",
 			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
-			sep,
-			tm.tm_hour, tm.tm_min, tm.tm_sec);
+			sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
 		return std::string(result);
 	} else {
 		char result[27];
 		snprintf(result, 27, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d.000000",
 			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
-			sep,
-			tm.tm_hour, tm.tm_min, tm.tm_sec);
+			sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
 		return std::string(result);
 	}
 }
@@ -1056,8 +1054,7 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 	if (tm.fsec > 0.0 || !trim) {
 		char result[28];
 		snprintf(result, 28, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d.%6.6d",
-			tm.year, tm.mon, tm.day,
-			sep,
+			tm.year, tm.mon, tm.day, sep,
 			tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec / DATETIME_MICROSECONDS));
 		std::string res(result);
 		if (trim) {
@@ -1070,9 +1067,7 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 	} else {
 		char result[20];
 		snprintf(result, 20, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d",
-			tm.year, tm.mon, tm.day,
-			sep,
-			tm.hour, tm.min, tm.sec);
+			tm.year, tm.mon, tm.day, sep, tm.hour, tm.min, tm.sec);
 		return std::string(result);
 	}
 }
