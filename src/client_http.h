@@ -166,7 +166,7 @@ class HttpClient : public BaseClient {
 	PathParser path_parser;
 	QueryParser query_parser;
 
-	unsigned indent;
+	int indent;
 	std::unique_ptr<query_field_t> query_field;
 
 	enum http_status response_status;
@@ -249,7 +249,7 @@ class HttpClient : public BaseClient {
 	std::string http_response(enum http_status status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int total_count=0, int matches_estimated=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
 	void clean_http_request();
 	void set_idle();
-	type_t serialize_response(const MsgPack& obj, const type_t& ct_type, unsigned indent, bool serialize_error=false);
+	type_t serialize_response(const MsgPack& obj, const type_t& ct_type, int indent, bool serialize_error=false);
 
 	type_t resolve_ct_type(std::string ct_type_str);
 	template <typename T>

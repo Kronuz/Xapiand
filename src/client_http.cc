@@ -195,7 +195,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 
 HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
 	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
-	  indent(0),
+	  indent(-1),
 	  response_size(0),
 	  response_logged(false),
 	  body_size(0),
@@ -465,7 +465,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 						std::sregex_iterator end;
 						int i = 0;
 						while (next != end) {
-							unsigned indent = 4;
+							int indent = -1;
 							double q = 1.0;
 							if (next->length(3)) {
 								auto param = next->str(3);
@@ -474,7 +474,9 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 									if (next_param->str(1) == "q") {
 										q = strict_stod(next_param->str(2));
 									} else if (next_param->str(1) == "indent") {
-										indent = (unsigned)strict_stoul(next_param->str(2));
+										indent = static_cast<int>(strict_stol(next_param->str(2)));
+										if (indent < 0) indent = 0;
+										else if (indent > 16) indent = 16;
 									}
 									++next_param;
 								}
@@ -1463,7 +1465,7 @@ HttpClient::search_view(enum http_method method, Command)
 				}
 			} else if (is_acceptable_type(json_type, ct_type)) {
 				first_chunk = basic_response.to_string(indent);
-				if (indent) {
+				if (indent != -1) {
 					first_chunk = first_chunk.substr(0, first_chunk.size() - (indent * 2) - 1) + "\n";
 					last_chunk = std::string(indent * 2, ' ') + "]\n" + std::string(indent, ' ') + "}\n}";
 					eol_chunk = "\n";
@@ -1755,9 +1757,9 @@ HttpClient::url_resolve()
 		if (query_parser.next("pretty") != -1) {
 			if (query_parser.len) {
 				try {
-					indent = Serialise::boolean(query_parser.get()) == "t" ? 4 : 0;
+					indent = Serialise::boolean(query_parser.get()) == "t" ? 4 : -1;
 				} catch (const Exception&) { }
-			} else if (indent == 0) {
+			} else if (indent == -1) {
 				indent = 4;
 			}
 		}
@@ -2257,7 +2259,7 @@ HttpClient::clean_http_request()
 	response_status = HTTP_STATUS_OK;
 	response_size = 0;
 
-	indent = 0;
+	indent = -1;
 	query_field.reset();
 	path_parser.clear();
 	query_parser.clear();
@@ -2371,7 +2373,7 @@ HttpClient::get_acceptable_type(const T& ct)
 	for (const auto& accept : accept_set) {
 		if (is_acceptable_type(std::get<2>(accept), ct)) {
 			auto _indent = std::get<3>(accept);
-			if (_indent) {
+			if (_indent != -1) {
 				indent = _indent;
 			}
 			return std::get<2>(accept);
@@ -2379,7 +2381,7 @@ HttpClient::get_acceptable_type(const T& ct)
 	}
 	const auto& accept = *accept_set.begin();
 	auto _indent = std::get<3>(accept);
-	if (_indent) {
+	if (_indent != -1) {
 		indent = _indent;
 	}
 	return std::get<2>(accept);
@@ -2387,7 +2389,7 @@ HttpClient::get_acceptable_type(const T& ct)
 
 
 type_t
-HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, unsigned indent, bool serialize_error)
+HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, int indent, bool serialize_error)
 {
 	L_CALL(this, "HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), indent, serialize_error ? "true" : "false");
 

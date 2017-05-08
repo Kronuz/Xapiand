@@ -267,7 +267,7 @@ public:
 	std::ostream& operator<<(std::ostream& s) const;
 
 	std::string unformatted_string() const;
-	std::string to_string(unsigned indent=0) const;
+	std::string to_string(int indent=-1) const;
 
 	template <typename B=msgpack::sbuffer>
 	std::string serialise() const;
@@ -1901,8 +1901,8 @@ inline MsgPack& MsgPack::operator+=(double val) {
 }
 
 
-inline std::string MsgPack::to_string(unsigned indent) const {
-	if (indent) {
+inline std::string MsgPack::to_string(int indent) const {
+	if (indent >= 0) {
 		rapidjson::Document doc = as_document();
 		rapidjson::StringBuffer buffer;
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
