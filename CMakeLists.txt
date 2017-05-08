@@ -425,7 +425,7 @@ endif ()
 ########################################################################
 
 find_package (Git)
-file (WRITE ${PROJECT_BINARY_DIR}/version.cmake "
+file (WRITE ${PROJECT_SOURCE_DIR}/version.cmake "
 set (PACKAGE_NAME \"${PACKAGE_NAME}\")
 set (PACKAGE_VERSION \"${PACKAGE_VERSION}\")
 set (PACKAGE_URL \"${PACKAGE_URL}\")
