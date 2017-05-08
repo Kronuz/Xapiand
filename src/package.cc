@@ -20,11 +20,10 @@
  * IN THE SOFTWARE.
  */
 
-#include "xapiand.h"
 #include "package.h"
 #include "package_config.h"
+#include "xapiand.h"
 
-#include <string>      // for string
 
 std::string Package::STRING = PACKAGE_STRING;
 std::string Package::NAME = PACKAGE_NAME;
