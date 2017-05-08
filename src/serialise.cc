@@ -611,16 +611,16 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 				return FieldType::DATE;
 			}
 
-			if (EWKT::isEWKT(str_value)) {
-				return FieldType::GEO;
-			}
-
 			if (Datetime::isTime(str_value)) {
 				return FieldType::TIME;
 			}
 
 			if (Datetime::isTimedelta(str_value)) {
 				return FieldType::TIMEDELTA;
+			}
+
+			if (EWKT::isEWKT(str_value)) {
+				return FieldType::GEO;
 			}
 
 			if (bool_term) {
@@ -725,20 +725,20 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 				return std::make_pair(FieldType::DATE, date(str_obj));
 			} catch (const DatetimeError&) { }
 
+			// Try like TIME
+			try {
+				return std::make_pair(FieldType::TIME, time(str_obj));
+			} catch (const TimeError&) { }
+
+			// Try like TIMEDELTA
+			try {
+				return std::make_pair(FieldType::TIMEDELTA, date(str_obj));
+			} catch (const TimedeltaError&) { }
+
 			// Try like GEO
 			try {
 				return std::make_pair(FieldType::GEO, geospatial(str_obj));
 			} catch (const EWKTError&) { }
-
-			// Try like TIME
-			try {
-				return std::make_pair(FieldType::TIME, time(str_obj));
-			} catch (const SerialisationError&) { }
-
-			// Try like TIMEDELTA
-			try {
-				return std::make_pair(FieldType::TIMEDELTA, timedelta(str_obj));
-			} catch (const SerialisationError&) { }
 
 			if (bool_term) {
 				return std::make_pair(FieldType::TERM, str_obj);
