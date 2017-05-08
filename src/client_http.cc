@@ -60,7 +60,7 @@
 #include "stats.h"                          // for Stats
 #include "threadpool.h"                     // for ThreadPool
 #include "utils.h"                          // for delta_string
-#include "version.h"                        // for Version
+#include "package.h"                        // for Package
 #include "xxh64.hpp"                        // for xxh64
 
 
@@ -133,7 +133,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 	}
 
 	if (mode & HTTP_HEADER_RESPONSE) {
-		headers += "Server: " + Version::STRING + eol;
+		headers += "Server: " + Package::STRING + eol;
 
 		response_ends = std::chrono::system_clock::now();
 		headers += "Response-Time: " + delta_string(request_begins, response_ends) + eol;
@@ -977,7 +977,7 @@ HttpClient::home_view(enum http_method method, Command)
 	obj_data["cluster_name"] = XapiandManager::manager->cluster_name;
 #endif
 	obj_data["version"] = {
-		{ "Xapian", Version::STRING },
+		{ "Xapian", Package::STRING },
 #ifdef XAPIAND_CHAISCRIPT
 		{ "ChaiScript", format_string("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #elif defined(XAPIAND_V8)

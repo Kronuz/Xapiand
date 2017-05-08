@@ -60,7 +60,7 @@
 #include "schema.h"                  // for default_spc
 #include "tclap/CmdLine.h"           // for CmdLine, ArgException, Arg, CmdL...
 #include "utils.h"                   // for format_string, center_string
-#include "version.h"                 // for Version
+#include "package.h"                 // for Package
 #include "worker.h"                  // for Worker
 #include "xxh64.hpp"                 // for xxh64
 
@@ -470,8 +470,8 @@ public:
 	}
 
 	virtual void usage(CmdLineInterface& _cmd) {
-		spacePrint(std::cout, Version::STRING, LINE_LENGTH, 0, 0);
-		spacePrint(std::cout, "[" + Version::BUGREPORT + "]", LINE_LENGTH, 0, 0);
+		spacePrint(std::cout, Package::STRING, LINE_LENGTH, 0, 0);
+		spacePrint(std::cout, "[" + Package::BUGREPORT + "]", LINE_LENGTH, 0, 0);
 
 		std::cout << std::endl;
 
@@ -495,7 +495,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 	const unsigned int nthreads = std::thread::hardware_concurrency() * SERVERS_MULTIPLIER;
 
 	try {
-		CmdLine cmd("", ' ', Version::STRING);
+		CmdLine cmd("", ' ', Package::STRING);
 
 		// ZshCompletionOutput zshoutput;
 		// cmd.setOutput(&zshoutput);
@@ -779,8 +779,8 @@ void banner() {
 		rgb(192, 192, 192) + "      \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
 		rgb(160, 160, 160) + "      /  \\ (_| | |_) | | (_| | | | | (_| |\n" +
 		rgb(128, 128, 128) + "     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
-		rgb(96, 96, 96)    + "               |_|" + LIGHT_GREEN + center_string(Version::STRING, 24) + "\n" + GREEN +
-		center_string("[" + Version::BUGREPORT + "]", 46) + "\n" +
+		rgb(96, 96, 96)    + "               |_|" + LIGHT_GREEN + center_string(Package::STRING, 24) + "\n" + GREEN +
+		center_string("[" + Package::BUGREPORT + "]", 46) + "\n" +
 		center_string("Using " + join_string(versions, ", ", " and "), 46) + "\n\n");
 }
 
@@ -846,7 +846,7 @@ int main(int argc, char **argv) {
 
 	usleep(100000ULL);
 
-	L_NOTICE(nullptr, Version::STRING + " started.");
+	L_NOTICE(nullptr, Package::STRING + " started.");
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {

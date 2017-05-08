@@ -15,6 +15,6 @@ execute_process (
 )
 
 configure_file (
-	"@PROJECT_SOURCE_DIR@/version_strings.h.in"
-	"@PROJECT_BINARY_DIR@/src/version_strings.h"
+	"@PROJECT_SOURCE_DIR@/package_config.h.in"
+	"@PROJECT_BINARY_DIR@/src/package_config.h"
 	IMMEDIATE @ONLY)

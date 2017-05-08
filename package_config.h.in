@@ -3,8 +3,8 @@
  * during the cmake configuration of your project. If you need to make changes
  * edit the original file NOT THIS FILE.
  * --------------------------------------------------------------------------*/
-#ifndef _VERSION_STRINGS_H_
-#define _VERSION_STRINGS_H_
+#ifndef _PACKAGE_CONFIG_H_
+#define _PACKAGE_CONFIG_H_
 
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "@PACKAGE_NAME@"
@@ -31,4 +31,4 @@
 #define PACKAGE_STRING PACKAGE_NAME " v" PACKAGE_VERSION
 #endif
 
-#endif /*  _VERSION_STRINGS_H_ */
+#endif /*  _PACKAGE_CONFIG_H_ */
