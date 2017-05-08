@@ -846,7 +846,7 @@ int main(int argc, char **argv) {
 
 	usleep(100000ULL);
 
-	L_NOTICE(nullptr, "Xapiand started.");
+	L_NOTICE(nullptr, PACKAGE_STRING " started.");
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {
