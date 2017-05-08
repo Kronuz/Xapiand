@@ -43,6 +43,7 @@ configure_file (
 	IMMEDIATE @ONLY)
 
 add_custom_target (version
+	BYPRODUCTS "${PROJECT_BINARY_DIR}/src/version.h"
 	COMMAND ${CMAKE_COMMAND} -P "${PROJECT_BINARY_DIR}/version.cmake")
 
 ########################################################################
