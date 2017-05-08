@@ -762,7 +762,7 @@ void usedir(const char* path, bool solo) {
 
 
 void banner() {
-	set_thread_name("===");
+	set_thread_name("-=-");
 
 	std::vector<std::string> versions;
 	versions.push_back(format_string("Xapian v%s", XAPIAN_VERSION));
