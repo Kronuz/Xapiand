@@ -442,7 +442,7 @@ configure_file (\"${PROJECT_SOURCE_DIR}/version.h.in\" \"${PROJECT_BINARY_DIR}/s
 ")
 add_custom_target (
     version
-    ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/version.cmake
+    ${CMAKE_COMMAND} -P ${PROJECT_SOURCE_DIR}/version.cmake
 )
 
 ########################################################################
