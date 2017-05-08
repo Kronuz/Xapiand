@@ -5,18 +5,16 @@ set (PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@")
 set (PACKAGE_TARNAME "@PACKAGE_TARNAME@")
 set (PATH_TESTS "@PATH_TESTS@")
 
-find_package (Git)
 execute_process (
     # COMMAND date "+%S"
-    COMMAND ${GIT_EXECUTABLE} --git-dir ./.git rev-parse --short HEAD
+    COMMAND @GIT_EXECUTABLE@ --git-dir ./.git rev-parse --short HEAD
     WORKING_DIRECTORY "@PROJECT_SOURCE_DIR@"
     OUTPUT_VARIABLE PACKAGE_HASH
     OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
 )
 
 configure_file (
 	"@PROJECT_SOURCE_DIR@/version.h.in"
 	"@PROJECT_BINARY_DIR@/src/version.h"
 	IMMEDIATE @ONLY)
-
-message (STATUS "Generated version.h with hash: ${PACKAGE_HASH}")

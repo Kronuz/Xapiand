@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.10)
+cmake_minimum_required (VERSION 3.2)
 project (xapiand C CXX)
 
 set (PACKAGE_NAME "Xapiand")
@@ -36,6 +36,8 @@ endforeach ()
 ########################################################################
 # Version
 ########################################################################
+
+find_package (Git)
 
 configure_file (
 	"${PROJECT_SOURCE_DIR}/version.cmake.in"
