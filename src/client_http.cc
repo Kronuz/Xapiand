@@ -474,7 +474,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 									if (next_param->str(1) == "q") {
 										q = strict_stod(next_param->str(2));
 									} else if (next_param->str(1) == "indent") {
-										indent = static_cast<int>(strict_stol(next_param->str(2)));
+										indent = strict_stoi(next_param->str(2));
 										if (indent < 0) indent = 0;
 										else if (indent > 16) indent = 16;
 									}
