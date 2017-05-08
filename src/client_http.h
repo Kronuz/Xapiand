@@ -78,7 +78,7 @@ struct accept_preference_comp {
 };
 
 
-using accept_set_t = std::set<std::tuple<double, int, type_t, unsigned>, accept_preference_comp<type_t>>;
+using accept_set_t = std::set<std::tuple<double, int, type_t, int>, accept_preference_comp<type_t>>;
 
 
 class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
