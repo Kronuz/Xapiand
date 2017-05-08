@@ -95,7 +95,7 @@
 #define strict_stoll(s)     stosx(std::stoll, s)
 #define strict_stof(s)      stosx(std::stof, s)
 #define strict_stod(s)      stosx(std::stod, s)
-#define strict_stold(s)     stosx(std::stoi, s)
+#define strict_stold(s)     stosx(std::stold, s)
 #define stox(func, s)       strict_##func(#s)
 
 
