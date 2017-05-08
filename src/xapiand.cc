@@ -51,7 +51,6 @@
 #include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
 #endif
 
-#include "version.h"                 // for PACKAGE_BUGREPORT, PACKAGE_STRING
 #include "endpoint.h"                // for Endpoint, Endpoint::cwd
 #include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"               // for Exit
@@ -61,6 +60,7 @@
 #include "schema.h"                  // for default_spc
 #include "tclap/CmdLine.h"           // for CmdLine, ArgException, Arg, CmdL...
 #include "utils.h"                   // for format_string, center_string
+#include "version.h"                 // for Version
 #include "worker.h"                  // for Worker
 #include "xxh64.hpp"                 // for xxh64
 
@@ -470,8 +470,8 @@ public:
 	}
 
 	virtual void usage(CmdLineInterface& _cmd) {
-		spacePrint(std::cout, PACKAGE_STRING, LINE_LENGTH, 0, 0);
-		spacePrint(std::cout, "[" PACKAGE_BUGREPORT "]", LINE_LENGTH, 0, 0);
+		spacePrint(std::cout, Version::STRING, LINE_LENGTH, 0, 0);
+		spacePrint(std::cout, "[" + Version::BUGREPORT + "]", LINE_LENGTH, 0, 0);
 
 		std::cout << std::endl;
 
@@ -495,7 +495,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 	const unsigned int nthreads = std::thread::hardware_concurrency() * SERVERS_MULTIPLIER;
 
 	try {
-		CmdLine cmd("", ' ', PACKAGE_STRING);
+		CmdLine cmd("", ' ', Version::STRING);
 
 		// ZshCompletionOutput zshoutput;
 		// cmd.setOutput(&zshoutput);
@@ -779,8 +779,8 @@ void banner() {
 		rgb(192, 192, 192) + "      \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
 		rgb(160, 160, 160) + "      /  \\ (_| | |_) | | (_| | | | | (_| |\n" +
 		rgb(128, 128, 128) + "     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
-		rgb(96, 96, 96)    + "               |_|" + LIGHT_GREEN + center_string(PACKAGE_STRING, 24) + "\n" + GREEN +
-		center_string(format_string("[%s]", PACKAGE_BUGREPORT), 46) + "\n" +
+		rgb(96, 96, 96)    + "               |_|" + LIGHT_GREEN + center_string(Version::STRING, 24) + "\n" + GREEN +
+		center_string("[" + Version::BUGREPORT + "]", 46) + "\n" +
 		center_string("Using " + join_string(versions, ", ", " and "), 46) + "\n\n");
 }
 
@@ -846,7 +846,7 @@ int main(int argc, char **argv) {
 
 	usleep(100000ULL);
 
-	L_NOTICE(nullptr, PACKAGE_STRING " started.");
+	L_NOTICE(nullptr, Version::STRING + " started.");
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {

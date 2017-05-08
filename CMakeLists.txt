@@ -34,19 +34,19 @@ endforeach ()
 
 
 ########################################################################
-# Version
+# Version Strings
 ########################################################################
 
 find_package (Git)
 
 configure_file (
-	"${PROJECT_SOURCE_DIR}/version.cmake.in"
-	"${PROJECT_BINARY_DIR}/version.cmake"
+	"${PROJECT_SOURCE_DIR}/version_strings.cmake.in"
+	"${PROJECT_BINARY_DIR}/version_strings.cmake"
 	IMMEDIATE @ONLY)
 
-add_custom_target (version
-	BYPRODUCTS "${PROJECT_BINARY_DIR}/src/version.h"
-	COMMAND ${CMAKE_COMMAND} -P "${PROJECT_BINARY_DIR}/version.cmake")
+add_custom_target (version_strings
+	BYPRODUCTS "${PROJECT_BINARY_DIR}/src/version_strings.h"
+	COMMAND ${CMAKE_COMMAND} -P "${PROJECT_BINARY_DIR}/version_strings.cmake")
 
 ########################################################################
 # CMake Includes
@@ -128,7 +128,7 @@ add_executable (${PROJECT_NAME}
 	$<TARGET_OBJECTS:GUID_OBJ>
 )
 
-add_dependencies (${PROJECT_NAME} version)
+add_dependencies (${PROJECT_NAME} version_strings)
 
 include_directories (
 	"${PROJECT_SOURCE_DIR}/src"
