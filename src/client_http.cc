@@ -395,6 +395,7 @@ HttpClient::on_info(http_parser* p)
 			}
 			break;
 		case 50:  // headers done
+			self->request_head = format_string("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(p)), self->path.c_str(), p->http_major, p->http_minor);
 			if (self->expect_100) {
 				// Return 100 if client is expecting it
 				self->write(self->http_response(HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE | HTTP_EXPECTED_CONTINUE_RESPONSE, p->http_major, p->http_minor));
@@ -422,7 +423,6 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 	if (state > 26 && state <= 32) {
 		// s_req_path  ->  s_req_http_start
 		self->path.append(at, length);
-		self->request_head = format_string("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(p)), self->path.c_str(), p->http_major, p->http_minor);
 	} else if (state >= 43 && state <= 44) {
 		// s_header_field  ->  s_header_value_discard_ws
 		self->header_name.append(at, length);
