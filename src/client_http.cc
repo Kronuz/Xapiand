@@ -2366,7 +2366,7 @@ HttpClient::get_acceptable_type(const T& ct)
 
 	if (accept_set.empty()) {
 		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, type_t, unsigned>(1, 0, content_type_pair(content_type), 0));
-		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string("*"), std::string("*")), 0));
+		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string(1, '*'), std::string(1, '*')), 0));
 	}
 	for (const auto& accept : accept_set) {
 		if (is_acceptable_type(std::get<2>(accept), ct)) {
