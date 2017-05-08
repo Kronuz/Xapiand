@@ -34,6 +34,18 @@ endforeach ()
 
 
 ########################################################################
+# Version
+########################################################################
+
+configure_file (
+	"${PROJECT_SOURCE_DIR}/version.cmake.in"
+	"${PROJECT_BINARY_DIR}/version.cmake"
+	IMMEDIATE @ONLY)
+
+add_custom_target (version
+	COMMAND ${CMAKE_COMMAND} -P "${PROJECT_BINARY_DIR}/version.cmake")
+
+########################################################################
 # CMake Includes
 ########################################################################
 
@@ -113,7 +125,7 @@ add_executable (${PROJECT_NAME}
 	$<TARGET_OBJECTS:GUID_OBJ>
 )
 
-ADD_DEPENDENCIES(${PROJECT_NAME} version)
+add_dependencies (${PROJECT_NAME} version)
 
 include_directories (
 	"${PROJECT_SOURCE_DIR}/src"
@@ -419,31 +431,6 @@ else ()
 	set ("XAPIAND_CLUSTERING" 0)
 endif ()
 
-
-########################################################################
-# Version
-########################################################################
-
-find_package (Git)
-file (WRITE ${PROJECT_SOURCE_DIR}/version.cmake "
-set (PACKAGE_NAME \"${PACKAGE_NAME}\")
-set (PACKAGE_VERSION \"${PACKAGE_VERSION}\")
-set (PACKAGE_URL \"${PACKAGE_URL}\")
-set (PACKAGE_BUGREPORT \"${PACKAGE_BUGREPORT}\")
-set (PACKAGE_TARNAME \"${PACKAGE_TARNAME}\")
-set (PATH_TESTS \"${PATH_TESTS}\")
-execute_process (
-    COMMAND ${GIT_EXECUTABLE} --git-dir ./.git rev-parse --short HEAD
-    WORKING_DIRECTORY \"${PROJECT_SOURCE_DIR}\"
-    OUTPUT_VARIABLE PACKAGE_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-configure_file (\"${PROJECT_SOURCE_DIR}/version.h.in\" \"${PROJECT_BINARY_DIR}/src/version.h\" @ONLY)
-")
-add_custom_target (
-    version
-    ${CMAKE_COMMAND} -P ${PROJECT_SOURCE_DIR}/version.cmake
-)
 
 ########################################################################
 # Configuration
