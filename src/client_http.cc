@@ -133,7 +133,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 	}
 
 	if (mode & HTTP_HEADER_RESPONSE) {
-		headers += "Server: " + std::string(PACKAGE_STRING) + eol;
+		headers += "Server: " PACKAGE_STRING + eol;
 
 		response_ends = std::chrono::system_clock::now();
 		headers += "Response-Time: " + delta_string(request_begins, response_ends) + eol;
@@ -975,7 +975,7 @@ HttpClient::home_view(enum http_method method, Command)
 	obj_data["cluster_name"] = XapiandManager::manager->cluster_name;
 #endif
 	obj_data["version"] = {
-		{ "Xapian", format_string("%s", PACKAGE_STRING) },
+		{ "Xapian", PACKAGE_STRING },
 #ifdef XAPIAND_CHAISCRIPT
 		{ "ChaiScript", format_string("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #elif defined(XAPIAND_V8)
