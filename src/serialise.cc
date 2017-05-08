@@ -1207,6 +1207,16 @@ Unserialise::type(const std::string& str_type)
 				return FieldType::DATE;
 			}
 			break;
+		case FieldType::TIME:
+			if (value[1] == '\0' || strcasecmp(value, TIME_STR) == 0) {
+				return FieldType::TIME;
+			}
+			break;
+		case FieldType::TIMEDELTA:
+			if (value[1] == '\0' || strcasecmp(value, TIMEDELTA_STR) == 0) {
+				return FieldType::TIMEDELTA;
+			}
+			break;
 		default:
 			break;
 	}
