@@ -1465,7 +1465,7 @@ HttpClient::search_view(enum http_method method, Command)
 				first_chunk = basic_response.to_string(indent);
 				if (indent) {
 					first_chunk = first_chunk.substr(0, first_chunk.size() - (indent * 2) - 1) + "\n";
-					last_chunk = std::string(' ', indent * 2) + "]\n" + std::string(' ', indent) + "}\n}";
+					last_chunk = std::string(indent * 2, ' ') + "]\n" + std::string(indent, ' ') + "}\n}";
 					eol_chunk = "\n";
 					sep_chunk = ",";
 					indent_chunk = true;
