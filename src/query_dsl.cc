@@ -476,48 +476,48 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, const std::string&
 	auto it = map_acc_date.find(field_accuracy.substr(1));
 	static const auto it_e = map_acc_date.end();
 	if (it != it_e) {
-		Datetime::tm_t tm = Datetime::DateParser(obj);
-		switch (it->second) {
-			case UnitTime::SECOND: {
-				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
-			}
-			case UnitTime::MINUTE: {
-				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
-			}
-			case UnitTime::HOUR: {
-				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
-			}
-			case UnitTime::DAY: {
-				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
-			}
-			case UnitTime::MONTH: {
-				Datetime::tm_t _tm(tm.year, tm.mon);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
-			}
-			case UnitTime::YEAR: {
-				Datetime::tm_t _tm(tm.year);
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
-			}
-			case UnitTime::DECADE: {
-				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
-			}
-			case UnitTime::CENTURY: {
-				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
-			}
-			case UnitTime::MILLENNIUM: {
-				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-				return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
-			}
-		}
+		THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
 	}
 
-	THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
+	Datetime::tm_t tm = Datetime::DateParser(obj);
+	switch (it->second) {
+		case UnitTime::SECOND: {
+			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
+		case UnitTime::MINUTE: {
+			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
+		case UnitTime::HOUR: {
+			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
+		case UnitTime::DAY: {
+			Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
+		case UnitTime::MONTH: {
+			Datetime::tm_t _tm(tm.year, tm.mon);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
+		case UnitTime::YEAR: {
+			Datetime::tm_t _tm(tm.year);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
+		case UnitTime::DECADE: {
+			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
+		case UnitTime::CENTURY: {
+			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
+		case UnitTime::MILLENNIUM: {
+			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix, required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
+	}
 }
 
 
