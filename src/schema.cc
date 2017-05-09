@@ -445,12 +445,14 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_DYNAMIC,            &Schema::write_dynamic         },
 	{ RESERVED_STRICT,             &Schema::write_strict          },
 	{ RESERVED_D_DETECTION,        &Schema::write_d_detection     },
+	{ RESERVED_TI_DETECTION,       &Schema::write_ti_detection    },
+	{ RESERVED_TD_DETECTION,       &Schema::write_td_detection    },
 	{ RESERVED_N_DETECTION,        &Schema::write_n_detection     },
 	{ RESERVED_G_DETECTION,        &Schema::write_g_detection     },
 	{ RESERVED_B_DETECTION,        &Schema::write_b_detection     },
 	{ RESERVED_S_DETECTION,        &Schema::write_s_detection     },
 	{ RESERVED_T_DETECTION,        &Schema::write_t_detection     },
-	{ RESERVED_TM_DETECTION,       &Schema::write_tm_detection    },
+	{ RESERVED_TE_DETECTION,       &Schema::write_te_detection    },
 	{ RESERVED_U_DETECTION,        &Schema::write_u_detection     },
 	{ RESERVED_NAMESPACE,          &Schema::write_namespace       },
 	{ RESERVED_PARTIAL_PATHS,      &Schema::write_partial_paths   },
@@ -519,12 +521,14 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_DYNAMIC,            &Schema::consistency_dynamic         },
 	{ RESERVED_STRICT,             &Schema::consistency_strict          },
 	{ RESERVED_D_DETECTION,        &Schema::consistency_d_detection     },
+	{ RESERVED_TI_DETECTION,       &Schema::consistency_ti_detection    },
+	{ RESERVED_TD_DETECTION,       &Schema::consistency_td_detection    },
 	{ RESERVED_N_DETECTION,        &Schema::consistency_n_detection     },
 	{ RESERVED_G_DETECTION,        &Schema::consistency_g_detection     },
 	{ RESERVED_B_DETECTION,        &Schema::consistency_b_detection     },
 	{ RESERVED_S_DETECTION,        &Schema::consistency_s_detection     },
 	{ RESERVED_T_DETECTION,        &Schema::consistency_t_detection     },
-	{ RESERVED_TM_DETECTION,       &Schema::consistency_tm_detection    },
+	{ RESERVED_TE_DETECTION,       &Schema::consistency_te_detection    },
 	{ RESERVED_U_DETECTION,        &Schema::consistency_u_detection     },
 	{ RESERVED_NAMESPACE,          &Schema::consistency_namespace       },
 	{ RESERVED_VERSION,            &Schema::consistency_version         },
@@ -546,12 +550,14 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 	{ RESERVED_DYNAMIC,         &Schema::update_dynamic          },
 	{ RESERVED_STRICT,          &Schema::update_strict           },
 	{ RESERVED_D_DETECTION,     &Schema::update_d_detection      },
+	{ RESERVED_TI_DETECTION,    &Schema::update_ti_detection     },
+	{ RESERVED_TD_DETECTION,    &Schema::update_td_detection     },
 	{ RESERVED_N_DETECTION,     &Schema::update_n_detection      },
 	{ RESERVED_G_DETECTION,     &Schema::update_g_detection      },
 	{ RESERVED_B_DETECTION,     &Schema::update_b_detection      },
 	{ RESERVED_S_DETECTION,     &Schema::update_s_detection      },
 	{ RESERVED_T_DETECTION,     &Schema::update_t_detection      },
-	{ RESERVED_TM_DETECTION,    &Schema::update_tm_detection     },
+	{ RESERVED_TE_DETECTION,    &Schema::update_te_detection     },
 	{ RESERVED_U_DETECTION,     &Schema::update_u_detection      },
 	{ RESERVED_BOOL_TERM,       &Schema::update_bool_term        },
 	{ RESERVED_ACCURACY,        &Schema::update_accuracy         },
@@ -630,6 +636,8 @@ required_spc_t::flags_t::flags_t()
 	  dynamic(true),
 	  strict(false),
 	  date_detection(true),
+	  time_detection(true),
+	  timedelta_detection(true),
 	  numeric_detection(true),
 	  geo_detection(true),
 	  bool_detection(true),
@@ -999,33 +1007,35 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_INDEX             << ": " << readable_index(index)          << "\n";
 	str << "\t" << RESERVED_ERROR             << ": " << error                          << "\n";
 
-	str << "\t" << RESERVED_PARTIALS          << ": " << (flags.partials          ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_STORE             << ": " << (flags.store             ? "true" : "false") << "\n";
-	str << "\t" << "parent_store"             << ": " << (flags.parent_store      ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_RECURSE           << ": " << (flags.is_recurse        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_DYNAMIC           << ": " << (flags.dynamic           ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_STRICT            << ": " << (flags.strict            ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_D_DETECTION       << ": " << (flags.date_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_N_DETECTION       << ": " << (flags.numeric_detection ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_G_DETECTION       << ": " << (flags.geo_detection     ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_B_DETECTION       << ": " << (flags.bool_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_S_DETECTION       << ": " << (flags.string_detection  ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_T_DETECTION       << ": " << (flags.text_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_TM_DETECTION      << ": " << (flags.term_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_U_DETECTION       << ": " << (flags.uuid_detection    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_BOOL_TERM         << ": " << (flags.bool_term         ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_NAMESPACE         << ": " << (flags.is_namespace      ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_PARTIAL_PATHS     << ": " << (flags.partial_paths     ? "true" : "false") << "\n";
-	str << "\t" << "optimal"                  << ": " << (flags.optimal           ? "true" : "false") << "\n";
-	str << "\t" << "field_found"              << ": " << (flags.field_found       ? "true" : "false") << "\n";
-	str << "\t" << "field_with_type"          << ": " << (flags.field_with_type   ? "true" : "false") << "\n";
-	str << "\t" << "complete"                 << ": " << (flags.complete          ? "true" : "false") << "\n";
-	str << "\t" << "dynamic_type"             << ": " << (flags.dynamic_type      ? "true" : "false") << "\n";
-	str << "\t" << "inside_namespace"         << ": " << (flags.inside_namespace  ? "true" : "false") << "\n";
-	str << "\t" << "dynamic_type_path"        << ": " << (flags.dynamic_type_path ? "true" : "false") << "\n";
-	str << "\t" << "has_bool_term"            << ": " << (flags.has_bool_term     ? "true" : "false") << "\n";
-	str << "\t" << "has_index"                << ": " << (flags.has_index         ? "true" : "false") << "\n";
-	str << "\t" << "has_namespace"            << ": " << (flags.has_namespace     ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_PARTIALS          << ": " << (flags.partials              ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_STORE             << ": " << (flags.store                 ? "true" : "false") << "\n";
+	str << "\t" << "parent_store"             << ": " << (flags.parent_store          ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_RECURSE           << ": " << (flags.is_recurse            ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_DYNAMIC           << ": " << (flags.dynamic               ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_STRICT            << ": " << (flags.strict                ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_D_DETECTION       << ": " << (flags.date_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_TI_DETECTION      << ": " << (flags.time_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_TD_DETECTION      << ": " << (flags.timedelta_detection   ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_N_DETECTION       << ": " << (flags.numeric_detection     ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_G_DETECTION       << ": " << (flags.geo_detection         ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_B_DETECTION       << ": " << (flags.bool_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_S_DETECTION       << ": " << (flags.string_detection      ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_T_DETECTION       << ": " << (flags.text_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_TE_DETECTION      << ": " << (flags.term_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_U_DETECTION       << ": " << (flags.uuid_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_BOOL_TERM         << ": " << (flags.bool_term             ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_NAMESPACE         << ": " << (flags.is_namespace          ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_PARTIAL_PATHS     << ": " << (flags.partial_paths         ? "true" : "false") << "\n";
+	str << "\t" << "optimal"                  << ": " << (flags.optimal               ? "true" : "false") << "\n";
+	str << "\t" << "field_found"              << ": " << (flags.field_found           ? "true" : "false") << "\n";
+	str << "\t" << "field_with_type"          << ": " << (flags.field_with_type       ? "true" : "false") << "\n";
+	str << "\t" << "complete"                 << ": " << (flags.complete              ? "true" : "false") << "\n";
+	str << "\t" << "dynamic_type"             << ": " << (flags.dynamic_type          ? "true" : "false") << "\n";
+	str << "\t" << "inside_namespace"         << ": " << (flags.inside_namespace      ? "true" : "false") << "\n";
+	str << "\t" << "dynamic_type_path"        << ": " << (flags.dynamic_type_path     ? "true" : "false") << "\n";
+	str << "\t" << "has_bool_term"            << ": " << (flags.has_bool_term         ? "true" : "false") << "\n";
+	str << "\t" << "has_index"                << ": " << (flags.has_index             ? "true" : "false") << "\n";
+	str << "\t" << "has_namespace"            << ": " << (flags.has_namespace         ? "true" : "false") << "\n";
 
 	str << "\t" << "meta_name"                << ": " << meta_name            << "\n";
 	str << "\t" << "full_meta_name"           << ": " << full_meta_name       << "\n";
@@ -3645,6 +3655,24 @@ Schema::update_d_detection(const MsgPack& prop_d_detection)
 
 
 void
+Schema::update_ti_detection(const MsgPack& prop_ti_detection)
+{
+	L_CALL(this, "Schema::update_ti_detection(%s)", repr(prop_ti_detection.to_string()).c_str());
+
+	specification.flags.time_detection = prop_ti_detection.as_bool();
+}
+
+
+void
+Schema::update_td_detection(const MsgPack& prop_td_detection)
+{
+	L_CALL(this, "Schema::update_td_detection(%s)", repr(prop_td_detection.to_string()).c_str());
+
+	specification.flags.timedelta_detection = prop_td_detection.as_bool();
+}
+
+
+void
 Schema::update_n_detection(const MsgPack& prop_n_detection)
 {
 	L_CALL(this, "Schema::update_n_detection(%s)", repr(prop_n_detection.to_string()).c_str());
@@ -3690,9 +3718,9 @@ Schema::update_t_detection(const MsgPack& prop_t_detection)
 
 
 void
-Schema::update_tm_detection(const MsgPack& prop_tm_detection)
+Schema::update_te_detection(const MsgPack& prop_tm_detection)
 {
-	L_CALL(this, "Schema::update_tm_detection(%s)", repr(prop_tm_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_te_detection(%s)", repr(prop_tm_detection.to_string()).c_str());
 
 	specification.flags.term_detection = prop_tm_detection.as_bool();
 }
@@ -3885,6 +3913,36 @@ Schema::write_d_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
+Schema::write_ti_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_ti_detection)
+{
+	// RESERVED_TI_DETECTION is heritable and can't change.
+	L_CALL(this, "Schema::write_ti_detection(%s)", repr(doc_ti_detection.to_string()).c_str());
+
+	try {
+		specification.flags.time_detection = doc_ti_detection.as_bool();
+		properties[prop_name] = static_cast<bool>(specification.flags.time_detection);
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+	}
+}
+
+
+void
+Schema::write_td_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_td_detection)
+{
+	// RESERVED_TD_DETECTION is heritable and can't change.
+	L_CALL(this, "Schema::write_td_detection(%s)", repr(doc_td_detection.to_string()).c_str());
+
+	try {
+		specification.flags.timedelta_detection = doc_td_detection.as_bool();
+		properties[prop_name] = static_cast<bool>(specification.flags.timedelta_detection);
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+	}
+}
+
+
+void
 Schema::write_n_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_n_detection)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
@@ -3960,10 +4018,10 @@ Schema::write_t_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_tm_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection)
+Schema::write_te_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection)
 {
-	// RESERVED_TM_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_tm_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
+	// RESERVED_TE_DETECTION is heritable and can't change.
+	L_CALL(this, "Schema::write_te_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
 
 	try {
 		specification.flags.term_detection = doc_tm_detection.as_bool();
@@ -4754,6 +4812,40 @@ Schema::consistency_d_detection(const std::string& prop_name, const MsgPack& doc
 
 
 void
+Schema::consistency_ti_detection(const std::string& prop_name, const MsgPack& doc_ti_detection)
+{
+	// RESERVED_TI_DETECTION is heritable and can't change.
+	L_CALL(this, "Schema::consistency_ti_detection(%s)", repr(doc_ti_detection.to_string()).c_str());
+
+	try {
+		const auto _time_detection = doc_ti_detection.as_bool();
+		if (specification.flags.time_detection != _time_detection) {
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.time_detection ? "true" : "false", _time_detection ? "true" : "false");
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+	}
+}
+
+
+void
+Schema::consistency_td_detection(const std::string& prop_name, const MsgPack& doc_td_detection)
+{
+	// RESERVED_TD_DETECTION is heritable and can't change.
+	L_CALL(this, "Schema::consistency_td_detection(%s)", repr(doc_td_detection.to_string()).c_str());
+
+	try {
+		const auto _timedelta_detection = doc_td_detection.as_bool();
+		if (specification.flags.timedelta_detection != _timedelta_detection) {
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.timedelta_detection ? "true" : "false", _timedelta_detection ? "true" : "false");
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+	}
+}
+
+
+void
 Schema::consistency_n_detection(const std::string& prop_name, const MsgPack& doc_n_detection)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
@@ -4839,10 +4931,10 @@ Schema::consistency_t_detection(const std::string& prop_name, const MsgPack& doc
 
 
 void
-Schema::consistency_tm_detection(const std::string& prop_name, const MsgPack& doc_tm_detection)
+Schema::consistency_te_detection(const std::string& prop_name, const MsgPack& doc_tm_detection)
 {
-	// RESERVED_TM_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_tm_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
+	// RESERVED_TE_DETECTION is heritable and can't change.
+	L_CALL(this, "Schema::consistency_te_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
 
 	try {
 		const auto _term_detection = doc_tm_detection.as_bool();
