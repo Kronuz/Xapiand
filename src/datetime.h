@@ -163,6 +163,13 @@ namespace Datetime {
 	std::string time_to_string(double t, bool trim=true);
 	bool isTime(const std::string& date);
 
+	inline bool isvalidTime(double t) {
+		static const long long min = -362339LL;       // 00:00:00+99:99
+		static const long long max =  724779999999LL; // 99:99:99.9999...-99:99
+		long long scaled = static_cast<long long>(t / DATETIME_MICROSECONDS);
+		return scaled >= min && scaled <= max;
+	}
+
 
 	/*
 	 * Specialized functions for timedelta.
@@ -174,4 +181,11 @@ namespace Datetime {
 	std::string timedelta_to_string(const clk_t& clk, bool trim=true);
 	std::string timedelta_to_string(double t, bool trim=true);
 	bool isTimedelta(const std::string& date);
+
+	inline bool isvalidTimedelta(double t) {
+		static const long long min = -362439999999LL; // -99:99:99.999...
+		static const long long max =  362439999999LL; // +99:99:99.999...
+		long long scaled = static_cast<long long>(t / DATETIME_MICROSECONDS);
+		return scaled >= min && scaled <= max;
+	}
 };

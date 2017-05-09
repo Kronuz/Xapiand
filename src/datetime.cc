@@ -1198,75 +1198,74 @@ Datetime::TimeParser(const std::string& _time)
 Datetime::clk_t
 Datetime::time_to_clk_t(double t)
 {
-	clk_t clk;
-	if (t < 0) {
-		auto _time = static_cast<int>(-t);
-		clk.fsec = t + _time;
-		if (clk.fsec < 0.0) {
-			++_time;
-		}
-		clk.tz_h = _time / 3600;
-		int aux;
-		if (clk.tz_h < 100) {
-			aux = clk.tz_h * 3600;
+	if (isvalidTime(t)) {
+		clk_t clk;
+		if (t < 0) {
+			auto _time = static_cast<int>(-t);
+			clk.fsec = t + _time;
+			if (clk.fsec < 0.0) {
+				++_time;
+			}
+			clk.tz_h = _time / 3600;
+			int aux;
+			if (clk.tz_h < 100) {
+				aux = clk.tz_h * 3600;
+			} else {
+				clk.tz_h = 99;
+				aux = clk.tz_h * 3600;
+			}
+			clk.tz_m = (_time - aux) / 60;
+			clk.sec = _time - aux - clk.tz_m * 60;
+			if (clk.sec) {
+				clk.sec = 60 - clk.sec;
+				++clk.tz_m;
+			}
+			clk.tz_s = '+';
+			if (clk.fsec < 0) {
+				clk.fsec += 1.0;
+			}
 		} else {
-			clk.tz_h = 99;
-			aux = clk.tz_h * 3600;
-		}
-		clk.tz_m = (_time - aux) / 60;
-		clk.sec = _time - aux - clk.tz_m * 60;
-		if (clk.sec > 60) {
-			THROW(TimeError, "Bad serialised time value");
-		} else if (clk.sec) {
-			clk.sec = 60 - clk.sec;
-			++clk.tz_m;
-		}
-		clk.tz_s = '+';
-		if (clk.fsec < 0) {
-			clk.fsec += 1.0;
-		}
-	} else {
-		auto _time = static_cast<int>(t);
-		clk.hour = _time / 3600;
-		if (clk.hour < 100) {
-			auto aux = _time - clk.hour * 3600;
-			clk.min = aux / 60;
-			clk.sec = aux - clk.min * 60;
-		} else {
-			if (clk.hour < 199) {
+			auto _time = static_cast<int>(t);
+			clk.hour = _time / 3600;
+			if (clk.hour < 100) {
 				auto aux = _time - clk.hour * 3600;
-				clk.tz_h = clk.hour - 99;
-				clk.hour = 99;
 				clk.min = aux / 60;
 				clk.sec = aux - clk.min * 60;
 			} else {
-				clk.tz_h = 99;
-				clk.hour = 99;
-				auto aux = _time - 712800; // 198 * 3600
-				clk.min = aux / 60;
-				if (clk.min < 100) {
+				if (clk.hour < 199) {
+					auto aux = _time - clk.hour * 3600;
+					clk.tz_h = clk.hour - 99;
+					clk.hour = 99;
+					clk.min = aux / 60;
 					clk.sec = aux - clk.min * 60;
 				} else {
-					if (clk.min < 199) {
+					clk.tz_h = 99;
+					clk.hour = 99;
+					auto aux = _time - 712800; // 198 * 3600
+					clk.min = aux / 60;
+					if (clk.min < 100) {
 						clk.sec = aux - clk.min * 60;
-						clk.tz_m = 198 - clk.min;
-						clk.min = 99;
 					} else {
-						clk.tz_m = 99;
-						clk.min = 99;
-						clk.sec = aux - 11880; // 198 * 60
-						if (clk.sec > 99) {
-							THROW(TimeError, "Bad serialised time value");
+						if (clk.min < 199) {
+							clk.sec = aux - clk.min * 60;
+							clk.tz_m = 198 - clk.min;
+							clk.min = 99;
+						} else {
+							clk.tz_m = 99;
+							clk.min = 99;
+							clk.sec = aux - 11880; // 198 * 60
 						}
 					}
 				}
 			}
+			clk.tz_s = '-';
+			clk.fsec = t - _time;
 		}
-		clk.tz_s = '-';
-		clk.fsec = t - _time;
+
+		return clk;
 	}
 
-	return clk;
+	THROW(TimeError, "Bad serialised time value");
 }
 
 
@@ -1442,35 +1441,36 @@ Datetime::TimedeltaParser(const std::string& timedelta)
 Datetime::clk_t
 Datetime::timedelta_to_clk_t(double t)
 {
-	clk_t clk;
-	if (t < 0) {
-		t *= -1.0;
-		clk.tz_s = '-';
-	}
+	if (isvalidTimedelta(t)) {
+		clk_t clk;
+		if (t < 0) {
+			t *= -1.0;
+			clk.tz_s = '-';
+		}
 
-	auto _time = static_cast<int>(t);
-	clk.hour = _time / 3600;
-	if (clk.hour < 100) {
-		auto aux = _time - clk.hour * 3600;
-		clk.min = aux / 60;
-		clk.sec = aux - clk.min * 60;
-	} else {
-		clk.hour = 99;
-		auto aux = _time - clk.hour * 3600;
-		clk.min = aux / 60;
-		if (clk.min < 100) {
-			clk.sec =  aux - clk.min * 60;
+		auto _time = static_cast<int>(t);
+		clk.hour = _time / 3600;
+		if (clk.hour < 100) {
+			auto aux = _time - clk.hour * 3600;
+			clk.min = aux / 60;
+			clk.sec = aux - clk.min * 60;
 		} else {
-			clk.min = 99;
-			clk.sec =  aux - clk.min * 60;
-			if (clk.sec > 99) {
-				THROW(TimedeltaError, "Bad serialised timedelta value");
+			clk.hour = 99;
+			auto aux = _time - clk.hour * 3600;
+			clk.min = aux / 60;
+			if (clk.min < 100) {
+				clk.sec =  aux - clk.min * 60;
+			} else {
+				clk.min = 99;
+				clk.sec =  aux - clk.min * 60;
 			}
 		}
-	}
-	clk.fsec = t - _time;
+		clk.fsec = t - _time;
 
-	return clk;
+		return clk;
+	}
+
+	THROW(TimedeltaError, "Bad serialised timedelta value");
 }
 
 
