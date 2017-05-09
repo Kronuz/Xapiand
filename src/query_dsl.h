@@ -90,6 +90,8 @@ class QueryDSL {
 	Xapian::Query get_value_query(const std::string& path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
 
 	Xapian::Query get_acc_date_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj, Xapian::termcount wqf);
+	Xapian::Query get_acc_time_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj, Xapian::termcount wqf);
+	Xapian::Query get_acc_timedelta_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj, Xapian::termcount wqf);
 	Xapian::Query get_acc_num_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj, Xapian::termcount wqf);
 	Xapian::Query get_acc_geo_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj, Xapian::termcount wqf);
 	Xapian::Query get_accuracy_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj, Xapian::termcount wqf, bool is_in);

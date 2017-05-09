@@ -231,6 +231,7 @@ inline static constexpr size_t getPos(size_t pos, size_t size) noexcept {
  */
 
 extern const std::unordered_map<std::string, UnitTime> map_acc_date;
+extern const std::unordered_map<std::string, UnitTime> map_acc_time;
 extern const std::unordered_map<std::string, StopStrategy> map_stop_strategy;
 extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
 extern const std::unordered_map<std::string, TypeIndex> map_index;

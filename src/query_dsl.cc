@@ -474,7 +474,8 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, const std::string&
 	L_CALL(this, "QueryDSL::get_acc_date_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
 	auto it = map_acc_date.find(field_accuracy.substr(1));
-	if (it != map_acc_date.end()) {
+	static const auto it_e = map_acc_date.end();
+	if (it != it_e) {
 		Datetime::tm_t tm = Datetime::DateParser(obj);
 		switch (it->second) {
 			case UnitTime::SECOND: {
@@ -517,6 +518,38 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, const std::string&
 	}
 
 	THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
+}
+
+
+Xapian::Query
+QueryDSL::get_acc_time_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
+{
+	L_CALL(this, "QueryDSL::get_acc_time_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
+
+	auto it = map_acc_time.find(field_accuracy.substr(2));
+	static const auto it_e = map_acc_time.end();
+	if (it == it_e) {
+		THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
+	}
+
+	int64_t value = Datetime::time_to_double(obj);
+	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, toUType(it->second))), field_spc.prefix, required_spc_t::get_ctype(FieldType::TIME)), wqf);
+}
+
+
+Xapian::Query
+QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, const std::string& field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
+{
+	L_CALL(this, "QueryDSL::get_acc_timedelta_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
+
+	auto it = map_acc_time.find(field_accuracy.substr(3));
+	static const auto it_e = map_acc_time.end();
+	if (it == it_e) {
+		THROW(QueryDslError, "Invalid field name: %s", field_accuracy.c_str());
+	}
+
+	int64_t value = Datetime::timedelta_to_double(obj);
+	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, toUType(it->second))), field_spc.prefix, required_spc_t::get_ctype(FieldType::TIMEDELTA)), wqf);
 }
 
 
@@ -573,6 +606,10 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, const std::string&
 			return get_acc_num_query(field_spc, field_accuracy, obj, wqf);
 		case FieldType::DATE:
 			return get_acc_date_query(field_spc, field_accuracy, obj, wqf);
+		case FieldType::TIME:
+			return get_acc_time_query(field_spc, field_accuracy, obj, wqf);
+		case FieldType::TIMEDELTA:
+			return get_acc_timedelta_query(field_spc, field_accuracy, obj, wqf);
 		case FieldType::GEO:
 			return get_acc_geo_query(field_spc, field_accuracy, obj, wqf);
 		default:
