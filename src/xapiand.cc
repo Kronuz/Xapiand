@@ -865,6 +865,7 @@ int main(int argc, char **argv) {
 
 	if (opts.strict) {
 		L_INFO(nullptr, "Using strict mode.");
+		default_spc.flags.strict = true;
 	}
 
 	if (opts.optimal) {

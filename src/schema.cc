@@ -1449,7 +1449,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 
 		if (fields.empty()) {
 			if (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY) {
-				if (XapiandManager::manager->strict || specification.flags.strict) {
+				if (specification.flags.strict) {
 					THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 				} else {
 					specification.sep_types[0] = FieldType::OBJECT;
@@ -1954,7 +1954,7 @@ Schema::validate_required_data(const MsgPack& value)
 	L_SCHEMA(this, "Specification heritable and sent by user: %s", specification.to_string().c_str());
 
 	if (specification.sep_types[2] == FieldType::EMPTY) {
-		if (XapiandManager::manager->strict || specification.flags.strict) {
+		if (specification.flags.strict) {
 			THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 		}
 		guess_field_type(value);
