@@ -107,12 +107,6 @@ pthread_get_name_np(char* buffer, size_t size)
 
 	std::lock_guard<std::mutex> lk(mtx);
 
-	names.clear();
-
-	if (!buffer) {
-		return 1;
-	}
-
 	auto it = names.find(tid);
 	if (it == names.end()) {
 		size_t len = 0;
@@ -134,6 +128,7 @@ pthread_get_name_np(char* buffer, size_t size)
 			}
 			break;
 		}
+		names.clear();
 		for (size_t i = 0; i < len / sizeof(*kp); i++) {
 			auto k_tid = static_cast<int>(kp[i].ki_tid);
 			auto oit = names.insert(std::make_pair(k_tid, kp[i].ki_tdname)).first;
@@ -144,8 +139,13 @@ pthread_get_name_np(char* buffer, size_t size)
 		free(kp);
 	}
 	if (it != names.end()) {
-		strncpy(buffer, it->second.c_str(), size);
-		return 0;
+		if (buffer) {
+			strncpy(buffer, it->second.c_str(), size);
+			return 0;
+		} else {
+			names.erase(it);
+			return 1;
+		}
 	}
 	return -1;
 }
