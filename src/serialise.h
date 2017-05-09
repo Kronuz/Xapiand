@@ -34,6 +34,7 @@
 #include <vector>                   // for vector
 
 #include "datetime.h"               // for tm_t (ptr only), timestamp
+#include "exception.h"              // for SerialisationError, ...
 #include "geospatial/cartesian.h"   // for Cartesian
 #include "geospatial/htm.h"         // for range_t
 #include "hash/endian.h"            // for __BYTE_ORDER, __BIG_ENDIAN, __LITTLE...
@@ -149,6 +150,8 @@ namespace Serialise {
 	std::string serialise(const required_spc_t& field_spc, const std::string& field_value);
 	std::string string(const required_spc_t& field_spc, const std::string& field_value);
 	std::string date(const required_spc_t& field_spc, const class MsgPack& field_value);
+	std::string time(const required_spc_t& field_spc, const class MsgPack& field_value);
+	std::string timedelta(const required_spc_t& field_spc, const class MsgPack& field_value);
 
 
 	/*
@@ -178,18 +181,34 @@ namespace Serialise {
 
 	// Serialise value like time.
 	std::string time(const std::string& field_value);
-	std::string time(const std::string& field_value, Datetime::clk_t& clk);
+	std::string time(const class MsgPack& field_value);
+	std::string time(const class MsgPack& field_value, Datetime::clk_t& clk);
 
 	inline std::string time(const Datetime::clk_t& clk) {
 		return timestamp(Datetime::time_to_double(clk));
 	}
 
+	inline std::string time(double t) {
+		if (Datetime::isvalidTime(t)) {
+			return timestamp(t);
+		}
+		THROW(SerialisationError, "Time: %f is out of range", t);
+	}
+
 	// Serialise value like timedelta.
 	std::string timedelta(const std::string& field_value);
-	std::string timedelta(const std::string& field_value, Datetime::clk_t& clk);
+	std::string timedelta(const class MsgPack& field_value);
+	std::string timedelta(const class MsgPack& field_value, Datetime::clk_t& clk);
 
 	inline std::string timedelta(const Datetime::clk_t& clk) {
 		return timestamp(Datetime::timedelta_to_double(clk));
+	}
+
+	inline std::string timedelta(double t) {
+		if (Datetime::isvalidTimedelta(t)) {
+			return timestamp(t);
+		}
+		THROW(SerialisationError, "Timedelta: %f is out of range", t);
 	}
 
 	// Serialise field_value like float.
