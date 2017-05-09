@@ -42,7 +42,7 @@ find_package (Git)
 configure_file (
 	"${PROJECT_SOURCE_DIR}/package_config.cmake.in"
 	"${PROJECT_BINARY_DIR}/package_config.cmake"
-	IMMEDIATE @ONLY)
+	@ONLY)
 
 add_custom_target (package_config
 	BYPRODUCTS "${PROJECT_BINARY_DIR}/src/package_config.h"
@@ -440,8 +440,9 @@ endif ()
 ########################################################################
 
 configure_file (
-	${PROJECT_SOURCE_DIR}/config.h.in
-	${PROJECT_BINARY_DIR}/src/config.h)
+	"${PROJECT_SOURCE_DIR}/config.h.in"
+	"${PROJECT_BINARY_DIR}/src/config.h"
+	@ONLY)
 
 
 ########################################################################
@@ -451,7 +452,7 @@ configure_file (
 configure_file (
 	"${PROJECT_SOURCE_DIR}/cmake_uninstall.cmake.in"
 	"${PROJECT_BINARY_DIR}/cmake_uninstall.cmake"
-	IMMEDIATE @ONLY)
+	@ONLY)
 
 add_custom_target (uninstall
 	COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/cmake_uninstall.cmake)
