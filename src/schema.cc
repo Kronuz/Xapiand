@@ -435,30 +435,30 @@ const std::unordered_map<std::string, Schema::dispatch_set_default_spc> Schema::
 
 
 const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::map_dispatch_write_properties({
-	{ RESERVED_WEIGHT,             &Schema::write_weight          },
-	{ RESERVED_POSITION,           &Schema::write_position        },
-	{ RESERVED_SPELLING,           &Schema::write_spelling        },
-	{ RESERVED_POSITIONS,          &Schema::write_positions       },
-	{ RESERVED_INDEX,              &Schema::write_index           },
-	{ RESERVED_STORE,              &Schema::write_store           },
-	{ RESERVED_RECURSE,            &Schema::write_recurse         },
-	{ RESERVED_DYNAMIC,            &Schema::write_dynamic         },
-	{ RESERVED_STRICT,             &Schema::write_strict          },
-	{ RESERVED_D_DETECTION,        &Schema::write_d_detection     },
-	{ RESERVED_TI_DETECTION,       &Schema::write_ti_detection    },
-	{ RESERVED_TD_DETECTION,       &Schema::write_td_detection    },
-	{ RESERVED_N_DETECTION,        &Schema::write_n_detection     },
-	{ RESERVED_G_DETECTION,        &Schema::write_g_detection     },
-	{ RESERVED_B_DETECTION,        &Schema::write_b_detection     },
-	{ RESERVED_S_DETECTION,        &Schema::write_s_detection     },
-	{ RESERVED_T_DETECTION,        &Schema::write_t_detection     },
-	{ RESERVED_TE_DETECTION,       &Schema::write_te_detection    },
-	{ RESERVED_U_DETECTION,        &Schema::write_u_detection     },
-	{ RESERVED_NAMESPACE,          &Schema::write_namespace       },
-	{ RESERVED_PARTIAL_PATHS,      &Schema::write_partial_paths   },
-	{ RESERVED_SCRIPT,             &Schema::write_script          },
-	{ RESERVED_VERSION,            &Schema::write_version         },
-	{ RESERVED_SCHEMA,             &Schema::write_schema          },
+	{ RESERVED_WEIGHT,                 &Schema::write_weight                 },
+	{ RESERVED_POSITION,               &Schema::write_position               },
+	{ RESERVED_SPELLING,               &Schema::write_spelling               },
+	{ RESERVED_POSITIONS,              &Schema::write_positions              },
+	{ RESERVED_INDEX,                  &Schema::write_index                  },
+	{ RESERVED_STORE,                  &Schema::write_store                  },
+	{ RESERVED_RECURSE,                &Schema::write_recurse                },
+	{ RESERVED_DYNAMIC,                &Schema::write_dynamic                },
+	{ RESERVED_STRICT,                 &Schema::write_strict                 },
+	{ RESERVED_DATE_DETECTION,         &Schema::write_date_detection         },
+	{ RESERVED_TIME_DETECTION,         &Schema::write_time_detection         },
+	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::write_timedelta_detection    },
+	{ RESERVED_NUMERIC_DETECTION,      &Schema::write_numeric_detection      },
+	{ RESERVED_GEO_DETECTION,          &Schema::write_geo_detection          },
+	{ RESERVED_BOOL_DETECTION,         &Schema::write_bool_detection         },
+	{ RESERVED_STRING_DETECTION,       &Schema::write_string_detection       },
+	{ RESERVED_TEXT_DETECTION,         &Schema::write_text_detection         },
+	{ RESERVED_TERM_DETECTION,         &Schema::write_term_detection         },
+	{ RESERVED_UUID_DETECTION,         &Schema::write_uuid_detection         },
+	{ RESERVED_NAMESPACE,              &Schema::write_namespace              },
+	{ RESERVED_PARTIAL_PATHS,          &Schema::write_partial_paths          },
+	{ RESERVED_SCRIPT,                 &Schema::write_script                 },
+	{ RESERVED_VERSION,                &Schema::write_version                },
+	{ RESERVED_SCHEMA,                 &Schema::write_schema                 },
 });
 
 
@@ -476,100 +476,100 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 
 
 const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_document({
-	{ RESERVED_WEIGHT,             &Schema::process_weight              },
-	{ RESERVED_POSITION,           &Schema::process_position            },
-	{ RESERVED_SPELLING,           &Schema::process_spelling            },
-	{ RESERVED_POSITIONS,          &Schema::process_positions           },
-	{ RESERVED_INDEX,              &Schema::process_index               },
-	{ RESERVED_STORE,              &Schema::process_store               },
-	{ RESERVED_RECURSE,            &Schema::process_recurse             },
-	{ RESERVED_PARTIAL_PATHS,      &Schema::process_partial_paths       },
-	{ RESERVED_VALUE,              &Schema::process_value               },
-	{ RESERVED_FLOAT,              &Schema::process_cast_object         },
-	{ RESERVED_POSITIVE,           &Schema::process_cast_object         },
-	{ RESERVED_INTEGER,            &Schema::process_cast_object         },
-	{ RESERVED_BOOLEAN,            &Schema::process_cast_object         },
-	{ RESERVED_TERM,               &Schema::process_cast_object         },
-	{ RESERVED_TEXT,               &Schema::process_cast_object         },
-	{ RESERVED_STRING,             &Schema::process_cast_object         },
-	{ RESERVED_DATE,               &Schema::process_cast_object         },
-	{ RESERVED_UUID,               &Schema::process_cast_object         },
-	{ RESERVED_EWKT,               &Schema::process_cast_object         },
-	{ RESERVED_POINT,              &Schema::process_cast_object         },
-	{ RESERVED_CIRCLE,             &Schema::process_cast_object         },
-	{ RESERVED_CONVEX,             &Schema::process_cast_object         },
-	{ RESERVED_POLYGON,            &Schema::process_cast_object         },
-	{ RESERVED_CHULL,              &Schema::process_cast_object         },
-	{ RESERVED_MULTIPOINT,         &Schema::process_cast_object         },
-	{ RESERVED_MULTICIRCLE,        &Schema::process_cast_object         },
-	{ RESERVED_MULTICONVEX,        &Schema::process_cast_object         },
-	{ RESERVED_MULTIPOLYGON,       &Schema::process_cast_object         },
-	{ RESERVED_MULTICHULL,         &Schema::process_cast_object         },
-	{ RESERVED_GEO_COLLECTION,     &Schema::process_cast_object         },
-	{ RESERVED_GEO_INTERSECTION,   &Schema::process_cast_object         },
+	{ RESERVED_WEIGHT,                 &Schema::process_weight                     },
+	{ RESERVED_POSITION,               &Schema::process_position                   },
+	{ RESERVED_SPELLING,               &Schema::process_spelling                   },
+	{ RESERVED_POSITIONS,              &Schema::process_positions                  },
+	{ RESERVED_INDEX,                  &Schema::process_index                      },
+	{ RESERVED_STORE,                  &Schema::process_store                      },
+	{ RESERVED_RECURSE,                &Schema::process_recurse                    },
+	{ RESERVED_PARTIAL_PATHS,          &Schema::process_partial_paths              },
+	{ RESERVED_VALUE,                  &Schema::process_value                      },
+	{ RESERVED_FLOAT,                  &Schema::process_cast_object                },
+	{ RESERVED_POSITIVE,               &Schema::process_cast_object                },
+	{ RESERVED_INTEGER,                &Schema::process_cast_object                },
+	{ RESERVED_BOOLEAN,                &Schema::process_cast_object                },
+	{ RESERVED_TERM,                   &Schema::process_cast_object                },
+	{ RESERVED_TEXT,                   &Schema::process_cast_object                },
+	{ RESERVED_STRING,                 &Schema::process_cast_object                },
+	{ RESERVED_DATE,                   &Schema::process_cast_object                },
+	{ RESERVED_UUID,                   &Schema::process_cast_object                },
+	{ RESERVED_EWKT,                   &Schema::process_cast_object                },
+	{ RESERVED_POINT,                  &Schema::process_cast_object                },
+	{ RESERVED_CIRCLE,                 &Schema::process_cast_object                },
+	{ RESERVED_CONVEX,                 &Schema::process_cast_object                },
+	{ RESERVED_POLYGON,                &Schema::process_cast_object                },
+	{ RESERVED_CHULL,                  &Schema::process_cast_object                },
+	{ RESERVED_MULTIPOINT,             &Schema::process_cast_object                },
+	{ RESERVED_MULTICIRCLE,            &Schema::process_cast_object                },
+	{ RESERVED_MULTICONVEX,            &Schema::process_cast_object                },
+	{ RESERVED_MULTIPOLYGON,           &Schema::process_cast_object                },
+	{ RESERVED_MULTICHULL,             &Schema::process_cast_object                },
+	{ RESERVED_GEO_COLLECTION,         &Schema::process_cast_object                },
+	{ RESERVED_GEO_INTERSECTION,       &Schema::process_cast_object                },
 	// Next functions only check the consistency of user provided data.
-	{ RESERVED_SCRIPT,             &Schema::consistency_script          },
-	{ RESERVED_LANGUAGE,           &Schema::consistency_language        },
-	{ RESERVED_STOP_STRATEGY,      &Schema::consistency_stop_strategy   },
-	{ RESERVED_STEM_STRATEGY,      &Schema::consistency_stem_strategy   },
-	{ RESERVED_STEM_LANGUAGE,      &Schema::consistency_stem_language   },
-	{ RESERVED_TYPE,               &Schema::consistency_type            },
-	{ RESERVED_BOOL_TERM,          &Schema::consistency_bool_term       },
-	{ RESERVED_ACCURACY,           &Schema::consistency_accuracy        },
-	{ RESERVED_PARTIALS,           &Schema::consistency_partials        },
-	{ RESERVED_ERROR,              &Schema::consistency_error           },
-	{ RESERVED_DYNAMIC,            &Schema::consistency_dynamic         },
-	{ RESERVED_STRICT,             &Schema::consistency_strict          },
-	{ RESERVED_D_DETECTION,        &Schema::consistency_d_detection     },
-	{ RESERVED_TI_DETECTION,       &Schema::consistency_ti_detection    },
-	{ RESERVED_TD_DETECTION,       &Schema::consistency_td_detection    },
-	{ RESERVED_N_DETECTION,        &Schema::consistency_n_detection     },
-	{ RESERVED_G_DETECTION,        &Schema::consistency_g_detection     },
-	{ RESERVED_B_DETECTION,        &Schema::consistency_b_detection     },
-	{ RESERVED_S_DETECTION,        &Schema::consistency_s_detection     },
-	{ RESERVED_T_DETECTION,        &Schema::consistency_t_detection     },
-	{ RESERVED_TE_DETECTION,       &Schema::consistency_te_detection    },
-	{ RESERVED_U_DETECTION,        &Schema::consistency_u_detection     },
-	{ RESERVED_NAMESPACE,          &Schema::consistency_namespace       },
-	{ RESERVED_VERSION,            &Schema::consistency_version         },
-	{ RESERVED_SCHEMA,             &Schema::consistency_schema          },
+	{ RESERVED_SCRIPT,                 &Schema::consistency_script                 },
+	{ RESERVED_LANGUAGE,               &Schema::consistency_language               },
+	{ RESERVED_STOP_STRATEGY,          &Schema::consistency_stop_strategy          },
+	{ RESERVED_STEM_STRATEGY,          &Schema::consistency_stem_strategy          },
+	{ RESERVED_STEM_LANGUAGE,          &Schema::consistency_stem_language          },
+	{ RESERVED_TYPE,                   &Schema::consistency_type                   },
+	{ RESERVED_BOOL_TERM,              &Schema::consistency_bool_term              },
+	{ RESERVED_ACCURACY,               &Schema::consistency_accuracy               },
+	{ RESERVED_PARTIALS,               &Schema::consistency_partials               },
+	{ RESERVED_ERROR,                  &Schema::consistency_error                  },
+	{ RESERVED_DYNAMIC,                &Schema::consistency_dynamic                },
+	{ RESERVED_STRICT,                 &Schema::consistency_strict                 },
+	{ RESERVED_DATE_DETECTION,         &Schema::consistency_date_detection         },
+	{ RESERVED_TIME_DETECTION,         &Schema::consistency_time_detection         },
+	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::consistency_timedelta_detection    },
+	{ RESERVED_NUMERIC_DETECTION,      &Schema::consistency_numeric_detection      },
+	{ RESERVED_GEO_DETECTION,          &Schema::consistency_geo_detection          },
+	{ RESERVED_BOOL_DETECTION,         &Schema::consistency_bool_detection         },
+	{ RESERVED_STRING_DETECTION,       &Schema::consistency_string_detection       },
+	{ RESERVED_TEXT_DETECTION,         &Schema::consistency_text_detection         },
+	{ RESERVED_TERM_DETECTION,         &Schema::consistency_term_detection         },
+	{ RESERVED_UUID_DETECTION,         &Schema::consistency_uuid_detection         },
+	{ RESERVED_NAMESPACE,              &Schema::consistency_namespace              },
+	{ RESERVED_VERSION,                &Schema::consistency_version                },
+	{ RESERVED_SCHEMA,                 &Schema::consistency_schema                 },
 });
 
 
 const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::map_dispatch_properties({
-	{ RESERVED_WEIGHT,          &Schema::update_weight           },
-	{ RESERVED_POSITION,        &Schema::update_position         },
-	{ RESERVED_SPELLING,        &Schema::update_spelling         },
-	{ RESERVED_POSITIONS,       &Schema::update_positions        },
-	{ RESERVED_TYPE,            &Schema::update_type             },
-	{ RESERVED_PREFIX,          &Schema::update_prefix           },
-	{ RESERVED_SLOT,            &Schema::update_slot             },
-	{ RESERVED_INDEX,           &Schema::update_index            },
-	{ RESERVED_STORE,           &Schema::update_store            },
-	{ RESERVED_RECURSE,         &Schema::update_recurse          },
-	{ RESERVED_DYNAMIC,         &Schema::update_dynamic          },
-	{ RESERVED_STRICT,          &Schema::update_strict           },
-	{ RESERVED_D_DETECTION,     &Schema::update_d_detection      },
-	{ RESERVED_TI_DETECTION,    &Schema::update_ti_detection     },
-	{ RESERVED_TD_DETECTION,    &Schema::update_td_detection     },
-	{ RESERVED_N_DETECTION,     &Schema::update_n_detection      },
-	{ RESERVED_G_DETECTION,     &Schema::update_g_detection      },
-	{ RESERVED_B_DETECTION,     &Schema::update_b_detection      },
-	{ RESERVED_S_DETECTION,     &Schema::update_s_detection      },
-	{ RESERVED_T_DETECTION,     &Schema::update_t_detection      },
-	{ RESERVED_TE_DETECTION,    &Schema::update_te_detection     },
-	{ RESERVED_U_DETECTION,     &Schema::update_u_detection      },
-	{ RESERVED_BOOL_TERM,       &Schema::update_bool_term        },
-	{ RESERVED_ACCURACY,        &Schema::update_accuracy         },
-	{ RESERVED_ACC_PREFIX,      &Schema::update_acc_prefix       },
-	{ RESERVED_LANGUAGE,        &Schema::update_language         },
-	{ RESERVED_STOP_STRATEGY,   &Schema::update_stop_strategy    },
-	{ RESERVED_STEM_STRATEGY,   &Schema::update_stem_strategy    },
-	{ RESERVED_STEM_LANGUAGE,   &Schema::update_stem_language    },
-	{ RESERVED_PARTIALS,        &Schema::update_partials         },
-	{ RESERVED_ERROR,           &Schema::update_error            },
-	{ RESERVED_NAMESPACE,       &Schema::update_namespace        },
-	{ RESERVED_PARTIAL_PATHS,   &Schema::update_partial_paths    },
+	{ RESERVED_WEIGHT,                 &Schema::update_weight                 },
+	{ RESERVED_POSITION,               &Schema::update_position               },
+	{ RESERVED_SPELLING,               &Schema::update_spelling               },
+	{ RESERVED_POSITIONS,              &Schema::update_positions              },
+	{ RESERVED_TYPE,                   &Schema::update_type                   },
+	{ RESERVED_PREFIX,                 &Schema::update_prefix                 },
+	{ RESERVED_SLOT,                   &Schema::update_slot                   },
+	{ RESERVED_INDEX,                  &Schema::update_index                  },
+	{ RESERVED_STORE,                  &Schema::update_store                  },
+	{ RESERVED_RECURSE,                &Schema::update_recurse                },
+	{ RESERVED_DYNAMIC,                &Schema::update_dynamic                },
+	{ RESERVED_STRICT,                 &Schema::update_strict                 },
+	{ RESERVED_DATE_DETECTION,         &Schema::update_date_detection         },
+	{ RESERVED_TIME_DETECTION,         &Schema::update_time_detection         },
+	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::update_timedelta_detection    },
+	{ RESERVED_NUMERIC_DETECTION,      &Schema::update_numeric_detection      },
+	{ RESERVED_GEO_DETECTION,          &Schema::update_geo_detection          },
+	{ RESERVED_BOOL_DETECTION,         &Schema::update_bool_detection         },
+	{ RESERVED_STRING_DETECTION,       &Schema::update_string_detection       },
+	{ RESERVED_TEXT_DETECTION,         &Schema::update_text_detection         },
+	{ RESERVED_TERM_DETECTION,         &Schema::update_term_detection         },
+	{ RESERVED_UUID_DETECTION,         &Schema::update_uuid_detection         },
+	{ RESERVED_BOOL_TERM,              &Schema::update_bool_term              },
+	{ RESERVED_ACCURACY,               &Schema::update_accuracy               },
+	{ RESERVED_ACC_PREFIX,             &Schema::update_acc_prefix             },
+	{ RESERVED_LANGUAGE,               &Schema::update_language               },
+	{ RESERVED_STOP_STRATEGY,          &Schema::update_stop_strategy          },
+	{ RESERVED_STEM_STRATEGY,          &Schema::update_stem_strategy          },
+	{ RESERVED_STEM_LANGUAGE,          &Schema::update_stem_language          },
+	{ RESERVED_PARTIALS,               &Schema::update_partials               },
+	{ RESERVED_ERROR,                  &Schema::update_error                  },
+	{ RESERVED_NAMESPACE,              &Schema::update_namespace              },
+	{ RESERVED_PARTIAL_PATHS,          &Schema::update_partial_paths          },
 });
 
 
@@ -997,50 +997,50 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_VALUE             << ": " << (value     ? value->to_string()     : "null")   << "\n";
-	str << "\t" << "value_rec"                << ": " << (value_rec ? value_rec->to_string() : "null")   << "\n";
+	str << "\t" << RESERVED_VALUE               << ": " << (value     ? value->to_string()     : "null")   << "\n";
+	str << "\t" << "value_rec"                  << ": " << (value_rec ? value_rec->to_string() : "null")   << "\n";
 
-	str << "\t" << RESERVED_SLOT              << ": " << slot                           << "\n";
-	str << "\t" << RESERVED_TYPE              << ": " << readable_type(sep_types)       << "\n";
-	str << "\t" << RESERVED_PREFIX            << ": " << repr(prefix)                   << "\n";
-	str << "\t" << "local_prefix"             << ": " << repr(local_prefix)             << "\n";
-	str << "\t" << RESERVED_INDEX             << ": " << readable_index(index)          << "\n";
-	str << "\t" << RESERVED_ERROR             << ": " << error                          << "\n";
+	str << "\t" << RESERVED_SLOT                << ": " << slot                           << "\n";
+	str << "\t" << RESERVED_TYPE                << ": " << readable_type(sep_types)       << "\n";
+	str << "\t" << RESERVED_PREFIX              << ": " << repr(prefix)                   << "\n";
+	str << "\t" << "local_prefix"               << ": " << repr(local_prefix)             << "\n";
+	str << "\t" << RESERVED_INDEX               << ": " << readable_index(index)          << "\n";
+	str << "\t" << RESERVED_ERROR               << ": " << error                          << "\n";
 
-	str << "\t" << RESERVED_PARTIALS          << ": " << (flags.partials              ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_STORE             << ": " << (flags.store                 ? "true" : "false") << "\n";
-	str << "\t" << "parent_store"             << ": " << (flags.parent_store          ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_RECURSE           << ": " << (flags.is_recurse            ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_DYNAMIC           << ": " << (flags.dynamic               ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_STRICT            << ": " << (flags.strict                ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_D_DETECTION       << ": " << (flags.date_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_TI_DETECTION      << ": " << (flags.time_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_TD_DETECTION      << ": " << (flags.timedelta_detection   ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_N_DETECTION       << ": " << (flags.numeric_detection     ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_G_DETECTION       << ": " << (flags.geo_detection         ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_B_DETECTION       << ": " << (flags.bool_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_S_DETECTION       << ": " << (flags.string_detection      ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_T_DETECTION       << ": " << (flags.text_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_TE_DETECTION      << ": " << (flags.term_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_U_DETECTION       << ": " << (flags.uuid_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_BOOL_TERM         << ": " << (flags.bool_term             ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_NAMESPACE         << ": " << (flags.is_namespace          ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_PARTIAL_PATHS     << ": " << (flags.partial_paths         ? "true" : "false") << "\n";
-	str << "\t" << "optimal"                  << ": " << (flags.optimal               ? "true" : "false") << "\n";
-	str << "\t" << "field_found"              << ": " << (flags.field_found           ? "true" : "false") << "\n";
-	str << "\t" << "field_with_type"          << ": " << (flags.field_with_type       ? "true" : "false") << "\n";
-	str << "\t" << "complete"                 << ": " << (flags.complete              ? "true" : "false") << "\n";
-	str << "\t" << "dynamic_type"             << ": " << (flags.dynamic_type          ? "true" : "false") << "\n";
-	str << "\t" << "inside_namespace"         << ": " << (flags.inside_namespace      ? "true" : "false") << "\n";
-	str << "\t" << "dynamic_type_path"        << ": " << (flags.dynamic_type_path     ? "true" : "false") << "\n";
-	str << "\t" << "has_bool_term"            << ": " << (flags.has_bool_term         ? "true" : "false") << "\n";
-	str << "\t" << "has_index"                << ": " << (flags.has_index             ? "true" : "false") << "\n";
-	str << "\t" << "has_namespace"            << ": " << (flags.has_namespace         ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_PARTIALS            << ": " << (flags.partials              ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_STORE               << ": " << (flags.store                 ? "true" : "false") << "\n";
+	str << "\t" << "parent_store"               << ": " << (flags.parent_store          ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_RECURSE             << ": " << (flags.is_recurse            ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_DYNAMIC             << ": " << (flags.dynamic               ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_STRICT              << ": " << (flags.strict                ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_DATE_DETECTION      << ": " << (flags.date_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_TIME_DETECTION      << ": " << (flags.time_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_TIMEDELTA_DETECTION << ": " << (flags.timedelta_detection   ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_NUMERIC_DETECTION   << ": " << (flags.numeric_detection     ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_GEO_DETECTION       << ": " << (flags.geo_detection         ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_BOOL_DETECTION      << ": " << (flags.bool_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_STRING_DETECTION    << ": " << (flags.string_detection      ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_TEXT_DETECTION      << ": " << (flags.text_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_TERM_DETECTION      << ": " << (flags.term_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_UUID_DETECTION      << ": " << (flags.uuid_detection        ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_BOOL_TERM           << ": " << (flags.bool_term             ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_NAMESPACE           << ": " << (flags.is_namespace          ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_PARTIAL_PATHS       << ": " << (flags.partial_paths         ? "true" : "false") << "\n";
+	str << "\t" << "optimal"                    << ": " << (flags.optimal               ? "true" : "false") << "\n";
+	str << "\t" << "field_found"                << ": " << (flags.field_found           ? "true" : "false") << "\n";
+	str << "\t" << "field_with_type"            << ": " << (flags.field_with_type       ? "true" : "false") << "\n";
+	str << "\t" << "complete"                   << ": " << (flags.complete              ? "true" : "false") << "\n";
+	str << "\t" << "dynamic_type"               << ": " << (flags.dynamic_type          ? "true" : "false") << "\n";
+	str << "\t" << "inside_namespace"           << ": " << (flags.inside_namespace      ? "true" : "false") << "\n";
+	str << "\t" << "dynamic_type_path"          << ": " << (flags.dynamic_type_path     ? "true" : "false") << "\n";
+	str << "\t" << "has_bool_term"              << ": " << (flags.has_bool_term         ? "true" : "false") << "\n";
+	str << "\t" << "has_index"                  << ": " << (flags.has_index             ? "true" : "false") << "\n";
+	str << "\t" << "has_namespace"              << ": " << (flags.has_namespace         ? "true" : "false") << "\n";
 
-	str << "\t" << "meta_name"                << ": " << meta_name            << "\n";
-	str << "\t" << "full_meta_name"           << ": " << full_meta_name       << "\n";
-	str << "\t" << "aux_stem_lan"             << ": " << aux_stem_lan         << "\n";
-	str << "\t" << "aux_lan"                  << ": " << aux_lan              << "\n";
+	str << "\t" << "meta_name"                  << ": " << meta_name            << "\n";
+	str << "\t" << "full_meta_name"             << ": " << full_meta_name       << "\n";
+	str << "\t" << "aux_stem_lan"               << ": " << aux_stem_lan         << "\n";
+	str << "\t" << "aux_lan"                    << ": " << aux_lan              << "\n";
 
 	str << "}\n";
 
@@ -3646,92 +3646,92 @@ Schema::update_strict(const MsgPack& prop_strict)
 
 
 void
-Schema::update_d_detection(const MsgPack& prop_d_detection)
+Schema::update_date_detection(const MsgPack& prop_date_detection)
 {
-	L_CALL(this, "Schema::update_d_detection(%s)", repr(prop_d_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_date_detection(%s)", repr(prop_date_detection.to_string()).c_str());
 
-	specification.flags.date_detection = prop_d_detection.as_bool();
+	specification.flags.date_detection = prop_date_detection.as_bool();
 }
 
 
 void
-Schema::update_ti_detection(const MsgPack& prop_ti_detection)
+Schema::update_time_detection(const MsgPack& prop_time_detection)
 {
-	L_CALL(this, "Schema::update_ti_detection(%s)", repr(prop_ti_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_time_detection(%s)", repr(prop_time_detection.to_string()).c_str());
 
-	specification.flags.time_detection = prop_ti_detection.as_bool();
+	specification.flags.time_detection = prop_time_detection.as_bool();
 }
 
 
 void
-Schema::update_td_detection(const MsgPack& prop_td_detection)
+Schema::update_timedelta_detection(const MsgPack& prop_timedelta_detection)
 {
-	L_CALL(this, "Schema::update_td_detection(%s)", repr(prop_td_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_timedelta_detection(%s)", repr(prop_timedelta_detection.to_string()).c_str());
 
-	specification.flags.timedelta_detection = prop_td_detection.as_bool();
+	specification.flags.timedelta_detection = prop_timedelta_detection.as_bool();
 }
 
 
 void
-Schema::update_n_detection(const MsgPack& prop_n_detection)
+Schema::update_numeric_detection(const MsgPack& prop_numeric_detection)
 {
-	L_CALL(this, "Schema::update_n_detection(%s)", repr(prop_n_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_numeric_detection(%s)", repr(prop_numeric_detection.to_string()).c_str());
 
-	specification.flags.numeric_detection = prop_n_detection.as_bool();
+	specification.flags.numeric_detection = prop_numeric_detection.as_bool();
 }
 
 
 void
-Schema::update_g_detection(const MsgPack& prop_g_detection)
+Schema::update_geo_detection(const MsgPack& prop_geo_detection)
 {
-	L_CALL(this, "Schema::update_g_detection(%s)", repr(prop_g_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_geo_detection(%s)", repr(prop_geo_detection.to_string()).c_str());
 
-	specification.flags.geo_detection = prop_g_detection.as_bool();
+	specification.flags.geo_detection = prop_geo_detection.as_bool();
 }
 
 
 void
-Schema::update_b_detection(const MsgPack& prop_b_detection)
+Schema::update_bool_detection(const MsgPack& prop_bool_detection)
 {
-	L_CALL(this, "Schema::update_b_detection(%s)", repr(prop_b_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_bool_detection(%s)", repr(prop_bool_detection.to_string()).c_str());
 
-	specification.flags.bool_detection = prop_b_detection.as_bool();
+	specification.flags.bool_detection = prop_bool_detection.as_bool();
 }
 
 
 void
-Schema::update_s_detection(const MsgPack& prop_s_detection)
+Schema::update_string_detection(const MsgPack& prop_string_detection)
 {
-	L_CALL(this, "Schema::update_s_detection(%s)", repr(prop_s_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_string_detection(%s)", repr(prop_string_detection.to_string()).c_str());
 
-	specification.flags.string_detection = prop_s_detection.as_bool();
+	specification.flags.string_detection = prop_string_detection.as_bool();
 }
 
 
 void
-Schema::update_t_detection(const MsgPack& prop_t_detection)
+Schema::update_text_detection(const MsgPack& prop_text_detection)
 {
-	L_CALL(this, "Schema::update_t_detection(%s)", repr(prop_t_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_text_detection(%s)", repr(prop_text_detection.to_string()).c_str());
 
-	specification.flags.text_detection = prop_t_detection.as_bool();
+	specification.flags.text_detection = prop_text_detection.as_bool();
 }
 
 
 void
-Schema::update_te_detection(const MsgPack& prop_tm_detection)
+Schema::update_term_detection(const MsgPack& prop_tm_detection)
 {
-	L_CALL(this, "Schema::update_te_detection(%s)", repr(prop_tm_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_term_detection(%s)", repr(prop_tm_detection.to_string()).c_str());
 
 	specification.flags.term_detection = prop_tm_detection.as_bool();
 }
 
 
 void
-Schema::update_u_detection(const MsgPack& prop_u_detection)
+Schema::update_uuid_detection(const MsgPack& prop_uuid_detection)
 {
-	L_CALL(this, "Schema::update_u_detection(%s)", repr(prop_u_detection.to_string()).c_str());
+	L_CALL(this, "Schema::update_uuid_detection(%s)", repr(prop_uuid_detection.to_string()).c_str());
 
-	specification.flags.uuid_detection = prop_u_detection.as_bool();
+	specification.flags.uuid_detection = prop_uuid_detection.as_bool();
 }
 
 
@@ -3898,13 +3898,13 @@ Schema::write_strict(MsgPack& properties, const std::string& prop_name, const Ms
 
 
 void
-Schema::write_d_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_d_detection)
+Schema::write_date_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_date_detection)
 {
 	// RESERVED_D_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_d_detection(%s)", repr(doc_d_detection.to_string()).c_str());
+	L_CALL(this, "Schema::write_date_detection(%s)", repr(doc_date_detection.to_string()).c_str());
 
 	try {
-		specification.flags.date_detection = doc_d_detection.as_bool();
+		specification.flags.date_detection = doc_date_detection.as_bool();
 		properties[prop_name] = static_cast<bool>(specification.flags.date_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3913,13 +3913,13 @@ Schema::write_d_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_ti_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_ti_detection)
+Schema::write_time_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_time_detection)
 {
 	// RESERVED_TI_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_ti_detection(%s)", repr(doc_ti_detection.to_string()).c_str());
+	L_CALL(this, "Schema::write_time_detection(%s)", repr(doc_time_detection.to_string()).c_str());
 
 	try {
-		specification.flags.time_detection = doc_ti_detection.as_bool();
+		specification.flags.time_detection = doc_time_detection.as_bool();
 		properties[prop_name] = static_cast<bool>(specification.flags.time_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3928,13 +3928,13 @@ Schema::write_ti_detection(MsgPack& properties, const std::string& prop_name, co
 
 
 void
-Schema::write_td_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_td_detection)
+Schema::write_timedelta_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_timedelta_detection)
 {
 	// RESERVED_TD_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_td_detection(%s)", repr(doc_td_detection.to_string()).c_str());
+	L_CALL(this, "Schema::write_timedelta_detection(%s)", repr(doc_timedelta_detection.to_string()).c_str());
 
 	try {
-		specification.flags.timedelta_detection = doc_td_detection.as_bool();
+		specification.flags.timedelta_detection = doc_timedelta_detection.as_bool();
 		properties[prop_name] = static_cast<bool>(specification.flags.timedelta_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3943,13 +3943,13 @@ Schema::write_td_detection(MsgPack& properties, const std::string& prop_name, co
 
 
 void
-Schema::write_n_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_n_detection)
+Schema::write_numeric_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_numeric_detection)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_n_detection(%s)", repr(doc_n_detection.to_string()).c_str());
+	L_CALL(this, "Schema::write_numeric_detection(%s)", repr(doc_numeric_detection.to_string()).c_str());
 
 	try {
-		specification.flags.numeric_detection = doc_n_detection.as_bool();
+		specification.flags.numeric_detection = doc_numeric_detection.as_bool();
 		properties[prop_name] = static_cast<bool>(specification.flags.numeric_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3958,13 +3958,13 @@ Schema::write_n_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_g_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_g_detection)
+Schema::write_geo_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_geo_detection)
 {
 	// RESERVED_G_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_g_detection(%s)", repr(doc_g_detection.to_string()).c_str());
+	L_CALL(this, "Schema::write_geo_detection(%s)", repr(doc_geo_detection.to_string()).c_str());
 
 	try {
-		specification.flags.geo_detection = doc_g_detection.as_bool();
+		specification.flags.geo_detection = doc_geo_detection.as_bool();
 		properties[prop_name] = static_cast<bool>(specification.flags.geo_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3973,13 +3973,13 @@ Schema::write_g_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_b_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_b_detection)
+Schema::write_bool_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_bool_detection)
 {
 	// RESERVED_B_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_b_detection(%s)", repr(doc_b_detection.to_string()).c_str());
+	L_CALL(this, "Schema::write_bool_detection(%s)", repr(doc_bool_detection.to_string()).c_str());
 
 	try {
-		specification.flags.bool_detection = doc_b_detection.as_bool();
+		specification.flags.bool_detection = doc_bool_detection.as_bool();
 		properties[prop_name] = static_cast<bool>(specification.flags.bool_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -3988,13 +3988,13 @@ Schema::write_b_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_s_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_s_detection)
+Schema::write_string_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_string_detection)
 {
 	// RESERVED_S_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_s_detection(%s)", repr(doc_s_detection.to_string()).c_str());
+	L_CALL(this, "Schema::write_string_detection(%s)", repr(doc_string_detection.to_string()).c_str());
 
 	try {
-		specification.flags.string_detection = doc_s_detection.as_bool();
+		specification.flags.string_detection = doc_string_detection.as_bool();
 		properties[prop_name] = static_cast<bool>(specification.flags.string_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4003,13 +4003,13 @@ Schema::write_s_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_t_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_t_detection)
+Schema::write_text_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_text_detection)
 {
 	// RESERVED_T_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_t_detection(%s)", repr(doc_t_detection.to_string()).c_str());
+	L_CALL(this, "Schema::write_text_detection(%s)", repr(doc_text_detection.to_string()).c_str());
 
 	try {
-		specification.flags.text_detection = doc_t_detection.as_bool();
+		specification.flags.text_detection = doc_text_detection.as_bool();
 		properties[prop_name] = static_cast<bool>(specification.flags.text_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4018,10 +4018,10 @@ Schema::write_t_detection(MsgPack& properties, const std::string& prop_name, con
 
 
 void
-Schema::write_te_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection)
+Schema::write_term_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection)
 {
 	// RESERVED_TE_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_te_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
+	L_CALL(this, "Schema::write_term_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
 
 	try {
 		specification.flags.term_detection = doc_tm_detection.as_bool();
@@ -4033,13 +4033,13 @@ Schema::write_te_detection(MsgPack& properties, const std::string& prop_name, co
 
 
 void
-Schema::write_u_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_u_detection)
+Schema::write_uuid_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_uuid_detection)
 {
 	// RESERVED_U_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::write_u_detection(%s)", repr(doc_u_detection.to_string()).c_str());
+	L_CALL(this, "Schema::write_uuid_detection(%s)", repr(doc_uuid_detection.to_string()).c_str());
 
 	try {
-		specification.flags.uuid_detection = doc_u_detection.as_bool();
+		specification.flags.uuid_detection = doc_uuid_detection.as_bool();
 		properties[prop_name] = static_cast<bool>(specification.flags.uuid_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4795,13 +4795,13 @@ Schema::consistency_strict(const std::string& prop_name, const MsgPack& doc_stri
 
 
 void
-Schema::consistency_d_detection(const std::string& prop_name, const MsgPack& doc_d_detection)
+Schema::consistency_date_detection(const std::string& prop_name, const MsgPack& doc_date_detection)
 {
 	// RESERVED_D_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_d_detection(%s)", repr(doc_d_detection.to_string()).c_str());
+	L_CALL(this, "Schema::consistency_date_detection(%s)", repr(doc_date_detection.to_string()).c_str());
 
 	try {
-		const auto _date_detection = doc_d_detection.as_bool();
+		const auto _date_detection = doc_date_detection.as_bool();
 		if (specification.flags.date_detection != _date_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.date_detection ? "true" : "false", _date_detection ? "true" : "false");
 		}
@@ -4812,13 +4812,13 @@ Schema::consistency_d_detection(const std::string& prop_name, const MsgPack& doc
 
 
 void
-Schema::consistency_ti_detection(const std::string& prop_name, const MsgPack& doc_ti_detection)
+Schema::consistency_time_detection(const std::string& prop_name, const MsgPack& doc_time_detection)
 {
 	// RESERVED_TI_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_ti_detection(%s)", repr(doc_ti_detection.to_string()).c_str());
+	L_CALL(this, "Schema::consistency_time_detection(%s)", repr(doc_time_detection.to_string()).c_str());
 
 	try {
-		const auto _time_detection = doc_ti_detection.as_bool();
+		const auto _time_detection = doc_time_detection.as_bool();
 		if (specification.flags.time_detection != _time_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.time_detection ? "true" : "false", _time_detection ? "true" : "false");
 		}
@@ -4829,13 +4829,13 @@ Schema::consistency_ti_detection(const std::string& prop_name, const MsgPack& do
 
 
 void
-Schema::consistency_td_detection(const std::string& prop_name, const MsgPack& doc_td_detection)
+Schema::consistency_timedelta_detection(const std::string& prop_name, const MsgPack& doc_timedelta_detection)
 {
 	// RESERVED_TD_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_td_detection(%s)", repr(doc_td_detection.to_string()).c_str());
+	L_CALL(this, "Schema::consistency_timedelta_detection(%s)", repr(doc_timedelta_detection.to_string()).c_str());
 
 	try {
-		const auto _timedelta_detection = doc_td_detection.as_bool();
+		const auto _timedelta_detection = doc_timedelta_detection.as_bool();
 		if (specification.flags.timedelta_detection != _timedelta_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.timedelta_detection ? "true" : "false", _timedelta_detection ? "true" : "false");
 		}
@@ -4846,13 +4846,13 @@ Schema::consistency_td_detection(const std::string& prop_name, const MsgPack& do
 
 
 void
-Schema::consistency_n_detection(const std::string& prop_name, const MsgPack& doc_n_detection)
+Schema::consistency_numeric_detection(const std::string& prop_name, const MsgPack& doc_numeric_detection)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_n_detection(%s)", repr(doc_n_detection.to_string()).c_str());
+	L_CALL(this, "Schema::consistency_numeric_detection(%s)", repr(doc_numeric_detection.to_string()).c_str());
 
 	try {
-		const auto _numeric_detection = doc_n_detection.as_bool();
+		const auto _numeric_detection = doc_numeric_detection.as_bool();
 		if (specification.flags.numeric_detection != _numeric_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.numeric_detection ? "true" : "false", _numeric_detection ? "true" : "false");
 		}
@@ -4863,13 +4863,13 @@ Schema::consistency_n_detection(const std::string& prop_name, const MsgPack& doc
 
 
 void
-Schema::consistency_g_detection(const std::string& prop_name, const MsgPack& doc_g_detection)
+Schema::consistency_geo_detection(const std::string& prop_name, const MsgPack& doc_geo_detection)
 {
 	// RESERVED_G_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_g_detection(%s)", repr(doc_g_detection.to_string()).c_str());
+	L_CALL(this, "Schema::consistency_geo_detection(%s)", repr(doc_geo_detection.to_string()).c_str());
 
 	try {
-		const auto _geo_detection = doc_g_detection.as_bool();
+		const auto _geo_detection = doc_geo_detection.as_bool();
 		if (specification.flags.geo_detection != _geo_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.geo_detection ? "true" : "false", _geo_detection ? "true" : "false");
 		}
@@ -4880,13 +4880,13 @@ Schema::consistency_g_detection(const std::string& prop_name, const MsgPack& doc
 
 
 void
-Schema::consistency_b_detection(const std::string& prop_name, const MsgPack& doc_b_detection)
+Schema::consistency_bool_detection(const std::string& prop_name, const MsgPack& doc_bool_detection)
 {
 	// RESERVED_B_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_b_detection(%s)", repr(doc_b_detection.to_string()).c_str());
+	L_CALL(this, "Schema::consistency_bool_detection(%s)", repr(doc_bool_detection.to_string()).c_str());
 
 	try {
-		const auto _bool_detection = doc_b_detection.as_bool();
+		const auto _bool_detection = doc_bool_detection.as_bool();
 		if (specification.flags.bool_detection != _bool_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.bool_detection ? "true" : "false", _bool_detection ? "true" : "false");
 		}
@@ -4897,13 +4897,13 @@ Schema::consistency_b_detection(const std::string& prop_name, const MsgPack& doc
 
 
 void
-Schema::consistency_s_detection(const std::string& prop_name, const MsgPack& doc_s_detection)
+Schema::consistency_string_detection(const std::string& prop_name, const MsgPack& doc_string_detection)
 {
 	// RESERVED_S_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_s_detection(%s)", repr(doc_s_detection.to_string()).c_str());
+	L_CALL(this, "Schema::consistency_string_detection(%s)", repr(doc_string_detection.to_string()).c_str());
 
 	try {
-		const auto _string_detection = doc_s_detection.as_bool();
+		const auto _string_detection = doc_string_detection.as_bool();
 		if (specification.flags.string_detection != _string_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.string_detection ? "true" : "false", _string_detection ? "true" : "false");
 		}
@@ -4914,13 +4914,13 @@ Schema::consistency_s_detection(const std::string& prop_name, const MsgPack& doc
 
 
 void
-Schema::consistency_t_detection(const std::string& prop_name, const MsgPack& doc_t_detection)
+Schema::consistency_text_detection(const std::string& prop_name, const MsgPack& doc_text_detection)
 {
 	// RESERVED_T_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_t_detection(%s)", repr(doc_t_detection.to_string()).c_str());
+	L_CALL(this, "Schema::consistency_text_detection(%s)", repr(doc_text_detection.to_string()).c_str());
 
 	try {
-		const auto _text_detection = doc_t_detection.as_bool();
+		const auto _text_detection = doc_text_detection.as_bool();
 		if (specification.flags.text_detection != _text_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.text_detection ? "true" : "false", _text_detection ? "true" : "false");
 		}
@@ -4931,10 +4931,10 @@ Schema::consistency_t_detection(const std::string& prop_name, const MsgPack& doc
 
 
 void
-Schema::consistency_te_detection(const std::string& prop_name, const MsgPack& doc_tm_detection)
+Schema::consistency_term_detection(const std::string& prop_name, const MsgPack& doc_tm_detection)
 {
 	// RESERVED_TE_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_te_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
+	L_CALL(this, "Schema::consistency_term_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
 
 	try {
 		const auto _term_detection = doc_tm_detection.as_bool();
@@ -4948,13 +4948,13 @@ Schema::consistency_te_detection(const std::string& prop_name, const MsgPack& do
 
 
 void
-Schema::consistency_u_detection(const std::string& prop_name, const MsgPack& doc_u_detection)
+Schema::consistency_uuid_detection(const std::string& prop_name, const MsgPack& doc_uuid_detection)
 {
 	// RESERVED_U_DETECTION is heritable and can't change.
-	L_CALL(this, "Schema::consistency_u_detection(%s)", repr(doc_u_detection.to_string()).c_str());
+	L_CALL(this, "Schema::consistency_uuid_detection(%s)", repr(doc_uuid_detection.to_string()).c_str());
 
 	try {
-		const auto _uuid_detection = doc_u_detection.as_bool();
+		const auto _uuid_detection = doc_uuid_detection.as_bool();
 		if (specification.flags.uuid_detection != _uuid_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.uuid_detection ? "true" : "false", _uuid_detection ? "true" : "false");
 		}
