@@ -2874,7 +2874,8 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 		}
 
 		if (specification.flags.is_namespace && fields.size()) {
-			THROW(ClientError, "An namespace object cannot have children in Schema");
+			specification = std::move(spc_start);
+			return;
 		}
 
 		if (!fields.empty()) {
@@ -5399,7 +5400,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		}
 
 		if (specification.flags.is_namespace && fields.size()) {
-			THROW(ClientError, "An namespace object cannot have children in Schema");
+			return;
 		}
 
 		restart_specification();
