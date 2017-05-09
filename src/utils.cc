@@ -83,6 +83,70 @@ static std::random_device rd;  // Random device engine, usually based on /dev/ra
 static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
 
+#if defined (__FreeBSD__) && defined (HAVE_PTHREADS) && defined (HAVE_PTHREAD_NP_H)
+
+#define HAVE_PTHREAD_GET_NAME_NP_2
+
+#include <mutex>
+#include <unordered_map>
+
+#include <errno.h>
+
+#include <stdlib.h>
+#include <sys/sysctl.h>
+#include <sys/user.h>
+
+int
+pthread_get_name_np(char* buffer, size_t size)
+{
+	int tid = pthread_getthreadid_np();
+
+	static std::unordered_map<int, std::string> names;
+	static std::mutex mtx;
+
+	std::lock_guard<std::mutex> lk(mtx);
+
+	auto it = names.find(tid);
+	if (it == names.end()) {
+		size_t len = 0;
+		struct kinfo_proc *kp = nullptr;
+		while (true) {
+			int ctl[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD, static_cast<int>(::getpid())};
+			int error = sysctl(ctl, 4, kp, &len, nullptr, 0);
+			if (kp == nullptr || (error != 0 && errno == ENOMEM)) {
+				struct kinfo_proc *nkp = (struct kinfo_proc *)realloc(kp, len);
+				if (nkp == nullptr) {
+					free(kp);
+					return -1;
+				}
+				kp = nkp;
+				continue;
+			}
+			if (error != 0) {
+				len = 0;
+			}
+			break;
+		}
+		names.clear();
+		for (size_t i = 0; i < len / sizeof(*kp); i++) {
+			auto k_tid = static_cast<int>(kp[i].ki_tid);
+			auto oit = names.insert(std::make_pair(k_tid, kp[i].ki_tdname)).first;
+			if (k_tid == tid) {
+				it = oit;
+			}
+		}
+		free(kp);
+	}
+	if (it != names.end()) {
+		strncpy(buffer, it->second.c_str(), size);
+		return 0;
+	}
+	return -1;
+}
+
+#endif
+
+
 void set_thread_name(const std::string& name) {
 #if defined(HAVE_PTHREAD_SETNAME_NP_1)
 	pthread_setname_np(name.c_str());
@@ -104,6 +168,8 @@ std::string get_thread_name() {
 	pthread_get_name_np(pthread_self(), name, sizeof(name));
 #elif defined(HAVE_PTHREAD_GET_NAME_NP_1)
 	strncpy(name, pthread_get_name_np(pthread_self()), sizeof(name));
+#elif defined(HAVE_PTHREAD_GET_NAME_NP_2)
+	pthread_get_name_np(name, sizeof(name));
 #else
 	static std::hash<std::thread::id> thread_hasher;
 	snprintf(name, sizeof(name), "%zx", thread_hasher(std::this_thread::get_id()));
