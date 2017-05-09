@@ -416,18 +416,7 @@ Serialise::time(const std::string& field_value)
 std::string
 Serialise::time(const class MsgPack& field_value)
 {
-	switch (field_value.getType()) {
-		case MsgPack::Type::POSITIVE_INTEGER:
-			return time(field_value.as_u64());
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			return time(field_value.as_i64());
-		case MsgPack::Type::FLOAT:
-			return time(field_value.as_f64());
-		case MsgPack::Type::STR:
-			return time(field_value.as_string());
-		default:
-			THROW(SerialisationError, "Type: %s is not time", MsgPackTypes[toUType(field_value.getType())]);
-	}
+	return timestamp(Datetime::time_to_double(field_value));
 }
 
 
@@ -463,18 +452,7 @@ Serialise::timedelta(const std::string& field_value)
 std::string
 Serialise::timedelta(const class MsgPack& field_value)
 {
-	switch (field_value.getType()) {
-		case MsgPack::Type::POSITIVE_INTEGER:
-			return timedelta(field_value.as_u64());
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			return timedelta(field_value.as_i64());
-		case MsgPack::Type::FLOAT:
-			return timedelta(field_value.as_f64());
-		case MsgPack::Type::STR:
-			return timedelta(field_value.as_string());
-		default:
-			THROW(SerialisationError, "Type: %s is not timedelta", MsgPackTypes[toUType(field_value.getType())]);
-	}
+	return timestamp(Datetime::timedelta_to_double(field_value));
 }
 
 
