@@ -1295,7 +1295,7 @@ Datetime::time_to_double(const MsgPack& _time)
 			THROW(TimeError, "Time: %f is out of range", t_val);
 		}
 		case MsgPack::Type::STR:
-			return _time_to_double(TimeParser(_time.as_string()));
+			return time_to_double(TimeParser(_time.as_string()));
 		default:
 			THROW(TimeError, "Time must be numeric or string");
 	}
