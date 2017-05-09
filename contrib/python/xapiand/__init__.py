@@ -152,7 +152,7 @@ class Xapiand(object):
         self.host = host
         self.port = port
         self.commit = commit
-        self.prefix = '/{}/'.format(prefix) if prefix else '/'
+        self.prefix = '{}/'.format(prefix) if prefix else ''
         if default_accept is None:
             default_accept = 'application/json' if msgpack is None else 'application/x-msgpack'
         self.default_accept = default_accept
@@ -182,7 +182,7 @@ class Xapiand(object):
         else:
             action_request = ''
 
-        return 'http://{}{}{}{}'.format(host, index, nodename, action_request)
+        return 'http://{}/{}{}{}'.format(host, index, nodename, action_request)
 
     def _send_request(self, action_request, index, host=None, port=None, nodename=None, id=None, body=None, default=NA, **kwargs):
         """
@@ -229,6 +229,7 @@ class Xapiand(object):
         if body is not None:
             if isinstance(body, dict):
                 if '_schema' in body:
+                    body = body.copy()
                     body['_schema'] = '{}{}'.format(self.prefix, body['_schema'].strip('/'))
             if isinstance(body, (dict, list)):
                 if is_msgpack:
