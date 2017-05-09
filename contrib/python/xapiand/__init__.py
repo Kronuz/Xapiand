@@ -160,7 +160,7 @@ class Xapiand(object):
             default_accept_encoding = 'deflate, gzip, identity'
         self.default_accept_encoding = default_accept_encoding
 
-    def _build_url(self, action_request, index, host, port, nodename, id, body):
+    def _build_url(self, action_request, index, host, port, nodename, id):
         if host and ':' in host:
             host, _, port = host.partition(':')
         if not host:
@@ -196,7 +196,7 @@ class Xapiand(object):
         :arg body: File or dictionary with the body of the request
         """
         method, stream, key = self._methods[action_request]
-        url = self._build_url(action_request, index, host, port, nodename, id, body)
+        url = self._build_url(action_request, index, host, port, nodename, id)
 
         params = kwargs.pop('params', None)
         if params is not None:
@@ -209,10 +209,22 @@ class Xapiand(object):
         kwargs.setdefault('allow_redirects', False)
         headers = kwargs.setdefault('headers', {})
         accept = headers.setdefault('accept', self.default_accept)
-        accept_encoding = headers.setdefault('accept-encoding', self.default_accept_encoding)
-        content_type = headers.setdefault('content-type', accept)
-        is_msgpack = 'application/x-msgpack' in content_type
-        is_json = 'application/json' in content_type
+        headers.setdefault('accept-encoding', self.default_accept_encoding)
+
+        if 'json' in kwargs is not None:
+            body = kwargs.pop('json')
+            headers['content-type'] = 'application/json'
+            is_msgpack = False
+            is_json = True
+        elif 'msgpack' in kwargs is not None:
+            body = kwargs.pop('msgpack')
+            headers['content-type'] = 'application/x-msgpack'
+            is_msgpack = True
+            is_json = False
+        else:
+            content_type = headers.setdefault('content-type', accept)
+            is_msgpack = 'application/x-msgpack' in content_type
+            is_json = 'application/json' in content_type
 
         if body is not None:
             if isinstance(body, (dict, list)):
