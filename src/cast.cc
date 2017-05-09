@@ -284,23 +284,33 @@ Cast::date(const MsgPack& obj)
 }
 
 
-std::string
+MsgPack
 Cast::time(const MsgPack& obj)
 {
-	if (obj.is_string()) {
-		return obj.as_string();
+	switch (obj.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:
+		case MsgPack::Type::FLOAT:
+		case MsgPack::Type::STR:
+			return obj;
+		default:
+			THROW(CastError, "Type %s cannot be cast to time", MsgPackTypes[toUType(obj.getType())]);
 	}
-	THROW(CastError, "Type %s cannot be cast to time", MsgPackTypes[toUType(obj.getType())]);
 }
 
 
-std::string
+MsgPack
 Cast::timedelta(const MsgPack& obj)
 {
-	if (obj.is_string()) {
-		return obj.as_string();
+	switch (obj.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:
+		case MsgPack::Type::FLOAT:
+		case MsgPack::Type::STR:
+			return obj;
+		default:
+			THROW(CastError, "Type %s cannot be cast to timedelta", MsgPackTypes[toUType(obj.getType())]);
 	}
-	THROW(CastError, "Type %s cannot be cast to timedelta", MsgPackTypes[toUType(obj.getType())]);
 }
 
 

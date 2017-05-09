@@ -71,8 +71,8 @@ namespace Cast {
 	bool boolean(const MsgPack& obj);
 	std::string uuid(const MsgPack& obj);
 	MsgPack date(const MsgPack& obj);
-	std::string time(const MsgPack& obj);
-	std::string timedelta(const MsgPack& obj);
+	MsgPack time(const MsgPack& obj);
+	MsgPack timedelta(const MsgPack& obj);
 	std::string ewkt(const MsgPack& obj);
 
 	FieldType getType(const std::string& cast_word);
