@@ -172,7 +172,7 @@ class Xapiand(object):
         if not isinstance(index, (tuple, list, set)):
             index = index.split(',')
 
-        indexes = [self.prefix + i.strip('/') for i in set(index)]
+        indexes = ['{}{}'.format(self.prefix, i.strip('/')) for i in set(index)]
         index = ','.join(['/'.join((i, id or '')) for i in indexes])
 
         nodename = '@{}'.format(nodename) if nodename else ''
@@ -227,6 +227,9 @@ class Xapiand(object):
             is_json = 'application/json' in content_type
 
         if body is not None:
+            if isinstance(body, dict):
+                if '_schema' in body:
+                    body['_schema'] = '{}{}'.format(self.prefix, body['_schema'].strip('/'))
             if isinstance(body, (dict, list)):
                 if is_msgpack:
                     body = msgpack.dumps(body)
