@@ -183,8 +183,6 @@ public:
 	std::string cluster_name;
 	std::string node_name;
 	bool solo;
-	bool strict;
-	bool optimal;
 
 	std::atomic_int atom_sig;
 	ev::async signal_sig_async;
