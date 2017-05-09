@@ -2621,7 +2621,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, static_cast<int64_t>(f_val));
 					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, static_cast<int64_t>(f_val));
 				}
-				break;
+				return;
 			} catch (const msgpack::type_error&) {
 				THROW(ClientError, "Format invalid for float type: %s", repr(value.to_string()).c_str());
 			}
@@ -2644,7 +2644,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, i_val);
 					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, i_val);
 				}
-				break;
+				return;
 			} catch (const msgpack::type_error&) {
 				THROW(ClientError, "Format invalid for integer type: %s", repr(value.to_string()).c_str());
 			}
@@ -2667,7 +2667,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 					GenerateTerms::positive(doc, field_spc.accuracy, field_spc.acc_prefix, u_val);
 					GenerateTerms::positive(doc, global_spc.accuracy, global_spc.acc_prefix, u_val);
 				}
-				break;
+				return;
 			} catch (const msgpack::type_error&) {
 				THROW(ClientError, "Format invalid for positive type: %s", repr(value.to_string()).c_str());
 			}
@@ -2689,7 +2689,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				GenerateTerms::date(doc, field_spc.accuracy, field_spc.acc_prefix, tm);
 				GenerateTerms::date(doc, global_spc.accuracy, global_spc.acc_prefix, tm);
 			}
-			break;
+			return;
 		}
 		case FieldType::TIME: {
 			double t_val = 0.0;
@@ -2708,7 +2708,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, t_val);
 				GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, t_val);
 			}
-			break;
+			return;
 		}
 		case FieldType::TIMEDELTA: {
 			double t_val;
@@ -2727,7 +2727,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, t_val);
 				GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, t_val);
 			}
-			break;
+			return;
 		}
 		case FieldType::GEO: {
 			GeoSpatial geo(value);
@@ -2785,7 +2785,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				s_f.insert(ser_value);
 				s_g.insert(std::move(ser_value));
-				break;
+				return;
 			} catch (const msgpack::type_error&) {
 				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
 			}
@@ -2800,7 +2800,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			s_f.insert(ser_value);
 			s_g.insert(std::move(ser_value));
-			break;
+			return;
 		}
 		case FieldType::UUID: {
 			try {
@@ -2813,7 +2813,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				s_f.insert(ser_value);
 				s_g.insert(std::move(ser_value));
-				break;
+				return;
 			} catch (const msgpack::type_error&) {
 				THROW(ClientError, "Format invalid for uuid type: %s", repr(value.to_string()).c_str());
 			}
