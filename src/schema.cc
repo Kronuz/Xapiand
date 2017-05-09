@@ -297,21 +297,40 @@ inline static std::string readable_type(const std::array<FieldType, 3>& sep_type
 
 static std::pair<std::string, FieldType> get_acc_data(const std::string& field_acc) {
 	auto it = map_acc_date.find(field_acc.substr(1));
-	if (it == map_acc_date.end()) {
+	static const auto it_e = map_acc_date.end();
+	if (it == it_e) {
 		try {
-			if (field_acc.find("_geo") == 0) {
-				return std::make_pair(get_prefix(strict_stoull(field_acc.substr(4))), FieldType::GEO);
-			} else {
-				return std::make_pair(get_prefix(strict_stoull(field_acc.substr(1))), FieldType::INTEGER);
+			switch (field_acc[1]) {
+				case 'g':
+					if (field_acc.length() > 4 && field_acc[2] == 'e' && field_acc[3] == 'o') {
+						return std::make_pair(get_prefix(strict_stoull(field_acc.substr(4))), FieldType::GEO);
+					}
+					break;
+				case 't': {
+					static const auto tit_e = map_acc_time.end();
+					if (field_acc[2] == 'd') {
+						auto tit = map_acc_time.find(field_acc.substr(3));
+						if (tit != tit_e) {
+							return std::make_pair(get_prefix(toUType(tit->second)), FieldType::TIMEDELTA);
+						}
+					} else {
+						auto tit = map_acc_time.find(field_acc.substr(2));
+						if (tit != tit_e) {
+							return std::make_pair(get_prefix(toUType(tit->second)), FieldType::TIME);
+						}
+					}
+					break;
+				}
+				default:
+					return std::make_pair(get_prefix(strict_stoull(field_acc.substr(1))), FieldType::INTEGER);
 			}
 		} catch (const InvalidArgument&) {
-			THROW(ClientError, "The field name: %s is not valid", repr(field_acc).c_str());
-		} catch (const OutOfRange&) {
-			THROW(ClientError, "The field name: %s is not valid", repr(field_acc).c_str());
-		}
-	} else {
-		return std::make_pair(get_prefix(toUType(it->second)), FieldType::DATE);
+		} catch (const OutOfRange&) { }
+
+		THROW(ClientError, "The field name: %s is not valid", repr(field_acc).c_str());
 	}
+
+	return std::make_pair(get_prefix(toUType(it->second)), FieldType::DATE);
 }
 
 
