@@ -20,7 +20,6 @@ X# $FreeBSD$
 X
 XPORTNAME=	xapiand
 XPORTVERSION=	1.0.0
-XPKGNAMESUFFIX=	"${GH_TAGNAME:C/^./-&/}"
 XDISTVERSION=	master
 XCATEGORIES=	textproc devel
 X
