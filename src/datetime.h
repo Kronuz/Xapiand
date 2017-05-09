@@ -158,6 +158,7 @@ namespace Datetime {
 
 	clk_t TimeParser(const std::string& _time);
 	clk_t time_to_clk_t(double t);
+	double time_to_double(const MsgPack& _time);
 	double time_to_double(const clk_t& clk);
 	std::string time_to_string(const clk_t& clk, bool trim=true);
 	std::string time_to_string(double t, bool trim=true);
@@ -177,6 +178,7 @@ namespace Datetime {
 
 	clk_t TimedeltaParser(const std::string& timedelta);
 	clk_t timedelta_to_clk_t(double t);
+	double timedelta_to_double(const MsgPack& timedelta);
 	double timedelta_to_double(const clk_t& clk);
 	std::string timedelta_to_string(const clk_t& clk, bool trim=true);
 	std::string timedelta_to_string(double t, bool trim=true);

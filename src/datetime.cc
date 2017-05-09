@@ -1270,6 +1270,39 @@ Datetime::time_to_clk_t(double t)
 
 
 double
+Datetime::time_to_double(const MsgPack& _time)
+{
+	switch (_time.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER: {
+			double t_val = _time.as_u64();
+			if (isvalidTime(t_val)) {
+				return t_val;
+			}
+			THROW(TimeError, "Time: %f is out of range", t_val);
+		}
+		case MsgPack::Type::NEGATIVE_INTEGER: {
+			double t_val = _time.as_i64();
+			if (isvalidTime(t_val)) {
+				return t_val;
+			}
+			THROW(TimeError, "Time: %f is out of range", t_val);
+		}
+		case MsgPack::Type::FLOAT: {
+			double t_val = _time.as_f64();
+			if (isvalidTime(t_val)) {
+				return t_val;
+			}
+			THROW(TimeError, "Time: %f is out of range", t_val);
+		}
+		case MsgPack::Type::STR:
+			return _time_to_double(TimeParser(_time.as_string()));
+		default:
+			THROW(TimeError, "Time must be numeric or string");
+	}
+}
+
+
+double
 Datetime::time_to_double(const clk_t& clk)
 {
 	int hour, min;
@@ -1471,6 +1504,39 @@ Datetime::timedelta_to_clk_t(double t)
 	}
 
 	THROW(TimedeltaError, "Bad serialised timedelta value");
+}
+
+
+double
+Datetime::timedelta_to_double(const MsgPack& timedelta)
+{
+	switch (timedelta.getType()) {
+		case MsgPack::Type::POSITIVE_INTEGER: {
+			double t_val = timedelta.as_u64();
+			if (isvalidTimedelta(t_val)) {
+				return t_val;
+			}
+			THROW(TimedeltaError, "Timedelta: %f is out of range", t_val);
+		}
+		case MsgPack::Type::NEGATIVE_INTEGER: {
+			double t_val = timedelta.as_i64();
+			if (isvalidTimedelta(t_val)) {
+				return t_val;
+			}
+			THROW(TimedeltaError, "Timedelta: %f is out of range", t_val);
+		}
+		case MsgPack::Type::FLOAT: {
+			double t_val = timedelta.as_f64();
+			if (isvalidTimedelta(t_val)) {
+				return t_val;
+			}
+			THROW(TimedeltaError, "Timedelta: %f is out of range", t_val);
+		}
+		case MsgPack::Type::STR:
+			return timedelta_to_double(TimedeltaParser(timedelta.as_string()));
+		default:
+			THROW(TimedeltaError, "Timedelta must be numeric or string");
+	}
 }
 
 
