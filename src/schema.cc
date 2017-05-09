@@ -2862,36 +2862,46 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 		THROW(ClientError, "Field name must not be empty");
 	}
 
-	const auto spc_start = specification;
-	if (obj_schema.is_map()) {
-		FieldVector fields;
-		auto mut_properties = mut_parent_properties;
+	switch (obj_schema.getType()) {
+		case MsgPack::Type::MAP: {
+			const auto spc_start = specification;
+			FieldVector fields;
+			auto mut_properties = mut_parent_properties;
 
-		mut_properties = &get_subproperties(mut_properties, name, obj_schema, fields);
+			mut_properties = &get_subproperties(mut_properties, name, obj_schema, fields);
 
-		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
-			_validate_required_data(*mut_properties);
-		}
+			if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
+				_validate_required_data(*mut_properties);
+			}
 
-		if (specification.flags.is_namespace && fields.size()) {
+			if (specification.flags.is_namespace && fields.size()) {
+				specification = std::move(spc_start);
+				return;
+			}
+
+			if (!fields.empty()) {
+				set_type_to_object();
+			}
+
+			const auto spc_object = std::move(specification);
+			for (const auto& field : fields) {
+				specification = spc_object;
+				update_schema(mut_properties, *field.second, field.first);
+			}
+
 			specification = std::move(spc_start);
 			return;
 		}
-
-		if (!fields.empty()) {
-			set_type_to_object();
-		}
-
-		const auto spc_object = std::move(specification);
-		for (const auto& field : fields) {
-			specification = spc_object;
-			update_schema(mut_properties, *field.second, field.first);
-		}
-	} else {
-		THROW(ClientError, "%s must be an object", repr(name).c_str());
+		case MsgPack::Type::ARRAY:
+			for (const auto& item : obj_schema) {
+				if (item.is_map()) {
+					update_schema(mut_parent_properties, item, name);
+				}
+			}
+			return;
+		default:
+			return;
 	}
-
-	specification = std::move(spc_start);
 }
 
 
