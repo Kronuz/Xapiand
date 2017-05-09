@@ -105,10 +105,14 @@ pthread_get_name_np(char* buffer, size_t size)
 	static std::unordered_map<int, std::string> names;
 	static std::mutex mtx;
 
-	std::lock_guard<std::mutex> lk(mtx);
+	std::unique_lock<std::mutex> lk(mtx);
 
 	auto it = names.find(tid);
 	if (it == names.end()) {
+		lk.unlock();
+		if (!buffer) {
+			return 1;
+		}
 		size_t len = 0;
 		struct kinfo_proc *kp = nullptr;
 		while (true) {
@@ -128,8 +132,12 @@ pthread_get_name_np(char* buffer, size_t size)
 			}
 			break;
 		}
-		names.clear();
-		for (size_t i = 0; i < len / sizeof(*kp); i++) {
+		auto items = len / sizeof(*kp);
+		lk.lock();
+		if (std::abs(names.size() - items) > 20) {
+			names.clear();
+		}
+		for (size_t i = 0; i < items; i++) {
 			auto k_tid = static_cast<int>(kp[i].ki_tid);
 			auto oit = names.insert(std::make_pair(k_tid, kp[i].ki_tdname)).first;
 			if (k_tid == tid) {
@@ -137,15 +145,15 @@ pthread_get_name_np(char* buffer, size_t size)
 			}
 		}
 		free(kp);
-	}
-	if (it != names.end()) {
-		if (buffer) {
-			strncpy(buffer, it->second.c_str(), size);
-			return 0;
-		} else {
+	} else {
+		if (!buffer) {
 			names.erase(it);
 			return 1;
 		}
+	}
+	if (it != names.end()) {
+		strncpy(buffer, it->second.c_str(), size);
+		return 0;
 	}
 	return -1;
 }
