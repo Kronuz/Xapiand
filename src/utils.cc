@@ -83,8 +83,9 @@ static std::random_device rd;  // Random device engine, usually based on /dev/ra
 static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
 
-#if defined (__FreeBSD__) && defined (HAVE_PTHREADS) && defined (HAVE_PTHREAD_NP_H)
-
+#if !defined(HAVE_PTHREAD_GETNAME_NP_3) && !defined(HAVE_PTHREAD_GET_NAME_NP_3) && !defined(HAVE_PTHREAD_GET_NAME_NP_1)
+#if defined (__FreeBSD__)
+#if defined (HAVE_PTHREADS) && defined (HAVE_PTHREAD_NP_H)
 #define HAVE_PTHREAD_GET_NAME_NP_2
 
 #include <mutex>
@@ -105,6 +106,12 @@ pthread_get_name_np(char* buffer, size_t size)
 	static std::mutex mtx;
 
 	std::lock_guard<std::mutex> lk(mtx);
+
+	names.clear();
+
+	if (!buffer) {
+		return 1;
+	}
 
 	auto it = names.find(tid);
 	if (it == names.end()) {
@@ -127,7 +134,6 @@ pthread_get_name_np(char* buffer, size_t size)
 			}
 			break;
 		}
-		names.clear();
 		for (size_t i = 0; i < len / sizeof(*kp); i++) {
 			auto k_tid = static_cast<int>(kp[i].ki_tid);
 			auto oit = names.insert(std::make_pair(k_tid, kp[i].ki_tdname)).first;
@@ -143,7 +149,8 @@ pthread_get_name_np(char* buffer, size_t size)
 	}
 	return -1;
 }
-
+#endif
+#endif
 #endif
 
 
@@ -156,6 +163,9 @@ void set_thread_name(const std::string& name) {
 	pthread_setname_np(pthread_self(), name.c_str(), nullptr);
 #elif defined(HAVE_PTHREAD_SET_NAME_NP_2)
 	pthread_set_name_np(pthread_self(), name.c_str());
+#endif
+#if defined(HAVE_PTHREAD_GET_NAME_NP_2)
+	pthread_get_name_np(nullptr, 0);
 #endif
 }
 
