@@ -61,6 +61,10 @@ ansi_color(float red, float green, float blue, float alpha, bool bold)
 		None,
 	} coloring = Coloring::Unknown;
 	static std::unordered_map<size_t, const std::string> colors;
+	static std::mutex mtx;
+
+	std::lock_guard<std::mutex> lk(mtx);
+
 	uint8_t r = static_cast<uint8_t>(red * alpha + 0.5);
 	uint8_t g = static_cast<uint8_t>(green * alpha + 0.5);
 	uint8_t b = static_cast<uint8_t>(blue * alpha + 0.5);
