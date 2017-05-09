@@ -60,17 +60,19 @@ ansi_color(float red, float green, float blue, float alpha, bool bold)
 		Standard16,
 		None,
 	} coloring = Coloring::Unknown;
+
 	static std::unordered_map<size_t, const std::string> colors;
 	static std::mutex mtx;
-
-	std::lock_guard<std::mutex> lk(mtx);
 
 	uint8_t r = static_cast<uint8_t>(red * alpha + 0.5);
 	uint8_t g = static_cast<uint8_t>(green * alpha + 0.5);
 	uint8_t b = static_cast<uint8_t>(blue * alpha + 0.5);
 	size_t hash = r << 17 | g << 9 | b << 1 | bold;
+
+	std::unique_lock<std::mutex> lk(mtx);
 	auto it = colors.find(hash);
 	if (it == colors.end()) {
+		lk.unlock();
 		if (coloring == Coloring::Unknown) {
 			std::string colorterm;
 			const char *env_colorterm = getenv("COLORTERM");
@@ -151,6 +153,7 @@ ansi_color(float red, float green, float blue, float alpha, bool bold)
 			default:
 				break;
 		}
+		lk.lock();
 		it = colors.insert(std::make_pair(hash, buffer)).first;
 	}
 	return it->second;
