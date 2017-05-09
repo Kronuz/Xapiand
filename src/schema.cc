@@ -2489,42 +2489,30 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			return;
 		}
 		case FieldType::TIME: {
-			try {
-				Datetime::clk_t clk = Datetime::TimeParser(value.as_string());
-				auto ser_value = Serialise::time(clk);
-				if (field_spc) {
-					index_term(doc, ser_value, *field_spc, pos);
-				}
-				if (global_spc) {
-					index_term(doc, ser_value, *global_spc, pos);
-				}
-				s.insert(std::move(ser_value));
-				if (spc.accuracy.empty()) {
-					GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, Datetime::time_to_double(clk));
-				}
-				return;
-			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for time type: %s", repr(value.to_string()).c_str());
+			double t_val = 0.0;
+			auto ser_value = Serialise::time(value, t_val);
+			if (field_spc) {
+				index_term(doc, ser_value, *field_spc, pos);
 			}
+			if (global_spc) {
+				index_term(doc, ser_value, *global_spc, pos);
+			}
+			s.insert(std::move(ser_value));
+			GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, t_val);
+			return;
 		}
 		case FieldType::TIMEDELTA: {
-			try {
-				Datetime::clk_t clk = Datetime::TimedeltaParser(value.as_string());
-				auto ser_value = Serialise::timedelta(clk);
-				if (field_spc) {
-					index_term(doc, ser_value, *field_spc, pos);
-				}
-				if (global_spc) {
-					index_term(doc, ser_value, *global_spc, pos);
-				}
-				s.insert(std::move(ser_value));
-				if (spc.accuracy.empty()) {
-					GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, Datetime::timedelta_to_double(clk));
-				}
-				return;
-			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for timedelta type: %s", repr(value.to_string()).c_str());
+			double t_val = 0.0;
+			auto ser_value = Serialise::timedelta(value, t_val);
+			if (field_spc) {
+				index_term(doc, ser_value, *field_spc, pos);
 			}
+			if (global_spc) {
+				index_term(doc, ser_value, *global_spc, pos);
+			}
+			s.insert(std::move(ser_value));
+			GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, t_val);
+			return;
 		}
 		case FieldType::GEO: {
 			GeoSpatial geo(value);
@@ -2704,52 +2692,42 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			break;
 		}
 		case FieldType::TIME: {
-			try {
-				Datetime::clk_t clk = Datetime::TimeParser(value.as_string());
-				auto ser_value = Serialise::time(clk);
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
-					index_term(doc, ser_value, field_spc, pos);
-				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
-					index_term(doc, ser_value, global_spc, pos);
-				}
-				s_f.insert(ser_value);
-				s_g.insert(std::move(ser_value));
-				auto t_val = Datetime::time_to_double(clk);
-				if (field_spc.accuracy == global_spc.accuracy) {
-					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, t_val);
-				} else {
-					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, t_val);
-					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, t_val);
-				}
-				break;
-			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for time type: %s", repr(value.to_string()).c_str());
+			double t_val = 0.0;
+			auto ser_value = Serialise::time(value, t_val);
+			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+				index_term(doc, ser_value, field_spc, pos);
 			}
+			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+				index_term(doc, ser_value, global_spc, pos);
+			}
+			s_f.insert(ser_value);
+			s_g.insert(std::move(ser_value));
+			if (field_spc.accuracy == global_spc.accuracy) {
+				GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, t_val);
+			} else {
+				GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, t_val);
+				GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, t_val);
+			}
+			break;
 		}
 		case FieldType::TIMEDELTA: {
-			try {
-				Datetime::clk_t clk = Datetime::TimedeltaParser(value.as_string());
-				auto ser_value = Serialise::timedelta(clk);
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
-					index_term(doc, ser_value, field_spc, pos);
-				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
-					index_term(doc, ser_value, global_spc, pos);
-				}
-				s_f.insert(ser_value);
-				s_g.insert(std::move(ser_value));
-				auto t_val = Datetime::timedelta_to_double(clk);
-				if (field_spc.accuracy == global_spc.accuracy) {
-					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, t_val);
-				} else {
-					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, t_val);
-					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, t_val);
-				}
-				break;
-			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for timedelta type: %s", repr(value.to_string()).c_str());
+			double t_val;
+			auto ser_value = Serialise::timedelta(value, t_val);
+			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+				index_term(doc, ser_value, field_spc, pos);
 			}
+			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+				index_term(doc, ser_value, global_spc, pos);
+			}
+			s_f.insert(ser_value);
+			s_g.insert(std::move(ser_value));
+			if (field_spc.accuracy == global_spc.accuracy) {
+				GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, t_val);
+			} else {
+				GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, t_val);
+				GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, t_val);
+			}
+			break;
 		}
 		case FieldType::GEO: {
 			GeoSpatial geo(value);

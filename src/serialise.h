@@ -182,11 +182,7 @@ namespace Serialise {
 	// Serialise value like time.
 	std::string time(const std::string& field_value);
 	std::string time(const class MsgPack& field_value);
-	std::string time(const class MsgPack& field_value, Datetime::clk_t& clk);
-
-	inline std::string time(const Datetime::clk_t& clk) {
-		return timestamp(Datetime::time_to_double(clk));
-	}
+	std::string time(const class MsgPack& field_value, double& t_val);
 
 	inline std::string time(double t) {
 		if (Datetime::isvalidTime(t)) {
@@ -198,11 +194,7 @@ namespace Serialise {
 	// Serialise value like timedelta.
 	std::string timedelta(const std::string& field_value);
 	std::string timedelta(const class MsgPack& field_value);
-	std::string timedelta(const class MsgPack& field_value, Datetime::clk_t& clk);
-
-	inline std::string timedelta(const Datetime::clk_t& clk) {
-		return timestamp(Datetime::timedelta_to_double(clk));
-	}
+	std::string timedelta(const class MsgPack& field_value, double& t_val);
 
 	inline std::string timedelta(double t) {
 		if (Datetime::isvalidTimedelta(t)) {

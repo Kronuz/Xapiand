@@ -409,7 +409,7 @@ Serialise::date(const class MsgPack& value, Datetime::tm_t& tm)
 std::string
 Serialise::time(const std::string& field_value)
 {
-	return time(Datetime::TimeParser(field_value));
+	return timestamp(Datetime::time_to_double(Datetime::TimeParser(field_value)));
 }
 
 
@@ -432,21 +432,21 @@ Serialise::time(const class MsgPack& field_value)
 
 
 std::string
-Serialise::time(const class MsgPack& field_value, Datetime::clk_t& clk)
+Serialise::time(const class MsgPack& field_value, double& t_val)
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			clk = Datetime::time_to_clk_t(field_value.as_u64());
-			return time(clk);
+			t_val = field_value.as_u64();
+			return time(t_val);
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			clk = Datetime::time_to_clk_t(field_value.as_i64());
-			return time(clk);
+			t_val = field_value.as_i64();
+			return time(t_val);
 		case MsgPack::Type::FLOAT:
-			clk = Datetime::time_to_clk_t(field_value.as_f64());
-			return time(clk);
+			t_val = field_value.as_f64();
+			return time(t_val);
 		case MsgPack::Type::STR:
-			clk = Datetime::TimeParser(field_value.as_string());
-			return time(clk);
+			t_val = Datetime::time_to_double(Datetime::TimeParser(field_value.as_string()));
+			return timestamp(t_val);
 		default:
 			THROW(SerialisationError, "Type: %s is not time", MsgPackTypes[toUType(field_value.getType())]);
 	}
@@ -456,7 +456,7 @@ Serialise::time(const class MsgPack& field_value, Datetime::clk_t& clk)
 std::string
 Serialise::timedelta(const std::string& field_value)
 {
-	return timedelta(Datetime::TimedeltaParser(field_value));
+	return timestamp(Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value)));
 }
 
 
@@ -479,21 +479,21 @@ Serialise::timedelta(const class MsgPack& field_value)
 
 
 std::string
-Serialise::timedelta(const class MsgPack& field_value, Datetime::clk_t& clk)
+Serialise::timedelta(const class MsgPack& field_value, double& t_val)
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			clk = Datetime::timedelta_to_clk_t(field_value.as_u64());
-			return timedelta(clk);
+			t_val = field_value.as_u64();
+			return timedelta(t_val);
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			clk = Datetime::timedelta_to_clk_t(field_value.as_i64());
-			return timedelta(clk);
+			t_val = field_value.as_i64();
+			return timedelta(t_val);
 		case MsgPack::Type::FLOAT:
-			clk = Datetime::timedelta_to_clk_t(field_value.as_f64());
-			return timedelta(clk);
+			t_val = field_value.as_f64();
+			return timedelta(t_val);
 		case MsgPack::Type::STR:
-			clk = Datetime::TimeParser(field_value.as_string());
-			return timedelta(clk);
+			t_val = Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value.as_string()));
+			return timestamp(t_val);
 		default:
 			THROW(SerialisationError, "Type: %s is not timedelta", MsgPackTypes[toUType(field_value.getType())]);
 	}
