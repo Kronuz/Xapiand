@@ -193,7 +193,7 @@ public:
 		StringList values(s);
 		for (const auto& value : values) {
 			auto t = Unserialise::timestamp(value);
-			if (Datetime::isvalidTime(t)) {
+			if (Datetime::isvalidTime(t)) {
 				aggregate_time(t, doc);
 			}
 		}
@@ -203,7 +203,7 @@ public:
 		StringList values(s);
 		for (const auto& value : values) {
 			auto t = Unserialise::timestamp(value);
-			if (Datetime::isvalidTimedelta(t)) {
+			if (Datetime::isvalidTimedelta(t)) {
 				aggregate_timedelta(t, doc);
 			}
 		}
