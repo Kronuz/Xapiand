@@ -1431,6 +1431,9 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 		}
 
 		if (fields.empty()) {
+			if (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY) {
+				set_type_to_object();
+			}
 			if (specification.flags.store) {
 				*data = (*data)[RESERVED_VALUE];
 			}
@@ -1449,13 +1452,8 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 
 		if (fields.empty()) {
 			if (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY) {
-				if (specification.flags.strict) {
-					THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
-				} else {
-					specification.sep_types[0] = FieldType::OBJECT;
-				}
+				set_type_to_object();
 			}
-
 			index_partial_paths(doc);
 			if (specification.flags.store && specification.sep_types[0] == FieldType::OBJECT) {
 				*data = MsgPack(MsgPack::Type::MAP);
@@ -2879,7 +2877,11 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 				return;
 			}
 
-			if (!fields.empty()) {
+			if (fields.empty()) {
+				if (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY) {
+					set_type_to_object();
+				}
+			} else {
 				set_type_to_object();
 			}
 
