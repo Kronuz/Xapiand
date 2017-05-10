@@ -338,41 +338,19 @@ static std::pair<std::string, FieldType> get_acc_data(const std::string& field_a
  * Default acc_prefixes for global values.
  */
 
-static const std::vector<std::string> global_acc_prefix_num = []() {
+static std::vector<std::string> get_acc_prefix(const std::vector<uint64_t> accuracy) {
 	std::vector<std::string> res;
-	res.reserve(def_accuracy_num.size());
-	for (const auto& acc : def_accuracy_num) {
+	res.reserve(accuracy.size());
+	for (const auto& acc : accuracy) {
 		res.push_back(get_prefix(acc));
 	}
 	return res;
-}();
+}
 
-static const std::vector<std::string> global_acc_prefix_date = []() {
-	std::vector<std::string> res;
-	res.reserve(def_accuracy_date.size());
-	for (const auto& acc : def_accuracy_date) {
-		res.push_back(get_prefix(acc));
-	}
-	return res;
-}();
-
-static const std::vector<std::string> global_acc_prefix_time = []() {
-	std::vector<std::string> res;
-	res.reserve(def_accuracy_time.size());
-	for (const auto& acc : def_accuracy_time) {
-		res.push_back(get_prefix(acc));
-	}
-	return res;
-}();
-
-static const std::vector<std::string> global_acc_prefix_geo = []() {
-	std::vector<std::string> res;
-	res.reserve(def_accuracy_geo.size());
-	for (const auto& acc : def_accuracy_geo) {
-		res.push_back(get_prefix(acc));
-	}
-	return res;
-}();
+static const std::vector<std::string> global_acc_prefix_num(get_acc_prefix(def_accuracy_num));
+static const std::vector<std::string> global_acc_prefix_date(get_acc_prefix(def_accuracy_date));
+static const std::vector<std::string> global_acc_prefix_time(get_acc_prefix(def_accuracy_time));
+static const std::vector<std::string> global_acc_prefix_geo(get_acc_prefix(def_accuracy_geo));
 
 
 /*
