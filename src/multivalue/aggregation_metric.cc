@@ -38,6 +38,10 @@ static func_value_handle get_func_value_handle(FieldType type, const std::string
 			return &SubAggregation::_aggregate_positive;
 		case FieldType::DATE:
 			return &SubAggregation::_aggregate_date;
+		case FieldType::TIME:
+			return &SubAggregation::_aggregate_time;
+		case FieldType::TIMEDELTA:
+			return &SubAggregation::_aggregate_timedelta;
 		case FieldType::BOOLEAN:
 			return &SubAggregation::_aggregate_boolean;
 		case FieldType::TERM:

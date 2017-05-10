@@ -102,6 +102,16 @@ public:
 		aggregate(bucket, doc);
 	}
 
+	void aggregate_time(double value, const Xapian::Document& doc) override {
+		auto bucket = std::to_string(value);
+		aggregate(bucket, doc);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
+		auto bucket = std::to_string(value);
+		aggregate(bucket, doc);
+	}
+
 	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
 		auto bucket = std::string(value ? "true" : "false");
 		aggregate(bucket, doc);
@@ -201,6 +211,16 @@ public:
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
+		auto bucket = get_bucket(value);
+		aggregate(bucket, doc);
+	}
+
+	void aggregate_time(double value, const Xapian::Document& doc) override {
+		auto bucket = get_bucket(value);
+		aggregate(bucket, doc);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
 		aggregate(bucket, doc);
 	}
@@ -332,6 +352,22 @@ public:
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
+		for (const auto& range : ranges_f64) {
+			if (value >= range.second.first && value < range.second.second) {
+				aggregate(range.first, doc);
+			}
+		}
+	}
+
+	void aggregate_time(double value, const Xapian::Document& doc) override {
+		for (const auto& range : ranges_f64) {
+			if (value >= range.second.first && value < range.second.second) {
+				aggregate(range.first, doc);
+			}
+		}
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);

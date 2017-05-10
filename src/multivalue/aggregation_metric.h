@@ -137,6 +137,14 @@ public:
 		THROW(AggregationError, "date type is not supported");
 	}
 
+	virtual void aggregate_time(double, const Xapian::Document&) {
+		THROW(AggregationError, "time type is not supported");
+	}
+
+	virtual void aggregate_timedelta(double, const Xapian::Document&) {
+		THROW(AggregationError, "timedelta type is not supported");
+	}
+
 	virtual void aggregate_boolean(bool, const Xapian::Document&) {
 		THROW(AggregationError, "boolean type is not supported");
 	}
@@ -178,6 +186,26 @@ public:
 		StringList values(s);
 		for (const auto& value : values) {
 			aggregate_date(Unserialise::timestamp(value), doc);
+		}
+	}
+
+	void _aggregate_time(const std::string& s, const Xapian::Document& doc) {
+		StringList values(s);
+		for (const auto& value : values) {
+			auto t = Unserialise::timestamp(value);
+			if (Datetime::isvalidTime(t)) {
+				aggregate_time(t, doc);
+			}
+		}
+	}
+
+	void _aggregate_timedelta(const std::string& s, const Xapian::Document& doc) {
+		StringList values(s);
+		for (const auto& value : values) {
+			auto t = Unserialise::timestamp(value);
+			if (Datetime::isvalidTimedelta(t)) {
+				aggregate_timedelta(t, doc);
+			}
 		}
 	}
 
@@ -263,6 +291,14 @@ public:
 		_aggregate();
 	}
 
+	void aggregate_time(double, const Xapian::Document&) override {
+		_aggregate();
+	}
+
+	void aggregate_timedelta(double, const Xapian::Document&) override {
+		_aggregate();
+	}
+
 	void aggregate_boolean(bool, const Xapian::Document&) override {
 		_aggregate();
 	}
@@ -313,6 +349,14 @@ public:
 	void aggregate_date(double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
+
+	void aggregate_time(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
 };
 
 
@@ -347,6 +391,14 @@ public:
 	}
 
 	void aggregate_date(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_time(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
@@ -401,6 +453,14 @@ public:
 	void aggregate_date(double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
+
+	void aggregate_time(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
 };
 
 
@@ -445,6 +505,14 @@ public:
 	void aggregate_date(double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
+
+	void aggregate_time(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
 };
 
 
@@ -480,6 +548,14 @@ public:
 	}
 
 	void aggregate_date(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_time(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
@@ -551,6 +627,14 @@ public:
 	void aggregate_date(double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
+
+	void aggregate_time(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
 };
 
 
@@ -591,6 +675,14 @@ public:
 	}
 
 	void aggregate_date(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_time(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 };
@@ -634,6 +726,14 @@ public:
 	}
 
 	void aggregate_date(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_time(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 };
@@ -680,6 +780,14 @@ public:
 	}
 
 	void aggregate_date(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_time(double value, const Xapian::Document&) override {
+		_aggregate(value);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 };
