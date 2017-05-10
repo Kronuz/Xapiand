@@ -533,7 +533,7 @@ QueryDSL::get_acc_time_query(const required_spc_t& field_spc, const std::string&
 	}
 
 	int64_t value = Datetime::time_to_double(obj);
-	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, toUType(it->second))), field_spc.prefix, required_spc_t::get_ctype(FieldType::TIME)), wqf);
+	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(it->second))), field_spc.prefix, required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
 }
 
 
@@ -549,7 +549,7 @@ QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, const std::st
 	}
 
 	int64_t value = Datetime::timedelta_to_double(obj);
-	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, toUType(it->second))), field_spc.prefix, required_spc_t::get_ctype(FieldType::TIMEDELTA)), wqf);
+	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(it->second))), field_spc.prefix, required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
 }
 
 
