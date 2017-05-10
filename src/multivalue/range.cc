@@ -125,6 +125,42 @@ Xapian::Query getDateQuery(const required_spc_t& field_spc, const MsgPack& start
 }
 
 
+Xapian::Query getTimeQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
+	auto time_s = Datetime::time_to_double(start);
+	auto time_e = Datetime::time_to_double(end);
+
+	if (time_s > time_e) {
+		return Xapian::Query::MatchNothing;
+	}
+
+	auto query = GenerateTerms::numeric(static_cast<int64_t>(time_s), static_cast<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix);
+	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::timestamp(time_s), Serialise::timestamp(time_e));
+	if (query.empty()) {
+		return Xapian::Query(mvr->release());
+	} else {
+		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
+	}
+}
+
+
+Xapian::Query getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
+	auto timedelta_s = Datetime::timedelta_to_double(start);
+	auto timedelta_e = Datetime::timedelta_to_double(end);
+
+	if (timedelta_s > timedelta_e) {
+		return Xapian::Query::MatchNothing;
+	}
+
+	auto query = GenerateTerms::numeric(static_cast<int64_t>(timedelta_s), static_cast<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix);
+	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::timestamp(timedelta_s), Serialise::timestamp(timedelta_e));
+	if (query.empty()) {
+		return Xapian::Query(mvr->release());
+	} else {
+		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
+	}
+}
+
+
 Xapian::Query
 MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 {
@@ -175,6 +211,10 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 				return getStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));
 			case FieldType::DATE:
 				return getDateQuery(field_spc, *start, *end);
+			case FieldType::TIME:
+				return getTimeQuery(field_spc, *start, *end);
+			case FieldType::TIMEDELTA:
+				return getTimedeltaQuery(field_spc, *start, *end);
 			case FieldType::GEO:
 				THROW(QueryParserError, "The format for Geo Spatial range is: <field>: [\"EWKT\"]");
 			default:
