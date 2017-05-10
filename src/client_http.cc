@@ -2104,7 +2104,7 @@ HttpClient::query_field_maker(int flag)
 void
 HttpClient::log_request()
 {
-	std::string request_prefix = " 🌎 ";
+	std::string request_prefix = " 🌎  ";
 
 	auto request_headers_color = &NO_COL;
 	auto request_head_color = &NO_COL;
@@ -2171,7 +2171,7 @@ HttpClient::log_request()
 void
 HttpClient::log_response()
 {
-	std::string response_prefix = " 💊 ";
+	std::string response_prefix = " 💊  ";
 	auto response_headers_color = &NO_COL;
 	auto response_head_color = &NO_COL;
 	auto response_body_color = &NO_COL;
@@ -2181,7 +2181,7 @@ HttpClient::log_response()
 		response_head_color = &brgb(68, 136, 68);
 		response_body_color = &rgb(68, 136, 68);
 	} else if ((int)response_status >= 300 && (int)response_status <= 399) {
-		response_prefix = " 💫 ";
+		response_prefix = " 💫  ";
 		response_headers_color = &rgba(68, 136, 120, 0.6);
 		response_head_color = &brgb(68, 136, 120);
 		response_body_color = &rgb(68, 136, 120);
@@ -2191,12 +2191,12 @@ HttpClient::log_response()
 		response_head_color = &brgb(116, 100, 77);
 		response_body_color = &rgb(116, 100, 77);
 	} else if ((int)response_status >= 400 && (int)response_status <= 499) {
-		response_prefix = " 💥 ";
+		response_prefix = " 💥  ";
 		response_headers_color = &rgba(183, 70, 17, 0.6);
 		response_head_color = &brgb(183, 70, 17);
 		response_body_color = &rgb(183, 70, 17);
 	} else if ((int)response_status >= 500 && (int)response_status <= 599) {
-		response_prefix = " 🔥 ";
+		response_prefix = " 🔥  ";
 		response_headers_color = &rgba(190, 30, 10, 0.6);
 		response_head_color = &brgb(190, 30, 10);
 		response_body_color = &rgb(190, 30, 10);
