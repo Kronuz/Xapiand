@@ -32,6 +32,7 @@
 #include <time.h>                                     // for tm, gmtime, time_t
 
 #include "cast.h"                                     // for Cast
+#include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
 #include "guid/guid.h"                                // for Guid
@@ -447,6 +448,17 @@ Serialise::time(const class MsgPack& field_value, double& t_val)
 
 
 std::string
+Serialise::time(double field_value)
+{
+	if (Datetime::isvalidTime(field_value)) {
+		return timestamp(field_value);
+	}
+
+	THROW(SerialisationError, "Time: %f is out of range", field_value);
+}
+
+
+std::string
 Serialise::timedelta(const std::string& field_value)
 {
 	return timestamp(Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value)));
@@ -479,6 +491,17 @@ Serialise::timedelta(const class MsgPack& field_value, double& t_val)
 		default:
 			THROW(SerialisationError, "Type: %s is not timedelta", MsgPackTypes[toUType(field_value.getType())]);
 	}
+}
+
+
+std::string
+Serialise::timedelta(double field_value)
+{
+	if (Datetime::isvalidTimedelta(field_value)) {
+		return timestamp(field_value);
+	}
+
+	THROW(SerialisationError, "Timedelta: %f is out of range", field_value);
 }
 
 
@@ -975,16 +998,38 @@ Unserialise::date(const std::string& serialised_date)
 std::string
 Unserialise::time(const std::string& serialised_time)
 {
-	double t = sortable_unserialise(serialised_time);
-	return Datetime::time_to_string(t);
+	return Datetime::time_to_string(sortable_unserialise(serialised_time));
+}
+
+
+double
+Unserialise::time_d(const std::string& serialised_time)
+{
+	auto t = sortable_unserialise(serialised_time);
+	if (Datetime::isvalidTime(t)) {
+		return t;
+	}
+
+	THROW(SerialisationError, "Unserialised time: %f is out of range", t);
 }
 
 
 std::string
 Unserialise::timedelta(const std::string& serialised_timedelta)
 {
-	double t = sortable_unserialise(serialised_timedelta);
-	return Datetime::timedelta_to_string(t);
+	return Datetime::timedelta_to_string(sortable_unserialise(serialised_timedelta));
+}
+
+
+double
+Unserialise::timedelta_d(const std::string& serialised_time)
+{
+	auto t = sortable_unserialise(serialised_time);
+	if (Datetime::isvalidTimedelta(t)) {
+		return t;
+	}
+
+	THROW(SerialisationError, "Unserialised timedelta: %f is out of range", t);
 }
 
 

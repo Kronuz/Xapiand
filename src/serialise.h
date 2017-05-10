@@ -34,7 +34,6 @@
 #include <vector>                   // for vector
 
 #include "datetime.h"               // for tm_t (ptr only), timestamp
-#include "exception.h"              // for SerialisationError, ...
 #include "geospatial/cartesian.h"   // for Cartesian
 #include "geospatial/htm.h"         // for range_t
 #include "hash/endian.h"            // for __BYTE_ORDER, __BIG_ENDIAN, __LITTLE...
@@ -183,25 +182,13 @@ namespace Serialise {
 	std::string time(const std::string& field_value);
 	std::string time(const class MsgPack& field_value);
 	std::string time(const class MsgPack& field_value, double& t_val);
-
-	inline std::string time(double t) {
-		if (Datetime::isvalidTime(t)) {
-			return timestamp(t);
-		}
-		THROW(SerialisationError, "Time: %f is out of range", t);
-	}
+	std::string time(double field_value);
 
 	// Serialise value like timedelta.
 	std::string timedelta(const std::string& field_value);
 	std::string timedelta(const class MsgPack& field_value);
 	std::string timedelta(const class MsgPack& field_value, double& t_val);
-
-	inline std::string timedelta(double t) {
-		if (Datetime::isvalidTimedelta(t)) {
-			return timestamp(t);
-		}
-		THROW(SerialisationError, "Timedelta: %f is out of range", t);
-	}
+	std::string timedelta(double field_value);
 
 	// Serialise field_value like float.
 	std::string _float(const std::string& field_value);
@@ -305,11 +292,22 @@ namespace Unserialise {
 	// Unserialise a serialised date.
 	std::string date(const std::string& serialised_date);
 
+	// Unserialise a serialised date returns the timestamp.
+	inline double timestamp(const std::string& serialised_timestamp) {
+		return sortable_unserialise(serialised_timestamp);
+	}
+
 	// Unserialise a serialised time.
 	std::string time(const std::string& serialised_time);
 
+	// Unserialise a serialised time and returns the timestamp.
+	double time_d(const std::string& serialised_time);
+
 	// Unserialise a serialised timedelta.
 	std::string timedelta(const std::string& serialised_timedelta);
+
+	// Unserialise a serialised timedelta and returns the timestamp.
+	double timedelta_d(const std::string& serialised_timedelta);
 
 	// Unserialise a serialised float.
 	inline double _float(const std::string& serialised_float) {
@@ -324,11 +322,6 @@ namespace Unserialise {
 	// Unserialise a serialised positive.
 	inline uint64_t positive(const std::string& serialised_positive) {
 		return sortable_unserialise(serialised_positive);
-	}
-
-	// Unserialise a serialised date and returns the timestamp.
-	inline double timestamp(const std::string& serialised_timestamp) {
-		return sortable_unserialise(serialised_timestamp);
 	}
 
 	// Unserialise a serialised boolean.
