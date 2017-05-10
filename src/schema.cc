@@ -2877,11 +2877,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 				return;
 			}
 
-			if (fields.empty()) {
-				if (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY) {
-					set_type_to_object();
-				}
-			} else {
+			if (!fields.empty() || (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY)) {
 				set_type_to_object();
 			}
 
