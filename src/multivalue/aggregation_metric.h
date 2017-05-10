@@ -192,20 +192,14 @@ public:
 	void _aggregate_time(const std::string& s, const Xapian::Document& doc) {
 		StringList values(s);
 		for (const auto& value : values) {
-			auto t = Unserialise::timestamp(value);
-			if (Datetime::isvalidTime(t)) {
-				aggregate_time(t, doc);
-			}
+			aggregate_time(Unserialise::time_d(value), doc);
 		}
 	}
 
 	void _aggregate_timedelta(const std::string& s, const Xapian::Document& doc) {
 		StringList values(s);
 		for (const auto& value : values) {
-			auto t = Unserialise::timestamp(value);
-			if (Datetime::isvalidTimedelta(t)) {
-				aggregate_timedelta(t, doc);
-			}
+			aggregate_timedelta(Unserialise::timedelta_d(value), doc);
 		}
 	}
 
