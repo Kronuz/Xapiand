@@ -246,10 +246,14 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 			return string(field_spc, field_value.as_string());
 		case MsgPack::Type::MAP:
 			switch (field_spc.get_type()) {
-				case FieldType::DATE:
-					return date(field_value);
 				case FieldType::FLOAT:
 					return _float(Datetime::timestamp(Datetime::DateParser(field_value)));
+				case FieldType::DATE:
+					return date(field_value);
+				case FieldType::TIME:
+					return time(Datetime::timestamp(Datetime::DateParser(field_value)));
+				case FieldType::TIMEDELTA:
+					return timedelta(Datetime::timestamp(Datetime::DateParser(field_value)));
 				case FieldType::STRING:
 					return Datetime::iso8601(Datetime::DateParser(field_value));
 				default:
