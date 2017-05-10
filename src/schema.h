@@ -289,7 +289,7 @@ struct required_spc_t {
 		flags_t();
 	} flags;
 
-	// For GEO, DATE and Numeric types.
+	// For GEO, DATE, TIME, TIMEDELTA and Numeric types.
 	std::vector<uint64_t> accuracy;
 	std::vector<std::string> acc_prefix;
 

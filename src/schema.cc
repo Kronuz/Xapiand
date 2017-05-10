@@ -1120,7 +1120,7 @@ Schema::restart_specification()
 	specification.aux_stem_lan               = default_spc.aux_stem_lan;
 	specification.aux_lan                    = default_spc.aux_lan;
 
-	specification.partial_spcs.clear();
+	specification.partial_spcs               = default_spc.partial_spcs;
 }
 
 
