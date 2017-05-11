@@ -357,50 +357,23 @@ static const std::vector<std::string> global_acc_prefix_geo(get_acc_prefix(def_a
  * Acceptable values string used when there is a data inconsistency.
  */
 
-static const std::string str_set_acc_date = []() {
+template <typename T>
+static std::string get_str_keys(const std::unordered_map<std::string, T>& map) {
 	std::string res("{ ");
-	for (const auto& p : map_acc_date) {
+	for (const auto& p : map) {
 		res.append(p.first).append(", ");
 	}
+	res.pop_back();
+	res.back() = ' ';
 	res.push_back('}');
 	return res;
-}();
+}
 
-static const std::string str_set_acc_time = []() {
-	std::string res("{ ");
-	for (const auto& p : map_acc_time) {
-		res.append(p.first).append(", ");
-	}
-	res.push_back('}');
-	return res;
-}();
-
-static const std::string str_set_stop_strategy = []() {
-	std::string res("{ ");
-	for (const auto& p : map_stop_strategy) {
-		res.append(p.first).append(", ");
-	}
-	res.push_back('}');
-	return res;
-}();
-
-static const std::string str_set_stem_strategy = []() {
-	std::string res("{ ");
-	for (const auto& p : map_stem_strategy) {
-		res.append(p.first).append(", ");
-	}
-	res.push_back('}');
-	return res;
-}();
-
-static const std::string str_set_index = []() {
-	std::string res("{ ");
-	for (const auto& p : map_index) {
-		res.append(p.first).append(", ");
-	}
-	res.push_back('}');
-	return res;
-}();
+static const std::string str_set_acc_date(get_str_keys(map_acc_date));
+static const std::string str_set_acc_time(get_str_keys(map_acc_time));
+static const std::string str_set_stop_strategy(get_str_keys(map_stop_strategy));
+static const std::string str_set_stem_strategy(get_str_keys(map_stem_strategy));
+static const std::string str_set_index(get_str_keys(map_index));
 
 
 specification_t default_spc;
