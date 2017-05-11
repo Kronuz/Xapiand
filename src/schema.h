@@ -235,7 +235,7 @@ extern const std::unordered_map<std::string, UnitTime> map_acc_time;
 extern const std::unordered_map<std::string, StopStrategy> map_stop_strategy;
 extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
 extern const std::unordered_map<std::string, TypeIndex> map_index;
-extern const std::unordered_map<std::string, std::array<FieldType, 3>> map_types;
+extern const std::unordered_map<std::string, std::array<FieldType, 3>> map_type;
 
 
 MSGPACK_ADD_ENUM(UnitTime);
