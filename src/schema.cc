@@ -360,12 +360,12 @@ static const std::vector<std::string> global_acc_prefix_geo(get_acc_prefix(def_a
 template <typename T>
 static std::string get_str_keys(const std::unordered_map<std::string, T>& map) {
 	std::string res("{ ");
+	char comma[3] = { '\0', ' ', '\0' };
 	for (const auto& p : map) {
-		res.append(p.first).append(", ");
+		res.append(comma).append(p.first);
+		comma[0] = ',';
 	}
-	res.pop_back();
-	res.back() = ' ';
-	res.push_back('}');
+	res.append(" }");
 	return res;
 }
 
