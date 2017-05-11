@@ -145,7 +145,7 @@ const std::unordered_map<std::string, TypeIndex> map_index({
 });
 
 
-const std::unordered_map<std::string, std::array<FieldType, 3>> map_types({
+const std::unordered_map<std::string, std::array<FieldType, 3>> map_type({
 	{ "array",                        {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }} },
 	{ "array/boolean",                {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }} },
 	{ "array/date",                   {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }} },
@@ -730,8 +730,8 @@ required_spc_t::set_types(const std::string& str_type)
 {
 	L_CALL(this, "required_spc_t::set_types(%s)", repr(str_type).c_str());
 
-	static const auto tit_e = map_types.end();
-	auto tit = map_types.find(lower_string(str_type));
+	static const auto tit_e = map_type.end();
+	auto tit = map_type.find(lower_string(str_type));
 	if (tit == tit_e) {
 		THROW(ClientError, "%s must be in { object, array, object/array, [object/][array/]<boolean, date, float, geospatial, integer, positive, string, term, text, uuid> }", RESERVED_TYPE);
 	} else {
