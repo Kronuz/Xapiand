@@ -145,6 +145,12 @@ const std::unordered_map<std::string, TypeIndex> map_index({
 });
 
 
+const std::unordered_map<std::string, DynamicPath> map_dynamic_path({
+	{ "branch", DynamicPath::BRANCH }, { "unify", DynamicPath::UNIFY },
+	{ "all",    DynamicPath::ALL    },
+});
+
+
 const std::unordered_map<std::string, std::array<FieldType, 3>> map_type({
 	{ "array",                        {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }} },
 	{ "array/boolean",                {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }} },
@@ -274,6 +280,16 @@ inline static std::string readable_index(TypeIndex index) noexcept {
 }
 
 
+inline static std::string readable_dynamic_path(DynamicPath dynamic_path) noexcept {
+	switch (dynamic_path) {
+		case DynamicPath::BRANCH:  return "branch";
+		case DynamicPath::UNIFY:   return "unify";
+		case DynamicPath::ALL:     return "all";
+		default:                   return "DynamicPath::UNKNOWN";
+	}
+}
+
+
 inline static std::string readable_type(const std::array<FieldType, 3>& sep_types) {
 	std::string result;
 	if (sep_types[0] != FieldType::EMPTY) {
@@ -374,6 +390,7 @@ static const std::string str_set_acc_time(get_str_keys(map_acc_time));
 static const std::string str_set_stop_strategy(get_str_keys(map_stop_strategy));
 static const std::string str_set_stem_strategy(get_str_keys(map_stem_strategy));
 static const std::string str_set_index(get_str_keys(map_index));
+static const std::string str_set_dynamic_path(get_str_keys(map_dynamic_path));
 
 
 specification_t default_spc;
@@ -407,6 +424,7 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_UUID_DETECTION,         &Schema::write_uuid_detection         },
 	{ RESERVED_NAMESPACE,              &Schema::write_namespace              },
 	{ RESERVED_PARTIAL_PATHS,          &Schema::write_partial_paths          },
+	{ RESERVED_DYNAMIC_PATH,           &Schema::write_dynamic_path           },
 	{ RESERVED_SCRIPT,                 &Schema::write_script                 },
 	{ RESERVED_VERSION,                &Schema::write_version                },
 	{ RESERVED_SCHEMA,                 &Schema::write_schema                 },
@@ -435,6 +453,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_STORE,                  &Schema::process_store                      },
 	{ RESERVED_RECURSE,                &Schema::process_recurse                    },
 	{ RESERVED_PARTIAL_PATHS,          &Schema::process_partial_paths              },
+	{ RESERVED_DYNAMIC_PATH,           &Schema::process_dynamic_path               },
 	{ RESERVED_VALUE,                  &Schema::process_value                      },
 	{ RESERVED_FLOAT,                  &Schema::process_cast_object                },
 	{ RESERVED_POSITIVE,               &Schema::process_cast_object                },
@@ -521,6 +540,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 	{ RESERVED_ERROR,                  &Schema::update_error                  },
 	{ RESERVED_NAMESPACE,              &Schema::update_namespace              },
 	{ RESERVED_PARTIAL_PATHS,          &Schema::update_partial_paths          },
+	{ RESERVED_DYNAMIC_PATH,           &Schema::update_dynamic_path           },
 });
 
 
@@ -608,7 +628,8 @@ required_spc_t::flags_t::flags_t()
 	  has_bool_term(false),
 	  has_index(false),
 	  has_namespace(false),
-	  has_partial_paths(false) { }
+	  has_partial_paths(false),
+	  has_dynamic_path(false) { }
 
 
 required_spc_t::required_spc_t()
@@ -718,7 +739,8 @@ specification_t::specification_t()
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),
 	  positions({ DEFAULT_POSITIONS }),
-	  index(DEFAULT_INDEX) { }
+	  index(DEFAULT_INDEX),
+	  dynamic_path(DEFAULT_DYNAMIC_PATH) { }
 
 
 specification_t::specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
@@ -728,7 +750,8 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),
 	  positions({ DEFAULT_POSITIONS }),
-	  index(DEFAULT_INDEX) { }
+	  index(DEFAULT_INDEX),
+	  dynamic_path(DEFAULT_DYNAMIC_PATH) { }
 
 
 specification_t::specification_t(const specification_t& o)
@@ -739,6 +762,7 @@ specification_t::specification_t(const specification_t& o)
 	  spelling(o.spelling),
 	  positions(o.positions),
 	  index(o.index),
+	  dynamic_path(o.dynamic_path),
 	  meta_name(o.meta_name),
 	  full_meta_name(o.full_meta_name),
 	  aux_stem_lan(o.aux_stem_lan),
@@ -755,6 +779,7 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  spelling(std::move(o.spelling)),
 	  positions(std::move(o.positions)),
 	  index(std::move(o.index)),
+	  dynamic_path(std::move(o.dynamic_path)),
 	  meta_name(std::move(o.meta_name)),
 	  full_meta_name(std::move(o.full_meta_name)),
 	  aux_stem_lan(std::move(o.aux_stem_lan)),
@@ -772,6 +797,7 @@ specification_t::operator=(const specification_t& o)
 	spelling = o.spelling;
 	positions = o.positions;
 	index = o.index;
+	dynamic_path = o.dynamic_path;
 	value.reset();
 	value_rec.reset();
 	doc_acc.reset();
@@ -795,6 +821,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	spelling = std::move(o.spelling);
 	positions = std::move(o.positions);
 	index = std::move(o.index);
+	dynamic_path = std::move(o.dynamic_path);
 	value.reset();
 	value_rec.reset();
 	doc_acc.reset();
@@ -951,12 +978,13 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_VALUE               << ": " << (value     ? value->to_string()     : "null")   << "\n";
 	str << "\t" << "value_rec"                  << ": " << (value_rec ? value_rec->to_string() : "null")   << "\n";
 
-	str << "\t" << RESERVED_SLOT                << ": " << slot                           << "\n";
-	str << "\t" << RESERVED_TYPE                << ": " << readable_type(sep_types)       << "\n";
-	str << "\t" << RESERVED_PREFIX              << ": " << repr(prefix)                   << "\n";
-	str << "\t" << "local_prefix"               << ": " << repr(local_prefix)             << "\n";
-	str << "\t" << RESERVED_INDEX               << ": " << readable_index(index)          << "\n";
-	str << "\t" << RESERVED_ERROR               << ": " << error                          << "\n";
+	str << "\t" << RESERVED_SLOT                << ": " << slot                                << "\n";
+	str << "\t" << RESERVED_TYPE                << ": " << readable_type(sep_types)            << "\n";
+	str << "\t" << RESERVED_PREFIX              << ": " << repr(prefix)                        << "\n";
+	str << "\t" << "local_prefix"               << ": " << repr(local_prefix)                  << "\n";
+	str << "\t" << RESERVED_INDEX               << ": " << readable_index(index)               << "\n";
+	str << "\t" << RESERVED_DYNAMIC_PATH        << ": " << readable_dynamic_path(dynamic_path) << "\n";
+	str << "\t" << RESERVED_ERROR               << ": " << error                               << "\n";
 
 	str << "\t" << RESERVED_PARTIALS            << ": " << (flags.partials              ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_STORE               << ": " << (flags.store                 ? "true" : "false") << "\n";
@@ -1080,6 +1108,7 @@ Schema::restart_specification()
 	specification.flags.has_index            = default_spc.flags.has_index;
 	specification.flags.has_namespace        = default_spc.flags.has_namespace;
 	specification.flags.has_partial_paths    = default_spc.flags.has_partial_paths;
+	specification.flags.has_dynamic_path     = default_spc.flags.has_dynamic_path;
 
 	specification.flags.field_with_type      = default_spc.flags.field_with_type;
 	specification.flags.complete             = default_spc.flags.complete;
@@ -3743,6 +3772,16 @@ Schema::update_partial_paths(const MsgPack& prop_partial_paths)
 
 
 void
+Schema::update_dynamic_path(const MsgPack& dynamic_path)
+{
+	L_CALL(this, "Schema::update_dynamic_path(%s)", repr(dynamic_path.to_string()).c_str());
+
+	specification.dynamic_path = static_cast<DynamicPath>(dynamic_path.as_u64());
+	specification.flags.has_dynamic_path = true;
+}
+
+
+void
 Schema::write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
@@ -4042,6 +4081,20 @@ Schema::write_partial_paths(MsgPack& properties, const std::string& prop_name, c
 
 	process_partial_paths(prop_name, doc_partial_paths);
 	properties[prop_name] = static_cast<bool>(specification.flags.partial_paths);
+}
+
+
+void
+Schema::write_dynamic_path(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic_path)
+{
+	L_CALL(this, "Schema::write_dynamic_path(%s)", repr(doc_dynamic_path.to_string()).c_str());
+
+	/*
+	 * RESERVED_DYNAMIC_PATH is heritable and can change.
+	 */
+
+	process_dynamic_path(prop_name, doc_dynamic_path);
+	properties[prop_name] = specification.dynamic_path;
 }
 
 
@@ -4403,6 +4456,31 @@ Schema::process_partial_paths(const std::string& prop_name, const MsgPack& doc_p
 		specification.flags.has_partial_paths = true;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+	}
+}
+
+
+void
+Schema::process_dynamic_path(const std::string& prop_name, const MsgPack& doc_dynamic_path)
+{
+	L_CALL(this, "Schema::process_dynamic_path(%s)", repr(doc_dynamic_path.to_string()).c_str());
+
+	/*
+	 * RESERVED_DYNAMIC_PATH is heritable and can change.
+	 */
+
+	try {
+		const auto str_dynamic_path = lower_string(doc_dynamic_path.as_string());
+		static const auto mdit_e = map_dynamic_path.end();
+		const auto mdit = map_dynamic_path.find(str_dynamic_path);
+		if (mdit == mdit_e) {
+			THROW(ClientError, "%s must be in %s (%s not supported)", prop_name.c_str(), str_set_dynamic_path.c_str(), str_dynamic_path.c_str());
+		} else {
+			specification.dynamic_path = mdit->second;
+			specification.flags.has_dynamic_path = true;
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
 }
 

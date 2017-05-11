@@ -51,6 +51,7 @@
 #define DEFAULT_SPELLING       false
 #define DEFAULT_BOOL_TERM      false
 #define DEFAULT_INDEX          TypeIndex::ALL
+#define DEFAULT_DYNAMIC_PATH   DynamicPath::ALL
 
 
 #define LIMIT_PARTIAL_PATHS_DEPTH  10    // 2^(n - 2) => 2^8 => 256 namespace terms.
@@ -73,6 +74,13 @@ enum class TypeIndex : uint8_t {
 	GLOBAL_ALL_FIELD_TERMS    = GLOBAL_ALL    | FIELD_TERMS,    // 1101  Bits for  "global_all,field_terms" *
 	GLOBAL_ALL_FIELD_VALUES   = GLOBAL_ALL    | FIELD_VALUES,   // 1110  Bits for  "global_all,field_values" *
 	ALL                       = GLOBAL_ALL    | FIELD_ALL,      // 1111  Bits for  "all"
+};
+
+
+enum class DynamicPath : uint8_t {
+	BRANCH   = 0b0001,  // Indexin using the field name.
+	UNIFY    = 0b0010,  // Indexing using the meta name.
+	ALL      = 0b0011,  // Indexing using field name and meta name.
 };
 
 
@@ -235,11 +243,13 @@ extern const std::unordered_map<std::string, UnitTime> map_acc_time;
 extern const std::unordered_map<std::string, StopStrategy> map_stop_strategy;
 extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
 extern const std::unordered_map<std::string, TypeIndex> map_index;
+extern const std::unordered_map<std::string, DynamicPath> map_dynamic_path;
 extern const std::unordered_map<std::string, std::array<FieldType, 3>> map_type;
 
 
 MSGPACK_ADD_ENUM(UnitTime);
 MSGPACK_ADD_ENUM(TypeIndex);
+MSGPACK_ADD_ENUM(DynamicPath);
 MSGPACK_ADD_ENUM(StopStrategy);
 MSGPACK_ADD_ENUM(StemStrategy);
 MSGPACK_ADD_ENUM(FieldType);
@@ -285,6 +295,7 @@ struct required_spc_t {
 		bool has_index:1;            // Either RESERVED_INDEX is in the schema or the user sent it
 		bool has_namespace:1;        // Either RESERVED_NAMESPACE is in the schema or the user sent it
 		bool has_partial_paths:1;    // Either RESERVED_PARTIAL_PATHS is in the schema or the user sent it
+		bool has_dynamic_path:1;     // Either RESERVED_DYNAMIC_PATH is in the schema or the user sent it
 
 		flags_t();
 	} flags;
@@ -335,6 +346,9 @@ struct specification_t : required_spc_t {
 	std::vector<bool> spelling;
 	std::vector<bool> positions;
 	TypeIndex index;
+
+	// Used to save how index dynamic paths.
+	DynamicPath dynamic_path;
 
 	// Value recovered from the item.
 	std::unique_ptr<const MsgPack> value;
@@ -586,6 +600,7 @@ class Schema {
 	void update_error(const MsgPack& prop_error);
 	void update_namespace(const MsgPack& prop_namespace);
 	void update_partial_paths(const MsgPack& prop_partial_paths);
+	void update_dynamic_path(const MsgPack& prop_update_paths);
 
 
 	/*
@@ -613,6 +628,7 @@ class Schema {
 	void write_uuid_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_uuid_detection);
 	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
 	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
+	void write_dynamic_path(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic_path);
 	void write_script(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
 	void write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version);
 	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
@@ -636,6 +652,7 @@ class Schema {
 	void process_store(const std::string& prop_name, const MsgPack& doc_store);
 	void process_recurse(const std::string& prop_name, const MsgPack& doc_recurse);
 	void process_partial_paths(const std::string& prop_name, const MsgPack& doc_partial_paths);
+	void process_dynamic_path(const std::string& prop_name, const MsgPack& doc_dynamic_path);
 	void process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term);
 	void process_partials(const std::string& prop_name, const MsgPack& doc_partials);
 	void process_error(const std::string& prop_name, const MsgPack& doc_error);

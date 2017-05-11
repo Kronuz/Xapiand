@@ -873,6 +873,7 @@ int main(int argc, char **argv) {
 		default_spc.index = TypeIndex::FIELD_ALL;
 		default_spc.flags.text_detection = false;
 		default_spc.flags.optimal = true;
+		default_spc.dynamic_path = DynamicPath::BRANCH;
 	}
 
 	// Flush threshold increased

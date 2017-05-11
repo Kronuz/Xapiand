@@ -66,6 +66,7 @@
 #define RESERVED_RECURSE               "_recurse"
 #define RESERVED_NAMESPACE             "_namespace"
 #define RESERVED_PARTIAL_PATHS         "_partial_paths"
+#define RESERVED_DYNAMIC_PATH          "_dynamic_path"
 #define RESERVED_SCHEMA                "_schema"
 // Reserved words for detecting types.
 #define RESERVED_DATE_DETECTION        "_date_detection"
