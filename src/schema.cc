@@ -1613,7 +1613,29 @@ Schema::complete_specification(const MsgPack& item_value)
 		validate_required_data(item_value);
 	}
 
-	if (specification.flags.uuid_path) {
+	if (specification.partial_prefixes.size() > 2) {
+		required_spc_t prev_spc = specification;
+
+		auto paths = get_partial_paths(specification.partial_prefixes);
+		specification.partial_spcs.reserve(paths.size());
+		paths.pop_back();
+
+		if (toUType(specification.index & TypeIndex::VALUES)) {
+			for (const auto& path : paths) {
+				specification.partial_spcs.push_back(get_namespace_specification(specification.sep_types[2], path));
+			}
+		} else {
+			required_spc_t spc;
+			spc.sep_types[2] = specification_t::global_type(specification.sep_types[2]);
+			for (const auto& path : paths) {
+				spc.prefix.field = path;
+				specification.partial_spcs.push_back(spc);
+			}
+		}
+
+		// Full path is process like normal field.
+		specification.partial_spcs.push_back(std::move(prev_spc));
+	} else if (specification.flags.uuid_path) {
 		switch (specification.index_uuid_field) {
 			case UUIDFieldIndex::UUID:
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
