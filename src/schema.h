@@ -278,7 +278,7 @@ struct required_spc_t {
 			if (uuid.empty()) {
 				return res;
 			}
-			res.append(1, ' ').append(repr(uuid));
+			res.append(1, '/').append(repr(uuid));
 			return res;
 		}
 
