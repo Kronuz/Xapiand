@@ -636,6 +636,7 @@ required_spc_t::flags_t::flags_t()
 
 required_spc_t::required_spc_t()
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY }}),
+	  slot(Xapian::BAD_VALUENO),
 	  language(DEFAULT_LANGUAGE),
 	  stop_strategy(DEFAULT_STOP_STRATEGY),
 	  stem_strategy(DEFAULT_STEM_STRATEGY),
