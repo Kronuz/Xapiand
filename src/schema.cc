@@ -618,8 +618,9 @@ required_spc_t::flags_t::flags_t()
 	  text_detection(true),
 	  term_detection(true),
 	  uuid_detection(true),
-	  partial_paths(true),
+	  partial_paths(false),
 	  is_namespace(false),
+	  optimal(false),
 	  field_found(true),
 	  field_with_type(false),
 	  complete(false),
@@ -1005,6 +1006,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_BOOL_TERM           << ": " << (flags.bool_term             ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_NAMESPACE           << ": " << (flags.is_namespace          ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_PARTIAL_PATHS       << ": " << (flags.partial_paths         ? "true" : "false") << "\n";
+	str << "\t" << "optimal"                    << ": " << (flags.optimal               ? "true" : "false") << "\n";
 	str << "\t" << "field_found"                << ": " << (flags.field_found           ? "true" : "false") << "\n";
 	str << "\t" << "field_with_type"            << ": " << (flags.field_with_type       ? "true" : "false") << "\n";
 	str << "\t" << "complete"                   << ": " << (flags.complete              ? "true" : "false") << "\n";
@@ -1107,7 +1109,6 @@ Schema::restart_specification()
 	specification.flags.has_bool_term        = default_spc.flags.has_bool_term;
 	specification.flags.has_index            = default_spc.flags.has_index;
 	specification.flags.has_namespace        = default_spc.flags.has_namespace;
-	specification.flags.has_partial_paths    = default_spc.flags.has_partial_paths;
 
 	specification.flags.field_with_type      = default_spc.flags.field_with_type;
 	specification.flags.complete             = default_spc.flags.complete;
@@ -4135,6 +4136,9 @@ Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const
 
 		// Only save in Schema if RESERVED_NAMESPACE is true.
 		specification.flags.is_namespace = doc_namespace.as_bool();
+		if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
+			specification.flags.partial_paths = specification.flags.partial_paths || !default_spc.flags.optimal;
+		}
 		specification.flags.has_namespace = true;
 		properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
 	} catch (const msgpack::type_error&) {
@@ -5223,6 +5227,10 @@ Schema::set_default_spc_ct(MsgPack& properties)
 		specification.flags.is_namespace = true;
 		specification.flags.has_namespace = true;
 		properties[RESERVED_NAMESPACE] = true;
+	}
+
+	if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
+		specification.flags.partial_paths = specification.flags.partial_paths || !default_spc.flags.optimal;
 	}
 }
 

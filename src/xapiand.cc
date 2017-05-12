@@ -870,9 +870,9 @@ int main(int argc, char **argv) {
 
 	if (opts.optimal) {
 		L_INFO(nullptr, "Using optimal mode.");
+		default_spc.flags.optimal = true;
 		default_spc.index = TypeIndex::FIELD_ALL;
 		default_spc.flags.text_detection = false;
-		default_spc.flags.partial_paths = false;
 		default_spc.index_uuid_field = UUIDFieldIndex::UUID;
 	}
 
