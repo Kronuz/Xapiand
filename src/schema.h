@@ -42,16 +42,16 @@
 #include "utils.h"                 // for repr, toUType, lower_string
 
 
-#define DEFAULT_STOP_STRATEGY  StopStrategy::STOP_ALL
-#define DEFAULT_STEM_STRATEGY  StemStrategy::STEM_SOME
-#define DEFAULT_LANGUAGE       "en"
-#define DEFAULT_GEO_PARTIALS   true
-#define DEFAULT_GEO_ERROR      0.3
-#define DEFAULT_POSITIONS      true
-#define DEFAULT_SPELLING       false
-#define DEFAULT_BOOL_TERM      false
-#define DEFAULT_INDEX          TypeIndex::ALL
-#define DEFAULT_DYNAMIC_PATH   DynamicPath::ALL
+#define DEFAULT_STOP_STRATEGY     StopStrategy::STOP_ALL
+#define DEFAULT_STEM_STRATEGY     StemStrategy::STEM_SOME
+#define DEFAULT_LANGUAGE          "en"
+#define DEFAULT_GEO_PARTIALS      true
+#define DEFAULT_GEO_ERROR         0.3
+#define DEFAULT_POSITIONS         true
+#define DEFAULT_SPELLING          false
+#define DEFAULT_BOOL_TERM         false
+#define DEFAULT_INDEX             TypeIndex::ALL
+#define DEFAULT_INDEX_UUID_FIELD  UUIDFieldIndex::BOTH
 
 
 #define LIMIT_PARTIAL_PATHS_DEPTH  10    // 2^(n - 2) => 2^8 => 256 namespace terms.
@@ -77,10 +77,10 @@ enum class TypeIndex : uint8_t {
 };
 
 
-enum class DynamicPath : uint8_t {
-	BRANCH   = 0b0001,  // Indexin using the field name.
-	UNIFY    = 0b0010,  // Indexing using the meta name.
-	ALL      = 0b0011,  // Indexing using field name and meta name.
+enum class UUIDFieldIndex : uint8_t {
+	UUID        = 0b0001,  // Indexin using the field name.
+	UUID_FIELD  = 0b0010,  // Indexing using the meta name.
+	BOTH        = 0b0011,  // Indexing using field_uuid and uuid.
 };
 
 
@@ -243,21 +243,53 @@ extern const std::unordered_map<std::string, UnitTime> map_acc_time;
 extern const std::unordered_map<std::string, StopStrategy> map_stop_strategy;
 extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
 extern const std::unordered_map<std::string, TypeIndex> map_index;
-extern const std::unordered_map<std::string, DynamicPath> map_dynamic_path;
+extern const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field;
 extern const std::unordered_map<std::string, std::array<FieldType, 3>> map_type;
 
 
 MSGPACK_ADD_ENUM(UnitTime);
 MSGPACK_ADD_ENUM(TypeIndex);
-MSGPACK_ADD_ENUM(DynamicPath);
+MSGPACK_ADD_ENUM(UUIDFieldIndex);
 MSGPACK_ADD_ENUM(StopStrategy);
 MSGPACK_ADD_ENUM(StemStrategy);
 MSGPACK_ADD_ENUM(FieldType);
 
 
 struct required_spc_t {
+	struct prefix_t {
+		std::string field;
+		std::string uuid;
+
+		prefix_t() = default;
+
+		template <typename S1, typename S2, typename std::enable_if<std::is_same<std::string, S1>::value && std::is_same<std::string, S2>::value>::type>
+		explicit prefix_t(S1&& _field, S2&& _uuid=std::string())
+			: field(std::forward<S1>(_field)),
+			  uuid(std::forward<S2>(_uuid)) { }
+
+		prefix_t(prefix_t&&) = default;
+		prefix_t(const prefix_t&) = default;
+
+		prefix_t& operator=(prefix_t&&) = default;
+		prefix_t& operator=(const prefix_t&) = default;
+
+		std::string to_string() const noexcept {
+			auto res = repr(field);
+			if (uuid.empty()) {
+				return res;
+			}
+			res.append(1, ' ').append(repr(uuid));
+			return res;
+		}
+
+		std::string operator()() const noexcept {
+			return field;
+		}
+	};
+
 	std::array<FieldType, 3> sep_types;
-	std::string prefix;
+	prefix_t prefix;
+	std::string prefix_field;
 	Xapian::valueno slot;
 
 	struct flags_t {
@@ -281,21 +313,20 @@ struct required_spc_t {
 		bool uuid_detection:1;
 		bool partial_paths:1;
 		bool is_namespace:1;
-		bool optimal:1;
 
 		// Auxiliar variables.
 		bool field_found:1;          // Flag if the property is already in the schema saved in the metadata
 		bool field_with_type:1;      // Reserved properties that shouldn't change once set, are flagged as fixed
 		bool complete:1;             // Flag if the specification for a field is complete
-		bool dynamic_type:1;         // Flag if the field is dynamic type
+		bool uuid_field:1;           // Flag if the field is uuid
+		bool uuid_path:1;            // Flag if the paths has uuid fields.
 		bool inside_namespace:1;     // Flag if the field is inside a namespace
-		bool dynamic_type_path:1;    // Flag if the path has a dynamic type field
 
+		bool has_uuid_prefix;        // Flag if prefix.field has uuid prefix.
 		bool has_bool_term:1;        // Either RESERVED_BOOL_TERM is in the schema or the user sent it
 		bool has_index:1;            // Either RESERVED_INDEX is in the schema or the user sent it
 		bool has_namespace:1;        // Either RESERVED_NAMESPACE is in the schema or the user sent it
 		bool has_partial_paths:1;    // Either RESERVED_PARTIAL_PATHS is in the schema or the user sent it
-		bool has_dynamic_path:1;     // Either RESERVED_DYNAMIC_PATH is in the schema or the user sent it
 
 		flags_t();
 	} flags;
@@ -340,15 +371,14 @@ struct required_spc_t {
 
 struct specification_t : required_spc_t {
 	// Reserved values.
-	std::string local_prefix;
+	prefix_t local_prefix;
 	std::vector<Xapian::termpos> position;
 	std::vector<Xapian::termcount> weight;
 	std::vector<bool> spelling;
 	std::vector<bool> positions;
 	TypeIndex index;
 
-	// Used to save how index dynamic paths.
-	DynamicPath dynamic_path;
+	UUIDFieldIndex index_uuid_field;  // Used to save how to index uuid fields.
 
 	// Value recovered from the item.
 	std::unique_ptr<const MsgPack> value;
@@ -366,7 +396,7 @@ struct specification_t : required_spc_t {
 	std::string aux_lan;
 
 	// Auxiliar variables for saving partial prefixes.
-	std::vector<std::string> partial_prefixes;
+	std::vector<prefix_t> partial_prefixes;
 	std::vector<required_spc_t> partial_spcs;
 
 	specification_t();
@@ -448,7 +478,7 @@ class Schema {
 	/*
 	 * Get the prefixes for a namespace.
 	 */
-	static std::vector<std::string> get_partial_paths(const std::vector<std::string>& partial_prefixes);
+	static std::vector<std::string> get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_prefixes);
 
 	/*
 	 * Complete specification of a namespace.
@@ -521,7 +551,7 @@ class Schema {
 	/*
 	 * Add partial prefix in specification.partials_prefixes or clear it.
 	 */
-	void update_partial_prefixes();
+	void update_prefixes();
 
 	/*
 	 * Gets the properties stored in the schema as well as those sent by the user.
@@ -600,7 +630,7 @@ class Schema {
 	void update_error(const MsgPack& prop_error);
 	void update_namespace(const MsgPack& prop_namespace);
 	void update_partial_paths(const MsgPack& prop_partial_paths);
-	void update_dynamic_path(const MsgPack& prop_update_paths);
+	void update_index_uuid_field(const MsgPack& prop_index_uuid_field);
 
 
 	/*
@@ -628,7 +658,7 @@ class Schema {
 	void write_uuid_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_uuid_detection);
 	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
 	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
-	void write_dynamic_path(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic_path);
+	void write_index_uuid_field(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index_uuid_field);
 	void write_script(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
 	void write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version);
 	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
@@ -652,7 +682,7 @@ class Schema {
 	void process_store(const std::string& prop_name, const MsgPack& doc_store);
 	void process_recurse(const std::string& prop_name, const MsgPack& doc_recurse);
 	void process_partial_paths(const std::string& prop_name, const MsgPack& doc_partial_paths);
-	void process_dynamic_path(const std::string& prop_name, const MsgPack& doc_dynamic_path);
+	void process_index_uuid_field(const std::string& prop_name, const MsgPack& doc_index_uuid_field);
 	void process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term);
 	void process_partials(const std::string& prop_name, const MsgPack& doc_partials);
 	void process_error(const std::string& prop_name, const MsgPack& doc_error);
@@ -710,6 +740,7 @@ class Schema {
 	static bool readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties);
 	static bool readable_index(MsgPack& prop_index, MsgPack& properties);
 	static bool readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack& properties);
+	static bool readable_index_uuid_field(MsgPack& prop_index_uuid_field, MsgPack& properties);
 
 
 	/*

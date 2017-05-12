@@ -304,7 +304,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					} catch (const std::out_of_range&) { }
 				} else {
 					term_id = Serialise::serialise(spc_id, _document_id);
-					prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
+					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 					{
 						lock_database lk_db(this);
@@ -355,10 +355,10 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 						spc_id.sep_types[2] = type_ser.first;
 						Schema::set_namespace_spc_id(spc_id);
 						term_id = type_ser.second;
-						prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
+						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 					} else {
 						term_id = Serialise::serialise(spc_id, _document_id);
-						prefixed_term_id = prefixed(term_id, spc_id.prefix, spc_id.get_ctype());
+						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 					}
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 					{
@@ -589,7 +589,7 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 	for (const auto& sim_field : similar.field) {
 		auto field_spc = schema->get_data_field(sim_field).first;
 		if (field_spc.get_type() != FieldType::EMPTY) {
-			prefixes.push_back(field_spc.prefix);
+			prefixes.push_back(field_spc.prefix());
 		}
 	}
 	return std::make_unique<FilterPrefixesExpandDecider>(prefixes);
@@ -760,9 +760,9 @@ DatabaseHandler::get_prefixed_term_id(const std::string& doc_id)
 		const auto type_ser = Serialise::guess_serialise(doc_id);
 		field_spc.sep_types[2] = type_ser.first;
 		Schema::set_namespace_spc_id(field_spc);
-		return prefixed(type_ser.second, field_spc.prefix, field_spc.get_ctype());
+		return prefixed(type_ser.second, field_spc.prefix(), field_spc.get_ctype());
 	} else {
-		return prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix, field_spc.get_ctype());
+		return prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix(), field_spc.get_ctype());
 	}
 }
 
