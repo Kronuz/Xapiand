@@ -1112,7 +1112,7 @@ Schema::restart_specification()
 
 	specification.flags.field_with_type      = default_spc.flags.field_with_type;
 	specification.flags.complete             = default_spc.flags.complete;
-	specification.flags.uuid_field         = default_spc.flags.uuid_field;
+	specification.flags.uuid_field           = default_spc.flags.uuid_field;
 
 	specification.sep_types                  = default_spc.sep_types;
 	specification.local_prefix               = default_spc.local_prefix;
@@ -1136,7 +1136,7 @@ Schema::restart_namespace_specification()
 
 	specification.flags.field_with_type  = default_spc.flags.field_with_type;
 	specification.flags.complete         = default_spc.flags.complete;
-	specification.flags.uuid_field     = default_spc.flags.uuid_field;
+	specification.flags.uuid_field       = default_spc.flags.uuid_field;
 
 	specification.sep_types              = default_spc.sep_types;
 	specification.aux_stem_lan           = default_spc.aux_stem_lan;
