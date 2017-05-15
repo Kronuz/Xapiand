@@ -33,7 +33,6 @@
 #include <set>                             // for __tree_const_iterator, set
 #include <stdexcept>                       // for out_of_range
 #include <type_traits>                     // for remove_reference<>::type
-#include <unordered_set>                   // for unordered_set
 
 #include "cast.h"                          // for Cast
 #include "datetime.h"                      // for isDate, tm_t
@@ -1451,44 +1450,72 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 }
 
 
-std::vector<std::string>
-Schema::get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_prefixes)
+std::unordered_set<std::string>
+Schema::get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_prefixes, bool uuid_path)
 {
-	L_CALL(nullptr, "Schema::get_partial_paths(%zu)", partial_prefixes.size());
+	L_CALL(nullptr, "Schema::get_partial_paths(%zu, %s)", partial_prefixes.size(), uuid_path ? "true" : "false");
 
 	if (partial_prefixes.size() > LIMIT_PARTIAL_PATHS_DEPTH) {
 		THROW(ClientError, "Partial paths limit depth is %d, and partial paths provided has a depth of %zu", LIMIT_PARTIAL_PATHS_DEPTH, partial_prefixes.size());
 	}
 
-	std::vector<std::string> prefixes;
-	prefixes.reserve(std::pow(2, partial_prefixes.size() - 2));
+	std::vector<std::string> paths;
+	paths.reserve(std::pow(2, partial_prefixes.size() - 2));
 	auto it = partial_prefixes.begin();
-	prefixes.push_back(it->field);
-	if (!it->uuid.empty() && it->field != it->uuid) {
-		prefixes.push_back(it->uuid);
-	}
-	const auto it_last = partial_prefixes.end() - 1;
-	for (++it; it != it_last; ++it) {
-		const auto size = prefixes.size();
-		for (size_t i = 0; i < size; ++i) {
-			std::string prefix;
-			prefix.reserve(prefixes[i].length() + it->field.length());
-			prefix.assign(prefixes[i]).append(it->field);
-			if (!it->uuid.empty() && it->field != it->uuid) {
-				prefix.append(it->uuid);
-			}
-			prefixes.push_back(std::move(prefix));
-		}
-	}
+	paths.push_back(it->field);
 
-	for (auto& prefix : prefixes) {
-		prefix.append(it_last->field);
+	if (uuid_path) {
 		if (!it->uuid.empty() && it->field != it->uuid) {
-			prefix.append(it_last->uuid);
+			paths.push_back(it->uuid);
+		}
+		const auto it_last = partial_prefixes.end() - 1;
+		for (++it; it != it_last; ++it) {
+			const auto size = paths.size();
+			for (size_t i = 0; i < size; ++i) {
+				std::string path;
+				path.reserve(paths[i].length() + it->field.length());
+				path.assign(paths[i]).append(it->field);
+				paths.push_back(std::move(path));
+				if (!it->uuid.empty() && it->field != it->uuid) {
+					path.reserve(paths[i].length() + it->uuid.length());
+					path.assign(paths[i]).append(it->uuid);
+					paths.push_back(std::move(path));
+				}
+			}
+		}
+
+		if (!it_last->uuid.empty() && it_last->field != it_last->uuid) {
+			const auto size = paths.size();
+			for (size_t i = 0; i < size; ++i) {
+				std::string path;
+				path.reserve(paths[i].length() + it_last->uuid.length());
+				path.assign(paths[i]).append(it_last->uuid);
+				paths.push_back(std::move(path));
+				paths[i].append(it_last->field);
+			}
+		} else {
+			for (auto& path : paths) {
+				path.append(it_last->field);
+			}
+		}
+	} else {
+		const auto it_last = partial_prefixes.end() - 1;
+		for (++it; it != it_last; ++it) {
+			const auto size = paths.size();
+			for (size_t i = 0; i < size; ++i) {
+				std::string path;
+				path.reserve(paths[i].length() + it->field.length());
+				path.assign(paths[i]).append(it->field);
+				paths.push_back(std::move(path));
+			}
+		}
+
+		for (auto& path : paths) {
+			path.append(it_last->field);
 		}
 	}
 
-	return prefixes;
+	return std::unordered_set<std::string>(std::make_move_iterator(paths.begin()), std::make_move_iterator(paths.end()));
 }
 
 
@@ -1536,7 +1563,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 	validate_required_namespace_data(item_value);
 
 	if (specification.partial_prefixes.size() > 2) {
-		const auto paths = get_partial_paths(specification.partial_prefixes);
+		const auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
 		specification.partial_spcs.reserve(paths.size());
 
 		if (toUType(specification.index & TypeIndex::VALUES)) {
@@ -1615,11 +1642,12 @@ Schema::complete_specification(const MsgPack& item_value)
 	}
 
 	if (specification.partial_prefixes.size() > 2) {
-		required_spc_t prev_spc = specification;
-
-		auto paths = get_partial_paths(specification.partial_prefixes);
+		auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
 		specification.partial_spcs.reserve(paths.size());
-		paths.pop_back();
+		paths.erase(specification.prefix.field);
+		if (!specification.local_prefix.uuid.empty()) { // local prefix tell us if the last field is indexed like uuid too.
+			paths.erase(specification.prefix.uuid);
+		}
 
 		if (toUType(specification.index & TypeIndex::VALUES)) {
 			for (const auto& path : paths) {
@@ -1633,60 +1661,91 @@ Schema::complete_specification(const MsgPack& item_value)
 				specification.partial_spcs.push_back(spc);
 			}
 		}
+	}
 
-		// Full path is process like normal field.
-		specification.partial_spcs.push_back(std::move(prev_spc));
-	} else if (specification.flags.uuid_path) {
+	if (specification.flags.uuid_path) {
 		switch (specification.index_uuid_field) {
-			case UUIDFieldIndex::UUID:
+			case UUIDFieldIndex::UUID: {
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-					specification.slot = get_slot(specification.prefix.uuid, specification.get_ctype());
-
-					for (auto& acc_prefix : specification.acc_prefix) {
-						acc_prefix.insert(0, specification.prefix.uuid);
+					required_spc_t spc_uuid(specification.slot, specification.sep_types[2], specification.accuracy, specification.acc_prefix);
+					spc_uuid.prefix.field = specification.prefix.uuid;
+					spc_uuid.slot = get_slot(spc_uuid.prefix.field, spc_uuid.get_ctype());
+					for (auto& acc_prefix : spc_uuid.acc_prefix) {
+						acc_prefix.insert(0, spc_uuid.prefix.uuid);
 					}
+					specification.partial_spcs.push_back(std::move(spc_uuid));
+				} else {
+					required_spc_t spc_uuid;
+					spc_uuid.sep_types[2] = specification.sep_types[2];
+					spc_uuid.prefix.field = specification.prefix.uuid;
+					specification.partial_spcs.push_back(std::move(spc_uuid));
 				}
-				specification.partial_spcs.push_back(specification);
 				break;
-			case UUIDFieldIndex::UUID_FIELD:
+			}
+			case UUIDFieldIndex::UUID_FIELD: {
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+					required_spc_t spc_field(specification.slot, specification.sep_types[2], specification.accuracy, specification.acc_prefix);
+					spc_field.prefix.field = specification.prefix.field;
 					if (specification.flags.has_uuid_prefix) {
-						specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+						spc_field.slot = get_slot(spc_field.prefix.field, spc_field.get_ctype());
 					}
-
-					for (auto& acc_prefix : specification.acc_prefix) {
-						acc_prefix.insert(0, specification.prefix.field);
+					for (auto& acc_prefix : spc_field.acc_prefix) {
+						acc_prefix.insert(0, spc_field.prefix.field);
 					}
+					specification.partial_spcs.push_back(std::move(spc_field));
+				} else {
+					required_spc_t spc_field;
+					spc_field.sep_types[2] = specification.sep_types[2];
+					spc_field.prefix.field = specification.prefix.field;
+					specification.partial_spcs.push_back(std::move(spc_field));
 				}
-				specification.partial_spcs.push_back(specification);
 				break;
-			case UUIDFieldIndex::BOTH:
-				required_spc_t spc_field = specification;
-				required_spc_t spc_uuid = specification;
+			}
+			case UUIDFieldIndex::BOTH: {
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+					required_spc_t spc_field(specification.slot, specification.sep_types[2], specification.accuracy, specification.acc_prefix);
+					required_spc_t spc_uuid = spc_field;
+					spc_field.prefix.field = specification.prefix.field;
+					spc_uuid.prefix.field = specification.prefix.uuid;
 					if (specification.flags.has_uuid_prefix) {
-						spc_field.slot = get_slot(specification.prefix.field, specification.get_ctype());
+						spc_field.slot = get_slot(spc_field.prefix.field, spc_field.get_ctype());
 					}
-					for (auto& acc_prefix : specification.acc_prefix) {
-						acc_prefix.insert(0, specification.prefix.field);
+					for (auto& acc_prefix : spc_field.acc_prefix) {
+						acc_prefix.insert(0, spc_field.prefix.field);
 					}
 
-					spc_uuid.slot = get_slot(specification.prefix.uuid, specification.get_ctype());
-					for (auto& acc_prefix : specification.acc_prefix) {
-						acc_prefix.insert(0, specification.prefix.uuid);
+					spc_uuid.slot = get_slot(spc_uuid.prefix.field, spc_uuid.get_ctype());
+					for (auto& acc_prefix : spc_uuid.acc_prefix) {
+						acc_prefix.insert(0, spc_uuid.prefix.field);
 					}
+					specification.partial_spcs.push_back(std::move(spc_field));
+					specification.partial_spcs.push_back(std::move(spc_uuid));
+				} else {
+					required_spc_t spc_field;
+					spc_field.sep_types[2] = specification.sep_types[2];
+					spc_field.prefix.field = specification.prefix.field;
+					specification.partial_spcs.push_back(spc_field);
+					// Add specification for prefix uuid.
+					spc_field.prefix.field = specification.prefix.uuid;
+					specification.partial_spcs.push_back(std::move(spc_field));
 				}
-				specification.partial_spcs.push_back(std::move(spc_field));
-				specification.partial_spcs.push_back(std::move(spc_uuid));
 				break;
+			}
 		}
 	} else {
 		if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-			for (auto& acc_prefix : specification.acc_prefix) {
-				acc_prefix.insert(0, specification.prefix.field);
+			required_spc_t spc_field(specification.slot, specification.sep_types[2], specification.accuracy, specification.acc_prefix);
+			spc_field.prefix.field = specification.prefix.field;
+			for (auto& acc_prefix : spc_field.acc_prefix) {
+				acc_prefix.insert(0, spc_field.prefix.field);
 			}
+			specification.partial_spcs.push_back(std::move(spc_field));
+		} else {
+			required_spc_t spc_field;
+			spc_field.sep_types[2] = specification.sep_types[2];
+			spc_field.prefix.field = specification.prefix.field;
+			specification.partial_spcs.push_back(std::move(spc_field));
 		}
-		specification.partial_spcs.push_back(specification);
 	}
 
 	specification.flags.complete = true;
@@ -2207,7 +2266,7 @@ Schema::index_partial_paths(Xapian::Document& doc)
 
 	if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
 		if (specification.partial_prefixes.size() > 2) {
-			const auto paths = get_partial_paths(specification.partial_prefixes);
+			const auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
 			for (const auto& path : paths) {
 				doc.add_term(path);
 			}
@@ -2971,6 +3030,8 @@ Schema::update_prefixes()
 					}
 					specification.prefix.field.append(specification.local_prefix.uuid);
 					specification.prefix.uuid.append(specification.local_prefix.uuid);
+					specification.local_prefix.field = std::move(specification.local_prefix.uuid);
+					specification.local_prefix.uuid.clear();
 					break;
 				}
 				case UUIDFieldIndex::UUID_FIELD: {
@@ -2978,6 +3039,7 @@ Schema::update_prefixes()
 					if (!specification.prefix.uuid.empty()) {
 						specification.prefix.uuid.append(specification.local_prefix.field);
 					}
+					specification.local_prefix.uuid.clear();
 					break;
 				}
 				case UUIDFieldIndex::BOTH: {

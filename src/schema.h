@@ -32,6 +32,7 @@
 #include <sys/types.h>             // for uint8_t
 #include <tuple>                   // for tuple
 #include <unordered_map>           // for unordered_map
+#include <unordered_set>           // for unordered_set
 #include <utility>                 // for pair
 #include <vector>                  // for vector
 #include <xapian.h>                // for QueryParser
@@ -479,7 +480,7 @@ class Schema {
 	/*
 	 * Get the prefixes for a namespace.
 	 */
-	static std::vector<std::string> get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_prefixes);
+	static std::unordered_set<std::string> get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_prefixes, bool uuid_path);
 
 	/*
 	 * Complete specification of a namespace.
