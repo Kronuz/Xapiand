@@ -117,7 +117,8 @@
 #define RESERVED_GEO_INTERSECTION      "_geometryintersection"
 
 
-#define DB_META_SCHEMA         "schema"
+#define DB_META_SCHEMA         "_schema"
+#define DB_SCHEMA              "schema"
 #define DB_OFFSPRING_UNION     '.'
 #define DB_VERSION_SCHEMA      1.0
 
