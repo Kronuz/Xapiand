@@ -1726,6 +1726,42 @@ Database::get_metadata(const std::string& key)
 }
 
 
+std::vector<std::string>
+Database::get_metadata_keys()
+{
+	L_CALL(this, "Database::get_metadata_keys()");
+
+	std::vector<std::string> values;
+
+	L_DATABASE_WRAP_INIT();
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			const Xapian::TermIterator end = db->metadata_keys_end();
+			Xapian::TermIterator key = db->metadata_keys_begin();
+			for (; key != end; ++key) {
+				values.push_back(*key);
+			}
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::NetworkError& exc) {
+			if (!t) THROW(Error, "Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::InvalidArgumentError&) {
+			break;
+		} catch (const Xapian::Error& exc) {
+			THROW(Error, exc.get_msg().c_str());
+		}
+		reopen();
+		values.clear();
+	}
+
+	L_DATABASE_WRAP(this, "Got metadata keys (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
+	return values;
+}
+
+
 void
 Database::set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal_)
 {

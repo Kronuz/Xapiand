@@ -1156,19 +1156,26 @@ HttpClient::meta_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::meta_view()");
 
-	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
+	enum http_status status_code = HTTP_STATUS_OK;
 
 	endpoints_maker(2s);
 
 	MsgPack response;
 	db_handler.reset(endpoints, DB_OPEN, method);
 	auto key = path_parser.get_pmt();
-	if (!key.empty()) {
+	if (key.empty()) {
+		response = MsgPack(MsgPack::Type::MAP);
+		for (auto& key : db_handler.get_metadata_keys()) {
+			auto metadata = db_handler.get_metadata(key);
+			if (!metadata.empty()) {
+				response[key] = MsgPack::unserialise(metadata);
+			}
+		}
+	} else {
 		auto metadata = db_handler.get_metadata(key);
 		if (metadata.empty()) {
 			status_code = HTTP_STATUS_NOT_FOUND;
 		} else {
-			status_code = HTTP_STATUS_OK;
 			response = MsgPack::unserialise(metadata);
 		}
 	}

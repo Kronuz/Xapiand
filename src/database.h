@@ -327,6 +327,8 @@ public:
 
 	Xapian::docid find_document(const std::string& term_id);
 	Xapian::Document get_document(const Xapian::docid& did, bool assume_valid_=false, bool pull_=false);
+
+	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
 

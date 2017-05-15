@@ -785,6 +785,16 @@ DatabaseHandler::get_prefixed_term_id(const std::string& doc_id)
 }
 
 
+std::vector<std::string>
+DatabaseHandler::get_metadata_keys()
+{
+	L_CALL(this, "DatabaseHandler::get_metadata_keys()");
+
+	lock_database lk_db(this);
+	return database->get_metadata_keys();
+}
+
+
 std::string
 DatabaseHandler::get_metadata(const std::string& key)
 {
@@ -793,7 +803,6 @@ DatabaseHandler::get_metadata(const std::string& key)
 	lock_database lk_db(this);
 	return database->get_metadata(key);
 }
-
 
 
 void
