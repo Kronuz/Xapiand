@@ -878,8 +878,8 @@ uint64_t get_total_virtual_memory() {
 uint64_t get_total_virtual_used() {
 	xsw_usage vmusage = {0, 0, 0, 0, false};
 	size_t size = sizeof(vmusage);
-	if(sysctlbyname("vm.swapusage", &vmusage, &size, NULL, 0)!=0 ) {
-		L_ERR(nullptr, "Unable to get swap usage by calling sysctlbyname(\"vm.swapusage\",...)" );
+	if (sysctlbyname("vm.swapusage", &vmusage, &size, NULL, 0) != 0) {
+		L_ERR(nullptr, "Unable to get swap usage by calling sysctlbyname(\"vm.swapusage\",...)");
 	}
 	return vmusage.xsu_used;
 }
