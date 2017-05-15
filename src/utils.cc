@@ -791,7 +791,7 @@ void adjustOpenFilesLimit(size_t& max_clients) {
 
 /*
  * From http://stackoverflow.com/questions/17088204/number-of-open-file-in-a-c-program
-*/
+ */
 unsigned long long file_descriptors_cnt() {
 	unsigned long long fdmax;
 	struct rlimit limit;
@@ -818,9 +818,7 @@ unsigned long long file_descriptors_cnt() {
 }
 
 
-
-uint64_t get_total_ram()
-{
+uint64_t get_total_ram() {
 	int mib[2];
 	int64_t physical_memory;
 	mib[0] = CTL_HW;
@@ -831,8 +829,7 @@ uint64_t get_total_ram()
 }
 
 
-std::pair<int64_t, int64_t> get_current_ram()
-{
+std::pair<int64_t, int64_t> get_current_ram() {
 	/* Total ram current in use */
 	vm_size_t page_size;
 	mach_port_t mach_port;
@@ -853,8 +850,7 @@ std::pair<int64_t, int64_t> get_current_ram()
 }
 
 
-uint64_t get_current_memory_by_process(bool resident)
-{
+uint64_t get_current_memory_by_process(bool resident) {
 	struct task_basic_info t_info;
 	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
 
@@ -869,8 +865,7 @@ uint64_t get_current_memory_by_process(bool resident)
 }
 
 
-uint64_t get_total_virtual_memory()
-{
+uint64_t get_total_virtual_memory() {
 	uint64_t myFreeSwap = 0;
 	struct statfs stats;
 	if (0 == statfs("/", &stats)) {
@@ -880,8 +875,7 @@ uint64_t get_total_virtual_memory()
 }
 
 
-uint64_t get_total_virtual_used()
-{
+uint64_t get_total_virtual_used() {
 	xsw_usage vmusage = {0, 0, 0, 0, false};
 	size_t size = sizeof(vmusage);
 	if(sysctlbyname("vm.swapusage", &vmusage, &size, NULL, 0)!=0 ) {
