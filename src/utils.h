@@ -404,6 +404,7 @@ inline M modulus(T val, M mod) {
 	return static_cast<M>(val) % mod;
 }
 
+
 uint64_t get_total_ram();
 std::pair<int64_t, int64_t> get_current_ram();
 uint64_t get_current_memory_by_process(bool resident=false);
