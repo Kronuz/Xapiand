@@ -999,6 +999,7 @@ XapiandManager::server_status(MsgPack& stats)
 	}
 #endif
 
+	stats["file_descriptors"] = file_descriptors_cnt();
 	stats["worker_tasks_running"] = thread_pool.running_size();
 	stats["worker_tasks_enqueued"] = thread_pool.size();
 	stats["worker_tasks_pool_size"] = thread_pool.threadpool_size();
