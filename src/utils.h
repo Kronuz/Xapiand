@@ -305,6 +305,8 @@ void _tcp_nopush(int sock, int optval);
 
 void adjustOpenFilesLimit(size_t& max_clients);
 
+unsigned long long file_descriptors_cnt();
+
 inline void tcp_nopush(int sock) {
 	_tcp_nopush(sock, 1);
 }

@@ -777,3 +777,32 @@ void adjustOpenFilesLimit(size_t& max_clients) {
 		}
 	}
 }
+
+
+/*
+ * From http://stackoverflow.com/questions/17088204/number-of-open-file-in-a-c-program
+*/
+unsigned long long file_descriptors_cnt() {
+	unsigned long long fdmax;
+	struct rlimit limit;
+	if (getrlimit(RLIMIT_NOFILE, &limit) == -1) {
+		fdmax = 4096;
+	} else {
+		fdmax = static_cast<unsigned long long>(limit.rlim_cur);
+	}
+	unsigned long long n = 0;
+	for (unsigned long long fd = 0; fd < fdmax; ++fd) {
+		struct stat buf;
+		if (fstat(fd, &buf)) {
+			// errno should be EBADF (not a valid open file descriptor) or other
+			// error. In either case, don't count.
+			continue;
+		}
+		++n;
+		// char filePath[PATH_MAX];
+		// if (fcntl(fd, F_GETPATH, filePath) != -1) {
+		// 	fprintf(stderr, "%llu - %s\n", fd, filePath);
+		// }
+	}
+	return n;
+}
