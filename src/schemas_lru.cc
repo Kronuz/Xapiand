@@ -201,6 +201,9 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			return true;
 		}
 	} else {
+		if (!db_handler->set_metadata(DB_META_SCHEMA, schema->load()->serialise(), false)) {
+			THROW(ClientError, "%s cannot be changed", RESERVED_SCHEMA);
+		}
 		const auto& schema_id = std::get<3>(info_local_schema);
 		const auto shared_schema_hash = std::hash<std::string>{}(schema_path + schema_id);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
@@ -217,7 +220,6 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			MsgPack shared_schema = *new_schema;
 			shared_schema[RESERVED_RECURSE] = false;
 			_db_handler.index(schema_id, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
-			db_handler->set_metadata(DB_META_SCHEMA, schema->load()->serialise());
 		} else {
 			old_schema = aux_schema;
 		}

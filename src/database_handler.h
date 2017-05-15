@@ -145,7 +145,7 @@ public:
 
 	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);
-	void set_metadata(const std::string& key, const std::string& value);
+	bool set_metadata(const std::string& key, const std::string& value, bool overwrite=true);
 
 	Document get_document(const Xapian::docid& did);
 	Document get_document(const std::string& doc_id);

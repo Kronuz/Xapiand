@@ -805,13 +805,20 @@ DatabaseHandler::get_metadata(const std::string& key)
 }
 
 
-void
-DatabaseHandler::set_metadata(const std::string& key, const std::string& value)
+bool
+DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool overwrite)
 {
-	L_CALL(this, "DatabaseHandler::set_metadata(%s, %s)", repr(key).c_str(), repr(value).c_str());
+	L_CALL(this, "DatabaseHandler::set_metadata(%s, %s, %s)", repr(key).c_str(), repr(value).c_str(), overwrite ? "true" : "false");
 
 	lock_database lk_db(this);
+	if (!overwrite) {
+		auto old_value = database->get_metadata(key);
+		if (!old_value.empty()) {
+			return (old_value == value);
+		}
+	}
 	database->set_metadata(key, value);
+	return true;
 }
 
 
