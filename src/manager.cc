@@ -1007,6 +1007,20 @@ XapiandManager::server_status(MsgPack& stats)
 	stats["servers_threads"] = server_pool.running_size();
 	stats["committers_threads"] = DatabaseAutocommit::running_size();
 	stats["fsync_threads"] = AsyncFsync::running_size();
+	stats["total_ram"] =  bytes_string(get_total_ram());
+	stats["ram_used"] =  bytes_string(get_current_ram().first);
+	stats["ram_used_by_process"] =  bytes_string(get_current_memory_by_process(true));
+	stats["total_virtual_memory"] = bytes_string(get_total_virtual_memory());
+	stats["virtual_memory_used"] = bytes_string(get_total_virtual_used());
+	stats["virtual_memory_by_process"] =  bytes_string(get_current_memory_by_process());
+
+	auto wdb = database_pool.total_wdatabases();
+	auto rdb = database_pool.total_rdatabases();
+
+	stats["total_open_databases"] = wdb + rdb;
+	stats["readable_open_databases"] = rdb;
+	stats["writable_open_databases"] = wdb;
+
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
 		stats["replicator_threads"] = replicator_pool.running_size();

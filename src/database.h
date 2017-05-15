@@ -451,4 +451,6 @@ public:
 	void finish();
 	bool switch_db(const Endpoint& endpoint);
 	void recover_database(const Endpoints& endpoints, int flags);
+	size_t total_wdatabases();
+	size_t total_rdatabases();
 };

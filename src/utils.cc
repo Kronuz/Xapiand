@@ -41,6 +41,16 @@
 #include <sysexits.h>            // for EX_OSFILE
 #include <thread>                // for this_thread
 #include <unistd.h>              // for close, rmdir, write, ssize_t
+#if defined(__APPLE__)
+#include <mach/vm_statistics.h>
+#include <mach/mach_types.h>
+#include <mach/mach_init.h>
+#include <mach/mach_host.h>
+#include <mach/mach.h>           // for task_basic_info
+#include <sys/param.h>           // for statfs
+#include <sys/mount.h>           // for statfs
+#include <sys/sysctl.h>          // for xsw_usage, sysctlbyname
+#endif
 
 #include "config.h"              // for HAVE_PTHREAD_GETNAME_NP_3, HAVE_PTHR...
 #include "exception.h"           // for Exit
@@ -805,4 +815,77 @@ unsigned long long file_descriptors_cnt() {
 		// }
 	}
 	return n;
+}
+
+
+
+uint64_t get_total_ram()
+{
+	int mib[2];
+	int64_t physical_memory;
+	mib[0] = CTL_HW;
+	mib[1] = HW_MEMSIZE;
+	auto length = sizeof(int64_t);
+	sysctl(mib, 2, &physical_memory, &length, NULL, 0);
+	return physical_memory;
+}
+
+
+std::pair<int64_t, int64_t> get_current_ram()
+{
+	/* Total ram current in use */
+	vm_size_t page_size;
+	mach_port_t mach_port;
+	mach_msg_type_number_t count;
+	vm_statistics64_data_t vm_stats;
+
+	mach_port = mach_host_self();
+	count = sizeof(vm_stats) / sizeof(natural_t);
+	if (KERN_SUCCESS == host_page_size(mach_port, &page_size) &&
+		KERN_SUCCESS == host_statistics64(mach_port, HOST_VM_INFO, (host_info64_t)&vm_stats, &count)) {
+		int64_t free_memory = (int64_t)vm_stats.free_count * (int64_t)page_size;
+		int64_t used_memory = ((int64_t)vm_stats.active_count +
+								 (int64_t)vm_stats.inactive_count +
+								 (int64_t)vm_stats.wire_count) *  (int64_t)page_size;
+		return std::make_pair(used_memory, free_memory);
+	}
+	return std::make_pair(0, 0);
+}
+
+
+uint64_t get_current_memory_by_process(bool resident)
+{
+	struct task_basic_info t_info;
+	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
+
+	if (KERN_SUCCESS != task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t)&t_info, &t_info_count)) {
+		return 0;
+	}
+	if (resident) {
+		return  t_info.resident_size;
+	} else {
+		return  t_info.virtual_size;
+	}
+}
+
+
+uint64_t get_total_virtual_memory()
+{
+	uint64_t myFreeSwap = 0;
+	struct statfs stats;
+	if (0 == statfs("/", &stats)) {
+		myFreeSwap = (uint64_t)stats.f_bsize * stats.f_bfree;
+	}
+	return myFreeSwap;
+}
+
+
+uint64_t get_total_virtual_used()
+{
+	xsw_usage vmusage = {0, 0, 0, 0, false};
+	size_t size = sizeof(vmusage);
+	if(sysctlbyname("vm.swapusage", &vmusage, &size, NULL, 0)!=0 ) {
+		L_ERR(nullptr, "Unable to get swap usage by calling sysctlbyname(\"vm.swapusage\",...)" );
+	}
+	return vmusage.xsu_used;
 }

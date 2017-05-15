@@ -2389,3 +2389,26 @@ DatabasePool::recover_database(const Endpoints& endpoints, int flags)
 		databases.erase(hash);
 	}
 }
+
+
+size_t
+DatabasePool::total_wdatabases()
+{
+	L_CALL(this, "DatabasePool::total_wdatabases()");
+
+	return writable_databases.size();
+}
+
+
+size_t
+DatabasePool::total_rdatabases()
+{
+	L_CALL(this, "DatabasePool::total_rdatabases()");
+
+	size_t db_count = 0;
+
+	for (auto d = databases.begin(); d != databases.end(); d++) {
+		db_count += d->second->size();
+	}
+	return db_count;
+}
