@@ -3156,7 +3156,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 				}
 				for (++it; it != it_last; ++it) {
 					const auto& n_field_name = *it;
-					if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
+					if (!is_valid(n_field_name)) {
 						THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(n_field_name).c_str());
 					} else {
 						norm_field_name = detect_dynamic(n_field_name);
@@ -3167,7 +3167,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 					}
 				}
 				const auto& n_field_name = *it_last;
-				if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
+				if (!is_valid(n_field_name)) {
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(n_field_name).c_str());
 				} else {
 					norm_field_name = detect_dynamic(n_field_name);
@@ -3181,7 +3181,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 		}
 
 		const auto& field_name = *it_last;
-		if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(field_name).c_str());
 		}
 		restart_specification();
@@ -3244,7 +3244,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 		const auto it_e = field_names.end();
 		for (auto it = field_names.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
-			if ((!is_valid(field_name) || field_name == UUID_FIELD_NAME) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(field_name).c_str());
 			}
 			restart_specification();
@@ -3273,7 +3273,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 					data = &(*data)[norm_field_name];
 					for (++it; it != it_e; ++it) {
 						const auto& n_field_name = *it;
-						if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
+						if (!is_valid(n_field_name)) {
 							THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(n_field_name).c_str());
 						} else {
 							data = &(*data)[detect_dynamic(n_field_name)];
@@ -3283,7 +3283,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 				} else {
 					for (++it; it != it_e; ++it) {
 						const auto& n_field_name = *it;
-						if (!is_valid(n_field_name) || n_field_name == UUID_FIELD_NAME) {
+						if (!is_valid(n_field_name)) {
 							THROW(ClientError, "Field name: %s (%s) is not valid", repr(name).c_str(), repr(n_field_name).c_str());
 						} else {
 							detect_dynamic(n_field_name);
@@ -5839,27 +5839,27 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 
 	const MsgPack* subproperties = &properties;
 	std::string prefix;
-	bool index_uuid_path = false;
+	bool has_uuid_prefix = false;
 
 	const auto it_e = field_names.end();
 	const auto it_b = field_names.begin();
 	for (auto it = it_b; it != it_e; ++it) {
 		auto& field_name = *it;
-		if (!is_valid(field_name) || field_name == UUID_FIELD_NAME) {
+		if (!is_valid(field_name)) {
 			// Check if the field_name is accuracy.
 			if (it == it_b) {
 				if (!map_dispatch_set_default_spc.count(field_name)) {
 					if (++it == it_e) {
 						auto acc_data = get_acc_data(field_name);
 						prefix.append(acc_data.first);
-						return std::forward_as_tuple(*subproperties, index_uuid_path, false, std::move(prefix), std::move(field_name), acc_data.second);
+						return std::forward_as_tuple(*subproperties, has_uuid_prefix, false, std::move(prefix), std::move(field_name), acc_data.second);
 					}
 					THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 				}
 			} else if (++it == it_e) {
 				auto acc_data = get_acc_data(field_name);
 				prefix.append(acc_data.first);
-				return std::forward_as_tuple(*subproperties, index_uuid_path, false, std::move(prefix), std::move(field_name), acc_data.second);
+				return std::forward_as_tuple(*subproperties, has_uuid_prefix, false, std::move(prefix), std::move(field_name), acc_data.second);
 			} else {
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 			}
@@ -5870,14 +5870,14 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			prefix.append(subproperties->at(RESERVED_PREFIX).as_string());
 		} catch (const std::out_of_range&) {
 			try {
-				const auto dynamic_prefix = Serialise::uuid(field_name);
-				index_uuid_path = true;
+				const auto prefix_uuid = Serialise::uuid(field_name);
+				has_uuid_prefix = true;
 				try {
 					subproperties = &subproperties->at(UUID_FIELD_NAME);
-					prefix.append(dynamic_prefix);
+					prefix.append(prefix_uuid);
 					continue;
 				} catch (const std::out_of_range&) {
-					prefix.append(dynamic_prefix);
+					prefix.append(prefix_uuid);
 				}
 			} catch (const SerialisationError&) {
 				prefix.append(get_prefix(field_name));
@@ -5890,26 +5890,26 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			}
 			for (++it; it != it_e; ++it) {
 				auto& partial_field = *it;
-				if (is_valid(partial_field) && partial_field != UUID_FIELD_NAME) {
+				if (is_valid(partial_field)) {
 					try {
 						prefix.append(Serialise::uuid(partial_field));
-						index_uuid_path = true;
+						has_uuid_prefix = true;
 					} catch (const SerialisationError&) {
 						prefix.append(get_prefix(partial_field));
 					}
 				} else if (++it == it_e) {
 					auto acc_data = get_acc_data(partial_field);
 					prefix.append(acc_data.first);
-					return std::forward_as_tuple(*subproperties, index_uuid_path, true, std::move(prefix), std::move(partial_field), acc_data.second);
+					return std::forward_as_tuple(*subproperties, has_uuid_prefix, true, std::move(prefix), std::move(partial_field), acc_data.second);
 				} else {
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(partial_field).c_str());
 				}
 			}
-			return std::forward_as_tuple(*subproperties, index_uuid_path, true, std::move(prefix), std::string(), FieldType::EMPTY);
+			return std::forward_as_tuple(*subproperties, has_uuid_prefix, true, std::move(prefix), std::string(), FieldType::EMPTY);
 		}
 	}
 
-	return std::forward_as_tuple(*subproperties, index_uuid_path, false, std::move(prefix), std::string(), FieldType::EMPTY);
+	return std::forward_as_tuple(*subproperties, has_uuid_prefix, false, std::move(prefix), std::string(), FieldType::EMPTY);
 }
 
 
