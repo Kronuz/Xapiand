@@ -40,14 +40,14 @@
 #define XAPIAND_PID_FILE             "xapiand.pid"
 #define XAPIAND_LOG_FILE             "xapiand.log"
 
-#define DBPOOL_SIZE          1000    /* Maximum number of database endpoints in database pool */
+#define DBPOOL_SIZE          500     /* Maximum number of database endpoints in database pool */
 #define NUM_REPLICATORS      10      /* Number of replicators */
 #define NUM_COMMITTERS       10      /* Number of threads handling the commits*/
 #define THEADPOOL_SIZE       100     /* Threadpool's size */
 #define SERVERS_MULTIPLIER   4       /* Server workers multiplier (by number of CPUs) */
 #define ENDPOINT_LIST_SIZE   10      /* Endpoints List's size */
 
-#define CONFIG_DEFAULT_MAX_CLIENTS 10000 /* Max of clients */
+#define CONFIG_DEFAULT_MAX_CLIENTS 1000 /* Max of clients */
 
 #if !defined(_WIN32) && \
 	!defined(__linux__) && \
