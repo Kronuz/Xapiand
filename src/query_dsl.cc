@@ -738,9 +738,9 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string& serialise
 			}
 			if (endswith(serialised_term, '*')) {
 				serialised_term.pop_back();
-				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
+				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
 			} else if (is_wildcard) {
-				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
+				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
 			} else {
 				return Xapian::Query(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
 			}
