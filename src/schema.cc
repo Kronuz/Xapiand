@@ -1275,15 +1275,17 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 	}
 
 	bool add_value = true;
+	auto prefix_field = std::move(specification.prefix.field);
 	for (const auto& spc : specification.partial_spcs) {
 		specification.sep_types[2] = spc.sep_types[2];
-		specification.prefix       = spc.prefix;
+		specification.prefix.field = spc.prefix.field;
 		specification.slot         = spc.slot;
 		specification.accuracy     = spc.accuracy;
 		specification.acc_prefix   = spc.acc_prefix;
 		index_item(doc, item_value, data, pos, add_value);
 		add_value = false;
 	}
+	specification.prefix.field = std::move(prefix_field);
 
 	if (specification.flags.store) {
 		data = data[RESERVED_VALUE];
@@ -1335,15 +1337,17 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 	}
 
 	bool add_value = true;
+	auto prefix_field = std::move(specification.prefix.field);
 	for (const auto& spc : specification.partial_spcs) {
 		specification.sep_types[2] = spc.sep_types[2];
-		specification.prefix       = spc.prefix;
+		specification.prefix.field = spc.prefix.field;
 		specification.slot         = spc.slot;
 		specification.accuracy     = spc.accuracy;
 		specification.acc_prefix   = spc.acc_prefix;
 		index_item(doc, item_value, *data, add_value);
 		add_value = false;
 	}
+	specification.prefix.field = std::move(prefix_field);
 
 	if (specification.flags.store && data->size() == 1) {
 		*data = (*data)[RESERVED_VALUE];
@@ -1400,15 +1404,17 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 		}
 
 		bool add_value = true;
+		auto prefix_field = std::move(specification.prefix.field);
 		for (const auto& spc : specification.partial_spcs) {
 			specification.sep_types[2] = spc.sep_types[2];
-			specification.prefix       = spc.prefix;
+			specification.prefix.field = spc.prefix.field;
 			specification.slot         = spc.slot;
 			specification.accuracy     = spc.accuracy;
 			specification.acc_prefix   = spc.acc_prefix;
 			index_item(doc, *val, *data, add_value);
 			add_value = false;
 		}
+		specification.prefix.field = std::move(prefix_field);
 
 		if (fields.empty()) {
 			if (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY) {
