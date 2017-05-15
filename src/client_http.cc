@@ -970,7 +970,7 @@ HttpClient::home_view(enum http_method method, Command)
 	db_handler.reset(endpoints, DB_SPAWN, method);
 
 	auto local_node_ = local_node.load();
-	auto document = db_handler.get_document("." + serialise_node_id(local_node_->id));
+	auto document = db_handler.get_document(serialise_node_id(local_node_->id));
 
 	auto obj_data = document.get_obj();
 	if (obj_data.find(ID_FIELD_NAME) == obj_data.end()) {
@@ -1274,7 +1274,7 @@ HttpClient::nodes_view(enum http_method, Command)
 
 	// FIXME: Get all nodes from cluster database:
 	auto local_node_ = local_node.load();
-	nodes["." + serialise_node_id(local_node_->id)] = {
+	nodes[serialise_node_id(local_node_->id)] = {
 		{ "_name", local_node_->name },
 	};
 

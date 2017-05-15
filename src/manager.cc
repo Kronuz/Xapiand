@@ -315,13 +315,13 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	DatabaseHandler db_handler(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
 	auto local_node_ = local_node.load();
 	try {
-		db_handler.get_document("." + serialise_node_id(local_node_->id));
+		db_handler.get_document(serialise_node_id(local_node_->id));
 	} catch (const CheckoutError&) {
 		new_cluster = 1;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
-			db_handler.index("." + serialise_node_id(local_node_->id), false, {
+			db_handler.index(serialise_node_id(local_node_->id), false, {
 				{ RESERVED_INDEX, "field_all" },
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  TERM_STR } } },
 				{ "name",         { { RESERVED_TYPE,  TERM_STR }, { RESERVED_VALUE, local_node_->name } } },
