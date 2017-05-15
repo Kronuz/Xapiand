@@ -290,7 +290,7 @@ simple, just send a GET request to the endpoint with a query:
 
 ::
 
-    curl -XGET 'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty=true'
+    curl -XGET 'http://localhost:8880/twitter/tweet/.search?q=user:Kronuz&pretty=true'
 
 Note the endpoint is still the same, but the ``_search`` replace the ``1`` in
 the above request, well this part can be essentially an identifier or an
@@ -394,7 +394,7 @@ the "user"*Kronuz* just for recall this is the previous request
 
 ::
 
-    curl -XGET 'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty=true'
+    curl -XGET 'http://localhost:8880/twitter/tweet/.search?q=user:Kronuz&pretty=true'
 
 Now you can see the difference, in the request with the ``1`` we are telling to
 Xapiand to return the document with the id equals to ``1`` and in other we are

@@ -178,7 +178,7 @@ class Xapiand(object):
         nodename = '@{}'.format(nodename) if nodename else ''
 
         if action_request in ('search', 'stats',):
-            action_request = '_{}'.format(action_request)
+            action_request = '.{}'.format(action_request)
         else:
             action_request = ''
 

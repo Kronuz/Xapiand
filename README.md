@@ -112,7 +112,7 @@ curl 'http://localhost:8880/twitter/tweet/2?pretty'
 Let’s find all the tweets that Kronuz posted:
 
 ```
-curl 'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty'
+curl 'http://localhost:8880/twitter/tweet/.search?q=user:Kronuz&pretty'
 ```
 
 *TODO: Work in progress...*
@@ -183,7 +183,7 @@ To achieve high availability, distribution of data and data locality, Xapiand ca
 ## License
 
 ```
-Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+Copyright (C) 2015-2017 deipi.com LLC and contributors. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to

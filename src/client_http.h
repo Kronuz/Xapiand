@@ -137,17 +137,17 @@ class HttpClient : public BaseClient {
 		NO_CMD_NO_ID,
 		NO_CMD_ID,
 		BAD_QUERY,
-		CMD_SEARCH    = xxh64::hash("_search"),
-		CMD_INFO      = xxh64::hash("_info"),
-		CMD_STATS     = xxh64::hash("_stats"),
-		CMD_META      = xxh64::hash("_meta"),
-		CMD_SCHEMA    = xxh64::hash("_schema"),
+		CMD_SEARCH    = xxh64::hash(".search"),
+		CMD_INFO      = xxh64::hash(".info"),
+		CMD_STATS     = xxh64::hash(".stats"),
+		CMD_META      = xxh64::hash(".meta"),
+		CMD_SCHEMA    = xxh64::hash(".schema"),
 #if XAPIAND_DATABASE_WAL
-		CMD_WAL       = xxh64::hash("_wal"),
+		CMD_WAL       = xxh64::hash(".wal"),
 #endif
-		CMD_NODES     = xxh64::hash("_nodes"),
-		CMD_TOUCH     = xxh64::hash("_touch"),
-		CMD_QUIT      = xxh64::hash("_quit"),
+		CMD_NODES     = xxh64::hash(".nodes"),
+		CMD_TOUCH     = xxh64::hash(".touch"),
+		CMD_QUIT      = xxh64::hash(".quit"),
 	};
 
 	struct http_parser parser;
