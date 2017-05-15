@@ -71,6 +71,9 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 					const auto& path = it.value();
 					try {
 						aux_schema_ptr = std::make_shared<const MsgPack>(path.as_string());
+						if (!db_handler->set_metadata(DB_META_SCHEMA, aux_schema_ptr->serialise(), false)) {
+							THROW(ClientError, "%s cannot be changed", RESERVED_SCHEMA);
+						}
 					} catch (const msgpack::type_error&) {
 						THROW(ClientError, "%s must be string", RESERVED_SCHEMA);
 					}
@@ -192,18 +195,14 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	const auto info_local_schema = get_local(db_handler);
 
-	const auto& schema = std::get<1>(info_local_schema);
 	const auto& schema_path = std::get<2>(info_local_schema);
 
 	if (schema_path.empty()) {
-		if (schema->compare_exchange_strong(old_schema, new_schema)) {
+		if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
 			db_handler->set_metadata(DB_META_SCHEMA, new_schema->serialise());
 			return true;
 		}
 	} else {
-		if (!db_handler->set_metadata(DB_META_SCHEMA, schema->load()->serialise(), false)) {
-			THROW(ClientError, "%s cannot be changed", RESERVED_SCHEMA);
-		}
 		const auto& schema_id = std::get<3>(info_local_schema);
 		const auto shared_schema_hash = std::hash<std::string>{}(schema_path + schema_id);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
