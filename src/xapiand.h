@@ -40,7 +40,7 @@
 #define XAPIAND_PID_FILE             "xapiand.pid"
 #define XAPIAND_LOG_FILE             "xapiand.log"
 
-#define DBPOOL_SIZE          500     /* Maximum number of database endpoints in database pool */
+#define DBPOOL_SIZE          250     /* Maximum number of database endpoints in database pool */
 #define NUM_REPLICATORS      10      /* Number of replicators */
 #define NUM_COMMITTERS       10      /* Number of threads handling the commits*/
 #define THEADPOOL_SIZE       100     /* Threadpool's size */
