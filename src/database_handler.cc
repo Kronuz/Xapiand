@@ -178,6 +178,22 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 
 
 MsgPack
+DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision)
+{
+	L_CALL(this, "DatabaseHandler::repr_wal(%u, %u)", start_revision, end_revision);
+
+	if (endpoints.size() != 1) {
+		THROW(ClientError, "It is expected one single endpoint");
+	}
+
+	// WAL required on a local writable database, open it.
+	lock_database lk_db(this);
+	auto wal = std::make_unique<DatabaseWAL>(endpoints[0].path, database.get());
+	return wal->repr(start_revision, end_revision);
+}
+
+
+MsgPack
 DatabaseHandler::get_document_obj(const std::string& term_id)
 {
 	L_CALL(this, "DatabaseHandler::get_document_obj(%s)", repr(term_id).c_str());

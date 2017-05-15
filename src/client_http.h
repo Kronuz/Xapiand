@@ -142,6 +142,7 @@ class HttpClient : public BaseClient {
 		CMD_STATS     = xxh64::hash("_stats"),
 		CMD_META      = xxh64::hash("_meta"),
 		CMD_SCHEMA    = xxh64::hash("_schema"),
+		CMD_WAL       = xxh64::hash("_wal"),
 		CMD_NODES     = xxh64::hash("_nodes"),
 		CMD_TOUCH     = xxh64::hash("_touch"),
 		CMD_QUIT      = xxh64::hash("_quit"),
@@ -226,6 +227,7 @@ class HttpClient : public BaseClient {
 	void search_view(enum http_method method, Command cmd);
 	void touch_view(enum http_method method, Command cmd);
 	void schema_view(enum http_method method, Command cmd);
+	void wal_view(enum http_method method, Command cmd);
 	void nodes_view(enum http_method method, Command cmd);
 	void stats_view(enum http_method method, Command cmd);
 

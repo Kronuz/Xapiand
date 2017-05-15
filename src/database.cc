@@ -237,6 +237,187 @@ DatabaseWAL::open_current(bool commited)
 	return modified;
 }
 
+MsgPack
+DatabaseWAL::repr_line(const std::string& line)
+{
+	L_CALL(this, "DatabaseWAL::repr_line(<line>)");
+
+	const char *p = line.data();
+	const char *p_end = p + line.size();
+
+	MsgPack repr;
+
+	repr["revision"] = unserialise_length(&p, p_end);
+
+	Type type = static_cast<Type>(unserialise_length(&p, p_end));
+
+	std::string data(p, p_end);
+
+	size_t size;
+
+	p = data.data();
+	p_end = p + data.size();
+
+	switch (type) {
+		case Type::ADD_DOCUMENT:
+			repr["op"] = "ADD_DOCUMENT";
+			repr["document"] = data;
+			break;
+		case Type::CANCEL:
+			repr["op"] = "CANCEL";
+			break;
+		case Type::DELETE_DOCUMENT_TERM:
+			repr["op"] = "DELETE_DOCUMENT_TERM";
+			size = unserialise_length(&p, p_end, true);
+			repr["term"] = std::string(p, size);
+			break;
+		case Type::COMMIT:
+			repr["op"] = "COMMIT";
+			break;
+		case Type::REPLACE_DOCUMENT:
+			repr["op"] = "REPLACE_DOCUMENT";
+			repr["docid"] = unserialise_length(&p, p_end);
+			repr["document"] = std::string(p, p_end - p);
+			break;
+		case Type::REPLACE_DOCUMENT_TERM:
+			repr["op"] = "REPLACE_DOCUMENT_TERM";
+			size = unserialise_length(&p, p_end, true);
+			repr["term"] = std::string(p, size);
+			repr["document"] = std::string(p + size, p_end - p - size);
+			break;
+		case Type::DELETE_DOCUMENT:
+			repr["op"] = "DELETE_DOCUMENT";
+			repr["docid"] = unserialise_length(&p, p_end);
+			break;
+		case Type::SET_METADATA:
+			repr["op"] = "SET_METADATA";
+			size = unserialise_length(&p, p_end, true);
+			repr["key"] = std::string(p, size);
+			repr["data"] = std::string(p + size, p_end - p - size);
+			break;
+		case Type::ADD_SPELLING:
+			repr["op"] = "ADD_SPELLING";
+			repr["term"] = std::string(p, p_end - p);
+			repr["freq"] = unserialise_length(&p, p_end);
+			break;
+		case Type::REMOVE_SPELLING:
+			repr["op"] = "REMOVE_SPELLING";
+			repr["term"] = std::string(p, p_end - p);
+			repr["freq"] = unserialise_length(&p, p_end);
+			break;
+		default:
+			THROW(Error, "Invalid WAL message!");
+	}
+
+	return repr;
+}
+
+
+MsgPack
+DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision)
+{
+	L_CALL(this, "DatabaseWAL::repr(%u, %u)", start_revision, end_revision);
+
+	fprintf(stderr, "%u\n", database->checkout_revision);
+
+	MsgPack repr(MsgPack::Type::ARRAY);
+
+	DIR *dir = opendir(base_path.c_str(), true);
+	if (!dir) {
+		THROW(Error, "Could not open the dir (%s)", strerror(errno));
+	}
+
+	uint32_t highest_revision = 0;
+	uint32_t lowest_revision = std::numeric_limits<uint32_t>::max();
+
+	File_ptr fptr;
+	find_file_dir(dir, fptr, WAL_STORAGE_PATH, true);
+
+	while (fptr.ent) {
+		try {
+			uint32_t file_revision = get_volume(std::string(fptr.ent->d_name));
+			if (static_cast<long>(file_revision) >= static_cast<long>(start_revision - WAL_SLOTS)) {
+				if (file_revision < lowest_revision) {
+					lowest_revision = file_revision;
+				}
+
+				if (file_revision > highest_revision) {
+					highest_revision = file_revision;
+				}
+			}
+		} catch (const std::invalid_argument&) {
+			THROW(Error, "In wal file %s (%s)", std::string(fptr.ent->d_name).c_str(), strerror(errno));
+		} catch (const std::out_of_range&) {
+			THROW(Error, "In wal file %s (%s)", std::string(fptr.ent->d_name).c_str(), strerror(errno));
+		}
+
+		find_file_dir(dir, fptr, WAL_STORAGE_PATH, true);
+	}
+
+	closedir(dir);
+	if (lowest_revision > start_revision) {
+		open(WAL_STORAGE_PATH + std::to_string(start_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+	} else {
+		bool reach_end = false;
+		uint32_t start_off, end_off;
+		uint32_t file_rev, begin_rev, end_rev;
+		for (auto slot = lowest_revision; slot <= highest_revision && not reach_end; ++slot) {
+			file_rev = begin_rev = slot;
+			open(WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN);
+
+			uint32_t high_slot = highest_valid_slot();
+			if (high_slot == static_cast<uint32_t>(-1)) {
+				continue;
+			}
+
+			if (slot == highest_revision) {
+				reach_end = true; /* Avoid reenter to the loop with the high valid slot of the highest revision */
+			}
+
+			if (slot == lowest_revision) {
+				slot = start_revision - header.head.revision - 1;
+				if (slot == static_cast<uint32_t>(-1)) {
+					/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
+					 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
+					 */
+					start_off = STORAGE_START_BLOCK_OFFSET;
+					begin_rev = 0;
+				} else {
+					start_off = header.slot[slot];
+					if (start_off == 0) {
+						THROW(StorageCorruptVolume, "Bad offset");
+					}
+					begin_rev = slot;
+				}
+			} else {
+				start_off = STORAGE_START_BLOCK_OFFSET;
+			}
+
+			seek(start_off);
+
+			end_off =  header.slot[high_slot];
+
+			if (start_off < end_off) {
+				end_rev =  header.head.revision + high_slot;
+				L_INFO(nullptr, "Read and repr operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, end_rev);
+			}
+
+			try {
+				while (true) {
+					std::string line = read(end_off);
+					repr.push_back(repr_line(line));
+				}
+			} catch (const StorageEOF& exc) { }
+
+			slot = high_slot;
+		}
+
+		open(WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+	}
+
+	return repr;
+}
+
 
 uint32_t
 DatabaseWAL::highest_valid_slot()

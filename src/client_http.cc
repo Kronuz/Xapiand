@@ -770,6 +770,10 @@ HttpClient::_get(enum http_method method)
 			path_parser.off_id = nullptr;  // Command has no ID
 			schema_view(method, cmd);
 			break;
+		case Command::CMD_WAL:
+			path_parser.off_id = nullptr;  // Command has no ID
+			wal_view(method, cmd);
+			break;
 		case Command::CMD_INFO:
 			info_view(method, cmd);
 			break;
@@ -1310,9 +1314,28 @@ HttpClient::schema_view(enum http_method method, Command)
 
 	db_handler.reset(endpoints, DB_OPEN, method);
 
-	operation_begins = std::chrono::system_clock::now();
+	operation_ends = std::chrono::system_clock::now();
 
 	write_http_response(HTTP_STATUS_OK, db_handler.get_schema()->get_readable());
+}
+
+
+void
+HttpClient::wal_view(enum http_method method, Command)
+{
+	L_CALL(this, "HttpClient::wal_view()");
+
+	endpoints_maker(1s);
+
+	operation_begins = std::chrono::system_clock::now();
+
+	db_handler.reset(endpoints, DB_OPEN, method);
+
+	auto repr = db_handler.repr_wal(0, -1);
+
+	operation_ends = std::chrono::system_clock::now();
+
+	write_http_response(HTTP_STATUS_OK, repr);
 }
 
 
