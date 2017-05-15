@@ -279,7 +279,7 @@ struct required_spc_t {
 			if (uuid.empty()) {
 				return res;
 			}
-			res.append(1, '/').append(repr(uuid));
+			res.insert(0, 1, '(').append(", ").append(repr(uuid)).push_back(')');
 			return res;
 		}
 
