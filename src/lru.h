@@ -189,7 +189,7 @@ public:
 	template<typename OnDrop>
 	void trim(const OnDrop& on_drop, ssize_t m_size) {
 		auto last(_items_list.rbegin());
-		for (size_t i= _items_map.size(); i != 0 && m_size > _max_size && last != _items_list.rend(); --i) {
+		for (size_t i = _items_map.size(); i != 0 && m_size > _max_size && last != _items_list.rend(); --i) {
 			auto it = --last.base();
 			switch (on_drop(it->second).second) {
 				case DropAction::renew:
@@ -200,6 +200,7 @@ public:
 				case DropAction::drop:
 					_items_map.erase(it->first);
 					_items_list.erase(it);
+					--m_size;
 					break;
 			}
 			last = _items_list.rbegin();
@@ -222,9 +223,8 @@ public:
 				return first->second;
 			}
 			case InsertAction::last: {
-				auto m_size = static_cast<ssize_t>(_items_map.size());
-				if (_max_size != -1 && m_size == _max_size) {
-					trim(on_drop, m_size + 1);
+				if (_max_size != -1) {
+					trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
 				}
 
 				_items_list.push_back(std::forward<P>(p));
