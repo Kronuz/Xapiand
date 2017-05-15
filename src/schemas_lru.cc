@@ -69,12 +69,12 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 					aux_schema_ptr = Schema::get_initial_schema();
 				} else {
 					const auto& path = it.value();
-					try {
-						aux_schema_ptr = std::make_shared<const MsgPack>(path.as_string());
+					if (path.is_string()) {
+						aux_schema_ptr = std::make_shared<const MsgPack>(path);
 						if (!db_handler->set_metadata(DB_META_SCHEMA, aux_schema_ptr->serialise(), false)) {
 							THROW(ClientError, "%s cannot be changed", RESERVED_SCHEMA);
 						}
-					} catch (const msgpack::type_error&) {
+					} else {
 						THROW(ClientError, "%s must be string", RESERVED_SCHEMA);
 					}
 				}
