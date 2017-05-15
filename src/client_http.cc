@@ -770,10 +770,12 @@ HttpClient::_get(enum http_method method)
 			path_parser.off_id = nullptr;  // Command has no ID
 			schema_view(method, cmd);
 			break;
+#if XAPIAND_DATABASE_WAL
 		case Command::CMD_WAL:
 			path_parser.off_id = nullptr;  // Command has no ID
 			wal_view(method, cmd);
 			break;
+#endif
 		case Command::CMD_INFO:
 			info_view(method, cmd);
 			break;
@@ -1320,6 +1322,7 @@ HttpClient::schema_view(enum http_method method, Command)
 }
 
 
+#if XAPIAND_DATABASE_WAL
 void
 HttpClient::wal_view(enum http_method method, Command)
 {
@@ -1337,6 +1340,7 @@ HttpClient::wal_view(enum http_method method, Command)
 
 	write_http_response(HTTP_STATUS_OK, repr);
 }
+#endif
 
 
 void

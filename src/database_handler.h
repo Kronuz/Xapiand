@@ -126,7 +126,9 @@ public:
 
 	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET);
 
+#if XAPIAND_DATABASE_WAL
 	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision);
+#endif
 
 	DataType index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type);
 	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type);

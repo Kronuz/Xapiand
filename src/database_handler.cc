@@ -177,6 +177,7 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 }
 
 
+#if XAPIAND_DATABASE_WAL
 MsgPack
 DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision)
 {
@@ -191,6 +192,7 @@ DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision)
 	auto wal = std::make_unique<DatabaseWAL>(endpoints[0].path, database.get());
 	return wal->repr(start_revision, end_revision);
 }
+#endif
 
 
 MsgPack
