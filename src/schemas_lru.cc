@@ -192,9 +192,11 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	const auto info_local_schema = get_local(db_handler);
 
+	const auto& schema = std::get<1>(info_local_schema);
 	const auto& schema_path = std::get<2>(info_local_schema);
+
 	if (schema_path.empty()) {
-		if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
+		if (schema->compare_exchange_strong(old_schema, new_schema)) {
 			db_handler->set_metadata(DB_META_SCHEMA, new_schema->serialise());
 			return true;
 		}
@@ -215,7 +217,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			MsgPack shared_schema = *new_schema;
 			shared_schema[RESERVED_RECURSE] = false;
 			_db_handler.index(schema_id, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
-			db_handler->set_metadata(DB_META_SCHEMA, (std::get<1>(info_local_schema)->load()->serialise()));
+			db_handler->set_metadata(DB_META_SCHEMA, schema->load()->serialise());
 		} else {
 			old_schema = aux_schema;
 		}
