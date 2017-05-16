@@ -2396,6 +2396,7 @@ DatabasePool::total_wdatabases()
 {
 	L_CALL(this, "DatabasePool::total_wdatabases()");
 
+	std::lock_guard<std::mutex> lk(qmtx);
 	return writable_databases.size();
 }
 
@@ -2407,6 +2408,7 @@ DatabasePool::total_rdatabases()
 
 	size_t db_count = 0;
 
+	std::lock_guard<std::mutex> lk(qmtx);
 	for (auto d = databases.begin(); d != databases.end(); d++) {
 		db_count += d->second->size();
 	}
