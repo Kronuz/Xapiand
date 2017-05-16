@@ -157,16 +157,19 @@ class Processor {
 			delete platform;
 		}
 
-		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script) {
-			auto script_hash = script_name.empty() ? hash(script) : hash(script_name);
+		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
+			auto script_hash = hash(script_name.empty() ? script_body : script_name);
 			try {
 				std::lock_guard<std::mutex> lk(mtx);
 				return script_lru.at(script_hash);
 			} catch (const std::out_of_range&) {
-				if (script.empty()) {
+				if (script_body.empty()) {
+					try {
+						return compile(script_name, script_name);
+					} catch (...) { }
 					throw;
 				}
-				auto processor = std::make_shared<Processor>(script_name, script);
+				auto processor = std::make_shared<Processor>(script_name, script_body);
 				std::lock_guard<std::mutex> lk(mtx);
 				auto it = script_lru.find(script_hash);
 				if (it == script_lru.end()) {

@@ -265,7 +265,7 @@ MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, 
 		THROW(ClientError, e.what());
 #endif
 	} catch (const std::out_of_range&) {
-		THROW(MissingTypeError, "Script for '%s' is missing", repr(script_name).c_str());
+		THROW(MissingTypeError, "Script for %s is missing", repr(script_name).c_str());
 	} catch (...) {
 		throw;
 	}
@@ -279,7 +279,7 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 
 	std::string script_type;
 	std::string script_name;
-	std::string script;
+	std::string script_body;
 	auto it = data.find(RESERVED_SCRIPT);
 	if (it == data.end()) {
 		return data;
@@ -287,7 +287,7 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 		auto& _script = it.value();
 		switch (_script.getType()) {
 			case MsgPack::Type::STR:
-				script = _script.as_string();
+				script_name = _script.as_string();
 				break;
 			case MsgPack::Type::MAP:
 				try {
@@ -297,9 +297,9 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 					script_name = _script.at(RESERVED_VALUE).as_string();
 				} catch (const std::out_of_range&) { }
 				try {
-					script = _script.at(RESERVED_BODY).as_string();
+					script_body = _script.at(RESERVED_BODY).as_string();
 				} catch (const std::out_of_range&) { }
-				if (script_name.empty() && script.empty()) {
+				if (script_name.empty() && script_body.empty()) {
 					THROW(ClientError, "%s must be a string or a valid script object", RESERVED_SCRIPT);
 				}
 				break;
@@ -309,18 +309,18 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 	}
 
 	// ECMAScript
-	if (script_type == "ecma" || endswith(script_name, ".js") || endswith(script, ".js") || endswith(script_name, ".es") || endswith(script, ".es")) {
+	if (script_type == "ecma" || endswith(script_name, ".js") || endswith(script_name, ".es")) {
 #if defined(XAPIAND_V8)
-		return call_script<v8pp::Processor>(data, term_id, script_name, script);
+		return call_script<v8pp::Processor>(data, term_id, script_name, script_body);
 #else
 		THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
 #endif
 	}
 
 	// ChaiScript
-	if (script_type == "chai" || endswith(script_name, ".chai") || endswith(script, ".chai")) {
+	if (script_type == "chai" || endswith(script_name, ".chai")) {
 #if defined(XAPIAND_CHAISCRIPT)
-		return call_script<chaipp::Processor>(data, term_id, script_name, script);
+		return call_script<chaipp::Processor>(data, term_id, script_name, script_body);
 #else
 		THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif
@@ -332,9 +332,9 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 
 	// Fallback:
 #if defined(XAPIAND_V8)
-	return call_script<v8pp::Processor>(data, term_id, script_name, script);
+	return call_script<v8pp::Processor>(data, term_id, script_name, script_body);
 #elif defined(XAPIAND_CHAISCRIPT)
-	return call_script<chaipp::Processor>(data, term_id, script_name, script);
+	return call_script<chaipp::Processor>(data, term_id, script_name, script_body);
 #endif
 
 }
