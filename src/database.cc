@@ -1972,7 +1972,7 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 					val->renew_time = now;
 					return lru::DropAction::renew;
 				}
-				if (val->renew_time < now - 60s || size > max_size) {
+				if ((size > max_size && val->renew_time < now - 500ms) || val->renew_time < now - 60s) {
 					return lru::DropAction::evict;
 				}
 				return lru::DropAction::leave;
@@ -1986,7 +1986,7 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 					val->renew_time = now;
 					return lru::DropAction::renew;
 				}
-				if (val->renew_time < now - 60s || size > max_size) {
+				if ((size > max_size && val->renew_time < now - 500ms) || val->renew_time < now - 60s) {
 					return lru::DropAction::evict;
 				}
 				return lru::DropAction::leave;
