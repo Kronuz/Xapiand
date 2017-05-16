@@ -765,7 +765,7 @@ void banner() {
 	set_thread_name("-=-");
 
 	std::vector<std::string> versions;
-	versions.push_back(format_string("Xapian v%s", XAPIAN_VERSION));
+	versions.push_back(format_string("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()));
 #ifdef XAPIAND_CHAISCRIPT
 	versions.push_back(format_string("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()));
 #elif defined(XAPIAND_V8)
