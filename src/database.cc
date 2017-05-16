@@ -1962,7 +1962,7 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 			return lru::GetAction::renew;
 		};
 		return at_and(on_get, key.first);
-	} catch (std::range_error) {
+	} catch (const std::out_of_range&) {
 		const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
 			if (val->persistent ||
 				val->size() < val->count ||

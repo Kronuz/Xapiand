@@ -460,7 +460,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					auto value = lower_string(self->header_value);
 					try {
 						self->accept_set = accept_sets.at(value);
-					} catch (const std::range_error&) {
+					} catch (const std::out_of_range&) {
 						std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
 						std::sregex_iterator end;
 						int i = 0;
@@ -494,7 +494,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					auto value = lower_string(self->header_value);
 					try {
 						self->accept_encoding_set = accept_encoding_sets.at(value);
-					} catch (const std::range_error&) {
+					} catch (const std::out_of_range&) {
 						std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
 						std::sregex_iterator end;
 						int i = 0;

@@ -161,7 +161,7 @@ public:
 	T& at(const Key& key) {
 		auto it(_items_map.find(key));
 		if (it == _items_map.end()) {
-			throw std::range_error("There is no such key in cache");
+			throw std::out_of_range("There is no such key in cache");
 		}
 		return at(it->second);
 	}
@@ -276,7 +276,7 @@ public:
 	T& at_and(const OnGet& on_get, const Key& key) {
 		auto it(_items_map.find(key));
 		if (it == _items_map.end()) {
-			throw std::range_error("There is no such key in cache");
+			throw std::out_of_range("There is no such key in cache");
 		}
 		return at_and(on_get, it->second);
 	}

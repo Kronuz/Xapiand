@@ -42,7 +42,7 @@ int test_lru() {
 			L_ERR(nullptr, "ERROR: LRU::insert with limit is not working");
 			RETURN(1);
 		}
-	} catch (const std::range_error&) { }
+	} catch (const std::out_of_range&) { }
 
 	if (lru.at("test4") != 444 || lru.at("test3") != 333 || lru.at("test2") != 222) {
 		L_ERR(nullptr, "ERROR: LRU::at is not working");
@@ -56,7 +56,7 @@ int test_lru() {
 			L_ERR(nullptr, "ERROR: LRU::insert with limit is not working");
 			RETURN(1);
 		}
-	} catch (const std::range_error&) { }
+	} catch (const std::out_of_range&) { }
 
 	if (lru.at("test2") != 222 || lru.at("test3") != 333 || lru.at("test5") != 555) {
 		L_ERR(nullptr, "ERROR: LRU::at is not working");
@@ -113,7 +113,7 @@ int test_lru_actions() {
 				L_ERR(nullptr, "ERROR: LRU::insert with limit is not working");
 				RETURN(1);
 			}
-		} catch (std::range_error) { }
+		} catch (std::out_of_range) { }
 
 		if (lru.size() != 3) {
 			L_ERR(nullptr, "ERROR: LRU::insert with limit is not working");

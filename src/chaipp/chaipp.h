@@ -54,7 +54,7 @@ class Processor {
 			try {
 				std::lock_guard<std::mutex> lk(mtx);
 				return script_lru.at(script_hash);
-			} catch (const std::range_error&) {
+			} catch (const std::out_of_range&) {
 				auto processor = std::make_shared<Processor>(script);
 				std::lock_guard<std::mutex> lk(mtx);
 				auto it = script_lru.find(script_hash);

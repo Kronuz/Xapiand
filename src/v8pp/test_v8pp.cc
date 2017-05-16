@@ -170,7 +170,7 @@ void run2() {
 		// try {
 		// 	auto& processor = script_lru.at(src_hash);
 		// 	new_map = processor["tons_to_kg"](old_map);
-		// } catch (const std::range_error&) {
+		// } catch (const std::out_of_range&) {
 		// 	auto& processor = script_lru.insert(std::make_pair(src_hash, v8pp::Processor("new", script)));
 		// 	new_map = processor["tons_to_kg"](old_map);
 		// }
@@ -183,7 +183,7 @@ void run2() {
 		std::cout << "End Map: " << old_map.to_string(true) << std::endl;
 		std::cout << "Return: " << res.to_string() << std::endl;
 		fprintf(stderr, "++++ FINISH 1\n");
-	} catch (const std::range_error&) {
+	} catch (const std::out_of_range&) {
 		fprintf(stderr, "ERROR: Must be in lru\n");
 	} catch (const v8pp::Error& e) {
 		fprintf(stderr, "\n\nERROR: %s\n", e.what());
