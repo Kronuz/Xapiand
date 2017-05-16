@@ -316,7 +316,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			std::string message(http_errno_description(err));
 			MsgPack err_response = {
 				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, message }
+				{ RESPONSE_MESSAGE, split_string(message, '\n') }
 			};
 			write_http_response(error_code, err_response);
 			L_WARNING(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message.c_str() : "incomplete request");
@@ -704,7 +704,7 @@ HttpClient::run()
 		} else {
 			MsgPack err_response = {
 				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, error }
+				{ RESPONSE_MESSAGE, split_string(error, '\n') }
 			};
 
 			write_http_response(error_code, err_response);
@@ -1391,7 +1391,7 @@ HttpClient::search_view(enum http_method method, Command)
 				enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
 				MsgPack err_response = {
 					{ RESPONSE_STATUS, (int)error_code },
-					{ RESPONSE_MESSAGE, std::string("Expecting exactly one index with volatile")  }
+					{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
 				};
 				write_http_response(error_code, err_response);
 				return;
@@ -1445,7 +1445,7 @@ HttpClient::search_view(enum http_method method, Command)
 			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 			MsgPack err_response = {
 				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, std::string("Response encoding gzip, deflate or identity not provided in the Accept-Encoding header") }
+				{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
 			};
 			write_http_response(error_code, err_response);
 			L_SEARCH(this, "ABORTED SEARCH");
@@ -1517,7 +1517,7 @@ HttpClient::search_view(enum http_method method, Command)
 				enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 				MsgPack err_response = {
 					{ RESPONSE_STATUS, (int)error_code },
-					{ RESPONSE_MESSAGE, std::string("Response type application/msgpack or application/json not provided in the Accept header") }
+					{ RESPONSE_MESSAGE, { "Response type application/msgpack or application/json not provided in the Accept header" } }
 				};
 				write_http_response(error_code, err_response);
 				L_SEARCH(this, "ABORTED SEARCH");
@@ -1558,7 +1558,7 @@ HttpClient::search_view(enum http_method method, Command)
 					enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 					MsgPack err_response = {
 						{ RESPONSE_STATUS, (int)error_code },
-						{ RESPONSE_MESSAGE, std::string("Response type " + ct_type_str + " not provided in the Accept header") }
+						{ RESPONSE_MESSAGE, { "Response type " + ct_type_str + " not provided in the Accept header" } }
 					};
 					write_http_response(error_code, err_response);
 					L_SEARCH(this, "ABORTED SEARCH");
@@ -1735,7 +1735,7 @@ HttpClient::write_status_response(enum http_status status, const std::string& me
 
 	write_http_response(status, {
 		{ RESPONSE_STATUS, (int)status },
-		{ RESPONSE_MESSAGE, message.empty() ? http_status_str(status) : message }
+		{ RESPONSE_MESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : split_string(message, '\n') }
 	});
 }
 
@@ -1755,7 +1755,7 @@ HttpClient::stats_view(enum http_method, Command)
 	enum http_status error_code = HTTP_STATUS_NOT_FOUND;
 	write_http_response(error_code, {
 		{ RESPONSE_STATUS, (int)error_code },
-		{ RESPONSE_MESSAGE, http_status_str(error_code)}
+		{ RESPONSE_MESSAGE, { http_status_str(error_code) } }
 	});
 }
 
@@ -2467,7 +2467,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack err_response = {
 			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, std::string("Response encoding gzip, deflate or identity not provided in the Accept-Encoding header") }
+			{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
 		};
 		write_http_response(error_code, err_response);
 		return;
@@ -2506,7 +2506,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack response_err = {
 			{ RESPONSE_STATUS, (int)status },
-			{ RESPONSE_MESSAGE, std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what()) }
+			{ RESPONSE_MESSAGE, { "Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what() } }
 		};
 		auto response_str = response_err.to_string();
 		if (type_encoding != Encoding::none) {
