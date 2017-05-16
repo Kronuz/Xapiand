@@ -361,6 +361,7 @@ private:
 
 	replica_state state;
 	std::atomic_bool modified;
+	std::chrono::time_point<std::chrono::system_clock> renew_time;
 	bool persistent;
 	bool _volatile;
 

@@ -1956,34 +1956,40 @@ DatabasesLRU::DatabasesLRU(ssize_t max_size)
 std::shared_ptr<DatabaseQueue>&
 DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 {
+	auto now = std::chrono::system_clock::now();
 	try {
-		return at(key.first);
+		return at_and([now](std::shared_ptr<DatabaseQueue>& val) {
+			val->renew_time = now;
+			return lru::GetAction::renew;
+		}, key.first);
 	} catch (std::range_error) {
 		if (key.second) {
 			// Volatile, insert to the back
-			return insert_back_and([](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
-				if (size <= max_size) {
-					return lru::DropAction::leave;
-				}
+			return insert_back_and([now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
 				if (val->persistent ||
 					val->size() < val->count ||
 					val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
+					val->renew_time = now;
 					return lru::DropAction::renew;
 				}
-				return lru::DropAction::evict;
+				if (val->renew_time < now - 60s || size > max_size) {
+					return lru::DropAction::evict;
+				}
+				return lru::DropAction::leave;
 			}, std::make_pair(key.first, DatabaseQueue::make_shared(key.second)));
 		} else {
 			// Non-volatile, insert to the front
-			return insert_and([](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
-				if (size <= max_size) {
-					return lru::DropAction::leave;
-				}
+			return insert_and([now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
 				if (val->persistent ||
 					val->size() < val->count ||
 					val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
+					val->renew_time = now;
 					return lru::DropAction::renew;
 				}
-				return lru::DropAction::evict;
+				if (val->renew_time < now - 60s || size > max_size) {
+					return lru::DropAction::evict;
+				}
+				return lru::DropAction::leave;
 			}, std::make_pair(key.first, DatabaseQueue::make_shared(key.second)));
 		}
 	}
