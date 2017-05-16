@@ -43,21 +43,6 @@
 #include "utils.h"                 // for repr, toUType, lower_string
 
 
-#define DEFAULT_STOP_STRATEGY     StopStrategy::STOP_ALL
-#define DEFAULT_STEM_STRATEGY     StemStrategy::STEM_SOME
-#define DEFAULT_LANGUAGE          "en"
-#define DEFAULT_GEO_PARTIALS      true
-#define DEFAULT_GEO_ERROR         0.3
-#define DEFAULT_POSITIONS         true
-#define DEFAULT_SPELLING          false
-#define DEFAULT_BOOL_TERM         false
-#define DEFAULT_INDEX             TypeIndex::ALL
-#define DEFAULT_INDEX_UUID_FIELD  UUIDFieldIndex::BOTH
-
-
-#define LIMIT_PARTIAL_PATHS_DEPTH  10    // 2^(n - 2) => 2^8 => 256 namespace terms.
-
-
 enum class TypeIndex : uint8_t {
 	NONE                      = 0,                              // 0000  Bits for  "none"
 	FIELD_TERMS               = 0b0001,                         // 0001  Bit for   "field_terms"
@@ -111,6 +96,19 @@ enum class UnitTime : uint16_t {
 	CENTURY,
 	MILLENNIUM,
 };
+
+
+constexpr StopStrategy DEFAULT_STOP_STRATEGY      = StopStrategy::STOP_ALL;
+constexpr StemStrategy DEFAULT_STEM_STRATEGY      = StemStrategy::STEM_SOME;
+constexpr const char DEFAULT_LANGUAGE[]           = "en";
+constexpr bool DEFAULT_GEO_PARTIALS               = true;
+constexpr double DEFAULT_GEO_ERROR                = 0.3;
+constexpr bool DEFAULT_POSITIONS                  = true;
+constexpr bool DEFAULT_SPELLING                   = false;
+constexpr bool DEFAULT_BOOL_TERM                  = false;
+constexpr TypeIndex DEFAULT_INDEX                 = TypeIndex::ALL;
+constexpr UUIDFieldIndex DEFAULT_INDEX_UUID_FIELD = UUIDFieldIndex::BOTH;
+constexpr size_t LIMIT_PARTIAL_PATHS_DEPTH        = 10; // 2^(n - 2) => 2^8 => 256 namespace terms
 
 
 inline constexpr TypeIndex operator|(const uint8_t& a, const TypeIndex& b) {

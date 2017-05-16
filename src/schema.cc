@@ -1464,7 +1464,7 @@ Schema::get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_p
 	L_CALL(nullptr, "Schema::get_partial_paths(%zu, %s)", partial_prefixes.size(), uuid_path ? "true" : "false");
 
 	if (partial_prefixes.size() > LIMIT_PARTIAL_PATHS_DEPTH) {
-		THROW(ClientError, "Partial paths limit depth is %d, and partial paths provided has a depth of %zu", LIMIT_PARTIAL_PATHS_DEPTH, partial_prefixes.size());
+		THROW(ClientError, "Partial paths limit depth is %zu, and partial paths provided has a depth of %zu", LIMIT_PARTIAL_PATHS_DEPTH, partial_prefixes.size());
 	}
 
 	std::vector<std::string> paths;
@@ -5851,9 +5851,9 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			}
 
 			// It is a search using partial prefix.
-			int depth_partials = std::distance(it, it_e);
+			size_t depth_partials = std::distance(it, it_e);
 			if (depth_partials > LIMIT_PARTIAL_PATHS_DEPTH) {
-				THROW(ClientError, "Partial paths limit depth is %d, and partial paths provided has a depth of %d", LIMIT_PARTIAL_PATHS_DEPTH, depth_partials);
+				THROW(ClientError, "Partial paths limit depth is %zu, and partial paths provided has a depth of %zu", LIMIT_PARTIAL_PATHS_DEPTH, depth_partials);
 			}
 			for (++it; it != it_e; ++it) {
 				auto& partial_field = *it;
