@@ -145,7 +145,7 @@ size_t
 Scheduler::threadpool_capacity()
 {
 	if (thread_pool) {
-		thread_pool->threadpool_capacity();
+		return thread_pool->threadpool_capacity();
 	}
 	return 0;
 }
@@ -155,7 +155,7 @@ size_t
 Scheduler::threadpool_size()
 {
 	if (thread_pool) {
-		thread_pool->threadpool_size();
+		return thread_pool->threadpool_size();
 	}
 	return 0;
 }
@@ -165,7 +165,7 @@ size_t
 Scheduler::running_size()
 {
 	if (thread_pool) {
-		thread_pool->running_size();
+		return thread_pool->running_size();
 	}
 	return 0;
 }
@@ -175,7 +175,7 @@ size_t
 Scheduler::size()
 {
 	if (thread_pool) {
-		thread_pool->size();
+		return thread_pool->size();
 	}
 	return 0;
 }
