@@ -309,22 +309,11 @@ struct required_spc_t {
 
 		prefix_t(prefix_t&&) = default;
 		prefix_t(const prefix_t&) = default;
-
 		prefix_t& operator=(prefix_t&&) = default;
 		prefix_t& operator=(const prefix_t&) = default;
 
-		std::string to_string() const noexcept {
-			auto res = repr(field);
-			if (uuid.empty()) {
-				return res;
-			}
-			res.insert(0, 1, '(').append(", ").append(repr(uuid)).push_back(')');
-			return res;
-		}
-
-		std::string operator()() const noexcept {
-			return field;
-		}
+		std::string to_string() const;
+		std::string operator()() const noexcept;
 	};
 
 	std::array<FieldType, 3> sep_types;
@@ -386,19 +375,8 @@ struct index_spc_t {
 		  accuracy(std::forward<Uint64Vector>(_acc)),
 		  acc_prefix(std::forward<StringVector>(_acc_p)) { }
 
-	explicit index_spc_t(required_spc_t&& spc)
-		: type(std::move(spc.sep_types[2])),
-		  prefix(std::move(spc.prefix.field)),
-		  slot(std::move(spc.slot)),
-		  accuracy(std::move(spc.accuracy)),
-		  acc_prefix(std::move(spc.acc_prefix)) { }
-
-	explicit index_spc_t(const required_spc_t& spc)
-		: type(spc.sep_types[2]),
-		  prefix(spc.prefix.field),
-		  slot(spc.slot),
-		  accuracy(spc.accuracy),
-		  acc_prefix(spc.acc_prefix) { }
+	explicit index_spc_t(required_spc_t&& spc);
+	explicit index_spc_t(const required_spc_t& spc);
 };
 
 
@@ -440,23 +418,9 @@ struct specification_t : required_spc_t {
 	specification_t& operator=(const specification_t& o);
 	specification_t& operator=(specification_t&& o) noexcept;
 
+	void update(index_spc_t&& spc);
+	void update(const index_spc_t& spc);
 	std::string to_string() const;
-
-	void update(index_spc_t&& spc) {
-		sep_types[2] = std::move(spc.type);
-		prefix.field = std::move(spc.prefix);
-		slot = std::move(spc.slot);
-		accuracy = std::move(spc.accuracy);
-		acc_prefix = std::move(spc.acc_prefix);
-	}
-
-	void update(const index_spc_t& spc) {
-		sep_types[2] = spc.type;
-		prefix.field = spc.prefix;
-		slot = spc.slot;
-		accuracy = spc.accuracy;
-		acc_prefix = spc.acc_prefix;
-	}
 
 	static FieldType global_type(FieldType field_type);
 	static const specification_t& get_global(FieldType field_type);

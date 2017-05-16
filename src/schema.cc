@@ -632,6 +632,25 @@ required_spc_t::flags_t::flags_t()
 	  has_partial_paths(false) { }
 
 
+std::string
+required_spc_t::prefix_t::to_string() const
+{
+	auto res = repr(field);
+	if (uuid.empty()) {
+		return res;
+	}
+	res.insert(0, 1, '(').append(", ").append(repr(uuid)).push_back(')');
+	return res;
+}
+
+
+std::string
+required_spc_t::prefix_t::operator()() const noexcept
+{
+	return field;
+}
+
+
 required_spc_t::required_spc_t()
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY }}),
 	  slot(Xapian::BAD_VALUENO),
@@ -732,6 +751,22 @@ required_spc_t::set_types(const std::string& str_type)
 		sep_types = tit->second;
 	}
 }
+
+
+index_spc_t::index_spc_t(required_spc_t&& spc)
+	: type(std::move(spc.sep_types[2])),
+	  prefix(std::move(spc.prefix.field)),
+	  slot(std::move(spc.slot)),
+	  accuracy(std::move(spc.accuracy)),
+	  acc_prefix(std::move(spc.acc_prefix)) { }
+
+
+index_spc_t::index_spc_t(const required_spc_t& spc)
+	: type(spc.sep_types[2]),
+	  prefix(spc.prefix.field),
+	  slot(spc.slot),
+	  accuracy(spc.accuracy),
+	  acc_prefix(spc.acc_prefix) { }
 
 
 specification_t::specification_t()
@@ -914,6 +949,28 @@ specification_t::get_global(FieldType field_type)
 		default:
 			THROW(ClientError, "Type: '%c' is an unknown type", field_type);
 	}
+}
+
+
+void
+specification_t::update(index_spc_t&& spc)
+{
+	sep_types[2] = std::move(spc.type);
+	prefix.field = std::move(spc.prefix);
+	slot = std::move(spc.slot);
+	accuracy = std::move(spc.accuracy);
+	acc_prefix = std::move(spc.acc_prefix);
+}
+
+
+void
+specification_t::update(const index_spc_t& spc)
+{
+	sep_types[2] = spc.type;
+	prefix.field = spc.prefix;
+	slot = spc.slot;
+	accuracy = spc.accuracy;
+	acc_prefix = spc.acc_prefix;
 }
 
 
