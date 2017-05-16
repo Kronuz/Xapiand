@@ -122,7 +122,11 @@ public:
 	Scheduler(const std::string& name_, const std::string& format, size_t num_threads);
 	~Scheduler();
 
+	size_t threadpool_capacity();
+	size_t threadpool_size();
 	size_t running_size();
+	size_t size();
+
 	void finish(int wait=10);
 	void join();
 	void add(const TaskType& task, unsigned long long wakeup_time);

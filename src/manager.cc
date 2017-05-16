@@ -983,49 +983,99 @@ XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endp
 void
 XapiandManager::server_status(MsgPack& stats)
 {
-	// stats["connections"] = XapiandServer::total_clients.load();
-	stats["http_connections"] = XapiandServer::http_clients.load();
+	// worker_tasks:
+	auto& stats_worker_tasks = stats["worker_tasks"];
+	stats_worker_tasks["running"] = thread_pool.running_size();
+	stats_worker_tasks["enqueued"] = thread_pool.size();
+	stats_worker_tasks["capacity"] = thread_pool.threadpool_capacity();
+	stats_worker_tasks["pool_size"] = thread_pool.threadpool_size();
+
+	// servers_threads:
+	auto& stats_servers_threads = stats["servers_threads"];
+	stats_servers_threads["running"] = server_pool.running_size();
+	stats_servers_threads["enqueued"] = server_pool.size();
+	stats_servers_threads["capacity"] = server_pool.threadpool_capacity();
+	stats_servers_threads["pool_size"] = server_pool.threadpool_size();
+
+	// replicator_threads:
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
-		stats["binary_connections"] = XapiandServer::binary_clients.load();
+		auto& stats_replicator_threads = stats["replicator_threads"];
+		stats_replicator_threads["running"] = replicator_pool.running_size();
+		stats_replicator_threads["enqueued"] = replicator_pool.size();
+		stats_replicator_threads["capacity"] = replicator_pool.threadpool_capacity();
+		stats_replicator_threads["pool_size"] = replicator_pool.threadpool_size();
 	}
 #endif
 
-	// stats["max_connections"] = XapiandServer::max_total_clients.load();
-	stats["max_http_connections"] = XapiandServer::max_http_clients.load();
+	// committers_threads:
+	auto& stats_committers_threads = stats["committers_threads"];
+	stats_committers_threads["running"] = DatabaseAutocommit::running_size();
+	stats_committers_threads["enqueued"] = DatabaseAutocommit::size();
+	stats_committers_threads["capacity"] = DatabaseAutocommit::threadpool_capacity();
+	stats_committers_threads["pool_size"] = DatabaseAutocommit::threadpool_size();
+
+	// fsync_threads:
+	auto& stats_fsync_threads = stats["fsync_threads"];
+	stats_fsync_threads["running"] = AsyncFsync::running_size();
+	stats_fsync_threads["enqueued"] = AsyncFsync::size();
+	stats_fsync_threads["capacity"] = AsyncFsync::threadpool_capacity();
+	stats_fsync_threads["pool_size"] = AsyncFsync::threadpool_size();
+
+	// connections:
+	auto& stats_connections = stats["connections"];
+
+	auto& stats_connections_http = stats_connections["http"];
+	stats_connections_http["current"] = XapiandServer::http_clients.load();
+	stats_connections_http["peak"] = XapiandServer::max_http_clients.load();
+
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
-		stats["max_binary_connections"] = XapiandServer::max_binary_clients.load();
+		auto& stats_connections_binary = stats_connections["binary"];
+		stats_connections_binary["current"] = XapiandServer::binary_clients.load();
+		stats_connections_binary["peak"] = XapiandServer::max_binary_clients.load();
 	}
 #endif
 
+	auto& stats_connections_total = stats_connections["total"];
+	stats_connections_total["current"] = XapiandServer::total_clients.load();
+	stats_connections_total["peak"] = XapiandServer::max_total_clients.load();
+
+	// file_descriptors:
 	stats["file_descriptors"] = file_descriptors_cnt();
-	stats["worker_tasks_running"] = thread_pool.running_size();
-	stats["worker_tasks_enqueued"] = thread_pool.size();
-	stats["worker_tasks_pool_size"] = thread_pool.threadpool_size();
 
-	stats["servers_threads"] = server_pool.running_size();
-	stats["committers_threads"] = DatabaseAutocommit::running_size();
-	stats["fsync_threads"] = AsyncFsync::running_size();
-	stats["total_ram"] =  bytes_string(get_total_ram());
-	stats["ram_used"] =  bytes_string(get_current_ram().first);
-	stats["ram_used_by_process"] =  bytes_string(get_current_memory_by_process(true));
-	stats["total_virtual_memory"] = bytes_string(get_total_virtual_memory());
-	stats["virtual_memory_used"] = bytes_string(get_total_virtual_used());
-	stats["virtual_memory_by_process"] =  bytes_string(get_current_memory_by_process());
+	// memory:
+	auto& stats_memory = stats["memory"];
 
-	auto wdb = database_pool.total_wdatabases();
-	auto rdb = database_pool.total_rdatabases();
+	auto& stats_memory_used = stats_memory["used"];
+	stats_memory_used["resident"] = bytes_string(get_current_memory_by_process());
+	stats_memory_used["virtual"] = bytes_string(get_current_memory_by_process(false));
 
-	stats["total_open_databases"] = wdb + rdb;
-	stats["readable_open_databases"] = rdb;
-	stats["writable_open_databases"] = wdb;
+	// auto& stats_memory_total_used = stats_memory["total_used"];
+	// stats_memory_total_used["resident"] =  bytes_string(get_current_ram().first);
+	// stats_memory_total_used["virtual"] = bytes_string(get_total_virtual_used());
 
-#ifdef XAPIAND_CLUSTERING
-	if(!solo) {
-		stats["replicator_threads"] = replicator_pool.running_size();
-	}
-#endif
+	auto& stats_memory_total = stats_memory["total"];
+	stats_memory_total["resident"] =  bytes_string(get_total_ram());
+	stats_memory_total["virtual"] = bytes_string(get_total_virtual_memory());
+
+	// databases:
+	auto wdb = database_pool.total_writable_databases();
+	auto rdb = database_pool.total_readable_databases();
+
+	auto& stats_databases = stats["databases"];
+
+	auto& stats_databases_readable = stats_databases["readable"];
+	stats_databases_readable["endpoints"] = rdb.first;
+	stats_databases_readable["total"] = rdb.second;
+
+	auto& stats_databases_writable = stats_databases["writable"];
+	stats_databases_writable["endpoints"] = wdb.first;
+	stats_databases_writable["total"] = wdb.second;
+
+	auto& stats_databases_total = stats_databases["total"];
+	stats_databases_total["endpoints"] = rdb.first + wdb.first;
+	stats_databases_total["total"] = rdb.second + wdb.second;
 }
 
 

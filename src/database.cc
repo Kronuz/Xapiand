@@ -2402,26 +2402,29 @@ DatabasePool::recover_database(const Endpoints& endpoints, int flags)
 }
 
 
-size_t
-DatabasePool::total_wdatabases()
+std::pair<size_t, size_t>
+DatabasePool::total_writable_databases()
 {
 	L_CALL(this, "DatabasePool::total_wdatabases()");
 
+	size_t db_count = 0;
 	std::lock_guard<std::mutex> lk(qmtx);
-	return writable_databases.size();
+	for (auto d = writable_databases.begin(); d != writable_databases.end(); d++) {
+		db_count += d->second->size();
+	}
+	return std::make_pair(writable_databases.size(), db_count);
 }
 
 
-size_t
-DatabasePool::total_rdatabases()
+std::pair<size_t, size_t>
+DatabasePool::total_readable_databases()
 {
 	L_CALL(this, "DatabasePool::total_rdatabases()");
 
 	size_t db_count = 0;
-
 	std::lock_guard<std::mutex> lk(qmtx);
 	for (auto d = databases.begin(); d != databases.end(); d++) {
 		db_count += d->second->size();
 	}
-	return db_count;
+	return std::make_pair(databases.size(), db_count);
 }

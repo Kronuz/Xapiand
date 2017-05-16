@@ -59,8 +59,20 @@ public:
 		scheduler().join();
 	}
 
+	static size_t threadpool_capacity() {
+		return scheduler().threadpool_capacity();
+	}
+
+	static size_t threadpool_size() {
+		return scheduler().threadpool_size();
+	}
+
 	static size_t running_size() {
 		return scheduler().running_size();
+	}
+
+	static size_t size() {
+		return scheduler().size();
 	}
 
 	AsyncFsync(bool forced_, int fd_, int mode_);
