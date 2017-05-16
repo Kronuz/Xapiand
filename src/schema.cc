@@ -1028,7 +1028,7 @@ specification_t::to_string() const
 
 	str << "\t" << "partial_index_spcs" << ": [ ";
 	for (const auto& spc : partial_index_spcs) {
-		str << "{" << spc.prefix << ", " << spc.slot << "} ";
+		str << "{" << repr(spc.prefix) << ", " << spc.slot << "} ";
 	}
 	str << "]\n";
 
