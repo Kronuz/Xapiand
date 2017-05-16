@@ -38,6 +38,7 @@ enum class DropAction : uint8_t {
 	leave,
 	renew,
 	evict,
+	stop,
 };
 
 
@@ -220,6 +221,8 @@ public:
 					break;
 				case DropAction::leave:
 					break;
+				case DropAction::stop:
+					return;
 			}
 			last = _items_list.rbegin();
 		}
