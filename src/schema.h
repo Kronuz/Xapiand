@@ -257,42 +257,6 @@ MSGPACK_ADD_ENUM(FieldType);
 
 
 struct required_spc_t {
-	struct prefix_t {
-		std::string field;
-		std::string uuid;
-
-		prefix_t() = default;
-
-		template <typename S1, typename S2, typename std::enable_if<std::is_same<std::string, S1>::value && std::is_same<std::string, S2>::value>::type>
-		explicit prefix_t(S1&& _field, S2&& _uuid=std::string())
-			: field(std::forward<S1>(_field)),
-			  uuid(std::forward<S2>(_uuid)) { }
-
-		prefix_t(prefix_t&&) = default;
-		prefix_t(const prefix_t&) = default;
-
-		prefix_t& operator=(prefix_t&&) = default;
-		prefix_t& operator=(const prefix_t&) = default;
-
-		std::string to_string() const noexcept {
-			auto res = repr(field);
-			if (uuid.empty()) {
-				return res;
-			}
-			res.insert(0, 1, '(').append(", ").append(repr(uuid)).push_back(')');
-			return res;
-		}
-
-		std::string operator()() const noexcept {
-			return field;
-		}
-	};
-
-	std::array<FieldType, 3> sep_types;
-	prefix_t prefix;
-	std::string prefix_field;
-	Xapian::valueno slot;
-
 	struct flags_t {
 		bool bool_term:1;
 		bool partials:1;
@@ -331,7 +295,43 @@ struct required_spc_t {
 		bool has_partial_paths:1;    // Either RESERVED_PARTIAL_PATHS is in the schema or the user sent it
 
 		flags_t();
-	} flags;
+	};
+
+	struct prefix_t {
+		std::string field;
+		std::string uuid;
+
+		prefix_t() = default;
+
+		template <typename S, typename std::enable_if<std::is_same<std::string, S>::value>::type>
+		explicit prefix_t(S&& _field, S&& _uuid=std::string())
+			: field(std::forward<S>(_field)),
+			  uuid(std::forward<S>(_uuid)) { }
+
+		prefix_t(prefix_t&&) = default;
+		prefix_t(const prefix_t&) = default;
+
+		prefix_t& operator=(prefix_t&&) = default;
+		prefix_t& operator=(const prefix_t&) = default;
+
+		std::string to_string() const noexcept {
+			auto res = repr(field);
+			if (uuid.empty()) {
+				return res;
+			}
+			res.insert(0, 1, '(').append(", ").append(repr(uuid)).push_back(')');
+			return res;
+		}
+
+		std::string operator()() const noexcept {
+			return field;
+		}
+	};
+
+	std::array<FieldType, 3> sep_types;
+	prefix_t prefix;
+	Xapian::valueno slot;
+	flags_t flags;
 
 	// For GEO, DATE, TIME, TIMEDELTA and Numeric types.
 	std::vector<uint64_t> accuracy;
@@ -371,6 +371,38 @@ struct required_spc_t {
 };
 
 
+struct index_spc_t {
+	FieldType type;
+	std::string prefix;
+	Xapian::valueno slot;
+	std::vector<uint64_t> accuracy;
+	std::vector<std::string> acc_prefix;
+
+	template <typename S=std::string, typename Uint64Vector=std::vector<uint64_t>, typename StringVector=std::vector<std::string>, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value &&
+		std::is_same<std::vector<uint64_t>, std::decay_t<Uint64Vector>>::value && std::is_same<std::vector<std::string>, std::decay_t<StringVector>>::value>>
+	explicit index_spc_t(FieldType _type, S&& _prefix=S(), Xapian::valueno _slot=Xapian::BAD_VALUENO, Uint64Vector&& _acc=Uint64Vector(), StringVector&& _acc_p=StringVector())
+		: type(_type),
+		  prefix(std::forward<S>(_prefix)),
+		  slot(_slot),
+		  accuracy(std::forward<Uint64Vector>(_acc)),
+		  acc_prefix(std::forward<StringVector>(_acc_p)) { }
+
+	explicit index_spc_t(required_spc_t&& spc)
+		: type(std::move(spc.sep_types[2])),
+		  prefix(std::move(spc.prefix.field)),
+		  slot(std::move(spc.slot)),
+		  accuracy(std::move(spc.accuracy)),
+		  acc_prefix(std::move(spc.acc_prefix)) { }
+
+	explicit index_spc_t(const required_spc_t& spc)
+		: type(spc.sep_types[2]),
+		  prefix(spc.prefix.field),
+		  slot(spc.slot),
+		  accuracy(spc.accuracy),
+		  acc_prefix(spc.acc_prefix) { }
+};
+
+
 struct specification_t : required_spc_t {
 	// Reserved values.
 	prefix_t local_prefix;
@@ -399,7 +431,7 @@ struct specification_t : required_spc_t {
 
 	// Auxiliar variables for saving partial prefixes.
 	std::vector<prefix_t> partial_prefixes;
-	std::vector<required_spc_t> partial_spcs;
+	std::vector<index_spc_t> partial_index_spcs;
 
 	specification_t();
 	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
@@ -410,6 +442,22 @@ struct specification_t : required_spc_t {
 	specification_t& operator=(specification_t&& o) noexcept;
 
 	std::string to_string() const;
+
+	void update(index_spc_t&& spc) {
+		sep_types[2] = std::move(spc.type);
+		prefix.field = std::move(spc.prefix);
+		slot = std::move(spc.slot);
+		accuracy = std::move(spc.accuracy);
+		acc_prefix = std::move(spc.acc_prefix);
+	}
+
+	void update(const index_spc_t& spc) {
+		sep_types[2] = spc.type;
+		prefix.field = spc.prefix;
+		slot = spc.slot;
+		accuracy = spc.accuracy;
+		acc_prefix = spc.acc_prefix;
+	}
 
 	static FieldType global_type(FieldType field_type);
 	static const specification_t& get_global(FieldType field_type);
