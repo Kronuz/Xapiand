@@ -3013,11 +3013,12 @@ Schema::update_prefixes()
 			switch (specification.index_uuid_field) {
 				case UUIDFieldIndex::UUID: {
 					specification.flags.has_uuid_prefix = true;
+					specification.prefix.field.append(specification.local_prefix.uuid);
 					if (specification.prefix.uuid.empty()) {
 						specification.prefix.uuid = specification.prefix.field;
+					} else {
+						specification.prefix.uuid.append(specification.local_prefix.uuid);
 					}
-					specification.prefix.field.append(specification.local_prefix.uuid);
-					specification.prefix.uuid.append(specification.local_prefix.uuid);
 					specification.local_prefix.field = std::move(specification.local_prefix.uuid);
 					specification.local_prefix.uuid.clear();
 					break;
