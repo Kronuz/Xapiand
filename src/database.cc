@@ -1867,11 +1867,10 @@ Database::dec_count_document(const std::string& term_id)
  */
 
 
-DatabaseQueue::DatabaseQueue(bool volatile_)
+DatabaseQueue::DatabaseQueue()
 	: state(replica_state::REPLICA_FREE),
 	  modified(false),
 	  persistent(false),
-	  _volatile(volatile_),
 	  count(0)
 {
 	L_OBJ(this, "CREATED DATABASE QUEUE!");
@@ -1984,10 +1983,10 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 		};
 		if (key.second) {
 			// Volatile, insert to the back
-			return insert_back_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared(key.second)));
+			return insert_back_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared()));
 		} else {
 			// Non-volatile, insert to the front
-			return insert_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared(key.second)));
+			return insert_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared()));
 		}
 	}
 }

@@ -363,7 +363,6 @@ private:
 	std::atomic_bool modified;
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
 	bool persistent;
-	bool _volatile;
 
 	size_t count;
 
@@ -375,7 +374,7 @@ private:
 	TaskQueue<> checkin_callbacks;
 
 protected:
-	DatabaseQueue(bool volatile_=false);
+	DatabaseQueue();
 
 public:
 	DatabaseQueue(const DatabaseQueue&) = delete;
