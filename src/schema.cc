@@ -1676,7 +1676,8 @@ Schema::complete_specification(const MsgPack& item_value)
 		switch (specification.index_uuid_field) {
 			case UUIDFieldIndex::UUID: {
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-					index_spc_t spc_uuid(specification.sep_types[2], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()), specification.accuracy, specification.acc_prefix);
+					index_spc_t spc_uuid(specification.sep_types[2], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
+						specification.accuracy, specification.acc_prefix);
 					for (auto& acc_prefix : spc_uuid.acc_prefix) {
 						acc_prefix.insert(0, spc_uuid.prefix);
 					}
@@ -1687,30 +1688,34 @@ Schema::complete_specification(const MsgPack& item_value)
 				break;
 			}
 			case UUIDFieldIndex::UUID_FIELD: {
-				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-					index_spc_t spc_field(specification.sep_types[2], specification.prefix.field, specification.slot, specification.accuracy, specification.acc_prefix);
-					if (specification.flags.has_uuid_prefix) {
-						spc_field.slot = get_slot(spc_field.prefix, specification.get_ctype());
+				if (specification.flags.has_uuid_prefix) {
+					if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+						index_spc_t spc_field(specification.sep_types[2], specification.prefix.field, get_slot(specification.prefix.field, specification.get_ctype()),
+							specification.accuracy, specification.acc_prefix);
+						for (auto& acc_prefix : spc_field.acc_prefix) {
+							acc_prefix.insert(0, spc_field.prefix);
+						}
+						specification.partial_index_spcs.push_back(std::move(spc_field));
+					} else {
+						specification.partial_index_spcs.emplace_back(specification.sep_types[2], specification.prefix.field);
 					}
-					for (auto& acc_prefix : spc_field.acc_prefix) {
-						acc_prefix.insert(0, spc_field.prefix);
+				} else if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+					for (auto& acc_prefix : specification.acc_prefix) {
+						acc_prefix.insert(0, specification.prefix.field);
 					}
-					specification.partial_index_spcs.push_back(std::move(spc_field));
-				} else {
-					specification.partial_index_spcs.emplace_back(specification.sep_types[2], specification.prefix.field);
 				}
 				break;
 			}
 			case UUIDFieldIndex::BOTH: {
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-					index_spc_t spc_field(specification.sep_types[2], specification.prefix.field, specification.slot, specification.accuracy, specification.acc_prefix);
-					index_spc_t spc_uuid(specification.sep_types[2], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()), specification.accuracy, specification.acc_prefix);
-					if (specification.flags.has_uuid_prefix) {
-						spc_field.slot = get_slot(spc_field.prefix, specification.get_ctype());
-					}
+					index_spc_t spc_field(specification.sep_types[2], specification.prefix.field,
+						specification.flags.has_uuid_prefix ? get_slot(specification.prefix.field, specification.get_ctype()) : specification.slot,
+						specification.accuracy, specification.acc_prefix);
 					for (auto& acc_prefix : spc_field.acc_prefix) {
 						acc_prefix.insert(0, spc_field.prefix);
 					}
+					index_spc_t spc_uuid(specification.sep_types[2], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
+						specification.accuracy, specification.acc_prefix);
 					for (auto& acc_prefix : spc_uuid.acc_prefix) {
 						acc_prefix.insert(0, spc_uuid.prefix);
 					}
@@ -1725,13 +1730,9 @@ Schema::complete_specification(const MsgPack& item_value)
 		}
 	} else {
 		if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-			index_spc_t spc_field(specification.sep_types[2], specification.prefix.field, specification.slot, specification.accuracy, specification.acc_prefix);
-			for (auto& acc_prefix : spc_field.acc_prefix) {
-				acc_prefix.insert(0, spc_field.prefix);
+			for (auto& acc_prefix : specification.acc_prefix) {
+				acc_prefix.insert(0, specification.prefix.field);
 			}
-			specification.partial_index_spcs.push_back(std::move(spc_field));
-		} else {
-			specification.partial_index_spcs.emplace_back(specification.sep_types[2], specification.prefix.field);
 		}
 	}
 
