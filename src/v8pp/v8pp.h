@@ -158,12 +158,14 @@ class Processor {
 		}
 
 		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script) {
-			auto script_hash = hash(script);
-
+			auto script_hash = script_name.empty() ? hash(script) : hash(script_name);
 			try {
 				std::lock_guard<std::mutex> lk(mtx);
 				return script_lru.at(script_hash);
 			} catch (const std::out_of_range&) {
+				if (script.empty()) {
+					throw;
+				}
 				auto processor = std::make_shared<Processor>(script_name, script);
 				std::lock_guard<std::mutex> lk(mtx);
 				auto it = script_lru.find(script_hash);

@@ -337,9 +337,6 @@ if (V8)
 	find_package (V8 REQUIRED)
 	include_directories (BEFORE "${V8_INCLUDE_DIRS}")
 	target_link_libraries (${PROJECT_NAME} ${V8_LIBRARIES})
-	if (CHAISCRIPT)
-		message (WARNING "V8 is actived, CHAISCRIPT will be ignored")
-	endif ()
 ########################################################################
 # ChaiScript Engine Library
 ########################################################################

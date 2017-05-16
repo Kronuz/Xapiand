@@ -63,6 +63,8 @@
 #define RESERVED_PREFIX                "_prefix"
 #define RESERVED_VERSION               "_version"
 #define RESERVED_SCRIPT                "_script"
+#define RESERVED_SCRIPT_SCRIPT         "_script"
+#define RESERVED_SCRIPT_NAME           "_name"
 #define RESERVED_RECURSE               "_recurse"
 #define RESERVED_NAMESPACE             "_namespace"
 #define RESERVED_PARTIAL_PATHS         "_partial_paths"

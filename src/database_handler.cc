@@ -211,30 +211,12 @@ DatabaseHandler::get_document_obj(const std::string& term_id)
 
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-MsgPack
-DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
+
+template<typename Processor>
+MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script)
 {
-	L_CALL(this, "DatabaseHandler::run_script(...)");
-
-	std::string script;
-	auto it = data.find(RESERVED_SCRIPT);
-	if (it == data.end()) {
-		return data;
-	} else {
-		try {
-			script = it.value().as_string();
-		} catch (const msgpack::type_error&) {
-			THROW(ClientError, "%s must be string", RESERVED_SCRIPT);
-		}
-	}
-
 	try {
-#if defined(XAPIAND_V8)
-		auto processor = v8pp::Processor::compile(RESERVED_SCRIPT, script);
-#elif defined(XAPIAND_CHAISCRIPT)
-		auto processor = chaipp::Processor::compile(RESERVED_SCRIPT, script);
-#endif
-
+		auto processor = Processor::compile(script_name, script);
 		switch (method) {
 			case HTTP_PUT:
 				try {
@@ -275,14 +257,76 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 		return data;
 	} catch (const v8pp::Error& e) {
 		THROW(ClientError, e.what());
-	}
-#elif defined(XAPIAND_CHAISCRIPT)
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
 	} catch (const chaipp::ReferenceError&) {
 		return data;
 	} catch (const chaipp::Error& e) {
 		THROW(ClientError, e.what());
-	}
 #endif
+	} catch (const std::out_of_range&) {
+		THROW(MissingTypeError, "Script for '%s' is missing", repr(script_name).c_str());
+	} catch (...) {
+		throw;
+	}
+}
+
+
+MsgPack
+DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
+{
+	L_CALL(this, "DatabaseHandler::run_script(...)");
+
+	std::string script_name;
+	std::string script;
+	auto it = data.find(RESERVED_SCRIPT);
+	if (it == data.end()) {
+		return data;
+	} else {
+		auto& _script = it.value();
+		switch (_script.getType()) {
+			case MsgPack::Type::STR:
+				script = _script.as_string();
+				break;
+			case MsgPack::Type::MAP:
+				try {
+					script_name = _script.at(RESERVED_SCRIPT_NAME).as_string();
+				} catch (const std::out_of_range&) { }
+				try {
+					script = _script.at(RESERVED_SCRIPT_SCRIPT).as_string();
+				} catch (const std::out_of_range&) { }
+				if (script_name.empty() && script.empty()) {
+					THROW(ClientError, "%s must be a string or a valid script object", RESERVED_SCRIPT);
+				}
+				break;
+			default:
+				THROW(ClientError, "%s must be a string or a valid script object", RESERVED_SCRIPT);
+		}
+	}
+
+	if (endswith(script_name, ".js") || endswith(script, ".js")) {
+#if defined(XAPIAND_V8)
+		return call_script<v8pp::Processor>(data, term_id, script_name, script);
+#else
+		THROW(ClientError, "JsvaScript not available.", RESERVED_SCRIPT);
+#endif
+	}
+
+	if (endswith(script_name, ".chai") || endswith(script, ".chai")) {
+#if defined(XAPIAND_CHAISCRIPT)
+		return call_script<chaipp::Processor>(data, term_id, script_name, script);
+#else
+		THROW(ClientError, "ChaiScript not available.", RESERVED_SCRIPT);
+#endif
+	}
+
+	// Fallback:
+#if defined(XAPIAND_V8)
+	return call_script<v8pp::Processor>(data, term_id, script_name, script);
+#elif defined(XAPIAND_CHAISCRIPT)
+	return call_script<chaipp::Processor>(data, term_id, script_name, script);
+#endif
+
 }
 #endif
 

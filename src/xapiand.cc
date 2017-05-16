@@ -47,7 +47,8 @@
 
 #if defined(XAPIAND_V8)
 #include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
-#elif defined(XAPIAND_CHAISCRIPT)
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
 #include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
 #endif
 
@@ -768,7 +769,8 @@ void banner() {
 	versions.push_back(format_string("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()));
 #if defined(XAPIAND_V8)
 	versions.push_back(format_string("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION));
-#elif defined(XAPIAND_CHAISCRIPT)
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
 	versions.push_back(format_string("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()));
 #endif
 

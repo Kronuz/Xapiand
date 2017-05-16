@@ -108,6 +108,8 @@ class DatabaseHandler {
 	MsgPack get_document_obj(const std::string& term_id);
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
+	template<typename ProcessorCompile>
+	MsgPack call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script);
 	MsgPack run_script(MsgPack& data, const std::string& term_id);
 #endif
 

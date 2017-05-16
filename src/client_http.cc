@@ -37,7 +37,9 @@
 
 #if defined(XAPIAND_V8)
 #include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
-#elif defined(XAPIAND_CHAISCRIPT)
+#endif
+
+#if defined(XAPIAND_CHAISCRIPT)
 #include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
 #endif
 
@@ -989,7 +991,8 @@ HttpClient::home_view(enum http_method method, Command)
 		{ "Xapian", format_string("%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #if defined(XAPIAND_V8)
 		{ "V8", format_string("%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION) },
-#elif defined(XAPIAND_CHAISCRIPT)
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
 		{ "ChaiScript", format_string("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #endif
 	};
