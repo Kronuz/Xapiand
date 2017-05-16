@@ -36,20 +36,14 @@ namespace lru {
 
 enum class DropAction : uint8_t {
 	drop,
-	leave,
 	renew,
+	leave,
 };
 
 
 enum class GetAction : uint8_t {
 	leave,
 	renew,
-};
-
-
-enum class InsertAction : uint8_t {
-	front,
-	last,
 };
 
 
@@ -117,27 +111,51 @@ public:
 	template<typename P>
 	T& insert(P&& p) {
 		erase(p.first);
-
-		_items_list.push_front(std::forward<P>(p));
-		auto first(_items_list.begin());
-		_items_map[first->first] = first;
-
 		if (_max_size != -1) {
+			auto size = static_cast<ssize_t>(_items_map.size() + 1);
 			auto last(_items_list.rbegin());
-			for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); --i) {
-				auto it = (++last).base();
+			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend() && size > _max_size; --i) {
+				auto it = --last.base();
+				--size;
 				_items_map.erase(it->first);
 				_items_list.erase(it);
 				last = _items_list.rbegin();
 			}
 		}
-
+		_items_list.push_front(std::forward<P>(p));
+		auto first(_items_list.begin());
+		_items_map[first->first] = first;
 		return first->second;
+	}
+
+	template<typename P>
+	T& insert_back(P&& p) {
+		erase(p.first);
+		if (_max_size != -1) {
+			auto size = static_cast<ssize_t>(_items_map.size() + 1);
+			auto last(_items_list.rbegin());
+			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend() && size > _max_size; --i) {
+				auto it = --last.base();
+				--size;
+				_items_map.erase(it->first);
+				_items_list.erase(it);
+				last = _items_list.rbegin();
+			}
+		}
+		_items_list.push_back(std::forward<P>(p));
+		auto last(_items_list.rbegin());
+		_items_map[last->first] = --last.base();
+		return last->second;
 	}
 
 	template<typename... Args>
 	T& emplace(Args&&... args) {
 		return insert(std::make_pair(std::forward<Args>(args)...));
+	}
+
+	template<typename... Args>
+	T& emplace_back(Args&&... args) {
+		return insert_back(std::make_pair(std::forward<Args>(args)...));
 	}
 
 	T& at(const iterator& it) {
@@ -187,20 +205,20 @@ public:
 	}
 
 	template<typename OnDrop>
-	void trim(const OnDrop& on_drop, ssize_t m_size) {
+	void trim(const OnDrop& on_drop, ssize_t size) {
 		auto last(_items_list.rbegin());
-		for (size_t i = _items_map.size(); i != 0 && m_size > _max_size && last != _items_list.rend(); --i) {
+		for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend(); --i) {
 			auto it = --last.base();
-			switch (on_drop(it->second).second) {
+			switch (on_drop(it->second, size, _max_size)) {
+				case DropAction::drop:
+					--size;
+					_items_map.erase(it->first);
+					_items_list.erase(it);
+					break;
 				case DropAction::renew:
 					_items_list.splice(_items_list.begin(), _items_list, it);
 					break;
 				case DropAction::leave:
-					break;
-				case DropAction::drop:
-					_items_map.erase(it->first);
-					_items_list.erase(it);
-					--m_size;
 					break;
 			}
 			last = _items_list.rbegin();
@@ -210,36 +228,35 @@ public:
 	template<typename OnDrop, typename P>
 	T& insert_and(const OnDrop& on_drop, P&& p) {
 		erase(p.first);
-
-		switch (on_drop(p.second).first) {
-			case InsertAction::front: {
-				_items_list.push_front(std::forward<P>(p));
-				auto first(_items_list.begin());
-				_items_map[first->first] = first;
-
-				if (_max_size != -1) {
-					trim(on_drop, static_cast<ssize_t>(_items_map.size()));
-				}
-				return first->second;
-			}
-			case InsertAction::last: {
-				if (_max_size != -1) {
-					trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
-				}
-
-				_items_list.push_back(std::forward<P>(p));
-				auto last(_items_list.rbegin());
-				_items_map[last->first] = --last.base();
-				return last->second;
-			}
-			default:
-				throw std::invalid_argument("Unknown InsertAction");
+		if (_max_size != -1) {
+			trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
 		}
+		_items_list.push_front(std::forward<P>(p));
+		auto first(_items_list.begin());
+		_items_map[first->first] = first;
+		return first->second;
+	}
+
+	template<typename OnDrop, typename P>
+	T& insert_back_and(const OnDrop& on_drop, P&& p) {
+		erase(p.first);
+		if (_max_size != -1) {
+			trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
+		}
+		_items_list.push_back(std::forward<P>(p));
+		auto last(_items_list.rbegin());
+		_items_map[last->first] = --last.base();
+		return last->second;
 	}
 
 	template<typename OnDrop, typename... Args>
 	T& emplace_and(OnDrop&& on_drop, Args&&... args) {
 		return insert_and(std::forward<OnDrop>(on_drop), std::make_pair(std::forward<Args>(args)...));
+	}
+
+	template<typename OnDrop, typename... Args>
+	T& emplace_back_and(OnDrop&& on_drop, Args&&... args) {
+		return insert_back_and(std::forward<OnDrop>(on_drop), std::make_pair(std::forward<Args>(args)...));
 	}
 
 	template<typename OnGet>

@@ -1959,19 +1959,33 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 	try {
 		return at(key.first);
 	} catch (std::range_error) {
-		return insert_and([](std::shared_ptr<DatabaseQueue>& val) {
-			lru::DropAction drop_action;
-			if (val->persistent || val->size() < val->count || val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
-				drop_action = lru::DropAction::renew;
-			} else {
-				drop_action =  lru::DropAction::drop;
-			}
-			if (val->_volatile) {
-				return std::make_pair(lru::InsertAction::last, drop_action);
-			} else {
-				return std::make_pair(lru::InsertAction::front, drop_action);
-			}
-		}, std::make_pair(key.first, DatabaseQueue::make_shared(key.second)));
+		if (key.second) {
+			// Volatile, insert to the back
+			return insert_back_and([](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
+				if (size <= max_size) {
+					return lru::DropAction::leave;
+				}
+				if (val->persistent ||
+					val->size() < val->count ||
+					val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
+					return lru::DropAction::renew;
+				}
+				return lru::DropAction::drop;
+			}, std::make_pair(key.first, DatabaseQueue::make_shared(key.second)));
+		} else {
+			// Non-volatile, insert to the front
+			return insert_and([](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
+				if (size <= max_size) {
+					return lru::DropAction::leave;
+				}
+				if (val->persistent ||
+					val->size() < val->count ||
+					val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
+					return lru::DropAction::renew;
+				}
+				return lru::DropAction::drop;
+			}, std::make_pair(key.first, DatabaseQueue::make_shared(key.second)));
+		}
 	}
 }
 

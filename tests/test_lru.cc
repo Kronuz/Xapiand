@@ -73,7 +73,7 @@ int test_lru_emplace() {
 	INIT_LOG
 	LRU<std::string, int> lru(1);
 	lru.emplace("test1", 111);
-	lru.emplace_and([](int&){ return std::make_pair(InsertAction::front, DropAction::leave); }, "test2", 222);
+	lru.emplace_and([](int&, ssize_t, ssize_t){ return DropAction::leave; }, "test2", 222);
 
 	if (lru.at("test1") != 111 || lru.at("test2") != 222) {
 		L_ERR(nullptr, "ERROR: LRU emplace is not working");
@@ -93,7 +93,7 @@ int test_lru_actions() {
 		lru.insert(std::make_pair("test1", 111));
 		lru.insert(std::make_pair("test2", 222));
 		lru.insert(std::make_pair("test3", 333));
-		lru.insert_and([](int&){ return std::make_pair(InsertAction::front, DropAction::leave); }, std::make_pair("test4", 444));  // this DOES NOT push 'test1' out of the lru
+		lru.insert_and([](int&, ssize_t, ssize_t){ return DropAction::leave; }, std::make_pair("test4", 444));  // this DOES NOT push 'test1' out of the lru
 
 		if (lru.size() != 4) {
 			L_ERR(nullptr, "ERROR: LRU::insert_and is not working");
@@ -120,7 +120,7 @@ int test_lru_actions() {
 			RETURN(1);
 		}
 
-		lru.insert_and([](int&){ return std::make_pair(InsertAction::front, DropAction::renew); }, std::make_pair("test6", 666));  // this renews 'test3'
+		lru.insert_and([](int&, ssize_t, ssize_t){ return DropAction::renew; }, std::make_pair("test6", 666));  // this renews 'test3'
 
 		if (lru.size() != 4) {
 			L_ERR(nullptr, "ERROR: LRU::insert_and  is not working");
