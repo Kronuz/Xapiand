@@ -303,7 +303,7 @@ struct required_spc_t {
 
 		prefix_t() = default;
 
-		template <typename S, typename std::enable_if<std::is_same<std::string, S>::value>::type>
+		template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
 		explicit prefix_t(S&& _field, S&& _uuid=std::string())
 			: field(std::forward<S>(_field)),
 			  uuid(std::forward<S>(_uuid)) { }
