@@ -277,6 +277,7 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 {
 	L_CALL(this, "DatabaseHandler::run_script(...)");
 
+	std::string script_type;
 	std::string script_name;
 	std::string script;
 	auto it = data.find(RESERVED_SCRIPT);
@@ -290,10 +291,13 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 				break;
 			case MsgPack::Type::MAP:
 				try {
-					script_name = _script.at(RESERVED_SCRIPT_NAME).as_string();
+					script_type = _script.at(RESERVED_TYPE).as_string();
 				} catch (const std::out_of_range&) { }
 				try {
-					script = _script.at(RESERVED_SCRIPT_SCRIPT).as_string();
+					script_name = _script.at(RESERVED_VALUE).as_string();
+				} catch (const std::out_of_range&) { }
+				try {
+					script = _script.at(RESERVED_BODY).as_string();
 				} catch (const std::out_of_range&) { }
 				if (script_name.empty() && script.empty()) {
 					THROW(ClientError, "%s must be a string or a valid script object", RESERVED_SCRIPT);
@@ -304,20 +308,26 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 		}
 	}
 
-	if (endswith(script_name, ".js") || endswith(script, ".js")) {
+	// ECMAScript
+	if (script_type == "ecma" || endswith(script_name, ".js") || endswith(script, ".js") || endswith(script_name, ".es") || endswith(script, ".es")) {
 #if defined(XAPIAND_V8)
 		return call_script<v8pp::Processor>(data, term_id, script_name, script);
 #else
-		THROW(ClientError, "JsvaScript not available.", RESERVED_SCRIPT);
+		THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
 #endif
 	}
 
-	if (endswith(script_name, ".chai") || endswith(script, ".chai")) {
+	// ChaiScript
+	if (script_type == "chai" || endswith(script_name, ".chai") || endswith(script, ".chai")) {
 #if defined(XAPIAND_CHAISCRIPT)
 		return call_script<chaipp::Processor>(data, term_id, script_name, script);
 #else
-		THROW(ClientError, "ChaiScript not available.", RESERVED_SCRIPT);
+		THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif
+	}
+
+	if (!script_type.empty()) {
+		THROW(ClientError, "Script type %s not available.", script_type.c_str());
 	}
 
 	// Fallback:
