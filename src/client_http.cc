@@ -980,11 +980,12 @@ HttpClient::home_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_CLUSTERING
-	obj_data["cluster_name"] = XapiandManager::manager->cluster_name;
+	obj_data["_cluster_name"] = XapiandManager::manager->cluster_name;
 #endif
-	obj_data["version"] = Package::STRING;
-	obj_data["url"] = Package::BUGREPORT;
-	obj_data["libraries"] = {
+	obj_data["_server"] = Package::STRING;
+	obj_data["_url"] = Package::BUGREPORT;
+	obj_data["_versions"] = {
+		{ "Xapiand", Package::HASH.empty() ? Package::VERSION : format_string("%s-%s", Package::VERSION.c_str(), Package::HASH.c_str()) },
 		{ "Xapian", format_string("%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #ifdef XAPIAND_CHAISCRIPT
 		{ "ChaiScript", format_string("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
