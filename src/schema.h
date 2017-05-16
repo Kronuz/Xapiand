@@ -39,6 +39,7 @@
 
 #include "database_utils.h"
 #include "geospatial/htm.h"        // for GeoSpatial, range_t
+#include "log.h"                   // for L_CALL
 #include "msgpack.h"               // for MsgPack
 #include "utils.h"                 // for repr, toUType, lower_string
 
@@ -849,7 +850,35 @@ public:
 	/*
 	 * Update namespace specification according to prefix_namespace.
 	 */
-	static required_spc_t get_namespace_specification(FieldType namespace_type, const std::string& prefix_namespace);
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
+	static required_spc_t get_namespace_specification(FieldType namespace_type, S&& prefix_namespace) {
+		L_CALL(nullptr, "Schema::get_namespace_specification('%c', %s)", toUType(namespace_type), repr(prefix_namespace).c_str());
+
+		auto spc = specification_t::get_global(namespace_type);
+
+		// If the namespace field is ID_FIELD_NAME, restart its default values.
+		if (prefix_namespace == NAMESPACE_PREFIX_ID_FIELD_NAME) {
+			set_namespace_spc_id(spc);
+		} else {
+			spc.prefix.field = std::forward<S>(prefix_namespace);
+			spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
+		}
+
+		switch (spc.sep_types[2]) {
+			case FieldType::INTEGER:
+			case FieldType::POSITIVE:
+			case FieldType::FLOAT:
+			case FieldType::DATE:
+			case FieldType::TIME:
+			case FieldType::TIMEDELTA:
+			case FieldType::GEO:
+				for (auto& acc_prefix : spc.acc_prefix) {
+					acc_prefix.insert(0, spc.prefix.field);
+				}
+			default:
+				return spc;
+		}
+	}
 
 	/*
 	 * Returns type, slot and prefix of ID_FIELD_NAME

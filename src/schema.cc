@@ -38,7 +38,6 @@
 #include "datetime.h"                      // for isDate, tm_t
 #include "exception.h"                     // for ClientError
 #include "geospatial/geospatial.h"         // for GeoSpatial
-#include "log.h"                           // for L_CALL
 #include "manager.h"                       // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"     // for integer, geo, date, positive
 #include "serialise_list.h"                // for StringList
@@ -1524,42 +1523,6 @@ Schema::get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_p
 	}
 
 	return std::unordered_set<std::string>(std::make_move_iterator(paths.begin()), std::make_move_iterator(paths.end()));
-}
-
-
-required_spc_t
-Schema::get_namespace_specification(FieldType namespace_type, const std::string& prefix_namespace)
-{
-	L_CALL(nullptr, "Schema::get_namespace_specification('%c', %s)", toUType(namespace_type), repr(prefix_namespace).c_str());
-
-	auto spc = specification_t::get_global(namespace_type);
-
-	// If the namespace field is ID_FIELD_NAME, restart its default values.
-	if (prefix_namespace == NAMESPACE_PREFIX_ID_FIELD_NAME) {
-		set_namespace_spc_id(spc);
-	} else {
-		spc.prefix.field = prefix_namespace;
-		spc.slot = get_slot(prefix_namespace, spc.get_ctype());
-	}
-
-	switch (spc.sep_types[2]) {
-		case FieldType::INTEGER:
-		case FieldType::POSITIVE:
-		case FieldType::FLOAT:
-		case FieldType::DATE:
-		case FieldType::TIME:
-		case FieldType::TIMEDELTA:
-		case FieldType::GEO:
-			for (auto& acc_prefix : spc.acc_prefix) {
-				acc_prefix.insert(0, prefix_namespace);
-			}
-			break;
-
-		default:
-			break;
-	}
-
-	return spc;
 }
 
 
