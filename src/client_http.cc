@@ -1292,23 +1292,18 @@ HttpClient::touch_view(enum http_method method, Command)
 
 	endpoints_maker(1s);
 
-	MsgPack response;
-	enum http_status status_code;
-	try {
-		operation_begins = std::chrono::system_clock::now();
+	operation_begins = std::chrono::system_clock::now();
 
-		db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
-		status_code = HTTP_STATUS_OK;
-		response["_touch"] = "Done";
-	} catch (const CheckoutError& e) {
-		status_code = HTTP_STATUS_OK;
-		auto ss = "Error: " + std::string(e.what());
-		response["_touch"] = ss;
-	}
+	db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
+
+	db_handler.reopen();  // Ensure touch.
 
 	operation_ends = std::chrono::system_clock::now();
 
-	write_http_response(status_code, response);
+	MsgPack response;
+	response[RESERVED_ENDPOINT] = endpoints.to_string();
+
+	write_http_response(HTTP_STATUS_CREATED, response);
 }
 
 
