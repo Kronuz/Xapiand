@@ -22,7 +22,7 @@ option (DATABASE_WAL "Enable database write ahead log (WAL)" ON)
 option (DATA_STORAGE "Enable data storage" ON)
 option (TRACEBACKS "Enable tracebacks for exceptions" OFF)
 option (V8 "Enable v8 engine" OFF)
-option (CHAISCRIPT "Enable ChaiScript engine" OFF)
+option (CHAISCRIPT "Enable ChaiScript engine" ON)
 
 foreach (opt BINARY_PROXY CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS V8 CHAISCRIPT)
 	if (${opt})
