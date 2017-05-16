@@ -1318,9 +1318,11 @@ HttpClient::schema_view(enum http_method method, Command)
 
 	db_handler.reset(endpoints, DB_OPEN, method);
 
+	auto schema = db_handler.get_schema()->get_readable();
+
 	operation_ends = std::chrono::system_clock::now();
 
-	write_http_response(HTTP_STATUS_OK, db_handler.get_schema()->get_readable());
+	write_http_response(HTTP_STATUS_OK, schema);
 }
 
 
