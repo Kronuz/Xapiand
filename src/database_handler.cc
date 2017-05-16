@@ -28,7 +28,7 @@
 #include <stdexcept>                        // for out_of_range
 
 #include "cast.h"                           // for Cast
-#include "chaiscript/chaipp.h"              // for chaipp namespace
+#include "chaipp/chaipp.h"                  // for chaipp namespace
 #include "database.h"                       // for DatabasePool, Database
 #include "exception.h"                      // for CheckoutError, ClientError
 #include "length.h"                         // for unserialise_length, seria...
@@ -43,7 +43,7 @@
 #include "schemas_lru.h"                    // for SchemasLRU
 #include "serialise.h"                      // for cast, serialise, type
 #include "utils.h"                          // for repr
-#include "v8/v8pp.h"                        // for v8pp namespace
+#include "v8pp/v8pp.h"                      // for v8pp namespace
 
 
 class FilterPrefixesExpandDecider : public Xapian::ExpandDecider {
