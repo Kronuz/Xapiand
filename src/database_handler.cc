@@ -210,7 +210,7 @@ DatabaseHandler::get_document_obj(const std::string& term_id)
 }
 
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 MsgPack
 DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 {
@@ -229,10 +229,10 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 	}
 
 	try {
-#ifdef XAPIAND_CHAISCRIPT
-		auto processor = chaipp::Processor::compile(RESERVED_SCRIPT, script);
-#elif defined(XAPIAND_V8)
+#if defined(XAPIAND_V8)
 		auto processor = v8pp::Processor::compile(RESERVED_SCRIPT, script);
+#elif defined(XAPIAND_CHAISCRIPT)
+		auto processor = chaipp::Processor::compile(RESERVED_SCRIPT, script);
 #endif
 
 		switch (method) {
@@ -270,16 +270,16 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 			default:
 				return data;
 		}
-#ifdef XAPIAND_CHAISCRIPT
-	} catch (const chaipp::ReferenceError&) {
-		return data;
-	} catch (const chaipp::Error& e) {
-		THROW(ClientError, e.what());
-	}
-#elif defined(XAPIAND_V8)
+#if defined(XAPIAND_V8)
 	} catch (const v8pp::ReferenceError&) {
 		return data;
 	} catch (const v8pp::Error& e) {
+		THROW(ClientError, e.what());
+	}
+#elif defined(XAPIAND_CHAISCRIPT)
+	} catch (const chaipp::ReferenceError&) {
+		return data;
+	} catch (const chaipp::Error& e) {
 		THROW(ClientError, e.what());
 	}
 #endif
@@ -298,7 +298,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 	std::string prefixed_term_id;
 	required_spc_t spc_id;
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	try {
 		short doc_revision;
 		do {
@@ -323,7 +323,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 				} else {
 					term_id = Serialise::serialise(spc_id, _document_id);
 					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 					{
 						lock_database lk_db(this);
 						doc_revision = database->get_revision_document(prefixed_term_id);
@@ -378,7 +378,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 						term_id = Serialise::serialise(spc_id, _document_id);
 						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 					}
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 					{
 						lock_database lk_db(this);
 						doc_revision = database->get_revision_document(prefixed_term_id);
@@ -409,7 +409,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			doc.add_value(spc_id.slot, term_id);
 
 			lock_database lk_db(this);
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 			if (database->set_revision_document(prefixed_term_id, doc_revision)) {
 #endif
 				try {
@@ -423,7 +423,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
 					return std::make_pair(std::move(did), std::move(obj));
 				}
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 			}
 		} while (true);
 	} catch (...) {

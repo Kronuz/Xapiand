@@ -5174,7 +5174,7 @@ Schema::consistency_script(const std::string& prop_name, const MsgPack& doc_scri
 	// RESERVED_SCRIPT isn't heritable and is not saved in schema.
 	L_CALL(this, "Schema::consistency_script(%s)", repr(doc_script.to_string()).c_str());
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	if (specification.full_meta_name.empty()) {
 		if (!doc_script.is_string()) {
 			THROW(ClientError, "%s must be string", prop_name.c_str());

@@ -267,7 +267,7 @@ public:
 
 
 class Database {
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	std::unordered_map<std::string, std::pair<short, short>> documents;
 #endif
 
@@ -336,7 +336,7 @@ public:
 		return endpoints.to_string();
 	}
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	void dec_count_document(const std::string& term_id);
 	short get_revision_document(const std::string& term_id);
 	bool set_revision_document(const std::string& term_id, short old_revision);

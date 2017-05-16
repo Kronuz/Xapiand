@@ -1801,7 +1801,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 }
 
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 short
 Database::get_revision_document(const std::string& term_id)
 {
