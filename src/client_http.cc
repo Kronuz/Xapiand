@@ -982,8 +982,10 @@ HttpClient::home_view(enum http_method method, Command)
 #ifdef XAPIAND_CLUSTERING
 	obj_data["cluster_name"] = XapiandManager::manager->cluster_name;
 #endif
-	obj_data["version"] = {
-		{ "Xapian", Package::STRING },
+	obj_data["version"] = Package::STRING;
+	obj_data["url"] = Package::BUGREPORT;
+	obj_data["libraries"] = {
+		{ "Xapian", format_string("%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #ifdef XAPIAND_CHAISCRIPT
 		{ "ChaiScript", format_string("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #elif defined(XAPIAND_V8)
