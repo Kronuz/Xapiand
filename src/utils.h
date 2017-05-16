@@ -39,6 +39,7 @@
 
 #include "ev/ev++.h"    // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
 #include "exception.h"  // for InvalidArgument, OutOfRange
+#include "split.h"      // for Split
 
 
 #define RESERVED_FDS  50 /* Better approach? */
@@ -219,6 +220,14 @@ inline std::string join_string(const std::vector<T>& values, const std::string& 
 template<typename T>
 inline std::string join_string(const std::vector<T>& values, const std::string& delimiter) {
 	return join_string(values, delimiter, delimiter);
+}
+
+
+template<typename T>
+inline std::vector<std::string> split_string(const std::string& value, const T& sep) {
+	std::vector<std::string> values;
+	Split<T>::split(value, sep, std::back_inserter(values));
+	return values;
 }
 
 
