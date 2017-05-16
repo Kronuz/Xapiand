@@ -35,9 +35,9 @@ namespace lru {
 
 
 enum class DropAction : uint8_t {
-	drop,
-	renew,
 	leave,
+	renew,
+	evict,
 };
 
 
@@ -210,7 +210,7 @@ public:
 		for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend(); --i) {
 			auto it = --last.base();
 			switch (on_drop(it->second, size, _max_size)) {
-				case DropAction::drop:
+				case DropAction::evict:
 					--size;
 					_items_map.erase(it->first);
 					_items_list.erase(it);

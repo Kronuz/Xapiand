@@ -1970,7 +1970,7 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 					val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
 					return lru::DropAction::renew;
 				}
-				return lru::DropAction::drop;
+				return lru::DropAction::evict;
 			}, std::make_pair(key.first, DatabaseQueue::make_shared(key.second)));
 		} else {
 			// Non-volatile, insert to the front
@@ -1983,7 +1983,7 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 					val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
 					return lru::DropAction::renew;
 				}
-				return lru::DropAction::drop;
+				return lru::DropAction::evict;
 			}, std::make_pair(key.first, DatabaseQueue::make_shared(key.second)));
 		}
 	}
