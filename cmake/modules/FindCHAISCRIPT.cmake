@@ -50,7 +50,7 @@ include(FindPackageHandleStandardArgs)
 
 # handle the QUIETLY and REQUIRED arguments and set CHAISCRIPT_FOUND to TRUE
 # if all listed variables are TRUE
-find_package_handle_standard_args(CHAISCRIPT "ChaiScript library not found."
+find_package_handle_standard_args (CHAISCRIPT "System ChaiScript library not found, using included one."
 	CHAISCRIPT_INCLUDE_DIR)
 
 

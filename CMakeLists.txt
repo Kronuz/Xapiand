@@ -331,21 +331,23 @@ endif ()
 
 
 ########################################################################
-# ChaiScript Engine Library
-########################################################################
-if (CHAISCRIPT)
-	find_package (CHAISCRIPT REQUIRED)
-	include_directories (BEFORE "${CHAISCRIPT_INCLUDE_DIRS}")
-	if (V8)
-		message (WARNING "CHAISCRIPT is actived, V8 will be ignored")
-	endif()
-########################################################################
 # V8 Engine Library
 ########################################################################
-elseif (V8)
+if (V8)
 	find_package (V8 REQUIRED)
 	include_directories (BEFORE "${V8_INCLUDE_DIRS}")
 	target_link_libraries (${PROJECT_NAME} ${V8_LIBRARIES})
+	if (CHAISCRIPT)
+		message (WARNING "V8 is actived, CHAISCRIPT will be ignored")
+	endif ()
+########################################################################
+# ChaiScript Engine Library
+########################################################################
+elseif (CHAISCRIPT)
+	find_package (CHAISCRIPT)
+	if (CHAISCRIPT_FOUND)
+		include_directories (BEFORE "${CHAISCRIPT_INCLUDE_DIRS}")
+	endif ()
 endif ()
 
 
