@@ -1994,6 +1994,31 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 
 
 void
+DatabasesLRU::cleanup()
+{
+	const auto now = std::chrono::system_clock::now();
+	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
+		if (val->persistent ||
+			val->size() < val->count ||
+			val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
+			return lru::DropAction::leave;
+		}
+		if (size > max_size) {
+			if (val->renew_time < now - 500ms) {
+				return lru::DropAction::evict;
+			}
+			return lru::DropAction::leave;
+		}
+		if (val->renew_time < now - 60s) {
+			return lru::DropAction::evict;
+		}
+		return lru::DropAction::stop;
+	};
+	trim(on_drop);
+}
+
+
+void
 DatabasesLRU::finish()
 {
 	L_CALL(this, "DatabasesLRU::finish()");
@@ -2124,12 +2149,14 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 		if (writable) {
 			queue = writable_databases[index];
+			databases.cleanup();
 			if (writable_for_commit && !queue->modified) {
 				L_DATABASE_END(this, "!! ABORTED CHECKOUT DB COMMIT NOT NEEDED [%s]: %s", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 				THROW(CheckoutErrorCommited, "Cannot checkout database: %s (commit)", repr(endpoints.to_string()).c_str());
 			}
 		} else {
 			queue = databases[index];
+			writable_databases.cleanup();
 		}
 
 		auto old_state = queue->state;

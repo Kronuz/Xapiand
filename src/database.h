@@ -408,6 +408,8 @@ public:
 
 	std::shared_ptr<DatabaseQueue>& operator[](const std::pair<size_t, bool>& key);
 
+	void cleanup();
+
 	void finish();
 };
 
