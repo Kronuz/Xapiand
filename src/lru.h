@@ -131,33 +131,33 @@ public:
 	}
 
 	template<typename P>
-	T& insert(P&& p) {
+	std::pair<iterator, bool> insert(P&& p) {
 		erase(p.first);
 		trim();
 		_items_list.push_front(std::forward<P>(p));
 		auto it(_items_list.begin());
-		_items_map[it->first] = it;
-		return it->second;
+		bool created = _items_map.emplace(it->first, it).second;
+		return std::make_pair(it, created);
 	}
 
 	template<typename P>
-	T& insert_back(P&& p) {
+	std::pair<iterator, bool> insert_back(P&& p) {
 		erase(p.first);
 		trim();
 		_items_list.push_back(std::forward<P>(p));
 		auto last(_items_list.rbegin());
 		auto it = --last.base();
-		_items_map[it->first] = it;
-		return it->second;
+		bool created = _items_map.emplace(it->first, it).second;
+		return std::make_pair(it, created);
 	}
 
 	template<typename... Args>
-	T& emplace(Args&&... args) {
+	std::pair<iterator, bool> emplace(Args&&... args) {
 		return insert(std::make_pair(std::forward<Args>(args)...));
 	}
 
 	template<typename... Args>
-	T& emplace_back(Args&&... args) {
+	std::pair<iterator, bool> emplace_back(Args&&... args) {
 		return insert_back(std::make_pair(std::forward<Args>(args)...));
 	}
 
@@ -189,7 +189,7 @@ public:
 	T& get(const Key& key) {
 		auto m_it(_items_map.find(key));
 		if (m_it == _items_map.end()) {
-			return insert(std::make_pair(key, T()));
+			return insert(std::make_pair(key, T())).first->second;
 		}
 		return at(m_it->second);
 	}
@@ -250,33 +250,33 @@ public:
 	}
 
 	template<typename OnDrop, typename P>
-	T& insert_and(const OnDrop& on_drop, P&& p) {
+	std::pair<iterator, bool> insert_and(const OnDrop& on_drop, P&& p) {
 		erase(p.first);
 		trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
 		_items_list.push_front(std::forward<P>(p));
 		auto it(_items_list.begin());
-		_items_map[it->first] = it;
-		return it->second;
+		bool created = _items_map.emplace(it->first, it).second;
+		return std::make_pair(it, created);
 	}
 
 	template<typename OnDrop, typename P>
-	T& insert_back_and(const OnDrop& on_drop, P&& p) {
+	std::pair<iterator, bool> insert_back_and(const OnDrop& on_drop, P&& p) {
 		erase(p.first);
 		trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
 		_items_list.push_back(std::forward<P>(p));
 		auto last(_items_list.rbegin());
 		auto it = --last.base();
-		_items_map[it->first] = it;
-		return it->second;
+		bool created = _items_map.emplace(it->first, it).second;
+		return std::make_pair(it, created);
 	}
 
 	template<typename OnDrop, typename... Args>
-	T& emplace_and(OnDrop&& on_drop, Args&&... args) {
+	std::pair<iterator, bool> emplace_and(OnDrop&& on_drop, Args&&... args) {
 		return insert_and(std::forward<OnDrop>(on_drop), std::make_pair(std::forward<Args>(args)...));
 	}
 
 	template<typename OnDrop, typename... Args>
-	T& emplace_back_and(OnDrop&& on_drop, Args&&... args) {
+	std::pair<iterator, bool> emplace_back_and(OnDrop&& on_drop, Args&&... args) {
 		return insert_back_and(std::forward<OnDrop>(on_drop), std::make_pair(std::forward<Args>(args)...));
 	}
 
@@ -295,7 +295,7 @@ public:
 				_items_list.splice(_items_list.begin(), _items_list, it);
 				break;
 		}
-		return it->first;
+		return it;
 	}
 
 	template<typename OnGet>
@@ -324,7 +324,7 @@ public:
 	T& get_and(const OnGet& on_get, const Key& key) {
 		auto m_it(_items_map.find(key));
 		if (m_it == _items_map.end()) {
-			T& ref = insert(std::make_pair(key, T()));
+			T& ref = insert(std::make_pair(key, T())).first->second;
 			switch (on_get(ref)) {
 				case GetAction::leave:
 					break;

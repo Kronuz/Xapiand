@@ -69,11 +69,7 @@ class Processor {
 			auto processor = std::make_shared<Processor>(script_body);
 
 			lk.lock();
-			it = script_lru.find(script_hash);
-			if (it == it_e) {
-				return script_lru.emplace(script_hash, std::move(processor));
-			}
-			return it->second;
+			return script_lru.emplace(script_hash, std::move(processor)).first->second;
 		}
 	};
 

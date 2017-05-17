@@ -1983,10 +1983,10 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 		};
 		if (key.second) {
 			// Volatile, insert to the back
-			return insert_back_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared()));
+			return insert_back_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared())).first->second;
 		} else {
 			// Non-volatile, insert to the front
-			return insert_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared()));
+			return insert_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared())).first->second;
 		}
 	}
 }

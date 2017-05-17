@@ -95,7 +95,7 @@ public:
 
 	accept_set_t& insert(std::pair<std::string, accept_set_t> pair) {
 		std::lock_guard<std::mutex> lk(qmtx);
-		return LRU::insert(pair);
+		return LRU::insert(pair).first->second;
 	}
 };
 
@@ -117,7 +117,7 @@ public:
 
 	accept_encoding_t& insert(std::pair<std::string, accept_encoding_t> pair) {
 		std::lock_guard<std::mutex> lk(qmtx);
-		return LRU::insert(pair);
+		return LRU::insert(pair).first->second;
 	}
 };
 
