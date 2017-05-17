@@ -901,6 +901,8 @@ void run(const opts_t &opts) {
 
 
 int main(int argc, char **argv) {
+	int exit_code = EX_OK;
+
 	opts_t opts;
 
 	parseOptions(argc, argv, opts);
@@ -925,63 +927,63 @@ int main(int argc, char **argv) {
 
 	Logging::log_level += opts.verbosity;
 
-	banner();
+	try {
 
-	if (opts.detach) {
-		L_NOTICE(nullptr, "Xapiand is done with all work here. Daemon on process ID [%d] taking over!", getpid());
-	}
+		banner();
 
-	usleep(100000ULL);
+		if (opts.detach) {
+			L_NOTICE(nullptr, "Xapiand is done with all work here. Daemon on process ID [%d] taking over!", getpid());
+		}
 
-	L_NOTICE(nullptr, Package::STRING + " started.");
+		usleep(100000ULL);
+
+		L_NOTICE(nullptr, Package::STRING + " started.");
+
+		adjustOpenFilesLimit(opts);
+
+		L_INFO(nullptr, "Configured: " + join_string(std::vector<std::string>{
+			std::to_string(opts.max_files) + ((opts.max_files == 1) ? " file" : " files"),
+		}, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
-	if (!opts.chert) {
-		// Prefer glass database
-		if (setenv("XAPIAN_PREFER_GLASS", "1", false) != 0) {
-			opts.chert = true;
+		if (!opts.chert) {
+			// Prefer glass database
+			if (setenv("XAPIAN_PREFER_GLASS", "1", false) != 0) {
+				opts.chert = true;
+			}
 		}
-	}
 #endif
-
-	if (opts.chert) {
-		L_INFO(nullptr, "Using Chert databases by default.");
-	} else {
-		L_INFO(nullptr, "Using Glass databases by default.");
-	}
-
-	if (opts.strict) {
-		L_INFO(nullptr, "Using strict mode.");
-		default_spc.flags.strict = true;
-	}
-
-	if (opts.optimal) {
-		L_INFO(nullptr, "Using optimal mode.");
-		default_spc.flags.optimal = true;
-		default_spc.index = TypeIndex::FIELD_ALL;
-		default_spc.flags.text_detection = false;
-		default_spc.index_uuid_field = UUIDFieldIndex::UUID;
-	}
-
-	// Flush threshold increased
-	int flush_threshold = 10000;  // Default is 10000 (if no set)
-	const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
-	if (p) flush_threshold = atoi(p);
-	if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", false) == 0) {
-		L_INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).", flush_threshold);
-	}
-
-	try {
-		adjustOpenFilesLimit(opts);
-		run(opts);
-	} catch (const Exit& exc) {
-		if (opts.detach && !opts.pidfile.empty()) {
-			L_INFO(nullptr, "Removing the pid file.");
-			unlink(opts.pidfile.c_str());
+		if (opts.chert) {
+			L_INFO(nullptr, "Using Chert databases by default.");
+		} else {
+			L_INFO(nullptr, "Using Glass databases by default.");
 		}
 
-		Logging::finish();
-		return exc.code;
+		// Flush threshold increased
+		int flush_threshold = 10000;  // Default is 10000 (if no set)
+		const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
+		if (p) flush_threshold = atoi(p);
+		if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", false) == 0) {
+			L_INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).", flush_threshold);
+		}
+
+		if (opts.strict) {
+			L_INFO(nullptr, "Using strict mode.");
+			default_spc.flags.strict = true;
+		}
+
+		if (opts.optimal) {
+			L_INFO(nullptr, "Using optimal mode.");
+			default_spc.flags.optimal = true;
+			default_spc.index = TypeIndex::FIELD_ALL;
+			default_spc.flags.text_detection = false;
+			default_spc.index_uuid_field = UUIDFieldIndex::UUID;
+		}
+
+		run(opts);
+
+	} catch (const Exit& exc) {
+		exit_code = exc.code;
 	}
 
 	if (opts.detach && !opts.pidfile.empty()) {
@@ -990,5 +992,5 @@ int main(int argc, char **argv) {
 	}
 
 	Logging::finish();
-	return EX_OK;
+	return exit_code;
 }
