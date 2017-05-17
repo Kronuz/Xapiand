@@ -51,25 +51,29 @@ class Processor {
 
 		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
 			auto script_hash = hash(script_name.empty() ? script_body : script_name);
-			try {
-				std::lock_guard<std::mutex> lk(mtx);
-				return script_lru.at(script_hash);
-			} catch (const std::out_of_range&) {
-				if (script_body.empty()) {
-					try {
-						return compile(script_name, script_name);
-					} catch (...) { }
-					throw;
-				}
-				auto processor = std::make_shared<Processor>(script_body);
-				std::lock_guard<std::mutex> lk(mtx);
-				auto it = script_lru.find(script_hash);
-				if (it == script_lru.end()) {
-					return script_lru.emplace(script_hash, std::move(processor));
-				} else {
-					return it->second;
-				}
+
+			std::unique_lock<std::mutex> lk(mtx);
+			const auto it_e = script_lru.end();
+			auto it = script_lru.find(script_hash);
+			lk.unlock();
+
+			if (it != it_e) {
+				return it->second;
 			}
+			if (script_body.empty()) {
+				try {
+					return compile(script_name, script_name);
+				} catch (...) { }
+				throw;
+			}
+			auto processor = std::make_shared<Processor>(script_body);
+
+			lk.lock();
+			it = script_lru.find(script_hash);
+			if (it == it_e) {
+				return script_lru.emplace(script_hash, std::move(processor));
+			}
+			return it->second;
 		}
 	};
 
