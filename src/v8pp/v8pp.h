@@ -161,13 +161,12 @@ class Processor {
 			auto script_hash = hash(script_name.empty() ? script_body : script_name);
 
 			std::unique_lock<std::mutex> lk(mtx);
-			const auto it_e = script_lru.end();
 			auto it = script_lru.find(script_hash);
-			lk.unlock();
-
-			if (it != it_e) {
+			if (it != script_lru.end()) {
 				return it->second;
 			}
+			lk.unlock();
+
 			if (script_body.empty()) {
 				try {
 					return compile(script_name, script_name);
