@@ -672,7 +672,6 @@ XapiandManager::run(const opts_t& o)
 #ifdef XAPIAND_CLUSTERING
 		solo ? "" : std::to_string(o.num_replicators) + ((o.num_replicators == 1) ? " replicator" : " replicators"),
 #endif
-		"",
 		std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters"),
 		std::to_string(o.num_fsynchers) + ((o.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
 	}, ", ", " and ", [](const auto& s) { return s.empty(); }));

@@ -213,7 +213,6 @@ inline std::string join_string(const std::vector<T>& values, const std::string& 
 	auto rit = values.rbegin();
 	auto rit_e = values.rend();
 	if (rit != rit_e) ++rit;
-	if (rit != rit_e) ++rit;
 	auto it_l = rit != rit_e ? rit.base() : it_e;
 
 	if (it != it_e) {
