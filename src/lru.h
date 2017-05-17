@@ -168,7 +168,7 @@ public:
 		return it->second;
 	}
 
-	T& at(const_iterator& it) const {
+	const T& at(const_iterator& it) const {
 		return it->second;
 	}
 
@@ -180,7 +180,7 @@ public:
 		return at(m_it->second);
 	}
 
-	T& at(const Key& key) const {
+	const T& at(const Key& key) const {
 		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
