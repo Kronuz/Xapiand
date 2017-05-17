@@ -203,6 +203,23 @@ public:
 		return at(m_it->second);
 	}
 
+	T& get_back(const Key& key, T& default_) {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
+			return emplace_back(key, default_).first->second;
+		}
+		return at(m_it->second);
+	}
+
+	template<typename... Args>
+	T& get_back(const Key& key, Args&&... args) {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
+			return emplace_back(key, T(std::forward<Args>(args)...)).first->second;
+		}
+		return at(m_it->second);
+	}
+
 	T& operator[] (const Key& key) {
 		return get(key);
 	}
@@ -350,6 +367,38 @@ public:
 		auto m_it(_items_map.find(key));
 		if (m_it == _items_map.end()) {
 			T& ref = emplace_and(on_drop, key, T(std::forward<Args>(args)...)).first->second;
+			switch (on_get(ref)) {
+				case GetAction::leave:
+					break;
+				case GetAction::renew:
+					break;
+			}
+			return ref;
+		}
+		return at_and(on_get, m_it->second);
+	}
+
+	template<typename OnGet, typename OnDrop>
+	T& get_back_and(const OnGet& on_get, const OnDrop& on_drop, const Key& key, T& default_) {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
+			T& ref = emplace_back_and(on_drop, key, default_).first->second;
+			switch (on_get(ref)) {
+				case GetAction::leave:
+					break;
+				case GetAction::renew:
+					break;
+			}
+			return ref;
+		}
+		return at_and(on_get, m_it->second);
+	}
+
+	template<typename OnGet, typename OnDrop, typename... Args>
+	T& get_back_and(const OnGet& on_get, const OnDrop& on_drop, const Key& key, Args&&... args) {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
+			T& ref = emplace_back_and(on_drop, key, T(std::forward<Args>(args)...)).first->second;
 			switch (on_get(ref)) {
 				case GetAction::leave:
 					break;
