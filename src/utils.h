@@ -42,6 +42,14 @@
 #include "split.h"      // for Split
 
 
+template<class T, class...Args>
+struct is_callable {
+	template<class U> static auto test(U*p) -> decltype((*p)(std::declval<Args>()...), void(), std::true_type());
+	template<class U> static auto test(...) -> decltype(std::false_type());
+	static constexpr auto value = decltype(test<T>(nullptr))::value;
+};
+
+
 /* Strict converter for unsigned types */
 #define stoux(func, s) \
 	[](const std::string& str) { \
