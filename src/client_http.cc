@@ -487,7 +487,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 							++next;
 							++i;
 						}
-						accept_sets.insert(std::make_pair(value, self->accept_set));
+						accept_sets.emplace(value, self->accept_set);
 					}
 					break;
 				}
@@ -517,7 +517,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 							++next;
 							++i;
 						}
-						accept_encoding_sets.insert(std::make_pair(value, self->accept_encoding_set));
+						accept_encoding_sets.emplace(value, self->accept_encoding_set);
 					}
 					break;
 				}

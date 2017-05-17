@@ -88,14 +88,14 @@ public:
 	AcceptLRU()
 		: LRU<std::string, accept_set_t>(100) { }
 
-	accept_set_t& at(std::string key) {
+	auto at(std::string key) {
 		std::lock_guard<std::mutex> lk(qmtx);
 		return LRU::at(key);
 	}
 
-	accept_set_t& insert(std::pair<std::string, accept_set_t> pair) {
+	auto emplace(std::string key, accept_set_t set) {
 		std::lock_guard<std::mutex> lk(qmtx);
-		return LRU::insert(pair).first->second;
+		return LRU::emplace(key, set);
 	}
 };
 
@@ -110,14 +110,14 @@ public:
 	AcceptEncodingLRU()
 	: LRU<std::string, accept_encoding_t>(100) { }
 
-	accept_encoding_t& at(std::string key) {
+	auto at(std::string key) {
 		std::lock_guard<std::mutex> lk(qmtx);
 		return LRU::at(key);
 	}
 
-	accept_encoding_t& insert(std::pair<std::string, accept_encoding_t> pair) {
+	auto emplace(std::string key, accept_encoding_t set) {
 		std::lock_guard<std::mutex> lk(qmtx);
-		return LRU::insert(pair).first->second;
+		return LRU::emplace(key, set);
 	}
 };
 
