@@ -1962,6 +1962,11 @@ DatabasesLRU::get(size_t hash, bool volatile_)
 		return lru::GetAction::renew;
 	};
 
+	auto it = find_and(on_get, hash);
+	if (it != end()) {
+		return it->second;
+	}
+
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
 		if (val->persistent ||
 			val->size() < val->count ||
@@ -1983,10 +1988,10 @@ DatabasesLRU::get(size_t hash, bool volatile_)
 
 	if (volatile_) {
 		// Volatile, insert default on the back
-		return get_back_and(on_get, on_drop, hash, DatabaseQueue::make_shared());
+		return emplace_back_and(on_drop, hash, DatabaseQueue::make_shared()).first->second;
 	} else {
 		// Non-volatile, insert default on the front
-		return get_and(on_get, on_drop, hash, DatabaseQueue::make_shared());
+		return emplace_and(on_drop, hash, DatabaseQueue::make_shared()).first->second;
 	}
 }
 
