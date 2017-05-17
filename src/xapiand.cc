@@ -767,7 +767,7 @@ void adjustOpenFilesLimit(opts_t &opts) {
 		}
 
 		if (setrlimit_error) {
-			L_WARNING(nullptr, "Server can't set maximum open files to %zd because of OS error: %s", max_files, strerror(setrlimit_error));
+			L_ERR(nullptr, "Server can't set maximum open files to %zd because of OS error: %s", max_files, strerror(setrlimit_error));
 		}
 	}
 
@@ -789,18 +789,18 @@ void adjustOpenFilesLimit(opts_t &opts) {
 
 
 	// Warn about changes to the configured dbpool_size or max_clients:
-	if (new_dbpool_size < opts.dbpool_size) {
+	if (new_dbpool_size > 0 && new_dbpool_size < opts.dbpool_size) {
 		L_WARNING(nullptr, "You requested a dbpool_size of %zd requiring at least %zd max file descriptors", opts.dbpool_size, (opts.dbpool_size + 1) * FDS_PER_DATABASE  + FDS_RESERVED);
 		L_WARNING(nullptr, "Current maximum open files is %zd so dbpool_size has been reduced to %zd to compensate for low limit.", max_files, new_dbpool_size);
 	}
-	if (new_max_clients < opts.max_clients) {
+	if (new_max_clients > 0 && new_max_clients < opts.max_clients) {
 		L_WARNING(nullptr, "You requested max_clients of %zd requiring at least %zd max file descriptors", opts.max_clients, (opts.max_clients + 1) * FDS_PER_CLIENT + FDS_RESERVED);
 		L_WARNING(nullptr, "Current maximum open files is %zd so max_clients has been reduced to %zd to compensate for low limit.", max_files, new_max_clients);
 	}
 
 	// Warn about minimum/recommended sizes:
 	if (max_files < minimum_files) {
-		L_ERR(nullptr, "Your current 'ulimit -n' of %zd is not enough for the server to start. Please increase your open file limit to at least %zd",
+		L_CRIT(nullptr, "Your current 'ulimit -n' of %zd is not enough for the server to start. Please increase your open file limit to at least %zd",
 			max_files,
 			minimum_files);
 		throw Exit(EX_OSFILE);
