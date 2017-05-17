@@ -67,48 +67,50 @@ public:
 
 	virtual ~LRU() = default;
 
-	auto begin() noexcept {
+	iterator begin() noexcept {
 		return _items_list.begin();
 	}
 
-	auto cbegin() const noexcept {
+	const_iterator cbegin() const noexcept {
 		return _items_list.cbegin();
 	}
 
-	auto end() noexcept {
+	iterator end() noexcept {
 		return _items_list.end();
 	}
 
-	auto cend() const noexcept {
+	const_iterator cend() const noexcept {
 		return _items_list.cend();
 	}
 
-	auto find(const Key& key) {
-		auto it(_items_map.find(key));
-		if (it == _items_map.end()) {
+	iterator find(const Key& key) {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
 			return _items_list.end();
 		}
-		return it->second;
+		auto it = m_it->second;
+		_items_list.splice(_items_list.begin(), _items_list, it);
+		return it;
 	}
 
-	auto find(const Key& key) const {
-		auto it(_items_map.find(key));
-		if (it == _items_map.cend()) {
+	const_iterator find(const Key& key) const {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.cend()) {
 			return _items_list.cend();
 		}
-		return it->second;
+		return m_it->second;
 	}
 
-	void erase(const iterator& it) {
+	void erase(iterator& it) {
 		_items_map.erase(it->first);
 		_items_list.erase(it->second);
 	}
 
 	size_t erase(const Key& key) {
-		auto it(_items_map.find(key));
-		if (it != _items_map.end()) {
-			_items_map.erase(it);
-			_items_list.erase(it->second);
+		auto m_it(_items_map.find(key));
+		if (m_it != _items_map.end()) {
+			_items_map.erase(m_it);
+			_items_list.erase(m_it->second);
 			return 1;
 		}
 		return 0;
@@ -158,25 +160,37 @@ public:
 		return insert_back(std::make_pair(std::forward<Args>(args)...));
 	}
 
-	T& at(const iterator& it) {
+	T& at(iterator& it) {
 		_items_list.splice(_items_list.begin(), _items_list, it);
 		return it->second;
 	}
 
+	T& at(const_iterator& it) const {
+		return it->second;
+	}
+
 	T& at(const Key& key) {
-		auto it(_items_map.find(key));
-		if (it == _items_map.end()) {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
-		return at(it->second);
+		return at(m_it->second);
+	}
+
+	T& at(const Key& key) const {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
+			throw std::out_of_range("There is no such key in cache");
+		}
+		return at(m_it->second);
 	}
 
 	T& get(const Key& key) {
-		auto it(_items_map.find(key));
-		if (it == _items_map.end()) {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
 			return insert(std::make_pair(key, T()));
 		}
-		return at(it->second);
+		return at(m_it->second);
 	}
 
 	T& operator[] (const Key& key) {
@@ -265,7 +279,25 @@ public:
 	}
 
 	template<typename OnGet>
-	T& at_and(const OnGet& on_get, const iterator& it) {
+	iterator find_and(const OnGet& on_get, const Key& key) {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
+			return _items_list.end();
+		}
+		auto it = m_it->second;
+		T& ref = it->second;
+		switch (on_get(ref)) {
+			case GetAction::leave:
+				break;
+			case GetAction::renew:
+				_items_list.splice(_items_list.begin(), _items_list, it);
+				break;
+		}
+		return it->first;
+	}
+
+	template<typename OnGet>
+	T& at_and(const OnGet& on_get, iterator& it) {
 		T& ref = it->second;
 		switch (on_get(ref)) {
 			case GetAction::leave:
@@ -279,17 +311,17 @@ public:
 
 	template<typename OnGet>
 	T& at_and(const OnGet& on_get, const Key& key) {
-		auto it(_items_map.find(key));
-		if (it == _items_map.end()) {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
-		return at_and(on_get, it->second);
+		return at_and(on_get, m_it->second);
 	}
 
 	template<typename OnGet>
 	T& get_and(const OnGet& on_get, const Key& key) {
-		auto it(_items_map.find(key));
-		if (it == _items_map.end()) {
+		auto m_it(_items_map.find(key));
+		if (m_it == _items_map.end()) {
 			T& ref = insert(std::make_pair(key, T()));
 			switch (on_get(ref)) {
 				case GetAction::leave:
@@ -299,7 +331,7 @@ public:
 			}
 			return ref;
 		}
-		return at_and(on_get, it->second);
+		return at_and(on_get, m_it->second);
 	}
 };
 
