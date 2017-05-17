@@ -380,7 +380,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 					{
 						lock_database lk_db(this);
-						doc_revision = database->get_revision_document(prefixed_term_id);
+						doc_revision = database->get_document_change_seq(prefixed_term_id);
 					}
 					obj = run_script(obj, prefixed_term_id);
 					if (!obj.is_map()) {
@@ -435,7 +435,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 					{
 						lock_database lk_db(this);
-						doc_revision = database->get_revision_document(prefixed_term_id);
+						doc_revision = database->get_document_change_seq(prefixed_term_id);
 					}
 #endif
 				}
@@ -464,7 +464,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 			lock_database lk_db(this);
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-			if (database->set_revision_document(prefixed_term_id, doc_revision)) {
+			if (database->set_document_change_seq(prefixed_term_id, doc_revision)) {
 #endif
 				try {
 					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
@@ -483,7 +483,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 	} catch (...) {
 		if (!prefixed_term_id.empty()) {
 			lock_database lk_db(this);
-			database->dec_count_document(prefixed_term_id);
+			database->dec_document_count(prefixed_term_id);
 		}
 		throw;
 	}

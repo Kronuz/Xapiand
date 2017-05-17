@@ -1803,9 +1803,9 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 short
-Database::get_revision_document(const std::string& term_id)
+Database::get_document_change_seq(const std::string& term_id)
 {
-	L_CALL(this, "Database::get_revision_document(%s)", repr(term_id).c_str());
+	L_CALL(this, "Database::get_document_change_seq(%s)", repr(term_id).c_str());
 
 	auto it = documents.find(term_id);
 	if (it == documents.end()) {
@@ -1819,7 +1819,7 @@ Database::get_revision_document(const std::string& term_id)
 
 
 bool
-Database::set_revision_document(const std::string& term_id, short old_revision)
+Database::set_document_change_seq(const std::string& term_id, short old_revision)
 {
 	L_CALL(this, "Database::set_revision_document(%s, %d)", repr(term_id).c_str(), old_revision);
 
@@ -1844,9 +1844,9 @@ Database::set_revision_document(const std::string& term_id, short old_revision)
 
 
 void
-Database::dec_count_document(const std::string& term_id)
+Database::dec_document_count(const std::string& term_id)
 {
-	L_CALL(this, "Database::dec_count_document(%s)", repr(term_id).c_str());
+	L_CALL(this, "Database::dec_document_count(%s)", repr(term_id).c_str());
 
 	auto it = documents.find(term_id);
 	if (it != documents.end()) {

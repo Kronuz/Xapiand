@@ -337,9 +337,9 @@ public:
 	}
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-	void dec_count_document(const std::string& term_id);
-	short get_revision_document(const std::string& term_id);
-	bool set_revision_document(const std::string& term_id, short old_revision);
+	void dec_document_count(const std::string& term_id);
+	short get_document_change_seq(const std::string& term_id);
+	bool set_document_change_seq(const std::string& term_id, short old_revision);
 #endif
 };
 
