@@ -207,17 +207,25 @@ template<typename T>
 inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, const std::string& last_delimiter)
 {
 	std::string result;
-	auto values_size = values.size();
-	for (typename std::vector<T>::size_type idx = 0; idx < values_size; ++idx) {
-		if (idx) {
-			if (idx == values_size - 1) {
-				result += last_delimiter;
-			} else {
-				result += delimiter;
-			}
-		}
-		result += std::to_string(values[idx]);
+	auto it = values.begin();
+	auto it_e = values.end();
+
+	auto rit = values.rbegin();
+	auto rit_e = values.rend();
+	if (rit != rit_e) ++rit;
+	if (rit != rit_e) ++rit;
+	auto it_l = rit != rit_e ? rit.base() : it_e;
+
+	if (it != it_e) {
+		result += std::to_string(*it++);
 	}
+	for (; it != it_l; ++it) {
+		result += delimiter + std::to_string(*it);
+	}
+	if (it != it_e) {
+		result += last_delimiter + std::to_string(*it);
+	}
+
 	return result;
 }
 
@@ -225,6 +233,20 @@ inline std::string join_string(const std::vector<T>& values, const std::string& 
 template<typename T>
 inline std::string join_string(const std::vector<T>& values, const std::string& delimiter) {
 	return join_string(values, delimiter, delimiter);
+}
+
+
+template<typename T, typename UnaryPredicate, typename = std::enable_if_t<is_callable<UnaryPredicate, T>::value>>
+inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, const std::string& last_delimiter, UnaryPredicate pred) {
+	std::vector<T> filtered_values(values.size());
+	std::remove_copy_if(values.begin(), values.end(), filtered_values.begin(), pred);
+	return join_string(filtered_values, delimiter, last_delimiter);
+}
+
+
+template<typename T, typename UnaryPredicate, typename = std::enable_if_t<is_callable<UnaryPredicate, T>::value>>
+inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, UnaryPredicate pred) {
+	return join_string(values, delimiter, delimiter, pred);
 }
 
 
