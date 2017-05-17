@@ -99,11 +99,16 @@ public:
 		return it->second;
 	}
 
+	void erase(const iterator& it) {
+		_items_map.erase(it->first);
+		_items_list.erase(it->second);
+	}
+
 	size_t erase(const Key& key) {
 		auto it(_items_map.find(key));
 		if (it != _items_map.end()) {
-			_items_list.erase(it->second);
 			_items_map.erase(it);
+			_items_list.erase(it->second);
 			return 1;
 		}
 		return 0;
