@@ -1617,20 +1617,45 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 			}
 		}
 	} else {
+		auto global_type = specification_t::global_type(specification.sep_types[2]);
 		if (specification.flags.uuid_path) {
 			switch (specification.index_uuid_field) {
 				case UUIDFieldIndex::UUID:
-					if (toUType(specification.index & TypeIndex::VALUES)) {
+					if (specification.prefix.uuid.empty()) {
+						if (specification.sep_types[2] == global_type) {
+							// Use specification directly because path has never been indexed as UIDFieldIndex::BOTH and type is the same as global_type.
+							if (toUType(specification.index & TypeIndex::VALUES)) {
+								specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+								for (auto& acc_prefix : specification.acc_prefix) {
+									acc_prefix.insert(0, specification.prefix.field);
+								}
+							}
+						} else if (toUType(specification.index & TypeIndex::VALUES)) {
+							specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.field));
+						} else {
+							specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
+						}
+					} else if (toUType(specification.index & TypeIndex::VALUES)) {
 						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.uuid));
 					} else {
-						specification.partial_index_spcs.emplace_back(specification_t::global_type(specification.sep_types[2]), specification.prefix.uuid);
+						specification.partial_index_spcs.emplace_back(global_type, specification.prefix.uuid);
 					}
 					break;
 				case UUIDFieldIndex::UUID_FIELD:
-					if (toUType(specification.index & TypeIndex::VALUES)) {
+					if (specification.sep_types[2] == global_type) {
+						// Use specification directly because type is the same as global_type.
+						if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+							if (specification.flags.has_uuid_prefix) {
+								specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+							}
+							for (auto& acc_prefix : specification.acc_prefix) {
+								acc_prefix.insert(0, specification.prefix.field);
+							}
+						}
+					} else if (toUType(specification.index & TypeIndex::VALUES)) {
 						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.field));
 					} else {
-						specification.partial_index_spcs.emplace_back(specification_t::global_type(specification.sep_types[2]), specification.prefix.field);
+						specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
 					}
 					break;
 				case UUIDFieldIndex::BOTH:
@@ -1638,16 +1663,24 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.field));
 						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.uuid));
 					} else {
-						auto global_type = specification_t::global_type(specification.sep_types[2]);
 						specification.partial_index_spcs.emplace_back(global_type, std::move(specification.prefix.field));
 						specification.partial_index_spcs.emplace_back(global_type, specification.prefix.uuid);
 					}
 					break;
 			}
-		} else if (toUType(specification.index & TypeIndex::VALUES)) {
-			specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.field));
 		} else {
-			specification.partial_index_spcs.emplace_back(specification_t::global_type(specification.sep_types[2]), specification.prefix.field);
+			if (specification.sep_types[2] == global_type) {
+				// Use specification directly because path is not uuid and type is the same as global_type.
+				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+					for (auto& acc_prefix : specification.acc_prefix) {
+						acc_prefix.insert(0, specification.prefix.field);
+					}
+				}
+			} else if (toUType(specification.index & TypeIndex::VALUES)) {
+				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.field));
+			} else {
+				specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
+			}
 		}
 	}
 
