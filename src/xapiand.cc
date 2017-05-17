@@ -71,6 +71,9 @@
 #define FDS_PER_CLIENT    2          // KQUEUE + IPv4
 #define FDS_PER_DATABASE  7          // Writable~=7, Readable~=5
 
+#define CONFIG_DEFAULT_MAX_CLIENTS 1000
+#define CONFIG_DEFAULT_MAX_FILES   (FDS_RESERVED + ((DBPOOL_SIZE + 2) * FDS_PER_DATABASE) + ((CONFIG_DEFAULT_MAX_CLIENTS + 2) * FDS_PER_CLIENT))
+
 
 using namespace TCLAP;
 
@@ -543,12 +546,12 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		ValueArg<std::string> use("", "use", "Connection processing backend.", false, "auto", &constraint, cmd);
 
 		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
-		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
+		ValueArg<size_t> dbpool_size("", "dbpool_size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
 		ValueArg<size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
 		ValueArg<size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
 		ValueArg<size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
-		ValueArg<size_t> max_clients("", "maxclients", "Max number of clients.", false, CONFIG_DEFAULT_MAX_CLIENTS, "maxclients", cmd);
-		ValueArg<size_t> max_files("", "maxfiles", "Max number of files to open.", false, CONFIG_DEFAULT_MAX_FILES, "maxfiles", cmd);
+		ValueArg<size_t> max_clients("", "max_clients", "Max number of clients.", false, CONFIG_DEFAULT_MAX_CLIENTS, "clients", cmd);
+		ValueArg<size_t> max_files("", "max_files", "Max number of files to open.", false, 0, "files", cmd);
 
 		std::vector<std::string> args;
 		for (int i = 0; i < argc; ++i) {
@@ -645,70 +648,177 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
  * max number of clients, the function will do the reverse setting
  * to the value that we can actually handle.
  */
+#include <sys/sysctl.h>
 void adjustOpenFilesLimit(opts_t &opts) {
-	rlim_t maxfiles = opts.max_files;
-	struct rlimit limit;
 
-	if (getrlimit(RLIMIT_NOFILE, &limit) == -1) {
-		L_WARNING(nullptr, "Unable to obtain the current NOFILE limit (%s), assuming %d and setting the max clients configuration accordingly", strerror(errno), opts.max_files);
-		auto _max_clients = (opts.max_files - FDS_RESERVED) / FDS_PER_CLIENT;
-		if (_max_clients < opts.max_clients) {
-			opts.max_clients = _max_clients;
+	// Try getting the currently available number of files:
+	int32_t openfiles = 0;
+	int32_t maxfiles = 0;
+	size_t size = sizeof(openfiles);
+#if defined(__APPLE__) || defined(__FreeBSD__)
+	if (sysctlbyname("kern.maxfilesperproc", &maxfiles, &size, NULL, 0) != 0) {
+		if (sysctlbyname("kern.maxfiles", &maxfiles, &size, NULL, 0) != 0) { }
+	}
+	if (sysctlbyname("kern.openfiles", &openfiles, &size, NULL, 0) != 0) {
+		if (sysctlbyname("kern.num_files", &openfiles, &size, NULL, 0) != 0) { }
+	}
+#endif
+	ssize_t available_files = maxfiles - openfiles;
+
+
+	// Try calculating minimum and recommended number of files:
+	ssize_t new_dbpool_size;
+	ssize_t new_max_clients;
+	ssize_t files = 1;
+	ssize_t minimum_files = 1;
+	ssize_t recommended_files = 1;
+
+	while (true) {
+		ssize_t used_files = FDS_RESERVED;
+
+		used_files += FDS_PER_DATABASE;
+		new_dbpool_size = (files - used_files) / FDS_PER_DATABASE;
+		if (new_dbpool_size > opts.dbpool_size) {
+			new_dbpool_size = opts.dbpool_size;
 		}
-		auto _dbpool_size = (opts.max_files - FDS_RESERVED) / FDS_PER_DATABASE;
-		if (_dbpool_size < opts.dbpool_size) {
-			opts.dbpool_size = _dbpool_size;
+		used_files += (new_dbpool_size + 1) * FDS_PER_DATABASE;
+
+		used_files += FDS_PER_CLIENT;
+		new_max_clients = (files - used_files) / FDS_PER_CLIENT;
+		if (new_max_clients > opts.max_clients) {
+			new_max_clients = opts.max_clients;
 		}
-	} else {
-		rlim_t oldlimit = limit.rlim_cur;
+		used_files += (new_max_clients + 1) * FDS_PER_CLIENT;
 
-		/* Set the max number of files if the current limit is not enough
-		* for our needs. */
-		if (oldlimit < maxfiles) {
-			rlim_t bestlimit;
-			int setrlimit_error = 0;
-
-			/* Try to set the file limit to match 'maxfiles' or at least
-			* to the higher value supported less than maxfiles. */
-			bestlimit = maxfiles;
-			while (bestlimit > oldlimit) {
-				rlim_t decr_step = 16;
-
-				limit.rlim_cur = bestlimit;
-				limit.rlim_max = bestlimit;
-				if (setrlimit(RLIMIT_NOFILE,&limit) != -1) break;
-				setrlimit_error = errno;
-
-				/* We failed to set file limit to 'bestlimit'. Try with a
-				* smaller limit decrementing by a few FDs per iteration. */
-				if (bestlimit < decr_step) break;
-				bestlimit -= decr_step;
-			}
-
-			/* Assume that the limit we get initially is still valid if
-			* our last try was even lower. */
-			if (bestlimit < oldlimit) {
-				bestlimit = oldlimit;
-			}
-
-			if (bestlimit < maxfiles) {
-				int old_maxclients = opts.max_clients;
-				opts.max_clients = bestlimit - FDS_RESERVED;
-
-				if (opts.max_clients < 1) {
-					L_WARNING(nullptr, "Your current 'ulimit -n' of %llu is not enough for the server to start. Please increase your open file limit to at least %llu",
-						(unsigned long long) oldlimit,
-						(unsigned long long) maxfiles);
-					throw Exit(EX_OSFILE);
-				}
-				L_WARNING(nullptr, "You requested maxclients of %d requiring at least %llu max file descriptors", old_maxclients, (unsigned long long) maxfiles);
-				L_WARNING(nullptr, "Server can't set maximum open files to %llu because of OS error: %s", (unsigned long long) maxfiles, strerror(setrlimit_error));
-				L_WARNING(nullptr, "Current maximum open files is %llu maxclients has been reduced to %d to compensate for low ulimit. If you need higher maxclients increase 'ulimit -n'", (unsigned long long) bestlimit, opts.max_clients);
-			} else {
-				L_INFO(nullptr, "Increased maximum number of open files to %llu (it was originally set to %llu)", (unsigned long long) maxfiles, (unsigned long long) oldlimit);
-			}
+		if (new_dbpool_size < 1 || new_max_clients < 1) {
+			files = minimum_files = used_files;
+		} else if (new_dbpool_size < opts.dbpool_size || new_max_clients < opts.max_clients) {
+			files = recommended_files = used_files;
+		} else {
+			break;
 		}
 	}
+
+
+	// Calculate max_files (from configuration, recommended and available numbers):
+	ssize_t max_files = opts.max_files;
+	if (max_files) {
+		// Decrese whatever the user requested to the amount of available files:
+		if (max_files > available_files) {
+			L_WARNING(nullptr, "Requested maximum number of files (%zd) capped to the maximum number of currently available files (%zd)", max_files, available_files);
+			max_files = available_files;
+		}
+	} else {
+		if (max_files < recommended_files) {
+			max_files = recommended_files;
+		}
+		if (max_files > available_files) {
+			max_files = available_files;
+		}
+	}
+
+
+	// Try getting current limit of files:
+	rlim_t limit_cur_files;
+	struct rlimit limit;
+	if (getrlimit(RLIMIT_NOFILE, &limit) == -1) {
+		limit_cur_files = available_files;
+		if (!limit_cur_files) {
+			limit_cur_files = 4000;
+		}
+		L_WARNING(nullptr, "Unable to obtain the current NOFILE limit (%s), assuming %d", strerror(errno), limit_cur_files);
+	} else {
+		limit_cur_files = limit.rlim_cur;
+	}
+
+
+	// Set the the max number of files:
+	// Increase if the current limit is not enough for our needs or
+	// decrease if the user requests it.
+	if (opts.max_files || limit_cur_files < max_files) {
+		bool increasing = limit_cur_files < max_files;
+
+		const rlim_t step = 16;
+		int setrlimit_error = 0;
+
+		// Try to set the file limit to match 'max_files' or at least to the higher value supported less than max_files.
+		rlim_t new_max_files = max_files;
+		while (new_max_files != limit_cur_files) {
+			limit.rlim_cur = new_max_files;
+			limit.rlim_max = new_max_files;
+			if (setrlimit(RLIMIT_NOFILE, &limit) != -1) {
+				max_files = new_max_files;
+				if (increasing) {
+					L_INFO(nullptr, "Increased maximum number of open files to %zd (it was originally set to %zd)", max_files, (size_t)limit_cur_files);
+				} else {
+					L_INFO(nullptr, "Decresed maximum number of open files to %zd (it was originally set to %zd)", max_files, (size_t)limit_cur_files);
+				}
+				break;
+			}
+
+			// We failed to set file limit to 'new_max_files'. Try with a smaller limit decrementing by a few FDs per iteration.
+			setrlimit_error = errno;
+			if (!increasing || new_max_files < step) {
+				// Assume that the limit we get initially is still valid if our last try was even lower.
+				new_max_files = limit_cur_files;
+				break;
+			}
+			new_max_files -= step;
+		}
+
+		if (setrlimit_error) {
+			L_WARNING(nullptr, "Server can't set maximum open files to %zd because of OS error: %s", max_files, strerror(setrlimit_error));
+		}
+	}
+
+
+	// Calculate dbpool_size and max_clients from current max_files:
+	files = max_files;
+	ssize_t used_files = FDS_RESERVED;
+	used_files += FDS_PER_DATABASE;
+	new_dbpool_size = (files - used_files) / FDS_PER_DATABASE;
+	if (new_dbpool_size > opts.dbpool_size) {
+		new_dbpool_size = opts.dbpool_size;
+	}
+	used_files += (new_dbpool_size + 1) * FDS_PER_DATABASE;
+	used_files += FDS_PER_CLIENT;
+	new_max_clients = (files - used_files) / FDS_PER_CLIENT;
+	if (new_max_clients > opts.max_clients) {
+		new_max_clients = opts.max_clients;
+	}
+
+
+	// Warn about changes to the configured dbpool_size or max_clients:
+	if (new_dbpool_size < opts.dbpool_size) {
+		L_WARNING(nullptr, "You requested a dbpool_size of %zd requiring at least %zd max file descriptors", opts.dbpool_size, (opts.dbpool_size + 1) * FDS_PER_DATABASE  + FDS_RESERVED);
+		L_WARNING(nullptr, "Current maximum open files is %zd so dbpool_size has been reduced to %zd to compensate for low limit.", max_files, new_dbpool_size);
+	}
+	if (new_max_clients < opts.max_clients) {
+		L_WARNING(nullptr, "You requested max_clients of %zd requiring at least %zd max file descriptors", opts.max_clients, (opts.max_clients + 1) * FDS_PER_CLIENT + FDS_RESERVED);
+		L_WARNING(nullptr, "Current maximum open files is %zd so max_clients has been reduced to %zd to compensate for low limit.", max_files, new_max_clients);
+	}
+
+	// Warn about minimum/recommended sizes:
+	if (max_files < minimum_files) {
+		L_ERR(nullptr, "Your current 'ulimit -n' of %zd is not enough for the server to start. Please increase your open file limit to at least %zd",
+			max_files,
+			minimum_files);
+		throw Exit(EX_OSFILE);
+	} else if (max_files < recommended_files) {
+		L_WARNING(nullptr, "Your current max_files of %zd is not enough. Please increase your open file limit to at least %zd",
+			max_files,
+			recommended_files);
+	}
+
+	if ((new_dbpool_size < opts.dbpool_size || new_max_clients < opts.max_clients) && (!opts.max_files || max_files < opts.max_files)) {
+		L_WARNING(nullptr, "If you need higher dbpool_size or max_clients increase 'ulimit -n'");
+	}
+
+
+	// Set new values:
+	opts.max_files = max_files;
+	opts.dbpool_size = new_dbpool_size;
+	opts.max_clients = new_max_clients;
 }
 
 

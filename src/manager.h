@@ -63,15 +63,15 @@ struct opts_t {
 	std::string gid;
 	std::string discovery_group;
 	std::string raft_group;
-	size_t num_servers;
-	size_t dbpool_size;
-	size_t num_replicators;
-	size_t threadpool_size;
-	size_t endpoints_list_size;
-	size_t num_committers;
-	size_t num_fsynchers;
-	size_t max_clients;
-	size_t max_files;
+	ssize_t num_servers;
+	ssize_t dbpool_size;
+	ssize_t num_replicators;
+	ssize_t threadpool_size;
+	ssize_t endpoints_list_size;
+	ssize_t num_committers;
+	ssize_t num_fsynchers;
+	ssize_t max_clients;
+	ssize_t max_files;
 	unsigned int ev_flags;
 };
 
