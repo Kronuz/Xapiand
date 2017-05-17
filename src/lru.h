@@ -135,9 +135,9 @@ public:
 		erase(p.first);
 		trim();
 		_items_list.push_front(std::forward<P>(p));
-		auto first(_items_list.begin());
-		_items_map[first->first] = first;
-		return first->second;
+		auto it(_items_list.begin());
+		_items_map[it->first] = it;
+		return it->second;
 	}
 
 	template<typename P>
@@ -146,8 +146,9 @@ public:
 		trim();
 		_items_list.push_back(std::forward<P>(p));
 		auto last(_items_list.rbegin());
-		_items_map[last->first] = --last.base();
-		return last->second;
+		auto it = --last.base();
+		_items_map[it->first] = it;
+		return it->second;
 	}
 
 	template<typename... Args>
@@ -253,9 +254,9 @@ public:
 		erase(p.first);
 		trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
 		_items_list.push_front(std::forward<P>(p));
-		auto first(_items_list.begin());
-		_items_map[first->first] = first;
-		return first->second;
+		auto it(_items_list.begin());
+		_items_map[it->first] = it;
+		return it->second;
 	}
 
 	template<typename OnDrop, typename P>
@@ -264,8 +265,9 @@ public:
 		trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
 		_items_list.push_back(std::forward<P>(p));
 		auto last(_items_list.rbegin());
-		_items_map[last->first] = --last.base();
-		return last->second;
+		auto it = --last.base();
+		_items_map[it->first] = it;
+		return it->second;
 	}
 
 	template<typename OnDrop, typename... Args>
