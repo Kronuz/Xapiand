@@ -63,7 +63,9 @@ public:
 	using const_iterator = typename list_t::const_iterator;
 
 	LRU(ssize_t max_size=-1)
-		: _max_size(max_size) { }
+		: _max_size(max_size) {
+		ASSERT(_max_size != 0);
+	}
 
 	virtual ~LRU() = default;
 
