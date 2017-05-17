@@ -1284,7 +1284,6 @@ Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& 
 
 				update_specification(*properties);
 				process_properties_document(item, fields);
-				update_prefixes();
 
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
 
