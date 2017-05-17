@@ -1668,7 +1668,8 @@ Schema::complete_specification(const MsgPack& item_value)
 		auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
 		specification.partial_index_spcs.reserve(paths.size());
 		paths.erase(specification.prefix.field);
-		if (!specification.local_prefix.uuid.empty()) { // local prefix tell us if the last field is indexed like uuid BOTH.
+		if (!specification.local_prefix.uuid.empty()) {
+			// local_prefix.uuid tell us if the last field is indexed as UIDFieldIndex::BOTH.
 			paths.erase(specification.prefix.uuid);
 		}
 
@@ -1686,31 +1687,28 @@ Schema::complete_specification(const MsgPack& item_value)
 
 	if (specification.flags.uuid_path) {
 		switch (specification.index_uuid_field) {
-			case UUIDFieldIndex::UUID: {
+			case UUIDFieldIndex::UUID:
 				if (specification.prefix.uuid.empty()) {
-					// Use prefix.field because path has never been indexed as BOTH.
+					// Use specification directly because path has never been indexed as UIDFieldIndex::BOTH.
 					if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 						specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
 						for (auto& acc_prefix : specification.acc_prefix) {
 							acc_prefix.insert(0, specification.prefix.field);
 						}
 					}
-				} else {
-					// Add a partial_index_spc because the prefix.field need to be reseted.
-					if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-						index_spc_t spc_uuid(specification.sep_types[2], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
-							specification.accuracy, specification.acc_prefix);
-						for (auto& acc_prefix : spc_uuid.acc_prefix) {
-							acc_prefix.insert(0, spc_uuid.prefix);
-						}
-						specification.partial_index_spcs.push_back(std::move(spc_uuid));
-					} else {
-						specification.partial_index_spcs.emplace_back(specification.sep_types[2], specification.prefix.uuid);
+				} else if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+					index_spc_t spc_uuid(specification.sep_types[2], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
+						specification.accuracy, specification.acc_prefix);
+					for (auto& acc_prefix : spc_uuid.acc_prefix) {
+						acc_prefix.insert(0, spc_uuid.prefix);
 					}
+					specification.partial_index_spcs.push_back(std::move(spc_uuid));
+				} else {
+					specification.partial_index_spcs.emplace_back(specification.sep_types[2], specification.prefix.uuid);
 				}
 				break;
-			}
-			case UUIDFieldIndex::UUID_FIELD: {
+			case UUIDFieldIndex::UUID_FIELD:
+				// Use specification directly.
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 					if (specification.flags.has_uuid_prefix) {
 						specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
@@ -1720,8 +1718,7 @@ Schema::complete_specification(const MsgPack& item_value)
 					}
 				}
 				break;
-			}
-			case UUIDFieldIndex::BOTH: {
+			case UUIDFieldIndex::BOTH:
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 					index_spc_t spc_field(specification.sep_types[2], specification.prefix.field,
 						specification.flags.has_uuid_prefix ? get_slot(specification.prefix.field, specification.get_ctype()) : specification.slot,
@@ -1741,7 +1738,6 @@ Schema::complete_specification(const MsgPack& item_value)
 					specification.partial_index_spcs.emplace_back(specification.sep_types[2], specification.prefix.uuid);
 				}
 				break;
-			}
 		}
 	} else {
 		if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
