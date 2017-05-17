@@ -163,12 +163,12 @@ public:
 		return insert_back(std::make_pair(std::forward<Args>(args)...));
 	}
 
-	T& at(iterator& it) {
+	T& at(iterator it) {
 		_items_list.splice(_items_list.begin(), _items_list, it);
 		return it->second;
 	}
 
-	const T& at(const_iterator& it) const {
+	const T& at(const_iterator it) const {
 		return it->second;
 	}
 
@@ -327,7 +327,7 @@ public:
 	}
 
 	template<typename OnGet>
-	T& at_and(const OnGet& on_get, iterator& it) {
+	T& at_and(const OnGet& on_get, iterator it) {
 		T& ref = it->second;
 		switch (on_get(ref)) {
 			case GetAction::leave:
