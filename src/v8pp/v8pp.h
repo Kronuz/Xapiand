@@ -127,7 +127,7 @@ class Processor {
 
 	class ScriptLRU : public lru::LRU<size_t, std::shared_ptr<v8pp::Processor>> {
 	public:
-		ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { }
+		ScriptLRU(ssize_t max_size) : LRU(max_size) { }
 	};
 
 
@@ -141,8 +141,9 @@ class Processor {
 	public:
 		v8::Isolate::CreateParams create_params;
 
-		V8Engine()
-			: platform(v8::platform::CreateDefaultPlatform())
+		V8Engine(ssize_t max_size=-1)
+			: platform(v8::platform::CreateDefaultPlatform()),
+			  script_lru(max_size)
 		{
 			create_params.array_buffer_allocator = &allocator;
 			v8::V8::InitializePlatform(platform);
