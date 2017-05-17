@@ -107,10 +107,10 @@ public:
 	}
 
 	size_t erase(const Key& key) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it != _items_map.end()) {
-			_items_map.erase(m_it);
 			_items_list.erase(m_it->second);
+			_items_map.erase(m_it);
 			return 1;
 		}
 		return 0;
