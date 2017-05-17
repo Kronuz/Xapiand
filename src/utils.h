@@ -42,9 +42,6 @@
 #include "split.h"      // for Split
 
 
-#define RESERVED_FDS  50 /* Better approach? */
-
-
 /* Strict converter for unsigned types */
 #define stoux(func, s) \
 	[](const std::string& str) { \
@@ -311,8 +308,6 @@ std::string delta_string(long double nanoseconds, bool colored=false);
 std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored=false);
 
 void _tcp_nopush(int sock, int optval);
-
-void adjustOpenFilesLimit(size_t& max_clients);
 
 unsigned long long file_descriptors_cnt();
 

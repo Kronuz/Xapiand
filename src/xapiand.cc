@@ -67,6 +67,10 @@
 
 #define LINE_LENGTH 78
 
+#define FDS_RESERVED     50          // Is there a better approach?
+#define FDS_PER_CLIENT    2          // KQUEUE + IPv4
+#define FDS_PER_DATABASE  7          // Writable~=7, Readable~=5
+
 
 using namespace TCLAP;
 
@@ -544,6 +548,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		ValueArg<size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
 		ValueArg<size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
 		ValueArg<size_t> max_clients("", "maxclients", "Max number of clients.", false, CONFIG_DEFAULT_MAX_CLIENTS, "maxclients", cmd);
+		ValueArg<size_t> max_files("", "maxfiles", "Max number of files to open.", false, CONFIG_DEFAULT_MAX_FILES, "maxfiles", cmd);
 
 		std::vector<std::string> args;
 		for (int i = 0; i < argc; ++i) {
@@ -611,6 +616,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.num_committers = num_committers.getValue();
 		opts.num_fsynchers = num_fsynchers.getValue();
 		opts.max_clients = max_clients.getValue();
+		opts.max_files = max_files.getValue();
 		opts.threadpool_size = THEADPOOL_SIZE;
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
 		if (opts.detach) {
@@ -624,6 +630,84 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.ev_flags = ev_backend(use.getValue());
 	} catch (const ArgException& exc) { // catch any exceptions
 		std::cerr << "error: " << exc.error() << " for arg " << exc.argId() << std::endl;
+	}
+}
+
+
+/*
+ * From https://github.com/antirez/redis/blob/b46239e58b00774d121de89e0e033b2ed3181eb0/src/server.c#L1496
+ *
+ * This function will try to raise the max number of open files accordingly to
+ * the configured max number of clients. It also reserves a number of file
+ * descriptors for extra operations of persistence, listening sockets, log files and so forth.
+ *
+ * If it will not be possible to set the limit accordingly to the configured
+ * max number of clients, the function will do the reverse setting
+ * to the value that we can actually handle.
+ */
+void adjustOpenFilesLimit(opts_t &opts) {
+	rlim_t maxfiles = opts.max_files;
+	struct rlimit limit;
+
+	if (getrlimit(RLIMIT_NOFILE, &limit) == -1) {
+		L_WARNING(nullptr, "Unable to obtain the current NOFILE limit (%s), assuming %d and setting the max clients configuration accordingly", strerror(errno), opts.max_files);
+		auto _max_clients = (opts.max_files - FDS_RESERVED) / FDS_PER_CLIENT;
+		if (_max_clients < opts.max_clients) {
+			opts.max_clients = _max_clients;
+		}
+		auto _dbpool_size = (opts.max_files - FDS_RESERVED) / FDS_PER_DATABASE;
+		if (_dbpool_size < opts.dbpool_size) {
+			opts.dbpool_size = _dbpool_size;
+		}
+	} else {
+		rlim_t oldlimit = limit.rlim_cur;
+
+		/* Set the max number of files if the current limit is not enough
+		* for our needs. */
+		if (oldlimit < maxfiles) {
+			rlim_t bestlimit;
+			int setrlimit_error = 0;
+
+			/* Try to set the file limit to match 'maxfiles' or at least
+			* to the higher value supported less than maxfiles. */
+			bestlimit = maxfiles;
+			while (bestlimit > oldlimit) {
+				rlim_t decr_step = 16;
+
+				limit.rlim_cur = bestlimit;
+				limit.rlim_max = bestlimit;
+				if (setrlimit(RLIMIT_NOFILE,&limit) != -1) break;
+				setrlimit_error = errno;
+
+				/* We failed to set file limit to 'bestlimit'. Try with a
+				* smaller limit decrementing by a few FDs per iteration. */
+				if (bestlimit < decr_step) break;
+				bestlimit -= decr_step;
+			}
+
+			/* Assume that the limit we get initially is still valid if
+			* our last try was even lower. */
+			if (bestlimit < oldlimit) {
+				bestlimit = oldlimit;
+			}
+
+			if (bestlimit < maxfiles) {
+				int old_maxclients = opts.max_clients;
+				opts.max_clients = bestlimit - FDS_RESERVED;
+
+				if (opts.max_clients < 1) {
+					L_WARNING(nullptr, "Your current 'ulimit -n' of %llu is not enough for the server to start. Please increase your open file limit to at least %llu",
+						(unsigned long long) oldlimit,
+						(unsigned long long) maxfiles);
+					throw Exit(EX_OSFILE);
+				}
+				L_WARNING(nullptr, "You requested maxclients of %d requiring at least %llu max file descriptors", old_maxclients, (unsigned long long) maxfiles);
+				L_WARNING(nullptr, "Server can't set maximum open files to %llu because of OS error: %s", (unsigned long long) maxfiles, strerror(setrlimit_error));
+				L_WARNING(nullptr, "Current maximum open files is %llu maxclients has been reduced to %d to compensate for low ulimit. If you need higher maxclients increase 'ulimit -n'", (unsigned long long) bestlimit, opts.max_clients);
+			} else {
+				L_INFO(nullptr, "Increased maximum number of open files to %llu (it was originally set to %llu)", (unsigned long long) maxfiles, (unsigned long long) oldlimit);
+			}
+		}
 	}
 }
 
@@ -889,7 +973,7 @@ int main(int argc, char **argv) {
 	}
 
 	try {
-		adjustOpenFilesLimit(opts.max_clients);
+		adjustOpenFilesLimit(opts);
 		run(opts);
 	} catch (const Exit& exc) {
 		if (opts.detach && !opts.pidfile.empty()) {
