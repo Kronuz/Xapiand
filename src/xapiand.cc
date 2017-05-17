@@ -939,13 +939,13 @@ int main(int argc, char **argv) {
 
 		L_NOTICE(nullptr, Package::STRING + " started.");
 
-		adjustOpenFilesLimit(opts);
-
-		L_INFO(nullptr, "With a maximum of " + join_string(std::vector<std::string>{
-			std::to_string(opts.max_files) + ((opts.max_files == 1) ? " file" : " files"),
-			std::to_string(opts.max_clients) + ((opts.max_clients == 1) ? " client" : " clients"),
-			std::to_string(opts.dbpool_size) + ((opts.dbpool_size == 1) ? " database" : " databases"),
-		}, ", ", " and ", [](const auto& s) { return s.empty(); }));
+		// Flush threshold increased
+		int flush_threshold = 10000;  // Default is 10000 (if no set)
+		const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
+		if (p) flush_threshold = atoi(p);
+		if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", false) == 0) {
+			L_INFO(nullptr, "Increased database flush threshold to 100000 (it was originally set to %d).", flush_threshold);
+		}
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 		if (!opts.chert) {
@@ -961,26 +961,30 @@ int main(int argc, char **argv) {
 			L_INFO(nullptr, "Using Glass databases by default.");
 		}
 
-		// Flush threshold increased
-		int flush_threshold = 10000;  // Default is 10000 (if no set)
-		const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
-		if (p) flush_threshold = atoi(p);
-		if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", false) == 0) {
-			L_INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).", flush_threshold);
-		}
-
+		std::vector<std::string> modes;
 		if (opts.strict) {
-			L_INFO(nullptr, "Using strict mode.");
+			modes.push_back("strict");
 			default_spc.flags.strict = true;
 		}
 
 		if (opts.optimal) {
-			L_INFO(nullptr, "Using optimal mode.");
+			modes.push_back("optimal");
 			default_spc.flags.optimal = true;
 			default_spc.index = TypeIndex::FIELD_ALL;
 			default_spc.flags.text_detection = false;
 			default_spc.index_uuid_field = UUIDFieldIndex::UUID;
 		}
+		if (!modes.empty()) {
+			L_INFO(nullptr, "Activated " + join_string(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
+		}
+
+		adjustOpenFilesLimit(opts);
+
+		L_INFO(nullptr, "With a maximum of " + join_string(std::vector<std::string>{
+			std::to_string(opts.max_files) + ((opts.max_files == 1) ? " file" : " files"),
+			std::to_string(opts.max_clients) + ((opts.max_clients == 1) ? " client" : " clients"),
+			std::to_string(opts.dbpool_size) + ((opts.dbpool_size == 1) ? " database" : " databases"),
+		}, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
 		run(opts);
 
