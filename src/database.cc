@@ -1953,7 +1953,7 @@ DatabasesLRU::DatabasesLRU(ssize_t max_size)
 
 
 std::shared_ptr<DatabaseQueue>&
-DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
+DatabasesLRU::get(size_t hash, bool volatile_)
 {
 	const auto now = std::chrono::system_clock::now();
 
@@ -1961,10 +1961,6 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 		val->renew_time = now;
 		return lru::GetAction::renew;
 	};
-	auto it = find_and(on_get, key.first);
-	if (it != end()) {
-		return it->second;
-	}
 
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
 		if (val->persistent ||
@@ -1984,12 +1980,13 @@ DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 		}
 		return lru::DropAction::stop;
 	};
-	if (key.second) {
-		// Volatile, insert to the back
-		return insert_back_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared())).first->second;
+
+	if (volatile_) {
+		// Volatile, insert default on the back
+		return get_back_and(on_get, on_drop, hash, DatabaseQueue::make_shared());
 	} else {
-		// Non-volatile, insert to the front
-		return insert_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared())).first->second;
+		// Non-volatile, insert default on the front
+		return get_and(on_get, on_drop, hash, DatabaseQueue::make_shared());
 	}
 }
 
@@ -2091,13 +2088,11 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	} catch (const CheckoutError& e) {
 		std::lock_guard<std::mutex> lk(qmtx);
 
-		const auto index = std::make_pair(endpoints.hash(), flags & DB_VOLATILE);
-
 		std::shared_ptr<DatabaseQueue> queue;
 		if (flags & DB_WRITABLE) {
-			queue = writable_databases[index];
+			queue = writable_databases.get(endpoints.hash(), flags & DB_VOLATILE);
 		} else {
-			queue = databases[index];
+			queue = databases.get(endpoints.hash(), flags & DB_VOLATILE);
 		}
 
 		queue->checkin_callbacks.clear();
@@ -2143,20 +2138,20 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	if (!finished) {
 		size_t hash = endpoints.hash();
-		const auto index = std::make_pair(hash, _volatile);
+
 		std::shared_ptr<DatabaseQueue> queue;
 
 		std::unique_lock<std::mutex> lk(qmtx);
 
 		if (writable) {
-			queue = writable_databases[index];
+			queue = writable_databases.get(hash, _volatile);
 			databases.cleanup();
 			if (writable_for_commit && !queue->modified) {
 				L_DATABASE_END(this, "!! ABORTED CHECKOUT DB COMMIT NOT NEEDED [%s]: %s", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 				THROW(CheckoutErrorCommited, "Cannot checkout database: %s (commit)", repr(endpoints.to_string()).c_str());
 			}
 		} else {
-			queue = databases[index];
+			queue = databases.get(hash, _volatile);
 			writable_databases.cleanup();
 		}
 
@@ -2304,9 +2299,9 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 				}
 			}
 		}
-		queue = writable_databases[std::make_pair(database->hash, false)];
+		queue = writable_databases.get(database->hash, false);
 	} else {
-		queue = databases[std::make_pair(database->hash, false)];
+		queue = databases.get(database->hash, false);
 	}
 
 	ASSERT(database->weak_queue.lock() == queue);
@@ -2425,7 +2420,7 @@ DatabasePool::recover_database(const Endpoints& endpoints, int flags)
 		/* Delete the count of the database creation */
 		/* Avoid mismatch between queue size and counter */
 		std::lock_guard<std::mutex> lk(qmtx);
-		databases[std::make_pair(hash, false)]->dec_count();
+		databases.get(hash, false)->dec_count();
 	}
 
 	if ((flags & RECOVER_REMOVE_DATABASE) || (flags & RECOVER_REMOVE_ALL)) {

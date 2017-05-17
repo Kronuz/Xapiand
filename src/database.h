@@ -405,7 +405,7 @@ class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
 public:
 	DatabasesLRU(ssize_t max_size);
 
-	std::shared_ptr<DatabaseQueue>& operator[](const std::pair<size_t, bool>& key);
+	std::shared_ptr<DatabaseQueue>& get(size_t hash, bool volatile_);
 
 	void cleanup();
 
