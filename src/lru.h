@@ -86,7 +86,7 @@ public:
 	}
 
 	iterator find(const Key& key) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			return _items_list.end();
 		}
@@ -96,7 +96,7 @@ public:
 	}
 
 	const_iterator find(const Key& key) const {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.cend()) {
 			return _items_list.cend();
 		}
@@ -121,7 +121,7 @@ public:
 	void trim() {
 		if (_max_size != -1) {
 			auto size = static_cast<ssize_t>(_items_map.size() + 1);
-			auto last(_items_list.rbegin());
+			auto last = _items_list.rbegin();
 			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend() && size > _max_size; --i) {
 				auto it = --last.base();
 				--size;
@@ -137,7 +137,7 @@ public:
 		erase(p.first);
 		trim();
 		_items_list.push_front(std::forward<P>(p));
-		auto it(_items_list.begin());
+		auto it = _items_list.begin();
 		bool created = _items_map.emplace(it->first, it).second;
 		return std::make_pair(it, created);
 	}
@@ -147,7 +147,7 @@ public:
 		erase(p.first);
 		trim();
 		_items_list.push_back(std::forward<P>(p));
-		auto last(_items_list.rbegin());
+		auto last = _items_list.rbegin();
 		auto it = --last.base();
 		bool created = _items_map.emplace(it->first, it).second;
 		return std::make_pair(it, created);
@@ -173,7 +173,7 @@ public:
 	}
 
 	T& at(const Key& key) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
@@ -181,7 +181,7 @@ public:
 	}
 
 	T& at(const Key& key) const {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
@@ -189,7 +189,7 @@ public:
 	}
 
 	T& get(const Key& key, T& default_) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			return emplace(key, default_).first->second;
 		}
@@ -198,7 +198,7 @@ public:
 
 	template<typename... Args>
 	T& get(const Key& key, Args&&... args) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			return emplace(key, T(std::forward<Args>(args)...)).first->second;
 		}
@@ -206,7 +206,7 @@ public:
 	}
 
 	T& get_back(const Key& key, T& default_) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			return emplace_back(key, default_).first->second;
 		}
@@ -215,7 +215,7 @@ public:
 
 	template<typename... Args>
 	T& get_back(const Key& key, Args&&... args) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			return emplace_back(key, T(std::forward<Args>(args)...)).first->second;
 		}
@@ -250,7 +250,7 @@ public:
 	template<typename OnDrop>
 	void trim(const OnDrop& on_drop, ssize_t size) {
 		if (_max_size != -1) {
-			auto last(_items_list.rbegin());
+			auto last = _items_list.rbegin();
 			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend(); --i) {
 				auto it = --last.base();
 				switch (on_drop(it->second, size, _max_size)) {
@@ -282,7 +282,7 @@ public:
 		erase(p.first);
 		trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
 		_items_list.push_front(std::forward<P>(p));
-		auto it(_items_list.begin());
+		auto it = _items_list.begin();
 		bool created = _items_map.emplace(it->first, it).second;
 		return std::make_pair(it, created);
 	}
@@ -292,7 +292,7 @@ public:
 		erase(p.first);
 		trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
 		_items_list.push_back(std::forward<P>(p));
-		auto last(_items_list.rbegin());
+		auto last = _items_list.rbegin();
 		auto it = --last.base();
 		bool created = _items_map.emplace(it->first, it).second;
 		return std::make_pair(it, created);
@@ -310,7 +310,7 @@ public:
 
 	template<typename OnGet>
 	iterator find_and(const OnGet& on_get, const Key& key) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			return _items_list.end();
 		}
@@ -341,7 +341,7 @@ public:
 
 	template<typename OnGet>
 	T& at_and(const OnGet& on_get, const Key& key) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
@@ -350,7 +350,7 @@ public:
 
 	template<typename OnGet, typename OnDrop>
 	T& get_and(const OnGet& on_get, const OnDrop& on_drop, const Key& key, T& default_) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			T& ref = emplace_and(on_drop, key, default_).first->second;
 			switch (on_get(ref)) {
@@ -366,7 +366,7 @@ public:
 
 	template<typename OnGet, typename OnDrop, typename... Args>
 	T& get_and(const OnGet& on_get, const OnDrop& on_drop, const Key& key, Args&&... args) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			T& ref = emplace_and(on_drop, key, T(std::forward<Args>(args)...)).first->second;
 			switch (on_get(ref)) {
@@ -382,7 +382,7 @@ public:
 
 	template<typename OnGet, typename OnDrop>
 	T& get_back_and(const OnGet& on_get, const OnDrop& on_drop, const Key& key, T& default_) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			T& ref = emplace_back_and(on_drop, key, default_).first->second;
 			switch (on_get(ref)) {
@@ -398,7 +398,7 @@ public:
 
 	template<typename OnGet, typename OnDrop, typename... Args>
 	T& get_back_and(const OnGet& on_get, const OnDrop& on_drop, const Key& key, Args&&... args) {
-		auto m_it(_items_map.find(key));
+		auto m_it = _items_map.find(key);
 		if (m_it == _items_map.end()) {
 			T& ref = emplace_back_and(on_drop, key, T(std::forward<Args>(args)...)).first->second;
 			switch (on_get(ref)) {
