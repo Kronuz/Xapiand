@@ -101,7 +101,7 @@ public:
 		return m_it->second;
 	}
 
-	void erase(iterator& it) {
+	void erase(const_iterator it) {
 		_items_map.erase(it->first);
 		_items_list.erase(it->second);
 	}
