@@ -131,7 +131,7 @@ class Processor {
 	};
 
 
-	class V8Engine {
+	class Engine {
 		v8::Platform* platform;
 		ArrayBufferAllocator allocator;
 
@@ -141,7 +141,7 @@ class Processor {
 	public:
 		v8::Isolate::CreateParams create_params;
 
-		V8Engine(ssize_t max_size=-1)
+		Engine(ssize_t max_size)
 			: platform(v8::platform::CreateDefaultPlatform()),
 			  script_lru(max_size)
 		{
@@ -151,7 +151,7 @@ class Processor {
 			v8::V8::Initialize();
 		}
 
-		~V8Engine() {
+		~Engine() {
 			script_lru.clear();
 			v8::V8::Dispose();
 			v8::V8::ShutdownPlatform();
@@ -475,14 +475,9 @@ class Processor {
 		return convert<MsgPack>()(result);
 	}
 
-	static V8Engine& engine() {
-		static V8Engine engine;
-		return engine;
-	}
-
 public:
 	Processor(const std::string& script_name, const std::string& script_source)
-		: isolate(v8::Isolate::New(engine().create_params)),
+		: isolate(v8::Isolate::New(engine(0).create_params)),
 		  finished(false)
 	{
 		Initialize(script_name, script_source);
@@ -514,8 +509,13 @@ public:
 		}
 	}
 
-	static auto compile(const std::string& script_name, const std::string& script) {
-		return engine().compile(script_name, script);
+	static Engine& engine(ssize_t max_size) {
+		static Engine engine(max_size);
+		return engine;
+	}
+
+	static auto compile(const std::string& script_name, const std::string& script_body) {
+		return engine(0).compile(script_name, script_body);
 	}
 };
 

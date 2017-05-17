@@ -213,10 +213,10 @@ DatabaseHandler::get_document_obj(const std::string& term_id)
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 
 template<typename Processor>
-MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script)
+MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script_body)
 {
 	try {
-		auto processor = Processor::compile(script_name, script);
+		auto processor = Processor::compile(script_name, script_body);
 		switch (method) {
 			case HTTP_PUT:
 				try {

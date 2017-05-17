@@ -47,7 +47,7 @@ class Processor {
 		std::mutex mtx;
 
 	public:
-		Engine(ssize_t max_size=-1)
+		Engine(ssize_t max_size)
 			: script_lru(max_size)
 		{ }
 
@@ -67,7 +67,7 @@ class Processor {
 				} catch (...) { }
 				throw;
 			}
-			auto processor = std::make_shared<Processor>(script_body);
+			auto processor = std::make_shared<Processor>(script_name, script_body);
 
 			lk.lock();
 			return script_lru.emplace(script_hash, std::move(processor)).first->second;
@@ -121,16 +121,11 @@ class Processor {
 		}
 	};
 
-	static Engine& engine() {
-		static Engine engine;
-		return engine;
-	}
-
 	chaiscript::ChaiScript chai;
 	std::map<std::string, Function> functions;
 
 public:
-	Processor(const std::string& script_source) {
+	Processor(const std::string&, const std::string& script_source) {
 		try {
 			chai.eval(script_source);
 		} catch (const std::exception& er) {
@@ -151,8 +146,13 @@ public:
 		}
 	}
 
-	static auto compile(const std::string& script_name, const std::string& script) {
-		return engine().compile(script_name, script);
+	static Engine& engine(ssize_t max_size) {
+		static Engine engine(max_size);
+		return engine;
+	}
+
+	static auto compile(const std::string& script_name, const std::string& script_body) {
+		return engine(0).compile(script_name, script_body);
 	}
 };
 
