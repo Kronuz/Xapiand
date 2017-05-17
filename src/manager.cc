@@ -75,6 +75,13 @@
 #include "worker.h"                          // for Worker, enable_make_shared
 
 
+#if defined(XAPIAND_V8)
+#include "v8pp/v8pp.h"
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
+#include "chaipp/chaipp.h"
+#endif
+
 #ifndef L_MANAGER
 #define L_MANAGER_DEFINED
 #define L_MANAGER L_TEST
@@ -647,6 +654,13 @@ XapiandManager::run(const opts_t& o)
 	make_servers(o);
 
 	make_replicators(o);
+
+#if defined(XAPIAND_V8)
+	v8pp::Processor::engine(SCRIPTS_CACHE_SIZE);
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
+	chaipp::Processor::engine(SCRIPTS_CACHE_SIZE);
+#endif
 
 	DatabaseAutocommit::scheduler(o.num_committers);
 
