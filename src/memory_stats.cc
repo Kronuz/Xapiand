@@ -42,21 +42,7 @@
 #endif
 
 
-uint64_t get_total_ram() {
-	int mib[2];
-	int64_t physical_memory;
-	mib[0] = CTL_HW;
-#if defined(__APPLE__)
-	mib[1] = HW_MEMSIZE;
-#elif defined(__FreeBSD__)
-	mib[1] = HW_REALMEM;
-#endif
-	auto length = sizeof(int64_t);
-	sysctl(mib, 2, &physical_memory, &length, NULL, 0);
-	return physical_memory;
-}
-
-#if defined(__APPLE__)
+#ifdef __APPLE__
 std::pair<int64_t, int64_t> get_current_ram() {
 	/* Total ram current in use */
 	vm_size_t page_size;
@@ -86,8 +72,22 @@ uint64_t get_total_virtual_used() {
 	}
 	return vmusage.xsu_used;
 }
-
 #endif
+
+
+uint64_t get_total_ram() {
+	int mib[2];
+	int64_t physical_memory;
+	mib[0] = CTL_HW;
+#if defined(__APPLE__)
+	mib[1] = HW_MEMSIZE;
+#elif defined(__FreeBSD__)
+	mib[1] = HW_REALMEM;
+#endif
+	auto length = sizeof(int64_t);
+	sysctl(mib, 2, &physical_memory, &length, NULL, 0);
+	return physical_memory;
+}
 
 
 uint64_t get_current_memory_by_process(bool resident) {
@@ -105,12 +105,12 @@ uint64_t get_current_memory_by_process(bool resident) {
 	}
 #elif defined(__FreeBSD__)
 	char errbuf[100];
-    struct kinfo_proc *p;
-    int cnt;
+	struct kinfo_proc *p;
+	int cnt;
 
-    kvm_t *kd = kvm_openfiles(NULL, NULL, NULL, O_RDWR, errbuf);
-    p = kvm_getprocs(kd, KERN_PROC_PID | KERN_PROC_INC_THREAD, getpid(), &cnt);
-    return p->ki_rssize * getpagesize();
+	kvm_t *kd = kvm_openfiles(NULL, NULL, NULL, O_RDWR, errbuf);
+	p = kvm_getprocs(kd, KERN_PROC_PID | KERN_PROC_INC_THREAD, getpid(), &cnt);
+	return p->ki_rssize * getpagesize();
 #endif
 }
 
@@ -125,10 +125,10 @@ uint64_t get_total_virtual_memory() {
 	return myFreeSwap;
 #elif defined(__FreeBSD__)
 	int total_pages = 0;
-    size_t len = sizeof(total_pages);
-    if (sysctlbyname("vm.stats.vm.v_page_count", &total_pages, &len, NULL, 0) != 0) {
-        L_ERR(nullptr, "Unable to get v_page count by calling sysctlbyname\n");
-    }
-    return total_pages * getpagesize();
+	size_t len = sizeof(total_pages);
+	if (sysctlbyname("vm.stats.vm.v_page_count", &total_pages, &len, NULL, 0) != 0) {
+		L_ERR(nullptr, "Unable to get v_page count by calling sysctlbyname\n");
+	}
+	return total_pages * getpagesize();
 #endif
 }

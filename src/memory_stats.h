@@ -24,12 +24,14 @@
 
 #include <cstdint>     // for int64_t, uint64_t
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 #include <utility>     // for std::pair
+
 
 std::pair<int64_t, int64_t> get_current_ram();
 uint64_t get_total_virtual_used();
 #endif
+
 
 uint64_t get_total_ram();
 uint64_t get_current_memory_by_process(bool resident=true);
