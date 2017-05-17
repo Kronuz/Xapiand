@@ -69,9 +69,9 @@
 #endif
 
 
+#include <assert.h>
 #ifdef NDEBUG
 #define ASSERT(args...)
 #else
-#include <assert.h>
 #define ASSERT(args...) assert(args)
 #endif
