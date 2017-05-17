@@ -1218,98 +1218,111 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		return;
 	}
 
-	const auto spc_start = specification;
-	auto properties = &*parent_properties;
-	auto data = parent_data;
-
 	switch (object.getType()) {
 		case MsgPack::Type::MAP: {
+			auto spc_start = specification;
+			auto properties = &*parent_properties;
+			auto data = parent_data;
 			FieldVector fields;
 			properties = &get_subproperties(properties, data, name, object, fields);
 			process_item_value(properties, doc, data, fields);
 			if (specification.flags.store && (data->is_undefined() || data->is_null())) {
 				parent_data->erase(name);
 			}
-			break;
+			specification = std::move(spc_start);
+			return;
 		}
 
 		case MsgPack::Type::ARRAY: {
-			properties = &get_subproperties(properties, data, name);
-			index_array(properties, object, data, doc);
-			break;
+			return index_array(parent_properties, object, parent_data, doc, name);
 		}
 
 		case MsgPack::Type::NIL:
-		case MsgPack::Type::UNDEFINED:
+		case MsgPack::Type::UNDEFINED: {
+			auto spc_start = specification;
+			auto properties = &*parent_properties;
+			auto data = parent_data;
 			get_subproperties(properties, data, name);
 			index_partial_paths(doc);
 			if (specification.flags.store) {
 				parent_data->erase(name);
 			}
+			specification = std::move(spc_start);
 			return;
+		}
 
 		default: {
+			auto spc_start = specification;
+			auto properties = &*parent_properties;
+			auto data = parent_data;
 			get_subproperties(properties, data, name);
 			process_item_value(doc, *data, object, 0);
-			break;
+			specification = std::move(spc_start);
+			return;
 		}
 	}
-
-	specification = std::move(spc_start);
 }
 
 
 void
-Schema::index_array(const MsgPack*& properties, const MsgPack& array, MsgPack*& data, Xapian::Document& doc)
+Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL(this, "Schema::index_array(%s, %s, <MsgPack*>, <Xapian::Document>)", repr(properties->to_string()).c_str(), repr(array.to_string()).c_str());
-
-	const auto spc_start = specification;
-	size_t pos = 0;
+	L_CALL(this, "Schema::index_array(%s, %s, <MsgPack*>, <Xapian::Document>, %s)", repr(parent_properties->to_string()).c_str(), repr(array.to_string()).c_str(), repr(name).c_str());
 
 	if (array.empty()) {
 		set_type_to_array();
 		if (specification.flags.store) {
-			*data = MsgPack(MsgPack::Type::ARRAY);
+			(*parent_data)[name] = MsgPack(MsgPack::Type::ARRAY);
 		}
 		return;
 	}
 
+	auto spc_start = specification;
+	size_t pos = 0;
 	for (const auto& item : array) {
 		switch (item.getType()) {
 			case MsgPack::Type::MAP: {
+				auto properties = &*parent_properties;
+				auto data = parent_data;
 				FieldVector fields;
-				specification.value = nullptr;
-				specification.value_rec = nullptr;
-
-				update_specification(*properties);
-				process_properties_document(item, fields);
-
+				properties = &get_subproperties(properties, data, name, item, fields);
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
-
 				process_item_value(properties, doc, data_pos, fields);
-
 				specification = spc_start;
 				break;
 			}
 
 			case MsgPack::Type::ARRAY: {
+				auto properties = &*parent_properties;
+				auto data = parent_data;
+				get_subproperties(properties, data, name);
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
 				process_item_value(doc, data_pos, item);
+				specification = spc_start;
 				break;
 			}
 
 			case MsgPack::Type::NIL:
-			case MsgPack::Type::UNDEFINED:
+			case MsgPack::Type::UNDEFINED: {
+				auto properties = &*parent_properties;
+				auto data = parent_data;
+				get_subproperties(properties, data, name);
 				index_partial_paths(doc);
 				if (specification.flags.store) {
 					(*data)[pos] = item;
 				}
-				return;
-
-			default:
-				process_item_value(doc, specification.flags.store ? (*data)[pos] : *data, item, pos);
+				specification = spc_start;
 				break;
+			}
+
+			default: {
+				auto properties = &*parent_properties;
+				auto data = parent_data;
+				get_subproperties(properties, data, name);
+				process_item_value(doc, specification.flags.store ? (*data)[pos] : *data, item, pos);
+				specification = spc_start;
+				break;
+			}
 		}
 		++pos;
 	}
