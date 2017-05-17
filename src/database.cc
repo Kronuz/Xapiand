@@ -1956,38 +1956,40 @@ std::shared_ptr<DatabaseQueue>&
 DatabasesLRU::operator[](const std::pair<size_t, bool>& key)
 {
 	const auto now = std::chrono::system_clock::now();
-	try {
-		const auto on_get = [now](std::shared_ptr<DatabaseQueue>& val) {
+
+	const auto on_get = [now](std::shared_ptr<DatabaseQueue>& val) {
+		val->renew_time = now;
+		return lru::GetAction::renew;
+	};
+	auto it = find_and(on_get, key.first);
+	if (it != end()) {
+		return it->second;
+	}
+
+	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
+		if (val->persistent ||
+			val->size() < val->count ||
+			val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
 			val->renew_time = now;
-			return lru::GetAction::renew;
-		};
-		return at_and(on_get, key.first);
-	} catch (const std::out_of_range&) {
-		const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
-			if (val->persistent ||
-				val->size() < val->count ||
-				val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
-				val->renew_time = now;
-				return lru::DropAction::renew;
-			}
-			if (size > max_size) {
-				if (val->renew_time < now - 500ms) {
-					return lru::DropAction::evict;
-				}
-				return lru::DropAction::leave;
-			}
-			if (val->renew_time < now - 60s) {
+			return lru::DropAction::renew;
+		}
+		if (size > max_size) {
+			if (val->renew_time < now - 500ms) {
 				return lru::DropAction::evict;
 			}
-			return lru::DropAction::stop;
-		};
-		if (key.second) {
-			// Volatile, insert to the back
-			return insert_back_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared())).first->second;
-		} else {
-			// Non-volatile, insert to the front
-			return insert_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared())).first->second;
+			return lru::DropAction::leave;
 		}
+		if (val->renew_time < now - 60s) {
+			return lru::DropAction::evict;
+		}
+		return lru::DropAction::stop;
+	};
+	if (key.second) {
+		// Volatile, insert to the back
+		return insert_back_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared())).first->second;
+	} else {
+		// Non-volatile, insert to the front
+		return insert_and(on_drop, std::make_pair(key.first, DatabaseQueue::make_shared())).first->second;
 	}
 }
 
