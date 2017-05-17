@@ -69,6 +69,7 @@ struct opts_t {
 	size_t threadpool_size;
 	size_t endpoints_list_size;
 	size_t num_committers;
+	size_t num_fsynchers;
 	size_t max_clients;
 	unsigned int ev_flags;
 };

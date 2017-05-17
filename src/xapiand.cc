@@ -541,7 +541,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
 		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
 		ValueArg<size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
-		ValueArg<size_t> num_committers("", "committers", "Number of committers.", false, NUM_COMMITTERS, "committers", cmd);
+		ValueArg<size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
+		ValueArg<size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
 		ValueArg<size_t> max_clients("", "maxclients", "Max number of clients.", false, CONFIG_DEFAULT_MAX_CLIENTS, "maxclients", cmd);
 
 		std::vector<std::string> args;
@@ -608,6 +609,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.dbpool_size = dbpool_size.getValue();
 		opts.num_replicators = opts.solo ? 0 : num_replicators.getValue();
 		opts.num_committers = num_committers.getValue();
+		opts.num_fsynchers = num_fsynchers.getValue();
 		opts.max_clients = max_clients.getValue();
 		opts.threadpool_size = THEADPOOL_SIZE;
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;

@@ -649,7 +649,8 @@ XapiandManager::run(const opts_t& o)
 	make_replicators(o);
 
 	DatabaseAutocommit::scheduler(o.num_committers);
-	AsyncFsync::scheduler(o.num_committers);
+
+	AsyncFsync::scheduler(o.num_fsynchers);
 
 	std::string msg = "Started " + std::to_string(o.num_servers) + ((o.num_servers == 1) ? " server" : " servers");
 	msg += ", " + std::to_string(o.threadpool_size) +( (o.threadpool_size == 1) ? " worker thread" : " worker threads");
@@ -659,6 +660,7 @@ XapiandManager::run(const opts_t& o)
 	}
 #endif
 	msg += ", " + std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters");
+	msg += ", " + std::to_string(o.num_fsynchers) + ((o.num_fsynchers == 1) ? " fsyncher" : " fsynchers");
 	L_NOTICE(this, msg.c_str());
 
 	if (solo) {
