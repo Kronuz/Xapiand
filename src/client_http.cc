@@ -43,6 +43,7 @@
 #include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
 #endif
 
+#include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "endpoint.h"                       // for Endpoints, Node, Endpoint
 #include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception.h"                      // for Exception, SerialisationE...
@@ -609,9 +610,23 @@ HttpClient::run()
 
 	try {
 		if (Logging::log_level > LOG_DEBUG) {
-			auto msgpack = get_body().second;
-			if (msgpack) {
-				request_body = msgpack.to_string(4);
+			if (content_type.find("image/") != std::string::npos) {
+				// From [https://www.iterm2.com/documentation-images.html]
+				std::string b64_name = cppcodec::base64_rfc4648::encode("");
+				std::string b64_request_body = cppcodec::base64_rfc4648::encode(body);
+				request_body = format_string("\033]1337;File=name=%s;inline=1;size=%d;width=auto:",
+					b64_name.c_str(),
+					b64_request_body.size());
+				request_body += b64_request_body.c_str();
+				request_body += '\a';
+			} else {
+				auto body_ = get_decoded_body();
+				auto msgpack = body_.second;
+				if (msgpack.is_map()) {
+					request_body = msgpack.to_string(4);
+				} else if (!body.empty()) {
+					request_body = "...";
+				}
 			}
 			log_request();
 		}
@@ -912,9 +927,9 @@ HttpClient::_delete(enum http_method method)
 
 
 std::pair<std::string, MsgPack>&
-HttpClient::get_body()
+HttpClient::get_decoded_body()
 {
-	L_CALL(this, "HttpClient::get_body()");
+	L_CALL(this, "HttpClient::get_decoded_body()");
 
 	if (decoded_body.first.empty()) {
 		// Create MsgPack object for the body
@@ -1073,7 +1088,7 @@ HttpClient::index_document_view(enum http_method method, Command)
 
 	operation_begins = std::chrono::system_clock::now();
 
-	auto body_ = get_body();
+	auto body_ = get_decoded_body();
 	MsgPack response;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	bool stored = true;
@@ -1107,7 +1122,7 @@ HttpClient::write_schema_view(enum http_method method, Command)
 	operation_begins = std::chrono::system_clock::now();
 
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	db_handler.write_schema(get_body().second);
+	db_handler.write_schema(get_decoded_body().second);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -1132,7 +1147,7 @@ HttpClient::update_document_view(enum http_method method, Command)
 
 	operation_begins = std::chrono::system_clock::now();
 
-	auto body_ = get_body();
+	auto body_ = get_decoded_body();
 	MsgPack response;
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	if (method == HTTP_PATCH) {
@@ -1408,7 +1423,7 @@ HttpClient::search_view(enum http_method method, Command)
 		if (body.empty()) {
 			mset = db_handler.get_mset(*query_field, nullptr, nullptr, suggestions);
 		} else {
-			auto body_ = get_body();
+			auto body_ = get_decoded_body();
 			AggregationMatchSpy aggs(body_.second, db_handler.get_schema());
 			mset = db_handler.get_mset(*query_field, &body_.second, &aggs, suggestions);
 			aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
@@ -1573,6 +1588,20 @@ HttpClient::search_view(enum http_method method, Command)
 						blob = document.get_blob();
 					}
 					auto blob_data = unserialise_string_at(2, blob);
+					if (Logging::log_level > LOG_DEBUG) {
+						if (ct_type.first == "image") {
+							// From [https://www.iterm2.com/documentation-images.html]
+							std::string b64_name = cppcodec::base64_rfc4648::encode("");
+							std::string b64_response_body = cppcodec::base64_rfc4648::encode(blob_data);
+							response_body = format_string("\033]1337;File=name=%s;inline=1;size=%d;width=auto:",
+								b64_name.c_str(),
+								b64_response_body.size());
+							response_body += b64_response_body.c_str();
+							response_body += '\a';
+						} else if (!blob_data.empty()) {
+							response_body = "...";
+						}
+					}
 					if (type_encoding != Encoding::none) {
 						auto encoded = encoding_http_response(type_encoding, blob_data, false, true, true);
 						if (!encoded.empty() && encoded.size() <= blob_data.size()) {
@@ -2488,10 +2517,22 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 	const auto& accepted_type = get_acceptable_type(ct_types);
 
 	try {
-		if (Logging::log_level > LOG_DEBUG) {
-			response_body += response.to_string(4);
-		}
 		auto result = serialize_response(response, accepted_type, indent, (int)status >= 400);
+		if (Logging::log_level > LOG_DEBUG) {
+			if (is_acceptable_type(accepted_type, json_type)) {
+				response_body += response.to_string(4);
+			} else if (is_acceptable_type(accepted_type, msgpack_type)) {
+				response_body += response.to_string(4);
+			} else if (is_acceptable_type(accepted_type, x_msgpack_type)) {
+				response_body += response.to_string(4);
+			} else if (is_acceptable_type(accepted_type, html_type)) {
+				response_body += response.to_string(4);
+			} else if (is_acceptable_type(accepted_type, text_type)) {
+				response_body += response.to_string(4);
+			} else if (!response.empty()) {
+				response_body += "...";
+			}
+		}
 		if (type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
 			if (!encoded.empty() && encoded.size() <= result.first.size()) {
