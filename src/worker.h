@@ -88,7 +88,7 @@ private:
 	auto __attach(T&& child) {
 		ASSERT(child);
 		auto it = _children.insert(_children.end(), std::forward<T>(child));
-		child->_iterator = it;
+		(*it)->_iterator = it;
 		return it;
 	}
 
