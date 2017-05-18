@@ -2204,7 +2204,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 								std::shared_ptr<Database> d;
 								try {
 									// Checkout executes any commands from the WAL
-									checkout(d, endpoint, DB_WRITABLE);
+									checkout(d, Endpoints(endpoint), DB_WRITABLE);
 									reopen = true;
 									checkin(d);
 								} catch (const CheckoutError&) { }
