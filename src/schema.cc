@@ -1805,10 +1805,10 @@ Schema::set_type_to_object()
 	if unlikely(specification.sep_types[1] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		auto& _types = get_mutable()[RESERVED_TYPE];
 		if (_types.is_undefined()) {
-			_types = MsgPack({ FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY });
+			_types = MsgPack({ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY });
 			specification.sep_types[1] = FieldType::OBJECT;
 		} else {
-			_types[0] = FieldType::OBJECT;
+			_types[1] = FieldType::OBJECT;
 			specification.sep_types[1] = FieldType::OBJECT;
 		}
 	}
@@ -1823,10 +1823,10 @@ Schema::set_type_to_array()
 	if unlikely(specification.sep_types[2] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		auto& _types = get_mutable()[RESERVED_TYPE];
 		if (_types.is_undefined()) {
-			_types = MsgPack({ FieldType::EMPTY, FieldType::ARRAY, FieldType::EMPTY });
+			_types = MsgPack({ FieldType::EMPTY, FieldType::EMPTY, FieldType::ARRAY, FieldType::EMPTY });
 			specification.sep_types[2] = FieldType::ARRAY;
 		} else {
-			_types[1] = FieldType::ARRAY;
+			_types[2] = FieldType::ARRAY;
 			specification.sep_types[2] = FieldType::ARRAY;
 		}
 	}
