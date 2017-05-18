@@ -42,7 +42,7 @@ private:
 public:
 	constexpr atomic_shared_ptr() noexcept = default;
 
-	constexpr atomic_shared_ptr(std::shared_ptr<T> ptr_) noexcept
+	explicit constexpr atomic_shared_ptr(const std::shared_ptr<T>& ptr_) noexcept
 		: ptr(ptr_) { }
 
 	atomic_shared_ptr(atomic_shared_ptr&& o) noexcept

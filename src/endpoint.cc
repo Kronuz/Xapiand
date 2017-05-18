@@ -28,7 +28,7 @@
 #include "length.h"         // for serialise_length, unserialise_length, ser...
 
 
-atomic_shared_ptr<const Node> local_node = std::make_shared<const Node>();
+atomic_shared_ptr<const Node> local_node(std::make_shared<const Node>());
 
 
 std::string
