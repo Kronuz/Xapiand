@@ -79,10 +79,15 @@ class EWKT {
 	static bool _isEWKT(Iterator first, Iterator last);
 
 public:
-	EWKT(const std::string& str);
+	explicit EWKT(const std::string& str);
 
 	EWKT(const EWKT& ewkt) noexcept
 		: geometry(ewkt.geometry) { }
+
+	EWKT& operator=(const EWKT& ewkt) {
+		geometry = ewkt.geometry;
+		return *this;
+	}
 
 	~EWKT() = default;
 
