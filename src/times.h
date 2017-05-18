@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -52,7 +52,8 @@
 #define CLOCK_THREAD_CPUTIME_ID 14
 #define CLOCK_PROCESS_CPUTIME_ID 15
 
-typedef	int	clockid_t;
+
+using clockid_t = int;
 
 int clock_gettime(clockid_t clk_id, struct timespec *tp);
 
@@ -64,20 +65,20 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp);
 #define _timespec_cmp(tsp0, cmp, tsp1) \
 	(((tsp0)->tv_sec == (tsp1)->tv_sec) ? \
 		((tsp0)->tv_nsec cmp (tsp1)->tv_nsec) : \
-		((tsp0)->tv_sec cmp (tsp1)->tv_sec))
-;
+		((tsp0)->tv_sec cmp (tsp1)->tv_sec));
 
-typedef struct timespec_s : public timespec {
-	timespec_s() {
+
+struct timespec_t : public timespec {
+	timespec_t() {
 		clear();
 	}
 
-	timespec_s(double other) {
+	explicit timespec_t(double other) {
 		tv_nsec = (int)((other - (int)other) * 1e9L);
 		tv_sec = (int)other;
 	}
 
-	inline void clear() {
+	inline void clear() noexcept {
 		tv_nsec = 0;
 		tv_sec = 0;
 	}
@@ -86,85 +87,85 @@ typedef struct timespec_s : public timespec {
 		clock_gettime(CLOCK_REALTIME, this);
 	}
 
-	inline double as_double() const {
+	inline double as_double() const noexcept {
 		return (double)tv_sec + ((double)tv_nsec / 1e9L);
 	}
 
-	inline timespec_s & operator=(const timespec_s &other) {
+	inline timespec_t& operator=(const timespec_t& other) {
 		tv_nsec = other.tv_nsec;
 		tv_sec = other.tv_sec;
 		return *this;
 	}
 
-	inline void operator-=(const timespec_s &other) {
+	inline void operator-=(const timespec_t& other) {
 		tv_nsec -= other.tv_nsec;
 		tv_sec -= other.tv_sec;
 		_adjust();
 	}
 
-	inline timespec_s operator-(const timespec_s &other) const {
-		timespec_s ts = *this;
+	inline timespec_t operator-(const timespec_t& other) const {
+		timespec_t ts = *this;
 		ts -= other;
 		return ts;
 	}
 
-	inline void operator+=(const timespec_s &other) {
+	inline void operator+=(const timespec_t& other) {
 		tv_nsec += other.tv_nsec;
 		tv_sec += other.tv_sec;
 		_adjust();
 	}
 
-	inline timespec_s operator+(const timespec_s &other) const {
-		timespec_s ts = *this;
+	inline timespec_t operator+(const timespec_t& other) const {
+		timespec_t ts = *this;
 		ts += other;
 		return ts;
 	}
 
-	inline void operator*=(const timespec_s &other) {
+	inline void operator*=(const timespec_t& other) {
 		tv_nsec *= other.tv_nsec;
 		tv_sec *= other.tv_sec;
 		_adjust();
 	}
 
-	inline timespec_s operator*(const timespec_s &other) const {
-		timespec_s ts = *this;
+	inline timespec_t operator*(const timespec_t& other) const {
+		timespec_t ts = *this;
 		ts *= other;
 		return ts;
 	}
 
-	inline void operator/=(const timespec_s &other) {
+	inline void operator/=(const timespec_t& other) {
 		tv_nsec *= other.tv_nsec;
 		tv_sec *= other.tv_sec;
 		_adjust();
 	}
 
-	inline timespec_s operator/(const timespec_s &other) const {
-		timespec_s ts = *this;
+	inline timespec_t operator/(const timespec_t& other) const {
+		timespec_t ts = *this;
 		ts *= other;
 		return ts;
 	}
 
-	inline bool operator<(const timespec_s &other) const {
+	inline bool operator<(const timespec_t& other) const {
 		return _timespec_cmp(this, <, &other);
 	}
 
-	inline bool operator<=(const timespec_s &other) const {
+	inline bool operator<=(const timespec_t& other) const {
 		return _timespec_cmp(this, <=, &other);
 	}
 
-	inline bool operator>(const timespec_s &other) const {
+	inline bool operator>(const timespec_t& other) const {
 		return _timespec_cmp(this, >, &other);
 	}
 
-	inline bool operator>=(const timespec_s &other) const {
+	inline bool operator>=(const timespec_t& other) const {
 		return _timespec_cmp(this, >=, &other);
 	}
 
-	inline bool operator==(const timespec_s &other) const {
+	inline bool operator==(const timespec_t& other) const {
 		return _timespec_cmp(this, ==, &other);
 	}
 
-	inline bool operator!=(const timespec_s &other) const {
+	inline bool operator!=(const timespec_t& other) const {
 		return _timespec_cmp(this, !=, &other);
 	}
 
@@ -179,7 +180,7 @@ private:
 			tv_sec++;
 		}
 	}
-} timespec_t;
+};
 
 
 inline timespec_t now() {
@@ -189,31 +190,31 @@ inline timespec_t now() {
 }
 
 
-inline bool operator<(double dt0, timespec_t &ts1) {
+inline bool operator<(double dt0, timespec_t& ts1) {
 	return timespec_t(dt0) < ts1;
 }
 
 
-inline bool operator<=(double dt0, timespec_t &ts1) {
+inline bool operator<=(double dt0, timespec_t& ts1) {
 	return timespec_t(dt0) <= ts1;
 }
 
 
-inline bool operator>(double dt0, timespec_t &ts1) {
+inline bool operator>(double dt0, timespec_t& ts1) {
 	return timespec_t(dt0) > ts1;
 }
 
 
-inline bool operator>=(double dt0, timespec_t &ts1) {
+inline bool operator>=(double dt0, timespec_t& ts1) {
 	return timespec_t(dt0) >= ts1;
 }
 
 
-inline bool operator==(double dt0, timespec_t &ts1) {
+inline bool operator==(double dt0, timespec_t& ts1) {
 	return timespec_t(dt0) == ts1;
 }
 
 
-inline bool operator!=(double dt0, timespec_t &ts1) {
+inline bool operator!=(double dt0, timespec_t& ts1) {
 	return timespec_t(dt0) != ts1;
 }
