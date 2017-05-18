@@ -73,7 +73,8 @@ std::string Endpoint::cwd("/");
 
 
 Endpoint::Endpoint()
-	: mastery_level(-1) { }
+	: port(-1),
+	  mastery_level(-1) { }
 
 
 Endpoint::Endpoint(const std::string& uri_, const Node* node_, long long mastery_level_, const std::string& node_name_)
@@ -125,7 +126,6 @@ Endpoint::Endpoint(const std::string& uri_, const Node* node_, long long mastery
 		if (!node_) {
 			node_ = local_node_.get();
 		}
-		protocol = "xapian";
 		host = node_->host();
 		port = node_->binary_port;
 		if (!port) port = XAPIAND_BINARY_SERVERPORT;
