@@ -165,24 +165,24 @@
 #define DATABASE_DATA_FOOTER_MAGIC        0x15
 
 
-struct type_t {
+struct ct_type_t {
 	std::string first;
 	std::string second;
 
-	type_t() {
+	ct_type_t() {
 	}
 
-	type_t(const std::pair<std::string, std::string>& pair) {
+	ct_type_t(const std::pair<std::string, std::string>& pair) {
 		first = pair.first;
 		second = pair.second;
 	}
 
-	type_t(const std::string& first_, const std::string& second_) {
+	ct_type_t(const std::string& first_, const std::string& second_) {
 		first = first_;
 		second = second_;
 	}
 
-	type_t(const std::string& ct_type_str) {
+	ct_type_t(const std::string& ct_type_str) {
 		const std::size_t found = ct_type_str.find_last_of('/');
 		if (found != std::string::npos) {
 			first = std::string(ct_type_str, 0, found);
@@ -190,10 +190,10 @@ struct type_t {
 		}
 	}
 
-	bool operator==(const type_t &other) const {
+	bool operator==(const ct_type_t &other) const {
 		return first == other.first && second == other.second;
 	}
-	bool operator!=(const type_t &other) const {
+	bool operator!=(const ct_type_t &other) const {
 		return !operator==(other);
 	}
 
@@ -211,14 +211,14 @@ struct type_t {
 	}
 };
 
-static const type_t no_type;
-static const type_t any_type(ANY_CONTENT_TYPE);
-static const type_t html_type(HTML_CONTENT_TYPE);
-static const type_t text_type(TEXT_CONTENT_TYPE);
-static const type_t json_type(JSON_CONTENT_TYPE);
-static const type_t msgpack_type(MSGPACK_CONTENT_TYPE);
-static const type_t x_msgpack_type(X_MSGPACK_CONTENT_TYPE);
-static const auto msgpack_serializers = std::vector<type_t>({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
+static const ct_type_t no_type;
+static const ct_type_t any_type(ANY_CONTENT_TYPE);
+static const ct_type_t html_type(HTML_CONTENT_TYPE);
+static const ct_type_t text_type(TEXT_CONTENT_TYPE);
+static const ct_type_t json_type(JSON_CONTENT_TYPE);
+static const ct_type_t msgpack_type(MSGPACK_CONTENT_TYPE);
+static const ct_type_t x_msgpack_type(X_MSGPACK_CONTENT_TYPE);
+static const auto msgpack_serializers = std::vector<ct_type_t>({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
 
 constexpr int DB_OPEN         = 0x0000; // Opens a database
 constexpr int DB_WRITABLE     = 0x0001; // Opens as writable

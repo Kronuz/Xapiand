@@ -908,7 +908,7 @@ HttpClient::_delete(enum http_method method)
 }
 
 
-std::pair<type_t, MsgPack>&
+std::pair<ct_type_t, MsgPack>&
 HttpClient::get_decoded_body()
 {
 	L_CALL(this, "HttpClient::get_decoded_body()");
@@ -921,7 +921,7 @@ HttpClient::get_decoded_body()
 			ct_type_str = JSON_CONTENT_TYPE;
 		}
 
-		type_t ct_type;
+		ct_type_t ct_type;
 		MsgPack msgpack;
 		if (!body.empty()) {
 			rapidjson::Document rdoc;
@@ -949,7 +949,7 @@ HttpClient::get_decoded_body()
 					break;
 				default:
 					msgpack = MsgPack(body);
-					ct_type = type_t(ct_type_str);
+					ct_type = ct_type_t(ct_type_str);
 					break;
 			}
 		}
@@ -2345,7 +2345,7 @@ HttpClient::set_idle()
 }
 
 
-type_t
+ct_type_t
 HttpClient::resolve_ct_type(std::string ct_type_str)
 {
 	if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE || ct_type_str == X_MSGPACK_CONTENT_TYPE) {
@@ -2357,9 +2357,9 @@ HttpClient::resolve_ct_type(std::string ct_type_str)
 			ct_type_str = X_MSGPACK_CONTENT_TYPE;
 		}
 	}
-	type_t ct_type(ct_type_str);
+	ct_type_t ct_type(ct_type_str);
 
-	std::vector<type_t> ct_types;
+	std::vector<ct_type_t> ct_types;
 	if (ct_type == json_type || ct_type == msgpack_type || ct_type == x_msgpack_type) {
 		ct_types = msgpack_serializers;
 	} else {
@@ -2376,8 +2376,8 @@ HttpClient::resolve_ct_type(std::string ct_type_str)
 }
 
 
-const type_t*
-HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const type_t& ct_type)
+const ct_type_t*
+HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type)
 {
 	L_CALL(this, "HttpClient::is_acceptable_type()");
 
@@ -2399,8 +2399,8 @@ HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const type_t& ct_t
 }
 
 
-const type_t*
-HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const std::vector<type_t>& ct_types)
+const ct_type_t*
+HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types)
 {
 	L_CALL(this, "HttpClient::is_acceptable_type(...)");
 
@@ -2414,13 +2414,13 @@ HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const std::vector<
 
 
 template <typename T>
-const type_t&
+const ct_type_t&
 HttpClient::get_acceptable_type(const T& ct)
 {
 	L_CALL(this, "HttpClient::get_acceptable_type()");
 
 	if (accept_set.empty()) {
-		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, type_t, unsigned>(1, 0, content_type, 0));
+		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, ct_type_t, unsigned>(1, 0, content_type, 0));
 		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string(1, '*'), std::string(1, '*')), 0));
 	}
 	for (const auto& accept : accept_set) {
@@ -2441,8 +2441,8 @@ HttpClient::get_acceptable_type(const T& ct)
 }
 
 
-type_t
-HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, int indent, bool serialize_error)
+ct_type_t
+HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error)
 {
 	L_CALL(this, "HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), indent, serialize_error ? "true" : "false");
 
@@ -2494,8 +2494,8 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 		return;
 	}
 
-	type_t ct_type(content_type);
-	std::vector<type_t> ct_types;
+	ct_type_t ct_type(content_type);
+	std::vector<ct_type_t> ct_types;
 	if (ct_type == json_type || ct_type == msgpack_type || content_type.empty()) {
 		ct_types = msgpack_serializers;
 	} else {

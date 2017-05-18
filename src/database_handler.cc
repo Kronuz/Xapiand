@@ -342,7 +342,7 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, bool stored, const std::string& store, MsgPack& obj, const std::string& blob, bool commit_, const type_t& ct_type)
+DatabaseHandler::index(const std::string& _document_id, bool stored, const std::string& store, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, %s, <store>, %s, <blob>, %s, <ct_type>)", repr(_document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
 
@@ -491,7 +491,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const type_t& ct_type)
+DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, %s, <body>, %s, %s/%s)", repr(_document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
@@ -521,7 +521,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPa
 
 
 DataType
-DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const type_t& ct_type)
+DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type)
 {
 	L_CALL(this, "DatabaseHandler::patch(%s, <patches>, %s, %s/%s)", repr(_document_id).c_str(), commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
@@ -552,7 +552,7 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 
 
 DataType
-DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const type_t& ct_type)
+DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
 	L_CALL(this, "DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(_document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
