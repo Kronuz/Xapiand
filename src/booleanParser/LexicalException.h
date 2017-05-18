@@ -32,7 +32,7 @@ class LexicalException : public std::exception {
 	const std::string msg;
 
 public:
-	LexicalException(const std::string& _msg)
+	explicit LexicalException(const std::string& _msg)
 		: msg(_msg) { }
 
 	virtual const char* what() const noexcept {

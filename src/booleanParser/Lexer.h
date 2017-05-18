@@ -50,6 +50,6 @@ class Lexer {
 	bool IsSymbolOp(char c) const;
 
 public:
-	Lexer(char* input);
+	explicit Lexer(char* input);
 	Token NextToken();
 };

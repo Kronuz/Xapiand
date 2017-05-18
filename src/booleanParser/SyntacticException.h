@@ -31,7 +31,7 @@ class SyntacticException : public std::exception {
 	const char* msg;
 
 public:
-	SyntacticException(const char* _msg)
+	explicit SyntacticException(const char* _msg)
 		: msg(_msg) { }
 
 	virtual const char* what() const noexcept {
