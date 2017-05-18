@@ -382,9 +382,11 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 						lock_database lk_db(this);
 						doc_revision = database->get_document_change_seq(prefixed_term_id);
 					}
-					obj = run_script(obj, prefixed_term_id);
-					if (!obj.is_map()) {
-						THROW(ClientError, "Script must return an object, it returned %s", obj.getStrType().c_str());
+					if (obj.is_map()) {
+						obj = run_script(obj, prefixed_term_id);
+						if (!obj.is_map()) {
+							THROW(ClientError, "Script must return an object, it returned %s", obj.getStrType().c_str());
+						}
 					}
 #endif
 				}
