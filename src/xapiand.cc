@@ -37,6 +37,7 @@
 #include <string.h>                  // for strcat, strchr, strlen, strrchr
 #include <strings.h>                 // for strcasecmp
 #include <sys/fcntl.h>               // for O_RDWR, O_CREAT
+#include <sys/resource.h>            // for rlimit
 #include <sys/signal.h>              // for sigaction, signal, SIG_IGN, SIGHUP
 #include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_O...
 #include <thread>                    // for thread
