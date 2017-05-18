@@ -150,58 +150,58 @@ const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field({
 });
 
 
-const std::unordered_map<std::string, std::array<FieldType, 3>> map_type({
-	{ "array",                        {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }} },
-	{ "array/boolean",                {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }} },
-	{ "array/date",                   {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }} },
-	{ "array/float",                  {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }} },
-	{ "array/geospatial",             {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }} },
-	{ "array/integer",                {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }} },
-	{ "array/positive",               {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }} },
-	{ "array/string",                 {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }} },
-	{ "array/term",                   {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }} },
-	{ "array/text",                   {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }} },
-	{ "array/time",                   {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }} },
-	{ "array/timedelta",              {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }} },
-	{ "array/uuid",                   {{ FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }} },
-	{ "boolean",                      {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }} },
-	{ "date",                         {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }} },
-	{ "float",                        {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }} },
-	{ "geospatial",                   {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }} },
-	{ "integer",                      {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }} },
-	{ "object",                       {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }} },
-	{ "object/array",                 {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }} },
-	{ "object/array/boolean",         {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }} },
-	{ "object/array/date",            {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }} },
-	{ "object/array/float",           {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }} },
-	{ "object/array/geospatial",      {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }} },
-	{ "object/array/integer",         {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }} },
-	{ "object/array/positive",        {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }} },
-	{ "object/array/string",          {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }} },
-	{ "object/array/term",            {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }} },
-	{ "object/array/text",            {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }} },
-	{ "object/array/time",            {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }} },
-	{ "object/array/timedelta",       {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }} },
-	{ "object/array/uuid",            {{ FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }} },
-	{ "object/boolean",               {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }} },
-	{ "object/date",                  {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }} },
-	{ "object/float",                 {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }} },
-	{ "object/geospatial",            {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }} },
-	{ "object/integer",               {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }} },
-	{ "object/positive",              {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }} },
-	{ "object/string",                {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }} },
-	{ "object/term",                  {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }} },
-	{ "object/text",                  {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }} },
-	{ "object/time",                  {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }} },
-	{ "object/timedelta",             {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }} },
-	{ "object/uuid",                  {{ FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }} },
-	{ "positive",                     {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }} },
-	{ "string",                       {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }} },
-	{ "term",                         {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }} },
-	{ "text",                         {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }} },
-	{ "time",                         {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }} },
-	{ "timedelta",                    {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }} },
-	{ "uuid",                         {{ FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }} },
+const std::unordered_map<std::string, std::array<FieldType, 4>> map_type({
+	{ "array",                        {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }} },
+	{ "array/boolean",                {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }} },
+	{ "array/date",                   {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }} },
+	{ "array/float",                  {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }} },
+	{ "array/geospatial",             {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }} },
+	{ "array/integer",                {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }} },
+	{ "array/positive",               {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }} },
+	{ "array/string",                 {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }} },
+	{ "array/term",                   {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }} },
+	{ "array/text",                   {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }} },
+	{ "array/time",                   {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }} },
+	{ "array/timedelta",              {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }} },
+	{ "array/uuid",                   {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }} },
+	{ "boolean",                      {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }} },
+	{ "date",                         {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }} },
+	{ "float",                        {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }} },
+	{ "geospatial",                   {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }} },
+	{ "integer",                      {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }} },
+	{ "object",                       {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }} },
+	{ "object/array",                 {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }} },
+	{ "object/array/boolean",         {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }} },
+	{ "object/array/date",            {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }} },
+	{ "object/array/float",           {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }} },
+	{ "object/array/geospatial",      {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }} },
+	{ "object/array/integer",         {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }} },
+	{ "object/array/positive",        {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }} },
+	{ "object/array/string",          {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }} },
+	{ "object/array/term",            {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }} },
+	{ "object/array/text",            {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }} },
+	{ "object/array/time",            {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }} },
+	{ "object/array/timedelta",       {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }} },
+	{ "object/array/uuid",            {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }} },
+	{ "object/boolean",               {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }} },
+	{ "object/date",                  {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }} },
+	{ "object/float",                 {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }} },
+	{ "object/geospatial",            {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }} },
+	{ "object/integer",               {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }} },
+	{ "object/positive",              {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }} },
+	{ "object/string",                {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }} },
+	{ "object/term",                  {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }} },
+	{ "object/text",                  {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }} },
+	{ "object/time",                  {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }} },
+	{ "object/timedelta",             {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }} },
+	{ "object/uuid",                  {{ FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }} },
+	{ "positive",                     {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }} },
+	{ "string",                       {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }} },
+	{ "term",                         {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }} },
+	{ "text",                         {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }} },
+	{ "time",                         {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }} },
+	{ "timedelta",                    {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }} },
+	{ "uuid",                         {{ FieldType::EMPTY, FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }} },
 });
 
 
@@ -289,7 +289,7 @@ inline static std::string readable_index_uuid_field(UUIDFieldIndex index_uuid_fi
 }
 
 
-inline static std::string readable_type(const std::array<FieldType, 3>& sep_types) {
+inline static std::string readable_type(const std::array<FieldType, 4>& sep_types) {
 	std::string result;
 	if (sep_types[0] != FieldType::EMPTY) {
 		result += Serialise::type(sep_types[0]);
@@ -301,6 +301,10 @@ inline static std::string readable_type(const std::array<FieldType, 3>& sep_type
 	if (sep_types[2] != FieldType::EMPTY) {
 		if (!result.empty()) result += "/";
 		result += Serialise::type(sep_types[2]);
+	}
+	if (sep_types[3] != FieldType::EMPTY) {
+		if (!result.empty()) result += "/";
+		result += Serialise::type(sep_types[3]);
 	}
 	return result;
 }
@@ -652,7 +656,7 @@ required_spc_t::prefix_t::operator()() const noexcept
 
 
 required_spc_t::required_spc_t()
-	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY }}),
+	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY }}),
 	  slot(Xapian::BAD_VALUENO),
 	  language(DEFAULT_LANGUAGE),
 	  stop_strategy(DEFAULT_STOP_STRATEGY),
@@ -663,7 +667,7 @@ required_spc_t::required_spc_t()
 
 required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
 	const std::vector<std::string>& _acc_prefix)
-	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, type }}),
+	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, type }}),
 	  slot(_slot),
 	  accuracy(acc),
 	  acc_prefix(_acc_prefix),
@@ -746,7 +750,7 @@ required_spc_t::set_types(const std::string& str_type)
 	static const auto tit_e = map_type.end();
 	auto tit = map_type.find(lower_string(str_type));
 	if (tit == tit_e) {
-		THROW(ClientError, "%s must be in { object, array, object/array, [object/][array/]<boolean, date, float, geospatial, integer, positive, string, term, text, uuid> }", RESERVED_TYPE);
+		THROW(ClientError, "%s must be in { foreign, [foreign/]object, [foreign/][object/]array, [foreign/][object/][array/]<integer, positive, float, date, time, timedelta, string, text, term, uuid, geospatial> }", RESERVED_TYPE);
 	} else {
 		sep_types = tit->second;
 	}
@@ -754,7 +758,7 @@ required_spc_t::set_types(const std::string& str_type)
 
 
 index_spc_t::index_spc_t(required_spc_t&& spc)
-	: type(std::move(spc.sep_types[2])),
+	: type(std::move(spc.sep_types[3])),
 	  prefix(std::move(spc.prefix.field)),
 	  slot(std::move(spc.slot)),
 	  accuracy(std::move(spc.accuracy)),
@@ -762,7 +766,7 @@ index_spc_t::index_spc_t(required_spc_t&& spc)
 
 
 index_spc_t::index_spc_t(const required_spc_t& spc)
-	: type(spc.sep_types[2]),
+	: type(spc.sep_types[3]),
 	  prefix(spc.prefix.field),
 	  slot(spc.slot),
 	  accuracy(spc.accuracy),
@@ -955,7 +959,7 @@ specification_t::get_global(FieldType field_type)
 void
 specification_t::update(index_spc_t&& spc)
 {
-	sep_types[2] = std::move(spc.type);
+	sep_types[3] = std::move(spc.type);
 	prefix.field = std::move(spc.prefix);
 	slot = std::move(spc.slot);
 	accuracy = std::move(spc.accuracy);
@@ -966,7 +970,7 @@ specification_t::update(index_spc_t&& spc)
 void
 specification_t::update(const index_spc_t& spc)
 {
-	sep_types[2] = spc.type;
+	sep_types[3] = spc.type;
 	prefix.field = spc.prefix;
 	slot = spc.slot;
 	accuracy = spc.accuracy;
@@ -1346,7 +1350,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 		index_item(doc, item_value, data, pos);
 	} else {
 		bool add_value = true;
-		index_spc_t start_index_spc(specification.sep_types[2], std::move(specification.prefix.field), specification.slot, std::move(specification.accuracy), std::move(specification.acc_prefix));
+		index_spc_t start_index_spc(specification.sep_types[3], std::move(specification.prefix.field), specification.slot, std::move(specification.accuracy), std::move(specification.acc_prefix));
 		for (const auto& index_spc : specification.partial_index_spcs) {
 			specification.update(index_spc);
 			index_item(doc, item_value, data, pos, add_value);
@@ -1408,7 +1412,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 		index_item(doc, item_value, *data);
 	} else {
 		bool add_value = true;
-		index_spc_t start_index_spc(specification.sep_types[2], std::move(specification.prefix.field), specification.slot,
+		index_spc_t start_index_spc(specification.sep_types[3], std::move(specification.prefix.field), specification.slot,
 			std::move(specification.accuracy), std::move(specification.acc_prefix));
 		for (const auto& index_spc : specification.partial_index_spcs) {
 			specification.update(index_spc);
@@ -1453,7 +1457,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 			}
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
-				if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
+				if (!specification.flags.field_with_type && specification.sep_types[3] != FieldType::EMPTY) {
 					_validate_required_data(get_mutable());
 				}
 				index_partial_paths(doc);
@@ -1476,7 +1480,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 			index_item(doc, *val, *data);
 		} else {
 			bool add_value = true;
-			index_spc_t start_index_spc(specification.sep_types[2], std::move(specification.prefix.field), specification.slot,
+			index_spc_t start_index_spc(specification.sep_types[3], std::move(specification.prefix.field), specification.slot,
 				std::move(specification.accuracy), std::move(specification.acc_prefix));
 			for (const auto& index_spc : specification.partial_index_spcs) {
 				specification.update(index_spc);
@@ -1487,7 +1491,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 		}
 
 		if (fields.empty()) {
-			if (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY) {
+			if (specification.sep_types[3] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY && specification.sep_types[2] == FieldType::EMPTY) {
 				set_type_to_object();
 			}
 			if (specification.flags.store) {
@@ -1502,16 +1506,16 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 			}
 		}
 	} else {
-		if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
+		if (!specification.flags.field_with_type && specification.sep_types[3] != FieldType::EMPTY) {
 			_validate_required_data(get_mutable());
 		}
 
 		if (fields.empty()) {
-			if (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY) {
+			if (specification.sep_types[3] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY && specification.sep_types[2] == FieldType::EMPTY) {
 				set_type_to_object();
 			}
 			index_partial_paths(doc);
-			if (specification.flags.store && specification.sep_types[0] == FieldType::OBJECT) {
+			if (specification.flags.store && specification.sep_types[1] == FieldType::OBJECT) {
 				*data = MsgPack(MsgPack::Type::MAP);
 			}
 		} else {
@@ -1608,10 +1612,10 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 
 		if (toUType(specification.index & TypeIndex::VALUES)) {
 			for (auto& path : paths) {
-				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], std::move(path)));
+				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[3], std::move(path)));
 			}
 		} else {
-			auto global_type = specification_t::global_type(specification.sep_types[2]);
+			auto global_type = specification_t::global_type(specification.sep_types[3]);
 			for (auto& path : paths) {
 				specification.partial_index_spcs.emplace_back(global_type, std::move(path));
 			}
@@ -1621,8 +1625,8 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 			switch (specification.index_uuid_field) {
 				case UUIDFieldIndex::UUID: {
 					if (specification.prefix.uuid.empty()) {
-						auto global_type = specification_t::global_type(specification.sep_types[2]);
-						if (specification.sep_types[2] == global_type) {
+						auto global_type = specification_t::global_type(specification.sep_types[3]);
+						if (specification.sep_types[3] == global_type) {
 							// Use specification directly because path has never been indexed as UIDFieldIndex::BOTH and type is the same as global_type.
 							if (toUType(specification.index & TypeIndex::VALUES)) {
 								specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
@@ -1631,20 +1635,20 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 								}
 							}
 						} else if (toUType(specification.index & TypeIndex::VALUES)) {
-							specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.field));
+							specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[3], specification.prefix.field));
 						} else {
 							specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
 						}
 					} else if (toUType(specification.index & TypeIndex::VALUES)) {
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.uuid));
+						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[3], specification.prefix.uuid));
 					} else {
-						specification.partial_index_spcs.emplace_back(specification_t::global_type(specification.sep_types[2]), specification.prefix.uuid);
+						specification.partial_index_spcs.emplace_back(specification_t::global_type(specification.sep_types[3]), specification.prefix.uuid);
 					}
 					break;
 				}
 				case UUIDFieldIndex::UUID_FIELD: {
-					auto global_type = specification_t::global_type(specification.sep_types[2]);
-					if (specification.sep_types[2] == global_type) {
+					auto global_type = specification_t::global_type(specification.sep_types[3]);
+					if (specification.sep_types[3] == global_type) {
 						// Use specification directly because type is the same as global_type.
 						if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 							if (specification.flags.has_uuid_prefix) {
@@ -1655,7 +1659,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 							}
 						}
 					} else if (toUType(specification.index & TypeIndex::VALUES)) {
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.field));
+						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[3], specification.prefix.field));
 					} else {
 						specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
 					}
@@ -1663,10 +1667,10 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 				}
 				case UUIDFieldIndex::BOTH: {
 					if (toUType(specification.index & TypeIndex::VALUES)) {
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.field));
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.uuid));
+						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[3], specification.prefix.field));
+						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[3], specification.prefix.uuid));
 					} else {
-						auto global_type = specification_t::global_type(specification.sep_types[2]);
+						auto global_type = specification_t::global_type(specification.sep_types[3]);
 						specification.partial_index_spcs.emplace_back(global_type, std::move(specification.prefix.field));
 						specification.partial_index_spcs.emplace_back(global_type, specification.prefix.uuid);
 					}
@@ -1674,8 +1678,8 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 				}
 			}
 		} else {
-			auto global_type = specification_t::global_type(specification.sep_types[2]);
-			if (specification.sep_types[2] == global_type) {
+			auto global_type = specification_t::global_type(specification.sep_types[3]);
+			if (specification.sep_types[3] == global_type) {
 				// Use specification directly because path is not uuid and type is the same as global_type.
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 					for (auto& acc_prefix : specification.acc_prefix) {
@@ -1683,7 +1687,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 					}
 				}
 			} else if (toUType(specification.index & TypeIndex::VALUES)) {
-				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], specification.prefix.field));
+				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[3], specification.prefix.field));
 			} else {
 				specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
 			}
@@ -1714,10 +1718,10 @@ Schema::complete_specification(const MsgPack& item_value)
 
 		if (toUType(specification.index & TypeIndex::VALUES)) {
 			for (auto& path : paths) {
-				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[2], std::move(path)));
+				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[3], std::move(path)));
 			}
 		} else {
-			auto global_type = specification_t::global_type(specification.sep_types[2]);
+			auto global_type = specification_t::global_type(specification.sep_types[3]);
 			for (auto& path : paths) {
 				specification.partial_index_spcs.emplace_back(global_type, std::move(path));
 			}
@@ -1736,14 +1740,14 @@ Schema::complete_specification(const MsgPack& item_value)
 						}
 					}
 				} else if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-					index_spc_t spc_uuid(specification.sep_types[2], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
+					index_spc_t spc_uuid(specification.sep_types[3], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
 						specification.accuracy, specification.acc_prefix);
 					for (auto& acc_prefix : spc_uuid.acc_prefix) {
 						acc_prefix.insert(0, spc_uuid.prefix);
 					}
 					specification.partial_index_spcs.push_back(std::move(spc_uuid));
 				} else {
-					specification.partial_index_spcs.emplace_back(specification.sep_types[2], specification.prefix.uuid);
+					specification.partial_index_spcs.emplace_back(specification.sep_types[3], specification.prefix.uuid);
 				}
 				break;
 			}
@@ -1761,13 +1765,13 @@ Schema::complete_specification(const MsgPack& item_value)
 			}
 			case UUIDFieldIndex::BOTH: {
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-					index_spc_t spc_field(specification.sep_types[2], specification.prefix.field,
+					index_spc_t spc_field(specification.sep_types[3], specification.prefix.field,
 						specification.flags.has_uuid_prefix ? get_slot(specification.prefix.field, specification.get_ctype()) : specification.slot,
 						specification.accuracy, specification.acc_prefix);
 					for (auto& acc_prefix : spc_field.acc_prefix) {
 						acc_prefix.insert(0, spc_field.prefix);
 					}
-					index_spc_t spc_uuid(specification.sep_types[2], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
+					index_spc_t spc_uuid(specification.sep_types[3], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
 						specification.accuracy, specification.acc_prefix);
 					for (auto& acc_prefix : spc_uuid.acc_prefix) {
 						acc_prefix.insert(0, spc_uuid.prefix);
@@ -1775,8 +1779,8 @@ Schema::complete_specification(const MsgPack& item_value)
 					specification.partial_index_spcs.push_back(std::move(spc_field));
 					specification.partial_index_spcs.push_back(std::move(spc_uuid));
 				} else {
-					specification.partial_index_spcs.emplace_back(specification.sep_types[2], specification.prefix.field);
-					specification.partial_index_spcs.emplace_back(specification.sep_types[2], specification.prefix.uuid);
+					specification.partial_index_spcs.emplace_back(specification.sep_types[3], specification.prefix.field);
+					specification.partial_index_spcs.emplace_back(specification.sep_types[3], specification.prefix.uuid);
 				}
 				break;
 			}
@@ -1798,14 +1802,14 @@ Schema::set_type_to_object()
 {
 	L_CALL(this, "Schema::set_type_to_object()");
 
-	if unlikely(specification.sep_types[0] == FieldType::EMPTY && !specification.flags.inside_namespace) {
+	if unlikely(specification.sep_types[1] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		auto& _types = get_mutable()[RESERVED_TYPE];
 		if (_types.is_undefined()) {
 			_types = MsgPack({ FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY });
-			specification.sep_types[0] = FieldType::OBJECT;
+			specification.sep_types[1] = FieldType::OBJECT;
 		} else {
 			_types[0] = FieldType::OBJECT;
-			specification.sep_types[0] = FieldType::OBJECT;
+			specification.sep_types[1] = FieldType::OBJECT;
 		}
 	}
 }
@@ -1816,14 +1820,14 @@ Schema::set_type_to_array()
 {
 	L_CALL(this, "Schema::set_type_to_array()");
 
-	if unlikely(specification.sep_types[1] == FieldType::EMPTY && !specification.flags.inside_namespace) {
+	if unlikely(specification.sep_types[2] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		auto& _types = get_mutable()[RESERVED_TYPE];
 		if (_types.is_undefined()) {
 			_types = MsgPack({ FieldType::EMPTY, FieldType::ARRAY, FieldType::EMPTY });
-			specification.sep_types[1] = FieldType::ARRAY;
+			specification.sep_types[2] = FieldType::ARRAY;
 		} else {
 			_types[1] = FieldType::ARRAY;
-			specification.sep_types[1] = FieldType::ARRAY;
+			specification.sep_types[2] = FieldType::ARRAY;
 		}
 	}
 }
@@ -1841,7 +1845,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 	}
 
 	std::set<uint64_t> set_acc;
-	switch (specification.sep_types[2]) {
+	switch (specification.sep_types[3]) {
 		case FieldType::GEO: {
 			// Set partials and error.
 			mut_properties[RESERVED_PARTIALS] = static_cast<bool>(specification.flags.partials);
@@ -1895,13 +1899,13 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 						const auto str_accuracy = lower_string(_accuracy.as_string());
 						const auto adit = map_acc_time.find(str_accuracy);
 						if (adit == adit_e) {
-							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
+							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[3]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
 						} else {
 							set_acc.insert(toUType(adit->second));
 						}
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), repr(str_set_acc_time).c_str());
+					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[3]).c_str(), repr(str_set_acc_time).c_str());
 				}
 			} else {
 				set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
@@ -1917,7 +1921,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 						set_acc.insert(_accuracy.as_u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str());
+					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[3]).c_str());
 				}
 			} else {
 				set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
@@ -1990,7 +1994,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 		case FieldType::UUID:
 			break;
 		default:
-			THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[2]);
+			THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[3]);
 	}
 
 	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
@@ -2035,11 +2039,11 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 
 	L_SCHEMA(this, "Specification heritable and sent by user: %s", specification.to_string().c_str());
 
-	if (specification.sep_types[2] == FieldType::EMPTY) {
+	if (specification.sep_types[3] == FieldType::EMPTY) {
 		guess_field_type(value);
 	}
 
-	switch (specification.sep_types[2]) {
+	switch (specification.sep_types[3]) {
 		case FieldType::GEO:
 			// Set partials and error.
 			specification.flags.partials = default_spc.flags.partials;
@@ -2090,7 +2094,7 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 			break;
 
 		default:
-			THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[2]);
+			THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[3]);
 	}
 
 	specification.flags.field_with_type = true;
@@ -2104,7 +2108,7 @@ Schema::validate_required_data(const MsgPack& value)
 
 	L_SCHEMA(this, "Specification heritable and sent by user: %s", specification.to_string().c_str());
 
-	if (specification.sep_types[2] == FieldType::EMPTY) {
+	if (specification.sep_types[3] == FieldType::EMPTY) {
 		if (specification.flags.strict) {
 			THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 		}
@@ -2123,66 +2127,66 @@ Schema::guess_field_type(const MsgPack& item_doc)
 	switch (item_doc.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[2] = FieldType::POSITIVE;
+				specification.sep_types[3] = FieldType::POSITIVE;
 				return;
 			}
 			break;
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[2] = FieldType::INTEGER;
+				specification.sep_types[3] = FieldType::INTEGER;
 				return;
 			}
 			break;
 		case MsgPack::Type::FLOAT:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[2] = FieldType::FLOAT;
+				specification.sep_types[3] = FieldType::FLOAT;
 				return;
 			}
 			break;
 		case MsgPack::Type::BOOLEAN:
 			if (specification.flags.bool_detection) {
-				specification.sep_types[2] = FieldType::BOOLEAN;
+				specification.sep_types[3] = FieldType::BOOLEAN;
 				return;
 			}
 			break;
 		case MsgPack::Type::STR: {
 			const auto str_value = item_doc.as_string();
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
-				specification.sep_types[2] = FieldType::UUID;
+				specification.sep_types[3] = FieldType::UUID;
 				return;
 			}
 			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
-				specification.sep_types[2] = FieldType::DATE;
+				specification.sep_types[3] = FieldType::DATE;
 				return;
 			}
 			if (specification.flags.time_detection && Datetime::isTime(str_value)) {
-				specification.sep_types[2] = FieldType::TIME;
+				specification.sep_types[3] = FieldType::TIME;
 				return;
 			}
 			if (specification.flags.timedelta_detection && Datetime::isTimedelta(str_value)) {
-				specification.sep_types[2] = FieldType::TIMEDELTA;
+				specification.sep_types[3] = FieldType::TIMEDELTA;
 				return;
 			}
 			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
-				specification.sep_types[2] = FieldType::GEO;
+				specification.sep_types[3] = FieldType::GEO;
 				return;
 			}
 			if (specification.flags.text_detection && (!specification.flags.string_detection && Serialise::isText(str_value, specification.flags.bool_term))) {
-				specification.sep_types[2] = FieldType::TEXT;
+				specification.sep_types[3] = FieldType::TEXT;
 				return;
 			}
 			if (specification.flags.string_detection && !specification.flags.bool_term) {
-				specification.sep_types[2] = FieldType::STRING;
+				specification.sep_types[3] = FieldType::STRING;
 				return;
 			}
 			if (specification.flags.term_detection) {
-				specification.sep_types[2] = FieldType::TERM;
+				specification.sep_types[3] = FieldType::TERM;
 				return;
 			}
 			if (specification.flags.bool_detection) {
 				try {
 					Serialise::boolean(str_value);
-					specification.sep_types[2] = FieldType::BOOLEAN;
+					specification.sep_types[3] = FieldType::BOOLEAN;
 					return;
 				} catch (const SerialisationError&) { }
 			}
@@ -2192,7 +2196,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			THROW(ClientError, "'%s' cannot be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
 			if (item_doc.size() == 1) {
-				specification.sep_types[2] = Cast::getType(item_doc.begin()->as_string());
+				specification.sep_types[3] = Cast::getType(item_doc.begin()->as_string());
 				return;
 			}
 			THROW(ClientError, "Expected map with one element");
@@ -2215,7 +2219,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	if (specification.flags.store && add_value) {
 		// Add value to data.
 		auto& data_value = data[RESERVED_VALUE];
-		if (specification.sep_types[2] == FieldType::UUID) {
+		if (specification.sep_types[3] == FieldType::UUID) {
 			// Compact uuid value
 			switch (data_value.getType()) {
 				case MsgPack::Type::UNDEFINED:
@@ -2258,7 +2262,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 		if (specification.flags.store && add_values) {
 			// Add value to data.
 			auto& data_value = data[RESERVED_VALUE];
-			if (specification.sep_types[2] == FieldType::UUID) {
+			if (specification.sep_types[3] == FieldType::UUID) {
 				// Compact uuid value
 				switch (data_value.getType()) {
 					case MsgPack::Type::UNDEFINED:
@@ -2359,7 +2363,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
 					index_term(doc, Serialise::MsgPack(global_spc, value), global_spc, pos++);
@@ -2368,7 +2372,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix.field);
@@ -2379,7 +2383,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
@@ -2389,7 +2393,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
@@ -2401,7 +2405,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
@@ -2411,7 +2415,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
@@ -2423,7 +2427,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
@@ -2434,7 +2438,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
@@ -2447,7 +2451,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
@@ -2457,7 +2461,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
@@ -2469,7 +2473,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
@@ -2480,7 +2484,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[2]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[3]);
 			std::set<std::string>& s_f = map_values[specification.slot];
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
@@ -2501,7 +2505,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 {
 	L_CALL(nullptr, "Schema::index_term(<Xapian::Document>, %s, <specification_t>, %zu)", repr(serialise_val).c_str(), pos);
 
-	switch (field_spc.sep_types[2]) {
+	switch (field_spc.sep_types[3]) {
 		case FieldType::TEXT: {
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
@@ -2603,7 +2607,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 {
 	L_CALL(nullptr, "Schema::index_value(<Xapian::Document>, %s, <std::set<std::string>>, <specification_t>, %zu, <specification_t*>, <specification_t*>)", repr(value.to_string()).c_str(), pos);
 
-	switch (spc.sep_types[2]) {
+	switch (spc.sep_types[3]) {
 		case FieldType::FLOAT: {
 			try {
 				const auto f_val = value.as_f64();
@@ -2742,7 +2746,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(spc.sep_types[3]).c_str(), repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -2772,7 +2776,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			}
 		}
 		default:
-			THROW(ClientError, "Type: '%c' is an unknown type", spc.sep_types[2]);
+			THROW(ClientError, "Type: '%c' is an unknown type", spc.sep_types[3]);
 	}
 }
 
@@ -2782,7 +2786,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 {
 	L_CALL(nullptr, "Schema::index_all_value(<Xapian::Document>, %s, <std::set<std::string>>, <std::set<std::string>>, <specification_t>, <specification_t>, %zu)", repr(value.to_string()).c_str(), pos);
 
-	switch (field_spc.sep_types[2]) {
+	switch (field_spc.sep_types[3]) {
 		case FieldType::FLOAT: {
 			try {
 				const auto f_val = value.as_f64();
@@ -2967,7 +2971,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				s_g.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[2]).c_str(), repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[3]).c_str(), repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -2999,7 +3003,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 		}
 		default:
-			THROW(ClientError, "Type: '%c' is an unknown type", field_spc.sep_types[2]);
+			THROW(ClientError, "Type: '%c' is an unknown type", field_spc.sep_types[3]);
 	}
 }
 
@@ -3021,7 +3025,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 
 			mut_properties = &get_subproperties(mut_properties, name, obj_schema, fields);
 
-			if (!specification.flags.field_with_type && specification.sep_types[2] != FieldType::EMPTY) {
+			if (!specification.flags.field_with_type && specification.sep_types[3] != FieldType::EMPTY) {
 				_validate_required_data(*mut_properties);
 			}
 
@@ -3030,7 +3034,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 				return;
 			}
 
-			if (!fields.empty() || (specification.sep_types[2] == FieldType::EMPTY && specification.sep_types[0] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY)) {
+			if (!fields.empty() || (specification.sep_types[3] == FieldType::EMPTY && specification.sep_types[1] == FieldType::EMPTY && specification.sep_types[2] == FieldType::EMPTY)) {
 				set_type_to_object();
 			}
 
@@ -3744,7 +3748,8 @@ Schema::update_type(const MsgPack& prop_type)
 	specification.sep_types[0] = (FieldType)prop_type.at(0).as_u64();
 	specification.sep_types[1] = (FieldType)prop_type.at(1).as_u64();
 	specification.sep_types[2] = (FieldType)prop_type.at(2).as_u64();
-	specification.flags.field_with_type = specification.sep_types[2] != FieldType::EMPTY;
+	specification.sep_types[3] = (FieldType)prop_type.at(3).as_u64();
+	specification.flags.field_with_type = specification.sep_types[3] != FieldType::EMPTY;
 }
 
 
@@ -4718,7 +4723,7 @@ Schema::consistency_language(const std::string& prop_name, const MsgPack& doc_la
 	L_CALL(this, "Schema::consistency_language(%s)", repr(doc_language.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[2] == FieldType::TEXT) {
+		if (specification.sep_types[3] == FieldType::TEXT) {
 			const auto _str_language = lower_string(doc_language.as_string());
 			if (specification.language != _str_language) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.language.c_str(), _str_language.c_str(), specification.full_meta_name.c_str());
@@ -4739,7 +4744,7 @@ Schema::consistency_stop_strategy(const std::string& prop_name, const MsgPack& d
 	L_CALL(this, "Schema::consistency_stop_strategy(%s)", repr(doc_stop_strategy.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[2] == FieldType::TEXT) {
+		if (specification.sep_types[3] == FieldType::TEXT) {
 			const auto _stop_strategy = lower_string(doc_stop_strategy.as_string());
 			const auto stop_strategy = ::readable_stop_strategy(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
@@ -4761,7 +4766,7 @@ Schema::consistency_stem_strategy(const std::string& prop_name, const MsgPack& d
 	L_CALL(this, "Schema::consistency_stem_strategy(%s)", repr(doc_stem_strategy.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[2] == FieldType::TEXT) {
+		if (specification.sep_types[3] == FieldType::TEXT) {
 			const auto _stem_strategy = lower_string(doc_stem_strategy.as_string());
 			const auto stem_strategy = ::readable_stem_strategy(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
@@ -4783,7 +4788,7 @@ Schema::consistency_stem_language(const std::string& prop_name, const MsgPack& d
 	L_CALL(this, "Schema::consistency_stem_language(%s)", repr(doc_stem_language.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[2] == FieldType::TEXT) {
+		if (specification.sep_types[3] == FieldType::TEXT) {
 			const auto _stem_language = lower_string(doc_stem_language.as_string());
 			if (specification.stem_language != _stem_language) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.stem_language.c_str(), _stem_language.c_str(), specification.full_meta_name.c_str());
@@ -4811,7 +4816,7 @@ Schema::consistency_type(const std::string& prop_name, const MsgPack& doc_type)
 		} else {
 			++init_pos;
 		}
-		const auto str_type = Serialise::type(specification.sep_types[2]);
+		const auto str_type = Serialise::type(specification.sep_types[3]);
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), str_type.c_str(), _str_type.substr(init_pos).c_str(), specification.full_meta_name.c_str());
 		}
@@ -4829,7 +4834,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 
 	if (doc_accuracy.is_array()) {
 		std::set<uint64_t> set_acc;
-		switch (specification.sep_types[2]) {
+		switch (specification.sep_types[3]) {
 			case FieldType::GEO: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
@@ -4885,13 +4890,13 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 						const auto str_accuracy = lower_string(_accuracy.as_string());
 						const auto adit = map_acc_time.find(str_accuracy);
 						if (adit == adit_e) {
-							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
+							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[3]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
 						} else {
 							set_acc.insert(toUType(adit->second));
 						}
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), repr(str_set_acc_time).c_str());
+					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[3]).c_str(), repr(str_set_acc_time).c_str());
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -4913,7 +4918,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 						set_acc.insert(_accuracy.as_u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers in %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[2]).c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers in %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[3]).c_str(), specification.full_meta_name.c_str());
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -4928,7 +4933,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				return;
 			}
 			default:
-				THROW(ClientError, "%s is not allowed in %s type fields", prop_name.c_str(), Serialise::type(specification.sep_types[2]).c_str());
+				THROW(ClientError, "%s is not allowed in %s type fields", prop_name.c_str(), Serialise::type(specification.sep_types[3]).c_str());
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, %s must be array", prop_name.c_str());
@@ -4943,7 +4948,7 @@ Schema::consistency_bool_term(const std::string& prop_name, const MsgPack& doc_b
 	L_CALL(this, "Schema::consistency_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[2] == FieldType::TERM) {
+		if (specification.sep_types[3] == FieldType::TERM) {
 			const auto _bool_term = doc_bool_term.as_bool();
 			if (specification.flags.bool_term != _bool_term) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", specification.full_meta_name.c_str());
@@ -4964,7 +4969,7 @@ Schema::consistency_partials(const std::string& prop_name, const MsgPack& doc_pa
 	L_CALL(this, "Schema::consistency_partials(%s)", repr(doc_partials.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[2] == FieldType::GEO) {
+		if (specification.sep_types[3] == FieldType::GEO) {
 			const auto _partials = doc_partials.as_bool();
 			if (specification.flags.partials != _partials) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.partials ? "true" : "false", _partials ? "true" : "false");
@@ -4985,7 +4990,7 @@ Schema::consistency_error(const std::string& prop_name, const MsgPack& doc_error
 	L_CALL(this, "Schema::consistency_error(%s)", repr(doc_error.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[2] == FieldType::GEO) {
+		if (specification.sep_types[3] == FieldType::GEO) {
 			const auto _error = doc_error.as_f64();
 			if (specification.error != _error) {
 				THROW(ClientError, "It is not allowed to change %s [%.2f  ->  %.2f]", prop_name.c_str(), specification.error, _error);
@@ -5283,8 +5288,8 @@ Schema::set_namespace_spc_id(required_spc_t& spc)
 	L_CALL(nullptr, "Schema::set_namespace_spc_id(<spc>)");
 
 	// ID_FIELD_NAME cannot be text or string.
-	if (spc.sep_types[2] == FieldType::TEXT || spc.sep_types[2] == FieldType::STRING) {
-		spc.sep_types[2] = FieldType::TERM;
+	if (spc.sep_types[3] == FieldType::TEXT || spc.sep_types[3] == FieldType::STRING) {
+		spc.sep_types[3] = FieldType::TERM;
 	}
 	spc.prefix.field = NAMESPACE_PREFIX_ID_FIELD_NAME;
 	spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
@@ -5310,8 +5315,8 @@ Schema::set_default_spc_id(MsgPack& properties)
 	}
 
 	// ID_FIELD_NAME cannot be TEXT nor STRING.
-	if (specification.sep_types[2] == FieldType::TEXT || specification.sep_types[2] == FieldType::STRING) {
-		specification.sep_types[2] = FieldType::TERM;
+	if (specification.sep_types[3] == FieldType::TEXT || specification.sep_types[3] == FieldType::STRING) {
+		specification.sep_types[3] = FieldType::TERM;
 		L_DEBUG(this, "%s cannot be type text or string, it's type was changed to term", ID_FIELD_NAME);
 	}
 
@@ -5338,8 +5343,8 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	}
 
 	// RESERVED_TYPE by default is TERM
-	if (specification.sep_types[2] == FieldType::EMPTY) {
-		specification.sep_types[2] = FieldType::TERM;
+	if (specification.sep_types[3] == FieldType::EMPTY) {
+		specification.sep_types[3] = FieldType::TERM;
 	}
 
 	// Set default prefix
@@ -5407,15 +5412,16 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 {
 	L_CALL(nullptr, "Schema::readable_type(%s, %s)", repr(prop_type.to_string()).c_str(), repr(properties.to_string()).c_str());
 
-	std::array<FieldType, 3> sep_types({{
+	std::array<FieldType, 4> sep_types({{
 		(FieldType)prop_type.at(0).as_u64(),
 		(FieldType)prop_type.at(1).as_u64(),
-		(FieldType)prop_type.at(2).as_u64()
+		(FieldType)prop_type.at(2).as_u64(),
+		(FieldType)prop_type.at(3).as_u64()
 	}});
 	prop_type = ::readable_type(sep_types);
 
 	// Readable accuracy.
-	switch (sep_types[2]) {
+	switch (sep_types[3]) {
 		case FieldType::DATE:
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA:
@@ -5674,11 +5680,11 @@ Schema::get_data_id() const
 
 	try {
 		const auto& properties = mut_schema ? mut_schema->at(DB_SCHEMA).at(ID_FIELD_NAME) : schema->at(DB_SCHEMA).at(ID_FIELD_NAME);
-		res.sep_types[2] = (FieldType)properties.at(RESERVED_TYPE).at(2).as_u64();
+		res.sep_types[3] = (FieldType)properties.at(RESERVED_TYPE).at(3).as_u64();
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		res.prefix.field = properties.at(RESERVED_PREFIX).as_string();
 		// Get required specification.
-		switch (res.sep_types[2]) {
+		switch (res.sep_types[3]) {
 			case FieldType::GEO:
 				res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
 				res.error = properties.at(RESERVED_ERROR).as_f64();
@@ -5714,15 +5720,15 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 
 		auto& acc_field = std::get<4>(info);
 		if (!acc_field.empty()) {
-			res.sep_types[2] = std::get<5>(info);
+			res.sep_types[3] = std::get<5>(info);
 			return std::make_pair(res, std::move(acc_field));
 		}
 
 		if (!res.flags.inside_namespace) {
 			const auto& properties = std::get<0>(info);
 
-			res.sep_types[2] = (FieldType)properties.at(RESERVED_TYPE).at(2).as_u64();
-			if (res.sep_types[2] == FieldType::EMPTY) {
+			res.sep_types[3] = (FieldType)properties.at(RESERVED_TYPE).at(3).as_u64();
+			if (res.sep_types[3] == FieldType::EMPTY) {
 				return std::make_pair(std::move(res), std::string());
 			}
 
@@ -5734,7 +5740,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 				}
 
 				// Get required specification.
-				switch (res.sep_types[2]) {
+				switch (res.sep_types[3]) {
 					case FieldType::GEO:
 						res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
 						res.error = properties.at(RESERVED_ERROR).as_f64();
@@ -5769,7 +5775,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 				}
 			} else {
 				// Get required specification.
-				switch (res.sep_types[2]) {
+				switch (res.sep_types[3]) {
 					case FieldType::GEO:
 						res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
 						res.error = properties.at(RESERVED_ERROR).as_f64();
@@ -5823,13 +5829,13 @@ Schema::get_slot_field(const std::string& field_name) const
 		}
 
 		if (res.flags.inside_namespace) {
-			res.sep_types[2] = FieldType::TERM;
+			res.sep_types[3] = FieldType::TERM;
 			res.slot = get_slot(std::get<3>(info), res.get_ctype());
 		} else {
 			const auto& properties = std::get<0>(info);
 
 			const auto& sep_types = properties.at(RESERVED_TYPE);
-			res.sep_types[2] = (FieldType)sep_types.at(2).as_u64();
+			res.sep_types[3] = (FieldType)sep_types.at(3).as_u64();
 
 			if (std::get<1>(info)) {
 				res.slot = get_slot(std::get<3>(info), res.get_ctype());
@@ -5838,7 +5844,7 @@ Schema::get_slot_field(const std::string& field_name) const
 			}
 
 			// Get required specification.
-			switch (res.sep_types[2]) {
+			switch (res.sep_types[3]) {
 				case FieldType::GEO:
 					res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
 					res.error = properties.at(RESERVED_ERROR).as_f64();

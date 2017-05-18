@@ -244,7 +244,7 @@ extern const std::unordered_map<std::string, StopStrategy> map_stop_strategy;
 extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
 extern const std::unordered_map<std::string, TypeIndex> map_index;
 extern const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field;
-extern const std::unordered_map<std::string, std::array<FieldType, 3>> map_type;
+extern const std::unordered_map<std::string, std::array<FieldType, 4>> map_type;
 
 
 MSGPACK_ADD_ENUM(UnitTime);
@@ -316,7 +316,7 @@ struct required_spc_t {
 		std::string operator()() const noexcept;
 	};
 
-	std::array<FieldType, 3> sep_types;
+	std::array<FieldType, 4> sep_types; // foreign/object/array/type
 	prefix_t prefix;
 	Xapian::valueno slot;
 	flags_t flags;
@@ -344,7 +344,11 @@ struct required_spc_t {
 	required_spc_t& operator=(required_spc_t&& o) noexcept;
 
 	FieldType get_type() const noexcept {
-		return sep_types[2];
+		return sep_types[3];
+	}
+
+	void set_type(FieldType type) {
+		sep_types[3] = type;
 	}
 
 	static char get_ctype(FieldType type) noexcept {
@@ -352,7 +356,7 @@ struct required_spc_t {
 	}
 
 	char get_ctype() const noexcept {
-		return get_ctype(sep_types[2]);
+		return get_ctype(sep_types[3]);
 	}
 
 	void set_types(const std::string& str_type);
@@ -828,7 +832,7 @@ public:
 			spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
 		}
 
-		switch (spc.sep_types[2]) {
+		switch (spc.sep_types[3]) {
 			case FieldType::INTEGER:
 			case FieldType::POSITIVE:
 			case FieldType::FLOAT:
