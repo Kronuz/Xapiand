@@ -132,7 +132,7 @@ pthread_get_name_np(char* buffer, size_t size)
 			}
 			break;
 		}
-		auto items = len / sizeof(*kp);
+		auto items = kp_len / sizeof(*kp);
 		lk.lock();
 		if (std::abs(names.size() - items) > 20) {
 			names.clear();
