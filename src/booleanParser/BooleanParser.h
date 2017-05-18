@@ -35,7 +35,7 @@
 
 class BooleanTree {
 public:
-	BooleanTree(const std::string& input);
+	explicit BooleanTree(const std::string& input);
 	~BooleanTree() = default;
 
 	std::unique_ptr<BaseNode> root;

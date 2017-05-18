@@ -33,7 +33,7 @@ class IdNode : public BaseNode {
 	std::string id;
 
 public:
-	IdNode(const std::string& _id)
+	explicit IdNode(const std::string& _id)
 		: id(_id) { }
 
 	std::string getId() const noexcept {
