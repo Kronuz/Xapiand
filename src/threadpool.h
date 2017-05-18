@@ -270,7 +270,7 @@ class ThreadPool : public TaskQueue<Params...> {
 public:
 	// Allocate a thread pool and set them to work trying to get tasks
 	template<typename... Params_>
-	ThreadPool(const std::string format_, size_t num_threads, Params_&&... params)
+	ThreadPool(const std::string& format_, size_t num_threads, Params_&&... params)
 		: worker([&](size_t idx) {
 			ThreadPool::_worker<Params_...>(idx, std::forward<Params_>(params)...);
 		}),
