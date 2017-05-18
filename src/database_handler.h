@@ -103,6 +103,8 @@ class DatabaseHandler {
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
+	std::shared_ptr<std::unordered_set<size_t>> context;
+
 	void recover_index();
 
 	MsgPack get_document_obj(const std::string& term_id);
@@ -119,14 +121,14 @@ class DatabaseHandler {
 
 public:
 	DatabaseHandler();
-	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET);
+	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, const std::shared_ptr<std::unordered_set<size_t>>& context_=nullptr);
 
 	~DatabaseHandler() = default;
 
 	std::shared_ptr<Database> get_database() const noexcept;
 	std::shared_ptr<Schema> get_schema(const MsgPack* obj=nullptr);
 
-	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET);
+	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, const std::shared_ptr<std::unordered_set<size_t>>& context_=nullptr);
 
 #if XAPIAND_DATABASE_WAL
 	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision);

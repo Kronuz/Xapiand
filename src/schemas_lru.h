@@ -30,11 +30,14 @@
 #include "msgpack.h"
 
 
+constexpr size_t MAX_SCHEMA_RECURSION = 10;
+
+
 class DatabaseHandler;
 
 
 class SchemasLRU : public lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
-	MsgPack get_shared(const Endpoint& endpoint, const std::string& id);
+	MsgPack get_shared(const Endpoint& endpoint, const std::string& id, std::shared_ptr<std::unordered_set<size_t>> context);
 	std::tuple<bool, atomic_shared_ptr<const MsgPack>*, std::string, std::string> get_local(DatabaseHandler* db_handler, const MsgPack* obj=nullptr);
 
 	std::mutex smtx;

@@ -127,10 +127,11 @@ DatabaseHandler::DatabaseHandler()
 	  method(HTTP_GET) { }
 
 
-DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, enum http_method method_)
+DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<size_t>>& context_)
 	: endpoints(endpoints_),
 	  flags(flags_),
-	  method(method_) { }
+	  method(method_),
+	  context(context_) { }
 
 
 std::shared_ptr<Database>
@@ -155,12 +156,12 @@ DatabaseHandler::recover_index()
 	L_CALL(this, "DatabaseHandler::recover_index()");
 
 	XapiandManager::manager->database_pool.recover_database(endpoints, RECOVER_REMOVE_WRITABLE);
-	reset(endpoints, flags, HTTP_PUT);
+	reset(endpoints, flags, HTTP_PUT, context);
 }
 
 
 void
-DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_)
+DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<size_t>>& context_)
 {
 	L_CALL(this, "DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()).c_str(), flags_);
 
@@ -174,6 +175,8 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 		endpoints = endpoints_;
 		flags = flags_;
 	}
+
+	context = context_;
 }
 
 

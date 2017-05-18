@@ -133,16 +133,32 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 
 
 MsgPack
-SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id)
+SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::shared_ptr<std::unordered_set<size_t>> context)
 {
-	L_CALL(this, "SchemasLRU::get_shared(%s, %s)", repr(endpoint.to_string()).c_str(), id.c_str());
+	L_CALL(this, "SchemasLRU::get_shared(%s, %s, %s)", repr(endpoint.to_string()).c_str(), id.c_str(), context ? std::to_string(context->size()).c_str() : "nullptr");
+
+	auto hash = endpoint.hash();
+	if (!context) {
+		context = std::make_shared<std::unordered_set<size_t>>();
+	}
 
 	try {
-		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN);
+		if (context->size() > MAX_SCHEMA_RECURSION) {
+			THROW(Error, "Maximum recursion reached: %s", endpoint.to_string().c_str());
+		}
+		if (context->insert(hash).second) {
+			THROW(Error, "Cyclic schema reference detected: %s", endpoint.to_string().c_str());
+		}
+		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN, HTTP_GET, context);
 		auto doc = _db_handler.get_document(id);
+		context->erase(hash);
 		return doc.get_obj();
 	} catch (const DocNotFoundError&) {
+		context->erase(hash);
 		THROW(DocNotFoundError, "In shared schema %s document not found: %s", repr(endpoint.to_string()).c_str(), id.c_str());
+	} catch (...) {
+		context->erase(hash);
+		throw;
 	}
 }
 
@@ -173,7 +189,8 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			if (std::get<0>(info_local_schema)) {
 				schema_ptr = Schema::get_initial_schema();
 			} else {
-				schema_ptr = std::make_shared<const MsgPack>(get_shared(schema_path, schema_id));
+
+				schema_ptr = std::make_shared<const MsgPack>(get_shared(schema_path, schema_id, db_handler->context));
 			}
 			schema_ptr->lock();
 			if (!atom_shared_schema->compare_exchange_strong(shared_schema_ptr, schema_ptr)) {
@@ -215,7 +232,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			aux_schema = old_schema;
 		}
 		if (atom_shared_schema->compare_exchange_strong(aux_schema, new_schema)) {
-			DatabaseHandler _db_handler(Endpoints(Endpoint(schema_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+			DatabaseHandler _db_handler(Endpoints(Endpoint(schema_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
 			MsgPack shared_schema = *new_schema;
 			shared_schema[RESERVED_RECURSE] = false;
 			_db_handler.index(schema_id, true, shared_schema, false, msgpack_type);
