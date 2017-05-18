@@ -171,8 +171,9 @@ class Processor {
 			if (script_body.empty()) {
 				try {
 					return compile(script_name, script_name);
-				} catch (...) { }
-				throw;
+				} catch (...) {
+					throw std::out_of_range("Script not found: " + script_name);
+				}
 			}
 			auto processor = std::make_shared<Processor>(script_name, script_body);
 
