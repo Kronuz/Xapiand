@@ -244,14 +244,18 @@ LZ4DecompressFile::LZ4DecompressFile(const std::string& filename, int seed)
 	: LZ4File(LZ4_MAX_CMP_SIZE, filename),
 	  LZ4BlockStreaming(seed),
 	  lz4StreamDecode(LZ4_createStreamDecode()),
-	  data((char*)malloc(LZ4_MAX_CMP_SIZE)) { }
+	  data((char*)malloc(LZ4_MAX_CMP_SIZE)),
+	  data_size(-1),
+	  data_offset(0) { }
 
 
 LZ4DecompressFile::LZ4DecompressFile(int fd_, off_t fd_offset_, off_t fd_nbytes_, int seed)
 	: LZ4File(LZ4_MAX_CMP_SIZE, fd_, fd_offset_, fd_nbytes_),
 	  LZ4BlockStreaming(seed),
 	  lz4StreamDecode(LZ4_createStreamDecode()),
-	  data((char*)malloc(LZ4_MAX_CMP_SIZE)) { }
+	  data((char*)malloc(LZ4_MAX_CMP_SIZE)),
+	  data_size(-1),
+	  data_offset(0) { }
 
 
 LZ4DecompressFile::~LZ4DecompressFile()
