@@ -47,7 +47,7 @@ constexpr double active_timeout = 15;
 class BaseTCP : public Worker {
 private:
 	void bind(int tries);
-	void check_backlog(int backlog);
+	void check_backlog(int tcp_backlog);
 
 protected:
 	int port;

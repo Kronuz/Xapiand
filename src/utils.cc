@@ -112,13 +112,14 @@ pthread_get_name_np(char* buffer, size_t size)
 		if (!buffer) {
 			return 1;
 		}
-		size_t len = 0;
+		size_t kp_len = 0;
 		struct kinfo_proc *kp = nullptr;
 		while (true) {
-			int ctl[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD, static_cast<int>(::getpid())};
-			int error = sysctl(ctl, 4, kp, &len, nullptr, 0);
-			if (kp == nullptr || (error != 0 && errno == ENOMEM)) {
-				struct kinfo_proc *nkp = (struct kinfo_proc *)realloc(kp, len);
+			int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD, static_cast<int>(::getpid())};
+			size_t mib_len = sizeof(mib) / sizeof(int);
+			int error = sysctl(mib, mib_len, kp, &kp_len, nullptr, 0);
+			if (kp == nullptr || (error < 0 && errno == ENOMEM)) {
+				struct kinfo_proc *nkp = (struct kinfo_proc *)realloc(kp, kp_len);
 				if (nkp == nullptr) {
 					free(kp);
 					return -1;
@@ -126,8 +127,8 @@ pthread_get_name_np(char* buffer, size_t size)
 				kp = nkp;
 				continue;
 			}
-			if (error != 0) {
-				len = 0;
+			if (error < 0) {
+				kp_len = 0;
 			}
 			break;
 		}

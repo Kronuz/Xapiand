@@ -65,6 +65,9 @@
 #include "worker.h"                  // for Worker
 #include "xxh64.hpp"                 // for xxh64
 
+#include <sys/sysctl.h>              // for sysctl, sysctlnametomib...
+
+
 #define LINE_LENGTH 78
 
 #define FDS_RESERVED     50          // Is there a better approach?
@@ -648,22 +651,64 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
  * max number of clients, the function will do the reverse setting
  * to the value that we can actually handle.
  */
-#include <sys/sysctl.h>
+ssize_t get_max_files_per_proc()
+{
+	int32_t max_files_per_proc = 0;
+
+#if defined(KERN_MAXFILESPERPROC)
+#define _SYSCTL_NAME "kern.maxfilesperproc"  // FreeBSD, Apple
+	int mib[] = {CTL_KERN, KERN_MAXFILESPERPROC};
+	size_t mib_len = sizeof(mib) / sizeof(int);
+#endif
+#ifdef _SYSCTL_NAME
+	auto max_files_per_proc_len = sizeof(max_files_per_proc);
+	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
+		L_ERR(nullptr, "ERROR: Unable to get max files per process: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+	}
+#undef _SYSCTL_NAME
+#else
+	L_WARNING(nullptr, "WARNING: No way of getting max files per process.");
+#endif
+
+	return max_files_per_proc;
+}
+
+
+ssize_t get_open_files()
+{
+	int32_t max_files_per_proc = 0;
+
+#if defined(KERN_OPENFILES)
+#define _SYSCTL_NAME "kern.openfiles"  // FreeBSD
+	int mib[] = {CTL_KERN, KERN_OPENFILES};
+	size_t mib_len = sizeof(mib) / sizeof(int);
+#elif defined(__APPLE__)
+#define _SYSCTL_NAME "kern.num_files"  // Apple
+	int mib[CTL_MAXNAME + 2];
+	size_t mib_len = sizeof(mib) / sizeof(int);
+	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
+		L_ERR(nullptr, "ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		return 0;
+	}
+#endif
+#ifdef _SYSCTL_NAME
+	auto max_files_per_proc_len = sizeof(max_files_per_proc);
+	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
+		L_ERR(nullptr, "ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+	}
+#undef _SYSCTL_NAME
+#else
+	L_WARNING(nullptr, "WARNING: No way of getting number of open files.");
+#endif
+
+	return max_files_per_proc;
+}
+
+
 void adjustOpenFilesLimit(opts_t &opts) {
 
 	// Try getting the currently available number of files:
-	int32_t openfiles = 0;
-	int32_t maxfiles = 0;
-	size_t size = sizeof(openfiles);
-#if defined(__APPLE__) || defined(__FreeBSD__)
-	if (sysctlbyname("kern.maxfilesperproc", &maxfiles, &size, NULL, 0) != 0) {
-		if (sysctlbyname("kern.maxfiles", &maxfiles, &size, NULL, 0) != 0) { }
-	}
-	if (sysctlbyname("kern.openfiles", &openfiles, &size, NULL, 0) != 0) {
-		if (sysctlbyname("kern.num_files", &openfiles, &size, NULL, 0) != 0) { }
-	}
-#endif
-	ssize_t available_files = maxfiles - openfiles;
+	ssize_t available_files = get_max_files_per_proc() - get_open_files();
 
 
 	// Try calculating minimum and recommended number of files:

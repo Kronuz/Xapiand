@@ -26,7 +26,7 @@
 
 #include <sys/param.h>           // for statfs, sysctl
 #include <sys/mount.h>           // for statfs, sysctl
-#include <sys/sysctl.h>          // for xsw_usage, sysctlbyname, sysctl
+#include <sys/sysctl.h>          // for xsw_usage, sysctlnametomib, sysctl
 
 #if defined(__APPLE__)
 #include <mach/vm_statistics.h>
@@ -42,8 +42,9 @@
 #endif
 
 
+std::pair<int64_t, int64_t> get_current_ram()
+{
 #ifdef __APPLE__
-std::pair<int64_t, int64_t> get_current_ram() {
 	/* Total ram current in use */
 	vm_size_t page_size;
 	mach_port_t mach_port;
@@ -60,38 +61,76 @@ std::pair<int64_t, int64_t> get_current_ram() {
 								 (int64_t)vm_stats.wire_count) *  (int64_t)page_size;
 		return std::make_pair(used_memory, free_memory);
 	}
+#endif
 	return std::make_pair(0, 0);
 }
 
 
-uint64_t get_total_virtual_used() {
+uint64_t get_total_virtual_used()
+{
+	uint64_t total_virtual_used = 0;
+
+#if defined(VM_SWAPUSAGE)
+#define _SYSCTL_NAME "vm.swapusage"  // Apple
+	int mib[] = {CTL_VM, VM_SWAPUSAGE};
+	size_t mib_len = sizeof(mib) / sizeof(int);
+#endif
+#ifdef _SYSCTL_NAME
 	xsw_usage vmusage = {0, 0, 0, 0, false};
-	size_t size = sizeof(vmusage);
-	if (sysctlbyname("vm.swapusage", &vmusage, &size, NULL, 0) != 0) {
-		L_ERR(nullptr, "Unable to get swap usage by calling sysctlbyname(\"vm.swapusage\",...)");
+	size_t vmusage_len = sizeof(vmusage);
+	if (sysctl(mib, mib_len, &vmusage, &vmusage_len, nullptr, 0) < 0) {
+		L_ERR(nullptr, "ERROR: Unable to get swap usage: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+	} else {
+		total_virtual_used = vmusage.xsu_used;
 	}
-	return vmusage.xsu_used;
-}
+#undef _SYSCTL_NAME
+#else
+	L_WARNING(nullptr, "WARNING: No way of getting swap usage.");
 #endif
 
-
-uint64_t get_total_ram() {
-	int mib[2];
-	int64_t physical_memory;
-	mib[0] = CTL_HW;
-#if defined(__APPLE__)
-	mib[1] = HW_MEMSIZE;
-#elif defined(__FreeBSD__)
-	mib[1] = HW_REALMEM;
-#endif
-	auto length = sizeof(int64_t);
-	sysctl(mib, 2, &physical_memory, &length, NULL, 0);
-	return physical_memory;
+	return total_virtual_used;
 }
 
 
-uint64_t get_current_memory_by_process(bool resident) {
-#if defined(__APPLE__)
+uint64_t get_total_ram()
+{
+	uint64_t total_ram = 0;
+
+#if defined(HW_REALMEM)
+#define _SYSCTL_NAME "hw.realmem"  // FreeBSD
+	int mib[] = {CTL_HW, HW_REALMEM};
+	size_t mib_len = sizeof(mib) / sizeof(int);
+#elif defined(HW_MEMSIZE)
+#define _SYSCTL_NAME "hw.memsize"  // Apple
+	int mib[] = {CTL_HW, HW_MEMSIZE};
+	size_t mib_len = sizeof(mib) / sizeof(int);
+#endif
+#ifdef _SYSCTL_NAME
+	auto total_ram_len = sizeof(total_ram);
+	if (sysctl(mib, mib_len, &total_ram, &total_ram_len, nullptr, 0) < 0) {
+		L_ERR(nullptr, "ERROR: Unable to get total memory size: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+	}
+#undef _SYSCTL_NAME
+#else
+	L_WARNING(nullptr, "WARNING: No way of getting total memory size.");
+#endif
+
+	return total_ram;
+}
+
+
+uint64_t get_current_memory_by_process(bool resident)
+{
+	uint64_t current_memory_by_process;
+#if defined(__FreeBSD__)
+	char errbuf[100];
+	struct kinfo_proc *p;
+	int cnt;
+
+	kvm_t *kd = kvm_openfiles(NULL, NULL, NULL, O_RDWR, errbuf);
+	p = kvm_getprocs(kd, KERN_PROC_PID | KERN_PROC_INC_THREAD, getpid(), &cnt);
+	current_memory_by_process = p->ki_rssize * getpagesize();
+#elif defined(__APPLE__)
 	struct task_basic_info t_info;
 	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
 
@@ -99,36 +138,45 @@ uint64_t get_current_memory_by_process(bool resident) {
 		return 0;
 	}
 	if (resident) {
-		return  t_info.resident_size;
+		current_memory_by_process = t_info.resident_size;
 	} else {
-		return  t_info.virtual_size;
+		current_memory_by_process = t_info.virtual_size;
 	}
-#elif defined(__FreeBSD__)
-	char errbuf[100];
-	struct kinfo_proc *p;
-	int cnt;
-
-	kvm_t *kd = kvm_openfiles(NULL, NULL, NULL, O_RDWR, errbuf);
-	p = kvm_getprocs(kd, KERN_PROC_PID | KERN_PROC_INC_THREAD, getpid(), &cnt);
-	return p->ki_rssize * getpagesize();
 #endif
+	return current_memory_by_process;
 }
 
 
-uint64_t get_total_virtual_memory() {
+uint64_t get_total_virtual_memory()
+{
+	uint64_t total_virtual_memory = 0;
+
 #if defined(__APPLE__)
-	uint64_t myFreeSwap = 0;
 	struct statfs stats;
 	if (0 == statfs("/", &stats)) {
-		myFreeSwap = (uint64_t)stats.f_bsize * stats.f_bfree;
+		total_virtual_memory = (uint64_t)stats.f_bsize * stats.f_bfree;
 	}
-	return myFreeSwap;
 #elif defined(__FreeBSD__)
-	int total_pages = 0;
-	size_t len = sizeof(total_pages);
-	if (sysctlbyname("vm.stats.vm.v_page_count", &total_pages, &len, NULL, 0) != 0) {
-		L_ERR(nullptr, "Unable to get v_page count by calling sysctlbyname\n");
+#define _SYSCTL_NAME "vm.stats.vm.v_page_count"  // FreeBSD
+	int mib[CTL_MAXNAME + 2];
+	size_t mib_len = sizeof(mib) / sizeof(int);
+	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
+		L_ERR(nullptr, "ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		return 0;
 	}
-	return total_pages * getpagesize();
 #endif
+#ifdef _SYSCTL_NAME
+	int64_t total_pages;
+	auto total_pages_len = sizeof(total_pages);
+	if (sysctl(mib, mib_len, &total_pages, &total_pages_len, nullptr, 0) < 0) {
+		L_ERR(nullptr, "ERROR: Unable to get total virtual memory size: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+	} else {
+		total_virtual_memory = total_pages * getpagesize();
+	}
+#undef _SYSCTL_NAME
+#else
+	L_WARNING(nullptr, "WARNING: No way of getting total virtual memory size.");
+#endif
+
+	return total_virtual_memory;
 }

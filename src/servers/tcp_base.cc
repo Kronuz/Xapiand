@@ -30,6 +30,7 @@
 #include <sys/errno.h>              // for __error, errno
 #include <sys/fcntl.h>              // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <sys/socket.h>             // for setsockopt, SOL_SOCKET, SO_NOSIGPIPE
+#include <sys/sysctl.h>             // for sysctl, CTL_KERN, KIPC_SOMAXCONN
 #include <sysexits.h>               // for EX_CONFIG, EX_IOERR
 
 #include "io_utils.h"               // for close
@@ -228,34 +229,32 @@ BaseTCP::accept()
 
 
 void
-BaseTCP::check_backlog(int)
+BaseTCP::check_backlog(int tcp_backlog)
 {
-#if defined(NET_CORE_SOMAXCONN)
-	int name[3] = {CTL_NET, NET_CORE, NET_CORE_SOMAXCONN};
-	int somaxconn;
-	size_t somaxconn_len = sizeof(somaxconn);
-	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
-		L_ERR(nullptr, "ERROR: sysctl: [%d] %s", errno, strerror(errno));
-		return;
-	}
-	if (somaxconn > 0 && somaxconn < tcp_backlog) {
-		L_ERR(nullptr, "WARNING: The TCP backlog setting of %d cannot be enforced because "
-				"net.core.somaxconn"
-				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
-	}
+#if defined(NCORE_SOMAXCONN)
+#define _SYSCTL_NAME "net.core.somaxconn"  // Linux?
+	int mib[] = {CTL_NET, NET_CORE, NCORE_SOMAXCONN};
+	size_t mib_len = sizeof(mib) / sizeof(int);
 #elif defined(KIPC_SOMAXCONN)
-	int name[3] = {CTL_KERN, KERN_IPC, KIPC_SOMAXCONN};
+#define _SYSCTL_NAME "kern.ipc.somaxconn"  // FreeBSD, Apple
+	int mib[] = {CTL_KERN, KERN_IPC, KIPC_SOMAXCONN};
+	size_t mib_len = sizeof(mib) / sizeof(int);
+#endif
+#ifdef _SYSCTL_NAME
 	int somaxconn;
 	size_t somaxconn_len = sizeof(somaxconn);
-	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
-		L_ERR(nullptr, "ERROR: sysctl: [%d] %s", errno, strerror(errno));
+	if (sysctl(mib, mib_len, &somaxconn, &somaxconn_len, nullptr, 0) < 0) {
+		L_ERR(nullptr, "ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 		return;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
-		L_ERR(nullptr, "WARNING: The TCP backlog setting of %d cannot be enforced because "
-				"kern.ipc.somaxconn"
+		L_WARNING(nullptr, "WARNING: The TCP backlog setting of %d cannot be enforced because "
+				_SYSCTL_NAME
 				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
 	}
+#undef _SYSCTL_NAME
+#else
+	L_WARNING(nullptr, "WARNING: No way of getting TCP backlog setting.");
 #endif
 }
 
