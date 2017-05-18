@@ -131,7 +131,7 @@ class RemoteProtocol {
 
 public:
 
-	RemoteProtocol(BinaryClient* client_);
+	explicit RemoteProtocol(BinaryClient* client_);
 	~RemoteProtocol();
 
 // For msg_query and msg_mset:
