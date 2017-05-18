@@ -336,9 +336,6 @@ public:
  * Decompress a file.
  */
 class DeflateDecompressFile : public DeflateFile, public DeflateBlockStreaming<DeflateDecompressFile> {
-	ssize_t data_size;
-	size_t data_offset;
-
 	std::string init();
 	std::string next();
 
