@@ -63,7 +63,7 @@ class Replication {
 	BinaryClient* client;
 
 public:
-	Replication(BinaryClient* client_);
+	explicit Replication(BinaryClient* client_);
 	~Replication();
 
 	void replication_server(ReplicationMessageType type, const std::string& message);
