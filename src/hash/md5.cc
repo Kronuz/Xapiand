@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Copyright (c) 2014,2015 Stephan Brumme. All rights reserved.
  * see http://create.stephan-brumme.com/disclaimer.html
@@ -21,9 +21,10 @@
 
 #include "md5.h"
 
+#include <cstring>
+
 #include "endian.h"
 
-#include <cstring>
 
 /// same as reset()
 MD5::MD5()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Copyright (c) 2014,2015 Stephan Brumme. All rights reserved.
  * see http://create.stephan-brumme.com/disclaimer.html
@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include <stddef.h>     // for size_t
-#include <sys/types.h>  // for uint32_t, uint64_t, uint8_t
 #include <cstdint>
+#include <stddef.h>     // for size_t
 #include <string>       // for string
+#include <sys/types.h>  // for uint32_t, uint64_t, uint8_t
 
 
 /*
