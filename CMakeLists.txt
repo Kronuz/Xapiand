@@ -379,7 +379,7 @@ endif ()
 # kvm Library
 ########################################################################
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "freeBSD")
+if (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
 	target_link_libraries (${PROJECT_NAME} kvm)
 endif ()
 
