@@ -108,7 +108,7 @@ Lexer::NextToken()
 								lexeme += currentSymbol.symbol;
 								if (lexeme.size() >= 1024) {
 									std::string msj = "Symbol " + symbol + " not expected";
-									throw LexicalException(msj.c_str());
+									throw LexicalException(msj);
 								}
 								currentState = LexerState::TOKEN;
 								currentSymbol = contentReader.NextSymbol();
@@ -157,7 +157,7 @@ Lexer::NextToken()
 
 					case '\0': {
 						std::string msj = "Symbol double quote expected";
-						throw LexicalException(msj.c_str());
+						throw LexicalException(msj);
 					}
 
 					default:
@@ -176,7 +176,7 @@ Lexer::NextToken()
 				switch(currentSymbol.symbol) {
 					case '\0': {
 						std::string msj = "Symbol EOF not expected";
-						throw LexicalException(msj.c_str());
+						throw LexicalException(msj);
 					}
 
 					default:
@@ -230,7 +230,7 @@ Lexer::NextToken()
 
 					default:
 						std::string msj = "Symbol ] expected";
-						throw LexicalException(msj.c_str());
+						throw LexicalException(msj);
 
 				}
 				break;
