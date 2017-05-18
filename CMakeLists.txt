@@ -598,7 +598,7 @@ if (BUILD_TESTS)
 			$<TARGET_OBJECTS:GUID_OBJ>
 		)
 
-		add_dependencies (${PROJECT_TEST} googletest)
+		add_dependencies (${PROJECT_TEST} googletest package_config)
 		target_link_libraries (${PROJECT_TEST}
 			${XAPIAN_LIBRARIES}
 			${CMAKE_THREAD_LIBS_INIT}
