@@ -141,14 +141,14 @@ Cast::integer(const MsgPack& obj)
 			try {
 				return strict_stoll(obj.as_string());
 			} catch (const InvalidArgument& er) {
-				THROW(CastError, "Value %s cannot be cast to integer [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
+				THROW(CastError, "Value %s cannot be cast to integer [%s]", obj.getStrType().c_str(), er.what());
 			} catch (const OutOfRange& er) {
-				THROW(CastError, "Value %s cannot be cast to integer [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
+				THROW(CastError, "Value %s cannot be cast to integer [%s]", obj.getStrType().c_str(), er.what());
 			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(CastError, "Type %s cannot be cast to integer", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to integer", obj.getStrType().c_str());
 	}
 }
 
@@ -167,14 +167,14 @@ Cast::positive(const MsgPack& obj)
 			try {
 				return strict_stoull(obj.as_string());
 			} catch (const InvalidArgument& er) {
-				THROW(CastError, "Value %s cannot be cast to positive [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
+				THROW(CastError, "Value %s cannot be cast to positive [%s]", obj.getStrType().c_str(), er.what());
 			} catch (const OutOfRange& er) {
-				THROW(CastError, "Value %s cannot be cast to positive [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
+				THROW(CastError, "Value %s cannot be cast to positive [%s]", obj.getStrType().c_str(), er.what());
 			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(CastError, "Type %s cannot be cast to positive", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to positive", obj.getStrType().c_str());
 	}
 }
 
@@ -193,14 +193,14 @@ Cast::_float(const MsgPack& obj)
 			try {
 				return strict_stod(obj.as_string());
 			} catch (const InvalidArgument& er) {
-				THROW(CastError, "Value %s cannot be cast to float [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
+				THROW(CastError, "Value %s cannot be cast to float [%s]", obj.getStrType().c_str(), er.what());
 			} catch (const OutOfRange& er) {
-				THROW(CastError, "Value %s cannot be cast to float [%s]", MsgPackTypes[toUType(obj.getType())], er.what());
+				THROW(CastError, "Value %s cannot be cast to float [%s]", obj.getStrType().c_str(), er.what());
 			}
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(CastError, "Type %s cannot be cast to float", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to float", obj.getStrType().c_str());
 	}
 }
 
@@ -253,7 +253,7 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.as_bool();
 		default:
-			THROW(CastError, "Type %s cannot be cast to boolean", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to boolean", obj.getStrType().c_str());
 	}
 }
 
@@ -264,7 +264,7 @@ Cast::uuid(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.as_string();
 	}
-	THROW(CastError, "Type %s cannot be cast to uuid", MsgPackTypes[toUType(obj.getType())]);
+	THROW(CastError, "Type %s cannot be cast to uuid", obj.getStrType().c_str());
 }
 
 
@@ -279,7 +279,7 @@ Cast::date(const MsgPack& obj)
 		case MsgPack::Type::MAP:
 			return obj;
 		default:
-			THROW(CastError, "Type %s cannot be cast to date", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to date", obj.getStrType().c_str());
 	}
 }
 
@@ -294,7 +294,7 @@ Cast::time(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type %s cannot be cast to time", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to time", obj.getStrType().c_str());
 	}
 }
 
@@ -309,7 +309,7 @@ Cast::timedelta(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type %s cannot be cast to timedelta", MsgPackTypes[toUType(obj.getType())]);
+			THROW(CastError, "Type %s cannot be cast to timedelta", obj.getStrType().c_str());
 	}
 }
 
@@ -320,7 +320,7 @@ Cast::ewkt(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.as_string();
 	}
-	THROW(CastError, "Type %s cannot be cast to ewkt", MsgPackTypes[toUType(obj.getType())]);
+	THROW(CastError, "Type %s cannot be cast to ewkt", obj.getStrType().c_str());
 }
 
 

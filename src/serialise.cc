@@ -119,7 +119,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 		case MsgPack::Type::MAP:
 			return object(field_spc, field_value);
 		default:
-			THROW(SerialisationError, "msgpack::type %s is not supported", MsgPackTypes[toUType(field_value.getType())]);
+			THROW(SerialisationError, "msgpack::type %s is not supported", field_value.getStrType().c_str());
 	}
 }
 
@@ -258,10 +258,10 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 				case FieldType::STRING:
 					return Datetime::iso8601(Datetime::DateParser(field_value));
 				default:
-					THROW(SerialisationError, "Type: %s is not a date", MsgPackTypes[toUType(field_value.getType())]);
+					THROW(SerialisationError, "Type: %s is not a date", field_value.getStrType().c_str());
 			}
 		default:
-			THROW(SerialisationError, "Type: %s is not a date", MsgPackTypes[toUType(field_value.getType())]);
+			THROW(SerialisationError, "Type: %s is not a date", field_value.getStrType().c_str());
 	}
 }
 
@@ -279,7 +279,7 @@ Serialise::time(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.as_string());
 		default:
-			THROW(SerialisationError, "Type: %s is not a time", MsgPackTypes[toUType(field_value.getType())]);
+			THROW(SerialisationError, "Type: %s is not a time", field_value.getStrType().c_str());
 	}
 }
 
@@ -297,7 +297,7 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.as_string());
 		default:
-			THROW(SerialisationError, "Type: %s is not a timedelta", MsgPackTypes[toUType(field_value.getType())]);
+			THROW(SerialisationError, "Type: %s is not a timedelta", field_value.getStrType().c_str());
 	}
 }
 
@@ -442,7 +442,7 @@ Serialise::time(const class MsgPack& field_value, double& t_val)
 			t_val = Datetime::time_to_double(Datetime::TimeParser(field_value.as_string()));
 			return timestamp(t_val);
 		default:
-			THROW(SerialisationError, "Type: %s is not time", MsgPackTypes[toUType(field_value.getType())]);
+			THROW(SerialisationError, "Type: %s is not time", field_value.getStrType().c_str());
 	}
 }
 
@@ -489,7 +489,7 @@ Serialise::timedelta(const class MsgPack& field_value, double& t_val)
 			t_val = Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value.as_string()));
 			return timestamp(t_val);
 		default:
-			THROW(SerialisationError, "Type: %s is not timedelta", MsgPackTypes[toUType(field_value.getType())]);
+			THROW(SerialisationError, "Type: %s is not timedelta", field_value.getStrType().c_str());
 	}
 }
 
@@ -807,7 +807,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 			return FieldType::STRING;
 
 		default:
-			THROW(SerialisationError, "Unexpected type %s", MsgPackTypes[toUType(field_value.getType())]);
+			THROW(SerialisationError, "Unexpected type %s", field_value.getStrType().c_str());
 	}
 }
 
@@ -927,7 +927,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 			return std::make_pair(FieldType::STRING, std::string());
 
 		default:
-			THROW(SerialisationError, "Unexpected type %s", MsgPackTypes[toUType(field_value.getType())]);
+			THROW(SerialisationError, "Unexpected type %s", field_value.getStrType().c_str());
 	}
 }
 

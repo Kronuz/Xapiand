@@ -384,7 +384,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					}
 					obj = run_script(obj, prefixed_term_id);
 					if (!obj.is_map()) {
-						THROW(ClientError, "Script must return an object [%s]", MsgPackTypes[toUType(obj.getType())]);
+						THROW(ClientError, "Script must return an object [%s]", obj.getStrType().c_str());
 					}
 #endif
 				}

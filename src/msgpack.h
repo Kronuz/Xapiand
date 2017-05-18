@@ -39,12 +39,6 @@
 #define MSGPACK_GROWTH_FACTOR    1.5f  // Choosing 1.5 as the factor allows memory reuse after 4 reallocations (https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md)
 
 
-static constexpr const char* const MsgPackTypes[] = {
-	"NIL", "BOOLEAN", "POSITIVE_INTEGER", "NEGATIVE_INTEGER", "FLOAT", "STR", "ARRAY",
-	"MAP", "BIN", "EXT", "UNDEFINED"
-};
-
-
 class MsgPack {
 	struct Body;
 
@@ -75,7 +69,7 @@ public:
 		MAP                 = msgpack::type::MAP,               //0x07
 		BIN                 = msgpack::type::BIN,               //0x08
 		EXT                 = msgpack::type::EXT,               //0x09
-		UNDEFINED           = 0x10,                             //0x10
+		UNDEFINED           = 0xff,                             //0xff
 	};
 
 	struct duplicate_key : public BaseException, public std::out_of_range {
@@ -258,6 +252,7 @@ public:
 	bool is_string() const noexcept;
 
 	MsgPack::Type getType() const noexcept;
+	std::string getStrType() const noexcept;
 
 	std::size_t hash() const;
 	bool operator==(const MsgPack& other) const;
@@ -475,6 +470,23 @@ struct MsgPack::Body {
 
 	Type getType() const noexcept {
 		return _obj->type == msgpack::type::EXT ? (Type)_obj->via.ext.type() : (Type)_obj->type;
+	}
+
+	std::string getStrType() const noexcept {
+		switch (getType()) {
+			case Type::NIL: return "NIL";
+			case Type::BOOLEAN: return "BOOLEAN";
+			case Type::POSITIVE_INTEGER: return "POSITIVE_INTEGER";
+			case Type::NEGATIVE_INTEGER: return "NEGATIVE_INTEGER";
+			case Type::FLOAT: return "FLOAT";
+			case Type::STR: return "STR";
+			case Type::ARRAY: return "ARRAY";
+			case Type::MAP: return "MAP";
+			case Type::BIN: return "BIN";
+			case Type::EXT: return "EXT";
+			case Type::UNDEFINED: return "UNDEFINED";
+			default: return "<UNKNOWN>";
+		}
 	}
 };
 
@@ -1831,6 +1843,11 @@ inline bool MsgPack::is_string() const noexcept {
 
 inline MsgPack::Type MsgPack::getType() const noexcept {
 	return _const_body->getType();
+}
+
+
+inline std::string MsgPack::getStrType() const noexcept {
+	return _const_body->getStrType();
 }
 
 

@@ -56,7 +56,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 			case MsgPack::Type::MAP:
 				break;
 			default:
-				THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, MsgPackTypes[toUType(local_schema_ptr->getType())]);
+				THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, local_schema_ptr->getStrType().c_str());
 		}
 	} else {
 		const auto str_schema = db_handler->get_metadata(DB_META_SCHEMA);
@@ -106,7 +106,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 			case MsgPack::Type::MAP:
 				break;
 			default:
-				THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, MsgPackTypes[toUType(aux_schema_ptr->getType())]);
+				THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, aux_schema_ptr->getStrType().c_str());
 		}
 
 		if (!atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr) && local_schema_ptr) {
@@ -123,7 +123,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 				case MsgPack::Type::MAP:
 					break;
 				default:
-					THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, MsgPackTypes[toUType(local_schema_ptr->getType())]);
+					THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, local_schema_ptr->getStrType().c_str());
 			}
 		}
 	}
