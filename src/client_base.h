@@ -63,6 +63,9 @@ public:
 		memcpy(data, bytes, len);
 	}
 
+	Buffer(const Buffer&) = delete;
+	Buffer& operator=(const Buffer&) = delete;
+
 	virtual ~Buffer() {
 		delete [] data;
 	}
