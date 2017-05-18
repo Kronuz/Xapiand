@@ -342,7 +342,7 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id)
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, bool stored, const std::string& store, MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type)
+DatabaseHandler::index(const std::string& _document_id, bool stored, const std::string& store, MsgPack& obj, const std::string& blob, bool commit_, const type_t& ct_type)
 {
 	L_CALL(this, "DatabaseHandler::index(%s, %s, <store>, %s, <blob>, %s, <ct_type>)", repr(_document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
 
@@ -404,17 +404,13 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					obj.erase(CT_FIELD_NAME);
 				} else {
 					// Add Content Type if indexing a blob.
-					const auto found = ct_type.find_last_of("/");
-					std::string type(ct_type.c_str(), found);
-					std::string subtype(ct_type.c_str(), found + 1, ct_type.length());
-
 					auto& ct_field = obj[CT_FIELD_NAME];
 					if (!ct_field.is_map() && !ct_field.is_undefined()) {
 						ct_field = MsgPack();
 					}
 					ct_field[RESERVED_TYPE] = TERM_STR;
-					ct_field[RESERVED_VALUE] = ct_type;
-					ct_field[type][subtype] = nullptr;
+					ct_field[RESERVED_VALUE] = ct_type.to_string();
+					ct_field[ct_type.first][ct_type.second] = nullptr;
 				}
 
 				// Index object.
@@ -458,7 +454,8 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 				doc.set_data(join_data(false, "", obj.serialise(), ""));
 			} else {
 				L_INDEX(this, "Data: %s", repr(obj.to_string()).c_str());
-				doc.set_data(join_data(stored, store, obj.serialise(), serialise_strings({ prefixed_term_id, ct_type, blob })));
+				auto ct_type_str = ct_type.to_string();
+				doc.set_data(join_data(stored, store, obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
 			}
 
 			doc.add_boolean_term(prefixed_term_id);
@@ -494,9 +491,9 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type)
+DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::index(%s, %s, <body>, %s, %s)", repr(_document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.c_str());
+	L_CALL(this, "DatabaseHandler::index(%s, %s, <body>, %s, %s/%s)", repr(_document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "Database is read-only");
@@ -524,9 +521,9 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPa
 
 
 DataType
-DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type)
+DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::patch(%s, <patches>, %s, %s)", repr(_document_id).c_str(), commit_ ? "true" : "false", ct_type.c_str());
+	L_CALL(this, "DatabaseHandler::patch(%s, <patches>, %s, %s/%s)", repr(_document_id).c_str(), commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "database is read-only");
@@ -555,9 +552,9 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 
 
 DataType
-DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type)
+DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::merge(%s, %s, <body>, %s, %s)", repr(_document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.c_str());
+	L_CALL(this, "DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(_document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "database is read-only");
@@ -1053,7 +1050,7 @@ DatabaseHandler::init_ref(const Endpoint& endpoint)
 				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
 				{ "reference", { { "_value", 1                  }, { "_type",  "integer" }, { "_index", "field_values" } } },
 			};
-			db_handler.index(doc_id, false, obj, true, MSGPACK_CONTENT_TYPE);
+			db_handler.index(doc_id, false, obj, true, msgpack_type);
 		}
 	} catch (const CheckoutError&) {
 		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
@@ -1080,7 +1077,7 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
 				{ "reference", { { "_value", nref               }, { "_type",  "integer" }, { "_index", "field_values" } } },
 			};
-			db_handler.index(doc_id, false, obj, true, MSGPACK_CONTENT_TYPE);
+			db_handler.index(doc_id, false, obj, true, msgpack_type);
 		} catch (const DocNotFoundError&) {
 			// QUESTION: Document not found - should add?
 			// QUESTION: This case could happen?
@@ -1089,7 +1086,7 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
 				{ "reference", { { "_value", 1                  }, { "_type",  "integer" }, { "_index", "field_values" } } },
 			};
-			db_handler.index(doc_id, false, obj, true, MSGPACK_CONTENT_TYPE);
+			db_handler.index(doc_id, false, obj, true, msgpack_type);
 		}
 	} catch (const CheckoutError&) {
 		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
@@ -1116,7 +1113,7 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
 				{ "reference", { { "_value", nref               }, { "_type",  "integer" }, { "_index", "field_values" } } },
 			};
-			db_handler.index(doc_id, false, obj, true, MSGPACK_CONTENT_TYPE);
+			db_handler.index(doc_id, false, obj, true, msgpack_type);
 			if (nref == 0) {
 				// qmtx need a lock
 				delete_files(endpoint.path);

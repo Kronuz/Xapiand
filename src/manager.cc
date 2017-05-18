@@ -334,7 +334,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  TERM_STR } } },
 				{ "name",         { { RESERVED_TYPE,  TERM_STR }, { RESERVED_VALUE, local_node_->name } } },
 				{ "tagline",      { { RESERVED_TYPE,  TERM_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
-			}, true, MSGPACK_CONTENT_TYPE);
+			}, true, msgpack_type);
 		} catch (const CheckoutError&) {
 			L_CRIT(this, "Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);

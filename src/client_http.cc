@@ -80,25 +80,6 @@
 #define QUERY_FIELD_PERIOD (1 << 4)
 
 
-type_t content_type_pair(const std::string& ct_type) {
-	const std::size_t found = ct_type.find_last_of('/');
-	if (found == std::string::npos) {
-		return  make_pair(std::string(), std::string());
-	}
-	return make_pair(std::string(ct_type, 0, found), std::string(ct_type, found + 1));
-}
-
-
-static const auto no_type             = std::make_pair("", "");
-static const auto any_type            = content_type_pair(ANY_CONTENT_TYPE);
-static const auto html_type           = content_type_pair(HTML_CONTENT_TYPE);
-static const auto text_type           = content_type_pair(TEXT_CONTENT_TYPE);
-static const auto json_type           = content_type_pair(JSON_CONTENT_TYPE);
-static const auto msgpack_type        = content_type_pair(MSGPACK_CONTENT_TYPE);
-static const auto x_msgpack_type      = content_type_pair(X_MSGPACK_CONTENT_TYPE);
-static const auto msgpack_serializers = std::vector<type_t>({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
-
-
 static const std::regex header_params_re("\\s*;\\s*([a-z]+)=(\\d+(?:\\.\\d+)?)", std::regex::optimize);
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)((?:\\s*;\\s*[a-z]+=\\d+(?:\\.\\d+)?)*)", std::regex::optimize);
 static const std::regex header_accept_encoding_re("([-a-z+]+|\\*)((?:\\s*;\\s*[a-z]+=\\d+(?:\\.\\d+)?)*)", std::regex::optimize);
@@ -621,8 +602,9 @@ HttpClient::run()
 				request_body += '\a';
 			} else {
 				auto body_ = get_decoded_body();
+				auto ct_type = body_.first;
 				auto msgpack = body_.second;
-				if (msgpack.is_map()) {
+				if (ct_type == json_type || ct_type == msgpack_type) {
 					request_body = msgpack.to_string(4);
 				} else if (!body.empty()) {
 					request_body = "...";
@@ -926,43 +908,48 @@ HttpClient::_delete(enum http_method method)
 }
 
 
-std::pair<std::string, MsgPack>&
+std::pair<type_t, MsgPack>&
 HttpClient::get_decoded_body()
 {
 	L_CALL(this, "HttpClient::get_decoded_body()");
 
 	if (decoded_body.first.empty()) {
-		// Create MsgPack object for the body
-		auto ct_type = content_type;
 
-		if (ct_type.empty()) {
-			ct_type = JSON_CONTENT_TYPE;
+		// Create MsgPack object for the body
+		auto ct_type_str = content_type;
+		if (ct_type_str.empty()) {
+			ct_type_str = JSON_CONTENT_TYPE;
 		}
 
+		type_t ct_type;
 		MsgPack msgpack;
 		if (!body.empty()) {
 			rapidjson::Document rdoc;
-			switch (xxh64::hash(ct_type)) {
+			switch (xxh64::hash(ct_type_str)) {
 				case xxh64::hash(FORM_URLENCODED_CONTENT_TYPE):
 				case xxh64::hash(X_FORM_URLENCODED_CONTENT_TYPE):
 					try {
 						json_load(rdoc, body);
 						msgpack = MsgPack(rdoc);
-						ct_type = JSON_CONTENT_TYPE;
+						ct_type = json_type;
 					} catch (const std::exception&) {
 						msgpack = MsgPack(body);
+						ct_type = msgpack_type;
 					}
 					break;
 				case xxh64::hash(JSON_CONTENT_TYPE):
 					json_load(rdoc, body);
 					msgpack = MsgPack(rdoc);
+					ct_type = json_type;
 					break;
 				case xxh64::hash(MSGPACK_CONTENT_TYPE):
 				case xxh64::hash(X_MSGPACK_CONTENT_TYPE):
 					msgpack = MsgPack::unserialise(body);
+					ct_type = msgpack_type;
 					break;
 				default:
 					msgpack = MsgPack(body);
+					ct_type = type_t(ct_type_str);
 					break;
 			}
 		}
@@ -2370,7 +2357,7 @@ HttpClient::resolve_ct_type(std::string ct_type_str)
 			ct_type_str = X_MSGPACK_CONTENT_TYPE;
 		}
 	}
-	auto ct_type = content_type_pair(ct_type_str);
+	type_t ct_type(ct_type_str);
 
 	std::vector<type_t> ct_types;
 	if (ct_type == json_type || ct_type == msgpack_type || ct_type == x_msgpack_type) {
@@ -2433,7 +2420,7 @@ HttpClient::get_acceptable_type(const T& ct)
 	L_CALL(this, "HttpClient::get_acceptable_type()");
 
 	if (accept_set.empty()) {
-		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, type_t, unsigned>(1, 0, content_type_pair(content_type), 0));
+		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, type_t, unsigned>(1, 0, content_type, 0));
 		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string(1, '*'), std::string(1, '*')), 0));
 	}
 	for (const auto& accept : accept_set) {
@@ -2507,7 +2494,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 		return;
 	}
 
-	auto ct_type = content_type_pair(content_type);
+	type_t ct_type(content_type);
 	std::vector<type_t> ct_types;
 	if (ct_type == json_type || ct_type == msgpack_type || content_type.empty()) {
 		ct_types = msgpack_serializers;

@@ -113,7 +113,7 @@ class DatabaseHandler {
 	MsgPack run_script(MsgPack& data, const std::string& term_id);
 #endif
 
-	DataType index(const std::string& _document_id, bool stored, const std::string& storage, MsgPack& obj, const std::string& blob, bool commit_, const std::string& ct_type);
+	DataType index(const std::string& _document_id, bool stored, const std::string& storage, MsgPack& obj, const std::string& blob, bool commit_, const type_t& ct_type);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -132,9 +132,9 @@ public:
 	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision);
 #endif
 
-	DataType index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type);
-	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const std::string& ct_type);
-	DataType merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const std::string& ct_type);
+	DataType index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const type_t& ct_type);
+	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const type_t& ct_type);
+	DataType merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const type_t& ct_type);
 
 	void write_schema(const MsgPack& obj);
 
