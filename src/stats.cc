@@ -253,8 +253,9 @@ Stats::add(Counter& counter, uint64_t duration)
 {
 	std::lock_guard<std::mutex> lk(mtx);
 	update_pos_time();
-	counter.min[static_cast<int>(current_pos.minute)].add(duration);
-	counter.sec[current_pos.second].add(duration);
+	Counter::Element element(duration);
+	counter.min[static_cast<int>(current_pos.minute)].add(element);
+	counter.sec[current_pos.second].add(element);
 }
 
 

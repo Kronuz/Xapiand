@@ -45,7 +45,7 @@ struct Stats {
 			uint64_t min;
 
 			Element();
-			Element(uint64_t duration);
+			explicit Element(uint64_t duration);
 			void clear();
 			void add(const Element& other);
 		};
@@ -64,7 +64,7 @@ struct Stats {
 		int second;
 
 		Pos();
-		Pos(const std::chrono::time_point<std::chrono::system_clock>& current);
+		explicit Pos(const std::chrono::time_point<std::chrono::system_clock>& current);
 	};
 
 	std::chrono::time_point<std::chrono::system_clock> current;
