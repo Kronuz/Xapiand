@@ -156,9 +156,8 @@ protected:
 			}
 
 			auto data = this;
-			size_t chunk_num = 0;
 			if (slot >= _Size) {
-				chunk_num = slot / _Size;
+				size_t chunk_num = slot / _Size;
 				slot = slot % _Size;
 
 				for (size_t c = 0; c < chunk_num; ++c) {

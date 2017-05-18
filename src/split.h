@@ -228,10 +228,10 @@ public:
 
 	template <typename OutputIt>
 	static void split(const std::string& str, const std::string& delimiter, OutputIt d_first) {
-		size_t prev = 0, next = 0, len;
+		size_t prev = 0, next = 0;
 
 		while ((next = str.find(delimiter, prev)) != std::string::npos) {
-			len = next - prev;
+			size_t len = next - prev;
 			if (len > 0) {
 				*d_first = str.substr(prev, len);
 				++d_first;
@@ -246,10 +246,10 @@ public:
 
 	template <typename OutputIt>
 	static void split(const std::string& str, char delimiter, OutputIt d_first) {
-		size_t prev = 0, next = 0, len;
+		size_t prev = 0, next = 0;
 
 		while ((next = str.find(delimiter, prev)) != std::string::npos) {
-			len = next - prev;
+			size_t len = next - prev;
 			if (len > 0) {
 				*d_first = str.substr(prev, len);
 				++d_first;
@@ -264,10 +264,10 @@ public:
 
 	template <typename OutputIt>
 	static void split_first_of(const std::string& str, const std::string& delimiter, OutputIt d_first) {
-		size_t prev = 0, next = 0, len;
+		size_t prev = 0, next = 0;
 
 		while ((next = str.find_first_of(delimiter, prev)) != std::string::npos) {
-			len = next - prev;
+			size_t len = next - prev;
 			if (len > 0) {
 				*d_first = str.substr(prev, len);
 				++d_first;
