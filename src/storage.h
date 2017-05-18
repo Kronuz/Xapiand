@@ -786,6 +786,10 @@ public:
 		}
 		return static_cast<uint32_t>(std::stoul(filename.substr(found + 1)));
 	}
+
+	bool closed() noexcept {
+		return fd == 0;
+	}
 };
 
 

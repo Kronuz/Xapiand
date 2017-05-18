@@ -314,7 +314,7 @@ DatabaseWAL::repr_line(const std::string& line)
 
 
 MsgPack
-DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision)
+DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/)
 {
 	L_CALL(this, "DatabaseWAL::repr(%u, %u)", start_revision, end_revision);
 
@@ -953,11 +953,7 @@ Database::reopen()
 				writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 				storages.push_back(std::make_unique<DataStorage>(e.path, this));
 			} else {
-				auto storage = std::make_unique<DataStorage>(e.path, this);
-				storage->volume = storage->highest_volume();
-
-				storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
-				writable_storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
+				writable_storages.push_back(std::make_unique<DataStorage>(e.path, this));
 				storages.push_back(std::make_unique<DataStorage>(e.path, this));
 			}
 		} else {
@@ -1360,6 +1356,10 @@ Database::storage_push_blob(Xapian::Document& doc) const
 		if (store.second.empty()) {
 			while (true) {
 				try {
+					if (storage->closed()) {
+						storage->volume = storage->highest_volume();
+						storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+					}
 					offset = storage->write(blob);
 					break;
 				} catch (StorageEOF) {

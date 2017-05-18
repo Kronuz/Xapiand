@@ -591,7 +591,7 @@ XapiandManager::make_servers(const opts_t& o)
 	L_NOTICE(this, msg.c_str());
 
 
-	for (size_t i = 0; i < o.num_servers; ++i) {
+	for (ssize_t i = 0; i < o.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(XapiandManager::manager, nullptr, ev_flags);
 		servers_weak.push_back(server);
 

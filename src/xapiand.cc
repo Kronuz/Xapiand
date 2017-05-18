@@ -764,14 +764,14 @@ void adjustOpenFilesLimit(opts_t &opts) {
 
 
 	// Try getting current limit of files:
-	rlim_t limit_cur_files;
+	ssize_t limit_cur_files;
 	struct rlimit limit;
 	if (getrlimit(RLIMIT_NOFILE, &limit) == -1) {
 		limit_cur_files = available_files;
 		if (!limit_cur_files) {
 			limit_cur_files = 4000;
 		}
-		L_WARNING(nullptr, "Unable to obtain the current NOFILE limit (%s), assuming %d", strerror(errno), limit_cur_files);
+		L_WARNING(nullptr, "Unable to obtain the current NOFILE limit (%s), assuming %zd", strerror(errno), limit_cur_files);
 	} else {
 		limit_cur_files = limit.rlim_cur;
 	}
@@ -783,14 +783,14 @@ void adjustOpenFilesLimit(opts_t &opts) {
 	if (opts.max_files || limit_cur_files < max_files) {
 		bool increasing = limit_cur_files < max_files;
 
-		const rlim_t step = 16;
+		const ssize_t step = 16;
 		int setrlimit_error = 0;
 
 		// Try to set the file limit to match 'max_files' or at least to the higher value supported less than max_files.
-		rlim_t new_max_files = max_files;
+		ssize_t new_max_files = max_files;
 		while (new_max_files != limit_cur_files) {
-			limit.rlim_cur = new_max_files;
-			limit.rlim_max = new_max_files;
+			limit.rlim_cur = static_cast<rlim_t>(new_max_files);
+			limit.rlim_max = static_cast<rlim_t>(new_max_files);
 			if (setrlimit(RLIMIT_NOFILE, &limit) != -1) {
 				max_files = new_max_files;
 				if (increasing) {

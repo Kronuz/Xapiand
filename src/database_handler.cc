@@ -669,7 +669,7 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 
 
 MSet
-DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions)
+DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& /*suggestions*/)
 {
 	L_CALL(this, "DatabaseHandler::get_mset(...)");
 
