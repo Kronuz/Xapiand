@@ -123,7 +123,7 @@ public:
 			auto size = static_cast<ssize_t>(_items_map.size() + 1);
 			auto last = _items_list.rbegin();
 			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend() && size > _max_size; --i) {
-				auto it = --last.base();
+				auto it = (++last).base();
 				--size;
 				_items_map.erase(it->first);
 				_items_list.erase(it);
@@ -148,7 +148,7 @@ public:
 		trim();
 		_items_list.push_back(std::forward<P>(p));
 		auto last = _items_list.rbegin();
-		auto it = --last.base();
+		auto it = (++last).base();
 		bool created = _items_map.emplace(it->first, it).second;
 		return std::make_pair(it, created);
 	}
@@ -252,7 +252,7 @@ public:
 		if (_max_size != -1) {
 			auto last = _items_list.rbegin();
 			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend(); --i) {
-				auto it = --last.base();
+				auto it = (++last).base();
 				switch (on_drop(it->second, size, _max_size)) {
 					case DropAction::evict:
 						--size;
@@ -293,7 +293,7 @@ public:
 		trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
 		_items_list.push_back(std::forward<P>(p));
 		auto last = _items_list.rbegin();
-		auto it = --last.base();
+		auto it = (++last).base();
 		bool created = _items_map.emplace(it->first, it).second;
 		return std::make_pair(it, created);
 	}
