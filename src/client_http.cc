@@ -595,7 +595,7 @@ HttpClient::run()
 				// From [https://www.iterm2.com/documentation-images.html]
 				std::string b64_name = cppcodec::base64_rfc4648::encode("");
 				std::string b64_request_body = cppcodec::base64_rfc4648::encode(body);
-				request_body = format_string("\033]1337;File=name=%s;inline=1;size=%d;width=auto:",
+				request_body = format_string("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
 					b64_name.c_str(),
 					b64_request_body.size());
 				request_body += b64_request_body.c_str();
@@ -1580,7 +1580,7 @@ HttpClient::search_view(enum http_method method, Command)
 							// From [https://www.iterm2.com/documentation-images.html]
 							std::string b64_name = cppcodec::base64_rfc4648::encode("");
 							std::string b64_response_body = cppcodec::base64_rfc4648::encode(blob_data);
-							response_body = format_string("\033]1337;File=name=%s;inline=1;size=%d;width=auto:",
+							response_body = format_string("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
 								b64_name.c_str(),
 								b64_response_body.size());
 							response_body += b64_response_body.c_str();
