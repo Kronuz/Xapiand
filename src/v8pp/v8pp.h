@@ -127,7 +127,7 @@ class Processor {
 
 	class ScriptLRU : public lru::LRU<size_t, std::shared_ptr<v8pp::Processor>> {
 	public:
-		ScriptLRU(ssize_t max_size) : LRU(max_size) { }
+		explicit ScriptLRU(ssize_t max_size) : LRU(max_size) { }
 	};
 
 
@@ -141,7 +141,7 @@ class Processor {
 	public:
 		v8::Isolate::CreateParams create_params;
 
-		Engine(ssize_t max_size)
+		explicit Engine(ssize_t max_size)
 			: platform(v8::platform::CreateDefaultPlatform()),
 			  script_lru(max_size)
 		{
@@ -319,7 +319,7 @@ class Processor {
 		}
 
 	public:
-		PropertyHandler(v8::Isolate* isolate_)
+		explicit PropertyHandler(v8::Isolate* isolate_)
 			: isolate(isolate_)
 		{
 			v8::Local<v8::ObjectTemplate> obj_template_ = v8::ObjectTemplate::New(isolate);
