@@ -223,7 +223,7 @@ PathParser::init(const std::string& p)
 	while (cn) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		#ifdef DEBUG_URL_PARSER
-		fprintf(stderr, "1>> %3s %02x '%c' [n1:%zu - n0:%zu = length:%zu] total:%zu\n", [state]{
+		fprintf(stderr, "1>> %3s %02x '%c' [n1:%td - n0:%td = length:%td] total:%td\n", [state]{
 			switch(state) {
 				case State::NCM: return "ncm";
 				case State::PMT: return "pmt";
@@ -262,7 +262,7 @@ PathParser::init(const std::string& p)
 	while (cn) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		#ifdef DEBUG_URL_PARSER
-		fprintf(stderr, "2<< %3s %02x '%c' [n1:%zu - n0:%zu = length:%zu] total:%zu\n", [state]{
+		fprintf(stderr, "2<< %3s %02x '%c' [n1:%td - n0:%td = length:%td] total:%td\n", [state]{
 			switch(state) {
 				case State::NCM: return "ncm";
 				case State::PMT: return "pmt";
@@ -408,7 +408,7 @@ PathParser::next()
 	while (true) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		#ifdef DEBUG_URL_PARSER
-		fprintf(stderr, "3>> %3s %02x '%c' [n1:%zu - n0:%zu = length:%zu] total:%zu\n", [state]{
+		fprintf(stderr, "3>> %3s %02x '%c' [n1:%td - n0:%td = length:%td] total:%td\n", [state]{
 			switch(state) {
 				case State::NCM: return "ncm";
 				case State::PMT: return "pmt";
