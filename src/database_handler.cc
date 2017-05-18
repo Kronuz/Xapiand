@@ -1038,7 +1038,7 @@ DatabaseHandler::init_ref(const Endpoint& endpoint)
 {
 	L_CALL(nullptr, "DatabaseHandler::init_ref(%s)", repr(endpoint.to_string()).c_str());
 
-	DatabaseHandler db_handler(Endpoint(".refs"), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
 	const auto doc_id = get_hashed(endpoint.path);
 
@@ -1065,7 +1065,7 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 {
 	L_CALL(nullptr, "DatabaseHandler::inc_ref(%s)", repr(endpoint.to_string()).c_str());
 
-	DatabaseHandler db_handler(Endpoint(".refs"), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
 	const auto doc_id = get_hashed(endpoint.path);
 
@@ -1101,7 +1101,7 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 {
 	L_CALL(nullptr, "DatabaseHandler::dec_ref(%s)", repr(endpoint.to_string()).c_str());
 
-	DatabaseHandler db_handler(Endpoint(".refs"), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
 	const auto doc_id = get_hashed(endpoint.path);
 
@@ -1132,7 +1132,7 @@ DatabaseHandler::get_master_count()
 {
 	L_CALL(nullptr, "DatabaseHandler::get_master_count()");
 
-	DatabaseHandler db_handler(Endpoint(".refs"), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
 	try {
 		std::vector<std::string> suggestions;

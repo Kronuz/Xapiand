@@ -229,8 +229,9 @@ public:
 
 	Endpoints() = default;
 
-	Endpoints(const Endpoint& endpoint) {
-		add(endpoint);
+	template <typename T, typename = std::enable_if_t<std::is_same<Endpoint, std::decay_t<T>>::value>>
+	explicit Endpoints(T&& endpoint) {
+		add(std::forward<T>(endpoint));
 	}
 
 	size_t hash() const;

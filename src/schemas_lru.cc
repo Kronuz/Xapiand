@@ -138,7 +138,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id)
 	L_CALL(this, "SchemasLRU::get_shared(%s, %s)", repr(endpoint.to_string()).c_str(), id.c_str());
 
 	try {
-		DatabaseHandler _db_handler(endpoint, DB_OPEN);
+		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN);
 		auto doc = _db_handler.get_document(id);
 		return doc.get_obj();
 	} catch (const DocNotFoundError&) {
@@ -215,7 +215,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			aux_schema = old_schema;
 		}
 		if (atom_shared_schema->compare_exchange_strong(aux_schema, new_schema)) {
-			DatabaseHandler _db_handler(Endpoint(schema_path), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+			DatabaseHandler _db_handler(Endpoints(Endpoint(schema_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 			MsgPack shared_schema = *new_schema;
 			shared_schema[RESERVED_RECURSE] = false;
 			_db_handler.index(schema_id, true, shared_schema, false, MSGPACK_CONTENT_TYPE);
