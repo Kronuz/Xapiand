@@ -162,13 +162,14 @@ QueryParser::get()
 
 
 PathParser::PathParser()
-	: len_pth(0), off_pth(nullptr),
-	  len_hst(0), off_hst(nullptr),
-	  len_nsp(0), off_nsp(nullptr),
-	  len_pmt(0), off_pmt(nullptr),
-	  len_ppmt(0), off_ppmt(nullptr),
-	  len_cmd(0), off_cmd(nullptr),
-	  len_id(0), off_id(nullptr) { }
+	: off(nullptr), len_pth(0),
+	  off_pth(nullptr), len_hst(0),
+	  off_hst(nullptr), len_nsp(0),
+	  off_nsp(nullptr), len_pmt(0),
+	  off_pmt(nullptr), len_ppmt(0),
+	  off_ppmt(nullptr), len_cmd(0),
+	  off_cmd(nullptr), len_id(0),
+	  off_id(nullptr) { }
 
 
 void
