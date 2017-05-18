@@ -32,6 +32,7 @@
 
 #define LVL_MAX 10
 
+
 class FieldParserError : public ClientError {
 public:
 	template<typename... Args>
