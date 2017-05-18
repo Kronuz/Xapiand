@@ -219,6 +219,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			MsgPack shared_schema = *new_schema;
 			shared_schema[RESERVED_RECURSE] = false;
 			_db_handler.index(schema_id, true, shared_schema, false, msgpack_type);
+			return true;
 		} else {
 			old_schema = aux_schema;
 		}
