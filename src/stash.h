@@ -58,13 +58,15 @@ struct StashContext {
 	unsigned long long current_key;
 
 	StashContext(StashContext&& o) noexcept
-		: cur_key(std::move(o.cur_key)),
+		: op(std::move(o.op)),
+		  cur_key(std::move(o.cur_key)),
 		  atom_first_key(o.atom_first_key.load()),
 		  atom_last_key(o.atom_last_key.load()),
 		  current_key(std::move(o.current_key)) { }
 
 	StashContext(unsigned long long first_key_)
-		: cur_key(first_key_),
+		: op(Operation::walk),
+		  cur_key(first_key_),
 		  atom_first_key(cur_key),
 		  atom_last_key(cur_key),
 		  current_key(first_key_) { }
