@@ -314,7 +314,7 @@ DatabaseWAL::repr_line(const std::string& line)
 
 
 MsgPack
-DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/)
+DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision)
 {
 	L_CALL(this, "DatabaseWAL::repr(%u, %u)", start_revision, end_revision);
 
