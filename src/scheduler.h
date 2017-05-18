@@ -50,7 +50,7 @@ protected:
 	std::atomic_ullong cleared_at;
 
 public:
-	ScheduledTask(std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
+	explicit ScheduledTask(std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 
 	~ScheduledTask() = default;
 
@@ -118,7 +118,7 @@ class Scheduler {
 	void run();
 
 public:
-	Scheduler(const std::string& name_);
+	explicit Scheduler(const std::string& name_);
 	Scheduler(const std::string& name_, const std::string& format, size_t num_threads);
 	~Scheduler();
 

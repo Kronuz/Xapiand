@@ -83,7 +83,7 @@ class function_mo : private std::function<F> {
 
 public:
 	template<typename Fun, typename = std::enable_if_t<!std::is_copy_constructible<Fun>::value && !std::is_copy_assignable<Fun>::value>>
-	function_mo(Fun fun) : std::function<F>(impl_move<Fun>(std::move(fun))) { }
+	explicit function_mo(Fun fun) : std::function<F>(impl_move<Fun>(std::move(fun))) { }
 
 	function_mo() = default;
 	function_mo(function_mo&&) = default;

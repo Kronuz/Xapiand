@@ -57,7 +57,7 @@ public:
 	Log(Log&& o);
 	Log& operator=(Log&& o);
 
-	Log(LogType log_);
+	explicit Log(LogType log_);
 	~Log();
 
 	bool _unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
