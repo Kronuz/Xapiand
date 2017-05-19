@@ -56,15 +56,15 @@ protected:
 
 	list_t _items_list;
 	map_t _items_map;
-	ssize_t _max_size;
+	size_t _max_size;
 
 public:
 	using iterator = typename list_t::iterator;
 	using const_iterator = typename list_t::const_iterator;
 
-	LRU(ssize_t max_size=-1)
+	LRU(size_t max_size=-1)
 		: _max_size(max_size) {
-		ASSERT(_max_size != 0);
+		assert(_max_size != 0);
 	}
 
 	virtual ~LRU() = default;
@@ -120,7 +120,7 @@ public:
 
 	void trim() {
 		if (_max_size != -1) {
-			auto size = static_cast<ssize_t>(_items_map.size() + 1);
+			auto size = _items_map.size() + 1;
 			auto last = _items_list.rbegin();
 			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend() && size > _max_size; --i) {
 				auto it = (++last).base();
