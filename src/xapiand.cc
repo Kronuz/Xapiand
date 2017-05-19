@@ -749,17 +749,13 @@ void adjustOpenFilesLimit(opts_t &opts) {
 	// Calculate max_files (from configuration, recommended and available numbers):
 	ssize_t max_files = opts.max_files;
 	if (max_files) {
-		// Decrese whatever the user requested to the amount of available files:
 		if (max_files > available_files) {
-			L_WARNING(nullptr, "Requested maximum number of files (%zd) capped to the maximum number of currently available files (%zd)", max_files, available_files);
-			max_files = available_files;
+			L_WARNING(nullptr, "The currently available number of files (%zd) exceeds the requested amount (%zd)", available_files, max_files);
 		}
 	} else {
-		if (max_files < recommended_files) {
-			max_files = recommended_files;
-		}
+		max_files = recommended_files;
 		if (max_files > available_files) {
-			max_files = available_files;
+			L_WARNING(nullptr, "The currently available number of files (%zd) exceeds needed amount (%zd)", available_files, max_files);
 		}
 	}
 
