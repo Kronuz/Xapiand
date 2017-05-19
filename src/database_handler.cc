@@ -122,8 +122,12 @@ lock_database::unlock()
 {
 	L_CALL(this, "lock_database::unlock(...)");
 
-	if (db_handler && db_handler->database) {
-		XapiandManager::manager->database_pool.checkin(db_handler->database);
+	if (db_handler) {
+		if (db_handler->database) {
+			XapiandManager::manager->database_pool.checkin(db_handler->database);
+		} else {
+			THROW(Error, "lock_database is not locked");
+		}
 	}
 }
 
