@@ -5726,19 +5726,17 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 	}
 
 	try {
-		auto info = get_dynamic_subproperties(schema->at(DB_SCHEMA), field_name);
+		auto spc = get_dynamic_subproperties(schema->at(DB_SCHEMA), field_name);
+		res.flags.inside_namespace = spc.inside_namespace;
+		res.prefix.field = std::move(spc.prefix);
 
-		res.flags.inside_namespace = std::get<2>(info);
-		res.prefix.field = std::move(std::get<3>(info));
-
-		auto& acc_field = std::get<4>(info);
-		if (!acc_field.empty()) {
-			res.sep_types[SPC_INDEX_TYPE] = std::get<5>(info);
-			return std::make_pair(res, std::move(acc_field));
+		if (!spc.acc_field.empty()) {
+			res.sep_types[SPC_INDEX_TYPE] = spc.acc_field_type;
+			return std::make_pair(res, std::move(spc.acc_field));
 		}
 
 		if (!res.flags.inside_namespace) {
-			const auto& properties = std::get<0>(info);
+			const auto& properties = *spc.properties;
 
 			res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).as_u64();
 			if (res.sep_types[SPC_INDEX_TYPE] == FieldType::EMPTY) {
@@ -5746,7 +5744,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 			}
 
 			if (is_range) {
-				if (std::get<1>(info)) {
+				if (spc.has_uuid_prefix) {
 					res.slot = get_slot(res.prefix.field, res.get_ctype());
 				} else {
 					res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
@@ -5833,24 +5831,23 @@ Schema::get_slot_field(const std::string& field_name) const
 	}
 
 	try {
-		auto info = get_dynamic_subproperties(schema->at(DB_SCHEMA), field_name);
-		res.flags.inside_namespace = std::get<2>(info);
+		auto spc = get_dynamic_subproperties(schema->at(DB_SCHEMA), field_name);
+		res.flags.inside_namespace = spc.inside_namespace;
 
-		auto& acc_field = std::get<4>(info);
-		if (!acc_field.empty()) {
+		if (!spc.acc_field.empty()) {
 			THROW(ClientError, "Field name: %s is an accuracy, therefore does not have slot", repr(field_name).c_str());
 		}
 
 		if (res.flags.inside_namespace) {
 			res.sep_types[SPC_INDEX_TYPE] = FieldType::TERM;
-			res.slot = get_slot(std::get<3>(info), res.get_ctype());
+			res.slot = get_slot(spc.prefix, res.get_ctype());
 		} else {
-			const auto& properties = std::get<0>(info);
+			const auto& properties = *spc.properties;
 
 			res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).as_u64();
 
-			if (std::get<1>(info)) {
-				res.slot = get_slot(std::get<3>(info), res.get_ctype());
+			if (spc.has_uuid_prefix) {
+				res.slot = get_slot(spc.prefix, res.get_ctype());
 			} else {
 				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 			}
@@ -5888,16 +5885,14 @@ Schema::get_slot_field(const std::string& field_name) const
 }
 
 
-std::tuple<const MsgPack&, bool, bool, std::string, std::string, FieldType>
+Schema::dynamic_spc_t
 Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
 {
 	L_CALL(this, "Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
 
 	Split<char> field_names(full_name, DB_OFFSPRING_UNION);
 
-	const MsgPack* subproperties = &properties;
-	std::string prefix;
-	bool has_uuid_prefix = false;
+	dynamic_spc_t spc(&properties);
 
 	const auto it_e = field_names.end();
 	const auto it_b = field_names.begin();
@@ -5909,36 +5904,40 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 				if (!map_dispatch_set_default_spc.count(field_name)) {
 					if (++it == it_e) {
 						auto acc_data = get_acc_data(field_name);
-						prefix.append(acc_data.first);
-						return std::forward_as_tuple(*subproperties, has_uuid_prefix, false, std::move(prefix), std::move(field_name), acc_data.second);
+						spc.prefix.append(acc_data.first);
+						spc.acc_field.assign(std::move(field_name));
+						spc.acc_field_type = acc_data.second;
+						return spc;
 					}
 					THROW(ClientError, "The field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 				}
 			} else if (++it == it_e) {
 				auto acc_data = get_acc_data(field_name);
-				prefix.append(acc_data.first);
-				return std::forward_as_tuple(*subproperties, has_uuid_prefix, false, std::move(prefix), std::move(field_name), acc_data.second);
+				spc.prefix.append(acc_data.first);
+				spc.acc_field.assign(std::move(field_name));
+				spc.acc_field_type = acc_data.second;
+				return spc;
 			} else {
 				THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(field_name).c_str());
 			}
 		}
 
 		try {
-			subproperties = &subproperties->at(field_name);
-			prefix.append(subproperties->at(RESERVED_PREFIX).as_string());
+			spc.properties = &spc.properties->at(field_name);
+			spc.prefix.append(spc.properties->at(RESERVED_PREFIX).as_string());
 		} catch (const std::out_of_range&) {
 			try {
 				const auto prefix_uuid = Serialise::uuid(field_name);
-				has_uuid_prefix = true;
+				spc.has_uuid_prefix = true;
 				try {
-					subproperties = &subproperties->at(UUID_FIELD_NAME);
-					prefix.append(prefix_uuid);
+					spc.properties = &spc.properties->at(UUID_FIELD_NAME);
+					spc.prefix.append(prefix_uuid);
 					continue;
 				} catch (const std::out_of_range&) {
-					prefix.append(prefix_uuid);
+					spc.prefix.append(prefix_uuid);
 				}
 			} catch (const SerialisationError&) {
-				prefix.append(get_prefix(field_name));
+				spc.prefix.append(get_prefix(field_name));
 			}
 
 			// It is a search using partial prefix.
@@ -5946,28 +5945,31 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			if (depth_partials > LIMIT_PARTIAL_PATHS_DEPTH) {
 				THROW(ClientError, "Partial paths limit depth is %zu, and partial paths provided has a depth of %zu", LIMIT_PARTIAL_PATHS_DEPTH, depth_partials);
 			}
+			spc.inside_namespace = true;
 			for (++it; it != it_e; ++it) {
 				auto& partial_field = *it;
 				if (is_valid(partial_field)) {
 					try {
-						prefix.append(Serialise::uuid(partial_field));
-						has_uuid_prefix = true;
+						spc.prefix.append(Serialise::uuid(partial_field));
+						spc.has_uuid_prefix = true;
 					} catch (const SerialisationError&) {
-						prefix.append(get_prefix(partial_field));
+						spc.prefix.append(get_prefix(partial_field));
 					}
 				} else if (++it == it_e) {
 					auto acc_data = get_acc_data(partial_field);
-					prefix.append(acc_data.first);
-					return std::forward_as_tuple(*subproperties, has_uuid_prefix, true, std::move(prefix), std::move(partial_field), acc_data.second);
+					spc.prefix.append(acc_data.first);
+					spc.acc_field.assign(std::move(partial_field));
+					spc.acc_field_type = acc_data.second;
+					return spc;
 				} else {
 					THROW(ClientError, "Field name: %s (%s) is not valid", repr(full_name).c_str(), repr(partial_field).c_str());
 				}
 			}
-			return std::forward_as_tuple(*subproperties, has_uuid_prefix, true, std::move(prefix), std::string(), FieldType::EMPTY);
+			return spc;
 		}
 	}
 
-	return std::forward_as_tuple(*subproperties, has_uuid_prefix, false, std::move(prefix), std::string(), FieldType::EMPTY);
+	return spc;
 }
 
 

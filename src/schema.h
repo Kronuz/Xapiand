@@ -768,18 +768,28 @@ class Schema {
 	static bool readable_index_uuid_field(MsgPack& prop_index_uuid_field, MsgPack& properties);
 
 
+	struct dynamic_spc_t {
+		const MsgPack* properties;  // Field's properties.
+		bool inside_namespace;      // If field is inside a namespace
+		std::string prefix;         // Field's prefix.
+		bool has_uuid_prefix;       // If prefix has uuid fields.
+		std::string acc_field;      // The accuracy field name.
+		FieldType acc_field_type;   // The type for accuracy field name.
+
+		dynamic_spc_t(const MsgPack* _properties)
+			: properties(_properties),
+			  inside_namespace(false),
+			  has_uuid_prefix(false),
+			  acc_field_type(FieldType::EMPTY) { }
+	};
+
+
 	/*
-	 * Returns:
-	 *   - The propierties of full name
-	 *   - If full name is dynamic
-	 *   - If full name is namespace
-	 *   - The prefix
-	 *   - The accuracy field name
-	 *   - The type for accuracy field name
-	 * if the path does not exist or is not valid field name throw a ClientError exception.
+	 * Returns dynamic_spc_t of full_name.
+	 * If full_name is not valid field name throw a ClientError exception.
 	 */
 
-	std::tuple<const MsgPack&, bool, bool, std::string, std::string, FieldType> get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
+	dynamic_spc_t get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);
