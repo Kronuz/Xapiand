@@ -374,7 +374,8 @@ private:
 	TaskQueue<> checkin_callbacks;
 
 protected:
-	DatabaseQueue();
+	template <typename... Args>
+	DatabaseQueue(Args&&... args);
 
 public:
 	DatabaseQueue(const DatabaseQueue&) = delete;

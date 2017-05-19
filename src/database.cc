@@ -1866,13 +1866,13 @@ Database::dec_document_count(const std::string& term_id)
  *
  */
 
-
-DatabaseQueue::DatabaseQueue()
-	: state(replica_state::REPLICA_FREE),
+template <typename... Args>
+DatabaseQueue::DatabaseQueue(Args&&... args)
+	: Queue(std::forward<Args>(args)...),
+	  state(replica_state::REPLICA_FREE),
 	  modified(false),
 	  persistent(false),
-	  count(0)
-{
+	  count(0) {
 	L_OBJ(this, "CREATED DATABASE QUEUE!");
 }
 
