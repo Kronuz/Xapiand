@@ -90,6 +90,8 @@ template<typename F, typename... Args>
 void
 lock_database::lock(F&& f, Args&&... args)
 {
+	L_CALL(this, "lock_database::lock(...)");
+
 	if (db_handler) {
 		if (db_handler->database) {
 			THROW(Error, "lock_database is already locked");
@@ -103,6 +105,8 @@ lock_database::lock(F&& f, Args&&... args)
 void
 lock_database::lock()
 {
+	L_CALL(this, "lock_database::lock()");
+
 	if (db_handler) {
 		if (db_handler->database) {
 			THROW(Error, "lock_database is already locked");
@@ -116,6 +120,8 @@ lock_database::lock()
 void
 lock_database::unlock()
 {
+	L_CALL(this, "lock_database::unlock(...)");
+
 	if (db_handler && db_handler->database) {
 		XapiandManager::manager->database_pool.checkin(db_handler->database);
 	}
