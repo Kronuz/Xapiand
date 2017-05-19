@@ -2044,7 +2044,7 @@ DatabasesLRU::finish()
 
 DatabasePool::DatabasePool(size_t dbpool_size, size_t max_databases)
 	: finished(false),
-	  queue_state(std::make_shared<queue::QueueState>(dbpool_size, -1, max_databases)),
+	  queue_state(std::make_shared<queue::QueueState>(dbpool_size, max_databases, -1)),
 	  databases(dbpool_size, queue_state),
 	  writable_databases(dbpool_size, queue_state)
 {
