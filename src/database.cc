@@ -1379,6 +1379,8 @@ Database::storage_push_blob(Xapian::Document& doc) const
 void
 Database::storage_commit()
 {
+	L_CALL(this, "Database::storage_commit()");
+
 	for (auto& storage : writable_storages) {
 		if (storage) {
 			storage->commit();
