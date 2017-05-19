@@ -817,6 +817,7 @@ DataStorage::highest_volume()
 #endif /* XAPIAND_DATA_STORAGE */
 
 
+
 /*  ____        _        _
  * |  _ \  __ _| |_ __ _| |__   __ _ ___  ___
  * | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \
@@ -1802,62 +1803,6 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	}
 }
 
-
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-short
-Database::get_document_change_seq(const std::string& term_id)
-{
-	L_CALL(this, "Database::get_document_change_seq(%s)", repr(term_id).c_str());
-
-	auto it = documents.find(term_id);
-	if (it == documents.end()) {
-		documents.emplace(std::piecewise_construct, std::forward_as_tuple(term_id), std::forward_as_tuple(1, 0));
-		return 0;
-	} else {
-		++it->second.first;
-		return it->second.second;
-	}
-}
-
-
-bool
-Database::set_document_change_seq(const std::string& term_id, short old_revision)
-{
-	L_CALL(this, "Database::set_document_change_seq(%s, %d)", repr(term_id).c_str(), old_revision);
-
-	auto it = documents.find(term_id);
-	if (it == documents.end()) {
-		return false;
-	} else {
-		if (old_revision == it->second.second) {
-			++it->second.second; // Increment revision.
-			if (--it->second.first == 0) { // Decrement count.
-				documents.erase(term_id);
-			}
-			return true;
-		} else {
-			if (--it->second.first == 0) {
-				documents.erase(term_id);
-			}
-			return false;
-		}
-	}
-}
-
-
-void
-Database::dec_document_change_cnt(const std::string& term_id)
-{
-	L_CALL(this, "Database::dec_document_change_cnt(%s)", repr(term_id).c_str());
-
-	auto it = documents.find(term_id);
-	if (it != documents.end()) {
-		if (--it->second.first == 0) {
-			documents.erase(term_id);
-		}
-	}
-}
-#endif
 
 
 /*  ____        _        _                     ___

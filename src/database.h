@@ -268,10 +268,6 @@ public:
 
 
 class Database {
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-	std::unordered_map<std::string, std::pair<short, short>> documents;
-#endif
-
 #ifdef XAPIAND_DATA_STORAGE
 	std::string storage_get(const std::unique_ptr<DataStorage>& storage, const std::string& store) const;
 	void storage_pull_blob(Xapian::Document& doc) const;
@@ -336,12 +332,6 @@ public:
 	std::string to_string() const {
 		return endpoints.to_string();
 	}
-
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-	void dec_document_change_cnt(const std::string& term_id);
-	short get_document_change_seq(const std::string& term_id);
-	bool set_document_change_seq(const std::string& term_id, short old_revision);
-#endif
 };
 
 

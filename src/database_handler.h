@@ -107,12 +107,14 @@ class DatabaseHandler {
 
 	void recover_index();
 
-	MsgPack get_document_obj(const std::string& term_id);
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
+	static std::mutex documents_mtx;
+	static std::unordered_map<size_t, std::shared_ptr<Document>> documents;
+
 	template<typename ProcessorCompile>
-	MsgPack call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script);
-	MsgPack run_script(MsgPack& data, const std::string& term_id);
+	MsgPack call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script, std::shared_ptr<Document>& document);
+	MsgPack run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<Document>& document);
 #endif
 
 	DataType index(const std::string& _document_id, bool stored, const std::string& storage, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type);
@@ -153,6 +155,7 @@ public:
 
 	Document get_document(const Xapian::docid& did);
 	Document get_document(const std::string& doc_id);
+	Document get_document_term(const std::string& term_id);
 	Xapian::docid get_docid(const std::string& doc_id);
 
 	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
@@ -168,11 +171,19 @@ public:
 	static void inc_ref(const Endpoint& endpoint);
 	static void dec_ref(const Endpoint& endpoint);
 	static int get_master_count();
+
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
+	void dec_document_change_cnt(const std::string& term_id);
+	const std::shared_ptr<Document> get_document_change_seq(const std::string& term_id);
+	bool set_document_change_seq(const std::string& term_id, const std::shared_ptr<Document>& old_document, const std::shared_ptr<Document>& new_document);
+#endif
 };
 
 
 class Document {
 	Xapian::Document doc;
+	mutable uint64_t _hash;
+
 	DatabaseHandler* db_handler;
 	std::shared_ptr<Database> database;
 
@@ -180,10 +191,10 @@ class Document {
 
 public:
 	Document();
-	Document(const Xapian::Document& doc_);
-	Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_);
+	Document(const Xapian::Document& doc_, uint64_t hash_=-1);
+	Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_, uint64_t hash_=-1);
 
-	Document(const Document& doc_);
+	Document(const Document& doc_, uint64_t hash_=-1);
 
 	Document& operator=(const Document& doc_);
 
@@ -199,4 +210,7 @@ public:
 	MsgPack get_obj();
 	MsgPack get_field(const std::string& slot_name);
 	static MsgPack get_field(const std::string& slot_name, const MsgPack& obj);
+
+	uint64_t hash() const;
+	MsgPack data() const;
 };
