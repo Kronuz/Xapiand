@@ -38,6 +38,7 @@
 #include <fcntl.h>
 #include <kvm.h>
 #include <sys/stat.h>
+#include <sys/user.h>
 #include <unistd.h>              // for getpagesize
 #endif
 
