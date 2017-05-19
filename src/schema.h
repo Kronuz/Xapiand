@@ -112,6 +112,13 @@ constexpr UUIDFieldIndex DEFAULT_INDEX_UUID_FIELD = UUIDFieldIndex::BOTH;
 constexpr size_t LIMIT_PARTIAL_PATHS_DEPTH        = 10; // 2^(n - 2) => 2^8 => 256 namespace terms
 
 
+constexpr size_t SPC_SIZE_TYPES   = 4;
+constexpr size_t SPC_FOREIGN_TYPE = 0;
+constexpr size_t SPC_OBJECT_TYPE  = 1;
+constexpr size_t SPC_ARRAY_TYPE   = 2;
+constexpr size_t SPC_INDEX_TYPE   = 3;
+
+
 inline constexpr TypeIndex operator|(const uint8_t& a, const TypeIndex& b) {
 	return static_cast<TypeIndex>(a | static_cast<uint8_t>(b));
 }
@@ -244,7 +251,7 @@ extern const std::unordered_map<std::string, StopStrategy> map_stop_strategy;
 extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
 extern const std::unordered_map<std::string, TypeIndex> map_index;
 extern const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field;
-extern const std::unordered_map<std::string, std::array<FieldType, 4>> map_type;
+extern const std::unordered_map<std::string, std::array<FieldType, SPC_SIZE_TYPES>> map_type;
 
 
 MSGPACK_ADD_ENUM(UnitTime);
@@ -316,7 +323,7 @@ struct required_spc_t {
 		std::string operator()() const noexcept;
 	};
 
-	std::array<FieldType, 4> sep_types; // foreign/object/array/type
+	std::array<FieldType, SPC_SIZE_TYPES> sep_types; // foreign/object/array/index_type
 	prefix_t prefix;
 	Xapian::valueno slot;
 	flags_t flags;
@@ -344,11 +351,11 @@ struct required_spc_t {
 	required_spc_t& operator=(required_spc_t&& o) noexcept;
 
 	FieldType get_type() const noexcept {
-		return sep_types[3];
+		return sep_types[SPC_INDEX_TYPE];
 	}
 
 	void set_type(FieldType type) {
-		sep_types[3] = type;
+		sep_types[SPC_INDEX_TYPE] = type;
 	}
 
 	static char get_ctype(FieldType type) noexcept {
@@ -356,9 +363,10 @@ struct required_spc_t {
 	}
 
 	char get_ctype() const noexcept {
-		return get_ctype(sep_types[3]);
+		return get_ctype(sep_types[SPC_INDEX_TYPE]);
 	}
 
+	static std::array<FieldType, SPC_SIZE_TYPES> get_types(const std::string& str_type);
 	void set_types(const std::string& str_type);
 };
 
@@ -832,7 +840,7 @@ public:
 			spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
 		}
 
-		switch (spc.sep_types[3]) {
+		switch (spc.sep_types[SPC_INDEX_TYPE]) {
 			case FieldType::INTEGER:
 			case FieldType::POSITIVE:
 			case FieldType::FLOAT:
