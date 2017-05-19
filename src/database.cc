@@ -1893,7 +1893,7 @@ DatabaseQueue::inc_count(int max)
 {
 	L_CALL(this, "DatabaseQueue::inc_count(%d)", max);
 
-	std::lock_guard<std::mutex> lk(*_mutex);
+	std::lock_guard<std::mutex> lk(_state->_mutex);
 
 	if (count == 0) {
 		if (auto database_pool = weak_database_pool.lock()) {
@@ -1917,7 +1917,7 @@ DatabaseQueue::dec_count()
 {
 	L_CALL(this, "DatabaseQueue::dec_count()");
 
-	std::lock_guard<std::mutex> lk(*_mutex);
+	std::lock_guard<std::mutex> lk(_state->_mutex);
 
 	if (count <= 0) {
 		L_CRIT(this, "Inconsistency in the number of databases in queue");
@@ -1948,17 +1948,9 @@ DatabaseQueue::dec_count()
  */
 
 
-DatabasesLRU::DatabasesLRU(size_t max_size, size_t databases_limit,
-	std::shared_ptr<std::mutex> databases_mutex,
-	std::shared_ptr<std::condition_variable> databases_pop_cond,
-	std::shared_ptr<std::condition_variable> databases_push_cond,
-	std::shared_ptr<std::atomic_size_t> databases_cnt)
-	: LRU(max_size),
-	  _databases_limit(databases_limit),
-	  _databases_mutex(databases_mutex),
-	  _databases_pop_cond(databases_pop_cond),
-	  _databases_push_cond(databases_push_cond),
-	  _databases_cnt(databases_cnt) { }
+DatabasesLRU::DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state)
+	: LRU(dbpool_size),
+	  _queue_state(queue_state) { }
 
 
 std::shared_ptr<DatabaseQueue>&
@@ -1997,10 +1989,10 @@ DatabasesLRU::get(size_t hash, bool volatile_)
 
 	if (volatile_) {
 		// Volatile, insert default on the back
-		return emplace_back_and(on_drop, hash, DatabaseQueue::make_shared(_databases_limit, -1)).first->second;
+		return emplace_back_and(on_drop, hash, DatabaseQueue::make_shared(_queue_state)).first->second;
 	} else {
 		// Non-volatile, insert default on the front
-		return emplace_and(on_drop, hash, DatabaseQueue::make_shared(_databases_limit, -1)).first->second;
+		return emplace_and(on_drop, hash, DatabaseQueue::make_shared(_queue_state)).first->second;
 	}
 }
 
@@ -2050,14 +2042,11 @@ DatabasesLRU::finish()
  */
 
 
-DatabasePool::DatabasePool(size_t max_size, size_t databases_limit)
+DatabasePool::DatabasePool(size_t dbpool_size, size_t max_databases)
 	: finished(false),
-	  databases_mutex(std::make_shared<std::mutex>()),
-	  databases_pop_cond(std::make_shared<std::condition_variable>()),
-	  databases_push_cond(std::make_shared<std::condition_variable>()),
-	  databases_cnt(std::make_shared<std::atomic_size_t>(0)),
-	  databases(max_size, databases_limit, databases_mutex, databases_pop_cond, databases_push_cond, databases_cnt),
-	  writable_databases(max_size, databases_limit, databases_mutex, databases_pop_cond, databases_push_cond, databases_cnt)
+	  queue_state(std::make_shared<queue::QueueState>(dbpool_size, -1, max_databases)),
+	  databases(dbpool_size, queue_state),
+	  writable_databases(dbpool_size, queue_state)
 {
 	L_OBJ(this, "CREATED DATABASE POLL!");
 }

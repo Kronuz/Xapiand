@@ -405,19 +405,10 @@ public:
 
 class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
 
-	// Specific
-	size_t _databases_limit;
-	const std::shared_ptr<std::mutex> _databases_mutex;
-	const std::shared_ptr<std::condition_variable> _databases_pop_cond;
-	const std::shared_ptr<std::condition_variable> _databases_push_cond;
-	const std::shared_ptr<std::atomic_size_t> _databases_cnt;
+	const std::shared_ptr<queue::QueueState> _queue_state;
 
 public:
-	DatabasesLRU(size_t max_size, size_t databases_limit,
-		std::shared_ptr<std::mutex> databases_mutex,
-		std::shared_ptr<std::condition_variable> databases_pop_cond,
-		std::shared_ptr<std::condition_variable> databases_push_cond,
-		std::shared_ptr<std::atomic_size_t> databases_cnt);
+	DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state);
 
 	std::shared_ptr<DatabaseQueue>& get(size_t hash, bool volatile_);
 
@@ -436,10 +427,7 @@ class DatabasePool {
 	std::mutex qmtx;
 	std::atomic_bool finished;
 
-	const std::shared_ptr<std::mutex> databases_mutex;
-	const std::shared_ptr<std::condition_variable> databases_pop_cond;
-	const std::shared_ptr<std::condition_variable> databases_push_cond;
-	const std::shared_ptr<std::atomic_size_t> databases_cnt;
+	const std::shared_ptr<queue::QueueState> queue_state;
 
 	std::unordered_map<size_t, std::unordered_set<std::shared_ptr<DatabaseQueue>>> queues;
 
@@ -462,7 +450,7 @@ class DatabasePool {
 public:
 	queue::QueueSet<Endpoint> updated_databases;
 
-	DatabasePool(size_t max_size, size_t databases_limit);
+	DatabasePool(size_t dbpool_size, size_t max_databases);
 	DatabasePool(const DatabasePool&) = delete;
 	DatabasePool(DatabasePool&&) = delete;
 	DatabasePool& operator=(const DatabasePool&) = delete;

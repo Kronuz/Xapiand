@@ -35,6 +35,26 @@
 
 
 namespace queue {
+	struct QueueState {
+		size_t _limit;
+		size_t _limit_cnt;
+		size_t _threshold;
+
+		// A mutex object to control access to the underlying queue object
+		std::mutex _mutex;
+
+		// A variable condition to make threads wait on specified condition values
+		std::condition_variable _pop_cond;
+		std::condition_variable _push_cond;
+		std::atomic_size_t _cnt;
+
+		QueueState(size_t limit=-1, size_t limit_cnt=-1, size_t threshold=-1)
+			: _limit(limit),
+			  _limit_cnt(limit_cnt),
+			  _threshold(threshold),
+			  _cnt(0) { }
+	};
+
 	template<typename T, typename Container = std::deque<T>>
 	class Queue {
 	protected:
@@ -42,30 +62,21 @@ namespace queue {
 
 		std::atomic_bool _ending;
 		std::atomic_bool _finished;
-		size_t _limit;
-		size_t _limit_cnt;
-		size_t _threshold;
 
-		// A mutex object to control access to the underlying queue object
-		const std::shared_ptr<std::mutex> _mutex;
-
-		// A variable condition to make threads wait on specified condition values
-		const std::shared_ptr<std::condition_variable> _pop_cond;
-		const std::shared_ptr<std::condition_variable> _push_cond;
-		const std::shared_ptr<std::atomic_size_t> _cnt;
+		const std::shared_ptr<QueueState> _state;
 
 		bool _push_wait(double timeout, std::unique_lock<std::mutex>& lk) {
 			auto push_wait_pred = [this]() {
-				return _finished || _ending || (_items_queue.size() < _limit && *_cnt < _limit_cnt);
+				return _finished || _ending || (_items_queue.size() < _state->_limit && _state->_cnt < _state->_limit_cnt);
 			};
 			if (timeout) {
 				if (timeout > 0.0) {
 					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
-					if (!_push_cond->wait_until(lk, timeout_tp, push_wait_pred)) {
+					if (!_state->_push_cond.wait_until(lk, timeout_tp, push_wait_pred)) {
 						return false;
 					}
 				} else {
-					_push_cond->wait(lk, push_wait_pred);
+					_state->_push_cond.wait(lk, push_wait_pred);
 				}
 			} else {
 				if (!push_wait_pred()) {
@@ -88,11 +99,11 @@ namespace queue {
 			if (timeout) {
 				if (timeout > 0.0) {
 					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
-					if (!_pop_cond->wait_until(lk, timeout_tp, pop_wait_pred)) {
+					if (!_state->_pop_cond.wait_until(lk, timeout_tp, pop_wait_pred)) {
 						return false;
 					}
 				} else {
-					_pop_cond->wait(lk, pop_wait_pred);
+					_state->_pop_cond.wait(lk, pop_wait_pred);
 				}
 			} else {
 				if (!pop_wait_pred()) {
@@ -113,7 +124,7 @@ namespace queue {
 			if (ret) {
 				// Insert the element in the queue
 				_items_queue.push_front(std::forward<E>(element));
-				++*_cnt;
+				++_state->_cnt;
 			}
 			return ret;
 		}
@@ -124,7 +135,7 @@ namespace queue {
 			if (ret) {
 				// Insert the element in the queue
 				_items_queue.push_back(std::forward<E>(element));
-				++*_cnt;
+				++_state->_cnt;
 			}
 			return ret;
 		}
@@ -137,8 +148,8 @@ namespace queue {
 
 				//pop the element
 				_items_queue.pop_back();
-				assert(*_cnt > 0);
-				--*_cnt;
+				assert(_state->_cnt > 0);
+				--_state->_cnt;
 			}
 			return ret;
 		}
@@ -151,8 +162,8 @@ namespace queue {
 
 				//pop the element
 				_items_queue.pop_front();
-				assert(*_cnt > 0);
-				--*_cnt;
+				assert(_state->_cnt > 0);
+				--_state->_cnt;
 			}
 			return ret;
 		}
@@ -160,8 +171,8 @@ namespace queue {
 		bool _clear_impl(std::unique_lock<std::mutex>&) noexcept {
 			auto size = _items_queue.size();
 			_items_queue.clear();
-			assert(*_cnt >= size);
-			*_cnt -= size;
+			assert(_state->_cnt >= size);
+			_state->_cnt -= size;
 
 			if (_finished || _ending) {
 				return false;
@@ -174,59 +185,31 @@ namespace queue {
 		Queue(size_t limit=-1, size_t threshold=-1, size_t limit_cnt=-1)
 			: _ending(false),
 			  _finished(false),
-			  _limit(limit),
-			  _limit_cnt(limit_cnt),
-			  _threshold(threshold),
-			  _mutex(std::make_shared<std::mutex>()),
-			  _pop_cond(std::make_shared<std::condition_variable>()),
-			  _push_cond(std::make_shared<std::condition_variable>()),
-			  _cnt(std::make_shared<std::atomic_size_t>(0)) { }
+			  _state(std::make_shared<QueueState>(limit, threshold, limit_cnt)) { }
 
-		Queue(size_t limit, size_t threshold, size_t limit_cnt,
-			std::shared_ptr<std::mutex> mutex,
-			std::shared_ptr<std::condition_variable> pop_cond,
-			std::shared_ptr<std::condition_variable> push_cond,
-			std::shared_ptr<std::atomic_size_t> cnt)
+		Queue(std::shared_ptr<QueueState> state)
 			: _ending(false),
 			  _finished(false),
-			  _limit(limit),
-			  _limit_cnt(limit_cnt),
-			  _threshold(threshold),
-			  _mutex(mutex),
-			  _pop_cond(pop_cond),
-			  _push_cond(push_cond),
-			  _cnt(cnt) { }
+			  _state(state) { }
 
 		// Move Constructor
 		Queue(Queue&& q) {
-			std::lock_guard<std::mutex> lk(*q._mutex);
+			std::lock_guard<std::mutex> lk(q._state->_mutex);
 			_items_queue = std::move(q._items_queue);
 			_ending = false;
 			_finished = false;
-			_limit = std::move(q._limit);
-			_limit_cnt = std::move(q._limit_cnt);
-			_threshold = std::move(q._threshold);
-			_mutex = std::move(q._mutex);
-			_pop_cond = std::move(q._pop_cond);
-			_push_cond = std::move(q._push_cond);
-			_cnt = std::move(q._cnt);
+			_state = std::move(q._state);
 		}
 
 		// Move assigment
 		Queue& operator=(Queue&& q) {
-			std::lock(*_mutex, *q._mutex);
-			std::lock_guard<std::mutex> self_lock(*_mutex, std::adopt_lock);
-			std::lock_guard<std::mutex> other_lock(*q._mutex, std::adopt_lock);
+			std::lock(_state->_mutex, q._state->_mutex);
+			std::lock_guard<std::mutex> self_lock(_state->_mutex, std::adopt_lock);
+			std::lock_guard<std::mutex> other_lock(q._state->_mutex, std::adopt_lock);
 			_items_queue = std::move(q._items_queue);
 			_ending = false;
 			_finished = false;
-			_limit = std::move(q._limit);
-			_limit_cnt = std::move(q._limit_cnt);
-			_threshold = std::move(q._threshold);
-			_mutex = std::move(q._mutex);
-			_pop_cond = std::move(q._pop_cond);
-			_push_cond = std::move(q._push_cond);
-			_cnt = std::move(q._cnt);
+			_state = std::move(q._state);
 			return *this;
 		}
 
@@ -237,10 +220,10 @@ namespace queue {
 		Queue& operator=(const Queue& q) = delete;
 
 		virtual ~Queue() {
-			std::lock_guard<std::mutex> lk(*_mutex);
+			std::lock_guard<std::mutex> lk(_state->_mutex);
 			auto size = _items_queue.size();
-			assert(*_cnt >= size);
-			*_cnt -= size;
+			assert(_state->_cnt >= size);
+			_state->_cnt -= size;
 			finish();
 		}
 
@@ -251,8 +234,8 @@ namespace queue {
 			_ending = true;
 
 			// Signal the condition variable in case any threads are waiting
-			_pop_cond->notify_all();
-			_push_cond->notify_all();
+			_state->_pop_cond.notify_all();
+			_state->_push_cond.notify_all();
 
 		}
 
@@ -263,87 +246,87 @@ namespace queue {
 			_finished = true;
 
 			// Signal the condition variable in case any threads are waiting
-			_pop_cond->notify_all();
-			_push_cond->notify_all();
+			_state->_pop_cond.notify_all();
+			_state->_push_cond.notify_all();
 		}
 
 		template<typename E>
 		bool push(E&& element, double timeout=-1.0) {
-			std::unique_lock<std::mutex> lk(*_mutex);
+			std::unique_lock<std::mutex> lk(_state->_mutex);
 			bool pushed = _push_front_impl(std::forward<E>(element), timeout, lk);
 			lk.unlock();
 
 			if (pushed) {
 				// Notifiy waiting thread it can push/pop now
-				_pop_cond->notify_one();
+				_state->_pop_cond.notify_one();
 			} else {
 				// FIXME: This block shouldn't be needed!
 				// Signal the condition variable in case any threads are waiting
-				_pop_cond->notify_all();
-				_push_cond->notify_all();
+				_state->_pop_cond.notify_all();
+				_state->_push_cond.notify_all();
 			}
 
 			return pushed;
 		}
 
 		bool pop(T& element, double timeout=-1.0) {
-			std::unique_lock<std::mutex> lk(*_mutex);
+			std::unique_lock<std::mutex> lk(_state->_mutex);
 			bool popped = _pop_back_impl(element, timeout, lk);
 			auto size = _items_queue.size();
 			lk.unlock();
 
 			if (popped) {
-				if (size < _threshold) {
+				if (size < _state->_threshold) {
 					// Notifiy waiting thread it can push/pop now
-					_push_cond->notify_one();
+					_state->_push_cond.notify_one();
 				}
 			} else {
 				// FIXME: This block shouldn't be needed!
 				// Signal the condition variable in case any threads are waiting
-				_pop_cond->notify_all();
-				_push_cond->notify_all();
+				_state->_pop_cond.notify_all();
+				_state->_push_cond.notify_all();
 			}
 
 			return popped;
 		}
 
 		void clear() {
-			std::unique_lock<std::mutex> lk(*_mutex);
+			std::unique_lock<std::mutex> lk(_state->_mutex);
 			bool cleared = _clear_impl(lk);
 			lk.unlock();
 
 			if (cleared) {
 				// Notifiy waiting thread it can push/pop now
-				_push_cond->notify_one();
+				_state->_push_cond.notify_one();
 			} else {
 				// FIXME: This block shouldn't be needed!
 				// Signal the condition variable in case any threads are waiting
-				_pop_cond->notify_all();
-				_push_cond->notify_all();
+				_state->_pop_cond.notify_all();
+				_state->_push_cond.notify_all();
 			}
 		}
 
 		bool empty() {
-			std::lock_guard<std::mutex> lk(*_mutex);
+			std::lock_guard<std::mutex> lk(_state->_mutex);
 			return _items_queue.empty();
 		}
 
 		size_t size() {
-			std::lock_guard<std::mutex> lk(*_mutex);
+			std::lock_guard<std::mutex> lk(_state->_mutex);
 			return _items_queue.size();
 		}
 
 		size_t count() {
-			return *_cnt;
+			return _state->_cnt;
 		}
 
 		T& front() {
-			std::lock_guard<std::mutex> lk(*_mutex);
+			std::lock_guard<std::mutex> lk(_state->_mutex);
 			return _items_queue.front();
 		}
 
 		bool front(T& element) {
-			std::lock_guard<std::mutex> lk(*_mutex);
+			std::lock_guard<std::mutex> lk(_state->_mutex);
 			if (_items_queue.empty()) {
 				return false;
 			}
@@ -380,12 +363,12 @@ namespace queue {
 
 			if (pushed) {
 				// Notifiy waiting thread it can push/pop now
-				Queue_t::_pop_cond->notify_one();
+				Queue_t::_state->_pop_cond.notify_one();
 			} else {
 				// FIXME: This block shouldn't be needed!
 				// Signal the condition variable in case any threads are waiting
-				Queue_t::_pop_cond->notify_all();
-				Queue_t::_push_cond->notify_all();
+				Queue_t::_state->_pop_cond.notify_all();
+				Queue_t::_state->_push_cond.notify_all();
 			}
 
 			return pushed;
@@ -397,7 +380,7 @@ namespace queue {
 
 		template<typename E, typename OnDup>
 		bool push(E&& element, double timeout, OnDup on_dup) {
-			std::unique_lock<std::mutex> lk(*Queue_t::_mutex);
+			std::unique_lock<std::mutex> lk(Queue_t::_state->_mutex);
 
 			auto it = _items_map.find(element);
 			if (it != _items_map.end()) {
@@ -413,8 +396,8 @@ namespace queue {
 						// Move it to front
 						Queue_t::_items_queue.erase(it->second);
 						_items_map.erase(it);
-						assert(*Queue_t::_cnt > 0);
-						--*Queue_t::_cnt;
+						assert(Queue_t::_state->_cnt > 0);
+						--Queue_t::_state->_cnt;
 						break;
 				}
 			}
@@ -429,20 +412,20 @@ namespace queue {
 
 		template<typename E>
 		bool push(E&& element, double timeout=-1.0) {
-			std::unique_lock<std::mutex> lk(*Queue_t::_mutex);
+			std::unique_lock<std::mutex> lk(Queue_t::_state->_mutex);
 			auto it = _items_map.find(element);
 			if (it != _items_map.end()) {
 				// The item is already there, move it to front
 				Queue_t::_items_queue.erase(it->second);
 				_items_map.erase(it);
-				assert(*Queue_t::_cnt > 0);
-				--*Queue_t::_cnt;
+				assert(Queue_t::_state->_cnt > 0);
+				--Queue_t::_state->_cnt;
 			}
 			return _push(std::forward<E>(element), timeout, lk);
 		}
 
 		bool pop(T& element, double timeout=-1.0) {
-			std::unique_lock<std::mutex> lk(*Queue_t::_mutex);
+			std::unique_lock<std::mutex> lk(Queue_t::_state->_mutex);
 			bool popped = Queue_t::_pop_back_impl(element, timeout, lk);
 
 			if (popped) {
@@ -457,46 +440,46 @@ namespace queue {
 			lk.unlock();
 
 			if (popped) {
-				if (size < Queue_t::_threshold) {
+				if (size < Queue_t::_state->_threshold) {
 					// Notifiy waiting thread it can push/pop now
-					Queue_t::_push_cond->notify_one();
+					Queue_t::_state->_push_cond.notify_one();
 				}
 			} else {
 				// FIXME: This block shouldn't be needed!
 				// Signal the condition variable in case any threads are waiting
-				Queue_t::_pop_cond->notify_all();
-				Queue_t::_push_cond->notify_all();
+				Queue_t::_state->_pop_cond.notify_all();
+				Queue_t::_state->_push_cond.notify_all();
 			}
 
 			return popped;
 		}
 
 		void clear() {
-			std::lock_guard<std::mutex> lk(*Queue_t::_mutex);
+			std::lock_guard<std::mutex> lk(Queue_t::_state->_mutex);
 			bool cleared = Queue_t::_clear_impl(lk);
 
 			_items_map.clear();
 
 			if (cleared) {
 				// Notifiy waiting thread it can push/pop now
-				Queue_t::_push_cond->notify_one();
+				Queue_t::_state->_push_cond.notify_one();
 			} else {
 				// FIXME: This block shouldn't be needed!
 				// Signal the condition variable in case any threads are waiting
-				Queue_t::_pop_cond->notify_all();
-				Queue_t::_push_cond->notify_all();
+				Queue_t::_state->_pop_cond.notify_all();
+				Queue_t::_state->_push_cond.notify_all();
 			}
 		}
 
 		size_t erase(const T& key) {
-			std::lock_guard<std::mutex> lk(*Queue_t::_mutex);
+			std::lock_guard<std::mutex> lk(Queue_t::_state->_mutex);
 			size_t items = 0;
 			auto it = _items_map.find(key);
 			if (it != _items_map.end()) {
 				Queue_t::_items_queue.erase(it->second);
 				_items_map.erase(it);
-				assert(*Queue_t::_cnt > 0);
-				--*Queue_t::_cnt;
+				assert(Queue_t::_state->_cnt > 0);
+				--Queue_t::_state->_cnt;
 				items++;
 			}
 			return items;
