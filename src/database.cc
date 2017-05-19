@@ -1821,7 +1821,7 @@ Database::get_document_change_seq(const std::string& term_id)
 bool
 Database::set_document_change_seq(const std::string& term_id, short old_revision)
 {
-	L_CALL(this, "Database::set_revision_document(%s, %d)", repr(term_id).c_str(), old_revision);
+	L_CALL(this, "Database::set_document_change_seq(%s, %d)", repr(term_id).c_str(), old_revision);
 
 	auto it = documents.find(term_id);
 	if (it == documents.end()) {
