@@ -185,7 +185,7 @@ namespace queue {
 		Queue(size_t hard_limit=-1, size_t soft_limit=-1, size_t threshold=-1)
 			: _ending(false),
 			  _finished(false),
-			  _state(std::make_shared<QueueState>(hard_limit, -1, threshold)) { }
+			  _state(std::make_shared<QueueState>(hard_limit, soft_limit, threshold)) { }
 
 		Queue(std::shared_ptr<QueueState> state)
 			: _ending(false),
