@@ -278,7 +278,7 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 	  written(0),
 	  read_buffer(new char[BUF_SIZE]),
 	  mode(MODE::READ_BUF),
-	  write_queue(WRITE_QUEUE_LIMIT, WRITE_QUEUE_THRESHOLD)
+	  write_queue(WRITE_QUEUE_LIMIT, -1, WRITE_QUEUE_THRESHOLD)
 {
 	update_async.set<BaseClient, &BaseClient::update_async_cb>(this);
 	update_async.start();
