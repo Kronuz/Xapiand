@@ -36,9 +36,6 @@
 #include <mach/mach.h>           // for task_basic_info
 #elif defined(__FreeBSD__)
 #include <fcntl.h>
-#include <kvm.h>
-#include <sys/stat.h>
-#include <sys/user.h>
 #include <unistd.h>              // for getpagesize
 #endif
 
@@ -122,15 +119,9 @@ uint64_t get_total_ram()
 
 uint64_t get_current_memory_by_process(bool resident)
 {
-	uint64_t current_memory_by_process;
+	uint64_t current_memory_by_process = 0;
 #if defined(__FreeBSD__)
-	char errbuf[100];
-	struct kinfo_proc *p;
-	int cnt;
-
-	kvm_t *kd = kvm_openfiles(NULL, NULL, NULL, O_RDWR, errbuf);
-	p = kvm_getprocs(kd, KERN_PROC_PID | KERN_PROC_INC_THREAD, getpid(), &cnt);
-	current_memory_by_process = p->ki_rssize * getpagesize();
+	L_WARNING(nullptr, "WARNING: No way of getting total %s memory size by the process.", resident ? "resident" : "virtual");
 #elif defined(__APPLE__)
 	struct task_basic_info t_info;
 	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
