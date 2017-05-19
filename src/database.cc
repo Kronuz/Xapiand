@@ -1893,7 +1893,7 @@ DatabaseQueue::inc_count(int max)
 {
 	L_CALL(this, "DatabaseQueue::inc_count(%d)", max);
 
-	std::lock_guard<std::mutex> lk(_mutex);
+	std::lock_guard<std::mutex> lk(*_mutex);
 
 	if (count == 0) {
 		if (auto database_pool = weak_database_pool.lock()) {
@@ -1917,7 +1917,7 @@ DatabaseQueue::dec_count()
 {
 	L_CALL(this, "DatabaseQueue::dec_count()");
 
-	std::lock_guard<std::mutex> lk(_mutex);
+	std::lock_guard<std::mutex> lk(*_mutex);
 
 	if (count <= 0) {
 		L_CRIT(this, "Inconsistency in the number of databases in queue");
