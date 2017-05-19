@@ -53,7 +53,9 @@ static_assert(_MSC_FULL_VER >= 190024210, "Visual C++ 2015 Update 3 or later req
 #define CHAISCRIPT_HAS_THREAD_LOCAL
 #elif defined(__clang__)
 #if __has_feature(cxx_thread_local)
+#if !defined(__FreeBSD__) || (__FreeBSD__ >= 11) //Bug in freeBSD lower that 11v. Use of thread_local produces linking error
 #define CHAISCRIPT_HAS_THREAD_LOCAL
+#endif
 #endif
 #endif
 
