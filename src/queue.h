@@ -42,8 +42,9 @@ namespace queue {
 
 		std::atomic_bool _ending;
 		std::atomic_bool _finished;
-		ssize_t _limit;
-		ssize_t _threshold;
+		size_t _limit;
+		size_t _limit_cnt;
+		size_t _threshold;
 
 		// A mutex object to control access to the underlying queue object
 		const std::shared_ptr<std::mutex> _mutex;
@@ -51,21 +52,23 @@ namespace queue {
 		// A variable condition to make threads wait on specified condition values
 		const std::shared_ptr<std::condition_variable> _pop_cond;
 		const std::shared_ptr<std::condition_variable> _push_cond;
-		const std::shared_ptr<std::function<bool()>> _pop_wait_pred;
-		const std::shared_ptr<std::function<bool()>> _push_wait_pred;
+		const std::shared_ptr<std::atomic_size_t> _cnt;
 
 		bool _push_wait(double timeout, std::unique_lock<std::mutex>& lk) {
+			auto push_wait_pred = [this]() {
+				return _finished || _ending || (_items_queue.size() < _limit && *_cnt < _limit_cnt);
+			};
 			if (timeout) {
 				if (timeout > 0.0) {
 					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
-					if (!_push_cond->wait_until(lk, timeout_tp, (*_push_wait_pred))) {
+					if (!_push_cond->wait_until(lk, timeout_tp, push_wait_pred)) {
 						return false;
 					}
 				} else {
-					_push_cond->wait(lk, (*_push_wait_pred));
+					_push_cond->wait(lk, push_wait_pred);
 				}
 			} else {
-				if (!(*_push_wait_pred)()) {
+				if (!push_wait_pred()) {
 					return false;
 				}
 			}
@@ -78,17 +81,21 @@ namespace queue {
 		}
 
 		bool _pop_wait(double timeout, std::unique_lock<std::mutex>& lk) {
+			auto pop_wait_pred = [this]() {
+				// While the queue is empty, make the thread that runs this wait
+				return _finished || _ending || !_items_queue.empty();
+			};
 			if (timeout) {
 				if (timeout > 0.0) {
 					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
-					if (!_pop_cond->wait_until(lk, timeout_tp, (*_pop_wait_pred))) {
+					if (!_pop_cond->wait_until(lk, timeout_tp, pop_wait_pred)) {
 						return false;
 					}
 				} else {
-					_pop_cond->wait(lk, (*_pop_wait_pred));
+					_pop_cond->wait(lk, pop_wait_pred);
 				}
 			} else {
-				if (!(*_pop_wait_pred)()) {
+				if (!pop_wait_pred()) {
 					return false;
 				}
 			}
@@ -106,6 +113,7 @@ namespace queue {
 			if (ret) {
 				// Insert the element in the queue
 				_items_queue.push_front(std::forward<E>(element));
+				++*_cnt;
 			}
 			return ret;
 		}
@@ -116,6 +124,7 @@ namespace queue {
 			if (ret) {
 				// Insert the element in the queue
 				_items_queue.push_back(std::forward<E>(element));
+				++*_cnt;
 			}
 			return ret;
 		}
@@ -128,6 +137,8 @@ namespace queue {
 
 				//pop the element
 				_items_queue.pop_back();
+				assert(*_cnt > 0);
+				--*_cnt;
 			}
 			return ret;
 		}
@@ -140,12 +151,17 @@ namespace queue {
 
 				//pop the element
 				_items_queue.pop_front();
+				assert(*_cnt > 0);
+				--*_cnt;
 			}
 			return ret;
 		}
 
 		bool _clear_impl(std::unique_lock<std::mutex>&) noexcept {
+			auto size = _items_queue.size();
 			_items_queue.clear();
+			assert(*_cnt >= size);
+			*_cnt -= size;
 
 			if (_finished || _ending) {
 				return false;
@@ -155,46 +171,45 @@ namespace queue {
 		}
 
 	public:
-		Queue(ssize_t limit=-1, ssize_t lower=-1)
+		Queue(size_t limit=-1, size_t threshold=-1, size_t limit_cnt=-1)
 			: _ending(false),
 			  _finished(false),
 			  _limit(limit),
-			  _threshold(lower),
+			  _limit_cnt(limit_cnt),
+			  _threshold(threshold),
 			  _mutex(std::make_shared<std::mutex>()),
 			  _pop_cond(std::make_shared<std::condition_variable>()),
 			  _push_cond(std::make_shared<std::condition_variable>()),
-			  _pop_wait_pred(std::make_shared<std::function<bool()>>([this]() {
-					// While the queue is empty, make the thread that runs this wait
-					return _finished || _ending || !_items_queue.empty();
-			  })),
-			  _push_wait_pred(std::make_shared<std::function<bool()>>([this]() {
-					return _finished || _ending || _items_queue.size() < _limit;
-				})) { }
+			  _cnt(std::make_shared<std::atomic_size_t>(0)) { }
 
-		Queue(ssize_t limit, ssize_t lower,
+		Queue(size_t limit, size_t threshold, size_t limit_cnt,
 			std::shared_ptr<std::mutex> mutex,
 			std::shared_ptr<std::condition_variable> pop_cond,
 			std::shared_ptr<std::condition_variable> push_cond,
-			std::shared_ptr<std::function<bool()>> pop_wait_pred,
-			std::shared_ptr<std::function<bool()>> push_wait_pred)
+			std::shared_ptr<std::atomic_size_t> cnt)
 			: _ending(false),
 			  _finished(false),
 			  _limit(limit),
-			  _threshold(lower),
+			  _limit_cnt(limit_cnt),
+			  _threshold(threshold),
 			  _mutex(mutex),
 			  _pop_cond(pop_cond),
 			  _push_cond(push_cond),
-			  _pop_wait_pred(pop_wait_pred),
-			  _push_wait_pred(push_wait_pred) { }
+			  _cnt(cnt) { }
 
 		// Move Constructor
 		Queue(Queue&& q) {
 			std::lock_guard<std::mutex> lk(*q._mutex);
 			_items_queue = std::move(q._items_queue);
-			_limit = std::move(q._limit);
-			_threshold = std::move(q._threshold);
-			_finished = false;
 			_ending = false;
+			_finished = false;
+			_limit = std::move(q._limit);
+			_limit_cnt = std::move(q._limit_cnt);
+			_threshold = std::move(q._threshold);
+			_mutex = std::move(q._mutex);
+			_pop_cond = std::move(q._pop_cond);
+			_push_cond = std::move(q._push_cond);
+			_cnt = std::move(q._cnt);
 		}
 
 		// Move assigment
@@ -203,10 +218,15 @@ namespace queue {
 			std::lock_guard<std::mutex> self_lock(*_mutex, std::adopt_lock);
 			std::lock_guard<std::mutex> other_lock(*q._mutex, std::adopt_lock);
 			_items_queue = std::move(q._items_queue);
-			_limit = std::move(q._limit);
-			_threshold = std::move(q._threshold);
-			_finished = false;
 			_ending = false;
+			_finished = false;
+			_limit = std::move(q._limit);
+			_limit_cnt = std::move(q._limit_cnt);
+			_threshold = std::move(q._threshold);
+			_mutex = std::move(q._mutex);
+			_pop_cond = std::move(q._pop_cond);
+			_push_cond = std::move(q._push_cond);
+			_cnt = std::move(q._cnt);
 			return *this;
 		}
 
@@ -216,7 +236,11 @@ namespace queue {
 		// Copy assigment
 		Queue& operator=(const Queue& q) = delete;
 
-		~Queue() {
+		virtual ~Queue() {
+			std::lock_guard<std::mutex> lk(*_mutex);
+			auto size = _items_queue.size();
+			assert(*_cnt >= size);
+			*_cnt -= size;
 			finish();
 		}
 
@@ -309,6 +333,10 @@ namespace queue {
 			return _items_queue.size();
 		}
 
+		size_t count() {
+			return *_cnt;
+		}
+
 		T& front() {
 			std::lock_guard<std::mutex> lk(*_mutex);
 			return _items_queue.front();
@@ -385,6 +413,8 @@ namespace queue {
 						// Move it to front
 						Queue_t::_items_queue.erase(it->second);
 						_items_map.erase(it);
+						assert(*Queue_t::_cnt > 0);
+						--*Queue_t::_cnt;
 						break;
 				}
 			}
@@ -405,6 +435,8 @@ namespace queue {
 				// The item is already there, move it to front
 				Queue_t::_items_queue.erase(it->second);
 				_items_map.erase(it);
+				assert(*Queue_t::_cnt > 0);
+				--*Queue_t::_cnt;
 			}
 			return _push(std::forward<E>(element), timeout, lk);
 		}
@@ -463,6 +495,8 @@ namespace queue {
 			if (it != _items_map.end()) {
 				Queue_t::_items_queue.erase(it->second);
 				_items_map.erase(it);
+				assert(*Queue_t::_cnt > 0);
+				--*Queue_t::_cnt;
 				items++;
 			}
 			return items;
