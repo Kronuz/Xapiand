@@ -182,10 +182,10 @@ namespace queue {
 		}
 
 	public:
-		Queue(size_t limit=-1, size_t threshold=-1, size_t limit_cnt=-1)
+		Queue(size_t limit=-1, size_t threshold=-1)
 			: _ending(false),
 			  _finished(false),
-			  _state(std::make_shared<QueueState>(limit, threshold, limit_cnt)) { }
+			  _state(std::make_shared<QueueState>(limit, -1, threshold)) { }
 
 		Queue(std::shared_ptr<QueueState> state)
 			: _ending(false),
