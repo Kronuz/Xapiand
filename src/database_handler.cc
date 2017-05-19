@@ -491,7 +491,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 	} catch (...) {
 		if (!prefixed_term_id.empty()) {
 			lock_database lk_db(this);
-			database->dec_document_count(prefixed_term_id);
+			database->dec_document_change_cnt(prefixed_term_id);
 		}
 		throw;
 	}

@@ -1844,9 +1844,9 @@ Database::set_document_change_seq(const std::string& term_id, short old_revision
 
 
 void
-Database::dec_document_count(const std::string& term_id)
+Database::dec_document_change_cnt(const std::string& term_id)
 {
-	L_CALL(this, "Database::dec_document_count(%s)", repr(term_id).c_str());
+	L_CALL(this, "Database::dec_document_change_cnt(%s)", repr(term_id).c_str());
 
 	auto it = documents.find(term_id);
 	if (it != documents.end()) {
