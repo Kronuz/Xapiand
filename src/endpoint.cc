@@ -204,7 +204,7 @@ Endpoint::operator<(const Endpoint& other) const
 size_t
 Endpoint::hash() const
 {
-	std::hash<std::string> hash_fn_string;
+	static std::hash<std::string> hash_fn_string;
 	std::hash<int> hash_fn_int;
 	return (
 		hash_fn_string(path) ^
