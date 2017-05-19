@@ -36,8 +36,8 @@
 
 namespace queue {
 	struct QueueState {
-		size_t _limit;
-		size_t _limit_cnt;
+		size_t _hard_limit;
+		size_t _soft_limit;
 		size_t _threshold;
 
 		// A mutex object to control access to the underlying queue object
@@ -48,9 +48,9 @@ namespace queue {
 		std::condition_variable _push_cond;
 		std::atomic_size_t _cnt;
 
-		QueueState(size_t limit=-1, size_t limit_cnt=-1, size_t threshold=-1)
-			: _limit(limit),
-			  _limit_cnt(limit_cnt),
+		QueueState(size_t hard_limit=-1, size_t soft_limit=-1, size_t threshold=-1)
+			: _hard_limit(hard_limit),
+			  _soft_limit(soft_limit),
 			  _threshold(threshold),
 			  _cnt(0) { }
 	};
@@ -67,7 +67,7 @@ namespace queue {
 
 		bool _push_wait(double timeout, std::unique_lock<std::mutex>& lk) {
 			auto push_wait_pred = [this]() {
-				return _finished || _ending || (_items_queue.size() < _state->_limit && _state->_cnt < _state->_limit_cnt);
+				return _finished || _ending || _state->_cnt < _state->_hard_limit;
 			};
 			if (timeout) {
 				if (timeout > 0.0) {
@@ -88,7 +88,7 @@ namespace queue {
 				return false;
 			}
 
-			return true;
+			return _state->_cnt < _state->_soft_limit;
 		}
 
 		bool _pop_wait(double timeout, std::unique_lock<std::mutex>& lk) {
@@ -182,10 +182,10 @@ namespace queue {
 		}
 
 	public:
-		Queue(size_t limit=-1, size_t threshold=-1)
+		Queue(size_t hard_limit=-1, size_t threshold=-1)
 			: _ending(false),
 			  _finished(false),
-			  _state(std::make_shared<QueueState>(limit, -1, threshold)) { }
+			  _state(std::make_shared<QueueState>(hard_limit, -1, threshold)) { }
 
 		Queue(std::shared_ptr<QueueState> state)
 			: _ending(false),
@@ -375,8 +375,8 @@ namespace queue {
 		}
 
 	public:
-		QueueSet(size_t limit=-1, size_t lower=-1)
-			: Queue<T, std::list<T>>(limit, lower) { }
+		QueueSet(size_t hard_limit=-1, size_t threshold=-1)
+			: Queue<T, std::list<T>>(hard_limit, threshold) { }
 
 		template<typename E, typename OnDup>
 		bool push(E&& element, double timeout, OnDup on_dup) {
@@ -473,16 +473,15 @@ namespace queue {
 
 		size_t erase(const T& key) {
 			std::lock_guard<std::mutex> lk(Queue_t::_state->_mutex);
-			size_t items = 0;
 			auto it = _items_map.find(key);
-			if (it != _items_map.end()) {
-				Queue_t::_items_queue.erase(it->second);
-				_items_map.erase(it);
-				assert(Queue_t::_state->_cnt > 0);
-				--Queue_t::_state->_cnt;
-				items++;
+			if (it == _items_map.end()) {
+				return 0;
 			}
-			return items;
+			Queue_t::_items_queue.erase(it->second);
+			_items_map.erase(it);
+			assert(Queue_t::_state->_cnt > 0);
+			--Queue_t::_state->_cnt;
+			return 1;
 		}
 	};
 };
