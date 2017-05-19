@@ -709,7 +709,8 @@ ssize_t get_open_files()
 void adjustOpenFilesLimit(opts_t &opts) {
 
 	// Try getting the currently available number of files (-10%):
-	ssize_t available_files = ((get_max_files_per_proc() - get_open_files()) * 8) / 10;
+	ssize_t available_files = get_max_files_per_proc() - get_open_files();
+	ssize_t aprox_available_files = (available_files * 8) / 10;
 
 
 	// Try calculating minimum and recommended number of files:
@@ -749,13 +750,13 @@ void adjustOpenFilesLimit(opts_t &opts) {
 	// Calculate max_files (from configuration, recommended and available numbers):
 	ssize_t max_files = opts.max_files;
 	if (max_files) {
-		if (max_files > available_files) {
-			L_WARNING(nullptr, "The currently available number of files (%zd) exceeds the requested amount (%zd)", available_files, max_files);
+		if (max_files > aprox_available_files) {
+			L_WARNING(nullptr, "The requested open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
 		}
 	} else {
 		max_files = recommended_files;
-		if (max_files > available_files) {
-			L_WARNING(nullptr, "The currently available number of files (%zd) exceeds minimum recommended amount (%zd)", available_files, max_files);
+		if (max_files > aprox_available_files) {
+			L_WARNING(nullptr, "The minimum recommended open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
 		}
 	}
 
@@ -765,7 +766,7 @@ void adjustOpenFilesLimit(opts_t &opts) {
 	struct rlimit limit;
 	if (getrlimit(RLIMIT_NOFILE, &limit) == -1) {
 		limit_cur_files = available_files;
-		if (!limit_cur_files) {
+		if (!limit_cur_files || limit_cur_files > 4000) {
 			limit_cur_files = 4000;
 		}
 		L_WARNING(nullptr, "Unable to obtain the current NOFILE limit (%s), assuming %zd", strerror(errno), limit_cur_files);
