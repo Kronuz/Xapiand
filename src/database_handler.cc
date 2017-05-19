@@ -470,8 +470,8 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			doc.add_boolean_term(prefixed_term_id);
 			doc.add_value(spc_id.slot, term_id);
 
-			lock_database lk_db(this);
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
+			lock_database lk_db(this);
 			if (database->set_document_change_seq(prefixed_term_id, doc_revision)) {
 #endif
 				try {
