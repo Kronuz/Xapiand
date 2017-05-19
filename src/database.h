@@ -27,6 +27,7 @@
 #include <atomic>               // for atomic_bool
 #include <chrono>               // for system_clock, system_clock::time_point
 #include <cstring>              // for size_t
+#include <functional>           // for function
 #include <list>                 // for __list_iterator, operator!=
 #include <memory>               // for shared_ptr, enable_shared_from_this, mak...
 #include <mutex>                // for mutex, condition_variable, unique_lock
@@ -403,8 +404,20 @@ public:
 
 
 class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
+
+	// Specific
+	size_t _databases_limit;
+	const std::shared_ptr<std::mutex> _databases_mutex;
+	const std::shared_ptr<std::condition_variable> _databases_pop_cond;
+	const std::shared_ptr<std::condition_variable> _databases_push_cond;
+	const std::shared_ptr<std::atomic_size_t> _databases_cnt;
+
 public:
-	DatabasesLRU(ssize_t max_size);
+	DatabasesLRU(size_t max_size, size_t databases_limit,
+		std::shared_ptr<std::mutex> databases_mutex,
+		std::shared_ptr<std::condition_variable> databases_pop_cond,
+		std::shared_ptr<std::condition_variable> databases_push_cond,
+		std::shared_ptr<std::atomic_size_t> databases_cnt);
 
 	std::shared_ptr<DatabaseQueue>& get(size_t hash, bool volatile_);
 
@@ -422,6 +435,11 @@ class DatabasePool {
 
 	std::mutex qmtx;
 	std::atomic_bool finished;
+
+	const std::shared_ptr<std::mutex> databases_mutex;
+	const std::shared_ptr<std::condition_variable> databases_pop_cond;
+	const std::shared_ptr<std::condition_variable> databases_push_cond;
+	const std::shared_ptr<std::atomic_size_t> databases_cnt;
 
 	std::unordered_map<size_t, std::unordered_set<std::shared_ptr<DatabaseQueue>>> queues;
 
@@ -444,7 +462,7 @@ class DatabasePool {
 public:
 	queue::QueueSet<Endpoint> updated_databases;
 
-	DatabasePool(size_t max_size);
+	DatabasePool(size_t max_size, size_t databases_limit);
 	DatabasePool(const DatabasePool&) = delete;
 	DatabasePool(DatabasePool&&) = delete;
 	DatabasePool& operator=(const DatabasePool&) = delete;

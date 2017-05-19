@@ -1948,8 +1948,17 @@ DatabaseQueue::dec_count()
  */
 
 
-DatabasesLRU::DatabasesLRU(ssize_t max_size)
-	: LRU(max_size) { }
+DatabasesLRU::DatabasesLRU(size_t max_size, size_t databases_limit,
+	std::shared_ptr<std::mutex> databases_mutex,
+	std::shared_ptr<std::condition_variable> databases_pop_cond,
+	std::shared_ptr<std::condition_variable> databases_push_cond,
+	std::shared_ptr<std::atomic_size_t> databases_cnt)
+	: LRU(max_size),
+	  _databases_limit(databases_limit),
+	  _databases_mutex(databases_mutex),
+	  _databases_pop_cond(databases_pop_cond),
+	  _databases_push_cond(databases_push_cond),
+	  _databases_cnt(databases_cnt) { }
 
 
 std::shared_ptr<DatabaseQueue>&
@@ -1988,10 +1997,10 @@ DatabasesLRU::get(size_t hash, bool volatile_)
 
 	if (volatile_) {
 		// Volatile, insert default on the back
-		return emplace_back_and(on_drop, hash, DatabaseQueue::make_shared()).first->second;
+		return emplace_back_and(on_drop, hash, DatabaseQueue::make_shared(_databases_limit, -1)).first->second;
 	} else {
 		// Non-volatile, insert default on the front
-		return emplace_and(on_drop, hash, DatabaseQueue::make_shared()).first->second;
+		return emplace_and(on_drop, hash, DatabaseQueue::make_shared(_databases_limit, -1)).first->second;
 	}
 }
 
@@ -2041,10 +2050,14 @@ DatabasesLRU::finish()
  */
 
 
-DatabasePool::DatabasePool(size_t max_size)
+DatabasePool::DatabasePool(size_t max_size, size_t databases_limit)
 	: finished(false),
-	  databases(max_size),
-	  writable_databases(max_size)
+	  databases_mutex(std::make_shared<std::mutex>()),
+	  databases_pop_cond(std::make_shared<std::condition_variable>()),
+	  databases_push_cond(std::make_shared<std::condition_variable>()),
+	  databases_cnt(std::make_shared<std::atomic_size_t>(0)),
+	  databases(max_size, databases_limit, databases_mutex, databases_pop_cond, databases_push_cond, databases_cnt),
+	  writable_databases(max_size, databases_limit, databases_mutex, databases_pop_cond, databases_push_cond, databases_cnt)
 {
 	L_OBJ(this, "CREATED DATABASE POLL!");
 }

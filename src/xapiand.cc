@@ -1137,7 +1137,7 @@ int main(int argc, char **argv) {
 		L_INFO(nullptr, "With a maximum of " + join_string(std::vector<std::string>{
 			std::to_string(opts.max_files) + ((opts.max_files == 1) ? " file" : " files"),
 			std::to_string(opts.max_clients) + ((opts.max_clients == 1) ? " client" : " clients"),
-			std::to_string(opts.dbpool_size) + ((opts.dbpool_size == 1) ? " database" : " databases"),
+			std::to_string(opts.max_databases) + ((opts.max_databases == 1) ? " database" : " databases"),
 		}, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
 		run(opts);
