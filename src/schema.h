@@ -469,9 +469,37 @@ class Schema {
 	specification_t specification;
 
 	/*
-	 * Returns a reference to a mutable schema (a copy of the one stored in the metadata)
+	 * Returns root properties of schema.
 	 */
-	MsgPack& get_mutable();
+	const MsgPack& get_properties() const {
+		return schema->at(DB_SCHEMA).at(RESERVED_VALUE);
+	}
+
+	/*
+	 * Returns root properties of mut_schema.
+	 */
+	MsgPack& get_mutable_properties() {
+		if (!mut_schema) {
+			mut_schema = std::make_unique<MsgPack>(*schema);
+		}
+		return mut_schema->at(DB_SCHEMA).at(RESERVED_VALUE);
+	}
+
+	/*
+	 * Returns newest root properties.
+	 */
+	const MsgPack& get_newest_properties() const {
+		if (mut_schema) {
+			return mut_schema->at(DB_SCHEMA).at(RESERVED_VALUE);
+		} else {
+			return schema->at(DB_SCHEMA).at(RESERVED_VALUE);
+		}
+	}
+
+	/*
+	 * Returns mutable full_meta_name properties of mut_schema.
+	 */
+	MsgPack& get_mutable_properties(const std::string& full_meta_name);
 
 	/*
 	 * Deletes the schema from the metadata and returns a reference to the mutable empty schema.

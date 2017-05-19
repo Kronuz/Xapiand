@@ -1101,7 +1101,7 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
 	try {
-		const auto& version = schema->at(DB_SCHEMA).at(RESERVED_VERSION);
+		const auto& version = get_properties().at(RESERVED_VERSION);
 		if (version.as_f64() != DB_VERSION_SCHEMA) {
 			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
@@ -1118,25 +1118,24 @@ Schema::get_initial_schema()
 {
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
-	MsgPack new_schema = {
-		{ DB_SCHEMA, { { RESERVED_VERSION, DB_VERSION_SCHEMA } } }
-	};
+	MsgPack new_schema = { {
+		DB_SCHEMA, {
+			{ RESERVED_TYPE, std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } } },
+			{ RESERVED_VALUE, { { RESERVED_VERSION, DB_VERSION_SCHEMA } } }
+		}
+	} };
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
 }
 
 
 MsgPack&
-Schema::get_mutable()
+Schema::get_mutable_properties(const std::string& full_meta_name)
 {
-	L_CALL(this, "Schema::get_mutable()");
+	L_CALL(this, "Schema::get_mutable_properties(%s)", full_meta_name.c_str());
 
-	if (!mut_schema) {
-		mut_schema = std::make_unique<MsgPack>(*schema);
-	}
-
-	MsgPack* prop = &mut_schema->at(DB_SCHEMA);
-	Split<char> field_names(specification.full_meta_name, DB_OFFSPRING_UNION);
+	MsgPack* prop = &get_mutable_properties();
+	Split<char> field_names(full_meta_name, DB_OFFSPRING_UNION);
 	for (const auto& field_name : field_names) {
 		prop = &(*prop)[field_name];
 	}
@@ -1149,11 +1148,7 @@ Schema::clear()
 {
 	L_CALL(this, "Schema::clear()");
 
-	if (!mut_schema) {
-		mut_schema = std::make_unique<MsgPack>(*schema);
-	}
-
-	auto& prop = mut_schema->at(DB_SCHEMA);
+	auto& prop = get_mutable_properties();
 	prop.clear();
 	prop[RESERVED_VERSION] = DB_VERSION_SCHEMA;
 	return prop;
@@ -1466,7 +1461,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
 				if (!specification.flags.field_with_type && specification.sep_types[SPC_INDEX_TYPE] != FieldType::EMPTY) {
-					_validate_required_data(get_mutable());
+					_validate_required_data(get_mutable_properties(specification.full_meta_name));
 				}
 				index_partial_paths(doc);
 				if (specification.flags.store) {
@@ -1515,7 +1510,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 		}
 	} else {
 		if (!specification.flags.field_with_type && specification.sep_types[SPC_INDEX_TYPE] != FieldType::EMPTY) {
-			_validate_required_data(get_mutable());
+			_validate_required_data(get_mutable_properties(specification.full_meta_name));
 		}
 
 		if (fields.empty()) {
@@ -1811,7 +1806,7 @@ Schema::set_type_to_object()
 	L_CALL(this, "Schema::set_type_to_object()");
 
 	if unlikely(specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && !specification.flags.inside_namespace) {
-		auto& _types = get_mutable()[RESERVED_TYPE];
+		auto& _types = get_mutable_properties(specification.full_meta_name)[RESERVED_TYPE];
 		if (_types.is_undefined()) {
 			_types = std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
 			specification.sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
@@ -1829,7 +1824,7 @@ Schema::set_type_to_array()
 	L_CALL(this, "Schema::set_type_to_array()");
 
 	if unlikely(specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY && !specification.flags.inside_namespace) {
-		auto& _types = get_mutable()[RESERVED_TYPE];
+		auto& _types = get_mutable_properties(specification.full_meta_name)[RESERVED_TYPE];
 		if (_types.is_undefined()) {
 			_types = std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::EMPTY, FieldType::ARRAY, FieldType::EMPTY } };
 			specification.sep_types[SPC_ARRAY_TYPE] = FieldType::ARRAY;
@@ -2123,7 +2118,7 @@ Schema::validate_required_data(const MsgPack& value)
 		guess_field_type(value);
 	}
 
-	_validate_required_data(get_mutable());
+	_validate_required_data(get_mutable_properties(specification.full_meta_name));
 }
 
 
@@ -3201,7 +3196,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 					} catch (const std::out_of_range&) { }
 				}
 
-				auto mut_properties = &get_mutable();
+				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 				add_field(mut_properties);
 				if (specification.flags.store) {
 					data = &(*data)[norm_field_name];
@@ -3258,7 +3253,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 				} catch (const std::out_of_range&) { }
 			}
 
-			auto mut_properties = &get_mutable();
+			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			add_field(mut_properties, object, fields);
 			if (specification.flags.store) {
 				data = &(*data)[norm_field_name];
@@ -3319,7 +3314,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 					} catch (const std::out_of_range&) { }
 				}
 
-				auto mut_properties = &get_mutable();
+				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 				add_field(mut_properties);
 				if (specification.flags.store) {
 					data = &(*data)[norm_field_name];
@@ -5384,13 +5379,10 @@ Schema::get_readable() const
 	L_CALL(this, "Schema::get_readable()");
 
 	auto schema_readable = mut_schema ? *mut_schema : *schema;
-	auto& properties = schema_readable.at(DB_SCHEMA);
-	if unlikely(properties.is_undefined()) {
-		schema_readable.erase(DB_SCHEMA);
-	} else {
-		readable(properties, true);
-	}
-
+	auto& schema_prop = schema_readable.at(DB_SCHEMA);
+	readable_type(schema_prop.at(RESERVED_TYPE), schema_prop);
+	auto& properties = schema_prop.at(RESERVED_VALUE);
+	readable(properties, true);
 	return schema_readable;
 }
 
@@ -5571,12 +5563,12 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		specification = default_spc;
 
 		FieldVector fields;
-		auto properties = mut_schema ? &mut_schema->at(DB_SCHEMA) : &schema->at(DB_SCHEMA);
+		auto properties = &get_newest_properties();
 
 		const auto it_e = object.end();
 		if (properties->size() == 1) {
 			specification.flags.field_found = false;
-			auto mut_properties = &get_mutable();
+			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			static const auto wpit_e = map_dispatch_write_properties.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->as_string();
@@ -5643,7 +5635,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		specification = default_spc;
 
 		FieldVector fields;
-		auto mut_properties = replace ? &clear() : &get_mutable();
+		auto mut_properties = replace ? &clear() : &get_mutable_properties();
 
 		if (mut_properties->size() == 1) {
 			specification.flags.field_found = false;
@@ -5692,7 +5684,7 @@ Schema::get_data_id() const
 	required_spc_t res;
 
 	try {
-		const auto& properties = mut_schema ? mut_schema->at(DB_SCHEMA).at(ID_FIELD_NAME) : schema->at(DB_SCHEMA).at(ID_FIELD_NAME);
+		const auto& properties = get_newest_properties().at(ID_FIELD_NAME);
 		res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).as_u64();
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
 		res.prefix.field = properties.at(RESERVED_PREFIX).as_string();
@@ -5726,7 +5718,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 	}
 
 	try {
-		auto spc = get_dynamic_subproperties(schema->at(DB_SCHEMA), field_name);
+		auto spc = get_dynamic_subproperties(get_properties(), field_name);
 		res.flags.inside_namespace = spc.inside_namespace;
 		res.prefix.field = std::move(spc.prefix);
 
@@ -5831,7 +5823,7 @@ Schema::get_slot_field(const std::string& field_name) const
 	}
 
 	try {
-		auto spc = get_dynamic_subproperties(schema->at(DB_SCHEMA), field_name);
+		auto spc = get_dynamic_subproperties(get_properties(), field_name);
 		res.flags.inside_namespace = spc.inside_namespace;
 
 		if (!spc.acc_field.empty()) {
