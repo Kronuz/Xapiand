@@ -708,8 +708,8 @@ ssize_t get_open_files()
 
 void adjustOpenFilesLimit(opts_t &opts) {
 
-	// Try getting the currently available number of files:
-	ssize_t available_files = get_max_files_per_proc() - get_open_files();
+	// Try getting the currently available number of files (-10%):
+	ssize_t available_files = ((get_max_files_per_proc() - get_open_files()) * 8) / 10;
 
 
 	// Try calculating minimum and recommended number of files:
@@ -755,7 +755,7 @@ void adjustOpenFilesLimit(opts_t &opts) {
 	} else {
 		max_files = recommended_files;
 		if (max_files > available_files) {
-			L_WARNING(nullptr, "The currently available number of files (%zd) exceeds needed amount (%zd)", available_files, max_files);
+			L_WARNING(nullptr, "The currently available number of files (%zd) exceeds minimum recommended amount (%zd)", available_files, max_files);
 		}
 	}
 
@@ -789,11 +789,10 @@ void adjustOpenFilesLimit(opts_t &opts) {
 			limit.rlim_cur = static_cast<rlim_t>(new_max_files);
 			limit.rlim_max = static_cast<rlim_t>(new_max_files);
 			if (setrlimit(RLIMIT_NOFILE, &limit) != -1) {
-				max_files = new_max_files;
 				if (increasing) {
-					L_INFO(nullptr, "Increased maximum number of open files to %zd (it was originally set to %zd)", max_files, (size_t)limit_cur_files);
+					L_INFO(nullptr, "Increased maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (size_t)limit_cur_files);
 				} else {
-					L_INFO(nullptr, "Decresed maximum number of open files to %zd (it was originally set to %zd)", max_files, (size_t)limit_cur_files);
+					L_INFO(nullptr, "Decresed maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (size_t)limit_cur_files);
 				}
 				break;
 			}
@@ -811,6 +810,9 @@ void adjustOpenFilesLimit(opts_t &opts) {
 		if (setrlimit_error) {
 			L_ERR(nullptr, "Server can't set maximum open files to %zd because of OS error: %s", max_files, strerror(setrlimit_error));
 		}
+		max_files = new_max_files;
+	} else {
+		max_files = limit_cur_files;
 	}
 
 
@@ -840,20 +842,19 @@ void adjustOpenFilesLimit(opts_t &opts) {
 		L_WARNING(nullptr, "Current maximum open files is %zd so max_clients has been reduced to %zd to compensate for low limit.", max_files, new_max_clients);
 	}
 
+
 	// Warn about minimum/recommended sizes:
 	if (max_files < minimum_files) {
-		L_CRIT(nullptr, "Your current 'ulimit -n' of %zd is not enough for the server to start. Please increase your open file limit to at least %zd",
+		L_CRIT(nullptr, "Your open files limit of %zd is not enough for the server to start. Please increase your system-wide open files limit to at least %zd",
 			max_files,
 			minimum_files);
+		L_WARNING(nullptr, "If you need to increase your system-wide open files limit use 'ulimit -n'");
 		throw Exit(EX_OSFILE);
 	} else if (max_files < recommended_files) {
-		L_WARNING(nullptr, "Your current max_files of %zd is not enough. Please increase your open file limit to at least %zd",
+		L_WARNING(nullptr, "Your current max_files of %zd is not enough. Please increase your system-wide open files limit to at least %zd",
 			max_files,
 			recommended_files);
-	}
-
-	if ((new_dbpool_size < opts.dbpool_size || new_max_clients < opts.max_clients) && (!opts.max_files || max_files < opts.max_files)) {
-		L_WARNING(nullptr, "If you need higher dbpool_size or max_clients increase 'ulimit -n'");
+		L_WARNING(nullptr, "If you need to increase your system-wide open files limit use 'ulimit -n'");
 	}
 
 
