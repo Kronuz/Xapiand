@@ -75,9 +75,6 @@
 #define FDS_PER_CLIENT    2          // KQUEUE + IPv4
 #define FDS_PER_DATABASE  7          // Writable~=7, Readable~=5
 
-#define CONFIG_DEFAULT_MAX_CLIENTS 1000
-#define CONFIG_DEFAULT_MAX_FILES   (FDS_RESERVED + ((DBPOOL_SIZE + 2) * FDS_PER_DATABASE) + ((CONFIG_DEFAULT_MAX_CLIENTS + 2) * FDS_PER_CLIENT))
-
 
 using namespace TCLAP;
 
@@ -554,7 +551,9 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		ValueArg<size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
 		ValueArg<size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
 		ValueArg<size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
-		ValueArg<size_t> max_clients("", "max_clients", "Max number of clients.", false, CONFIG_DEFAULT_MAX_CLIENTS, "clients", cmd);
+
+		ValueArg<size_t> max_clients("", "max_clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
+		ValueArg<size_t> max_databases("", "max_databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
 		ValueArg<size_t> max_files("", "max_files", "Max number of files to open.", false, 0, "files", cmd);
 
 		std::vector<std::string> args;
@@ -623,6 +622,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.num_committers = num_committers.getValue();
 		opts.num_fsynchers = num_fsynchers.getValue();
 		opts.max_clients = max_clients.getValue();
+		opts.max_databases = max_databases.getValue();
 		opts.max_files = max_files.getValue();
 		opts.threadpool_size = THEADPOOL_SIZE;
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;

@@ -71,6 +71,7 @@ struct opts_t {
 	ssize_t num_committers;
 	ssize_t num_fsynchers;
 	ssize_t max_clients;
+	ssize_t max_databases;
 	ssize_t max_files;
 	unsigned int ev_flags;
 };

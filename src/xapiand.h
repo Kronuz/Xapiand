@@ -41,6 +41,8 @@
 #define XAPIAND_LOG_FILE             "xapiand.log"
 
 #define DBPOOL_SIZE          300     /* Maximum number of database endpoints in database pool. */
+#define MAX_CLIENTS          1000    /* Maximum number of open client connections */
+#define MAX_DATABASES        400     /* Maximum number of open databases */
 #define NUM_REPLICATORS      10      /* Number of replicators. */
 #define NUM_COMMITTERS       10      /* Number of threads handling the commits. */
 #define NUM_FSYNCHERS        10      /* Number of threads handling the fsyncs. */
