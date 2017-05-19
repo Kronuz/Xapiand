@@ -53,7 +53,7 @@ private:
 	ev::async _destroy_async;
 	ev::async _detach_children_async;
 
-	std::mutex _mtx;
+	std::recursive_mutex _mtx;
 	std::atomic_bool _runner;
 	std::atomic_bool _detaching;
 
@@ -153,7 +153,7 @@ public:
 		};
 		auto child = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
 		if (child->_parent) {
-			std::lock_guard<std::mutex> lk(child->_parent->_mtx);
+			std::lock_guard<std::recursive_mutex> lk(child->_parent->_mtx);
 			child->_parent->__attach(child);
 		}
 

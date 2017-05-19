@@ -44,7 +44,7 @@ Worker::_init()
 {
 	L_CALL(this, "Worker::_init()");
 
-	std::lock_guard<std::mutex> lk(_mtx);
+	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
 	if (_parent) {
 		_iterator = _parent->_children.end();
@@ -135,7 +135,7 @@ Worker::_gather_children()
 {
 	L_CALL(this, "Worker::_gather_children() [%s]", __repr__().c_str());
 
-	std::lock_guard<std::mutex> lk(_mtx);
+	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
 	// Collect active children
 	std::vector<std::weak_ptr<Worker>> weak_children;
@@ -158,7 +158,7 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 {
 	L_CALL(this, "Worker::_detach_impl(<weak_child>) [%s]", __repr__().c_str());
 
-	std::lock_guard<std::mutex> lk(_mtx);
+	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
 #ifdef L_WORKER
 	std::string child_repr;
@@ -196,7 +196,7 @@ Worker::_ancestor(int levels)
 {
 	L_CALL(this, "Worker::_ancestor(%d) [%s]", levels, __repr__().c_str());
 
-	std::lock_guard<std::mutex> lk(_mtx);
+	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
 	auto ancestor = shared_from_this();
 	while (ancestor->_parent && levels-- != 0) {
@@ -223,7 +223,7 @@ Worker::__repr__(const std::string& name) const
 std::string
 Worker::dump_tree(int level)
 {
-	std::lock_guard<std::mutex> lk(_mtx);
+	std::lock_guard<std::recursive_mutex> lk(_mtx);
 	std::string ret = "\n";
 	for (int l = 0; l < level; ++l) ret += "    ";
 	ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + ")";
