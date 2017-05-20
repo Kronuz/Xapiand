@@ -1120,12 +1120,12 @@ Schema::get_initial_schema()
 {
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
-	MsgPack new_schema = { {
+	MsgPack new_schema({ {
 		DB_SCHEMA, {
-			{ RESERVED_TYPE, std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } } },
+			{ RESERVED_TYPE,  std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } } },
 			{ RESERVED_VALUE, { { RESERVED_VERSION, DB_VERSION_SCHEMA } } }
 		}
-	} };
+	} });
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
 }
