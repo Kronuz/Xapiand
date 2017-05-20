@@ -171,6 +171,7 @@ enum class FieldType : uint8_t {
 	ARRAY         =  'A',
 	BOOLEAN       =  'B',
 	DATE          =  'D',
+	FOREIGN       =  'E',
 	FLOAT         =  'F',
 	GEO           =  'G',
 	INTEGER       =  'I',
