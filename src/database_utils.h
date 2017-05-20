@@ -68,7 +68,6 @@
 #define RESERVED_NAMESPACE             "_namespace"
 #define RESERVED_PARTIAL_PATHS         "_partial_paths"
 #define RESERVED_INDEX_UUID_FIELD      "_index_uuid_field"
-#define RESERVED_SCHEMA                "_schema"
 // Reserved words for detecting types.
 #define RESERVED_DATE_DETECTION        "_date_detection"
 #define RESERVED_TIME_DETECTION        "_time_detection"
