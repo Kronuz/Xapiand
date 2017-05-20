@@ -96,21 +96,22 @@
 #endif
 
 
-#define FLOAT_STR       "float"
-#define INTEGER_STR     "integer"
-#define POSITIVE_STR    "positive"
-#define TERM_STR        "term"
-#define TEXT_STR        "text"
-#define STRING_STR      "string"
-#define DATE_STR        "date"
-#define TIME_STR        "time"
-#define TIMEDELTA_STR   "timedelta"
-#define GEO_STR         "geospatial"
-#define BOOLEAN_STR     "boolean"
-#define UUID_STR        "uuid"
-#define ARRAY_STR       "array"
-#define OBJECT_STR      "object"
-#define EMPTY_STR       "empty"
+constexpr const char FLOAT_STR[]     = "float";
+constexpr const char INTEGER_STR[]   = "integer";
+constexpr const char POSITIVE_STR[]  = "positive";
+constexpr const char TERM_STR[]      = "term";
+constexpr const char TEXT_STR[]      = "text";
+constexpr const char STRING_STR[]    = "string";
+constexpr const char DATE_STR[]      = "date";
+constexpr const char TIME_STR[]      = "time";
+constexpr const char TIMEDELTA_STR[] = "timedelta";
+constexpr const char GEO_STR[]       = "geospatial";
+constexpr const char BOOLEAN_STR[]   = "boolean";
+constexpr const char UUID_STR[]      = "uuid";
+constexpr const char ARRAY_STR[]     = "array";
+constexpr const char OBJECT_STR[]    = "object";
+constexpr const char FOREIGN_STR[]   = "foreign";
+constexpr const char EMPTY_STR[]     = "empty";
 
 
 constexpr char SERIALISED_FALSE      = 'f';
