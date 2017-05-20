@@ -293,14 +293,14 @@ inline static std::string readable_index_uuid_field(UUIDFieldIndex index_uuid_fi
 
 inline static std::string readable_type(const std::array<FieldType, SPC_SIZE_TYPES>& sep_types) {
 	std::string result;
-	if (sep_types[SPC_FOREIGN_TYPE] != FieldType::EMPTY) {
+	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 		result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
 	}
-	if (sep_types[SPC_OBJECT_TYPE] != FieldType::EMPTY) {
+	if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
 		if (!result.empty()) result += "/";
 		result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
 	}
-	if (sep_types[SPC_ARRAY_TYPE] != FieldType::EMPTY) {
+	if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
 		if (!result.empty()) result += "/";
 		result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
 	}
