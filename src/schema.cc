@@ -5283,8 +5283,8 @@ Schema::consistency_schema(const std::string& prop_name, const MsgPack& doc_sche
 	L_CALL(this, "Schema::consistency_schema(%s)", repr(doc_schema.to_string()).c_str());
 
 	if (specification.full_meta_name.empty()) {
-		if (!doc_schema.is_string()) {
-			THROW(ClientError, "%s must be string", prop_name.c_str());
+		if (!doc_schema.is_map()) {
+			THROW(ClientError, "%s must be map", prop_name.c_str());
 		}
 	} else {
 		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());

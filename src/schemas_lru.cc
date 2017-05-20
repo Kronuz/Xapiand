@@ -27,6 +27,43 @@
 #include "schema.h"
 
 
+inline void
+SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& local_schema_ptr, std::string& schema_path, std::string& schema_id)
+{
+	try {
+		const auto& schema_obj = local_schema_ptr->at(DB_SCHEMA);
+		try {
+			const auto& type = schema_obj.at(RESERVED_TYPE);
+			if (!type.is_array() || type.size() != SPC_SIZE_TYPES) {
+				THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. %s must be array of %zu integers", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, SPC_SIZE_TYPES);
+			}
+			const auto& value = schema_obj.at(RESERVED_VALUE);
+			if (type.at(SPC_FOREIGN_TYPE).as_u64() == toUType(FieldType::FOREIGN)) {
+				try {
+					const auto aux_schema_str = value.as_string();
+					split_path_id(aux_schema_str, schema_path, schema_id);
+					if (schema_path.empty() || schema_id.empty()) {
+						THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. %s in %s must contain index and docid [%s]", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA, aux_schema_str.c_str());
+					}
+				} catch (const msgpack::type_error&) {
+					THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. %s in %s must be string because is foreign", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA);
+				}
+			} else if (!value.is_map()) {
+				THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. %s in %s must be object because is not foreign", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA);
+			}
+		} catch (const std::out_of_range&) {
+			THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. %s must have %s and %s", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), DB_SCHEMA, RESERVED_TYPE, RESERVED_VALUE);
+		} catch (const msgpack::type_error&) {
+			THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. %s must be map instead of %s", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), DB_SCHEMA, schema_obj.getStrType().c_str());
+		}
+	} catch (const std::out_of_range&) {
+		THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. It must contain %s", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), DB_SCHEMA);
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. It must be map instead of %s", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), local_schema_ptr->getStrType().c_str());
+	}
+}
+
+
 std::tuple<bool, atomic_shared_ptr<const MsgPack>*, std::string, std::string>
 SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 {
@@ -42,40 +79,63 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 	}
 	auto local_schema_ptr = atom_local_schema->load();
 
-	std::string schema_path_str, schema_id;
+	std::string schema_path, schema_id;
 	if (local_schema_ptr) {
-		switch (local_schema_ptr->getType()) {
-			case MsgPack::Type::STR: {
-				const auto aux_schema_str = local_schema_ptr->as_string();
-				split_path_id(aux_schema_str, schema_path_str, schema_id);
-				if (schema_path_str.empty() || schema_id.empty()) {
-					THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must contain index and docid [%s]", DB_META_SCHEMA, aux_schema_str.c_str());
-				}
-				break;
-			}
-			case MsgPack::Type::MAP:
-				break;
-			default:
-				THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, local_schema_ptr->getStrType().c_str());
-		}
+		validate_metadata(db_handler, local_schema_ptr, schema_path, schema_id);
 	} else {
 		const auto str_schema = db_handler->get_metadata(DB_META_SCHEMA);
 		std::shared_ptr<const MsgPack> aux_schema_ptr;
 		if (str_schema.empty()) {
 			created = true;
-			if (obj) {
-				const auto it = obj->find(RESERVED_SCHEMA);
+			if (obj && obj->is_map()) {
+				const auto it = obj->find(DB_META_SCHEMA);
 				if (it == obj->end()) {
 					aux_schema_ptr = Schema::get_initial_schema();
 				} else {
-					const auto& path = it.value();
-					if (path.is_string()) {
-						aux_schema_ptr = std::make_shared<const MsgPack>(path);
-						if (!db_handler->set_metadata(DB_META_SCHEMA, aux_schema_ptr->serialise(), false)) {
-							THROW(ClientError, "%s cannot be changed", RESERVED_SCHEMA);
+					const auto& meta_schema = it.value();
+					try {
+						const auto& schema_obj = meta_schema.at(DB_SCHEMA);
+						static const auto meta_field = std::string(DB_META_SCHEMA) + std::string(1, DB_OFFSPRING_UNION) + std::string(DB_SCHEMA);
+						try {
+							auto sep_types = required_spc_t::get_types(schema_obj.at(RESERVED_TYPE).as_string());
+							const auto& value = schema_obj.at(RESERVED_VALUE);
+							if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+								try {
+									const auto aux_schema_str = value.as_string();
+									MsgPack new_schema({ {
+										DB_SCHEMA, {
+											{ RESERVED_TYPE,  sep_types },
+											{ RESERVED_VALUE, value     }
+										}
+									} });
+									aux_schema_ptr = std::make_shared<const MsgPack>(std::move(new_schema));
+									split_path_id(aux_schema_str, schema_path, schema_id);
+									if (schema_path.empty() || schema_id.empty()) {
+										THROW(ClientError, "%s in %s must contain index and docid [%s]", RESERVED_VALUE, meta_field.c_str(), aux_schema_str.c_str());
+									}
+								} catch (const msgpack::type_error&) {
+									THROW(Error, "%s in %s must be string because is foreign type", RESERVED_VALUE, meta_field.c_str());
+								}
+							} else if (value.is_map()) {
+								MsgPack new_schema({ {
+									DB_SCHEMA, {
+										{ RESERVED_TYPE,  sep_types },
+										{ RESERVED_VALUE, value     },
+									}
+								} });
+								aux_schema_ptr = std::make_shared<const MsgPack>(std::move(new_schema));
+							} else {
+								THROW(Error, "%s in %s must be object because is not foreign type", RESERVED_VALUE, meta_field.c_str());
+							}
+						} catch (const std::out_of_range&) {
+							THROW(Error, "%s must have %s and %s", meta_field.c_str(), RESERVED_TYPE, RESERVED_VALUE);
+						} catch (const msgpack::type_error&) {
+							THROW(Error, "%s must be map instead of %s", meta_field.c_str(), schema_obj.getStrType().c_str());
 						}
-					} else {
-						THROW(ClientError, "%s must be string", RESERVED_SCHEMA);
+					} catch (const std::out_of_range&) {
+						THROW(Error, "%s must contain %s", DB_META_SCHEMA, DB_SCHEMA);
+					} catch (const msgpack::type_error&) {
+						THROW(Error, "%s must be map instead of %s", DB_META_SCHEMA, meta_schema.getStrType().c_str());
 					}
 				}
 			} else {
@@ -84,51 +144,29 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 		} else {
 			try {
 				aux_schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+				validate_metadata(db_handler, aux_schema_ptr, schema_path, schema_id);
 			} catch (const msgpack::unpack_error& e) {
-				THROW(Error, "Metadata %s is corrupt, you need provide a new one [%s]", DB_META_SCHEMA, e.what());
+				THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one [%s]", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), e.what());
 			}
 		}
 		aux_schema_ptr->lock();
 
-		switch (aux_schema_ptr->getType()) {
-			case MsgPack::Type::STR: {
-				const auto aux_schema_str = aux_schema_ptr->as_string();
-				split_path_id(aux_schema_str, schema_path_str, schema_id);
-				if (schema_path_str.empty() || schema_id.empty()) {
-					if (created) {
-						THROW(ClientError, "%s must contain index and docid [%s]", RESERVED_SCHEMA, aux_schema_str.c_str());
-					} else {
-						THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must contain index and docid [%s]", DB_META_SCHEMA, aux_schema_str.c_str());
-					}
+		if (!atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr)) {
+			if (created) {
+				if (!db_handler->set_metadata(DB_META_SCHEMA, local_schema_ptr->serialise(), false)) {
+					THROW(ClientError, "Cannot set metadata: %s", DB_META_SCHEMA);
 				}
-				break;
+				created = false;
 			}
-			case MsgPack::Type::MAP:
-				break;
-			default:
-				THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, aux_schema_ptr->getStrType().c_str());
-		}
-
-		if (!atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr) && local_schema_ptr) {
-			created = false;
-			switch (local_schema_ptr->getType()) {
-				case MsgPack::Type::STR: {
-					const auto aux_schema_str = local_schema_ptr->as_string();
-					split_path_id(aux_schema_str, schema_path_str, schema_id);
-					if (schema_path_str.empty() || schema_id.empty()) {
-						THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must contain index and docid [%s]", DB_META_SCHEMA, aux_schema_str.c_str());
-					}
-					break;
-				}
-				case MsgPack::Type::MAP:
-					break;
-				default:
-					THROW(Error, "Metadata %s is corrupt, you need provide a new one. It must be string or map [%s]", DB_META_SCHEMA, local_schema_ptr->getStrType().c_str());
+			validate_metadata(db_handler, local_schema_ptr, schema_path, schema_id);
+		} else if (created) {
+			if (!db_handler->set_metadata(DB_META_SCHEMA, aux_schema_ptr->serialise(), false)) {
+				THROW(ClientError, "Cannot set metadata: %s", DB_META_SCHEMA);
 			}
 		}
 	}
 
-	return std::make_tuple(created, atom_local_schema, std::move(schema_path_str), std::move(schema_id));
+	return std::make_tuple(created, atom_local_schema, std::move(schema_path), std::move(schema_id));
 }
 
 
