@@ -227,7 +227,6 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			if (std::get<0>(info_local_schema)) {
 				schema_ptr = Schema::get_initial_schema();
 			} else {
-
 				schema_ptr = std::make_shared<const MsgPack>(get_shared(schema_path, schema_id, db_handler->context));
 			}
 			schema_ptr->lock();
