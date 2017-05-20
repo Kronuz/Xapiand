@@ -175,7 +175,7 @@ public:
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	void dec_document_change_cnt(const std::string& term_id);
 	const std::shared_ptr<Document> get_document_change_seq(const std::string& term_id);
-	bool set_document_change_seq(const std::string& term_id, const std::shared_ptr<Document>& old_document, const std::shared_ptr<Document>& new_document);
+	bool set_document_change_seq(const std::string& term_id, const std::shared_ptr<Document>& new_document, std::shared_ptr<Document>& old_document);
 #endif
 };
 

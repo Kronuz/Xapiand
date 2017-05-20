@@ -467,7 +467,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			doc.add_value(spc_id.slot, term_id);
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-			if (set_document_change_seq(prefixed_term_id, old_document, std::make_shared<Document>(doc))) {
+			if (set_document_change_seq(prefixed_term_id, std::make_shared<Document>(doc), old_document)) {
 #endif
 				lock_database lk_db(this);
 				try {
@@ -1190,7 +1190,7 @@ DatabaseHandler::get_document_change_seq(const std::string& term_id)
 
 
 bool
-DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::shared_ptr<Document>& old_document, const std::shared_ptr<Document>& new_document)
+DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::shared_ptr<Document>& new_document, std::shared_ptr<Document>& old_document)
 {
 	L_CALL(this, "DatabaseHandler::set_document_change_seq(%s, %s, %s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str(), old_document ? std::to_string(old_document->hash()).c_str() : "nil", new_document ? std::to_string(new_document->hash()).c_str() : "nil");
 
@@ -1231,6 +1231,8 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 	}
 
 	bool accepted = (!old_document || old_document->hash() == current_hash);
+
+	old_document.reset();
 
 	if (it != DatabaseHandler::documents.end()) {
 		if (it->second.use_count() == 1) {
