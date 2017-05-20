@@ -2264,7 +2264,11 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		DatabaseAutocommit::commit(database);
 	}
 
-	queue->push(database);
+	if (!queue->push(database)) {
+		writable_databases.cleanup();
+		databases.cleanup();
+		queue->push(database);
+	}
 
 	auto& endpoints = database->endpoints;
 	bool signal_checkins = false;
