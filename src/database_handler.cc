@@ -132,8 +132,10 @@ lock_database::unlock()
 }
 
 
+#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 std::mutex DatabaseHandler::documents_mtx;
 std::unordered_map<size_t, std::shared_ptr<Document>> DatabaseHandler::documents;
+#endif
 
 
 DatabaseHandler::DatabaseHandler()
