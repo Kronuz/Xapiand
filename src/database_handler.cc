@@ -1207,11 +1207,11 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 
 	uint64_t current_hash = -1;
 	if (it == DatabaseHandler::documents.end()) {
-		std::shared_ptr<Document> document;
 		if (old_document) {
 			lk.unlock();
 
 			// Get document from database
+			std::shared_ptr<Document> document;
 			try{
 				document = std::make_shared<Document>(get_document_term(term_id));
 			} catch (const DocNotFoundError&) {
@@ -1219,14 +1219,13 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 			}
 
 			lk.lock();
-		} else {
-			document = std::make_shared<Document>();
+
+			if (is_local) {
+				it = DatabaseHandler::documents.emplace(key, document).first;
+				document = it->second;
+			}
+			current_hash = document->hash();
 		}
-		if (is_local) {
-			it = DatabaseHandler::documents.emplace(key, document).first;
-			document = it->second;
-		}
-		current_hash = document->hash();
 	}
 
 	bool accepted = (!old_document || old_document->hash() == current_hash);
