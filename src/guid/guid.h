@@ -104,7 +104,7 @@ class Guid {
 public:
 
 	// create a guid from vector of bytes
-	Guid(const std::array<unsigned char, 16>& bytes);
+	explicit Guid(const std::array<unsigned char, 16>& bytes);
 
 	// create a guid from string
 	explicit Guid(const std::string& fromString);
@@ -232,7 +232,7 @@ class GuidGenerator {
 
 public:
 #ifdef GUID_ANDROID
-	GuidGenerator(JNIEnv* env);
+	explicit GuidGenerator(JNIEnv* env);
 #else
 	GuidGenerator() { }
 #endif

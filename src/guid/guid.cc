@@ -609,7 +609,7 @@ GuidGenerator::_newGuid()
 	auto bytes = CFUUIDGetUUIDBytes(newId);
 	CFRelease(newId);
 
-	return std::array<unsigned char, 16>{{
+	return Guid(std::array<unsigned char, 16>{{
 		bytes.byte0,
 		bytes.byte1,
 		bytes.byte2,
@@ -626,7 +626,7 @@ GuidGenerator::_newGuid()
 		bytes.byte13,
 		bytes.byte14,
 		bytes.byte15,
-	}};
+	}});
 }
 #endif
 
