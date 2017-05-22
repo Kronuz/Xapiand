@@ -221,38 +221,44 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 std::mutex DatabaseHandler::documents_mtx;
-std::unordered_map<size_t, std::shared_ptr<Document>> DatabaseHandler::documents;
+std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> DatabaseHandler::documents;
 
 
 template<typename Processor>
-MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script_body, std::shared_ptr<Document>& document)
+MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
 	try {
 		auto processor = Processor::compile(script_name, script_body);
 		switch (method) {
 			case HTTP_PUT:
-				try {
-					document = get_document_change_seq(term_id);
-					return (*processor)["on_put"](data, document->get_obj());
-				} catch (const DocNotFoundError&) {
-					return data;
+				old_document_pair = get_document_change_seq(term_id);
+				L_LOG(this, "%s", data.to_string(4).c_str());
+				if (old_document_pair) {
+					L_LOG(this, "%s", old_document_pair->second.to_string(4).c_str());
+					return (*processor)["on_put"](data, old_document_pair->second);
+				} else {
+					return (*processor)["on_put"](data);
 				}
 
 			case HTTP_PATCH:
 			case HTTP_MERGE:
-				try {
-					document = get_document_change_seq(term_id);
-					return (*processor)["on_patch"](data, document->get_obj());
-				} catch (const DocNotFoundError&) {
-					return data;
+				old_document_pair = get_document_change_seq(term_id);
+				L_LOG(this, "%s", data.to_string(4).c_str());
+				if (old_document_pair) {
+					L_LOG(this, "%s", old_document_pair->second.to_string(4).c_str());
+					return (*processor)["on_patch"](data, old_document_pair->second);
+				} else {
+					return (*processor)["on_patch"](data);
 				}
 
 			case HTTP_DELETE:
-				try {
-					document = get_document_change_seq(term_id);
-					return (*processor)["on_delete"](data, document->get_obj());
-				} catch (const DocNotFoundError&) {
-					return data;
+				old_document_pair = get_document_change_seq(term_id);
+				L_LOG(this, "%s", data.to_string(4).c_str());
+				if (old_document_pair) {
+					L_LOG(this, "%s", old_document_pair->second.to_string(4).c_str());
+					return (*processor)["on_delete"](data, old_document_pair->second);
+				} else {
+					return (*processor)["on_delete"](data);
 				}
 
 			case HTTP_GET:
@@ -285,7 +291,7 @@ MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, 
 
 
 MsgPack
-DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<Document>& document)
+DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
 	L_CALL(this, "DatabaseHandler::run_script(...)");
 
@@ -323,7 +329,7 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 	// ECMAScript
 	if (script_type == "ecma" || endswith(script_name, ".js") || endswith(script_name, ".es")) {
 #if defined(XAPIAND_V8)
-		return call_script<v8pp::Processor>(data, term_id, script_name, script_body, document);
+		return call_script<v8pp::Processor>(data, term_id, script_name, script_body, old_document_pair);
 #else
 		THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
 #endif
@@ -332,7 +338,7 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 	// ChaiScript
 	if (script_type == "chai" || endswith(script_name, ".chai")) {
 #if defined(XAPIAND_CHAISCRIPT)
-		return call_script<chaipp::Processor>(data, term_id, script_name, script_body, document);
+		return call_script<chaipp::Processor>(data, term_id, script_name, script_body, old_document_pair);
 #else
 		THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif
@@ -344,9 +350,9 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 
 	// Fallback:
 #if defined(XAPIAND_V8)
-	return call_script<v8pp::Processor>(data, term_id, script_name, script_body, document);
+	return call_script<v8pp::Processor>(data, term_id, script_name, script_body, old_document_pair);
 #elif defined(XAPIAND_CHAISCRIPT)
-	return call_script<chaipp::Processor>(data, term_id, script_name, script_body, document);
+	return call_script<chaipp::Processor>(data, term_id, script_name, script_body, old_document_pair);
 #endif
 
 }
@@ -366,7 +372,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	try {
-		std::shared_ptr<Document> old_document;
+		std::shared_ptr<std::pair<size_t, const MsgPack>> old_document_pair;
 		do {
 #endif
 			auto schema_begins = std::chrono::system_clock::now();
@@ -391,7 +397,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 					if (obj.is_map()) {
-						obj = run_script(obj, prefixed_term_id, old_document);
+						obj = run_script(obj, prefixed_term_id, old_document_pair);
 						if (!obj.is_map()) {
 							THROW(ClientError, "Script must return an object, it returned %s", obj.getStrType().c_str());
 						}
@@ -464,7 +470,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			doc.add_value(spc_id.slot, term_id);
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-			if (set_document_change_seq(prefixed_term_id, std::make_shared<Document>(doc), old_document)) {
+			if (set_document_change_seq(prefixed_term_id, std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(Document(doc).hash(), obj)), old_document_pair)) {
 #endif
 				lock_database lk_db(this);
 				try {
@@ -1149,7 +1155,7 @@ DatabaseHandler::get_master_count()
 
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-const std::shared_ptr<Document>
+const std::shared_ptr<std::pair<size_t, const MsgPack>>
 DatabaseHandler::get_document_change_seq(const std::string& term_id)
 {
 	L_CALL(this, "DatabaseHandler::get_document_change_seq(%s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str());
@@ -1166,30 +1172,36 @@ DatabaseHandler::get_document_change_seq(const std::string& term_id)
 		it = DatabaseHandler::documents.find(key);
 	}
 
-	std::shared_ptr<Document> document;
+	std::shared_ptr<std::pair<size_t, const MsgPack>> current_document_pair;
 	if (it == DatabaseHandler::documents.end()) {
 		lk.unlock();
 
 		// Get document from database
-		document = std::make_shared<Document>(get_document_term(term_id));
+		try {
+			auto current_document = get_document_term(term_id);
+			current_document_pair = std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(current_document.hash(), current_document.get_obj()));
+		} catch (const DocNotFoundError&) {
+			current_document_pair = std::shared_ptr<std::pair<size_t, const MsgPack>>(nullptr);
+		}
 
 		lk.lock();
 
 		if (is_local) {
-			it = DatabaseHandler::documents.emplace(key, document).first;
-			document = it->second;
+			it = DatabaseHandler::documents.emplace(key, current_document_pair).first;
+			current_document_pair = it->second;
 		}
 	} else {
-		document = it->second;
+		current_document_pair = it->second;
 	}
-	return document;
+
+	return current_document_pair;
 }
 
 
 bool
-DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::shared_ptr<Document>& new_document, std::shared_ptr<Document>& old_document)
+DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
-	L_CALL(this, "DatabaseHandler::set_document_change_seq(%s, %s, %s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str(), old_document ? std::to_string(old_document->hash()).c_str() : "nil", new_document ? std::to_string(new_document->hash()).c_str() : "nil");
+	L_CALL(this, "DatabaseHandler::set_document_change_seq(%s, %s, %s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str(), std::to_string(new_document_pair->first).c_str(), old_document_pair ? std::to_string(old_document_pair->first).c_str() : "nil");
 
 	static std::hash<std::string> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(term_id);
@@ -1203,38 +1215,40 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 		it = DatabaseHandler::documents.find(key);
 	}
 
-	uint64_t current_hash = 0;
+	std::shared_ptr<std::pair<size_t, const MsgPack>> current_document_pair;
 	if (it == DatabaseHandler::documents.end()) {
-		if (old_document) {
+		if (old_document_pair) {
 			lk.unlock();
 
 			// Get document from database
-			std::shared_ptr<Document> document;
-			try{
-				document = std::make_shared<Document>(get_document_term(term_id));
+			try {
+				auto current_document = get_document_term(term_id);
+				current_document_pair = std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(current_document.hash(), current_document.get_obj()));
 			} catch (const DocNotFoundError&) {
-				document = std::make_shared<Document>(Xapian::Document());
+				current_document_pair = std::shared_ptr<std::pair<size_t, const MsgPack>>(nullptr);
 			}
 
 			lk.lock();
 
 			if (is_local) {
-				it = DatabaseHandler::documents.emplace(key, document).first;
-				document = it->second;
+				it = DatabaseHandler::documents.emplace(key, current_document_pair).first;
+				current_document_pair = it->second;
 			}
-			current_hash = document->hash();
 		}
+	} else {
+		current_document_pair = it->second;
 	}
 
-	bool accepted = (!old_document || old_document->hash() == current_hash);
+	bool accepted = (!old_document_pair || (current_document_pair && old_document_pair->first == current_document_pair->first));
 
-	old_document.reset();
+	current_document_pair.reset();
+	old_document_pair.reset();
 
 	if (it != DatabaseHandler::documents.end()) {
 		if (it->second.use_count() == 1) {
 			DatabaseHandler::documents.erase(it);
 		} else if (accepted) {
-			it->second = new_document;
+			it->second = new_document_pair;
 		}
 	}
 
