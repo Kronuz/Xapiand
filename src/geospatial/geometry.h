@@ -72,7 +72,7 @@ public:
 
 	// Does a great circle with the defined center.
 	template <typename T, typename = std::enable_if_t<std::is_same<Cartesian, std::decay_t<T>>::value>>
-	Constraint(T&& _center)
+	explicit Constraint(T&& _center)
 		: center(std::forward<T>(_center)),
 		  arcangle(PI_HALF),
 		  distance(0.0),
@@ -127,7 +127,7 @@ protected:
 	Type type;
 
 public:
-	Geometry(Type t)
+	explicit Geometry(Type t)
 		: type(t) { }
 
 	Geometry(Geometry&& g) noexcept

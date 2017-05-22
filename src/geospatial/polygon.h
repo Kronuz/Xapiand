@@ -148,7 +148,7 @@ private:
 	bool simplified;
 
 public:
-	Polygon(Geometry::Type type)
+	explicit Polygon(Geometry::Type type)
 		: Geometry(type),
 		  simplified(true) { }
 

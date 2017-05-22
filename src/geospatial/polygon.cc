@@ -253,7 +253,7 @@ Polygon::ConvexPolygon::process_polygon(std::vector<Cartesian>&& points)
 		for (auto it = points.begin(); it != it_last; ++it) {
 			constraint = *it ^ *(it + 1);
 			constraint.normalize();
-			constraints.push_back(std::move(constraint));
+			constraints.emplace_back(std::move(constraint));
 			// Normalizes the corner.
 			it->normalize();
 			corners.push_back(std::move(*it));
@@ -266,7 +266,7 @@ Polygon::ConvexPolygon::process_polygon(std::vector<Cartesian>&& points)
 		for (auto rit = points.rbegin(); rit != rit_last; ++rit) {
 			constraint = *rit ^ *(rit + 1);
 			constraint.normalize();
-			constraints.push_back(std::move(constraint));
+			constraints.emplace_back(std::move(constraint));
 			// Normalize the corner.
 			rit->normalize();
 			corners.push_back(std::move(*rit));

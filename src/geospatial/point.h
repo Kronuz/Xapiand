@@ -35,7 +35,7 @@ class Point : public Geometry {
 
 public:
 	template <typename T, typename = std::enable_if_t<std::is_same<Cartesian, std::decay_t<T>>::value>>
-	Point(T&& point)
+	explicit Point(T&& point)
 		: Geometry(Type::POINT),
 		  p(std::forward<T>(point))
 	{
