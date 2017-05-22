@@ -221,11 +221,11 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 std::mutex DatabaseHandler::documents_mtx;
-std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, MsgPack>>> DatabaseHandler::documents;
+std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> DatabaseHandler::documents;
 
 
 template<typename Processor>
-MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script_body, std::shared_ptr<std::pair<size_t, MsgPack>>& old_document_pair)
+MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
 	try {
 		auto processor = Processor::compile(script_name, script_body);
@@ -295,7 +295,7 @@ MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, 
 
 
 MsgPack
-DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, MsgPack>>& old_document_pair)
+DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
 	L_CALL(this, "DatabaseHandler::run_script(...)");
 
@@ -376,7 +376,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	try {
-		std::shared_ptr<std::pair<size_t, MsgPack>> old_document_pair;
+		std::shared_ptr<std::pair<size_t, const MsgPack>> old_document_pair;
 		do {
 #endif
 			auto schema_begins = std::chrono::system_clock::now();
@@ -474,7 +474,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 			doc.add_value(spc_id.slot, term_id);
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-			if (set_document_change_seq(prefixed_term_id, std::make_shared<std::pair<size_t, MsgPack>>(std::make_pair(Document(doc).hash(), obj)), old_document_pair)) {
+			if (set_document_change_seq(prefixed_term_id, std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(Document(doc).hash(), obj)), old_document_pair)) {
 #endif
 				lock_database lk_db(this);
 				try {
@@ -1159,7 +1159,7 @@ DatabaseHandler::get_master_count()
 
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-const std::shared_ptr<std::pair<size_t, MsgPack>>
+const std::shared_ptr<std::pair<size_t, const MsgPack>>
 DatabaseHandler::get_document_change_seq(const std::string& term_id)
 {
 	L_CALL(this, "DatabaseHandler::get_document_change_seq(%s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str());
@@ -1176,16 +1176,16 @@ DatabaseHandler::get_document_change_seq(const std::string& term_id)
 		it = DatabaseHandler::documents.find(key);
 	}
 
-	std::shared_ptr<std::pair<size_t, MsgPack>> current_document_pair;
+	std::shared_ptr<std::pair<size_t, const MsgPack>> current_document_pair;
 	if (it == DatabaseHandler::documents.end()) {
 		lk.unlock();
 
 		// Get document from database
 		try {
 			auto current_document = get_document_term(term_id);
-			current_document_pair = std::make_shared<std::pair<size_t, MsgPack>>(std::make_pair(current_document.hash(), current_document.get_obj()));
+			current_document_pair = std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(current_document.hash(), current_document.get_obj()));
 		} catch (const DocNotFoundError&) {
-			current_document_pair = std::shared_ptr<std::pair<size_t, MsgPack>>(nullptr);
+			current_document_pair = std::shared_ptr<std::pair<size_t, const MsgPack>>(nullptr);
 		}
 
 		lk.lock();
@@ -1203,7 +1203,7 @@ DatabaseHandler::get_document_change_seq(const std::string& term_id)
 
 
 bool
-DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::shared_ptr<std::pair<size_t, MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, MsgPack>>& old_document_pair)
+DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
 	L_CALL(this, "DatabaseHandler::set_document_change_seq(%s, %s, %s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str(), std::to_string(new_document_pair->first).c_str(), old_document_pair ? std::to_string(old_document_pair->first).c_str() : "nil");
 
@@ -1219,7 +1219,7 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 		it = DatabaseHandler::documents.find(key);
 	}
 
-	std::shared_ptr<std::pair<size_t, MsgPack>> current_document_pair;
+	std::shared_ptr<std::pair<size_t, const MsgPack>> current_document_pair;
 	if (it == DatabaseHandler::documents.end()) {
 		if (old_document_pair) {
 			lk.unlock();
@@ -1227,9 +1227,9 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 			// Get document from database
 			try {
 				auto current_document = get_document_term(term_id);
-				current_document_pair = std::make_shared<std::pair<size_t, MsgPack>>(std::make_pair(current_document.hash(), current_document.get_obj()));
+				current_document_pair = std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(current_document.hash(), current_document.get_obj()));
 			} catch (const DocNotFoundError&) {
-				current_document_pair = std::shared_ptr<std::pair<size_t, MsgPack>>(nullptr);
+				current_document_pair = std::shared_ptr<std::pair<size_t, const MsgPack>>(nullptr);
 			}
 
 			lk.lock();

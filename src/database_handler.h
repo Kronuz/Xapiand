@@ -110,11 +110,11 @@ class DatabaseHandler {
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	static std::mutex documents_mtx;
-	static std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, MsgPack>>> documents;
+	static std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> documents;
 
 	template<typename ProcessorCompile>
-	MsgPack call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script, std::shared_ptr<std::pair<size_t, MsgPack>>& old_document_pair);
-	MsgPack run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, MsgPack>>& old_document_pair);
+	MsgPack call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
+	MsgPack run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
 #endif
 
 	DataType index(const std::string& _document_id, bool stored, const std::string& storage, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type);
@@ -174,8 +174,8 @@ public:
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	void dec_document_change_cnt(const std::string& term_id);
-	const std::shared_ptr<std::pair<size_t, MsgPack>> get_document_change_seq(const std::string& term_id);
-	bool set_document_change_seq(const std::string& term_id, const std::shared_ptr<std::pair<size_t, MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, MsgPack>>& old_document_pair);
+	const std::shared_ptr<std::pair<size_t, const MsgPack>> get_document_change_seq(const std::string& term_id);
+	bool set_document_change_seq(const std::string& term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
 #endif
 };
 
