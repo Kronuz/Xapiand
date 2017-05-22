@@ -162,7 +162,7 @@ class Generator {
 	public:
 		GroupType type;
 
-		Group(GroupType type_);
+		explicit Group(GroupType type_);
 
 		virtual ~Group() = default;
 
@@ -231,7 +231,7 @@ class Literal : public Generator {
 	std::string value;
 
 public:
-	Literal(const std::string& value_);
+	explicit Literal(const std::string& value_);
 
 	size_t combinations() const override;
 	size_t min() const override;

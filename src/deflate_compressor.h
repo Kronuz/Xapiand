@@ -74,7 +74,7 @@ protected:
 	}
 
 public:
-	DeflateBlockStreaming(bool gzip_)
+	explicit DeflateBlockStreaming(bool gzip_)
 		: gzip(gzip_),
 		  stream(0),
 		  state(DeflateState::NONE),
@@ -260,7 +260,7 @@ protected:
 	size_t bytes_readed;
 	size_t size_file;
 
-	DeflateFile(const std::string& filename)
+	explicit DeflateFile(const std::string& filename)
 		: bytes_readed(0),
 		  size_file(0)
 	{

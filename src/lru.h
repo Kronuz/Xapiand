@@ -62,7 +62,7 @@ public:
 	using iterator = typename list_t::iterator;
 	using const_iterator = typename list_t::const_iterator;
 
-	LRU(size_t max_size=-1)
+	explicit LRU(size_t max_size=-1)
 		: _max_size(max_size) {
 		assert(_max_size != 0);
 	}

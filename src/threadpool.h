@@ -69,7 +69,7 @@ class function_mo : private std::function<F> {
 	struct impl_move {
 		Fun f;
 
-		impl_move(Fun f_) : f(std::move(f_)) { }
+		explicit impl_move(Fun f_) : f(std::move(f_)) { }
 		impl_move(impl_move&&) = default;
 		impl_move& operator =(impl_move&&) = default;
 		impl_move(const impl_move&) { assert(false); };
