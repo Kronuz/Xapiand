@@ -21,8 +21,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef MSGPACK_TYPE_RAPIDJSON_DOCUMENT_HPP__
-#define MSGPACK_TYPE_RAPIDJSON_DOCUMENT_HPP__
+#pragma once
 
 #include "msgpack.hpp"           // for msgpack::object
 #include "rapidjson/document.h"  // for GenericDocument
@@ -31,46 +30,54 @@
 namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { namespace adaptor {
 
     template <typename Encoding, typename Allocator, typename StackAllocator>
-    struct convert< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> > {
+    struct convert<rapidjson::GenericDocument<Encoding, Allocator, StackAllocator>> {
         msgpack::object const& operator()(msgpack::object const& o, rapidjson::GenericDocument<Encoding, Allocator, StackAllocator>& v) const {
-            switch (o.type)
-            {
-                case msgpack::type::BOOLEAN: v.SetBool(o.via.boolean); break;;
-                case msgpack::type::POSITIVE_INTEGER: v.SetUint64(o.via.u64); break;
-                case msgpack::type::NEGATIVE_INTEGER: v.SetInt64(o.via.i64); break;
-                case msgpack::type::FLOAT: v.SetDouble(o.via.f64); break;
+            switch (o.type) {
+                case msgpack::type::BOOLEAN:
+                    v.SetBool(o.via.boolean);
+                    break;
+                case msgpack::type::POSITIVE_INTEGER:
+                    v.SetUint64(o.via.u64);
+                    break;
+                case msgpack::type::NEGATIVE_INTEGER:
+                    v.SetInt64(o.via.i64);
+                    break;
+                case msgpack::type::FLOAT:
+                    v.SetDouble(o.via.f64);
+                    break;
                 case msgpack::type::BIN: // fall through
-                case msgpack::type::STR: v.SetString(o.via.str.ptr, o.via.str.size); break;
-                case msgpack::type::ARRAY:{
+                case msgpack::type::STR:
+                    v.SetString(o.via.str.ptr, o.via.str.size);
+                    break;
+                case msgpack::type::ARRAY: {
                     v.SetArray();
                     v.Reserve(o.via.array.size, v.GetAllocator());
                     msgpack::object* ptr = o.via.array.ptr;
                     msgpack::object* END = ptr + o.via.array.size;
-                    for (; ptr < END; ++ptr)
-                    {
+                    for (; ptr < END; ++ptr) {
                         rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> element(&v.GetAllocator());
                         ptr->convert(&element);
                         v.PushBack(static_cast<rapidjson::GenericValue<Encoding, Allocator>&>(element), v.GetAllocator());
                     }
-                }
                     break;
+                }
                 case msgpack::type::MAP: {
                     v.SetObject();
                     msgpack::object_kv* ptr = o.via.map.ptr;
                     msgpack::object_kv* END = ptr + o.via.map.size;
-                    for (; ptr < END; ++ptr)
-                    {
+                    for (; ptr < END; ++ptr) {
                         rapidjson::GenericValue<Encoding, Allocator> key(ptr->key.via.str.ptr, ptr->key.via.str.size, v.GetAllocator());
                         rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> val(&v.GetAllocator());
                         ptr->val.convert(&val);
 
                         v.AddMember(key, val, v.GetAllocator());
                     }
-                }
                     break;
+                }
                 case msgpack::type::NIL:
                 default:
-                    v.SetNull(); break;
+                    v.SetNull();
+                    break;
 
             }
             return o;
@@ -79,7 +86,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 
 
     template <typename Encoding, typename Allocator>
-    struct convert< rapidjson::GenericValue<Encoding, Allocator> > {
+    struct convert<rapidjson::GenericValue<Encoding, Allocator>> {
         msgpack::object const& operator()(msgpack::object const& o, rapidjson::GenericValue<Encoding, Allocator>& v) const {
             rapidjson::GenericDocument<Encoding, Allocator> d;
             o >> d;
@@ -88,34 +95,31 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
     };
 
     template <typename Encoding, typename Allocator>
-    struct pack< rapidjson::GenericValue<Encoding, Allocator> > {
+    struct pack<rapidjson::GenericValue<Encoding, Allocator>> {
         template <typename Stream>
         msgpack::packer<Stream>& operator()(msgpack::packer<Stream>& o, rapidjson::GenericValue<Encoding, Allocator> const& v) const {
-            switch (v.GetType())
-            {
+            switch (v.GetType()) {
                 case rapidjson::kNullType:
                     return o.pack_nil();
                 case rapidjson::kFalseType:
                     return o.pack_false();
                 case rapidjson::kTrueType:
                     return o.pack_true();
-                case rapidjson::kObjectType:
-                {
+                case rapidjson::kObjectType: {
                     o.pack_map(v.MemberCount());
                     typename rapidjson::GenericValue<Encoding, Allocator>::ConstMemberIterator i = v.MemberBegin(), END = v.MemberEnd();
-                    for (; i != END; ++i)
-                    {
+                    for (; i != END; ++i) {
                         o.pack_str(i->name.GetStringLength()).pack_str_body(i->name.GetString(), i->name.GetStringLength());
                         o.pack(i->value);
                     }
                     return o;
                 }
-                case rapidjson::kArrayType:
-                {
+                case rapidjson::kArrayType: {
                     o.pack_array(v.Size());
                     typename rapidjson::GenericValue<Encoding, Allocator>::ConstValueIterator i = v.Begin(), END = v.End();
-                    for (;i < END; ++i)
+                    for (;i < END; ++i) {
                         o.pack(*i);
+                    }
                     return o;
                 }
                 case rapidjson::kStringType:
@@ -138,7 +142,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
     };
 
     template <typename Encoding, typename Allocator, typename StackAllocator>
-    struct pack< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> > {
+    struct pack<rapidjson::GenericDocument<Encoding, Allocator, StackAllocator>> {
         template <typename Stream>
         msgpack::packer<Stream>& operator()(msgpack::packer<Stream>& o, rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> const& v) const {
             o << static_cast<const rapidjson::GenericValue<Encoding, Allocator>&>(v);
@@ -147,10 +151,9 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
     };
 
     template <typename Encoding, typename Allocator>
-    struct object_with_zone< rapidjson::GenericValue<Encoding, Allocator> > {
+    struct object_with_zone<rapidjson::GenericValue<Encoding, Allocator>> {
         void operator()(msgpack::object::with_zone& o, rapidjson::GenericValue<Encoding, Allocator> const& v) const {
-            switch (v.GetType())
-            {
+            switch (v.GetType()) {
                 case rapidjson::kNullType:
                     o.type = type::NIL;
                     break;
@@ -162,14 +165,12 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
                     o.type = type::BOOLEAN;
                     o.via.boolean = true;
                     break;
-                case rapidjson::kObjectType:
-                {
+                case rapidjson::kObjectType: {
                     o.type = type::MAP;
                     if (v.ObjectEmpty()) {
                         o.via.map.ptr = NULL;
                         o.via.map.size = 0;
-                    }
-                    else {
+                    } else {
                         unsigned sz = v.MemberCount();
                         object_kv* p = (object_kv*)o.zone.allocate_align(sizeof(object_kv)*sz);
                         object_kv* const pend = p + sz;
@@ -185,14 +186,12 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
                     }
                     break;
                 }
-                case rapidjson::kArrayType:
-                {
+                case rapidjson::kArrayType: {
                     o.type = type::ARRAY;
                     if (v.Empty()) {
                         o.via.array.ptr = NULL;
                         o.via.array.size = 0;
-                    }
-                    else {
+                    } else {
                         msgpack::object* p = (msgpack::object*)o.zone.allocate_align(sizeof(msgpack::object)*v.Size());
                         msgpack::object* const pend = p + v.Size();
                         o.via.array.ptr = p;
@@ -206,8 +205,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
                     }
                     break;
                 }
-                case rapidjson::kStringType:
-                {
+                case rapidjson::kStringType: {
                     o.type = type::STR;
                     unsigned size = v.GetStringLength();
                     char* ptr = (char*)o.zone.allocate_align(size);
@@ -217,28 +215,19 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
                     break;
                 }
                 case rapidjson::kNumberType:
-                    if (v.IsInt())
-                    {
+                    if (v.IsInt()) {
                         o.type = type::NEGATIVE_INTEGER;
                         o.via.i64 = v.GetInt();
-                    }
-                    else if (v.IsUint())
-                    {
+                    } else if (v.IsUint()) {
                         o.type = type::POSITIVE_INTEGER;
                         o.via.u64 = v.GetUint();
-                    }
-                    else if (v.IsInt64())
-                    {
+                    } else if (v.IsInt64()) {
                         o.type = type::NEGATIVE_INTEGER;
                         o.via.i64 = v.GetInt64();
-                    }
-                    else if (v.IsUint64())
-                    {
+                    } else if (v.IsUint64()) {
                         o.type = type::POSITIVE_INTEGER;
                         o.via.u64 = v.GetUint64();
-                    }
-                    else if (v.IsDouble())
-                    {
+                    } else if (v.IsDouble()) {
                         o.type = type::FLOAT;
                         o.via.f64 = v.GetDouble();
                     }
@@ -251,12 +240,9 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
     };
 
     template <typename Encoding, typename Allocator, typename StackAllocator>
-    struct object_with_zone< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> > {
+    struct object_with_zone<rapidjson::GenericDocument<Encoding, Allocator, StackAllocator>> {
         void operator()(msgpack::object::with_zone& o, rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> const& v) const {
             o << static_cast<const rapidjson::GenericValue<Encoding, Allocator>&>(v);
         }
     };
 }}}
-
-
-#endif /* msgpack/type/rapidjson/document.hpp */
