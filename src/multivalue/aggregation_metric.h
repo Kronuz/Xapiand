@@ -116,7 +116,7 @@ protected:
 	MsgPack& _result;
 
 public:
-	SubAggregation(MsgPack& result)
+	explicit SubAggregation(MsgPack& result)
 		: _result(result) { }
 
 	virtual ~SubAggregation() = default;
@@ -240,7 +240,7 @@ class HandledSubAggregation : public SubAggregation {
 protected:
 	ValueHandle _handle;
 
-	HandledSubAggregation(MsgPack& result)
+	explicit HandledSubAggregation(MsgPack& result)
 		: SubAggregation(result) { }
 
 public:
@@ -413,7 +413,7 @@ class MetricMin : public HandledSubAggregation {
 protected:
 	double _min;
 
-	MetricMin(MsgPack& result)
+	explicit MetricMin(MsgPack& result)
 		: HandledSubAggregation(result),
 		  _min(DBL_MAX) { }
 
@@ -465,7 +465,7 @@ class MetricMax : public HandledSubAggregation {
 protected:
 	double _max;
 
-	MetricMax(MsgPack& result)
+	explicit MetricMax(MsgPack& result)
 		: HandledSubAggregation(result),
 		  _max(-DBL_MAX) { }
 

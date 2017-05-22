@@ -47,7 +47,7 @@ class Aggregation {
 
 
 public:
-	Aggregation(MsgPack& result);
+	explicit Aggregation(MsgPack& result);
 	Aggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
 	void operator()(const Xapian::Document& doc);
