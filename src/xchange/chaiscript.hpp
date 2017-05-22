@@ -177,7 +177,6 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				} else {
 					auto size = cast_val.size();
 					object_kv* p = (object_kv*)o.zone.allocate_align(sizeof(object_kv) * size);
-					object_kv* const pend = p + size;
 					o.via.map.ptr = p;
 					o.via.map.size = size;
 					for (const auto& pair : cast_val) {
@@ -195,7 +194,6 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				} else {
 					auto size = cast_val.size();
 					msgpack::object* p = (msgpack::object*)o.zone.allocate_align(sizeof(msgpack::object) * size);
-					msgpack::object* const pend = p + size;
 					o.via.array.ptr = p;
 					o.via.array.size = size;
 					for (const auto& val : cast_val) {
