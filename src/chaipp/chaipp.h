@@ -39,7 +39,8 @@ inline static size_t hash(const std::string& source) {
 class Processor {
 	class ScriptLRU : public lru::LRU<size_t, std::shared_ptr<Processor>> {
 	public:
-		ScriptLRU(ssize_t max_size) : LRU(max_size) { }
+		ScriptLRU(ssize_t max_size)
+			: LRU(max_size) { }
 	};
 
 	class Engine {
@@ -48,8 +49,7 @@ class Processor {
 
 	public:
 		Engine(ssize_t max_size)
-			: script_lru(max_size)
-		{ }
+			: script_lru(max_size) { }
 
 		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
 			auto script_hash = hash(script_name.empty() ? script_body : script_name);
