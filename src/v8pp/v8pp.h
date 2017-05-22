@@ -339,7 +339,7 @@ class Processor {
 			obj_template.Reset();
 		}
 
-		v8::Local<v8::Value> operator()(MsgPack& arg) const {
+		v8::Local<v8::Value> operator()(const MsgPack& arg) const {
 			return wapped_type.toValue(isolate, arg, obj_template.Get(isolate));
 		}
 	};
