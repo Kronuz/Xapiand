@@ -127,6 +127,23 @@ class Processor {
 
 public:
 	Processor(const std::string&, const std::string& script_source) {
+		chai.add(chaiscript::fun([](const std::map<std::string, chaiscript::Boxed_Value>& map) {
+			auto it = map.find("_value");
+			if (it == map.end()) {
+				return chaiscript::Boxed_Value(map);
+			} else {
+				return it->second;
+			}
+		}), "value");
+
+		chai.add(chaiscript::fun([](const std::vector<chaiscript::Boxed_Value>& vector) {
+			return chaiscript::Boxed_Value(vector);
+		}), "value");
+
+		chai.add(chaiscript::fun([](const chaiscript::Boxed_Value& boxed_value) {
+			return boxed_value;
+		}), "value");
+
 		try {
 			chai.eval(script_source);
 		} catch (const std::exception& er) {
