@@ -48,6 +48,9 @@ enum class GetAction : uint8_t {
 };
 
 
+constexpr size_t MAX_SIZE_T = static_cast<size_t>(-1);
+
+
 template<typename Key, typename T>
 class LRU {
 protected:
@@ -62,8 +65,9 @@ public:
 	using iterator = typename list_t::iterator;
 	using const_iterator = typename list_t::const_iterator;
 
-	explicit LRU(size_t max_size=-1)
-		: _max_size(max_size) {
+	explicit LRU(size_t max_size=MAX_SIZE_T)
+		: _max_size(max_size)
+	{
 		assert(_max_size != 0);
 	}
 
@@ -119,7 +123,7 @@ public:
 	}
 
 	void trim() {
-		if (_max_size != -1) {
+		if (_max_size != MAX_SIZE_T) {
 			auto size = _items_map.size() + 1;
 			auto last = _items_list.rbegin();
 			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend() && size > _max_size; --i) {
@@ -244,12 +248,12 @@ public:
 	}
 
 	size_t max_size() const noexcept {
-		return (_max_size == -1) ? _items_map.max_size() : _max_size;
+		return (_max_size == MAX_SIZE_T) ? _items_map.max_size() : _max_size;
 	}
 
 	template<typename OnDrop>
 	void trim(const OnDrop& on_drop, ssize_t size) {
-		if (_max_size != -1) {
+		if (_max_size != MAX_SIZE_T) {
 			auto last = _items_list.rbegin();
 			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend(); --i) {
 				auto it = (++last).base();
