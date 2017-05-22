@@ -6,7 +6,7 @@
 
 class ScriptLRU : public lru::LRU<size_t, v8pp::Processor> {
 public:
-	ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { };
+	explicit ScriptLRU(ssize_t max_size=-1) : LRU(max_size) { };
 };
 
 
