@@ -237,7 +237,7 @@ MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, 
 					return (*processor)["on_put"](data, old_document_pair->second);
 				} else {
 					L_INDEX(this, "Script: on_put(%s)", data.to_string(4).c_str());
-					return (*processor)["on_put"](data);
+					return (*processor)["on_put"](data, MsgPack(MsgPack::Type::MAP));
 				}
 
 			case HTTP_PATCH:
@@ -248,7 +248,7 @@ MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, 
 					return (*processor)["on_patch"](data, old_document_pair->second);
 				} else {
 					L_INDEX(this, "Script: on_patch(%s)", data.to_string(4).c_str());
-					return (*processor)["on_patch"](data);
+					return (*processor)["on_patch"](data, MsgPack(MsgPack::Type::MAP));
 				}
 
 			case HTTP_DELETE:
@@ -258,7 +258,7 @@ MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, 
 					return (*processor)["on_delete"](data, old_document_pair->second);
 				} else {
 					L_INDEX(this, "Script: on_delete(%s)", data.to_string(4).c_str());
-					return (*processor)["on_delete"](data);
+					return (*processor)["on_delete"](data, MsgPack(MsgPack::Type::MAP));
 				}
 
 			case HTTP_GET: {
