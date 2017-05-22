@@ -45,7 +45,7 @@ private:
 				std::map<std::string, chaiscript::Boxed_Value> map;
 				const auto it_e = obj.end();
 				for (auto it = obj.begin(); it != it_e; ++it) {
-					map.insert(std::make_pair(it->as_string(), process(it.value())));
+					map.emplace(it->as_string(), process(it.value()));
 				}
 				return chaiscript::Boxed_Value(map);
 			}
