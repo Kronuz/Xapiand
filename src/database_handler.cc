@@ -226,7 +226,6 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-
 template<typename Processor>
 MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script_body, std::shared_ptr<Document>& document)
 {
@@ -1201,7 +1200,6 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 
 	std::unique_lock<std::mutex> lk(DatabaseHandler::documents_mtx);
 
-
 	auto it = DatabaseHandler::documents.end();
 	if (is_local) {
 		it = DatabaseHandler::documents.find(key);
@@ -1270,7 +1268,6 @@ DatabaseHandler::dec_document_change_cnt(const std::string& term_id)
 	}
 }
 #endif
-
 
 
 /*  ____                                        _

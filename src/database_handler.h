@@ -212,5 +212,4 @@ public:
 	static MsgPack get_field(const std::string& slot_name, const MsgPack& obj);
 
 	uint64_t hash() const;
-	MsgPack data() const;
 };
