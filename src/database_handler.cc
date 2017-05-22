@@ -1305,6 +1305,7 @@ Document&
 Document::operator=(const Document& doc_)
 {
 	doc = doc_.doc;
+	_hash = doc_._hash;
 	db_handler = doc_.db_handler;
 	database = doc_.database;
 	return *this;
