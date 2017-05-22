@@ -132,12 +132,6 @@ lock_database::unlock()
 }
 
 
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-std::mutex DatabaseHandler::documents_mtx;
-std::unordered_map<size_t, std::shared_ptr<Document>> DatabaseHandler::documents;
-#endif
-
-
 DatabaseHandler::DatabaseHandler()
 	: flags(0),
 	  method(HTTP_GET) { }
@@ -226,6 +220,10 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
+std::mutex DatabaseHandler::documents_mtx;
+std::unordered_map<size_t, std::shared_ptr<Document>> DatabaseHandler::documents;
+
+
 template<typename Processor>
 MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script_body, std::shared_ptr<Document>& document)
 {
