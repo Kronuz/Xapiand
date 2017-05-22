@@ -1318,6 +1318,7 @@ Document::update()
 
 	if (db_handler && db_handler->database && database != db_handler->database) {
 		doc = db_handler->database->get_document(doc.get_docid());
+		_hash = -1;
 		database = db_handler->database;
 	}
 }
