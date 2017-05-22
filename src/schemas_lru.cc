@@ -184,7 +184,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::sha
 		if (context->size() > MAX_SCHEMA_RECURSION) {
 			THROW(Error, "Maximum recursion reached: %s", endpoint.to_string().c_str());
 		}
-		if (context->insert(hash).second) {
+		if (!context->insert(hash).second) {
 			THROW(Error, "Cyclic schema reference detected: %s", endpoint.to_string().c_str());
 		}
 		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN, HTTP_GET, context);
