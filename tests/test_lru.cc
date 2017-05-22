@@ -146,7 +146,7 @@ int test_lru_mutate() {
 	LRU<std::string, int> lru(3);
 	lru.insert(std::make_pair("test1", 111));
 	if (lru.at_and([](int& o){ o = 123; return GetAction::leave; }, "test1") != 123 ||
-		lru.get_and([](int& o){ o = 456; return GetAction::leave; }, "test1") != 456 ||
+		lru.get_and([](int& o){ o = 456; return GetAction::leave; }, [](int&){ return DropAction::leave; }, "test1") != 456 ||
 		lru.at("test1") != 456) {
 		L_ERR(nullptr, "ERROR: LRU mutate is not working");
 		RETURN(1);
