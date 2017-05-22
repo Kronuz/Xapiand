@@ -32,6 +32,9 @@
 #include "rapidjson/prettywriter.h"
 #include "rapidjson/stringbuffer.h"
 #include "xchange/rapidjson.hpp"
+#if XAPIAND_CHAISCRIPT
+#include "xchange/chaiscript.hpp"
+#endif
 
 
 #define MSGPACK_MAP_INIT_SIZE    4
