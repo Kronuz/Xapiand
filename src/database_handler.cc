@@ -1296,7 +1296,7 @@ Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_, u
 
 Document::Document(const Document& doc_)
 	: doc(doc_.doc),
-	  _hash(doc_.hash_),
+	  _hash(doc_._hash),
 	  db_handler(doc_.db_handler),
 	  database(doc_.database) { }
 
