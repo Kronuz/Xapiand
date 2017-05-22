@@ -210,5 +210,5 @@ public:
 	MsgPack get_field(const std::string& slot_name);
 	static MsgPack get_field(const std::string& slot_name, const MsgPack& obj);
 
-	uint64_t hash() const;
+	uint64_t hash(size_t retries=DB_RETRIES);
 };

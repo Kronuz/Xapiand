@@ -1543,26 +1543,40 @@ Document::get_field(const std::string& slot_name, const MsgPack& obj)
 
 
 uint64_t
-Document::hash() const
+Document::hash(size_t retries)
 {
-	if (_hash == -1) {
-		_hash = 0;
-		auto vit = doc.values_begin();
-		auto vit_e = doc.values_end();
-		for (; vit != vit_e; ++vit) {
-			_hash ^= xxh64::hash(*vit) * vit.get_valueno();
-		}
-		auto tit = doc.termlist_begin();
-		auto tit_e = doc.termlist_end();
-		for (; tit != tit_e; ++tit) {
-			_hash ^= xxh64::hash(*tit) * tit.get_wdf();
-			auto pit = tit.positionlist_begin();
-			auto pit_e = tit.positionlist_end();
-			for (; pit != pit_e; ++pit) {
-				_hash ^= *pit;
+	try {
+		lock_database lk_db(db_handler);
+		update();
+
+		if (_hash == -1) {
+			_hash = 0;
+
+			// Add hash of values
+			const auto iv_e = doc.values_end();
+			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
+				_hash ^= xxh64::hash(*iv) * iv.get_valueno();
 			}
+
+			// Add hash of terms
+			const auto it_e = doc.termlist_end();
+			for (auto it = doc.termlist_begin(); it != it_e; ++it) {
+				_hash ^= xxh64::hash(*it) * it.get_wdf();
+				const auto pit_e = it.positionlist_end();
+				for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
+					_hash ^= *pit;
+				}
+			}
+
+			// Add hash of data
+			_hash ^= xxh64::hash(doc.get_data());
 		}
-		_hash ^= xxh64::hash(doc.get_data());
+		return _hash;
+	} catch (const Xapian::DatabaseModifiedError& exc) {
+		if (retries) {
+			return hash(--retries);
+		} else {
+			THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
+		}
 	}
-	return _hash;
 }
