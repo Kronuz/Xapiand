@@ -1268,6 +1268,7 @@ DatabaseHandler::dec_document_change_cnt(const std::string& term_id)
 #endif
 
 
+
 /*  ____                                        _
  * |  _ \  ___   ___ _   _ _ __ ___   ___ _ __ | |_
  * | | | |/ _ \ / __| | | | '_ ` _ \ / _ \ '_ \| __|
