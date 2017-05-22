@@ -28,6 +28,8 @@
 #include <sstream>
 #include <vector>
 
+#include "../src/utils.h"
+
 
 #ifndef TESTING_LOGS
 #  define TESTING_LOGS 1
@@ -38,34 +40,6 @@
 #ifndef TESTING_DATABASE
 #  define TESTING_DATABASE 1
 #endif
-
-
-#define TEST_VERBOSITY 3
-#define TEST_DETACH false
-#define TEST_CHERT false
-#define TEST_SOLO true
-#define TEST_REQUIRED_TYPE false
-#define TEST_OPTIMAL false
-#define TEST_DATABASE ""
-#define TEST_CLUSTER_NAME "cluster_test"
-#define TEST_NODE_NAME "node_test"
-#define TEST_PIDFILE ""
-#define TEST_LOGFILE ""
-#define TEST_UID ""
-#define TEST_GID ""
-#define TEST_DISCOVERY_GROUP ""
-#define TEST_RAFT_GROUP ""
-#define TEST_NUM_SERVERS 1
-#define TEST_DBPOOL_SIZE 1
-#define TEST_NUM_REPLICATORS 1
-#define TEST_THREADPOOL_SIZE 1
-#define TEST_ENDPOINT_LIST_SIZE 1
-#define TEST_NUM_COMMITERS 1
-#define TEST_EV_FLAG 0
-#define TEST_LOCAL_HOST "127.0.0.1"
-
-
-#include "../src/utils.h"
 
 
 #if (TESTING_LOGS == 1)
@@ -94,6 +68,33 @@ inline void log(std::string fmt, Args&&... args) {
 #  define RETURN(x) { return x; }
 #  define INIT_LOG
 #endif
+
+
+constexpr int TEST_VERBOSITY                = 3;
+constexpr bool TEST_DETACH                  = false;
+constexpr bool TEST_CHERT                   = false;
+constexpr bool TEST_SOLO                    = true;
+constexpr bool TEST_STRICT                  = false;
+constexpr bool TEST_OPTIMAL                 = false;
+constexpr const char TEST_DATABASE[]        = "";
+constexpr const char TEST_CLUSTER_NAME[]    = "cluster_test";
+constexpr const char TEST_NODE_NAME[]       = "node_test";
+constexpr const char TEST_PIDFILE[]         = "";
+constexpr const char TEST_LOGFILE[]         = "";
+constexpr const char TEST_UID[]             = "";
+constexpr const char TEST_GID[]             = "";
+constexpr const char TEST_DISCOVERY_GROUP[] = "";
+constexpr const char TEST_RAFT_GROUP[]      = "";
+constexpr const char TEST_LOCAL_HOST[]      = "127.0.0.1";
+constexpr size_t TEST_NUM_SERVERS           = 1;
+constexpr size_t TEST_DBPOOL_SIZE           = 1;
+constexpr size_t TEST_NUM_REPLICATORS       = 1;
+constexpr size_t TEST_THREADPOOL_SIZE       = 1;
+constexpr size_t TEST_ENDPOINT_LIST_SIZE    = 1;
+constexpr size_t TEST_NUM_COMMITERS         = 1;
+constexpr unsigned int TEST_EV_FLAG         = 0;
+constexpr size_t TEST_MAX_CLIENTS           = 100;
+constexpr size_t TEST_MAX_FILES             = 1000;
 
 
 #if (TESTING_ENDPOINTS == 1)
