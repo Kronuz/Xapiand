@@ -232,40 +232,44 @@ MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, 
 		switch (method) {
 			case HTTP_PUT:
 				old_document_pair = get_document_change_seq(term_id);
-				L_LOG(this, "%s", data.to_string(4).c_str());
 				if (old_document_pair) {
-					L_LOG(this, "%s", old_document_pair->second.to_string(4).c_str());
+					L_INDEX(this, "Script: on_put(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
 					return (*processor)["on_put"](data, old_document_pair->second);
 				} else {
+					L_INDEX(this, "Script: on_put(%s)", data.to_string(4).c_str());
 					return (*processor)["on_put"](data);
 				}
 
 			case HTTP_PATCH:
 			case HTTP_MERGE:
 				old_document_pair = get_document_change_seq(term_id);
-				L_LOG(this, "%s", data.to_string(4).c_str());
 				if (old_document_pair) {
-					L_LOG(this, "%s", old_document_pair->second.to_string(4).c_str());
+					L_INDEX(this, "Script: on_patch(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
 					return (*processor)["on_patch"](data, old_document_pair->second);
 				} else {
+					L_INDEX(this, "Script: on_patch(%s)", data.to_string(4).c_str());
 					return (*processor)["on_patch"](data);
 				}
 
 			case HTTP_DELETE:
 				old_document_pair = get_document_change_seq(term_id);
-				L_LOG(this, "%s", data.to_string(4).c_str());
 				if (old_document_pair) {
-					L_LOG(this, "%s", old_document_pair->second.to_string(4).c_str());
+					L_INDEX(this, "Script: on_delete(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
 					return (*processor)["on_delete"](data, old_document_pair->second);
 				} else {
+					L_INDEX(this, "Script: on_delete(%s)", data.to_string(4).c_str());
 					return (*processor)["on_delete"](data);
 				}
 
-			case HTTP_GET:
+			case HTTP_GET: {
+				L_INDEX(this, "Script: on_get(%s)", data.to_string(4).c_str());
 				return (*processor)["on_get"](data);
+			}
 
-			case HTTP_POST:
+			case HTTP_POST: {
+				L_INDEX(this, "Script: on_post(%s)", data.to_string(4).c_str());
 				return (*processor)["on_post"](data);
+			}
 
 			default:
 				return data;
