@@ -1203,7 +1203,7 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 		it = DatabaseHandler::documents.find(key);
 	}
 
-	uint64_t current_hash = -1;
+	uint64_t current_hash = 0;
 	if (it == DatabaseHandler::documents.end()) {
 		if (old_document) {
 			lk.unlock();
@@ -1277,7 +1277,7 @@ DatabaseHandler::dec_document_change_cnt(const std::string& term_id)
  */
 
 Document::Document()
-	: _hash(-1),
+	: _hash(0),
 	  db_handler(nullptr) { }
 
 
@@ -1319,7 +1319,7 @@ Document::update()
 
 	if (db_handler && db_handler->database && database != db_handler->database) {
 		doc = db_handler->database->get_document(doc.get_docid());
-		_hash = -1;
+		_hash = 0;
 		database = db_handler->database;
 	}
 }
@@ -1549,9 +1549,7 @@ Document::hash(size_t retries)
 		lock_database lk_db(db_handler);
 		update();
 
-		if (_hash == -1) {
-			_hash = 0;
-
+		if (_hash == 0) {
 			// Add hash of values
 			const auto iv_e = doc.values_end();
 			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
