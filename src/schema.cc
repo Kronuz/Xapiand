@@ -291,27 +291,6 @@ inline static std::string readable_index_uuid_field(UUIDFieldIndex index_uuid_fi
 }
 
 
-inline static std::string readable_type(const std::array<FieldType, SPC_SIZE_TYPES>& sep_types) {
-	std::string result;
-	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-		result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
-	}
-	if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
-		if (!result.empty()) result += "/";
-		result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
-	}
-	if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
-		if (!result.empty()) result += "/";
-		result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
-	}
-	if (sep_types[SPC_INDEX_TYPE] != FieldType::EMPTY) {
-		if (!result.empty()) result += "/";
-		result += Serialise::type(sep_types[SPC_INDEX_TYPE]);
-	}
-	return result;
-}
-
-
 /*
  *  Function to generate a prefix given an field accuracy.
  */
@@ -758,6 +737,32 @@ required_spc_t::get_types(const std::string& str_type)
 }
 
 
+std::string
+required_spc_t::get_str_type(const std::array<FieldType, SPC_SIZE_TYPES>& sep_types)
+{
+	L_CALL(nullptr, "required_spc_t::get_str_type({ %d, %d, %d, %d })", toUType(sep_types[SPC_FOREIGN_TYPE]), toUType(sep_types[SPC_OBJECT_TYPE]),
+		toUType(sep_types[SPC_ARRAY_TYPE]), toUType(sep_types[SPC_INDEX_TYPE]));
+
+	std::string result;
+	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+		result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
+	}
+	if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
+		if (!result.empty()) result += "/";
+		result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
+	}
+	if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
+		if (!result.empty()) result += "/";
+		result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
+	}
+	if (sep_types[SPC_INDEX_TYPE] != FieldType::EMPTY) {
+		if (!result.empty()) result += "/";
+		result += Serialise::type(sep_types[SPC_INDEX_TYPE]);
+	}
+	return result;
+}
+
+
 void
 required_spc_t::set_types(const std::string& str_type)
 {
@@ -1050,7 +1055,7 @@ specification_t::to_string() const
 	str << "\t" << "value_rec"                  << ": " << (value_rec ? value_rec->to_string() : "null")   << "\n";
 
 	str << "\t" << RESERVED_SLOT                << ": " << slot                                        << "\n";
-	str << "\t" << RESERVED_TYPE                << ": " << readable_type(sep_types)                    << "\n";
+	str << "\t" << RESERVED_TYPE                << ": " << get_str_type(sep_types)                     << "\n";
 	str << "\t" << RESERVED_PREFIX              << ": " << prefix.to_string()                          << "\n";
 	str << "\t" << "local_prefix"               << ": " << local_prefix.to_string()                    << "\n";
 	str << "\t" << RESERVED_INDEX               << ": " << readable_index(index)                       << "\n";
@@ -5425,7 +5430,7 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 		(FieldType)prop_type.at(SPC_ARRAY_TYPE).as_u64(),
 		(FieldType)prop_type.at(SPC_INDEX_TYPE).as_u64()
 	}});
-	prop_type = ::readable_type(sep_types);
+	prop_type = required_spc_t::get_str_type(sep_types);
 
 	// Readable accuracy.
 	switch (sep_types[SPC_INDEX_TYPE]) {
