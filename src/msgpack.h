@@ -41,6 +41,8 @@
 #define MSGPACK_ARRAY_INIT_SIZE  4
 #define MSGPACK_GROWTH_FACTOR    1.5f  // Choosing 1.5 as the factor allows memory reuse after 4 reallocations (https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md)
 
+constexpr uint8_t MSGPACK_EXT_BEGIN = 0x80;
+
 
 class MsgPack {
 	struct Body;
@@ -72,7 +74,9 @@ public:
 		MAP                 = msgpack::type::MAP,               //0x07
 		BIN                 = msgpack::type::BIN,               //0x08
 		EXT                 = msgpack::type::EXT,               //0x09
-		UNDEFINED           = 0xff,                             //0xff
+
+		// Custom external types follow:
+		UNDEFINED           = MSGPACK_EXT_BEGIN,
 	};
 
 	struct duplicate_key : public BaseException, public std::out_of_range {
@@ -2052,7 +2056,7 @@ namespace msgpack {
 					o_ext.type = msgpack::type::EXT;
 					o_ext.via.ext.ptr = ptr;
 					o_ext.via.ext.size = 1;
-					ptr[0] = (char)v.getType();
+					ptr[0] = (char)v.getType() - MSGPACK_EXT_BEGIN;
 					o = o_ext;
 				}
 			};
@@ -2064,7 +2068,7 @@ namespace msgpack {
 					char* ptr = static_cast<char*>(o.zone.allocate_align(1));
 					o.via.ext.ptr = ptr;
 					o.via.ext.size = 1;
-					ptr[0] = (char)v.getType();
+					ptr[0] = (char)v.getType() - MSGPACK_EXT_BEGIN;
 				}
 			};
 		} // namespace adaptor
