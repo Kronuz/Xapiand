@@ -98,7 +98,7 @@ protected:
 	}
 
 public:
-	LZ4BlockStreaming(int seed)
+	explicit LZ4BlockStreaming(int seed)
 		: _size(0),
 		  _offset(0),
 		  cmpBuf_size(LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE)),
