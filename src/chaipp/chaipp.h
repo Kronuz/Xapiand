@@ -125,8 +125,42 @@ class Processor {
 	chaiscript::ChaiScript chai;
 	std::map<std::string, Function> functions;
 
-public:
-	Processor(const std::string&, const std::string& script_source) {
+	void init() {
+		/*
+		 * Adding special assigment operators.
+		 */
+
+		chai.add(chaiscript::fun([](std::map<std::string, chaiscript::Boxed_Value>& map, const std::vector<chaiscript::Boxed_Value>& vector) {
+			map["_value"] = chaiscript::Boxed_Value(vector);
+		}), "=");
+
+		chai.add(chaiscript::fun([](std::map<std::string, chaiscript::Boxed_Value>& map, const chaiscript::Boxed_Value& boxed_value) {
+			map["_value"] = boxed_value;
+		}), "=");
+
+		chai.add(chaiscript::fun([](std::vector<chaiscript::Boxed_Value>& vector, const std::map<std::string, chaiscript::Boxed_Value>& map) {
+			vector.clear();
+			vector.push_back(chaiscript::Boxed_Value(map));
+		}), "=");
+
+		chai.add(chaiscript::fun([](std::vector<chaiscript::Boxed_Value>& vector, const chaiscript::Boxed_Value& boxed_value) {
+			vector.clear();
+			vector.push_back(boxed_value);
+		}), "=");
+
+		chai.add(chaiscript::fun([](chaiscript::Boxed_Value& boxed_value, const std::map<std::string, chaiscript::Boxed_Value>& map) {
+			boxed_value = chaiscript::Boxed_Value(map);
+		}), "=");
+
+		chai.add(chaiscript::fun([](chaiscript::Boxed_Value& boxed_value, const std::vector<chaiscript::Boxed_Value>& vector) {
+			boxed_value = chaiscript::Boxed_Value(vector);
+		}), "=");
+
+
+		/*
+		 * Adding value method.
+		 */
+
 		chai.add(chaiscript::fun([](const std::map<std::string, chaiscript::Boxed_Value>& map) {
 			auto it = map.find("_value");
 			if (it == map.end()) {
@@ -143,6 +177,11 @@ public:
 		chai.add(chaiscript::fun([](const chaiscript::Boxed_Value& boxed_value) {
 			return boxed_value;
 		}), "value");
+	}
+
+public:
+	Processor(const std::string&, const std::string& script_source) {
+		init();
 
 		try {
 			chai.eval(script_source);
