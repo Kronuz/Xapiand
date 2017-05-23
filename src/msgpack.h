@@ -37,11 +37,10 @@
 #endif
 
 
-#define MSGPACK_MAP_INIT_SIZE    4
-#define MSGPACK_ARRAY_INIT_SIZE  4
-#define MSGPACK_GROWTH_FACTOR    1.5f  // Choosing 1.5 as the factor allows memory reuse after 4 reallocations (https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md)
-
-constexpr uint8_t MSGPACK_EXT_BEGIN = 0x80;
+constexpr size_t  MSGPACK_MAP_INIT_SIZE   = 4;
+constexpr size_t  MSGPACK_ARRAY_INIT_SIZE = 4;
+constexpr double  MSGPACK_GROWTH_FACTOR   = 1.5;  // Choosing 1.5 as the factor allows memory reuse after 4 reallocations (https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md)
+constexpr uint8_t MSGPACK_EXT_BEGIN       = 0x80;
 
 
 class MsgPack {
