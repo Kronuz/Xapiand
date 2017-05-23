@@ -24,7 +24,6 @@
 
 #include "database_handler.h"
 #include "log.h"
-#include "schema.h"
 
 
 inline void
@@ -64,6 +63,53 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 }
 
 
+inline std::shared_ptr<const MsgPack>
+SchemasLRU::validate_string_meta_schema(const MsgPack& value, const std::array<FieldType, SPC_SIZE_TYPES>& sep_types, std::string& schema_path, std::string& schema_id)
+{
+	const auto aux_schema_str = value.as_string();
+	split_path_id(aux_schema_str, schema_path, schema_id);
+	if (schema_path.empty() || schema_id.empty()) {
+		THROW(ClientError, "%s in %s must contain index and docid [%s]", RESERVED_VALUE, DB_META_SCHEMA, aux_schema_str.c_str());
+	}
+	MsgPack new_schema({ {
+		DB_SCHEMA, {
+			{ RESERVED_TYPE,  sep_types },
+			{ RESERVED_VALUE, value     },
+		}
+	} });
+	new_schema.lock();
+	return std::make_shared<const MsgPack>(std::move(new_schema));
+}
+
+
+inline std::shared_ptr<const MsgPack>
+SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<FieldType, SPC_SIZE_TYPES>& sep_types, std::string& schema_path, std::string& schema_id)
+{
+	switch (value.getType()) {
+		case MsgPack::Type::STR:
+			if (sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+				THROW(ClientError, "%s must be map because is not foreign", DB_META_SCHEMA);
+			}
+			return validate_string_meta_schema(value, sep_types, schema_path, schema_id);
+		case MsgPack::Type::MAP: {
+			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+				THROW(ClientError, "%s must be string because is foreign", DB_META_SCHEMA);
+			}
+			MsgPack new_schema({ {
+				DB_SCHEMA, {
+					{ RESERVED_TYPE,  sep_types },
+					{ RESERVED_VALUE, value     },
+				}
+			} });
+			new_schema.lock();
+			return std::make_shared<const MsgPack>(std::move(new_schema));
+		}
+		default:
+			THROW(ClientError, "%s in %s must be string or map", RESERVED_VALUE, DB_META_SCHEMA);
+	}
+}
+
+
 std::tuple<bool, atomic_shared_ptr<const MsgPack>*, std::string, std::string>
 SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 {
@@ -93,49 +139,56 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 					aux_schema_ptr = Schema::get_initial_schema();
 				} else {
 					const auto& meta_schema = it.value();
-					try {
-						const auto& schema_obj = meta_schema.at(DB_SCHEMA);
-						static const auto meta_field = std::string(DB_META_SCHEMA) + std::string(1, DB_OFFSPRING_UNION) + std::string(DB_SCHEMA);
-						try {
-							auto sep_types = required_spc_t::get_types(schema_obj.at(RESERVED_TYPE).as_string());
-							const auto& value = schema_obj.at(RESERVED_VALUE);
-							if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-								try {
-									const auto aux_schema_str = value.as_string();
-									MsgPack new_schema({ {
-										DB_SCHEMA, {
-											{ RESERVED_TYPE,  sep_types },
-											{ RESERVED_VALUE, value     }
-										}
-									} });
-									aux_schema_ptr = std::make_shared<const MsgPack>(std::move(new_schema));
-									split_path_id(aux_schema_str, schema_path, schema_id);
-									if (schema_path.empty() || schema_id.empty()) {
-										THROW(ClientError, "%s in %s must contain index and docid [%s]", RESERVED_VALUE, meta_field.c_str(), aux_schema_str.c_str());
-									}
-								} catch (const msgpack::type_error&) {
-									THROW(Error, "%s in %s must be string because is foreign type", RESERVED_VALUE, meta_field.c_str());
-								}
-							} else if (value.is_map()) {
-								MsgPack new_schema({ {
-									DB_SCHEMA, {
-										{ RESERVED_TYPE,  sep_types },
-										{ RESERVED_VALUE, value     },
-									}
-								} });
-								aux_schema_ptr = std::make_shared<const MsgPack>(std::move(new_schema));
-							} else {
-								THROW(Error, "%s in %s must be object because is not foreign type", RESERVED_VALUE, meta_field.c_str());
+					switch (meta_schema.getType()) {
+						case MsgPack::Type::STR: {
+							if (default_spc.flags.strict) {
+								THROW(MissingTypeError, "Type of field %s is missing", repr(DB_META_SCHEMA).c_str());
 							}
-						} catch (const std::out_of_range&) {
-							THROW(Error, "%s must have %s and %s", meta_field.c_str(), RESERVED_TYPE, RESERVED_VALUE);
-						} catch (const msgpack::type_error&) {
-							THROW(Error, "%s must be map instead of %s", meta_field.c_str(), schema_obj.getStrType().c_str());
+							std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
+							aux_schema_ptr = validate_string_meta_schema(meta_schema, sep_types, schema_path, schema_id);
+							break;
 						}
-					} catch (const std::out_of_range&) {
-						THROW(Error, "%s must contain %s", DB_META_SCHEMA, DB_SCHEMA);
-					} catch (const msgpack::type_error&) {
-						THROW(Error, "%s must be map instead of %s", DB_META_SCHEMA, meta_schema.getStrType().c_str());
+						case MsgPack::Type::MAP: {
+							auto it_t = meta_schema.find(RESERVED_TYPE);
+							if (it_t == meta_schema.end()) {
+								if (default_spc.flags.strict) {
+									THROW(MissingTypeError, "Type of field %s is missing", repr(DB_META_SCHEMA).c_str());
+								}
+								if (meta_schema.size() == 1) {
+									auto it_v = meta_schema.find(RESERVED_VALUE);
+									if (it_v == meta_schema.end()) {
+										it_v = meta_schema.find(DB_SCHEMA);
+										if (it_v == meta_schema.end()) {
+											THROW(ClientError, "%s only must contain %s or %s", DB_META_SCHEMA, RESERVED_VALUE, DB_SCHEMA);
+										} else {
+											std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
+											aux_schema_ptr = validate_object_meta_schema(meta_schema, sep_types, schema_path, schema_id);
+										}
+									} else {
+										std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { it_v->is_string() ? FieldType::FOREIGN : FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
+										aux_schema_ptr = validate_object_meta_schema(*it_v, sep_types, schema_path, schema_id);
+									}
+								} else {
+									THROW(ClientError, "%s only must contain %s or %s", DB_META_SCHEMA, RESERVED_VALUE, DB_SCHEMA);
+								}
+							} else {
+								auto it_v = meta_schema.find(RESERVED_VALUE);
+								if (it_v == meta_schema.end() || meta_schema.size() > 2) {
+									THROW(ClientError, "%s only must contain %s and %s", DB_META_SCHEMA, RESERVED_VALUE, RESERVED_TYPE);
+								}
+								auto sep_types = required_spc_t::get_types(it_t->as_string());
+								if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
+									if (default_spc.flags.strict) {
+										THROW(MissingTypeError, "Type of field %s is not completed", repr(DB_META_SCHEMA).c_str());
+									}
+									sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
+								}
+								aux_schema_ptr = validate_object_meta_schema(*it_v, sep_types, schema_path, schema_id);
+							}
+							break;
+						}
+						default:
+							THROW(ClientError, "%s must be string or map instead of %s", DB_META_SCHEMA, meta_schema.getStrType().c_str());
 					}
 				}
 			} else {
