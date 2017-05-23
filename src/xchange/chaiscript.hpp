@@ -281,6 +281,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				}
 			} else if (v.is_undef()) {
 				char* ptr = static_cast<char*>(o.zone.allocate_align(1));
+				o.type = type::EXT;
 				o.via.ext.ptr = ptr;
 				o.via.ext.size = 1;
 				ptr[0] = (char)0; // MsgPack::Type::UNDEFINED - MSGPACK_EXT_BEGIN;
