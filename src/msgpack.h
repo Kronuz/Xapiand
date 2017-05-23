@@ -474,7 +474,7 @@ struct MsgPack::Body {
 	}
 
 	Type getType() const noexcept {
-		return _obj->type == msgpack::type::EXT ? (Type)_obj->via.ext.type() : (Type)_obj->type;
+		return _obj->type == msgpack::type::EXT ? (Type)(_obj->via.ext.type() | MSGPACK_EXT_BEGIN) : (Type)_obj->type;
 	}
 
 	std::string getStrType() const noexcept {
