@@ -41,6 +41,7 @@ constexpr size_t  MSGPACK_MAP_INIT_SIZE   = 4;
 constexpr size_t  MSGPACK_ARRAY_INIT_SIZE = 4;
 constexpr double  MSGPACK_GROWTH_FACTOR   = 1.5;  // Choosing 1.5 as the factor allows memory reuse after 4 reallocations (https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md)
 constexpr uint8_t MSGPACK_EXT_BEGIN       = 0x80;
+constexpr uint8_t MSGPACK_EXT_MASK        = 0x7f;
 
 
 class MsgPack {
@@ -94,11 +95,9 @@ public:
 	};
 
 	struct Undefined {
-		Undefined() = default;
+		static const char type = (uint8_t)Type::UNDEFINED & MSGPACK_EXT_MASK;
 
-		Type getType() const noexcept {
-			return Type::UNDEFINED;
-		}
+		Undefined() = default;
 	};
 
 	using iterator = Iterator<MsgPack>;
@@ -2055,7 +2054,7 @@ namespace msgpack {
 					o_ext.type = msgpack::type::EXT;
 					o_ext.via.ext.ptr = ptr;
 					o_ext.via.ext.size = 1;
-					ptr[0] = (char)v.getType() - MSGPACK_EXT_BEGIN;
+					ptr[0] = v.type;
 					o = o_ext;
 				}
 			};
@@ -2067,7 +2066,7 @@ namespace msgpack {
 					char* ptr = static_cast<char*>(o.zone.allocate_align(1));
 					o.via.ext.ptr = ptr;
 					o.via.ext.size = 1;
-					ptr[0] = (char)v.getType() - MSGPACK_EXT_BEGIN;
+					ptr[0] = v.type;
 				}
 			};
 		} // namespace adaptor
