@@ -29,6 +29,8 @@
 inline void
 SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& local_schema_ptr, std::string& schema_path, std::string& schema_id)
 {
+	L_CALL(this, "SchemasLRU::validate_metadata(...)");
+
 	try {
 		const auto& schema_obj = local_schema_ptr->at(DB_SCHEMA);
 		try {
@@ -66,6 +68,8 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 inline std::shared_ptr<const MsgPack>
 SchemasLRU::validate_string_meta_schema(const MsgPack& value, const std::array<FieldType, SPC_SIZE_TYPES>& sep_types, std::string& schema_path, std::string& schema_id)
 {
+	L_CALL(this, "SchemasLRU::validate_string_meta_schema(%s, %s, ...)", repr(value.to_string()).c_str(), required_spc_t::get_str_type(sep_types).c_str());
+
 	const auto aux_schema_str = value.as_string();
 	split_path_id(aux_schema_str, schema_path, schema_id);
 	if (schema_path.empty() || schema_id.empty()) {
@@ -85,6 +89,8 @@ SchemasLRU::validate_string_meta_schema(const MsgPack& value, const std::array<F
 inline std::shared_ptr<const MsgPack>
 SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<FieldType, SPC_SIZE_TYPES>& sep_types, std::string& schema_path, std::string& schema_id)
 {
+	L_CALL(this, "SchemasLRU::validate_object_meta_schema(%s, %s, ...)", repr(value.to_string()).c_str(), required_spc_t::get_str_type(sep_types).c_str());
+
 	switch (value.getType()) {
 		case MsgPack::Type::STR:
 			if (sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
