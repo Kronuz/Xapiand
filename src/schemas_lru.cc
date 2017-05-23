@@ -182,14 +182,19 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 								if (it_v == meta_schema.end() || meta_schema.size() > 2) {
 									THROW(ClientError, "%s only must contain %s and %s", DB_META_SCHEMA, RESERVED_VALUE, RESERVED_TYPE);
 								}
-								auto sep_types = required_spc_t::get_types(it_t->as_string());
-								if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-									if (default_spc.flags.strict) {
-										THROW(MissingTypeError, "Type of field %s is not completed", repr(DB_META_SCHEMA).c_str());
+								const auto& type = it_t.value();
+								if (type.is_string()) {
+									auto sep_types = required_spc_t::get_types(type.as_string());
+									if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
+										if (default_spc.flags.strict) {
+											THROW(MissingTypeError, "Type of field %s is not completed", repr(DB_META_SCHEMA).c_str());
+										}
+										sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
 									}
-									sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
+									aux_schema_ptr = validate_object_meta_schema(it_v.value(), sep_types, schema_path, schema_id);
+								} else {
+									THROW(ClientError, "%s in %s must be string", RESERVED_TYPE, DB_META_SCHEMA);
 								}
-								aux_schema_ptr = validate_object_meta_schema(it_v.value(), sep_types, schema_path, schema_id);
 							}
 							break;
 						}
