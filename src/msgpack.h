@@ -391,7 +391,7 @@ struct MsgPack::Body {
 	size_t _pos;
 	MsgPack _key;
 	msgpack::object* _obj;
-	ssize_t _capacity;
+	size_t _capacity;
 
 	const MsgPack _nil;
 
@@ -820,7 +820,7 @@ inline void MsgPack::_deinit() {
 
 
 inline void MsgPack::_reserve_map(size_t rsize) {
-	if (_body->_capacity <= static_cast<ssize_t>(rsize)) {
+	if (_body->_capacity <= rsize) {
 		size_t nsize = _body->_capacity < MSGPACK_MAP_INIT_SIZE ? MSGPACK_MAP_INIT_SIZE : _body->_capacity * MSGPACK_GROWTH_FACTOR;
 		while (nsize < rsize) {
 			nsize *= MSGPACK_GROWTH_FACTOR;
@@ -841,7 +841,7 @@ inline void MsgPack::_reserve_map(size_t rsize) {
 
 
 inline void MsgPack::_reserve_array(size_t rsize) {
-	if (_body->_capacity <= static_cast<ssize_t>(rsize)) {
+	if (_body->_capacity <= rsize) {
 		size_t nsize = _body->_capacity >= MSGPACK_ARRAY_INIT_SIZE ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_ARRAY_INIT_SIZE;
 		while (nsize < rsize) {
 			nsize *= MSGPACK_GROWTH_FACTOR;
