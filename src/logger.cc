@@ -67,7 +67,7 @@ ansi_color(float red, float green, float blue, float alpha, bool bold)
 	uint8_t r = static_cast<uint8_t>(red * alpha + 0.5);
 	uint8_t g = static_cast<uint8_t>(green * alpha + 0.5);
 	uint8_t b = static_cast<uint8_t>(blue * alpha + 0.5);
-	size_t hash = r << 17 | g << 9 | b << 1 | bold;
+	size_t hash = (r << 17) | (g << 9) | (b << 1) | bold;
 
 	std::unique_lock<std::mutex> lk(mtx);
 	auto it = colors.find(hash);
