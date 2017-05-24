@@ -3058,6 +3058,9 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 			return;
 		}
 		case MsgPack::Type::ARRAY:
+			if (!is_valid(name)) {
+				THROW(ClientError, "Field name: %s in %s is not valid", repr(name).c_str(), repr(specification.full_meta_name).c_str());
+			}
 			for (const auto& item : obj_schema) {
 				if (item.is_map()) {
 					update_schema(mut_parent_properties, item, name);
@@ -3065,6 +3068,9 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 			}
 			return;
 		default:
+			if (!is_valid(name)) {
+				THROW(ClientError, "Field name: %s in %s is not valid", repr(name).c_str(), repr(specification.full_meta_name).c_str());
+			}
 			return;
 	}
 }
