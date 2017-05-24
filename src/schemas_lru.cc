@@ -171,8 +171,9 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 											aux_schema_ptr = validate_object_meta_schema(meta_schema, sep_types, schema_path, schema_id);
 										}
 									} else {
-										std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { it_v->is_string() ? FieldType::FOREIGN : FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
-										aux_schema_ptr = validate_object_meta_schema(it_v.value(), sep_types, schema_path, schema_id);
+										const auto& value = it_v.value();
+										std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { value.is_string() ? FieldType::FOREIGN : FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
+										aux_schema_ptr = validate_object_meta_schema(value, sep_types, schema_path, schema_id);
 									}
 								} else {
 									THROW(ClientError, "%s only must contain %s or %s", DB_META_SCHEMA, RESERVED_VALUE, DB_SCHEMA);
