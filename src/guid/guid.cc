@@ -595,7 +595,7 @@ GuidGenerator::_newGuid()
 	}
 	std::array<unsigned char, 16> byteArray;
 	uuid_enc_be(byteArray.data(), &id);
-	return byteArray;
+	return Guid(byteArray);
 }
 #endif
 
