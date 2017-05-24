@@ -299,35 +299,33 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 {
 	L_CALL(this, "DatabaseHandler::run_script(...)");
 
-	std::string script_type;
-	std::string script_name;
-	std::string script_body;
 	auto it = data.find(RESERVED_SCRIPT);
 	if (it == data.end()) {
 		return data;
-	} else {
-		auto& _script = it.value();
-		switch (_script.getType()) {
-			case MsgPack::Type::STR:
-				script_name = _script.as_string();
-				break;
-			case MsgPack::Type::MAP:
-				try {
-					script_type = _script.at(RESERVED_TYPE).as_string();
-				} catch (const std::out_of_range&) { }
-				try {
-					script_name = _script.at(RESERVED_VALUE).as_string();
-				} catch (const std::out_of_range&) { }
-				try {
-					script_body = _script.at(RESERVED_BODY).as_string();
-				} catch (const std::out_of_range&) { }
-				if (script_name.empty() && script_body.empty()) {
-					THROW(ClientError, "%s must be a string or a valid script object", RESERVED_SCRIPT);
-				}
-				break;
-			default:
+	}
+
+	std::string script_type, script_name, script_body;
+	auto& _script = it.value();
+	switch (_script.getType()) {
+		case MsgPack::Type::STR:
+			script_name = _script.as_string();
+			break;
+		case MsgPack::Type::MAP:
+			try {
+				script_type = _script.at(RESERVED_TYPE).as_string();
+			} catch (const std::out_of_range&) { }
+			try {
+				script_name = _script.at(RESERVED_VALUE).as_string();
+			} catch (const std::out_of_range&) { }
+			try {
+				script_body = _script.at(RESERVED_BODY).as_string();
+			} catch (const std::out_of_range&) { }
+			if (script_name.empty() && script_body.empty()) {
 				THROW(ClientError, "%s must be a string or a valid script object", RESERVED_SCRIPT);
-		}
+			}
+			break;
+		default:
+			THROW(ClientError, "%s must be a string or a valid script object", RESERVED_SCRIPT);
 	}
 
 	// ECMAScript
