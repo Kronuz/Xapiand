@@ -187,7 +187,7 @@ enum class FieldType : uint8_t {
 const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& language);
 
 
-inline static Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {
+inline constexpr Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {
 	switch (stop_strategy) {
 		case StopStrategy::STOP_NONE:
 			return Xapian::TermGenerator::STOP_NONE;
@@ -201,7 +201,7 @@ inline static Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(Stop
 }
 
 
-inline static Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(StemStrategy stem_strategy) {
+inline constexpr Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(StemStrategy stem_strategy) {
 	switch (stem_strategy) {
 		case StemStrategy::STEM_NONE:
 			return Xapian::TermGenerator::STEM_NONE;
@@ -217,7 +217,7 @@ inline static Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(Stem
 }
 
 
-inline static Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(StemStrategy stem_strategy) {
+inline constexpr Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(StemStrategy stem_strategy) {
 	switch (stem_strategy) {
 		case StemStrategy::STEM_NONE:
 			return Xapian::QueryParser::STEM_NONE;
@@ -233,7 +233,7 @@ inline static Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(Stem
 }
 
 
-inline static constexpr size_t getPos(size_t pos, size_t size) noexcept {
+inline constexpr size_t getPos(size_t pos, size_t size) noexcept {
 	if (pos < size) {
 		return pos;
 	} else {
