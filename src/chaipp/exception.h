@@ -41,19 +41,19 @@ public:
 
 class ScriptSyntaxError : public Error {
 public:
-	ScriptSyntaxError(const std::string& what_arg) : Error(what_arg) { }
+	explicit ScriptSyntaxError(const std::string& what_arg) : Error(what_arg) { }
 };
 
 
 class ReferenceError : public Error {
 public:
-	ReferenceError(const std::string& what_arg) : Error(what_arg) { }
+	explicit ReferenceError(const std::string& what_arg) : Error(what_arg) { }
 };
 
 
 class InvalidArgument : public Error {
 public:
-	InvalidArgument(const std::string& what_arg) : Error(what_arg) { }
+	explicit InvalidArgument(const std::string& what_arg) : Error(what_arg) { }
 };
 
 }; // End namespace chaipp
