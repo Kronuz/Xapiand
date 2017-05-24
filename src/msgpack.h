@@ -95,7 +95,7 @@ public:
 	};
 
 	struct Undefined {
-		static const char type = (uint8_t)Type::UNDEFINED & MSGPACK_EXT_MASK;
+		static constexpr char type = (uint8_t)Type::UNDEFINED & MSGPACK_EXT_MASK;
 
 		Undefined() = default;
 	};
