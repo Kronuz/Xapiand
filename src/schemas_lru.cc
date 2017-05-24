@@ -116,6 +116,22 @@ SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<F
 }
 
 
+inline bool
+SchemasLRU::get_strict(const MsgPack& obj)
+{
+	auto it = obj.find(RESERVED_STRICT);
+	if (it == obj.end()) {
+		return false;
+	}
+
+	try {
+		return it.value().as_bool();
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "%s must be bool", RESERVED_STRICT);
+	}
+}
+
+
 std::tuple<bool, atomic_shared_ptr<const MsgPack>*, std::string, std::string>
 SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 {
@@ -144,10 +160,12 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 				if (it == obj->end()) {
 					aux_schema_ptr = Schema::get_initial_schema();
 				} else {
+					// Update strict for root.
+					bool strict = default_spc.flags.strict || get_strict(*obj);
 					const auto& meta_schema = it.value();
 					switch (meta_schema.getType()) {
 						case MsgPack::Type::STR: {
-							if (default_spc.flags.strict) {
+							if (strict) {
 								THROW(MissingTypeError, "Type of field %s is missing", repr(DB_META_SCHEMA).c_str());
 							}
 							std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
@@ -157,7 +175,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 						case MsgPack::Type::MAP: {
 							auto it_t = meta_schema.find(RESERVED_TYPE);
 							if (it_t == meta_schema.end()) {
-								if (default_spc.flags.strict) {
+								if (strict) {
 									THROW(MissingTypeError, "Type of field %s is missing", repr(DB_META_SCHEMA).c_str());
 								}
 								if (meta_schema.size() == 1) {
@@ -187,7 +205,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 								if (type.is_string()) {
 									auto sep_types = required_spc_t::get_types(type.as_string());
 									if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-										if (default_spc.flags.strict) {
+										if (strict) {
 											THROW(MissingTypeError, "Type of field %s is not completed", repr(DB_META_SCHEMA).c_str());
 										}
 										sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
