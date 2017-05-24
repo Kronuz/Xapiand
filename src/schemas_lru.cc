@@ -138,8 +138,8 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 		const auto str_schema = db_handler->get_metadata(DB_META_SCHEMA);
 		std::shared_ptr<const MsgPack> aux_schema_ptr;
 		if (str_schema.empty()) {
-			created = true;
 			if (obj && obj->is_map()) {
+				created = true;
 				const auto it = obj->find(DB_META_SCHEMA);
 				if (it == obj->end()) {
 					aux_schema_ptr = Schema::get_initial_schema();
