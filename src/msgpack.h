@@ -392,7 +392,7 @@ struct MsgPack::Body {
 	msgpack::object* _obj;
 	size_t _capacity;
 
-	const MsgPack _nil;
+	const MsgPack _undefined;
 
 	Body(const std::shared_ptr<msgpack::zone>& zone,
 		 const std::shared_ptr<msgpack::object>& base,
@@ -411,7 +411,7 @@ struct MsgPack::Body {
 			_key(key),
 			_obj(obj),
 			_capacity(size()),
-			_nil(std::make_shared<Body>(_zone, _base, _parent.lock(), nullptr)) { }
+			_undefined(std::make_shared<Body>(_zone, _base, _parent.lock(), nullptr)) { }
 
 	Body(const std::shared_ptr<msgpack::zone>& zone,
 		 const std::shared_ptr<msgpack::object>& base,
@@ -427,7 +427,7 @@ struct MsgPack::Body {
 			_key(std::shared_ptr<Body>()),
 			_obj(obj),
 			_capacity(size()),
-			_nil(std::shared_ptr<Body>()) { }
+			_undefined(std::shared_ptr<Body>()) { }
 
 	template <typename T>
 	Body(T&& v)
@@ -441,7 +441,7 @@ struct MsgPack::Body {
 		  _key(std::shared_ptr<Body>()),
 		  _obj(_base.get()),
 		  _capacity(size()),
-		  _nil(std::make_shared<Body>(_zone, _base, _parent.lock(), nullptr)) { }
+		  _undefined(std::make_shared<Body>(_zone, _base, _parent.lock(), nullptr)) { }
 
 	MsgPack& at(size_t pos) {
 		return array.at(pos);
@@ -474,6 +474,7 @@ struct MsgPack::Body {
 	}
 
 	Type getType() const noexcept {
+		if (!_obj) return Type::UNDEFINED;
 		return _obj->type == msgpack::type::EXT ? (Type)(_obj->via.ext.type() | MSGPACK_EXT_BEGIN) : (Type)_obj->type;
 	}
 
@@ -1395,7 +1396,7 @@ inline MsgPack& MsgPack::operator[](const std::string& key) {
 inline const MsgPack& MsgPack::operator[](const std::string& key) const {
 	auto it = find(key);
 	if (it == cend()) {
-		return _const_body->_nil;
+		return _const_body->_undefined;
 	}
 	return _const_body->at(key);
 }
@@ -1413,7 +1414,7 @@ inline MsgPack& MsgPack::operator[](size_t pos) {
 inline const MsgPack& MsgPack::operator[](size_t pos) const {
 	auto it = find(pos);
 	if (it == cend()) {
-		return _const_body->_nil;
+		return _const_body->_undefined;
 	}
 	return _const_body->at(pos);
 }
