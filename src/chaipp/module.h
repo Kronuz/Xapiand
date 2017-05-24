@@ -58,6 +58,9 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			chaiscript::constructor<MsgPack(std::vector<MsgPack>&)>(),
 			chaiscript::constructor<MsgPack(const std::vector<MsgPack>&)>(),
 			chaiscript::constructor<MsgPack(const std::map<std::string, MsgPack>&)>(),
+			chaiscript::constructor<MsgPack(const chaiscript::Boxed_Value&)>(),
+			chaiscript::constructor<MsgPack(const std::vector<chaiscript::Boxed_Value>&)>(),
+			chaiscript::constructor<MsgPack(const std::map<std::string, chaiscript::Boxed_Value>&)>(),
 		},
 		{
 			// Specific instantiation of the template MsgPack::operator[](M&&).
@@ -301,6 +304,27 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun(static_cast<MsgPack::iterator (MsgPack::*)(size_t, MsgPack&&)>(&MsgPack::insert<MsgPack>)),                                                "insert" },
 			{ chaiscript::fun(static_cast<MsgPack::iterator (MsgPack::*)(size_t, MsgPack&)>(&MsgPack::insert<MsgPack&>)),                                                "insert" },
 			{ chaiscript::fun(static_cast<MsgPack::iterator (MsgPack::*)(size_t, const MsgPack&)>(&MsgPack::insert<const MsgPack&>)),                                    "insert" },
+
+			// Overload operator +
+			{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.as_i64() + value; }),                     "+" },
+			{ chaiscript::fun([](const MsgPack& obj, int value) { return obj.as_i64() + value; }),                          "+" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.as_i64() + value; }),                "+" },
+			{ chaiscript::fun([](const MsgPack& obj, long value) { return obj.as_i64() + value; }),                         "+" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.as_i64() + value; }),           "+" },
+			{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.as_i64() + value; }),                    "+" },
+			{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.as_f64() + value; }),                        "+" },
+			{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.as_f64() + value; }),                       "+" },
+			{ chaiscript::fun([](const MsgPack& obj, const std::string& value) { return obj.as_string().append(value); }),  "+" },
+
+			// Overload operator -
+			{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.as_i64() - value; }),                     "-" },
+			{ chaiscript::fun([](const MsgPack& obj, int value) { return obj.as_i64() - value; }),                          "-" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.as_i64() - value; }),                "-" },
+			{ chaiscript::fun([](const MsgPack& obj, long value) { return obj.as_i64() - value; }),                         "-" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.as_i64() - value; }),           "-" },
+			{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.as_i64() - value; }),                    "-" },
+			{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.as_f64() - value; }),                        "-" },
+			{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.as_f64() - value; }),                       "-" },
 
 			// Adding special value method.
 			{

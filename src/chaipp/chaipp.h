@@ -107,7 +107,7 @@ class Processor {
 		template <typename... Args>
 		MsgPack operator()(Args&&... args) const {
 			try {
-				auto func = chaiscript::boxed_cast<std::function<chaiscript::Boxed_Value(Args...)>>(value);
+				auto func = chaiscript::boxed_cast<std::function<MsgPack(Args...)>>(value);
 				return func(std::forward<Args>(args)...);
 			} catch (const chaiscript::exception::bad_boxed_cast& er) {
 				throw InvalidArgument(er.what());
