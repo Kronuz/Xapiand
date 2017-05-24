@@ -24,8 +24,8 @@
 
 #if XAPIAND_CHAISCRIPT
 
-#include "convert.h"
-#include "wrapper.h"
+#include "exception.h"
+#include "module.h"
 
 
 namespace chaipp {
@@ -76,22 +76,10 @@ class Processor {
 	};
 
 	/*
-	* Wrap ChaiScript function into new C++ function.
-	*/
+	 * Wrap ChaiScript function into new C++ function.
+	 */
 	class Function {
 		chaiscript::Boxed_Value value;
-
-		template <typename... Args>
-		MsgPack eval(Args&&... args) const {
-			try {
-				auto func = chaiscript::boxed_cast<std::function<chaiscript::Boxed_Value(Args...)>>(value);
-				return chaipp::convert<MsgPack>()(func(std::forward<Args>(args)...));
-			} catch (const chaiscript::exception::bad_boxed_cast& er) {
-				throw InvalidArgument(er.what());
-			} catch (const chaiscript::exception::eval_error& er) {
-				throw ScriptSyntaxError(er.pretty_print());
-			}
-		}
 
 	public:
 		Function(chaiscript::Boxed_Value&& value_)
@@ -118,70 +106,24 @@ class Processor {
 
 		template <typename... Args>
 		MsgPack operator()(Args&&... args) const {
-			return eval(chaipp::wrap<MsgPack>()(std::forward<Args>(args))...);
+			try {
+				auto func = chaiscript::boxed_cast<std::function<chaiscript::Boxed_Value(Args...)>>(value);
+				return func(std::forward<Args>(args)...);
+			} catch (const chaiscript::exception::bad_boxed_cast& er) {
+				throw InvalidArgument(er.what());
+			} catch (const chaiscript::exception::eval_error& er) {
+				throw ScriptSyntaxError(er.pretty_print());
+			}
 		}
 	};
 
 	chaiscript::ChaiScript chai;
 	std::map<std::string, Function> functions;
 
-	void init() {
-		/*
-		 * Adding special assigment operators.
-		 */
-
-		chai.add(chaiscript::fun([](std::map<std::string, chaiscript::Boxed_Value>& map, const std::vector<chaiscript::Boxed_Value>& vector) {
-			map["_value"] = chaiscript::Boxed_Value(vector);
-		}), "=");
-
-		chai.add(chaiscript::fun([](std::map<std::string, chaiscript::Boxed_Value>& map, const chaiscript::Boxed_Value& boxed_value) {
-			map["_value"] = boxed_value;
-		}), "=");
-
-		chai.add(chaiscript::fun([](std::vector<chaiscript::Boxed_Value>& vector, const std::map<std::string, chaiscript::Boxed_Value>& map) {
-			vector.clear();
-			vector.push_back(chaiscript::Boxed_Value(map));
-		}), "=");
-
-		chai.add(chaiscript::fun([](std::vector<chaiscript::Boxed_Value>& vector, const chaiscript::Boxed_Value& boxed_value) {
-			vector.clear();
-			vector.push_back(boxed_value);
-		}), "=");
-
-		chai.add(chaiscript::fun([](chaiscript::Boxed_Value& boxed_value, const std::map<std::string, chaiscript::Boxed_Value>& map) {
-			boxed_value = chaiscript::Boxed_Value(map);
-		}), "=");
-
-		chai.add(chaiscript::fun([](chaiscript::Boxed_Value& boxed_value, const std::vector<chaiscript::Boxed_Value>& vector) {
-			boxed_value = chaiscript::Boxed_Value(vector);
-		}), "=");
-
-
-		/*
-		 * Adding value method.
-		 */
-
-		chai.add(chaiscript::fun([](const std::map<std::string, chaiscript::Boxed_Value>& map) {
-			auto it = map.find("_value");
-			if (it == map.end()) {
-				return chaiscript::Boxed_Value(map);
-			} else {
-				return it->second;
-			}
-		}), "value");
-
-		chai.add(chaiscript::fun([](const std::vector<chaiscript::Boxed_Value>& vector) {
-			return chaiscript::Boxed_Value(vector);
-		}), "value");
-
-		chai.add(chaiscript::fun([](const chaiscript::Boxed_Value& boxed_value) {
-			return boxed_value;
-		}), "value");
-	}
-
 public:
 	Processor(const std::string&, const std::string& script_source) {
-		init();
+		static auto module_msgpack = ModuleMsgPack();
+		chai.add(module_msgpack);
 
 		try {
 			chai.eval(script_source);
