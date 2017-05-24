@@ -682,16 +682,10 @@ inline MsgPack::MsgPack(Type type)
 			_body->_obj->via.map.ptr = nullptr;
 			_body->_obj->via.map.size = 0;
 			break;
-		case Type::EXT: {
-			_body->_obj->type = msgpack::type::EXT;
-			char* ptr = static_cast<char*>(o.zone.allocate_align(1));
-			_body->_obj->via.ext.ptr = ptr;
-			_body->_obj->via.ext.size = 1;
-			ptr[0] = _body->_obj->type;
-			break;
-		}
 		case Type::UNDEFINED:
 			break;
+		default:
+			THROW(msgpack::type_error);
 	}
 }
 
