@@ -149,11 +149,12 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun(&MsgPack::size),          "size"         },
 			{ chaiscript::fun(&MsgPack::empty),         "empty"        },
 
-			{ chaiscript::fun(&MsgPack::as_u64),        "as_u64"       },
-			{ chaiscript::fun(&MsgPack::as_i64),        "as_i64"       },
-			{ chaiscript::fun(&MsgPack::as_f64),        "as_f64"       },
-			{ chaiscript::fun(&MsgPack::as_string),     "as_string"    },
-			{ chaiscript::fun(&MsgPack::as_bool),       "as_bool"      },
+			{ chaiscript::fun(&MsgPack::u64),        "u64"       },
+			{ chaiscript::fun(&MsgPack::i64),        "i64"       },
+			{ chaiscript::fun(&MsgPack::f64),        "f64"       },
+			{ chaiscript::fun(&MsgPack::str),        "str"       },
+			{ chaiscript::fun(&MsgPack::boolean),    "boolean"   },
+
 			{ chaiscript::fun(&MsgPack::as_document),   "as_document"  },
 
 			{ chaiscript::fun(&MsgPack::is_undefined),  "is_undefined" },
