@@ -367,6 +367,44 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun([](float value, const MsgPack& obj) { return value - obj.as_f64(); }),                        "-" },
 			{ chaiscript::fun([](double value, const MsgPack& obj) { return value - obj.as_f64(); }),                       "-" },
 
+			// Overload operator *
+			{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.as_i64() * value; }),                     "*" },
+			{ chaiscript::fun([](const MsgPack& obj, int value) { return obj.as_i64() * value; }),                          "*" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.as_i64() * value; }),                "*" },
+			{ chaiscript::fun([](const MsgPack& obj, long value) { return obj.as_i64() * value; }),                         "*" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.as_i64() * value; }),           "*" },
+			{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.as_i64() * value; }),                    "*" },
+			{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.as_f64() * value; }),                        "*" },
+			{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.as_f64() * value; }),                       "*" },
+
+			{ chaiscript::fun([](unsigned value, const MsgPack& obj) { return value * obj.as_i64(); }),                     "*" },
+			{ chaiscript::fun([](int value, const MsgPack& obj) { return value * obj.as_i64(); }),                          "*" },
+			{ chaiscript::fun([](unsigned long value, const MsgPack& obj) { return value * obj.as_i64(); }),                "*" },
+			{ chaiscript::fun([](long value, const MsgPack& obj) { return value * obj.as_i64(); }),                         "*" },
+			{ chaiscript::fun([](unsigned long long value, const MsgPack& obj) { return value * obj.as_i64(); }),           "*" },
+			{ chaiscript::fun([](long long value, const MsgPack& obj) { return value * obj.as_i64(); }),                    "*" },
+			{ chaiscript::fun([](float value, const MsgPack& obj) { return value * obj.as_f64(); }),                        "*" },
+			{ chaiscript::fun([](double value, const MsgPack& obj) { return value * obj.as_f64(); }),                       "*" },
+
+			// Overload operator /
+			{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.as_i64() / value; }),                     "/" },
+			{ chaiscript::fun([](const MsgPack& obj, int value) { return obj.as_i64() / value; }),                          "/" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.as_i64() / value; }),                "/" },
+			{ chaiscript::fun([](const MsgPack& obj, long value) { return obj.as_i64() / value; }),                         "/" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.as_i64() / value; }),           "/" },
+			{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.as_i64() / value; }),                    "/" },
+			{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.as_f64() / value; }),                        "/" },
+			{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.as_f64() / value; }),                       "/" },
+
+			{ chaiscript::fun([](unsigned value, const MsgPack& obj) { return value / obj.as_i64(); }),                     "/" },
+			{ chaiscript::fun([](int value, const MsgPack& obj) { return value / obj.as_i64(); }),                          "/" },
+			{ chaiscript::fun([](unsigned long value, const MsgPack& obj) { return value / obj.as_i64(); }),                "/" },
+			{ chaiscript::fun([](long value, const MsgPack& obj) { return value / obj.as_i64(); }),                         "/" },
+			{ chaiscript::fun([](unsigned long long value, const MsgPack& obj) { return value / obj.as_i64(); }),           "/" },
+			{ chaiscript::fun([](long long value, const MsgPack& obj) { return value / obj.as_i64(); }),                    "/" },
+			{ chaiscript::fun([](float value, const MsgPack& obj) { return value / obj.as_f64(); }),                        "/" },
+			{ chaiscript::fun([](double value, const MsgPack& obj) { return value / obj.as_f64(); }),                       "/" },
+
 			// Adding special value method.
 			{
 				chaiscript::fun([](const MsgPack& obj) {
