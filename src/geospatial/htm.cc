@@ -1717,7 +1717,7 @@ HTM::writeGrahamScanMap(const std::string& file, const std::string& output_file,
 
 	// Original Points.
 	for (const auto& point : points) {
-		const auto latlon = point.toLatLon();
+		latlon = point.toLatLon();
 		fs << "mymap.circle(" << latlon.first << ", " << latlon.second << ", " << MIN_RADIUS_RADIANS << ", '#FF0000', ew=2)\n";
 	}
 
@@ -1725,7 +1725,7 @@ HTM::writeGrahamScanMap(const std::string& file, const std::string& output_file,
 	std::string lat(1, '[');
 	std::string lon(1, '[');
 	for (const auto& point : convex_points) {
-		const auto latlon = point.toLatLon();
+		latlon = point.toLatLon();
 		lat.append(std::to_string(latlon.first)).push_back(',');
 		lon.append(std::to_string(latlon.second)).push_back(',');
 	}
