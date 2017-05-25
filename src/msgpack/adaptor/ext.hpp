@@ -151,7 +151,7 @@ public:
     }
 
     bool operator== (const ext_ref& x) const {
-        return m_size == x.m_size && std::memcmp(m_ptr, x.m_ptr, m_size) == 0;
+        return m_size == x.m_size && (m_ptr == x.m_ptr || std::memcmp(m_ptr, x.m_ptr, m_size) == 0);
     }
 
     bool operator!= (const ext_ref& x) const {
@@ -161,13 +161,13 @@ public:
     bool operator< (const ext_ref& x) const {
         if (m_size < x.m_size) return true;
         if (m_size > x.m_size) return false;
-        return std::memcmp(m_ptr, x.m_ptr, m_size) < 0;
+        return m_ptr != x.m_ptr && std::memcmp(m_ptr, x.m_ptr, m_size) < 0;
     }
 
     bool operator> (const ext_ref& x) const {
         if (m_size > x.m_size) return true;
         if (m_size < x.m_size) return false;
-        return std::memcmp(m_ptr, x.m_ptr, m_size) > 0;
+        return m_ptr != x.m_ptr && std::memcmp(m_ptr, x.m_ptr, m_size) > 0;
     }
 private:
     const char* m_ptr;

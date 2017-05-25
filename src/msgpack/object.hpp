@@ -407,15 +407,15 @@ inline bool operator==(const msgpack::object& x, const msgpack::object& y)
 
     case msgpack::type::STR:
         return x.via.str.size == y.via.str.size &&
-            std::memcmp(x.via.str.ptr, y.via.str.ptr, x.via.str.size) == 0;
+            (x.via.str.ptr == y.via.str.ptr || std::memcmp(x.via.str.ptr, y.via.str.ptr, x.via.str.size) == 0);
 
     case msgpack::type::BIN:
         return x.via.bin.size == y.via.bin.size &&
-            std::memcmp(x.via.bin.ptr, y.via.bin.ptr, x.via.bin.size) == 0;
+            (x.via.bin.ptr == y.via.bin.ptr || std::memcmp(x.via.bin.ptr, y.via.bin.ptr, x.via.bin.size) == 0);
 
     case msgpack::type::EXT:
         return x.via.ext.size == y.via.ext.size &&
-            std::memcmp(x.via.ext.ptr, y.via.ext.ptr, x.via.ext.size) == 0;
+            (x.via.ext.ptr == y.via.ext.ptr || std::memcmp(x.via.ext.ptr, y.via.ext.ptr, x.via.ext.size) == 0);
 
     case msgpack::type::ARRAY:
         if(x.via.array.size != y.via.array.size) {
