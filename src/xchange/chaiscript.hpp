@@ -158,7 +158,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				}
 			} else if (v.is_undef()) {
 				o.pack_ext(1, type::EXT);
-				char type[1] = { 0 }; // MsgPack::Type::UNDEFINED - MSGPACK_EXT_BEGIN;
+				char type[1] = { 0 }; // (char)Type::UNDEFINED & MSGPACK_EXT_MASK
 				return o.pack_ext_body(type, 1);
 			} else if (v.is_null()) {
 				return o.pack_nil();
@@ -284,7 +284,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				o.type = type::EXT;
 				o.via.ext.ptr = ptr;
 				o.via.ext.size = 1;
-				ptr[0] = (char)0; // MsgPack::Type::UNDEFINED & MSGPACK_EXT_BEGIN;
+				ptr[0] = (char)0; // Type::UNDEFINED & MSGPACK_EXT_MASK;
 			} else if (v.is_null()) {
 				o.type = type::NIL;
 			}
