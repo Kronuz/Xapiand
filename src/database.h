@@ -385,7 +385,7 @@ public:
 		 * it is neccesary wrap the constructor in a struct.
 		 */
 		struct enable_make_shared : DatabaseQueue {
-			enable_make_shared(Args&&... args) : DatabaseQueue(std::forward<Args>(args)...) { }
+			enable_make_shared(Args&&... args_) : DatabaseQueue(std::forward<Args>(args_)...) { }
 		};
 
 		return std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
