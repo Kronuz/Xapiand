@@ -73,7 +73,6 @@ public:
 		ARRAY               = msgpack::type::ARRAY,             //0x06
 		MAP                 = msgpack::type::MAP,               //0x07
 		BIN                 = msgpack::type::BIN,               //0x08
-		EXT                 = msgpack::type::EXT,               //0x09
 
 		// Custom external types follow:
 		UNDEFINED           = MSGPACK_EXT_BEGIN,
@@ -489,7 +488,6 @@ struct MsgPack::Body {
 			case Type::ARRAY: return "ARRAY";
 			case Type::MAP: return "MAP";
 			case Type::BIN: return "BIN";
-			case Type::EXT: return "EXT";
 			case Type::UNDEFINED: return "UNDEFINED";
 			default: return "<UNKNOWN>";
 		}
@@ -860,7 +858,6 @@ inline void MsgPack::_reserve_array(size_t rsize) {
 
 inline MsgPack::iterator MsgPack::_find(const std::string& key) {
 	switch (_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			return end();
 		case Type::MAP: {
@@ -878,7 +875,6 @@ inline MsgPack::iterator MsgPack::_find(const std::string& key) {
 
 inline MsgPack::const_iterator MsgPack::_find(const std::string& key) const {
 	switch (_const_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			return cend();
 		case Type::MAP: {
@@ -896,7 +892,6 @@ inline MsgPack::const_iterator MsgPack::_find(const std::string& key) const {
 
 inline MsgPack::iterator MsgPack::_find(size_t pos) {
 	switch (_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			return end();
 		case Type::MAP: {
@@ -927,7 +922,6 @@ inline MsgPack::iterator MsgPack::_find(size_t pos) {
 
 inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 	switch (_const_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			return cend();
 		case Type::MAP: {
@@ -958,7 +952,6 @@ inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(const std::string& key) {
 	switch (_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			return std::make_pair(0, end());
 		case Type::MAP: {
@@ -992,7 +985,6 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(const std::string& k
 
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 	switch (_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			return std::make_pair(0, end());
 		case Type::MAP: {
@@ -1090,7 +1082,6 @@ inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const 
 template <typename T>
 inline MsgPack& MsgPack::_put(const std::string& key, T&& val) {
 	switch (_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			_body->_obj->type = msgpack::type::MAP;
 			_body->_obj->via.map.ptr = nullptr;
@@ -1116,7 +1107,6 @@ inline MsgPack& MsgPack::_put(const std::string& key, T&& val) {
 template <typename T>
 inline MsgPack& MsgPack::_put(size_t pos, T&& val) {
 	switch (_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			_body->_obj->type = msgpack::type::ARRAY;
 			_body->_obj->via.array.ptr = nullptr;
@@ -1151,7 +1141,6 @@ inline MsgPack& MsgPack::_put(size_t pos, T&& val) {
 template <typename T>
 inline MsgPack::iterator MsgPack::_insert(size_t pos, T&& val) {
 	switch (_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			_body->_obj->type = msgpack::type::ARRAY;
 			_body->_obj->via.array.ptr = nullptr;
@@ -1455,7 +1444,6 @@ inline const MsgPack& MsgPack::at(M&& o) const {
 inline MsgPack& MsgPack::at(const std::string& key) {
 	_fill(false, false);
 	switch (_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
@@ -1468,7 +1456,6 @@ inline MsgPack& MsgPack::at(const std::string& key) {
 inline const MsgPack& MsgPack::at(const std::string& key) const {
 	_fill(false, false);
 	switch (_const_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
@@ -1482,7 +1469,6 @@ inline const MsgPack& MsgPack::at(const std::string& key) const {
 inline MsgPack& MsgPack::at(size_t pos) {
 	_fill(false, false);
 	switch (_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
@@ -1501,7 +1487,6 @@ inline MsgPack& MsgPack::at(size_t pos) {
 inline const MsgPack& MsgPack::at(size_t pos) const {
 	_fill(false, false);
 	switch (_const_body->getType()) {
-		case Type::EXT:
 		case Type::UNDEFINED:
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
@@ -1667,7 +1652,6 @@ inline void MsgPack::clear() noexcept {
 
 inline MsgPack::operator bool() const {
 	switch (_const_body->getType()) {
-		case Type::EXT:
 		case Type::MAP:
 		case Type::ARRAY:
 		case Type::STR:
