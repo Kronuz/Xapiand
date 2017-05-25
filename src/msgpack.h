@@ -161,7 +161,13 @@ private:
 	MsgPack& _put(size_t pos, T&& val);
 
 	template <typename T>
-	MsgPack::iterator _insert(size_t pos, T&& val);
+	MsgPack& _insert(size_t pos, T&& val);
+
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	MsgPack& _put(M&& o, T&& val);
+
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	MsgPack& _insert(M&& o, T&& val);
 
 	void _fill(bool recursive, bool lock);
 	void _fill(bool recursive, bool lock) const;
@@ -189,7 +195,7 @@ public:
 	MsgPack::iterator insert(T&& v);
 
 	template <typename T>
-	MsgPack& push_back(T&& v);
+	void push_back(T&& v);
 
 	template <typename T>
 	decltype(auto) external(std::function<T(const msgpack::object&)>) const;
@@ -1093,48 +1099,22 @@ inline MsgPack& MsgPack::_put(const std::string& key, T&& val) {
 			_body->_obj->via.map.ptr = nullptr;
 			_body->_obj->via.map.size = 0;
 		case Type::MAP: {
-			_reserve_map(_body->_obj->via.map.size + 1);
-			auto p = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
-			p->key.type = msgpack::type::STR;
-			p->key.via.str.size = static_cast<uint32_t>(key.size());
-			auto ptr = static_cast<char*>(_body->_zone->allocate_align(p->key.via.str.size));
-			std::memcpy(ptr, key.data(), p->key.via.str.size);
-			p->key.via.str.ptr = ptr;
-			p->val = msgpack::object(std::forward<T>(val), *_body->_zone);
-			++_body->_obj->via.map.size;
-			return *_init_map(_body->map.size());
-		}
-		default:
-			THROW(msgpack::type_error);
-	}
-}
-
-
-template <typename T>
-inline MsgPack& MsgPack::_put(size_t pos, T&& val) {
-	switch (_body->getType()) {
-		case Type::UNDEFINED:
-			_body->_obj->type = msgpack::type::ARRAY;
-			_body->_obj->via.array.ptr = nullptr;
-			_body->_obj->via.array.size = 0;
-		case Type::ARRAY: {
-			if (pos >= _body->_obj->via.array.size) {
-				_reserve_array(pos + 1);
-
-				// Initialize new elements.
-				const auto plast = &_body->_obj->via.array.ptr[pos];
-				auto p = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
-				for (; p != plast; ++p) {
-					p->type = msgpack::type::NIL;
-					++_body->_obj->via.array.size;
-				}
-
-				*p = msgpack::object(std::forward<T>(val), *_body->_zone);
-				++_body->_obj->via.array.size;
-				return *_init_array(_body->array.size());
+			auto it = _body->map.find(key);
+			if (it == _body->map.end()) {
+				_reserve_map(_body->_obj->via.map.size + 1);
+				auto p = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
+				p->key.type = msgpack::type::STR;
+				p->key.via.str.size = static_cast<uint32_t>(key.size());
+				auto ptr = static_cast<char*>(_body->_zone->allocate_align(p->key.via.str.size));
+				std::memcpy(ptr, key.data(), p->key.via.str.size);
+				p->key.via.str.ptr = ptr;
+				p->val = msgpack::object(std::forward<T>(val), *_body->_zone);
+				++_body->_obj->via.map.size;
+				return *_init_map(_body->map.size());
 			} else {
-				auto p = &_body->_obj->via.array.ptr[pos];
-				*p = msgpack::object(std::forward<T>(val), *_body->_zone);
+				auto pos = it->second.second._body->_pos;
+				auto p = &_body->_obj->via.map.ptr[pos];
+				p->val = msgpack::object(std::forward<T>(val), *_body->_zone);
 				return _body->at(pos);
 			}
 		}
@@ -1145,7 +1125,7 @@ inline MsgPack& MsgPack::_put(size_t pos, T&& val) {
 
 
 template <typename T>
-inline MsgPack::iterator MsgPack::_insert(size_t pos, T&& val) {
+inline MsgPack& MsgPack::_put(size_t pos, T&& val) {
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_body->_obj->type = msgpack::type::ARRAY;
@@ -1165,24 +1145,12 @@ inline MsgPack::iterator MsgPack::_insert(size_t pos, T&& val) {
 
 				*p = msgpack::object(std::forward<T>(val), *_body->_zone);
 				++_body->_obj->via.array.size;
-				_init_array(_body->array.size());
-				return MsgPack::Iterator<MsgPack>(this, size() - 1);
+				return *_init_array(_body->array.size());
 			} else {
-				_reserve_array(_body->_obj->via.array.size + 1);
-
-				auto p = _body->_obj->via.array.ptr + pos;
-				if (p->type == msgpack::type::NIL) {
-					*p = msgpack::object(std::forward<T>(val), *_body->_zone);
-					return MsgPack::Iterator<MsgPack>(this, pos);
-				} else {
-					std::memmove(p + 1, p, (_body->_obj->via.array.size - pos) * sizeof(msgpack::object));
-					*p = msgpack::object(std::forward<T>(val), *_body->_zone);
-					++_body->_obj->via.array.size;
-					_init_array(_body->array.size());
-					return MsgPack::Iterator<MsgPack>(this, pos);
-				}
+				auto p = &_body->_obj->via.array.ptr[pos];
+				*p = msgpack::object(std::forward<T>(val), *_body->_zone);
+				return _body->at(pos);
 			}
-			break;
 		default:
 			THROW(msgpack::type_error);
 	}
@@ -1190,7 +1158,7 @@ inline MsgPack::iterator MsgPack::_insert(size_t pos, T&& val) {
 
 
 template <typename M, typename T, typename>
-inline MsgPack& MsgPack::put(M&& o, T&& val) {
+inline MsgPack& MsgPack::_put(M&& o, T&& val) {
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val));
@@ -1208,12 +1176,10 @@ inline MsgPack& MsgPack::put(M&& o, T&& val) {
 
 
 template <typename M, typename T, typename>
-inline MsgPack::iterator MsgPack::insert(M&& o, T&& val) {
+inline MsgPack& MsgPack::_insert(M&& o, T&& val) {
 	switch (o._body->getType()) {
-		case Type::STR: {
-			auto& obj = _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val));
-			return  MsgPack::Iterator<MsgPack>(this, obj._body->_pos);
-		}
+		case Type::STR:
+			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1228,13 +1194,67 @@ inline MsgPack::iterator MsgPack::insert(M&& o, T&& val) {
 
 
 template <typename T>
+inline MsgPack& MsgPack::_insert(size_t pos, T&& val) {
+	switch (_body->getType()) {
+		case Type::UNDEFINED:
+			_body->_obj->type = msgpack::type::ARRAY;
+			_body->_obj->via.array.ptr = nullptr;
+			_body->_obj->via.array.size = 0;
+		case Type::ARRAY:
+			if (pos >= _body->_obj->via.array.size) {
+				_reserve_array(pos + 1);
+
+				// Initialize new elements.
+				const auto plast = &_body->_obj->via.array.ptr[pos];
+				auto p = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
+				for (; p != plast; ++p) {
+					p->type = msgpack::type::NIL;
+					++_body->_obj->via.array.size;
+				}
+
+				*p = msgpack::object(std::forward<T>(val), *_body->_zone);
+				++_body->_obj->via.array.size;
+				return *_init_array(_body->array.size());
+			} else {
+				_reserve_array(_body->_obj->via.array.size + 1);
+
+				auto p = &_body->_obj->via.array.ptr[pos];
+				std::memmove(p + 1, p, (_body->_obj->via.array.size - pos) * sizeof(msgpack::object));
+				*p = msgpack::object(std::forward<T>(val), *_body->_zone);
+				++_body->_obj->via.array.size;
+				return *_init_array(_body->array.size());
+			}
+			break;
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
+template <typename M, typename T, typename>
+inline MsgPack& MsgPack::put(M&& o, T&& val) {
+	_fill(false, false);
+	return _put(std::forward<M>(o), std::forward<T>(val));
+}
+
+
+template <typename M, typename T, typename>
+inline MsgPack::iterator MsgPack::insert(M&& o, T&& val) {
+	_fill(false, false);
+	return _insert(std::forward<M>(o), std::forward<T>(val));
+}
+
+
+template <typename T>
 inline MsgPack& MsgPack::put(const std::string& s, T&& val) {
+	_fill(false, false);
 	return _put(s, std::forward<T>(val));
 }
 
 
 template <typename T>
 inline MsgPack::iterator MsgPack::insert(const std::string& s, T&& val) {
+	_fill(false, false);
 	auto& obj = _put(s, std::forward<T>(val));
 	return MsgPack::Iterator<MsgPack>(this, obj._body->_pos);
 }
@@ -1242,19 +1262,23 @@ inline MsgPack::iterator MsgPack::insert(const std::string& s, T&& val) {
 
 template <typename T>
 inline MsgPack& MsgPack::put(size_t pos, T&& val) {
+	_fill(false, false);
 	return _put(pos, std::forward<T>(val));
 }
 
 
 template <typename T>
 inline MsgPack::iterator MsgPack::insert(size_t pos, T&& val) {
-	return _insert(pos, std::forward<T>(val));
+	_fill(false, false);
+	auto& obj = _insert(pos, std::forward<T>(val));
+	return  MsgPack::Iterator<MsgPack>(this, obj._body->_pos);
 }
 
 
 template <typename T>
-inline MsgPack& MsgPack::push_back(T&& v) {
-	return _put(size(), std::forward<T>(v));
+inline void MsgPack::push_back(T&& v) {
+	_fill(false, false);
+	_put(size(), std::forward<T>(v));
 }
 
 
@@ -1303,9 +1327,9 @@ inline decltype(auto) MsgPack::external(std::function<T(const msgpack::object&)>
 
 template <typename T, typename>
 inline MsgPack::iterator MsgPack::insert(T&& v) {
+	_fill(false, false);
 	MsgPack o(v);
-	bool found = false;
-	MsgPack::Iterator<MsgPack> it = end();
+	auto pos = size();
 	switch (o._body->getType()) {
 		case Type::ARRAY:
 			if (o._body->_obj->via.array.size % 2) {
@@ -1317,28 +1341,22 @@ inline MsgPack::iterator MsgPack::insert(T&& v) {
 				if (key._body->getType() != Type::STR) {
 					break;
 				}
-				auto& obj = put(key, val);
-				if (!found) {
-					found = true;
-					it = MsgPack::Iterator<MsgPack>(this, obj._body->_pos);
-				}
+				auto& obj = _put(key, val);
+				pos = obj._body->_pos;
 			}
 			break;
 		case Type::MAP:
 			for (auto& key : o) {
 				auto& val = o.at(key);
-				auto& obj = put(key, val);
-				if (!found) {
-					found = true;
-					it = MsgPack::Iterator<MsgPack>(this, obj._body->_pos);
-				}
+				auto& obj = _put(key, val);
+				pos = obj._body->_pos;
 			}
 			break;
 		default:
 			break;
 	}
 
-	return it;
+	return MsgPack::Iterator<MsgPack>(this, pos);
 }
 
 
