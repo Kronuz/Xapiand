@@ -166,9 +166,6 @@ private:
 	void _fill(bool recursive, bool lock);
 	void _fill(bool recursive, bool lock) const;
 
-	template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
-	std::pair<iterator, bool> insert(T&& v);
-
 public:
 	void lock() const;
 
@@ -188,6 +185,8 @@ public:
 	MsgPack::iterator insert(const std::string& s, T&& val);
 	template <typename T>
 	MsgPack::iterator insert(size_t pos, T&& val);
+	template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
+	MsgPack::iterator insert(T&& v);
 
 	template <typename T>
 	MsgPack& push_back(T&& v);
@@ -1213,7 +1212,7 @@ inline MsgPack::iterator MsgPack::insert(M&& o, T&& val) {
 	switch (o._body->getType()) {
 		case Type::STR: {
 			auto& obj = _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val));
-			return  MsgPack::Iterator<MsgPack>(this, obj->_body->_pos);
+			return  MsgPack::Iterator<MsgPack>(this, obj._body->_pos);
 		}
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
@@ -1237,7 +1236,7 @@ inline MsgPack& MsgPack::put(const std::string& s, T&& val) {
 template <typename T>
 inline MsgPack::iterator MsgPack::insert(const std::string& s, T&& val) {
 	auto& obj = _put(s, std::forward<T>(val));
-	return MsgPack::Iterator<MsgPack>(this, obj->_body->_pos);
+	return MsgPack::Iterator<MsgPack>(this, obj._body->_pos);
 }
 
 
@@ -1303,9 +1302,9 @@ inline decltype(auto) MsgPack::external(std::function<T(const msgpack::object&)>
 
 
 template <typename T, typename>
-inline std::pair<MsgPack::iterator, bool> MsgPack::insert(T&& v) {
+inline MsgPack::iterator MsgPack::insert(T&& v) {
 	MsgPack o(v);
-	bool done = false;
+	bool found = false;
 	MsgPack::Iterator<MsgPack> it = end();
 	switch (o._body->getType()) {
 		case Type::ARRAY:
@@ -1318,22 +1317,28 @@ inline std::pair<MsgPack::iterator, bool> MsgPack::insert(T&& v) {
 				if (key._body->getType() != Type::STR) {
 					break;
 				}
-				put(key, val);
+				auto& obj = put(key, val);
+				if (!found) {
+					found = true;
+					it = MsgPack::Iterator<MsgPack>(this, obj._body->_pos);
+				}
 			}
-			done = true;
 			break;
 		case Type::MAP:
 			for (auto& key : o) {
 				auto& val = o.at(key);
-				put(key, val);
+				auto& obj = put(key, val);
+				if (!found) {
+					found = true;
+					it = MsgPack::Iterator<MsgPack>(this, obj._body->_pos);
+				}
 			}
-			done = true;
 			break;
 		default:
 			break;
 	}
 
-	return std::make_pair(it, done);
+	return it;
 }
 
 
