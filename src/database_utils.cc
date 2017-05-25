@@ -110,7 +110,7 @@ std::string normalize_uuid(const std::string& uuid)
 MsgPack normalize_uuid(const MsgPack& uuid)
 {
 	if (uuid.is_string()) {
-		return normalize_uuid(uuid.as_string());
+		return normalize_uuid(uuid.str());
 	}
 	return uuid;
 }

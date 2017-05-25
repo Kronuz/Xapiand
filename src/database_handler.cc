@@ -308,17 +308,17 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 	auto& _script = it.value();
 	switch (_script.getType()) {
 		case MsgPack::Type::STR:
-			script_name = _script.as_string();
+			script_name = _script.str();
 			break;
 		case MsgPack::Type::MAP:
 			try {
-				script_type = _script.at(RESERVED_TYPE).as_string();
+				script_type = _script.at(RESERVED_TYPE).str();
 			} catch (const std::out_of_range&) { }
 			try {
-				script_name = _script.at(RESERVED_VALUE).as_string();
+				script_name = _script.at(RESERVED_VALUE).str();
 			} catch (const std::out_of_range&) { }
 			try {
-				script_body = _script.at(RESERVED_BODY).as_string();
+				script_body = _script.at(RESERVED_BODY).str();
 			} catch (const std::out_of_range&) { }
 			if (script_name.empty() && script_body.empty()) {
 				THROW(ClientError, "%s must be a string or a valid script object", RESERVED_SCRIPT);
@@ -388,7 +388,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 						const auto& id_field = obj.at(ID_FIELD_NAME);
 						if (id_field.is_map()) {
 							try {
-								spc_id.set_types(id_field.at(RESERVED_TYPE).as_string());
+								spc_id.set_types(id_field.at(RESERVED_TYPE).str());
 							} catch (const msgpack::type_error&) {
 								THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
 							}
@@ -516,7 +516,7 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPa
 	std::string blob;
 	switch (body.getType()) {
 		case MsgPack::Type::STR:
-			blob = body.as_string();
+			blob = body.str();
 			break;
 		case MsgPack::Type::MAP:
 			obj = body;
@@ -584,7 +584,7 @@ DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPa
 	auto obj = MsgPack::unserialise(::split_data_obj(data));
 	switch (obj.getType()) {
 		case MsgPack::Type::STR: {
-			const auto blob = body.as_string();
+			const auto blob = body.str();
 			return index(_document_id, stored, "", obj, blob, commit_, ct_type);
 		}
 		case MsgPack::Type::MAP: {
@@ -956,7 +956,7 @@ DatabaseHandler::get_document_info(const std::string& doc_id)
 			const auto ct_type_mp = Document::get_field(CT_FIELD_NAME, obj);
 			info["_blob"] = {
 				{ "_type", "stored" },
-				{ "_content_type", ct_type_mp ? ct_type_mp.as_string() : "unknown" },
+				{ "_content_type", ct_type_mp ? ct_type_mp.str() : "unknown" },
 				{ "_volume", std::get<0>(locator) },
 				{ "_offset", std::get<1>(locator) },
 				{ "_size", std::get<2>(locator) },
@@ -1080,7 +1080,7 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 	try {
 		try {
 			auto document = db_handler.get_document(doc_id);
-			auto nref = document.get_value("reference").as_i64() + 1;
+			auto nref = document.get_value("reference").i64() + 1;
 			const MsgPack obj = {
 				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
 				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
@@ -1116,7 +1116,7 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 	try {
 		try {
 			auto document = db_handler.get_document(doc_id);
-			auto nref = document.get_value("reference").as_i64() - 1;
+			auto nref = document.get_value("reference").i64() - 1;
 			const MsgPack obj = {
 				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
 				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },

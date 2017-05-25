@@ -45,8 +45,8 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 	T value_s, value_e;
 	switch (field_spc.get_type()) {
 		case FieldType::FLOAT: {
-			double val_s = start.is_map() ? Cast::cast(start).as_f64() : Cast::_float(start);
-			double val_e = end.is_map() ? Cast::cast(end).as_f64() : Cast::_float(end);
+			double val_s = start.is_map() ? Cast::cast(start).f64() : Cast::_float(start);
+			double val_e = end.is_map() ? Cast::cast(end).f64() : Cast::_float(end);
 			if (val_s > val_e) {
 				return Xapian::Query::MatchNothing;
 			}
@@ -58,8 +58,8 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 			break;
 		}
 		case FieldType::INTEGER: {
-			int64_t val_s = start.is_map() ? Cast::cast(start).as_i64() : Cast::integer(start);
-			int64_t val_e = end.is_map() ? Cast::cast(end).as_i64() : Cast::integer(end);
+			int64_t val_s = start.is_map() ? Cast::cast(start).i64() : Cast::integer(start);
+			int64_t val_e = end.is_map() ? Cast::cast(end).i64() : Cast::integer(end);
 			if (val_s > val_e) {
 				return Xapian::Query::MatchNothing;
 			}
@@ -71,8 +71,8 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 			break;
 		}
 		case FieldType::POSITIVE: {
-			uint64_t val_s = start.is_map() ? Cast::cast(start).as_u64() : Cast::positive(start);
-			uint64_t val_e = end.is_map() ? Cast::cast(end).as_u64() : Cast::positive(end);
+			uint64_t val_s = start.is_map() ? Cast::cast(start).u64() : Cast::positive(start);
+			uint64_t val_e = end.is_map() ? Cast::cast(end).u64() : Cast::positive(end);
 			if (val_s > val_e) {
 				return Xapian::Query::MatchNothing;
 			}

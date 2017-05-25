@@ -39,17 +39,17 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::STR: {
-			EWKT ewkt(obj.as_string());
+			EWKT ewkt(obj.str());
 			geometry = ewkt.getGeometry();
 			return;
 		}
 		case MsgPack::Type::MAP: {
 			auto it = obj.begin();
-			const auto str_key = it->as_string();
+			const auto str_key = it->str();
 			switch ((Cast::Hash)xxh64::hash(str_key)) {
 				case Cast::Hash::EWKT: {
 					try {
-						EWKT ewkt(it.value().as_string());
+						EWKT ewkt(it.value().str());
 						geometry = ewkt.getGeometry();
 						return;
 					} catch (const msgpack::type_error&) {
@@ -127,7 +127,7 @@ inline void
 GeoSpatial::process_units(data_t& data, const MsgPack& units)
 {
 	try {
-		const auto str = units.as_string();
+		const auto str = units.str();
 		if (str == "degrees") {
 			data.units = Cartesian::Units::DEGREES;
 		} else if (str == "radians") {
@@ -144,7 +144,7 @@ GeoSpatial::process_units(data_t& data, const MsgPack& units)
 inline void
 GeoSpatial::process_srid(data_t& data, const MsgPack& srid) {
 	try {
-		data.srid = srid.as_i64();
+		data.srid = srid.i64();
 		if (!Cartesian::is_SRID_supported(data.srid)) {
 			THROW(GeoSpatialError, "SRID = %d is not supported", data.srid);
 		}
@@ -155,13 +155,13 @@ GeoSpatial::process_srid(data_t& data, const MsgPack& srid) {
 
 
 GeoSpatial::data_t
-GeoSpatial::get_data(const MsgPack& o, bool has_radius)
+GeoSpatial::get_data(const MsgPack& o, bool hradius)
 {
-	data_t data(has_radius);
+	data_t data(hradius);
 	static const auto dit_e = map_dispatch.end();
 	const auto it_e = o.end();
 	for (auto it = o.begin(); it != it_e; ++it) {
-		const auto str_key = it->as_string();
+		const auto str_key = it->str();
 		const auto dit = map_dispatch.find(str_key);
 		if (dit == dit_e) {
 			THROW(GeoSpatialError, "%s is a invalid word", str_key.c_str());
@@ -184,14 +184,14 @@ GeoSpatial::getPoints(const data_t& data, const MsgPack& latitude, const MsgPack
 				auto it = latitude.begin();
 				auto hit = height->begin();
 				for (const auto& lon : longitude) {
-					points.emplace_back(it->as_f64(), lon.as_f64(), hit->as_f64(), data.units, data.srid);
+					points.emplace_back(it->f64(), lon.f64(), hit->f64(), data.units, data.srid);
 					++it;
 					++hit;
 				}
 			} else {
 				auto it = latitude.begin();
 				for (const auto& lon : longitude) {
-					points.emplace_back(it->as_f64(), lon.as_f64(), 0, data.units, data.srid);
+					points.emplace_back(it->f64(), lon.f64(), 0, data.units, data.srid);
 					++it;
 				}
 			}
@@ -212,7 +212,7 @@ GeoSpatial::make_point(const MsgPack& o)
 		const auto data = get_data(o);
 		if (data.lat && data.lon) {
 			try {
-				return Point(Cartesian(data.lat->as_f64(), data.lon->as_f64(), data.height ? data.height->as_f64() : 0, data.units, data.srid));
+				return Point(Cartesian(data.lat->f64(), data.lon->f64(), data.height ? data.height->f64() : 0, data.units, data.srid));
 			} catch (const msgpack::type_error&) {
 				THROW(GeoSpatialError, "%s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 			}
@@ -232,7 +232,7 @@ GeoSpatial::make_circle(const MsgPack& o)
 		const auto data = get_data(o, true);
 		if (data.lat && data.lon && data.radius) {
 			try {
-				return Circle(Cartesian(data.lat->as_f64(), data.lon->as_f64(), data.height ? data.height->as_f64() : 0, data.units, data.srid), data.radius->as_f64());
+				return Circle(Cartesian(data.lat->f64(), data.lon->f64(), data.height ? data.height->f64() : 0, data.units, data.srid), data.radius->f64());
 			} catch (const msgpack::type_error&) {
 				THROW(GeoSpatialError, "%s, %s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
 			}
@@ -260,7 +260,7 @@ GeoSpatial::make_convex(const MsgPack& o)
 							auto hit = data.height->begin();
 							convex.reserve(data.lat->size());
 							for (const auto& latitude : *data.lat) {
-								convex.add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), hit->as_f64(), data.units, data.srid), data.radius->as_f64()));
+								convex.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), data.radius->f64()));
 								++it;
 								++hit;
 							}
@@ -271,7 +271,7 @@ GeoSpatial::make_convex(const MsgPack& o)
 						auto it = data.lon->begin();
 						convex.reserve(data.lat->size());
 						for (const auto& latitude : *data.lat) {
-							convex.add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), 0, data.units, data.srid), data.radius->as_f64()));
+							convex.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), data.radius->f64()));
 							++it;
 						}
 					}
@@ -351,7 +351,7 @@ GeoSpatial::make_multipoint(const MsgPack& o)
 							auto hit = data.height->begin();
 							multipoint.reserve(data.lat->size());
 							for (const auto& latitude : *data.lat) {
-								multipoint.add(Point(Cartesian(latitude.as_f64(), it->as_f64(), hit->as_f64(), data.units, data.srid)));
+								multipoint.add(Point(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid)));
 								++it;
 								++hit;
 							}
@@ -362,7 +362,7 @@ GeoSpatial::make_multipoint(const MsgPack& o)
 						auto it = data.lon->begin();
 						multipoint.reserve(data.lat->size());
 						for (const auto& latitude : *data.lat) {
-							multipoint.add(Point(Cartesian(latitude.as_f64(), it->as_f64(), 0, data.units, data.srid)));
+							multipoint.add(Point(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid)));
 							++it;
 						}
 					}
@@ -397,7 +397,7 @@ GeoSpatial::make_multicircle(const MsgPack& o)
 							auto hit = data.height->begin();
 							multicircle.reserve(data.lat->size());
 							for (const auto& latitude : *data.lat) {
-								multicircle.add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), hit->as_f64(), data.units, data.srid), data.radius->as_f64()));
+								multicircle.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), data.radius->f64()));
 								++it;
 								++hit;
 							}
@@ -408,7 +408,7 @@ GeoSpatial::make_multicircle(const MsgPack& o)
 						auto it = data.lon->begin();
 						multicircle.reserve(data.lat->size());
 						for (const auto& latitude : *data.lat) {
-							multicircle.add(Circle(Cartesian(latitude.as_f64(), it->as_f64(), 0, data.units, data.srid), data.radius->as_f64()));
+							multicircle.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), data.radius->f64()));
 							++it;
 						}
 					}
@@ -437,7 +437,7 @@ GeoSpatial::make_multipolygon(const MsgPack& o)
 			multipolygon.reserve(o.size());
 			const auto it_e = o.end();
 			for (auto it = o.begin(); it != it_e; ++it) {
-				const auto str_key = it->as_string();
+				const auto str_key = it->str();
 				switch ((Cast::Hash)xxh64::hash(str_key)) {
 					case Cast::Hash::POLYGON:
 						multipolygon.add(make_polygon(it.value(), Geometry::Type::POLYGON));
@@ -522,7 +522,7 @@ GeoSpatial::make_collection(const MsgPack& o)
 		Collection collection;
 		const auto it_e = o.end();
 		for (auto it = o.begin(); it != it_e; ++it) {
-			const auto str_key = it->as_string();
+			const auto str_key = it->str();
 			switch ((Cast::Hash)xxh64::hash(str_key)) {
 				case Cast::Hash::POINT:
 					collection.add_point(make_point(it.value()));
@@ -573,7 +573,7 @@ GeoSpatial::make_intersection(const MsgPack& o)
 		intersection.reserve(o.size());
 		const auto it_e = o.end();
 		for (auto it = o.begin(); it != it_e; ++it) {
-			const auto str_key = it->as_string();
+			const auto str_key = it->str();
 			switch ((Cast::Hash)xxh64::hash(str_key)) {
 				case Cast::Hash::POINT:
 					intersection.add(std::make_shared<Point>(make_point(it.value())));

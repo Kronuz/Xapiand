@@ -392,7 +392,7 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 		case MsgPack::Type::MAP: {
 			const auto it_e = obj.end();
 			for (auto it = obj.begin(); it != it_e; ++it) {
-				const auto field_name = it->as_string();
+				const auto field_name = it->str();
 				auto const& o = it.value();
 
 				L_QUERY(this, BLUE "%s = %s" NO_COL, field_name.c_str(), o.to_string().c_str());
@@ -443,7 +443,7 @@ QueryDSL::get_value_query(const std::string& path, const MsgPack& obj, Xapian::t
 
 	if (path.empty()) {
 		if (!is_in && is_raw && obj.is_string()) {
-			const auto aux = Cast::cast(FieldType::EMPTY, obj.as_string());
+			const auto aux = Cast::cast(FieldType::EMPTY, obj.str());
 			return get_namespace_query(default_spc, aux, wqf, q_flags, is_in, is_wildcard);
 		}
 		return get_namespace_query(default_spc, obj, wqf, q_flags, is_in, is_wildcard);
@@ -452,17 +452,17 @@ QueryDSL::get_value_query(const std::string& path, const MsgPack& obj, Xapian::t
 		const auto& field_spc = data_field.first;
 
 		if (!data_field.second.empty()) {
-			return get_accuracy_query(field_spc, data_field.second, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.as_string()) : obj, wqf, is_in);
+			return get_accuracy_query(field_spc, data_field.second, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str()) : obj, wqf, is_in);
 		}
 
 		if (field_spc.flags.inside_namespace) {
-			return get_namespace_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.as_string()) : obj, wqf, q_flags, is_in, is_wildcard);
+			return get_namespace_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str()) : obj, wqf, q_flags, is_in, is_wildcard);
 		}
 
 		try {
-			return get_regular_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.as_string()) : obj, wqf, q_flags, is_in, is_wildcard);
+			return get_regular_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str()) : obj, wqf, q_flags, is_in, is_wildcard);
 		} catch (const SerialisationError&) {
-			return get_namespace_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(FieldType::EMPTY, obj.as_string()) : obj, wqf, q_flags, is_in, is_wildcard);
+			return get_namespace_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(FieldType::EMPTY, obj.str()) : obj, wqf, q_flags, is_in, is_wildcard);
 		}
 	}
 }
@@ -625,7 +625,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 
 	if (is_in) {
 		if (obj.is_string()) {
-			auto parsed = parse_guess_range(field_spc, obj.as_string());
+			auto parsed = parse_guess_range(field_spc, obj.str());
 			if (parsed.first == FieldType::EMPTY) {
 				return Xapian::Query::MatchAll;
 			} else if (field_spc.prefix().empty()) {
@@ -649,7 +649,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 		case MsgPack::Type::NIL:
 			return Xapian::Query(field_spc.prefix());
 		case MsgPack::Type::STR: {
-			auto val = obj.as_string();
+			auto val = obj.str();
 			if (val.empty()) {
 				return Xapian::Query(field_spc.prefix());
 			} else if (val == "*") {
@@ -675,7 +675,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 
 	if (is_in) {
 		if (obj.is_string()) {
-			return get_in_query(field_spc, parse_range(field_spc, obj.as_string()));
+			return get_in_query(field_spc, parse_range(field_spc, obj.str()));
 		} else {
 			return get_in_query(field_spc, obj);
 		}
@@ -685,7 +685,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 		case MsgPack::Type::NIL:
 			return Xapian::Query(field_spc.prefix());
 		case MsgPack::Type::STR: {
-			auto val = obj.as_string();
+			auto val = obj.str();
 			if (val.empty()) {
 				return Xapian::Query(field_spc.prefix());
 			} else if (val == "*") {
@@ -759,7 +759,7 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 
 	if (obj.is_map() && obj.size() == 1) {
 		const auto it = obj.begin();
-		const auto field_name = it->as_string();
+		const auto field_name = it->str();
 		if (field_name.compare(QUERYDSL_RANGE) == 0) {
 			const auto& value = it.value();
 			if (value.is_map()) {
@@ -923,7 +923,7 @@ QueryDSL::get_query(const MsgPack& obj)
 {
 	L_CALL(this, "QueryDSL::get_query(%s)", repr(obj.to_string()).c_str());
 
-	if (obj.is_string() && obj.as_string().compare("*") == 0) {
+	if (obj.is_string() && obj.str().compare("*") == 0) {
 		return Xapian::Query::MatchAll;
 	}
 

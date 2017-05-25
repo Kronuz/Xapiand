@@ -132,10 +132,10 @@ inline void _incr(MsgPack& o, double val, double limit) {
 	try {
 		o += val;
 		if (val < 0) {
-			if (o.as_f64() <= limit) {
+			if (o.f64() <= limit) {
 				THROW(LimitError, "Limit exceeded");
 			}
-		} else if (o.as_f64() >= limit) {
+		} else if (o.f64() >= limit) {
 			THROW(LimitError, "Limit exceeded");
 		}
 	} catch (const msgpack::type_error&) {

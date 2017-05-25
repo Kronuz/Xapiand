@@ -82,10 +82,10 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 	try {
 		const auto& aggs = conf.at(AGGREGATION_AGGS);
 		for (const auto& agg : aggs) {
-			auto sub_agg_name = agg.as_string();
+			auto sub_agg_name = agg.str();
 			if (is_valid(sub_agg_name)) {
 				const auto& sub_agg = aggs.at(sub_agg_name);
-				auto sub_agg_type = (*sub_agg.begin()).as_string();
+				auto sub_agg_type = (*sub_agg.begin()).str();
 				try {
 					auto func = map_dispatch_aggregations.at(sub_agg_type);
 					(this->*func)(_result[sub_agg_name], sub_agg, schema);

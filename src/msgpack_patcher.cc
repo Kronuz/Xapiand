@@ -45,7 +45,7 @@ void apply_patch(const MsgPack& patch, MsgPack& object) {
 		for (const auto& elem : patch) {
 			try {
 				const auto& op = elem.at(PATCH_OP);
-				auto op_str = op.as_string();
+				auto op_str = op.str();
 				try {
 					auto func = map_dispatch_patch_op.at(op_str);
 					(*func)(elem, object);
@@ -284,10 +284,10 @@ const MsgPack& get_patch_value(const MsgPack& obj_patch, const char* patch_op) {
 
 double get_patch_double(const MsgPack& val, const char* patch_op) {
 	if (val.is_string()) {
-		return strict_stod(val.as_string());
+		return strict_stod(val.str());
 	} else {
 		try {
-			return val.as_f64();
+			return val.f64();
 		} catch (const msgpack::type_error&) {
 			THROW(ClientError, "'%s' must be string or numeric", patch_op);
 		}

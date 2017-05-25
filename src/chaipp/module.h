@@ -34,7 +34,7 @@ namespace chaipp {
 inline static chaiscript::ModulePtr ModuleMsgPack() {
 	chaiscript::ModulePtr module(new chaiscript::Module());
 
-	module->add(chaiscript::type_conversion<const MsgPack, bool>([](const MsgPack &obj) { return obj.as_bool(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, bool>([](const MsgPack &obj) { return obj.boolean(); }));
 	module->add(chaiscript::type_conversion<const MsgPack, unsigned>([](const MsgPack &obj) { return obj.as_u64(); }));
 	module->add(chaiscript::type_conversion<const MsgPack, int>([](const MsgPack &obj) { return obj.as_u64(); }));
 	module->add(chaiscript::type_conversion<const MsgPack, unsigned long>([](const MsgPack &obj) { return obj.as_u64(); }));
@@ -43,7 +43,7 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 	module->add(chaiscript::type_conversion<const MsgPack, long long>([](const MsgPack &obj) { return obj.as_u64(); }));
 	module->add(chaiscript::type_conversion<const MsgPack, float>([](const MsgPack &obj) { return obj.as_u64(); }));
 	module->add(chaiscript::type_conversion<const MsgPack, double>([](const MsgPack &obj) { return obj.as_u64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, std::string>([](const MsgPack &obj) { return obj.as_string(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, std::string>([](const MsgPack &obj) { return obj.str(); }));
 
 	chaiscript::utility::add_class<MsgPack>(
 		*module,
@@ -325,7 +325,7 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.as_i64() + value; }),                    "+" },
 			{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.as_f64() + value; }),                        "+" },
 			{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.as_f64() + value; }),                       "+" },
-			{ chaiscript::fun([](const MsgPack& obj, const std::string& value) { return obj.as_string().append(value); }),  "+" },
+			{ chaiscript::fun([](const MsgPack& obj, const std::string& value) { return obj.str().append(value); }),        "+" },
 
 			{ chaiscript::fun([](unsigned value, const MsgPack& obj) { return value + obj.as_u64(); }),                     "+" },
 			{ chaiscript::fun([](int value, const MsgPack& obj) { return value + obj.as_i64(); }),                          "+" },
@@ -335,7 +335,7 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun([](long long value, const MsgPack& obj) { return value + obj.as_i64(); }),                    "+" },
 			{ chaiscript::fun([](float value, const MsgPack& obj) { return value + obj.as_f64(); }),                        "+" },
 			{ chaiscript::fun([](double value, const MsgPack& obj) { return value + obj.as_f64(); }),                       "+" },
-			{ chaiscript::fun([](const std::string& value, const MsgPack& obj) { return value + obj.as_string(); }),        "+" },
+			{ chaiscript::fun([](const std::string& value, const MsgPack& obj) { return value + obj.str(); }),              "+" },
 
 			// Overload operator -
 			{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.as_u64() - value; }),                     "-" },

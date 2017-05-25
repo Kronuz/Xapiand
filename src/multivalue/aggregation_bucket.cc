@@ -39,7 +39,7 @@ FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& conf, const
 		const auto& field_term = conf.at(AGGREGATION_FILTER).at(AGGREGATION_TERM);
 		try {
 			for (const auto& field : field_term) {
-				auto field_name = field.as_string();
+				auto field_name = field.str();
 				auto field_spc = schema->get_slot_field(field_name);
 				const auto& values = field_term.at(field_name);
 				std::set<std::string> s_values;

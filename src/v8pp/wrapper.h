@@ -54,7 +54,7 @@ struct wrap<MsgPack> {
 				return obj;
 			}
 			case MsgPack::Type::STR: {
-				auto arg_str = arg.as_string();
+				auto arg_str = arg.str();
 				return v8::String::NewFromUtf8(isolate, arg_str.data(), v8::NewStringType::kNormal, arg_str.size()).ToLocalChecked();
 			}
 			case MsgPack::Type::POSITIVE_INTEGER:
@@ -161,7 +161,7 @@ struct wrap<MsgPack> {
 				v8::Local<v8::Array> result = v8::Array::New(isolate, obj.size());
 				int i = 0;
 				for (const auto& key : obj) {
-					result->Set(i++, v8::String::NewFromUtf8(isolate, key.as_string().c_str(), v8::NewStringType::kNormal).ToLocalChecked());
+					result->Set(i++, v8::String::NewFromUtf8(isolate, key.str().c_str(), v8::NewStringType::kNormal).ToLocalChecked());
 				}
 				return result;
 			}

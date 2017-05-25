@@ -107,15 +107,15 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::BOOLEAN:
-			return boolean(field_spc.get_type(), field_value.as_bool());
+			return boolean(field_spc.get_type(), field_value.boolean());
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return positive(field_spc.get_type(), field_value.as_u64());
+			return positive(field_spc.get_type(), field_value.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return integer(field_spc.get_type(), field_value.as_i64());
+			return integer(field_spc.get_type(), field_value.i64());
 		case MsgPack::Type::FLOAT:
-			return _float(field_spc.get_type(), field_value.as_f64());
+			return _float(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
-			return string(field_spc, field_value.as_string());
+			return string(field_spc, field_value.str());
 		case MsgPack::Type::MAP:
 			return object(field_spc, field_value);
 		default:
@@ -128,7 +128,7 @@ std::string
 Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 {
 	if (o.size() == 1) {
-		auto str_key = o.begin()->as_string();
+		auto str_key = o.begin()->str();
 		switch ((Cast::Hash)xxh64::hash(str_key)) {
 			case Cast::Hash::INTEGER:
 				return integer(field_spc.get_type(), Cast::integer(o.at(str_key)));
@@ -238,13 +238,13 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return positive(field_spc.get_type(), field_value.as_u64());
+			return positive(field_spc.get_type(), field_value.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return integer(field_spc.get_type(), field_value.as_i64());
+			return integer(field_spc.get_type(), field_value.i64());
 		case MsgPack::Type::FLOAT:
-			return _float(field_spc.get_type(), field_value.as_f64());
+			return _float(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
-			return string(field_spc, field_value.as_string());
+			return string(field_spc, field_value.str());
 		case MsgPack::Type::MAP:
 			switch (field_spc.get_type()) {
 				case FieldType::FLOAT:
@@ -271,13 +271,13 @@ Serialise::time(const required_spc_t& field_spc, const class MsgPack& field_valu
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return positive(field_spc.get_type(), field_value.as_u64());
+			return positive(field_spc.get_type(), field_value.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return integer(field_spc.get_type(), field_value.as_i64());
+			return integer(field_spc.get_type(), field_value.i64());
 		case MsgPack::Type::FLOAT:
-			return _float(field_spc.get_type(), field_value.as_f64());
+			return _float(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
-			return string(field_spc, field_value.as_string());
+			return string(field_spc, field_value.str());
 		default:
 			THROW(SerialisationError, "Type: %s is not a time", field_value.getStrType().c_str());
 	}
@@ -289,13 +289,13 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return positive(field_spc.get_type(), field_value.as_u64());
+			return positive(field_spc.get_type(), field_value.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return integer(field_spc.get_type(), field_value.as_i64());
+			return integer(field_spc.get_type(), field_value.i64());
 		case MsgPack::Type::FLOAT:
-			return _float(field_spc.get_type(), field_value.as_f64());
+			return _float(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
-			return string(field_spc, field_value.as_string());
+			return string(field_spc, field_value.str());
 		default:
 			THROW(SerialisationError, "Type: %s is not a timedelta", field_value.getStrType().c_str());
 	}
@@ -430,16 +430,16 @@ Serialise::time(const class MsgPack& field_value, double& t_val)
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			t_val = field_value.as_u64();
+			t_val = field_value.u64();
 			return time(t_val);
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			t_val = field_value.as_i64();
+			t_val = field_value.i64();
 			return time(t_val);
 		case MsgPack::Type::FLOAT:
-			t_val = field_value.as_f64();
+			t_val = field_value.f64();
 			return time(t_val);
 		case MsgPack::Type::STR:
-			t_val = Datetime::time_to_double(Datetime::TimeParser(field_value.as_string()));
+			t_val = Datetime::time_to_double(Datetime::TimeParser(field_value.str()));
 			return timestamp(t_val);
 		default:
 			THROW(SerialisationError, "Type: %s is not time", field_value.getStrType().c_str());
@@ -477,16 +477,16 @@ Serialise::timedelta(const class MsgPack& field_value, double& t_val)
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			t_val = field_value.as_u64();
+			t_val = field_value.u64();
 			return timedelta(t_val);
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			t_val = field_value.as_i64();
+			t_val = field_value.i64();
 			return timedelta(t_val);
 		case MsgPack::Type::FLOAT:
-			t_val = field_value.as_f64();
+			t_val = field_value.f64();
 			return timedelta(t_val);
 		case MsgPack::Type::STR:
-			t_val = Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value.as_string()));
+			t_val = Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value.str()));
 			return timestamp(t_val);
 		default:
 			THROW(SerialisationError, "Type: %s is not timedelta", field_value.getStrType().c_str());
@@ -717,7 +717,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 			return FieldType::BOOLEAN;
 
 		case MsgPack::Type::STR: {
-			const auto str_value = field_value.as_string();
+			const auto str_value = field_value.str();
 
 			if (isUUID(str_value)) {
 				return FieldType::UUID;
@@ -752,7 +752,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 
 		case MsgPack::Type::MAP: {
 			if (field_value.size() == 1) {
-				const auto str_key = field_value.begin()->as_string();
+				const auto str_key = field_value.begin()->str();
 				switch ((Cast::Hash)xxh64::hash(str_key)) {
 					case Cast::Hash::INTEGER:
 						return FieldType::INTEGER;
@@ -817,19 +817,19 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return std::make_pair(FieldType::INTEGER, integer(field_value.as_i64()));
+			return std::make_pair(FieldType::INTEGER, integer(field_value.i64()));
 
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return std::make_pair(FieldType::POSITIVE, positive(field_value.as_u64()));
+			return std::make_pair(FieldType::POSITIVE, positive(field_value.u64()));
 
 		case MsgPack::Type::FLOAT:
-			return std::make_pair(FieldType::FLOAT, _float(field_value.as_f64()));
+			return std::make_pair(FieldType::FLOAT, _float(field_value.f64()));
 
 		case MsgPack::Type::BOOLEAN:
-			return std::make_pair(FieldType::BOOLEAN, boolean(field_value.as_bool()));
+			return std::make_pair(FieldType::BOOLEAN, boolean(field_value.boolean()));
 
 		case MsgPack::Type::STR: {
-			auto str_obj = field_value.as_string();
+			auto str_obj = field_value.str();
 
 			// Try like UUID
 			try {
@@ -872,7 +872,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 		case MsgPack::Type::MAP: {
 			if (field_value.size() == 1) {
 				const auto it = field_value.begin();
-				const auto str_key = it->as_string();
+				const auto str_key = it->str();
 				switch ((Cast::Hash)xxh64::hash(str_key)) {
 					case Cast::Hash::INTEGER:
 						return std::make_pair(FieldType::INTEGER, integer(Cast::integer(it.value())));

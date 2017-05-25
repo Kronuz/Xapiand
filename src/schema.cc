@@ -1109,7 +1109,7 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 {
 	try {
 		const auto& version = get_properties().at(RESERVED_VERSION);
-		if (version.as_f64() != DB_VERSION_SCHEMA) {
+		if (version.f64() != DB_VERSION_SCHEMA) {
 			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
 	} catch (const std::out_of_range&) {
@@ -1864,7 +1864,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 			if (specification.doc_acc) {
 				try {
 					for (const auto& _accuracy : *specification.doc_acc) {
-						const auto val_acc = _accuracy.as_u64();
+						const auto val_acc = _accuracy.u64();
 						if (val_acc <= HTM_MAX_LEVEL) {
 							set_acc.insert(HTM_START_POS - 2 * val_acc);
 						} else {
@@ -1884,7 +1884,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 				try {
 					static const auto adit_e = map_acc_date.end();
 					for (const auto& _accuracy : *specification.doc_acc) {
-						const auto str_accuracy = lower_string(_accuracy.as_string());
+						const auto str_accuracy = lower_string(_accuracy.str());
 						const auto adit = map_acc_date.find(str_accuracy);
 						if (adit == adit_e) {
 							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
@@ -1906,7 +1906,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 				try {
 					static const auto adit_e = map_acc_time.end();
 					for (const auto& _accuracy : *specification.doc_acc) {
-						const auto str_accuracy = lower_string(_accuracy.as_string());
+						const auto str_accuracy = lower_string(_accuracy.str());
 						const auto adit = map_acc_time.find(str_accuracy);
 						if (adit == adit_e) {
 							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
@@ -1928,7 +1928,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 			if (specification.doc_acc) {
 				try {
 					for (const auto& _accuracy : *specification.doc_acc) {
-						set_acc.insert(_accuracy.as_u64());
+						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str());
@@ -2160,7 +2160,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			}
 			break;
 		case MsgPack::Type::STR: {
-			const auto str_value = item_doc.as_string();
+			const auto str_value = item_doc.str();
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
 				specification.sep_types[SPC_INDEX_TYPE] = FieldType::UUID;
 				return;
@@ -2206,7 +2206,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			THROW(ClientError, "'%s' cannot be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
 			if (item_doc.size() == 1) {
-				specification.sep_types[SPC_INDEX_TYPE] = Cast::getType(item_doc.begin()->as_string());
+				specification.sep_types[SPC_INDEX_TYPE] = Cast::getType(item_doc.begin()->str());
 				return;
 			}
 			THROW(ClientError, "Expected map with one element");
@@ -2620,7 +2620,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 	switch (spc.sep_types[SPC_INDEX_TYPE]) {
 		case FieldType::FLOAT: {
 			try {
-				const auto f_val = value.as_f64();
+				const auto f_val = value.f64();
 				auto ser_value = Serialise::_float(f_val);
 				if (field_spc) {
 					index_term(doc, ser_value, *field_spc, pos);
@@ -2637,7 +2637,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		}
 		case FieldType::INTEGER: {
 			try {
-				const auto i_val = value.as_i64();
+				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
 				if (field_spc) {
 					index_term(doc, ser_value, *field_spc, pos);
@@ -2654,7 +2654,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		}
 		case FieldType::POSITIVE: {
 			try {
-				const auto u_val = value.as_u64();
+				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
 				if (field_spc) {
 					index_term(doc, ser_value, *field_spc, pos);
@@ -2746,7 +2746,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		case FieldType::TEXT:
 		case FieldType::STRING: {
 			try {
-				auto ser_value = value.as_string();
+				auto ser_value = value.str();
 				if (field_spc) {
 					index_term(doc, ser_value, *field_spc, pos);
 				}
@@ -2772,7 +2772,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		}
 		case FieldType::UUID: {
 			try {
-				auto ser_value = Serialise::uuid(value.as_string());
+				auto ser_value = Serialise::uuid(value.str());
 				if (field_spc) {
 					index_term(doc, ser_value, *field_spc, pos);
 				}
@@ -2799,7 +2799,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 	switch (field_spc.sep_types[SPC_INDEX_TYPE]) {
 		case FieldType::FLOAT: {
 			try {
-				const auto f_val = value.as_f64();
+				const auto f_val = value.f64();
 				auto ser_value = Serialise::_float(f_val);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 					index_term(doc, ser_value, field_spc, pos);
@@ -2822,7 +2822,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		}
 		case FieldType::INTEGER: {
 			try {
-				const auto i_val = value.as_i64();
+				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 					index_term(doc, ser_value, field_spc, pos);
@@ -2845,7 +2845,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		}
 		case FieldType::POSITIVE: {
 			try {
-				const auto u_val = value.as_u64();
+				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 					index_term(doc, ser_value, field_spc, pos);
@@ -2970,7 +2970,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		case FieldType::TEXT:
 		case FieldType::STRING: {
 			try {
-				auto ser_value = value.as_string();
+				auto ser_value = value.str();
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 					index_term(doc, ser_value, field_spc, pos);
 				}
@@ -2998,7 +2998,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		}
 		case FieldType::UUID: {
 			try {
-				auto ser_value = Serialise::uuid(value.as_string());
+				auto ser_value = Serialise::uuid(value.str());
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 					index_term(doc, ser_value, field_spc, pos);
 				}
@@ -3469,7 +3469,7 @@ Schema::process_properties_document(const MsgPack& object, FieldVector& fields)
 	const auto it_e = object.end();
 	if (specification.flags.field_with_type) {
 		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->as_string();
+			auto str_key = it->str();
 			const auto ddit = map_dispatch_document.find(str_key);
 			if (ddit == ddit_e) {
 				fields.emplace_back(std::move(str_key), &it.value());
@@ -3480,7 +3480,7 @@ Schema::process_properties_document(const MsgPack& object, FieldVector& fields)
 	} else {
 		static const auto wtit_e = map_dispatch_without_type.end();
 		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->as_string();
+			auto str_key = it->str();
 			const auto wtit = map_dispatch_without_type.find(str_key);
 			if (wtit == wtit_e) {
 				const auto ddit = map_dispatch_document.find(str_key);
@@ -3507,7 +3507,7 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 	const auto it_e = object.end();
 	if (specification.flags.field_with_type) {
 		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->as_string();
+			auto str_key = it->str();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
 				const auto ddit = map_dispatch_document.find(str_key);
@@ -3523,7 +3523,7 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 	} else {
 		static const auto wtit_e = map_dispatch_without_type.end();
 		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->as_string();
+			auto str_key = it->str();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
 				const auto wtit = map_dispatch_without_type.find(str_key);
@@ -3573,7 +3573,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 	static const auto ddit_e = map_dispatch_document.end();
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
-		auto str_key = it->as_string();
+		auto str_key = it->str();
 		const auto wpit = map_dispatch_write_properties.find(str_key);
 		if (wpit == wpit_e) {
 			const auto wtit = map_dispatch_without_type.find(str_key);
@@ -3648,7 +3648,7 @@ Schema::update_specification(const MsgPack& properties)
 	static const auto dpit_e = map_dispatch_properties.end();
 	const auto it_e = properties.end();
 	for (auto it = properties.begin(); it != it_e; ++it) {
-		const auto dpit = map_dispatch_properties.find(it->as_string());
+		const auto dpit = map_dispatch_properties.find(it->str());
 		if (dpit != dpit_e) {
 			(this->*dpit->second)(it.value());
 		}
@@ -3664,10 +3664,10 @@ Schema::update_position(const MsgPack& prop_position)
 	specification.position.clear();
 	if (prop_position.is_array()) {
 		for (const auto& _position : prop_position) {
-			specification.position.push_back(static_cast<Xapian::termpos>(_position.as_u64()));
+			specification.position.push_back(static_cast<Xapian::termpos>(_position.u64()));
 		}
 	} else {
-		specification.position.push_back(static_cast<Xapian::termpos>(prop_position.as_u64()));
+		specification.position.push_back(static_cast<Xapian::termpos>(prop_position.u64()));
 	}
 }
 
@@ -3680,10 +3680,10 @@ Schema::update_weight(const MsgPack& prop_weight)
 	specification.weight.clear();
 	if (prop_weight.is_array()) {
 		for (const auto& _weight : prop_weight) {
-			specification.weight.push_back(static_cast<Xapian::termpos>(_weight.as_u64()));
+			specification.weight.push_back(static_cast<Xapian::termpos>(_weight.u64()));
 		}
 	} else {
-		specification.weight.push_back(static_cast<Xapian::termpos>(prop_weight.as_u64()));
+		specification.weight.push_back(static_cast<Xapian::termpos>(prop_weight.u64()));
 	}
 }
 
@@ -3696,10 +3696,10 @@ Schema::update_spelling(const MsgPack& prop_spelling)
 	specification.spelling.clear();
 	if (prop_spelling.is_array()) {
 		for (const auto& _spelling : prop_spelling) {
-			specification.spelling.push_back(_spelling.as_bool());
+			specification.spelling.push_back(_spelling.boolean());
 		}
 	} else {
-		specification.spelling.push_back(prop_spelling.as_bool());
+		specification.spelling.push_back(prop_spelling.boolean());
 	}
 }
 
@@ -3712,10 +3712,10 @@ Schema::update_positions(const MsgPack& prop_positions)
 	specification.positions.clear();
 	if (prop_positions.is_array()) {
 		for (const auto& _positions : prop_positions) {
-			specification.positions.push_back(_positions.as_bool());
+			specification.positions.push_back(_positions.boolean());
 		}
 	} else {
-		specification.positions.push_back(prop_positions.as_bool());
+		specification.positions.push_back(prop_positions.boolean());
 	}
 }
 
@@ -3725,7 +3725,7 @@ Schema::update_language(const MsgPack& prop_language)
 {
 	L_CALL(this, "Schema::update_language(%s)", repr(prop_language.to_string()).c_str());
 
-	specification.language = prop_language.as_string();
+	specification.language = prop_language.str();
 }
 
 
@@ -3734,7 +3734,7 @@ Schema::update_stop_strategy(const MsgPack& prop_stop_strategy)
 {
 	L_CALL(this, "Schema::update_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
 
-	specification.stop_strategy = static_cast<StopStrategy>(prop_stop_strategy.as_u64());
+	specification.stop_strategy = static_cast<StopStrategy>(prop_stop_strategy.u64());
 }
 
 
@@ -3743,7 +3743,7 @@ Schema::update_stem_strategy(const MsgPack& prop_stem_strategy)
 {
 	L_CALL(this, "Schema::update_stem_strategy(%s)", repr(prop_stem_strategy.to_string()).c_str());
 
-	specification.stem_strategy = static_cast<StemStrategy>(prop_stem_strategy.as_u64());
+	specification.stem_strategy = static_cast<StemStrategy>(prop_stem_strategy.u64());
 }
 
 
@@ -3752,7 +3752,7 @@ Schema::update_stem_language(const MsgPack& prop_stem_language)
 {
 	L_CALL(this, "Schema::update_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
 
-	specification.stem_language = prop_stem_language.as_string();
+	specification.stem_language = prop_stem_language.str();
 }
 
 
@@ -3762,10 +3762,10 @@ Schema::update_type(const MsgPack& prop_type)
 	L_CALL(this, "Schema::update_type(%s)", repr(prop_type.to_string()).c_str());
 
 	try {
-		specification.sep_types[SPC_FOREIGN_TYPE] = (FieldType)prop_type.at(SPC_FOREIGN_TYPE).as_u64();
-		specification.sep_types[SPC_OBJECT_TYPE]  = (FieldType)prop_type.at(SPC_OBJECT_TYPE).as_u64();
-		specification.sep_types[SPC_ARRAY_TYPE]   = (FieldType)prop_type.at(SPC_ARRAY_TYPE).as_u64();
-		specification.sep_types[SPC_INDEX_TYPE]   = (FieldType)prop_type.at(SPC_INDEX_TYPE).as_u64();
+		specification.sep_types[SPC_FOREIGN_TYPE] = (FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64();
+		specification.sep_types[SPC_OBJECT_TYPE]  = (FieldType)prop_type.at(SPC_OBJECT_TYPE).u64();
+		specification.sep_types[SPC_ARRAY_TYPE]   = (FieldType)prop_type.at(SPC_ARRAY_TYPE).u64();
+		specification.sep_types[SPC_INDEX_TYPE]   = (FieldType)prop_type.at(SPC_INDEX_TYPE).u64();
 		specification.flags.field_with_type = specification.sep_types[SPC_INDEX_TYPE] != FieldType::EMPTY;
 	} catch (const msgpack::type_error&) {
 	} catch (const std::out_of_range&) {
@@ -3781,7 +3781,7 @@ Schema::update_accuracy(const MsgPack& prop_accuracy)
 
 	specification.accuracy.reserve(prop_accuracy.size());
 	for (const auto& acc : prop_accuracy) {
-		specification.accuracy.push_back(acc.as_f64());
+		specification.accuracy.push_back(acc.f64());
 	}
 }
 
@@ -3793,7 +3793,7 @@ Schema::update_acc_prefix(const MsgPack& prop_acc_prefix)
 
 	specification.acc_prefix.reserve(prop_acc_prefix.size());
 	for (const auto& acc_p : prop_acc_prefix) {
-		specification.acc_prefix.push_back(acc_p.as_string());
+		specification.acc_prefix.push_back(acc_p.str());
 	}
 }
 
@@ -3803,7 +3803,7 @@ Schema::update_prefix(const MsgPack& prop_prefix)
 {
 	L_CALL(this, "Schema::update_prefix(%s)", repr(prop_prefix.to_string()).c_str());
 
-	specification.local_prefix.field = prop_prefix.as_string();
+	specification.local_prefix.field = prop_prefix.str();
 }
 
 
@@ -3812,7 +3812,7 @@ Schema::update_slot(const MsgPack& prop_slot)
 {
 	L_CALL(this, "Schema::update_slot(%s)", repr(prop_slot.to_string()).c_str());
 
-	specification.slot = static_cast<Xapian::valueno>(prop_slot.as_u64());
+	specification.slot = static_cast<Xapian::valueno>(prop_slot.u64());
 }
 
 
@@ -3821,7 +3821,7 @@ Schema::update_index(const MsgPack& prop_index)
 {
 	L_CALL(this, "Schema::update_index(%s)", repr(prop_index.to_string()).c_str());
 
-	specification.index = static_cast<TypeIndex>(prop_index.as_u64());
+	specification.index = static_cast<TypeIndex>(prop_index.u64());
 	specification.flags.has_index = true;
 }
 
@@ -3832,7 +3832,7 @@ Schema::update_store(const MsgPack& prop_store)
 	L_CALL(this, "Schema::update_store(%s)", repr(prop_store.to_string()).c_str());
 
 	specification.flags.parent_store = specification.flags.store;
-	specification.flags.store = prop_store.as_bool() && specification.flags.parent_store;
+	specification.flags.store = prop_store.boolean() && specification.flags.parent_store;
 }
 
 
@@ -3841,7 +3841,7 @@ Schema::update_recurse(const MsgPack& prop_recurse)
 {
 	L_CALL(this, "Schema::update_recurse(%s)", repr(prop_recurse.to_string()).c_str());
 
-	specification.flags.is_recurse = prop_recurse.as_bool();
+	specification.flags.is_recurse = prop_recurse.boolean();
 }
 
 
@@ -3850,7 +3850,7 @@ Schema::update_dynamic(const MsgPack& prop_dynamic)
 {
 	L_CALL(this, "Schema::update_dynamic(%s)", repr(prop_dynamic.to_string()).c_str());
 
-	specification.flags.dynamic = prop_dynamic.as_bool();
+	specification.flags.dynamic = prop_dynamic.boolean();
 }
 
 
@@ -3859,7 +3859,7 @@ Schema::update_strict(const MsgPack& prop_strict)
 {
 	L_CALL(this, "Schema::update_strict(%s)", repr(prop_strict.to_string()).c_str());
 
-	specification.flags.strict = prop_strict.as_bool();
+	specification.flags.strict = prop_strict.boolean();
 }
 
 
@@ -3868,7 +3868,7 @@ Schema::update_date_detection(const MsgPack& prop_date_detection)
 {
 	L_CALL(this, "Schema::update_date_detection(%s)", repr(prop_date_detection.to_string()).c_str());
 
-	specification.flags.date_detection = prop_date_detection.as_bool();
+	specification.flags.date_detection = prop_date_detection.boolean();
 }
 
 
@@ -3877,7 +3877,7 @@ Schema::update_time_detection(const MsgPack& prop_time_detection)
 {
 	L_CALL(this, "Schema::update_time_detection(%s)", repr(prop_time_detection.to_string()).c_str());
 
-	specification.flags.time_detection = prop_time_detection.as_bool();
+	specification.flags.time_detection = prop_time_detection.boolean();
 }
 
 
@@ -3886,7 +3886,7 @@ Schema::update_timedelta_detection(const MsgPack& prop_timedelta_detection)
 {
 	L_CALL(this, "Schema::update_timedelta_detection(%s)", repr(prop_timedelta_detection.to_string()).c_str());
 
-	specification.flags.timedelta_detection = prop_timedelta_detection.as_bool();
+	specification.flags.timedelta_detection = prop_timedelta_detection.boolean();
 }
 
 
@@ -3895,7 +3895,7 @@ Schema::update_numeric_detection(const MsgPack& prop_numeric_detection)
 {
 	L_CALL(this, "Schema::update_numeric_detection(%s)", repr(prop_numeric_detection.to_string()).c_str());
 
-	specification.flags.numeric_detection = prop_numeric_detection.as_bool();
+	specification.flags.numeric_detection = prop_numeric_detection.boolean();
 }
 
 
@@ -3904,7 +3904,7 @@ Schema::update_geo_detection(const MsgPack& prop_geo_detection)
 {
 	L_CALL(this, "Schema::update_geo_detection(%s)", repr(prop_geo_detection.to_string()).c_str());
 
-	specification.flags.geo_detection = prop_geo_detection.as_bool();
+	specification.flags.geo_detection = prop_geo_detection.boolean();
 }
 
 
@@ -3913,7 +3913,7 @@ Schema::update_bool_detection(const MsgPack& prop_bool_detection)
 {
 	L_CALL(this, "Schema::update_bool_detection(%s)", repr(prop_bool_detection.to_string()).c_str());
 
-	specification.flags.bool_detection = prop_bool_detection.as_bool();
+	specification.flags.bool_detection = prop_bool_detection.boolean();
 }
 
 
@@ -3922,7 +3922,7 @@ Schema::update_string_detection(const MsgPack& prop_string_detection)
 {
 	L_CALL(this, "Schema::update_string_detection(%s)", repr(prop_string_detection.to_string()).c_str());
 
-	specification.flags.string_detection = prop_string_detection.as_bool();
+	specification.flags.string_detection = prop_string_detection.boolean();
 }
 
 
@@ -3931,7 +3931,7 @@ Schema::update_text_detection(const MsgPack& prop_text_detection)
 {
 	L_CALL(this, "Schema::update_text_detection(%s)", repr(prop_text_detection.to_string()).c_str());
 
-	specification.flags.text_detection = prop_text_detection.as_bool();
+	specification.flags.text_detection = prop_text_detection.boolean();
 }
 
 
@@ -3940,7 +3940,7 @@ Schema::update_term_detection(const MsgPack& prop_tm_detection)
 {
 	L_CALL(this, "Schema::update_term_detection(%s)", repr(prop_tm_detection.to_string()).c_str());
 
-	specification.flags.term_detection = prop_tm_detection.as_bool();
+	specification.flags.term_detection = prop_tm_detection.boolean();
 }
 
 
@@ -3949,7 +3949,7 @@ Schema::update_uuid_detection(const MsgPack& prop_uuid_detection)
 {
 	L_CALL(this, "Schema::update_uuid_detection(%s)", repr(prop_uuid_detection.to_string()).c_str());
 
-	specification.flags.uuid_detection = prop_uuid_detection.as_bool();
+	specification.flags.uuid_detection = prop_uuid_detection.boolean();
 }
 
 
@@ -3958,7 +3958,7 @@ Schema::update_bool_term(const MsgPack& prop_bool_term)
 {
 	L_CALL(this, "Schema::update_bool_term(%s)", repr(prop_bool_term.to_string()).c_str());
 
-	specification.flags.bool_term = prop_bool_term.as_bool();
+	specification.flags.bool_term = prop_bool_term.boolean();
 }
 
 
@@ -3967,7 +3967,7 @@ Schema::update_partials(const MsgPack& prop_partials)
 {
 	L_CALL(this, "Schema::update_partials(%s)", repr(prop_partials.to_string()).c_str());
 
-	specification.flags.partials = prop_partials.as_bool();
+	specification.flags.partials = prop_partials.boolean();
 }
 
 
@@ -3976,7 +3976,7 @@ Schema::update_error(const MsgPack& prop_error)
 {
 	L_CALL(this, "Schema::update_error(%s)", repr(prop_error.to_string()).c_str());
 
-	specification.error = prop_error.as_f64();
+	specification.error = prop_error.f64();
 }
 
 
@@ -3985,7 +3985,7 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 {
 	L_CALL(this, "Schema::update_namespace(%s)", repr(prop_namespace.to_string()).c_str());
 
-	specification.flags.is_namespace = prop_namespace.as_bool();
+	specification.flags.is_namespace = prop_namespace.boolean();
 	specification.flags.has_namespace = true;
 }
 
@@ -3995,7 +3995,7 @@ Schema::update_partial_paths(const MsgPack& prop_partial_paths)
 {
 	L_CALL(this, "Schema::update_partial_paths(%s)", repr(prop_partial_paths.to_string()).c_str());
 
-	specification.flags.partial_paths = prop_partial_paths.as_bool();
+	specification.flags.partial_paths = prop_partial_paths.boolean();
 	specification.flags.has_partial_paths = true;
 }
 
@@ -4005,7 +4005,7 @@ Schema::update_index_uuid_field(const MsgPack& prop_index_uuid_field)
 {
 	L_CALL(this, "Schema::update_index_uuid_field(%s)", repr(prop_index_uuid_field.to_string()).c_str());
 
-	specification.index_uuid_field = static_cast<UUIDFieldIndex>(prop_index_uuid_field.as_u64());
+	specification.index_uuid_field = static_cast<UUIDFieldIndex>(prop_index_uuid_field.u64());
 }
 
 
@@ -4075,7 +4075,7 @@ Schema::write_store(MsgPack& properties, const std::string& prop_name, const Msg
 	 */
 
 	process_store(prop_name, doc_store);
-	properties[prop_name] = doc_store.as_bool();
+	properties[prop_name] = doc_store.boolean();
 }
 
 
@@ -4101,7 +4101,7 @@ Schema::write_dynamic(MsgPack& properties, const std::string& prop_name, const M
 	L_CALL(this, "Schema::write_dynamic(%s)", repr(doc_dynamic.to_string()).c_str());
 
 	try {
-		specification.flags.dynamic = doc_dynamic.as_bool();
+		specification.flags.dynamic = doc_dynamic.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.dynamic);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4116,7 +4116,7 @@ Schema::write_strict(MsgPack& properties, const std::string& prop_name, const Ms
 	L_CALL(this, "Schema::write_strict(%s)", repr(doc_strict.to_string()).c_str());
 
 	try {
-		specification.flags.strict = doc_strict.as_bool();
+		specification.flags.strict = doc_strict.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.strict);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4131,7 +4131,7 @@ Schema::write_date_detection(MsgPack& properties, const std::string& prop_name, 
 	L_CALL(this, "Schema::write_date_detection(%s)", repr(doc_date_detection.to_string()).c_str());
 
 	try {
-		specification.flags.date_detection = doc_date_detection.as_bool();
+		specification.flags.date_detection = doc_date_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.date_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4146,7 +4146,7 @@ Schema::write_time_detection(MsgPack& properties, const std::string& prop_name, 
 	L_CALL(this, "Schema::write_time_detection(%s)", repr(doc_time_detection.to_string()).c_str());
 
 	try {
-		specification.flags.time_detection = doc_time_detection.as_bool();
+		specification.flags.time_detection = doc_time_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.time_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4161,7 +4161,7 @@ Schema::write_timedelta_detection(MsgPack& properties, const std::string& prop_n
 	L_CALL(this, "Schema::write_timedelta_detection(%s)", repr(doc_timedelta_detection.to_string()).c_str());
 
 	try {
-		specification.flags.timedelta_detection = doc_timedelta_detection.as_bool();
+		specification.flags.timedelta_detection = doc_timedelta_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.timedelta_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4176,7 +4176,7 @@ Schema::write_numeric_detection(MsgPack& properties, const std::string& prop_nam
 	L_CALL(this, "Schema::write_numeric_detection(%s)", repr(doc_numeric_detection.to_string()).c_str());
 
 	try {
-		specification.flags.numeric_detection = doc_numeric_detection.as_bool();
+		specification.flags.numeric_detection = doc_numeric_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.numeric_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4191,7 +4191,7 @@ Schema::write_geo_detection(MsgPack& properties, const std::string& prop_name, c
 	L_CALL(this, "Schema::write_geo_detection(%s)", repr(doc_geo_detection.to_string()).c_str());
 
 	try {
-		specification.flags.geo_detection = doc_geo_detection.as_bool();
+		specification.flags.geo_detection = doc_geo_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.geo_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4206,7 +4206,7 @@ Schema::write_bool_detection(MsgPack& properties, const std::string& prop_name, 
 	L_CALL(this, "Schema::write_bool_detection(%s)", repr(doc_bool_detection.to_string()).c_str());
 
 	try {
-		specification.flags.bool_detection = doc_bool_detection.as_bool();
+		specification.flags.bool_detection = doc_bool_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.bool_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4221,7 +4221,7 @@ Schema::write_string_detection(MsgPack& properties, const std::string& prop_name
 	L_CALL(this, "Schema::write_string_detection(%s)", repr(doc_string_detection.to_string()).c_str());
 
 	try {
-		specification.flags.string_detection = doc_string_detection.as_bool();
+		specification.flags.string_detection = doc_string_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.string_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4236,7 +4236,7 @@ Schema::write_text_detection(MsgPack& properties, const std::string& prop_name, 
 	L_CALL(this, "Schema::write_text_detection(%s)", repr(doc_text_detection.to_string()).c_str());
 
 	try {
-		specification.flags.text_detection = doc_text_detection.as_bool();
+		specification.flags.text_detection = doc_text_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.text_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4251,7 +4251,7 @@ Schema::write_term_detection(MsgPack& properties, const std::string& prop_name, 
 	L_CALL(this, "Schema::write_term_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
 
 	try {
-		specification.flags.term_detection = doc_tm_detection.as_bool();
+		specification.flags.term_detection = doc_tm_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.term_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4266,7 +4266,7 @@ Schema::write_uuid_detection(MsgPack& properties, const std::string& prop_name, 
 	L_CALL(this, "Schema::write_uuid_detection(%s)", repr(doc_uuid_detection.to_string()).c_str());
 
 	try {
-		specification.flags.uuid_detection = doc_uuid_detection.as_bool();
+		specification.flags.uuid_detection = doc_uuid_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.uuid_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4286,7 +4286,7 @@ Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const
 		}
 
 		// Only save in Schema if RESERVED_NAMESPACE is true.
-		specification.flags.is_namespace = doc_namespace.as_bool();
+		specification.flags.is_namespace = doc_namespace.boolean();
 		if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
 			specification.flags.partial_paths = specification.flags.partial_paths || !default_spc.flags.optimal;
 		}
@@ -4364,7 +4364,7 @@ Schema::process_language(const std::string& prop_name, const MsgPack& doc_langua
 	L_CALL(this, "Schema::process_language(%s)", repr(doc_language.to_string()).c_str());
 
 	try {
-		const auto _str_language = lower_string(doc_language.as_string());
+		const auto _str_language = lower_string(doc_language.str());
 		static const auto slit_e = map_stem_language.end();
 		const auto slit = map_stem_language.find(_str_language);
 		if (slit != slit_e && slit->second.first) {
@@ -4387,7 +4387,7 @@ Schema::process_stop_strategy(const std::string& prop_name, const MsgPack& doc_s
 	L_CALL(this, "Schema::process_stop_strategy(%s)", repr(doc_stop_strategy.to_string()).c_str());
 
 	try {
-		const auto _stop_strategy = lower_string(doc_stop_strategy.as_string());
+		const auto _stop_strategy = lower_string(doc_stop_strategy.str());
 		static const auto ssit_e = map_stop_strategy.end();
 		const auto ssit = map_stop_strategy.find(_stop_strategy);
 		if (ssit == ssit_e) {
@@ -4408,7 +4408,7 @@ Schema::process_stem_strategy(const std::string& prop_name, const MsgPack& doc_s
 	L_CALL(this, "Schema::process_stem_strategy(%s)", repr(doc_stem_strategy.to_string()).c_str());
 
 	try {
-		const auto _stem_strategy = lower_string(doc_stem_strategy.as_string());
+		const auto _stem_strategy = lower_string(doc_stem_strategy.str());
 		static const auto ssit_e = map_stem_strategy.end();
 		const auto ssit = map_stem_strategy.find(_stem_strategy);
 		if (ssit == ssit_e) {
@@ -4429,7 +4429,7 @@ Schema::process_stem_language(const std::string& prop_name, const MsgPack& doc_s
 	L_CALL(this, "Schema::process_stem_language(%s)", repr(doc_stem_language.to_string()).c_str());
 
 	try {
-		const auto _stem_language = lower_string(doc_stem_language.as_string());
+		const auto _stem_language = lower_string(doc_stem_language.str());
 		static const auto slit_e = map_stem_language.end();
 		const auto slit = map_stem_language.find(_stem_language);
 		if (slit == slit_e) {
@@ -4451,7 +4451,7 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 	L_CALL(this, "Schema::process_type(%s)", repr(doc_type.to_string()).c_str());
 
 	try {
-		specification.set_types(doc_type.as_string());
+		specification.set_types(doc_type.str());
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
 	}
@@ -4479,7 +4479,7 @@ Schema::process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_
 	L_CALL(this, "Schema::process_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
 
 	try {
-		specification.flags.bool_term = doc_bool_term.as_bool();
+		specification.flags.bool_term = doc_bool_term.boolean();
 		specification.flags.has_bool_term = true;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a boolean", prop_name.c_str());
@@ -4494,7 +4494,7 @@ Schema::process_partials(const std::string& prop_name, const MsgPack& doc_partia
 	L_CALL(this, "Schema::process_partials(%s)", repr(doc_partials.to_string()).c_str());
 
 	try {
-		specification.flags.partials = doc_partials.as_bool();
+		specification.flags.partials = doc_partials.boolean();
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -4508,7 +4508,7 @@ Schema::process_error(const std::string& prop_name, const MsgPack& doc_error)
 	L_CALL(this, "Schema::process_error(%s)", repr(doc_error.to_string()).c_str());
 
 	try {
-		specification.error = doc_error.as_f64();
+		specification.error = doc_error.f64();
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a double", prop_name.c_str());
 	}
@@ -4528,10 +4528,10 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 				THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
 			}
 			for (const auto& _position : doc_position) {
-				specification.position.push_back(static_cast<unsigned>(_position.as_u64()));
+				specification.position.push_back(static_cast<unsigned>(_position.u64()));
 			}
 		} else {
-			specification.position.push_back(static_cast<unsigned>(doc_position.as_u64()));
+			specification.position.push_back(static_cast<unsigned>(doc_position.u64()));
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
@@ -4552,10 +4552,10 @@ Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
 				THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
 			}
 			for (const auto& _weight : doc_weight) {
-				specification.weight.push_back(static_cast<unsigned>(_weight.as_u64()));
+				specification.weight.push_back(static_cast<unsigned>(_weight.u64()));
 			}
 		} else {
-			specification.weight.push_back(static_cast<unsigned>(doc_weight.as_u64()));
+			specification.weight.push_back(static_cast<unsigned>(doc_weight.u64()));
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
@@ -4576,10 +4576,10 @@ Schema::process_spelling(const std::string& prop_name, const MsgPack& doc_spelli
 				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
 			}
 			for (const auto& _spelling : doc_spelling) {
-				specification.spelling.push_back(_spelling.as_bool());
+				specification.spelling.push_back(_spelling.boolean());
 			}
 		} else {
-			specification.spelling.push_back(doc_spelling.as_bool());
+			specification.spelling.push_back(doc_spelling.boolean());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
@@ -4600,10 +4600,10 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
 			}
 			for (const auto& _positions : doc_positions) {
-				specification.positions.push_back(_positions.as_bool());
+				specification.positions.push_back(_positions.boolean());
 			}
 		} else {
-			specification.positions.push_back(doc_positions.as_bool());
+			specification.positions.push_back(doc_positions.boolean());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
@@ -4618,7 +4618,7 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 	L_CALL(this, "Schema::process_index(%s)", repr(doc_index.to_string()).c_str());
 
 	try {
-		const auto str_index = lower_string(doc_index.as_string());
+		const auto str_index = lower_string(doc_index.str());
 		static const auto miit_e = map_index.end();
 		const auto miit = map_index.find(str_index);
 		if (miit == miit_e) {
@@ -4644,7 +4644,7 @@ Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
 	 */
 
 	try {
-		specification.flags.store = specification.flags.parent_store && doc_store.as_bool();
+		specification.flags.store = specification.flags.parent_store && doc_store.boolean();
 		specification.flags.parent_store = specification.flags.store;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4663,7 +4663,7 @@ Schema::process_recurse(const std::string& prop_name, const MsgPack& doc_recurse
 	 */
 
 	try {
-		specification.flags.is_recurse = doc_recurse.as_bool();
+		specification.flags.is_recurse = doc_recurse.boolean();
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
 	}
@@ -4680,7 +4680,7 @@ Schema::process_partial_paths(const std::string& prop_name, const MsgPack& doc_p
 	 */
 
 	try {
-		specification.flags.partial_paths = doc_partial_paths.as_bool();
+		specification.flags.partial_paths = doc_partial_paths.boolean();
 		specification.flags.has_partial_paths = true;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
@@ -4698,7 +4698,7 @@ Schema::process_index_uuid_field(const std::string& prop_name, const MsgPack& do
 	 */
 
 	try {
-		const auto str_index_uuid_field = lower_string(doc_index_uuid_field.as_string());
+		const auto str_index_uuid_field = lower_string(doc_index_uuid_field.str());
 		static const auto mdit_e = map_index_uuid_field.end();
 		const auto mdit = map_index_uuid_field.find(str_index_uuid_field);
 		if (mdit == mdit_e) {
@@ -4745,7 +4745,7 @@ Schema::consistency_language(const std::string& prop_name, const MsgPack& doc_la
 
 	try {
 		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TEXT) {
-			const auto _str_language = lower_string(doc_language.as_string());
+			const auto _str_language = lower_string(doc_language.str());
 			if (specification.language != _str_language) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.language.c_str(), _str_language.c_str(), specification.full_meta_name.c_str());
 			}
@@ -4766,7 +4766,7 @@ Schema::consistency_stop_strategy(const std::string& prop_name, const MsgPack& d
 
 	try {
 		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TEXT) {
-			const auto _stop_strategy = lower_string(doc_stop_strategy.as_string());
+			const auto _stop_strategy = lower_string(doc_stop_strategy.str());
 			const auto stop_strategy = ::readable_stop_strategy(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), stop_strategy.c_str(), _stop_strategy.c_str(), specification.full_meta_name.c_str());
@@ -4788,7 +4788,7 @@ Schema::consistency_stem_strategy(const std::string& prop_name, const MsgPack& d
 
 	try {
 		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TEXT) {
-			const auto _stem_strategy = lower_string(doc_stem_strategy.as_string());
+			const auto _stem_strategy = lower_string(doc_stem_strategy.str());
 			const auto stem_strategy = ::readable_stem_strategy(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), stem_strategy.c_str(), _stem_strategy.c_str(), specification.full_meta_name.c_str());
@@ -4810,7 +4810,7 @@ Schema::consistency_stem_language(const std::string& prop_name, const MsgPack& d
 
 	try {
 		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TEXT) {
-			const auto _stem_language = lower_string(doc_stem_language.as_string());
+			const auto _stem_language = lower_string(doc_stem_language.str());
 			if (specification.stem_language != _stem_language) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.stem_language.c_str(), _stem_language.c_str(), specification.full_meta_name.c_str());
 			}
@@ -4830,7 +4830,7 @@ Schema::consistency_type(const std::string& prop_name, const MsgPack& doc_type)
 	L_CALL(this, "Schema::consistency_type(%s)", repr(doc_type.to_string()).c_str());
 
 	try {
-		const auto _str_type = lower_string(doc_type.as_string());
+		const auto _str_type = lower_string(doc_type.str());
 		auto init_pos = _str_type.rfind('/');
 		if (init_pos == std::string::npos) {
 			init_pos = 0;
@@ -4859,7 +4859,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 			case FieldType::GEO: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
-						set_acc.insert(HTM_START_POS - 2 * _accuracy.as_u64());
+						set_acc.insert(HTM_START_POS - 2 * _accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
@@ -4880,7 +4880,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				try {
 					static const auto adit_e = map_acc_date.end();
 					for (const auto& _accuracy : doc_accuracy) {
-						const auto str_accuracy = lower_string(_accuracy.as_string());
+						const auto str_accuracy = lower_string(_accuracy.str());
 						const auto adit = map_acc_date.find(str_accuracy);
 						if (adit == adit_e) {
 							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
@@ -4908,7 +4908,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				try {
 					static const auto adit_e = map_acc_time.end();
 					for (const auto& _accuracy : doc_accuracy) {
-						const auto str_accuracy = lower_string(_accuracy.as_string());
+						const auto str_accuracy = lower_string(_accuracy.str());
 						const auto adit = map_acc_time.find(str_accuracy);
 						if (adit == adit_e) {
 							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
@@ -4936,7 +4936,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 			case FieldType::FLOAT: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
-						set_acc.insert(_accuracy.as_u64());
+						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers in %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str(), specification.full_meta_name.c_str());
@@ -4970,7 +4970,7 @@ Schema::consistency_bool_term(const std::string& prop_name, const MsgPack& doc_b
 
 	try {
 		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TERM) {
-			const auto _bool_term = doc_bool_term.as_bool();
+			const auto _bool_term = doc_bool_term.boolean();
 			if (specification.flags.bool_term != _bool_term) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", specification.full_meta_name.c_str());
 			}
@@ -4991,7 +4991,7 @@ Schema::consistency_partials(const std::string& prop_name, const MsgPack& doc_pa
 
 	try {
 		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::GEO) {
-			const auto _partials = doc_partials.as_bool();
+			const auto _partials = doc_partials.boolean();
 			if (specification.flags.partials != _partials) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.partials ? "true" : "false", _partials ? "true" : "false");
 			}
@@ -5012,7 +5012,7 @@ Schema::consistency_error(const std::string& prop_name, const MsgPack& doc_error
 
 	try {
 		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::GEO) {
-			const auto _error = doc_error.as_f64();
+			const auto _error = doc_error.f64();
 			if (specification.error != _error) {
 				THROW(ClientError, "It is not allowed to change %s [%.2f  ->  %.2f]", prop_name.c_str(), specification.error, _error);
 			}
@@ -5032,7 +5032,7 @@ Schema::consistency_dynamic(const std::string& prop_name, const MsgPack& doc_dyn
 	L_CALL(this, "Schema::consistency_dynamic(%s)", repr(doc_dynamic.to_string()).c_str());
 
 	try {
-		const auto _dynamic = doc_dynamic.as_bool();
+		const auto _dynamic = doc_dynamic.boolean();
 		if (specification.flags.dynamic != _dynamic) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.dynamic ? "true" : "false", _dynamic ? "true" : "false");
 		}
@@ -5049,7 +5049,7 @@ Schema::consistency_strict(const std::string& prop_name, const MsgPack& doc_stri
 	L_CALL(this, "Schema::consistency_strict(%s)", repr(doc_strict.to_string()).c_str());
 
 	try {
-		const auto _strict = doc_strict.as_bool();
+		const auto _strict = doc_strict.boolean();
 		if (specification.flags.strict != _strict) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.strict ? "true" : "false", _strict ? "true" : "false");
 		}
@@ -5066,7 +5066,7 @@ Schema::consistency_date_detection(const std::string& prop_name, const MsgPack& 
 	L_CALL(this, "Schema::consistency_date_detection(%s)", repr(doc_date_detection.to_string()).c_str());
 
 	try {
-		const auto _date_detection = doc_date_detection.as_bool();
+		const auto _date_detection = doc_date_detection.boolean();
 		if (specification.flags.date_detection != _date_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.date_detection ? "true" : "false", _date_detection ? "true" : "false");
 		}
@@ -5083,7 +5083,7 @@ Schema::consistency_time_detection(const std::string& prop_name, const MsgPack& 
 	L_CALL(this, "Schema::consistency_time_detection(%s)", repr(doc_time_detection.to_string()).c_str());
 
 	try {
-		const auto _time_detection = doc_time_detection.as_bool();
+		const auto _time_detection = doc_time_detection.boolean();
 		if (specification.flags.time_detection != _time_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.time_detection ? "true" : "false", _time_detection ? "true" : "false");
 		}
@@ -5100,7 +5100,7 @@ Schema::consistency_timedelta_detection(const std::string& prop_name, const MsgP
 	L_CALL(this, "Schema::consistency_timedelta_detection(%s)", repr(doc_timedelta_detection.to_string()).c_str());
 
 	try {
-		const auto _timedelta_detection = doc_timedelta_detection.as_bool();
+		const auto _timedelta_detection = doc_timedelta_detection.boolean();
 		if (specification.flags.timedelta_detection != _timedelta_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.timedelta_detection ? "true" : "false", _timedelta_detection ? "true" : "false");
 		}
@@ -5117,7 +5117,7 @@ Schema::consistency_numeric_detection(const std::string& prop_name, const MsgPac
 	L_CALL(this, "Schema::consistency_numeric_detection(%s)", repr(doc_numeric_detection.to_string()).c_str());
 
 	try {
-		const auto _numeric_detection = doc_numeric_detection.as_bool();
+		const auto _numeric_detection = doc_numeric_detection.boolean();
 		if (specification.flags.numeric_detection != _numeric_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.numeric_detection ? "true" : "false", _numeric_detection ? "true" : "false");
 		}
@@ -5134,7 +5134,7 @@ Schema::consistency_geo_detection(const std::string& prop_name, const MsgPack& d
 	L_CALL(this, "Schema::consistency_geo_detection(%s)", repr(doc_geo_detection.to_string()).c_str());
 
 	try {
-		const auto _geo_detection = doc_geo_detection.as_bool();
+		const auto _geo_detection = doc_geo_detection.boolean();
 		if (specification.flags.geo_detection != _geo_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.geo_detection ? "true" : "false", _geo_detection ? "true" : "false");
 		}
@@ -5151,7 +5151,7 @@ Schema::consistency_bool_detection(const std::string& prop_name, const MsgPack& 
 	L_CALL(this, "Schema::consistency_bool_detection(%s)", repr(doc_bool_detection.to_string()).c_str());
 
 	try {
-		const auto _bool_detection = doc_bool_detection.as_bool();
+		const auto _bool_detection = doc_bool_detection.boolean();
 		if (specification.flags.bool_detection != _bool_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.bool_detection ? "true" : "false", _bool_detection ? "true" : "false");
 		}
@@ -5168,7 +5168,7 @@ Schema::consistency_string_detection(const std::string& prop_name, const MsgPack
 	L_CALL(this, "Schema::consistency_string_detection(%s)", repr(doc_string_detection.to_string()).c_str());
 
 	try {
-		const auto _string_detection = doc_string_detection.as_bool();
+		const auto _string_detection = doc_string_detection.boolean();
 		if (specification.flags.string_detection != _string_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.string_detection ? "true" : "false", _string_detection ? "true" : "false");
 		}
@@ -5185,7 +5185,7 @@ Schema::consistency_text_detection(const std::string& prop_name, const MsgPack& 
 	L_CALL(this, "Schema::consistency_text_detection(%s)", repr(doc_text_detection.to_string()).c_str());
 
 	try {
-		const auto _text_detection = doc_text_detection.as_bool();
+		const auto _text_detection = doc_text_detection.boolean();
 		if (specification.flags.text_detection != _text_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.text_detection ? "true" : "false", _text_detection ? "true" : "false");
 		}
@@ -5202,7 +5202,7 @@ Schema::consistency_term_detection(const std::string& prop_name, const MsgPack& 
 	L_CALL(this, "Schema::consistency_term_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
 
 	try {
-		const auto _term_detection = doc_tm_detection.as_bool();
+		const auto _term_detection = doc_tm_detection.boolean();
 		if (specification.flags.term_detection != _term_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.term_detection ? "true" : "false", _term_detection ? "true" : "false");
 		}
@@ -5219,7 +5219,7 @@ Schema::consistency_uuid_detection(const std::string& prop_name, const MsgPack& 
 	L_CALL(this, "Schema::consistency_uuid_detection(%s)", repr(doc_uuid_detection.to_string()).c_str());
 
 	try {
-		const auto _uuid_detection = doc_uuid_detection.as_bool();
+		const auto _uuid_detection = doc_uuid_detection.boolean();
 		if (specification.flags.uuid_detection != _uuid_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.uuid_detection ? "true" : "false", _uuid_detection ? "true" : "false");
 		}
@@ -5236,7 +5236,7 @@ Schema::consistency_namespace(const std::string& prop_name, const MsgPack& doc_n
 	L_CALL(this, "Schema::consistency_namespace(%s)", repr(doc_namespace.to_string()).c_str());
 
 	try {
-		const auto _is_namespace = doc_namespace.as_bool();
+		const auto _is_namespace = doc_namespace.boolean();
 		if (specification.flags.is_namespace != _is_namespace) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.is_namespace ? "true" : "false", _is_namespace ? "true" : "false");
 		}
@@ -5274,7 +5274,7 @@ Schema::consistency_version(const std::string& prop_name, const MsgPack& doc_ver
 
 	if (specification.full_meta_name.empty()) {
 		try {
-			const auto _version = doc_version.as_f64();
+			const auto _version = doc_version.f64();
 			if (_version != DB_VERSION_SCHEMA) {
 				THROW(ClientError, "It is not allowed to change %s [%.2f  ->  %.2f]", prop_name.c_str(), DB_VERSION_SCHEMA, _version);
 			}
@@ -5408,7 +5408,7 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 	// Change this item of schema in readable form.
 	static const auto drit_e = map_dispatch_readable.end();
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
-		const auto str_key = it->as_string();
+		const auto str_key = it->str();
 		const auto drit = map_dispatch_readable.find(str_key);
 		if (drit == drit_e) {
 			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
@@ -5431,10 +5431,10 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 	L_CALL(nullptr, "Schema::readable_type(%s, %s)", repr(prop_type.to_string()).c_str(), repr(properties.to_string()).c_str());
 
 	std::array<FieldType, SPC_SIZE_TYPES> sep_types({{
-		(FieldType)prop_type.at(SPC_FOREIGN_TYPE).as_u64(),
-		(FieldType)prop_type.at(SPC_OBJECT_TYPE).as_u64(),
-		(FieldType)prop_type.at(SPC_ARRAY_TYPE).as_u64(),
-		(FieldType)prop_type.at(SPC_INDEX_TYPE).as_u64()
+		(FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64(),
+		(FieldType)prop_type.at(SPC_OBJECT_TYPE).u64(),
+		(FieldType)prop_type.at(SPC_ARRAY_TYPE).u64(),
+		(FieldType)prop_type.at(SPC_INDEX_TYPE).u64()
 	}});
 	prop_type = required_spc_t::get_str_type(sep_types);
 
@@ -5444,12 +5444,12 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA:
 			for (auto& _accuracy : properties.at(RESERVED_ACCURACY)) {
-				_accuracy = readable_acc_date((UnitTime)_accuracy.as_u64());
+				_accuracy = readable_acc_date((UnitTime)_accuracy.u64());
 			}
 			break;
 		case FieldType::GEO:
 			for (auto& _accuracy : properties.at(RESERVED_ACCURACY)) {
-				_accuracy = (HTM_START_POS - _accuracy.as_u64()) / 2;
+				_accuracy = (HTM_START_POS - _accuracy.u64()) / 2;
 			}
 			break;
 		default:
@@ -5474,7 +5474,7 @@ Schema::readable_stop_strategy(MsgPack& prop_stop_strategy, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
 
-	prop_stop_strategy = ::readable_stop_strategy((StopStrategy)prop_stop_strategy.as_u64());
+	prop_stop_strategy = ::readable_stop_strategy((StopStrategy)prop_stop_strategy.u64());
 
 	return true;
 }
@@ -5485,7 +5485,7 @@ Schema::readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_stem_strategy(%s)", repr(prop_stem_strategy.to_string()).c_str());
 
-	prop_stem_strategy = ::readable_stem_strategy((StemStrategy)prop_stem_strategy.as_u64());
+	prop_stem_strategy = ::readable_stem_strategy((StemStrategy)prop_stem_strategy.u64());
 
 	return true;
 }
@@ -5496,8 +5496,8 @@ Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties)
 {
 	L_CALL(nullptr, "Schema::readable_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
 
-	const auto language = properties[RESERVED_LANGUAGE].as_string();
-	const auto stem_language = prop_stem_language.as_string();
+	const auto language = properties[RESERVED_LANGUAGE].str();
+	const auto stem_language = prop_stem_language.str();
 
 	return (language != stem_language);
 }
@@ -5508,7 +5508,7 @@ Schema::readable_index(MsgPack& prop_index, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_index(%s)", repr(prop_index.to_string()).c_str());
 
-	prop_index = ::readable_index((TypeIndex)prop_index.as_u64());
+	prop_index = ::readable_index((TypeIndex)prop_index.u64());
 
 	return true;
 }
@@ -5528,7 +5528,7 @@ Schema::readable_index_uuid_field(MsgPack& prop_index_uuid_field, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_index_uuid_field(%s)", repr(prop_index_uuid_field.to_string()).c_str());
 
-	prop_index_uuid_field = ::readable_index_uuid_field((UUIDFieldIndex)prop_index_uuid_field.as_u64());
+	prop_index_uuid_field = ::readable_index_uuid_field((UUIDFieldIndex)prop_index_uuid_field.u64());
 
 	return true;
 }
@@ -5584,7 +5584,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			static const auto wpit_e = map_dispatch_write_properties.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->as_string();
+				auto str_key = it->str();
 				const auto wpit = map_dispatch_write_properties.find(str_key);
 				if (wpit == wpit_e) {
 					if (map_dispatch_document.count(str_key)) {
@@ -5601,7 +5601,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			update_specification(*properties);
 			static const auto ddit_e = map_dispatch_document.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->as_string();
+				auto str_key = it->str();
 				const auto ddit = map_dispatch_document.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
@@ -5659,7 +5659,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		static const auto wpit_e = map_dispatch_write_properties.end();
 		const auto it_e = obj_schema.end();
 		for (auto it = obj_schema.begin(); it != it_e; ++it) {
-			auto str_key = it->as_string();
+			auto str_key = it->str();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
 				if (map_dispatch_document.count(str_key)) {
@@ -5698,17 +5698,17 @@ Schema::get_data_id() const
 
 	try {
 		const auto& properties = get_newest_properties().at(ID_FIELD_NAME);
-		res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).as_u64();
-		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
-		res.prefix.field = properties.at(RESERVED_PREFIX).as_string();
+		res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).u64();
+		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).u64());
+		res.prefix.field = properties.at(RESERVED_PREFIX).str();
 		// Get required specification.
 		switch (res.sep_types[SPC_INDEX_TYPE]) {
 			case FieldType::GEO:
-				res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
-				res.error = properties.at(RESERVED_ERROR).as_f64();
+				res.flags.partials = properties.at(RESERVED_PARTIALS).boolean();
+				res.error = properties.at(RESERVED_ERROR).f64();
 				break;
 			case FieldType::TERM:
-				res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
+				res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).boolean();
 				break;
 			default:
 				break;
@@ -5743,7 +5743,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 		if (!res.flags.inside_namespace) {
 			const auto& properties = *spc.properties;
 
-			res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).as_u64();
+			res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).u64();
 			if (res.sep_types[SPC_INDEX_TYPE] == FieldType::EMPTY) {
 				return std::make_pair(std::move(res), std::string());
 			}
@@ -5752,14 +5752,14 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 				if (spc.has_uuid_prefix) {
 					res.slot = get_slot(res.prefix.field, res.get_ctype());
 				} else {
-					res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
+					res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).u64());
 				}
 
 				// Get required specification.
 				switch (res.sep_types[SPC_INDEX_TYPE]) {
 					case FieldType::GEO:
-						res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
-						res.error = properties.at(RESERVED_ERROR).as_f64();
+						res.flags.partials = properties.at(RESERVED_PARTIALS).boolean();
+						res.error = properties.at(RESERVED_ERROR).f64();
 					case FieldType::FLOAT:
 					case FieldType::INTEGER:
 					case FieldType::POSITIVE:
@@ -5767,24 +5767,24 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 					case FieldType::TIME:
 					case FieldType::TIMEDELTA:
 						for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
-							res.accuracy.push_back(acc.as_u64());
+							res.accuracy.push_back(acc.u64());
 						}
 						for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
-							res.acc_prefix.push_back(res.prefix.field + acc_p.as_string());
+							res.acc_prefix.push_back(res.prefix.field + acc_p.str());
 						}
 						break;
 					case FieldType::TEXT:
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
-						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
-						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
-						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
+						res.language = properties.at(RESERVED_LANGUAGE).str();
+						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).u64();
+						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).u64();
+						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).str();
 						break;
 					case FieldType::STRING:
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
+						res.language = properties.at(RESERVED_LANGUAGE).str();
 						break;
 					case FieldType::TERM:
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
-						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
+						res.language = properties.at(RESERVED_LANGUAGE).str();
+						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).boolean();
 						break;
 					default:
 						break;
@@ -5793,21 +5793,21 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 				// Get required specification.
 				switch (res.sep_types[SPC_INDEX_TYPE]) {
 					case FieldType::GEO:
-						res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
-						res.error = properties.at(RESERVED_ERROR).as_f64();
+						res.flags.partials = properties.at(RESERVED_PARTIALS).boolean();
+						res.error = properties.at(RESERVED_ERROR).f64();
 						break;
 					case FieldType::TEXT:
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
-						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
-						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
-						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
+						res.language = properties.at(RESERVED_LANGUAGE).str();
+						res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).u64();
+						res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).u64();
+						res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).str();
 						break;
 					case FieldType::STRING:
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
+						res.language = properties.at(RESERVED_LANGUAGE).str();
 						break;
 					case FieldType::TERM:
-						res.language = properties.at(RESERVED_LANGUAGE).as_string();
-						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
+						res.language = properties.at(RESERVED_LANGUAGE).str();
+						res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).boolean();
 						break;
 					default:
 						break;
@@ -5849,32 +5849,32 @@ Schema::get_slot_field(const std::string& field_name) const
 		} else {
 			const auto& properties = *spc.properties;
 
-			res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).as_u64();
+			res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).u64();
 
 			if (spc.has_uuid_prefix) {
 				res.slot = get_slot(spc.prefix, res.get_ctype());
 			} else {
-				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).as_u64());
+				res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).u64());
 			}
 
 			// Get required specification.
 			switch (res.sep_types[SPC_INDEX_TYPE]) {
 				case FieldType::GEO:
-					res.flags.partials = properties.at(RESERVED_PARTIALS).as_bool();
-					res.error = properties.at(RESERVED_ERROR).as_f64();
+					res.flags.partials = properties.at(RESERVED_PARTIALS).boolean();
+					res.error = properties.at(RESERVED_ERROR).f64();
 					break;
 				case FieldType::TEXT:
-					res.language = properties.at(RESERVED_LANGUAGE).as_string();
-					res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).as_u64();
-					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).as_u64();
-					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).as_string();
+					res.language = properties.at(RESERVED_LANGUAGE).str();
+					res.stop_strategy = (StopStrategy)properties.at(RESERVED_STOP_STRATEGY).u64();
+					res.stem_strategy = (StemStrategy)properties.at(RESERVED_STEM_STRATEGY).u64();
+					res.stem_language = properties.at(RESERVED_STEM_LANGUAGE).str();
 					break;
 				case FieldType::STRING:
-					res.language = properties.at(RESERVED_LANGUAGE).as_string();
+					res.language = properties.at(RESERVED_LANGUAGE).str();
 					break;
 				case FieldType::TERM:
-					res.language = properties.at(RESERVED_LANGUAGE).as_string();
-					res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
+					res.language = properties.at(RESERVED_LANGUAGE).str();
+					res.flags.bool_term = properties.at(RESERVED_BOOL_TERM).boolean();
 					break;
 				default:
 					break;
@@ -5929,7 +5929,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 
 		try {
 			spc.properties = &spc.properties->at(field_name);
-			spc.prefix.append(spc.properties->at(RESERVED_PREFIX).as_string());
+			spc.prefix.append(spc.properties->at(RESERVED_PREFIX).str());
 		} catch (const std::out_of_range&) {
 			try {
 				const auto prefix_uuid = Serialise::uuid(field_name);

@@ -39,9 +39,9 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 				THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. %s must be array of %zu integers", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, SPC_SIZE_TYPES);
 			}
 			const auto& value = schema_obj.at(RESERVED_VALUE);
-			if (type.at(SPC_FOREIGN_TYPE).as_u64() == toUType(FieldType::FOREIGN)) {
+			if (type.at(SPC_FOREIGN_TYPE).u64() == toUType(FieldType::FOREIGN)) {
 				try {
-					const auto aux_schema_str = value.as_string();
+					const auto aux_schema_str = value.str();
 					split_path_id(aux_schema_str, schema_path, schema_id);
 					if (schema_path.empty() || schema_id.empty()) {
 						THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. %s in %s must contain index and docid [%s]", DB_META_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA, aux_schema_str.c_str());
@@ -70,7 +70,7 @@ SchemasLRU::validate_string_meta_schema(const MsgPack& value, const std::array<F
 {
 	L_CALL(this, "SchemasLRU::validate_string_meta_schema(%s, %s, ...)", repr(value.to_string()).c_str(), required_spc_t::get_str_type(sep_types).c_str());
 
-	const auto aux_schema_str = value.as_string();
+	const auto aux_schema_str = value.str();
 	split_path_id(aux_schema_str, schema_path, schema_id);
 	if (schema_path.empty() || schema_id.empty()) {
 		THROW(ClientError, "%s in %s must contain index and docid [%s]", RESERVED_VALUE, DB_META_SCHEMA, aux_schema_str.c_str());
@@ -125,7 +125,7 @@ SchemasLRU::get_strict(const MsgPack& obj)
 	}
 
 	try {
-		return it.value().as_bool();
+		return it.value().boolean();
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "%s must be bool", RESERVED_STRICT);
 	}
@@ -203,7 +203,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 								}
 								const auto& type = it_t.value();
 								if (type.is_string()) {
-									auto sep_types = required_spc_t::get_types(type.as_string());
+									auto sep_types = required_spc_t::get_types(type.str());
 									if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
 										if (strict) {
 											THROW(MissingTypeError, "Type of field %s is not completed", repr(DB_META_SCHEMA).c_str());

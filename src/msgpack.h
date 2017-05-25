@@ -246,11 +246,11 @@ public:
 
 	bool empty() const noexcept;
 
-	uint64_t as_u64() const;
-	int64_t as_i64() const;
-	double as_f64() const;
-	std::string as_string() const;
-	bool as_bool() const;
+	uint64_t u64() const;
+	int64_t i64() const;
+	double f64() const;
+	std::string str() const;
+	bool boolean() const;
 	rapidjson::Document as_document() const;
 
 	uint64_t like_u64() const;
@@ -1704,7 +1704,7 @@ inline bool MsgPack::empty() const noexcept {
 }
 
 
-inline uint64_t MsgPack::as_u64() const {
+inline uint64_t MsgPack::u64() const {
 	switch (_const_body->getType()) {
 		case Type::NEGATIVE_INTEGER: {
 			auto val = _const_body->_obj->via.i64;
@@ -1721,7 +1721,7 @@ inline uint64_t MsgPack::as_u64() const {
 }
 
 
-inline int64_t MsgPack::as_i64() const {
+inline int64_t MsgPack::i64() const {
 	switch (_const_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			return _const_body->_obj->via.i64;
@@ -1738,7 +1738,7 @@ inline int64_t MsgPack::as_i64() const {
 }
 
 
-inline double MsgPack::as_f64() const {
+inline double MsgPack::f64() const {
 	switch (_const_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			return _const_body->_obj->via.i64;
@@ -1752,7 +1752,7 @@ inline double MsgPack::as_f64() const {
 }
 
 
-inline std::string MsgPack::as_string() const {
+inline std::string MsgPack::str() const {
 	if (_const_body->getType() == Type::STR) {
 		return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
 	}
@@ -1761,7 +1761,7 @@ inline std::string MsgPack::as_string() const {
 }
 
 
-inline bool MsgPack::as_bool() const {
+inline bool MsgPack::boolean() const {
 	if (_const_body->getType() == Type::BOOLEAN) {
 		return _const_body->_obj->via.boolean;
 	}

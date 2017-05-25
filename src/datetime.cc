@@ -52,10 +52,10 @@ static constexpr int cumdays[2][12] = {
 static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
 	switch (year.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			tm.year = year.as_u64();
+			tm.year = year.u64();
 			return;
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			tm.year = year.as_i64();
+			tm.year = year.i64();
 			return;
 		default:
 			THROW(DatetimeError, "_year must be a positive integer value");
@@ -66,10 +66,10 @@ static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
 static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
 	switch (month.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			tm.mon = month.as_u64();
+			tm.mon = month.u64();
 			return;
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			tm.mon = month.as_i64();
+			tm.mon = month.i64();
 			return;
 		default:
 			THROW(DatetimeError, "_month must be a positive integer value");
@@ -80,10 +80,10 @@ static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
 static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 	switch (day.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			tm.day = day.as_u64();
+			tm.day = day.u64();
 			return;
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			tm.day = day.as_i64();
+			tm.day = day.i64();
 			return;
 		default:
 			THROW(DatetimeError, "_day must be a positive integer value");
@@ -290,29 +290,29 @@ Datetime::DateParser(const MsgPack& value)
 	double _timestamp;
 	switch (value.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			_timestamp = value.as_u64();
+			_timestamp = value.u64();
 			return Datetime::to_tm_t(_timestamp);
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			_timestamp = value.as_i64();
+			_timestamp = value.i64();
 			return Datetime::to_tm_t(_timestamp);
 		case MsgPack::Type::FLOAT:
-			_timestamp = value.as_f64();
+			_timestamp = value.f64();
 			return Datetime::to_tm_t(_timestamp);
 		case MsgPack::Type::STR:
-			return Datetime::DateParser(value.as_string());
+			return Datetime::DateParser(value.str());
 		case MsgPack::Type::MAP: {
 			Datetime::tm_t tm;
 			std::string str_time;
 			const auto it_e = value.end();
 			for (auto it = value.begin(); it != it_e; ++it) {
-				auto str_key = it->as_string();
+				auto str_key = it->str();
 				try {
 					auto func = map_dispatch_date.at(str_key);
 					(*func)(tm, it.value());
 				} catch (const std::out_of_range&) {
 					if (str_key == "_time") {
 						try {
-							str_time = it.value().as_string();
+							str_time = it.value().str();
 						} catch (const msgpack::type_error&) {
 							THROW(DatetimeError, "_time must be string");
 						}
@@ -1274,28 +1274,28 @@ Datetime::time_to_double(const MsgPack& _time)
 {
 	switch (_time.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER: {
-			double t_val = _time.as_u64();
+			double t_val = _time.u64();
 			if (isvalidTime(t_val)) {
 				return t_val;
 			}
 			THROW(TimeError, "Time: %f is out of range", t_val);
 		}
 		case MsgPack::Type::NEGATIVE_INTEGER: {
-			double t_val = _time.as_i64();
+			double t_val = _time.i64();
 			if (isvalidTime(t_val)) {
 				return t_val;
 			}
 			THROW(TimeError, "Time: %f is out of range", t_val);
 		}
 		case MsgPack::Type::FLOAT: {
-			double t_val = _time.as_f64();
+			double t_val = _time.f64();
 			if (isvalidTime(t_val)) {
 				return t_val;
 			}
 			THROW(TimeError, "Time: %f is out of range", t_val);
 		}
 		case MsgPack::Type::STR:
-			return time_to_double(TimeParser(_time.as_string()));
+			return time_to_double(TimeParser(_time.str()));
 		default:
 			THROW(TimeError, "Time must be numeric or string");
 	}
@@ -1512,28 +1512,28 @@ Datetime::timedelta_to_double(const MsgPack& timedelta)
 {
 	switch (timedelta.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER: {
-			double t_val = timedelta.as_u64();
+			double t_val = timedelta.u64();
 			if (isvalidTimedelta(t_val)) {
 				return t_val;
 			}
 			THROW(TimedeltaError, "Timedelta: %f is out of range", t_val);
 		}
 		case MsgPack::Type::NEGATIVE_INTEGER: {
-			double t_val = timedelta.as_i64();
+			double t_val = timedelta.i64();
 			if (isvalidTimedelta(t_val)) {
 				return t_val;
 			}
 			THROW(TimedeltaError, "Timedelta: %f is out of range", t_val);
 		}
 		case MsgPack::Type::FLOAT: {
-			double t_val = timedelta.as_f64();
+			double t_val = timedelta.f64();
 			if (isvalidTimedelta(t_val)) {
 				return t_val;
 			}
 			THROW(TimedeltaError, "Timedelta: %f is out of range", t_val);
 		}
 		case MsgPack::Type::STR:
-			return timedelta_to_double(TimedeltaParser(timedelta.as_string()));
+			return timedelta_to_double(TimedeltaParser(timedelta.str()));
 		default:
 			THROW(TimedeltaError, "Timedelta must be numeric or string");
 	}

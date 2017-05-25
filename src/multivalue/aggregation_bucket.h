@@ -180,13 +180,13 @@ public:
 		try {
 			const auto& interval = histogram_conf.at(AGGREGATION_INTERVAL);
 			try {
-				interval_u64 = interval.as_u64();
+				interval_u64 = interval.u64();
 			} catch (const msgpack::type_error&) { }
 			try {
-				interval_i64 = interval.as_i64();
+				interval_i64 = interval.i64();
 			} catch (const msgpack::type_error&) { }
 			try {
-				interval_f64 = interval.as_f64();
+				interval_f64 = interval.f64();
 			} catch (const msgpack::type_error&) { }
 		} catch (const std::out_of_range&) {
 			THROW(AggregationError, "'%s' must be specified must be specified in '%s'", AGGREGATION_INTERVAL, AGGREGATION_HISTOGRAM);
@@ -267,23 +267,23 @@ public:
 				bool err_f64 = false;
 
 				try {
-					key = range.at(AGGREGATION_KEY).as_string();
+					key = range.at(AGGREGATION_KEY).str();
 				} catch (const std::out_of_range&) { }
 
 				try {
 					const auto& from = range.at(AGGREGATION_FROM);
 					try {
-						from_u64 = from.as_u64();
+						from_u64 = from.u64();
 					} catch (const msgpack::type_error&) {
 						err_u64 = true;
 					}
 					try {
-						from_i64 = from.as_i64();
+						from_i64 = from.i64();
 					} catch (const msgpack::type_error&) {
 						err_i64 = true;
 					}
 					try {
-						from_f64 = from.as_f64();
+						from_f64 = from.f64();
 					} catch (const msgpack::type_error&) {
 						err_f64 = true;
 					}
@@ -296,17 +296,17 @@ public:
 				try {
 					const auto& to = range.at(AGGREGATION_TO);
 					try {
-						to_u64 = to.as_u64();
+						to_u64 = to.u64();
 					} catch (const msgpack::type_error&) {
 						err_u64 = true;
 					}
 					try {
-						to_i64 = to.as_i64();
+						to_i64 = to.i64();
 					} catch (const msgpack::type_error&) {
 						err_i64 = true;
 					}
 					try {
-						to_f64 = to.as_f64();
+						to_f64 = to.f64();
 					} catch (const msgpack::type_error&) {
 						err_f64 = true;
 					}

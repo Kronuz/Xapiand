@@ -1552,7 +1552,7 @@ HttpClient::search_view(enum http_method method, Command)
 
 				if (ct_type_str.empty()) {
 					const auto ct_type_mp = Document::get_field(CT_FIELD_NAME, document.get_obj());
-					ct_type_str = ct_type_mp ? ct_type_mp.as_string() : MSGPACK_CONTENT_TYPE;
+					ct_type_str = ct_type_mp ? ct_type_mp.str() : MSGPACK_CONTENT_TYPE;
 				}
 
 				ct_type = resolve_ct_type(ct_type_str);

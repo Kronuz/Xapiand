@@ -29,7 +29,7 @@ MsgPack
 Cast::cast(const MsgPack& obj)
 {
 	if (obj.size() == 1) {
-		const auto str_key = obj.begin()->as_string();
+		const auto str_key = obj.begin()->str();
 		switch ((Hash)xxh64::hash(str_key)) {
 			case Hash::INTEGER:
 				return integer(obj.at(str_key));
@@ -132,21 +132,21 @@ Cast::integer(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return obj.as_u64();
+			return obj.u64();
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return obj.as_i64();
+			return obj.i64();
 		case MsgPack::Type::FLOAT:
-			return obj.as_f64();
+			return obj.f64();
 		case MsgPack::Type::STR:
 			try {
-				return strict_stoll(obj.as_string());
+				return strict_stoll(obj.str());
 			} catch (const InvalidArgument& er) {
 				THROW(CastError, "Value %s cannot be cast to integer [%s]", obj.getStrType().c_str(), er.what());
 			} catch (const OutOfRange& er) {
 				THROW(CastError, "Value %s cannot be cast to integer [%s]", obj.getStrType().c_str(), er.what());
 			}
 		case MsgPack::Type::BOOLEAN:
-			return obj.as_bool();
+			return obj.boolean();
 		default:
 			THROW(CastError, "Type %s cannot be cast to integer", obj.getStrType().c_str());
 	}
@@ -158,21 +158,21 @@ Cast::positive(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return obj.as_u64();
+			return obj.u64();
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return obj.as_i64();
+			return obj.i64();
 		case MsgPack::Type::FLOAT:
-			return obj.as_f64();
+			return obj.f64();
 		case MsgPack::Type::STR:
 			try {
-				return strict_stoull(obj.as_string());
+				return strict_stoull(obj.str());
 			} catch (const InvalidArgument& er) {
 				THROW(CastError, "Value %s cannot be cast to positive [%s]", obj.getStrType().c_str(), er.what());
 			} catch (const OutOfRange& er) {
 				THROW(CastError, "Value %s cannot be cast to positive [%s]", obj.getStrType().c_str(), er.what());
 			}
 		case MsgPack::Type::BOOLEAN:
-			return obj.as_bool();
+			return obj.boolean();
 		default:
 			THROW(CastError, "Type %s cannot be cast to positive", obj.getStrType().c_str());
 	}
@@ -184,21 +184,21 @@ Cast::_float(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return obj.as_u64();
+			return obj.u64();
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return obj.as_i64();
+			return obj.i64();
 		case MsgPack::Type::FLOAT:
-			return obj.as_f64();
+			return obj.f64();
 		case MsgPack::Type::STR:
 			try {
-				return strict_stod(obj.as_string());
+				return strict_stod(obj.str());
 			} catch (const InvalidArgument& er) {
 				THROW(CastError, "Value %s cannot be cast to float [%s]", obj.getStrType().c_str(), er.what());
 			} catch (const OutOfRange& er) {
 				THROW(CastError, "Value %s cannot be cast to float [%s]", obj.getStrType().c_str(), er.what());
 			}
 		case MsgPack::Type::BOOLEAN:
-			return obj.as_bool();
+			return obj.boolean();
 		default:
 			THROW(CastError, "Type %s cannot be cast to float", obj.getStrType().c_str());
 	}
@@ -210,15 +210,15 @@ Cast::string(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return std::to_string(obj.as_u64());
+			return std::to_string(obj.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return std::to_string(obj.as_i64());
+			return std::to_string(obj.i64());
 		case MsgPack::Type::FLOAT:
-			return std::to_string(obj.as_f64());
+			return std::to_string(obj.f64());
 		case MsgPack::Type::STR:
-			return obj.as_string();
+			return obj.str();
 		case MsgPack::Type::BOOLEAN:
-			return obj.as_bool() ? "true" : "false";
+			return obj.boolean() ? "true" : "false";
 		default:
 			return obj.to_string();
 	}
@@ -230,13 +230,13 @@ Cast::boolean(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return obj.as_u64() != 0;
+			return obj.u64() != 0;
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return obj.as_i64() != 0;
+			return obj.i64() != 0;
 		case MsgPack::Type::FLOAT:
-			return obj.as_f64() != 0;
+			return obj.f64() != 0;
 		case MsgPack::Type::STR: {
-			const char *value = obj.as_string().c_str();
+			const char *value = obj.str().c_str();
 			switch (value[0]) {
 				case '\0':
 					return false;
@@ -251,7 +251,7 @@ Cast::boolean(const MsgPack& obj)
 			}
 		}
 		case MsgPack::Type::BOOLEAN:
-			return obj.as_bool();
+			return obj.boolean();
 		default:
 			THROW(CastError, "Type %s cannot be cast to boolean", obj.getStrType().c_str());
 	}
@@ -262,7 +262,7 @@ std::string
 Cast::uuid(const MsgPack& obj)
 {
 	if (obj.is_string()) {
-		return obj.as_string();
+		return obj.str();
 	}
 	THROW(CastError, "Type %s cannot be cast to uuid", obj.getStrType().c_str());
 }
@@ -318,7 +318,7 @@ std::string
 Cast::ewkt(const MsgPack& obj)
 {
 	if (obj.is_string()) {
-		return obj.as_string();
+		return obj.str();
 	}
 	THROW(CastError, "Type %s cannot be cast to ewkt", obj.getStrType().c_str());
 }
