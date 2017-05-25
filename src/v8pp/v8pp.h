@@ -125,9 +125,10 @@ class Processor {
 	};
 
 
-	class ScriptLRU : public lru::LRU<size_t, std::shared_ptr<v8pp::Processor>> {
+	class ScriptLRU : public lru::LRU<size_t, std::pair<size_t, std::shared_ptr<Processor>>> {
 	public:
-		explicit ScriptLRU(ssize_t max_size) : LRU(max_size) { }
+		ScriptLRU(ssize_t max_size)
+			: LRU(max_size) { }
 	};
 
 
@@ -160,11 +161,14 @@ class Processor {
 
 		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
 			auto script_hash = hash(script_name.empty() ? script_body : script_name);
+			auto body_hash = script_name.empty() ? script_hash : hash(script_body);
 
 			std::unique_lock<std::mutex> lk(mtx);
 			auto it = script_lru.find(script_hash);
 			if (it != script_lru.end()) {
-				return it->second;
+				if (script_body.empty() || it->second.first == body_hash) {
+					return it->second.second;
+				}
 			}
 			lk.unlock();
 
@@ -178,7 +182,7 @@ class Processor {
 			auto processor = std::make_shared<Processor>(script_name, script_body);
 
 			lk.lock();
-			return script_lru.emplace(script_hash, std::move(processor)).first->second;
+			return script_lru.emplace(script_hash, std::make_pair(body_hash, std::move(processor))).first->second.second;
 		}
 	};
 
