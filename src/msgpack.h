@@ -380,7 +380,7 @@ public:
 	}
 
 	bool operator==(const Iterator& other) const {
-		return *_mobj == *other._mobj && _off == other._off;
+		return this == &other || (*_mobj == *other._mobj && _off == other._off);
 	}
 
 	bool operator!=(const Iterator& other) const {
@@ -1993,7 +1993,7 @@ inline std::size_t MsgPack::hash() const {
 
 
 inline bool MsgPack::operator==(const MsgPack& other) const {
-	return *_const_body->_obj == *other._const_body->_obj;
+	return this == &other || *_const_body->_obj == *other._const_body->_obj;
 }
 
 
