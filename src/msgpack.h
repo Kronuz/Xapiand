@@ -1700,29 +1700,15 @@ inline bool MsgPack::empty() const noexcept {
 
 inline uint64_t MsgPack::as_u64() const {
 	switch (_const_body->getType()) {
-		case Type::NIL:
-			return 0;
-		case Type::BOOLEAN:
-			return _const_body->_obj->via.boolean ? 1 : 0;
+		case Type::NEGATIVE_INTEGER: {
+			auto val = _const_body->_obj->via.i64;
+			if (val < 0) {
+				THROW(msgpack::type_error);
+			}
+			return val;
+		}
 		case Type::POSITIVE_INTEGER:
 			return _const_body->_obj->via.u64;
-		case Type::NEGATIVE_INTEGER:
-			if (_const_body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
-			}
-			return _const_body->_obj->via.i64;
-		case Type::FLOAT:
-			return _const_body->_obj->via.f64;
-		case Type::STR:
-			try {
-				return std::stoull(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
-			} catch (const std::out_of_range&) {
-				THROW(msgpack::type_error);
-			} catch (const std::invalid_argument&) {
-				THROW(msgpack::type_error);
-			}
-		case Type::UNDEFINED:
-			return 0;
 		default:
 			THROW(msgpack::type_error);
 	}
@@ -1731,29 +1717,15 @@ inline uint64_t MsgPack::as_u64() const {
 
 inline int64_t MsgPack::as_i64() const {
 	switch (_const_body->getType()) {
-		case Type::NIL:
-			return 0;
-		case Type::BOOLEAN:
-			return _const_body->_obj->via.boolean ? 1 : 0;
-		case Type::POSITIVE_INTEGER:
-			if (_const_body->_obj->via.u64 > INT64_MAX) {
-				THROW(msgpack::type_error);
-			}
-			return _const_body->_obj->via.u64;
 		case Type::NEGATIVE_INTEGER:
 			return _const_body->_obj->via.i64;
-		case Type::FLOAT:
-			return _const_body->_obj->via.f64;
-		case Type::STR:
-			try {
-				return std::stoll(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
-			} catch (const std::out_of_range&) {
-				THROW(msgpack::type_error);
-			} catch (const std::invalid_argument&) {
+		case Type::POSITIVE_INTEGER: {
+			auto val = _const_body->_obj->via.u64;
+			if (val > INT64_MAX) {
 				THROW(msgpack::type_error);
 			}
-		case Type::UNDEFINED:
-			return 0;
+			return val;
+		}
 		default:
 			THROW(msgpack::type_error);
 	}
@@ -1762,26 +1734,12 @@ inline int64_t MsgPack::as_i64() const {
 
 inline double MsgPack::as_f64() const {
 	switch (_const_body->getType()) {
-		case Type::NIL:
-			return 0;
-		case Type::BOOLEAN:
-			return _const_body->_obj->via.boolean ? 1 : 0;
-		case Type::POSITIVE_INTEGER:
-			return _const_body->_obj->via.u64;
 		case Type::NEGATIVE_INTEGER:
 			return _const_body->_obj->via.i64;
+		case Type::POSITIVE_INTEGER:
+			return _const_body->_obj->via.u64;
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
-		case Type::STR:
-			try {
-				return std::stod(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
-			} catch (const std::out_of_range&) {
-				THROW(msgpack::type_error);
-			} catch (const std::invalid_argument&) {
-				THROW(msgpack::type_error);
-			}
-		case Type::UNDEFINED:
-			return 0;
 		default:
 			THROW(msgpack::type_error);
 	}
@@ -1789,38 +1747,20 @@ inline double MsgPack::as_f64() const {
 
 
 inline std::string MsgPack::as_string() const {
-	std::ostringstream oss;
-
-	switch (_const_body->getType()) {
-		case Type::NIL:
-			return "nil";
-		case Type::BOOLEAN:
-			return _const_body->_obj->via.boolean ? "true" : "false";
-		case Type::POSITIVE_INTEGER:
-			return std::to_string(_const_body->_obj->via.u64);
-		case Type::NEGATIVE_INTEGER:
-			return std::to_string(_const_body->_obj->via.i64);
-		case Type::FLOAT:
-			return std::to_string(_const_body->_obj->via.f64);
-		case Type::STR:
-			return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
-		case Type::ARRAY:
-			oss << *_const_body->_obj;
-			return oss.str();
-		case Type::MAP:
-			oss << *_const_body->_obj;
-			return oss.str();
-		case Type::BIN:
-			return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
-		case Type::UNDEFINED:
-			return "undefined";
+	if (_const_body->getType() == Type::STR) {
+		return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
 	}
+
+	THROW(msgpack::type_error);
 }
 
 
-
 inline bool MsgPack::as_bool() const {
-	return operator bool();
+	if (_const_body->getType() == Type::BOOLEAN) {
+		return _const_body->_obj->via.boolean;
+	}
+
+	THROW(msgpack::type_error);
 }
 
 
