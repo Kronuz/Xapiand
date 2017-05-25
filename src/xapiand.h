@@ -73,7 +73,6 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvariadic-macros"
-#pragma clang diagnostic ignored "-Wvariadic-macros"
 
 #ifdef NDEBUG
 #define ASSERT(args...)

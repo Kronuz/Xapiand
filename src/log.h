@@ -24,7 +24,6 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvariadic-macros"
-#pragma clang diagnostic ignored "-Wvariadic-macros"
 
 #include "logger_fwd.h"
 
