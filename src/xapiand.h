@@ -70,8 +70,15 @@
 
 
 #include <assert.h>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
+#pragma clang diagnostic ignored "-Wvariadic-macros"
+
 #ifdef NDEBUG
 #define ASSERT(args...)
 #else
 #define ASSERT(args...) assert(args)
 #endif
+
+#pragma GCC diagnostic pop
