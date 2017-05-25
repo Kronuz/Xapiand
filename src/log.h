@@ -22,6 +22,10 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
+#pragma clang diagnostic ignored "-Wvariadic-macros"
+
 #include "logger_fwd.h"
 
 #define _ L_NOTHING
@@ -79,3 +83,5 @@
 #define L_DATABASE_WRAP _
 #define L_INDEX _
 #define L_SEARCH _
+
+#pragma GCC diagnostic pop
