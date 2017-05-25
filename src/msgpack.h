@@ -1786,9 +1786,6 @@ inline uint64_t MsgPack::like_u64() const {
 		case Type::POSITIVE_INTEGER:
 			return _const_body->_obj->via.u64;
 		case Type::NEGATIVE_INTEGER:
-			if (_const_body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
-			}
 			return _const_body->_obj->via.i64;
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
@@ -1796,14 +1793,16 @@ inline uint64_t MsgPack::like_u64() const {
 			try {
 				return std::stoull(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
 			} catch (const std::out_of_range&) {
-				THROW(msgpack::type_error);
-			} catch (const std::invalid_argument&) {
-				THROW(msgpack::type_error);
-			}
-		case Type::UNDEFINED:
+			} catch (const std::invalid_argument&) { }
+			return 0;
+		case Type::BIN:
+			try {
+				return std::stoull(std::string(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
+			} catch (const std::out_of_range&) {
+			} catch (const std::invalid_argument&) { }
 			return 0;
 		default:
-			THROW(msgpack::type_error);
+			return 0;
 	}
 }
 
@@ -1815,9 +1814,6 @@ inline int64_t MsgPack::like_i64() const {
 		case Type::BOOLEAN:
 			return _const_body->_obj->via.boolean ? 1 : 0;
 		case Type::POSITIVE_INTEGER:
-			if (_const_body->_obj->via.u64 > INT64_MAX) {
-				THROW(msgpack::type_error);
-			}
 			return _const_body->_obj->via.u64;
 		case Type::NEGATIVE_INTEGER:
 			return _const_body->_obj->via.i64;
@@ -1827,14 +1823,16 @@ inline int64_t MsgPack::like_i64() const {
 			try {
 				return std::stoll(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
 			} catch (const std::out_of_range&) {
-				THROW(msgpack::type_error);
-			} catch (const std::invalid_argument&) {
-				THROW(msgpack::type_error);
-			}
-		case Type::UNDEFINED:
+			} catch (const std::invalid_argument&) { }
+			return 0;
+		case Type::BIN:
+			try {
+				return std::stoll(std::string(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
+			} catch (const std::out_of_range&) {
+			} catch (const std::invalid_argument&) { }
 			return 0;
 		default:
-			THROW(msgpack::type_error);
+			return 0;
 	}
 }
 
@@ -1855,14 +1853,16 @@ inline double MsgPack::like_f64() const {
 			try {
 				return std::stod(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
 			} catch (const std::out_of_range&) {
-				THROW(msgpack::type_error);
-			} catch (const std::invalid_argument&) {
-				THROW(msgpack::type_error);
-			}
-		case Type::UNDEFINED:
+			} catch (const std::invalid_argument&) { }
+			return 0;
+		case Type::BIN:
+			try {
+				return std::stod(std::string(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
+			} catch (const std::out_of_range&) {
+			} catch (const std::invalid_argument&) { }
 			return 0;
 		default:
-			THROW(msgpack::type_error);
+			return 0;
 	}
 }
 
