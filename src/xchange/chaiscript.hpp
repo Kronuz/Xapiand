@@ -284,7 +284,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				o.type = type::EXT;
 				o.via.ext.ptr = ptr;
 				o.via.ext.size = 1;
-				ptr[0] = (char)0; // MsgPack::Type::UNDEFINED - MSGPACK_EXT_BEGIN;
+				ptr[0] = (char)0; // MsgPack::Type::UNDEFINED & MSGPACK_EXT_BEGIN;
 			} else if (v.is_null()) {
 				o.type = type::NIL;
 			}

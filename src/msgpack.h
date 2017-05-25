@@ -93,11 +93,19 @@ public:
 		invalid_argument(Args&&... args) : BaseException(std::forward<Args>(args)...), std::invalid_argument(message) { }
 	};
 
-	struct Undefined {
-		static constexpr char type = (uint8_t)Type::UNDEFINED & MSGPACK_EXT_MASK;
+	static msgpack::object _undefined() {
+		static const char data = (char)Type::UNDEFINED & MSGPACK_EXT_MASK;
+		msgpack::object o;
+		o.type = msgpack::type::EXT;
+		o.via.ext.ptr = &data;
+		o.via.ext.size = 1;
+		return o;
+	}
 
-		Undefined() = default;
-	};
+	static const MsgPack& undefined() {
+		static const MsgPack undefined(MsgPack::_undefined());
+		return undefined;
+	}
 
 	using iterator = Iterator<MsgPack>;
 	using const_iterator = Iterator<const MsgPack>;
@@ -391,8 +399,6 @@ struct MsgPack::Body {
 	msgpack::object* _obj;
 	size_t _capacity;
 
-	const MsgPack _undefined;
-
 	Body(const std::shared_ptr<msgpack::zone>& zone,
 		 const std::shared_ptr<msgpack::object>& base,
 		 const std::shared_ptr<Body>& parent,
@@ -409,8 +415,7 @@ struct MsgPack::Body {
 			_pos(pos),
 			_key(key),
 			_obj(obj),
-			_capacity(size()),
-			_undefined(std::make_shared<Body>(_zone, _base, _parent.lock(), nullptr)) { }
+			_capacity(size()) { }
 
 	Body(const std::shared_ptr<msgpack::zone>& zone,
 		 const std::shared_ptr<msgpack::object>& base,
@@ -425,8 +430,7 @@ struct MsgPack::Body {
 			_pos(-1),
 			_key(std::shared_ptr<Body>()),
 			_obj(obj),
-			_capacity(size()),
-			_undefined(std::shared_ptr<Body>()) { }
+			_capacity(size()) { }
 
 	template <typename T>
 	Body(T&& v)
@@ -439,8 +443,7 @@ struct MsgPack::Body {
 		  _pos(-1),
 		  _key(std::shared_ptr<Body>()),
 		  _obj(_base.get()),
-		  _capacity(size()),
-		  _undefined(std::make_shared<Body>(_zone, _base, _parent.lock(), nullptr)) { }
+		  _capacity(size()) { }
 
 	MsgPack& at(size_t pos) {
 		return array.at(pos);
@@ -459,7 +462,6 @@ struct MsgPack::Body {
 	}
 
 	size_t size() const noexcept {
-		if (!_obj) return 0;
 		switch (_obj->type) {
 			case msgpack::type::MAP:
 				return _obj->via.map.size;
@@ -473,7 +475,6 @@ struct MsgPack::Body {
 	}
 
 	Type getType() const noexcept {
-		if (!_obj) return Type::UNDEFINED;
 		return _obj->type == msgpack::type::EXT ? (Type)(_obj->via.ext.type() | MSGPACK_EXT_BEGIN) : (Type)_obj->type;
 	}
 
@@ -610,7 +611,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 
 
 inline MsgPack::MsgPack()
-	: MsgPack(Undefined()) { }
+	: MsgPack(MsgPack::undefined()) { }
 
 
 inline MsgPack::MsgPack(const MsgPack& other)
@@ -630,14 +631,14 @@ inline MsgPack::MsgPack(T&& v)
 
 
 inline MsgPack::MsgPack(std::initializer_list<MsgPack> list)
-	: MsgPack(Undefined())
+	: MsgPack(MsgPack::undefined())
 {
 	_initializer(list);
 }
 
 
 inline MsgPack::MsgPack(Type type)
-	: MsgPack(Undefined())
+	: MsgPack(MsgPack::undefined())
 {
 	_deinit();
 	switch (type) {
@@ -1370,7 +1371,7 @@ inline const MsgPack& MsgPack::operator[](M&& o) const {
 inline MsgPack& MsgPack::operator[](const std::string& key) {
 	auto it = find(key);
 	if (it == end()) {
-		return put(key, Undefined());
+		return put(key, MsgPack::undefined());
 	}
 	return _body->at(key);
 }
@@ -1379,7 +1380,7 @@ inline MsgPack& MsgPack::operator[](const std::string& key) {
 inline const MsgPack& MsgPack::operator[](const std::string& key) const {
 	auto it = find(key);
 	if (it == cend()) {
-		return _const_body->_undefined;
+		return MsgPack::undefined();
 	}
 	return _const_body->at(key);
 }
@@ -1388,7 +1389,7 @@ inline const MsgPack& MsgPack::operator[](const std::string& key) const {
 inline MsgPack& MsgPack::operator[](size_t pos) {
 	auto it = find(pos);
 	if (it == end()) {
-		return put(pos, Undefined());
+		return put(pos, MsgPack::undefined());
 	}
 	return _body->at(pos);
 }
@@ -1397,7 +1398,7 @@ inline MsgPack& MsgPack::operator[](size_t pos) {
 inline const MsgPack& MsgPack::operator[](size_t pos) const {
 	auto it = find(pos);
 	if (it == cend()) {
-		return _const_body->_undefined;
+		return MsgPack::undefined();
 	}
 	return _const_body->at(pos);
 }
@@ -2025,30 +2026,6 @@ namespace msgpack {
 					msgpack::object obj(nil, o.zone);
 					o.type = obj.type;
 					o.via = obj.via;
-				}
-			};
-
-			template <>
-			struct object<MsgPack::Undefined> {
-				void operator()(msgpack::object& o, const MsgPack::Undefined& v) const {
-					msgpack::object o_ext;
-					char* ptr = (char *)std::malloc(1);
-					o_ext.type = msgpack::type::EXT;
-					o_ext.via.ext.ptr = ptr;
-					o_ext.via.ext.size = 1;
-					ptr[0] = v.type;
-					o = o_ext;
-				}
-			};
-
-			template <>
-			struct object_with_zone<MsgPack::Undefined> {
-				void operator()(msgpack::object::with_zone& o, const MsgPack::Undefined& v) const {
-					o.type = msgpack::type::EXT;
-					char* ptr = static_cast<char*>(o.zone.allocate_align(1));
-					o.via.ext.ptr = ptr;
-					o.via.ext.size = 1;
-					ptr[0] = v.type;
 				}
 			};
 		} // namespace adaptor
