@@ -1712,7 +1712,7 @@ HTM::writeGrahamScanMap(const std::string& file, const std::string& output_file,
 	fs << "sys.path.append(os.path.abspath('" << path_google_map << "'))\n\n";
 	fs << "from google_map_plotter import GoogleMapPlotter\n";
 
-	const auto latlon = convex_points.back().toLatLon();
+	auto latlon = convex_points.back().toLatLon();
 	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ", 6)\n";
 
 	// Original Points.
