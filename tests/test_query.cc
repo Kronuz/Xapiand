@@ -190,7 +190,7 @@ static int make_search(const std::vector<test_query_t> _tests) {
 					auto obj_data = document.get_obj();
 					try {
 						auto data = obj_data.at(test.field);
-						auto str_data = data.as_string();
+						auto str_data = data.str();
 						if (it->compare(str_data) != 0) {
 							++cont;
 							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", test.field.c_str(), str_data.c_str(), test.field.c_str(), it->c_str());

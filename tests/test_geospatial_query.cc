@@ -128,7 +128,7 @@ static int make_search(const std::vector<test_geo_t> _tests) {
 				auto it = test.expect_datas.begin();
 				for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {
 					auto document = db_geo.db_handler.get_document(*m);
-					auto region = document.get_obj().at("region").as_string();
+					auto region = document.get_obj().at("region").str();
 					if (region != *it) {
 						++cont;
 						L_ERR(nullptr, "Different regions. Result: %s Expected: %s", region.c_str(), it->c_str());
