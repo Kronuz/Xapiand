@@ -58,13 +58,13 @@ struct wrap<MsgPack> {
 				return v8::String::NewFromUtf8(isolate, arg_str.data(), v8::NewStringType::kNormal, arg_str.size()).ToLocalChecked();
 			}
 			case MsgPack::Type::POSITIVE_INTEGER:
-				return v8::Integer::New(isolate, arg.as_u64());
+				return v8::Integer::New(isolate, arg.u64());
 			case MsgPack::Type::NEGATIVE_INTEGER:
-				return v8::Integer::New(isolate, arg.as_i64());
+				return v8::Integer::New(isolate, arg.i64());
 			case MsgPack::Type::FLOAT:
-				return v8::Number::New(isolate, arg.as_f64());
+				return v8::Number::New(isolate, arg.f64());
 			case MsgPack::Type::BOOLEAN:
-				return v8::Boolean::New(isolate, arg.as_bool());
+				return v8::Boolean::New(isolate, arg.boolean());
 			case MsgPack::Type::UNDEFINED:
 				return v8::Undefined(isolate);
 			case MsgPack::Type::NIL:
