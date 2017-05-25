@@ -166,6 +166,9 @@ private:
 	void _fill(bool recursive, bool lock);
 	void _fill(bool recursive, bool lock) const;
 
+	template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
+	std::pair<iterator, bool> insert(T&& v);
+
 public:
 	void lock() const;
 
@@ -191,9 +194,6 @@ public:
 
 	template <typename T>
 	decltype(auto) external(std::function<T(const msgpack::object&)>) const;
-
-	template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
-	std::pair<iterator, bool> insert(T&& v);
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	MsgPack& operator[](M&& o);
@@ -1305,15 +1305,15 @@ template <typename T, typename>
 inline std::pair<MsgPack::iterator, bool> MsgPack::insert(T&& v) {
 	MsgPack o(v);
 	bool done = false;
-	MsgPack::Iterator<MsgPack> it(end());
+	MsgPack::Iterator<MsgPack> it = end();
 	switch (o._body->getType()) {
 		case Type::ARRAY:
 			if (o._body->_obj->via.array.size % 2) {
 				break;
 			}
-			for (auto it = o.begin(); it != o.end(); ++it) {
-				auto key = *it++;
-				auto val = *it;
+			for (auto o_it = o.begin(); o_it != o.end(); ++o_it) {
+				auto key = *o_it;
+				auto val = *++o_it;
 				if (key._body->getType() != Type::STR) {
 					break;
 				}
