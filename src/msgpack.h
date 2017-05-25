@@ -253,6 +253,12 @@ public:
 	bool as_bool() const;
 	rapidjson::Document as_document() const;
 
+	uint64_t like_u64() const;
+	int64_t like_i64() const;
+	double like_f64() const;
+	std::string like_string() const;
+	bool like_bool() const;
+
 	bool is_undefined() const noexcept;
 	bool is_null() const noexcept;
 	bool is_boolean() const noexcept;
@@ -1768,6 +1774,131 @@ inline rapidjson::Document MsgPack::as_document() const {
 	rapidjson::Document doc;
 	_const_body->_obj->convert(&doc);
 	return doc;
+}
+
+
+inline uint64_t MsgPack::like_u64() const {
+	switch (_const_body->getType()) {
+		case Type::NIL:
+			return 0;
+		case Type::BOOLEAN:
+			return _const_body->_obj->via.boolean ? 1 : 0;
+		case Type::POSITIVE_INTEGER:
+			return _const_body->_obj->via.u64;
+		case Type::NEGATIVE_INTEGER:
+			if (_const_body->_obj->via.i64 < 0) {
+				THROW(msgpack::type_error);
+			}
+			return _const_body->_obj->via.i64;
+		case Type::FLOAT:
+			return _const_body->_obj->via.f64;
+		case Type::STR:
+			try {
+				return std::stoull(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
+			} catch (const std::out_of_range&) {
+				THROW(msgpack::type_error);
+			} catch (const std::invalid_argument&) {
+				THROW(msgpack::type_error);
+			}
+		case Type::UNDEFINED:
+			return 0;
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
+inline int64_t MsgPack::like_i64() const {
+	switch (_const_body->getType()) {
+		case Type::NIL:
+			return 0;
+		case Type::BOOLEAN:
+			return _const_body->_obj->via.boolean ? 1 : 0;
+		case Type::POSITIVE_INTEGER:
+			if (_const_body->_obj->via.u64 > INT64_MAX) {
+				THROW(msgpack::type_error);
+			}
+			return _const_body->_obj->via.u64;
+		case Type::NEGATIVE_INTEGER:
+			return _const_body->_obj->via.i64;
+		case Type::FLOAT:
+			return _const_body->_obj->via.f64;
+		case Type::STR:
+			try {
+				return std::stoll(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
+			} catch (const std::out_of_range&) {
+				THROW(msgpack::type_error);
+			} catch (const std::invalid_argument&) {
+				THROW(msgpack::type_error);
+			}
+		case Type::UNDEFINED:
+			return 0;
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
+inline double MsgPack::like_f64() const {
+	switch (_const_body->getType()) {
+		case Type::NIL:
+			return 0;
+		case Type::BOOLEAN:
+			return _const_body->_obj->via.boolean ? 1 : 0;
+		case Type::POSITIVE_INTEGER:
+			return _const_body->_obj->via.u64;
+		case Type::NEGATIVE_INTEGER:
+			return _const_body->_obj->via.i64;
+		case Type::FLOAT:
+			return _const_body->_obj->via.f64;
+		case Type::STR:
+			try {
+				return std::stod(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
+			} catch (const std::out_of_range&) {
+				THROW(msgpack::type_error);
+			} catch (const std::invalid_argument&) {
+				THROW(msgpack::type_error);
+			}
+		case Type::UNDEFINED:
+			return 0;
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
+inline std::string MsgPack::like_string() const {
+	std::ostringstream oss;
+
+	switch (_const_body->getType()) {
+		case Type::NIL:
+			return "nil";
+		case Type::BOOLEAN:
+			return _const_body->_obj->via.boolean ? "true" : "false";
+		case Type::POSITIVE_INTEGER:
+			return std::to_string(_const_body->_obj->via.u64);
+		case Type::NEGATIVE_INTEGER:
+			return std::to_string(_const_body->_obj->via.i64);
+		case Type::FLOAT:
+			return std::to_string(_const_body->_obj->via.f64);
+		case Type::STR:
+			return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
+		case Type::ARRAY:
+			oss << *_const_body->_obj;
+			return oss.str();
+		case Type::MAP:
+			oss << *_const_body->_obj;
+			return oss.str();
+		case Type::BIN:
+			return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
+		case Type::UNDEFINED:
+			return "undefined";
+	}
+}
+
+
+inline bool MsgPack::like_bool() const {
+	return operator bool();
 }
 
 
