@@ -251,13 +251,13 @@ public:
 	double f64() const;
 	std::string str() const;
 	bool boolean() const;
-	rapidjson::Document as_document() const;
 
-	uint64_t like_u64() const;
-	int64_t like_i64() const;
-	double like_f64() const;
-	std::string like_string() const;
-	bool like_bool() const;
+	uint64_t as_u64() const;
+	int64_t as_i64() const;
+	double as_f64() const;
+	std::string as_str() const;
+	bool as_boolean() const;
+	rapidjson::Document as_document() const;
 
 	bool is_undefined() const noexcept;
 	bool is_null() const noexcept;
@@ -1770,14 +1770,7 @@ inline bool MsgPack::boolean() const {
 }
 
 
-inline rapidjson::Document MsgPack::as_document() const {
-	rapidjson::Document doc;
-	_const_body->_obj->convert(&doc);
-	return doc;
-}
-
-
-inline uint64_t MsgPack::like_u64() const {
+inline uint64_t MsgPack::as_u64() const {
 	switch (_const_body->getType()) {
 		case Type::NIL:
 			return 0;
@@ -1807,7 +1800,7 @@ inline uint64_t MsgPack::like_u64() const {
 }
 
 
-inline int64_t MsgPack::like_i64() const {
+inline int64_t MsgPack::as_i64() const {
 	switch (_const_body->getType()) {
 		case Type::NIL:
 			return 0;
@@ -1837,7 +1830,7 @@ inline int64_t MsgPack::like_i64() const {
 }
 
 
-inline double MsgPack::like_f64() const {
+inline double MsgPack::as_f64() const {
 	switch (_const_body->getType()) {
 		case Type::NIL:
 			return 0;
@@ -1867,7 +1860,7 @@ inline double MsgPack::like_f64() const {
 }
 
 
-inline std::string MsgPack::like_string() const {
+inline std::string MsgPack::as_str() const {
 	std::ostringstream oss;
 
 	switch (_const_body->getType()) {
@@ -1897,8 +1890,15 @@ inline std::string MsgPack::like_string() const {
 }
 
 
-inline bool MsgPack::like_bool() const {
+inline bool MsgPack::as_boolean() const {
 	return operator bool();
+}
+
+
+inline rapidjson::Document MsgPack::as_document() const {
+	rapidjson::Document doc;
+	_const_body->_obj->convert(&doc);
+	return doc;
 }
 
 
