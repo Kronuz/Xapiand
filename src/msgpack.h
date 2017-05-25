@@ -1211,9 +1211,10 @@ inline MsgPack& MsgPack::put(M&& o, T&& val) {
 template <typename M, typename T, typename>
 inline MsgPack::iterator MsgPack::insert(M&& o, T&& val) {
 	switch (o._body->getType()) {
-		case Type::STR:
-			_put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val));
-			return  MsgPack::Iterator<MsgPack>(this, size() - 1);
+		case Type::STR: {
+			auto& obj = _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val));
+			return  MsgPack::Iterator<MsgPack>(this, obj->_body->_pos);
+		}
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1235,8 +1236,8 @@ inline MsgPack& MsgPack::put(const std::string& s, T&& val) {
 
 template <typename T>
 inline MsgPack::iterator MsgPack::insert(const std::string& s, T&& val) {
-	_put(s, std::forward<T>(val));
-	return MsgPack::Iterator<MsgPack>(this, size() - 1);
+	auto& obj = _put(s, std::forward<T>(val));
+	return MsgPack::Iterator<MsgPack>(this, obj->_body->_pos);
 }
 
 
