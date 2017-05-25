@@ -306,22 +306,22 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun(static_cast<MsgPack::iterator (MsgPack::*)(size_t, const MsgPack&)>(&MsgPack::insert<const MsgPack&>)),                                    "insert" },
 
 			// Overload operator +
-			{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.is_undefined() ? obj : obj.as_i64() + value; }),                     "+" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.is_undefined() ? obj : obj.as_u64() + value; }),                     "+" },
 			{ chaiscript::fun([](const MsgPack& obj, int value) { return obj.is_undefined() ? obj : obj.as_i64() + value; }),                          "+" },
-			{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.is_undefined() ? obj : obj.as_i64() + value; }),                "+" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.is_undefined() ? obj : obj.as_u64() + value; }),                "+" },
 			{ chaiscript::fun([](const MsgPack& obj, long value) { return obj.is_undefined() ? obj : obj.as_i64() + value; }),                         "+" },
-			{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.is_undefined() ? obj : obj.as_i64() + value; }),           "+" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.is_undefined() ? obj : obj.as_u64() + value; }),           "+" },
 			{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.is_undefined() ? obj : obj.as_i64() + value; }),                    "+" },
 			{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.is_undefined() ? obj : obj.as_f64() + value; }),                        "+" },
 			{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.is_undefined() ? obj : obj.as_f64() + value; }),                       "+" },
 			{ chaiscript::fun([](const MsgPack& obj, const std::string& value) { return obj.is_undefined() ? obj : obj.as_string().append(value); }),  "+" },
 
 			// Overload operator -
-			{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.is_undefined() ? obj : obj.as_i64() - value; }),                     "-" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.is_undefined() ? obj : obj.as_u64() - value; }),                     "-" },
 			{ chaiscript::fun([](const MsgPack& obj, int value) { return obj.is_undefined() ? obj : obj.as_i64() - value; }),                          "-" },
-			{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.is_undefined() ? obj : obj.as_i64() - value; }),                "-" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.is_undefined() ? obj : obj.as_u64() - value; }),                "-" },
 			{ chaiscript::fun([](const MsgPack& obj, long value) { return obj.is_undefined() ? obj : obj.as_i64() - value; }),                         "-" },
-			{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.is_undefined() ? obj : obj.as_i64() - value; }),           "-" },
+			{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.is_undefined() ? obj : obj.as_u64() - value; }),           "-" },
 			{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.is_undefined() ? obj : obj.as_i64() - value; }),                    "-" },
 			{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.is_undefined() ? obj : obj.as_f64() - value; }),                        "-" },
 			{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.is_undefined() ? obj : obj.as_f64() - value; }),                       "-" },
