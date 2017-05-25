@@ -157,35 +157,35 @@ protected:
 				return StashState::StashEmpty;
 			}
 
-			auto data = this;
+			auto _data = this;
 			if (slot >= _Size) {
 				size_t chunk_num = slot / _Size;
 				slot = slot % _Size;
 
 				for (size_t c = 0; c < chunk_num; ++c) {
-					auto next = data->atom_next.load();
+					auto next = _data->atom_next.load();
 					if (!next) {
 						if (!spawn) {
 							return StashState::StashShort;
 						}
 						auto tmp = new Data;
-						if (data->atom_next.compare_exchange_strong(next, tmp)) {
+						if (_data->atom_next.compare_exchange_strong(next, tmp)) {
 							next = tmp;
 						} else {
 							delete tmp;
 						}
 					}
-					data = next;
+					_data = next;
 				}
 			}
 
-			auto chunk = data->atom_chunk.load();
+			auto chunk = _data->atom_chunk.load();
 			if (!chunk) {
 				if (!spawn) {
 					return StashState::ChunkEmpty;
 				}
 				auto tmp = new Chunks{{ }};
-				if (data->atom_chunk.compare_exchange_strong(chunk, tmp)) {
+				if (_data->atom_chunk.compare_exchange_strong(chunk, tmp)) {
 					chunk = tmp;
 				} else {
 					delete tmp;
@@ -280,7 +280,7 @@ public:
 					auto status = ptr->next(ctx, value_ptr, new_first_key);
 					if (status) {
 						if (ctx.op == StashContext::Operation::clean) {
-							auto ptr = atom_ptr.exchange(nullptr);
+							ptr = atom_ptr.exchange(nullptr);
 							if (ptr) {
 								L_STASH(this, "StashSlots::" + LIGHT_RED + "CLEAR" + NO_COL + " - " + ctx._col() + "_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_first_key:%llu, atom_last_key:%llu, op:%s", _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_first_key.load(), ctx.atom_last_key.load(), ctx._op());
 								delete ptr;
@@ -444,7 +444,7 @@ public:
 						}
 					}
 					if (ctx.op != StashContext::Operation::peep) {
-						auto ptr = atom_ptr.exchange(nullptr);
+						ptr = atom_ptr.exchange(nullptr);
 						if (ptr) {
 							L_STASH(this, "StashValues::" + LIGHT_RED + "CLEAR" + NO_COL + " - " + ctx._col() + "cur:%llu, cur:%llu, atom_end:%llu, op:%s", cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
 							delete ptr;
