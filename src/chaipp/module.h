@@ -34,16 +34,21 @@ namespace chaipp {
 inline static chaiscript::ModulePtr ModuleMsgPack() {
 	chaiscript::ModulePtr module(new chaiscript::Module());
 
-	module->add(chaiscript::type_conversion<const MsgPack, bool>([](const MsgPack &obj) { return obj.as_boolean(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, unsigned>([](const MsgPack &obj) { return obj.as_u64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, int>([](const MsgPack &obj) { return obj.as_i64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, unsigned long>([](const MsgPack &obj) { return obj.as_u64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, long>([](const MsgPack &obj) { return obj.as_i64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, unsigned long long>([](const MsgPack &obj) { return obj.as_u64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, long long>([](const MsgPack &obj) { return obj.as_i64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, float>([](const MsgPack &obj) { return obj.as_f64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, double>([](const MsgPack &obj) { return obj.as_f64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, std::string>([](const MsgPack &obj) { return obj.as_str(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, bool>([](const MsgPack& obj) { return obj.as_boolean(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, unsigned>([](const MsgPack& obj) { return obj.as_u64(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, int>([](const MsgPack& obj) { return obj.as_i64(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, unsigned long>([](const MsgPack& obj) { return obj.as_u64(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, long>([](const MsgPack& obj) { return obj.as_i64(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, unsigned long long>([](const MsgPack& obj) { return obj.as_u64(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, long long>([](const MsgPack& obj) { return obj.as_i64(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, float>([](const MsgPack& obj) { return obj.as_f64(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, double>([](const MsgPack& obj) { return obj.as_f64(); }));
+	module->add(chaiscript::type_conversion<const MsgPack, std::string>([](const MsgPack& obj) { return obj.as_str(); }));
+
+	module->add(chaiscript::type_conversion<unsigned, size_t>([](const unsigned& orig) { return static_cast<size_t>(orig); }));
+	module->add(chaiscript::type_conversion<int, size_t>([](const int& orig) { return static_cast<size_t>(orig); }));
+	module->add(chaiscript::type_conversion<unsigned long, size_t>([](const unsigned long& orig) { return static_cast<size_t>(orig); }));
+	module->add(chaiscript::type_conversion<long, size_t>([](const long& orig) { return static_cast<size_t>(orig); }));
 
 	chaiscript::utility::add_class<MsgPack>(
 		*module,
