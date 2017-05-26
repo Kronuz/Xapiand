@@ -738,7 +738,7 @@ HttpClient::_head(enum http_method method)
 			document_info_view(method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
@@ -780,11 +780,6 @@ HttpClient::_get(enum http_method method)
 		case Command::CMD_NODES:
 			nodes_view(method, cmd);
 			break;
-		case Command::CMD_QUIT:
-		case Command::CMD_TOUCH:
-		case Command::BAD_QUERY:
-			write_status_response(HTTP_STATUS_BAD_REQUEST);
-			break;
 		case Command::CMD_METADATA:
 			path_parser.off_id = nullptr;  // Command has no ID
 			meta_view(method, cmd, path_parser.get_pmt());
@@ -793,6 +788,11 @@ HttpClient::_get(enum http_method method)
 			path_parser.off_id = nullptr;  // Command has no ID
 			if(path_parser.off_cmd) ++path_parser.off_cmd;
 			meta_view(method, cmd, path_parser.get_cmd());
+			break;
+		case Command::CMD_QUIT:
+		case Command::CMD_TOUCH:
+		case Command::BAD_QUERY:
+			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
@@ -814,7 +814,7 @@ HttpClient::_merge(enum http_method method)
 			update_meta_view(method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
@@ -839,7 +839,7 @@ HttpClient::_put(enum http_method method)
 			write_schema_view(method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
@@ -875,7 +875,7 @@ HttpClient::_post(enum http_method method)
 			break;
 #endif
 		default:
-			write_status_response(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
@@ -892,7 +892,7 @@ HttpClient::_patch(enum http_method method)
 			update_document_view(method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
@@ -909,7 +909,7 @@ HttpClient::_delete(enum http_method method)
 			delete_document_view(method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_BAD_REQUEST);
+			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
