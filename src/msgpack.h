@@ -606,7 +606,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 				}
 				auto it = parent_body->map.find(val);
 				if (it != parent_body->map.end()) {
-					if (parent_body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
+					if (parent_body->map.emplace(str_key, std::move(it->second)).second) {
 						parent_body->map.erase(it);
 					} else {
 						THROW(duplicate_key, "Duplicate 1 key: " + str_key);
@@ -737,7 +737,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 		auto last_key = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
 		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, last_key._body, &p->val));
 		auto str_key = std::string(p->key.via.str.ptr, p->key.via.str.size);
-		auto inserted = _body->map.insert(std::make_pair(str_key, std::make_pair(std::move(last_key), std::move(last_val))));
+		auto inserted = _body->map.emplace(str_key, std::make_pair(std::move(last_key), std::move(last_val)));
 		if (!inserted.second) {
 			THROW(duplicate_key, "Duplicate key: " + str_key);
 		}
