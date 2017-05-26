@@ -419,26 +419,26 @@ public:
 		uint32_t curr_offset = header.head.offset;
 		const char* orig_data = data;
 
-		StorageBinHeader bin_header;
-		memset(&bin_header, 0, sizeof(bin_header));
-		const char* bin_header_data = reinterpret_cast<const char*>(&bin_header);
+		StorageBinHeader _bin_header;
+		memset(&_bin_header, 0, sizeof(_bin_header));
+		const char* bin_header_data = reinterpret_cast<const char*>(&_bin_header);
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
-		StorageBinFooter bin_footer;
-		memset(&bin_footer, 0, sizeof(bin_footer));
-		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
+		StorageBinFooter _bin_footer;
+		memset(&_bin_footer, 0, sizeof(_bin_footer));
+		const char* bin_footer_data = reinterpret_cast<const char*>(&_bin_footer);
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 
 		size_t it_size;
 		bool compress = (flags & STORAGE_COMPRESS) && data_size > STORAGE_MIN_COMPRESS_SIZE;
 		if (compress) {
-			bin_header.init(param, args, 0, STORAGE_FLAG_COMPRESSED);
+			_bin_header.init(param, args, 0, STORAGE_FLAG_COMPRESSED);
 			cmpData.reset(data, data_size, STORAGE_MAGIC);
 			cmpData_it = cmpData.begin();
 			it_size = cmpData_it.size();
 			data = cmpData_it->data();
 		} else {
-			bin_header.init(param, args, static_cast<uint32_t>(data_size), 0);
+			_bin_header.init(param, args, static_cast<uint32_t>(data_size), 0);
 			it_size = data_size;
 		}
 
@@ -474,9 +474,9 @@ public:
 			// Update header size in buffer.
 			if (compress) {
 				buffer_header->size = static_cast<uint32_t>(cmpData.size());
-				bin_footer.init(param, args, cmpData.get_digest());
+				_bin_footer.init(param, args, cmpData.get_digest());
 			} else {
-				bin_footer.init(param, args, XXH32(orig_data, data_size, STORAGE_MAGIC));
+				_bin_footer.init(param, args, XXH32(orig_data, data_size, STORAGE_MAGIC));
 			}
 
 			write_bin(&buffer, tmp_buffer_offset, &bin_footer_data, bin_footer_data_size);
@@ -516,14 +516,14 @@ public:
 
 		uint32_t curr_offset = header.head.offset;
 
-		StorageBinHeader bin_header;
-		memset(&bin_header, 0, sizeof(bin_header));
-		const char* bin_header_data = reinterpret_cast<const char*>(&bin_header);
+		StorageBinHeader _bin_header;
+		memset(&_bin_header, 0, sizeof(_bin_header));
+		const char* bin_header_data = reinterpret_cast<const char*>(&_bin_header);
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
-		StorageBinFooter bin_footer;
-		memset(&bin_footer, 0, sizeof(bin_footer));
-		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
+		StorageBinFooter _bin_footer;
+		memset(&_bin_footer, 0, sizeof(_bin_footer));
+		const char* bin_footer_data = reinterpret_cast<const char*>(&_bin_footer);
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 
 		size_t it_size, file_size = 0;
@@ -533,7 +533,7 @@ public:
 
 		bool compress = (flags & STORAGE_COMPRESS);
 		if (compress) {
-			bin_header.init(param, args, 0, STORAGE_FLAG_COMPRESSED);
+			_bin_header.init(param, args, 0, STORAGE_FLAG_COMPRESSED);
 			cmpFile.reset(filename, STORAGE_MAGIC);
 			cmpFile_it = cmpFile.begin();
 			it_size = cmpFile_it.size();
@@ -543,7 +543,7 @@ public:
 			if unlikely(fd_write < 0) {
 				THROW(LZ4IOError, "Cannot open file: %s", filename.c_str());
 			}
-			bin_header.init(param, args, 0, 0);
+			_bin_header.init(param, args, 0, 0);
 			it_size = io::read(fd_write, buf_read, sizeof(buf_read));
 			data = buf_read;
 			file_size += it_size;
@@ -590,10 +590,10 @@ public:
 			// Update header size in buffer.
 			if (compress) {
 				buffer_header->size = static_cast<uint32_t>(cmpFile.size());
-				bin_footer.init(param, args, cmpFile.get_digest());
+				_bin_footer.init(param, args, cmpFile.get_digest());
 			} else {
 				buffer_header->size = static_cast<uint32_t>(file_size);
-				bin_footer.init(param, args, XXH32_digest(xxhash));
+				_bin_footer.init(param, args, XXH32_digest(xxhash));
 				io::close(fd_write);
 			}
 
