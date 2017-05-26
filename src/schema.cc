@@ -357,24 +357,8 @@ static const std::vector<std::string> global_acc_prefix_geo(get_acc_prefix(def_a
  * Acceptable values string used when there is a data inconsistency.
  */
 
-template <typename T>
-static std::string get_str_keys(const std::unordered_map<std::string, T>& map) {
-	std::string res("{ ");
-	char comma[3] = { '\0', ' ', '\0' };
-	for (const auto& p : map) {
-		res.append(comma).append(p.first);
-		comma[0] = ',';
-	}
-	res.append(" }");
-	return res;
-}
-
-static const std::string str_set_acc_date(get_str_keys(map_acc_date));
-static const std::string str_set_acc_time(get_str_keys(map_acc_time));
-static const std::string str_set_stop_strategy(get_str_keys(map_stop_strategy));
-static const std::string str_set_stem_strategy(get_str_keys(map_stem_strategy));
-static const std::string str_set_index(get_str_keys(map_index));
-static const std::string str_set_index_uuid_field(get_str_keys(map_index_uuid_field));
+static const std::string str_set_acc_date(get_map_keys(map_acc_date));
+static const std::string str_set_acc_time(get_map_keys(map_acc_time));
 
 
 specification_t default_spc;
@@ -4391,6 +4375,7 @@ Schema::process_stop_strategy(const std::string& prop_name, const MsgPack& doc_s
 		static const auto ssit_e = map_stop_strategy.end();
 		const auto ssit = map_stop_strategy.find(_stop_strategy);
 		if (ssit == ssit_e) {
+			static const std::string str_set_stop_strategy(get_map_keys(map_stop_strategy));
 			THROW(ClientError, "%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stop_strategy.c_str(), _stop_strategy.c_str());
 		} else {
 			specification.stop_strategy = ssit->second;
@@ -4412,6 +4397,7 @@ Schema::process_stem_strategy(const std::string& prop_name, const MsgPack& doc_s
 		static const auto ssit_e = map_stem_strategy.end();
 		const auto ssit = map_stem_strategy.find(_stem_strategy);
 		if (ssit == ssit_e) {
+			static const std::string str_set_stem_strategy(get_map_keys(map_stem_strategy));
 			THROW(ClientError, "%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stem_strategy.c_str(), _stem_strategy.c_str());
 		} else {
 			specification.stem_strategy = ssit->second;
@@ -4622,6 +4608,7 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 		static const auto miit_e = map_index.end();
 		const auto miit = map_index.find(str_index);
 		if (miit == miit_e) {
+			static const std::string str_set_index(get_map_keys(map_index));
 			THROW(ClientError, "%s must be in %s (%s not supported)", prop_name.c_str(), str_set_index.c_str(), str_index.c_str());
 		} else {
 			specification.index = miit->second;
@@ -4702,6 +4689,7 @@ Schema::process_index_uuid_field(const std::string& prop_name, const MsgPack& do
 		static const auto mdit_e = map_index_uuid_field.end();
 		const auto mdit = map_index_uuid_field.find(str_index_uuid_field);
 		if (mdit == mdit_e) {
+			static const std::string str_set_index_uuid_field(get_map_keys(map_index_uuid_field));
 			THROW(ClientError, "%s must be in %s (%s not supported)", prop_name.c_str(), str_set_index_uuid_field.c_str(), str_index_uuid_field.c_str());
 		} else {
 			specification.index_uuid_field = mdit->second;

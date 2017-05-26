@@ -24,18 +24,19 @@
 
 #include "xapiand.h"
 
-#include <chrono>       // for system_clock, time_point, duration_cast, seconds
-#include <ctype.h>      // for tolower, toupper
-#include <dirent.h>     // for DIR
-#include <math.h>       // for log10, floor, pow
-#include <regex>        // for regex
-#include <stdio.h>      // for size_t, snprintf
-#include <string>       // for string, allocator
-#include <sys/errno.h>  // for EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
-#include <sys/types.h>  // for uint64_t, uint16_t, uint8_t, int32_t, uint32_t
-#include <type_traits>  // for forward, underlying_type_t
-#include <unistd.h>     // for usleep
-#include <vector>       // for vector
+#include <chrono>             // for system_clock, time_point, duration_cast, seconds
+#include <ctype.h>            // for tolower, toupper
+#include <dirent.h>           // for DIR
+#include <math.h>             // for log10, floor, pow
+#include <regex>              // for regex
+#include <stdio.h>            // for size_t, snprintf
+#include <string>             // for string, allocator
+#include <sys/errno.h>        // for EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
+#include <sys/types.h>        // for uint64_t, uint16_t, uint8_t, int32_t, uint32_t
+#include <type_traits>        // for forward, underlying_type_t
+#include <unistd.h>           // for usleep
+#include <vector>             // for vector
+#include <unordered_map>      // for unordered_map
 
 #include "ev/ev++.h"    // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
 #include "exception.h"  // for InvalidArgument, OutOfRange
@@ -435,4 +436,17 @@ inline M modulus(T val, M mod) {
 		return m ? mod - m : m;
 	}
 	return static_cast<M>(val) % mod;
+}
+
+
+template <typename T>
+inline std::string get_map_keys(const std::unordered_map<std::string, T>& map) {
+	std::string res("{ ");
+	char comma[3] = { '\0', ' ', '\0' };
+	for (const auto& p : map) {
+		res.append(comma).append(p.first);
+		comma[0] = ',';
+	}
+	res.append(" }");
+	return res;
 }
