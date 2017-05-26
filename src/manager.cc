@@ -1153,7 +1153,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 	}
 
 	for (int offset = 0; offset < total_inc;) {
-		auto& stat = stats.push_back(MsgPack());
+		MsgPack stat;
 		// stat["system_time"] = Datetime::iso8601(current_time);
 		auto& time_period = stat["period"];
 
@@ -1191,6 +1191,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 				counter_stats["max"] = delta_string(counter.second.max);
 			}
 		}
+		stats.push_back(std::move(stat));
 	}
 }
 
