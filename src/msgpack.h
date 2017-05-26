@@ -335,14 +335,14 @@ public:
 		return tmp;
 	}
 
-	Iterator& operator+=(int _off) {
-		_off += _off;
+	Iterator& operator+=(int off) {
+		_off += off;
 		return *this;
 	}
 
-	Iterator operator+(int _off) const {
+	Iterator operator+(int off) const {
 		Iterator tmp(*this);
-		tmp._off += _off;
+		tmp._off += off;
 		return tmp;
 	}
 
