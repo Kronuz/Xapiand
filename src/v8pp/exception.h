@@ -61,7 +61,7 @@ public:
 
 class CycleDetectionError : public Error {
 public:
-	CycleDetectionError() : Error("Cycle detection") { }
+	explicit CycleDetectionError(bool reach_max_depth) : Error(reach_max_depth ? "Max depth reached in object" : "Cycle detection") { }
 };
 
 }; // End namespace v8pp

@@ -38,6 +38,9 @@
 
 namespace v8pp {
 
+constexpr size_t MAX_DEPTH_OBJECT = 20;
+
+
 // Generic converter.
 template <typename T, typename Enabler = void>
 struct convert;
@@ -106,7 +109,8 @@ private:
 			}
 		} else if (v->IsObject()) {
 			auto o_v8 = v->ToObject();
-			if (std::find(visitObjects.begin(), visitObjects.end(), o_v8) == visitObjects.end()) {
+			bool reach_max_depth = visitObjects.size() > MAX_DEPTH_OBJECT;
+			if (!reach_max_depth && std::find(visitObjects.begin(), visitObjects.end(), o_v8) == visitObjects.end()) {
 				visitObjects.push_back(o_v8);
 				auto properties = o_v8->GetPropertyNames();
 				auto length = properties->ToObject()->Get(v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "length", v8::NewStringType::kNormal).ToLocalChecked())->Uint32Value();
@@ -114,7 +118,7 @@ private:
 					process(o[convert<std::string>()(properties->Get(i))], o_v8->Get(properties->Get(i)), visitObjects);
 				}
 			} else {
-				throw CycleDetectionError();
+				throw CycleDetectionError(reach_max_depth);
 			}
 		} else if (v->IsUndefined()) {
 			o = MsgPack();
