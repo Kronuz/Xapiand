@@ -22,6 +22,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
+
 #include <algorithm>          // for move
 #include <atomic>             // for atomic_bool, atomic, atomic_int
 #include <chrono>             // for system_clock, time_point, duration, millise...
@@ -203,3 +206,5 @@ template <typename... Args>
 inline Log Logging::log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args) {
 	return log(cleanup, stacked, wakeup, async, priority, std::string(), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
 }
+
+#pragma GCC diagnostic pop
