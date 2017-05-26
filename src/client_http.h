@@ -138,7 +138,7 @@ class HttpClient : public BaseClient {
 		CMD_SEARCH    = xxh64::hash(".search"),
 		CMD_INFO      = xxh64::hash(".info"),
 		CMD_STATS     = xxh64::hash(".stats"),
-		CMD_META      = xxh64::hash(".meta"),
+		CMD_METADATA  = xxh64::hash(".metadata"),
 		CMD_SCHEMA    = xxh64::hash(".schema"),
 #if XAPIAND_DATABASE_WAL
 		CMD_WAL       = xxh64::hash(".wal"),

@@ -761,7 +761,7 @@ HttpClient::_get(enum http_method method)
 			path_parser.off_id = nullptr;  // Command has no ID
 			search_view(method, cmd);
 			break;
-		case Command::CMD_META:
+		case Command::CMD_METADATA:
 			path_parser.off_id = nullptr;  // Command has no ID
 			meta_view(method, cmd);
 			break;
@@ -802,7 +802,7 @@ HttpClient::_merge(enum http_method method)
 		case Command::NO_CMD_ID:
 			update_document_view(method, cmd);
 			break;
-		case Command::CMD_META:
+		case Command::CMD_METADATA:
 			path_parser.off_id = nullptr;  // Command has no ID
 			update_meta_view(method, cmd);
 			break;
@@ -823,7 +823,7 @@ HttpClient::_put(enum http_method method)
 		case Command::NO_CMD_ID:
 			index_document_view(method, cmd);
 			break;
-		case Command::CMD_META:
+		case Command::CMD_METADATA:
 			path_parser.off_id = nullptr;  // Command has no ID
 			write_meta_view(method, cmd);
 			break;
