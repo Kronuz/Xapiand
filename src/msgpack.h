@@ -171,6 +171,11 @@ private:
 	void _fill(bool recursive, bool lock);
 	void _fill(bool recursive, bool lock) const;
 
+	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	MsgPack::iterator _find(M&& o);
+	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	MsgPack::const_iterator _find(M&& o) const;
+
 public:
 	template <typename T>
 	decltype(auto) external(std::function<T(const msgpack::object&)>) const;
@@ -1261,6 +1266,42 @@ inline void MsgPack::_fill(bool recursive, bool lock) const {
 }
 
 
+template <typename M, typename>
+inline MsgPack::iterator MsgPack::_find(M&& o) {
+	switch (o._body->getType()) {
+		case Type::STR:
+			return _find(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+		case Type::NEGATIVE_INTEGER:
+			if (o._body->_obj->via.i64 < 0) {
+				THROW(msgpack::type_error);
+			}
+			return _find(static_cast<size_t>(o._body->_obj->via.i64));
+		case Type::POSITIVE_INTEGER:
+			return _find(static_cast<size_t>(o._body->_obj->via.u64));
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
+template <typename M, typename>
+inline MsgPack::const_iterator MsgPack::_find(M&& o) const {
+	switch (o._const_body->getType()) {
+		case Type::STR:
+			return _find(std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
+		case Type::NEGATIVE_INTEGER:
+			if (o._const_body->_obj->via.i64 < 0) {
+				THROW(msgpack::type_error);
+			}
+			return _find(static_cast<size_t>(o._const_body->_obj->via.i64));
+		case Type::POSITIVE_INTEGER:
+			return _find(static_cast<size_t>(o._const_body->_obj->via.u64));
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
 template <typename T>
 inline decltype(auto) MsgPack::external(std::function<T(const msgpack::object&)> f) const {
 	return f(*_body->_obj);
@@ -1691,38 +1732,14 @@ inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const 
 template <typename M, typename>
 inline MsgPack::iterator MsgPack::find(M&& o) {
 	_fill(false, false);
-	switch (o._body->getType()) {
-		case Type::STR:
-			return _find(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
-		case Type::NEGATIVE_INTEGER:
-			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
-			}
-			return _find(static_cast<size_t>(o._body->_obj->via.i64));
-		case Type::POSITIVE_INTEGER:
-			return _find(static_cast<size_t>(o._body->_obj->via.u64));
-		default:
-			THROW(msgpack::type_error);
-	}
+	return _find(std::forward<M>(o));
 }
 
 
 template <typename M, typename>
 inline MsgPack::const_iterator MsgPack::find(M&& o) const {
 	_fill(false, false);
-	switch (o._const_body->getType()) {
-		case Type::STR:
-			return _find(std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
-		case Type::NEGATIVE_INTEGER:
-			if (o._const_body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
-			}
-			return _find(static_cast<size_t>(o._const_body->_obj->via.i64));
-		case Type::POSITIVE_INTEGER:
-			return _find(static_cast<size_t>(o._const_body->_obj->via.u64));
-		default:
-			THROW(msgpack::type_error);
-	}
+	return _find(std::forward<M>(o));
 }
 
 
