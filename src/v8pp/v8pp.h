@@ -360,18 +360,26 @@ class Processor {
 			: processor(processor_),
 			  function(std::move(function_)) { }
 
-		Function(Function&&) = delete;
+		Function(Function&& o) noexcept
+			: processor(std::move(o.processor)),
+			  function(std::move(o.function)) { }
+
 		Function(const Function&) = delete;
 
-		Function& operator=(Function&&) = delete;
-		Function& operator=(const Function&) = delete;
+		Function& operator=(Function&& o) noexcept {
+			processor = std::move(o.processor);
+			function = std::move(o.function);
+			return *this;
+		}
+
+		Function& operator=(const Function& o) = delete;
 
 		~Function() {
 			function.Reset();
 		}
 
 		template <typename... Args>
-		MsgPack operator()(Args&&... args) {
+		MsgPack operator()(Args&&... args) const {
 			return processor->invoke(function, std::forward<Args>(args)...);
 		}
 	};
@@ -380,7 +388,7 @@ class Processor {
 
 	std::unique_ptr<PropertyHandler> property_handler;
 	v8::Global<v8::Context> context;
-	std::unordered_map<std::string, std::unique_ptr<Function>> functions;
+	std::unordered_map<std::string, const Function> functions;
 
 	// Auxiliar variables for kill a script.
 	std::mutex kill_mtx;
@@ -505,13 +513,12 @@ public:
 		isolate->Dispose();
 	}
 
-	Function& operator[](const std::string& name) {
-		try {
-			return *functions.at(name);
-		} catch (const std::out_of_range&) {
-			auto p = functions.emplace(name, std::make_unique<Function>(this, extract_function(name)));
-			return *p.first->second;
+	const Function& operator[](const std::string& name) {
+		auto it = functions.find(name);
+		if (it == functions.end()) {
+			it = functions.emplace(name, Function(this, extract_function(name))).first;
 		}
+		return it->second;
 	}
 
 	static Engine& engine(ssize_t max_size) {

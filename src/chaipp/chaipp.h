@@ -22,10 +22,15 @@
 
 #pragma once
 
+#include "xapiand.h"
+
+
 #if XAPIAND_CHAISCRIPT
 
 #include "exception.h"
 #include "module.h"
+
+#include <unordered_map>
 
 
 namespace chaipp {
@@ -96,18 +101,14 @@ class Processor {
 		Function(Function&& o) noexcept
 			: value(std::move(o.value)) { }
 
-		Function(const Function& o)
-			: value(o.value) { }
+		Function(const Function& o) = delete;
 
 		Function& operator=(Function&& o) noexcept {
 			value = std::move(o.value);
 			return *this;
 		}
 
-		Function& operator=(const Function& o) {
-			value = o.value;
-			return *this;
-		}
+		Function& operator=(const Function& o) = delete;
 
 		template <typename... Args>
 		MsgPack operator()(Args&&... args) const {
@@ -123,7 +124,7 @@ class Processor {
 	};
 
 	chaiscript::ChaiScript chai;
-	std::map<std::string, Function> functions;
+	std::unordered_map<std::string, const Function> functions;
 
 public:
 	Processor(const std::string&, const std::string& script_source) {
@@ -138,16 +139,15 @@ public:
 	}
 
 	const Function& operator[](const std::string& name) {
-		try {
-			return functions.at(name);
-		} catch (const std::out_of_range&) {
+		auto it = functions.find(name);
+		if (it == functions.end()) {
 			try {
-				auto p = functions.emplace(name, chai.eval(name));
-				return p.first->second;
+				it = functions.emplace(name, chai.eval(name)).first;
 			} catch (const chaiscript::exception::eval_error& er) {
 				throw ReferenceError(er.pretty_print());
 			}
 		}
+		return it->second;
 	}
 
 	static Engine& engine(ssize_t max_size) {
