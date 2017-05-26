@@ -593,10 +593,13 @@ inline void MsgPack::_initializer(std::initializer_list<MsgPack> list) {
 
 inline void MsgPack::_assignment(const msgpack::object& obj) {
 	if (_body->_is_key) {
+		// Rename key, if the assignment is acting on a map key...
+		// We expect obj to be a string:
 		if (obj.type != msgpack::type::STR) {
 			THROW(msgpack::type_error);
 		}
 		if (auto parent_body = _body->_parent.lock()) {
+			// If there's a parent, and it's initialized...
 			if (parent_body->_initialized) {
 				// Change key in the parent's map:
 				auto val = std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
@@ -609,7 +612,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 					if (parent_body->map.emplace(str_key, std::move(it->second)).second) {
 						parent_body->map.erase(it);
 					} else {
-						THROW(duplicate_key, "Duplicate 1 key: " + str_key);
+						THROW(duplicate_key, "Cannot rename to duplicate key: " + str_key);
 					}
 					assert(parent_body->_obj->via.map.size == parent_body->map.size());
 				}
