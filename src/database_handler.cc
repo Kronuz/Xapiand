@@ -286,10 +286,6 @@ MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, 
 	} catch (const chaipp::Error& e) {
 		THROW(ClientError, e.what());
 #endif
-	} catch (const std::out_of_range&) {
-		THROW(MissingTypeError, "Script for %s is missing", repr(script_name).c_str());
-	} catch (...) {
-		throw;
 	}
 }
 
