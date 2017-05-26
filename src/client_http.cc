@@ -94,7 +94,7 @@ AcceptEncodingLRU HttpClient::accept_encoding_sets;
 
 
 std::string
-HttpClient::http_response(enum http_status status, int mode, unsigned short http_major, unsigned short http_minor, int total_count, int matches_estimated, const std::string& body, const std::string& ct_type, const std::string& ct_encoding) {
+HttpClient::http_response(enum http_status status, int mode, unsigned short http_major, unsigned short http_minor, int total_count, int matches_estimated, const std::string& _body, const std::string& ct_type, const std::string& ct_encoding) {
 	L_CALL(this, "HttpClient::http_response()");
 
 	char buffer[20];
@@ -149,7 +149,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 			headers += "Transfer-Encoding: chunked" + eol;
 		} else {
 			headers += "Content-Length: ";
-			snprintf(buffer, sizeof(buffer), "%lu", body.size());
+			snprintf(buffer, sizeof(buffer), "%lu", _body.size());
 			headers += buffer + eol;
 		}
 		headers_sep += eol;
@@ -157,11 +157,11 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 
 	if (mode & HTTP_BODY_RESPONSE) {
 		if (mode & HTTP_CHUNKED_RESPONSE) {
-			snprintf(buffer, sizeof(buffer), "%lx", body.size());
+			snprintf(buffer, sizeof(buffer), "%lx", _body.size());
 			response += buffer + eol;
-			response += body + eol;
+			response += _body + eol;
 		} else {
-			response += body;
+			response += _body;
 		}
 	}
 
@@ -1173,10 +1173,10 @@ HttpClient::meta_view(enum http_method method, Command)
 	auto key = path_parser.get_pmt();
 	if (key.empty()) {
 		response = MsgPack(MsgPack::Type::MAP);
-		for (auto& key : db_handler.get_metadata_keys()) {
-			auto metadata = db_handler.get_metadata(key);
+		for (auto& _key : db_handler.get_metadata_keys()) {
+			auto metadata = db_handler.get_metadata(_key);
 			if (!metadata.empty()) {
-				response[key] = MsgPack::unserialise(metadata);
+				response[_key] = MsgPack::unserialise(metadata);
 			}
 		}
 	} else {
@@ -1864,26 +1864,26 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 		}
 	}
 
-	std::string path;
+	std::string _path;
 	if (path_parser.off_pth) {
-		path = path_parser.get_pth();
-		if (startswith(path, "/")) { /* path without slash */
-			path = path.substr(1, std::string::npos);
+		_path = path_parser.get_pth();
+		if (startswith(_path, "/")) { /* path without slash */
+			_path.erase(0, 1);
 		}
-		if (startswith(path, ".")) {
-			THROW(ClientError, "The index directory %s couldn't start with '.', it's reserved", path.c_str());
+		if (startswith(_path, ".")) {
+			THROW(ClientError, "The index directory %s couldn't start with '.', it's reserved", _path.c_str());
 		}
 	}
 
 	std::string index_path;
-	if (ns.empty() && path.empty()) {
+	if (ns.empty() && _path.empty()) {
 		index_path = ".";
 	} else if (ns.empty()) {
-		index_path = path;
-	} else if (path.empty()) {
+		index_path = _path;
+	} else if (_path.empty()) {
 		index_path = ns;
 	} else {
-		index_path = ns + "/" + path;
+		index_path = ns + "/" + _path;
 	}
 	index_paths.push_back(index_path);
 
@@ -2442,12 +2442,12 @@ HttpClient::get_acceptable_type(const T& ct)
 
 
 ct_type_t
-HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error)
+HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int _indent, bool serialize_error)
 {
-	L_CALL(this, "HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), indent, serialize_error ? "true" : "false");
+	L_CALL(this, "HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), _indent, serialize_error ? "true" : "false");
 
 	if (is_acceptable_type(ct_type, json_type)) {
-		return std::make_pair(obj.to_string(indent), json_type.first + "/" + json_type.second + "; charset=utf-8");
+		return std::make_pair(obj.to_string(_indent), json_type.first + "/" + json_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, msgpack_type)) {
 		return std::make_pair(obj.serialise(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, x_msgpack_type)) {

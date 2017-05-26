@@ -462,12 +462,12 @@ BaseClient::write_directly(int fd)
 		const char *buf_data = buffer->dpos();
 
 #ifdef MSG_NOSIGNAL
-		ssize_t written = ::send(fd, buf_data, buf_size, MSG_NOSIGNAL);
+		ssize_t _written = ::send(fd, buf_data, buf_size, MSG_NOSIGNAL);
 #else
-		ssize_t written = io::write(fd, buf_data, buf_size);
+		ssize_t _written = io::write(fd, buf_data, buf_size);
 #endif
 
-		if (written < 0) {
+		if (_written < 0) {
 			if (ignored_errorno(errno, true, false)) {
 				L_CONN(this, "WR:RETRY: {fd:%d} - %d: %s", fd, errno, strerror(errno));
 				return WR::RETRY;
@@ -478,8 +478,8 @@ BaseClient::write_directly(int fd)
 			}
 		}
 
-		L_TCP_WIRE(this, "{fd:%d} <<-- %s (%zu bytes)", fd, repr(buf_data, written, true, true, 500).c_str(), written);
-		buffer->pos += written;
+		L_TCP_WIRE(this, "{fd:%d} <<-- %s (%zu bytes)", fd, repr(buf_data, _written, true, true, 500).c_str(), _written);
+		buffer->pos += _written;
 		if (buffer->nbytes() == 0) {
 			if (write_queue.pop(buffer)) {
 				if (write_queue.empty()) {
