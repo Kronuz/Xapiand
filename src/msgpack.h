@@ -1655,6 +1655,8 @@ inline MsgPack::iterator MsgPack::erase(MsgPack::iterator it) {
 
 
 inline void MsgPack::clear() noexcept {
+	_body->_initialized = false;
+
 	switch (_body->getType()) {
 		case Type::MAP:
 			_body->_obj->via.map.size = 0;
