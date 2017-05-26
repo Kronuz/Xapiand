@@ -1190,9 +1190,9 @@ inline std::pair<MsgPack*, bool> MsgPack::_insert(M&& o, T&& val, bool overwrite
 			if (o._body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
 			}
-			return _insert(static_cast<size_t>(o._body->_obj->via.i64), std::forward<T>(val));
+			return _insert(static_cast<size_t>(o._body->_obj->via.i64), std::forward<T>(val), overwrite);
 		case Type::POSITIVE_INTEGER:
-			return _insert(static_cast<size_t>(o._body->_obj->via.u64), std::forward<T>(val));
+			return _insert(static_cast<size_t>(o._body->_obj->via.u64), std::forward<T>(val), overwrite);
 		default:
 			THROW(msgpack::type_error);
 	}
