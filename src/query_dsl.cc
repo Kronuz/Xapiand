@@ -39,7 +39,7 @@
 
 #ifndef L_QUERY
 #define L_QUERY_DEFINED
-#define L_QUERY(args...)
+#define L_QUERY L_TEST
 #endif
 
 
