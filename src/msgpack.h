@@ -164,7 +164,7 @@ private:
 	std::pair<MsgPack*, bool> _put(size_t pos, T&& val, bool overwrite);
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	std::pair<MsgPack*, bool> _insert(M&& o, T&& val, bool overwrite);
+	std::pair<MsgPack*, bool> _emplace(M&& o, T&& val, bool overwrite);
 	template <typename T>
 	std::pair<MsgPack*, bool> _insert(size_t pos, T&& val, bool overwrite);
 
@@ -172,20 +172,25 @@ private:
 	void _fill(bool recursive, bool lock) const;
 
 public:
+	template <typename T>
+	decltype(auto) external(std::function<T(const msgpack::object&)>) const;
+
 	void lock() const;
 
-	MsgPack& path(const std::vector<std::string>& path);
-	const MsgPack& path(const std::vector<std::string>& path) const;
+	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	size_t erase(M&& o);
+	size_t erase(const std::string& s);
+	size_t erase(size_t pos);
+	iterator erase(iterator it);
+
+	void clear() noexcept;
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	MsgPack::iterator put(M&& o, T&& val);
+	MsgPack::iterator remplace(M&& o, T&& val);
 	template <typename T>
-	MsgPack::iterator put(const std::string& s, T&& val);
+	MsgPack::iterator remplace(const std::string& s, T&& val);
 	template <typename T>
-	MsgPack::iterator put(size_t pos, T&& val);
-
-	template <typename K, typename V>
-	std::pair<MsgPack::iterator, bool> insert(const std::pair<K&&, V&&>& val);
+	MsgPack::iterator remplace(size_t pos, T&& val);
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	std::pair<MsgPack::iterator, bool> emplace(M&& o, T&& val);
@@ -194,11 +199,34 @@ public:
 	template <typename T>
 	std::pair<MsgPack::iterator, bool> emplace(size_t pos, T&& val);
 
+	template <typename K, typename V>
+	std::pair<MsgPack::iterator, bool> insert(const std::pair<K&&, V&&>& val);
+
 	template <typename T>
 	void push_back(T&& v);
 
+	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	void update(M&& o);
+
+	// Same as remplace(), but returning a reference:
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	MsgPack& put(M&& o, T&& val);
 	template <typename T>
-	decltype(auto) external(std::function<T(const msgpack::object&)>) const;
+	MsgPack& put(const std::string& s, T&& val);
+	template <typename T>
+	MsgPack& put(size_t pos, T&& val);
+
+	// Same as emplace(), but returning a reference:
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	MsgPack& add(M&& o, T&& val);
+	template <typename T>
+	MsgPack& add(const std::string& s, T&& val);
+	template <typename T>
+	MsgPack& add(size_t pos, T&& val);
+
+	// Same as push_back(), but returning a reference:
+	template <typename T>
+	MsgPack& append(T&& v);
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	MsgPack& operator[](M&& o);
@@ -218,6 +246,9 @@ public:
 	MsgPack& at(size_t pos);
 	const MsgPack& at(size_t pos) const;
 
+	MsgPack& path(const std::vector<std::string>& path);
+	const MsgPack& path(const std::vector<std::string>& path) const;
+
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	iterator find(M&& o);
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
@@ -227,19 +258,8 @@ public:
 	iterator find(size_t pos);
 	const_iterator find(size_t pos) const;
 
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	void update(M&& o);
-
 	template <typename T>
 	size_t count(T&& v) const;
-
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	size_t erase(M&& o);
-	size_t erase(const std::string& s);
-	size_t erase(size_t pos);
-	iterator erase(iterator it);
-
-	void clear() noexcept;
 
 	std::size_t hash() const;
 
@@ -558,7 +578,7 @@ inline void MsgPack::_initializer_array(std::initializer_list<MsgPack> list) {
 	_body->_obj->via.array.size = 0;
 	_reserve_array(list.size());
 	for (const auto& val : list) {
-		push_back(val);
+		_put(size(), val, true);
 	}
 }
 
@@ -573,7 +593,7 @@ inline void MsgPack::_initializer_map(std::initializer_list<MsgPack> list) {
 	_body->_obj->via.map.size = 0;
 	_reserve_map(list.size());
 	for (const auto& val : list) {
-		put(val.at(0), val.at(1));
+		_put(val.at(0), val.at(1), true);
 	}
 }
 
@@ -1150,7 +1170,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 
 
 template <typename M, typename T, typename>
-inline std::pair<MsgPack*, bool> MsgPack::_insert(M&& o, T&& val, bool overwrite) {
+inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrite) {
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
@@ -1241,8 +1261,65 @@ inline void MsgPack::_fill(bool recursive, bool lock) const {
 }
 
 
+template <typename T>
+inline decltype(auto) MsgPack::external(std::function<T(const msgpack::object&)> f) const {
+	return f(*_body->_obj);
+}
+
+
+inline void MsgPack::lock() const {
+	_fill(true, true);
+}
+
+
+template <typename M, typename>
+inline size_t MsgPack::erase(M&& o) {
+	_fill(false, false);
+	return _erase(std::forward<M>(o)).first;
+}
+
+
+inline size_t MsgPack::erase(const std::string& s) {
+	_fill(false, false);
+	return _erase(s).first;
+}
+
+
+inline size_t MsgPack::erase(size_t pos) {
+	_fill(false, false);
+	return _erase(pos).first;
+}
+
+
+inline MsgPack::iterator MsgPack::erase(MsgPack::iterator it) {
+	_fill(false, false);
+	return _erase(it._off).second;
+}
+
+
+inline void MsgPack::clear() noexcept {
+	_body->_initialized = false;
+
+	switch (_body->getType()) {
+		case Type::MAP:
+			_body->_obj->via.map.size = 0;
+			_body->map.clear();
+			break;
+		case Type::ARRAY:
+			_body->_obj->via.array.size = 0;
+			_body->array.clear();
+			break;
+		case Type::STR:
+			_body->_obj->via.str.size = 0;
+			break;
+		default:
+			break;
+	}
+}
+
+
 template <typename M, typename T, typename>
-inline MsgPack::iterator MsgPack::put(M&& o, T&& val) {
+inline MsgPack::iterator MsgPack::remplace(M&& o, T&& val) {
 	_fill(false, false);
 	auto pair = _put(std::forward<M>(o), std::forward<T>(val), true);
 	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
@@ -1250,7 +1327,7 @@ inline MsgPack::iterator MsgPack::put(M&& o, T&& val) {
 
 
 template <typename T>
-inline MsgPack::iterator MsgPack::put(const std::string& s, T&& val) {
+inline MsgPack::iterator MsgPack::remplace(const std::string& s, T&& val) {
 	_fill(false, false);
 	auto pair = _put(s, std::forward<T>(val), true);
 	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
@@ -1258,7 +1335,7 @@ inline MsgPack::iterator MsgPack::put(const std::string& s, T&& val) {
 
 
 template <typename T>
-inline MsgPack::iterator MsgPack::put(size_t pos, T&& val) {
+inline MsgPack::iterator MsgPack::remplace(size_t pos, T&& val) {
 	_fill(false, false);
 	auto pair = _put(pos, std::forward<T>(val), true);
 	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
@@ -1268,7 +1345,7 @@ inline MsgPack::iterator MsgPack::put(size_t pos, T&& val) {
 template <typename M, typename T, typename>
 inline std::pair<MsgPack::iterator, bool> MsgPack::emplace(M&& o, T&& val) {
 	_fill(false, false);
-	auto pair = _insert(std::forward<M>(o), std::forward<T>(val), false);
+	auto pair = _emplace(std::forward<M>(o), std::forward<T>(val), false);
 	return std::make_pair(MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos), pair.second);
 }
 
@@ -1302,14 +1379,85 @@ inline void MsgPack::push_back(T&& v) {
 }
 
 
-inline void MsgPack::lock() const {
-	_fill(true, true);
+template <typename M, typename>
+inline void MsgPack::update(M&& o) {
+	switch (o._body->getType()) {
+		case Type::MAP:
+			for (const auto& key : o) {
+				const auto& val = o.at(key);
+				if (find(key) == end()) {
+					remplace(key, val);
+				} else {
+					auto& item = at(key);
+					if (item.is_map()) {
+						item.update(val);
+					} else {
+						item = val;
+					}
+				}
+			}
+			break;
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
+// Following are helper functions to directly return references:
+
+template <typename M, typename T, typename>
+inline MsgPack& MsgPack::put(M&& o, T&& val) {
+	_fill(false, false);
+	auto pair = _put(std::forward<M>(o), std::forward<T>(val), true);
+	return *pair.first;
 }
 
 
 template <typename T>
-inline decltype(auto) MsgPack::external(std::function<T(const msgpack::object&)> f) const {
-	return f(*_body->_obj);
+inline MsgPack& MsgPack::put(const std::string& s, T&& val) {
+	_fill(false, false);
+	auto pair = _put(s, std::forward<T>(val), true);
+	return *pair.first;
+}
+
+
+template <typename T>
+inline MsgPack& MsgPack::put(size_t pos, T&& val) {
+	_fill(false, false);
+	auto pair = _put(pos, std::forward<T>(val), true);
+	return *pair.first;
+}
+
+
+template <typename M, typename T, typename>
+inline MsgPack& MsgPack::add(M&& o, T&& val) {
+	_fill(false, false);
+	auto pair = _emplace(std::forward<M>(o), std::forward<T>(val), false);
+	return *pair.first;
+}
+
+
+template <typename T>
+inline MsgPack& MsgPack::add(const std::string& s, T&& val) {
+	_fill(false, false);
+	auto pair = _put(s, std::forward<T>(val), false);
+	return *pair.first;
+}
+
+
+template <typename T>
+inline MsgPack& MsgPack::add(size_t pos, T&& val) {
+	_fill(false, false);
+	auto pair = _insert(pos, std::forward<T>(val), false);
+	return *pair.first;
+}
+
+
+template <typename T>
+inline MsgPack& MsgPack::append(T&& v) {
+	_fill(false, false);
+	auto pair = _put(size(), std::forward<T>(v), false);
+	return *pair.first;
 }
 
 
@@ -1602,79 +1750,9 @@ inline MsgPack::const_iterator MsgPack::find(size_t pos) const {
 }
 
 
-template <typename M, typename>
-inline void MsgPack::update(M&& o) {
-	switch (o._body->getType()) {
-		case Type::MAP:
-			for (const auto& key : o) {
-				const auto& val = o.at(key);
-				if (find(key) == end()) {
-					put(key, val);
-				} else {
-					auto& item = at(key);
-					if (item.is_map()) {
-						item.update(val);
-					} else {
-						item = val;
-					}
-				}
-			}
-			break;
-		default:
-			THROW(msgpack::type_error);
-	}
-}
-
-
 template <typename T>
 inline size_t MsgPack::count(T&& v) const {
 	return find(std::forward<T>(v)) == end() ? 0 : 1;
-}
-
-
-template <typename M, typename>
-inline size_t MsgPack::erase(M&& o) {
-	_fill(false, false);
-	return _erase(std::forward<M>(o)).first;
-}
-
-
-inline size_t MsgPack::erase(const std::string& s) {
-	_fill(false, false);
-	return _erase(s).first;
-}
-
-
-inline size_t MsgPack::erase(size_t pos) {
-	_fill(false, false);
-	return _erase(pos).first;
-}
-
-
-inline MsgPack::iterator MsgPack::erase(MsgPack::iterator it) {
-	_fill(false, false);
-	return _erase(it._off).second;
-}
-
-
-inline void MsgPack::clear() noexcept {
-	_body->_initialized = false;
-
-	switch (_body->getType()) {
-		case Type::MAP:
-			_body->_obj->via.map.size = 0;
-			_body->map.clear();
-			break;
-		case Type::ARRAY:
-			_body->_obj->via.array.size = 0;
-			_body->array.clear();
-			break;
-		case Type::STR:
-			_body->_obj->via.str.size = 0;
-			break;
-		default:
-			break;
-	}
 }
 
 
