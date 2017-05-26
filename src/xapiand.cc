@@ -1005,6 +1005,16 @@ void usedir(const char* path, bool solo) {
 void banner() {
 	set_thread_name("-=-");
 
+	std::vector<std::string> values({
+			format_string("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
+#if defined(XAPIAND_V8)
+			format_string("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION),
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
+			format_string("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
+#endif
+	});
+
 	L_INFO(nullptr,
 		"\n\n" +
 		rgb(255, 255, 255) + "     __  __           _                 _\n" +
@@ -1014,15 +1024,7 @@ void banner() {
 		rgb(128, 128, 128) + "     /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
 		rgb(96, 96, 96)    + "               |_|" + LIGHT_GREEN + center_string(Package::STRING, 25) + "\n" + GREEN +
 		center_string("[" + Package::BUGREPORT + "]", 46) + "\n" +
-		center_string("Using " + join_string(std::vector<std::string>{
-			format_string("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
-#if defined(XAPIAND_V8)
-			format_string("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION),
-#endif
-#if defined(XAPIAND_CHAISCRIPT)
-			format_string("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
-#endif
-		}, ", ", " and "), 46) + "\n\n");
+		center_string("Using " + join_string(values, ", ", " and "), 46) + "\n\n");
 }
 
 

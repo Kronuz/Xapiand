@@ -667,7 +667,7 @@ XapiandManager::run(const opts_t& o)
 
 	AsyncFsync::scheduler(o.num_fsynchers);
 
-	L_NOTICE(this, "Started " + join_string(std::vector<std::string>{
+	std::vector<std::string> values({
 		std::to_string(o.num_servers) + ((o.num_servers == 1) ? " server" : " servers"),
 		std::to_string(o.threadpool_size) +( (o.threadpool_size == 1) ? " worker thread" : " worker threads"),
 #ifdef XAPIAND_CLUSTERING
@@ -675,7 +675,9 @@ XapiandManager::run(const opts_t& o)
 #endif
 		std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters"),
 		std::to_string(o.num_fsynchers) + ((o.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
-	}, ", ", " and ", [](const auto& s) { return s.empty(); }));
+	});
+
+	L_NOTICE(this, "Started " + join_string(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
 	if (solo) {
 		setup_node();
