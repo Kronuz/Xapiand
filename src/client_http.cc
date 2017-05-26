@@ -1791,7 +1791,8 @@ HttpClient::url_resolve()
 
 		if (u.field_set & (1 << UF_PATH )) {
 			size_t path_size = u.field_data[3].len;
-			char path_buf_str[path_size + 1];
+			std::unique_ptr<char[]> path_buf_ptr(new char[path_size + 1]);
+			auto path_buf_str = path_buf_ptr.get();
 			const char* path_str = path.data() + u.field_data[3].off;
 			normalize_path(path_str, path_str + path_size, path_buf_str);
 			if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
