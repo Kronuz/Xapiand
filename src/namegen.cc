@@ -1046,9 +1046,9 @@ Generator::Group::split()
 
 
 void
-Generator::Group::wrap(Wrapper type)
+Generator::Group::wrap(Wrapper _type)
 {
-	wrappers.push(type);
+	wrappers.push(_type);
 }
 
 
