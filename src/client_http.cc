@@ -786,8 +786,13 @@ HttpClient::_get(enum http_method method)
 			break;
 		default:
 			path_parser.off_id = nullptr;  // Command has no ID
-			if(path_parser.off_cmd) ++path_parser.off_cmd;
-			meta_view(method, cmd, path_parser.get_cmd());
+			if (path_parser.off_cmd && path_parser.len_cmd > 2) {
+				if (*++path_parser.off_cmd != '_') {
+					write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
+				}
+				--path_parser.len_cmd;
+				meta_view(method, cmd, path_parser.get_cmd());
+			}
 			break;
 		case Command::CMD_QUIT:
 		case Command::CMD_TOUCH:
