@@ -225,11 +225,11 @@ Cartesian::operator*(const Cartesian& p) const noexcept
 
 
 Cartesian&
-Cartesian::operator*(double scale) noexcept
+Cartesian::operator*(double _scale) noexcept
 {
-	x *= scale;
-	y *= scale;
-	z *= scale;
+	x *= _scale;
+	y *= _scale;
+	z *= _scale;
 	return *this;
 }
 
