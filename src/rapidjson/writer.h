@@ -40,7 +40,7 @@ RAPIDJSON_NAMESPACE_BEGIN
 
     User may programmatically calls the functions of a writer to generate JSON text.
 
-    On the other side, a writer can also be passed to objects that generates events, 
+    On the other side, a writer can also be passed to objects that generates events,
 
     for example Reader::Parse() and Document::Accept().
 
@@ -61,7 +61,7 @@ public:
         \param levelDepth Initial capacity of stack.
     */
     explicit
-    Writer(OutputStream& os, StackAllocator* stackAllocator = 0, size_t levelDepth = kDefaultLevelDepth) : 
+    Writer(OutputStream& os, StackAllocator* stackAllocator = 0, size_t levelDepth = kDefaultLevelDepth) :
         os_(&os), level_stack_(stackAllocator, levelDepth * sizeof(Level)), hasRoot_(false) {}
 
     explicit
@@ -331,27 +331,27 @@ protected:
                         buffer_end = buffer_start - start + length;
                     }
                     for (Ch *b = buffer_start; b != buffer_end; ++b) {
-                        Ch c = *b;
-                        char e = escape[(unsigned char)c];
+                        Ch _c = *b;
+                        char e = escape[(unsigned char)_c];
                         switch (e) {
                             case 0:
-                            if ((unsigned char)c >= 0x20 && (unsigned char)c < 0x7f) {
-                                os_->Put(c);
+                            if ((unsigned char)_c >= 0x20 && (unsigned char)_c < 0x7f) {
+                                os_->Put(_c);
                                 break;
                             }
                             case 'x':
                                 os_->Put('\\');
                                 os_->Put('x');
-                                os_->Put(hexDigits[(unsigned char)c >> 4]);
-                                os_->Put(hexDigits[(unsigned char)c & 0xF]);
+                                os_->Put(hexDigits[(unsigned char)_c >> 4]);
+                                os_->Put(hexDigits[(unsigned char)_c & 0xF]);
                                 break;
                             case 'u':
                                 os_->Put('\\');
                                 os_->Put('u');
                                 os_->Put('0');
                                 os_->Put('0');
-                                os_->Put(hexDigits[(unsigned char)c >> 4]);
-                                os_->Put(hexDigits[(unsigned char)c & 0xF]);
+                                os_->Put(hexDigits[(unsigned char)_c >> 4]);
+                                os_->Put(hexDigits[(unsigned char)_c & 0xF]);
                                 break;
                             default:
                                 os_->Put('\\');
@@ -379,7 +379,7 @@ protected:
         if (level_stack_.GetSize() != 0) { // this value is not at root
             Level* level = level_stack_.template Top<Level>();
             if (level->valueCount > 0) {
-                if (level->inArray) 
+                if (level->inArray)
                     os_->Put(','); // add comma if it is not the first element in array
                 else  // in object
                     os_->Put((level->valueCount % 2 == 0) ? ',' : ':');
