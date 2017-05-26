@@ -216,7 +216,7 @@ class HttpClient : public BaseClient {
 
 	void home_view(enum http_method method, Command cmd);
 	void info_view(enum http_method method, Command cmd);
-	void meta_view(enum http_method method, Command cmd);
+	void meta_view(enum http_method method, Command cmd, std::string key);
 	void write_meta_view(enum http_method method, Command cmd);
 	void update_meta_view(enum http_method method, Command cmd);
 	void delete_document_view(enum http_method method, Command cmd);

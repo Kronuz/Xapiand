@@ -761,10 +761,6 @@ HttpClient::_get(enum http_method method)
 			path_parser.off_id = nullptr;  // Command has no ID
 			search_view(method, cmd);
 			break;
-		case Command::CMD_METADATA:
-			path_parser.off_id = nullptr;  // Command has no ID
-			meta_view(method, cmd);
-			break;
 		case Command::CMD_SCHEMA:
 			path_parser.off_id = nullptr;  // Command has no ID
 			schema_view(method, cmd);
@@ -784,8 +780,19 @@ HttpClient::_get(enum http_method method)
 		case Command::CMD_NODES:
 			nodes_view(method, cmd);
 			break;
-		default:
+		case Command::CMD_QUIT:
+		case Command::CMD_TOUCH:
+		case Command::BAD_QUERY:
 			write_status_response(HTTP_STATUS_BAD_REQUEST);
+			break;
+		case Command::CMD_METADATA:
+			path_parser.off_id = nullptr;  // Command has no ID
+			meta_view(method, cmd, path_parser.get_pmt());
+			break;
+		default:
+			path_parser.off_id = nullptr;  // Command has no ID
+			if(path_parser.off_cmd) ++path_parser.off_cmd;
+			meta_view(method, cmd, path_parser.get_cmd());
 			break;
 	}
 }
@@ -1160,9 +1167,10 @@ HttpClient::update_document_view(enum http_method method, Command)
 
 
 void
-HttpClient::meta_view(enum http_method method, Command)
+HttpClient::meta_view(enum http_method method, Command, std::string key)
 {
 	L_CALL(this, "HttpClient::meta_view()");
+
 
 	enum http_status status_code = HTTP_STATUS_OK;
 
@@ -1170,7 +1178,6 @@ HttpClient::meta_view(enum http_method method, Command)
 
 	MsgPack response;
 	db_handler.reset(endpoints, DB_OPEN, method);
-	auto key = path_parser.get_pmt();
 	if (key.empty()) {
 		response = MsgPack(MsgPack::Type::MAP);
 		for (auto& _key : db_handler.get_metadata_keys()) {
