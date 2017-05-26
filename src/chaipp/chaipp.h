@@ -27,10 +27,10 @@
 
 #if XAPIAND_CHAISCRIPT
 
+#include <unordered_map>
+
 #include "exception.h"
 #include "module.h"
-
-#include <unordered_map>
 
 
 namespace chaipp {
@@ -45,7 +45,7 @@ class Processor {
 
 	class ScriptLRU : public lru::LRU<size_t, std::pair<size_t, std::shared_ptr<Processor>>> {
 	public:
-		ScriptLRU(ssize_t max_size)
+		explicit ScriptLRU(ssize_t max_size)
 			: LRU(max_size) { }
 	};
 
@@ -55,7 +55,7 @@ class Processor {
 		std::mutex mtx;
 
 	public:
-		Engine(ssize_t max_size)
+		explicit Engine(ssize_t max_size)
 			: script_lru(max_size) { }
 
 		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
@@ -92,10 +92,10 @@ class Processor {
 		chaiscript::Boxed_Value value;
 
 	public:
-		Function(chaiscript::Boxed_Value&& value_)
+		explicit Function(chaiscript::Boxed_Value&& value_)
 			: value(std::move(value_)) { }
 
-		Function(const chaiscript::Boxed_Value& value_)
+		explicit Function(const chaiscript::Boxed_Value& value_)
 			: value(value_) { }
 
 		Function(Function&& o) noexcept
