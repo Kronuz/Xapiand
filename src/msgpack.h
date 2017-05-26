@@ -1127,9 +1127,9 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(const std::string& key, T&& val, 
 				if (overwrite) {
 					auto p = &_body->_obj->via.map.ptr[pos];
 					p->val = msgpack::object(std::forward<T>(val), *_body->_zone);
-					return std::make_pair(&_body->at(pos), true);
+					return std::make_pair(&_body->at(key), true);
 				}
-				return std::make_pair(&_body->at(pos), false);
+				return std::make_pair(&_body->at(key), false);
 			}
 		}
 		default:
