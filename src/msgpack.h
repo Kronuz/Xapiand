@@ -151,23 +151,22 @@ private:
 	MsgPack::iterator _find(size_t pos);
 	MsgPack::const_iterator _find(size_t pos) const;
 
+	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	std::pair<size_t, MsgPack::iterator> _erase(M&& o);
 	std::pair<size_t, MsgPack::iterator> _erase(const std::string& key);
 	std::pair<size_t, MsgPack::iterator> _erase(size_t pos);
 
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	std::pair<MsgPack*, bool> _put(M&& o, T&& val, bool overwrite);
 	template <typename T>
 	std::pair<MsgPack*, bool> _put(const std::string& key, T&& val, bool overwrite);
-
 	template <typename T>
 	std::pair<MsgPack*, bool> _put(size_t pos, T&& val, bool overwrite);
 
-	template <typename T>
-	std::pair<MsgPack*, bool> _insert(size_t pos, T&& val, bool overwrite);
-
-	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	std::pair<MsgPack*, bool> _put(M&& o, T&& val, bool overwrite);
-
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	std::pair<MsgPack*, bool> _insert(M&& o, T&& val, bool overwrite);
+	template <typename T>
+	std::pair<MsgPack*, bool> _insert(size_t pos, T&& val, bool overwrite);
 
 	void _fill(bool recursive, bool lock);
 	void _fill(bool recursive, bool lock) const;
@@ -185,14 +184,15 @@ public:
 	template <typename T>
 	MsgPack::iterator put(size_t pos, T&& val);
 
+	template <typename K, typename V>
+	std::pair<MsgPack::iterator, bool> insert(const std::pair<K&&, V&&>& val);
+
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	std::pair<MsgPack::iterator, bool> insert(M&& o, T&& val);
+	std::pair<MsgPack::iterator, bool> emplace(M&& o, T&& val);
 	template <typename T>
-	std::pair<MsgPack::iterator, bool> insert(const std::string& s, T&& val);
+	std::pair<MsgPack::iterator, bool> emplace(const std::string& s, T&& val);
 	template <typename T>
-	std::pair<MsgPack::iterator, bool> insert(size_t pos, T&& val);
-	template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
-	MsgPack::iterator insert(T&& v);
+	std::pair<MsgPack::iterator, bool> emplace(size_t pos, T&& val);
 
 	template <typename T>
 	void push_back(T&& v);
@@ -241,6 +241,8 @@ public:
 
 	void clear() noexcept;
 
+	std::size_t hash() const;
+
 	explicit operator bool() const;
 
 	void reserve(size_t n);
@@ -277,7 +279,6 @@ public:
 	MsgPack::Type getType() const noexcept;
 	std::string getStrType() const noexcept;
 
-	std::size_t hash() const;
 	bool operator==(const MsgPack& other) const;
 	bool operator!=(const MsgPack& other) const;
 	MsgPack operator+(double val);
@@ -962,6 +963,24 @@ inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 }
 
 
+template <typename M, typename>
+inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
+	switch (o._body->getType()) {
+		case Type::STR:
+			return _erase(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+		case Type::NEGATIVE_INTEGER:
+			if (o._body->_obj->via.i64 < 0) {
+				THROW(msgpack::type_error);
+			}
+			return _erase(static_cast<size_t>(o._body->_obj->via.i64));
+		case Type::POSITIVE_INTEGER:
+			return _erase(static_cast<size_t>(o._body->_obj->via.u64));
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(const std::string& key) {
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
@@ -1037,57 +1056,21 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 }
 
 
-inline MsgPack& MsgPack::path(const std::vector<std::string>& path) {
-	auto current = this;
-	for (const auto& s : path) {
-		switch (current->_const_body->getType()) {
-			case Type::MAP: {
-				current = &current->at(s);
-				break;
+template <typename M, typename T, typename>
+inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
+	switch (o._body->getType()) {
+		case Type::STR:
+			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
+		case Type::NEGATIVE_INTEGER:
+			if (o._body->_obj->via.i64 < 0) {
+				THROW(msgpack::type_error);
 			}
-			case Type::ARRAY: {
-				std::string::size_type sz;
-				int pos = std::stoi(s, &sz);
-				if (pos < 0 || sz != s.size()) {
-					THROW(invalid_argument, "The index for the array must be a positive integer, it is: " + s);
-				}
-				current = &current->at(pos);
-				break;
-			}
-
-			default:
-				THROW(invalid_argument, "The container must be a map or an array to access: " + s);
-		}
+			return _put(static_cast<size_t>(o._body->_obj->via.i64), std::forward<T>(val), overwrite);
+		case Type::POSITIVE_INTEGER:
+			return _put(static_cast<size_t>(o._body->_obj->via.u64), std::forward<T>(val), overwrite);
+		default:
+			THROW(msgpack::type_error);
 	}
-
-	return *current;
-}
-
-
-inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const {
-	auto current = this;
-	for (const auto& s : path) {
-		switch (current->getType()) {
-			case Type::MAP: {
-				current = &current->at(s);
-				break;
-			}
-			case Type::ARRAY: {
-				std::string::size_type sz;
-				int pos = std::stoi(s, &sz);
-				if (pos < 0 || sz != s.size()) {
-					THROW(invalid_argument, "The index for the array must be a positive integer, it is: " + s);
-				}
-				current = &current->at(pos);
-				break;
-			}
-
-			default:
-				THROW(invalid_argument, "The container must be a map or an array to access: " + s);
-		}
-	}
-
-	return *current;
 }
 
 
@@ -1164,24 +1147,6 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 
 
 template <typename M, typename T, typename>
-inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
-	switch (o._body->getType()) {
-		case Type::STR:
-			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
-		case Type::NEGATIVE_INTEGER:
-			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
-			}
-			return _put(static_cast<size_t>(o._body->_obj->via.i64), std::forward<T>(val), overwrite);
-		case Type::POSITIVE_INTEGER:
-			return _put(static_cast<size_t>(o._body->_obj->via.u64), std::forward<T>(val), overwrite);
-		default:
-			THROW(msgpack::type_error);
-	}
-}
-
-
-template <typename M, typename T, typename>
 inline std::pair<MsgPack*, bool> MsgPack::_insert(M&& o, T&& val, bool overwrite) {
 	switch (o._body->getType()) {
 		case Type::STR:
@@ -1241,61 +1206,6 @@ inline std::pair<MsgPack*, bool> MsgPack::_insert(size_t pos, T&& val, bool over
 }
 
 
-template <typename M, typename T, typename>
-inline MsgPack::iterator MsgPack::put(M&& o, T&& val) {
-	_fill(false, false);
-	auto pair = _put(std::forward<M>(o), std::forward<T>(val), true);
-	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
-}
-
-
-template <typename M, typename T, typename>
-inline std::pair<MsgPack::iterator, bool> MsgPack::insert(M&& o, T&& val) {
-	_fill(false, false);
-	auto pair = _insert(std::forward<M>(o), std::forward<T>(val), false);
-	return std::make_pair(MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos), pair.second);
-}
-
-
-template <typename T>
-inline MsgPack::iterator MsgPack::put(const std::string& s, T&& val) {
-	_fill(false, false);
-	auto pair = _put(s, std::forward<T>(val), true);
-	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
-}
-
-
-template <typename T>
-inline std::pair<MsgPack::iterator, bool> MsgPack::insert(const std::string& s, T&& val) {
-	_fill(false, false);
-	auto pair = _put(s, std::forward<T>(val), false);
-	return std::make_pair(MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos), pair.second);
-}
-
-
-template <typename T>
-inline MsgPack::iterator MsgPack::put(size_t pos, T&& val) {
-	_fill(false, false);
-	auto pair = _put(pos, std::forward<T>(val), true);
-	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
-}
-
-
-template <typename T>
-inline std::pair<MsgPack::iterator, bool> MsgPack::insert(size_t pos, T&& val) {
-	_fill(false, false);
-	auto pair = _insert(pos, std::forward<T>(val), false);
-	return std::make_pair(MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos), pair.second);
-}
-
-
-template <typename T>
-inline void MsgPack::push_back(T&& v) {
-	_fill(false, false);
-	_put(size(), std::forward<T>(v), false);
-}
-
-
 inline void MsgPack::_fill(bool recursive, bool lock) {
 	if (_body->_lock) {
 		return;
@@ -1328,6 +1238,67 @@ inline void MsgPack::_fill(bool recursive, bool lock) const {
 }
 
 
+template <typename M, typename T, typename>
+inline MsgPack::iterator MsgPack::put(M&& o, T&& val) {
+	_fill(false, false);
+	auto pair = _put(std::forward<M>(o), std::forward<T>(val), true);
+	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
+}
+
+
+template <typename T>
+inline MsgPack::iterator MsgPack::put(const std::string& s, T&& val) {
+	_fill(false, false);
+	auto pair = _put(s, std::forward<T>(val), true);
+	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
+}
+
+
+template <typename T>
+inline MsgPack::iterator MsgPack::put(size_t pos, T&& val) {
+	_fill(false, false);
+	auto pair = _put(pos, std::forward<T>(val), true);
+	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
+}
+
+
+template <typename M, typename T, typename>
+inline std::pair<MsgPack::iterator, bool> MsgPack::emplace(M&& o, T&& val) {
+	_fill(false, false);
+	auto pair = _insert(std::forward<M>(o), std::forward<T>(val), false);
+	return std::make_pair(MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos), pair.second);
+}
+
+
+template <typename T>
+inline std::pair<MsgPack::iterator, bool> MsgPack::emplace(const std::string& s, T&& val) {
+	_fill(false, false);
+	auto pair = _put(s, std::forward<T>(val), false);
+	return std::make_pair(MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos), pair.second);
+}
+
+
+template <typename T>
+inline std::pair<MsgPack::iterator, bool> MsgPack::emplace(size_t pos, T&& val) {
+	_fill(false, false);
+	auto pair = _insert(pos, std::forward<T>(val), false);
+	return std::make_pair(MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos), pair.second);
+}
+
+
+template <typename K, typename V>
+inline std::pair<MsgPack::iterator, bool> MsgPack::insert(const std::pair<K&&, V&&>& val) {
+	return emplace(std::forward<K>(val.first), std::forward<V>(val.second));
+}
+
+
+template <typename T>
+inline void MsgPack::push_back(T&& v) {
+	_fill(false, false);
+	_put(size(), std::forward<T>(v), false);
+}
+
+
 inline void MsgPack::lock() const {
 	_fill(true, true);
 }
@@ -1336,41 +1307,6 @@ inline void MsgPack::lock() const {
 template <typename T>
 inline decltype(auto) MsgPack::external(std::function<T(const msgpack::object&)> f) const {
 	return f(*_body->_obj);
-}
-
-
-template <typename T, typename>
-inline MsgPack::iterator MsgPack::insert(T&& v) {
-	_fill(false, false);
-	MsgPack o(v);
-	auto pos = size();
-	switch (o._body->getType()) {
-		case Type::ARRAY:
-			if (o._body->_obj->via.array.size % 2) {
-				break;
-			}
-			for (auto o_it = o.begin(); o_it != o.end(); ++o_it) {
-				auto key = *o_it;
-				auto val = *++o_it;
-				if (key._body->getType() != Type::STR) {
-					break;
-				}
-				auto pair = _put(key, val, false);
-				pos = pair.first->_body->_pos;
-			}
-			break;
-		case Type::MAP:
-			for (auto& key : o) {
-				auto& val = o.at(key);
-				auto pair = _put(key, val, false);
-				pos = pair.first->_body->_pos;
-			}
-			break;
-		default:
-			break;
-	}
-
-	return MsgPack::Iterator<MsgPack>(this, pos);
 }
 
 
@@ -1547,6 +1483,60 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 }
 
 
+inline MsgPack& MsgPack::path(const std::vector<std::string>& path) {
+	auto current = this;
+	for (const auto& s : path) {
+		switch (current->_const_body->getType()) {
+			case Type::MAP: {
+				current = &current->at(s);
+				break;
+			}
+			case Type::ARRAY: {
+				std::string::size_type sz;
+				int pos = std::stoi(s, &sz);
+				if (pos < 0 || sz != s.size()) {
+					THROW(invalid_argument, "The index for the array must be a positive integer, it is: " + s);
+				}
+				current = &current->at(pos);
+				break;
+			}
+
+			default:
+				THROW(invalid_argument, "The container must be a map or an array to access: " + s);
+		}
+	}
+
+	return *current;
+}
+
+
+inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const {
+	auto current = this;
+	for (const auto& s : path) {
+		switch (current->getType()) {
+			case Type::MAP: {
+				current = &current->at(s);
+				break;
+			}
+			case Type::ARRAY: {
+				std::string::size_type sz;
+				int pos = std::stoi(s, &sz);
+				if (pos < 0 || sz != s.size()) {
+					THROW(invalid_argument, "The index for the array must be a positive integer, it is: " + s);
+				}
+				current = &current->at(pos);
+				break;
+			}
+
+			default:
+				THROW(invalid_argument, "The container must be a map or an array to access: " + s);
+		}
+	}
+
+	return *current;
+}
+
+
 template <typename M, typename>
 inline MsgPack::iterator MsgPack::find(M&& o) {
 	_fill(false, false);
@@ -1642,19 +1632,7 @@ inline size_t MsgPack::count(T&& v) const {
 template <typename M, typename>
 inline size_t MsgPack::erase(M&& o) {
 	_fill(false, false);
-	switch (o._body->getType()) {
-		case Type::STR:
-			return _erase(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size)).first;
-		case Type::NEGATIVE_INTEGER:
-			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
-			}
-			return _erase(static_cast<size_t>(o._body->_obj->via.i64)).first;
-		case Type::POSITIVE_INTEGER:
-			return _erase(static_cast<size_t>(o._body->_obj->via.u64)).first;
-		default:
-			THROW(msgpack::type_error);
-	}
+	return _erase(std::forward<M>(o)).first;
 }
 
 
@@ -1691,6 +1669,29 @@ inline void MsgPack::clear() noexcept {
 			break;
 		default:
 			break;
+	}
+}
+
+
+inline std::size_t MsgPack::hash() const {
+	switch (_body->getType()) {
+		case Type::MAP: {
+			_fill(false, false);
+			size_t pos = 0;
+			std::size_t hash = 0;
+			const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
+			for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
+				if (p->key.type != msgpack::type::STR) {
+					THROW(msgpack::type_error);
+				}
+				auto val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->val));
+				hash ^= std::hash<std::string>{}(std::string(p->key.via.str.ptr, p->key.via.str.size));
+				hash ^= val.hash();
+			}
+			return hash;
+		}
+		default:
+			return std::hash<std::string>{}(serialise());
 	}
 }
 
@@ -2005,28 +2006,6 @@ inline MsgPack::Type MsgPack::getType() const noexcept {
 
 inline std::string MsgPack::getStrType() const noexcept {
 	return _const_body->getStrType();
-}
-
-
-inline std::size_t MsgPack::hash() const {
-	switch (_body->getType()) {
-		case Type::MAP: {
-			size_t pos = 0;
-			std::size_t hash = 0;
-			const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
-			for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
-				if (p->key.type != msgpack::type::STR) {
-					THROW(msgpack::type_error);
-				}
-				auto val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->val));
-				hash ^= std::hash<std::string>{}(std::string(p->key.via.str.ptr, p->key.via.str.size));
-				hash ^= val.hash();
-			}
-			return hash;
-		}
-		default:
-			return std::hash<std::string>{}(serialise());
-	}
 }
 
 
