@@ -191,11 +191,11 @@ public:
 	void clear() noexcept;
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	MsgPack::iterator remplace(M&& o, T&& val);
+	MsgPack::iterator replace(M&& o, T&& val);
 	template <typename T>
-	MsgPack::iterator remplace(const std::string& s, T&& val);
+	MsgPack::iterator replace(const std::string& s, T&& val);
 	template <typename T>
-	MsgPack::iterator remplace(size_t pos, T&& val);
+	MsgPack::iterator replace(size_t pos, T&& val);
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	std::pair<MsgPack::iterator, bool> emplace(M&& o, T&& val);
@@ -213,7 +213,7 @@ public:
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	void update(M&& o);
 
-	// Same as remplace(), but returning a reference:
+	// Same as replace(), but returning a reference:
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	MsgPack& put(M&& o, T&& val);
 	template <typename T>
@@ -1360,7 +1360,7 @@ inline void MsgPack::clear() noexcept {
 
 
 template <typename M, typename T, typename>
-inline MsgPack::iterator MsgPack::remplace(M&& o, T&& val) {
+inline MsgPack::iterator MsgPack::replace(M&& o, T&& val) {
 	_fill(false, false);
 	auto pair = _put(std::forward<M>(o), std::forward<T>(val), true);
 	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
@@ -1368,7 +1368,7 @@ inline MsgPack::iterator MsgPack::remplace(M&& o, T&& val) {
 
 
 template <typename T>
-inline MsgPack::iterator MsgPack::remplace(const std::string& s, T&& val) {
+inline MsgPack::iterator MsgPack::replace(const std::string& s, T&& val) {
 	_fill(false, false);
 	auto pair = _put(s, std::forward<T>(val), true);
 	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
@@ -1376,7 +1376,7 @@ inline MsgPack::iterator MsgPack::remplace(const std::string& s, T&& val) {
 
 
 template <typename T>
-inline MsgPack::iterator MsgPack::remplace(size_t pos, T&& val) {
+inline MsgPack::iterator MsgPack::replace(size_t pos, T&& val) {
 	_fill(false, false);
 	auto pair = _put(pos, std::forward<T>(val), true);
 	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
@@ -1427,7 +1427,7 @@ inline void MsgPack::update(M&& o) {
 			for (const auto& key : o) {
 				const auto& val = o.at(key);
 				if (find(key) == end()) {
-					remplace(key, val);
+					replace(key, val);
 				} else {
 					auto& item = at(key);
 					if (item.is_map()) {
