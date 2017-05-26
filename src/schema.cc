@@ -411,7 +411,7 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_INDEX_UUID_FIELD,       &Schema::write_index_uuid_field       },
 	{ RESERVED_SCRIPT,                 &Schema::write_script                 },
 	{ RESERVED_VERSION,                &Schema::write_version                },
-	{ DB_META_SCHEMA,                  &Schema::write_schema                 },
+	{ RESERVED_SCHEMA,                 &Schema::write_schema                 },
 });
 
 
@@ -486,7 +486,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_UUID_DETECTION,         &Schema::consistency_uuid_detection         },
 	{ RESERVED_NAMESPACE,              &Schema::consistency_namespace              },
 	{ RESERVED_VERSION,                &Schema::consistency_version                },
-	{ DB_META_SCHEMA,                  &Schema::consistency_schema                 },
+	{ RESERVED_SCHEMA,                 &Schema::consistency_schema                 },
 });
 
 
@@ -5290,7 +5290,7 @@ Schema::consistency_version(const std::string& prop_name, const MsgPack& doc_ver
 void
 Schema::consistency_schema(const std::string& prop_name, const MsgPack& doc_schema)
 {
-	// DB_META_SCHEMA isn't heritable and only is allowed in root.
+	// RESERVED_SCHEMA isn't heritable and only is allowed in root.
 	L_CALL(this, "Schema::consistency_schema(%s)", repr(doc_schema.to_string()).c_str());
 
 	if (specification.full_meta_name.empty()) {

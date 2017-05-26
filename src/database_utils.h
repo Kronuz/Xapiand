@@ -115,9 +115,9 @@
 #define RESERVED_MULTICHULL            "_multichull"
 #define RESERVED_GEO_COLLECTION        "_geometrycollection"
 #define RESERVED_GEO_INTERSECTION      "_geometryintersection"
+#define RESERVED_SCHEMA                "_schema"
+#define RESERVED_META                  "_meta"
 
-
-#define DB_META_SCHEMA         "_schema"
 #define DB_SCHEMA              "schema"
 #define DB_OFFSPRING_UNION     '.'
 #define DB_VERSION_SCHEMA      1.0
