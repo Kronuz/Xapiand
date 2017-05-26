@@ -330,16 +330,16 @@ HttpClient::on_read_file_done()
 
 // HTTP parser callbacks.
 const http_parser_settings HttpClient::settings = {
-	.on_message_begin = HttpClient::on_info,
-	.on_url = HttpClient::on_data,
-	.on_status = HttpClient::on_data,
-	.on_header_field = HttpClient::on_data,
-	.on_header_value = HttpClient::on_data,
-	.on_headers_complete = HttpClient::on_info,
-	.on_body = HttpClient::on_data,
-	.on_message_complete = HttpClient::on_info,
-	.on_chunk_header = HttpClient::on_info,
-	.on_chunk_complete = HttpClient::on_info
+	HttpClient::on_info,  // on_message_begin
+	HttpClient::on_data,  // on_url
+	HttpClient::on_data,  // on_status
+	HttpClient::on_data,  // on_header_field
+	HttpClient::on_data,  // on_header_value
+	HttpClient::on_info,  // on_headers_complete
+	HttpClient::on_data,  // on_body
+	HttpClient::on_info,  // on_message_complete
+	HttpClient::on_info,  // on_chunk_header
+	HttpClient::on_info   // on_chunk_complete
 };
 
 
