@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "xapiand.h"
+
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string
 
@@ -36,6 +38,12 @@ class Error : public std::runtime_error {
 class TimeOutError : public Error {
 public:
 	TimeOutError() : Error("Time Out") { }
+};
+
+
+class ScriptNotFoundError : public Error {
+public:
+	explicit ScriptNotFoundError(const std::string& what_arg) : Error(what_arg) { }
 };
 
 

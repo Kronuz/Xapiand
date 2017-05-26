@@ -277,12 +277,16 @@ MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, 
 #if defined(XAPIAND_V8)
 	} catch (const v8pp::ReferenceError&) {
 		return data;
+	} catch (const v8pp::ScriptNotFoundError& e) {
+		THROW(MissingTypeError, e.what());
 	} catch (const v8pp::Error& e) {
 		THROW(ClientError, e.what());
 #endif
 #if defined(XAPIAND_CHAISCRIPT)
 	} catch (const chaipp::ReferenceError&) {
 		return data;
+	} catch (const chaipp::ScriptNotFoundError& e) {
+		THROW(MissingTypeError, e.what());
 	} catch (const chaipp::Error& e) {
 		THROW(ClientError, e.what());
 #endif

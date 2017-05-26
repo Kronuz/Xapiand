@@ -35,15 +35,15 @@ class Error : public std::runtime_error {
 };
 
 
-class CycleDetectionError : public Error {
-public:
-	CycleDetectionError() : Error("Cycle detection") { }
-};
-
-
 class TimeOutError : public Error {
 public:
 	TimeOutError() : Error("Time Out") { }
+};
+
+
+class ScriptNotFoundError : public Error {
+public:
+	explicit ScriptNotFoundError(const std::string& what_arg) : Error(what_arg) { }
 };
 
 
@@ -56,6 +56,12 @@ public:
 class ReferenceError : public Error {
 public:
 	explicit ReferenceError(const std::string& what_arg) : Error(what_arg) { }
+};
+
+
+class CycleDetectionError : public Error {
+public:
+	CycleDetectionError() : Error("Cycle detection") { }
 };
 
 }; // End namespace v8pp
