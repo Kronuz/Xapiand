@@ -84,7 +84,7 @@ inline void _add(MsgPack& o, const MsgPack& val, const std::string& target) {
 			} else {
 				try {
 					size_t offset = strict_stoul(target);
-					o.insert(offset, val);
+					o.emplace(offset, val);
 				} catch (const std::invalid_argument&) {
 					THROW(ClientError, "Target in array must be a positive integer or '-'");
 				}
