@@ -142,7 +142,7 @@ public:
 		auto it = functions.find(name);
 		if (it == functions.end()) {
 			try {
-				it = functions.emplace(name, chai.eval(name)).first;
+				it = functions.emplace(name, Function(chai.eval(name))).first;
 			} catch (const chaiscript::exception::eval_error& er) {
 				throw ReferenceError(er.pretty_print());
 			}
