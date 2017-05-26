@@ -1199,7 +1199,7 @@ DatabaseHandler::get_document_change_seq(const std::string& term_id)
 bool
 DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
-	L_CALL(this, "DatabaseHandler::set_document_change_seq(%s, %s, %s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str(), std::to_string(new_document_pair->first).c_str(), old_document_pair ? std::to_string(old_document_pair->first).c_str() : "nil");
+	L_CALL(this, "DatabaseHandler::set_document_change_seq(%s, %s, %s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str(), std::to_string(new_document_pair->first).c_str(), old_document_pair ? std::to_string(old_document_pair->first).c_str() : "nullptr");
 
 	static std::hash<std::string> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(term_id);
