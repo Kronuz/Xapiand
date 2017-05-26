@@ -192,13 +192,13 @@ XapiandManager::load_node_name()
 
 
 void
-XapiandManager::save_node_name(const std::string& node_name)
+XapiandManager::save_node_name(const std::string& _node_name)
 {
-	L_CALL(this, "XapiandManager::save_node_name(%s)", node_name.c_str());
+	L_CALL(this, "XapiandManager::save_node_name(%s)", _node_name.c_str());
 
 	int fd = io::open("nodename", O_WRONLY | O_CREAT, 0644);
 	if (fd >= 0) {
-		if (io::write(fd, node_name.c_str(), node_name.size()) != static_cast<ssize_t>(node_name.size())) {
+		if (io::write(fd, _node_name.c_str(), _node_name.size()) != static_cast<ssize_t>(_node_name.size())) {
 			L_CRIT(nullptr, "Cannot write in nodename file");
 			sig_exit(-EX_IOERR);
 		}
