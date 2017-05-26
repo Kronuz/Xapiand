@@ -149,13 +149,13 @@ public:
 
 	static Log print(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
-	bool _unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
+	bool _unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 
-	bool _unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
+	bool _unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 
 	template <typename... Args>
-	bool unlog(int priority, const char *file, int line, const std::string& suffix, const std::string& prefix, const void *obj, const std::string& fmt, Args&&... args) {
-		return _unlog(priority, file, line, suffix.c_str(), prefix.c_str(), obj, fmt.c_str(), std::forward<Args>(args)...);
+	bool unlog(int _priority, const char *file, int line, const std::string& suffix, const std::string& prefix, const void *obj, const std::string& fmt, Args&&... args) {
+		return _unlog(_priority, file, line, suffix.c_str(), prefix.c_str(), obj, fmt.c_str(), std::forward<Args>(args)...);
 	}
 
 	void cleanup();

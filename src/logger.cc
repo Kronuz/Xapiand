@@ -477,16 +477,16 @@ Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::sys
 
 
 bool
-Logging::_unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
+Logging::_unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr)
 {
 	if (!clear()) {
-		if (priority > log_level) {
+		if (_priority > log_level) {
 			return false;
 		}
 
-		std::string str(_str_format(stacked, priority, std::string(), file, line, suffix, prefix, obj, format, argptr, true));
+		std::string str(_str_format(stacked, _priority, std::string(), file, line, suffix, prefix, obj, format, argptr, true));
 
-		print(str, false, stacked, 0, async, priority, time_point_from_ullong(created_at));
+		print(str, false, stacked, 0, async, _priority, time_point_from_ullong(created_at));
 
 		return true;
 	}
@@ -495,11 +495,11 @@ Logging::_unlog(int priority, const char *file, int line, const char *suffix, co
 
 
 bool
-Logging::_unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+Logging::_unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = _unlog(priority, file, line, suffix, prefix, obj, format, argptr);
+	auto ret = _unlog(_priority, file, line, suffix, prefix, obj, format, argptr);
 	va_end(argptr);
 
 	return ret;
