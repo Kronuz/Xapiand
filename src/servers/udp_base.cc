@@ -198,9 +198,9 @@ char
 BaseUDP::get_message(std::string& result, char max_type)
 {
 	char buf[1024];
-	struct sockaddr_in addr;
-	socklen_t addrlen = sizeof(addr);
-	ssize_t received = ::recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
+	struct sockaddr_in _addr;
+	socklen_t addrlen = sizeof(_addr);
+	ssize_t received = ::recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *)&_addr, &addrlen);
 	if (received < 0) {
 		if (!ignored_errorno(errno, true, true)) {
 			L_ERR(this, "ERROR: read error (sock=%d): %s", sock, strerror(errno));
