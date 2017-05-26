@@ -4302,7 +4302,7 @@ Schema::write_index_uuid_field(MsgPack& properties, const std::string& prop_name
 	L_CALL(this, "Schema::write_index_uuid_field(%s)", repr(doc_index_uuid_field.to_string()).c_str());
 
 	/*
-	 * RESERVED_INDEX_UUID_FIELD is herie and can change.
+	 * RESERVED_INDEX_UUID_FIELD is heritable and can change.
 	 */
 
 	process_index_uuid_field(prop_name, doc_index_uuid_field);
@@ -4681,7 +4681,7 @@ Schema::process_index_uuid_field(const std::string& prop_name, const MsgPack& do
 	L_CALL(this, "Schema::process_index_uuid_field(%s)", repr(doc_index_uuid_field.to_string()).c_str());
 
 	/*
-	 * RESERVED_INDEX_UUID_FIELD is herie and can change.
+	 * RESERVED_INDEX_UUID_FIELD is heritable and can change.
 	 */
 
 	try {
