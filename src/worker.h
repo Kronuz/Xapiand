@@ -149,7 +149,7 @@ public:
 		 * it is neccesary wrap the constructor in a struct.
 		 */
 		struct enable_make_shared : T {
-			enable_make_shared(Args&&... args) : T(std::forward<Args>(args)...) { }
+			enable_make_shared(Args&&... _args) : T(std::forward<Args>(_args)...) { }
 		};
 		auto child = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
 		if (child->_parent) {
