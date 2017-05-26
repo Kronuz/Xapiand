@@ -314,9 +314,9 @@ DatabaseWAL::repr_line(const std::string& line)
 
 
 MsgPack
-DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision)
+DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/)
 {
-	L_CALL(this, "DatabaseWAL::repr(%u, %u)", start_revision, end_revision);
+	L_CALL(this, "DatabaseWAL::repr(%u, ...)", start_revision);
 
 	fprintf(stderr, "%u\n", database->checkout_revision);
 
@@ -1666,6 +1666,8 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 			if (assume_valid_) {
 				doc = db->get_document(did, Xapian::DOC_ASSUME_VALID);
 			} else
+#else
+			(void)assume_valid_;
 #endif
 			{
 				doc = db->get_document(did);
