@@ -178,7 +178,7 @@ private:
 
 public:
 	template <typename T>
-	decltype(auto) external(std::function<T(const msgpack::object&)>) const;
+	auto external(std::function<T(const msgpack::object&)>) const;
 
 	void lock() const;
 
@@ -1303,7 +1303,7 @@ inline MsgPack::const_iterator MsgPack::_find(M&& o) const {
 
 
 template <typename T>
-inline decltype(auto) MsgPack::external(std::function<T(const msgpack::object&)> f) const {
+inline auto MsgPack::external(std::function<T(const msgpack::object&)> f) const {
 	return f(*_body->_obj);
 }
 
