@@ -127,7 +127,7 @@ class Processor {
 
 	class ScriptLRU : public lru::LRU<size_t, std::pair<size_t, std::shared_ptr<Processor>>> {
 	public:
-		ScriptLRU(ssize_t max_size)
+		explicit ScriptLRU(ssize_t max_size)
 			: LRU(max_size) { }
 	};
 
