@@ -1176,7 +1176,6 @@ HttpClient::meta_view(enum http_method method, Command, std::string key)
 {
 	L_CALL(this, "HttpClient::meta_view()");
 
-
 	enum http_status status_code = HTTP_STATUS_OK;
 
 	endpoints_maker(2s);
