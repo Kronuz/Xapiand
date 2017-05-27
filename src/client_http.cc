@@ -782,16 +782,13 @@ HttpClient::_get(enum http_method method)
 			break;
 		case Command::CMD_METADATA:
 			path_parser.off_id = nullptr;  // Command has no ID
-			meta_view(method, cmd, path_parser.get_pmt());
+			meta_view(method, cmd);
 			break;
 		default:
-			path_parser.off_id = nullptr;  // Command has no ID
-			if (path_parser.off_cmd && path_parser.len_cmd > 2) {
-				if (*++path_parser.off_cmd != '_') {
-					write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
-				}
-				--path_parser.len_cmd;
-				meta_view(method, cmd, path_parser.get_cmd());
+			if (path_parser.off_cmd && path_parser.len_cmd > 1) {
+				path_parser.off_id = ++path_parser.off_cmd;  // Command ID is CMD + 1
+				path_parser.len_id = --path_parser.len_cmd;  // Command ID is CMD + 1
+				search_view(method, Command::CMD_SEARCH);
 			}
 			break;
 		case Command::CMD_QUIT:
@@ -1172,7 +1169,7 @@ HttpClient::update_document_view(enum http_method method, Command)
 
 
 void
-HttpClient::meta_view(enum http_method method, Command, std::string key)
+HttpClient::meta_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::meta_view()");
 
@@ -1182,6 +1179,7 @@ HttpClient::meta_view(enum http_method method, Command, std::string key)
 
 	MsgPack response;
 	db_handler.reset(endpoints, DB_OPEN, method);
+	auto key(path_parser.get_pmt());
 	if (key.empty()) {
 		response = MsgPack(MsgPack::Type::MAP);
 		for (auto& _key : db_handler.get_metadata_keys()) {
@@ -1371,21 +1369,17 @@ HttpClient::search_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::search_view()");
 
-	bool chunked = !path_parser.off_id || isRange(path_parser.get_id());
-
-	int query_field_flags = 0;
-
-	if (!path_parser.off_id) {
-		query_field_flags |= QUERY_FIELD_SEARCH;
-	} else {
-		query_field_flags |= QUERY_FIELD_ID;
-	}
+	auto id(path_parser.get_id());
 
 	endpoints_maker(1s);
-	query_field_maker(query_field_flags);
+	query_field_maker(id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID);
 
-	if (path_parser.off_id) {
-		query_field->query.push_back(std::string(ID_FIELD_NAME)  + ":" +  path_parser.get_id());
+	bool chunked;
+	if (id.empty()) {
+		chunked = true;
+	} else {
+		query_field->query.push_back(std::string(ID_FIELD_NAME)  + ":" +  id);
+		chunked = isRange(id);
 	}
 
 	MSet mset;
