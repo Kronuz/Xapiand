@@ -786,9 +786,16 @@ HttpClient::_get(enum http_method method)
 			break;
 		default:
 			if (path_parser.off_cmd && path_parser.len_cmd > 1) {
-				path_parser.off_id = ++path_parser.off_cmd;  // Command ID is CMD + 1
-				path_parser.len_id = --path_parser.len_cmd;  // Command ID is CMD + 1
-				search_view(method, Command::CMD_SEARCH);
+				if (*(path_parser.off_cmd + 1) == '_') {
+					path_parser.off_id = nullptr;  // Command has no ID
+					path_parser.off_pmt = path_parser.off_cmd + 1;
+					path_parser.len_pmt = path_parser.len_cmd + 1;
+					meta_view(method, cmd);
+				} else {
+					path_parser.off_id = path_parser.off_cmd;  // Command ID is CMD + 1
+					path_parser.len_id = path_parser.len_cmd;  // Command ID is CMD + 1
+					search_view(method, cmd);
+				}
 			}
 			break;
 		case Command::CMD_QUIT:
@@ -1179,7 +1186,15 @@ HttpClient::meta_view(enum http_method method, Command)
 
 	MsgPack response;
 	db_handler.reset(endpoints, DB_OPEN, method);
-	auto key(path_parser.get_pmt());
+
+	std::string key;
+	std::vector<std::string> fields;
+	Split<>::split(path_parser.get_pmt(), '.', std::back_inserter(fields), false);
+	if (!fields.empty()) {
+		key = fields.front();
+		fields.erase(fields.begin());
+	}
+
 	if (key.empty()) {
 		response = MsgPack(MsgPack::Type::MAP);
 		for (auto& _key : db_handler.get_metadata_keys()) {
@@ -1194,6 +1209,13 @@ HttpClient::meta_view(enum http_method method, Command)
 			status_code = HTTP_STATUS_NOT_FOUND;
 		} else {
 			response = MsgPack::unserialise(metadata);
+			if (!fields.empty()) {
+				try {
+					response = response.path(fields);
+				} catch (const std::out_of_range&) {
+					response = MsgPack(MsgPack::Type::UNDEFINED);
+				}
+			}
 		}
 	}
 
@@ -1369,7 +1391,13 @@ HttpClient::search_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::search_view()");
 
-	auto id(path_parser.get_id());
+	std::string id;
+	std::vector<std::string> fields;
+	Split<>::split(path_parser.get_id(), '.', std::back_inserter(fields), false);
+	if (!fields.empty()) {
+		id = fields.front();
+		fields.erase(fields.begin());
+	}
 
 	endpoints_maker(1s);
 	query_field_maker(id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID);
@@ -1619,6 +1647,14 @@ HttpClient::search_view(enum http_method method, Command)
 			// int subdatabase = (document.get_docid() - 1) % endpoints.size();
 			// auto endpoint = endpoints[subdatabase];
 			// obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
+
+			if (!fields.empty()) {
+				try {
+					obj_data = obj_data.path(fields);
+				} catch (const std::out_of_range&) {
+					obj_data = MsgPack(MsgPack::Type::UNDEFINED);
+				}
+			}
 
 			if (Logging::log_level > LOG_DEBUG) {
 				if (chunked) {
