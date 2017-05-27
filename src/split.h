@@ -32,6 +32,7 @@ class Split {
 
 	std::string str;
 	T sep;
+	bool skip_blank;
 	size_t inc;
 
 	dispatch_search search_func;
@@ -74,7 +75,7 @@ class Split {
 					}
 					end = split->next(start);
 					inc = split->inc;
-				} while (start == end && end != std::string::npos);
+				} while (split->skip_blank && start == end && end != std::string::npos);
 			}
 		}
 
@@ -90,7 +91,7 @@ class Split {
 						return;
 					}
 					end = split->next(start);
-				} while (start == end && end != std::string::npos);
+				} while (split->skip_blank && start == end && end != std::string::npos);
 			}
 		}
 
@@ -149,18 +150,25 @@ public:
 	enum class Type : uint8_t {
 		FIND,
 		FIND_FIRST_OF,
+		SKIP_BLANK_FIND,
+		SKIP_BLANK_FIND_FIRST_OF,
 	};
 
 	template <typename String, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<String>>::value && std::is_same<T, std::decay_t<String>>::value>>
 	Split(String&& str_, String&& sep_, Type type=Type::FIND)
 		: str(std::forward<String>(str_)),
-		  sep(std::forward<String>(sep_))
+		  sep(std::forward<String>(sep_)),
+		  skip_blank(true)
 	{
 		switch (type) {
+			case Type::SKIP_BLANK_FIND:
+				skip_blank = false;
 			case Type::FIND:
 				inc = sep.length();
 				search_func = &Split::find;
 				break;
+			case Type::SKIP_BLANK_FIND_FIRST_OF:
+				skip_blank = false;
 			case Type::FIND_FIRST_OF:
 				inc = 1;
 				search_func = &Split::find_first_of;
@@ -176,12 +184,17 @@ public:
 	Split(String&& str_, Sep&& sep_, Type type=Type::FIND)
 		: str(std::forward<String>(str_)),
 		  sep(std::forward<Sep>(sep_)),
+		  skip_blank(true),
 		  inc(1)
 	{
 		switch (type) {
+			case Type::SKIP_BLANK_FIND:
+				skip_blank = false;
 			case Type::FIND:
 				search_func = &Split::find;
 				break;
+			case Type::SKIP_BLANK_FIND_FIRST_OF:
+				skip_blank = false;
 			case Type::FIND_FIRST_OF:
 				search_func = &Split::find_first_of;
 				break;
@@ -227,12 +240,12 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void split(const std::string& str, const std::string& delimiter, OutputIt d_first) {
+	static void split(const std::string& str, const std::string& delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
 		while ((next = str.find(delimiter, prev)) != std::string::npos) {
 			size_t len = next - prev;
-			if (len > 0) {
+			if (!skip_blank || len > 0) {
 				*d_first = str.substr(prev, len);
 				++d_first;
 			}
@@ -245,12 +258,12 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void split(const std::string& str, char delimiter, OutputIt d_first) {
+	static void split(const std::string& str, char delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
 		while ((next = str.find(delimiter, prev)) != std::string::npos) {
 			size_t len = next - prev;
-			if (len > 0) {
+			if (!skip_blank || len > 0) {
 				*d_first = str.substr(prev, len);
 				++d_first;
 			}
@@ -263,12 +276,12 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void split_first_of(const std::string& str, const std::string& delimiter, OutputIt d_first) {
+	static void split_first_of(const std::string& str, const std::string& delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
 		while ((next = str.find_first_of(delimiter, prev)) != std::string::npos) {
 			size_t len = next - prev;
-			if (len > 0) {
+			if (!skip_blank || len > 0) {
 				*d_first = str.substr(prev, len);
 				++d_first;
 			}
@@ -281,7 +294,7 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void split_first_of(const std::string& str, char delimiter, OutputIt d_first) {
-		return split(str, delimiter, d_first);
+	static void split_first_of(const std::string& str, char delimiter, OutputIt d_first, bool skip_blank=true) {
+		return split(str, delimiter, d_first, skip_blank);
 	}
 };
