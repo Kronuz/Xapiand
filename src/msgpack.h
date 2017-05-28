@@ -253,6 +253,7 @@ public:
 
 	MsgPack& path(const std::vector<std::string>& path);
 	const MsgPack& path(const std::vector<std::string>& path) const;
+	const MsgPack select(const std::string& selector) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	iterator find(M&& o);
@@ -1727,6 +1728,144 @@ inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const 
 
 	return *current;
 }
+
+
+inline const MsgPack MsgPack::select(const std::string& selector) const {
+	// .field.subfield.name
+	// {field{subfield{name}other{name}}}
+	MsgPack ret;
+
+	std::vector<const MsgPack*> base_stack;
+	std::vector<const MsgPack*> input_stack;
+	std::vector<MsgPack*> output_stack;
+
+	auto base = this;
+	auto input = base;
+	auto output = &ret;
+
+	std::string name;
+	const char* name_off = nullptr;
+	const char* off = selector.data();
+	const char* end = off + selector.size();
+
+	for (;off != end; ++off) {
+		switch (*off) {
+			case '.':
+				if (name_off) {
+					name = std::string(name_off, off - name_off);
+					name_off = nullptr;
+				}
+				if (!name.empty()) {
+					if (input) {
+						try {
+							input = &input->at(name);
+						} catch (const std::out_of_range&) {
+							input = nullptr;
+						} catch (const msgpack::type_error&) {
+							input = nullptr;
+						}
+					}
+					name.clear();
+				}
+				break;
+			case '{':
+				if (name_off) {
+					name = std::string(name_off, off - name_off);
+					name_off = nullptr;
+				}
+				base_stack.push_back(base);
+				input_stack.push_back(input);
+				output_stack.push_back(output);
+				if (!name.empty()) {
+					if (input && output) {
+						try {
+							input = &input->at(name);
+							base = input;
+							output = &(*output)[name];
+						} catch (const std::out_of_range&) {
+							input = nullptr;
+							output = nullptr;
+						} catch (const msgpack::type_error&) {
+							input = nullptr;
+							output = nullptr;
+						}
+					}
+					name.clear();
+				}
+				break;
+			case '}':
+				if (name_off) {
+					name = std::string(name_off, off - name_off);
+					name_off = nullptr;
+				}
+				if (!name.empty()) {
+					if (input && output) {
+						try {
+							auto& val = input->at(name);
+							(*output)[name] = val;
+						} catch (const std::out_of_range&) {
+						} catch (const msgpack::type_error&) { }
+					}
+					name.clear();
+				}
+				if (!output_stack.size()) {
+					THROW(invalid_argument, "Unbalanced braces.");
+				}
+				base = base_stack.back();
+				base_stack.pop_back();
+				input = input_stack.back();
+				input_stack.pop_back();
+				output = output_stack.back();
+				output_stack.pop_back();
+				break;
+			case ',':
+			case ' ':
+				input = base;
+				if (name_off) {
+					name = std::string(name_off, off - name_off);
+					name_off = nullptr;
+				}
+				break;
+			default:
+				if (!name.empty()) {
+					if (input && output) {
+						try {
+							auto& val = input->at(name);
+							(*output)[name] = val;
+						} catch (const std::out_of_range&) {
+						} catch (const msgpack::type_error&) { }
+					}
+					name.clear();
+				}
+				if (!name_off) {
+					name_off = off;
+				}
+				break;
+		}
+	}
+
+	if (output_stack.size()) {
+		THROW(invalid_argument, "Unbalanced braces.");
+	}
+
+	if (name_off) {
+		name = std::string(name_off, off - name_off);
+		name_off = nullptr;
+	}
+	if (!name.empty()) {
+		if (input && output) {
+			try {
+				auto& val = input->at(name);
+				*output = val;
+			} catch (const std::out_of_range&) {
+			} catch (const msgpack::type_error&) { }
+		}
+		name.clear();
+	}
+
+	return ret;
+}
+
 
 
 template <typename M, typename>
