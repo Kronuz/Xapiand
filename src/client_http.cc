@@ -1187,12 +1187,12 @@ HttpClient::meta_view(enum http_method method, Command)
 	MsgPack response;
 	db_handler.reset(endpoints, DB_OPEN, method);
 
-	std::string key;
-	std::vector<std::string> fields;
-	Split<>::split(path_parser.get_pmt(), '.', std::back_inserter(fields), false);
-	if (!fields.empty()) {
-		key = fields.front();
-		fields.erase(fields.begin());
+	std::string key = path_parser.get_pmt();
+	std::string selector;
+	auto needle = key.find('.');
+	if (needle != std::string::npos) {
+		selector = key.substr(needle);
+		key = key.substr(0, needle);
 	}
 
 	if (key.empty()) {
@@ -1209,9 +1209,9 @@ HttpClient::meta_view(enum http_method method, Command)
 			status_code = HTTP_STATUS_NOT_FOUND;
 		} else {
 			response = MsgPack::unserialise(metadata);
-			if (!fields.empty()) {
+			if (!selector.empty()) {
 				try {
-					response = response.path(fields);
+					response = response.select(selector);
 				} catch (const std::out_of_range&) {
 					response = MsgPack(MsgPack::Type::UNDEFINED);
 				}
@@ -1391,12 +1391,13 @@ HttpClient::search_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::search_view()");
 
-	std::string id;
-	std::vector<std::string> fields;
-	Split<>::split(path_parser.get_id(), '.', std::back_inserter(fields), false);
-	if (!fields.empty()) {
-		id = fields.front();
-		fields.erase(fields.begin());
+
+	std::string id = path_parser.get_id();
+	std::string selector;
+	auto needle = id.find('.');
+	if (needle != std::string::npos) {
+		selector = id.substr(needle);
+		id = id.substr(0, needle);
 	}
 
 	endpoints_maker(1s);
@@ -1648,9 +1649,9 @@ HttpClient::search_view(enum http_method method, Command)
 			// auto endpoint = endpoints[subdatabase];
 			// obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
 
-			if (!fields.empty()) {
+			if (!selector.empty()) {
 				try {
-					obj_data = obj_data.path(fields);
+					obj_data = obj_data.select(selector);
 				} catch (const std::out_of_range&) {
 					obj_data = MsgPack(MsgPack::Type::UNDEFINED);
 				}
