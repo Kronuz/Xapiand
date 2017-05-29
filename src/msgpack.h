@@ -1802,7 +1802,7 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 				if (!name.empty()) {
 					if (input && output) {
 						try {
-							auto& val = input->at(name);
+							const auto& val = input->at(name);
 							(*output)[name] = val;
 						} catch (const std::out_of_range&) {
 						} catch (const msgpack::type_error&) { }
@@ -1831,7 +1831,7 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 				if (!name.empty()) {
 					if (input && output) {
 						try {
-							auto& val = input->at(name);
+							const auto& val = input->at(name);
 							(*output)[name] = val;
 						} catch (const std::out_of_range&) {
 						} catch (const msgpack::type_error&) { }
@@ -1856,7 +1856,7 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 	if (!name.empty()) {
 		if (input && output) {
 			try {
-				auto& val = input->at(name);
+				const auto& val = input->at(name);
 				*output = val;
 			} catch (const std::out_of_range&) {
 			} catch (const msgpack::type_error&) { }
