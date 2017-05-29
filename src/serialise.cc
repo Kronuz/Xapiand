@@ -86,7 +86,7 @@ Serialise::isUUID(const std::string& field_value) noexcept
 {
 	if (field_value.length() > 2) {
 		bool allow_b64 = false;
-		Split<char> split(std::string(), UUID_SEPARATOR_LIST);
+		Split<char> split(field_value, UUID_SEPARATOR_LIST);
 		if (field_value.front() == '{' && field_value.back() == '}') {
 			allow_b64 = true;
 			split = Split<char>(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST);
