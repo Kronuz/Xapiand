@@ -1820,7 +1820,11 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 				output_stack.pop_back();
 				break;
 			case ',':
+			case ';':
 			case ' ':
+			case '\t':
+			case '\n':
+			case '\r':
 				input = base;
 				if (name_off) {
 					name = std::string(name_off, off - name_off);
