@@ -1047,13 +1047,14 @@ Unserialise::uuid(const std::string& serialised_uuid)
 {
 	std::vector<Guid> uuids;
 	Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
-	if (uuids.size() == 1) {
-		return uuids.back().to_string();
-	} else {
-		std::string result = base64::encode(serialised_uuid);
-		result.insert(0, 1, '{').push_back('}');
-		return result;
+	std::string result;
+	for (auto& uuid : uuids) {
+		if (!result.empty()) {
+			result += ";";
+		}
+		result.append(uuid.to_string());
 	}
+	return result;
 }
 
 
