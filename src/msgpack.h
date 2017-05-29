@@ -1733,6 +1733,7 @@ inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const 
 inline MsgPack MsgPack::select(const std::string& selector) const {
 	// .field.subfield.name
 	// {field{subfield{name}other{name}}}
+
 	MsgPack ret;
 
 	std::vector<const MsgPack*> base_stack;
@@ -1746,9 +1747,9 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 	std::string name;
 	const char* name_off = nullptr;
 	const char* off = selector.data();
-	const char* end = off + selector.size();
+	const char* end = off + selector.length();
 
-	for (;off != end; ++off) {
+	for (; off != end; ++off) {
 		switch (*off) {
 			case '.':
 				if (name_off) {
@@ -1865,7 +1866,6 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 
 	return ret;
 }
-
 
 
 template <typename M, typename>
