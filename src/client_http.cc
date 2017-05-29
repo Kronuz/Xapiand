@@ -791,10 +791,6 @@ HttpClient::_get(enum http_method method)
 					path_parser.off_pmt = path_parser.off_cmd + 1;
 					path_parser.len_pmt = path_parser.len_cmd + 1;
 					meta_view(method, cmd);
-				} else {
-					path_parser.off_id = path_parser.off_cmd;  // Command ID is CMD + 1
-					path_parser.len_id = path_parser.len_cmd;  // Command ID is CMD + 1
-					search_view(method, cmd);
 				}
 			}
 			break;
@@ -1868,7 +1864,8 @@ HttpClient::url_resolve()
 				return Command::NO_CMD_NO_ID;
 			}
 		} else {
-			return static_cast<Command>(xxh64::hash(lower_string(path_parser.get_cmd())));
+			auto cmd = path_parser.get_cmd();
+			return static_cast<Command>(xxh64::hash(lower_string(cmd.substr(0, cmd.find_first_of(".{", 1)))));
 		}
 
 	} else {
@@ -1900,7 +1897,7 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 	if (path_parser.off_nsp) {
 		ns = path_parser.get_nsp() + "/";
 		if (startswith(ns, "/")) { /* ns without slash */
-			ns = ns.substr(1, std::string::npos);
+			ns = ns.substr(1);
 		}
 		if (startswith(ns, ".")) {
 			THROW(ClientError, "The index directory %s couldn't start with '.', it's reserved", ns.c_str());
