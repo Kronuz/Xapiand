@@ -44,18 +44,21 @@
 #include "utils.h"                                    // for toUType, stox, repr
 
 
+constexpr char UUID_SEPARATOR_LIST = ';';
+
+
 bool
 Serialise::isUUID(const std::string& field_value) noexcept
 {
 	if (field_value.length() > 2) {
 		bool allow_b64 = false;
-		Split<char> split(field_value, ';');
+		Split<char> split(std::string(), UUID_SEPARATOR_LIST);
 		if (field_value.front() == '{' && field_value.back() == '}') {
 			allow_b64 = true;
-			split = Split<char>(field_value.substr(1, field_value.length() - 2), ';');
+			split = Split<char>(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST);
 		} else if (field_value.compare(0, 9, "urn:uuid:") == 0) {
 			allow_b64 = true;
-			split = Split<char>(field_value.substr(9), ';');
+			split = Split<char>(field_value.substr(9), UUID_SEPARATOR_LIST);
 		} else if ((field_value.length() + 1) % (UUID_LENGTH + 1) == 0) {
 			if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
 				return false;
@@ -64,7 +67,7 @@ Serialise::isUUID(const std::string& field_value) noexcept
 		for (const auto& uuid : split) {
 			if (uuid.length() == UUID_LENGTH && uuid[8] == '-' && uuid[13] == '-' && uuid[18] == '-' && uuid[23] == '-') {
 				auto c = uuid.data();
-				for (size_t pos = uuid.size(); pos; --pos) {
+				for (size_t pos = uuid.length(); pos; --pos) {
 					if (!std::isxdigit(*c++) && pos != 28 && pos != 23 && pos != 18 && pos != 13) {
 						return false;
 					}
@@ -105,7 +108,7 @@ Serialise::isUUID(const std::string& field_value) noexcept
 					   true,    true,    true,    false,   false,   false,   false,   false,
 				};
 				auto c = uuid.data();
-				for (size_t pos = uuid.size(); pos; --pos) {
+				for (size_t pos = uuid.length(); pos; --pos) {
 					if (!base64_rfc4648_url_alphabet[(int)*c++]) {
 						return false;
 					}
@@ -568,11 +571,11 @@ Serialise::uuid(const std::string& field_value)
 	if (isUUID(field_value)) {
 		std::vector<std::string> result;
 		if (field_value.front() == '{') {
-			Split<>::split(field_value.substr(1, field_value.length() - 2), ';', std::back_inserter(result));
+			Split<>::split(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST, std::back_inserter(result));
 		} else if (field_value.compare(0, 9, "urn:uuid:") == 0) {
-			Split<>::split(field_value.substr(9), ';', std::back_inserter(result));
+			Split<>::split(field_value.substr(9), UUID_SEPARATOR_LIST, std::back_inserter(result));
 		} else {
-			Split<>::split(field_value, ';', std::back_inserter(result));
+			Split<>::split(field_value, UUID_SEPARATOR_LIST, std::back_inserter(result));
 		}
 		return Guid::serialise(result.begin(), result.end());
 	}
@@ -1050,7 +1053,7 @@ Unserialise::uuid(const std::string& serialised_uuid)
 	std::string result;
 	for (auto& uuid : uuids) {
 		if (!result.empty()) {
-			result += ";";
+			result.push_back(UUID_SEPARATOR_LIST);
 		}
 		result.append(uuid.to_string());
 	}
