@@ -1183,12 +1183,20 @@ HttpClient::meta_view(enum http_method method, Command)
 	MsgPack response;
 	db_handler.reset(endpoints, DB_OPEN, method);
 
-	std::string key = path_parser.get_pmt();
 	std::string selector;
-	auto needle = key.find_first_of(".{", 1);
-	if (needle != std::string::npos) {
-		selector = key.substr(needle);
-		key = key.substr(0, needle);
+	auto key = path_parser.get_pmt();
+	if (key.empty()) {
+		std::string cmd = path_parser.get_cmd();
+		auto needle = cmd.find_first_of(".{", 1);
+		if (needle != std::string::npos) {
+			selector = cmd.substr(needle);
+		}
+	} else {
+		auto needle = key.find_first_of(".{", 1);
+		if (needle != std::string::npos) {
+			selector = key.substr(needle);
+			key = key.substr(0, needle);
+		}
 	}
 
 	if (key.empty()) {
@@ -1205,14 +1213,11 @@ HttpClient::meta_view(enum http_method method, Command)
 			status_code = HTTP_STATUS_NOT_FOUND;
 		} else {
 			response = MsgPack::unserialise(metadata);
-			if (!selector.empty()) {
-				try {
-					response = response.select(selector);
-				} catch (const std::out_of_range&) {
-					response = MsgPack(MsgPack::Type::UNDEFINED);
-				}
-			}
 		}
+	}
+
+	if (!selector.empty()) {
+		response = response.select(selector);
 	}
 
 	write_http_response(status_code, response);
@@ -1347,6 +1352,13 @@ HttpClient::schema_view(enum http_method method, Command)
 {
 	L_CALL(this, "HttpClient::schema_view()");
 
+	std::string selector;
+	auto cmd = path_parser.get_cmd();
+	auto needle = cmd.find_first_of(".{", 1);
+	if (needle != std::string::npos) {
+		selector = cmd.substr(needle);
+	}
+
 	endpoints_maker(1s);
 
 	operation_begins = std::chrono::system_clock::now();
@@ -1354,6 +1366,9 @@ HttpClient::schema_view(enum http_method method, Command)
 	db_handler.reset(endpoints, DB_OPEN, method);
 
 	auto schema = db_handler.get_schema()->get_readable();
+	if (!selector.empty()) {
+		schema = schema.select(selector);
+	}
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -1388,8 +1403,8 @@ HttpClient::search_view(enum http_method method, Command)
 	L_CALL(this, "HttpClient::search_view()");
 
 
-	std::string id = path_parser.get_id();
 	std::string selector;
+	auto id = path_parser.get_id();
 	if (id.empty()) {
 		auto cmd = path_parser.get_cmd();
 		auto needle = cmd.find_first_of(".{", 1);
@@ -1654,11 +1669,7 @@ HttpClient::search_view(enum http_method method, Command)
 			// obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
 
 			if (!selector.empty()) {
-				try {
-					obj_data = obj_data.select(selector);
-				} catch (const std::out_of_range&) {
-					obj_data = MsgPack(MsgPack::Type::UNDEFINED);
-				}
+				obj_data = obj_data.select(selector);
 			}
 
 			if (Logging::log_level > LOG_DEBUG) {
