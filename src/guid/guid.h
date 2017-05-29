@@ -146,20 +146,9 @@ public:
 		std::string serialised;
 		while (first != last) {
 			const auto& uuid = *first;
-			if (uuid.length() == UUID_LENGTH) {
-				if (uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-') {
-					serialised.append(serialise_base64(uuid));
-				} else {
-					int i = 0;
-					for (const auto& c : uuid) {
-						if (!std::isxdigit(c) && i != 8 && i != 13 && i != 18 && i != 23) {
-							THROW(SerialisationError, "Invalid UUID format in: %s [%c -> %d]", uuid.c_str(), c, i);
-						}
-						++i;
-					}
-					Guid guid(uuid);
-					serialised.append(guid.serialise());
-				}
+			if (uuid.length() == UUID_LENGTH && uuid[8] == '-' && uuid[13] == '-' && uuid[18] == '-' && uuid[23] == '-') {
+				Guid guid(uuid);
+				serialised.append(guid.serialise());
 			} else {
 				serialised.append(serialise_base64(uuid));
 			}
