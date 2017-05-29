@@ -48,56 +48,74 @@ bool
 Serialise::isUUID(const std::string& field_value) noexcept
 {
 	if (field_value.length() > 2) {
+		bool allow_b64 = false;
+		Split<char> split(field_value, ';');
 		if (field_value.front() == '{' && field_value.back() == '}') {
-			Split<char> split(field_value.substr(1, field_value.length() - 2), ';');
-			for (const auto& uuid : split) {
-				if (uuid.length() == UUID_LENGTH) {
-					if (uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-') {
-						return false;
-					}
-					int i = 0;
-					for (const auto& c : uuid) {
-						if (!std::isxdigit(c) && i != 8 && i != 13 && i != 18 && i != 23) {
-							return false;
-						}
-						++i;
-					}
-				} else {
-					if (uuid.empty()) {
-						return false;
-					} else {
-						static const std::unordered_set<char> set_base64_rfc4648_alphabet({
-							'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-							'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-							'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-							'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-							'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/',
-						});
-						static auto it_e = set_base64_rfc4648_alphabet.end();
-						for (const auto& c : uuid) {
-							if (set_base64_rfc4648_alphabet.find(c) == it_e) {
-								return false;
-							}
-						}
-					}
-				}
-			}
-			return true;
-		} else if (field_value.length() == UUID_LENGTH) {
+			allow_b64 = true;
+			split = Split<char>(field_value.substr(1, field_value.length() - 2), ';');
+		} else if (field_value.compare(0, 9, "urn:uuid:") == 0) {
+			allow_b64 = true;
+			split = Split<char>(field_value.substr(9), ';');
+		} else if ((field_value.length() + 1) % (UUID_LENGTH + 1) == 0) {
 			if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
 				return false;
 			}
-			int i = 0;
-			for (const auto& c : field_value) {
-				if (!std::isxdigit(c) && i != 8 && i != 13 && i != 18 && i != 23) {
-					return false;
-				}
-				++i;
-			}
-			return true;
 		}
+		for (const auto& uuid : split) {
+			if (uuid.length() == UUID_LENGTH && uuid[8] == '-' && uuid[13] == '-' && uuid[18] == '-' && uuid[23] == '-') {
+				auto c = uuid.data();
+				for (size_t pos = uuid.size(); pos; --pos) {
+					if (!std::isxdigit(*c++) && pos != 28 && pos != 23 && pos != 18 && pos != 13) {
+						return false;
+					}
+				}
+			} else if (allow_b64 && !uuid.empty()) {
+				static const bool base64_rfc4648_url_alphabet[256] = {
+					// 0 nul    1 soh    2 stx    3 etx    4 eot    5 enq    6 ack    7 bel
+					   false,   false,   false,   false,   false,   false,   false,   false,
+					// 8 bs     9 ht     10 nl    11 vt    12 np    13 cr    14 so    15 si
+					   false,   false,   false,   false,   false,   false,   false,   false,
+					// 16 dle   17 dc1   18 dc2   19 dc3   20 dc4   21 nak   22 syn   23 etb
+					   false,   false,   false,   false,   false,   false,   false,   false,
+					// 24 can   25 em    26 sub   27 esc   28 fs    29 gs    30 rs    31 us
+					   false,   false,   false,   false,   false,   false,   false,   false,
+					// 32 sp    33  !    34  "    35  #    36  $    37  %    38  &    39  '
+					   false,   false,   false,   false,   false,   false,   false,   false,
+					// 40  (    41  )    42  *    43  +    44  ,    45  -    46  .    47  /
+					   false,   false,   false,   false,   false,   true,   false,   false,
+					// 48  0    49  1    50  2    51  3    52  4    53  5    54  6    55  7
+					   true,    true,    true,    true,    true,    true,    true,    true,
+					// 56  8    57  9    58  :    59  ;    60  <    61  =    62  >    63  ?
+					   true,    true,    false,   false,   false,   false,   false,   false,
+					// 64  @    65  A    66  B    67  C    68  D    69  E    70  F    71  G
+					   false,   true,    true,    true,    true,    true,    true,    true,
+					// 72  H    73  I    74  J    75  K    76  L    77  M    78  N    79  O
+					   true,    true,    true,    true,    true,    true,    true,    true,
+					// 80  P    81  Q    82  R    83  S    84  T    85  U    86  V    87  W
+					   true,    true,    true,    true,    true,    true,    true,    true,
+					// 88  X    89  Y    90  Z    91  [    92  \    93  ]    94  ^    95  _
+					   true,    true,    true,    false,   false,   false,   false,   true,
+					// 96  `    97  a    98  b    99  c    100  d   101  e   102  f   103  g
+					   false,   true,    true,    true,    true,    true,    true,    true,
+					// 104  h   105  i   106  j   107  k   108  l   109  m   110  n   111  o
+					   true,    true,    true,    true,    true,    true,    true,    true,
+					// 112  p   113  q   114  r   115  s   116  t   117  u   118  v   119  w
+					   true,    true,    true,    true,    true,    true,    true,    true,
+					// 120  x   121  y   122  z   123  {   124  |   125  }   126  ~   127 del
+					   true,    true,    true,    false,   false,   false,   false,   false,
+				};
+				auto c = uuid.data();
+				for (size_t pos = uuid.size(); pos; --pos) {
+					if (!base64_rfc4648_url_alphabet[(int)*c++]) {
+						return false;
+					}
+				}
+			} else {
+				return false;
+			}
+		}
+		return true;
 	}
-
 	return false;
 }
 
@@ -547,26 +565,17 @@ Serialise::positive(const std::string& field_value)
 std::string
 Serialise::uuid(const std::string& field_value)
 {
-	if (field_value.length() > 2) {
-		if (field_value.front() == '{' && field_value.back() == '}') {
-			std::vector<std::string> result;
+	if (isUUID(field_value)) {
+		std::vector<std::string> result;
+		if (field_value.front() == '{') {
 			Split<>::split(field_value.substr(1, field_value.length() - 2), ';', std::back_inserter(result));
-			return Guid::serialise(result.begin(), result.end());
-		} else if (field_value.length() == UUID_LENGTH) {
-			if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
-				THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
-			}
-			int i = 0;
-			for (const auto& c : field_value) {
-				if (!std::isxdigit(c) && i != 8 && i != 13 && i != 18 && i != 23) {
-					THROW(SerialisationError, "Invalid UUID format in: '%s' [%c -> %d]", field_value.c_str(), c, i);
-				}
-				++i;
-			}
-			return Guid(field_value).serialise();
+		} else if (field_value.compare(0, 9, "urn:uuid:") == 0) {
+			Split<>::split(field_value.substr(9), ';', std::back_inserter(result));
+		} else {
+			Split<>::split(field_value, ';', std::back_inserter(result));
 		}
+		return Guid::serialise(result.begin(), result.end());
 	}
-
 	THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
 }
 
