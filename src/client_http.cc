@@ -1189,7 +1189,7 @@ HttpClient::meta_view(enum http_method method, Command)
 
 	std::string key = path_parser.get_pmt();
 	std::string selector;
-	auto needle = key.find('.');
+	auto needle = key.find_first_of(".{");
 	if (needle != std::string::npos) {
 		selector = key.substr(needle);
 		key = key.substr(0, needle);
@@ -1394,7 +1394,7 @@ HttpClient::search_view(enum http_method method, Command)
 
 	std::string id = path_parser.get_id();
 	std::string selector;
-	auto needle = id.find('.');
+	auto needle = id.find_first_of(".{");
 	if (needle != std::string::npos) {
 		selector = id.substr(needle);
 		id = id.substr(0, needle);
