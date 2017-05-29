@@ -253,7 +253,7 @@ public:
 
 	MsgPack& path(const std::vector<std::string>& path);
 	const MsgPack& path(const std::vector<std::string>& path) const;
-	const MsgPack select(const std::string& selector) const;
+	MsgPack select(const std::string& selector) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	iterator find(M&& o);
@@ -1730,7 +1730,7 @@ inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const 
 }
 
 
-inline const MsgPack MsgPack::select(const std::string& selector) const {
+inline MsgPack MsgPack::select(const std::string& selector) const {
 	// .field.subfield.name
 	// {field{subfield{name}other{name}}}
 	MsgPack ret;
