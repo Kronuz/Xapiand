@@ -734,8 +734,11 @@ Serialise::type(FieldType field_type)
 		case FieldType::TIME:       return TIME_STR;
 		case FieldType::TIMEDELTA:  return TIMEDELTA_STR;
 		case FieldType::UUID:       return UUID_STR;
+		case FieldType::CHAI:       return CHAI_STR;
+		case FieldType::ECMA:       return ECMA_STR;
 		case FieldType::OBJECT:     return OBJECT_STR;
 		case FieldType::ARRAY:      return ARRAY_STR;
+		case FieldType::FOREIGN:    return FOREIGN_STR;
 		case FieldType::EMPTY:      return EMPTY_STR;
 		default:                    return "unknown";
 	}
