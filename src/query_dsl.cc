@@ -841,9 +841,9 @@ QueryDSL::make_dsl_query(const std::string& query)
 						THROW(QueryDslError, "Bad boolean expression");
 					} else {
 						MsgPack object;
-						auto& _or = object["_or"] = { stack_msgpack.back() }; // letf expression
+						auto& _or = object["_or"] = { nullptr, stack_msgpack.back() };  // right expression
 						stack_msgpack.pop_back();
-						_or.push_back(stack_msgpack.back()); // right expression
+						_or[0] = stack_msgpack.back();  // left expression
 						stack_msgpack.pop_back();
 						stack_msgpack.push_back(std::move(object));
 					}
@@ -854,9 +854,9 @@ QueryDSL::make_dsl_query(const std::string& query)
 						THROW(QueryDslError, "Bad boolean expression");
 					} else {
 						MsgPack object;
-						auto& _and = object["_and"] = { stack_msgpack.back() }; // letf expression
+						auto& _and = object["_and"] = { nullptr, stack_msgpack.back() };  // right expression
 						stack_msgpack.pop_back();
-						_and.push_back(stack_msgpack.back()); // right expression
+						_and[0] = stack_msgpack.back();  // left expression
 						stack_msgpack.pop_back();
 						stack_msgpack.push_back(std::move(object));
 					}
@@ -867,9 +867,9 @@ QueryDSL::make_dsl_query(const std::string& query)
 						THROW(QueryDslError, "Bad boolean expression");
 					} else {
 						MsgPack object;
-						auto& _and_maybe = object["_and_maybe"] = { stack_msgpack.back() }; // letf expression
+						auto& _and_maybe = object["_and_maybe"] = { nullptr, stack_msgpack.back() };  // right expression
 						stack_msgpack.pop_back();
-						_and_maybe.push_back(stack_msgpack.back()); // right expression
+						_and_maybe[0] = stack_msgpack.back();  // left expression
 						stack_msgpack.pop_back();
 						stack_msgpack.push_back(std::move(object));
 					}
@@ -880,9 +880,9 @@ QueryDSL::make_dsl_query(const std::string& query)
 						THROW(QueryDslError, "Bad boolean expression");
 					} else {
 						MsgPack object;
-						auto& _xor = object["_xor"] = { stack_msgpack.back() }; // letf expression
+						auto& _xor = object["_xor"] = { nullptr, stack_msgpack.back() };  // right expression
 						stack_msgpack.pop_back();
-						_xor.push_back(stack_msgpack.back()); // right expression
+						_xor[0] = stack_msgpack.back();  // left expression
 						stack_msgpack.pop_back();
 						stack_msgpack.push_back(std::move(object));
 					}
