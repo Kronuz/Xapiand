@@ -791,9 +791,9 @@ HttpClient::_get(enum http_method method)
 					path_parser.off_pmt = path_parser.off_cmd + 1;
 					path_parser.len_pmt = path_parser.len_cmd + 1;
 					meta_view(method, cmd);
+					break;
 				}
 			}
-			break;
 		case Command::CMD_QUIT:
 		case Command::CMD_TOUCH:
 		case Command::BAD_QUERY:
