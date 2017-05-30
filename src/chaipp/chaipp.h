@@ -30,6 +30,7 @@
 #include <unordered_map>
 
 #include "exception.h"
+#include "lru.h"
 #include "module.h"
 
 
@@ -58,10 +59,7 @@ class Processor {
 		explicit Engine(ssize_t max_size)
 			: script_lru(max_size) { }
 
-		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
-			auto script_hash = hash(script_name.empty() ? script_body : script_name);
-			auto body_hash = script_name.empty() ? script_hash : hash(script_body);
-
+		std::shared_ptr<Processor> compile(size_t script_hash, size_t body_hash, const std::string& script_body) {
 			std::unique_lock<std::mutex> lk(mtx);
 			auto it = script_lru.find(script_hash);
 			if (it != script_lru.end()) {
@@ -71,17 +69,24 @@ class Processor {
 			}
 			lk.unlock();
 
-			if (script_body.empty()) {
-				try {
-					return compile(script_name, script_name);
-				} catch (...) {
-					throw ScriptNotFoundError("Script not found: " + repr(script_name));
-				}
-			}
-			auto processor = std::make_shared<Processor>(script_name, script_body);
+			auto processor = std::make_shared<Processor>(script_body);
 
 			lk.lock();
 			return script_lru.emplace(script_hash, std::make_pair(body_hash, std::move(processor))).first->second.second;
+		}
+
+		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
+			if (script_name.empty()) {
+				auto body_hash = hash(script_body);
+				return compile(body_hash, body_hash, script_body);
+			} else if (script_body.empty()) {
+				auto script_hash = hash(script_name);
+				return compile(script_hash, script_hash, script_name);
+			} else {
+				auto script_hash = hash(script_name);
+				auto body_hash = hash(script_body);
+				return compile(script_hash, body_hash, script_body);
+			}
 		}
 	};
 
@@ -127,7 +132,7 @@ class Processor {
 	std::unordered_map<std::string, const Function> functions;
 
 public:
-	Processor(const std::string&, const std::string& script_source) {
+	Processor(const std::string& script_source) {
 		static auto module_msgpack = ModuleMsgPack();
 		chai.add(module_msgpack);
 
@@ -153,6 +158,10 @@ public:
 	static Engine& engine(ssize_t max_size) {
 		static Engine engine(max_size);
 		return engine;
+	}
+
+	static auto compile(size_t script_hash, size_t body_hash, const std::string& script_body) {
+		return engine(0).compile(script_hash, body_hash, script_body);
 	}
 
 	static auto compile(const std::string& script_name, const std::string& script_body) {
