@@ -502,9 +502,19 @@ class Schema {
 	}
 
 	/*
+	 * Returns full_meta_name properties of schema.
+	 */
+	const MsgPack& get_properties(const std::string& full_meta_name);
+
+	/*
 	 * Returns mutable full_meta_name properties of mut_schema.
 	 */
 	MsgPack& get_mutable_properties(const std::string& full_meta_name);
+
+	/*
+	 * Returns newest full_meta_name properties.
+	 */
+	const MsgPack& get_newest_properties(const std::string& full_meta_name);
 
 	/*
 	 * Deletes the schema from the metadata and returns a reference to the mutable empty schema.

@@ -1120,6 +1120,20 @@ Schema::get_initial_schema()
 }
 
 
+const MsgPack&
+Schema::get_properties(const std::string& full_meta_name)
+{
+	L_CALL(this, "Schema::get_properties(%s)", full_meta_name.c_str());
+
+	const MsgPack* prop = &get_properties();
+	Split<char> field_names(full_meta_name, DB_OFFSPRING_UNION);
+	for (const auto& field_name : field_names) {
+		prop = &(*prop).at(field_name);
+	}
+	return *prop;
+}
+
+
 MsgPack&
 Schema::get_mutable_properties(const std::string& full_meta_name)
 {
@@ -1129,6 +1143,20 @@ Schema::get_mutable_properties(const std::string& full_meta_name)
 	Split<char> field_names(full_meta_name, DB_OFFSPRING_UNION);
 	for (const auto& field_name : field_names) {
 		prop = &(*prop)[field_name];
+	}
+	return *prop;
+}
+
+
+const MsgPack&
+Schema::get_newest_properties(const std::string& full_meta_name)
+{
+	L_CALL(this, "Schema::get_newest_properties(%s)", full_meta_name.c_str());
+
+	const MsgPack* prop = &get_newest_properties();
+	Split<char> field_names(full_meta_name, DB_OFFSPRING_UNION);
+	for (const auto& field_name : field_names) {
+		prop = &(*prop).at(field_name);
 	}
 	return *prop;
 }
