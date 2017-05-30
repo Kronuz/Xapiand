@@ -98,6 +98,8 @@ Serialise::isUUID(const std::string& field_value) noexcept
 				return false;
 			}
 			split = Split<char>(field_value, UUID_SEPARATOR_LIST);
+		} else {
+			return false;
 		}
 		for (const auto& uuid : split) {
 			if (uuid.length() == UUID_LENGTH && uuid[8] == '-' && uuid[13] == '-' && uuid[18] == '-' && uuid[23] == '-') {
@@ -583,6 +585,8 @@ Serialise::uuid(const std::string& field_value)
 				THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
 			}
 			Split<>::split(field_value, UUID_SEPARATOR_LIST, std::back_inserter(result));
+		} else {
+			THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
 		}
 		for (const auto& uuid : result) {
 			if (uuid.length() == UUID_LENGTH && uuid[8] == '-' && uuid[13] == '-' && uuid[18] == '-' && uuid[23] == '-') {
