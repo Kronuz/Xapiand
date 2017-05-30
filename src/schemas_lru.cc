@@ -117,11 +117,11 @@ SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<F
 
 
 inline bool
-SchemasLRU::get_strict(const MsgPack& obj)
+SchemasLRU::get_strict(const MsgPack& obj, bool flag_strict)
 {
 	auto it = obj.find(RESERVED_STRICT);
 	if (it == obj.end()) {
-		return false;
+		return flag_strict;
 	}
 
 	try {
@@ -161,7 +161,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 					aux_schema_ptr = Schema::get_initial_schema();
 				} else {
 					// Update strict for root.
-					bool strict = default_spc.flags.strict || get_strict(*obj);
+					bool strict = get_strict(*obj, default_spc.flags.strict);
 					const auto& meta_schema = it.value();
 					switch (meta_schema.getType()) {
 						case MsgPack::Type::STR: {
