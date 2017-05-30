@@ -1197,60 +1197,100 @@ FieldType
 Unserialise::type(const std::string& str_type)
 {
 	const char *value = str_type.c_str();
-	switch ((FieldType)(toupper(value[0]))) {
-		case FieldType::FLOAT:
-			if (value[1] == '\0' || strcasecmp(value, FLOAT_STR) == 0) {
-				return FieldType::FLOAT;
+	switch (tolower(value[0])) {
+		case ' ':
+			if (value[1] == '\0') {
+				return FieldType::EMPTY;
 			}
 			break;
-		case FieldType::INTEGER:
-			if (value[1] == '\0' || strcasecmp(value, INTEGER_STR) == 0) {
-				return FieldType::INTEGER;
+		case 'a':
+			if (value[1] == '\0' || strcasecmp(value, ARRAY_STR) == 0) {
+				return FieldType::ARRAY;
 			}
 			break;
-		case FieldType::POSITIVE:
-			if (value[1] == '\0' || strcasecmp(value, POSITIVE_STR) == 0) {
-				return FieldType::POSITIVE;
-			}
-			break;
-		case FieldType::GEO:
-			if (value[1] == '\0' || strcasecmp(value, GEO_STR) == 0) {
-				return FieldType::GEO;
-			}
-			break;
-		case FieldType::TERM:
-			if (value[1] == '\0' || strcasecmp(value, TERM_STR) == 0) {
-				return FieldType::TERM;
-			}
-			break;
-		case FieldType::TEXT:
-			if (value[1] == '\0' || strcasecmp(value, TEXT_STR) == 0) {
-				return FieldType::TEXT;
-			}
-			break;
-		case FieldType::STRING:
-			if (value[1] == '\0' || strcasecmp(value, STRING_STR) == 0) {
-				return FieldType::STRING;
-			}
-			break;
-		case FieldType::BOOLEAN:
+		case 'b':
 			if (value[1] == '\0' || strcasecmp(value, BOOLEAN_STR) == 0) {
 				return FieldType::BOOLEAN;
 			}
 			break;
-		case FieldType::DATE:
+		case 'c':
+			if (value[1] == '\0' || strcasecmp(value, CHAI_STR) == 0) {
+				return FieldType::CHAI;
+			}
+			break;
+		case 'd':
 			if (value[1] == '\0' || strcasecmp(value, DATE_STR) == 0) {
 				return FieldType::DATE;
 			}
 			break;
-		case FieldType::TIME:
-			if (value[1] == '\0' || strcasecmp(value, TIME_STR) == 0) {
-				return FieldType::TIME;
+		case 'e':
+			if (value[1] == '\0' || strcasecmp(value, ECMA_STR) == 0) {
+				return FieldType::ECMA;
+			}
+			if (strcasecmp(value, EMPTY_STR) == 0) {
+				return FieldType::EMPTY;
 			}
 			break;
-		case FieldType::TIMEDELTA:
-			if (value[1] == '\0' || strcasecmp(value, TIMEDELTA_STR) == 0) {
-				return FieldType::TIMEDELTA;
+		case 'f':
+			if (value[1] == '\0' || strcasecmp(value, FLOAT_STR) == 0) {
+				return FieldType::FLOAT;
+			}
+			if (strcasecmp(value, FOREIGN_STR) == 0) {
+				return FieldType::FOREIGN;
+			}
+			break;
+		case 'g':
+			if (value[1] == '\0' || strcasecmp(value, GEO_STR) == 0) {
+				return FieldType::GEO;
+			}
+			break;
+		case 'i':
+			if (value[1] == '\0' || strcasecmp(value, INTEGER_STR) == 0) {
+				return FieldType::INTEGER;
+			}
+			break;
+		case 'o':
+			if (value[1] == '\0' || strcasecmp(value, OBJECT_STR) == 0) {
+				return FieldType::OBJECT;
+			}
+			break;
+		case 'p':
+			if (value[1] == '\0' || strcasecmp(value, POSITIVE_STR) == 0) {
+				return FieldType::POSITIVE;
+			}
+			break;
+		case 's':
+			if (value[1] == '\0' || strcasecmp(value, STRING_STR) == 0) {
+				return FieldType::STRING;
+			}
+			break;
+		case 't':
+			switch (tolower(value[1])) {
+				case '\0':
+					return FieldType::TERM;
+				case 'e':
+					if (strcasecmp(value, TERM_STR) == 0) {
+						return FieldType::TERM;
+					}
+					if (strcasecmp(value, TEXT_STR) == 0) {
+						return FieldType::TEXT;
+					}
+					break;
+				case 'i':
+					if (strcasecmp(value, TIME_STR) == 0) {
+						return FieldType::TIME;
+					}
+					if (strcasecmp(value, TIMEDELTA_STR) == 0) {
+						return FieldType::TIMEDELTA;
+					}
+					break;
+				default:
+					break;
+			}
+			break;
+		case 'u':
+			if (value[1] == '\0' || strcasecmp(value, UUID_STR) == 0) {
+				return FieldType::UUID;
 			}
 			break;
 		default:
