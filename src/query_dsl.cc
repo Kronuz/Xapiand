@@ -862,6 +862,19 @@ QueryDSL::make_dsl_query(const std::string& query)
 					}
 					break;
 
+				case TokenType::Maybe:
+					if (stack_msgpack.size() < 2) {
+						THROW(QueryDslError, "Bad boolean expression");
+					} else {
+						MsgPack object;
+						auto& _and_maybe = object["_and_maybe"] = { stack_msgpack.back() }; // letf expression
+						stack_msgpack.pop_back();
+						_and_maybe.push_back(stack_msgpack.back()); // right expression
+						stack_msgpack.pop_back();
+						stack_msgpack.push_back(std::move(object));
+					}
+					break;
+
 				case TokenType::Xor:
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");

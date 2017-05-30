@@ -31,6 +31,7 @@ enum class TokenType : uint8_t {
 	Not=1,
 	Or,
 	And,
+	Maybe,
 	Xor,
 	LeftParenthesis,
 	RightParenthesis,

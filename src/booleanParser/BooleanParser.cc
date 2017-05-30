@@ -23,6 +23,7 @@
 #include "BooleanParser.h"
 
 #include "AndNode.h"
+#include "MaybeNode.h"
 #include "IdNode.h"
 #include "NotNode.h"
 #include "OrNode.h"
@@ -81,6 +82,8 @@ BooleanTree::BuildTree()
 				return std::make_unique<OrNode>(BuildTree(), BuildTree());
 			case TokenType::And:
 				return std::make_unique<AndNode>(BuildTree(), BuildTree());
+			case TokenType::Maybe:
+				return std::make_unique<MaybeNode>(BuildTree(), BuildTree());
 			case TokenType::Xor:
 				return std::make_unique<XorNode>(BuildTree(), BuildTree());
 			default:
@@ -132,6 +135,7 @@ BooleanTree::toRPN()
 			case TokenType::Not:
 			case TokenType::Or:
 			case TokenType::And:
+			case TokenType::Maybe:
 			case TokenType::Xor:
 				while (!stack_operator.empty() && precedence(currentToken.get_type()) >= precedence(stack_operator.back().get_type())) {
 					Token token_back = stack_operator.back();
@@ -163,12 +167,14 @@ BooleanTree::precedence(TokenType type)
 			return 0;
 		case TokenType::And:
 			return 1;
-		case TokenType::Xor:
+		case TokenType::Maybe:
 			return 2;
-		case TokenType::Or:
+		case TokenType::Xor:
 			return 3;
-		default:
+		case TokenType::Or:
 			return 4;
+		default:
+			return 5;
 	}
 }
 
@@ -187,45 +193,57 @@ BooleanTree::postorder(BaseNode* p, int indent)
 		switch (p->getType()) {
 			case NodeType::AND:
 				if (dynamic_cast<AndNode*>(p)->getLeftNode()) {
-					postorder(dynamic_cast<AndNode*>(p)->getLeftNode(), indent+4);
+					postorder(dynamic_cast<AndNode*>(p)->getLeftNode(), indent + 4);
 				}
 				if (indent) {
 					std::cout << std::setw(indent) << ' ';
 				}
 				std::cout << "AND" << "\n ";
 				if (dynamic_cast<AndNode*>(p)->getRightNode()) {
-					postorder(dynamic_cast<AndNode*>(p)->getRightNode(), indent+4);
+					postorder(dynamic_cast<AndNode*>(p)->getRightNode(), indent + 4);
+				}
+				break;
+			case NodeType::MAYBE:
+				if (dynamic_cast<MaybeNode*>(p)->getLeftNode()) {
+					postorder(dynamic_cast<MaybeNode*>(p)->getLeftNode(), indent + 4);
+				}
+				if (indent) {
+					std::cout << std::setw(indent) << ' ';
+				}
+				std::cout << "MAYBE" << "\n ";
+				if (dynamic_cast<AndNode*>(p)->getRightNode()) {
+					postorder(dynamic_cast<AndNode*>(p)->getRightNode(), indent + 4);
 				}
 				break;
 			case NodeType::OR:
 				if (dynamic_cast<OrNode*>(p)->getLeftNode()) {
-					postorder(dynamic_cast<OrNode*>(p)->getLeftNode(), indent+4);
+					postorder(dynamic_cast<OrNode*>(p)->getLeftNode(), indent + 4);
 				}
 				if (indent) {
 					std::cout << std::setw(indent) << ' ';
 				}
 				std::cout << "OR" << "\n ";
 				if (dynamic_cast<OrNode*>(p)->getRightNode()) {
-					postorder(dynamic_cast<OrNode*>(p)->getRightNode(), indent+4);
+					postorder(dynamic_cast<OrNode*>(p)->getRightNode(), indent + 4);
 				}
 				break;
 			case NodeType::NOT:
 				if (dynamic_cast<NotNode*>(p)) {
 					std::cout << std::setw(indent) << ' ';
 					std::cout << "NOT" << "\n ";
-					postorder(dynamic_cast<NotNode*>(p)->getNode(), indent+4);
+					postorder(dynamic_cast<NotNode*>(p)->getNode(), indent + 4);
 				}
 				break;
 			case NodeType::XOR:
 				if (dynamic_cast<XorNode*>(p)->getLeftNode()) {
-					postorder(dynamic_cast<XorNode*>(p)->getLeftNode(), indent+4);
+					postorder(dynamic_cast<XorNode*>(p)->getLeftNode(), indent + 4);
 				}
 				if (indent) {
 					std::cout << std::setw(indent) << ' ';
 				}
 				std::cout << "XOR" << "\n ";
 				if (dynamic_cast<XorNode*>(p)->getRightNode()) {
-					postorder(dynamic_cast<XorNode*>(p)->getRightNode(), indent+4);
+					postorder(dynamic_cast<XorNode*>(p)->getRightNode(), indent + 4);
 				}
 				break;
 			case NodeType::ID:

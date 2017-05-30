@@ -28,6 +28,7 @@
 #include <string>
 
 #define AND "AND"
+#define MAYBE "MAYBE"
 #define OR "OR"
 #define NOT "NOT"
 #define XOR "XOR"
@@ -277,6 +278,12 @@ Lexer::IsStringOperator(Token& token) const
 			case 'A':
 				if (strcasecmp(lexeme.data(), AND) == 0) {
 					token.set_type(TokenType::And);
+				}
+				break;
+			case 'm':
+			case 'M':
+				if (strcasecmp(lexeme.data(), MAYBE) == 0) {
+					token.set_type(TokenType::Maybe);
 				}
 				break;
 			case 'o':

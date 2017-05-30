@@ -29,6 +29,7 @@
 
 enum class NodeType : uint8_t {
 	AND,
+	MAYBE,
 	OR,
 	NOT,
 	XOR,
