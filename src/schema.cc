@@ -4314,7 +4314,7 @@ Schema::write_index_uuid_field(MsgPack& properties, const std::string& prop_name
 
 
 void
-Schema::write_chai(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_chai)
+Schema::write_chai(MsgPack& properties, const std::string&, const MsgPack& doc_chai)
 {
 	// RESERVED_CHAI isn't heritable and can't change once fixed.
 	L_CALL(this, "Schema::write_chai(%s)", repr(doc_chai.to_string()).c_str());
@@ -4323,28 +4323,28 @@ Schema::write_chai(MsgPack& properties, const std::string& prop_name, const MsgP
 	Script script(RESERVED_CHAI, doc_chai);
 	properties[RESERVED_SCRIPT] = script.process_chai(specification.flags.strict);
 #else
-	THROW(ClientError, "%s only is allowed when ChaiScript is available", prop_name.c_str());
+	THROW(ClientError, "%s only is allowed when ChaiScript is available", RESERVED_CHAI);
 #endif
 }
 
 
 void
-Schema::write_ecma(MsgPack&, const std::string& prop_name, const MsgPack& doc_ecma)
+Schema::write_ecma(MsgPack& properties, const std::string&, const MsgPack& doc_ecma)
 {
 	// RESERVED_ECMA isn't heritable and can't change once fixed.
 	L_CALL(this, "Schema::write_ecma(%s)", repr(doc_ecma.to_string()).c_str());
 
 #if defined(XAPIAND_V8)
-	Script script(RESERVED_ECMA, doc_chai);
+	Script script(RESERVED_ECMA, doc_ecma);
 	properties[RESERVED_SCRIPT] = script.process_ecma(specification.flags.strict);
 #else
-	THROW(ClientError, "%s only is allowed when ECMAScript or JavaScript is available", prop_name.c_str());
+	THROW(ClientError, "%s only is allowed when ECMAScript or JavaScript is available", RESERVED_ECMA);
 #endif
 }
 
 
 void
-Schema::write_script(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script)
+Schema::write_script(MsgPack& properties, const std::string&, const MsgPack& doc_script)
 {
 	// RESERVED_SCRIPT isn't heritable and can't change once fixed
 	L_CALL(this, "Schema::write_script(%s)", repr(doc_script.to_string()).c_str());
@@ -4353,7 +4353,7 @@ Schema::write_script(MsgPack& properties, const std::string& prop_name, const Ms
 	Script script(RESERVED_SCRIPT, doc_script);
 	properties[RESERVED_SCRIPT] = script.process_script(specification.flags.strict);
 #else
-	THROW(ClientError, "%s only is allowed when ChaiScript or ECMAScript/JavaScript is actived", prop_name.c_str());
+	THROW(ClientError, "%s only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
 #endif
 }
 
@@ -5598,10 +5598,9 @@ Schema::readable_index_uuid_field(MsgPack& prop_index_uuid_field, MsgPack&)
 bool
 Schema::readable_script(MsgPack& prop_script, MsgPack&)
 {
-	L_CALL(nullptr, "Schema::readable_script(%s)", repr(prop_script).c_str());
+	L_CALL(nullptr, "Schema::readable_script(%s)", repr(prop_script.to_string()).c_str());
 
-	prop_script = readable(prop_script, false);
-
+	readable(prop_script, false);
 	return true;
 }
 
