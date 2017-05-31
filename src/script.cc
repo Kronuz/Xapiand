@@ -213,7 +213,7 @@ Script::process_ecma(bool strict)
 	switch (sep_types[SPC_INDEX_TYPE]) {
 		case FieldType::EMPTY:
 			if (strict) {
-				THROW(MissingTypeError, "Type of field %s in %s is missing", prop_name, repr(specification.full_meta_name).c_str());
+				THROW(MissingTypeError, "Type of field %s is missing", prop_name);
 			}
 			sep_types[SPC_INDEX_TYPE] = FieldType::ECMA;
 		case FieldType::ECMA: {
