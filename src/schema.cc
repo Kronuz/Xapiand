@@ -166,10 +166,14 @@ const std::unordered_map<std::string, std::array<FieldType, SPC_SIZE_TYPES>> map
 	{ "array/timedelta",              {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }} },
 	{ "array/uuid",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }} },
 	{ "boolean",                      {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }} },
+	{ "chai",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::CHAI          }} },
 	{ "date",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }} },
+	{ "ecma",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::ECMA          }} },
 	{ "float",                        {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }} },
-	{ "foreign",                      {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }} },
-	{ "foreign/object",               {{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }} },
+	{ "foreign",                      {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }} },
+	{ "foreign/chai",                 {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::CHAI          }} },
+	{ "foreign/ecma",                 {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::ECMA          }} },
+	{ "foreign/object",               {{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }} },
 	{ "geospatial",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }} },
 	{ "integer",                      {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }} },
 	{ "object",                       {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }} },
@@ -720,7 +724,7 @@ required_spc_t::get_types(const std::string& str_type)
 	static const auto tit_e = map_type.end();
 	auto tit = map_type.find(lower_string(str_type));
 	if (tit == tit_e) {
-		THROW(ClientError, "%s must be in { foreign, [foreign/]object, [foreign/][object/]array, [foreign/][object/][array/]<integer, positive, float, date, time, timedelta, string, text, term, uuid, geospatial> }  [%s]", RESERVED_TYPE, str_type.c_str());
+		THROW(ClientError, "%s must be in { foreign, [foreign/]object, [foreign/]<chai, ecma>, [foreign/][object/]array, [foreign/][object/][array/]<integer, positive, float, date, time, timedelta, string, text, term, uuid, geospatial> }  [%s]", RESERVED_TYPE, str_type.c_str());
 	}
 	return tit->second;
 }
