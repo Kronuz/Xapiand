@@ -159,10 +159,7 @@ class Processor {
 			delete platform;
 		}
 
-		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
-			auto script_hash = hash(script_name.empty() ? script_body : script_name);
-			auto body_hash = script_name.empty() ? script_hash : hash(script_body);
-
+		std::shared_ptr<Processor> compile(size_t script_hash, size_t body_hash, const std::string& script_body) {
 			std::unique_lock<std::mutex> lk(mtx);
 			auto it = script_lru.find(script_hash);
 			if (it != script_lru.end()) {
@@ -172,17 +169,24 @@ class Processor {
 			}
 			lk.unlock();
 
-			if (script_body.empty()) {
-				try {
-					return compile(script_name, script_name);
-				} catch (...) {
-					throw ScriptNotFoundError("Script not found: " + repr(script_name));
-				}
-			}
-			auto processor = std::make_shared<Processor>(script_name, script_body);
+			auto processor = std::make_shared<Processor>(script_body);
 
 			lk.lock();
 			return script_lru.emplace(script_hash, std::make_pair(body_hash, std::move(processor))).first->second.second;
+		}
+
+		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
+			if (script_name.empty()) {
+				auto body_hash = hash(script_body);
+				return compile(body_hash, body_hash, script_body);
+			} else if (script_body.empty()) {
+				auto script_hash = hash(script_name);
+				return compile(script_hash, script_hash, script_name);
+			} else {
+				auto script_hash = hash(script_name);
+				auto body_hash = hash(script_body);
+				return compile(script_hash, body_hash, script_body);
+			}
 		}
 	};
 
@@ -395,7 +399,7 @@ class Processor {
 	std::condition_variable kill_cond;
 	std::atomic_bool finished;
 
-	void Initialize(const std::string& script_name_, const std::string& script_source_) {
+	void Initialize(const std::string& script_source_) {
 		v8::Locker locker(isolate);
 		v8::Isolate::Scope isolate_scope(isolate);
 		v8::HandleScope handle_scope(isolate);
@@ -413,6 +417,7 @@ class Processor {
 		v8::Context::Scope context_scope(context_);
 		v8::TryCatch try_catch;
 
+		std::string script_name_("_script");
 		v8::Local<v8::String> script_name = v8::String::NewFromUtf8(isolate, script_name_.data(), v8::NewStringType::kNormal, script_name_.size()).ToLocalChecked();
 		v8::Local<v8::String> script_source = v8::String::NewFromUtf8(isolate, script_source_.data(), v8::NewStringType::kNormal, script_source_.size()).ToLocalChecked();
 		v8::Local<v8::Script> script = v8::Script::Compile(script_source, script_name);
@@ -489,11 +494,11 @@ class Processor {
 	}
 
 public:
-	Processor(const std::string& script_name, const std::string& script_source)
+	Processor(const std::string& script_source)
 		: isolate(v8::Isolate::New(engine(0).create_params)),
 		  finished(false)
 	{
-		Initialize(script_name, script_source);
+		Initialize(script_source);
 	}
 
 	Processor(Processor&&) = delete;
@@ -528,6 +533,10 @@ public:
 
 	static auto compile(const std::string& script_name, const std::string& script_body) {
 		return engine(0).compile(script_name, script_body);
+	}
+
+	static auto compile(size_t script_hash, size_t body_hash, const std::string& script_body) {
+		return engine(0).compile(script_hash, body_hash, script_body);
 	}
 };
 
