@@ -530,6 +530,7 @@ const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_dis
 	{ RESERVED_INDEX,               &Schema::readable_index              },
 	{ RESERVED_ACC_PREFIX,          &Schema::readable_acc_prefix         },
 	{ RESERVED_INDEX_UUID_FIELD,    &Schema::readable_index_uuid_field   },
+	{ RESERVED_SCRIPT,              &Schema::readable_script             },
 });
 
 
@@ -5589,6 +5590,17 @@ Schema::readable_index_uuid_field(MsgPack& prop_index_uuid_field, MsgPack&)
 	L_CALL(nullptr, "Schema::readable_index_uuid_field(%s)", repr(prop_index_uuid_field.to_string()).c_str());
 
 	prop_index_uuid_field = ::readable_index_uuid_field((UUIDFieldIndex)prop_index_uuid_field.u64());
+
+	return true;
+}
+
+
+bool
+Schema::readable_script(MsgPack& prop_script, MsgPack&)
+{
+	L_CALL(nullptr, "Schema::readable_script(%s)", repr(prop_script).c_str());
+
+	prop_script = readable(prop_script, false);
 
 	return true;
 }

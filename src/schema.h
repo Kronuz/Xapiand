@@ -813,6 +813,7 @@ class Schema {
 	static bool readable_index(MsgPack& prop_index, MsgPack& properties);
 	static bool readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack& properties);
 	static bool readable_index_uuid_field(MsgPack& prop_index_uuid_field, MsgPack& properties);
+	static bool readable_script(MsgPack& prop_script, MsgPack& properties);
 
 
 	struct dynamic_spc_t {
