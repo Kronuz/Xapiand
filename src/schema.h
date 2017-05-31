@@ -727,6 +727,8 @@ class Schema {
 	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
 	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
 	void write_index_uuid_field(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index_uuid_field);
+	void write_chai(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_chai);
+	void write_ecma(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_ecma);
 	void write_script(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
 	void write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version);
 	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
@@ -779,6 +781,8 @@ class Schema {
 	void consistency_term_detection(const std::string& prop_name, const MsgPack& doc_term_detection);
 	void consistency_uuid_detection(const std::string& prop_name, const MsgPack& doc_uuid_detection);
 	void consistency_namespace(const std::string& prop_name, const MsgPack& doc_namespace);
+	void consistency_chai(const std::string& prop_name, const MsgPack& doc_chai);
+	void consistency_ecma(const std::string& prop_name, const MsgPack& doc_ecma);
 	void consistency_script(const std::string& prop_name, const MsgPack& doc_script);
 	void consistency_version(const std::string& prop_name, const MsgPack& doc_version);
 	void consistency_schema(const std::string& prop_name, const MsgPack& doc_schema);
@@ -913,6 +917,11 @@ public:
 	 * Returns type, slot and prefix of ID_FIELD_NAME
 	 */
 	required_spc_t get_data_id() const;
+
+	/*
+	 * Returns data of RESERVED_SCRIPT
+	 */
+	MsgPack get_data_script() const;
 
 	/*
 	 * Functions used for searching, return a field properties.

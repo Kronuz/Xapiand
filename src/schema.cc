@@ -40,6 +40,7 @@
 #include "geospatial/geospatial.h"         // for GeoSpatial
 #include "manager.h"                       // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"     // for integer, geo, date, positive
+#include "script.h"                        // for Script
 #include "serialise_list.h"                // for StringList
 #include "split.h"                         // for Split
 
@@ -393,6 +394,8 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_NAMESPACE,              &Schema::write_namespace              },
 	{ RESERVED_PARTIAL_PATHS,          &Schema::write_partial_paths          },
 	{ RESERVED_INDEX_UUID_FIELD,       &Schema::write_index_uuid_field       },
+	{ RESERVED_CHAI,                   &Schema::write_chai                   },
+	{ RESERVED_ECMA,                   &Schema::write_ecma                   },
 	{ RESERVED_SCRIPT,                 &Schema::write_script                 },
 	{ RESERVED_VERSION,                &Schema::write_version                },
 	{ RESERVED_SCHEMA,                 &Schema::write_schema                 },
@@ -446,6 +449,8 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_GEO_COLLECTION,         &Schema::process_cast_object                },
 	{ RESERVED_GEO_INTERSECTION,       &Schema::process_cast_object                },
 	// Next functions only check the consistency of user provided data.
+	{ RESERVED_CHAI,                   &Schema::consistency_chai                   },
+	{ RESERVED_ECMA,                   &Schema::consistency_ecma                   },
 	{ RESERVED_SCRIPT,                 &Schema::consistency_script                 },
 	{ RESERVED_LANGUAGE,               &Schema::consistency_language               },
 	{ RESERVED_STOP_STRATEGY,          &Schema::consistency_stop_strategy          },
@@ -4304,11 +4309,47 @@ Schema::write_index_uuid_field(MsgPack& properties, const std::string& prop_name
 
 
 void
-Schema::write_script(MsgPack&, const std::string& prop_name, const MsgPack& doc_script)
+Schema::write_chai(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_chai)
 {
+	// RESERVED_CHAI isn't heritable and can't change once fixed.
+	L_CALL(this, "Schema::write_chai(%s)", repr(doc_chai.to_string()).c_str());
+
+#if defined(XAPIAND_CHAISCRIPT)
+	Script script(RESERVED_CHAI, doc_chai);
+	properties[RESERVED_SCRIPT] = script.process_chai(specification.flags.strict);
+#else
+	THROW(ClientError, "%s only is allowed when ChaiScript is available", prop_name.c_str());
+#endif
+}
+
+
+void
+Schema::write_ecma(MsgPack&, const std::string& prop_name, const MsgPack& doc_ecma)
+{
+	// RESERVED_ECMA isn't heritable and can't change once fixed.
+	L_CALL(this, "Schema::write_ecma(%s)", repr(doc_ecma.to_string()).c_str());
+
+#if defined(XAPIAND_V8)
+	Script script(RESERVED_ECMA, doc_chai);
+	properties[RESERVED_SCRIPT] = script.process_ecma(specification.flags.strict);
+#else
+	THROW(ClientError, "%s only is allowed when ECMAScript or JavaScript is available", prop_name.c_str());
+#endif
+}
+
+
+void
+Schema::write_script(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script)
+{
+	// RESERVED_SCRIPT isn't heritable and can't change once fixed
 	L_CALL(this, "Schema::write_script(%s)", repr(doc_script.to_string()).c_str());
 
-	consistency_script(prop_name, doc_script);
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	Script script(RESERVED_SCRIPT, doc_script);
+	properties[RESERVED_SCRIPT] = script.process_script(specification.flags.strict);
+#else
+	THROW(ClientError, "%s only is allowed when ChaiScript or ECMAScript/JavaScript is actived", prop_name.c_str());
+#endif
 }
 
 
@@ -5228,21 +5269,55 @@ Schema::consistency_namespace(const std::string& prop_name, const MsgPack& doc_n
 
 
 void
+Schema::consistency_chai(const std::string& prop_name, const MsgPack& doc_chai)
+{
+	// RESERVED_CHAI isn't heritable and can't change once fixed.
+	L_CALL(this, "Schema::consistency_chai(%s)", repr(doc_chai.to_string()).c_str());
+
+#if defined(XAPIAND_CHAISCRIPT)
+	try {
+		get_newest_properties(specification.full_meta_name).at(prop_name);
+	} catch (const std::out_of_range&) {
+		write_chai(get_mutable_properties(specification.full_meta_name), prop_name, doc_chai);
+	}
+#else
+	THROW(ClientError, "%s only is allowed when ChaiScript is actived [%s]", prop_name.c_str(), repr(doc_chai.to_string()).c_str());
+#endif
+}
+
+
+void
+Schema::consistency_ecma(const std::string& prop_name, const MsgPack& doc_ecma)
+{
+	// RESERVED_ECMA isn't heritable and can't change once fixed.
+	L_CALL(this, "Schema::consistency_ecma(%s)", repr(doc_ecma.to_string()).c_str());
+
+#if defined(XAPIAND_V8)
+	try {
+		get_newest_properties(specification.full_meta_name).at(prop_name);
+	} catch (const std::out_of_range&) {
+		write_ecma(get_mutable_properties(specification.full_meta_name), prop_name, doc_ecma);
+	}
+#else
+	THROW(ClientError, "%s only is allowed when v8 engine is actived [%s]", prop_name.c_str(), repr(doc_ecma.to_string()).c_str());
+#endif
+}
+
+
+void
 Schema::consistency_script(const std::string& prop_name, const MsgPack& doc_script)
 {
-	// RESERVED_SCRIPT isn't heritable and is not saved in schema.
+	// RESERVED_SCRIPT isn't heritable and can't change once fixed.
 	L_CALL(this, "Schema::consistency_script(%s)", repr(doc_script.to_string()).c_str());
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-	if (specification.full_meta_name.empty()) {
-		if (!doc_script.is_string() && !doc_script.is_map()) {
-			THROW(ClientError, "%s must be string or a valid script object", prop_name.c_str());
-		}
-	} else {
-		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());
+	try {
+		get_newest_properties(specification.full_meta_name).at(prop_name);
+	} catch (const std::out_of_range&) {
+		write_script(get_mutable_properties(specification.full_meta_name), prop_name, doc_script);
 	}
 #else
-	THROW(ClientError, "%s only is allowed in root object when ChaiScript or v8 engine is actived [%s]", prop_name.c_str(), repr(doc_script.to_string()).c_str());
+	THROW(ClientError, "%s only is allowed when ChaiScript or v8 engine is actived [%s]", prop_name.c_str(), repr(doc_script.to_string()).c_str());
 #endif
 }
 
@@ -5697,6 +5772,19 @@ Schema::get_data_id() const
 	} catch (const std::out_of_range&) { }
 
 	return res;
+}
+
+
+MsgPack
+Schema::get_data_script() const
+{
+	L_CALL(this, "Schema::get_data_script()");
+
+	try {
+		return get_newest_properties().at(RESERVED_SCRIPT);
+	} catch (const std::out_of_range&) {
+		return MsgPack();
+	}
 }
 
 
