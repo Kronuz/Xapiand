@@ -41,6 +41,7 @@
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema, required_spc_t
 #include "schemas_lru.h"                    // for SchemasLRU
+#include "script.h"                         // for Script
 #include "serialise.h"                      // for cast, serialise, type
 #include "utils.h"                          // for repr
 #include "v8pp/v8pp.h"                      // for v8pp namespace
@@ -225,10 +226,10 @@ std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> Da
 
 
 template<typename Processor>
-MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
+MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t script_hash, size_t body_hash, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
 	try {
-		auto processor = Processor::compile(script_name, script_body);
+		auto processor = Processor::compile(script_hash, body_hash, script_body);
 		switch (method) {
 			case HTTP_PUT:
 				old_document_pair = get_document_change_seq(term_id);
@@ -277,16 +278,12 @@ MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, 
 #if defined(XAPIAND_V8)
 	} catch (const v8pp::ReferenceError&) {
 		return data;
-	} catch (const v8pp::ScriptNotFoundError& e) {
-		THROW(MissingTypeError, e.what());
 	} catch (const v8pp::Error& e) {
 		THROW(ClientError, e.what());
 #endif
 #if defined(XAPIAND_CHAISCRIPT)
 	} catch (const chaipp::ReferenceError&) {
 		return data;
-	} catch (const chaipp::ScriptNotFoundError& e) {
-		THROW(MissingTypeError, e.what());
 	} catch (const chaipp::Error& e) {
 		THROW(ClientError, e.what());
 #endif
@@ -300,63 +297,53 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 	L_CALL(this, "DatabaseHandler::run_script(...)");
 
 	auto it = data.find(RESERVED_SCRIPT);
-	if (it == data.end()) {
-		return data;
-	}
-
-	std::string script_type, script_name, script_body;
-	auto& _script = it.value();
-	switch (_script.getType()) {
-		case MsgPack::Type::STR:
-			script_name = _script.str();
-			break;
-		case MsgPack::Type::MAP:
-			try {
-				script_type = _script.at(RESERVED_TYPE).str();
-			} catch (const std::out_of_range&) { }
-			try {
-				script_name = _script.at(RESERVED_VALUE).str();
-			} catch (const std::out_of_range&) { }
-			try {
-				script_body = _script.at(RESERVED_BODY).str();
-			} catch (const std::out_of_range&) { }
-			if (script_name.empty() && script_body.empty()) {
-				THROW(ClientError, "%s must be a string or a valid script object", RESERVED_SCRIPT);
+	const auto it_e = data.end();
+	MsgPack data_script;
+	if (it == it_e) {
+		it = data.find(RESERVED_CHAI);
+		if (it == it_e) {
+			it = data.find(RESERVED_ECMA);
+			if (it == it_e) {
+				data_script = schema->get_data_script();
+			} else {
+				Script script(RESERVED_ECMA, it.value());
+				data_script = script.process_ecma(default_spc.flags.strict);
 			}
-			break;
-		default:
-			THROW(ClientError, "%s must be a string or a valid script object", RESERVED_SCRIPT);
+		} else {
+			Script script(RESERVED_CHAI, it.value());
+			data_script = script.process_chai(default_spc.flags.strict);
+		}
+	} else {
+		Script script(RESERVED_SCRIPT, it.value());
+		data_script = script.process_script(default_spc.flags.strict);
 	}
 
-	// ECMAScript
-	if (script_type == "ecma" || endswith(script_name, ".js") || endswith(script_name, ".es")) {
-#if defined(XAPIAND_V8)
-		return call_script<v8pp::Processor>(data, term_id, script_name, script_body, old_document_pair);
-#else
-		THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
-#endif
-	}
-
-	// ChaiScript
-	if (script_type == "chai" || endswith(script_name, ".chai")) {
+	if (data_script.is_map()) {
+		const auto& type = data_script[RESERVED_TYPE];
+		if (type[SPC_FOREIGN_TYPE].u64() == toUType(FieldType::FOREIGN)) {
+			THROW(ClientError, "Missing Implementation for Foreign scripts");
+		} else {
+			auto script_type = (FieldType)type[SPC_FOREIGN_TYPE].u64();
+			switch (script_type) {
+				case FieldType::CHAI:
 #if defined(XAPIAND_CHAISCRIPT)
-		return call_script<chaipp::Processor>(data, term_id, script_name, script_body, old_document_pair);
+					return call_script<chaipp::Processor>(data, term_id, data_script[RESERVED_HASH].u64(), data_script[RESERVED_BODY_HASH].u64(), data_script[RESERVED_BODY].str(), old_document_pair);
 #else
-		THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
+					THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif
-	}
-
-	if (!script_type.empty()) {
-		THROW(ClientError, "Script type %s not available.", script_type.c_str());
-	}
-
-	// Fallback:
+				case FieldType::ECMA:
 #if defined(XAPIAND_V8)
-	return call_script<v8pp::Processor>(data, term_id, script_name, script_body, old_document_pair);
-#elif defined(XAPIAND_CHAISCRIPT)
-	return call_script<chaipp::Processor>(data, term_id, script_name, script_body, old_document_pair);
+					return call_script<v8pp::Processor>(data, term_id, data_script[RESERVED_HASH].u64(), data_script[RESERVED_BODY_HASH].u64(), data_script[RESERVED_BODY].str(), old_document_pair);
+#else
+					THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
 #endif
+				default:
+					THROW(ClientError, "Script type %s is not valid.", Serialise::type(script_type).c_str());
+			}
+		}
+	}
 
+	return data;
 }
 #endif
 

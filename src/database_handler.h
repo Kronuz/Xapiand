@@ -113,7 +113,7 @@ class DatabaseHandler {
 	static std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> documents;
 
 	template<typename ProcessorCompile>
-	MsgPack call_script(MsgPack& data, const std::string& term_id, const std::string& script_name, const std::string& script, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
+	MsgPack call_script(MsgPack& data, const std::string& term_id, size_t script_hash, size_t body_hash, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
 	MsgPack run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
 #endif
 
