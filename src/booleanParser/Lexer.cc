@@ -27,16 +27,18 @@
 #include <cstring>
 #include <string>
 
-#define AND "AND"
-#define MAYBE "MAYBE"
-#define OR "OR"
-#define NOT "NOT"
-#define XOR "XOR"
 
-#define DOUBLEQUOTE '"'
-#define SINGLEQUOTE '\''
-#define LEFT_SQUARE_BRACKET '['
-#define RIGHT_SQUARE_BRACKET ']'
+constexpr const char AND[]    = "AND";
+constexpr const char MAYBE[]  = "MAYBE";
+constexpr const char OR[]     = "OR";
+constexpr const char NOT[]    = "NOT";
+constexpr const char XOR[]    = "XOR";
+
+
+constexpr char DOUBLEQUOTE            = '"';
+constexpr char SINGLEQUOTE            = '\'';
+constexpr char LEFT_SQUARE_BRACKET    = '[';
+constexpr char RIGHT_SQUARE_BRACKET   = ']';
 
 
 Lexer::Lexer(char* input)
