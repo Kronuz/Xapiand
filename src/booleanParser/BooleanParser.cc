@@ -22,19 +22,18 @@
 
 #include "BooleanParser.h"
 
+#include <algorithm>
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+
 #include "AndNode.h"
-#include "MaybeNode.h"
 #include "IdNode.h"
+#include "MaybeNode.h"
 #include "NotNode.h"
 #include "OrNode.h"
 #include "SyntacticException.h"
 #include "XorNode.h"
-
-#include <iostream>
-#include <algorithm>
-#include <iomanip>
-#include <cstring>
-
 
 
 BooleanTree::BooleanTree(const std::string& input_)
