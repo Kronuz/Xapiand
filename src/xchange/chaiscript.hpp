@@ -174,7 +174,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				const auto& cast_val = chaiscript::boxed_cast<std::map<std::string, chaiscript::Boxed_Value>>(v);
 				o.type = type::MAP;
 				if (cast_val.empty()) {
-					o.via.map.ptr = NULL;
+					o.via.map.ptr = nullptr;
 					o.via.map.size = 0;
 				} else {
 					auto size = cast_val.size();
@@ -191,7 +191,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				const auto& cast_val = chaiscript::boxed_cast<std::vector<chaiscript::Boxed_Value>>(v);
 				o.type = type::ARRAY;
 				if (cast_val.empty()) {
-					o.via.array.ptr = NULL;
+					o.via.array.ptr = nullptr;
 					o.via.array.size = 0;
 				} else {
 					auto size = cast_val.size();

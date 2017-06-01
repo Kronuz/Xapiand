@@ -170,7 +170,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				case rapidjson::kObjectType: {
 					o.type = type::MAP;
 					if (v.ObjectEmpty()) {
-						o.via.map.ptr = NULL;
+						o.via.map.ptr = nullptr;
 						o.via.map.size = 0;
 					} else {
 						unsigned sz = v.MemberCount();
@@ -191,7 +191,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				case rapidjson::kArrayType: {
 					o.type = type::ARRAY;
 					if (v.Empty()) {
-						o.via.array.ptr = NULL;
+						o.via.array.ptr = nullptr;
 						o.via.array.size = 0;
 					} else {
 						msgpack::object* p = (msgpack::object*)o.zone.allocate_align(sizeof(msgpack::object)*v.Size());
