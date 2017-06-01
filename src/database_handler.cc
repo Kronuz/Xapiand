@@ -226,7 +226,8 @@ std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> Da
 
 
 template<typename Processor>
-MsgPack DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t script_hash, size_t body_hash, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
+MsgPack
+DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t script_hash, size_t body_hash, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
 	try {
 		auto processor = Processor::compile(script_hash, body_hash, script_body);
@@ -1169,9 +1170,7 @@ DatabaseHandler::get_document_change_seq(const std::string& term_id)
 		try {
 			auto current_document = get_document_term(term_id);
 			current_document_pair = std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(current_document.hash(), current_document.get_obj()));
-		} catch (const DocNotFoundError&) {
-			current_document_pair = std::shared_ptr<std::pair<size_t, const MsgPack>>(nullptr);
-		}
+		} catch (const DocNotFoundError&) { }
 
 		lk.lock();
 
@@ -1213,9 +1212,7 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 			try {
 				auto current_document = get_document_term(term_id);
 				current_document_pair = std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(current_document.hash(), current_document.get_obj()));
-			} catch (const DocNotFoundError&) {
-				current_document_pair = std::shared_ptr<std::pair<size_t, const MsgPack>>(nullptr);
-			}
+			} catch (const DocNotFoundError&) { }
 
 			lk.lock();
 
