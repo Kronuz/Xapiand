@@ -91,7 +91,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 		template <typename Stream>
 		msgpack::packer<Stream>& operator()(msgpack::packer<Stream>& o, chaiscript::Boxed_Value const& v) const {
 			if (v.is_type(chaiscript::user_type<std::map<std::string, chaiscript::Boxed_Value>>())) {
-				const auto& cast_val = chaiscript::boxed_cast<std::map<std::string, chaiscript::Boxed_Value>>(v);
+				const auto& cast_val = chaiscript::boxed_cast<const std::map<std::string, chaiscript::Boxed_Value>&>(v);
 				o.pack_map(cast_val.size());
 				for (const auto& pair : cast_val) {
 					o.pack_str(pair.first.size()).pack_str_body(pair.first.data(), pair.first.size());
@@ -99,15 +99,16 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 				}
 				return o;
 			} else if (v.is_type(chaiscript::user_type<std::vector<chaiscript::Boxed_Value>>())) {
-				const auto& cast_val = chaiscript::boxed_cast<std::vector<chaiscript::Boxed_Value>>(v);
+				const auto& cast_val = chaiscript::boxed_cast<const std::vector<chaiscript::Boxed_Value>&>(v);
 				o.pack_array(cast_val.size());
 				for (const auto& val : cast_val) {
 					o.pack(val);
 				}
 				return o;
 			} else if (v.is_type(chaiscript::user_type<std::string>())) {
-				auto string = chaiscript::boxed_cast<std::string>(v);
-				return o.pack_str(string.size()).pack_str_body(string.data(), string.size());
+				const auto& cast_val = chaiscript::boxed_cast<const std::string&>(v);
+				auto size = cast_val.size();
+				return o.pack_str(size).pack_str_body(cast_val.data(), size);
 			} else if (v.get_type_info().is_arithmetic()) {
 				if (v.is_type(chaiscript::user_type<int8_t>())) {
 					return o.pack_int8(chaiscript::boxed_cast<int8_t>(v));
@@ -171,7 +172,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 	struct object_with_zone<chaiscript::Boxed_Value> {
 		void operator()(msgpack::object::with_zone& o, chaiscript::Boxed_Value const& v) const {
 			if (v.is_type(chaiscript::user_type<std::map<std::string, chaiscript::Boxed_Value>>())) {
-				const auto& cast_val = chaiscript::boxed_cast<std::map<std::string, chaiscript::Boxed_Value>>(v);
+				const auto& cast_val = chaiscript::boxed_cast<const std::map<std::string, chaiscript::Boxed_Value>&>(v);
 				o.type = type::MAP;
 				if (cast_val.empty()) {
 					o.via.map.ptr = nullptr;
@@ -188,7 +189,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 					}
 				}
 			} else if (v.is_type(chaiscript::user_type<std::vector<chaiscript::Boxed_Value>>())) {
-				const auto& cast_val = chaiscript::boxed_cast<std::vector<chaiscript::Boxed_Value>>(v);
+				const auto& cast_val = chaiscript::boxed_cast<const std::vector<chaiscript::Boxed_Value>&>(v);
 				o.type = type::ARRAY;
 				if (cast_val.empty()) {
 					o.via.array.ptr = nullptr;
@@ -204,11 +205,11 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 					}
 				}
 			} else if (v.is_type(chaiscript::user_type<std::string>())) {
-				auto string = chaiscript::boxed_cast<std::string>(v);
+				const auto& cast_val = chaiscript::boxed_cast<const std::string&>(v);
 				o.type = type::STR;
-				auto size = string.size();
+				auto size = cast_val.size();
 				char* ptr = (char*)o.zone.allocate_align(size);
-				memcpy(ptr, string.data(), size);
+				memcpy(ptr, cast_val.data(), size);
 				o.via.str.ptr = ptr;
 				o.via.str.size = size;
 			} else if (v.get_type_info().is_arithmetic()) {
