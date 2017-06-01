@@ -271,7 +271,8 @@ SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::sha
 			THROW(Error, "Cyclic schema reference detected: %s", endpoint.to_string().c_str());
 		}
 		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN, HTTP_GET, context);
-		auto doc = _db_handler.get_document(id);
+		// FIXME: Process the subfield instead of sustract it.
+		auto doc = _db_handler.get_document(id.substr(0, id.rfind(DB_OFFSPRING_UNION)));
 		context->erase(hash);
 		return doc.get_obj();
 	} catch (const DocNotFoundError&) {
@@ -355,7 +356,8 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			DatabaseHandler _db_handler(Endpoints(Endpoint(schema_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
 			MsgPack shared_schema = *new_schema;
 			shared_schema[RESERVED_RECURSE] = false;
-			_db_handler.index(schema_id, true, shared_schema, false, msgpack_type);
+			// FIXME: Process the schema_path instead of sustract it.
+			_db_handler.index(schema_id.substr(0, schema_id.rfind(DB_OFFSPRING_UNION)), true, shared_schema, false, msgpack_type);
 			return true;
 		} else {
 			old_schema = aux_schema;
