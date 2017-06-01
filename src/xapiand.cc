@@ -1084,7 +1084,6 @@ int main(int argc, char **argv) {
 	Logging::log_level += opts.verbosity;
 
 	try {
-
 		banner();
 
 		if (opts.detach) {
