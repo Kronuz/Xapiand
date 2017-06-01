@@ -324,7 +324,7 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 		if (type[SPC_FOREIGN_TYPE].u64() == toUType(FieldType::FOREIGN)) {
 			THROW(ClientError, "Missing Implementation for Foreign scripts");
 		} else {
-			auto script_type = (FieldType)type[SPC_FOREIGN_TYPE].u64();
+			auto script_type = (FieldType)type[SPC_INDEX_TYPE].u64();
 			switch (script_type) {
 				case FieldType::CHAI:
 #if defined(XAPIAND_CHAISCRIPT)
