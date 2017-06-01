@@ -123,8 +123,9 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 						const char* cast_val = chaiscript::boxed_cast<const char*>(v);
 						auto size = std::strlen(cast_val);
 						return o.pack_str(size).pack_str_body(cast_val, size);
+					} else {
+						return o.pack_char(chaiscript::boxed_cast<char>(v));
 					}
-					return o.pack_char(chaiscript::boxed_cast<char>(v));
 				} else if (v.is_type(chaiscript::user_type<signed char>())) {
 					return o.pack_signed_char(chaiscript::boxed_cast<signed char>(v));
 				} else if (v.is_type(chaiscript::user_type<short>())) {
