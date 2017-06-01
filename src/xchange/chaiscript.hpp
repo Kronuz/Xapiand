@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "msgpack.hpp"           // for msgpack::object
-
 #include <chaiscript/chaiscript.hpp>
+
+#include "msgpack.hpp"           // for msgpack::object
 
 
 namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { namespace adaptor {
@@ -225,8 +225,18 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 					o.type = type::NEGATIVE_INTEGER;
 					o.via.i64 = chaiscript::boxed_cast<int64_t>(v);
 				} else if (v.is_type(chaiscript::user_type<char>())) {
-					o.type = type::NEGATIVE_INTEGER;
-					o.via.i64 = chaiscript::boxed_cast<char>(v);
+					if (v.is_ref()) {
+						const char* _ptr = chaiscript::boxed_cast<const char*>(v);
+						o.type = type::STR;
+						auto size = std::strlen(_ptr);
+						char* ptr = (char*)o.zone.allocate_align(size);
+						memcpy(ptr, _ptr, size);
+						o.via.str.ptr = ptr;
+						o.via.str.size = size;
+					} else {
+						o.type = type::NEGATIVE_INTEGER;
+						o.via.i64 = chaiscript::boxed_cast<char>(v);
+					}
 				} else if (v.is_type(chaiscript::user_type<signed char>())) {
 					o.type = type::NEGATIVE_INTEGER;
 					o.via.i64 = chaiscript::boxed_cast<signed char>(v);
