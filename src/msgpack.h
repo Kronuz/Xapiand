@@ -103,7 +103,7 @@ public:
 	}
 
 	static const MsgPack& undefined() {
-		static const MsgPack undefined(MsgPack::_undefined());
+		static const MsgPack undefined(_undefined());
 		return undefined;
 	}
 
