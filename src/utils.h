@@ -51,6 +51,15 @@ struct is_callable {
 };
 
 
+/*
+ * It may be used to suppress the "unused variable" or "unused local typedefs" compiler warnings
+ * when the variable or typedef can't be removed or commented out, e.g. when some blocks of the
+ * code are conditionally activated.
+ */
+template<typename... Args>
+inline void ignore_unused(Args&&...) { }
+
+
 /* Strict converter for unsigned types */
 #define stoux(func, s) \
 	[](const std::string& str) { \
