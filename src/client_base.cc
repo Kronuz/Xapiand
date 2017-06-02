@@ -416,7 +416,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 {
 	int fd = watcher.fd;
 
-	L_CALL(this, "BaseClient::io_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd); (void)revents;
+	L_CALL(this, "BaseClient::io_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 	L_INFO_HOOK_LOG("BaseClient::io_cb", this, "BaseClient::io_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
 	if (revents & EV_ERROR) {
@@ -698,9 +698,11 @@ BaseClient::io_cb_read(int fd)
 
 
 void
-BaseClient::update_async_cb(ev::async &, int revents)
+BaseClient::update_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "BaseClient::update_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "BaseClient::update_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	L_EV_BEGIN(this, "BaseClient::update_async_cb:BEGIN");
 
@@ -711,9 +713,11 @@ BaseClient::update_async_cb(ev::async &, int revents)
 
 
 void
-BaseClient::read_start_async_cb(ev::async &, int revents)
+BaseClient::read_start_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "BaseClient::read_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "BaseClient::read_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	L_EV_BEGIN(this, "BaseClient::read_start_async_cb:BEGIN");
 
