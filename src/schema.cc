@@ -4355,7 +4355,7 @@ Schema::write_script(MsgPack& properties, const std::string&, const MsgPack& doc
 	Script script(RESERVED_SCRIPT, doc_script);
 	properties[RESERVED_SCRIPT] = script.process_script(specification.flags.strict);
 #else
-	ignore_unused(properties, prop_name, doc_script);
+	ignore_unused(properties, doc_script);
 	THROW(ClientError, "%s only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
 #endif
 }
