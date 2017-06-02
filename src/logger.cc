@@ -22,19 +22,21 @@
 
 #include "logger.h"
 
-#include <ctime>         // for time_t
-#include <functional>    // for ref
-#include <iostream>      // for cerr
-#include <regex>         // for regex_replace, regex
-#include <stdarg.h>      // for va_list, va_end, va_start
-#include <stdexcept>     // for out_of_range
-#include <stdio.h>       // for fileno, vsnprintf, stderr
-#include <system_error>  // for system_error
-#include <unistd.h>      // for isatty
+#include <ctime>              // for time_t
+#include <functional>         // for ref
+#include <iostream>           // for cerr
+#include <regex>              // for regex_replace, regex
+#include <stdarg.h>           // for va_list, va_end, va_start
+#include <stdexcept>          // for out_of_range
+#include <stdio.h>            // for fileno, vsnprintf, stderr
+#include <system_error>       // for system_error
+#include <unistd.h>           // for isatty
 
-#include "datetime.h"    // for to_string
-#include "exception.h"   // for traceback
-#include "utils.h"       // for get_thread_name
+#include "datetime.h"         // for to_string
+#include "exception.h"        // for traceback
+#include "ignore_unused.h"    // for ignore_unused
+#include "utils.h"            // for get_thread_name
+
 
 #define BUFFER_SIZE (500 * 1024)
 #define STACKED_INDENT "<indent>"
@@ -425,7 +427,7 @@ Logging::_str_format(bool stacked, int priority, const std::string& exc, const c
 			result += buffer;
 		}
 #else
-		(void)obj;
+		ignore_unused(obj);
 #endif
 		result += " ";
 

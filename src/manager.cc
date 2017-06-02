@@ -63,6 +63,7 @@
 #include "ev/ev++.h"                         // for async, loop_ref (ptr only)
 #include "exception.h"                       // for Exit, ClientError, Excep...
 #include "http_parser.h"                     // for http_method
+#include "ignore_unused.h"                   // for ignore_unused
 #include "io_utils.h"                        // for close, open, read, write
 #include "log.h"                             // for L_CALL, L_DEBUG
 #include "memory_stats.h"                    // for get_total_ram, get_total_virtual_memor...
@@ -454,7 +455,9 @@ XapiandManager::signal_sig(int sig)
 void
 XapiandManager::signal_sig_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "XapiandManager::signal_sig_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "XapiandManager::signal_sig_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	int sig = atom_sig;
 	switch (sig) {
@@ -636,7 +639,7 @@ XapiandManager::make_replicators(const opts_t& o)
 		}
 	}
 #else
-	(void)o;  // silence -Wunused-parameter
+	ignore_unused(o);
 #endif
 }
 
@@ -988,8 +991,7 @@ XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endp
 	}
 	else
 #else
-	(void)n_endps;  // silence -Wunused-parameter
-	(void)timeout;  // silence -Wunused-parameter
+	ignore_unused(n_endps, timeout);
 #endif
 	{
 		endpv.push_back(Endpoint(path));

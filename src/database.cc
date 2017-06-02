@@ -37,6 +37,7 @@
 #include "database_autocommit.h"  // for DatabaseAutocommit
 #include "database_handler.h"     // for DatabaseHandler
 #include "exception.h"            // for Error, MSG_Error, Exception, DocNot...
+#include "ignore_unused.h"        // for ignore_unused
 #include "io_utils.h"             // for close, strerrno, write, open
 #include "length.h"               // for serialise_length, unserialise_length
 #include "log.h"                  // for L_OBJ, L_CALL

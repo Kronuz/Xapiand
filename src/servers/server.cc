@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -27,6 +27,7 @@
 #include <ratio>                 // for ratio
 #include <type_traits>           // for remove_reference<>::type
 
+#include "ignore_unused.h"       // for ignore_unused
 #include "log.h"                 // for L_EV, L_OBJ, L_CALL, L_EV_BEGIN
 #include "manager.h"             // for XapiandManager, XapiandManager::manager
 #include "utils.h"               // for readable_revents
@@ -76,7 +77,9 @@ XapiandServer::run()
 void
 XapiandServer::setup_node_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "XapiandServer::setup_node_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "XapiandServer::setup_node_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	L_EV_BEGIN(this, "XapiandServer::setup_async_cb:BEGIN");
 	XapiandManager::manager->setup_node(share_this<XapiandServer>());

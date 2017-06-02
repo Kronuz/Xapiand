@@ -56,13 +56,14 @@
 #include "endpoint.h"                // for Endpoint, Endpoint::cwd
 #include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"               // for Exit
+#include "ignore_unused.h"           // for ignore_unused
 #include "io_utils.h"                // for close, open, write
 #include "log.h"                     // for Logging, L_INFO, L_CRIT, L_NOTICE
 #include "manager.h"                 // for opts_t, XapiandManager, XapiandM...
+#include "package.h"                 // for Package
 #include "schema.h"                  // for default_spc
 #include "tclap/CmdLine.h"           // for CmdLine, ArgException, Arg, CmdL...
 #include "utils.h"                   // for format_string, center_string
-#include "package.h"                 // for Package
 #include "worker.h"                  // for Worker
 #include "xxh64.hpp"                 // for xxh64
 
@@ -987,7 +988,7 @@ void usedir(const char* path, bool solo) {
 		}
 	}
 #else
-	(void)solo;  // silence -Wunused-parameter
+	ignore_unused(solo);
 #endif
 
 	if (chdir(path) == -1) {

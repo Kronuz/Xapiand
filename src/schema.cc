@@ -38,6 +38,7 @@
 #include "datetime.h"                      // for isDate, tm_t
 #include "exception.h"                     // for ClientError
 #include "geospatial/geospatial.h"         // for GeoSpatial
+#include "ignore_unused.h"                 // for ignore_unused
 #include "manager.h"                       // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"     // for integer, geo, date, positive
 #include "script.h"                        // for Script

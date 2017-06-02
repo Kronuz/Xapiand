@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -25,6 +25,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "endpoint.h"
+#include "ignore_unused.h"
 
 
 constexpr const char* const Raft::MessageNames[];
@@ -102,7 +103,9 @@ Raft::stop()
 void
 Raft::start_leader_heartbeat_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Raft::start_leader_heartbeat_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::start_leader_heartbeat_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	_start_leader_heartbeat();
 }
@@ -111,7 +114,9 @@ Raft::start_leader_heartbeat_async_cb(ev::async&, int revents)
 void
 Raft::reset_leader_election_timeout_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Raft::reset_leader_election_timeout_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::reset_leader_election_timeout_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	_reset_leader_election_timeout();
 }
@@ -120,7 +125,9 @@ Raft::reset_leader_election_timeout_async_cb(ev::async&, int revents)
 void
 Raft::reset_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Raft::reset_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::reset_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	_reset();
 }
@@ -143,7 +150,9 @@ Raft::_reset()
 void
 Raft::leader_election_timeout_cb(ev::timer&, int revents)
 {
-	L_CALL(this, "Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	L_EV_BEGIN(this, "Raft::leader_election_timeout_cb:BEGIN");
 
@@ -185,7 +194,9 @@ Raft::_reset_leader_election_timeout()
 void
 Raft::leader_heartbeat_cb(ev::timer&, int revents)
 {
-	L_CALL(this, "Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	L_EV_BEGIN(this, "Raft::leader_heartbeat_cb:BEGIN");
 

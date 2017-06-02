@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,6 +22,7 @@
 
 #include "worker.h"
 
+#include "ignore_unused.h"
 #include "log.h"
 #include "utils.h"
 
@@ -100,7 +101,9 @@ Worker::_shutdown_async_cb()
 void
 Worker::_break_loop_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Worker::_break_loop_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
+	L_CALL(this, "Worker::_break_loop_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str());
+
+	ignore_unused(revents);
 
 	L_EV_BEGIN(this, "Worker::_break_loop_async_cb:BEGIN");
 	break_loop_impl();
@@ -111,7 +114,9 @@ Worker::_break_loop_async_cb(ev::async&, int revents)
 void
 Worker::_destroy_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Worker::_destroy_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
+	L_CALL(this, "Worker::_destroy_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str());
+
+	ignore_unused(revents);
 
 	L_EV_BEGIN(this, "Worker::_destroy_async_cb:BEGIN");
 	destroy_impl();
@@ -122,7 +127,9 @@ Worker::_destroy_async_cb(ev::async&, int revents)
 void
 Worker::_detach_children_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Worker::_detach_children_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str()); (void)revents;
+	L_CALL(this, "Worker::_detach_children_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str());
+
+	ignore_unused(revents);
 
 	L_EV_BEGIN(this, "Worker::_detach_children_async_cb:BEGIN");
 	detach_children_impl();

@@ -24,7 +24,6 @@
 
 #include "xapiand.h"
 
-
 #ifdef XAPIAND_CLUSTERING
 
 #include "udp_base.h"

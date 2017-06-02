@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2017 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -35,6 +35,7 @@
 #include <xapian.h>              // for SerialisationError
 
 #include "ev/ev++.h"             // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
+#include "ignore_unused.h"       // for ignore_unused
 #include "io_utils.h"            // for read, close, lseek, write
 #include "length.h"              // for serialise_length, unserialise_length
 #include "log.h"                 // for L_CALL, L_ERR, L_EV, L_CONN, L_OBJ

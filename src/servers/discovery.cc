@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,6 +23,8 @@
 #include "discovery.h"
 
 #ifdef XAPIAND_CLUSTERING
+
+#include "ignore_unused.h"
 
 
 constexpr const char* const Discovery::MessageNames[];
@@ -77,7 +79,9 @@ Discovery::stop() {
 void
 Discovery::enter_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Discovery::enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Discovery::enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	_enter();
 }
@@ -100,7 +104,9 @@ Discovery::_enter()
 void
 Discovery::heartbeat_cb(ev::timer&, int revents)
 {
-	L_CALL(this, "Discovery::heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str()); (void)revents;
+	L_CALL(this, "Discovery::heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+
+	ignore_unused(revents);
 
 	L_EV_BEGIN(this, "Discovery::heartbeat_cb:BEGIN");
 

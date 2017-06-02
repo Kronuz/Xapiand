@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -59,7 +59,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	int fd = watcher.fd;
 
-	L_CALL(this, "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd); (void)revents;
+	L_CALL(this, "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 	L_INFO_HOOK_LOG("HttpServer::io_accept_cb", this, "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
 	if (EV_ERROR & revents) {

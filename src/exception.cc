@@ -22,12 +22,14 @@
 
 #include "exception.h"
 
-#include <cxxabi.h>    // for abi::__cxa_demangle
-#include <execinfo.h>  // for backtrace, backtrace_symbols
-#include <stdarg.h>    // for va_end, va_list, va_start
-#include <stdio.h>     // for vsnprintf
-#include <stdlib.h>    // for free
-#include <string.h>    // for strtok_r
+#include <cxxabi.h>           // for abi::__cxa_demangle
+#include <execinfo.h>         // for backtrace, backtrace_symbols
+#include <stdarg.h>           // for va_end, va_list, va_start
+#include <stdio.h>            // for vsnprintf
+#include <stdlib.h>           // for free
+#include <string.h>           // for strtok_r
+
+#include "ignore_unused.h"    // for ignore_unused
 
 
 #define BUFFER_SIZE 1024
@@ -75,8 +77,7 @@ std::string traceback(const char *filename, int line) {
 
 	free(strs);
 #else
-	(void)filename;
-	(void)line;
+	ignore_unused(filename, line);
 #endif
 	return t;
 }

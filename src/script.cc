@@ -26,6 +26,7 @@
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 
 #include "chaipp/chaipp.h"
+#include "ignore_unused.h"
 #include "serialise.h"
 #include "v8pp/v8pp.h"
 

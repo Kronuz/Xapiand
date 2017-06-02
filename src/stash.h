@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -25,6 +25,7 @@
 #include <array>     // for array
 #include <atomic>    // for atomic
 
+#include "ignore_unused.h"
 #include "log.h"
 
 
@@ -463,7 +464,9 @@ public:
 	template<typename... Args>
 	void put(StashContext& ctx, unsigned long long, Args&&... args) {
 		auto slot = atom_end++;
-		L_STASH(this, "StashValues::" + LIGHT_MAGENTA + "PUT" + NO_COL + " - " + ctx._col() + "slot:%llu, atom_end:%llu, op:%s", slot, atom_end.load(), ctx._op()); (void)ctx;
+		L_STASH(this, "StashValues::" + LIGHT_MAGENTA + "PUT" + NO_COL + " - " + ctx._col() + "slot:%llu, atom_end:%llu, op:%s", slot, atom_end.load(), ctx._op());
+
+		ignore_unused(ctx);
 
 		std::atomic<_Tp*>* ptr_atom_ptr;
 		Stash_T::get(&ptr_atom_ptr, slot, true);
