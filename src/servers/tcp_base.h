@@ -24,10 +24,10 @@
 
 #include "xapiand.h"
 
-#include <time.h>    // for time_t
 #include <iostream>
 #include <memory>    // for shared_ptr
 #include <string>    // for string
+#include <time.h>    // for time_t
 
 #include "worker.h"  // for Worker
 
