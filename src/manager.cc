@@ -76,6 +76,16 @@
 #include "utils.h"                           // for Stats::Pos, SLOT_TIME_SE...
 #include "worker.h"                          // for Worker, enable_make_shared
 
+#ifdef XAPIAND_CLUSTERING
+#include "replicator.h"                      // for XapiandReplicator
+#include "servers/binary.h"                  // for Binary
+#include "servers/discovery.h"               // for Discovery
+#include "servers/raft.h"                    // for Raft
+#include "servers/server_binary.h"           // for RaftBinary
+#include "servers/server_discovery.h"        // for DicoveryServer
+#include "servers/server_raft.h"             // for RaftServer
+#endif
+
 
 #if defined(XAPIAND_V8)
 #include "v8pp/v8pp.h"
@@ -966,7 +976,7 @@ XapiandManager::get_region()
 }
 
 
-std::future<bool>
+std::shared_future<bool>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
 	L_CALL(this, "XapiandManager::trigger_replication(%s, %s)", repr(src_endpoint.to_string()).c_str(), repr(dst_endpoint.to_string()).c_str());
