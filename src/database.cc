@@ -2020,30 +2020,6 @@ DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_pt
 }
 
 
-template<typename F, typename... Args>
-inline void
-DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args)
-{
-	try {
-		checkout(database, endpoints, flags);
-	} catch (const CheckoutError& e) {
-		std::lock_guard<std::mutex> lk(qmtx);
-
-		std::shared_ptr<DatabaseQueue> queue;
-		if (flags & DB_WRITABLE) {
-			queue = writable_databases.get(endpoints.hash(), flags & DB_VOLATILE);
-		} else {
-			queue = databases.get(endpoints.hash(), flags & DB_VOLATILE);
-		}
-
-		queue->checkin_callbacks.clear();
-		queue->checkin_callbacks.enqueue(std::forward<F>(f), std::forward<Args>(args)...);
-
-		throw e;
-	}
-}
-
-
 void
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {

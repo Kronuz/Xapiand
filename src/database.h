@@ -411,6 +411,9 @@ public:
 class DatabasePool {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
+#ifdef XAPIAND_CLUSTERING
+	friend class BinaryClient;
+#endif
 	friend class DatabaseQueue;
 	friend class lock_database;
 
@@ -430,7 +433,26 @@ class DatabasePool {
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 
 	template<typename F, typename... Args>
-	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args);
+	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args) {
+		try {
+			checkout(database, endpoints, flags);
+		} catch (const CheckoutError& e) {
+			std::lock_guard<std::mutex> lk(qmtx);
+
+			std::shared_ptr<DatabaseQueue> queue;
+			if (flags & DB_WRITABLE) {
+				queue = writable_databases.get(endpoints.hash(), flags & DB_VOLATILE);
+			} else {
+				queue = databases.get(endpoints.hash(), flags & DB_VOLATILE);
+			}
+
+			queue->checkin_callbacks.clear();
+			queue->checkin_callbacks.enqueue(std::forward<F>(f), std::forward<Args>(args)...);
+
+			throw e;
+		}
+	}
+
 	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
 
 	void checkin(std::shared_ptr<Database>& database);
