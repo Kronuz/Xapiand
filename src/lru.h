@@ -250,7 +250,7 @@ public:
 	}
 
 	template<typename OnDrop>
-	void trim(const OnDrop& on_drop, ssize_t size) {
+	void trim(const OnDrop& on_drop, size_t size) {
 		if (_max_size != SIZE_MAX) {
 			auto last = _items_list.rbegin();
 			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend(); --i) {
@@ -276,13 +276,13 @@ public:
 
 	template<typename OnDrop>
 	void trim(const OnDrop& on_drop) {
-		trim(on_drop, static_cast<ssize_t>(_items_map.size()));
+		trim(on_drop, _items_map.size());
 	}
 
 	template<typename OnDrop, typename P>
 	std::pair<iterator, bool> insert_and(const OnDrop& on_drop, P&& p) {
 		erase(p.first);
-		trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
+		trim(on_drop, _items_map.size() + 1);
 		_items_list.push_front(std::forward<P>(p));
 		auto it = _items_list.begin();
 		bool created = _items_map.emplace(it->first, it).second;
@@ -292,7 +292,7 @@ public:
 	template<typename OnDrop, typename P>
 	std::pair<iterator, bool> insert_back_and(const OnDrop& on_drop, P&& p) {
 		erase(p.first);
-		trim(on_drop, static_cast<ssize_t>(_items_map.size() + 1));
+		trim(on_drop, _items_map.size() + 1);
 		_items_list.push_back(std::forward<P>(p));
 		auto last = _items_list.rbegin();
 		auto it = (++last).base();
