@@ -643,7 +643,7 @@ XapiandManager::make_replicators(const opts_t& o)
 {
 #ifdef XAPIAND_CLUSTERING
 	if (!solo) {
-		for (size_t i = 0; i < o.num_replicators; ++i) {
+		for (ssize_t i = 0; i < o.num_replicators; ++i) {
 			auto obj = Worker::make_shared<XapiandReplicator>(XapiandManager::manager, nullptr, ev_flags);
 			replicator_pool.enqueue(std::move(obj));
 		}
@@ -846,13 +846,13 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 
 
 std::shared_ptr<const Node>
-XapiandManager::get_node(const std::string& node_name)
+XapiandManager::get_node(const std::string& _node_name)
 {
-	L_CALL(this, "XapiandManager::get_node(%s)", node_name.c_str());
+	L_CALL(this, "XapiandManager::get_node(%s)", _node_name.c_str());
 
 	try {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
-		return nodes.at(lower_string(node_name));
+		return nodes.at(lower_string(_node_name));
 	} catch (const std::out_of_range &err) {
 		return nullptr;
 	}
@@ -860,11 +860,11 @@ XapiandManager::get_node(const std::string& node_name)
 
 
 std::shared_ptr<const Node>
-XapiandManager::touch_node(const std::string& node_name, int32_t region)
+XapiandManager::touch_node(const std::string& _node_name, int32_t region)
 {
-	L_CALL(this, "XapiandManager::touch_node(%s, %x)", node_name.c_str(), region);
+	L_CALL(this, "XapiandManager::touch_node(%s, %x)", _node_name.c_str(), region);
 
-	std::string lower_node_name(lower_string(node_name));
+	std::string lower_node_name(lower_string(_node_name));
 
 	auto local_node_ = local_node.load();
 	if (lower_node_name == lower_string(local_node_->name)) {
@@ -896,12 +896,12 @@ XapiandManager::touch_node(const std::string& node_name, int32_t region)
 
 
 void
-XapiandManager::drop_node(const std::string& node_name)
+XapiandManager::drop_node(const std::string& _node_name)
 {
-	L_CALL(this, "XapiandManager::drop_node(%s)", node_name.c_str());
+	L_CALL(this, "XapiandManager::drop_node(%s)", _node_name.c_str());
 
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	nodes.erase(lower_string(node_name));
+	nodes.erase(lower_string(_node_name));
 }
 
 
