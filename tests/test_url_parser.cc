@@ -31,17 +31,7 @@
 
 static std::string run_url_path(const std::string& path, bool clear_id) {
 	const char* parser_url_path_states_names[] = {
-		[toUType(PathParser::State::NCM)]   = "ncm",
-		[toUType(PathParser::State::PMT)]   = "pmt",
-		[toUType(PathParser::State::CMD)]   = "cmd",
-		[toUType(PathParser::State::ID)]    = "id",
-		[toUType(PathParser::State::NSP)]   = "nsp",
-		[toUType(PathParser::State::PTH)]   = "pth",
-		[toUType(PathParser::State::HST)]   = "hst",
-		[toUType(PathParser::State::END)]   = "end",
-		[toUType(PathParser::State::INVALID_STATE)] = "INVALID_STATE",
-		[toUType(PathParser::State::INVALID_NSP)]   = "INVALID_NSP",
-		[toUType(PathParser::State::INVALID_HST)]   = "INVALID_HST",
+		"ncm", "pmt", "cmd", "id", "nsp", "pth", "hst", "end", "INVALID_STATE", "INVALID_NSP", "INVALID_HST",
 	};
 
 	PathParser::State state;
