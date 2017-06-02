@@ -195,23 +195,23 @@ int test_expanded_guids() {
 			'0', '1', '2',  '3',  '4',  '5',  '6',  '7',
 			'8', '9', 'a',  'b',  'c',  'd',  'e',  'f',
 		};
-		for (int i = 0; i < 8; ++i) {
+		for (int j = 0; j < 8; ++j) {
 			uuid_orig.push_back(x[random_int(0, 15)]);
 		}
 		uuid_orig.push_back('-');
-		for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
 			uuid_orig.push_back(x[random_int(0, 15)]);
 		}
 		uuid_orig.push_back('-');
-		for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
 			uuid_orig.push_back(x[random_int(0, 15)]);
 		}
 		uuid_orig.push_back('-');
-		for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
 			uuid_orig.push_back(x[random_int(0, 15)]);
 		}
 		uuid_orig.push_back('-');
-		for (int i = 0; i < 12; ++i) {
+		for (int j = 0; j < 12; ++j) {
 			uuid_orig.push_back(x[random_int(0, 15)]);
 		}
 		// If random uuid is rfc 4122, change the variant.
