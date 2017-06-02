@@ -23,18 +23,19 @@
 #	xapian-core/files/patch-net_remoteserver.cc
 #	xapian-core/files/patch-net_remoteserver.h
 #	xapian-core/files/patch-net_remotetcpclient.h
+#	xapian-core/files/patch-net_resolver.h
 #	xapian-core/pkg-descr
 #	xapian-core/pkg-plist
 #
 echo c - xapian-core
 mkdir -p xapian-core > /dev/null 2>&1
 echo x - xapian-core/Makefile
-sed 's/^X//' >xapian-core/Makefile << 'END-of-xapian-core/Makefile'
+sed 's/^X//' >xapian-core/Makefile << 'bb15b57be79ed098817542f273cd04f0'
 X# Created by: J.F. Dockes
 X# $FreeBSD: head/databases/xapian-core/Makefile 412236 2016-03-31 15:38:43Z sunpoet $
 X
 XPORTNAME=	xapian-core
-XPORTVERSION=	1.4.2
+XPORTVERSION=	1.4.4
 XCATEGORIES=	databases
 XMASTER_SITES=	http://oligarchy.co.uk/xapian/${PORTVERSION}/ \
 X		LOCAL/sunpoet
@@ -54,6 +55,7 @@ XGNU_CONFIGURE=	yes
 XINSTALL_TARGET=	install-strip
 XUSE_LDCONFIG=	yes
 XUSES=		libtool pathfix tar:xz
+XCPPFLAGS=       "-DFLINTLOCK_USE_FLOCK"
 X
 XPORTDOCS=	*
 X
@@ -65,17 +67,17 @@ X	${INSTALL_PROGRAM} ${WRKSRC}/examples/.libs/${file} ${STAGEDIR}${PREFIX}/bin/x
 X.endfor
 X
 X.include <bsd.port.mk>
-END-of-xapian-core/Makefile
+bb15b57be79ed098817542f273cd04f0
 echo x - xapian-core/distinfo
-sed 's/^X//' >xapian-core/distinfo << 'END-of-xapian-core/distinfo'
+sed 's/^X//' >xapian-core/distinfo << 'b49b3e3560b5e4bda659c2592ac05ff7'
 XTIMESTAMP = 1483610329
-XSHA256 (xapian-core-1.4.2.tar.xz) = aec2c4352998127a2f2316218bf70f48cef0a466a87af3939f5f547c5246e1ce
-XSIZE (xapian-core-1.4.2.tar.xz) = 2799492
-END-of-xapian-core/distinfo
+XSHA256 (xapian-core-1.4.4.tar.xz) = a6a985a9841a452d75cf2169196b7ca6ebeef27da7c607078cd401ad041732d9
+XSIZE (xapian-core-1.4.4.tar.xz) = 2807952
+b49b3e3560b5e4bda659c2592ac05ff7
 echo c - xapian-core/files
 mkdir -p xapian-core/files > /dev/null 2>&1
 echo x - xapian-core/files/patch-api_omenquire.cc
-sed 's/^X//' >xapian-core/files/patch-api_omenquire.cc << 'END-of-xapian-core/files/patch-api_omenquire.cc'
+sed 's/^X//' >xapian-core/files/patch-api_omenquire.cc << '73c1fcc39153e355766ceae99bdf1fc7'
 Xdiff --git api/omenquire.cc api/omenquire.cc
 Xindex 2d40978..25df563 100644
 X--- api/omenquire.cc
@@ -266,9 +268,9 @@ X+
 X MSet
 X Enquire::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
 X 		  Xapian::doccount check_at_least, const RSet *rset,
-END-of-xapian-core/files/patch-api_omenquire.cc
+73c1fcc39153e355766ceae99bdf1fc7
 echo x - xapian-core/files/patch-api_omenquireinternal.h
-sed 's/^X//' >xapian-core/files/patch-api_omenquireinternal.h << 'END-of-xapian-core/files/patch-api_omenquireinternal.h'
+sed 's/^X//' >xapian-core/files/patch-api_omenquireinternal.h << '42000b6ff3d0b59949c6d3241f1d5cf9'
 Xdiff --git api/omenquireinternal.h api/omenquireinternal.h
 Xindex 4f25b39..8b0104d 100644
 X--- api/omenquireinternal.h
@@ -305,9 +307,9 @@ X+
 X 	MSet get_mset(Xapian::doccount first, Xapian::doccount maxitems,
 X 		      Xapian::doccount check_at_least,
 X 		      const RSet *omrset,
-END-of-xapian-core/files/patch-api_omenquireinternal.h
+42000b6ff3d0b59949c6d3241f1d5cf9
 echo x - xapian-core/files/patch-backends_dbfactory__remote.cc
-sed 's/^X//' >xapian-core/files/patch-backends_dbfactory__remote.cc << 'END-of-xapian-core/files/patch-backends_dbfactory__remote.cc'
+sed 's/^X//' >xapian-core/files/patch-backends_dbfactory__remote.cc << 'ac69d80474e87d4780bc463a6adc8439'
 Xdiff --git backends/dbfactory_remote.cc backends/dbfactory_remote.cc
 Xindex 5eaab61..3aa4aa9 100644
 X--- backends/dbfactory_remote.cc
@@ -393,9 +395,9 @@ X+    return Remote::open_writable(program, args, timeout_, flags, std::string()
 X }
 X 
 X }
-END-of-xapian-core/files/patch-backends_dbfactory__remote.cc
+ac69d80474e87d4780bc463a6adc8439
 echo x - xapian-core/files/patch-backends_remote_remote-database.cc
-sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.cc << 'END-of-xapian-core/files/patch-backends_remote_remote-database.cc'
+sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.cc << '0ea39a0ec8ec970f8d736e827925e001'
 Xdiff --git backends/remote/remote-database.cc backends/remote/remote-database.cc
 Xindex 7bed102..08211d8 100644
 X--- backends/remote/remote-database.cc
@@ -508,9 +510,9 @@ X+    link.do_close(writable_);
 X }
 X 
 X void
-END-of-xapian-core/files/patch-backends_remote_remote-database.cc
+0ea39a0ec8ec970f8d736e827925e001
 echo x - xapian-core/files/patch-backends_remote_remote-database.h
-sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.h << 'END-of-xapian-core/files/patch-backends_remote_remote-database.h'
+sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.h << '9fee399553c179cdff94485118d9bd8e'
 Xdiff --git backends/remote/remote-database.h backends/remote/remote-database.h
 Xindex a0835a6..7e0b19a 100644
 X--- backends/remote/remote-database.h
@@ -545,9 +547,9 @@ X+		   bool writable, int flags, const string & dir);
 X 
 X     /// Receive a message from the server.
 X     reply_type get_message(string & message, reply_type required_type = REPLY_MAX) const;
-END-of-xapian-core/files/patch-backends_remote_remote-database.h
+9fee399553c179cdff94485118d9bd8e
 echo x - xapian-core/files/patch-common_remoteprotocol.h
-sed 's/^X//' >xapian-core/files/patch-common_remoteprotocol.h << 'END-of-xapian-core/files/patch-common_remoteprotocol.h'
+sed 's/^X//' >xapian-core/files/patch-common_remoteprotocol.h << 'f14fb3cbf56cb06e2897cb4e67e23ccc'
 Xdiff --git common/remoteprotocol.h common/remoteprotocol.h
 Xindex fcaa1ec..03adba7 100644
 X--- common/remoteprotocol.h
@@ -560,9 +562,9 @@ X+    MSG_READACCESS,		// Select currenty active read access database
 X     MSG_MAX
 X };
 X 
-END-of-xapian-core/files/patch-common_remoteprotocol.h
+f14fb3cbf56cb06e2897cb4e67e23ccc
 echo x - xapian-core/files/patch-include_xapian_dbfactory.h
-sed 's/^X//' >xapian-core/files/patch-include_xapian_dbfactory.h << 'END-of-xapian-core/files/patch-include_xapian_dbfactory.h'
+sed 's/^X//' >xapian-core/files/patch-include_xapian_dbfactory.h << '67bbc4702834efb44fdc7a7a5e85d1c0'
 Xdiff --git include/xapian/dbfactory.h include/xapian/dbfactory.h
 Xindex 3a75bf1..e6b148e 100644
 X--- include/xapian/dbfactory.h
@@ -631,9 +633,9 @@ X+XAPIAN_VISIBILITY_DEFAULT
 X WritableDatabase open_writable(const std::string &program, const std::string &args, useconds_t timeout = 0, int flags = 0);
 X 
 X }
-END-of-xapian-core/files/patch-include_xapian_dbfactory.h
+67bbc4702834efb44fdc7a7a5e85d1c0
 echo x - xapian-core/files/patch-include_xapian_enquire.h
-sed 's/^X//' >xapian-core/files/patch-include_xapian_enquire.h << 'END-of-xapian-core/files/patch-include_xapian_enquire.h'
+sed 's/^X//' >xapian-core/files/patch-include_xapian_enquire.h << 'afc9ec4ca0a4c778214dbdacfb016ab2'
 Xdiff --git include/xapian/enquire.h include/xapian/enquire.h
 Xindex 4dadede..973a151 100644
 X--- include/xapian/enquire.h
@@ -678,9 +680,9 @@ X+			  const MatchDecider * mdecider = 0) const;
 X 	MSet get_mset(Xapian::doccount first, Xapian::doccount maxitems,
 X 		      Xapian::doccount checkatleast = 0,
 X 		      const RSet * omrset = 0,
-END-of-xapian-core/files/patch-include_xapian_enquire.h
+afc9ec4ca0a4c778214dbdacfb016ab2
 echo x - xapian-core/files/patch-include_xapian_mset.h
-sed 's/^X//' >xapian-core/files/patch-include_xapian_mset.h << 'END-of-xapian-core/files/patch-include_xapian_mset.h'
+sed 's/^X//' >xapian-core/files/patch-include_xapian_mset.h << 'dcd82398ac91b4141e407b22618e7618'
 Xdiff --git include/xapian/mset.h include/xapian/mset.h
 Xindex 2401e54..39ff724 100644
 X--- include/xapian/mset.h
@@ -705,9 +707,9 @@ X+
 X     /** @private @internal MSet is what the C++ STL calls a container.
 X      *
 X      *  The following typedefs allow the class to be used in templates in the
-END-of-xapian-core/files/patch-include_xapian_mset.h
+dcd82398ac91b4141e407b22618e7618
 echo x - xapian-core/files/patch-net_progclient.cc
-sed 's/^X//' >xapian-core/files/patch-net_progclient.cc << 'END-of-xapian-core/files/patch-net_progclient.cc'
+sed 's/^X//' >xapian-core/files/patch-net_progclient.cc << '0289b2a578b1454667ac8e80e4c86882'
 Xdiff --git net/progclient.cc net/progclient.cc
 Xindex 3ba0d9e..9357fde 100644
 X--- net/progclient.cc
@@ -733,9 +735,9 @@ X+    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable_ | fl
 X }
 X 
 X string
-END-of-xapian-core/files/patch-net_progclient.cc
+0289b2a578b1454667ac8e80e4c86882
 echo x - xapian-core/files/patch-net_progclient.h
-sed 's/^X//' >xapian-core/files/patch-net_progclient.h << 'END-of-xapian-core/files/patch-net_progclient.h'
+sed 's/^X//' >xapian-core/files/patch-net_progclient.h << 'af1e8193bdacf07368b21c8e0218ba49'
 Xdiff --git net/progclient.h net/progclient.h
 Xindex 5567e55..9ebcde9 100644
 X--- net/progclient.h
@@ -750,9 +752,9 @@ X+	       const std::string & dir);
 X 
 X     /** Destructor. */
 X     ~ProgClient();
-END-of-xapian-core/files/patch-net_progclient.h
+af1e8193bdacf07368b21c8e0218ba49
 echo x - xapian-core/files/patch-net_remoteserver.cc
-sed 's/^X//' >xapian-core/files/patch-net_remoteserver.cc << 'END-of-xapian-core/files/patch-net_remoteserver.cc'
+sed 's/^X//' >xapian-core/files/patch-net_remoteserver.cc << 'cd2359dfb11d830004d48d3043a75101'
 Xdiff --git net/remoteserver.cc net/remoteserver.cc
 Xindex 8185bc0..22a7804 100644
 X--- net/remoteserver.cc
@@ -1270,9 +1272,9 @@ X+	wdb = NULL;
 X+    }
 X+    dbpaths = dbpaths_;
 X+}
-END-of-xapian-core/files/patch-net_remoteserver.cc
+cd2359dfb11d830004d48d3043a75101
 echo x - xapian-core/files/patch-net_remoteserver.h
-sed 's/^X//' >xapian-core/files/patch-net_remoteserver.h << 'END-of-xapian-core/files/patch-net_remoteserver.h'
+sed 's/^X//' >xapian-core/files/patch-net_remoteserver.h << '1811e7c1331cf56f9f2c5eb483581c69'
 Xdiff --git net/remoteserver.h net/remoteserver.h
 Xindex 857d791..37c0dab 100644
 X--- net/remoteserver.h
@@ -1298,9 +1300,9 @@ X+
 X   public:
 X     /** Construct a RemoteServer.
 X      *
-END-of-xapian-core/files/patch-net_remoteserver.h
+1811e7c1331cf56f9f2c5eb483581c69
 echo x - xapian-core/files/patch-net_remotetcpclient.h
-sed 's/^X//' >xapian-core/files/patch-net_remotetcpclient.h << 'END-of-xapian-core/files/patch-net_remotetcpclient.h'
+sed 's/^X//' >xapian-core/files/patch-net_remotetcpclient.h << '8edbcb701c2f73405d7c18ffeac9b9b2'
 Xdiff --git net/remotetcpclient.h net/remotetcpclient.h
 Xindex 9da59a8..9382f27 100644
 X--- net/remotetcpclient.h
@@ -1320,9 +1322,22 @@ X+			 writable_, flags_, dir) { }
 X 
 X     /** Destructor. */
 X     ~RemoteTcpClient();
-END-of-xapian-core/files/patch-net_remotetcpclient.h
+8edbcb701c2f73405d7c18ffeac9b9b2
+echo x - xapian-core/files/patch-net_resolver.h
+sed 's/^X//' >xapian-core/files/patch-net_resolver.h << '5ba018ecf61a069d7161ca26d182d963'
+X--- net/resolver.h.orig	2017-06-02 17:32:09 UTC
+X+++ net/resolver.h
+X@@ -22,6 +22,7 @@
+X #define XAPIAN_INCLUDED_RESOLVER_H
+X 
+X #include <cstring>
+X+#include <sys/socket.h>
+X #include "safenetdb.h"
+X #include "str.h"
+X #include "xapian/error.h"
+5ba018ecf61a069d7161ca26d182d963
 echo x - xapian-core/pkg-descr
-sed 's/^X//' >xapian-core/pkg-descr << 'END-of-xapian-core/pkg-descr'
+sed 's/^X//' >xapian-core/pkg-descr << '98a98df9fcab60de6efa63d29b31972f'
 XXapian is an Open Source Probabilistic Information Retrieval library, released
 Xunder the GPL. It's written in C++, with bindings to allow use from other
 Xlanguages.
@@ -1341,9 +1356,9 @@ X- Platform independent data formats
 X- Allows simultaneous update and searching.
 X
 XWWW: http://www.xapian.org/
-END-of-xapian-core/pkg-descr
+98a98df9fcab60de6efa63d29b31972f
 echo x - xapian-core/pkg-plist
-sed 's/^X//' >xapian-core/pkg-plist << 'END-of-xapian-core/pkg-plist'
+sed 's/^X//' >xapian-core/pkg-plist << '210f147e6696fa0219151394a79bdd74'
 Xbin/copydatabase
 Xbin/quest
 Xbin/simpleexpand
@@ -1401,7 +1416,7 @@ Xlib/cmake/xapian/xapian-config-version.cmake
 Xlib/cmake/xapian/xapian-config.cmake
 Xlib/libxapian.so
 Xlib/libxapian.so.30
-Xlib/libxapian.so.30.2.0
+Xlib/libxapian.so.30.3.1
 Xlibdata/pkgconfig/xapian-core.pc
 Xman/man1/copydatabase.1.gz
 Xman/man1/quest.1.gz
@@ -1415,6 +1430,6 @@ Xman/man1/xapian-replicate.1.gz
 Xman/man1/xapian-replicate-server.1.gz
 Xman/man1/xapian-tcpsrv.1.gz
 Xshare/aclocal/xapian.m4
-END-of-xapian-core/pkg-plist
+210f147e6696fa0219151394a79bdd74
 exit
 
