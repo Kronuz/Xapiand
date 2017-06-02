@@ -24,7 +24,9 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "endpoint.h"
 #include "ignore_unused.h"
+#include "manager.h"
 
 
 constexpr const char* const Discovery::MessageNames[];
@@ -163,6 +165,17 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 	}
 
 	L_EV_END(this, "Discovery::heartbeat_cb:END");
+}
+
+
+void
+Discovery::send_message(Message type, const std::string& message)
+{
+	if (type != Discovery::Message::HEARTBEAT) {
+		L_DISCOVERY(this, "<< send_message(%s)", MessageNames[toUType(type)]);
+	}
+	L_DISCOVERY_PROTO(this, "message: %s", repr(message).c_str());
+	BaseUDP::send_message(toUType(type), message);
 }
 
 

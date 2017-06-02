@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -28,6 +28,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "udp_base.h"  // for BaseUDP
+#include "endpoint.h"  // for Node
 
 
 // Values in seconds
@@ -121,14 +122,7 @@ public:
 	void start();
 	void stop();
 
-	inline void send_message(Message type, const std::string& message) {
-		if (type != Raft::Message::HEARTBEAT_LEADER) {
-			L_RAFT(this, "<< send_message(%s)", MessageNames[toUType(type)]);
-		}
-		L_RAFT_PROTO(this, "message: %s", repr(message).c_str());
-		BaseUDP::send_message(toUType(type), message);
-	}
-
+	void send_message(Message type, const std::string& message);
 	std::string getDescription() const noexcept override;
 };
 

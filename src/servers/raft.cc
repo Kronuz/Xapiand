@@ -26,6 +26,8 @@
 
 #include "endpoint.h"
 #include "ignore_unused.h"
+#include "log.h"
+#include "manager.h"
 
 
 constexpr const char* const Raft::MessageNames[];
@@ -225,6 +227,17 @@ Raft::_start_leader_heartbeat()
 	send_message(Message::LEADER, local_node_->serialise() +
 		serialise_length(number_servers) +
 		serialise_length(term));
+}
+
+
+void
+Raft::send_message(Message type, const std::string& message)
+{
+	if (type != Raft::Message::HEARTBEAT_LEADER) {
+		L_RAFT(this, "<< send_message(%s)", MessageNames[toUType(type)]);
+	}
+	L_RAFT_PROTO(this, "message: %s", repr(message).c_str());
+	BaseUDP::send_message(toUType(type), message);
 }
 
 

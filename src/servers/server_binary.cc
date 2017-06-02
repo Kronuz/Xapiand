@@ -26,6 +26,7 @@
 
 #include "binary.h"
 #include "client_binary.h"
+#include "endpoint.h"
 #include "ignore_unused.h"
 
 

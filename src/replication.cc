@@ -24,6 +24,10 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "io_utils.h"
+#include "length.h"
+
+
 /*  ____            _ _           _   _
  * |  _ \ ___ _ __ | (_) ___ __ _| |_(_) ___  _ __
  * | |_) / _ \ '_ \| | |/ __/ _` | __| |/ _ \| '_ \

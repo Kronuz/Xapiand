@@ -25,6 +25,8 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "length.h"
+#include "manager.h"
 #include "server.h"
 
 

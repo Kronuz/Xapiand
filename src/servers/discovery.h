@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -85,14 +85,7 @@ public:
 	void start();
 	void stop();
 
-	inline void send_message(Message type, const std::string& message) {
-		if (type != Discovery::Message::HEARTBEAT) {
-			L_DISCOVERY(this, "<< send_message(%s)", MessageNames[toUType(type)]);
-		}
-		L_DISCOVERY_PROTO(this, "message: %s", repr(message).c_str());
-		BaseUDP::send_message(toUType(type), message);
-	}
-
+	void send_message(Message type, const std::string& message);
 	std::string getDescription() const noexcept override;
 };
 

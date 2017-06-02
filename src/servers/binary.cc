@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,9 +24,10 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "remote_protocol.h"
-
 #include <netinet/tcp.h> /* for TCP_NODELAY */
+
+#include "remote_protocol.h"
+#include "server_binary.h"
 
 
 Binary::Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)

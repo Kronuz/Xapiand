@@ -33,6 +33,7 @@
 #include "database.h"
 #include "io_utils.h"
 #include "length.h"
+#include "manager.h"
 #include "remote_protocol.h"
 #include "replication.h"
 #include "servers/server.h"

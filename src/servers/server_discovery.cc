@@ -28,7 +28,10 @@
 #include <arpa/inet.h>
 
 #include "binary.h"
+#include "database_handler.h"
 #include "discovery.h"
+#include "endpoint.h"
+#include "manager.h"
 #include "server.h"
 
 

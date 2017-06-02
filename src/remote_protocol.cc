@@ -23,6 +23,9 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "database.h"
+#include "length.h"
+
 
 /*  ____                      _       ____            _                  _
  * |  _ \ ___ _ __ ___   ___ | |_ ___|  _ \ _ __ ___ | |_ ___   ___ ___ | |
