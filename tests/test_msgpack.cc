@@ -134,13 +134,14 @@ int test_msgpack_constructors() {
 
 	// rapidjson::Document
 	std::string str_json;
-	std::string filename = path_test_msgpack + "msgpack/json_test1.txt";
+	std::string filename(path_test_msgpack);
+	filename.append("msgpack/json_test1.txt");
 	if (!read_file_contents(filename, &str_json)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		++res;
 	} else {
 		std::string expect_json;
-		std::string filename(path_test_msgpack + "msgpack/json_test1_unpack.txt");
+		filename.assign(path_test_msgpack).append("msgpack/json_test1_unpack.txt");
 		if (!read_file_contents(filename, &expect_json)) {
 			L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 			++res;
