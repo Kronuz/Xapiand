@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -32,8 +32,8 @@
 #include "worker.h"  // for Worker
 
 
-#define CONN_TCP_NODELAY       1
-#define CONN_TCP_DEFER_ACCEPT  2
+constexpr int CONN_TCP_NODELAY      = 1;
+constexpr int CONN_TCP_DEFER_ACCEPT = 2;
 
 
 class XapiandManager;
