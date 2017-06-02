@@ -1101,7 +1101,7 @@ Database::commit(bool wal_)
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_commit();
 #else
-	(void)wal_;
+	ignore_unused(wal_);
 #endif
 
 	L_DATABASE_WRAP_INIT();
@@ -1154,7 +1154,7 @@ Database::cancel(bool wal_)
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_cancel();
 #else
-	(void)wal_;
+	ignore_unused(wal_);
 #endif
 
 	L_DATABASE_WRAP_INIT();
@@ -1193,8 +1193,6 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 	if (wal_ && wal) {
 		wal->write_delete_document(did);
 	}
-#else
-	(void)wal_;
 #endif
 
 	L_DATABASE_WRAP_INIT();
@@ -1237,8 +1235,6 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_delete_document_term(term);
-#else
-	(void)wal_;
 #endif
 
 	L_DATABASE_WRAP_INIT();
@@ -1400,8 +1396,6 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_add_document(doc);
-#else
-	(void)wal_;
 #endif /* XAPIAND_DATABASE_WAL */
 
 	Xapian::Document doc_ = doc;
@@ -1447,8 +1441,6 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_replace_document(did, doc);
-#else
-	(void)wal_;
 #endif /* XAPIAND_DATABASE_WAL */
 
 	Xapian::Document doc_ = doc;
@@ -1496,8 +1488,6 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_replace_document_term(term, doc);
-#else
-	(void)wal_;
 #endif
 
 	Xapian::Document doc_ = doc;
@@ -1543,8 +1533,6 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_add_spelling(word, freqinc);
-#else
-	(void)wal_;
 #endif
 
 	L_DATABASE_WRAP_INIT();
@@ -1582,8 +1570,6 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_remove_spelling(word, freqdec);
-#else
-	(void)wal_;
 #endif
 
 	L_DATABASE_WRAP_INIT();
@@ -1667,7 +1653,7 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 				doc = db->get_document(did, Xapian::DOC_ASSUME_VALID);
 			} else
 #else
-			(void)assume_valid_;
+			ignore_unused(assume_valid_);
 #endif
 			{
 				doc = db->get_document(did);
@@ -1677,7 +1663,7 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 				storage_pull_blob(doc);
 			}
 #else
-	(void)pull_;
+	ignore_unused(pull_);
 #endif /* XAPIAND_DATA_STORAGE */
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
@@ -1774,8 +1760,6 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && wal) wal->write_set_metadata(key, value);
-#else
-	(void)wal_;
 #endif
 
 	L_DATABASE_WRAP_INIT();
