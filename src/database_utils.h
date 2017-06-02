@@ -173,47 +173,51 @@ struct ct_type_t {
 	std::string first;
 	std::string second;
 
-	ct_type_t() {
-	}
+	ct_type_t() = default;
 
-	ct_type_t(const std::pair<std::string, std::string>& pair) {
-		first = pair.first;
-		second = pair.second;
-	}
+	ct_type_t(const std::pair<std::string, std::string>& pair)
+		: first(pair.first),
+		  second(pair.second) { }
 
-	ct_type_t(const std::string& first_, const std::string& second_) {
-		first = first_;
-		second = second_;
-	}
+	template<typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
+	ct_type_t(S&& first_, S&& second_)
+		: first(std::forward<S>(first_)),
+		  second(std::forward<S>(second_)) { }
 
 	ct_type_t(const std::string& ct_type_str) {
-		const std::size_t found = ct_type_str.find_last_of('/');
+		const auto found = ct_type_str.rfind('/');
 		if (found != std::string::npos) {
-			first = std::string(ct_type_str, 0, found);
-			second = std::string(ct_type_str, found + 1);
+			first = ct_type_str.substr(0, found);
+			second = ct_type_str.substr(found + 1);
 		}
 	}
 
-	bool operator==(const ct_type_t &other) const {
+	bool operator==(const ct_type_t& other) const noexcept {
 		return first == other.first && second == other.second;
 	}
-	bool operator!=(const ct_type_t &other) const {
+
+	bool operator!=(const ct_type_t& other) const {
 		return !operator==(other);
 	}
 
-	void clear() {
+	void clear() noexcept {
 		first.clear();
 		second.clear();
 	}
 
-	bool empty() const {
+	bool empty() const noexcept {
 		return first.empty() && second.empty();
 	}
 
 	std::string to_string() const {
-		return first + "/" + second;
+		std::string res;
+		res.reserve(first.length() + second.length() + 1);
+		res.assign(first).push_back('/');
+		res.append(second);
+		return res;
 	}
 };
+
 
 static const ct_type_t no_type;
 static const ct_type_t any_type(ANY_CONTENT_TYPE);
@@ -222,7 +226,8 @@ static const ct_type_t text_type(TEXT_CONTENT_TYPE);
 static const ct_type_t json_type(JSON_CONTENT_TYPE);
 static const ct_type_t msgpack_type(MSGPACK_CONTENT_TYPE);
 static const ct_type_t x_msgpack_type(X_MSGPACK_CONTENT_TYPE);
-static const auto msgpack_serializers = std::vector<ct_type_t>({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
+static const std::vector<ct_type_t> msgpack_serializers({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
+
 
 constexpr int DB_OPEN         = 0x0000; // Opens a database
 constexpr int DB_WRITABLE     = 0x0001; // Opens as writable
@@ -243,8 +248,8 @@ struct similar_field_t {
 	unsigned n_rset;
 	unsigned n_eset;
 	unsigned n_term; // If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
-	std::vector <std::string> field;
-	std::vector <std::string> type;
+	std::vector<std::string> field;
+	std::vector<std::string> type;
 
 	similar_field_t()
 		: n_rset(5), n_eset(32), n_term(10) { }
