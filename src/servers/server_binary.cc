@@ -80,7 +80,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 		return;
 	}
 
-	assert(http->sock == fd || http->sock == -1);
+	assert(binary->sock == fd || binary->sock == -1);
 
 	L_EV_BEGIN(this, "BinaryServer::io_accept_cb:BEGIN");
 
