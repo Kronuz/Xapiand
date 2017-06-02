@@ -2027,7 +2027,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 		case FieldType::UUID:
 			break;
 		default:
-			THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[SPC_INDEX_TYPE]);
+			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str());
 	}
 
 	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
@@ -2127,7 +2127,7 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 			break;
 
 		default:
-			THROW(ClientError, "%s '%c' is not supported", RESERVED_TYPE, specification.sep_types[SPC_INDEX_TYPE]);
+			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str());
 	}
 
 	specification.flags.field_with_type = true;
