@@ -294,7 +294,7 @@ int test_storage_exception_write(int flags) {
 			lk.unlock();
 			std::this_thread::sleep_for(std::chrono::milliseconds(ran));
 			if (!finish.load()) {
-				std::unique_lock<std::mutex> lk(mtx);
+				lk.lock();
 				_storage.close();
 				lk.unlock();
 			} else {
@@ -380,7 +380,7 @@ int test_storage_exception_write_file(int flags) {
 			lk.unlock();
 			std::this_thread::sleep_for(std::chrono::milliseconds(ran));
 			if (!finish.load()) {
-				std::unique_lock<std::mutex> lk(mtx);
+				lk.lock();
 				_storage.close();
 				lk.unlock();
 			} else {
