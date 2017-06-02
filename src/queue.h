@@ -63,7 +63,7 @@ namespace queue {
 		std::atomic_bool _ending;
 		std::atomic_bool _finished;
 
-		const std::shared_ptr<QueueState> _state;
+		std::shared_ptr<QueueState> _state;
 
 		bool _push_wait(double timeout, std::unique_lock<std::mutex>& lk) {
 			auto push_wait_pred = [this]() {
