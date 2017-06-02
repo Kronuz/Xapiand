@@ -199,6 +199,7 @@ Script::process_chai(bool strict)
 			THROW(ClientError, "Only type %s is allowed in %s", Serialise::type(FieldType::CHAI).c_str(), prop_name);
 	}
 #else
+	ignore_unused(strict);
 	THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif
 }
@@ -259,6 +260,7 @@ Script::process_ecma(bool strict)
 			THROW(ClientError, "Only type %s is allowed in %s", Serialise::type(FieldType::ECMA).c_str(), prop_name);
 	}
 #else
+	ignore_unused(strict);
 	THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
 #endif
 }

@@ -4323,6 +4323,7 @@ Schema::write_chai(MsgPack& properties, const std::string&, const MsgPack& doc_c
 	Script script(RESERVED_CHAI, doc_chai);
 	properties[RESERVED_SCRIPT] = script.process_chai(specification.flags.strict);
 #else
+	ignore_unused(properties, doc_chai);
 	THROW(ClientError, "%s only is allowed when ChaiScript is available", RESERVED_CHAI);
 #endif
 }
@@ -4338,6 +4339,7 @@ Schema::write_ecma(MsgPack& properties, const std::string&, const MsgPack& doc_e
 	Script script(RESERVED_ECMA, doc_ecma);
 	properties[RESERVED_SCRIPT] = script.process_ecma(specification.flags.strict);
 #else
+	ignore_unused(properties, doc_ecma);
 	THROW(ClientError, "%s only is allowed when ECMAScript or JavaScript is available", RESERVED_ECMA);
 #endif
 }
@@ -4353,6 +4355,7 @@ Schema::write_script(MsgPack& properties, const std::string&, const MsgPack& doc
 	Script script(RESERVED_SCRIPT, doc_script);
 	properties[RESERVED_SCRIPT] = script.process_script(specification.flags.strict);
 #else
+	ignore_unused(properties, prop_name, doc_script);
 	THROW(ClientError, "%s only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
 #endif
 }
