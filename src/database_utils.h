@@ -35,138 +35,130 @@
 
 
 // Reserved words only used in the responses to the user.
-#define RESERVED_ENDPOINT              "_endpoint"
-#define RESERVED_RANK                  "_rank"
-#define RESERVED_PERCENT               "_percent"
+constexpr const char RESERVED_ENDPOINT[]            = "_endpoint";
+constexpr const char RESERVED_RANK[]                = "_rank";
+constexpr const char RESERVED_PERCENT[]             = "_percent";
 
 // Reserved words used in schema.
-#define ID_FIELD_NAME                  "_id"
-#define CT_FIELD_NAME                  "_ct"
-#define UUID_FIELD_NAME                "<uuid_field>"
+constexpr const char ID_FIELD_NAME[]                = "_id";
+constexpr const char CT_FIELD_NAME[]                = "_ct";
+constexpr const char UUID_FIELD_NAME[]              = "<uuid_field>";
 
-#define RESERVED_WEIGHT                "_weight"
-#define RESERVED_POSITION              "_position"
-#define RESERVED_SPELLING              "_spelling"
-#define RESERVED_POSITIONS             "_positions"
-#define RESERVED_LANGUAGE              "_language"
-#define RESERVED_ACCURACY              "_accuracy"
-#define RESERVED_ACC_PREFIX            "_accuracy_prefix"
-#define RESERVED_ACC_GPREFIX           "_accuracy_gprefix"
-#define RESERVED_STORE                 "_store"
-#define RESERVED_TYPE                  "_type"
-#define RESERVED_DYNAMIC               "_dynamic"
-#define RESERVED_STRICT                "_strict"
-#define RESERVED_BOOL_TERM             "_bool_term"
-#define RESERVED_VALUE                 "_value"
-#define RESERVED_SLOT                  "_slot"
-#define RESERVED_INDEX                 "_index"
-#define RESERVED_PREFIX                "_prefix"
-#define RESERVED_VERSION               "_version"
-#define RESERVED_CHAI                  "_chai"
-#define RESERVED_ECMA                  "_ecma"
-#define RESERVED_SCRIPT                "_script"
-#define RESERVED_NAME                  "_name"
-#define RESERVED_BODY                  "_body"
-#define RESERVED_HASH                  "_hash"
-#define RESERVED_BODY_HASH             "_body_hash"
-#define RESERVED_RECURSE               "_recurse"
-#define RESERVED_NAMESPACE             "_namespace"
-#define RESERVED_PARTIAL_PATHS         "_partial_paths"
-#define RESERVED_INDEX_UUID_FIELD      "_index_uuid_field"
+constexpr const char RESERVED_WEIGHT[]              = "_weight";
+constexpr const char RESERVED_POSITION[]            = "_position";
+constexpr const char RESERVED_SPELLING[]            = "_spelling";
+constexpr const char RESERVED_POSITIONS[]           = "_positions";
+constexpr const char RESERVED_LANGUAGE[]            = "_language";
+constexpr const char RESERVED_ACCURACY[]            = "_accuracy";
+constexpr const char RESERVED_ACC_PREFIX[]          = "_accuracy_prefix";
+constexpr const char RESERVED_ACC_GPREFIX[]         = "_accuracy_gprefix";
+constexpr const char RESERVED_STORE[]               = "_store";
+constexpr const char RESERVED_TYPE[]                = "_type";
+constexpr const char RESERVED_DYNAMIC[]             = "_dynamic";
+constexpr const char RESERVED_STRICT[]              = "_strict";
+constexpr const char RESERVED_BOOL_TERM[]           = "_bool_term";
+constexpr const char RESERVED_VALUE[]               = "_value";
+constexpr const char RESERVED_SLOT[]                = "_slot";
+constexpr const char RESERVED_INDEX[]               = "_index";
+constexpr const char RESERVED_PREFIX[]              = "_prefix";
+constexpr const char RESERVED_VERSION[]             = "_version";
+constexpr const char RESERVED_CHAI[]                = "_chai";
+constexpr const char RESERVED_ECMA[]                = "_ecma";
+constexpr const char RESERVED_SCRIPT[]              = "_script";
+constexpr const char RESERVED_NAME[]                = "_name";
+constexpr const char RESERVED_BODY[]                = "_body";
+constexpr const char RESERVED_HASH[]                = "_hash";
+constexpr const char RESERVED_BODY_HASH[]           = "_body_hash";
+constexpr const char RESERVED_RECURSE[]             = "_recurse";
+constexpr const char RESERVED_NAMESPACE[]           = "_namespace";
+constexpr const char RESERVED_PARTIAL_PATHS[]       = "_partial_paths";
+constexpr const char RESERVED_INDEX_UUID_FIELD[]    = "_index_uuid_field";
 // Reserved words for detecting types.
-#define RESERVED_DATE_DETECTION        "_date_detection"
-#define RESERVED_TIME_DETECTION        "_time_detection"
-#define RESERVED_TIMEDELTA_DETECTION   "_timedelta_detection"
-#define RESERVED_NUMERIC_DETECTION     "_numeric_detection"
-#define RESERVED_GEO_DETECTION         "_geo_detection"
-#define RESERVED_BOOL_DETECTION        "_bool_detection"
-#define RESERVED_STRING_DETECTION      "_string_detection"
-#define RESERVED_TEXT_DETECTION        "_text_detection"
-#define RESERVED_TERM_DETECTION        "_term_detection"
-#define RESERVED_UUID_DETECTION        "_uuid_detection"
+constexpr const char RESERVED_DATE_DETECTION[]      = "_date_detection";
+constexpr const char RESERVED_TIME_DETECTION[]      = "_time_detection";
+constexpr const char RESERVED_TIMEDELTA_DETECTION[] = "_timedelta_detection";
+constexpr const char RESERVED_NUMERIC_DETECTION[]   = "_numeric_detection";
+constexpr const char RESERVED_GEO_DETECTION[]       = "_geo_detection";
+constexpr const char RESERVED_BOOL_DETECTION[]      = "_bool_detection";
+constexpr const char RESERVED_STRING_DETECTION[]    = "_string_detection";
+constexpr const char RESERVED_TEXT_DETECTION[]      = "_text_detection";
+constexpr const char RESERVED_TERM_DETECTION[]      = "_term_detection";
+constexpr const char RESERVED_UUID_DETECTION[]      = "_uuid_detection";
 // Reserved words used only in the root of the  document.
-#define RESERVED_VALUES                "_values"
-#define RESERVED_TERMS                 "_terms"
-#define RESERVED_DATA                  "_data"
+constexpr const char RESERVED_VALUES[]              = "_values";
+constexpr const char RESERVED_TERMS[]               = "_terms";
+constexpr const char RESERVED_DATA[]                = "_data";
 // Reserved words used in schema only for TEXT fields.
-#define RESERVED_STOP_STRATEGY         "_stop_strategy"
-#define RESERVED_STEM_STRATEGY         "_stem_strategy"
-#define RESERVED_STEM_LANGUAGE         "_stem_language"
+constexpr const char RESERVED_STOP_STRATEGY[]       = "_stop_strategy";
+constexpr const char RESERVED_STEM_STRATEGY[]       = "_stem_strategy";
+constexpr const char RESERVED_STEM_LANGUAGE[]       = "_stem_language";
 // Reserved words used in schema only for GEO fields.
-#define RESERVED_PARTIALS              "_partials"
-#define RESERVED_ERROR                 "_error"
+constexpr const char RESERVED_PARTIALS[]            = "_partials";
+constexpr const char RESERVED_ERROR[]               = "_error";
 // Reserved words used for doing explicit cast convertions
-#define RESERVED_FLOAT                 "_float"
-#define RESERVED_POSITIVE              "_positive"
-#define RESERVED_INTEGER               "_integer"
-#define RESERVED_BOOLEAN               "_boolean"
-#define RESERVED_TERM                  "_term"
-#define RESERVED_TEXT                  "_text"
-#define RESERVED_STRING                "_string"
-#define RESERVED_DATE                  "_date"
-#define RESERVED_TIME                  "_time"
-#define RESERVED_TIMEDELTA             "_timedelta"
-#define RESERVED_UUID                  "_uuid"
-#define RESERVED_EWKT                  "_ewkt"
-#define RESERVED_POINT                 "_point"
-#define RESERVED_CIRCLE                "_circle"
-#define RESERVED_CONVEX                "_convex"
-#define RESERVED_POLYGON               "_polygon"
-#define RESERVED_CHULL                 "_chull"
-#define RESERVED_MULTIPOINT            "_multipoint"
-#define RESERVED_MULTICIRCLE           "_multicircle"
-#define RESERVED_MULTICONVEX           "_multiconvex"
-#define RESERVED_MULTIPOLYGON          "_multipolygon"
-#define RESERVED_MULTICHULL            "_multichull"
-#define RESERVED_GEO_COLLECTION        "_geometrycollection"
-#define RESERVED_GEO_INTERSECTION      "_geometryintersection"
-#define RESERVED_SCHEMA                "_schema"
-#define RESERVED_META                  "_meta"
+constexpr const char RESERVED_FLOAT[]               = "_float";
+constexpr const char RESERVED_POSITIVE[]            = "_positive";
+constexpr const char RESERVED_INTEGER[]             = "_integer";
+constexpr const char RESERVED_BOOLEAN[]             = "_boolean";
+constexpr const char RESERVED_TERM[]                = "_term";
+constexpr const char RESERVED_TEXT[]                = "_text";
+constexpr const char RESERVED_STRING[]              = "_string";
+constexpr const char RESERVED_DATE[]                = "_date";
+constexpr const char RESERVED_TIME[]                = "_time";
+constexpr const char RESERVED_TIMEDELTA[]           = "_timedelta";
+constexpr const char RESERVED_UUID[]                = "_uuid";
+constexpr const char RESERVED_EWKT[]                = "_ewkt";
+constexpr const char RESERVED_POINT[]               = "_point";
+constexpr const char RESERVED_CIRCLE[]              = "_circle";
+constexpr const char RESERVED_CONVEX[]              = "_convex";
+constexpr const char RESERVED_POLYGON[]             = "_polygon";
+constexpr const char RESERVED_CHULL[]               = "_chull";
+constexpr const char RESERVED_MULTIPOINT[]          = "_multipoint";
+constexpr const char RESERVED_MULTICIRCLE[]         = "_multicircle";
+constexpr const char RESERVED_MULTICONVEX[]         = "_multiconvex";
+constexpr const char RESERVED_MULTIPOLYGON[]        = "_multipolygon";
+constexpr const char RESERVED_MULTICHULL[]          = "_multichull";
+constexpr const char RESERVED_GEO_COLLECTION[]      = "_geometrycollection";
+constexpr const char RESERVED_GEO_INTERSECTION[]    = "_geometryintersection";
+constexpr const char RESERVED_SCHEMA[]              = "_schema";
+constexpr const char RESERVED_META[]                = "_meta";
+constexpr const char DB_SCHEMA[]                    = "schema"; // Word using for save the metadata.
 
-#define DB_SCHEMA              "schema"
-#define DB_OFFSPRING_UNION     '.'
-#define DB_VERSION_SCHEMA      1.0
+constexpr char DB_OFFSPRING_UNION  = '.';
+constexpr double DB_VERSION_SCHEMA = 1.0;
+constexpr int DB_RETRIES           = 3;   // Number of tries to do an operation on a Xapian::Database or Document
 
-#define DB_SLOT_RESERVED       20    // Reserved slots by special data
-#define DB_RETRIES             3     // Number of tries to do an operation on a Xapian::Database or Document
+constexpr Xapian::valueno DB_SLOT_RESERVED     = 20; // Reserved slots by special data
+constexpr Xapian::valueno DB_SLOT_ID           = 0;  // Slot ID document
+constexpr Xapian::valueno DB_SLOT_CONTENT_TYPE = 1;  // Slot content type data
+constexpr Xapian::valueno DB_SLOT_NUMERIC      = 10; // Slot for saving global float/integer/positive values
+constexpr Xapian::valueno DB_SLOT_DATE         = 11; // Slot for saving global date values
+constexpr Xapian::valueno DB_SLOT_GEO          = 12; // Slot for saving global geo values
+constexpr Xapian::valueno DB_SLOT_STRING       = 13; // Slot for saving global string/text values.
+constexpr Xapian::valueno DB_SLOT_BOOLEAN      = 14; // Slot for saving global boolean values.
+constexpr Xapian::valueno DB_SLOT_UUID         = 15; // Slot for saving global uuid values.
+constexpr Xapian::valueno DB_SLOT_TIME         = 16; // Slot for saving global time values.
+constexpr Xapian::valueno DB_SLOT_TIMEDELTA    = 17; // Slot for saving global timedelta values.
 
-#define DB_SLOT_ID             0     // Slot ID document
-#define DB_SLOT_CONTENT_TYPE   1     // Slot content type data
-
-#define DB_SLOT_NUMERIC        10    // Slot for saving global float/integer/positive values
-#define DB_SLOT_DATE           11    // Slot for saving global date values
-#define DB_SLOT_GEO            12    // Slot for saving global geo values
-#define DB_SLOT_STRING         13    // Slot for saving global string/text values.
-#define DB_SLOT_BOOLEAN        14    // Slot for saving global boolean values.
-#define DB_SLOT_UUID           15    // Slot for saving global uuid values.
-#define DB_SLOT_TIME           16    // Slot for saving global time values.
-#define DB_SLOT_TIMEDELTA      17    // Slot for saving global timedelta values.
-
+constexpr char DATABASE_DATA_HEADER_MAGIC        = 0x11;
+constexpr char DATABASE_DATA_HEADER_MAGIC_STORED = 0x12;
+constexpr char DATABASE_DATA_FOOTER_MAGIC        = 0x15;
 
 // Default prefixes
-#define DOCUMENT_ID_TERM_PREFIX            "Q"
-#define DOCUMENT_NAMESPACE_TERM_PREFIX     "N"
-#define DOCUMENT_ACCURACY_TERM_PREFIX      "A"
-#define DOCUMENT_CONTENT_TYPE_TERM_PREFIX  "C"
-#define DOCUMENT_USER_DEFINED_TERM_PREFIX  "X"
+constexpr const char DOCUMENT_ID_TERM_PREFIX[]           = "Q";
+constexpr const char DOCUMENT_CONTENT_TYPE_TERM_PREFIX[] = "C";
 
-#define DOCUMENT_DB_MASTER                 "M"
-#define DOCUMENT_DB_SLAVE                  "S"
+constexpr const char DOCUMENT_DB_MASTER[] = "M";
+constexpr const char DOCUMENT_DB_SLAVE[]  = "S";
 
-
-#define ANY_CONTENT_TYPE                "*/*"
-#define HTML_CONTENT_TYPE               "text/html"
-#define TEXT_CONTENT_TYPE               "text/plain"
-#define JSON_CONTENT_TYPE               "application/json"
-#define MSGPACK_CONTENT_TYPE            "application/msgpack"
-#define X_MSGPACK_CONTENT_TYPE          "application/x-msgpack"
-#define FORM_URLENCODED_CONTENT_TYPE    "application/www-form-urlencoded"
-#define X_FORM_URLENCODED_CONTENT_TYPE  "application/x-www-form-urlencoded"
-
-
-#define DATABASE_DATA_HEADER_MAGIC        0x11
-#define DATABASE_DATA_HEADER_MAGIC_STORED 0x12
-#define DATABASE_DATA_FOOTER_MAGIC        0x15
+constexpr const char ANY_CONTENT_TYPE[]               = "*/*";
+constexpr const char HTML_CONTENT_TYPE[]              = "text/html";
+constexpr const char TEXT_CONTENT_TYPE[]              = "text/plain";
+constexpr const char JSON_CONTENT_TYPE[]              = "application/json";
+constexpr const char MSGPACK_CONTENT_TYPE[]           = "application/msgpack";
+constexpr const char X_MSGPACK_CONTENT_TYPE[]         = "application/x-msgpack";
+constexpr const char FORM_URLENCODED_CONTENT_TYPE[]   = "application/www-form-urlencoded";
+constexpr const char X_FORM_URLENCODED_CONTENT_TYPE[] = "application/x-www-form-urlencoded";
 
 
 struct ct_type_t {
