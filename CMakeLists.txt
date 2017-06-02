@@ -599,6 +599,7 @@ if (BUILD_TESTS)
 			${PATH_TESTS}/test_${VAR_TEST}.cc
 			${PATH_TESTS}/set_${VAR_TEST}_test.cc
 			${PATH_TESTS}/utils.cc
+			${PROJECT_SOURCE_DIR}/src/package.cc
 			$<TARGET_OBJECTS:XAPIAND_OBJ>
 			$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>
 			$<TARGET_OBJECTS:LIBEV_OBJ>
@@ -606,7 +607,7 @@ if (BUILD_TESTS)
 			$<TARGET_OBJECTS:GUID_OBJ>
 		)
 
-		add_dependencies (${PROJECT_TEST} googletest package_config)
+		add_dependencies (${PROJECT_TEST} googletest)
 		target_link_libraries (${PROJECT_TEST}
 			${XAPIAN_LIBRARIES}
 			${CMAKE_THREAD_LIBS_INIT}
