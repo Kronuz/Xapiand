@@ -1051,24 +1051,39 @@ Datetime::iso8601(const std::tm& tm, bool trim, char sep)
 std::string
 Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 {
-	if (tm.fsec > 0.0 || !trim) {
-		char result[28];
-		snprintf(result, 28, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d.%6.6d",
-			tm.year, tm.mon, tm.day, sep,
-			tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec / DATETIME_MICROSECONDS));
-		std::string res(result);
-		if (trim) {
-			auto it = res.erase(res.begin() + 19) + 1;
+	if (trim) {
+		if (tm.fsec > 0.0) {
+			char result[27];
+			snprintf(result, 27, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d.%6.6d",
+				tm.year, tm.mon, tm.day, sep,
+				tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec / DATETIME_MICROSECONDS));
+			std::string res(result);
+			auto it = res.begin() + 19;
 			for (auto it_last = res.end() - 1; it_last != it && *it_last == '0'; --it_last) {
 				it_last = res.erase(it_last);
 			}
+			return res;
+		} else {
+			char result[20];
+			snprintf(result, 20, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d",
+				tm.year, tm.mon, tm.day, sep,
+				tm.hour, tm.min, tm.sec);
+			return std::string(result);
 		}
-		return res;
 	} else {
-		char result[20];
-		snprintf(result, 20, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d",
-			tm.year, tm.mon, tm.day, sep, tm.hour, tm.min, tm.sec);
-		return std::string(result);
+		if (tm.fsec > 0.0) {
+			char result[27];
+			snprintf(result, 27, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d.%6.6d",
+				tm.year, tm.mon, tm.day, sep,
+				tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec / DATETIME_MICROSECONDS));
+			return std::string(result);
+		} else {
+			char result[27];
+			snprintf(result, 27, "%2.4d-%2.2d-%2.2d%c%2.2d:%2.2d:%2.2d.000000",
+				tm.year, tm.mon, tm.day, sep,
+				tm.hour, tm.min, tm.sec);
+			return std::string(result);
+		}
 	}
 }
 
