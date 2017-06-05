@@ -642,7 +642,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 					if (parent_body->map.emplace(str_key, std::move(it->second)).second) {
 						parent_body->map.erase(it);
 					} else {
-						THROW(duplicate_key, "Cannot rename to duplicate key: " + str_key);
+						THROW(duplicate_key, "Cannot rename to duplicate key: %s", str_key.c_str());
 					}
 					assert(parent_body->_obj->via.map.size == parent_body->map.size());
 				}
@@ -772,7 +772,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 		auto str_key = std::string(p->key.via.str.ptr, p->key.via.str.size);
 		auto inserted = _body->map.emplace(str_key, std::make_pair(std::move(last_key), std::move(last_val)));
 		if (!inserted.second) {
-			THROW(duplicate_key, "Duplicate key: " + str_key);
+			THROW(duplicate_key, "Duplicate key: %s", str_key.c_str());
 		}
 		ret = &inserted.first->second.second;
 	}
@@ -1651,7 +1651,7 @@ inline MsgPack& MsgPack::at(size_t pos) {
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			if (pos >= _body->_obj->via.map.size) {
-				THROW(out_of_range, "The map only contains " + std::to_string(_body->_obj->via.map.size) + " elements");
+				THROW(out_of_range, "The map only contains %u elements", _body->_obj->via.map.size);
 			}
 			return at(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
 		case Type::ARRAY:
@@ -1669,7 +1669,7 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			if (pos >= _const_body->_obj->via.map.size) {
-				THROW(out_of_range, "The map only contains " + std::to_string(_const_body->_obj->via.map.size) + " elements");
+				THROW(out_of_range, "The map only contains %u elements", _const_body->_obj->via.map.size);
 			}
 			return at(std::string(_const_body->_obj->via.map.ptr[pos].key.via.str.ptr, _const_body->_obj->via.map.ptr[pos].key.via.str.size));
 		case Type::ARRAY:
@@ -1692,14 +1692,14 @@ inline MsgPack& MsgPack::path(const std::vector<std::string>& path) {
 				std::string::size_type sz;
 				int pos = std::stoi(s, &sz);
 				if (pos < 0 || sz != s.size()) {
-					THROW(invalid_argument, "The index for the array must be a positive integer, it is: " + s);
+					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s.c_str());
 				}
 				current = &current->at(pos);
 				break;
 			}
 
 			default:
-				THROW(invalid_argument, "The container must be a map or an array to access: " + s);
+				THROW(invalid_argument, "The container must be a map or an array to access: %s", s.c_str());
 		}
 	}
 
@@ -1719,14 +1719,14 @@ inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const 
 				std::string::size_type sz;
 				int pos = std::stoi(s, &sz);
 				if (pos < 0 || sz != s.size()) {
-					THROW(invalid_argument, "The index for the array must be a positive integer, it is: " + s);
+					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s.c_str());
 				}
 				current = &current->at(pos);
 				break;
 			}
 
 			default:
-				THROW(invalid_argument, "The container must be a map or an array to access: " + s);
+				THROW(invalid_argument, "The container must be a map or an array to access: %s", s.c_str());
 		}
 	}
 
