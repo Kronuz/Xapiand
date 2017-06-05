@@ -220,10 +220,12 @@ namespace queue {
 		Queue& operator=(const Queue& q) = delete;
 
 		virtual ~Queue() {
-			std::lock_guard<std::mutex> lk(_state->_mutex);
-			auto size = _items_queue.size();
-			assert(_state->_cnt >= size);
-			_state->_cnt -= size;
+			if (_state) {
+				std::lock_guard<std::mutex> lk(_state->_mutex);
+				auto size = _items_queue.size();
+				assert(_state->_cnt >= size);
+				_state->_cnt -= size;
+			}
 			finish();
 		}
 
