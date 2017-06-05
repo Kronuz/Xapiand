@@ -202,17 +202,23 @@ int test_queue_set_on_dup() {
 
 int test_queue_constructor() {
 	INIT_LOG
-	std::pair<int, Queue<int>> foo = std::make_pair(1, Queue<int>());
-	foo.second.push(1);
-	foo.second.push(2);
-	foo.second.push(3);
+	Queue<int> queue;
+	queue.push(1);
+	queue.push(2);
+	queue.push(3);
 
 	int i1, i2, i3;
 
-	if (!foo.second.pop(i1, 0) || !foo.second.pop(i2, 0) || !foo.second.pop(i3, 0) || foo.second.size() != 0) {
-		L_ERR(nullptr, "QueueSet move constructor is not working.");
+	if (!queue.pop(i1, 0) || !queue.pop(i2, 0) || !queue.pop(i3, 0) || queue.size() != 0) {
+		L_ERR(nullptr, "Queue default constructor is not working.");
 		RETURN(1);
 	}
+
+	// Test move constructor.
+	Queue<int> q2(std::move(queue));
+
+	// Test move assigments.
+	q2 = Queue<int>();
 
 	RETURN(0);
 }
