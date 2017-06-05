@@ -598,8 +598,12 @@ inline void MsgPack::_initializer_map(std::initializer_list<MsgPack> list) {
 	_body->_obj->via.map.ptr = nullptr;
 	_body->_obj->via.map.size = 0;
 	_reserve_map(list.size());
+	bool result;
 	for (const auto& val : list) {
-		_put(val.at(0), val.at(1), true);
+		std::tie(std::ignore, result) = _put(val.at(0), val.at(1), false);
+		if unlikely(!result) {
+			THROW(duplicate_key, "Duplicate key: %s", val.at(0).to_string().c_str());
+		}
 	}
 }
 
