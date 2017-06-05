@@ -465,7 +465,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 									++next_param;
 								}
 							}
-							self->accept_set.insert(std::make_tuple(q, i, std::make_pair(next->str(1), next->str(2)), indent));
+							self->accept_set.insert(std::make_tuple(q, i, ct_type_t(next->str(1), next->str(2)), indent));
 							++next;
 							++i;
 						}
@@ -2480,7 +2480,7 @@ HttpClient::get_acceptable_type(const T& ct)
 
 	if (accept_set.empty()) {
 		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, ct_type_t, unsigned>(1, 0, content_type, 0));
-		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string(1, '*'), std::string(1, '*')), 0));
+		accept_set.insert(std::make_tuple(1, 1, ct_type_t(std::string(1, '*'), std::string(1, '*')), 0));
 	}
 	for (const auto& accept : accept_set) {
 		if (is_acceptable_type(std::get<2>(accept), ct)) {
@@ -2506,28 +2506,26 @@ HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int
 	L_CALL(this, "HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), _indent, serialize_error ? "true" : "false");
 
 	if (is_acceptable_type(ct_type, json_type)) {
-		return std::make_pair(obj.to_string(_indent), json_type.first + "/" + json_type.second + "; charset=utf-8");
+		return ct_type_t(obj.to_string(_indent), json_type.first + "/" + json_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, msgpack_type)) {
-		return std::make_pair(obj.serialise(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
+		return ct_type_t(obj.serialise(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, x_msgpack_type)) {
-		return std::make_pair(obj.serialise(), x_msgpack_type.first + "/" + x_msgpack_type.second + "; charset=utf-8");
+		return ct_type_t(obj.serialise(), x_msgpack_type.first + "/" + x_msgpack_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, html_type)) {
 		std::function<std::string(const msgpack::object&)> html_serialize = serialize_error ? msgpack_to_html_error : msgpack_to_html;
-		return std::make_pair(obj.external(html_serialize), html_type.first + "/" + html_type.second + "; charset=utf-8");
-	} else if (is_acceptable_type(ct_type, text_type)) {
-		/*
-		 error:
+		return ct_type_t(obj.external(html_serialize), html_type.first + "/" + html_type.second + "; charset=utf-8");
+	} /* else if (is_acceptable_type(ct_type, text_type)) {
+		error:
 			{{ RESPONSE_STATUS }} - {{ RESPONSE_MESSAGE }}
 
-		 obj:
+		obj:
 			{{ key1 }}: {{ val1 }}
 			{{ key2 }}: {{ val2 }}
 			...
 
-		 array:
+		array:
 			{{ val1 }}, {{ val2 }}, ...
-		 */
-	}
+	} */
 	THROW(SerialisationError, "Type is not serializable");
 }
 
