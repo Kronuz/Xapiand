@@ -167,22 +167,19 @@ struct ct_type_t {
 
 	ct_type_t() = default;
 
-	ct_type_t(const std::pair<std::string, std::string>& pair)
-		: first(pair.first),
-		  second(pair.second) { }
-
 	template<typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
 	ct_type_t(S&& first_, S&& second_)
 		: first(std::forward<S>(first_)),
 		  second(std::forward<S>(second_)) { }
 
-	ct_type_t(const std::string& ct_type_str) {
+	explicit ct_type_t(const std::string& ct_type_str) {
 		const auto found = ct_type_str.rfind('/');
 		if (found != std::string::npos) {
 			first = ct_type_str.substr(0, found);
 			second = ct_type_str.substr(found + 1);
 		}
 	}
+
 
 	bool operator==(const ct_type_t& other) const noexcept {
 		return first == other.first && second == other.second;
