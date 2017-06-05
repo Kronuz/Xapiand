@@ -297,7 +297,7 @@ struct required_spc_t {
 		bool uuid_path:1;            // Flag if the paths has uuid fields.
 		bool inside_namespace:1;     // Flag if the field is inside a namespace
 
-		bool has_uuid_prefix;        // Flag if prefix.field has uuid prefix.
+		bool has_uuid_prefix:1;      // Flag if prefix.field has uuid prefix.
 		bool has_bool_term:1;        // Either RESERVED_BOOL_TERM is in the schema or the user sent it
 		bool has_index:1;            // Either RESERVED_INDEX is in the schema or the user sent it
 		bool has_namespace:1;        // Either RESERVED_NAMESPACE is in the schema or the user sent it
