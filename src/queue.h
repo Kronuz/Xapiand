@@ -225,8 +225,8 @@ namespace queue {
 				auto size = _items_queue.size();
 				assert(_state->_cnt >= size);
 				_state->_cnt -= size;
+				finish();
 			}
-			finish();
 		}
 
 		void end() noexcept {
