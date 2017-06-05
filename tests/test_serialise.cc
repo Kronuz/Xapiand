@@ -208,7 +208,8 @@ int test_datetotimestamp() {
 	for (const auto& test : test_timestamp_date) {
 		std::string timestamp;
 		try {
-			timestamp = Datetime::iso8601(Datetime::DateParser(test.date));
+			auto tm = Datetime::DateParser(test.date);
+			timestamp = std::to_string(Datetime::timestamp(tm));
 		} catch (const std::exception &exc) {
 			timestamp = "";
 		}
