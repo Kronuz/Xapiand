@@ -301,45 +301,33 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 	const auto it_e = data.end();
 	MsgPack data_script;
 	if (it == it_e) {
-		it = data.find(RESERVED_CHAI);
-		if (it == it_e) {
-			it = data.find(RESERVED_ECMA);
-			if (it == it_e) {
-				data_script = schema->get_data_script();
-			} else {
-				Script script(RESERVED_ECMA, it.value());
-				data_script = script.process_ecma(default_spc.flags.strict);
-			}
-		} else {
-			Script script(RESERVED_CHAI, it.value());
-			data_script = script.process_chai(default_spc.flags.strict);
-		}
+		data_script = schema->get_data_script();
 	} else {
-		Script script(RESERVED_SCRIPT, it.value());
+		Script script(it.value());
+		// FIXME: Right strict flag.
 		data_script = script.process_script(default_spc.flags.strict);
 	}
 
 	if (data_script.is_map()) {
-		const auto& type = data_script[RESERVED_TYPE];
+		const auto& type = data_script.at(RESERVED_TYPE);
 		if (type[SPC_FOREIGN_TYPE].u64() == toUType(FieldType::FOREIGN)) {
 			THROW(ClientError, "Missing Implementation for Foreign scripts");
 		} else {
-			auto script_type = (FieldType)type[SPC_INDEX_TYPE].u64();
-			switch (script_type) {
-				case FieldType::CHAI:
-#if defined(XAPIAND_CHAISCRIPT)
-					return call_script<chaipp::Processor>(data, term_id, data_script[RESERVED_HASH].u64(), data_script[RESERVED_BODY_HASH].u64(), data_script[RESERVED_BODY].str(), old_document_pair);
-#else
-					THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
-#endif
-				case FieldType::ECMA:
+			auto it_s = data_script.find(RESERVED_CHAI);
+			if (it_s == data_script.end()) {
 #if defined(XAPIAND_V8)
-					return call_script<v8pp::Processor>(data, term_id, data_script[RESERVED_HASH].u64(), data_script[RESERVED_BODY_HASH].u64(), data_script[RESERVED_BODY].str(), old_document_pair);
+				const auto& ecma = data_script.at(RESERVED_ECMA);
+				return call_script<v8pp::Processor>(data, term_id, ecma.at(RESERVED_HASH).u64(), ecma.at(RESERVED_BODY_HASH).u64(), ecma.at(RESERVED_BODY).str(), old_document_pair);
 #else
-					THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
+				THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
 #endif
-				default:
-					THROW(ClientError, "Script type %s is not valid.", Serialise::type(script_type).c_str());
+			} else {
+#if defined(XAPIAND_CHAISCRIPT)
+				const auto& chai = it_s.value();
+				return call_script<chaipp::Processor>(data, term_id, chai.at(RESERVED_HASH).u64(), chai.at(RESERVED_BODY_HASH).u64(), chai.at(RESERVED_BODY).str(), old_document_pair);
+#else
+				THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
+#endif
 			}
 		}
 	}
