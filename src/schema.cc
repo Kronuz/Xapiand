@@ -35,6 +35,7 @@
 #include <type_traits>                     // for remove_reference<>::type
 
 #include "cast.h"                          // for Cast
+#include "database_handler.h"              // for DatabaseHandler
 #include "datetime.h"                      // for isDate, tm_t
 #include "exception.h"                     // for ClientError
 #include "geospatial/geospatial.h"         // for GeoSpatial
@@ -5631,6 +5632,97 @@ Schema::to_string(bool prettify) const
 }
 
 
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+MsgPack
+Schema::index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, DatabaseHandler* db_handler, Xapian::Document& doc)
+{
+	L_CALL(this, "Schema::index(%s, %s, <old_document_pair>, <db_handler>, <doc>)", repr(object.to_string()).c_str(), repr(term_id).c_str());
+
+	try {
+		specification = default_spc;
+
+		FieldVector fields;
+		auto properties = &get_newest_properties();
+
+		const auto it_e = object.end();
+		if (properties->size() == 1) {
+			specification.flags.field_found = false;
+			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+			static const auto wpit_e = map_dispatch_write_properties.end();
+			for (auto it = object.begin(); it != it_e; ++it) {
+				auto str_key = it->str();
+				const auto wpit = map_dispatch_write_properties.find(str_key);
+				if (wpit == wpit_e) {
+					if (map_dispatch_document.count(str_key)) {
+						THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
+					} else {
+						fields.emplace_back(std::move(str_key), &it.value());
+					}
+				} else {
+					(this->*wpit->second)(*mut_properties, str_key, it.value());
+				}
+			}
+			write_script(*mut_properties);
+			properties = &*mut_properties;
+		} else {
+			update_specification(*properties);
+			static const auto ddit_e = map_dispatch_document.end();
+			for (auto it = object.begin(); it != it_e; ++it) {
+				auto str_key = it->str();
+				const auto ddit = map_dispatch_document.find(str_key);
+				if (ddit == ddit_e) {
+					fields.emplace_back(std::move(str_key), &it.value());
+				} else {
+					(this->*ddit->second)(str_key, it.value());
+				}
+			}
+			normalize_script();
+		}
+
+		if (specification.script) {
+			std::cout << object.to_string(4) << std::endl;
+			object = db_handler->run_script(object, term_id, old_document_pair, *specification.script);
+			std::cout << object.to_string(4) << std::endl;
+			if (!object.is_map()) {
+				THROW(ClientError, "Script must return an object, it returned %s", object.getStrType().c_str());
+			}
+			// Rebuild fields with new values.
+			fields.clear();
+			static const auto ddit_e = map_dispatch_document.end();
+			for (auto it = object.begin(); it != it_e; ++it) {
+				auto str_key = it->str();
+				const auto ddit = map_dispatch_document.find(str_key);
+				if (ddit == ddit_e) {
+					fields.emplace_back(std::move(str_key), &it.value());
+				}
+			}
+		}
+
+		MsgPack data;
+		auto data_ptr = &data;
+
+		restart_specification();
+		const auto spc_start = std::move(specification);
+		for (const auto& field : fields) {
+			specification = spc_start;
+			index_object(properties, *field.second, data_ptr, doc, field.first);
+		}
+
+		for (const auto& elem : map_values) {
+			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
+			doc.add_value(elem.first, val_ser);
+			L_INDEX(this, "Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
+		}
+
+		return data;
+	} catch (...) {
+		mut_schema.reset();
+		throw;
+	}
+}
+
+#else
+
 MsgPack
 Schema::index(const MsgPack& object, Xapian::Document& doc)
 {
@@ -5660,9 +5752,6 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 					(this->*wpit->second)(*mut_properties, str_key, it.value());
 				}
 			}
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-			write_script(*mut_properties);
-#endif
 			properties = &*mut_properties;
 		} else {
 			update_specification(*properties);
@@ -5676,9 +5765,6 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 					(this->*ddit->second)(str_key, it.value());
 				}
 			}
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-			normalize_script();
-#endif
 		}
 
 		MsgPack data;
@@ -5703,6 +5789,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		throw;
 	}
 }
+#endif
 
 
 void
@@ -5741,6 +5828,10 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 				(this->*wpit->second)(*mut_properties, str_key, it.value());
 			}
 		}
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+		write_script(*mut_properties);
+#endif
 
 		if (specification.flags.is_namespace && fields.size()) {
 			return;

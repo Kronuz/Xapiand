@@ -456,6 +456,9 @@ extern const std::string NAMESPACE_PREFIX_ID_FIELD_NAME;
 using dispatch_index = void (*)(Xapian::Document&, std::string&&, const specification_t&, size_t);
 
 
+class DatabaseHandler;
+
+
 class Schema {
 	using dispatch_set_default_spc   = void (Schema::*)(MsgPack&);
 	using dispatch_write_reserved    = void (Schema::*)(MsgPack&, const std::string&, const MsgPack&);
@@ -876,10 +879,16 @@ public:
 	 */
 	std::string to_string(bool prettify=false) const;
 
+
 	/*
 	 * Function to index object in doc.
 	 */
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	MsgPack index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, DatabaseHandler* db_handler, Xapian::Document& doc);
+#else
 	MsgPack index(const MsgPack& object, Xapian::Document& doc);
+#endif
+
 
 	/*
 	 * Returns readable schema.

@@ -226,7 +226,7 @@ std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> Da
 
 
 template<typename Processor>
-MsgPack
+MsgPack&
 DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t script_hash, size_t body_hash, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
 	try {
@@ -236,46 +236,50 @@ DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t s
 				old_document_pair = get_document_change_seq(term_id);
 				if (old_document_pair) {
 					L_INDEX(this, "Script: on_put(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
-					return (*processor)["on_put"](data, old_document_pair->second);
+					data = (*processor)["on_put"](data, old_document_pair->second);
 				} else {
 					L_INDEX(this, "Script: on_put(%s)", data.to_string(4).c_str());
-					return (*processor)["on_put"](data, MsgPack(MsgPack::Type::MAP));
+					data = (*processor)["on_put"](data, MsgPack(MsgPack::Type::MAP));
 				}
+				break;
 
 			case HTTP_PATCH:
 			case HTTP_MERGE:
 				old_document_pair = get_document_change_seq(term_id);
 				if (old_document_pair) {
 					L_INDEX(this, "Script: on_patch(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
-					return (*processor)["on_patch"](data, old_document_pair->second);
+					data = (*processor)["on_patch"](data, old_document_pair->second);
 				} else {
 					L_INDEX(this, "Script: on_patch(%s)", data.to_string(4).c_str());
-					return (*processor)["on_patch"](data, MsgPack(MsgPack::Type::MAP));
+					data = (*processor)["on_patch"](data, MsgPack(MsgPack::Type::MAP));
 				}
+				break;
 
 			case HTTP_DELETE:
 				old_document_pair = get_document_change_seq(term_id);
 				if (old_document_pair) {
 					L_INDEX(this, "Script: on_delete(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
-					return (*processor)["on_delete"](data, old_document_pair->second);
+					data = (*processor)["on_delete"](data, old_document_pair->second);
 				} else {
 					L_INDEX(this, "Script: on_delete(%s)", data.to_string(4).c_str());
-					return (*processor)["on_delete"](data, MsgPack(MsgPack::Type::MAP));
+					data = (*processor)["on_delete"](data, MsgPack(MsgPack::Type::MAP));
 				}
+				break;
 
-			case HTTP_GET: {
+			case HTTP_GET:
 				L_INDEX(this, "Script: on_get(%s)", data.to_string(4).c_str());
-				return (*processor)["on_get"](data);
-			}
+				data = (*processor)["on_get"](data);
+				break;
 
-			case HTTP_POST: {
+			case HTTP_POST:
 				L_INDEX(this, "Script: on_post(%s)", data.to_string(4).c_str());
-				return (*processor)["on_post"](data);
-			}
+				data = (*processor)["on_post"](data);
+				break;
 
 			default:
-				return data;
+				break;
 		}
+		return data;
 #if defined(XAPIAND_V8)
 	} catch (const v8pp::ReferenceError&) {
 		return data;
@@ -292,21 +296,10 @@ DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t s
 }
 
 
-MsgPack
-DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
+MsgPack&
+DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script)
 {
 	L_CALL(this, "DatabaseHandler::run_script(...)");
-
-	auto it = data.find(RESERVED_SCRIPT);
-	const auto it_e = data.end();
-	MsgPack data_script;
-	if (it == it_e) {
-		data_script = schema->get_data_script();
-	} else {
-		Script script(it.value());
-		// FIXME: Right strict flag.
-		data_script = script.process_script(default_spc.flags.strict);
-	}
 
 	if (data_script.is_map()) {
 		const auto& type = data_script.at(RESERVED_TYPE);
@@ -373,14 +366,6 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 				} else {
 					term_id = Serialise::serialise(spc_id, _document_id);
 					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-					if (obj.is_map()) {
-						obj = run_script(obj, prefixed_term_id, old_document_pair);
-						if (!obj.is_map()) {
-							THROW(ClientError, "Script must return an object, it returned %s", obj.getStrType().c_str());
-						}
-					}
-#endif
 				}
 
 				// Add ID.
@@ -406,7 +391,11 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 				}
 
 				// Index object.
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+				obj = schema->index(obj, prefixed_term_id, old_document_pair, this, doc);
+#else
 				obj = schema->index(obj, doc);
+#endif
 
 				if (prefixed_term_id.empty()) {
 					// Now the schema is full, get specification id.

@@ -95,6 +95,7 @@ using DataType = std::pair<Xapian::docid, MsgPack>;
 class DatabaseHandler {
 	friend class Document;
 	friend class lock_database;
+	friend class Schema;
 	friend class SchemasLRU;
 
 	Endpoints endpoints;
@@ -113,8 +114,8 @@ class DatabaseHandler {
 	static std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> documents;
 
 	template<typename ProcessorCompile>
-	MsgPack call_script(MsgPack& data, const std::string& term_id, size_t script_hash, size_t body_hash, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
-	MsgPack run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
+	MsgPack& call_script(MsgPack& data, const std::string& term_id, size_t script_hash, size_t body_hash, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
+	MsgPack& run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script);
 #endif
 
 	DataType index(const std::string& _document_id, bool stored, const std::string& storage, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type);
