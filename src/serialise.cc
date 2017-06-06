@@ -734,8 +734,7 @@ Serialise::type(FieldType field_type)
 		case FieldType::TIME:       return TIME_STR;
 		case FieldType::TIMEDELTA:  return TIMEDELTA_STR;
 		case FieldType::UUID:       return UUID_STR;
-		case FieldType::CHAI:       return CHAI_STR;
-		case FieldType::ECMA:       return ECMA_STR;
+		case FieldType::SCRIPT:     return SCRIPT_STR;
 		case FieldType::OBJECT:     return OBJECT_STR;
 		case FieldType::ARRAY:      return ARRAY_STR;
 		case FieldType::FOREIGN:    return FOREIGN_STR;
@@ -1213,21 +1212,13 @@ Unserialise::type(const std::string& str_type)
 				return FieldType::BOOLEAN;
 			}
 			break;
-		case 'c':
-			if (value[1] == '\0' || strcasecmp(value, CHAI_STR) == 0) {
-				return FieldType::CHAI;
-			}
-			break;
 		case 'd':
 			if (value[1] == '\0' || strcasecmp(value, DATE_STR) == 0) {
 				return FieldType::DATE;
 			}
 			break;
 		case 'e':
-			if (value[1] == '\0' || strcasecmp(value, ECMA_STR) == 0) {
-				return FieldType::ECMA;
-			}
-			if (strcasecmp(value, EMPTY_STR) == 0) {
+			if (value[1] == '\0' || strcasecmp(value, EMPTY_STR) == 0) {
 				return FieldType::EMPTY;
 			}
 			break;
@@ -1291,6 +1282,11 @@ Unserialise::type(const std::string& str_type)
 		case 'u':
 			if (value[1] == '\0' || strcasecmp(value, UUID_STR) == 0) {
 				return FieldType::UUID;
+			}
+			break;
+		case 'x':
+			if (value[1] == '\0' || strcasecmp(value, SCRIPT_STR) == 0) {
+				return FieldType::SCRIPT;
 			}
 			break;
 		default:

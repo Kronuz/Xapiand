@@ -170,18 +170,17 @@ enum class FieldType : uint8_t {
 	TIMEDELTA     =  'z',
 	ARRAY         =  'A',
 	BOOLEAN       =  'B',
-	CHAI          =  'C',
 	DATE          =  'D',
 	FOREIGN       =  'E',
 	FLOAT         =  'F',
 	GEO           =  'G',
 	INTEGER       =  'I',
-	ECMA          =  'J',
 	OBJECT        =  'O',
 	POSITIVE      =  'P',
 	TEXT          =  'S',
 	TERM          =  'T',
 	UUID          =  'U',
+	SCRIPT        =  'X',
 	TIME          =  'Z',
 };
 
@@ -296,6 +295,9 @@ struct required_spc_t {
 		bool uuid_field:1;           // Flag if the field is uuid
 		bool uuid_path:1;            // Flag if the paths has uuid fields.
 		bool inside_namespace:1;     // Flag if the field is inside a namespace
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+		bool normalized_script:1;    // Flag if the script is normalized.
+#endif
 
 		bool has_uuid_prefix:1;      // Flag if prefix.field has uuid prefix.
 		bool has_bool_term:1;        // Either RESERVED_BOOL_TERM is in the schema or the user sent it
@@ -409,9 +411,12 @@ struct specification_t : required_spc_t {
 	UUIDFieldIndex index_uuid_field;  // Used to save how to index uuid fields.
 
 	// Value recovered from the item.
-	std::unique_ptr<const MsgPack> value;
 	std::unique_ptr<MsgPack> value_rec;
+	std::unique_ptr<const MsgPack> value;
 	std::unique_ptr<const MsgPack> doc_acc;
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	std::unique_ptr<const MsgPack> script;
+#endif
 
 	// Used to save the last meta name.
 	std::string meta_name;
@@ -699,6 +704,7 @@ class Schema {
 	void update_namespace(const MsgPack& prop_namespace);
 	void update_partial_paths(const MsgPack& prop_partial_paths);
 	void update_index_uuid_field(const MsgPack& prop_index_uuid_field);
+	void update_script(const MsgPack& prop_script);
 
 
 	/*
@@ -727,11 +733,9 @@ class Schema {
 	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
 	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
 	void write_index_uuid_field(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index_uuid_field);
-	void write_chai(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_chai);
-	void write_ecma(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_ecma);
-	void write_script(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
 	void write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version);
 	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
+	void write_script(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
 
 
 	/*
@@ -758,6 +762,7 @@ class Schema {
 	void process_error(const std::string& prop_name, const MsgPack& doc_error);
 	void process_value(const std::string& prop_name, const MsgPack& doc_value);
 	void process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object);
+	void process_script(const std::string& prop_name, const MsgPack& doc_script);
 	// Next functions only check the consistency of user provided data.
 	void consistency_language(const std::string& prop_name, const MsgPack& doc_language);
 	void consistency_stop_strategy(const std::string& prop_name, const MsgPack& doc_stop_strategy);
@@ -786,6 +791,16 @@ class Schema {
 	void consistency_script(const std::string& prop_name, const MsgPack& doc_script);
 	void consistency_version(const std::string& prop_name, const MsgPack& doc_version);
 	void consistency_schema(const std::string& prop_name, const MsgPack& doc_schema);
+
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	/*
+	 * Auxiliar functions for RESERVED_SCRIPT.
+	 */
+
+	void write_script(MsgPack& properties);
+	void normalize_script();
+#endif
 
 
 	/*

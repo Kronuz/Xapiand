@@ -167,14 +167,11 @@ const std::unordered_map<std::string, std::array<FieldType, SPC_SIZE_TYPES>> map
 	{ "array/timedelta",              {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }} },
 	{ "array/uuid",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }} },
 	{ "boolean",                      {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }} },
-	{ "chai",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::CHAI          }} },
 	{ "date",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }} },
-	{ "ecma",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::ECMA          }} },
 	{ "float",                        {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }} },
 	{ "foreign",                      {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }} },
-	{ "foreign/chai",                 {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::CHAI          }} },
-	{ "foreign/ecma",                 {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::ECMA          }} },
 	{ "foreign/object",               {{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }} },
+	{ "foreign/script",               {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }} },
 	{ "geospatial",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }} },
 	{ "integer",                      {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }} },
 	{ "object",                       {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }} },
@@ -204,6 +201,7 @@ const std::unordered_map<std::string, std::array<FieldType, SPC_SIZE_TYPES>> map
 	{ "object/timedelta",             {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }} },
 	{ "object/uuid",                  {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }} },
 	{ "positive",                     {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }} },
+	{ "script",                       {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }} },
 	{ "string",                       {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }} },
 	{ "term",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }} },
 	{ "text",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }} },
@@ -399,11 +397,9 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_NAMESPACE,              &Schema::write_namespace              },
 	{ RESERVED_PARTIAL_PATHS,          &Schema::write_partial_paths          },
 	{ RESERVED_INDEX_UUID_FIELD,       &Schema::write_index_uuid_field       },
-	{ RESERVED_CHAI,                   &Schema::write_chai                   },
-	{ RESERVED_ECMA,                   &Schema::write_ecma                   },
-	{ RESERVED_SCRIPT,                 &Schema::write_script                 },
 	{ RESERVED_VERSION,                &Schema::write_version                },
 	{ RESERVED_SCHEMA,                 &Schema::write_schema                 },
+	{ RESERVED_SCRIPT,                 &Schema::write_script                 },
 });
 
 
@@ -431,6 +427,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_PARTIAL_PATHS,          &Schema::process_partial_paths              },
 	{ RESERVED_INDEX_UUID_FIELD,       &Schema::process_index_uuid_field           },
 	{ RESERVED_VALUE,                  &Schema::process_value                      },
+	{ RESERVED_SCRIPT,                 &Schema::process_script                     },
 	{ RESERVED_FLOAT,                  &Schema::process_cast_object                },
 	{ RESERVED_POSITIVE,               &Schema::process_cast_object                },
 	{ RESERVED_INTEGER,                &Schema::process_cast_object                },
@@ -454,9 +451,6 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_GEO_COLLECTION,         &Schema::process_cast_object                },
 	{ RESERVED_GEO_INTERSECTION,       &Schema::process_cast_object                },
 	// Next functions only check the consistency of user provided data.
-	{ RESERVED_CHAI,                   &Schema::consistency_chai                   },
-	{ RESERVED_ECMA,                   &Schema::consistency_ecma                   },
-	{ RESERVED_SCRIPT,                 &Schema::consistency_script                 },
 	{ RESERVED_LANGUAGE,               &Schema::consistency_language               },
 	{ RESERVED_STOP_STRATEGY,          &Schema::consistency_stop_strategy          },
 	{ RESERVED_STEM_STRATEGY,          &Schema::consistency_stem_strategy          },
@@ -519,6 +513,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 	{ RESERVED_NAMESPACE,              &Schema::update_namespace              },
 	{ RESERVED_PARTIAL_PATHS,          &Schema::update_partial_paths          },
 	{ RESERVED_INDEX_UUID_FIELD,       &Schema::update_index_uuid_field       },
+	{ RESERVED_SCRIPT,                 &Schema::update_script                 },
 });
 
 
@@ -605,6 +600,9 @@ required_spc_t::flags_t::flags_t()
 	  uuid_field(false),
 	  uuid_path(false),
 	  inside_namespace(false),
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	  normalized_script(false),
+#endif
 	  has_uuid_prefix(false),
 	  has_bool_term(false),
 	  has_index(false),
@@ -847,9 +845,12 @@ specification_t::operator=(const specification_t& o)
 	positions = o.positions;
 	index = o.index;
 	index_uuid_field = o.index_uuid_field;
-	value.reset();
 	value_rec.reset();
+	value.reset();
 	doc_acc.reset();
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	script.reset();
+#endif
 	meta_name = o.meta_name;
 	full_meta_name = o.full_meta_name;
 	aux_stem_lan = o.aux_stem_lan;
@@ -871,9 +872,12 @@ specification_t::operator=(specification_t&& o) noexcept
 	positions = std::move(o.positions);
 	index = std::move(o.index);
 	index_uuid_field = std::move(o.index_uuid_field);
-	value.reset();
 	value_rec.reset();
+	value.reset();
 	doc_acc.reset();
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	script.reset();
+#endif
 	meta_name = std::move(o.meta_name);
 	full_meta_name = std::move(o.full_meta_name);
 	aux_stem_lan = std::move(o.aux_stem_lan);
@@ -1046,8 +1050,12 @@ specification_t::to_string() const
 	}
 	str << "]\n";
 
-	str << "\t" << RESERVED_VALUE               << ": " << (value     ? value->to_string()     : "null")   << "\n";
 	str << "\t" << "value_rec"                  << ": " << (value_rec ? value_rec->to_string() : "null")   << "\n";
+	str << "\t" << RESERVED_VALUE               << ": " << (value     ? value->to_string()     : "null")   << "\n";
+	str << "\t" << "doc_acc"                    << ": " << (doc_acc   ? doc_acc->to_string()   : "null")   << "\n";
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	str << "\t" << RESERVED_SCRIPT              << ": " << (script    ? script->to_string()    : "null")   << "\n";
+#endif
 
 	str << "\t" << RESERVED_SLOT                << ": " << slot                                        << "\n";
 	str << "\t" << RESERVED_TYPE                << ": " << get_str_type(sep_types)                     << "\n";
@@ -1083,6 +1091,9 @@ specification_t::to_string() const
 	str << "\t" << "uuid_field"                 << ": " << (flags.uuid_field            ? "true" : "false") << "\n";
 	str << "\t" << "uuid_path"                  << ": " << (flags.uuid_path             ? "true" : "false") << "\n";
 	str << "\t" << "inside_namespace"           << ": " << (flags.inside_namespace      ? "true" : "false") << "\n";
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	str << "\t" << "normalized_script"          << ": " << (flags.normalized_script     ? "true" : "false") << "\n";
+#endif
 	str << "\t" << "has_uuid_prefix"            << ": " << (flags.has_uuid_prefix       ? "true" : "false") << "\n";
 	str << "\t" << "has_bool_term"              << ": " << (flags.has_bool_term         ? "true" : "false") << "\n";
 	str << "\t" << "has_index"                  << ": " << (flags.has_index             ? "true" : "false") << "\n";
@@ -3482,6 +3493,9 @@ Schema::process_properties_document(const MsgPack& object, FieldVector& fields)
 			}
 		}
 	}
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	normalize_script();
+#endif
 }
 
 
@@ -3530,6 +3544,9 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 			}
 		}
 	}
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	write_script(*mut_properties);
+#endif
 }
 
 
@@ -3579,6 +3596,9 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 			(this->*wpit->second)(*mut_properties, str_key, it.value());
 		}
 	}
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	write_script(*mut_properties);
+#endif
 
 	// Load default specifications.
 	static const auto dsit_e = map_dispatch_set_default_spc.end();
@@ -3998,6 +4018,21 @@ Schema::update_index_uuid_field(const MsgPack& prop_index_uuid_field)
 
 
 void
+Schema::update_script(const MsgPack& prop_script)
+{
+	L_CALL(this, "Schema::update_script(%s)", repr(prop_script.to_string()).c_str());
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	specification.script = std::make_unique<const MsgPack>(prop_script);
+	specification.flags.normalized_script = true;
+#else
+	ignore_unused(prop_script);
+	THROW(ClientError, "%s only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
+#endif
+}
+
+
+void
 Schema::write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
@@ -4315,54 +4350,6 @@ Schema::write_index_uuid_field(MsgPack& properties, const std::string& prop_name
 
 
 void
-Schema::write_chai(MsgPack& properties, const std::string&, const MsgPack& doc_chai)
-{
-	// RESERVED_CHAI isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::write_chai(%s)", repr(doc_chai.to_string()).c_str());
-
-#if defined(XAPIAND_CHAISCRIPT)
-	Script script(RESERVED_CHAI, doc_chai);
-	properties[RESERVED_SCRIPT] = script.process_chai(specification.flags.strict);
-#else
-	ignore_unused(properties, doc_chai);
-	THROW(ClientError, "%s only is allowed when ChaiScript is available", RESERVED_CHAI);
-#endif
-}
-
-
-void
-Schema::write_ecma(MsgPack& properties, const std::string&, const MsgPack& doc_ecma)
-{
-	// RESERVED_ECMA isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::write_ecma(%s)", repr(doc_ecma.to_string()).c_str());
-
-#if defined(XAPIAND_V8)
-	Script script(RESERVED_ECMA, doc_ecma);
-	properties[RESERVED_SCRIPT] = script.process_ecma(specification.flags.strict);
-#else
-	ignore_unused(properties, doc_ecma);
-	THROW(ClientError, "%s only is allowed when ECMAScript or JavaScript is available", RESERVED_ECMA);
-#endif
-}
-
-
-void
-Schema::write_script(MsgPack& properties, const std::string&, const MsgPack& doc_script)
-{
-	// RESERVED_SCRIPT isn't heritable and can't change once fixed
-	L_CALL(this, "Schema::write_script(%s)", repr(doc_script.to_string()).c_str());
-
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	Script script(RESERVED_SCRIPT, doc_script);
-	properties[RESERVED_SCRIPT] = script.process_script(specification.flags.strict);
-#else
-	ignore_unused(properties, doc_script);
-	THROW(ClientError, "%s only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
-#endif
-}
-
-
-void
 Schema::write_version(MsgPack&, const std::string& prop_name, const MsgPack& doc_version)
 {
 	L_CALL(this, "Schema::write_version(%s)", repr(doc_version.to_string()).c_str());
@@ -4381,6 +4368,15 @@ Schema::write_schema(MsgPack&, const std::string& prop_name, const MsgPack& doc_
 	L_CALL(this, "Schema::write_schema(%s)", repr(doc_schema.to_string()).c_str());
 
 	consistency_schema(prop_name, doc_schema);
+}
+
+
+void
+Schema::write_script(MsgPack&, const std::string& prop_name, const MsgPack& doc_script)
+{
+	L_CALL(this, "Schema::write_script(%s)", repr(doc_script.to_string()).c_str());
+
+	process_script(prop_name, doc_script);
 }
 
 
@@ -4750,6 +4746,22 @@ Schema::process_value(const std::string&, const MsgPack& doc_value)
 	L_CALL(this, "Schema::process_value(%s)", repr(doc_value.to_string()).c_str());
 
 	specification.value = std::make_unique<const MsgPack>(doc_value);
+}
+
+
+void
+Schema::process_script(const std::string&, const MsgPack& doc_script)
+{
+	// RESERVED_SCRIPT isn't heritable.
+	L_CALL(this, "Schema::process_script(%s)", repr(doc_script.to_string()).c_str());
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	specification.script = std::make_unique<const MsgPack>(doc_script);
+	specification.flags.normalized_script = false;
+#else
+	ignore_unused(doc_script);
+	THROW(ClientError, "%s only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
+#endif
 }
 
 
@@ -5278,60 +5290,6 @@ Schema::consistency_namespace(const std::string& prop_name, const MsgPack& doc_n
 
 
 void
-Schema::consistency_chai(const std::string& prop_name, const MsgPack& doc_chai)
-{
-	// RESERVED_CHAI isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::consistency_chai(%s)", repr(doc_chai.to_string()).c_str());
-
-#if defined(XAPIAND_CHAISCRIPT)
-	try {
-		get_newest_properties(specification.full_meta_name).at(prop_name);
-	} catch (const std::out_of_range&) {
-		write_chai(get_mutable_properties(specification.full_meta_name), prop_name, doc_chai);
-	}
-#else
-	THROW(ClientError, "%s only is allowed when ChaiScript is actived [%s]", prop_name.c_str(), repr(doc_chai.to_string()).c_str());
-#endif
-}
-
-
-void
-Schema::consistency_ecma(const std::string& prop_name, const MsgPack& doc_ecma)
-{
-	// RESERVED_ECMA isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::consistency_ecma(%s)", repr(doc_ecma.to_string()).c_str());
-
-#if defined(XAPIAND_V8)
-	try {
-		get_newest_properties(specification.full_meta_name).at(prop_name);
-	} catch (const std::out_of_range&) {
-		write_ecma(get_mutable_properties(specification.full_meta_name), prop_name, doc_ecma);
-	}
-#else
-	THROW(ClientError, "%s only is allowed when v8 engine is actived [%s]", prop_name.c_str(), repr(doc_ecma.to_string()).c_str());
-#endif
-}
-
-
-void
-Schema::consistency_script(const std::string& prop_name, const MsgPack& doc_script)
-{
-	// RESERVED_SCRIPT isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::consistency_script(%s)", repr(doc_script.to_string()).c_str());
-
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-	try {
-		get_newest_properties(specification.full_meta_name).at(prop_name);
-	} catch (const std::out_of_range&) {
-		write_script(get_mutable_properties(specification.full_meta_name), prop_name, doc_script);
-	}
-#else
-	THROW(ClientError, "%s only is allowed when ChaiScript or v8 engine is actived [%s]", prop_name.c_str(), repr(doc_script.to_string()).c_str());
-#endif
-}
-
-
-void
 Schema::consistency_version(const std::string& prop_name, const MsgPack& doc_version)
 {
 	// RESERVED_VERSION isn't heritable and only is allowed in root.
@@ -5366,6 +5324,37 @@ Schema::consistency_schema(const std::string& prop_name, const MsgPack& doc_sche
 		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());
 	}
 }
+
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+void
+Schema::write_script(MsgPack& properties)
+{
+	// RESERVED_SCRIPT isn't heritable and can't change once fixed.
+	L_CALL(this, "Schema::write_script(%s)", repr(doc_script.to_string()).c_str());
+
+	if (specification.script) {
+		Script script(*specification.script);
+		specification.script = std::make_unique<const MsgPack>(script.process_script(specification.flags.strict));
+		properties[RESERVED_SCRIPT] = *specification.script;
+		specification.flags.normalized_script = true;
+	}
+}
+
+
+void
+Schema::normalize_script()
+{
+	// RESERVED_SCRIPT isn't heritable.
+	L_CALL(this, "Schema::normalize_script()");
+
+	if (specification.script && !specification.flags.normalized_script) {
+		Script script(*specification.script);
+		specification.script = std::make_unique<const MsgPack>(script.process_script(specification.flags.strict));
+		specification.flags.normalized_script = true;
+	}
+}
+#endif
 
 
 void
@@ -5671,6 +5660,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 					(this->*wpit->second)(*mut_properties, str_key, it.value());
 				}
 			}
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+			write_script(*mut_properties);
+#endif
 			properties = &*mut_properties;
 		} else {
 			update_specification(*properties);
@@ -5684,6 +5676,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 					(this->*ddit->second)(str_key, it.value());
 				}
 			}
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+			normalize_script();
+#endif
 		}
 
 		MsgPack data;
