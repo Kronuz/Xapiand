@@ -34,6 +34,10 @@
 const std::unordered_map<std::string, Script::dispatch_func> Script::map_dispatch_script({
 	{ RESERVED_TYPE,   &Script::process_type   },
 	{ RESERVED_VALUE,  &Script::process_value  },
+	{ RESERVED_CHAI,   &Script::process_chai   },
+	{ RESERVED_ECMA,   &Script::process_ecma   },
+	{ RESERVED_BODY,   &Script::process_body   },
+	{ RESERVED_NAME,   &Script::process_name   },
 });
 
 
@@ -43,8 +47,10 @@ const std::unordered_map<std::string, Script::dispatch_func> Script::map_dispatc
 });
 
 
-Script::Script(const char* _prop_name, const MsgPack& _obj)
-	: prop_name(_prop_name),
+Script::Script(const MsgPack& _obj)
+	: type(Type::EMPTY),
+	  with_value(false),
+	  with_data(false),
 	  sep_types({ { FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY } })
 {
 	switch (_obj.getType()) {
@@ -60,15 +66,18 @@ Script::Script(const char* _prop_name, const MsgPack& _obj)
 				auto dsit = map_dispatch_script.find(str_key);
 				if (dsit == dsit_e) {
 					static const auto str_set_dispatch_script = get_map_keys(map_dispatch_script);
-					THROW(ClientError, "%s in %s is not valid, only can use %s", repr(str_key).c_str(), prop_name, str_set_dispatch_script.c_str());
+					THROW(ClientError, "%s in %s is not valid, only can use %s", repr(str_key).c_str(), RESERVED_SCRIPT, str_set_dispatch_script.c_str());
 				} else {
 					(this->*dsit->second)(it.value());
 				}
 			}
+			if (body.empty()) {
+				THROW(ClientError, "%s must be defined", RESERVED_BODY);
+			}
 			break;
 		}
 		default:
-			THROW(ClientError, "%s must be string or a valid script object", prop_name);
+			THROW(ClientError, "%s must be string or a valid script object", RESERVED_SCRIPT);
 	}
 }
 
@@ -78,8 +87,13 @@ Script::process_body(const MsgPack& _body)
 {
 	L_CALL(this, "Script::process_body(%s)", repr(_body.to_string()).c_str());
 
+	if (with_value) {
+		THROW(ClientError, "%s is ill-formed", RESERVED_SCRIPT);
+	}
+
 	try {
 		body = _body.str();
+		with_data = true;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "%s must be string", RESERVED_BODY);
 	}
@@ -91,8 +105,13 @@ Script::process_name(const MsgPack& _name)
 {
 	L_CALL(this, "Script::process_name(%s)", repr(_name.to_string()).c_str());
 
+	if (with_value) {
+		THROW(ClientError, "%s is ill-formed", RESERVED_SCRIPT);
+	}
+
 	try {
 		name = _name.str();
+		with_data = true;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "%s must be string", RESERVED_NAME);
 	}
@@ -117,6 +136,10 @@ Script::process_value(const MsgPack& _value)
 {
 	L_CALL(this, "Script::process_value(%s)", repr(_value.to_string()).c_str());
 
+	if (with_data || with_value) {
+		THROW(ClientError, "%s is ill-formed", RESERVED_SCRIPT);
+	}
+
 	switch (_value.getType()) {
 		case MsgPack::Type::STR:
 			body = _value.str();
@@ -134,14 +157,35 @@ Script::process_value(const MsgPack& _value)
 					(this->*dsit->second)(it.value());
 				}
 			}
-			if (body.empty() || name.empty()) {
-				THROW(ClientError, "%s and %s must be defined in %s", RESERVED_NAME, RESERVED_BODY, RESERVED_VALUE);
+			if (body.empty()) {
+				THROW(ClientError, "%s must be defined in %s", RESERVED_BODY, RESERVED_VALUE);
 			}
 			break;
 		}
 		default:
 			THROW(ClientError, "%s must be string or a valid object", RESERVED_VALUE);
 	}
+	with_value = true;
+}
+
+
+void
+Script::process_chai(const MsgPack& _chai)
+{
+	L_CALL(this, "Script::process_chai(%s)", repr(_chai.to_string()).c_str());
+
+	process_value(_chai);
+	type = Type::CHAI;
+}
+
+
+void
+Script::process_ecma(const MsgPack& _ecma)
+{
+	L_CALL(this, "Script::process_ecma(%s)", repr(_ecma.to_string()).c_str());
+
+	process_value(_ecma);
+	type = Type::ECMA;
 }
 
 
@@ -154,15 +198,15 @@ Script::process_chai(bool strict)
 	switch (sep_types[SPC_INDEX_TYPE]) {
 		case FieldType::EMPTY:
 			if (strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", prop_name);
+				THROW(MissingTypeError, "Type of field %s is missing", RESERVED_SCRIPT);
 			}
-			sep_types[SPC_INDEX_TYPE] = FieldType::CHAI;
-		case FieldType::CHAI: {
+			sep_types[SPC_INDEX_TYPE] = FieldType::SCRIPT;
+		case FieldType::SCRIPT: {
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				if (name.empty()) {
 					return MsgPack({
-						{ RESERVED_TYPE,      sep_types },
-						{ RESERVED_BODY,      body      },
+						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_CHAI, body      },
 					});
 				} else {
 					THROW(ClientError, "For type %s, %s must be string", Serialise::type(FieldType::FOREIGN).c_str(), RESERVED_VALUE);
@@ -172,24 +216,28 @@ Script::process_chai(bool strict)
 				try {
 					chaipp::Processor::compile(body_hash, body_hash, body);
 					return MsgPack({
-						{ RESERVED_TYPE,       sep_types },
-						{ RESERVED_HASH,       body_hash },
-						{ RESERVED_BODY_HASH,  body_hash },
-						{ RESERVED_BODY,       body      },
+						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_CHAI, {
+							{ RESERVED_HASH,      body_hash },
+							{ RESERVED_BODY_HASH, body_hash },
+							{ RESERVED_BODY,      body      },
+						}}
 					});
 				} catch (...) {
 					THROW(ScriptNotFoundError, "Script not found: %s", repr(body).c_str());
 				}
 			} else {
 				auto script_hash = chaipp::hash(name);
-				auto body_hash = chaipp::hash(name);
+				auto body_hash = chaipp::hash(body);
 				try {
 					chaipp::Processor::compile(body_hash, body_hash, body);
 					return MsgPack({
-						{ RESERVED_TYPE,       sep_types   },
-						{ RESERVED_HASH,       script_hash },
-						{ RESERVED_BODY_HASH,  body_hash   },
-						{ RESERVED_BODY,       body        },
+						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_CHAI, {
+							{ RESERVED_HASH,      script_hash },
+							{ RESERVED_BODY_HASH, body_hash },
+							{ RESERVED_BODY,      body      },
+						}}
 					});
 				} catch (...) {
 					THROW(ScriptNotFoundError, "Script not found: %s", repr(body).c_str());
@@ -197,7 +245,7 @@ Script::process_chai(bool strict)
 			}
 		}
 		default:
-			THROW(ClientError, "Only type %s is allowed in %s", Serialise::type(FieldType::CHAI).c_str(), prop_name);
+			THROW(ClientError, "Only type %s is allowed in %s", Serialise::type(FieldType::SCRIPT).c_str(), RESERVED_SCRIPT);
 	}
 #else
 	ignore_unused(strict);
@@ -215,42 +263,46 @@ Script::process_ecma(bool strict)
 	switch (sep_types[SPC_INDEX_TYPE]) {
 		case FieldType::EMPTY:
 			if (strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", prop_name);
+				THROW(MissingTypeError, "Type of field %s is missing", RESERVED_SCRIPT);
 			}
-			sep_types[SPC_INDEX_TYPE] = FieldType::ECMA;
-		case FieldType::ECMA: {
+			sep_types[SPC_INDEX_TYPE] = FieldType::SCRIPT;
+		case FieldType::SCRIPT: {
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				if (name.empty()) {
 					return MsgPack({
-						{ RESERVED_TYPE,      sep_types },
-						{ RESERVED_BODY,      body      },
+						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_ECMA, body      },
 					});
 				} else {
 					THROW(ClientError, "For type %s, %s must be string", Serialise::type(FieldType::FOREIGN).c_str(), RESERVED_VALUE);
 				}
 			} else if (name.empty()) {
-				auto body_hash = v8pp::hash(body);
+				uint64_t body_hash = v8pp::hash(body);
 				try {
 					v8pp::Processor::compile(body_hash, body_hash, body);
 					return MsgPack({
-						{ RESERVED_TYPE,       sep_types },
-						{ RESERVED_HASH,       body_hash },
-						{ RESERVED_BODY_HASH,  body_hash },
-						{ RESERVED_BODY,       body      },
+						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_ECMA, {
+							{ RESERVED_HASH,      body_hash },
+							{ RESERVED_BODY_HASH, body_hash },
+							{ RESERVED_BODY,      body      },
+						}}
 					});
 				} catch (...) {
 					THROW(ScriptNotFoundError, "Script not found: %s", repr(body).c_str());
 				}
 			} else {
 				auto script_hash = v8pp::hash(name);
-				auto body_hash = v8pp::hash(name);
+				auto body_hash = v8pp::hash(body);
 				try {
 					v8pp::Processor::compile(body_hash, body_hash, body);
 					return MsgPack({
-						{ RESERVED_TYPE,       sep_types   },
-						{ RESERVED_HASH,       script_hash },
-						{ RESERVED_BODY_HASH,  body_hash   },
-						{ RESERVED_BODY,       body        },
+						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_ECMA, {
+							{ RESERVED_HASH,      script_hash },
+							{ RESERVED_BODY_HASH, body_hash },
+							{ RESERVED_BODY,      body      },
+						}}
 					});
 				} catch (...) {
 					THROW(ScriptNotFoundError, "Script not found: %s", repr(body).c_str());
@@ -258,7 +310,7 @@ Script::process_ecma(bool strict)
 			}
 		}
 		default:
-			THROW(ClientError, "Only type %s is allowed in %s", Serialise::type(FieldType::ECMA).c_str(), prop_name);
+			THROW(ClientError, "Only type %s is allowed in %s", Serialise::type(FieldType::SCRIPT).c_str(), RESERVED_SCRIPT);
 	}
 #else
 	ignore_unused(strict);
@@ -272,12 +324,12 @@ Script::process_script(bool strict)
 {
 	L_CALL(this, "Script::process_script(%s)", strict ? "true" : "false");
 
-	switch (sep_types[SPC_INDEX_TYPE]) {
-		case FieldType::CHAI:
+	switch (type) {
+		case Type::CHAI:
 			return process_chai(strict);
-		case FieldType::ECMA:
+		case Type::ECMA:
 			return process_ecma(strict);
-		case FieldType::EMPTY:
+		case Type::EMPTY:
 #if defined(XAPIAND_V8)
 			try {
 				return process_ecma(strict);
@@ -300,7 +352,7 @@ Script::process_script(bool strict)
 			}
 #endif
 		default:
-			THROW(ClientError, "Type %s is not allowed in %s", Serialise::type(sep_types[SPC_INDEX_TYPE]).c_str(), prop_name);
+			THROW(ClientError, "Type %s is not allowed in %s", Serialise::type(sep_types[SPC_INDEX_TYPE]).c_str(), RESERVED_SCRIPT);
 	}
 }
 

@@ -46,18 +46,28 @@ class Script {
 	static const std::unordered_map<std::string, dispatch_func> map_dispatch_script;
 	static const std::unordered_map<std::string, dispatch_func> map_dispatch_value;
 
+	enum class Type : uint8_t {
+		EMPTY,
+		CHAI,
+		ECMA,
+	};
+
 	void process_body(const MsgPack& _body);
 	void process_name(const MsgPack& _name);
 	void process_type(const MsgPack& _type);
 	void process_value(const MsgPack& _value);
+	void process_chai(const MsgPack& _chai);
+	void process_ecma(const MsgPack& _ecma);
 
-	const char* prop_name;
 	std::string body;
 	std::string name;
+	Type type;
+	bool with_value;
+	bool with_data;
 	std::array<FieldType, SPC_SIZE_TYPES> sep_types;
 
 public:
-	Script(const char* _prop_name, const MsgPack& _obj);
+	Script(const MsgPack& _obj);
 
 	MsgPack process_chai(bool strict);
 	MsgPack process_ecma(bool strict);
