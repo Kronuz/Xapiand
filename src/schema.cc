@@ -451,6 +451,8 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 	{ RESERVED_MULTICHULL,             &Schema::process_cast_object                },
 	{ RESERVED_GEO_COLLECTION,         &Schema::process_cast_object                },
 	{ RESERVED_GEO_INTERSECTION,       &Schema::process_cast_object                },
+	{ RESERVED_CHAI,                   &Schema::process_cast_object                },
+	{ RESERVED_ECMA,                   &Schema::process_cast_object                },
 	// Next functions only check the consistency of user provided data.
 	{ RESERVED_LANGUAGE,               &Schema::consistency_language               },
 	{ RESERVED_STOP_STRATEGY,          &Schema::consistency_stop_strategy          },
@@ -2035,6 +2037,17 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 			mut_properties[RESERVED_LANGUAGE] = specification.language;
 			break;
 		}
+		case FieldType::SCRIPT: {
+			if (!specification.flags.has_index) {
+				const auto index = TypeIndex::NONE; // Fallback to index anything.
+				if (specification.index != index) {
+					specification.index = index;
+					mut_properties[RESERVED_INDEX] = index;
+				}
+				specification.flags.has_index = true;
+			}
+			break;
+		}
 		case FieldType::BOOLEAN:
 		case FieldType::UUID:
 			break;
@@ -2125,6 +2138,13 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 			if (!specification.flags.has_bool_term) {
 				specification.flags.bool_term = strhasupper(specification.meta_name);
 				specification.flags.has_bool_term = true;
+			}
+			break;
+
+		case FieldType::SCRIPT:
+			if (!specification.flags.has_index) {
+				specification.index = TypeIndex::NONE; // Fallback to index anything.
+				specification.flags.has_index = true;
 			}
 			break;
 

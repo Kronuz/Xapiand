@@ -56,6 +56,8 @@ namespace Cast {
 		MULTICHULL        = xxh64::hash(RESERVED_MULTICHULL),
 		GEO_COLLECTION    = xxh64::hash(RESERVED_GEO_COLLECTION),
 		GEO_INTERSECTION  = xxh64::hash(RESERVED_GEO_INTERSECTION),
+		CHAI              = xxh64::hash(RESERVED_CHAI),
+		ECMA              = xxh64::hash(RESERVED_ECMA),
 	};
 
 	/*
