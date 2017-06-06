@@ -5680,9 +5680,7 @@ Schema::index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::
 		}
 
 		if (specification.script) {
-			std::cout << object.to_string(4) << std::endl;
 			object = db_handler->run_script(object, term_id, old_document_pair, *specification.script);
-			std::cout << object.to_string(4) << std::endl;
 			if (!object.is_map()) {
 				THROW(ClientError, "Script must return an object, it returned %s", object.getStrType().c_str());
 			}
