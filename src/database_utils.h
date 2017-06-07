@@ -208,7 +208,7 @@ struct ct_type_t {
 };
 
 
-static const ct_type_t no_type;
+static const ct_type_t no_type{};
 static const ct_type_t any_type(ANY_CONTENT_TYPE);
 static const ct_type_t html_type(HTML_CONTENT_TYPE);
 static const ct_type_t text_type(TEXT_CONTENT_TYPE);
