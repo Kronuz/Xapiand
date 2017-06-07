@@ -727,7 +727,7 @@ required_spc_t::get_types(const std::string& str_type)
 	static const auto tit_e = map_type.end();
 	auto tit = map_type.find(lower_string(str_type));
 	if (tit == tit_e) {
-		THROW(ClientError, "%s must be in { foreign, [foreign/]object, [foreign/]<chai, ecma>, [foreign/][object/]array, [foreign/][object/][array/]<integer, positive, float, date, time, timedelta, string, text, term, uuid, geospatial> }  [%s]", RESERVED_TYPE, str_type.c_str());
+		THROW(ClientError, "%s must be in { foreign, [foreign/]object, [foreign/][object/]array, [foreign/][object/][array/]<integer, positive, float, date, time, timedelta, string, text, term, uuid, geospatial, script> }  [%s]", RESERVED_TYPE, str_type.c_str());
 	}
 	return tit->second;
 }
