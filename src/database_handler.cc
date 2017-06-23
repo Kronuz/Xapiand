@@ -172,6 +172,26 @@ DatabaseHandler::recover_index()
 
 
 void
+DatabaseHandler::delete_schema()
+{
+	L_CALL(this, "DatabaseHandler::delete_schema()");
+
+	const auto local_schema_hash = endpoints.hash();
+	lock_database lk_db(this);
+	unsigned doccount = database->db->get_doccount();
+
+	if (doccount == 0) {
+		XapiandManager::manager->schemas.erase(local_schema_hash);
+		database->set_metadata(RESERVED_META, "");
+		/* Using method set_metadata of database directly instead of DatabaseHandler.set_schema
+		   for avoid double lock or database modification window in the time
+		   to unlock and lock again in DatabaseHandler.set_schema
+		 */
+	}
+}
+
+
+void
 DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<size_t>>& context_)
 {
 	L_CALL(this, "DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()).c_str(), flags_);
@@ -454,6 +474,12 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 			}
 		} while (true);
+	} catch (const MissingTypeError&) { //FIXME: perhaps others erros must be handlend in here
+		delete_schema();
+		if (!prefixed_term_id.empty()) {
+			dec_document_change_cnt(prefixed_term_id);
+		}
+		throw;
 	} catch (...) {
 		if (!prefixed_term_id.empty()) {
 			dec_document_change_cnt(prefixed_term_id);

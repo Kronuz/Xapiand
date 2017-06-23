@@ -107,6 +107,7 @@ class DatabaseHandler {
 	std::shared_ptr<std::unordered_set<size_t>> context;
 
 	void recover_index();
+	void delete_schema();
 
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
