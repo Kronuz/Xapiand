@@ -276,15 +276,17 @@ class Xapiand(object):
                         if is_msgpack:
                             if first:
                                 first = False
-                                if ord(chunk[-1]) & 0xf0 == 0x90:
-                                    chunk = chunk[:-1] + '\x90'
-                                elif chunk[-3] == '\xdc':
-                                    chunk = chunk[:-3] + '\x90'
-                                elif chunk[-5] == '\xdd':
-                                    chunk = chunk[:-5] + '\x90'
+                                for o, m, v in ((-1, 0xf0, 0x90), (-3, 0xff, 0xdc), (-5, 0xff, 0xdd)):
+                                    if ord(chunk[o]) & m == v:
+                                        try:
+                                            yield msgpack.loads(chunk[:o] + '\x90')
+                                            break
+                                        except Exception:
+                                            pass
                                 else:
                                     raise IOError("Unexpected chunk!")
-                            yield msgpack.loads(chunk)
+                            else:
+                                yield msgpack.loads(chunk)
                         elif is_json:
                             if first:
                                 first = False
