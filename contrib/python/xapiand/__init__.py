@@ -230,12 +230,17 @@ class Xapiand(object):
             if isinstance(body, dict):
                 if '_schema' in body:
                     body = body.copy()
-                    body['_schema'] = '{}{}'.format(self.prefix, body['_schema'].strip('/'))
+                    schema = body['_schema']
+                    if isinstance(schema, dict):
+                        schema['_value'] = '{}{}'.format(self.prefix, schema['_value'].strip('/'))
+                    else:
+                        schema = '{}{}'.format(self.prefix, schema.strip('/'))
+                    body['_schema'] = schema
             if isinstance(body, (dict, list)):
                 if is_msgpack:
                     body = msgpack.dumps(body)
                 elif is_json:
-                    body = json.dumps(body)
+                    body = json.dumps(body, ensure_ascii=True)
             elif os.path.isfile(body):
                 body = open(body, 'r')
             res = method(url, body, **kwargs)
@@ -245,7 +250,7 @@ class Xapiand(object):
                 if is_msgpack:
                     kwargs['data'] = msgpack.dumps(data)
                 elif is_json:
-                    kwargs['data'] = json.dumps(data)
+                    kwargs['data'] = json.dumps(data, ensure_ascii=True)
             res = method(url, **kwargs)
 
         if res.status_code == 404 and action_request in ('patch', 'delete', 'get'):
