@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016,2017 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,18 +24,18 @@
 
 #include "xapiand.h"     // for unlikely
 
-#include <fcntl.h>
-#include <stdlib.h>      // for malloc, free
-#include <string.h>
-#include <sys/fcntl.h>   // for O_RDONLY
-#include <sys/stat.h>
-#include <sys/types.h>   // for off_t, uint16_t, ssize_t, uint32_t
 #include <algorithm>     // for move
 #include <cstring>       // for size_t, memcpy
+#include <fcntl.h>
 #include <functional>    // for function, __base
 #include <iostream>
 #include <iterator>      // for input_iterator_tag, iterator
+#include <stdlib.h>      // for malloc, free
+#include <string.h>
 #include <string>        // for string
+#include <sys/fcntl.h>   // for O_RDONLY
+#include <sys/stat.h>
+#include <sys/types.h>   // for off_t, uint16_t, ssize_t, uint32_t
 #include <type_traits>   // for forward
 
 #include "exception.h"   // for Error
@@ -43,9 +43,9 @@
 #include "lz4/lz4.h"     // for LZ4_COMPRESSBOUND, LZ4_resetStream, LZ4_stre...
 #include "lz4/xxhash.h"  // for XXH32_createState, XXH32_reset, XXH32_digest
 
-#define LZ4_BLOCK_SIZE        (1024 * 2)
-#define LZ4_MAX_CMP_SIZE      (sizeof(uint16_t) + LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE))
-#define LZ4_RING_BUFFER_BYTES (1024 * 256 + LZ4_BLOCK_SIZE)
+constexpr size_t LZ4_BLOCK_SIZE        = 1024 * 2;
+constexpr size_t LZ4_MAX_CMP_SIZE      = sizeof(uint16_t) + LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE);
+constexpr size_t LZ4_RING_BUFFER_BYTES = 1024 * 256 + LZ4_BLOCK_SIZE;
 
 
 class LZ4Exception : public Error {
