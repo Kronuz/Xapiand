@@ -169,80 +169,82 @@ DatabaseWAL::open_current(bool commited)
 	closedir(dir);
 	if (lowest_revision > revision) {
 		create(revision);
-	} else {
-		modified = false;
-		bool reach_end = false;
-		uint32_t start_off, end_off;
-		uint32_t file_rev, begin_rev, rev;
-		for (rev = lowest_revision; rev <= highest_revision && not reach_end; ++rev) {
-			try {
-				open(WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN);
-			} catch (const StorageIOError&) {
-				continue;
-			}
-
-			file_rev = begin_rev = rev;
-
-			uint32_t high_slot = highest_valid_slot();
-			if (high_slot == static_cast<uint32_t>(-1)) {
-				continue;
-			}
-
-			if (rev == highest_revision) {
-				reach_end = true; /* Avoid reenter to the loop with the high valid slot of the highest revision */
-				if (!commited) {
-					/* last slot contain offset at the end of file */
-					/* In case not "commited" not execute the high slot avaible because are operations without commit */
-					--high_slot;
-				}
-			}
-
-			if (rev == lowest_revision) {
-				auto slot = revision - header.head.revision - 1;
-				if (slot == static_cast<uint32_t>(-1)) {
-					/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
-					 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
-					 */
-					start_off = STORAGE_START_BLOCK_OFFSET;
-					begin_rev = header.head.revision;
-				} else {
-					if (slot > high_slot) {
-						rev = header.head.revision + high_slot;
-						continue;
-					}
-					start_off = header.slot[slot];
-					begin_rev = header.head.revision + slot;
-				}
-			} else {
-				start_off = STORAGE_START_BLOCK_OFFSET;
-			}
-
-			seek(start_off);
-
-			end_off =  header.slot[high_slot];
-
-			rev = header.head.revision + high_slot;
-
-			if (start_off < end_off) {
-				L_INFO(nullptr, "Read and execute operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, rev);
-			}
-
-			try {
-				while (true) {
-					std::string line = read(end_off);
-					if (!execute(line)) {
-						THROW(Error, "WAL revision mismatch!");
-					}
-				}
-			} catch (const StorageEOF& exc) { }
-		}
-
-		if (rev < revision) {
-			THROW(StorageCorruptVolume, "Revision not reached");
-		}
-
-		create(highest_revision);
+		return false;
 	}
+
+	modified = false;
+	bool reach_end = false;
+	uint32_t start_off, end_off;
+	uint32_t file_rev, begin_rev, rev;
+	for (rev = lowest_revision; rev <= highest_revision && not reach_end; ++rev) {
+		try {
+			open(WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN);
+		} catch (const StorageIOError&) {
+			continue;
+		}
+
+		file_rev = begin_rev = rev;
+
+		uint32_t high_slot = highest_valid_slot();
+		if (high_slot == static_cast<uint32_t>(-1)) {
+			continue;
+		}
+
+		if (rev == highest_revision) {
+			reach_end = true; /* Avoid reenter to the loop with the high valid slot of the highest revision */
+			if (!commited) {
+				/* last slot contain offset at the end of file */
+				/* In case not "commited" not execute the high slot avaible because are operations without commit */
+				--high_slot;
+			}
+		}
+
+		if (rev == lowest_revision) {
+			auto slot = revision - header.head.revision - 1;
+			if (slot == static_cast<uint32_t>(-1)) {
+				/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
+				 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
+				 */
+				start_off = STORAGE_START_BLOCK_OFFSET;
+				begin_rev = header.head.revision;
+			} else {
+				if (slot > high_slot) {
+					rev = header.head.revision + high_slot;
+					continue;
+				}
+				start_off = header.slot[slot];
+				begin_rev = header.head.revision + slot;
+			}
+		} else {
+			start_off = STORAGE_START_BLOCK_OFFSET;
+		}
+
+		seek(start_off);
+
+		end_off =  header.slot[high_slot];
+
+		rev = header.head.revision + high_slot;
+
+		if (start_off < end_off) {
+			L_INFO(nullptr, "Read and execute operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, rev);
+		}
+
+		try {
+			while (true) {
+				std::string line = read(end_off);
+				if (!execute(line)) {
+					THROW(Error, "WAL revision mismatch!");
+				}
+			}
+		} catch (const StorageEOF& exc) { }
+	}
+
+	if (rev < revision) {
+		THROW(StorageCorruptVolume, "Revision not reached");
+	}
+
+	create(highest_revision);
+
 	return modified;
 }
 
@@ -370,66 +372,68 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/)
 	}
 
 	closedir(dir);
-	if (lowest_revision <= start_revision) {
-		bool reach_end = false;
-		uint32_t start_off, end_off;
-		uint32_t file_rev, begin_rev, end_rev;
-		for (auto rev = lowest_revision; rev <= highest_revision && not reach_end; ++rev) {
-			try {
-				open(WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN);
-			} catch (const StorageIOError&) {
-				continue;
-			}
+	if (lowest_revision > start_revision) {
+		start_revision = lowest_revision;
+	}
 
-			file_rev = begin_rev = rev;
-
-			uint32_t high_slot = highest_valid_slot();
-			if (high_slot == static_cast<uint32_t>(-1)) {
-				continue;
-			}
-
-			if (rev == highest_revision) {
-				reach_end = true; /* Avoid reenter to the loop with the high valid slot of the highest revision */
-			}
-
-			if (rev == lowest_revision) {
-				auto slot = start_revision - header.head.revision - 1;
-				if (slot == static_cast<uint32_t>(-1)) {
-					/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
-					 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
-					 */
-					start_off = STORAGE_START_BLOCK_OFFSET;
-					begin_rev = header.head.revision;
-				} else {
-					if (slot > high_slot) {
-						rev = header.head.revision + high_slot;
-						continue;
-					}
-					start_off = header.slot[slot];
-					begin_rev = header.head.revision + slot;
-				}
-			} else {
-				start_off = STORAGE_START_BLOCK_OFFSET;
-			}
-
-			seek(start_off);
-
-			end_off =  header.slot[high_slot];
-
-			if (start_off < end_off) {
-				end_rev =  header.head.revision + high_slot;
-				L_INFO(nullptr, "Read and repr operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, end_rev);
-			}
-
-			try {
-				while (true) {
-					std::string line = read(end_off);
-					repr.push_back(repr_line(line));
-				}
-			} catch (const StorageEOF& exc) { }
-
-			rev = header.head.revision + high_slot;
+	bool reach_end = false;
+	uint32_t start_off, end_off;
+	uint32_t file_rev, begin_rev, end_rev;
+	for (auto rev = lowest_revision; rev <= highest_revision && not reach_end; ++rev) {
+		try {
+			open(WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN);
+		} catch (const StorageIOError&) {
+			continue;
 		}
+
+		file_rev = begin_rev = rev;
+
+		uint32_t high_slot = highest_valid_slot();
+		if (high_slot == static_cast<uint32_t>(-1)) {
+			continue;
+		}
+
+		if (rev == highest_revision) {
+			reach_end = true; /* Avoid reenter to the loop with the high valid slot of the highest revision */
+		}
+
+		if (rev == lowest_revision) {
+			auto slot = start_revision - header.head.revision - 1;
+			if (slot == static_cast<uint32_t>(-1)) {
+				/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
+				 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
+				 */
+				start_off = STORAGE_START_BLOCK_OFFSET;
+				begin_rev = header.head.revision;
+			} else {
+				if (slot > high_slot) {
+					rev = header.head.revision + high_slot;
+					continue;
+				}
+				start_off = header.slot[slot];
+				begin_rev = header.head.revision + slot;
+			}
+		} else {
+			start_off = STORAGE_START_BLOCK_OFFSET;
+		}
+
+		seek(start_off);
+
+		end_off =  header.slot[high_slot];
+
+		if (start_off < end_off) {
+			end_rev =  header.head.revision + high_slot;
+			L_INFO(nullptr, "Read and repr operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, end_rev);
+		}
+
+		try {
+			while (true) {
+				std::string line = read(end_off);
+				repr.push_back(repr_line(line));
+			}
+		} catch (const StorageEOF& exc) { }
+
+		rev = header.head.revision + high_slot;
 	}
 
 	return repr;
