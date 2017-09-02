@@ -5352,7 +5352,7 @@ void
 Schema::write_script(MsgPack& properties)
 {
 	// RESERVED_SCRIPT isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::write_script(%s)", repr(doc_script.to_string()).c_str());
+	L_CALL(this, "Schema::write_script()");
 
 	if (specification.script) {
 		Script script(*specification.script);
