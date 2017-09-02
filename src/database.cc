@@ -168,23 +168,27 @@ DatabaseWAL::open_current(bool commited)
 
 	closedir(dir);
 	if (lowest_revision > revision) {
-		open(WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+		create(revision);
 	} else {
 		modified = false;
-
 		bool reach_end = false;
 		uint32_t start_off, end_off;
-		uint32_t file_rev, begin_rev, end_rev;
-		for (auto slot = lowest_revision; slot <= highest_revision && not reach_end; ++slot) {
-			file_rev = begin_rev = slot;
-			open(WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN);
+		uint32_t file_rev, begin_rev, rev;
+		for (rev = lowest_revision; rev <= highest_revision && not reach_end; ++rev) {
+			try {
+				open(WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN);
+			} catch (const StorageIOError&) {
+				continue;
+			}
+
+			file_rev = begin_rev = rev;
 
 			uint32_t high_slot = highest_valid_slot();
 			if (high_slot == static_cast<uint32_t>(-1)) {
 				continue;
 			}
 
-			if (slot == highest_revision) {
+			if (rev == highest_revision) {
 				reach_end = true; /* Avoid reenter to the loop with the high valid slot of the highest revision */
 				if (!commited) {
 					/* last slot contain offset at the end of file */
@@ -193,20 +197,21 @@ DatabaseWAL::open_current(bool commited)
 				}
 			}
 
-			if (slot == lowest_revision) {
-				slot = revision - header.head.revision - 1;
+			if (rev == lowest_revision) {
+				auto slot = revision - header.head.revision - 1;
 				if (slot == static_cast<uint32_t>(-1)) {
 					/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
 					 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
 					 */
 					start_off = STORAGE_START_BLOCK_OFFSET;
-					begin_rev = 0;
+					begin_rev = header.head.revision;
 				} else {
-					start_off = header.slot[slot];
-					if (start_off == 0) {
-						THROW(StorageCorruptVolume, "Bad offset");
+					if (slot > high_slot) {
+						rev = header.head.revision + high_slot;
+						continue;
 					}
-					begin_rev = slot;
+					start_off = header.slot[slot];
+					begin_rev = header.head.revision + slot;
 				}
 			} else {
 				start_off = STORAGE_START_BLOCK_OFFSET;
@@ -216,9 +221,10 @@ DatabaseWAL::open_current(bool commited)
 
 			end_off =  header.slot[high_slot];
 
+			rev = header.head.revision + high_slot;
+
 			if (start_off < end_off) {
-				end_rev =  header.head.revision + high_slot;
-				L_INFO(nullptr, "Read and execute operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, end_rev);
+				L_INFO(nullptr, "Read and execute operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, rev);
 			}
 
 			try {
@@ -229,14 +235,24 @@ DatabaseWAL::open_current(bool commited)
 					}
 				}
 			} catch (const StorageEOF& exc) { }
-
-			slot = high_slot;
 		}
 
-		open(WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+		if (rev < revision) {
+			THROW(StorageCorruptVolume, "Revision not reached");
+		}
+
+		create(highest_revision);
 	}
 	return modified;
 }
+
+
+bool
+DatabaseWAL::create(uint32_t revision)
+{
+	return open(WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+}
+
 
 MsgPack
 DatabaseWAL::repr_line(const std::string& line)
@@ -319,8 +335,6 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/)
 {
 	L_CALL(this, "DatabaseWAL::repr(%u, ...)", start_revision);
 
-	fprintf(stderr, "%u\n", database->checkout_revision);
-
 	MsgPack repr(MsgPack::Type::ARRAY);
 
 	DIR *dir = opendir(base_path.c_str(), true);
@@ -356,39 +370,43 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/)
 	}
 
 	closedir(dir);
-	if (lowest_revision > start_revision) {
-		open(WAL_STORAGE_PATH + std::to_string(start_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
-	} else {
+	if (lowest_revision <= start_revision) {
 		bool reach_end = false;
 		uint32_t start_off, end_off;
 		uint32_t file_rev, begin_rev, end_rev;
-		for (auto slot = lowest_revision; slot <= highest_revision && not reach_end; ++slot) {
-			file_rev = begin_rev = slot;
-			open(WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN);
+		for (auto rev = lowest_revision; rev <= highest_revision && not reach_end; ++rev) {
+			try {
+				open(WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN);
+			} catch (const StorageIOError&) {
+				continue;
+			}
+
+			file_rev = begin_rev = rev;
 
 			uint32_t high_slot = highest_valid_slot();
 			if (high_slot == static_cast<uint32_t>(-1)) {
 				continue;
 			}
 
-			if (slot == highest_revision) {
+			if (rev == highest_revision) {
 				reach_end = true; /* Avoid reenter to the loop with the high valid slot of the highest revision */
 			}
 
-			if (slot == lowest_revision) {
-				slot = start_revision - header.head.revision - 1;
+			if (rev == lowest_revision) {
+				auto slot = start_revision - header.head.revision - 1;
 				if (slot == static_cast<uint32_t>(-1)) {
 					/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
 					 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
 					 */
 					start_off = STORAGE_START_BLOCK_OFFSET;
-					begin_rev = 0;
+					begin_rev = header.head.revision;
 				} else {
-					start_off = header.slot[slot];
-					if (start_off == 0) {
-						THROW(StorageCorruptVolume, "Bad offset");
+					if (slot > high_slot) {
+						rev = header.head.revision + high_slot;
+						continue;
 					}
-					begin_rev = slot;
+					start_off = header.slot[slot];
+					begin_rev = header.head.revision + slot;
 				}
 			} else {
 				start_off = STORAGE_START_BLOCK_OFFSET;
@@ -410,10 +428,8 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/)
 				}
 			} catch (const StorageEOF& exc) { }
 
-			slot = high_slot;
+			rev = header.head.revision + high_slot;
 		}
-
-		open(WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 	}
 
 	return repr;
@@ -969,9 +985,20 @@ Database::reopen()
 		if (local && !(flags & DB_NOWAL)) {
 			// WAL required on a local writable database, open it.
 			wal = std::make_unique<DatabaseWAL>(e.path, this);
-			if (wal->open_current(true)) {
-				if (auto queue = weak_queue.lock()) {
-					queue->modified = true;
+			try {
+				if (wal->open_current(true)) {
+					if (auto queue = weak_queue.lock()) {
+						queue->modified = true;
+					}
+				}
+			} catch (const StorageCorruptVolume& exc) {
+				if (wal->create(checkout_revision)) {
+					L_WARNING(this, "Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()).c_str(), checkout_revision);
+					if (auto queue = weak_queue.lock()) {
+						queue->modified = true;
+					}
+				} else {
+					L_ERR(this, "Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()).c_str(), checkout_revision);
 				}
 			}
 		}

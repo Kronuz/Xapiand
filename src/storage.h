@@ -311,9 +311,10 @@ public:
 		XXH32_freeState(xxhash);
 	}
 
-	void open(const std::string& relative_path, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
+	bool open(const std::string& relative_path, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
 		L_CALL(this, "Storage::open(%s, %d, <args>)", repr(relative_path).c_str(), flags_);
 
+		bool created = false;
 		auto path_ = base_path + relative_path;
 
 		if (path != path_ || flags != flags_) {
@@ -332,6 +333,7 @@ public:
 			if unlikely(fd < 0) {
 				if (flags & STORAGE_CREATE) {
 					fd = io::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR | O_CREAT : O_RDONLY | O_CREAT, 0644);
+					created = true;
 				}
 				if unlikely(fd < 0) {
 					close();
@@ -347,11 +349,12 @@ public:
 				}
 
 				seek(STORAGE_START_BLOCK_OFFSET);
-				return;
+				return created;
 			}
 		}
 
 		reopen();
+		return created;
 	}
 
 	void reopen(void* args=nullptr) {

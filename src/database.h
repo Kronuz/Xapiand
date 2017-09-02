@@ -153,8 +153,8 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	MsgPack repr_line(const std::string& line);
 	uint32_t highest_valid_slot();
 
-	inline void open(const std::string& path, int flags, bool commit_eof=false) {
-		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, flags, reinterpret_cast<void*>(commit_eof));
+	inline bool open(const std::string& path, int flags, bool commit_eof=false) {
+		return Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, flags, reinterpret_cast<void*>(commit_eof));
 	}
 
 public:
@@ -177,6 +177,7 @@ public:
 	DatabaseWAL(const std::string& base_path_, Database* database_);
 	~DatabaseWAL();
 
+	bool create(uint32_t revision);
 	bool open_current(bool current);
 	MsgPack repr(uint32_t start_revision, uint32_t end_revision);
 
