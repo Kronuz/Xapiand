@@ -2140,7 +2140,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					}
 
 #ifdef XAPIAND_DATABASE_WAL
-					if (!writable && count == 1) {
+					if (!writable && count == 1 && !(flags & DB_NOWAL)) {
 						bool reopen = false;
 						for (const auto& endpoint : database->endpoints) {
 							if (endpoint.is_local()) {

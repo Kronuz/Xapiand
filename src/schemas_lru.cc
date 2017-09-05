@@ -270,7 +270,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::sha
 		if (!context->insert(hash).second) {
 			THROW(Error, "Cyclic schema reference detected: %s", endpoint.to_string().c_str());
 		}
-		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN, HTTP_GET, context);
+		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN | DB_NOWAL, HTTP_GET, context);
 		// FIXME: Process the subfield instead of sustract it.
 		auto doc = _db_handler.get_document(id.substr(0, id.rfind(DB_OFFSPRING_UNION)));
 		context->erase(hash);
