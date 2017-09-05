@@ -233,7 +233,7 @@ DatabaseWAL::open_current(bool commited)
 			while (true) {
 				std::string line = read(end_off);
 				if (!execute(line)) {
-					THROW(Error, "WAL revision mismatch!");
+					THROW(StorageCorruptVolume, "WAL revision mismatch!");
 				}
 			}
 		} catch (const StorageEOF& exc) { }
