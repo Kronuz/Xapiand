@@ -674,7 +674,11 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 
 	MSet mset;
 
-	schema = get_schema();
+	try {
+		schema = get_schema();
+	} catch (const DocNotFoundError& exc) {
+		return mset;
+	}
 
 	Xapian::Query query;
 	switch (method) {
