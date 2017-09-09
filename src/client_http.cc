@@ -1001,7 +1001,7 @@ HttpClient::home_view(enum http_method method, Command)
 	obj_data["_server"] = Package::STRING;
 	obj_data["_url"] = Package::BUGREPORT;
 	obj_data["_versions"] = {
-		{ "Xapiand", Package::HASH.empty() ? Package::VERSION : format_string("%s-%s", Package::VERSION.c_str(), Package::HASH.c_str()) },
+		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : format_string("%s_%s", Package::VERSION.c_str(), Package::REVISION.c_str()) },
 		{ "Xapian", format_string("%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #if defined(XAPIAND_V8)
 		{ "V8", format_string("%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION) },

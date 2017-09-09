@@ -28,6 +28,7 @@
 std::string Package::STRING = PACKAGE_STRING;
 std::string Package::NAME = PACKAGE_NAME;
 std::string Package::VERSION = PACKAGE_VERSION;
+std::string Package::REVISION = PACKAGE_REVISION;
 std::string Package::HASH = PACKAGE_HASH;
 std::string Package::URL = PACKAGE_URL;
 std::string Package::BUGREPORT = PACKAGE_BUGREPORT;

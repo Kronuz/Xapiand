@@ -13,6 +13,9 @@
 #define PACKAGE_VERSION "@PACKAGE_VERSION@"
 
 /* Define git revision if available */
+#cmakedefine PACKAGE_REVISION "@PACKAGE_REVISION@"
+
+/* Define git hash if available */
 #cmakedefine PACKAGE_HASH "@PACKAGE_HASH@"
 
 /* Define to the home page for this package. */
@@ -25,8 +28,8 @@
 #define PACKAGE_TARNAME "@PACKAGE_TARNAME@"
 
 /* Define to the full name and version of this package. */
-#ifdef PACKAGE_HASH
-#define PACKAGE_STRING PACKAGE_NAME " v" PACKAGE_VERSION "-" PACKAGE_HASH
+#ifdef PACKAGE_REVISION
+#define PACKAGE_STRING PACKAGE_NAME " v" PACKAGE_VERSION "-" PACKAGE_REVISION
 #else
 #define PACKAGE_STRING PACKAGE_NAME " v" PACKAGE_VERSION
 #endif
