@@ -20,7 +20,7 @@ X# $FreeBSD$
 X
 XPORTNAME=	xapiand
 XPORTVERSION=	1.0.0
-XDISTVERSION=	master
+X
 XCATEGORIES=	textproc devel
 X
 XMAINTAINER=	german.mb@deipi.com
@@ -36,11 +36,15 @@ XUSE_RC_SUBR=	xapiand
 X
 XUSES=		cmake compiler:c++14-lang pkgconfig
 XCMAKE_NINJA= 	yes
-XCMAKE_ARGS=	-DPACKAGE_HASH="${GH_TAGNAME}" -DCMAKE_INSTALL_MANDIR:PATH="${MAN8PREFIX}/man" -DV8=on
+XCMAKE_ARGS=	-DPACKAGE_HASH="${GH_TAGNAME}" -DPACKAGE_REVISION="${PORTREVISION}" -DCMAKE_INSTALL_MANDIR:PATH="${MAN8PREFIX}/man" -DV8=on
 X
 XUSE_GITHUB=	yes
 XGH_ACCOUNT=	Kronuz
 XGH_PROJECT=	Xapiand
+X
+XGH!=	/usr/bin/env python -c 'import urllib, json; commit=json.load(urllib.urlopen("https://api.github.com/repos/${GH_ACCOUNT}/${GH_PROJECT}/commits/master")); print(commit["sha"][:8] + ":" + commit["commit"]["author"]["date"].replace("-", "").replace(":", "").replace("T", "")[:14])'
+XGH_TAGNAME?=	${GH:C@^(.*):(.*)$@\1@}
+XPORTREVISION?=	${GH:C@^(.*):(.*)$@\2@}
 X
 XXAPIAND_USER?=	xapiand
 XXAPIAND_GROUP?=	${XAPIAND_USER}
