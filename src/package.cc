@@ -24,11 +24,19 @@
 #include "package_config.h"
 #include "xapiand.h"
 
+#ifndef PACKAGE_REVISION
+#define PACKAGE_REVISION ""
+#endif
+
+#ifndef PACKAGE_HASH
+#define PACKAGE_HASH ""
+#endif
 
 std::string Package::STRING = PACKAGE_STRING;
 std::string Package::NAME = PACKAGE_NAME;
 std::string Package::VERSION = PACKAGE_VERSION;
 std::string Package::REVISION = PACKAGE_REVISION;
+std::string Package::FULLVERSION = PACKAGE_FULLVERSION;
 std::string Package::HASH = PACKAGE_HASH;
 std::string Package::URL = PACKAGE_URL;
 std::string Package::BUGREPORT = PACKAGE_BUGREPORT;

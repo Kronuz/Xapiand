@@ -31,6 +31,7 @@ struct Package {
 	static std::string NAME;
 	static std::string VERSION;
 	static std::string REVISION;
+	static std::string FULLVERSION;
 	static std::string HASH;
 	static std::string URL;
 	static std::string BUGREPORT;
