@@ -287,8 +287,8 @@ std::vector<std::string> ev_supported() {
  * user defined output.
  */
 class CmdOutput : public StdOutput {
-	inline void spacePrint(std::ostream& os, const std::string& s, int maxWidth,
-				int indentSpaces, int secondLineOffset, bool endl=true) const {
+	void spacePrint(std::ostream& os, const std::string& s, int maxWidth,
+			int indentSpaces, int secondLineOffset, bool endl=true) const {
 		int len = static_cast<int>(s.length());
 
 		if ((len + indentSpaces > maxWidth) && maxWidth > 0) {
@@ -361,7 +361,7 @@ class CmdOutput : public StdOutput {
 		}
 	}
 
-	inline void _shortUsage(CmdLineInterface& _cmd, std::ostream& os) const {
+	void _shortUsage(CmdLineInterface& _cmd, std::ostream& os) const {
 		std::list<Arg*> argList = _cmd.getArgList();
 		std::string progName = _cmd.getProgramName();
 		XorHandler xorHandler = _cmd.getXorHandler();
@@ -395,7 +395,7 @@ class CmdOutput : public StdOutput {
 		spacePrint(os, s, LINE_LENGTH, 3, secondLineOffset);
 	}
 
-	inline void _longUsage(CmdLineInterface& _cmd, std::ostream& os) const {
+	void _longUsage(CmdLineInterface& _cmd, std::ostream& os) const {
 		std::list<Arg*> argList = _cmd.getArgList();
 		std::string message = _cmd.getMessage();
 		XorHandler xorHandler = _cmd.getXorHandler();
@@ -454,7 +454,7 @@ class CmdOutput : public StdOutput {
 	}
 
 public:
-	virtual void failure(CmdLineInterface& _cmd, ArgException& exc) {
+	void failure(CmdLineInterface& _cmd, ArgException& exc) override {
 		std::string progName = _cmd.getProgramName();
 
 		std::cerr << "Error: " << exc.argId() << std::endl;
@@ -479,7 +479,7 @@ public:
 		throw ExitException(EX_USAGE);
 	}
 
-	virtual void usage(CmdLineInterface& _cmd) {
+	void usage(CmdLineInterface& _cmd) override {
 		spacePrint(std::cout, Package::STRING, LINE_LENGTH, 0, 0);
 		spacePrint(std::cout, "[" + Package::BUGREPORT + "]", LINE_LENGTH, 0, 0);
 
@@ -494,7 +494,7 @@ public:
 		_longUsage(_cmd, std::cout);
 	}
 
-	virtual void version(CmdLineInterface& _cmd) {
+	void version(CmdLineInterface& _cmd) override {
 		std::string xversion = _cmd.getVersion();
 		std::cout << xversion << std::endl;
 	}
