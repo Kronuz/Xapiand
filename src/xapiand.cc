@@ -53,6 +53,7 @@
 #include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
 #endif
 
+#include "cmdoutput.h"               // for CmdOutput
 #include "endpoint.h"                // for Endpoint, Endpoint::cwd
 #include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"               // for Exit
@@ -60,9 +61,7 @@
 #include "io_utils.h"                // for close, open, write
 #include "log.h"                     // for Logging, L_INFO, L_CRIT, L_NOTICE
 #include "manager.h"                 // for opts_t, XapiandManager, XapiandM...
-#include "package.h"                 // for Package
 #include "schema.h"                  // for default_spc
-#include "tclap/CmdLine.h"           // for CmdLine, ArgException, Arg, CmdL...
 #include "utils.h"                   // for format_string, center_string
 #include "worker.h"                  // for Worker
 #include "xxh64.hpp"                 // for xxh64
@@ -70,14 +69,9 @@
 #include <sys/sysctl.h>              // for sysctl, sysctlnametomib...
 
 
-#define LINE_LENGTH 78
-
 #define FDS_RESERVED     50          // Is there a better approach?
 #define FDS_PER_CLIENT    2          // KQUEUE + IPv4
 #define FDS_PER_DATABASE  7          // Writable~=7, Readable~=5
-
-
-using namespace TCLAP;
 
 
 template<typename T, std::size_t N>
@@ -282,227 +276,10 @@ std::vector<std::string> ev_supported() {
 }
 
 
-/*
- * This exemplifies how the output class can be overridden to provide
- * user defined output.
- */
-class CmdOutput : public StdOutput {
-	void spacePrint(std::ostream& os, const std::string& s, int maxWidth,
-			int indentSpaces, int secondLineOffset, bool endl=true) const {
-		int len = static_cast<int>(s.length());
-
-		if ((len + indentSpaces > maxWidth) && maxWidth > 0) {
-			int allowedLen = maxWidth - indentSpaces;
-			int start = 0;
-			while (start < len) {
-				// find the substring length
-				// int stringLen = std::min<int>( len - start, allowedLen );
-				// doing it this way to support a VisualC++ 2005 bug
-				using namespace std;
-				int stringLen = min<int>(len - start, allowedLen);
-
-				// trim the length so it doesn't end in middle of a word
-				if (stringLen == allowedLen) {
-					while (stringLen >= 0 &&
-						s[stringLen+start] != ' ' &&
-						s[stringLen+start] != ',' &&
-						s[stringLen+start] != '|') {
-						--stringLen;
-					}
-				}
-
-				// ok, the word is longer than the line, so just split
-				// wherever the line ends
-				if (stringLen <= 0) {
-					stringLen = allowedLen;
-				}
-
-				// check for newlines
-				for (int i = 0; i < stringLen; ++i) {
-					if (s[start+i] == '\n') {
-						stringLen = i + 1;
-					}
-				}
-
-				if (start != 0) {
-					os << std::endl;
-				}
-
-				// print the indent
-				for (int i = 0; i < indentSpaces; ++i) {
-					os << " ";
-				}
-
-				if (start == 0) {
-					// handle second line offsets
-					indentSpaces += secondLineOffset;
-
-					// adjust allowed len
-					allowedLen -= secondLineOffset;
-				}
-
-				os << s.substr(start,stringLen);
-
-				// so we don't start a line with a space
-				while (s[stringLen+start] == ' ' && start < len) {
-					++start;
-				}
-
-				start += stringLen;
-			}
-		} else {
-			for (int i = 0; i < indentSpaces; ++i) {
-				os << " ";
-			}
-			os << s;
-			if (endl) {
-				os << std::endl;
-			}
-		}
-	}
-
-	void _shortUsage(CmdLineInterface& _cmd, std::ostream& os) const {
-		std::list<Arg*> argList = _cmd.getArgList();
-		std::string progName = _cmd.getProgramName();
-		XorHandler xorHandler = _cmd.getXorHandler();
-		std::vector<std::vector<Arg*>> xorList = xorHandler.getXorList();
-
-		std::string s = progName + " ";
-
-		// first the xor
-		for (size_t i = 0; i < xorList.size(); ++i) {
-			s += " {";
-			for (auto it = xorList[i].begin(); it != xorList[i].end(); ++it) {
-				s += (*it)->shortID() + "|";
-			}
-
-			s[s.length() - 1] = '}';
-		}
-
-		// then the rest
-		for (auto it = argList.begin(); it != argList.end(); ++it) {
-			if (!xorHandler.contains((*it))) {
-				s += " " + (*it)->shortID();
-			}
-		}
-
-		// if the program name is too long, then adjust the second line offset
-		int secondLineOffset = static_cast<int>(progName.length()) + 2;
-		if (secondLineOffset > LINE_LENGTH / 2) {
-			secondLineOffset = static_cast<int>(LINE_LENGTH / 2);
-		}
-
-		spacePrint(os, s, LINE_LENGTH, 3, secondLineOffset);
-	}
-
-	void _longUsage(CmdLineInterface& _cmd, std::ostream& os) const {
-		std::list<Arg*> argList = _cmd.getArgList();
-		std::string message = _cmd.getMessage();
-		XorHandler xorHandler = _cmd.getXorHandler();
-		std::vector< std::vector<Arg*> > xorList = xorHandler.getXorList();
-
-		size_t max = 0;
-
-		for (size_t i = 0; i < xorList.size(); ++i) {
-			for (auto it = xorList[i].begin(); it != xorList[i].end(); ++it) {
-				const std::string& id = (*it)->longID();
-				if (id.size() > max) {
-					max = id.size();
-				}
-			}
-		}
-
-		// first the xor
-		for (size_t i = 0; i < xorList.size(); ++i) {
-			for (auto it = xorList[i].begin(); it != xorList[i].end(); ++it) {
-				const std::string& id = (*it)->longID();
-				spacePrint(os, id, (int)max + 3, 3, 3, false);
-				spacePrint(os, (*it)->getDescription(), LINE_LENGTH - ((int)max - 10), static_cast<int>((2 + max) - id.size()), static_cast<int>(3 + id.size()), false);
-
-				if (it + 1 != xorList[i].end()) {
-					spacePrint(os, "-- OR --", LINE_LENGTH, 9, 0);
-				}
-			}
-			os << std::endl << std::endl;
-		}
-
-		// then the rest
-		for (auto it = argList.begin(); it != argList.end(); ++it) {
-			if (!xorHandler.contains((*it))) {
-				const std::string& id = (*it)->longID();
-				if (id.size() > max) {
-					max = id.size();
-				}
-			}
-		}
-
-		// then the rest
-		for (auto it = argList.begin(); it != argList.end(); ++it) {
-			if (!xorHandler.contains((*it))) {
-				const std::string& id = (*it)->longID();
-				spacePrint(os, id, (int)max + 3, 3, 3, false);
-				spacePrint(os, (*it)->getDescription(), LINE_LENGTH - ((int)max - 10), static_cast<int>((2 + max) - id.size()), static_cast<int>(3 + id.size()), false);
-				os << std::endl;
-			}
-		}
-
-		os << std::endl;
-
-		if (!message.empty()) {
-			spacePrint( os, message, LINE_LENGTH, 3, 0 );
-		}
-	}
-
-public:
-	void failure(CmdLineInterface& _cmd, ArgException& exc) override {
-		std::string progName = _cmd.getProgramName();
-
-		std::cerr << "Error: " << exc.argId() << std::endl;
-
-		spacePrint(std::cerr, exc.error(), LINE_LENGTH, 3, 0);
-
-		std::cerr << std::endl;
-
-		if (_cmd.hasHelpAndVersion()) {
-			std::cerr << "Usage: " << std::endl;
-
-			_shortUsage( _cmd, std::cerr );
-
-			std::cerr << std::endl << "For complete usage and help type: "
-					  << std::endl << "   " << progName << " "
-					  << Arg::nameStartString() << "help"
-					  << std::endl << std::endl;
-		} else {
-			usage(_cmd);
-		}
-
-		throw ExitException(EX_USAGE);
-	}
-
-	void usage(CmdLineInterface& _cmd) override {
-		spacePrint(std::cout, Package::STRING, LINE_LENGTH, 0, 0);
-		spacePrint(std::cout, "[" + Package::BUGREPORT + "]", LINE_LENGTH, 0, 0);
-
-		std::cout << std::endl;
-
-		std::cout << "Usage: " << std::endl;
-
-		_shortUsage(_cmd, std::cout);
-
-		std::cout << std::endl << "Where: " << std::endl;
-
-		_longUsage(_cmd, std::cout);
-	}
-
-	void version(CmdLineInterface& _cmd) override {
-		std::string xversion = _cmd.getVersion();
-		std::cout << xversion << std::endl;
-	}
-};
-
-
 void parseOptions(int argc, char** argv, opts_t &opts) {
 	const unsigned int nthreads = std::thread::hardware_concurrency() * SERVERS_MULTIPLIER;
+
+	using namespace TCLAP;
 
 	try {
 		CmdLine cmd("", ' ', Package::STRING);
