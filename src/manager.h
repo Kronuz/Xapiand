@@ -38,6 +38,7 @@
 #include "stats.h"
 #include "threadpool.h"
 #include "worker.h"
+#include "serialise.h"
 
 
 #define UNKNOWN_REGION -1
@@ -74,6 +75,8 @@ struct opts_t {
 	ssize_t max_databases;
 	ssize_t max_files;
 	unsigned int ev_flags;
+	bool uuid_compact;
+	UUIDRepr uuid_repr;
 };
 
 
@@ -186,6 +189,9 @@ public:
 	std::string cluster_name;
 	std::string node_name;
 	bool solo;
+
+	bool uuid_compact;
+	UUIDRepr uuid_repr;
 
 	std::atomic_int atom_sig;
 	ev::async signal_sig_async;

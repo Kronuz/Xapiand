@@ -1076,8 +1076,8 @@ HttpClient::index_document_view(enum http_method method, Command)
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
 	if (method == HTTP_POST) {
-		auto g = generator.newGuid();
-		doc_id = g.to_string();
+		auto uuid = generator.newGuid(XapiandManager::manager->uuid_compact);
+		doc_id = Unserialise::uuid(uuid.serialise(), XapiandManager::manager->uuid_repr);
 	} else {
 		doc_id = path_parser.get_id();
 	}

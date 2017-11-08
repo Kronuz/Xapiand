@@ -138,6 +138,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 #else
 	  solo(true),
 #endif
+	  uuid_compact(o.uuid_compact),
+	  uuid_repr(o.uuid_repr),
 	  atom_sig(0),
 	  signal_sig_async(*ev_loop)
 {
