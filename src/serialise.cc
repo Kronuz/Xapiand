@@ -1106,11 +1106,19 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 			result.push_back('}');
 			break;
 		}
+		case UUIDRepr::urn: {
+			std::vector<Guid> uuids;
+			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
+			result.append("urn:uuid:");
+			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
+			break;
+		}
 		case UUIDRepr::base64: {
 			result.push_back('~');
 			result.append(base64::encode(serialised_uuid));
 			break;
 		}
+
 	}
 	return result;
 }

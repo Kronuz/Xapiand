@@ -303,7 +303,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 
 		SwitchArg uuid_compact("", "uuid-compact", "Generate compact UUIDs.", cmd, false);
-		std::vector<std::string> uuid_repr_allowed({ "simple", "curly", "base64" });
+		std::vector<std::string> uuid_repr_allowed({ "simple", "curly", "base64", "urn" });
 		ValuesConstraint<std::string> uuid_repr_constraint(uuid_repr_allowed);
 		ValueArg<std::string> uuid_repr("", "uuid", "UUID normalizer.", false, "auto", &uuid_repr_constraint, cmd);
 
@@ -439,7 +439,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.ev_flags = ev_backend(use.getValue());
 		opts.uuid_compact = uuid_compact.getValue();
 		auto uuid_repr_str = uuid_repr.getValue();
-		opts.uuid_repr = uuid_repr_str == "curly" ? UUIDRepr::curly : uuid_repr_str == "base64" ? UUIDRepr::base64 : UUIDRepr::simple;
+		opts.uuid_repr = uuid_repr_str == "curly" ? UUIDRepr::curly : uuid_repr_str == "base64" ? UUIDRepr::base64 : uuid_repr_str == "urn" ? UUIDRepr::urn : UUIDRepr::simple;
 	} catch (const ArgException& exc) { // catch any exceptions
 		std::cerr << "error: " << exc.error() << " for arg " << exc.argId() << std::endl;
 	}

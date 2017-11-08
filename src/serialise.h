@@ -130,6 +130,7 @@ enum class UUIDRepr : uint8_t {
 	simple,
 	curly,
 	base64,
+	urn,
 };
 
 class CartesianList;
