@@ -80,7 +80,12 @@ ssize_t write(int fildes, T (&buf)[N]) {
 }
 
 ssize_t write(int fildes, const std::string& buf) {
-	return write(fildes, buf.data(), buf.size());
+	if ((isatty(fildes) || Logging::colors) && !Logging::no_colors) {
+		return write(fildes, buf.data(), buf.size());
+	} else {
+		auto buf2 = Logging::decolorize(buf);
+		return write(fildes, buf2.data(), buf2.size());
+	}
 }
 
 
@@ -171,7 +176,7 @@ void sig_info(int) {
 
 void sig_handler(int sig) {
 	const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
-	write(STDERR_FILENO, msg.data(), msg.size());
+	write(STDERR_FILENO, msg);
 
 #if !defined(NDEBUG) && (defined(__APPLE__) || defined(__FreeBSD__))
 	if (sig == SIGINFO) {
@@ -335,6 +340,9 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "", "file", cmd);
 		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "", "file", cmd);
 
+		SwitchArg no_colors("", "no-colors", "Disables colors on the console.", cmd, false);
+		SwitchArg colors("", "colors", "Enables colors on the console.", cmd, false);
+
 		SwitchArg detach("d", "detach", "detach process. (run in background)", cmd);
 #ifdef XAPIAND_CLUSTERING
 		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
@@ -393,6 +401,9 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 		opts.strict = strict_arg.getValue();
 		opts.optimal = optimal_arg.getValue();
+
+		opts.colors = colors.getValue();
+		opts.no_colors = no_colors.getValue();
 
 		opts.database = database.getValue();
 		opts.cluster_name = cluster_name.getValue();
@@ -876,6 +887,8 @@ int main(int argc, char **argv) {
 	}
 
 	Logging::log_level += opts.verbosity;
+	Logging::colors = opts.colors;
+	Logging::no_colors = opts.no_colors;
 
 	try {
 		banner();

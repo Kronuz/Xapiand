@@ -110,6 +110,9 @@ class Logging : public ScheduledTask {
 	Logging& operator=(const Logging&) = delete;
 
 public:
+	static bool colors;
+	static bool no_colors;
+
 	static int log_level;
 	static std::vector<std::unique_ptr<Logger>> handlers;
 
@@ -117,6 +120,8 @@ public:
 	~Logging();
 
 	static std::string _str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr, bool info);
+
+	static std::string decolorize(const std::string& str);
 
 	static void finish(int wait=10);
 	static void join();

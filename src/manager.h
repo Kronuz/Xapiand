@@ -51,6 +51,8 @@ struct opts_t {
 	bool solo;
 	bool strict;
 	bool optimal;
+	bool colors;
+	bool no_colors;
 	std::string database;
 	std::string cluster_name;
 	std::string node_name;
