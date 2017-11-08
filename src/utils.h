@@ -144,6 +144,18 @@ inline std::string repr(T (&s)[N], bool friendly=true, bool quote=true, size_t m
 }
 
 
+std::string escape(const void* p, size_t size, bool quote=true);
+
+inline std::string escape(const std::string& string, bool quote=true) {
+	return escape(string.c_str(), string.length(), quote);
+}
+
+template<typename T, std::size_t N>
+inline std::string escape(T (&s)[N], bool quote=true) {
+	return escape(s, N - 1, quote);
+}
+
+
 inline bool ignored_errorno(int e, bool tcp, bool udp) {
 	switch(e) {
 		case EAGAIN:

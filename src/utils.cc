@@ -248,13 +248,13 @@ std::string repr(const void* p, size_t size, bool friendly, bool quote, size_t m
 					*d++ = '\\';
 					*d++ = 'r';
 					break;
-				case '\'':
-					*d++ = '\\';
-					*d++ = '\'';
-					break;
 				case '\\':
 					*d++ = '\\';
 					*d++ = '\\';
+					break;
+				case '\'':
+					*d++ = '\\';
+					*d++ = '\'';
 					break;
 				default:
 					if (c >= ' ' && c <= '~') {
@@ -274,6 +274,62 @@ std::string repr(const void* p, size_t size, bool friendly, bool quote, size_t m
 			d += 2;
 		}
 		//printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 1));
+	}
+	if (quote) *d++ = '\'';
+	*d = '\0';
+	std::string ret(buff);
+	delete [] buff;
+	return ret;
+}
+
+std::string escape(const void* p, size_t size, bool quote) {
+	const char* q = (const char *)p;
+	char *buff = new char[size * 2 + 1];
+	char *d = buff;
+	if (quote) *d++ = '\'';
+	const char *p_end = q + size;
+	while (q != p_end) {
+		char c = *q++;
+			switch (c) {
+				case '\b':
+					*d++ = '\\';
+					*d++ = 'b';
+					break;
+				case '\t':
+					*d++ = '\\';
+					*d++ = 't';
+					break;
+				case '\n':
+					*d++ = '\\';
+					*d++ = 'n';
+					break;
+				case '\f':
+					*d++ = '\\';
+					*d++ = 'f';
+					break;
+				case '\r':
+					*d++ = '\\';
+					*d++ = 'r';
+					break;
+				case '\\':
+					*d++ = '\\';
+					*d++ = '\\';
+					break;
+				case '\'':
+					*d++ = '\\';
+					*d++ = '\'';
+					break;
+				default:
+					if (c >= ' ' && c <= '~') {
+						*d++ = c;
+					} else {
+						*d++ = '\\';
+						*d++ = 'x';
+						sprintf(d, "%02x", (unsigned char)c);
+						d += 2;
+					}
+					break;
+			}
 	}
 	if (quote) *d++ = '\'';
 	*d = '\0';
