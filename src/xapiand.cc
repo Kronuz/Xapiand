@@ -290,12 +290,6 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		CmdOutput output;
 		cmd.setOutput(&output);
 
-		SwitchArg uuid_compact("", "uuid-compact", "Generate compact UUID", cmd, false);
-		std::vector<std::string> uuid_repr_allowed({ "simple", "curly", "base64" });
-		ValuesConstraint<std::string> uuid_repr_constraint(uuid_repr_allowed);
-		ValueArg<std::string> uuid_repr("", "uuid", "UUID normalizer.", false, "auto", &uuid_repr_constraint, cmd);
-
-		SwitchArg detach("d", "detach", "detach process. (run in background)", cmd);
 		MultiSwitchArg verbose("v", "verbose", "Increase verbosity.", cmd);
 		ValueArg<unsigned int> verbosity("", "verbosity", "Set verbosity.", false, 0, "verbosity", cmd);
 
@@ -303,41 +297,49 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		SwitchArg chert("", "chert", "Prefer Chert databases.", cmd, false);
 #endif
 
-		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
-		SwitchArg strict_arg("", "strict", "Force the user to define the type for each field", cmd, false);
-		SwitchArg optimal_arg("", "optimal", "Force the configuration for indexing documents to optimal", cmd, false);
-
-		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
-		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
-		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
-
-		ValueArg<unsigned int> http_port("", "port", "TCP HTTP port number to listen on for REST API.", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
-		ValueArg<unsigned int> binary_port("", "xapian", "Xapian binary protocol TCP port number to listen on.", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
-
-		ValueArg<unsigned int> discovery_port("", "discovery-port", "Discovery UDP port number to listen on.", false, XAPIAND_DISCOVERY_SERVERPORT, "port", cmd);
-		ValueArg<std::string> discovery_group("", "discovery-group", "Discovery UDP group name.", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
+		SwitchArg uuid_compact("", "uuid-compact", "Generate compact UUIDs.", cmd, false);
+		std::vector<std::string> uuid_repr_allowed({ "simple", "curly", "base64" });
+		ValuesConstraint<std::string> uuid_repr_constraint(uuid_repr_allowed);
+		ValueArg<std::string> uuid_repr("", "uuid", "UUID normalizer.", false, "auto", &uuid_repr_constraint, cmd);
 
 		ValueArg<unsigned int> raft_port("", "raft-port", "Raft UDP port number to listen on.", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
 		ValueArg<std::string> raft_group("", "raft-group", "Raft UDP group name.", false, XAPIAND_RAFT_GROUP, "group", cmd);
 
-		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "", "file", cmd);
-		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "", "file", cmd);
-		ValueArg<std::string> uid("", "uid", "User ID.", false, "", "uid", cmd);
-		ValueArg<std::string> gid("", "gid", "Group ID.", false, "", "gid", cmd);
+		ValueArg<unsigned int> discovery_port("", "discovery-port", "Discovery UDP port number to listen on.", false, XAPIAND_DISCOVERY_SERVERPORT, "port", cmd);
+		ValueArg<std::string> discovery_group("", "discovery-group", "Discovery UDP group name.", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
+		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
+		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
+
+		ValueArg<size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
+
+		ValueArg<size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
+		ValueArg<size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
+		ValueArg<size_t> dbpool_size("", "dbpool-size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
+
+		ValueArg<size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
+		ValueArg<size_t> max_files("", "max-files", "Max number of files to open.", false, 0, "files", cmd);
+
+		ValueArg<size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
+		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
 
 		auto use_allowed = ev_supported();
 		ValuesConstraint<std::string> use_constraint(use_allowed);
 		ValueArg<std::string> use("", "use", "Connection processing backend.", false, "auto", &use_constraint, cmd);
 
-		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
-		ValueArg<size_t> dbpool_size("", "dbpool-size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
-		ValueArg<size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
-		ValueArg<size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
-		ValueArg<size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
+		ValueArg<unsigned int> binary_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
+		ValueArg<unsigned int> http_port("", "port", "TCP HTTP port number to listen on for REST API.", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
 
-		ValueArg<size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
-		ValueArg<size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
-		ValueArg<size_t> max_files("", "max-files", "Max number of files to open.", false, 0, "files", cmd);
+		ValueArg<std::string> gid("", "gid", "Group ID.", false, "", "gid", cmd);
+		ValueArg<std::string> uid("", "uid", "User ID.", false, "", "uid", cmd);
+
+		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "", "file", cmd);
+		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "", "file", cmd);
+
+		SwitchArg detach("d", "detach", "detach process. (run in background)", cmd);
+		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
+		SwitchArg strict_arg("", "strict", "Force the user to define the type for each field.", cmd, false);
+		SwitchArg optimal_arg("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
+		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 
 		std::vector<std::string> args;
 		for (int i = 0; i < argc; ++i) {
