@@ -96,6 +96,28 @@ std::string get_prefix(const std::string& field_name)
 }
 
 
+std::string normalize_uuid(const std::string& uuid)
+{
+	auto front = uuid.front();
+	auto back = uuid.back();
+	if (front == '~' && back == '~') {
+		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base64);
+	} else if (front == '{' && back == '}') {
+		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::curly);
+	}
+	return uuid;
+}
+
+
+MsgPack normalize_uuid(const MsgPack& uuid)
+{
+	if (uuid.is_string()) {
+		return normalize_uuid(uuid.str());
+	}
+	return uuid;
+}
+
+
 long long read_mastery(const std::string& dir, bool force)
 {
 	L_DATABASE(nullptr, "+ READING MASTERY OF INDEX '%s'...", dir.c_str());

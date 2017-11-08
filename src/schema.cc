@@ -2284,16 +2284,30 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	if (specification.flags.store && add_value) {
 		// Add value to data.
 		auto& data_value = data[RESERVED_VALUE];
-		switch (data_value.getType()) {
-			case MsgPack::Type::UNDEFINED:
-				data_value = value;
-				break;
-			case MsgPack::Type::ARRAY:
-				data_value.push_back(value);
-				break;
-			default:
-				data_value = MsgPack({ data_value, value });
-				break;
+		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::UUID) {
+			switch (data_value.getType()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = normalize_uuid(value);
+					break;
+				case MsgPack::Type::ARRAY:
+					data_value.push_back(normalize_uuid(value));
+					break;
+				default:
+					data_value = MsgPack({ data_value, normalize_uuid(value) });
+					break;
+			}
+		} else {
+			switch (data_value.getType()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = value;
+					break;
+				case MsgPack::Type::ARRAY:
+					data_value.push_back(value);
+					break;
+				default:
+					data_value = MsgPack({ data_value, value });
+					break;
+			}
 		}
 	}
 }
@@ -2312,21 +2326,40 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 		if (specification.flags.store && add_values) {
 			// Add value to data.
 			auto& data_value = data[RESERVED_VALUE];
-			switch (data_value.getType()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = values;
-					break;
-				case MsgPack::Type::ARRAY:
-					for (const auto& value : values) {
-						data_value.push_back(value);
-					}
-					break;
-				default:
-					data_value = MsgPack({ data_value });
-					for (const auto& value : values) {
-						data_value.push_back(value);
-					}
-					break;
+			if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::UUID) {
+				switch (data_value.getType()) {
+					case MsgPack::Type::UNDEFINED:
+						data_value = MsgPack(MsgPack::Type::ARRAY);
+						break;
+					case MsgPack::Type::ARRAY:
+						for (const auto& value : values) {
+							data_value.push_back(normalize_uuid(value));
+						}
+						break;
+					default:
+						data_value = MsgPack({ data_value });
+						for (const auto& value : values) {
+							data_value.push_back(normalize_uuid(value));
+						}
+						break;
+				}
+			} else {
+				switch (data_value.getType()) {
+					case MsgPack::Type::UNDEFINED:
+						data_value = values;
+						break;
+					case MsgPack::Type::ARRAY:
+						for (const auto& value : values) {
+							data_value.push_back(value);
+						}
+						break;
+					default:
+						data_value = MsgPack({ data_value });
+						for (const auto& value : values) {
+							data_value.push_back(value);
+						}
+						break;
+				}
 			}
 		}
 	} else {
@@ -3471,12 +3504,13 @@ Schema::detect_dynamic(const std::string& field_name)
 		specification.meta_name.assign(UUID_FIELD_NAME);
 		specification.flags.uuid_field = true;
 		specification.flags.uuid_path = true;
+		return normalize_uuid(field_name);
 	} else {
 		specification.local_prefix.field.assign(get_prefix(field_name));
 		specification.meta_name.assign(field_name);
 		specification.flags.uuid_field = false;
+		return field_name;
 	}
-	return field_name;
 }
 
 

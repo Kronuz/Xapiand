@@ -87,7 +87,12 @@ Serialise::isUUID(const std::string& field_value) noexcept
 	if (field_value.length() > 2) {
 		bool allow_b64 = false;
 		Split<char> split(std::string(), UUID_SEPARATOR_LIST);
-		if (field_value.front() == '{' && field_value.back() == '}') {
+		auto front = field_value.front();
+		auto back = field_value.back();
+		if (front == '~') {
+			allow_b64 = true;
+			split = Split<char>(field_value.substr(1, field_value.length() - 1), UUID_SEPARATOR_LIST);
+		} else if (front == '{' && back == '}') {
 			allow_b64 = true;
 			split = Split<char>(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST);
 		} else if (field_value.compare(0, 9, "urn:uuid:") == 0) {
@@ -574,7 +579,12 @@ Serialise::uuid(const std::string& field_value)
 	if (field_value.length() > 2) {
 		bool allow_b64 = false;
 		std::vector<std::string> result;
-		if (field_value.front() == '{' && field_value.back() == '}') {
+		auto front = field_value.front();
+		auto back = field_value.back();
+		if (front == '~') {
+			allow_b64 = true;
+			Split<>::split(field_value.substr(1, field_value.length() - 1), UUID_SEPARATOR_LIST, std::back_inserter(result));
+		} else if (front == '{' && back == '}') {
 			allow_b64 = true;
 			Split<>::split(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST, std::back_inserter(result));
 		} else if (field_value.compare(0, 9, "urn:uuid:") == 0) {
@@ -1078,16 +1088,29 @@ Unserialise::timedelta_d(const std::string& serialised_time)
 
 
 std::string
-Unserialise::uuid(const std::string& serialised_uuid)
+Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 {
-	std::vector<Guid> uuids;
-	Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
 	std::string result;
-	for (auto& uuid : uuids) {
-		if (!result.empty()) {
-			result.push_back(UUID_SEPARATOR_LIST);
+	switch (repr) {
+		case UUIDRepr::simple: {
+			std::vector<Guid> uuids;
+			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
+			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
+			break;
 		}
-		result.append(uuid.to_string());
+		case UUIDRepr::curly: {
+			std::vector<Guid> uuids;
+			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
+			result.push_back('{');
+			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
+			result.push_back('}');
+			break;
+		}
+		case UUIDRepr::base64: {
+			result.push_back('~');
+			result.append(base64::encode(serialised_uuid));
+			break;
+		}
 	}
 	return result;
 }

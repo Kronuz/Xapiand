@@ -126,6 +126,11 @@ constexpr uint8_t SERIALISED_LENGTH_RANGE     = 2 * HTM_BYTES_ID;
 constexpr uint32_t DOUBLE2INT = 1000000000;
 constexpr uint32_t MAXDOU2INT = 2000000000;
 
+enum class UUIDRepr : uint8_t {
+	simple,
+	curly,
+	base64,
+};
 
 class CartesianList;
 class RangeList;
@@ -341,7 +346,7 @@ namespace Unserialise {
 	CartesianList centroids(const std::string& serialised_geo);
 
 	// Unserialise a serialised UUID.
-	std::string uuid(const std::string& serialised_uuid);
+	std::string uuid(const std::string& serialised_uuid, UUIDRepr repr=UUIDRepr::base64);
 
 	// Unserialise a serialised cartesian coordinate.
 	Cartesian cartesian(const std::string& serialised_cartesian);

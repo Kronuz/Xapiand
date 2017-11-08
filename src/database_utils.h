@@ -290,6 +290,8 @@ std::string prefixed(const std::string& term, const std::string& field_prefix, c
 Xapian::valueno get_slot(const std::string& field_prefix, char field_type);
 std::string get_prefix(unsigned long long field_number);
 std::string get_prefix(const std::string& field_name);
+std::string normalize_uuid(const std::string& uuid);
+MsgPack normalize_uuid(const MsgPack& uuid);
 long long read_mastery(const std::string& dir, bool force);
 void json_load(rapidjson::Document& doc, const std::string& str);
 rapidjson::Document to_json(const std::string& str);
