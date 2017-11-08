@@ -207,7 +207,6 @@ inline std::string format_string(const std::string& fmt, Args&&... args) {
 template<typename T>
 inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, const std::string& last_delimiter)
 {
-	std::string result;
 	auto it = values.begin();
 	auto it_e = values.end();
 
@@ -216,14 +215,18 @@ inline std::string join_string(const std::vector<T>& values, const std::string& 
 	if (rit != rit_e) ++rit;
 	auto it_l = rit != rit_e ? rit.base() : it_e;
 
+	std::string result;
+
 	if (it != it_e) {
-		result += std::to_string(*it++);
+		result.append(std::to_string(*it++));
 	}
 	for (; it != it_l; ++it) {
-		result += delimiter + std::to_string(*it);
+		result.append(delimiter);
+		result.append(std::to_string(*it));
 	}
 	if (it != it_e) {
-		result += last_delimiter + std::to_string(*it);
+		result.append(last_delimiter);
+		result.append(std::to_string(*it));
 	}
 
 	return result;
