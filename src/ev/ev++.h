@@ -40,6 +40,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wc++1z-compat-mangling"
 
 #ifndef EVPP_H__
 #define EVPP_H__
