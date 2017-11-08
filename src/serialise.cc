@@ -1098,7 +1098,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
 		}
-		case UUIDRepr::curly: {
+		case UUIDRepr::guid: {
 			std::vector<Guid> uuids;
 			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.push_back('{');
