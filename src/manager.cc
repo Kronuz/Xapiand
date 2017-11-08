@@ -131,15 +131,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  state(State::RESET),
-	  cluster_name(o.cluster_name),
+	  opts(o),
 	  node_name(o.node_name),
-#ifdef XAPIAND_CLUSTERING
-	  solo(o.solo),
-#else
-	  solo(true),
-#endif
-	  uuid_compact(o.uuid_compact),
-	  uuid_repr(o.uuid_repr),
 	  atom_sig(0),
 	  signal_sig_async(*ev_loop)
 {
@@ -157,7 +150,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 			node_name = node_name_;
 		}
 	}
-	if (solo) {
+	if (opts.solo) {
 		if (node_name.empty()) {
 			node_name = name_generator();
 		}
@@ -378,7 +371,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			Endpoint remote_endpoint(".", node.get());
 			// Replicate database from the other node
 	#ifdef XAPIAND_CLUSTERING
-			if (!solo) {
+			if (!opts.solo) {
 				L_INFO(this, "Syncing cluster data from %s...", node->name.c_str());
 
 				auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
@@ -406,25 +399,25 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 #endif
 
-	if (solo) {
+	if (opts.solo) {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE(this, "Using solo cluster: %s.", cluster_name.c_str());
+				L_NOTICE(this, "Using solo cluster: %s.", opts.cluster_name.c_str());
 				break;
 			case 1:
-				L_NOTICE(this, "Using new solo cluster: %s.", cluster_name.c_str());
+				L_NOTICE(this, "Using new solo cluster: %s.", opts.cluster_name.c_str());
 				break;
 		}
 	} else {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE(this, "Joined cluster: %s. It is now online!", cluster_name.c_str());
+				L_NOTICE(this, "Joined cluster: %s. It is now online!", opts.cluster_name.c_str());
 				break;
 			case 1:
-				L_NOTICE(this, "Joined new cluster: %s. It is now online!", cluster_name.c_str());
+				L_NOTICE(this, "Joined new cluster: %s. It is now online!", opts.cluster_name.c_str());
 				break;
 			case 2:
-				L_NOTICE(this, "Joined cluster: %s. It was already online!", cluster_name.c_str());
+				L_NOTICE(this, "Joined cluster: %s. It was already online!", opts.cluster_name.c_str());
 				break;
 		}
 	}
@@ -550,7 +543,7 @@ XapiandManager::destroyer() {
 
 #ifdef XAPIAND_CLUSTERING
 	if (auto discovery = weak_discovery.lock()) {
-		L_INFO(this, "Waving goodbye to cluster %s!", cluster_name.c_str());
+		L_INFO(this, "Waving goodbye to cluster %s!", opts.cluster_name.c_str());
 		discovery->stop();
 	}
 #endif
@@ -590,7 +583,7 @@ XapiandManager::make_servers(const opts_t& o)
 	std::shared_ptr<Discovery> discovery;
 	std::shared_ptr<Raft> raft;
 
-	if (!solo) {
+	if (!opts.solo) {
 		binary = Worker::make_shared<Binary>(XapiandManager::manager, ev_loop, ev_flags, o.binary_port);
 		msg += binary->getDescription() + ", ";
 
@@ -613,7 +606,7 @@ XapiandManager::make_servers(const opts_t& o)
 		Worker::make_shared<HttpServer>(server, server->ev_loop, ev_flags, http);
 
 #ifdef XAPIAND_CLUSTERING
-		if (!solo) {
+		if (!opts.solo) {
 			auto binary_server = Worker::make_shared<BinaryServer>(server, server->ev_loop, ev_flags, binary);
 			binary->add_server(binary_server);
 
@@ -628,8 +621,8 @@ XapiandManager::make_servers(const opts_t& o)
 	// Make server protocols weak:
 	weak_http = std::move(http);
 #ifdef XAPIAND_CLUSTERING
-	if (!solo) {
-		L_INFO(this, "Joining cluster %s...", cluster_name.c_str());
+	if (!opts.solo) {
+		L_INFO(this, "Joining cluster %s...", opts.cluster_name.c_str());
 		discovery->start();
 
 		weak_binary = std::move(binary);
@@ -644,7 +637,7 @@ void
 XapiandManager::make_replicators(const opts_t& o)
 {
 #ifdef XAPIAND_CLUSTERING
-	if (!solo) {
+	if (!opts.solo) {
 		for (ssize_t i = 0; i < o.num_replicators; ++i) {
 			auto obj = Worker::make_shared<XapiandReplicator>(XapiandManager::manager, nullptr, ev_flags);
 			replicator_pool.enqueue(std::move(obj));
@@ -686,7 +679,7 @@ XapiandManager::run(const opts_t& o)
 		std::to_string(o.num_servers) + ((o.num_servers == 1) ? " server" : " servers"),
 		std::to_string(o.threadpool_size) +( (o.threadpool_size == 1) ? " worker thread" : " worker threads"),
 #ifdef XAPIAND_CLUSTERING
-		solo ? "" : std::to_string(o.num_replicators) + ((o.num_replicators == 1) ? " replicator" : " replicators"),
+		opts.solo ? "" : std::to_string(o.num_replicators) + ((o.num_replicators == 1) ? " replicator" : " replicators"),
 #endif
 		std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters"),
 		std::to_string(o.num_fsynchers) + ((o.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
@@ -694,7 +687,7 @@ XapiandManager::run(const opts_t& o)
 
 	L_NOTICE(this, "Started " + join_string(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
-	if (solo) {
+	if (opts.solo) {
 		setup_node();
 	}
 
@@ -748,7 +741,7 @@ XapiandManager::join()
 	server_pool.join();
 
 #ifdef XAPIAND_CLUSTERING
-	if (!solo) {
+	if (!opts.solo) {
 		L_MANAGER(this, "Waiting for %zu replicator%s...", replicator_pool.running_size(), (replicator_pool.running_size() == 1) ? "" : "s");
 		replicator_pool.join();
 	}
@@ -794,7 +787,7 @@ XapiandManager::is_single_node()
 {
 	L_CALL(this, "XapiandManager::is_single_node()");
 
-	return solo || (nodes_size() == 0);
+	return opts.solo || (nodes_size() == 0);
 }
 
 
@@ -998,7 +991,7 @@ XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endp
 	L_CALL(this, "XapiandManager::resolve_index_endpoint(%s, ...)", path.c_str());
 
 #ifdef XAPIAND_CLUSTERING
-	if (!solo) {
+	if (!opts.solo) {
 		return endp_r.resolve_index_endpoint(path, endpv, n_endps, timeout);
 	}
 	else
@@ -1031,7 +1024,7 @@ XapiandManager::server_status(MsgPack& stats)
 
 	// replicator_threads:
 #ifdef XAPIAND_CLUSTERING
-	if(!solo) {
+	if(!opts.solo) {
 		auto& stats_replicator_threads = stats["replicator_threads"];
 		stats_replicator_threads["running"] = replicator_pool.running_size();
 		stats_replicator_threads["enqueued"] = replicator_pool.size();
@@ -1062,7 +1055,7 @@ XapiandManager::server_status(MsgPack& stats)
 	stats_connections_http["peak"] = XapiandServer::max_http_clients.load();
 
 #ifdef XAPIAND_CLUSTERING
-	if(!solo) {
+	if(!opts.solo) {
 		auto& stats_connections_binary = stats_connections["binary"];
 		stats_connections_binary["current"] = XapiandServer::binary_clients.load();
 		stats_connections_binary["peak"] = XapiandServer::max_binary_clients.load();

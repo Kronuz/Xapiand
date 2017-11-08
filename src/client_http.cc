@@ -996,7 +996,7 @@ HttpClient::home_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_CLUSTERING
-	obj_data["_cluster_name"] = XapiandManager::manager->cluster_name;
+	obj_data["_cluster_name"] = XapiandManager::manager->opts.cluster_name;
 #endif
 	obj_data["_server"] = Package::STRING;
 	obj_data["_url"] = Package::BUGREPORT;
@@ -1076,8 +1076,8 @@ HttpClient::index_document_view(enum http_method method, Command)
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
 	if (method == HTTP_POST) {
-		auto uuid = generator.newGuid(XapiandManager::manager->uuid_compact);
-		doc_id = Unserialise::uuid(uuid.serialise(), XapiandManager::manager->uuid_repr);
+		auto uuid = generator.newGuid(XapiandManager::manager->opts.uuid_compact);
+		doc_id = Unserialise::uuid(uuid.serialise(), XapiandManager::manager->opts.uuid_repr);
 	} else {
 		doc_id = path_parser.get_id();
 	}
@@ -1319,7 +1319,7 @@ HttpClient::nodes_view(enum http_method, Command)
 	};
 
 	write_http_response(HTTP_STATUS_OK, {
-		{ "_cluster_name", XapiandManager::manager->cluster_name },
+		{ "_cluster_name", XapiandManager::manager->opts.cluster_name },
 		{ "_nodes", nodes },
 	});
 }

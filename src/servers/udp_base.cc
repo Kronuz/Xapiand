@@ -187,7 +187,7 @@ BaseUDP::send_message(char type, const std::string& content)
 	if (!content.empty()) {
 		std::string message(1, type);
 		message.append(std::string((const char *)&version, sizeof(uint16_t)));
-		message.append(serialise_string(XapiandManager::manager->cluster_name));
+		message.append(serialise_string(XapiandManager::manager->opts.cluster_name));
 		message.append(content);
 		sending_message(message);
 	}
@@ -237,7 +237,7 @@ BaseUDP::get_message(std::string& result, char max_type)
 		THROW(NetworkError, "Badly formed message: No cluster name!");
 	}
 
-	if (remote_cluster_name != XapiandManager::manager->cluster_name) {
+	if (remote_cluster_name != XapiandManager::manager->opts.cluster_name) {
 		throw DummyException();
 	}
 

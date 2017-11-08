@@ -336,7 +336,9 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "", "file", cmd);
 
 		SwitchArg detach("d", "detach", "detach process. (run in background)", cmd);
+#ifdef XAPIAND_CLUSTERING
 		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
+#endif
 		SwitchArg strict_arg("", "strict", "Force the user to define the type for each field.", cmd, false);
 		SwitchArg optimal_arg("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
@@ -384,7 +386,11 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.chert = true;
 #endif
 
+#ifdef XAPIAND_CLUSTERING
 		opts.solo = solo.getValue();
+#else
+		opts.solo = true;
+#endif
 		opts.strict = strict_arg.getValue();
 		opts.optimal = optimal_arg.getValue();
 

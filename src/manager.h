@@ -186,12 +186,8 @@ public:
 	std::atomic<time_t> shutdown_now;
 
 	std::atomic<State> state;
-	std::string cluster_name;
+	const opts_t& opts;
 	std::string node_name;
-	bool solo;
-
-	bool uuid_compact;
-	UUIDRepr uuid_repr;
 
 	std::atomic_int atom_sig;
 	ev::async signal_sig_async;
