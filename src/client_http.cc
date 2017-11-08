@@ -1426,7 +1426,7 @@ HttpClient::search_view(enum http_method method, Command)
 	if (id.empty()) {
 		chunked = true;
 	} else {
-		query_field->query.push_back(std::string(ID_FIELD_NAME)  + ":" +  id);
+		query_field->query.push_back(std::string(ID_FIELD_NAME)  + ":" +  repr(id, false));
 		chunked = isRange(id);
 	}
 
