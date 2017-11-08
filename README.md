@@ -73,6 +73,14 @@ Xapiand is written in C++14, it makes use of libev (which is included in the cod
 
 4. Run `curl 'http://localhost:8880/'`.
 
+##### macOS specifics
+
+
+1. Simply installing Xcode will not install all of the command line developer tools,
+   you must execute `xcode-select --install` in Terminal before trying to build.
+
+2. You need cmake installed `brew install cmake`.
+
 
 ### Indexing
 
