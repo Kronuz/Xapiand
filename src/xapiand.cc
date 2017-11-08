@@ -347,8 +347,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #ifdef XAPIAND_CLUSTERING
 		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
 #endif
-		SwitchArg strict_arg("", "strict", "Force the user to define the type for each field.", cmd, false);
 		SwitchArg optimal_arg("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
+		SwitchArg strict_arg("", "strict", "Force the user to define the type for each field.", cmd, false);
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 
 		std::vector<std::string> args;
