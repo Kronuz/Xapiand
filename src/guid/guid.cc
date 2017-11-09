@@ -444,22 +444,6 @@ Guid::serialise() const
 }
 
 
-std::string
-Guid::serialise_base64(const std::string& uuid_base64)
-{
-	try {
-		const auto bytes = base64::decode<std::string>(uuid_base64);
-		if (is_valid(bytes)) {
-			return bytes;
-		} else {
-			THROW(SerialisationError, "Invalid base64 UUID format in: %s", uuid_base64.c_str());
-		}
-	} catch (const cppcodec::padding_error&) {
-		THROW(SerialisationError, "Invalid base64 UUID format in: %s", uuid_base64.c_str());
-	}
-}
-
-
 bool
 Guid::is_valid(const std::string& bytes)
 {
