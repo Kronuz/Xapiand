@@ -100,7 +100,7 @@ std::string normalize_uuid(const std::string& uuid)
 	auto front = uuid.front();
 	auto back = uuid.back();
 	if (front == '~') {
-		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base64);
+		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base62);
 	} else if (front == '{' && back == '}') {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::guid);
 	} else if (uuid.compare(0, 9, "urn:uuid:") == 0) {

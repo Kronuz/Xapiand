@@ -129,7 +129,7 @@ constexpr uint32_t MAXDOU2INT = 2000000000;
 enum class UUIDRepr : uint8_t {
 	simple,
 	guid,
-	base64,
+	base62,
 	urn,
 };
 
@@ -347,7 +347,7 @@ namespace Unserialise {
 	CartesianList centroids(const std::string& serialised_geo);
 
 	// Unserialise a serialised UUID.
-	std::string uuid(const std::string& serialised_uuid, UUIDRepr repr=UUIDRepr::base64);
+	std::string uuid(const std::string& serialised_uuid, UUIDRepr repr=UUIDRepr::base62);
 
 	// Unserialise a serialised cartesian coordinate.
 	Cartesian cartesian(const std::string& serialised_cartesian);

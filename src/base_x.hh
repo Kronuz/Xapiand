@@ -63,8 +63,7 @@ public:
 	}
 
 	template <typename Result = std::string>
-	Result encode(Integer num) const {
-		Result result;
+	void encode(Result& result, Integer num) const {
 		if (num) {
 			while (num) {
 				auto r = num.divmod(sz);
@@ -78,23 +77,49 @@ public:
 		}
 
 		std::reverse(result.begin(), result.end());
+	}
+
+	template <typename Result = std::string>
+	Result encode(Integer num) const {
+		Result result;
+		encode(result, num);
 		return result;
 	}
 
 	template <typename Result = std::string>
+	void encode(Result& result, const char* bytes, size_t size) const {
+		encode(result, Integer(bytes, size, 256));
+	}
+
+	template <typename Result = std::string>
 	Result encode(const char* bytes, size_t size) const {
-		auto num = Integer(bytes, size, 256);
-		return encode<Result>(num);
+		Result result;
+		encode(result, Integer(bytes, size, 256));
+		return result;
+	}
+
+	template <typename Result = std::string, typename T, std::size_t N>
+	void encode(Result& result, T (&s)[N]) const {
+		encode(result, s, N - 1);
 	}
 
 	template <typename Result = std::string, typename T, std::size_t N>
 	Result encode(T (&s)[N]) const {
-		return encode<Result>(s, N - 1);
+		Result result;
+		encode(result, s, N - 1);
+		return result;
+	}
+
+	template <typename Result = std::string>
+	void encode(Result& result, const std::string& binary) const {
+		return encode(result, binary.data(), binary.size());
 	}
 
 	template <typename Result = std::string>
 	Result encode(const std::string& binary) const {
-		return encode<Result>(binary.data(), binary.size());
+		Result result;
+		encode(result, binary.data(), binary.size());
+		return result;
 	}
 
 	void decode(Integer& result, const char* encoded, size_t encoded_size) const {
@@ -112,26 +137,41 @@ public:
 	}
 
 	template <typename Result, typename = typename std::enable_if<!std::is_integral<Result>::value>::type>
-	void decode(Result& binary_result, const char* encoded, size_t encoded_size) const {
+	void decode(Result& result, const char* encoded, size_t encoded_size) const {
 		Integer num;
 		decode(num, encoded, encoded_size);
-		binary_result = num.template str<Result>(256);
+		result = num.template str<Result>(256);
 	}
 
-	template <typename Result> Result decode(const char* encoded, size_t encoded_size) const {
+	template <typename Result>
+	Result decode(const char* encoded, size_t encoded_size) const {
 		Result result;
 		decode(result, encoded, encoded_size);
 		return result;
 	}
 
 	template <typename Result = std::string, typename T, std::size_t N>
+	void decode(Result& result, T (&s)[N]) const {
+		decode(result, s, N - 1);
+	}
+
+	template <typename Result = std::string, typename T, std::size_t N>
 	Result decode(T (&s)[N]) const {
-		return decode<Result>(s, N - 1);
+		Result result;
+		decode(result, s, N - 1);
+		return result;
+	}
+
+	template <typename Result = std::string>
+	void decode(Result& result, const std::string& encoded) const {
+		decode(result, encoded.data(), encoded.size());
 	}
 
 	template <typename Result = std::string>
 	Result decode(const std::string& encoded) const {
-		return decode<Result>(encoded.data(), encoded.size());
+		Result result;
+		decode(result, encoded.data(), encoded.size());
+		return result;
 	}
 
 	bool is_valid(const char* encoded, size_t encoded_size) const {
