@@ -143,8 +143,14 @@ public:
 	static std::string serialise(InputIt first, InputIt last) {
 		std::string serialised;
 		while (first != last) {
-			Guid guid(*first++);
-			serialised.append(guid.serialise());
+			const auto& uuid = *first;
+			if (uuid.length() == UUID_LENGTH && uuid[8] == '-' && uuid[13] == '-' && uuid[18] == '-' && uuid[23] == '-') {
+				Guid guid(uuid);
+				serialised.append(guid.serialise());
+			} else {
+				serialised.append(serialise_base62(uuid));
+			}
+			++first;
 		}
 
 		return serialised;
@@ -190,6 +196,8 @@ private:
 	uint8_t get_uuid_variant() const;
 	uint8_t get_uuid_version() const;
 	GuidCompactor get_compactor(bool compacted) const;
+
+	static std::string serialise_base62(const std::string& uuid_base62);
 
 	// Aux functions for unserialise a serialised uuid's list.
 	static Guid unserialise_full(uint8_t length, const char** pos);

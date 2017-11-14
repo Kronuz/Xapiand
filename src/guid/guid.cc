@@ -26,7 +26,8 @@ THE SOFTWARE.
 
 #include "guid.h"
 
-#include "serialise.h"  // For BYTE_SWAP_*
+#include "serialise.h"  // for BYTE_SWAP_*
+#include "base_x.hh"    // for base62
 
 #include <algorithm>
 #include <iomanip>
@@ -443,6 +444,21 @@ Guid::serialise() const
 	return compactor.serialise(get_uuid_variant());
 }
 
+std::string
+Guid::serialise_base62(const std::string& uuid_base62)
+{
+	std::string bytes;
+	try {
+		base62::base62().decode(bytes, uuid_base62);
+	} catch (const std::invalid_argument&) {
+		THROW(SerialisationError, "Invalid base62 UUID format in: %s", uuid_base62.c_str());
+	}
+	if (is_valid(bytes)) {
+		return bytes;
+	} else {
+		THROW(SerialisationError, "Invalid base62 UUID format in: %s", uuid_base62.c_str());
+	}
+}
 
 bool
 Guid::is_valid(const std::string& bytes)
