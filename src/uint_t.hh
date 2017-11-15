@@ -64,10 +64,10 @@ to header-only and extended to arbitrary bit length.
 #if (defined(__clang__) && __has_builtin(__builtin_clzll)) || (defined(__GNUC__ ) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)))
 #  define HAVE____BUILTIN_CLZLL
 #endif
-#if (defined(__clang__) && __has_builtin(__builtin_addcll)) || (defined(__GNUC__ ) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)))
+#if (defined(__clang__) && __has_builtin(__builtin_addcll))
 #  define HAVE____BUILTIN_ADDCLL
 #endif
-#if (defined(__clang__) && __has_builtin(__builtin_subcll)) || (defined(__GNUC__ ) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)))
+#if (defined(__clang__) && __has_builtin(__builtin_subcll))
 #  define HAVE____BUILTIN_SUBCLL
 #endif
 
@@ -117,7 +117,7 @@ inline uint64_t addcarry(uint64_t x, uint64_t y, uint64_t c, uint64_t* result) {
 #if defined HAVE___ADDCARRY_U64
 	return _addcarry_u64(c, x, y, result);  // _addcarry_u64(carryin, x, y, *sum) -> carryout
 #elif defined HAVE____BUILTIN_ADDCLL
-	uint64_t carryout;
+	unsigned long long carryout;
 	*result = __builtin_addcll(x, y, c, &carryout);  // __builtin_addcll(x, y, carryin, *carryout) -> sum
 	return carryout;
 #elif defined HAVE____INT64_T
@@ -141,7 +141,7 @@ inline uint64_t subborrow(uint64_t x, uint64_t y, uint64_t c, uint64_t* result) 
 #if defined HAVE___SUBBORROW_U64
 	return _subborrow_u64(c, x, y, result);  // _addcarry_u64(carryin, x, y, *sum) -> carryout
 #elif defined HAVE____BUILTIN_SUBCLL
-	uint64_t carryout;
+	unsigned long long carryout;
 	*result = __builtin_subcll(x, y, c, &carryout);  // __builtin_addcll(x, y, carryin, *carryout) -> sum
 	return carryout;
 #elif defined HAVE____INT64_T
@@ -183,7 +183,7 @@ class uint_t {
 
 		template <typename T, typename... Args, typename = typename std::enable_if<std::is_integral<T>::value>::type>
 		void _uint_t(const T & value, Args... args) {
-		    _uint_t(args...);
+			_uint_t(args...);
 			_value.push_back(static_cast<uint64_t>(value));
 		}
 
@@ -219,6 +219,43 @@ class uint_t {
 			return 0;
 		}
 
+		static const uint8_t& base_shift(int base) {
+			static const uint8_t _[36] = {
+				0, 1, 0, 2, 0, 0, 0, 3,
+				0, 0, 0, 0, 0, 0, 0, 4,
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 5,
+			};
+			return _[base - 1];
+		}
+
+		static const uint8_t& ord(int chr) {
+			static const uint8_t _[256] = {
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+				0x08, 0x09, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+				0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+				0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+				0x21, 0x22, 0x23, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+				0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+				0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+				0x21, 0x22, 0x23, 0xff, 0xff, 0xff, 0xff, 0xff,
+			};
+			return _[chr];
+		}
+
+		static const char& chr(int ord) {
+			static const char _[256] = "0123456789abcdefghijklmnopqrstuvwxyz";
+			return _[ord];
+		}
+
 	public:
 		// Constructors
 		uint_t()
@@ -243,7 +280,7 @@ class uint_t {
 		template <typename T, typename... Args, typename = typename std::enable_if<std::is_integral<T>::value>::type>
 		uint_t(const T & value, Args... args)
 			: _carry(false) {
-		    _uint_t(args...);
+			_uint_t(args...);
 			_value.push_back(static_cast<uint64_t>(value));
 			trim();
 		}
@@ -251,17 +288,23 @@ class uint_t {
 		explicit uint_t(const char* bytes, size_t size, size_t base)
 			: _carry(false) {
 			if (base >= 2 && base <= 36) {
-				for (; size; --size, ++bytes) {
-					uint8_t d = std::tolower(*bytes);
-					if (std::isdigit(d)) { // 0-9
-						d -= '0';
-					} else {
-						d -= 'a' - 10;
+				uint_t shift = base_shift(base);
+				if (shift) {
+					for (; size; --size, ++bytes) {
+						auto d = ord(static_cast<int>(*bytes));
+						if (d >= base) {
+							throw std::runtime_error("Error: Not a digit in base " + std::to_string(base) + ": '" + std::string(1, *bytes) + "'");
+						}
+						*this = (*this << shift) | d;
 					}
-					if (d >= base) {
-						throw std::runtime_error("Error: Not a digit in base " + std::to_string(base) + ": '" + std::string(1, *bytes) + "'");
+				} else {
+					for (; size; --size, ++bytes) {
+						auto d = ord(static_cast<int>(*bytes));
+						if (d >= base) {
+							throw std::runtime_error("Error: Not a digit in base " + std::to_string(base) + ": '" + std::string(1, *bytes) + "'");
+						}
+						*this = (*this * base) + d;
 					}
-					*this = (*this * base) + d;
 				}
 			} else if (base == 256) {
 				bytes += size - 1;
@@ -735,25 +778,29 @@ class uint_t {
 		// Get string representation of value
 		template <typename Result = std::string>
 		Result str(size_t base = 10) const {
+			Result result;
 			if (base >= 2 && base <= 36) {
-				Result result;
 				if (!*this) {
 					result.push_back('0');
 				} else {
-					std::pair<uint_t, uint_t> qr(*this, uint_0());
-					do {
-						qr = qr.first.divmod(base);
-						if (qr.second < 10) {
-							result.push_back((uint8_t)qr.second + '0');
-						} else {
-							result.push_back((uint8_t)qr.second + 'a' - 10);
-						}
-					} while (qr.first);
+					uint64_t mask = base - 1;
+					uint_t shift = base_shift(base);
+					if (shift) {
+						auto num = *this;
+						do {
+							result.push_back(chr(static_cast<int>(num & mask)));
+							num >>= shift;
+						} while (num);
+					} else {
+						std::pair<uint_t, uint_t> qr(*this, uint_0());
+						do {
+							qr = qr.first.divmod(base);
+							result.push_back(chr(static_cast<int>(qr.second)));
+						} while (qr.first);
+					}
 				}
 				std::reverse(result.begin(), result.end());
-				return result;
 			} else if (base == 256) {
-				Result result;
 				auto it = _value.begin();
 				auto it_e = _value.end();
 				for (; it != it_e; ++it) {
@@ -762,10 +809,10 @@ class uint_t {
 				auto found = std::find_if(result.rbegin(), result.rend(), [](const char& c) { return c; });
 				result.resize(result.rend() - found);
 				std::reverse(result.begin(), result.end());
-				return result;
 			} else {
 				throw std::invalid_argument("Base must be in the range [2, 36]");
 			}
+			return result;
 		}
 };
 
