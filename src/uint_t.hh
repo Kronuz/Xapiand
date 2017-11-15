@@ -31,7 +31,8 @@ a bug in operator*.
 Thanks to François Dessenne for convincing me
 to do a general rewrite of this class.
 
-Converted to header-only and extended by German Mendez Bravo (Kronuz)
+Germán Mández Bravo (Kronuz) converted Jason Lee's uint128_t
+to header-only and extended to arbitrary bit length.
 */
 
 #ifndef __uint_t__
@@ -46,17 +47,120 @@ Converted to header-only and extended by German Mendez Bravo (Kronuz)
 #include <stdexcept>
 #include <type_traits>
 
+
+// Compatibility inlines
 #ifndef __has_builtin         // Optional of course
 #define __has_builtin(x) 0    // Compatibility with non-clang compilers
 #endif
 
-#if (defined(__clang__) && __has_builtin(__builtin_clzll)) || (defined(__GNUC__ ) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)))
-#define HAVE__BUILTIN_CLZLL
+#if defined _MSC_VER
+#  define HAVE___ADDCARRY_U64
+#  define HAVE___SUBBORROW_U64
+#  define HAVE___UMUL128
+#  include <intrin.h>
+  typedef unsigned __int64 uint64_t;
 #endif
 
-#ifndef M_PI
-#define M_PI 3.14159265359
+#if (defined(__clang__) && __has_builtin(__builtin_clzll)) || (defined(__GNUC__ ) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)))
+#  define HAVE____BUILTIN_CLZLL
 #endif
+#if (defined(__clang__) && __has_builtin(__builtin_addcll)) || (defined(__GNUC__ ) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)))
+#  define HAVE____BUILTIN_ADDCLL
+#endif
+#if (defined(__clang__) && __has_builtin(__builtin_subcll)) || (defined(__GNUC__ ) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)))
+#  define HAVE____BUILTIN_SUBCLL
+#endif
+
+#if defined __SIZEOF_INT128__
+#define HAVE____INT64_T
+#endif
+
+
+inline uint64_t bits(uint64_t x) {
+#if defined HAVE____BUILTIN_CLZLL
+	return x ? 64 - __builtin_clzll(x) : 1;
+#else
+	uint64_t c = x ? 0 : 1;
+	while (x) {
+		x >>= 1;
+		++c;
+	}
+	return c;
+#endif
+}
+
+inline uint64_t muladd(uint64_t x, uint64_t y, uint64_t c, uint64_t* result) {
+#if defined HAVE___UMUL128 && defined HAVE___ADDCARRY_U64
+	uint64_t h;
+	uint64_t l = _umul128(x, y, &h);  // _umul128(x, y, *hi) -> lo
+	return h + _addcarry_u64(0, l, c, result);  // _addcarry_u64(carryin, x, y, *sum) -> carryout
+#elif defined HAVE____INT64_T
+	auto r = static_cast<__uint128_t>(x) * static_cast<__uint128_t>(y) + static_cast<__uint128_t>(c);
+	*result = r;
+	return r >> 64;
+#else
+	uint64_t x0 = x & 0xffffffff;
+	uint64_t x1 = x >> 32;
+	uint64_t y0 = y & 0xffffffff;
+	uint64_t y1 = y >> 32;
+
+	uint64_t u = (x0 * y0) + (c & 0xffffffff);
+	uint64_t v = (x1 * y0) + (u >> 32) + (c >> 32);
+	uint64_t w = (x0 * y1) + (v & 0xffffffff);
+
+	*result = (w << 32) + (u & 0xffffffff); // low
+	return (x1 * y1) + (v >> 32) + (w >> 32); // high
+#endif
+}
+
+inline uint64_t addcarry(uint64_t x, uint64_t y, uint64_t c, uint64_t* result) {
+#if defined HAVE___ADDCARRY_U64
+	return _addcarry_u64(c, x, y, result);  // _addcarry_u64(carryin, x, y, *sum) -> carryout
+#elif defined HAVE____BUILTIN_ADDCLL
+	uint64_t carryout;
+	*result = __builtin_addcll(x, y, c, &carryout);  // __builtin_addcll(x, y, carryin, *carryout) -> sum
+	return carryout;
+#elif defined HAVE____INT64_T
+	auto r = static_cast<__uint128_t>(x) + static_cast<__uint128_t>(y) + static_cast<__uint128_t>(c);
+	*result = r;
+	return static_cast<bool>(r >> 64);
+#else
+	uint64_t x0 = x & 0xffffffff;
+	uint64_t x1 = x >> 32;
+	uint64_t y0 = y & 0xffffffff;
+	uint64_t y1 = y >> 32;
+
+	auto u = x0 + y0 + c;
+	auto v = x1 + y1 + static_cast<bool>(u >> 32);
+	*result = (v << 32) + (u & 0xffffffff);
+	return static_cast<bool>(v >> 32);
+#endif
+}
+
+inline uint64_t subborrow(uint64_t x, uint64_t y, uint64_t c, uint64_t* result) {
+#if defined HAVE___SUBBORROW_U64
+	return _subborrow_u64(c, x, y, result);  // _addcarry_u64(carryin, x, y, *sum) -> carryout
+#elif defined HAVE____BUILTIN_SUBCLL
+	uint64_t carryout;
+	*result = __builtin_subcll(x, y, c, &carryout);  // __builtin_addcll(x, y, carryin, *carryout) -> sum
+	return carryout;
+#elif defined HAVE____INT64_T
+	auto r = static_cast<__uint128_t>(x) - static_cast<__uint128_t>(y) - static_cast<__uint128_t>(c);
+	*result = r;
+	return static_cast<bool>(r >> 64);
+#else
+	uint64_t x0 = x & 0xffffffff;
+	uint64_t x1 = x >> 32;
+	uint64_t y0 = y & 0xffffffff;
+	uint64_t y1 = y >> 32;
+
+	auto u = x0 - y0 - c;
+	auto v = x1 - y1 - static_cast<bool>(u >> 32);
+	*result = (v << 32) + (u & 0xffffffff);
+	return static_cast<bool>(v >> 32);
+#endif
+}
+
 
 class uint_t;
 
@@ -69,7 +173,7 @@ namespace std {  // This is probably not a good idea
 
 class uint_t {
 	private:
-		bool _cf;
+		bool _carry;
 		std::vector<uint64_t> _value;
 
 		template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
@@ -118,19 +222,19 @@ class uint_t {
 	public:
 		// Constructors
 		uint_t()
-			: _cf(false) { }
+			: _carry(false) { }
 
-		uint_t(const uint_t& num)
-			: _cf(false),
-			  _value(num._value) { }
+		uint_t(const uint_t& o)
+			: _carry(o._carry),
+			  _value(o._value) { }
 
-		uint_t(uint_t&& num)
-			: _cf(false),
-			  _value(std::move(num._value)) { }
+		uint_t(uint_t&& o)
+			: _carry(std::move(o._carry)),
+			  _value(std::move(o._value)) { }
 
 		template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
 		uint_t(const T & value)
-			: _cf(false) {
+			: _carry(false) {
 			if (value) {
 				_value.push_back(static_cast<uint64_t>(value));
 			}
@@ -138,14 +242,14 @@ class uint_t {
 
 		template <typename T, typename... Args, typename = typename std::enable_if<std::is_integral<T>::value>::type>
 		uint_t(const T & value, Args... args)
-			: _cf(false) {
+			: _carry(false) {
 		    _uint_t(args...);
 			_value.push_back(static_cast<uint64_t>(value));
 			trim();
 		}
 
 		explicit uint_t(const char* bytes, size_t size, size_t base)
-			: _cf(false) {
+			: _carry(false) {
 			if (base >= 2 && base <= 36) {
 				for (; size; --size, ++bytes) {
 					uint8_t d = std::tolower(*bytes);
@@ -189,12 +293,14 @@ class uint_t {
 		//  RHS input args only
 
 		// Assignment Operator
-		uint_t& operator=(const uint_t& rhs) {
-			_value = rhs._value;
+		uint_t& operator=(const uint_t& o) {
+			_carry = o._carry;
+			_value = o._value;
 			return *this;
 		}
-		uint_t& operator=(uint_t&& rhs) {
-			_value = std::move(rhs._value);
+		uint_t& operator=(uint_t&& o) {
+			_carry = std::move(o._carry);
+			_value = std::move(o._value);
 			return *this;
 		}
 
@@ -438,20 +544,17 @@ class uint_t {
 			auto it_e = _value.end();
 			auto rhs_it = rhs._value.begin();
 			auto rhs_it_e = rhs._value.end();
-			auto carry = 0;
+			uint64_t carry = 0;
 			for (; it != it_e && rhs_it != rhs_it_e; ++it, ++rhs_it) {
-				auto num = static_cast<__uint128_t>(*it) + static_cast<__uint128_t>(*rhs_it) + carry;
-				*it = num;
-				carry = !!(num >> 64);
+				carry = addcarry(*it, *rhs_it, carry, &*it);
 			}
 			for (; it != it_e && carry; ++it) {
-				auto num = static_cast<__uint128_t>(*it) + carry;
-				*it = num;
-				carry = !!(num >> 64);
+				carry = addcarry(*it, 0, carry, &*it);
 			}
 			if (carry) {
 				_value.push_back(1);
 			}
+			_carry = false;
 			trim();
 			return *this;
 		}
@@ -475,20 +578,14 @@ class uint_t {
 			auto it_e = _value.end();
 			auto rhs_it = rhs._value.begin();
 			auto rhs_it_e = rhs._value.end();
-			auto carry = 0;
+			uint64_t carry = 0;
 			for (; it != it_e && rhs_it != rhs_it_e; ++it, ++rhs_it) {
-				auto num = static_cast<__uint128_t>(*it) - static_cast<__uint128_t>(*rhs_it) - carry;
-				*it = num;
-				carry = !!(num >> 64);
+				carry = subborrow(*it, *rhs_it, carry, &*it);
 			}
 			for (; it != it_e && carry; ++it) {
-				auto num = static_cast<__uint128_t>(*it) - carry;
-				*it = num;
-				carry = !!(num >> 64);
+				carry = subborrow(*it, 0, carry, &*it);
 			}
-			if (carry) {
-				_cf = true;
-			}
+			_carry = carry;
 			trim();
 			return *this;
 		}
@@ -514,9 +611,9 @@ class uint_t {
 				auto rhs_it = rhs._value.begin();
 				auto rhs_it_e = rhs._value.end();
 				for (; rhs_it != rhs_it_e; ++rhs_it) {
-					auto prod = static_cast<__uint128_t>(*it) * static_cast<__uint128_t>(*rhs_it) + carry; // multiply through
+					uint64_t prod;
+					carry = muladd(*it, *rhs_it, carry, &prod);
 					row._value.push_back(prod);
-					carry = prod >> 64;
 				}
 				if (carry) {
 					row._value.push_back(carry);
@@ -630,14 +727,7 @@ class uint_t {
 			if (_value.size()) {
 				out = (_value.size() - 1) * 64;
 				uint64_t ms = _value.back();
-				#ifdef HAVE__BUILTIN_CLZLL
-				out += 64 - __builtin_clzll(ms);
-				#else
-				while (ms) {
-					ms >>= 1;
-					++out;
-				}
-				#endif
+				out += ::bits(ms);
 			}
 			return out;
 		}
