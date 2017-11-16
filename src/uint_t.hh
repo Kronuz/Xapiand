@@ -44,6 +44,7 @@ to header-only and extended to arbitrary bit length.
 #include <cstring>
 #include <cstdint>
 #include <iostream>
+#include <algorithm>
 #include <stdexcept>
 #include <type_traits>
 
@@ -201,7 +202,7 @@ class uint_t {
 			for (; rit != rit_e; ++rit) {
 				if (*rit) break;
 			}
-			_value.resize(rit_e - rit);
+			_value.resize(rit_e - rit); // shrink
 		}
 
 		int compare(const uint_t& rhs) const {
@@ -306,17 +307,10 @@ class uint_t {
 						*this = (*this * base) + d;
 					}
 				}
-			} else if (base == 256) {
-				bytes += size - 1;
-				while (size) {
-					uint64_t num = 0;
-					uint8_t* ptr = reinterpret_cast<uint8_t*>(&num);
-					uint8_t* ptr_e = ptr + 8;
-					for (; size && ptr < ptr_e; --size) {
-						*ptr++ = *bytes--;
-					}
-					_value.push_back(num);
-				}
+			} else if (size && base == 256) {
+				_value.resize((size + sizeof(uint64_t) - 1) / sizeof(uint64_t)); // grow (no initialization)
+				*_value.rbegin() = 0; // initialize last value
+				std::reverse_copy(bytes, bytes + size, reinterpret_cast<char*>(_value.data()));
 			} else {
 				throw std::runtime_error("Error: Cannot convert from base " + std::to_string(base));
 			}
@@ -391,7 +385,7 @@ class uint_t {
 
 		uint_t& operator&=(const uint_t& rhs) {
 			if (_value.size() > rhs._value.size()) {
-				_value.resize(rhs._value.size());
+				_value.resize(rhs._value.size()); // shrink
 			}
 			auto it = _value.begin();
 			auto it_e = _value.end();
@@ -411,7 +405,7 @@ class uint_t {
 
 		uint_t& operator|=(const uint_t& rhs) {
 			if (_value.size() < rhs._value.size()) {
-				_value.resize(rhs._value.size(), 0);
+				_value.resize(rhs._value.size(), 0); // grow
 			}
 			auto it = _value.begin();
 			auto rhs_it = rhs._value.begin();
@@ -431,7 +425,7 @@ class uint_t {
 
 		uint_t& operator^=(const uint_t& rhs) {
 			if (_value.size() < rhs._value.size()) {
-				_value.resize(rhs._value.size(), 0);
+				_value.resize(rhs._value.size(), 0); // grow
 			}
 			auto it = _value.begin();
 			auto rhs_it = rhs._value.begin();
@@ -581,7 +575,7 @@ class uint_t {
 			}
 
 			if (_value.size() < rhs._value.size()) {
-				_value.resize(rhs._value.size(), 0);
+				_value.resize(rhs._value.size(), 0); // grow
 			}
 			auto it = _value.begin();
 			auto it_e = _value.end();
@@ -615,7 +609,7 @@ class uint_t {
 			}
 
 			if (_value.size() < rhs._value.size()) {
-				_value.resize(rhs._value.size(), 0);
+				_value.resize(rhs._value.size(), 0); // grow
 			}
 			auto it = _value.begin();
 			auto it_e = _value.end();
@@ -778,8 +772,8 @@ class uint_t {
 		// Get string representation of value
 		template <typename Result = std::string>
 		Result str(size_t base = 10) const {
-			Result result;
 			if (base >= 2 && base <= 36) {
+				Result result;
 				if (!*this) {
 					result.push_back('0');
 				} else {
@@ -800,19 +794,17 @@ class uint_t {
 					}
 				}
 				std::reverse(result.begin(), result.end());
+				return result;
 			} else if (base == 256) {
-				auto it = _value.begin();
-				auto it_e = _value.end();
-				for (; it != it_e; ++it) {
-					result.append(Result(reinterpret_cast<const char*>(&*it), 8));
-				}
+				auto ptr = reinterpret_cast<const char*>(_value.data());
+				Result result(ptr, ptr + _value.size() * sizeof(uint64_t));
 				auto found = std::find_if(result.rbegin(), result.rend(), [](const char& c) { return c; });
-				result.resize(result.rend() - found);
+				result.resize(result.rend() - found); // shrink
 				std::reverse(result.begin(), result.end());
+				return result;
 			} else {
 				throw std::invalid_argument("Base must be in the range [2, 36]");
 			}
-			return result;
 		}
 };
 
