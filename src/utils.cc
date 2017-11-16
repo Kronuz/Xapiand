@@ -284,7 +284,7 @@ std::string repr(const void* p, size_t size, bool friendly, bool quote, size_t m
 
 std::string escape(const void* p, size_t size, bool quote) {
 	const char* q = (const char *)p;
-	char *buff = new char[size * 2 + 1];
+	char *buff = new char[size * 2 + 3]; //Consider size of quotes
 	char *d = buff;
 	if (quote) *d++ = '\'';
 	const char *p_end = q + size;
