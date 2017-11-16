@@ -230,7 +230,7 @@ Script::process_chai(bool strict)
 				auto script_hash = chaipp::hash(name);
 				auto body_hash = chaipp::hash(body);
 				try {
-					chaipp::Processor::compile(body_hash, body_hash, body);
+					chaipp::Processor::compile(script_hash, body_hash, body);
 					return MsgPack({
 						{ RESERVED_TYPE, sep_types },
 						{ RESERVED_CHAI, {
