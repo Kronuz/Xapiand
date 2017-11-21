@@ -2330,6 +2330,9 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 				switch (data_value.getType()) {
 					case MsgPack::Type::UNDEFINED:
 						data_value = MsgPack(MsgPack::Type::ARRAY);
+						for (const auto& value : values) {
+							data_value.push_back(normalize_uuid(value));
+						}
 						break;
 					case MsgPack::Type::ARRAY:
 						for (const auto& value : values) {
