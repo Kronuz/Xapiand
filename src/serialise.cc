@@ -82,7 +82,7 @@ Serialise::isUUID(const std::string& field_value) noexcept
 					}
 				}
 			} else if (allow_b62 && !uuid.empty()) {
-				return base62::base62().is_valid(uuid);
+				return base62::base62().is_valid(uuid, true);
 			} else {
 				return false;
 			}
@@ -569,7 +569,7 @@ Serialise::uuid(const std::string& field_value)
 					}
 				}
 			} else if (allow_b62 && !uuid.empty()) {
-				if (!base62::base62().is_valid(uuid)) {
+				if (!base62::base62().is_valid(uuid, true)) {
 					THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
 				}
 			} else {
@@ -1074,7 +1074,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 		}
 		case UUIDRepr::base62: {
 			result.push_back('~');
-			result.append(base62::base62().encode(serialised_uuid));
+			result.append(base62::base62().encode(serialised_uuid, true));
 			break;
 		}
 

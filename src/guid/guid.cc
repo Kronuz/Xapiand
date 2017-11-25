@@ -449,7 +449,7 @@ Guid::serialise_base62(const std::string& uuid_base62)
 {
 	std::string bytes;
 	try {
-		base62::base62().decode(bytes, uuid_base62);
+		base62::base62().decode(bytes, uuid_base62, true);
 	} catch (const std::invalid_argument&) {
 		THROW(SerialisationError, "Invalid base62 UUID format in: %s", uuid_base62.c_str());
 	}
