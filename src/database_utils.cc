@@ -30,6 +30,7 @@
 #include <sys/fcntl.h>                               // for O_CLOEXEC, O_CREAT, O_RDONLY
 #include <sys/stat.h>                                // for stat
 
+#include "base_x.hh"                                  // for base62
 #include "cast.h"                                    // for Cast
 #include "exception.h"                               // for ClientError, MSG_ClientError
 #include "guid/guid.h"                               // for Guid
@@ -97,15 +98,26 @@ std::string get_prefix(const std::string& field_name)
 
 std::string normalize_uuid(const std::string& uuid)
 {
-	auto front = uuid.front();
-	auto back = uuid.back();
-	if (front == '~') {
+#ifdef UUID_USE_BASE58
+	if (base58::base58().is_valid(uuid)) {
+		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base58);
+	}
+#endif
+#ifdef UUID_USE_BASE62
+	if (base62::base62().is_valid(uuid)) {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base62);
-	} else if (front == '{' && back == '}') {
+	}
+#endif
+#ifdef UUID_USE_GUID
+	if (uuid.front() == '{' && uuid.back() == '}') {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::guid);
-	} else if (uuid.compare(0, 9, "urn:uuid:") == 0) {
+	}
+#endif
+#ifdef UUID_USE_URN
+	if (uuid.compare(0, 9, "urn:uuid:") == 0) {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::urn);
 	}
+#endif
 	return uuid;
 }
 

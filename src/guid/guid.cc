@@ -26,8 +26,8 @@ THE SOFTWARE.
 
 #include "guid.h"
 
-#include "serialise.h"  // for BYTE_SWAP_*
 #include "base_x.hh"    // for base62
+#include "serialise.h"  // for BYTE_SWAP_*
 
 #include <algorithm>
 #include <iomanip>
@@ -445,19 +445,26 @@ Guid::serialise() const
 }
 
 std::string
-Guid::serialise_base62(const std::string& uuid_base62)
+Guid::serialise_decode(const std::string& encoded)
 {
 	std::string bytes;
+#ifdef UUID_USE_BASE58
 	try {
-		base62::base62().decode(bytes, uuid_base62, true);
-	} catch (const std::invalid_argument&) {
-		THROW(SerialisationError, "Invalid base62 UUID format in: %s", uuid_base62.c_str());
-	}
-	if (is_valid(bytes)) {
-		return bytes;
-	} else {
-		THROW(SerialisationError, "Invalid base62 UUID format in: %s", uuid_base62.c_str());
-	}
+		base58::base58().decode(bytes, encoded, true);
+		if (is_valid(bytes)) {
+			return bytes;
+		}
+	} catch (const std::invalid_argument&) { }
+#endif
+#ifdef UUID_USE_BASE62
+	try {
+		base62::base62().decode(bytes, encoded, true);
+		if (is_valid(bytes)) {
+			return bytes;
+		}
+	} catch (const std::invalid_argument&) { }
+#endif
+	THROW(SerialisationError, "Invalid encoded UUID format in: %s", encoded.c_str());
 }
 
 bool

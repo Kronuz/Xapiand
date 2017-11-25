@@ -127,10 +127,19 @@ constexpr uint32_t DOUBLE2INT = 1000000000;
 constexpr uint32_t MAXDOU2INT = 2000000000;
 
 enum class UUIDRepr : uint8_t {
-	simple,
-	guid,
+#ifdef UUID_USE_BASE62
 	base62,
+#endif
+#ifdef UUID_USE_BASE58
+	base58,
+#endif
+#ifdef UUID_USE_GUID
+	guid,
+#endif
+#ifdef UUID_USE_URN
 	urn,
+#endif
+	simple,
 };
 
 class CartesianList;

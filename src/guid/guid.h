@@ -148,7 +148,7 @@ public:
 				Guid guid(uuid);
 				serialised.append(guid.serialise());
 			} else {
-				serialised.append(serialise_base62(uuid));
+				serialised.append(serialise_decode(uuid));
 			}
 			++first;
 		}
@@ -197,7 +197,7 @@ private:
 	uint8_t get_uuid_version() const;
 	GuidCompactor get_compactor(bool compacted) const;
 
-	static std::string serialise_base62(const std::string& uuid_base62);
+	static std::string serialise_decode(const std::string& encoded);
 
 	// Aux functions for unserialise a serialised uuid's list.
 	static Guid unserialise_full(uint8_t length, const char** pos);

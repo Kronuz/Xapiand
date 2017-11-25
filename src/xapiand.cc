@@ -302,7 +302,21 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		SwitchArg chert("", "chert", "Prefer Chert databases.", cmd, false);
 #endif
 
-		std::vector<std::string> uuid_repr_allowed({ "simple", "guid", "base62", "urn" });
+		std::vector<std::string> uuid_repr_allowed({
+#ifdef UUID_USE_BASE58
+			"base58",
+#endif
+#ifdef UUID_USE_BASE62
+			"base62",
+#endif
+#ifdef UUID_USE_GUID
+			"guid",
+#endif
+#ifdef UUID_USE_URN
+			"urn",
+#endif
+			"simple",
+		});
 		ValuesConstraint<std::string> uuid_repr_constraint(uuid_repr_allowed);
 		ValueArg<std::string> uuid_repr("", "uuid", "UUID normalizer.", false, "auto", &uuid_repr_constraint, cmd);
 		SwitchArg uuid_compact("", "uuid-compact", "Generate compact UUIDs.", cmd, false);
@@ -439,7 +453,27 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.ev_flags = ev_backend(use.getValue());
 		opts.uuid_compact = uuid_compact.getValue();
 		auto uuid_repr_str = uuid_repr.getValue();
-		opts.uuid_repr = uuid_repr_str == "guid" ? UUIDRepr::guid : uuid_repr_str == "base62" ? UUIDRepr::base62 : uuid_repr_str == "urn" ? UUIDRepr::urn : UUIDRepr::simple;
+		opts.uuid_repr = UUIDRepr::simple;
+#ifdef UUID_USE_BASE58
+		if (uuid_repr_str == "base58") {
+			opts.uuid_repr = UUIDRepr::base58;
+		}
+#endif
+#ifdef UUID_USE_BASE62
+		if (uuid_repr_str == "base62") {
+			opts.uuid_repr = UUIDRepr::base62;
+		}
+#endif
+#ifdef UUID_USE_GUID
+		if (uuid_repr_str == "guid") {
+			opts.uuid_repr = UUIDRepr::guid;
+		}
+#endif
+#ifdef UUID_USE_URN
+		if (uuid_repr_str == "urn") {
+			opts.uuid_repr = UUIDRepr::urn;
+		}
+#endif
 	} catch (const ArgException& exc) { // catch any exceptions
 		std::cerr << "error: " << exc.error() << " for arg " << exc.argId() << std::endl;
 	}
