@@ -450,7 +450,7 @@ Guid::serialise_decode(const std::string& encoded)
 	std::string bytes;
 #ifdef UUID_USE_BASE58
 	try {
-		Base58::base58chk().decode(bytes, encoded);
+		Base58::flickrchk().decode(bytes, encoded);
 		if (is_valid(bytes)) {
 			return bytes;
 		}
