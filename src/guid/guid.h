@@ -40,56 +40,7 @@ THE SOFTWARE.
 #endif
 
 
-constexpr uint8_t TIME_BITS       = 60;
-constexpr uint8_t VERSION_BITS    = 64 - TIME_BITS;  // 4
-constexpr uint8_t COMPACTED_BITS  = 1;
-constexpr uint8_t SALT_BITS       = 5;
-constexpr uint8_t CLOCK_BITS      = 14;
-constexpr uint8_t NODE_BITS       = 48;
-constexpr uint8_t PADDING_BITS    = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS;  // 44
-constexpr uint8_t PADDING1_BITS   = 64 - COMPACTED_BITS - NODE_BITS - CLOCK_BITS;  // 1
-
-
 constexpr uint8_t UUID_LENGTH     = 36;
-
-
-class Guid;
-
-
-/*
- * Union for compact uuids
- */
-union GuidCompactor {
-	struct compact_t {
-		uint64_t time        : TIME_BITS;
-		uint64_t version     : VERSION_BITS;
-
-		uint64_t compacted   : COMPACTED_BITS;
-		uint64_t padding     : PADDING_BITS;
-		uint64_t salt        : SALT_BITS;
-		uint64_t clock       : CLOCK_BITS;
-	} compact;
-
-	struct expanded_t {
-		uint64_t time        : TIME_BITS;
-		uint64_t version     : VERSION_BITS;
-
-		uint64_t compacted   : COMPACTED_BITS;
-		uint64_t padding     : PADDING1_BITS;
-		uint64_t node        : NODE_BITS;
-		uint64_t clock       : CLOCK_BITS;
-	} expanded;
-
-	GuidCompactor();
-
-private:
-	friend class Guid;
-
-	uint64_t calculate_node() const;
-	std::string serialise(uint8_t variant) const;
-	static GuidCompactor unserialise_raw(uint8_t lenght, const char** bytes);
-	static GuidCompactor unserialise_condensed(uint8_t lenght, const char** bytes);
-};
 
 
 /*
@@ -174,6 +125,8 @@ public:
 	}
 
 private:
+	union GuidCompactor get_compactor(bool compacted) const;
+
 	// actual data
 	std::array<unsigned char, 16> _bytes;
 
@@ -185,7 +138,6 @@ private:
 	uint16_t get_uuid1_clock_seq() const;
 	uint8_t get_uuid_variant() const;
 	uint8_t get_uuid_version() const;
-	GuidCompactor get_compactor(bool compacted) const;
 
 	static std::string serialise_decode(const std::string& encoded);
 
