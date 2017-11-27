@@ -157,7 +157,22 @@ GuidCompactor::serialise(uint8_t variant) const
 
 
 GuidCompactor
-GuidCompactor::unserialise(uint8_t length, const char** pos)
+GuidCompactor::unserialise_raw(uint8_t length, const char** pos)
+{
+	char buf[16];
+	std::memset(buf, 0, sizeof(buf));
+	std::memcpy(buf, *pos + 1, length + 1);
+
+	GuidCompactor compactor;
+	*(reinterpret_cast<uint64_t*>(&compactor)) = *(reinterpret_cast<uint64_t*>(buf));
+	*(reinterpret_cast<uint64_t*>(&compactor) + 1) = *(reinterpret_cast<uint64_t*>(buf) + 1);
+	*pos += length + 2;
+	return compactor;
+}
+
+
+GuidCompactor
+GuidCompactor::unserialise_condensed(uint8_t length, const char** pos)
 {
 	bool compacted = **pos & 0x10;
 	bool version   = **pos & 0x20;
@@ -185,21 +200,6 @@ GuidCompactor::unserialise(uint8_t length, const char** pos)
 	compactor.compact.version = version ? 1 : 4;
 	compactor.compact.compacted = compacted;
 	*pos += length + 1;
-	return compactor;
-}
-
-
-GuidCompactor
-GuidCompactor::unserialise_full(uint8_t length, const char** pos)
-{
-	char buf[16];
-	std::memset(buf, 0, sizeof(buf));
-	std::memcpy(buf, *pos + 1, length + 1);
-
-	GuidCompactor compactor;
-	*(reinterpret_cast<uint64_t*>(&compactor)) = *(reinterpret_cast<uint64_t*>(buf));
-	*(reinterpret_cast<uint64_t*>(&compactor) + 1) = *(reinterpret_cast<uint64_t*>(buf) + 1);
-	*pos += length + 2;
 	return compactor;
 }
 
@@ -508,19 +508,19 @@ Guid::unserialise(const std::string& bytes)
 		if (length == 0 || bytes.length() != static_cast<size_t>(length + 2)) {
 			THROW(SerialisationError, "Bad encoded uuid");
 		}
-		return unserialise_full(length, &pos);
+		return unserialise_raw(length, &pos);
 	} else if (bytes.length() != static_cast<size_t>(length + 1)) {
 		THROW(SerialisationError, "Bad encoded uuid");
 	}
 
-	return unserialise(length, &pos);
+	return unserialise_condensed(length, &pos);
 }
 
 
 Guid
-Guid::unserialise(uint8_t length, const char** pos)
+Guid::unserialise_raw(uint8_t length, const char** pos)
 {
-	GuidCompactor compactor = GuidCompactor::unserialise(length, pos);
+	GuidCompactor compactor = GuidCompactor::unserialise_raw(length, pos);
 
 	uint64_t time = compactor.compact.time;
 	if (time) {
@@ -528,8 +528,8 @@ Guid::unserialise(uint8_t length, const char** pos)
 	}
 
 	unsigned char clock_seq_low = compactor.compact.clock & 0xffULL;
-	unsigned char clock_seq_hi_variant = compactor.compact.clock >> 8 | 0x80ULL;  // Variant: RFC 4122
-	uint64_t node = compactor.compact.compacted ? compactor.calculate_node() : compactor.expanded.node;
+	unsigned char clock_seq_hi_variant = compactor.compact.clock >> 8 | compactor.expanded.padding << 7 | compactor.expanded.compacted << 6;
+	uint64_t node = compactor.expanded.node;
 	unsigned time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
@@ -547,9 +547,9 @@ Guid::unserialise(uint8_t length, const char** pos)
 
 
 Guid
-Guid::unserialise_full(uint8_t length, const char** pos)
+Guid::unserialise_condensed(uint8_t length, const char** pos)
 {
-	GuidCompactor compactor = GuidCompactor::unserialise_full(length, pos);
+	GuidCompactor compactor = GuidCompactor::unserialise_condensed(length, pos);
 
 	uint64_t time = compactor.compact.time;
 	if (time) {
@@ -557,8 +557,8 @@ Guid::unserialise_full(uint8_t length, const char** pos)
 	}
 
 	unsigned char clock_seq_low = compactor.compact.clock & 0xffULL;
-	unsigned char clock_seq_hi_variant = compactor.compact.clock >> 8 | compactor.expanded.padding << 7 | compactor.expanded.compacted << 6;
-	uint64_t node = compactor.expanded.node;
+	unsigned char clock_seq_hi_variant = compactor.compact.clock >> 8 | 0x80ULL;  // Variant: RFC 4122
+	uint64_t node = compactor.compact.compacted ? compactor.calculate_node() : compactor.expanded.node;
 	unsigned time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;

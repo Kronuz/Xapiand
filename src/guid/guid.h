@@ -41,13 +41,13 @@ THE SOFTWARE.
 
 
 constexpr uint8_t TIME_BITS       = 60;
-constexpr uint8_t VERSION_BITS    = 64 - TIME_BITS;
+constexpr uint8_t VERSION_BITS    = 64 - TIME_BITS;  // 4
 constexpr uint8_t COMPACTED_BITS  = 1;
 constexpr uint8_t SALT_BITS       = 5;
 constexpr uint8_t CLOCK_BITS      = 14;
 constexpr uint8_t NODE_BITS       = 48;
-constexpr uint8_t PADDING_BITS    = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS;
-constexpr uint8_t PADDING1_BITS   = 64 - COMPACTED_BITS - NODE_BITS - CLOCK_BITS;
+constexpr uint8_t PADDING_BITS    = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS;  // 44
+constexpr uint8_t PADDING1_BITS   = 64 - COMPACTED_BITS - NODE_BITS - CLOCK_BITS;  // 1
 
 
 constexpr uint8_t UUID_LENGTH     = 36;
@@ -87,8 +87,8 @@ private:
 
 	uint64_t calculate_node() const;
 	std::string serialise(uint8_t variant) const;
-	static GuidCompactor unserialise(uint8_t lenght, const char** bytes);
-	static GuidCompactor unserialise_full(uint8_t lenght, const char** bytes);
+	static GuidCompactor unserialise_raw(uint8_t lenght, const char** bytes);
+	static GuidCompactor unserialise_condensed(uint8_t lenght, const char** bytes);
 };
 
 
@@ -167,11 +167,11 @@ public:
 				if (length == 0 || (end - pos) < (length + 2)) {
 					THROW(SerialisationError, "Bad encoded expanded uuid");
 				}
-				*d_first = unserialise_full(length, &pos);
+				*d_first = unserialise_raw(length, &pos);
 			} else if ((end - pos) < (length + 1)) {
 				THROW(SerialisationError, "Bad encoded compacted/condensed uuid");
 			} else {
-				*d_first = unserialise(length, &pos);
+				*d_first = unserialise_condensed(length, &pos);
 			}
 		}
 	}
@@ -200,8 +200,8 @@ private:
 	static std::string serialise_decode(const std::string& encoded);
 
 	// Aux functions for unserialise a serialised uuid's list.
-	static Guid unserialise_full(uint8_t length, const char** pos);
-	static Guid unserialise(uint8_t length, const char** pos);
+	static Guid unserialise_raw(uint8_t length, const char** pos);
+	static Guid unserialise_condensed(uint8_t length, const char** pos);
 };
 
 
