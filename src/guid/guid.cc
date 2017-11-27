@@ -157,29 +157,29 @@ GuidCompactor::serialise(uint8_t variant) const
 
 
 GuidCompactor
-GuidCompactor::unserialise_raw(uint8_t length, const char** pos)
+GuidCompactor::unserialise_raw(uint8_t length, const char** ptr)
 {
 	char buf[16];
 	std::memset(buf, 0, sizeof(buf));
-	std::memcpy(buf, *pos + 1, length + 1);
+	std::memcpy(buf, *ptr + 1, length + 1);
 
 	GuidCompactor compactor;
 	*(reinterpret_cast<uint64_t*>(&compactor)) = *(reinterpret_cast<uint64_t*>(buf));
 	*(reinterpret_cast<uint64_t*>(&compactor) + 1) = *(reinterpret_cast<uint64_t*>(buf) + 1);
-	*pos += length + 2;
+	*ptr += length + 2;
 	return compactor;
 }
 
 
 GuidCompactor
-GuidCompactor::unserialise_condensed(uint8_t length, const char** pos)
+GuidCompactor::unserialise_condensed(uint8_t length, const char** ptr)
 {
-	bool compacted = **pos & 0x10;
-	bool version   = **pos & 0x20;
+	bool compacted = **ptr & 0x10;
+	bool version   = **ptr & 0x20;
 
 	char buf[16];
 	std::memset(buf, 0, sizeof(buf));
-	std::memcpy(buf, *pos, length + 1);
+	std::memcpy(buf, *ptr, length + 1);
 	auto ls64 = *(reinterpret_cast<uint64_t*>(buf));
 	auto ms64 = *(reinterpret_cast<uint64_t*>(buf) + 1);
 
@@ -199,7 +199,7 @@ GuidCompactor::unserialise_condensed(uint8_t length, const char** pos)
 	*(reinterpret_cast<uint64_t*>(&compactor) + 1) = val2;
 	compactor.compact.version = version ? 1 : 4;
 	compactor.compact.compacted = compacted;
-	*pos += length + 1;
+	*ptr += length + 1;
 	return compactor;
 }
 
@@ -470,25 +470,32 @@ Guid::serialise_decode(const std::string& encoded)
 bool
 Guid::is_valid(const std::string& bytes)
 {
-	if (bytes.length() < 2) {
-		return false;
-	}
+	const char* pos = bytes.data();
+	const char* end = pos + bytes.size();
+	return is_valid(&pos, end);
+}
 
-	const char* pos = bytes.c_str();
-	const char* end = pos + bytes.length();
-	while (pos != end) {
-		uint8_t length = *pos & 0x0f;
+bool
+Guid::is_valid(const char** ptr, const char* end)
+{
+	while (*ptr != end) {
+		auto size = end - *ptr;
+		if (size < 2 || size > UUID_MAX_SERIALISED_LENGTH) {
+			return false;
+		}
+		uint8_t l = **ptr;
+		auto length = l & 0x0f;
 		if (length == 0) {
-			length = (*pos & 0xf0) >> 4;
-			if (length == 0 || (end - pos) < (length + 2)) {
+			length = (l >> 4) & 0x0f;
+			if (length == 0 || size < length + 2) {
 				return false;
 			}
-			pos += length + 2;
-		} else if ((end - pos) < (length + 1)) {
-			return false;
-		} else {
-			pos += length + 1;
+			*ptr += length + 2;
 		}
+		if (size < length + 1) {
+			return false;
+		}
+		*ptr += length + 1;
 	}
 	return true;
 }
@@ -497,23 +504,32 @@ Guid::is_valid(const std::string& bytes)
 Guid
 Guid::unserialise(const std::string& bytes)
 {
-	if (bytes.length() < 2 || bytes.length() > UUID_MAX_SERIALISED_LENGTH) {
+	const char* pos = bytes.data();
+	const char* end = pos + bytes.size();
+	return unserialise(&pos, end);
+}
+
+
+Guid
+Guid::unserialise(const char** ptr, const char* end)
+{
+	auto size = end - *ptr;
+	if (size < 2 || size > UUID_MAX_SERIALISED_LENGTH) {
 		THROW(SerialisationError, "Bad encoded uuid");
 	}
-
-	const char* pos = bytes.c_str();
-	uint8_t length = *pos & 0x0f;
+	uint8_t l = **ptr;
+	auto length = l & 0x0f;
 	if (length == 0) {
-		length = (*pos & 0xf0) >> 4;
-		if (length == 0 || bytes.length() != static_cast<size_t>(length + 2)) {
-			THROW(SerialisationError, "Bad encoded uuid");
+		length = (l >> 4) & 0x0f;
+		if (length == 0 || size < length + 2) {
+			THROW(SerialisationError, "Bad encoded expanded uuid");
 		}
-		return unserialise_raw(length, &pos);
-	} else if (bytes.length() != static_cast<size_t>(length + 1)) {
-		THROW(SerialisationError, "Bad encoded uuid");
+		return unserialise_raw(length, ptr);
 	}
-
-	return unserialise_condensed(length, &pos);
+	if (size < length + 1) {
+		THROW(SerialisationError, "Bad encoded compacted/condensed uuid");
+	}
+	return unserialise_condensed(length, ptr);
 }
 
 

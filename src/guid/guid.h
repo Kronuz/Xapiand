@@ -136,7 +136,9 @@ public:
 	std::string serialise() const;
 
 	static bool is_valid(const std::string& bytes);
+	static bool is_valid(const char** ptr, const char* end);
 	static Guid unserialise(const std::string& bytes);
+	static Guid unserialise(const char** ptr, const char* end);
 
 	// Serialise a uuid's list.
 	template <typename InputIt>
@@ -144,7 +146,7 @@ public:
 		std::string serialised;
 		while (first != last) {
 			const auto& uuid = *first;
-			if (uuid.length() == UUID_LENGTH && uuid[8] == '-' && uuid[13] == '-' && uuid[18] == '-' && uuid[23] == '-') {
+			if (uuid.size() == UUID_LENGTH && uuid[8] == '-' && uuid[13] == '-' && uuid[18] == '-' && uuid[23] == '-') {
 				Guid guid(uuid);
 				serialised.append(guid.serialise());
 			} else {
@@ -159,28 +161,16 @@ public:
 	// unserialise a serialised uuid's list
 	template <typename OutputIt>
 	static void unserialise(const char** ptr, const char* end, OutputIt d_first) {
-		const char* pos = *ptr;
-		while (pos != end) {
-			uint8_t length = *pos & 0x0f;
-			if (length == 0) {
-				length = (*pos & 0xf0) >> 4;
-				if (length == 0 || (end - pos) < (length + 2)) {
-					THROW(SerialisationError, "Bad encoded expanded uuid");
-				}
-				*d_first = unserialise_raw(length, &pos);
-			} else if ((end - pos) < (length + 1)) {
-				THROW(SerialisationError, "Bad encoded compacted/condensed uuid");
-			} else {
-				*d_first = unserialise_condensed(length, &pos);
-			}
+		while (*ptr != end) {
+			*d_first++ = unserialise(ptr, end);
 		}
 	}
 
 	template <typename OutputIt>
 	static void unserialise(const std::string& serialised, OutputIt d_first) {
-		const char* ptr = serialised.data();
-		const char* end = serialised.data() + serialised.length();
-		unserialise(&ptr, end, d_first);
+		const char* pos = serialised.data();
+		const char* end = pos + serialised.size();
+		unserialise(&pos, end, d_first);
 	}
 
 private:
