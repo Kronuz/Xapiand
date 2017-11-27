@@ -450,7 +450,7 @@ Guid::serialise_decode(const std::string& encoded)
 	std::string bytes;
 #ifdef UUID_USE_BASE58
 	try {
-		base58::base58().decode(bytes, encoded, true);
+		Base58::base58chk().decode(bytes, encoded);
 		if (is_valid(bytes)) {
 			return bytes;
 		}
@@ -458,7 +458,7 @@ Guid::serialise_decode(const std::string& encoded)
 #endif
 #ifdef UUID_USE_BASE62
 	try {
-		base62::base62().decode(bytes, encoded, true);
+		Base62::base62chk().decode(bytes, encoded);
 		if (is_valid(bytes)) {
 			return bytes;
 		}

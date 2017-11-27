@@ -356,7 +356,7 @@ namespace Unserialise {
 	CartesianList centroids(const std::string& serialised_geo);
 
 	// Unserialise a serialised UUID.
-	std::string uuid(const std::string& serialised_uuid, UUIDRepr repr=UUIDRepr::base62);
+	std::string uuid(const std::string& serialised_uuid, UUIDRepr repr=UUIDRepr::simple);
 
 	// Unserialise a serialised cartesian coordinate.
 	Cartesian cartesian(const std::string& serialised_cartesian);
