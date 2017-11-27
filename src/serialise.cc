@@ -54,6 +54,12 @@ Serialise::isUUID(const std::string& field_value) noexcept
 	if (field_value.length() > 2) {
 		bool allow_encoded = false;
 		Split<char> split(std::string(), UUID_SEPARATOR_LIST);
+#ifdef UUID_USE_BASE16
+		if (Base16::base16chk().is_valid(field_value)) {
+			allow_encoded = true;
+			split = Split<char>(field_value, UUID_SEPARATOR_LIST);
+		} else
+#endif
 #ifdef UUID_USE_BASE58
 		if (Base58::flickrchk().is_valid(field_value)) {
 			allow_encoded = true;
@@ -95,6 +101,9 @@ Serialise::isUUID(const std::string& field_value) noexcept
 					}
 				}
 			} else if (allow_encoded && !uuid.empty()) {
+#ifdef UUID_USE_BASE16
+				if (Base16::base16chk().is_valid(uuid)) return true;
+#endif
 #ifdef UUID_USE_BASE58
 				if (Base58::flickrchk().is_valid(uuid)) return true;
 #endif
@@ -560,6 +569,12 @@ Serialise::uuid(const std::string& field_value)
 	if (field_value.length() > 2) {
 		bool allow_encoded = false;
 		std::vector<std::string> result;
+#ifdef UUID_USE_BASE16
+		if (Base16::base16chk().is_valid(field_value)) {
+			allow_encoded = true;
+			Split<>::split(field_value, UUID_SEPARATOR_LIST, std::back_inserter(result));
+		} else
+#endif
 #ifdef UUID_USE_BASE58
 		if (Base58::flickrchk().is_valid(field_value)) {
 			allow_encoded = true;
@@ -602,6 +617,9 @@ Serialise::uuid(const std::string& field_value)
 				}
 			} else if (allow_encoded && !uuid.empty()) {
 				if (true
+#ifdef UUID_USE_BASE16
+					&& !Base16::base16chk().is_valid(uuid)
+#endif
 #ifdef UUID_USE_BASE58
 					&& !Base58::flickrchk().is_valid(uuid)
 #endif
@@ -1090,6 +1108,12 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 {
 	std::string result;
 	switch (repr) {
+#ifdef UUID_USE_BASE16
+		case UUIDRepr::base16: {
+			result.append(Base16::base16chk().encode(serialised_uuid));
+			break;
+		}
+#endif
 #ifdef UUID_USE_BASE58
 		case UUIDRepr::base58: {
 			result.append(Base58::flickrchk().encode(serialised_uuid));

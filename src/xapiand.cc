@@ -303,6 +303,9 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 
 		std::vector<std::string> uuid_repr_allowed({
+#ifdef UUID_USE_BASE16
+			"base16",
+#endif
 #ifdef UUID_USE_BASE58
 			"base58",
 #endif
@@ -454,6 +457,11 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.uuid_compact = uuid_compact.getValue();
 		auto uuid_repr_str = uuid_repr.getValue();
 		opts.uuid_repr = UUIDRepr::simple;
+#ifdef UUID_USE_BASE16
+		if (uuid_repr_str == "base16") {
+			opts.uuid_repr = UUIDRepr::base16;
+		}
+#endif
 #ifdef UUID_USE_BASE58
 		if (uuid_repr_str == "base58") {
 			opts.uuid_repr = UUIDRepr::base58;

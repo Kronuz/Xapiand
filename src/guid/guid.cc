@@ -498,10 +498,19 @@ Guid::serialise() const
 	}
 }
 
+
 std::string
 Guid::serialise_decode(const std::string& encoded)
 {
 	std::string bytes;
+#ifdef UUID_USE_BASE16
+	try {
+		Base16::base16chk().decode(bytes, encoded);
+		if (is_valid(bytes)) {
+			return bytes;
+		}
+	} catch (const std::invalid_argument&) { }
+#endif
 #ifdef UUID_USE_BASE58
 	try {
 		Base58::flickrchk().decode(bytes, encoded);
@@ -521,6 +530,7 @@ Guid::serialise_decode(const std::string& encoded)
 	THROW(SerialisationError, "Invalid encoded UUID format in: %s", encoded.c_str());
 }
 
+
 bool
 Guid::is_valid(const std::string& bytes)
 {
@@ -528,6 +538,7 @@ Guid::is_valid(const std::string& bytes)
 	const char* end = pos + bytes.size();
 	return is_valid(&pos, end);
 }
+
 
 bool
 Guid::is_valid(const char** ptr, const char* end)
