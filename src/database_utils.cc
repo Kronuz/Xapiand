@@ -104,7 +104,7 @@ std::string normalize_uuid(const std::string& uuid)
 	}
 #endif
 #ifdef UUID_USE_BASE62
-	if (Base62::base62chk().is_valid(uuid)) {
+	if (Base62::invertedchk().is_valid(uuid)) {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base62);
 	}
 #endif

@@ -61,7 +61,7 @@ Serialise::isUUID(const std::string& field_value) noexcept
 		} else
 #endif
 #ifdef UUID_USE_BASE62
-		if (Base62::base62chk().is_valid(field_value)) {
+		if (Base62::invertedchk().is_valid(field_value)) {
 			allow_encoded = true;
 			split = Split<char>(field_value, UUID_SEPARATOR_LIST);
 		} else
@@ -99,7 +99,7 @@ Serialise::isUUID(const std::string& field_value) noexcept
 				if (Base58::flickrchk().is_valid(uuid)) return true;
 #endif
 #ifdef UUID_USE_BASE62
-				if (Base62::base62chk().is_valid(uuid)) return true;
+				if (Base62::invertedchk().is_valid(uuid)) return true;
 #endif
 				return false;
 			} else {
@@ -567,7 +567,7 @@ Serialise::uuid(const std::string& field_value)
 		} else
 #endif
 #ifdef UUID_USE_BASE62
-		if (Base62::base62chk().is_valid(field_value)) {
+		if (Base62::invertedchk().is_valid(field_value)) {
 			allow_encoded = true;
 			Split<>::split(field_value, UUID_SEPARATOR_LIST, std::back_inserter(result));
 		} else
@@ -606,7 +606,7 @@ Serialise::uuid(const std::string& field_value)
 					&& !Base58::flickrchk().is_valid(uuid)
 #endif
 #ifdef UUID_USE_BASE62
-					&& !Base62::base62chk().is_valid(uuid)
+					&& !Base62::invertedchk().is_valid(uuid)
 #endif
 				) {
 					THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
@@ -1098,7 +1098,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 #endif
 #ifdef UUID_USE_BASE62
 		case UUIDRepr::base62: {
-			result.append(Base62::base62chk().encode(serialised_uuid));
+			result.append(Base62::invertedchk().encode(serialised_uuid));
 			break;
 		}
 #endif

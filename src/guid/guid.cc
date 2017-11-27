@@ -458,7 +458,7 @@ Guid::serialise_decode(const std::string& encoded)
 #endif
 #ifdef UUID_USE_BASE62
 	try {
-		Base62::base62chk().decode(bytes, encoded);
+		Base62::invertedchk().decode(bytes, encoded);
 		if (is_valid(bytes)) {
 			return bytes;
 		}
