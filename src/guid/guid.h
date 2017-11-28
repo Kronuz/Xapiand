@@ -132,7 +132,7 @@ private:
 	static std::string serialise(const std::string& encoded);
 
 	// Aux functions for unserialise a serialised uuid's list.
-	static Guid unserialise_raw(uint8_t length, const char** pos);
+	static Guid unserialise_unknown(uint8_t length, const char** pos);
 	static Guid unserialise_condensed(uint8_t length, const char** pos);
 };
 

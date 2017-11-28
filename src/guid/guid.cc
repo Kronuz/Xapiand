@@ -109,10 +109,10 @@ union GuidCompactor {
 
 	uint64_t calculate_node() const;
 
-	std::string serialise_raw(uint8_t variant) const;
+	std::string serialise_unknown(uint8_t variant) const;
 	std::string serialise_condensed(uint8_t variant) const;
 
-	static GuidCompactor unserialise_raw(uint8_t lenght, const char** bytes);
+	static GuidCompactor unserialise_unknown(uint8_t lenght, const char** bytes);
 	static GuidCompactor unserialise_condensed(uint8_t lenght, const char** bytes);
 
 	GuidCompactor();
@@ -150,11 +150,11 @@ GuidCompactor::calculate_node() const
 
 
 inline std::string
-GuidCompactor::serialise_raw(uint8_t variant) const
+GuidCompactor::serialise_unknown(uint8_t variant) const
 {
 	auto ls64 = *(reinterpret_cast<const uint64_t*>(this));
 	auto ms64 = *(reinterpret_cast<const uint64_t*>(this) + 1);
-	ms64 = (ms64 & 0xfffffffffffffffc) | (variant & 0xc0) >> 6;
+	ms64 = (ms64 & 0xfffffffffffffffc) | (variant & 0xc0) >> 6;  // fix variant
 
 	char buf[17];
 	*(reinterpret_cast<uint64_t*>(buf + 1)) = ls64;
@@ -172,7 +172,7 @@ GuidCompactor::serialise_raw(uint8_t variant) const
 
 
 inline GuidCompactor
-GuidCompactor::unserialise_raw(uint8_t length, const char** ptr)
+GuidCompactor::unserialise_unknown(uint8_t length, const char** ptr)
 {
 	char buf[16] = {};
 	std::copy(*ptr + 1, *ptr + length + 1, buf);
@@ -441,66 +441,65 @@ Guid::get_uuid_version() const
 }
 
 
-inline GuidCompactor
-Guid::get_compactor(bool compacted) const
-{
-	GuidCompactor compactor;
-	compactor.compact.compacted = compacted;
-	auto time = get_uuid1_time();
-	if (time) {
-		time -= UUID_TIME_INITIAL;
-	}
-	compactor.compact.time = time;
-	compactor.compact.clock = get_uuid1_clock_seq();
-
-	return compactor;
-}
-
 
 inline void
 Guid::compact()
 {
-	auto node = get_uuid1_node();
+	auto variant = get_uuid_variant();
+	auto version = get_uuid_version();
+	if (variant == 0x80 && (version == 1 || version == 4)) {
+		auto node = get_uuid1_node();
 
-	auto salt = fnv_1a(node);
-	salt &= SALT_MASK;
+		auto salt = fnv_1a(node);
+		salt &= SALT_MASK;
 
-	auto compactor = get_compactor(true);
-	compactor.compact.version = 1;
-	compactor.compact.salt = salt;
-	node = compactor.calculate_node();
+		GuidCompactor compactor;
+		compactor.compact.compacted = true;
+		compactor.compact.time = get_uuid1_time();
+		if (version == 4 && compactor.compact.time) {
+			compactor.compact.time -= UUID_TIME_INITIAL;
+		}
+		compactor.compact.clock = get_uuid1_clock_seq();
+		compactor.compact.version = version;
+		compactor.compact.salt = salt;
+		node = compactor.calculate_node();
 
-	uint64_t num_last = BYTE_SWAP_8(*reinterpret_cast<uint64_t*>(&_bytes[8]));
-	num_last = (num_last & 0xffff000000000000ULL) | node;
-	*reinterpret_cast<uint64_t*>(&_bytes[8]) = BYTE_SWAP_8(num_last);
+		uint64_t num_last = BYTE_SWAP_8(*reinterpret_cast<uint64_t*>(&_bytes[8]));
+		num_last = (num_last & 0xffff000000000000ULL) | node;
+		*reinterpret_cast<uint64_t*>(&_bytes[8]) = BYTE_SWAP_8(num_last);
+	}
 }
 
 
 std::string
 Guid::serialise() const
 {
+	auto variant = get_uuid_variant();
+	auto version = get_uuid_version();
+	auto time = get_uuid1_time();
 	auto node = get_uuid1_node();
 	auto salt = node & SALT_MASK;
 
-	auto compactor = get_compactor(true);
-	compactor.compact.salt = salt;
-	auto compacted_node = compactor.calculate_node();
-
-	if (node != compacted_node) {
-		compactor = get_compactor(false);
-		compactor.expanded.node = node;
-	}
-
-	auto version = get_uuid_version();
-	compactor.expanded.version = version;
-
-	auto variant = get_uuid_variant();
+	GuidCompactor compactor;
+	compactor.compact.compacted = true;
+	compactor.compact.version = version;
+	compactor.compact.time = time;
+	compactor.compact.clock = get_uuid1_clock_seq();
 
 	if (variant == 0x80 && (version == 1 || version == 4)) {
+		if (version == 4 && compactor.compact.time) {
+			compactor.compact.time -= UUID_TIME_INITIAL;
+		}
+		compactor.compact.salt = salt;
+		auto compacted_node = compactor.calculate_node();
+		if (node != compacted_node) {
+			compactor.expanded.compacted = false;
+			compactor.expanded.node = node;
+		}
 		return compactor.serialise_condensed(variant);
-	} else {
-		return compactor.serialise_raw(variant);
 	}
+
+	return compactor.serialise_unknown(variant);
 }
 
 
@@ -599,7 +598,7 @@ Guid::unserialise(const char** ptr, const char* end)
 		if (length == 0 || size < length + 2) {
 			THROW(SerialisationError, "Bad encoded expanded uuid");
 		}
-		return unserialise_raw(length, ptr);
+		return unserialise_unknown(length, ptr);
 	}
 	if (size < length + 1) {
 		THROW(SerialisationError, "Bad encoded compacted/condensed uuid");
@@ -609,19 +608,15 @@ Guid::unserialise(const char** ptr, const char* end)
 
 
 Guid
-Guid::unserialise_raw(uint8_t length, const char** ptr)
+Guid::unserialise_unknown(uint8_t length, const char** ptr)
 {
-	GuidCompactor compactor = GuidCompactor::unserialise_raw(length, ptr);
-
-	uint64_t time = compactor.compact.time;
-	if (time) {
-		time += UUID_TIME_INITIAL;
-	}
+	GuidCompactor compactor = GuidCompactor::unserialise_unknown(length, ptr);
 
 	unsigned char clock_seq_low = compactor.compact.clock & 0xffULL;
 	unsigned char clock_seq_hi_variant = compactor.compact.clock >> 8 | compactor.expanded.padding << 7 | compactor.expanded.compacted << 6;
 	uint64_t node = compactor.expanded.node;
 
+	uint64_t time = compactor.compact.time;
 	unsigned time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
@@ -643,15 +638,14 @@ Guid::unserialise_condensed(uint8_t length, const char** ptr)
 {
 	GuidCompactor compactor = GuidCompactor::unserialise_condensed(length, ptr);
 
-	uint64_t time = compactor.compact.time;
-	if (time) {
-		time += UUID_TIME_INITIAL;
-	}
-
 	unsigned char clock_seq_low = compactor.compact.clock & 0xffULL;
 	unsigned char clock_seq_hi_variant = compactor.compact.clock >> 8 | 0x80ULL;  // Variant: RFC 4122
 	uint64_t node = compactor.compact.compacted ? compactor.calculate_node() : compactor.expanded.node;
 
+	uint64_t time = compactor.compact.time;
+	if (compactor.compact.version == 1 && time) {
+		time += UUID_TIME_INITIAL;
+	}
 	unsigned time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
