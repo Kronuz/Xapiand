@@ -99,17 +99,17 @@ std::string get_prefix(const std::string& field_name)
 std::string normalize_uuid(const std::string& uuid)
 {
 #ifdef UUID_USE_BASE16
-	if (Base16::base16chk().is_valid(uuid)) {
+	if (BASE16.is_valid(uuid)) {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base16);
 	}
 #endif
 #ifdef UUID_USE_BASE58
-	if (Base58::flickrchk().is_valid(uuid)) {
+	if (BASE58.is_valid(uuid)) {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base58);
 	}
 #endif
 #ifdef UUID_USE_BASE62
-	if (Base62::invertedchk().is_valid(uuid)) {
+	if (BASE62.is_valid(uuid)) {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base62);
 	}
 #endif

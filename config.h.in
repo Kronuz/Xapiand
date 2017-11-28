@@ -270,4 +270,14 @@
 #cmakedefine UUID_USE_GUID @UUID_USE_GUID@
 #cmakedefine UUID_USE_URN @UUID_USE_URN@
 
+#ifdef UUID_USE_BASE16
+	#define BASE16 Base16::base16chk()
+#endif
+#ifdef UUID_USE_BASE58
+	#define BASE58 Base58::flickrchk()
+#endif
+#ifdef UUID_USE_BASE62
+	#define BASE62 Base62::invertedchk()
+#endif
+
 #endif /*  _CONFIG_H_ */

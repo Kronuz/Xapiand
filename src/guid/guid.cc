@@ -505,7 +505,7 @@ Guid::serialise_decode(const std::string& encoded)
 	std::string bytes;
 #ifdef UUID_USE_BASE16
 	try {
-		Base16::base16chk().decode(bytes, encoded);
+		BASE16.decode(bytes, encoded);
 		if (is_valid(bytes)) {
 			return bytes;
 		}
@@ -513,7 +513,7 @@ Guid::serialise_decode(const std::string& encoded)
 #endif
 #ifdef UUID_USE_BASE58
 	try {
-		Base58::flickrchk().decode(bytes, encoded);
+		BASE58.decode(bytes, encoded);
 		if (is_valid(bytes)) {
 			return bytes;
 		}
@@ -521,7 +521,7 @@ Guid::serialise_decode(const std::string& encoded)
 #endif
 #ifdef UUID_USE_BASE62
 	try {
-		Base62::invertedchk().decode(bytes, encoded);
+		BASE62.decode(bytes, encoded);
 		if (is_valid(bytes)) {
 			return bytes;
 		}
