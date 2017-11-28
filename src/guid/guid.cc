@@ -152,13 +152,13 @@ GuidCompactor::calculate_node() const
 inline std::string
 GuidCompactor::serialise_unknown(uint8_t variant) const
 {
-	auto ls64 = *(reinterpret_cast<const uint64_t*>(this));
-	auto ms64 = *(reinterpret_cast<const uint64_t*>(this) + 1);
-	ms64 = (ms64 & 0xfffffffffffffffc) | (variant & 0xc0) >> 6;  // fix variant
+	auto buf0 = *(reinterpret_cast<const uint64_t*>(this));
+	auto buf1 = *(reinterpret_cast<const uint64_t*>(this) + 1);
+	buf1 = (buf1 & 0xfffffffffffffffc) | (variant & 0xc0) >> 6;  // fix variant
 
 	char buf[17];
-	*(reinterpret_cast<uint64_t*>(buf + 1)) = ls64;
-	*(reinterpret_cast<uint64_t*>(buf + 1) + 1) = ms64;
+	*(reinterpret_cast<uint64_t*>(buf + 1)) = buf0;
+	*(reinterpret_cast<uint64_t*>(buf + 1) + 1) = buf1;
 
 	auto ptr = buf + 17;
 	const auto min_buf = buf + 2;
@@ -177,9 +177,13 @@ GuidCompactor::unserialise_unknown(uint8_t length, const char** ptr)
 	char buf[16] = {};
 	std::copy(*ptr + 1, *ptr + length + 1, buf);
 
+	auto buf0 = *(reinterpret_cast<uint64_t*>(buf));
+	auto buf1 = *(reinterpret_cast<uint64_t*>(buf) + 1);
+
 	GuidCompactor compactor;
-	*(reinterpret_cast<uint64_t*>(&compactor)) = *(reinterpret_cast<uint64_t*>(buf));
-	*(reinterpret_cast<uint64_t*>(&compactor) + 1) = *(reinterpret_cast<uint64_t*>(buf) + 1);
+	*(reinterpret_cast<uint64_t*>(&compactor)) = buf0;
+	*(reinterpret_cast<uint64_t*>(&compactor) + 1) = buf1;
+
 	*ptr += length + 2;
 	return compactor;
 }
@@ -188,24 +192,24 @@ GuidCompactor::unserialise_unknown(uint8_t length, const char** ptr)
 inline std::string
 GuidCompactor::serialise_condensed(uint8_t variant) const
 {
-	auto val1 = *(reinterpret_cast<const uint64_t*>(this));
-	auto val2 = *(reinterpret_cast<const uint64_t*>(this) + 1);
+	auto val0 = *(reinterpret_cast<const uint64_t*>(this));
+	auto val1 = *(reinterpret_cast<const uint64_t*>(this) + 1);
 
-	uint64_t ls64, ms64;
+	uint64_t buf0, buf1;
 	if (compact.compacted) {
-		static const uint8_t skip1  = PADDING_BITS - VERSION_BITS - COMPACTED_BITS;
-		static const uint8_t skip2 = 64 - skip1;
-		static const uint8_t skip3 = skip1 + VERSION_BITS;
-		ls64 = val1 << skip2 | val2 >> skip1;
-		ms64 = (val1 << VERSION_BITS) >> skip3;
+		static const uint8_t skip1 = PADDING_BITS - VERSION_BITS - COMPACTED_BITS;  // 44 - 4 - 1 = 39
+		static const uint8_t skip2 = 64 - skip1;  // 25
+		static const uint8_t skip3 = skip1 + VERSION_BITS;  // 39 + 4 = 43
+		buf0 = val0 << skip2 | val1 >> skip1;
+		buf1 = (val0 << VERSION_BITS) >> skip3;
 	} else {
-		ms64 = (val1 << VERSION_BITS) | (val2 >> TIME_BITS);
-		ls64 = val2 << VERSION_BITS;
+		buf0 = val1 << VERSION_BITS;
+		buf1 = (val0 << VERSION_BITS) | (val1 >> TIME_BITS);
 	}
 
 	char buf[16];
-	*(reinterpret_cast<uint64_t*>(buf)) = ls64;
-	*(reinterpret_cast<uint64_t*>(buf) + 1) = ms64;
+	*(reinterpret_cast<uint64_t*>(buf)) = buf0;
+	*(reinterpret_cast<uint64_t*>(buf) + 1) = buf1;
 
 	auto ptr = buf + 16;
 	const auto min_buf = buf + 1;
@@ -222,30 +226,31 @@ inline GuidCompactor
 GuidCompactor::unserialise_condensed(uint8_t length, const char** ptr)
 {
 	bool compacted = **ptr & 0x10;
-	bool version   = **ptr & 0x20;
+	bool version1  = **ptr & 0x20;
 
 	char buf[16] = {};
 	std::copy(*ptr, *ptr + length + 1, buf);
 
-	auto ls64 = *(reinterpret_cast<uint64_t*>(buf));
-	auto ms64 = *(reinterpret_cast<uint64_t*>(buf) + 1);
+	auto buf0 = *(reinterpret_cast<uint64_t*>(buf));
+	auto buf1 = *(reinterpret_cast<uint64_t*>(buf) + 1);
 
-	uint64_t val1, val2;
+	uint64_t val0, val1;
 	if (compacted) {
-		static const uint8_t skip1 = PADDING_BITS - VERSION_BITS - COMPACTED_BITS;
-		static const uint8_t skip2 = 64 - skip1;
-		val1 = ms64 << skip1 | ls64 >> skip2;
-		val2 = ls64 << skip1;
+		static const uint8_t skip1 = PADDING_BITS - VERSION_BITS - COMPACTED_BITS;  // 44 - 4 - 1 = 39
+		static const uint8_t skip2 = 64 - skip1;  // 25
+		val0 = buf1 << skip1 | buf0 >> skip2;
+		val1 = buf0 << skip1;
 	} else {
-		val1 = ms64 >> VERSION_BITS;
-		val2 = ms64 << TIME_BITS | ls64 >> VERSION_BITS;
+		val0 = buf1 >> VERSION_BITS;
+		val1 = buf1 << TIME_BITS | buf0 >> VERSION_BITS;
 	}
 
 	GuidCompactor compactor;
-	*(reinterpret_cast<uint64_t*>(&compactor)) = val1;
-	*(reinterpret_cast<uint64_t*>(&compactor) + 1) = val2;
-	compactor.compact.version = version ? 1 : 4;
+	*(reinterpret_cast<uint64_t*>(&compactor)) = val0;
+	*(reinterpret_cast<uint64_t*>(&compactor) + 1) = val1;
+	compactor.compact.version = version1 ? 1 : 4;
 	compactor.compact.compacted = compacted;
+
 	*ptr += length + 1;
 	return compactor;
 }
