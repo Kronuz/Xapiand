@@ -507,8 +507,13 @@ Guid::serialise() const
 
 
 std::string
-Guid::serialise_decode(const std::string& encoded)
+Guid::serialise(const std::string& encoded)
 {
+	if (encoded.size() == UUID_LENGTH && encoded[8] == '-' && encoded[13] == '-' && encoded[18] == '-' && encoded[23] == '-') {
+		Guid guid(encoded);
+		return guid.serialise();
+	}
+
 	std::string bytes;
 #ifdef UUID_USE_BASE16
 	try {
