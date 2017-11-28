@@ -29,11 +29,8 @@ THE SOFTWARE.
 #include "exception.h"
 
 #include <array>           // for array
-#include <iomanip>
 #include <iostream>        // for ostream
-#include <sstream>
 #include <string>          // for string
-#include <unordered_set>   // for unordered_set
 
 #ifdef GUID_ANDROID
 #include <jni.h>
