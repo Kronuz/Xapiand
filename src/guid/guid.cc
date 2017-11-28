@@ -283,29 +283,34 @@ std::ostream& operator<<(std::ostream& s, const Guid& guid) {
 
 
 // converts a single hex char to a number (0 - 15)
-unsigned char hexDigitToChar(char ch) {
-	// 0 - 9
-	if (ch > 47 && ch < 58) {
-		return ch - 48;
-	}
+constexpr unsigned char hexDigitToChar(char chr) {
+	constexpr const int _[256] = {
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  0,  0,  0,  0,  0,  0,
 
-	// a - f
-	if (ch > 96 && ch < 103) {
-		return ch - 87;
-	}
+		 0, 10, 11, 12, 13, 14, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0, 10, 11, 12, 13, 14, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 
-	// A - F
-	if (ch > 64 && ch < 71) {
-		return ch - 55;
-	}
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 
-	return 0;
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	};
+	return _[chr];
 }
-
 
 // converts the two hexadecimal characters to an unsigned char (a byte)
 unsigned char hexPairToChar(char a, char b) {
-	return hexDigitToChar(a) * 16 + hexDigitToChar(b);
+	return hexDigitToChar(a) << 4 | hexDigitToChar(b);
 }
 
 
