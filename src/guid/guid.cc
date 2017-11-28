@@ -493,10 +493,12 @@ Guid::serialise() const
 		compactor.expanded.node = node;
 	}
 
-	compactor.expanded.version = get_uuid_version();
+	auto version = get_uuid_version();
+	compactor.expanded.version = version;
 
 	auto variant = get_uuid_variant();
-	if (variant == 0x80 && (compactor.compact.version == 1 || compactor.compact.version == 4)) {
+
+	if (variant == 0x80 && (version == 1 || version == 4)) {
 		return compactor.serialise_condensed(variant);
 	} else {
 		return compactor.serialise_raw(variant);
