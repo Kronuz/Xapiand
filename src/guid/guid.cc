@@ -35,24 +35,6 @@ THE SOFTWARE.
 #include <sstream>        // for std::ostringstream
 #include <stdexcept>      // for std::invalid_argument
 
-#ifdef GUID_LIBUUID
-#include <uuid/uuid.h>
-#endif
-
-#ifdef GUID_FREEBSD
-#include <cstdint>
-#include <cstring>
-#include <uuid.h>
-#endif
-
-#ifdef GUID_CFUUID
-#include <CoreFoundation/CFUUID.h>
-#endif
-
-#ifdef GUID_WINDOWS
-#include <objbase.h>
-#endif
-
 
 // 0x11f0241243c00ULL = 1yr
 constexpr uint64_t UUID_TIME_INITIAL           = 0x1e6bfffffffffffULL;
@@ -669,21 +651,12 @@ Guid::unserialise_condensed(uint8_t length, const char** ptr)
 }
 
 
-// This is the linux friendly implementation, but it could work on other
-// systems that have libuuid available
-#ifdef GUID_LIBUUID
-inline Guid
-GuidGenerator::_newGuid()
-{
-	std::array<unsigned char, 16> id;
-	uuid_generate_time(id.data());
-	return id;
-}
-#endif
-
-
 // This is the FreBSD version.
-#ifdef GUID_FREEBSD
+#if defined GUID_FREEBSD
+#include <cstdint>
+#include <cstring>
+#include <uuid.h>
+
 inline Guid
 GuidGenerator::_newGuid()
 {
@@ -698,11 +671,25 @@ GuidGenerator::_newGuid()
 	uuid_enc_be(byteArray.data(), &id);
 	return Guid(byteArray);
 }
-#endif
 
 
-// this is the mac and ios version
-#ifdef GUID_CFUUID
+// For systems that have libuuid available.
+#elif defined GUID_LIBUUID
+#include <uuid/uuid.h>
+
+inline Guid
+GuidGenerator::_newGuid()
+{
+	std::array<unsigned char, 16> byteArray;
+	uuid_generate_time(byteArray.data());
+	return Guid(byteArray);
+}
+
+
+// This is the macOS and iOS version
+#elif defined GUID_CFUUID
+#include <CoreFoundation/CFUUID.h>
+
 inline Guid
 GuidGenerator::_newGuid()
 {
@@ -729,11 +716,12 @@ GuidGenerator::_newGuid()
 		bytes.byte15,
 	}});
 }
-#endif
 
 
-// obviously this is the windows version
-#ifdef GUID_WINDOWS
+// Obviously this is the Windows version
+#elif defined GUID_WINDOWS
+#include <objbase.h>
+
 inline Guid
 GuidGenerator::_newGuid()
 {
@@ -762,11 +750,11 @@ GuidGenerator::_newGuid()
 		newId.Data4[7],
 	}};
 }
-#endif
 
 
-// android version that uses a call to a java api
-#ifdef GUID_ANDROID
+// Android version that uses a call to a java api
+#elif defined GUID_ANDROID
+
 GuidGenerator::GuidGenerator(JNIEnv *env)
 {
 	_env = env;
