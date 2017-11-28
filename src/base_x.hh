@@ -45,11 +45,11 @@ class BaseX {
 	const char padding;
 	const int flags;
 
-	const char& chr(unsigned char ord) const {
+	constexpr char chr(unsigned char ord) const {
 		return _chr[ord];
 	}
 
-	const int& ord(unsigned char chr) const {
+	constexpr int ord(unsigned char chr) const {
 		return _ord[chr];
 	}
 

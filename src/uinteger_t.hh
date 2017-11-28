@@ -692,8 +692,8 @@ private:
 		resize(rit_e - rit_f); // shrink
 	}
 
-	static const char& chr(int ord) {
-		static const char _[256] = {
+	static constexpr char chr(int ord) {
+		constexpr const char _[256] = {
 			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b',
 			'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
 			'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
@@ -701,8 +701,8 @@ private:
 		return _[ord];
 	}
 
-	static const int& ord(int chr) {
-		static const int _[256] = {
+	static constexpr int ord(int chr) {
+		constexpr const int _[256] = {
 			-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 			-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 			-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
