@@ -95,8 +95,8 @@ inline void unserialise_unsigned(const char** p, const char* end, T* result) {
 	static_assert(static_cast<T>(-1) > 0, "Type not unsigned");
 
 	const char * ptr = *p;
-	ASSERT(ptr);
-	ASSERT(ptr <= end);
+	assert(ptr);
+	assert(ptr <= end);
 
 	const char * start = ptr;
 

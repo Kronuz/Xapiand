@@ -426,7 +426,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 		detach();
 	}
 
-	ASSERT(sock == fd || sock == -1);
+	assert(sock == fd || sock == -1);
 
 	L_EV_BEGIN(this, "BaseClient::io_cb:BEGIN");
 

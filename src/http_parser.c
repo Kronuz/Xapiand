@@ -73,7 +73,7 @@ do {                                                                 \
 /* Run the notify callback FOR, returning ER if it fails */
 #define CALLBACK_NOTIFY_(FOR, ER)                                    \
 do {                                                                 \
-  ASSERT(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
+  assert(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
                                                                      \
   if likely(settings->on_##FOR) {                                    \
     parser->state = CURRENT_STATE();                                 \
@@ -98,7 +98,7 @@ do {                                                                 \
 /* Run data callback FOR with LEN bytes, returning ER if it fails */
 #define CALLBACK_DATA_(FOR, LEN, ER)                                 \
 do {                                                                 \
-  ASSERT(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
+  assert(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
                                                                      \
   if (FOR##_mark) {                                                  \
     if likely(settings->on_##FOR) {                                  \
@@ -1499,7 +1499,7 @@ header_field_begin:
                 break;
 
               default:
-                ASSERT(0 && "Unknown header_state");
+                assert(0 && "Unknown header_state");
                 break;
             }
           }
@@ -1639,7 +1639,7 @@ header_field_begin:
 
             case h_connection:
             case h_transfer_encoding:
-              ASSERT(0 && "Shouldn't get here.");
+              assert(0 && "Shouldn't get here.");
               break;
 
             case h_content_length:
@@ -1964,7 +1964,7 @@ header_field_begin:
         uint64_t to_read = MIN(parser->content_length,
                                (uint64_t) ((data + len) - p));
 
-        ASSERT(parser->content_length != 0
+        assert(parser->content_length != 0
             && parser->content_length != ULLONG_MAX);
 
         /* The difference between advancing content_length and p is because
@@ -2013,8 +2013,8 @@ header_field_begin:
 
       case s_chunk_size_start:
       {
-        ASSERT(parser->nread == 1);
-        ASSERT(parser->flags & F_CHUNKED);
+        assert(parser->nread == 1);
+        assert(parser->flags & F_CHUNKED);
 
         unhex_val = unhex[(unsigned char)ch];
         if unlikely(unhex_val == -1) {
@@ -2031,7 +2031,7 @@ header_field_begin:
       {
         uint64_t t;
 
-        ASSERT(parser->flags & F_CHUNKED);
+        assert(parser->flags & F_CHUNKED);
 
         if (ch == CR) {
           UPDATE_STATE(s_chunk_size_almost_done);
@@ -2066,7 +2066,7 @@ header_field_begin:
 
       case s_chunk_parameters:
       {
-        ASSERT(parser->flags & F_CHUNKED);
+        assert(parser->flags & F_CHUNKED);
         /* just ignore this shit. TODO check for overflow */
         if (ch == CR) {
           UPDATE_STATE(s_chunk_size_almost_done);
@@ -2077,7 +2077,7 @@ header_field_begin:
 
       case s_chunk_size_almost_done:
       {
-        ASSERT(parser->flags & F_CHUNKED);
+        assert(parser->flags & F_CHUNKED);
         STRICT_CHECK(ch != LF);
 
         parser->nread = 0;
@@ -2097,8 +2097,8 @@ header_field_begin:
         uint64_t to_read = MIN(parser->content_length,
                                (uint64_t) ((data + len) - p));
 
-        ASSERT(parser->flags & F_CHUNKED);
-        ASSERT(parser->content_length != 0
+        assert(parser->flags & F_CHUNKED);
+        assert(parser->content_length != 0
             && parser->content_length != ULLONG_MAX);
 
         /* See the explanation in s_body_identity for why the content
@@ -2116,15 +2116,15 @@ header_field_begin:
       }
 
       case s_chunk_data_almost_done:
-        ASSERT(parser->flags & F_CHUNKED);
-        ASSERT(parser->content_length == 0);
+        assert(parser->flags & F_CHUNKED);
+        assert(parser->content_length == 0);
         STRICT_CHECK(ch != CR);
         UPDATE_STATE(s_chunk_data_done);
         CALLBACK_DATA(body);
         break;
 
       case s_chunk_data_done:
-        ASSERT(parser->flags & F_CHUNKED);
+        assert(parser->flags & F_CHUNKED);
         STRICT_CHECK(ch != LF);
         parser->nread = 0;
         UPDATE_STATE(s_chunk_size_start);
@@ -2132,7 +2132,7 @@ header_field_begin:
         break;
 
       default:
-        ASSERT(0 && "unhandled state");
+        assert(0 && "unhandled state");
         SET_ERRNO(HPE_INVALID_INTERNAL_STATE);
         goto error;
     }
@@ -2148,7 +2148,7 @@ header_field_begin:
    * value that's in-bounds).
    */
 
-  ASSERT(((header_field_mark ? 1 : 0) +
+  assert(((header_field_mark ? 1 : 0) +
           (header_value_mark ? 1 : 0) +
           (url_mark ? 1 : 0)  +
           (body_mark ? 1 : 0) +
@@ -2252,13 +2252,13 @@ http_parser_settings_init(http_parser_settings *settings)
 
 const char *
 http_errno_name(enum http_errno err) {
-  ASSERT(((size_t) err) < ARRAY_SIZE(http_strerror_tab));
+  assert(((size_t) err) < ARRAY_SIZE(http_strerror_tab));
   return http_strerror_tab[err].name;
 }
 
 const char *
 http_errno_description(enum http_errno err) {
-  ASSERT(((size_t) err) < ARRAY_SIZE(http_strerror_tab));
+  assert(((size_t) err) < ARRAY_SIZE(http_strerror_tab));
   return http_strerror_tab[err].description;
 }
 
@@ -2351,7 +2351,7 @@ http_parse_host(const char * buf, struct http_parser_url *u, int found_at) {
   const char *p;
   size_t buflen = u->field_data[UF_HOST].off + u->field_data[UF_HOST].len;
 
-  ASSERT(u->field_set & (1 << UF_HOST));
+  assert(u->field_set & (1 << UF_HOST));
 
   u->field_data[UF_HOST].len = 0;
 
@@ -2485,7 +2485,7 @@ http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
         break;
 
       default:
-        ASSERT(!"Unexpected state");
+        assert(!"Unexpected state");
         return 1;
     }
 
@@ -2545,7 +2545,7 @@ http_parser_pause(http_parser *parser, int paused) {
       HTTP_PARSER_ERRNO(parser) == HPE_PAUSED) {
     SET_ERRNO((paused) ? HPE_PAUSED : HPE_OK);
   } else {
-    ASSERT(0 && "Attempting to pause parser in error state");
+    assert(0 && "Attempting to pause parser in error state");
   }
 }
 

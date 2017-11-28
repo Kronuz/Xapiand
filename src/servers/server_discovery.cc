@@ -397,7 +397,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 		return;
 	}
 
-	ASSERT(discovery->get_socket() == fd || discovery->get_socket() == -1);
+	assert(discovery->get_socket() == fd || discovery->get_socket() == -1);
 
 	L_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN");
 

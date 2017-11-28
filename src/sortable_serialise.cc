@@ -94,7 +94,7 @@ sortable_serialise_(long double value, char * buf)
 	 * negative, in which case they should sort later).
 	 */
 
-	ASSERT(exponent >= 0);
+	assert(exponent >= 0);
 	if (exponent < 128) {
 		next ^= 0x20;
 		// Put the top 5 bits of the exponent into the lower 5 bits of the
@@ -109,7 +109,7 @@ sortable_serialise_(long double value, char * buf)
 		if (negative ^ exponent_negative) next ^= 0xc0;
 
 	} else {
-		ASSERT((exponent >> 15) == 0);
+		assert((exponent >> 15) == 0);
 		// Put the top 5 bits of the exponent into the lower 5 bits of the
 		// first byte:
 		next |= static_cast<unsigned char>(exponent >> 10);
@@ -152,7 +152,7 @@ sortable_serialise_(long double value, char * buf)
 	// leading bit, we can save several trailing 0xff bytes in lots of common
 	// cases.
 
-	ASSERT(negative || (word1 & (1<<30)));
+	assert(negative || (word1 & (1<<30)));
 	if (negative) {
 		// We negate the mantissa for negative numbers, so that the sort order
 		// is reversed (since larger negative numbers should come first).
@@ -306,7 +306,7 @@ sortable_unserialise(const std::string & value)
 		word3 = -word3;
 		if (word4 != 0) ++word3;
 		word4 = -word4;
-		ASSERT((word1 & 0xf0000000) != 0);
+		assert((word1 & 0xf0000000) != 0);
 		word1 &= 0x3fffffff;
 	}
 	if (!negative) word1 |= 1<<30;

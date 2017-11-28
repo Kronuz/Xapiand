@@ -24,6 +24,9 @@
 
 #include "config.h"
 
+#include <assert.h>
+
+
 #define XAPIAND_TAGLINE              "You Know, Also for Search"
 
 #define XAPIAND_CLUSTER_NAME         "Xapiand"
@@ -69,15 +72,12 @@
 #endif
 
 
-#include <assert.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvariadic-macros"
-
-#ifdef NDEBUG
-#define ASSERT(args...)
-#else
-#define ASSERT(args...) assert(args)
+#ifdef UUID_USE_BASE16
+	#define BASE16 Base16::base16chk()
 #endif
-
-#pragma GCC diagnostic pop
+#ifdef UUID_USE_BASE58
+	#define BASE58 Base58::flickrchk()
+#endif
+#ifdef UUID_USE_BASE62
+	#define BASE62 Base62::invertedchk()
+#endif

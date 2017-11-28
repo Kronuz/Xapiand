@@ -309,7 +309,7 @@ public:
 			if (!found) {
 				unsigned long long new_cur_key;
 				if (!final_key || (ctx.current_key && ctx.current_key < final_key)) {
-					ASSERT(ctx.current_key);
+					assert(ctx.current_key);
 					new_cur_key = get_base_key(ctx.current_key);
 				} else {
 					new_cur_key = get_base_key(final_key);

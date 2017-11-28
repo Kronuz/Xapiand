@@ -628,11 +628,11 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 {
 	L_CALL(this, "DatabaseWAL::write_line(...)");
 
-	ASSERT(database->flags & DB_WRITABLE);
-	ASSERT(!(database->flags & DB_NOWAL));
+	assert(database->flags & DB_WRITABLE);
+	assert(!(database->flags & DB_NOWAL));
 
 	auto endpoint = database->endpoints[0];
-	ASSERT(endpoint.is_local());
+	assert(endpoint.is_local());
 
 	std::string revision_encode = database->get_revision_str();
 	std::string uuid = database->get_uuid();
@@ -922,7 +922,7 @@ Database::reopen()
 	auto endpoints_size = endpoints.size();
 	auto i = endpoints.cbegin();
 	if (flags & DB_WRITABLE) {
-		ASSERT(endpoints_size == 1);
+		assert(endpoints_size == 1);
 		db = std::make_unique<Xapian::WritableDatabase>();
 		const auto& e = *i;
 		Xapian::WritableDatabase wdb;
@@ -2077,7 +2077,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB [%s]: %s ...", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 
-	ASSERT (!database);
+	assert(!database);
 
 	if (writable && endpoints.size() != 1) {
 		L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()).c_str());
@@ -2229,7 +2229,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	L_DATABASE_BEGIN(this, "-- CHECKING IN DB [%s]: %s ...", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()).c_str());
 
-	ASSERT(database);
+	assert(database);
 
 	std::shared_ptr<DatabaseQueue> queue;
 
@@ -2252,7 +2252,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		queue = databases.get(database->hash, false);
 	}
 
-	ASSERT(database->weak_queue.lock() == queue);
+	assert(database->weak_queue.lock() == queue);
 
 	if (queue->modified) {
 		DatabaseAutocommit::commit(database);

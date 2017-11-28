@@ -122,7 +122,7 @@ serialise_double(double v)
 
 	n = result.size() - n;
 	if (n > 1) {
-		ASSERT(n <= 8);
+		assert(n <= 8);
 		result[0] = static_cast<unsigned char>(result[0] | ((n - 1) << 4));
 	}
 
@@ -230,8 +230,8 @@ unsigned long long
 unserialise_length(const char** p, const char* end, bool check_remaining)
 {
 	const char *ptr = *p;
-	ASSERT(ptr);
-	ASSERT(ptr <= end);
+	assert(ptr);
+	assert(ptr <= end);
 
 	if unlikely(ptr == end) {
 		// Out of data.
@@ -275,8 +275,8 @@ serialise_string(const std::string &input) {
 std::string
 unserialise_string(const char** p, const char* end) {
 	const char *ptr = *p;
-	ASSERT(ptr);
-	ASSERT(ptr <= end);
+	assert(ptr);
+	assert(ptr <= end);
 
 	std::string string;
 
@@ -305,8 +305,8 @@ std::string
 unserialise_string_at(size_t at, const char** p, const char* end)
 {
 	const char *ptr = *p;
-	ASSERT(ptr);
-	ASSERT(ptr <= end);
+	assert(ptr);
+	assert(ptr <= end);
 
 	std::string string;
 	unsigned long long length = 0;

@@ -277,7 +277,7 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 		return;
 	}
 
-	ASSERT(raft->get_socket() == fd || raft->get_socket() == -1);
+	assert(raft->get_socket() == fd || raft->get_socket() == -1);
 
 	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN");
 

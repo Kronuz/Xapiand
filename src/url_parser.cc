@@ -294,7 +294,7 @@ PathParser::init(const std::string& p)
 						break;
 
 					case State::PMT:
-						ASSERT(n0 >= n1);
+						assert(n0 >= n1);
 						length = n0 - n1;
 						if (length) {
 							if (*(n1 + 1) == '.') {
@@ -313,7 +313,7 @@ PathParser::init(const std::string& p)
 						break;
 
 					case State::ID:
-						ASSERT(n0 >= n1);
+						assert(n0 >= n1);
 						length = n0 - n1;
 						if (length) {
 							off_id = n1 + 1;
@@ -431,14 +431,14 @@ PathParser::next()
 				switch (state) {
 					case State::NSP:
 					case State::PTH:
-						ASSERT(n1 >= n0);
+						assert(n1 >= n0);
 						length = n1 - n0;
 						off_pth = n0;
 						len_pth = length;
 						off = ++n1;
 						return state;
 					case State::HST:
-						ASSERT(n1 >= n0);
+						assert(n1 >= n0);
 						length = n1 - n0;
 						if (!length) {
 							return State::INVALID_HST;
@@ -455,7 +455,7 @@ PathParser::next()
 			case ':':
 				switch (state) {
 					case State::NSP:
-						ASSERT(n1 >= n0);
+						assert(n1 >= n0);
 						length = n1 - n0;
 						if (!length) {
 							return State::INVALID_NSP;
@@ -474,7 +474,7 @@ PathParser::next()
 				switch (state) {
 					case State::NSP:
 					case State::PTH:
-						ASSERT(n1 >= n0);
+						assert(n1 >= n0);
 						length = n1 - n0;
 						off_pth = n0;
 						len_pth = length;

@@ -86,7 +86,7 @@ protected:
 private:
 	template<typename T>
 	auto __attach(T&& child) {
-		ASSERT(child);
+		assert(child);
 		auto it = _children.insert(_children.end(), std::forward<T>(child));
 		(*it)->_iterator = it;
 		return it;
@@ -94,9 +94,9 @@ private:
 
 	template<typename T>
 	auto __detach(T&& child) {
-		ASSERT(child);
+		assert(child);
 		if (child->_iterator != _children.end()) {
-			ASSERT(child->_parent.get() == this);
+			assert(child->_parent.get() == this);
 			auto it = _children.erase(child->_iterator);
 			child->_iterator = _children.end();
 			return it;

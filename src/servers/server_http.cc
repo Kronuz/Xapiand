@@ -67,7 +67,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 		return;
 	}
 
-	ASSERT(http->sock == fd || http->sock == -1);
+	assert(http->sock == fd || http->sock == -1);
 
 	L_EV_BEGIN(this, "HttpServer::io_accept_cb:BEGIN");
 

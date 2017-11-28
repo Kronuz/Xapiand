@@ -358,7 +358,7 @@ Worker::run_loop()
 {
 	L_CALL(this, "Worker::run_loop() [%s]", __repr__().c_str());
 
-	ASSERT(ev_loop->depth() == 0);
+	assert(ev_loop->depth() == 0);
 
 	_runner = true;
 	ev_loop->run();

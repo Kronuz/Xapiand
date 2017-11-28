@@ -218,7 +218,7 @@ void
 Raft::_start_leader_heartbeat()
 {
 	auto local_node_ = local_node.load();
-	ASSERT(leader == *local_node_);
+	assert(leader == *local_node_);
 
 	leader_heartbeat.repeat = random_real(HEARTBEAT_LEADER_MIN, HEARTBEAT_LEADER_MAX);
 	leader_heartbeat.again();
