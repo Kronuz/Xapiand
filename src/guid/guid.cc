@@ -197,14 +197,15 @@ GuidCompactor::serialise_condensed(uint8_t variant) const
 
 	uint64_t buf0, buf1;
 	if (compact.compacted) {
-		static const uint8_t skip1 = PADDING_BITS - VERSION_BITS - COMPACTED_BITS;  // 44 - 4 - 1 = 39
-		static const uint8_t skip2 = 64 - skip1;  // 25
-		static const uint8_t skip3 = skip1 + VERSION_BITS;  // 39 + 4 = 43
-		buf0 = val0 << skip2 | val1 >> skip1;
-		buf1 = (val0 << VERSION_BITS) >> skip3;
+		constexpr uint8_t s4 = VERSION_BITS;  // 4
+		constexpr uint8_t s43 = PADDING_BITS - COMPACTED_BITS;  // 39 + 4 = 43
+		constexpr uint8_t s60 = TIME_BITS;  // 60
+		constexpr uint8_t s39 = PADDING_BITS - VERSION_BITS - COMPACTED_BITS;  // 44 - 4 - 1 = 39
+		buf0 = val0 << (64 - s39) | val1 >> s39;
+		buf1 = (val0 << s4) >> s43;
 	} else {
-		buf0 = val1 << VERSION_BITS;
-		buf1 = (val0 << VERSION_BITS) | (val1 >> TIME_BITS);
+		buf0 = val1 << s4;
+		buf1 = (val0 << s4) | (val1 >> s60);
 	}
 
 	char buf[16];
@@ -236,13 +237,14 @@ GuidCompactor::unserialise_condensed(uint8_t length, const char** ptr)
 
 	uint64_t val0, val1;
 	if (compacted) {
-		static const uint8_t skip1 = PADDING_BITS - VERSION_BITS - COMPACTED_BITS;  // 44 - 4 - 1 = 39
-		static const uint8_t skip2 = 64 - skip1;  // 25
-		val0 = buf1 << skip1 | buf0 >> skip2;
-		val1 = buf0 << skip1;
+		constexpr uint8_t s4 = VERSION_BITS;  // 4
+		constexpr uint8_t s60 = TIME_BITS;  // 60
+		constexpr uint8_t s39 = PADDING_BITS - VERSION_BITS - COMPACTED_BITS;  // 44 - 4 - 1 = 39
+		val0 = buf1 << s39 | buf0 >> (64 - s39);
+		val1 = buf0 << s39;
 	} else {
-		val0 = buf1 >> VERSION_BITS;
-		val1 = buf1 << TIME_BITS | buf0 >> VERSION_BITS;
+		val0 = buf1 >> s4;
+		val1 = buf1 << s60 | buf0 >> s4;
 	}
 
 	GuidCompactor compactor;
