@@ -224,9 +224,7 @@ std::string repr(const void* p, size_t size, bool friendly, bool quote, size_t m
 				*d++ = '.';
 				*d++ = '.';
 			}
-			continue;
-		}
-		if (friendly) {
+		} else if (friendly) {
 			switch (c) {
 				case '\b':
 					*d++ = '\\';
