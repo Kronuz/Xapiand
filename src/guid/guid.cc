@@ -40,7 +40,7 @@ THE SOFTWARE.
 // 0x00011f0241243c00 = 1yr (31556952000000000 nanoseconds)
 constexpr uint64_t UUID_TIME_EPOCH             = 0x01b21dd213814000ULL;
 constexpr uint64_t UUID_TIME_YEAR              = 0x00011f0241243c00ULL;
-constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH + ((2016 - 1970) * UUID_TIME_YEAR);  // 0x01e5b039c8040800ULL
+constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH;
 constexpr uint8_t  UUID_MAX_SERIALISED_LENGTH  = 17;
 
 constexpr uint8_t VARIANT_BITS    = 2;
