@@ -76,7 +76,7 @@
 	#define BASE16 Base16::base16chk()
 #endif
 #ifdef UUID_USE_BASE58
-	#define BASE58 Base58::flickrchk()
+	#define BASE58 Base58::dubaluchk()
 #endif
 #ifdef UUID_USE_BASE62
 	#define BASE62 Base62::invertedchk()

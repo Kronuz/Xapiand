@@ -585,6 +585,14 @@ struct Base58 {
 		static constexpr BaseX encoder(BaseX::with_checksum, "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ", "", "", "");
 		return encoder;
 	}
+	static const BaseX& dubalu() {
+		static constexpr BaseX encoder(0, "Kd345678a9oc2efghijkmnbpqrstMvwxyzABCDEFGHJlLuNPQRSTUVWXYZ", "", "", "");
+		return encoder;
+	}
+	static const BaseX& dubaluchk() {
+		static constexpr BaseX encoder(BaseX::with_checksum, "Kd345678a9oc2efghijkmnbpqrstMvwxyzABCDEFGHJlLuNPQRSTUVWXYZ", "", "", "");
+		return encoder;
+	}
 
 	static const BaseX& base58_le() {
 		static constexpr BaseX encoder(BaseX::little_endian, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv", "", "", "");
