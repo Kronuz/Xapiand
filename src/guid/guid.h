@@ -83,8 +83,13 @@ public:
 	void compact();
 	std::string serialise() const;
 
-	static bool is_valid(const std::string& bytes);
 	static bool is_valid(const char** ptr, const char* end);
+	static bool is_valid(const std::string& bytes) {
+		const char* pos = bytes.data();
+		const char* end = pos + bytes.size();
+		return is_valid(&pos, end);
+	}
+
 	static Guid unserialise(const std::string& bytes);
 	static Guid unserialise(const char** ptr, const char* end);
 
@@ -130,9 +135,11 @@ private:
 	uint8_t get_uuid_version() const;
 
 	static std::string serialise(const std::string& encoded);
+	std::string serialise_full() const;
+	std::string serialise_condensed() const;
 
 	// Aux functions for unserialise a serialised uuid's list.
-	static Guid unserialise_unknown(uint8_t length, const char** pos);
+	static Guid unserialise_full(uint8_t length, const char** pos);
 	static Guid unserialise_condensed(uint8_t length, const char** pos);
 };
 

@@ -35,9 +35,12 @@ THE SOFTWARE.
 #include <sstream>        // for std::ostringstream
 #include <stdexcept>      // for std::invalid_argument
 
-
-// 0x11f0241243c00ULL = 1yr
-constexpr uint64_t UUID_TIME_INITIAL           = 0x1e6bfffffffffffULL;
+// 0x01b21dd213814000 is the number of 100-ns intervals between the
+// UUID epoch 1582-10-15 00:00:00 and the Unix epoch 1970-01-01 00:00:00.
+// 0x00011f0241243c00 = 1yr (31556952000000000 nanoseconds)
+constexpr uint64_t UUID_TIME_EPOCH             = 0x01b21dd213814000ULL;
+constexpr uint64_t UUID_TIME_YEAR              = 0x00011f0241243c00ULL;
+constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH + ((2016 - 1970) * UUID_TIME_YEAR);  // 0x01e5b039c8040800ULL
 constexpr uint8_t  UUID_MAX_SERIALISED_LENGTH  = 17;
 
 constexpr uint8_t VARIANT_BITS    = 2;
@@ -70,7 +73,7 @@ static inline uint64_t fnv_1a(uint64_t num) {
 /*
  * Union for compact uuids
  */
-union GuidCompactor {
+union GuidCondenser {
 	struct compact_t {
 		uint64_t time        : TIME_BITS;
 		uint64_t version     : VERSION_BITS;
@@ -93,22 +96,19 @@ union GuidCompactor {
 
 	uint64_t calculate_node() const;
 
-	std::string serialise_unknown(uint8_t variant) const;
-	std::string serialise_condensed(uint8_t variant) const;
+	std::string serialise() const;
+	static GuidCondenser unserialise(uint8_t lenght, const char** bytes);
 
-	static GuidCompactor unserialise_unknown(uint8_t lenght, const char** bytes);
-	static GuidCompactor unserialise_condensed(uint8_t lenght, const char** bytes);
-
-	GuidCompactor();
+	GuidCondenser();
 };
 
 
-GuidCompactor::GuidCompactor()
+GuidCondenser::GuidCondenser()
 	: compact({ 0, 0, 0, 0, 0, 0 }) { }
 
 
 inline uint64_t
-GuidCompactor::calculate_node() const
+GuidCondenser::calculate_node() const
 {
 	uint32_t seed = 0;
 	if (compact.time) {
@@ -134,47 +134,7 @@ GuidCompactor::calculate_node() const
 
 
 inline std::string
-GuidCompactor::serialise_unknown(uint8_t variant) const
-{
-	auto buf0 = *(reinterpret_cast<const uint64_t*>(this));
-	auto buf1 = *(reinterpret_cast<const uint64_t*>(this) + 1);
-	buf1 = (buf1 & 0xfffffffffffffffc) | (variant & 0xc0) >> 6;  // fix variant
-
-	char buf[17];
-	*(reinterpret_cast<uint64_t*>(buf + 1)) = buf0;
-	*(reinterpret_cast<uint64_t*>(buf + 1) + 1) = buf1;
-
-	auto ptr = buf + 17;
-	const auto min_buf = buf + 2;
-	while (ptr != min_buf && !*--ptr);
-	auto length = ptr - buf - 1;
-
-	buf[0] = length & 0x0f;
-
-	return std::string(buf, length + 2);
-}
-
-
-inline GuidCompactor
-GuidCompactor::unserialise_unknown(uint8_t length, const char** ptr)
-{
-	char buf[16] = {};
-	std::copy(*ptr + 1, *ptr + length + 1, buf);
-
-	auto buf0 = *(reinterpret_cast<uint64_t*>(buf));
-	auto buf1 = *(reinterpret_cast<uint64_t*>(buf) + 1);
-
-	GuidCompactor compactor;
-	*(reinterpret_cast<uint64_t*>(&compactor)) = buf0;
-	*(reinterpret_cast<uint64_t*>(&compactor) + 1) = buf1;
-
-	*ptr += length + 2;
-	return compactor;
-}
-
-
-inline std::string
-GuidCompactor::serialise_condensed(uint8_t variant) const
+GuidCondenser::serialise() const
 {
 	auto val0 = *(reinterpret_cast<const uint64_t*>(this));
 	auto val1 = *(reinterpret_cast<const uint64_t*>(this) + 1);
@@ -193,32 +153,34 @@ GuidCompactor::serialise_condensed(uint8_t variant) const
 		buf1 = val0 << (64 - s2) | val1 >> s2;
 	}
 
-	char buf[17];
+	char buf[UUID_MAX_SERIALISED_LENGTH];
 	*(reinterpret_cast<uint64_t*>(buf + 1)) = BYTE_SWAP_8(buf0);
 	*(reinterpret_cast<uint64_t*>(buf + 1) + 1) = BYTE_SWAP_8(buf1);
 	buf[0] = '\0';
 
-	const auto end = buf + 16;
 	auto ptr = buf;
+	const auto end = ptr + sizeof(buf) - 1;
 	while (ptr != end && !*++ptr);
-	if (*ptr & 0xfc) {
-		--ptr;
-	}
+	if (*ptr & 0xfc) --ptr;
 	assert(ptr != buf); // UUID is 128bit - 4bit (version) - 2bit (variant) = 122bit really used
 	auto length = end - ptr;
 	*ptr = (length - 1) << 4 | compact.compacted << 3 | (compact.version & 0x01) << 2 | (*ptr & 0x03);
+
 	return std::string(ptr, length);
 }
 
 
-inline GuidCompactor
-GuidCompactor::unserialise_condensed(uint8_t length, const char** ptr)
+inline GuidCondenser
+GuidCondenser::unserialise(uint8_t length, const char** ptr)
 {
-	bool compacted = **ptr & 0x08;
-	bool version1  = **ptr & 0x04;
+	auto l = **ptr;
+	bool compacted = l & 0x08;
+	bool version1  = l & 0x04;
 
-	char buf[17] = {};
-	std::copy(*ptr, *ptr + length + 1, buf + 17 - (length + 1));
+	char buf[UUID_MAX_SERIALISED_LENGTH];
+	auto start = buf + UUID_MAX_SERIALISED_LENGTH - length;
+	std::fill(buf, start, 0);
+	std::copy(*ptr, *ptr + length, start);
 
 	auto buf0 = BYTE_SWAP_8(*(reinterpret_cast<uint64_t*>(buf)));
 	auto buf1 = BYTE_SWAP_8(*(reinterpret_cast<uint64_t*>(buf) + 1));
@@ -234,14 +196,14 @@ GuidCompactor::unserialise_condensed(uint8_t length, const char** ptr)
 		val1 = buf1 << s2;
 	}
 
-	GuidCompactor compactor;
-	*(reinterpret_cast<uint64_t*>(&compactor)) = val0;
-	*(reinterpret_cast<uint64_t*>(&compactor) + 1) = val1;
-	compactor.compact.version = version1 ? 1 : 4;
-	compactor.compact.compacted = compacted;
+	GuidCondenser condenser;
+	*(reinterpret_cast<uint64_t*>(&condenser)) = val0;
+	*(reinterpret_cast<uint64_t*>(&condenser) + 1) = val1;
+	condenser.compact.version = version1 ? 1 : 4;
+	condenser.compact.compacted = compacted;
 
-	*ptr += length + 1;
-	return compactor;
+	*ptr += length;
+	return condenser;
 }
 
 
@@ -435,7 +397,6 @@ Guid::get_uuid_version() const
 }
 
 
-
 inline void
 Guid::compact()
 {
@@ -447,16 +408,16 @@ Guid::compact()
 		auto salt = fnv_1a(node);
 		salt &= SALT_MASK;
 
-		GuidCompactor compactor;
-		compactor.compact.compacted = true;
-		compactor.compact.time = get_uuid1_time();
-		if (version == 1 && compactor.compact.time) {
-			compactor.compact.time -= UUID_TIME_INITIAL;
+		GuidCondenser condenser;
+		condenser.compact.compacted = true;
+		condenser.compact.time = get_uuid1_time();
+		if (version == 1 && condenser.compact.time) {
+			condenser.compact.time -= UUID_TIME_INITIAL;
 		}
-		compactor.compact.clock = get_uuid1_clock_seq();
-		compactor.compact.version = version;
-		compactor.compact.salt = salt;
-		node = compactor.calculate_node();
+		condenser.compact.clock = get_uuid1_clock_seq();
+		condenser.compact.version = version;
+		condenser.compact.salt = salt;
+		node = condenser.calculate_node();
 
 		uint64_t num_last = BYTE_SWAP_8(*reinterpret_cast<uint64_t*>(&_bytes[8]));
 		num_last = (num_last & 0xffff000000000000ULL) | node;
@@ -470,30 +431,59 @@ Guid::serialise() const
 {
 	auto variant = get_uuid_variant();
 	auto version = get_uuid_version();
-	auto time = get_uuid1_time();
-	auto node = get_uuid1_node();
-	auto salt = node & SALT_MASK;
-
-	GuidCompactor compactor;
-	compactor.compact.compacted = true;
-	compactor.compact.version = version;
-	compactor.compact.time = time;
-	compactor.compact.clock = get_uuid1_clock_seq();
 
 	if (variant == 0x80 && (version == 1 || version == 4)) {
-		if (version == 1 && compactor.compact.time) {
-			compactor.compact.time -= UUID_TIME_INITIAL;
-		}
-		compactor.compact.salt = salt;
-		auto compacted_node = compactor.calculate_node();
-		if (node != compacted_node) {
-			compactor.expanded.compacted = false;
-			compactor.expanded.node = node;
-		}
-		return compactor.serialise_condensed(variant);
+		return serialise_condensed();
 	}
 
-	return compactor.serialise_unknown(variant);
+	return serialise_full();
+}
+
+
+std::string
+Guid::serialise_full() const
+{
+	auto buf = reinterpret_cast<const char*>(&_bytes[0]);
+
+	auto ptr = buf;
+	const auto end = ptr + 16;
+	while (ptr != end && !*++ptr);
+	if (*ptr) --ptr;
+	assert(ptr != buf); // UUID is 128bit - 4bit (version) - 2bit (variant) = 122bit really used
+	auto length = end - ptr;
+
+	std::string serialised;
+	serialised.reserve(length + 1);
+	serialised.push_back((length - 1) & 0x0f);
+	serialised.append(ptr, length);
+
+	return serialised;
+}
+
+
+std::string
+Guid::serialise_condensed() const
+{
+	GuidCondenser condenser;
+	condenser.compact.compacted = true;
+	condenser.compact.version = get_uuid_version();
+	condenser.compact.time = get_uuid1_time();
+	condenser.compact.clock = get_uuid1_clock_seq();
+
+	if (condenser.compact.version == 1 && condenser.compact.time) {
+		condenser.compact.time -= UUID_TIME_INITIAL;
+	}
+
+	auto node = get_uuid1_node();
+	auto salt = node & SALT_MASK;
+	condenser.compact.salt = salt;
+	auto compacted_node = condenser.calculate_node();
+	if (node != compacted_node) {
+		condenser.expanded.compacted = false;
+		condenser.expanded.node = node;
+	}
+
+	return condenser.serialise();
 }
 
 
@@ -535,15 +525,6 @@ Guid::serialise(const std::string& encoded)
 
 
 bool
-Guid::is_valid(const std::string& bytes)
-{
-	const char* pos = bytes.data();
-	const char* end = pos + bytes.size();
-	return is_valid(&pos, end);
-}
-
-
-bool
 Guid::is_valid(const char** ptr, const char* end)
 {
 	while (*ptr != end) {
@@ -559,11 +540,12 @@ Guid::is_valid(const char** ptr, const char* end)
 				return false;
 			}
 			*ptr += length + 2;
+		} else {
+			if (size < length + 1) {
+				return false;
+			}
+			*ptr += length + 1;
 		}
-		if (size < length + 1) {
-			return false;
-		}
-		*ptr += length + 1;
 	}
 	return true;
 }
@@ -589,40 +571,30 @@ Guid::unserialise(const char** ptr, const char* end)
 	auto length = l >> 4;
 	if (length == 0) {
 		length = l & 0x0f;
-		if (length == 0 || size < length + 2) {
-			THROW(SerialisationError, "Bad encoded expanded uuid");
+		if (length == 0 || size < length + 1) {
+			THROW(SerialisationError, "Bad encoded uuid");
 		}
-		return unserialise_unknown(length, ptr);
+		return unserialise_full(length + 1, ptr);
+	} else {
+		if (size < length + 1) {
+			THROW(SerialisationError, "Bad condensed uuid");
+		}
+		return unserialise_condensed(length + 1, ptr);
 	}
-	if (size < length + 1) {
-		THROW(SerialisationError, "Bad encoded compacted/condensed uuid");
-	}
-	return unserialise_condensed(length, ptr);
 }
 
 
 Guid
-Guid::unserialise_unknown(uint8_t length, const char** ptr)
+Guid::unserialise_full(uint8_t length, const char** ptr)
 {
-	GuidCompactor compactor = GuidCompactor::unserialise_unknown(length, ptr);
-
-	unsigned char clock_seq_low = compactor.compact.clock & 0xffULL;
-	unsigned char clock_seq_hi_variant = compactor.compact.clock >> 8 | compactor.expanded.padding << 7 | compactor.expanded.compacted << 6;
-	uint64_t node = compactor.expanded.node;
-
-	uint64_t time = compactor.compact.time;
-	unsigned time_low = time & 0xffffffffULL;
-	uint16_t time_mid = (time >> 32) & 0xffffULL;
-	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
-	time_hi_version |= compactor.compact.version << 12;
-
 	Guid out;
-	*reinterpret_cast<uint32_t*>(&out._bytes[0]) = BYTE_SWAP_4(time_low);
-	*reinterpret_cast<uint16_t*>(&out._bytes[4]) = BYTE_SWAP_2(time_mid);
-	*reinterpret_cast<uint16_t*>(&out._bytes[6]) = BYTE_SWAP_2(time_hi_version);
-	*reinterpret_cast<uint64_t*>(&out._bytes[8]) = BYTE_SWAP_8(node);
-	out._bytes[8] = clock_seq_hi_variant;
-	out._bytes[9] = clock_seq_low;
+
+	auto buf = reinterpret_cast<char*>(&out._bytes[0]);
+	auto start = buf + 16 - length;
+	std::fill(buf, start, 0);
+	std::copy(*ptr, *ptr + length, start);
+
+	*ptr += length + 1;
 	return out;
 }
 
@@ -630,20 +602,20 @@ Guid::unserialise_unknown(uint8_t length, const char** ptr)
 Guid
 Guid::unserialise_condensed(uint8_t length, const char** ptr)
 {
-	GuidCompactor compactor = GuidCompactor::unserialise_condensed(length, ptr);
+	GuidCondenser condenser = GuidCondenser::unserialise(length, ptr);
 
-	unsigned char clock_seq_low = compactor.compact.clock & 0xffULL;
-	unsigned char clock_seq_hi_variant = compactor.compact.clock >> 8 | 0x80ULL;  // Variant: RFC 4122
-	uint64_t node = compactor.compact.compacted ? compactor.calculate_node() : compactor.expanded.node;
+	unsigned char clock_seq_low = condenser.compact.clock & 0xffULL;
+	unsigned char clock_seq_hi_variant = condenser.compact.clock >> 8 | 0x80ULL;  // Variant: RFC 4122
+	uint64_t node = condenser.compact.compacted ? condenser.calculate_node() : condenser.expanded.node;
 
-	uint64_t time = compactor.compact.time;
-	if (compactor.compact.version == 1 && time) {
+	uint64_t time = condenser.compact.time;
+	if (condenser.compact.version == 1 && time) {
 		time += UUID_TIME_INITIAL;
 	}
 	unsigned time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
-	time_hi_version |= compactor.compact.version << 12;
+	time_hi_version |= condenser.compact.version << 12;
 
 	Guid out;
 	*reinterpret_cast<uint32_t*>(&out._bytes[0]) = BYTE_SWAP_4(time_low);
