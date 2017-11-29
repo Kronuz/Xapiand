@@ -586,11 +586,11 @@ struct Base58 {
 		return encoder;
 	}
 	static const BaseX& dubalu() {
-		static constexpr BaseX encoder(0, "Kd345678a9oc2efghijkmnbpqrstMvwxyzABCDEFGHJlLuNPQRSTUVWXYZ", "", "", "");
+		static constexpr BaseX encoder(0, "KDB45678a9oA2efghijkUnbpqrstMvwxyzc3CdEFGHJlLuNPQRSTmVWXYZ", "", "", "");
 		return encoder;
 	}
 	static const BaseX& dubaluchk() {
-		static constexpr BaseX encoder(BaseX::with_checksum, "Kd345678a9oc2efghijkmnbpqrstMvwxyzABCDEFGHJlLuNPQRSTUVWXYZ", "", "", "");
+		static constexpr BaseX encoder(BaseX::with_checksum, "KDB45678a9oA2efghijkUnbpqrstMvwxyzc3CdEFGHJlLuNPQRSTmVWXYZ", "", "", "");
 		return encoder;
 	}
 
