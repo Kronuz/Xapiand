@@ -130,6 +130,21 @@ public:
 
 	using container = std::vector<digit>;
 
+	template <typename T>
+	struct is_result {
+		static const bool value = false;
+	};
+
+	template <typename T, typename Alloc>
+	struct is_result<std::vector<T, Alloc>> {
+		static const bool value = true;
+	};
+
+	template <typename charT, typename traits, typename Alloc>
+	struct is_result<std::basic_string<charT, traits, Alloc>> {
+		static const bool value = true;
+	};
+
 private:
 	static_assert(digit_octets == half_digit_octets * 2, "half_digit must be exactly half the size of digit");
 
@@ -1979,6 +1994,9 @@ public:
 	explicit uinteger_t(T (&s)[N], int base=10) :
 		uinteger_t(s, N - 1, base) { }
 
+	explicit uinteger_t(const unsigned char* bytes, std::size_t sz, int base) :
+		uinteger_t(strtouint(bytes, sz, base)) { }
+
 	explicit uinteger_t(const char* bytes, std::size_t sz, int base) :
 		uinteger_t(strtouint(bytes, sz, base)) { }
 
@@ -2234,7 +2252,7 @@ public:
 	}
 
 	// Get string representation of value
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	Result str(int alphabet_base = 10) const {
 		auto num_sz = size();
 		if (alphabet_base >= 2 && alphabet_base <= 36) {
@@ -2300,25 +2318,26 @@ public:
 		}
 	}
 
-	static uinteger_t strtouint(const char* encoded, std::size_t encoded_size, int alphabet_base) {
+	static uinteger_t strtouint(const void* encoded, std::size_t encoded_size, int alphabet_base) {
+		const char* data = (const char *)encoded;
 		uinteger_t result;
 
 		if (alphabet_base >= 2 && alphabet_base <= 36) {
 			uinteger_t alphabet_base_bits = base_bits(alphabet_base);
 			uinteger_t uint_base = alphabet_base;
 			if (alphabet_base_bits) {
-				for (; encoded_size; --encoded_size, ++encoded) {
-					auto d = ord(static_cast<int>(*encoded));
+				for (; encoded_size; --encoded_size, ++data) {
+					auto d = ord(static_cast<int>(*data));
 					if (d < 0) {
-						throw std::invalid_argument("Error: Not a digit in base " + std::to_string(alphabet_base) + ": '" + std::string(1, *encoded) + "' at " + std::to_string(encoded_size));
+						throw std::invalid_argument("Error: Not a digit in base " + std::to_string(alphabet_base) + ": '" + std::string(1, *data) + "' at " + std::to_string(encoded_size));
 					}
 					result = (result << alphabet_base_bits) | d;
 				}
 			} else {
-				for (; encoded_size; --encoded_size, ++encoded) {
-					auto d = ord(static_cast<int>(*encoded));
+				for (; encoded_size; --encoded_size, ++data) {
+					auto d = ord(static_cast<int>(*data));
 					if (d < 0) {
-						throw std::invalid_argument("Error: Not a digit in base " + std::to_string(alphabet_base) + ": '" + std::string(1, *encoded) + "' at " + std::to_string(encoded_size));
+						throw std::invalid_argument("Error: Not a digit in base " + std::to_string(alphabet_base) + ": '" + std::string(1, *data) + "' at " + std::to_string(encoded_size));
 					}
 					result = (result * uint_base) + d;
 				}
@@ -2333,7 +2352,7 @@ public:
 			result.resize(value_size); // grow (no initialization)
 			*result.begin() = 0; // initialize value
 			auto ptr = reinterpret_cast<char*>(result.data());
-			std::copy(encoded, encoded + encoded_size, ptr + value_padding);
+			std::copy(data, data + encoded_size, ptr + value_padding);
 			std::reverse(ptr, ptr + value_size * digit_octets);
 		} else {
 			throw std::invalid_argument("Error: Cannot convert from base " + std::to_string(alphabet_base));
@@ -2342,22 +2361,22 @@ public:
 		return result;
 	}
 
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	Result bin() const {
 		return str<Result>(2);
 	}
 
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	Result oct() const {
 		return str<Result>(8);
 	}
 
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	Result hex() const {
 		return str<Result>(16);
 	}
 
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	Result raw() const {
 		return str<Result>(256);
 	}

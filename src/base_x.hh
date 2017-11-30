@@ -26,7 +26,10 @@ THE SOFTWARE.
 #ifndef __BASE_X__H_
 #define __BASE_X__H_
 
-#include <algorithm>
+#include <algorithm>        // for std::find_if, std::reverse
+#include <stdexcept>        // for std::invalid_argument
+#include <string>           // for std::string
+#include <type_traits>      // for std::enable_if_t
 
 #include "uinteger_t.hh"
 
@@ -126,7 +129,7 @@ public:
 	}
 
 	// Get string representation of value
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	void encode(Result& result, const uinteger_t& num) const {
 		auto num_sz = num.size();
 		if (num_sz) {
@@ -200,43 +203,55 @@ public:
 		}
 	}
 
-	template <typename Result = std::string>
-	Result encode(uinteger_t num) const {
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
+	Result encode(const uinteger_t& num) const {
 		Result result;
 		encode(result, num);
 		return result;
 	}
 
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
+	void encode(Result& result, const unsigned char* bytes, size_t size) const {
+		encode(result, uinteger_t(bytes, size, 256));
+	}
+
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
+	Result encode(const unsigned char* bytes, size_t size) const {
+		Result result;
+		encode(result, uinteger_t(bytes, size, 256));
+		return result;
+	}
+
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	void encode(Result& result, const char* bytes, size_t size) const {
 		encode(result, uinteger_t(bytes, size, 256));
 	}
 
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	Result encode(const char* bytes, size_t size) const {
 		Result result;
 		encode(result, uinteger_t(bytes, size, 256));
 		return result;
 	}
 
-	template <typename Result = std::string, typename T, std::size_t N>
+	template <typename Result = std::string, typename T, std::size_t N, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	void encode(Result& result, T (&s)[N]) const {
 		encode(result, s, N - 1);
 	}
 
-	template <typename Result = std::string, typename T, std::size_t N>
+	template <typename Result = std::string, typename T, std::size_t N, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	Result encode(T (&s)[N]) const {
 		Result result;
 		encode(result, s, N - 1);
 		return result;
 	}
 
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	void encode(Result& result, const std::string& binary) const {
 		return encode(result, binary.data(), binary.size());
 	}
 
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	Result encode(const std::string& binary) const {
 		Result result;
 		encode(result, binary.data(), binary.size());
@@ -334,38 +349,38 @@ public:
 		}
 	}
 
-	template <typename Result, typename = typename std::enable_if<!std::is_integral<Result>::value>::type>
+	template <typename Result, typename = typename std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	void decode(Result& result, const char* encoded, size_t encoded_size) const {
 		uinteger_t num;
 		decode(num, encoded, encoded_size);
 		result = num.template str<Result>(256);
 	}
 
-	template <typename Result>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value or std::is_integral<Result>::value>>
 	Result decode(const char* encoded, size_t encoded_size) const {
 		Result result;
 		decode(result, encoded, encoded_size);
 		return result;
 	}
 
-	template <typename Result = std::string, typename T, std::size_t N>
+	template <typename Result = std::string, typename T, std::size_t N, typename = std::enable_if_t<uinteger_t::is_result<Result>::value or std::is_integral<Result>::value>>
 	void decode(Result& result, T (&s)[N]) const {
 		decode(result, s, N - 1);
 	}
 
-	template <typename Result = std::string, typename T, std::size_t N>
+	template <typename Result = std::string, typename T, std::size_t N, typename = std::enable_if_t<uinteger_t::is_result<Result>::value or std::is_integral<Result>::value>>
 	Result decode(T (&s)[N]) const {
 		Result result;
 		decode(result, s, N - 1);
 		return result;
 	}
 
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value or std::is_integral<Result>::value>>
 	void decode(Result& result, const std::string& encoded) const {
 		decode(result, encoded.data(), encoded.size());
 	}
 
-	template <typename Result = std::string>
+	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value or std::is_integral<Result>::value>>
 	Result decode(const std::string& encoded) const {
 		Result result;
 		decode(result, encoded.data(), encoded.size());
