@@ -296,17 +296,19 @@ int test_several_guids() {
 		}
 		std::string serialised;
 		for (auto& encoded : norm_uuids) {
-			if (encoded.size() == UUID_LENGTH && encoded[8] == '-' && encoded[13] == '-' && encoded[18] == '-' && encoded[23] == '-') {
+			std::string decoded;
+			try {
+				base64::decode(decoded, node_id_str);
+				if (Guid::is_serialised(decoded)) {
+					serialised.append(decoded);
+					continue;
+				}
+			} catch (const std::invalid_argument&) { }
+			try {
 				Guid guid(encoded);
 				serialised.append(guid.serialise());
 				continue;
-			}
-			std::string decoded;
-			base64::decode(decoded, node_id_str);
-			if (Guid::is_serialised(decoded)) {
-				serialised.append(decoded);
-				continue;
-			}
+			} catch (const std::invalid_argument&) { }
 			L_ERR(nullptr, "Invalid encoded UUID format in: %s", encoded.c_str());
 		}
 
