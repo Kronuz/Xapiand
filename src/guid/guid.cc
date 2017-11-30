@@ -397,7 +397,7 @@ Guid::get_uuid_version() const
 
 
 inline void
-Guid::compact()
+Guid::compact_crush()
 {
 	auto variant = get_uuid_variant();
 	auto version = get_uuid_version();
@@ -488,6 +488,57 @@ Guid::serialise_condensed() const
 
 bool
 Guid::is_valid(const char** ptr, const char* end)
+{
+	auto pos = *ptr;
+	auto size = end - pos + 1;
+	if (
+		size == UUID_LENGTH &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		*pos++ == '-' &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		*pos++ == '-' &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		*pos++ == '-' &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		*pos++ == '-' &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++) &&
+		std::isxdigit(*pos++)
+	) {
+		*ptr = pos;
+		return true;
+	}
+	return false;
+}
+
+
+bool
+Guid::is_serialised(const char** ptr, const char* end)
 {
 	while (*ptr != end) {
 		auto size = end - *ptr;
@@ -738,7 +789,7 @@ GuidGenerator::newGuid(bool compact)
 {
 	auto guid = _newGuid();
 	if (compact) {
-		guid.compact();
+		guid.compact_crush();
 	}
 	return guid;
 }

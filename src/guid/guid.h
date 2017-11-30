@@ -37,7 +37,7 @@ THE SOFTWARE.
 #endif
 
 
-constexpr uint8_t UUID_LENGTH     = 36;
+constexpr uint8_t UUID_LENGTH = 36;
 
 
 /*
@@ -47,8 +47,10 @@ constexpr uint8_t UUID_LENGTH     = 36;
  * string via constructor.
  */
 class Guid {
-public:
+	// actual data
+	std::array<unsigned char, 16> _bytes;
 
+public:
 	// create a guid from vector of bytes
 	explicit Guid(const std::array<unsigned char, 16>& bytes);
 
@@ -74,14 +76,9 @@ public:
 	bool operator==(const Guid& other) const;
 	bool operator!=(const Guid& other) const;
 
-	inline const std::array<unsigned char, 16>& get_bytes() const {
+	const std::array<unsigned char, 16>& get_bytes() const {
 		return _bytes;
 	}
-
-	std::string to_string() const;
-
-	void compact();
-	std::string serialise() const;
 
 	static bool is_valid(const char** ptr, const char* end);
 	static bool is_valid(const std::string& bytes) {
@@ -89,6 +86,16 @@ public:
 		const char* end = pos + bytes.size();
 		return is_valid(&pos, end);
 	}
+
+	static bool is_serialised(const char** ptr, const char* end);
+	static bool is_serialised(const std::string& bytes) {
+		const char* pos = bytes.data();
+		const char* end = pos + bytes.size();
+		return is_serialised(&pos, end);
+	}
+
+	std::string to_string() const;
+	std::string serialise() const;
 
 	static Guid unserialise(const std::string& bytes);
 	static Guid unserialise(const char** ptr, const char* end);
@@ -108,12 +115,9 @@ public:
 		unserialise(&pos, end, d_first);
 	}
 
+	void compact_crush();
+
 private:
-	union GuidCompactor get_compactor(bool compacted) const;
-
-	// actual data
-	std::array<unsigned char, 16> _bytes;
-
 	// make the << operator a friend so it can access _bytes
 	friend std::ostream &operator<<(std::ostream& s, const Guid& guid);
 
@@ -123,10 +127,13 @@ private:
 	uint8_t get_uuid_variant() const;
 	uint8_t get_uuid_version() const;
 
+	union GuidCompactor get_compactor(bool compacted) const;
+
+	// Aux functions for serialise/unserialise UUIDs.
+
 	std::string serialise_full() const;
 	std::string serialise_condensed() const;
 
-	// Aux functions for unserialise a serialised uuid's list.
 	static Guid unserialise_full(uint8_t length, const char** pos);
 	static Guid unserialise_condensed(uint8_t length, const char** pos);
 };

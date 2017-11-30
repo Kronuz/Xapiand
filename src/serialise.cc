@@ -45,73 +45,36 @@
 #include "utils.h"                                    // for toUType, stox, repr
 
 
-static constexpr char UUID_SEPARATOR_LIST = ';';
+constexpr char UUID_SEPARATOR_LIST = ';';
 
 
 bool
 Serialise::isUUID(const std::string& field_value) noexcept
 {
 	if (field_value.length() > 2) {
-		bool allow_encoded = false;
-		Split<char> split(std::string(), UUID_SEPARATOR_LIST);
-#ifdef UUID_USE_BASE16
-		if (BASE16.is_valid(field_value)) {
-			allow_encoded = true;
-			split = Split<char>(field_value, UUID_SEPARATOR_LIST);
-		} else
-#endif
-#ifdef UUID_USE_BASE58
-		if (BASE58.is_valid(field_value)) {
-			allow_encoded = true;
-			split = Split<char>(field_value, UUID_SEPARATOR_LIST);
-		} else
-#endif
-#ifdef UUID_USE_BASE62
-		if (BASE62.is_valid(field_value)) {
-			allow_encoded = true;
-			split = Split<char>(field_value, UUID_SEPARATOR_LIST);
-		} else
-#endif
+		Split<> split(field_value, UUID_SEPARATOR_LIST);
 #ifdef UUID_USE_GUID
 		if (field_value.front() == '{' && field_value.back() == '}') {
-			allow_encoded = true;
-			split = Split<char>(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST);
+			split = Split<>(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST);
 		} else
 #endif
 #ifdef UUID_USE_URN
 		if (field_value.compare(0, 9, "urn:uuid:") == 0) {
-			allow_encoded = true;
-			split = Split<char>(field_value.substr(9), UUID_SEPARATOR_LIST);
-		} else
-#endif
-		if ((field_value.length() + 1) % (UUID_LENGTH + 1) == 0) {
-			if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
-				return false;
-			}
-			split = Split<char>(field_value, UUID_SEPARATOR_LIST);
-		} else {
-			return false;
+			split = Split<>(field_value.substr(9), UUID_SEPARATOR_LIST);
 		}
+#endif
 		for (const auto& uuid : split) {
-			if (uuid.length() == UUID_LENGTH && uuid[8] == '-' && uuid[13] == '-' && uuid[18] == '-' && uuid[23] == '-') {
-				auto c = uuid.data();
-				for (size_t pos = uuid.length(); pos; --pos) {
-					if (!std::isxdigit(*c++) && pos != 28 && pos != 23 && pos != 18 && pos != 13) {
-						return false;
-					}
-				}
-			} else if (allow_encoded && !uuid.empty()) {
+			if (!uuid.empty()) {
 #ifdef UUID_USE_BASE16
-				if (BASE16.is_valid(uuid)) return true;
+				if (BASE16.is_valid(uuid)) continue;
 #endif
 #ifdef UUID_USE_BASE58
-				if (BASE58.is_valid(uuid)) return true;
+				if (BASE58.is_valid(uuid)) continue;
 #endif
 #ifdef UUID_USE_BASE62
-				if (BASE62.is_valid(uuid)) return true;
+				if (BASE62.is_valid(uuid)) continue;
 #endif
-				return false;
-			} else {
+				if (Guid::is_valid(uuid)) continue;
 				return false;
 			}
 		}
@@ -567,109 +530,55 @@ std::string
 Serialise::uuid(const std::string& field_value)
 {
 	if (field_value.length() > 2) {
-		bool allow_encoded = false;
-		std::vector<std::string> result;
-#ifdef UUID_USE_BASE16
-		if (BASE16.is_valid(field_value)) {
-			allow_encoded = true;
-			Split<>::split(field_value, UUID_SEPARATOR_LIST, std::back_inserter(result));
-		} else
-#endif
-#ifdef UUID_USE_BASE58
-		if (BASE58.is_valid(field_value)) {
-			allow_encoded = true;
-			Split<>::split(field_value, UUID_SEPARATOR_LIST, std::back_inserter(result));
-		} else
-#endif
-#ifdef UUID_USE_BASE62
-		if (BASE62.is_valid(field_value)) {
-			allow_encoded = true;
-			Split<>::split(field_value, UUID_SEPARATOR_LIST, std::back_inserter(result));
-		} else
-#endif
+		Split<> split(field_value, UUID_SEPARATOR_LIST);
 #ifdef UUID_USE_GUID
 		if (field_value.front() == '{' && field_value.back() == '}') {
-			allow_encoded = true;
-			Split<>::split(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST, std::back_inserter(result));
+			split = Split<>(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST);
 		} else
 #endif
 #ifdef UUID_USE_URN
 		if (field_value.compare(0, 9, "urn:uuid:") == 0) {
-			allow_encoded = true;
-			Split<>::split(field_value.substr(9), UUID_SEPARATOR_LIST, std::back_inserter(result));
-		} else
-#endif
-		if ((field_value.length() + 1) % (UUID_LENGTH + 1) == 0) {
-			if (field_value[8] != '-' || field_value[13] != '-' || field_value[18] != '-' || field_value[23] != '-') {
-				THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
-			}
-			Split<>::split(field_value, UUID_SEPARATOR_LIST, std::back_inserter(result));
-		} else {
-			THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
+			split = Split<>(field_value.substr(9), UUID_SEPARATOR_LIST);
 		}
-		for (const auto& uuid : result) {
-			if (uuid.length() == UUID_LENGTH && uuid[8] == '-' && uuid[13] == '-' && uuid[18] == '-' && uuid[23] == '-') {
-				auto c = uuid.data();
-				for (size_t pos = uuid.length(); pos; --pos) {
-					if (!std::isxdigit(*c++) && pos != 28 && pos != 23 && pos != 18 && pos != 13) {
-						THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
-					}
-				}
-			} else if (allow_encoded && !uuid.empty()) {
-				if (true
-#ifdef UUID_USE_BASE16
-					&& !BASE16.is_valid(uuid)
 #endif
-#ifdef UUID_USE_BASE58
-					&& !BASE58.is_valid(uuid)
-#endif
-#ifdef UUID_USE_BASE62
-					&& !BASE62.is_valid(uuid)
-#endif
-				) {
-					THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
-				}
-			} else {
-				THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
-			}
-		}
-
 		std::string serialised;
-		for (const auto& encoded : result) {
-			if (encoded.size() == UUID_LENGTH && encoded[8] == '-' && encoded[13] == '-' && encoded[18] == '-' && encoded[23] == '-') {
-				Guid guid(encoded);
-				serialised.append(guid.serialise());
-				continue;
+		for (const auto& uuid : split) {
+			if (!uuid.empty()) {
+				std::string decoded;
+			#ifdef UUID_USE_BASE16
+				try {
+					BASE16.decode(decoded, uuid);
+					if (Guid::is_serialised(decoded)) {
+						serialised.append(decoded);
+						continue;
+					}
+				} catch (const std::invalid_argument&) { }
+			#endif
+			#ifdef UUID_USE_BASE58
+				try {
+					BASE58.decode(decoded, uuid);
+					if (Guid::is_serialised(decoded)) {
+						serialised.append(decoded);
+						continue;
+					}
+				} catch (const std::invalid_argument&) { }
+			#endif
+			#ifdef UUID_USE_BASE62
+				try {
+					BASE62.decode(decoded, uuid);
+					if (Guid::is_serialised(decoded)) {
+						serialised.append(decoded);
+						continue;
+					}
+				} catch (const std::invalid_argument&) { }
+			#endif
+				if (Guid::is_valid(uuid)) {
+					Guid guid(uuid);
+					serialised.append(guid.serialise());
+					continue;
+				}
+				THROW(SerialisationError, "Invalid encoded UUID format in: %s", uuid.c_str());
 			}
-			std::string decoded;
-		#ifdef UUID_USE_BASE16
-			try {
-				BASE16.decode(decoded, encoded);
-				if (Guid::is_valid(decoded)) {
-					serialised.append(decoded);
-					continue;
-				}
-			} catch (const std::invalid_argument&) { }
-		#endif
-		#ifdef UUID_USE_BASE58
-			try {
-				BASE58.decode(decoded, encoded);
-				if (Guid::is_valid(decoded)) {
-					serialised.append(decoded);
-					continue;
-				}
-			} catch (const std::invalid_argument&) { }
-		#endif
-		#ifdef UUID_USE_BASE62
-			try {
-				BASE62.decode(decoded, encoded);
-				if (Guid::is_valid(decoded)) {
-					serialised.append(decoded);
-					continue;
-				}
-			} catch (const std::invalid_argument&) { }
-		#endif
-			THROW(SerialisationError, "Invalid encoded UUID format in: %s", encoded.c_str());
 		}
 		return serialised;
 	}
@@ -1146,24 +1055,6 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 {
 	std::string result;
 	switch (repr) {
-#ifdef UUID_USE_BASE16
-		case UUIDRepr::base16: {
-			result.append(BASE16.encode(serialised_uuid));
-			break;
-		}
-#endif
-#ifdef UUID_USE_BASE58
-		case UUIDRepr::base58: {
-			result.append(BASE58.encode(serialised_uuid));
-			break;
-		}
-#endif
-#ifdef UUID_USE_BASE62
-		case UUIDRepr::base62: {
-			result.append(BASE62.encode(serialised_uuid));
-			break;
-		}
-#endif
 #ifdef UUID_USE_GUID
 		case UUIDRepr::guid: {
 			std::vector<Guid> uuids;
@@ -1180,6 +1071,24 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.append("urn:uuid:");
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
+			break;
+		}
+#endif
+#ifdef UUID_USE_BASE16
+		case UUIDRepr::base16: {
+			result.append(BASE16.encode(serialised_uuid));
+			break;
+		}
+#endif
+#ifdef UUID_USE_BASE58
+		case UUIDRepr::base58: {
+			result.append(BASE58.encode(serialised_uuid));
+			break;
+		}
+#endif
+#ifdef UUID_USE_BASE62
+		case UUIDRepr::base62: {
+			result.append(BASE62.encode(serialised_uuid));
 			break;
 		}
 #endif

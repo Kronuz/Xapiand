@@ -98,6 +98,16 @@ std::string get_prefix(const std::string& field_name)
 
 std::string normalize_uuid(const std::string& uuid)
 {
+#ifdef UUID_USE_GUID
+	if (uuid.front() == '{' && uuid.back() == '}') {
+		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::guid);
+	}
+#endif
+#ifdef UUID_USE_URN
+	if (uuid.compare(0, 9, "urn:uuid:") == 0) {
+		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::urn);
+	}
+#endif
 #ifdef UUID_USE_BASE16
 	if (BASE16.is_valid(uuid)) {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base16);
@@ -111,16 +121,6 @@ std::string normalize_uuid(const std::string& uuid)
 #ifdef UUID_USE_BASE62
 	if (BASE62.is_valid(uuid)) {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base62);
-	}
-#endif
-#ifdef UUID_USE_GUID
-	if (uuid.front() == '{' && uuid.back() == '}') {
-		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::guid);
-	}
-#endif
-#ifdef UUID_USE_URN
-	if (uuid.compare(0, 9, "urn:uuid:") == 0) {
-		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::urn);
 	}
 #endif
 	return uuid;

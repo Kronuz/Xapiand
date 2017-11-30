@@ -303,7 +303,7 @@ int test_several_guids() {
 			}
 			std::string decoded;
 			base64::decode(decoded, node_id_str);
-			if (Guid::is_valid(decoded)) {
+			if (Guid::is_serialised(decoded)) {
 				serialised.append(decoded);
 				continue;
 			}
