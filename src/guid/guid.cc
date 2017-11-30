@@ -126,6 +126,7 @@ GuidCondenser::calculate_node() const
 	node |= rng();
 	node &= NODE_MASK & ~SALT_MASK;
 	node |= compact.salt;
+	node |= 0x010000000000; // set multicast bit
 	return node;
 }
 
