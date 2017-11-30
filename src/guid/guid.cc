@@ -42,8 +42,6 @@ constexpr uint64_t UUID_TIME_YEAR              = 0x00011f0241243c00ULL;
 constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH;
 constexpr uint8_t  UUID_MAX_SERIALISED_LENGTH  = 17;
 
-constexpr uint8_t VARIANT_BITS    = 2;
-
 constexpr uint8_t TIME_BITS       = 60;
 constexpr uint8_t VERSION_BITS    = 64 - TIME_BITS;  // 4
 constexpr uint8_t COMPACTED_BITS  = 1;
@@ -139,17 +137,18 @@ GuidCondenser::serialise() const
 	auto val1 = *(reinterpret_cast<const uint64_t*>(this) + 1);
 
 	uint64_t buf0, buf1;
-	constexpr uint8_t s4 = VERSION_BITS;  // 4
 	if (compact.compacted) {
-		constexpr uint8_t s45 = PADDING_BITS - COMPACTED_BITS + VARIANT_BITS;  // 44 - 1 + 2 = 45
-		constexpr uint8_t s49 = PADDING_BITS - COMPACTED_BITS + VARIANT_BITS + VERSION_BITS;  // 44 - 1 + 2 + 4 = 49
-		buf0 = (val0 << s4) >> s49;
-		buf1 = val0 << (64 - s45) | val1 >> s45;
+	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
+	// v0:VVVVTTTTTTTTTTTTTTTttttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
+	// b0:                                                 TTTTTTTTTTTTTTT b1:tttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSS
+		buf0 = (val0 << VERSION_BITS) >> (VERSION_BITS + (PADDING_BITS + COMPACTED_BITS));
+		buf1 = val0 << (64 - (PADDING_BITS + COMPACTED_BITS)) | val1 >> (PADDING_BITS + COMPACTED_BITS);
 	} else {
-		constexpr uint8_t s2 = PADDING1_BITS - COMPACTED_BITS + VARIANT_BITS;  // 1 - 1 + 2 = 2
-		constexpr uint8_t s6 = PADDING1_BITS - COMPACTED_BITS + VARIANT_BITS + VERSION_BITS;  // 1 - 1 + 2 + 4 = 6
-		buf0 = (val0 << s4) >> s6;
-		buf1 = val0 << (64 - s2) | val1 >> s2;
+	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
+	// v0:VVVVTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTtt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
+	// b0:      TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:ttKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+		buf0 = (val0 << VERSION_BITS) >> (VERSION_BITS + (PADDING1_BITS + COMPACTED_BITS));
+		buf1 = val0 << (64 - (PADDING1_BITS + COMPACTED_BITS)) | val1 >> (PADDING1_BITS + COMPACTED_BITS);
 	}
 
 	char buf[UUID_MAX_SERIALISED_LENGTH];
@@ -162,7 +161,7 @@ GuidCondenser::serialise() const
 	while (ptr != end && !*++ptr);
 	if (*ptr & 0xfc) --ptr;
 	assert(ptr != buf); // UUID is 128bit - 4bit (version) - 2bit (variant) = 122bit really used
-	auto length = end - ptr;
+	auto length = end - ptr + 1;
 	*ptr = (length - 1) << 4 | compact.compacted << 3 | (compact.version & 0x01) << 2 | (*ptr & 0x03);
 
 	return std::string(ptr, length);
@@ -186,13 +185,17 @@ GuidCondenser::unserialise(uint8_t length, const char** ptr)
 
 	uint64_t val0, val1;
 	if (compacted) {
-		constexpr uint8_t s45 = PADDING_BITS - COMPACTED_BITS + VARIANT_BITS;  // 44 - 1 + 2 = 45
-		val0 = buf0 << s45 | buf1 >> (64 - s45);
-		val1 = buf1 << s45;
+	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
+	// b0:                                                 TTTTTTTTTTTTTTT b1:tttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSS
+	// v0:VVVVTTTTTTTTTTTTTTTttttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
+		val0 = buf0 << (PADDING_BITS + COMPACTED_BITS) | buf1 >> (64 - (PADDING_BITS + COMPACTED_BITS));
+		val1 = buf1 << (PADDING_BITS + COMPACTED_BITS);
 	} else {
-		constexpr uint8_t s2 = PADDING1_BITS - COMPACTED_BITS + VARIANT_BITS;  // 1 - 1 + 2 = 2
-		val0 = buf0 << s2 | buf1 >> (64 - s2);
-		val1 = buf1 << s2;
+	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
+	// b0:      TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:ttKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+	// v0:VVVVTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTtt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
+		val0 = buf0 << (PADDING1_BITS + COMPACTED_BITS) | buf1 >> (64 - (PADDING1_BITS + COMPACTED_BITS));
+		val1 = buf1 << (PADDING1_BITS + COMPACTED_BITS);
 	}
 
 	GuidCondenser condenser;
