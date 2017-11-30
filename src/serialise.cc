@@ -572,11 +572,11 @@ Serialise::uuid(const std::string& field_value)
 					}
 				} catch (const std::invalid_argument&) { }
 			#endif
-				if (Guid::is_valid(uuid)) {
+				try {
 					Guid guid(uuid);
 					serialised.append(guid.serialise());
 					continue;
-				}
+				} catch (const std::invalid_argument&) { }
 				THROW(SerialisationError, "Invalid encoded UUID format in: %s", uuid.c_str());
 			}
 		}

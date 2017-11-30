@@ -235,35 +235,69 @@ std::ostream& operator<<(std::ostream& s, const Guid& guid) {
 }
 
 
-// converts a single hex char to a number (0 - 15)
-constexpr unsigned char hexDigitToChar(char chr) {
+// converts the two hexadecimal characters to an unsigned char (a byte)
+unsigned char hexPairToChar(const char** ptr) {
 	constexpr const int _[256] = {
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  0,  0,  0,  0,  0,  0,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,
 
-		 0, 10, 11, 12, 13, 14, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0, 10, 11, 12, 13, 14, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	};
-	return _[chr];
+	auto pos = *ptr;
+	auto a = _[*pos++];
+	auto b = _[*pos++];
+	if (a == -1 || b == -1) {
+		THROW(InvalidArgument, "Invalid UUID string hex character");
+	}
+	*ptr = pos;
+	return a << 4 | b;
 }
 
-// converts the two hexadecimal characters to an unsigned char (a byte)
-unsigned char hexPairToChar(char a, char b) {
-	return hexDigitToChar(a) << 4 | hexDigitToChar(b);
+
+static inline std::array<unsigned char, 16>
+uuid_to_bytes(const char* pos, size_t size)
+{
+	if (size != UUID_LENGTH) {
+		THROW(InvalidArgument, "Invalid UUID string length");
+	}
+	std::array<unsigned char, 16> bytes;
+	auto b = bytes.begin();
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	if (*pos++ != '-') THROW(InvalidArgument, "Invalid UUID string character");
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	if (*pos++ != '-') THROW(InvalidArgument, "Invalid UUID string character");
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	if (*pos++ != '-') THROW(InvalidArgument, "Invalid UUID string character");
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	if (*pos++ != '-') THROW(InvalidArgument, "Invalid UUID string character");
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	*b++ = hexPairToChar(&pos);
+	return bytes;
 }
 
 
@@ -274,27 +308,7 @@ Guid::Guid(const std::array<unsigned char, 16>& bytes)
 
 // create a guid from string
 Guid::Guid(const std::string& fromString)
-{
-	char charOne;
-	bool lookingForFirstChar = true;
-
-	auto bytes = _bytes.begin();
-
-	for (const char& ch : fromString) {
-		if (ch == '-') {
-			continue;
-		}
-
-		if (lookingForFirstChar) {
-			charOne = ch;
-			lookingForFirstChar = false;
-		} else {
-			*bytes = hexPairToChar(charOne, ch);
-			++bytes;
-			lookingForFirstChar = true;
-		}
-	}
-}
+	: _bytes(uuid_to_bytes(fromString.data(), fromString.size())) { }
 
 
 // create empty guid
@@ -578,19 +592,19 @@ Guid::unserialise(const char** ptr, const char* end)
 {
 	auto size = end - *ptr;
 	if (size < 2 || size > UUID_MAX_SERIALISED_LENGTH) {
-		THROW(SerialisationError, "Bad encoded uuid");
+		THROW(SerialisationError, "Bad encoded UUID");
 	}
 	uint8_t l = **ptr;
 	auto length = l >> 4;
 	if (length == 0) {
 		length = l & 0x0f;
 		if (length == 0 || size < length + 1) {
-			THROW(SerialisationError, "Bad encoded uuid");
+			THROW(SerialisationError, "Bad encoded UUID");
 		}
 		return unserialise_full(length + 1, ptr);
 	} else {
 		if (size < length + 1) {
-			THROW(SerialisationError, "Bad condensed uuid");
+			THROW(SerialisationError, "Bad condensed UUID");
 		}
 		return unserialise_condensed(length + 1, ptr);
 	}
