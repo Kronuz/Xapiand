@@ -633,7 +633,45 @@ Serialise::uuid(const std::string& field_value)
 				THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
 			}
 		}
-		return Guid::serialise(result.begin(), result.end());
+
+		std::string serialised;
+		for (const auto& encoded : result) {
+			if (encoded.size() == UUID_LENGTH && encoded[8] == '-' && encoded[13] == '-' && encoded[18] == '-' && encoded[23] == '-') {
+				Guid guid(encoded);
+				serialised.append(guid.serialise());
+				continue;
+			}
+			std::string decoded;
+		#ifdef UUID_USE_BASE16
+			try {
+				BASE16.decode(decoded, encoded);
+				if (Guid::is_valid(decoded)) {
+					serialised.append(decoded);
+					continue;
+				}
+			} catch (const std::invalid_argument&) { }
+		#endif
+		#ifdef UUID_USE_BASE58
+			try {
+				BASE58.decode(decoded, encoded);
+				if (Guid::is_valid(decoded)) {
+					serialised.append(decoded);
+					continue;
+				}
+			} catch (const std::invalid_argument&) { }
+		#endif
+		#ifdef UUID_USE_BASE62
+			try {
+				BASE62.decode(decoded, encoded);
+				if (Guid::is_valid(decoded)) {
+					serialised.append(decoded);
+					continue;
+				}
+			} catch (const std::invalid_argument&) { }
+		#endif
+			THROW(SerialisationError, "Invalid encoded UUID format in: %s", encoded.c_str());
+		}
+		return serialised;
 	}
 	THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
 }

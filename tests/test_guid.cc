@@ -294,8 +294,22 @@ int test_several_guids() {
 				break;
 			}
 		}
-		std::vector<Guid> guids;
-		const auto serialised = Guid::serialise(norm_uuids.begin(), norm_uuids.end());
+		std::string serialised;
+		for (auto& encoded : norm_uuids) {
+			if (encoded.size() == UUID_LENGTH && encoded[8] == '-' && encoded[13] == '-' && encoded[18] == '-' && encoded[23] == '-') {
+				Guid guid(encoded);
+				serialised.append(guid.serialise());
+				continue;
+			}
+			std::string decoded;
+			base64::decode(decoded, node_id_str);
+			if (Guid::is_valid(decoded)) {
+				serialised.append(decoded);
+				continue;
+			}
+			L_ERR(nullptr, "Invalid encoded UUID format in: %s", encoded.c_str());
+		}
+
 		Guid::unserialise(serialised, std::back_inserter(guids));
 		if (guids.size() != str_uuids.size()) {
 			++cont;

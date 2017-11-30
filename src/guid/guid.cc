@@ -26,7 +26,6 @@ THE SOFTWARE.
 
 #include "guid.h"
 
-#include "base_x.hh"    // for base62
 #include "serialise.h"  // for BYTE_SWAP_*
 
 #include <algorithm>      // for std::copy
@@ -484,43 +483,6 @@ Guid::serialise_condensed() const
 	}
 
 	return condenser.serialise();
-}
-
-
-std::string
-Guid::serialise(const std::string& encoded)
-{
-	if (encoded.size() == UUID_LENGTH && encoded[8] == '-' && encoded[13] == '-' && encoded[18] == '-' && encoded[23] == '-') {
-		Guid guid(encoded);
-		return guid.serialise();
-	}
-
-	std::string bytes;
-#ifdef UUID_USE_BASE16
-	try {
-		BASE16.decode(bytes, encoded);
-		if (is_valid(bytes)) {
-			return bytes;
-		}
-	} catch (const std::invalid_argument&) { }
-#endif
-#ifdef UUID_USE_BASE58
-	try {
-		BASE58.decode(bytes, encoded);
-		if (is_valid(bytes)) {
-			return bytes;
-		}
-	} catch (const std::invalid_argument&) { }
-#endif
-#ifdef UUID_USE_BASE62
-	try {
-		BASE62.decode(bytes, encoded);
-		if (is_valid(bytes)) {
-			return bytes;
-		}
-	} catch (const std::invalid_argument&) { }
-#endif
-	THROW(SerialisationError, "Invalid encoded UUID format in: %s", encoded.c_str());
 }
 
 

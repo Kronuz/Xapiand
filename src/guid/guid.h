@@ -93,17 +93,6 @@ public:
 	static Guid unserialise(const std::string& bytes);
 	static Guid unserialise(const char** ptr, const char* end);
 
-	// Serialise a uuid's list.
-	template <typename InputIt>
-	static std::string serialise(InputIt first, InputIt last) {
-		std::string serialised;
-		while (first != last) {
-			serialised.append(serialise(*first++));
-		}
-
-		return serialised;
-	}
-
 	// unserialise a serialised uuid's list
 	template <typename OutputIt>
 	static void unserialise(const char** ptr, const char* end, OutputIt d_first) {
@@ -134,7 +123,6 @@ private:
 	uint8_t get_uuid_variant() const;
 	uint8_t get_uuid_version() const;
 
-	static std::string serialise(const std::string& encoded);
 	std::string serialise_full() const;
 	std::string serialise_condensed() const;
 
