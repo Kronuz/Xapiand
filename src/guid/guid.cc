@@ -36,7 +36,7 @@ THE SOFTWARE.
 
 // 0x01b21dd213814000 is the number of 100-ns intervals between the
 // UUID epoch 1582-10-15 00:00:00 and the Unix epoch 1970-01-01 00:00:00.
-// 0x00011f0241243c00 = 1yr (31556952000000000 nanoseconds)
+// 0x00011f0241243c00 = 1yr (365.2425 x 24 x 60 x 60 = 31556952s = 31556952000000000 nanoseconds)
 constexpr uint64_t UUID_TIME_EPOCH             = 0x01b21dd213814000ULL;
 constexpr uint64_t UUID_TIME_YEAR              = 0x00011f0241243c00ULL;
 constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH;
