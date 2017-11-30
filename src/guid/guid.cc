@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "guid.h"
 
-#include "serialise.h"  // for BYTE_SWAP_*
+#include "serialise.h"    // for BYTE_SWAP_*
 
 #include <algorithm>      // for std::copy
 #include <iomanip>        // for std::setw and std::setfill
@@ -378,71 +378,127 @@ Guid::to_string() const
 }
 
 
-inline uint64_t
-Guid::get_uuid1_node() const
+void
+Guid::uuid1_node(uint64_t node)
 {
-	return BYTE_SWAP_8(*reinterpret_cast<const uint64_t*>(&_bytes[8])) & 0xffffffffffffULL;
+	auto node_ptr = reinterpret_cast<uint64_t*>(&_bytes[8]);
+	*node_ptr = BYTE_SWAP_8((BYTE_SWAP_8(*node_ptr) & 0xffff000000000000ULL) | (node & 0xffffffffffffULL));
 }
 
 
-inline uint64_t
-Guid::get_uuid1_time() const
+void
+Guid::uuid1_time(uint64_t time)
 {
-	uint64_t tmp = BYTE_SWAP_2(*reinterpret_cast<const uint16_t*>(&_bytes[6])) & 0xfffULL;
-	tmp <<= 16;
-	tmp |= BYTE_SWAP_2(*reinterpret_cast<const uint16_t*>(&_bytes[4]));
-	tmp <<= 32;
-	tmp |= BYTE_SWAP_4(*reinterpret_cast<const uint32_t*>(&_bytes[0]));
-	return tmp;
+	auto time_low_ptr = reinterpret_cast<uint32_t*>(&_bytes[0]);
+	auto time_mid_ptr = reinterpret_cast<uint16_t*>(&_bytes[4]);
+	auto time_hi_and_version_ptr = reinterpret_cast<uint16_t*>(&_bytes[6]);
+
+	unsigned time_low = time & 0xffffffffULL;
+	uint16_t time_mid = (time >> 32) & 0xffffULL;
+	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
+	time_hi_version |= BYTE_SWAP_2(*time_hi_and_version_ptr) & 0xf000ULL;
+
+	*time_low_ptr = BYTE_SWAP_4(time_low);
+	*time_mid_ptr = BYTE_SWAP_2(time_mid);
+	*time_hi_and_version_ptr = BYTE_SWAP_2(time_hi_version);
 }
 
 
-inline uint16_t
-Guid::get_uuid1_clock_seq() const
+void
+Guid::uuid1_clock_seq(uint16_t clock_seq)
 {
-	return BYTE_SWAP_2(*reinterpret_cast<const uint16_t*>(&_bytes[8])) & 0x3fffULL;
+	uint8_t clock_seq_low = clock_seq & 0xffULL;
+	uint8_t clock_seq_hi_variant = (clock_seq >> 8) & 0x3fULL;
+	clock_seq_hi_variant |= _bytes[8] & 0xc0ULL;
+	_bytes[8] = clock_seq_hi_variant;
+	_bytes[9] = clock_seq_low;
 }
 
 
-inline uint8_t
-Guid::get_uuid_variant() const
+void
+Guid::uuid_variant(uint8_t variant)
+{
+	uint8_t clock_seq_hi_variant = variant & 0xc0ULL;
+	clock_seq_hi_variant |= _bytes[8] & 0x3fULL;
+	_bytes[8] = clock_seq_hi_variant;
+}
+
+
+void
+Guid::uuid_version(uint8_t version)
+{
+	_bytes[6] = (_bytes[6] & 0x0fULL) | ((version & 0x0f) << 4);
+}
+
+
+uint64_t
+Guid::uuid1_node() const
+{
+	auto node_ptr = reinterpret_cast<const uint64_t*>(&_bytes[8]);
+	return BYTE_SWAP_8(*node_ptr) & 0xffffffffffffULL;
+}
+
+
+uint64_t
+Guid::uuid1_time() const
+{
+	auto time_low_ptr = reinterpret_cast<const uint32_t*>(&_bytes[0]);
+	auto time_mid_ptr = reinterpret_cast<const uint16_t*>(&_bytes[4]);
+	auto time_hi_and_version_ptr = reinterpret_cast<const uint16_t*>(&_bytes[6]);
+	uint64_t time = BYTE_SWAP_2(*time_hi_and_version_ptr) & 0xfffULL;
+	time <<= 16;
+	time |= BYTE_SWAP_2(*time_mid_ptr);
+	time <<= 32;
+	time |= BYTE_SWAP_4(*time_low_ptr);
+	return time;
+}
+
+
+uint16_t
+Guid::uuid1_clock_seq() const
+{
+	auto clock_seq_ptr = reinterpret_cast<const uint16_t*>(&_bytes[8]);
+	return BYTE_SWAP_2(*clock_seq_ptr) & 0x3fffULL;
+}
+
+
+uint8_t
+Guid::uuid_variant() const
 {
 	return _bytes[8] & 0xc0ULL;
 }
 
 
-inline uint8_t
-Guid::get_uuid_version() const
+uint8_t
+Guid::uuid_version() const
 {
 	return _bytes[6] >> 4;
 }
 
 
-inline void
+void
 Guid::compact_crush()
 {
-	auto variant = get_uuid_variant();
-	auto version = get_uuid_version();
+	auto variant = uuid_variant();
+	auto version = uuid_version();
 	if (variant == 0x80 && (version == 1 || version == 4)) {
-		auto node = get_uuid1_node();
+		auto node = uuid1_node();
 
 		auto salt = fnv_1a(node);
 		salt &= SALT_MASK;
 
 		GuidCondenser condenser;
 		condenser.compact.compacted = true;
-		condenser.compact.time = get_uuid1_time();
+		condenser.compact.time = uuid1_time();
 		if (version == 1 && condenser.compact.time) {
 			condenser.compact.time -= UUID_TIME_INITIAL;
 		}
-		condenser.compact.clock = get_uuid1_clock_seq();
+		condenser.compact.clock = uuid1_clock_seq();
 		condenser.compact.version = version;
 		condenser.compact.salt = salt;
 		node = condenser.calculate_node();
 
-		uint64_t num_last = BYTE_SWAP_8(*reinterpret_cast<uint64_t*>(&_bytes[8]));
-		num_last = (num_last & 0xffff000000000000ULL) | node;
-		*reinterpret_cast<uint64_t*>(&_bytes[8]) = BYTE_SWAP_8(num_last);
+		uuid1_node(node);
 	}
 }
 
@@ -450,8 +506,8 @@ Guid::compact_crush()
 std::string
 Guid::serialise() const
 {
-	auto variant = get_uuid_variant();
-	auto version = get_uuid_version();
+	auto variant = uuid_variant();
+	auto version = uuid_version();
 
 	if (variant == 0x80 && (version == 1 || version == 4)) {
 		return serialise_condensed();
@@ -487,15 +543,15 @@ Guid::serialise_condensed() const
 {
 	GuidCondenser condenser;
 	condenser.compact.compacted = true;
-	condenser.compact.version = get_uuid_version();
-	condenser.compact.time = get_uuid1_time();
-	condenser.compact.clock = get_uuid1_clock_seq();
+	condenser.compact.version = uuid_version();
+	condenser.compact.time = uuid1_time();
+	condenser.compact.clock = uuid1_clock_seq();
 
 	if (condenser.compact.version == 1 && condenser.compact.time) {
 		condenser.compact.time -= UUID_TIME_INITIAL;
 	}
 
-	auto node = get_uuid1_node();
+	auto node = uuid1_node();
 	auto salt = node & SALT_MASK;
 	condenser.compact.salt = salt;
 	auto compacted_node = condenser.calculate_node();
@@ -639,26 +695,33 @@ Guid::unserialise_condensed(uint8_t length, const char** ptr)
 {
 	GuidCondenser condenser = GuidCondenser::unserialise(length, ptr);
 
-	unsigned char clock_seq_low = condenser.compact.clock & 0xffULL;
-	unsigned char clock_seq_hi_variant = condenser.compact.clock >> 8 | 0x80ULL;  // Variant: RFC 4122
-	uint64_t node = condenser.compact.compacted ? condenser.calculate_node() : condenser.expanded.node;
-
 	uint64_t time = condenser.compact.time;
 	if (condenser.compact.version == 1 && time) {
 		time += UUID_TIME_INITIAL;
 	}
-	unsigned time_low = time & 0xffffffffULL;
+	uint32_t time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
 	time_hi_version |= condenser.compact.version << 12;
 
+	uint64_t node = condenser.compact.compacted ? condenser.calculate_node() : condenser.expanded.node;
+
+	uint8_t clock_seq_hi_variant = condenser.compact.clock >> 8 | 0x80ULL;  // Variant: RFC 4122
+	uint8_t clock_seq_low = condenser.compact.clock & 0xffULL;
+
 	Guid out;
-	*reinterpret_cast<uint32_t*>(&out._bytes[0]) = BYTE_SWAP_4(time_low);
-	*reinterpret_cast<uint16_t*>(&out._bytes[4]) = BYTE_SWAP_2(time_mid);
-	*reinterpret_cast<uint16_t*>(&out._bytes[6]) = BYTE_SWAP_2(time_hi_version);
-	*reinterpret_cast<uint64_t*>(&out._bytes[8]) = BYTE_SWAP_8(node);
+	auto time_low_ptr = reinterpret_cast<uint32_t*>(&out._bytes[0]);
+	auto time_mid_ptr = reinterpret_cast<uint16_t*>(&out._bytes[4]);
+	auto time_hi_and_version_ptr = reinterpret_cast<uint16_t*>(&out._bytes[6]);
+	auto node_ptr = reinterpret_cast<uint64_t*>(&out._bytes[8]);
+
+	*time_low_ptr = BYTE_SWAP_4(time_low);
+	*time_mid_ptr = BYTE_SWAP_2(time_mid);
+	*time_hi_and_version_ptr = BYTE_SWAP_2(time_hi_version);
+	*node_ptr = BYTE_SWAP_8(node);
 	out._bytes[8] = clock_seq_hi_variant;
 	out._bytes[9] = clock_seq_low;
+
 	return out;
 }
 

@@ -119,15 +119,21 @@ public:
 
 	void compact_crush();
 
+	void uuid1_node(uint64_t node);
+	void uuid1_time(uint64_t time);
+	void uuid1_clock_seq(uint16_t clock_seq);
+	void uuid_variant(uint8_t variant);
+	void uuid_version(uint8_t version);
+
+	uint64_t uuid1_node() const;
+	uint64_t uuid1_time() const;
+	uint16_t uuid1_clock_seq() const;
+	uint8_t uuid_variant() const;
+	uint8_t uuid_version() const;
+
 private:
 	// make the << operator a friend so it can access _bytes
 	friend std::ostream &operator<<(std::ostream& s, const Guid& guid);
-
-	uint64_t get_uuid1_node() const;
-	uint64_t get_uuid1_time() const;
-	uint16_t get_uuid1_clock_seq() const;
-	uint8_t get_uuid_variant() const;
-	uint8_t get_uuid_version() const;
 
 	union GuidCompactor get_compactor(bool compacted) const;
 
