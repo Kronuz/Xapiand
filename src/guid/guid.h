@@ -55,7 +55,9 @@ public:
 	explicit Guid(const std::array<unsigned char, 16>& bytes);
 
 	// create a guid from string
-	explicit Guid(const std::string& fromString);
+	explicit Guid(const char* str, size_t size);
+
+	explicit Guid(const std::string& string);
 
 	// create empty guid
 	Guid();

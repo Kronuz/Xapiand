@@ -307,8 +307,12 @@ Guid::Guid(const std::array<unsigned char, 16>& bytes)
 
 
 // create a guid from string
-Guid::Guid(const std::string& fromString)
-	: _bytes(uuid_to_bytes(fromString.data(), fromString.size())) { }
+Guid::Guid(const char* str, size_t size)
+	: _bytes(uuid_to_bytes(str, size)) { }
+
+
+Guid::Guid(const std::string& string)
+	: Guid(string.data(), string.size()) { }
 
 
 // create empty guid

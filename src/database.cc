@@ -571,23 +571,9 @@ DatabaseWAL::init_database()
 		return true;
 	}
 
-	std::string uuid_str(header.head.uuid, UUID_LENGTH);
-	if (uuid_str[8] != '-' || uuid_str[13] != '-' || uuid_str[18] != '-' || uuid_str[23] != '-') {
-		THROW(SerialisationError, "Invalid UUID format in: %s", uuid_str.c_str());
-	}
-	for (size_t i = 0; i < UUID_LENGTH; ++i) {
-		if (!std::isxdigit(uuid_str.at(i)) && i != 8 && i != 13 && i != 18 && i != 23) {
-			THROW(SerialisationError, "Invalid UUID format in: %s", uuid_str.c_str());
-		}
-	}
-
-	Guid guid(uuid_str);
+	Guid guid(header.head.uuid, UUID_LENGTH);
 	const auto& bytes = guid.get_bytes();
-	std::string uuid;
-	uuid.reserve(bytes.size());
-	for (const char& c : bytes) {
-		uuid.push_back(c);
-	}
+	std::string uuid(bytes.begin(), bytes.end());
 
 	int fd = io::open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL);
 	if (unlikely(fd < 0)) {
