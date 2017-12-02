@@ -39,7 +39,8 @@ THE SOFTWARE.
 // 0x00011f0241243c00 = 1yr (365.2425 x 24 x 60 x 60 = 31556952s = 31556952000000000 nanoseconds)
 constexpr uint64_t UUID_TIME_EPOCH             = 0x01b21dd213814000ULL;
 constexpr uint64_t UUID_TIME_YEAR              = 0x00011f0241243c00ULL;
-constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH;
+constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH + (2016 - 1970) * UUID_TIME_YEAR;
+constexpr uint64_t UUID_TIME_DIVISOR           = 100;
 constexpr uint8_t  UUID_MAX_SERIALISED_LENGTH  = 17;
 
 constexpr uint8_t TIME_BITS       = 60;
@@ -518,18 +519,17 @@ void
 Guid::compact_crush()
 {
 	if (uuid_variant() == 0x80 && uuid_version() == 1) {
+		auto time = uuid1_time();
+		if (time) time -= UUID_TIME_INITIAL;
+
 		auto node = uuid1_node();
 
-		auto salt = fnv_1a(node);
-		salt &= SALT_MASK;
+		auto salt = fnv_1a(node) & SALT_MASK;
 
 		GuidCondenser condenser;
 		condenser.compact.compacted = true;
-		condenser.compact.time = uuid1_time();
-		if (condenser.compact.time) {
-			condenser.compact.time -= UUID_TIME_INITIAL;
-		}
 		condenser.compact.clock = uuid1_clock_seq();
+		condenser.compact.time = time / UUID_TIME_DIVISOR;
 		condenser.compact.salt = salt;
 		node = condenser.calculate_node();
 
@@ -575,21 +575,23 @@ Guid::serialise_full() const
 std::string
 Guid::serialise_condensed() const
 {
-	GuidCondenser condenser;
-	condenser.compact.compacted = true;
-	condenser.compact.time = uuid1_time();
-	condenser.compact.clock = uuid1_clock_seq();
-
-	if (condenser.compact.time) {
-		condenser.compact.time -= UUID_TIME_INITIAL;
-	}
+	auto time = uuid1_time();
+	if (time) time -= UUID_TIME_INITIAL;
 
 	auto node = uuid1_node();
+
 	auto salt = node & SALT_MASK;
+
+	GuidCondenser condenser;
+	condenser.compact.compacted = true;
+	condenser.compact.clock = uuid1_clock_seq();
+	condenser.compact.time = time / UUID_TIME_DIVISOR;
 	condenser.compact.salt = salt;
+
 	auto compacted_node = condenser.calculate_node();
 	if (node != compacted_node) {
 		condenser.expanded.compacted = false;
+		condenser.compact.time = time;
 		condenser.expanded.node = node;
 	}
 
@@ -739,9 +741,9 @@ Guid::unserialise_condensed(const char** ptr, const char* end)
 	GuidCondenser condenser = GuidCondenser::unserialise(ptr, end);
 
 	uint64_t time = condenser.compact.time;
-	if (time) {
-		time += UUID_TIME_INITIAL;
-	}
+	if (condenser.compact.compacted) time *= UUID_TIME_DIVISOR;
+	if (time) time += UUID_TIME_INITIAL;
+
 	uint32_t time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
