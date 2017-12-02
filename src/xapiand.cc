@@ -315,6 +315,9 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #ifdef UUID_USE_BASE58
 			"base58",
 #endif
+#ifdef UUID_USE_BASE59
+			"base59",
+#endif
 #ifdef UUID_USE_BASE62
 			"base62",
 #endif
@@ -473,7 +476,12 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		}
 #endif
 #ifdef UUID_USE_BASE58
-		// Properties of encoded UUIDs in Base58 (with dubaluchk)
+		if (uuid_repr_str == "base58") {
+			opts.uuid_repr = UUIDRepr::base58;
+		}
+#endif
+#ifdef UUID_USE_BASE59
+		// Properties of encoded UUIDs in Base59 (with dubaluchk)
 
 		// Compacted UUIDs (v1):
 		//   * Will start with 'du' until 2032 (14 characters).
@@ -496,8 +504,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		//   * Easter egg base58 UUIDs created on Jul 13, 2020 will start with 'DUBALU'
 		//     from 4:19:59 to 4:46:07 UTC  (0x01eac4ea05fbc980 - 0x01eac4edac959980)
 
-		if (uuid_repr_str == "base58") {
-			opts.uuid_repr = UUIDRepr::base58;
+		if (uuid_repr_str == "base59") {
+			opts.uuid_repr = UUIDRepr::base59;
 		}
 #endif
 #ifdef UUID_USE_BASE62

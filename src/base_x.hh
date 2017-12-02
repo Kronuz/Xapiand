@@ -542,10 +542,6 @@ struct Base58 {
 		static constexpr BaseX encoder(BaseX::with_checksum, "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ", "", "", "");
 		return encoder;
 	}
-	static const BaseX& dubaluchk() {
-		static constexpr BaseX encoder(BaseX::with_checksum, "xdqBJyDQzFCGHwKA9MN7POUER4ST3aVLZ5jYcfbghWkm2iueln8prXst6v", "", "", "l1IO0o");
-		return encoder;
-	}
 };
 
 // base62
@@ -604,6 +600,14 @@ struct Base66 {
 	}
 	static const BaseX& base66chk() {
 		static constexpr BaseX encoder(BaseX::with_checksum, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~", "", "", "");
+		return encoder;
+	}
+};
+
+struct Base59 {
+	static const BaseX& dubaluchk() {
+		// static constexpr BaseX encoder(BaseX::with_checksum, "xdqBJyDQzFCGHwKA9MN7POUER4ST3aVLZ5jYcfbghWkm2iueln8prXst6v", "", "", "l1IO0o");
+		static constexpr BaseX encoder(BaseX::with_checksum, "23456789abcdefghijklmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ", "", "", "l1IO0");
 		return encoder;
 	}
 };

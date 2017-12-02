@@ -71,6 +71,9 @@ Serialise::isUUID(const std::string& field_value) noexcept
 #ifdef UUID_USE_BASE58
 				if (BASE58.is_valid(uuid)) continue;
 #endif
+#ifdef UUID_USE_BASE59
+				if (BASE59.is_valid(uuid)) continue;
+#endif
 #ifdef UUID_USE_BASE62
 				if (BASE62.is_valid(uuid)) continue;
 #endif
@@ -557,6 +560,15 @@ Serialise::uuid(const std::string& field_value)
 			#ifdef UUID_USE_BASE58
 				try {
 					BASE58.decode(decoded, uuid);
+					if (Guid::is_serialised(decoded)) {
+						serialised.append(decoded);
+						continue;
+					}
+				} catch (const std::invalid_argument&) { }
+			#endif
+			#ifdef UUID_USE_BASE59
+				try {
+					BASE59.decode(decoded, uuid);
 					if (Guid::is_serialised(decoded)) {
 						serialised.append(decoded);
 						continue;
@@ -1083,6 +1095,12 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 #ifdef UUID_USE_BASE58
 		case UUIDRepr::base58: {
 			result.append(BASE58.encode(serialised_uuid));
+			break;
+		}
+#endif
+#ifdef UUID_USE_BASE59
+		case UUIDRepr::base59: {
+			result.append(BASE59.encode(serialised_uuid));
 			break;
 		}
 #endif

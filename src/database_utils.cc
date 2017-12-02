@@ -118,6 +118,11 @@ std::string normalize_uuid(const std::string& uuid)
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base58);
 	}
 #endif
+#ifdef UUID_USE_BASE59
+	if (BASE59.is_valid(uuid)) {
+		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base59);
+	}
+#endif
 #ifdef UUID_USE_BASE62
 	if (BASE62.is_valid(uuid)) {
 		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base62);

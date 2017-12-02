@@ -139,6 +139,9 @@ enum class UUIDRepr : uint8_t {
 #ifdef UUID_USE_BASE58
 	base58,
 #endif
+#ifdef UUID_USE_BASE59
+	base59,
+#endif
 #ifdef UUID_USE_BASE62
 	base62,
 #endif

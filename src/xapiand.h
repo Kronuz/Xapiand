@@ -76,7 +76,10 @@
 	#define BASE16 Base16::base16chk()
 #endif
 #ifdef UUID_USE_BASE58
-	#define BASE58 Base58::dubaluchk()
+	#define BASE58 Base58::base58chk()
+#endif
+#ifdef UUID_USE_BASE59
+	#define BASE59 Base59::dubaluchk()
 #endif
 #ifdef UUID_USE_BASE62
 	#define BASE62 Base62::invertedchk()
