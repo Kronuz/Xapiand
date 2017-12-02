@@ -142,8 +142,8 @@ private:
 	std::string serialise_full() const;
 	std::string serialise_condensed() const;
 
-	static Guid unserialise_full(uint8_t length, const char** pos);
-	static Guid unserialise_condensed(uint8_t length, const char** pos);
+	static Guid unserialise_full(const char** ptr, const char* end);
+	static Guid unserialise_condensed(const char** ptr, const char* end);
 };
 
 

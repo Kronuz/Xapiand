@@ -43,16 +43,34 @@ constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH;
 constexpr uint8_t  UUID_MAX_SERIALISED_LENGTH  = 17;
 
 constexpr uint8_t TIME_BITS       = 60;
-constexpr uint8_t VERSION_BITS    = 64 - TIME_BITS;  // 4
+constexpr uint8_t PADDING_C0_BITS = 64 - TIME_BITS;  // 4
+constexpr uint8_t PADDING_E0_BITS = 64 - TIME_BITS;  // 4
 constexpr uint8_t COMPACTED_BITS  = 1;
 constexpr uint8_t SALT_BITS       = 5;
 constexpr uint8_t CLOCK_BITS      = 14;
 constexpr uint8_t NODE_BITS       = 48;
-constexpr uint8_t PADDING_BITS    = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS;  // 44
-constexpr uint8_t PADDING1_BITS   = 64 - COMPACTED_BITS - NODE_BITS - CLOCK_BITS;  // 1
+constexpr uint8_t PADDING_C1_BITS = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS;  // 44
+constexpr uint8_t PADDING_E1_BITS = 64 - COMPACTED_BITS - NODE_BITS - CLOCK_BITS;  // 1
 
 constexpr uint64_t SALT_MASK     =  ((1ULL << SALT_BITS)    - 1);
 constexpr uint64_t NODE_MASK     =  ((1ULL << NODE_BITS)    - 1);
+
+// Variable-length length encoding table for condensed UUIDs (prefix, mask)
+static constexpr uint8_t VL[13][2][2] = {
+    { { 0x1c, 0xfc }, { 0x1c, 0xfc } },  //  [0]  4: 00011100 11111100  00011100 11111100
+    { { 0x18, 0xfc }, { 0x18, 0xfc } },  //  [1]  5: 00011000 11111100  00011000 11111100
+    { { 0x14, 0xfc }, { 0x14, 0xfc } },  //  [2]  6: 00010100 11111100  00010100 11111100
+    { { 0x10, 0xfc }, { 0x10, 0xfc } },  //  [3]  7: 00010000 11111100  00010000 11111100
+    { { 0x0f, 0xff }, { 0xf0, 0xf0 } },  //  [4]  8: 00001111 11111111  11110000 11110000
+    { { 0x0e, 0xff }, { 0xe0, 0xf0 } },  //  [5]  9: 00001110 11111111  11100000 11110000
+    { { 0x0d, 0xff }, { 0xd0, 0xf0 } },  //  [6] 10: 00001101 11111111  11010000 11110000
+    { { 0x0c, 0xff }, { 0xc0, 0xf0 } },  //  [7] 11: 00001100 11111111  11000000 11110000
+    { { 0x03, 0xff }, { 0x30, 0xf0 } },  //  [8] 12: 00000011 11111111  00110000 11110000
+    { { 0x02, 0xff }, { 0x20, 0xf0 } },  //  [9] 13: 00000010 11111111  00100000 11110000
+    { { 0x0a, 0xfe }, { 0xa0, 0xe0 } },  // [10] 14: 00001010 11111110  10100000 11100000
+    { { 0x08, 0xfe }, { 0x80, 0xe0 } },  // [11] 15: 00001000 11111110  10000000 11100000
+    { { 0x04, 0xfc }, { 0x40, 0xc0 } },  // [12] 16: 00000100 11111100  01000000 11000000
+};
 
 
 static inline uint64_t fnv_1a(uint64_t num) {
@@ -68,25 +86,25 @@ static inline uint64_t fnv_1a(uint64_t num) {
 
 
 /*
- * Union for compact uuids
+ * Union for condensed UUIDs
  */
 union GuidCondenser {
 	struct compact_t {
 		uint64_t time        : TIME_BITS;
-		uint64_t version     : VERSION_BITS;
+		uint64_t padding0    : PADDING_C0_BITS;
 
+		uint64_t padding1    : PADDING_C1_BITS;
 		uint64_t compacted   : COMPACTED_BITS;
-		uint64_t padding     : PADDING_BITS;
 		uint64_t salt        : SALT_BITS;
 		uint64_t clock       : CLOCK_BITS;
 	} compact;
 
 	struct expanded_t {
 		uint64_t time        : TIME_BITS;
-		uint64_t version     : VERSION_BITS;
+		uint64_t padding0    : PADDING_E0_BITS;
 
+		uint64_t padding1    : PADDING_E1_BITS;
 		uint64_t compacted   : COMPACTED_BITS;
-		uint64_t padding     : PADDING1_BITS;
 		uint64_t node        : NODE_BITS;
 		uint64_t clock       : CLOCK_BITS;
 	} expanded;
@@ -94,7 +112,7 @@ union GuidCondenser {
 	uint64_t calculate_node() const;
 
 	std::string serialise() const;
-	static GuidCondenser unserialise(uint8_t lenght, const char** bytes);
+	static GuidCondenser unserialise(const char** ptr, const char* end);
 
 	GuidCondenser();
 };
@@ -140,16 +158,16 @@ GuidCondenser::serialise() const
 	uint64_t buf0, buf1;
 	if (compact.compacted) {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
-	// v0:VVVVTTTTTTTTTTTTTTTttttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
-	// b0:                                                 TTTTTTTTTTTTTTT b1:tttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSS
-		buf0 = (val0 << VERSION_BITS) >> (VERSION_BITS + (PADDING_BITS + COMPACTED_BITS));
-		buf1 = val0 << (64 - (PADDING_BITS + COMPACTED_BITS)) | val1 >> (PADDING_BITS + COMPACTED_BITS);
+	// v0:PPPPTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSCPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
+	// b0:                                                TTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSC
+		buf0 = val0 >> PADDING_C1_BITS;
+		buf1 = val0 << (64 - PADDING_C1_BITS) | val1 >> PADDING_C1_BITS;
 	} else {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
-	// v0:VVVVTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTtt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
-	// b0:      TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:ttKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
-		buf0 = (val0 << VERSION_BITS) >> (VERSION_BITS + (PADDING1_BITS + COMPACTED_BITS));
-		buf1 = val0 << (64 - (PADDING1_BITS + COMPACTED_BITS)) | val1 >> (PADDING1_BITS + COMPACTED_BITS);
+	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNCP
+	// b0:     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:tKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNC
+		buf0 = val0 >> PADDING_E1_BITS;
+		buf1 = val0 << (64 - PADDING_E1_BITS) | val1 >> PADDING_E1_BITS;
 	}
 
 	char buf[UUID_MAX_SERIALISED_LENGTH];
@@ -158,52 +176,72 @@ GuidCondenser::serialise() const
 	buf[0] = '\0';
 
 	auto ptr = buf;
-	const auto end = ptr + sizeof(buf) - 1;
-	while (ptr != end && !*++ptr);
-	if (*ptr & 0xfc) --ptr;
-	assert(ptr != buf); // UUID is 128bit - 4bit (version) - 2bit (variant) = 122bit really used
-	auto length = end - ptr + 1;
-	*ptr = (length - 1) << 4 | compact.compacted << 3 | (compact.version & 0x01) << 2 | (*ptr & 0x03);
+	const auto end = ptr + sizeof(buf) - 4; // serialized must be at least 4 bytes long.
+	while (ptr != end && !*++ptr); // remove all leading zeros
 
-	return std::string(ptr, length);
+	auto length = end - ptr;
+	if (*ptr & VL[length][0][1]) {
+		if (*ptr & VL[length][1][1]) {
+			--ptr;
+			++length;
+			*ptr |= VL[length][0][0];
+		} else {
+			*ptr |= VL[length][1][0];
+		}
+	} else {
+		*ptr |= VL[length][0][0];
+	}
+
+	return std::string(ptr, length + 4);
 }
 
 
 inline GuidCondenser
-GuidCondenser::unserialise(uint8_t length, const char** ptr)
+GuidCondenser::unserialise(const char** ptr, const char* end)
 {
+	auto size = end - *ptr;
+	auto length = size + 1;
 	auto l = **ptr;
-	bool compacted = l & 0x08;
-	bool version1  = l & 0x04;
+	bool q = (l & 0xf0);
+	int i = 0;
+	for (; i < 13; ++i) {
+		if (VL[i][q][0] == (l & VL[i][q][1])) {
+			length = i + 4;
+			break;
+		}
+	}
+	if (size < length) {
+		THROW(SerialisationError, "Bad condensed UUID");
+	}
 
 	char buf[UUID_MAX_SERIALISED_LENGTH];
 	auto start = buf + UUID_MAX_SERIALISED_LENGTH - length;
 	std::fill(buf, start, 0);
 	std::copy(*ptr, *ptr + length, start);
 
-	auto buf0 = BYTE_SWAP_8(*(reinterpret_cast<uint64_t*>(buf)));
-	auto buf1 = BYTE_SWAP_8(*(reinterpret_cast<uint64_t*>(buf) + 1));
+	*start &= ~VL[i][q][1];
+
+	auto buf0 = BYTE_SWAP_8(*(reinterpret_cast<uint64_t*>(buf + 1)));
+	auto buf1 = BYTE_SWAP_8(*(reinterpret_cast<uint64_t*>(buf + 1) + 1));
 
 	uint64_t val0, val1;
-	if (compacted) {
+	if (buf1 & 1) {  // compacted
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
-	// b0:                                                 TTTTTTTTTTTTTTT b1:tttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSS
-	// v0:VVVVTTTTTTTTTTTTTTTttttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
-		val0 = buf0 << (PADDING_BITS + COMPACTED_BITS) | buf1 >> (64 - (PADDING_BITS + COMPACTED_BITS));
-		val1 = buf1 << (PADDING_BITS + COMPACTED_BITS);
+	// b0:                                                TTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSC
+	// v0:PPPPTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSCPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
+		val0 = buf0 << PADDING_C1_BITS | buf1 >> (64 - PADDING_C1_BITS);
+		val1 = buf1 << PADDING_C1_BITS;
 	} else {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
-	// b0:      TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:ttKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
-	// v0:VVVVTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTtt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
-		val0 = buf0 << (PADDING1_BITS + COMPACTED_BITS) | buf1 >> (64 - (PADDING1_BITS + COMPACTED_BITS));
-		val1 = buf1 << (PADDING1_BITS + COMPACTED_BITS);
+	// b0:     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:tKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNC
+	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNCP
+		val0 = buf0 << PADDING_E1_BITS | buf1 >> (64 - PADDING_E1_BITS);
+		val1 = buf1 << PADDING_E1_BITS;
 	}
 
 	GuidCondenser condenser;
 	*(reinterpret_cast<uint64_t*>(&condenser)) = val0;
 	*(reinterpret_cast<uint64_t*>(&condenser) + 1) = val1;
-	condenser.compact.version = version1 ? 1 : 4;
-	condenser.compact.compacted = compacted;
 
 	*ptr += length;
 	return condenser;
@@ -263,8 +301,8 @@ unsigned char hexPairToChar(const char** ptr) {
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	};
 	auto pos = *ptr;
-	auto a = _[*pos++];
-	auto b = _[*pos++];
+	auto a = _[static_cast<unsigned char>(*pos++)];
+	auto b = _[static_cast<unsigned char>(*pos++)];
 	if (a == -1 || b == -1) {
 		THROW(InvalidArgument, "Invalid UUID string hex character");
 	}
@@ -479,9 +517,7 @@ Guid::uuid_version() const
 void
 Guid::compact_crush()
 {
-	auto variant = uuid_variant();
-	auto version = uuid_version();
-	if (variant == 0x80 && (version == 1 || version == 4)) {
+	if (uuid_variant() == 0x80 && uuid_version() == 1) {
 		auto node = uuid1_node();
 
 		auto salt = fnv_1a(node);
@@ -490,11 +526,10 @@ Guid::compact_crush()
 		GuidCondenser condenser;
 		condenser.compact.compacted = true;
 		condenser.compact.time = uuid1_time();
-		if (version == 1 && condenser.compact.time) {
+		if (condenser.compact.time) {
 			condenser.compact.time -= UUID_TIME_INITIAL;
 		}
 		condenser.compact.clock = uuid1_clock_seq();
-		condenser.compact.version = version;
 		condenser.compact.salt = salt;
 		node = condenser.calculate_node();
 
@@ -506,10 +541,7 @@ Guid::compact_crush()
 std::string
 Guid::serialise() const
 {
-	auto variant = uuid_variant();
-	auto version = uuid_version();
-
-	if (variant == 0x80 && (version == 1 || version == 4)) {
+	if (uuid_variant() == 0x80 && uuid_version() == 1) {
 		return serialise_condensed();
 	}
 
@@ -523,16 +555,18 @@ Guid::serialise_full() const
 	auto buf = reinterpret_cast<const char*>(&_bytes[0]);
 
 	auto ptr = buf;
-	const auto end = ptr + 16;
-	while (ptr != end && !*++ptr);
-	if (*ptr) --ptr;
-	assert(ptr != buf); // UUID is 128bit - 4bit (version) - 2bit (variant) = 122bit really used
+	const auto end = ptr + 16 - 10;
+	while (ptr != end && !*++ptr); // remove all leading zeros
+
 	auto length = end - ptr;
+	if (*ptr) ++length;
+
+	uint8_t l = (length << 5) | 0x10ULL;
 
 	std::string serialised;
-	serialised.reserve(length + 1);
-	serialised.push_back((length - 1) & 0x0f);
-	serialised.append(ptr, length);
+	serialised.reserve(length + 10);
+	serialised.push_back(l);
+	serialised.append(ptr, length + 9);
 
 	return serialised;
 }
@@ -543,11 +577,10 @@ Guid::serialise_condensed() const
 {
 	GuidCondenser condenser;
 	condenser.compact.compacted = true;
-	condenser.compact.version = uuid_version();
 	condenser.compact.time = uuid1_time();
 	condenser.compact.clock = uuid1_clock_seq();
 
-	if (condenser.compact.version == 1 && condenser.compact.time) {
+	if (condenser.compact.time) {
 		condenser.compact.time -= UUID_TIME_INITIAL;
 	}
 
@@ -615,27 +648,40 @@ Guid::is_valid(const char** ptr, const char* end)
 }
 
 
+static inline bool
+_is_serialised(const char** ptr, const char* end)
+{
+	auto size = end - *ptr;
+	if (size < 2 || size > UUID_MAX_SERIALISED_LENGTH) {
+		return false;
+	}
+	auto length = size + 1;
+	uint8_t l = **ptr;
+	if (l == 1) {
+		length = 17;
+	} else {
+		bool q = (l & 0xf0);
+		for (int i = 0; i < 13; ++i) {
+			if (VL[i][q][0] == (l & VL[i][q][1])) {
+				length = i + 4;
+				break;
+			}
+		}
+	}
+	if (size < length) {
+		return false;
+	}
+	*ptr += length;
+	return true;
+}
+
+
 bool
 Guid::is_serialised(const char** ptr, const char* end)
 {
 	while (*ptr != end) {
-		auto size = end - *ptr;
-		if (size < 2 || size > UUID_MAX_SERIALISED_LENGTH) {
+		if (!_is_serialised(ptr, end)) {
 			return false;
-		}
-		uint8_t l = **ptr;
-		auto length = l >> 4;
-		if (length == 0) {
-			length = l & 0x0f;
-			if (length == 0 || size < length + 2) {
-				return false;
-			}
-			*ptr += length + 2;
-		} else {
-			if (size < length + 1) {
-				return false;
-			}
-			*ptr += length + 1;
 		}
 	}
 	return true;
@@ -658,51 +704,48 @@ Guid::unserialise(const char** ptr, const char* end)
 	if (size < 2 || size > UUID_MAX_SERIALISED_LENGTH) {
 		THROW(SerialisationError, "Bad encoded UUID");
 	}
-	uint8_t l = **ptr;
-	auto length = l >> 4;
-	if (length == 0) {
-		length = l & 0x0f;
-		if (length == 0 || size < length + 1) {
-			THROW(SerialisationError, "Bad encoded UUID");
-		}
-		return unserialise_full(length + 1, ptr);
+	if (**ptr == 1) {
+		return unserialise_full(ptr, end);
 	} else {
-		if (size < length + 1) {
-			THROW(SerialisationError, "Bad condensed UUID");
-		}
-		return unserialise_condensed(length + 1, ptr);
+		return unserialise_condensed(ptr, end);
 	}
 }
 
 
 Guid
-Guid::unserialise_full(uint8_t length, const char** ptr)
+Guid::unserialise_full(const char** ptr, const char* end)
 {
+	auto size = end - *ptr;
+	auto length = 17;
+	if (size < length) {
+		THROW(SerialisationError, "Bad encoded UUID");
+	}
+
 	Guid out;
 
 	auto buf = reinterpret_cast<char*>(&out._bytes[0]);
-	auto start = buf + 16 - length;
+	auto start = buf + 16 - length + 1;
 	std::fill(buf, start, 0);
-	std::copy(*ptr, *ptr + length, start);
+	std::copy(*ptr + 1, *ptr + length, start);
 
-	*ptr += length + 1;
+	*ptr += length;
 	return out;
 }
 
 
 Guid
-Guid::unserialise_condensed(uint8_t length, const char** ptr)
+Guid::unserialise_condensed(const char** ptr, const char* end)
 {
-	GuidCondenser condenser = GuidCondenser::unserialise(length, ptr);
+	GuidCondenser condenser = GuidCondenser::unserialise(ptr, end);
 
 	uint64_t time = condenser.compact.time;
-	if (condenser.compact.version == 1 && time) {
+	if (time) {
 		time += UUID_TIME_INITIAL;
 	}
 	uint32_t time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
-	time_hi_version |= condenser.compact.version << 12;
+	time_hi_version |= 0x1000ULL; // Version 1: RFC 4122
 
 	uint64_t node = condenser.compact.compacted ? condenser.calculate_node() : condenser.expanded.node;
 
