@@ -520,20 +520,22 @@ Guid::compact_crush()
 {
 	if (uuid_variant() == 0x80 && uuid_version() == 1) {
 		auto time = uuid1_time();
-		if (time) time -= UUID_TIME_INITIAL;
+		if (!time || time > UUID_TIME_INITIAL) {
+			if (time) time -= UUID_TIME_INITIAL;
 
-		auto node = uuid1_node();
+			auto node = uuid1_node();
 
-		auto salt = fnv_1a(node) & SALT_MASK;
+			auto salt = fnv_1a(node) & SALT_MASK;
 
-		GuidCondenser condenser;
-		condenser.compact.compacted = true;
-		condenser.compact.clock = uuid1_clock_seq();
-		condenser.compact.time = time / UUID_TIME_DIVISOR;
-		condenser.compact.salt = salt;
-		node = condenser.calculate_node();
+			GuidCondenser condenser;
+			condenser.compact.compacted = true;
+			condenser.compact.clock = uuid1_clock_seq();
+			condenser.compact.time = time / UUID_TIME_DIVISOR;
+			condenser.compact.salt = salt;
+			node = condenser.calculate_node();
 
-		uuid1_node(node);
+			uuid1_node(node);
+		}
 	}
 }
 
