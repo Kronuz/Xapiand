@@ -544,6 +544,22 @@ struct Base58 {
 	}
 };
 
+// base59
+struct Base59 {
+	static const BaseX& base59() {
+		static constexpr BaseX encoder(0, "23456789abcdefghijklmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ", "", "", "l1IO0");
+		return encoder;
+	}
+	static const BaseX& base59chk() {
+		static constexpr BaseX encoder(BaseX::with_checksum, "23456789abcdefghijklmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ", "", "", "l1IO0");
+		return encoder;
+	}
+	static const BaseX& dubaluchk() {
+		static constexpr BaseX encoder(BaseX::with_checksum, "2B45l789ZDctefghLjk6mnopqrsbwvuUyzx3CdEFGHJKiMNOPQRSTAVWXYa", "", "", "l1IO0");
+		return encoder;
+	}
+};
+
 // base62
 struct Base62 {
 	static const BaseX& base62() {
@@ -600,14 +616,6 @@ struct Base66 {
 	}
 	static const BaseX& base66chk() {
 		static constexpr BaseX encoder(BaseX::with_checksum, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~", "", "", "");
-		return encoder;
-	}
-};
-
-struct Base59 {
-	static const BaseX& dubaluchk() {
-		static constexpr BaseX encoder(BaseX::with_checksum, "23456789abcdefghijklmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ", "", "", "l1IO0");
-		// static constexpr BaseX encoder(BaseX::with_checksum, "2B45l789ZDctefghLjk6mnopqrsbwvuUyzx3CdEFGHJKiMNOPQRSTAVWXYa", "", "", "l1IO0");
 		return encoder;
 	}
 };
