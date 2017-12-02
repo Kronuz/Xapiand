@@ -606,8 +606,8 @@ struct Base66 {
 
 struct Base59 {
 	static const BaseX& dubaluchk() {
-		// static constexpr BaseX encoder(BaseX::with_checksum, "xdqBJyDQzFCGHwKA9MN7POUER4ST3aVLZ5jYcfbghWkm2iueln8prXst6v", "", "", "l1IO0o");
 		static constexpr BaseX encoder(BaseX::with_checksum, "23456789abcdefghijklmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ", "", "", "l1IO0");
+		// static constexpr BaseX encoder(BaseX::with_checksum, "2B45l789ZDctefghLjk6mnopqrsbwvuUyzx3CdEFGHJKiMNOPQRSTAVWXYa", "", "", "l1IO0");
 		return encoder;
 	}
 };

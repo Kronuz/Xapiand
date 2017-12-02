@@ -481,29 +481,6 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		}
 #endif
 #ifdef UUID_USE_BASE59
-		// Properties of encoded UUIDs in Base59 (with dubaluchk)
-
-		// Compacted UUIDs (v1):
-		//   * Will start with 'du' until 2032 (14 characters).
-		//   * Will start with 'de' until 2081 (14 characters).
-		//   * Will start with 'dl' until 2094 (14 characters).
-		//   * Will start with 'z' from 2094 and for a long time (15 characters).
-		//   * From 2017 to 2040, prefixes will be:
-		//       duj, duc, duf, dug,
-		//       duh, duk, dum, dui, duu, dul, dun, dup, dur, dus,
-		//       dut, duv, dex, deq, deB, dey, deD, dez, deF, deG
-		//   * Easter egg base58 UUIDs created on Jul 13, 2020 will start with 'dubalu'
-		//     from 17:15:29 to 17:17:16 UTC  (0x01eac5565c065680 - 0x01eac5569bcd3e00)
-
-		// Expanded UUIDs (v1):
-		//   * Will start with 'DU' for a very very long time (22 characters).
-		//   * From 2017 to 2040, prefixes will be:
-		//       DUqv, DUBy, DUBG, DUBM,
-		//       DUBE, DUBa, DUBY, DUBW, DUBe, DUBX, DUJd, DUJQ, DUJw, DUJ7,
-		//       DUJ4, DUJL, DUJf, DUJm, DUJn, DUJt, DUyB, DUyF, DUyA, DUyO
-		//   * Easter egg base58 UUIDs created on Jul 13, 2020 will start with 'DUBALU'
-		//     from 4:19:59 to 4:46:07 UTC  (0x01eac4ea05fbc980 - 0x01eac4edac959980)
-
 		if (uuid_repr_str == "base59") {
 			opts.uuid_repr = UUIDRepr::base59;
 		}
