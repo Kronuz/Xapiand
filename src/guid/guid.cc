@@ -39,19 +39,19 @@ THE SOFTWARE.
 // 0x00011f0241243c00 = 1yr (365.2425 x 24 x 60 x 60 = 31556952s = 31556952000000000 nanoseconds)
 constexpr uint64_t UUID_TIME_EPOCH             = 0x01b21dd213814000ULL;
 constexpr uint64_t UUID_TIME_YEAR              = 0x00011f0241243c00ULL;
-constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH + (2016 - 1970) * UUID_TIME_YEAR;
+constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH + (2015 - 1970) * UUID_TIME_YEAR;
 constexpr uint64_t UUID_TIME_DIVISOR           = 100;
 constexpr uint8_t  UUID_MAX_SERIALISED_LENGTH  = 17;
 
 constexpr uint8_t TIME_BITS       = 60;
-constexpr uint8_t PADDING_C0_BITS = 64 - TIME_BITS;  // 4
-constexpr uint8_t PADDING_E0_BITS = 64 - TIME_BITS;  // 4
+constexpr uint8_t PADDING_C0_BITS = 64 - TIME_BITS;
+constexpr uint8_t PADDING_E0_BITS = 64 - TIME_BITS;
 constexpr uint8_t COMPACTED_BITS  = 1;
-constexpr uint8_t SALT_BITS       = 5;
+constexpr uint8_t SALT_BITS       = 6;
 constexpr uint8_t CLOCK_BITS      = 14;
 constexpr uint8_t NODE_BITS       = 48;
-constexpr uint8_t PADDING_C1_BITS = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS;  // 44
-constexpr uint8_t PADDING_E1_BITS = 64 - COMPACTED_BITS - NODE_BITS - CLOCK_BITS;  // 1
+constexpr uint8_t PADDING_C1_BITS = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS;
+constexpr uint8_t PADDING_E1_BITS = 64 - COMPACTED_BITS - NODE_BITS - CLOCK_BITS;
 
 constexpr uint64_t SALT_MASK     =  ((1ULL << SALT_BITS)    - 1);
 constexpr uint64_t NODE_MASK     =  ((1ULL << NODE_BITS)    - 1);
