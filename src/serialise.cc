@@ -65,17 +65,46 @@ Serialise::isUUID(const std::string& field_value) noexcept
 #endif
 		for (const auto& uuid : split) {
 			if (!uuid.empty()) {
+				std::string decoded;
 #ifdef UUID_USE_BASE16
-				if (BASE16.is_valid(uuid)) continue;
+				if (BASE16.is_valid(uuid)) {
+					try {
+						BASE16.decode(decoded, uuid);
+						if (Guid::is_serialised(decoded)) {
+							continue;
+						}
+					} catch (const std::invalid_argument&) { }
+				}
 #endif
 #ifdef UUID_USE_BASE58
-				if (BASE58.is_valid(uuid)) continue;
+				if (BASE58.is_valid(uuid)) {
+					try {
+						BASE58.decode(decoded, uuid);
+						if (Guid::is_serialised(decoded)) {
+							continue;
+						}
+					} catch (const std::invalid_argument&) { }
+				}
 #endif
 #ifdef UUID_USE_BASE59
-				if (BASE59.is_valid(uuid)) continue;
+				if (BASE59.is_valid(uuid)) {
+					try {
+						BASE59.decode(decoded, uuid);
+						if (Guid::is_serialised(decoded)) {
+							continue;
+						}
+					} catch (const std::invalid_argument&) { }
+				}
 #endif
 #ifdef UUID_USE_BASE62
-				if (BASE62.is_valid(uuid)) continue;
+				if (BASE62.is_valid(uuid)) {
+					try {
+						BASE62.decode(decoded, uuid);
+						if (Guid::is_serialised(decoded)) {
+							continue;
+						}
+					} catch (const std::invalid_argument&) { }
+				}
 #endif
 				if (Guid::is_valid(uuid)) continue;
 				return false;
