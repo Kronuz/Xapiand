@@ -86,6 +86,17 @@ static inline uint64_t fnv_1a(uint64_t num) {
 }
 
 
+static inline uint64_t xor_fold(uint64_t num, int bits) {
+	// xor-fold to n bits:
+	uint64_t folded = 0;
+	while (num) {
+		folded ^= num;
+		num >>= bits;
+	}
+	return folded;
+}
+
+
 /*
  * Union for condensed UUIDs
  */
@@ -529,7 +540,13 @@ Guid::compact_crush()
 			condenser.compact.compacted = true;
 			condenser.compact.clock = uuid1_clock_seq();
 			condenser.compact.time = time / UUID_TIME_DIVISOR;
-			condenser.compact.salt = (node & 0x010000000000 ? node : fnv_1a(node)) & SALT_MASK;
+			if (node & 0x010000000000) {
+				condenser.compact.salt = node & SALT_MASK;
+			} else {
+				auto salt = fnv_1a(node);
+				salt = xor_fold(salt, SALT_BITS);
+				condenser.compact.salt = salt & SALT_MASK;
+			}
 
 			uuid1_node(condenser.calculate_node());
 		}
