@@ -525,16 +525,13 @@ Guid::compact_crush()
 
 			auto node = uuid1_node();
 
-			auto salt = fnv_1a(node) & SALT_MASK;
-
 			GuidCondenser condenser;
 			condenser.compact.compacted = true;
 			condenser.compact.clock = uuid1_clock_seq();
 			condenser.compact.time = time / UUID_TIME_DIVISOR;
-			condenser.compact.salt = salt;
-			node = condenser.calculate_node();
+			condenser.compact.salt = (node & 0x010000000000 ? node : fnv_1a(node)) & SALT_MASK;
 
-			uuid1_node(node);
+			uuid1_node(condenser.calculate_node());
 		}
 	}
 }
@@ -582,13 +579,11 @@ Guid::serialise_condensed() const
 
 	auto node = uuid1_node();
 
-	auto salt = node & SALT_MASK;
-
 	GuidCondenser condenser;
 	condenser.compact.compacted = true;
 	condenser.compact.clock = uuid1_clock_seq();
 	condenser.compact.time = time / UUID_TIME_DIVISOR;
-	condenser.compact.salt = salt;
+	condenser.compact.salt = node & SALT_MASK;
 
 	auto compacted_node = condenser.calculate_node();
 	if (node != compacted_node) {
