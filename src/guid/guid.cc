@@ -39,15 +39,15 @@ THE SOFTWARE.
 // 0x00011f0241243c00 = 1yr (365.2425 x 24 x 60 x 60 = 31556952s = 31556952000000000 nanoseconds)
 constexpr uint64_t UUID_TIME_EPOCH             = 0x01b21dd213814000ULL;
 constexpr uint64_t UUID_TIME_YEAR              = 0x00011f0241243c00ULL;
-constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH + (2015 - 1970) * UUID_TIME_YEAR;
-constexpr uint64_t UUID_TIME_DIVISOR           = 100;
+constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH + (2016 - 1970) * UUID_TIME_YEAR;
+constexpr uint64_t UUID_TIME_DIVISOR           = 10000;
 constexpr uint8_t  UUID_MAX_SERIALISED_LENGTH  = 17;
 
 constexpr uint8_t TIME_BITS       = 60;
 constexpr uint8_t PADDING_C0_BITS = 64 - TIME_BITS;
 constexpr uint8_t PADDING_E0_BITS = 64 - TIME_BITS;
 constexpr uint8_t COMPACTED_BITS  = 1;
-constexpr uint8_t SALT_BITS       = 6;
+constexpr uint8_t SALT_BITS       = 7;
 constexpr uint8_t CLOCK_BITS      = 14;
 constexpr uint8_t NODE_BITS       = 48;
 constexpr uint8_t PADDING_C1_BITS = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS;
@@ -58,19 +58,19 @@ constexpr uint64_t NODE_MASK     =  ((1ULL << NODE_BITS)    - 1);
 
 // Variable-length length encoding table for condensed UUIDs (prefix, mask)
 static constexpr uint8_t VL[13][2][2] = {
-    { { 0x1c, 0xfc }, { 0x1c, 0xfc } },  //  [0]  4: 00011100 11111100  00011100 11111100
-    { { 0x18, 0xfc }, { 0x18, 0xfc } },  //  [1]  5: 00011000 11111100  00011000 11111100
-    { { 0x14, 0xfc }, { 0x14, 0xfc } },  //  [2]  6: 00010100 11111100  00010100 11111100
-    { { 0x10, 0xfc }, { 0x10, 0xfc } },  //  [3]  7: 00010000 11111100  00010000 11111100
-    { { 0x0f, 0xff }, { 0xf0, 0xf0 } },  //  [4]  8: 00001111 11111111  11110000 11110000
-    { { 0x0e, 0xff }, { 0xe0, 0xf0 } },  //  [5]  9: 00001110 11111111  11100000 11110000
-    { { 0x0d, 0xff }, { 0xd0, 0xf0 } },  //  [6] 10: 00001101 11111111  11010000 11110000
-    { { 0x0c, 0xff }, { 0xc0, 0xf0 } },  //  [7] 11: 00001100 11111111  11000000 11110000
-    { { 0x03, 0xff }, { 0x30, 0xf0 } },  //  [8] 12: 00000011 11111111  00110000 11110000
-    { { 0x02, 0xff }, { 0x20, 0xf0 } },  //  [9] 13: 00000010 11111111  00100000 11110000
-    { { 0x0a, 0xfe }, { 0xa0, 0xe0 } },  // [10] 14: 00001010 11111110  10100000 11100000
-    { { 0x08, 0xfe }, { 0x80, 0xe0 } },  // [11] 15: 00001000 11111110  10000000 11100000
-    { { 0x04, 0xfc }, { 0x40, 0xc0 } },  // [12] 16: 00000100 11111100  01000000 11000000
+    { { 0x1c, 0xfc }, { 0x1c, 0xfc } },  //  4: 00011100 11111100  00011100 11111100
+    { { 0x18, 0xfc }, { 0x18, 0xfc } },  //  5: 00011000 11111100  00011000 11111100
+    { { 0x14, 0xfc }, { 0x14, 0xfc } },  //  6: 00010100 11111100  00010100 11111100
+    { { 0x10, 0xfc }, { 0x10, 0xfc } },  //  7: 00010000 11111100  00010000 11111100
+    { { 0x04, 0xfc }, { 0x40, 0xc0 } },  //  8: 00000100 11111100  01000000 11000000
+    { { 0x0a, 0xfe }, { 0xa0, 0xe0 } },  //  9: 00001010 11111110  10100000 11100000
+    { { 0x08, 0xfe }, { 0x80, 0xe0 } },  // 10: 00001000 11111110  10000000 11100000
+    { { 0x02, 0xff }, { 0x20, 0xf0 } },  // 11: 00000010 11111111  00100000 11110000
+    { { 0x03, 0xff }, { 0x30, 0xf0 } },  // 12: 00000011 11111111  00110000 11110000
+    { { 0x0c, 0xff }, { 0xc0, 0xf0 } },  // 13: 00001100 11111111  11000000 11110000
+    { { 0x0d, 0xff }, { 0xd0, 0xf0 } },  // 14: 00001101 11111111  11010000 11110000
+    { { 0x0e, 0xff }, { 0xe0, 0xf0 } },  // 15: 00001110 11111111  11100000 11110000
+    { { 0x0f, 0xff }, { 0xf0, 0xf0 } },  // 16: 00001111 11111111  11110000 11110000
 };
 
 
