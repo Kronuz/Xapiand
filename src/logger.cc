@@ -461,7 +461,9 @@ Logging::_str_format(bool stacked, int priority, const std::string& exc, const c
 	delete []buffer;
 	if (priority < 0) {
 		if (exc.empty()) {
+#ifdef XAPIAND_TRACEBACKS
 			result += DARK_GREY + traceback(file, line) + NO_COL;
+#endif
 		} else {
 			result += NO_COL + exc + NO_COL;
 		}

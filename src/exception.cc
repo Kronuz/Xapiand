@@ -37,7 +37,7 @@
 
 std::string traceback(const char *filename, int line) {
 	std::string t;
-#ifdef XAPIAND_TRACEBACKS
+#ifndef NDEBUG
 	void* callstack[128];
 
 	// retrieve current stack addresses

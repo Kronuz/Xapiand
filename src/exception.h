@@ -30,10 +30,7 @@
 #include <xapian.h>     // for DocNotFoundError, InternalError, InvalidArgum...
 
 
-#ifdef XAPIAND_TRACEBACKS
-#define TRACEBACK (traceback(__FILE__, __LINE__).c_str())
-#endif
-
+#define TRACEBACK() traceback(__FILE__, __LINE__)
 
 std::string traceback(const char *filename, int line);
 
