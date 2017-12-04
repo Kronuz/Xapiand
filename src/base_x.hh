@@ -58,10 +58,9 @@ class BaseX {
 
 public:
 	static constexpr int ignore_case =   (1 << 0);
-	static constexpr int little_endian = (1 << 1);
-	static constexpr int with_checksum = (1 << 2);
-	static constexpr int with_check =    (1 << 3);
-	static constexpr int block_padding = (1 << 4);
+	static constexpr int with_checksum = (1 << 1);
+	static constexpr int with_check =    (1 << 2);
+	static constexpr int block_padding = (1 << 3);
 
 	template <std::size_t alphabet_size1, std::size_t extended_size1, std::size_t padding_size1, std::size_t translate_size1>
 	constexpr BaseX(int flags, const char (&alphabet)[alphabet_size1], const char (&extended)[extended_size1], const char (&padding_string)[padding_size1], const char (&translate)[translate_size1]) :
@@ -178,9 +177,7 @@ public:
 					quotient = std::move(r.first);
 				} while (quotient);
 			}
-			if (!(flags & BaseX::little_endian)) {
-				std::reverse(result.begin(), result.end());
-			}
+			std::reverse(result.begin(), result.end());
 			if (padding_size) {
 				Result p;
 				p.resize((padding_size - (result.size() % padding_size)) % padding_size, padding);
@@ -262,7 +259,6 @@ public:
 		result = 0;
 		int sum = 0;
 		int direction = 1;
-		const char* tmple;
 
 		if (flags & BaseX::with_checksum) {
 			auto sz = encoded_size - 1;
@@ -273,13 +269,6 @@ public:
 
 		if (flags & BaseX::with_check) {
 			--encoded_size;
-		}
-
-		if (flags & BaseX::little_endian) {
-			direction = -1;
-			tmple = encoded + encoded_size;
-			encoded = tmple - 1;
-			for (; encoded_size && *encoded == padding; --encoded_size, --encoded);
 		}
 
 		int bp = 0;
@@ -313,11 +302,7 @@ public:
 			}
 		}
 
-		if (flags & BaseX::little_endian) {
-			encoded = tmple;
-		} else {
-			for (; encoded_size && *encoded == padding; --encoded_size, ++encoded);
-		}
+		for (; encoded_size && *encoded == padding; --encoded_size, ++encoded);
 
 		result >>= (bp & 7);
 
