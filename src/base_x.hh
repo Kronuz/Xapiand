@@ -540,7 +540,7 @@ struct Base59 {
 		return encoder;
 	}
 	static const BaseX& dubaluchk() {
-		static constexpr BaseX encoder(BaseX::with_checksum, "zy9MalDxwpKLdnW2APJscgbYUq6jht7Ee3TiX5vZRkVCr4uBHoGSQf8FNmO", "", "", "~l1IO0");
+		static constexpr BaseX encoder(BaseX::with_checksum, "zy9MalDxwpKLdnW2APJscgbYUq6jht7Ee3TiX5vZRkVCr4uBHoGSQf8FNmO", "", "", "-l1IO0");
 		return encoder;
 	}
 };
