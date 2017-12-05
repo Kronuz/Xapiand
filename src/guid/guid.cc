@@ -34,6 +34,8 @@ THE SOFTWARE.
 
 #include "endian.h"       // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
 #include "exception.h"    // for THROW, SerialisationError, InvalidArgument
+#include "utils.h"        // for hexdec
+
 
 // 0x01b21dd213814000 is the number of 100-ns intervals between the
 // UUID epoch 1582-10-15 00:00:00 and the Unix epoch 1970-01-01 00:00:00.
@@ -290,37 +292,12 @@ std::ostream& operator<<(std::ostream& s, const Guid& guid) {
 }
 
 
-// converts the two hexadecimal characters to an unsigned char (a byte)
-unsigned char hexPairToChar(const char** ptr) {
-	constexpr const int _[256] = {
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,
-
-		-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	};
-	auto pos = *ptr;
-	auto a = _[static_cast<unsigned char>(*pos++)];
-	auto b = _[static_cast<unsigned char>(*pos++)];
-	if (a == -1 || b == -1) {
+static inline unsigned char hexPairToChar(const char** ptr) {
+	auto dec = hexdec(ptr);
+	if (dec == -1) {
 		THROW(InvalidArgument, "Invalid UUID string hex character");
 	}
-	*ptr = pos;
-	return a << 4 | b;
+	return dec;
 }
 
 
