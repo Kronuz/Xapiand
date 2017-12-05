@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "guid.h"
 
-#include "serialise.h"    // for BYTE_SWAP_*
+#include "endian.h"       // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
 
 #include <algorithm>      // for std::copy
 #include <iomanip>        // for std::setw and std::setfill
@@ -183,8 +183,8 @@ GuidCondenser::serialise() const
 	}
 
 	char buf[UUID_MAX_SERIALISED_LENGTH];
-	*(reinterpret_cast<uint64_t*>(buf + 1)) = BYTE_SWAP_8(buf0);
-	*(reinterpret_cast<uint64_t*>(buf + 1) + 1) = BYTE_SWAP_8(buf1);
+	*(reinterpret_cast<uint64_t*>(buf + 1)) = htobe64(buf0);
+	*(reinterpret_cast<uint64_t*>(buf + 1) + 1) = htobe64(buf1);
 	buf[0] = '\0';
 
 	auto ptr = buf;
@@ -233,8 +233,8 @@ GuidCondenser::unserialise(const char** ptr, const char* end)
 
 	*start &= ~VL[i][q][1];
 
-	auto buf0 = BYTE_SWAP_8(*(reinterpret_cast<uint64_t*>(buf + 1)));
-	auto buf1 = BYTE_SWAP_8(*(reinterpret_cast<uint64_t*>(buf + 1) + 1));
+	auto buf0 = be64toh(*(reinterpret_cast<uint64_t*>(buf + 1)));
+	auto buf1 = be64toh(*(reinterpret_cast<uint64_t*>(buf + 1) + 1));
 
 	uint64_t val0, val1;
 	if (buf1 & 1) {  // compacted
@@ -432,7 +432,7 @@ void
 Guid::uuid1_node(uint64_t node)
 {
 	auto node_ptr = reinterpret_cast<uint64_t*>(&_bytes[8]);
-	*node_ptr = BYTE_SWAP_8((BYTE_SWAP_8(*node_ptr) & 0xffff000000000000ULL) | (node & 0xffffffffffffULL));
+	*node_ptr = htobe64((be64toh(*node_ptr) & 0xffff000000000000ULL) | (node & 0xffffffffffffULL));
 }
 
 
@@ -446,11 +446,11 @@ Guid::uuid1_time(uint64_t time)
 	unsigned time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
-	time_hi_version |= BYTE_SWAP_2(*time_hi_and_version_ptr) & 0xf000ULL;
+	time_hi_version |= be16toh(*time_hi_and_version_ptr) & 0xf000ULL;
 
-	*time_low_ptr = BYTE_SWAP_4(time_low);
-	*time_mid_ptr = BYTE_SWAP_2(time_mid);
-	*time_hi_and_version_ptr = BYTE_SWAP_2(time_hi_version);
+	*time_low_ptr = htobe32(time_low);
+	*time_mid_ptr = htobe16(time_mid);
+	*time_hi_and_version_ptr = htobe16(time_hi_version);
 }
 
 
@@ -485,7 +485,7 @@ uint64_t
 Guid::uuid1_node() const
 {
 	auto node_ptr = reinterpret_cast<const uint64_t*>(&_bytes[8]);
-	return BYTE_SWAP_8(*node_ptr) & 0xffffffffffffULL;
+	return be64toh(*node_ptr) & 0xffffffffffffULL;
 }
 
 
@@ -495,11 +495,11 @@ Guid::uuid1_time() const
 	auto time_low_ptr = reinterpret_cast<const uint32_t*>(&_bytes[0]);
 	auto time_mid_ptr = reinterpret_cast<const uint16_t*>(&_bytes[4]);
 	auto time_hi_and_version_ptr = reinterpret_cast<const uint16_t*>(&_bytes[6]);
-	uint64_t time = BYTE_SWAP_2(*time_hi_and_version_ptr) & 0xfffULL;
+	uint64_t time = be16toh(*time_hi_and_version_ptr) & 0xfffULL;
 	time <<= 16;
-	time |= BYTE_SWAP_2(*time_mid_ptr);
+	time |= be16toh(*time_mid_ptr);
 	time <<= 32;
-	time |= BYTE_SWAP_4(*time_low_ptr);
+	time |= be32toh(*time_low_ptr);
 	return time;
 }
 
@@ -508,7 +508,7 @@ uint16_t
 Guid::uuid1_clock_seq() const
 {
 	auto clock_seq_ptr = reinterpret_cast<const uint16_t*>(&_bytes[8]);
-	return BYTE_SWAP_2(*clock_seq_ptr) & 0x3fffULL;
+	return be16toh(*clock_seq_ptr) & 0x3fffULL;
 }
 
 
@@ -774,10 +774,10 @@ Guid::unserialise_condensed(const char** ptr, const char* end)
 	auto time_hi_and_version_ptr = reinterpret_cast<uint16_t*>(&out._bytes[6]);
 	auto node_ptr = reinterpret_cast<uint64_t*>(&out._bytes[8]);
 
-	*time_low_ptr = BYTE_SWAP_4(time_low);
-	*time_mid_ptr = BYTE_SWAP_2(time_mid);
-	*time_hi_and_version_ptr = BYTE_SWAP_2(time_hi_version);
-	*node_ptr = BYTE_SWAP_8(node);
+	*time_low_ptr = htobe32(time_low);
+	*time_mid_ptr = htobe16(time_mid);
+	*time_hi_and_version_ptr = htobe16(time_hi_version);
+	*node_ptr = htobe64(node);
 	out._bytes[8] = clock_seq_hi_variant;
 	out._bytes[9] = clock_seq_low;
 

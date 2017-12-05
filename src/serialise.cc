@@ -33,6 +33,7 @@
 
 #include "base_x.hh"                                  // for base62
 #include "cast.h"                                     // for Cast
+#include "endian.h"                                   // for htobe32, htobe56
 #include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
@@ -699,9 +700,9 @@ Serialise::ranges(const std::vector<range_t>& ranges)
 std::string
 Serialise::cartesian(const Cartesian& norm_cartesian)
 {
-	uint32_t x = Swap4Bytes(((uint32_t)(norm_cartesian.x * DOUBLE2INT) + MAXDOU2INT));
-	uint32_t y = Swap4Bytes(((uint32_t)(norm_cartesian.y * DOUBLE2INT) + MAXDOU2INT));
-	uint32_t z = Swap4Bytes(((uint32_t)(norm_cartesian.z * DOUBLE2INT) + MAXDOU2INT));
+	uint32_t x = htobe32(((uint32_t)(norm_cartesian.x * DOUBLE2INT) + MAXDOU2INT));
+	uint32_t y = htobe32(((uint32_t)(norm_cartesian.y * DOUBLE2INT) + MAXDOU2INT));
+	uint32_t z = htobe32(((uint32_t)(norm_cartesian.z * DOUBLE2INT) + MAXDOU2INT));
 	const char serialised[] = { (char)(x & 0xFF), (char)((x >>  8) & 0xFF), (char)((x >> 16) & 0xFF), (char)((x >> 24) & 0xFF),
 								(char)(y & 0xFF), (char)((y >>  8) & 0xFF), (char)((y >> 16) & 0xFF), (char)((y >> 24) & 0xFF),
 								(char)(z & 0xFF), (char)((z >>  8) & 0xFF), (char)((z >> 16) & 0xFF), (char)((z >> 24) & 0xFF) };
@@ -712,7 +713,7 @@ Serialise::cartesian(const Cartesian& norm_cartesian)
 std::string
 Serialise::trixel_id(uint64_t id)
 {
-	id = Swap7Bytes(id);
+	id = htobe56(id);
 	const char serialised[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
 								(char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF) };
 	return std::string(serialised, HTM_BYTES_ID);
@@ -722,8 +723,8 @@ Serialise::trixel_id(uint64_t id)
 std::string
 Serialise::range(const range_t& range)
 {
-	uint64_t start = Swap7Bytes(range.start);
-	uint64_t end = Swap7Bytes(range.end);
+	uint64_t start = htobe56(range.start);
+	uint64_t end = htobe56(range.end);
 	const char serialised[] = { (char)(start & 0xFF), (char)((start >>  8) & 0xFF), (char)((start >> 16) & 0xFF), (char)((start >> 24) & 0xFF),
 								(char)((start >> 32) & 0xFF), (char)((start >> 40) & 0xFF), (char)((start >> 48) & 0xFF),
 								(char)(end & 0xFF), (char)((end >>  8) & 0xFF), (char)((end >> 16) & 0xFF), (char)((end >> 24) & 0xFF),
