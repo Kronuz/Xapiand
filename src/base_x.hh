@@ -371,10 +371,8 @@ public:
 
 	bool is_valid(const char* encoded, size_t encoded_size) const {
 		int sum = 0;
-		if (flags & BaseX::with_checksum) {
-			auto sz = encoded_size - 1;
-			sum += (sz + sz / size) % size;
-		}
+		int sumsz = 0;
+		if (flags & BaseX::with_checksum) --sumsz;
 		for (; encoded_size; --encoded_size, ++encoded) {
 			auto d = ord(static_cast<int>(*encoded));
 			if (d < 0) continue; // ignored character
@@ -382,9 +380,13 @@ public:
 				return false;
 			}
 			sum += d;
+			++sumsz;
 		}
-		if (flags & BaseX::with_checksum && (sum % size)) {
-			return false;
+		if (flags & BaseX::with_checksum) {
+			sum += (sumsz + sumsz / size) % size;
+			if (sum % size) {
+				return false;
+			}
 		}
 		return true;
 	}
