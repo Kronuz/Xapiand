@@ -37,6 +37,7 @@
 #include "io_utils.h"                                // for close, open, read, write
 #include "length.h"                                  // for serialise_length and unserialise_length
 #include "log.h"                                     // for L_DATABASE
+#include "manager.h"                                 // for XapiandManager::manager->opts.uuid_repr
 #include "rapidjson/document.h"                      // for Document, GenericDocument
 #include "rapidjson/error/en.h"                      // for GetParseError_En
 #include "rapidjson/error/error.h"                   // for ParseResult
@@ -98,37 +99,7 @@ std::string get_prefix(const std::string& field_name)
 
 std::string normalize_uuid(const std::string& uuid)
 {
-#ifdef UUID_USE_GUID
-	if (uuid.front() == '{' && uuid.back() == '}') {
-		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::guid);
-	}
-#endif
-#ifdef UUID_USE_URN
-	if (uuid.compare(0, 9, "urn:uuid:") == 0) {
-		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::urn);
-	}
-#endif
-#ifdef UUID_USE_BASE16
-	if (BASE16.is_valid(uuid)) {
-		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base16);
-	}
-#endif
-#ifdef UUID_USE_BASE58
-	if (BASE58.is_valid(uuid)) {
-		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base58);
-	}
-#endif
-#ifdef UUID_USE_BASE59
-	if (BASE59.is_valid(uuid)) {
-		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base59);
-	}
-#endif
-#ifdef UUID_USE_BASE62
-	if (BASE62.is_valid(uuid)) {
-		return Unserialise::uuid(Serialise::uuid(uuid), UUIDRepr::base62);
-	}
-#endif
-	return uuid;
+	return Unserialise::uuid(Serialise::uuid(uuid), XapiandManager::manager->opts.uuid_repr);
 }
 
 
