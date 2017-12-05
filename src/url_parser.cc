@@ -558,7 +558,7 @@ std::string
 PathParser::get_nsp()
 {
 	if (!off_nsp) return std::string();
-	return urldecode(off_nsp, len_nsp);
+	return urlexpand(off_nsp, len_nsp);
 }
 
 
