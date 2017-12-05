@@ -458,38 +458,40 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		}
 		opts.ev_flags = ev_backend(use.getValue());
 		opts.uuid_compact = uuid_compact.getValue();
-		auto uuid_repr_str = uuid_repr.getValue();
-		opts.uuid_repr = UUIDRepr::simple;
+		switch (xxh64::hash(uuid_repr.getValue())) {
 #ifdef UUID_USE_GUID
-		if (uuid_repr_str == "guid") {
-			opts.uuid_repr = UUIDRepr::guid;
-		}
+			case xxh64::hash("guid"):
+				opts.uuid_repr = UUIDRepr::guid;
+				break;
 #endif
 #ifdef UUID_USE_URN
-		if (uuid_repr_str == "urn") {
-			opts.uuid_repr = UUIDRepr::urn;
-		}
+			case xxh64::hash("urn"):
+				opts.uuid_repr = UUIDRepr::urn;
+				break;
 #endif
 #ifdef UUID_USE_BASE16
-		if (uuid_repr_str == "base16") {
-			opts.uuid_repr = UUIDRepr::base16;
-		}
+			case xxh64::hash("base16"):
+				opts.uuid_repr = UUIDRepr::base16;
+				break;
 #endif
 #ifdef UUID_USE_BASE58
-		if (uuid_repr_str == "base58") {
-			opts.uuid_repr = UUIDRepr::base58;
-		}
+			case xxh64::hash("base58"):
+				opts.uuid_repr = UUIDRepr::base58;
+				break;
 #endif
 #ifdef UUID_USE_BASE59
-		if (uuid_repr_str == "base59") {
-			opts.uuid_repr = UUIDRepr::base59;
-		}
+			case xxh64::hash("base59"):
+				opts.uuid_repr = UUIDRepr::base59;
+				break;
 #endif
 #ifdef UUID_USE_BASE62
-		if (uuid_repr_str == "base62") {
-			opts.uuid_repr = UUIDRepr::base62;
-		}
+			case xxh64::hash("base62"):
+				opts.uuid_repr = UUIDRepr::base62;
+				break;
 #endif
+			default:
+				opts.uuid_repr = UUIDRepr::simple;
+		}
 	} catch (const ArgException& exc) { // catch any exceptions
 		std::cerr << "error: " << exc.error() << " for arg " << exc.argId() << std::endl;
 	}
