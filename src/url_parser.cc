@@ -22,8 +22,6 @@
 
 #include "url_parser.h"
 
-#include <cctype>            // for isxdigit
-#include <cstdlib>           // for strtol
 #include <cstring>           // for strlen, strncmp
 
 #include "database_utils.h"  // for normalize_uuid
@@ -32,74 +30,71 @@
 std::string
 urldecode(const void *p, size_t size)
 {
-	int dec;
-	const char* q = (const char *)p;
-	char *buff = new char[size + 1];
-	char *d = buff;
-	const char *p_end = q + size;
-	while (q != p_end) {
-		char c = *q++;
-		switch (c) {
-			case '+':
-				*d++ = ' ';
-				break;
-			case '%':
-				dec = hexdec(&q);
-				if (dec != -1) {
-					c = dec;
-				}
-			default:
-				*d++ = c;
-		}
-	}
-	std::string ret(buff, d - buff);
-	delete [] buff;
-	return ret;
-}
-
-
-std::string
-urlexpand(const void *p, size_t size)
-{
-	int dec;
-	size_t sz;
-	const char* q = (const char *)p;
 	std::string buf;
-	buf.reserve(size); //TODO: resize
-	const char *p_end = q + size;
-	const char *off = q;
-
+	buf.reserve(size);
+	const char* q = (const char *)p;
+	auto p_end = q + size;
 	while (q != p_end) {
 		char c = *q++;
 		switch (c) {
 			case '+':
 				buf.push_back(' ');
 				break;
-			case '/':
-				sz = q - off - 1;
+			case '%': {
+				auto dec = hexdec(&q);
+				if (dec != -1) {
+					c = dec;
+				}
+			}
+			default:
+				buf.push_back(c);
+		}
+	}
+	return buf;
+}
+
+
+std::string
+urlexpand(const void *p, size_t size)
+{
+	std::string buf;
+	buf.reserve(size);
+	const char* q = (const char *)p;
+	auto p_end = q + size;
+	auto oq = q;
+	while (q != p_end) {
+		char c = *q++;
+		switch (c) {
+			case '+':
+				buf.push_back(' ');
+				break;
+			case '/': {
+				auto sz = q - oq - 1;
 				if (sz) {
 					try {
-						auto uuid_normalized = normalize_uuid(std::string(off, sz));
+						auto uuid_normalized = normalize_uuid(std::string(oq, sz));
 						buf.resize(buf.size() - sz);
 						buf.append(uuid_normalized);
 					} catch (const SerialisationError& exc) { }
 				}
 				buf.push_back(c);
-				off = q;
+				oq = q;
 				break;
-			case '%':
-				dec = hexdec(&q);
+			}
+			case '%': {
+				auto dec = hexdec(&q);
 				if (dec != -1) {
 					c = dec;
 				}
+			}
 			default:
 				buf.push_back(c);
 		}
 	}
-	sz = q - off;
+	auto sz = q - oq;
 	if (sz) {
 		try {
-			auto uuid_normalized = normalize_uuid(std::string(off, sz));
+			auto uuid_normalized = normalize_uuid(std::string(oq, sz));
 			buf.resize(buf.size() - sz);
 			buf.append(uuid_normalized);
 		} catch (const SerialisationError& exc) { }
