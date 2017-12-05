@@ -58,6 +58,56 @@ urldecode(const void *p, size_t size)
 }
 
 
+std::string
+urlexpand(const void *p, size_t size)
+{
+	int dec;
+	size_t sz;
+	const char* q = (const char *)p;
+	std::string buf;
+	buf.reserve(size); //TODO: resize
+	const char *p_end = q + size;
+	const char *off = q;
+
+	while (q != p_end) {
+		char c = *q++;
+		switch (c) {
+			case '+':
+				buf.push_back(' ');
+				break;
+			case '/':
+				sz = q - off - 1;
+				if (sz) {
+					try {
+						auto uuid_normalized = normalize_uuid(std::string(off, sz));
+						buf.resize(buf.size() - sz);
+						buf.append(uuid_normalized);
+					} catch (const SerialisationError& exc) { }
+				}
+				buf.push_back(c);
+				off = q;
+				break;
+			case '%':
+				dec = hexdec(&q);
+				if (dec != -1) {
+					c = dec;
+				}
+			default:
+				buf.push_back(c);
+		}
+	}
+	sz = q - off;
+	if (sz) {
+		try {
+			auto uuid_normalized = normalize_uuid(std::string(off, sz));
+			buf.resize(buf.size() - sz);
+			buf.append(uuid_normalized);
+		} catch (const SerialisationError& exc) { }
+	}
+	return buf;
+}
+
+
 QueryParser::QueryParser()
 	: len(0),
 	  off(nullptr) { }
@@ -497,7 +547,7 @@ std::string
 PathParser::get_pth()
 {
 	if (!off_pth) return std::string();
-	return urldecode(off_pth, len_pth);
+	return urlexpand(off_pth, len_pth);
 }
 
 
@@ -545,5 +595,5 @@ std::string
 PathParser::get_id()
 {
 	if (!off_id) return std::string();
-	return urldecode(off_id, len_id);
+	return urlexpand(off_id, len_id);
 }
