@@ -22,15 +22,17 @@
 
 #include "url_parser.h"
 
-#include <cctype>   // for isxdigit
-#include <cstdlib>  // for strtol
-#include <cstring>  // for strlen, strncmp
+#include <cctype>            // for isxdigit
+#include <cstdlib>           // for strtol
+#include <cstring>           // for strlen, strncmp
 
+#include "database_utils.h"  // for normalize_uuid
+#include "utils.h"           // for hexdec
 
 std::string
 urldecode(const void *p, size_t size)
 {
-	char eStr[3] = "00"; /* for a hex code */
+	int dec;
 	const char* q = (const char *)p;
 	char *buff = new char[size + 1];
 	char *d = buff;
@@ -42,20 +44,15 @@ urldecode(const void *p, size_t size)
 				*d++ = ' ';
 				break;
 			case '%':
-				if (q < p_end - 1 && std::isxdigit(*q) && std::isxdigit(*(q + 1))) {
-					/* combine the next to numbers into one */
-					eStr[0] = *q++;
-					eStr[1] = *q++;
-					/* convert it to decimal */
-					*d++ = std::strtol(eStr, nullptr, 16);
-					break;
+				dec = hexdec(&q);
+				if (dec != -1) {
+					c = dec;
 				}
 			default:
 				*d++ = c;
 		}
 	}
-	*d = '\0';
-	std::string ret(buff);
+	std::string ret(buff, d - buff);
 	delete [] buff;
 	return ret;
 }
