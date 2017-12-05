@@ -26,8 +26,6 @@ THE SOFTWARE.
 
 #pragma once
 
-#include "exception.h"
-
 #include <array>           // for array
 #include <iostream>        // for ostream
 #include <string>          // for string

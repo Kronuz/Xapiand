@@ -26,13 +26,14 @@ THE SOFTWARE.
 
 #include "guid.h"
 
-#include "endian.h"       // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
-
 #include <algorithm>      // for std::copy
 #include <iomanip>        // for std::setw and std::setfill
 #include <random>         // for std::mt19937
 #include <sstream>        // for std::ostringstream
-#include <stdexcept>      // for std::invalid_argument
+#include <stdexcept>      // for std::bad_alloc
+
+#include "endian.h"       // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
+#include "exception.h"    // for THROW, SerialisationError, InvalidArgument
 
 // 0x01b21dd213814000 is the number of 100-ns intervals between the
 // UUID epoch 1582-10-15 00:00:00 and the Unix epoch 1970-01-01 00:00:00.
