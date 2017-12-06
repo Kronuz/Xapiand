@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "guid.h"
 
-#include <algorithm>      // for std::copy
+#include <algorithm>      // for std::copy_n
 #include <iomanip>        // for std::setw and std::setfill
 #include <random>         // for std::mt19937
 #include <sstream>        // for std::ostringstream
@@ -232,7 +232,7 @@ GuidCondenser::unserialise(const char** ptr, const char* end)
 	char buf[UUID_MAX_SERIALISED_LENGTH];
 	auto start = buf + UUID_MAX_SERIALISED_LENGTH - length;
 	std::fill(buf, start, 0);
-	std::copy(*ptr, *ptr + length, start);
+	std::copy_n(*ptr, length, start);
 
 	*start &= ~VL[i][q][1];
 
@@ -702,19 +702,14 @@ Guid
 Guid::unserialise_full(const char** ptr, const char* end)
 {
 	auto size = end - *ptr;
-	auto length = 17;
-	if (size < length) {
+	if (size < 17) {
 		THROW(SerialisationError, "Bad encoded UUID");
 	}
 
 	Guid out;
+	std::copy_n(*ptr + 1, 16, reinterpret_cast<char*>(&out._bytes[0]));
 
-	auto buf = reinterpret_cast<char*>(&out._bytes[0]);
-	auto start = buf + 16 - length + 1;
-	std::fill(buf, start, 0);
-	std::copy(*ptr + 1, *ptr + length, start);
-
-	*ptr += length;
+	*ptr += 17;
 	return out;
 }
 
