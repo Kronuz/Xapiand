@@ -550,22 +550,10 @@ Guid::serialise() const
 std::string
 Guid::serialise_full() const
 {
-	auto buf = reinterpret_cast<const char*>(&_bytes[0]);
-
-	auto ptr = buf;
-	const auto end = ptr + 16 - 10;
-	while (ptr != end && !*++ptr); // remove all leading zeros
-
-	auto length = end - ptr;
-	if (*ptr) ++length;
-
-	uint8_t l = (length << 5) | 0x10ULL;
-
 	std::string serialised;
-	serialised.reserve(length + 10);
-	serialised.push_back(l);
-	serialised.append(ptr, length + 9);
-
+	serialised.reserve(17);
+	serialised.push_back(0x01);
+	serialised.append(reinterpret_cast<const char*>(&_bytes[0]), 16);
 	return serialised;
 }
 
