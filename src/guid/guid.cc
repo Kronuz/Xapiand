@@ -650,7 +650,7 @@ static inline bool
 _is_serialised(const char** ptr, const char* end)
 {
 	auto size = end - *ptr;
-	if (size < 2 || size > UUID_MAX_SERIALISED_LENGTH) {
+	if (size < 2) {
 		return false;
 	}
 	auto length = size + 1;
@@ -699,7 +699,7 @@ Guid
 Guid::unserialise(const char** ptr, const char* end)
 {
 	auto size = end - *ptr;
-	if (size < 2 || size > UUID_MAX_SERIALISED_LENGTH) {
+	if (size < 2) {
 		THROW(SerialisationError, "Bad encoded UUID");
 	}
 	if (**ptr == 1) {
