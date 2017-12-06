@@ -25,7 +25,7 @@
 #include <cstring>           // for strlen, strncmp
 
 #include "database_utils.h"  // for normalize_uuid
-#include "manager.h"         // for XapiandManager::manager->opts.uuid_partition
+#include "manager.h"         // for XapiandManager::manager->opts.path_partition
 #include "utils.h"           // for hexdec
 
 std::string
@@ -543,7 +543,7 @@ std::string
 PathParser::get_pth()
 {
 	if (!off_pth) return std::string();
-	if (XapiandManager::manager->opts.uuid_partition) {
+	if (XapiandManager::manager->opts.path_partition) {
 		return urlexpand(off_pth, len_pth, normalize_uuid_partition);
 	}
 	return urlexpand(off_pth, len_pth, normalize_uuid);
@@ -562,7 +562,7 @@ std::string
 PathParser::get_nsp()
 {
 	if (!off_nsp) return std::string();
-	if (XapiandManager::manager->opts.uuid_partition) {
+	if (XapiandManager::manager->opts.path_partition) {
 		return urlexpand(off_nsp, len_nsp, normalize_uuid_partition);
 	}
 	return urlexpand(off_nsp, len_nsp, normalize_uuid);

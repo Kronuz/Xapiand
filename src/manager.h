@@ -79,7 +79,7 @@ struct opts_t {
 	unsigned int ev_flags;
 	bool uuid_compact;
 	UUIDRepr uuid_repr;
-	bool uuid_partition;
+	bool path_partition;
 };
 
 
