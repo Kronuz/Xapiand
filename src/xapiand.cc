@@ -289,11 +289,14 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 	try {
 		CmdLine cmd("", ' ', Package::STRING);
 
-		// ZshCompletionOutput zshoutput;
-		// cmd.setOutput(&zshoutput);
-
 		CmdOutput output;
-		cmd.setOutput(&output);
+		ZshCompletionOutput zshoutput;
+
+		if (getenv("ZSH_COMPLETE")) {
+			cmd.setOutput(&zshoutput);
+		} else {
+			cmd.setOutput(&output);
+		}
 
 		MultiSwitchArg verbose("v", "verbose", "Increase verbosity.", cmd);
 		ValueArg<unsigned int> verbosity("", "verbosity", "Set verbosity.", false, 0, "verbosity", cmd);
