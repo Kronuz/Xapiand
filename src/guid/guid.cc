@@ -527,6 +527,10 @@ Guid::compact_crush()
 			}
 
 			uuid1_node(condenser.calculate_node());
+
+			time = condenser.compact.time * UUID_TIME_DIVISOR;
+			if (time) time += UUID_TIME_INITIAL;
+			uuid1_time(time);
 		}
 	}
 }
