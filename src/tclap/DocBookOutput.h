@@ -277,6 +277,8 @@ inline void DocBookOutput::printLongArg(Arg* a)
 	if ( a->isValueRequired() )
 	{
 		std::string arg = a->shortID();
+		if ( a->acceptsMultipleValues() )
+			arg.erase(arg.length() - 5); // remove trailing " ..."
 		removeChar(arg,'[');
 		removeChar(arg,']');
 		removeChar(arg,'<');
