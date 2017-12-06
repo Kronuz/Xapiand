@@ -30,7 +30,7 @@
 
 
 static std::string
-normalize(const std::string& uuid) noexcept
+normalize(const std::string& uuid)
 {
 	try {
 		return Unserialise::uuid(Serialise::uuid(uuid), XapiandManager::manager->opts.uuid_repr);
@@ -41,7 +41,7 @@ normalize(const std::string& uuid) noexcept
 
 
 static std::string
-normalize_and_partition(const std::string& uuid) noexcept
+normalize_and_partition(const std::string& uuid)
 {
 	std::string normalized;
 	try {
