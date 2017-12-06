@@ -307,8 +307,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 
 		std::vector<std::string> uuid_allowed({
 			"friendly",
-			"expanded",
 			"compact",
+			"partition",
 #ifdef UUID_USE_GUID
 			"guid",
 #endif
@@ -329,9 +329,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 		});
 		ValuesConstraint<std::string> uuid_constraint(uuid_allowed);
-		MultiArg<std::string> uuid("", "uuid", "Toggle modes for compacted or friendly UUIDs.", false, &uuid_constraint, cmd);
-
-		SwitchArg path_partition("", "path-partition", "Partition index paths. Ex.: /fullpath -> /ful/lp/ath", cmd, false);
+		MultiArg<std::string> uuid("", "uuid", "Toggle modes for compacted, encoded or friendly UUIDs and UUID index partitioning.", false, &uuid_constraint, cmd);
 
 		ValueArg<unsigned int> raft_port("", "raft-port", "Raft UDP port number to listen on.", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
 		ValueArg<std::string> raft_group("", "raft-group", "Raft UDP group name.", false, XAPIAND_RAFT_GROUP, "group", cmd);
@@ -427,7 +425,6 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 		opts.strict = strict_arg.getValue();
 		opts.optimal = optimal_arg.getValue();
-		opts.path_partition = path_partition.getValue();
 
 		opts.colors = colors.getValue();
 		opts.no_colors = no_colors.getValue();
@@ -465,6 +462,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		}
 		opts.ev_flags = ev_backend(use.getValue());
 		opts.uuid_compact = false;
+		opts.uuid_partition = false;
 		opts.uuid_repr = UUIDRepr::simple;
 		for (const auto& u : uuid.getValue()) {
 			switch (xxh64::hash(u)) {
@@ -478,11 +476,11 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 					opts.uuid_repr = UUIDRepr::base62;
 #endif
 					break;
-				case xxh64::hash("expanded"):
-					opts.uuid_compact = false;
-					break;
 				case xxh64::hash("compact"):
 					opts.uuid_compact = true;
+					break;
+				case xxh64::hash("partition"):
+					opts.uuid_partition = true;
 					break;
 #ifdef UUID_USE_GUID
 				case xxh64::hash("guid"):
