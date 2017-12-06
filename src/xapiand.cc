@@ -302,7 +302,10 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		SwitchArg chert("", "chert", "Prefer Chert databases.", cmd, false);
 #endif
 
-		std::vector<std::string> uuid_repr_allowed({
+		std::vector<std::string> uuid_allowed({
+			"friendly",
+			"expanded",
+			"compact",
 #ifdef UUID_USE_GUID
 			"guid",
 #endif
@@ -321,11 +324,11 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #ifdef UUID_USE_BASE62
 			"base62",
 #endif
-			"simple",
 		});
-		ValuesConstraint<std::string> uuid_repr_constraint(uuid_repr_allowed);
-		ValueArg<std::string> uuid_repr("", "uuid", "UUID normalizer.", false, "auto", &uuid_repr_constraint, cmd);
-		SwitchArg uuid_compact("", "uuid-compact", "Generate compact UUIDs.", cmd, false);
+		ValuesConstraint<std::string> uuid_constraint(uuid_allowed);
+		MultiArg<std::string> uuid("", "uuid", "Toggle modes for compacted or friendly UUIDs.", false, &uuid_constraint, cmd);
+
+		SwitchArg path_partition("", "path-partition", "Partition index paths. Ex.: /fullpath -> /ful/lp/ath", cmd, false);
 
 		ValueArg<unsigned int> raft_port("", "raft-port", "Raft UDP port number to listen on.", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
 		ValueArg<std::string> raft_group("", "raft-group", "Raft UDP group name.", false, XAPIAND_RAFT_GROUP, "group", cmd);
@@ -369,7 +372,6 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 		SwitchArg optimal_arg("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
 		SwitchArg strict_arg("", "strict", "Force the user to define the type for each field.", cmd, false);
-		SwitchArg path_partition("", "path-partition", "Partition index paths.", cmd, false);
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 
 		std::vector<std::string> args;
@@ -459,40 +461,57 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 			}
 		}
 		opts.ev_flags = ev_backend(use.getValue());
-		opts.uuid_compact = uuid_compact.getValue();
-		switch (xxh64::hash(uuid_repr.getValue())) {
+		opts.uuid_compact = false;
+		opts.uuid_repr = UUIDRepr::simple;
+		for (const auto& u : uuid.getValue()) {
+			switch (xxh64::hash(u)) {
+				case xxh64::hash("friendly"):
+					opts.uuid_compact = true;
+#if defined UUID_USE_BASE59
+					opts.uuid_repr = UUIDRepr::base59;
+#elif defined UUID_USE_BASE58
+					opts.uuid_repr = UUIDRepr::base58;
+#elif defined UUID_USE_BASE62
+					opts.uuid_repr = UUIDRepr::base62;
+#endif
+					break;
+				case xxh64::hash("expanded"):
+					opts.uuid_compact = false;
+					break;
+				case xxh64::hash("compact"):
+					opts.uuid_compact = true;
+					break;
 #ifdef UUID_USE_GUID
-			case xxh64::hash("guid"):
-				opts.uuid_repr = UUIDRepr::guid;
-				break;
+				case xxh64::hash("guid"):
+					opts.uuid_repr = UUIDRepr::guid;
+					break;
 #endif
 #ifdef UUID_USE_URN
-			case xxh64::hash("urn"):
-				opts.uuid_repr = UUIDRepr::urn;
-				break;
+				case xxh64::hash("urn"):
+					opts.uuid_repr = UUIDRepr::urn;
+					break;
 #endif
 #ifdef UUID_USE_BASE16
-			case xxh64::hash("base16"):
-				opts.uuid_repr = UUIDRepr::base16;
-				break;
+				case xxh64::hash("base16"):
+					opts.uuid_repr = UUIDRepr::base16;
+					break;
 #endif
 #ifdef UUID_USE_BASE58
-			case xxh64::hash("base58"):
-				opts.uuid_repr = UUIDRepr::base58;
-				break;
+				case xxh64::hash("base58"):
+					opts.uuid_repr = UUIDRepr::base58;
+					break;
 #endif
 #ifdef UUID_USE_BASE59
-			case xxh64::hash("base59"):
-				opts.uuid_repr = UUIDRepr::base59;
-				break;
+				case xxh64::hash("base59"):
+					opts.uuid_repr = UUIDRepr::base59;
+					break;
 #endif
 #ifdef UUID_USE_BASE62
-			case xxh64::hash("base62"):
-				opts.uuid_repr = UUIDRepr::base62;
-				break;
+				case xxh64::hash("base62"):
+					opts.uuid_repr = UUIDRepr::base62;
+					break;
 #endif
-			default:
-				opts.uuid_repr = UUIDRepr::simple;
+			}
 		}
 	} catch (const ArgException& exc) { // catch any exceptions
 		std::cerr << "error: " << exc.error() << " for arg " << exc.argId() << std::endl;
