@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <sysexits.h>         // for EX_USAGE
+
 #include "config.h"           // for HAVE_SSTREAM, HAVE_STRSTREAM
 #include "package.h"          // for Package
 #include "tclap/CmdLine.h"    // for CmdLine, ArgException, Arg, CmdL...
