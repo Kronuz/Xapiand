@@ -1235,8 +1235,8 @@ Unserialise::cartesian(const std::string& serialised_val)
 uint64_t
 Unserialise::trixel_id(const std::string& serialised_id)
 {
-	if (serialised_id.length() != HTM_BYTES_ID) {
-		THROW(SerialisationError, "Cannot unserialise trixel_id: %s [%zu]", repr(serialised_id).c_str(), serialised_id.length());
+	if (serialised_id.size() != HTM_BYTES_ID) {
+		THROW(SerialisationError, "Cannot unserialise trixel_id: %s [%zu]", repr(serialised_id).c_str(), serialised_id.size());
 	}
 
 	uint64_t id = (((uint64_t)serialised_id[0] << 48) & 0xFF000000000000) | (((uint64_t)serialised_id[1] << 40) & 0xFF0000000000) | \
@@ -1250,8 +1250,8 @@ Unserialise::trixel_id(const std::string& serialised_id)
 range_t
 Unserialise::range(const std::string& serialised_range)
 {
-	if (serialised_range.length() != SERIALISED_LENGTH_RANGE) {
-		THROW(SerialisationError, "Cannot unserialise range_t: %s [%zu]", repr(serialised_range).c_str(), serialised_range.length());
+	if (serialised_range.size() != SERIALISED_LENGTH_RANGE) {
+		THROW(SerialisationError, "Cannot unserialise range_t: %s [%zu]", repr(serialised_range).c_str(), serialised_range.size());
 	}
 
 	uint64_t start = (((uint64_t)serialised_range[0] << 48) & 0xFF000000000000) | (((uint64_t)serialised_range[1] << 40) & 0xFF0000000000) | \
