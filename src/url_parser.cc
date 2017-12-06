@@ -24,9 +24,52 @@
 
 #include <cstring>           // for strlen, strncmp
 
-#include "database_utils.h"  // for normalize_uuid
-#include "manager.h"         // for XapiandManager::manager->opts.path_partition
+#include "manager.h"         // for XapiandManager::manager->opts
+#include "serialise.h"       // for Serialise
 #include "utils.h"           // for hexdec
+
+
+static std::string
+normalize(const std::string& uuid) noexcept
+{
+	std::string normalized;
+	try {
+		normalized = Unserialise::uuid(Serialise::uuid(uuid), XapiandManager::manager->opts.uuid_repr);
+	} catch (const SerialisationError&) { }
+	return normalized;
+}
+
+
+static std::string
+normalize_and_partition(const std::string& uuid) noexcept
+{
+	std::string normalized;
+	try {
+		normalized = Unserialise::uuid(Serialise::uuid(uuid), XapiandManager::manager->opts.uuid_repr);
+	} catch (const SerialisationError& exc) {
+		normalized = uuid;
+	}
+	std::string ret;
+	auto cit = normalized.cbegin();
+	auto cit_e = normalized.cend();
+	ret.reserve(2 + normalized.size());
+	if (cit == cit_e) return ret;
+	ret.push_back(*cit++);
+	if (cit == cit_e) return ret;
+	ret.push_back(*cit++);
+	if (cit == cit_e) return ret;
+	ret.push_back(*cit++);
+	if (cit == cit_e) return ret;
+	ret.push_back('/');
+	ret.push_back(*cit++);
+	if (cit == cit_e) return ret;
+	ret.push_back(*cit++);
+	if (cit == cit_e) return ret;
+	ret.push_back('/');
+	ret.append(cit, cit_e);
+	return ret;
+}
+
 
 std::string
 urldecode(const void *p, size_t size)
@@ -56,7 +99,7 @@ urldecode(const void *p, size_t size)
 
 
 std::string
-urlexpand(const void *p, size_t size, std::string(*fn)(const std::string&))
+urlexpand(const void *p, size_t size, std::string(*normalizer)(const std::string&))
 {
 	std::string buf;
 	buf.reserve(size);
@@ -72,11 +115,11 @@ urlexpand(const void *p, size_t size, std::string(*fn)(const std::string&))
 			case '/': {
 				auto sz = q - oq - 1;
 				if (sz) {
-					try {
-						auto uuid_normalized = fn(std::string(oq, sz));
+					auto normalized = normalizer(std::string(oq, sz));
+					if (!normalized.empty()) {
 						buf.resize(buf.size() - sz);
-						buf.append(uuid_normalized);
-					} catch (const SerialisationError& exc) { }
+						buf.append(normalized);
+					}
 				}
 				buf.push_back(c);
 				oq = q;
@@ -94,11 +137,11 @@ urlexpand(const void *p, size_t size, std::string(*fn)(const std::string&))
 	}
 	auto sz = q - oq;
 	if (sz) {
-		try {
-			auto uuid_normalized = fn(std::string(oq, sz));
+		auto normalized = normalizer(std::string(oq, sz));
+		if (!normalized.empty()) {
 			buf.resize(buf.size() - sz);
-			buf.append(uuid_normalized);
-		} catch (const SerialisationError& exc) { }
+			buf.append(normalized);
+		}
 	}
 	return buf;
 }
@@ -544,9 +587,9 @@ PathParser::get_pth()
 {
 	if (!off_pth) return std::string();
 	if (XapiandManager::manager->opts.path_partition) {
-		return urlexpand(off_pth, len_pth, normalize_uuid_partition);
+		return urlexpand(off_pth, len_pth, normalize_and_partition);
 	}
-	return urlexpand(off_pth, len_pth, normalize_uuid);
+	return urlexpand(off_pth, len_pth, normalize);
 }
 
 
@@ -563,9 +606,9 @@ PathParser::get_nsp()
 {
 	if (!off_nsp) return std::string();
 	if (XapiandManager::manager->opts.path_partition) {
-		return urlexpand(off_nsp, len_nsp, normalize_uuid_partition);
+		return urlexpand(off_nsp, len_nsp, normalize_and_partition);
 	}
-	return urlexpand(off_nsp, len_nsp, normalize_uuid);
+	return urlexpand(off_nsp, len_nsp, normalize);
 }
 
 
@@ -597,5 +640,5 @@ std::string
 PathParser::get_id()
 {
 	if (!off_id) return std::string();
-	return urlexpand(off_id, len_id, normalize_uuid);
+	return urlexpand(off_id, len_id, normalize);
 }
