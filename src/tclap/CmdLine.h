@@ -35,6 +35,8 @@
 #include "VersionVisitor.h"
 #include "IgnoreRestVisitor.h"
 
+#include "ZshCompletionOutput.h"
+#include "DocBookOutput.h"
 #include "CmdLineOutput.h"
 #include "StdOutput.h"
 
