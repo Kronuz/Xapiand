@@ -52,11 +52,12 @@ constexpr char UUID_SEPARATOR_LIST = ';';
 bool
 Serialise::isUUID(const std::string& field_value) noexcept
 {
-	if (field_value.length() > 2) {
+	auto field_value_sz = field_value.size();
+	if (field_value_sz > 2) {
 		Split<> split(field_value, UUID_SEPARATOR_LIST);
 #ifdef UUID_USE_GUID
 		if (field_value.front() == '{' && field_value.back() == '}') {
-			split = Split<>(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST);
+			split = Split<>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
 		} else
 #endif
 #ifdef UUID_USE_URN
@@ -65,49 +66,54 @@ Serialise::isUUID(const std::string& field_value) noexcept
 		}
 #endif
 		for (const auto& uuid : split) {
-			if (!uuid.empty()) {
+			auto uuid_sz = uuid.size();
+			if (uuid_sz) {
 				std::string decoded;
 #ifdef UUID_USE_BASE16
-				if (BASE16.is_valid(uuid)) {
-					try {
+				if (uuid_sz >= 9) {  // floor((4 * 8) / log2(16)) + 1
+					if (BASE16.is_valid(uuid)) {
 						BASE16.decode(decoded, uuid);
 						if (Guid::is_serialised(decoded)) {
 							continue;
 						}
-					} catch (const std::invalid_argument&) { }
+					}
 				}
 #endif
 #ifdef UUID_USE_BASE58
-				if (BASE58.is_valid(uuid)) {
-					try {
+				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(58)) + 1
+					if (BASE58.is_valid(uuid)) {
 						BASE58.decode(decoded, uuid);
 						if (Guid::is_serialised(decoded)) {
 							continue;
 						}
-					} catch (const std::invalid_argument&) { }
+					}
 				}
 #endif
 #ifdef UUID_USE_BASE59
-				if (BASE59.is_valid(uuid)) {
-					try {
+				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(59)) + 1
+					if (BASE59.is_valid(uuid)) {
 						BASE59.decode(decoded, uuid);
 						if (Guid::is_serialised(decoded)) {
 							continue;
 						}
-					} catch (const std::invalid_argument&) { }
+					}
 				}
 #endif
 #ifdef UUID_USE_BASE62
-				if (BASE62.is_valid(uuid)) {
-					try {
+				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(62)) + 1
+					if (BASE62.is_valid(uuid)) {
 						BASE62.decode(decoded, uuid);
 						if (Guid::is_serialised(decoded)) {
 							continue;
 						}
-					} catch (const std::invalid_argument&) { }
+					}
 				}
 #endif
-				if (Guid::is_valid(uuid)) continue;
+				if (uuid_sz == UUID_LENGTH) {
+					if (Guid::is_valid(uuid)) {
+						continue;
+					}
+				}
 				return false;
 			}
 		}
@@ -562,11 +568,12 @@ Serialise::positive(const std::string& field_value)
 std::string
 Serialise::uuid(const std::string& field_value)
 {
-	if (field_value.length() > 2) {
+	auto field_value_sz = field_value.size();
+	if (field_value_sz > 2) {
 		Split<> split(field_value, UUID_SEPARATOR_LIST);
 #ifdef UUID_USE_GUID
 		if (field_value.front() == '{' && field_value.back() == '}') {
-			split = Split<>(field_value.substr(1, field_value.length() - 2), UUID_SEPARATOR_LIST);
+			split = Split<>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
 		} else
 #endif
 #ifdef UUID_USE_URN
@@ -576,49 +583,60 @@ Serialise::uuid(const std::string& field_value)
 #endif
 		std::string serialised;
 		for (const auto& uuid : split) {
-			if (!uuid.empty()) {
+			auto uuid_sz = uuid.size();
+			if (uuid_sz) {
 				std::string decoded;
 			#ifdef UUID_USE_BASE16
-				try {
-					BASE16.decode(decoded, uuid);
-					if (Guid::is_serialised(decoded)) {
-						serialised.append(decoded);
-						continue;
-					}
-				} catch (const std::invalid_argument&) { }
+				if (uuid_sz >= 9) {  // floor((4 * 8) / log2(16)) + 1
+					try {
+						BASE16.decode(decoded, uuid);
+						if (Guid::is_serialised(decoded)) {
+							serialised.append(decoded);
+							continue;
+						}
+					} catch (const std::invalid_argument&) { }
+				}
 			#endif
 			#ifdef UUID_USE_BASE58
-				try {
-					BASE58.decode(decoded, uuid);
-					if (Guid::is_serialised(decoded)) {
-						serialised.append(decoded);
-						continue;
-					}
-				} catch (const std::invalid_argument&) { }
+				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(58)) + 1
+					try {
+						BASE58.decode(decoded, uuid);
+						if (Guid::is_serialised(decoded)) {
+							serialised.append(decoded);
+							continue;
+						}
+					} catch (const std::invalid_argument&) { }
+				}
 			#endif
 			#ifdef UUID_USE_BASE59
-				try {
-					BASE59.decode(decoded, uuid);
-					if (Guid::is_serialised(decoded)) {
-						serialised.append(decoded);
-						continue;
-					}
-				} catch (const std::invalid_argument&) { }
+				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(59)) + 1
+					try {
+						BASE59.decode(decoded, uuid);
+						if (Guid::is_serialised(decoded)) {
+							serialised.append(decoded);
+							continue;
+						}
+					} catch (const std::invalid_argument&) { }
+				}
 			#endif
 			#ifdef UUID_USE_BASE62
-				try {
-					BASE62.decode(decoded, uuid);
-					if (Guid::is_serialised(decoded)) {
-						serialised.append(decoded);
-						continue;
-					}
-				} catch (const std::invalid_argument&) { }
+				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(62)) + 1
+					try {
+						BASE62.decode(decoded, uuid);
+						if (Guid::is_serialised(decoded)) {
+							serialised.append(decoded);
+							continue;
+						}
+					} catch (const std::invalid_argument&) { }
+				}
 			#endif
-				try {
-					Guid guid(uuid);
-					serialised.append(guid.serialise());
-					continue;
-				} catch (const std::invalid_argument&) { }
+				if (uuid_sz == UUID_LENGTH) {
+					try {
+						Guid guid(uuid);
+						serialised.append(guid.serialise());
+						continue;
+					} catch (const std::invalid_argument&) { }
+				}
 				THROW(SerialisationError, "Invalid encoded UUID format in: %s", uuid.c_str());
 			}
 		}
