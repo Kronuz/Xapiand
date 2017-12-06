@@ -306,7 +306,6 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 
 		std::vector<std::string> uuid_allowed({
-			"friendly",
 			"compact",
 			"partition",
 #ifdef UUID_USE_GUID
@@ -327,9 +326,10 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #ifdef UUID_USE_BASE62
 			"base62",
 #endif
+			"optimal",
 		});
 		ValuesConstraint<std::string> uuid_constraint(uuid_allowed);
-		MultiArg<std::string> uuid("", "uuid", "Toggle modes for compacted, encoded or friendly UUIDs and UUID index partitioning.", false, &uuid_constraint, cmd);
+		MultiArg<std::string> uuid("", "uuid", "Toggle modes for compact and/or encoded UUIDs and UUID index path partitioning.", false, &uuid_constraint, cmd);
 
 		ValueArg<unsigned int> raft_port("", "raft-port", "Raft UDP port number to listen on.", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
 		ValueArg<std::string> raft_group("", "raft-group", "Raft UDP group name.", false, XAPIAND_RAFT_GROUP, "group", cmd);
@@ -466,8 +466,9 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.uuid_repr = UUIDRepr::simple;
 		for (const auto& u : uuid.getValue()) {
 			switch (xxh64::hash(u)) {
-				case xxh64::hash("friendly"):
+				case xxh64::hash("optimal"):
 					opts.uuid_compact = true;
+					opts.uuid_partition = true;
 #if defined UUID_USE_BASE59
 					opts.uuid_repr = UUIDRepr::base59;
 #elif defined UUID_USE_BASE58
