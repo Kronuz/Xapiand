@@ -208,26 +208,26 @@ public:
 	}
 
 	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
-	void encode(Result& result, const unsigned char* bytes, size_t size) const {
-		encode(result, uinteger_t(bytes, size, 256));
+	void encode(Result& result, const unsigned char* decoded, size_t decoded_size) const {
+		encode(result, uinteger_t(decoded, decoded_size, 256));
 	}
 
 	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
-	Result encode(const unsigned char* bytes, size_t size) const {
+	Result encode(const unsigned char* decoded, size_t decoded_size) const {
 		Result result;
-		encode(result, uinteger_t(bytes, size, 256));
+		encode(result, uinteger_t(decoded, decoded_size, 256));
 		return result;
 	}
 
 	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
-	void encode(Result& result, const char* bytes, size_t size) const {
-		encode(result, uinteger_t(bytes, size, 256));
+	void encode(Result& result, const char* decoded, size_t decoded_size) const {
+		encode(result, uinteger_t(decoded, decoded_size, 256));
 	}
 
 	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
-	Result encode(const char* bytes, size_t size) const {
+	Result encode(const char* decoded, size_t decoded_size) const {
 		Result result;
-		encode(result, uinteger_t(bytes, size, 256));
+		encode(result, uinteger_t(decoded, decoded_size, 256));
 		return result;
 	}
 
