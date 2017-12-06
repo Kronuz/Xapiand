@@ -25,6 +25,7 @@
 #include <cstring>           // for strlen, strncmp
 
 #include "database_utils.h"  // for normalize_uuid
+#include "manager.h"         // for XapiandManager::manager->opts.uuid_partition
 #include "utils.h"           // for hexdec
 
 std::string
@@ -55,7 +56,7 @@ urldecode(const void *p, size_t size)
 
 
 std::string
-urlexpand(const void *p, size_t size)
+urlexpand(const void *p, size_t size, std::string(*fn)(const std::string&))
 {
 	std::string buf;
 	buf.reserve(size);
@@ -72,7 +73,7 @@ urlexpand(const void *p, size_t size)
 				auto sz = q - oq - 1;
 				if (sz) {
 					try {
-						auto uuid_normalized = normalize_uuid(std::string(oq, sz));
+						auto uuid_normalized = fn(std::string(oq, sz));
 						buf.resize(buf.size() - sz);
 						buf.append(uuid_normalized);
 					} catch (const SerialisationError& exc) { }
@@ -94,7 +95,7 @@ urlexpand(const void *p, size_t size)
 	auto sz = q - oq;
 	if (sz) {
 		try {
-			auto uuid_normalized = normalize_uuid(std::string(oq, sz));
+			auto uuid_normalized = fn(std::string(oq, sz));
 			buf.resize(buf.size() - sz);
 			buf.append(uuid_normalized);
 		} catch (const SerialisationError& exc) { }
@@ -542,7 +543,10 @@ std::string
 PathParser::get_pth()
 {
 	if (!off_pth) return std::string();
-	return urlexpand(off_pth, len_pth);
+	if (XapiandManager::manager->opts.uuid_partition) {
+		return urlexpand(off_pth, len_pth, normalize_uuid_partition);
+	}
+	return urlexpand(off_pth, len_pth, normalize_uuid);
 }
 
 
@@ -558,7 +562,10 @@ std::string
 PathParser::get_nsp()
 {
 	if (!off_nsp) return std::string();
-	return urlexpand(off_nsp, len_nsp);
+	if (XapiandManager::manager->opts.uuid_partition) {
+		return urlexpand(off_nsp, len_nsp, normalize_uuid_partition);
+	}
+	return urlexpand(off_nsp, len_nsp, normalize_uuid);
 }
 
 
@@ -590,5 +597,5 @@ std::string
 PathParser::get_id()
 {
 	if (!off_id) return std::string();
-	return urlexpand(off_id, len_id);
+	return urlexpand(off_id, len_id, normalize_uuid);
 }

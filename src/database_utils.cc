@@ -97,6 +97,24 @@ std::string get_prefix(const std::string& field_name)
 }
 
 
+std::string normalize_uuid_partition(const std::string& uuid)
+{
+	auto normalized_uuid = Unserialise::uuid(Serialise::uuid(uuid), XapiandManager::manager->opts.uuid_repr);
+	auto it = normalized_uuid.cbegin();
+	std::string ret;
+	ret.reserve(2 + normalized_uuid.size());
+	ret.push_back(*it++);
+	ret.push_back(*it++);
+	ret.push_back(*it++);
+	ret.push_back('/');
+	ret.push_back(*it++);
+	ret.push_back(*it++);
+	ret.push_back('/');
+	ret.append(it, normalized_uuid.cend());
+	return ret;
+}
+
+
 std::string normalize_uuid(const std::string& uuid)
 {
 	return Unserialise::uuid(Serialise::uuid(uuid), XapiandManager::manager->opts.uuid_repr);

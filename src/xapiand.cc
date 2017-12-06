@@ -369,6 +369,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 		SwitchArg optimal_arg("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
 		SwitchArg strict_arg("", "strict", "Force the user to define the type for each field.", cmd, false);
+		SwitchArg uuid_partition("", "uuid-partition", "Split UUID normalized to create index path.", cmd, false);
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 
 		std::vector<std::string> args;
@@ -421,6 +422,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 		opts.strict = strict_arg.getValue();
 		opts.optimal = optimal_arg.getValue();
+		opts.uuid_partition = uuid_partition.getValue();
 
 		opts.colors = colors.getValue();
 		opts.no_colors = no_colors.getValue();
