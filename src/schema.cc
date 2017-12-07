@@ -5725,11 +5725,7 @@ Schema::index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::
 				auto str_key = it->str();
 				const auto wpit = map_dispatch_write_properties.find(str_key);
 				if (wpit == wpit_e) {
-					if (map_dispatch_document.count(str_key)) {
-						THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
-					} else {
-						fields.emplace_back(std::move(str_key), &it.value());
-					}
+					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
 					(this->*wpit->second)(*mut_properties, str_key, it.value());
 				}
@@ -5813,11 +5809,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 				auto str_key = it->str();
 				const auto wpit = map_dispatch_write_properties.find(str_key);
 				if (wpit == wpit_e) {
-					if (map_dispatch_document.count(str_key)) {
-						THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
-					} else {
-						fields.emplace_back(std::move(str_key), &it.value());
-					}
+					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
 					(this->*wpit->second)(*mut_properties, str_key, it.value());
 				}
@@ -5889,11 +5881,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 			auto str_key = it->str();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
-				if (map_dispatch_document.count(str_key)) {
-					THROW(ClientError, "%s is not allowed in root object", str_key.c_str());
-				} else {
-					fields.emplace_back(std::move(str_key), &it.value());
-				}
+				fields.emplace_back(std::move(str_key), &it.value());
 			} else {
 				(this->*wpit->second)(*mut_properties, str_key, it.value());
 			}
