@@ -29,8 +29,10 @@
 #include <stdarg.h>           // for va_list, va_end, va_start
 #include <stdexcept>          // for out_of_range
 #include <stdio.h>            // for fileno, vsnprintf, stderr
+#include <stdlib.h>           // for getenv
 #include <system_error>       // for system_error
 #include <unistd.h>           // for isatty
+#include <unordered_map>      // for unordered_map
 
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback

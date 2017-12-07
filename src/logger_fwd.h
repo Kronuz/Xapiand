@@ -22,12 +22,10 @@
 
 #pragma once
 
-#include <atomic>             // for atomic_uulong
+#include <atomic>             // for std::atomic
 #include <chrono>             // for system_clock, time_point, duration, millise...
 #include <cstdarg>            // for va_list, va_end
-#include <stdlib.h>           // for getenv
 #include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
-#include <unordered_map>      // for unordered_map
 
 #include "exception.h"        // for BaseException
 #include "utils.h"
