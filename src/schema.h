@@ -197,7 +197,7 @@ inline constexpr Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(S
 		case StopStrategy::STOP_STEMMED:
 			return Xapian::TermGenerator::STOP_STEMMED;
 		default:
-			THROW(Error, "Schema is corrupt, you need provide a new one");
+			THROW(Error, "Schema is corrupt: invalid stop strategy");
 	}
 }
 
@@ -213,7 +213,7 @@ inline constexpr Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(S
 		case StemStrategy::STEM_ALL_Z:
 			return Xapian::TermGenerator::STEM_ALL_Z;
 		default:
-			THROW(Error, "Schema is corrupt, you need provide a new one");
+			THROW(Error, "Schema is corrupt: invalid stem strategy");
 	}
 }
 
@@ -229,7 +229,7 @@ inline constexpr Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(S
 		case StemStrategy::STEM_ALL_Z:
 			return Xapian::QueryParser::STEM_ALL_Z;
 		default:
-			THROW(Error, "Schema is corrupt, you need provide a new one");
+			THROW(Error, "Schema is corrupt: invalid stem strategy");
 	}
 }
 

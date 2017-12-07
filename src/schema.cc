@@ -1122,9 +1122,9 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
 	} catch (const std::out_of_range&) {
-		THROW(Error, "Schema is corrupt, you need provide a new one");
+		THROW(Error, "Schema is corrupt: no schema version");
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt, you need provide a new one");
+		THROW(Error, "Schema is corrupt: invalid version");
 	}
 }
 
