@@ -330,7 +330,7 @@ PathParser::init(const std::string& p)
 			case '/':
 				++n1;
 				cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
-				if (cn == '.') {
+				if (cn == '_') {
 					state = State::CMD;
 					cn = '\0';
 				}
@@ -383,7 +383,7 @@ PathParser::init(const std::string& p)
 						assert(n0 >= n1);
 						length = n0 - n1;
 						if (length) {
-							if (*(n1 + 1) == '.') {
+							if (*(n1 + 1) == '_') {
 								off_cmd = n1 + 1;
 								len_cmd = length;
 								state = State::ID;

@@ -135,18 +135,18 @@ class HttpClient : public BaseClient {
 		NO_CMD_NO_ID,
 		NO_CMD_ID,
 		BAD_QUERY,
-		CMD_SEARCH    = xxh64::hash(".search"),
-		CMD_INFO      = xxh64::hash(".info"),
-		CMD_STATS     = xxh64::hash(".stats"),
-		CMD_METADATA  = xxh64::hash(".metadata"),
-		CMD_SCHEMA    = xxh64::hash(".schema"),
+		CMD_SEARCH    = xxh64::hash("_search"),
+		CMD_INFO      = xxh64::hash("_info"),
+		CMD_STATS     = xxh64::hash("_stats"),
+		CMD_METADATA  = xxh64::hash("_metadata"),
+		CMD_SCHEMA    = xxh64::hash("_schema"),
 #if XAPIAND_DATABASE_WAL
-		CMD_WAL       = xxh64::hash(".wal"),
+		CMD_WAL       = xxh64::hash("_wal"),
 #endif
-		CMD_NODES     = xxh64::hash(".nodes"),
-		CMD_TOUCH     = xxh64::hash(".touch"),
+		CMD_NODES     = xxh64::hash("_nodes"),
+		CMD_TOUCH     = xxh64::hash("_touch"),
 #ifndef NDEBUG
-		CMD_QUIT      = xxh64::hash(".quit"),
+		CMD_QUIT      = xxh64::hash("_quit"),
 #endif
 	};
 
