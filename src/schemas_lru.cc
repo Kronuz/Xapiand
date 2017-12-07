@@ -166,7 +166,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 					switch (meta_schema.getType()) {
 						case MsgPack::Type::STR: {
 							if (strict) {
-								THROW(MissingTypeError, "Type of field %s is missing", repr(RESERVED_SCHEMA).c_str());
+								THROW(MissingTypeError, "Type of field '%s' is missing", RESERVED_SCHEMA);
 							}
 							std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
 							aux_schema_ptr = validate_string_meta_schema(meta_schema, sep_types, schema_path, schema_id);
@@ -176,14 +176,14 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 							auto it_t = meta_schema.find(RESERVED_TYPE);
 							if (it_t == meta_schema.end()) {
 								if (strict) {
-									THROW(MissingTypeError, "Type of field %s is missing", repr(RESERVED_SCHEMA).c_str());
+									THROW(MissingTypeError, "Type of field '%s' is missing", RESERVED_SCHEMA);
 								}
 								if (meta_schema.size() == 1) {
 									auto it_v = meta_schema.find(RESERVED_VALUE);
 									if (it_v == meta_schema.end()) {
 										it_v = meta_schema.find(DB_SCHEMA);
 										if (it_v == meta_schema.end()) {
-											THROW(ClientError, "%s only must contain %s or %s", RESERVED_SCHEMA, RESERVED_VALUE, DB_SCHEMA);
+											THROW(ClientError, "'%s' can only contain '%s' or '%s'", RESERVED_SCHEMA, RESERVED_VALUE, DB_SCHEMA);
 										} else {
 											std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
 											aux_schema_ptr = validate_object_meta_schema(it_v.value(), sep_types, schema_path, schema_id);
@@ -194,31 +194,31 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 										aux_schema_ptr = validate_object_meta_schema(value, sep_types, schema_path, schema_id);
 									}
 								} else {
-									THROW(ClientError, "%s only must contain %s or %s", RESERVED_SCHEMA, RESERVED_VALUE, DB_SCHEMA);
+									THROW(ClientError, "'%s' can only contain '%s' or '%s'", RESERVED_SCHEMA, RESERVED_VALUE, DB_SCHEMA);
 								}
 							} else {
 								auto it_v = meta_schema.find(RESERVED_VALUE);
 								if (it_v == meta_schema.end() || meta_schema.size() > 2) {
-									THROW(ClientError, "%s only must contain %s and %s", RESERVED_SCHEMA, RESERVED_VALUE, RESERVED_TYPE);
+									THROW(ClientError, "'%s' must only contain '%s' and '%s'", RESERVED_SCHEMA, RESERVED_VALUE, RESERVED_TYPE);
 								}
 								const auto& type = it_t.value();
 								if (type.is_string()) {
 									auto sep_types = required_spc_t::get_types(type.str());
 									if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
 										if (strict) {
-											THROW(MissingTypeError, "Type of field %s is not completed", repr(RESERVED_SCHEMA).c_str());
+											THROW(MissingTypeError, "Type of field '%s' is not completed", RESERVED_SCHEMA);
 										}
 										sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
 									}
 									aux_schema_ptr = validate_object_meta_schema(it_v.value(), sep_types, schema_path, schema_id);
 								} else {
-									THROW(ClientError, "%s in %s must be string", RESERVED_TYPE, RESERVED_SCHEMA);
+									THROW(ClientError, "'%s' in '%s' must be string", RESERVED_TYPE, RESERVED_SCHEMA);
 								}
 							}
 							break;
 						}
 						default:
-							THROW(ClientError, "%s must be string or map instead of %s", RESERVED_SCHEMA, meta_schema.getStrType().c_str());
+							THROW(ClientError, "'%s' must be string or map instead of %s", RESERVED_SCHEMA, meta_schema.getStrType().c_str());
 					}
 				}
 			} else {
