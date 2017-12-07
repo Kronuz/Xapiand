@@ -5365,7 +5365,7 @@ Schema::consistency_namespace(const std::string& prop_name, const MsgPack& doc_n
 void
 Schema::consistency_version(const std::string& prop_name, const MsgPack& doc_version)
 {
-	// RESERVED_VERSION isn't heritable and only is allowed in root.
+	// RESERVED_VERSION isn't heritable and is only allowed in root object.
 	L_CALL(this, "Schema::consistency_version(%s)", repr(doc_version.to_string()).c_str());
 
 	if (specification.full_meta_name.empty()) {
@@ -5378,7 +5378,7 @@ Schema::consistency_version(const std::string& prop_name, const MsgPack& doc_ver
 			THROW(ClientError, "%s must be a double", prop_name.c_str());
 		}
 	} else {
-		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());
+		THROW(ClientError, "%s is only allowed in root object", prop_name.c_str());
 	}
 }
 
@@ -5386,7 +5386,7 @@ Schema::consistency_version(const std::string& prop_name, const MsgPack& doc_ver
 void
 Schema::consistency_schema(const std::string& prop_name, const MsgPack& doc_schema)
 {
-	// RESERVED_SCHEMA isn't heritable and only is allowed in root.
+	// RESERVED_SCHEMA isn't heritable and is only allowed in root object.
 	L_CALL(this, "Schema::consistency_schema(%s)", repr(doc_schema.to_string()).c_str());
 
 	if (specification.full_meta_name.empty()) {
@@ -5394,7 +5394,7 @@ Schema::consistency_schema(const std::string& prop_name, const MsgPack& doc_sche
 			THROW(ClientError, "%s must be string or map", prop_name.c_str());
 		}
 	} else {
-		THROW(ClientError, "%s only is allowed in root object", prop_name.c_str());
+		THROW(ClientError, "%s is only allowed in root object", prop_name.c_str());
 	}
 }
 
