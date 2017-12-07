@@ -172,8 +172,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 							if (strict) {
 								THROW(MissingTypeError, "Type of field '%s' is missing", RESERVED_SCHEMA);
 							}
-							std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
-							aux_schema_ptr = validate_string_meta_schema({}, meta_schema, sep_types, schema_path, schema_id);
+							aux_schema_ptr = validate_string_meta_schema({}, meta_schema, std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
 							break;
 						}
 						case MsgPack::Type::MAP: {
@@ -187,16 +186,13 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 								auto it_s = meta_schema.find(DB_SCHEMA);
 								if (it_v == it_end && it_s != it_end) {
 									const auto& value = it_s.value();
-									std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
-									aux_schema_ptr = validate_meta_schema(meta_schema, value, sep_types, schema_path, schema_id);
+									aux_schema_ptr = validate_meta_schema(meta_schema, value, std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
 								} else if (it_v != it_end && it_s == it_end) {
 									const auto& value = it_v.value();
 									if (value.is_string()) {
-										std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
-										aux_schema_ptr = validate_string_meta_schema({}, value, sep_types, schema_path, schema_id);
+										aux_schema_ptr = validate_string_meta_schema({}, value, std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
 									} else {
-										std::array<FieldType, SPC_SIZE_TYPES> sep_types = { { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
-										aux_schema_ptr = validate_meta_schema({}, value, sep_types, schema_path, schema_id);
+										aux_schema_ptr = validate_meta_schema({}, value, std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
 									}
 								} else {
 									THROW(ClientError, "'%s' must contain either '%s' or '%s'", RESERVED_SCHEMA, RESERVED_VALUE, DB_SCHEMA);
