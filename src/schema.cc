@@ -4864,13 +4864,9 @@ Schema::consistency_language(const std::string& prop_name, const MsgPack& doc_la
 	L_CALL(this, "Schema::consistency_language(%s)", repr(doc_language.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TEXT) {
-			const auto _str_language = lower_string(doc_language.str());
-			if (specification.language != _str_language) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.language.c_str(), _str_language.c_str(), specification.full_meta_name.c_str());
-			}
-		} else {
-			THROW(ClientError, "%s only is allowed in text type fields", prop_name.c_str());
+		const auto _str_language = lower_string(doc_language.str());
+		if (specification.language != _str_language) {
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.language.c_str(), _str_language.c_str(), specification.full_meta_name.c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
