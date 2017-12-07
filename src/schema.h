@@ -616,7 +616,7 @@ class Schema {
 	/*
 	 * Auxiliar function for update schema.
 	 */
-	void update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema, const std::string& name);
+	void update_schema(MsgPack*& mut_parent_properties, const std::string& name, const MsgPack& obj_schema);
 
 	/*
 	 * Get the properties of meta name of schema.

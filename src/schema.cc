@@ -1148,7 +1148,7 @@ Schema::get_initial_schema()
 const MsgPack&
 Schema::get_properties(const std::string& full_meta_name)
 {
-	L_CALL(this, "Schema::get_properties(%s)", full_meta_name.c_str());
+	L_CALL(this, "Schema::get_properties(%s)", repr(full_meta_name).c_str());
 
 	const MsgPack* prop = &get_properties();
 	Split<char> field_names(full_meta_name, DB_OFFSPRING_UNION);
@@ -1162,7 +1162,7 @@ Schema::get_properties(const std::string& full_meta_name)
 MsgPack&
 Schema::get_mutable_properties(const std::string& full_meta_name)
 {
-	L_CALL(this, "Schema::get_mutable_properties(%s)", full_meta_name.c_str());
+	L_CALL(this, "Schema::get_mutable_properties(%s)", repr(full_meta_name).c_str());
 
 	MsgPack* prop = &get_mutable_properties();
 	Split<char> field_names(full_meta_name, DB_OFFSPRING_UNION);
@@ -1176,7 +1176,7 @@ Schema::get_mutable_properties(const std::string& full_meta_name)
 const MsgPack&
 Schema::get_newest_properties(const std::string& full_meta_name)
 {
-	L_CALL(this, "Schema::get_newest_properties(%s)", full_meta_name.c_str());
+	L_CALL(this, "Schema::get_newest_properties(%s)", repr(full_meta_name).c_str());
 
 	const MsgPack* prop = &get_newest_properties();
 	Split<char> field_names(full_meta_name, DB_OFFSPRING_UNION);
@@ -1383,7 +1383,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 void
 Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos)
 {
-	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", data.to_string().c_str(), item_value.to_string().c_str(), pos);
+	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", repr(data.to_string()).c_str(), repr(item_value.to_string()).c_str(), pos);
 
 	if (!specification.flags.complete) {
 		if (specification.flags.inside_namespace) {
@@ -1415,7 +1415,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 inline void
 Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value)
 {
-	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", data->to_string().c_str(), item_value.to_string().c_str());
+	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", repr(data->to_string()).c_str(), repr(item_value.to_string()).c_str());
 
 	switch (item_value.getType()) {
 		case MsgPack::Type::ARRAY: {
@@ -3076,9 +3076,9 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 
 
 void
-Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema, const std::string& name)
+Schema::update_schema(MsgPack*& mut_parent_properties, const std::string& name, const MsgPack& obj_schema)
 {
-	L_CALL(this, "Schema::update_schema(%s, %s, %s)", repr(mut_parent_properties->to_string()).c_str(), repr(obj_schema.to_string()).c_str(), repr(name).c_str());
+	L_CALL(this, "Schema::update_schema(%s, %s, %s)", repr(mut_parent_properties->to_string()).c_str(), repr(name).c_str(), repr(obj_schema.to_string()).c_str());
 
 	if (name.empty()) {
 		THROW(ClientError, "Field name must not be empty");
@@ -3108,7 +3108,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 			const auto spc_object = std::move(specification);
 			for (const auto& field : fields) {
 				specification = spc_object;
-				update_schema(mut_properties, *field.second, field.first);
+				update_schema(mut_properties, field.first, *field.second);
 			}
 
 			specification = std::move(spc_start);
@@ -3120,7 +3120,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const MsgPack& obj_schema
 			}
 			for (const auto& item : obj_schema) {
 				if (item.is_map()) {
-					update_schema(mut_parent_properties, item, name);
+					update_schema(mut_parent_properties, name, item);
 				}
 			}
 			return;
@@ -5896,7 +5896,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		const auto spc_start = std::move(specification);
 		for (const auto& field : fields) {
 			specification = spc_start;
-			update_schema(mut_properties, *field.second, field.first);
+			update_schema(mut_properties, field.first, *field.second);
 		}
 	} catch (...) {
 		mut_schema.reset();

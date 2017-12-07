@@ -73,7 +73,7 @@ SchemasLRU::validate_string_meta_schema(MsgPack new_schema, const MsgPack& value
 	const auto aux_schema_str = value.str();
 	split_path_id(aux_schema_str, schema_path, schema_id);
 	if (schema_path.empty() || schema_id.empty()) {
-		THROW(ClientError, "%s in %s must contain index and docid [%s]", RESERVED_VALUE, RESERVED_SCHEMA, aux_schema_str.c_str());
+		THROW(ClientError, "'%s' in '%s' must contain index and docid [%s]", RESERVED_VALUE, RESERVED_SCHEMA, aux_schema_str.c_str());
 	}
 	new_schema[DB_SCHEMA] = {
 		{ RESERVED_TYPE,  sep_types },
