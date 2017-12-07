@@ -459,7 +459,7 @@ inline std::string get_map_keys(const std::unordered_map<std::string, T>& map) {
 	std::string res("{ ");
 	char comma[3] = { '\0', ' ', '\0' };
 	for (const auto& p : map) {
-		res.append(comma).append(p.first);
+		res.append(comma).append(repr(p.first));
 		comma[0] = ',';
 	}
 	res.append(" }");
