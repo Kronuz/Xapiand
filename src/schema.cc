@@ -406,6 +406,7 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 
 const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_without_type({
 	{ RESERVED_LANGUAGE,           &Schema::process_language        },
+	{ RESERVED_SLOT,               &Schema::process_slot            },
 	{ RESERVED_STOP_STRATEGY,      &Schema::process_stop_strategy   },
 	{ RESERVED_STEM_STRATEGY,      &Schema::process_stem_strategy   },
 	{ RESERVED_STEM_LANGUAGE,      &Schema::process_stem_language   },
@@ -4457,6 +4458,24 @@ Schema::process_language(const std::string& prop_name, const MsgPack& doc_langua
 		THROW(ClientError, "%s: %s is not supported", prop_name.c_str(), _str_language.c_str());
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+	}
+}
+
+
+void
+Schema::process_slot(const std::string& prop_name, const MsgPack& doc_slot)
+{
+	// RESERVED_SLOT isn't heritable and can't change once fixed.
+	L_CALL(this, "Schema::process_slot(%s)", repr(doc_slot.to_string()).c_str());
+
+	try {
+		auto slot = static_cast<Xapian::valueno>(doc_slot.u64());
+		if (slot < DB_SLOT_RESERVED || slot == Xapian::BAD_VALUENO) {
+			THROW(ClientError, "%s: %u is not supported", prop_name.c_str(), slot);
+		}
+		specification.slot = slot;
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be integer", prop_name.c_str());
 	}
 }
 

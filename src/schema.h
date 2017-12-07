@@ -750,6 +750,7 @@ class Schema {
 	void process_spelling(const std::string& prop_name, const MsgPack& doc_spelling);
 	void process_positions(const std::string& prop_name, const MsgPack& doc_positions);
 	void process_language(const std::string& prop_name, const MsgPack& doc_language);
+	void process_slot(const std::string& prop_name, const MsgPack& doc_slot);
 	void process_stop_strategy(const std::string& prop_name, const MsgPack& doc_stop_strategy);
 	void process_stem_strategy(const std::string& prop_name, const MsgPack& doc_stem_strategy);
 	void process_stem_language(const std::string& prop_name, const MsgPack& doc_stem_language);
