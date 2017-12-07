@@ -5508,7 +5508,7 @@ Schema::get_readable() const
 	readable_type(schema_prop.at(RESERVED_TYPE), schema_prop);
 	auto& properties = schema_prop.at(RESERVED_VALUE);
 	readable(properties, true);
-	return schema_readable;
+	return properties;
 }
 
 
