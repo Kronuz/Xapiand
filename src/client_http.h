@@ -145,7 +145,9 @@ class HttpClient : public BaseClient {
 #endif
 		CMD_NODES     = xxh64::hash(".nodes"),
 		CMD_TOUCH     = xxh64::hash(".touch"),
+#ifndef NDEBUG
 		CMD_QUIT      = xxh64::hash(".quit"),
+#endif
 	};
 
 	struct http_parser parser;

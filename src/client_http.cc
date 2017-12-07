@@ -794,7 +794,9 @@ HttpClient::_get(enum http_method method)
 					break;
 				}
 			}
+#ifndef NDEBUG
 		case Command::CMD_QUIT:
+#endif
 		case Command::CMD_TOUCH:
 		case Command::BAD_QUERY:
 			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
