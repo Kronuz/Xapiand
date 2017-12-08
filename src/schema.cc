@@ -2042,7 +2042,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 	}
 
 	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
-	if (set_acc.size()) {
+	if (!set_acc.empty()) {
 		for (const auto& acc : set_acc) {
 			specification.acc_prefix.push_back(get_prefix(acc));
 		}
