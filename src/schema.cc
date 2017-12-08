@@ -728,7 +728,7 @@ required_spc_t::get_types(const std::string& str_type)
 	static const auto tit_e = map_type.end();
 	auto tit = map_type.find(lower_string(str_type));
 	if (tit == tit_e) {
-		THROW(ClientError, "%s must be in { foreign, [foreign/]<object, script>, [foreign/][object/]array, [foreign/][object/][array/]<integer, positive, float, date, time, timedelta, string, text, term, uuid, geospatial> }  [%s]", RESERVED_TYPE, str_type.c_str());
+		THROW(ClientError, "%s not supported, '%s' must be one of { 'date', 'float', 'geospatial', 'integer', 'positive', 'script', 'string', 'term', 'text', 'time', 'timedelta', 'uuid' } or any of their { 'object/<type>', 'array/<type>', 'object/array/<t,ype>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' } variations.", repr(str_type).c_str(), RESERVED_TYPE);
 	}
 	return tit->second;
 }
@@ -1123,9 +1123,9 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
 	} catch (const std::out_of_range&) {
-		THROW(Error, "Schema is corrupt: no schema version");
+		THROW(Error, "Schema is corrupt: '%s' does not exist", RESERVED_VERSION);
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: invalid version");
+		THROW(Error, "Schema is corrupt: '%s' has an invalid version", RESERVED_VERSION);
 	}
 }
 
@@ -3836,7 +3836,7 @@ Schema::update_type(const MsgPack& prop_type)
 		specification.flags.concrete = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
 	} catch (const msgpack::type_error&) {
 	} catch (const std::out_of_range&) {
-		THROW(Error, "Schema is corrupt: %s in %s, you must provide a new one.", RESERVED_TYPE, specification.full_meta_name.c_str());
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TYPE, repr(specification.full_meta_name).c_str());
 	}
 }
 
@@ -4725,7 +4725,7 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 		const auto miit = map_index.find(str_index);
 		if (miit == miit_e) {
 			static const std::string str_set_index(get_map_keys(map_index));
-			THROW(ClientError, "%s must be in %s (%s not supported)", prop_name.c_str(), str_set_index.c_str(), str_index.c_str());
+			THROW(ClientError, "%s not supported, %s must be one of %s", repr(str_index).c_str(), repr(prop_name).c_str(), str_set_index.c_str());
 		} else {
 			specification.index = miit->second;
 			specification.flags.has_index = true;
@@ -4806,7 +4806,7 @@ Schema::process_index_uuid_field(const std::string& prop_name, const MsgPack& do
 		const auto mdit = map_index_uuid_field.find(str_index_uuid_field);
 		if (mdit == mdit_e) {
 			static const std::string str_set_index_uuid_field(get_map_keys(map_index_uuid_field));
-			THROW(ClientError, "%s must be in %s (%s not supported)", prop_name.c_str(), str_set_index_uuid_field.c_str(), str_index_uuid_field.c_str());
+			THROW(ClientError, "%s not supported, %s must be one of %s (%s not supported)", repr(str_index_uuid_field).c_str(), repr(prop_name).c_str(), str_set_index_uuid_field.c_str());
 		} else {
 			specification.index_uuid_field = mdit->second;
 		}
