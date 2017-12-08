@@ -5704,11 +5704,23 @@ Schema::to_string(bool prettify) const
 }
 
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 MsgPack
-Schema::index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, DatabaseHandler* db_handler, Xapian::Document& doc)
+Schema::index(
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	MsgPack& object,
+	const std::string& term_id,
+	std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair,
+	DatabaseHandler* db_handler,
+#else
+	const MsgPack& object,
+#endif
+	Xapian::Document& doc)
 {
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 	L_CALL(this, "Schema::index(%s, %s, <old_document_pair>, <db_handler>, <doc>)", repr(object.to_string()).c_str(), repr(term_id).c_str());
+#else
+	L_CALL(this, "Schema::index(%s, <doc>)", repr(object.to_string()).c_str());
+#endif
 
 	try {
 		specification = default_spc;
@@ -5717,7 +5729,7 @@ Schema::index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::
 		auto properties = &get_newest_properties();
 
 		const auto it_e = object.end();
-		if (properties->size() == 1) {
+		if (properties->size() <= 1) {  // it's a new specification if there's only _version' here
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			static const auto wpit_e = map_dispatch_write_properties.end();
@@ -5730,7 +5742,9 @@ Schema::index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::
 					(this->*wpit->second)(*mut_properties, str_key, it.value());
 				}
 			}
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 			write_script(*mut_properties);
+#endif
 			properties = &*mut_properties;
 		} else {
 			update_specification(*properties);
@@ -5744,9 +5758,12 @@ Schema::index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::
 					(this->*ddit->second)(str_key, it.value());
 				}
 			}
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 			normalize_script();
+#endif
 		}
 
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 		if (specification.script) {
 			object = db_handler->run_script(object, term_id, old_document_pair, *specification.script);
 			if (!object.is_map()) {
@@ -5763,95 +5780,30 @@ Schema::index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::
 				}
 			}
 		}
-
-		MsgPack data;
-		auto data_ptr = &data;
-
-		restart_specification();
-		const auto spc_start = std::move(specification);
-		for (const auto& field : fields) {
-			specification = spc_start;
-			index_object(properties, *field.second, data_ptr, doc, field.first);
-		}
-
-		for (const auto& elem : map_values) {
-			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
-			doc.add_value(elem.first, val_ser);
-			L_INDEX(this, "Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
-		}
-
-		return data;
-	} catch (...) {
-		mut_schema.reset();
-		throw;
-	}
-}
-
-#else
-
-MsgPack
-Schema::index(const MsgPack& object, Xapian::Document& doc)
-{
-	L_CALL(this, "Schema::index(%s, <doc>)", repr(object.to_string()).c_str());
-
-	try {
-		specification = default_spc;
-
-		FieldVector fields;
-		auto properties = &get_newest_properties();
-
-		const auto it_e = object.end();
-		if (properties->size() == 1) {
-			specification.flags.field_found = false;
-			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-			static const auto wpit_e = map_dispatch_write_properties.end();
-			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->str();
-				const auto wpit = map_dispatch_write_properties.find(str_key);
-				if (wpit == wpit_e) {
-					fields.emplace_back(std::move(str_key), &it.value());
-				} else {
-					(this->*wpit->second)(*mut_properties, str_key, it.value());
-				}
-			}
-			properties = &*mut_properties;
-		} else {
-			update_specification(*properties);
-			static const auto ddit_e = map_dispatch_document_properties.end();
-			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->str();
-				const auto ddit = map_dispatch_document_properties.find(str_key);
-				if (ddit == ddit_e) {
-					fields.emplace_back(std::move(str_key), &it.value());
-				} else {
-					(this->*ddit->second)(str_key, it.value());
-				}
-			}
-		}
-
-		MsgPack data;
-		auto data_ptr = &data;
-
-		restart_specification();
-		const auto spc_start = std::move(specification);
-		for (const auto& field : fields) {
-			specification = spc_start;
-			index_object(properties, *field.second, data_ptr, doc, field.first);
-		}
-
-		for (const auto& elem : map_values) {
-			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
-			doc.add_value(elem.first, val_ser);
-			L_INDEX(this, "Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
-		}
-
-		return data;
-	} catch (...) {
-		mut_schema.reset();
-		throw;
-	}
-}
 #endif
+
+		MsgPack data;
+		auto data_ptr = &data;
+
+		restart_specification();
+		const auto spc_start = std::move(specification);
+		for (const auto& field : fields) {
+			specification = spc_start;
+			index_object(properties, *field.second, data_ptr, doc, field.first);
+		}
+
+		for (const auto& elem : map_values) {
+			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
+			doc.add_value(elem.first, val_ser);
+			L_INDEX(this, "Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
+		}
+
+		return data;
+	} catch (...) {
+		mut_schema.reset();
+		throw;
+	}
+}
 
 
 void
@@ -5869,7 +5821,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		FieldVector fields;
 		auto mut_properties = replace ? &clear() : &get_mutable_properties();
 
-		if (mut_properties->size() == 1) {
+		if (mut_properties->size() <= 1) {  // it's a new specification if there's only _version' here
 			specification.flags.field_found = false;
 		} else {
 			update_specification(*mut_properties);
@@ -5886,7 +5838,6 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 				(this->*wpit->second)(*mut_properties, str_key, it.value());
 			}
 		}
-
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 		write_script(*mut_properties);
 #endif
