@@ -5812,9 +5812,16 @@ Schema::index(
 			}
 		}
 #endif
-
 		MsgPack data;
 		auto data_ptr = &data;
+
+		if (specification.flags.complete) {
+			if (specification.flags.inside_namespace) {
+				complete_namespace_specification(object);
+			} else {
+				complete_specification(object);
+			}
+		}
 
 		restart_specification();
 		const auto spc_start = std::move(specification);
@@ -5859,6 +5866,14 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		}
 
 		dispatch_write_properties(*mut_properties, obj_schema, fields);
+
+		if (!specification.flags.concrete) {
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(*mut_properties);
+			}
+		}
 
 		if (specification.flags.is_namespace && fields.size()) {
 			return;
