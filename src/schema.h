@@ -739,6 +739,18 @@ class Schema {
 	void write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version);
 	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
 	void write_script(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_language(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_slot(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_stop_strategy(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_stem_strategy(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_stem_language(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_type(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_bool_term(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_accuracy(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_partials(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_error(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_value(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
+	void write_cast_object(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
 
 
 	/*

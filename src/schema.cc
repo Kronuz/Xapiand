@@ -386,84 +386,119 @@ const std::unordered_map<std::string, Schema::dispatch_set_default_spc> Schema::
 
 
 const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::map_dispatch_write_properties({
-	{ RESERVED_WEIGHT,                 &Schema::write_weight                 },
-	{ RESERVED_POSITION,               &Schema::write_position               },
-	{ RESERVED_SPELLING,               &Schema::write_spelling               },
-	{ RESERVED_POSITIONS,              &Schema::write_positions              },
-	{ RESERVED_INDEX,                  &Schema::write_index                  },
-	{ RESERVED_STORE,                  &Schema::write_store                  },
-	{ RESERVED_RECURSE,                &Schema::write_recurse                },
-	{ RESERVED_DYNAMIC,                &Schema::write_dynamic                },
-	{ RESERVED_STRICT,                 &Schema::write_strict                 },
-	{ RESERVED_DATE_DETECTION,         &Schema::write_date_detection         },
-	{ RESERVED_TIME_DETECTION,         &Schema::write_time_detection         },
-	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::write_timedelta_detection    },
-	{ RESERVED_NUMERIC_DETECTION,      &Schema::write_numeric_detection      },
-	{ RESERVED_GEO_DETECTION,          &Schema::write_geo_detection          },
-	{ RESERVED_BOOL_DETECTION,         &Schema::write_bool_detection         },
-	{ RESERVED_STRING_DETECTION,       &Schema::write_string_detection       },
-	{ RESERVED_TEXT_DETECTION,         &Schema::write_text_detection         },
-	{ RESERVED_TERM_DETECTION,         &Schema::write_term_detection         },
-	{ RESERVED_UUID_DETECTION,         &Schema::write_uuid_detection         },
-	{ RESERVED_NAMESPACE,              &Schema::write_namespace              },
-	{ RESERVED_PARTIAL_PATHS,          &Schema::write_partial_paths          },
-	{ RESERVED_INDEX_UUID_FIELD,       &Schema::write_index_uuid_field       },
-	{ RESERVED_VERSION,                &Schema::write_version                },
-	{ RESERVED_SCHEMA,                 &Schema::write_schema                 },
-	{ RESERVED_SCRIPT,                 &Schema::write_script                 },
+	{ RESERVED_WEIGHT,                 &Schema::write_weight                       },
+	{ RESERVED_POSITION,               &Schema::write_position                     },
+	{ RESERVED_SPELLING,               &Schema::write_spelling                     },
+	{ RESERVED_POSITIONS,              &Schema::write_positions                    },
+	{ RESERVED_INDEX,                  &Schema::write_index                        },
+	{ RESERVED_STORE,                  &Schema::write_store                        },
+	{ RESERVED_RECURSE,                &Schema::write_recurse                      },
+	{ RESERVED_DYNAMIC,                &Schema::write_dynamic                      },
+	{ RESERVED_STRICT,                 &Schema::write_strict                       },
+	{ RESERVED_DATE_DETECTION,         &Schema::write_date_detection               },
+	{ RESERVED_TIME_DETECTION,         &Schema::write_time_detection               },
+	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::write_timedelta_detection          },
+	{ RESERVED_NUMERIC_DETECTION,      &Schema::write_numeric_detection            },
+	{ RESERVED_GEO_DETECTION,          &Schema::write_geo_detection                },
+	{ RESERVED_BOOL_DETECTION,         &Schema::write_bool_detection               },
+	{ RESERVED_STRING_DETECTION,       &Schema::write_string_detection             },
+	{ RESERVED_TEXT_DETECTION,         &Schema::write_text_detection               },
+	{ RESERVED_TERM_DETECTION,         &Schema::write_term_detection               },
+	{ RESERVED_UUID_DETECTION,         &Schema::write_uuid_detection               },
+	{ RESERVED_NAMESPACE,              &Schema::write_namespace                    },
+	{ RESERVED_PARTIAL_PATHS,          &Schema::write_partial_paths                },
+	{ RESERVED_INDEX_UUID_FIELD,       &Schema::write_index_uuid_field             },
+	{ RESERVED_VERSION,                &Schema::write_version                      },
+	{ RESERVED_SCHEMA,                 &Schema::write_schema                       },
+	{ RESERVED_SCRIPT,                 &Schema::write_script                       },
+	{ RESERVED_LANGUAGE,               &Schema::write_language                     },
+	{ RESERVED_SLOT,                   &Schema::write_slot                         },
+	{ RESERVED_STOP_STRATEGY,          &Schema::write_stop_strategy                },
+	{ RESERVED_STEM_STRATEGY,          &Schema::write_stem_strategy                },
+	{ RESERVED_STEM_LANGUAGE,          &Schema::write_stem_language                },
+	{ RESERVED_TYPE,                   &Schema::write_type                         },
+	{ RESERVED_BOOL_TERM,              &Schema::write_bool_term                    },
+	{ RESERVED_ACCURACY,               &Schema::write_accuracy                     },
+	{ RESERVED_PARTIALS,               &Schema::write_partials                     },
+	{ RESERVED_ERROR,                  &Schema::write_error                        },
+	{ RESERVED_VALUE,                  &Schema::write_value                        },
+	{ RESERVED_FLOAT,                  &Schema::write_cast_object                  },
+	{ RESERVED_POSITIVE,               &Schema::write_cast_object                  },
+	{ RESERVED_INTEGER,                &Schema::write_cast_object                  },
+	{ RESERVED_BOOLEAN,                &Schema::write_cast_object                  },
+	{ RESERVED_TERM,                   &Schema::write_cast_object                  },
+	{ RESERVED_TEXT,                   &Schema::write_cast_object                  },
+	{ RESERVED_STRING,                 &Schema::write_cast_object                  },
+	{ RESERVED_DATE,                   &Schema::write_cast_object                  },
+	{ RESERVED_UUID,                   &Schema::write_cast_object                  },
+	{ RESERVED_EWKT,                   &Schema::write_cast_object                  },
+	{ RESERVED_POINT,                  &Schema::write_cast_object                  },
+	{ RESERVED_CIRCLE,                 &Schema::write_cast_object                  },
+	{ RESERVED_CONVEX,                 &Schema::write_cast_object                  },
+	{ RESERVED_POLYGON,                &Schema::write_cast_object                  },
+	{ RESERVED_CHULL,                  &Schema::write_cast_object                  },
+	{ RESERVED_MULTIPOINT,             &Schema::write_cast_object                  },
+	{ RESERVED_MULTICIRCLE,            &Schema::write_cast_object                  },
+	{ RESERVED_MULTICONVEX,            &Schema::write_cast_object                  },
+	{ RESERVED_MULTIPOLYGON,           &Schema::write_cast_object                  },
+	{ RESERVED_MULTICHULL,             &Schema::write_cast_object                  },
+	{ RESERVED_GEO_COLLECTION,         &Schema::write_cast_object                  },
+	{ RESERVED_GEO_INTERSECTION,       &Schema::write_cast_object                  },
+	{ RESERVED_CHAI,                   &Schema::write_cast_object                  },
+	{ RESERVED_ECMA,                   &Schema::write_cast_object                  },
 });
 
 
 const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::map_dispatch_feed_properties({
-	{ RESERVED_WEIGHT,                 &Schema::feed_weight                 },
-	{ RESERVED_POSITION,               &Schema::feed_position               },
-	{ RESERVED_SPELLING,               &Schema::feed_spelling               },
-	{ RESERVED_POSITIONS,              &Schema::feed_positions              },
-	{ RESERVED_TYPE,                   &Schema::feed_type                   },
-	{ RESERVED_PREFIX,                 &Schema::feed_prefix                 },
-	{ RESERVED_SLOT,                   &Schema::feed_slot                   },
-	{ RESERVED_INDEX,                  &Schema::feed_index                  },
-	{ RESERVED_STORE,                  &Schema::feed_store                  },
-	{ RESERVED_RECURSE,                &Schema::feed_recurse                },
-	{ RESERVED_DYNAMIC,                &Schema::feed_dynamic                },
-	{ RESERVED_STRICT,                 &Schema::feed_strict                 },
-	{ RESERVED_DATE_DETECTION,         &Schema::feed_date_detection         },
-	{ RESERVED_TIME_DETECTION,         &Schema::feed_time_detection         },
-	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::feed_timedelta_detection    },
-	{ RESERVED_NUMERIC_DETECTION,      &Schema::feed_numeric_detection      },
-	{ RESERVED_GEO_DETECTION,          &Schema::feed_geo_detection          },
-	{ RESERVED_BOOL_DETECTION,         &Schema::feed_bool_detection         },
-	{ RESERVED_STRING_DETECTION,       &Schema::feed_string_detection       },
-	{ RESERVED_TEXT_DETECTION,         &Schema::feed_text_detection         },
-	{ RESERVED_TERM_DETECTION,         &Schema::feed_term_detection         },
-	{ RESERVED_UUID_DETECTION,         &Schema::feed_uuid_detection         },
-	{ RESERVED_BOOL_TERM,              &Schema::feed_bool_term              },
-	{ RESERVED_ACCURACY,               &Schema::feed_accuracy               },
-	{ RESERVED_ACC_PREFIX,             &Schema::feed_acc_prefix             },
-	{ RESERVED_LANGUAGE,               &Schema::feed_language               },
-	{ RESERVED_STOP_STRATEGY,          &Schema::feed_stop_strategy          },
-	{ RESERVED_STEM_STRATEGY,          &Schema::feed_stem_strategy          },
-	{ RESERVED_STEM_LANGUAGE,          &Schema::feed_stem_language          },
-	{ RESERVED_PARTIALS,               &Schema::feed_partials               },
-	{ RESERVED_ERROR,                  &Schema::feed_error                  },
-	{ RESERVED_NAMESPACE,              &Schema::feed_namespace              },
-	{ RESERVED_PARTIAL_PATHS,          &Schema::feed_partial_paths          },
-	{ RESERVED_INDEX_UUID_FIELD,       &Schema::feed_index_uuid_field       },
-	{ RESERVED_SCRIPT,                 &Schema::feed_script                 },
+	{ RESERVED_WEIGHT,                 &Schema::feed_weight                        },
+	{ RESERVED_POSITION,               &Schema::feed_position                      },
+	{ RESERVED_SPELLING,               &Schema::feed_spelling                      },
+	{ RESERVED_POSITIONS,              &Schema::feed_positions                     },
+	{ RESERVED_TYPE,                   &Schema::feed_type                          },
+	{ RESERVED_PREFIX,                 &Schema::feed_prefix                        },
+	{ RESERVED_SLOT,                   &Schema::feed_slot                          },
+	{ RESERVED_INDEX,                  &Schema::feed_index                         },
+	{ RESERVED_STORE,                  &Schema::feed_store                         },
+	{ RESERVED_RECURSE,                &Schema::feed_recurse                       },
+	{ RESERVED_DYNAMIC,                &Schema::feed_dynamic                       },
+	{ RESERVED_STRICT,                 &Schema::feed_strict                        },
+	{ RESERVED_DATE_DETECTION,         &Schema::feed_date_detection                },
+	{ RESERVED_TIME_DETECTION,         &Schema::feed_time_detection                },
+	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::feed_timedelta_detection           },
+	{ RESERVED_NUMERIC_DETECTION,      &Schema::feed_numeric_detection             },
+	{ RESERVED_GEO_DETECTION,          &Schema::feed_geo_detection                 },
+	{ RESERVED_BOOL_DETECTION,         &Schema::feed_bool_detection                },
+	{ RESERVED_STRING_DETECTION,       &Schema::feed_string_detection              },
+	{ RESERVED_TEXT_DETECTION,         &Schema::feed_text_detection                },
+	{ RESERVED_TERM_DETECTION,         &Schema::feed_term_detection                },
+	{ RESERVED_UUID_DETECTION,         &Schema::feed_uuid_detection                },
+	{ RESERVED_BOOL_TERM,              &Schema::feed_bool_term                     },
+	{ RESERVED_ACCURACY,               &Schema::feed_accuracy                      },
+	{ RESERVED_ACC_PREFIX,             &Schema::feed_acc_prefix                    },
+	{ RESERVED_LANGUAGE,               &Schema::feed_language                      },
+	{ RESERVED_STOP_STRATEGY,          &Schema::feed_stop_strategy                 },
+	{ RESERVED_STEM_STRATEGY,          &Schema::feed_stem_strategy                 },
+	{ RESERVED_STEM_LANGUAGE,          &Schema::feed_stem_language                 },
+	{ RESERVED_PARTIALS,               &Schema::feed_partials                      },
+	{ RESERVED_ERROR,                  &Schema::feed_error                         },
+	{ RESERVED_NAMESPACE,              &Schema::feed_namespace                     },
+	{ RESERVED_PARTIAL_PATHS,          &Schema::feed_partial_paths                 },
+	{ RESERVED_INDEX_UUID_FIELD,       &Schema::feed_index_uuid_field              },
+	{ RESERVED_SCRIPT,                 &Schema::feed_script                        },
 });
 
 
 const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_process_properties_without_concrete_type({
-	{ RESERVED_LANGUAGE,           &Schema::process_language        },
-	{ RESERVED_SLOT,               &Schema::process_slot            },
-	{ RESERVED_STOP_STRATEGY,      &Schema::process_stop_strategy   },
-	{ RESERVED_STEM_STRATEGY,      &Schema::process_stem_strategy   },
-	{ RESERVED_STEM_LANGUAGE,      &Schema::process_stem_language   },
-	{ RESERVED_TYPE,               &Schema::process_type            },
-	{ RESERVED_BOOL_TERM,          &Schema::process_bool_term       },
-	{ RESERVED_ACCURACY,           &Schema::process_accuracy        },
-	{ RESERVED_PARTIALS,           &Schema::process_partials        },
-	{ RESERVED_ERROR,              &Schema::process_error           },
+	{ RESERVED_LANGUAGE,               &Schema::process_language                   },
+	{ RESERVED_SLOT,                   &Schema::process_slot                       },
+	{ RESERVED_STOP_STRATEGY,          &Schema::process_stop_strategy              },
+	{ RESERVED_STEM_STRATEGY,          &Schema::process_stem_strategy              },
+	{ RESERVED_STEM_LANGUAGE,          &Schema::process_stem_language              },
+	{ RESERVED_TYPE,                   &Schema::process_type                       },
+	{ RESERVED_BOOL_TERM,              &Schema::process_bool_term                  },
+	{ RESERVED_ACCURACY,               &Schema::process_accuracy                   },
+	{ RESERVED_PARTIALS,               &Schema::process_partials                   },
+	{ RESERVED_ERROR,                  &Schema::process_error                      },
 });
 
 
@@ -4446,6 +4481,114 @@ Schema::write_script(MsgPack&, const std::string& prop_name, const MsgPack& doc_
 	L_CALL(this, "Schema::write_script(%s)", repr(doc_script.to_string()).c_str());
 
 	process_script(prop_name, doc_script);
+}
+
+
+void
+Schema::write_language(MsgPack&, const std::string& prop_name, const MsgPack& doc_language)
+{
+	L_CALL(this, "Schema::write_language(%s)", repr(doc_language.to_string()).c_str());
+
+	process_language(prop_name, doc_language);
+}
+
+
+void
+Schema::write_slot(MsgPack&, const std::string& prop_name, const MsgPack& doc_slot)
+{
+	L_CALL(this, "Schema::write_slot(%s)", repr(doc_slot.to_string()).c_str());
+
+	process_slot(prop_name, doc_slot);
+}
+
+
+void
+Schema::write_stop_strategy(MsgPack&, const std::string& prop_name, const MsgPack& doc_stop_strategy)
+{
+	L_CALL(this, "Schema::write_stop_strategy(%s)", repr(doc_stop_strategy.to_string()).c_str());
+
+	process_stop_strategy(prop_name, doc_stop_strategy);
+}
+
+
+void
+Schema::write_stem_strategy(MsgPack&, const std::string& prop_name, const MsgPack& doc_stem_strategy)
+{
+	L_CALL(this, "Schema::write_stem_strategy(%s)", repr(doc_stem_strategy.to_string()).c_str());
+
+	process_stem_strategy(prop_name, doc_stem_strategy);
+}
+
+
+void
+Schema::write_stem_language(MsgPack&, const std::string& prop_name, const MsgPack& doc_stem_language)
+{
+	L_CALL(this, "Schema::write_stem_language(%s)", repr(doc_stem_language.to_string()).c_str());
+
+	process_stem_language(prop_name, doc_stem_language);
+}
+
+
+void
+Schema::write_type(MsgPack&, const std::string& prop_name, const MsgPack& doc_type)
+{
+	L_CALL(this, "Schema::write_type(%s)", repr(doc_type.to_string()).c_str());
+
+	process_type(prop_name, doc_type);
+}
+
+
+void
+Schema::write_bool_term(MsgPack&, const std::string& prop_name, const MsgPack& doc_bool_term)
+{
+	L_CALL(this, "Schema::write_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
+
+	process_bool_term(prop_name, doc_bool_term);
+}
+
+
+void
+Schema::write_accuracy(MsgPack&, const std::string& prop_name, const MsgPack& doc_accuracy)
+{
+	L_CALL(this, "Schema::write_accuracy(%s)", repr(doc_accuracy.to_string()).c_str());
+
+	process_accuracy(prop_name, doc_accuracy);
+}
+
+
+void
+Schema::write_partials(MsgPack&, const std::string& prop_name, const MsgPack& doc_partials)
+{
+	L_CALL(this, "Schema::write_partials(%s)", repr(doc_partials.to_string()).c_str());
+
+	process_partials(prop_name, doc_partials);
+}
+
+
+void
+Schema::write_error(MsgPack&, const std::string& prop_name, const MsgPack& doc_error)
+{
+	L_CALL(this, "Schema::write_error(%s)", repr(doc_error.to_string()).c_str());
+
+	process_error(prop_name, doc_error);
+}
+
+
+void
+Schema::write_value(MsgPack&, const std::string& prop_name, const MsgPack& doc_value)
+{
+	L_CALL(this, "Schema::write_value(%s)", repr(doc_value.to_string()).c_str());
+
+	process_value(prop_name, doc_value);
+}
+
+
+void
+Schema::write_cast_object(MsgPack&, const std::string& prop_name, const MsgPack& doc_cast_object)
+{
+	L_CALL(this, "Schema::write_cast_object(%s)", repr(doc_cast_object.to_string()).c_str());
+
+	process_cast_object(prop_name, doc_cast_object);
 }
 
 
