@@ -1514,8 +1514,12 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 			}
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
-				if (!specification.flags.concrete && specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
-					validate_required_data(get_mutable_properties(specification.full_meta_name));
+				if (!specification.flags.concrete) {
+					if (specification.flags.inside_namespace) {
+						validate_required_namespace_data();
+					} else {
+						validate_required_data(get_mutable_properties(specification.full_meta_name));
+					}
 				}
 				index_partial_paths(doc);
 				if (specification.flags.store) {
@@ -1563,8 +1567,12 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 			}
 		}
 	} else {
-		if (!specification.flags.concrete && specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
-			validate_required_data(get_mutable_properties(specification.full_meta_name));
+		if (!specification.flags.concrete) {
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(get_mutable_properties(specification.full_meta_name));
+			}
 		}
 
 		if (fields.empty()) {
