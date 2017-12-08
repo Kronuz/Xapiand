@@ -547,8 +547,9 @@ class Schema {
 	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 
 	void process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
-	void process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value);
-	void process_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields);
+	void process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value);
+	void index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields);
+	void update_item_value(MsgPack& properties, const FieldVector& fields);
 
 
 	/*
