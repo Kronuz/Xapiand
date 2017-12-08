@@ -70,9 +70,12 @@ const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
  *    initialize the specification with default specifications and sent by the user.
  * 6. If there are values sent by user, fills the document to be indexed by
  *    process_item_value(...)
- * 7. If the path has uuid field name the values are indexed accordint to index_uuid_field.
- * 8. index() does steps 1 to 3 and for each field call index_object(...)
- * 9. index_object() does step 1 to 7 and for each field call index_object(...).
+ * 7. If the path has uuid field name the values are indexed according to index_uuid_field.
+ * 8. index_object() does step 1 to 7 and for each field call index_object(...).
+ * 9. index() does steps 1 to 3 and for each field call index_object(...)
+ *
+ * write_schema() does something similar to index(), except it always writes,
+ * it doesn't try to process existing data.
  */
 
 
