@@ -404,7 +404,7 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_document_properties_without_concrete_type({
+const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_process_properties_without_concrete_type({
 	{ RESERVED_LANGUAGE,           &Schema::process_language        },
 	{ RESERVED_SLOT,               &Schema::process_slot            },
 	{ RESERVED_STOP_STRATEGY,      &Schema::process_stop_strategy   },
@@ -418,7 +418,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_document_properties({
+const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_process_properties({
 	{ RESERVED_WEIGHT,                 &Schema::process_weight                     },
 	{ RESERVED_POSITION,               &Schema::process_position                   },
 	{ RESERVED_SPELLING,               &Schema::process_spelling                   },
@@ -3523,12 +3523,12 @@ Schema::process_document_properties(const MsgPack& object, FieldVector& fields)
 {
 	L_CALL(this, "Schema::process_document_properties(%s, <fields>)", repr(object.to_string()).c_str());
 
-	static const auto ddit_e = map_dispatch_document_properties.end();
+	static const auto ddit_e = map_dispatch_process_properties.end();
 	const auto it_e = object.end();
 	if (specification.flags.concrete) {
 		for (auto it = object.begin(); it != it_e; ++it) {
 			auto str_key = it->str();
-			const auto ddit = map_dispatch_document_properties.find(str_key);
+			const auto ddit = map_dispatch_process_properties.find(str_key);
 			if (ddit == ddit_e) {
 				fields.emplace_back(std::move(str_key), &it.value());
 			} else {
@@ -3536,12 +3536,12 @@ Schema::process_document_properties(const MsgPack& object, FieldVector& fields)
 			}
 		}
 	} else {
-		static const auto wtit_e = map_dispatch_document_properties_without_concrete_type.end();
+		static const auto wtit_e = map_dispatch_process_properties_without_concrete_type.end();
 		for (auto it = object.begin(); it != it_e; ++it) {
 			auto str_key = it->str();
-			const auto wtit = map_dispatch_document_properties_without_concrete_type.find(str_key);
+			const auto wtit = map_dispatch_process_properties_without_concrete_type.find(str_key);
 			if (wtit == wtit_e) {
-				const auto ddit = map_dispatch_document_properties.find(str_key);
+				const auto ddit = map_dispatch_process_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -3564,14 +3564,14 @@ Schema::process_document_properties_write(MsgPack*& mut_properties, const MsgPac
 	L_CALL(this, "Schema::process_document_properties_write(%s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	static const auto wpit_e = map_dispatch_write_properties.end();
-	static const auto ddit_e = map_dispatch_document_properties.end();
+	static const auto ddit_e = map_dispatch_process_properties.end();
 	const auto it_e = object.end();
 	if (specification.flags.concrete) {
 		for (auto it = object.begin(); it != it_e; ++it) {
 			auto str_key = it->str();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
-				const auto ddit = map_dispatch_document_properties.find(str_key);
+				const auto ddit = map_dispatch_process_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -3582,14 +3582,14 @@ Schema::process_document_properties_write(MsgPack*& mut_properties, const MsgPac
 			}
 		}
 	} else {
-		static const auto wtit_e = map_dispatch_document_properties_without_concrete_type.end();
+		static const auto wtit_e = map_dispatch_process_properties_without_concrete_type.end();
 		for (auto it = object.begin(); it != it_e; ++it) {
 			auto str_key = it->str();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
-				const auto wtit = map_dispatch_document_properties_without_concrete_type.find(str_key);
+				const auto wtit = map_dispatch_process_properties_without_concrete_type.find(str_key);
 				if (wtit == wtit_e) {
-					const auto ddit = map_dispatch_document_properties.find(str_key);
+					const auto ddit = map_dispatch_process_properties.find(str_key);
 					if (ddit == ddit_e) {
 						fields.emplace_back(std::move(str_key), &it.value());
 					} else {
@@ -3633,16 +3633,16 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 
 	// Write obj specifications.
 	static const auto wpit_e = map_dispatch_write_properties.end();
-	static const auto wtit_e = map_dispatch_document_properties_without_concrete_type.end();
-	static const auto ddit_e = map_dispatch_document_properties.end();
+	static const auto wtit_e = map_dispatch_process_properties_without_concrete_type.end();
+	static const auto ddit_e = map_dispatch_process_properties.end();
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
 		auto str_key = it->str();
 		const auto wpit = map_dispatch_write_properties.find(str_key);
 		if (wpit == wpit_e) {
-			const auto wtit = map_dispatch_document_properties_without_concrete_type.find(str_key);
+			const auto wtit = map_dispatch_process_properties_without_concrete_type.find(str_key);
 			if (wtit == wtit_e) {
-				const auto ddit = map_dispatch_document_properties.find(str_key);
+				const auto ddit = map_dispatch_process_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -5748,10 +5748,10 @@ Schema::index(
 			properties = &*mut_properties;
 		} else {
 			update_specification(*properties);
-			static const auto ddit_e = map_dispatch_document_properties.end();
+			static const auto ddit_e = map_dispatch_process_properties.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
-				const auto ddit = map_dispatch_document_properties.find(str_key);
+				const auto ddit = map_dispatch_process_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -5771,10 +5771,10 @@ Schema::index(
 			}
 			// Rebuild fields with new values.
 			fields.clear();
-			static const auto ddit_e = map_dispatch_document_properties.end();
+			static const auto ddit_e = map_dispatch_process_properties.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
-				const auto ddit = map_dispatch_document_properties.find(str_key);
+				const auto ddit = map_dispatch_process_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				}
