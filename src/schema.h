@@ -472,7 +472,7 @@ class Schema {
 	static const std::unordered_map<std::string, dispatch_write_reserved> map_dispatch_write_properties;
 	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_process_properties_without_concrete_type;
 	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_process_properties;
-	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_update_properties;
+	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_feed_properties;
 	static const std::unordered_map<std::string, dispatch_readable> map_get_readable;
 
 	std::shared_ptr<const MsgPack> schema;
@@ -665,49 +665,49 @@ class Schema {
 
 
 	/*
-	 * Specification is updated with the properties.
+	 * Specification is fed with the properties.
 	 */
-	void update_specification(const MsgPack& properties);
+	void feed_specification(const MsgPack& properties);
 
 	/*
-	 * Functions for updating specification using the properties in schema.
+	 * Functions for feeding specification using the properties in schema.
 	 */
 
-	void update_position(const MsgPack& prop_position);
-	void update_weight(const MsgPack& prop_weight);
-	void update_spelling(const MsgPack& prop_spelling);
-	void update_positions(const MsgPack& prop_positions);
-	void update_language(const MsgPack& prop_language);
-	void update_stop_strategy(const MsgPack& prop_stop_strategy);
-	void update_stem_strategy(const MsgPack& prop_stem_strategy);
-	void update_stem_language(const MsgPack& prop_stem_language);
-	void update_type(const MsgPack& prop_type);
-	void update_accuracy(const MsgPack& prop_accuracy);
-	void update_acc_prefix(const MsgPack& prop_acc_prefix);
-	void update_prefix(const MsgPack& prop_prefix);
-	void update_slot(const MsgPack& prop_slot);
-	void update_index(const MsgPack& prop_index);
-	void update_store(const MsgPack& prop_store);
-	void update_recurse(const MsgPack& prop_recurse);
-	void update_dynamic(const MsgPack& prop_dynamic);
-	void update_strict(const MsgPack& prop_strict);
-	void update_date_detection(const MsgPack& prop_date_detection);
-	void update_time_detection(const MsgPack& prop_time_detection);
-	void update_timedelta_detection(const MsgPack& prop_timedelta_detection);
-	void update_numeric_detection(const MsgPack& prop_numeric_detection);
-	void update_geo_detection(const MsgPack& prop_geo_detection);
-	void update_bool_detection(const MsgPack& prop_bool_detection);
-	void update_string_detection(const MsgPack& prop_string_detection);
-	void update_text_detection(const MsgPack& prop_text_detection);
-	void update_term_detection(const MsgPack& prop_term_detection);
-	void update_uuid_detection(const MsgPack& prop_uuid_detection);
-	void update_bool_term(const MsgPack& prop_bool_term);
-	void update_partials(const MsgPack& prop_partials);
-	void update_error(const MsgPack& prop_error);
-	void update_namespace(const MsgPack& prop_namespace);
-	void update_partial_paths(const MsgPack& prop_partial_paths);
-	void update_index_uuid_field(const MsgPack& prop_index_uuid_field);
-	void update_script(const MsgPack& prop_script);
+	void feed_position(const MsgPack& prop_position);
+	void feed_weight(const MsgPack& prop_weight);
+	void feed_spelling(const MsgPack& prop_spelling);
+	void feed_positions(const MsgPack& prop_positions);
+	void feed_language(const MsgPack& prop_language);
+	void feed_stop_strategy(const MsgPack& prop_stop_strategy);
+	void feed_stem_strategy(const MsgPack& prop_stem_strategy);
+	void feed_stem_language(const MsgPack& prop_stem_language);
+	void feed_type(const MsgPack& prop_type);
+	void feed_accuracy(const MsgPack& prop_accuracy);
+	void feed_acc_prefix(const MsgPack& prop_acc_prefix);
+	void feed_prefix(const MsgPack& prop_prefix);
+	void feed_slot(const MsgPack& prop_slot);
+	void feed_index(const MsgPack& prop_index);
+	void feed_store(const MsgPack& prop_store);
+	void feed_recurse(const MsgPack& prop_recurse);
+	void feed_dynamic(const MsgPack& prop_dynamic);
+	void feed_strict(const MsgPack& prop_strict);
+	void feed_date_detection(const MsgPack& prop_date_detection);
+	void feed_time_detection(const MsgPack& prop_time_detection);
+	void feed_timedelta_detection(const MsgPack& prop_timedelta_detection);
+	void feed_numeric_detection(const MsgPack& prop_numeric_detection);
+	void feed_geo_detection(const MsgPack& prop_geo_detection);
+	void feed_bool_detection(const MsgPack& prop_bool_detection);
+	void feed_string_detection(const MsgPack& prop_string_detection);
+	void feed_text_detection(const MsgPack& prop_text_detection);
+	void feed_term_detection(const MsgPack& prop_term_detection);
+	void feed_uuid_detection(const MsgPack& prop_uuid_detection);
+	void feed_bool_term(const MsgPack& prop_bool_term);
+	void feed_partials(const MsgPack& prop_partials);
+	void feed_error(const MsgPack& prop_error);
+	void feed_namespace(const MsgPack& prop_namespace);
+	void feed_partial_paths(const MsgPack& prop_partial_paths);
+	void feed_index_uuid_field(const MsgPack& prop_index_uuid_field);
+	void feed_script(const MsgPack& prop_script);
 
 
 	/*

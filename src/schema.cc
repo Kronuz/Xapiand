@@ -52,30 +52,37 @@
 #define L_SCHEMA L_TEST
 #endif
 
-
 const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
 
 
 /*
- * 1. Try reading schema from the metadata.
- * 2. Feed specification_t with the read schema using update_*;
+ * index() algorithm outline:
+ * 1. Try reading schema from the metadata, if there is already a schema jump to 3.
+ * 2. Write properties and feed specification_t using write_*, this step could
+ *    use some process_* (for some properties). Jump to 5.
+ * 3. Feed specification_t with the read schema using feed_*;
  *    sets field_found for all found fields.
- * 3. Feed specification_t with the object sent by the user using process_*,
+ * 4. Complement specification_t with the object sent by the user using process_*,
  *    except those that are already fixed because are reserved to be and
- *    they already exist in the metadata.
- * 4. If the field in the schema is normal and still has no RESERVED_TYPE (concrete)
+ *    they already exist in the metadata, those are simply checked with consistency_*.
+ * 5. If the field in the schema is normal and still has no RESERVED_TYPE (concrete)
  *    and a value is received for the field, call validate_required_data() to
  *    initialize the specification with validated data sent by the user.
- * 5. If the field is namespace or has partial paths call validate_required_namespace_data() to
+ * 6. If the field is namespace or has partial paths call validate_required_namespace_data() to
  *    initialize the specification with default specifications and sent by the user.
- * 6. If there are values sent by user, fills the document to be indexed by
+ * 7. If there are values sent by user, fills the document to be indexed by
  *    process_item_value(...)
- * 7. If the path has uuid field name the values are indexed according to index_uuid_field.
- * 8. index_object() does step 1 to 7 and for each field call index_object(...).
- * 9. index() does steps 1 to 3 and for each field call index_object(...)
+ * 8. If the path has uuid field name the values are indexed according to index_uuid_field.
+ * 9. index_object() does step 2 to 8 and for each field it calls index_object(...).
+ * 10. index() does steps 2 to 4 and for each field it calls index_object(...)
  *
- * write_schema() does something similar to index(), except it always writes,
- * it doesn't try to process existing data.
+ * write_schema() algorithm outline:
+ * 1. Try reading schema from the metadata.
+ * 2. If there is already a schema, feed specification_t with the read schema
+ *    using feed_*; sets field_found for all found fields.
+ * 3. Write properties and feed specification_t using write_*, this step could
+ *    use some process_* (for some properties).
+ * 4. update_schema() does step 2 to 3 and for each field it calls update_schema(...).
  */
 
 
@@ -485,42 +492,42 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::map_dispatch_update_properties({
-	{ RESERVED_WEIGHT,                 &Schema::update_weight                 },
-	{ RESERVED_POSITION,               &Schema::update_position               },
-	{ RESERVED_SPELLING,               &Schema::update_spelling               },
-	{ RESERVED_POSITIONS,              &Schema::update_positions              },
-	{ RESERVED_TYPE,                   &Schema::update_type                   },
-	{ RESERVED_PREFIX,                 &Schema::update_prefix                 },
-	{ RESERVED_SLOT,                   &Schema::update_slot                   },
-	{ RESERVED_INDEX,                  &Schema::update_index                  },
-	{ RESERVED_STORE,                  &Schema::update_store                  },
-	{ RESERVED_RECURSE,                &Schema::update_recurse                },
-	{ RESERVED_DYNAMIC,                &Schema::update_dynamic                },
-	{ RESERVED_STRICT,                 &Schema::update_strict                 },
-	{ RESERVED_DATE_DETECTION,         &Schema::update_date_detection         },
-	{ RESERVED_TIME_DETECTION,         &Schema::update_time_detection         },
-	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::update_timedelta_detection    },
-	{ RESERVED_NUMERIC_DETECTION,      &Schema::update_numeric_detection      },
-	{ RESERVED_GEO_DETECTION,          &Schema::update_geo_detection          },
-	{ RESERVED_BOOL_DETECTION,         &Schema::update_bool_detection         },
-	{ RESERVED_STRING_DETECTION,       &Schema::update_string_detection       },
-	{ RESERVED_TEXT_DETECTION,         &Schema::update_text_detection         },
-	{ RESERVED_TERM_DETECTION,         &Schema::update_term_detection         },
-	{ RESERVED_UUID_DETECTION,         &Schema::update_uuid_detection         },
-	{ RESERVED_BOOL_TERM,              &Schema::update_bool_term              },
-	{ RESERVED_ACCURACY,               &Schema::update_accuracy               },
-	{ RESERVED_ACC_PREFIX,             &Schema::update_acc_prefix             },
-	{ RESERVED_LANGUAGE,               &Schema::update_language               },
-	{ RESERVED_STOP_STRATEGY,          &Schema::update_stop_strategy          },
-	{ RESERVED_STEM_STRATEGY,          &Schema::update_stem_strategy          },
-	{ RESERVED_STEM_LANGUAGE,          &Schema::update_stem_language          },
-	{ RESERVED_PARTIALS,               &Schema::update_partials               },
-	{ RESERVED_ERROR,                  &Schema::update_error                  },
-	{ RESERVED_NAMESPACE,              &Schema::update_namespace              },
-	{ RESERVED_PARTIAL_PATHS,          &Schema::update_partial_paths          },
-	{ RESERVED_INDEX_UUID_FIELD,       &Schema::update_index_uuid_field       },
-	{ RESERVED_SCRIPT,                 &Schema::update_script                 },
+const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::map_dispatch_feed_properties({
+	{ RESERVED_WEIGHT,                 &Schema::feed_weight                 },
+	{ RESERVED_POSITION,               &Schema::feed_position               },
+	{ RESERVED_SPELLING,               &Schema::feed_spelling               },
+	{ RESERVED_POSITIONS,              &Schema::feed_positions              },
+	{ RESERVED_TYPE,                   &Schema::feed_type                   },
+	{ RESERVED_PREFIX,                 &Schema::feed_prefix                 },
+	{ RESERVED_SLOT,                   &Schema::feed_slot                   },
+	{ RESERVED_INDEX,                  &Schema::feed_index                  },
+	{ RESERVED_STORE,                  &Schema::feed_store                  },
+	{ RESERVED_RECURSE,                &Schema::feed_recurse                },
+	{ RESERVED_DYNAMIC,                &Schema::feed_dynamic                },
+	{ RESERVED_STRICT,                 &Schema::feed_strict                 },
+	{ RESERVED_DATE_DETECTION,         &Schema::feed_date_detection         },
+	{ RESERVED_TIME_DETECTION,         &Schema::feed_time_detection         },
+	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::feed_timedelta_detection    },
+	{ RESERVED_NUMERIC_DETECTION,      &Schema::feed_numeric_detection      },
+	{ RESERVED_GEO_DETECTION,          &Schema::feed_geo_detection          },
+	{ RESERVED_BOOL_DETECTION,         &Schema::feed_bool_detection         },
+	{ RESERVED_STRING_DETECTION,       &Schema::feed_string_detection       },
+	{ RESERVED_TEXT_DETECTION,         &Schema::feed_text_detection         },
+	{ RESERVED_TERM_DETECTION,         &Schema::feed_term_detection         },
+	{ RESERVED_UUID_DETECTION,         &Schema::feed_uuid_detection         },
+	{ RESERVED_BOOL_TERM,              &Schema::feed_bool_term              },
+	{ RESERVED_ACCURACY,               &Schema::feed_accuracy               },
+	{ RESERVED_ACC_PREFIX,             &Schema::feed_acc_prefix             },
+	{ RESERVED_LANGUAGE,               &Schema::feed_language               },
+	{ RESERVED_STOP_STRATEGY,          &Schema::feed_stop_strategy          },
+	{ RESERVED_STEM_STRATEGY,          &Schema::feed_stem_strategy          },
+	{ RESERVED_STEM_LANGUAGE,          &Schema::feed_stem_language          },
+	{ RESERVED_PARTIALS,               &Schema::feed_partials               },
+	{ RESERVED_ERROR,                  &Schema::feed_error                  },
+	{ RESERVED_NAMESPACE,              &Schema::feed_namespace              },
+	{ RESERVED_PARTIAL_PATHS,          &Schema::feed_partial_paths          },
+	{ RESERVED_INDEX_UUID_FIELD,       &Schema::feed_index_uuid_field       },
+	{ RESERVED_SCRIPT,                 &Schema::feed_script                 },
 });
 
 
@@ -3215,7 +3222,7 @@ Schema::_get_subproperties(T& properties, const std::string& meta_name)
 		specification.full_meta_name.append(1, DB_OFFSPRING_UNION).append(meta_name);
 	}
 
-	update_specification(*properties);
+	feed_specification(*properties);
 }
 
 
@@ -3711,14 +3718,14 @@ Schema::add_field(MsgPack*& mut_properties)
 
 
 void
-Schema::update_specification(const MsgPack& properties)
+Schema::feed_specification(const MsgPack& properties)
 {
-	L_CALL(this, "Schema::update_specification(%s)", repr(properties.to_string()).c_str());
+	L_CALL(this, "Schema::feed_specification(%s)", repr(properties.to_string()).c_str());
 
-	static const auto dpit_e = map_dispatch_update_properties.end();
+	static const auto dpit_e = map_dispatch_feed_properties.end();
 	const auto it_e = properties.end();
 	for (auto it = properties.begin(); it != it_e; ++it) {
-		const auto dpit = map_dispatch_update_properties.find(it->str());
+		const auto dpit = map_dispatch_feed_properties.find(it->str());
 		if (dpit != dpit_e) {
 			(this->*dpit->second)(it.value());
 		}
@@ -3727,9 +3734,9 @@ Schema::update_specification(const MsgPack& properties)
 
 
 void
-Schema::update_position(const MsgPack& prop_position)
+Schema::feed_position(const MsgPack& prop_position)
 {
-	L_CALL(this, "Schema::update_position(%s)", repr(prop_position.to_string()).c_str());
+	L_CALL(this, "Schema::feed_position(%s)", repr(prop_position.to_string()).c_str());
 
 	specification.position.clear();
 	if (prop_position.is_array()) {
@@ -3743,9 +3750,9 @@ Schema::update_position(const MsgPack& prop_position)
 
 
 void
-Schema::update_weight(const MsgPack& prop_weight)
+Schema::feed_weight(const MsgPack& prop_weight)
 {
-	L_CALL(this, "Schema::update_weight(%s)", repr(prop_weight.to_string()).c_str());
+	L_CALL(this, "Schema::feed_weight(%s)", repr(prop_weight.to_string()).c_str());
 
 	specification.weight.clear();
 	if (prop_weight.is_array()) {
@@ -3759,9 +3766,9 @@ Schema::update_weight(const MsgPack& prop_weight)
 
 
 void
-Schema::update_spelling(const MsgPack& prop_spelling)
+Schema::feed_spelling(const MsgPack& prop_spelling)
 {
-	L_CALL(this, "Schema::update_spelling(%s)", repr(prop_spelling.to_string()).c_str());
+	L_CALL(this, "Schema::feed_spelling(%s)", repr(prop_spelling.to_string()).c_str());
 
 	specification.spelling.clear();
 	if (prop_spelling.is_array()) {
@@ -3775,9 +3782,9 @@ Schema::update_spelling(const MsgPack& prop_spelling)
 
 
 void
-Schema::update_positions(const MsgPack& prop_positions)
+Schema::feed_positions(const MsgPack& prop_positions)
 {
-	L_CALL(this, "Schema::update_positions(%s)", repr(prop_positions.to_string()).c_str());
+	L_CALL(this, "Schema::feed_positions(%s)", repr(prop_positions.to_string()).c_str());
 
 	specification.positions.clear();
 	if (prop_positions.is_array()) {
@@ -3791,45 +3798,45 @@ Schema::update_positions(const MsgPack& prop_positions)
 
 
 void
-Schema::update_language(const MsgPack& prop_language)
+Schema::feed_language(const MsgPack& prop_language)
 {
-	L_CALL(this, "Schema::update_language(%s)", repr(prop_language.to_string()).c_str());
+	L_CALL(this, "Schema::feed_language(%s)", repr(prop_language.to_string()).c_str());
 
 	specification.language = prop_language.str();
 }
 
 
 void
-Schema::update_stop_strategy(const MsgPack& prop_stop_strategy)
+Schema::feed_stop_strategy(const MsgPack& prop_stop_strategy)
 {
-	L_CALL(this, "Schema::update_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
+	L_CALL(this, "Schema::feed_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
 
 	specification.stop_strategy = static_cast<StopStrategy>(prop_stop_strategy.u64());
 }
 
 
 void
-Schema::update_stem_strategy(const MsgPack& prop_stem_strategy)
+Schema::feed_stem_strategy(const MsgPack& prop_stem_strategy)
 {
-	L_CALL(this, "Schema::update_stem_strategy(%s)", repr(prop_stem_strategy.to_string()).c_str());
+	L_CALL(this, "Schema::feed_stem_strategy(%s)", repr(prop_stem_strategy.to_string()).c_str());
 
 	specification.stem_strategy = static_cast<StemStrategy>(prop_stem_strategy.u64());
 }
 
 
 void
-Schema::update_stem_language(const MsgPack& prop_stem_language)
+Schema::feed_stem_language(const MsgPack& prop_stem_language)
 {
-	L_CALL(this, "Schema::update_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
+	L_CALL(this, "Schema::feed_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
 
 	specification.stem_language = prop_stem_language.str();
 }
 
 
 void
-Schema::update_type(const MsgPack& prop_type)
+Schema::feed_type(const MsgPack& prop_type)
 {
-	L_CALL(this, "Schema::update_type(%s)", repr(prop_type.to_string()).c_str());
+	L_CALL(this, "Schema::feed_type(%s)", repr(prop_type.to_string()).c_str());
 
 	try {
 		specification.sep_types[SPC_FOREIGN_TYPE]  = (FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64();
@@ -3845,9 +3852,9 @@ Schema::update_type(const MsgPack& prop_type)
 
 
 void
-Schema::update_accuracy(const MsgPack& prop_accuracy)
+Schema::feed_accuracy(const MsgPack& prop_accuracy)
 {
-	L_CALL(this, "Schema::update_accuracy(%s)", repr(prop_accuracy.to_string()).c_str());
+	L_CALL(this, "Schema::feed_accuracy(%s)", repr(prop_accuracy.to_string()).c_str());
 
 	specification.accuracy.reserve(prop_accuracy.size());
 	for (const auto& acc : prop_accuracy) {
@@ -3857,9 +3864,9 @@ Schema::update_accuracy(const MsgPack& prop_accuracy)
 
 
 void
-Schema::update_acc_prefix(const MsgPack& prop_acc_prefix)
+Schema::feed_acc_prefix(const MsgPack& prop_acc_prefix)
 {
-	L_CALL(this, "Schema::update_acc_prefix(%s)", repr(prop_acc_prefix.to_string()).c_str());
+	L_CALL(this, "Schema::feed_acc_prefix(%s)", repr(prop_acc_prefix.to_string()).c_str());
 
 	specification.acc_prefix.reserve(prop_acc_prefix.size());
 	for (const auto& acc_p : prop_acc_prefix) {
@@ -3869,27 +3876,27 @@ Schema::update_acc_prefix(const MsgPack& prop_acc_prefix)
 
 
 void
-Schema::update_prefix(const MsgPack& prop_prefix)
+Schema::feed_prefix(const MsgPack& prop_prefix)
 {
-	L_CALL(this, "Schema::update_prefix(%s)", repr(prop_prefix.to_string()).c_str());
+	L_CALL(this, "Schema::feed_prefix(%s)", repr(prop_prefix.to_string()).c_str());
 
 	specification.local_prefix.field = prop_prefix.str();
 }
 
 
 void
-Schema::update_slot(const MsgPack& prop_slot)
+Schema::feed_slot(const MsgPack& prop_slot)
 {
-	L_CALL(this, "Schema::update_slot(%s)", repr(prop_slot.to_string()).c_str());
+	L_CALL(this, "Schema::feed_slot(%s)", repr(prop_slot.to_string()).c_str());
 
 	specification.slot = static_cast<Xapian::valueno>(prop_slot.u64());
 }
 
 
 void
-Schema::update_index(const MsgPack& prop_index)
+Schema::feed_index(const MsgPack& prop_index)
 {
-	L_CALL(this, "Schema::update_index(%s)", repr(prop_index.to_string()).c_str());
+	L_CALL(this, "Schema::feed_index(%s)", repr(prop_index.to_string()).c_str());
 
 	specification.index = static_cast<TypeIndex>(prop_index.u64());
 	specification.flags.has_index = true;
@@ -3897,9 +3904,9 @@ Schema::update_index(const MsgPack& prop_index)
 
 
 void
-Schema::update_store(const MsgPack& prop_store)
+Schema::feed_store(const MsgPack& prop_store)
 {
-	L_CALL(this, "Schema::update_store(%s)", repr(prop_store.to_string()).c_str());
+	L_CALL(this, "Schema::feed_store(%s)", repr(prop_store.to_string()).c_str());
 
 	specification.flags.parent_store = specification.flags.store;
 	specification.flags.store = prop_store.boolean() && specification.flags.parent_store;
@@ -3907,153 +3914,153 @@ Schema::update_store(const MsgPack& prop_store)
 
 
 void
-Schema::update_recurse(const MsgPack& prop_recurse)
+Schema::feed_recurse(const MsgPack& prop_recurse)
 {
-	L_CALL(this, "Schema::update_recurse(%s)", repr(prop_recurse.to_string()).c_str());
+	L_CALL(this, "Schema::feed_recurse(%s)", repr(prop_recurse.to_string()).c_str());
 
 	specification.flags.is_recurse = prop_recurse.boolean();
 }
 
 
 void
-Schema::update_dynamic(const MsgPack& prop_dynamic)
+Schema::feed_dynamic(const MsgPack& prop_dynamic)
 {
-	L_CALL(this, "Schema::update_dynamic(%s)", repr(prop_dynamic.to_string()).c_str());
+	L_CALL(this, "Schema::feed_dynamic(%s)", repr(prop_dynamic.to_string()).c_str());
 
 	specification.flags.dynamic = prop_dynamic.boolean();
 }
 
 
 void
-Schema::update_strict(const MsgPack& prop_strict)
+Schema::feed_strict(const MsgPack& prop_strict)
 {
-	L_CALL(this, "Schema::update_strict(%s)", repr(prop_strict.to_string()).c_str());
+	L_CALL(this, "Schema::feed_strict(%s)", repr(prop_strict.to_string()).c_str());
 
 	specification.flags.strict = prop_strict.boolean();
 }
 
 
 void
-Schema::update_date_detection(const MsgPack& prop_date_detection)
+Schema::feed_date_detection(const MsgPack& prop_date_detection)
 {
-	L_CALL(this, "Schema::update_date_detection(%s)", repr(prop_date_detection.to_string()).c_str());
+	L_CALL(this, "Schema::feed_date_detection(%s)", repr(prop_date_detection.to_string()).c_str());
 
 	specification.flags.date_detection = prop_date_detection.boolean();
 }
 
 
 void
-Schema::update_time_detection(const MsgPack& prop_time_detection)
+Schema::feed_time_detection(const MsgPack& prop_time_detection)
 {
-	L_CALL(this, "Schema::update_time_detection(%s)", repr(prop_time_detection.to_string()).c_str());
+	L_CALL(this, "Schema::feed_time_detection(%s)", repr(prop_time_detection.to_string()).c_str());
 
 	specification.flags.time_detection = prop_time_detection.boolean();
 }
 
 
 void
-Schema::update_timedelta_detection(const MsgPack& prop_timedelta_detection)
+Schema::feed_timedelta_detection(const MsgPack& prop_timedelta_detection)
 {
-	L_CALL(this, "Schema::update_timedelta_detection(%s)", repr(prop_timedelta_detection.to_string()).c_str());
+	L_CALL(this, "Schema::feed_timedelta_detection(%s)", repr(prop_timedelta_detection.to_string()).c_str());
 
 	specification.flags.timedelta_detection = prop_timedelta_detection.boolean();
 }
 
 
 void
-Schema::update_numeric_detection(const MsgPack& prop_numeric_detection)
+Schema::feed_numeric_detection(const MsgPack& prop_numeric_detection)
 {
-	L_CALL(this, "Schema::update_numeric_detection(%s)", repr(prop_numeric_detection.to_string()).c_str());
+	L_CALL(this, "Schema::feed_numeric_detection(%s)", repr(prop_numeric_detection.to_string()).c_str());
 
 	specification.flags.numeric_detection = prop_numeric_detection.boolean();
 }
 
 
 void
-Schema::update_geo_detection(const MsgPack& prop_geo_detection)
+Schema::feed_geo_detection(const MsgPack& prop_geo_detection)
 {
-	L_CALL(this, "Schema::update_geo_detection(%s)", repr(prop_geo_detection.to_string()).c_str());
+	L_CALL(this, "Schema::feed_geo_detection(%s)", repr(prop_geo_detection.to_string()).c_str());
 
 	specification.flags.geo_detection = prop_geo_detection.boolean();
 }
 
 
 void
-Schema::update_bool_detection(const MsgPack& prop_bool_detection)
+Schema::feed_bool_detection(const MsgPack& prop_bool_detection)
 {
-	L_CALL(this, "Schema::update_bool_detection(%s)", repr(prop_bool_detection.to_string()).c_str());
+	L_CALL(this, "Schema::feed_bool_detection(%s)", repr(prop_bool_detection.to_string()).c_str());
 
 	specification.flags.bool_detection = prop_bool_detection.boolean();
 }
 
 
 void
-Schema::update_string_detection(const MsgPack& prop_string_detection)
+Schema::feed_string_detection(const MsgPack& prop_string_detection)
 {
-	L_CALL(this, "Schema::update_string_detection(%s)", repr(prop_string_detection.to_string()).c_str());
+	L_CALL(this, "Schema::feed_string_detection(%s)", repr(prop_string_detection.to_string()).c_str());
 
 	specification.flags.string_detection = prop_string_detection.boolean();
 }
 
 
 void
-Schema::update_text_detection(const MsgPack& prop_text_detection)
+Schema::feed_text_detection(const MsgPack& prop_text_detection)
 {
-	L_CALL(this, "Schema::update_text_detection(%s)", repr(prop_text_detection.to_string()).c_str());
+	L_CALL(this, "Schema::feed_text_detection(%s)", repr(prop_text_detection.to_string()).c_str());
 
 	specification.flags.text_detection = prop_text_detection.boolean();
 }
 
 
 void
-Schema::update_term_detection(const MsgPack& prop_tm_detection)
+Schema::feed_term_detection(const MsgPack& prop_tm_detection)
 {
-	L_CALL(this, "Schema::update_term_detection(%s)", repr(prop_tm_detection.to_string()).c_str());
+	L_CALL(this, "Schema::feed_term_detection(%s)", repr(prop_tm_detection.to_string()).c_str());
 
 	specification.flags.term_detection = prop_tm_detection.boolean();
 }
 
 
 void
-Schema::update_uuid_detection(const MsgPack& prop_uuid_detection)
+Schema::feed_uuid_detection(const MsgPack& prop_uuid_detection)
 {
-	L_CALL(this, "Schema::update_uuid_detection(%s)", repr(prop_uuid_detection.to_string()).c_str());
+	L_CALL(this, "Schema::feed_uuid_detection(%s)", repr(prop_uuid_detection.to_string()).c_str());
 
 	specification.flags.uuid_detection = prop_uuid_detection.boolean();
 }
 
 
 void
-Schema::update_bool_term(const MsgPack& prop_bool_term)
+Schema::feed_bool_term(const MsgPack& prop_bool_term)
 {
-	L_CALL(this, "Schema::update_bool_term(%s)", repr(prop_bool_term.to_string()).c_str());
+	L_CALL(this, "Schema::feed_bool_term(%s)", repr(prop_bool_term.to_string()).c_str());
 
 	specification.flags.bool_term = prop_bool_term.boolean();
 }
 
 
 void
-Schema::update_partials(const MsgPack& prop_partials)
+Schema::feed_partials(const MsgPack& prop_partials)
 {
-	L_CALL(this, "Schema::update_partials(%s)", repr(prop_partials.to_string()).c_str());
+	L_CALL(this, "Schema::feed_partials(%s)", repr(prop_partials.to_string()).c_str());
 
 	specification.flags.partials = prop_partials.boolean();
 }
 
 
 void
-Schema::update_error(const MsgPack& prop_error)
+Schema::feed_error(const MsgPack& prop_error)
 {
-	L_CALL(this, "Schema::update_error(%s)", repr(prop_error.to_string()).c_str());
+	L_CALL(this, "Schema::feed_error(%s)", repr(prop_error.to_string()).c_str());
 
 	specification.error = prop_error.f64();
 }
 
 
 void
-Schema::update_namespace(const MsgPack& prop_namespace)
+Schema::feed_namespace(const MsgPack& prop_namespace)
 {
-	L_CALL(this, "Schema::update_namespace(%s)", repr(prop_namespace.to_string()).c_str());
+	L_CALL(this, "Schema::feed_namespace(%s)", repr(prop_namespace.to_string()).c_str());
 
 	specification.flags.is_namespace = prop_namespace.boolean();
 	specification.flags.has_namespace = true;
@@ -4061,9 +4068,9 @@ Schema::update_namespace(const MsgPack& prop_namespace)
 
 
 void
-Schema::update_partial_paths(const MsgPack& prop_partial_paths)
+Schema::feed_partial_paths(const MsgPack& prop_partial_paths)
 {
-	L_CALL(this, "Schema::update_partial_paths(%s)", repr(prop_partial_paths.to_string()).c_str());
+	L_CALL(this, "Schema::feed_partial_paths(%s)", repr(prop_partial_paths.to_string()).c_str());
 
 	specification.flags.partial_paths = prop_partial_paths.boolean();
 	specification.flags.has_partial_paths = true;
@@ -4071,18 +4078,18 @@ Schema::update_partial_paths(const MsgPack& prop_partial_paths)
 
 
 void
-Schema::update_index_uuid_field(const MsgPack& prop_index_uuid_field)
+Schema::feed_index_uuid_field(const MsgPack& prop_index_uuid_field)
 {
-	L_CALL(this, "Schema::update_index_uuid_field(%s)", repr(prop_index_uuid_field.to_string()).c_str());
+	L_CALL(this, "Schema::feed_index_uuid_field(%s)", repr(prop_index_uuid_field.to_string()).c_str());
 
 	specification.index_uuid_field = static_cast<UUIDFieldIndex>(prop_index_uuid_field.u64());
 }
 
 
 void
-Schema::update_script(const MsgPack& prop_script)
+Schema::feed_script(const MsgPack& prop_script)
 {
-	L_CALL(this, "Schema::update_script(%s)", repr(prop_script.to_string()).c_str());
+	L_CALL(this, "Schema::feed_script(%s)", repr(prop_script.to_string()).c_str());
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 	specification.script = std::make_unique<const MsgPack>(prop_script);
@@ -5750,7 +5757,7 @@ Schema::index(
 #endif
 			properties = &*mut_properties;
 		} else {
-			update_specification(*properties);
+			feed_specification(*properties);
 			static const auto ddit_e = map_dispatch_process_properties.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
@@ -5827,7 +5834,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		if (mut_properties->size() <= 1) {  // it's a new specification if there's only _version' here
 			specification.flags.field_found = false;
 		} else {
-			update_specification(*mut_properties);
+			feed_specification(*mut_properties);
 		}
 
 		static const auto wpit_e = map_dispatch_write_properties.end();
