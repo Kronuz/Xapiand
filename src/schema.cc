@@ -379,13 +379,13 @@ static const std::string str_set_acc_time(get_map_keys(map_acc_time));
 specification_t default_spc;
 
 
-const std::unordered_map<std::string, Schema::dispatch_set_default_spc> Schema::map_dispatch_set_default_spc({
+const std::unordered_map<std::string, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
 	{ ID_FIELD_NAME,  &Schema::set_default_spc_id },
 	{ CT_FIELD_NAME,  &Schema::set_default_spc_ct },
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::map_dispatch_write_properties({
+const std::unordered_map<std::string, Schema::dispatcher_write_reserved> Schema::map_dispatch_write_properties({
 	{ RESERVED_WEIGHT,                 &Schema::write_weight                       },
 	{ RESERVED_POSITION,               &Schema::write_position                     },
 	{ RESERVED_SPELLING,               &Schema::write_spelling                     },
@@ -410,46 +410,10 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 	{ RESERVED_INDEX_UUID_FIELD,       &Schema::write_index_uuid_field             },
 	{ RESERVED_VERSION,                &Schema::write_version                      },
 	{ RESERVED_SCHEMA,                 &Schema::write_schema                       },
-	{ RESERVED_SCRIPT,                 &Schema::write_script                       },
-	{ RESERVED_LANGUAGE,               &Schema::write_language                     },
-	{ RESERVED_SLOT,                   &Schema::write_slot                         },
-	{ RESERVED_STOP_STRATEGY,          &Schema::write_stop_strategy                },
-	{ RESERVED_STEM_STRATEGY,          &Schema::write_stem_strategy                },
-	{ RESERVED_STEM_LANGUAGE,          &Schema::write_stem_language                },
-	{ RESERVED_TYPE,                   &Schema::write_type                         },
-	{ RESERVED_BOOL_TERM,              &Schema::write_bool_term                    },
-	{ RESERVED_ACCURACY,               &Schema::write_accuracy                     },
-	{ RESERVED_PARTIALS,               &Schema::write_partials                     },
-	{ RESERVED_ERROR,                  &Schema::write_error                        },
-	{ RESERVED_VALUE,                  &Schema::write_value                        },
-	{ RESERVED_FLOAT,                  &Schema::write_cast_object                  },
-	{ RESERVED_POSITIVE,               &Schema::write_cast_object                  },
-	{ RESERVED_INTEGER,                &Schema::write_cast_object                  },
-	{ RESERVED_BOOLEAN,                &Schema::write_cast_object                  },
-	{ RESERVED_TERM,                   &Schema::write_cast_object                  },
-	{ RESERVED_TEXT,                   &Schema::write_cast_object                  },
-	{ RESERVED_STRING,                 &Schema::write_cast_object                  },
-	{ RESERVED_DATE,                   &Schema::write_cast_object                  },
-	{ RESERVED_UUID,                   &Schema::write_cast_object                  },
-	{ RESERVED_EWKT,                   &Schema::write_cast_object                  },
-	{ RESERVED_POINT,                  &Schema::write_cast_object                  },
-	{ RESERVED_CIRCLE,                 &Schema::write_cast_object                  },
-	{ RESERVED_CONVEX,                 &Schema::write_cast_object                  },
-	{ RESERVED_POLYGON,                &Schema::write_cast_object                  },
-	{ RESERVED_CHULL,                  &Schema::write_cast_object                  },
-	{ RESERVED_MULTIPOINT,             &Schema::write_cast_object                  },
-	{ RESERVED_MULTICIRCLE,            &Schema::write_cast_object                  },
-	{ RESERVED_MULTICONVEX,            &Schema::write_cast_object                  },
-	{ RESERVED_MULTIPOLYGON,           &Schema::write_cast_object                  },
-	{ RESERVED_MULTICHULL,             &Schema::write_cast_object                  },
-	{ RESERVED_GEO_COLLECTION,         &Schema::write_cast_object                  },
-	{ RESERVED_GEO_INTERSECTION,       &Schema::write_cast_object                  },
-	{ RESERVED_CHAI,                   &Schema::write_cast_object                  },
-	{ RESERVED_ECMA,                   &Schema::write_cast_object                  },
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::map_dispatch_feed_properties({
+const std::unordered_map<std::string, Schema::dispatcher_update_reserved> Schema::map_dispatch_feed_properties({
 	{ RESERVED_WEIGHT,                 &Schema::feed_weight                        },
 	{ RESERVED_POSITION,               &Schema::feed_position                      },
 	{ RESERVED_SPELLING,               &Schema::feed_spelling                      },
@@ -488,7 +452,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_process_properties_without_concrete_type({
+const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schema::map_dispatch_process_properties({
 	{ RESERVED_LANGUAGE,               &Schema::process_language                   },
 	{ RESERVED_SLOT,                   &Schema::process_slot                       },
 	{ RESERVED_STOP_STRATEGY,          &Schema::process_stop_strategy              },
@@ -502,7 +466,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_process_properties({
+const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schema::map_dispatch_process_concrete_properties({
 	{ RESERVED_WEIGHT,                 &Schema::process_weight                     },
 	{ RESERVED_POSITION,               &Schema::process_position                   },
 	{ RESERVED_SPELLING,               &Schema::process_spelling                   },
@@ -566,7 +530,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_get_readable({
+const std::unordered_map<std::string, Schema::dispatcher_readable> Schema::map_get_readable({
 	{ RESERVED_TYPE,                &Schema::readable_type               },
 	{ RESERVED_PREFIX,              &Schema::readable_prefix             },
 	{ RESERVED_STOP_STRATEGY,       &Schema::readable_stop_strategy      },
@@ -1931,11 +1895,8 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 {
 	L_CALL(this, "Schema::_validate_required_data(%s)", repr(mut_properties.to_string()).c_str());
 
-	static const auto dsit_e = map_dispatch_set_default_spc.end();
-	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
-	if (dsit != dsit_e) {
-		(this->*dsit->second)(mut_properties);
-	}
+
+	dispatch_set_default_spc(mut_properties);
 
 	std::set<uint64_t> set_acc;
 	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
@@ -3257,7 +3218,7 @@ Schema::_get_subproperties(T& properties, const std::string& meta_name)
 		specification.full_meta_name.append(1, DB_OFFSPRING_UNION).append(meta_name);
 	}
 
-	feed_specification(*properties);
+	dispatch_feed_properties(*properties);
 }
 
 
@@ -3279,7 +3240,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 				data = &(*data)[norm_field_name];
 			}
 		}
-		process_document_properties(object, fields);
+		dispatch_process_properties(object, fields);
 		auto norm_field_name = detect_dynamic(*it_last);
 		update_prefixes();
 		specification.flags.inside_namespace = true;
@@ -3350,7 +3311,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 		restart_specification();
 		try {
 			_get_subproperties(properties, field_name);
-			process_document_properties(object, fields);
+			dispatch_process_properties(object, fields);
 			update_prefixes();
 			if (specification.flags.store) {
 				data = &(*data)[field_name];
@@ -3360,7 +3321,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 			if (specification.flags.uuid_field) {
 				try {
 					_get_subproperties(properties, specification.meta_name);
-					process_document_properties(object, fields);
+					dispatch_process_properties(object, fields);
 					update_prefixes();
 					if (specification.flags.store) {
 						data = &(*data)[norm_field_name];
@@ -3510,7 +3471,7 @@ Schema::get_subproperties_write(MsgPack*& mut_properties, const std::string& nam
 	restart_specification();
 	try {
 		_get_subproperties(mut_properties, field_name);
-		process_document_properties_write(mut_properties, object, fields);
+		dispatch_write_properties(*mut_properties, object, fields);
 	} catch (const std::out_of_range&) {
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
@@ -3563,30 +3524,114 @@ Schema::detect_dynamic(const std::string& field_name)
 }
 
 
-void
-Schema::process_document_properties(const MsgPack& object, FieldVector& fields)
+inline void
+Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields)
 {
-	L_CALL(this, "Schema::process_document_properties(%s, <fields>)", repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::dispatch_process_concrete_properties(%s, <fields>)", repr(object.to_string()).c_str());
 
-	static const auto ddit_e = map_dispatch_process_properties.end();
+	static const auto ddit_e = map_dispatch_process_concrete_properties.end();
 	const auto it_e = object.end();
-	if (specification.flags.concrete) {
-		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
-			const auto ddit = map_dispatch_process_properties.find(str_key);
+	for (auto it = object.begin(); it != it_e; ++it) {
+		auto str_key = it->str();
+		const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
+		if (ddit == ddit_e) {
+			fields.emplace_back(std::move(str_key), &it.value());
+		} else {
+			(this->*ddit->second)(str_key, it.value());
+		}
+	}
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	normalize_script();
+#endif
+}
+
+
+inline void
+Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fields)
+{
+	L_CALL(this, "Schema::dispatch_process_all_properties(%s, <fields>)", repr(object.to_string()).c_str());
+
+	static const auto wtit_e = map_dispatch_process_properties.end();
+	static const auto ddit_e = map_dispatch_process_concrete_properties.end();
+	const auto it_e = object.end();
+	for (auto it = object.begin(); it != it_e; ++it) {
+		auto str_key = it->str();
+		const auto wtit = map_dispatch_process_properties.find(str_key);
+		if (wtit == wtit_e) {
+			const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
 			if (ddit == ddit_e) {
 				fields.emplace_back(std::move(str_key), &it.value());
 			} else {
 				(this->*ddit->second)(str_key, it.value());
 			}
+		} else {
+			(this->*wtit->second)(str_key, it.value());
 		}
+	}
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	normalize_script();
+#endif
+}
+
+
+inline void
+Schema::dispatch_process_properties(const MsgPack& object, FieldVector& fields)
+{
+	if (specification.flags.concrete) {
+		dispatch_process_concrete_properties(object, fields);
 	} else {
-		static const auto wtit_e = map_dispatch_process_properties_without_concrete_type.end();
-		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
-			const auto wtit = map_dispatch_process_properties_without_concrete_type.find(str_key);
+		dispatch_process_all_properties(object, fields);
+	}
+}
+
+
+inline void
+Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields)
+{
+	L_CALL(this, "Schema::dispatch_write_concrete_properties(%s, %s, <fields>)", repr(mut_properties.to_string()).c_str(), repr(object.to_string()).c_str());
+
+	static const auto wpit_e = map_dispatch_write_properties.end();
+	static const auto ddit_e = map_dispatch_process_concrete_properties.end();
+	const auto it_e = object.end();
+	for (auto it = object.begin(); it != it_e; ++it) {
+		auto str_key = it->str();
+		const auto wpit = map_dispatch_write_properties.find(str_key);
+		if (wpit == wpit_e) {
+			const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
+			if (ddit == ddit_e) {
+				fields.emplace_back(std::move(str_key), &it.value());
+			} else {
+				(this->*ddit->second)(str_key, it.value());
+			}
+		} else {
+			(this->*wpit->second)(mut_properties, str_key, it.value());
+		}
+	}
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	write_script(mut_properties);
+#endif
+}
+
+
+void
+Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields)
+{
+	L_CALL(this, "Schema::dispatch_write_all_properties(%s, %s, <fields>)", repr(mut_properties.to_string()).c_str(), repr(object.to_string()).c_str());
+
+	static const auto wpit_e = map_dispatch_write_properties.end();
+	static const auto wtit_e = map_dispatch_process_properties.end();
+	static const auto ddit_e = map_dispatch_process_concrete_properties.end();
+	const auto it_e = object.end();
+	for (auto it = object.begin(); it != it_e; ++it) {
+		auto str_key = it->str();
+		const auto wpit = map_dispatch_write_properties.find(str_key);
+		if (wpit == wpit_e) {
+			const auto wtit = map_dispatch_process_properties.find(str_key);
 			if (wtit == wtit_e) {
-				const auto ddit = map_dispatch_process_properties.find(str_key);
+				const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -3595,62 +3640,36 @@ Schema::process_document_properties(const MsgPack& object, FieldVector& fields)
 			} else {
 				(this->*wtit->second)(str_key, it.value());
 			}
+		} else {
+			(this->*wpit->second)(mut_properties, str_key, it.value());
 		}
 	}
+
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	normalize_script();
+	write_script(mut_properties);
 #endif
 }
 
 
-void
-Schema::process_document_properties_write(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields)
+inline void
+Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields)
 {
-	L_CALL(this, "Schema::process_document_properties_write(%s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
-
-	static const auto wpit_e = map_dispatch_write_properties.end();
-	static const auto ddit_e = map_dispatch_process_properties.end();
-	const auto it_e = object.end();
 	if (specification.flags.concrete) {
-		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
-			const auto wpit = map_dispatch_write_properties.find(str_key);
-			if (wpit == wpit_e) {
-				const auto ddit = map_dispatch_process_properties.find(str_key);
-				if (ddit == ddit_e) {
-					fields.emplace_back(std::move(str_key), &it.value());
-				} else {
-					(this->*ddit->second)(str_key, it.value());
-				}
-			} else {
-				(this->*wpit->second)(*mut_properties, str_key, it.value());
-			}
-		}
+		dispatch_write_concrete_properties(mut_properties, object, fields);
 	} else {
-		static const auto wtit_e = map_dispatch_process_properties_without_concrete_type.end();
-		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
-			const auto wpit = map_dispatch_write_properties.find(str_key);
-			if (wpit == wpit_e) {
-				const auto wtit = map_dispatch_process_properties_without_concrete_type.find(str_key);
-				if (wtit == wtit_e) {
-					const auto ddit = map_dispatch_process_properties.find(str_key);
-					if (ddit == ddit_e) {
-						fields.emplace_back(std::move(str_key), &it.value());
-					} else {
-						(this->*ddit->second)(str_key, it.value());
-					}
-				} else {
-					(this->*wtit->second)(str_key, it.value());
-				}
-			} else {
-				(this->*wpit->second)(*mut_properties, str_key, it.value());
-			}
-		}
+		dispatch_write_all_properties(mut_properties, object, fields);
 	}
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	write_script(*mut_properties);
-#endif
+}
+
+
+inline void
+Schema::dispatch_set_default_spc(MsgPack& mut_properties)
+{
+	static const auto dsit_e = map_dispatch_set_default_spc.end();
+	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
+	if (dsit != dsit_e) {
+		(this->*dsit->second)(mut_properties);
+	}
 }
 
 
@@ -3677,39 +3696,10 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 	}
 
 	// Write obj specifications.
-	static const auto wpit_e = map_dispatch_write_properties.end();
-	static const auto wtit_e = map_dispatch_process_properties_without_concrete_type.end();
-	static const auto ddit_e = map_dispatch_process_properties.end();
-	const auto it_e = object.end();
-	for (auto it = object.begin(); it != it_e; ++it) {
-		auto str_key = it->str();
-		const auto wpit = map_dispatch_write_properties.find(str_key);
-		if (wpit == wpit_e) {
-			const auto wtit = map_dispatch_process_properties_without_concrete_type.find(str_key);
-			if (wtit == wtit_e) {
-				const auto ddit = map_dispatch_process_properties.find(str_key);
-				if (ddit == ddit_e) {
-					fields.emplace_back(std::move(str_key), &it.value());
-				} else {
-					(this->*ddit->second)(str_key, it.value());
-				}
-			} else {
-				(this->*wtit->second)(str_key, it.value());
-			}
-		} else {
-			(this->*wpit->second)(*mut_properties, str_key, it.value());
-		}
-	}
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	write_script(*mut_properties);
-#endif
+	dispatch_write_all_properties(*mut_properties, object, fields);
 
 	// Load default specifications.
-	static const auto dsit_e = map_dispatch_set_default_spc.end();
-	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
-	if (dsit != dsit_e) {
-		(this->*dsit->second)(*mut_properties);
-	}
+	dispatch_set_default_spc(*mut_properties);
 
 	// Write prefix in properties.
 	(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix.field;
@@ -3739,11 +3729,7 @@ Schema::add_field(MsgPack*& mut_properties)
 	}
 
 	// Load default specifications.
-	static const auto dsit_e = map_dispatch_set_default_spc.end();
-	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
-	if (dsit != dsit_e) {
-		(this->*dsit->second)(*mut_properties);
-	}
+	dispatch_set_default_spc(*mut_properties);
 
 	// Write prefix in properties.
 	(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix.field;
@@ -3753,9 +3739,9 @@ Schema::add_field(MsgPack*& mut_properties)
 
 
 void
-Schema::feed_specification(const MsgPack& properties)
+Schema::dispatch_feed_properties(const MsgPack& properties)
 {
-	L_CALL(this, "Schema::feed_specification(%s)", repr(properties.to_string()).c_str());
+	L_CALL(this, "Schema::dispatch_feed_properties(%s)", repr(properties.to_string()).c_str());
 
 	static const auto dpit_e = map_dispatch_feed_properties.end();
 	const auto it_e = properties.end();
@@ -4472,123 +4458,6 @@ Schema::write_schema(MsgPack&, const std::string& prop_name, const MsgPack& doc_
 	L_CALL(this, "Schema::write_schema(%s)", repr(doc_schema.to_string()).c_str());
 
 	consistency_schema(prop_name, doc_schema);
-}
-
-
-void
-Schema::write_script(MsgPack&, const std::string& prop_name, const MsgPack& doc_script)
-{
-	L_CALL(this, "Schema::write_script(%s)", repr(doc_script.to_string()).c_str());
-
-	process_script(prop_name, doc_script);
-}
-
-
-void
-Schema::write_language(MsgPack&, const std::string& prop_name, const MsgPack& doc_language)
-{
-	L_CALL(this, "Schema::write_language(%s)", repr(doc_language.to_string()).c_str());
-
-	process_language(prop_name, doc_language);
-}
-
-
-void
-Schema::write_slot(MsgPack&, const std::string& prop_name, const MsgPack& doc_slot)
-{
-	L_CALL(this, "Schema::write_slot(%s)", repr(doc_slot.to_string()).c_str());
-
-	process_slot(prop_name, doc_slot);
-}
-
-
-void
-Schema::write_stop_strategy(MsgPack&, const std::string& prop_name, const MsgPack& doc_stop_strategy)
-{
-	L_CALL(this, "Schema::write_stop_strategy(%s)", repr(doc_stop_strategy.to_string()).c_str());
-
-	process_stop_strategy(prop_name, doc_stop_strategy);
-}
-
-
-void
-Schema::write_stem_strategy(MsgPack&, const std::string& prop_name, const MsgPack& doc_stem_strategy)
-{
-	L_CALL(this, "Schema::write_stem_strategy(%s)", repr(doc_stem_strategy.to_string()).c_str());
-
-	process_stem_strategy(prop_name, doc_stem_strategy);
-}
-
-
-void
-Schema::write_stem_language(MsgPack&, const std::string& prop_name, const MsgPack& doc_stem_language)
-{
-	L_CALL(this, "Schema::write_stem_language(%s)", repr(doc_stem_language.to_string()).c_str());
-
-	process_stem_language(prop_name, doc_stem_language);
-}
-
-
-void
-Schema::write_type(MsgPack&, const std::string& prop_name, const MsgPack& doc_type)
-{
-	L_CALL(this, "Schema::write_type(%s)", repr(doc_type.to_string()).c_str());
-
-	process_type(prop_name, doc_type);
-}
-
-
-void
-Schema::write_bool_term(MsgPack&, const std::string& prop_name, const MsgPack& doc_bool_term)
-{
-	L_CALL(this, "Schema::write_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
-
-	process_bool_term(prop_name, doc_bool_term);
-}
-
-
-void
-Schema::write_accuracy(MsgPack&, const std::string& prop_name, const MsgPack& doc_accuracy)
-{
-	L_CALL(this, "Schema::write_accuracy(%s)", repr(doc_accuracy.to_string()).c_str());
-
-	process_accuracy(prop_name, doc_accuracy);
-}
-
-
-void
-Schema::write_partials(MsgPack&, const std::string& prop_name, const MsgPack& doc_partials)
-{
-	L_CALL(this, "Schema::write_partials(%s)", repr(doc_partials.to_string()).c_str());
-
-	process_partials(prop_name, doc_partials);
-}
-
-
-void
-Schema::write_error(MsgPack&, const std::string& prop_name, const MsgPack& doc_error)
-{
-	L_CALL(this, "Schema::write_error(%s)", repr(doc_error.to_string()).c_str());
-
-	process_error(prop_name, doc_error);
-}
-
-
-void
-Schema::write_value(MsgPack&, const std::string& prop_name, const MsgPack& doc_value)
-{
-	L_CALL(this, "Schema::write_value(%s)", repr(doc_value.to_string()).c_str());
-
-	process_value(prop_name, doc_value);
-}
-
-
-void
-Schema::write_cast_object(MsgPack&, const std::string& prop_name, const MsgPack& doc_cast_object)
-{
-	L_CALL(this, "Schema::write_cast_object(%s)", repr(doc_cast_object.to_string()).c_str());
-
-	process_cast_object(prop_name, doc_cast_object);
 }
 
 
@@ -5557,7 +5426,7 @@ void
 Schema::write_script(MsgPack& properties)
 {
 	// RESERVED_SCRIPT isn't heritable and can't change once fixed.
-	L_CALL(this, "Schema::write_script()");
+	L_CALL(this, "Schema::write_script(%s)", repr(properties.to_string()).c_str());
 
 	if (specification.script) {
 		Script script(*specification.script);
@@ -5900,11 +5769,11 @@ Schema::index(
 #endif
 			properties = &*mut_properties;
 		} else {
-			feed_specification(*properties);
-			static const auto ddit_e = map_dispatch_process_properties.end();
+			dispatch_feed_properties(*properties);
+			static const auto ddit_e = map_dispatch_process_concrete_properties.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
-				const auto ddit = map_dispatch_process_properties.find(str_key);
+				const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -5924,10 +5793,10 @@ Schema::index(
 			}
 			// Rebuild fields with new values.
 			fields.clear();
-			static const auto ddit_e = map_dispatch_process_properties.end();
+			static const auto ddit_e = map_dispatch_process_concrete_properties.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
-				const auto ddit = map_dispatch_process_properties.find(str_key);
+				const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				}
@@ -5977,7 +5846,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		if (mut_properties->size() <= 1) {  // it's a new specification if there's only _version' here
 			specification.flags.field_found = false;
 		} else {
-			feed_specification(*mut_properties);
+			dispatch_feed_properties(*mut_properties);
 		}
 
 		static const auto wpit_e = map_dispatch_write_properties.end();

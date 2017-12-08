@@ -460,20 +460,20 @@ class DatabaseHandler;
 
 
 class Schema {
-	using dispatch_set_default_spc   = void (Schema::*)(MsgPack&);
-	using dispatch_write_reserved    = void (Schema::*)(MsgPack&, const std::string&, const MsgPack&);
-	using dispatch_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
-	using dispatch_update_reserved   = void (Schema::*)(const MsgPack&);
-	using dispatch_readable          = bool (*)(MsgPack&, MsgPack&);
+	using dispatcher_set_default_spc   = void (Schema::*)(MsgPack&);
+	using dispatcher_write_reserved    = void (Schema::*)(MsgPack&, const std::string&, const MsgPack&);
+	using dispatcher_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
+	using dispatcher_update_reserved   = void (Schema::*)(const MsgPack&);
+	using dispatcher_readable          = bool (*)(MsgPack&, MsgPack&);
 
 	using FieldVector = std::vector<std::pair<std::string, const MsgPack*>>;
 
-	static const std::unordered_map<std::string, dispatch_set_default_spc> map_dispatch_set_default_spc;
-	static const std::unordered_map<std::string, dispatch_write_reserved> map_dispatch_write_properties;
-	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_feed_properties;
-	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_process_properties_without_concrete_type;
-	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_process_properties;
-	static const std::unordered_map<std::string, dispatch_readable> map_get_readable;
+	static const std::unordered_map<std::string, dispatcher_set_default_spc> map_dispatch_set_default_spc;
+	static const std::unordered_map<std::string, dispatcher_write_reserved> map_dispatch_write_properties;
+	static const std::unordered_map<std::string, dispatcher_update_reserved> map_dispatch_feed_properties;
+	static const std::unordered_map<std::string, dispatcher_process_reserved> map_dispatch_process_properties;
+	static const std::unordered_map<std::string, dispatcher_process_reserved> map_dispatch_process_concrete_properties;
+	static const std::unordered_map<std::string, dispatcher_readable> map_get_readable;
 
 	std::shared_ptr<const MsgPack> schema;
 	std::unique_ptr<MsgPack> mut_schema;
@@ -652,8 +652,13 @@ class Schema {
 	 * Update specification using object's properties.
 	 */
 
-	void process_document_properties(const MsgPack& object, FieldVector& fields);
-	void process_document_properties_write(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields);
+	void dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields);
+	void dispatch_process_all_properties(const MsgPack& object, FieldVector& fields);
+	void dispatch_process_properties(const MsgPack& object, FieldVector& fields);
+	void dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields);
+	void dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields);
+	void dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields);
+	void dispatch_set_default_spc(MsgPack& mut_properties);
 
 
 	/*
@@ -667,7 +672,7 @@ class Schema {
 	/*
 	 * Specification is fed with the properties.
 	 */
-	void feed_specification(const MsgPack& properties);
+	void dispatch_feed_properties(const MsgPack& properties);
 
 	/*
 	 * Functions for feeding specification using the properties in schema.
@@ -738,19 +743,6 @@ class Schema {
 	void write_index_uuid_field(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index_uuid_field);
 	void write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version);
 	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
-	void write_script(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_language(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_slot(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_stop_strategy(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_stem_strategy(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_stem_language(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_type(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_bool_term(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_accuracy(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_partials(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_error(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_value(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
-	void write_cast_object(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_script);
 
 
 	/*
