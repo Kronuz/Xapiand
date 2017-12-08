@@ -64,7 +64,7 @@ class Script {
 	Type type;
 	bool with_value;
 	bool with_data;
-	std::array<FieldType, SPC_SIZE_TYPES> sep_types;
+	std::array<FieldType, SPC_TOTAL_TYPES> sep_types;
 
 public:
 	Script(const MsgPack& _obj);

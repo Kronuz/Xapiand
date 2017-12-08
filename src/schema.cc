@@ -63,7 +63,7 @@ const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
  * 3. Feed specification_t with the object sent by the user using process_*,
  *    except those that are already fixed because are reserved to be and
  *    they already exist in the metadata.
- * 4. If the field in the schema is normal and still has no RESERVED_TYPE (field_with_type)
+ * 4. If the field in the schema is normal and still has no RESERVED_TYPE (concrete)
  *    and a value is received for the field, call validate_required_data() to
  *    initialize the specification with validated data sent by the user.
  * 5. If the field is namespace or has partial paths call validate_required_namespace_data() to
@@ -153,7 +153,7 @@ const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field({
 });
 
 
-const std::unordered_map<std::string, std::array<FieldType, SPC_SIZE_TYPES>> map_type({
+const std::unordered_map<std::string, std::array<FieldType, SPC_TOTAL_TYPES>> map_type({
 	{ "array",                        {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }} },
 	{ "array/boolean",                {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }} },
 	{ "array/date",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }} },
@@ -404,7 +404,7 @@ const std::unordered_map<std::string, Schema::dispatch_write_reserved> Schema::m
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_without_type({
+const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_document_properties_without_concrete_type({
 	{ RESERVED_LANGUAGE,           &Schema::process_language        },
 	{ RESERVED_SLOT,               &Schema::process_slot            },
 	{ RESERVED_STOP_STRATEGY,      &Schema::process_stop_strategy   },
@@ -418,7 +418,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_document({
+const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema::map_dispatch_document_properties({
 	{ RESERVED_WEIGHT,                 &Schema::process_weight                     },
 	{ RESERVED_POSITION,               &Schema::process_position                   },
 	{ RESERVED_SPELLING,               &Schema::process_spelling                   },
@@ -482,7 +482,7 @@ const std::unordered_map<std::string, Schema::dispatch_process_reserved> Schema:
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::map_dispatch_properties({
+const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::map_dispatch_update_properties({
 	{ RESERVED_WEIGHT,                 &Schema::update_weight                 },
 	{ RESERVED_POSITION,               &Schema::update_position               },
 	{ RESERVED_SPELLING,               &Schema::update_spelling               },
@@ -521,7 +521,7 @@ const std::unordered_map<std::string, Schema::dispatch_update_reserved> Schema::
 });
 
 
-const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_dispatch_readable({
+const std::unordered_map<std::string, Schema::dispatch_readable> Schema::map_get_readable({
 	{ RESERVED_TYPE,                &Schema::readable_type               },
 	{ RESERVED_PREFIX,              &Schema::readable_prefix             },
 	{ RESERVED_STOP_STRATEGY,       &Schema::readable_stop_strategy      },
@@ -599,7 +599,7 @@ required_spc_t::flags_t::flags_t()
 	  is_namespace(false),
 	  optimal(false),
 	  field_found(true),
-	  field_with_type(false),
+	  concrete(false),
 	  complete(false),
 	  uuid_field(false),
 	  uuid_path(false),
@@ -720,7 +720,7 @@ required_spc_t::operator=(required_spc_t&& o) noexcept
 }
 
 
-std::array<FieldType, SPC_SIZE_TYPES>
+std::array<FieldType, SPC_TOTAL_TYPES>
 required_spc_t::get_types(const std::string& str_type)
 {
 	L_CALL(nullptr, "required_spc_t::get_types(%s)", repr(str_type).c_str());
@@ -735,10 +735,10 @@ required_spc_t::get_types(const std::string& str_type)
 
 
 std::string
-required_spc_t::get_str_type(const std::array<FieldType, SPC_SIZE_TYPES>& sep_types)
+required_spc_t::get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 {
 	L_CALL(nullptr, "required_spc_t::get_str_type({ %d, %d, %d, %d })", toUType(sep_types[SPC_FOREIGN_TYPE]), toUType(sep_types[SPC_OBJECT_TYPE]),
-		toUType(sep_types[SPC_ARRAY_TYPE]), toUType(sep_types[SPC_INDEX_TYPE]));
+		toUType(sep_types[SPC_ARRAY_TYPE]), toUType(sep_types[SPC_CONCRETE_TYPE]));
 
 	std::string result;
 	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
@@ -752,9 +752,9 @@ required_spc_t::get_str_type(const std::array<FieldType, SPC_SIZE_TYPES>& sep_ty
 		if (!result.empty()) result += "/";
 		result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
 	}
-	if (sep_types[SPC_INDEX_TYPE] != FieldType::EMPTY) {
+	if (sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
 		if (!result.empty()) result += "/";
-		result += Serialise::type(sep_types[SPC_INDEX_TYPE]);
+		result += Serialise::type(sep_types[SPC_CONCRETE_TYPE]);
 	}
 	return result;
 }
@@ -770,7 +770,7 @@ required_spc_t::set_types(const std::string& str_type)
 
 
 index_spc_t::index_spc_t(required_spc_t&& spc)
-	: type(std::move(spc.sep_types[SPC_INDEX_TYPE])),
+	: type(std::move(spc.sep_types[SPC_CONCRETE_TYPE])),
 	  prefix(std::move(spc.prefix.field)),
 	  slot(std::move(spc.slot)),
 	  accuracy(std::move(spc.accuracy)),
@@ -778,7 +778,7 @@ index_spc_t::index_spc_t(required_spc_t&& spc)
 
 
 index_spc_t::index_spc_t(const required_spc_t& spc)
-	: type(spc.sep_types[SPC_INDEX_TYPE]),
+	: type(spc.sep_types[SPC_CONCRETE_TYPE]),
 	  prefix(spc.prefix.field),
 	  slot(spc.slot),
 	  accuracy(spc.accuracy),
@@ -977,7 +977,7 @@ specification_t::get_global(FieldType field_type)
 void
 specification_t::update(index_spc_t&& spc)
 {
-	sep_types[SPC_INDEX_TYPE] = std::move(spc.type);
+	sep_types[SPC_CONCRETE_TYPE] = std::move(spc.type);
 	prefix.field = std::move(spc.prefix);
 	slot = std::move(spc.slot);
 	accuracy = std::move(spc.accuracy);
@@ -988,7 +988,7 @@ specification_t::update(index_spc_t&& spc)
 void
 specification_t::update(const index_spc_t& spc)
 {
-	sep_types[SPC_INDEX_TYPE] = spc.type;
+	sep_types[SPC_CONCRETE_TYPE] = spc.type;
 	prefix.field = spc.prefix;
 	slot = spc.slot;
 	accuracy = spc.accuracy;
@@ -1090,7 +1090,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_PARTIAL_PATHS       << ": " << (flags.partial_paths         ? "true" : "false") << "\n";
 	str << "\t" << "optimal"                    << ": " << (flags.optimal               ? "true" : "false") << "\n";
 	str << "\t" << "field_found"                << ": " << (flags.field_found           ? "true" : "false") << "\n";
-	str << "\t" << "field_with_type"            << ": " << (flags.field_with_type       ? "true" : "false") << "\n";
+	str << "\t" << "concrete"                   << ": " << (flags.concrete       ? "true" : "false") << "\n";
 	str << "\t" << "complete"                   << ": " << (flags.complete              ? "true" : "false") << "\n";
 	str << "\t" << "uuid_field"                 << ": " << (flags.uuid_field            ? "true" : "false") << "\n";
 	str << "\t" << "uuid_path"                  << ": " << (flags.uuid_path             ? "true" : "false") << "\n";
@@ -1137,7 +1137,7 @@ Schema::get_initial_schema()
 
 	MsgPack new_schema({ {
 		DB_SCHEMA, {
-			{ RESERVED_TYPE,  std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } } },
+			{ RESERVED_TYPE,  std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } } },
 			{ RESERVED_VALUE, { { RESERVED_VERSION, DB_VERSION_SCHEMA } } }
 		}
 	} });
@@ -1218,7 +1218,7 @@ Schema::restart_specification()
 	specification.flags.has_index            = default_spc.flags.has_index;
 	specification.flags.has_namespace        = default_spc.flags.has_namespace;
 
-	specification.flags.field_with_type      = default_spc.flags.field_with_type;
+	specification.flags.concrete             = default_spc.flags.concrete;
 	specification.flags.complete             = default_spc.flags.complete;
 	specification.flags.uuid_field           = default_spc.flags.uuid_field;
 
@@ -1242,7 +1242,7 @@ Schema::restart_namespace_specification()
 	specification.flags.bool_term        = default_spc.flags.bool_term;
 	specification.flags.has_bool_term    = default_spc.flags.has_bool_term;
 
-	specification.flags.field_with_type  = default_spc.flags.field_with_type;
+	specification.flags.concrete         = default_spc.flags.concrete;
 	specification.flags.complete         = default_spc.flags.complete;
 	specification.flags.uuid_field       = default_spc.flags.uuid_field;
 
@@ -1398,7 +1398,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 		index_item(doc, item_value, data, pos);
 	} else {
 		bool add_value = true;
-		index_spc_t start_index_spc(specification.sep_types[SPC_INDEX_TYPE], std::move(specification.prefix.field), specification.slot, std::move(specification.accuracy), std::move(specification.acc_prefix));
+		index_spc_t start_index_spc(specification.sep_types[SPC_CONCRETE_TYPE], std::move(specification.prefix.field), specification.slot, std::move(specification.accuracy), std::move(specification.acc_prefix));
 		for (const auto& index_spc : specification.partial_index_spcs) {
 			specification.update(index_spc);
 			index_item(doc, item_value, data, pos, add_value);
@@ -1460,7 +1460,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 		index_item(doc, item_value, *data);
 	} else {
 		bool add_value = true;
-		index_spc_t start_index_spc(specification.sep_types[SPC_INDEX_TYPE], std::move(specification.prefix.field), specification.slot,
+		index_spc_t start_index_spc(specification.sep_types[SPC_CONCRETE_TYPE], std::move(specification.prefix.field), specification.slot,
 			std::move(specification.accuracy), std::move(specification.acc_prefix));
 		for (const auto& index_spc : specification.partial_index_spcs) {
 			specification.update(index_spc);
@@ -1505,7 +1505,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 			}
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
-				if (!specification.flags.field_with_type && specification.sep_types[SPC_INDEX_TYPE] != FieldType::EMPTY) {
+				if (!specification.flags.concrete && specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
 					_validate_required_data(get_mutable_properties(specification.full_meta_name));
 				}
 				index_partial_paths(doc);
@@ -1528,7 +1528,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 			index_item(doc, *val, *data);
 		} else {
 			bool add_value = true;
-			index_spc_t start_index_spc(specification.sep_types[SPC_INDEX_TYPE], std::move(specification.prefix.field), specification.slot,
+			index_spc_t start_index_spc(specification.sep_types[SPC_CONCRETE_TYPE], std::move(specification.prefix.field), specification.slot,
 				std::move(specification.accuracy), std::move(specification.acc_prefix));
 			for (const auto& index_spc : specification.partial_index_spcs) {
 				specification.update(index_spc);
@@ -1539,7 +1539,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 		}
 
 		if (fields.empty()) {
-			if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 				set_type_to_object();
 			}
 			if (specification.flags.store) {
@@ -1554,12 +1554,12 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 			}
 		}
 	} else {
-		if (!specification.flags.field_with_type && specification.sep_types[SPC_INDEX_TYPE] != FieldType::EMPTY) {
+		if (!specification.flags.concrete && specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
 			_validate_required_data(get_mutable_properties(specification.full_meta_name));
 		}
 
 		if (fields.empty()) {
-			if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 				set_type_to_object();
 			}
 			index_partial_paths(doc);
@@ -1660,10 +1660,10 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 
 		if (toUType(specification.index & TypeIndex::VALUES)) {
 			for (auto& path : paths) {
-				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_INDEX_TYPE], std::move(path)));
+				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], std::move(path)));
 			}
 		} else {
-			auto global_type = specification_t::global_type(specification.sep_types[SPC_INDEX_TYPE]);
+			auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
 			for (auto& path : paths) {
 				specification.partial_index_spcs.emplace_back(global_type, std::move(path));
 			}
@@ -1673,8 +1673,8 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 			switch (specification.index_uuid_field) {
 				case UUIDFieldIndex::UUID: {
 					if (specification.prefix.uuid.empty()) {
-						auto global_type = specification_t::global_type(specification.sep_types[SPC_INDEX_TYPE]);
-						if (specification.sep_types[SPC_INDEX_TYPE] == global_type) {
+						auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
+						if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
 							// Use specification directly because path has never been indexed as UIDFieldIndex::BOTH and type is the same as global_type.
 							if (toUType(specification.index & TypeIndex::VALUES)) {
 								specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
@@ -1683,20 +1683,20 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 								}
 							}
 						} else if (toUType(specification.index & TypeIndex::VALUES)) {
-							specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.field));
+							specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
 						} else {
 							specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
 						}
 					} else if (toUType(specification.index & TypeIndex::VALUES)) {
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.uuid));
+						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid));
 					} else {
-						specification.partial_index_spcs.emplace_back(specification_t::global_type(specification.sep_types[SPC_INDEX_TYPE]), specification.prefix.uuid);
+						specification.partial_index_spcs.emplace_back(specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]), specification.prefix.uuid);
 					}
 					break;
 				}
 				case UUIDFieldIndex::UUID_FIELD: {
-					auto global_type = specification_t::global_type(specification.sep_types[SPC_INDEX_TYPE]);
-					if (specification.sep_types[SPC_INDEX_TYPE] == global_type) {
+					auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
+					if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
 						// Use specification directly because type is the same as global_type.
 						if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 							if (specification.flags.has_uuid_prefix) {
@@ -1707,7 +1707,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 							}
 						}
 					} else if (toUType(specification.index & TypeIndex::VALUES)) {
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.field));
+						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
 					} else {
 						specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
 					}
@@ -1715,10 +1715,10 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 				}
 				case UUIDFieldIndex::BOTH: {
 					if (toUType(specification.index & TypeIndex::VALUES)) {
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.field));
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.uuid));
+						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
+						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid));
 					} else {
-						auto global_type = specification_t::global_type(specification.sep_types[SPC_INDEX_TYPE]);
+						auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
 						specification.partial_index_spcs.emplace_back(global_type, std::move(specification.prefix.field));
 						specification.partial_index_spcs.emplace_back(global_type, specification.prefix.uuid);
 					}
@@ -1726,8 +1726,8 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 				}
 			}
 		} else {
-			auto global_type = specification_t::global_type(specification.sep_types[SPC_INDEX_TYPE]);
-			if (specification.sep_types[SPC_INDEX_TYPE] == global_type) {
+			auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
 				// Use specification directly because path is not uuid and type is the same as global_type.
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
 					for (auto& acc_prefix : specification.acc_prefix) {
@@ -1735,7 +1735,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 					}
 				}
 			} else if (toUType(specification.index & TypeIndex::VALUES)) {
-				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.field));
+				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
 			} else {
 				specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
 			}
@@ -1751,7 +1751,7 @@ Schema::complete_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_specification(%s)", repr(item_value.to_string()).c_str());
 
-	if (!specification.flags.field_with_type) {
+	if (!specification.flags.concrete) {
 		validate_required_data(item_value);
 	}
 
@@ -1766,10 +1766,10 @@ Schema::complete_specification(const MsgPack& item_value)
 
 		if (toUType(specification.index & TypeIndex::VALUES)) {
 			for (auto& path : paths) {
-				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_INDEX_TYPE], std::move(path)));
+				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], std::move(path)));
 			}
 		} else {
-			auto global_type = specification_t::global_type(specification.sep_types[SPC_INDEX_TYPE]);
+			auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
 			for (auto& path : paths) {
 				specification.partial_index_spcs.emplace_back(global_type, std::move(path));
 			}
@@ -1788,14 +1788,14 @@ Schema::complete_specification(const MsgPack& item_value)
 						}
 					}
 				} else if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-					index_spc_t spc_uuid(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
+					index_spc_t spc_uuid(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
 						specification.accuracy, specification.acc_prefix);
 					for (auto& acc_prefix : spc_uuid.acc_prefix) {
 						acc_prefix.insert(0, spc_uuid.prefix);
 					}
 					specification.partial_index_spcs.push_back(std::move(spc_uuid));
 				} else {
-					specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.uuid);
+					specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid);
 				}
 				break;
 			}
@@ -1813,13 +1813,13 @@ Schema::complete_specification(const MsgPack& item_value)
 			}
 			case UUIDFieldIndex::BOTH: {
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
-					index_spc_t spc_field(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.field,
+					index_spc_t spc_field(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field,
 						specification.flags.has_uuid_prefix ? get_slot(specification.prefix.field, specification.get_ctype()) : specification.slot,
 						specification.accuracy, specification.acc_prefix);
 					for (auto& acc_prefix : spc_field.acc_prefix) {
 						acc_prefix.insert(0, spc_field.prefix);
 					}
-					index_spc_t spc_uuid(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
+					index_spc_t spc_uuid(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
 						specification.accuracy, specification.acc_prefix);
 					for (auto& acc_prefix : spc_uuid.acc_prefix) {
 						acc_prefix.insert(0, spc_uuid.prefix);
@@ -1827,8 +1827,8 @@ Schema::complete_specification(const MsgPack& item_value)
 					specification.partial_index_spcs.push_back(std::move(spc_field));
 					specification.partial_index_spcs.push_back(std::move(spc_uuid));
 				} else {
-					specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.field);
-					specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_INDEX_TYPE], specification.prefix.uuid);
+					specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field);
+					specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid);
 				}
 				break;
 			}
@@ -1853,7 +1853,7 @@ Schema::set_type_to_object()
 	if unlikely(specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		auto& _types = get_mutable_properties(specification.full_meta_name)[RESERVED_TYPE];
 		if (_types.is_undefined()) {
-			_types = std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
+			_types = std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
 			specification.sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
 		} else {
 			_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
@@ -1871,7 +1871,7 @@ Schema::set_type_to_array()
 	if unlikely(specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		auto& _types = get_mutable_properties(specification.full_meta_name)[RESERVED_TYPE];
 		if (_types.is_undefined()) {
-			_types = std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::EMPTY, FieldType::ARRAY, FieldType::EMPTY } };
+			_types = std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::EMPTY, FieldType::EMPTY, FieldType::ARRAY, FieldType::EMPTY } };
 			specification.sep_types[SPC_ARRAY_TYPE] = FieldType::ARRAY;
 		} else {
 			_types[SPC_ARRAY_TYPE] = FieldType::ARRAY;
@@ -1893,7 +1893,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 	}
 
 	std::set<uint64_t> set_acc;
-	switch (specification.sep_types[SPC_INDEX_TYPE]) {
+	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::GEO: {
 			// Set partials and error.
 			mut_properties[RESERVED_PARTIALS] = static_cast<bool>(specification.flags.partials);
@@ -1947,13 +1947,13 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 						const auto str_accuracy = lower_string(_accuracy.str());
 						const auto adit = map_acc_time.find(str_accuracy);
 						if (adit == adit_e) {
-							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
+							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
 						} else {
 							set_acc.insert(toUType(adit->second));
 						}
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str(), repr(str_set_acc_time).c_str());
+					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(str_set_acc_time).c_str());
 				}
 			} else {
 				set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
@@ -1969,7 +1969,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str());
+					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
 				}
 			} else {
 				set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
@@ -2053,7 +2053,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 		case FieldType::UUID:
 			break;
 		default:
-			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str());
+			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
 	}
 
 	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
@@ -2085,7 +2085,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 	// Process RESERVED_TYPE
 	mut_properties[RESERVED_TYPE] = specification.sep_types;
 
-	specification.flags.field_with_type = true;
+	specification.flags.concrete = true;
 
 	// L_DEBUG(this, "\nspecification = %s\nmut_properties = %s", specification.to_string().c_str(), mut_properties.to_string(true).c_str());
 }
@@ -2098,11 +2098,11 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 
 	L_SCHEMA(this, "Specification heritable and sent by user: %s", specification.to_string().c_str());
 
-	if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::EMPTY) {
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
 		guess_field_type(value);
 	}
 
-	switch (specification.sep_types[SPC_INDEX_TYPE]) {
+	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::GEO:
 			// Set partials and error.
 			specification.flags.partials = default_spc.flags.partials;
@@ -2160,10 +2160,10 @@ Schema::validate_required_namespace_data(const MsgPack& value)
 			break;
 
 		default:
-			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str());
+			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
 	}
 
-	specification.flags.field_with_type = true;
+	specification.flags.concrete = true;
 }
 
 
@@ -2174,7 +2174,7 @@ Schema::validate_required_data(const MsgPack& value)
 
 	L_SCHEMA(this, "Specification heritable and sent by user: %s", specification.to_string().c_str());
 
-	if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::EMPTY) {
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
 		if (specification.flags.strict) {
 			THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 		}
@@ -2193,66 +2193,66 @@ Schema::guess_field_type(const MsgPack& item_doc)
 	switch (item_doc.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::POSITIVE;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::POSITIVE;
 				return;
 			}
 			break;
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::INTEGER;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::INTEGER;
 				return;
 			}
 			break;
 		case MsgPack::Type::FLOAT:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::FLOAT;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::FLOAT;
 				return;
 			}
 			break;
 		case MsgPack::Type::BOOLEAN:
 			if (specification.flags.bool_detection) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::BOOLEAN;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::BOOLEAN;
 				return;
 			}
 			break;
 		case MsgPack::Type::STR: {
 			const auto str_value = item_doc.str();
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::UUID;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::UUID;
 				return;
 			}
 			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::DATE;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::DATE;
 				return;
 			}
 			if (specification.flags.time_detection && Datetime::isTime(str_value)) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::TIME;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TIME;
 				return;
 			}
 			if (specification.flags.timedelta_detection && Datetime::isTimedelta(str_value)) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::TIMEDELTA;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TIMEDELTA;
 				return;
 			}
 			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::GEO;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::GEO;
 				return;
 			}
 			if (specification.flags.text_detection && (!specification.flags.string_detection && Serialise::isText(str_value, specification.flags.bool_term))) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::TEXT;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
 				return;
 			}
 			if (specification.flags.string_detection && !specification.flags.bool_term) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::STRING;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::STRING;
 				return;
 			}
 			if (specification.flags.term_detection) {
-				specification.sep_types[SPC_INDEX_TYPE] = FieldType::TERM;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TERM;
 				return;
 			}
 			if (specification.flags.bool_detection) {
 				try {
 					Serialise::boolean(str_value);
-					specification.sep_types[SPC_INDEX_TYPE] = FieldType::BOOLEAN;
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::BOOLEAN;
 					return;
 				} catch (const SerialisationError&) { }
 			}
@@ -2262,7 +2262,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			THROW(ClientError, "'%s' cannot be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
 			if (item_doc.size() == 1) {
-				specification.sep_types[SPC_INDEX_TYPE] = Cast::getType(item_doc.begin()->str());
+				specification.sep_types[SPC_CONCRETE_TYPE] = Cast::getType(item_doc.begin()->str());
 				return;
 			}
 			THROW(ClientError, "Expected map with one element");
@@ -2285,7 +2285,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	if (specification.flags.store && add_value) {
 		// Add value to data.
 		auto& data_value = data[RESERVED_VALUE];
-		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::UUID) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::UUID) {
 			switch (data_value.getType()) {
 				case MsgPack::Type::UNDEFINED:
 					data_value = normalize_uuid(value);
@@ -2327,7 +2327,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 		if (specification.flags.store && add_values) {
 			// Add value to data.
 			auto& data_value = data[RESERVED_VALUE];
-			if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::UUID) {
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::UUID) {
 				switch (data_value.getType()) {
 					case MsgPack::Type::UNDEFINED:
 						data_value = MsgPack(MsgPack::Type::ARRAY);
@@ -2431,7 +2431,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
 					index_term(doc, Serialise::MsgPack(global_spc, value), global_spc, pos++);
@@ -2440,7 +2440,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					doc.add_term(specification.prefix.field);
@@ -2451,7 +2451,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
@@ -2461,7 +2461,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
@@ -2473,7 +2473,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
@@ -2483,7 +2483,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
@@ -2495,7 +2495,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
@@ -2506,7 +2506,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
@@ -2519,7 +2519,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (!(value.is_null() || value.is_undefined())) {
@@ -2529,7 +2529,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
@@ -2541,7 +2541,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
@@ -2552,7 +2552,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_INDEX_TYPE]);
+			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_f = map_values[specification.slot];
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
@@ -2573,7 +2573,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 {
 	L_CALL(nullptr, "Schema::index_term(<Xapian::Document>, %s, <specification_t>, %zu)", repr(serialise_val).c_str(), pos);
 
-	switch (field_spc.sep_types[SPC_INDEX_TYPE]) {
+	switch (field_spc.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::TEXT: {
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
@@ -2675,7 +2675,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 {
 	L_CALL(nullptr, "Schema::index_value(<Xapian::Document>, %s, <std::set<std::string>>, <specification_t>, %zu, <specification_t*>, <specification_t*>)", repr(value.to_string()).c_str(), pos);
 
-	switch (spc.sep_types[SPC_INDEX_TYPE]) {
+	switch (spc.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::FLOAT: {
 			try {
 				const auto f_val = value.f64();
@@ -2814,7 +2814,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(spc.sep_types[SPC_INDEX_TYPE]).c_str(), repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(spc.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -2844,7 +2844,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			}
 		}
 		default:
-			THROW(ClientError, "Type: '%c' is an unknown type", spc.sep_types[SPC_INDEX_TYPE]);
+			THROW(ClientError, "Type: '%c' is an unknown type", spc.sep_types[SPC_CONCRETE_TYPE]);
 	}
 }
 
@@ -2854,7 +2854,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 {
 	L_CALL(nullptr, "Schema::index_all_value(<Xapian::Document>, %s, <std::set<std::string>>, <std::set<std::string>>, <specification_t>, <specification_t>, %zu)", repr(value.to_string()).c_str(), pos);
 
-	switch (field_spc.sep_types[SPC_INDEX_TYPE]) {
+	switch (field_spc.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::FLOAT: {
 			try {
 				const auto f_val = value.f64();
@@ -3039,7 +3039,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				s_g.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[SPC_INDEX_TYPE]).c_str(), repr(value.to_string()).c_str());
+				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(value.to_string()).c_str());
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -3071,7 +3071,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 		}
 		default:
-			THROW(ClientError, "Type: '%c' is an unknown type", field_spc.sep_types[SPC_INDEX_TYPE]);
+			THROW(ClientError, "Type: '%c' is an unknown type", field_spc.sep_types[SPC_CONCRETE_TYPE]);
 	}
 }
 
@@ -3091,9 +3091,9 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const std::string& name, 
 			FieldVector fields;
 			auto mut_properties = mut_parent_properties;
 
-			mut_properties = &get_subproperties(mut_properties, name, obj_schema, fields);
+			mut_properties = &get_subproperties_write(mut_properties, name, obj_schema, fields);
 
-			if (!specification.flags.field_with_type && specification.sep_types[SPC_INDEX_TYPE] != FieldType::EMPTY) {
+			if (!specification.flags.concrete && specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
 				_validate_required_data(*mut_properties);
 			}
 
@@ -3102,7 +3102,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const std::string& name, 
 				return;
 			}
 
-			if (!fields.empty() || (specification.sep_types[SPC_INDEX_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY)) {
+			if (!fields.empty() || (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY)) {
 				set_type_to_object();
 			}
 
@@ -3193,9 +3193,9 @@ Schema::update_prefixes()
 
 template <typename T>
 inline void
-Schema::get_subproperties(T& properties, const std::string& meta_name)
+Schema::_get_subproperties(T& properties, const std::string& meta_name)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str());
+	L_CALL(this, "Schema::_get_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str());
 
 	properties = &properties->at(meta_name);
 	specification.flags.field_found = true;
@@ -3234,7 +3234,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 				data = &(*data)[norm_field_name];
 			}
 		}
-		process_properties_document(object, fields);
+		process_document_properties(object, fields);
 		auto norm_field_name = detect_dynamic(*it_last);
 		update_prefixes();
 		specification.flags.inside_namespace = true;
@@ -3249,7 +3249,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 			}
 			restart_specification();
 			try {
-				get_subproperties(properties, field_name);
+				_get_subproperties(properties, field_name);
 				update_prefixes();
 				if (specification.flags.store) {
 					data = &(*data)[field_name];
@@ -3258,7 +3258,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
 					try {
-						get_subproperties(properties, specification.meta_name);
+						_get_subproperties(properties, specification.meta_name);
 						update_prefixes();
 						if (specification.flags.store) {
 							data = &(*data)[norm_field_name];
@@ -3304,8 +3304,8 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 		}
 		restart_specification();
 		try {
-			get_subproperties(properties, field_name);
-			process_properties_document(object, fields);
+			_get_subproperties(properties, field_name);
+			process_document_properties(object, fields);
 			update_prefixes();
 			if (specification.flags.store) {
 				data = &(*data)[field_name];
@@ -3314,8 +3314,8 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 			auto norm_field_name = detect_dynamic(field_name);
 			if (specification.flags.uuid_field) {
 				try {
-					get_subproperties(properties, specification.meta_name);
-					process_properties_document(object, fields);
+					_get_subproperties(properties, specification.meta_name);
+					process_document_properties(object, fields);
 					update_prefixes();
 					if (specification.flags.store) {
 						data = &(*data)[norm_field_name];
@@ -3367,7 +3367,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 			}
 			restart_specification();
 			try {
-				get_subproperties(properties, field_name);
+				_get_subproperties(properties, field_name);
 				update_prefixes();
 				if (specification.flags.store) {
 					data = &(*data)[field_name];
@@ -3376,7 +3376,7 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
 					try {
-						get_subproperties(properties, specification.meta_name);
+						_get_subproperties(properties, specification.meta_name);
 						update_prefixes();
 						if (specification.flags.store) {
 							data = &(*data)[norm_field_name];
@@ -3419,9 +3419,9 @@ Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std:
 
 
 MsgPack&
-Schema::get_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields)
+Schema::get_subproperties_write(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields)
 {
-	L_CALL(this, "Schema::get_subproperties(%s, %s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::get_subproperties_write(%s, %s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
 
 	std::vector<std::string> field_names;
 	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
@@ -3434,7 +3434,7 @@ Schema::get_subproperties(MsgPack*& mut_properties, const std::string& name, con
 		}
 		restart_specification();
 		try {
-			get_subproperties(mut_properties, field_name);
+			_get_subproperties(mut_properties, field_name);
 		} catch (const std::out_of_range&) {
 			for ( ; it != it_last; ++it) {
 				const auto& n_field_name = *it;
@@ -3464,8 +3464,8 @@ Schema::get_subproperties(MsgPack*& mut_properties, const std::string& name, con
 	}
 	restart_specification();
 	try {
-		get_subproperties(mut_properties, field_name);
-		process_properties_document(mut_properties, object, fields);
+		_get_subproperties(mut_properties, field_name);
+		process_document_properties_write(mut_properties, object, fields);
 	} catch (const std::out_of_range&) {
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
@@ -3519,16 +3519,16 @@ Schema::detect_dynamic(const std::string& field_name)
 
 
 void
-Schema::process_properties_document(const MsgPack& object, FieldVector& fields)
+Schema::process_document_properties(const MsgPack& object, FieldVector& fields)
 {
-	L_CALL(this, "Schema::process_properties_document(%s, <fields>)", repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::process_document_properties(%s, <fields>)", repr(object.to_string()).c_str());
 
-	static const auto ddit_e = map_dispatch_document.end();
+	static const auto ddit_e = map_dispatch_document_properties.end();
 	const auto it_e = object.end();
-	if (specification.flags.field_with_type) {
+	if (specification.flags.concrete) {
 		for (auto it = object.begin(); it != it_e; ++it) {
 			auto str_key = it->str();
-			const auto ddit = map_dispatch_document.find(str_key);
+			const auto ddit = map_dispatch_document_properties.find(str_key);
 			if (ddit == ddit_e) {
 				fields.emplace_back(std::move(str_key), &it.value());
 			} else {
@@ -3536,12 +3536,12 @@ Schema::process_properties_document(const MsgPack& object, FieldVector& fields)
 			}
 		}
 	} else {
-		static const auto wtit_e = map_dispatch_without_type.end();
+		static const auto wtit_e = map_dispatch_document_properties_without_concrete_type.end();
 		for (auto it = object.begin(); it != it_e; ++it) {
 			auto str_key = it->str();
-			const auto wtit = map_dispatch_without_type.find(str_key);
+			const auto wtit = map_dispatch_document_properties_without_concrete_type.find(str_key);
 			if (wtit == wtit_e) {
-				const auto ddit = map_dispatch_document.find(str_key);
+				const auto ddit = map_dispatch_document_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -3559,19 +3559,19 @@ Schema::process_properties_document(const MsgPack& object, FieldVector& fields)
 
 
 void
-Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields)
+Schema::process_document_properties_write(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields)
 {
-	L_CALL(this, "Schema::process_properties_document(%s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
+	L_CALL(this, "Schema::process_document_properties_write(%s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(object.to_string()).c_str());
 
 	static const auto wpit_e = map_dispatch_write_properties.end();
-	static const auto ddit_e = map_dispatch_document.end();
+	static const auto ddit_e = map_dispatch_document_properties.end();
 	const auto it_e = object.end();
-	if (specification.flags.field_with_type) {
+	if (specification.flags.concrete) {
 		for (auto it = object.begin(); it != it_e; ++it) {
 			auto str_key = it->str();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
-				const auto ddit = map_dispatch_document.find(str_key);
+				const auto ddit = map_dispatch_document_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -3582,14 +3582,14 @@ Schema::process_properties_document(MsgPack*& mut_properties, const MsgPack& obj
 			}
 		}
 	} else {
-		static const auto wtit_e = map_dispatch_without_type.end();
+		static const auto wtit_e = map_dispatch_document_properties_without_concrete_type.end();
 		for (auto it = object.begin(); it != it_e; ++it) {
 			auto str_key = it->str();
 			const auto wpit = map_dispatch_write_properties.find(str_key);
 			if (wpit == wpit_e) {
-				const auto wtit = map_dispatch_without_type.find(str_key);
+				const auto wtit = map_dispatch_document_properties_without_concrete_type.find(str_key);
 				if (wtit == wtit_e) {
-					const auto ddit = map_dispatch_document.find(str_key);
+					const auto ddit = map_dispatch_document_properties.find(str_key);
 					if (ddit == ddit_e) {
 						fields.emplace_back(std::move(str_key), &it.value());
 					} else {
@@ -3633,16 +3633,16 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 
 	// Write obj specifications.
 	static const auto wpit_e = map_dispatch_write_properties.end();
-	static const auto wtit_e = map_dispatch_without_type.end();
-	static const auto ddit_e = map_dispatch_document.end();
+	static const auto wtit_e = map_dispatch_document_properties_without_concrete_type.end();
+	static const auto ddit_e = map_dispatch_document_properties.end();
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
 		auto str_key = it->str();
 		const auto wpit = map_dispatch_write_properties.find(str_key);
 		if (wpit == wpit_e) {
-			const auto wtit = map_dispatch_without_type.find(str_key);
+			const auto wtit = map_dispatch_document_properties_without_concrete_type.find(str_key);
 			if (wtit == wtit_e) {
-				const auto ddit = map_dispatch_document.find(str_key);
+				const auto ddit = map_dispatch_document_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -3712,10 +3712,10 @@ Schema::update_specification(const MsgPack& properties)
 {
 	L_CALL(this, "Schema::update_specification(%s)", repr(properties.to_string()).c_str());
 
-	static const auto dpit_e = map_dispatch_properties.end();
+	static const auto dpit_e = map_dispatch_update_properties.end();
 	const auto it_e = properties.end();
 	for (auto it = properties.begin(); it != it_e; ++it) {
-		const auto dpit = map_dispatch_properties.find(it->str());
+		const auto dpit = map_dispatch_update_properties.find(it->str());
 		if (dpit != dpit_e) {
 			(this->*dpit->second)(it.value());
 		}
@@ -3829,11 +3829,11 @@ Schema::update_type(const MsgPack& prop_type)
 	L_CALL(this, "Schema::update_type(%s)", repr(prop_type.to_string()).c_str());
 
 	try {
-		specification.sep_types[SPC_FOREIGN_TYPE] = (FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64();
-		specification.sep_types[SPC_OBJECT_TYPE]  = (FieldType)prop_type.at(SPC_OBJECT_TYPE).u64();
-		specification.sep_types[SPC_ARRAY_TYPE]   = (FieldType)prop_type.at(SPC_ARRAY_TYPE).u64();
-		specification.sep_types[SPC_INDEX_TYPE]   = (FieldType)prop_type.at(SPC_INDEX_TYPE).u64();
-		specification.flags.field_with_type = specification.sep_types[SPC_INDEX_TYPE] != FieldType::EMPTY;
+		specification.sep_types[SPC_FOREIGN_TYPE]  = (FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64();
+		specification.sep_types[SPC_OBJECT_TYPE]   = (FieldType)prop_type.at(SPC_OBJECT_TYPE).u64();
+		specification.sep_types[SPC_ARRAY_TYPE]    = (FieldType)prop_type.at(SPC_ARRAY_TYPE).u64();
+		specification.sep_types[SPC_CONCRETE_TYPE] = (FieldType)prop_type.at(SPC_CONCRETE_TYPE).u64();
+		specification.flags.concrete = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
 	} catch (const msgpack::type_error&) {
 	} catch (const std::out_of_range&) {
 		THROW(Error, "Schema is corrupt: %s in %s, you must provide a new one.", RESERVED_TYPE, specification.full_meta_name.c_str());
@@ -4881,7 +4881,7 @@ Schema::consistency_stop_strategy(const std::string& prop_name, const MsgPack& d
 	L_CALL(this, "Schema::consistency_stop_strategy(%s)", repr(doc_stop_strategy.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TEXT) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
 			const auto _stop_strategy = lower_string(doc_stop_strategy.str());
 			const auto stop_strategy = ::readable_stop_strategy(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
@@ -4903,7 +4903,7 @@ Schema::consistency_stem_strategy(const std::string& prop_name, const MsgPack& d
 	L_CALL(this, "Schema::consistency_stem_strategy(%s)", repr(doc_stem_strategy.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TEXT) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
 			const auto _stem_strategy = lower_string(doc_stem_strategy.str());
 			const auto stem_strategy = ::readable_stem_strategy(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
@@ -4925,7 +4925,7 @@ Schema::consistency_stem_language(const std::string& prop_name, const MsgPack& d
 	L_CALL(this, "Schema::consistency_stem_language(%s)", repr(doc_stem_language.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TEXT) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
 			const auto _stem_language = lower_string(doc_stem_language.str());
 			if (specification.stem_language != _stem_language) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.stem_language.c_str(), _stem_language.c_str(), specification.full_meta_name.c_str());
@@ -4953,7 +4953,7 @@ Schema::consistency_type(const std::string& prop_name, const MsgPack& doc_type)
 		} else {
 			++init_pos;
 		}
-		const auto str_type = Serialise::type(specification.sep_types[SPC_INDEX_TYPE]);
+		const auto str_type = Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]);
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), str_type.c_str(), _str_type.substr(init_pos).c_str(), specification.full_meta_name.c_str());
 		}
@@ -4971,7 +4971,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 
 	if (doc_accuracy.is_array()) {
 		std::set<uint64_t> set_acc;
-		switch (specification.sep_types[SPC_INDEX_TYPE]) {
+		switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
 			case FieldType::GEO: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
@@ -5027,13 +5027,13 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 						const auto str_accuracy = lower_string(_accuracy.str());
 						const auto adit = map_acc_time.find(str_accuracy);
 						if (adit == adit_e) {
-							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
+							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
 						} else {
 							set_acc.insert(toUType(adit->second));
 						}
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str(), repr(str_set_acc_time).c_str());
+					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(str_set_acc_time).c_str());
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -5055,7 +5055,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers in %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers in %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), specification.full_meta_name.c_str());
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -5070,7 +5070,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				return;
 			}
 			default:
-				THROW(ClientError, "%s is not allowed in %s type fields", prop_name.c_str(), Serialise::type(specification.sep_types[SPC_INDEX_TYPE]).c_str());
+				THROW(ClientError, "%s is not allowed in %s type fields", prop_name.c_str(), Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, %s must be array", prop_name.c_str());
@@ -5085,7 +5085,7 @@ Schema::consistency_bool_term(const std::string& prop_name, const MsgPack& doc_b
 	L_CALL(this, "Schema::consistency_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TERM) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TERM) {
 			const auto _bool_term = doc_bool_term.boolean();
 			if (specification.flags.bool_term != _bool_term) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", specification.full_meta_name.c_str());
@@ -5106,7 +5106,7 @@ Schema::consistency_partials(const std::string& prop_name, const MsgPack& doc_pa
 	L_CALL(this, "Schema::consistency_partials(%s)", repr(doc_partials.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::GEO) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::GEO) {
 			const auto _partials = doc_partials.boolean();
 			if (specification.flags.partials != _partials) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.partials ? "true" : "false", _partials ? "true" : "false");
@@ -5127,7 +5127,7 @@ Schema::consistency_error(const std::string& prop_name, const MsgPack& doc_error
 	L_CALL(this, "Schema::consistency_error(%s)", repr(doc_error.to_string()).c_str());
 
 	try {
-		if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::GEO) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::GEO) {
 			const auto _error = doc_error.f64();
 			if (specification.error != _error) {
 				THROW(ClientError, "It is not allowed to change %s [%.2f  ->  %.2f]", prop_name.c_str(), specification.error, _error);
@@ -5436,8 +5436,8 @@ Schema::set_namespace_spc_id(required_spc_t& spc)
 	L_CALL(nullptr, "Schema::set_namespace_spc_id(<spc>)");
 
 	// ID_FIELD_NAME cannot be text or string.
-	if (spc.sep_types[SPC_INDEX_TYPE] == FieldType::TEXT || spc.sep_types[SPC_INDEX_TYPE] == FieldType::STRING) {
-		spc.sep_types[SPC_INDEX_TYPE] = FieldType::TERM;
+	if (spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT || spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::STRING) {
+		spc.sep_types[SPC_CONCRETE_TYPE] = FieldType::TERM;
 	}
 	spc.prefix.field = NAMESPACE_PREFIX_ID_FIELD_NAME;
 	spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
@@ -5463,8 +5463,8 @@ Schema::set_default_spc_id(MsgPack& properties)
 	}
 
 	// ID_FIELD_NAME cannot be TEXT nor STRING.
-	if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::TEXT || specification.sep_types[SPC_INDEX_TYPE] == FieldType::STRING) {
-		specification.sep_types[SPC_INDEX_TYPE] = FieldType::TERM;
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::STRING) {
+		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TERM;
 		L_DEBUG(this, "%s cannot be type text or string, it's type was changed to term", ID_FIELD_NAME);
 	}
 
@@ -5491,8 +5491,8 @@ Schema::set_default_spc_ct(MsgPack& properties)
 	}
 
 	// RESERVED_TYPE by default is TERM
-	if (specification.sep_types[SPC_INDEX_TYPE] == FieldType::EMPTY) {
-		specification.sep_types[SPC_INDEX_TYPE] = FieldType::TERM;
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TERM;
 	}
 
 	// Set default prefix
@@ -5533,10 +5533,10 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 	L_CALL(nullptr, "Schema::readable(%s, %d)", repr(item_schema.to_string()).c_str(), is_root);
 
 	// Change this item of schema in readable form.
-	static const auto drit_e = map_dispatch_readable.end();
+	static const auto drit_e = map_get_readable.end();
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
 		const auto str_key = it->str();
-		const auto drit = map_dispatch_readable.find(str_key);
+		const auto drit = map_get_readable.find(str_key);
 		if (drit == drit_e) {
 			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
 				readable(it.value(), false);
@@ -5557,16 +5557,16 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 {
 	L_CALL(nullptr, "Schema::readable_type(%s, %s)", repr(prop_type.to_string()).c_str(), repr(properties.to_string()).c_str());
 
-	std::array<FieldType, SPC_SIZE_TYPES> sep_types({{
+	std::array<FieldType, SPC_TOTAL_TYPES> sep_types({{
 		(FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64(),
 		(FieldType)prop_type.at(SPC_OBJECT_TYPE).u64(),
 		(FieldType)prop_type.at(SPC_ARRAY_TYPE).u64(),
-		(FieldType)prop_type.at(SPC_INDEX_TYPE).u64()
+		(FieldType)prop_type.at(SPC_CONCRETE_TYPE).u64()
 	}});
 	prop_type = required_spc_t::get_str_type(sep_types);
 
 	// Readable accuracy.
-	switch (sep_types[SPC_INDEX_TYPE]) {
+	switch (sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::DATE:
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA:
@@ -5734,10 +5734,10 @@ Schema::index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::
 			properties = &*mut_properties;
 		} else {
 			update_specification(*properties);
-			static const auto ddit_e = map_dispatch_document.end();
+			static const auto ddit_e = map_dispatch_document_properties.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
-				const auto ddit = map_dispatch_document.find(str_key);
+				const auto ddit = map_dispatch_document_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -5754,10 +5754,10 @@ Schema::index(MsgPack& object, const std::string& term_id, std::shared_ptr<std::
 			}
 			// Rebuild fields with new values.
 			fields.clear();
-			static const auto ddit_e = map_dispatch_document.end();
+			static const auto ddit_e = map_dispatch_document_properties.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
-				const auto ddit = map_dispatch_document.find(str_key);
+				const auto ddit = map_dispatch_document_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				}
@@ -5817,10 +5817,10 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			properties = &*mut_properties;
 		} else {
 			update_specification(*properties);
-			static const auto ddit_e = map_dispatch_document.end();
+			static const auto ddit_e = map_dispatch_document_properties.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
-				const auto ddit = map_dispatch_document.find(str_key);
+				const auto ddit = map_dispatch_document_properties.find(str_key);
 				if (ddit == ddit_e) {
 					fields.emplace_back(std::move(str_key), &it.value());
 				} else {
@@ -5917,11 +5917,11 @@ Schema::get_data_id() const
 
 	try {
 		const auto& properties = get_newest_properties().at(ID_FIELD_NAME);
-		res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).u64();
+		res.sep_types[SPC_CONCRETE_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_CONCRETE_TYPE).u64();
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).u64());
 		res.prefix.field = properties.at(RESERVED_PREFIX).str();
 		// Get required specification.
-		switch (res.sep_types[SPC_INDEX_TYPE]) {
+		switch (res.sep_types[SPC_CONCRETE_TYPE]) {
 			case FieldType::GEO:
 				res.flags.partials = properties.at(RESERVED_PARTIALS).boolean();
 				res.error = properties.at(RESERVED_ERROR).f64();
@@ -5968,15 +5968,15 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 		res.prefix.field = std::move(spc.prefix);
 
 		if (!spc.acc_field.empty()) {
-			res.sep_types[SPC_INDEX_TYPE] = spc.acc_field_type;
+			res.sep_types[SPC_CONCRETE_TYPE] = spc.acc_field_type;
 			return std::make_pair(res, std::move(spc.acc_field));
 		}
 
 		if (!res.flags.inside_namespace) {
 			const auto& properties = *spc.properties;
 
-			res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).u64();
-			if (res.sep_types[SPC_INDEX_TYPE] == FieldType::EMPTY) {
+			res.sep_types[SPC_CONCRETE_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_CONCRETE_TYPE).u64();
+			if (res.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
 				return std::make_pair(std::move(res), std::string());
 			}
 
@@ -5988,7 +5988,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 				}
 
 				// Get required specification.
-				switch (res.sep_types[SPC_INDEX_TYPE]) {
+				switch (res.sep_types[SPC_CONCRETE_TYPE]) {
 					case FieldType::GEO:
 						res.flags.partials = properties.at(RESERVED_PARTIALS).boolean();
 						res.error = properties.at(RESERVED_ERROR).f64();
@@ -6023,7 +6023,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 				}
 			} else {
 				// Get required specification.
-				switch (res.sep_types[SPC_INDEX_TYPE]) {
+				switch (res.sep_types[SPC_CONCRETE_TYPE]) {
 					case FieldType::GEO:
 						res.flags.partials = properties.at(RESERVED_PARTIALS).boolean();
 						res.error = properties.at(RESERVED_ERROR).f64();
@@ -6076,12 +6076,12 @@ Schema::get_slot_field(const std::string& field_name) const
 		}
 
 		if (res.flags.inside_namespace) {
-			res.sep_types[SPC_INDEX_TYPE] = FieldType::TERM;
+			res.sep_types[SPC_CONCRETE_TYPE] = FieldType::TERM;
 			res.slot = get_slot(spc.prefix, res.get_ctype());
 		} else {
 			const auto& properties = *spc.properties;
 
-			res.sep_types[SPC_INDEX_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_INDEX_TYPE).u64();
+			res.sep_types[SPC_CONCRETE_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_CONCRETE_TYPE).u64();
 
 			if (spc.has_uuid_prefix) {
 				res.slot = get_slot(spc.prefix, res.get_ctype());
@@ -6090,7 +6090,7 @@ Schema::get_slot_field(const std::string& field_name) const
 			}
 
 			// Get required specification.
-			switch (res.sep_types[SPC_INDEX_TYPE]) {
+			switch (res.sep_types[SPC_CONCRETE_TYPE]) {
 				case FieldType::GEO:
 					res.flags.partials = properties.at(RESERVED_PARTIALS).boolean();
 					res.error = properties.at(RESERVED_ERROR).f64();

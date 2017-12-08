@@ -195,12 +195,12 @@ Script::process_chai(bool strict)
 	L_CALL(this, "Script::process_chai(%s)", strict ? "true" : "false");
 
 #if defined(XAPIAND_CHAISCRIPT)
-	switch (sep_types[SPC_INDEX_TYPE]) {
+	switch (sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::EMPTY:
 			if (strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", RESERVED_SCRIPT);
 			}
-			sep_types[SPC_INDEX_TYPE] = FieldType::SCRIPT;
+			sep_types[SPC_CONCRETE_TYPE] = FieldType::SCRIPT;
 		case FieldType::SCRIPT: {
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				if (name.empty()) {
@@ -260,12 +260,12 @@ Script::process_ecma(bool strict)
 	L_CALL(this, "Script::process_ecma(%s)", strict ? "true" : "false");
 
 #if defined(XAPIAND_V8)
-	switch (sep_types[SPC_INDEX_TYPE]) {
+	switch (sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::EMPTY:
 			if (strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", RESERVED_SCRIPT);
 			}
-			sep_types[SPC_INDEX_TYPE] = FieldType::SCRIPT;
+			sep_types[SPC_CONCRETE_TYPE] = FieldType::SCRIPT;
 		case FieldType::SCRIPT: {
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				if (name.empty()) {
@@ -352,7 +352,7 @@ Script::process_script(bool strict)
 			}
 #endif
 		default:
-			THROW(ClientError, "Type %s is not allowed in %s", Serialise::type(sep_types[SPC_INDEX_TYPE]).c_str(), RESERVED_SCRIPT);
+			THROW(ClientError, "Type %s is not allowed in %s", Serialise::type(sep_types[SPC_CONCRETE_TYPE]).c_str(), RESERVED_SCRIPT);
 	}
 }
 

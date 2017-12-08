@@ -35,8 +35,8 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 		const auto& schema_obj = local_schema_ptr->at(DB_SCHEMA);
 		try {
 			const auto& type = schema_obj.at(RESERVED_TYPE);
-			if (!type.is_array() || type.size() != SPC_SIZE_TYPES) {
-				THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. %s must be array of %zu integers", RESERVED_META, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, SPC_SIZE_TYPES);
+			if (!type.is_array() || type.size() != SPC_TOTAL_TYPES) {
+				THROW(Error, "Metadata %s is corrupt in %s, you need provide a new one. %s must be array of %zu integers", RESERVED_META, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, SPC_TOTAL_TYPES);
 			}
 			const auto& value = schema_obj.at(RESERVED_VALUE);
 			if (type.at(SPC_FOREIGN_TYPE).u64() == toUType(FieldType::FOREIGN)) {
@@ -66,7 +66,7 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 
 
 inline std::shared_ptr<const MsgPack>
-SchemasLRU::validate_string_meta_schema(const MsgPack& value, const std::array<FieldType, SPC_SIZE_TYPES>& sep_types, std::string& schema_path, std::string& schema_id)
+SchemasLRU::validate_string_meta_schema(const MsgPack& value, const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types, std::string& schema_path, std::string& schema_id)
 {
 	L_CALL(this, "SchemasLRU::validate_string_meta_schema(%s, %s, ...)", repr(value.to_string()).c_str(), required_spc_t::get_str_type(sep_types).c_str());
 
@@ -88,7 +88,7 @@ SchemasLRU::validate_string_meta_schema(const MsgPack& value, const std::array<F
 
 
 inline std::shared_ptr<const MsgPack>
-SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<FieldType, SPC_SIZE_TYPES>& sep_types)
+SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 {
 	L_CALL(this, "SchemasLRU::validate_object_meta_schema(%s, %s, ...)", repr(value.to_string()).c_str(), required_spc_t::get_str_type(sep_types).c_str());
 
@@ -116,7 +116,7 @@ SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<F
 
 
 inline std::shared_ptr<const MsgPack>
-SchemasLRU::validate_meta_schema(const MsgPack& value, const std::array<FieldType, SPC_SIZE_TYPES>& sep_types, std::string& schema_path, std::string& schema_id)
+SchemasLRU::validate_meta_schema(const MsgPack& value, const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types, std::string& schema_path, std::string& schema_id)
 {
 	L_CALL(this, "SchemasLRU::validate_meta_schema(%s, %s, ...)", repr(value.to_string()).c_str(), required_spc_t::get_str_type(sep_types).c_str());
 
@@ -189,7 +189,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 							if (strict) {
 								THROW(MissingTypeError, "Type of field '%s' is missing", RESERVED_SCHEMA);
 							}
-							aux_schema_ptr = validate_string_meta_schema(meta_schema, std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
+							aux_schema_ptr = validate_string_meta_schema(meta_schema, std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
 							break;
 						}
 						case MsgPack::Type::MAP: {
@@ -203,12 +203,12 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 								if (it_v != it_end) {
 									const auto& value = it_v.value();
 									if (value.is_string()) {
-										aux_schema_ptr = validate_string_meta_schema(value, std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
+										aux_schema_ptr = validate_string_meta_schema(value, std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
 									} else {
-										aux_schema_ptr = validate_meta_schema(value, std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
+										aux_schema_ptr = validate_meta_schema(value, std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
 									}
 								} else {
-									aux_schema_ptr = validate_meta_schema(meta_schema, std::array<FieldType, SPC_SIZE_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
+									aux_schema_ptr = validate_meta_schema(meta_schema, std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } }, schema_path, schema_id);
 								}
 							} else {
 								auto it_v = meta_schema.find(RESERVED_VALUE);

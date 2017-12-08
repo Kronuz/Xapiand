@@ -112,11 +112,11 @@ constexpr UUIDFieldIndex DEFAULT_INDEX_UUID_FIELD = UUIDFieldIndex::BOTH;
 constexpr size_t LIMIT_PARTIAL_PATHS_DEPTH        = 10; // 2^(n - 2) => 2^8 => 256 namespace terms
 
 
-constexpr size_t SPC_SIZE_TYPES   = 4;
-constexpr size_t SPC_FOREIGN_TYPE = 0;
-constexpr size_t SPC_OBJECT_TYPE  = 1;
-constexpr size_t SPC_ARRAY_TYPE   = 2;
-constexpr size_t SPC_INDEX_TYPE   = 3;
+constexpr size_t SPC_FOREIGN_TYPE  = 0;
+constexpr size_t SPC_OBJECT_TYPE   = 1;
+constexpr size_t SPC_ARRAY_TYPE    = 2;
+constexpr size_t SPC_CONCRETE_TYPE = 3;
+constexpr size_t SPC_TOTAL_TYPES   = 4;
 
 
 inline constexpr TypeIndex operator|(const uint8_t& a, const TypeIndex& b) {
@@ -253,7 +253,7 @@ extern const std::unordered_map<std::string, StopStrategy> map_stop_strategy;
 extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
 extern const std::unordered_map<std::string, TypeIndex> map_index;
 extern const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field;
-extern const std::unordered_map<std::string, std::array<FieldType, SPC_SIZE_TYPES>> map_type;
+extern const std::unordered_map<std::string, std::array<FieldType, SPC_TOTAL_TYPES>> map_type;
 
 
 MSGPACK_ADD_ENUM(UnitTime);
@@ -290,7 +290,7 @@ struct required_spc_t {
 
 		// Auxiliar variables.
 		bool field_found:1;          // Flag if the property is already in the schema saved in the metadata
-		bool field_with_type:1;      // Reserved properties that shouldn't change once set, are flagged as fixed
+		bool concrete:1;             // Reserved properties that shouldn't change once set, are flagged as fixed
 		bool complete:1;             // Flag if the specification for a field is complete
 		bool uuid_field:1;           // Flag if the field is uuid
 		bool uuid_path:1;            // Flag if the paths has uuid fields.
@@ -328,7 +328,7 @@ struct required_spc_t {
 		std::string operator()() const noexcept;
 	};
 
-	std::array<FieldType, SPC_SIZE_TYPES> sep_types; // foreign/object/array/index_type
+	std::array<FieldType, SPC_TOTAL_TYPES> sep_types; // foreign/object/array/index_type
 	prefix_t prefix;
 	Xapian::valueno slot;
 	flags_t flags;
@@ -356,11 +356,11 @@ struct required_spc_t {
 	required_spc_t& operator=(required_spc_t&& o) noexcept;
 
 	FieldType get_type() const noexcept {
-		return sep_types[SPC_INDEX_TYPE];
+		return sep_types[SPC_CONCRETE_TYPE];
 	}
 
 	void set_type(FieldType type) {
-		sep_types[SPC_INDEX_TYPE] = type;
+		sep_types[SPC_CONCRETE_TYPE] = type;
 	}
 
 	static char get_ctype(FieldType type) noexcept {
@@ -368,11 +368,11 @@ struct required_spc_t {
 	}
 
 	char get_ctype() const noexcept {
-		return get_ctype(sep_types[SPC_INDEX_TYPE]);
+		return get_ctype(sep_types[SPC_CONCRETE_TYPE]);
 	}
 
-	static std::array<FieldType, SPC_SIZE_TYPES> get_types(const std::string& str_type);
-	static std::string get_str_type(const std::array<FieldType, SPC_SIZE_TYPES>& sep_types);
+	static std::array<FieldType, SPC_TOTAL_TYPES> get_types(const std::string& str_type);
+	static std::string get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types);
 
 	void set_types(const std::string& str_type);
 };
@@ -470,10 +470,10 @@ class Schema {
 
 	static const std::unordered_map<std::string, dispatch_set_default_spc> map_dispatch_set_default_spc;
 	static const std::unordered_map<std::string, dispatch_write_reserved> map_dispatch_write_properties;
-	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_without_type;
-	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document;
-	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_properties;
-	static const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
+	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document_properties_without_concrete_type;
+	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_document_properties;
+	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_update_properties;
+	static const std::unordered_map<std::string, dispatch_readable> map_get_readable;
 
 	std::shared_ptr<const MsgPack> schema;
 	std::unique_ptr<MsgPack> mut_schema;
@@ -622,7 +622,7 @@ class Schema {
 	 * Get the properties of meta name of schema.
 	 */
 	template <typename T>
-	void get_subproperties(T& properties, const std::string& meta_name);
+	void _get_subproperties(T& properties, const std::string& meta_name);
 
 	/*
 	 * Add partial prefix in specification.partials_prefixes or clear it.
@@ -635,7 +635,7 @@ class Schema {
 
 	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields);
 	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name);
-	MsgPack& get_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields);
+	MsgPack& get_subproperties_write(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields);
 
 
 	/*
@@ -652,8 +652,8 @@ class Schema {
 	 * Update specification using object's properties.
 	 */
 
-	void process_properties_document(const MsgPack& object, FieldVector& fields);
-	void process_properties_document(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields);
+	void process_document_properties(const MsgPack& object, FieldVector& fields);
+	void process_document_properties_write(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields);
 
 
 	/*
@@ -923,7 +923,7 @@ public:
 			spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
 		}
 
-		switch (spc.sep_types[SPC_INDEX_TYPE]) {
+		switch (spc.sep_types[SPC_CONCRETE_TYPE]) {
 			case FieldType::INTEGER:
 			case FieldType::POSITIVE:
 			case FieldType::FLOAT:
