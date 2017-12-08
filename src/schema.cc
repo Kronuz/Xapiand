@@ -1395,13 +1395,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", repr(data.to_string()).c_str(), repr(item_value.to_string()).c_str(), pos);
 
-	if (!specification.flags.complete) {
-		if (specification.flags.inside_namespace) {
-			complete_namespace_specification(item_value);
-		} else {
-			complete_specification(item_value);
-		}
-	}
+	complete_specification(item_value);
 
 	if (specification.partial_index_spcs.empty()) {
 		index_item(doc, item_value, data, pos);
@@ -1432,13 +1426,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 			bool valid = false;
 			for (const auto& item : item_value) {
 				if (!item.is_null() && !item.is_undefined()) {
-					if (!specification.flags.complete) {
-						if (specification.flags.inside_namespace) {
-							complete_namespace_specification(item);
-						} else {
-							complete_specification(item);
-						}
-					}
+					complete_specification(item);
 					valid = true;
 					break;
 				}
@@ -1455,13 +1443,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 			}
 			return;
 		default:
-			if (!specification.flags.complete) {
-				if (specification.flags.inside_namespace) {
-					complete_namespace_specification(item_value);
-				} else {
-					complete_specification(item_value);
-				}
-			}
+			complete_specification(item_value);
 			break;
 	}
 
@@ -1497,13 +1479,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 				bool valid = false;
 				for (const auto& item : *val) {
 					if (!item.is_null() && !item.is_undefined()) {
-						if (!specification.flags.complete) {
-							if (specification.flags.inside_namespace) {
-								complete_namespace_specification(item);
-							} else {
-								complete_specification(item);
-							}
-						}
+						complete_specification(item);
 						valid = true;
 						break;
 					}
@@ -1523,13 +1499,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 				}
 				return;
 			default:
-				if (!specification.flags.complete) {
-					if (specification.flags.inside_namespace) {
-						complete_namespace_specification(*val);
-					} else {
-						complete_specification(*val);
-					}
-				}
+				complete_specification(*val);
 				break;
 		}
 
@@ -1759,6 +1729,15 @@ void
 Schema::complete_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_specification(%s)", repr(item_value.to_string()).c_str());
+
+	if (specification.flags.complete) {
+		return;
+	}
+
+	if (specification.flags.inside_namespace) {
+		complete_namespace_specification(item_value);
+		return;
+	}
 
 	if (!specification.flags.concrete) {
 		validate_required_data(item_value);
