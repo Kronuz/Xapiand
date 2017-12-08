@@ -336,9 +336,11 @@ RemoteProtocol::msg_update(const std::string &)
 		message += serialise_length(doclen_lb);
 		message += serialise_length(db->get_doclength_upper_bound() - doclen_lb);
 		message += (db->has_positions() ? '1' : '0');
-		// FIXME: clumsy to reverse calculate total_len like this:
+#if XAPIAN_MAJOR_VERSION <= 1 && XAPIAN_MINOR_VERSION <= 4 && XAPIAN_REVISION <= 4
 		message += serialise_length(db->get_avlength() * db->get_doccount() + .5);
-		//message += serialise_length(db->get_total_length());
+#else
+		message += serialise_length(db->get_total_length());
+#endif
 		std::string uuid = db->get_uuid();
 		message += uuid;
 
