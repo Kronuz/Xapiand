@@ -5750,39 +5750,14 @@ Schema::index(
 		FieldVector fields;
 		auto properties = &get_newest_properties();
 
-		const auto it_e = object.end();
 		if (properties->size() <= 1) {  // it's a new specification if there's only _version' here
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-			static const auto wpit_e = map_dispatch_write_properties.end();
-			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->str();
-				const auto wpit = map_dispatch_write_properties.find(str_key);
-				if (wpit == wpit_e) {
-					fields.emplace_back(std::move(str_key), &it.value());
-				} else {
-					(this->*wpit->second)(*mut_properties, str_key, it.value());
-				}
-			}
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-			write_script(*mut_properties);
-#endif
+			dispatch_write_properties(*mut_properties, object, fields);
 			properties = &*mut_properties;
 		} else {
 			dispatch_feed_properties(*properties);
-			static const auto ddit_e = map_dispatch_process_concrete_properties.end();
-			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->str();
-				const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
-				if (ddit == ddit_e) {
-					fields.emplace_back(std::move(str_key), &it.value());
-				} else {
-					(this->*ddit->second)(str_key, it.value());
-				}
-			}
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-			normalize_script();
-#endif
+			dispatch_process_properties(object, fields);
 		}
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
@@ -5793,12 +5768,17 @@ Schema::index(
 			}
 			// Rebuild fields with new values.
 			fields.clear();
+			static const auto wtit_e = map_dispatch_process_properties.end();
 			static const auto ddit_e = map_dispatch_process_concrete_properties.end();
+			const auto it_e = object.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
-				const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
-				if (ddit == ddit_e) {
-					fields.emplace_back(std::move(str_key), &it.value());
+				const auto wtit = map_dispatch_process_properties.find(str_key);
+				if (wtit == wtit_e) {
+					const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
+					if (ddit == ddit_e) {
+						fields.emplace_back(std::move(str_key), &it.value());
+					}
 				}
 			}
 		}
@@ -5849,20 +5829,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 			dispatch_feed_properties(*mut_properties);
 		}
 
-		static const auto wpit_e = map_dispatch_write_properties.end();
-		const auto it_e = obj_schema.end();
-		for (auto it = obj_schema.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
-			const auto wpit = map_dispatch_write_properties.find(str_key);
-			if (wpit == wpit_e) {
-				fields.emplace_back(std::move(str_key), &it.value());
-			} else {
-				(this->*wpit->second)(*mut_properties, str_key, it.value());
-			}
-		}
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-		write_script(*mut_properties);
-#endif
+		dispatch_write_properties(*mut_properties, obj_schema, fields);
 
 		if (specification.flags.is_namespace && fields.size()) {
 			return;
