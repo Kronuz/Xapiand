@@ -1395,10 +1395,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", repr(data.to_string()).c_str(), repr(item_value.to_string()).c_str(), pos);
 
-	if (specification.flags.inside_namespace) {
-		complete_namespace_specification(item_value);
-	} else {
-		complete_specification(item_value);
+	if (specification.flags.complete) {
+		if (specification.flags.inside_namespace) {
+			complete_namespace_specification(item_value);
+		} else {
+			complete_specification(item_value);
+		}
 	}
 
 	if (specification.partial_index_spcs.empty()) {
@@ -1430,10 +1432,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 			bool valid = false;
 			for (const auto& item : item_value) {
 				if (!item.is_null() && !item.is_undefined()) {
-					if (specification.flags.inside_namespace) {
-						complete_namespace_specification(item);
-					} else {
-						complete_specification(item);
+					if (specification.flags.complete) {
+						if (specification.flags.inside_namespace) {
+							complete_namespace_specification(item);
+						} else {
+							complete_specification(item);
+						}
 					}
 					valid = true;
 					break;
@@ -1451,10 +1455,12 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 			}
 			return;
 		default:
-			if (specification.flags.inside_namespace) {
-				complete_namespace_specification(item_value);
-			} else {
-				complete_specification(item_value);
+			if (specification.flags.complete) {
+				if (specification.flags.inside_namespace) {
+					complete_namespace_specification(item_value);
+				} else {
+					complete_specification(item_value);
+				}
 			}
 			break;
 	}
@@ -1491,10 +1497,12 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 				bool valid = false;
 				for (const auto& item : *val) {
 					if (!item.is_null() && !item.is_undefined()) {
-						if (specification.flags.inside_namespace) {
-							complete_namespace_specification(item);
-						} else {
-							complete_specification(item);
+						if (specification.flags.complete) {
+							if (specification.flags.inside_namespace) {
+								complete_namespace_specification(item);
+							} else {
+								complete_specification(item);
+							}
 						}
 						valid = true;
 						break;
@@ -1515,10 +1523,12 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 				}
 				return;
 			default:
-				if (specification.flags.inside_namespace) {
-					complete_namespace_specification(*val);
-				} else {
-					complete_specification(*val);
+				if (specification.flags.complete) {
+					if (specification.flags.inside_namespace) {
+						complete_namespace_specification(*val);
+					} else {
+						complete_specification(*val);
+					}
 				}
 				break;
 		}
@@ -1651,15 +1661,15 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_namespace_specification(%s)", repr(item_value.to_string()).c_str());
 
-	if (specification.flags.complete) {
-		return;
+	if (!specification.flags.concrete) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+			guess_field_type(item_value);
+		}
+		validate_required_namespace_data();
 	}
-
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
-		guess_field_type(item_value);
-	}
-
-	validate_required_namespace_data();
 
 	if (specification.partial_prefixes.size() > 2) {
 		auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
@@ -1757,10 +1767,6 @@ void
 Schema::complete_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_specification(%s)", repr(item_value.to_string()).c_str());
-
-	if (specification.flags.complete) {
-		return;
-	}
 
 	if (!specification.flags.concrete) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
@@ -3103,8 +3109,12 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const std::string& name, 
 
 			mut_properties = &get_subproperties_write(mut_properties, name, obj_schema, fields);
 
-			if (!specification.flags.concrete && specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
-				validate_required_data(*mut_properties);
+			if (!specification.flags.concrete) {
+				if (specification.flags.inside_namespace) {
+					validate_required_namespace_data();
+				} else {
+					validate_required_data(*mut_properties);
+				}
 			}
 
 			if (specification.flags.is_namespace && fields.size()) {
