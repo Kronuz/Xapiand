@@ -1449,6 +1449,13 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 		}
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
+			if (!specification.flags.concrete) {
+				if (specification.flags.inside_namespace) {
+					validate_required_namespace_data();
+				} else {
+					validate_required_data(get_mutable_properties(specification.full_meta_name));
+				}
+			}
 			index_partial_paths(doc);
 			if (specification.flags.store) {
 				*data = item_value;
