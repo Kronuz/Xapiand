@@ -1395,7 +1395,11 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 {
 	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", repr(data.to_string()).c_str(), repr(item_value.to_string()).c_str(), pos);
 
-	complete_specification(item_value);
+	if (specification.flags.inside_namespace) {
+		complete_namespace_specification(item_value);
+	} else {
+		complete_specification(item_value);
+	}
 
 	if (specification.partial_index_spcs.empty()) {
 		index_item(doc, item_value, data, pos);
@@ -1426,7 +1430,11 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 			bool valid = false;
 			for (const auto& item : item_value) {
 				if (!item.is_null() && !item.is_undefined()) {
-					complete_specification(item);
+					if (specification.flags.inside_namespace) {
+						complete_namespace_specification(item);
+					} else {
+						complete_specification(item);
+					}
 					valid = true;
 					break;
 				}
@@ -1443,7 +1451,11 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack&
 			}
 			return;
 		default:
-			complete_specification(item_value);
+			if (specification.flags.inside_namespace) {
+				complete_namespace_specification(item_value);
+			} else {
+				complete_specification(item_value);
+			}
 			break;
 	}
 
@@ -1479,7 +1491,11 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 				bool valid = false;
 				for (const auto& item : *val) {
 					if (!item.is_null() && !item.is_undefined()) {
-						complete_specification(item);
+						if (specification.flags.inside_namespace) {
+							complete_namespace_specification(item);
+						} else {
+							complete_specification(item);
+						}
 						valid = true;
 						break;
 					}
@@ -1491,7 +1507,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
 				if (!specification.flags.concrete && specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
-					_validate_required_data(get_mutable_properties(specification.full_meta_name));
+					validate_required_data(get_mutable_properties(specification.full_meta_name));
 				}
 				index_partial_paths(doc);
 				if (specification.flags.store) {
@@ -1499,7 +1515,11 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 				}
 				return;
 			default:
-				complete_specification(*val);
+				if (specification.flags.inside_namespace) {
+					complete_namespace_specification(*val);
+				} else {
+					complete_specification(*val);
+				}
 				break;
 		}
 
@@ -1534,7 +1554,7 @@ Schema::process_item_value(const MsgPack*& properties, Xapian::Document& doc, Ms
 		}
 	} else {
 		if (!specification.flags.concrete && specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
-			_validate_required_data(get_mutable_properties(specification.full_meta_name));
+			validate_required_data(get_mutable_properties(specification.full_meta_name));
 		}
 
 		if (fields.empty()) {
@@ -1631,7 +1651,15 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_namespace_specification(%s)", repr(item_value.to_string()).c_str());
 
-	validate_required_namespace_data(item_value);
+	if (specification.flags.complete) {
+		return;
+	}
+
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+		guess_field_type(item_value);
+	}
+
+	validate_required_namespace_data();
 
 	if (specification.partial_prefixes.size() > 2) {
 		auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
@@ -1734,13 +1762,14 @@ Schema::complete_specification(const MsgPack& item_value)
 		return;
 	}
 
-	if (specification.flags.inside_namespace) {
-		complete_namespace_specification(item_value);
-		return;
-	}
-
 	if (!specification.flags.concrete) {
-		validate_required_data(item_value);
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+			guess_field_type(item_value);
+		}
+		validate_required_data(get_mutable_properties(specification.full_meta_name));
 	}
 
 	if (specification.partial_prefixes.size() > 2) {
@@ -1870,14 +1899,92 @@ Schema::set_type_to_array()
 
 
 void
-Schema::_validate_required_data(MsgPack& mut_properties)
+Schema::validate_required_namespace_data()
 {
-	L_CALL(this, "Schema::_validate_required_data(%s)", repr(mut_properties.to_string()).c_str());
+	L_CALL(this, "Schema::validate_required_namespace_data()");
 
+	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
+		case FieldType::GEO:
+			// Set partials and error.
+			specification.flags.partials = default_spc.flags.partials;
+			specification.error = default_spc.error;
+			specification.flags.concrete = true;
+			break;
+
+		case FieldType::TEXT:
+			if (!specification.flags.has_index) {
+				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+				specification.flags.has_index = true;
+			}
+
+			specification.language = default_spc.language;
+
+			specification.stop_strategy = default_spc.stop_strategy;
+
+			specification.stem_strategy = default_spc.stem_strategy;
+			specification.stem_language = default_spc.stem_language;
+			specification.flags.concrete = true;
+			break;
+
+		case FieldType::STRING:
+			if (!specification.flags.has_index) {
+				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+				specification.flags.has_index = true;
+			}
+			specification.flags.concrete = true;
+			break;
+
+		case FieldType::TERM:
+			if (!specification.flags.has_index) {
+				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+				specification.flags.has_index = true;
+			}
+
+			if (!specification.flags.has_bool_term) {
+				specification.flags.bool_term = strhasupper(specification.meta_name);
+				specification.flags.has_bool_term = true;
+			}
+			specification.flags.concrete = true;
+			break;
+
+		case FieldType::SCRIPT:
+			if (!specification.flags.has_index) {
+				specification.index = TypeIndex::NONE; // Fallback to index anything.
+				specification.flags.has_index = true;
+			}
+			specification.flags.concrete = true;
+			break;
+
+		case FieldType::DATE:
+		case FieldType::TIME:
+		case FieldType::TIMEDELTA:
+		case FieldType::INTEGER:
+		case FieldType::POSITIVE:
+		case FieldType::FLOAT:
+		case FieldType::BOOLEAN:
+		case FieldType::UUID:
+			specification.flags.concrete = true;
+			break;
+
+		case FieldType::EMPTY:
+			specification.flags.concrete = false;
+			break;
+
+		default:
+			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
+	}
+}
+
+
+void
+Schema::validate_required_data(MsgPack& mut_properties)
+{
+	L_CALL(this, "Schema::validate_required_data(%s)", repr(mut_properties.to_string()).c_str());
 
 	dispatch_set_default_spc(mut_properties);
 
 	std::set<uint64_t> set_acc;
+
 	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::GEO: {
 			// Set partials and error.
@@ -1900,6 +2007,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 			} else {
 				set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
 			}
+			specification.flags.concrete = true;
 			break;
 		}
 		case FieldType::DATE: {
@@ -1921,6 +2029,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 			} else {
 				set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
 			}
+			specification.flags.concrete = true;
 			break;
 		}
 		case FieldType::TIME:
@@ -1943,6 +2052,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 			} else {
 				set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
 			}
+			specification.flags.concrete = true;
 			break;
 		}
 		case FieldType::INTEGER:
@@ -1959,6 +2069,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 			} else {
 				set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
 			}
+			specification.flags.concrete = true;
 			break;
 		}
 		case FieldType::TEXT: {
@@ -1985,6 +2096,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 			if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
 				specification.language = specification.aux_stem_lan;
 			}
+			specification.flags.concrete = true;
 			break;
 		}
 		case FieldType::STRING: {
@@ -1999,6 +2111,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 
 			// It is needed for soundex.
 			mut_properties[RESERVED_LANGUAGE] = specification.language;
+			specification.flags.concrete = true;
 			break;
 		}
 		case FieldType::TERM: {
@@ -2021,6 +2134,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 
 			// It is needed for soundex.
 			mut_properties[RESERVED_LANGUAGE] = specification.language;
+			specification.flags.concrete = true;
 			break;
 		}
 		case FieldType::SCRIPT: {
@@ -2032,11 +2146,18 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 				}
 				specification.flags.has_index = true;
 			}
+			specification.flags.concrete = true;
 			break;
 		}
 		case FieldType::BOOLEAN:
 		case FieldType::UUID:
+			specification.flags.concrete = true;
 			break;
+
+		case FieldType::EMPTY:
+			specification.flags.concrete = false;
+			break;
+
 		default:
 			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
 	}
@@ -2070,103 +2191,7 @@ Schema::_validate_required_data(MsgPack& mut_properties)
 	// Process RESERVED_TYPE
 	mut_properties[RESERVED_TYPE] = specification.sep_types;
 
-	specification.flags.concrete = true;
-
 	// L_DEBUG(this, "\nspecification = %s\nmut_properties = %s", specification.to_string().c_str(), mut_properties.to_string(true).c_str());
-}
-
-
-void
-Schema::validate_required_namespace_data(const MsgPack& value)
-{
-	L_CALL(this, "Schema::validate_required_namespace_data(%s)", repr(value.to_string()).c_str());
-
-	L_SCHEMA(this, "Specification heritable and sent by user: %s", specification.to_string().c_str());
-
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
-		guess_field_type(value);
-	}
-
-	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::GEO:
-			// Set partials and error.
-			specification.flags.partials = default_spc.flags.partials;
-			specification.error = default_spc.error;
-			break;
-
-		case FieldType::TEXT:
-			if (!specification.flags.has_index) {
-				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
-				specification.flags.has_index = true;
-			}
-
-			specification.language = default_spc.language;
-
-			specification.stop_strategy = default_spc.stop_strategy;
-
-			specification.stem_strategy = default_spc.stem_strategy;
-			specification.stem_language = default_spc.stem_language;
-			break;
-
-		case FieldType::STRING:
-			if (!specification.flags.has_index) {
-				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
-				specification.flags.has_index = true;
-			}
-			break;
-
-		case FieldType::TERM:
-			if (!specification.flags.has_index) {
-				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
-				specification.flags.has_index = true;
-			}
-
-			if (!specification.flags.has_bool_term) {
-				specification.flags.bool_term = strhasupper(specification.meta_name);
-				specification.flags.has_bool_term = true;
-			}
-			break;
-
-		case FieldType::SCRIPT:
-			if (!specification.flags.has_index) {
-				specification.index = TypeIndex::NONE; // Fallback to index anything.
-				specification.flags.has_index = true;
-			}
-			break;
-
-		case FieldType::DATE:
-		case FieldType::TIME:
-		case FieldType::TIMEDELTA:
-		case FieldType::INTEGER:
-		case FieldType::POSITIVE:
-		case FieldType::FLOAT:
-		case FieldType::BOOLEAN:
-		case FieldType::UUID:
-			break;
-
-		default:
-			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
-	}
-
-	specification.flags.concrete = true;
-}
-
-
-void
-Schema::validate_required_data(const MsgPack& value)
-{
-	L_CALL(this, "Schema::validate_required_data(%s)", repr(value.to_string()).c_str());
-
-	L_SCHEMA(this, "Specification heritable and sent by user: %s", specification.to_string().c_str());
-
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
-		if (specification.flags.strict) {
-			THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
-		}
-		guess_field_type(value);
-	}
-
-	_validate_required_data(get_mutable_properties(specification.full_meta_name));
 }
 
 
@@ -3079,7 +3104,7 @@ Schema::update_schema(MsgPack*& mut_parent_properties, const std::string& name, 
 			mut_properties = &get_subproperties_write(mut_properties, name, obj_schema, fields);
 
 			if (!specification.flags.concrete && specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
-				_validate_required_data(*mut_properties);
+				validate_required_data(*mut_properties);
 			}
 
 			if (specification.flags.is_namespace && fields.size()) {

@@ -581,10 +581,8 @@ class Schema {
 	 * Insert into properties all required data.
 	 */
 
-	void _validate_required_data(MsgPack& mut_properties);
-	void validate_required_namespace_data(const MsgPack& value);
-	void validate_required_data(const MsgPack& value);
-
+	void validate_required_namespace_data();
+	void validate_required_data(MsgPack& mut_properties);
 
 	/*
 	 * Sets in specification the item_doc's type
