@@ -470,9 +470,9 @@ class Schema {
 
 	static const std::unordered_map<std::string, dispatch_set_default_spc> map_dispatch_set_default_spc;
 	static const std::unordered_map<std::string, dispatch_write_reserved> map_dispatch_write_properties;
+	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_feed_properties;
 	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_process_properties_without_concrete_type;
 	static const std::unordered_map<std::string, dispatch_process_reserved> map_dispatch_process_properties;
-	static const std::unordered_map<std::string, dispatch_update_reserved> map_dispatch_feed_properties;
 	static const std::unordered_map<std::string, dispatch_readable> map_get_readable;
 
 	std::shared_ptr<const MsgPack> schema;
