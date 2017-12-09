@@ -129,8 +129,9 @@ constexpr double DB_VERSION_SCHEMA = 1.0;
 constexpr int DB_RETRIES           = 3;   // Number of tries to do an operation on a Xapian::Database or Document
 
 constexpr Xapian::valueno DB_SLOT_RESERVED     = 20; // Reserved slots by special data
-constexpr Xapian::valueno DB_SLOT_ID           = 0;  // Slot ID document
-constexpr Xapian::valueno DB_SLOT_CONTENT_TYPE = 1;  // Slot content type data
+constexpr Xapian::valueno DB_SLOT_ID           = 0;  // Slot for document ID
+constexpr Xapian::valueno DB_SLOT_CONTENT_TYPE = 1;  // Slot for data content type
+constexpr Xapian::valueno DB_SLOT_ROOT         = 9;  // Slot for root
 constexpr Xapian::valueno DB_SLOT_NUMERIC      = 10; // Slot for saving global float/integer/positive values
 constexpr Xapian::valueno DB_SLOT_DATE         = 11; // Slot for saving global date values
 constexpr Xapian::valueno DB_SLOT_GEO          = 12; // Slot for saving global geo values

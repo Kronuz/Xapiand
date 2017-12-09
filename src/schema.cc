@@ -5715,6 +5715,9 @@ Schema::index(
 	try {
 		specification = default_spc;
 
+		// Set default RESERVED_SLOT for root
+		specification.slot = DB_SLOT_ROOT;
+
 		FieldVector fields;
 		auto properties = &get_newest_properties();
 
@@ -5781,6 +5784,9 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 
 	try {
 		specification = default_spc;
+
+		// Set default RESERVED_SLOT for root
+		specification.slot = DB_SLOT_ROOT;
 
 		FieldVector fields;
 		auto mut_properties = replace ? &clear() : &get_mutable_properties();
