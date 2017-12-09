@@ -2157,11 +2157,14 @@ Schema::validate_required_data(MsgPack& mut_properties)
 		mut_properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
 	}
 
-	// Process RESERVED_SLOT
-	if (specification.slot == Xapian::BAD_VALUENO) {
-		specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+	if (specification.flags.concrete) {
+		// Process RESERVED_SLOT
+		if (specification.slot == Xapian::BAD_VALUENO) {
+			specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+		}
+
+		mut_properties[RESERVED_SLOT] = specification.slot;
 	}
-	mut_properties[RESERVED_SLOT] = specification.slot;
 
 	// If field is namespace fallback to index anything but values.
 	if (!specification.flags.has_index && !specification.partial_prefixes.empty()) {
