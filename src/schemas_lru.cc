@@ -307,9 +307,13 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	const auto info_local_schema = get_local(db_handler, obj);
 
 	const auto& schema_path = std::get<2>(info_local_schema);
+
 	if (schema_path.empty()) {
+		// LOCAL Schema, loaded in `info_local_schema[1]`:
 		return std::get<1>(info_local_schema)->load();
 	} else {
+		// FOREIGN Schema, get from the cache or use `get_shared()`
+		// to load from `schema_path/schema_id` endpoint:
 		const auto& schema_id = std::get<3>(info_local_schema);
 		const auto shared_schema_hash = std::hash<std::string>{}(schema_path + schema_id);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
@@ -350,11 +354,13 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	const auto& schema_path = std::get<2>(info_local_schema);
 
 	if (schema_path.empty()) {
+		// LOCAL Schema, update cache and save it to `metadata._meta`:
 		if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
 			db_handler->set_metadata(RESERVED_META, new_schema->serialise());
 			return true;
 		}
 	} else {
+		// FOREIGN Schema, update cache and save it to `schema_path/schema_id` endpoint:
 		const auto& schema_id = std::get<3>(info_local_schema);
 		const auto shared_schema_hash = std::hash<std::string>{}(schema_path + schema_id);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
