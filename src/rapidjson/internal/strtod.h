@@ -15,7 +15,6 @@
 #ifndef RAPIDJSON_STRTOD_
 #define RAPIDJSON_STRTOD_
 
-#include "../rapidjson.h"
 #include "ieee754.h"
 #include "biginteger.h"
 #include "diyfp.h"
@@ -129,27 +128,27 @@ inline bool StrtodFast(double d, int p, double* result) {
 // Compute an approximation and see if it is within 1/2 ULP
 inline bool StrtodDiyFp(const char* decimals, size_t length, size_t decimalPosition, int exp, double* result) {
     uint64_t significand = 0;
-    size_t i = 0;   // 2^64 - 1 = 18446744073709551615, 1844674407370955161 = 0x1999999999999999
+    size_t i = 0;   // 2^64 - 1 = 18446744073709551615, 1844674407370955161 = 0x1999999999999999    
     for (; i < length; i++) {
         if (significand  >  RAPIDJSON_UINT64_C2(0x19999999, 0x99999999) ||
             (significand == RAPIDJSON_UINT64_C2(0x19999999, 0x99999999) && decimals[i] > '5'))
             break;
         significand = significand * 10u + static_cast<unsigned>(decimals[i] - '0');
     }
-
+    
     if (i < length && decimals[i] >= '5') // Rounding
         significand++;
 
     size_t remaining = length - i;
     const unsigned kUlpShift = 3;
     const unsigned kUlp = 1 << kUlpShift;
-    int error = (remaining == 0) ? 0 : kUlp / 2;
+    int64_t error = (remaining == 0) ? 0 : kUlp / 2;
 
     DiyFp v(significand, 0);
     v = v.Normalize();
     error <<= -v.e;
 
-    const int dExp = (int)decimalPosition - (int)i + exp;
+    const int dExp = static_cast<int>(decimalPosition) - static_cast<int>(i) + exp;
 
     int actualExp;
     DiyFp cachedPower = GetCachedPower10(dExp, &actualExp);
@@ -206,7 +205,7 @@ inline bool StrtodDiyFp(const char* decimals, size_t length, size_t decimalPosit
 
 inline double StrtodBigInteger(double approx, const char* decimals, size_t length, size_t decimalPosition, int exp) {
     const BigInteger dInt(decimals, length);
-    const int dExp = (int)decimalPosition - (int)length + exp;
+    const int dExp = static_cast<int>(decimalPosition) - static_cast<int>(length) + exp;
     Double a(approx);
     int cmp = CheckWithinHalfULP(a.Value(), dInt, dExp);
     if (cmp < 0)
@@ -246,8 +245,8 @@ inline double StrtodFullPrecision(double d, int p, const char* decimals, size_t 
 
     // Trim right-most digits
     const int kMaxDecimalDigit = 780;
-    if ((int)length > kMaxDecimalDigit) {
-        int delta = (int(length) - kMaxDecimalDigit);
+    if (static_cast<int>(length) > kMaxDecimalDigit) {
+        int delta = (static_cast<int>(length) - kMaxDecimalDigit);
         exp += delta;
         decimalPosition -= static_cast<unsigned>(delta);
         length = kMaxDecimalDigit;

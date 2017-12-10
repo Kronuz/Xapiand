@@ -1,5 +1,5 @@
 // Tencent is pleased to support the open source community by making RapidJSON available.
-//
+// 
 // Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip. All rights reserved.
 //
 // Licensed under the MIT License (the "License"); you may not use this file except
@@ -7,9 +7,9 @@
 //
 // http://opensource.org/licenses/MIT
 //
-// Unless required by applicable law or agreed to in writing, software distributed
-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// Unless required by applicable law or agreed to in writing, software distributed 
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
 #ifndef RAPIDJSON_ALLOCATORS_H_
@@ -24,10 +24,10 @@ RAPIDJSON_NAMESPACE_BEGIN
 
 /*! \class rapidjson::Allocator
     \brief Concept for allocating, resizing and freeing memory block.
-
+    
     Note that Malloc() and Realloc() are non-static but Free() is static.
-
-    So if an allocator need to support Free(), it needs to put its pointer in
+    
+    So if an allocator need to support Free(), it needs to put its pointer in 
     the header of memory block.
 
 \code
@@ -62,7 +62,7 @@ concept Allocator {
 class CrtAllocator {
 public:
     static const bool kNeedFree = true;
-    void* Malloc(size_t size) {
+    void* Malloc(size_t size) { 
         if (size) //  behavior of malloc(0) is implementation defined.
             return std::malloc(size);
         else
@@ -83,7 +83,7 @@ public:
 // MemoryPoolAllocator
 
 //! Default memory allocator used by the parser and DOM.
-/*! This allocator allocate memory blocks from pre-allocated memory chunks.
+/*! This allocator allocate memory blocks from pre-allocated memory chunks. 
 
     It does not free memory blocks. And Realloc() only allocate new memory.
 
@@ -107,7 +107,7 @@ public:
     /*! \param chunkSize The size of memory chunk. The default is kDefaultChunkSize.
         \param baseAllocator The allocator for allocating memory chunks.
     */
-    MemoryPoolAllocator(size_t chunkSize = kDefaultChunkCapacity, BaseAllocator* baseAllocator = 0) :
+    MemoryPoolAllocator(size_t chunkSize = kDefaultChunkCapacity, BaseAllocator* baseAllocator = 0) : 
         chunkHead_(0), chunk_capacity_(chunkSize), userBuffer_(0), baseAllocator_(baseAllocator), ownBaseAllocator_(0)
     {
     }
@@ -179,7 +179,8 @@ public:
 
         size = RAPIDJSON_ALIGN(size);
         if (chunkHead_ == 0 || chunkHead_->size + size > chunkHead_->capacity)
-            AddChunk(chunk_capacity_ > size ? chunk_capacity_ : size);
+            if (!AddChunk(chunk_capacity_ > size ? chunk_capacity_ : size))
+                return NULL;
 
         void *buffer = reinterpret_cast<char *>(chunkHead_) + RAPIDJSON_ALIGN(sizeof(ChunkHeader)) + chunkHead_->size;
         chunkHead_->size += size;
@@ -194,14 +195,16 @@ public:
         if (newSize == 0)
             return NULL;
 
+        originalSize = RAPIDJSON_ALIGN(originalSize);
+        newSize = RAPIDJSON_ALIGN(newSize);
+
         // Do not shrink if new size is smaller than original
         if (originalSize >= newSize)
             return originalPtr;
 
         // Simply expand it if it is the last allocation and there is sufficient space
-        if (originalPtr == (char *)(chunkHead_) + RAPIDJSON_ALIGN(sizeof(ChunkHeader)) + chunkHead_->size - originalSize) {
+        if (originalPtr == reinterpret_cast<char *>(chunkHead_) + RAPIDJSON_ALIGN(sizeof(ChunkHeader)) + chunkHead_->size - originalSize) {
             size_t increment = static_cast<size_t>(newSize - originalSize);
-            increment = RAPIDJSON_ALIGN(increment);
             if (chunkHead_->size + increment <= chunkHead_->capacity) {
                 chunkHead_->size += increment;
                 return originalPtr;
@@ -209,11 +212,13 @@ public:
         }
 
         // Realloc process: allocate and copy memory, do not free original buffer.
-        void* newBuffer = Malloc(newSize);
-        RAPIDJSON_ASSERT(newBuffer != 0);   // Do not handle out-of-memory explicitly.
-        if (originalSize)
-            std::memcpy(newBuffer, originalPtr, originalSize);
-        return newBuffer;
+        if (void* newBuffer = Malloc(newSize)) {
+            if (originalSize)
+                std::memcpy(newBuffer, originalPtr, originalSize);
+            return newBuffer;
+        }
+        else
+            return NULL;
     }
 
     //! Frees a memory block (concept Allocator)
@@ -227,15 +232,20 @@ private:
 
     //! Creates a new chunk.
     /*! \param capacity Capacity of the chunk in bytes.
+        \return true if success.
     */
-    void AddChunk(size_t capacity) {
+    bool AddChunk(size_t capacity) {
         if (!baseAllocator_)
             ownBaseAllocator_ = baseAllocator_ = RAPIDJSON_NEW(BaseAllocator());
-        ChunkHeader* chunk = reinterpret_cast<ChunkHeader*>(baseAllocator_->Malloc(RAPIDJSON_ALIGN(sizeof(ChunkHeader)) + capacity));
-        chunk->capacity = capacity;
-        chunk->size = 0;
-        chunk->next = chunkHead_;
-        chunkHead_ =  chunk;
+        if (ChunkHeader* chunk = reinterpret_cast<ChunkHeader*>(baseAllocator_->Malloc(RAPIDJSON_ALIGN(sizeof(ChunkHeader)) + capacity))) {
+            chunk->capacity = capacity;
+            chunk->size = 0;
+            chunk->next = chunkHead_;
+            chunkHead_ =  chunk;
+            return true;
+        }
+        else
+            return false;
     }
 
     static const int kDefaultChunkCapacity = 64 * 1024; //!< Default chunk capacity.
