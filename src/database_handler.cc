@@ -182,7 +182,7 @@ DatabaseHandler::delete_schema()
 
 	if (doccount == 0) {
 		XapiandManager::manager->schemas.erase(local_schema_hash);
-		database->set_metadata(RESERVED_META, "");
+		database->set_metadata(RESERVED_SCHEMA, "");
 		/* Using method set_metadata of database directly instead of DatabaseHandler.set_schema
 		   for avoid double lock or database modification window in the time
 		   to unlock and lock again in DatabaseHandler.set_schema

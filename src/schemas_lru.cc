@@ -36,7 +36,7 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 		try {
 			const auto& type = schema_obj.at(RESERVED_TYPE);
 			if (!type.is_array() || type.size() != SPC_TOTAL_TYPES) {
-				THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be array of %zu integers", RESERVED_META, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, SPC_TOTAL_TYPES);
+				THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be array of %zu integers", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, SPC_TOTAL_TYPES);
 			}
 			const auto& value = schema_obj.at(RESERVED_VALUE);
 			if (type.at(SPC_FOREIGN_TYPE).u64() == toUType(FieldType::FOREIGN)) {
@@ -44,23 +44,23 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 					const auto aux_schema_str = value.str();
 					split_path_id(aux_schema_str, schema_path, schema_id);
 					if (schema_path.empty() || schema_id.empty()) {
-						THROW(Error, "Metadata '%s' is corrupt in %s: '%s' in '%s' must contain index and docid [%s]", RESERVED_META, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA, aux_schema_str.c_str());
+						THROW(Error, "Metadata '%s' is corrupt in %s: '%s' in '%s' must contain index and docid [%s]", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA, aux_schema_str.c_str());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(Error, "Metadata '%s' is corrupt in %s: '%s' in '%s' must be string because is foreign", RESERVED_META, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA);
+					THROW(Error, "Metadata '%s' is corrupt in %s: '%s' in '%s' must be string because is foreign", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA);
 				}
 			} else if (!value.is_map()) {
-				THROW(Error, "Metadata '%s' is corrupt in %s: '%s' in '%s' must be object because is not foreign", RESERVED_META, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA);
+				THROW(Error, "Metadata '%s' is corrupt in %s: '%s' in '%s' must be object because is not foreign", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA);
 			}
 		} catch (const std::out_of_range&) {
-			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must have '%s' and '%s'", RESERVED_META, db_handler->endpoints.to_string().c_str(), DB_SCHEMA, RESERVED_TYPE, RESERVED_VALUE);
+			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must have '%s' and '%s'", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), DB_SCHEMA, RESERVED_TYPE, RESERVED_VALUE);
 		} catch (const msgpack::type_error&) {
-			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be map instead of %s", RESERVED_META, db_handler->endpoints.to_string().c_str(), DB_SCHEMA, schema_obj.getStrType().c_str());
+			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be map instead of %s", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), DB_SCHEMA, schema_obj.getStrType().c_str());
 		}
 	} catch (const std::out_of_range&) {
-		THROW(Error, "Metadata '%s' is corrupt in %s: It must contain '%s'", RESERVED_META, db_handler->endpoints.to_string().c_str(), DB_SCHEMA);
+		THROW(Error, "Metadata '%s' is corrupt in %s: It must contain '%s'", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), DB_SCHEMA);
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Metadata '%s' is corrupt in %s: It must be map instead of %s", RESERVED_META, db_handler->endpoints.to_string().c_str(), local_schema_ptr->getStrType().c_str());
+		THROW(Error, "Metadata '%s' is corrupt in %s: It must be map instead of %s", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), local_schema_ptr->getStrType().c_str());
 	}
 }
 
@@ -172,7 +172,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 	if (local_schema_ptr) {
 		validate_metadata(db_handler, local_schema_ptr, schema_path, schema_id);
 	} else {
-		const auto str_schema = db_handler->get_metadata(RESERVED_META);
+		const auto str_schema = db_handler->get_metadata(RESERVED_SCHEMA);
 		std::shared_ptr<const MsgPack> aux_schema_ptr;
 		if (str_schema.empty()) {
 			if (obj && obj->is_map()) {
@@ -243,22 +243,22 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 				aux_schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
 				validate_metadata(db_handler, aux_schema_ptr, schema_path, schema_id);
 			} catch (const msgpack::unpack_error& e) {
-				THROW(Error, "Metadata '%s' is corrupt in %s: %s", RESERVED_META, db_handler->endpoints.to_string().c_str(), e.what());
+				THROW(Error, "Metadata '%s' is corrupt in %s: %s", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), e.what());
 			}
 		}
 		aux_schema_ptr->lock();
 
 		if (!atom_local_schema->compare_exchange_strong(local_schema_ptr, aux_schema_ptr)) {
 			if (created) {
-				if (!db_handler->set_metadata(RESERVED_META, local_schema_ptr->serialise(), false)) {
-					THROW(ClientError, "Cannot set metadata: '%s'", RESERVED_META);
+				if (!db_handler->set_metadata(RESERVED_SCHEMA, local_schema_ptr->serialise(), false)) {
+					THROW(ClientError, "Cannot set metadata: '%s'", RESERVED_SCHEMA);
 				}
 				created = false;
 			}
 			validate_metadata(db_handler, local_schema_ptr, schema_path, schema_id);
 		} else if (created) {
-			if (!db_handler->set_metadata(RESERVED_META, aux_schema_ptr->serialise(), false)) {
-				THROW(ClientError, "Cannot set metadata: '%s'", RESERVED_META);
+			if (!db_handler->set_metadata(RESERVED_SCHEMA, aux_schema_ptr->serialise(), false)) {
+				THROW(ClientError, "Cannot set metadata: '%s'", RESERVED_SCHEMA);
 			}
 		}
 	}
@@ -356,7 +356,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	if (schema_path.empty()) {
 		// LOCAL Schema, update cache and save it to `metadata._meta`:
 		if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
-			db_handler->set_metadata(RESERVED_META, new_schema->serialise());
+			db_handler->set_metadata(RESERVED_SCHEMA, new_schema->serialise());
 			return true;
 		}
 	} else {
