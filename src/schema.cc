@@ -2047,7 +2047,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
+					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
 				}
 			} else {
 				set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
@@ -4186,7 +4186,7 @@ Schema::write_dynamic(MsgPack& properties, const std::string& prop_name, const M
 		specification.flags.dynamic = doc_dynamic.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.dynamic);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4201,7 +4201,7 @@ Schema::write_strict(MsgPack& properties, const std::string& prop_name, const Ms
 		specification.flags.strict = doc_strict.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.strict);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4216,7 +4216,7 @@ Schema::write_date_detection(MsgPack& properties, const std::string& prop_name, 
 		specification.flags.date_detection = doc_date_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.date_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4231,7 +4231,7 @@ Schema::write_time_detection(MsgPack& properties, const std::string& prop_name, 
 		specification.flags.time_detection = doc_time_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.time_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4246,7 +4246,7 @@ Schema::write_timedelta_detection(MsgPack& properties, const std::string& prop_n
 		specification.flags.timedelta_detection = doc_timedelta_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.timedelta_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4261,7 +4261,7 @@ Schema::write_numeric_detection(MsgPack& properties, const std::string& prop_nam
 		specification.flags.numeric_detection = doc_numeric_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.numeric_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4276,7 +4276,7 @@ Schema::write_geo_detection(MsgPack& properties, const std::string& prop_name, c
 		specification.flags.geo_detection = doc_geo_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.geo_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4291,7 +4291,7 @@ Schema::write_bool_detection(MsgPack& properties, const std::string& prop_name, 
 		specification.flags.bool_detection = doc_bool_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.bool_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4306,7 +4306,7 @@ Schema::write_string_detection(MsgPack& properties, const std::string& prop_name
 		specification.flags.string_detection = doc_string_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.string_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4321,7 +4321,7 @@ Schema::write_text_detection(MsgPack& properties, const std::string& prop_name, 
 		specification.flags.text_detection = doc_text_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.text_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4336,7 +4336,7 @@ Schema::write_term_detection(MsgPack& properties, const std::string& prop_name, 
 		specification.flags.term_detection = doc_tm_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.term_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4351,7 +4351,7 @@ Schema::write_uuid_detection(MsgPack& properties, const std::string& prop_name, 
 		specification.flags.uuid_detection = doc_uuid_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.uuid_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4375,7 +4375,7 @@ Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const
 		specification.flags.has_namespace = true;
 		properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4446,9 +4446,9 @@ Schema::process_language(const std::string& prop_name, const MsgPack& doc_langua
 			return;
 		}
 
-		THROW(ClientError, "%s: %s is not supported", prop_name.c_str(), _str_language.c_str());
+		THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), _str_language.c_str());
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4462,11 +4462,11 @@ Schema::process_slot(const std::string& prop_name, const MsgPack& doc_slot)
 	try {
 		auto slot = static_cast<Xapian::valueno>(doc_slot.u64());
 		if (slot < DB_SLOT_RESERVED || slot == Xapian::BAD_VALUENO) {
-			THROW(ClientError, "%s: %u is not supported", prop_name.c_str(), slot);
+			THROW(ClientError, "%s invalid slot (%u not supported)", repr(prop_name).c_str(), slot);
 		}
 		specification.slot = slot;
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be integer", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be integer", repr(prop_name).c_str());
 	}
 }
 
@@ -4483,12 +4483,12 @@ Schema::process_stop_strategy(const std::string& prop_name, const MsgPack& doc_s
 		const auto ssit = map_stop_strategy.find(_stop_strategy);
 		if (ssit == ssit_e) {
 			static const std::string str_set_stop_strategy(get_map_keys(map_stop_strategy));
-			THROW(ClientError, "%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stop_strategy.c_str(), _stop_strategy.c_str());
+			THROW(ClientError, "%s can be in %s (%s not supported)", repr(prop_name).c_str(), str_set_stop_strategy.c_str(), _stop_strategy.c_str());
 		} else {
 			specification.stop_strategy = ssit->second;
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4505,12 +4505,12 @@ Schema::process_stem_strategy(const std::string& prop_name, const MsgPack& doc_s
 		const auto ssit = map_stem_strategy.find(_stem_strategy);
 		if (ssit == ssit_e) {
 			static const std::string str_set_stem_strategy(get_map_keys(map_stem_strategy));
-			THROW(ClientError, "%s can be in %s (%s not supported)", prop_name.c_str(), str_set_stem_strategy.c_str(), _stem_strategy.c_str());
+			THROW(ClientError, "%s can be in %s (%s not supported)", repr(prop_name).c_str(), str_set_stem_strategy.c_str(), _stem_strategy.c_str());
 		} else {
 			specification.stem_strategy = ssit->second;
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4526,13 +4526,13 @@ Schema::process_stem_language(const std::string& prop_name, const MsgPack& doc_s
 		static const auto slit_e = map_stem_language.end();
 		const auto slit = map_stem_language.find(_stem_language);
 		if (slit == slit_e) {
-			THROW(ClientError, "%s: %s is not supported", prop_name.c_str(), _stem_language.c_str());
+			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), _stem_language.c_str());
 		} else {
 			specification.stem_language = _stem_language;
 			specification.aux_stem_lan = slit->second.second;
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4546,7 +4546,7 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 	try {
 		specification.set_types(doc_type.str());
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4560,7 +4560,7 @@ Schema::process_accuracy(const std::string& prop_name, const MsgPack& doc_accura
 	if (doc_accuracy.is_array()) {
 		specification.doc_acc = std::make_unique<const MsgPack>(doc_accuracy);
 	} else {
-		THROW(ClientError, "Data inconsistency, %s must be array", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be array", repr(prop_name).c_str());
 	}
 }
 
@@ -4575,7 +4575,7 @@ Schema::process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_
 		specification.flags.bool_term = doc_bool_term.boolean();
 		specification.flags.has_bool_term = true;
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4589,7 +4589,7 @@ Schema::process_partials(const std::string& prop_name, const MsgPack& doc_partia
 	try {
 		specification.flags.partials = doc_partials.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4603,7 +4603,7 @@ Schema::process_error(const std::string& prop_name, const MsgPack& doc_error)
 	try {
 		specification.error = doc_error.f64();
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a double", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a double", repr(prop_name).c_str());
 	}
 }
 
@@ -4618,7 +4618,7 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 		specification.position.clear();
 		if (doc_position.is_array()) {
 			if (doc_position.empty()) {
-				THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
+				THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name).c_str());
 			}
 			for (const auto& _position : doc_position) {
 				specification.position.push_back(static_cast<unsigned>(_position.u64()));
@@ -4627,7 +4627,7 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 			specification.position.push_back(static_cast<unsigned>(doc_position.u64()));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name).c_str());
 	}
 }
 
@@ -4642,7 +4642,7 @@ Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
 		specification.weight.clear();
 		if (doc_weight.is_array()) {
 			if (doc_weight.empty()) {
-				THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
+				THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name).c_str());
 			}
 			for (const auto& _weight : doc_weight) {
 				specification.weight.push_back(static_cast<unsigned>(_weight.u64()));
@@ -4651,7 +4651,7 @@ Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
 			specification.weight.push_back(static_cast<unsigned>(doc_weight.u64()));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name).c_str());
 	}
 }
 
@@ -4666,7 +4666,7 @@ Schema::process_spelling(const std::string& prop_name, const MsgPack& doc_spelli
 		specification.spelling.clear();
 		if (doc_spelling.is_array()) {
 			if (doc_spelling.empty()) {
-				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
+				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name).c_str());
 			}
 			for (const auto& _spelling : doc_spelling) {
 				specification.spelling.push_back(_spelling.boolean());
@@ -4675,7 +4675,7 @@ Schema::process_spelling(const std::string& prop_name, const MsgPack& doc_spelli
 			specification.spelling.push_back(doc_spelling.boolean());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name).c_str());
 	}
 }
 
@@ -4690,7 +4690,7 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 		specification.positions.clear();
 		if (doc_positions.is_array()) {
 			if (doc_positions.empty()) {
-				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
+				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name).c_str());
 			}
 			for (const auto& _positions : doc_positions) {
 				specification.positions.push_back(_positions.boolean());
@@ -4699,7 +4699,7 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 			specification.positions.push_back(doc_positions.boolean());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name).c_str());
 	}
 }
 
@@ -4722,7 +4722,7 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 			specification.flags.has_index = true;
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4741,7 +4741,7 @@ Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
 		specification.flags.store = specification.flags.parent_store && doc_store.boolean();
 		specification.flags.parent_store = specification.flags.store;
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4759,7 +4759,7 @@ Schema::process_recurse(const std::string& prop_name, const MsgPack& doc_recurse
 	try {
 		specification.flags.is_recurse = doc_recurse.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4777,7 +4777,7 @@ Schema::process_partial_paths(const std::string& prop_name, const MsgPack& doc_p
 		specification.flags.partial_paths = doc_partial_paths.boolean();
 		specification.flags.has_partial_paths = true;
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -4802,7 +4802,7 @@ Schema::process_index_uuid_field(const std::string& prop_name, const MsgPack& do
 			specification.index_uuid_field = mdit->second;
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4828,7 +4828,7 @@ Schema::process_script(const std::string&, const MsgPack& doc_script)
 	specification.flags.normalized_script = false;
 #else
 	ignore_unused(doc_script);
-	THROW(ClientError, "%s only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
+	THROW(ClientError, "'%s' only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
 #endif
 }
 
@@ -4857,10 +4857,10 @@ Schema::consistency_language(const std::string& prop_name, const MsgPack& doc_la
 	try {
 		const auto _str_language = lower_string(doc_language.str());
 		if (specification.language != _str_language) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.language.c_str(), _str_language.c_str(), specification.full_meta_name.c_str());
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.language.c_str(), _str_language.c_str(), specification.full_meta_name.c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4876,13 +4876,13 @@ Schema::consistency_stop_strategy(const std::string& prop_name, const MsgPack& d
 			const auto _stop_strategy = lower_string(doc_stop_strategy.str());
 			const auto stop_strategy = ::readable_stop_strategy(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), stop_strategy.c_str(), _stop_strategy.c_str(), specification.full_meta_name.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stop_strategy.c_str(), _stop_strategy.c_str(), specification.full_meta_name.c_str());
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in text type fields", prop_name.c_str());
+			THROW(ClientError, "%s only is allowed in text type fields", repr(prop_name).c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4898,13 +4898,13 @@ Schema::consistency_stem_strategy(const std::string& prop_name, const MsgPack& d
 			const auto _stem_strategy = lower_string(doc_stem_strategy.str());
 			const auto stem_strategy = ::readable_stem_strategy(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), stem_strategy.c_str(), _stem_strategy.c_str(), specification.full_meta_name.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stem_strategy.c_str(), _stem_strategy.c_str(), specification.full_meta_name.c_str());
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in text type fields", prop_name.c_str());
+			THROW(ClientError, "%s only is allowed in text type fields", repr(prop_name).c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4919,10 +4919,10 @@ Schema::consistency_stem_language(const std::string& prop_name, const MsgPack& d
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
 			const auto _stem_language = lower_string(doc_stem_language.str());
 			if (specification.stem_language != _stem_language) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.stem_language.c_str(), _stem_language.c_str(), specification.full_meta_name.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.stem_language.c_str(), _stem_language.c_str(), specification.full_meta_name.c_str());
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in text type fields", prop_name.c_str());
+			THROW(ClientError, "%s only is allowed in text type fields", repr(prop_name).c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
@@ -4946,10 +4946,10 @@ Schema::consistency_type(const std::string& prop_name, const MsgPack& doc_type)
 		}
 		const auto str_type = Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]);
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), str_type.c_str(), _str_type.substr(init_pos).c_str(), specification.full_meta_name.c_str());
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), str_type.c_str(), _str_type.substr(init_pos).c_str(), specification.full_meta_name.c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
 }
 
@@ -4979,7 +4979,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(std::to_string((HTM_START_POS - acc) / 2)).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", prop_name.c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", repr(prop_name).c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
 				}
 				return;
 			}
@@ -5006,7 +5006,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(std::to_string(readable_acc_date((UnitTime)acc))).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", prop_name.c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", repr(prop_name).c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
 				}
 				return;
 			}
@@ -5034,7 +5034,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(std::to_string(readable_acc_date((UnitTime)acc))).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", prop_name.c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", repr(prop_name).c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
 				}
 				return;
 			}
@@ -5056,15 +5056,15 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(std::to_string(acc)).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", prop_name.c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", repr(prop_name).c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
 				}
 				return;
 			}
 			default:
-				THROW(ClientError, "%s is not allowed in %s type fields", prop_name.c_str(), Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
+				THROW(ClientError, "%s is not allowed in %s type fields", repr(prop_name).c_str(), Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str());
 		}
 	} else {
-		THROW(ClientError, "Data inconsistency, %s must be array", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be array", repr(prop_name).c_str());
 	}
 }
 
@@ -5079,13 +5079,13 @@ Schema::consistency_bool_term(const std::string& prop_name, const MsgPack& doc_b
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TERM) {
 			const auto _bool_term = doc_bool_term.boolean();
 			if (specification.flags.bool_term != _bool_term) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", prop_name.c_str(), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", specification.full_meta_name.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", specification.full_meta_name.c_str());
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in term type fields", prop_name.c_str());
+			THROW(ClientError, "%s only is allowed in term type fields", repr(prop_name).c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5100,13 +5100,13 @@ Schema::consistency_partials(const std::string& prop_name, const MsgPack& doc_pa
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::GEO) {
 			const auto _partials = doc_partials.boolean();
 			if (specification.flags.partials != _partials) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.partials ? "true" : "false", _partials ? "true" : "false");
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.partials ? "true" : "false", _partials ? "true" : "false");
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in geospatial type fields", prop_name.c_str());
+			THROW(ClientError, "%s only is allowed in geospatial type fields", repr(prop_name).c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5121,13 +5121,13 @@ Schema::consistency_error(const std::string& prop_name, const MsgPack& doc_error
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::GEO) {
 			const auto _error = doc_error.f64();
 			if (specification.error != _error) {
-				THROW(ClientError, "It is not allowed to change %s [%.2f  ->  %.2f]", prop_name.c_str(), specification.error, _error);
+				THROW(ClientError, "It is not allowed to change %s [%.2f  ->  %.2f]", repr(prop_name).c_str(), specification.error, _error);
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in geospatial type fields", prop_name.c_str());
+			THROW(ClientError, "%s only is allowed in geospatial type fields", repr(prop_name).c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a double", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be a double", repr(prop_name).c_str());
 	}
 }
 
@@ -5141,10 +5141,10 @@ Schema::consistency_dynamic(const std::string& prop_name, const MsgPack& doc_dyn
 	try {
 		const auto _dynamic = doc_dynamic.boolean();
 		if (specification.flags.dynamic != _dynamic) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.dynamic ? "true" : "false", _dynamic ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.dynamic ? "true" : "false", _dynamic ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5158,10 +5158,10 @@ Schema::consistency_strict(const std::string& prop_name, const MsgPack& doc_stri
 	try {
 		const auto _strict = doc_strict.boolean();
 		if (specification.flags.strict != _strict) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.strict ? "true" : "false", _strict ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.strict ? "true" : "false", _strict ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5175,10 +5175,10 @@ Schema::consistency_date_detection(const std::string& prop_name, const MsgPack& 
 	try {
 		const auto _date_detection = doc_date_detection.boolean();
 		if (specification.flags.date_detection != _date_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.date_detection ? "true" : "false", _date_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.date_detection ? "true" : "false", _date_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5192,10 +5192,10 @@ Schema::consistency_time_detection(const std::string& prop_name, const MsgPack& 
 	try {
 		const auto _time_detection = doc_time_detection.boolean();
 		if (specification.flags.time_detection != _time_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.time_detection ? "true" : "false", _time_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.time_detection ? "true" : "false", _time_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5209,10 +5209,10 @@ Schema::consistency_timedelta_detection(const std::string& prop_name, const MsgP
 	try {
 		const auto _timedelta_detection = doc_timedelta_detection.boolean();
 		if (specification.flags.timedelta_detection != _timedelta_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.timedelta_detection ? "true" : "false", _timedelta_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.timedelta_detection ? "true" : "false", _timedelta_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5226,10 +5226,10 @@ Schema::consistency_numeric_detection(const std::string& prop_name, const MsgPac
 	try {
 		const auto _numeric_detection = doc_numeric_detection.boolean();
 		if (specification.flags.numeric_detection != _numeric_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.numeric_detection ? "true" : "false", _numeric_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.numeric_detection ? "true" : "false", _numeric_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5243,10 +5243,10 @@ Schema::consistency_geo_detection(const std::string& prop_name, const MsgPack& d
 	try {
 		const auto _geo_detection = doc_geo_detection.boolean();
 		if (specification.flags.geo_detection != _geo_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.geo_detection ? "true" : "false", _geo_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.geo_detection ? "true" : "false", _geo_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5260,10 +5260,10 @@ Schema::consistency_bool_detection(const std::string& prop_name, const MsgPack& 
 	try {
 		const auto _bool_detection = doc_bool_detection.boolean();
 		if (specification.flags.bool_detection != _bool_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.bool_detection ? "true" : "false", _bool_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.bool_detection ? "true" : "false", _bool_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5277,10 +5277,10 @@ Schema::consistency_string_detection(const std::string& prop_name, const MsgPack
 	try {
 		const auto _string_detection = doc_string_detection.boolean();
 		if (specification.flags.string_detection != _string_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.string_detection ? "true" : "false", _string_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.string_detection ? "true" : "false", _string_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5294,10 +5294,10 @@ Schema::consistency_text_detection(const std::string& prop_name, const MsgPack& 
 	try {
 		const auto _text_detection = doc_text_detection.boolean();
 		if (specification.flags.text_detection != _text_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.text_detection ? "true" : "false", _text_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.text_detection ? "true" : "false", _text_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5311,10 +5311,10 @@ Schema::consistency_term_detection(const std::string& prop_name, const MsgPack& 
 	try {
 		const auto _term_detection = doc_tm_detection.boolean();
 		if (specification.flags.term_detection != _term_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.term_detection ? "true" : "false", _term_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.term_detection ? "true" : "false", _term_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5328,10 +5328,10 @@ Schema::consistency_uuid_detection(const std::string& prop_name, const MsgPack& 
 	try {
 		const auto _uuid_detection = doc_uuid_detection.boolean();
 		if (specification.flags.uuid_detection != _uuid_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.uuid_detection ? "true" : "false", _uuid_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.uuid_detection ? "true" : "false", _uuid_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5345,10 +5345,10 @@ Schema::consistency_namespace(const std::string& prop_name, const MsgPack& doc_n
 	try {
 		const auto _is_namespace = doc_namespace.boolean();
 		if (specification.flags.is_namespace != _is_namespace) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", prop_name.c_str(), specification.flags.is_namespace ? "true" : "false", _is_namespace ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.is_namespace ? "true" : "false", _is_namespace ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", prop_name.c_str());
+		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
 }
 
@@ -5363,13 +5363,13 @@ Schema::consistency_version(const std::string& prop_name, const MsgPack& doc_ver
 		try {
 			const auto _version = doc_version.f64();
 			if (_version != DB_VERSION_SCHEMA) {
-				THROW(ClientError, "It is not allowed to change %s [%.2f  ->  %.2f]", prop_name.c_str(), DB_VERSION_SCHEMA, _version);
+				THROW(ClientError, "It is not allowed to change %s [%.2f  ->  %.2f]", repr(prop_name).c_str(), DB_VERSION_SCHEMA, _version);
 			}
 		} catch (const msgpack::type_error&) {
-			THROW(ClientError, "%s must be a double", prop_name.c_str());
+			THROW(ClientError, "%s must be a double", repr(prop_name).c_str());
 		}
 	} else {
-		THROW(ClientError, "%s is only allowed in root object", prop_name.c_str());
+		THROW(ClientError, "%s is only allowed in root object", repr(prop_name).c_str());
 	}
 }
 
@@ -5382,10 +5382,10 @@ Schema::consistency_schema(const std::string& prop_name, const MsgPack& doc_sche
 
 	if (specification.full_meta_name.empty()) {
 		if (!doc_schema.is_string() && !doc_schema.is_map()) {
-			THROW(ClientError, "%s must be string or map", prop_name.c_str());
+			THROW(ClientError, "%s must be string or map", repr(prop_name).c_str());
 		}
 	} else {
-		THROW(ClientError, "%s is only allowed in root object", prop_name.c_str());
+		THROW(ClientError, "%s is only allowed in root object", repr(prop_name).c_str());
 	}
 }
 
