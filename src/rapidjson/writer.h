@@ -343,16 +343,21 @@ protected:
     }
 
     bool WriteString(const Ch* str, SizeType length)  {
-        static const typename TargetEncoding::Ch hexDigits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+        static const typename TargetEncoding::Ch hexDigits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
         static const char escape[256] = {
+#define X 'x'
+#define X16 X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X
 #define Z16 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
             //0    1    2    3    4    5    6    7    8    9    A    B    C    D    E    F
-            'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'b', 't', 'n', 'u', 'f', 'r', 'u', 'u', // 00
-            'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', // 10
+              X,   X,   X,   X,   X,   X,   X,   X, 'b', 't', 'n',   X, 'f', 'r',   X,   X, // 00
+            X16,                                                                            // 10
               0,   0, '"',   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, // 20
             Z16, Z16,                                                                       // 30~4F
               0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,'\\',   0,   0,   0, // 50
-            Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16                                // 60~FF
+            Z16, Z16,                                                                       // 80~FF
+            Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16                                          // 60~7F
+#undef X
+#undef X16
 #undef Z16
         };
 
@@ -398,13 +403,69 @@ protected:
             }
             else if ((sizeof(Ch) == 1 || static_cast<unsigned>(c) < 256) && RAPIDJSON_UNLIKELY(escape[static_cast<unsigned char>(c)]))  {
                 is.Take();
-                PutUnsafe(*os_, '\\');
-                PutUnsafe(*os_, static_cast<typename TargetEncoding::Ch>(escape[static_cast<unsigned char>(c)]));
-                if (escape[static_cast<unsigned char>(c)] == 'u') {
-                    PutUnsafe(*os_, '0');
-                    PutUnsafe(*os_, '0');
-                    PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) >> 4]);
-                    PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) & 0xF]);
+                char e = escape[(unsigned char)c];
+                switch (e) {
+                    case 'x':
+                        PutUnsafe(*os_, '\\');
+                        PutUnsafe(*os_, 'x');
+                        PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) >> 4]);
+                        PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) & 0xF]);
+                        break;
+                    case 'u':
+                        PutUnsafe(*os_, '\\');
+                        PutUnsafe(*os_, 'u');
+                        PutUnsafe(*os_, '0');
+                        PutUnsafe(*os_, '0');
+                        PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) >> 4]);
+                        PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) & 0xF]);
+                        break;
+                    default:
+                        PutUnsafe(*os_, '\\');
+                        PutUnsafe(*os_, e);
+                        break;
+                }
+            }
+            else if (sizeof(Ch) == 1)  {
+                unsigned codepoint;
+                Ch buffer[4];
+                Ch *buffer_start = &buffer[0];
+                Ch *buffer_end = buffer_start;
+                SizeType start = is.Tell();
+                if (SourceEncoding::Decode(is, &codepoint, &buffer_end)) {
+                    TargetEncoding::Encode(*os_, codepoint);
+                } else {
+                    if (buffer_end > buffer_start - start + length) {
+                        buffer_end = buffer_start - start + length;
+                    }
+                    for (Ch *b = buffer_start; b != buffer_end; ++b) {
+                        Ch c = *b;
+                        char e = escape[static_cast<unsigned char>(c)];
+                        switch (e) {
+                            case 0:
+                            if (static_cast<unsigned char>(c) >= 0x20 && static_cast<unsigned char>(c) < 0x7f) {
+                                PutUnsafe(*os_, c);
+                                break;
+                            }
+                            case 'x':
+                                PutUnsafe(*os_, '\\');
+                                PutUnsafe(*os_, 'x');
+                                PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) >> 4]);
+                                PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) & 0xF]);
+                                break;
+                            case 'u':
+                                PutUnsafe(*os_, '\\');
+                                PutUnsafe(*os_, 'u');
+                                PutUnsafe(*os_, '0');
+                                PutUnsafe(*os_, '0');
+                                PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) >> 4]);
+                                PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) & 0xF]);
+                                break;
+                            default:
+                                PutUnsafe(*os_, '\\');
+                                PutUnsafe(*os_, e);
+                                break;
+                        }
+                    }
                 }
             }
             else if (RAPIDJSON_UNLIKELY(!(writeFlags & kWriteValidateEncodingFlag ? 

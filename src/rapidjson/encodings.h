@@ -52,7 +52,7 @@ concept Encoding {
     //! \param codepoint Output of the unicode codepoint.
     //! \return true if a valid codepoint can be decoded from the stream.
     template <typename InputStream>
-    static bool Decode(InputStream& is, unsigned* codepoint);
+    static bool Decode(InputStream& is, unsigned* codepoint, typename InputStream::Ch** buffer=nullptr);
 
     //! \brief Validate one Unicode codepoint from an encoded stream.
     //! \param is Input stream to obtain codepoint.
@@ -143,11 +143,13 @@ struct UTF8 {
     }
 
     template <typename InputStream>
-    static bool Decode(InputStream& is, unsigned* codepoint) {
-#define COPY() c = is.Take(); *codepoint = (*codepoint << 6) | (static_cast<unsigned char>(c) & 0x3Fu)
+    static bool Decode(InputStream& is, unsigned* codepoint, typename InputStream::Ch** buffer=nullptr) {
+#define TAKE() c = is.Take(); if (*buffer) *(*buffer)++ = c;
+#define COPY() TAKE(); *codepoint = (*codepoint << 6) | (static_cast<unsigned char>(c) & 0x3Fu)
 #define TRANS(mask) result &= ((GetRange(static_cast<unsigned char>(c)) & mask) != 0)
 #define TAIL() COPY(); TRANS(0x70)
-        typename InputStream::Ch c = is.Take();
+        typename InputStream::Ch c;
+        TAKE();
         if (!(c & 0x80)) {
             *codepoint = static_cast<unsigned char>(c);
             return true;
@@ -170,6 +172,7 @@ struct UTF8 {
         case 11: COPY(); TRANS(0x60); TAIL(); TAIL(); return result;
         default: return false;
         }
+#undef TAKE
 #undef COPY
 #undef TRANS
 #undef TAIL
@@ -304,21 +307,24 @@ struct UTF16 {
     }
 
     template <typename InputStream>
-    static bool Decode(InputStream& is, unsigned* codepoint) {
+    static bool Decode(InputStream& is, unsigned* codepoint, typename InputStream::Ch** buffer=nullptr) {
+#define TAKE() c = is.Take(); *(*buffer)++ = c;
         RAPIDJSON_STATIC_ASSERT(sizeof(typename InputStream::Ch) >= 2);
-        typename InputStream::Ch c = is.Take();
+        typename InputStream::Ch c;
+        TAKE();
         if (c < 0xD800 || c > 0xDFFF) {
             *codepoint = static_cast<unsigned>(c);
             return true;
         }
         else if (c <= 0xDBFF) {
             *codepoint = (static_cast<unsigned>(c) & 0x3FF) << 10;
-            c = is.Take();
+            TAKE();
             *codepoint |= (static_cast<unsigned>(c) & 0x3FF);
             *codepoint += 0x10000;
             return c >= 0xDC00 && c <= 0xDFFF;
         }
         return false;
+#undef TAKE
     }
 
     template <typename InputStream, typename OutputStream>
@@ -436,11 +442,14 @@ struct UTF32 {
     }
 
     template <typename InputStream>
-    static bool Decode(InputStream& is, unsigned* codepoint) {
+    static bool Decode(InputStream& is, unsigned* codepoint, typename InputStream::Ch** buffer=nullptr) {
+#define TAKE() c = is.Take(); *(*buffer)++ = c;
         RAPIDJSON_STATIC_ASSERT(sizeof(typename InputStream::Ch) >= 4);
-        Ch c = is.Take();
+        Ch c;
+        TAKE();
         *codepoint = c;
         return c <= 0x10FFFF;
+#undef TAKE
     }
 
     template <typename InputStream, typename OutputStream>
@@ -557,10 +566,13 @@ struct ASCII {
     }
 
     template <typename InputStream>
-    static bool Decode(InputStream& is, unsigned* codepoint) {
-        uint8_t c = static_cast<uint8_t>(is.Take());
-        *codepoint = c;
-        return c <= 0X7F;
+    static bool Decode(InputStream& is, unsigned* codepoint, typename InputStream::Ch** buffer=nullptr) {
+#define TAKE() c = is.Take(); *(*buffer)++ = c;
+        Ch c;
+        TAKE();
+        *codepoint = static_cast<unsigned char>(c);
+        return static_cast<unsigned char>(c) <= 0X7F;
+#undef TAKE
     }
 
     template <typename InputStream, typename OutputStream>
@@ -634,10 +646,10 @@ struct AutoUTF {
     }
 
     template <typename InputStream>
-    RAPIDJSON_FORCEINLINE static bool Decode(InputStream& is, unsigned* codepoint) {
+    RAPIDJSON_FORCEINLINE static bool Decode(InputStream& is, unsigned* codepoint, typename InputStream::Ch** buffer=nullptr) {
         typedef bool (*DecodeFunc)(InputStream&, unsigned*);
         static const DecodeFunc f[] = { RAPIDJSON_ENCODINGS_FUNC(Decode) };
-        return (*f[is.GetType()])(is, codepoint);
+        return (*f[is.GetType()])(is, codepoint, buffer);
     }
 
     template <typename InputStream, typename OutputStream>
