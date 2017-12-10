@@ -151,7 +151,7 @@ long long read_mastery(const std::string& dir, bool force)
 
 void json_load(rapidjson::Document& doc, const std::string& str)
 {
-	rapidjson::ParseResult parse_done = doc.Parse(str.data());
+	rapidjson::ParseResult parse_done = doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(str.data());
 	if (!parse_done) {
 		constexpr size_t tabsize = 3;
 		auto offset = parse_done.Offset();
