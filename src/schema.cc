@@ -1144,12 +1144,10 @@ Schema::get_initial_schema()
 {
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
-	MsgPack new_schema({ {
-		DB_SCHEMA, {
-			{ RESERVED_TYPE,  std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } } },
-			{ RESERVED_VALUE, { { RESERVED_VERSION, DB_VERSION_SCHEMA } } }
-		}
-	} });
+	MsgPack new_schema({
+		{ RESERVED_TYPE,  std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } } },
+		{ RESERVED_VALUE, { { RESERVED_VERSION, DB_VERSION_SCHEMA } } }
+	});
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
 }
@@ -5512,9 +5510,8 @@ Schema::get_readable() const
 	L_CALL(this, "Schema::get_readable()");
 
 	auto schema_readable = mut_schema ? *mut_schema : *schema;
-	auto& schema_prop = schema_readable.at(DB_SCHEMA);
-	readable_type(schema_prop.at(RESERVED_TYPE), schema_prop);
-	auto& properties = schema_prop.at(RESERVED_VALUE);
+	readable_type(schema_readable.at(RESERVED_TYPE), schema_readable);
+	auto& properties = schema_readable.at(RESERVED_VALUE);
 	readable(properties, true);
 	return properties;
 }

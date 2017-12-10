@@ -31,36 +31,30 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 {
 	L_CALL(this, "SchemasLRU::validate_metadata(...)");
 
+	const auto& schema_obj = *local_schema_ptr;
 	try {
-		const auto& schema_obj = local_schema_ptr->at(DB_SCHEMA);
-		try {
-			const auto& type = schema_obj.at(RESERVED_TYPE);
-			if (!type.is_array() || type.size() != SPC_TOTAL_TYPES) {
-				THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be array of %zu integers", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, SPC_TOTAL_TYPES);
-			}
-			const auto& value = schema_obj.at(RESERVED_VALUE);
-			if (type.at(SPC_FOREIGN_TYPE).u64() == toUType(FieldType::FOREIGN)) {
-				try {
-					const auto aux_schema_str = value.str();
-					split_path_id(aux_schema_str, schema_path, schema_id);
-					if (schema_path.empty() || schema_id.empty()) {
-						THROW(Error, "Metadata '%s' is corrupt in %s: '%s' in '%s' must contain index and docid [%s]", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA, aux_schema_str.c_str());
-					}
-				} catch (const msgpack::type_error&) {
-					THROW(Error, "Metadata '%s' is corrupt in %s: '%s' in '%s' must be string because is foreign", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA);
+		const auto& type = schema_obj.at(RESERVED_TYPE);
+		if (!type.is_array() || type.size() != SPC_TOTAL_TYPES) {
+			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be array of %zu integers", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, SPC_TOTAL_TYPES);
+		}
+		const auto& value = schema_obj.at(RESERVED_VALUE);
+		if (type.at(SPC_FOREIGN_TYPE).u64() == toUType(FieldType::FOREIGN)) {
+			try {
+				const auto aux_schema_str = value.str();
+				split_path_id(aux_schema_str, schema_path, schema_id);
+				if (schema_path.empty() || schema_id.empty()) {
+					THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must contain index and docid [%s]", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, aux_schema_str.c_str());
 				}
-			} else if (!value.is_map()) {
-				THROW(Error, "Metadata '%s' is corrupt in %s: '%s' in '%s' must be object because is not foreign", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE, DB_SCHEMA);
+			} catch (const msgpack::type_error&) {
+				THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be string because is foreign", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE);
 			}
-		} catch (const std::out_of_range&) {
-			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must have '%s' and '%s'", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), DB_SCHEMA, RESERVED_TYPE, RESERVED_VALUE);
-		} catch (const msgpack::type_error&) {
-			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be map instead of %s", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), DB_SCHEMA, schema_obj.getStrType().c_str());
+		} else if (!value.is_map()) {
+			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be object because is not foreign", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE);
 		}
 	} catch (const std::out_of_range&) {
-		THROW(Error, "Metadata '%s' is corrupt in %s: It must contain '%s'", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), DB_SCHEMA);
+		THROW(Error, "Metadata '%s' is corrupt in %s: must have '%s' and '%s'", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, RESERVED_VALUE);
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Metadata '%s' is corrupt in %s: It must be map instead of %s", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), local_schema_ptr->getStrType().c_str());
+		THROW(Error, "Metadata '%s' is corrupt in %s: must be object instead of %s", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), schema_obj.getStrType().c_str());
 	}
 }
 
@@ -75,12 +69,10 @@ SchemasLRU::validate_string_meta_schema(const MsgPack& value, const std::array<F
 	if (schema_path.empty() || schema_id.empty()) {
 		THROW(ClientError, "'%s' in '%s' must contain index and docid [%s]", RESERVED_VALUE, RESERVED_SCHEMA, aux_schema_str.c_str());
 	}
-	MsgPack new_schema({ {
-		DB_SCHEMA, {
-			{ RESERVED_TYPE,  sep_types },
-			{ RESERVED_VALUE, value     },
-		}
-	} });
+	MsgPack new_schema({
+		{ RESERVED_TYPE,  sep_types },
+		{ RESERVED_VALUE, value     },
+	});
 
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -92,12 +84,10 @@ SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<F
 {
 	L_CALL(this, "SchemasLRU::validate_object_meta_schema(%s, %s, ...)", repr(value.to_string()).c_str(), required_spc_t::get_str_type(sep_types).c_str());
 
-	MsgPack new_schema({ {
-		DB_SCHEMA, {
-			{ RESERVED_TYPE,  sep_types },
-			{ RESERVED_VALUE, value     },
-		}
-	} });
+	MsgPack new_schema({
+		{ RESERVED_TYPE,  sep_types },
+		{ RESERVED_VALUE, value     },
+	});
 
 	try {
 		const auto& version = value.at(RESERVED_VALUE).at(RESERVED_VERSION);
@@ -107,7 +97,7 @@ SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<F
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 	} catch (const std::out_of_range&) {
-		new_schema[DB_SCHEMA][RESERVED_VALUE][RESERVED_VERSION] = DB_VERSION_SCHEMA;
+		new_schema[RESERVED_VALUE][RESERVED_VERSION] = DB_VERSION_SCHEMA;
 	}
 
 	new_schema.lock();

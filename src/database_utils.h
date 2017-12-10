@@ -121,7 +121,6 @@ constexpr const char RESERVED_MULTICHULL[]          = "_multichull";
 constexpr const char RESERVED_GEO_COLLECTION[]      = "_geometrycollection";
 constexpr const char RESERVED_GEO_INTERSECTION[]    = "_geometryintersection";
 constexpr const char RESERVED_SCHEMA[]              = "_schema";
-constexpr const char DB_SCHEMA[]                    = "schema"; // Word used to save schema in the metadata.
 
 constexpr char DB_OFFSPRING_UNION  = '.';
 constexpr double DB_VERSION_SCHEMA = 1.0;
