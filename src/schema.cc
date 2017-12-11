@@ -454,6 +454,7 @@ const std::unordered_map<std::string, Schema::dispatcher_update_reserved> Schema
 
 const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schema::map_dispatch_process_properties({
 	{ RESERVED_LANGUAGE,               &Schema::process_language                   },
+	{ RESERVED_PREFIX,                 &Schema::process_prefix                     },
 	{ RESERVED_SLOT,                   &Schema::process_slot                       },
 	{ RESERVED_STOP_STRATEGY,          &Schema::process_stop_strategy              },
 	{ RESERVED_STEM_STRATEGY,          &Schema::process_stem_strategy              },
@@ -4477,6 +4478,20 @@ Schema::process_language(const std::string& prop_name, const MsgPack& doc_langua
 		}
 
 		THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), _str_language.c_str());
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
+	}
+}
+
+
+void
+Schema::process_prefix(const std::string& prop_name, const MsgPack& doc_prefix)
+{
+	// RESERVED_prefix isn't heritable and can't change once fixed.
+	L_CALL(this, "Schema::process_prefix(%s)", repr(doc_prefix.to_string()).c_str());
+
+	try {
+		specification.local_prefix.field = doc_prefix.str();
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
