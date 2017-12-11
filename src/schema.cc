@@ -5721,7 +5721,7 @@ Schema::index(
 		FieldVector fields;
 		auto properties = &get_newest_properties();
 
-		if (properties->size() <= 1) {  // it's a new specification if there's only _version' here
+		if (properties->size() <= 1) {  // it's a new specification if there's only '_version' here
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			dispatch_write_properties(*mut_properties, object, fields);
@@ -5791,7 +5791,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		FieldVector fields;
 		auto mut_properties = replace ? &clear() : &get_mutable_properties();
 
-		if (mut_properties->size() <= 1) {  // it's a new specification if there's only _version' here
+		if (mut_properties->size() <= 1) {  // it's a new specification if there's only '_version' here
 			specification.flags.field_found = false;
 		} else {
 			dispatch_feed_properties(*mut_properties);
