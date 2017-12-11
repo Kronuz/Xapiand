@@ -1521,6 +1521,9 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 			set_type_to_object();
 		}
 	} else {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+			THROW(ClientError, "%s is a foreign type and as such it cannot have fields", repr(specification.full_meta_name).c_str());
+		}
 		set_type_to_object();
 		const auto spc_object = std::move(specification);
 		for (const auto& field : fields) {
@@ -1548,15 +1551,21 @@ Schema::update_item_value(MsgPack& properties, const FieldVector& fields)
 		return;
 	}
 
-	if (!fields.empty() || (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY)) {
+	if (fields.empty()) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+			set_type_to_object();
+		}
+	} else {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+			THROW(ClientError, "%s is a foreign type and as such it cannot have fields", repr(specification.full_meta_name).c_str());
+		}
 		set_type_to_object();
-	}
-
-	const auto spc_object = std::move(specification);
-	for (const auto& field : fields) {
-		specification = spc_object;
-		auto mut_properties = &properties;
-		update_schema(mut_properties, field.first, *field.second);
+		const auto spc_object = std::move(specification);
+		for (const auto& field : fields) {
+			specification = spc_object;
+			auto mut_properties = &properties;
+			update_schema(mut_properties, field.first, *field.second);
+		}
 	}
 
 	specification = std::move(spc_start);
