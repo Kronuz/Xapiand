@@ -29,15 +29,12 @@
 #include <stdlib.h>           // for free
 #include <string.h>           // for strtok_r
 
-#include "ignore_unused.h"    // for ignore_unused
-
 
 #define BUFFER_SIZE 1024
 
 
 std::string traceback(const char *filename, int line) {
 	std::string t;
-#ifndef NDEBUG
 	void* callstack[128];
 
 	// retrieve current stack addresses
@@ -76,9 +73,6 @@ std::string traceback(const char *filename, int line) {
 	}
 
 	free(strs);
-#else
-	ignore_unused(filename, line);
-#endif
 	return t;
 }
 
