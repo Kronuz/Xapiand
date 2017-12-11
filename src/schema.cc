@@ -1201,6 +1201,7 @@ Schema::clear()
 	auto& prop = get_mutable_properties();
 	prop.clear();
 	prop[RESERVED_VERSION] = DB_VERSION_SCHEMA;
+	prop[RESERVED_TYPE] = OBJECT_STR;
 	return prop;
 }
 
@@ -4441,7 +4442,7 @@ Schema::write_index_uuid_field(MsgPack& properties, const std::string& prop_name
 
 
 void
-Schema::write_version(MsgPack&, const std::string& prop_name, const MsgPack& doc_version)
+Schema::write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version)
 {
 	L_CALL(this, "Schema::write_version(%s)", repr(doc_version.to_string()).c_str());
 
@@ -5723,7 +5724,7 @@ Schema::index(
 		FieldVector fields;
 		auto properties = &get_newest_properties();
 
-		if (properties->size() <= 1) {  // it's a new specification if there's only '_version' here
+		if (properties->size() <= 2) {  // it's a new specification if there's only '_version' and '_type' here
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			dispatch_write_properties(*mut_properties, object, fields);
@@ -5793,7 +5794,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		FieldVector fields;
 		auto mut_properties = replace ? &clear() : &get_mutable_properties();
 
-		if (mut_properties->size() <= 1) {  // it's a new specification if there's only '_version' here
+		if (mut_properties->size() <= 2) {  // it's a new specification if there's only '_version' and '_type' here
 			specification.flags.field_found = false;
 		} else {
 			dispatch_feed_properties(*mut_properties);
