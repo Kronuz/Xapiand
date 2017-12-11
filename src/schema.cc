@@ -380,10 +380,10 @@ specification_t default_spc;
 
 
 const std::unordered_map<std::string, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
-	{ VERSION_FIELD_NAME,     &Schema::set_default_spc_version },
-	{ DESCRIPTION_FIELD_NAME, &Schema::set_default_spc_description },
-	{ ID_FIELD_NAME,          &Schema::set_default_spc_id },
-	{ CT_FIELD_NAME,          &Schema::set_default_spc_content_type },
+	{ VERSION_FIELD_NAME,      &Schema::set_default_spc_version },
+	{ DESCRIPTION_FIELD_NAME,  &Schema::set_default_spc_description },
+	{ ID_FIELD_NAME,           &Schema::set_default_spc_id },
+	{ CONTENT_TYPE_FIELD_NAME, &Schema::set_default_spc_content_type },
 });
 
 

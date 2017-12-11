@@ -41,10 +41,10 @@ constexpr const char RESERVED_INFO_WEIGHT[]         = "#weight";
 constexpr const char RESERVED_INFO_PERCENT[]        = "#percent";
 
 // Reserved words used in schema.
+constexpr const char ID_FIELD_NAME[]                = "_id";
 constexpr const char VERSION_FIELD_NAME[]           = "_version";
 constexpr const char DESCRIPTION_FIELD_NAME[]       = "_description";
-constexpr const char ID_FIELD_NAME[]                = "_id";
-constexpr const char CT_FIELD_NAME[]                = "_ct";
+constexpr const char CONTENT_TYPE_FIELD_NAME[]      = "_content_type";
 constexpr const char UUID_FIELD_NAME[]              = "<uuid_field>";
 
 constexpr const char RESERVED_WEIGHT[]              = "_weight";

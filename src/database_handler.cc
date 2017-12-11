@@ -398,10 +398,10 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 				}
 
 				if (blob.empty()) {
-					obj.erase(CT_FIELD_NAME);
+					obj.erase(CONTENT_TYPE_FIELD_NAME);
 				} else {
 					// Add Content Type if indexing a blob.
-					auto& ct_field = obj[CT_FIELD_NAME];
+					auto& ct_field = obj[CONTENT_TYPE_FIELD_NAME];
 					if (!ct_field.is_map() && !ct_field.is_undefined()) {
 						ct_field = MsgPack();
 					}
@@ -948,7 +948,7 @@ DatabaseHandler::get_document_info(const std::string& doc_id)
 			info["_blob"] = nullptr;
 		} else {
 			const auto locator = ::storage_unserialise_locator(store.second);
-			const auto ct_type_mp = Document::get_field(CT_FIELD_NAME, obj);
+			const auto ct_type_mp = Document::get_field(CONTENT_TYPE_FIELD_NAME, obj);
 			info["_blob"] = {
 				{ "_type", "stored" },
 				{ "_content_type", ct_type_mp ? ct_type_mp.str() : "unknown" },
