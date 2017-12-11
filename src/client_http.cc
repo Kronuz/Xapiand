@@ -1343,7 +1343,7 @@ HttpClient::touch_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 	MsgPack response;
-	response[RESERVED_ENDPOINT] = endpoints.to_string();
+	response[RESERVED_INFO_ENDPOINT] = endpoints.to_string();
 
 	write_http_response(HTTP_STATUS_CREATED, response);
 }
@@ -1663,12 +1663,12 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 
 			// Detailed info about the document:
-			obj_data[RESERVED_RANK] = m.get_rank();
-			obj_data[RESERVED_WEIGHT] = m.get_weight();
-			obj_data[RESERVED_PERCENT] = m.get_percent();
+			obj_data[RESERVED_INFO_RANK] = m.get_rank();
+			obj_data[RESERVED_INFO_WEIGHT] = m.get_weight();
+			obj_data[RESERVED_INFO_PERCENT] = m.get_percent();
 			// int subdatabase = (document.get_docid() - 1) % endpoints.size();
 			// auto endpoint = endpoints[subdatabase];
-			// obj_data[RESERVED_ENDPOINT] = endpoint.to_string();
+			// obj_data[RESERVED_INFO_ENDPOINT] = endpoint.to_string();
 
 			if (!selector.empty()) {
 				obj_data = obj_data.select(selector);

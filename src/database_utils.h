@@ -35,9 +35,10 @@
 
 
 // Reserved words only used in the responses to the user.
-constexpr const char RESERVED_ENDPOINT[]            = "_endpoint";
-constexpr const char RESERVED_RANK[]                = "_rank";
-constexpr const char RESERVED_PERCENT[]             = "_percent";
+constexpr const char RESERVED_INFO_ENDPOINT[]       = "#endpoint";
+constexpr const char RESERVED_INFO_RANK[]           = "#rank";
+constexpr const char RESERVED_INFO_WEIGHT[]         = "#weight";
+constexpr const char RESERVED_INFO_PERCENT[]        = "#percent";
 
 // Reserved words used in schema.
 constexpr const char ID_FIELD_NAME[]                = "_id";
