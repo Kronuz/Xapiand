@@ -829,12 +829,8 @@ class Schema {
 
 	static bool readable_type(MsgPack& prop_type, MsgPack& properties);
 	static bool readable_prefix(MsgPack& prop_prefix, MsgPack& properties);
-	static bool readable_stop_strategy(MsgPack& prop_stop_strategy, MsgPack& properties);
-	static bool readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack& properties);
 	static bool readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties);
-	static bool readable_index(MsgPack& prop_index, MsgPack& properties);
 	static bool readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack& properties);
-	static bool readable_index_uuid_field(MsgPack& prop_index_uuid_field, MsgPack& properties);
 	static bool readable_script(MsgPack& prop_script, MsgPack& properties);
 
 

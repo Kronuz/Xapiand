@@ -34,11 +34,11 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 	const auto& schema_obj = *local_schema_ptr;
 	try {
 		const auto& type = schema_obj.at(RESERVED_TYPE);
-		if (!type.is_array() || type.size() != SPC_TOTAL_TYPES) {
-			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be array of %zu integers", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, SPC_TOTAL_TYPES);
+		if (!type.is_string()) {
+			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be string", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE);
 		}
 		const auto& value = schema_obj.at(RESERVED_VALUE);
-		if (type.at(SPC_FOREIGN_TYPE).u64() == toUType(FieldType::FOREIGN)) {
+		if (required_spc_t::get_types(type.str())[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 			try {
 				const auto aux_schema_str = value.str();
 				split_path_id(aux_schema_str, schema_path, schema_id);
@@ -70,7 +70,7 @@ SchemasLRU::validate_string_meta_schema(const MsgPack& value, const std::array<F
 		THROW(ClientError, "'%s' in '%s' must contain index and docid [%s]", RESERVED_VALUE, RESERVED_SCHEMA, aux_schema_str.c_str());
 	}
 	MsgPack new_schema({
-		{ RESERVED_TYPE,  sep_types },
+		{ RESERVED_TYPE,  required_spc_t::get_str_type(sep_types) },
 		{ RESERVED_VALUE, value     },
 	});
 
@@ -85,7 +85,7 @@ SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<F
 	L_CALL(this, "SchemasLRU::validate_object_meta_schema(%s, %s, ...)", repr(value.to_string()).c_str(), required_spc_t::get_str_type(sep_types).c_str());
 
 	MsgPack new_schema({
-		{ RESERVED_TYPE,  sep_types },
+		{ RESERVED_TYPE,  required_spc_t::get_str_type(sep_types) },
 		{ RESERVED_VALUE, value     },
 	});
 

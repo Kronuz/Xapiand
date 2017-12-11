@@ -205,7 +205,7 @@ Script::process_chai(bool strict)
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				if (name.empty()) {
 					return MsgPack({
-						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_CHAI, body      },
 					});
 				} else {
@@ -216,7 +216,7 @@ Script::process_chai(bool strict)
 				try {
 					chaipp::Processor::compile(body_hash, body_hash, body);
 					return MsgPack({
-						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_CHAI, {
 							{ RESERVED_HASH,      body_hash },
 							{ RESERVED_BODY_HASH, body_hash },
@@ -232,7 +232,7 @@ Script::process_chai(bool strict)
 				try {
 					chaipp::Processor::compile(script_hash, body_hash, body);
 					return MsgPack({
-						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_CHAI, {
 							{ RESERVED_HASH,      script_hash },
 							{ RESERVED_BODY_HASH, body_hash },
@@ -270,7 +270,7 @@ Script::process_ecma(bool strict)
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				if (name.empty()) {
 					return MsgPack({
-						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_ECMA, body      },
 					});
 				} else {
@@ -281,7 +281,7 @@ Script::process_ecma(bool strict)
 				try {
 					v8pp::Processor::compile(body_hash, body_hash, body);
 					return MsgPack({
-						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_ECMA, {
 							{ RESERVED_HASH,      body_hash },
 							{ RESERVED_BODY_HASH, body_hash },
@@ -297,7 +297,7 @@ Script::process_ecma(bool strict)
 				try {
 					v8pp::Processor::compile(body_hash, body_hash, body);
 					return MsgPack({
-						{ RESERVED_TYPE, sep_types },
+						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_ECMA, {
 							{ RESERVED_HASH,      script_hash },
 							{ RESERVED_BODY_HASH, body_hash },

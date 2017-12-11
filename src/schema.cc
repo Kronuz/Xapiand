@@ -533,12 +533,8 @@ const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schem
 const std::unordered_map<std::string, Schema::dispatcher_readable> Schema::map_get_readable({
 	{ RESERVED_TYPE,                &Schema::readable_type               },
 	{ RESERVED_PREFIX,              &Schema::readable_prefix             },
-	{ RESERVED_STOP_STRATEGY,       &Schema::readable_stop_strategy      },
-	{ RESERVED_STEM_STRATEGY,       &Schema::readable_stem_strategy      },
 	{ RESERVED_STEM_LANGUAGE,       &Schema::readable_stem_language      },
-	{ RESERVED_INDEX,               &Schema::readable_index              },
 	{ RESERVED_ACC_PREFIX,          &Schema::readable_acc_prefix         },
-	{ RESERVED_INDEX_UUID_FIELD,    &Schema::readable_index_uuid_field   },
 	{ RESERVED_SCRIPT,              &Schema::readable_script             },
 });
 
@@ -1145,7 +1141,7 @@ Schema::get_initial_schema()
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
 	MsgPack new_schema({
-		{ RESERVED_TYPE,  std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } } },
+		{ RESERVED_TYPE,  OBJECT_STR },
 		{ RESERVED_VALUE, { { RESERVED_VERSION, DB_VERSION_SCHEMA } } }
 	});
 	new_schema.lock();
@@ -1851,14 +1847,9 @@ Schema::set_type_to_object()
 	L_CALL(this, "Schema::set_type_to_object()");
 
 	if unlikely(specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && !specification.flags.inside_namespace) {
-		auto& _types = get_mutable_properties(specification.full_meta_name)[RESERVED_TYPE];
-		if (_types.is_undefined()) {
-			_types = std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::EMPTY, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY } };
-			specification.sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
-		} else {
-			_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
-			specification.sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
-		}
+		specification.sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
+		auto& mut_properties = get_mutable_properties(specification.full_meta_name);
+		mut_properties[RESERVED_TYPE] = required_spc_t::get_str_type(specification.sep_types);
 	}
 }
 
@@ -1869,14 +1860,9 @@ Schema::set_type_to_array()
 	L_CALL(this, "Schema::set_type_to_array()");
 
 	if unlikely(specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY && !specification.flags.inside_namespace) {
-		auto& _types = get_mutable_properties(specification.full_meta_name)[RESERVED_TYPE];
-		if (_types.is_undefined()) {
-			_types = std::array<FieldType, SPC_TOTAL_TYPES>{ { FieldType::EMPTY, FieldType::EMPTY, FieldType::ARRAY, FieldType::EMPTY } };
-			specification.sep_types[SPC_ARRAY_TYPE] = FieldType::ARRAY;
-		} else {
-			_types[SPC_ARRAY_TYPE] = FieldType::ARRAY;
-			specification.sep_types[SPC_ARRAY_TYPE] = FieldType::ARRAY;
-		}
+		specification.sep_types[SPC_ARRAY_TYPE] = FieldType::ARRAY;
+		auto& mut_properties = get_mutable_properties(specification.full_meta_name);
+		mut_properties[RESERVED_TYPE] = required_spc_t::get_str_type(specification.sep_types);
 	}
 }
 
@@ -2060,7 +2046,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
-					mut_properties[RESERVED_INDEX] = index;
+					mut_properties[RESERVED_INDEX] = ::readable_index(index);
 				}
 				specification.flags.has_index = true;
 			}
@@ -2087,7 +2073,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
-					mut_properties[RESERVED_INDEX] = index;
+					mut_properties[RESERVED_INDEX] = ::readable_index(index);
 				}
 				specification.flags.has_index = true;
 			}
@@ -2102,7 +2088,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
-					mut_properties[RESERVED_INDEX] = index;
+					mut_properties[RESERVED_INDEX] = ::readable_index(index);
 				}
 				specification.flags.has_index = true;
 			}
@@ -2125,7 +2111,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				const auto index = TypeIndex::NONE; // Fallback to index anything.
 				if (specification.index != index) {
 					specification.index = index;
-					mut_properties[RESERVED_INDEX] = index;
+					mut_properties[RESERVED_INDEX] = ::readable_index(index);
 				}
 				specification.flags.has_index = true;
 			}
@@ -2169,13 +2155,13 @@ Schema::validate_required_data(MsgPack& mut_properties)
 		const auto index = specification.index & ~TypeIndex::VALUES;
 		if (specification.index != index) {
 			specification.index = index;
-			mut_properties[RESERVED_INDEX] = index;
+			mut_properties[RESERVED_INDEX] = ::readable_index(index);
 		}
 		specification.flags.has_index = true;
 	}
 
 	// Process RESERVED_TYPE
-	mut_properties[RESERVED_TYPE] = specification.sep_types;
+	mut_properties[RESERVED_TYPE] = required_spc_t::get_str_type(specification.sep_types);
 
 	// L_DEBUG(this, "\nspecification = %s\nmut_properties = %s", specification.to_string().c_str(), mut_properties.to_string(true).c_str());
 }
@@ -3801,7 +3787,19 @@ Schema::feed_stop_strategy(const MsgPack& prop_stop_strategy)
 {
 	L_CALL(this, "Schema::feed_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
 
-	specification.stop_strategy = static_cast<StopStrategy>(prop_stop_strategy.u64());
+	try {
+		const auto _stop_strategy = lower_string(prop_stop_strategy.str());
+		static const auto ssit_e = map_stop_strategy.end();
+		const auto ssit = map_stop_strategy.find(_stop_strategy);
+		if (ssit == ssit_e) {
+			static const std::string str_set_stop_strategy(get_map_keys(map_stop_strategy));
+			THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name).c_str(), repr(str_set_stop_strategy).c_str());
+		} else {
+			specification.stop_strategy = ssit->second;
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -3810,7 +3808,19 @@ Schema::feed_stem_strategy(const MsgPack& prop_stem_strategy)
 {
 	L_CALL(this, "Schema::feed_stem_strategy(%s)", repr(prop_stem_strategy.to_string()).c_str());
 
-	specification.stem_strategy = static_cast<StemStrategy>(prop_stem_strategy.u64());
+	try {
+		const auto _stem_strategy = lower_string(prop_stem_strategy.str());
+		static const auto ssit_e = map_stem_strategy.end();
+		const auto ssit = map_stem_strategy.find(_stem_strategy);
+		if (ssit == ssit_e) {
+			static const std::string str_set_stem_strategy(get_map_keys(map_stem_strategy));
+			THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name).c_str(), repr(str_set_stem_strategy).c_str());
+		} else {
+			specification.stem_strategy = ssit->second;
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -3829,13 +3839,9 @@ Schema::feed_type(const MsgPack& prop_type)
 	L_CALL(this, "Schema::feed_type(%s)", repr(prop_type.to_string()).c_str());
 
 	try {
-		specification.sep_types[SPC_FOREIGN_TYPE]  = (FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64();
-		specification.sep_types[SPC_OBJECT_TYPE]   = (FieldType)prop_type.at(SPC_OBJECT_TYPE).u64();
-		specification.sep_types[SPC_ARRAY_TYPE]    = (FieldType)prop_type.at(SPC_ARRAY_TYPE).u64();
-		specification.sep_types[SPC_CONCRETE_TYPE] = (FieldType)prop_type.at(SPC_CONCRETE_TYPE).u64();
+		specification.set_types(prop_type.str());
 		specification.flags.concrete = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
 	} catch (const msgpack::type_error&) {
-	} catch (const std::out_of_range&) {
 		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TYPE, repr(specification.full_meta_name).c_str());
 	}
 }
@@ -3888,8 +3894,20 @@ Schema::feed_index(const MsgPack& prop_index)
 {
 	L_CALL(this, "Schema::feed_index(%s)", repr(prop_index.to_string()).c_str());
 
-	specification.index = static_cast<TypeIndex>(prop_index.u64());
-	specification.flags.has_index = true;
+	try {
+		const auto str_index = lower_string(prop_index.str());
+		static const auto miit_e = map_index.end();
+		const auto miit = map_index.find(str_index);
+		if (miit == miit_e) {
+			static const std::string str_set_index(get_map_keys(map_index));
+			THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_INDEX, repr(specification.full_meta_name).c_str(), repr(str_set_index).c_str());
+		} else {
+			specification.index = miit->second;
+			specification.flags.has_index = true;
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_INDEX, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -4072,7 +4090,19 @@ Schema::feed_index_uuid_field(const MsgPack& prop_index_uuid_field)
 {
 	L_CALL(this, "Schema::feed_index_uuid_field(%s)", repr(prop_index_uuid_field.to_string()).c_str());
 
-	specification.index_uuid_field = static_cast<UUIDFieldIndex>(prop_index_uuid_field.u64());
+	try {
+		const auto str_index_uuid_field = lower_string(prop_index_uuid_field.str());
+		static const auto mdit_e = map_index_uuid_field.end();
+		const auto mdit = map_index_uuid_field.find(str_index_uuid_field);
+		if (mdit == mdit_e) {
+			static const std::string str_set_index_uuid_field(get_map_keys(map_index_uuid_field));
+			THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name).c_str(), repr(str_set_index_uuid_field).c_str());
+		} else {
+			specification.index_uuid_field = mdit->second;
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -4142,7 +4172,7 @@ Schema::write_index(MsgPack& properties, const std::string& prop_name, const Msg
 	L_CALL(this, "Schema::write_index(%s)", repr(doc_index.to_string()).c_str());
 
 	process_index(prop_name, doc_index);
-	properties[prop_name] = specification.index;
+	properties[prop_name] = ::readable_index(specification.index);
 }
 
 
@@ -4404,7 +4434,7 @@ Schema::write_index_uuid_field(MsgPack& properties, const std::string& prop_name
 	 */
 
 	process_index_uuid_field(prop_name, doc_index_uuid_field);
-	properties[prop_name] = specification.index_uuid_field;
+	properties[prop_name] = ::readable_index_uuid_field(specification.index_uuid_field);
 }
 
 
@@ -5448,7 +5478,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 		const auto index = specification.index | TypeIndex::FIELD_ALL;  // force field_all
 		if (specification.index != index) {
 			specification.index = index;
-			properties[RESERVED_INDEX] = index;
+			properties[RESERVED_INDEX] = ::readable_index(index);
 		}
 		specification.flags.has_index = true;
 	}
@@ -5476,7 +5506,7 @@ Schema::set_default_spc_ct(MsgPack& properties)
 		const auto index = (specification.index | TypeIndex::FIELD_VALUES) & ~TypeIndex::FIELD_TERMS; // Fallback to index anything but values
 		if (specification.index != index) {
 			specification.index = index;
-			properties[RESERVED_INDEX] = index;
+			properties[RESERVED_INDEX] = ::readable_index(index);
 		}
 		specification.flags.has_index = true;
 	}
@@ -5547,16 +5577,8 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 {
 	L_CALL(nullptr, "Schema::readable_type(%s, %s)", repr(prop_type.to_string()).c_str(), repr(properties.to_string()).c_str());
 
-	std::array<FieldType, SPC_TOTAL_TYPES> sep_types({{
-		(FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64(),
-		(FieldType)prop_type.at(SPC_OBJECT_TYPE).u64(),
-		(FieldType)prop_type.at(SPC_ARRAY_TYPE).u64(),
-		(FieldType)prop_type.at(SPC_CONCRETE_TYPE).u64()
-	}});
-	prop_type = required_spc_t::get_str_type(sep_types);
-
 	// Readable accuracy.
-	switch (sep_types[SPC_CONCRETE_TYPE]) {
+	switch (required_spc_t::get_types(prop_type.str())[SPC_CONCRETE_TYPE]) {
 		case FieldType::DATE:
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA:
@@ -5587,28 +5609,6 @@ Schema::readable_prefix(MsgPack&, MsgPack&)
 
 
 bool
-Schema::readable_stop_strategy(MsgPack& prop_stop_strategy, MsgPack&)
-{
-	L_CALL(nullptr, "Schema::readable_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
-
-	prop_stop_strategy = ::readable_stop_strategy((StopStrategy)prop_stop_strategy.u64());
-
-	return true;
-}
-
-
-bool
-Schema::readable_stem_strategy(MsgPack& prop_stem_strategy, MsgPack&)
-{
-	L_CALL(nullptr, "Schema::readable_stem_strategy(%s)", repr(prop_stem_strategy.to_string()).c_str());
-
-	prop_stem_strategy = ::readable_stem_strategy((StemStrategy)prop_stem_strategy.u64());
-
-	return true;
-}
-
-
-bool
 Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties)
 {
 	L_CALL(nullptr, "Schema::readable_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
@@ -5621,33 +5621,11 @@ Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties)
 
 
 bool
-Schema::readable_index(MsgPack& prop_index, MsgPack&)
-{
-	L_CALL(nullptr, "Schema::readable_index(%s)", repr(prop_index.to_string()).c_str());
-
-	prop_index = ::readable_index((TypeIndex)prop_index.u64());
-
-	return true;
-}
-
-
-bool
 Schema::readable_acc_prefix(MsgPack&, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_acc_prefix(...)");
 
 	return false;
-}
-
-
-bool
-Schema::readable_index_uuid_field(MsgPack& prop_index_uuid_field, MsgPack&)
-{
-	L_CALL(nullptr, "Schema::readable_index_uuid_field(%s)", repr(prop_index_uuid_field.to_string()).c_str());
-
-	prop_index_uuid_field = ::readable_index_uuid_field((UUIDFieldIndex)prop_index_uuid_field.u64());
-
-	return true;
 }
 
 
@@ -5816,7 +5794,7 @@ Schema::get_data_id() const
 
 	try {
 		const auto& properties = get_newest_properties().at(ID_FIELD_NAME);
-		res.sep_types[SPC_CONCRETE_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_CONCRETE_TYPE).u64();
+		res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(properties.at(RESERVED_TYPE).str())[SPC_CONCRETE_TYPE];
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).u64());
 		res.prefix.field = properties.at(RESERVED_PREFIX).str();
 		// Get required specification.
@@ -5874,7 +5852,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 		if (!res.flags.inside_namespace) {
 			const auto& properties = *spc.properties;
 
-			res.sep_types[SPC_CONCRETE_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_CONCRETE_TYPE).u64();
+			res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(properties.at(RESERVED_TYPE).str())[SPC_CONCRETE_TYPE];
 			if (res.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
 				return std::make_pair(std::move(res), std::string());
 			}
@@ -5980,7 +5958,7 @@ Schema::get_slot_field(const std::string& field_name) const
 		} else {
 			const auto& properties = *spc.properties;
 
-			res.sep_types[SPC_CONCRETE_TYPE] = (FieldType)properties.at(RESERVED_TYPE).at(SPC_CONCRETE_TYPE).u64();
+			res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(properties.at(RESERVED_TYPE).str())[SPC_CONCRETE_TYPE];
 
 			if (spc.has_uuid_prefix) {
 				res.slot = get_slot(spc.prefix, res.get_ctype());
