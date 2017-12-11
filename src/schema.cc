@@ -534,6 +534,7 @@ const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schem
 const std::unordered_map<std::string, Schema::dispatcher_readable> Schema::map_get_readable({
 	{ RESERVED_TYPE,                &Schema::readable_type               },
 	{ RESERVED_PREFIX,              &Schema::readable_prefix             },
+	{ RESERVED_SLOT,                &Schema::readable_slot               },
 	{ RESERVED_STEM_LANGUAGE,       &Schema::readable_stem_language      },
 	{ RESERVED_ACC_PREFIX,          &Schema::readable_acc_prefix         },
 	{ RESERVED_SCRIPT,              &Schema::readable_script             },
@@ -5618,6 +5619,15 @@ bool
 Schema::readable_prefix(MsgPack&, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_prefix(...)");
+
+	return false;
+}
+
+
+bool
+Schema::readable_slot(MsgPack&, MsgPack&)
+{
+	L_CALL(nullptr, "Schema::readable_slot(...)");
 
 	return false;
 }

@@ -830,6 +830,7 @@ class Schema {
 
 	static bool readable_type(MsgPack& prop_type, MsgPack& properties);
 	static bool readable_prefix(MsgPack& prop_prefix, MsgPack& properties);
+	static bool readable_slot(MsgPack& prop_prefix, MsgPack& properties);
 	static bool readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties);
 	static bool readable_acc_prefix(MsgPack& prop_acc_prefix, MsgPack& properties);
 	static bool readable_script(MsgPack& prop_script, MsgPack& properties);
