@@ -37,8 +37,9 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 		if (!type.is_string()) {
 			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be string", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE);
 		}
-		const auto& value = schema_obj.at(RESERVED_VALUE);
-		if (required_spc_t::get_types(type.str())[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+		auto sep_type = required_spc_t::get_types(type.str());
+		if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+			const auto& value = schema_obj.at(RESERVED_VALUE);
 			try {
 				const auto aux_schema_str = value.str();
 				split_path_id(aux_schema_str, schema_path, schema_id);
@@ -48,7 +49,7 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 			} catch (const msgpack::type_error&) {
 				THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be string because is foreign", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE);
 			}
-		} else if (!value.is_map()) {
+		} else if (sep_type[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
 			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be object because is not foreign", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE);
 		}
 	} catch (const std::out_of_range&) {
@@ -84,20 +85,18 @@ SchemasLRU::validate_object_meta_schema(const MsgPack& value, const std::array<F
 {
 	L_CALL(this, "SchemasLRU::validate_object_meta_schema(%s, %s, ...)", repr(value.to_string()).c_str(), required_spc_t::get_str_type(sep_types).c_str());
 
-	MsgPack new_schema({
-		{ RESERVED_TYPE,  required_spc_t::get_str_type(sep_types) },
-		{ RESERVED_VALUE, value     },
-	});
+	MsgPack new_schema(value);
+	new_schema[RESERVED_TYPE] = required_spc_t::get_str_type(sep_types);
 
 	try {
-		const auto& version = value.at(RESERVED_VALUE).at(RESERVED_VERSION);
+		const auto& version = value.at(RESERVED_VERSION);
 		if (version.f64() != DB_VERSION_SCHEMA) {
 			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 	} catch (const std::out_of_range&) {
-		new_schema[RESERVED_VALUE][RESERVED_VERSION] = DB_VERSION_SCHEMA;
+		new_schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;
 	}
 
 	new_schema.lock();

@@ -1143,8 +1143,8 @@ Schema::get_initial_schema()
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
 	MsgPack new_schema({
-		{ RESERVED_TYPE,  OBJECT_STR },
-		{ RESERVED_VALUE, { { RESERVED_VERSION, DB_VERSION_SCHEMA } } }
+		{ RESERVED_VERSION, DB_VERSION_SCHEMA },
+		{ RESERVED_TYPE,    OBJECT_STR },
 	});
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -5556,10 +5556,8 @@ Schema::get_readable() const
 	L_CALL(this, "Schema::get_readable()");
 
 	auto schema_readable = mut_schema ? *mut_schema : *schema;
-	readable_type(schema_readable.at(RESERVED_TYPE), schema_readable);
-	auto& properties = schema_readable.at(RESERVED_VALUE);
-	readable(properties, true);
-	return properties;
+	readable(schema_readable, true);
+	return schema_readable;
 }
 
 
@@ -5594,7 +5592,8 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 	L_CALL(nullptr, "Schema::readable_type(%s, %s)", repr(prop_type.to_string()).c_str(), repr(properties.to_string()).c_str());
 
 	// Readable accuracy.
-	switch (required_spc_t::get_types(prop_type.str())[SPC_CONCRETE_TYPE]) {
+	auto sep_types = required_spc_t::get_types(prop_type.str());
+	switch (sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::DATE:
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA:

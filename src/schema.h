@@ -485,7 +485,7 @@ class Schema {
 	 * Returns root properties of schema.
 	 */
 	const MsgPack& get_properties() const {
-		return schema->at(RESERVED_VALUE);
+		return *schema;
 	}
 
 	/*
@@ -495,7 +495,7 @@ class Schema {
 		if (!mut_schema) {
 			mut_schema = std::make_unique<MsgPack>(*schema);
 		}
-		return mut_schema->at(RESERVED_VALUE);
+		return *mut_schema;
 	}
 
 	/*
@@ -503,9 +503,9 @@ class Schema {
 	 */
 	const MsgPack& get_newest_properties() const {
 		if (mut_schema) {
-			return mut_schema->at(RESERVED_VALUE);
+			return *mut_schema;
 		} else {
-			return schema->at(RESERVED_VALUE);
+			return *schema;
 		}
 	}
 
