@@ -815,8 +815,10 @@ class Schema {
 	 * Functions to update default specification for fields.
 	 */
 
+	void set_default_spc_version(MsgPack& properties);
+	void set_default_spc_description(MsgPack& properties);
 	void set_default_spc_id(MsgPack& properties);
-	void set_default_spc_ct(MsgPack& properties);
+	void set_default_spc_content_type(MsgPack& properties);
 
 
 	/*

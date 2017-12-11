@@ -380,8 +380,10 @@ specification_t default_spc;
 
 
 const std::unordered_map<std::string, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
-	{ ID_FIELD_NAME,  &Schema::set_default_spc_id },
-	{ CT_FIELD_NAME,  &Schema::set_default_spc_ct },
+	{ VERSION_FIELD_NAME,     &Schema::set_default_spc_version },
+	{ DESCRIPTION_FIELD_NAME, &Schema::set_default_spc_description },
+	{ ID_FIELD_NAME,          &Schema::set_default_spc_id },
+	{ CT_FIELD_NAME,          &Schema::set_default_spc_content_type },
 });
 
 
@@ -408,7 +410,6 @@ const std::unordered_map<std::string, Schema::dispatcher_write_reserved> Schema:
 	{ RESERVED_NAMESPACE,              &Schema::write_namespace                    },
 	{ RESERVED_PARTIAL_PATHS,          &Schema::write_partial_paths                },
 	{ RESERVED_INDEX_UUID_FIELD,       &Schema::write_index_uuid_field             },
-	{ RESERVED_VERSION,                &Schema::write_version                      },
 	{ RESERVED_SCHEMA,                 &Schema::write_schema                       },
 });
 
@@ -526,7 +527,6 @@ const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schem
 	{ RESERVED_TERM_DETECTION,         &Schema::consistency_term_detection         },
 	{ RESERVED_UUID_DETECTION,         &Schema::consistency_uuid_detection         },
 	{ RESERVED_NAMESPACE,              &Schema::consistency_namespace              },
-	{ RESERVED_VERSION,                &Schema::consistency_version                },
 	{ RESERVED_SCHEMA,                 &Schema::consistency_schema                 },
 });
 
@@ -1125,14 +1125,14 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
 	try {
-		const auto& version = get_properties().at(RESERVED_VERSION);
+		const auto& version = get_properties().at(VERSION_FIELD_NAME);
 		if (version.f64() != DB_VERSION_SCHEMA) {
 			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
 	} catch (const std::out_of_range&) {
-		THROW(Error, "Schema is corrupt: '%s' does not exist", RESERVED_VERSION);
+		THROW(Error, "Schema is corrupt: '%s' does not exist", VERSION_FIELD_NAME);
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' has an invalid version", RESERVED_VERSION);
+		THROW(Error, "Schema is corrupt: '%s' has an invalid version", VERSION_FIELD_NAME);
 	}
 }
 
@@ -1143,8 +1143,8 @@ Schema::get_initial_schema()
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
 	MsgPack new_schema({
-		{ RESERVED_VERSION, DB_VERSION_SCHEMA },
-		{ RESERVED_TYPE,    OBJECT_STR },
+		{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
+		{ RESERVED_TYPE,      OBJECT_STR },
 	});
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -1200,7 +1200,7 @@ Schema::clear()
 
 	auto& prop = get_mutable_properties();
 	prop.clear();
-	prop[RESERVED_VERSION] = DB_VERSION_SCHEMA;
+	prop[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
 	prop[RESERVED_TYPE] = OBJECT_STR;
 	return prop;
 }
@@ -4442,19 +4442,6 @@ Schema::write_index_uuid_field(MsgPack& properties, const std::string& prop_name
 
 
 void
-Schema::write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version)
-{
-	L_CALL(this, "Schema::write_version(%s)", repr(doc_version.to_string()).c_str());
-
-	/*
-	 * RESERVED_VERSION must be DB_VERSION_SCHEMA.
-	 */
-
-	consistency_version(prop_name, doc_version);
-}
-
-
-void
 Schema::write_schema(MsgPack&, const std::string& prop_name, const MsgPack& doc_schema)
 {
 	L_CALL(this, "Schema::write_schema(%s)", repr(doc_schema.to_string()).c_str());
@@ -5401,27 +5388,6 @@ Schema::consistency_namespace(const std::string& prop_name, const MsgPack& doc_n
 
 
 void
-Schema::consistency_version(const std::string& prop_name, const MsgPack& doc_version)
-{
-	// RESERVED_VERSION isn't heritable and is only allowed in root object.
-	L_CALL(this, "Schema::consistency_version(%s)", repr(doc_version.to_string()).c_str());
-
-	if (specification.full_meta_name.empty()) {
-		try {
-			const auto _version = doc_version.f64();
-			if (_version != DB_VERSION_SCHEMA) {
-				THROW(ClientError, "It is not allowed to change %s [%.2f  ->  %.2f]", repr(prop_name).c_str(), DB_VERSION_SCHEMA, _version);
-			}
-		} catch (const msgpack::type_error&) {
-			THROW(ClientError, "%s must be a double", repr(prop_name).c_str());
-		}
-	} else {
-		THROW(ClientError, "%s is only allowed in root object", repr(prop_name).c_str());
-	}
-}
-
-
-void
 Schema::consistency_schema(const std::string& prop_name, const MsgPack& doc_schema)
 {
 	// RESERVED_SCHEMA isn't heritable and is only allowed in root object.
@@ -5483,6 +5449,48 @@ Schema::set_namespace_spc_id(required_spc_t& spc)
 
 
 void
+Schema::set_default_spc_version(MsgPack& properties)
+{
+	L_CALL(this, "Schema::set_default_spc_version(%s)", repr(properties.to_string()).c_str());
+
+	if (!specification.flags.has_index) {
+		const auto index = specification.index | TypeIndex::NONE;  // force none
+		if (specification.index != index) {
+			specification.index = index;
+			properties[RESERVED_INDEX] = ::readable_index(index);
+		}
+		specification.flags.has_index = true;
+	}
+
+	// RESERVED_TYPE by default is FLOAT
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::FLOAT;
+	}
+}
+
+
+void
+Schema::set_default_spc_description(MsgPack& properties)
+{
+	L_CALL(this, "Schema::set_default_spc_version(%s)", repr(properties.to_string()).c_str());
+
+	if (!specification.flags.has_index) {
+		const auto index = specification.index | TypeIndex::NONE;  // force none
+		if (specification.index != index) {
+			specification.index = index;
+			properties[RESERVED_INDEX] = ::readable_index(index);
+		}
+		specification.flags.has_index = true;
+	}
+
+	// RESERVED_TYPE by default is TEXT
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
+	}
+}
+
+
+void
 Schema::set_default_spc_id(MsgPack& properties)
 {
 	L_CALL(this, "Schema::set_default_spc_id(%s)", repr(properties.to_string()).c_str());
@@ -5515,9 +5523,9 @@ Schema::set_default_spc_id(MsgPack& properties)
 
 
 void
-Schema::set_default_spc_ct(MsgPack& properties)
+Schema::set_default_spc_content_type(MsgPack& properties)
 {
-	L_CALL(this, "Schema::set_default_spc_ct(%s)", repr(properties.to_string()).c_str());
+	L_CALL(this, "Schema::set_default_spc_content_type(%s)", repr(properties.to_string()).c_str());
 
 	if (!specification.flags.has_index) {
 		const auto index = (specification.index | TypeIndex::FIELD_VALUES) & ~TypeIndex::FIELD_TERMS; // Fallback to index anything but values
