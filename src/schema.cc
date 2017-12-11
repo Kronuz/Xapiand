@@ -4461,7 +4461,7 @@ Schema::process_slot(const std::string& prop_name, const MsgPack& doc_slot)
 
 	try {
 		auto slot = static_cast<Xapian::valueno>(doc_slot.u64());
-		if (slot < DB_SLOT_RESERVED || slot == Xapian::BAD_VALUENO) {
+		if (slot == Xapian::BAD_VALUENO) {
 			THROW(ClientError, "%s invalid slot (%u not supported)", repr(prop_name).c_str(), slot);
 		}
 		specification.slot = slot;
