@@ -266,6 +266,7 @@ MSGPACK_ADD_ENUM(FieldType);
 
 struct required_spc_t {
 	struct flags_t {
+		bool changed:1;
 		bool bool_term:1;
 		bool partials:1;
 
@@ -824,8 +825,6 @@ class Schema {
 
 	void set_default_spc_id(MsgPack& properties);
 	void set_default_spc_content_type(MsgPack& properties);
-	void set_default_spc_version(MsgPack& properties);
-	void set_default_spc_description(MsgPack& properties);
 
 
 	/*

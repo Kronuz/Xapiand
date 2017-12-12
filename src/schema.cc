@@ -382,9 +382,6 @@ specification_t default_spc;
 const std::unordered_map<std::string, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
 	{ ID_FIELD_NAME,           &Schema::set_default_spc_id },
 	{ CONTENT_TYPE_FIELD_NAME, &Schema::set_default_spc_content_type },
-
-	{ RESERVED_VERSION,        &Schema::set_default_spc_version },
-	{ RESERVED_DESCRIPTION,    &Schema::set_default_spc_description },
 });
 
 
@@ -590,7 +587,8 @@ const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& lang
 
 
 required_spc_t::flags_t::flags_t()
-	: bool_term(DEFAULT_BOOL_TERM),
+	: changed(false),
+	  bool_term(DEFAULT_BOOL_TERM),
 	  partials(DEFAULT_GEO_PARTIALS),
 	  store(true),
 	  parent_store(true),
@@ -798,7 +796,8 @@ index_spc_t::index_spc_t(const required_spc_t& spc)
 
 
 specification_t::specification_t()
-	: position({ 0 }),
+	: version(0),
+	  position({ 0 }),
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),
 	  positions({ DEFAULT_POSITIONS }),
@@ -809,6 +808,7 @@ specification_t::specification_t()
 specification_t::specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
 	const std::vector<std::string>& _acc_prefix)
 	: required_spc_t(_slot, type, acc, _acc_prefix),
+	  version(0),
 	  position({ 0 }),
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),
@@ -819,6 +819,8 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 
 specification_t::specification_t(const specification_t& o)
 	: required_spc_t(o),
+	  version(o.version),
+	  description(o.description),
 	  local_prefix(o.local_prefix),
 	  position(o.position),
 	  weight(o.weight),
@@ -836,6 +838,8 @@ specification_t::specification_t(const specification_t& o)
 
 specification_t::specification_t(specification_t&& o) noexcept
 	: required_spc_t(std::move(o)),
+	  version(std::move(o.version)),
+	  description(std::move(o.description)),
 	  local_prefix(std::move(o.local_prefix)),
 	  position(std::move(o.position)),
 	  weight(std::move(o.weight)),
@@ -854,6 +858,8 @@ specification_t::specification_t(specification_t&& o) noexcept
 specification_t&
 specification_t::operator=(const specification_t& o)
 {
+	version = o.version;
+	description = o.description;
 	local_prefix = o.local_prefix;
 	position = o.position;
 	weight = o.weight;
@@ -881,6 +887,8 @@ specification_t::operator=(const specification_t& o)
 specification_t&
 specification_t::operator=(specification_t&& o) noexcept
 {
+	version = std::move(o.version);
+	description = std::move(o.description);
 	local_prefix = std::move(o.local_prefix);
 	position = std::move(o.position);
 	weight = std::move(o.weight);
@@ -1081,6 +1089,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_INDEX_UUID_FIELD    << ": " << readable_index_uuid_field(index_uuid_field) << "\n";
 	str << "\t" << RESERVED_ERROR               << ": " << error                                       << "\n";
 
+	str << "\t" << "changed"                    << ": " << (flags.changed               ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_PARTIALS            << ": " << (flags.partials              ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_STORE               << ": " << (flags.store                 ? "true" : "false") << "\n";
 	str << "\t" << "parent_store"               << ": " << (flags.parent_store          ? "true" : "false") << "\n";
@@ -1216,6 +1225,9 @@ Schema::restart_specification()
 {
 	L_CALL(this, "Schema::restart_specification()");
 
+	specification.version                    = default_spc.version;
+	specification.description                = default_spc.description;
+
 	specification.flags.partials             = default_spc.flags.partials;
 	specification.error                      = default_spc.error;
 
@@ -1224,6 +1236,7 @@ Schema::restart_specification()
 	specification.stem_strategy              = default_spc.stem_strategy;
 	specification.stem_language              = default_spc.stem_language;
 
+	specification.flags.changed              = default_spc.flags.changed;
 	specification.flags.bool_term            = default_spc.flags.bool_term;
 	specification.flags.has_bool_term        = default_spc.flags.has_bool_term;
 	specification.flags.has_index            = default_spc.flags.has_index;
@@ -1250,6 +1263,10 @@ Schema::restart_namespace_specification()
 {
 	L_CALL(this, "Schema::restart_namespace_specification()");
 
+	specification.version                = default_spc.version;
+	specification.description            = default_spc.description;
+
+	specification.flags.changed          = default_spc.flags.changed;
 	specification.flags.bool_term        = default_spc.flags.bool_term;
 	specification.flags.has_bool_term    = default_spc.flags.has_bool_term;
 
@@ -1454,7 +1471,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 		}
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
-			if (!specification.flags.concrete) {
+			if (specification.flags.changed || !specification.flags.concrete) {
 				if (specification.flags.inside_namespace) {
 					validate_required_namespace_data();
 				} else {
@@ -1506,7 +1523,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 	if (val && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 		process_item_value(doc, *data, *val);
 	} else {
-		if (!specification.flags.concrete) {
+		if (specification.flags.changed || !specification.flags.concrete) {
 			if (specification.flags.inside_namespace) {
 				validate_required_namespace_data();
 			} else {
@@ -1543,7 +1560,7 @@ inline void
 Schema::update_item_value(MsgPack& properties, const FieldVector& fields)
 {
 	const auto spc_start = specification;
-	if (!specification.flags.concrete) {
+	if (specification.flags.changed || !specification.flags.concrete) {
 		if (specification.flags.inside_namespace) {
 			validate_required_namespace_data();
 		} else {
@@ -1651,7 +1668,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_namespace_specification(%s)", repr(item_value.to_string()).c_str());
 
-	if (!specification.flags.concrete) {
+	if (specification.flags.changed || !specification.flags.concrete) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
@@ -1758,7 +1775,7 @@ Schema::complete_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_specification(%s)", repr(item_value.to_string()).c_str());
 
-	if (!specification.flags.concrete) {
+	if (specification.flags.changed || !specification.flags.concrete) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
@@ -2179,6 +2196,14 @@ Schema::validate_required_data(MsgPack& mut_properties)
 
 	// Process RESERVED_TYPE
 	mut_properties[RESERVED_TYPE] = required_spc_t::get_str_type(specification.sep_types);
+
+	if (specification.version) {
+		mut_properties[RESERVED_VERSION] = specification.version;
+	}
+
+	if (!specification.description.empty()) {
+		mut_properties[RESERVED_DESCRIPTION] = specification.description;
+	}
 
 	// L_DEBUG(this, "\nspecification = %s\nmut_properties = %s", specification.to_string().c_str(), mut_properties.to_string(true).c_str());
 }
@@ -4707,10 +4732,18 @@ Schema::process_version(const std::string& prop_name, const MsgPack& doc_version
 {
 	L_CALL(this, "Schema::process_version(%s)", repr(doc_version.to_string()).c_str());
 
-	try {
-		specification.version = doc_version.f64();
-	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a number", repr(prop_name).c_str());
+	if (specification.full_meta_name.empty()) {
+		try {
+			auto version = doc_version.f64();
+			if (specification.version != version) {
+				specification.version = version;
+				specification.flags.changed = true;
+			}
+		} catch (const msgpack::type_error&) {
+			THROW(ClientError, "Data inconsistency, %s must be a number", repr(prop_name).c_str());
+		}
+	} else {
+		THROW(ClientError, "%s is only allowed in root object", repr(prop_name).c_str());
 	}
 }
 
@@ -4720,10 +4753,18 @@ Schema::process_description(const std::string& prop_name, const MsgPack& doc_des
 {
 	L_CALL(this, "Schema::process_description(%s)", repr(doc_description.to_string()).c_str());
 
-	try {
-		specification.description = doc_description.str();
-	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a string", repr(prop_name).c_str());
+	if (specification.full_meta_name.empty()) {
+		try {
+			auto description = doc_description.str();
+			if (specification.description != description) {
+				specification.description = description;
+				specification.flags.changed = true;
+			}
+		} catch (const msgpack::type_error&) {
+			THROW(ClientError, "Data inconsistency, %s must be a string", repr(prop_name).c_str());
+		}
+	} else {
+		THROW(ClientError, "%s is only allowed in root object", repr(prop_name).c_str());
 	}
 }
 
@@ -5583,23 +5624,6 @@ Schema::set_default_spc_content_type(MsgPack& properties)
 }
 
 
-void
-Schema::set_default_spc_version(MsgPack& properties)
-{
-	L_CALL(this, "Schema::set_default_spc_version(%s)", repr(properties.to_string()).c_str());
-	properties[RESERVED_VERSION] = specification.version;
-}
-
-
-void
-Schema::set_default_spc_description(MsgPack& properties)
-{
-	L_CALL(this, "Schema::set_default_spc_description(%s)", repr(properties.to_string()).c_str());
-
-	properties[RESERVED_DESCRIPTION] = specification.description;
-}
-
-
 const MsgPack
 Schema::get_readable() const
 {
@@ -5617,23 +5641,21 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 	L_CALL(nullptr, "Schema::readable(%s, %d)", repr(item_schema.to_string()).c_str(), is_root);
 
 	// Change this item of schema in readable form.
-	if (item_schema.is_map()) {
-		static const auto drit_e = map_get_readable.end();
-		for (auto it = item_schema.begin(); it != item_schema.end(); ) {
-			const auto str_key = it->str();
-			const auto drit = map_get_readable.find(str_key);
-			if (drit == drit_e) {
-				if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
-					readable(it.value(), false);
-				}
-			} else {
-				if (!(*drit->second)(it.value(), item_schema)) {
-					it = item_schema.erase(it);
-					continue;
-				}
+	static const auto drit_e = map_get_readable.end();
+	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
+		const auto str_key = it->str();
+		const auto drit = map_get_readable.find(str_key);
+		if (drit == drit_e) {
+			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
+				readable(it.value(), false);
 			}
-			++it;
+		} else {
+			if (!(*drit->second)(it.value(), item_schema)) {
+				it = item_schema.erase(it);
+				continue;
+			}
 		}
+		++it;
 	}
 }
 
