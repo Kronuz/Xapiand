@@ -266,7 +266,6 @@ MSGPACK_ADD_ENUM(FieldType);
 
 struct required_spc_t {
 	struct flags_t {
-		bool changed:1;
 		bool bool_term:1;
 		bool partials:1;
 
@@ -401,9 +400,6 @@ struct index_spc_t {
 
 
 struct specification_t : required_spc_t {
-	double version;
-	std::string description;
-
 	// Reserved values.
 	prefix_t local_prefix;
 	std::vector<Xapian::termpos> position;
@@ -681,8 +677,6 @@ class Schema {
 	 * Functions for feeding specification using the properties in schema.
 	 */
 
-	void feed_version(const MsgPack& prop_version);
-	void feed_description(const MsgPack& prop_description);
 	void feed_position(const MsgPack& prop_position);
 	void feed_weight(const MsgPack& prop_weight);
 	void feed_spelling(const MsgPack& prop_spelling);
@@ -754,8 +748,6 @@ class Schema {
 	 * Functions for reserved words that are in the document.
 	 */
 
-	void process_version(const std::string& prop_name, const MsgPack& doc_version);
-	void process_description(const std::string& prop_name, const MsgPack& doc_description);
 	void process_weight(const std::string& prop_name, const MsgPack& doc_weight);
 	void process_position(const std::string& prop_name, const MsgPack& doc_position);
 	void process_spelling(const std::string& prop_name, const MsgPack& doc_spelling);
@@ -823,6 +815,8 @@ class Schema {
 	 * Functions to update default specification for fields.
 	 */
 
+	void set_default_spc_version(MsgPack& properties);
+	void set_default_spc_description(MsgPack& properties);
 	void set_default_spc_id(MsgPack& properties);
 	void set_default_spc_content_type(MsgPack& properties);
 

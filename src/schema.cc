@@ -380,8 +380,11 @@ specification_t default_spc;
 
 
 const std::unordered_map<std::string, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
+	{ VERSION_FIELD_NAME,      &Schema::set_default_spc_version },
+	{ DESCRIPTION_FIELD_NAME,  &Schema::set_default_spc_description },
 	{ ID_FIELD_NAME,           &Schema::set_default_spc_id },
 	{ CONTENT_TYPE_FIELD_NAME, &Schema::set_default_spc_content_type },
+
 });
 
 
@@ -413,8 +416,6 @@ const std::unordered_map<std::string, Schema::dispatcher_write_reserved> Schema:
 
 
 const std::unordered_map<std::string, Schema::dispatcher_update_reserved> Schema::map_dispatch_feed_properties({
-	{ RESERVED_VERSION,                &Schema::feed_version                       },
-	{ RESERVED_DESCRIPTION,            &Schema::feed_description                   },
 	{ RESERVED_WEIGHT,                 &Schema::feed_weight                        },
 	{ RESERVED_POSITION,               &Schema::feed_position                      },
 	{ RESERVED_SPELLING,               &Schema::feed_spelling                      },
@@ -469,8 +470,6 @@ const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schem
 
 
 const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schema::map_dispatch_process_concrete_properties({
-	{ RESERVED_VERSION,                &Schema::process_version                    },
-	{ RESERVED_DESCRIPTION,            &Schema::process_description                },
 	{ RESERVED_WEIGHT,                 &Schema::process_weight                     },
 	{ RESERVED_POSITION,               &Schema::process_position                   },
 	{ RESERVED_SPELLING,               &Schema::process_spelling                   },
@@ -587,8 +586,7 @@ const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& lang
 
 
 required_spc_t::flags_t::flags_t()
-	: changed(false),
-	  bool_term(DEFAULT_BOOL_TERM),
+	: bool_term(DEFAULT_BOOL_TERM),
 	  partials(DEFAULT_GEO_PARTIALS),
 	  store(true),
 	  parent_store(true),
@@ -796,8 +794,7 @@ index_spc_t::index_spc_t(const required_spc_t& spc)
 
 
 specification_t::specification_t()
-	: version(0),
-	  position({ 0 }),
+	: position({ 0 }),
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),
 	  positions({ DEFAULT_POSITIONS }),
@@ -808,7 +805,6 @@ specification_t::specification_t()
 specification_t::specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
 	const std::vector<std::string>& _acc_prefix)
 	: required_spc_t(_slot, type, acc, _acc_prefix),
-	  version(0),
 	  position({ 0 }),
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),
@@ -819,8 +815,6 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 
 specification_t::specification_t(const specification_t& o)
 	: required_spc_t(o),
-	  version(o.version),
-	  description(o.description),
 	  local_prefix(o.local_prefix),
 	  position(o.position),
 	  weight(o.weight),
@@ -838,8 +832,6 @@ specification_t::specification_t(const specification_t& o)
 
 specification_t::specification_t(specification_t&& o) noexcept
 	: required_spc_t(std::move(o)),
-	  version(std::move(o.version)),
-	  description(std::move(o.description)),
 	  local_prefix(std::move(o.local_prefix)),
 	  position(std::move(o.position)),
 	  weight(std::move(o.weight)),
@@ -858,8 +850,6 @@ specification_t::specification_t(specification_t&& o) noexcept
 specification_t&
 specification_t::operator=(const specification_t& o)
 {
-	version = o.version;
-	description = o.description;
 	local_prefix = o.local_prefix;
 	position = o.position;
 	weight = o.weight;
@@ -887,8 +877,6 @@ specification_t::operator=(const specification_t& o)
 specification_t&
 specification_t::operator=(specification_t&& o) noexcept
 {
-	version = std::move(o.version);
-	description = std::move(o.description);
 	local_prefix = std::move(o.local_prefix);
 	position = std::move(o.position);
 	weight = std::move(o.weight);
@@ -1089,7 +1077,6 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_INDEX_UUID_FIELD    << ": " << readable_index_uuid_field(index_uuid_field) << "\n";
 	str << "\t" << RESERVED_ERROR               << ": " << error                                       << "\n";
 
-	str << "\t" << "changed"                    << ": " << (flags.changed               ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_PARTIALS            << ": " << (flags.partials              ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_STORE               << ": " << (flags.store                 ? "true" : "false") << "\n";
 	str << "\t" << "parent_store"               << ": " << (flags.parent_store          ? "true" : "false") << "\n";
@@ -1139,14 +1126,14 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
 	try {
-		const auto& version = get_properties().at(RESERVED_VERSION);
+		const auto& version = get_properties().at(VERSION_FIELD_NAME);
 		if (version.f64() != DB_VERSION_SCHEMA) {
 			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
 	} catch (const std::out_of_range&) {
-		THROW(Error, "Schema is corrupt: '%s' does not exist", RESERVED_VERSION);
+		THROW(Error, "Schema is corrupt: '%s' does not exist", VERSION_FIELD_NAME);
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' has an invalid version", RESERVED_VERSION);
+		THROW(Error, "Schema is corrupt: '%s' has an invalid version", VERSION_FIELD_NAME);
 	}
 }
 
@@ -1157,8 +1144,8 @@ Schema::get_initial_schema()
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
 	MsgPack new_schema({
-		{ RESERVED_VERSION, DB_VERSION_SCHEMA },
-		{ RESERVED_TYPE,    "object" },
+		{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
+		{ RESERVED_TYPE,      "object" },
 	});
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -1214,7 +1201,7 @@ Schema::clear()
 
 	auto& prop = get_mutable_properties();
 	prop.clear();
-	prop[RESERVED_VERSION] = DB_VERSION_SCHEMA;
+	prop[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
 	prop[RESERVED_TYPE] = "object";
 	return prop;
 }
@@ -1225,9 +1212,6 @@ Schema::restart_specification()
 {
 	L_CALL(this, "Schema::restart_specification()");
 
-	specification.version                    = default_spc.version;
-	specification.description                = default_spc.description;
-
 	specification.flags.partials             = default_spc.flags.partials;
 	specification.error                      = default_spc.error;
 
@@ -1236,7 +1220,6 @@ Schema::restart_specification()
 	specification.stem_strategy              = default_spc.stem_strategy;
 	specification.stem_language              = default_spc.stem_language;
 
-	specification.flags.changed              = default_spc.flags.changed;
 	specification.flags.bool_term            = default_spc.flags.bool_term;
 	specification.flags.has_bool_term        = default_spc.flags.has_bool_term;
 	specification.flags.has_index            = default_spc.flags.has_index;
@@ -1263,10 +1246,6 @@ Schema::restart_namespace_specification()
 {
 	L_CALL(this, "Schema::restart_namespace_specification()");
 
-	specification.version                = default_spc.version;
-	specification.description            = default_spc.description;
-
-	specification.flags.changed          = default_spc.flags.changed;
 	specification.flags.bool_term        = default_spc.flags.bool_term;
 	specification.flags.has_bool_term    = default_spc.flags.has_bool_term;
 
@@ -1471,7 +1450,7 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 		}
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
-			if (specification.flags.changed || !specification.flags.concrete) {
+			if (!specification.flags.concrete) {
 				if (specification.flags.inside_namespace) {
 					validate_required_namespace_data();
 				} else {
@@ -1523,7 +1502,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 	if (val && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 		process_item_value(doc, *data, *val);
 	} else {
-		if (specification.flags.changed || !specification.flags.concrete) {
+		if (!specification.flags.concrete) {
 			if (specification.flags.inside_namespace) {
 				validate_required_namespace_data();
 			} else {
@@ -1560,7 +1539,7 @@ inline void
 Schema::update_item_value(MsgPack& properties, const FieldVector& fields)
 {
 	const auto spc_start = specification;
-	if (specification.flags.changed || !specification.flags.concrete) {
+	if (!specification.flags.concrete) {
 		if (specification.flags.inside_namespace) {
 			validate_required_namespace_data();
 		} else {
@@ -1668,7 +1647,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_namespace_specification(%s)", repr(item_value.to_string()).c_str());
 
-	if (specification.flags.changed || !specification.flags.concrete) {
+	if (!specification.flags.concrete) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
@@ -1775,7 +1754,7 @@ Schema::complete_specification(const MsgPack& item_value)
 {
 	L_CALL(this, "Schema::complete_specification(%s)", repr(item_value.to_string()).c_str());
 
-	if (specification.flags.changed || !specification.flags.concrete) {
+	if (!specification.flags.concrete) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
@@ -2196,14 +2175,6 @@ Schema::validate_required_data(MsgPack& mut_properties)
 
 	// Process RESERVED_TYPE
 	mut_properties[RESERVED_TYPE] = required_spc_t::get_str_type(specification.sep_types);
-
-	if (specification.version) {
-		mut_properties[RESERVED_VERSION] = specification.version;
-	}
-
-	if (!specification.description.empty()) {
-		mut_properties[RESERVED_DESCRIPTION] = specification.description;
-	}
 
 	// L_DEBUG(this, "\nspecification = %s\nmut_properties = %s", specification.to_string().c_str(), mut_properties.to_string(true).c_str());
 }
@@ -3752,28 +3723,6 @@ Schema::dispatch_feed_properties(const MsgPack& properties)
 
 
 void
-Schema::feed_version(const MsgPack& prop_version)
-{
-	L_CALL(this, "Schema::feed_version(%s)", repr(prop_version.to_string()).c_str());
-
-	if (prop_version.is_number()) {
-		specification.version = prop_version.f64();
-	}
-}
-
-
-void
-Schema::feed_description(const MsgPack& prop_description)
-{
-	L_CALL(this, "Schema::feed_description(%s)", repr(prop_description.to_string()).c_str());
-
-	if (prop_description.is_string()) {
-		specification.description = prop_description.str();
-	}
-}
-
-
-void
 Schema::feed_weight(const MsgPack& prop_weight)
 {
 	L_CALL(this, "Schema::feed_weight(%s)", repr(prop_weight.to_string()).c_str());
@@ -4728,48 +4677,6 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 
 
 void
-Schema::process_version(const std::string& prop_name, const MsgPack& doc_version)
-{
-	L_CALL(this, "Schema::process_version(%s)", repr(doc_version.to_string()).c_str());
-
-	if (specification.full_meta_name.empty()) {
-		try {
-			auto version = doc_version.f64();
-			if (specification.version != version) {
-				specification.version = version;
-				specification.flags.changed = true;
-			}
-		} catch (const msgpack::type_error&) {
-			THROW(ClientError, "Data inconsistency, %s must be a number", repr(prop_name).c_str());
-		}
-	} else {
-		THROW(ClientError, "%s is only allowed in root object", repr(prop_name).c_str());
-	}
-}
-
-
-void
-Schema::process_description(const std::string& prop_name, const MsgPack& doc_description)
-{
-	L_CALL(this, "Schema::process_description(%s)", repr(doc_description.to_string()).c_str());
-
-	if (specification.full_meta_name.empty()) {
-		try {
-			auto description = doc_description.str();
-			if (specification.description != description) {
-				specification.description = description;
-				specification.flags.changed = true;
-			}
-		} catch (const msgpack::type_error&) {
-			THROW(ClientError, "Data inconsistency, %s must be a string", repr(prop_name).c_str());
-		}
-	} else {
-		THROW(ClientError, "%s is only allowed in root object", repr(prop_name).c_str());
-	}
-}
-
-
-void
 Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
 {
 	// RESERVED_WEIGHT property is heritable and can change between documents.
@@ -5552,6 +5459,48 @@ Schema::set_namespace_spc_id(required_spc_t& spc)
 	}
 	spc.prefix.field = NAMESPACE_PREFIX_ID_FIELD_NAME;
 	spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
+}
+
+
+void
+Schema::set_default_spc_version(MsgPack& properties)
+{
+	   L_CALL(this, "Schema::set_default_spc_version(%s)", repr(properties.to_string()).c_str());
+
+	   if (!specification.flags.has_index) {
+			   const auto index = specification.index | TypeIndex::NONE;  // force none
+			   if (specification.index != index) {
+					   specification.index = index;
+					   properties[RESERVED_INDEX] = ::readable_index(index);
+			   }
+			   specification.flags.has_index = true;
+	   }
+
+	   // RESERVED_TYPE by default is FLOAT
+	   if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+			   specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::FLOAT;
+	   }
+}
+
+
+void
+Schema::set_default_spc_description(MsgPack& properties)
+{
+	   L_CALL(this, "Schema::set_default_spc_version(%s)", repr(properties.to_string()).c_str());
+
+	   if (!specification.flags.has_index) {
+			   const auto index = specification.index | TypeIndex::NONE;  // force none
+			   if (specification.index != index) {
+					   specification.index = index;
+					   properties[RESERVED_INDEX] = ::readable_index(index);
+			   }
+			   specification.flags.has_index = true;
+	   }
+
+	   // RESERVED_TYPE by default is TEXT
+	   if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+			   specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
+	   }
 }
 
 
