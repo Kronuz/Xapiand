@@ -363,7 +363,6 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			DatabaseHandler _db_handler(Endpoints(Endpoint(schema_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
 			MsgPack shared_schema = *new_schema;
 			shared_schema[RESERVED_RECURSE] = false;
-			shared_schema[RESERVED_STRICT] = true;
 			// FIXME: Process the schema_path instead of sustract it.
 			_db_handler.index(schema_id.substr(0, schema_id.rfind(DB_OFFSPRING_UNION)), true, shared_schema, false, msgpack_type);
 			return true;
