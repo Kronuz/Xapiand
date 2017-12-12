@@ -72,7 +72,7 @@ SchemasLRU::validate_foreign_meta_schema(const MsgPack& value, std::string& sche
 	}
 
 	MsgPack new_schema({
-		{ RESERVED_TYPE, FOREIGN_STR },
+		{ RESERVED_TYPE, "foreign/object" },
 		{ RESERVED_VALUE, value },
 	});
 

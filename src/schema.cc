@@ -1144,7 +1144,7 @@ Schema::get_initial_schema()
 
 	MsgPack new_schema({
 		{ RESERVED_VERSION, DB_VERSION_SCHEMA },
-		{ RESERVED_TYPE,    OBJECT_STR },
+		{ RESERVED_TYPE,    "object" },
 	});
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -1201,7 +1201,7 @@ Schema::clear()
 	auto& prop = get_mutable_properties();
 	prop.clear();
 	prop[RESERVED_VERSION] = DB_VERSION_SCHEMA;
-	prop[RESERVED_TYPE] = OBJECT_STR;
+	prop[RESERVED_TYPE] = "object";
 	return prop;
 }
 
