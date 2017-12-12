@@ -5587,15 +5587,15 @@ Schema::get_readable() const
 	L_CALL(this, "Schema::get_readable()");
 
 	auto schema_readable = mut_schema ? *mut_schema : *schema;
-	readable(schema_readable, true);
+	readable(schema_readable, 2);
 	return schema_readable;
 }
 
 
 void
-Schema::readable(MsgPack& item_schema, bool is_root)
+Schema::readable(MsgPack& item_schema, int root)
 {
-	L_CALL(nullptr, "Schema::readable(%s, %d)", repr(item_schema.to_string()).c_str(), is_root);
+	L_CALL(nullptr, "Schema::readable(%s, %d)", repr(item_schema.to_string()).c_str(), root);
 
 	// Change this item of schema in readable form.
 	static const auto drit_e = map_get_readable.end();
@@ -5603,10 +5603,20 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 		const auto str_key = it->str();
 		const auto drit = map_get_readable.find(str_key);
 		if (drit == drit_e) {
-			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
+			if (is_valid(str_key)) {
 				auto& value = it.value();
 				if (value.is_map()) {
-					readable(value, false);
+					readable(value, root - 1);
+				}
+			} else if (map_dispatch_set_default_spc.count(str_key)) {
+				if (root > 0) {
+					auto& value = it.value();
+					if (value.is_map()) {
+						readable(value, root - 1);
+					}
+				} else {
+					it = item_schema.erase(it);
+					continue;
 				}
 			}
 		} else {
@@ -5692,7 +5702,7 @@ Schema::readable_script(MsgPack& prop_script, MsgPack&)
 {
 	L_CALL(nullptr, "Schema::readable_script(%s)", repr(prop_script.to_string()).c_str());
 
-	readable(prop_script, false);
+	readable(prop_script, 0);
 	return true;
 }
 
