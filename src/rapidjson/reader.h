@@ -880,10 +880,11 @@ private:
                     }
                     TEncoding::Encode(os, codepoint);
                 }
-                else if (e == 'x') {
+                else if (RAPIDJSON_LIKELY(e == 'x')) {    // Hex
+                    is.Take();
                     unsigned codepoint = ParseHex(2, is, escapeOffset);
                     RAPIDJSON_PARSE_ERROR_EARLY_RETURN_VOID;
-                    os.Put((unsigned char)codepoint);
+                    os.Put(static_cast<typename TEncoding::Ch>(static_cast<unsigned char>(codepoint)));
                 }
                 else
                     RAPIDJSON_PARSE_ERROR(kParseErrorStringEscapeInvalid, escapeOffset);
