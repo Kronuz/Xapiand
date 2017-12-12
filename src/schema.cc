@@ -921,7 +921,7 @@ specification_t::global_type(FieldType field_type)
 			return FieldType::STRING;
 
 		default:
-			THROW(ClientError, "Type: '%u' is an unknown type", field_type);
+			THROW(ClientError, "Type: 0x%02x is an unknown type", field_type);
 	}
 }
 
@@ -976,7 +976,7 @@ specification_t::get_global(FieldType field_type)
 			return spc;
 		}
 		default:
-			THROW(ClientError, "Type: '%c' is an unknown type", field_type);
+			THROW(ClientError, "Type: 0x%02x is an unknown type", field_type);
 	}
 }
 
@@ -2838,7 +2838,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			}
 		}
 		default:
-			THROW(ClientError, "Type: '%c' is an unknown type", spc.sep_types[SPC_CONCRETE_TYPE]);
+			THROW(ClientError, "Type: 0x%02x is an unknown type", spc.sep_types[SPC_CONCRETE_TYPE]);
 	}
 }
 
@@ -3065,7 +3065,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 		}
 		default:
-			THROW(ClientError, "Type: '%c' is an unknown type", field_spc.sep_types[SPC_CONCRETE_TYPE]);
+			THROW(ClientError, "Type: 0x%02x is an unknown type", field_spc.sep_types[SPC_CONCRETE_TYPE]);
 	}
 }
 

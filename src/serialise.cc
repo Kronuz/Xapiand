@@ -223,7 +223,7 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
-			THROW(SerialisationError, "Type: %s is an unknown type", type(field_type).c_str());
+			THROW(SerialisationError, "Type: 0x%02x is an unknown type", field_type);
 	}
 }
 
@@ -1058,7 +1058,7 @@ Unserialise::MsgPack(FieldType field_type, const std::string& serialised_val)
 			result = uuid(serialised_val);
 			break;
 		default:
-			THROW(SerialisationError, "Type: %s is an unknown type", Serialise::type(field_type).c_str());
+			THROW(SerialisationError, "Type: 0x%02x is an unknown type", field_type);
 	}
 
 	return result;
@@ -1369,5 +1369,5 @@ Unserialise::type(const std::string& str_type)
 			break;
 	}
 
-	THROW(SerialisationError, "Type: %s is an unknown type", repr(str_type).c_str());
+	THROW(SerialisationError, "Type: %s is an unsupported type", repr(str_type).c_str());
 }
