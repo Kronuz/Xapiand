@@ -372,7 +372,7 @@ struct required_spc_t {
 	}
 
 	static const std::array<FieldType, SPC_TOTAL_TYPES>& get_types(const std::string& str_type);
-	static std::string get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types);
+	static const std::string& get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types);
 
 	void set_types(const std::string& str_type);
 };

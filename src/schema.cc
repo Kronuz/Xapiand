@@ -164,6 +164,7 @@ const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field({
 
 
 const std::unordered_map<std::string, const std::array<FieldType, SPC_TOTAL_TYPES>> map_type({
+	{ "undefined",                    {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }} },
 	{ "array",                        {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }} },
 	{ "array/boolean",                {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }} },
 	{ "array/date",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }} },
@@ -220,6 +221,80 @@ const std::unordered_map<std::string, const std::array<FieldType, SPC_TOTAL_TYPE
 	{ "timedelta",                    {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }} },
 	{ "uuid",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }} },
 });
+
+
+namespace std {
+	template<typename T, size_t N>
+	struct hash<const array<T, N>> {
+		size_t operator()(const array<T, N>& a) const {
+			size_t h = 0;
+			for (auto e : a) {
+				h ^= hash<T>{}(e) + 0x9e3779b9 + (h << 6) + (h >> 2);
+			}
+			return h;
+		}
+	};
+}
+
+const std::unordered_map<const std::array<FieldType, SPC_TOTAL_TYPES>, std::string> map_str_type({
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }}, "undefined"                     },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }}, "array"                         },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }}, "array/boolean"                 },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }}, "array/date"                    },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }}, "array/float"                   },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }}, "array/geospatial"              },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }}, "array/integer"                 },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }}, "array/positive"                },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }}, "array/string"                  },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }}, "array/term"                    },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }}, "array/text"                    },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }}, "array/time"                    },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }}, "array/timedelta"               },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }}, "array/uuid"                    },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }}, "boolean"                       },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }}, "date"                          },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }}, "float"                         },
+	{ {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }}, "foreign"                       },
+	{ {{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }}, "foreign/object"                },
+	{ {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }}, "foreign/script"                },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }}, "geospatial"                    },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }}, "integer"                       },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }}, "object"                        },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }}, "object/array"                  },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }}, "object/array/boolean"          },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }}, "object/array/date"             },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }}, "object/array/float"            },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }}, "object/array/geospatial"       },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }}, "object/array/integer"          },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }}, "object/array/positive"         },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }}, "object/array/string"           },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }}, "object/array/term"             },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }}, "object/array/text"             },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }}, "object/array/time"             },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }}, "object/array/timedelta"        },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }}, "object/array/uuid"             },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }}, "object/boolean"                },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }}, "object/date"                   },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }}, "object/float"                  },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }}, "object/geospatial"             },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }}, "object/integer"                },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }}, "object/positive"               },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }}, "object/string"                 },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }}, "object/term"                   },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }}, "object/text"                   },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }}, "object/time"                   },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }}, "object/timedelta"              },
+	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }}, "object/uuid"                   },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }}, "positive"                      },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }}, "script"                        },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }}, "string"                        },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }}, "term"                          },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }}, "text"                          },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }}, "time"                          },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }}, "timedelta"                     },
+	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }}, "uuid"                          },
+});
+
 
 
 /*
@@ -740,29 +815,33 @@ required_spc_t::get_types(const std::string& str_type)
 }
 
 
-std::string
+const std::string&
 required_spc_t::get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 {
-	L_CALL(nullptr, "required_spc_t::get_str_type({ %d, %d, %d, %d })", toUType(sep_types[SPC_FOREIGN_TYPE]), toUType(sep_types[SPC_OBJECT_TYPE]),
-		toUType(sep_types[SPC_ARRAY_TYPE]), toUType(sep_types[SPC_CONCRETE_TYPE]));
+	L_CALL(nullptr, "required_spc_t::get_str_type({ %d, %d, %d, %d })", toUType(sep_types[SPC_FOREIGN_TYPE]), toUType(sep_types[SPC_OBJECT_TYPE]), toUType(sep_types[SPC_ARRAY_TYPE]), toUType(sep_types[SPC_CONCRETE_TYPE]));
 
-	std::string result;
-	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-		result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
+	static const auto tit_e = map_str_type.end();
+	auto tit = map_str_type.find(sep_types);
+	if (tit == tit_e) {
+		std::string result;
+		if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+			result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
+		}
+		if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
+			if (!result.empty()) result += "/";
+			result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
+		}
+		if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
+			if (!result.empty()) result += "/";
+			result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
+		}
+		if (sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+			if (!result.empty()) result += "/";
+			result += Serialise::type(sep_types[SPC_CONCRETE_TYPE]);
+		}
+		THROW(ClientError, "%s not supported.", repr(result).c_str(), RESERVED_TYPE);
 	}
-	if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
-		if (!result.empty()) result += "/";
-		result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
-	}
-	if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
-		if (!result.empty()) result += "/";
-		result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
-	}
-	if (sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
-		if (!result.empty()) result += "/";
-		result += Serialise::type(sep_types[SPC_CONCRETE_TYPE]);
-	}
-	return result;
+	return tit->second;
 }
 
 
