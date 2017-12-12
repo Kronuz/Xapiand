@@ -1128,6 +1128,8 @@ void Schema::check(const MsgPack& schema) {
 			if (sep_types[SPC_CONCRETE_TYPE] != FieldType::FLOAT) {
 				THROW(Error, "Schema is corrupt: '%s' has an unsupported type", VERSION_FIELD_NAME);
 			}
+		} catch (const std::out_of_range&) {
+			THROW(Error, "Schema is corrupt: '%s' does not have a type", VERSION_FIELD_NAME);
 		} catch (const msgpack::type_error&) {
 			THROW(Error, "Schema is corrupt: '%s' has an invalid type", VERSION_FIELD_NAME);
 		}
@@ -1154,7 +1156,9 @@ void Schema::check(const MsgPack& schema) {
 				THROW(Error, "Schema is corrupt: '%s' has an unsupported type", SCHEMA_FIELD_NAME);
 			}
 		} catch (const std::out_of_range&) {
-			THROW(Error, "Schema is corrupt: '%s' has an invalid schema object", SCHEMA_FIELD_NAME);
+			if (!schema_field.is_map()) {
+				THROW(Error, "Schema is corrupt: '%s' is not an object", SCHEMA_FIELD_NAME);
+			}
 		} catch (const msgpack::type_error&) {
 			THROW(Error, "Schema is corrupt: '%s' has an invalid type", SCHEMA_FIELD_NAME);
 		}
