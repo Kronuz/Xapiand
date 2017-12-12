@@ -400,6 +400,9 @@ struct index_spc_t {
 
 
 struct specification_t : required_spc_t {
+	double version;
+	std::string description;
+
 	// Reserved values.
 	prefix_t local_prefix;
 	std::vector<Xapian::termpos> position;
@@ -677,6 +680,8 @@ class Schema {
 	 * Functions for feeding specification using the properties in schema.
 	 */
 
+	void feed_version(const MsgPack& prop_version);
+	void feed_description(const MsgPack& prop_description);
 	void feed_position(const MsgPack& prop_position);
 	void feed_weight(const MsgPack& prop_weight);
 	void feed_spelling(const MsgPack& prop_spelling);
@@ -817,10 +822,10 @@ class Schema {
 	 * Functions to update default specification for fields.
 	 */
 
-	void set_default_spc_version(MsgPack& properties);
-	void set_default_spc_description(MsgPack& properties);
 	void set_default_spc_id(MsgPack& properties);
 	void set_default_spc_content_type(MsgPack& properties);
+	void set_default_spc_version(MsgPack& properties);
+	void set_default_spc_description(MsgPack& properties);
 
 
 	/*

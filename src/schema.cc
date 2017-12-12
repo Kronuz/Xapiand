@@ -382,6 +382,9 @@ specification_t default_spc;
 const std::unordered_map<std::string, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
 	{ ID_FIELD_NAME,           &Schema::set_default_spc_id },
 	{ CONTENT_TYPE_FIELD_NAME, &Schema::set_default_spc_content_type },
+
+	{ RESERVED_VERSION,        &Schema::set_default_spc_version },
+	{ RESERVED_DESCRIPTION,    &Schema::set_default_spc_description },
 });
 
 
@@ -413,6 +416,8 @@ const std::unordered_map<std::string, Schema::dispatcher_write_reserved> Schema:
 
 
 const std::unordered_map<std::string, Schema::dispatcher_update_reserved> Schema::map_dispatch_feed_properties({
+	{ RESERVED_VERSION,                &Schema::feed_version                       },
+	{ RESERVED_DESCRIPTION,            &Schema::feed_description                   },
 	{ RESERVED_WEIGHT,                 &Schema::feed_weight                        },
 	{ RESERVED_POSITION,               &Schema::feed_position                      },
 	{ RESERVED_SPELLING,               &Schema::feed_spelling                      },
@@ -3722,17 +3727,23 @@ Schema::dispatch_feed_properties(const MsgPack& properties)
 
 
 void
-Schema::feed_position(const MsgPack& prop_position)
+Schema::feed_version(const MsgPack& prop_version)
 {
-	L_CALL(this, "Schema::feed_position(%s)", repr(prop_position.to_string()).c_str());
+	L_CALL(this, "Schema::feed_version(%s)", repr(prop_version.to_string()).c_str());
 
-	specification.position.clear();
-	if (prop_position.is_array()) {
-		for (const auto& _position : prop_position) {
-			specification.position.push_back(static_cast<Xapian::termpos>(_position.u64()));
-		}
-	} else {
-		specification.position.push_back(static_cast<Xapian::termpos>(prop_position.u64()));
+	if (prop_version.is_number()) {
+		specification.version = prop_version.f64();
+	}
+}
+
+
+void
+Schema::feed_description(const MsgPack& prop_description)
+{
+	L_CALL(this, "Schema::feed_description(%s)", repr(prop_description.to_string()).c_str());
+
+	if (prop_description.is_string()) {
+		specification.description = prop_description.str();
 	}
 }
 
@@ -3749,6 +3760,22 @@ Schema::feed_weight(const MsgPack& prop_weight)
 		}
 	} else {
 		specification.weight.push_back(static_cast<Xapian::termpos>(prop_weight.u64()));
+	}
+}
+
+
+void
+Schema::feed_position(const MsgPack& prop_position)
+{
+	L_CALL(this, "Schema::feed_position(%s)", repr(prop_position.to_string()).c_str());
+
+	specification.position.clear();
+	if (prop_position.is_array()) {
+		for (const auto& _position : prop_position) {
+			specification.position.push_back(static_cast<Xapian::termpos>(_position.u64()));
+		}
+	} else {
+		specification.position.push_back(static_cast<Xapian::termpos>(prop_position.u64()));
 	}
 }
 
@@ -4680,7 +4707,9 @@ Schema::process_version(const std::string& prop_name, const MsgPack& doc_version
 {
 	L_CALL(this, "Schema::process_version(%s)", repr(doc_version.to_string()).c_str());
 
-	if (!doc_version.is_number()) {
+	try {
+		specification.version = doc_version.f64();
+	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a number", repr(prop_name).c_str());
 	}
 }
@@ -4691,7 +4720,9 @@ Schema::process_description(const std::string& prop_name, const MsgPack& doc_des
 {
 	L_CALL(this, "Schema::process_description(%s)", repr(doc_description.to_string()).c_str());
 
-	if (!doc_description.is_string()) {
+	try {
+		specification.description = doc_description.str();
+	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a string", repr(prop_name).c_str());
 	}
 }
@@ -5484,48 +5515,6 @@ Schema::set_namespace_spc_id(required_spc_t& spc)
 
 
 void
-Schema::set_default_spc_version(MsgPack& properties)
-{
-	L_CALL(this, "Schema::set_default_spc_version(%s)", repr(properties.to_string()).c_str());
-
-	if (!specification.flags.has_index) {
-		const auto index = specification.index | TypeIndex::NONE;  // force none
-		if (specification.index != index) {
-			specification.index = index;
-			properties[RESERVED_INDEX] = ::readable_index(index);
-		}
-		specification.flags.has_index = true;
-	}
-
-	// RESERVED_TYPE by default is FLOAT
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
-		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::FLOAT;
-	}
-}
-
-
-void
-Schema::set_default_spc_description(MsgPack& properties)
-{
-	L_CALL(this, "Schema::set_default_spc_version(%s)", repr(properties.to_string()).c_str());
-
-	if (!specification.flags.has_index) {
-		const auto index = specification.index | TypeIndex::NONE;  // force none
-		if (specification.index != index) {
-			specification.index = index;
-			properties[RESERVED_INDEX] = ::readable_index(index);
-		}
-		specification.flags.has_index = true;
-	}
-
-	// RESERVED_TYPE by default is TEXT
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
-		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
-	}
-}
-
-
-void
 Schema::set_default_spc_id(MsgPack& properties)
 {
 	L_CALL(this, "Schema::set_default_spc_id(%s)", repr(properties.to_string()).c_str());
@@ -5591,6 +5580,23 @@ Schema::set_default_spc_content_type(MsgPack& properties)
 	if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
 		specification.flags.partial_paths = specification.flags.partial_paths || !default_spc.flags.optimal;
 	}
+}
+
+
+void
+Schema::set_default_spc_version(MsgPack& properties)
+{
+	L_CALL(this, "Schema::set_default_spc_version(%s)", repr(properties.to_string()).c_str());
+	properties[RESERVED_VERSION] = specification.version;
+}
+
+
+void
+Schema::set_default_spc_description(MsgPack& properties)
+{
+	L_CALL(this, "Schema::set_default_spc_description(%s)", repr(properties.to_string()).c_str());
+
+	properties[RESERVED_DESCRIPTION] = specification.description;
 }
 
 
