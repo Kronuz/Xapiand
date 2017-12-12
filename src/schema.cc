@@ -5604,7 +5604,10 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 		const auto drit = map_get_readable.find(str_key);
 		if (drit == drit_e) {
 			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
-				readable(it.value(), false);
+				auto& value = it.value();
+				if (value.is_map()) {
+					readable(value, false);
+				}
 			}
 		} else {
 			if (!(*drit->second)(it.value(), item_schema)) {
