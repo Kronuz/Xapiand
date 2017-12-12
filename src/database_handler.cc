@@ -323,7 +323,8 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 
 	if (data_script.is_map()) {
 		const auto& type = data_script.at(RESERVED_TYPE);
-		if (type[SPC_FOREIGN_TYPE].u64() == toUType(FieldType::FOREIGN)) {
+		const auto& sep_type = required_spc_t::get_types(type.str());
+		if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 			THROW(ClientError, "Missing Implementation for Foreign scripts");
 		} else {
 			auto it_s = data_script.find(RESERVED_CHAI);
