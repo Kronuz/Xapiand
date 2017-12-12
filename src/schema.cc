@@ -1498,7 +1498,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 	L_CALL(this, "Schema::index_item_value(<MsgPack*>, <doc>, %s, <FieldVector>)", repr(data->to_string()).c_str());
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
-	if (val) {
+	if (val && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 		process_item_value(doc, *data, *val);
 	} else {
 		if (!specification.flags.concrete) {
@@ -1647,7 +1647,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 	L_CALL(this, "Schema::complete_namespace_specification(%s)", repr(item_value.to_string()).c_str());
 
 	if (!specification.flags.concrete) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 			}
@@ -1754,7 +1754,7 @@ Schema::complete_specification(const MsgPack& item_value)
 	L_CALL(this, "Schema::complete_specification(%s)", repr(item_value.to_string()).c_str());
 
 	if (!specification.flags.concrete) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 			}
