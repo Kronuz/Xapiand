@@ -1119,29 +1119,41 @@ specification_t::to_string() const
 	return str.str();
 }
 
-void Schema::check(const MsgPack& schema) {
+
+void Schema::check(const MsgPack& object) {
 	// Check version:
 	try {
-		const auto& version_field = schema.at(VERSION_FIELD_NAME);
-		try {
-			const auto& sep_types = required_spc_t::get_types(version_field.at(RESERVED_TYPE).str());
-			if (sep_types[SPC_CONCRETE_TYPE] != FieldType::FLOAT) {
-				THROW(Error, "Schema is corrupt: '%s' has an unsupported type", VERSION_FIELD_NAME);
+		const auto& version_field = object.at(VERSION_FIELD_NAME);
+		if (version_field.is_map()) {
+			try {
+				const auto& sep_types = required_spc_t::get_types(version_field.at(RESERVED_TYPE).str());
+				if (sep_types[SPC_CONCRETE_TYPE] != FieldType::FLOAT) {
+					THROW(Error, "Schema is corrupt: '%s' has an unsupported type", VERSION_FIELD_NAME);
+				}
+			} catch (const std::out_of_range&) {
+				THROW(Error, "Schema is corrupt: '%s' does not have a type", VERSION_FIELD_NAME);
+			} catch (const msgpack::type_error&) {
+				THROW(Error, "Schema is corrupt: '%s' has an invalid type", VERSION_FIELD_NAME);
 			}
-		} catch (const std::out_of_range&) {
-			THROW(Error, "Schema is corrupt: '%s' does not have a type", VERSION_FIELD_NAME);
-		} catch (const msgpack::type_error&) {
-			THROW(Error, "Schema is corrupt: '%s' has an invalid type", VERSION_FIELD_NAME);
-		}
-		try {
-			const auto& version_value = version_field.at(RESERVED_VALUE);
-			if (version_value.f64() != DB_VERSION_SCHEMA) {
+			try {
+				const auto& version_value = version_field.at(RESERVED_VALUE);
+				if (!version_value.is_number()) {
+					THROW(Error, "Schema is corrupt: '%s' field must be a number", VERSION_FIELD_NAME);
+				}
+				if (version_value.f64() != DB_VERSION_SCHEMA) {
+					THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
+				}
+			} catch (const std::out_of_range&) {
+				THROW(Error, "Schema is corrupt: '%s' does not have a value", VERSION_FIELD_NAME);
+			} catch (const msgpack::type_error&) {
+				THROW(Error, "Schema is corrupt: '%s' has an invalid version", VERSION_FIELD_NAME);
+			}
+		} else if (!version_field.is_number()) {
+			THROW(Error, "Schema is corrupt: '%s' field must be a number", VERSION_FIELD_NAME);
+		} else {
+			if (version_field.f64() != DB_VERSION_SCHEMA) {
 				THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 			}
-		} catch (const std::out_of_range&) {
-			THROW(Error, "Schema is corrupt: '%s' does not have a value", VERSION_FIELD_NAME);
-		} catch (const msgpack::type_error&) {
-			THROW(Error, "Schema is corrupt: '%s' has an invalid version", VERSION_FIELD_NAME);
 		}
 	} catch (const std::out_of_range&) {
 		THROW(Error, "Schema is corrupt: '%s' field does not exist", VERSION_FIELD_NAME);
@@ -1149,7 +1161,7 @@ void Schema::check(const MsgPack& schema) {
 
 	// Check schema object:
 	try {
-		const auto& schema_field = schema.at(SCHEMA_FIELD_NAME);
+		const auto& schema_field = object.at(SCHEMA_FIELD_NAME);
 		try {
 			const auto& sep_types = required_spc_t::get_types(schema_field.at(RESERVED_TYPE).str());
 			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
@@ -1171,7 +1183,7 @@ void Schema::check(const MsgPack& schema) {
 Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
-	check(*schema);
+	Schema::check(*schema);
 }
 
 
@@ -5795,32 +5807,46 @@ Schema::index(
 
 
 void
-Schema::write_schema(const MsgPack& obj_schema, bool replace)
+Schema::write_schema(const MsgPack& object, bool replace)
 {
-	L_CALL(this, "Schema::write_schema(%s, %d)", repr(obj_schema.to_string()).c_str(), replace);
-
-	if (!obj_schema.is_map()) {
-		THROW(ClientError, "Schema must be an object [%s]", obj_schema.getStrType().c_str());
-	}
+	L_CALL(this, "Schema::write_schema(%s, %d)", repr(object.to_string()).c_str(), replace);
 
 	try {
+		try {
+			Schema::check(object);
+		} catch (const Error& err) {
+			throw ClientError(err);
+		}
+
+		auto& mut_properties = get_mutable_properties();
+		if (replace) {
+			mut_properties.clear();
+		}
+
+		const auto it_e = object.end();
+		for (auto it = object.begin(); it != it_e; ++it) {
+			auto str_key = it->str();
+			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+				(*mut_schema)[str_key] = it.value();
+			}
+		}
+
 		specification = default_spc;
 
 		// Set default RESERVED_SLOT for root
 		specification.slot = DB_SLOT_ROOT;
 
 		FieldVector fields;
-		auto mut_properties = replace ? &clear() : &get_mutable_properties();
 
-		if (mut_properties->empty()) {
+		if (mut_properties.empty()) {
 			specification.flags.field_found = false;
 		} else {
-			dispatch_feed_properties(*mut_properties);
+			dispatch_feed_properties(mut_properties);
 		}
 
-		dispatch_write_properties(*mut_properties, obj_schema, fields);
+		dispatch_write_properties(mut_properties, object.at(SCHEMA_FIELD_NAME), fields);
 
-		update_item_value(*mut_properties, fields);
+		update_item_value(mut_properties, fields);
 	} catch (...) {
 		mut_schema.reset();
 		throw;

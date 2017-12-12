@@ -53,12 +53,19 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 			}
 		} else {
 			const auto& schema_value = schema_obj.at(SCHEMA_FIELD_NAME);
-			if (sep_type[SPC_OBJECT_TYPE] != FieldType::OBJECT || !schema_value.is_map()) {
+			if (!schema_value.is_map() || sep_type[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
 				THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be object because is not foreign", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE);
 			}
 		}
 	} catch (const std::out_of_range&) {
-		THROW(Error, "Metadata '%s' is corrupt in %s: must have '%s' and '%s'", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE, SCHEMA_FIELD_NAME);
+		try{
+			const auto& schema_value = schema_obj.at(SCHEMA_FIELD_NAME);
+			if (!schema_value.is_map()) {
+				THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be object because is not foreign", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_VALUE);
+			}
+		} catch (const std::out_of_range&) {
+			THROW(Error, "Metadata '%s' is corrupt in %s: must have '%s'", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), SCHEMA_FIELD_NAME);
+		}
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Metadata '%s' is corrupt in %s: must be object instead of %s", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), schema_obj.getStrType().c_str());
 	}

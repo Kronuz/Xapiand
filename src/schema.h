@@ -868,7 +868,7 @@ public:
 
 	~Schema() = default;
 
-	static void check(const MsgPack& schema);
+	static void check(const MsgPack& object);
 
 	static std::shared_ptr<const MsgPack> get_initial_schema();
 

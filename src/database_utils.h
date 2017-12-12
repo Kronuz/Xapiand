@@ -125,7 +125,6 @@ constexpr const char RESERVED_SCHEMA[]              = "_schema";
 
 constexpr const char SCHEMA_FIELD_NAME[]            = "schema";
 constexpr const char VERSION_FIELD_NAME[]           = "version";
-constexpr const char DESCRIPTION_FIELD_NAME[]       = "description";
 
 constexpr char DB_OFFSPRING_UNION  = '.';
 constexpr double DB_VERSION_SCHEMA = 1.0;
