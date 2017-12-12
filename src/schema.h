@@ -485,7 +485,7 @@ class Schema {
 	 * Returns root properties of schema.
 	 */
 	const MsgPack& get_properties() const {
-		return *schema;
+		return schema->at(SCHEMA_FIELD_NAME);
 	}
 
 	/*
@@ -495,7 +495,7 @@ class Schema {
 		if (!mut_schema) {
 			mut_schema = std::make_unique<MsgPack>(*schema);
 		}
-		return *mut_schema;
+		return mut_schema->at(SCHEMA_FIELD_NAME);
 	}
 
 	/*
@@ -503,9 +503,9 @@ class Schema {
 	 */
 	const MsgPack& get_newest_properties() const {
 		if (mut_schema) {
-			return *mut_schema;
+			return mut_schema->at(SCHEMA_FIELD_NAME);
 		} else {
-			return *schema;
+			return schema->at(SCHEMA_FIELD_NAME);
 		}
 	}
 
@@ -740,7 +740,6 @@ class Schema {
 	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
 	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
 	void write_index_uuid_field(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index_uuid_field);
-	void write_version(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_version);
 	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
 
 
@@ -797,7 +796,6 @@ class Schema {
 	void consistency_chai(const std::string& prop_name, const MsgPack& doc_chai);
 	void consistency_ecma(const std::string& prop_name, const MsgPack& doc_ecma);
 	void consistency_script(const std::string& prop_name, const MsgPack& doc_script);
-	void consistency_version(const std::string& prop_name, const MsgPack& doc_version);
 	void consistency_schema(const std::string& prop_name, const MsgPack& doc_schema);
 
 
@@ -815,8 +813,6 @@ class Schema {
 	 * Functions to update default specification for fields.
 	 */
 
-	void set_default_spc_version(MsgPack& properties);
-	void set_default_spc_description(MsgPack& properties);
 	void set_default_spc_id(MsgPack& properties);
 	void set_default_spc_content_type(MsgPack& properties);
 
@@ -871,6 +867,8 @@ public:
 	Schema& operator=(const Schema& schema) = delete;
 
 	~Schema() = default;
+
+	static void check(const MsgPack& schema);
 
 	static std::shared_ptr<const MsgPack> get_initial_schema();
 

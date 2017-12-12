@@ -41,8 +41,6 @@ constexpr const char RESERVED_INFO_WEIGHT[]         = "#weight";
 constexpr const char RESERVED_INFO_PERCENT[]        = "#percent";
 
 // Reserved field names.
-constexpr const char VERSION_FIELD_NAME[]           = "_version";
-constexpr const char DESCRIPTION_FIELD_NAME[]       = "_description";
 constexpr const char ID_FIELD_NAME[]                = "_id";
 constexpr const char CONTENT_TYPE_FIELD_NAME[]      = "_content_type";
 constexpr const char UUID_FIELD_NAME[]              = "<uuid_field>";
@@ -124,6 +122,10 @@ constexpr const char RESERVED_MULTICHULL[]          = "_multichull";
 constexpr const char RESERVED_GEO_COLLECTION[]      = "_geometrycollection";
 constexpr const char RESERVED_GEO_INTERSECTION[]    = "_geometryintersection";
 constexpr const char RESERVED_SCHEMA[]              = "_schema";
+
+constexpr const char SCHEMA_FIELD_NAME[]            = "schema";
+constexpr const char VERSION_FIELD_NAME[]           = "version";
+constexpr const char DESCRIPTION_FIELD_NAME[]       = "description";
 
 constexpr char DB_OFFSPRING_UNION  = '.';
 constexpr double DB_VERSION_SCHEMA = 1.0;

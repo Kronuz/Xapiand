@@ -380,8 +380,6 @@ specification_t default_spc;
 
 
 const std::unordered_map<std::string, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
-	{ VERSION_FIELD_NAME,      &Schema::set_default_spc_version },
-	{ DESCRIPTION_FIELD_NAME,  &Schema::set_default_spc_description },
 	{ ID_FIELD_NAME,           &Schema::set_default_spc_id },
 	{ CONTENT_TYPE_FIELD_NAME, &Schema::set_default_spc_content_type },
 
@@ -1121,20 +1119,55 @@ specification_t::to_string() const
 	return str.str();
 }
 
+void Schema::check(const MsgPack& schema) {
+	// Check version:
+	try {
+		const auto& version_field = schema.at(VERSION_FIELD_NAME);
+		try {
+			const auto& sep_types = required_spc_t::get_types(version_field.at(RESERVED_TYPE).str());
+			if (sep_types[SPC_CONCRETE_TYPE] != FieldType::FLOAT) {
+				THROW(Error, "Schema is corrupt: '%s' has an unsupported type", VERSION_FIELD_NAME);
+			}
+		} catch (const msgpack::type_error&) {
+			THROW(Error, "Schema is corrupt: '%s' has an invalid type", VERSION_FIELD_NAME);
+		}
+		try {
+			const auto& version_value = version_field.at(RESERVED_VALUE);
+			if (version_value.f64() != DB_VERSION_SCHEMA) {
+				THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
+			}
+		} catch (const std::out_of_range&) {
+			THROW(Error, "Schema is corrupt: '%s' does not have a value", VERSION_FIELD_NAME);
+		} catch (const msgpack::type_error&) {
+			THROW(Error, "Schema is corrupt: '%s' has an invalid version", VERSION_FIELD_NAME);
+		}
+	} catch (const std::out_of_range&) {
+		THROW(Error, "Schema is corrupt: '%s' field does not exist", VERSION_FIELD_NAME);
+	}
+
+	// Check schema object:
+	try {
+		const auto& schema_field = schema.at(SCHEMA_FIELD_NAME);
+		try {
+			const auto& sep_types = required_spc_t::get_types(schema_field.at(RESERVED_TYPE).str());
+			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
+				THROW(Error, "Schema is corrupt: '%s' has an unsupported type", SCHEMA_FIELD_NAME);
+			}
+		} catch (const std::out_of_range&) {
+			THROW(Error, "Schema is corrupt: '%s' has an invalid schema object", SCHEMA_FIELD_NAME);
+		} catch (const msgpack::type_error&) {
+			THROW(Error, "Schema is corrupt: '%s' has an invalid type", SCHEMA_FIELD_NAME);
+		}
+	} catch (const std::out_of_range&) {
+		THROW(Error, "Schema is corrupt: '%s' field does not exist", SCHEMA_FIELD_NAME);
+	}
+}
+
 
 Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
-	try {
-		const auto& version = get_properties().at(VERSION_FIELD_NAME);
-		if (version.f64() != DB_VERSION_SCHEMA) {
-			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
-		}
-	} catch (const std::out_of_range&) {
-		THROW(Error, "Schema is corrupt: '%s' does not exist", VERSION_FIELD_NAME);
-	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' has an invalid version", VERSION_FIELD_NAME);
-	}
+	check(*schema);
 }
 
 
@@ -1144,8 +1177,14 @@ Schema::get_initial_schema()
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
 	MsgPack new_schema({
-		{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
-		{ RESERVED_TYPE,      "object" },
+		{ RESERVED_TYPE, "object" },
+		{ VERSION_FIELD_NAME, {
+			{ RESERVED_TYPE, "float" },
+			{ RESERVED_VALUE, DB_VERSION_SCHEMA },
+		} },
+		{ SCHEMA_FIELD_NAME,  {
+			{ RESERVED_TYPE, "object" },
+		} },
 	});
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -1201,7 +1240,6 @@ Schema::clear()
 
 	auto& prop = get_mutable_properties();
 	prop.clear();
-	prop[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
 	prop[RESERVED_TYPE] = "object";
 	return prop;
 }
@@ -5463,48 +5501,6 @@ Schema::set_namespace_spc_id(required_spc_t& spc)
 
 
 void
-Schema::set_default_spc_version(MsgPack& properties)
-{
-	   L_CALL(this, "Schema::set_default_spc_version(%s)", repr(properties.to_string()).c_str());
-
-	   if (!specification.flags.has_index) {
-			   const auto index = specification.index | TypeIndex::NONE;  // force none
-			   if (specification.index != index) {
-					   specification.index = index;
-					   properties[RESERVED_INDEX] = ::readable_index(index);
-			   }
-			   specification.flags.has_index = true;
-	   }
-
-	   // RESERVED_TYPE by default is FLOAT
-	   if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
-			   specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::FLOAT;
-	   }
-}
-
-
-void
-Schema::set_default_spc_description(MsgPack& properties)
-{
-	   L_CALL(this, "Schema::set_default_spc_version(%s)", repr(properties.to_string()).c_str());
-
-	   if (!specification.flags.has_index) {
-			   const auto index = specification.index | TypeIndex::NONE;  // force none
-			   if (specification.index != index) {
-					   specification.index = index;
-					   properties[RESERVED_INDEX] = ::readable_index(index);
-			   }
-			   specification.flags.has_index = true;
-	   }
-
-	   // RESERVED_TYPE by default is TEXT
-	   if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
-			   specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
-	   }
-}
-
-
-void
 Schema::set_default_spc_id(MsgPack& properties)
 {
 	L_CALL(this, "Schema::set_default_spc_id(%s)", repr(properties.to_string()).c_str());
@@ -5746,7 +5742,7 @@ Schema::index(
 		FieldVector fields;
 		auto properties = &get_newest_properties();
 
-		if (properties->size() <= 2) {  // it's a new specification if there's only '_version' and '_type' here
+		if (properties->size() <= 1) {  // only '_type' should be here
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			dispatch_write_properties(*mut_properties, object, fields);
@@ -5816,7 +5812,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		FieldVector fields;
 		auto mut_properties = replace ? &clear() : &get_mutable_properties();
 
-		if (mut_properties->size() <= 2) {  // it's a new specification if there's only '_version' and '_type' here
+		if (mut_properties->size() <= 1) {  // only '_type' should be here
 			specification.flags.field_found = false;
 		} else {
 			dispatch_feed_properties(*mut_properties);
