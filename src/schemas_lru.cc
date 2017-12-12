@@ -89,14 +89,14 @@ SchemasLRU::validate_object_meta_schema(const MsgPack& value)
 	MsgPack new_schema(value);
 
 	try {
-		const auto& version = value.at(VERSION_FIELD_NAME);
+		const auto& version = value.at(RESERVED_VERSION);
 		if (version.f64() != DB_VERSION_SCHEMA) {
 			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 	} catch (const std::out_of_range&) {
-		new_schema[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
+		new_schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;
 	}
 
 	new_schema.lock();

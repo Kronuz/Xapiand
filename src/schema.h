@@ -748,6 +748,8 @@ class Schema {
 	 * Functions for reserved words that are in the document.
 	 */
 
+	void process_version(const std::string& prop_name, const MsgPack& doc_version);
+	void process_description(const std::string& prop_name, const MsgPack& doc_description);
 	void process_weight(const std::string& prop_name, const MsgPack& doc_weight);
 	void process_position(const std::string& prop_name, const MsgPack& doc_position);
 	void process_spelling(const std::string& prop_name, const MsgPack& doc_spelling);

@@ -380,8 +380,6 @@ specification_t default_spc;
 
 
 const std::unordered_map<std::string, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
-	{ VERSION_FIELD_NAME,      &Schema::set_default_spc_version },
-	{ DESCRIPTION_FIELD_NAME,  &Schema::set_default_spc_description },
 	{ ID_FIELD_NAME,           &Schema::set_default_spc_id },
 	{ CONTENT_TYPE_FIELD_NAME, &Schema::set_default_spc_content_type },
 });
@@ -469,6 +467,8 @@ const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schem
 
 
 const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schema::map_dispatch_process_concrete_properties({
+	{ RESERVED_VERSION,                &Schema::process_version                    },
+	{ RESERVED_DESCRIPTION,            &Schema::process_description                },
 	{ RESERVED_WEIGHT,                 &Schema::process_weight                     },
 	{ RESERVED_POSITION,               &Schema::process_position                   },
 	{ RESERVED_SPELLING,               &Schema::process_spelling                   },
@@ -1125,14 +1125,14 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
 	try {
-		const auto& version = get_properties().at(VERSION_FIELD_NAME);
+		const auto& version = get_properties().at(RESERVED_VERSION);
 		if (version.f64() != DB_VERSION_SCHEMA) {
 			THROW(Error, "Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 		}
 	} catch (const std::out_of_range&) {
-		THROW(Error, "Schema is corrupt: '%s' does not exist", VERSION_FIELD_NAME);
+		THROW(Error, "Schema is corrupt: '%s' does not exist", RESERVED_VERSION);
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' has an invalid version", VERSION_FIELD_NAME);
+		THROW(Error, "Schema is corrupt: '%s' has an invalid version", RESERVED_VERSION);
 	}
 }
 
@@ -1143,8 +1143,8 @@ Schema::get_initial_schema()
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
 	MsgPack new_schema({
-		{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
-		{ RESERVED_TYPE,      OBJECT_STR },
+		{ RESERVED_VERSION, DB_VERSION_SCHEMA },
+		{ RESERVED_TYPE,    OBJECT_STR },
 	});
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -1200,7 +1200,7 @@ Schema::clear()
 
 	auto& prop = get_mutable_properties();
 	prop.clear();
-	prop[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
+	prop[RESERVED_VERSION] = DB_VERSION_SCHEMA;
 	prop[RESERVED_TYPE] = OBJECT_STR;
 	return prop;
 }
@@ -4671,6 +4671,28 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name).c_str());
+	}
+}
+
+
+void
+Schema::process_version(const std::string& prop_name, const MsgPack& doc_version)
+{
+	L_CALL(this, "Schema::process_version(%s)", repr(doc_version.to_string()).c_str());
+
+	if (!doc_version.is_number()) {
+		THROW(ClientError, "Data inconsistency, %s must be a number", repr(prop_name).c_str());
+	}
+}
+
+
+void
+Schema::process_description(const std::string& prop_name, const MsgPack& doc_description)
+{
+	L_CALL(this, "Schema::process_description(%s)", repr(doc_description.to_string()).c_str());
+
+	if (!doc_description.is_string()) {
+		THROW(ClientError, "Data inconsistency, %s must be a string", repr(prop_name).c_str());
 	}
 }
 
