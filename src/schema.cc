@@ -5617,21 +5617,23 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 	L_CALL(nullptr, "Schema::readable(%s, %d)", repr(item_schema.to_string()).c_str(), is_root);
 
 	// Change this item of schema in readable form.
-	static const auto drit_e = map_get_readable.end();
-	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
-		const auto str_key = it->str();
-		const auto drit = map_get_readable.find(str_key);
-		if (drit == drit_e) {
-			if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
-				readable(it.value(), false);
+	if (item_schema.is_map()) {
+		static const auto drit_e = map_get_readable.end();
+		for (auto it = item_schema.begin(); it != item_schema.end(); ) {
+			const auto str_key = it->str();
+			const auto drit = map_get_readable.find(str_key);
+			if (drit == drit_e) {
+				if (is_valid(str_key) || (is_root && map_dispatch_set_default_spc.count(str_key))) {
+					readable(it.value(), false);
+				}
+			} else {
+				if (!(*drit->second)(it.value(), item_schema)) {
+					it = item_schema.erase(it);
+					continue;
+				}
 			}
-		} else {
-			if (!(*drit->second)(it.value(), item_schema)) {
-				it = item_schema.erase(it);
-				continue;
-			}
+			++it;
 		}
-		++it;
 	}
 }
 
