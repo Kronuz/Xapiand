@@ -37,7 +37,7 @@ SchemasLRU::validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr
 		if (!type.is_string()) {
 			THROW(Error, "Metadata '%s' is corrupt in %s: '%s' must be string", RESERVED_SCHEMA, db_handler->endpoints.to_string().c_str(), RESERVED_TYPE);
 		}
-		auto sep_type = required_spc_t::get_types(type.str());
+		const auto& sep_type = required_spc_t::get_types(type.str());
 		if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 			const auto& value = schema_obj.at(RESERVED_VALUE);
 			try {
@@ -189,12 +189,11 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 								}
 								const auto& type = it_t.value();
 								if (type.is_string()) {
-									auto sep_types = required_spc_t::get_types(type.str());
+									const auto& sep_types = required_spc_t::get_types(type.str());
 									if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
 										if (strict) {
 											THROW(MissingTypeError, "Type of field '%s' is not completed", RESERVED_SCHEMA);
 										}
-										sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
 									}
 									const auto& value = it_v.value();
 									switch (value.getType()) {

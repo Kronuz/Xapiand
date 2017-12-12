@@ -163,7 +163,7 @@ const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field({
 });
 
 
-const std::unordered_map<std::string, std::array<FieldType, SPC_TOTAL_TYPES>> map_type({
+const std::unordered_map<std::string, const std::array<FieldType, SPC_TOTAL_TYPES>> map_type({
 	{ "array",                        {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }} },
 	{ "array/boolean",                {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }} },
 	{ "array/date",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }} },
@@ -727,7 +727,7 @@ required_spc_t::operator=(required_spc_t&& o) noexcept
 }
 
 
-std::array<FieldType, SPC_TOTAL_TYPES>
+const std::array<FieldType, SPC_TOTAL_TYPES>&
 required_spc_t::get_types(const std::string& str_type)
 {
 	L_CALL(nullptr, "required_spc_t::get_types(%s)", repr(str_type).c_str());
@@ -5636,7 +5636,7 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 	L_CALL(nullptr, "Schema::readable_type(%s, %s)", repr(prop_type.to_string()).c_str(), repr(properties.to_string()).c_str());
 
 	// Readable accuracy.
-	auto sep_types = required_spc_t::get_types(prop_type.str());
+	const auto& sep_types = required_spc_t::get_types(prop_type.str());
 	switch (sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::DATE:
 		case FieldType::TIME:

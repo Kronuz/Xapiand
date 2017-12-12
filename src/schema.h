@@ -253,7 +253,7 @@ extern const std::unordered_map<std::string, StopStrategy> map_stop_strategy;
 extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
 extern const std::unordered_map<std::string, TypeIndex> map_index;
 extern const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field;
-extern const std::unordered_map<std::string, std::array<FieldType, SPC_TOTAL_TYPES>> map_type;
+extern const std::unordered_map<std::string, const std::array<FieldType, SPC_TOTAL_TYPES>> map_type;
 
 
 MSGPACK_ADD_ENUM(UnitTime);
@@ -371,7 +371,7 @@ struct required_spc_t {
 		return get_ctype(sep_types[SPC_CONCRETE_TYPE]);
 	}
 
-	static std::array<FieldType, SPC_TOTAL_TYPES> get_types(const std::string& str_type);
+	static const std::array<FieldType, SPC_TOTAL_TYPES>& get_types(const std::string& str_type);
 	static std::string get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types);
 
 	void set_types(const std::string& str_type);
