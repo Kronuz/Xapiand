@@ -4856,7 +4856,11 @@ Schema::process_value(const std::string&, const MsgPack& doc_value)
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
 	L_CALL(this, "Schema::process_value(%s)", repr(doc_value.to_string()).c_str());
 
-	specification.value = std::make_unique<const MsgPack>(doc_value);
+	if (specification.value || specification.value_rec) {
+		THROW(ClientError, "Object already has a value");
+	} else {
+		specification.value = std::make_unique<const MsgPack>(doc_value);
+	}
 }
 
 
@@ -4882,8 +4886,8 @@ Schema::process_cast_object(const std::string& prop_name, const MsgPack& doc_cas
 	// This property isn't heritable and is not saved in schema.
 	L_CALL(this, "Schema::process_cast_object(%s)", repr(doc_cast_object.to_string()).c_str());
 
-	if (specification.value_rec) {
-		THROW(ClientError, "Only one cast object can be defined");
+	if (specification.value || specification.value_rec) {
+		THROW(ClientError, "Object already has a value");
 	} else {
 		specification.value_rec = std::make_unique<MsgPack>();
 		(*specification.value_rec)[prop_name] = doc_cast_object;
