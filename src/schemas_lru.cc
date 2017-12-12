@@ -173,6 +173,9 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 									const auto& value = it_v.value();
 									switch (value.getType()) {
 										case MsgPack::Type::STR:
+											if (meta_schema.size() != 1) { // '_value'
+												THROW(ClientError, "'%s' is a foreign type and as such it cannot have fields", RESERVED_SCHEMA);
+											}
 											aux_schema_ptr = validate_foreign_meta_schema(value, schema_path, schema_id);
 											break;
 										case MsgPack::Type::MAP:
@@ -202,6 +205,9 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 										case MsgPack::Type::STR:
 											if (sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 												THROW(ClientError, "'%s' must be map because is not foreign", RESERVED_SCHEMA);
+											}
+											if (meta_schema.size() != 2) { // '_type' and '_value'
+												THROW(ClientError, "'%s' is a foreign type and as such it cannot have fields", RESERVED_SCHEMA);
 											}
 											aux_schema_ptr = validate_foreign_meta_schema(value, schema_path, schema_id);
 											break;
