@@ -1181,14 +1181,11 @@ Schema::get_initial_schema()
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
 	MsgPack new_schema({
-		{ RESERVED_TYPE, "object" },
 		{ VERSION_FIELD_NAME, {
 			{ RESERVED_TYPE, "float" },
 			{ RESERVED_VALUE, DB_VERSION_SCHEMA },
 		} },
-		{ SCHEMA_FIELD_NAME,  {
-			{ RESERVED_TYPE, "object" },
-		} },
+		{ SCHEMA_FIELD_NAME, MsgPack(MsgPack::Type::MAP) },
 	});
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -1244,7 +1241,6 @@ Schema::clear()
 
 	auto& prop = get_mutable_properties();
 	prop.clear();
-	prop[RESERVED_TYPE] = "object";
 	return prop;
 }
 
@@ -5746,7 +5742,7 @@ Schema::index(
 		FieldVector fields;
 		auto properties = &get_newest_properties();
 
-		if (properties->size() <= 1) {  // only '_type' should be here
+		if (properties->empty()) {
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			dispatch_write_properties(*mut_properties, object, fields);
@@ -5816,7 +5812,7 @@ Schema::write_schema(const MsgPack& obj_schema, bool replace)
 		FieldVector fields;
 		auto mut_properties = replace ? &clear() : &get_mutable_properties();
 
-		if (mut_properties->size() <= 1) {  // only '_type' should be here
+		if (mut_properties->empty()) {
 			specification.flags.field_found = false;
 		} else {
 			dispatch_feed_properties(*mut_properties);
