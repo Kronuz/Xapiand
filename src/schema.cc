@@ -3512,7 +3512,7 @@ Schema::verify_dynamic(const std::string& field_name)
 		specification.flags.uuid_field = true;
 		specification.flags.uuid_path = true;
 	} else {
-		specification.local_prefix.uuid = get_prefix(field_name);
+		specification.local_prefix.field.assign(get_prefix(field_name));
 		specification.meta_name.assign(field_name);
 		specification.flags.uuid_field = false;
 	}
