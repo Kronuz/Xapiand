@@ -71,7 +71,7 @@ const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
  * 6. If the field is namespace or has partial paths call validate_required_namespace_data() to
  *    initialize the specification with default specifications and sent by the user.
  * 7. If there are values sent by user, fills the document to be indexed via
- *    index_item_value() and process_item_value()
+ *    index_item_value()
  * 8. If the path has uuid field name the values are indexed according to index_uuid_field.
  * 9. index_object() does step 2 to 8 and for each field it calls index_object(...).
  * 10. index() does steps 2 to 4 and for each field it calls index_object(...)
@@ -82,7 +82,7 @@ const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
  *    using feed_*; sets field_found for all found fields.
  * 3. Write properties and feed specification_t using write_*, this step could
  *    use some process_* (for some properties).
- * 4. update_schema() does step 2 to 3 and for each field it calls update_schema(...).
+ * 4. write_object() does step 2 to 3 and for each field it calls update_schema(...).
  */
 
 
@@ -1444,6 +1444,321 @@ Schema::restart_namespace_specification()
 }
 
 
+inline void
+Schema::feed_subproperties(const MsgPack& properties, const std::string& meta_name)
+{
+	L_CALL(this, "Schema::feed_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(meta_name).c_str());
+
+	auto& meta_properties = properties.at(meta_name);
+	specification.flags.field_found = true;
+	static const auto stit_e = map_stem_language.end();
+	const auto stit = map_stem_language.find(meta_name);
+	if (stit != stit_e && stit->second.first) {
+		specification.language = stit->second.second;
+		specification.aux_lan = stit->second.second;
+	}
+
+	if (specification.full_meta_name.empty()) {
+		specification.full_meta_name.assign(meta_name);
+	} else {
+		specification.full_meta_name.append(1, DB_OFFSPRING_UNION).append(meta_name);
+	}
+
+	dispatch_feed_properties(meta_properties);
+}
+
+
+//  _____ _____ _____ _____ _____ _____ _____ _____
+// |_____|_____|_____|_____|_____|_____|_____|_____|
+//      ___           _
+//     |_ _|_ __   __| | _____  __
+//      | || '_ \ / _` |/ _ \ \/ /
+//      | || | | | (_| |  __/>  <
+//     |___|_| |_|\__,_|\___/_/\_\
+//  _____ _____ _____ _____ _____ _____ _____ _____
+// |_____|_____|_____|_____|_____|_____|_____|_____|
+
+MsgPack
+Schema::index(
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	MsgPack& object,
+	const std::string& term_id,
+	std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair,
+	DatabaseHandler* db_handler,
+#else
+	const MsgPack& object,
+#endif
+	Xapian::Document& doc)
+{
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	L_CALL(this, "Schema::index(%s, %s, <old_document_pair>, <db_handler>, <doc>)", repr(object.to_string()).c_str(), repr(term_id).c_str());
+#else
+	L_CALL(this, "Schema::index(%s, <doc>)", repr(object.to_string()).c_str());
+#endif
+
+	try {
+		specification = default_spc;
+
+		// Set default RESERVED_SLOT for root
+		specification.slot = DB_SLOT_ROOT;
+
+		FieldVector fields;
+		auto properties = &get_newest_properties();
+
+		if (properties->empty()) {
+			specification.flags.field_found = false;
+			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+			dispatch_write_properties(*mut_properties, object, fields);
+			properties = &*mut_properties;
+		} else {
+			dispatch_feed_properties(*properties);
+			dispatch_process_properties(object, fields);
+		}
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+		if (specification.script) {
+			object = db_handler->run_script(object, term_id, old_document_pair, *specification.script);
+			if (!object.is_map()) {
+				THROW(ClientError, "Script must return an object, it returned %s", object.getStrType().c_str());
+			}
+			// Rebuild fields with new values.
+			fields.clear();
+			static const auto wtit_e = map_dispatch_process_properties.end();
+			static const auto ddit_e = map_dispatch_process_concrete_properties.end();
+			const auto it_e = object.end();
+			for (auto it = object.begin(); it != it_e; ++it) {
+				auto str_key = it->str();
+				const auto wtit = map_dispatch_process_properties.find(str_key);
+				if (wtit == wtit_e) {
+					const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
+					if (ddit == ddit_e) {
+						fields.emplace_back(std::move(str_key), &it.value());
+					}
+				}
+			}
+		}
+#endif
+		MsgPack data;
+		auto data_ptr = &data;
+
+		index_item_value(properties, doc, data_ptr, fields);
+
+		for (const auto& elem : map_values) {
+			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
+			doc.add_value(elem.first, val_ser);
+			L_INDEX(this, "Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
+		}
+
+		return data;
+	} catch (...) {
+		mut_schema.reset();
+		throw;
+	}
+}
+
+
+const MsgPack&
+Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields)
+{
+	L_CALL(this, "Schema::index_subproperties(%s, <data>, %s, %s, <fields>)", repr(properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
+
+	std::vector<std::string> field_names;
+	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
+
+	const auto it_last = field_names.end() - 1;
+	if (specification.flags.is_namespace) {
+		restart_namespace_specification();
+		for (auto it = field_names.begin(); it != it_last; ++it) {
+			auto norm_field_name = detect_dynamic(*it);
+			update_prefixes();
+			if (specification.flags.store) {
+				data = &(*data)[norm_field_name];
+			}
+		}
+		dispatch_process_properties(object, fields);
+		auto norm_field_name = detect_dynamic(*it_last);
+		update_prefixes();
+		specification.flags.inside_namespace = true;
+		if (specification.flags.store) {
+			data = &(*data)[norm_field_name];
+		}
+	} else {
+		for (auto it = field_names.begin(); it != it_last; ++it) {
+			const auto& field_name = *it;
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			}
+			restart_specification();
+			try {
+				feed_subproperties(*properties, field_name);
+				update_prefixes();
+				if (specification.flags.store) {
+					data = &(*data)[field_name];
+				}
+			} catch (const std::out_of_range&) {
+				auto norm_field_name = detect_dynamic(field_name);
+				if (specification.flags.uuid_field) {
+					try {
+						feed_subproperties(*properties, specification.meta_name);
+						update_prefixes();
+						if (specification.flags.store) {
+							data = &(*data)[norm_field_name];
+						}
+						continue;
+					} catch (const std::out_of_range&) { }
+				}
+
+				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+				add_field(mut_properties);
+				if (specification.flags.store) {
+					data = &(*data)[norm_field_name];
+				}
+				for (++it; it != it_last; ++it) {
+					const auto& n_field_name = *it;
+					if (!is_valid(n_field_name)) {
+						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+					} else {
+						norm_field_name = detect_dynamic(n_field_name);
+						add_field(mut_properties);
+						if (specification.flags.store) {
+							data = &(*data)[norm_field_name];
+						}
+					}
+				}
+				const auto& n_field_name = *it_last;
+				if (!is_valid(n_field_name)) {
+					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+				} else {
+					norm_field_name = detect_dynamic(n_field_name);
+					add_field(mut_properties, object, fields);
+					if (specification.flags.store) {
+						data = &(*data)[norm_field_name];
+					}
+				}
+				return *mut_properties;
+			}
+		}
+
+		const auto& field_name = *it_last;
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+		}
+		restart_specification();
+		try {
+			feed_subproperties(*properties, field_name);
+			dispatch_process_properties(object, fields);
+			update_prefixes();
+			if (specification.flags.store) {
+				data = &(*data)[field_name];
+			}
+		} catch (const std::out_of_range&) {
+			auto norm_field_name = detect_dynamic(field_name);
+			if (specification.flags.uuid_field) {
+				try {
+					feed_subproperties(*properties, specification.meta_name);
+					dispatch_process_properties(object, fields);
+					update_prefixes();
+					if (specification.flags.store) {
+						data = &(*data)[norm_field_name];
+					}
+					return *properties;
+				} catch (const std::out_of_range&) { }
+			}
+
+			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+			add_field(mut_properties, object, fields);
+			if (specification.flags.store) {
+				data = &(*data)[norm_field_name];
+			}
+			return *mut_properties;
+		}
+	}
+
+	return *properties;
+}
+
+
+const MsgPack&
+Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name)
+{
+	L_CALL(this, "Schema::index_subproperties(%s, <data>, %s)", repr(properties->to_string()).c_str(), repr(name).c_str());
+
+	Split<char> field_names(name, DB_OFFSPRING_UNION);
+
+	if (specification.flags.is_namespace) {
+		restart_namespace_specification();
+		if (specification.flags.store) {
+			for (const auto& field_name : field_names) {
+				data = &(*data)[detect_dynamic(field_name)];
+				update_prefixes();
+			}
+		} else {
+			for (const auto& field_name : field_names) {
+				detect_dynamic(field_name);
+				update_prefixes();
+			}
+		}
+		specification.flags.inside_namespace = true;
+	} else {
+		const auto it_e = field_names.end();
+		for (auto it = field_names.begin(); it != it_e; ++it) {
+			const auto& field_name = *it;
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			}
+			restart_specification();
+			try {
+				feed_subproperties(*properties, field_name);
+				update_prefixes();
+				if (specification.flags.store) {
+					data = &(*data)[field_name];
+				}
+			} catch (const std::out_of_range&) {
+				auto norm_field_name = detect_dynamic(field_name);
+				if (specification.flags.uuid_field) {
+					try {
+						feed_subproperties(*properties, specification.meta_name);
+						update_prefixes();
+						if (specification.flags.store) {
+							data = &(*data)[norm_field_name];
+						}
+						continue;
+					} catch (const std::out_of_range&) { }
+				}
+
+				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+				add_field(mut_properties);
+				if (specification.flags.store) {
+					data = &(*data)[norm_field_name];
+					for (++it; it != it_e; ++it) {
+						const auto& n_field_name = *it;
+						if (!is_valid(n_field_name)) {
+							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+						} else {
+							data = &(*data)[detect_dynamic(n_field_name)];
+							add_field(mut_properties);
+						}
+					}
+				} else {
+					for (++it; it != it_e; ++it) {
+						const auto& n_field_name = *it;
+						if (!is_valid(n_field_name)) {
+							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+						} else {
+							detect_dynamic(n_field_name);
+							add_field(mut_properties);
+						}
+					}
+				}
+				return *mut_properties;
+			}
+		}
+	}
+
+	return *properties;
+}
+
+
 void
 Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
@@ -1466,7 +1781,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto properties = &*parent_properties;
 			auto data = parent_data;
 			FieldVector fields;
-			properties = &get_subproperties(properties, data, name, object, fields);
+			properties = &index_subproperties(properties, data, name, object, fields);
 			index_item_value(properties, doc, data, fields);
 			if (specification.flags.store && (data->is_undefined() || data->is_null())) {
 				parent_data->erase(name);
@@ -1484,7 +1799,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto spc_start = specification;
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			get_subproperties(properties, data, name);
+			index_subproperties(properties, data, name);
 			index_partial_paths(doc);
 			if (specification.flags.store) {
 				parent_data->erase(name);
@@ -1497,8 +1812,8 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto spc_start = specification;
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			get_subproperties(properties, data, name);
-			process_item_value(doc, *data, object, 0);
+			index_subproperties(properties, data, name);
+			index_item_value(doc, *data, object, 0);
 			specification = std::move(spc_start);
 			return;
 		}
@@ -1527,7 +1842,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				FieldVector fields;
-				properties = &get_subproperties(properties, data, name, item, fields);
+				properties = &index_subproperties(properties, data, name, item, fields);
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
 				index_item_value(properties, doc, data_pos, fields);
 				specification = spc_start;
@@ -1537,9 +1852,9 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			case MsgPack::Type::ARRAY: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				get_subproperties(properties, data, name);
+				index_subproperties(properties, data, name);
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
-				process_item_value(doc, *data_pos, item);
+				index_item_value(doc, *data_pos, item);
 				specification = spc_start;
 				break;
 			}
@@ -1548,7 +1863,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			case MsgPack::Type::UNDEFINED: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				get_subproperties(properties, data, name);
+				index_subproperties(properties, data, name);
 				index_partial_paths(doc);
 				if (specification.flags.store) {
 					(*data)[pos] = item;
@@ -1560,8 +1875,8 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			default: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				get_subproperties(properties, data, name);
-				process_item_value(doc, specification.flags.store ? (*data)[pos] : *data, item, pos);
+				index_subproperties(properties, data, name);
+				index_item_value(doc, specification.flags.store ? (*data)[pos] : *data, item, pos);
 				specification = spc_start;
 				break;
 			}
@@ -1572,9 +1887,9 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 
 
 void
-Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos)
+Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos)
 {
-	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s, %zu)", repr(data.to_string()).c_str(), repr(item_value.to_string()).c_str(), pos);
+	L_CALL(this, "Schema::index_item_value(<doc>, %s, %s, %zu)", repr(data.to_string()).c_str(), repr(item_value.to_string()).c_str(), pos);
 
 	if (!specification.flags.complete) {
 		if (specification.flags.inside_namespace) {
@@ -1607,9 +1922,9 @@ Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& 
 
 
 inline void
-Schema::process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value)
+Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value)
 {
-	L_CALL(this, "Schema::process_item_value(<doc>, %s, %s)", repr(data.to_string()).c_str(), repr(item_value.to_string()).c_str());
+	L_CALL(this, "Schema::index_item_value(<doc>, %s, %s)", repr(data.to_string()).c_str(), repr(item_value.to_string()).c_str());
 
 	switch (item_value.getType()) {
 		case MsgPack::Type::ARRAY: {
@@ -1683,7 +1998,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
-		process_item_value(doc, *data, *val);
+		index_item_value(doc, *data, *val);
 	} else {
 		if (!specification.flags.concrete) {
 			if (specification.flags.inside_namespace) {
@@ -1718,15 +2033,343 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 }
 
 
-inline void
-Schema::update_item_value(MsgPack& properties, const FieldVector& fields)
+//  _____ _____ _____ _____ _____ _____ _____ _____
+// |_____|_____|_____|_____|_____|_____|_____|_____|
+//      _   _           _       _
+//     | | | |_ __   __| | __ _| |_ ___
+//     | | | | '_ \ / _` |/ _` | __/ _ \
+//     | |_| | |_) | (_| | (_| | ||  __/
+//      \___/| .__/ \__,_|\__,_|\__\___|
+//           |_|
+//  _____ _____ _____ _____ _____ _____ _____ _____
+// |_____|_____|_____|_____|_____|_____|_____|_____|
+
+void
+Schema::update(const MsgPack& object)
 {
+	L_CALL(this, "Schema::update(%s)", repr(object.to_string()).c_str());
+
+	try {
+		try {
+			Schema::check(object, "Invalid schema: ");
+		} catch (const Error& err) {
+			throw ClientError(err);
+		}
+
+		const auto& schema_obj = object.at(SCHEMA_FIELD_NAME);
+
+		auto properties = &get_newest_properties();
+
+		specification = default_spc;
+
+		// Set default RESERVED_SLOT for root
+		specification.slot = DB_SLOT_ROOT;
+
+		FieldVector fields;
+
+		if (properties->empty()) {
+			specification.flags.field_found = false;
+			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+			dispatch_write_properties(*mut_properties, schema_obj, fields);
+			properties = &*mut_properties;
+		} else {
+			dispatch_feed_properties(*properties);
+			dispatch_process_properties(schema_obj, fields);
+		}
+
+		update_item_value(properties, fields);
+
+		// Inject remaining items from received object into the new schema
+		const auto it_e = object.end();
+		for (auto it = object.begin(); it != it_e; ++it) {
+			auto str_key = it->str();
+			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+				(*mut_schema)[str_key] = it.value();
+			}
+		}
+	} catch (...) {
+		mut_schema.reset();
+		throw;
+	}
+}
+
+
+const MsgPack&
+Schema::update_subproperties(const MsgPack*& properties, const std::string& name, const MsgPack& object, FieldVector& fields)
+{
+	L_CALL(this, "Schema::update_subproperties(%s, %s, %s, <fields>)", repr(properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
+
+	std::vector<std::string> field_names;
+	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
+
+	const auto it_last = field_names.end() - 1;
+	if (specification.flags.is_namespace) {
+		restart_namespace_specification();
+		for (auto it = field_names.begin(); it != it_last; ++it) {
+			auto norm_field_name = detect_dynamic(*it);
+			update_prefixes();
+		}
+		dispatch_process_properties(object, fields);
+		auto norm_field_name = detect_dynamic(*it_last);
+		update_prefixes();
+		specification.flags.inside_namespace = true;
+	} else {
+		for (auto it = field_names.begin(); it != it_last; ++it) {
+			const auto& field_name = *it;
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			}
+			restart_specification();
+			try {
+				feed_subproperties(*properties, field_name);
+				update_prefixes();
+			} catch (const std::out_of_range&) {
+				auto norm_field_name = detect_dynamic(field_name);
+				if (specification.flags.uuid_field) {
+					try {
+						feed_subproperties(*properties, specification.meta_name);
+						update_prefixes();
+						continue;
+					} catch (const std::out_of_range&) { }
+				}
+
+				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+				add_field(mut_properties);
+				for (++it; it != it_last; ++it) {
+					const auto& n_field_name = *it;
+					if (!is_valid(n_field_name)) {
+						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+					} else {
+						norm_field_name = detect_dynamic(n_field_name);
+						add_field(mut_properties);
+					}
+				}
+				const auto& n_field_name = *it_last;
+				if (!is_valid(n_field_name)) {
+					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+				} else {
+					norm_field_name = detect_dynamic(n_field_name);
+					add_field(mut_properties, object, fields);
+				}
+				return *mut_properties;
+			}
+		}
+
+		const auto& field_name = *it_last;
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+		}
+		restart_specification();
+		try {
+			feed_subproperties(*properties, field_name);
+			dispatch_process_properties(object, fields);
+			update_prefixes();
+		} catch (const std::out_of_range&) {
+			auto norm_field_name = detect_dynamic(field_name);
+			if (specification.flags.uuid_field) {
+				try {
+					feed_subproperties(*properties, specification.meta_name);
+					dispatch_process_properties(object, fields);
+					update_prefixes();
+					return *properties;
+				} catch (const std::out_of_range&) { }
+			}
+
+			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+			add_field(mut_properties, object, fields);
+			return *mut_properties;
+		}
+	}
+
+	return *properties;
+}
+
+
+const MsgPack&
+Schema::update_subproperties(const MsgPack*& properties, const std::string& name)
+{
+	L_CALL(this, "Schema::update_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(name).c_str());
+
+	Split<char> field_names(name, DB_OFFSPRING_UNION);
+
+	if (specification.flags.is_namespace) {
+		restart_namespace_specification();
+		for (const auto& field_name : field_names) {
+			detect_dynamic(field_name);
+			update_prefixes();
+		}
+		specification.flags.inside_namespace = true;
+	} else {
+		const auto it_e = field_names.end();
+		for (auto it = field_names.begin(); it != it_e; ++it) {
+			const auto& field_name = *it;
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			}
+			restart_specification();
+			try {
+				feed_subproperties(*properties, field_name);
+				update_prefixes();
+			} catch (const std::out_of_range&) {
+				auto norm_field_name = detect_dynamic(field_name);
+				if (specification.flags.uuid_field) {
+					try {
+						feed_subproperties(*properties, specification.meta_name);
+						update_prefixes();
+						continue;
+					} catch (const std::out_of_range&) { }
+				}
+
+				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+				add_field(mut_properties);
+				for (++it; it != it_e; ++it) {
+					const auto& n_field_name = *it;
+					if (!is_valid(n_field_name)) {
+						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+					} else {
+						detect_dynamic(n_field_name);
+						add_field(mut_properties);
+					}
+				}
+				return *mut_properties;
+			}
+		}
+	}
+
+	return *properties;
+}
+
+
+void
+Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name)
+{
+	L_CALL(this, "Schema::update_object(%s, %s, %s)", repr(parent_properties->to_string()).c_str(), repr(object.to_string()).c_str(), repr(name).c_str());
+
+	if (name.empty()) {
+		THROW(ClientError, "Field name must not be empty");
+	}
+
+	if (!specification.flags.is_recurse) {
+		return;
+	}
+
+	switch (object.getType()) {
+		case MsgPack::Type::MAP: {
+			auto spc_start = specification;
+			auto properties = &*parent_properties;
+			FieldVector fields;
+			properties = &update_subproperties(properties, name, object, fields);
+			update_item_value(properties, fields);
+			specification = std::move(spc_start);
+			return;
+		}
+
+		case MsgPack::Type::ARRAY: {
+			return update_array(parent_properties, object, name);
+		}
+
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED: {
+			auto spc_start = specification;
+			auto properties = &*parent_properties;
+			update_subproperties(properties, name);
+			specification = std::move(spc_start);
+			return;
+		}
+
+		default: {
+			auto spc_start = specification;
+			auto properties = &*parent_properties;
+			update_subproperties(properties, name);
+			update_item_value();
+			specification = std::move(spc_start);
+			return;
+		}
+	}
+}
+
+void
+Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name)
+{
+	L_CALL(this, "Schema::update_array(%s, %s, %s)", repr(parent_properties->to_string()).c_str(), repr(array.to_string()).c_str(), repr(name).c_str());
+
+	if (array.empty()) {
+		set_type_to_array();
+		return;
+	}
+
+	auto spc_start = specification;
+	size_t pos = 0;
+	for (const auto& item : array) {
+		switch (item.getType()) {
+			case MsgPack::Type::MAP: {
+				auto properties = &*parent_properties;
+				FieldVector fields;
+				properties = &update_subproperties(properties, name, item, fields);
+				update_item_value(properties, fields);
+				specification = spc_start;
+				break;
+			}
+
+			case MsgPack::Type::NIL:
+			case MsgPack::Type::UNDEFINED: {
+				auto properties = &*parent_properties;
+				update_subproperties(properties, name);
+				specification = spc_start;
+				break;
+			}
+
+			default: {
+				auto properties = &*parent_properties;
+				update_subproperties(properties, name);
+				update_item_value();
+				specification = spc_start;
+				break;
+			}
+		}
+		++pos;
+	}
+}
+
+
+void
+Schema::update_item_value()
+{
+	L_CALL(this, "Schema::update_item_value()");
+
+	if (!specification.flags.concrete) {
+		if (specification.flags.inside_namespace) {
+			validate_required_namespace_data();
+		} else {
+			validate_required_data(get_mutable_properties(specification.full_meta_name));
+		}
+	}
+
+	if (!specification.partial_index_spcs.empty()) {
+		index_spc_t start_index_spc(specification.sep_types[SPC_CONCRETE_TYPE], std::move(specification.prefix.field), specification.slot, std::move(specification.accuracy), std::move(specification.acc_prefix));
+		for (const auto& index_spc : specification.partial_index_spcs) {
+			specification.update(index_spc);
+		}
+		specification.update(std::move(start_index_spc));
+	}
+
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+		set_type_to_object();
+	}
+}
+
+
+inline void
+Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
+{
+	L_CALL(this, "Schema::update_item_value(<const MsgPack*>, <FieldVector>)");
+
 	const auto spc_start = specification;
 	if (!specification.flags.concrete) {
 		if (specification.flags.inside_namespace) {
 			validate_required_namespace_data();
 		} else {
-			validate_required_data(properties);
+			validate_required_data(get_mutable_properties(specification.full_meta_name));
 		}
 	}
 
@@ -1747,13 +2390,374 @@ Schema::update_item_value(MsgPack& properties, const FieldVector& fields)
 		const auto spc_object = std::move(specification);
 		for (const auto& field : fields) {
 			specification = spc_object;
-			auto mut_properties = &properties;
-			update_schema(mut_properties, field.first, *field.second);
+			update_object(properties, *field.second, field.first);
+		}
+	}
+}
+
+
+//  _____ _____ _____ _____ _____ _____ _____ _____
+// |_____|_____|_____|_____|_____|_____|_____|_____|
+//     __        __    _ _
+//     \ \      / / __(_) |_ ___
+//      \ \ /\ / / '__| | __/ _ \
+//       \ V  V /| |  | | ||  __/
+//        \_/\_/ |_|  |_|\__\___|
+//  _____ _____ _____ _____ _____ _____ _____ _____
+// |_____|_____|_____|_____|_____|_____|_____|_____|
+
+void
+Schema::write(const MsgPack& object, bool replace)
+{
+	L_CALL(this, "Schema::write(%s, %d)", repr(object.to_string()).c_str(), replace);
+
+	try {
+		try {
+			Schema::check(object, "Invalid schema: ");
+		} catch (const Error& err) {
+			throw ClientError(err);
+		}
+
+		const auto& schema_obj = object.at(SCHEMA_FIELD_NAME);
+
+		auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+		if (replace) {
+			mut_properties->clear();
+		}
+
+		specification = default_spc;
+
+		// Set default RESERVED_SLOT for root
+		specification.slot = DB_SLOT_ROOT;
+
+		FieldVector fields;
+
+		if (mut_properties->empty()) {
+			specification.flags.field_found = false;
+		} else {
+			dispatch_feed_properties(*mut_properties);
+		}
+
+		dispatch_write_properties(*mut_properties, schema_obj, fields);
+
+		write_item_value(mut_properties, fields);
+
+		// Inject remaining items from received object into the new schema
+		const auto it_e = object.end();
+		for (auto it = object.begin(); it != it_e; ++it) {
+			auto str_key = it->str();
+			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+				(*mut_schema)[str_key] = it.value();
+			}
+		}
+	} catch (...) {
+		mut_schema.reset();
+		throw;
+	}
+}
+
+
+MsgPack&
+Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields)
+{
+	L_CALL(this, "Schema::write_subproperties(%s, %s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
+
+	std::vector<std::string> field_names;
+	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
+
+	const auto it_last = field_names.end() - 1;
+	if (specification.flags.is_namespace) {
+		restart_namespace_specification();
+		for (auto it = field_names.begin(); it != it_last; ++it) {
+			verify_dynamic(*it);
+			update_prefixes();
+		}
+		dispatch_write_properties(*mut_properties, object, fields);
+		verify_dynamic(*it_last);
+		update_prefixes();
+		specification.flags.inside_namespace = true;
+	} else {
+		for (auto it = field_names.begin(); it != it_last; ++it) {
+			const auto& field_name = *it;
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			}
+			restart_specification();
+			try {
+				feed_subproperties(*mut_properties, field_name);
+				update_prefixes();
+			} catch (const std::out_of_range&) {
+				verify_dynamic(field_name);
+				if (specification.flags.uuid_field) {
+					try {
+						feed_subproperties(*mut_properties, specification.meta_name);
+						update_prefixes();
+						continue;
+					} catch (const std::out_of_range&) { }
+				}
+
+				add_field(mut_properties);
+				for (++it; it != it_last; ++it) {
+					const auto& n_field_name = *it;
+					if (!is_valid(n_field_name)) {
+						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+					} else {
+						verify_dynamic(n_field_name);
+						add_field(mut_properties);
+					}
+				}
+				const auto& n_field_name = *it_last;
+				if (!is_valid(n_field_name)) {
+					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+				} else {
+					verify_dynamic(n_field_name);
+					add_field(mut_properties, object, fields);
+				}
+				return *mut_properties;
+			}
+		}
+
+		const auto& field_name = *it_last;
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+		}
+		restart_specification();
+		try {
+			feed_subproperties(*mut_properties, field_name);
+			dispatch_write_properties(*mut_properties, object, fields);
+			update_prefixes();
+		} catch (const std::out_of_range&) {
+			verify_dynamic(field_name);
+			if (specification.flags.uuid_field) {
+				try {
+					feed_subproperties(*mut_properties, specification.meta_name);
+					dispatch_write_properties(*mut_properties, object, fields);
+					update_prefixes();
+					return *mut_properties;
+				} catch (const std::out_of_range&) { }
+			}
+
+			add_field(mut_properties, object, fields);
+			return *mut_properties;
 		}
 	}
 
-	specification = std::move(spc_start);
+	return *mut_properties;
 }
+
+
+MsgPack&
+Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
+{
+	L_CALL(this, "Schema::write_subproperties(%s, %s)", repr(mut_properties->to_string()).c_str(), repr(name).c_str());
+
+	Split<char> field_names(name, DB_OFFSPRING_UNION);
+
+	if (specification.flags.is_namespace) {
+		restart_namespace_specification();
+		for (const auto& field_name : field_names) {
+			verify_dynamic(field_name);
+			update_prefixes();
+		}
+		specification.flags.inside_namespace = true;
+	} else {
+		const auto it_e = field_names.end();
+		for (auto it = field_names.begin(); it != it_e; ++it) {
+			const auto& field_name = *it;
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
+				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			}
+			restart_specification();
+			try {
+				feed_subproperties(*mut_properties, field_name);
+				update_prefixes();
+			} catch (const std::out_of_range&) {
+				verify_dynamic(field_name);
+				if (specification.flags.uuid_field) {
+					try {
+						feed_subproperties(*mut_properties, specification.meta_name);
+						update_prefixes();
+						continue;
+					} catch (const std::out_of_range&) { }
+				}
+
+				add_field(mut_properties);
+				for (++it; it != it_e; ++it) {
+					const auto& n_field_name = *it;
+					if (!is_valid(n_field_name)) {
+						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+					} else {
+						verify_dynamic(n_field_name);
+						add_field(mut_properties);
+					}
+				}
+				return *mut_properties;
+			}
+		}
+	}
+
+	return *mut_properties;
+}
+
+
+void
+Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name)
+{
+	L_CALL(this, "Schema::write_object(%s, %s, %s)", repr(mut_parent_properties->to_string()).c_str(), repr(object.to_string()).c_str(), repr(name).c_str());
+
+	if (name.empty()) {
+		THROW(ClientError, "Field name must not be empty");
+	}
+
+	if (!specification.flags.is_recurse) {
+		return;
+	}
+
+	switch (object.getType()) {
+		case MsgPack::Type::MAP: {
+			auto spc_start = specification;
+			auto properties = &*mut_parent_properties;
+			FieldVector fields;
+			properties = &write_subproperties(properties, name, object, fields);
+			write_item_value(properties, fields);
+			specification = std::move(spc_start);
+			return;
+		}
+
+		case MsgPack::Type::ARRAY: {
+			return write_array(mut_parent_properties, object, name);
+		}
+
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED: {
+			auto spc_start = specification;
+			auto properties = &*mut_parent_properties;
+			write_subproperties(properties, name);
+			specification = std::move(spc_start);
+			return;
+		}
+
+		default: {
+			auto spc_start = specification;
+			auto properties = &*mut_parent_properties;
+			write_subproperties(properties, name);
+			write_item_value(properties);
+			specification = std::move(spc_start);
+			return;
+		}
+	}
+}
+
+
+void
+Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name)
+{
+	L_CALL(this, "Schema::write_array(%s, %s, %s)", repr(mut_parent_properties->to_string()).c_str(), repr(array.to_string()).c_str(), repr(name).c_str());
+
+	if (array.empty()) {
+		set_type_to_array();
+		return;
+	}
+
+	auto spc_start = specification;
+	size_t pos = 0;
+	for (const auto& item : array) {
+		switch (item.getType()) {
+			case MsgPack::Type::MAP: {
+				auto properties = &*mut_parent_properties;
+				FieldVector fields;
+				properties = &write_subproperties(properties, name, item, fields);
+				write_item_value(properties, fields);
+				specification = spc_start;
+				break;
+			}
+
+			case MsgPack::Type::NIL:
+			case MsgPack::Type::UNDEFINED: {
+				auto properties = &*mut_parent_properties;
+				write_subproperties(properties, name);
+				specification = spc_start;
+				break;
+			}
+
+			default: {
+				auto properties = &*mut_parent_properties;
+				write_subproperties(properties, name);
+				write_item_value(properties);
+				specification = spc_start;
+				break;
+			}
+		}
+		++pos;
+	}
+}
+
+
+void
+Schema::write_item_value(MsgPack*& mut_properties)
+{
+	L_CALL(this, "Schema::write_item_value()");
+
+	if (!specification.flags.concrete) {
+		if (specification.flags.inside_namespace) {
+			validate_required_namespace_data();
+		} else {
+			validate_required_data(*mut_properties);
+		}
+	}
+
+	if (!specification.partial_index_spcs.empty()) {
+		index_spc_t start_index_spc(specification.sep_types[SPC_CONCRETE_TYPE], std::move(specification.prefix.field), specification.slot, std::move(specification.accuracy), std::move(specification.acc_prefix));
+		for (const auto& index_spc : specification.partial_index_spcs) {
+			specification.update(index_spc);
+		}
+		specification.update(std::move(start_index_spc));
+	}
+
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+		set_type_to_object();
+	}
+}
+
+
+inline void
+Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
+{
+	L_CALL(this, "Schema::write_item_value(<const MsgPack*>, <FieldVector>)");
+
+	const auto spc_start = specification;
+	if (!specification.flags.concrete) {
+		if (specification.flags.inside_namespace) {
+			validate_required_namespace_data();
+		} else {
+			validate_required_data(*mut_properties);
+		}
+	}
+
+	if (specification.flags.is_namespace && fields.size()) {
+		specification = std::move(spc_start);
+		return;
+	}
+
+	if (fields.empty()) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+			set_type_to_object();
+		}
+	} else {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+			THROW(ClientError, "%s is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name).c_str());
+		}
+		set_type_to_object();
+		const auto spc_object = std::move(specification);
+		for (const auto& field : fields) {
+			specification = spc_object;
+			write_object(mut_properties, *field.second, field.first);
+		}
+	}
+}
+
+//  _____ _____ _____ _____ _____ _____ _____ _____
+// |_____|_____|_____|_____|_____|_____|_____|_____|
 
 
 std::unordered_set<std::string>
@@ -3254,43 +4258,6 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 }
 
 
-void
-Schema::update_schema(MsgPack*& mut_parent_properties, const std::string& name, const MsgPack& obj_schema)
-{
-	L_CALL(this, "Schema::update_schema(%s, %s, %s)", repr(mut_parent_properties->to_string()).c_str(), repr(name).c_str(), repr(obj_schema.to_string()).c_str());
-
-	if (name.empty()) {
-		THROW(ClientError, "Field name must not be empty");
-	}
-
-	switch (obj_schema.getType()) {
-		case MsgPack::Type::MAP: {
-			FieldVector fields;
-			auto mut_properties = mut_parent_properties;
-			mut_properties = &get_subproperties_write(mut_properties, name, obj_schema, fields);
-
-			update_item_value(*mut_properties, fields);
-			return;
-		}
-		case MsgPack::Type::ARRAY:
-			if (!is_valid(name)) {
-				THROW(ClientError, "Field name: %s in %s is not valid", repr(name).c_str(), repr(specification.full_meta_name).c_str());
-			}
-			for (const auto& item : obj_schema) {
-				if (item.is_map()) {
-					update_schema(mut_parent_properties, name, item);
-				}
-			}
-			return;
-		default:
-			if (!is_valid(name)) {
-				THROW(ClientError, "Field name: %s in %s is not valid", repr(name).c_str(), repr(specification.full_meta_name).c_str());
-			}
-			return;
-	}
-}
-
-
 inline void
 Schema::update_prefixes()
 {
@@ -3345,293 +4312,6 @@ Schema::update_prefixes()
 	} else {
 		specification.partial_prefixes.clear();
 	}
-}
-
-
-template <typename T>
-inline void
-Schema::_get_subproperties(T& properties, const std::string& meta_name)
-{
-	L_CALL(this, "Schema::_get_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str());
-
-	properties = &properties->at(meta_name);
-	specification.flags.field_found = true;
-	static const auto stit_e = map_stem_language.end();
-	const auto stit = map_stem_language.find(meta_name);
-	if (stit != stit_e && stit->second.first) {
-		specification.language = stit->second.second;
-		specification.aux_lan = stit->second.second;
-	}
-
-	if (specification.full_meta_name.empty()) {
-		specification.full_meta_name.assign(meta_name);
-	} else {
-		specification.full_meta_name.append(1, DB_OFFSPRING_UNION).append(meta_name);
-	}
-
-	dispatch_feed_properties(*properties);
-}
-
-
-const MsgPack&
-Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields)
-{
-	L_CALL(this, "Schema::get_subproperties(%s, <data>, %s, %s, <fields>)", repr(properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
-
-	std::vector<std::string> field_names;
-	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
-
-	const auto it_last = field_names.end() - 1;
-	if (specification.flags.is_namespace) {
-		restart_namespace_specification();
-		for (auto it = field_names.begin(); it != it_last; ++it) {
-			auto norm_field_name = detect_dynamic(*it);
-			update_prefixes();
-			if (specification.flags.store) {
-				data = &(*data)[norm_field_name];
-			}
-		}
-		dispatch_process_properties(object, fields);
-		auto norm_field_name = detect_dynamic(*it_last);
-		update_prefixes();
-		specification.flags.inside_namespace = true;
-		if (specification.flags.store) {
-			data = &(*data)[norm_field_name];
-		}
-	} else {
-		for (auto it = field_names.begin(); it != it_last; ++it) {
-			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
-			}
-			restart_specification();
-			try {
-				_get_subproperties(properties, field_name);
-				update_prefixes();
-				if (specification.flags.store) {
-					data = &(*data)[field_name];
-				}
-			} catch (const std::out_of_range&) {
-				auto norm_field_name = detect_dynamic(field_name);
-				if (specification.flags.uuid_field) {
-					try {
-						_get_subproperties(properties, specification.meta_name);
-						update_prefixes();
-						if (specification.flags.store) {
-							data = &(*data)[norm_field_name];
-						}
-						continue;
-					} catch (const std::out_of_range&) { }
-				}
-
-				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-				add_field(mut_properties);
-				if (specification.flags.store) {
-					data = &(*data)[norm_field_name];
-				}
-				for (++it; it != it_last; ++it) {
-					const auto& n_field_name = *it;
-					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-					} else {
-						norm_field_name = detect_dynamic(n_field_name);
-						add_field(mut_properties);
-						if (specification.flags.store) {
-							data = &(*data)[norm_field_name];
-						}
-					}
-				}
-				const auto& n_field_name = *it_last;
-				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-				} else {
-					norm_field_name = detect_dynamic(n_field_name);
-					add_field(mut_properties, object, fields);
-					if (specification.flags.store) {
-						data = &(*data)[norm_field_name];
-					}
-				}
-				return *mut_properties;
-			}
-		}
-
-		const auto& field_name = *it_last;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
-		}
-		restart_specification();
-		try {
-			_get_subproperties(properties, field_name);
-			dispatch_process_properties(object, fields);
-			update_prefixes();
-			if (specification.flags.store) {
-				data = &(*data)[field_name];
-			}
-		} catch (const std::out_of_range&) {
-			auto norm_field_name = detect_dynamic(field_name);
-			if (specification.flags.uuid_field) {
-				try {
-					_get_subproperties(properties, specification.meta_name);
-					dispatch_process_properties(object, fields);
-					update_prefixes();
-					if (specification.flags.store) {
-						data = &(*data)[norm_field_name];
-					}
-					return *properties;
-				} catch (const std::out_of_range&) { }
-			}
-
-			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-			add_field(mut_properties, object, fields);
-			if (specification.flags.store) {
-				data = &(*data)[norm_field_name];
-			}
-			return *mut_properties;
-		}
-	}
-
-	return *properties;
-}
-
-
-const MsgPack&
-Schema::get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name)
-{
-	L_CALL(this, "Schema::get_subproperties(%s, <data>, %s)", repr(properties->to_string()).c_str(), repr(name).c_str());
-
-	Split<char> field_names(name, DB_OFFSPRING_UNION);
-
-	if (specification.flags.is_namespace) {
-		restart_namespace_specification();
-		if (specification.flags.store) {
-			for (const auto& field_name : field_names) {
-				data = &(*data)[detect_dynamic(field_name)];
-				update_prefixes();
-			}
-		} else {
-			for (const auto& field_name : field_names) {
-				detect_dynamic(field_name);
-				update_prefixes();
-			}
-		}
-		specification.flags.inside_namespace = true;
-	} else {
-		const auto it_e = field_names.end();
-		for (auto it = field_names.begin(); it != it_e; ++it) {
-			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
-			}
-			restart_specification();
-			try {
-				_get_subproperties(properties, field_name);
-				update_prefixes();
-				if (specification.flags.store) {
-					data = &(*data)[field_name];
-				}
-			} catch (const std::out_of_range&) {
-				auto norm_field_name = detect_dynamic(field_name);
-				if (specification.flags.uuid_field) {
-					try {
-						_get_subproperties(properties, specification.meta_name);
-						update_prefixes();
-						if (specification.flags.store) {
-							data = &(*data)[norm_field_name];
-						}
-						continue;
-					} catch (const std::out_of_range&) { }
-				}
-
-				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-				add_field(mut_properties);
-				if (specification.flags.store) {
-					data = &(*data)[norm_field_name];
-					for (++it; it != it_e; ++it) {
-						const auto& n_field_name = *it;
-						if (!is_valid(n_field_name)) {
-							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-						} else {
-							data = &(*data)[detect_dynamic(n_field_name)];
-							add_field(mut_properties);
-						}
-					}
-				} else {
-					for (++it; it != it_e; ++it) {
-						const auto& n_field_name = *it;
-						if (!is_valid(n_field_name)) {
-							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-						} else {
-							detect_dynamic(n_field_name);
-							add_field(mut_properties);
-						}
-					}
-				}
-				return *mut_properties;
-			}
-		}
-	}
-
-	return *properties;
-}
-
-
-MsgPack&
-Schema::get_subproperties_write(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields)
-{
-	L_CALL(this, "Schema::get_subproperties_write(%s, %s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
-
-	std::vector<std::string> field_names;
-	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
-
-	const auto it_last = field_names.end() - 1;
-	for (auto it = field_names.begin(); it != it_last; ++it) {
-		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
-		}
-		restart_specification();
-		try {
-			_get_subproperties(mut_properties, field_name);
-		} catch (const std::out_of_range&) {
-			for ( ; it != it_last; ++it) {
-				const auto& n_field_name = *it;
-				if (!is_valid(n_field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(n_field_name))) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-				} else {
-					verify_dynamic(n_field_name);
-					add_field(mut_properties);
-				}
-			}
-
-			const auto& n_field_name = *it_last;
-			if (!is_valid(n_field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(n_field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-			} else {
-				verify_dynamic(n_field_name);
-				add_field(mut_properties, object, fields);
-			}
-
-			return *mut_properties;
-		}
-	}
-
-	const auto& field_name = *it_last;
-	if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-		THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
-	}
-	restart_specification();
-	try {
-		_get_subproperties(mut_properties, field_name);
-		dispatch_write_properties(*mut_properties, object, fields);
-	} catch (const std::out_of_range&) {
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
-		} else {
-			verify_dynamic(field_name);
-			add_field(mut_properties, object, fields);
-		}
-	}
-	return *mut_properties;
 }
 
 
@@ -5865,134 +6545,6 @@ Schema::to_string(bool prettify) const
 	L_CALL(this, "Schema::to_string(%d)", prettify);
 
 	return get_readable().to_string(prettify);
-}
-
-
-MsgPack
-Schema::index(
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	MsgPack& object,
-	const std::string& term_id,
-	std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair,
-	DatabaseHandler* db_handler,
-#else
-	const MsgPack& object,
-#endif
-	Xapian::Document& doc)
-{
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	L_CALL(this, "Schema::index(%s, %s, <old_document_pair>, <db_handler>, <doc>)", repr(object.to_string()).c_str(), repr(term_id).c_str());
-#else
-	L_CALL(this, "Schema::index(%s, <doc>)", repr(object.to_string()).c_str());
-#endif
-
-	try {
-		specification = default_spc;
-
-		// Set default RESERVED_SLOT for root
-		specification.slot = DB_SLOT_ROOT;
-
-		FieldVector fields;
-		auto properties = &get_newest_properties();
-
-		if (properties->empty()) {
-			specification.flags.field_found = false;
-			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-			dispatch_write_properties(*mut_properties, object, fields);
-			properties = &*mut_properties;
-		} else {
-			dispatch_feed_properties(*properties);
-			dispatch_process_properties(object, fields);
-		}
-
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-		if (specification.script) {
-			object = db_handler->run_script(object, term_id, old_document_pair, *specification.script);
-			if (!object.is_map()) {
-				THROW(ClientError, "Script must return an object, it returned %s", object.getStrType().c_str());
-			}
-			// Rebuild fields with new values.
-			fields.clear();
-			static const auto wtit_e = map_dispatch_process_properties.end();
-			static const auto ddit_e = map_dispatch_process_concrete_properties.end();
-			const auto it_e = object.end();
-			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->str();
-				const auto wtit = map_dispatch_process_properties.find(str_key);
-				if (wtit == wtit_e) {
-					const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
-					if (ddit == ddit_e) {
-						fields.emplace_back(std::move(str_key), &it.value());
-					}
-				}
-			}
-		}
-#endif
-		MsgPack data;
-		auto data_ptr = &data;
-
-		index_item_value(properties, doc, data_ptr, fields);
-
-		for (const auto& elem : map_values) {
-			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
-			doc.add_value(elem.first, val_ser);
-			L_INDEX(this, "Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
-		}
-
-		return data;
-	} catch (...) {
-		mut_schema.reset();
-		throw;
-	}
-}
-
-
-void
-Schema::write_schema(const MsgPack& object, bool replace)
-{
-	L_CALL(this, "Schema::write_schema(%s, %d)", repr(object.to_string()).c_str(), replace);
-
-	try {
-		try {
-			Schema::check(object, "Invalid schema: ");
-		} catch (const Error& err) {
-			throw ClientError(err);
-		}
-
-		auto& mut_properties = get_mutable_properties();
-		if (replace) {
-			mut_properties.clear();
-		}
-
-		specification = default_spc;
-
-		// Set default RESERVED_SLOT for root
-		specification.slot = DB_SLOT_ROOT;
-
-		FieldVector fields;
-
-		if (mut_properties.empty()) {
-			specification.flags.field_found = false;
-		} else {
-			dispatch_feed_properties(mut_properties);
-		}
-
-		dispatch_write_properties(mut_properties, object.at(SCHEMA_FIELD_NAME), fields);
-
-		update_item_value(mut_properties, fields);
-
-		// Inject remaining items from received object into the new schema
-		const auto it_e = object.end();
-		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
-			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
-				(*mut_schema)[str_key] = it.value();
-			}
-		}
-	} catch (...) {
-		mut_schema.reset();
-		throw;
-	}
 }
 
 

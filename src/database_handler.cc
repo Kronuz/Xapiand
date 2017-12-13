@@ -599,7 +599,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 	auto schema_begins = std::chrono::system_clock::now();
 	do {
 		schema = get_schema();
-		schema->write_schema(obj, method == HTTP_PUT);
+		schema->write(obj, method == HTTP_PUT);
 		L_INDEX(this, "Schema to write: %s", repr(schema->to_string()).c_str());
 		auto update = update_schema();
 		if (update.first) {

@@ -539,17 +539,52 @@ class Schema {
 	 */
 	void restart_namespace_specification();
 
+
+	/*
+	 * Get the properties of meta name of schema.
+	 */
+
+	void feed_subproperties(const MsgPack& properties, const std::string& meta_name);
+
 	/*
 	 * Main functions to index objects and arrays
 	 */
 
+	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields);
+	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name);
+
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 
-	void process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
-	void process_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value);
+	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
+	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value);
 	void index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields);
-	void update_item_value(MsgPack& properties, const FieldVector& fields);
+
+	/*
+	 * Main functions to update objects and arrays
+	 */
+
+	const MsgPack& update_subproperties(const MsgPack*& properties, const std::string& name, const MsgPack& object, FieldVector& fields);
+	const MsgPack& update_subproperties(const MsgPack*& properties, const std::string& name);
+
+	void update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name);
+	void update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name);
+
+	void update_item_value();
+	void update_item_value(const MsgPack*& properties, const FieldVector& fields);
+
+	/*
+	 * Main functions to write objects and arrays
+	 */
+
+	MsgPack& write_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields);
+	MsgPack& write_subproperties(MsgPack*& mut_properties, const std::string& name);
+
+	void write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name);
+	void write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name);
+
+	void write_item_value(MsgPack*& mut_properties);
+	void write_item_value(MsgPack*& mut_properties, const FieldVector& fields);
 
 
 	/*
@@ -611,31 +646,10 @@ class Schema {
 	static void index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s, const specification_t& spc, size_t pos, const specification_t* field_spc=nullptr, const specification_t* global_spc=nullptr);
 	static void index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s_f, std::set<std::string>& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
 
-
-	/*
-	 * Auxiliar function for update schema.
-	 */
-	void update_schema(MsgPack*& mut_parent_properties, const std::string& name, const MsgPack& obj_schema);
-
-	/*
-	 * Get the properties of meta name of schema.
-	 */
-	template <typename T>
-	void _get_subproperties(T& properties, const std::string& meta_name);
-
 	/*
 	 * Add partial prefix in specification.partials_prefixes or clear it.
 	 */
 	void update_prefixes();
-
-	/*
-	 * Gets the properties stored in the schema as well as those sent by the user.
-	 */
-
-	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields);
-	const MsgPack& get_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name);
-	MsgPack& get_subproperties_write(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields);
-
 
 	/*
 	 * Verify if field_name is the meta field used for dynamic types.
@@ -892,16 +906,17 @@ public:
 	MsgPack index(const MsgPack& object, Xapian::Document& doc);
 #endif
 
+	/*
+	 * Function to update the schema according to obj_schema.
+	 */
+	void update(const MsgPack& obj_schema);
+	void write(const MsgPack& obj_schema, bool replace);
+
 
 	/*
 	 * Returns readable schema.
 	 */
 	const MsgPack get_readable() const;
-
-	/*
-	 * Function to update the schema according to obj_schema.
-	 */
-	void write_schema(const MsgPack& obj_schema, bool replace);
 
 	/*
 	 * Set default specification in namespace FIELD_ID_NAME
