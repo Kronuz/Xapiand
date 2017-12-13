@@ -5693,11 +5693,6 @@ Schema::readable(MsgPack& item_schema, int root)
 				}
 			} else if (map_dispatch_set_default_spc.count(str_key)) {
 				if (root > 0) {
-					auto& value = it.value();
-					if (value.is_map()) {
-						readable(value, root - 1);
-					}
-				} else {
 					it = item_schema.erase(it);
 					continue;
 				}
