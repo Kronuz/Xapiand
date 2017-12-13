@@ -98,9 +98,26 @@ SchemasLRU::validate_object_meta_schema(const MsgPack& value)
 {
 	L_CALL(this, "SchemasLRU::validate_object_meta_schema(%s)", repr(value.to_string()).c_str());
 
-	Schema::check(value);
+	MsgPack new_schema;
+	if (value.find(SCHEMA_FIELD_NAME) != value.end()) {
+		new_schema = value;
+	} else {
+		new_schema = {
+			{ VERSION_FIELD_NAME, {
+				{ RESERVED_TYPE, FLOAT_STR },
+				{ RESERVED_INDEX, "none" },
+				{ RESERVED_VALUE, DB_VERSION_SCHEMA },
+			} },
+			{ SCHEMA_FIELD_NAME, value },
+		};
+	}
 
-	MsgPack new_schema(value);
+	try {
+		Schema::validate(new_schema, "Invalid schema: ");
+	} catch (const Error& err) {
+		throw ClientError(err);
+	}
+
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
 }

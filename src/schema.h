@@ -868,7 +868,8 @@ public:
 
 	~Schema() = default;
 
-	static void check(const MsgPack& object);
+	static void validate(const MsgPack& object, const char* prefix);
+	static void check(const MsgPack& object, const char* prefix);
 
 	static std::shared_ptr<const MsgPack> get_initial_schema();
 
