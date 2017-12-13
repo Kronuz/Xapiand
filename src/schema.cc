@@ -1272,8 +1272,12 @@ Schema::get_initial_schema()
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
 	MsgPack new_schema({
+		{ ID_FIELD_NAME,  {
+			{ RESERVED_TYPE, TERM_STR },
+		} },
 		{ VERSION_FIELD_NAME, {
-			{ RESERVED_TYPE, "float" },
+			{ RESERVED_TYPE, FLOAT_STR },
+			{ RESERVED_INDEX, "none" },
 			{ RESERVED_VALUE, DB_VERSION_SCHEMA },
 		} },
 		{ SCHEMA_FIELD_NAME, MsgPack(MsgPack::Type::MAP) },
