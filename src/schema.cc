@@ -1199,46 +1199,42 @@ specification_t::to_string() const
 }
 
 
-void Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_versionless) {
+// Schema::check returns pair: std::string* foreign_value, schema object
+std::pair<const MsgPack*, const MsgPack*>
+Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless)
+{
+	L_CALL(nullptr, "Schema::check(%s, <prefix>, '%s', '%s', '%s')", repr(object.to_string()).c_str(), allow_foreign ? "allow_foreign" : "", allow_root ? "allow_root" : "", allow_versionless ? "allow_versionless" : "");
+
+	// Check foreign:
 	if (allow_foreign) {
+		if (object.is_string()) {
+			return std::make_pair(&object, nullptr);
+		}
 		try {
 			const auto& sep_types = required_spc_t::get_types(object.at(RESERVED_TYPE).str());
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				try {
 					const auto& foreign_value = object.at(RESERVED_VALUE);
 					if (!foreign_value.is_string()) {
-						THROW(Error, "%sobject must be string because is foreign", prefix);
+						THROW(Error, "%sschema must be string because is foreign", prefix);
 					}
 					if (object.size() != 2) { // '_type' and '_value'
-						THROW(Error, "%sobject is a foreign type and as such it cannot have extra fields");
+						THROW(Error, "%sschema is a foreign type and as such it cannot have extra fields");
 					}
-					return;
+					return std::make_pair(&foreign_value, nullptr);
 				} catch (const std::out_of_range&) {
-					THROW(Error, "%sobject must be a string to be foreign", prefix);
+					THROW(Error, "%sschema must be a string to be foreign", prefix);
 				}
+			} else if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
+				THROW(Error, "%sschema must be object", prefix);
 			}
 		} catch (const msgpack::type_error&) {
-			THROW(Error, "%sobject has an invalid type", prefix);
+			THROW(Error, "%sschema has an invalid type", prefix);
 		} catch (const std::out_of_range&) { }
 	}
 
-	// Check schema object:
-	try {
-		const auto& schema_field = object.at(SCHEMA_FIELD_NAME);
-		try {
-			const auto& sep_types = required_spc_t::get_types(schema_field.at(RESERVED_TYPE).str());
-			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(Error, "%s'%s' has an unsupported type", prefix, SCHEMA_FIELD_NAME);
-			}
-		} catch (const std::out_of_range&) {
-			if (!schema_field.is_map()) {
-				THROW(Error, "%s'%s' is not an object", prefix, SCHEMA_FIELD_NAME);
-			}
-		} catch (const msgpack::type_error&) {
-			THROW(Error, "%s'%s' has an invalid type", prefix, SCHEMA_FIELD_NAME);
-		}
-	} catch (const std::out_of_range&) {
-		THROW(Error, "%s'%s' field does not exist", prefix, SCHEMA_FIELD_NAME);
+	if (!object.is_map()) {
+		THROW(Error, "%sschema must be a map", prefix);
 	}
 
 	// Check version:
@@ -1280,13 +1276,36 @@ void Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign
 			THROW(Error, "%s'%s' field does not exist", prefix, VERSION_FIELD_NAME);
 		}
 	}
+
+	// Check schema object:
+	try {
+		const auto& schema_field = object.at(SCHEMA_FIELD_NAME);
+		try {
+			const auto& sep_types = required_spc_t::get_types(schema_field.at(RESERVED_TYPE).str());
+			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
+				THROW(Error, "%s'%s' has an unsupported type", prefix, SCHEMA_FIELD_NAME);
+			}
+		} catch (const std::out_of_range&) {
+			if (!schema_field.is_map()) {
+				THROW(Error, "%s'%s' is not an object", prefix, SCHEMA_FIELD_NAME);
+			}
+		} catch (const msgpack::type_error&) {
+			THROW(Error, "%s'%s' has an invalid type", prefix, SCHEMA_FIELD_NAME);
+		}
+		return std::make_pair(nullptr, &schema_field);
+	} catch (const std::out_of_range&) {
+		if (!allow_root) {
+			THROW(Error, "%s'%s' field does not exist", prefix, SCHEMA_FIELD_NAME);
+		}
+		return std::make_pair(nullptr, nullptr);
+	}
 }
 
 
 Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
-	Schema::check(*schema, "Schema is corrupt: ", false, false);
+	Schema::check(*schema, "Schema is corrupt: ", false, false, false);
 }
 
 
@@ -2024,13 +2043,21 @@ Schema::update(const MsgPack& object)
 	L_CALL(this, "Schema::update(%s)", repr(object.to_string()).c_str());
 
 	try {
+		std::pair<const MsgPack*, const MsgPack*> checked;
 		try {
-			Schema::check(object, "Invalid schema: ", false, true);
+			checked = Schema::check(object, "Invalid schema: ", true, true, true);
 		} catch (const Error& err) {
 			throw ClientError(err);
 		}
 
-		const auto& schema_obj = object.at(SCHEMA_FIELD_NAME);
+		if (checked.first) {
+			mut_schema = std::make_unique<MsgPack>(MsgPack({
+				{ RESERVED_TYPE, "foreign/object" },
+				{ RESERVED_VALUE, *checked.first },
+			}));
+			return;
+		}
+		const auto& schema_obj = checked.second ? *checked.second : object;
 
 		auto properties = &get_newest_properties();
 
@@ -2053,15 +2080,17 @@ Schema::update(const MsgPack& object)
 
 		update_item_value(properties, fields);
 
-		// Inject remaining items from received object into the new schema
-		const auto it_e = object.end();
-		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
-			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
-				if (!mut_schema) {
-					mut_schema = std::make_unique<MsgPack>(*schema);
+		if (checked.second) {
+			// Inject remaining items from received object into the new schema
+			const auto it_e = object.end();
+			for (auto it = object.begin(); it != it_e; ++it) {
+				auto str_key = it->str();
+				if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+					if (!mut_schema) {
+						mut_schema = std::make_unique<MsgPack>(*schema);
+					}
+					(*mut_schema)[str_key] = it.value();
 				}
-				(*mut_schema)[str_key] = it.value();
 			}
 		}
 	} catch (...) {
@@ -2389,13 +2418,21 @@ Schema::write(const MsgPack& object, bool replace)
 	L_CALL(this, "Schema::write(%s, %d)", repr(object.to_string()).c_str(), replace);
 
 	try {
+		std::pair<const MsgPack*, const MsgPack*> checked;
 		try {
-			Schema::check(object, "Invalid schema: ", false, true);
+			checked = Schema::check(object, "Invalid schema: ", true, true, true);
 		} catch (const Error& err) {
 			throw ClientError(err);
 		}
 
-		const auto& schema_obj = object.at(SCHEMA_FIELD_NAME);
+		if (checked.first) {
+			mut_schema = std::make_unique<MsgPack>(MsgPack({
+				{ RESERVED_TYPE, "foreign/object" },
+				{ RESERVED_VALUE, *checked.first },
+			}));
+			return;
+		}
+		const auto& schema_obj = checked.second ? *checked.second : object;
 
 		auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 		if (replace) {
@@ -2419,15 +2456,17 @@ Schema::write(const MsgPack& object, bool replace)
 
 		write_item_value(mut_properties, fields);
 
-		// Inject remaining items from received object into the new schema
-		const auto it_e = object.end();
-		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
-			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
-				if (!mut_schema) {
-					mut_schema = std::make_unique<MsgPack>(*schema);
+		if (checked.second) {
+			// Inject remaining items from received object into the new schema
+			const auto it_e = object.end();
+			for (auto it = object.begin(); it != it_e; ++it) {
+				auto str_key = it->str();
+				if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+					if (!mut_schema) {
+						mut_schema = std::make_unique<MsgPack>(*schema);
+					}
+					(*mut_schema)[str_key] = it.value();
 				}
-				(*mut_schema)[str_key] = it.value();
 			}
 		}
 	} catch (...) {

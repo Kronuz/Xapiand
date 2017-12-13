@@ -39,9 +39,6 @@ class DatabaseHandler;
 
 class SchemasLRU : public lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
 	void validate_metadata(DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& local_schema_ptr, std::string& schema_path, std::string& schema_id);
-	std::shared_ptr<const MsgPack> validate_foreign_meta_schema(const MsgPack& schema_value, std::string& schema_path, std::string& schema_id);
-	std::shared_ptr<const MsgPack> validate_object_meta_schema(const MsgPack& schema_value);
-	bool get_strict(const MsgPack& obj, bool flag_strict);
 	std::tuple<bool, atomic_shared_ptr<const MsgPack>*, std::string, std::string> get_local(DatabaseHandler* db_handler, const MsgPack* obj=nullptr);
 	MsgPack get_shared(const Endpoint& endpoint, const std::string& id, std::shared_ptr<std::unordered_set<size_t>> context);
 
