@@ -113,7 +113,7 @@ SchemasLRU::validate_object_meta_schema(const MsgPack& value)
 	}
 
 	try {
-		Schema::validate(new_schema, "Invalid schema: ");
+		Schema::check(new_schema, "Invalid schema: ", false, true);
 	} catch (const Error& err) {
 		throw ClientError(err);
 	}
