@@ -1315,9 +1315,6 @@ Schema::get_initial_schema()
 	L_CALL(nullptr, "Schema::get_initial_schema()");
 
 	MsgPack new_schema({
-		{ ID_FIELD_NAME,  {
-			{ RESERVED_TYPE, TERM_STR },
-		} },
 		{ VERSION_FIELD_NAME, {
 			{ RESERVED_TYPE, FLOAT_STR },
 			{ RESERVED_INDEX, "none" },

@@ -239,6 +239,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		}
 		if (atom_shared_schema->compare_exchange_strong(aux_schema, new_schema)) {
 			MsgPack shared_schema = *new_schema;
+			shared_schema[RESERVED_STRICT] = false;
 			shared_schema[SCHEMA_FIELD_NAME][RESERVED_RECURSE] = false;
 			DatabaseHandler _db_handler(Endpoints(Endpoint(schema_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
 			// FIXME: Process the schema_path instead of sustract it.
