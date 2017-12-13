@@ -5964,14 +5964,6 @@ Schema::write_schema(const MsgPack& object, bool replace)
 			mut_properties.clear();
 		}
 
-		const auto it_e = object.end();
-		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
-			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
-				(*mut_schema)[str_key] = it.value();
-			}
-		}
-
 		specification = default_spc;
 
 		// Set default RESERVED_SLOT for root
@@ -5988,6 +5980,15 @@ Schema::write_schema(const MsgPack& object, bool replace)
 		dispatch_write_properties(mut_properties, object.at(SCHEMA_FIELD_NAME), fields);
 
 		update_item_value(mut_properties, fields);
+
+		// Inject remaining items from received object into the new schema
+		const auto it_e = object.end();
+		for (auto it = object.begin(); it != it_e; ++it) {
+			auto str_key = it->str();
+			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+				(*mut_schema)[str_key] = it.value();
+			}
+		}
 	} catch (...) {
 		mut_schema.reset();
 		throw;
