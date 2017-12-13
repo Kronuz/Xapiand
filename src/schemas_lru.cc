@@ -171,27 +171,18 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 								auto it_v = meta_schema.find(RESERVED_VALUE);
 								if (it_v != it_end) {
 									const auto& value = it_v.value();
-									switch (value.getType()) {
-										case MsgPack::Type::STR:
-											if (meta_schema.size() != 1) { // '_value'
-												THROW(ClientError, "'%s' is a foreign type and as such it cannot have fields", RESERVED_SCHEMA);
-											}
-											aux_schema_ptr = validate_foreign_meta_schema(value, schema_path, schema_id);
-											break;
-										case MsgPack::Type::MAP:
-											aux_schema_ptr = validate_object_meta_schema(value);
-											break;
-										default:
-											THROW(ClientError, "'%s' in '%s' must be string or map", RESERVED_VALUE, RESERVED_SCHEMA);
+									if (value.is_string()) {
+										if (meta_schema.size() != 1) { // '_value'
+											THROW(ClientError, "'%s' is a foreign type and as such it cannot have extra fields", RESERVED_SCHEMA);
+										}
+										aux_schema_ptr = validate_foreign_meta_schema(value, schema_path, schema_id);
+									} else {
+										THROW(ClientError, "'%s' must be a string to be foreign", RESERVED_SCHEMA);
 									}
 								} else {
 									aux_schema_ptr = validate_object_meta_schema(meta_schema);
 								}
 							} else {
-								auto it_v = meta_schema.find(RESERVED_VALUE);
-								if (it_v == it_end) {
-									THROW(ClientError, "'%s' must contain both '%s' and '%s'", RESERVED_SCHEMA, RESERVED_VALUE, RESERVED_TYPE);
-								}
 								const auto& type = it_t.value();
 								if (type.is_string()) {
 									const auto& sep_types = required_spc_t::get_types(type.str());
@@ -200,25 +191,24 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 											THROW(MissingTypeError, "Type of field '%s' is not completed", RESERVED_SCHEMA);
 										}
 									}
-									const auto& value = it_v.value();
-									switch (value.getType()) {
-										case MsgPack::Type::STR:
-											if (sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
-												THROW(ClientError, "'%s' must be map because is not foreign", RESERVED_SCHEMA);
-											}
-											if (meta_schema.size() != 2) { // '_type' and '_value'
-												THROW(ClientError, "'%s' is a foreign type and as such it cannot have fields", RESERVED_SCHEMA);
-											}
-											aux_schema_ptr = validate_foreign_meta_schema(value, schema_path, schema_id);
-											break;
-										case MsgPack::Type::MAP:
-											if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-												THROW(ClientError, "'%s' must be string because is foreign", RESERVED_SCHEMA);
-											}
-											aux_schema_ptr = validate_object_meta_schema(value);
-											break;
-										default:
-											THROW(ClientError, "'%s' in '%s' must be string or map", RESERVED_VALUE, RESERVED_SCHEMA);
+									auto it_v = meta_schema.find(RESERVED_VALUE);
+									if (it_v != it_end) {
+										const auto& value = it_v.value();
+										if (sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+											THROW(ClientError, "'%s' must not have a concrete value", RESERVED_SCHEMA);
+										}
+										if (!value.is_string()) {
+											THROW(ClientError, "'%s' must be string because is foreign", RESERVED_SCHEMA);
+										}
+										if (meta_schema.size() != 2) { // '_type' and '_value'
+											THROW(ClientError, "'%s' is a foreign type and as such it cannot have extra fields", RESERVED_SCHEMA);
+										}
+										aux_schema_ptr = validate_foreign_meta_schema(value, schema_path, schema_id);
+									} else {
+										if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+											THROW(ClientError, "'%s' must be string because is foreign", RESERVED_SCHEMA);
+										}
+										aux_schema_ptr = validate_object_meta_schema(meta_schema);
 									}
 								} else {
 									THROW(ClientError, "'%s' in '%s' must be string", RESERVED_TYPE, RESERVED_SCHEMA);

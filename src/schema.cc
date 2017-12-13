@@ -1656,7 +1656,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 		}
 	} else {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			THROW(ClientError, "%s is a foreign type and as such it cannot have fields", repr(specification.full_meta_name).c_str());
+			THROW(ClientError, "%s is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name).c_str());
 		}
 		set_type_to_object();
 		const auto spc_object = std::move(specification);
@@ -1691,7 +1691,7 @@ Schema::update_item_value(MsgPack& properties, const FieldVector& fields)
 		}
 	} else {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			THROW(ClientError, "%s is a foreign type and as such it cannot have fields", repr(specification.full_meta_name).c_str());
+			THROW(ClientError, "%s is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name).c_str());
 		}
 		set_type_to_object();
 		const auto spc_object = std::move(specification);
