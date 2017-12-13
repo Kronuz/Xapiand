@@ -1200,6 +1200,25 @@ specification_t::to_string() const
 
 
 void Schema::check(const MsgPack& object) {
+	// Check schema object:
+	try {
+		const auto& schema_field = object.at(SCHEMA_FIELD_NAME);
+		try {
+			const auto& sep_types = required_spc_t::get_types(schema_field.at(RESERVED_TYPE).str());
+			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
+				THROW(Error, "Schema is corrupt: '%s' has an unsupported type", SCHEMA_FIELD_NAME);
+			}
+		} catch (const std::out_of_range&) {
+			if (!schema_field.is_map()) {
+				THROW(Error, "Schema is corrupt: '%s' is not an object", SCHEMA_FIELD_NAME);
+			}
+		} catch (const msgpack::type_error&) {
+			THROW(Error, "Schema is corrupt: '%s' has an invalid type", SCHEMA_FIELD_NAME);
+		}
+	} catch (const std::out_of_range&) {
+		THROW(Error, "Schema is corrupt: '%s' field does not exist", SCHEMA_FIELD_NAME);
+	}
+
 	// Check version:
 	try {
 		const auto& version_field = object.at(VERSION_FIELD_NAME);
@@ -1236,25 +1255,6 @@ void Schema::check(const MsgPack& object) {
 		}
 	} catch (const std::out_of_range&) {
 		THROW(Error, "Schema is corrupt: '%s' field does not exist", VERSION_FIELD_NAME);
-	}
-
-	// Check schema object:
-	try {
-		const auto& schema_field = object.at(SCHEMA_FIELD_NAME);
-		try {
-			const auto& sep_types = required_spc_t::get_types(schema_field.at(RESERVED_TYPE).str());
-			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(Error, "Schema is corrupt: '%s' has an unsupported type", SCHEMA_FIELD_NAME);
-			}
-		} catch (const std::out_of_range&) {
-			if (!schema_field.is_map()) {
-				THROW(Error, "Schema is corrupt: '%s' is not an object", SCHEMA_FIELD_NAME);
-			}
-		} catch (const msgpack::type_error&) {
-			THROW(Error, "Schema is corrupt: '%s' has an invalid type", SCHEMA_FIELD_NAME);
-		}
-	} catch (const std::out_of_range&) {
-		THROW(Error, "Schema is corrupt: '%s' field does not exist", SCHEMA_FIELD_NAME);
 	}
 }
 
