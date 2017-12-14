@@ -121,8 +121,10 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 			created = false;
 		}
 		if (created) {
-			if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
-				THROW(ClientError, "Cannot set metadata: '%s'", RESERVED_SCHEMA);
+			if (!local_schema_ptr || *local_schema_ptr != *schema_ptr) {
+				if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
+					THROW(ClientError, "Cannot set metadata: '%s'", RESERVED_SCHEMA);
+				}
 			}
 		}
 	}
@@ -197,8 +199,10 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 				schema_ptr = std::make_shared<const MsgPack>(get_shared(schema_path, schema_id, db_handler->context));
 			}
 			schema_ptr->lock();
-			if (!atom_shared_schema->compare_exchange_strong(shared_schema_ptr, schema_ptr)) {
-				schema_ptr = shared_schema_ptr;
+			if (shared_schema_ptr != schema_ptr) {
+				if (!atom_shared_schema->compare_exchange_strong(shared_schema_ptr, schema_ptr)) {
+					schema_ptr = shared_schema_ptr;
+				}
 			}
 		}
 		if (!schema_ptr->is_map()) {
@@ -220,9 +224,13 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	if (schema_path.empty()) {
 		// LOCAL Schema, update cache and save it to `metadata._meta`:
-		if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
-			db_handler->set_metadata(RESERVED_SCHEMA, new_schema->serialise());
-			return true;
+		if (old_schema != new_schema) {
+			if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
+				if (!old_schema || *old_schema != *new_schema) {
+					db_handler->set_metadata(RESERVED_SCHEMA, new_schema->serialise());
+				}
+				return true;
+			}
 		}
 	} else {
 		// FOREIGN Schema, update cache and save it to `schema_path/schema_id` endpoint:
@@ -237,16 +245,20 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		if (atom_shared_schema->load()) {
 			aux_schema = old_schema;
 		}
-		if (atom_shared_schema->compare_exchange_strong(aux_schema, new_schema)) {
-			MsgPack shared_schema = *new_schema;
-			shared_schema[RESERVED_STRICT] = false;
-			shared_schema[SCHEMA_FIELD_NAME][RESERVED_RECURSE] = false;
-			DatabaseHandler _db_handler(Endpoints(Endpoint(schema_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
-			// FIXME: Process the schema_path instead of sustract it.
-			_db_handler.index(schema_id.substr(0, schema_id.find(DB_OFFSPRING_UNION)), true, shared_schema, false, msgpack_type);
-			return true;
-		} else {
-			old_schema = aux_schema;
+		if (aux_schema != new_schema) {
+			if (atom_shared_schema->compare_exchange_strong(aux_schema, new_schema)) {
+				MsgPack shared_schema = *new_schema;
+				shared_schema[RESERVED_STRICT] = false;
+				shared_schema[SCHEMA_FIELD_NAME][RESERVED_RECURSE] = false;
+				if (!aux_schema || *aux_schema != shared_schema) {
+					DatabaseHandler _db_handler(Endpoints(Endpoint(schema_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
+					// FIXME: Process the schema_path instead of sustract it.
+					_db_handler.index(schema_id.substr(0, schema_id.find(DB_OFFSPRING_UNION)), true, shared_schema, false, msgpack_type);
+				}
+				return true;
+			} else {
+				old_schema = aux_schema;
+			}
 		}
 	}
 
