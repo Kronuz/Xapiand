@@ -1305,7 +1305,10 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
-	Schema::check(*schema, "Schema is corrupt: ", false, false, false);
+	auto checked = Schema::check(*schema, "Schema is corrupt: ", true, false, false);
+	if (checked.first) {
+		schema = get_initial_schema();
+	}
 }
 
 
