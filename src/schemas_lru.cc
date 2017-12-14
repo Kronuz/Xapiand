@@ -156,9 +156,6 @@ SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::sha
 		auto doc = _db_handler.get_document(id.substr(0, id.rfind(DB_OFFSPRING_UNION)));
 		context->erase(hash);
 		return doc.get_obj();
-	} catch (const DocNotFoundError&) {
-		context->erase(hash);
-		THROW(DocNotFoundError, "In shared schema %s document not found: %s", repr(endpoint.to_string()).c_str(), id.c_str());
 	} catch (...) {
 		context->erase(hash);
 		throw;
@@ -196,7 +193,16 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			if (std::get<0>(info_local_schema)) {
 				schema_ptr = Schema::get_initial_schema();
 			} else {
-				schema_ptr = std::make_shared<const MsgPack>(get_shared(schema_path, schema_id, db_handler->context));
+				try {
+					schema_ptr = std::make_shared<const MsgPack>(get_shared(schema_path, schema_id, db_handler->context));
+					if (schema_ptr->empty()) {
+						schema_ptr = Schema::get_initial_schema();
+					}
+				} catch (const CheckoutError&) {
+					schema_ptr = Schema::get_initial_schema();
+				} catch (const DocNotFoundError&) {
+					schema_ptr = Schema::get_initial_schema();
+				}
 			}
 			schema_ptr->lock();
 			if (shared_schema_ptr != schema_ptr) {
