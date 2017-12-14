@@ -258,6 +258,8 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				}
 				return true;
 			}
+		} else {
+			return true;
 		}
 	} else {
 		// FOREIGN Schema, update cache and save it to `foreign_path/foreign_id` endpoint:
@@ -293,6 +295,8 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			} else {
 				old_schema = aux_schema;
 			}
+		} else {
+			return true;
 		}
 	}
 
