@@ -67,9 +67,6 @@
 #include "xxh64.hpp"                        // for xxh64
 
 
-#define RESPONSE_MESSAGE "_message"
-#define RESPONSE_STATUS  "_status"
-
 #define MAX_BODY_SIZE (250 * 1024 * 1024)
 #define MAX_BODY_MEM (5 * 1024 * 1024)
 
@@ -78,6 +75,28 @@
 #define QUERY_FIELD_ID     (1 << 2)
 #define QUERY_FIELD_TIME   (1 << 3)
 #define QUERY_FIELD_PERIOD (1 << 4)
+
+
+// Reserved words only used in the responses to the user.
+constexpr const char RESPONSE_ENDPOINT[]            = "#endpoint";
+constexpr const char RESPONSE_RANK[]                = "#rank";
+constexpr const char RESPONSE_WEIGHT[]              = "#weight";
+constexpr const char RESPONSE_PERCENT[]             = "#percent";
+constexpr const char RESPONSE_TOTAL_COUNT[]         = "_total_count";
+constexpr const char RESPONSE_MATCHES_ESTIMATED[]   = "_matches_estimated";
+constexpr const char RESPONSE_HITS[]                = "_hits";
+constexpr const char RESPONSE_AGGREGATIONS[]        = "_aggregations";
+constexpr const char RESPONSE_QUERY[]               = "_query";
+constexpr const char RESPONSE_MESSAGE[]             = "_message";
+constexpr const char RESPONSE_STATUS[]              = "_status";
+constexpr const char RESPONSE_NAME[]                = "_name";
+constexpr const char RESPONSE_NODES[]               = "_nodes";
+constexpr const char RESPONSE_CLUSTER_NAME[]        = "_cluster_name";
+constexpr const char RESPONSE_COMMIT[]              = "_commit";
+constexpr const char RESPONSE_SERVER[]              = "_server";
+constexpr const char RESPONSE_URL[]                 = "_url";
+constexpr const char RESPONSE_VERSIONS[]            = "_versions";
+constexpr const char RESPONSE_DELETE[]              = "_delete";
 
 
 static const std::regex header_params_re("\\s*;\\s*([a-z]+)=(\\d+(?:\\.\\d+)?)", std::regex::optimize);
@@ -998,11 +1017,11 @@ HttpClient::home_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_CLUSTERING
-	obj_data["_cluster_name"] = XapiandManager::manager->opts.cluster_name;
+	obj_data[RESPONSE_CLUSTER_NAME] = XapiandManager::manager->opts.cluster_name;
 #endif
-	obj_data["_server"] = Package::STRING;
-	obj_data["_url"] = Package::BUGREPORT;
-	obj_data["_versions"] = {
+	obj_data[RESPONSE_SERVER] = Package::STRING;
+	obj_data[RESPONSE_URL] = Package::BUGREPORT;
+	obj_data[RESPONSE_VERSIONS] = {
 		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : format_string("%s_%s", Package::VERSION.c_str(), Package::REVISION.c_str()) },
 		{ "Xapian", format_string("%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #if defined(XAPIAND_V8)
@@ -1056,10 +1075,9 @@ HttpClient::delete_document_view(enum http_method method, Command)
 	db_handler.delete_document(doc_id, query_field->commit);
 	operation_ends = std::chrono::system_clock::now();
 	status_code = HTTP_STATUS_OK;
-
-	response["_delete"] = {
+	response[RESPONSE_DELETE] = {
 		{ ID_FIELD_NAME, doc_id },
-		{ "_commit",  query_field->commit }
+		{ RESPONSE_COMMIT,  query_field->commit }
 	};
 
 	Stats::cnt().add("del", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
@@ -1104,7 +1122,7 @@ HttpClient::index_document_view(enum http_method method, Command)
 	if (response.find(ID_FIELD_NAME) == response.end()) {
 		response[ID_FIELD_NAME] = doc_id;
 	}
-	response["_commit"] = query_field->commit;
+	response[RESPONSE_COMMIT] = query_field->commit;
 
 	write_http_response(status_code, response);
 }
@@ -1167,7 +1185,7 @@ HttpClient::update_document_view(enum http_method method, Command)
 	if (response.find(ID_FIELD_NAME) == response.end()) {
 		response[ID_FIELD_NAME] = doc_id;
 	}
-	response["_commit"] = query_field->commit;
+	response[RESPONSE_COMMIT] = query_field->commit;
 
 	write_http_response(status_code, response);
 }
@@ -1317,12 +1335,12 @@ HttpClient::nodes_view(enum http_method, Command)
 	// FIXME: Get all nodes from cluster database:
 	auto local_node_ = local_node.load();
 	nodes[serialise_node_id(local_node_->id)] = {
-		{ "_name", local_node_->name },
+		{ RESPONSE_NAME, local_node_->name },
 	};
 
 	write_http_response(HTTP_STATUS_OK, {
-		{ "_cluster_name", XapiandManager::manager->opts.cluster_name },
-		{ "_nodes", nodes },
+		{ RESPONSE_CLUSTER_NAME, XapiandManager::manager->opts.cluster_name },
+		{ RESPONSE_NODES, nodes },
 	});
 }
 
@@ -1343,7 +1361,7 @@ HttpClient::touch_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 	MsgPack response;
-	response[RESERVED_INFO_ENDPOINT] = endpoints.to_string();
+	response[RESPONSE_ENDPOINT] = endpoints.to_string();
 
 	write_http_response(HTTP_STATUS_CREATED, response);
 }
@@ -1521,18 +1539,17 @@ HttpClient::search_view(enum http_method method, Command)
 		std::string l_sep_chunk;
 
 		auto ct_type = resolve_ct_type(MSGPACK_CONTENT_TYPE);
-
 		if (chunked) {
 			MsgPack basic_query({
-				{"_total_count", total_count},
-				{"_matches_estimated", mset.get_matches_estimated()},
-				{ "_hits", MsgPack(MsgPack::Type::ARRAY) },
+				{ RESPONSE_TOTAL_COUNT, total_count},
+				{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
+				{ RESPONSE_HITS, MsgPack(MsgPack::Type::ARRAY) },
 			});
 			MsgPack basic_response;
 			if (aggregations) {
-				basic_response["_aggregations"] = aggregations;
+				basic_response[RESPONSE_AGGREGATIONS] = aggregations;
 			}
-			basic_response["_query"] = basic_query;
+			basic_response[RESPONSE_QUERY] = basic_query;
 
 			if (Logging::log_level > LOG_DEBUG) {
 				l_first_chunk = basic_response.to_string(4);
@@ -1663,12 +1680,12 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 
 			// Detailed info about the document:
-			obj_data[RESERVED_INFO_RANK] = m.get_rank();
-			obj_data[RESERVED_INFO_WEIGHT] = m.get_weight();
-			obj_data[RESERVED_INFO_PERCENT] = m.get_percent();
+			obj_data[RESPONSE_RANK] = m.get_rank();
+			obj_data[RESPONSE_WEIGHT] = m.get_weight();
+			obj_data[RESPONSE_PERCENT] = m.get_percent();
 			// int subdatabase = (document.get_docid() - 1) % endpoints.size();
 			// auto endpoint = endpoints[subdatabase];
-			// obj_data[RESERVED_INFO_ENDPOINT] = endpoint.to_string();
+			// obj_data[RESPONSE_ENDPOINT] = endpoint.to_string();
 
 			if (!selector.empty()) {
 				obj_data = obj_data.select(selector);

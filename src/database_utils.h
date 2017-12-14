@@ -34,12 +34,6 @@
 #include "xxh64.hpp"               // for xxh64
 
 
-// Reserved words only used in the responses to the user.
-constexpr const char RESERVED_INFO_ENDPOINT[]       = "#endpoint";
-constexpr const char RESERVED_INFO_RANK[]           = "#rank";
-constexpr const char RESERVED_INFO_WEIGHT[]         = "#weight";
-constexpr const char RESERVED_INFO_PERCENT[]        = "#percent";
-
 // Reserved field names.
 constexpr const char ID_FIELD_NAME[]                = "_id";
 constexpr const char CONTENT_TYPE_FIELD_NAME[]      = "_content_type";
