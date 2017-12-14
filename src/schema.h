@@ -871,6 +871,9 @@ class Schema {
 
 	dynamic_spc_t get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
+	template <typename ErrorType>
+	static std::pair<const MsgPack*, const MsgPack*> check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless);
+
 public:
 	Schema(const std::shared_ptr<const MsgPack>& schema);
 
@@ -881,8 +884,6 @@ public:
 	Schema& operator=(const Schema& schema) = delete;
 
 	~Schema() = default;
-
-	static std::pair<const MsgPack*, const MsgPack*> check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless);
 
 	static std::shared_ptr<const MsgPack> get_initial_schema();
 

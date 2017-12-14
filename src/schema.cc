@@ -1199,7 +1199,7 @@ specification_t::to_string() const
 }
 
 
-// Schema::check returns pair: std::string* foreign_value, schema object
+template <typename ErrorType>
 std::pair<const MsgPack*, const MsgPack*>
 Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless)
 {
@@ -1216,25 +1216,25 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 				try {
 					const auto& foreign_value = object.at(RESERVED_VALUE);
 					if (!foreign_value.is_string()) {
-						THROW(Error, "%sschema must be string because is foreign", prefix);
+						THROW(ErrorType, "%sschema must be string because is foreign", prefix);
 					}
 					if (object.size() != 2) { // '_type' and '_value'
-						THROW(Error, "%sschema is a foreign type and as such it cannot have extra fields");
+						THROW(ErrorType, "%sschema is a foreign type and as such it cannot have extra fields");
 					}
 					return std::make_pair(&foreign_value, nullptr);
 				} catch (const std::out_of_range&) {
-					THROW(Error, "%sschema must be a string to be foreign", prefix);
+					THROW(ErrorType, "%sschema must be a string to be foreign", prefix);
 				}
 			} else if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(Error, "%sschema must be object", prefix);
+				THROW(ErrorType, "%sschema must be object", prefix);
 			}
 		} catch (const msgpack::type_error&) {
-			THROW(Error, "%sschema has an invalid type", prefix);
+			THROW(ErrorType, "%sschema has an invalid type", prefix);
 		} catch (const std::out_of_range&) { }
 	}
 
 	if (!object.is_map()) {
-		THROW(Error, "%sschema must be a map", prefix);
+		THROW(ErrorType, "%sschema must be a map", prefix);
 	}
 
 	// Check version:
@@ -1244,36 +1244,36 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			try {
 				const auto& sep_types = required_spc_t::get_types(version_field.at(RESERVED_TYPE).str());
 				if (sep_types[SPC_CONCRETE_TYPE] != FieldType::FLOAT) {
-					THROW(Error, "%s'%s' has an unsupported type", prefix, VERSION_FIELD_NAME);
+					THROW(ErrorType, "%s'%s' has an unsupported type", prefix, VERSION_FIELD_NAME);
 				}
 			} catch (const std::out_of_range&) {
-				THROW(Error, "%s'%s' does not have a type", prefix, VERSION_FIELD_NAME);
+				THROW(ErrorType, "%s'%s' does not have a type", prefix, VERSION_FIELD_NAME);
 			} catch (const msgpack::type_error&) {
-				THROW(Error, "%s'%s' has an invalid type", prefix, VERSION_FIELD_NAME);
+				THROW(ErrorType, "%s'%s' has an invalid type", prefix, VERSION_FIELD_NAME);
 			}
 			try {
 				const auto& version_value = version_field.at(RESERVED_VALUE);
 				if (!version_value.is_number()) {
-					THROW(Error, "%s'%s' field must be a number", prefix, VERSION_FIELD_NAME);
+					THROW(ErrorType, "%s'%s' field must be a number", prefix, VERSION_FIELD_NAME);
 				}
 				if (version_value.f64() != DB_VERSION_SCHEMA) {
-					THROW(Error, "%sDifferent schema versions, the current version is %1.1f", prefix, DB_VERSION_SCHEMA);
+					THROW(ErrorType, "%sDifferent schema versions, the current version is %1.1f", prefix, DB_VERSION_SCHEMA);
 				}
 			} catch (const std::out_of_range&) {
-				THROW(Error, "%s'%s' does not have a value", prefix, VERSION_FIELD_NAME);
+				THROW(ErrorType, "%s'%s' does not have a value", prefix, VERSION_FIELD_NAME);
 			} catch (const msgpack::type_error&) {
-				THROW(Error, "%s'%s' has an invalid version", prefix, VERSION_FIELD_NAME);
+				THROW(ErrorType, "%s'%s' has an invalid version", prefix, VERSION_FIELD_NAME);
 			}
 		} else if (!version_field.is_number()) {
-			THROW(Error, "%s'%s' field must be a number", prefix, VERSION_FIELD_NAME);
+			THROW(ErrorType, "%s'%s' field must be a number", prefix, VERSION_FIELD_NAME);
 		} else {
 			if (version_field.f64() != DB_VERSION_SCHEMA) {
-				THROW(Error, "%sDifferent schema versions, the current version is %1.1f", prefix, DB_VERSION_SCHEMA);
+				THROW(ErrorType, "%sDifferent schema versions, the current version is %1.1f", prefix, DB_VERSION_SCHEMA);
 			}
 		}
 	} catch (const std::out_of_range&) {
 		if (!allow_versionless) {
-			THROW(Error, "%s'%s' field does not exist", prefix, VERSION_FIELD_NAME);
+			THROW(ErrorType, "%s'%s' field does not exist", prefix, VERSION_FIELD_NAME);
 		}
 	}
 
@@ -1283,19 +1283,19 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 		try {
 			const auto& sep_types = required_spc_t::get_types(schema_field.at(RESERVED_TYPE).str());
 			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(Error, "%s'%s' has an unsupported type", prefix, SCHEMA_FIELD_NAME);
+				THROW(ErrorType, "%s'%s' has an unsupported type", prefix, SCHEMA_FIELD_NAME);
 			}
 		} catch (const std::out_of_range&) {
 			if (!schema_field.is_map()) {
-				THROW(Error, "%s'%s' is not an object", prefix, SCHEMA_FIELD_NAME);
+				THROW(ErrorType, "%s'%s' is not an object", prefix, SCHEMA_FIELD_NAME);
 			}
 		} catch (const msgpack::type_error&) {
-			THROW(Error, "%s'%s' has an invalid type", prefix, SCHEMA_FIELD_NAME);
+			THROW(ErrorType, "%s'%s' has an invalid type", prefix, SCHEMA_FIELD_NAME);
 		}
 		return std::make_pair(nullptr, &schema_field);
 	} catch (const std::out_of_range&) {
 		if (!allow_root) {
-			THROW(Error, "%s'%s' field does not exist", prefix, SCHEMA_FIELD_NAME);
+			THROW(ErrorType, "%s'%s' field does not exist", prefix, SCHEMA_FIELD_NAME);
 		}
 		return std::make_pair(nullptr, nullptr);
 	}
@@ -1305,7 +1305,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 	: schema(other)
 {
-	auto checked = Schema::check(*schema, "Schema is corrupt: ", true, false, false);
+	auto checked = check<Error>(*schema, "Schema is corrupt: ", true, false, false);
 	if (checked.first) {
 		schema = get_initial_schema();
 	}
@@ -2047,11 +2047,7 @@ Schema::update(const MsgPack& object)
 
 	try {
 		std::pair<const MsgPack*, const MsgPack*> checked;
-		try {
-			checked = Schema::check(object, "Invalid schema: ", true, true, true);
-		} catch (const Error& err) {
-			throw ClientError(err);
-		}
+		checked = check<ClientError>(object, "Invalid schema: ", true, true, true);
 
 		if (checked.first) {
 			mut_schema = std::make_unique<MsgPack>(MsgPack({
@@ -2422,11 +2418,7 @@ Schema::write(const MsgPack& object, bool replace)
 
 	try {
 		std::pair<const MsgPack*, const MsgPack*> checked;
-		try {
-			checked = Schema::check(object, "Invalid schema: ", true, true, true);
-		} catch (const Error& err) {
-			throw ClientError(err);
-		}
+		checked = check<ClientError>(object, "Invalid schema: ", true, true, true);
 
 		if (checked.first) {
 			mut_schema = std::make_unique<MsgPack>(MsgPack({
