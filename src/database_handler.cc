@@ -156,8 +156,8 @@ std::shared_ptr<Schema>
 DatabaseHandler::get_schema(const MsgPack* obj)
 {
 	L_CALL(this, "DatabaseHandler::get_schema(<obj>)");
-
-	return std::make_shared<Schema>(XapiandManager::manager->schemas.get(this, obj));
+	auto s = XapiandManager::manager->schemas.get(this, obj);
+	return std::make_shared<Schema>(std::move(s.first), std::move(s.second));
 }
 
 

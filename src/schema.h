@@ -875,7 +875,7 @@ class Schema {
 	static std::pair<const MsgPack*, const MsgPack*> check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless);
 
 public:
-	Schema(const std::shared_ptr<const MsgPack>& schema);
+	Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack> m = nullptr);
 
 	Schema() = delete;
 	Schema(Schema&& schema) = delete;
@@ -890,6 +890,11 @@ public:
 	std::shared_ptr<const MsgPack> get_modified_schema();
 
 	std::shared_ptr<const MsgPack> get_const_schema() const;
+
+	void swap(std::unique_ptr<MsgPack>& other) noexcept {
+		mut_schema.swap(other);
+	}
+
 
 	/*
 	 * Transforms schema into json string.
