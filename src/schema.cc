@@ -6416,15 +6416,15 @@ Schema::get_readable() const
 	L_CALL(this, "Schema::get_readable()");
 
 	auto schema_readable = mut_schema ? *mut_schema : *schema;
-	readable(schema_readable, 2);
+	readable(schema_readable, true);
 	return schema_readable;
 }
 
 
 void
-Schema::readable(MsgPack& item_schema, int root)
+Schema::readable(MsgPack& item_schema, bool at_root)
 {
-	L_CALL(nullptr, "Schema::readable(%s, %d)", repr(item_schema.to_string()).c_str(), root);
+	L_CALL(nullptr, "Schema::readable(%s, %s)", repr(item_schema.to_string()).c_str(), at_root ? "true" : "false");
 
 	// Change this item of schema in readable form.
 	static const auto drit_e = map_get_readable.end();
@@ -6435,10 +6435,10 @@ Schema::readable(MsgPack& item_schema, int root)
 			if (is_valid(str_key)) {
 				auto& value = it.value();
 				if (value.is_map()) {
-					readable(value, root - 1);
+					readable(value, false);
 				}
 			} else if (map_dispatch_set_default_spc.count(str_key)) {
-				if (root > 0) {
+				if (at_root) {
 					it = item_schema.erase(it);
 					continue;
 				}
