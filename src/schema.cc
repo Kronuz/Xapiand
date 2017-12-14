@@ -52,6 +52,7 @@
 #define L_SCHEMA L_TEST
 #endif
 
+
 const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
 
 
