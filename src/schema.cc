@@ -1323,7 +1323,9 @@ Schema::get_initial_schema()
 			{ RESERVED_INDEX, "none" },
 			{ RESERVED_VALUE, DB_VERSION_SCHEMA },
 		} },
-		{ SCHEMA_FIELD_NAME, MsgPack(MsgPack::Type::MAP) },
+		{ SCHEMA_FIELD_NAME, {
+			{ RESERVED_RECURSE, false },
+		} },
 	});
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -1379,6 +1381,7 @@ Schema::clear()
 
 	auto& prop = get_mutable_properties();
 	prop.clear();
+	prop[RESERVED_RECURSE] = false;
 	return prop;
 }
 
@@ -1498,7 +1501,7 @@ Schema::index(
 		FieldVector fields;
 		auto properties = &get_newest_properties();
 
-		if (properties->empty()) {
+		if (properties->size() == 1) {  // only '_recurse' is here
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			dispatch_write_properties(*mut_properties, object, fields);
@@ -2068,7 +2071,7 @@ Schema::update(const MsgPack& object)
 
 		FieldVector fields;
 
-		if (properties->empty()) {
+		if (properties->size() == 1) {  // only '_recurse' is here
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			dispatch_write_properties(*mut_properties, schema_obj, fields);
@@ -2446,7 +2449,7 @@ Schema::write(const MsgPack& object, bool replace)
 
 		FieldVector fields;
 
-		if (mut_properties->empty()) {
+		if (mut_properties->size() == 1) {  // only '_recurse' is here
 			specification.flags.field_found = false;
 		} else {
 			dispatch_feed_properties(*mut_properties);
