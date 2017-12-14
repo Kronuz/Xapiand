@@ -123,8 +123,16 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 		if (created) {
 			if (!local_schema_ptr || *local_schema_ptr != *schema_ptr) {
-				if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
-					THROW(ClientError, "Cannot set metadata: '%s'", RESERVED_SCHEMA);
+				try {
+					if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
+						THROW(ClientError, "Cannot set metadata: '%s'", RESERVED_SCHEMA);
+					}
+				} catch(...) {
+					if (local_schema_ptr != schema_ptr) {
+						// On error, try reverting
+						atom_local_schema->compare_exchange_strong(schema_ptr, local_schema_ptr);
+					}
+					throw;
 				}
 			}
 		}
@@ -236,9 +244,17 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	if (foreign_path.empty() || !new_foreign_path.empty()) {
 		// LOCAL Schema, update cache and save it to `metadata._meta`:
 		if (old_schema != new_schema) {
-			if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
+			auto& atom_local_schema = std::get<1>(info_local_schema);
+			if (atom_local_schema->compare_exchange_strong(old_schema, new_schema)) {
 				if (!old_schema || *old_schema != *new_schema) {
-					db_handler->set_metadata(RESERVED_SCHEMA, new_schema->serialise());
+					try {
+						db_handler->set_metadata(RESERVED_SCHEMA, new_schema->serialise());
+					} catch(...) {
+						// On error, try reverting
+						std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
+						atom_local_schema->compare_exchange_strong(aux_new_schema, old_schema);
+						throw;
+					}
 				}
 				return true;
 			}
@@ -262,9 +278,16 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				shared_schema[RESERVED_STRICT] = false;
 				shared_schema[SCHEMA_FIELD_NAME][RESERVED_RECURSE] = false;
 				if (!aux_schema || *aux_schema != shared_schema) {
-					DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
-					// FIXME: Process the foreign_path instead of sustract it.
-					_db_handler.index(foreign_id.substr(0, foreign_id.find(DB_OFFSPRING_UNION)), true, shared_schema, false, msgpack_type);
+					try {
+						DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
+						// FIXME: Process the foreign_path instead of sustract it.
+						_db_handler.index(foreign_id.substr(0, foreign_id.find(DB_OFFSPRING_UNION)), true, shared_schema, false, msgpack_type);
+					} catch(...) {
+						// On error, try reverting
+						std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
+						atom_shared_schema->compare_exchange_strong(aux_new_schema, aux_schema);
+						throw;
+					}
 				}
 				return true;
 			} else {
