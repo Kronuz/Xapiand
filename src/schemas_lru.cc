@@ -26,15 +26,17 @@
 #include "log.h"
 
 
+
+template <typename ErrorType>
 inline void
-SchemasLRU::validate_metadata(const MsgPack& object, const char* prefix, std::string& foreign_path, std::string& foreign_id)
+SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_path, std::string& foreign_id)
 {
-	L_CALL(this, "SchemasLRU::validate_metadata(...)");
+	L_CALL(this, "SchemasLRU::validate_schema(...)");
 
 	try {
 		const auto& type = object.at(RESERVED_TYPE);
 		if (!type.is_string()) {
-			THROW(Error, "%s'%s' must be string", prefix, RESERVED_TYPE);
+			THROW(ErrorType, "%s'%s' must be string", prefix, RESERVED_TYPE);
 		}
 		const auto& sep_type = required_spc_t::get_types(type.str());
 		if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
@@ -43,30 +45,30 @@ SchemasLRU::validate_metadata(const MsgPack& object, const char* prefix, std::st
 				const auto aux_schema_str = foreign_value.str();
 				split_path_id(aux_schema_str, foreign_path, foreign_id);
 				if (foreign_path.empty() || foreign_id.empty()) {
-					THROW(Error, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_VALUE, aux_schema_str.c_str());
+					THROW(ErrorType, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_VALUE, aux_schema_str.c_str());
 				}
 			} catch (const std::out_of_range&) {
-				THROW(Error, "%smust have '%s' and '%s'", prefix, RESERVED_TYPE, RESERVED_VALUE);
+				THROW(ErrorType, "%smust have '%s' and '%s'", prefix, RESERVED_TYPE, RESERVED_VALUE);
 			} catch (const msgpack::type_error&) {
-				THROW(Error, "%s'%s' must be string because is foreign", prefix, RESERVED_VALUE);
+				THROW(ErrorType, "%s'%s' must be string because is foreign", prefix, RESERVED_VALUE);
 			}
 		} else {
 			const auto& schema_value = object.at(SCHEMA_FIELD_NAME);
 			if (!schema_value.is_map() || sep_type[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(Error, "%s'%s' must be object because is not foreign", prefix, RESERVED_VALUE);
+				THROW(ErrorType, "%s'%s' must be object because is not foreign", prefix, RESERVED_VALUE);
 			}
 		}
 	} catch (const std::out_of_range&) {
 		try{
 			const auto& schema_value = object.at(SCHEMA_FIELD_NAME);
 			if (!schema_value.is_map()) {
-				THROW(Error, "%s'%s' must be object because is not foreign", prefix, RESERVED_VALUE);
+				THROW(ErrorType, "%s'%s' must be object because is not foreign", prefix, RESERVED_VALUE);
 			}
 		} catch (const std::out_of_range&) {
-			THROW(Error, "%smust have '%s'", prefix, SCHEMA_FIELD_NAME);
+			THROW(ErrorType, "%smust have '%s'", prefix, SCHEMA_FIELD_NAME);
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "%smust be object instead of %s", prefix, object.getStrType().c_str());
+		THROW(ErrorType, "%smust be object instead of %s", prefix, object.getStrType().c_str());
 	}
 }
 
@@ -128,7 +130,7 @@ SchemasLRU::get_local(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 	}
 
-	validate_metadata(*schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+	validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
 	return std::make_tuple(created, atom_local_schema, std::move(foreign_path), std::move(foreign_id));
 }
 
@@ -227,7 +229,11 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	const auto& foreign_path = std::get<2>(info_local_schema);
 
-	if (foreign_path.empty()) {
+	std::string new_foreign_path;
+	std::string new_foreign_id;
+	validate_schema<ClientError>(*new_schema, "New schema is invalid: ", new_foreign_path, new_foreign_id);
+
+	if (foreign_path.empty() || !new_foreign_path.empty()) {
 		// LOCAL Schema, update cache and save it to `metadata._meta`:
 		if (old_schema != new_schema) {
 			if (std::get<1>(info_local_schema)->compare_exchange_strong(old_schema, new_schema)) {
