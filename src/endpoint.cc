@@ -26,9 +26,96 @@
 #include <xapian.h>         // for SerialisationError
 
 #include "length.h"         // for serialise_length, unserialise_length, ser...
+#include "manager.h"        // for XapiandManager::manager->opts
+#include "serialise.h"      // for Serialise
 
 
 atomic_shared_ptr<const Node> local_node(std::make_shared<const Node>());
+
+
+static inline std::string
+normalize(const void *p, size_t size)
+{
+	try {
+		return Unserialise::uuid(Serialise::uuid(std::string(static_cast<const char*>(p), size)), XapiandManager::manager->opts.uuid_repr);
+	} catch (const SerialisationError&) {
+		return "";
+	}
+}
+
+
+static inline std::string
+normalize_and_partition(const void *p, size_t size)
+{
+	std::string normalized;
+	try {
+		normalized = Unserialise::uuid(Serialise::uuid(std::string(static_cast<const char*>(p), size)), XapiandManager::manager->opts.uuid_repr);
+	} catch (const SerialisationError& exc) {
+		return normalized;
+	}
+	std::string ret;
+	auto cit = normalized.cbegin();
+	auto cit_e = normalized.cend();
+	ret.reserve(2 + normalized.size());
+	if (cit == cit_e) return ret;
+	ret.push_back(*cit++);
+	if (cit == cit_e) return ret;
+	ret.push_back(*cit++);
+	if (cit == cit_e) return ret;
+	ret.push_back(*cit++);
+	if (cit == cit_e) return ret;
+	ret.push_back('/');
+	ret.push_back(*cit++);
+	if (cit == cit_e) return ret;
+	ret.push_back(*cit++);
+	if (cit == cit_e) return ret;
+	ret.push_back('/');
+	ret.append(cit, cit_e);
+	return ret;
+}
+
+
+typedef std::string(*normalizer_t)(const void *p, size_t size);
+template<normalizer_t normalize>
+static inline std::string
+normalizer(const void *p, size_t size)
+{
+	std::string buf;
+	buf.reserve(size);
+	auto q = static_cast<const char *>(p);
+	auto p_end = q + size;
+	auto oq = q;
+	while (q != p_end) {
+		char c = *q++;
+		switch (c) {
+			case '.':
+			case '/': {
+				auto sz = q - oq - 1;
+				if (sz) {
+					auto normalized = normalize(oq, sz);
+					if (!normalized.empty()) {
+						buf.resize(buf.size() - sz);
+						buf.append(normalized);
+					}
+				}
+				buf.push_back(c);
+				oq = q;
+				break;
+			}
+			default:
+				buf.push_back(c);
+		}
+	}
+	auto sz = q - oq;
+	if (sz) {
+		auto normalized = normalize(oq, sz);
+		if (!normalized.empty()) {
+			buf.resize(buf.size() - sz);
+			buf.append(normalized);
+		}
+	}
+	return buf;
+}
 
 
 std::string
@@ -117,8 +204,14 @@ Endpoint::Endpoint(const std::string& uri_, const Node* node_, long long mastery
 		path.erase(0, Endpoint::cwd.size());
 	}
 
-	if (path.length() != 1 && endswith(path, '/')) {
-		path = path.substr(0, path.length() - 1);
+	if (path.size() != 1 && endswith(path, '/')) {
+		path = path.substr(0, path.size() - 1);
+	}
+
+	if (XapiandManager::manager->opts.uuid_partition) {
+		path = normalizer<normalize_and_partition>(path.data(), path.size());
+	} else {
+		path = normalizer<normalize>(path.data(), path.size());
 	}
 
 	if (protocol == "file") {

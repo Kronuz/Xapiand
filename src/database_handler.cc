@@ -352,9 +352,9 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, bool stored, const std::string& store, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::index(const std::string& document_id, bool stored, const std::string& store, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::index(%s, %s, <store>, %s, <blob>, %s, <ct_type>)", repr(_document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
+	L_CALL(this, "DatabaseHandler::index(%s, %s, <store>, %s, <blob>, %s, <ct_type>)", repr(document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
 
 	Xapian::Document doc;
 
@@ -385,13 +385,13 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 						}
 					} catch (const std::out_of_range&) { }
 				} else {
-					term_id = Serialise::serialise(spc_id, _document_id);
+					term_id = Serialise::serialise(spc_id, document_id);
 					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 				}
 
 				// Add ID.
 				auto& id_field = obj[ID_FIELD_NAME];
-				auto id_value = Cast::cast(spc_id.get_type(), _document_id);
+				auto id_value = Cast::cast(spc_id.get_type(), document_id);
 				if (id_field.is_map()) {
 					id_field[RESERVED_VALUE] = id_value;
 				} else {
@@ -423,13 +423,13 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 					spc_id = schema->get_data_id();
 					if (spc_id.get_type() == FieldType::EMPTY) {
 						// Index like a namespace.
-						const auto type_ser = Serialise::guess_serialise(_document_id);
+						const auto type_ser = Serialise::guess_serialise(document_id);
 						spc_id.set_type(type_ser.first);
 						Schema::set_namespace_spc_id(spc_id);
 						term_id = type_ser.second;
 						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 					} else {
-						term_id = Serialise::serialise(spc_id, _document_id);
+						term_id = Serialise::serialise(spc_id, document_id);
 						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 					}
 				}
@@ -492,15 +492,15 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 
 
 DataType
-DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::index(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::index(%s, %s, <body>, %s, %s/%s)", repr(_document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
+	L_CALL(this, "DatabaseHandler::index(%s, %s, <body>, %s, %s/%s)", repr(document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "Database is read-only");
 	}
 
-	if (_document_id.empty()) {
+	if (document_id.empty()) {
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
@@ -517,20 +517,20 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const MsgPa
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
 	}
 
-	return index(_document_id, stored, "", obj, blob, commit_, ct_type);
+	return index(document_id, stored, "", obj, blob, commit_, ct_type);
 }
 
 
 DataType
-DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::patch(const std::string& document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::patch(%s, <patches>, %s, %s/%s)", repr(_document_id).c_str(), commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
+	L_CALL(this, "DatabaseHandler::patch(%s, <patches>, %s, %s/%s)", repr(document_id).c_str(), commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "database is read-only");
 	}
 
-	if (_document_id.empty()) {
+	if (document_id.empty()) {
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
@@ -538,7 +538,7 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 		THROW(ClientError, "Patches must be a JSON or MsgPack");
 	}
 
-	auto document = get_document(_document_id);
+	auto document = get_document(document_id);
 
 	const auto data = document.get_data();
 
@@ -548,20 +548,20 @@ DatabaseHandler::patch(const std::string& _document_id, const MsgPack& patches, 
 	const auto store = ::split_data_store(data);
 	const auto blob = store.first ? "" : document.get_blob();
 
-	return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type);
+	return index(document_id, store.first, store.second, obj, blob, commit_, ct_type);
 }
 
 
 DataType
-DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::merge(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(_document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
+	L_CALL(this, "DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "database is read-only");
 	}
 
-	if (_document_id.empty()) {
+	if (document_id.empty()) {
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
@@ -569,7 +569,7 @@ DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPa
 		THROW(ClientError, "Must be a JSON or MsgPack");
 	}
 
-	auto document = get_document(_document_id);
+	auto document = get_document(document_id);
 
 	const auto data = document.get_data();
 
@@ -577,13 +577,13 @@ DatabaseHandler::merge(const std::string& _document_id, bool stored, const MsgPa
 	switch (obj.getType()) {
 		case MsgPack::Type::STR: {
 			const auto blob = body.str();
-			return index(_document_id, stored, "", obj, blob, commit_, ct_type);
+			return index(document_id, stored, "", obj, blob, commit_, ct_type);
 		}
 		case MsgPack::Type::MAP: {
 			obj.update(body);
 			const auto store = ::split_data_store(data);
 			const auto blob = store.first ? "" : document.get_blob();
-			return index(_document_id, store.first, store.second, obj, blob, commit_, ct_type);
+			return index(document_id, store.first, store.second, obj, blob, commit_, ct_type);
 		}
 		default:
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
@@ -824,21 +824,21 @@ DatabaseHandler::update_schema()
 
 
 std::string
-DatabaseHandler::get_prefixed_term_id(const std::string& doc_id)
+DatabaseHandler::get_prefixed_term_id(const std::string& document_id)
 {
-	L_CALL(this, "DatabaseHandler::get_prefixed_term_id(%s)", repr(doc_id).c_str());
+	L_CALL(this, "DatabaseHandler::get_prefixed_term_id(%s)", repr(document_id).c_str());
 
 	schema = get_schema();
 
 	auto field_spc = schema->get_data_id();
 	if (field_spc.get_type() == FieldType::EMPTY) {
 		// Search like namespace.
-		const auto type_ser = Serialise::guess_serialise(doc_id);
+		const auto type_ser = Serialise::guess_serialise(document_id);
 		field_spc.set_type(type_ser.first);
 		Schema::set_namespace_spc_id(field_spc);
 		return prefixed(type_ser.second, field_spc.prefix(), field_spc.get_ctype());
 	} else {
-		return prefixed(Serialise::serialise(field_spc, doc_id), field_spc.prefix(), field_spc.get_ctype());
+		return prefixed(Serialise::serialise(field_spc, document_id), field_spc.prefix(), field_spc.get_ctype());
 	}
 }
 
@@ -891,11 +891,11 @@ DatabaseHandler::get_document(const Xapian::docid& did)
 
 
 Document
-DatabaseHandler::get_document(const std::string& doc_id)
+DatabaseHandler::get_document(const std::string& document_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document((std::string)%s)", repr(doc_id).c_str());
+	L_CALL(this, "DatabaseHandler::get_document((std::string)%s)", repr(document_id).c_str());
 
-	const auto term_id = get_prefixed_term_id(doc_id);
+	const auto term_id = get_prefixed_term_id(document_id);
 
 	lock_database lk_db(this);
 	Xapian::docid did = database->find_document(term_id);
@@ -904,11 +904,11 @@ DatabaseHandler::get_document(const std::string& doc_id)
 
 
 Xapian::docid
-DatabaseHandler::get_docid(const std::string& doc_id)
+DatabaseHandler::get_docid(const std::string& document_id)
 {
-	L_CALL(this, "DatabaseHandler::get_docid(%s)", repr(doc_id).c_str());
+	L_CALL(this, "DatabaseHandler::get_docid(%s)", repr(document_id).c_str());
 
-	const auto term_id = get_prefixed_term_id(doc_id);
+	const auto term_id = get_prefixed_term_id(document_id);
 
 	lock_database lk_db(this);
 	return database->find_document(term_id);
@@ -916,11 +916,11 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 
 
 void
-DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool wal_)
+DatabaseHandler::delete_document(const std::string& document_id, bool commit_, bool wal_)
 {
-	L_CALL(this, "DatabaseHandler::delete_document(%s)", repr(doc_id).c_str());
+	L_CALL(this, "DatabaseHandler::delete_document(%s)", repr(document_id).c_str());
 
-	const auto term_id = get_prefixed_term_id(doc_id);
+	const auto term_id = get_prefixed_term_id(document_id);
 
 	lock_database lk_db(this);
 	database->delete_document(database->find_document(term_id), commit_, wal_);
@@ -928,11 +928,11 @@ DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool w
 
 
 MsgPack
-DatabaseHandler::get_document_info(const std::string& doc_id)
+DatabaseHandler::get_document_info(const std::string& document_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document_info(%s)", repr(doc_id).c_str());
+	L_CALL(this, "DatabaseHandler::get_document_info(%s)", repr(document_id).c_str());
 
-	auto document = get_document(doc_id);
+	auto document = get_document(document_id);
 
 	const auto data = document.get_data();
 
@@ -1044,18 +1044,18 @@ DatabaseHandler::init_ref(const Endpoint& endpoint)
 
 	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
-	const auto doc_id = get_hashed(endpoint.path);
+	const auto document_id = get_hashed(endpoint.path);
 
 	try {
 		try {
-			db_handler.get_document(doc_id);
+			db_handler.get_document(document_id);
 		} catch (const DocNotFoundError&) {
 			static const MsgPack obj = {
 				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
 				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
 				{ "reference", { { "_value", 1                  }, { "_type",  "integer" }, { "_index", "field_values" } } },
 			};
-			db_handler.index(doc_id, false, obj, true, msgpack_type);
+			db_handler.index(document_id, false, obj, true, msgpack_type);
 		}
 	} catch (const CheckoutError&) {
 		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
@@ -1071,18 +1071,18 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 
 	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
-	const auto doc_id = get_hashed(endpoint.path);
+	const auto document_id = get_hashed(endpoint.path);
 
 	try {
 		try {
-			auto document = db_handler.get_document(doc_id);
+			auto document = db_handler.get_document(document_id);
 			auto nref = document.get_value("reference").i64() + 1;
 			const MsgPack obj = {
 				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
 				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
 				{ "reference", { { "_value", nref               }, { "_type",  "integer" }, { "_index", "field_values" } } },
 			};
-			db_handler.index(doc_id, false, obj, true, msgpack_type);
+			db_handler.index(document_id, false, obj, true, msgpack_type);
 		} catch (const DocNotFoundError&) {
 			// QUESTION: Document not found - should add?
 			// QUESTION: This case could happen?
@@ -1091,7 +1091,7 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
 				{ "reference", { { "_value", 1                  }, { "_type",  "integer" }, { "_index", "field_values" } } },
 			};
-			db_handler.index(doc_id, false, obj, true, msgpack_type);
+			db_handler.index(document_id, false, obj, true, msgpack_type);
 		}
 	} catch (const CheckoutError&) {
 		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
@@ -1107,18 +1107,18 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 
 	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
-	const auto doc_id = get_hashed(endpoint.path);
+	const auto document_id = get_hashed(endpoint.path);
 
 	try {
 		try {
-			auto document = db_handler.get_document(doc_id);
+			auto document = db_handler.get_document(document_id);
 			auto nref = document.get_value("reference").i64() - 1;
 			const MsgPack obj = {
 				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
 				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
 				{ "reference", { { "_value", nref               }, { "_type",  "integer" }, { "_index", "field_values" } } },
 			};
-			db_handler.index(doc_id, false, obj, true, msgpack_type);
+			db_handler.index(document_id, false, obj, true, msgpack_type);
 			if (nref == 0) {
 				// qmtx need a lock
 				delete_files(endpoint.path);

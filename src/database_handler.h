@@ -119,7 +119,7 @@ class DatabaseHandler {
 	MsgPack& run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script);
 #endif
 
-	DataType index(const std::string& _document_id, bool stored, const std::string& storage, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type);
+	DataType index(const std::string& document_id, bool stored, const std::string& storage, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -138,9 +138,9 @@ public:
 	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision);
 #endif
 
-	DataType index(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
-	DataType patch(const std::string& _document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type);
-	DataType merge(const std::string& _document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
+	DataType index(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
+	DataType patch(const std::string& document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type);
+	DataType merge(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
 
 	void write_schema(const MsgPack& obj);
 
@@ -149,18 +149,18 @@ public:
 
 	std::pair<bool, bool> update_schema();
 
-	std::string get_prefixed_term_id(const std::string& doc_id);
+	std::string get_prefixed_term_id(const std::string& document_id);
 
 	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);
 	bool set_metadata(const std::string& key, const std::string& value, bool overwrite=true);
 
 	Document get_document(const Xapian::docid& did);
-	Document get_document(const std::string& doc_id);
+	Document get_document(const std::string& document_id);
 	Document get_document_term(const std::string& term_id);
-	Xapian::docid get_docid(const std::string& doc_id);
+	Xapian::docid get_docid(const std::string& document_id);
 
-	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
+	void delete_document(const std::string& document_id, bool commit_=false, bool wal_=true);
 
 	MsgPack get_document_info(const std::string& document_id);
 	MsgPack get_database_info();
