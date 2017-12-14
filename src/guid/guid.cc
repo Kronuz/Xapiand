@@ -587,7 +587,7 @@ bool
 Guid::is_valid(const char** ptr, const char* end)
 {
 	auto pos = *ptr;
-	auto size = end - pos + 1;
+	auto size = end - pos;
 	if (
 		size == UUID_LENGTH &&
 		std::isxdigit(*pos++) &&
