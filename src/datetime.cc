@@ -1005,17 +1005,17 @@ bool
 Datetime::isvalidDate(int year, int month, int day)
 {
 	if (year < 1) {
-		L_ERR(nullptr, "ERROR: Year is out of range.");
+		L_ERR("ERROR: Year is out of range.");
 		return false;
 	}
 
 	try {
 		if (day < 1 || day > getDays_month(year, month)) {
-			L_ERR(nullptr, "ERROR: Day is out of range for month.");
+			L_ERR("ERROR: Day is out of range for month.");
 			return false;
 		}
 	} catch (const std::exception& ex) {
-		L_ERR(nullptr, "ERROR: %s.", *ex.what() ? ex.what() : "Unkown exception!");
+		L_ERR("ERROR: %s.", *ex.what() ? ex.what() : "Unkown exception!");
 		return false;
 	}
 

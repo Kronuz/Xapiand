@@ -46,7 +46,7 @@ int test_md5() {
 	for (auto it = test.begin(), rit = expect.begin(); it != test.end(); ++it, ++rit) {
 		std::string res = md5(*it);
 		if (res != *rit) {
-			L_ERR(nullptr, "ERROR: Testing MD5 Failed.\nResult MD5(%s)=%s  Expected=%s", it->c_str(), res.c_str(), rit->c_str());
+			L_ERR("ERROR: Testing MD5 Failed.\nResult MD5(%s)=%s  Expected=%s", it->c_str(), res.c_str(), rit->c_str());
 			RETURN (1);
 		}
 	}
@@ -74,7 +74,7 @@ int test_sha256() {
 	for (auto it = test.begin(), rit = expects.begin(); it != test.end(); ++it, ++rit) {
 		std::string res = sha256(*it);
 		if (res != *rit) {
-			L_ERR(nullptr, "ERROR: Testing SHA256 Failed.\nResult SHA256(%s)=%s  Expected=%s", it->c_str(), res.c_str(), rit->c_str());
+			L_ERR("ERROR: Testing SHA256 Failed.\nResult SHA256(%s)=%s  Expected=%s", it->c_str(), res.c_str(), rit->c_str());
 			RETURN(1);
 		}
 	}

@@ -52,13 +52,13 @@ int test_boolparser() {
 		BooleanTree booltree(query.query);
 
 		if (booltree.size() != query.stack_expected.size()) {
-			L_ERR(nullptr, "ERROR: Boolean parser mismatch sizes in stacks: expected %zu, result is: %zu", query.stack_expected.size(), booltree.size());
+			L_ERR("ERROR: Boolean parser mismatch sizes in stacks: expected %zu, result is: %zu", query.stack_expected.size(), booltree.size());
 			++count;
 		} else {
 			for (const auto& token : query.stack_expected) {
 				const auto& lexeme = booltree.front().get_lexeme();
 				if (token != lexeme) {
-					L_ERR(nullptr, "ERROR: Boolean parser: expected token %s, result is: %s", token.c_str(), lexeme.c_str());
+					L_ERR("ERROR: Boolean parser: expected token %s, result is: %s", token.c_str(), lexeme.c_str());
 					++count;
 				}
 				booltree.pop_front();

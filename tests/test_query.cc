@@ -182,7 +182,7 @@ static int make_search(const std::vector<test_query_t> _tests) {
 			// Check by documents
 			if (mset.size() != test.expect_datas.size()) {
 				++cont;
-				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), test.expect_datas.size());
+				L_ERR("ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), test.expect_datas.size());
 			} else {
 				Xapian::MSetIterator m = mset.begin();
 				for (auto it = test.expect_datas.begin(); m != mset.end(); ++it, ++m) {
@@ -193,16 +193,16 @@ static int make_search(const std::vector<test_query_t> _tests) {
 						auto str_data = data.str();
 						if (it->compare(str_data) != 0) {
 							++cont;
-							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", test.field.c_str(), str_data.c_str(), test.field.c_str(), it->c_str());
+							L_ERR("ERROR: Result = %s:%s   Expected = %s:%s", test.field.c_str(), str_data.c_str(), test.field.c_str(), it->c_str());
 						}
 					} catch (const msgpack::type_error& exc) {
 						++cont;
-						L_EXC(nullptr, "ERROR: %s", exc.what());
+						L_EXC("ERROR: %s", exc.what());
 					}
 				}
 			}
 		} catch (const std::exception& exc) {
-			L_EXC(nullptr, "ERROR: %s\n", exc.what());
+			L_EXC("ERROR: %s\n", exc.what());
 			++cont;
 		}
 	}
@@ -216,16 +216,16 @@ int test_query_search() {
 	try {
 		int cont = make_search(test_query);
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing search using query is correct!");
+			L_DEBUG("Testing search using query is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing search using query has mistakes.");
+			L_ERR("ERROR: Testing search using query has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception& exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -236,16 +236,16 @@ int test_partials_search() {
 	try {
 		int cont = make_search(test_partials);
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing search using partials is correct!");
+			L_DEBUG("Testing search using partials is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing search using partials has mistakes.");
+			L_ERR("ERROR: Testing search using partials has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception& exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }

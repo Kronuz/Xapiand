@@ -43,7 +43,7 @@ DatabaseAutocommit::DatabaseAutocommit(bool forced_, Endpoints endpoints_, std::
 void
 DatabaseAutocommit::commit(const std::shared_ptr<Database>& database)
 {
-	L_CALL(nullptr, "DatabaseAutocommit::commit(<database>)");
+	L_CALL("DatabaseAutocommit::commit(<database>)");
 
 	std::shared_ptr<DatabaseAutocommit> task;
 	unsigned long long next_wakeup_time;
@@ -92,7 +92,7 @@ DatabaseAutocommit::commit(const std::shared_ptr<Database>& database)
 void
 DatabaseAutocommit::run()
 {
-	L_CALL(this, "DatabaseAutocommit::run()");
+	L_CALL("DatabaseAutocommit::run()");
 	L_INFO_HOOK_LOG("DatabaseAutocommit::run", this, "DatabaseAutocommit::run()");
 
 	{
@@ -113,9 +113,9 @@ DatabaseAutocommit::run()
 		auto end = std::chrono::system_clock::now();
 
 		if (successful) {
-			L_DEBUG(this, "Autocommit: %s%s (took %s)", repr(endpoints.to_string()).c_str(), forced ? " (forced)" : "", delta_string(start, end).c_str());
+			L_DEBUG("Autocommit: %s%s (took %s)", repr(endpoints.to_string()).c_str(), forced ? " (forced)" : "", delta_string(start, end).c_str());
 		} else {
-			L_WARNING(this, "Autocommit falied: %s%s (took %s)", repr(endpoints.to_string()).c_str(), forced ? " (forced)" : "", delta_string(start, end).c_str());
+			L_WARNING("Autocommit falied: %s%s (took %s)", repr(endpoints.to_string()).c_str(), forced ? " (forced)" : "", delta_string(start, end).c_str());
 		}
 	}
 }

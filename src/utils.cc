@@ -477,7 +477,7 @@ void delete_files(const std::string& path) {
 		if (ent->d_type == DT_REG) {
 			std::string file = path + "/" + std::string(ent->d_name);
 			if (remove(file.c_str()) != 0) {
-				L_ERR(nullptr, "File %s could not be deleted", ent->d_name);
+				L_ERR("File %s could not be deleted", ent->d_name);
 			}
 		}
 	}
@@ -485,7 +485,7 @@ void delete_files(const std::string& path) {
 	closedir(dirp);
 	if (!contains_folder) {
 		if (rmdir(path.c_str()) != 0) {
-			L_ERR(nullptr, "Directory %s could not be deleted", path.c_str());
+			L_ERR("Directory %s could not be deleted", path.c_str());
 		}
 	}
 }
@@ -503,14 +503,14 @@ void move_files(const std::string& src, const std::string& dst) {
 			std::string old_name = src + "/" + ent->d_name;
 			std::string new_name = dst + "/" + ent->d_name;
 			if (::rename(old_name.c_str(), new_name.c_str()) != 0) {
-				L_ERR(nullptr, "Couldn't rename %s to %s", old_name.c_str(), new_name.c_str());
+				L_ERR("Couldn't rename %s to %s", old_name.c_str(), new_name.c_str());
 			}
 		}
 	}
 
 	closedir(dirp);
 	if (rmdir(src.c_str()) != 0) {
-		L_ERR(nullptr, "Directory %s could not be deleted", src.c_str());
+		L_ERR("Directory %s could not be deleted", src.c_str());
 	}
 }
 
@@ -601,7 +601,7 @@ void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pr
 int copy_file(const std::string& src, const std::string& dst, bool create, const std::string& file_name, const std::string& new_name) {
 	DIR* dir_src = opendir(src.c_str());
 	if (!dir_src) {
-		L_ERR(nullptr, "ERROR: %s", strerror(errno));
+		L_ERR("ERROR: %s", strerror(errno));
 		return -1;
 	}
 
@@ -611,11 +611,11 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 	if (-1 == err) {
 		if (ENOENT == errno && create) {
 			if (::mkdir(dst.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				L_ERR(nullptr, "ERROR: couldn't create directory %s (%s)", dst.c_str(), strerror(errno));
+				L_ERR("ERROR: couldn't create directory %s (%s)", dst.c_str(), strerror(errno));
 				return -1;
 			}
 		} else {
-			L_ERR(nullptr, "ERROR: couldn't obtain directory information %s (%s)", dst.c_str(), strerror(errno));
+			L_ERR("ERROR: couldn't obtain directory information %s (%s)", dst.c_str(), strerror(errno));
 			return -1;
 		}
 	}
@@ -640,20 +640,20 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 
 			int src_fd = io::open(src_path.c_str(), O_RDONLY);
 			if (-1 == src_fd) {
-				L_ERR(nullptr, "ERROR: opening file. %s\n", src_path.c_str());
+				L_ERR("ERROR: opening file. %s\n", src_path.c_str());
 				return -1;
 			}
 
 			int dst_fd = io::open(dst_path.c_str(), O_CREAT | O_WRONLY, 0644);
 			if (-1 == src_fd) {
-				L_ERR(nullptr, "ERROR: opening file. %s\n", dst_path.c_str());
+				L_ERR("ERROR: opening file. %s\n", dst_path.c_str());
 				return -1;
 			}
 
 			while (1) {
 				ssize_t bytes = io::read(src_fd, buffer, 4096);
 				if (-1 == bytes) {
-					L_ERR(nullptr, "ERROR: reading file. %s (%s)\n", src_path.c_str(), strerror(errno));
+					L_ERR("ERROR: reading file. %s (%s)\n", src_path.c_str(), strerror(errno));
 					return -1;
 				}
 
@@ -661,7 +661,7 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 
 				bytes = write(dst_fd, buffer, bytes);
 				if (-1 == bytes) {
-					L_ERR(nullptr, "ERROR: writing file. %s (%s)\n", dst_path.c_str(), strerror(errno));
+					L_ERR("ERROR: writing file. %s (%s)\n", dst_path.c_str(), strerror(errno));
 					return -1;
 				}
 			}
@@ -750,13 +750,13 @@ std::string delta_string(const std::chrono::time_point<std::chrono::system_clock
 void _tcp_nopush(int sock, int optval) {
 #ifdef TCP_NOPUSH
 	if (setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) < 0) {
-		L_ERR(nullptr, "ERROR: setsockopt TCP_NOPUSH (sock=%d): [%d] %s", sock, errno, strerror(errno));
+		L_ERR("ERROR: setsockopt TCP_NOPUSH (sock=%d): [%d] %s", sock, errno, strerror(errno));
 	}
 #endif
 
 #ifdef TCP_CORK
 	if (setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) < 0) {
-		L_ERR(nullptr, "ERROR: setsockopt TCP_CORK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+		L_ERR("ERROR: setsockopt TCP_CORK (sock=%d): [%d] %s", sock, errno, strerror(errno));
 	}
 #endif
 }

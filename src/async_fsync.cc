@@ -40,7 +40,7 @@ AsyncFsync::AsyncFsync(bool forced_, int fd_, int mode_)
 void
 AsyncFsync::async_fsync(int fd, bool full_fsync)
 {
-	L_CALL(nullptr, "AsyncFsync::async_fsync(%d, %s)", fd, full_fsync ? "true" : "false");
+	L_CALL("AsyncFsync::async_fsync(%d, %s)", fd, full_fsync ? "true" : "false");
 
 	std::shared_ptr<AsyncFsync> task;
 	unsigned long long next_wakeup_time;
@@ -88,7 +88,7 @@ AsyncFsync::async_fsync(int fd, bool full_fsync)
 void
 AsyncFsync::run()
 {
-	L_CALL(this, "AsyncFsync::run()");
+	L_CALL("AsyncFsync::run()");
 	L_INFO_HOOK_LOG("AsyncFsync::run", this, "AsyncFsync::run()");
 
 	{
@@ -109,8 +109,8 @@ AsyncFsync::run()
 	auto end = std::chrono::system_clock::now();
 
 	if (successful) {
-		L_DEBUG(this, "Async %s: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", delta_string(start, end).c_str());
+		L_DEBUG("Async %s: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", delta_string(start, end).c_str());
 	} else {
-		L_WARNING(this, "Async %s falied: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", delta_string(start, end).c_str());
+		L_WARNING("Async %s falied: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", delta_string(start, end).c_str());
 	}
 }

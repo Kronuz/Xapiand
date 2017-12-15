@@ -170,20 +170,20 @@ int testCartesianTransforms() {
 			Cartesian c(test.lat, test.lon, test.height, Cartesian::Units::DEGREES, test.SRID);
 			const auto deg_min_sec = c.toDegMinSec();
 			if (deg_min_sec != test.res) {
-				L_ERR(nullptr, "ERROR: Resul: %s  Expected: %s", deg_min_sec.c_str(), test.res.c_str());
+				L_ERR("ERROR: Resul: %s  Expected: %s", deg_min_sec.c_str(), test.res.c_str());
 				++cont;
 			}
 		}
 	} catch (const std::exception& exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		++cont;
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing the transformation of coordinates between CRS is correct!");
+		L_DEBUG("Testing the transformation of coordinates between CRS is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing the transformation of coordinates between CRS has mistakes.");
+		L_ERR("ERROR: Testing the transformation of coordinates between CRS has mistakes.");
 		RETURN(1);
 	}
 }
@@ -228,18 +228,18 @@ int testGrahamScanAlgorithm() {
 					std::getline(expected, coord_exp);
 					if (coord_exp != coord_get) {
 						++cont;
-						L_ERR(nullptr, "ERROR: Result(%s) Expect(%s).", coord_get.c_str(), coord_exp.c_str());
+						L_ERR("ERROR: Result(%s) Expect(%s).", coord_get.c_str(), coord_exp.c_str());
 					}
 				} else {
 					++cont;
-					L_ERR(nullptr, "ERROR: Expected less corners.");
+					L_ERR("ERROR: Expected less corners.");
 					break;
 				}
 			}
 
 			if (!expected.eof()) {
 				++cont;
-				L_ERR(nullptr, "ERROR: Expected more corners.");
+				L_ERR("ERROR: Expected more corners.");
 				break;
 			}
 
@@ -249,16 +249,16 @@ int testGrahamScanAlgorithm() {
 			HTM::writeGrahamScanMap(python_geospatial + "convex_hull/" + test + "GM.py", test + "GM.html", points, convex_points, path_test_geospatial);
 			HTM::writeGrahamScan3D(python_geospatial + "convex_hull/" + test + "3D.py", points, convex_points);
 		} else {
-			L_ERR(nullptr, "ERROR: File %s or %s not found.", source_file.c_str(), expected_file.c_str());
+			L_ERR("ERROR: File %s or %s not found.", source_file.c_str(), expected_file.c_str());
 			++cont;
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing Geometry Hull Convex is correct!");
+		L_DEBUG("Testing Geometry Hull Convex is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing Geometry Hull Convex has mistakes.");
+		L_ERR("ERROR: Testing Geometry Hull Convex has mistakes.");
 		RETURN(1);
 	}
 }
@@ -423,14 +423,14 @@ inline int verify_trixels_ranges(const std::shared_ptr<Geometry>& geometry, cons
 		HTM::insertGreaterRange(_ranges, HTM::getRange(trixel));
 	}
 	if (_ranges != ranges) {
-		L_ERR(nullptr, "ERROR: Different ranges [%zu %zu]", ranges.size(), _ranges.size());
+		L_ERR("ERROR: Different ranges [%zu %zu]", ranges.size(), _ranges.size());
 		++cont;
 	}
 
 	// Test ranges to trixels
 	auto _trixels = HTM::getTrixels(ranges);
 	if (_trixels != trixels) {
-		L_ERR(nullptr, "ERROR: Different trixels [%zu %zu]", trixels.size(), _trixels.size());
+		L_ERR("ERROR: Different trixels [%zu %zu]", trixels.size(), _trixels.size());
 		++cont;
 	}
 
@@ -441,7 +441,7 @@ inline int verify_trixels_ranges(const std::shared_ptr<Geometry>& geometry, cons
 	_trixels = _geometry->getTrixels(partials, error);
 	HTM::simplifyTrixels(_trixels);
 	if (_trixels != trixels) {
-		L_ERR(nullptr, "ERROR: Geometry::toEWKT is not working\nEWKT: %s\nRec. EWKT: %s", str_ewkt.c_str(), _geometry->toEWKT().c_str());
+		L_ERR("ERROR: Geometry::toEWKT is not working\nEWKT: %s\nRec. EWKT: %s", str_ewkt.c_str(), _geometry->toEWKT().c_str());
 		++cont;
 	}
 
@@ -486,7 +486,7 @@ int testCircle() {
 		HTM::writeGoogleMap(python_geospatial + "AllCircleGM.py", "AllCircleGM.html", circle, trixels, path_test_geospatial);
 		if (verify_trixels_ranges(circle, trixels, ranges) != 0) {
 			++cont;
-			L_ERR(nullptr, "Testing circle (all the globe) is not working");
+			L_ERR("Testing circle (all the globe) is not working");
 		}
 	}
 	{
@@ -499,7 +499,7 @@ int testCircle() {
 		HTM::writeGoogleMap(python_geospatial + "NegCircleGM.py", "NegCircleGM.html", circle, trixels, path_test_geospatial);
 		if (verify_trixels_ranges(circle, trixels, ranges) != 0) {
 			++cont;
-			L_ERR(nullptr, "Testing negative circle is not working");
+			L_ERR("Testing negative circle is not working");
 		}
 	}
 	{
@@ -512,7 +512,7 @@ int testCircle() {
 		HTM::writeGoogleMap(python_geospatial + "PosCircleGM.py", "PosCircleGM.html", circle, trixels, path_test_geospatial);
 		if (verify_trixels_ranges(circle, trixels, ranges) != 0) {
 			++cont;
-			L_ERR(nullptr, "Testing positive circle is not working");
+			L_ERR("Testing positive circle is not working");
 		}
 	}
 	{
@@ -525,7 +525,7 @@ int testCircle() {
 		HTM::writeGoogleMap(python_geospatial + "PosCircleGM2.py", "PosCircleGM2.html", circle, trixels, path_test_geospatial);
 		if (verify_trixels_ranges(circle, trixels, ranges) != 0) {
 			++cont;
-			L_ERR(nullptr, "Testing positive circle is not working");
+			L_ERR("Testing positive circle is not working");
 		}
 	}
 	RETURN(cont);

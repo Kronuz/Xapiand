@@ -45,7 +45,7 @@ BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* 
 {
 	bind(tries_, group_);
 
-	L_OBJ(this, "CREATED BASE UDP!");
+	L_OBJ("CREATED BASE UDP!");
 }
 
 
@@ -56,7 +56,7 @@ BaseUDP::~BaseUDP()
 	io::close(sock);
 	sock = -1;
 
-	L_OBJ(this, "DELETED BASE UDP!");
+	L_OBJ("DELETED BASE UDP!");
 }
 
 
@@ -70,7 +70,7 @@ BaseUDP::destroy_impl()
 void
 BaseUDP::destroyer()
 {
-	L_CALL(this, "BaseUDP::destroyer()");
+	L_CALL("BaseUDP::destroyer()");
 
 	if (sock == -1) {
 		return;
@@ -83,7 +83,7 @@ BaseUDP::destroyer()
 void
 BaseUDP::shutdown_impl(time_t asap, time_t now)
 {
-	L_CALL(this, "BaseUDP::shutdown_impl(%d, %d)", (int)asap, (int)now);
+	L_CALL("BaseUDP::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 
@@ -103,21 +103,21 @@ BaseUDP::bind(int tries, const std::string& group)
 	struct ip_mreq mreq;
 
 	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-		L_CRIT(this, "ERROR: %s socket: [%d] %s", description.c_str(), errno, strerror(errno));
+		L_CRIT("ERROR: %s socket: [%d] %s", description.c_str(), errno, strerror(errno));
 		sig_exit(-EX_CONFIG);
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same port
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) < 0) {
-		L_ERR(this, "ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+		L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	}
 
 	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
-		L_ERR(this, "ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+		L_ERR("ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	}
 
 	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) < 0) {
-		L_ERR(this, "ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+		L_ERR("ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	}
 
 	// use setsockopt() to request that the kernel join a multicast group
@@ -125,7 +125,7 @@ BaseUDP::bind(int tries, const std::string& group)
 	mreq.imr_multiaddr.s_addr = inet_addr(group.c_str());
 	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
-		L_CRIT(this, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+		L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 		io::close(sock);
 		sig_exit(-EX_CONFIG);
 	}
@@ -140,20 +140,20 @@ BaseUDP::bind(int tries, const std::string& group)
 		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			if (!ignored_errorno(errno, true, true)) {
 				if (i == tries - 1) break;
-				L_DEBUG(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 				continue;
 			}
 		}
 
 		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-			L_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+			L_ERR("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 
 		addr.sin_addr.s_addr = inet_addr(group.c_str());  // setup s_addr for sender (send to group)
 		return;
 	}
 
-	L_CRIT(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+	L_CRIT("ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	io::close(sock);
 	sig_exit(-EX_CONFIG);
 }
@@ -163,7 +163,7 @@ void
 BaseUDP::sending_message(const std::string& message)
 {
 	if (sock != -1) {
-		L_UDP_WIRE(this, "(sock=%d) <<-- %s", sock, repr(message).c_str());
+		L_UDP_WIRE("(sock=%d) <<-- %s", sock, repr(message).c_str());
 
 #ifdef MSG_NOSIGNAL
 		ssize_t written = ::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&addr, sizeof(addr));
@@ -173,7 +173,7 @@ BaseUDP::sending_message(const std::string& message)
 
 		if (written < 0) {
 			if (sock != -1 && !ignored_errorno(errno, true, true)) {
-				L_ERR(this, "ERROR: sendto error (sock=%d): %s", sock, strerror(errno));
+				L_ERR("ERROR: sendto error (sock=%d): %s", sock, strerror(errno));
 				XapiandManager::manager->shutdown();
 			}
 		}
@@ -203,20 +203,20 @@ BaseUDP::get_message(std::string& result, char max_type)
 	ssize_t received = ::recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *)&_addr, &addrlen);
 	if (received < 0) {
 		if (!ignored_errorno(errno, true, true)) {
-			L_ERR(this, "ERROR: read error (sock=%d): %s", sock, strerror(errno));
+			L_ERR("ERROR: read error (sock=%d): %s", sock, strerror(errno));
 			THROW(NetworkError, strerror(errno));
 		}
-		L_CONN(this, "Received EOF (sock=%d)!", sock);
+		L_CONN("Received EOF (sock=%d)!", sock);
 		throw DummyException();
 	} else if (received == 0) {
 		// If no messages are available to be received and the peer has performed an orderly shutdown.
-		L_CONN(this, "Received EOF (sock=%d)!", sock);
+		L_CONN("Received EOF (sock=%d)!", sock);
 		throw DummyException();
 	} else if (received < 4) {
 		THROW(NetworkError, "Badly formed message: Incomplete!");
 	}
 
-	L_UDP_WIRE(this, "(sock=%d) -->> %s", sock, repr(buf, received).c_str());
+	L_UDP_WIRE("(sock=%d) -->> %s", sock, repr(buf, received).c_str());
 
 	const char *p = buf;
 	const char *p_end = p + received;

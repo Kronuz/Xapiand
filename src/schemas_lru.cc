@@ -30,7 +30,7 @@ template <typename ErrorType>
 inline void
 SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_path, std::string& foreign_id)
 {
-	L_CALL(this, "SchemasLRU::validate_schema(%s)", repr(object.to_string()).c_str());
+	L_CALL("SchemasLRU::validate_schema(%s)", repr(object.to_string()).c_str());
 
 	if (object.is_string()) {
 		const auto aux_schema_str = object.str();
@@ -84,7 +84,7 @@ SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::stri
 MsgPack
 SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::shared_ptr<std::unordered_set<size_t>> context)
 {
-	L_CALL(this, "SchemasLRU::get_shared(%s, %s, %s)", repr(endpoint.to_string()).c_str(), id.c_str(), context ? std::to_string(context->size()).c_str() : "nullptr");
+	L_CALL("SchemasLRU::get_shared(%s, %s, %s)", repr(endpoint.to_string()).c_str(), id.c_str(), context ? std::to_string(context->size()).c_str() : "nullptr");
 
 	auto hash = endpoint.hash();
 	if (!context) {
@@ -113,7 +113,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::sha
 std::pair<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>>
 SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 {
-	L_CALL(this, "SchemasLRU::get(<db_handler>, %s)", obj ? repr(obj->to_string()).c_str() : "nullptr");
+	L_CALL("SchemasLRU::get(<db_handler>, %s)", obj ? repr(obj->to_string()).c_str() : "nullptr");
 
 	std::string foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
@@ -268,7 +268,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 bool
 SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema)
 {
-	L_CALL(this, "SchemasLRU::set(<db_handler>, <old_schema>, %s)", new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
+	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, %s)", new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
 
 	bool failure = false;
 	std::string foreign_path, foreign_id;

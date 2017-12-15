@@ -30,7 +30,7 @@
 XapiandReplicator::XapiandReplicator(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 	: Worker(std::move(manager_), ev_loop_, ev_flags_) {
 
-	L_OBJ(this, "CREATED XAPIAN REPLICATOR!");
+	L_OBJ("CREATED XAPIAN REPLICATOR!");
 }
 
 XapiandReplicator::~XapiandReplicator()
@@ -49,7 +49,7 @@ XapiandReplicator::destroy_impl()
 void
 XapiandReplicator::destroyer()
 {
-	L_CALL(this, "XapiandReplicator::destroyer()");
+	L_CALL("XapiandReplicator::destroyer()");
 
 	XapiandManager::manager->database_pool.updated_databases.finish();
 }
@@ -58,7 +58,7 @@ XapiandReplicator::destroyer()
 void
 XapiandReplicator::shutdown_impl(time_t asap, time_t now)
 {
-	L_CALL(this, "XapiandReplicator::shutdown_impl(%d, %d)", (int)asap, (int)now);
+	L_CALL("XapiandReplicator::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 
@@ -73,12 +73,12 @@ XapiandReplicator::shutdown_impl(time_t asap, time_t now)
 void
 XapiandReplicator::run()
 {
-	L_CALL(this, "XapiandReplicator::run()");
+	L_CALL("XapiandReplicator::run()");
 
 	// Function that retrieves a task from a queue, runs it and deletes it
 	Endpoint endpoint;
 	while (XapiandManager::manager->database_pool.updated_databases.pop(endpoint)) {
-		L_DEBUG(this, "Replicator was informed database was updated: %s", repr(endpoint.to_string()).c_str());
+		L_DEBUG("Replicator was informed database was updated: %s", repr(endpoint.to_string()).c_str());
 		on_commit(endpoint);
 	}
 
@@ -89,7 +89,7 @@ XapiandReplicator::run()
 void
 XapiandReplicator::on_commit(const Endpoint &endpoint)
 {
-	L_CALL(this, "XapiandReplicator::on_commit(%s)", repr(endpoint.to_string()).c_str());
+	L_CALL("XapiandReplicator::on_commit(%s)", repr(endpoint.to_string()).c_str());
 
 	if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
 		auto local_node_ = local_node.load();

@@ -47,9 +47,9 @@ XapiandServer::XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev
 {
 	setup_node_async.set<XapiandServer, &XapiandServer::setup_node_async_cb>(this);
 	setup_node_async.start();
-	L_EV(this, "Start server's async setup node event");
+	L_EV("Start server's async setup node event");
 
-	L_OBJ(this, "CREATED XAPIAN SERVER!");
+	L_OBJ("CREATED XAPIAN SERVER!");
 }
 
 
@@ -57,18 +57,18 @@ XapiandServer::~XapiandServer()
 {
 	destroyer();
 
-	L_OBJ(this, "DELETED XAPIAN SERVER!");
+	L_OBJ("DELETED XAPIAN SERVER!");
 }
 
 
 void
 XapiandServer::run()
 {
-	L_CALL(this, "XapiandServer::run()");
+	L_CALL("XapiandServer::run()");
 
-	L_EV(this, "Starting server loop...");
+	L_EV("Starting server loop...");
 	run_loop();
-	L_EV(this, "Server loop ended!");
+	L_EV("Server loop ended!");
 
 	detach();
 }
@@ -77,16 +77,16 @@ XapiandServer::run()
 void
 XapiandServer::setup_node_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "XapiandServer::setup_node_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("XapiandServer::setup_node_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
 
 	ignore_unused(revents);
 
-	L_EV_BEGIN(this, "XapiandServer::setup_async_cb:BEGIN");
+	L_EV_BEGIN("XapiandServer::setup_async_cb:BEGIN");
 	XapiandManager::manager->setup_node(share_this<XapiandServer>());
 
 	setup_node_async.stop();
-	L_EV(this, "Stop server's async setup node event");
-	L_EV_END(this, "XapiandServer::setup_async_cb:END");
+	L_EV("Stop server's async setup node event");
+	L_EV_END("XapiandServer::setup_async_cb:END");
 }
 
 
@@ -100,19 +100,19 @@ XapiandServer::destroy_impl()
 void
 XapiandServer::destroyer()
 {
-	L_CALL(this, "XapiandServer::destroyer()");
+	L_CALL("XapiandServer::destroyer()");
 
 	std::lock_guard<std::mutex> lk(qmtx);
 
 	setup_node_async.stop();
-	L_EV(this, "Stop server's async setup node event");
+	L_EV("Stop server's async setup node event");
 }
 
 
 void
 XapiandServer::shutdown_impl(time_t asap, time_t now)
 {
-	L_CALL(this, "XapiandServer::shutdown_impl(%d, %d)", (int)asap, (int)now);
+	L_CALL("XapiandServer::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 

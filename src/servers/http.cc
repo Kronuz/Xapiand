@@ -37,13 +37,13 @@ Http::Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loo
 	node_copy->http_port = port;
 	local_node = std::shared_ptr<const Node>(node_copy.release());
 
-	L_OBJ(this, "CREATED CONFIGURATION FOR HTTP");
+	L_OBJ("CREATED CONFIGURATION FOR HTTP");
 }
 
 
 Http::~Http()
 {
-	L_OBJ(this, "DELETED CONFIGURATION FOR HTTP");
+	L_OBJ("DELETED CONFIGURATION FOR HTTP");
 }
 
 

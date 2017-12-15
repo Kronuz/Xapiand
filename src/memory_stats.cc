@@ -77,13 +77,13 @@ uint64_t get_total_virtual_used()
 	xsw_usage vmusage = {0, 0, 0, 0, false};
 	size_t vmusage_len = sizeof(vmusage);
 	if (sysctl(mib, mib_len, &vmusage, &vmusage_len, nullptr, 0) < 0) {
-		L_ERR(nullptr, "ERROR: Unable to get swap usage: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: Unable to get swap usage: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 	} else {
 		total_virtual_used = vmusage.xsu_used;
 	}
 #undef _SYSCTL_NAME
 #else
-	L_WARNING(nullptr, "WARNING: No way of getting swap usage.");
+	L_WARNING("WARNING: No way of getting swap usage.");
 #endif
 
 	return total_virtual_used;
@@ -106,11 +106,11 @@ uint64_t get_total_ram()
 #ifdef _SYSCTL_NAME
 	auto total_ram_len = sizeof(total_ram);
 	if (sysctl(mib, mib_len, &total_ram, &total_ram_len, nullptr, 0) < 0) {
-		L_ERR(nullptr, "ERROR: Unable to get total memory size: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: Unable to get total memory size: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 	}
 #undef _SYSCTL_NAME
 #else
-	L_WARNING(nullptr, "WARNING: No way of getting total memory size.");
+	L_WARNING("WARNING: No way of getting total memory size.");
 #endif
 
 	return total_ram;
@@ -121,7 +121,7 @@ uint64_t get_current_memory_by_process(bool resident)
 {
 	uint64_t current_memory_by_process = 0;
 #if defined(__FreeBSD__)
-	L_WARNING(nullptr, "WARNING: No way of getting total %s memory size by the process.", resident ? "resident" : "virtual");
+	L_WARNING("WARNING: No way of getting total %s memory size by the process.", resident ? "resident" : "virtual");
 #elif defined(__APPLE__)
 	struct task_basic_info t_info;
 	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
@@ -153,7 +153,7 @@ uint64_t get_total_virtual_memory()
 	int mib[CTL_MAXNAME + 2];
 	size_t mib_len = sizeof(mib) / sizeof(int);
 	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
-		L_ERR(nullptr, "ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 		return 0;
 	}
 #endif
@@ -161,13 +161,13 @@ uint64_t get_total_virtual_memory()
 	int64_t total_pages;
 	auto total_pages_len = sizeof(total_pages);
 	if (sysctl(mib, mib_len, &total_pages, &total_pages_len, nullptr, 0) < 0) {
-		L_ERR(nullptr, "ERROR: Unable to get total virtual memory size: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: Unable to get total virtual memory size: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 	} else {
 		total_virtual_memory = total_pages * getpagesize();
 	}
 #undef _SYSCTL_NAME
 #else
-	L_WARNING(nullptr, "WARNING: No way of getting total virtual memory size.");
+	L_WARNING("WARNING: No way of getting total virtual memory size.");
 #endif
 
 	return total_virtual_memory;

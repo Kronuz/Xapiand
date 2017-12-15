@@ -225,7 +225,7 @@ class ThreadPool : public TaskQueue<Params...> {
 		set_thread_name(std::string(name));
 		std::unique_ptr<function_mo<void(Params...)>> task;
 
-		L_THREADPOOL(this, "Worker %s started! (size: %lu, capacity: %lu)", name, threadpool_size(), threadpool_capacity());
+		L_THREADPOOL("Worker %s started! (size: %lu, capacity: %lu)", name, threadpool_size(), threadpool_capacity());
 		while (TaskQueue<Params...>::tasks.pop(task)) {
 			++running_tasks;
 			try {
@@ -233,20 +233,20 @@ class ThreadPool : public TaskQueue<Params...> {
 				task->get();
 			} catch (const BaseException& exc) {
 				auto exc_context = exc.get_context();
-				L_EXC(this, "Task died with an unhandled exception: %s", *exc_context ? exc_context : "Unkown Exception!");
+				L_EXC("Task died with an unhandled exception: %s", *exc_context ? exc_context : "Unkown Exception!");
 			} catch (const Xapian::Error& exc) {
 				auto exc_msg = exc.get_msg().c_str();
-				L_EXC(this, "Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown Xapian::Error!");
+				L_EXC("Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown Xapian::Error!");
 			} catch (const std::exception& exc) {
 				auto exc_msg = exc.what();
-				L_EXC(this, "Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown std::exception!");
+				L_EXC("Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown std::exception!");
 			} catch (...) {
 				std::exception exc;
-				L_EXC(this, "Task died with an unhandled exception: Unkown!");
+				L_EXC("Task died with an unhandled exception: Unkown!");
 			}
 			--running_tasks;
 		}
-		L_THREADPOOL(this, "Worker %s ended.", name);
+		L_THREADPOOL("Worker %s ended.", name);
 	}
 
 	bool spawn_workers() {

@@ -114,11 +114,11 @@ MsgPack normalize_uuid(const MsgPack& uuid)
 
 long long read_mastery(const std::string& dir, bool force)
 {
-	L_DATABASE(nullptr, "+ READING MASTERY OF INDEX '%s'...", dir.c_str());
+	L_DATABASE("+ READING MASTERY OF INDEX '%s'...", dir.c_str());
 
 	struct stat info;
 	if (stat(dir.c_str(), &info) || !(info.st_mode & S_IFDIR)) {
-		L_DATABASE(nullptr, "- NO MASTERY OF INDEX '%s'", dir.c_str());
+		L_DATABASE("- NO MASTERY OF INDEX '%s'", dir.c_str());
 		return -1;
 	}
 
@@ -143,7 +143,7 @@ long long read_mastery(const std::string& dir, bool force)
 		}
 	}
 
-	L_DATABASE(nullptr, "- MASTERY OF INDEX '%s' is %llx", dir.c_str(), mastery_level);
+	L_DATABASE("- MASTERY OF INDEX '%s' is %llx", dir.c_str(), mastery_level);
 
 	return mastery_level;
 }
@@ -315,7 +315,7 @@ std::string msgpack_to_html_error(const msgpack::object& o)
 
 std::string join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob)
 {
-	L_CALL(nullptr, "::join_data(<stored>, <stored_locator>, <obj>, <blob>)");
+	L_CALL("::join_data(<stored>, <stored_locator>, <obj>, <blob>)");
 
 	auto obj_len = serialise_length(obj.size());
 	std::string data;
@@ -339,7 +339,7 @@ std::string join_data(bool stored, const std::string& stored_locator, const std:
 
 std::pair<bool, std::string> split_data_store(const std::string& data)
 {
-	L_CALL(nullptr, "::split_data_store(<data>)");
+	L_CALL("::split_data_store(<data>)");
 
 	std::string stored_locator;
 	size_t length;
@@ -376,7 +376,7 @@ std::pair<bool, std::string> split_data_store(const std::string& data)
 
 std::string split_data_obj(const std::string& data)
 {
-	L_CALL(nullptr, "::split_data_obj(<data>)");
+	L_CALL("::split_data_obj(<data>)");
 
 	size_t length;
 	const char *p = data.data();
@@ -411,7 +411,7 @@ std::string split_data_obj(const std::string& data)
 
 std::string split_data_blob(const std::string& data)
 {
-	L_CALL(nullptr, "::split_data_blob(<data>)");
+	L_CALL("::split_data_blob(<data>)");
 
 	size_t length;
 	const char *p = data.data();

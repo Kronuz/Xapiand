@@ -43,7 +43,7 @@ int test_pool() {
 	pool.join();
 
 	if (results != "<1<2<3<44>2>3>1>") {
-		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<3<44>2>3>1>", results.c_str());
+		L_ERR("ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<3<44>2>3>1>", results.c_str());
 		RETURN(1);
 	}
 
@@ -65,7 +65,7 @@ int test_pool_limit() {
 	pool.end();
 	pool.join();
 	if (results != "<1<2<32><44>3>1>") {
-		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<32><44>3>1>", results.c_str());
+		L_ERR("ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<32><44>3>1>", results.c_str());
 		RETURN(1);
 	}
 
@@ -109,7 +109,7 @@ int test_pool_func() {
 	}
 
 	if (total != 30) {
-		L_ERR(nullptr, "ThreadPool::enqueue functions with int is not working correctly. Result: %d Expect: 30", total);
+		L_ERR("ThreadPool::enqueue functions with int is not working correctly. Result: %d Expect: 30", total);
 		RETURN(1);
 	}
 
@@ -157,7 +157,7 @@ int test_pool_func_shared() {
 	}
 
 	if (total != 30) {
-		L_ERR(nullptr, "ThreadPool::enqueue functions with std::shared_ptr is not working correctly. Result: %d Expect: 30", total);
+		L_ERR("ThreadPool::enqueue functions with std::shared_ptr is not working correctly. Result: %d Expect: 30", total);
 		RETURN(1);
 	}
 
@@ -205,7 +205,7 @@ int test_pool_func_unique() {
 	}
 
 	if (total != 30)  {
-		L_ERR(nullptr, "ThreadPool::enqueue functions with std::unique_ptr is not working correctly. Result: %d Expect: 30", total);
+		L_ERR("ThreadPool::enqueue functions with std::unique_ptr is not working correctly. Result: %d Expect: 30", total);
 		RETURN(1);
 	}
 

@@ -165,7 +165,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
 	signal_sig_async.start();
 
-	L_OBJ(this, "CREATED XAPIAN MANAGER!");
+	L_OBJ("CREATED XAPIAN MANAGER!");
 }
 
 
@@ -173,14 +173,14 @@ XapiandManager::~XapiandManager()
 {
 	destroyer();
 
-	L_OBJ(this, "DELETED XAPIAN MANAGER!");
+	L_OBJ("DELETED XAPIAN MANAGER!");
 }
 
 
 std::string
 XapiandManager::load_node_name()
 {
-	L_CALL(this, "XapiandManager::load_node_name()");
+	L_CALL("XapiandManager::load_node_name()");
 
 	ssize_t length = 0;
 	char buf[512];
@@ -200,17 +200,17 @@ XapiandManager::load_node_name()
 void
 XapiandManager::save_node_name(const std::string& _node_name)
 {
-	L_CALL(this, "XapiandManager::save_node_name(%s)", _node_name.c_str());
+	L_CALL("XapiandManager::save_node_name(%s)", _node_name.c_str());
 
 	int fd = io::open("nodename", O_WRONLY | O_CREAT, 0644);
 	if (fd >= 0) {
 		if (io::write(fd, _node_name.c_str(), _node_name.size()) != static_cast<ssize_t>(_node_name.size())) {
-			L_CRIT(nullptr, "Cannot write in nodename file");
+			L_CRIT("Cannot write in nodename file");
 			sig_exit(-EX_IOERR);
 		}
 		io::close(fd);
 	} else {
-		L_CRIT(nullptr, "Cannot open or create the nodename file");
+		L_CRIT("Cannot open or create the nodename file");
 		sig_exit(-EX_NOINPUT);
 	}
 }
@@ -219,7 +219,7 @@ XapiandManager::save_node_name(const std::string& _node_name)
 std::string
 XapiandManager::set_node_name(const std::string& node_name_)
 {
-	L_CALL(this, "XapiandManager::set_node_name(%s)", node_name_.c_str());
+	L_CALL("XapiandManager::set_node_name(%s)", node_name_.c_str());
 
 	node_name = load_node_name();
 
@@ -238,7 +238,7 @@ XapiandManager::set_node_name(const std::string& node_name_)
 uint64_t
 XapiandManager::load_node_id()
 {
-	L_CALL(this, "XapiandManager::load_node_id()");
+	L_CALL("XapiandManager::load_node_id()");
 
 	uint64_t node_id = 0;
 	ssize_t length = 0;
@@ -253,7 +253,7 @@ XapiandManager::load_node_id()
 		try {
 			node_id = unserialise_node_id(std::string(buf, length));
 		} catch (...) {
-			L_CRIT(nullptr, "Cannot load node_id!");
+			L_CRIT("Cannot load node_id!");
 			sig_exit(-EX_IOERR);
 		}
 	}
@@ -264,18 +264,18 @@ XapiandManager::load_node_id()
 void
 XapiandManager::save_node_id(uint64_t node_id)
 {
-	L_CALL(this, "XapiandManager::save_node_id(%llu)", node_id);
+	L_CALL("XapiandManager::save_node_id(%llu)", node_id);
 
 	int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
 	if (fd >= 0) {
 		auto node_id_str = serialise_node_id(node_id);
 		if (io::write(fd, node_id_str.data(), node_id_str.size()) != static_cast<ssize_t>(node_id_str.size())) {
-			L_CRIT(nullptr, "Cannot write in node file");
+			L_CRIT("Cannot write in node file");
 			sig_exit(-EX_IOERR);
 		}
 		io::close(fd);
 	} else {
-		L_CRIT(nullptr, "Cannot open or create the node file");
+		L_CRIT("Cannot open or create the node file");
 		sig_exit(-EX_NOINPUT);
 	}
 }
@@ -284,7 +284,7 @@ XapiandManager::save_node_id(uint64_t node_id)
 uint64_t
 XapiandManager::get_node_id()
 {
-	L_CALL(this, "XapiandManager::get_node_id()");
+	L_CALL("XapiandManager::get_node_id()");
 
 	uint64_t node_id = load_node_id();
 
@@ -300,7 +300,7 @@ XapiandManager::get_node_id()
 void
 XapiandManager::setup_node()
 {
-	L_CALL(this, "XapiandManager::setup_node()");
+	L_CALL("XapiandManager::setup_node()");
 
 	for (const auto& weak_server : servers_weak) {
 		if (auto server = weak_server.lock()) {
@@ -308,16 +308,16 @@ XapiandManager::setup_node()
 			return;
 		}
 	}
-	L_WARNING(this, "Cannot setup node: No servers!");
+	L_WARNING("Cannot setup node: No servers!");
 }
 
 
 void
 XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 {
-	L_CALL(this, "XapiandManager::setup_node(...)");
+	L_CALL("XapiandManager::setup_node(...)");
 
-	L_DISCOVERY(this, "Setup Node!");
+	L_DISCOVERY("Setup Node!");
 
 	int new_cluster = 0;
 
@@ -332,7 +332,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		db_handler.get_document(serialise_node_id(local_node_->id));
 	} catch (const CheckoutError&) {
 		new_cluster = 1;
-		L_INFO(this, "Cluster database doesn't exist. Generating database...");
+		L_INFO("Cluster database doesn't exist. Generating database...");
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 			db_handler.index(serialise_node_id(local_node_->id), false, {
@@ -342,14 +342,14 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				{ "tagline",      { { RESERVED_TYPE,  TERM_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
 			}, true, msgpack_type);
 		} catch (const CheckoutError&) {
-			L_CRIT(this, "Cannot generate cluster database");
+			L_CRIT("Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
 		}
 	} catch (const DocNotFoundError&) {
-		L_CRIT(this, "Cluster database is corrupt");
+		L_CRIT("Cluster database is corrupt");
 		sig_exit(-EX_DATAERR);
 	} catch (const Exception& e) {
-		L_CRIT(this, "Exception: %s", e.what());
+		L_CRIT("Exception: %s", e.what());
 		sig_exit(-EX_SOFTWARE);
 	}
 
@@ -361,7 +361,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		local_node_copy->name = node_name;
 		local_node = std::shared_ptr<const Node>(local_node_copy.release());
 	}
-	L_INFO(this, "Node %s accepted to the party!", node_name.c_str());
+	L_INFO("Node %s accepted to the party!", node_name.c_str());
 
 	{
 		// Get a node (any node)
@@ -372,11 +372,11 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			// Replicate database from the other node
 	#ifdef XAPIAND_CLUSTERING
 			if (!opts.solo) {
-				L_INFO(this, "Syncing cluster data from %s...", node->name.c_str());
+				L_INFO("Syncing cluster data from %s...", node->name.c_str());
 
 				auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
 				if (ret.get()) {
-					L_INFO(this, "Cluster data being synchronized from %s...", node->name.c_str());
+					L_INFO("Cluster data being synchronized from %s...", node->name.c_str());
 					new_cluster = 2;
 					break;
 				}
@@ -402,22 +402,22 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (opts.solo) {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE(this, "Using solo cluster: %s.", opts.cluster_name.c_str());
+				L_NOTICE("Using solo cluster: %s.", opts.cluster_name.c_str());
 				break;
 			case 1:
-				L_NOTICE(this, "Using new solo cluster: %s.", opts.cluster_name.c_str());
+				L_NOTICE("Using new solo cluster: %s.", opts.cluster_name.c_str());
 				break;
 		}
 	} else {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE(this, "Joined cluster: %s. It is now online!", opts.cluster_name.c_str());
+				L_NOTICE("Joined cluster: %s. It is now online!", opts.cluster_name.c_str());
 				break;
 			case 1:
-				L_NOTICE(this, "Joined new cluster: %s. It is now online!", opts.cluster_name.c_str());
+				L_NOTICE("Joined new cluster: %s. It is now online!", opts.cluster_name.c_str());
 				break;
 			case 2:
-				L_NOTICE(this, "Joined cluster: %s. It was already online!", opts.cluster_name.c_str());
+				L_NOTICE("Joined cluster: %s. It was already online!", opts.cluster_name.c_str());
 				break;
 		}
 	}
@@ -427,19 +427,19 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 struct sockaddr_in
 XapiandManager::host_address()
 {
-	L_CALL(this, "XapiandManager::host_address()");
+	L_CALL("XapiandManager::host_address()");
 
 	struct sockaddr_in addr;
 	struct ifaddrs *if_addr_struct;
 	if (getifaddrs(&if_addr_struct) < 0) {
-		L_ERR(this, "ERROR: getifaddrs: %s", strerror(errno));
+		L_ERR("ERROR: getifaddrs: %s", strerror(errno));
 	} else {
 		for (struct ifaddrs *ifa = if_addr_struct; ifa != NULL; ifa = ifa->ifa_next) {
 			if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET && !(ifa->ifa_flags & IFF_LOOPBACK)) { // check it is IP4
 				char ip[INET_ADDRSTRLEN];
 				addr = *(struct sockaddr_in *)ifa->ifa_addr;
 				inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
-				L_NOTICE(this, "Node IP address is %s on interface %s", ip, ifa->ifa_name);
+				L_NOTICE("Node IP address is %s on interface %s", ip, ifa->ifa_name);
 				break;
 			}
 		}
@@ -460,7 +460,7 @@ XapiandManager::signal_sig(int sig)
 void
 XapiandManager::signal_sig_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "XapiandManager::signal_sig_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("XapiandManager::signal_sig_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
 
 	ignore_unused(revents);
 
@@ -482,7 +482,7 @@ XapiandManager::signal_sig_async_cb(ev::async&, int revents)
 void
 XapiandManager::shutdown_sig(int sig)
 {
-	L_CALL(this, "XapiandManager::shutdown_sig(%d)", sig);
+	L_CALL("XapiandManager::shutdown_sig(%d)", sig);
 
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
@@ -495,26 +495,26 @@ XapiandManager::shutdown_sig(int sig)
 	}
 	if (shutdown_now && sig != SIGTERM) {
 		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
-			L_WARNING(this, "You insisted... Xapiand exiting now!");
+			L_WARNING("You insisted... Xapiand exiting now!");
 			throw Exit(1);
 		}
 	} else if (shutdown_asap && sig != SIGTERM) {
 		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			shutdown_now = now;
-			L_INFO(this, "Trying immediate shutdown.");
+			L_INFO("Trying immediate shutdown.");
 		} else if (sig == 0) {
 			shutdown_now = now;
 		}
 	} else {
 		switch (sig) {
 			case SIGINT:
-				L_INFO(this, "Received SIGINT scheduling shutdown...");
+				L_INFO("Received SIGINT scheduling shutdown...");
 				break;
 			case SIGTERM:
-				L_INFO(this, "Received SIGTERM scheduling shutdown...");
+				L_INFO("Received SIGTERM scheduling shutdown...");
 				break;
 			default:
-				L_INFO(this, "Received shutdown signal, scheduling shutdown...");
+				L_INFO("Received shutdown signal, scheduling shutdown...");
 		};
 	}
 
@@ -539,11 +539,11 @@ XapiandManager::destroy_impl()
 
 void
 XapiandManager::destroyer() {
-	L_CALL(this, "XapiandManager::destroyer()");
+	L_CALL("XapiandManager::destroyer()");
 
 #ifdef XAPIAND_CLUSTERING
 	if (auto discovery = weak_discovery.lock()) {
-		L_INFO(this, "Waving goodbye to cluster %s!", opts.cluster_name.c_str());
+		L_INFO("Waving goodbye to cluster %s!", opts.cluster_name.c_str());
 		discovery->stop();
 	}
 #endif
@@ -555,7 +555,7 @@ XapiandManager::destroyer() {
 void
 XapiandManager::shutdown_impl(time_t asap, time_t now)
 {
-	L_CALL(this, "XapiandManager::shutdown_impl(%d, %d)", (int)asap, (int)now);
+	L_CALL("XapiandManager::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 
@@ -571,7 +571,7 @@ XapiandManager::shutdown_impl(time_t asap, time_t now)
 void
 XapiandManager::make_servers(const opts_t& o)
 {
-	L_CALL(this, "XapiandManager::make_servers()");
+	L_CALL("XapiandManager::make_servers()");
 
 	std::string msg("Listening on ");
 
@@ -596,7 +596,7 @@ XapiandManager::make_servers(const opts_t& o)
 #endif
 
 	msg += "at pid:" + std::to_string(getpid()) + " ...";
-	L_NOTICE(this, msg.c_str());
+	L_NOTICE(msg.c_str());
 
 
 	for (ssize_t i = 0; i < o.num_servers; ++i) {
@@ -622,7 +622,7 @@ XapiandManager::make_servers(const opts_t& o)
 	weak_http = std::move(http);
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		L_INFO(this, "Joining cluster %s...", opts.cluster_name.c_str());
+		L_INFO("Joining cluster %s...", opts.cluster_name.c_str());
 		discovery->start();
 
 		weak_binary = std::move(binary);
@@ -652,10 +652,10 @@ XapiandManager::make_replicators(const opts_t& o)
 void
 XapiandManager::run(const opts_t& o)
 {
-	L_CALL(this, "XapiandManager::run()");
+	L_CALL("XapiandManager::run()");
 
 	if (node_name == "~") {
-		L_CRIT(this, "Node name %s doesn't match with the one in the cluster's database!", o.node_name.c_str());
+		L_CRIT("Node name %s doesn't match with the one in the cluster's database!", o.node_name.c_str());
 		join();
 		throw Exit(EX_CONFIG);
 	}
@@ -685,16 +685,16 @@ XapiandManager::run(const opts_t& o)
 		std::to_string(o.num_fsynchers) + ((o.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
 	});
 
-	L_NOTICE(this, "Started " + join_string(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
+	L_NOTICE("Started " + join_string(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
 	if (opts.solo) {
 		setup_node();
 	}
 
 	try {
-		L_EV(this, "Entered manager loop...");
+		L_EV("Entered manager loop...");
 		run_loop();
-		L_EV(this, "Manager loop ended!");
+		L_EV("Manager loop ended!");
 	} catch (...) {
 		join();
 		throw;
@@ -710,20 +710,20 @@ XapiandManager::run(const opts_t& o)
 void
 XapiandManager::finish()
 {
-	L_CALL(this, "XapiandManager::finish()");
+	L_CALL("XapiandManager::finish()");
 
-	L_MANAGER(this, "Finishing servers pool!");
+	L_MANAGER("Finishing servers pool!");
 	server_pool.finish();
 
 #ifdef XAPIAND_CLUSTERING
-	L_MANAGER(this, "Finishing replicators pool!");
+	L_MANAGER("Finishing replicators pool!");
 	replicator_pool.finish();
 #endif
 
-	L_MANAGER(this, "Finishing commiters pool!");
+	L_MANAGER("Finishing commiters pool!");
 	DatabaseAutocommit::finish();
 
-	L_MANAGER(this, "Finishing async fsync pool!");
+	L_MANAGER("Finishing async fsync pool!");
 	AsyncFsync::finish();
 }
 
@@ -731,51 +731,51 @@ XapiandManager::finish()
 void
 XapiandManager::join()
 {
-	L_CALL(this, "XapiandManager::join()");
+	L_CALL("XapiandManager::join()");
 
-	L_MANAGER(this, "Workers:" BLUE "%s", dump_tree().c_str());
+	L_MANAGER("Workers:" BLUE "%s", dump_tree().c_str());
 
 	finish();
 
-	L_MANAGER(this, "Waiting for %zu server%s...", server_pool.running_size(), (server_pool.running_size() == 1) ? "" : "s");
+	L_MANAGER("Waiting for %zu server%s...", server_pool.running_size(), (server_pool.running_size() == 1) ? "" : "s");
 	server_pool.join();
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		L_MANAGER(this, "Waiting for %zu replicator%s...", replicator_pool.running_size(), (replicator_pool.running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for %zu replicator%s...", replicator_pool.running_size(), (replicator_pool.running_size() == 1) ? "" : "s");
 		replicator_pool.join();
 	}
 #endif
 
-	L_MANAGER(this, "Finishing autocommitter scheduler!");
+	L_MANAGER("Finishing autocommitter scheduler!");
 	DatabaseAutocommit::finish();
 
-	L_MANAGER(this, "Waiting for %zu autocommitter%s...", DatabaseAutocommit::running_size(), (DatabaseAutocommit::running_size() == 1) ? "" : "s");
+	L_MANAGER("Waiting for %zu autocommitter%s...", DatabaseAutocommit::running_size(), (DatabaseAutocommit::running_size() == 1) ? "" : "s");
 	DatabaseAutocommit::join();
 
-	L_MANAGER(this, "Finishing async fsync threads pool!");
+	L_MANAGER("Finishing async fsync threads pool!");
 	AsyncFsync::finish();
 
-	L_MANAGER(this, "Waiting for %zu async fsync%s...", AsyncFsync::running_size(), (AsyncFsync::running_size() == 1) ? "" : "s");
+	L_MANAGER("Waiting for %zu async fsync%s...", AsyncFsync::running_size(), (AsyncFsync::running_size() == 1) ? "" : "s");
 	AsyncFsync::join();
 
-	L_MANAGER(this, "Finishing worker threads pool!");
+	L_MANAGER("Finishing worker threads pool!");
 	thread_pool.finish();
 
-	L_MANAGER(this, "Finishing database pool!");
+	L_MANAGER("Finishing database pool!");
 	database_pool.finish();
 
-	L_MANAGER(this, "Waiting for %zu worker thread%s...", thread_pool.running_size(), (thread_pool.running_size() == 1) ? "" : "s");
+	L_MANAGER("Waiting for %zu worker thread%s...", thread_pool.running_size(), (thread_pool.running_size() == 1) ? "" : "s");
 	thread_pool.join();
 
-	L_MANAGER(this, "Server ended!");
+	L_MANAGER("Server ended!");
 }
 
 
 size_t
 XapiandManager::nodes_size()
 {
-	L_CALL(this, "XapiandManager::nodes_size()");
+	L_CALL("XapiandManager::nodes_size()");
 
 	std::unique_lock<std::mutex> lk_n(nodes_mtx);
 	return nodes.size();
@@ -785,7 +785,7 @@ XapiandManager::nodes_size()
 bool
 XapiandManager::is_single_node()
 {
-	L_CALL(this, "XapiandManager::is_single_node()");
+	L_CALL("XapiandManager::is_single_node()");
 
 	return opts.solo || (nodes_size() == 0);
 }
@@ -796,7 +796,7 @@ XapiandManager::is_single_node()
 void
 XapiandManager::reset_state()
 {
-	L_CALL(this, "XapiandManager::reset_state()");
+	L_CALL("XapiandManager::reset_state()");
 
 	if (state != State::RESET) {
 		state = State::RESET;
@@ -810,7 +810,7 @@ XapiandManager::reset_state()
 bool
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
-	L_CALL(this, "XapiandManager::put_node(%s)", repr(node->to_string()).c_str());
+	L_CALL("XapiandManager::put_node(%s)", repr(node->to_string()).c_str());
 
 	auto local_node_ = local_node.load();
 	std::string lower_node_name(lower_string(node->name));
@@ -843,7 +843,7 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 std::shared_ptr<const Node>
 XapiandManager::get_node(const std::string& _node_name)
 {
-	L_CALL(this, "XapiandManager::get_node(%s)", _node_name.c_str());
+	L_CALL("XapiandManager::get_node(%s)", _node_name.c_str());
 
 	try {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
@@ -857,7 +857,7 @@ XapiandManager::get_node(const std::string& _node_name)
 std::shared_ptr<const Node>
 XapiandManager::touch_node(const std::string& _node_name, int32_t region)
 {
-	L_CALL(this, "XapiandManager::touch_node(%s, %x)", _node_name.c_str(), region);
+	L_CALL("XapiandManager::touch_node(%s, %x)", _node_name.c_str(), region);
 
 	std::string lower_node_name(lower_string(_node_name));
 
@@ -893,7 +893,7 @@ XapiandManager::touch_node(const std::string& _node_name, int32_t region)
 void
 XapiandManager::drop_node(const std::string& _node_name)
 {
-	L_CALL(this, "XapiandManager::drop_node(%s)", _node_name.c_str());
+	L_CALL("XapiandManager::drop_node(%s)", _node_name.c_str());
 
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	nodes.erase(lower_string(_node_name));
@@ -903,7 +903,7 @@ XapiandManager::drop_node(const std::string& _node_name)
 size_t
 XapiandManager::get_nodes_by_region(int32_t region)
 {
-	L_CALL(this, "XapiandManager::get_nodes_by_region(%x)", region);
+	L_CALL("XapiandManager::get_nodes_by_region(%x)", region);
 
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	size_t cnt = 0;
@@ -917,7 +917,7 @@ XapiandManager::get_nodes_by_region(int32_t region)
 int32_t
 XapiandManager::get_region(const std::string& db_name)
 {
-	L_CALL(this, "XapiandManager::get_region(%s)", db_name.c_str());
+	L_CALL("XapiandManager::get_region(%s)", db_name.c_str());
 
 	bool re_load = false;
 	auto local_node_ = local_node.load();
@@ -940,7 +940,7 @@ XapiandManager::get_region(const std::string& db_name)
 int32_t
 XapiandManager::get_region()
 {
-	L_CALL(this, "XapiandManager::get_region()");
+	L_CALL("XapiandManager::get_region()");
 
 	if (auto raft = weak_raft.lock()) {
 		auto local_node_ = local_node.load();
@@ -962,7 +962,7 @@ XapiandManager::get_region()
 				}
 				local_node = std::shared_ptr<const Node>(local_node_copy.release());
 			}
-			L_RAFT(this, "Regions: %d Region: %d", local_node_->regions, local_node_->region);
+			L_RAFT("Regions: %d Region: %d", local_node_->regions, local_node_->region);
 		}
 	}
 
@@ -974,7 +974,7 @@ XapiandManager::get_region()
 std::shared_future<bool>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
-	L_CALL(this, "XapiandManager::trigger_replication(%s, %s)", repr(src_endpoint.to_string()).c_str(), repr(dst_endpoint.to_string()).c_str());
+	L_CALL("XapiandManager::trigger_replication(%s, %s)", repr(src_endpoint.to_string()).c_str(), repr(dst_endpoint.to_string()).c_str());
 
 	if (auto binary = weak_binary.lock()) {
 		return binary->trigger_replication(src_endpoint, dst_endpoint);
@@ -988,7 +988,7 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 bool
 XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps, std::chrono::duration<double, std::milli> timeout)
 {
-	L_CALL(this, "XapiandManager::resolve_index_endpoint(%s, ...)", path.c_str());
+	L_CALL("XapiandManager::resolve_index_endpoint(%s, ...)", path.c_str());
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
@@ -1175,7 +1175,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 			time_period["end"] = Datetime::iso8601(current_time - (start + offset));
 			int end_sec = modulus(second - offset, SLOT_TIME_SECOND);
 			int start_sec = modulus(end_sec - increment, SLOT_TIME_SECOND);
-			L_DEBUG(this, "sec: %d..%d (pos.second:%u, offset:%d, increment:%d)", start_sec, end_sec, second, offset, increment);
+			L_DEBUG("sec: %d..%d (pos.second:%u, offset:%d, increment:%d)", start_sec, end_sec, second, offset, increment);
 			stats_cnt.add_stats_sec(start_sec, end_sec, added_counters);
 			offset += increment + 1;
 		} else {
@@ -1186,7 +1186,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 			time_period["end"] = Datetime::iso8601(current_time - (start + offset));
 			int end_min = modulus(minute - offset / 60, SLOT_TIME_MINUTE);
 			int start_min = modulus(end_min - increment / 60, SLOT_TIME_MINUTE);
-			L_DEBUG(this, "min: %d..%d (pos.minute:%u, offset:%d, increment:%d)", start_min, end_min, minute, offset, increment);
+			L_DEBUG("min: %d..%d (pos.minute:%u, offset:%d, increment:%d)", start_min, end_min, minute, offset, increment);
 			stats_cnt.add_stats_min(start_min, end_min, added_counters);
 			offset += increment + 60;
 		}

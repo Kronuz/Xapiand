@@ -56,13 +56,13 @@ inline std::string::size_type common_prefix_length(const std::string &a, const s
 RemoteProtocol::RemoteProtocol(BinaryClient* client_)
 	: client(client_)
 	{
-		L_OBJ(this, "CREATED REMOTE PROTOCOL!");
+		L_OBJ("CREATED REMOTE PROTOCOL!");
 	}
 
 
 RemoteProtocol::~RemoteProtocol()
 {
-	L_OBJ(this, "DELETED REMOTE PROTOCOL!");
+	L_OBJ("DELETED REMOTE PROTOCOL!");
 }
 
 

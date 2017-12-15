@@ -91,7 +91,7 @@ template<typename F, typename... Args>
 void
 lock_database::lock(F&& f, Args&&... args)
 {
-	L_CALL(this, "lock_database::lock(...)");
+	L_CALL("lock_database::lock(...)");
 
 	if (db_handler) {
 		if (db_handler->database) {
@@ -106,7 +106,7 @@ lock_database::lock(F&& f, Args&&... args)
 void
 lock_database::lock()
 {
-	L_CALL(this, "lock_database::lock()");
+	L_CALL("lock_database::lock()");
 
 	if (db_handler) {
 		if (db_handler->database) {
@@ -121,7 +121,7 @@ lock_database::lock()
 void
 lock_database::unlock()
 {
-	L_CALL(this, "lock_database::unlock(...)");
+	L_CALL("lock_database::unlock(...)");
 
 	if (db_handler) {
 		if (db_handler->database) {
@@ -155,7 +155,7 @@ DatabaseHandler::get_database() const noexcept
 std::shared_ptr<Schema>
 DatabaseHandler::get_schema(const MsgPack* obj)
 {
-	L_CALL(this, "DatabaseHandler::get_schema(<obj>)");
+	L_CALL("DatabaseHandler::get_schema(<obj>)");
 	auto s = XapiandManager::manager->schemas.get(this, obj);
 	return std::make_shared<Schema>(std::move(s.first), std::move(s.second));
 }
@@ -164,7 +164,7 @@ DatabaseHandler::get_schema(const MsgPack* obj)
 void
 DatabaseHandler::recover_index()
 {
-	L_CALL(this, "DatabaseHandler::recover_index()");
+	L_CALL("DatabaseHandler::recover_index()");
 
 	XapiandManager::manager->database_pool.recover_database(endpoints, RECOVER_REMOVE_WRITABLE);
 	reset(endpoints, flags, HTTP_PUT, context);
@@ -174,7 +174,7 @@ DatabaseHandler::recover_index()
 void
 DatabaseHandler::delete_schema()
 {
-	L_CALL(this, "DatabaseHandler::delete_schema()");
+	L_CALL("DatabaseHandler::delete_schema()");
 
 	const auto local_schema_hash = endpoints.hash();
 	lock_database lk_db(this);
@@ -194,7 +194,7 @@ DatabaseHandler::delete_schema()
 void
 DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<size_t>>& context_)
 {
-	L_CALL(this, "DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()).c_str(), flags_);
+	L_CALL("DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()).c_str(), flags_);
 
 	if (endpoints_.size() == 0) {
 		THROW(ClientError, "It is expected at least one endpoint");
@@ -215,7 +215,7 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 MsgPack
 DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision)
 {
-	L_CALL(this, "DatabaseHandler::repr_wal(%u, %u)", start_revision, end_revision);
+	L_CALL("DatabaseHandler::repr_wal(%u, %u)", start_revision, end_revision);
 
 	if (endpoints.size() != 1) {
 		THROW(ClientError, "It is expected one single endpoint");
@@ -232,7 +232,7 @@ DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision)
 Document
 DatabaseHandler::get_document_term(const std::string& term_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document_term(%s)", repr(term_id).c_str());
+	L_CALL("DatabaseHandler::get_document_term(%s)", repr(term_id).c_str());
 
 	lock_database lk_db(this);
 	Xapian::docid did = database->find_document(term_id);
@@ -255,10 +255,10 @@ DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t s
 			case HTTP_PUT:
 				old_document_pair = get_document_change_seq(term_id);
 				if (old_document_pair) {
-					L_INDEX(this, "Script: on_put(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
+					L_INDEX("Script: on_put(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
 					data = (*processor)["on_put"](data, old_document_pair->second);
 				} else {
-					L_INDEX(this, "Script: on_put(%s)", data.to_string(4).c_str());
+					L_INDEX("Script: on_put(%s)", data.to_string(4).c_str());
 					data = (*processor)["on_put"](data, MsgPack(MsgPack::Type::MAP));
 				}
 				break;
@@ -267,10 +267,10 @@ DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t s
 			case HTTP_MERGE:
 				old_document_pair = get_document_change_seq(term_id);
 				if (old_document_pair) {
-					L_INDEX(this, "Script: on_patch(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
+					L_INDEX("Script: on_patch(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
 					data = (*processor)["on_patch"](data, old_document_pair->second);
 				} else {
-					L_INDEX(this, "Script: on_patch(%s)", data.to_string(4).c_str());
+					L_INDEX("Script: on_patch(%s)", data.to_string(4).c_str());
 					data = (*processor)["on_patch"](data, MsgPack(MsgPack::Type::MAP));
 				}
 				break;
@@ -278,21 +278,21 @@ DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t s
 			case HTTP_DELETE:
 				old_document_pair = get_document_change_seq(term_id);
 				if (old_document_pair) {
-					L_INDEX(this, "Script: on_delete(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
+					L_INDEX("Script: on_delete(%s, %s)", data.to_string(4).c_str(), old_document_pair->second.to_string(4).c_str());
 					data = (*processor)["on_delete"](data, old_document_pair->second);
 				} else {
-					L_INDEX(this, "Script: on_delete(%s)", data.to_string(4).c_str());
+					L_INDEX("Script: on_delete(%s)", data.to_string(4).c_str());
 					data = (*processor)["on_delete"](data, MsgPack(MsgPack::Type::MAP));
 				}
 				break;
 
 			case HTTP_GET:
-				L_INDEX(this, "Script: on_get(%s)", data.to_string(4).c_str());
+				L_INDEX("Script: on_get(%s)", data.to_string(4).c_str());
 				data = (*processor)["on_get"](data);
 				break;
 
 			case HTTP_POST:
-				L_INDEX(this, "Script: on_post(%s)", data.to_string(4).c_str());
+				L_INDEX("Script: on_post(%s)", data.to_string(4).c_str());
 				data = (*processor)["on_post"](data);
 				break;
 
@@ -319,7 +319,7 @@ DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t s
 MsgPack&
 DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script)
 {
-	L_CALL(this, "DatabaseHandler::run_script(...)");
+	L_CALL("DatabaseHandler::run_script(...)");
 
 	if (data_script.is_map()) {
 		const auto& type = data_script.at(RESERVED_TYPE);
@@ -354,7 +354,7 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 DataType
 DatabaseHandler::index(const std::string& document_id, bool stored, const std::string& store, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::index(%s, %s, <store>, %s, <blob>, %s, <ct_type>)", repr(document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
+	L_CALL("DatabaseHandler::index(%s, %s, <store>, %s, <blob>, %s, <ct_type>)", repr(document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
 
 	Xapian::Document doc;
 
@@ -370,7 +370,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 			auto schema_begins = std::chrono::system_clock::now();
 			do {
 				schema = get_schema(&obj);
-				L_INDEX(this, "Schema: %s", repr(schema->to_string()).c_str());
+				L_INDEX("Schema: %s", repr(schema->to_string()).c_str());
 
 				spc_id = schema->get_data_id();
 				if (spc_id.get_type() == FieldType::EMPTY) {
@@ -446,10 +446,10 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 			} while (true);
 
 			if (blob.empty()) {
-				L_INDEX(this, "Data: %s", repr(obj.to_string()).c_str());
+				L_INDEX("Data: %s", repr(obj.to_string()).c_str());
 				doc.set_data(join_data(false, "", obj.serialise(), ""));
 			} else {
-				L_INDEX(this, "Data: %s", repr(obj.to_string()).c_str());
+				L_INDEX("Data: %s", repr(obj.to_string()).c_str());
 				auto ct_type_str = ct_type.to_string();
 				doc.set_data(join_data(stored, store, obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
 			}
@@ -494,7 +494,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 DataType
 DatabaseHandler::index(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::index(%s, %s, <body>, %s, %s/%s)", repr(document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
+	L_CALL("DatabaseHandler::index(%s, %s, <body>, %s, %s/%s)", repr(document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "Database is read-only");
@@ -524,7 +524,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const MsgPac
 DataType
 DatabaseHandler::patch(const std::string& document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::patch(%s, <patches>, %s, %s/%s)", repr(document_id).c_str(), commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
+	L_CALL("DatabaseHandler::patch(%s, <patches>, %s, %s/%s)", repr(document_id).c_str(), commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "database is read-only");
@@ -555,7 +555,7 @@ DatabaseHandler::patch(const std::string& document_id, const MsgPack& patches, b
 DataType
 DatabaseHandler::merge(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL(this, "DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
+	L_CALL("DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "database is read-only");
@@ -594,13 +594,13 @@ DatabaseHandler::merge(const std::string& document_id, bool stored, const MsgPac
 void
 DatabaseHandler::write_schema(const MsgPack& obj)
 {
-	L_CALL(this, "DatabaseHandler::write_schema(<obj>)");
+	L_CALL("DatabaseHandler::write_schema(<obj>)");
 
 	auto schema_begins = std::chrono::system_clock::now();
 	do {
 		schema = get_schema();
 		schema->write(obj, method == HTTP_PUT);
-		L_INDEX(this, "Schema to write: %s", repr(schema->to_string()).c_str());
+		L_INDEX("Schema to write: %s", repr(schema->to_string()).c_str());
 		auto update = update_schema();
 		if (update.first) {
 			auto schema_ends = std::chrono::system_clock::now();
@@ -618,7 +618,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 Xapian::RSet
 DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 {
-	L_CALL(this, "DatabaseHandler::get_rset(...)");
+	L_CALL("DatabaseHandler::get_rset(...)");
 
 	Xapian::RSet rset;
 
@@ -648,7 +648,7 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 std::unique_ptr<Xapian::ExpandDecider>
 DatabaseHandler::get_edecider(const similar_field_t& similar)
 {
-	L_CALL(this, "DatabaseHandler::get_edecider(...)");
+	L_CALL("DatabaseHandler::get_edecider(...)");
 
 	// Expand Decider filter.
 	std::vector<std::string> prefixes;
@@ -671,7 +671,7 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 MSet
 DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& /*suggestions*/)
 {
-	L_CALL(this, "DatabaseHandler::get_mset(...)");
+	L_CALL("DatabaseHandler::get_mset(...)");
 
 	MSet mset;
 
@@ -809,7 +809,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 std::pair<bool, bool>
 DatabaseHandler::update_schema()
 {
-	L_CALL(this, "DatabaseHandler::update_schema()");
+	L_CALL("DatabaseHandler::update_schema()");
 
 	auto mod_schema = schema->get_modified_schema();
 	if (mod_schema) {
@@ -826,7 +826,7 @@ DatabaseHandler::update_schema()
 std::string
 DatabaseHandler::get_prefixed_term_id(const std::string& document_id)
 {
-	L_CALL(this, "DatabaseHandler::get_prefixed_term_id(%s)", repr(document_id).c_str());
+	L_CALL("DatabaseHandler::get_prefixed_term_id(%s)", repr(document_id).c_str());
 
 	schema = get_schema();
 
@@ -846,7 +846,7 @@ DatabaseHandler::get_prefixed_term_id(const std::string& document_id)
 std::vector<std::string>
 DatabaseHandler::get_metadata_keys()
 {
-	L_CALL(this, "DatabaseHandler::get_metadata_keys()");
+	L_CALL("DatabaseHandler::get_metadata_keys()");
 
 	lock_database lk_db(this);
 	return database->get_metadata_keys();
@@ -856,7 +856,7 @@ DatabaseHandler::get_metadata_keys()
 std::string
 DatabaseHandler::get_metadata(const std::string& key)
 {
-	L_CALL(this, "DatabaseHandler::get_metadata(%s)", repr(key).c_str());
+	L_CALL("DatabaseHandler::get_metadata(%s)", repr(key).c_str());
 
 	lock_database lk_db(this);
 	return database->get_metadata(key);
@@ -866,7 +866,7 @@ DatabaseHandler::get_metadata(const std::string& key)
 bool
 DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool overwrite)
 {
-	L_CALL(this, "DatabaseHandler::set_metadata(%s, %s, %s)", repr(key).c_str(), repr(value).c_str(), overwrite ? "true" : "false");
+	L_CALL("DatabaseHandler::set_metadata(%s, %s, %s)", repr(key).c_str(), repr(value).c_str(), overwrite ? "true" : "false");
 
 	lock_database lk_db(this);
 	if (!overwrite) {
@@ -883,7 +883,7 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 Document
 DatabaseHandler::get_document(const Xapian::docid& did)
 {
-	L_CALL(this, "DatabaseHandler::get_document((Xapian::docid)%d)", did);
+	L_CALL("DatabaseHandler::get_document((Xapian::docid)%d)", did);
 
 	lock_database lk_db(this);
 	return Document(this, database->get_document(did));
@@ -893,7 +893,7 @@ DatabaseHandler::get_document(const Xapian::docid& did)
 Document
 DatabaseHandler::get_document(const std::string& document_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document((std::string)%s)", repr(document_id).c_str());
+	L_CALL("DatabaseHandler::get_document((std::string)%s)", repr(document_id).c_str());
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
@@ -906,7 +906,7 @@ DatabaseHandler::get_document(const std::string& document_id)
 Xapian::docid
 DatabaseHandler::get_docid(const std::string& document_id)
 {
-	L_CALL(this, "DatabaseHandler::get_docid(%s)", repr(document_id).c_str());
+	L_CALL("DatabaseHandler::get_docid(%s)", repr(document_id).c_str());
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
@@ -918,7 +918,7 @@ DatabaseHandler::get_docid(const std::string& document_id)
 void
 DatabaseHandler::delete_document(const std::string& document_id, bool commit_, bool wal_)
 {
-	L_CALL(this, "DatabaseHandler::delete_document(%s)", repr(document_id).c_str());
+	L_CALL("DatabaseHandler::delete_document(%s)", repr(document_id).c_str());
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
@@ -930,7 +930,7 @@ DatabaseHandler::delete_document(const std::string& document_id, bool commit_, b
 MsgPack
 DatabaseHandler::get_document_info(const std::string& document_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document_info(%s)", repr(document_id).c_str());
+	L_CALL("DatabaseHandler::get_document_info(%s)", repr(document_id).c_str());
 
 	auto document = get_document(document_id);
 
@@ -985,7 +985,7 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 MsgPack
 DatabaseHandler::get_database_info()
 {
-	L_CALL(this, "DatabaseHandler::get_database_info()");
+	L_CALL("DatabaseHandler::get_database_info()");
 
 	lock_database lk_db(this);
 	unsigned doccount = database->db->get_doccount();
@@ -1006,7 +1006,7 @@ DatabaseHandler::get_database_info()
 bool
 DatabaseHandler::commit(bool _wal)
 {
-	L_CALL(this, "DatabaseHandler::commit(%s)", _wal ? "true" : "false");
+	L_CALL("DatabaseHandler::commit(%s)", _wal ? "true" : "false");
 
 	lock_database lk_db(this);
 	return database->commit(_wal);
@@ -1016,7 +1016,7 @@ DatabaseHandler::commit(bool _wal)
 bool
 DatabaseHandler::reopen()
 {
-	L_CALL(this, "DatabaseHandler::reopen()");
+	L_CALL("DatabaseHandler::reopen()");
 
 	lock_database lk_db(this);
 	return database->reopen();
@@ -1026,7 +1026,7 @@ DatabaseHandler::reopen()
 long long
 DatabaseHandler::get_mastery_level()
 {
-	L_CALL(this, "DatabaseHandler::get_mastery_level()");
+	L_CALL("DatabaseHandler::get_mastery_level()");
 
 	try {
 		lock_database lk_db(this);
@@ -1040,7 +1040,7 @@ DatabaseHandler::get_mastery_level()
 void
 DatabaseHandler::init_ref(const Endpoint& endpoint)
 {
-	L_CALL(nullptr, "DatabaseHandler::init_ref(%s)", repr(endpoint.to_string()).c_str());
+	L_CALL("DatabaseHandler::init_ref(%s)", repr(endpoint.to_string()).c_str());
 
 	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
@@ -1058,7 +1058,7 @@ DatabaseHandler::init_ref(const Endpoint& endpoint)
 			db_handler.index(document_id, false, obj, true, msgpack_type);
 		}
 	} catch (const CheckoutError&) {
-		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
+		L_CRIT("Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
 		return;
 	}
 }
@@ -1067,7 +1067,7 @@ DatabaseHandler::init_ref(const Endpoint& endpoint)
 void
 DatabaseHandler::inc_ref(const Endpoint& endpoint)
 {
-	L_CALL(nullptr, "DatabaseHandler::inc_ref(%s)", repr(endpoint.to_string()).c_str());
+	L_CALL("DatabaseHandler::inc_ref(%s)", repr(endpoint.to_string()).c_str());
 
 	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
@@ -1094,7 +1094,7 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 			db_handler.index(document_id, false, obj, true, msgpack_type);
 		}
 	} catch (const CheckoutError&) {
-		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
+		L_CRIT("Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
 		return;
 	}
 }
@@ -1103,7 +1103,7 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 void
 DatabaseHandler::dec_ref(const Endpoint& endpoint)
 {
-	L_CALL(nullptr, "DatabaseHandler::dec_ref(%s)", repr(endpoint.to_string()).c_str());
+	L_CALL("DatabaseHandler::dec_ref(%s)", repr(endpoint.to_string()).c_str());
 
 	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
@@ -1125,7 +1125,7 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 			}
 		} catch (const DocNotFoundError&) { }
 	} catch (const CheckoutError&) {
-		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
+		L_CRIT("Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
 		return;
 	}
 }
@@ -1134,7 +1134,7 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 int
 DatabaseHandler::get_master_count()
 {
-	L_CALL(nullptr, "DatabaseHandler::get_master_count()");
+	L_CALL("DatabaseHandler::get_master_count()");
 
 	DatabaseHandler db_handler(Endpoints(Endpoint(".refs")), DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 
@@ -1146,7 +1146,7 @@ DatabaseHandler::get_master_count()
 		auto mset = db_handler.get_mset(q_t, nullptr, nullptr, suggestions);
 		return mset.get_matches_estimated();
 	} catch (const CheckoutError&) {
-		L_CRIT(nullptr, "Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
+		L_CRIT("Cannot open %s database", repr(db_handler.endpoints.to_string()).c_str());
 		return - 1;
 	}
 }
@@ -1156,7 +1156,7 @@ DatabaseHandler::get_master_count()
 const std::shared_ptr<std::pair<size_t, const MsgPack>>
 DatabaseHandler::get_document_change_seq(const std::string& term_id)
 {
-	L_CALL(this, "DatabaseHandler::get_document_change_seq(%s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str());
+	L_CALL("DatabaseHandler::get_document_change_seq(%s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str());
 
 	static std::hash<std::string> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(term_id);
@@ -1197,7 +1197,7 @@ DatabaseHandler::get_document_change_seq(const std::string& term_id)
 bool
 DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
-	L_CALL(this, "DatabaseHandler::set_document_change_seq(%s, %s, %s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str(), std::to_string(new_document_pair->first).c_str(), old_document_pair ? std::to_string(old_document_pair->first).c_str() : "nullptr");
+	L_CALL("DatabaseHandler::set_document_change_seq(%s, %s, %s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str(), std::to_string(new_document_pair->first).c_str(), old_document_pair ? std::to_string(old_document_pair->first).c_str() : "nullptr");
 
 	static std::hash<std::string> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(term_id);
@@ -1253,7 +1253,7 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 void
 DatabaseHandler::dec_document_change_cnt(const std::string& term_id)
 {
-	L_CALL(this, "DatabaseHandler::dec_document_change_cnt(%s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str());
+	L_CALL("DatabaseHandler::dec_document_change_cnt(%s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str());
 
 	static std::hash<std::string> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(term_id);
@@ -1324,7 +1324,7 @@ Document::operator=(const Document& doc_)
 void
 Document::update()
 {
-	L_CALL(this, "Document::update()");
+	L_CALL("Document::update()");
 
 	if (db_handler && db_handler->database && database != db_handler->database) {
 		doc = db_handler->database->get_document(doc.get_docid());
@@ -1337,7 +1337,7 @@ Document::update()
 std::string
 Document::serialise(size_t retries)
 {
-	L_CALL(this, "Document::serialise(%zu)", retries);
+	L_CALL("Document::serialise(%zu)", retries);
 
 	try {
 		lock_database lk_db(db_handler);
@@ -1356,7 +1356,7 @@ Document::serialise(size_t retries)
 std::string
 Document::get_value(Xapian::valueno slot, size_t retries)
 {
-	L_CALL(this, "Document::get_value(%u, %zu)", slot, retries);
+	L_CALL("Document::get_value(%u, %zu)", slot, retries);
 
 	try {
 		lock_database lk_db(db_handler);
@@ -1375,7 +1375,7 @@ Document::get_value(Xapian::valueno slot, size_t retries)
 std::string
 Document::get_data(size_t retries)
 {
-	L_CALL(this, "Document::get_data(%zu)", retries);
+	L_CALL("Document::get_data(%zu)", retries);
 
 	try {
 		lock_database lk_db(db_handler);
@@ -1394,7 +1394,7 @@ Document::get_data(size_t retries)
 std::string
 Document::get_blob(size_t retries)
 {
-	L_CALL(this, "Document::get_blob(%zu)", retries);
+	L_CALL("Document::get_blob(%zu)", retries);
 
 	try {
 		lock_database lk_db(db_handler);
@@ -1419,7 +1419,7 @@ Document::get_blob(size_t retries)
 MsgPack
 Document::get_terms(size_t retries)
 {
-	L_CALL(this, "get_terms(%zu)", retries);
+	L_CALL("get_terms(%zu)", retries);
 
 	try {
 		MsgPack terms;
@@ -1460,7 +1460,7 @@ Document::get_terms(size_t retries)
 MsgPack
 Document::get_values(size_t retries)
 {
-	L_CALL(this, "get_values(%zu)", retries);
+	L_CALL("get_values(%zu)", retries);
 
 	try {
 		MsgPack values;
@@ -1487,7 +1487,7 @@ Document::get_values(size_t retries)
 MsgPack
 Document::get_value(const std::string& slot_name)
 {
-	L_CALL(this, "Document::get_value(%s)", slot_name.c_str());
+	L_CALL("Document::get_value(%s)", slot_name.c_str());
 
 	if (db_handler) {
 		auto slot_field = db_handler->get_schema()->get_slot_field(slot_name);
@@ -1501,7 +1501,7 @@ Document::get_value(const std::string& slot_name)
 std::pair<bool, std::string>
 Document::get_store()
 {
-	L_CALL(this, "Document::get_store()");
+	L_CALL("Document::get_store()");
 
 	return ::split_data_store(get_data());
 }
@@ -1510,7 +1510,7 @@ Document::get_store()
 MsgPack
 Document::get_obj()
 {
-	L_CALL(this, "Document::get_obj()");
+	L_CALL("Document::get_obj()");
 
 	return MsgPack::unserialise(::split_data_obj(get_data()));
 }
@@ -1519,7 +1519,7 @@ Document::get_obj()
 MsgPack
 Document::get_field(const std::string& slot_name)
 {
-	L_CALL(this, "Document::get_field(%s)", slot_name.c_str());
+	L_CALL("Document::get_field(%s)", slot_name.c_str());
 
 	return get_field(slot_name, get_obj());
 }
@@ -1528,7 +1528,7 @@ Document::get_field(const std::string& slot_name)
 MsgPack
 Document::get_field(const std::string& slot_name, const MsgPack& obj)
 {
-	L_CALL(nullptr, "Document::get_field(%s, <obj>)", slot_name.c_str());
+	L_CALL("Document::get_field(%s, <obj>)", slot_name.c_str());
 
 	auto itf = obj.find(slot_name);
 	if (itf != obj.end()) {

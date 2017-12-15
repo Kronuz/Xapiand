@@ -700,19 +700,19 @@ static int make_search(const std::vector<sort_t> _tests, const std::string& metr
 			mset = db_sort.db_handler.get_mset(query, nullptr, nullptr, suggestions);
 			if (mset.size() != test.expect_result.size()) {
 				++cont;
-				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %u. Expected: %zu.", mset.size(), test.expect_result.size());
+				L_ERR("ERROR: Different number of documents. Obtained %u. Expected: %zu.", mset.size(), test.expect_result.size());
 			} else {
 				Xapian::MSetIterator m = mset.begin();
 				for (auto it = test.expect_result.begin(); m != mset.end(); ++it, ++m) {
 					auto val = Unserialise::MsgPack(FieldType::INTEGER, m.get_document().get_value(0)).to_string();
 					if (it->compare(val) != 0) {
 						++cont;
-						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", ID_FIELD_NAME, val.c_str(), ID_FIELD_NAME, it->c_str());
+						L_ERR("ERROR: Result = %s:%s   Expected = %s:%s", ID_FIELD_NAME, val.c_str(), ID_FIELD_NAME, it->c_str());
 					}
 				}
 			}
 		} catch (const std::exception& exc) {
-			L_EXC(nullptr, "ERROR: %s", exc.what());
+			L_EXC("ERROR: %s", exc.what());
 			++cont;
 		}
 	}
@@ -726,16 +726,16 @@ int sort_test_string_levens() {
 	try {
 		int cont = make_search(string_levens_tests, "leven");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings (levens) is correct!");
+			L_DEBUG("Testing sort strings (levens) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (levens) has mistakes.");
+			L_ERR("ERROR: Testing sort strings (levens) has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -746,16 +746,16 @@ int sort_test_string_jaro() {
 	try {
 		int cont = make_search(string_jaro_tests, "jaro");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings (jaro) is correct!");
+			L_DEBUG("Testing sort strings (jaro) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (jaro) has mistakes.");
+			L_ERR("ERROR: Testing sort strings (jaro) has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -766,16 +766,16 @@ int sort_test_string_jaro_w() {
 	try {
 		int cont = make_search(string_jaro_w_tests, "jarow");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings  (jaro-winkler) is correct!");
+			L_DEBUG("Testing sort strings  (jaro-winkler) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (jaro-winkler)  has mistakes.");
+			L_ERR("ERROR: Testing sort strings (jaro-winkler)  has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -786,16 +786,16 @@ int sort_test_string_dice() {
 	try {
 		int cont = make_search(string_dice_tests, "dice");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings (sorensen-dice) is correct!");
+			L_DEBUG("Testing sort strings (sorensen-dice) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (sorensen-dice) has mistakes.");
+			L_ERR("ERROR: Testing sort strings (sorensen-dice) has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -806,16 +806,16 @@ int sort_test_string_jaccard() {
 	try {
 		int cont = make_search(string_jaccard_tests, "jaccard");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings (jaccard) is correct!");
+			L_DEBUG("Testing sort strings (jaccard) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (jaccard) has mistakes.");
+			L_ERR("ERROR: Testing sort strings (jaccard) has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -826,16 +826,16 @@ int sort_test_string_lcs() {
 	try {
 		int cont = make_search(string_lcs_tests, "lcs");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings (lcs) is correct!");
+			L_DEBUG("Testing sort strings (lcs) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (lcs) has mistakes.");
+			L_ERR("ERROR: Testing sort strings (lcs) has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -846,16 +846,16 @@ int sort_test_string_lcsq() {
 	try {
 		int cont = make_search(string_lcsq_tests, "lcsq");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings (lcsq) is correct!");
+			L_DEBUG("Testing sort strings (lcsq) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (lcsq) has mistakes.");
+			L_ERR("ERROR: Testing sort strings (lcsq) has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -866,16 +866,16 @@ int sort_test_string_soundex_en() {
 	try {
 		int cont = make_search(string_soundex_en_tests, "soundex");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings (soundex-en) is correct!");
+			L_DEBUG("Testing sort strings (soundex-en) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (soundex-en) has mistakes.");
+			L_ERR("ERROR: Testing sort strings (soundex-en) has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -886,16 +886,16 @@ int sort_test_string_soundex_fr() {
 	try {
 		int cont = make_search(string_soundex_fr_tests, "soundex");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings (soundex-fr) is correct!");
+			L_DEBUG("Testing sort strings (soundex-fr) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (soundex-fr) has mistakes.");
+			L_ERR("ERROR: Testing sort strings (soundex-fr) has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -906,16 +906,16 @@ int sort_test_string_soundex_de() {
 	try {
 		int cont = make_search(string_soundex_de_tests, "soundex");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings (soundex-de) is correct!");
+			L_DEBUG("Testing sort strings (soundex-de) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (soundex-de) has mistakes.");
+			L_ERR("ERROR: Testing sort strings (soundex-de) has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -926,16 +926,16 @@ int sort_test_string_soundex_es() {
 	try {
 		int cont = make_search(string_soundex_es_tests, "soundex");
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort strings (soundex-es) is correct!");
+			L_DEBUG("Testing sort strings (soundex-es) is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort strings (soundex-es) has mistakes.");
+			L_ERR("ERROR: Testing sort strings (soundex-es) has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -946,16 +946,16 @@ int sort_test_floats() {
 	try {
 		int cont = make_search(float_tests);
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort floats is correct!");
+			L_DEBUG("Testing sort floats is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort floats has mistakes.");
+			L_ERR("ERROR: Testing sort floats has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -966,16 +966,16 @@ int sort_test_integers() {
 	try {
 		int cont = make_search(integer_tests);
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort integers is correct!");
+			L_DEBUG("Testing sort integers is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort integers has mistakes.");
+			L_ERR("ERROR: Testing sort integers has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -986,16 +986,16 @@ int sort_test_positives() {
 	try {
 		int cont = make_search(positive_tests);
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort positives is correct!");
+			L_DEBUG("Testing sort positives is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort positives has mistakes.");
+			L_ERR("ERROR: Testing sort positives has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -1006,16 +1006,16 @@ int sort_test_date() {
 	try {
 		int cont = make_search(date_tests);
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort dates is correct!");
+			L_DEBUG("Testing sort dates is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort dates has mistakes.");
+			L_ERR("ERROR: Testing sort dates has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN (1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN (1);
 	}
 }
@@ -1026,16 +1026,16 @@ int sort_test_boolean() {
 	try {
 		int cont = make_search(boolean_tests);
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort booleans is correct!");
+			L_DEBUG("Testing sort booleans is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort booleans has mistakes.");
+			L_ERR("ERROR: Testing sort booleans has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }
@@ -1046,16 +1046,16 @@ int sort_test_geo() {
 	try {
 		int cont = make_search(geo_tests);
 		if (cont == 0) {
-			L_DEBUG(nullptr, "Testing sort geospatials is correct!");
+			L_DEBUG("Testing sort geospatials is correct!");
 		} else {
-			L_ERR(nullptr, "ERROR: Testing sort geospatials has mistakes.");
+			L_ERR("ERROR: Testing sort geospatials has mistakes.");
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC(nullptr, "ERROR: %s", exc.what());
+		L_EXC("ERROR: %s", exc.what());
 		RETURN(1);
 	}
 }

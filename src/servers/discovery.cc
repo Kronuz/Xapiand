@@ -41,18 +41,18 @@ Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_r
 
 	enter_async.set<Discovery, &Discovery::enter_async_cb>(this);
 	enter_async.start();
-	L_EV(this, "Start discovery's async enter event");
+	L_EV("Start discovery's async enter event");
 
-	L_OBJ(this, "CREATED DISCOVERY");
+	L_OBJ("CREATED DISCOVERY");
 }
 
 
 Discovery::~Discovery()
 {
 	heartbeat.stop();
-	L_EV(this, "Stop discovery's heartbeat event");
+	L_EV("Stop discovery's heartbeat event");
 
-	L_OBJ(this, "DELETED DISCOVERY");
+	L_OBJ("DELETED DISCOVERY");
 }
 
 
@@ -60,28 +60,28 @@ void
 Discovery::start() {
 	heartbeat.repeat = HEARTBEAT_EXPLORE;
 	heartbeat.again();
-	L_EV(this, "Start discovery's heartbeat exploring event (%f)", heartbeat.repeat);
+	L_EV("Start discovery's heartbeat exploring event (%f)", heartbeat.repeat);
 
-	L_DISCOVERY(this, "Discovery was started! (exploring)");
+	L_DISCOVERY("Discovery was started! (exploring)");
 }
 
 
 void
 Discovery::stop() {
 	heartbeat.stop();
-	L_EV(this, "Stop discovery's heartbeat event");
+	L_EV("Stop discovery's heartbeat event");
 
 	auto local_node_ = local_node.load();
 	send_message(Message::BYE, local_node_->serialise());
 
-	L_DISCOVERY(this, "Discovery was stopped!");
+	L_DISCOVERY("Discovery was stopped!");
 }
 
 
 void
 Discovery::enter_async_cb(ev::async&, int revents)
 {
-	L_CALL(this, "Discovery::enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("Discovery::enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
 
 	ignore_unused(revents);
 
@@ -97,23 +97,23 @@ Discovery::_enter()
 
 	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
 	heartbeat.again();
-	L_EV(this, "Reset discovery's heartbeat event (%f)", heartbeat.repeat);
+	L_EV("Reset discovery's heartbeat event (%f)", heartbeat.repeat);
 
-	L_DISCOVERY(this, "Discovery was started! (heartbeat)");
+	L_DISCOVERY("Discovery was started! (heartbeat)");
 }
 
 
 void
 Discovery::heartbeat_cb(ev::timer&, int revents)
 {
-	L_CALL(this, "Discovery::heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("Discovery::heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
 
 	ignore_unused(revents);
 
-	L_EV_BEGIN(this, "Discovery::heartbeat_cb:BEGIN");
+	L_EV_BEGIN("Discovery::heartbeat_cb:BEGIN");
 
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
-		L_DISCOVERY(this, "Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(XapiandManager::manager->state.load())]);
+		L_DISCOVERY("Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(XapiandManager::manager->state.load())]);
 	}
 
 	switch (XapiandManager::manager->state.load()) {
@@ -134,7 +134,7 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			}
 
 			local_node_ = local_node.load();
-			L_INFO(this, "Advertising as %s (id: %016llX)...", local_node_->name.c_str(), local_node_->id);
+			L_INFO("Advertising as %s (id: %016llX)...", local_node_->name.c_str(), local_node_->id);
 			send_message(Message::HELLO, local_node_->serialise());
 			XapiandManager::manager->state.store(XapiandManager::State::WAITING);
 			break;
@@ -160,11 +160,11 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 		}
 
 		case XapiandManager::State::BAD:
-			L_ERR(this, "ERROR: Manager is in BAD state!!");
+			L_ERR("ERROR: Manager is in BAD state!!");
 			break;
 	}
 
-	L_EV_END(this, "Discovery::heartbeat_cb:END");
+	L_EV_END("Discovery::heartbeat_cb:END");
 }
 
 
@@ -172,9 +172,9 @@ void
 Discovery::send_message(Message type, const std::string& message)
 {
 	if (type != Discovery::Message::HEARTBEAT) {
-		L_DISCOVERY(this, "<< send_message(%s)", MessageNames[toUType(type)]);
+		L_DISCOVERY("<< send_message(%s)", MessageNames[toUType(type)]);
 	}
-	L_DISCOVERY_PROTO(this, "message: %s", repr(message).c_str());
+	L_DISCOVERY_PROTO("message: %s", repr(message).c_str());
 	BaseUDP::send_message(toUType(type), message);
 }
 

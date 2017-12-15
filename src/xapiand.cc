@@ -544,11 +544,11 @@ ssize_t get_max_files_per_proc()
 #ifdef _SYSCTL_NAME
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
 	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
-		L_ERR(nullptr, "ERROR: Unable to get max files per process: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: Unable to get max files per process: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 	}
 #undef _SYSCTL_NAME
 #else
-	L_WARNING(nullptr, "WARNING: No way of getting max files per process.");
+	L_WARNING("WARNING: No way of getting max files per process.");
 #endif
 
 	return max_files_per_proc;
@@ -568,18 +568,18 @@ ssize_t get_open_files()
 	int mib[CTL_MAXNAME + 2];
 	size_t mib_len = sizeof(mib) / sizeof(int);
 	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
-		L_ERR(nullptr, "ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 		return 0;
 	}
 #endif
 #ifdef _SYSCTL_NAME
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
 	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
-		L_ERR(nullptr, "ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 	}
 #undef _SYSCTL_NAME
 #else
-	L_WARNING(nullptr, "WARNING: No way of getting number of open files.");
+	L_WARNING("WARNING: No way of getting number of open files.");
 #endif
 
 	return max_files_per_proc;
@@ -631,12 +631,12 @@ void adjustOpenFilesLimit(opts_t &opts) {
 	ssize_t max_files = opts.max_files;
 	if (max_files) {
 		if (max_files > aprox_available_files) {
-			L_WARNING(nullptr, "The requested open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
+			L_WARNING("The requested open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
 		}
 	} else {
 		max_files = recommended_files;
 		if (max_files > aprox_available_files) {
-			L_WARNING(nullptr, "The minimum recommended open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
+			L_WARNING("The minimum recommended open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
 		}
 	}
 
@@ -649,7 +649,7 @@ void adjustOpenFilesLimit(opts_t &opts) {
 		if (!limit_cur_files || limit_cur_files > 4000) {
 			limit_cur_files = 4000;
 		}
-		L_WARNING(nullptr, "Unable to obtain the current NOFILE limit (%s), assuming %zd", strerror(errno), limit_cur_files);
+		L_WARNING("Unable to obtain the current NOFILE limit (%s), assuming %zd", strerror(errno), limit_cur_files);
 	} else {
 		limit_cur_files = limit.rlim_cur;
 	}
@@ -671,9 +671,9 @@ void adjustOpenFilesLimit(opts_t &opts) {
 			limit.rlim_max = static_cast<rlim_t>(new_max_files);
 			if (setrlimit(RLIMIT_NOFILE, &limit) != -1) {
 				if (increasing) {
-					L_INFO(nullptr, "Increased maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (size_t)limit_cur_files);
+					L_INFO("Increased maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (size_t)limit_cur_files);
 				} else {
-					L_INFO(nullptr, "Decresed maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (size_t)limit_cur_files);
+					L_INFO("Decresed maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (size_t)limit_cur_files);
 				}
 				break;
 			}
@@ -689,7 +689,7 @@ void adjustOpenFilesLimit(opts_t &opts) {
 		}
 
 		if (setrlimit_error) {
-			L_ERR(nullptr, "Server can't set maximum open files to %zd because of OS error: %s", max_files, strerror(setrlimit_error));
+			L_ERR("Server can't set maximum open files to %zd because of OS error: %s", max_files, strerror(setrlimit_error));
 		}
 		max_files = new_max_files;
 	} else {
@@ -715,27 +715,27 @@ void adjustOpenFilesLimit(opts_t &opts) {
 
 	// Warn about changes to the configured dbpool_size or max_clients:
 	if (new_dbpool_size > 0 && new_dbpool_size < opts.dbpool_size) {
-		L_WARNING(nullptr, "You requested a dbpool_size of %zd requiring at least %zd max file descriptors", opts.dbpool_size, (opts.dbpool_size + 1) * FDS_PER_DATABASE  + FDS_RESERVED);
-		L_WARNING(nullptr, "Current maximum open files is %zd so dbpool_size has been reduced to %zd to compensate for low limit.", max_files, new_dbpool_size);
+		L_WARNING("You requested a dbpool_size of %zd requiring at least %zd max file descriptors", opts.dbpool_size, (opts.dbpool_size + 1) * FDS_PER_DATABASE  + FDS_RESERVED);
+		L_WARNING("Current maximum open files is %zd so dbpool_size has been reduced to %zd to compensate for low limit.", max_files, new_dbpool_size);
 	}
 	if (new_max_clients > 0 && new_max_clients < opts.max_clients) {
-		L_WARNING(nullptr, "You requested max_clients of %zd requiring at least %zd max file descriptors", opts.max_clients, (opts.max_clients + 1) * FDS_PER_CLIENT + FDS_RESERVED);
-		L_WARNING(nullptr, "Current maximum open files is %zd so max_clients has been reduced to %zd to compensate for low limit.", max_files, new_max_clients);
+		L_WARNING("You requested max_clients of %zd requiring at least %zd max file descriptors", opts.max_clients, (opts.max_clients + 1) * FDS_PER_CLIENT + FDS_RESERVED);
+		L_WARNING("Current maximum open files is %zd so max_clients has been reduced to %zd to compensate for low limit.", max_files, new_max_clients);
 	}
 
 
 	// Warn about minimum/recommended sizes:
 	if (max_files < minimum_files) {
-		L_CRIT(nullptr, "Your open files limit of %zd is not enough for the server to start. Please increase your system-wide open files limit to at least %zd",
+		L_CRIT("Your open files limit of %zd is not enough for the server to start. Please increase your system-wide open files limit to at least %zd",
 			max_files,
 			minimum_files);
-		L_WARNING(nullptr, "If you need to increase your system-wide open files limit use 'ulimit -n'");
+		L_WARNING("If you need to increase your system-wide open files limit use 'ulimit -n'");
 		throw Exit(EX_OSFILE);
 	} else if (max_files < recommended_files) {
-		L_WARNING(nullptr, "Your current max_files of %zd is not enough. Please increase your system-wide open files limit to at least %zd",
+		L_WARNING("Your current max_files of %zd is not enough. Please increase your system-wide open files limit to at least %zd",
 			max_files,
 			recommended_files);
-		L_WARNING(nullptr, "If you need to increase your system-wide open files limit use 'ulimit -n'");
+		L_WARNING("If you need to increase your system-wide open files limit use 'ulimit -n'");
 	}
 
 
@@ -751,7 +751,7 @@ void demote(const char* username, const char* group) {
 	uid_t uid = getuid();
 	if (uid == 0 || geteuid() == 0) {
 		if (username == nullptr || *username == '\0') {
-			L_CRIT(nullptr, "Can't run as root without the --uid switch");
+			L_CRIT("Can't run as root without the --uid switch");
 			throw Exit(EX_USAGE);
 
 		}
@@ -762,7 +762,7 @@ void demote(const char* username, const char* group) {
 		if ((pw = getpwnam(username)) == nullptr) {
 			uid = atoi(username);
 			if (!uid || (pw = getpwuid(uid)) == nullptr) {
-				L_CRIT(nullptr, "Can't find the user %s to switch to", username);
+				L_CRIT("Can't find the user %s to switch to", username);
 				throw Exit(EX_NOUSER);
 			}
 		}
@@ -774,7 +774,7 @@ void demote(const char* username, const char* group) {
 			if ((gr = getgrnam(group)) == nullptr) {
 				gid = atoi(group);
 				if (!gid || (gr = getgrgid(gid)) == nullptr) {
-					L_CRIT(nullptr, "Can't find the group %s to switch to", group);
+					L_CRIT("Can't find the group %s to switch to", group);
 					throw Exit(EX_NOUSER);
 				}
 			}
@@ -782,16 +782,16 @@ void demote(const char* username, const char* group) {
 			group = gr->gr_name;
 		} else {
 			if ((gr = getgrgid(gid)) == nullptr) {
-				L_CRIT(nullptr, "Can't find the group id %d", gid);
+				L_CRIT("Can't find the group id %d", gid);
 				throw Exit(EX_NOUSER);
 			}
 			group = gr->gr_name;
 		}
 		if (setgid(gid) < 0 || setuid(uid) < 0) {
-			L_CRIT(nullptr, "Failed to assume identity of %s:%s", username, group);
+			L_CRIT("Failed to assume identity of %s:%s", username, group);
 			throw Exit(EX_OSERR);
 		}
-		L_NOTICE(nullptr, "Running as %s:%s", username, group);
+		L_NOTICE("Running as %s:%s", username, group);
 	}
 }
 
@@ -835,7 +835,7 @@ void usedir(const char* path, bool solo) {
 		DIR *dirp;
 		dirp = opendir(path, true);
 		if (!dirp) {
-			L_CRIT(nullptr, "Cannot open working directory: %s", path);
+			L_CRIT("Cannot open working directory: %s", path);
 			throw Exit(EX_OSFILE);
 		}
 
@@ -862,7 +862,7 @@ void usedir(const char* path, bool solo) {
 		closedir(dirp);
 
 		if (!empty) {
-			L_CRIT(nullptr, "Working directory must be empty or a valid xapian database: %s", path);
+			L_CRIT("Working directory must be empty or a valid xapian database: %s", path);
 			throw Exit(EX_DATAERR);
 		}
 	}
@@ -871,14 +871,14 @@ void usedir(const char* path, bool solo) {
 #endif
 
 	if (chdir(path) == -1) {
-		L_CRIT(nullptr, "Cannot change current working directory to %s", path);
+		L_CRIT("Cannot change current working directory to %s", path);
 		throw Exit(EX_OSFILE);
 	}
 
 	char buffer[PATH_MAX];
 	getcwd(buffer, sizeof(buffer));
 	Endpoint::cwd = normalize_path(buffer, buffer, true);  // Endpoint::cwd must always end with slash
-	L_NOTICE(nullptr, "Changed current working directory to %s", Endpoint::cwd.c_str());
+	L_NOTICE("Changed current working directory to %s", Endpoint::cwd.c_str());
 }
 
 
@@ -895,7 +895,7 @@ void banner() {
 #endif
 	});
 
-	L_INFO(nullptr,
+	L_INFO(
 		"\n\n" +
 		rgb(255, 255, 255) + "              __\n" +
 		rgb(255, 255, 255) + "         __  / /          _                 /|\n" +
@@ -917,7 +917,7 @@ void run(const opts_t &opts) {
 	setup_signal_handlers();
 	ev::default_loop default_loop(opts.ev_flags);
 
-	L_INFO(nullptr, "Connection processing backend: %s", ev_backend(default_loop.backend()));
+	L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
 
 	XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
 	try {
@@ -929,9 +929,9 @@ void run(const opts_t &opts) {
 
 	long managers = XapiandManager::manager.use_count() - 1;
 	if (managers == 0) {
-		L_NOTICE(nullptr, "Xapiand is cleanly done with all work!");
+		L_NOTICE("Xapiand is cleanly done with all work!");
 	} else {
-		L_WARNING(nullptr, "Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree().c_str());
+		L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree().c_str());
 	}
 	XapiandManager::manager.reset();
 }
@@ -970,19 +970,19 @@ int main(int argc, char **argv) {
 		banner();
 
 		if (opts.detach) {
-			L_NOTICE(nullptr, "Xapiand is done with all work here. Daemon on process ID [%d] taking over!", getpid());
+			L_NOTICE("Xapiand is done with all work here. Daemon on process ID [%d] taking over!", getpid());
 		}
 
 		usleep(100000ULL);
 
-		L_NOTICE(nullptr, Package::STRING + " started.");
+		L_NOTICE(Package::STRING + " started.");
 
 		// Flush threshold increased
 		int flush_threshold = 10000;  // Default is 10000 (if no set)
 		const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
 		if (p) flush_threshold = atoi(p);
 		if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", false) == 0) {
-			L_INFO(nullptr, "Increased database flush threshold to 100000 (it was originally set to %d).", flush_threshold);
+			L_INFO("Increased database flush threshold to 100000 (it was originally set to %d).", flush_threshold);
 		}
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
@@ -994,9 +994,9 @@ int main(int argc, char **argv) {
 		}
 #endif
 		if (opts.chert) {
-			L_INFO(nullptr, "Using Chert databases by default.");
+			L_INFO("Using Chert databases by default.");
 		} else {
-			L_INFO(nullptr, "Using Glass databases by default.");
+			L_INFO("Using Glass databases by default.");
 		}
 
 		std::vector<std::string> modes;
@@ -1013,12 +1013,12 @@ int main(int argc, char **argv) {
 			default_spc.index_uuid_field = UUIDFieldIndex::UUID;
 		}
 		if (!modes.empty()) {
-			L_INFO(nullptr, "Activated " + join_string(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
+			L_INFO("Activated " + join_string(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
 		}
 
 		adjustOpenFilesLimit(opts);
 
-		L_INFO(nullptr, "With a maximum of " + join_string(std::vector<std::string>{
+		L_INFO("With a maximum of " + join_string(std::vector<std::string>{
 			std::to_string(opts.max_files) + ((opts.max_files == 1) ? " file" : " files"),
 			std::to_string(opts.max_clients) + ((opts.max_clients == 1) ? " client" : " clients"),
 			std::to_string(opts.max_databases) + ((opts.max_databases == 1) ? " database" : " databases"),
@@ -1031,7 +1031,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (opts.detach && !opts.pidfile.empty()) {
-		L_INFO(nullptr, "Removing the pid file.");
+		L_INFO("Removing the pid file.");
 		unlink(opts.pidfile.c_str());
 	}
 

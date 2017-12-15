@@ -464,16 +464,16 @@ int numeric_test() {
 		} catch (const std::exception&) { }
 
 		if (result_query_terms != test.expected_query_terms) {
-			L_ERR(nullptr, "ERROR: Different numeric filter query.\n\tResult: %s\n\tExpected: %s", result_query_terms.c_str(), test.expected_query_terms.c_str());
+			L_ERR("ERROR: Different numeric filter query.\n\tResult: %s\n\tExpected: %s", result_query_terms.c_str(), test.expected_query_terms.c_str());
 			++cont;
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing generation of numerical terms is correct!");
+		L_DEBUG("Testing generation of numerical terms is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing generation of numerical terms has mistakes.");
+		L_ERR("ERROR: Testing generation of numerical terms has mistakes.");
 		RETURN(1);
 	}
 }
@@ -487,16 +487,16 @@ int date_test() {
 		auto val_e = Datetime::timestamp(Datetime::DateParser(test.end));
 		auto result_query_terms = GenerateTerms::date(val_s, val_e, test.accuracy, test.acc_prefix).get_description();
 		if (result_query_terms != test.expected_query_terms) {
-			L_ERR(nullptr, "ERROR: Different numeric filter query.\n\tResult: %s\n\tExpected: %s", result_query_terms.c_str(), test.expected_query_terms.c_str());
+			L_ERR("ERROR: Different numeric filter query.\n\tResult: %s\n\tExpected: %s", result_query_terms.c_str(), test.expected_query_terms.c_str());
 			++cont;
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing generation of terms for dates is correct!");
+		L_DEBUG("Testing generation of terms for dates is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing generation of terms for dates has mistakes.");
+		L_ERR("ERROR: Testing generation of terms for dates has mistakes.");
 		RETURN(1);
 	}
 }
@@ -508,16 +508,16 @@ int geo_test() {
 	for (const auto& test : geo_tests) {
 		auto result_query_terms = GenerateTerms::geo(test.ranges, test.accuracy, test.acc_prefix).get_description();
 		if (result_query_terms != test.expected_query_terms) {
-			L_ERR(nullptr, "ERROR: Different numeric filter query.\n\tResult: %s\n\tExpected: %s", result_query_terms.c_str(), test.expected_query_terms.c_str());
+			L_ERR("ERROR: Different numeric filter query.\n\tResult: %s\n\tExpected: %s", result_query_terms.c_str(), test.expected_query_terms.c_str());
 			++cont;
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing generation of terms for geospatials is correct!");
+		L_DEBUG("Testing generation of terms for geospatials is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing generation of terms for geospatials has mistakes.");
+		L_ERR("ERROR: Testing generation of terms for geospatials has mistakes.");
 		RETURN(1);
 	}
 }

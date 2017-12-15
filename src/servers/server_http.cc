@@ -42,15 +42,15 @@ HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	  http(http_)
 {
 	io.start(http->sock, ev::READ);
-	L_EV(this, "Start http's server accept event (sock=%d)", http->sock);
+	L_EV("Start http's server accept event (sock=%d)", http->sock);
 
-	L_OBJ(this, "CREATED HTTP SERVER!");
+	L_OBJ("CREATED HTTP SERVER!");
 }
 
 
 HttpServer::~HttpServer()
 {
-	L_OBJ(this, "DELETED HTTP SERVER!");
+	L_OBJ("DELETED HTTP SERVER!");
 }
 
 
@@ -59,25 +59,25 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	int fd = watcher.fd;
 
-	L_CALL(this, "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 	L_INFO_HOOK_LOG("HttpServer::io_accept_cb", this, "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
 	if (EV_ERROR & revents) {
-		L_EV(this, "ERROR: got invalid http event {fd:%d}: %s", fd, strerror(errno));
+		L_EV("ERROR: got invalid http event {fd:%d}: %s", fd, strerror(errno));
 		return;
 	}
 
 	assert(http->sock == fd || http->sock == -1);
 
-	L_EV_BEGIN(this, "HttpServer::io_accept_cb:BEGIN");
+	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
 
 	int client_sock;
 	if ((client_sock = http->accept()) < 0) {
 		if (!ignored_errorno(errno, true, false)) {
-			L_ERR(this, "ERROR: accept http error {fd:%d}: %s", fd, strerror(errno));
+			L_ERR("ERROR: accept http error {fd:%d}: %s", fd, strerror(errno));
 		}
 	} else {
 		Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags, client_sock);
 	}
-	L_EV_END(this, "HttpServer::io_accept_cb:END");
+	L_EV_END("HttpServer::io_accept_cb:END");
 }

@@ -43,13 +43,13 @@ using dispatch_func = void (Replication::*)(const std::string&);
 Replication::Replication(BinaryClient* client_)
 	: client(client_)
 {
-		L_OBJ(this, "CREATED REPLICATION OBJ!");
+		L_OBJ("CREATED REPLICATION OBJ!");
 }
 
 
 Replication::~Replication()
 {
-	L_OBJ(this, "DELETED REPLICATION OBJ!");
+	L_OBJ("DELETED REPLICATION OBJ!");
 }
 
 
@@ -76,7 +76,7 @@ Replication::replication_server(ReplicationMessageType type, const std::string &
 void
 Replication::msg_get_changesets(const std::string &)
 {
-	L_REPLICATION(this, "Replication::msg_get_changesets");
+	L_REPLICATION("Replication::msg_get_changesets");
 
 	// Xapian::Database *db_;
 	// const char *p = message.c_str();
@@ -110,10 +110,10 @@ Replication::msg_get_changesets(const std::string &)
 	// int fd = mkstemp(path);
 	// try {
 	// 	std::string to_revision = databases[db_]->checkout_revision;
-	// 	L_REPLICATION(this, "Replication::msg_get_changesets for %s (%s) from rev:%s to rev:%s [%d]", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
+	// 	L_REPLICATION("Replication::msg_get_changesets for %s (%s) from rev:%s to rev:%s [%d]", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
 
 	// 	if (fd < 0) {
-	// 		L_ERR(this, "Cannot write to %s (1)", path);
+	// 		L_ERR("Cannot write to %s (1)", path);
 	// 		return;
 	// 	}
 	// 	// db_->write_changesets_to_fd(fd, from_revision, uuid != db_->get_uuid());  // FIXME: Implement Replication
@@ -161,7 +161,7 @@ Replication::replication_client(ReplicationReplyType type, const std::string &me
 void
 Replication::reply_end_of_changes(const std::string &)
 {
-	L_REPLICATION(this, "Replication::reply_end_of_changes");
+	L_REPLICATION("Replication::reply_end_of_changes");
 
 	// if (repl_switched_db) {
 	// 	XapiandManager::manager->database_pool.switch_db(*endpoints.cbegin());
@@ -176,9 +176,9 @@ Replication::reply_end_of_changes(const std::string &)
 void
 Replication::reply_fail(const std::string &)
 {
-	L_REPLICATION(this, "Replication::reply_fail");
+	L_REPLICATION("Replication::reply_fail");
 
-	// L_ERR(this, "Replication failure!");
+	// L_ERR("Replication failure!");
 	// client->checkin_database();
 
 	// shutdown();
@@ -188,7 +188,7 @@ Replication::reply_fail(const std::string &)
 void
 Replication::reply_db_header(const std::string &)
 {
-	L_REPLICATION(this, "Replication::reply_db_header");
+	L_REPLICATION("Replication::reply_db_header");
 
 	// const char *p = message.data();
 	// const char *p_end = p + message.size();
@@ -203,15 +203,15 @@ Replication::reply_db_header(const std::string &)
 
 	// int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	// if (dir == 0) {
-	// 	L_DEBUG(this, "Directory %s created", path_tmp.c_str());
+	// 	L_DEBUG("Directory %s created", path_tmp.c_str());
 	// } else if (errno == EEXIST) {
 	// 	delete_files(path_tmp.c_str());
 	// 	dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	// 	if (dir == 0) {
-	// 		L_DEBUG(this, "Directory %s created", path_tmp.c_str());
+	// 		L_DEBUG("Directory %s created", path_tmp.c_str());
 	// 	}
 	// } else {
-	// 	L_ERR(this, "Directory %s not created (%s)", path_tmp.c_str(), strerror(errno));
+	// 	L_ERR("Directory %s not created (%s)", path_tmp.c_str(), strerror(errno));
 	// }
 }
 
@@ -219,7 +219,7 @@ Replication::reply_db_header(const std::string &)
 void
 Replication::reply_db_filename(const std::string &)
 {
-	L_REPLICATION(this, "Replication::reply_db_filename");
+	L_REPLICATION("Replication::reply_db_filename");
 
 	// const char *p = message.data();
 	// const char *p_end = p + message.size();
@@ -230,7 +230,7 @@ Replication::reply_db_filename(const std::string &)
 void
 Replication::reply_db_filedata(const std::string &)
 {
-	L_REPLICATION(this, "Replication::reply_db_filedata");
+	L_REPLICATION("Replication::reply_db_filedata");
 
 	// const char *p = message.data();
 	// const char *p_end = p + message.size();
@@ -242,9 +242,9 @@ Replication::reply_db_filedata(const std::string &)
 
 	// int fd = io::open(path_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
 	// if (fd >= 0) {
-	// 	L_REPLICATION(this, "path_filename %s", path_filename.c_str());
+	// 	L_REPLICATION("path_filename %s", path_filename.c_str());
 	// 	if (io::write(fd, p, p_end - p) != p_end - p) {
-	// 		L_ERR(this, "Cannot write to %s", repl_db_filename.c_str());
+	// 		L_ERR("Cannot write to %s", repl_db_filename.c_str());
 	// 		return;
 	// 	}
 	// 	io::close(fd);
@@ -255,7 +255,7 @@ Replication::reply_db_filedata(const std::string &)
 void
 Replication::reply_db_footer(const std::string &)
 {
-	L_REPLICATION(this, "Replication::reply_db_footer");
+	L_REPLICATION("Replication::reply_db_footer");
 
 	// // const char *p = message.data();
 	// // const char *p_end = p + message.size();
@@ -271,7 +271,7 @@ Replication::reply_db_footer(const std::string &)
 	// 	try {
 	// 		XapiandManager::manager->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE);
 	// 	} catch (const CheckoutError&)
-	// 		L_ERR(this, "Cannot checkout tmp %s", endpoint_tmp.path.c_str());
+	// 		L_ERR("Cannot checkout tmp %s", endpoint_tmp.path.c_str());
 	// 	}
 	// }
 
@@ -283,7 +283,7 @@ Replication::reply_db_footer(const std::string &)
 void
 Replication::reply_changeset(const std::string &)
 {
-	L_REPLICATION(this, "Replication::reply_changeset");
+	L_REPLICATION("Replication::reply_changeset");
 
 	// Xapian::WritableDatabase *wdb_;
 	// if (repl_database_tmp) {
@@ -295,7 +295,7 @@ Replication::reply_changeset(const std::string &)
 	// char path[] = "/tmp/xapian_changes.XXXXXX";
 	// int fd = mkstemp(path);
 	// if (fd < 0) {
-	// 	L_ERR(this, "Cannot write to %s (1)", path);
+	// 	L_ERR("Cannot write to %s (1)", path);
 	// 	return;
 	// }
 
@@ -304,12 +304,12 @@ Replication::reply_changeset(const std::string &)
 	// header += serialise_length(message.size());
 
 	// if (io::write(fd, header.data(), header.size()) != static_cast<ssize_t>(header.size())) {
-	// 	L_ERR(this, "Cannot write to %s (2)", path);
+	// 	L_ERR("Cannot write to %s (2)", path);
 	// 	return;
 	// }
 
 	// if (io::write(fd, message.data(), message.size()) != static_cast<ssize_t>(message.size())) {
-	// 	L_ERR(this, "Cannot write to %s (3)", path);
+	// 	L_ERR("Cannot write to %s (3)", path);
 	// 	return;
 	// }
 
@@ -319,12 +319,12 @@ Replication::reply_changeset(const std::string &)
 	// 	// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
 	// 	repl_just_switched_db = false;
 	// } catch (const MSG_NetworkError& exc) {
-	// 	L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+	// 	L_EXC("ERROR: %s", exc.get_msg().c_str());
 	// 	io::close(fd);
 	// 	io::unlink(path);
 	// 	throw;
 	// } catch (const Xapian::DatabaseError& exc) {
-	// 	L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+	// 	L_EXC("ERROR: %s", exc.get_msg().c_str());
 	// 	io::close(fd);
 	// 	io::unlink(path);
 	// 	throw;
@@ -342,7 +342,7 @@ Replication::reply_changeset(const std::string &)
 void
 Replication::replication_client_file_done()
 {
-	L_REPLICATION(this, "Replication::replication_client_file_done");
+	L_REPLICATION("Replication::replication_client_file_done");
 
 	char buf[1024];
 	const char *p;

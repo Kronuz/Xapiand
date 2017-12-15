@@ -32,7 +32,7 @@ BaseServer::BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 {
 	io.set<BaseServer, &BaseServer::io_accept_cb>(this);
 
-	L_OBJ(this, "CREATED BASE SERVER!");
+	L_OBJ("CREATED BASE SERVER!");
 }
 
 
@@ -40,14 +40,14 @@ BaseServer::~BaseServer()
 {
 	destroyer();
 
-	L_OBJ(this, "DELETED BASE SERVER!");
+	L_OBJ("DELETED BASE SERVER!");
 }
 
 
 void
 BaseServer::shutdown_impl(time_t asap, time_t now)
 {
-	L_CALL(this, "BaseServer::shutdown_impl(%d, %d)", (int)asap, (int)now);
+	L_CALL("BaseServer::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
 	Worker::shutdown_impl(asap, now);
 
@@ -69,7 +69,7 @@ BaseServer::destroy_impl()
 void
 BaseServer::destroyer()
 {
-	L_CALL(this, "BaseServer::destroyer()");
+	L_CALL("BaseServer::destroyer()");
 
 	io.stop();
 }

@@ -38,15 +38,15 @@ RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	  raft(raft_)
 {
 	io.start(raft->get_socket(), ev::READ);
-	L_EV(this, "Start raft's server accept event (sock=%d)", raft->get_socket());
+	L_EV("Start raft's server accept event (sock=%d)", raft->get_socket());
 
-	L_OBJ(this, "CREATED RAFT SERVER!");
+	L_OBJ("CREATED RAFT SERVER!");
 }
 
 
 RaftServer::~RaftServer()
 {
-	L_OBJ(this, "DELETED RAFT SERVER!");
+	L_OBJ("DELETED RAFT SERVER!");
 }
 
 
@@ -86,10 +86,10 @@ RaftServer::heartbeat_leader(const std::string& message)
 	raft->reset_leader_election_timeout();
 
 	if (raft->leader != remote_node) {
-		L_RAFT(this, "Request the raft server's configuration!");
+		L_RAFT("Request the raft server's configuration!");
 		raft->send_message(Raft::Message::LEADERSHIP, local_node_->serialise());
 	}
-	L_RAFT_PROTO(this, "Listening %s's heartbeat in timestamp: %f!", remote_node.name.c_str(), raft->last_activity);
+	L_RAFT_PROTO("Listening %s's heartbeat in timestamp: %f!", remote_node.name.c_str(), raft->last_activity);
 }
 
 
@@ -108,38 +108,38 @@ RaftServer::request_vote(const std::string& message)
 
 	uint64_t remote_term = unserialise_length(&p, p_end);
 
-	L_RAFT(this, "remote_term: %llu  local_term: %llu", remote_term, raft->term);
+	L_RAFT("remote_term: %llu  local_term: %llu", remote_term, raft->term);
 
 	if (remote_term > raft->term) {
 		if (raft->state == Raft::State::LEADER && remote_node != *local_node_) {
-			L_ERR(this, "ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, this node will reset!", remote_node.name.c_str(), remote_term, raft->term);
+			L_ERR("ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, this node will reset!", remote_node.name.c_str(), remote_term, raft->term);
 			raft->reset();
 		}
 
 		raft->votedFor = remote_node;
 		raft->term = remote_term;
 
-		L_RAFT(this, "It Vote for %s", raft->votedFor.name.c_str());
+		L_RAFT("It Vote for %s", raft->votedFor.name.c_str());
 		raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 			serialise_length(true) + serialise_length(remote_term));
 	} else {
 		if (raft->state == Raft::State::LEADER && remote_node != *local_node_) {
-			L_ERR(this, "ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, remote node will reset!", remote_node.name.c_str(), remote_term, raft->term);
+			L_ERR("ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, remote node will reset!", remote_node.name.c_str(), remote_term, raft->term);
 			raft->send_message(Raft::Message::RESET, remote_node.serialise());
 			return;
 		}
 
 		if (remote_term < raft->term) {
-			L_RAFT(this, "Vote for %s", raft->votedFor.name.c_str());
+			L_RAFT("Vote for %s", raft->votedFor.name.c_str());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 				serialise_length(false) + serialise_length(raft->term));
 		} else if (raft->votedFor.empty()) {
 			raft->votedFor = remote_node;
-			L_RAFT(this, "Vote for %s", raft->votedFor.name.c_str());
+			L_RAFT("Vote for %s", raft->votedFor.name.c_str());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 				serialise_length(true) + serialise_length(raft->term));
 		} else {
-			L_RAFT(this, "Vote for %s", raft->votedFor.name.c_str());
+			L_RAFT("Vote for %s", raft->votedFor.name.c_str());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 				serialise_length(false) + serialise_length(raft->term));
 		}
@@ -165,13 +165,13 @@ RaftServer::response_vote(const std::string& message)
 
 		if (vote) {
 			++raft->votes;
-			L_RAFT(this, "Number of servers: %d;  Votes received: %d", raft->number_servers.load(), raft->votes);
+			L_RAFT("Number of servers: %d;  Votes received: %d", raft->number_servers.load(), raft->votes);
 			if (raft->votes > raft->number_servers / 2) {
 				raft->state = Raft::State::LEADER;
 
 				if (raft->leader != *local_node_) {
 					raft->leader = *local_node_;
-					L_NOTICE(this, "Raft: New leader for region %d is %s (1)", local_node_->region, raft->leader.name.c_str());
+					L_NOTICE("Raft: New leader for region %d is %s (1)", local_node_->region, raft->leader.name.c_str());
 				}
 
 				raft->start_leader_heartbeat();
@@ -204,7 +204,7 @@ RaftServer::leader(const std::string& message)
 
 	if (raft->state == Raft::State::LEADER) {
 		if (remote_node != *local_node_) {
-			L_CRIT(this, "I'm leader, other responded as leader!");
+			L_CRIT("I'm leader, other responded as leader!");
 			raft->reset();
 		}
 		return;
@@ -216,7 +216,7 @@ RaftServer::leader(const std::string& message)
 
 	if (raft->leader != remote_node) {
 		raft->leader = remote_node;
-		L_NOTICE(this, "Raft: New leader for region %d is %s (2)", local_node_->region, raft->leader.name.c_str());
+		L_NOTICE("Raft: New leader for region %d is %s (2)", local_node_->region, raft->leader.name.c_str());
 	}
 
 	raft->reset_leader_election_timeout();
@@ -237,7 +237,7 @@ RaftServer::leadership(const std::string& message)
 	}
 
 	if (raft->state == Raft::State::LEADER) {
-		L_DEBUG(this, "Sending Data!");
+		L_DEBUG("Sending Data!");
 		raft->send_message(Raft::Message::LEADER, local_node_->serialise() +
 			serialise_length(raft->number_servers) +
 			serialise_length(raft->term));
@@ -269,17 +269,17 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	int fd = watcher.fd;
 
-	L_CALL(this, "RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+	L_CALL("RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 	L_INFO_HOOK_LOG("RaftServer::io_accept_cb", this, "RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
 	if (EV_ERROR & revents) {
-		L_EV(this, "ERROR: got invalid raft event {fd:%d}: %s", fd, strerror(errno));
+		L_EV("ERROR: got invalid raft event {fd:%d}: %s", fd, strerror(errno));
 		return;
 	}
 
 	assert(raft->get_socket() == fd || raft->get_socket() == -1);
 
-	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN");
+	L_EV_BEGIN("RaftServer::io_accept_cb:BEGIN");
 
 	if (revents & EV_READ) {
 		while (XapiandManager::manager->state == XapiandManager::State::READY) {
@@ -287,24 +287,24 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 				std::string message;
 				Raft::Message type = static_cast<Raft::Message>(raft->get_message(message, static_cast<char>(Raft::Message::MAX)));
 				if (type != Raft::Message::HEARTBEAT_LEADER) {
-					L_RAFT(this, ">> get_message(%s)", Raft::MessageNames[static_cast<int>(type)]);
+					L_RAFT(">> get_message(%s)", Raft::MessageNames[static_cast<int>(type)]);
 				}
-				L_RAFT_PROTO(this, "message: %s", repr(message).c_str());
+				L_RAFT_PROTO("message: %s", repr(message).c_str());
 
 				raft_server(type, message);
 			} catch (const DummyException&) {
 				break;  // no message
 			} catch (const BaseException& exc) {
-				L_WARNING(this, "WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+				L_WARNING("WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 				break;
 			} catch (...) {
-				L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
+				L_EV_END("RaftServer::io_accept_cb:END %lld", now);
 				throw;
 			}
 		}
 	}
 
-	L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
+	L_EV_END("RaftServer::io_accept_cb:END %lld", now);
 }
 
 #endif

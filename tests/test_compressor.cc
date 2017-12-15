@@ -110,10 +110,10 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 
 		return cmp_checksum != dec_checksum;
 	} catch (const Exception& err) {
-		L_ERR(nullptr, "%s\n", err.get_context());
+		L_ERR("%s\n", err.get_context());
 		return 1;
 	} catch (const std::exception& err) {
-		L_ERR(nullptr, "%s\n", err.what());
+		L_ERR("%s\n", err.what());
 		return 1;
 	}
 }
@@ -138,7 +138,7 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 			++it;
 		}
 		cmp_checksum = lz4.get_digest();
-		L_ERR(nullptr, "Size compress: %zu (checksum: %u)\n", lz4.size(), cmp_checksum);
+		L_ERR("Size compress: %zu (checksum: %u)\n", lz4.size(), cmp_checksum);
 		io::close(fd);
 
 
@@ -149,14 +149,14 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 			++dec_it;
 		}
 		dec_checksum = dec_lz4.get_digest();
-		L_ERR(nullptr, "Size decompress: %zu (checksum: %u)\n", dec_lz4.size(), dec_checksum);
+		L_ERR("Size decompress: %zu (checksum: %u)\n", dec_lz4.size(), dec_checksum);
 
 		return cmp_checksum != dec_checksum;
 	} catch (const Exception& err) {
-		L_ERR(nullptr, "%s\n", err.get_context());
+		L_ERR("%s\n", err.get_context());
 		return 1;
 	} catch (const std::exception& err) {
-		L_ERR(nullptr, "%s\n", err.what());
+		L_ERR("%s\n", err.what());
 		return 1;
 	}
 }
@@ -199,7 +199,7 @@ int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numB
 			}
 			break;
 		}
-		L_ERR(nullptr, "Size compress: %zu\n", total_size);
+		L_ERR("Size compress: %zu\n", total_size);
 		io::close(orig_fd);
 
 
@@ -217,7 +217,7 @@ int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numB
 				++dec_it;
 			}
 			if (*it_checksum != dec_lz4.get_digest()) {
-				L_ERR(nullptr, "Different checksums");
+				L_ERR("Different checksums");
 				return 1;
 			}
 			++it_checksum;
@@ -225,10 +225,10 @@ int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numB
 
 		return 0;
 	} catch (const Exception& err) {
-		L_ERR(nullptr, "%s\n", err.get_context());
+		L_ERR("%s\n", err.get_context());
 		return 1;
 	} catch (const std::exception& err) {
-		L_ERR(nullptr, "%s\n", err.what());
+		L_ERR("%s\n", err.what());
 		return 1;
 	}
 }

@@ -33,14 +33,14 @@ inline int testing(const std::vector<std::string>& strs) {
 
 	StringList s(serialised);
 	if (s.size() != strs.size()) {
-		L_ERR(nullptr, "StringList is not working. Size: %zu Expected: %zu", s.size(), strs.size());
+		L_ERR("StringList is not working. Size: %zu Expected: %zu", s.size(), strs.size());
 		++cont;
 	}
 
 	std::vector<std::string> res;
 	StringList::unserialise(serialised, std::back_inserter(res));
 	if (res.size() != strs.size()) {
-		L_ERR(nullptr, "StringList::unserialise is not working. Size: %zu Expected: %zu", res.size(), strs.size());
+		L_ERR("StringList::unserialise is not working. Size: %zu Expected: %zu", res.size(), strs.size());
 		++cont;
 	}
 
@@ -48,7 +48,7 @@ inline int testing(const std::vector<std::string>& strs) {
 	auto it_r = res.begin();
 	for (const auto& elem : strs) {
 		if (*it_s != elem || *it_r != elem) {
-			L_ERR(nullptr, "StringList is not working. Result: [%s, %s] Expected: %s", it_s->c_str(), it_r->c_str(), elem.c_str());
+			L_ERR("StringList is not working. Result: [%s, %s] Expected: %s", it_s->c_str(), it_r->c_str(), elem.c_str());
 			++cont;
 		}
 		++it_s;
@@ -66,14 +66,14 @@ inline int testing(const std::vector<Cartesian>& ptos) {
 
 	CartesianList s(serialised);
 	if (s.size() != ptos.size()) {
-		L_ERR(nullptr, "CartesianList is not working. Size: %zu Expected: %zu", s.size(), ptos.size());
+		L_ERR("CartesianList is not working. Size: %zu Expected: %zu", s.size(), ptos.size());
 		++cont;
 	}
 
 	std::vector<Cartesian> res;
 	CartesianList::unserialise(serialised, std::back_inserter(res));
 	if (res.size() != ptos.size()) {
-		L_ERR(nullptr, "CartesianList::unserialise is not working. Size: %zu Expected: %zu", res.size(), ptos.size());
+		L_ERR("CartesianList::unserialise is not working. Size: %zu Expected: %zu", res.size(), ptos.size());
 		++cont;
 	}
 
@@ -81,7 +81,7 @@ inline int testing(const std::vector<Cartesian>& ptos) {
 	auto it_r = res.begin();
 	for (const auto& elem : ptos) {
 		if (*it_s != elem || *it_r != elem) {
-			L_ERR(nullptr, "CartesianList is not working. Result: [%s, %s] Expected: %s", it_s->to_string().c_str(), it_r->to_string().c_str(), elem.to_string().c_str());
+			L_ERR("CartesianList is not working. Result: [%s, %s] Expected: %s", it_s->to_string().c_str(), it_r->to_string().c_str(), elem.to_string().c_str());
 			++cont;
 		}
 		++it_s;
@@ -99,14 +99,14 @@ inline int testing(const std::vector<range_t>& ranges) {
 
 	RangeList s(serialised);
 	if (s.size() != ranges.size()) {
-		L_ERR(nullptr, "RangeList is not working. Size: %zu Expected: %zu", s.size(), ranges.size());
+		L_ERR("RangeList is not working. Size: %zu Expected: %zu", s.size(), ranges.size());
 		++cont;
 	}
 
 	std::vector<range_t> res;
 	RangeList::unserialise(serialised, std::back_inserter(res));
 	if (res.size() != ranges.size()) {
-		L_ERR(nullptr, "RangeList::unserialise is not working. Size: %zu Expected: %zu", res.size(), ranges.size());
+		L_ERR("RangeList::unserialise is not working. Size: %zu Expected: %zu", res.size(), ranges.size());
 		++cont;
 	}
 
@@ -114,7 +114,7 @@ inline int testing(const std::vector<range_t>& ranges) {
 	auto it_r = res.begin();
 	for (const auto& elem : ranges) {
 		if (*it_s != elem || *it_r != elem) {
-			L_ERR(nullptr, "RangeList is not working. Result: [%s, %s] Expected: %s", it_s->to_string().c_str(), it_r->to_string().c_str(), elem.to_string().c_str());
+			L_ERR("RangeList is not working. Result: [%s, %s] Expected: %s", it_s->to_string().c_str(), it_r->to_string().c_str(), elem.to_string().c_str());
 			++cont;
 		}
 		++it_s;

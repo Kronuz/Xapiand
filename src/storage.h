@@ -312,7 +312,7 @@ public:
 	}
 
 	bool open(const std::string& relative_path, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
-		L_CALL(this, "Storage::open(%s, %d, <args>)", repr(relative_path).c_str(), flags_);
+		L_CALL("Storage::open(%s, %d, <args>)", repr(relative_path).c_str(), flags_);
 
 		bool created = false;
 		auto path_ = base_path + relative_path;
@@ -358,7 +358,7 @@ public:
 	}
 
 	void reopen(void* args=nullptr) {
-		L_CALL(this, "Storage::reopen()");
+		L_CALL("Storage::reopen()");
 
 		if unlikely(fd <= 0) {
 			close();
@@ -388,7 +388,7 @@ public:
 	}
 
 	void close() {
-		L_CALL(this, "Storage::close()");
+		L_CALL("Storage::close()");
 
 		if (fd) {
 			if (flags & STORAGE_WRITABLE) {
@@ -408,7 +408,7 @@ public:
 	}
 
 	void seek(uint32_t offset) {
-		L_CALL(this, "Storage::seek()");
+		L_CALL("Storage::seek()");
 
 		if (offset > header.head.offset) {
 			THROW(StorageEOF, "Storage EOF");
@@ -417,7 +417,7 @@ public:
 	}
 
 	uint32_t write(const char *data, size_t data_size, void* args=nullptr) {
-		L_CALL(this, "Storage::write() [1]");
+		L_CALL("Storage::write() [1]");
 
 		uint32_t curr_offset = header.head.offset;
 		const char* orig_data = data;
@@ -515,7 +515,7 @@ public:
 	}
 
 	uint32_t write_file(const std::string& filename, void* args=nullptr) {
-		L_CALL(this, "Storage::write_file()");
+		L_CALL("Storage::write_file()");
 
 		uint32_t curr_offset = header.head.offset;
 
@@ -634,7 +634,7 @@ public:
 	}
 
 	size_t read(char* buf, size_t buf_size, uint32_t limit=-1, void* args=nullptr) {
-		L_CALL(this, "Storage::read() [1]");
+		L_CALL("Storage::read() [1]");
 
 		if (!buf_size) {
 			return 0;
@@ -716,7 +716,7 @@ public:
 	}
 
 	void commit() {
-		L_CALL(this, "Storage::commit()");
+		L_CALL("Storage::commit()");
 
 		if (!changed) {
 			return;
@@ -761,13 +761,13 @@ public:
 	}
 
 	uint32_t write(const std::string& data, void* args=nullptr) {
-		L_CALL(this, "Storage::write() [2]");
+		L_CALL("Storage::write() [2]");
 
 		return write(data.data(), data.size(), args);
 	}
 
 	std::string read(uint32_t limit=-1, void* args=nullptr) {
-		L_CALL(this, "Storage::read() [2]");
+		L_CALL("Storage::read() [2]");
 
 		std::string ret;
 
@@ -781,7 +781,7 @@ public:
 	}
 
 	uint32_t get_volume(const std::string& filename) {
-		L_CALL(this, "Storage::get_volume()");
+		L_CALL("Storage::get_volume()");
 
 		std::size_t found = filename.find_last_of(".");
 		if (found == std::string::npos) {

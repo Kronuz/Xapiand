@@ -215,15 +215,15 @@ int test_datetotimestamp() {
 		}
 		if (timestamp != test.serialised) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Serialise::date is not working. Result: %s Expect: %s", timestamp.c_str(), test.serialised.c_str());
+			L_ERR("ERROR: Serialise::date is not working. Result: %s Expect: %s", timestamp.c_str(), test.serialised.c_str());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing the transformation between date string and timestamp is correct!");
+		L_DEBUG("Testing the transformation between date string and timestamp is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing the transformation between date string and timestamp has mistakes.");
+		L_ERR("ERROR: Testing the transformation between date string and timestamp has mistakes.");
 		RETURN(1);
 	}
 }
@@ -237,15 +237,15 @@ int test_unserialise_date() {
 		const auto date = Unserialise::date(serialised);
 		if (date != test.serialised) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Unserialise::date is not working. Result: %s Expect: %s", date.c_str(), test.serialised.c_str());
+			L_ERR("ERROR: Unserialise::date is not working. Result: %s Expect: %s", date.c_str(), test.serialised.c_str());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing unserialise date is correct!");
+		L_DEBUG("Testing unserialise date is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing unserialise date has mistakes.");
+		L_ERR("ERROR: Testing unserialise date has mistakes.");
 		RETURN(1);
 	}
 }
@@ -258,15 +258,15 @@ int test_serialise_cartesian() {
 		const auto serialised = repr(Serialise::cartesian(test.cartesian), true, false);
 		if (serialised != test.serialised) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Serialise::cartesian is not working. Result: %s Expect: %s", serialised.c_str(), test.serialised.c_str());
+			L_ERR("ERROR: Serialise::cartesian is not working. Result: %s Expect: %s", serialised.c_str(), test.serialised.c_str());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing serialise Cartesian is correct!");
+		L_DEBUG("Testing serialise Cartesian is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing serialise Cartesian has mistakes.");
+		L_ERR("ERROR: Testing serialise Cartesian has mistakes.");
 		RETURN(1);
 	}
 }
@@ -280,15 +280,15 @@ int test_unserialise_cartesian() {
 		const auto cartesian = Unserialise::cartesian(serialised);
 		if (cartesian != test.cartesian) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Unserialise::cartesian is not working. Result: %s Expect: %s", cartesian.to_string().c_str(), test.cartesian.to_string().c_str());
+			L_ERR("ERROR: Unserialise::cartesian is not working. Result: %s Expect: %s", cartesian.to_string().c_str(), test.cartesian.to_string().c_str());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing unserialise Cartesian is correct!");
+		L_DEBUG("Testing unserialise Cartesian is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing unserialise Cartesian has mistakes.");
+		L_ERR("ERROR: Testing unserialise Cartesian has mistakes.");
 		RETURN(1);
 	}
 }
@@ -301,15 +301,15 @@ int test_serialise_range() {
 		const auto serialised = repr(Serialise::range(test.range), true, false);
 		if (serialised != test.serialised) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Serialise::range is not working. Result: %s Expect: %s", serialised.c_str(), test.serialised.c_str());
+			L_ERR("ERROR: Serialise::range is not working. Result: %s Expect: %s", serialised.c_str(), test.serialised.c_str());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing serialise range_t is correct!");
+		L_DEBUG("Testing serialise range_t is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing serialise range_t has mistakes.");
+		L_ERR("ERROR: Testing serialise range_t has mistakes.");
 		RETURN(1);
 	}
 }
@@ -323,15 +323,15 @@ int test_unserialise_range() {
 		const auto range = Unserialise::range(serialised);
 		if (range != test.range) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Unserialise::range is not working. Result: %s Expect: %s", range.to_string().c_str(), test.range.to_string().c_str());
+			L_ERR("ERROR: Unserialise::range is not working. Result: %s Expect: %s", range.to_string().c_str(), test.range.to_string().c_str());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing unserialise range_t is correct!");
+		L_DEBUG("Testing unserialise range_t is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing unserialise range_t has mistakes.");
+		L_ERR("ERROR: Testing unserialise range_t has mistakes.");
 		RETURN(1);
 	}
 }
@@ -344,15 +344,15 @@ int test_serialise_uuid() {
 		const auto serialised = repr(Serialise::uuid(test.uuid), true, false);
 		if (serialised != test.serialised) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Serialise::uuid is not working. Result: %s Expect: %s", serialised.c_str(), test.serialised.c_str());
+			L_ERR("ERROR: Serialise::uuid is not working. Result: %s Expect: %s", serialised.c_str(), test.serialised.c_str());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing serialise uuid is correct!");
+		L_DEBUG("Testing serialise uuid is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing serialise uuid has mistakes.");
+		L_ERR("ERROR: Testing serialise uuid has mistakes.");
 		RETURN(1);
 	}
 }
@@ -366,15 +366,15 @@ int test_unserialise_uuid() {
 		const auto uuid = Unserialise::uuid(serialised);
 		if (uuid != test.unserialised) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Unserialise::uuid is not working. Result: %s Expect: %s", uuid.c_str(), test.unserialised.c_str());
+			L_ERR("ERROR: Unserialise::uuid is not working. Result: %s Expect: %s", uuid.c_str(), test.unserialised.c_str());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing unserialise uuid is correct!");
+		L_DEBUG("Testing unserialise uuid is correct!");
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "ERROR: Testing unserialise uuid has mistakes.");
+		L_ERR("ERROR: Testing unserialise uuid has mistakes.");
 		RETURN(1);
 	}
 }

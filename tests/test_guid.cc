@@ -45,9 +45,9 @@ int test_guid() {
 	auto g2 = generator.newGuid();
 	auto g3 = generator.newGuid();
 
-	L_DEBUG(nullptr, "Guids generated: %s  %s  %s", repr(g1.to_string()).c_str(), repr(g2.to_string()).c_str(), repr(g3.to_string()).c_str());
+	L_DEBUG("Guids generated: %s  %s  %s", repr(g1.to_string()).c_str(), repr(g2.to_string()).c_str(), repr(g3.to_string()).c_str());
 	if (g1 == g2 || g1 == g3 || g2 == g3) {
-		L_ERR(nullptr, "ERROR: Not all random guids are different");
+		L_ERR("ERROR: Not all random guids are different");
 		RETURN(1);
 	}
 
@@ -61,27 +61,27 @@ int test_guid() {
 	Guid s4(u1);
 
 	if (s1 == s2) {
-		L_ERR(nullptr, "ERROR: s1 and s2 must be different");
+		L_ERR("ERROR: s1 and s2 must be different");
 		RETURN(1);
 	}
 
 	if (s1 != s4) {
-		L_ERR(nullptr, "ERROR: s1 and s4 must be equal");
+		L_ERR("ERROR: s1 and s4 must be equal");
 		RETURN(1);
 	}
 
 	if (s1.to_string() != u1) {
-		L_ERR(nullptr, "ERROR: string generated from s1 is wrong");
+		L_ERR("ERROR: string generated from s1 is wrong");
 		RETURN(1);
 	}
 
 	if (s2.to_string() != u2) {
-		L_ERR(nullptr, "ERROR: string generated from s2 is wrong");
+		L_ERR("ERROR: string generated from s2 is wrong");
 		RETURN(1);
 	}
 
 	if (s3.to_string() != u3) {
-		L_ERR(nullptr, "ERROR: string generated from s3 is wrong");
+		L_ERR("ERROR: string generated from s3 is wrong");
 		RETURN(1);
 	}
 
@@ -107,7 +107,7 @@ int test_special_guids() {
 		const auto uuid_rec = guid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Expected: %s Result: %s", uuid_orig.c_str(), uuid_rec.c_str());
+			L_ERR("ERROR: Expected: %s Result: %s", uuid_orig.c_str(), uuid_rec.c_str());
 		}
 	}
 
@@ -137,12 +137,12 @@ int test_compacted_guids() {
 	}
 
 	if (max_length > MAX_COMPACTED_LENGTH) {
-		L_ERR(nullptr, "ERROR: Max length for compacted uuid is %zu", MAX_COMPACTED_LENGTH);
+		L_ERR("ERROR: Max length for compacted uuid is %zu", MAX_COMPACTED_LENGTH);
 		++cont;
 	}
 
 	if (min_length < MIN_COMPACTED_LENGTH) {
-		L_ERR(nullptr, "ERROR: Min length for compacted uuid is %zu", MIN_COMPACTED_LENGTH);
+		L_ERR("ERROR: Min length for compacted uuid is %zu", MIN_COMPACTED_LENGTH);
 		++cont;
 	}
 
@@ -172,12 +172,12 @@ int test_condensed_guids() {
 	}
 
 	if (max_length > MAX_CONDENSED_LENGTH) {
-		L_ERR(nullptr, "ERROR: Max length for condensed uuid is %zu", MAX_CONDENSED_LENGTH);
+		L_ERR("ERROR: Max length for condensed uuid is %zu", MAX_CONDENSED_LENGTH);
 		++cont;
 	}
 
 	if (min_length < MIN_CONDENSED_LENGTH) {
-		L_ERR(nullptr, "ERROR: Min length for condensed uuid is %zu", MIN_CONDENSED_LENGTH);
+		L_ERR("ERROR: Min length for condensed uuid is %zu", MIN_CONDENSED_LENGTH);
 		++cont;
 	}
 
@@ -226,7 +226,7 @@ int test_expanded_guids() {
 		const auto uuid_rec = guid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Expected: %s Result: %s\n", uuid_orig.c_str(), uuid_rec.c_str());
+			L_ERR("ERROR: Expected: %s Result: %s\n", uuid_orig.c_str(), uuid_rec.c_str());
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -237,12 +237,12 @@ int test_expanded_guids() {
 	}
 
 	if (max_length > MAX_EXPANDED_LENGTH) {
-		L_ERR(nullptr, "ERROR: Max length for expanded uuid is %zu", MAX_EXPANDED_LENGTH);
+		L_ERR("ERROR: Max length for expanded uuid is %zu", MAX_EXPANDED_LENGTH);
 		++cont;
 	}
 
 	if (min_length < MIN_EXPANDED_LENGTH) {
-		L_ERR(nullptr, "ERROR: Min length for expanded uuid is %zu", MIN_EXPANDED_LENGTH);
+		L_ERR("ERROR: Min length for expanded uuid is %zu", MIN_EXPANDED_LENGTH);
 		++cont;
 	}
 
@@ -309,20 +309,20 @@ int test_several_guids() {
 				serialised.append(guid.serialise());
 				continue;
 			} catch (const std::invalid_argument&) { }
-			L_ERR(nullptr, "Invalid encoded UUID format in: %s", encoded.c_str());
+			L_ERR("Invalid encoded UUID format in: %s", encoded.c_str());
 		}
 
 		Guid::unserialise(serialised, std::back_inserter(guids));
 		if (guids.size() != str_uuids.size()) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Different sizes. Expected: %zu  Result: %zu", str_uuids.size(), guids.size());
+			L_ERR("ERROR: Different sizes. Expected: %zu  Result: %zu", str_uuids.size(), guids.size());
 		} else {
 			auto it = str_uuids.begin();
 			for (const auto& guid : guids) {
 				const auto str_guid = guid.to_string();
 				if (str_guid != *it) {
 					++cont;
-					L_ERR(nullptr, "ERROR: Expected: %s  Result: %s", it->c_str(), str_guid.c_str());
+					L_ERR("ERROR: Expected: %s  Result: %s", it->c_str(), str_guid.c_str());
 				}
 				++it;
 			}

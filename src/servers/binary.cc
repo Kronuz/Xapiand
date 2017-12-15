@@ -38,13 +38,13 @@ Binary::Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev
 	node_copy->binary_port = port;
 	local_node = std::shared_ptr<const Node>(node_copy.release());
 
-	L_OBJ(this, "CREATED CONFIGURATION FOR BINARY");
+	L_OBJ("CREATED CONFIGURATION FOR BINARY");
 }
 
 
 Binary::~Binary()
 {
-	L_OBJ(this, "DELETED CONFIGURATION FOR BINARY");
+	L_OBJ("DELETED CONFIGURATION FOR BINARY");
 }
 
 
@@ -63,28 +63,28 @@ Binary::connection_socket()
 	int optval = 1;
 
 	if ((client_sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		L_ERR(nullptr, "ERROR: cannot create binary connection: [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: cannot create binary connection: [%d] %s", errno, strerror(errno));
 		return -1;
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		L_ERR(nullptr, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", sock, errno, strerror(errno));
+		L_ERR("ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", sock, errno, strerror(errno));
 	}
 #endif
 
 	// if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-	// 	L_ERR(nullptr, "ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", sock, errno, strerror(errno));
+	// 	L_ERR("ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", sock, errno, strerror(errno));
 	// }
 
 	// struct linger ling = {0, 0};
 	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-	// 	L_ERR(nullptr, "ERROR: setsockopt SO_LINGER (sock=%d): %s", sock, strerror(errno));
+	// 	L_ERR("ERROR: setsockopt SO_LINGER (sock=%d): %s", sock, strerror(errno));
 	// }
 
 	if (flags & CONN_TCP_NODELAY) {
 		if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-			L_ERR(nullptr, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s", sock, strerror(errno));
+			L_ERR("ERROR: setsockopt TCP_NODELAY (sock=%d): %s", sock, strerror(errno));
 		}
 	}
 

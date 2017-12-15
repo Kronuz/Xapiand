@@ -79,13 +79,13 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* 
 	}
 	int total_clients = XapiandServer::total_clients;
 	if (binary_clients > total_clients) {
-		L_CRIT(this, "Inconsistency in number of binary clients");
+		L_CRIT("Inconsistency in number of binary clients");
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	L_CONN(this, "New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, binary_clients, total_clients);
+	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, binary_clients, total_clients);
 
-	L_OBJ(this, "CREATED BINARY CLIENT! (%d clients)", binary_clients);
+	L_OBJ("CREATED BINARY CLIENT! (%d clients)", binary_clients);
 }
 
 
@@ -96,18 +96,18 @@ BinaryClient::~BinaryClient()
 	int binary_clients = --XapiandServer::binary_clients;
 	int total_clients = XapiandServer::total_clients;
 	if (binary_clients < 0 || binary_clients > total_clients) {
-		L_CRIT(this, "Inconsistency in number of binary clients");
+		L_CRIT("Inconsistency in number of binary clients");
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	L_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)", binary_clients);
+	L_OBJ("DELETED BINARY CLIENT! (%d clients left)", binary_clients);
 }
 
 
 bool
 BinaryClient::init_remote()
 {
-	L_CALL(this, "BinaryClient::init_remote()");
+	L_CALL("BinaryClient::init_remote()");
 
 	state = State::INIT;
 
@@ -119,7 +119,7 @@ BinaryClient::init_remote()
 bool
 BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-	L_REPLICATION(this, "init_replication: %s  -->  %s", repr(src_endpoint.to_string()).c_str(), repr(dst_endpoint.to_string()).c_str());
+	L_REPLICATION("init_replication: %s  -->  %s", repr(src_endpoint.to_string()).c_str(), repr(dst_endpoint.to_string()).c_str());
 	state = State::REPLICATIONPROTOCOL_CLIENT;
 
 	repl_endpoints.add(src_endpoint);
@@ -132,22 +132,22 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 			src_endpoint,
 			dst_endpoint
 		] () {
-			L_DEBUG(XapiandManager::manager.get(), "Triggering replication for %s after checkin!", repr(dst_endpoint.to_string()).c_str());
+			L_DEBUG("Triggering replication for %s after checkin!", repr(dst_endpoint.to_string()).c_str());
 			XapiandManager::manager->trigger_replication(src_endpoint, dst_endpoint);
 		});
 	} catch (const CheckoutError&) {
-		L_ERR(this, "Cannot checkout %s", repr(endpoints.to_string()).c_str());
+		L_ERR("Cannot checkout %s", repr(endpoints.to_string()).c_str());
 		return false;
 	}
 
 	int port = (src_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : src_endpoint.port;
 
 	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) < 0) {
-		L_ERR(this, "Cannot connect to %s", src_endpoint.host.c_str(), std::to_string(port).c_str());
+		L_ERR("Cannot connect to %s", src_endpoint.host.c_str(), std::to_string(port).c_str());
 		checkin_database();
 		return false;
 	}
-	L_CONN(this, "Connected to %s! (in socket %d)", repr(src_endpoint.to_string()).c_str(), sock.load());
+	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()).c_str(), sock.load());
 
 	XapiandManager::manager->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
@@ -157,7 +157,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 void
 BinaryClient::on_read_file_done()
 {
-	L_BINARY_WIRE(this, "BinaryClient::on_read_file_done");
+	L_BINARY_WIRE("BinaryClient::on_read_file_done");
 
 	io::lseek(file_descriptor, 0, SEEK_SET);
 
@@ -167,21 +167,21 @@ BinaryClient::on_read_file_done()
 				replication->replication_client_file_done();
 				break;
 			default:
-				L_ERR(this, "ERROR: Invalid on_read_file_done for state: %d", state);
+				L_ERR("ERROR: Invalid on_read_file_done for state: %d", state);
 				checkin_database();
 				shutdown();
 		};
 	} catch (const Xapian::NetworkError& exc) {
-		L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_msg().c_str());
 		checkin_database();
 		shutdown();
 	} catch (const std::exception& exc) {
-		L_EXC(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
+		L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
 		checkin_database();
 		shutdown();
 	} catch (...) {
 		std::exception exc;
-		L_EXC(this, "ERROR: Unkown error!");
+		L_EXC("ERROR: Unkown error!");
 		checkin_database();
 		shutdown();
 	}
@@ -193,7 +193,7 @@ BinaryClient::on_read_file_done()
 void
 BinaryClient::on_read_file(const char *buf, ssize_t received)
 {
-	L_BINARY_WIRE(this, "BinaryClient::on_read_file: %zd bytes", received);
+	L_BINARY_WIRE("BinaryClient::on_read_file: %zd bytes", received);
 	io::write(file_descriptor, buf, received);
 }
 
@@ -205,7 +205,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		return;
 	}
 
-	L_BINARY_WIRE(this, "BinaryClient::on_read: %zd bytes", received);
+	L_BINARY_WIRE("BinaryClient::on_read: %zd bytes", received);
 	buffer.append(buf, received);
 	while (buffer.length() >= 2) {
 		const char *o = buffer.data();
@@ -223,12 +223,12 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		std::string data = std::string(p, len);
 		buffer.erase(0, p - o + len);
 
-		L_BINARY(this, "on_read message: '\\%02x' (state=0x%x)", type, state);
+		L_BINARY("on_read message: '\\%02x' (state=0x%x)", type, state);
 		switch (type) {
 			case SWITCH_TO_REPL:
 				state = State::REPLICATIONPROTOCOL_SERVER;  // Switch to replication protocol
 				type = toUType(ReplicationMessageType::MSG_GET_CHANGESETS);
-				L_BINARY(this, "Switched to replication protocol");
+				L_BINARY("Switched to replication protocol");
 				break;
 		}
 
@@ -335,10 +335,10 @@ BinaryClient::run()
 void
 BinaryClient::_run()
 {
-	L_OBJ_BEGIN(this, "BinaryClient::run:BEGIN");
+	L_OBJ_BEGIN("BinaryClient::run:BEGIN");
 	if (running++) {
 		--running;
-		L_OBJ_END(this, "BinaryClient::run:END");
+		L_OBJ_END("BinaryClient::run:END");
 		return;
 	}
 
@@ -351,12 +351,12 @@ BinaryClient::_run()
 		try {
 			switch (state) {
 				case State::INIT:
-					L_ERR(this, "Unexpected INIT!");
+					L_ERR("Unexpected INIT!");
 				case State::REMOTEPROTOCOL_SERVER: {
 					std::string message;
 					RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
-					L_BINARY(this, ">> get_message(%s)", RemoteMessageTypeNames[static_cast<int>(type)]);
-					L_BINARY_PROTO(this, "message: '%s'", repr(message).c_str());
+					L_BINARY(">> get_message(%s)", RemoteMessageTypeNames[static_cast<int>(type)]);
+					L_BINARY_PROTO("message: '%s'", repr(message).c_str());
 					remote_protocol->remote_server(type, message);
 					break;
 				}
@@ -364,8 +364,8 @@ BinaryClient::_run()
 				case State::REPLICATIONPROTOCOL_SERVER: {
 					std::string message;
 					ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
-					L_BINARY(this, ">> get_message(%s)", ReplicationMessageTypeNames[static_cast<int>(type)]);
-					L_BINARY_PROTO(this, "message: '%s'", repr(message).c_str());
+					L_BINARY(">> get_message(%s)", ReplicationMessageTypeNames[static_cast<int>(type)]);
+					L_BINARY_PROTO("message: '%s'", repr(message).c_str());
 					replication->replication_server(type, message);
 					break;
 				}
@@ -373,8 +373,8 @@ BinaryClient::_run()
 				case State::REPLICATIONPROTOCOL_CLIENT: {
 					std::string message;
 					ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
-					L_BINARY(this, ">> get_message(%s)", ReplicationReplyTypeNames[static_cast<int>(type)]);
-					L_BINARY_PROTO(this, "message: '%s'", repr(message).c_str());
+					L_BINARY(">> get_message(%s)", ReplicationReplyTypeNames[static_cast<int>(type)]);
+					L_BINARY_PROTO("message: '%s'", repr(message).c_str());
 					replication->replication_client(type, message);
 					break;
 				}
@@ -390,11 +390,11 @@ BinaryClient::_run()
 			shutdown();
 		} catch (const Xapian::NetworkError& exc) {
 			auto exc_msg = exc.get_msg().c_str();
-			L_EXC(this, "ERROR: %s", *exc_msg ? exc_msg : "Unkown Xapian::NetworkError!");
+			L_EXC("ERROR: %s", *exc_msg ? exc_msg : "Unkown Xapian::NetworkError!");
 			checkin_database();
 			shutdown();
 		} catch (const BaseException& exc) {
-			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+			L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
@@ -404,13 +404,13 @@ BinaryClient::_run()
 			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 			checkin_database();
 		} catch (const std::exception& exc) {
-			L_EXC(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
+			L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
 			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
 		} catch (...) {
 			std::exception exc;
-			L_EXC(this, "ERROR: %s", "Unkown exception!");
+			L_EXC("ERROR: %s", "Unkown exception!");
 			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
@@ -418,7 +418,7 @@ BinaryClient::_run()
 	}
 
 	--running;
-	L_OBJ_END(this, "BinaryClient::run:END");
+	L_OBJ_END("BinaryClient::run:END");
 }
 
 #endif  /* XAPIAND_CLUSTERING */

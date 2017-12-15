@@ -114,7 +114,7 @@ AcceptEncodingLRU HttpClient::accept_encoding_sets;
 
 std::string
 HttpClient::http_response(enum http_status status, int mode, unsigned short http_major, unsigned short http_minor, int total_count, int matches_estimated, const std::string& _body, const std::string& ct_type, const std::string& ct_encoding) {
-	L_CALL(this, "HttpClient::http_response()");
+	L_CALL("HttpClient::http_response()");
 
 	char buffer[20];
 	std::string head;
@@ -214,16 +214,16 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 	}
 	int total_clients = XapiandServer::total_clients;
 	if (http_clients > total_clients) {
-		L_CRIT(this, "Inconsistency in number of http clients");
+		L_CRIT("Inconsistency in number of http clients");
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	L_CONN(this, "New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, http_clients, total_clients);
+	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, http_clients, total_clients);
 
-	response_log = L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release();
+	response_log = L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, "Client idle for too long...").release();
 	idle = true;
 
-	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
+	L_OBJ("CREATED HTTP CLIENT! (%d clients)", http_clients);
 }
 
 
@@ -232,7 +232,7 @@ HttpClient::~HttpClient()
 	int http_clients = --XapiandServer::http_clients;
 	int total_clients = XapiandServer::total_clients;
 	if (http_clients < 0 || http_clients > total_clients) {
-		L_CRIT(this, "Inconsistency in number of http clients");
+		L_CRIT("Inconsistency in number of http clients");
 		sig_exit(-EX_SOFTWARE);
 	}
 
@@ -244,35 +244,35 @@ HttpClient::~HttpClient()
 
 	if (body_descriptor) {
 		if (io::close(body_descriptor) < 0) {
-			L_ERR(this, "ERROR: Cannot close temporary file '%s': %s", body_path, strerror(errno));
+			L_ERR("ERROR: Cannot close temporary file '%s': %s", body_path, strerror(errno));
 		}
 
 		if (io::unlink(body_path) < 0) {
-			L_ERR(this, "ERROR: Cannot delete temporary file '%s': %s", body_path, strerror(errno));
+			L_ERR("ERROR: Cannot delete temporary file '%s': %s", body_path, strerror(errno));
 		}
 	}
 
 	response_log.load()->clear();
 
 	if (shutting_down || !(idle && write_queue.empty())) {
-		L_WARNING(this, "Client killed!");
+		L_WARNING("Client killed!");
 	}
 
-	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)", http_clients);
+	L_OBJ("DELETED HTTP CLIENT! (%d clients left)", http_clients);
 }
 
 
 void
 HttpClient::on_read(const char* buf, ssize_t received)
 {
-	L_CALL(this, "HttpClient::on_read(<buf>, %zd)", received);
+	L_CALL("HttpClient::on_read(<buf>, %zd)", received);
 
 	unsigned init_state = parser.state;
 
 	if (received <= 0) {
 		response_log.load()->clear();
 		if (received < 0 || init_state != 18 || !write_queue.empty()) {
-			L_WARNING(this, "Client unexpectedly closed the other end! [%d]", init_state);
+			L_WARNING("Client unexpectedly closed the other end! [%d]", init_state);
 			destroy();  // Handle error. Just close the connection.
 			detach();
 		}
@@ -284,12 +284,12 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		idle = false;
 		request_begining = false;
 		request_begins = std::chrono::system_clock::now();
-		auto old_response_log = response_log.exchange(L_DELAYED(true, 10s, LOG_WARNING, MAGENTA, this, "Request taking too long...").release());
+		auto old_response_log = response_log.exchange(L_DELAYED(true, 10s, LOG_WARNING, MAGENTA, "Request taking too long...").release());
 		old_response_log->clear();
 		response_logged = false;
 	}
 
-	L_HTTP_WIRE(this, "HttpClient::on_read: %zd bytes", received);
+	L_HTTP_WIRE("HttpClient::on_read: %zd bytes", received);
 	ssize_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		unsigned final_state = parser.state;
@@ -301,7 +301,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			}
 		}
 		if (final_state == 1 || final_state == 18) {  // dead or message_complete
-			L_EV(this, "Disable read event");
+			L_EV("Disable read event");
 			io_read.stop();
 			written = 0;
 			if (!closed) {
@@ -320,7 +320,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 				{ RESPONSE_MESSAGE, split_string(message, '\n') }
 			};
 			write_http_response(error_code, err_response);
-			L_WARNING(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message.c_str() : "incomplete request");
+			L_WARNING(HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message.c_str() : "incomplete request");
 		}
 		destroy();  // Handle error. Just close the connection.
 		detach();
@@ -332,18 +332,18 @@ HttpClient::on_read(const char* buf, ssize_t received)
 void
 HttpClient::on_read_file(const char*, ssize_t received)
 {
-	L_CALL(this, "HttpClient::on_read_file(<buf>, %zd)", received);
+	L_CALL("HttpClient::on_read_file(<buf>, %zd)", received);
 
-	L_ERR(this, "Not Implemented: HttpClient::on_read_file: %zd bytes", received);
+	L_ERR("Not Implemented: HttpClient::on_read_file: %zd bytes", received);
 }
 
 
 void
 HttpClient::on_read_file_done()
 {
-	L_CALL(this, "HttpClient::on_read_file_done()");
+	L_CALL("HttpClient::on_read_file_done()");
 
-	L_ERR(this, "Not Implemented: HttpClient::on_read_file_done");
+	L_ERR("Not Implemented: HttpClient::on_read_file_done");
 }
 
 
@@ -367,11 +367,11 @@ HttpClient::on_info(http_parser* p)
 {
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
-	L_CALL(self, "HttpClient::on_info(...)");
+	L_CALL("HttpClient::on_info(...)");
 
 	int state = p->state;
 
-	L_HTTP_PROTO_PARSER(self, "%4d - (INFO)", state);
+	L_HTTP_PROTO_PARSER("%4d - (INFO)", state);
 
 	switch (state) {
 		case 18:  // message_complete
@@ -392,7 +392,7 @@ HttpClient::on_info(http_parser* p)
 			self->header_name.clear();
 			self->header_value.clear();
 			if (self->body_descriptor && io::close(self->body_descriptor) < 0) {
-				L_ERR(self, "ERROR: Cannot close temporary file '%s': %s", self->body_path, strerror(errno));
+				L_ERR("ERROR: Cannot close temporary file '%s': %s", self->body_path, strerror(errno));
 			} else {
 				self->body_descriptor = 0;
 			}
@@ -417,11 +417,11 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 {
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
-	L_CALL(self, "HttpClient::on_data(...)");
+	L_CALL("HttpClient::on_data(...)");
 
 	int state = p->state;
 
-	L_HTTP_PROTO_PARSER(self, "%4d - %s", state, repr(at, length).c_str());
+	L_HTTP_PROTO_PARSER("%4d - %s", state, repr(at, length).c_str());
 
 	if (state > 26 && state <= 32) {
 		// s_req_path  ->  s_req_http_start
@@ -570,7 +570,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 				strcpy(self->body_path, "/tmp/xapiand_upload.XXXXXX");
 				self->body_descriptor = mkstemp(self->body_path);
 				if (self->body_descriptor < 0) {
-					L_ERR(self, "Cannot write to %s (1)", self->body_path);
+					L_ERR("Cannot write to %s (1)", self->body_path);
 					return 0;
 				}
 				io::write(self->body_descriptor, self->body.data(), self->body.size());
@@ -579,7 +579,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 			io::write(self->body_descriptor, at, length);
 			if (state == 62) {
 				if (self->body_descriptor && io::close(self->body_descriptor) < 0) {
-					L_ERR(self, "ERROR: Cannot close temporary file '%s': %s", self->body_path, strerror(errno));
+					L_ERR("ERROR: Cannot close temporary file '%s': %s", self->body_path, strerror(errno));
 				} else {
 					self->body_descriptor = 0;
 				}
@@ -596,13 +596,13 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 void
 HttpClient::run()
 {
-	L_CALL(this, "HttpClient::run()");
+	L_CALL("HttpClient::run()");
 
-	L_CONN(this, "Start running in worker.");
+	L_CONN("Start running in worker.");
 
-	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
+	L_OBJ_BEGIN("HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
-	auto old_response_log = response_log.exchange(L_DELAYED(true, 1s, LOG_WARNING, MAGENTA, this, "Response taking too long...").release());
+	auto old_response_log = response_log.exchange(L_DELAYED(true, 1s, LOG_WARNING, MAGENTA, "Response taking too long...").release());
 	old_response_log->clear();
 
 	std::string error;
@@ -666,27 +666,27 @@ HttpClient::run()
 	} catch (const DocNotFoundError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign(http_status_str(error_code));
-		// L_EXC(this, "ERROR: %s", error.c_str());
+		// L_EXC("ERROR: %s", error.c_str());
 	} catch (const MissingTypeError& exc) {
 		error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		error.assign(exc.what());
-		// L_EXC(this, "ERROR: %s", error.c_str());
+		// L_EXC("ERROR: %s", error.c_str());
 	} catch (const ClientError& exc) {
 		error_code = HTTP_STATUS_BAD_REQUEST;
 		error.assign(exc.what());
-		// L_EXC(this, "ERROR: %s", error.c_str());
+		// L_EXC("ERROR: %s", error.c_str());
 	} catch (const CheckoutError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-		// L_EXC(this, "ERROR: %s", error.c_str());
+		// L_EXC("ERROR: %s", error.c_str());
 	} catch (const TimeOutError& exc) {
 		error_code = HTTP_STATUS_REQUEST_TIMEOUT;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-		// L_EXC(this, "ERROR: %s", error.c_str());
+		// L_EXC("ERROR: %s", error.c_str());
 	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.get_message() ? exc.get_message() : "Unkown BaseException!");
-		L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+		L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 	} catch (const Xapian::Error& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 
@@ -701,16 +701,16 @@ HttpClient::run()
 		} else {
 			error.assign(exc_msg_error);
 		}
-		L_EXC(this, "ERROR: %s", error.c_str());
+		L_EXC("ERROR: %s", error.c_str());
 	} catch (const std::exception& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.what() ? exc.what() : "Unkown std::exception!");
-		L_EXC(this, "ERROR: %s", error.c_str());
+		L_EXC("ERROR: %s", error.c_str());
 	} catch (...) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign("Unknown exception!");
 		std::exception exc;
-		L_EXC(this, "ERROR: %s", error.c_str());
+		L_EXC("ERROR: %s", error.c_str());
 	}
 
 	if (error_code != HTTP_STATUS_OK) {
@@ -730,14 +730,14 @@ HttpClient::run()
 	clean_http_request();
 	read_start_async.send();
 
-	L_OBJ_END(this, "HttpClient::run:END");
+	L_OBJ_END("HttpClient::run:END");
 }
 
 
 void
 HttpClient::_options(enum http_method)
 {
-	L_CALL(this, "HttpClient::_options()");
+	L_CALL("HttpClient::_options()");
 
 	write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE, parser.http_major, parser.http_minor));
 }
@@ -746,7 +746,7 @@ HttpClient::_options(enum http_method)
 void
 HttpClient::_head(enum http_method method)
 {
-	L_CALL(this, "HttpClient::_head()");
+	L_CALL("HttpClient::_head()");
 
 	auto cmd = url_resolve();
 	switch (cmd) {
@@ -766,7 +766,7 @@ HttpClient::_head(enum http_method method)
 void
 HttpClient::_get(enum http_method method)
 {
-	L_CALL(this, "HttpClient::_get()");
+	L_CALL("HttpClient::_get()");
 
 	auto cmd = url_resolve();
 	switch (cmd) {
@@ -827,7 +827,7 @@ HttpClient::_get(enum http_method method)
 void
 HttpClient::_merge(enum http_method method)
 {
-	L_CALL(this, "HttpClient::_merge()");
+	L_CALL("HttpClient::_merge()");
 
 
 	auto cmd = url_resolve();
@@ -849,7 +849,7 @@ HttpClient::_merge(enum http_method method)
 void
 HttpClient::_put(enum http_method method)
 {
-	L_CALL(this, "HttpClient::_put()");
+	L_CALL("HttpClient::_put()");
 
 	auto cmd = url_resolve();
 	switch (cmd) {
@@ -874,7 +874,7 @@ HttpClient::_put(enum http_method method)
 void
 HttpClient::_post(enum http_method method)
 {
-	L_CALL(this, "HttpClient::_post()");
+	L_CALL("HttpClient::_post()");
 
 	auto cmd = url_resolve();
 	switch (cmd) {
@@ -910,7 +910,7 @@ HttpClient::_post(enum http_method method)
 void
 HttpClient::_patch(enum http_method method)
 {
-	L_CALL(this, "HttpClient::_patch()");
+	L_CALL("HttpClient::_patch()");
 
 	auto cmd = url_resolve();
 	switch (cmd) {
@@ -927,7 +927,7 @@ HttpClient::_patch(enum http_method method)
 void
 HttpClient::_delete(enum http_method method)
 {
-	L_CALL(this, "HttpClient::_delete()");
+	L_CALL("HttpClient::_delete()");
 
 	auto cmd = url_resolve();
 	switch (cmd) {
@@ -944,7 +944,7 @@ HttpClient::_delete(enum http_method method)
 std::pair<ct_type_t, MsgPack>&
 HttpClient::get_decoded_body()
 {
-	L_CALL(this, "HttpClient::get_decoded_body()");
+	L_CALL("HttpClient::get_decoded_body()");
 
 	if (decoded_body.first.empty()) {
 
@@ -997,7 +997,7 @@ HttpClient::get_decoded_body()
 void
 HttpClient::home_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::home_view()");
+	L_CALL("HttpClient::home_view()");
 
 	endpoints.clear();
 	endpoints.add(Endpoint("."));
@@ -1039,7 +1039,7 @@ HttpClient::home_view(enum http_method method, Command)
 void
 HttpClient::document_info_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::document_info_view()");
+	L_CALL("HttpClient::document_info_view()");
 
 	endpoints_maker(1s);
 
@@ -1059,7 +1059,7 @@ HttpClient::document_info_view(enum http_method method, Command)
 void
 HttpClient::delete_document_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::delete_document_view()");
+	L_CALL("HttpClient::delete_document_view()");
 
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
@@ -1081,7 +1081,7 @@ HttpClient::delete_document_view(enum http_method method, Command)
 	};
 
 	Stats::cnt().add("del", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
-	L_TIME(this, "Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
+	L_TIME("Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	write_http_response(status_code, response);
 }
@@ -1090,7 +1090,7 @@ HttpClient::delete_document_view(enum http_method method, Command)
 void
 HttpClient::index_document_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::index_document_view()");
+	L_CALL("HttpClient::index_document_view()");
 
 	std::string doc_id;
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
@@ -1116,7 +1116,7 @@ HttpClient::index_document_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 	Stats::cnt().add("index", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
-	L_TIME(this, "Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
+	L_TIME("Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	status_code = HTTP_STATUS_OK;
 	if (response.find(ID_FIELD_NAME) == response.end()) {
@@ -1131,7 +1131,7 @@ HttpClient::index_document_view(enum http_method method, Command)
 void
 HttpClient::write_schema_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::write_schema_view()");
+	L_CALL("HttpClient::write_schema_view()");
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
@@ -1156,7 +1156,7 @@ HttpClient::write_schema_view(enum http_method method, Command)
 void
 HttpClient::update_document_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::update_document_view()");
+	L_CALL("HttpClient::update_document_view()");
 
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
@@ -1179,7 +1179,7 @@ HttpClient::update_document_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 	Stats::cnt().add("patch", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
-	L_TIME(this, "Updating took %s", delta_string(operation_begins, operation_ends).c_str());
+	L_TIME("Updating took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	status_code = HTTP_STATUS_OK;
 	if (response.find(ID_FIELD_NAME) == response.end()) {
@@ -1194,7 +1194,7 @@ HttpClient::update_document_view(enum http_method method, Command)
 void
 HttpClient::meta_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::meta_view()");
+	L_CALL("HttpClient::meta_view()");
 
 	enum http_status status_code = HTTP_STATUS_OK;
 
@@ -1247,7 +1247,7 @@ HttpClient::meta_view(enum http_method method, Command)
 void
 HttpClient::write_meta_view(enum http_method, Command)
 {
-	L_CALL(this, "HttpClient::write_meta_view()");
+	L_CALL("HttpClient::write_meta_view()");
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
@@ -1260,7 +1260,7 @@ HttpClient::write_meta_view(enum http_method, Command)
 void
 HttpClient::update_meta_view(enum http_method, Command)
 {
-	L_CALL(this, "HttpClient::update_meta_view()");
+	L_CALL("HttpClient::update_meta_view()");
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
@@ -1273,7 +1273,7 @@ HttpClient::update_meta_view(enum http_method, Command)
 void
 HttpClient::info_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::info_view()");
+	L_CALL("HttpClient::info_view()");
 
 	MsgPack response;
 	bool res_stats = false;
@@ -1315,7 +1315,7 @@ HttpClient::info_view(enum http_method method, Command)
 void
 HttpClient::nodes_view(enum http_method, Command)
 {
-	L_CALL(this, "HttpClient::nodes_view()");
+	L_CALL("HttpClient::nodes_view()");
 
 	path_parser.off_id = nullptr;  // Command has no ID
 
@@ -1348,7 +1348,7 @@ HttpClient::nodes_view(enum http_method, Command)
 void
 HttpClient::touch_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::touch_view()");
+	L_CALL("HttpClient::touch_view()");
 
 	endpoints_maker(1s);
 
@@ -1370,7 +1370,7 @@ HttpClient::touch_view(enum http_method method, Command)
 void
 HttpClient::schema_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::schema_view()");
+	L_CALL("HttpClient::schema_view()");
 
 	std::string selector;
 	auto cmd = path_parser.get_cmd();
@@ -1400,7 +1400,7 @@ HttpClient::schema_view(enum http_method method, Command)
 void
 HttpClient::wal_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::wal_view()");
+	L_CALL("HttpClient::wal_view()");
 
 	endpoints_maker(1s);
 
@@ -1420,7 +1420,7 @@ HttpClient::wal_view(enum http_method method, Command)
 void
 HttpClient::search_view(enum http_method method, Command)
 {
-	L_CALL(this, "HttpClient::search_view()");
+	L_CALL("HttpClient::search_view()");
 
 
 	std::string selector;
@@ -1496,7 +1496,7 @@ HttpClient::search_view(enum http_method method, Command)
 		}
 	}
 
-	L_SEARCH(this, "Suggested queries: %s", [&suggestions]() {
+	L_SEARCH("Suggested queries: %s", [&suggestions]() {
 		MsgPack res(MsgPack::Type::ARRAY);
 		for (const auto& suggestion : suggestions) {
 			res.push_back(suggestion);
@@ -1523,7 +1523,7 @@ HttpClient::search_view(enum http_method method, Command)
 				{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
 			};
 			write_http_response(error_code, err_response);
-			L_SEARCH(this, "ABORTED SEARCH");
+			L_SEARCH("ABORTED SEARCH");
 			return;
 		}
 
@@ -1594,7 +1594,7 @@ HttpClient::search_view(enum http_method method, Command)
 					{ RESPONSE_MESSAGE, { "Response type application/msgpack or application/json not provided in the Accept header" } }
 				};
 				write_http_response(error_code, err_response);
-				L_SEARCH(this, "ABORTED SEARCH");
+				L_SEARCH("ABORTED SEARCH");
 				return;
 			}
 		}
@@ -1635,7 +1635,7 @@ HttpClient::search_view(enum http_method method, Command)
 						{ RESPONSE_MESSAGE, { "Response type " + ct_type_str + " not provided in the Accept header" } }
 					};
 					write_http_response(error_code, err_response);
-					L_SEARCH(this, "ABORTED SEARCH");
+					L_SEARCH("ABORTED SEARCH");
 					return;
 				}
 
@@ -1814,16 +1814,16 @@ HttpClient::search_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 	Stats::cnt().add("search", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
-	L_TIME(this, "Searching took %s", delta_string(operation_begins, operation_ends).c_str());
+	L_TIME("Searching took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	L_SEARCH(this, "FINISH SEARCH");
+	L_SEARCH("FINISH SEARCH");
 }
 
 
 void
 HttpClient::write_status_response(enum http_status status, const std::string& message)
 {
-	L_CALL(this, "HttpClient::write_status_response()");
+	L_CALL("HttpClient::write_status_response()");
 
 	write_http_response(status, {
 		{ RESPONSE_STATUS, (int)status },
@@ -1835,7 +1835,7 @@ HttpClient::write_status_response(enum http_status status, const std::string& me
 void
 HttpClient::stats_view(enum http_method, Command)
 {
-	L_CALL(this, "HttpClient::stats_view()");
+	L_CALL("HttpClient::stats_view()");
 
 	if (!path_parser.off_id) {
 		MsgPack response(MsgPack::Type::ARRAY);
@@ -1855,15 +1855,15 @@ HttpClient::stats_view(enum http_method, Command)
 HttpClient::Command
 HttpClient::url_resolve()
 {
-	L_CALL(this, "HttpClient::url_resolve()");
+	L_CALL("HttpClient::url_resolve()");
 
 	struct http_parser_url u;
 	std::string b = repr(path, true, false);
 
-	L_HTTP(this, "URL: %s", b.c_str());
+	L_HTTP("URL: %s", b.c_str());
 
 	if (http_parser_parse_url(path.data(), path.size(), 0, &u) == 0) {
-		L_HTTP_PROTO_PARSER(this, "HTTP parsing done!");
+		L_HTTP_PROTO_PARSER("HTTP parsing done!");
 
 		if (u.field_set & (1 << UF_PATH )) {
 			size_t path_size = u.field_data[3].len;
@@ -1907,7 +1907,7 @@ HttpClient::url_resolve()
 		}
 
 	} else {
-		L_HTTP_PROTO_PARSER(this, "Parsing not done");
+		L_HTTP_PROTO_PARSER("Parsing not done");
 		// Bad query
 		return Command::BAD_QUERY;
 	}
@@ -2004,7 +2004,7 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 			endpoints.add(asked_node);
 		}
 	}
-	L_HTTP(this, "Endpoint: -> %s", endpoints.to_string().c_str());
+	L_HTTP("Endpoint: -> %s", endpoints.to_string().c_str());
 }
 
 
@@ -2080,13 +2080,13 @@ HttpClient::query_field_maker(int flag)
 		query_parser.rewind();
 
 		while (query_parser.next("query") != -1) {
-			L_SEARCH(this, "query=%s", query_parser.get().c_str());
+			L_SEARCH("query=%s", query_parser.get().c_str());
 			query_field->query.push_back(query_parser.get());
 		}
 		query_parser.rewind();
 
 		while (query_parser.next("q") != -1) {
-			L_SEARCH(this, "query=%s", query_parser.get().c_str());
+			L_SEARCH("query=%s", query_parser.get().c_str());
 			query_field->query.push_back(query_parser.get());
 		}
 		query_parser.rewind();
@@ -2289,7 +2289,7 @@ HttpClient::log_request()
 	};
 
 	auto request = *request_head_color + request_head + "\n" + *request_headers_color + request_headers + *request_body_color + request_body;
-	L(LOG_DEBUG + 1, NO_COL, this, "%s%s", request_prefix.c_str(), indent_string(request, ' ', 4, false).c_str());
+	L(LOG_DEBUG + 1, NO_COL, "%s%s", request_prefix.c_str(), indent_string(request, ' ', 4, false).c_str());
 }
 
 
@@ -2328,20 +2328,20 @@ HttpClient::log_response()
 	}
 
 	auto response = *response_head_color + response_head + "\n" + *response_headers_color + response_headers + *response_body_color + response_body;
-	L(LOG_DEBUG + 1, NO_COL, this, "%s%s", response_prefix.c_str(), indent_string(response, ' ', 4, false).c_str());
+	L(LOG_DEBUG + 1, NO_COL, "%s%s", response_prefix.c_str(), indent_string(response, ' ', 4, false).c_str());
 }
 
 
 void
 HttpClient::clean_http_request()
 {
-	L_CALL(this, "HttpClient::clean_http_request()");
+	L_CALL("HttpClient::clean_http_request()");
 
 	response_ends = std::chrono::system_clock::now();
 
 	response_log.load()->clear();
 	if (parser.http_errno) {
-		if (!response_logged.exchange(true)) L(LOG_ERR, LIGHT_RED, this, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
+		if (!response_logged.exchange(true)) L(LOG_ERR, LIGHT_RED, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
 	} else {
 		int priority = LOG_DEBUG;
 		auto color = &WHITE;
@@ -2361,7 +2361,7 @@ HttpClient::clean_http_request()
 			if (Logging::log_level > LOG_DEBUG) {
 				log_response();
 			}
-			L(priority, *color, this, "\"%s\" %d %s %s", request_head.c_str(), (int)response_status, bytes_string(response_size).c_str(), delta_string(request_begins, response_ends).c_str());
+			L(priority, *color, "\"%s\" %d %s %s", request_head.c_str(), (int)response_status, bytes_string(response_size).c_str(), delta_string(request_begins, response_ends).c_str());
 		}
 	}
 
@@ -2391,7 +2391,7 @@ HttpClient::clean_http_request()
 	accept_set.clear();
 
 	request_begining = true;
-	L_TIME(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
+	L_TIME("Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
 
 	set_idle();
 
@@ -2402,15 +2402,15 @@ HttpClient::clean_http_request()
 void
 HttpClient::set_idle()
 {
-	L_CALL(this, "HttpClient::set_idle()");
+	L_CALL("HttpClient::set_idle()");
 
-	// auto old_response_log = response_log.exchange(L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, this, "Client idle for too long...").release());
+	// auto old_response_log = response_log.exchange(L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, "Client idle for too long...").release());
 	// old_response_log->clear();
 
 	idle = true;
 
 	if (shutting_down && write_queue.empty()) {
-		L_WARNING(this, "Programmed shut down!");
+		L_WARNING("Programmed shut down!");
 		destroy();
 		detach();
 	}
@@ -2451,7 +2451,7 @@ HttpClient::resolve_ct_type(std::string ct_type_str)
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type)
 {
-	L_CALL(this, "HttpClient::is_acceptable_type()");
+	L_CALL("HttpClient::is_acceptable_type()");
 
 	bool type_ok = false, subtype_ok = false;
 	if (ct_type_pattern.first == "*") {
@@ -2474,7 +2474,7 @@ HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types)
 {
-	L_CALL(this, "HttpClient::is_acceptable_type(...)");
+	L_CALL("HttpClient::is_acceptable_type(...)");
 
 	for (auto& ct_type : ct_types) {
 		if (is_acceptable_type(ct_type_pattern, ct_type)) {
@@ -2489,7 +2489,7 @@ template <typename T>
 const ct_type_t&
 HttpClient::get_acceptable_type(const T& ct)
 {
-	L_CALL(this, "HttpClient::get_acceptable_type()");
+	L_CALL("HttpClient::get_acceptable_type()");
 
 	if (accept_set.empty()) {
 		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, ct_type_t, unsigned>(1, 0, content_type, 0));
@@ -2516,7 +2516,7 @@ HttpClient::get_acceptable_type(const T& ct)
 ct_type_t
 HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int _indent, bool serialize_error)
 {
-	L_CALL(this, "HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), _indent, serialize_error ? "true" : "false");
+	L_CALL("HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), _indent, serialize_error ? "true" : "false");
 
 	if (is_acceptable_type(ct_type, json_type)) {
 		return ct_type_t(obj.to_string(_indent), json_type.first + "/" + json_type.second + "; charset=utf-8");
@@ -2546,7 +2546,7 @@ HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int
 void
 HttpClient::write_http_response(enum http_status status, const MsgPack& response)
 {
-	L_CALL(this, "HttpClient::write_http_response()");
+	L_CALL("HttpClient::write_http_response()");
 
 	auto type_encoding = resolve_encoding();
 	if (type_encoding == Encoding::unknown && status != HTTP_STATUS_NOT_ACCEPTABLE) {
@@ -2625,7 +2625,7 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& response
 Encoding
 HttpClient::resolve_encoding()
 {
-	L_CALL(this, "HttpClient::resolve_encoding()");
+	L_CALL("HttpClient::resolve_encoding()");
 
 	if (accept_encoding_set.empty()) {
 		return Encoding::none;
@@ -2670,7 +2670,7 @@ HttpClient::readable_encoding(Encoding e)
 std::string
 HttpClient::encoding_http_response(Encoding e, const std::string& response, bool chunk, bool start, bool end)
 {
-	L_CALL(this, "HttpClient::encoding_http_response(%s)", repr(response).c_str());
+	L_CALL("HttpClient::encoding_http_response(%s)", repr(response).c_str());
 
 	bool gzip = false;
 	switch (e) {
