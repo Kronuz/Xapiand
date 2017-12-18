@@ -30,7 +30,7 @@
 #include "exception.h"        // for BaseException
 #include "utils.h"
 #include "xxh64.hpp"          // for xxh64
-
+#include "ansi_color.hh"      // for ansi_color
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
 
@@ -163,15 +163,6 @@ template <typename... Args>
 inline Log log(bool cleanup, bool stacked, int timeout, bool async, int priority, Args&&... args) {
 	return log(cleanup, stacked, std::chrono::milliseconds(timeout), async, priority, std::forward<Args>(args)...);
 }
-
-const std::string& ansi_color(float red, float green, float blue, float alpha, bool bold);
-
-
-#define rgb(r, g, b)      ansi_color(r, g, b, 1, false)
-#define rgba(r, g, b, a)  ansi_color(r, g, b, a, false)
-#define brgb(r, g, b)     ansi_color(r, g, b, 1, true)
-#define brgba(r, g, b, a) ansi_color(r, g, b, a, true)
-
 
 const std::string NO_COL("\033[0m");
 
