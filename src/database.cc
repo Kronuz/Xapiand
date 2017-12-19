@@ -1742,10 +1742,10 @@ Database::get_metadata_keys()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			const Xapian::TermIterator end = db->metadata_keys_end();
-			Xapian::TermIterator key = db->metadata_keys_begin();
-			for (; key != end; ++key) {
-				values.push_back(*key);
+			auto it = db->metadata_keys_begin();
+			auto it_e = db->metadata_keys_end();
+			for (; it != it_e; ++it) {
+				values.push_back(*it);
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
