@@ -942,31 +942,32 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 	info[ID_FIELD_NAME] = Document::get_field(ID_FIELD_NAME, obj) || document.get_value(ID_FIELD_NAME);
 	info[RESERVED_DATA] = obj;
 
+	const auto blob = split_data_blob(data);
+	if (blob.empty()) {
 #ifdef XAPIAND_DATA_STORAGE
-	const auto store = ::split_data_store(data);
-	if (store.first) {
-		if (store.second.empty()) {
-			info["_blob"] = nullptr;
-		} else {
-			const auto locator = ::storage_unserialise_locator(store.second);
-			const auto ct_type_mp = Document::get_field(CONTENT_TYPE_FIELD_NAME, obj);
-			info["_blob"] = {
-				{ "_type", "stored" },
-				{ "_content_type", ct_type_mp ? ct_type_mp.str() : "unknown" },
-				{ "_volume", std::get<0>(locator) },
-				{ "_offset", std::get<1>(locator) },
-				{ "_size", std::get<2>(locator) },
-			};
+		const auto store = split_data_store(data);
+		if (store.first) {
+			if (store.second.empty()) {
+				info["_blob"] = nullptr;
+			} else {
+				const auto locator = ::storage_unserialise_locator(store.second);
+				const auto ct_type_mp = Document::get_field(CONTENT_TYPE_FIELD_NAME, obj);
+				info["_blob"] = {
+					{ "_type", "stored" },
+					{ "_content_type", ct_type_mp ? ct_type_mp.str() : "unknown" },
+					{ "_volume", std::get<0>(locator) },
+					{ "_offset", std::get<1>(locator) },
+					{ "_size", std::get<2>(locator) },
+				};
+			}
 		}
-	} else
 #endif
-	{
-		const auto blob = ::split_data_blob(data);
-		const auto blob_data = ::unserialise_string_at(2, blob);
+	} else {
+		const auto blob_data = unserialise_string_at(2, blob);
 		if (blob_data.empty()) {
 			info["_blob"] = nullptr;
 		} else {
-			auto blob_ct = ::unserialise_string_at(1, blob);
+			auto blob_ct = unserialise_string_at(1, blob);
 			info["_blob"] = {
 				{ "_type", "local" },
 				{ "_content_type", blob_ct },

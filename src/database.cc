@@ -1304,19 +1304,17 @@ Database::storage_get_blob(const Xapian::Document& doc) const
 {
 	L_CALL("Database::storage_get_blob()");
 
-	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-	const auto& storage = storages[subdatabase];
-	if (!storage) {
-		return "";
-	}
-
 	auto data = doc.get_data();
 	auto blob = split_data_blob(data);
 
 	if (blob.empty()) {
 		auto store = split_data_store(data);
 		if (store.first) {
-			blob = storage_get(storage, store.second);
+			int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+			const auto& storage = storages[subdatabase];
+			if (storage) {
+				blob = storage_get(storage, store.second);
+			}
 		}
 	}
 
@@ -1329,20 +1327,18 @@ Database::storage_pull_blob(Xapian::Document& doc) const
 {
 	L_CALL("Database::storage_pull_blob()");
 
-	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-	const auto& storage = storages[subdatabase];
-	if (!storage) {
-		return;
-	}
-
 	auto data = doc.get_data();
 	auto blob = split_data_blob(data);
 
 	if (blob.empty()) {
 		auto store = split_data_store(data);
 		if (store.first) {
-			blob = storage_get(storage, store.second);
-			doc.set_data(join_data(store.first, "", split_data_obj(data), blob));
+			int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+			const auto& storage = storages[subdatabase];
+			if (storage) {
+				blob = storage_get(storage, store.second);
+				doc.set_data(join_data(store.first, "", split_data_obj(data), blob));
+			}
 		}
 	}
 }
