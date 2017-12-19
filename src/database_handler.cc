@@ -413,7 +413,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 
 				// Index object.
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-				obj = schema->index(obj, prefixed_term_id, old_document_pair, this, doc);
+				obj = schema->index(obj, doc, prefixed_term_id, &old_document_pair, this);
 #else
 				obj = schema->index(obj, doc);
 #endif

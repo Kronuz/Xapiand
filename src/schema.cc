@@ -1476,17 +1476,16 @@ Schema::feed_subproperties(const MsgPack& properties, const std::string& meta_na
 //  _____ _____ _____ _____ _____ _____ _____ _____
 // |_____|_____|_____|_____|_____|_____|_____|_____|
 
-MsgPack
-Schema::index(
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	MsgPack& object,
+MsgPack
+Schema::index(MsgPack& object, Xapian::Document& doc,
 	const std::string& term_id,
-	std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair,
-	DatabaseHandler* db_handler,
+	std::shared_ptr<std::pair<size_t, const MsgPack>>* old_document_pair,
+	DatabaseHandler* db_handler)
 #else
-	const MsgPack& object,
+MsgPack
+Schema::index(const MsgPack& object, Xapian::Document& doc)
 #endif
-	Xapian::Document& doc)
 {
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 	L_CALL("Schema::index(%s, %s, <old_document_pair>, <db_handler>, <doc>)", repr(object.to_string()).c_str(), repr(term_id).c_str());
@@ -1514,8 +1513,9 @@ Schema::index(
 		}
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-		if (specification.script) {
-			object = db_handler->run_script(object, term_id, old_document_pair, *specification.script);
+		if (specification.script && db_handler) {
+			assert(old_document_pair);
+			object = db_handler->run_script(object, term_id, *old_document_pair, *specification.script);
 			if (!object.is_map()) {
 				THROW(ClientError, "Script must return an object, it returned %s", object.getStrType().c_str());
 			}
