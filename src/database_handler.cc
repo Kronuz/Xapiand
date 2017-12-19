@@ -542,10 +542,10 @@ DatabaseHandler::patch(const std::string& document_id, const MsgPack& patches, b
 
 	const auto data = document.get_data();
 
-	auto obj = MsgPack::unserialise(::split_data_obj(data));
+	auto obj = MsgPack::unserialise(split_data_obj(data));
 	apply_patch(patches, obj);
 
-	const auto store = ::split_data_store(data);
+	const auto store = split_data_store(data);
 	const auto blob = store.first ? "" : document.get_blob();
 
 	return index(document_id, store.first, store.second, obj, blob, commit_, ct_type);
@@ -573,7 +573,7 @@ DatabaseHandler::merge(const std::string& document_id, bool stored, const MsgPac
 
 	const auto data = document.get_data();
 
-	auto obj = MsgPack::unserialise(::split_data_obj(data));
+	auto obj = MsgPack::unserialise(split_data_obj(data));
 	switch (obj.getType()) {
 		case MsgPack::Type::STR: {
 			const auto blob = body.str();
@@ -581,7 +581,7 @@ DatabaseHandler::merge(const std::string& document_id, bool stored, const MsgPac
 		}
 		case MsgPack::Type::MAP: {
 			obj.update(body);
-			const auto store = ::split_data_store(data);
+			const auto store = split_data_store(data);
 			const auto blob = store.first ? "" : document.get_blob();
 			return index(document_id, store.first, store.second, obj, blob, commit_, ct_type);
 		}
@@ -936,7 +936,7 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 
 	const auto data = document.get_data();
 
-	const auto obj = MsgPack::unserialise(::split_data_obj(data));
+	const auto obj = MsgPack::unserialise(split_data_obj(data));
 
 	MsgPack info;
 	info[ID_FIELD_NAME] = Document::get_field(ID_FIELD_NAME, obj) || document.get_value(ID_FIELD_NAME);
@@ -950,7 +950,7 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 			if (store.second.empty()) {
 				info["_blob"] = nullptr;
 			} else {
-				const auto locator = ::storage_unserialise_locator(store.second);
+				const auto locator = storage_unserialise_locator(store.second);
 				const auto ct_type_mp = Document::get_field(CONTENT_TYPE_FIELD_NAME, obj);
 				info["_blob"] = {
 					{ "_type", "stored" },
@@ -1504,7 +1504,7 @@ Document::get_store()
 {
 	L_CALL("Document::get_store()");
 
-	return ::split_data_store(get_data());
+	return split_data_store(get_data());
 }
 
 
@@ -1513,7 +1513,7 @@ Document::get_obj()
 {
 	L_CALL("Document::get_obj()");
 
-	return MsgPack::unserialise(::split_data_obj(get_data()));
+	return MsgPack::unserialise(split_data_obj(get_data()));
 }
 
 
