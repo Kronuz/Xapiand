@@ -69,9 +69,9 @@ class ansi_color {
 
   static constexpr auto standard256() {
     constexpr uint8_t color = (red == green && green == blue) ? (
-      red < 8 ? 16 :
-      red > 248 ? 231 :
-      (232 + static_cast<int>((((red - 8.0f) / 247.0f) * 24.0f) + 0.5f))
+      red <= 8 ? 16 :
+      red >= 238 ? 231 :
+      (232 + static_cast<int>(((red - 8) * 23.0f / 230.0f) + 0.5f))
     ) : (
       16 +
       (static_cast<int>(red / 255.0f * 5.0f + 0.5f) * 36) +
