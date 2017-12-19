@@ -124,7 +124,7 @@ long long read_mastery(const std::string& dir, bool force)
 
 	long long mastery_level = -1;
 
-	int fd = io::open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC, 0644);
+	int fd = io::open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd < 0) {
 		if (force) {
 			mastery_level = save_mastery(dir);

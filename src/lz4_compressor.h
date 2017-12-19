@@ -314,7 +314,7 @@ protected:
 
 public:
 	inline void open(const std::string& filename) {
-		fd = io::open(filename.c_str(), O_RDONLY, 0644);
+		fd = io::open(filename.c_str(), O_RDONLY);
 		if unlikely(fd < 0) {
 			THROW(LZ4IOError, "Cannot open file: %s", filename.c_str());
 		}

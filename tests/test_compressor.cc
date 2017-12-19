@@ -51,7 +51,7 @@ const std::vector<std::string> big_files({
 
 
 std::string read_file(const std::string& filename) {
-	int fd = io::open(filename.c_str(), O_RDONLY, 0644);
+	int fd = io::open(filename.c_str(), O_RDONLY);
 	if unlikely(fd < 0) {
 		THROW(Error, "Cannot open file: %s", filename.c_str());
 	}
