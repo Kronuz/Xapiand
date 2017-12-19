@@ -147,6 +147,9 @@ public:
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions);
 
+	void dump(int fd);
+	void restore(int fd);
+
 	std::pair<bool, bool> update_schema();
 
 	std::string get_prefixed_term_id(const std::string& document_id);

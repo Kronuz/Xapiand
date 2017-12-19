@@ -330,6 +330,9 @@ public:
 	std::string get_metadata(const std::string& key);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
 
+	void dump_metadata(int fd);
+	void dump_documents(int fd);
+
 	std::string to_string() const {
 		return endpoints.to_string();
 	}

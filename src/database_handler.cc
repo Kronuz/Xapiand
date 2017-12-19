@@ -668,6 +668,30 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 }
 
 
+void
+DatabaseHandler::dump(int fd)
+{
+	L_CALL("DatabaseHandler::dump()");
+
+	lock_database lk_db(this);
+
+	database->dump_metadata(fd);
+	database->dump_documents(fd);
+}
+
+
+void
+DatabaseHandler::restore(int fd)
+{
+	L_CALL("DatabaseHandler::restore()");
+
+	lock_database lk_db(this);
+
+	// database->dump_metadata(fd);
+	// database->dump_documents(fd);
+}
+
+
 MSet
 DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& /*suggestions*/)
 {

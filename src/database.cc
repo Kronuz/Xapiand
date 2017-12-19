@@ -1804,6 +1804,102 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 }
 
 
+void
+Database::dump_metadata(int fd)
+{
+	L_CALL("Database::dump_metadata()");
+
+	L_DATABASE_WRAP_INIT();
+
+	ssize_t w;
+	std::string initial;
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		std::string key;
+		try {
+			auto it = db->metadata_keys_begin();
+			auto it_e = db->metadata_keys_end();
+			it.skip_to(initial);
+			for (; it != it_e; ++it) {
+				key = *it;
+				auto value = db->get_metadata(key);
+				w = io::write(fd, key.data(), key.size());
+				if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+				w = io::write(fd, value.data(), value.size());
+				if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+			}
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::NetworkError& exc) {
+			if (!t) THROW(Error, "Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::InvalidArgumentError&) {
+			break;
+		} catch (const Xapian::Error& exc) {
+			THROW(Error, exc.get_msg().c_str());
+		}
+		reopen();
+		initial = key;
+	}
+
+	L_DATABASE_WRAP("Dump metadata (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+}
+
+
+void
+Database::dump_documents(int fd)
+{
+	L_CALL("Database::dump_documents()");
+
+	L_DATABASE_WRAP_INIT();
+
+	ssize_t w;
+	Xapian::docid initial = 1;
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		Xapian::docid did = initial;
+		try {
+			auto it = db->postlist_begin("");
+			auto it_e = db->postlist_end("");
+			it.skip_to(initial);
+			for (; it != it_e; ++it) {
+				did = *it;
+				auto doc = db->get_document(did);
+				auto data = doc.get_data();
+				auto obj = split_data_obj(data);
+				auto blob = split_data_blob(data);
+#ifdef XAPIAND_DATA_STORAGE
+				if (blob.empty()) {
+					auto store = split_data_store(data);
+					if (store.first) {
+						int subdatabase = (did - 1) % endpoints.size();
+						const auto& storage = storages[subdatabase];
+						if (storage) {
+							blob = storage_get(storage, store.second);
+						}
+					}
+				}
+#endif
+				w = io::write(fd, obj.data(), obj.size());
+				if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+				w = io::write(fd, blob.data(), blob.size());
+				if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+			}
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::NetworkError& exc) {
+			if (!t) THROW(Error, "Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+		} catch (const SerialisationError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const Xapian::Error& exc) {
+			THROW(Error, exc.get_msg().c_str());
+		}
+		reopen();
+		initial = did;
+	}
+
+	L_DATABASE_WRAP("Dump documents (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+}
+
 
 /*  ____        _        _                     ___
  * |  _ \  __ _| |_ __ _| |__   __ _ ___  ___ / _ \ _   _  ___ _   _  ___
