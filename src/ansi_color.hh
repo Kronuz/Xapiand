@@ -71,7 +71,7 @@ class ansi_color {
     constexpr uint8_t color = (red == green && green == blue) ? (
       red < 8 ? 16 :
       red > 248 ? 231 :
-      232 + static_cast<uint8_t>((((red - 8.0f) / 247.0f) * 24.0f) + 0.5f)
+      (232 + static_cast<int>((((red - 8.0f) / 247.0f) * 24.0f) + 0.5f))
     ) : (
       16 +
       (static_cast<int>(red / 255.0f * 5.0f + 0.5f) * 36) +
