@@ -78,10 +78,10 @@
 
 
 // Reserved words only used in the responses to the user.
-constexpr const char RESPONSE_ENDPOINT[]            = "#endpoint";
-constexpr const char RESPONSE_RANK[]                = "#rank";
-constexpr const char RESPONSE_WEIGHT[]              = "#weight";
-constexpr const char RESPONSE_PERCENT[]             = "#percent";
+constexpr const char RESPONSE_ENDPOINT[]            = "_endpoint";
+constexpr const char RESPONSE_RANK[]                = "_rank";
+constexpr const char RESPONSE_WEIGHT[]              = "_weight";
+constexpr const char RESPONSE_PERCENT[]             = "_percent";
 constexpr const char RESPONSE_TOTAL_COUNT[]         = "_total_count";
 constexpr const char RESPONSE_MATCHES_ESTIMATED[]   = "_matches_estimated";
 constexpr const char RESPONSE_HITS[]                = "_hits";
