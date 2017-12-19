@@ -49,6 +49,18 @@
 #include "xxh64.hpp"            // for xxh64
 
 
+// Available commands
+constexpr const char COMMAND_INFO[]        = "_info";
+constexpr const char COMMAND_METADATA[]    = "_metadata";
+constexpr const char COMMAND_NODES[]       = "_nodes";
+constexpr const char COMMAND_QUIT[]        = "_quit";
+constexpr const char COMMAND_SCHEMA[]      = "_schema";
+constexpr const char COMMAND_SEARCH[]      = "_search";
+constexpr const char COMMAND_STATS[]       = "_stats";
+constexpr const char COMMAND_TOUCH[]       = "_touch";
+constexpr const char COMMAND_WAL[]         = "_wal";
+
+
 class GuidGenerator;
 class HttpServer;
 class Logging;
@@ -135,18 +147,18 @@ class HttpClient : public BaseClient {
 		NO_CMD_NO_ID,
 		NO_CMD_ID,
 		BAD_QUERY,
-		CMD_SEARCH    = xxh64::hash("_search"),
-		CMD_INFO      = xxh64::hash("_info"),
-		CMD_STATS     = xxh64::hash("_stats"),
-		CMD_METADATA  = xxh64::hash("_metadata"),
-		CMD_SCHEMA    = xxh64::hash("_schema"),
+		CMD_SEARCH    = xxh64::hash(COMMAND_SEARCH),
+		CMD_INFO      = xxh64::hash(COMMAND_INFO),
+		CMD_STATS     = xxh64::hash(COMMAND_STATS),
+		CMD_METADATA  = xxh64::hash(COMMAND_METADATA),
+		CMD_SCHEMA    = xxh64::hash(COMMAND_SCHEMA),
 #if XAPIAND_DATABASE_WAL
-		CMD_WAL       = xxh64::hash("_wal"),
+		CMD_WAL       = xxh64::hash(COMMAND_WAL),
 #endif
-		CMD_NODES     = xxh64::hash("_nodes"),
-		CMD_TOUCH     = xxh64::hash("_touch"),
+		CMD_NODES     = xxh64::hash(COMMAND_NODES),
+		CMD_TOUCH     = xxh64::hash(COMMAND_TOUCH),
 #ifndef NDEBUG
-		CMD_QUIT      = xxh64::hash("_quit"),
+		CMD_QUIT      = xxh64::hash(COMMAND_QUIT),
 #endif
 	};
 
