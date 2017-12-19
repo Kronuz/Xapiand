@@ -329,6 +329,9 @@ public:
 
 	template <typename B=msgpack::sbuffer>
 	std::string serialise() const;
+	static MsgPack unserialise(const char* data, std::size_t len, std::size_t& off);
+	static MsgPack unserialise(const char* data, std::size_t len);
+	static MsgPack unserialise(const std::string& s, std::size_t& off);
 	static MsgPack unserialise(const std::string& s);
 
 	friend msgpack::adaptor::convert<MsgPack>;
@@ -2413,8 +2416,25 @@ inline std::string MsgPack::serialise() const {
 }
 
 
+inline MsgPack MsgPack::unserialise(const char* data, std::size_t len, std::size_t& off) {
+	return MsgPack(msgpack::unpack(data, len, off).get());
+}
+
+
+inline MsgPack MsgPack::unserialise(const std::string& s, std::size_t& off) {
+	return unserialise(s.data(), s.size(), off);
+}
+
+
+inline MsgPack MsgPack::unserialise(const char* data, std::size_t len) {
+	std::size_t off = 0;
+	return unserialise(data, len, off);
+}
+
+
 inline MsgPack MsgPack::unserialise(const std::string& s) {
-	return MsgPack(msgpack::unpack(s.data(), s.size()).get());
+	std::size_t off = 0;
+	return unserialise(s, off);
 }
 
 
