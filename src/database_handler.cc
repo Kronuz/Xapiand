@@ -961,7 +961,7 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 	} else
 #endif
 	{
-		const auto blob = document.get_blob();
+		const auto blob = ::split_data_blob(data);
 		const auto blob_data = ::unserialise_string_at(2, blob);
 		if (blob_data.empty()) {
 			info["_blob"] = nullptr;
