@@ -27,6 +27,7 @@
 #include <unordered_map>
 
 #include "exception.h"
+#include "io_utils.h"
 #include "msgpack.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
@@ -333,6 +334,8 @@ public:
 	static MsgPack unserialise(const char* data, std::size_t len);
 	static MsgPack unserialise(const std::string& s, std::size_t& off);
 	static MsgPack unserialise(const std::string& s);
+
+	static MsgPack unserialise(int fd, std::string& buffer, std::size_t& off);
 
 	friend msgpack::adaptor::convert<MsgPack>;
 	friend msgpack::adaptor::pack<MsgPack>;
@@ -2435,6 +2438,27 @@ inline MsgPack MsgPack::unserialise(const char* data, std::size_t len) {
 inline MsgPack MsgPack::unserialise(const std::string& s) {
 	std::size_t off = 0;
 	return unserialise(s, off);
+}
+
+
+inline MsgPack MsgPack::unserialise(int fd, std::string& buffer, std::size_t& off) {
+	do {
+		ssize_t r;
+		try {
+			char buf[1024];
+			r = io::read(fd, buf, sizeof(buf));
+			if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
+			buffer.append(buf, r);
+			auto obj = unserialise(buffer, off);
+			if (off > 10 * 1024) {
+				buffer.erase(0, off);
+				off = 0;
+			}
+			return obj;
+		} catch (const msgpack::insufficient_bytes&) {
+			if (!r) throw;
+		}
+	} while (true);
 }
 
 
