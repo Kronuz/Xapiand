@@ -119,7 +119,7 @@ class DatabaseHandler {
 	MsgPack& run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script);
 #endif
 
-	DataType index(const std::string& document_id, bool stored, const std::string& storage, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type);
+	DataType index(const std::string& document_id, bool stored, const std::string& stored_locator, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -127,7 +127,7 @@ class DatabaseHandler {
 	void get_term_id(const std::string& document_id, MsgPack& obj, required_spc_t& spc_id, std::string& term_id, std::string& prefixed_term_id);
 	void add_id(const std::string& document_id, MsgPack& obj, required_spc_t& spc_id);
 	void ensure_term_id(const std::string& document_id, MsgPack& obj, required_spc_t& spc_id, std::string& term_id, std::string& prefixed_term_id);
-	void finish_document(Xapian::Document& doc, bool stored, const std::string& store, const MsgPack& obj, const std::string& blob, const ct_type_t& ct_type, const required_spc_t& spc_id, const std::string& term_id, const std::string& prefixed_term_id);
+	void finish_document(Xapian::Document& doc, bool stored, const std::string& stored_locator, const MsgPack& obj, const std::string& blob, const ct_type_t& ct_type, const required_spc_t& spc_id, const std::string& term_id, const std::string& prefixed_term_id);
 
 	bool update_schema(std::chrono::time_point<std::chrono::system_clock> schema_begins);
 

@@ -427,7 +427,7 @@ DatabaseHandler::ensure_term_id(const std::string& document_id, MsgPack& obj, re
 
 
 void
-DatabaseHandler::finish_document(Xapian::Document& doc, bool stored, const std::string& store, const MsgPack& obj, const std::string& blob, const ct_type_t& ct_type, const required_spc_t& spc_id, const std::string& term_id, const std::string& prefixed_term_id)
+DatabaseHandler::finish_document(Xapian::Document& doc, bool stored, const std::string& stored_locator, const MsgPack& obj, const std::string& blob, const ct_type_t& ct_type, const required_spc_t& spc_id, const std::string& term_id, const std::string& prefixed_term_id)
 {
 	if (blob.empty()) {
 		L_INDEX("Data: %s", repr(obj.to_string()).c_str());
@@ -435,7 +435,7 @@ DatabaseHandler::finish_document(Xapian::Document& doc, bool stored, const std::
 	} else {
 		L_INDEX("Data: %s", repr(obj.to_string()).c_str());
 		auto ct_type_str = ct_type.to_string();
-		doc.set_data(join_data(stored, store, obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
+		doc.set_data(join_data(stored, stored_locator, obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
 	}
 
 	doc.add_boolean_term(prefixed_term_id);
@@ -444,12 +444,11 @@ DatabaseHandler::finish_document(Xapian::Document& doc, bool stored, const std::
 
 
 DataType
-DatabaseHandler::index(const std::string& document_id, bool stored, const std::string& store, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::index(const std::string& document_id, bool stored, const std::string& stored_locator, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::index(%s, %s, <store>, %s, <blob>, %s, <ct_type>)", repr(document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
+	L_CALL("DatabaseHandler::index(%s, %s, <stored_locator>, %s, <blob>, %s, <ct_type>)", repr(document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
 
 	Xapian::Document doc;
-
 	required_spc_t spc_id;
 	std::string term_id;
 	std::string prefixed_term_id;
@@ -478,7 +477,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 				ensure_term_id(document_id, obj, spc_id, term_id, prefixed_term_id);
 			} while (!update_schema(schema_begins));
 
-			finish_document(doc, stored, store, obj, blob, ct_type, spc_id, term_id, prefixed_term_id);
+			finish_document(doc, stored, stored_locator, obj, blob, ct_type, spc_id, term_id, prefixed_term_id);
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 			if (set_document_change_seq(prefixed_term_id, std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(Document(doc).hash(), obj)), old_document_pair)) {
@@ -605,7 +604,7 @@ DatabaseHandler::merge(const std::string& document_id, bool stored, const MsgPac
 		case MsgPack::Type::MAP: {
 			obj.update(body);
 			const auto store = split_data_store(data);
-			const auto blob = store.first ? "" : document.get_blob();
+			const auto blob = store.first ? "" : document.get_blob(); // only get blob when needed (when it's not stored)
 			return index(document_id, store.first, store.second, obj, blob, commit_, ct_type);
 		}
 		default:
