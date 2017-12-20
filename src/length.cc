@@ -27,6 +27,8 @@
 #include <cmath>        // for scalbn, frexp, HUGE_VAL
 #include <functional>   // for std::reference_wrapper
 
+#include "io_utils.h"   // for io::read and io::write
+
 // The serialisation we use for doubles is inspired by a comp.lang.c post
 // by Jens Moeller:
 //
@@ -287,6 +289,65 @@ unserialise_string(const char** p, const char* end) {
 	*p = ptr;
 
 	return string;
+}
+
+
+void
+serialise_string(int fd, const std::string &input)
+{
+	ssize_t w;
+
+	auto length = serialise_length(input.size());
+	w = io::write(fd, length.data(), length.size());
+	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+
+	w = io::write(fd, input.data(), input.size());
+	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+}
+
+
+std::string
+unserialise_string(int fd, std::string &buffer, std::size_t& off)
+{
+	ssize_t r;
+	if (buffer.size() < 10) {
+		char buf[1024];
+		r = io::read(fd, buf, sizeof(buf));
+		if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
+		buffer.append(buf, r);
+	}
+
+	auto start = buffer.data();
+	auto end = start + buffer.size();
+	start += off;
+	auto pos = start;
+	auto length = unserialise_length(&pos, end, true);
+	off += (pos - start);
+
+	std::string str;
+	auto available = end - pos;
+	if (available >= length) {
+		str.append(pos, pos + length);
+		off += length;
+		buffer.erase(0, off);
+		off = 0;
+	} else {
+		std::string str;
+		str.reserve(length);
+		str.append(pos, end);
+		str.resize(length);
+		r = io::read(fd, &str[available], length - available);
+		if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
+		if (r != length - available) THROW(SerialisationError, "Invalid input: insufficient data");
+		buffer.clear();
+		off = 0;
+	}
+
+	if (off > 10 * 1024) {
+		buffer.erase(0, off);
+		off = 0;
+	}
+	return str;
 }
 
 
