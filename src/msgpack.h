@@ -2445,10 +2445,6 @@ inline MsgPack MsgPack::unserialise(int fd, std::string& buffer, std::size_t& of
 	do {
 		ssize_t r;
 		try {
-			char buf[1024];
-			r = io::read(fd, buf, sizeof(buf));
-			if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
-			buffer.append(buf, r);
 			auto obj = unserialise(buffer, off);
 			if (off > 10 * 1024) {
 				buffer.erase(0, off);
@@ -2458,6 +2454,10 @@ inline MsgPack MsgPack::unserialise(int fd, std::string& buffer, std::size_t& of
 		} catch (const msgpack::insufficient_bytes&) {
 			if (!r) throw;
 		}
+		char buf[1024];
+		r = io::read(fd, buf, sizeof(buf));
+		if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
+		buffer.append(buf, r);
 	} while (true);
 }
 
