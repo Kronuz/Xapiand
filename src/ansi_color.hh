@@ -51,8 +51,11 @@ enum class Coloring : uint8_t {
 
 
 // Ansi colors:
-template <uint8_t red, uint8_t green, uint8_t blue, bool bold = false>
+template <int red, int green, int blue, bool bold = false>
 class ansi_color {
+  static constexpr uint8_t r = red < 0 ? 0 : red > 255 ? 255 : red;
+  static constexpr uint8_t g = green < 0 ? 0 : green > 255 ? 255 : green;
+  static constexpr uint8_t b = blue < 0 ? 0 : blue > 255 ? 255 : blue;
   static constexpr auto esc = static_str::literal("\033[");
 
   static constexpr auto trueColor() {
@@ -60,23 +63,23 @@ class ansi_color {
       esc +
       to_string<bold>::value +
       ";38;2;" +
-      to_string<red>::value + ";" +
-      to_string<green>::value + ";" +
-      to_string<blue>::value +
+      to_string<r>::value + ";" +
+      to_string<g>::value + ";" +
+      to_string<b>::value +
       "m"
     );
   }
 
   static constexpr auto standard256() {
-    constexpr uint8_t color = (red == green && green == blue) ? (
-      red <= 8 ? 16 :
-      red >= 238 ? 231 :
-      (232 + static_cast<int>(((red - 8) * 23.0f / 230.0f) + 0.5f))
+    constexpr uint8_t color = (r == g && g == b) ? (
+      r < 8 ? 16 :
+      r > 238 ? 231 :
+      (232 + static_cast<int>(((r - 8) * 23.0f / 230.0f) + 0.5f))
     ) : (
       16 +
-      (static_cast<int>(red / 255.0f * 5.0f + 0.5f) * 36) +
-      (static_cast<int>(green / 255.0f * 5.0f + 0.5f) * 6) +
-      (static_cast<int>(blue / 255.0f * 5.0f + 0.5f))
+      (static_cast<int>(r / 255.0f * 5.0f + 0.5f) * 36) +
+      (static_cast<int>(g / 255.0f * 5.0f + 0.5f) * 6) +
+      (static_cast<int>(b / 255.0f * 5.0f + 0.5f))
     );
     return (
       esc +
@@ -88,23 +91,23 @@ class ansi_color {
   }
 
   static constexpr auto standard16() {
-    constexpr auto _min = red < green ? red : green;
-    constexpr auto min = _min < blue ? _min : blue;
-    constexpr auto _max = red > green ? red : green;
-    constexpr auto max = _max > blue ? _max : blue;
-    constexpr uint8_t color = (red == green && green == blue) ? (
-      red > 192 ? 15 :
-      red > 128 ? 7 :
-      red > 32 ? 8 :
+    constexpr auto _min = r < g ? r : g;
+    constexpr auto min = _min < b ? _min : b;
+    constexpr auto _max = r > g ? r : g;
+    constexpr auto max = _max > b ? _max : b;
+    constexpr uint8_t color = (r == g && g == b) ? (
+      r > 192 ? 15 :
+      r > 128 ? 7 :
+      r > 32 ? 8 :
       0
     ) : (
       (max <= 32) ? (
         0
       ) : (
         (
-          ((static_cast<int>((blue - min) * 255.0f / (max - min) + 0.5f) > 128 ? 1 : 0) << 2) |
-          ((static_cast<int>((green - min) * 255.0f / (max - min) + 0.5f) > 128 ? 1 : 0) << 1) |
-          ((static_cast<int>((red - min) * 255.0f / (max - min) + 0.5f) > 128 ? 1 : 0))
+          ((static_cast<int>((b - min) * 255.0f / (max - min) + 0.5f) > 128 ? 1 : 0) << 2) |
+          ((static_cast<int>((g - min) * 255.0f / (max - min) + 0.5f) > 128 ? 1 : 0) << 1) |
+          ((static_cast<int>((r - min) * 255.0f / (max - min) + 0.5f) > 128 ? 1 : 0))
         ) + (max > 192 ? 8 : 0)
       )
     );
@@ -142,17 +145,17 @@ class ansi_color {
   static const std::string _col() {
     switch (ansi_color<0, 0, 0>::detectColoring()) {
       case Coloring::TrueColor: {
-        constexpr const auto trueColor = ansi_color<red, green, blue, bold>::trueColor();
-        return std::string(trueColor);
+        constexpr const auto _ = trueColor();
+        return std::string(_);
       }
       case Coloring::Palette:
       case Coloring::Standard256: {
-        constexpr const auto standard256 = ansi_color<red, green, blue, bold>::standard256();
-        return std::string(standard256);
+        constexpr const auto _ = standard256();
+        return std::string(_);
       }
       case Coloring::Standard16: {
-        constexpr const auto standard16 = ansi_color<red, green, blue, bold>::standard16();
-        return std::string(standard16);
+        constexpr const auto _ = standard16();
+        return std::string(_);
       }
       case Coloring::None: {
         return "";
@@ -172,7 +175,7 @@ public:
   }
 };
 
-#define rgb(r, g, b)      ansi_color<static_cast<uint8_t>(r), static_cast<uint8_t>(g), static_cast<uint8_t>(b), false>::col()
-#define rgba(r, g, b, a)  ansi_color<static_cast<uint8_t>(r * a + 0.5f), static_cast<uint8_t>(g * a + 0.5f), static_cast<uint8_t>(b * a + 0.5f), false>::col()
-#define brgb(r, g, b)     ansi_color<static_cast<uint8_t>(r), static_cast<uint8_t>(g), static_cast<uint8_t>(b), true>::col()
-#define brgba(r, g, b, a) ansi_color<static_cast<uint8_t>(r * a + 0.5f), static_cast<uint8_t>(g * a + 0.5f), static_cast<uint8_t>(b * a + 0.5f), true>::col()
+#define rgb(r, g, b)      ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b), false>::col()
+#define rgba(r, g, b, a)  ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f), false>::col()
+#define brgb(r, g, b)     ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b), true>::col()
+#define brgba(r, g, b, a) ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f), true>::col()
