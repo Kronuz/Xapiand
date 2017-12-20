@@ -36,8 +36,6 @@
 find_path (V8_INCLUDE_DIR v8.h
 	$ENV{V8_DIR}/include
 	$ENV{V8_DIR}
-	~/Library/Frameworks
-	/Library/Frameworks
 	/usr/local/include
 	/usr/include
 	/sw/include # Fink
@@ -46,6 +44,8 @@ find_path (V8_INCLUDE_DIR v8.h
 	/opt/include
 	/usr/freeware/include
 	/devel
+	~/Library/Frameworks
+	/Library/Frameworks
 )
 
 
@@ -54,8 +54,6 @@ find_library (V8_LIBRARY
 	PATHS
 		$ENV{V8_DIR}
 		$ENV{V8_DIR}/lib
-		~/Library/Frameworks
-		/Library/Frameworks
 		/usr/local/lib
 		/usr/lib
 		/sw/lib
@@ -63,6 +61,8 @@ find_library (V8_LIBRARY
 		/opt/csw/lib
 		/opt/lib
 		/usr/freeware/lib64
+		~/Library/Frameworks
+		/Library/Frameworks
 )
 
 find_library (V8_BASE_LIBRARY
@@ -70,8 +70,6 @@ find_library (V8_BASE_LIBRARY
 	PATHS
 		$ENV{V8_DIR}
 		$ENV{V8_DIR}/lib
-		~/Library/Frameworks
-		/Library/Frameworks
 		/usr/local/lib
 		/usr/lib
 		/sw/lib
@@ -79,6 +77,8 @@ find_library (V8_BASE_LIBRARY
 		/opt/csw/lib
 		/opt/lib
 		/usr/freeware/lib64
+		~/Library/Frameworks
+		/Library/Frameworks
 )
 
 find_library (V8_NOSNAPSHOT_LIBRARY
@@ -86,8 +86,6 @@ find_library (V8_NOSNAPSHOT_LIBRARY
 	PATHS
 		$ENV{V8_DIR}
 		$ENV{V8_DIR}/lib
-		~/Library/Frameworks
-		/Library/Frameworks
 		/usr/local/lib
 		/usr/lib
 		/sw/lib
@@ -95,6 +93,8 @@ find_library (V8_NOSNAPSHOT_LIBRARY
 		/opt/csw/lib
 		/opt/lib
 		/usr/freeware/lib64
+		~/Library/Frameworks
+		/Library/Frameworks
 )
 
 find_library (V8_LIBBASE_LIBRARY
@@ -102,8 +102,6 @@ find_library (V8_LIBBASE_LIBRARY
 	PATHS
 		$ENV{V8_DIR}
 		$ENV{V8_DIR}/lib
-		~/Library/Frameworks
-		/Library/Frameworks
 		/usr/local/lib
 		/usr/lib
 		/sw/lib
@@ -111,6 +109,8 @@ find_library (V8_LIBBASE_LIBRARY
 		/opt/csw/lib
 		/opt/lib
 		/usr/freeware/lib64
+		~/Library/Frameworks
+		/Library/Frameworks
 )
 
 find_library (V8_LIBPLATFORM_LIBRARY
@@ -118,8 +118,6 @@ find_library (V8_LIBPLATFORM_LIBRARY
 	PATHS
 		$ENV{V8_DIR}
 		$ENV{V8_DIR}/lib
-		~/Library/Frameworks
-		/Library/Frameworks
 		/usr/local/lib
 		/usr/lib
 		/sw/lib
@@ -127,6 +125,8 @@ find_library (V8_LIBPLATFORM_LIBRARY
 		/opt/csw/lib
 		/opt/lib
 		/usr/freeware/lib64
+		~/Library/Frameworks
+		/Library/Frameworks
 )
 
 if (V8_INCLUDE_DIR AND V8_LIBRARY)

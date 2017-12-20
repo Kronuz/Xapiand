@@ -30,11 +30,9 @@
 
 
 find_path (CHAISCRIPT_INCLUDE_DIR chaiscript/chaiscript.hpp
-	/usr/local/include
 	$ENV{CHAISCRIPT_DIR}/include
 	$ENV{CHAISCRIPT_DIR}
-	~/Library/Frameworks
-	/Library/Frameworks
+	/usr/local/include
 	/usr/include
 	/sw/include # Fink
 	/opt/local/include # DarwinPorts
@@ -42,6 +40,8 @@ find_path (CHAISCRIPT_INCLUDE_DIR chaiscript/chaiscript.hpp
 	/opt/include
 	/usr/freeware/include
 	/devel
+	~/Library/Frameworks
+	/Library/Frameworks
 )
 
 

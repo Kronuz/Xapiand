@@ -40,12 +40,12 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
 	set (UUID_ERR_MSG "UUID library (${UUID_LIB_PATH}) not found, You may need to install the e2fsprogs-devel package")
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 	set (GUID_LIBUUID 1)
-	set (UUID_NAME_LIB uuid)
+	set (UUID_NAME_LIB c++)
 	set (UUID_LIB_PATH uuid/uuid.h)
 	# set (GUID_CFUUID 1)
 	# set (UUID_NAME_LIB CoreFoundation)
 	# set (UUID_LIB_PATH CoreFoundation/CFUUID.h)
-	set (UUID_ERR_MSG "UUID library (${UUID_LIB_PATH}) not found")
+	# set (UUID_ERR_MSG "UUID library (${UUID_LIB_PATH}) not found")
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 	set (GUID_LIBUUID 1)
 	set (UUID_NAME_LIB uuid)
@@ -62,15 +62,36 @@ set (UUID_DEFINITIONS ${PC_UUID_CFLAGS_OTHER})
 
 
 find_path (UUID_INCLUDE_DIR ${UUID_LIB_PATH}
-	HINTS ${PC_UUID_INCLUDEDIR} ${PC_UUID_INCLUDE_DIRS})
+	$ENV{UUID_DIR}/include
+	$ENV{UUID_DIR}
+	/usr/local/include
+	/usr/include
+	/sw/include # Fink
+	/opt/local/include # DarwinPorts
+	/opt/csw/include # Blastwave
+	/opt/include
+	/usr/freeware/include
+	/devel
+	~/Library/Frameworks
+	/Library/Frameworks
+)
 
 
 find_library (UUID_LIBRARY ${UUID_NAME_LIB}
-	HINTS ${PC_UUID_LIBDIR} ${PC_UUID_LIBRARY_DIRS})
+	$ENV{UUID_DIR}
+	$ENV{UUID_DIR}/lib
+	/usr/local/lib
+	/usr/lib
+	/sw/lib
+	/opt/local/lib
+	/opt/csw/lib
+	/opt/lib
+	/usr/freeware/lib64
+	~/Library/Frameworks
+	/Library/Frameworks
+)
 
-
-include(FindPackageHandleStandardArgs)
-
+include (FindPackageHandleStandardArgs)
 
 # handle the QUIETLY and REQUIRED arguments and set UUID_FOUND to TRUE
 # if all listed variables are TRUE
