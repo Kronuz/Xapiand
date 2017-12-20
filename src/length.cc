@@ -321,7 +321,7 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off)
 	auto end = start + buffer.size();
 	start += off;
 	auto pos = start;
-	auto length = unserialise_length(&pos, end, true);
+	auto length = unserialise_length(&pos, end, false);
 	off += (pos - start);
 
 	std::string str;
