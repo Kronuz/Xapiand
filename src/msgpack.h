@@ -330,6 +330,7 @@ public:
 
 	template <typename B=msgpack::sbuffer>
 	std::string serialise() const;
+	void serialise(int fd) const;
 	static MsgPack unserialise(const char* data, std::size_t len, std::size_t& off);
 	static MsgPack unserialise(const char* data, std::size_t len);
 	static MsgPack unserialise(const std::string& s, std::size_t& off);
@@ -2416,6 +2417,13 @@ inline std::string MsgPack::serialise() const {
 	B buf;
 	msgpack::pack(&buf, *_const_body->_obj);
 	return std::string(buf.data(), buf.size());
+}
+
+
+inline void MsgPack::serialise(int fd) const {
+	std::string serialised = serialise();
+	ssize_t w = io::write(fd, serialised.data(), serialised.size());
+	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
 }
 
 
