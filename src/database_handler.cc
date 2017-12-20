@@ -1579,15 +1579,10 @@ Document::get_field(const std::string& slot_name, const MsgPack& obj)
 		if (value.is_map()) {
 			auto itv = value.find(RESERVED_VALUE);
 			if (itv != value.end()) {
-				const auto& value_ = itv.value();
-				if (!value_.empty()) {
-					return value_;
-				}
+				return itv.value();
 			}
 		}
-		if (!value.empty()) {
-			return value;
-		}
+		return value;
 	}
 
 	return MsgPack(MsgPack::Type::NIL);
