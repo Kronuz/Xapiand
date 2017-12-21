@@ -949,8 +949,6 @@ int server(opts_t &opts) {
 	int exit_code = EX_OK;
 
 	try {
-		banner();
-
 		if (opts.detach) {
 			L_NOTICE("Xapiand is done with all work here. Daemon on process ID [%d] taking over!", getpid());
 		}
@@ -1025,14 +1023,19 @@ int dump(opts_t &opts) {
 			DatabaseHandler db_handler;
 			db_handler.reset(Endpoints(Endpoint(opts.dump)), DB_OPEN);
 			db_handler.dump(fd);
+			L_INFO("Dump is ready!");
 		} catch (...) {
-			exit_code = EX_DATAERR;
+			if (fd != STDOUT_FILENO) {
+				io::close(fd);
+			}
+			throw;
 		}
 		if (fd != STDOUT_FILENO) {
 			io::close(fd);
 		}
 	} else {
 		exit_code = EX_OSFILE;
+		L_ERR("Cannot open file: %s", opts.filename.c_str());
 	}
 
 	return exit_code;
@@ -1050,14 +1053,19 @@ int restore(opts_t &opts) {
 			DatabaseHandler db_handler;
 			db_handler.reset(Endpoints(Endpoint(opts.restore)), DB_WRITABLE | DB_SPAWN);
 			db_handler.restore(fd);
+			L_INFO("Restore is done!");
 		} catch (...) {
-			exit_code = EX_DATAERR;
+			if (fd != STDIN_FILENO) {
+				io::close(fd);
+			}
+			throw;
 		}
 		if (fd != STDIN_FILENO) {
 			io::close(fd);
 		}
 	} else {
 		exit_code = EX_OSFILE;
+		L_ERR("Cannot open file: %s", opts.filename.c_str());
 	}
 
 	return exit_code;
@@ -1120,6 +1128,8 @@ int main(int argc, char **argv) {
 		default_spc.flags.text_detection = false;
 		default_spc.index_uuid_field = UUIDFieldIndex::UUID;
 	}
+
+	banner();
 
 	try {
 		if (!opts.dump.empty()) {
