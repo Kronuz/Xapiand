@@ -1825,6 +1825,7 @@ Database::dump_metadata(int fd)
 				serialise_string(fd, key);
 				serialise_string(fd, value);
 			}
+			serialise_string(fd, ""); // mark end
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1880,6 +1881,7 @@ Database::dump_documents(int fd)
 				serialise_string(fd, obj);
 				serialise_string(fd, blob);
 			}
+			serialise_string(fd, ""); // mark end
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());

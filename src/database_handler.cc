@@ -658,17 +658,6 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 
 
 void
-DatabaseHandler::dump_schema(int fd)
-{
-	L_CALL("DatabaseHandler::dump_schema()");
-
-
-	serialise_string(fd, "");
-	serialise_string(fd, schema->get_readable().serialise());
-}
-
-
-void
 DatabaseHandler::dump(int fd)
 {
 	L_CALL("DatabaseHandler::dump()");
@@ -677,7 +666,7 @@ DatabaseHandler::dump(int fd)
 
 	lock_database lk_db(this);
 	database->dump_metadata(fd);
-	dump_schema(fd);
+	serialise_string(fd, schema->get_readable().serialise());
 	database->dump_documents(fd);
 }
 
