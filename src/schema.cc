@@ -538,6 +538,7 @@ const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schem
 	{ RESERVED_TYPE,                   &Schema::process_type                       },
 	{ RESERVED_BOOL_TERM,              &Schema::process_bool_term                  },
 	{ RESERVED_ACCURACY,               &Schema::process_accuracy                   },
+	{ RESERVED_ACC_PREFIX,             &Schema::process_acc_prefix                 },
 	{ RESERVED_PARTIALS,               &Schema::process_partials                   },
 	{ RESERVED_ERROR,                  &Schema::process_error                      },
 });
@@ -5454,6 +5455,23 @@ Schema::process_accuracy(const std::string& prop_name, const MsgPack& doc_accura
 		specification.doc_acc = std::make_unique<const MsgPack>(doc_accuracy);
 	} else {
 		THROW(ClientError, "Data inconsistency, %s must be array", repr(prop_name).c_str());
+	}
+}
+
+
+void
+Schema::process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_prefix)
+{
+	// RESERVED_ACCURACY isn't heritable and can't change once fixed.
+	L_CALL("Schema::process_acc_prefix(%s)", repr(doc_acc_prefix.to_string()).c_str());
+
+	try {
+		specification.acc_prefix.reserve(doc_acc_prefix.size());
+		for (const auto& acc_p : doc_acc_prefix) {
+			specification.acc_prefix.push_back(acc_p.str());
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be an array of strings", repr(prop_name).c_str());
 	}
 }
 

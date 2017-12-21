@@ -47,7 +47,6 @@ constexpr const char RESERVED_POSITIONS[]           = "_positions";
 constexpr const char RESERVED_LANGUAGE[]            = "_language";
 constexpr const char RESERVED_ACCURACY[]            = "_accuracy";
 constexpr const char RESERVED_ACC_PREFIX[]          = "_accuracy_prefix";
-constexpr const char RESERVED_ACC_GPREFIX[]         = "_accuracy_gprefix";
 constexpr const char RESERVED_STORE[]               = "_store";
 constexpr const char RESERVED_TYPE[]                = "_type";
 constexpr const char RESERVED_DYNAMIC[]             = "_dynamic";

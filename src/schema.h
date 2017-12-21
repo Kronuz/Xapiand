@@ -773,6 +773,7 @@ class Schema {
 	void process_stem_language(const std::string& prop_name, const MsgPack& doc_stem_language);
 	void process_type(const std::string& prop_name, const MsgPack& doc_type);
 	void process_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy);
+	void process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_prefix);
 	void process_index(const std::string& prop_name, const MsgPack& doc_index);
 	void process_store(const std::string& prop_name, const MsgPack& doc_store);
 	void process_recurse(const std::string& prop_name, const MsgPack& doc_recurse);
