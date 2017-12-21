@@ -692,15 +692,15 @@ DatabaseHandler::restore(int fd)
 		auto value = unserialise_string(fd, buffer, off);
 		if (key.empty()) {
 			// restore schema, it's in value
+			lk_db.unlock();
+			schema = get_schema();
 			if (!value.empty()) {
 				auto schema_begins = std::chrono::system_clock::now();
-				lk_db.unlock();
 				do {
-					schema = get_schema();
 					schema->write(MsgPack::unserialise(value), true);
 				} while (!update_schema(schema_begins));
-				lk_db.lock();
 			}
+			lk_db.lock();
 			break;
 		}
 		database->set_metadata(key, value, false, false);
