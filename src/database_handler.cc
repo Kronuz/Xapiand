@@ -784,7 +784,6 @@ DatabaseHandler::restore(int fd)
 		if (blob.empty()) {
 			doc.set_data(join_data(false, "", obj.serialise(), ""));
 		} else {
-			auto ct_type_str = ct_type.to_string();
 			doc.set_data(join_data(true, "", obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
 		}
 		doc.add_boolean_term(prefixed_term_id);
