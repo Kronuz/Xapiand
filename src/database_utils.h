@@ -120,7 +120,7 @@ constexpr const char SCHEMA_FIELD_NAME[]            = "schema";
 constexpr const char VERSION_FIELD_NAME[]           = "version";
 
 constexpr char DB_OFFSPRING_UNION  = '.';
-constexpr double DB_VERSION_SCHEMA = 1.0;
+constexpr double DB_VERSION_SCHEMA = 2.0;
 constexpr int DB_RETRIES           = 3;   // Number of tries to do an operation on a Xapian::Database or Document
 
 constexpr Xapian::valueno DB_SLOT_RESERVED     = 20; // Reserved slots by special data
