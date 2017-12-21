@@ -299,9 +299,10 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 			cmd.setOutput(&output);
 		}
 
+		ValueArg<std::string> out("o", "out", "Output filename for dump.", false, "", "file", cmd);
 		ValueArg<std::string> dump("", "dump", "Dump endpoint to stdout.", false, "", "endpoint", cmd);
+		ValueArg<std::string> in("i", "in", "Input filename for restore.", false, "", "file", cmd);
 		ValueArg<std::string> restore("", "restore", "Restore endpoint from stdin.", false, "", "endpoint", cmd);
-		ValueArg<std::string> filename("F", "filename", "Filename for dump/restore.", false, "", "file", cmd);
 
 		MultiSwitchArg verbose("v", "verbose", "Increase verbosity.", cmd);
 		ValueArg<unsigned int> verbosity("", "verbosity", "Set verbosity.", false, 0, "verbosity", cmd);
@@ -523,14 +524,31 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		}
 
 		opts.dump = dump.getValue();
+		auto out_filename = out.getValue();
 		opts.restore = restore.getValue();
+		auto in_filename = in.getValue();
 		if (!opts.dump.empty() && !opts.restore.empty()) {
 			throw CmdLineParseException("Cannot dump and restore at the same time");
 		} else if (!opts.dump.empty() || !opts.restore.empty()) {
-			if (!opts.filename.empty()) {
-				throw CmdLineParseException("Option invalid: --filename <file> can be used only with --dump and --restore ");
+			if (!opts.dump.empty()) {
+				if (!in_filename.empty()) {
+					throw CmdLineParseException("Option invalid: --in <file> can be used only with --restore");
+				}
+				opts.filename = out_filename;
+			} else {
+				if (!out_filename.empty()) {
+					throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
+				}
+				opts.filename = in_filename;
 			}
 			opts.detach = false;
+		} else {
+			if (!in_filename.empty()) {
+				throw CmdLineParseException("Option invalid: --in <file> can be used only with --restore");
+			}
+			if (!out_filename.empty()) {
+				throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
+			}
 		}
 
 	} catch (const ArgException& exc) { // catch any exceptions
