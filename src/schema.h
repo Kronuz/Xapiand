@@ -917,6 +917,16 @@ public:
 	void update(const MsgPack& obj_schema);
 	void write(const MsgPack& obj_schema, bool replace);
 
+	/*
+	 * Returns underlying msgpack schema.
+	 */
+	const MsgPack& get_schema() const {
+		if (mut_schema) {
+			return *mut_schema;
+		} else {
+			return *schema;
+		}
+	}
 
 	/*
 	 * Returns readable schema.

@@ -664,7 +664,7 @@ DatabaseHandler::dump(int fd)
 	std::string readable_schema;
 	try {
 		schema = get_schema();
-		readable_schema = schema->get_readable().serialise();
+		readable_schema = schema->get_schema().serialise();
 	} catch (...) {
 		L_WARNING("Cannot open schema for %s database", repr(endpoints.to_string()).c_str());
 	}

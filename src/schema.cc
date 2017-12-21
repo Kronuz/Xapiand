@@ -6415,7 +6415,7 @@ Schema::get_readable() const
 {
 	L_CALL("Schema::get_readable()");
 
-	auto schema_readable = mut_schema ? *mut_schema : *schema;
+	auto schema_readable = get_schema();
 	readable(schema_readable, true);
 	return schema_readable;
 }
