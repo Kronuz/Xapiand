@@ -1241,31 +1241,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 	// Check version:
 	try {
 		const auto& version_field = object.at(VERSION_FIELD_NAME);
-		if (version_field.is_map()) {
-			try {
-				const auto& sep_types = required_spc_t::get_types(version_field.at(RESERVED_TYPE).str());
-				if (sep_types[SPC_CONCRETE_TYPE] != FieldType::FLOAT) {
-					THROW(ErrorType, "%s'%s' has an unsupported type", prefix, VERSION_FIELD_NAME);
-				}
-			} catch (const std::out_of_range&) {
-				THROW(ErrorType, "%s'%s' does not have a type", prefix, VERSION_FIELD_NAME);
-			} catch (const msgpack::type_error&) {
-				THROW(ErrorType, "%s'%s' has an invalid type", prefix, VERSION_FIELD_NAME);
-			}
-			try {
-				const auto& version_value = version_field.at(RESERVED_VALUE);
-				if (!version_value.is_number()) {
-					THROW(ErrorType, "%s'%s' field must be a number", prefix, VERSION_FIELD_NAME);
-				}
-				if (version_value.f64() != DB_VERSION_SCHEMA) {
-					THROW(ErrorType, "%sDifferent schema versions, the current version is %1.1f", prefix, DB_VERSION_SCHEMA);
-				}
-			} catch (const std::out_of_range&) {
-				THROW(ErrorType, "%s'%s' does not have a value", prefix, VERSION_FIELD_NAME);
-			} catch (const msgpack::type_error&) {
-				THROW(ErrorType, "%s'%s' has an invalid version", prefix, VERSION_FIELD_NAME);
-			}
-		} else if (!version_field.is_number()) {
+		if (!version_field.is_number()) {
 			THROW(ErrorType, "%s'%s' field must be a number", prefix, VERSION_FIELD_NAME);
 		} else {
 			if (version_field.f64() != DB_VERSION_SCHEMA) {
@@ -1320,14 +1296,9 @@ Schema::get_initial_schema()
 	L_CALL("Schema::get_initial_schema()");
 
 	MsgPack new_schema({
-		{ VERSION_FIELD_NAME, {
-			{ RESERVED_TYPE, FLOAT_STR },
-			{ RESERVED_INDEX, "none" },
-			{ RESERVED_VALUE, DB_VERSION_SCHEMA },
-		} },
-		{ SCHEMA_FIELD_NAME, {
-			{ RESERVED_RECURSE, false },
-		} },
+		{ RESERVED_RECURSE, false },
+		{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
+		{ SCHEMA_FIELD_NAME, MsgPack(MsgPack::Type::MAP) },
 	});
 	new_schema.lock();
 	return std::make_shared<const MsgPack>(std::move(new_schema));
@@ -1383,7 +1354,6 @@ Schema::clear()
 
 	auto& prop = get_mutable_properties();
 	prop.clear();
-	prop[RESERVED_RECURSE] = false;
 	return prop;
 }
 
@@ -1502,7 +1472,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		FieldVector fields;
 		auto properties = &get_newest_properties();
 
-		if (properties->size() == 1) {  // only '_recurse' is here
+		if (properties->empty()) {  // new schemas have empty properties
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			dispatch_write_properties(*mut_properties, object, fields);
@@ -2069,7 +2039,7 @@ Schema::update(const MsgPack& object)
 
 		FieldVector fields;
 
-		if (properties->size() == 1) {  // only '_recurse' is here
+		if (properties->empty()) {  // new schemas have empty properties
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			dispatch_write_properties(*mut_properties, schema_obj, fields);
@@ -2443,7 +2413,7 @@ Schema::write(const MsgPack& object, bool replace)
 
 		FieldVector fields;
 
-		if (mut_properties->size() == 1) {  // only '_recurse' is here
+		if (mut_properties->empty()) {  // new schemas have empty properties
 			specification.flags.field_found = false;
 		} else {
 			dispatch_feed_properties(*mut_properties);
