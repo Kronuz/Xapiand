@@ -123,12 +123,6 @@ class DatabaseHandler {
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
-	void add_content_type(MsgPack& obj, const std::string& blob, const ct_type_t& ct_type);
-	void get_term_id(const std::string& document_id, MsgPack& obj, required_spc_t& spc_id, std::string& term_id, std::string& prefixed_term_id);
-	void add_id(const std::string& document_id, MsgPack& obj, required_spc_t& spc_id);
-	void ensure_term_id(const std::string& document_id, MsgPack& obj, required_spc_t& spc_id, std::string& term_id, std::string& prefixed_term_id);
-	void finish_document(Xapian::Document& doc, bool stored, const std::string& stored_locator, const MsgPack& obj, const std::string& blob, const ct_type_t& ct_type, const required_spc_t& spc_id, const std::string& term_id, const std::string& prefixed_term_id);
-
 	bool update_schema(std::chrono::time_point<std::chrono::system_clock> schema_begins);
 
 public:

@@ -351,98 +351,6 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 #endif
 
 
-void
-DatabaseHandler::add_content_type(MsgPack& obj, const std::string& blob, const ct_type_t& ct_type)
-{
-	if (blob.empty()) {
-		obj.erase(CONTENT_TYPE_FIELD_NAME);
-	} else {
-		// Add Content Type if indexing a blob.
-		auto& ct_field = obj[CONTENT_TYPE_FIELD_NAME];
-		if (!ct_field.is_map() && !ct_field.is_undefined()) {
-			ct_field = MsgPack();
-		}
-		ct_field[RESERVED_TYPE] = TERM_STR;
-		ct_field[RESERVED_VALUE] = ct_type.to_string();
-		ct_field[ct_type.first][ct_type.second] = nullptr;
-	}
-}
-
-
-void
-DatabaseHandler::get_term_id(const std::string& document_id, MsgPack& obj, required_spc_t& spc_id, std::string& term_id, std::string& prefixed_term_id)
-{
-	spc_id = schema->get_data_id();
-	if (spc_id.get_type() == FieldType::EMPTY) {
-		try {
-			const auto& id_field = obj.at(ID_FIELD_NAME);
-			if (id_field.is_map()) {
-				try {
-					spc_id.set_types(id_field.at(RESERVED_TYPE).str());
-				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
-				}
-			}
-		} catch (const std::out_of_range&) { }
-	} else {
-		term_id = Serialise::serialise(spc_id, document_id);
-		prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
-	}
-}
-
-
-void
-DatabaseHandler::add_id(const std::string& document_id, MsgPack& obj, required_spc_t& spc_id)
-{
-	// Add ID.
-	auto& id_field = obj[ID_FIELD_NAME];
-	auto id_value = Cast::cast(spc_id.get_type(), document_id);
-	if (id_field.is_map()) {
-		id_field[RESERVED_VALUE] = id_value;
-	} else {
-		id_field = id_value;
-	}
-}
-
-
-void
-DatabaseHandler::ensure_term_id(const std::string& document_id, MsgPack& obj, required_spc_t& spc_id, std::string& term_id, std::string& prefixed_term_id)
-{
-	if (prefixed_term_id.empty()) {
-		// Now the schema is full, get specification id.
-		spc_id = schema->get_data_id();
-		if (spc_id.get_type() == FieldType::EMPTY) {
-			// Index like a namespace.
-			const auto type_ser = Serialise::guess_serialise(document_id);
-			spc_id.set_type(type_ser.first);
-			Schema::set_namespace_spc_id(spc_id);
-			term_id = type_ser.second;
-			prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
-		} else {
-			term_id = Serialise::serialise(spc_id, document_id);
-			prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
-		}
-	}
-}
-
-
-void
-DatabaseHandler::finish_document(Xapian::Document& doc, bool stored, const std::string& stored_locator, const MsgPack& obj, const std::string& blob, const ct_type_t& ct_type, const required_spc_t& spc_id, const std::string& term_id, const std::string& prefixed_term_id)
-{
-	if (blob.empty()) {
-		L_INDEX("Data: %s", repr(obj.to_string()).c_str());
-		doc.set_data(join_data(false, "", obj.serialise(), ""));
-	} else {
-		L_INDEX("Data: %s", repr(obj.to_string()).c_str());
-		auto ct_type_str = ct_type.to_string();
-		doc.set_data(join_data(stored, stored_locator, obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
-	}
-
-	doc.add_boolean_term(prefixed_term_id);
-	doc.add_value(spc_id.slot, term_id);
-}
-
-
 DataType
 DatabaseHandler::index(const std::string& document_id, bool stored, const std::string& stored_locator, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type)
 {
@@ -463,10 +371,46 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 				schema = get_schema(&obj);
 				L_INDEX("Schema: %s", repr(schema->to_string()).c_str());
 
-				get_term_id(document_id, obj, spc_id, term_id, prefixed_term_id);
+				// Get term ID.
+				spc_id = schema->get_data_id();
+				if (spc_id.get_type() == FieldType::EMPTY) {
+					try {
+						const auto& id_field = obj.at(ID_FIELD_NAME);
+						if (id_field.is_map()) {
+							try {
+								spc_id.set_types(id_field.at(RESERVED_TYPE).str());
+							} catch (const msgpack::type_error&) {
+								THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+							}
+						}
+					} catch (const std::out_of_range&) { }
+				} else {
+					term_id = Serialise::serialise(spc_id, document_id);
+					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+				}
 
-				add_content_type(obj, blob, ct_type);
-				add_id(document_id, obj, spc_id);
+				// Add ID.
+				auto& id_field = obj[ID_FIELD_NAME];
+				auto id_value = Cast::cast(spc_id.get_type(), document_id);
+				if (id_field.is_map()) {
+					id_field[RESERVED_VALUE] = id_value;
+				} else {
+					id_field = id_value;
+				}
+
+				// Add Content Type.
+				if (blob.empty()) {
+					obj.erase(CONTENT_TYPE_FIELD_NAME);
+				} else {
+					// Add Content Type if indexing a blob.
+					auto& ct_field = obj[CONTENT_TYPE_FIELD_NAME];
+					if (!ct_field.is_map() && !ct_field.is_undefined()) {
+						ct_field = MsgPack();
+					}
+					ct_field[RESERVED_TYPE] = TERM_STR;
+					ct_field[RESERVED_VALUE] = ct_type.to_string();
+					ct_field[ct_type.first][ct_type.second] = nullptr;
+				}
 
 				// Index object.
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
@@ -474,11 +418,38 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 #else
 				obj = schema->index(obj, doc);
 #endif
-				ensure_term_id(document_id, obj, spc_id, term_id, prefixed_term_id);
+
+				// Ensure term ID.
+				if (prefixed_term_id.empty()) {
+					// Now the schema is full, get specification id.
+					spc_id = schema->get_data_id();
+					if (spc_id.get_type() == FieldType::EMPTY) {
+						// Index like a namespace.
+						const auto type_ser = Serialise::guess_serialise(document_id);
+						spc_id.set_type(type_ser.first);
+						Schema::set_namespace_spc_id(spc_id);
+						term_id = type_ser.second;
+						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+					} else {
+						term_id = Serialise::serialise(spc_id, document_id);
+						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+					}
+				}
 			} while (!update_schema(schema_begins));
 
-			finish_document(doc, stored, stored_locator, obj, blob, ct_type, spc_id, term_id, prefixed_term_id);
+			// Finish document: add data, ID term and ID value.
+			if (blob.empty()) {
+				L_INDEX("Data: %s", repr(obj.to_string()).c_str());
+				doc.set_data(join_data(false, "", obj.serialise(), ""));
+			} else {
+				L_INDEX("Data: %s", repr(obj.to_string()).c_str());
+				auto ct_type_str = ct_type.to_string();
+				doc.set_data(join_data(stored, stored_locator, obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
+			}
+			doc.add_boolean_term(prefixed_term_id);
+			doc.add_value(spc_id.slot, term_id);
 
+			// Index document.
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 			if (set_document_change_seq(prefixed_term_id, std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(Document(doc).hash(), obj)), old_document_pair)) {
 #endif
