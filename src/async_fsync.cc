@@ -89,7 +89,7 @@ void
 AsyncFsync::run()
 {
 	L_CALL("AsyncFsync::run()");
-	L_INFO_HOOK_LOG("AsyncFsync::run", this, "AsyncFsync::run()");
+	L_INFO_HOOK_LOG("AsyncFsync::run", "AsyncFsync::run()");
 
 	{
 		std::lock_guard<std::mutex> statuses_lk(AsyncFsync::statuses_mtx);

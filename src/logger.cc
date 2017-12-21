@@ -308,7 +308,7 @@ Logging::join()
 void
 Logging::run()
 {
-	L_INFO_HOOK_LOG("Logging::run", this, "Logging::run()");
+	L_INFO_HOOK_LOG("Logging::run", "Logging::run()");
 
 	auto msg = str_start;
 	auto log_age = age();

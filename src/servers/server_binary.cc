@@ -73,7 +73,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 	int fd = watcher.fd;
 
 	L_CALL("BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
-	L_INFO_HOOK_LOG("BinaryServer::io_accept_cb", this, "BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+	L_INFO_HOOK_LOG("BinaryServer::io_accept_cb", "BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
 	if (EV_ERROR & revents) {
 		L_EV("ERROR: got invalid binary event {fd:%d}: %s", fd, strerror(errno));

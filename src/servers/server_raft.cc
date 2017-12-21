@@ -270,7 +270,7 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 	int fd = watcher.fd;
 
 	L_CALL("RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
-	L_INFO_HOOK_LOG("RaftServer::io_accept_cb", this, "RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+	L_INFO_HOOK_LOG("RaftServer::io_accept_cb", "RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
 	if (EV_ERROR & revents) {
 		L_EV("ERROR: got invalid raft event {fd:%d}: %s", fd, strerror(errno));

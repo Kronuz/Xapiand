@@ -93,7 +93,7 @@ void
 DatabaseAutocommit::run()
 {
 	L_CALL("DatabaseAutocommit::run()");
-	L_INFO_HOOK_LOG("DatabaseAutocommit::run", this, "DatabaseAutocommit::run()");
+	L_INFO_HOOK_LOG("DatabaseAutocommit::run", "DatabaseAutocommit::run()");
 
 	{
 		std::lock_guard<std::mutex> statuses_lk(DatabaseAutocommit::statuses_mtx);
