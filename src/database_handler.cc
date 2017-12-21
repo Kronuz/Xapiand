@@ -704,7 +704,7 @@ DatabaseHandler::restore(int fd)
 			}
 			break;
 		}
-		database->set_metadata(key, value);
+		database->set_metadata(key, value, false, false);
 	} while (true);
 
 	// restore documents
@@ -791,10 +791,10 @@ DatabaseHandler::restore(int fd)
 		doc.add_value(DB_SLOT_ID, term_id);
 
 		// Index document.
-		database->replace_document_term(prefixed_term_id, doc);
+		database->replace_document_term(prefixed_term_id, doc, false, false);
 	} while (true);
 
-	database->commit();
+	database->commit(false);
 }
 
 
