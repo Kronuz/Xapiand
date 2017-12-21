@@ -993,8 +993,8 @@ int server(opts_t &opts) {
 		ev::default_loop default_loop(opts.ev_flags);
 		L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
 
+		usedir(opts.database.c_str(), opts.solo);
 		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
-
 		XapiandManager::manager->run(opts);
 
 		long managers = XapiandManager::manager.use_count() - 1;
@@ -1015,13 +1015,15 @@ int server(opts_t &opts) {
 int dump(opts_t &opts) {
 	int exit_code = EX_OK;
 
-	XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
-
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
+			usedir(opts.database.c_str(), opts.solo);
+			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
 			DatabaseHandler db_handler;
-			db_handler.reset(Endpoints(Endpoint(opts.dump)), DB_OPEN);
+			Endpoints endpoints(Endpoint(opts.dump));
+			L_INFO("Dumping database: %s", repr(endpoints.to_string()).c_str());
+			db_handler.reset(endpoints, DB_OPEN);
 			db_handler.dump(fd);
 			L_INFO("Dump is ready!");
 		} catch (...) {
@@ -1045,13 +1047,15 @@ int dump(opts_t &opts) {
 int restore(opts_t &opts) {
 	int exit_code = EX_OK;
 
-	XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
-
 	int fd = opts.filename.empty() ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
 	if (fd >= 0) {
 		try {
+			usedir(opts.database.c_str(), opts.solo);
+			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
 			DatabaseHandler db_handler;
-			db_handler.reset(Endpoints(Endpoint(opts.restore)), DB_WRITABLE | DB_SPAWN);
+			Endpoints endpoints(Endpoint(opts.restore));
+			L_INFO("Restoring into: %s", repr(endpoints.to_string()).c_str());
+			db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 			db_handler.restore(fd);
 			L_INFO("Restore is done!");
 		} catch (...) {
@@ -1085,14 +1089,9 @@ int main(int argc, char **argv) {
 	}
 
 	// Initialize options:
-
-	std::setlocale(LC_CTYPE, "");
-
-	usedir(opts.database.c_str(), opts.solo);
-
-	demote(opts.uid.c_str(), opts.gid.c_str());
-
 	setup_signal_handlers();
+	std::setlocale(LC_CTYPE, "");
+	demote(opts.uid.c_str(), opts.gid.c_str());
 
 	// Logging thread must be created after fork the parent process
 	auto& handlers = Logging::handlers;
