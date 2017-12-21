@@ -369,7 +369,7 @@ protected:
         PutUnsafe(*os_, '\"');
         GenericStringStream<SourceEncoding> is(str);
         while (ScanWriteUnescapedString(is, length)) {
-            const Ch c = is.Peek();
+            Ch c = is.Peek();
             if (!TargetEncoding::supportUnicode && static_cast<unsigned>(c) >= 0x80) {
                 // Unicode escaping
                 unsigned codepoint;
@@ -438,7 +438,7 @@ protected:
                         buffer_end = buffer_start - start + length;
                     }
                     for (Ch *b = buffer_start; b != buffer_end; ++b) {
-                        Ch c = *b;
+                        c = *b;
                         char e = escape[static_cast<unsigned char>(c)];
                         switch (e) {
                             case 0:
