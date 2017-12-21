@@ -894,14 +894,6 @@ HttpClient::_post(enum http_method method)
 			path_parser.off_id = nullptr;  // Command has no ID
 			touch_view(method, cmd);
 			break;
-		case Command::CMD_DUMP:
-			path_parser.off_id = nullptr;  // Command has no ID
-			dump_view(method, cmd);
-			break;
-		case Command::CMD_RESTORE:
-			path_parser.off_id = nullptr;  // Command has no ID
-			restore_view(method, cmd);
-			break;
 #ifndef NDEBUG
 		case Command::CMD_QUIT:
 			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
@@ -1423,64 +1415,6 @@ HttpClient::wal_view(enum http_method method, Command)
 	write_http_response(HTTP_STATUS_OK, repr);
 }
 #endif
-
-
-void
-HttpClient::dump_view(enum http_method method, Command)
-{
-	L_CALL("HttpClient::dump_view()");
-
-	endpoints_maker(1s);
-
-	db_handler.reset(endpoints, DB_OPEN);
-
-	operation_begins = std::chrono::system_clock::now();
-
-	std::string filename = "/tmp/xapiand.dump";
-	int fd = io::open(filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-	try {
-		if unlikely(fd < 0) {
-			THROW(Error, "Cannot open file: %s", filename.c_str());
-		}
-		db_handler.dump(fd);
-	} catch (...) {
-		io::close(fd);
-		throw;
-	}
-
-	operation_ends = std::chrono::system_clock::now();
-
-	write_http_response(HTTP_STATUS_OK);
-}
-
-
-void
-HttpClient::restore_view(enum http_method method, Command)
-{
-	L_CALL("HttpClient::restore_view()");
-
-	endpoints_maker(1s);
-
-	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN);
-
-	operation_begins = std::chrono::system_clock::now();
-
-	std::string filename = "/tmp/xapiand.dump";
-	int fd = io::open(filename.c_str(), O_RDONLY);
-	try {
-		if unlikely(fd < 0) {
-			THROW(Error, "Cannot open file: %s", filename.c_str());
-		}
-		db_handler.restore(fd);
-	} catch (...) {
-		io::close(fd);
-		throw;
-	}
-
-	operation_ends = std::chrono::system_clock::now();
-
-	write_http_response(HTTP_STATUS_OK);
-}
 
 
 void

@@ -154,8 +154,6 @@ class HttpClient : public BaseClient {
 		CMD_STATS     = xxh64::hash(COMMAND_STATS),
 		CMD_METADATA  = xxh64::hash(COMMAND_METADATA),
 		CMD_SCHEMA    = xxh64::hash(COMMAND_SCHEMA),
-		CMD_DUMP      = xxh64::hash(COMMAND_DUMP),
-		CMD_RESTORE   = xxh64::hash(COMMAND_RESTORE),
 #if XAPIAND_DATABASE_WAL
 		CMD_WAL       = xxh64::hash(COMMAND_WAL),
 #endif
@@ -248,8 +246,6 @@ class HttpClient : public BaseClient {
 #if XAPIAND_DATABASE_WAL
 	void wal_view(enum http_method method, Command cmd);
 #endif
-	void dump_view(enum http_method method, Command cmd);
-	void restore_view(enum http_method method, Command cmd);
 	void nodes_view(enum http_method method, Command cmd);
 	void stats_view(enum http_method method, Command cmd);
 
