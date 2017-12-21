@@ -374,16 +374,21 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 				// Get term ID.
 				spc_id = schema->get_data_id();
 				if (spc_id.get_type() == FieldType::EMPTY) {
-					try {
-						const auto& id_field = obj.at(ID_FIELD_NAME);
-						if (id_field.is_map()) {
-							try {
-								spc_id.set_types(id_field.at(RESERVED_TYPE).str());
-							} catch (const msgpack::type_error&) {
-								THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+					auto f_it = obj.find(ID_FIELD_NAME);
+					if (f_it != obj.end()) {
+						const auto& field = f_it.value();
+						if (field.is_map()) {
+							auto f_it_end = field.end();
+							auto ft_it = field.find(RESERVED_TYPE);
+							if (ft_it != f_it_end) {
+								const auto& type = ft_it.value();
+								if (!type.is_string()) {
+									THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+								}
+								spc_id.set_types(type.str());
 							}
 						}
-					} catch (const std::out_of_range&) { }
+					}
 				} else {
 					term_id = Serialise::serialise(spc_id, document_id);
 					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
@@ -732,22 +737,37 @@ DatabaseHandler::restore(int fd)
 		auto ct_type = ct_type_t(ct_type_str);
 
 		L_GREEN("%s", repr(obj.to_string()).c_str());
-		auto document_id = Document::get_field(ID_FIELD_NAME, obj);
+		MsgPack document_id;
 
 		// Get term ID.
 		spc_id = schema->get_data_id();
 		if (spc_id.get_type() == FieldType::EMPTY) {
-			try {
-				const auto& id_field = obj.at(ID_FIELD_NAME);
-				if (id_field.is_map()) {
-					try {
-						spc_id.set_types(id_field.at(RESERVED_TYPE).str());
-					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+			auto f_it = obj.find(ID_FIELD_NAME);
+			if (f_it != obj.end()) {
+				const auto& field = f_it.value();
+				if (field.is_map()) {
+					auto f_it_end = field.end();
+					auto ft_it = field.find(RESERVED_TYPE);
+					if (ft_it != f_it_end) {
+						const auto& type = ft_it.value();
+						if (!type.is_string()) {
+							THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+						}
+						spc_id.set_types(type.str());
 					}
+					auto fv_it = field.find(RESERVED_VALUE);
+					if (fv_it != f_it_end) {
+						document_id = fv_it.value();
+					}
+				} else {
+					document_id = field;
 				}
-			} catch (const std::out_of_range&) { }
+			}
+			if (document_id.is_undefined()) {
+				document_id = Unserialise::MsgPack(spc_id.get_type(), document_id_str);
+			}
 		} else {
+			document_id = Unserialise::MsgPack(spc_id.get_type(), document_id_str);
 			term_id = Serialise::serialise(spc_id, document_id);
 			prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 		}
