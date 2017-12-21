@@ -1023,7 +1023,7 @@ int dump(opts_t &opts) {
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump));
 			L_INFO("Dumping database: %s", repr(endpoints.to_string()).c_str());
-			db_handler.reset(endpoints, DB_OPEN);
+			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump(fd);
 			L_INFO("Dump is ready!");
 		} catch (...) {
