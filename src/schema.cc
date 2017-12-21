@@ -3326,10 +3326,11 @@ Schema::validate_required_data(MsgPack& mut_properties)
 
 	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
 	if (!set_acc.empty()) {
+		specification.acc_prefix.clear();
 		for (const auto& acc : set_acc) {
 			specification.acc_prefix.push_back(get_prefix(acc));
 		}
-		specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+		specification.accuracy.assign(set_acc.begin(), set_acc.end());
 		mut_properties[RESERVED_ACCURACY]   = specification.accuracy;
 		mut_properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
 	}
@@ -4721,6 +4722,7 @@ Schema::feed_accuracy(const MsgPack& prop_accuracy)
 {
 	L_CALL("Schema::feed_accuracy(%s)", repr(prop_accuracy.to_string()).c_str());
 
+	specification.accuracy.clear();
 	specification.accuracy.reserve(prop_accuracy.size());
 	for (const auto& _accuracy : prop_accuracy) {
 		uint64_t accuracy;
@@ -4746,6 +4748,7 @@ Schema::feed_acc_prefix(const MsgPack& prop_acc_prefix)
 {
 	L_CALL("Schema::feed_acc_prefix(%s)", repr(prop_acc_prefix.to_string()).c_str());
 
+	specification.acc_prefix.clear();
 	specification.acc_prefix.reserve(prop_acc_prefix.size());
 	for (const auto& acc_p : prop_acc_prefix) {
 		specification.acc_prefix.push_back(acc_p.str());
@@ -5481,10 +5484,11 @@ Schema::process_accuracy(const std::string& prop_name, const MsgPack& doc_accura
 void
 Schema::process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_prefix)
 {
-	// RESERVED_ACCURACY isn't heritable and can't change once fixed.
+	// RESERVED_ACC_PREFIX isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_acc_prefix(%s)", repr(doc_acc_prefix.to_string()).c_str());
 
 	try {
+		specification.acc_prefix.clear();
 		specification.acc_prefix.reserve(doc_acc_prefix.size());
 		for (const auto& acc_p : doc_acc_prefix) {
 			specification.acc_prefix.push_back(acc_p.str());
