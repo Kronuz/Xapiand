@@ -310,7 +310,7 @@ std::string
 unserialise_string(int fd, std::string &buffer, std::size_t& off)
 {
 	ssize_t r;
-	if (buffer.size() < 10) {
+	if (buffer.size() - off < 10) {
 		char buf[1024];
 		r = io::read(fd, buf, sizeof(buf));
 		if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
@@ -328,11 +328,9 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off)
 	auto available = end - pos;
 	if (available >= length) {
 		str.append(pos, pos + length);
-		off += length;
-		buffer.erase(0, off);
+		buffer.erase(0, off + length);
 		off = 0;
 	} else {
-		std::string str;
 		str.reserve(length);
 		str.append(pos, end);
 		str.resize(length);
@@ -347,6 +345,7 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off)
 		buffer.erase(0, off);
 		off = 0;
 	}
+
 	return str;
 }
 
