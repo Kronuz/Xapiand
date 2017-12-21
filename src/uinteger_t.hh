@@ -1833,7 +1833,7 @@ public:
 			mulhi = 0;
 			digit carry = 0;
 			for (; _it_w != it_w_e; ++_it_v, ++_it_w) {
-				digit mullo = 0;
+				mullo = 0;
 				mulhi = _multadd(*_it_w, _q, 0, mulhi, &mullo);
 				carry = _subborrow(*_it_v, mullo, carry, &*_it_v);
 			}
@@ -1843,8 +1843,8 @@ public:
 				// D6. Add w back if q was too large (this branch taken rarely)
 				--_q;
 
-				auto _it_v = it_v_k;
-				auto _it_w = it_w;
+				_it_v = it_v_k;
+				_it_w = it_w;
 				carry = 0;
 				for (; _it_w != it_w_e; ++_it_v, ++_it_w) {
 					carry = _addcarry(*_it_v, *_it_w, carry, &*_it_v);
