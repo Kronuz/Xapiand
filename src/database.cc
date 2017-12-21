@@ -1822,10 +1822,8 @@ Database::dump_metadata(int fd)
 			for (; it != it_e; ++it) {
 				key = *it;
 				auto value = db->get_metadata(key);
-				w = io::write(fd, key.data(), key.size());
-				if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
-				w = io::write(fd, value.data(), value.size());
-				if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+				serialise_string(fd, key);
+				serialise_string(fd, value);
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
@@ -1878,10 +1876,9 @@ Database::dump_documents(int fd)
 					}
 				}
 #endif
-				w = io::write(fd, obj.data(), obj.size());
-				if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
-				w = io::write(fd, blob.data(), blob.size());
-				if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+				serialise_string(fd, doc.get_value(DB_SLOT_ID));
+				serialise_string(fd, obj);
+				serialise_string(fd, blob);
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
