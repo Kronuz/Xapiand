@@ -927,35 +927,9 @@ void banner() {
 }
 
 
-void run(const opts_t &opts) {
-	usedir(opts.database.c_str(), opts.solo);
-
-	demote(opts.uid.c_str(), opts.gid.c_str());
-
-	setup_signal_handlers();
-	ev::default_loop default_loop(opts.ev_flags);
-
-	L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
-
-	XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
-	try {
-		XapiandManager::manager->run(opts);
-	} catch (...) {
-		XapiandManager::manager.reset();
-		throw;
-	}
-
-	long managers = XapiandManager::manager.use_count() - 1;
-	if (managers == 0) {
-		L_NOTICE("Xapiand is cleanly done with all work!");
-	} else {
-		L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree().c_str());
-	}
-	XapiandManager::manager.reset();
-}
-
-
 int server(opts_t &opts) {
+	int exit_code = EX_OK;
+
 	try {
 		banner();
 
@@ -1000,18 +974,32 @@ int server(opts_t &opts) {
 			std::to_string(opts.max_databases) + ((opts.max_databases == 1) ? " database" : " databases"),
 		}, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
-		run(opts);
+		ev::default_loop default_loop(opts.ev_flags);
+		L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
+
+		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
+
+		XapiandManager::manager->run(opts);
+
+		long managers = XapiandManager::manager.use_count() - 1;
+		if (managers == 0) {
+			L_NOTICE("Xapiand is cleanly done with all work!");
+		} else {
+			L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree().c_str());
+		}
 
 	} catch (const Exit& exc) {
-		return exc.code;
+		exit_code = exc.code;
 	}
 
-	return EX_OK;
+	return exit_code;
 }
 
 
 int dump(opts_t &opts) {
 	int exit_code = EX_OK;
+
+	XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
 
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
@@ -1035,6 +1023,8 @@ int dump(opts_t &opts) {
 
 int restore(opts_t &opts) {
 	int exit_code = EX_OK;
+
+	XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
 
 	int fd = opts.filename.empty() ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
 	if (fd >= 0) {
@@ -1072,6 +1062,12 @@ int main(int argc, char **argv) {
 
 	std::setlocale(LC_CTYPE, "");
 
+	usedir(opts.database.c_str(), opts.solo);
+
+	demote(opts.uid.c_str(), opts.gid.c_str());
+
+	setup_signal_handlers();
+
 	// Logging thread must be created after fork the parent process
 	auto& handlers = Logging::handlers;
 	if (opts.logfile.compare("syslog") == 0) {
@@ -1107,13 +1103,38 @@ int main(int argc, char **argv) {
 		default_spc.index_uuid_field = UUIDFieldIndex::UUID;
 	}
 
-	if (!opts.dump.empty()) {
-		exit_code = dump(opts);
-	} else if (!opts.restore.empty()) {
-		exit_code = restore(opts);
-	} else {
-		exit_code = server(opts);
+	try {
+		if (!opts.dump.empty()) {
+			exit_code = dump(opts);
+		} else if (!opts.restore.empty()) {
+			exit_code = restore(opts);
+		} else {
+			exit_code = server(opts);
+		}
+	} catch (const BaseException& exc) {
+		exit_code = EX_SOFTWARE;
+		L_CRIT("Uncaught exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+	} catch (const Xapian::Error& exc) {
+		exit_code = EX_SOFTWARE;
+		auto exc_msg_error = exc.get_msg();
+		const char* error_str = exc.get_error_string();
+		if (error_str) {
+			exc_msg_error.append(" (").append(error_str).push_back(')');
+		}
+		if (exc_msg_error.empty()) {
+			L_CRIT("Uncaught Xapian::Error!");
+		} else {
+			L_CRIT(exc_msg_error);
+		}
+	} catch (const std::exception& exc) {
+		exit_code = EX_SOFTWARE;
+		L_CRIT("Uncaught exception: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
+	} catch (...) {
+		exit_code = EX_SOFTWARE;
+		L_CRIT("Uncaught exception!");
 	}
+
+	XapiandManager::manager.reset();
 
 	if (opts.detach && !opts.pidfile.empty()) {
 		L_INFO("Removing the pid file.");

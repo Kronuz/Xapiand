@@ -107,7 +107,7 @@ constexpr const char* const XapiandManager::StateNames[];
 
 
 std::shared_ptr<XapiandManager> XapiandManager::manager;
-
+static ev::loop_ref* loop_ref_nil = nullptr;
 
 void sig_exit(int sig) {
 	if (sig < 0) {
@@ -116,6 +116,23 @@ void sig_exit(int sig) {
 		XapiandManager::manager->signal_sig(sig);
 	}
 }
+
+XapiandManager::XapiandManager(const opts_t& o)
+	: Worker(nullptr, loop_ref_nil, 0),
+	  database_pool(o.dbpool_size, o.max_databases),
+	  schemas(o.dbpool_size),
+	  thread_pool("W%02zu", o.threadpool_size),
+	  server_pool("S%02zu", o.num_servers),
+#ifdef XAPIAND_CLUSTERING
+	  replicator_pool("R%02zu", o.num_replicators),
+	  endp_r(o.endpoints_list_size),
+#endif
+	  shutdown_asap(0),
+	  shutdown_now(0),
+	  state(State::RESET),
+	  opts(o),
+	  node_name(o.node_name),
+	  atom_sig(0) { }
 
 
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, const opts_t& o)

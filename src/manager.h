@@ -118,6 +118,7 @@ class XapiandManager : public Worker  {
 
 	std::mutex qmtx;
 
+	XapiandManager(const opts_t& o);
 	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, const opts_t& o);
 
 	struct sockaddr_in host_address();
