@@ -83,7 +83,11 @@ lock_database::lock_database(DatabaseHandler* db_handler_)
 
 lock_database::~lock_database()
 {
-	unlock();
+	if (db_handler) {
+		if (db_handler->database) {
+			unlock();
+		}
+	}
 }
 
 
