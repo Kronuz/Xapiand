@@ -652,13 +652,26 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 
 
 void
+DatabaseHandler::dump_schema(int fd)
+{
+	L_CALL("DatabaseHandler::dump_schema()");
+
+
+	serialise_string(fd, "");
+	serialise_string(fd, schema->get_readable().serialise());
+}
+
+
+void
 DatabaseHandler::dump(int fd)
 {
 	L_CALL("DatabaseHandler::dump()");
 
-	lock_database lk_db(this);
+	schema = get_schema();
 
+	lock_database lk_db(this);
 	database->dump_metadata(fd);
+	dump_schema(fd);
 	database->dump_documents(fd);
 }
 
@@ -670,8 +683,110 @@ DatabaseHandler::restore(int fd)
 
 	lock_database lk_db(this);
 
-	// database->dump_metadata(fd);
-	// database->dump_documents(fd);
+	std::string buffer;
+	std::size_t off = 0;
+
+	// restore metadata
+	std::cerr << "restore metadata..." << std::endl;
+	do {
+		auto key = unserialise_string(fd, buffer, off);
+		auto value = unserialise_string(fd, buffer, off);
+		if (key.empty()) {
+			// restore schema, it's in value
+			std::cerr << "restore schema..." << std::endl;
+			auto schema_begins = std::chrono::system_clock::now();
+			lk_db.unlock();
+			do {
+				schema = get_schema();
+				L_INDEX("Schema: %s", repr(schema->to_string()).c_str());
+
+				schema->write(MsgPack::unserialise(value), true);
+			} while (!update_schema(schema_begins));
+			lk_db.lock();
+			break;
+		}
+		std::cerr << "  -> " << key << std::endl;
+		database->set_metadata(key, value);
+	} while (true);
+
+	// restore documents
+	std::cerr << "restore documents..." << std::endl;
+	do {
+		auto document_id_str = unserialise_string(fd, buffer, off);
+		auto obj_str = unserialise_string(fd, buffer, off);
+		std::cerr << "  -> " << repr(obj_str) << std::endl;
+		auto blob = unserialise_string(fd, buffer, off);
+		auto obj = MsgPack::unserialise(obj_str);
+		std::cerr << "  => " << obj.to_string() << std::endl;
+
+		Xapian::Document doc;
+		required_spc_t spc_id;
+		std::string term_id;
+		std::string prefixed_term_id;
+
+		std::string ct_type_str;
+		if (!blob.empty()) {
+			ct_type_str = unserialise_string_at(1, blob);
+		}
+		auto ct_type = ct_type_t(ct_type_str);
+
+		L_GREEN("%s", repr(obj.to_string()).c_str());
+		auto document_id = Document::get_field(ID_FIELD_NAME, obj);
+
+		// Get term ID.
+		spc_id = schema->get_data_id();
+		if (spc_id.get_type() == FieldType::EMPTY) {
+			try {
+				const auto& id_field = obj.at(ID_FIELD_NAME);
+				if (id_field.is_map()) {
+					try {
+						spc_id.set_types(id_field.at(RESERVED_TYPE).str());
+					} catch (const msgpack::type_error&) {
+						THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+					}
+				}
+			} catch (const std::out_of_range&) { }
+		} else {
+			term_id = Serialise::serialise(spc_id, document_id);
+			prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+		}
+
+		obj = schema->index(obj, doc);
+
+		// Ensure term ID.
+		if (prefixed_term_id.empty()) {
+			// Now the schema is full, get specification id.
+			spc_id = schema->get_data_id();
+			if (spc_id.get_type() == FieldType::EMPTY) {
+				// Index like a namespace.
+				const auto type_ser = Serialise::guess_serialise(document_id);
+				spc_id.set_type(type_ser.first);
+				Schema::set_namespace_spc_id(spc_id);
+				term_id = type_ser.second;
+				prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+			} else {
+				term_id = Serialise::serialise(spc_id, document_id);
+				prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+			}
+		}
+
+		// Finish document: add data, ID term and ID value.
+		if (blob.empty()) {
+			L_INDEX("Data: %s", repr(obj.to_string()).c_str());
+			doc.set_data(join_data(false, "", obj.serialise(), ""));
+		} else {
+			L_INDEX("Data: %s", repr(obj.to_string()).c_str());
+			auto ct_type_str = ct_type.to_string();
+			doc.set_data(join_data(true, "", obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
+		}
+		doc.add_boolean_term(prefixed_term_id);
+		doc.add_value(spc_id.slot, term_id);
+
+		// Index document.
+		database->replace_document_term(prefixed_term_id, doc);
+	} while (true);
+
+	commit();
 }
 
 
