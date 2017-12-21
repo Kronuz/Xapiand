@@ -54,6 +54,7 @@
 #endif
 
 #include "cmdoutput.h"               // for CmdOutput
+#include "database_handler.h"        // for DatabaseHandler
 #include "endpoint.h"                // for Endpoint, Endpoint::cwd
 #include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"               // for Exit
@@ -298,6 +299,10 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 			cmd.setOutput(&output);
 		}
 
+		ValueArg<std::string> dump("", "dump", "Dump endpoint to stdout.", false, "", "endpoint", cmd);
+		ValueArg<std::string> restore("", "restore", "Restore endpoint from stdin.", false, "", "endpoint", cmd);
+		ValueArg<std::string> filename("F", "filename", "Filename for dump/restore.", false, "", "file", cmd);
+
 		MultiSwitchArg verbose("v", "verbose", "Increase verbosity.", cmd);
 		ValueArg<unsigned int> verbosity("", "verbosity", "Set verbosity.", false, 0, "verbosity", cmd);
 
@@ -408,6 +413,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 				}
 			}
 		}
+
 		cmd.parse(args);
 
 		opts.verbosity = verbosity.getValue() + verbose.getValue();
@@ -515,6 +521,18 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 			}
 		}
+
+		opts.dump = dump.getValue();
+		opts.restore = restore.getValue();
+		if (!opts.dump.empty() && !opts.restore.empty()) {
+			throw CmdLineParseException("Cannot dump and restore at the same time");
+		} else if (!opts.dump.empty() || !opts.restore.empty()) {
+			if (!opts.filename.empty()) {
+				throw CmdLineParseException("Option invalid: --filename <file> can be used only with --dump and --restore ");
+			}
+			opts.detach = false;
+		}
+
 	} catch (const ArgException& exc) { // catch any exceptions
 		std::cerr << "error: " << exc.error() << " for arg " << exc.argId() << std::endl;
 	}
@@ -937,35 +955,7 @@ void run(const opts_t &opts) {
 }
 
 
-int main(int argc, char **argv) {
-	int exit_code = EX_OK;
-
-	opts_t opts;
-
-	parseOptions(argc, argv, opts);
-
-	std::setlocale(LC_CTYPE, "");
-
-	if (opts.detach) {
-		detach();
-		writepid(opts.pidfile.c_str());
-	}
-
-	// Logging thread must be created after fork the parent process
-	auto& handlers = Logging::handlers;
-	if (opts.logfile.compare("syslog") == 0) {
-		handlers.push_back(std::make_unique<SysLog>());
-	} else if (!opts.logfile.empty()) {
-		handlers.push_back(std::make_unique<StreamLogger>(opts.logfile.c_str()));
-	}
-	if (!opts.detach || handlers.empty()) {
-		handlers.push_back(std::make_unique<StderrLogger>());
-	}
-
-	Logging::log_level += opts.verbosity;
-	Logging::colors = opts.colors;
-	Logging::no_colors = opts.no_colors;
-
+int server(opts_t &opts) {
 	try {
 		banner();
 
@@ -985,14 +975,6 @@ int main(int argc, char **argv) {
 			L_INFO("Increased database flush threshold to 100000 (it was originally set to %d).", flush_threshold);
 		}
 
-#ifdef XAPIAN_HAS_GLASS_BACKEND
-		if (!opts.chert) {
-			// Prefer glass database
-			if (setenv("XAPIAN_PREFER_GLASS", "1", false) != 0) {
-				opts.chert = true;
-			}
-		}
-#endif
 		if (opts.chert) {
 			L_INFO("Using Chert databases by default.");
 		} else {
@@ -1002,15 +984,9 @@ int main(int argc, char **argv) {
 		std::vector<std::string> modes;
 		if (opts.strict) {
 			modes.push_back("strict");
-			default_spc.flags.strict = true;
 		}
-
 		if (opts.optimal) {
 			modes.push_back("optimal");
-			default_spc.flags.optimal = true;
-			default_spc.index = TypeIndex::FIELD_ALL;
-			default_spc.flags.text_detection = false;
-			default_spc.index_uuid_field = UUIDFieldIndex::UUID;
 		}
 		if (!modes.empty()) {
 			L_INFO("Activated " + join_string(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
@@ -1027,7 +1003,116 @@ int main(int argc, char **argv) {
 		run(opts);
 
 	} catch (const Exit& exc) {
-		exit_code = exc.code;
+		return exc.code;
+	}
+
+	return EX_OK;
+}
+
+
+int dump(opts_t &opts) {
+	int exit_code = EX_OK;
+
+	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+	if (fd >= 0) {
+		try {
+			DatabaseHandler db_handler;
+			db_handler.reset(Endpoints(Endpoint(opts.dump)), DB_OPEN);
+			db_handler.dump(fd);
+		} catch (...) {
+			exit_code = EX_DATAERR;
+		}
+		if (fd != STDOUT_FILENO) {
+			io::close(fd);
+		}
+	} else {
+		exit_code = EX_OSFILE;
+	}
+
+	return exit_code;
+}
+
+
+int restore(opts_t &opts) {
+	int exit_code = EX_OK;
+
+	int fd = opts.filename.empty() ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
+	if (fd >= 0) {
+		try {
+			DatabaseHandler db_handler;
+			db_handler.reset(Endpoints(Endpoint(opts.restore)), DB_WRITABLE | DB_SPAWN);
+			db_handler.restore(fd);
+		} catch (...) {
+			exit_code = EX_DATAERR;
+		}
+		if (fd != STDIN_FILENO) {
+			io::close(fd);
+		}
+	} else {
+		exit_code = EX_OSFILE;
+	}
+
+	return exit_code;
+}
+
+
+int main(int argc, char **argv) {
+	int exit_code = EX_OK;
+
+	opts_t opts;
+
+	parseOptions(argc, argv, opts);
+
+	if (opts.detach) {
+		detach();
+		writepid(opts.pidfile.c_str());
+	}
+
+	// Initialize options:
+
+	std::setlocale(LC_CTYPE, "");
+
+	// Logging thread must be created after fork the parent process
+	auto& handlers = Logging::handlers;
+	if (opts.logfile.compare("syslog") == 0) {
+		handlers.push_back(std::make_unique<SysLog>());
+	} else if (!opts.logfile.empty()) {
+		handlers.push_back(std::make_unique<StreamLogger>(opts.logfile.c_str()));
+	}
+	if (!opts.detach || handlers.empty()) {
+		handlers.push_back(std::make_unique<StderrLogger>());
+	}
+
+	Logging::log_level += opts.verbosity;
+	Logging::colors = opts.colors;
+	Logging::no_colors = opts.no_colors;
+
+#ifdef XAPIAN_HAS_GLASS_BACKEND
+	if (!opts.chert) {
+		// Prefer glass database
+		if (setenv("XAPIAN_PREFER_GLASS", "1", false) != 0) {
+			opts.chert = true;
+		}
+	}
+#endif
+
+	if (opts.strict) {
+		default_spc.flags.strict = true;
+	}
+
+	if (opts.optimal) {
+		default_spc.flags.optimal = true;
+		default_spc.index = TypeIndex::FIELD_ALL;
+		default_spc.flags.text_detection = false;
+		default_spc.index_uuid_field = UUIDFieldIndex::UUID;
+	}
+
+	if (!opts.dump.empty()) {
+		exit_code = dump(opts);
+	} else if (!opts.restore.empty()) {
+		exit_code = restore(opts);
+	} else {
+		exit_code = server(opts);
 	}
 
 	if (opts.detach && !opts.pidfile.empty()) {
