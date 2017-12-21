@@ -452,8 +452,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 				doc.set_data(join_data(stored, stored_locator, obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
 			}
 			doc.add_boolean_term(prefixed_term_id);
-			assert(spc_id.slot == DB_SLOT_ID);
-			doc.add_value(DB_SLOT_ID, term_id);
+			doc.add_value(spc_id.slot, term_id);
 
 			// Index document.
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
@@ -787,8 +786,7 @@ DatabaseHandler::restore(int fd)
 			doc.set_data(join_data(true, "", obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
 		}
 		doc.add_boolean_term(prefixed_term_id);
-		assert(spc_id.slot == DB_SLOT_ID);
-		doc.add_value(DB_SLOT_ID, term_id);
+		doc.add_value(spc_id.slot, term_id);
 
 		// Index document.
 		database->replace_document_term(prefixed_term_id, doc, false, false);
