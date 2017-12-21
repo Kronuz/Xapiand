@@ -114,6 +114,7 @@ namespace Serialise {
 
 	std::string MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value);
 	std::string object(const required_spc_t& field_spc, const class MsgPack& o);
+	std::string serialise(const required_spc_t& field_spc, const class MsgPack& field_value);
 	std::string serialise(const required_spc_t& field_spc, const std::string& field_value);
 	std::string string(const required_spc_t& field_spc, const std::string& field_value);
 	std::string date(const required_spc_t& field_spc, const class MsgPack& field_value);

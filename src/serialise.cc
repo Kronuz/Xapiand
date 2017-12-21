@@ -195,6 +195,40 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 
 
 std::string
+Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field_value)
+{
+	auto field_type = field_spc.get_type();
+
+	switch (field_type) {
+		case FieldType::INTEGER:
+			return integer(field_value.i64());
+		case FieldType::POSITIVE:
+			return positive(field_value.u64());
+		case FieldType::FLOAT:
+			return _float(field_value.f64());
+		case FieldType::DATE:
+			return date(field_value);
+		case FieldType::TIME:
+			return time(field_value);
+		case FieldType::TIMEDELTA:
+			return timedelta(field_value);
+		case FieldType::BOOLEAN:
+			return boolean(field_value.boolean());
+		case FieldType::TERM:
+		case FieldType::TEXT:
+		case FieldType::STRING:
+			return field_value.str();
+		case FieldType::GEO:
+			return geospatial(field_value);
+		case FieldType::UUID:
+			return uuid(field_value.str());
+		default:
+			THROW(SerialisationError, "Type: 0x%02x is an unknown type", field_type);
+	}
+}
+
+
+std::string
 Serialise::serialise(const required_spc_t& field_spc, const std::string& field_value)
 {
 	auto field_type = field_spc.get_type();
