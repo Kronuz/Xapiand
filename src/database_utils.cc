@@ -315,6 +315,16 @@ std::string msgpack_to_html_error(const msgpack::object& o)
 
 std::string join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob)
 {
+	/* Joined data is as follows:
+	 * For stored (in storage) blobs:
+	 *   In any case, when object gets saved, and if available, it uses
+	 *   <blob> to update (or create) a valid locator and save the data.
+	 *       1. <stored_locator> is a valid locator, and there may not be a <blob>.
+	 *       2. <stored_locator> is empty, and there is a <blob>
+	 *   "<DATA_HEADER_MAGIC_STORED><stored_locator><object><DATA_FOOTER_MAGIC><blob>"
+	 * For inplace (not stored) blobs:
+	 *   "<DATA_HEADER_MAGIC><object><DATA_FOOTER_MAGIC><blob>"
+	 */
 	L_CALL("::join_data(<stored>, <stored_locator>, <obj>, <blob>)");
 
 	auto obj_len = serialise_length(obj.size());
