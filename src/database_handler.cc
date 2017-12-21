@@ -662,11 +662,17 @@ DatabaseHandler::dump(int fd)
 {
 	L_CALL("DatabaseHandler::dump()");
 
-	schema = get_schema();
+	std::string readable_schema;
+	try {
+		schema = get_schema();
+		readable_schema = schema->get_readable().serialise();
+	} catch (...) {
+		L_WARNING("Cannot open schema for %s database", repr(endpoints.to_string()).c_str());
+	}
 
 	lock_database lk_db(this);
 	database->dump_metadata(fd);
-	serialise_string(fd, schema->get_readable().serialise());
+	serialise_string(fd, readable_schema);
 	database->dump_documents(fd);
 }
 
@@ -682,30 +688,26 @@ DatabaseHandler::restore(int fd)
 	std::size_t off = 0;
 
 	// restore metadata
-	std::cerr << "restore metadata..." << std::endl;
 	do {
 		auto key = unserialise_string(fd, buffer, off);
 		auto value = unserialise_string(fd, buffer, off);
 		if (key.empty()) {
 			// restore schema, it's in value
-			std::cerr << "restore schema..." << std::endl;
-			auto schema_begins = std::chrono::system_clock::now();
-			lk_db.unlock();
-			do {
-				schema = get_schema();
-				L_INDEX("Schema: %s", repr(schema->to_string()).c_str());
-
-				schema->write(MsgPack::unserialise(value), true);
-			} while (!update_schema(schema_begins));
-			lk_db.lock();
+			if (!value.empty()) {
+				auto schema_begins = std::chrono::system_clock::now();
+				lk_db.unlock();
+				do {
+					schema = get_schema();
+					schema->write(MsgPack::unserialise(value), true);
+				} while (!update_schema(schema_begins));
+				lk_db.lock();
+			}
 			break;
 		}
-		std::cerr << "  -> " << key << std::endl;
 		database->set_metadata(key, value);
 	} while (true);
 
 	// restore documents
-	std::cerr << "restore documents..." << std::endl;
 	do {
 		auto document_id_str = unserialise_string(fd, buffer, off);
 		if (document_id_str.empty()) break;
@@ -780,10 +782,8 @@ DatabaseHandler::restore(int fd)
 
 		// Finish document: add data, ID term and ID value.
 		if (blob.empty()) {
-			L_INDEX("Data: %s", repr(obj.to_string()).c_str());
 			doc.set_data(join_data(false, "", obj.serialise(), ""));
 		} else {
-			L_INDEX("Data: %s", repr(obj.to_string()).c_str());
 			auto ct_type_str = ct_type.to_string();
 			doc.set_data(join_data(true, "", obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
 		}
