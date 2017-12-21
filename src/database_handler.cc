@@ -708,11 +708,10 @@ DatabaseHandler::restore(int fd)
 	std::cerr << "restore documents..." << std::endl;
 	do {
 		auto document_id_str = unserialise_string(fd, buffer, off);
+		if (document_id_str.empty()) break;
 		auto obj_str = unserialise_string(fd, buffer, off);
-		std::cerr << "  -> " << repr(obj_str) << std::endl;
 		auto blob = unserialise_string(fd, buffer, off);
 		auto obj = MsgPack::unserialise(obj_str);
-		std::cerr << "  => " << obj.to_string() << std::endl;
 
 		Xapian::Document doc;
 		required_spc_t spc_id;
@@ -725,7 +724,6 @@ DatabaseHandler::restore(int fd)
 		}
 		auto ct_type = ct_type_t(ct_type_str);
 
-		L_GREEN("%s", repr(obj.to_string()).c_str());
 		MsgPack document_id;
 
 		// Get term ID.
@@ -797,7 +795,7 @@ DatabaseHandler::restore(int fd)
 		database->replace_document_term(prefixed_term_id, doc);
 	} while (true);
 
-	commit();
+	database->commit();
 }
 
 
