@@ -334,6 +334,9 @@ Logging::_str_format(bool stacked, int priority, const std::string& exc, const c
 
 #ifdef LOG_LOCATION
 		result += std::string(file) + ":" + std::to_string(line) + ": ";
+#else
+		ignore_unused(file);
+		ignore_unused(line);
 #endif
 		result += NO_COL;
 	}
@@ -347,6 +350,9 @@ Logging::_str_format(bool stacked, int priority, const std::string& exc, const c
 		if (exc.empty()) {
 #ifdef XAPIAND_TRACEBACKS
 			result += DARK_GREY + traceback(file, line) + NO_COL;
+#else
+			ignore_unused(file);
+			ignore_unused(line);
 #endif
 		} else {
 			result += NO_COL + exc + NO_COL;
