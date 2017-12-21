@@ -3171,13 +3171,19 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				try {
 					static const auto adit_e = map_acc_date.end();
 					for (const auto& _accuracy : *specification.doc_acc) {
-						const auto str_accuracy = lower_string(_accuracy.str());
-						const auto adit = map_acc_date.find(str_accuracy);
-						if (adit == adit_e) {
-							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
+						uint64_t accuracy;
+						if (_accuracy.is_string()) {
+							const auto str_accuracy = lower_string(_accuracy.str());
+							const auto adit = map_acc_date.find(str_accuracy);
+							if (adit == adit_e) {
+								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
+							} else {
+								accuracy = toUType(adit->second);
+							}
 						} else {
-							set_acc.insert(toUType(adit->second));
+							accuracy = _accuracy.f64();
 						}
+						set_acc.insert(accuracy);
 					}
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str());
@@ -4716,8 +4722,21 @@ Schema::feed_accuracy(const MsgPack& prop_accuracy)
 	L_CALL("Schema::feed_accuracy(%s)", repr(prop_accuracy.to_string()).c_str());
 
 	specification.accuracy.reserve(prop_accuracy.size());
-	for (const auto& acc : prop_accuracy) {
-		specification.accuracy.push_back(acc.f64());
+	for (const auto& _accuracy : prop_accuracy) {
+		uint64_t accuracy;
+		if (_accuracy.is_string()) {
+			static const auto adit_e = map_acc_date.end();
+			const auto str_accuracy = lower_string(_accuracy.str());
+			const auto adit = map_acc_date.find(str_accuracy);
+			if (adit == adit_e) {
+				THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name).c_str());
+			} else {
+				accuracy = toUType(adit->second);
+			}
+		} else {
+			accuracy = _accuracy.f64();
+		}
+		specification.accuracy.push_back(accuracy);
 	}
 }
 
@@ -5902,13 +5921,19 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				try {
 					static const auto adit_e = map_acc_date.end();
 					for (const auto& _accuracy : doc_accuracy) {
-						const auto str_accuracy = lower_string(_accuracy.str());
-						const auto adit = map_acc_date.find(str_accuracy);
-						if (adit == adit_e) {
-							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
+						uint64_t accuracy;
+						if (_accuracy.is_string()) {
+							const auto str_accuracy = lower_string(_accuracy.str());
+							const auto adit = map_acc_date.find(str_accuracy);
+							if (adit == adit_e) {
+								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
+							} else {
+								accuracy = toUType(adit->second);
+							}
 						} else {
-							set_acc.insert(toUType(adit->second));
+							accuracy = _accuracy.f64();
 						}
+						set_acc.insert(accuracy);
 					}
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str());
