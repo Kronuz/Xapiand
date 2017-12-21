@@ -86,16 +86,16 @@ enum class StemStrategy : uint8_t {
 };
 
 
-enum class UnitTime : uint16_t {
-	SECOND    = 1,
-	MINUTE    = 60,
-	HOUR      = 3600,
-	DAY,
-	MONTH,
-	YEAR,
-	DECADE,
-	CENTURY,
-	MILLENNIUM,
+enum class UnitTime : uint32_t {
+	SECOND     = 1,
+	MINUTE     = SECOND * 60,
+	HOUR       = MINUTE * 60,
+	DAY        = HOUR * 24,
+	MONTH      = DAY * 30,
+	YEAR       = DAY * 365,
+	DECADE     = YEAR * 10,
+	CENTURY    = YEAR * 100,
+	MILLENNIUM = YEAR * 1000,
 };
 
 
