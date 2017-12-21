@@ -1811,7 +1811,6 @@ Database::dump_metadata(int fd)
 
 	L_DATABASE_WRAP_INIT();
 
-	ssize_t w;
 	std::string initial;
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		std::string key;
@@ -1851,7 +1850,6 @@ Database::dump_documents(int fd)
 
 	L_DATABASE_WRAP_INIT();
 
-	ssize_t w;
 	Xapian::docid initial = 1;
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::docid did = initial;
