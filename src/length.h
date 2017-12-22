@@ -55,6 +55,10 @@ std::string serialise_string(const std::string &input);
 
 std::string unserialise_string(const char** p, const char* end);
 
+void serialise_length(int fd, unsigned long long len);
+
+unsigned long long unserialise_length(int fd, std::string &buffer, std::size_t& off);
+
 void serialise_string(int fd, const std::string &input);
 
 std::string unserialise_string(int fd, std::string &buffer, std::size_t& off);

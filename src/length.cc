@@ -228,6 +228,7 @@ serialise_length(unsigned long long len)
 	return result;
 }
 
+
 unsigned long long
 unserialise_length(const char** p, const char* end, bool check_remaining)
 {
@@ -293,21 +294,18 @@ unserialise_string(const char** p, const char* end) {
 
 
 void
-serialise_string(int fd, const std::string &input)
+serialise_length(int fd, unsigned long long len)
 {
 	ssize_t w;
 
-	auto length = serialise_length(input.size());
+	auto length = serialise_length(len);
 	w = io::write(fd, length.data(), length.size());
-	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
-
-	w = io::write(fd, input.data(), input.size());
 	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
 }
 
 
-std::string
-unserialise_string(int fd, std::string &buffer, std::size_t& off)
+unsigned long long
+unserialise_length(int fd, std::string &buffer, std::size_t& off)
 {
 	ssize_t r;
 	if (buffer.size() - off < 10) {
@@ -324,6 +322,29 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off)
 	auto length = unserialise_length(&pos, end, false);
 	off += (pos - start);
 
+	return length;
+}
+
+
+void
+serialise_string(int fd, const std::string &input)
+{
+	serialise_length(fd, input.size());
+
+	ssize_t w = io::write(fd, input.data(), input.size());
+	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+}
+
+
+std::string
+unserialise_string(int fd, std::string &buffer, std::size_t& off)
+{
+	ssize_t length = unserialise_length(fd, buffer, off);
+
+	auto pos = buffer.data();
+	auto end = pos + buffer.size();
+	pos += off;
+
 	std::string str;
 	auto available = end - pos;
 	if (available >= length) {
@@ -334,7 +355,7 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off)
 		str.reserve(length);
 		str.append(pos, end);
 		str.resize(length);
-		r = io::read(fd, &str[available], length - available);
+		ssize_t r = io::read(fd, &str[available], length - available);
 		if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
 		if (r != length - available) THROW(SerialisationError, "Invalid input: insufficient data");
 		buffer.clear();
