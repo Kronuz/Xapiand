@@ -74,6 +74,23 @@ constexpr const char RESPONSE_VALUES[]              = "#values";
 const std::string dump_header("xapiand-dump");
 
 
+Xapian::docid
+to_docid(const std::string& document_id)
+{
+	if (startswith(document_id, "::")) {
+		std::string did_str(document_id.begin() + 2, document_id.end());
+		try {
+			return static_cast<Xapian::docid>(strict_stol(did_str));
+		} catch (const InvalidArgument& er) {
+			THROW(ClientError, "Value %s cannot be cast to integer [%s]", repr(did_str).c_str(), er.what());
+		} catch (const OutOfRange& er) {
+			THROW(ClientError, "Value %s cannot be cast to integer [%s]", repr(did_str).c_str(), er.what());
+		}
+	}
+	return static_cast<Xapian::docid>(0);
+}
+
+
 class FilterPrefixesExpandDecider : public Xapian::ExpandDecider {
 	std::vector<std::string> prefixes;
 
@@ -266,7 +283,7 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 	L_CALL("DatabaseHandler::get_document_term(%s)", repr(term_id).c_str());
 
 	lock_database lk_db(this);
-	Xapian::docid did = database->find_document(term_id);
+	auto did = database->find_document(term_id);
 	return Document(this, database->get_document(did, database->flags & DB_WRITABLE));
 }
 
@@ -1111,10 +1128,15 @@ DatabaseHandler::get_document(const std::string& document_id)
 {
 	L_CALL("DatabaseHandler::get_document((std::string)%s)", repr(document_id).c_str());
 
+	auto did = to_docid(document_id);
+	if (did) {
+		return get_document(did);
+	}
+
 	const auto term_id = get_prefixed_term_id(document_id);
 
 	lock_database lk_db(this);
-	Xapian::docid did = database->find_document(term_id);
+	did = database->find_document(term_id);
 	return Document(this, database->get_document(did, database->flags & DB_WRITABLE));
 }
 
@@ -1123,6 +1145,11 @@ Xapian::docid
 DatabaseHandler::get_docid(const std::string& document_id)
 {
 	L_CALL("DatabaseHandler::get_docid(%s)", repr(document_id).c_str());
+
+	auto did = to_docid(document_id);
+	if (did) {
+		return did;
+	}
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
@@ -1136,6 +1163,12 @@ DatabaseHandler::delete_document(const std::string& document_id, bool commit_, b
 {
 	L_CALL("DatabaseHandler::delete_document(%s)", repr(document_id).c_str());
 
+	auto did = to_docid(document_id);
+	if (did) {
+		database->delete_document(did, commit_, wal_);
+		return;
+	}
+
 	const auto term_id = get_prefixed_term_id(document_id);
 
 	lock_database lk_db(this);
@@ -1144,9 +1177,11 @@ DatabaseHandler::delete_document(const std::string& document_id, bool commit_, b
 
 
 MsgPack
-DatabaseHandler::get_document_info(Document& document)
+DatabaseHandler::get_document_info(const std::string& document_id)
 {
-	L_CALL("DatabaseHandler::get_document_info(<document>)");
+	L_CALL("DatabaseHandler::get_document_info(%s)", repr(document_id).c_str());
+
+	auto document = get_document(document_id);
 	const auto data = document.get_data();
 
 	const auto obj = MsgPack::unserialise(split_data_obj(data));
@@ -1195,26 +1230,6 @@ DatabaseHandler::get_document_info(Document& document)
 	info[RESPONSE_VALUES] = document.get_values();
 
 	return info;
-}
-
-
-MsgPack
-DatabaseHandler::get_document_info(const Xapian::docid& did)
-{
-	L_CALL("DatabaseHandler::get_document_info((Xapian::docid)%d)", did);
-
-	auto document = get_document(did);
-	return get_document_info(document);
-}
-
-
-MsgPack
-DatabaseHandler::get_document_info(const std::string& document_id)
-{
-	L_CALL("DatabaseHandler::get_document_info(%s)", repr(document_id).c_str());
-
-	auto document = get_document(document_id);
-	return get_document_info(document);
 }
 
 

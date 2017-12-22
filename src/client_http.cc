@@ -1302,8 +1302,7 @@ HttpClient::info_view(enum http_method method, Command)
 
 	// Info about a specific document was requested
 	if (path_parser.off_pmt) {
-		auto info = db_handler.get_document_info(path_parser.get_pmt());
-		response[RESPONSE_DOCUMENT_INFO] = std::move(info);
+		response[RESPONSE_DOCUMENT_INFO] = db_handler.get_document_info(path_parser.get_pmt());
 	}
 
 	operation_ends = std::chrono::system_clock::now();
