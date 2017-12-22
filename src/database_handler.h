@@ -47,6 +47,9 @@ class Schema;
 class SchemasLRU;
 
 
+Xapian::docid to_docid(const std::string& document_id);
+
+
 class MSet : public Xapian::MSet {
 public:
 	MSet() = default;

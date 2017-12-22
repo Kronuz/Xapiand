@@ -77,7 +77,8 @@ const std::string dump_header("xapiand-dump");
 Xapian::docid
 to_docid(const std::string& document_id)
 {
-	if (document_id.size() > 2 && document_id[0] == ':' && document_id[1] == ':') {
+	size_t sz = document_id.size();
+	if (sz > 2 && document_id[0] == ':' && document_id[1] == ':') {
 		std::string did_str(document_id.begin() + 2, document_id.end());
 		try {
 			return static_cast<Xapian::docid>(strict_stol(did_str));

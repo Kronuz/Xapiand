@@ -1419,7 +1419,6 @@ HttpClient::search_view(enum http_method method, Command)
 {
 	L_CALL("HttpClient::search_view()");
 
-
 	std::string selector;
 	auto id = path_parser.get_id();
 	if (id.empty()) {
@@ -1438,6 +1437,8 @@ HttpClient::search_view(enum http_method method, Command)
 
 	endpoints_maker(1s);
 	query_field_maker(id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID);
+
+	auto did = to_docid(id);
 
 	bool chunked;
 	if (id.empty()) {
@@ -1477,13 +1478,15 @@ HttpClient::search_view(enum http_method method, Command)
 
 		db_handler.reopen();  // Ensure the database is current.
 
-		if (body.empty()) {
-			mset = db_handler.get_mset(*query_field, nullptr, nullptr, suggestions);
-		} else {
-			auto body_ = get_decoded_body();
-			AggregationMatchSpy aggs(body_.second, db_handler.get_schema());
-			mset = db_handler.get_mset(*query_field, &body_.second, &aggs, suggestions);
-			aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
+		if (!did) {
+			if (body.empty()) {
+				mset = db_handler.get_mset(*query_field, nullptr, nullptr, suggestions);
+			} else {
+				auto body_ = get_decoded_body();
+				AggregationMatchSpy aggs(body_.second, db_handler.get_schema());
+				mset = db_handler.get_mset(*query_field, &body_.second, &aggs, suggestions);
+				aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
+			}
 		}
 	} catch (const CheckoutError&) {
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
@@ -1502,7 +1505,7 @@ HttpClient::search_view(enum http_method method, Command)
 	}().to_string().c_str());
 
 	int rc = 0;
-	auto total_count = mset.size();
+	auto total_count = did ? 1 : mset.size();
 
 	if (!chunked && !total_count) {
 		enum http_status error_code = HTTP_STATUS_NOT_FOUND;
@@ -1539,7 +1542,7 @@ HttpClient::search_view(enum http_method method, Command)
 		if (chunked) {
 			MsgPack basic_query({
 				{ RESPONSE_TOTAL_COUNT, total_count},
-				{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
+				{ RESPONSE_MATCHES_ESTIMATED, did ? 1 : mset.get_matches_estimated()},
 				{ RESPONSE_HITS, MsgPack(MsgPack::Type::ARRAY) },
 			});
 			MsgPack basic_response;
@@ -1599,8 +1602,8 @@ HttpClient::search_view(enum http_method method, Command)
 		std::string buffer;
 		std::string l_buffer;
 		const auto m_e = mset.end();
-		for (auto m = mset.begin(); m != m_e; ++rc, ++m) {
-			auto document = db_handler.get_document(*m);
+		for (auto m = mset.begin(); did || m != m_e; ++rc, ++m) {
+			auto document = db_handler.get_document(did ? did : *m);
 
 			const auto data = document.get_data();
 			if (data.empty()) {
@@ -1678,12 +1681,14 @@ HttpClient::search_view(enum http_method method, Command)
 
 			// Detailed info about the document:
 			obj_data[RESPONSE_DOCID] = document.get_docid();
-			obj_data[RESPONSE_RANK] = m.get_rank();
-			obj_data[RESPONSE_WEIGHT] = m.get_weight();
-			obj_data[RESPONSE_PERCENT] = m.get_percent();
-			// int subdatabase = (document.get_docid() - 1) % endpoints.size();
-			// auto endpoint = endpoints[subdatabase];
-			// obj_data[RESPONSE_ENDPOINT] = endpoint.to_string();
+			if (!did) {
+				obj_data[RESPONSE_RANK] = m.get_rank();
+				obj_data[RESPONSE_WEIGHT] = m.get_weight();
+				obj_data[RESPONSE_PERCENT] = m.get_percent();
+				// int subdatabase = (document.get_docid() - 1) % endpoints.size();
+				// auto endpoint = endpoints[subdatabase];
+				// obj_data[RESPONSE_ENDPOINT] = endpoint.to_string();
+			}
 
 			if (!selector.empty()) {
 				obj_data = obj_data.select(selector);
@@ -1746,6 +1751,8 @@ HttpClient::search_view(enum http_method method, Command)
 					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
 				}
 			}
+
+			if (did) break;
 		}
 
 		if (Logging::log_level > LOG_DEBUG) {
