@@ -1681,7 +1681,7 @@ HttpClient::search_view(enum http_method method, Command)
 
 			// Detailed info about the document:
 			obj_data[RESPONSE_DOCID] = document.get_docid();
-			if (!did) {
+			if (!did && chunked) {
 				obj_data[RESPONSE_RANK] = m.get_rank();
 				obj_data[RESPONSE_WEIGHT] = m.get_weight();
 				obj_data[RESPONSE_PERCENT] = m.get_percent();
