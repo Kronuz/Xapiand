@@ -892,6 +892,11 @@ DatabaseHandler::restore(int fd)
 		L_WARNING("Invalid dump hash (0x%08x != 0x%08x)", saved_hash, current_hash);
 	}
 
+	lk_db.unlock();
+	auto schema_begins = std::chrono::system_clock::now();
+	while (!update_schema(schema_begins));
+	lk_db.lock();
+
 	database->commit(false);
 }
 
