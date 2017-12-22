@@ -82,25 +82,25 @@ Cast::cast(FieldType type, const std::string& field_value)
 			try {
 				return MsgPack(strict_stoll(field_value));
 			} catch (const InvalidArgument& er) {
-				THROW(CastError, "Value %s cannot be cast to integer [%s]", field_value.c_str(), er.what());
+				THROW(CastError, "Value %s cannot be cast to integer [%s]", repr(field_value).c_str(), er.what());
 			} catch (const OutOfRange& er) {
-				THROW(CastError, "Value %s cannot be cast to integer [%s]", field_value.c_str(), er.what());
+				THROW(CastError, "Value %s cannot be cast to integer [%s]", repr(field_value).c_str(), er.what());
 			}
 		case FieldType::POSITIVE:
 			try {
 				return MsgPack(strict_stoull(field_value));
 			} catch (const InvalidArgument& er) {
-				THROW(CastError, "Value %s cannot be cast to positive [%s]", field_value.c_str(), er.what());
+				THROW(CastError, "Value %s cannot be cast to positive [%s]", repr(field_value).c_str(), er.what());
 			} catch (const OutOfRange& er) {
-				THROW(CastError, "Value %s cannot be cast to positive [%s]", field_value.c_str(), er.what());
+				THROW(CastError, "Value %s cannot be cast to positive [%s]", repr(field_value).c_str(), er.what());
 			}
 		case FieldType::FLOAT:
 			try {
 				return MsgPack(strict_stod(field_value));
 			} catch (const InvalidArgument& er) {
-				THROW(CastError, "Value %s cannot be cast to float [%s]", field_value.c_str(), er.what());
+				THROW(CastError, "Value %s cannot be cast to float [%s]", repr(field_value).c_str(), er.what());
 			} catch (const OutOfRange& er) {
-				THROW(CastError, "Value %s cannot be cast to float [%s]", field_value.c_str(), er.what());
+				THROW(CastError, "Value %s cannot be cast to float [%s]", repr(field_value).c_str(), er.what());
 			}
 		case FieldType::EMPTY:
 			// Try like INTEGER.
