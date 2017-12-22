@@ -6459,6 +6459,10 @@ Schema::readable(MsgPack& item_schema, bool at_root)
 					it = item_schema.erase(it);
 					continue;
 				}
+				auto& value = it.value();
+				if (value.is_map()) {
+					readable(value, false);
+				}
 			}
 		} else {
 			if (!(*drit->second)(it.value(), item_schema)) {
