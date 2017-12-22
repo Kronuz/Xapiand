@@ -138,6 +138,10 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 	if (mode & HTTP_HEADER_RESPONSE) {
 		headers += "Server: " + Package::STRING + eol;
 
+		if (!endpoints.empty()) {
+			headers += "Database: " + endpoints.to_string() + eol;
+		}
+
 		response_ends = std::chrono::system_clock::now();
 		headers += "Response-Time: " + delta_string(request_begins, response_ends) + eol;
 		if (operation_ends >= operation_begins) {
