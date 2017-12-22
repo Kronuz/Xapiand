@@ -704,6 +704,7 @@ DatabaseHandler::restore(int fd)
 {
 	L_CALL("DatabaseHandler::restore()");
 
+	size_t i;
 	std::string buffer;
 	std::size_t off = 0;
 
@@ -726,12 +727,19 @@ DatabaseHandler::restore(int fd)
 	XXH32_update(&xxhash, saved_schema_ser.data(), saved_schema_ser.size());
 
 	// restore metadata (key, value)
+	i = 0;
 	do {
+		++i;
 		auto key = unserialise_string(fd, buffer, off);
-		if (key.empty()) break;
 		XXH32_update(&xxhash, key.data(), key.size());
 		auto value = unserialise_string(fd, buffer, off);
 		XXH32_update(&xxhash, value.data(), value.size());
+		if (key.empty() && value.empty()) break;
+
+		if (key.empty()) {
+			L_WARNING("Metadata with no key ignored [%zu]", ID_FIELD_NAME, i);
+			continue;
+		}
 
 		database->set_metadata(key, value, false, false);
 	} while (true);
@@ -749,15 +757,15 @@ DatabaseHandler::restore(int fd)
 	lk_db.lock();
 
 	// restore documents (document_id, object, blob)
+	i = 0;
 	do {
-		auto document_id_ser = unserialise_string(fd, buffer, off);
-		if (document_id_ser.empty()) break;
-		XXH32_update(&xxhash, document_id_ser.data(), document_id_ser.size());
+		++i;
 		auto obj_ser = unserialise_string(fd, buffer, off);
 		XXH32_update(&xxhash, obj_ser.data(), obj_ser.size());
 		auto obj = MsgPack::unserialise(obj_ser);
 		auto blob = unserialise_string(fd, buffer, off);
 		XXH32_update(&xxhash, blob.data(), blob.size());
+		if (obj_ser.empty() && blob.empty()) break;
 
 		Xapian::Document doc;
 		required_spc_t spc_id;
@@ -774,12 +782,12 @@ DatabaseHandler::restore(int fd)
 
 		// Get term ID.
 		spc_id = schema->get_data_id();
-		if (spc_id.get_type() == FieldType::EMPTY) {
-			auto f_it = obj.find(ID_FIELD_NAME);
-			if (f_it != obj.end()) {
-				const auto& field = f_it.value();
-				if (field.is_map()) {
-					auto f_it_end = field.end();
+		auto f_it = obj.find(ID_FIELD_NAME);
+		if (f_it != obj.end()) {
+			const auto& field = f_it.value();
+			if (field.is_map()) {
+				auto f_it_end = field.end();
+				if (spc_id.get_type() == FieldType::EMPTY) {
 					auto ft_it = field.find(RESERVED_TYPE);
 					if (ft_it != f_it_end) {
 						const auto& type = ft_it.value();
@@ -788,21 +796,19 @@ DatabaseHandler::restore(int fd)
 						}
 						spc_id.set_types(type.str());
 					}
-					auto fv_it = field.find(RESERVED_VALUE);
-					if (fv_it != f_it_end) {
-						document_id = fv_it.value();
-					}
-				} else {
-					document_id = field;
 				}
+				auto fv_it = field.find(RESERVED_VALUE);
+				if (fv_it != f_it_end) {
+					document_id = fv_it.value();
+				}
+			} else {
+				document_id = field;
 			}
-			if (document_id.is_undefined()) {
-				document_id = Unserialise::MsgPack(spc_id.get_type(), document_id_ser);
-			}
-		} else {
-			document_id = Unserialise::MsgPack(spc_id.get_type(), document_id_ser);
-			term_id = Serialise::serialise(spc_id, document_id);
-			prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+		}
+
+		if (document_id.is_undefined()) {
+			L_WARNING("Document with no '%s' ignored [%zu]", ID_FIELD_NAME, i);
+			continue;
 		}
 
 		obj = schema->index(obj, doc);

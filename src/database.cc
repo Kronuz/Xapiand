@@ -1826,7 +1826,11 @@ Database::dump_metadata(int fd, XXH32_state_t& xxhash)
 				serialise_string(fd, value);
 				XXH32_update(&xxhash, value.data(), value.size());
 			}
-			serialise_string(fd, ""); // mark end
+			// mark end:
+			serialise_string(fd, "");
+			XXH32_update(&xxhash, "", 0);
+			serialise_string(fd, "");
+			XXH32_update(&xxhash, "", 0);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1877,17 +1881,17 @@ Database::dump_documents(int fd, XXH32_state_t& xxhash)
 					}
 				}
 #endif
-				auto document_id_ser = doc.get_value(DB_SLOT_ID);
-				serialise_string(fd, document_id_ser);
-				XXH32_update(&xxhash, document_id_ser.data(), document_id_ser.size());
-
 				serialise_string(fd, obj_ser);
 				XXH32_update(&xxhash, obj_ser.data(), obj_ser.size());
 
 				serialise_string(fd, blob);
 				XXH32_update(&xxhash, blob.data(), blob.size());
 			}
-			serialise_string(fd, ""); // mark end
+			// mark end:
+			serialise_string(fd, "");
+			XXH32_update(&xxhash, "", 0);
+			serialise_string(fd, "");
+			XXH32_update(&xxhash, "", 0);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again (%s)", exc.get_msg().c_str());
