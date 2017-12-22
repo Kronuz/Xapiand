@@ -48,23 +48,23 @@
 
 
 // Reserved words only used in the responses to the user.
-constexpr const char RESPONSE_AV_LENGTH[]           = "_av_length";
-constexpr const char RESPONSE_BLOB[]                = "_blob";
-constexpr const char RESPONSE_CONTENT_TYPE[]        = "_content_type";
-constexpr const char RESPONSE_DOC_COUNT[]           = "_doc_count";
-constexpr const char RESPONSE_DOC_DEL[]             = "_doc_del";
-constexpr const char RESPONSE_DOC_LEN_LOWER[]       = "_doc_len_lower";
-constexpr const char RESPONSE_DOC_LEN_UPPER[]       = "_doc_len_upper";
-constexpr const char RESPONSE_HAS_POSITIONS[]       = "_has_positions";
-constexpr const char RESPONSE_LAST_ID[]             = "_last_id";
-constexpr const char RESPONSE_OFFSET[]              = "_offset";
-constexpr const char RESPONSE_POS[]                 = "_pos";
-constexpr const char RESPONSE_SIZE[]                = "_size";
-constexpr const char RESPONSE_TERM_FREQ[]           = "_term_freq";
-constexpr const char RESPONSE_TYPE[]                = "_type";
-constexpr const char RESPONSE_UUID[]                = "_uuid";
-constexpr const char RESPONSE_VOLUME[]              = "_volume";
-constexpr const char RESPONSE_WDF[]                 = "_wdf";
+constexpr const char RESPONSE_AV_LENGTH[]           = "#av_length";
+constexpr const char RESPONSE_BLOB[]                = "#blob";
+constexpr const char RESPONSE_CONTENT_TYPE[]        = "#content_type";
+constexpr const char RESPONSE_DOC_COUNT[]           = "#doc_count";
+constexpr const char RESPONSE_DOC_DEL[]             = "#doc_del";
+constexpr const char RESPONSE_DOC_LEN_LOWER[]       = "#doc_len_lower";
+constexpr const char RESPONSE_DOC_LEN_UPPER[]       = "#doc_len_upper";
+constexpr const char RESPONSE_HAS_POSITIONS[]       = "#has_positions";
+constexpr const char RESPONSE_LAST_ID[]             = "#last_id";
+constexpr const char RESPONSE_OFFSET[]              = "#offset";
+constexpr const char RESPONSE_POS[]                 = "#pos";
+constexpr const char RESPONSE_SIZE[]                = "#size";
+constexpr const char RESPONSE_TERM_FREQ[]           = "#term_freq";
+constexpr const char RESPONSE_TYPE[]                = "#type";
+constexpr const char RESPONSE_UUID[]                = "#uuid";
+constexpr const char RESPONSE_VOLUME[]              = "#volume";
+constexpr const char RESPONSE_WDF[]                 = "#wdf";
 
 
 const std::string dump_header("xapiand-dump");

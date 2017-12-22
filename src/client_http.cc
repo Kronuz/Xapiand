@@ -78,25 +78,25 @@
 
 
 // Reserved words only used in the responses to the user.
-constexpr const char RESPONSE_ENDPOINT[]            = "_endpoint";
-constexpr const char RESPONSE_RANK[]                = "_rank";
-constexpr const char RESPONSE_WEIGHT[]              = "_weight";
-constexpr const char RESPONSE_PERCENT[]             = "_percent";
-constexpr const char RESPONSE_TOTAL_COUNT[]         = "_total_count";
-constexpr const char RESPONSE_MATCHES_ESTIMATED[]   = "_matches_estimated";
-constexpr const char RESPONSE_HITS[]                = "_hits";
-constexpr const char RESPONSE_AGGREGATIONS[]        = "_aggregations";
-constexpr const char RESPONSE_QUERY[]               = "_query";
-constexpr const char RESPONSE_MESSAGE[]             = "_message";
-constexpr const char RESPONSE_STATUS[]              = "_status";
-constexpr const char RESPONSE_NAME[]                = "_name";
-constexpr const char RESPONSE_NODES[]               = "_nodes";
-constexpr const char RESPONSE_CLUSTER_NAME[]        = "_cluster_name";
-constexpr const char RESPONSE_COMMIT[]              = "_commit";
-constexpr const char RESPONSE_SERVER[]              = "_server";
-constexpr const char RESPONSE_URL[]                 = "_url";
-constexpr const char RESPONSE_VERSIONS[]            = "_versions";
-constexpr const char RESPONSE_DELETE[]              = "_delete";
+constexpr const char RESPONSE_ENDPOINT[]            = "#endpoint";
+constexpr const char RESPONSE_RANK[]                = "#rank";
+constexpr const char RESPONSE_WEIGHT[]              = "#weight";
+constexpr const char RESPONSE_PERCENT[]             = "#percent";
+constexpr const char RESPONSE_TOTAL_COUNT[]         = "#total_count";
+constexpr const char RESPONSE_MATCHES_ESTIMATED[]   = "#matches_estimated";
+constexpr const char RESPONSE_HITS[]                = "#hits";
+constexpr const char RESPONSE_AGGREGATIONS[]        = "#aggregations";
+constexpr const char RESPONSE_QUERY[]               = "#query";
+constexpr const char RESPONSE_MESSAGE[]             = "#message";
+constexpr const char RESPONSE_STATUS[]              = "#status";
+constexpr const char RESPONSE_NAME[]                = "#name";
+constexpr const char RESPONSE_NODES[]               = "#nodes";
+constexpr const char RESPONSE_CLUSTER_NAME[]        = "#cluster_name";
+constexpr const char RESPONSE_COMMIT[]              = "#commit";
+constexpr const char RESPONSE_SERVER[]              = "#server";
+constexpr const char RESPONSE_URL[]                 = "#url";
+constexpr const char RESPONSE_VERSIONS[]            = "#versions";
+constexpr const char RESPONSE_DELETE[]              = "#delete";
 
 
 static const std::regex header_params_re("\\s*;\\s*([a-z]+)=(\\d+(?:\\.\\d+)?)", std::regex::optimize);
