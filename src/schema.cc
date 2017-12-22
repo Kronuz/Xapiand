@@ -3181,7 +3181,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 								accuracy = toUType(adit->second);
 							}
 						} else {
-							accuracy = _accuracy.f64();
+							accuracy = _accuracy.u64();
 						}
 						set_acc.insert(accuracy);
 					}
@@ -4736,7 +4736,7 @@ Schema::feed_accuracy(const MsgPack& prop_accuracy)
 				accuracy = toUType(adit->second);
 			}
 		} else {
-			accuracy = _accuracy.f64();
+			accuracy = _accuracy.u64();
 		}
 		specification.accuracy.push_back(accuracy);
 	}
@@ -5935,7 +5935,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 								accuracy = toUType(adit->second);
 							}
 						} else {
-							accuracy = _accuracy.f64();
+							accuracy = _accuracy.u64();
 						}
 						set_acc.insert(accuracy);
 					}
