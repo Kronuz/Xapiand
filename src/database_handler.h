@@ -202,6 +202,8 @@ public:
 	Document(const Document& doc_);
 	Document& operator=(const Document& doc_);
 
+	Xapian::docid get_docid();
+
 	std::string serialise(size_t retries=DB_RETRIES);
 	std::string get_value(Xapian::valueno slot, size_t retries=DB_RETRIES);
 	std::string get_data(size_t retries=DB_RETRIES);

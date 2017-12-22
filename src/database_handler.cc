@@ -65,6 +65,7 @@ constexpr const char RESPONSE_TYPE[]                = "#type";
 constexpr const char RESPONSE_UUID[]                = "#uuid";
 constexpr const char RESPONSE_VOLUME[]              = "#volume";
 constexpr const char RESPONSE_WDF[]                 = "#wdf";
+constexpr const char RESPONSE_DID[]                 = "#did";
 constexpr const char RESPONSE_DATA[]                = "#data";
 constexpr const char RESPONSE_TERMS[]               = "#terms";
 constexpr const char RESPONSE_VALUES[]              = "#values";
@@ -1154,7 +1155,9 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 	const auto obj = MsgPack::unserialise(split_data_obj(data));
 
 	MsgPack info;
-	info[ID_FIELD_NAME] = Document::get_field(ID_FIELD_NAME, obj);
+
+
+	info[RESPONSE_DID] = document.get_docid();
 	info[RESPONSE_DATA] = obj;
 
 	const auto blob = split_data_blob(data);
@@ -1547,6 +1550,13 @@ Document::update()
 		_hash = 0;
 		database = db_handler->database;
 	}
+}
+
+
+Xapian::docid
+Document::get_docid()
+{
+	return doc.get_docid();
 }
 
 
