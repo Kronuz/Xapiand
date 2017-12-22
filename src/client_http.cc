@@ -1286,39 +1286,29 @@ HttpClient::info_view(enum http_method method, Command)
 	L_CALL("HttpClient::info_view()");
 
 	MsgPack response;
-	bool res_stats = false;
 
-	if (!path_parser.off_id) {
+	endpoints_maker(1s);
+
+	operation_begins = std::chrono::system_clock::now();
+
+	db_handler.reset(endpoints, DB_OPEN, method);
+
+	// There's no path, we're at root so we get the server's info
+	if (!path_parser.off_pth) {
 		XapiandManager::manager->server_status(response[RESPONSE_SERVER_INFO]);
-		res_stats = true;
-	} else {
-		endpoints_maker(1s);
-
-		operation_begins = std::chrono::system_clock::now();
-
-		db_handler.reset(endpoints, DB_OPEN, method);
-		try {
-			auto info = db_handler.get_document_info(path_parser.get_id());
-			response[RESPONSE_DOCUMENT_INFO] = std::move(info);
-		} catch (const DocNotFoundError&) {
-			path_parser.off_id = nullptr;
-		}
-
-		path_parser.rewind();
-		endpoints_maker(1s);
-
-		response[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
-
-		operation_ends = std::chrono::system_clock::now();
-
-		res_stats = true;
 	}
 
-	if (res_stats) {
-		write_http_response(HTTP_STATUS_OK, response);
-	} else {
-		write_status_response(HTTP_STATUS_NOT_FOUND);
+	response[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
+
+	// Info about a specific document was requested
+	if (path_parser.off_pmt) {
+		auto info = db_handler.get_document_info(path_parser.get_pmt());
+		response[RESPONSE_DOCUMENT_INFO] = std::move(info);
 	}
+
+	operation_ends = std::chrono::system_clock::now();
+
+	write_http_response(HTTP_STATUS_OK, response);
 }
 
 
