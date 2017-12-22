@@ -65,6 +65,9 @@ constexpr const char RESPONSE_TYPE[]                = "#type";
 constexpr const char RESPONSE_UUID[]                = "#uuid";
 constexpr const char RESPONSE_VOLUME[]              = "#volume";
 constexpr const char RESPONSE_WDF[]                 = "#wdf";
+constexpr const char RESPONSE_DATA[]                = "#data";
+constexpr const char RESPONSE_TERMS[]               = "#terms";
+constexpr const char RESPONSE_VALUES[]              = "#values";
 
 
 const std::string dump_header("xapiand-dump");
@@ -1151,8 +1154,8 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 	const auto obj = MsgPack::unserialise(split_data_obj(data));
 
 	MsgPack info;
-	info[ID_FIELD_NAME] = Document::get_field(ID_FIELD_NAME, obj) || document.get_value(ID_FIELD_NAME);
-	info[RESERVED_DATA] = obj;
+	info[ID_FIELD_NAME] = Document::get_field(ID_FIELD_NAME, obj);
+	info[RESPONSE_DATA] = obj;
 
 	const auto blob = split_data_blob(data);
 	if (blob.empty()) {
@@ -1188,8 +1191,8 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 		}
 	}
 
-	info[RESERVED_TERMS] = document.get_terms();
-	info[RESERVED_VALUES] = document.get_values();
+	info[RESPONSE_TERMS] = document.get_terms();
+	info[RESPONSE_VALUES] = document.get_values();
 
 	return info;
 }
