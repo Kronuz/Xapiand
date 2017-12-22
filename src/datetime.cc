@@ -33,6 +33,12 @@
 #include "utils.h"    // for stox
 
 
+constexpr const char RESERVED_YEAR[]                = "_year";
+constexpr const char RESERVED_MONTH[]               = "_month";
+constexpr const char RESERVED_DAY[]                 = "_day";
+constexpr const char RESERVED_TIME[]                = "_time";
+
+
 const std::regex Datetime::date_re("([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]+))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?", std::regex::optimize);
 const std::regex Datetime::date_math_re("([+-]\\d+|\\/{1,2})([dyMwhms])", std::regex::optimize);
 
@@ -58,7 +64,7 @@ static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
 			tm.year = year.i64();
 			return;
 		default:
-			THROW(DatetimeError, "_year must be a positive integer value");
+			THROW(DatetimeError, "'%s' must be a positive integer value", RESERVED_YEAR);
 	}
 }
 
@@ -72,7 +78,7 @@ static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
 			tm.mon = month.i64();
 			return;
 		default:
-			THROW(DatetimeError, "_month must be a positive integer value");
+			THROW(DatetimeError, "'%s' must be a positive integer value", RESERVED_MONTH);
 	}
 }
 
@@ -86,7 +92,7 @@ static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 			tm.day = day.i64();
 			return;
 		default:
-			THROW(DatetimeError, "_day must be a positive integer value");
+			THROW(DatetimeError, "'%s' must be a positive integer value", RESERVED_DAY);
 	}
 }
 
@@ -193,9 +199,9 @@ static void process_date_time(Datetime::tm_t& tm, const std::string& str_time) {
 
 
 static const std::unordered_map<std::string, void (*)(Datetime::tm_t&, const MsgPack&)> map_dispatch_date({
-	{ "_year",    &process_date_year   },
-	{ "_month",   &process_date_month  },
-	{ "_day",     &process_date_day    },
+	{ RESERVED_YEAR,    &process_date_year   },
+	{ RESERVED_MONTH,   &process_date_month  },
+	{ RESERVED_DAY,     &process_date_day    },
 });
 
 
@@ -310,11 +316,11 @@ Datetime::DateParser(const MsgPack& value)
 					auto func = map_dispatch_date.at(str_key);
 					(*func)(tm, it.value());
 				} catch (const std::out_of_range&) {
-					if (str_key == "_time") {
+					if (str_key == RESERVED_TIME) {
 						try {
 							str_time = it.value().str();
 						} catch (const msgpack::type_error&) {
-							THROW(DatetimeError, "_time must be string");
+							THROW(DatetimeError, "'%s' must be string", RESERVED_TIME);
 						}
 					} else {
 						THROW(DatetimeError, "Unsupported Key: %s in date", str_key.c_str());

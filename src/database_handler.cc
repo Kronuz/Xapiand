@@ -46,6 +46,27 @@
 #include "utils.h"                          // for repr
 #include "v8pp/v8pp.h"                      // for v8pp namespace
 
+
+// Reserved words only used in the responses to the user.
+constexpr const char RESPONSE_AV_LENGTH[]           = "_av_length";
+constexpr const char RESPONSE_BLOB[]                = "_blob";
+constexpr const char RESPONSE_CONTENT_TYPE[]        = "_content_type";
+constexpr const char RESPONSE_DOC_COUNT[]           = "_doc_count";
+constexpr const char RESPONSE_DOC_DEL[]             = "_doc_del";
+constexpr const char RESPONSE_DOC_LEN_LOWER[]       = "_doc_len_lower";
+constexpr const char RESPONSE_DOC_LEN_UPPER[]       = "_doc_len_upper";
+constexpr const char RESPONSE_HAS_POSITIONS[]       = "_has_positions";
+constexpr const char RESPONSE_LAST_ID[]             = "_last_id";
+constexpr const char RESPONSE_OFFSET[]              = "_offset";
+constexpr const char RESPONSE_POS[]                 = "_pos";
+constexpr const char RESPONSE_SIZE[]                = "_size";
+constexpr const char RESPONSE_TERM_FREQ[]           = "_term_freq";
+constexpr const char RESPONSE_TYPE[]                = "_type";
+constexpr const char RESPONSE_UUID[]                = "_uuid";
+constexpr const char RESPONSE_VOLUME[]              = "_volume";
+constexpr const char RESPONSE_WDF[]                 = "_wdf";
+
+
 const std::string dump_header("xapiand-dump");
 
 
@@ -1139,16 +1160,16 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 		const auto store = split_data_store(data);
 		if (store.first) {
 			if (store.second.empty()) {
-				info["_blob"] = nullptr;
+				info[RESPONSE_BLOB] = nullptr;
 			} else {
 				const auto locator = storage_unserialise_locator(store.second);
 				const auto ct_type_mp = Document::get_field(CONTENT_TYPE_FIELD_NAME, obj);
-				info["_blob"] = {
-					{ "_type", "stored" },
-					{ "_content_type", ct_type_mp ? ct_type_mp.str() : "unknown" },
-					{ "_volume", std::get<0>(locator) },
-					{ "_offset", std::get<1>(locator) },
-					{ "_size", std::get<2>(locator) },
+				info[RESPONSE_BLOB] = {
+					{ RESPONSE_TYPE, "stored" },
+					{ RESPONSE_CONTENT_TYPE, ct_type_mp ? ct_type_mp.str() : "unknown" },
+					{ RESPONSE_VOLUME, std::get<0>(locator) },
+					{ RESPONSE_OFFSET, std::get<1>(locator) },
+					{ RESPONSE_SIZE, std::get<2>(locator) },
 				};
 			}
 		}
@@ -1156,13 +1177,13 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 	} else {
 		const auto blob_data = unserialise_string_at(2, blob);
 		if (blob_data.empty()) {
-			info["_blob"] = nullptr;
+			info[RESPONSE_BLOB] = nullptr;
 		} else {
 			auto blob_ct = unserialise_string_at(1, blob);
-			info["_blob"] = {
-				{ "_type", "local" },
-				{ "_content_type", blob_ct },
-				{ "_size", blob_data.size() },
+			info[RESPONSE_BLOB] = {
+				{ RESPONSE_TYPE, "local" },
+				{ RESPONSE_CONTENT_TYPE, blob_ct },
+				{ RESPONSE_SIZE, blob_data.size() },
 			};
 		}
 	}
@@ -1183,14 +1204,14 @@ DatabaseHandler::get_database_info()
 	unsigned doccount = database->db->get_doccount();
 	unsigned lastdocid = database->db->get_lastdocid();
 	MsgPack info;
-	info["_uuid"] = database->db->get_uuid();
-	info["_doc_count"] = doccount;
-	info["_last_id"] = lastdocid;
-	info["_doc_del"] = lastdocid - doccount;
-	info["_av_length"] = database->db->get_avlength();
-	info["_doc_len_lower"] =  database->db->get_doclength_lower_bound();
-	info["_doc_len_upper"] = database->db->get_doclength_upper_bound();
-	info["_has_positions"] = database->db->has_positions();
+	info[RESPONSE_UUID] = database->db->get_uuid();
+	info[RESPONSE_DOC_COUNT] = doccount;
+	info[RESPONSE_LAST_ID] = lastdocid;
+	info[RESPONSE_DOC_DEL] = lastdocid - doccount;
+	info[RESPONSE_AV_LENGTH] = database->db->get_avlength();
+	info[RESPONSE_DOC_LEN_LOWER] =  database->db->get_doclength_lower_bound();
+	info[RESPONSE_DOC_LEN_UPPER] = database->db->get_doclength_upper_bound();
+	info[RESPONSE_HAS_POSITIONS] = database->db->has_positions();
 	return info;
 }
 
@@ -1243,9 +1264,9 @@ DatabaseHandler::init_ref(const Endpoint& endpoint)
 			db_handler.get_document(document_id);
 		} catch (const DocNotFoundError&) {
 			static const MsgPack obj = {
-				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
-				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
-				{ "reference", { { "_value", 1                  }, { "_type",  "integer" }, { "_index", "field_values" } } },
+				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "term"             }, { RESERVED_INDEX, "field"   } } },
+				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "term"    }, { RESERVED_INDEX, "field_terms"  } } },
+				{ "reference",   { { RESERVED_VALUE, 1                  }, { RESERVED_TYPE,  "integer" }, { RESERVED_INDEX, "field_values" } } },
 			};
 			db_handler.index(document_id, false, obj, true, msgpack_type);
 		}
@@ -1270,18 +1291,18 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 			auto document = db_handler.get_document(document_id);
 			auto nref = document.get_value("reference").i64() + 1;
 			const MsgPack obj = {
-				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
-				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
-				{ "reference", { { "_value", nref               }, { "_type",  "integer" }, { "_index", "field_values" } } },
+				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "term"             }, { RESERVED_INDEX, "field"   } } },
+				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "term"    }, { RESERVED_INDEX, "field_terms"  } } },
+				{ "reference",   { { RESERVED_VALUE, nref               }, { RESERVED_TYPE,  "integer" }, { RESERVED_INDEX, "field_values" } } },
 			};
 			db_handler.index(document_id, false, obj, true, msgpack_type);
 		} catch (const DocNotFoundError&) {
 			// QUESTION: Document not found - should add?
 			// QUESTION: This case could happen?
 			static const MsgPack obj = {
-				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
-				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
-				{ "reference", { { "_value", 1                  }, { "_type",  "integer" }, { "_index", "field_values" } } },
+				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "term"             }, { RESERVED_INDEX, "field"   } } },
+				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "term"    }, { RESERVED_INDEX, "field_terms"  } } },
+				{ "reference",   { { RESERVED_VALUE, 1                  }, { RESERVED_TYPE,  "integer" }, { RESERVED_INDEX, "field_values" } } },
 			};
 			db_handler.index(document_id, false, obj, true, msgpack_type);
 		}
@@ -1306,9 +1327,9 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 			auto document = db_handler.get_document(document_id);
 			auto nref = document.get_value("reference").i64() - 1;
 			const MsgPack obj = {
-				{ "_id",       { { "_type",  "term"             }, { "_index", "field"   } } },
-				{ "master",    { { "_value", DOCUMENT_DB_MASTER }, { "_type",  "term"    }, { "_index", "field_terms"  } } },
-				{ "reference", { { "_value", nref               }, { "_type",  "integer" }, { "_index", "field_values" } } },
+				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "term"             }, { RESERVED_INDEX, "field"   } } },
+				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "term"    }, { RESERVED_INDEX, "field_terms"  } } },
+				{ "reference",   { { RESERVED_VALUE, nref               }, { RESERVED_TYPE,  "integer" }, { RESERVED_INDEX, "field_values" } } },
 			};
 			db_handler.index(document_id, false, obj, true, msgpack_type);
 			if (nref == 0) {
@@ -1624,13 +1645,13 @@ Document::get_terms(size_t retries)
 		const auto it_e = doc.termlist_end();
 		for (auto it = doc.termlist_begin(); it != it_e; ++it) {
 			auto& term = terms[*it];
-			term["_wdf"] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
+			term[RESPONSE_WDF] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
 			try {
 				auto _term_freq = it.get_termfreq();  // The number of documents which this term indexes.
-				term["_term_freq"] = _term_freq;
+				term[RESPONSE_TERM_FREQ] = _term_freq;
 			} catch (const Xapian::InvalidOperationError&) { }  // Iterator has moved, and does not support random access or doc is not associated with a database.
 			if (it.positionlist_count()) {
-				auto& term_pos = term["_pos"];
+				auto& term_pos = term[RESPONSE_POS];
 				term_pos.reserve(it.positionlist_count());
 				const auto pit_e = it.positionlist_end();
 				for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
