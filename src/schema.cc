@@ -3456,14 +3456,17 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			}
 			break;
 		}
-		case MsgPack::Type::ARRAY:
-			THROW(ClientError, "'%s' cannot be array of arrays", RESERVED_VALUE);
 		case MsgPack::Type::MAP:
 			if (item_doc.size() == 1) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = Cast::getType(item_doc.begin()->str());
-				return;
+				auto item = item_doc.begin();
+				if (item->is_string()) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = Cast::getType(item->str());
+					return;
+				}
 			}
-			THROW(ClientError, "Expected map with one element");
+			THROW(ClientError, "'%s' cannot be a nested object", RESERVED_VALUE);
+		case MsgPack::Type::ARRAY:
+			THROW(ClientError, "'%s' cannot be a nested array", RESERVED_VALUE);
 		default:
 			break;
 	}
