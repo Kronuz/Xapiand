@@ -785,36 +785,38 @@ HttpClient::_get(enum http_method method)
 			search_view(method, cmd);
 			break;
 		case Command::CMD_SEARCH:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			search_view(method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			schema_view(method, cmd);
 			break;
 #if XAPIAND_DATABASE_WAL
 		case Command::CMD_WAL:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			wal_view(method, cmd);
 			break;
 #endif
 		case Command::CMD_INFO:
+			path_parser.skip_id();  // Command has no ID
 			info_view(method, cmd);
 			break;
 		case Command::CMD_STATS:
 			stats_view(method, cmd);
 			break;
 		case Command::CMD_NODES:
+			path_parser.skip_id();  // Command has no ID
 			nodes_view(method, cmd);
 			break;
 		case Command::CMD_METADATA:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			meta_view(method, cmd);
 			break;
 		default:
 			if (path_parser.off_cmd && path_parser.len_cmd > 1) {
 				if (*(path_parser.off_cmd + 1) == '_') {
-					path_parser.off_id = nullptr;  // Command has no ID
+					path_parser.skip_id();  // Command has no ID
 					path_parser.off_pmt = path_parser.off_cmd + 1;
 					path_parser.len_pmt = path_parser.len_cmd + 1;
 					meta_view(method, cmd);
@@ -844,7 +846,7 @@ HttpClient::_merge(enum http_method method)
 			update_document_view(method, cmd);
 			break;
 		case Command::CMD_METADATA:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			update_meta_view(method, cmd);
 			break;
 		default:
@@ -865,11 +867,11 @@ HttpClient::_put(enum http_method method)
 			index_document_view(method, cmd);
 			break;
 		case Command::CMD_METADATA:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			write_meta_view(method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			write_schema_view(method, cmd);
 			break;
 		default:
@@ -887,19 +889,19 @@ HttpClient::_post(enum http_method method)
 	auto cmd = url_resolve();
 	switch (cmd) {
 		case Command::NO_CMD_ID:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			index_document_view(method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			write_schema_view(method, cmd);
 			break;
 		case Command::CMD_SEARCH:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			search_view(method, cmd);
 			break;
 		case Command::CMD_TOUCH:
-			path_parser.off_id = nullptr;  // Command has no ID
+			path_parser.skip_id();  // Command has no ID
 			touch_view(method, cmd);
 			break;
 #ifndef NDEBUG
@@ -1324,8 +1326,6 @@ void
 HttpClient::nodes_view(enum http_method, Command)
 {
 	L_CALL("HttpClient::nodes_view()");
-
-	path_parser.off_id = nullptr;  // Command has no ID
 
 	path_parser.next();
 	if (path_parser.next() != PathParser::State::END) {

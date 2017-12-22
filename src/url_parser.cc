@@ -489,6 +489,13 @@ PathParser::next()
 }
 
 
+void
+PathParser::skip_id() noexcept
+{
+	off_id = 0;
+}
+
+
 std::string
 PathParser::get_pth()
 {

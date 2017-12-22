@@ -97,6 +97,8 @@ public:
 	State init(const std::string& p);
 	State next();
 
+	void skip_id() noexcept;
+
 	std::string get_pth();
 	std::string get_hst();
 	std::string get_nsp();
