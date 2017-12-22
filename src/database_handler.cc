@@ -65,7 +65,7 @@ constexpr const char RESPONSE_TYPE[]                = "#type";
 constexpr const char RESPONSE_UUID[]                = "#uuid";
 constexpr const char RESPONSE_VOLUME[]              = "#volume";
 constexpr const char RESPONSE_WDF[]                 = "#wdf";
-constexpr const char RESPONSE_DOC_ID[]              = "#doc_id";
+constexpr const char RESPONSE_DOCID[]               = "#docid";
 constexpr const char RESPONSE_DATA[]                = "#data";
 constexpr const char RESPONSE_TERMS[]               = "#terms";
 constexpr const char RESPONSE_VALUES[]              = "#values";
@@ -1189,7 +1189,7 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 	MsgPack info;
 
 
-	info[RESPONSE_DOC_ID] = document.get_docid();
+	info[RESPONSE_DOCID] = document.get_docid();
 	info[RESPONSE_DATA] = obj;
 
 	const auto blob = split_data_blob(data);

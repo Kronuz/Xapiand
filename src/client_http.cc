@@ -97,7 +97,7 @@ constexpr const char RESPONSE_SERVER[]              = "#server";
 constexpr const char RESPONSE_URL[]                 = "#url";
 constexpr const char RESPONSE_VERSIONS[]            = "#versions";
 constexpr const char RESPONSE_DELETE[]              = "#delete";
-constexpr const char RESPONSE_DOC_ID[]              = "#doc_id";
+constexpr const char RESPONSE_DOCID[]               = "#docid";
 constexpr const char RESPONSE_SERVER_INFO[]         = "#server_info";
 constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
 constexpr const char RESPONSE_DATABASE_INFO[]       = "#database_info";
@@ -1058,7 +1058,7 @@ HttpClient::document_info_view(enum http_method method, Command)
 	db_handler.reset(endpoints, DB_SPAWN, method);
 
 	MsgPack response;
-	response[RESPONSE_DOC_ID] = db_handler.get_docid(path_parser.get_id());
+	response[RESPONSE_DOCID] = db_handler.get_docid(path_parser.get_id());
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -1677,6 +1677,7 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 
 			// Detailed info about the document:
+			obj_data[RESPONSE_DOCID] = document.get_docid();
 			obj_data[RESPONSE_RANK] = m.get_rank();
 			obj_data[RESPONSE_WEIGHT] = m.get_weight();
 			obj_data[RESPONSE_PERCENT] = m.get_percent();
