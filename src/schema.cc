@@ -308,6 +308,24 @@ static const std::vector<uint64_t> def_accuracy_time({ toUType(UnitTime::MINUTE)
 static const std::vector<uint64_t> def_accuracy_geo({ HTM_START_POS - 40, HTM_START_POS - 30, HTM_START_POS - 20, HTM_START_POS - 10, HTM_START_POS }); // HTM's level 20, 15, 10, 5, 0
 
 
+inline static bool validate_acc_date(UnitTime unit) noexcept {
+	switch (unit) {
+		case UnitTime::SECOND:
+		case UnitTime::MINUTE:
+		case UnitTime::HOUR:
+		case UnitTime::DAY:
+		case UnitTime::MONTH:
+		case UnitTime::YEAR:
+		case UnitTime::DECADE:
+		case UnitTime::CENTURY:
+		case UnitTime::MILLENNIUM:
+			return true;
+		default:
+			return false;
+	}
+}
+
+
 /*
  * Helper functions to print readable form of enums
  */
@@ -3181,7 +3199,11 @@ Schema::validate_required_data(MsgPack& mut_properties)
 								accuracy = toUType(adit->second);
 							}
 						} else {
-							accuracy = _accuracy.u64();
+								accuracy = _accuracy.u64();
+							if (validate_acc_date(static_cast<UnitTime>(accuracy))) {
+							} else {
+								THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str());
+							}
 						}
 						set_acc.insert(accuracy);
 					}
@@ -5935,7 +5957,11 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 								accuracy = toUType(adit->second);
 							}
 						} else {
-							accuracy = _accuracy.u64();
+								accuracy = _accuracy.u64();
+							if (validate_acc_date(static_cast<UnitTime>(accuracy))) {
+							} else {
+								THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str());
+							}
 						}
 						set_acc.insert(accuracy);
 					}
