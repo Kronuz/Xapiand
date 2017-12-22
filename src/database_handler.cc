@@ -674,8 +674,8 @@ DatabaseHandler::dump(int fd)
 	}
 
 	lock_database lk_db(this);
-	database->dump_metadata(fd);
 	serialise_string(fd, readable_schema);
+	database->dump_metadata(fd);
 	database->dump_documents(fd);
 }
 
@@ -685,30 +685,33 @@ DatabaseHandler::restore(int fd)
 {
 	L_CALL("DatabaseHandler::restore()");
 
-	lock_database lk_db(this);
-
 	std::string buffer;
 	std::size_t off = 0;
+
+	// get schema
+	schema = get_schema();
+	auto schema_str = unserialise_string(fd, buffer, off);
+
+	lock_database lk_db(this);
 
 	// restore metadata
 	do {
 		auto key = unserialise_string(fd, buffer, off);
+		if (key.empty()) break;
 		auto value = unserialise_string(fd, buffer, off);
-		if (key.empty()) {
-			// restore schema, it's in value
-			lk_db.unlock();
-			schema = get_schema();
-			if (!value.empty()) {
-				auto schema_begins = std::chrono::system_clock::now();
-				do {
-					schema->write(MsgPack::unserialise(value), true);
-				} while (!update_schema(schema_begins));
-			}
-			lk_db.lock();
-			break;
-		}
+
 		database->set_metadata(key, value, false, false);
 	} while (true);
+
+	// restore schema
+	if (!schema_str.empty()) {
+		lk_db.unlock();
+		auto schema_begins = std::chrono::system_clock::now();
+		do {
+			schema->write(MsgPack::unserialise(schema_str), true);
+		} while (!update_schema(schema_begins));
+		lk_db.lock();
+	}
 
 	// restore documents
 	do {
