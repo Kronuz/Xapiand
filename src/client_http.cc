@@ -97,6 +97,10 @@ constexpr const char RESPONSE_SERVER[]              = "#server";
 constexpr const char RESPONSE_URL[]                 = "#url";
 constexpr const char RESPONSE_VERSIONS[]            = "#versions";
 constexpr const char RESPONSE_DELETE[]              = "#delete";
+constexpr const char RESPONSE_DOC_ID[]              = "#doc_id";
+constexpr const char RESPONSE_SERVER_INFO[]         = "#server_info";
+constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
+constexpr const char RESPONSE_DATABASE_INFO[]       = "#database_info";
 
 
 static const std::regex header_params_re("\\s*;\\s*([a-z]+)=(\\d+(?:\\.\\d+)?)", std::regex::optimize);
@@ -1052,7 +1056,7 @@ HttpClient::document_info_view(enum http_method method, Command)
 	db_handler.reset(endpoints, DB_SPAWN, method);
 
 	MsgPack response;
-	response["doc_id"] = db_handler.get_docid(path_parser.get_id());
+	response[RESPONSE_DOC_ID] = db_handler.get_docid(path_parser.get_id());
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -1283,7 +1287,7 @@ HttpClient::info_view(enum http_method method, Command)
 	bool res_stats = false;
 
 	if (!path_parser.off_id) {
-		XapiandManager::manager->server_status(response["server_info"]);
+		XapiandManager::manager->server_status(response[RESPONSE_SERVER_INFO]);
 		res_stats = true;
 	} else {
 		endpoints_maker(1s);
@@ -1293,7 +1297,7 @@ HttpClient::info_view(enum http_method method, Command)
 		db_handler.reset(endpoints, DB_OPEN, method);
 		try {
 			auto info = db_handler.get_document_info(path_parser.get_id());
-			response["document_info"] = std::move(info);
+			response[RESPONSE_DOCUMENT_INFO] = std::move(info);
 		} catch (const DocNotFoundError&) {
 			path_parser.off_id = nullptr;
 		}
@@ -1301,7 +1305,7 @@ HttpClient::info_view(enum http_method method, Command)
 		path_parser.rewind();
 		endpoints_maker(1s);
 
-		response["database_info"] = db_handler.get_database_info();
+		response[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
 
 		operation_ends = std::chrono::system_clock::now();
 
