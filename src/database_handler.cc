@@ -762,7 +762,6 @@ DatabaseHandler::restore(int fd)
 		++i;
 		auto obj_ser = unserialise_string(fd, buffer, off);
 		XXH32_update(&xxhash, obj_ser.data(), obj_ser.size());
-		auto obj = MsgPack::unserialise(obj_ser);
 		auto blob = unserialise_string(fd, buffer, off);
 		XXH32_update(&xxhash, blob.data(), blob.size());
 		if (obj_ser.empty() && blob.empty()) break;
@@ -779,6 +778,7 @@ DatabaseHandler::restore(int fd)
 		auto ct_type = ct_type_t(ct_type_str);
 
 		MsgPack document_id;
+		auto obj = MsgPack::unserialise(obj_ser);
 
 		// Get term ID.
 		spc_id = schema->get_data_id();
