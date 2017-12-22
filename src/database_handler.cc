@@ -46,6 +46,8 @@
 #include "utils.h"                          // for repr
 #include "v8pp/v8pp.h"                      // for v8pp namespace
 
+const std::string dump_header("xapiand-dump");
+
 
 class FilterPrefixesExpandDecider : public Xapian::ExpandDecider {
 	std::vector<std::string> prefixes;
@@ -665,18 +667,35 @@ DatabaseHandler::dump(int fd)
 {
 	L_CALL("DatabaseHandler::dump()");
 
-	std::string readable_schema;
+	std::string saved_schema_ser;
 	try {
 		schema = get_schema();
-		readable_schema = schema->get_schema().serialise();
+		saved_schema_ser = schema->get_schema().serialise();
 	} catch (...) {
 		L_WARNING("Cannot open schema for %s database", repr(endpoints.to_string()).c_str());
 	}
 
 	lock_database lk_db(this);
-	serialise_string(fd, readable_schema);
-	database->dump_metadata(fd);
-	database->dump_documents(fd);
+
+	XXH32_state_t xxhash;
+	XXH32_reset(&xxhash, 0);
+
+	auto db_endpoints = endpoints.to_string();
+	serialise_string(fd, dump_header);
+	XXH32_update(&xxhash, dump_header.data(), dump_header.size());
+
+	serialise_string(fd, db_endpoints);
+	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
+
+	serialise_string(fd, saved_schema_ser);
+	XXH32_update(&xxhash, saved_schema_ser.data(), saved_schema_ser.size());
+
+	database->dump_metadata(fd, xxhash);
+	database->dump_documents(fd, xxhash);
+
+	uint32_t current_hash = XXH32_digest(&xxhash);
+	serialise_length(fd, current_hash);
+	L_INFO("Dump hash is 0x%08x", current_hash);
 }
 
 
@@ -688,38 +707,57 @@ DatabaseHandler::restore(int fd)
 	std::string buffer;
 	std::size_t off = 0;
 
-	// get schema
-	schema = get_schema();
-	auto schema_str = unserialise_string(fd, buffer, off);
-
 	lock_database lk_db(this);
 
-	// restore metadata
+	XXH32_state_t xxhash;
+	XXH32_reset(&xxhash, 0);
+
+	auto header = unserialise_string(fd, buffer, off);
+	XXH32_update(&xxhash, header.data(), header.size());
+	if (header != dump_header) {
+		THROW(ClientError, "Invalid dump", RESERVED_TYPE);
+	}
+
+	auto db_endpoints = unserialise_string(fd, buffer, off);
+	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
+
+	// get the schema (string)
+	auto saved_schema_ser = unserialise_string(fd, buffer, off);
+	XXH32_update(&xxhash, saved_schema_ser.data(), saved_schema_ser.size());
+
+	// restore metadata (key, value)
 	do {
 		auto key = unserialise_string(fd, buffer, off);
 		if (key.empty()) break;
+		XXH32_update(&xxhash, key.data(), key.size());
 		auto value = unserialise_string(fd, buffer, off);
+		XXH32_update(&xxhash, value.data(), value.size());
 
 		database->set_metadata(key, value, false, false);
 	} while (true);
 
 	// restore schema
-	if (!schema_str.empty()) {
-		lk_db.unlock();
+	lk_db.unlock();
+	schema = get_schema();
+	if (!saved_schema_ser.empty()) {
+		auto saved_schema = MsgPack::unserialise(saved_schema_ser);
 		auto schema_begins = std::chrono::system_clock::now();
 		do {
-			schema->write(MsgPack::unserialise(schema_str), true);
+			schema->write(saved_schema, true);
 		} while (!update_schema(schema_begins));
-		lk_db.lock();
 	}
+	lk_db.lock();
 
-	// restore documents
+	// restore documents (document_id, object, blob)
 	do {
-		auto document_id_str = unserialise_string(fd, buffer, off);
-		if (document_id_str.empty()) break;
-		auto obj_str = unserialise_string(fd, buffer, off);
+		auto document_id_ser = unserialise_string(fd, buffer, off);
+		if (document_id_ser.empty()) break;
+		XXH32_update(&xxhash, document_id_ser.data(), document_id_ser.size());
+		auto obj_ser = unserialise_string(fd, buffer, off);
+		XXH32_update(&xxhash, obj_ser.data(), obj_ser.size());
+		auto obj = MsgPack::unserialise(obj_ser);
 		auto blob = unserialise_string(fd, buffer, off);
-		auto obj = MsgPack::unserialise(obj_str);
+		XXH32_update(&xxhash, blob.data(), blob.size());
 
 		Xapian::Document doc;
 		required_spc_t spc_id;
@@ -759,10 +797,10 @@ DatabaseHandler::restore(int fd)
 				}
 			}
 			if (document_id.is_undefined()) {
-				document_id = Unserialise::MsgPack(spc_id.get_type(), document_id_str);
+				document_id = Unserialise::MsgPack(spc_id.get_type(), document_id_ser);
 			}
 		} else {
-			document_id = Unserialise::MsgPack(spc_id.get_type(), document_id_str);
+			document_id = Unserialise::MsgPack(spc_id.get_type(), document_id_ser);
 			term_id = Serialise::serialise(spc_id, document_id);
 			prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 		}
@@ -798,6 +836,12 @@ DatabaseHandler::restore(int fd)
 		// Index document.
 		database->replace_document_term(prefixed_term_id, doc, false, false);
 	} while (true);
+
+	uint32_t saved_hash = unserialise_length(fd, buffer, off);
+	uint32_t current_hash = XXH32_digest(&xxhash);
+	if (saved_hash != current_hash) {
+		L_WARNING("Invalid dump hash (0x%08x != 0x%08x)", saved_hash, current_hash);
+	}
 
 	database->commit(false);
 }

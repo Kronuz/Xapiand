@@ -1805,7 +1805,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 
 
 void
-Database::dump_metadata(int fd)
+Database::dump_metadata(int fd, XXH32_state_t& xxhash)
 {
 	L_CALL("Database::dump_metadata()");
 
@@ -1822,7 +1822,9 @@ Database::dump_metadata(int fd)
 				key = *it;
 				auto value = db->get_metadata(key);
 				serialise_string(fd, key);
+				XXH32_update(&xxhash, key.data(), key.size());
 				serialise_string(fd, value);
+				XXH32_update(&xxhash, value.data(), value.size());
 			}
 			serialise_string(fd, ""); // mark end
 			break;
@@ -1844,7 +1846,7 @@ Database::dump_metadata(int fd)
 
 
 void
-Database::dump_documents(int fd)
+Database::dump_documents(int fd, XXH32_state_t& xxhash)
 {
 	L_CALL("Database::dump_documents()");
 
@@ -1861,7 +1863,7 @@ Database::dump_documents(int fd)
 				did = *it;
 				auto doc = db->get_document(did);
 				auto data = doc.get_data();
-				auto obj = split_data_obj(data);
+				auto obj_ser = split_data_obj(data);
 				auto blob = split_data_blob(data);
 #ifdef XAPIAND_DATA_STORAGE
 				if (blob.empty()) {
@@ -1875,9 +1877,15 @@ Database::dump_documents(int fd)
 					}
 				}
 #endif
-				serialise_string(fd, doc.get_value(DB_SLOT_ID));
-				serialise_string(fd, obj);
+				auto document_id_ser = doc.get_value(DB_SLOT_ID);
+				serialise_string(fd, document_id_ser);
+				XXH32_update(&xxhash, document_id_ser.data(), document_id_ser.size());
+
+				serialise_string(fd, obj_ser);
+				XXH32_update(&xxhash, obj_ser.data(), obj_ser.size());
+
 				serialise_string(fd, blob);
+				XXH32_update(&xxhash, blob.data(), blob.size());
 			}
 			serialise_string(fd, ""); // mark end
 			break;

@@ -46,6 +46,7 @@
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include "guid/guid.h"          // for Guid
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
+#include "lz4/xxhash.h"         // for XXH32
 #include "queue.h"              // for Queue, QueueSet
 #include "storage.h"            // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "threadpool.h"         // for TaskQueue
@@ -330,8 +331,8 @@ public:
 	std::string get_metadata(const std::string& key);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
 
-	void dump_metadata(int fd);
-	void dump_documents(int fd);
+	void dump_metadata(int fd, XXH32_state_t& xxhash);
+	void dump_documents(int fd, XXH32_state_t& xxhash);
 
 	std::string to_string() const {
 		return endpoints.to_string();
