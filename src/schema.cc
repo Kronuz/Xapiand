@@ -1552,7 +1552,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 	std::vector<std::string> field_names;
 	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
 
-	const auto it_last = field_names.end() - 1;
+	if (field_names.empty()) {
+		return *properties;
+	}
+
+	auto it_last = field_names.end() - 1;
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
 		for (auto it = field_names.begin(); it != it_last; ++it) {
@@ -1570,10 +1574,17 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			data = &(*data)[norm_field_name];
 		}
 	} else {
-		for (auto it = field_names.begin(); it != it_last; ++it) {
+		auto it = field_names.begin();
+		while (it_last != it && first_char(*it_last) == '#') --it_last;
+		for (; it != it_last; ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			switch (first_char(field_name)) {
+				case '#':
+					continue;
+				case '_':
+					if (specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name)) break;
+				case '\x00':
+					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
 			try {
@@ -1602,33 +1613,39 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 				}
 				for (++it; it != it_last; ++it) {
 					const auto& n_field_name = *it;
-					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-					} else {
-						norm_field_name = detect_dynamic(n_field_name);
-						add_field(mut_properties);
-						if (specification.flags.store) {
-							data = &(*data)[norm_field_name];
-						}
+					switch (first_char(n_field_name)) {
+						case '#':
+							continue;
+						case '_':
+						case '\x00':
+							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 					}
 				}
 				const auto& n_field_name = *it_last;
-				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-				} else {
-					norm_field_name = detect_dynamic(n_field_name);
-					add_field(mut_properties, object, fields);
-					if (specification.flags.store) {
-						data = &(*data)[norm_field_name];
-					}
+				switch (first_char(n_field_name)) {
+					case '#':
+						continue;
+					case '_':
+					case '\x00':
+						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
+				}
+				norm_field_name = detect_dynamic(n_field_name);
+				add_field(mut_properties, object, fields);
+				if (specification.flags.store) {
+					data = &(*data)[norm_field_name];
 				}
 				return *mut_properties;
 			}
 		}
 
 		const auto& field_name = *it_last;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+		switch (first_char(field_name)) {
+			case '#':
+				return *properties;
+			case '_':
+				if (specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name)) break;
+			case '\x00':
+				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
 		try {
@@ -1690,8 +1707,13 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 		const auto it_e = field_names.end();
 		for (auto it = field_names.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			switch (first_char(field_name)) {
+				case '#':
+					continue;
+				case '_':
+					if (specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name)) break;
+				case '\x00':
+					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
 			try {
@@ -1719,22 +1741,28 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					data = &(*data)[norm_field_name];
 					for (++it; it != it_e; ++it) {
 						const auto& n_field_name = *it;
-						if (!is_valid(n_field_name)) {
-							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-						} else {
-							data = &(*data)[detect_dynamic(n_field_name)];
-							add_field(mut_properties);
+						switch (first_char(n_field_name)) {
+							case '#':
+								continue;
+							case '_':
+							case '\x00':
+								THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 						}
+						data = &(*data)[detect_dynamic(n_field_name)];
+						add_field(mut_properties);
 					}
 				} else {
 					for (++it; it != it_e; ++it) {
 						const auto& n_field_name = *it;
-						if (!is_valid(n_field_name)) {
-							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-						} else {
-							detect_dynamic(n_field_name);
-							add_field(mut_properties);
+						switch (first_char(n_field_name)) {
+							case '#':
+								continue;
+							case '_':
+							case '\x00':
+								THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 						}
+						detect_dynamic(n_field_name);
+						add_field(mut_properties);
 					}
 				}
 				return *mut_properties;
@@ -2075,7 +2103,13 @@ Schema::update(const MsgPack& object)
 			const auto it_e = object.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
-				if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+				switch (first_char(str_key)) {
+					case '#':
+					case '_':
+					case '\x00':
+						continue;
+				}
+				if (str_key != SCHEMA_FIELD_NAME) {
 					if (!mut_schema) {
 						mut_schema = std::make_unique<MsgPack>(*schema);
 					}
@@ -2098,7 +2132,11 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 	std::vector<std::string> field_names;
 	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
 
-	const auto it_last = field_names.end() - 1;
+	if (field_names.empty()) {
+		return *properties;
+	}
+
+	auto it_last = field_names.end() - 1;
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
 		for (auto it = field_names.begin(); it != it_last; ++it) {
@@ -2110,10 +2148,17 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 		update_prefixes();
 		specification.flags.inside_namespace = true;
 	} else {
-		for (auto it = field_names.begin(); it != it_last; ++it) {
+		auto it = field_names.begin();
+		while (it_last != it && first_char(*it_last) == '#') --it_last;
+		for (; it != it_last; ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			switch (first_char(field_name)) {
+				case '#':
+					continue;
+				case '_':
+					if (specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name)) break;
+				case '\x00':
+					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
 			try {
@@ -2133,27 +2178,38 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 				add_field(mut_properties);
 				for (++it; it != it_last; ++it) {
 					const auto& n_field_name = *it;
-					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-					} else {
-						norm_field_name = detect_dynamic(n_field_name);
-						add_field(mut_properties);
+					switch (first_char(n_field_name)) {
+						case '#':
+							continue;
+						case '_':
+						case '\x00':
+							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 					}
+					norm_field_name = detect_dynamic(n_field_name);
+					add_field(mut_properties);
 				}
 				const auto& n_field_name = *it_last;
-				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-				} else {
-					norm_field_name = detect_dynamic(n_field_name);
-					add_field(mut_properties, object, fields);
+				switch (first_char(n_field_name)) {
+					case '#':
+						continue;
+					case '_':
+					case '\x00':
+						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 				}
+				norm_field_name = detect_dynamic(n_field_name);
+				add_field(mut_properties, object, fields);
 				return *mut_properties;
 			}
 		}
 
 		const auto& field_name = *it_last;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+		switch (first_char(field_name)) {
+			case '#':
+				return *properties;
+			case '_':
+				if (specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name)) break;
+			case '\x00':
+				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
 		try {
@@ -2199,8 +2255,13 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 		const auto it_e = field_names.end();
 		for (auto it = field_names.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			switch (first_char(field_name)) {
+				case '#':
+					continue;
+				case '_':
+					if (specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name)) break;
+				case '\x00':
+					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
 			try {
@@ -2220,12 +2281,15 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 				add_field(mut_properties);
 				for (++it; it != it_e; ++it) {
 					const auto& n_field_name = *it;
-					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-					} else {
-						detect_dynamic(n_field_name);
-						add_field(mut_properties);
+					switch (first_char(n_field_name)) {
+						case '#':
+							continue;
+						case '_':
+						case '\x00':
+							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 					}
+					detect_dynamic(n_field_name);
+					add_field(mut_properties);
 				}
 				return *mut_properties;
 			}
@@ -2447,7 +2511,13 @@ Schema::write(const MsgPack& object, bool replace)
 			const auto it_e = object.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str();
-				if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+				switch (first_char(str_key)) {
+					case '#':
+					case '_':
+					case '\x00':
+						continue;
+				}
+				if (str_key != SCHEMA_FIELD_NAME) {
 					if (!mut_schema) {
 						mut_schema = std::make_unique<MsgPack>(*schema);
 					}
@@ -2470,7 +2540,11 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name, c
 	std::vector<std::string> field_names;
 	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
 
-	const auto it_last = field_names.end() - 1;
+	if (field_names.empty()) {
+		return *mut_properties;
+	}
+
+	auto it_last = field_names.end() - 1;
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
 		for (auto it = field_names.begin(); it != it_last; ++it) {
@@ -2482,10 +2556,17 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name, c
 		update_prefixes();
 		specification.flags.inside_namespace = true;
 	} else {
-		for (auto it = field_names.begin(); it != it_last; ++it) {
+		auto it = field_names.begin();
+		while (it_last != it && first_char(*it_last) == '#') --it_last;
+		for (; it != it_last; ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			switch (first_char(field_name)) {
+				case '#':
+					continue;
+				case '_':
+					if (specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name)) break;
+				case '\x00':
+					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
 			try {
@@ -2504,27 +2585,38 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name, c
 				add_field(mut_properties);
 				for (++it; it != it_last; ++it) {
 					const auto& n_field_name = *it;
-					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-					} else {
-						verify_dynamic(n_field_name);
-						add_field(mut_properties);
+					switch (first_char(n_field_name)) {
+						case '#':
+							continue;
+						case '_':
+						case '\x00':
+							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 					}
+					verify_dynamic(n_field_name);
+					add_field(mut_properties);
 				}
 				const auto& n_field_name = *it_last;
-				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-				} else {
-					verify_dynamic(n_field_name);
-					add_field(mut_properties, object, fields);
+				switch (first_char(n_field_name)) {
+					case '#':
+						continue;
+					case '_':
+					case '\x00':
+						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 				}
+				verify_dynamic(n_field_name);
+				add_field(mut_properties, object, fields);
 				return *mut_properties;
 			}
 		}
 
 		const auto& field_name = *it_last;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+		switch (first_char(field_name)) {
+			case '#':
+				return *mut_properties;
+			case '_':
+				if (specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name)) break;
+			case '\x00':
+				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
 		try {
@@ -2569,8 +2661,13 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 		const auto it_e = field_names.end();
 		for (auto it = field_names.begin(); it != it_e; ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			switch (first_char(field_name)) {
+				case '#':
+					continue;
+				case '_':
+					if (specification.full_meta_name.empty() && map_dispatch_set_default_spc.count(field_name)) break;
+				case '\x00':
+					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
 			try {
@@ -2589,12 +2686,15 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 				add_field(mut_properties);
 				for (++it; it != it_e; ++it) {
 					const auto& n_field_name = *it;
-					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
-					} else {
-						verify_dynamic(n_field_name);
-						add_field(mut_properties);
+					switch (first_char(n_field_name)) {
+						case '#':
+							continue;
+						case '_':
+						case '\x00':
+							THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 					}
+					verify_dynamic(n_field_name);
+					add_field(mut_properties);
 				}
 				return *mut_properties;
 			}
@@ -6492,21 +6592,25 @@ Schema::readable(MsgPack& item_schema, bool at_root)
 		const auto str_key = it->str();
 		const auto drit = map_get_readable.find(str_key);
 		if (drit == drit_e) {
-			if (is_valid(str_key)) {
-				auto& value = it.value();
-				if (value.is_map()) {
-					readable(value, false);
-				}
-			} else if (map_dispatch_set_default_spc.count(str_key)) {
-				if (at_root) {
-					it = item_schema.erase(it);
+			switch (first_char(str_key)) {
+				case '#':
 					continue;
-				}
-				auto& value = it.value();
-				if (value.is_map()) {
-					readable(value, false);
-				}
+				case '_':
+					if (map_dispatch_set_default_spc.count(str_key)) {
+						if (at_root) {
+							it = item_schema.erase(it);
+							continue;
+						}
+						break;
+					}
+				case '\x00':
+					continue;
 			}
+			auto& value = it.value();
+			if (value.is_map()) {
+				readable(value, false);
+			}
+
 		} else {
 			if (!(*drit->second)(it.value(), item_schema)) {
 				it = item_schema.erase(it);
@@ -6855,28 +6959,34 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 	const auto it_b = field_names.begin();
 	for (auto it = it_b; it != it_e; ++it) {
 		auto& field_name = *it;
-		if (!is_valid(field_name)) {
-			// Check if the field_name is accuracy.
-			if (it == it_b) {
-				if (!map_dispatch_set_default_spc.count(field_name)) {
-					if (++it == it_e) {
-						auto acc_data = get_acc_data(field_name);
-						spc.prefix.append(acc_data.first);
-						spc.acc_field.assign(std::move(field_name));
-						spc.acc_field_type = acc_data.second;
-						return spc;
+		switch (first_char(field_name)) {
+			case '#':
+				continue;
+			case '_':
+				// Check if the field_name is accuracy.
+				if (it == it_b) {
+					if (!map_dispatch_set_default_spc.count(field_name)) {
+						if (++it == it_e) {
+							auto acc_data = get_acc_data(field_name);
+							spc.prefix.append(acc_data.first);
+							spc.acc_field.assign(std::move(field_name));
+							spc.acc_field_type = acc_data.second;
+							return spc;
+						}
+						THROW(ClientError, "The field name: %s (%s) in %s is not valid", repr(full_name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 					}
-					THROW(ClientError, "The field name: %s (%s) in %s is not valid", repr(full_name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+				} else if (++it == it_e) {
+					auto acc_data = get_acc_data(field_name);
+					spc.prefix.append(acc_data.first);
+					spc.acc_field.assign(std::move(field_name));
+					spc.acc_field_type = acc_data.second;
+					return spc;
+				} else {
+					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(full_name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 				}
-			} else if (++it == it_e) {
-				auto acc_data = get_acc_data(field_name);
-				spc.prefix.append(acc_data.first);
-				spc.acc_field.assign(std::move(field_name));
-				spc.acc_field_type = acc_data.second;
-				return spc;
-			} else {
+				break;
+			case '\x00':
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(full_name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
-			}
 		}
 
 		try {
@@ -6905,21 +7015,25 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			spc.inside_namespace = true;
 			for (++it; it != it_e; ++it) {
 				auto& partial_field = *it;
-				if (is_valid(partial_field)) {
-					try {
-						spc.prefix.append(Serialise::uuid(partial_field));
-						spc.has_uuid_prefix = true;
-					} catch (const SerialisationError&) {
-						spc.prefix.append(get_prefix(partial_field));
-					}
-				} else if (++it == it_e) {
-					auto acc_data = get_acc_data(partial_field);
-					spc.prefix.append(acc_data.first);
-					spc.acc_field.assign(std::move(partial_field));
-					spc.acc_field_type = acc_data.second;
-					return spc;
-				} else {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(full_name).c_str(), repr(partial_field).c_str(), repr(specification.full_meta_name).c_str());
+				switch (first_char(partial_field)) {
+					case '#':
+						continue;
+					case '_':
+						if (++it == it_e) {
+							auto acc_data = get_acc_data(partial_field);
+							spc.prefix.append(acc_data.first);
+							spc.acc_field.assign(std::move(partial_field));
+							spc.acc_field_type = acc_data.second;
+							return spc;
+						}
+					case '\x00':
+						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(full_name).c_str(), repr(partial_field).c_str(), repr(specification.full_meta_name).c_str());
+				}
+				try {
+					spc.prefix.append(Serialise::uuid(partial_field));
+					spc.has_uuid_prefix = true;
+				} catch (const SerialisationError&) {
+					spc.prefix.append(get_prefix(partial_field));
 				}
 			}
 			return spc;
