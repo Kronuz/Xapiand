@@ -83,20 +83,17 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 		const auto& aggs = conf.at(AGGREGATION_AGGS);
 		for (const auto& agg : aggs) {
 			auto sub_agg_name = agg.str();
-			switch (first_char(sub_agg_name)) {
-				case '#':
-					continue;
-				case '_':
-				case '\x00':
-					THROW(AggregationError, "Aggregation sub_agg_name: %s is not valid", sub_agg_name.c_str());
-			}
-			const auto& sub_agg = aggs.at(sub_agg_name);
-			auto sub_agg_type = (*sub_agg.begin()).str();
-			try {
-				auto func = map_dispatch_aggregations.at(sub_agg_type);
-				(this->*func)(_result[sub_agg_name], sub_agg, schema);
-			} catch (const std::out_of_range&) {
-				THROW(AggregationError, "Aggregation type: %s is not valid", sub_agg_name.c_str());
+			if (is_valid(sub_agg_name)) {
+				const auto& sub_agg = aggs.at(sub_agg_name);
+				auto sub_agg_type = (*sub_agg.begin()).str();
+				try {
+					auto func = map_dispatch_aggregations.at(sub_agg_type);
+					(this->*func)(_result[sub_agg_name], sub_agg, schema);
+				} catch (const std::out_of_range&) {
+					THROW(AggregationError, "Aggregation type: %s is not valid", sub_agg_name.c_str());
+				}
+			} else {
+				THROW(AggregationError, "Aggregation sub_agg_name: %s is not valid", sub_agg_name.c_str());
 			}
 		}
 	} catch (const msgpack::type_error) {

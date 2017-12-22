@@ -271,9 +271,9 @@ struct query_field_t {
 };
 
 
-inline char first_char(const std::string& field_name) {
-	if (field_name.empty()) return '\x00';
-	return field_name.at(0);
+// All non-empty field names not starting with underscore are valid.
+inline bool is_valid(const std::string& field_name) {
+	return !field_name.empty() && field_name.at(0) != '_';
 }
 
 
