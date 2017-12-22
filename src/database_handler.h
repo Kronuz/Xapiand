@@ -165,6 +165,8 @@ public:
 
 	void delete_document(const std::string& document_id, bool commit_=false, bool wal_=true);
 
+	MsgPack get_document_info(Document& document);
+	MsgPack get_document_info(const Xapian::docid& did);
 	MsgPack get_document_info(const std::string& document_id);
 	MsgPack get_database_info();
 

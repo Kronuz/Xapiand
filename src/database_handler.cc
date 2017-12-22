@@ -65,7 +65,7 @@ constexpr const char RESPONSE_TYPE[]                = "#type";
 constexpr const char RESPONSE_UUID[]                = "#uuid";
 constexpr const char RESPONSE_VOLUME[]              = "#volume";
 constexpr const char RESPONSE_WDF[]                 = "#wdf";
-constexpr const char RESPONSE_DID[]                 = "#did";
+constexpr const char RESPONSE_DOC_ID[]              = "#doc_id";
 constexpr const char RESPONSE_DATA[]                = "#data";
 constexpr const char RESPONSE_TERMS[]               = "#terms";
 constexpr const char RESPONSE_VALUES[]              = "#values";
@@ -1144,12 +1144,9 @@ DatabaseHandler::delete_document(const std::string& document_id, bool commit_, b
 
 
 MsgPack
-DatabaseHandler::get_document_info(const std::string& document_id)
+DatabaseHandler::get_document_info(Document& document)
 {
-	L_CALL("DatabaseHandler::get_document_info(%s)", repr(document_id).c_str());
-
-	auto document = get_document(document_id);
-
+	L_CALL("DatabaseHandler::get_document_info(<document>)");
 	const auto data = document.get_data();
 
 	const auto obj = MsgPack::unserialise(split_data_obj(data));
@@ -1157,7 +1154,7 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 	MsgPack info;
 
 
-	info[RESPONSE_DID] = document.get_docid();
+	info[RESPONSE_DOC_ID] = document.get_docid();
 	info[RESPONSE_DATA] = obj;
 
 	const auto blob = split_data_blob(data);
@@ -1198,6 +1195,26 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 	info[RESPONSE_VALUES] = document.get_values();
 
 	return info;
+}
+
+
+MsgPack
+DatabaseHandler::get_document_info(const Xapian::docid& did)
+{
+	L_CALL("DatabaseHandler::get_document_info((Xapian::docid)%d)", did);
+
+	auto document = get_document(did);
+	return get_document_info(document);
+}
+
+
+MsgPack
+DatabaseHandler::get_document_info(const std::string& document_id)
+{
+	L_CALL("DatabaseHandler::get_document_info(%s)", repr(document_id).c_str());
+
+	auto document = get_document(document_id);
+	return get_document_info(document);
 }
 
 
