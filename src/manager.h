@@ -29,7 +29,7 @@
 #include <regex>
 #include <unordered_map>
 
-#include "cppcodec/base64_default_url_unpadded.hpp"
+#include "base_x.hh"
 #include "database.h"
 #include "endpoint_resolver.h"
 #include "ev/ev++.h"
@@ -99,12 +99,12 @@ extern void sig_exit(int sig);
 
 
 inline std::string serialise_node_id(uint64_t node_id) {
-	return base64::encode(serialise_length(node_id));
+	return Base62::inverted().encode(serialise_length(node_id));
 }
 
 
 inline uint64_t unserialise_node_id(const std::string& node_id_str) {
-	auto serialized = base64::decode<std::string>(node_id_str);
+	auto serialized = Base62::inverted().decode(node_id_str);
 	const char *p = serialized.data();
 	const char *p_end = p + serialized.size();
 	return unserialise_length(&p, p_end);
