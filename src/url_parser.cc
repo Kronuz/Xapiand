@@ -334,7 +334,11 @@ PathParser::init(const std::string& p)
 						n0 = n1;
 						break;
 					case State::ID:
-						cn = '\0';
+						if (cn == ':' && *(n1 - 1) == ':') {
+							--n1;
+						} else {
+							cn = '\0';
+						}
 					default:
 						break;
 				}
@@ -448,15 +452,19 @@ PathParser::next()
 			case ':':
 				switch (state) {
 					case State::NSP:
-						assert(n1 >= n0);
-						length = n1 - n0;
-						if (!length) {
-							return State::INVALID_NSP;
+						if (*(n1 + 1) == ':') {
+							++n1;
+						} else {
+							assert(n1 >= n0);
+							length = n1 - n0;
+							if (!length) {
+								return State::INVALID_NSP;
+							}
+							off_nsp = n0;
+							len_nsp = length;
+							state = State::PTH;
+							n0 = n1 + 1;
 						}
-						off_nsp = n0;
-						len_nsp = length;
-						state = State::PTH;
-						n0 = n1 + 1;
 						break;
 					default:
 						break;
