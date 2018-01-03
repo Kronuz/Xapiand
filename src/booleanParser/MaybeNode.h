@@ -1,6 +1,6 @@
 /*
  * Copyright (C):
- *  2017 deipi.com LLC and contributors
+ *  2015-2018 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to

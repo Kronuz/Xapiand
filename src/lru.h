@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015,2016,2017 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2018 deipi.com LLC and contributors. All rights reserved.
  * Copyright (C) 2014, lamerman. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy

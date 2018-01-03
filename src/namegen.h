@@ -5,7 +5,7 @@
  * @license Public Domain
  * @authors:
  *   German M. Bravo (Kronuz)
- *   2016,2017 deipi.com LLC and contributors
+ *   2015-2018 deipi.com LLC and contributors. All rights reserved.
  *
  *
  * This library is designed after the RinkWorks Fantasy Name Generator.
