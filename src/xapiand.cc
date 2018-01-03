@@ -300,7 +300,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		}
 
 		ValueArg<std::string> out("o", "out", "Output filename for dump.", false, "", "file", cmd);
-		ValueArg<std::string> dump("", "dump", "Dump endpoint to stdout.", false, "", "endpoint", cmd);
+		ValueArg<std::string> dump_meta("", "dump-meta", "Dump endpoint metadata to stdout.", false, "", "endpoint", cmd);
+		ValueArg<std::string> dump_docs("", "dump", "Dump endpoint to stdout.", false, "", "endpoint", cmd);
 		ValueArg<std::string> in("i", "in", "Input filename for restore.", false, "", "file", cmd);
 		ValueArg<std::string> restore("", "restore", "Restore endpoint from stdin.", false, "", "endpoint", cmd);
 
@@ -523,23 +524,24 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 			}
 		}
 
-		opts.dump = dump.getValue();
+		opts.dump_meta = dump_meta.getValue();
+		opts.dump_docs = dump_docs.getValue();
 		auto out_filename = out.getValue();
 		opts.restore = restore.getValue();
 		auto in_filename = in.getValue();
-		if (!opts.dump.empty() && !opts.restore.empty()) {
+		if ((!opts.dump_meta.empty() || !opts.dump_docs.empty()) && !opts.restore.empty()) {
 			throw CmdLineParseException("Cannot dump and restore at the same time");
-		} else if (!opts.dump.empty() || !opts.restore.empty()) {
-			if (!opts.dump.empty()) {
-				if (!in_filename.empty()) {
-					throw CmdLineParseException("Option invalid: --in <file> can be used only with --restore");
-				}
-				opts.filename = out_filename;
-			} else {
+		} else if (!opts.dump_meta.empty() || !opts.dump_docs.empty() || !opts.restore.empty()) {
+			if (!opts.restore.empty()) {
 				if (!out_filename.empty()) {
 					throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
 				}
 				opts.filename = in_filename;
+			} else {
+				if (!in_filename.empty()) {
+					throw CmdLineParseException("Option invalid: --in <file> can be used only with --restore");
+				}
+				opts.filename = out_filename;
 			}
 			opts.detach = false;
 		} else {
@@ -1012,7 +1014,7 @@ int server(opts_t &opts) {
 }
 
 
-int dump(opts_t &opts) {
+int dump_meta(opts_t &opts) {
 	int exit_code = EX_OK;
 
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
@@ -1021,10 +1023,42 @@ int dump(opts_t &opts) {
 			usedir(opts.database.c_str(), opts.solo);
 			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
 			DatabaseHandler db_handler;
-			Endpoints endpoints(Endpoint(opts.dump));
+			Endpoints endpoints(Endpoint(opts.dump_meta));
+			L_INFO("Dumping metadata database: %s", repr(endpoints.to_string()).c_str());
+			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
+			db_handler.dump_meta(fd);
+			L_INFO("Dump is ready!");
+		} catch (...) {
+			if (fd != STDOUT_FILENO) {
+				io::close(fd);
+			}
+			throw;
+		}
+		if (fd != STDOUT_FILENO) {
+			io::close(fd);
+		}
+	} else {
+		exit_code = EX_OSFILE;
+		L_ERR("Cannot open file: %s", opts.filename.c_str());
+	}
+
+	return exit_code;
+}
+
+
+int dump_docs(opts_t &opts) {
+	int exit_code = EX_OK;
+
+	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+	if (fd >= 0) {
+		try {
+			usedir(opts.database.c_str(), opts.solo);
+			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
+			DatabaseHandler db_handler;
+			Endpoints endpoints(Endpoint(opts.dump_docs));
 			L_INFO("Dumping database: %s", repr(endpoints.to_string()).c_str());
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
-			db_handler.dump(fd);
+			db_handler.dump_docs(fd);
 			L_INFO("Dump is ready!");
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
@@ -1131,8 +1165,10 @@ int main(int argc, char **argv) {
 	banner();
 
 	try {
-		if (!opts.dump.empty()) {
-			exit_code = dump(opts);
+		if (!opts.dump_meta.empty()) {
+			exit_code = dump_meta(opts);
+		} else if (!opts.dump_docs.empty()) {
+			exit_code = dump_docs(opts);
 		} else if (!opts.restore.empty()) {
 			exit_code = restore(opts);
 		} else {

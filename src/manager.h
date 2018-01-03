@@ -80,7 +80,8 @@ struct opts_t {
 	bool uuid_compact;
 	UUIDRepr uuid_repr;
 	bool uuid_partition;
-	std::string dump;
+	std::string dump_docs;
+	std::string dump_meta;
 	std::string restore;
 	std::string filename;
 };

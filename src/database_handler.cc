@@ -71,7 +71,8 @@ constexpr const char RESPONSE_TERMS[]               = "#terms";
 constexpr const char RESPONSE_VALUES[]              = "#values";
 
 
-const std::string dump_header("xapiand-dump");
+const std::string dump_meta_header("xapiand-dump-meta");
+const std::string dump_docs_header("xapiand-dump-docs");
 
 
 Xapian::docid
@@ -706,17 +707,9 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 
 
 void
-DatabaseHandler::dump(int fd)
+DatabaseHandler::dump_meta(int fd)
 {
-	L_CALL("DatabaseHandler::dump()");
-
-	std::string saved_schema_ser;
-	try {
-		schema = get_schema();
-		saved_schema_ser = schema->get_schema().serialise();
-	} catch (...) {
-		L_WARNING("Cannot open schema for %s database", repr(endpoints.to_string()).c_str());
-	}
+	L_CALL("DatabaseHandler::dump_meta()");
 
 	lock_database lk_db(this);
 
@@ -724,16 +717,37 @@ DatabaseHandler::dump(int fd)
 	XXH32_reset(&xxhash, 0);
 
 	auto db_endpoints = endpoints.to_string();
-	serialise_string(fd, dump_header);
-	XXH32_update(&xxhash, dump_header.data(), dump_header.size());
+	serialise_string(fd, dump_meta_header);
+	XXH32_update(&xxhash, dump_meta_header.data(), dump_meta_header.size());
 
 	serialise_string(fd, db_endpoints);
 	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
 
-	serialise_string(fd, saved_schema_ser);
-	XXH32_update(&xxhash, saved_schema_ser.data(), saved_schema_ser.size());
-
 	database->dump_metadata(fd, xxhash);
+
+	uint32_t current_hash = XXH32_digest(&xxhash);
+	serialise_length(fd, current_hash);
+	L_INFO("Dump hash is 0x%08x", current_hash);
+}
+
+
+void
+DatabaseHandler::dump_docs(int fd)
+{
+	L_CALL("DatabaseHandler::dump_docs()");
+
+	lock_database lk_db(this);
+
+	XXH32_state_t xxhash;
+	XXH32_reset(&xxhash, 0);
+
+	auto db_endpoints = endpoints.to_string();
+	serialise_string(fd, dump_docs_header);
+	XXH32_update(&xxhash, dump_docs_header.data(), dump_docs_header.size());
+
+	serialise_string(fd, db_endpoints);
+	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
+
 	database->dump_documents(fd, xxhash);
 
 	uint32_t current_hash = XXH32_digest(&xxhash);
@@ -747,7 +761,6 @@ DatabaseHandler::restore(int fd)
 {
 	L_CALL("DatabaseHandler::restore()");
 
-	size_t i;
 	std::string buffer;
 	std::size_t off = 0;
 
@@ -758,144 +771,136 @@ DatabaseHandler::restore(int fd)
 
 	auto header = unserialise_string(fd, buffer, off);
 	XXH32_update(&xxhash, header.data(), header.size());
-	if (header != dump_header) {
+	if (header != dump_docs_header && header != dump_meta_header) {
 		THROW(ClientError, "Invalid dump", RESERVED_TYPE);
 	}
 
 	auto db_endpoints = unserialise_string(fd, buffer, off);
 	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
 
-	// get the schema (string)
-	auto saved_schema_ser = unserialise_string(fd, buffer, off);
-	XXH32_update(&xxhash, saved_schema_ser.data(), saved_schema_ser.size());
-
 	// restore metadata (key, value)
-	i = 0;
-	do {
-		++i;
-		auto key = unserialise_string(fd, buffer, off);
-		XXH32_update(&xxhash, key.data(), key.size());
-		auto value = unserialise_string(fd, buffer, off);
-		XXH32_update(&xxhash, value.data(), value.size());
-		if (key.empty() && value.empty()) break;
-
-		if (key.empty()) {
-			L_WARNING("Metadata with no key ignored [%zu]", ID_FIELD_NAME, i);
-			continue;
-		}
-
-		database->set_metadata(key, value, false, false);
-	} while (true);
-
-	// restore schema
-	lk_db.unlock();
-	schema = get_schema();
-	if (!saved_schema_ser.empty()) {
-		auto saved_schema = MsgPack::unserialise(saved_schema_ser);
-		auto schema_begins = std::chrono::system_clock::now();
+	if (header == dump_meta_header) {
+		size_t i = 0;
 		do {
-			schema->write(saved_schema, true);
-		} while (!update_schema(schema_begins));
+			++i;
+			auto key = unserialise_string(fd, buffer, off);
+			XXH32_update(&xxhash, key.data(), key.size());
+			auto value = unserialise_string(fd, buffer, off);
+			XXH32_update(&xxhash, value.data(), value.size());
+			if (key.empty() && value.empty()) break;
+
+			if (key.empty()) {
+				L_WARNING("Metadata with no key ignored [%zu]", ID_FIELD_NAME, i);
+				continue;
+			}
+
+			database->set_metadata(key, value, false, false);
+		} while (true);
 	}
-	lk_db.lock();
 
 	// restore documents (document_id, object, blob)
-	i = 0;
-	do {
-		++i;
-		auto obj_ser = unserialise_string(fd, buffer, off);
-		XXH32_update(&xxhash, obj_ser.data(), obj_ser.size());
-		auto blob = unserialise_string(fd, buffer, off);
-		XXH32_update(&xxhash, blob.data(), blob.size());
-		if (obj_ser.empty() && blob.empty()) break;
+	if (header == dump_docs_header) {
+		lk_db.unlock();
+		schema = get_schema();
+		lk_db.lock();
 
-		Xapian::Document doc;
-		required_spc_t spc_id;
-		std::string term_id;
-		std::string prefixed_term_id;
+		size_t i = 0;
+		do {
+			++i;
+			auto obj_ser = unserialise_string(fd, buffer, off);
+			XXH32_update(&xxhash, obj_ser.data(), obj_ser.size());
+			auto blob = unserialise_string(fd, buffer, off);
+			XXH32_update(&xxhash, blob.data(), blob.size());
+			if (obj_ser.empty() && blob.empty()) break;
 
-		std::string ct_type_str;
-		if (!blob.empty()) {
-			ct_type_str = unserialise_string_at(1, blob);
-		}
-		auto ct_type = ct_type_t(ct_type_str);
+			Xapian::Document doc;
+			required_spc_t spc_id;
+			std::string term_id;
+			std::string prefixed_term_id;
 
-		MsgPack document_id;
-		auto obj = MsgPack::unserialise(obj_ser);
-
-		// Get term ID.
-		spc_id = schema->get_data_id();
-		auto f_it = obj.find(ID_FIELD_NAME);
-		if (f_it != obj.end()) {
-			const auto& field = f_it.value();
-			if (field.is_map()) {
-				auto f_it_end = field.end();
-				if (spc_id.get_type() == FieldType::EMPTY) {
-					auto ft_it = field.find(RESERVED_TYPE);
-					if (ft_it != f_it_end) {
-						const auto& type = ft_it.value();
-						if (!type.is_string()) {
-							THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
-						}
-						spc_id.set_types(type.str());
-					}
-				}
-				auto fv_it = field.find(RESERVED_VALUE);
-				if (fv_it != f_it_end) {
-					document_id = fv_it.value();
-				}
-			} else {
-				document_id = field;
+			std::string ct_type_str;
+			if (!blob.empty()) {
+				ct_type_str = unserialise_string_at(1, blob);
 			}
-		}
+			auto ct_type = ct_type_t(ct_type_str);
 
-		if (document_id.is_undefined()) {
-			L_WARNING("Document with no '%s' ignored [%zu]", ID_FIELD_NAME, i);
-			continue;
-		}
+			MsgPack document_id;
+			auto obj = MsgPack::unserialise(obj_ser);
 
-		obj = schema->index(obj, doc);
-
-		// Ensure term ID.
-		if (prefixed_term_id.empty()) {
-			// Now the schema is full, get specification id.
+			// Get term ID.
 			spc_id = schema->get_data_id();
-			if (spc_id.get_type() == FieldType::EMPTY) {
-				// Index like a namespace.
-				const auto type_ser = Serialise::guess_serialise(document_id);
-				spc_id.set_type(type_ser.first);
-				Schema::set_namespace_spc_id(spc_id);
-				term_id = type_ser.second;
-				prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
-			} else {
-				term_id = Serialise::serialise(spc_id, document_id);
-				prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+			auto f_it = obj.find(ID_FIELD_NAME);
+			if (f_it != obj.end()) {
+				const auto& field = f_it.value();
+				if (field.is_map()) {
+					auto f_it_end = field.end();
+					if (spc_id.get_type() == FieldType::EMPTY) {
+						auto ft_it = field.find(RESERVED_TYPE);
+						if (ft_it != f_it_end) {
+							const auto& type = ft_it.value();
+							if (!type.is_string()) {
+								THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
+							}
+							spc_id.set_types(type.str());
+						}
+					}
+					auto fv_it = field.find(RESERVED_VALUE);
+					if (fv_it != f_it_end) {
+						document_id = fv_it.value();
+					}
+				} else {
+					document_id = field;
+				}
 			}
-		}
 
-		// Finish document: add data, ID term and ID value.
-		if (blob.empty()) {
-			doc.set_data(join_data(false, "", obj.serialise(), ""));
-		} else {
-			doc.set_data(join_data(true, "", obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
-		}
-		doc.add_boolean_term(prefixed_term_id);
-		doc.add_value(spc_id.slot, term_id);
+			if (document_id.is_undefined()) {
+				L_WARNING("Document with no '%s' ignored [%zu]", ID_FIELD_NAME, i);
+				continue;
+			}
 
-		// Index document.
-		database->replace_document_term(prefixed_term_id, doc, false, false);
-	} while (true);
+			obj = schema->index(obj, doc);
+
+			// Ensure term ID.
+			if (prefixed_term_id.empty()) {
+				// Now the schema is full, get specification id.
+				spc_id = schema->get_data_id();
+				if (spc_id.get_type() == FieldType::EMPTY) {
+					// Index like a namespace.
+					const auto type_ser = Serialise::guess_serialise(document_id);
+					spc_id.set_type(type_ser.first);
+					Schema::set_namespace_spc_id(spc_id);
+					term_id = type_ser.second;
+					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+				} else {
+					term_id = Serialise::serialise(spc_id, document_id);
+					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+				}
+			}
+
+			// Finish document: add data, ID term and ID value.
+			if (blob.empty()) {
+				doc.set_data(join_data(false, "", obj.serialise(), ""));
+			} else {
+				doc.set_data(join_data(true, "", obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
+			}
+			doc.add_boolean_term(prefixed_term_id);
+			doc.add_value(spc_id.slot, term_id);
+
+			// Index document.
+			database->replace_document_term(prefixed_term_id, doc, false, false);
+		} while (true);
+
+		lk_db.unlock();
+		auto schema_begins = std::chrono::system_clock::now();
+		while (!update_schema(schema_begins));
+		lk_db.lock();
+	}
 
 	uint32_t saved_hash = unserialise_length(fd, buffer, off);
 	uint32_t current_hash = XXH32_digest(&xxhash);
 	if (saved_hash != current_hash) {
 		L_WARNING("Invalid dump hash (0x%08x != 0x%08x)", saved_hash, current_hash);
 	}
-
-	lk_db.unlock();
-	auto schema_begins = std::chrono::system_clock::now();
-	while (!update_schema(schema_begins));
-	lk_db.lock();
 
 	database->commit(false);
 }
