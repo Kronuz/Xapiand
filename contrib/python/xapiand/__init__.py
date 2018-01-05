@@ -58,6 +58,10 @@ except ImportError:
 __all__ = ['Xapiand']
 
 
+RESPONSE_QUERY = '#query'
+RESPONSE_AGGREGATIONS = '#aggregations'
+
+
 XAPIAND_SANDBOX_PREFIX = os.environ.get('XAPIAND_SANDBOX_PREFIX', 'sandbox')
 XAPIAND_LIVE_PREFIX = os.environ.get('XAPIAND_LIVE_PREFIX', 'live')
 XAPIAND_HOST = os.environ.get('XAPIAND_HOST', '127.0.0.1')
@@ -79,16 +83,21 @@ class Object(NestedDict):
     def __init__(self, *args, **kwargs):
         super(Object, self).__init__(*args, **kwargs)
         for k in list(self):
-            if k[0] == '_':
-                dict.__setattr__(self, k, self.pop(k))
+            if k[0] == '#':
+                dict.__setattr__(self, k[1:], self.pop(k))
+            elif k[0] == '_':
+                dict.__setattr__(self, k, self.get(k))
 
 
 class Results(object):
     def __init__(self, meta, generator):
-        for k, v in meta.get('_query', {}).items():
-            if k[0] == '_':
+        for k, v in meta.get(RESPONSE_QUERY, {}).items():
+            if k[0] == '#':
+                dict.__setattr__(self, k[1:], v)
+            elif k[0] == '_':
                 dict.__setattr__(self, k, v)
-        aggregations = NestedDict(meta.get('_aggregations', {}))
+
+        aggregations = NestedDict(meta.get(RESPONSE_AGGREGATIONS, {}))
         dict.__setattr__(self, 'aggregations', aggregations)
         self.generator = generator
 
@@ -178,7 +187,7 @@ class Xapiand(object):
         nodename = '@{}'.format(nodename) if nodename else ''
 
         if action_request in ('search', 'stats',):
-            action_request = '.{}'.format(action_request)
+            action_request = '_{}'.format(action_request)
         else:
             action_request = ''
 
