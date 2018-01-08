@@ -32,6 +32,7 @@
 #ifndef L_STASH
 #define L_STASH_DEFINED
 #define L_STASH L_TEST
+// #define L_STASH(f, args...) fprintf(stdout, (std::string(f) + "\n").c_str(), args)
 #endif
 
 

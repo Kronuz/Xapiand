@@ -31,6 +31,7 @@
 #ifndef L_SCHEDULER
 #define L_SCHEDULER_DEFINED
 #define L_SCHEDULER L_TEST
+// #define L_SCHEDULER(f, args...) fprintf(stdout, (std::string(f) + "\n").c_str(), args)
 #endif
 
 
