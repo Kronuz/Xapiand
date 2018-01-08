@@ -108,8 +108,8 @@ union GuidCondenser {
 		uint64_t time        : TIME_BITS;
 		uint64_t padding0    : PADDING_C0_BITS;
 
-		uint64_t padding1    : PADDING_C1_BITS;
 		uint64_t compacted   : COMPACTED_BITS;
+		uint64_t padding1    : PADDING_C1_BITS;
 		uint64_t salt        : SALT_BITS;
 		uint64_t clock       : CLOCK_BITS;
 	} compact;
@@ -118,8 +118,8 @@ union GuidCondenser {
 		uint64_t time        : TIME_BITS;
 		uint64_t padding0    : PADDING_E0_BITS;
 
-		uint64_t padding1    : PADDING_E1_BITS;
 		uint64_t compacted   : COMPACTED_BITS;
+		uint64_t padding1    : PADDING_E1_BITS;
 		uint64_t node        : NODE_BITS;
 		uint64_t clock       : CLOCK_BITS;
 	} expanded;
@@ -167,20 +167,24 @@ GuidCondenser::calculate_node() const
 inline std::string
 GuidCondenser::serialise() const
 {
-	auto val0 = *(reinterpret_cast<const uint64_t*>(this));
-	auto val1 = *(reinterpret_cast<const uint64_t*>(this) + 1);
+	uint64_t val0 = *(reinterpret_cast<const uint64_t*>(this));
+	uint64_t val1 = *(reinterpret_cast<const uint64_t*>(this) + 1);
 
 	uint64_t buf0, buf1;
 	if (compact.compacted) {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
-	// v0:PPPPTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSCPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
+	// v0:PPPPTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
 	// b0:                                                TTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSC
-		buf0 = val0 >> PADDING_C1_BITS;
+		assert(compact.padding0 == 0);
+		assert(compact.padding1 == 0);
+		buf0 = (val0 >> PADDING_C1_BITS) | 1;
 		buf1 = val0 << (64 - PADDING_C1_BITS) | val1 >> PADDING_C1_BITS;
 	} else {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
-	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNCP
+	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
 	// b0:     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:tKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNC
+		assert(expanded.padding0 == 0);
+		assert(expanded.padding1 == 0);
 		buf0 = val0 >> PADDING_E1_BITS;
 		buf1 = val0 << (64 - PADDING_E1_BITS) | val1 >> PADDING_E1_BITS;
 	}
@@ -243,13 +247,13 @@ GuidCondenser::unserialise(const char** ptr, const char* end)
 	if (buf1 & 1) {  // compacted
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// b0:                                                TTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSC
-	// v0:PPPPTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSCPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
+	// v0:PPPPTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
 		val0 = buf0 << PADDING_C1_BITS | buf1 >> (64 - PADDING_C1_BITS);
-		val1 = buf1 << PADDING_C1_BITS;
+		val1 = (buf1 << PADDING_C1_BITS) | 1;
 	} else {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// b0:     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:tKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNC
-	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNCP
+	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
 		val0 = buf0 << PADDING_E1_BITS | buf1 >> (64 - PADDING_E1_BITS);
 		val1 = buf1 << PADDING_E1_BITS;
 	}
@@ -575,7 +579,7 @@ Guid::serialise_condensed() const
 	auto compacted_node = condenser.calculate_node();
 	if (node != compacted_node) {
 		condenser.expanded.compacted = false;
-		condenser.compact.time = time;
+		condenser.expanded.time = time;
 		condenser.expanded.node = node;
 	}
 
