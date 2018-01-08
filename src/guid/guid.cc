@@ -141,18 +141,9 @@ inline uint64_t
 GuidCondenser::calculate_node() const
 {
 	uint32_t seed = 0;
-	if (compact.time) {
-		seed ^= fnv_1a(compact.time);
-	}
-	if (compact.clock) {
-		seed ^= fnv_1a(compact.clock);
-	}
-	if (compact.salt) {
-		seed ^= fnv_1a(compact.salt);
-	}
-	if (!seed) {
-		return 0;
-	}
+	seed ^= fnv_1a(compact.time);
+	seed ^= fnv_1a(compact.clock);
+	seed ^= fnv_1a(compact.salt);
 	std::mt19937 rng(seed);
 	uint64_t node = rng();
 	node <<= 32;
@@ -177,16 +168,16 @@ GuidCondenser::serialise() const
 	// b0:                                                TTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSC
 		assert(compact.padding0 == 0);
 		assert(compact.padding1 == 0);
-		buf0 = (val0 >> PADDING_C1_BITS) | 1;
-		buf1 = val0 << (64 - PADDING_C1_BITS) | val1 >> PADDING_C1_BITS;
+		buf0 = (val0 >> PADDING_C1_BITS);
+		buf1 = (val0 << (64 - PADDING_C1_BITS)) | (val1 >> PADDING_C1_BITS);
 	} else {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
 	// b0:     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:tKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNC
 		assert(expanded.padding0 == 0);
 		assert(expanded.padding1 == 0);
-		buf0 = val0 >> PADDING_E1_BITS;
-		buf1 = val0 << (64 - PADDING_E1_BITS) | val1 >> PADDING_E1_BITS;
+		buf0 = (val0 >> PADDING_E1_BITS);
+		buf1 = (val0 << (64 - PADDING_E1_BITS)) | (val1 >> PADDING_E1_BITS) | 1;
 	}
 
 	char buf[UUID_MAX_SERIALISED_LENGTH];
@@ -244,18 +235,18 @@ GuidCondenser::unserialise(const char** ptr, const char* end)
 	auto buf1 = be64toh(*(reinterpret_cast<uint64_t*>(buf + 1) + 1));
 
 	uint64_t val0, val1;
-	if (buf1 & 1) {  // compacted
+	if (!(buf1 & 1)) {  // compacted
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// b0:                                                TTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSC
 	// v0:PPPPTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
-		val0 = buf0 << PADDING_C1_BITS | buf1 >> (64 - PADDING_C1_BITS);
-		val1 = (buf1 << PADDING_C1_BITS) | 1;
+		val0 = (buf0 << PADDING_C1_BITS) | (buf1 >> (64 - PADDING_C1_BITS));
+		val1 = (buf1 << PADDING_C1_BITS);
 	} else {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// b0:     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:tKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNC
 	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
-		val0 = buf0 << PADDING_E1_BITS | buf1 >> (64 - PADDING_E1_BITS);
-		val1 = buf1 << PADDING_E1_BITS;
+		val0 = (buf0 << PADDING_E1_BITS) | (buf1 >> (64 - PADDING_E1_BITS));
+		val1 = (buf1 << PADDING_E1_BITS) | 1;
 	}
 
 	GuidCondenser condenser;
