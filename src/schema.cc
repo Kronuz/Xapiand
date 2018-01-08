@@ -1902,9 +1902,6 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 		set_type_to_object();
 	}
-	if (specification.flags.store && data.size() == 1) {
-		data = data[RESERVED_VALUE];
-	}
 }
 
 
@@ -1970,10 +1967,6 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 			add_value = false;
 		}
 		specification.update(std::move(start_index_spc));
-	}
-
-	if (specification.flags.store && data.size() == 1) {
-		data = data[RESERVED_VALUE];
 	}
 }
 
@@ -3485,29 +3478,28 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), pos);
 	if (specification.flags.store && add_value) {
 		// Add value to data.
-		auto& data_value = data[RESERVED_VALUE];
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::UUID) {
-			switch (data_value.getType()) {
+			switch (data.getType()) {
 				case MsgPack::Type::UNDEFINED:
-					data_value = normalize_uuid(value);
+					data = normalize_uuid(value);
 					break;
 				case MsgPack::Type::ARRAY:
-					data_value.push_back(normalize_uuid(value));
+					data.push_back(normalize_uuid(value));
 					break;
 				default:
-					data_value = MsgPack({ data_value, normalize_uuid(value) });
+					data = MsgPack({ data, normalize_uuid(value) });
 					break;
 			}
 		} else {
-			switch (data_value.getType()) {
+			switch (data.getType()) {
 				case MsgPack::Type::UNDEFINED:
-					data_value = value;
+					data = value;
 					break;
 				case MsgPack::Type::ARRAY:
-					data_value.push_back(value);
+					data.push_back(value);
 					break;
 				default:
-					data_value = MsgPack({ data_value, value });
+					data = MsgPack({ data, value });
 					break;
 			}
 		}
@@ -3527,41 +3519,40 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 
 		if (specification.flags.store && add_values) {
 			// Add value to data.
-			auto& data_value = data[RESERVED_VALUE];
 			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::UUID) {
-				switch (data_value.getType()) {
+				switch (data.getType()) {
 					case MsgPack::Type::UNDEFINED:
-						data_value = MsgPack(MsgPack::Type::ARRAY);
+						data = MsgPack(MsgPack::Type::ARRAY);
 						for (const auto& value : values) {
-							data_value.push_back(normalize_uuid(value));
+							data.push_back(normalize_uuid(value));
 						}
 						break;
 					case MsgPack::Type::ARRAY:
 						for (const auto& value : values) {
-							data_value.push_back(normalize_uuid(value));
+							data.push_back(normalize_uuid(value));
 						}
 						break;
 					default:
-						data_value = MsgPack({ data_value });
+						data = MsgPack({ data });
 						for (const auto& value : values) {
-							data_value.push_back(normalize_uuid(value));
+							data.push_back(normalize_uuid(value));
 						}
 						break;
 				}
 			} else {
-				switch (data_value.getType()) {
+				switch (data.getType()) {
 					case MsgPack::Type::UNDEFINED:
-						data_value = values;
+						data = values;
 						break;
 					case MsgPack::Type::ARRAY:
 						for (const auto& value : values) {
-							data_value.push_back(value);
+							data.push_back(value);
 						}
 						break;
 					default:
-						data_value = MsgPack({ data_value });
+						data = MsgPack({ data });
 						for (const auto& value : values) {
-							data_value.push_back(value);
+							data.push_back(value);
 						}
 						break;
 				}
