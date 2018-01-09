@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import base64
+import base59
 import six
 import string
 import uuid
 from struct import pack, unpack_from
+
+import sys
 
 try:
     from .mertwis import MT19937
@@ -24,15 +26,40 @@ def _fnv_1a(num):
     return fnv
 
 
+def xor_fold(num, bits):
+    # xor-fold to n bits:
+    folded = 0
+    while num:
+        folded ^= num
+        num >>= bits
+    return folded
+
+
 def _unserialise(bytes_):
+    size = len(bytes_)
+    length = size
     byte0 = ord(bytes_[0])
-    compacted = (byte0 & 0x10) == 0x10
-    version = (byte0 & 0x20) == 0x20
+    q = bool(byte0 & 0xf0)
+    list_bytes_ = list(bytes_)
+    for i in range(13):
+        if (UUID.VL[i][q][0] == (byte0 & UUID.VL[i][q][1])):
+            length = i + 4
+            break
+
+    if (size < length):
+        raise ValueError('Bad encoded uuid')
+
+    byte0 &= ~UUID.VL[i][q][1]
+    list_bytes_[0] = chr(byte0)
+
     meat = 0
-    for s in reversed(bytes_):
+    for s in list_bytes_:
         meat <<= 8
         meat |= ord(s)
-    meat >>= 6
+
+    compacted = not (meat & 1)
+    meat >>= UUID.COMPACTED_BITS
+
     if compacted:
         salt = meat & UUID.SALT_MASK
         meat >>= UUID.SALT_BITS
@@ -46,62 +73,34 @@ def _unserialise(bytes_):
         clock = meat & UUID.CLOCK_MASK
         meat >>= UUID.CLOCK_BITS
         time = meat & UUID.TIME_MASK
+
     if time:
+        if compacted:
+            time *= UUID.UUID_TIME_DIVISOR
         time = (time + UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
-    clock_seq_low = clock & 0xff
-    clock_seq_hi_variant = (clock >> 8) & 0x3f | 0x80  # Variant: RFC 4122
     time_low = time & 0xffffffff
     time_mid = (time >> 32) & 0xffff
     time_hi_version = (time >> 48) & 0xfff
-    if version:
-        time_hi_version |= 0x1000
-    else:
-        time_hi_version |= 0x4000
+    time_hi_version |= 0x1000
+    clock_seq_low = clock & 0xff
+    clock_seq_hi_variant = (clock >> 8) & 0x3f | 0x80  # Variant: RFC 4122
     return UUID(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node))
 
 
 def _unserialise_full(bytes_):
-    bytes_ = bytes_.ljust(17, chr(0x00))
-    meat1, meat2 = unpack_from('<QQ', bytes_, 1)
-    time = meat1 & UUID.TIME_MASK
-    meat1 >>= UUID.TIME_BITS
-    version = meat1 & UUID.VERSION_MASK
-    meat1 >>= UUID.VERSION_BITS
-    if time:
-        time = (time + UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
-    variant = meat2 & UUID.VARIANT_MASK
-    meat2 >>= UUID.VARIANT_BITS
-    node = meat2 & UUID.NODE_MASK
-    meat2 >>= UUID.NODE_BITS
-    clock = meat2 & UUID.CLOCK_MASK
-    clock_seq_low = clock & 0xff
-    clock_seq_hi_variant = clock >> 8 | variant << 6
-    time_low = time & 0xffffffff
-    time_mid = (time >> 32) & 0xffff
-    time_hi_version = (time >> 48) & 0xfff | version << 12
-    return UUID(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node))
-
+    if len(bytes_) < 17:
+        raise ValueError('Bad encoded uuid %s' % repr(bytes_))
+    return UUID(bytes=bytes_[1:])
 
 def unserialise(bytes_):
     bytes_length = len(bytes_)
     result = []
     offset = 0
     while offset != bytes_length:
-        byte0 = ord(bytes_[offset])
-        length = byte0 & 0x0f
-        if length == 0:
-            length = (byte0 & 0xf0) >> 4
-            if length == 0 or len(bytes_[offset:]) < (length + 2):
-                raise ValueError('Bad encoded uuid %s' % repr(bytes_))
-            final_offset = offset + length + 2
-            result.append(_unserialise_full(bytes_[offset:final_offset]))
-            offset = final_offset
-        elif len(bytes_[offset:]) < (length + 1):
-            raise ValueError('Bad encoded uuid %s' % repr(bytes_))
-        else:
-            final_offset = offset + length + 1
-            result.append(_unserialise(bytes_[offset:final_offset]))
-            offset = final_offset
+        length = ord(bytes_[offset])
+        offset += 1
+        result.append(UUID.unserialise(bytes_[offset:offset + length]))
+        offset += length
     return result
 
 
@@ -110,73 +109,50 @@ def unserialise_compound(bytes_):
         if len(bytes_) > 2:
             if bytes_[0] == '{' and bytes_[-1] == '}':
                 bytes_ = serialise_compound(bytes_)
+            elif bytes_.startswith('urn:uuid:'):
+                bytes_ = serialise_compound(bytes_)
+            elif (len(bytes_) + 1) % (UUID.UUID_LENGTH + 1) == 0:
+                bytes_ = serialise_compound(bytes_)
     return unserialise(bytes_)
 
 
-def _validated_serialized(bytes_):
-    bytes_length = len(bytes_)
-    if bytes_length < 2:
-        ValueError('Invalid serialised UUID format: %r' % bytes_)
-    offset = 0
-    while offset != bytes_length:
-        byte0 = ord(bytes_[offset])
-        length = byte0 & 0x0f
-        if length == 0:
-            length = (byte0 & 0xf0) >> 4
-            if length == 0 or len(bytes_[offset:]) < (length + 2):
-                ValueError('Invalid serialised UUID format: %r' % bytes_)
-            offset += length + 2
-        elif len(bytes_[offset:]) < (length + 1):
-            ValueError('Invalid serialised UUID format: %r' % bytes_)
-        else:
-            offset += length + 1
+def _serialise_base59(b59_):
+    if isinstance(b59_, six.text_type):
+        b59_ = b59_.encode('ascii')
+    bytes_ = base59.b59encode(b59_)
     return bytes_
-
-
-def b64_encode(b64_):
-    return base64.urlsafe_b64encode(b64_).strip(b'=')
-
-
-def b64_decode(b64_):
-    pad = b'=' * (-len(b64_) % 4)
-    return base64.urlsafe_b64decode(b64_ + pad)
-
-
-def _serialise_base64(b64_):
-    if isinstance(b64_, six.text_type):
-        b64_ = b64_.encode('ascii')
-    bytes_ = b64_decode(b64_)
-    return _validated_serialized(bytes_)
 
 
 def serialise(uuids_):
     serialised = b''
     for uuid_ in uuids_:
-        if len(uuid_) == UUID.UUID_LENGTH:
-            if uuid_[8] != '-' or uuid_[13] != '-' or uuid_[18] != '-' or uuid_[23] != '-':
-                serialised += _serialise_base64(uuid_)
+        if len(uuid_) == UUID.UUID_LENGTH and uuid_[8] == '-' and uuid_[13] == '-' and uuid_[18] == '-' and uuid_[23] == '-':
+            hex_uuid = uuid_[0:8] + uuid_[9:4] + uuid_[14:4] + uuid_[19:4] + uuid_[24:12]
+            if all(c in string.hexdigits for c in hex_uuid):
+                u = UUID(uuid_)
+                ser = u.serialise()
+                serialised += chr(len(ser))
+                serialised += ser
             else:
-                hex_uuid = uuid_[0:8] + uuid_[9:4] + uuid_[14:4] + uuid_[19:4] + uuid_[24:12]
-                if all(c in string.hexdigits for c in hex_uuid):
-                    u = UUID(uuid_)
-                    serialised += u.serialise()
-                else:
-                    raise ValueError('Invalid UUID format %s' % uuid_)
-        else:
-            serialised += _serialise_base64(uuid_)
+                raise ValueError('Invalid UUID format %s' % uuid_)
+        # else:
+        #     serialised += _serialise_base59(uuid_)
     return serialised
 
 
 def serialise_compound(compound_uuid):
     if isinstance(compound_uuid, six.string_types):
         if len(compound_uuid) > 2:
+            payload = None
             if compound_uuid[0] == '{' and compound_uuid[-1] == '}':
                 payload = compound_uuid[1:-1]
+            elif compound_uuid.startswith('urn:uuid:'):
+                payload = compound_uuid[9:]
+            elif (len(compound_uuid) + 1) % (UUID.UUID_LENGTH + 1) == 0:
+                payload = compound_uuid
+            if payload:
                 uuids_ = payload.split(';')
                 bytes_ = serialise(uuids_)
-                return bytes_
-            elif len(compound_uuid) == UUID.UUID_LENGTH:
-                bytes_ = serialise([compound_uuid])
                 return bytes_
     elif isinstance(compound_uuid, (list, tuple)):
         bytes_ = serialise(compound_uuid)
@@ -188,16 +164,17 @@ class UUID(six.binary_type, uuid.UUID):
     """
     Anonymous UUID is 00000000-0000-1000-8000-000000000000
     """
-    UUID_TIME_INITIAL = 0x1e6bfffffffffff
+    UUID_TIME_INITIAL = 0x1e5b039c8040800
 
     UUID_MIN_SERIALISED_LENGTH = 2
     UUID_MAX_SERIALISED_LENGTH = 17
     UUID_LENGTH = 36
+    UUID_TIME_DIVISOR = 10000
 
     TIME_BITS = 60
     VERSION_BITS = 64 - TIME_BITS
     COMPACTED_BITS = 1
-    SALT_BITS = 5
+    SALT_BITS = 7
     CLOCK_BITS = 14
     NODE_BITS = 48
     PADDING_BITS = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS
@@ -207,9 +184,26 @@ class UUID(six.binary_type, uuid.UUID):
     TIME_MASK = ((1 << TIME_BITS) - 1)
     SALT_MASK = ((1 << SALT_BITS) - 1)
     CLOCK_MASK = ((1 << CLOCK_BITS) - 1)
+    COMPACTED_MASK = ((1 << COMPACTED_BITS) - 1)
     NODE_MASK = ((1 << NODE_BITS) - 1)
     VERSION_MASK = ((1 << VERSION_BITS) - 1)
     VARIANT_MASK = ((1 << VARIANT_BITS) - 1)
+
+    VL = [
+        [[0x1c, 0xfc], [0x1c, 0xfc]],  #  4: 00011100 11111100  00011100 11111100
+        [[0x18, 0xfc], [0x18, 0xfc]],  #  5: 00011000 11111100  00011000 11111100
+        [[0x14, 0xfc], [0x14, 0xfc]],  #  6: 00010100 11111100  00010100 11111100
+        [[0x10, 0xfc], [0x10, 0xfc]],  #  7: 00010000 11111100  00010000 11111100
+        [[0x04, 0xfc], [0x40, 0xc0]],  #  8: 00000100 11111100  01000000 11000000
+        [[0x0a, 0xfe], [0xa0, 0xe0]],  #  9: 00001010 11111110  10100000 11100000
+        [[0x08, 0xfe], [0x80, 0xe0]],  # 10: 00001000 11111110  10000000 11100000
+        [[0x02, 0xff], [0x20, 0xf0]],  # 11: 00000010 11111111  00100000 11110000
+        [[0x03, 0xff], [0x30, 0xf0]],  # 12: 00000011 11111111  00110000 11110000
+        [[0x0c, 0xff], [0xc0, 0xf0]],  # 13: 00001100 11111111  11000000 11110000
+        [[0x0d, 0xff], [0xd0, 0xf0]],  # 14: 00001101 11111111  11010000 11110000
+        [[0x0e, 0xff], [0xe0, 0xf0]],  # 15: 00001110 11111111  11100000 11110000
+        [[0x0f, 0xff], [0xf0, 0xf0]],  # 16: 00001111 11111111  11110000 11110000
+    ]
 
     def __new__(self, *args, **kwargs):
         return six.binary_type.__new__(self, uuid.UUID(*args, **kwargs))
@@ -217,20 +211,16 @@ class UUID(six.binary_type, uuid.UUID):
     @classmethod
     def _calculate_node(cls, time, clock, salt):
         seed = 0
-        if time:
-            seed ^= _fnv_1a(time)
-        if clock:
-            seed ^= _fnv_1a(clock)
-        if salt:
-            seed ^= _fnv_1a(salt)
-        if not seed:
-            return 0
+        seed ^= _fnv_1a(time)
+        seed ^= _fnv_1a(clock)
+        seed ^= _fnv_1a(salt)
         g = MT19937(seed & 0xffffffff)
         node = g()
         node <<= 32
         node |= g()
         node &= cls.NODE_MASK & ~cls.SALT_MASK
         node |= salt
+        node |= 0x010000000000  # set multicast bit
         return node
 
     @classmethod
@@ -250,12 +240,15 @@ class UUID(six.binary_type, uuid.UUID):
         # clock = 14 bits
         # node = 48 bits
         if data is not None:
-            if len(data) < cls.UUID_MIN_SERIALISED_LENGTH or len(data) > cls.UUID_MAX_SERIALISED_LENGTH:
-                raise ValueError('Serialise UUID can store [%d, %d] bytes, given %d' % (cls.UUID_MIN_SERIALISED_LENGTH, cls.UUID_MAX_SERIALISED_LENGTH, len(data)))
+            if len(data) < 2 or len(data) > cls.UUID_MAX_SERIALISED_LENGTH:
+                raise ValueError('Serialise UUID can store [%d, %d] bytes, given %d' % (2, cls.UUID_MAX_SERIALISED_LENGTH, len(data)))
             num = 0
+            node = 0
             for d in reversed(data):
                 num <<= 8
                 num |= ord(d)
+                node ^= num
+            node &= 0xffffffffffff
             time_low = num & 0xffffffff
             num >>= 32
             time_mid = num & 0xffff
@@ -265,9 +258,6 @@ class UUID(six.binary_type, uuid.UUID):
             clock_seq_hi_variant = num & 0x3f
             num >>= 6
             clock_seq_low = num & 0xff
-            num >>= 8
-            node = num & 0xffffffffffff
-
             if compacted or compacted is None and len(data) <= 9:
                 compacted = True
                 time_hi_version |= 0x1000  # Version 1
@@ -281,9 +271,16 @@ class UUID(six.binary_type, uuid.UUID):
         if compacted or compacted is None:
             time = num.time
             if time:
-                time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+                time = (time - cls.UUID_TIME_INITIAL)
+                time = time / cls.UUID_TIME_DIVISOR
             clock = num.clock_seq
-            salt = _fnv_1a(num.node) & cls.SALT_MASK
+            salt = None
+            if num.node & 0x010000000000:
+                salt = num.node & cls.SALT_MASK
+            else:
+                salt = _fnv_1a(num.node)
+                salt = xor_fold(salt, cls.SALT_BITS)
+                salt = salt & cls.SALT_MASK
             node = cls._calculate_node(time, clock, salt)
             num = cls(fields=(num.fields[:-1] + (node,)))
         return num
@@ -310,82 +307,61 @@ class UUID(six.binary_type, uuid.UUID):
 
     @classmethod
     def unserialise(cls, bytes_):
-        if bytes_ is None or len(bytes_) < cls.UUID_MIN_SERIALISED_LENGTH or len(bytes_) > cls.UUID_MAX_SERIALISED_LENGTH:
+        if bytes_ is None or len(bytes_) < 2 or len(bytes_) > cls.UUID_MAX_SERIALISED_LENGTH:
             raise ValueError('Bad encoded uuid %s' % repr(bytes_))
 
-        byte0 = ord(bytes_[0])
-        length = byte0 & 0x0f
-        if length == 0:
-            length = (byte0 & 0xf0) >> 4
-            if length == 0 or len(bytes_) != (length + 2):
-                raise ValueError('Bad encoded uuid %s' % repr(bytes_))
+        if (bytes_ and ord(bytes_[0]) == 1):
             return _unserialise_full(bytes_)
-        elif len(bytes_) != (length + 1):
-            raise ValueError('Bad encoded uuid %s' % repr(bytes_))
-        return _unserialise(bytes_)
+        else:
+            return _unserialise(bytes_)
+
 
     def _serialise(self, variant):
         cls = self.__class__
-        time = self.time
+        time = self.time & cls.TIME_MASK
         if time:
             time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
-        clock = self.clock_seq
-        node = self.node
+        clock = self.clock_seq & cls.CLOCK_MASK
+        node = self.node & cls.NODE_MASK
         version = ord(self.bytes[6]) >> 4
-        if variant == 0x80 and (version == 1 or version == 4):
+        if variant == 0x80 and version == 1:
             salt = node & cls.SALT_MASK
-            compacted_node = cls._calculate_node(time, clock, salt)
+            compacted_time = time / cls.UUID_TIME_DIVISOR
+            compacted_node = cls._calculate_node(compacted_time, clock, salt)
             compacted = node == compacted_node
 
-            meat = time & cls.TIME_MASK
-            meat <<= cls.CLOCK_BITS
-            meat |= clock & cls.CLOCK_MASK
             if compacted:
+                meat = compacted_time
+                meat <<= cls.CLOCK_BITS
+                meat |= clock
                 meat <<= cls.SALT_BITS
-                meat |= salt & cls.SALT_MASK
+                meat |= salt
+                meat <<= cls.COMPACTED_BITS
             else:
+                meat = time
+                meat <<= cls.CLOCK_BITS
+                meat |= clock
                 meat <<= cls.NODE_BITS
-                meat |= node & cls.NODE_MASK
-            meat <<= 6
+                meat |= node
+                meat <<= cls.COMPACTED_BITS
+                meat |= 1
 
-            bytes_ = b''
-            while meat:
-                bytes_ += chr(meat & 0xff)
+            bytes_ = []
+            while meat or len(bytes_) < 4:
+                bytes_.append(meat & 0xff)
                 meat >>= 8
-            length = len(bytes_)
-            if length == 0:
-                bytes_ = chr((version & 0x01) << 5 | compacted << 4 | 1) + '\x00'
-            elif length == 1:
-                bytes_ = chr(ord(bytes_[0]) | (version & 0x01) << 5 | compacted << 4 | length) + '\x00'
-            else:
-                length -= 1
-                bytes_ = chr(ord(bytes_[0]) | (version & 0x01) << 5 | compacted << 4 | length) + bytes_[1:]
-            return bytes_
-        else:
-            meat1 = version & cls.VERSION_MASK
-            meat1 <<= cls.TIME_BITS
-            meat1 |= time & cls.TIME_MASK
-            meat2 = clock & cls.CLOCK_MASK
-            meat2 <<= cls.NODE_BITS
-            meat2 |= node & cls.NODE_MASK
-            meat2 <<= cls.VARIANT_BITS
-            meat2 |= (variant & 0xc0) >> 6 & cls.VARIANT_MASK
-            bytes_ = pack('<QQ', meat1, meat2)
-            length = len(bytes_)
-            for byte_ in reversed(bytes_):
-                if byte_ == '\x00':
-                    bytes_ = bytes_[:-1]
-                    length -= 1
+            length = len(bytes_) - 4
+            if bytes_[-1] & cls.VL[length][0][1]:
+                if bytes_[-1] & cls.VL[length][1][1]:
+                    bytes_.append(cls.VL[length + 1][0][0])
                 else:
-                    break
-            if length == 0:
-                bytes_ = chr(1 << 4) + '\x00\x00'
-            elif length == 1:
-                bytes_ = chr(1 << 4) + bytes_ + '\x00'
+                    bytes_[-1] |= cls.VL[length][1][0]
             else:
-                length -= 1
-                bytes_ = chr((length & 0x0f) << 4) + bytes_
-            return bytes_
+                bytes_[-1] |= cls.VL[length][0][0]
+            return ''.join(chr(c) for c in reversed(bytes_))
+        else:
+            return chr(0x01) + self.bytes
+
 
     def serialise(self):
         return self._serialise(ord(self.bytes[8]) & 0xc0)
@@ -393,33 +369,29 @@ class UUID(six.binary_type, uuid.UUID):
 
 if __name__ == '__main__':
     str_uuids = [
-        '00000000-0000-0000-0000-000000000000',
-        '00000000-0000-1000-8000-000000000000',
-        '00000000-0000-1000-a000-000000000000',
-        '00000000-0000-4000-b000-000000000000',
-        '00000000-2000-1000-c000-000000000000',
-        '00000000-2000-4000-c000-000000000000',
-        '00000000-2000-2000-0000-000000000000',
-        '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662',
-        'b6e0e797-80fc-11e6-b58a-60f81dc76762',
-        'd095e48f-c64f-4f08-91ec-888e6068dfe0',
-        'c5c52a08-c3b4-11e6-9231-339cb51d7742',
-        'c5c52a08-c3b4-51e6-7231-339cb51d7742',
+         '00000000-0000-1000-8000-000000000000',
+         '11111111-1111-1111-8111-111111111111',
+            # compresos
+         '230c3300-dc3c-11e7-9266-a9cf6771112b',
+         'f223c600-debf-11e7-85f7-cdf2b3c2e82b',
+            # NO compresos
+         '60579016-dec5-11e7-b616-34363bc9ddd6',
+         '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662',
     ]
     expected_serialised = [
-        repr('\x10\x00\x00'),
-        repr('1\x00'),
-        repr('(\x00\x00\x00\x00\x00\x00\x00\b'),
-        repr('\b\x00\x00\x00\x00\x00\x00\x00\f'),
-        repr('\x80\x01\x00\x00\x00\x00`\x19\x1e\x03'),
-        repr('\x80\x01\x00\x00\x00\x00`\x19N\x03'),
-        repr('p\x01\x00\x00\x00\x00`\x19.'),
-        repr('\xb8\x80\xde\xf3\xe8\x92\x9dR\x07'),
-        repr('\xaf\xd8\xd9q\x07>\x98b\x8dy\x0en\xcb\x0f\xfc\xff'),
-        repr('\x0f\xf87\x1a\x98#"{\x04I^\t\xfdd \xd2'),
-        repr('\xb8\x88\x91\x12T\x8a\x8bi\x07'),
-        repr('\xf0\t*\xc5\xc5\xb4\x03\x00P\t\xddu\xd4r\xce\xc4\xc8'),
+        repr('\x1c\x00\x00\x01'),
+        repr('\xf7\x95\xb0k\xa4\x86\x84\x88\x82""""""#'),
+        repr('\x07\x8e\xf7)l\x12fV'),
+        repr('\x07\x93\x15\xfax\x05\xf7V'),
+        repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xad'),
+        repr('\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc5'),
     ]
+    ################################################
+    uu = UUID('00000000-0000-0000-0000-000000000000')
+    sr = uu.serialise()
+    sb59 = _serialise_base59(sr.encode('ascii'))
+    ################################################
+
     errors = 0
     i = 0
     for str_uuid in str_uuids:
@@ -428,6 +400,7 @@ if __name__ == '__main__':
             expected = expected_serialised[i]
             serialised = u.serialise()
             result = repr(serialised)
+            res = _unserialise(serialised)
             if result != expected:
                 errors += 1
                 print 'Error in serialise: %s  Expected: %s Result: %s' % (str_uuid, expected, result)
@@ -447,10 +420,10 @@ if __name__ == '__main__':
         '{d095e48f-c64f-4f08-91ec-888e6068dfe0;c5c52a08-c3b4-11e6-9231-339cb51d7742;c5c52a08-c3b4-51e6-7231-339cb51d7742}',
     ]
     expected_serialised = [
-        repr('\x10\x00\x001\x00(\x00\x00\x00\x00\x00\x00\x00\b'),
-        repr('\b\x00\x00\x00\x00\x00\x00\x00\f\x80\x01\x00\x00\x00\x00`\x19\x1e\x03\x80\x01\x00\x00\x00\x00`\x19N\x03'),
-        repr('p\x01\x00\x00\x00\x00`\x19.\xb8\x80\xde\xf3\xe8\x92\x9dR\x07\xaf\xd8\xd9q\x07>\x98b\x8dy\x0en\xcb\x0f\xfc\xff'),
-        repr('\x0f\xf87\x1a\x98#"{\x04I^\t\xfdd \xd2\xb8\x88\x91\x12T\x8a\x8bi\x07\xf0\t*\xc5\xc5\xb4\x03\x00P\t\xddu\xd4r\xce\xc4\xc8'),
+        repr('\x11\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x1c\x00\x00\x01\t\n@\x00\x00\x00\x00\x00\x00\x01'),
+        repr('\x11\x01\x00\x00\x00\x00\x00\x00@\x00\xb0\x00\x00\x00\x00\x00\x00\x00\x11\x01\x00\x00\x00\x00 \x00\x10\x00\xc0\x00\x00\x00\x00\x00\x00\x00\x11\x01\x00\x00\x00\x00 \x00@\x00\xc0\x00\x00\x00\x00\x00\x00\x00'),
+        repr('\x11\x01\x00\x00\x00\x00 \x00 \x00\x00\x00\x00\x00\x00\x00\x00\x00\x0f\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc5\x0f\x0ehawno\xcb\xeb\x14\xc1\xf0;\x8e\xce\xc5'),
+        repr('\x11\x01\xd0\x95\xe4\x8f\xc6OO\x08\x91\xec\x88\x8e`h\xdf\xe0\x0f\x0e\x89\xbd~\xe0\x91\x04$bg9j:\xee\x85\x11\x01\xc5\xc5*\x08\xc3\xb4Q\xe6r13\x9c\xb5\x1dwB'),
     ]
     i = 0
     for str_uuid in str_uuids:
