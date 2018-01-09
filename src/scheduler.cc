@@ -189,8 +189,8 @@ Scheduler::finish(int wait)
 
 	{
 		std::lock_guard<std::mutex> lk(mtx);
+		wakeup_signal.notify_all();
 	}
-	wakeup_signal.notify_all();
 
 	if (thread_pool) {
 		thread_pool->finish();
