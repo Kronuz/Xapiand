@@ -33,6 +33,7 @@
 #include <system_error>       // for system_error
 #include <unistd.h>           // for isatty
 #include <unordered_map>      // for unordered_map
+#include <vector>
 
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback
@@ -47,6 +48,8 @@
 std::atomic<uint64_t> logger_info_hook;
 
 const std::regex filter_re("\033\\[[;\\d]*m", std::regex::optimize);
+std::mutex Logging::collected_mtx;
+std::vector<std::shared_ptr<Logging>> Logging::collected;
 std::mutex Logging::stack_mtx;
 std::unordered_map<std::thread::id, unsigned> Logging::stack_levels;
 bool Logging::colors = false;
@@ -91,7 +94,7 @@ _println(bool with_endl, const char *format, va_list argptr, bool info)
 
 
 Log
-_log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
+_log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
@@ -102,7 +105,7 @@ _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clo
 
 
 Log
-_log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+_log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
 	return Logging::log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
 }
@@ -217,7 +220,7 @@ SysLog::log(int priority, const std::string& str, bool with_priority, bool)
 }
 
 
-Logging::Logging(const std::string& str, bool clean_, bool stacked_, bool async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
+Logging::Logging(const std::string& str, bool clean_, bool stacked_, int async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
 	: ScheduledTask(created_at_),
 	  stack_level(0),
 	  stacked(stacked_),
@@ -295,6 +298,7 @@ void
 Logging::finish(int wait)
 {
 	scheduler().finish(wait);
+	dump_collected();
 }
 
 
@@ -311,9 +315,11 @@ Logging::run()
 	L_INFO_HOOK_LOG("Logging::run", "Logging::run()");
 
 	auto msg = str_start;
-	auto log_age = age();
-	if (log_age > 2e8) {
-		msg += " ~" + delta_string(log_age, true);
+	if (async > 0) {
+		auto log_age = age();
+		if (log_age > 2e8) {
+			msg += " ~" + delta_string(log_age, true);
+		}
 	}
 	Logging::log(priority, msg, stack_level * 2);
 }
@@ -363,7 +369,7 @@ Logging::_str_format(bool stacked, int priority, const std::string& exc, const c
 
 
 Log
-Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
 	if (priority > log_level) {
 		return Log(std::make_shared<Logging>("", clean, stacked, async, priority, std::chrono::system_clock::now()));
@@ -376,7 +382,7 @@ Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::sys
 
 
 Log
-Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
+Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
@@ -417,22 +423,11 @@ Logging::_unlog(int _priority, const char *file, int line, const char *suffix, c
 }
 
 
-Log
-Logging::add(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
-{
-	auto l_ptr = std::make_shared<Logging>(str, clean, stacked, async, priority, created_at);
-
-	scheduler().add(l_ptr, wakeup);
-
-	return Log(l_ptr);
-}
-
-
 void
 Logging::log(int priority, std::string str, int indent, bool with_priority, bool with_endl)
 {
-	static std::mutex log_mutex;
-	std::lock_guard<std::mutex> lk(log_mutex);
+	static std::mutex log_mtx;
+	std::lock_guard<std::mutex> lk(log_mtx);
 	auto needle = str.find(STACKED_INDENT);
 	if (needle != std::string::npos) {
 		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
@@ -444,17 +439,35 @@ Logging::log(int priority, std::string str, int indent, bool with_priority, bool
 
 
 Log
-Logging::print(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
+Logging::print(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
 	if (priority > log_level) {
 		return Log(std::make_shared<Logging>(str, clean, stacked, async, priority, created_at));
 	}
 
-	if (async || wakeup > std::chrono::system_clock::now()) {
-		return add(str, clean, stacked, wakeup, async, priority, created_at);
+	auto l_ptr = std::make_shared<Logging>(str, clean, stacked, async, priority, created_at);
+
+	if (async < 0) {
+		// collected logs
+		std::lock_guard<std::mutex> lk(collected_mtx);
+		collected.push_back(l_ptr);
+	} else if (async || wakeup > std::chrono::system_clock::now()) {
+		// asynchronous logs
+		scheduler().add(l_ptr, wakeup);
 	} else {
-		auto l_ptr = std::make_shared<Logging>(str, clean, stacked, async, priority, created_at);
-		log(priority, str, l_ptr->stack_level * 2);
-		return Log(l_ptr);
+		// immediate logs
+		l_ptr->run();
 	}
+	return Log(l_ptr);
+}
+
+
+void
+Logging::dump_collected()
+{
+	std::lock_guard<std::mutex> lk(collected_mtx);
+	for (const auto& l_ptr : collected) {
+		l_ptr->run();
+	}
+	collected.clear();
 }

@@ -33,7 +33,9 @@
 #include "ansi_color.hh"      // for ansi_color
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
-
+#define ASYNC_COLLECT -1
+#define ASYNC_IMMEDIATE 0
+#define ASYNC 1
 
 extern std::atomic<uint64_t> logger_info_hook;
 
@@ -125,11 +127,11 @@ inline void log(const std::string& fmt, Args&&... args) {
 }
 
 
-Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
+Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
 
 
 template <typename T, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-inline Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...) {
+inline Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...) {
 	va_list argptr;
 	va_start(argptr, format);
 	auto ret = _log(cleanup, stacked, wakeup, async, priority, std::string(exc->get_traceback()), file, line, suffix, prefix, format, argptr);
@@ -139,28 +141,28 @@ inline Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono:
 
 
 template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-inline Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char *file, int line, const std::string& suffix, const std::string& prefix, const std::string& fmt, Args&&... args) {
+inline Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const T* exc, const char *file, int line, const std::string& suffix, const std::string& prefix, const std::string& fmt, Args&&... args) {
 	return _log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix.c_str(), prefix.c_str(), fmt.c_str(), std::forward<Args>(args)...);
 }
 
 
-Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
+Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
 
 
 template <typename... Args>
-inline Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void* exc, const char *file, int line, const std::string& suffix, const std::string& prefix, const std::string& fmt, Args&&... args) {
+inline Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const void* exc, const char *file, int line, const std::string& suffix, const std::string& prefix, const std::string& fmt, Args&&... args) {
 	return _log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix.c_str(), prefix.c_str(), fmt.c_str(), std::forward<Args>(args)...);
 }
 
 
 template <typename T, typename R, typename... Args>
-inline Log log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, bool async, int priority, Args&&... args) {
+inline Log log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int async, int priority, Args&&... args) {
 	return log(cleanup, stacked, std::chrono::system_clock::now() + timeout, async, priority, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
-inline Log log(bool cleanup, bool stacked, int timeout, bool async, int priority, Args&&... args) {
+inline Log log(bool cleanup, bool stacked, int timeout, int async, int priority, Args&&... args) {
 	return log(cleanup, stacked, std::chrono::milliseconds(timeout), async, priority, std::forward<Args>(args)...);
 }
 
@@ -200,7 +202,7 @@ const std::string NO_COL("\033[0m");
 #define EMERG_COL LIGHT_RED
 
 
-#define L_DELAYED(cleanup, delay, priority, color, args...) log(cleanup, false, delay, true, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define L_DELAYED(cleanup, delay, priority, color, args...) log(cleanup, false, delay, ASYNC, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 #define L_DELAYED_UNLOG(priority, color, args...) unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
 #define L_DELAYED_CLEAR() clear()
 
@@ -212,8 +214,9 @@ const std::string NO_COL("\033[0m");
 
 #define L_NOTHING(args...)
 
-#define PRINT(stacked, level, color, args...) log(false, stacked, 0ms, false, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
-#define LOG(stacked, level, color, args...) log(false, stacked, 0ms, level >= ASYNC_LOG_LEVEL, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define COLLECT(stacked, level, color, args...) log(false, stacked, 0ms, ASYNC_COLLECT, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define PRINT(stacked, level, color, args...) log(false, stacked, 0ms, ASYNC_IMMEDIATE, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG(stacked, level, color, args...) log(false, stacked, 0ms, level >= ASYNC_LOG_LEVEL ? ASYNC : ASYNC_IMMEDIATE, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 
 #define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
 #define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
@@ -242,6 +245,11 @@ const std::string NO_COL("\033[0m");
 #define L_UNINDENTED_LIGHT_MAGENTA(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_MAGENTA, args)
 #define L_UNINDENTED_LIGHT_CYAN(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_CYAN, args)
 #define L_UNINDENTED_WHITE(args...) L_UNINDENTED(LOG_DEBUG, WHITE, args)
+
+#define C(level, color, args...) COLLECT(true, level, color, args)
+#define C_LOG(args...) C(LOG_DEBUG, LOG_COL, args)
+#define C_STACKED(args...) auto UNIQUE_NAME = C(args)
+#define C_STACKED_LOG(args...) C_STACKED(LOG_DEBUG, LOG_COL, args)
 
 #define P(level, color, args...) PRINT(true, level, color, args)
 #define P_LOG(args...) P(LOG_DEBUG, LOG_COL, args)

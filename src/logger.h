@@ -90,7 +90,8 @@ class Logging : public ScheduledTask {
 
 	static Scheduler& scheduler();
 
-	static Log add(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
+	static std::mutex collected_mtx;
+	static std::vector<std::shared_ptr<Logging>> collected;
 
 	static std::mutex stack_mtx;
 	static std::unordered_map<std::thread::id, unsigned> stack_levels;
@@ -100,7 +101,7 @@ class Logging : public ScheduledTask {
 
 	bool clean;
 	std::string str_start;
-	bool async;
+	int async;
 	int priority;
 	std::atomic_bool cleaned;
 
@@ -116,7 +117,7 @@ public:
 	static int log_level;
 	static std::vector<std::unique_ptr<Logger>> handlers;
 
-	Logging(const std::string& str, bool cleanup, bool stacked, bool async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
+	Logging(const std::string& str, bool cleanup, bool stacked, int async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Logging();
 
 	static std::string _str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr, bool info);
@@ -126,36 +127,37 @@ public:
 	static void finish(int wait=10);
 	static void join();
 	static void add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup);
+	static void dump_collected();
 
 	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
 
 	template <typename T, typename R, typename... Args>
-	static Log log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, bool async, int priority, Args&&... args);
+	static Log log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int async, int priority, Args&&... args);
 
 	template <typename T, typename R>
-	static Log print(const std::string& str, bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, bool async, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
+	static Log print(const std::string& str, bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int async, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
 	template <typename... Args>
-	static Log log(bool cleanup, bool stacked, int timeout, bool async, int priority, Args&&... args);
+	static Log log(bool cleanup, bool stacked, int timeout, int async, int priority, Args&&... args);
 
-	static Log print(const std::string& str, bool cleanup, bool stacked, int timeout=0, bool async=true, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
+	static Log print(const std::string& str, bool cleanup, bool stacked, int timeout=0, int async=true, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
-	static Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
+	static Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
 
-	static Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
+	static Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
 
 	template <typename... Args>
-	static Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const std::string& suffix, const std::string& prefix, const std::string& fmt, Args&&... args) {
+	static Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const std::string& suffix, const std::string& prefix, const std::string& fmt, Args&&... args) {
 		return _log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix.c_str(), prefix.c_str(), fmt.c_str(), std::forward<Args>(args)...);
 	}
 
 	template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-	static Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, Args&&... args);
+	static Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, Args&&... args);
 
 	template <typename... Args>
-	static Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const char *format, Args&&... args);
+	static Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const char *format, Args&&... args);
 
-	static Log print(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
+	static Log print(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
 	bool _unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
 
@@ -179,36 +181,36 @@ public:
 
 
 template <typename T, typename R, typename... Args>
-inline Log Logging::log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, bool async, int priority, Args&&... args) {
+inline Log Logging::log(bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int async, int priority, Args&&... args) {
 	return log(cleanup, stacked, std::chrono::system_clock::now() + timeout, async, priority, std::forward<Args>(args)...);
 }
 
 
 template <typename T, typename R>
-inline Log Logging::print(const std::string& str, bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at) {
+inline Log Logging::print(const std::string& str, bool cleanup, bool stacked, std::chrono::duration<T, R> timeout, int async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at) {
 	return print(str, cleanup, stacked, std::chrono::system_clock::now() + timeout, async, priority, created_at);
 }
 
 
 template <typename... Args>
-inline Log Logging::log(bool cleanup, bool stacked, int timeout, bool async, int priority, Args&&... args) {
+inline Log Logging::log(bool cleanup, bool stacked, int timeout, int async, int priority, Args&&... args) {
 	return log(cleanup, stacked, std::chrono::milliseconds(timeout), async, priority, std::forward<Args>(args)...);
 }
 
 
-inline Log Logging::print(const std::string& str, bool cleanup, bool stacked, int timeout, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at) {
+inline Log Logging::print(const std::string& str, bool cleanup, bool stacked, int timeout, int async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at) {
 	return print(str, cleanup, stacked, std::chrono::milliseconds(timeout), async, priority, created_at);
 }
 
 
 template <typename T, typename... Args, typename>
-inline Log Logging::log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, Args&&... args) {
+inline Log Logging::log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, Args&&... args) {
 	return log(cleanup, stacked, wakeup, async, priority, std::string(exc->get_traceback()), file, line, suffix, prefix, format, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
-inline Log Logging::log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const char *format, Args&&... args) {
+inline Log Logging::log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const char *format, Args&&... args) {
 	return log(cleanup, stacked, wakeup, async, priority, std::string(), file, line, suffix, prefix, format, std::forward<Args>(args)...);
 }
 
