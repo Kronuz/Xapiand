@@ -53,6 +53,9 @@ class Log {
 	Log(const Log&) = delete;
 	Log& operator=(const Log&) = delete;
 
+	bool _unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
+	bool _unlog(int priority, const char* file, int line, const char *suffix, const char *prefix, const char *format, ...);
+
 public:
 	Log(Log&& o);
 	Log& operator=(Log&& o);
@@ -60,20 +63,9 @@ public:
 	explicit Log(LogType log_);
 	~Log();
 
-	bool _unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
-
-	bool _unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...) {
-		va_list argptr;
-		va_start(argptr, format);
-		auto ret = _unlog(priority, file, line, suffix, prefix, format, argptr);
-		va_end(argptr);
-
-		return ret;
-	}
-
-	template <typename... Args>
-	bool unlog(int priority, const char *file, int line, const std::string& suffix, const std::string& prefix, const std::string& fmt, Args&&... args) {
-		return _unlog(priority, file, line, suffix.c_str(), prefix.c_str(), fmt.c_str(), std::forward<Args>(args)...);
+	template <typename S, typename P, typename F, typename... Args>
+	bool unlog(int priority, const char* file, int line, S&& suffix, P&& prefix, F&& format, Args&&... args) {
+		return _unlog(priority, file, line, cstr(std::forward<S>(suffix)), cstr(std::forward<P>(prefix)), cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 	}
 
 	bool clear();
@@ -82,76 +74,41 @@ public:
 };
 
 
-void _println(bool with_endl, const char *format, va_list argptr, bool info=false);
+void _println(bool info, bool with_endl, const char *format, va_list argptr);
+void _println(bool info, bool with_endl, const char* format, ...);
 
 
-inline void _print(const char *format, ...) {
-	va_list argptr;
-	va_start(argptr, format);
-	_println(true, format, argptr);
-	va_end(argptr);
+template <typename F, typename... Args>
+static void println(bool with_endl, F&& format, Args&&... args) {
+	return _println(false, with_endl, cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 }
 
 
-template <typename... Args>
-inline void print(const std::string& fmt, Args&&... args) {
-	_print(fmt.c_str(), std::forward<Args>(args)...);
+template <typename F, typename... Args>
+static void print(F&& format, Args&&... args) {
+	return _println(false, true, cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 }
 
 
-inline void _println(bool with_endl, const char *format, ...) {
-	va_list argptr;
-	va_start(argptr, format);
-	_println(with_endl, format, argptr);
-	va_end(argptr);
-}
-
-
-template <typename... Args>
-inline void println(bool with_endl, const std::string& fmt, Args&&... args) {
-	_println(with_endl, fmt.c_str(), std::forward<Args>(args)...);
-}
-
-
-inline void _log(const char *format, ...) {
-	va_list argptr;
-	va_start(argptr, format);
-	_println(true, format, argptr, true);
-	va_end(argptr);
-}
-
-
-template <typename... Args>
-inline void log(const std::string& fmt, Args&&... args) {
-	_log(fmt.c_str(), std::forward<Args>(args)...);
+template <typename F, typename... Args>
+static void info(F&& format, Args&&... args) {
+	return _println(true, true, cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 }
 
 
 Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
+Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
 
 
-template <typename T, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-inline Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...) {
-	va_list argptr;
-	va_start(argptr, format);
-	auto ret = _log(cleanup, stacked, wakeup, async, priority, std::string(exc->get_traceback()), file, line, suffix, prefix, format, argptr);
-	va_end(argptr);
-	return ret;
+template <typename T, typename S, typename P, typename F, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
+inline Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const T* exc, const char *file, int line, S&& suffix, P&& prefix, F&& format, Args&&... args) {
+	return _log(cleanup, stacked, wakeup, async, priority, std::string(exc->get_traceback()), file, line, cstr(std::forward<S>(suffix)), cstr(std::forward<P>(prefix)), cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 }
 
 
-template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-inline Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const T* exc, const char *file, int line, const std::string& suffix, const std::string& prefix, const std::string& fmt, Args&&... args) {
-	return _log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix.c_str(), prefix.c_str(), fmt.c_str(), std::forward<Args>(args)...);
-}
-
-
-Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
-
-
-template <typename... Args>
-inline Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const void* exc, const char *file, int line, const std::string& suffix, const std::string& prefix, const std::string& fmt, Args&&... args) {
-	return _log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix.c_str(), prefix.c_str(), fmt.c_str(), std::forward<Args>(args)...);
+template <typename S, typename P, typename F, typename... Args>
+inline Log log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const void*, const char *file, int line, S&& suffix, P&& prefix, F&& format, Args&&... args) {
+	return _log(cleanup, stacked, wakeup, async, priority, std::string(), file, line, cstr(std::forward<S>(suffix)), cstr(std::forward<P>(prefix)), cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 }
 
 

@@ -51,6 +51,21 @@ struct is_callable {
 };
 
 
+/* Wrapper to get c_str() from either std::string or a raw const char* */
+class cstr {
+	const char* _str;
+public:
+	explicit cstr(const std::string &s) : _str(s.c_str())  { }
+	explicit cstr(const char* s) : _str(s) { }
+	operator const char* () {
+		return _str;
+	}
+	const char* c_str() {
+		return _str;
+	}
+};
+
+
 /* Strict converter for unsigned types */
 #define stoux(func, s) \
 	[](const std::string& str) { \
