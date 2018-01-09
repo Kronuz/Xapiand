@@ -309,16 +309,8 @@ const std::string NO_COL("\033[0m");
 #define L_INFO_HOOK_LIGHT_CYAN(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LIGHT_CYAN, args)
 #define L_INFO_HOOK_WHITE(hook, args...) L_INFO_HOOK(hook, LOG_INFO, WHITE, args)
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-#define L_STDOUT(f, ...) fprintf(stdout, (std::string(f) + "\n").c_str(), ##__VA_ARGS__)
-#define L_STDERR(f, ...) fprintf(stderr, (std::string(f) + "\n").c_str(), ##__VA_ARGS__)
-#pragma GCC diagnostic pop
-
 #ifdef NDEBUG
-#define L_TEST L_NOTHING
 #define L_DEBUG L_NOTHING
 #else
-#define L_TEST L_NOTHING
 #define L_DEBUG(args...) L(LOG_DEBUG, DEBUG_COL, args)
 #endif

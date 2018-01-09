@@ -96,7 +96,7 @@
 
 #ifndef L_MANAGER
 #define L_MANAGER_DEFINED
-#define L_MANAGER L_TEST
+#define L_MANAGER L_NOTHING
 #endif
 
 

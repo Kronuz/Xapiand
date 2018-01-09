@@ -49,7 +49,7 @@
 
 #ifndef L_SCHEMA
 #define L_SCHEMA_DEFINED
-#define L_SCHEMA L_TEST
+#define L_SCHEMA L_NOTHING
 #endif
 
 

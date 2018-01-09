@@ -55,7 +55,6 @@ inline void log(std::string fmt, Args&&... args) {
 	fprintf(stderr, fmt.c_str(), std::forward<Args>(args)...);
 #pragma GCC diagnostic pop
 }
-#  define L_TEST(obj, args...) log(args)
 #  define L_DEBUG(obj, args...) log(args)
 #  define L_INFO(obj, args...) log(args)
 #  define L_NOTICE(obj, args...) log(args)
