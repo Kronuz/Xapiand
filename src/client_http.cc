@@ -228,7 +228,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 
 	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, http_clients, total_clients);
 
-	response_log = L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, "Client idle for too long...").release();
+	response_log = L_DELAYED(true, 300s, LOG_WARNING, PURPLE, "Client idle for too long...").release();
 	idle = true;
 
 	L_OBJ("CREATED HTTP CLIENT! (%d clients)", http_clients);
@@ -292,7 +292,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		idle = false;
 		request_begining = false;
 		request_begins = std::chrono::system_clock::now();
-		auto old_response_log = response_log.exchange(L_DELAYED(true, 10s, LOG_WARNING, MAGENTA, "Request taking too long...").release());
+		auto old_response_log = response_log.exchange(L_DELAYED(true, 10s, LOG_WARNING, PURPLE, "Request taking too long...").release());
 		old_response_log->clear();
 		response_logged = false;
 	}
@@ -610,7 +610,7 @@ HttpClient::run()
 
 	L_OBJ_BEGIN("HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
-	auto old_response_log = response_log.exchange(L_DELAYED(true, 1s, LOG_WARNING, MAGENTA, "Response taking too long...").release());
+	auto old_response_log = response_log.exchange(L_DELAYED(true, 1s, LOG_WARNING, PURPLE, "Response taking too long...").release());
 	old_response_log->clear();
 
 	std::string error;
@@ -2354,12 +2354,12 @@ HttpClient::clean_http_request()
 		if ((int)response_status >= 200 && (int)response_status <= 299) {
 			color = &GREY;
 		} else if ((int)response_status >= 300 && (int)response_status <= 399) {
-			color = &CYAN;
+			color = &STEEL_BLUE;
 		} else if ((int)response_status >= 400 && (int)response_status <= 499) {
-			color = &YELLOW;
+			color = &SADDLE_BROWN;
 			priority = LOG_INFO;
 		} else if ((int)response_status >= 500 && (int)response_status <= 599) {
-			color = &LIGHT_MAGENTA;
+			color = &LIGHT_PURPLE;
 			priority = LOG_ERR;
 		}
 		if (!response_logged.exchange(true)) {
@@ -2409,7 +2409,7 @@ HttpClient::set_idle()
 {
 	L_CALL("HttpClient::set_idle()");
 
-	// auto old_response_log = response_log.exchange(L_DELAYED(true, 300s, LOG_WARNING, MAGENTA, "Client idle for too long...").release());
+	// auto old_response_log = response_log.exchange(L_DELAYED(true, 300s, LOG_WARNING, PURPLE, "Client idle for too long...").release());
 	// old_response_log->clear();
 
 	idle = true;

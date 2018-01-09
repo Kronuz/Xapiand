@@ -489,7 +489,7 @@ XapiandManager::signal_sig_async_cb(ev::async&, int revents)
 			break;
 #if defined(__APPLE__) || defined(__FreeBSD__)
 		case SIGINFO:
-			print(BLUE + "Workers: %s", dump_tree().c_str());
+			print(STEEL_BLUE + "Workers: %s", dump_tree().c_str());
 			break;
 #endif
 	}
@@ -750,7 +750,7 @@ XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
 
-	L_MANAGER("Workers:" BLUE "%s", dump_tree().c_str());
+	L_MANAGER("Workers:" STEEL_BLUE "%s", dump_tree().c_str());
 
 	finish();
 

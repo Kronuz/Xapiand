@@ -355,7 +355,7 @@ Logging::str_format(bool stacked, int priority, const std::string& exc, const ch
 	if (info && validated_priority(priority) <= LOG_DEBUG) {
 		auto iso8601 = "[" + Datetime::iso8601(std::chrono::system_clock::now(), false, ' ') + "]";
 		auto tid = " (" + get_thread_name() + ")";
-		result = DARK_GREY + iso8601 + tid;
+		result = DIM_GREY + iso8601 + tid;
 		result += " ";
 
 #ifdef LOG_LOCATION
@@ -375,7 +375,7 @@ Logging::str_format(bool stacked, int priority, const std::string& exc, const ch
 	if (priority < 0) {
 		if (exc.empty()) {
 #ifdef XAPIAND_TRACEBACKS
-			result += DARK_GREY + traceback(file, line) + NO_COL;
+			result += DIM_GREY + traceback(file, line) + NO_COL;
 #else
 			ignore_unused(file);
 			ignore_unused(line);

@@ -395,7 +395,7 @@ QueryDSL::process(Xapian::Query::op op, const std::string& parent, const MsgPack
 				const auto field_name = it->str();
 				auto const& o = it.value();
 
-				L_QUERY(BLUE + "%s = %s" + NO_COL, field_name.c_str(), o.to_string().c_str());
+				L_QUERY(STEEL_BLUE + "%s = %s" + NO_COL, field_name.c_str(), o.to_string().c_str());
 
 				static const auto it_de = map_dispatch.end();
 
@@ -941,7 +941,7 @@ QueryDSL::get_query(const MsgPack& obj)
 	}
 
 	auto query = process(Xapian::Query::OP_AND, std::string(), obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD, false, false, false);
-	L_QUERY("query = " + CYAN + "%s" + NO_COL + "\n" + DARK_GREY + "%s" + NO_COL, query.get_description().c_str(), repr(query.serialise()).c_str());
+	L_QUERY("query = " + STEEL_BLUE + "%s" + NO_COL + "\n" + DIM_GREY + "%s" + NO_COL, query.get_description().c_str(), repr(query.serialise()).c_str());
 	return query;
 }
 

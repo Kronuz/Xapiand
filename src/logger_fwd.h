@@ -125,23 +125,6 @@ inline Log log(bool cleanup, bool stacked, int timeout, int async, int priority,
 
 const std::string NO_COL("\033[0m");
 
-#define BLACK rgb(0, 0, 0)
-#define RED rgb(131, 19, 11)
-#define GREEN rgb(11, 131, 61)
-#define YELLOW rgb(131, 87, 11)
-#define BLUE rgb(11, 69, 131)
-#define MAGENTA rgb(131, 11, 103)
-#define CYAN rgb(11, 103, 131)
-#define GREY rgb(192, 192, 192)
-#define DARK_GREY rgb(96, 96, 96)
-#define LIGHT_RED rgb(232, 25, 10)
-#define LIGHT_GREEN rgb(10, 232, 103)
-#define LIGHT_YELLOW rgb(232, 195, 10)
-#define LIGHT_BLUE rgb(10, 114, 232)
-#define LIGHT_MAGENTA rgb(232, 10, 180)
-#define LIGHT_CYAN rgb(6, 220, 255)
-#define WHITE rgb(255, 255, 255)
-
 
 #define MERGE_(a,b)  a##b
 #define LABEL_(a) MERGE_(__unique, a)
@@ -150,10 +133,10 @@ const std::string NO_COL("\033[0m");
 
 #define LOG_COL WHITE
 #define DEBUG_COL NO_COL
-#define INFO_COL CYAN
-#define NOTICE_COL LIGHT_CYAN
-#define WARNING_COL LIGHT_YELLOW
-#define ERR_COL RED
+#define INFO_COL STEEL_BLUE
+#define NOTICE_COL LIGHT_SKY_BLUE
+#define WARNING_COL GOLD
+#define ERR_COL BROWN
 #define CRIT_COL LIGHT_RED
 #define ALERT_COL LIGHT_RED
 #define EMERG_COL LIGHT_RED
@@ -163,10 +146,10 @@ const std::string NO_COL("\033[0m");
 #define L_DELAYED_UNLOG(priority, color, args...) unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
 #define L_DELAYED_CLEAR() clear()
 
-#define L_DELAYED_200(args...) auto __log_timed = L_DELAYED(true, 200ms, LOG_WARNING, LIGHT_MAGENTA, args)
-#define L_DELAYED_600(args...) auto __log_timed = L_DELAYED(true, 600ms, LOG_WARNING, LIGHT_MAGENTA, args)
-#define L_DELAYED_1000(args...) auto __log_timed = L_DELAYED(true, 1000ms, LOG_WARNING, LIGHT_MAGENTA, args)
-#define L_DELAYED_N_UNLOG(args...) __log_timed.L_DELAYED_UNLOG(LOG_WARNING, MAGENTA, args)
+#define L_DELAYED_200(args...) auto __log_timed = L_DELAYED(true, 200ms, LOG_WARNING, LIGHT_PURPLE, args)
+#define L_DELAYED_600(args...) auto __log_timed = L_DELAYED(true, 600ms, LOG_WARNING, LIGHT_PURPLE, args)
+#define L_DELAYED_1000(args...) auto __log_timed = L_DELAYED(true, 1000ms, LOG_WARNING, LIGHT_PURPLE, args)
+#define L_DELAYED_N_UNLOG(args...) __log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, args)
 #define L_DELAYED_N_CLEAR() __log_timed.L_DELAYED_CLEAR()
 
 #define L_NOTHING(args...)
@@ -186,22 +169,6 @@ const std::string NO_COL("\033[0m");
 
 #define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
 #define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
-#define L_UNINDENTED_BLACK(args...) L_UNINDENTED(LOG_DEBUG, BLACK, args)
-#define L_UNINDENTED_GREY(args...) L_UNINDENTED(LOG_DEBUG, GREY, args)
-#define L_UNINDENTED_RED(args...) L_UNINDENTED(LOG_DEBUG, RED, args)
-#define L_UNINDENTED_GREEN(args...) L_UNINDENTED(LOG_DEBUG, GREEN, args)
-#define L_UNINDENTED_YELLOW(args...) L_UNINDENTED(LOG_DEBUG, YELLOW, args)
-#define L_UNINDENTED_BLUE(args...) L_UNINDENTED(LOG_DEBUG, BLUE, args)
-#define L_UNINDENTED_MAGENTA(args...) L_UNINDENTED(LOG_DEBUG, MAGENTA, args)
-#define L_UNINDENTED_CYAN(args...) L_UNINDENTED(LOG_DEBUG, CYAN, args)
-#define L_UNINDENTED_DARK_GREY(args...) L_UNINDENTED(LOG_DEBUG, DARK_GREY, args)
-#define L_UNINDENTED_LIGHT_RED(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_RED, args)
-#define L_UNINDENTED_LIGHT_GREEN(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_GREEN, args)
-#define L_UNINDENTED_LIGHT_YELLOW(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_YELLOW, args)
-#define L_UNINDENTED_LIGHT_BLUE(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_BLUE, args)
-#define L_UNINDENTED_LIGHT_MAGENTA(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_MAGENTA, args)
-#define L_UNINDENTED_LIGHT_CYAN(args...) L_UNINDENTED(LOG_DEBUG, LIGHT_CYAN, args)
-#define L_UNINDENTED_WHITE(args...) L_UNINDENTED(LOG_DEBUG, WHITE, args)
 
 #define C(level, color, args...) COLLECT(true, level, color, args)
 #define C_LOG(args...) C(LOG_DEBUG, LOG_COL, args)
@@ -215,41 +182,9 @@ const std::string NO_COL("\033[0m");
 
 #define L(level, color, args...) LOG(true, level, color, args)
 #define L_LOG(args...) L(LOG_DEBUG, LOG_COL, args)
-#define L_BLACK(args...) L(LOG_DEBUG, BLACK, args)
-#define L_GREY(args...) L(LOG_DEBUG, GREY, args)
-#define L_RED(args...) L(LOG_DEBUG, RED, args)
-#define L_GREEN(args...) L(LOG_DEBUG, GREEN, args)
-#define L_YELLOW(args...) L(LOG_DEBUG, YELLOW, args)
-#define L_BLUE(args...) L(LOG_DEBUG, BLUE, args)
-#define L_MAGENTA(args...) L(LOG_DEBUG, MAGENTA, args)
-#define L_CYAN(args...) L(LOG_DEBUG, CYAN, args)
-#define L_DARK_GREY(args...) L(LOG_DEBUG, DARK_GREY, args)
-#define L_LIGHT_RED(args...) L(LOG_DEBUG, LIGHT_RED, args)
-#define L_LIGHT_GREEN(args...) L(LOG_DEBUG, LIGHT_GREEN, args)
-#define L_LIGHT_YELLOW(args...) L(LOG_DEBUG, LIGHT_YELLOW, args)
-#define L_LIGHT_BLUE(args...) L(LOG_DEBUG, LIGHT_BLUE, args)
-#define L_LIGHT_MAGENTA(args...) L(LOG_DEBUG, LIGHT_MAGENTA, args)
-#define L_LIGHT_CYAN(args...) L(LOG_DEBUG, LIGHT_CYAN, args)
-#define L_WHITE(args...) L(LOG_DEBUG, WHITE, args)
 
 #define L_STACKED(args...) auto UNIQUE_NAME = L(args)
 #define L_STACKED_LOG(args...) L_STACKED(LOG_DEBUG, LOG_COL, args)
-#define L_STACKED_BLACK(args...) L_STACKED(LOG_DEBUG, BLACK, args)
-#define L_STACKED_GREY(args...) L_STACKED(LOG_DEBUG, GREY, args)
-#define L_STACKED_RED(args...) L_STACKED(LOG_DEBUG, RED, args)
-#define L_STACKED_GREEN(args...) L_STACKED(LOG_DEBUG, GREEN, args)
-#define L_STACKED_YELLOW(args...) L_STACKED(LOG_DEBUG, YELLOW, args)
-#define L_STACKED_BLUE(args...) L_STACKED(LOG_DEBUG, BLUE, args)
-#define L_STACKED_MAGENTA(args...) L_STACKED(LOG_DEBUG, MAGENTA, args)
-#define L_STACKED_CYAN(args...) L_STACKED(LOG_DEBUG, CYAN, args)
-#define L_STACKED_DARK_GREY(args...) L_STACKED(LOG_DEBUG, DARK_GREY, args)
-#define L_STACKED_LIGHT_RED(args...) L_STACKED(LOG_DEBUG, LIGHT_RED, args)
-#define L_STACKED_LIGHT_GREEN(args...) L_STACKED(LOG_DEBUG, LIGHT_GREEN, args)
-#define L_STACKED_LIGHT_YELLOW(args...) L_STACKED(LOG_DEBUG, LIGHT_YELLOW, args)
-#define L_STACKED_LIGHT_BLUE(args...) L_STACKED(LOG_DEBUG, LIGHT_BLUE, args)
-#define L_STACKED_LIGHT_MAGENTA(args...) L_STACKED(LOG_DEBUG, LIGHT_MAGENTA, args)
-#define L_STACKED_LIGHT_CYAN(args...) L_STACKED(LOG_DEBUG, LIGHT_CYAN, args)
-#define L_STACKED_WHITE(args...) L_STACKED(LOG_DEBUG, WHITE, args)
 
 #ifdef NDEBUG
 #define L_INFO_HOOK L_NOTHING
@@ -257,25 +192,11 @@ const std::string NO_COL("\033[0m");
 #define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { P(args); }
 #endif
 #define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LOG_COL, args)
-#define L_INFO_HOOK_BLACK(hook, args...) L_INFO_HOOK(hook, LOG_INFO, BLACK, args)
-#define L_INFO_HOOK_GREY(hook, args...) L_INFO_HOOK(hook, LOG_INFO, GREY, args)
-#define L_INFO_HOOK_RED(hook, args...) L_INFO_HOOK(hook, LOG_INFO, RED, args)
-#define L_INFO_HOOK_GREEN(hook, args...) L_INFO_HOOK(hook, LOG_INFO, GREEN, args)
-#define L_INFO_HOOK_YELLOW(hook, args...) L_INFO_HOOK(hook, LOG_INFO, YELLOW, args)
-#define L_INFO_HOOK_BLUE(hook, args...) L_INFO_HOOK(hook, LOG_INFO, BLUE, args)
-#define L_INFO_HOOK_MAGENTA(hook, args...) L_INFO_HOOK(hook, LOG_INFO, MAGENTA, args)
-#define L_INFO_HOOK_CYAN(hook, args...) L_INFO_HOOK(hook, LOG_INFO, CYAN, args)
-#define L_INFO_HOOK_DARK_GREY(hook, args...) L_INFO_HOOK(hook, LOG_INFO, DARK_GREY, args)
-#define L_INFO_HOOK_LIGHT_RED(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LIGHT_RED, args)
-#define L_INFO_HOOK_LIGHT_GREEN(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LIGHT_GREEN, args)
-#define L_INFO_HOOK_LIGHT_YELLOW(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LIGHT_YELLOW, args)
-#define L_INFO_HOOK_LIGHT_BLUE(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LIGHT_BLUE, args)
-#define L_INFO_HOOK_LIGHT_MAGENTA(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LIGHT_MAGENTA, args)
-#define L_INFO_HOOK_LIGHT_CYAN(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LIGHT_CYAN, args)
-#define L_INFO_HOOK_WHITE(hook, args...) L_INFO_HOOK(hook, LOG_INFO, WHITE, args)
 
 #ifdef NDEBUG
 #define L_DEBUG L_NOTHING
 #else
 #define L_DEBUG(args...) L(LOG_DEBUG, DEBUG_COL, args)
 #endif
+
+#include "logger_colors.h"

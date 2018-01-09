@@ -127,14 +127,14 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGSTKFLT:
 #endif
 				// terminate process
-				col = &RED;
+				col = &BROWN;
 				break;
 			case SIGSTOP:
 			case SIGTSTP:
 			case SIGTTIN:
 			case SIGTTOU:
 				// stop process
-				col = &YELLOW;
+				col = &SADDLE_BROWN;
 				break;
 			case SIGURG:
 			case SIGCONT:
@@ -145,10 +145,10 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGINFO:
 #endif
 				// discard signal
-				col = &BLUE;
+				col = &STEEL_BLUE;
 				break;
 			default:
-				col = &BLUE;
+				col = &STEEL_BLUE;
 				break;
 		}
 #if defined(__linux__)
@@ -157,7 +157,7 @@ static const std::vector<std::string> vec_signame = []() {
 		res.push_back(format_string(*col + "Signal received: %s" + NO_COL + "\n", sys_signame[sig]));
 #endif
 	}
-	res.push_back(BLUE + "Signal received: unknown" + NO_COL + "\n");
+	res.push_back(STEEL_BLUE + "Signal received: unknown" + NO_COL + "\n");
 	return res;
 }();
 
@@ -166,10 +166,10 @@ static const std::vector<std::string> vec_signame = []() {
 void sig_info(int) {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
-		write(STDERR_FILENO, BLUE + "Info hooks disabled!" + NO_COL + "\n");
+		write(STDERR_FILENO, STEEL_BLUE + "Info hooks disabled!" + NO_COL + "\n");
 	} else {
 		logger_info_hook = -1ULL;
-		write(STDERR_FILENO, BLUE + "Info hooks enabled!" + NO_COL + "\n");
+		write(STDERR_FILENO, STEEL_BLUE + "Info hooks enabled!" + NO_COL + "\n");
 	}
 }
 #endif
