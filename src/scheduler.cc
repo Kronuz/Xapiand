@@ -279,21 +279,23 @@ Scheduler::run()
 	set_thread_name(name);
 
 	std::unique_lock<std::mutex> lk(mtx);
-	lk.unlock();
-
 	auto next_wakeup_time = atom_next_wakeup_time.load();
+	lk.unlock();
 
 	while (running != 0) {
 		if (--running < 0) {
 			running = -1;
 		}
 
-		auto now = std::chrono::system_clock::now();
-		auto wakeup_time = time_point_to_ullong(now + (running < 0 ? 30s : 100ms));
 		bool pending = false;
 
-		TaskType task;
+		// Propose a wakeup time some time in the future:
+		auto now = std::chrono::system_clock::now();
+		auto wakeup_time = time_point_to_ullong(now + (running < 0 ? 30s : 100ms));
 
+		// Then figure out if there's something that needs to be acted upon sooner
+		// than that wakeup time in the scheduler queue (an earlier wakeup time needed):
+		TaskType task;
 		L_SCHEDULER("Scheduler::" + DARK_GREY + "PEEPING" + NO_COL + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wakeup_time);
 		if ((task = scheduler_queue.peep(wakeup_time))) {
 			if (task) {
@@ -303,6 +305,7 @@ Scheduler::run()
 			}
 		}
 
+		// Try setting the worked out wakeup time as the real next wakeup time:
 		if (atom_next_wakeup_time.compare_exchange_strong(next_wakeup_time, wakeup_time)) {
 			if (running >= 0 && !pending) {
 				break;
@@ -310,6 +313,9 @@ Scheduler::run()
 		}
 		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time)) { }
 
+		// Sleep until wakeup time arrives or someone adding a task wakes us up;
+		// make sure we first lock mutex so there cannot be race condition between
+		// the time we load the next_wakeup_time and we actually start waiting:
 		L_INFO_HOOK_LOG("Scheduler::LOOP", "Scheduler::" + CYAN + "LOOP" + NO_COL + " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
 		lk.lock();
 		next_wakeup_time = atom_next_wakeup_time.load();
@@ -317,14 +323,13 @@ Scheduler::run()
 		lk.unlock();
 		L_SCHEDULER("Scheduler::" + LIGHT_BLUE + "WAKEUP" + NO_COL + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wakeup_time);
 
+		// Start walking the queue and running still pending tasks.
 		scheduler_queue.clean_checkpoint();
-
 		while ((task = scheduler_queue.walk())) {
 			if (task) {
 				run_one(task);
 			}
 		}
-
 		scheduler_queue.clean();
 	}
 }
