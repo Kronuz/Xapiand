@@ -28,10 +28,10 @@
 #include "utils.h"       // for time_point_to_ullong, format_string
 
 
+// #define L_SCHEDULER L_STDOUT
 #ifndef L_SCHEDULER
 #define L_SCHEDULER_DEFINED
-#define L_SCHEDULER L_TEST
-// #define L_SCHEDULER(f, args...) fprintf(stdout, (std::string(f) + "\n").c_str(), args)
+#define L_SCHEDULER L_NOTHING
 #endif
 
 
@@ -234,13 +234,13 @@ Scheduler::add(const TaskType& task, unsigned long long wakeup_time)
 		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time));
 
 		if (next_wakeup_time > wakeup_time || next_wakeup_time < now) {
-			L_SCHEDULER("Scheduler::" + GREEN + "NOTIFY" + NO_COL + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
+			L_SCHEDULER("Scheduler::" + LIGHT_GREEN + "ADDED_NOTIFY" + NO_COL + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
 			{
 				std::lock_guard<std::mutex> lk(mtx);
 			}
 			wakeup_signal.notify_one();
 		} else {
-			L_SCHEDULER("Scheduler::" + BLUE + "ADDED" + NO_COL + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
+			L_SCHEDULER("Scheduler::" + GREEN + "ADDED" + NO_COL + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
 		}
 	}
 }
@@ -276,6 +276,8 @@ Scheduler::run_one(TaskType& task)
 void
 Scheduler::run()
 {
+	L_SCHEDULER("Scheduler::" + LIGHT_CYAN + "STARTED" + NO_COL);
+
 	set_thread_name(name);
 
 	std::unique_lock<std::mutex> lk(mtx);
@@ -299,9 +301,9 @@ Scheduler::run()
 		L_SCHEDULER("Scheduler::" + DARK_GREY + "PEEPING" + NO_COL + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wakeup_time);
 		if ((task = scheduler_queue.peep(wakeup_time))) {
 			if (task) {
-				pending = true;
+				pending = true;  // flag there are still scheduled things pending.
 				wakeup_time = task->wakeup_time;
-				L_SCHEDULER("Scheduler::" + BLUE + "PEEP" + NO_COL + " - now:%llu, wakeup_time:%llu  (%s)", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
+				L_SCHEDULER("Scheduler::" + MAGENTA + "PEEP_UPDATED" + NO_COL + " - now:%llu, wakeup_time:%llu  (%s)", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
 			}
 		}
 
@@ -316,7 +318,7 @@ Scheduler::run()
 		// Sleep until wakeup time arrives or someone adding a task wakes us up;
 		// make sure we first lock mutex so there cannot be race condition between
 		// the time we load the next_wakeup_time and we actually start waiting:
-		L_INFO_HOOK_LOG("Scheduler::LOOP", "Scheduler::" + CYAN + "LOOP" + NO_COL + " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
+		L_INFO_HOOK_LOG("Scheduler::LOOP", "Scheduler::" + BLUE + "LOOP" + NO_COL + " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
 		lk.lock();
 		next_wakeup_time = atom_next_wakeup_time.load();
 		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time));
