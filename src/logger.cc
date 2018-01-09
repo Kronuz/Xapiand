@@ -88,8 +88,7 @@ validated_priority(int priority)
 void
 _println(bool info, bool with_endl, const char *format, va_list argptr)
 {
-	std::string str(Logging::_str_format(false, LOG_DEBUG, "", "", 0, "", "", format, argptr, info));
-	Logging::_log(LOG_DEBUG, str, 0, info, with_endl);
+	Logging::_println(info, with_endl, format, argptr);
 }
 
 
@@ -342,12 +341,12 @@ Logging::run()
 			msg += " ~" + delta_string(log_age, true);
 		}
 	}
-	Logging::_log(priority, msg, stack_level * 2);
+	log(priority, msg, stack_level * 2);
 }
 
 
 std::string
-Logging::_str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr, bool info)
+Logging::str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr, bool info)
 {
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
@@ -389,31 +388,6 @@ Logging::_str_format(bool stacked, int priority, const std::string& exc, const c
 }
 
 
-Log
-Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
-{
-	if (priority > log_level) {
-		return Log(std::make_shared<Logging>("", clean, stacked, async, priority, std::chrono::system_clock::now()));
-	}
-
-	std::string str(_str_format(stacked, priority, exc, file, line, suffix, prefix, format, argptr, true)); // TODO: Slow!
-
-	return _print(str, clean, stacked, wakeup, async, priority);
-}
-
-
-Log
-Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
-{
-	va_list argptr;
-	va_start(argptr, format);
-	auto ret = _log(clean, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
-	va_end(argptr);
-
-	return ret;
-}
-
-
 bool
 Logging::_unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
@@ -422,9 +396,8 @@ Logging::_unlog(int _priority, const char *file, int line, const char *suffix, c
 			return false;
 		}
 
-		std::string str(_str_format(stacked, _priority, std::string(), file, line, suffix, prefix, format, argptr, true));
-
-		print(str, false, stacked, 0, async, _priority, time_point_from_ullong(created_at));
+		std::string str(str_format(stacked, _priority, std::string(), file, line, suffix, prefix, format, argptr, true));
+		add(str, false, stacked, std::chrono::system_clock::now(), async, _priority, time_point_from_ullong(created_at));
 
 		return true;
 	}
@@ -445,22 +418,27 @@ Logging::_unlog(int _priority, const char *file, int line, const char *suffix, c
 
 
 void
-Logging::_log(int priority, std::string str, int indent, bool with_priority, bool with_endl)
+Logging::_println(bool info, bool with_endl, const char *format, va_list argptr)
 {
-	static std::mutex log_mtx;
-	std::lock_guard<std::mutex> lk(log_mtx);
-	auto needle = str.find(STACKED_INDENT);
-	if (needle != std::string::npos) {
-		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
-	}
-	for (auto& handler : handlers) {
-		handler->log(priority, str, with_priority, with_endl);
-	}
+	std::string str(str_format(false, LOG_DEBUG, "", "", 0, "", "", format, argptr, info));
+	log(LOG_DEBUG, str, 0, info, with_endl);
 }
 
 
 Log
-Logging::_print(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
+Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+{
+	if (priority > log_level) {
+		return Log(std::make_shared<Logging>("", clean, stacked, async, priority, std::chrono::system_clock::now()));
+	}
+
+	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, format, argptr, true)); // TODO: Slow!
+	return add(str, clean, stacked, wakeup, async, priority);
+}
+
+
+Log
+Logging::add(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
 	auto l_ptr = std::make_shared<Logging>(str, clean, stacked, async, priority, created_at);
 
@@ -479,6 +457,21 @@ Logging::_print(const std::string& str, bool clean, bool stacked, std::chrono::t
 	}
 
 	return Log(l_ptr);
+}
+
+
+void
+Logging::log(int priority, std::string str, int indent, bool with_priority, bool with_endl)
+{
+	static std::mutex log_mtx;
+	std::lock_guard<std::mutex> lk(log_mtx);
+	auto needle = str.find(STACKED_INDENT);
+	if (needle != std::string::npos) {
+		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
+	}
+	for (auto& handler : handlers) {
+		handler->log(priority, str, with_priority, with_endl);
+	}
 }
 
 

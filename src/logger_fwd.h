@@ -159,7 +159,7 @@ const std::string NO_COL("\033[0m");
 #define EMERG_COL LIGHT_RED
 
 
-#define L_DELAYED(cleanup, delay, priority, color, args...) log(cleanup, false, delay, ASYNC, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define L_DELAYED(cleanup, delay, priority, color, args...) ::log(cleanup, false, delay, ASYNC, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 #define L_DELAYED_UNLOG(priority, color, args...) unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
 #define L_DELAYED_CLEAR() clear()
 
@@ -171,9 +171,9 @@ const std::string NO_COL("\033[0m");
 
 #define L_NOTHING(args...)
 
-#define COLLECT(stacked, level, color, args...) log(false, stacked, 0ms, ASYNC_COLLECT, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
-#define PRINT(stacked, level, color, args...) log(false, stacked, 0ms, ASYNC_IMMEDIATE, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
-#define LOG(stacked, level, color, args...) log(false, stacked, 0ms, level >= ASYNC_LOG_LEVEL ? ASYNC : ASYNC_IMMEDIATE, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define COLLECT(stacked, level, color, args...) ::log(false, stacked, 0ms, ASYNC_COLLECT, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define PRINT(stacked, level, color, args...) ::log(false, stacked, 0ms, ASYNC_IMMEDIATE, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG(stacked, level, color, args...) ::log(false, stacked, 0ms, level >= ASYNC_LOG_LEVEL ? ASYNC : ASYNC_IMMEDIATE, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 
 #define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
 #define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
@@ -182,7 +182,7 @@ const std::string NO_COL("\033[0m");
 #define L_CRIT(args...) LOG(true, LOG_CRIT, CRIT_COL, args)
 #define L_ALERT(args...) LOG(true, -LOG_ALERT, ALERT_COL, args)
 #define L_EMERG(args...) LOG(true, -LOG_EMERG, EMERG_COL, args)
-#define L_EXC(args...) log(false, true, 0ms, true, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define L_EXC(args...) ::log(false, true, 0ms, true, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
 #define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
 #define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
