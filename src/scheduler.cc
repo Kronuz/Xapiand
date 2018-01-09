@@ -325,7 +325,10 @@ Scheduler::run()
 		L_INFO_HOOK_LOG("Scheduler::LOOP", "Scheduler::" + BLUE + "LOOP" + NO_COL + " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
 		lk.lock();
 		next_wakeup_time = atom_next_wakeup_time.load();
-		wakeup_signal.wait_until(lk, time_point_from_ullong(next_wakeup_time));
+		auto next_wakeup_time_point = time_point_from_ullong(next_wakeup_time);
+		if (next_wakeup_time_point > now) {
+			wakeup_signal.wait_until(lk, next_wakeup_time_point);
+		}
 		lk.unlock();
 		L_SCHEDULER("Scheduler::" + LIGHT_BLUE + "WAKEUP" + NO_COL + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wakeup_time);
 
