@@ -302,8 +302,12 @@ Scheduler::run()
 		if ((task = scheduler_queue.peep(wakeup_time))) {
 			if (task) {
 				pending = true;  // flag there are still scheduled things pending.
-				wakeup_time = task->wakeup_time;
-				L_SCHEDULER("Scheduler::" + MAGENTA + "PEEP_UPDATED" + NO_COL + " - now:%llu, wakeup_time:%llu  (%s)", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
+				if (wakeup_time > task->wakeup_time) {
+					wakeup_time = task->wakeup_time;
+					L_SCHEDULER("Scheduler::" + MAGENTA + "PEEP_UPDATED" + NO_COL + " - now:%llu, wakeup_time:%llu  (%s)", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
+				} else {
+					L_SCHEDULER("Scheduler::" + DARK_GREY + "PEEPED" + NO_COL + " - now:%llu, wakeup_time:%llu  (%s)", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
+				}
 			}
 		}
 
