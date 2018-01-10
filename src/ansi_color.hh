@@ -58,6 +58,10 @@ class ansi_color {
   static constexpr uint8_t b = blue < 0 ? 0 : blue > 255 ? 255 : blue;
   static constexpr auto esc = static_str::literal("\033[");
 
+  static constexpr auto noColor() {
+    return esc + "0m";
+  }
+
   static constexpr auto trueColor() {
     return (
       esc +
@@ -163,6 +167,11 @@ class ansi_color {
     };
   }
 
+  static const std::string _no_col() {
+    constexpr const auto _ = noColor();
+    return std::string(_);
+  }
+
 public:
   static Coloring detectColoring() {
     static Coloring coloring = _detectColoring();
@@ -173,9 +182,15 @@ public:
     static auto col = _col();
     return col;
   }
+
+  static const std::string& no_col() {
+    static auto no_col = _no_col();
+    return no_col;
+  }
 };
 
-#define rgb(r, g, b)      ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b), false>::col()
-#define rgba(r, g, b, a)  ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f), false>::col()
+#define rgb(r, g, b)      ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b)>::col()
+#define rgba(r, g, b, a)  ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f)>::col()
 #define brgb(r, g, b)     ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b), true>::col()
 #define brgba(r, g, b, a) ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f), true>::col()
+#define no_col()          ansi_color<0, 0, 0>::no_col()

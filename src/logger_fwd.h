@@ -123,8 +123,7 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, int async, in
 	return log(cleanup, info, stacked, std::chrono::milliseconds(timeout), async, priority, std::forward<Args>(args)...);
 }
 
-const std::string NO_COL("\033[0m");
-
+#define NO_COL no_col()
 
 #define MERGE_(a,b)  a##b
 #define LABEL_(a) MERGE_(__unique, a)
