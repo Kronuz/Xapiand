@@ -49,13 +49,14 @@
 
 #define L_INIT auto start = std::chrono::system_clock::now
 
+#define L_TRACEBACK() L_PRINT(TRACEBACK())
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Enable the following when needed. Use L_* or L_STACKED_* or L_UNINDENTED_*
 // ex. L_STACKED_DIM_GREY, L_CYAN, L_STACKED_LOG or L_PURPLE
 
 #define L_ERRNO _
-#define L_TRACEBACK _
 #define L_CALL _
 #define L_TIME _
 #define L_CONN _
