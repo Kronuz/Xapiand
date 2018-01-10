@@ -114,12 +114,8 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 	return log(cleanup, info, stacked, std::chrono::milliseconds(timeout), async, priority, std::forward<Args>(args)...);
 }
 
+
 #define NO_COL no_col()
-
-#define MERGE_(a,b)  a##b
-#define LABEL_(a) MERGE_(__unique, a)
-#define UNIQUE_NAME LABEL_(__LINE__)
-
 
 #define LOG_COL WHITE
 #define DEBUG_COL NO_COL
@@ -131,6 +127,9 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 #define ALERT_COL LIGHT_RED
 #define EMERG_COL LIGHT_RED
 
+#define MERGE_(a,b)  a##b
+#define LABEL_(a) MERGE_(__unique, a)
+#define UNIQUE_NAME LABEL_(__LINE__)
 
 #define L_DELAYED(cleanup, delay, priority, color, args...) ::log(cleanup, true, false, delay, true, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 #define L_DELAYED_UNLOG(priority, color, args...) unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
@@ -158,27 +157,23 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 #define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
 #define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
 
-#define L_COLLECT(args...) ::collect(args)
-
-#define L_PRINT(args...) ::print(args)
-
 #define L(level, color, args...) LOG(true, level, color, args)
 #define L_LOG(args...) L(LOG_DEBUG, LOG_COL, args)
 
 #define L_STACKED(args...) auto UNIQUE_NAME = L(args)
 #define L_STACKED_LOG(args...) L_STACKED(LOG_DEBUG, LOG_COL, args)
 
-#ifdef NDEBUG
-#define L_INFO_HOOK L_NOTHING
-#else
-#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { L_PRINT(args); }
-#endif
-#define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, args)
+#define L_COLLECT(args...) ::collect(args)
+
+#define L_PRINT(args...) ::print(args)
 
 #ifdef NDEBUG
 #define L_DEBUG L_NOTHING
+#define L_INFO_HOOK L_NOTHING
 #else
 #define L_DEBUG(args...) L(LOG_DEBUG, DEBUG_COL, args)
+#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { L_PRINT(args); }
 #endif
+#define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, args)
 
 #include "logger_colors.h"
