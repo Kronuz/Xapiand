@@ -4674,14 +4674,18 @@ Schema::feed_stop_strategy(const MsgPack& prop_stop_strategy)
 	L_CALL("Schema::feed_stop_strategy(%s)", repr(prop_stop_strategy.to_string()).c_str());
 
 	try {
-		const auto _stop_strategy = lower_string(prop_stop_strategy.str());
-		static const auto ssit_e = map_stop_strategy.end();
-		const auto ssit = map_stop_strategy.find(_stop_strategy);
-		if (ssit == ssit_e) {
-			static const std::string str_set_stop_strategy(get_map_keys(map_stop_strategy));
-			THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name).c_str(), repr(str_set_stop_strategy).c_str());
+		if (prop_stop_strategy.is_string()) {
+			const auto _stop_strategy = lower_string(prop_stop_strategy.str());
+			static const auto ssit_e = map_stop_strategy.end();
+			const auto ssit = map_stop_strategy.find(_stop_strategy);
+			if (ssit == ssit_e) {
+				static const std::string str_set_stop_strategy(get_map_keys(map_stop_strategy));
+				THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name).c_str(), repr(str_set_stop_strategy).c_str());
+			} else {
+				specification.stop_strategy = ssit->second;
+			}
 		} else {
-			specification.stop_strategy = ssit->second;
+			specification.stop_strategy = static_cast<StopStrategy>(prop_stop_strategy.u64());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name).c_str());
@@ -4695,14 +4699,18 @@ Schema::feed_stem_strategy(const MsgPack& prop_stem_strategy)
 	L_CALL("Schema::feed_stem_strategy(%s)", repr(prop_stem_strategy.to_string()).c_str());
 
 	try {
-		const auto _stem_strategy = lower_string(prop_stem_strategy.str());
-		static const auto ssit_e = map_stem_strategy.end();
-		const auto ssit = map_stem_strategy.find(_stem_strategy);
-		if (ssit == ssit_e) {
-			static const std::string str_set_stem_strategy(get_map_keys(map_stem_strategy));
-			THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name).c_str(), repr(str_set_stem_strategy).c_str());
+		if (prop_stem_strategy.is_string()) {
+			const auto _stem_strategy = lower_string(prop_stem_strategy.str());
+			static const auto ssit_e = map_stem_strategy.end();
+			const auto ssit = map_stem_strategy.find(_stem_strategy);
+			if (ssit == ssit_e) {
+				static const std::string str_set_stem_strategy(get_map_keys(map_stem_strategy));
+				THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name).c_str(), repr(str_set_stem_strategy).c_str());
+			} else {
+				specification.stem_strategy = ssit->second;
+			}
 		} else {
-			specification.stem_strategy = ssit->second;
+			specification.stem_strategy = static_cast<StemStrategy>(prop_stem_strategy.u64());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name).c_str());
