@@ -158,9 +158,9 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 #define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
 #define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
 
-#define C_LOG(args...) ::collect(args)
+#define L_COLLECT(args...) ::collect(args)
 
-#define P_LOG(args...) ::print(args)
+#define L_PRINT(args...) ::print(args)
 
 #define L(level, color, args...) LOG(true, level, color, args)
 #define L_LOG(args...) L(LOG_DEBUG, LOG_COL, args)
@@ -171,7 +171,7 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 #ifdef NDEBUG
 #define L_INFO_HOOK L_NOTHING
 #else
-#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { ::print(args); }
+#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { L_PRINT(args); }
 #endif
 #define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, args)
 

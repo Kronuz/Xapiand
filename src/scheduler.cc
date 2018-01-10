@@ -28,7 +28,7 @@
 #include "utils.h"       // for time_point_to_ullong, format_string
 
 
-// #define L_SCHEDULER C_LOG
+// #define L_SCHEDULER L_COLLECT
 #ifndef L_SCHEDULER
 #define L_SCHEDULER_DEFINED
 #define L_SCHEDULER L_NOTHING

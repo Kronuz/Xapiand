@@ -29,7 +29,7 @@
 #include "log.h"
 
 
-// #define L_STASH C_LOG
+// #define L_STASH L_COLLECT
 #ifndef L_STASH
 #define L_STASH_DEFINED
 #define L_STASH L_NOTHING
