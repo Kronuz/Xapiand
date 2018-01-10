@@ -38,6 +38,7 @@
 #include <time.h>             // for time_t
 #include <type_traits>        // for forward, decay_t, enable_if_t, is_base_of
 #include <unordered_map>      // for unordered_map
+#include <utility>            // for pair
 #include <vector>             // for vector
 
 #include "logger_fwd.h"
@@ -91,7 +92,7 @@ class Logging : public ScheduledTask {
 	static Scheduler& scheduler();
 
 	static std::mutex collected_mtx;
-	static std::vector<std::shared_ptr<Logging>> collected;
+	static std::vector<std::pair<std::string, bool>> collected;
 
 	static std::mutex stack_mtx;
 	static std::unordered_map<std::thread::id, unsigned> stack_levels;
@@ -132,7 +133,7 @@ public:
 	static void join();
 	static void dump_collected();
 
-	static void do_println(bool info, bool with_endl, const char *format, va_list argptr);
+	static void do_println(bool collect, bool with_endl, const char *format, va_list argptr);
 	static Log do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
 
 	template <typename S, typename P, typename F, typename... Args>

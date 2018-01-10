@@ -48,7 +48,7 @@ std::atomic<uint64_t> logger_info_hook;
 
 const std::regex filter_re("\033\\[[;\\d]*m", std::regex::optimize);
 std::mutex Logging::collected_mtx;
-std::vector<std::shared_ptr<Logging>> Logging::collected;
+std::vector<std::pair<std::string, bool>> Logging::collected;
 std::mutex Logging::stack_mtx;
 std::unordered_map<std::thread::id, unsigned> Logging::stack_levels;
 bool Logging::colors = false;
@@ -85,18 +85,18 @@ validated_priority(int priority)
 
 
 void
-vprintln(bool info, bool with_endl, const char *format, va_list argptr)
+vprintln(bool collect, bool with_endl, const char *format, va_list argptr)
 {
-	Logging::do_println(info, with_endl, format, argptr);
+	Logging::do_println(collect, with_endl, format, argptr);
 }
 
 
 void
-_println(bool info, bool with_endl, const char* format, ...)
+_println(bool collect, bool with_endl, const char* format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	vprintln(info, with_endl, format, argptr);
+	vprintln(collect, with_endl, format, argptr);
 	va_end(argptr);
 }
 
@@ -394,7 +394,7 @@ Logging::vunlog(int _priority, const char *file, int line, const char *suffix, c
 	_priority = validated_priority(_priority);
 	if (!clear()) {
 		if (_priority <= log_level) {
-			std::string str(format_string(true, stacked, _priority, std::string(), file, line, suffix, prefix, format, argptr));
+			auto str = format_string(true, stacked, _priority, std::string(), file, line, suffix, prefix, format, argptr);
 			add(str, false, stacked, std::chrono::system_clock::now(), async, _priority, time_point_from_ullong(created_at));
 			return true;
 		}
@@ -416,10 +416,15 @@ Logging::_unlog(int _priority, const char *file, int line, const char *suffix, c
 
 
 void
-Logging::do_println(bool info, bool with_endl, const char *format, va_list argptr)
+Logging::do_println(bool collect, bool with_endl, const char *format, va_list argptr)
 {
-	std::string str(format_string(info, false, LOG_DEBUG, "", "", 0, "", "", format, argptr));
-	log(LOG_DEBUG, str, 0, info, with_endl);
+	auto str = vformat_string(format, argptr);
+	if (collect) {
+		std::lock_guard<std::mutex> lk(collected_mtx);
+		collected.push_back(std::make_pair(std::move(str), with_endl));
+	} else {
+		log(0, str, 0, false, with_endl);
+	}
 }
 
 
@@ -429,7 +434,7 @@ Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std
 	priority = validated_priority(priority);
 
 	if (priority <= log_level) {
-		std::string str(format_string(info, stacked, priority, exc, file, line, suffix, prefix, format, argptr));  // TODO: Slow!
+		auto str = format_string(info, stacked, priority, exc, file, line, suffix, prefix, format, argptr);  // TODO: Slow!
 		return add(str, clean, stacked, wakeup, async, priority);
 	}
 
@@ -442,11 +447,7 @@ Logging::add(const std::string& str, bool clean, bool stacked, std::chrono::time
 {
 	auto l_ptr = std::make_shared<Logging>(str, clean, stacked, async, priority, created_at);
 
-	if (async < 0) {
-		// collected logs
-		std::lock_guard<std::mutex> lk(collected_mtx);
-		collected.push_back(l_ptr);
-	} else if (async || wakeup > std::chrono::system_clock::now()) {
+	if (async || wakeup > std::chrono::system_clock::now()) {
 		// asynchronous logs
 		scheduler().add(l_ptr, wakeup);
 	} else {
@@ -477,8 +478,8 @@ void
 Logging::dump_collected()
 {
 	std::lock_guard<std::mutex> lk(collected_mtx);
-	for (const auto& l_ptr : collected) {
-		l_ptr->run();
+	for (const auto& s : collected) {
+		log(0, s.first, 0, false, s.second);
 	}
 	collected.clear();
 }

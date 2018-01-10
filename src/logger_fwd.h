@@ -74,14 +74,8 @@ public:
 };
 
 
-void vprintln(bool info, bool with_endl, const char *format, va_list argptr);
-void _println(bool info, bool with_endl, const char* format, ...);
-
-
-template <typename F, typename... Args>
-static void println(bool with_endl, F&& format, Args&&... args) {
-	return _println(false, with_endl, cstr(std::forward<F>(format)), std::forward<Args>(args)...);
-}
+void vprintln(bool collect, bool with_endl, const char* format, va_list argptr);
+void _println(bool collect, bool with_endl, const char* format, ...);
 
 
 template <typename F, typename... Args>
@@ -91,7 +85,7 @@ static void print(F&& format, Args&&... args) {
 
 
 template <typename F, typename... Args>
-static void info(F&& format, Args&&... args) {
+static void collect(F&& format, Args&&... args) {
 	return _println(true, true, cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 }
 
@@ -153,8 +147,6 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, int async, in
 
 #define L_NOTHING(args...)
 
-#define COLLECT(stacked, level, color, args...) ::log(false, false, stacked, 0ms, ASYNC_COLLECT, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
-#define PRINT(stacked, level, color, args...) ::log(false, false, stacked, 0ms, ASYNC_IMMEDIATE, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 #define LOG(stacked, level, color, args...) ::log(false, true, stacked, 0ms, level >= ASYNC_LOG_LEVEL ? ASYNC : ASYNC_IMMEDIATE, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 
 #define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
@@ -169,15 +161,9 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, int async, in
 #define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
 #define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
 
-#define C(level, color, args...) COLLECT(false, level, color, args)
-#define C_LOG(args...) C(LOG_DEBUG, LOG_COL, args)
-#define C_STACKED(args...) auto UNIQUE_NAME = C(args)
-#define C_STACKED_LOG(args...) C_STACKED(LOG_DEBUG, LOG_COL, args)
+#define C_LOG(args...) ::collect(args)
 
-#define P(level, color, args...) PRINT(false, level, color, args)
-#define P_LOG(args...) P(LOG_DEBUG, LOG_COL, args)
-#define P_STACKED(args...) auto UNIQUE_NAME = P(args)
-#define P_STACKED_LOG(args...) P_STACKED(LOG_DEBUG, LOG_COL, args)
+#define P_LOG(args...) ::print(args)
 
 #define L(level, color, args...) LOG(true, level, color, args)
 #define L_LOG(args...) L(LOG_DEBUG, LOG_COL, args)
@@ -188,7 +174,7 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, int async, in
 #ifdef NDEBUG
 #define L_INFO_HOOK L_NOTHING
 #else
-#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { P(args); }
+#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { L(args); }
 #endif
 #define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LOG_COL, args)
 
