@@ -171,9 +171,9 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 #ifdef NDEBUG
 #define L_INFO_HOOK L_NOTHING
 #else
-#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { L(args); }
+#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { ::print(args); }
 #endif
-#define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, LOG_INFO, LOG_COL, args)
+#define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, args)
 
 #ifdef NDEBUG
 #define L_DEBUG L_NOTHING
