@@ -41,7 +41,6 @@
 #include "utils.h"            // for get_thread_name
 
 
-#define BUFFER_SIZE (500 * 1024)
 #define STACKED_INDENT "<indent>"
 
 
@@ -348,10 +347,17 @@ Logging::run()
 std::string
 Logging::str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr, bool info)
 {
-	char* buffer = new char[BUFFER_SIZE];
-	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
-	std::string msg(buffer);
-	delete []buffer;
+	// Figure out the length of the formatted message.
+	va_list argptr_copy;
+	va_copy(argptr_copy, argptr);
+	auto len = vsnprintf(nullptr, 0, format, argptr_copy);
+	va_end(argptr_copy);
+
+	// Make a string to hold the formatted message.
+	std::string msg;
+	msg.resize(len + 1);
+	vsnprintf(&msg[0], len + 1, format, argptr);
+	msg.resize(len);
 
 	std::string result;
 	if (info && priority <= LOG_DEBUG) {
