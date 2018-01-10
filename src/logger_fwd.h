@@ -165,17 +165,17 @@ const std::string NO_COL("\033[0m");
 #define L_CRIT(args...) LOG(true, LOG_CRIT, CRIT_COL, args)
 #define L_ALERT(args...) LOG(true, -LOG_ALERT, ALERT_COL, args)
 #define L_EMERG(args...) LOG(true, -LOG_EMERG, EMERG_COL, args)
-#define L_EXC(args...) ::log(false, true, 0ms, true, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define L_EXC(args...) ::log(false, true, 0ms, ASYNC, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
 #define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
 #define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
 
-#define C(level, color, args...) COLLECT(true, level, color, args)
+#define C(level, color, args...) COLLECT(false, level, color, args)
 #define C_LOG(args...) C(LOG_DEBUG, LOG_COL, args)
 #define C_STACKED(args...) auto UNIQUE_NAME = C(args)
 #define C_STACKED_LOG(args...) C_STACKED(LOG_DEBUG, LOG_COL, args)
 
-#define P(level, color, args...) PRINT(true, level, color, args)
+#define P(level, color, args...) PRINT(false, level, color, args)
 #define P_LOG(args...) P(LOG_DEBUG, LOG_COL, args)
 #define P_STACKED(args...) auto UNIQUE_NAME = P(args)
 #define P_STACKED_LOG(args...) P_STACKED(LOG_DEBUG, LOG_COL, args)
