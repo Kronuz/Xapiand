@@ -30,7 +30,6 @@
 #include "exception.h"        // for BaseException
 #include "utils.h"
 #include "xxh64.hpp"          // for xxh64
-#include "ansi_color.hh"      // for ansi_color
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
 
@@ -114,19 +113,6 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 	return log(cleanup, info, stacked, std::chrono::milliseconds(timeout), async, priority, std::forward<Args>(args)...);
 }
 
-
-#define NO_COL no_col()
-
-#define LOG_COL WHITE
-#define DEBUG_COL NO_COL
-#define INFO_COL STEEL_BLUE
-#define NOTICE_COL LIGHT_SKY_BLUE
-#define WARNING_COL GOLD
-#define ERR_COL BROWN
-#define CRIT_COL LIGHT_RED
-#define ALERT_COL LIGHT_RED
-#define EMERG_COL LIGHT_RED
-
 #define MERGE_(a,b)  a##b
 #define LABEL_(a) MERGE_(__unique, a)
 #define UNIQUE_NAME LABEL_(__LINE__)
@@ -175,5 +161,3 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 #define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { L_PRINT(args); }
 #endif
 #define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, args)
-
-#include "logger_colors.h"

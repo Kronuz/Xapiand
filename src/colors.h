@@ -22,6 +22,11 @@
 
 #pragma once
 
+#include "ansi_color.hh"      // for ansi_color
+
+#define NO_COL no_col()
+
+
 #define ALICE_BLUE rgb(240, 248, 255)
 #define L_UNINDENTED_ALICE_BLUE(args...) L_UNINDENTED(LOG_DEBUG, ALICE_BLUE, args)
 #define L_ALICE_BLUE(args...) L(LOG_DEBUG, ALICE_BLUE, args)

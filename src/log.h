@@ -26,6 +26,17 @@
 #pragma GCC diagnostic ignored "-Wvariadic-macros"
 
 #include "logger_fwd.h"
+#include "colors.h"
+
+#define LOG_COL WHITE
+#define DEBUG_COL NO_COL
+#define INFO_COL STEEL_BLUE
+#define NOTICE_COL LIGHT_SKY_BLUE
+#define WARNING_COL GOLD
+#define ERR_COL BROWN
+#define CRIT_COL LIGHT_RED
+#define ALERT_COL LIGHT_RED
+#define EMERG_COL LIGHT_RED
 
 #define _ L_NOTHING
 
