@@ -334,7 +334,7 @@ Logging::run()
 	L_INFO_HOOK_LOG("Logging::run", "Logging::run()");
 
 	auto msg = str_start;
-	if (async > 0) {
+	if (async >= 0) {
 		auto log_age = age();
 		if (log_age > 2e8) {
 			msg += " ~" + delta_string(log_age, true);
