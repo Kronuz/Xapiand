@@ -22,12 +22,12 @@
 
 #include "exception.h"
 
+#include <cstdarg>            // for va_end, va_list, va_start
+#include <cstdio>             // for vsnprintf
+#include <cstdlib>            // for free
+#include <cstring>            // for strtok_r
 #include <cxxabi.h>           // for abi::__cxa_demangle
 #include <execinfo.h>         // for backtrace, backtrace_symbols
-#include <stdarg.h>           // for va_end, va_list, va_start
-#include <stdio.h>            // for vsnprintf
-#include <stdlib.h>           // for free
-#include <string.h>           // for strtok_r
 
 
 #define BUFFER_SIZE 1024
@@ -79,19 +79,27 @@ std::string traceback(const char *filename, int line) {
 
 BaseException::BaseException(const char *filename, int line, const char* type, const char *format, ...)
 {
-	char buffer[BUFFER_SIZE];
-
 	va_list argptr;
 	va_start(argptr, format);
-	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
+
+	// Figure out the length of the formatted message.
+	va_list argptr_copy;
+	va_copy(argptr_copy, argptr);
+	auto len = vsnprintf(nullptr, 0, format, argptr_copy);
+	va_end(argptr_copy);
+
+	// Make a string to hold the formatted message.
+	message.resize(len + 1);
+	vsnprintf(&message[0], len + 1, format, argptr);
+	message.resize(len);
+
 	va_end(argptr);
-	message.assign(buffer);
+
 	if (message.empty()) {
 		message.assign(type);
 	}
 
-	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
-	context.assign(std::string(buffer) + ": " + message);
+	context.assign(std::string(filename) + ":" + std::to_string(line) + ": " + message);
 #ifdef XAPIAND_TRACEBACKS
 	traceback = ::traceback(filename, line);
 #else
