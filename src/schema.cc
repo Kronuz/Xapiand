@@ -2134,6 +2134,21 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 		index_item_value(doc, *data, *val);
+		if (fields.empty()) {
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+				set_type_to_object();
+			}
+		} else {
+			set_type_to_object();
+			const auto spc_object = std::move(specification);
+			for (const auto& field : fields) {
+				specification = spc_object;
+				index_object(properties, *field.second, data, doc, field.first);
+			}
+		}
+		if (specification.flags.store && data->size() == 1) {
+			*data = (*data)[RESERVED_VALUE];
+		}
 	} else {
 		if (!specification.flags.concrete) {
 			if (specification.flags.inside_namespace) {
@@ -2147,24 +2162,22 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 			if (specification.flags.store && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
 				*data = MsgPack(MsgPack::Type::MAP);
 			}
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+				set_type_to_object();
+			}
+		} else {
+			if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+				THROW(ClientError, "%s is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name).c_str());
+			}
+			set_type_to_object();
+			const auto spc_object = std::move(specification);
+			for (const auto& field : fields) {
+				specification = spc_object;
+				index_object(properties, *field.second, data, doc, field.first);
+			}
 		}
 	}
 
-	if (fields.empty()) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
-			set_type_to_object();
-		}
-	} else {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			THROW(ClientError, "%s is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name).c_str());
-		}
-		set_type_to_object();
-		const auto spc_object = std::move(specification);
-		for (const auto& field : fields) {
-			specification = spc_object;
-			index_object(properties, *field.second, data, doc, field.first);
-		}
-	}
 }
 
 
