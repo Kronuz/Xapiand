@@ -4737,13 +4737,17 @@ Schema::feed_weight(const MsgPack& prop_weight)
 {
 	L_CALL("Schema::feed_weight(%s)", repr(prop_weight.to_string()).c_str());
 
-	specification.weight.clear();
-	if (prop_weight.is_array()) {
-		for (const auto& _weight : prop_weight) {
-			specification.weight.push_back(static_cast<Xapian::termpos>(_weight.u64()));
+	try {
+		specification.weight.clear();
+		if (prop_weight.is_array()) {
+			for (const auto& _weight : prop_weight) {
+				specification.weight.push_back(static_cast<Xapian::termpos>(_weight.u64()));
+			}
+		} else {
+			specification.weight.push_back(static_cast<Xapian::termpos>(prop_weight.u64()));
 		}
-	} else {
-		specification.weight.push_back(static_cast<Xapian::termpos>(prop_weight.u64()));
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_WEIGHT, repr(specification.full_meta_name).c_str());
 	}
 }
 
@@ -4753,13 +4757,17 @@ Schema::feed_position(const MsgPack& prop_position)
 {
 	L_CALL("Schema::feed_position(%s)", repr(prop_position.to_string()).c_str());
 
-	specification.position.clear();
-	if (prop_position.is_array()) {
-		for (const auto& _position : prop_position) {
-			specification.position.push_back(static_cast<Xapian::termpos>(_position.u64()));
+	try {
+		specification.position.clear();
+		if (prop_position.is_array()) {
+			for (const auto& _position : prop_position) {
+				specification.position.push_back(static_cast<Xapian::termpos>(_position.u64()));
+			}
+		} else {
+			specification.position.push_back(static_cast<Xapian::termpos>(prop_position.u64()));
 		}
-	} else {
-		specification.position.push_back(static_cast<Xapian::termpos>(prop_position.u64()));
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_POSITION, repr(specification.full_meta_name).c_str());
 	}
 }
 
@@ -4769,13 +4777,17 @@ Schema::feed_spelling(const MsgPack& prop_spelling)
 {
 	L_CALL("Schema::feed_spelling(%s)", repr(prop_spelling.to_string()).c_str());
 
-	specification.spelling.clear();
-	if (prop_spelling.is_array()) {
-		for (const auto& _spelling : prop_spelling) {
-			specification.spelling.push_back(_spelling.boolean());
+	try {
+		specification.spelling.clear();
+		if (prop_spelling.is_array()) {
+			for (const auto& _spelling : prop_spelling) {
+				specification.spelling.push_back(_spelling.boolean());
+			}
+		} else {
+			specification.spelling.push_back(prop_spelling.boolean());
 		}
-	} else {
-		specification.spelling.push_back(prop_spelling.boolean());
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_SPELLING, repr(specification.full_meta_name).c_str());
 	}
 }
 
@@ -4785,13 +4797,17 @@ Schema::feed_positions(const MsgPack& prop_positions)
 {
 	L_CALL("Schema::feed_positions(%s)", repr(prop_positions.to_string()).c_str());
 
-	specification.positions.clear();
-	if (prop_positions.is_array()) {
-		for (const auto& _positions : prop_positions) {
-			specification.positions.push_back(_positions.boolean());
+	try {
+		specification.positions.clear();
+		if (prop_positions.is_array()) {
+			for (const auto& _positions : prop_positions) {
+				specification.positions.push_back(_positions.boolean());
+			}
+		} else {
+			specification.positions.push_back(prop_positions.boolean());
 		}
-	} else {
-		specification.positions.push_back(prop_positions.boolean());
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_POSITIONS, repr(specification.full_meta_name).c_str());
 	}
 }
 
@@ -4801,7 +4817,11 @@ Schema::feed_language(const MsgPack& prop_language)
 {
 	L_CALL("Schema::feed_language(%s)", repr(prop_language.to_string()).c_str());
 
-	specification.language = prop_language.str();
+	try {
+		specification.language = prop_language.str();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_LANGUAGE, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -4860,7 +4880,11 @@ Schema::feed_stem_language(const MsgPack& prop_stem_language)
 {
 	L_CALL("Schema::feed_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
 
-	specification.stem_language = prop_stem_language.str();
+	try {
+		specification.stem_language = prop_stem_language.str();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STEM_LANGUAGE, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -4890,23 +4914,27 @@ Schema::feed_accuracy(const MsgPack& prop_accuracy)
 {
 	L_CALL("Schema::feed_accuracy(%s)", repr(prop_accuracy.to_string()).c_str());
 
-	specification.accuracy.clear();
-	specification.accuracy.reserve(prop_accuracy.size());
-	for (const auto& _accuracy : prop_accuracy) {
-		uint64_t accuracy;
-		if (_accuracy.is_string()) {
-			static const auto adit_e = map_acc_date.end();
-			const auto str_accuracy = lower_string(_accuracy.str());
-			const auto adit = map_acc_date.find(str_accuracy);
-			if (adit == adit_e) {
-				THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name).c_str());
+	try {
+		specification.accuracy.clear();
+		specification.accuracy.reserve(prop_accuracy.size());
+		for (const auto& _accuracy : prop_accuracy) {
+			uint64_t accuracy;
+			if (_accuracy.is_string()) {
+				static const auto adit_e = map_acc_date.end();
+				const auto str_accuracy = lower_string(_accuracy.str());
+				const auto adit = map_acc_date.find(str_accuracy);
+				if (adit == adit_e) {
+					THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name).c_str());
+				} else {
+					accuracy = toUType(adit->second);
+				}
 			} else {
-				accuracy = toUType(adit->second);
+				accuracy = _accuracy.u64();
 			}
-		} else {
-			accuracy = _accuracy.u64();
+			specification.accuracy.push_back(accuracy);
 		}
-		specification.accuracy.push_back(accuracy);
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name).c_str());
 	}
 }
 
@@ -4916,10 +4944,14 @@ Schema::feed_acc_prefix(const MsgPack& prop_acc_prefix)
 {
 	L_CALL("Schema::feed_acc_prefix(%s)", repr(prop_acc_prefix.to_string()).c_str());
 
-	specification.acc_prefix.clear();
-	specification.acc_prefix.reserve(prop_acc_prefix.size());
-	for (const auto& acc_p : prop_acc_prefix) {
-		specification.acc_prefix.push_back(acc_p.str());
+	try {
+		specification.acc_prefix.clear();
+		specification.acc_prefix.reserve(prop_acc_prefix.size());
+		for (const auto& acc_p : prop_acc_prefix) {
+			specification.acc_prefix.push_back(acc_p.str());
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACC_PREFIX, repr(specification.full_meta_name).c_str());
 	}
 }
 
@@ -4929,7 +4961,11 @@ Schema::feed_prefix(const MsgPack& prop_prefix)
 {
 	L_CALL("Schema::feed_prefix(%s)", repr(prop_prefix.to_string()).c_str());
 
-	specification.local_prefix.field = prop_prefix.str();
+	try {
+		specification.local_prefix.field = prop_prefix.str();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_PREFIX, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -4938,7 +4974,11 @@ Schema::feed_slot(const MsgPack& prop_slot)
 {
 	L_CALL("Schema::feed_slot(%s)", repr(prop_slot.to_string()).c_str());
 
-	specification.slot = static_cast<Xapian::valueno>(prop_slot.u64());
+	try {
+		specification.slot = static_cast<Xapian::valueno>(prop_slot.u64());
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_SLOT, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -4969,8 +5009,12 @@ Schema::feed_store(const MsgPack& prop_store)
 {
 	L_CALL("Schema::feed_store(%s)", repr(prop_store.to_string()).c_str());
 
-	specification.flags.parent_store = specification.flags.store;
-	specification.flags.store = prop_store.boolean() && specification.flags.parent_store;
+	try {
+		specification.flags.parent_store = specification.flags.store;
+		specification.flags.store = prop_store.boolean() && specification.flags.parent_store;
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STORE, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -4979,7 +5023,11 @@ Schema::feed_recurse(const MsgPack& prop_recurse)
 {
 	L_CALL("Schema::feed_recurse(%s)", repr(prop_recurse.to_string()).c_str());
 
-	specification.flags.is_recurse = prop_recurse.boolean();
+	try {
+		specification.flags.is_recurse = prop_recurse.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_RECURSE, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -4988,7 +5036,11 @@ Schema::feed_dynamic(const MsgPack& prop_dynamic)
 {
 	L_CALL("Schema::feed_dynamic(%s)", repr(prop_dynamic.to_string()).c_str());
 
-	specification.flags.dynamic = prop_dynamic.boolean();
+	try {
+		specification.flags.dynamic = prop_dynamic.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_DYNAMIC, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -4997,7 +5049,11 @@ Schema::feed_strict(const MsgPack& prop_strict)
 {
 	L_CALL("Schema::feed_strict(%s)", repr(prop_strict.to_string()).c_str());
 
-	specification.flags.strict = prop_strict.boolean();
+	try {
+		specification.flags.strict = prop_strict.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STRICT, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5006,7 +5062,11 @@ Schema::feed_date_detection(const MsgPack& prop_date_detection)
 {
 	L_CALL("Schema::feed_date_detection(%s)", repr(prop_date_detection.to_string()).c_str());
 
-	specification.flags.date_detection = prop_date_detection.boolean();
+	try {
+		specification.flags.date_detection = prop_date_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_DATE_DETECTION, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5015,7 +5075,11 @@ Schema::feed_time_detection(const MsgPack& prop_time_detection)
 {
 	L_CALL("Schema::feed_time_detection(%s)", repr(prop_time_detection.to_string()).c_str());
 
-	specification.flags.time_detection = prop_time_detection.boolean();
+	try {
+		specification.flags.time_detection = prop_time_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TIME_DETECTION, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5024,7 +5088,11 @@ Schema::feed_timedelta_detection(const MsgPack& prop_timedelta_detection)
 {
 	L_CALL("Schema::feed_timedelta_detection(%s)", repr(prop_timedelta_detection.to_string()).c_str());
 
-	specification.flags.timedelta_detection = prop_timedelta_detection.boolean();
+	try {
+		specification.flags.timedelta_detection = prop_timedelta_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TIMEDELTA_DETECTION, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5033,7 +5101,11 @@ Schema::feed_numeric_detection(const MsgPack& prop_numeric_detection)
 {
 	L_CALL("Schema::feed_numeric_detection(%s)", repr(prop_numeric_detection.to_string()).c_str());
 
-	specification.flags.numeric_detection = prop_numeric_detection.boolean();
+	try {
+		specification.flags.numeric_detection = prop_numeric_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_NUMERIC_DETECTION, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5042,7 +5114,11 @@ Schema::feed_geo_detection(const MsgPack& prop_geo_detection)
 {
 	L_CALL("Schema::feed_geo_detection(%s)", repr(prop_geo_detection.to_string()).c_str());
 
-	specification.flags.geo_detection = prop_geo_detection.boolean();
+	try {
+		specification.flags.geo_detection = prop_geo_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_GEO_DETECTION, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5051,7 +5127,11 @@ Schema::feed_bool_detection(const MsgPack& prop_bool_detection)
 {
 	L_CALL("Schema::feed_bool_detection(%s)", repr(prop_bool_detection.to_string()).c_str());
 
-	specification.flags.bool_detection = prop_bool_detection.boolean();
+	try {
+		specification.flags.bool_detection = prop_bool_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_BOOL_DETECTION, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5060,7 +5140,11 @@ Schema::feed_string_detection(const MsgPack& prop_string_detection)
 {
 	L_CALL("Schema::feed_string_detection(%s)", repr(prop_string_detection.to_string()).c_str());
 
-	specification.flags.string_detection = prop_string_detection.boolean();
+	try {
+		specification.flags.string_detection = prop_string_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STRING_DETECTION, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5069,16 +5153,24 @@ Schema::feed_text_detection(const MsgPack& prop_text_detection)
 {
 	L_CALL("Schema::feed_text_detection(%s)", repr(prop_text_detection.to_string()).c_str());
 
-	specification.flags.text_detection = prop_text_detection.boolean();
+	try {
+		specification.flags.text_detection = prop_text_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TEXT_DETECTION, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
 void
-Schema::feed_term_detection(const MsgPack& prop_tm_detection)
+Schema::feed_term_detection(const MsgPack& prop_term_detection)
 {
-	L_CALL("Schema::feed_term_detection(%s)", repr(prop_tm_detection.to_string()).c_str());
+	L_CALL("Schema::feed_term_detection(%s)", repr(prop_term_detection.to_string()).c_str());
 
-	specification.flags.term_detection = prop_tm_detection.boolean();
+	try {
+		specification.flags.term_detection = prop_term_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TERM_DETECTION, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5087,7 +5179,11 @@ Schema::feed_uuid_detection(const MsgPack& prop_uuid_detection)
 {
 	L_CALL("Schema::feed_uuid_detection(%s)", repr(prop_uuid_detection.to_string()).c_str());
 
-	specification.flags.uuid_detection = prop_uuid_detection.boolean();
+	try {
+		specification.flags.uuid_detection = prop_uuid_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_UUID_DETECTION, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5096,7 +5192,11 @@ Schema::feed_bool_term(const MsgPack& prop_bool_term)
 {
 	L_CALL("Schema::feed_bool_term(%s)", repr(prop_bool_term.to_string()).c_str());
 
-	specification.flags.bool_term = prop_bool_term.boolean();
+	try {
+		specification.flags.bool_term = prop_bool_term.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_BOOL_TERM, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5105,7 +5205,11 @@ Schema::feed_partials(const MsgPack& prop_partials)
 {
 	L_CALL("Schema::feed_partials(%s)", repr(prop_partials.to_string()).c_str());
 
-	specification.flags.partials = prop_partials.boolean();
+	try {
+		specification.flags.partials = prop_partials.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_PARTIALS, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5114,7 +5218,11 @@ Schema::feed_error(const MsgPack& prop_error)
 {
 	L_CALL("Schema::feed_error(%s)", repr(prop_error.to_string()).c_str());
 
-	specification.error = prop_error.f64();
+	try {
+		specification.error = prop_error.f64();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ERROR, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5123,8 +5231,12 @@ Schema::feed_namespace(const MsgPack& prop_namespace)
 {
 	L_CALL("Schema::feed_namespace(%s)", repr(prop_namespace.to_string()).c_str());
 
-	specification.flags.is_namespace = prop_namespace.boolean();
-	specification.flags.has_namespace = true;
+	try {
+		specification.flags.is_namespace = prop_namespace.boolean();
+		specification.flags.has_namespace = true;
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_NAMESPACE, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5133,8 +5245,12 @@ Schema::feed_partial_paths(const MsgPack& prop_partial_paths)
 {
 	L_CALL("Schema::feed_partial_paths(%s)", repr(prop_partial_paths.to_string()).c_str());
 
-	specification.flags.partial_paths = prop_partial_paths.boolean();
-	specification.flags.has_partial_paths = true;
+	try {
+		specification.flags.partial_paths = prop_partial_paths.boolean();
+		specification.flags.has_partial_paths = true;
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_PARTIAL_PATHS, repr(specification.full_meta_name).c_str());
+	}
 }
 
 
@@ -5410,13 +5526,13 @@ Schema::write_text_detection(MsgPack& properties, const std::string& prop_name, 
 
 
 void
-Schema::write_term_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_tm_detection)
+Schema::write_term_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_term_detection)
 {
 	// RESERVED_TE_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_term_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
+	L_CALL("Schema::write_term_detection(%s)", repr(doc_term_detection.to_string()).c_str());
 
 	try {
-		specification.flags.term_detection = doc_tm_detection.boolean();
+		specification.flags.term_detection = doc_term_detection.boolean();
 		properties[prop_name] = static_cast<bool>(specification.flags.term_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
@@ -6426,13 +6542,13 @@ Schema::consistency_text_detection(const std::string& prop_name, const MsgPack& 
 
 
 void
-Schema::consistency_term_detection(const std::string& prop_name, const MsgPack& doc_tm_detection)
+Schema::consistency_term_detection(const std::string& prop_name, const MsgPack& doc_term_detection)
 {
 	// RESERVED_TE_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_term_detection(%s)", repr(doc_tm_detection.to_string()).c_str());
+	L_CALL("Schema::consistency_term_detection(%s)", repr(doc_term_detection.to_string()).c_str());
 
 	try {
-		const auto _term_detection = doc_tm_detection.boolean();
+		const auto _term_detection = doc_term_detection.boolean();
 		if (specification.flags.term_detection != _term_detection) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name).c_str(), specification.flags.term_detection ? "true" : "false", _term_detection ? "true" : "false");
 		}
