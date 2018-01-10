@@ -425,8 +425,8 @@ struct specification_t : required_spc_t {
 	std::string full_meta_name;
 
 	// Auxiliar variables, only need specify _stem_language or _language.
-	std::string aux_stem_lan;
-	std::string aux_lan;
+	std::string aux_stem_language;
+	std::string aux_language;
 
 	// Auxiliar variables for saving partial prefixes.
 	std::vector<prefix_t> partial_prefixes;

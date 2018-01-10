@@ -1058,8 +1058,8 @@ specification_t::specification_t(const specification_t& o)
 	  index_uuid_field(o.index_uuid_field),
 	  meta_name(o.meta_name),
 	  full_meta_name(o.full_meta_name),
-	  aux_stem_lan(o.aux_stem_lan),
-	  aux_lan(o.aux_lan),
+	  aux_stem_language(o.aux_stem_language),
+	  aux_language(o.aux_language),
 	  partial_prefixes(o.partial_prefixes),
 	  partial_index_spcs(o.partial_index_spcs) { }
 
@@ -1075,8 +1075,8 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  index_uuid_field(std::move(o.index_uuid_field)),
 	  meta_name(std::move(o.meta_name)),
 	  full_meta_name(std::move(o.full_meta_name)),
-	  aux_stem_lan(std::move(o.aux_stem_lan)),
-	  aux_lan(std::move(o.aux_lan)),
+	  aux_stem_language(std::move(o.aux_stem_language)),
+	  aux_language(std::move(o.aux_language)),
 	  partial_prefixes(std::move(o.partial_prefixes)),
 	  partial_index_spcs(std::move(o.partial_index_spcs)) { }
 
@@ -1099,8 +1099,8 @@ specification_t::operator=(const specification_t& o)
 #endif
 	meta_name = o.meta_name;
 	full_meta_name = o.full_meta_name;
-	aux_stem_lan = o.aux_stem_lan;
-	aux_lan = o.aux_lan;
+	aux_stem_language = o.aux_stem_language;
+	aux_language = o.aux_language;
 	partial_prefixes = o.partial_prefixes;
 	partial_index_spcs = o.partial_index_spcs;
 	required_spc_t::operator=(o);
@@ -1126,8 +1126,8 @@ specification_t::operator=(specification_t&& o) noexcept
 #endif
 	meta_name = std::move(o.meta_name);
 	full_meta_name = std::move(o.full_meta_name);
-	aux_stem_lan = std::move(o.aux_stem_lan);
-	aux_lan = std::move(o.aux_lan);
+	aux_stem_language = std::move(o.aux_stem_language);
+	aux_language = std::move(o.aux_language);
 	partial_prefixes = std::move(o.partial_prefixes);
 	partial_index_spcs = std::move(o.partial_index_spcs);
 	required_spc_t::operator=(std::move(o));
@@ -1347,8 +1347,8 @@ specification_t::to_string() const
 
 	str << "\t" << "meta_name"                  << ": " << meta_name            << "\n";
 	str << "\t" << "full_meta_name"             << ": " << full_meta_name       << "\n";
-	str << "\t" << "aux_stem_lan"               << ": " << aux_stem_lan         << "\n";
-	str << "\t" << "aux_lan"                    << ": " << aux_lan              << "\n";
+	str << "\t" << "aux_stem_language"               << ": " << aux_stem_language         << "\n";
+	str << "\t" << "aux_language"                    << ": " << aux_language              << "\n";
 
 	str << "}\n";
 
@@ -1541,8 +1541,8 @@ Schema::restart_specification()
 	specification.slot                       = default_spc.slot;
 	specification.accuracy                   = default_spc.accuracy;
 	specification.acc_prefix                 = default_spc.acc_prefix;
-	specification.aux_stem_lan               = default_spc.aux_stem_lan;
-	specification.aux_lan                    = default_spc.aux_lan;
+	specification.aux_stem_language               = default_spc.aux_stem_language;
+	specification.aux_language                    = default_spc.aux_language;
 
 	specification.partial_index_spcs         = default_spc.partial_index_spcs;
 }
@@ -1561,8 +1561,8 @@ Schema::restart_namespace_specification()
 	specification.flags.uuid_field       = default_spc.flags.uuid_field;
 
 	specification.sep_types              = default_spc.sep_types;
-	specification.aux_stem_lan           = default_spc.aux_stem_lan;
-	specification.aux_lan                = default_spc.aux_lan;
+	specification.aux_stem_language           = default_spc.aux_stem_language;
+	specification.aux_language                = default_spc.aux_language;
 
 	specification.partial_index_spcs     = default_spc.partial_index_spcs;
 }
@@ -1579,7 +1579,7 @@ Schema::feed_subproperties(const MsgPack& properties, const std::string& meta_na
 	const auto stit = map_stem_language.find(meta_name);
 	if (stit != stit_e && stit->second.first) {
 		specification.language = stit->second.second;
-		specification.aux_lan = stit->second.second;
+		specification.aux_language = stit->second.second;
 	}
 
 	if (specification.full_meta_name.empty()) {
@@ -3402,13 +3402,13 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			mut_properties[RESERVED_STOP_STRATEGY] = ::get_str_stop_strategy(specification.stop_strategy);
 
 			mut_properties[RESERVED_STEM_STRATEGY] = ::get_str_stem_strategy(specification.stem_strategy);
-			if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
-				specification.stem_language = specification.aux_lan;
+			if (specification.aux_stem_language.empty() && !specification.aux_language.empty()) {
+				specification.stem_language = specification.aux_language;
 			}
 			mut_properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
 
-			if (specification.aux_lan.empty() && !specification.aux_stem_lan.empty()) {
-				specification.language = specification.aux_stem_lan;
+			if (specification.aux_language.empty() && !specification.aux_stem_language.empty()) {
+				specification.language = specification.aux_stem_language;
 			}
 			specification.flags.concrete = true;
 			break;
@@ -4664,7 +4664,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 	const auto slit = map_stem_language.find(specification.meta_name);
 	if (slit != slit_e && slit->second.first) {
 		specification.language = slit->second.second;
-		specification.aux_lan = slit->second.second;
+		specification.aux_language = slit->second.second;
 	}
 
 	if (specification.full_meta_name.empty()) {
@@ -4697,7 +4697,7 @@ Schema::add_field(MsgPack*& mut_properties)
 	const auto slit = map_stem_language.find(specification.meta_name);
 	if (slit != slit_e && slit->second.first) {
 		specification.language = slit->second.second;
-		specification.aux_lan = slit->second.second;
+		specification.aux_language = slit->second.second;
 	}
 
 	if (specification.full_meta_name.empty()) {
@@ -5628,7 +5628,7 @@ Schema::process_language(const std::string& prop_name, const MsgPack& doc_langua
 		const auto slit = map_stem_language.find(_str_language);
 		if (slit != slit_e && slit->second.first) {
 			specification.language = slit->second.second;
-			specification.aux_lan = slit->second.second;
+			specification.aux_language = slit->second.second;
 			return;
 		}
 
@@ -5729,7 +5729,7 @@ Schema::process_stem_language(const std::string& prop_name, const MsgPack& doc_s
 			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), _stem_language.c_str());
 		} else {
 			specification.stem_language = _stem_language;
-			specification.aux_stem_lan = slit->second.second;
+			specification.aux_stem_language = slit->second.second;
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
