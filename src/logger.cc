@@ -87,7 +87,7 @@ validated_priority(int priority)
 void
 vprintln(bool info, bool with_endl, const char *format, va_list argptr)
 {
-	Logging::_println(info, with_endl, format, argptr);
+	Logging::do_println(info, with_endl, format, argptr);
 }
 
 
@@ -102,18 +102,18 @@ _println(bool info, bool with_endl, const char* format, ...)
 
 
 Log
-vlog(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
-	return Logging::_log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
+	return Logging::do_log(cleanup, info, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
 }
 
 
 Log
-_log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
+_log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = vlog(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
+	auto ret = vlog(cleanup, info, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
 	va_end(argptr);
 	return ret;
 }
@@ -345,7 +345,7 @@ Logging::run()
 
 
 std::string
-Logging::format_string(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr, bool info)
+Logging::format_string(bool info, bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
 	auto msg = vformat_string(format, argptr);
 
@@ -398,7 +398,7 @@ Logging::vunlog(int _priority, const char *file, int line, const char *suffix, c
 			return false;
 		}
 
-		std::string str(format_string(stacked, _priority, std::string(), file, line, suffix, prefix, format, argptr, true));
+		std::string str(format_string(true, stacked, _priority, std::string(), file, line, suffix, prefix, format, argptr));
 		add(str, false, stacked, std::chrono::system_clock::now(), async, _priority, time_point_from_ullong(created_at));
 
 		return true;
@@ -420,15 +420,15 @@ Logging::_unlog(int _priority, const char *file, int line, const char *suffix, c
 
 
 void
-Logging::_println(bool info, bool with_endl, const char *format, va_list argptr)
+Logging::do_println(bool info, bool with_endl, const char *format, va_list argptr)
 {
-	std::string str(format_string(false, LOG_DEBUG, "", "", 0, "", "", format, argptr, info));
+	std::string str(format_string(info, false, LOG_DEBUG, "", "", 0, "", "", format, argptr));
 	log(LOG_DEBUG, str, 0, info, with_endl);
 }
 
 
 Log
-Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
 	priority = validated_priority(priority);
 
@@ -436,7 +436,7 @@ Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::sys
 		return Log(std::make_shared<Logging>("", clean, stacked, async, priority, std::chrono::system_clock::now()));
 	}
 
-	std::string str(format_string(stacked, priority, exc, file, line, suffix, prefix, format, argptr, true)); // TODO: Slow!
+	std::string str(format_string(info, stacked, priority, exc, file, line, suffix, prefix, format, argptr)); // TODO: Slow!
 	return add(str, clean, stacked, wakeup, async, priority);
 }
 
