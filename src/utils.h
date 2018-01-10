@@ -24,19 +24,19 @@
 
 #include "xapiand.h"
 
+#include <cctype>             // for tolower, toupper
 #include <chrono>             // for system_clock, time_point, duration_cast, seconds
-#include <ctype.h>            // for tolower, toupper
+#include <cstdio>             // for size_t, vsnprintf
 #include <dirent.h>           // for DIR
 #include <math.h>             // for log10, floor, pow
 #include <regex>              // for regex
-#include <stdio.h>            // for size_t, snprintf
 #include <string>             // for string, allocator
 #include <sys/errno.h>        // for EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
 #include <sys/types.h>        // for uint64_t, uint16_t, uint8_t, int32_t, uint32_t
 #include <type_traits>        // for forward, underlying_type_t
 #include <unistd.h>           // for usleep
-#include <vector>             // for vector
 #include <unordered_map>      // for unordered_map
+#include <vector>             // for vector
 
 #include "ev/ev++.h"    // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
 #include "exception.h"  // for InvalidArgument, OutOfRange
@@ -223,11 +223,37 @@ namespace std {
 }
 
 
-template<typename... Args>
-inline std::string format_string(const std::string& fmt, Args&&... args) {
-	char buf[4096];
-	snprintf(buf, sizeof(buf), fmt.c_str(), std::forward<Args>(args)...);
-	return buf;
+inline std::string vformat_string(const char* format, va_list argptr) {
+	// Figure out the length of the formatted message.
+	va_list argptr_copy;
+	va_copy(argptr_copy, argptr);
+	auto len = vsnprintf(nullptr, 0, format, argptr_copy);
+	va_end(argptr_copy);
+
+	// Make a string to hold the formatted message.
+	std::string str;
+	str.resize(len + 1);
+	vsnprintf(&str[0], len + 1, format, argptr);
+	str.resize(len);
+
+	return str;
+}
+
+
+inline std::string _format_string(const char* format, ...) {
+	va_list argptr;
+
+	va_start(argptr, format);
+	auto str = vformat_string(format, argptr);
+	va_end(argptr);
+
+	return str;
+}
+
+
+template<typename F, typename... Args>
+inline std::string format_string(F&& format, Args&&... args) {
+	return _format_string(cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 }
 
 
