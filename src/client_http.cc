@@ -803,6 +803,7 @@ HttpClient::_get(enum http_method method)
 			info_view(method, cmd);
 			break;
 		case Command::CMD_STATS:
+			path_parser.skip_id();  // Command has no ID
 			stats_view(method, cmd);
 			break;
 		case Command::CMD_NODES:
@@ -1842,18 +1843,10 @@ HttpClient::stats_view(enum http_method, Command)
 {
 	L_CALL("HttpClient::stats_view()");
 
-	if (!path_parser.off_id) {
-		MsgPack response(MsgPack::Type::ARRAY);
-		query_field_maker(QUERY_FIELD_TIME | QUERY_FIELD_PERIOD);
-		XapiandManager::manager->get_stats_time(response, query_field->time, query_field->period);
-		write_http_response(HTTP_STATUS_OK, response);
-	}
-
-	enum http_status error_code = HTTP_STATUS_NOT_FOUND;
-	write_http_response(error_code, {
-		{ RESPONSE_STATUS, (int)error_code },
-		{ RESPONSE_MESSAGE, { http_status_str(error_code) } }
-	});
+	MsgPack response(MsgPack::Type::ARRAY);
+	query_field_maker(QUERY_FIELD_TIME | QUERY_FIELD_PERIOD);
+	XapiandManager::manager->get_stats_time(response, query_field->time, query_field->period);
+	write_http_response(HTTP_STATUS_OK, response);
 }
 
 
