@@ -53,7 +53,6 @@ class Log {
 	Log(const Log&) = delete;
 	Log& operator=(const Log&) = delete;
 
-	bool vunlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
 	bool _unlog(int priority, const char* file, int line, const char *suffix, const char *prefix, const char *format, ...);
 
 public:
@@ -67,6 +66,7 @@ public:
 	bool unlog(int priority, const char* file, int line, S&& suffix, P&& prefix, F&& format, Args&&... args) {
 		return _unlog(priority, file, line, cstr(std::forward<S>(suffix)), cstr(std::forward<P>(prefix)), cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 	}
+	bool vunlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
 
 	bool clear();
 	long double age();
