@@ -1684,7 +1684,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 const MsgPack&
 Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields)
 {
-	L_CALL("Schema::index_subproperties(%s, <data>, %s, %s, <fields>)", repr(properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
+	L_CALL("Schema::index_subproperties(%s, %s, %s, %s, <fields>)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
 
 	std::vector<std::string> field_names;
 	Split<>::split(name, DB_OFFSPRING_UNION, std::back_inserter(field_names));
@@ -1805,7 +1805,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 const MsgPack&
 Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name)
 {
-	L_CALL("Schema::index_subproperties(%s, <data>, %s)", repr(properties->to_string()).c_str(), repr(name).c_str());
+	L_CALL("Schema::index_subproperties(%s, %s, %s)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str(), repr(name).c_str());
 
 	Split<char> field_names(name, DB_OFFSPRING_UNION);
 
@@ -2111,7 +2111,7 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 inline void
 Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields)
 {
-	L_CALL("Schema::index_item_value(<MsgPack*>, <doc>, %s, <FieldVector>)", repr(data->to_string()).c_str());
+	L_CALL("Schema::index_item_value(%s, <doc>, %s, <FieldVector>)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str());
 
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 	if (val && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
