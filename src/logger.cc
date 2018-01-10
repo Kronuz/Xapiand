@@ -351,6 +351,8 @@ Logging::str_format(bool stacked, int priority, const std::string& exc, const ch
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	std::string msg(buffer);
+	delete []buffer;
+
 	std::string result;
 	if (info && priority <= LOG_DEBUG) {
 		auto iso8601 = "[" + Datetime::iso8601(std::chrono::system_clock::now(), false, ' ') + "]";
@@ -370,8 +372,9 @@ Logging::str_format(bool stacked, int priority, const std::string& exc, const ch
 	if (stacked) {
 		result += STACKED_INDENT;
 	}
+
 	result += prefix + msg + suffix;
-	delete []buffer;
+
 	if (priority < 0) {
 		if (exc.empty()) {
 #ifdef XAPIAND_TRACEBACKS
