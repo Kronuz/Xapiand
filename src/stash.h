@@ -98,7 +98,7 @@ struct StashContext {
 			case Operation::clean:
 				return "clean";
 			default:
-				return "Operation::UNKNOWN";
+				return "unknown";
 		}
 	}
 
