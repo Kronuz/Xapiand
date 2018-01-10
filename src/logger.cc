@@ -72,7 +72,7 @@ static const std::string priorities[] = {
 };
 
 
-static inline constexpr int
+static inline int
 validated_priority(int priority)
 {
 	if (priority < 0) {
@@ -193,9 +193,9 @@ void
 StreamLogger::log(int priority, const std::string& str, bool with_priority, bool with_endl)
 {
 	if (Logging::colors && !Logging::no_colors) {
-		ofs << (with_priority ? priorities[validated_priority(priority)] : "") + str;
+		ofs << (with_priority ? priorities[priority] : "") + str;
 	} else {
-		ofs << Logging::decolorize((with_priority ? priorities[validated_priority(priority)] : "") + str);
+		ofs << Logging::decolorize((with_priority ? priorities[priority] : "") + str);
 	}
 	if (with_endl) {
 		ofs << std::endl;
@@ -207,9 +207,9 @@ void
 StderrLogger::log(int priority, const std::string& str, bool with_priority, bool with_endl)
 {
 	if ((isatty(fileno(stderr)) || Logging::colors) && !Logging::no_colors) {
-		std::cerr << (with_priority ? priorities[validated_priority(priority)] : "") + str;
+		std::cerr << (with_priority ? priorities[priority] : "") + str;
 	} else {
-		std::cerr << Logging::decolorize((with_priority ? priorities[validated_priority(priority)] : "") + str);
+		std::cerr << Logging::decolorize((with_priority ? priorities[priority] : "") + str);
 	}
 	if (with_endl) {
 		std::cerr << std::endl;
@@ -233,9 +233,9 @@ void
 SysLog::log(int priority, const std::string& str, bool with_priority, bool)
 {
 	if (Logging::colors && !Logging::no_colors) {
-		syslog(priority, "%s", ((with_priority ? priorities[validated_priority(priority)] : "") + str).c_str());
+		syslog(priority, "%s", ((with_priority ? priorities[priority] : "") + str).c_str());
 	} else {
-		syslog(priority, "%s", Logging::decolorize((with_priority ? priorities[validated_priority(priority)] : "") + str).c_str());
+		syslog(priority, "%s", Logging::decolorize((with_priority ? priorities[priority] : "") + str).c_str());
 	}
 }
 
@@ -352,7 +352,7 @@ Logging::str_format(bool stacked, int priority, const std::string& exc, const ch
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	std::string msg(buffer);
 	std::string result;
-	if (info && validated_priority(priority) <= LOG_DEBUG) {
+	if (info && priority <= LOG_DEBUG) {
 		auto iso8601 = "[" + Datetime::iso8601(std::chrono::system_clock::now(), false, ' ') + "]";
 		auto tid = " (" + get_thread_name() + ")";
 		result = DIM_GREY + iso8601 + tid;
@@ -391,6 +391,8 @@ Logging::str_format(bool stacked, int priority, const std::string& exc, const ch
 bool
 Logging::_unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
+	_priority = validated_priority(_priority);
+
 	if (!clear()) {
 		if (_priority > log_level) {
 			return false;
@@ -428,6 +430,8 @@ Logging::_println(bool info, bool with_endl, const char *format, va_list argptr)
 Log
 Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
+	priority = validated_priority(priority);
+
 	if (priority > log_level) {
 		return Log(std::make_shared<Logging>("", clean, stacked, async, priority, std::chrono::system_clock::now()));
 	}
