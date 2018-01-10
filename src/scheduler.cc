@@ -189,8 +189,8 @@ Scheduler::finish(int wait)
 
 	{
 		std::lock_guard<std::mutex> lk(mtx);
-		wakeup_signal.notify_all();
 	}
+	wakeup_signal.notify_all();
 
 	if (thread_pool) {
 		thread_pool->finish();
@@ -236,8 +236,8 @@ Scheduler::add(const TaskType& task, unsigned long long wakeup_time)
 		if (next_wakeup_time >= wakeup_time || next_wakeup_time <= now) {
 			{
 				std::lock_guard<std::mutex> lk(mtx);
-				wakeup_signal.notify_one();
 			}
+			wakeup_signal.notify_one();
 			L_SCHEDULER("Scheduler::" + LIGHT_GREEN + "ADDED_NOTIFY" + NO_COL + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
 		} else {
 			L_SCHEDULER("Scheduler::" + FOREST_GREEN + "ADDED" + NO_COL + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
