@@ -1938,6 +1938,9 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto data = parent_data;
 			index_subproperties(properties, data, name);
 			index_item_value(doc, *data, object, 0);
+			if (specification.flags.store && data->size() == 1) {
+				*data = (*data)[RESERVED_VALUE];
+			}
 			specification = std::move(spc_start);
 			return;
 		}
@@ -1977,8 +1980,15 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				index_subproperties(properties, data, name);
-				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
-				index_item_value(doc, *data_pos, item);
+				if (specification.flags.store) {
+					auto &data_pos = (*data)[pos];
+					index_item_value(doc, data_pos, item);
+					if (data_pos.size() == 1) {
+						data_pos = data_pos[RESERVED_VALUE];
+					}
+				} else {
+					index_item_value(doc, *data, item);
+				}
 				specification = spc_start;
 				break;
 			}
@@ -2000,7 +2010,15 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				index_subproperties(properties, data, name);
-				index_item_value(doc, specification.flags.store ? (*data)[pos] : *data, item, pos);
+				if (specification.flags.store) {
+					auto &data_pos = (*data)[pos];
+					index_item_value(doc, data_pos, item, pos);
+					if (data_pos.size() == 1) {
+						data_pos = data_pos[RESERVED_VALUE];
+					}
+				} else {
+					index_item_value(doc, *data, item, pos);
+				}
 				specification = spc_start;
 				break;
 			}
@@ -2038,10 +2056,6 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 
 	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 		set_type_to_object();
-	}
-
-	if (specification.flags.store && data.size() == 1) {
-		data = data[RESERVED_VALUE];
 	}
 }
 
@@ -2108,10 +2122,6 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 			add_value = false;
 		}
 		specification.update(std::move(start_index_spc));
-	}
-
-	if (specification.flags.store && data.size() == 1) {
-		data = data[RESERVED_VALUE];
 	}
 }
 
