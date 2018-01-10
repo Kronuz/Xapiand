@@ -392,16 +392,12 @@ bool
 Logging::vunlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
 	_priority = validated_priority(_priority);
-
 	if (!clear()) {
-		if (_priority > log_level) {
-			return false;
+		if (_priority <= log_level) {
+			std::string str(format_string(true, stacked, _priority, std::string(), file, line, suffix, prefix, format, argptr));
+			add(str, false, stacked, std::chrono::system_clock::now(), async, _priority, time_point_from_ullong(created_at));
+			return true;
 		}
-
-		std::string str(format_string(true, stacked, _priority, std::string(), file, line, suffix, prefix, format, argptr));
-		add(str, false, stacked, std::chrono::system_clock::now(), async, _priority, time_point_from_ullong(created_at));
-
-		return true;
 	}
 	return false;
 }
@@ -432,12 +428,12 @@ Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std
 {
 	priority = validated_priority(priority);
 
-	if (priority > log_level) {
-		return Log(std::make_shared<Logging>("", clean, stacked, async, priority, std::chrono::system_clock::now()));
+	if (priority <= log_level) {
+		std::string str(format_string(info, stacked, priority, exc, file, line, suffix, prefix, format, argptr));  // TODO: Slow!
+		return add(str, clean, stacked, wakeup, async, priority);
 	}
 
-	std::string str(format_string(info, stacked, priority, exc, file, line, suffix, prefix, format, argptr)); // TODO: Slow!
-	return add(str, clean, stacked, wakeup, async, priority);
+	return Log(std::make_shared<Logging>("", clean, stacked, async, priority, std::chrono::system_clock::now()));
 }
 
 
@@ -446,18 +442,16 @@ Logging::add(const std::string& str, bool clean, bool stacked, std::chrono::time
 {
 	auto l_ptr = std::make_shared<Logging>(str, clean, stacked, async, priority, created_at);
 
-	if (priority <= log_level) {
-		if (async < 0) {
-			// collected logs
-			std::lock_guard<std::mutex> lk(collected_mtx);
-			collected.push_back(l_ptr);
-		} else if (async || wakeup > std::chrono::system_clock::now()) {
-			// asynchronous logs
-			scheduler().add(l_ptr, wakeup);
-		} else {
-			// immediate logs
-			l_ptr->run();
-		}
+	if (async < 0) {
+		// collected logs
+		std::lock_guard<std::mutex> lk(collected_mtx);
+		collected.push_back(l_ptr);
+	} else if (async || wakeup > std::chrono::system_clock::now()) {
+		// asynchronous logs
+		scheduler().add(l_ptr, wakeup);
+	} else {
+		// immediate logs
+		l_ptr->run();
 	}
 
 	return Log(l_ptr);
