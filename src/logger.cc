@@ -22,18 +22,18 @@
 
 #include "logger.h"
 
+#include <cstdarg>            // for va_list, va_end, va_start
+#include <cstdio>             // for fileno, vsnprintf, stderr
+#include <cstdlib>            // for getenv
 #include <ctime>              // for time_t
 #include <functional>         // for ref
 #include <iostream>           // for cerr
 #include <regex>              // for regex_replace, regex
-#include <stdarg.h>           // for va_list, va_end, va_start
 #include <stdexcept>          // for out_of_range
-#include <stdio.h>            // for fileno, vsnprintf, stderr
-#include <stdlib.h>           // for getenv
 #include <system_error>       // for system_error
 #include <unistd.h>           // for isatty
 #include <unordered_map>      // for unordered_map
-#include <vector>
+#include <vector>             // for vector
 
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback
