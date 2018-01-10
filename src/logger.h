@@ -110,7 +110,6 @@ class Logging : public ScheduledTask {
 	Logging& operator=(Logging&&) = delete;
 	Logging& operator=(const Logging&) = delete;
 
-	bool _unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
 	bool _unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
 
 	static std::string str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr, bool info);
@@ -140,6 +139,7 @@ public:
 	bool unlog(int _priority, const char *file, int line, S&& suffix, P&& prefix, F&& format, Args&&... args) {
 		return _unlog(_priority, file, line, cstr(std::forward<S>(suffix)), cstr(std::forward<P>(prefix)), cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 	}
+	bool vunlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
 
 	void cleanup();
 

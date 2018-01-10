@@ -53,7 +53,7 @@ class Log {
 	Log(const Log&) = delete;
 	Log& operator=(const Log&) = delete;
 
-	bool _unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
+	bool vunlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
 	bool _unlog(int priority, const char* file, int line, const char *suffix, const char *prefix, const char *format, ...);
 
 public:
@@ -74,7 +74,7 @@ public:
 };
 
 
-void _println(bool info, bool with_endl, const char *format, va_list argptr);
+void vprintln(bool info, bool with_endl, const char *format, va_list argptr);
 void _println(bool info, bool with_endl, const char* format, ...);
 
 
@@ -96,7 +96,7 @@ static void info(F&& format, Args&&... args) {
 }
 
 
-Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
+Log vlog(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
 Log _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
 
 

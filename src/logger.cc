@@ -85,7 +85,7 @@ validated_priority(int priority)
 
 
 void
-_println(bool info, bool with_endl, const char *format, va_list argptr)
+vprintln(bool info, bool with_endl, const char *format, va_list argptr)
 {
 	Logging::_println(info, with_endl, format, argptr);
 }
@@ -96,13 +96,13 @@ _println(bool info, bool with_endl, const char* format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	_println(info, with_endl, format, argptr);
+	vprintln(info, with_endl, format, argptr);
 	va_end(argptr);
 }
 
 
 Log
-_log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+vlog(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
 	return Logging::_log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
 }
@@ -113,7 +113,7 @@ _log(bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clo
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = _log(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
+	auto ret = vlog(cleanup, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
 	va_end(argptr);
 	return ret;
 }
@@ -149,9 +149,9 @@ Log::operator=(Log&& o)
 
 
 bool
-Log::_unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+Log::vunlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
-	return log->_unlog(priority, file, line, suffix, prefix, format, argptr);
+	return log->vunlog(priority, file, line, suffix, prefix, format, argptr);
 }
 
 
@@ -160,7 +160,7 @@ Log::_unlog(int priority, const char* file, int line, const char *suffix, const 
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = _unlog(priority, file, line, suffix, prefix, format, argptr);
+	auto ret = vunlog(priority, file, line, suffix, prefix, format, argptr);
 	va_end(argptr);
 	return ret;
 }
@@ -398,7 +398,7 @@ Logging::str_format(bool stacked, int priority, const std::string& exc, const ch
 
 
 bool
-Logging::_unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+Logging::vunlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
 	_priority = validated_priority(_priority);
 
@@ -421,7 +421,7 @@ Logging::_unlog(int _priority, const char *file, int line, const char *suffix, c
 {
 	va_list argptr;
 	va_start(argptr, format);
-	auto ret = _unlog(_priority, file, line, suffix, prefix, format, argptr);
+	auto ret = vunlog(_priority, file, line, suffix, prefix, format, argptr);
 	va_end(argptr);
 
 	return ret;
