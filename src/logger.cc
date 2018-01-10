@@ -345,19 +345,9 @@ Logging::run()
 
 
 std::string
-Logging::str_format(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr, bool info)
+Logging::format_string(bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr, bool info)
 {
-	// Figure out the length of the formatted message.
-	va_list argptr_copy;
-	va_copy(argptr_copy, argptr);
-	auto len = vsnprintf(nullptr, 0, format, argptr_copy);
-	va_end(argptr_copy);
-
-	// Make a string to hold the formatted message.
-	std::string msg;
-	msg.resize(len + 1);
-	vsnprintf(&msg[0], len + 1, format, argptr);
-	msg.resize(len);
+	auto msg = vformat_string(format, argptr);
 
 	std::string result;
 	if (info && priority <= LOG_DEBUG) {
@@ -393,6 +383,7 @@ Logging::str_format(bool stacked, int priority, const std::string& exc, const ch
 			result += NO_COL + exc + NO_COL;
 		}
 	}
+
 	return result;
 }
 
@@ -407,7 +398,7 @@ Logging::vunlog(int _priority, const char *file, int line, const char *suffix, c
 			return false;
 		}
 
-		std::string str(str_format(stacked, _priority, std::string(), file, line, suffix, prefix, format, argptr, true));
+		std::string str(format_string(stacked, _priority, std::string(), file, line, suffix, prefix, format, argptr, true));
 		add(str, false, stacked, std::chrono::system_clock::now(), async, _priority, time_point_from_ullong(created_at));
 
 		return true;
@@ -431,7 +422,7 @@ Logging::_unlog(int _priority, const char *file, int line, const char *suffix, c
 void
 Logging::_println(bool info, bool with_endl, const char *format, va_list argptr)
 {
-	std::string str(str_format(false, LOG_DEBUG, "", "", 0, "", "", format, argptr, info));
+	std::string str(format_string(false, LOG_DEBUG, "", "", 0, "", "", format, argptr, info));
 	log(LOG_DEBUG, str, 0, info, with_endl);
 }
 
@@ -445,7 +436,7 @@ Logging::_log(bool clean, bool stacked, std::chrono::time_point<std::chrono::sys
 		return Log(std::make_shared<Logging>("", clean, stacked, async, priority, std::chrono::system_clock::now()));
 	}
 
-	std::string str(str_format(stacked, priority, exc, file, line, suffix, prefix, format, argptr, true)); // TODO: Slow!
+	std::string str(format_string(stacked, priority, exc, file, line, suffix, prefix, format, argptr, true)); // TODO: Slow!
 	return add(str, clean, stacked, wakeup, async, priority);
 }
 
