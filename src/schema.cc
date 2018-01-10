@@ -330,73 +330,231 @@ inline static bool validate_acc_date(UnitTime unit) noexcept {
  * Helper functions to print readable form of enums
  */
 
-inline static std::string readable_acc_date(UnitTime unit) noexcept {
+inline static const std::string&
+get_str_acc_date(UnitTime unit) noexcept
+{
 	switch (unit) {
-		case UnitTime::SECOND:     return "second";
-		case UnitTime::MINUTE:     return "minute";
-		case UnitTime::HOUR:       return "hour";
-		case UnitTime::DAY:        return "day";
-		case UnitTime::MONTH:      return "month";
-		case UnitTime::YEAR:       return "year";
-		case UnitTime::DECADE:     return "decade";
-		case UnitTime::CENTURY:    return "century";
-		case UnitTime::MILLENNIUM: return "millennium";
-		default:                   return "UnitTime::UNKNOWN";
+		case UnitTime::SECOND: {
+			static const std::string second("second");
+			return second;
+		}
+		case UnitTime::MINUTE: {
+			static const std::string minute("minute");
+			return minute;
+		}
+		case UnitTime::HOUR: {
+			static const std::string hour("hour");
+			return hour;
+		}
+		case UnitTime::DAY: {
+			static const std::string day("day");
+			return day;
+		}
+		case UnitTime::MONTH: {
+			static const std::string month("month");
+			return month;
+		}
+		case UnitTime::YEAR: {
+			static const std::string year("year");
+			return year;
+		}
+		case UnitTime::DECADE: {
+			static const std::string decade("decade");
+			return decade;
+		}
+		case UnitTime::CENTURY: {
+			static const std::string century("century");
+			return century;
+		}
+		case UnitTime::MILLENNIUM: {
+			static const std::string millennium("millennium");
+			return millennium;
+		}
+		default: {
+			static const std::string unknown("unknown");
+			return unknown;
+		}
 	}
 }
 
 
-inline static std::string readable_stop_strategy(StopStrategy stop_strategy) noexcept {
+inline static const std::string&
+get_str_stop_strategy(StopStrategy stop_strategy) noexcept
+{
 	switch (stop_strategy) {
-		case StopStrategy::STOP_NONE:    return "stop_none";
-		case StopStrategy::STOP_ALL:     return "stop_all";
-		case StopStrategy::STOP_STEMMED: return "stop_stemmed";
-		default:                         return "StopStrategy::UNKNOWN";
+		case StopStrategy::STOP_NONE: {
+			static const std::string stop_none("stop_none");
+			return stop_none;
+		}
+		case StopStrategy::STOP_ALL: {
+			static const std::string stop_all("stop_all");
+			return stop_all;
+		}
+		case StopStrategy::STOP_STEMMED: {
+			static const std::string stop_stemmed("stop_stemmed");
+			return stop_stemmed;
+		}
+		default: {
+			static const std::string unknown("unknown");
+			return unknown;
+		}
 	}
 }
 
 
-inline static std::string readable_stem_strategy(StemStrategy stem_strategy) noexcept {
+inline static const std::string&
+get_str_stem_strategy(StemStrategy stem_strategy) noexcept
+{
 	switch (stem_strategy) {
-		case StemStrategy::STEM_NONE:   return "stem_none";
-		case StemStrategy::STEM_SOME:   return "stem_some";
-		case StemStrategy::STEM_ALL:    return "stem_all";
-		case StemStrategy::STEM_ALL_Z:  return "stem_all_z";
-		default:                        return "StemStrategy::UNKNOWN";
+		case StemStrategy::STEM_NONE: {
+			static const std::string stem_none("stem_none");
+			return stem_none;
+		}
+		case StemStrategy::STEM_SOME: {
+			static const std::string stem_some("stem_some");
+			return stem_some;
+		}
+		case StemStrategy::STEM_ALL: {
+			static const std::string stem_all("stem_all");
+			return stem_all;
+		}
+		case StemStrategy::STEM_ALL_Z: {
+			static const std::string stem_all_z("stem_all_z");
+			return stem_all_z;
+		}
+		default: {
+			static const std::string unknown("unknown");
+			return unknown;
+		}
 	}
 }
 
 
-inline static std::string readable_index(TypeIndex index) noexcept {
+inline static const std::string&
+get_str_index(TypeIndex index) noexcept
+{
 	switch (index) {
-		case TypeIndex::NONE:                       return "none";
-		case TypeIndex::FIELD_TERMS:                return "field_terms";
-		case TypeIndex::FIELD_VALUES:               return "field_values";
-		case TypeIndex::FIELD_ALL:                  return "field";
-		case TypeIndex::GLOBAL_TERMS:               return "global_terms";
-		case TypeIndex::TERMS:                      return "terms";
-		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES:  return "global_terms,field_values";
-		case TypeIndex::GLOBAL_TERMS_FIELD_ALL:     return "global_terms,field";
-		case TypeIndex::GLOBAL_VALUES:              return "global_values";
-		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS:  return "global_values,field_terms";
-		case TypeIndex::VALUES:                     return "values";
-		case TypeIndex::GLOBAL_VALUES_FIELD_ALL:    return "global_values,field";
-		case TypeIndex::GLOBAL_ALL:                 return "global";
-		case TypeIndex::GLOBAL_ALL_FIELD_TERMS:     return "global,field_terms";
-		case TypeIndex::GLOBAL_ALL_FIELD_VALUES:    return "global,field_values";
-		case TypeIndex::ALL:                        return "all";
-		default:                                    return "TypeIndex::UNKNOWN";
+		case TypeIndex::NONE: {
+			static const std::string none("none");
+			return none;
+		}
+		case TypeIndex::FIELD_TERMS: {
+			static const std::string field_terms("field_terms");
+			return field_terms;
+		}
+		case TypeIndex::FIELD_VALUES: {
+			static const std::string field_values("field_values");
+			return field_values;
+		}
+		case TypeIndex::FIELD_ALL: {
+			static const std::string field("field");
+			return field;
+		}
+		case TypeIndex::GLOBAL_TERMS: {
+			static const std::string global_terms("global_terms");
+			return global_terms;
+		}
+		case TypeIndex::TERMS: {
+			static const std::string terms("terms");
+			return terms;
+		}
+		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES: {
+			static const std::string global_terms_field_values("global_terms,field_values");
+			return global_terms_field_values;
+		}
+		case TypeIndex::GLOBAL_TERMS_FIELD_ALL: {
+			static const std::string global_terms_field("global_terms,field");
+			return global_terms_field;
+		}
+		case TypeIndex::GLOBAL_VALUES: {
+			static const std::string global_values("global_values");
+			return global_values;
+		}
+		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS: {
+			static const std::string global_values_field_terms("global_values,field_terms");
+			return global_values_field_terms;
+		}
+		case TypeIndex::VALUES: {
+			static const std::string values("values");
+			return values;
+		}
+		case TypeIndex::GLOBAL_VALUES_FIELD_ALL: {
+			static const std::string global_values_field("global_values,field");
+			return global_values_field;
+		}
+		case TypeIndex::GLOBAL_ALL: {
+			static const std::string global("global");
+			return global;
+		}
+		case TypeIndex::GLOBAL_ALL_FIELD_TERMS: {
+			static const std::string global_field_terms("global,field_terms");
+			return global_field_terms;
+		}
+		case TypeIndex::GLOBAL_ALL_FIELD_VALUES: {
+			static const std::string global_field_values("global,field_values");
+			return global_field_values;
+		}
+		case TypeIndex::ALL: {
+			static const std::string all("all");
+			return all;
+		}
+		default: {
+			static const std::string unknown("unknown");
+			return unknown;
+		}
 	}
 }
 
 
-inline static std::string readable_index_uuid_field(UUIDFieldIndex index_uuid_field) noexcept {
+inline static const std::string&
+get_str_index_uuid_field(UUIDFieldIndex index_uuid_field) noexcept
+{
 	switch (index_uuid_field) {
-		case UUIDFieldIndex::UUID:       return "uuid";
-		case UUIDFieldIndex::UUID_FIELD: return "uuid_field";
-		case UUIDFieldIndex::BOTH:       return "both";
-		default:                         return "UUIDFieldIndex::UNKNOWN";
+		case UUIDFieldIndex::UUID: {
+			static const std::string uuid("uuid");
+			return uuid;
+		}
+		case UUIDFieldIndex::UUID_FIELD: {
+			static const std::string uuid_field("uuid_field");
+			return uuid_field;
+		}
+		case UUIDFieldIndex::BOTH: {
+			static const std::string both("both");
+			return both;
+		}
+		default: {
+			static const std::string unknown("unknown");
+			return unknown;
+		}
 	}
+}
+
+
+inline static const std::string&
+get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
+{
+	static const auto tit_e = map_str_type.end();
+	auto tit = map_str_type.find(sep_types);
+	if (tit == tit_e) {
+		std::string result;
+		if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+			result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
+		}
+		if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
+			if (!result.empty()) result += "/";
+			result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
+		}
+		if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
+			if (!result.empty()) result += "/";
+			result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
+		}
+		if (sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+			if (!result.empty()) result += "/";
+			result += Serialise::type(sep_types[SPC_CONCRETE_TYPE]);
+		}
+		THROW(ClientError, "%s not supported.", repr(result).c_str(), RESERVED_TYPE);
+	}
+	return tit->second;
 }
 
 
@@ -840,28 +998,7 @@ required_spc_t::get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_t
 {
 	L_CALL("required_spc_t::get_str_type({ %d, %d, %d, %d })", toUType(sep_types[SPC_FOREIGN_TYPE]), toUType(sep_types[SPC_OBJECT_TYPE]), toUType(sep_types[SPC_ARRAY_TYPE]), toUType(sep_types[SPC_CONCRETE_TYPE]));
 
-	static const auto tit_e = map_str_type.end();
-	auto tit = map_str_type.find(sep_types);
-	if (tit == tit_e) {
-		std::string result;
-		if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
-		}
-		if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
-			if (!result.empty()) result += "/";
-			result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
-		}
-		if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
-			if (!result.empty()) result += "/";
-			result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
-		}
-		if (sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
-			if (!result.empty()) result += "/";
-			result += Serialise::type(sep_types[SPC_CONCRETE_TYPE]);
-		}
-		THROW(ClientError, "%s not supported.", repr(result).c_str(), RESERVED_TYPE);
-	}
-	return tit->second;
+	return ::get_str_type(sep_types);
 }
 
 
@@ -1131,8 +1268,8 @@ specification_t::to_string() const
 	str << "]\n";
 
 	str << "\t" << RESERVED_LANGUAGE          << ": " << language          << "\n";
-	str << "\t" << RESERVED_STOP_STRATEGY     << ": " << readable_stop_strategy(stop_strategy) << "\n";
-	str << "\t" << RESERVED_STEM_STRATEGY     << ": " << readable_stem_strategy(stem_strategy) << "\n";
+	str << "\t" << RESERVED_STOP_STRATEGY     << ": " << get_str_stop_strategy(stop_strategy) << "\n";
+	str << "\t" << RESERVED_STEM_STRATEGY     << ": " << get_str_stem_strategy(stem_strategy) << "\n";
 	str << "\t" << RESERVED_STEM_LANGUAGE     << ": " << stem_language     << "\n";
 
 	str << "\t" << RESERVED_ACCURACY << ": [ ";
@@ -1170,8 +1307,8 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_TYPE                << ": " << get_str_type(sep_types)                     << "\n";
 	str << "\t" << RESERVED_PREFIX              << ": " << prefix.to_string()                          << "\n";
 	str << "\t" << "local_prefix"               << ": " << local_prefix.to_string()                    << "\n";
-	str << "\t" << RESERVED_INDEX               << ": " << readable_index(index)                       << "\n";
-	str << "\t" << RESERVED_INDEX_UUID_FIELD    << ": " << readable_index_uuid_field(index_uuid_field) << "\n";
+	str << "\t" << RESERVED_INDEX               << ": " << get_str_index(index)                       << "\n";
+	str << "\t" << RESERVED_INDEX_UUID_FIELD    << ": " << get_str_index_uuid_field(index_uuid_field) << "\n";
 	str << "\t" << RESERVED_ERROR               << ": " << error                                       << "\n";
 
 	str << "\t" << RESERVED_PARTIALS            << ": " << (flags.partials              ? "true" : "false") << "\n";
@@ -3047,7 +3184,7 @@ Schema::set_type_to_object()
 	if unlikely(specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		specification.sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
 		auto& mut_properties = get_mutable_properties(specification.full_meta_name);
-		mut_properties[RESERVED_TYPE] = required_spc_t::get_str_type(specification.sep_types);
+		mut_properties[RESERVED_TYPE] = ::get_str_type(specification.sep_types);
 	}
 }
 
@@ -3060,7 +3197,7 @@ Schema::set_type_to_array()
 	if unlikely(specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY && !specification.flags.inside_namespace) {
 		specification.sep_types[SPC_ARRAY_TYPE] = FieldType::ARRAY;
 		auto& mut_properties = get_mutable_properties(specification.full_meta_name);
-		mut_properties[RESERVED_TYPE] = required_spc_t::get_str_type(specification.sep_types);
+		mut_properties[RESERVED_TYPE] = ::get_str_type(specification.sep_types);
 	}
 }
 
@@ -3254,7 +3391,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
-					mut_properties[RESERVED_INDEX] = ::readable_index(index);
+					mut_properties[RESERVED_INDEX] = ::get_str_index(index);
 				}
 				specification.flags.has_index = true;
 			}
@@ -3262,9 +3399,9 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			// It is needed for soundex.
 			mut_properties[RESERVED_LANGUAGE] = specification.language;
 
-			mut_properties[RESERVED_STOP_STRATEGY] = specification.stop_strategy;
+			mut_properties[RESERVED_STOP_STRATEGY] = ::get_str_stop_strategy(specification.stop_strategy);
 
-			mut_properties[RESERVED_STEM_STRATEGY] = specification.stem_strategy;
+			mut_properties[RESERVED_STEM_STRATEGY] = ::get_str_stem_strategy(specification.stem_strategy);
 			if (specification.aux_stem_lan.empty() && !specification.aux_lan.empty()) {
 				specification.stem_language = specification.aux_lan;
 			}
@@ -3281,7 +3418,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
-					mut_properties[RESERVED_INDEX] = ::readable_index(index);
+					mut_properties[RESERVED_INDEX] = ::get_str_index(index);
 				}
 				specification.flags.has_index = true;
 			}
@@ -3296,7 +3433,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
 					specification.index = index;
-					mut_properties[RESERVED_INDEX] = ::readable_index(index);
+					mut_properties[RESERVED_INDEX] = ::get_str_index(index);
 				}
 				specification.flags.has_index = true;
 			}
@@ -3319,7 +3456,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				const auto index = TypeIndex::NONE; // Fallback to index anything.
 				if (specification.index != index) {
 					specification.index = index;
-					mut_properties[RESERVED_INDEX] = ::readable_index(index);
+					mut_properties[RESERVED_INDEX] = ::get_str_index(index);
 				}
 				specification.flags.has_index = true;
 			}
@@ -3364,13 +3501,13 @@ Schema::validate_required_data(MsgPack& mut_properties)
 		const auto index = specification.index & ~TypeIndex::VALUES;
 		if (specification.index != index) {
 			specification.index = index;
-			mut_properties[RESERVED_INDEX] = ::readable_index(index);
+			mut_properties[RESERVED_INDEX] = ::get_str_index(index);
 		}
 		specification.flags.has_index = true;
 	}
 
 	// Process RESERVED_TYPE
-	mut_properties[RESERVED_TYPE] = required_spc_t::get_str_type(specification.sep_types);
+	mut_properties[RESERVED_TYPE] = ::get_str_type(specification.sep_types);
 
 	// L_DEBUG("\nspecification = %s\nmut_properties = %s", specification.to_string().c_str(), mut_properties.to_string(true).c_str());
 }
@@ -5088,7 +5225,7 @@ Schema::write_index(MsgPack& properties, const std::string& prop_name, const Msg
 	L_CALL("Schema::write_index(%s)", repr(doc_index.to_string()).c_str());
 
 	process_index(prop_name, doc_index);
-	properties[prop_name] = ::readable_index(specification.index);
+	properties[prop_name] = ::get_str_index(specification.index);
 }
 
 
@@ -5350,7 +5487,7 @@ Schema::write_index_uuid_field(MsgPack& properties, const std::string& prop_name
 	 */
 
 	process_index_uuid_field(prop_name, doc_index_uuid_field);
-	properties[prop_name] = ::readable_index_uuid_field(specification.index_uuid_field);
+	properties[prop_name] = ::get_str_index_uuid_field(specification.index_uuid_field);
 }
 
 
@@ -5850,7 +5987,7 @@ Schema::consistency_stop_strategy(const std::string& prop_name, const MsgPack& d
 	try {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
 			const auto _stop_strategy = lower_string(doc_stop_strategy.str());
-			const auto stop_strategy = ::readable_stop_strategy(specification.stop_strategy);
+			const auto stop_strategy = ::get_str_stop_strategy(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stop_strategy.c_str(), _stop_strategy.c_str(), specification.full_meta_name.c_str());
 			}
@@ -5872,7 +6009,7 @@ Schema::consistency_stem_strategy(const std::string& prop_name, const MsgPack& d
 	try {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
 			const auto _stem_strategy = lower_string(doc_stem_strategy.str());
-			const auto stem_strategy = ::readable_stem_strategy(specification.stem_strategy);
+			const auto stem_strategy = ::get_str_stem_strategy(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stem_strategy.c_str(), _stem_strategy.c_str(), specification.full_meta_name.c_str());
 			}
@@ -5987,10 +6124,10 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(std::to_string(readable_acc_date((UnitTime)acc))).push_back(' ');
+						str_accuracy.append(std::to_string(get_str_acc_date((UnitTime)acc))).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(std::to_string(readable_acc_date((UnitTime)acc))).push_back(' ');
+						_str_accuracy.append(std::to_string(get_str_acc_date((UnitTime)acc))).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", repr(prop_name).c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
 				}
@@ -6015,10 +6152,10 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(std::to_string(readable_acc_date((UnitTime)acc))).push_back(' ');
+						str_accuracy.append(std::to_string(get_str_acc_date((UnitTime)acc))).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(std::to_string(readable_acc_date((UnitTime)acc))).push_back(' ');
+						_str_accuracy.append(std::to_string(get_str_acc_date((UnitTime)acc))).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", repr(prop_name).c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
 				}
@@ -6413,7 +6550,7 @@ Schema::set_default_spc_id(MsgPack& properties)
 		const auto index = specification.index | TypeIndex::FIELD_ALL;  // force field_all
 		if (specification.index != index) {
 			specification.index = index;
-			properties[RESERVED_INDEX] = ::readable_index(index);
+			properties[RESERVED_INDEX] = ::get_str_index(index);
 		}
 		specification.flags.has_index = true;
 	}
@@ -6441,7 +6578,7 @@ Schema::set_default_spc_content_type(MsgPack& properties)
 		const auto index = (specification.index | TypeIndex::FIELD_VALUES) & ~TypeIndex::FIELD_TERMS; // Fallback to index anything but values
 		if (specification.index != index) {
 			specification.index = index;
-			properties[RESERVED_INDEX] = ::readable_index(index);
+			properties[RESERVED_INDEX] = ::get_str_index(index);
 		}
 		specification.flags.has_index = true;
 	}
@@ -6529,7 +6666,7 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA:
 			for (auto& _accuracy : properties.at(RESERVED_ACCURACY)) {
-				_accuracy = readable_acc_date((UnitTime)_accuracy.u64());
+				_accuracy = get_str_acc_date((UnitTime)_accuracy.u64());
 			}
 			break;
 		case FieldType::GEO:
