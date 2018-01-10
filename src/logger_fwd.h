@@ -33,9 +33,6 @@
 #include "ansi_color.hh"      // for ansi_color
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
-#define ASYNC_COLLECT -1
-#define ASYNC_IMMEDIATE 0
-#define ASYNC 1
 
 extern std::atomic<uint64_t> logger_info_hook;
 
@@ -90,30 +87,30 @@ static void collect(F&& format, Args&&... args) {
 }
 
 
-Log vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
-Log _log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
+Log vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
+Log _log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
 
 
 template <typename T, typename S, typename P, typename F, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const T* exc, const char *file, int line, S&& suffix, P&& prefix, F&& format, Args&&... args) {
+inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char *file, int line, S&& suffix, P&& prefix, F&& format, Args&&... args) {
 	return _log(cleanup, info, stacked, wakeup, async, priority, std::string(exc->get_traceback()), file, line, cstr(std::forward<S>(suffix)), cstr(std::forward<P>(prefix)), cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 }
 
 
 template <typename S, typename P, typename F, typename... Args>
-inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const void*, const char *file, int line, S&& suffix, P&& prefix, F&& format, Args&&... args) {
+inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char *file, int line, S&& suffix, P&& prefix, F&& format, Args&&... args) {
 	return _log(cleanup, info, stacked, wakeup, async, priority, std::string(), file, line, cstr(std::forward<S>(suffix)), cstr(std::forward<P>(prefix)), cstr(std::forward<F>(format)), std::forward<Args>(args)...);
 }
 
 
 template <typename T, typename R, typename... Args>
-inline Log log(bool cleanup, bool info, bool stacked, std::chrono::duration<T, R> timeout, int async, int priority, Args&&... args) {
+inline Log log(bool cleanup, bool info, bool stacked, std::chrono::duration<T, R> timeout, bool async, int priority, Args&&... args) {
 	return log(cleanup, info, stacked, std::chrono::system_clock::now() + timeout, async, priority, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
-inline Log log(bool cleanup, bool info, bool stacked, int timeout, int async, int priority, Args&&... args) {
+inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, int priority, Args&&... args) {
 	return log(cleanup, info, stacked, std::chrono::milliseconds(timeout), async, priority, std::forward<Args>(args)...);
 }
 
@@ -135,7 +132,7 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, int async, in
 #define EMERG_COL LIGHT_RED
 
 
-#define L_DELAYED(cleanup, delay, priority, color, args...) ::log(cleanup, true, false, delay, ASYNC, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define L_DELAYED(cleanup, delay, priority, color, args...) ::log(cleanup, true, false, delay, true, priority, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 #define L_DELAYED_UNLOG(priority, color, args...) unlog(priority, __FILE__, __LINE__, NO_COL, color, args)
 #define L_DELAYED_CLEAR() clear()
 
@@ -147,7 +144,7 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, int async, in
 
 #define L_NOTHING(args...)
 
-#define LOG(stacked, level, color, args...) ::log(false, true, stacked, 0ms, level >= ASYNC_LOG_LEVEL ? ASYNC : ASYNC_IMMEDIATE, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+#define LOG(stacked, level, color, args...) ::log(false, true, stacked, 0ms, level >= ASYNC_LOG_LEVEL, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 
 #define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
 #define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
@@ -156,7 +153,7 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, int async, in
 #define L_CRIT(args...) LOG(true, LOG_CRIT, CRIT_COL, args)
 #define L_ALERT(args...) LOG(true, -LOG_ALERT, ALERT_COL, args)
 #define L_EMERG(args...) LOG(true, -LOG_EMERG, EMERG_COL, args)
-#define L_EXC(args...) ::log(false, true, true, 0ms, ASYNC, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define L_EXC(args...) ::log(false, true, true, 0ms, true, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
 #define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
 #define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)

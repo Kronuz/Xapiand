@@ -102,14 +102,14 @@ _println(bool collect, bool with_endl, const char* format, ...)
 
 
 Log
-vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
 	return Logging::do_log(cleanup, info, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
 }
 
 
 Log
-_log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
+_log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
@@ -239,7 +239,7 @@ SysLog::log(int priority, const std::string& str, bool with_priority, bool)
 }
 
 
-Logging::Logging(const std::string& str, bool clean_, bool stacked_, int async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
+Logging::Logging(const std::string& str, bool clean_, bool stacked_, bool async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
 	: ScheduledTask(created_at_),
 	  stack_level(0),
 	  stacked(stacked_),
@@ -334,7 +334,7 @@ Logging::run()
 	L_INFO_HOOK_LOG("Logging::run", "Logging::run()");
 
 	auto msg = str_start;
-	if (async >= 0) {
+	if (async) {
 		auto log_age = age();
 		if (log_age > 2e8) {
 			msg += " ~" + delta_string(log_age, true);
@@ -429,7 +429,7 @@ Logging::do_println(bool collect, bool with_endl, const char *format, va_list ar
 
 
 Log
-Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
 {
 	priority = validated_priority(priority);
 
@@ -443,7 +443,7 @@ Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std
 
 
 Log
-Logging::add(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, int async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
+Logging::add(const std::string& str, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
 	auto l_ptr = std::make_shared<Logging>(str, clean, stacked, async, priority, created_at);
 
