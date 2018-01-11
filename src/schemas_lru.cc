@@ -99,8 +99,9 @@ SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::sha
 			THROW(Error, "Cyclic schema reference detected: %s", endpoint.to_string().c_str());
 		}
 		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN | DB_NOWAL, HTTP_GET, context);
-		// FIXME: Process the subfield instead of sustract it.
-		auto doc = _db_handler.get_document(id.substr(0, id.rfind(DB_OFFSPRING_UNION)));
+		// FIXME: Process the subfields instead of ignoring.
+		auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
+		auto doc = _db_handler.get_document(id.substr(0, needle));
 		context->erase(hash);
 		return doc.get_obj();
 	} catch (...) {
@@ -393,8 +394,9 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		if (*shared_schema_ptr != *new_schema) {
 			try {
 				DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
-				// FIXME: Process the foreign_path instead of sustract it.
-				_db_handler.index(foreign_id.substr(0, foreign_id.find(DB_OFFSPRING_UNION)), true, *new_schema, false, msgpack_type);
+				// FIXME: Process the foreign_path's subfields instead of ignoring.
+				auto needle = foreign_id.find_first_of("|{", 1);  // to get selector, find first of either | or {
+				_db_handler.index(foreign_id.substr(0, needle), true, *new_schema, false, msgpack_type);
 			} catch(...) {
 				// On error, try reverting
 				std::shared_ptr<const MsgPack> aux_new_schema(new_schema);

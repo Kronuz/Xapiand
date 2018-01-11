@@ -1218,12 +1218,12 @@ HttpClient::meta_view(enum http_method method, Command)
 	auto key = path_parser.get_pmt();
 	if (key.empty()) {
 		std::string cmd = path_parser.get_cmd();
-		auto needle = cmd.find_first_of(".{", 1);
+		auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
 			selector = cmd.substr(needle);
 		}
 	} else {
-		auto needle = key.find_first_of(".{", 1);
+		auto needle = key.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
 			selector = key.substr(needle);
 			key = key.substr(0, needle);
@@ -1372,7 +1372,7 @@ HttpClient::schema_view(enum http_method method, Command)
 
 	std::string selector;
 	auto cmd = path_parser.get_cmd();
-	auto needle = cmd.find_first_of(".{", 1);
+	auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 	if (needle != std::string::npos) {
 		selector = cmd.substr(needle);
 	}
@@ -1424,12 +1424,12 @@ HttpClient::search_view(enum http_method method, Command)
 	auto id = path_parser.get_id();
 	if (id.empty()) {
 		auto cmd = path_parser.get_cmd();
-		auto needle = cmd.find_first_of(".{", 1);
+		auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
 			selector = cmd.substr(needle);
 		}
 	} else {
-		auto needle = id.find_first_of(".{", 1);
+		auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
 			selector = id.substr(needle);
 			id = id.substr(0, needle);
@@ -1901,7 +1901,8 @@ HttpClient::url_resolve()
 			}
 		} else {
 			auto cmd = path_parser.get_cmd();
-			return static_cast<Command>(xxh64::hash(lower_string(cmd.substr(0, cmd.find_first_of(".{", 1)))));
+			auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
+			return static_cast<Command>(xxh64::hash(lower_string(cmd.substr(0, needle))));
 		}
 
 	} else {
