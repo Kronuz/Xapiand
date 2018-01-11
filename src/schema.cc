@@ -6754,7 +6754,9 @@ Schema::set_default_spc_content_type(MsgPack& properties)
 	}
 
 	if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
-		specification.flags.partial_paths = specification.flags.partial_paths || !default_spc.flags.optimal;
+		specification.flags.partial_paths = true;
+		specification.flags.has_partial_paths = true;
+		properties[RESERVED_PARTIAL_PATHS] = true;
 	}
 }
 
