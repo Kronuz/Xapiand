@@ -1907,9 +1907,6 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			FieldVector fields;
 			properties = &index_subproperties(properties, data, name, object, fields);
 			index_item_value(properties, doc, data, fields);
-			if (specification.flags.store && (data->is_undefined() || data->is_null())) {
-				parent_data->erase(name);
-			}
 			specification = std::move(spc_start);
 			return;
 		}
@@ -1925,9 +1922,6 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto data = parent_data;
 			index_subproperties(properties, data, name);
 			index_partial_paths(doc);
-			if (specification.flags.store) {
-				parent_data->erase(name);
-			}
 			specification = std::move(spc_start);
 			return;
 		}
