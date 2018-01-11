@@ -38,14 +38,17 @@ Xapiand aims to be: A Highly Available Distributed RESTful Storage and Search En
 
 ## Getting Started
 
-This guide will take you through the process of installing Xapiand and familiarize you with the concepts that will allow you to use the storage and search indexes. **DON'T PANIC**, it will take just a few minutes.
+This guide will take you through the process of installing Xapiand and
+familiarize you with the concepts that will allow you to use the storage and
+search indexes. **DON'T PANIC**, it will take just a few minutes.
 
 
 ### Installation
 
 #### Requirements
 
-Xapiand is written in C++14, it makes use of libev (which is included in the codebase). The only external dependencies for building it are:
+Xapiand is written in C++14, it makes use of libev (which is included in the
+codebase). The only external dependencies for building it are:
 
 * Clang or GCC
 * pkg-config
@@ -57,34 +60,58 @@ Xapiand is written in C++14, it makes use of libev (which is included in the cod
 
 #### Building from Source (GitHub)
 
-1. Download and untar the Xapiand official distribution or clone repository from GitHub.
+1. Download and untar the Xapiand official distribution or clone repository
+   from GitHub.
 
-2. Build and install using:
+2. Prepare build using:
 
-	```
+	```sh
 	mkdir build
 	cd build
 	cmake -GNinja ..
+	```
+
+3. build and install using:
+
+	```sh
 	ninja
 	ninja install
 	```
 
-3. Run `xapiand` inside a new directory to be assigned to the node.
+4. Run `xapiand` inside a new directory to be assigned to the node.
 
-4. Run `curl 'http://localhost:8880/'`.
+5. Run `curl 'http://localhost:8880/'`.
+
 
 ##### macOS specifics
 
 
-1. Simply installing Xcode will not install all of the command line developer tools,
-   you must execute `xcode-select --install` in Terminal before trying to build.
+1. Simply installing Xcode will not install all of the command line developer
+   tools, you must execute `xcode-select --install` in Terminal before trying
+   to build.
 
 2. You need cmake installed `brew install cmake`.
+
+3. You need to request cmake to leave framework libraries last during the
+   prepare build step above: `cmake -GNinja -DCMAKE_FIND_FRAMEWORK=LAST ..`
+
+
+##### Notes
+
+* When preparing build for developing and debugging, generally you'd want to
+  enable the Address Sanitizer, tracebacks in exceptions and debugging symbols:
+  `cmake -GNinja -DCMAKE_FIND_FRAMEWORK=LAST -DCMAKE_BUILD_TYPE=Debug -DASAN=ON -DTRACEBACKS=ON ..`
+
+* When compiling using ninja, the whole machine could slow down while compiling,
+  since it uses all cores; you can prevent this by telling ninja to use
+  `cores - 1` jobs. Example, for a system with 4 cores: `ninja -j3`.
 
 
 ### Indexing
 
-Let's try and index some twitter like information. First, let's create a twitter user, and add some tweets (the twitter index will be created automatically):
+Let's try and index some twitter like information. First, let's create a
+twitter user, and add some tweets (the twitter index will be created
+automatically):
 
 ```
 curl -XPUT 'http://localhost:8880/twitter/user/Kronuz?commit' -d '{ "name" : "German M. Bravo" }'
@@ -130,8 +157,8 @@ curl 'http://localhost:8880/twitter/tweet/.search?q=user:Kronuz&pretty'
 
 The storage is designed to put files in volumes much in the way Facebook's
 Haystack <sup>[1](#footnote-1)</sup> works; once there a file enters the
-storage it can't really get deleted/modified from the volume, but instead, if a
-change is needed, a new file blob will be written to the volume. Storage is
+storage it can't really get deleted/modified from the volume, but instead, if
+a change is needed, a new file blob will be written to the volume. Storage is
 envisioned to be used when there are files you need to store which you know
 won't be changing often.
 
@@ -157,8 +184,9 @@ curl -H "Accept: image/png" 'http://localhost:8880/twitter/images/Kronuz.png'
 
 ## The road ahead
 
-This is a list of features that are only partially implemented; but that are planned to be supported
-by Xapiand some time soonish in order to get closer to the final product:
+This is a list of features that are only partially implemented; but that are
+planned to be supported by Xapiand some time soonish in order to get closer
+to the final product:
 
 * Multi-Partitioning and Distribution Strategies:
 	* Social-Based Partitioning and Replication (SPAR <sup>[2](#footnote-2)</sup>).
@@ -173,13 +201,16 @@ by Xapiand some time soonish in order to get closer to the final product:
 
 ### Multi-Partitioning and Distribution Strategies
 
-To achieve high availability, distribution of data and data locality, Xapiand can partition, replicate and distribute indexes across several nodes using any of the following partitioning strategies:
+To achieve high availability, distribution of data and data locality, Xapiand
+can partition, replicate and distribute indexes across several nodes using
+any of the following partitioning strategies:
 
 
 #### Social-Based Partitioning and Replication
 
 * Horizontal scaling by distributing indexes among several nodes.
-* Maximizes data locality ensuring related indexes are kept (or are directly available) in the same node.
+* Maximizes data locality ensuring related indexes are kept (or are directly
+  available) in the same node.
 * Minimizes network usage when accessing a set of related indexes.
 
 
