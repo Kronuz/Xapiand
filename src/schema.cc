@@ -6728,7 +6728,7 @@ Schema::set_default_spc_content_type(MsgPack& properties)
 	L_CALL("Schema::set_default_spc_content_type(%s)", repr(properties.to_string()).c_str());
 
 	if (!specification.flags.has_index) {
-		const auto index = (specification.index | TypeIndex::FIELD_VALUES) & ~TypeIndex::FIELD_TERMS; // Fallback to index anything but values
+		const auto index = (specification.index | TypeIndex::FIELD_TERMS) & ~TypeIndex::FIELD_VALUES; // Fallback to index anything but values
 		if (specification.index != index) {
 			specification.index = index;
 			properties[RESERVED_INDEX] = ::get_str_index(index);
