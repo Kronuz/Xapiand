@@ -2418,6 +2418,8 @@ HttpClient::set_idle()
 ct_type_t
 HttpClient::resolve_ct_type(std::string ct_type_str)
 {
+	L_CALL("HttpClient::resolve_ct_type(%s)", repr(ct_type_str).c_str());
+
 	if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE || ct_type_str == X_MSGPACK_CONTENT_TYPE) {
 		if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
 			ct_type_str = JSON_CONTENT_TYPE;
@@ -2449,7 +2451,7 @@ HttpClient::resolve_ct_type(std::string ct_type_str)
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type)
 {
-	L_CALL("HttpClient::is_acceptable_type()");
+	L_CALL("HttpClient::is_acceptable_type('%s/%s', '%s/%s')", ct_type_pattern.first.c_str(), ct_type_pattern.second.c_str(), ct_type.first.c_str(), ct_type.second.c_str());
 
 	bool type_ok = false, subtype_ok = false;
 	if (ct_type_pattern.first == "*") {
@@ -2472,7 +2474,7 @@ HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types)
 {
-	L_CALL("HttpClient::is_acceptable_type(...)");
+	L_CALL("HttpClient::is_acceptable_type('%s/%s', <vector>)", ct_type_pattern.first.c_str(), ct_type_pattern.second.c_str());
 
 	for (auto& ct_type : ct_types) {
 		if (is_acceptable_type(ct_type_pattern, ct_type)) {
