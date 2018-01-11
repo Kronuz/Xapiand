@@ -50,15 +50,16 @@
 
 
 // Available commands
-constexpr const char COMMAND_INFO[]        = "_info";
-constexpr const char COMMAND_METADATA[]    = "_metadata";
-constexpr const char COMMAND_NODES[]       = "_nodes";
-constexpr const char COMMAND_QUIT[]        = "_quit";
-constexpr const char COMMAND_SCHEMA[]      = "_schema";
-constexpr const char COMMAND_SEARCH[]      = "_search";
-constexpr const char COMMAND_STATS[]       = "_stats";
-constexpr const char COMMAND_TOUCH[]       = "_touch";
-constexpr const char COMMAND_WAL[]         = "_wal";
+
+constexpr const char COMMAND_INFO[]        = COMMAND_PREFIX "info";
+constexpr const char COMMAND_METADATA[]    = COMMAND_PREFIX "metadata";
+constexpr const char COMMAND_NODES[]       = COMMAND_PREFIX "nodes";
+constexpr const char COMMAND_QUIT[]        = COMMAND_PREFIX "quit";
+constexpr const char COMMAND_SCHEMA[]      = COMMAND_PREFIX "schema";
+constexpr const char COMMAND_SEARCH[]      = COMMAND_PREFIX "search";
+constexpr const char COMMAND_STATS[]       = COMMAND_PREFIX "stats";
+constexpr const char COMMAND_TOUCH[]       = COMMAND_PREFIX "touch";
+constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
 
 
 class GuidGenerator;

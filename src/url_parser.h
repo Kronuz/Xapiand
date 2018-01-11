@@ -28,6 +28,9 @@
 #include <string>
 
 
+#define COMMAND_PREFIX "_"
+
+
 std::string urldecode(const void *p, size_t size);
 inline std::string urldecode(const std::string& string) {
 	return urldecode(string.data(), string.size());

@@ -35,6 +35,8 @@
 #endif
 
 
+constexpr const char cmd_prefix = COMMAND_PREFIX[0];
+
 std::string
 urldecode(const void *p, size_t size)
 {
@@ -210,7 +212,7 @@ PathParser::init(const std::string& p)
 
 	L_URL_PARSER(repr(path));
 
-	char cn;
+	char cn, cn1, cn2, cp1;
 	size_t length;
 	const char *ni = path.data();
 	const char *nf = ni + path.length();
@@ -243,11 +245,12 @@ PathParser::init(const std::string& p)
 
 		switch (cn) {
 			case '/':
-				++n1;
-				cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
-				if (cn == '_') {
+				cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
+				cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
+				if (cn1 == cmd_prefix && (cn2 == '_' || (cn2 >= 'A' && cn2 <= 'Z') || (cn2 >= 'a' && cn2 <= 'z'))) {
 					state = State::CMD;
-					cn = '\0';
+					cn1 = '\0';
+					++n1;
 				}
 			default:
 				break;
@@ -296,7 +299,9 @@ PathParser::init(const std::string& p)
 						assert(n0 >= n1);
 						length = n0 - n1;
 						if (length) {
-							if (*(n1 + 1) == '_') {
+							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
+							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
+							if (cn1 == cmd_prefix && (cn2 == '_' || (cn2 >= 'A' && cn2 <= 'Z') || (cn2 >= 'a' && cn2 <= 'z'))) {
 								off_cmd = n1 + 1;
 								len_cmd = length;
 								state = State::ID;
@@ -340,8 +345,10 @@ PathParser::init(const std::string& p)
 						n0 = n1;
 						break;
 					case State::ID:
-						if (cn == ':' && *(n1 - 1) == ':') {
-							--n1;
+						cp1 = ((n1 - 1) >= nf || (n1 - 1) < ni) ? '\0' : *(n1 - 1);
+						cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
+						if (cn == ':' && (cn1 == ':' || cp1 == ':' || cp1 == '/')) {
+							break;
 						} else {
 							cn = '\0';
 						}
@@ -377,7 +384,7 @@ PathParser::init(const std::string& p)
 PathParser::State
 PathParser::next()
 {
-	char cn;
+	char cn, cn1, cp1;
 	size_t length;
 	const char *ni = path.data();
 	const char *nf = ni + path.length();
@@ -456,8 +463,10 @@ PathParser::next()
 			case ':':
 				switch (state) {
 					case State::NSP:
-						if (*(n1 + 1) == ':') {
-							++n1;
+						cp1 = ((n1 - 1) >= nf || (n1 - 1) < ni) ? '\0' : *(n1 - 1);
+						cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
+						if (cn1 == ':' || cp1 == ':' || cp1 == '/') {
+							break;
 						} else {
 							assert(n1 >= n0);
 							length = n1 - n0;
