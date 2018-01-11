@@ -2069,7 +2069,7 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		case MsgPack::Type::ARRAY: {
 			bool valid = false;
 			for (const auto& item : item_value) {
-				if (!item.is_null() && !item.is_undefined()) {
+				if (!(item.is_null() || item.is_undefined())) {
 					if (!specification.flags.complete) {
 						if (specification.flags.inside_namespace) {
 							complete_namespace_specification(item);
