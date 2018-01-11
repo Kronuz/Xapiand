@@ -4665,6 +4665,8 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 inline void
 Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields)
 {
+	L_CALL("Schema::dispatch_write_properties(%s, <object>, <fields>)", repr(mut_properties.to_string()).c_str());
+
 	if (specification.flags.concrete) {
 		dispatch_write_concrete_properties(mut_properties, object, fields);
 	} else {
@@ -4676,6 +4678,8 @@ Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object
 inline void
 Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 {
+	L_CALL("Schema::dispatch_set_default_spc(%s)", repr(mut_properties.to_string()).c_str());
+
 	static const auto dsit_e = map_dispatch_set_default_spc.end();
 	const auto dsit = map_dispatch_set_default_spc.find(specification.full_meta_name);
 	if (dsit != dsit_e) {
