@@ -909,7 +909,7 @@ DatabaseHandler::restore(int fd)
 MSet
 DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& /*suggestions*/)
 {
-	L_CALL("DatabaseHandler::get_mset(...)");
+	L_CALL("DatabaseHandler::get_mset(%s, %s)", repr(join_string(e.query, " & ")).c_str(), qdsl ? repr(qdsl->to_string()).c_str() : "null");
 
 	MSet mset;
 
@@ -937,6 +937,8 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 		default:
 			break;
 	}
+
+	// L_DEBUG("query: %s", query.get_description().c_str());
 
 	// Configure sorter.
 	std::unique_ptr<Multi_MultiValueKeyMaker> sorter;
