@@ -25,6 +25,14 @@
 #include <cstring>           // for strlen, strncmp
 
 #include "utils.h"           // for hexdec
+#include "log.h"
+
+
+#define L_URL_PARSER L_LOG
+#ifndef L_URL_PARSER
+#define L_URL_PARSER_DEFINED
+#define L_URL_PARSER L_NOTHING
+#endif
 
 
 std::string
@@ -200,6 +208,8 @@ PathParser::init(const std::string& p)
 	clear();
 	path = p;
 
+	L_URL_PARSER(repr(path));
+
 	char cn;
 	size_t length;
 	const char *ni = path.data();
@@ -215,8 +225,7 @@ PathParser::init(const std::string& p)
 	cn = '\xff';
 	while (cn) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
-		#ifdef DEBUG_URL_PARSER
-		fprintf(stderr, "1>> %3s %02x '%c' [n1:%td - n0:%td = length:%td] total:%td\n", [state]{
+		L_URL_PARSER(GREEN + "1 ->> %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
 			switch(state) {
 				case State::NCM: return "ncm";
 				case State::PMT: return "pmt";
@@ -231,7 +240,6 @@ PathParser::init(const std::string& p)
 				case State::INVALID_HST: return "INVALID_HST";
 			}
 		}(), (int)cn, cn, n0 - ni, n1 - ni, n1 - n0, nf - ni);
-		#endif
 
 		switch (cn) {
 			case '/':
@@ -254,8 +262,7 @@ PathParser::init(const std::string& p)
 	cn = '\xff';
 	while (cn) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
-		#ifdef DEBUG_URL_PARSER
-		fprintf(stderr, "2<< %3s %02x '%c' [n1:%td - n0:%td = length:%td] total:%td\n", [state]{
+		L_URL_PARSER(BLUE + "2 <<- %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
 			switch(state) {
 				case State::NCM: return "ncm";
 				case State::PMT: return "pmt";
@@ -270,7 +277,6 @@ PathParser::init(const std::string& p)
 				case State::INVALID_HST: return "INVALID_HST";
 			}
 		}(), (int)cn, cn, n1 - ni, n0 - ni, n0 - n1, nf - ni);
-		#endif
 
 		switch (cn) {
 			case '\0':
@@ -404,8 +410,7 @@ PathParser::next()
 	cn = '\xff';
 	while (true) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
-		#ifdef DEBUG_URL_PARSER
-		fprintf(stderr, "3>> %3s %02x '%c' [n1:%td - n0:%td = length:%td] total:%td\n", [state]{
+		L_URL_PARSER(CYAN + "3 ->> %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
 			switch(state) {
 				case State::NCM: return "ncm";
 				case State::PMT: return "pmt";
@@ -420,7 +425,6 @@ PathParser::next()
 				case State::INVALID_HST: return "INVALID_HST";
 			}
 		}(), (int)cn, cn, n0 - ni, n1 - ni, n1 - n0, nf - ni);
-		#endif
 
 		switch (cn) {
 			case '\0':
@@ -558,3 +562,9 @@ PathParser::get_id()
 	if (!off_id) return std::string();
 	return urldecode(off_id, len_id);
 }
+
+
+#ifdef L_URL_PARSER_DEFINED
+#undef L_URL_PARSER_DEFINED
+#undef L_URL_PARSER
+#endif
