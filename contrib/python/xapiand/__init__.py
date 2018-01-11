@@ -60,7 +60,7 @@ __all__ = ['Xapiand']
 
 RESPONSE_QUERY = '#query'
 RESPONSE_AGGREGATIONS = '#aggregations'
-
+COMMAND_PREFIX = ':'
 
 XAPIAND_SANDBOX_PREFIX = os.environ.get('XAPIAND_SANDBOX_PREFIX', 'sandbox')
 XAPIAND_LIVE_PREFIX = os.environ.get('XAPIAND_LIVE_PREFIX', 'live')
@@ -187,7 +187,7 @@ class Xapiand(object):
         nodename = '@{}'.format(nodename) if nodename else ''
 
         if action_request in ('search', 'stats',):
-            action_request = '_{}'.format(action_request)
+            action_request = '{}{}'.format(COMMAND_PREFIX, action_request)
         else:
             action_request = ''
 
