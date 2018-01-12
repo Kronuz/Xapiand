@@ -1613,11 +1613,11 @@ HttpClient::search_view(enum http_method method, Command)
 
 			MsgPack obj_data;
 			if (chunked) {
-				obj_data = MsgPack::unserialise(::split_data_obj(data));
+				obj_data = MsgPack::unserialise(split_data_obj(data));
 			} else {
 				std::string blob;
 				std::string ct_type_str;
-				auto store = ::split_data_store(data);
+				auto store = split_data_store(data);
 				if (!store.first) {
 					blob = document.get_blob();
 					ct_type_str = unserialise_string_at(1, blob);
@@ -1641,7 +1641,7 @@ HttpClient::search_view(enum http_method method, Command)
 				}
 
 				if (is_acceptable_type(ct_type, msgpack_serializers)) {
-					obj_data = MsgPack::unserialise(::split_data_obj(data));
+					obj_data = MsgPack::unserialise(split_data_obj(data));
 				} else {
 					// Returns blob_data in case that type is unkown
 					if (blob.empty()) {
