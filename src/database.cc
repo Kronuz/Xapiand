@@ -1310,10 +1310,12 @@ Database::storage_get_blob(const Xapian::Document& doc) const
 	if (blob.empty()) {
 		auto store = split_data_store(data);
 		if (store.first) {
-			int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-			const auto& storage = storages[subdatabase];
-			if (storage) {
-				blob = storage_get(storage, store.second);
+			if (!store.second.empty()) {
+				int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+				const auto& storage = storages[subdatabase];
+				if (storage) {
+					blob = storage_get(storage, store.second);
+				}
 			}
 		}
 	}
@@ -1333,11 +1335,13 @@ Database::storage_pull_blob(Xapian::Document& doc) const
 	if (blob.empty()) {
 		auto store = split_data_store(data);
 		if (store.first) {
-			int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-			const auto& storage = storages[subdatabase];
-			if (storage) {
-				blob = storage_get(storage, store.second);
-				doc.set_data(join_data(store.first, "", split_data_obj(data), blob));
+			if (!store.second.empty()) {
+				int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+				const auto& storage = storages[subdatabase];
+				if (storage) {
+					blob = storage_get(storage, store.second);
+					doc.set_data(join_data(store.first, "", split_data_obj(data), blob));
+				}
 			}
 		}
 	}
