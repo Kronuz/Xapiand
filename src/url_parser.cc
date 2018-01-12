@@ -28,7 +28,6 @@
 #include "log.h"
 
 
-#define L_URL_PARSER L_LOG
 #ifndef L_URL_PARSER
 #define L_URL_PARSER_DEFINED
 #define L_URL_PARSER L_NOTHING
