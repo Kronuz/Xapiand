@@ -47,13 +47,20 @@ normalize(const void *p, size_t size)
 static inline std::string
 normalize_and_partition(const void *p, size_t size)
 {
+	std::string ret;
 	std::string normalized;
 	try {
-		normalized = Unserialise::uuid(Serialise::uuid(std::string(static_cast<const char*>(p), size)), XapiandManager::manager->opts.uuid_repr);
+		auto serialised_uuid = Serialise::uuid(std::string(static_cast<const char*>(p), size));
+		normalized = Unserialise::uuid(serialised_uuid, XapiandManager::manager->opts.uuid_repr);
+		if (XapiandManager::manager->opts.uuid_repr == UUIDRepr::simple || serialised_uuid.front() == 1 || (serialised_uuid.back() & 1) != 0) {
+			ret.append(&normalized[9], &normalized[13]);
+			ret.push_back('/');
+			ret.append(normalized);
+			return ret;
+		}
 	} catch (const SerialisationError& exc) {
 		return normalized;
 	}
-	std::string ret;
 	auto cit = normalized.cbegin();
 	auto cit_e = normalized.cend();
 	ret.reserve(2 + normalized.size());
