@@ -1214,13 +1214,12 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 				info[RESPONSE_BLOB] = nullptr;
 			} else {
 				const auto locator = storage_unserialise_locator(store.second);
-				const auto field_ct_type_str = Document::get_field(CONTENT_TYPE_FIELD_NAME, obj);
 				info[RESPONSE_BLOB] = {
 					{ RESPONSE_TYPE, "stored" },
-					{ RESPONSE_CONTENT_TYPE, field_ct_type_str ? field_ct_type_str.str() : "unknown" },
 					{ RESPONSE_VOLUME, std::get<0>(locator) },
 					{ RESPONSE_OFFSET, std::get<1>(locator) },
 					{ RESPONSE_SIZE, std::get<2>(locator) },
+					{ RESPONSE_CONTENT_TYPE, std::get<3>(locator) },
 				};
 			}
 		}

@@ -470,46 +470,53 @@ void split_path_id(const std::string& path_id, std::string& path, std::string& i
 
 
 #ifdef XAPIAND_DATA_STORAGE
-std::tuple<ssize_t, size_t, size_t> storage_unserialise_locator(const std::string& store)
+std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(const std::string& store)
 {
 	ssize_t volume;
 	size_t offset, size;
+	std::string content_type;
 
 	const char *p = store.data();
 	const char *p_end = p + store.size();
 	if (*p++ != STORAGE_BIN_HEADER_MAGIC) {
-		return std::make_tuple(-1, 0, 0);
+		return std::make_tuple(-1, 0, 0, "");
 	}
 	try {
 		volume = unserialise_length(&p, p_end);
 	} catch (const Xapian::SerialisationError&) {
-		return std::make_tuple(-1, 0, 0);
+		return std::make_tuple(-1, 0, 0, "");
 	}
 	try {
 		offset = unserialise_length(&p, p_end);
 	} catch (const Xapian::SerialisationError&) {
-		return std::make_tuple(-1, 0, 0);
+		return std::make_tuple(-1, 0, 0, "");
 	}
 	try {
 		size = unserialise_length(&p, p_end);
 	} catch (const Xapian::SerialisationError&) {
-		return std::make_tuple(-1, 0, 0);
+		return std::make_tuple(-1, 0, 0, "");
+	}
+	try {
+		content_type = unserialise_string(&p, p_end);
+	} catch (const Xapian::SerialisationError&) {
+		return std::make_tuple(-1, 0, 0, "");
 	}
 	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) {
-		return std::make_tuple(-1, 0, 0);
+		return std::make_tuple(-1, 0, 0, "");
 	}
 
-	return std::make_tuple(volume, offset, size);
+	return std::make_tuple(volume, offset, size, content_type);
 }
 
 
-std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size)
+std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size, const std::string& content_type)
 {
 	std::string ret;
 	ret.append(1, STORAGE_BIN_HEADER_MAGIC);
 	ret.append(serialise_length(volume));
 	ret.append(serialise_length(offset));
 	ret.append(serialise_length(size));
+	ret.append(serialise_string(content_type));
 	ret.append(1, STORAGE_BIN_FOOTER_MAGIC);
 	return ret;
 }

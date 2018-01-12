@@ -302,6 +302,6 @@ std::string split_data_obj(const std::string& data);
 std::string split_data_blob(const std::string& data);
 void split_path_id(const std::string& path_id, std::string& path, std::string& id);
 #ifdef XAPIAND_DATA_STORAGE
-std::tuple<ssize_t, size_t, size_t> storage_unserialise_locator(const std::string& store);
-std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size);
+std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(const std::string& store);
+std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size, const std::string& content_type);
 #endif /* XAPIAND_DATA_STORAGE */

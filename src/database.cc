@@ -1378,7 +1378,7 @@ Database::storage_push_blob(Xapian::Document& doc) const
 					storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
 				}
 			}
-			auto stored_locator = storage_serialise_locator(storage->volume, offset, blob.size());
+			auto stored_locator = storage_serialise_locator(storage->volume, offset, blob.size(), unserialise_string_at(1, blob));
 			doc.set_data(join_data(true, stored_locator, split_data_obj(data), ""));
 		} else {
 			doc.set_data(join_data(store.first, store.second, split_data_obj(data), ""));
