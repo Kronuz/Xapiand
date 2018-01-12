@@ -1614,22 +1614,25 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 
 			MsgPack obj;
-			MsgPack* obj_ptr;
-			if (chunked) {
-				obj = MsgPack::unserialise(split_data_obj(data));
-			} else {
-				// Figure out the document's blob and blob's ContentType.
+			if (!chunked) {
+				// Figure out the document's ContentType.
 				std::string blob;
 				std::string ct_type_str;
 				auto store = split_data_store(data);
-				if (!store.first) {
+				if (store.first) {
+					// It's stored, get ContentType from storage locator.
+					ct_type_str = std::get<3>(storage_unserialise_locator(store.second));
+				} else {
+					// Not stored, get blob from the document's body and ContentType from it.
 					blob = document.get_blob();
 					ct_type_str = unserialise_string_at(1, blob);
 				}
-
-				// There wasn't a content type in the blob, try getting it from the object.
 				if (ct_type_str.empty()) {
-					const auto field_ct_type_str = Document::get_field(CONTENT_TYPE_FIELD_NAME, document.get_obj());
+					// There wasn't a content type in the blob, try getting it from the object's field.
+					if (obj.is_undefined()) {
+						obj = MsgPack::unserialise(split_data_obj(data));
+					}
+					const auto field_ct_type_str = Document::get_field(CONTENT_TYPE_FIELD_NAME, obj);
 					ct_type_str = field_ct_type_str ? field_ct_type_str.str() : MSGPACK_CONTENT_TYPE;
 				}
 
@@ -1652,9 +1655,7 @@ HttpClient::search_view(enum http_method method, Command)
 					return;
 				}
 
-				if (is_acceptable_type(ct_type, msgpack_serializers)) {
-					obj = MsgPack::unserialise(split_data_obj(data));
-				} else {
+				if (!is_acceptable_type(ct_type, msgpack_serializers)) {
 					// Returns blob_data in case that type is unkown
 					if (blob.empty()) {
 						blob = document.get_blob();
@@ -1686,6 +1687,10 @@ HttpClient::search_view(enum http_method method, Command)
 					}
 					return;
 				}
+			}
+
+			if (obj.is_undefined()) {
+				obj = MsgPack::unserialise(split_data_obj(data));
 			}
 
 			if (obj.find(ID_FIELD_NAME) == obj.end()) {
