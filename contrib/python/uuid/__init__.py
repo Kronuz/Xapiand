@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import base59
 import six
-import string
 import uuid
-from struct import pack, unpack_from
+import string
 
-import sys
+try:
+    from . import base59
+except ValueError:
+    import base59
 
 try:
     from .mertwis import MT19937
@@ -47,7 +48,7 @@ def _unserialise(bytes_):
             break
 
     if (size < length):
-        raise ValueError('Bad encoded uuid')
+        raise ValueError("Bad encoded uuid")
 
     byte0 &= ~UUID.VL[i][q][1]
     list_bytes_[0] = chr(byte0)
@@ -89,8 +90,9 @@ def _unserialise(bytes_):
 
 def _unserialise_full(bytes_):
     if len(bytes_) < 17:
-        raise ValueError('Bad encoded uuid %s' % repr(bytes_))
+        raise ValueError("Bad encoded uuid %s" % repr(bytes_))
     return UUID(bytes=bytes_[1:])
+
 
 def unserialise(bytes_):
     bytes_length = len(bytes_)
@@ -134,7 +136,7 @@ def serialise(uuids_):
                 serialised += chr(len(ser))
                 serialised += ser
             else:
-                raise ValueError('Invalid UUID format %s' % uuid_)
+                raise ValueError("Invalid UUID format %s" % uuid_)
         # else:
         #     serialised += _serialise_base59(uuid_)
     return serialised
@@ -157,7 +159,7 @@ def serialise_compound(compound_uuid):
     elif isinstance(compound_uuid, (list, tuple)):
         bytes_ = serialise(compound_uuid)
         return bytes_
-    raise ValueError('Invalid UUID format in: %s' % compound_uuid)
+    raise ValueError("Invalid UUID format in: %s" % compound_uuid)
 
 
 class UUID(six.binary_type, uuid.UUID):
@@ -190,12 +192,12 @@ class UUID(six.binary_type, uuid.UUID):
     VARIANT_MASK = ((1 << VARIANT_BITS) - 1)
 
     VL = [
-        [[0x1c, 0xfc], [0x1c, 0xfc]],  #  4: 00011100 11111100  00011100 11111100
-        [[0x18, 0xfc], [0x18, 0xfc]],  #  5: 00011000 11111100  00011000 11111100
-        [[0x14, 0xfc], [0x14, 0xfc]],  #  6: 00010100 11111100  00010100 11111100
-        [[0x10, 0xfc], [0x10, 0xfc]],  #  7: 00010000 11111100  00010000 11111100
-        [[0x04, 0xfc], [0x40, 0xc0]],  #  8: 00000100 11111100  01000000 11000000
-        [[0x0a, 0xfe], [0xa0, 0xe0]],  #  9: 00001010 11111110  10100000 11100000
+        [[0x1c, 0xfc], [0x1c, 0xfc]],  # 4:  00011100 11111100  00011100 11111100
+        [[0x18, 0xfc], [0x18, 0xfc]],  # 5:  00011000 11111100  00011000 11111100
+        [[0x14, 0xfc], [0x14, 0xfc]],  # 6:  00010100 11111100  00010100 11111100
+        [[0x10, 0xfc], [0x10, 0xfc]],  # 7:  00010000 11111100  00010000 11111100
+        [[0x04, 0xfc], [0x40, 0xc0]],  # 8:  00000100 11111100  01000000 11000000
+        [[0x0a, 0xfe], [0xa0, 0xe0]],  # 9:  00001010 11111110  10100000 11100000
         [[0x08, 0xfe], [0x80, 0xe0]],  # 10: 00001000 11111110  10000000 11100000
         [[0x02, 0xff], [0x20, 0xf0]],  # 11: 00000010 11111111  00100000 11110000
         [[0x03, 0xff], [0x30, 0xf0]],  # 12: 00000011 11111111  00110000 11110000
@@ -241,7 +243,7 @@ class UUID(six.binary_type, uuid.UUID):
         # node = 48 bits
         if data is not None:
             if len(data) < 2 or len(data) > cls.UUID_MAX_SERIALISED_LENGTH:
-                raise ValueError('Serialise UUID can store [%d, %d] bytes, given %d' % (2, cls.UUID_MAX_SERIALISED_LENGTH, len(data)))
+                raise ValueError("Serialise UUID can store [%d, %d] bytes, given %d" % (2, cls.UUID_MAX_SERIALISED_LENGTH, len(data)))
             num = 0
             node = 0
             for d in reversed(data):
@@ -308,13 +310,12 @@ class UUID(six.binary_type, uuid.UUID):
     @classmethod
     def unserialise(cls, bytes_):
         if bytes_ is None or len(bytes_) < 2 or len(bytes_) > cls.UUID_MAX_SERIALISED_LENGTH:
-            raise ValueError('Bad encoded uuid %s' % repr(bytes_))
+            raise ValueError("Bad encoded uuid %s" % repr(bytes_))
 
         if (bytes_ and ord(bytes_[0]) == 1):
             return _unserialise_full(bytes_)
         else:
             return _unserialise(bytes_)
-
 
     def _serialise(self, variant):
         cls = self.__class__
@@ -362,21 +363,20 @@ class UUID(six.binary_type, uuid.UUID):
         else:
             return chr(0x01) + self.bytes
 
-
     def serialise(self):
         return self._serialise(ord(self.bytes[8]) & 0xc0)
 
 
 if __name__ == '__main__':
     str_uuids = [
-         '00000000-0000-1000-8000-000000000000',
-         '11111111-1111-1111-8111-111111111111',
-            # compresos
-         '230c3300-dc3c-11e7-9266-a9cf6771112b',
-         'f223c600-debf-11e7-85f7-cdf2b3c2e82b',
-            # NO compresos
-         '60579016-dec5-11e7-b616-34363bc9ddd6',
-         '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662',
+        '00000000-0000-1000-8000-000000000000',
+        '11111111-1111-1111-8111-111111111111',
+        # compresos
+        '230c3300-dc3c-11e7-9266-a9cf6771112b',
+        'f223c600-debf-11e7-85f7-cdf2b3c2e82b',
+        # NO compresos
+        '60579016-dec5-11e7-b616-34363bc9ddd6',
+        '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662',
     ]
     expected_serialised = [
         repr('\x1c\x00\x00\x01'),
@@ -403,14 +403,14 @@ if __name__ == '__main__':
             res = _unserialise(serialised)
             if result != expected:
                 errors += 1
-                print 'Error in serialise: %s  Expected: %s Result: %s' % (str_uuid, expected, result)
+                print("Error in serialise: %s  Expected: %s Result: %s" % (str_uuid, expected, result))
             uns_u = UUID.unserialise(serialised)
             if uns_u != u:
                 errors += 1
-                print 'Error in unserialise: Expected: %s Result: %s' % (str_uuid, uns_u)
-        except ValueError, e:
+                print("Error in unserialise: Expected: %s Result: %s" % (str_uuid, uns_u))
+        except ValueError as e:
             errors += 1
-            print e.message
+            print(e.message)
         i += 1
 
     str_uuids = [
@@ -433,7 +433,7 @@ if __name__ == '__main__':
             result = repr(serialised)
             if result != expected:
                 errors += 1
-                print 'Error in serialise: %s  Expected: %s Result: %s' % (str_uuid, expected, result)
+                print("Error in serialise: %s  Expected: %s Result: %s" % (str_uuid, expected, result))
             uns_uuuids = unserialise(serialised)
             compound_uuid = '{'
             for uuid_ in uns_uuuids:
@@ -441,12 +441,12 @@ if __name__ == '__main__':
             compound_uuid = compound_uuid[:-1] + '}'
             if compound_uuid != str_uuid:
                 errors += 1
-                print 'Error in unserialise: Expected: %s Result: %s' % (str_uuid, compound_uuid)
-        except ValueError, e:
+                print("Error in unserialise: Expected: %s Result: %s" % (str_uuid, compound_uuid))
+        except ValueError as e:
             errors += 1
-            print e.message
+            print(e.message)
         i += 1
     if errors == 0:
-        print 'Pass all tests'
+        print("Pass all tests")
     else:
-        print 'Finish with ', errors, ' errors'
+        print("Finished with %d errors" % errors)
