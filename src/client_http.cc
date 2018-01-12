@@ -1620,25 +1620,23 @@ HttpClient::search_view(enum http_method method, Command)
 
 				// If there's a ContentType in the blob store or in the ContentType's field
 				// in the object, try resolving to it (or otherwise don't touch the current ct_type)
-				auto _ct_type = resolve_ct_type(ct_type_str);
-				if (!_ct_type.empty()) {
-					ct_type = _ct_type;
-				}
-
-				if (ct_type.empty()) {
-					// No content type could be resolved, return NOT ACCEPTABLE.
-					enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-					MsgPack err_response = {
-						{ RESPONSE_STATUS, (int)error_code },
-						{ RESPONSE_MESSAGE, { "Response type " + ct_type_str + " not provided in the Accept header" } }
-					};
-					write_http_response(error_code, err_response);
-					L_SEARCH("ABORTED SEARCH");
-					return;
-				}
-
-				if (!is_acceptable_type(ct_type, msgpack_serializers)) {
+				auto blob_ct_type = resolve_ct_type(ct_type_str);
+				if (blob_ct_type.empty()) {
+					if (ct_type.empty()) {
+						// No content type could be resolved, return NOT ACCEPTABLE.
+						enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+						MsgPack err_response = {
+							{ RESPONSE_STATUS, (int)error_code },
+							{ RESPONSE_MESSAGE, { "Response type " + ct_type_str + " not provided in the Accept header" } }
+						};
+						write_http_response(error_code, err_response);
+						L_SEARCH("ABORTED SEARCH");
+						return;
+					}
+				} else {
 					// Returns blob_data in case that type is unkown
+					ct_type = blob_ct_type;
+
 					auto blob = document.get_blob();
 					auto blob_data = unserialise_string_at(STORED_BLOB_DATA, blob);
 					if (Logging::log_level > LOG_DEBUG) {
