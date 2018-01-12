@@ -618,7 +618,7 @@ HttpClient::run()
 
 	try {
 		if (Logging::log_level > LOG_DEBUG) {
-			if (content_type.find("image/") != std::string::npos) {
+			if (Logging::log_level > LOG_DEBUG + 1 && content_type.find("image/") != std::string::npos) {
 				// From [https://www.iterm2.com/documentation-images.html]
 				std::string b64_name = cppcodec::base64_rfc4648::encode("");
 				std::string b64_request_body = cppcodec::base64_rfc4648::encode(body);
@@ -634,7 +634,7 @@ HttpClient::run()
 				if (ct_type == json_type || ct_type == msgpack_type) {
 					request_body = msgpack.to_string(4);
 				} else if (!body.empty()) {
-					request_body = "...";
+					request_body = "<blob " + bytes_string(body.size()) + ">";
 				}
 			}
 			log_request();
@@ -1640,7 +1640,7 @@ HttpClient::search_view(enum http_method method, Command)
 					auto blob = document.get_blob();
 					auto blob_data = unserialise_string_at(STORED_BLOB_DATA, blob);
 					if (Logging::log_level > LOG_DEBUG) {
-						if (ct_type.first == "image") {
+						if (Logging::log_level > LOG_DEBUG + 1 && ct_type.first == "image") {
 							// From [https://www.iterm2.com/documentation-images.html]
 							std::string b64_name = cppcodec::base64_rfc4648::encode("");
 							std::string b64_response_body = cppcodec::base64_rfc4648::encode(blob_data);
@@ -1650,7 +1650,7 @@ HttpClient::search_view(enum http_method method, Command)
 							response_body += b64_response_body.c_str();
 							response_body += '\a';
 						} else if (!blob_data.empty()) {
-							response_body = "...";
+							response_body = "<blob " + bytes_string(blob_data.size()) + ">";
 						}
 					}
 					if (type_encoding != Encoding::none) {
